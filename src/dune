@@ -1,0 +1,5 @@
+(library (name bonsai)
+ (libraries core_kernel.composition_infix core_kernel incr_map incremental)
+ (preprocess
+  (pps ppx_jane ppx_pattern_bind -annotated-ignores -check-doc-comments))
+ (public_name bonsai))
