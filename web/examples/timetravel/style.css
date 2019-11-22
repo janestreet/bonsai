@@ -1,0 +1,43 @@
+html, body {
+    width:100%; 
+    height:100%;
+    margin:0;
+    padding:0;
+}
+
+div.cnt {
+    display: flex;
+    align-items: flex-end;
+}
+
+div.ch {
+    display: inline-grid;
+}
+
+div.cnt > button {
+    background-color: rgb(47, 122, 53);
+    color: white;
+    border: 1px solid rgb(62, 205, 71);
+    border-radius:3px;
+    margin-left: -1px;
+    margin-bottom: 1px;
+}
+
+div.cnt > button.current {
+    background-color: rgb(142, 116, 38);
+    border: 1px solid rgb(254, 201, 33);
+}
+
+
+.history_wrapper {
+    background-color: rgb(38, 38, 38);
+    border-radius:3px;
+    padding: 10px;
+}
+
+.history_wrapper_wrapper {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}

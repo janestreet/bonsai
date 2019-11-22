@@ -1,0 +1,32 @@
+opam-version: "2.0"
+maintainer: "opensource@janestreet.com"
+authors: ["Jane Street Group, LLC <opensource@janestreet.com>"]
+homepage: "https://github.com/janestreet/bonsai"
+bug-reports: "https://github.com/janestreet/bonsai/issues"
+dev-repo: "git+https://github.com/janestreet/bonsai.git"
+doc: "https://ocaml.janestreet.com/ocaml-core/latest/doc/bonsai/index.html"
+license: "MIT"
+build: [
+  ["dune" "build" "-p" name "-j" jobs]
+]
+depends: [
+  "ocaml" {>= "4.08.0"}
+  "async_kernel"
+  "core_kernel"
+  "incr_dom"
+  "incr_map"
+  "incremental"
+  "ppx_jane"
+  "ppx_pattern_bind"
+  "virtual_dom"
+  "dune"             {>= "1.5.1"}
+]
+synopsis: "A library for building dynamic webapps, using Js_of_ocaml"
+description: "
+Bonsai is a library for building reusable UI components inside an
+Incremental-style UI framework such as Incr_dom.  The API is broken
+up into roughly two modules:
+
+- Creating components
+- Combining components
+"

@@ -1,0 +1,2 @@
+(executables (names handle_io) (libraries bonsai_web)
+ (preprocess (pps ppx_jane)))
