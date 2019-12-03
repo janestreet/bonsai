@@ -755,6 +755,7 @@ module Make (Incr : Incremental.S) (Event : T) :
     end
   end
 
+  let id = T (With_readonly_model (Pure Fn.id), nothing_type_id)
   let pure_from_model ~f = compose (const ()) (pure ~f |> Project.Model.to_input)
 
   module List_deprecated = struct end

@@ -568,3 +568,15 @@ let%expect_test "Incremental.of_incr" =
   H.show ();
   [%expect {| world |}]
 ;;
+
+let%expect_test "id" =
+  let component = Bonsai.id in
+  let driver = Driver.create ~initial_input:5 ~initial_model:"hello" component in
+  let (module H) = Helpers.make ~driver ~sexp_of_result:[%sexp_of: int * string] in
+  H.show ();
+  [%expect {| (5 hello) |}];
+  H.set_input 20;
+  [%expect {| (20 hello) |}];
+  H.set_model "world";
+  [%expect {| (20 world) |}]
+;;

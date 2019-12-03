@@ -26,6 +26,8 @@ module type S = sig
 
   type ('input, 'model, 'result) nonexpert_t := ('input, 'model, 'result) t
 
+  val id : ('input, 'model, 'input * 'model) t
+
   (** {1 Component Constructors} *)
 
   (** Returns a component with no action or model, only a constant result. *)
