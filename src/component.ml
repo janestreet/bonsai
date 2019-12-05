@@ -3,7 +3,7 @@ open! Import
 open Composition_infix
 include Component_intf
 
-module Make (Incr : Incremental.S) (Event : T) :
+module Make (Incr : Incremental.S) (Event : Event) :
   S with module Incr := Incr with module Event := Event = struct
   module Incr_map = Incr_map.Make (Incr)
   module Snapshot = Snapshot.Make (Event)
@@ -922,6 +922,8 @@ module Make (Incr : Incremental.S) (Event : T) :
 
   module Let_syntax = struct
     let return = return
+    let map = map
+    let both = both
 
     include Infix
 
@@ -930,8 +932,20 @@ module Make (Incr : Incremental.S) (Event : T) :
       let both = both
       let map = map
 
-      module Open_on_rhs = struct end
+      module Open_on_rhs = Infix
     end
+  end
+
+  module Arrow = struct
+    let arr f = pure ~f
+    let first t = both (fst @>> t) (arr snd)
+    let second t = both (arr fst) (snd @>> t)
+    let split t u = both (fst @>> t) (snd @>> u)
+    let fanout = both
+    let ( *** ) = split
+    let ( &&& ) = fanout
+    let ( ^>> ) = ( @>> )
+    let ( >>^ ) = ( >>| )
   end
 
   module Expert = struct

@@ -1,8 +1,15 @@
 open! Core_kernel
 open! Import
 
+module type Event = sig
+  type t
+
+  val sequence : t list -> t
+  val no_op : t
+end
+
 module type S = sig
-  module Event : T
+  module Event : Event
   module Incr : Incremental.S
 
   (** Default is [`Ignore]. *)
@@ -61,8 +68,6 @@ module type S = sig
       other map functions. *)
   val map_input : ('i2, 'model, 'result) t -> f:('i1 -> 'i2) -> ('i1, 'model, 'result) t
 
-  include Applicative.Let_syntax3 with type ('r, 'i, 'm) t := ('i, 'm, 'r) t
-
   module Let_syntax : sig
     val return : 'result -> (_, _, 'result) t
 
@@ -77,7 +82,7 @@ module type S = sig
         -> ('input, 'model, 'r2) t
         -> ('input, 'model, 'r1 * 'r2) t
 
-      module Open_on_rhs : sig end
+      module Open_on_rhs : module type of Infix
     end
   end
 
@@ -136,7 +141,7 @@ module type S = sig
     -> ('input, 'model, 'result) t
 
   module Incremental : sig
-    (** Constructs a bonsai component whose result is always 
+    (** Constructs a bonsai component whose result is always
         the same as its input Incremental node.  *)
     val of_incr : 'result Incr.t -> (_, _, 'result) t
 
@@ -432,15 +437,49 @@ module type S = sig
         never what you actually want, causing mis-delivery of events every time that the
         list changes. *)
   end
+
+  module Arrow : sig
+    (** [('i, _, 'r) t] is an arrow from ['i] to ['r]. *)
+
+    (** [arr] is the same as [pure]. *)
+    val arr : ('i -> 'r) -> ('i, _, 'r) t
+
+    (** [first t] applies [t] to the first part of the input. *)
+    val first : ('i, 'm, 'r) t -> ('i * 'a, 'm, 'r * 'a) t
+
+    (** [second t] applies [t] to the second part of the input. *)
+    val second : ('i, 'm, 'r) t -> ('a * 'i, 'm, 'a * 'r) t
+
+    (** [split t u] applies [t] to the first part of the input and [u] to the second
+        part. *)
+    val split : ('i1, 'm, 'r1) t -> ('i2, 'm, 'r2) t -> ('i1 * 'i2, 'm, 'r1 * 'r2) t
+
+    (** [t *** u = split t u]. *)
+    val ( *** ) : ('i1, 'm, 'r1) t -> ('i2, 'm, 'r2) t -> ('i1 * 'i2, 'm, 'r1 * 'r2) t
+
+    (** [fanout t u] applies [t] and [u] to the same input and returns both results.  It's
+        actually just [both]. *)
+    val fanout : ('i, 'm, 'r1) t -> ('i, 'm, 'r2) t -> ('i, 'm, 'r1 * 'r2) t
+
+    (** [t &&& u = fanout t u]. *)
+    val ( &&& ) : ('i, 'm, 'r1) t -> ('i, 'm, 'r2) t -> ('i, 'm, 'r1 * 'r2) t
+
+    (** [^>>] is the same as [@>>], but with a Haskell-like name. *)
+    val ( ^>> ) : ('i1 -> 'i2) -> ('i2, 'model, 'result) t -> ('i1, 'model, 'result) t
+
+    (** [>>^] is the same as [>>|], but with a Haskell-like name. *)
+    val ( >>^ ) : ('input, 'model, 'r1) t -> ('r1 -> 'r2) -> ('input, 'model, 'r2) t
+  end
 end
 
 module type Component = sig
+  module type Event = Event
   module type S = S
 
   (** Bonsai can be used with any Incremental-style UI framework. The parameters for the
       Bonsai component functor are an instance of Incremental (used to re-evaluate the UI
       only when the UI model has changed) and an opaque Event.t type (which is used to
       schedule actions). *)
-  module Make (Incr : Incremental.S) (Event : T) :
+  module Make (Incr : Incremental.S) (Event : Event) :
     S with module Incr := Incr with module Event := Event
 end

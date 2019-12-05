@@ -251,6 +251,44 @@ let%expect_test "schedule event from outside of the component" =
     () |}]
 ;;
 
+let%expect_test "schedule many events from outside of the component" =
+  let module Raises_something_from_without = struct
+    module Input = Unit
+
+    module Action = struct
+      type t = Trigger [@@deriving sexp_of]
+    end
+
+    module Model = Unit
+
+    module Result = struct
+      type t = unit * (Action.t -> Event.t)
+    end
+
+    let apply_action ~inject:_ ~schedule_event () () Action.Trigger =
+      schedule_event
+        (Event.sequence
+           [ Event.External_event "hello world"
+           ; Event.no_op
+           ; Event.External_event "goodbye world"
+           ])
+    ;;
+
+    let compute ~inject () () = (), inject
+    let name = Source_code_position.to_string [%here]
+  end
+  in
+  let component = Bonsai.of_module (module Raises_something_from_without) in
+  let driver = Driver.create ~initial_input:() ~initial_model:() component in
+  let (module H) = Helpers.make_with_inject ~driver ~sexp_of_result:[%sexp_of: unit] in
+  H.do_actions [ Trigger ];
+  [%expect
+    {|
+    External event: hello world
+    External event: goodbye world
+    () |}]
+;;
+
 let%expect_test "map merge combinator" =
   let component_a = Bonsai.pure_from_model ~f:(fun a -> a + 1) in
   let component_b = Bonsai.pure_from_model ~f:Int.of_string in

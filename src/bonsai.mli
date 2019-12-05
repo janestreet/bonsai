@@ -2,6 +2,7 @@ open! Core_kernel
 open! Import
 
 module type S = Component.S
+module type Event = Component.Event
 
 (** Bonsai can be used with any Incremental-style UI framework.  The parameters for the
     Bonsai component functor are an instance of Incremental (used to re-evaluate the UI
@@ -19,5 +20,5 @@ module type S = Component.S
 
     [Bonsai_web] re-exports the contents of its [Import] module, which allows users to
     refer to the module [Bonsai] to construct components. *)
-module Make (Incr : Incremental.S) (Event : T) :
+module Make (Incr : Incremental.S) (Event : Event) :
   S with module Incr := Incr with module Event := Event

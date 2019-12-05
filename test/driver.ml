@@ -56,8 +56,9 @@ let result (T t) = Incr.Observer.value_exn t.snapshot |> Bonsai.Expert.Snapshot.
 
 let flush (T { event_queue; model_var; snapshot; action_type_id; old_model_var; _ }) =
   let previous_model = Incr.Var.value model_var in
-  while not (Queue.is_empty event_queue) do
-    match Queue.dequeue_exn event_queue with
+  let rec process_event : Event.t -> unit = function
+    | No_op -> ()
+    | Sequence events -> List.iter events ~f:process_event
     | External_event s -> printf "External event: %s\n" s
     | Packed (action, type_id) ->
       let action =
@@ -71,6 +72,9 @@ let flush (T { event_queue; model_var; snapshot; action_type_id; old_model_var; 
       (* We need to stabilize after every action so that [Snapshot.apply_action] is closed
          over the latest model. *)
       Incr.stabilize ()
+  in
+  while not (Queue.is_empty event_queue) do
+    process_event (Queue.dequeue_exn event_queue)
   done;
   Incr.Var.set old_model_var (Some previous_model);
   Incr.stabilize ()
