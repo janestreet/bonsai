@@ -89,7 +89,7 @@ module type S = sig
   (** Many modules have the same shape, they declare the model, action, and result of the
       component, and then define apply_action and view over those types.
 
-      This is intended to be used with the [Component.of_module] function. *)
+      This is intended to be used with the {!of_module} function. *)
   module type S = sig
     module Input : T
     module Model : T
@@ -101,7 +101,7 @@ module type S = sig
     module Result : T
 
     (** [apply_action] is a transformation from a model and an action into a new model.
-        During the transformation, the Component can also emit more actions via
+        During the transformation, the component can also emit more actions via
         [schedule_event] or use Async to arrange for [schedule_event] to be called later.
     *)
     val apply_action
@@ -135,7 +135,7 @@ module type S = sig
     type nonrec t = (Component.Input.t, Component.Model.t, Component.Result.t) t
   end
 
-  (** Creates a component from a [Component.S] first class module. *)
+  (** Creates a component from a [Bonsai.S] first class module. *)
   val of_module
     :  ('input, 'model, 'action, 'result) component_s
     -> ('input, 'model, 'result) t
@@ -472,14 +472,26 @@ module type S = sig
   end
 end
 
-module type Component = sig
+module type Bonsai = sig
   module type Event = Event
   module type S = S
 
-  (** Bonsai can be used with any Incremental-style UI framework. The parameters for the
+  (** Bonsai can be used with any Incremental-style UI framework.  The parameters for the
       Bonsai component functor are an instance of Incremental (used to re-evaluate the UI
       only when the UI model has changed) and an opaque Event.t type (which is used to
-      schedule actions). *)
+      schedule actions).
+
+      The recommended use of this functor is to bind the name [Bonsai] to its invocation.
+      For example, [Bonsai_web]'s [import.ml] has:
+
+      {[
+        module Incr = Incr_dom.Incr
+        module Vdom = Virtual_dom.Vdom
+        module Bonsai = Bonsai.Make (Incr) (Vdom.Event)
+      ]}
+
+      [Bonsai_web] re-exports the contents of its [Import] module, which allows users to
+      refer to the module [Bonsai] to construct components. *)
   module Make (Incr : Incremental.S) (Event : Event) :
     S with module Incr := Incr with module Event := Event
 end

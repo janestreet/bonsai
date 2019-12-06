@@ -6,7 +6,7 @@ let%expect_test "constant component" =
   let driver = Driver.create ~initial_input:() ~initial_model:() constant_component in
   let (module H) = Helpers.make_string ~driver in
   H.show ();
-  [%expect {| "some constant value" |}]
+  [%expect {| some constant value |}]
 ;;
 
 let%expect_test "function component" =
@@ -131,11 +131,11 @@ let%expect_test "basic Same_model let syntax" =
   let driver = Driver.create ~initial_input:() ~initial_model:0 component in
   let (module H) = Helpers.make_string_with_inject ~driver in
   H.show ();
-  [%expect {| "5 | 0" |}];
+  [%expect {| 5 | 0 |}];
   H.do_actions [ Increment ];
-  [%expect {| "5 | 1" |}];
+  [%expect {| 5 | 1 |}];
   H.do_actions [ Decrement ];
-  [%expect {| "5 | 0" |}]
+  [%expect {| 5 | 0 |}]
 ;;
 
 let%expect_test "module project field" =
@@ -165,11 +165,11 @@ let%expect_test "module project field" =
   in
   let (module H) = Helpers.make_string_with_inject ~driver in
   H.show ();
-  [%expect {| "0 | 0" |}];
+  [%expect {| 0 | 0 |}];
   H.do_actions [ First Increment ];
-  [%expect {| "1 | 0" |}];
+  [%expect {| 1 | 0 |}];
   H.do_actions [ Second Decrement ];
-  [%expect {| "1 | -1" |}]
+  [%expect {| 1 | -1 |}]
 ;;
 
 let%expect_test "module project with [Nothing.t] action" =
@@ -188,13 +188,13 @@ let%expect_test "module project with [Nothing.t] action" =
   let driver = Driver.create ~initial_input:() ~initial_model:0 component in
   let (module H) = Helpers.make_string_with_inject ~driver in
   H.show ();
-  [%expect {| "0 | 0" |}];
+  [%expect {| 0 | 0 |}];
   H.do_actions [ Increment ];
-  [%expect {| "1 | 1" |}];
+  [%expect {| 1 | 1 |}];
   H.do_actions [ Increment ];
-  [%expect {| "2 | 2" |}];
+  [%expect {| 2 | 2 |}];
   H.do_actions [ Decrement ];
-  [%expect {| "1 | 1" |}]
+  [%expect {| 1 | 1 |}]
 ;;
 
 let%expect_test "incremental fn constructor" =
@@ -213,11 +213,11 @@ let%expect_test "incremental fn constructor" =
     doing math
     doing math
     doing math
-    ((0 1) (1 2) (2 3)) |}];
+    ((0 1)(1 2)(2 3)) |}];
   H.set_model (Int.Map.add_exn initial_model ~key:3 ~data:3);
   [%expect {|
     doing math
-    ((0 1) (1 2) (2 3) (3 4)) |}]
+    ((0 1)(1 2)(2 3)(3 4)) |}]
 ;;
 
 let%expect_test "schedule event from outside of the component" =
@@ -386,15 +386,15 @@ let%expect_test "incremental module constructor" =
   [%expect "()"];
   let model = Set.add initial_model "hello" in
   H.set_model model;
-  [%expect "((5 (hello)))"];
+  [%expect "((5(hello)))"];
   let model = Set.add model "there" in
   H.set_model model;
-  [%expect "((5 (hello there)))"];
+  [%expect "((5(hello there)))"];
   let model = Set.add model "hi" in
   H.set_model model;
-  [%expect "((2 (hi)) (5 (hello there)))"];
+  [%expect "((2(hi))(5(hello there)))"];
   H.do_actions [ Char_count_component.Action.Remove_strings_of_length_5 ];
-  [%expect "((2 (hi)))"]
+  [%expect "((2(hi)))"]
 ;;
 
 let%expect_test "cutoff" =
@@ -457,20 +457,20 @@ let%expect_test "input" =
     Helpers.make_with_inject ~driver ~sexp_of_result:[%sexp_of: int * string list]
   in
   H.show ();
-  [%expect "(0 ())"];
+  [%expect "(0())"];
   H.set_input [ "a"; "b"; "c"; "aa"; "bbb"; "cccc" ];
-  [%expect "(0 ())"];
+  [%expect "(0())"];
   H.do_actions [ Words_counter_component.Action.Increment ];
   let _ = Words_counter_component.Action.Decrement in
-  [%expect "(1 (a b c))"];
+  [%expect "(1(a b c))"];
   H.do_actions [ Words_counter_component.Action.Increment ];
-  [%expect "(2 (aa))"];
+  [%expect "(2(aa))"];
   H.do_actions [ Words_counter_component.Action.Increment ];
-  [%expect "(3 (bbb))"];
+  [%expect "(3(bbb))"];
   H.do_actions [ Words_counter_component.Action.Increment ];
-  [%expect "(4 (cccc))"];
+  [%expect "(4(cccc))"];
   H.set_input [ "aaaa"; "bbbb" ];
-  [%expect {| (4 (aaaa bbbb)) |}]
+  [%expect {| (4(aaaa bbbb)) |}]
 ;;
 
 let%expect_test "compose, pure" =
@@ -568,9 +568,9 @@ let%expect_test "assoc on model" =
   in
   let (module H) = Helpers.make_string_with_inject ~driver in
   H.show ();
-  [%expect {| "((a 0) (b 2))" |}];
+  [%expect {| ((a 0) (b 2)) |}];
   H.do_actions [ "a", Counter_component.Action.Increment ];
-  [%expect {| "((a 1) (b 2))" |}]
+  [%expect {| ((a 1) (b 2)) |}]
 ;;
 
 let%expect_test "assoc on input" =
@@ -583,9 +583,9 @@ let%expect_test "assoc on input" =
   in
   let (module H) = Helpers.make ~driver ~sexp_of_result:[%sexp_of: int String.Map.t] in
   H.show ();
-  [%expect {| ((a 1) (b 3)) |}];
+  [%expect {| ((a 1)(b 3)) |}];
   H.set_input (String.Map.of_alist_exn [ "a", 1; "b", 2 ]);
-  [%expect {| ((a 2) (b 3)) |}]
+  [%expect {| ((a 2)(b 3)) |}]
 ;;
 
 let%expect_test "Incremental.of_incr" =
