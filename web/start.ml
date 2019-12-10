@@ -47,10 +47,31 @@ module Handle = struct
   let outgoing { outgoing_pipe; _ } = outgoing_pipe
 end
 
+module App_input = struct
+  type ('input, 'outgoing) t =
+    { input : 'input
+    ; inject_outgoing : 'outgoing -> Vdom.Event.t
+    }
+  [@@deriving fields]
+
+  let create = Fields.create
+end
+
+module App_result = struct
+  type 'incoming t =
+    { view : Vdom.Node.t
+    ; inject_incoming : 'incoming -> Vdom.Event.t
+    }
+  [@@deriving fields]
+
+  let create = Fields.create
+end
+
 let start_generic_poly
       (type input input_and_inject model action result incoming outgoing)
-      ~(get_dom_and_inject : result -> Vdom.Node.t * (incoming -> Vdom.Event.t))
-      ~(get_input_and_inject : input -> (outgoing -> Vdom.Event.t) -> input_and_inject)
+      ~(get_dom_and_inject : result -> incoming App_result.t)
+      ~(get_input_and_inject :
+          input:input -> inject_outgoing:(outgoing -> Vdom.Event.t) -> input_and_inject)
       ~(initial_input : input)
       ~(initial_model : model)
       ~bind_to_element_with_id
@@ -94,7 +115,7 @@ let start_generic_poly
       let old_model = old_model >>| Option.some in
       let input =
         let%map input = Incr.Var.watch input_var in
-        get_input_and_inject input Out_event.inject
+        get_input_and_inject ~input ~inject_outgoing:Out_event.inject
       in
       let%map snapshot =
         Bonsai.Expert.eval ~input ~old_model ~model ~inject component ~action_type_id
@@ -104,9 +125,9 @@ let start_generic_poly
         apply_action ~schedule_event:Vdom.Event.Expert.handle_non_dom_event_exn action
       in
       let result = Bonsai.Expert.Snapshot.result snapshot in
-      let dom, inject = get_dom_and_inject result in
-      Handle.set_inject handle inject;
-      Incr_dom.Component.create ~apply_action model dom
+      let { App_result.view; inject_incoming } = get_dom_and_inject result in
+      Handle.set_inject handle inject_incoming;
+      Incr_dom.Component.create ~apply_action model view
     ;;
   end
   in
@@ -138,8 +159,9 @@ let start_generic
 (* I can't use currying here because of the value restriction. *)
 let start_standalone ~initial_input ~initial_model ~bind_to_element_with_id component =
   start_generic
-    ~get_dom_and_inject:(fun result -> result, Nothing.unreachable_code)
-    ~get_input_and_inject:(fun input _inject -> input)
+    ~get_dom_and_inject:(fun view ->
+      { App_result.view; inject_incoming = Nothing.unreachable_code })
+    ~get_input_and_inject:(fun ~input ~inject_outgoing:_ -> input)
     ~initial_input
     ~initial_model
     ~bind_to_element_with_id
@@ -149,7 +171,7 @@ let start_standalone ~initial_input ~initial_model ~bind_to_element_with_id comp
 let start ~initial_input ~initial_model ~bind_to_element_with_id component =
   start_generic
     ~get_dom_and_inject:Fn.id
-    ~get_input_and_inject:Tuple2.create
+    ~get_input_and_inject:App_input.create
     ~initial_input
     ~initial_model
     ~bind_to_element_with_id

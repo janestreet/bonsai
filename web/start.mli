@@ -18,6 +18,38 @@ module Handle : sig
   val outgoing : (_, _, 'outgoing) t -> 'outgoing Pipe.Reader.t
 end
 
+(** The input of an application-level component is a value of type
+    [('input, 'outgoing) App_input.t]. *)
+module App_input : sig
+  type ('input, 'outgoing) t
+
+  (** The [input] field is used to access the ['input] to the application that is
+      set from the imperative [Handle.t] value. *)
+  val input : ('input, _) t -> 'input
+
+  (** [inject_outgoing] is used to inject values of the type ['outgoing] into events to
+      communicate with the imperative [Handle.t] holder.  Any values injected via
+      [inject_outgoing] will be present in the ['outgoing Pipe.Reader.t] that can be
+      acquired via {!Handle.outgoing}. *)
+  val inject_outgoing : (_, 'outgoing) t -> 'outgoing -> Vdom.Event.t
+end
+
+(** The result of an application-level component is a value of type ['incoming
+    App_result.t].  This value contains the view of the app, and also an inject function:
+    a way for the holder of the [Handle.t] to send events into the application component.
+
+    If the application developer doesn't want to use incoming events, they should use
+    {!Core_kernel.Nothing.t} for the ['incoming] type, and
+    {!Core_kernel.Nothing.unreachable_code} for the value of [inject_incoming]. *)
+module App_result : sig
+  type 'incoming t
+
+  val create
+    :  view:Vdom.Node.t
+    -> inject_incoming:('incoming -> Vdom.Event.t)
+    -> 'incoming t
+end
+
 (** {1 Start functions} *)
 
 (** Start an application, receiving a handle that can't schedule any actions.
@@ -43,8 +75,5 @@ val start
   :  initial_input:'input
   -> initial_model:'model
   -> bind_to_element_with_id:string
-  -> ( 'input * ('outgoing -> Vdom.Event.t)
-     , 'model
-     , Vdom.Node.t * ('incoming -> Vdom.Event.t) )
-       Bonsai.t
+  -> (('input, 'outgoing) App_input.t, 'model, 'incoming App_result.t) Bonsai.t
   -> ('input, 'incoming, 'outgoing) Handle.t
