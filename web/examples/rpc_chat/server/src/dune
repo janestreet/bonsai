@@ -1,0 +1,4 @@
+(library (name bonsai_chat_native)
+ (preprocess (pps ppx_jane -annotated-ignores))
+ (libraries async_extra.async_bus bonsai_chat_common cohttp_static_handler
+  simple_web_server))

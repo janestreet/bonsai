@@ -43,7 +43,9 @@ module Handle = struct
     | Before_app_start queue -> Queue.iter queue ~f:(schedule t)
   ;;
 
+  let input t = Incr.Var.value t.input_var
   let set_input t input = Incr.Var.set t.input_var input
+  let update_input t ~f = set_input t (f (input t))
   let outgoing { outgoing_pipe; _ } = outgoing_pipe
 end
 

@@ -14,7 +14,9 @@ module Handle : sig
   val stop : _ t -> unit
   val started : _ t -> unit Deferred.t
   val schedule : (_, 'incoming, _) t -> 'incoming -> unit
+  val input : ('input, _, _) t -> 'input
   val set_input : ('input, _, _) t -> 'input -> unit
+  val update_input : ('input, _, _) t -> f:('input -> 'input) -> unit
   val outgoing : (_, _, 'outgoing) t -> 'outgoing Pipe.Reader.t
 end
 

@@ -1,0 +1,2 @@
+(executables (names main) (libraries bonsai_chat_native)
+ (preprocess (pps ppx_jane)))

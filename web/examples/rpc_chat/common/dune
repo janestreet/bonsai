@@ -1,0 +1,2 @@
+(library (name bonsai_chat_common) (preprocess (pps ppx_jane))
+ (libraries core_kernel async_kernel async_rpc_kernel))
