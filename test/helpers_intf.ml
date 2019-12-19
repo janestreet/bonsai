@@ -1,4 +1,5 @@
 open! Core_kernel
+open! Import
 
 module type S = sig
   type input

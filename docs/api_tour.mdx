@@ -1,0 +1,45 @@
+---
+title: "The Bonsai API"
+uuid: 110f47ff-e1ed-4f34-80bb-4d1994bae968
+parent: "../README.md"
+---
+
+<!--
+This is a hack for hiding ocaml evaluation inside an MDX file.  The ocaml code
+gets run (imports are added to the evaluation context), but the code is not
+present in the output documents.
+
+```ocaml
+# open! Bonsai_mdx
+```
+-->
+
+It is recommended that the reader of this documentation understand the concepts
+explained in [The Bonsai Conceptual Model](./concepts.md).
+
+The `bonsai` library is really just one big functor, but for web development
+with Bonsai, we've instantiated this functor alongside some other helpers in
+the `bonsai_web` library.  All examples that follow assume that the following modules
+are open:
+
+```ocaml
+open! Core_kernel
+open! Bonsai_web
+```
+
+Currently, there are no other instantiations of the Bonsai functor, but
+`bonsai_vim`, `bonsai_emacs`, and `bonsai_term` are all potential long-term
+projects that could be built on top of the core Bonsai library.
+
+
+# Table Of Contents
+
+Since the Bonsai library is primarily concerned with manipulating values of
+type `Bonsai.t`,  the library can be broken up into several conceptual categories:
+
+-------------------------------------- --------------------------------------------------------------------------------------------------------------------
+[**Constructors**](./constructors.mdx) Functions that produce `Bonsai.t` values
+[**Combinators**](./combinators.mdx)   Functions that combine multiple `Bonsai.t` values into one
+[**Projections**](./projections.mdx)   Functions that take exactly one `Bonsai.t` and produce a new `Bonsai.t` with different semantics
+[**Collections**](./collections.mdx)   Functions that take exactly one `Bonsai.t` and project the `input` (or `model`) and the result over some collection.
+-------------------------------------- --------------------------------------------------------------------------------------------------------------------

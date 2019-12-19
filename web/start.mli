@@ -56,7 +56,7 @@ end
 
 (** Start an application, receiving a handle that can't schedule any actions.
 
-    The outermost [Bonsai.t]s result type parameter should be a [Vdom.Node.t], which will
+    The outermost [Bonsai.t]'s result type parameter should be a [Vdom.Node.t], which will
     be bound to the DOM element with id [bind_to_element_with_id]. *)
 val start_standalone
   :  initial_input:'input
@@ -68,7 +68,7 @@ val start_standalone
 (** Start an application, receiving a handle that can schedule actions of a user-defined
     type.
 
-    The outermost [Bonsai.t]s result type parameter should be pair of:
+    The outermost [Bonsai.t]'s result type parameter should be a pair consisting of:
 
     - a [Vdom.Node.t], which will be bound to the DOM element with id
       [bind_to_element_with_id]; and

@@ -1,2 +1,3 @@
-(library (name bonsai_test) (libraries bonsai incr_map)
- (preprocess (pps ppx_jane ppx_pattern_bind)))
+(library (name bonsai_test) (libraries bonsai core_kernel incr_map)
+ (preprocess
+  (pps ppx_jane ppx_pattern_bind -annotated-ignores -check-doc-comments)))

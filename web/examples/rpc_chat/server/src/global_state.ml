@@ -11,8 +11,8 @@ let create () =
   let message_bus =
     Bus.create
       [%here]
-      Bus.Callback_arity.Arity1
-      ~on_subscription_after_first_write:Bus.On_subscription_after_first_write.Allow
+      Arity1
+      ~on_subscription_after_first_write:Allow
       ~on_callback_raise:(fun error -> print_s [%sexp (error : Error.t)])
   in
   let messages =
@@ -20,7 +20,7 @@ let create () =
       [ ( Room.of_string "incr_dom-room"
         , Queue.of_list
             [ Message.
-                { room = Room.of_string "bonsai-room"
+                { room = Room.of_string "incr_dom-room"
                 ; author = "Bonsai Developers"
                 ; contents = "hello world!"
                 }

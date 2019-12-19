@@ -1,0 +1,47 @@
+/* I like this styling for ocaml comments */
+code.ocaml .co {
+  font-family: 'Open Sans', sans-serif;
+  font-style: normal;
+  font-size:1.1em;
+  letter-spacing:0.05em;
+  line-height:1.6;
+  color: #e88b8b;
+}
+
+h1, h2 {
+  background: var(--color-bg);
+  position:sticky; 
+  top:60px; 
+  padding:5px;
+  z-index:1;
+}
+
+#floater {
+  position:sticky; 
+  top:60px; 
+  background: white; 
+  width:fit-content; 
+  margin-left:10px;
+  float:right;
+  padding: 5px;
+  border-radius:5px;
+  border-top-right-radius:0;
+  border-top-left-radius:0;
+  z-index:2;
+}
+
+#floater table {
+  margin:0;
+}
+
+#floater #remove {
+  cursor: pointer;
+  background: maroon;
+  color: white;
+  text-align: left;
+  border-radius: 3px;
+  padding: 3px;
+  margin: 3px;
+  font-size: 1.2em;
+  float:right;
+}

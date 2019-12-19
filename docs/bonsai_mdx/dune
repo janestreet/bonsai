@@ -1,0 +1,2 @@
+(library (name bonsai_mdx) (libraries bonsai core_kernel async_kernel)
+ (preprocess (pps ppx_jane -check-doc-comments)) (public_name bonsai.mdx))

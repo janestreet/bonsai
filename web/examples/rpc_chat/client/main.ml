@@ -15,7 +15,7 @@ let process_message_stream ~conn ~app_handle =
   let%bind pipe, _ = Rpc.Pipe_rpc.dispatch_exn Protocol.Message_stream.t conn () in
   let input = Start.Handle.input app_handle in
   Pipe.iter pipe ~f:(fun message ->
-    if Option.exists input.App.Input.current_room ~f:(Room.equal message.room)
+    if [%equal: Room.t option] input.App.Input.current_room (Some message.room)
     then
       Start.Handle.set_input
         app_handle
@@ -54,13 +54,14 @@ let run () =
       ~bind_to_element_with_id:"app"
       App.component
   in
-  let check_hg_version_upon_connection =
-    Rpc.Check_hg_version_upon_connection.Yes { on_version_mismatch = Alert }
+  let%bind conn =
+    Rpc.Connection.client_exn
+      ()
+      ~check_hg_version_upon_connection:(Yes { on_version_mismatch = Alert })
   in
-  let%map conn = Rpc.Connection.client_exn () ~check_hg_version_upon_connection in
-  List.iter
-    [ refresh_rooms; handle_outgoing_bonsai_messages; process_message_stream ]
-    ~f:(fun f -> don't_wait_for (f ~conn ~app_handle))
+  [ refresh_rooms; handle_outgoing_bonsai_messages; process_message_stream ]
+  |> List.map ~f:(fun f -> f ~conn ~app_handle)
+  |> Deferred.List.all_unit
 ;;
 
 let () = don't_wait_for (run ())

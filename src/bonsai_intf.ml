@@ -91,16 +91,44 @@ module type S = sig
 
       This is intended to be used with the {!of_module} function. *)
   module type S = sig
-    module Input : T
-    module Model : T
+    (** A component receives read-only input, either as output from other
+        components or from an external system (e.g. data from a server).  The input
+        is frequently dynamic, but may also be constant. *)
+    module Input : sig
+      type t
+    end
 
+    (** A component's model is a state-machine that the component can read, but
+        also write to.  Because both the input and model are readable, it can be hard
+        to decide whether to request some data from the input or the model.  It is
+        highly recommended to put just the data that needs mutation in [Model.t], and
+        the rest in [Input.t]. *)
+    module Model : sig
+      type t
+    end
+
+    (** Components can change their own [Model.t] by issuing "actions" that
+        perform the state transition.  If you think of the state machine as
+        having state-nodes of type [Model.t], then the arrows between those nodes
+        would be of type [Action.t]. *)
     module Action : sig
       type t [@@deriving sexp_of]
     end
 
-    module Result : T
+    (** While UI components stereotypically produce some kind of "view", with
+        Bonsai, components are small and easy enough to compose that Bonsai
+        components frequently produce intermediate results which are then wired into
+        other components. *)
+    module Result : sig
+      type t
+    end
 
-    (** [apply_action] is a transformation from a model and an action into a new model.
+    (** When an action is raised by this component (via an Event.t), Bonsai
+        will eventually pass that action back to that component's [apply_action]
+        function.  This function is responsible for looking at the model and the
+        incoming action and producing a new model.  
+
+        [apply_action] is a transformation from a model and an action into a new model.
         During the transformation, the component can also emit more actions via
         [schedule_event] or use Async to arrange for [schedule_event] to be called later.
     *)
@@ -112,15 +140,19 @@ module type S = sig
       -> Action.t
       -> Model.t
 
-    (** Computes the [Result.t] of the component based off of the [Model.t].
+    (** [compute] is a function from input and model to the component's result.
+        In a component that produces a view, this function could be thought of as the
+        "view computation function".  
 
-        The [inject] argument is used to transform actions into [Event.t]s for use in
-        event handlers like [on_click]. *)
+        This function is also given an "inject" function which converts this
+        component's [Action.t] to a global [Event.t] which can be given to
+        Bonsai to schedule.  Frequently, this Event.t is embedded within the
+        result as a handler for some kind of user input. *)
     val compute : inject:(Action.t -> Event.t) -> Input.t -> Model.t -> Result.t
 
-    (** A name to identify this component.
-
-        A reasonable fallback is [Source_code_position.to_string [%here]]. *)
+    (** The name of the component.  This is used to identify the component while
+        debugging, and to annotate error messages.  If you can't think of a good
+        name, a reasonable fallback is [Source_code_position.to_string [%here]]. *)
     val name : string
   end
 

@@ -57,7 +57,10 @@ module T = struct
     in
     let submit_button =
       Vdom_input_widgets.Button.simple "send" ~on_click:(fun _ ->
-        Input.inject_send_message input model.Model.message)
+        Vdom.Event.Many
+          [ Input.inject_send_message input model.Model.message
+          ; inject (Action.Update "")
+          ])
     in
     Vdom.Node.div [ Vdom.Attr.id "compose" ] [ text_input; submit_button ]
   ;;

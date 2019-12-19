@@ -1,4 +1,5 @@
 open! Core_kernel
+open! Import
 include Helpers_intf
 
 let make_generic

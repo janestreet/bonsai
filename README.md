@@ -1,111 +1,56 @@
-"`Bonsai`: A library for writing reusable UI components"
-========================================================
+"Bonsai!"
+=========
 
-Bonsai is a library for building reusable UI components inside an
-Incremental-style UI framework such as Incr_dom.  The API is broken
-up into roughly two concepts. 
+Bonsai is a library that is used to build browser-based frontend applications
+in OCaml.  It builds on top of the technology and lessons learned from
+`Incr_dom` [^incr_dom], an incremental frontend framework.
 
-1. Creating components
-2. Combining components
+The main differences between `Incr_dom` and Bonsai are 
 
+- Bonsai has a notion of first-class components - 
+  [read more](./docs/concepts.md)
+- `Incr_dom` expects users to program in the `Incremental` monad; in Bonsai,
+  incrementality is added for you under the hood - 
+  [read more](./docs/incrementality.md)
+- Combining Bonsai components is easy (and fun!) - 
+  [read more](./docs/combinators.mdx)
 
-# Components
+Similarities between `Incr_dom` and Bonsai: 
 
-Before diving into those modules, let's first examine what a
-"Component" is.
+- Both are built on top of Incremental library for performance optimizations
+- Both make use of the `Vdom` library and associated helper libraries 
+  (`lib/vdom_input_widgets`, `lib/vdom_keyboard`, etc..) to help developers 
+  construct the view of the app.
+- Bonsai components are embeddable inside of existing `Incr_dom` apps!
 
-The component type (`('model, 'result) Bonsai.t`) can be thought of as
-a function from `'model` to `'result`, but where the `'result` can
-schedule events of type `'action`. These `'action`s are used to
-produce a new `'model` which in turn causes the `'result` to be
-recomputed. Instances of the `'result` type can contain callbacks
-which schedule `'action`s when interacted with by user (via button
-click, text input, etc). These actions are handled by the components
-`apply_action` function, which yields a new model to be displayed.
+# Table of Contents
 
-The basic life-cycle of a component is illustrated below.
+<!-- This table-of-contents is very dependent on the exact whitespace present.  
+Pandoc really wants to stick paragraph <p> nodes any time that there's even a trace of 
+whitespace inbetween these html nodes... -->
+<div class="toc_node"> <a href="./README.md"> [This Page] </a>
+<div class="toc_node"> <a href="./docs/concepts.md"> Bonsai Concepts </a></div>
+<div class="toc_node"> <a href="./docs/history.md"> A History of Bonsai </a></div>
+<div class="toc_node"> <a href="./docs/incrementality.md"> Incrementality in Bonsai </a></div>
+<div class="toc_node"> <a href="./docs/inside_incr_dom.md"> Using Bonsai inside an Incr_dom App </a></div>
+<div class="toc_node"> <a href="./docs/api_tour.mdx"> The Bonsai API </a>
+<div class="toc_node"> <a href="./docs/constructors.mdx">Constructors </a> </div>
+<div class="toc_node"> <a href="./docs/combinators.mdx"> Combinators</a></div>
+<div class="toc_node"> <a href="./docs/projections.mdx"> Projections </a></div>
+<div class="toc_node"> <s><a href="./docs/collections.mdx"> Collections </a></s></div>
+</div>
+</div>
 
-```svgbob
-                 .----------------.     compute function
-                 |     'model     |-------.
-                 '----------------'       |
-                    ^                     v
-                    |              .-------------.
-new model produced  |              |   'result   |
-                    |              '-------------'
-                    |                     |
-               .----------------.         |
-               |  apply_action  |<--------'
-               '----------------'   'action emitted
-```
+# Getting Started
 
-# Constructing Components
+Reading [Bonsai Concepts](./docs/concepts.md) is the best place to get an
+overview of the library and to build a mental model for structuring Bonsai
+applications.
 
-## `Bonsai.of_module`
+Examples of using Bonsai in a web browser can be found in
+`lib/bonsai_web/examples`.
 
-The most complete component constructor is the `Bonsai.of_module`
-function which takes a first-class module with both the `compute`
-function and `apply_action` function.
-
-Here's an example of an Bonsai_web component:
-
-```ocaml
-module Counter_component = struct
-  module Result = Vdom.Node
-  module Model = Int
-
-  module Action = struct
-    type t =
-      | Increment
-      | Decrement
-    [@@deriving sexp_of]
-  end
-
-  let apply_action ~inject:_ ~schedule_event:_ model = function
-    | Action.Increment -> model + 1
-    | Action.Decrement -> model - 1
-  ;;
-
-  let compute ~inject model =
-    let button label action =
-      let on_click = Vdom.Attr.on_click (fun _ -> inject action) in
-      Vdom.Node.button [ on_click ] [ Vdom.Node.text label ]
-    in
-    Vdom.Node.div
-      []
-      [ button "-1" Action.Decrement
-      ; Vdom.Node.text (Int.to_string model)
-      ; button "+1" Action.Increment
-      ]
-  ;;
-end
-
-let counter_component
-  : ( Counter_component.Result.t, Counter_component.Model.t) Bonsai.t
-  = Bonsai.of_module (module Counter_component)
-;;
-```
-
-Aside from defining the result, model, and action types, this component declares
-its result `compute` function. This component also defines the `apply_action`
-callback which looks at an action and creates a new model based off that action.
-
-## `Bonsai.of_fn`
-
-For components that produce no action, `Bonsai.of_fn` takes a standard function
-`'model -> 'result` and produces a component of type `('model, 'result) Bonsai.t`.
-
-```ocaml
-let rational_component : (string, float * float) Bonsai.t
-  = Bonsai.of_fn (fun (numerator, denominator) ->
-    sprintf "%f / %f" numerator denominator)
-```
-
-## `Bonsai.const`
-
-`Bonsai.const` is used to produce a component whose result never changes.
-It has a model of type `unit`.
-
-```ocaml
-let constant_component: (unit, string) Bonsai.t = Component.const "hello world"
-```
+[^incr_dom]: 
+  For interoperability between Bonsai and `Incr_dom`, see [Using Bonsai Inside
+  Incr_dom](./docs/inside_incr_dom.md).
+  For a short history of Bonsai and `Incr_dom`, see [History](./docs/history.md)

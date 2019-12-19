@@ -1,0 +1,185 @@
+---
+title: "2: Combinators"
+uuid: 16202242-ed98-49aa-804f-e72c0d51ab47
+parent: "./api_tour.mdx"
+---
+
+<div id="floater">
+```
+type ('input, 'model, 'result) t
+```
+------------------- -------------------------------------------------
+<tt>**'input**</tt>   Input to component
+<tt>**'model**</tt>   Component state-machine
+<tt>**'result**</tt>  Type of computed value
+------------------- -------------------------------------------------
+</div>
+
+<!--
+```ocaml
+# open! Bonsai_mdx
+# open! Core_kernel
+```
+-->
+
+One of the main features of Bonsai is the compositionality of its components. [^history]
+These functions allow the program to combine mutliple components into one
+component.
+
+Because a "Bonsai Program" is nothing more than a large component composed
+of smaller pieces, mastering combinators is critical.
+
+## <tt> Bonsai.compose </tt> or  <tt> Bonsai.Infix.( >>> ) </tt>
+
+The `>>>` infix operator connects the output from one component into the input
+of another component.  This is conceptually similar to function composition.
+
+```ocaml
+# #show Bonsai.compose
+val compose :
+  ('i1, 'model, 'r1) Bonsai.t ->
+  ('r1, 'model, 'r2) Bonsai.t -> ('i1, 'model, 'r2) Bonsai.t
+
+# #show Bonsai.Infix.( >>> )
+val ( >>> ) :
+  ('i1, 'model, 'r1) Bonsai.t ->
+  ('r1, 'model, 'r2) Bonsai.t -> ('i1, 'model, 'r2) Bonsai.t
+```
+
+
+### Examples
+
+<!--
+```ocaml
+let limited_textbox: (int, string, Vdom.Node.t) Bonsai.t  = Bonsai.pure (fun _ -> failwith "")
+let slider: (unit, int, int * Vdom.Node.t) Bonsai.t  = Bonsai.pure (fun _ -> failwith "")
+```
+-->
+
+Assume that we have the following Bonsai components:
+
+A textbox component that limits the number of characters to some integer
+(provided via input):
+
+```ocaml
+# #show limited_textbox
+val limited_textbox : (int, string, Vdom.Node.t) Bonsai.t
+```
+
+A numeric slider component that takes no input but returns
+the VDom node alongside its current value:
+
+```ocaml
+# #show slider
+val slider : (unit, int, int * Vdom.Node.t) Bonsai.t
+```
+
+Before composing them, they need to share the same model, so we create a
+record to contain both of the models.
+
+```ocaml
+module Model = struct
+  type t =
+    { limit: int
+    ; text: string
+    } [@@deriving fields]
+end
+```
+
+
+```ocaml
+let arrow_first (t : ('i, 'm, 'r) Bonsai.t) : ('i * 'a, 'm, 'r * 'a) Bonsai.t =
+  let open Bonsai.Let_syntax in
+  let%map x = fst @>> t
+  and y = Bonsai.pure ~f:snd in
+  x, y
+;;
+```
+
+
+```ocaml
+# let slider = slider |> Bonsai.Project.Model.field Model.Fields.limit
+val slider : (unit, Model.t, int * Vdom.Node.t) Bonsai.t = <abstr>
+
+# let limited_textbox =
+    limited_textbox
+    |> Bonsai.Project.Model.field Model.Fields.text
+    |> arrow_first
+val limited_textbox :
+  (int * '_weak1, Model.t, Vdom.Node.t * '_weak1) Bonsai.t = <abstr>
+
+# open Bonsai.Infix
+# let composed = slider >>> limited_textbox
+val composed : (unit, Model.t, Vdom.Node.t * Vdom.Node.t) Bonsai.t = <abstr>
+
+# let both =
+    let layout_both (slider, textbox) = Vdom.Node.div [] [slider; textbox] in
+    composed >>| layout_both
+val both : (unit, Model.t, Vdom.Node.t) Bonsai.t = <abstr>
+```
+
+## <tt> Bonsai.Let\_syntax.Let\_syntax.both </tt>
+
+`Bonsai.Let_syntax.Let_syntax.both` allows you to combine two
+components that have the same input and model, and produces a new
+component whose result is a tuple containing the results from the
+constituent components.
+
+```ocaml
+# #show Bonsai.Let_syntax.Let_syntax.both;;
+val both :
+  ('input, 'model, 'r1) Bonsai.t ->
+  ('input, 'model, 'r2) Bonsai.t -> ('input, 'model, 'r1 * 'r2) Bonsai.t
+```
+
+### Examples
+
+
+<!--
+```ocaml
+let list_of_counters: (unit, int Int.Map.t, Vdom.Node.t) Bonsai.t = Bonsai.pure(fun _ -> failwith "")
+let add_counter: (unit, int Int.Map.t, Vdom.Node.t) Bonsai.t = Bonsai.pure(fun _ -> failwith "")
+```
+-->
+
+Assuming that we have two components already defined, `list_of_counters` and `add_counter`,
+we can combine them with `both`.
+
+```ocaml
+# #show list_of_counters;;
+val list_of_counters : (unit, int Int.Map.t, Vdom.Node.t) Bonsai.t
+
+# #show add_counter;;
+val add_counter : (unit, int Int.Map.t, Vdom.Node.t) Bonsai.t
+
+# let combined = Bonsai.Let_syntax.Let_syntax.both list_of_counters add_counter;;
+val combined : (unit, int Int.Map.t, Vdom.Node.t * Vdom.Node.t) Bonsai.t =
+  <abstr>
+```
+
+## <tt> Bonsai.Let\_syntax </tt>
+
+Instead of using `Bonsai.Let_syntax.Let_syntax.both` directly, most people just
+use the Bonsai `Let_syntax`.  As with `both`, the `'input` and `'model` for all
+components being combined must be the same.
+
+### Examples
+
+
+```ocaml
+# #show list_of_counters;;
+val list_of_counters : (unit, int Int.Map.t, Vdom.Node.t) Bonsai.t
+
+# #show add_counter;;
+val add_counter : (unit, int Int.Map.t, Vdom.Node.t) Bonsai.t
+
+# let combined =
+    let%map.Bonsai list_c = list_of_counters
+    and add_c = add_counter in
+    (* The type of the value *)
+    Vdom.Node.div [] [list_c; add_c];;
+val combined : (unit, int Int.Map.t, Vdom.Node.t) Bonsai.t = <abstr>
+```
+
+[^history]: Bonsai actually got started as a library for "`Incr_dom` combinators!"
+  [history of bonsai](./history.md).
