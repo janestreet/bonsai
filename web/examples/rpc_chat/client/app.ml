@@ -12,7 +12,7 @@ module Input = struct
   let default = { rooms = []; current_room = None; messages = [] }
 end
 
-module Model = Compose.Model
+module Model = Compose_message.Model
 
 let convert_room_list_input app_input =
   let input = Start.App_input.input app_input in
@@ -35,14 +35,14 @@ let convert_messages_panel_input app_input =
 let convert_compose_panel_input app_input =
   let inject = Start.App_input.inject_outgoing app_input in
   let inject_send_message message = message |> Outgoing.Send_message |> inject in
-  Compose.Input.create ~inject_send_message
+  Compose_message.Input.create ~inject_send_message
 ;;
 
 let component =
   let open Bonsai.Infix in
   let%map.Bonsai rooms_list =
     convert_room_list_input @>> Room_list_panel.component |> Bonsai.Project.Model.ignore
-  and compose_panel = convert_compose_panel_input @>> Compose.component
+  and compose_panel = convert_compose_panel_input @>> Compose_message.component
   and messages_panel =
     convert_messages_panel_input @>> Messages_panel.component
     |> Bonsai.Project.Model.ignore

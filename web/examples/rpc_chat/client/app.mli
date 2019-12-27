@@ -13,7 +13,7 @@ module Input : sig
 end
 
 module Model : sig
-  type t = Compose.Model.t
+  type t = Compose_message.Model.t
 end
 
 val component
