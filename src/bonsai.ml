@@ -28,14 +28,43 @@ module Make (Incr : Incremental.S) (Event : Event) :
   end
 
   module Projection = struct
-    module Model = struct
-      type ('m_up, 'm_down) t =
-        { unlift : 'm_up -> 'm_down
-        ; lift : 'm_up -> 'm_down -> 'm_up
-        }
-    end
+    (* {v
+                    up               up'
+                    |                 ^
+                    |                 |
+            unlift  |           lift  +----- up
+                    |                 |
+                    v                 |
+                   down             down'
+         v} *)
+    type ('m_up, 'm_down) t =
+      { unlift : 'm_up -> 'm_down
+      ; lift : 'm_up -> 'm_down -> 'm_up
+      }
 
-    type ('m_up, 'm_down) t = { model : ('m_up, 'm_down) Model.t }
+    (* {v
+                       up               up'
+                       |                 ^
+                       |                 |
+            p1.unlift  |        p1.lift  +----- up
+                       |                 |
+                       v                 |
+                      mid               mid'
+                       |                 ^
+                       |                 |
+            p2.unlift  |        p2.lift  +----- mid
+                       |                 |
+                       v                 |
+                      down              down'
+        v} *)
+    let compose p1 p2 =
+      { lift =
+          (fun m_up m_down ->
+             let m_mid = p1.unlift m_up in
+             p1.lift m_up (p2.lift m_mid m_down))
+      ; unlift = p1.unlift >> p2.unlift
+      }
+    ;;
   end
 
   module Module_component = struct
@@ -160,20 +189,6 @@ module Make (Incr : Incremental.S) (Event : Event) :
 
     type ('input, 'model, 'action, 'result) optimize_type =
       ('input, 'model, 'action, 'result) t -> ('input, 'model, 'action, 'result) t
-
-    type ('input, 'm, 'a1, 'a2, 'result, 'r1, 'r2) both_compose_type =
-      eval1:('input, 'm, 'a1, 'r1) eval_type
-      -> eval2:('input, 'm, 'a2, 'r2) eval_type
-      -> input:'input Incr.t
-      -> old_model:'m option Incr.t
-      -> model:'m Incr.t
-      -> inject:(('a1, 'a2) Either.t -> Event.t)
-      -> f:('r1 -> 'r2 -> 'result)
-      -> action_type_id1:'a1 Type_equal.Id.t
-      -> action_type_id2:'a2 Type_equal.Id.t
-      -> ('input, 'm, 'a1, 'r1) t
-      -> ('input, 'm, 'a2, 'r2) t
-      -> ('m, ('a1, 'a2) Either.t, 'result) Snapshot.t Incr.t
   end
 
   include Module_component
@@ -186,14 +201,18 @@ module Make (Incr : Incremental.S) (Event : Event) :
         ('input * 'model, unit, 'action, 'result) unpacked
         -> ('input, 'model, 'action, 'result) unpacked
     | Projection :
-        ('input, 'm1, 'a, 'result) unpacked * ('m2, 'm1) Projection.t
+        { t : ('input, 'm1, 'a, 'result) unpacked
+        ; projection : ('m2, 'm1) Projection.t
+        }
         -> ('input, 'm2, 'a, 'result) unpacked
     | Module :
         ('input, 'model, 'action, 'result) component_s
         -> ('input, 'model, 'action, 'result) unpacked
     (* Incremental Constructors *)
     | Map_incr :
-        ('input, 'm, 'a, 'r1) unpacked * ('r1 Incr.t -> 'r2 Incr.t)
+        { t : ('input, 'm, 'a, 'r1) unpacked
+        ; f : 'r1 Incr.t -> 'r2 Incr.t
+        }
         -> ('input, 'm, 'a, 'r2) unpacked
     | Switch :
         ((Switch.Case_action.t -> Event.t)
@@ -202,8 +221,8 @@ module Make (Incr : Incremental.S) (Event : Event) :
          -> ('input, 'model, 'result) Switch.Case.t Incr.t)
         -> ('input, 'model, Switch.Case_action.t, 'result) unpacked
     | Cutoff :
-        { cutoff : 'm Incr.Cutoff.t
-        ; component : ('i, 'm, 'a, 'r) unpacked
+        { t : ('i, 'm, 'a, 'r) unpacked
+        ; cutoff : 'm Incr.Cutoff.t
         }
         -> ('i, 'm, 'a, 'r) unpacked
     | Pure_incr :
@@ -214,50 +233,60 @@ module Make (Incr : Incremental.S) (Event : Event) :
         -> ('input, 'model, 'action, 'result) unpacked
     (* Composition and Combinators *)
     | Compose :
-        ('i1, 'm, 'a1, 'r1) unpacked
-        * 'a1 Type_equal.Id.t
-        * ('r1, 'm, 'a2, 'r2) unpacked
-        * 'a2 Type_equal.Id.t
+        { t1 : ('i1, 'm, 'a1, 'r1) unpacked
+        ; action_type_id1 : 'a1 Type_equal.Id.t
+        ; t2 : ('r1, 'm, 'a2, 'r2) unpacked
+        ; action_type_id2 : 'a2 Type_equal.Id.t
+        }
         -> ('i1, 'm, ('a1, 'a2) Either.t, 'r2) unpacked
     | Map :
-        ('input, 'm, 'a, 'r1) unpacked * ('r1 -> 'r2)
+        { t : ('input, 'm, 'a, 'r1) unpacked
+        ; f : 'r1 -> 'r2
+        }
         -> ('input, 'm, 'a, 'r2) unpacked
-    | Both :
-        ('input, 'model, 'a1, 'r1) unpacked
-        * 'a1 Type_equal.Id.t
-        * ('input, 'model, 'a2, 'r2) unpacked
-        * 'a2 Type_equal.Id.t
-        * ('r1 -> 'r2 -> 'result)
+    | Map2 :
+        { t1 : ('input, 'model, 'a1, 'r1) unpacked
+        ; action_type_id1 : 'a1 Type_equal.Id.t
+        ; t2 : ('input, 'model, 'a2, 'r2) unpacked
+        ; action_type_id2 : 'a2 Type_equal.Id.t
+        ; f : 'r1 -> 'r2 -> 'result
+        }
         -> ('input, 'model, ('a1, 'a2) Either.t, 'result) unpacked
     | Option :
-        ('input, 'm, 'a, 'r) unpacked * (unit, 'm option) on_action_mismatch
+        { t : ('input, 'm, 'a, 'r) unpacked
+        ; on_action_for_none : (unit, 'm option) on_action_mismatch
+        }
         -> ('input, 'm option, 'a, 'r option) unpacked
     | Either :
-        ('input, 'm1, 'a1, 'r1) unpacked
-        * 'a1 Type_equal.Id.t
-        * ('input, 'm2, 'a2, 'r2) unpacked
-        * 'a2 Type_equal.Id.t
-        * ( [ `Action_for_first of 'm2 | `Action_for_second of 'm1 ]
-          , ('m1, 'm2) Either.t )
-            on_action_mismatch
+        { t1 : ('input, 'm1, 'a1, 'r1) unpacked
+        ; action_type_id1 : 'a1 Type_equal.Id.t
+        ; t2 : ('input, 'm2, 'a2, 'r2) unpacked
+        ; action_type_id2 : 'a2 Type_equal.Id.t
+        ; on_action_for_other_component :
+            ( [ `Action_for_first of 'm2 | `Action_for_second of 'm1 ]
+            , ('m1, 'm2) Either.t )
+              on_action_mismatch
+        }
         -> ( 'input
            , ('m1, 'm2) Either.t
            , ('a1, 'a2) Either.t
            , ('r1, 'r2) Either.t )
              unpacked
     | Assoc_by_model :
-        (* We need the Type_equal witnesses here because the typechecker's rules aren't
-           powerful enough to just have the Comparator.t here. *)
-        ('k * 'input, 'model, 'action, 'result) unpacked
-        * 'action Type_equal.Id.t
-        * ('model, 'action, 'result, 'k, 'cmp, 'r_by_k, 'm_by_k) Assoc.t
+        { (* We need the Type_equal witnesses here because the typechecker's rules aren't
+             powerful enough to just have the Comparator.t here. *)
+          t : ('k * 'input, 'model, 'action, 'result) unpacked
+        ; action_type_id : 'action Type_equal.Id.t
+        ; assoc : ('model, 'action, 'result, 'k, 'cmp, 'r_by_k, 'm_by_k) Assoc.t
+        }
         -> ('input, 'm_by_k, 'k * 'action, 'r_by_k) unpacked
     | Assoc_by_input :
-        (* We need the Type_equal witnesses here because the typechecker's rules aren't
-           powerful enough to just have the Comparator.t here. *)
-        ('k * 'input, 'model, 'action, 'result) unpacked
-        * 'action Type_equal.Id.t
-        * ('input, 'action, 'result, 'k, 'cmp, 'r_by_k, 'i_by_k) Assoc.t
+        { (* We need the Type_equal witnesses here because the typechecker's rules aren't
+             powerful enough to just have the Comparator.t here. *)
+          t : ('k * 'input, 'model, 'action, 'result) unpacked
+        ; action_type_id : 'action Type_equal.Id.t
+        ; assoc : ('input, 'action, 'result, 'k, 'cmp, 'r_by_k, 'i_by_k) Assoc.t
+        }
         -> ('i_by_k, 'model, 'k * 'action, 'r_by_k) unpacked
     (* For experts *)
     | Full :
@@ -280,36 +309,6 @@ module Make (Incr : Incremental.S) (Event : Event) :
     end)
 
   open C
-
-  module Both = struct
-    let compose : (_, _, _, _, _, _, _) both_compose_type =
-      fun ~eval1
-        ~eval2
-        ~input
-        ~old_model
-        ~model
-        ~inject
-        ~f
-        ~action_type_id1
-        ~action_type_id2
-        a
-        b ->
-        let inject_a e = inject (First e) in
-        let inject_b e = inject (Second e) in
-        let%map a =
-          eval1 ~input ~old_model ~model ~inject:inject_a ~action_type_id:action_type_id1 a
-        and b =
-          eval2 ~input ~old_model ~model ~inject:inject_b ~action_type_id:action_type_id2 b
-        in
-        let apply_action ~schedule_event action =
-          match action with
-          | First a_action -> Snapshot.apply_action a a_action ~schedule_event
-          | Second b_action -> Snapshot.apply_action b b_action ~schedule_event
-        in
-        let result = f (Snapshot.result a) (Snapshot.result b) in
-        Snapshot.create ~result ~apply_action
-    ;;
-  end
 
   let apply_nothing_action ~schedule_event:_ a = Nothing.unreachable_code a
 
@@ -339,7 +338,7 @@ module Make (Incr : Incremental.S) (Event : Event) :
     | Pure_incr f ->
       let%map result = f input in
       Snapshot.create ~result ~apply_action:apply_nothing_action
-    | Cutoff { cutoff; component } ->
+    | Cutoff { t; cutoff } ->
       let model = model >>| Fn.id in
       let old_model = old_model >>| Fn.id in
       Incr.set_cutoff model cutoff;
@@ -351,7 +350,7 @@ module Make (Incr : Incremental.S) (Event : Event) :
            | Some old_value, Some new_value ->
              Incr.Cutoff.should_cutoff cutoff ~old_value ~new_value
            | None, Some _ | Some _, None -> false));
-      eval ~input ~model ~old_model ~inject ~action_type_id component
+      eval ~input ~model ~old_model ~inject ~action_type_id t
     | Full f -> f ~input ~old_model ~model ~inject
     | Switch f ->
       let open Incr.Let_syntax in
@@ -372,10 +371,10 @@ module Make (Incr : Incremental.S) (Event : Event) :
           lift model
       in
       Snapshot.create ~result ~apply_action
-    | Projection (t, { model = model_projection }) ->
-      let model_downwards = Incr.map model ~f:model_projection.unlift in
+    | Projection { t; projection } ->
+      let model_downwards = Incr.map model ~f:projection.unlift in
       let old_model_downwards =
-        Incr.map old_model ~f:(Option.map ~f:model_projection.unlift)
+        Incr.map old_model ~f:(Option.map ~f:projection.unlift)
       in
       let%map snapshot =
         eval
@@ -389,37 +388,39 @@ module Make (Incr : Incremental.S) (Event : Event) :
       let result = Snapshot.result snapshot in
       let apply_action ~schedule_event a =
         let inner_model = Snapshot.apply_action snapshot ~schedule_event a in
-        model_projection.lift model inner_model
+        projection.lift model inner_model
       in
       Snapshot.create ~result ~apply_action
-    | Compose (a, a_id, b, b_id) ->
-      let inject_a e = inject (First e) in
-      let inject_b e = inject (Second e) in
-      let a = eval a ~input ~old_model ~model ~inject:inject_a ~action_type_id:a_id in
-      let b =
+    | Compose { t1; action_type_id1; t2; action_type_id2 } ->
+      let s1 =
+        let inject e = inject (First e) in
+        eval t1 ~input ~old_model ~model ~inject ~action_type_id:action_type_id1
+      in
+      let s2 =
+        let inject e = inject (Second e) in
         eval
-          b
-          ~input:(a >>| Snapshot.result)
+          t2
+          ~input:(s1 >>| Snapshot.result)
           ~old_model
           ~model
-          ~inject:inject_b
-          ~action_type_id:b_id
+          ~inject
+          ~action_type_id:action_type_id2
       in
-      let%map a_apply_action = a >>| Snapshot.apply_action
-      and b_apply_action = b >>| Snapshot.apply_action
-      and b_result = b >>| Snapshot.result in
+      let%map apply_action1 = s1 >>| Snapshot.apply_action
+      and apply_action2 = s2 >>| Snapshot.apply_action
+      and result2 = s2 >>| Snapshot.result in
       let apply_action ~schedule_event action =
         match action with
-        | First a_action -> a_apply_action a_action ~schedule_event
-        | Second b_action -> b_apply_action b_action ~schedule_event
+        | First action1 -> apply_action1 action1 ~schedule_event
+        | Second action2 -> apply_action2 action2 ~schedule_event
       in
-      Snapshot.create ~result:b_result ~apply_action
-    | Map (t, f) ->
+      Snapshot.create ~result:result2 ~apply_action
+    | Map { t; f } ->
       let%map snapshot = eval ~input ~old_model ~model ~inject ~action_type_id t in
       Snapshot.create
         ~result:(f (Snapshot.result snapshot))
         ~apply_action:(Snapshot.apply_action snapshot)
-    | Map_incr (t, f) ->
+    | Map_incr { t; f } ->
       let snapshot = eval ~input ~old_model ~model ~inject ~action_type_id t in
       let result = snapshot >>| Snapshot.result |> f in
       let apply_action = snapshot >>| Snapshot.apply_action in
@@ -438,20 +439,22 @@ module Make (Incr : Incremental.S) (Event : Event) :
       let%map apply_action = M.apply_action input model ~inject
       and result = M.compute input model ~inject in
       Snapshot.create ~result ~apply_action
-    | Both (a, action_type_id1, b, action_type_id2, f) ->
-      Both.compose
-        ~eval1:eval
-        ~eval2:eval
-        ~input
-        ~old_model
-        ~model
-        ~inject
-        ~f
-        ~action_type_id1
-        ~action_type_id2
-        a
-        b
-    | Option (t, on_action_for_none) ->
+    | Map2 { t1; action_type_id1; t2; action_type_id2; f } ->
+      let%map s1 =
+        let inject e = inject (First e) in
+        eval ~input ~old_model ~model ~inject ~action_type_id:action_type_id1 t1
+      and s2 =
+        let inject e = inject (Second e) in
+        eval ~input ~old_model ~model ~inject ~action_type_id:action_type_id2 t2
+      in
+      let apply_action ~schedule_event action =
+        match action with
+        | First action1 -> Snapshot.apply_action s1 action1 ~schedule_event
+        | Second action2 -> Snapshot.apply_action s2 action2 ~schedule_event
+      in
+      let result = f (Snapshot.result s1) (Snapshot.result s2) in
+      Snapshot.create ~result ~apply_action
+    | Option { t; on_action_for_none } ->
       let none_old_model = Incr.const None in
       let error_message action =
         [%message
@@ -483,7 +486,8 @@ module Make (Incr : Incremental.S) (Event : Event) :
            Some (Snapshot.apply_action snapshot ~schedule_event a)
          in
          Snapshot.create ~result ~apply_action)
-    | Either (t1, action_type_id1, t2, action_type_id2, on_action_for_other_component) ->
+    | Either { t1; action_type_id1; t2; action_type_id2; on_action_for_other_component }
+      ->
       (* I couldn't figure out how to pull each case out into another function even
          though they are similar. *)
       let outer_model = model in
@@ -546,7 +550,7 @@ module Make (Incr : Incremental.S) (Event : Event) :
            | First _, `Custom handler -> handler (`Action_for_first model)
          in
          Snapshot.create ~result ~apply_action)
-    | Assoc_by_model (t, action_type_id, { r_by_k = T; d_by_k = T }) ->
+    | Assoc_by_model { t; action_type_id; assoc = { r_by_k = T; d_by_k = T } } ->
       (* I couldn't figure out how to pull this out into another function *)
       let%bind comparator = model >>| Map.comparator_s in
       let (module Current_comparator) = comparator in
@@ -597,7 +601,7 @@ module Make (Incr : Incremental.S) (Event : Event) :
       let%map apply_action = apply_action
       and result = results_map in
       Snapshot.create ~result ~apply_action
-    | Assoc_by_input (t, action_type_id, { r_by_k = T; d_by_k = T }) ->
+    | Assoc_by_input { t; action_type_id; assoc = { r_by_k = T; d_by_k = T } } ->
       (* I couldn't figure out how to pull this out into another function *)
       let%bind comparator = input >>| Map.comparator_s in
       let (module Current_comparator) = comparator in
@@ -629,38 +633,37 @@ module Make (Incr : Incremental.S) (Event : Event) :
       let%map apply_action = apply_action
       and result = results_map in
       Snapshot.create ~result ~apply_action
+  ;;
 
-  and optimize : type i m a r. (i, m, a, r) optimize_type = function
-    | Map (c, f) ->
-      (match optimize c with
+  let rec optimize : type i m a r. (i, m, a, r) optimize_type = function
+    | Constant _ as t -> t
+    | Pure _ as t -> t
+    | With_readonly_model t -> With_readonly_model (optimize t)
+    | Module _ as t -> t
+    | Map_incr r -> Map_incr { r with t = optimize r.t }
+    | Switch _ as t -> t
+    | Cutoff r -> Cutoff { r with t = optimize r.t }
+    | Pure_incr _ as t -> t
+    | Module_incr _ as t -> t
+    | Compose r -> Compose { r with t1 = optimize r.t1; t2 = optimize r.t2 }
+    | Map { t; f } ->
+      (match optimize t with
        | Constant r -> Constant (f r)
-       | Map (c, g) -> Map (c, f << g)
+       | Map { t; f = f_inner } -> Map { t; f = f << f_inner }
        | Pure f_inner -> Pure (f << f_inner)
-       | Both (l, ati1, r, ati2, f') ->
-         let g a b = f (f' a b) in
-         Both (l, ati1, r, ati2, g)
-       | other -> Map (other, f))
-    | Projection (c1, p1) ->
-      (match optimize c1 with
-       | Projection (c2, p2) ->
-         let a =
-           { Projection.model =
-               { lift =
-                   (fun m_up m_down ->
-                      let m_mid = p1.model.unlift m_up in
-                      p1.model.lift m_up (p2.model.lift m_mid m_down))
-               ; unlift = (fun m -> p2.model.unlift (p1.model.unlift m))
-               }
-           }
-         in
-         Projection (c2, a)
-       | other -> Projection (other, p1))
-    | Both (l, ati1, r, ati2, f) ->
-      let l = optimize l in
-      let r = optimize r in
-      Both (l, ati1, r, ati2, f)
-    | Assoc_by_model (t, ati, cmp) -> Assoc_by_model (optimize t, ati, cmp)
-    | other -> other
+       | Map2 r -> Map2 { r with f = (fun a b -> f (r.f a b)) }
+       | t -> Map { t; f })
+    | Projection { t; projection = p1 } ->
+      (match optimize t with
+       | Projection { t; projection = p2 } ->
+         Projection { t; projection = Projection.compose p1 p2 }
+       | t -> Projection { t; projection = p1 })
+    | Map2 r -> Map2 { r with t1 = optimize r.t1; t2 = optimize r.t2 }
+    | Option r -> Option { r with t = optimize r.t }
+    | Either r -> Either { r with t1 = optimize r.t1; t2 = optimize r.t2 }
+    | Assoc_by_model r -> Assoc_by_model { r with t = optimize r.t }
+    | Assoc_by_input r -> Assoc_by_input { r with t = optimize r.t }
+    | Full _ as t -> t
   ;;
 
   let nothing_type_id =
@@ -686,23 +689,27 @@ module Make (Incr : Incremental.S) (Event : Event) :
     T (Module m, Type_equal.Id.create ~name:M.name [%sexp_of: M.Action.t])
   ;;
 
-  let compose (T (at, ati)) (T (bt, bti)) =
+  let compose (T (t1, action_type_id1)) (T (t2, action_type_id2)) =
     T
-      ( Compose (at, ati, bt, bti)
+      ( Compose { t1; action_type_id1; t2; action_type_id2 }
       , Type_equal.Id.create
           ~name:(Source_code_position.to_string [%here])
-          (Either.sexp_of_t (Type_equal.Id.to_sexp ati) (Type_equal.Id.to_sexp bti)) )
+          (Either.sexp_of_t
+             (Type_equal.Id.to_sexp action_type_id1)
+             (Type_equal.Id.to_sexp action_type_id2)) )
   ;;
 
-  let map (T (t, ati)) ~f = T (Map (t, f), ati)
+  let map (T (t, action_type_id)) ~f = T (Map { t; f }, action_type_id)
 
-  let map2 (T (a, ati)) (T (b, bti)) ~f =
+  let map2 (T (t1, action_type_id1)) (T (t2, action_type_id2)) ~f =
     T
-      ( Both (a, ati, b, bti, f)
+      ( Map2 { t1; action_type_id1; t2; action_type_id2; f }
         ,
         Type_equal.Id.create
           ~name:(Source_code_position.to_string [%here])
-          (Either.sexp_of_t (Type_equal.Id.to_sexp ati) (Type_equal.Id.to_sexp bti)) )
+          (Either.sexp_of_t
+             (Type_equal.Id.to_sexp action_type_id1)
+             (Type_equal.Id.to_sexp action_type_id2)) )
   ;;
 
   let map_input t ~f = compose (pure ~f) t
@@ -744,8 +751,8 @@ module Make (Incr : Incremental.S) (Event : Event) :
 
   module Project = struct
     module Model = struct
-      let f (T (t, ati)) ~unlift ~lift =
-        T (Projection (t, Projection.{ model = { unlift; lift } }), ati)
+      let f (T (t, action_type_id)) ~unlift ~lift =
+        T (Projection { t; projection = { unlift; lift } }, action_type_id)
       ;;
 
       let field field t = f t ~unlift:(Field.get field) ~lift:(Field.fset field)
@@ -764,8 +771,12 @@ module Make (Incr : Incremental.S) (Event : Event) :
     let pure ~f = T (Pure_incr f, nothing_type_id)
     let of_incr t = pure ~f:(Fn.const t)
     let pure_from_model ~f = compose (const ()) (pure ~f |> Project.Model.to_input)
-    let with_cutoff (T (c, ati)) ~cutoff = T (Cutoff { cutoff; component = c }, ati)
-    let map (T (c, ati)) ~f = T (Map_incr (c, f), ati)
+
+    let with_cutoff (T (t, action_type_id)) ~cutoff =
+      T (Cutoff { t; cutoff }, action_type_id)
+    ;;
+
+    let map (T (t, action_type_id)) ~f = T (Map_incr { t; f }, action_type_id)
     let map_input t ~f = compose (pure ~f) t
 
     module type S = Module_component.S_incremental
@@ -829,8 +840,11 @@ module Make (Incr : Incremental.S) (Event : Event) :
   module Option = struct
     let default_on_action_for_none = `Ignore
 
-    let wrap_model ?(on_action_for_none = default_on_action_for_none) (T (t, ati)) =
-      T (Option (t, on_action_for_none), ati)
+    let wrap_model
+          ?(on_action_for_none = default_on_action_for_none)
+          (T (t, action_type_id))
+      =
+      T (Option { t; on_action_for_none }, action_type_id)
     ;;
 
     let wrap_model_with_default ?on_action_for_none t ~default =
@@ -848,14 +862,17 @@ module Make (Incr : Incremental.S) (Event : Event) :
 
     let wrap_model
           ?(on_action_for_other_component = default_on_action_for_other_component)
-          (T (a, ati))
-          (T (b, bti))
+          (T (t1, action_type_id1))
+          (T (t2, action_type_id2))
       =
       T
-        ( Either (a, ati, b, bti, on_action_for_other_component)
+        ( Either
+            { t1; action_type_id1; t2; action_type_id2; on_action_for_other_component }
         , Type_equal.Id.create
             ~name:(Source_code_position.to_string [%here])
-            (Either.sexp_of_t (Type_equal.Id.to_sexp ati) (Type_equal.Id.to_sexp bti)) )
+            (Either.sexp_of_t
+               (Type_equal.Id.to_sexp action_type_id1)
+               (Type_equal.Id.to_sexp action_type_id2)) )
     ;;
 
     let wrap_model_with_same_result ?on_action_for_other_component a b =
@@ -872,7 +889,7 @@ module Make (Incr : Incremental.S) (Event : Event) :
     let associ_model
           (type k cmp)
           ?(comparator : (k, cmp) Map.comparator option)
-          (T (t, ati))
+          (T (t, action_type_id))
       =
       let sexp_of_key =
         match comparator with
@@ -880,10 +897,10 @@ module Make (Incr : Incremental.S) (Event : Event) :
         | None -> sexp_of_opaque
       in
       T
-        ( Assoc_by_model (t, ati, { r_by_k = T; d_by_k = T })
+        ( Assoc_by_model { t; action_type_id; assoc = { r_by_k = T; d_by_k = T } }
         , Type_equal.Id.create
             ~name:(Source_code_position.to_string [%here])
-            (sexp_of_pair sexp_of_key (Type_equal.Id.to_sexp ati)) )
+            (sexp_of_pair sexp_of_key (Type_equal.Id.to_sexp action_type_id)) )
     ;;
 
     let assoc_model ?comparator t = associ_model ?comparator (snd @>> t)
@@ -891,7 +908,7 @@ module Make (Incr : Incremental.S) (Event : Event) :
     let associ_input
           (type k cmp)
           ?(comparator : (k, cmp) Map.comparator option)
-          (T (t, ati))
+          (T (t, action_type_id))
       =
       let sexp_of_key =
         match comparator with
@@ -899,10 +916,10 @@ module Make (Incr : Incremental.S) (Event : Event) :
         | None -> sexp_of_opaque
       in
       T
-        ( Assoc_by_input (t, ati, { r_by_k = T; d_by_k = T })
+        ( Assoc_by_input { t; action_type_id; assoc = { r_by_k = T; d_by_k = T } }
         , Type_equal.Id.create
             ~name:(Source_code_position.to_string [%here])
-            (sexp_of_pair sexp_of_key (Type_equal.Id.to_sexp ati)) )
+            (sexp_of_pair sexp_of_key (Type_equal.Id.to_sexp action_type_id)) )
     ;;
 
     let assoc_input ?comparator t = associ_input ?comparator (snd @>> t)
@@ -960,6 +977,6 @@ module Make (Incr : Incremental.S) (Event : Event) :
     let conceal = Fn.id
     let of_full ~f ~action_type_id = T (Full f, action_type_id)
     let eval = eval
-    let optimize (T (t, ati)) = T (optimize t, ati)
+    let optimize (T (t, action_type_id)) = T (optimize t, action_type_id)
   end
 end
