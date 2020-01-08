@@ -618,3 +618,77 @@ let%expect_test "id" =
   H.set_model "world";
   [%expect {| (20 world) |}]
 ;;
+
+let%expect_test "enum" =
+  let component =
+    Bonsai.enum
+      (module Bool)
+      ~which:(fun _ model -> model)
+      ~handle:(function
+        | true -> Bonsai.pure ~f:(sprintf "true %d")
+        | false -> Bonsai.pure ~f:(sprintf "false %d"))
+  in
+  let driver = Driver.create ~initial_input:5 ~initial_model:true component in
+  let (module H) = Helpers.make_string ~driver in
+  H.show ();
+  [%expect {| true 5 |}];
+  H.set_input 10;
+  [%expect {| true 10 |}];
+  H.set_model false;
+  [%expect {| false 10 |}];
+  H.set_input 5;
+  [%expect {| false 5 |}]
+;;
+
+let%expect_test "enum with action handling `Ignore" =
+  let component =
+    Bonsai.enum
+      (module Bool)
+      ~which:(fun _ model -> model mod 3 = 0)
+      ~handle:(function
+        | false -> Bonsai.of_module (module Counter_component)
+        | true ->
+          Bonsai.pure_from_model ~f:(fun model ->
+            Int.to_string model, fun _ -> failwith "cant raise actions out of this one"))
+  in
+  let driver = Driver.create ~initial_model:1 ~initial_input:() component in
+  let (module H) = Helpers.make_string_with_inject ~driver in
+  H.show ();
+  [%expect "1"];
+  H.do_actions [ Counter_component.Action.Increment ];
+  [%expect "2"];
+  H.do_actions
+    (* The second of these actions is ignored. *)
+    [ Counter_component.Action.Increment; Counter_component.Action.Increment ];
+  [%expect "3"]
+;;
+
+let%expect_test "enum with action handling `Ignore" =
+  let component =
+    Bonsai.enum
+      ~on_action_mismatch:`Raise
+      (module Bool)
+      ~which:(fun _ model -> model mod 3 = 0)
+      ~handle:(function
+        | false -> Bonsai.of_module (module Counter_component)
+        | true ->
+          Bonsai.pure_from_model ~f:(fun model ->
+            Int.to_string model, fun _ -> failwith "cant raise actions out of this one"))
+  in
+  let driver = Driver.create ~initial_model:1 ~initial_input:() component in
+  let (module H) = Helpers.make_string_with_inject ~driver in
+  H.show ();
+  [%expect "1"];
+  H.do_actions [ Counter_component.Action.Increment ];
+  [%expect "2"];
+  Expect_test_helpers_kernel.require_does_raise [%here] (fun () ->
+    H.do_actions
+      (* The second of these actions throws the exception that follows. *)
+      [ Counter_component.Action.Increment; Counter_component.Action.Increment ]);
+  [%expect
+    {|
+    ("Component received an action for key"
+      (action_key false)
+      "while in the key"
+      (current_key true)) |}]
+;;

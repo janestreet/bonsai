@@ -50,6 +50,17 @@ module type S = sig
       input of [b]. *)
   val compose : ('i1, 'model, 'r1) t -> ('r1, 'model, 'r2) t -> ('i1, 'model, 'r2) t
 
+  module type Enum = sig
+    type t [@@deriving sexp, compare, enumerate]
+  end
+
+  val enum
+    :  ?on_action_mismatch:('key * 'model, 'model) on_action_mismatch
+    -> (module Enum with type t = 'key)
+    -> which:('input -> 'model -> 'key)
+    -> handle:('key -> ('input, 'model, 'result) t)
+    -> ('input, 'model, 'result) t
+
   module Infix : sig
     (** [a >>> b] is [compose a b] *)
     val ( >>> ) : ('i1, 'model, 'r1) t -> ('r1, 'model, 'r2) t -> ('i1, 'model, 'r2) t

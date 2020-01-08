@@ -158,12 +158,15 @@ module Make (Incr : Incremental.S) (Event : Event) :
         | T :
             { action : 'a
             ; type_id : 'a Type_equal.Id.t
+            ; userdata : 'k
+            ; sexp_of_userdata : 'k -> Sexp.t
             }
             -> t
 
-      let sexp_of_t (T { action; type_id }) =
+      let sexp_of_t (T { action; type_id; userdata; sexp_of_userdata }) =
         let sexp_of_action = Type_equal.Id.to_sexp type_id in
-        [%message "Bonsai.Switch.Case_action" (action : action)]
+        [%message
+          "Bonsai.Switch.Case_action" (action : action) "for" (userdata : userdata)]
       ;;
 
       let type_id : t Type_equal.Id.t =
@@ -214,6 +217,11 @@ module Make (Incr : Incremental.S) (Event : Event) :
         ; f : 'r1 Incr.t -> 'r2 Incr.t
         }
         -> ('input, 'm, 'a, 'r2) unpacked
+    | Enum :
+        { components : ('key, ('input, 'model, 'action, 'result) unpacked, 'cmp) Map.t
+        ; which : 'input -> 'model -> 'key
+        }
+        -> ('input, 'model, 'action, 'result) unpacked
     | Switch :
         ((Switch.Case_action.t -> Event.t)
          -> 'input Incr.t
@@ -225,6 +233,14 @@ module Make (Incr : Incremental.S) (Event : Event) :
         ; cutoff : 'm Incr.Cutoff.t
         }
         -> ('i, 'm, 'a, 'r) unpacked
+    | Erase_action :
+        { t : ('i, 'm, 'a, 'r) unpacked
+        ; action_type_id : 'a Type_equal.Id.t
+        ; sexp_of_key : 'k -> Sexp.t
+        ; key : 'k
+        ; on_action_mismatch : ('k * 'm, 'm) on_action_mismatch
+        }
+        -> ('i, 'm, Switch.Case_action.t, 'r) unpacked
     | Pure_incr :
         ('input Incr.t -> 'result Incr.t)
         -> ('input, _, Nothing.t, 'result) unpacked
@@ -352,6 +368,70 @@ module Make (Incr : Incremental.S) (Event : Event) :
            | None, Some _ | Some _, None -> false));
       eval ~input ~model ~old_model ~inject ~action_type_id t
     | Full f -> f ~input ~old_model ~model ~inject
+    | Erase_action
+        { t = component
+        ; action_type_id = erased_action_type_id
+        ; key
+        ; sexp_of_key
+        ; on_action_mismatch
+        } ->
+      let inject action =
+        inject
+          (Switch.Case_action.T
+             { action
+             ; type_id = erased_action_type_id
+             ; userdata = key
+             ; sexp_of_userdata = sexp_of_key
+             })
+      in
+      let error_message ~action_key ~current_key =
+        [%message
+          "Component received an action for key"
+            (action_key : Sexp.t)
+            "while in the key"
+            (current_key : key)]
+      in
+      let%map model = model
+      and snapshot =
+        eval
+          ~input
+          ~model
+          ~old_model
+          ~inject
+          ~action_type_id:erased_action_type_id
+          component
+      in
+      let apply_action ~schedule_event a =
+        let (Switch.Case_action.T { action; type_id; userdata; sexp_of_userdata }) = a in
+        match Type_equal.Id.same_witness type_id erased_action_type_id with
+        | Some T -> Snapshot.apply_action snapshot ~schedule_event action
+        | None ->
+          (match on_action_mismatch with
+           | `Ignore -> model
+           | `Raise ->
+             raise_s
+               (error_message ~action_key:([%sexp_of: userdata] userdata) ~current_key:key)
+           | `Warn ->
+             eprint_s
+               (error_message ~action_key:([%sexp_of: userdata] userdata) ~current_key:key);
+             model
+           | `Custom f -> f (key, model))
+      in
+      let result = Snapshot.result snapshot in
+      Snapshot.create ~result ~apply_action
+    | Enum { components; which } ->
+      let key =
+        let%map model = model
+        and input = input in
+        which input model
+      in
+      components
+      |> Core_kernel.Map.comparator
+      |> (fun c -> c.Comparator.compare)
+      |> Incremental.Cutoff.of_compare
+      |> Incr.set_cutoff key;
+      let%bind component = key >>| Map.find_exn components in
+      eval ~input ~model ~old_model ~inject ~action_type_id component
     | Switch f ->
       let open Incr.Let_syntax in
       let%bind (T ({ input; model; compute; lift }, type_id)) = f inject input model in
@@ -360,7 +440,7 @@ module Make (Incr : Incremental.S) (Event : Event) :
       let result = Snapshot.result snapshot in
       let apply_action
             ~schedule_event
-            (T { action; type_id = type_id' } : Switch.Case_action.t)
+            (T { action; type_id = type_id'; _ } : Switch.Case_action.t)
         =
         match Type_equal.Id.same_witness type_id type_id' with
         | Some T ->
@@ -663,6 +743,8 @@ module Make (Incr : Incremental.S) (Event : Event) :
     | Either r -> Either { r with t1 = optimize r.t1; t2 = optimize r.t2 }
     | Assoc_by_model r -> Assoc_by_model { r with t = optimize r.t }
     | Assoc_by_input r -> Assoc_by_input { r with t = optimize r.t }
+    | Erase_action r -> Erase_action { r with t = optimize r.t }
+    | Enum r -> Enum { r with components = Map.map r.components ~f:optimize }
     | Full _ as t -> t
   ;;
 
@@ -676,6 +758,35 @@ module Make (Incr : Incremental.S) (Event : Event) :
 
   let const r = T (Constant r, nothing_type_id)
   let pure ~f = T (Pure f, nothing_type_id)
+
+  module type Enum = sig
+    type t [@@deriving sexp, compare, enumerate]
+  end
+
+  let enum
+        (type k)
+        ?(on_action_mismatch = `Ignore)
+        (module E : Enum with type t = k)
+        ~which
+        ~(handle : k -> (_, _, _) t)
+    =
+    let module E_map = Map.Make (E) in
+    let f key =
+      let (T (unpacked, action_type_id)) = handle key in
+      Erase_action
+        { t = unpacked
+        ; action_type_id
+        ; key
+        ; sexp_of_key = E.sexp_of_t
+        ; on_action_mismatch
+        }
+    in
+    let components =
+      List.fold E.all ~init:E_map.empty ~f:(fun map k ->
+        Map.add_exn map ~key:k ~data:(f k))
+    in
+    T (Enum { components; which }, Switch.Case_action.type_id)
+  ;;
 
   (* Modifier Functions *)
 
@@ -816,7 +927,13 @@ module Make (Incr : Incremental.S) (Event : Event) :
       let g inject =
         let create_case (T (component, action_type_id)) ~case_input ~case_model ~lift =
           let inject action =
-            inject (Switch.Case_action.T { action; type_id = action_type_id })
+            inject
+              (Switch.Case_action.T
+                 { action
+                 ; type_id = action_type_id
+                 ; userdata = ()
+                 ; sexp_of_userdata = sexp_of_opaque
+                 })
           in
           let compute input model =
             eval
