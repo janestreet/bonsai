@@ -46,14 +46,10 @@ module T = struct
             ]
         else Vdom.Event.Ignore)
     in
+    let on_input = Vdom.Attr.on_input (fun _ s -> inject (Action.Update s)) in
+    let value = Vdom.Attr.string_property "value" model.message in
     let text_input =
-      Vdom_input_widgets.Entry.text
-        ~extra_attrs:[ on_ret ]
-        ~on_input:(function
-          | Some s -> inject (Action.Update s)
-          | None -> inject (Action.Update ""))
-        ~value:(Some model.Model.message)
-        ()
+      Vdom.Node.input [ on_ret; on_input; value ] [ Vdom.Node.text "submit" ]
     in
     let submit_button =
       Vdom_input_widgets.Button.simple "send" ~on_click:(fun _ ->

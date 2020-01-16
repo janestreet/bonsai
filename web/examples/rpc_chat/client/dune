@@ -1,4 +1,4 @@
 (executables (names main)
- (libraries async_kernel async_js_jane core_kernel bonsai_web
-  bonsai_chat_common vdom_input_widgets)
+ (libraries async_kernel async_js core_kernel bonsai_web bonsai_chat_common
+  vdom_input_widgets)
  (preprocess (pps js_of_ocaml-ppx ppx_jane)))

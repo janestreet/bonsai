@@ -1,13 +1,13 @@
 # Bonsai inside of `Incr_dom`
 
 One of the main goals of Bonsai has always been good interoperability
-with `Incr_dom`.  Because of the design decisions detailed in [A
-History of Bonsai](./history.md), embedding a Bonsai component inside
+with `Incr_dom`.  Because of the design decisions detailed in 
+[A History of Bonsai](./history.md), embedding a Bonsai component inside
 of an `Incr_dom` app is trivial!  (Going the other way -- embedding part
 of an `Incr_dom` program inside a Bonsai component -- is not yet possible).
 
 The module that facilitates this translation is `Bonsai_web.To_incr_dom`, which
-contains two functions (`convert`, `convert_with_extra`) and a module type
+contains two functions (`convert` and `convert_with_extra`) and a module type
 `S`.
 
 Looking at the type signature for `convert`, we see that it's a function that takes a
@@ -44,9 +44,9 @@ module type S = sig
 end
 ```
 
-If you've read the [History](./history.md) page, you'll recognize the
-`create` function as what I defined as "the closest thing that
-`Incr_dom` has to components."
+If you've read the [History](./history.md) page, you'll recognize the `create`
+function as what I defined as "the closest thing that `Incr_dom` has to
+components."
 
 It is common to use the `convert` function like so:
 
@@ -60,6 +60,5 @@ end = struct
 end
 ```
 
-To see an example of these APIs being used to embed a Bonsai component inside
-an `Incr_dom` app, check out the example in
+To see an example of these APIs in use, check out the example in
 `web/examples/inside_incr_dom/`.

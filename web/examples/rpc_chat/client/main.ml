@@ -1,7 +1,7 @@
 open! Core_kernel
 open! Async_kernel
 open Bonsai_web
-open Async_js_jane
+open Async_js
 open Bonsai_chat_common
 module Outgoing_command = Outgoing
 module Incoming_command = Nothing
@@ -13,8 +13,8 @@ let refresh_rooms ~conn ~app_handle =
 
 let process_message_stream ~conn ~app_handle =
   let%bind pipe, _ = Rpc.Pipe_rpc.dispatch_exn Protocol.Message_stream.t conn () in
-  let input = Start.Handle.input app_handle in
   Pipe.iter pipe ~f:(fun message ->
+    let input = Start.Handle.input app_handle in
     if [%equal: Room.t option] input.App.Input.current_room (Some message.room)
     then
       Start.Handle.set_input
@@ -54,11 +54,7 @@ let run () =
       ~bind_to_element_with_id:"app"
       App.component
   in
-  let%bind conn =
-    Rpc.Connection.client_exn
-      ()
-      ~check_hg_version_upon_connection:(Yes { on_version_mismatch = Alert })
-  in
+  let%bind conn = Rpc.Connection.client_exn () in
   [ refresh_rooms; handle_outgoing_bonsai_messages; process_message_stream ]
   |> List.map ~f:(fun f -> f ~conn ~app_handle)
   |> Deferred.List.all_unit

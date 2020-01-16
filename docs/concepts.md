@@ -58,19 +58,21 @@ these concepts in mind.
 ## Functional UI
 
 At first glance, functions appear to be a good building block for user
-interfaces.  If you could imagine a hypothetical `View.t` type whose
-value represents a specific display of UI elements, a GUI programmer
-writing a function of type `val render : Application_state.t ->
-View.t` should be enough to define the visualization of the state of
-some app.  As the `Application_state` changes, this render function
-gets called and pushes the newly generated View.t out to be displayed.
+interfaces.  If you could imagine a hypothetical `View.t` type whose value
+represents a specific display of UI elements, a GUI programmer writing a
+function of type `val render : Application_state.t -> View.t` should be enough
+to define the visualization of the state of some app.  As the
+`Application_state` changes, this render function gets called and causes the
+newly generated View.t to be displayed.
 
 However, there are two main reasons that this style of “functional UI” is
 rarely seen:
 
 Render functions quickly become complex enough that advanced memoization
-strategies are needed to prevent slowly recomputing an unchanged view.  UI
-components require internal mutable state.  Consider the humble text box:
+strategies are needed to prevent spending a lot of time recomputing the whole
+view for an application that is barely changing.  
+
+UI components require internal mutable state.  Consider the humble text box:
 cursor position, selection ranges and scroll-state are all fundamental parts of
 the user experience, but forcing the application developer to keep track of
 that state for every text box in their application quickly devolves into chaos.
@@ -86,36 +88,34 @@ and memoization appear to be in conflict.
 
 # Enter the Arrow
 
-Despite its issues, the pure-functional model is still very tempting, and if
-we could annotate functions with an additional “state” type parameter, then a
-library like Incremental could be used to reduce unnecessary recomputation.
-Because OCaml doesn't support anything like this (and it's hard to imagine how
-it could), we turn to a concept from category theory: the Arrow.  Arrows
-describe data structures that behave like functions, but have something else
-about them that make them unrepresentable as plain functions.  In the case of
-Bonsai, we use our Arrow to provide both memoization and an internal
-state-machine for our components.
+Despite its issues, the pure-functional model is still very tempting, and if we
+could annotate OCaml functions with an additional “state” type parameter, then
+a library like Incremental could be used to reduce unnecessary recomputation.
+Because OCaml doesn't support this (and it's hard to imagine how it could), we
+turn to a concept from category theory: the Arrow.  Arrows describe data
+structures that behave like functions, but have something else about them that
+make them unrepresentable as plain functions.  In the case of Bonsai, we use
+our Arrow to provide both memoization and an internal state-machine for our
+components.
 
 The arrow type that Bonsai defines is called `Bonsai.t`, or written with its
 type parameters, `('input, 'model, 'result) Bonsai.t`.  As you may have guessed
 given the name, this type is the focal point of the library; every other
-function in the library produced, manipulates, or composes values of this type.
+function in the library produces, manipulates, or composes values of this type.
 
 A value of type `('input, 'model, 'result) Bonsai.t` can be thought of as a
 function that goes from `'input` to `'result` with an internal state-machine of
-type `'model`.  When computing the value of `'result`, a Bonsai component can
-read its `'model` state-machine, and can return a `'result` that contains an
-`Event.t` value which, when scheduled, is handed back to the component in
-order to transition the state-machine.
+type `'model`.  
+
 
 ## Pure Bonsai
 
 Pure functions are still representable (and encouraged!) and will have the type
 signature `('input, 'a, 'result) Bonsai.t`.  The generic `'a` type in the
 `'model` type parameter location indicates that the state-machine could really
-be anything: after all, the component doesn't read or write to the state
-machine. Creating a pure `Bonsai.t` out of a pure function is as easy as
-calling `Bonsai.pure`, which has the type signature:
+be anything: after all, the component doesn't read or write to its state
+machine. Creating a `Bonsai.t` out of a pure function is as easy as calling
+`Bonsai.pure`, which has the type signature:
 
 ```ocaml
 val pure: f:(‘input -> ‘result) -> (‘input, _, ‘result) Bonsai.t
@@ -135,10 +135,10 @@ I'll leave out an example here, in favor of linking to the API documentation:
 Just like functions, Bonsai.t can be composed both in parallel and serially.
 
 A parallel composition is performed via the Bonsai let-syntax.  Because
-Bonsai.t is an applicative, `let%map` is used to create a function out of many
-smaller ones.
+Bonsai.t is an applicative, `let%map` is used to create a large component out
+of multiple smaller ones.
 
-The bonsai composition
+The bonsai composition:
 
 ```ocaml
 let h =
@@ -148,7 +148,7 @@ let h =
   a, b, c
 ```
 
-Is roughly equivalent to the function composition
+Is roughly equivalent to the plain OCaml function composition:
 
 ```ocaml
 let h x =
@@ -173,9 +173,11 @@ let h a = g (f a)
 ## Caveat Compose
 
 There is one huge asterisk that comes with both forms of Bonsai composition.
-For parallel composition, the `'input` parameters for all the composed
-`Bonsai.t` values must be the same.  For parallel and sequential composition,
-the `'model` state machine type must also be the same.
+
+* For parallel composition, the `'input` parameters for all the composed
+  `Bonsai.t` values must be the same.  
+* For parallel and sequential composition, the `'model` state machine type must
+  also be the same.
 
 On the surface, this seems like such a restrictive API that using
 composition in practice would be impossible.  However, the rest of the
@@ -189,13 +191,22 @@ Transforming the input type on a component is as easy as passing a
 transformation function to `Bonsai.map_input` or `Bonsai.Infix.( @>> )`.
 
 ```ocaml
+(* @>> changes the 'input in ('input, 'model, 'result) Bonsai.t *)
 let component : (string, _, _) Bonsai.t = string_printer
 let component : (int,    _, _) Bonsai.t = Int.to_string @>> component
 ```
 
 Using the input mapping functions, it's common to decorate every component in a
 parallel composition with an input-conversion that passes on the necessary
-parts of the super-component's input to the sub-component.
+parts of the super-component's input to the sub-component like so: 
+
+```ocaml
+let supercomponent = 
+  let%map a = convert_a @>> component_a 
+  and     b = convert_b @>> component_b 
+  and     c = convert_c @>> component_c 
+  in a, b, c
+```
 
 ### Model Transformation
 
@@ -214,7 +225,7 @@ the `'outer` type.  This is done with a second function of type `'outer ->
 ‘inner -> ‘outer`.
 
 As for the meaning of composing two state-machines together, typically this is
-done by building a bigger state-machine that contains both of the
+done by building a super-state-machine that contains both of the
 sub-state-machines side-by-side.
 
 Both of these idioms are captured by the ever-helpful Fieldslib and

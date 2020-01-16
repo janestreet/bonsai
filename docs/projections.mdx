@@ -419,3 +419,80 @@ val string_repeat_component : (string * int, '_weak10, string) Bonsai.t =
 # let projected = Bonsai.Project.Model.to_input_with_other string_repeat_component
 val projected : (string, int, string) Bonsai.t = <abstr>
 ```
+
+## <tt> Bonsai.enum </tt>
+
+`Bonsai.enum` is how a Bonsai component can branch on its input or model
+and provide a different Bonsai component that handles different cases.
+
+```ocaml
+# Bonsai.enum
+- : ?on_action_mismatch:('key * 'model, 'model)
+                        Bonsai_mdx__Import.Bonsai.on_action_mismatch ->
+    (module Bonsai_mdx.Bonsai.Enum with type t = 'key) ->
+    which:('input -> 'model -> 'key) ->
+    handle:('key -> ('input, 'model, 'result) Bonsai.t) ->
+    ('input, 'model, 'result) Bonsai.t
+= <fun>
+```
+
+The three required parameters for `Bonsai.enum` are
+
+#### A first-class module satisfying <tt> Enum </tt>
+
+The "Enum" module type is the following:
+
+```ocaml
+  module type Enum = sig
+    type t [@@deriving sexp, compare, enumerate]
+  end
+```
+
+The important part here is the `enumerate` derivation, which allows
+Bonsai to list all possible combinations of that type.
+
+#### <tt> ~which </tt>
+
+The `which` function is defined by the user to translate cases from
+the components input and model into values of their first-class
+module.
+
+#### <tt> ~handle </tt>
+
+This function translates the values returned by `~which` into
+the Bonsai component that handles that kind of value.
+
+### Examples
+
+```ocaml
+module Branch = struct
+  type t =
+    | Multiple_of_ten
+    | Even
+    | Odd
+    | Overridden
+  [@@deriving sexp, compare, enumerate]
+end
+```
+
+```ocaml
+# let which input model =
+    if model
+    then Branch.Overridden
+    else if input mod 10 = 0
+    then Branch.Multiple_of_ten
+    else if input mod 2 = 0
+    then Branch.Even
+    else Branch.Odd
+val which : int -> bool -> Branch.t = <fun>
+
+# let handle = function
+    | Branch.Multiple_of_ten -> Bonsai.pure ~f:(sprintf "%d is a multiple of ten")
+    | Branch.Even-> Bonsai.pure ~f:(sprintf "%d is even")
+    | Branch.Odd-> Bonsai.pure ~f:(sprintf "%d is odd")
+    | Branch.Overridden -> Bonsai.const "OVERRIDDEN BY MODEL"
+val handle : Branch.t -> (int, 'a, string) Bonsai.t = <fun>
+
+# let component = Bonsai.enum (module Branch) ~which ~handle
+val component : (int, bool, string) Bonsai.t = <abstr>
+```
