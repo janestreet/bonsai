@@ -35,6 +35,8 @@ module Handle = struct
     | Before_app_start queue -> Queue.enqueue queue a
   ;;
 
+  let set_started t = Ivar.fill_if_empty t.started ()
+
   let set_inject t inject =
     let prev = t.injector in
     t.injector <- Inject inject;
@@ -129,7 +131,8 @@ let start_generic_poly
       let result = Bonsai.Expert.Snapshot.result snapshot in
       let { App_result.view; inject_incoming } = get_dom_and_inject result in
       Handle.set_inject handle inject_incoming;
-      Incr_dom.Component.create ~apply_action model view
+      let on_display () ~schedule_action:_ = Handle.set_started handle in
+      Incr_dom.Component.create ~apply_action ~on_display model view
     ;;
   end
   in
