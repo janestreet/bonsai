@@ -10,7 +10,7 @@ let component =
         [ Vdom.Attr.on_click (fun _ -> inject ()) ]
         [ Vdom.Node.text "click me to print a thing to the console" ]
     in
-    Start.App_result.create ~view ~inject_incoming:Nothing.unreachable_code)
+    Start.App_result.create ~view ~extra:() ~inject_incoming:Nothing.unreachable_code)
 ;;
 
 let () =

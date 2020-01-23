@@ -33,6 +33,7 @@ whitespace inbetween these html nodes... -->
 <div class="toc_node"> <a href="./docs/history.md"> A History of Bonsai </a></div>
 <div class="toc_node"> <a href="./docs/incrementality.md"> Incrementality in Bonsai </a></div>
 <div class="toc_node"> <a href="./docs/inside_incr_dom.md"> Using Bonsai inside an Incr_dom App </a></div>
+<div class="toc_node"> <a href="./docs/bonsai_web.md"> Bonsai_web </a></div>
 <div class="toc_node"> <a href="./docs/api_tour.mdx"> The Bonsai API </a>
 <div class="toc_node"> <a href="./docs/constructors.mdx">Constructors </a> </div>
 <div class="toc_node"> <a href="./docs/combinators.mdx"> Combinators</a></div>

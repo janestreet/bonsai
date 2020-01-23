@@ -1,4 +1,5 @@
 (library (name bonsai_web)
- (libraries async_kernel bonsai core_kernel incr_dom virtual_dom)
+ (libraries async_kernel bonsai core_kernel.bus core_kernel incr_dom
+  core_kernel.moption virtual_dom)
  (preprocess (pps ppx_jane -annotated-ignores -check-doc-comments))
  (public_name bonsai.web))

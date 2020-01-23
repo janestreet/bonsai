@@ -9,20 +9,33 @@ module Handle = struct
       | Inject of ('a -> Vdom.Event.t)
   end
 
-  type ('input, 'incoming, 'outgoing) t =
+  type ('input, 'extra, 'incoming, 'outgoing) t =
     { mutable injector : 'incoming Injector.t
     ; stop : unit Ivar.t
     ; started : unit Ivar.t
     ; input_var : 'input Incr.Var.t
     ; outgoing_pipe : 'outgoing Pipe.Reader.t
+    ; extra : ('extra -> unit) Bus.Read_write.t
+    ; last_extra : 'extra Moption.t
     }
 
   let create ~input_var ~outgoing_pipe =
+    let extra =
+      Bus.create
+        [%here]
+        Arity1
+        ~on_subscription_after_first_write:Allow_and_send_last_value
+        ~on_callback_raise:(fun error -> eprint_s [%sexp (error : Error.t)])
+    in
+    let last_extra = Moption.create () in
+    Bus.iter_exn extra [%here] ~f:(fun extra -> Moption.set_some last_extra extra);
     { injector = Before_app_start (Queue.create ())
     ; stop = Ivar.create ()
     ; started = Ivar.create ()
     ; input_var
     ; outgoing_pipe
+    ; extra
+    ; last_extra
     }
   ;;
 
@@ -49,6 +62,8 @@ module Handle = struct
   let set_input t input = Incr.Var.set t.input_var input
   let update_input t ~f = set_input t (f (input t))
   let outgoing { outgoing_pipe; _ } = outgoing_pipe
+  let extra t = Bus.read_only t.extra
+  let last_extra t = Moption.get t.last_extra
 end
 
 module App_input = struct
@@ -62,8 +77,9 @@ module App_input = struct
 end
 
 module App_result = struct
-  type 'incoming t =
+  type ('extra, 'incoming) t =
     { view : Vdom.Node.t
+    ; extra : 'extra
     ; inject_incoming : 'incoming -> Vdom.Event.t
     }
   [@@deriving fields]
@@ -72,16 +88,16 @@ module App_result = struct
 end
 
 let start_generic_poly
-      (type input input_and_inject model action result incoming outgoing)
-      ~(get_dom_and_inject : result -> incoming App_result.t)
-      ~(get_input_and_inject :
+      (type input input_and_inject model action result extra incoming outgoing)
+      ~(get_app_result : result -> (extra, incoming) App_result.t)
+      ~(get_app_input :
           input:input -> inject_outgoing:(outgoing -> Vdom.Event.t) -> input_and_inject)
       ~(initial_input : input)
       ~(initial_model : model)
       ~bind_to_element_with_id
       ~(component : (input_and_inject, model, action, result) Bonsai.Expert.unpacked)
       ~(action_type_id : action Type_equal.Id.t)
-  : (input, incoming, outgoing) Handle.t
+  : (input, extra, incoming, outgoing) Handle.t
   =
   let outgoing_pipe, pipe_write = Pipe.create () in
   let module Out_event =
@@ -119,7 +135,7 @@ let start_generic_poly
       let old_model = old_model >>| Option.some in
       let input =
         let%map input = Incr.Var.watch input_var in
-        get_input_and_inject ~input ~inject_outgoing:Out_event.inject
+        get_app_input ~input ~inject_outgoing:Out_event.inject
       in
       let%map snapshot =
         Bonsai.Expert.eval ~input ~old_model ~model ~inject component ~action_type_id
@@ -129,8 +145,9 @@ let start_generic_poly
         apply_action ~schedule_event:Vdom.Event.Expert.handle_non_dom_event_exn action
       in
       let result = Bonsai.Expert.Snapshot.result snapshot in
-      let { App_result.view; inject_incoming } = get_dom_and_inject result in
+      let { App_result.view; extra; inject_incoming } = get_app_result result in
       Handle.set_inject handle inject_incoming;
+      Bus.write handle.extra extra;
       let on_display () ~schedule_action:_ = Handle.set_started handle in
       Incr_dom.Component.create ~apply_action ~on_display model view
     ;;
@@ -145,7 +162,7 @@ let start_generic_poly
 ;;
 
 let start_generic
-      ~get_dom_and_inject
+      ~get_app_result
       ~initial_input
       ~initial_model
       ~bind_to_element_with_id
@@ -153,7 +170,7 @@ let start_generic
   =
   let (T (unpacked, action_type_id)) = Bonsai.Expert.reveal component in
   start_generic_poly
-    ~get_dom_and_inject
+    ~get_app_result
     ~initial_input
     ~initial_model
     ~bind_to_element_with_id
@@ -164,9 +181,9 @@ let start_generic
 (* I can't use currying here because of the value restriction. *)
 let start_standalone ~initial_input ~initial_model ~bind_to_element_with_id component =
   start_generic
-    ~get_dom_and_inject:(fun view ->
-      { App_result.view; inject_incoming = Nothing.unreachable_code })
-    ~get_input_and_inject:(fun ~input ~inject_outgoing:_ -> input)
+    ~get_app_result:(fun view ->
+      { App_result.view; extra = (); inject_incoming = Nothing.unreachable_code })
+    ~get_app_input:(fun ~input ~inject_outgoing:_ -> input)
     ~initial_input
     ~initial_model
     ~bind_to_element_with_id
@@ -175,8 +192,8 @@ let start_standalone ~initial_input ~initial_model ~bind_to_element_with_id comp
 
 let start ~initial_input ~initial_model ~bind_to_element_with_id component =
   start_generic
-    ~get_dom_and_inject:Fn.id
-    ~get_input_and_inject:App_input.create
+    ~get_app_result:Fn.id
+    ~get_app_input:App_input.create
     ~initial_input
     ~initial_model
     ~bind_to_element_with_id

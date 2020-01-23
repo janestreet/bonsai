@@ -57,5 +57,5 @@ let component =
       ]
   in
   let inject_incoming = Nothing.unreachable_code in
-  Start.App_result.create ~view ~inject_incoming
+  Start.App_result.create ~view ~extra:() ~inject_incoming
 ;;

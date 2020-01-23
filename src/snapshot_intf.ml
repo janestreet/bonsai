@@ -11,7 +11,7 @@ module type S = sig
       created.
 
       The application of the action is allowed to engage in side-effecting computations,
-      including calling the [schedule_action] function to request that further actions be
+      including calling the [schedule_event] function to request that further actions be
       enqueued to be applied to the model. *)
   val apply_action
     :  ('model, 'action, _) t

@@ -281,8 +281,31 @@ val ( @>> ) :
   ('i2, 'model, 'result) Bonsai.t -> ('i1, 'model, 'result) Bonsai.t
 ```
 
-The `@>>` operator is pronounced "the infix-operator that will pierce the
-heavens".
+`@>>` is pronounced "the drill operator", but I'm still partial to "the
+infix-operator that will pierce the heavens". 
+
+### !Warning!
+
+When using the drill operator, you may need more parenthesis for grouping 
+than you may expect.
+
+For example: 
+
+```
+Input_from_server.response
+@>> Model.Response.queries
+@>> fun queries -> Queries.Input.create ~queries
+@>> Queries.component
+```
+
+should actually be written as 
+
+```
+Input_from_server.response
+@>> Model.Response.queries
+@>> (fun queries -> Queries.Input.create ~queries)
+@>> Queries.component
+```
 
 ### Examples
 
