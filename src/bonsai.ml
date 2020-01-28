@@ -760,7 +760,7 @@ module Make (Incr : Incremental.S) (Event : Event) :
   let pure ~f = T (Pure f, nothing_type_id)
 
   module type Enum = sig
-    type t [@@deriving sexp, compare, enumerate]
+    type t [@@deriving sexp_of, compare, enumerate]
   end
 
   let enum
@@ -770,7 +770,7 @@ module Make (Incr : Incremental.S) (Event : Event) :
         ~which
         ~(handle : k -> (_, _, _) t)
     =
-    let module E_map = Map.Make (E) in
+    let module E_map = Map.Make_plain (E) in
     let f key =
       let (T (unpacked, action_type_id)) = handle key in
       Erase_action
@@ -786,6 +786,16 @@ module Make (Incr : Incremental.S) (Event : Event) :
         Map.add_exn map ~key:k ~data:(f k))
     in
     T (Enum { components; which }, Switch.Case_action.type_id)
+  ;;
+
+  let if_ ?on_action_mismatch cond ~then_ ~else_ =
+    enum
+      ?on_action_mismatch
+      (module Bool)
+      ~which:cond
+      ~handle:(function
+        | true -> then_
+        | false -> else_)
   ;;
 
   (* Modifier Functions *)

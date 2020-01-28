@@ -466,9 +466,9 @@ The three required parameters for `Bonsai.enum` are
 The "Enum" module type is the following:
 
 ```ocaml
-  module type Enum = sig
-    type t [@@deriving sexp, compare, enumerate]
-  end
+module type Enum = sig
+  type t [@@deriving sexp_of, compare, enumerate]
+end
 ```
 
 The important part here is the `enumerate` derivation, which allows
@@ -518,4 +518,30 @@ val handle : Branch.t -> (int, 'a, string) Bonsai.t = <fun>
 
 # let component = Bonsai.enum (module Branch) ~which ~handle
 val component : (int, bool, string) Bonsai.t = <abstr>
+```
+
+## <tt> Bonsai.if_ </tt>
+
+`Bonsai.if_` is a special case of `Bonsai.enum` with exactly two branches.
+
+```ocaml
+# Bonsai.if_
+- : ?on_action_mismatch:(bool * 'model, 'model)
+                        Bonsai_mdx__Import.Bonsai.on_action_mismatch ->
+    ('input -> 'model -> bool) ->
+    then_:('input, 'model, 'result) Bonsai.t ->
+    else_:('input, 'model, 'result) Bonsai.t ->
+    ('input, 'model, 'result) Bonsai.t
+= <fun>
+```
+
+### Example
+
+```ocaml
+# let component =
+    Bonsai.if_
+      (fun input _model -> input % 2 = 0)
+      ~then_:(Bonsai.pure ~f:(sprintf "%d is even"))
+      ~else_:(Bonsai.pure ~f:(sprintf "%d is odd"))
+val component : (int, '_weak11, string) Bonsai.t = <abstr>
 ```

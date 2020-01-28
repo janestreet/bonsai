@@ -51,7 +51,7 @@ module type S = sig
   val compose : ('i1, 'model, 'r1) t -> ('r1, 'model, 'r2) t -> ('i1, 'model, 'r2) t
 
   module type Enum = sig
-    type t [@@deriving sexp, compare, enumerate]
+    type t [@@deriving sexp_of, compare, enumerate]
   end
 
   val enum
@@ -59,6 +59,14 @@ module type S = sig
     -> (module Enum with type t = 'key)
     -> which:('input -> 'model -> 'key)
     -> handle:('key -> ('input, 'model, 'result) t)
+    -> ('input, 'model, 'result) t
+
+  (** [if_] is a simple application of [enum] to [(module Bool)]. *)
+  val if_
+    :  ?on_action_mismatch:(bool * 'model, 'model) on_action_mismatch
+    -> ('input -> 'model -> bool)
+    -> then_:('input, 'model, 'result) t
+    -> else_:('input, 'model, 'result) t
     -> ('input, 'model, 'result) t
 
   module Infix : sig
@@ -137,7 +145,7 @@ module type S = sig
     (** When an action is raised by this component (via an Event.t), Bonsai
         will eventually pass that action back to that component's [apply_action]
         function.  This function is responsible for looking at the model and the
-        incoming action and producing a new model.  
+        incoming action and producing a new model.
 
         [apply_action] is a transformation from a model and an action into a new model.
         During the transformation, the component can also emit more actions via
@@ -153,7 +161,7 @@ module type S = sig
 
     (** [compute] is a function from input and model to the component's result.
         In a component that produces a view, this function could be thought of as the
-        "view computation function".  
+        "view computation function".
 
         This function is also given an "inject" function which converts this
         component's [Action.t] to a global [Event.t] which can be given to
