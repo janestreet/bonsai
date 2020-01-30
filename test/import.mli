@@ -14,7 +14,7 @@ module Event : sig
 end
 
 module Incr : Incremental.S
-module Bonsai : Bonsai.S with module Incr := Incr with module Event := Event
+module Bonsai : Bonsai.S with module Incr = Incr with module Event = Event
 
 module Incr_map :
   Incr_map.S with type state_witness := Incr.state_witness and module Incr := Incr

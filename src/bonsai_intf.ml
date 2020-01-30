@@ -532,13 +532,17 @@ module type Bonsai = sig
       only when the UI model has changed) and an opaque Event.t type (which is used to
       schedule actions).
 
-      The recommended use of this functor is to bind the name [Bonsai] to its invocation.
-      For example, [Bonsai_web]'s [import.ml] has:
+      The recommended use of this functor is to bind the name [Bonsai] to its invocation,
+      plus the [Incr] and [Event] arguments.  For example, [Bonsai_web]'s [import.ml] has:
 
       {[
         module Incr = Incr_dom.Incr
         module Vdom = Virtual_dom.Vdom
-        module Bonsai = Bonsai.Make (Incr) (Vdom.Event)
+        module Bonsai = struct
+          module Event = Event
+          module Incr = Incr
+          include Bonsai.Make (Incr) (Event)
+        end
       ]}
 
       [Bonsai_web] re-exports the contents of its [Import] module, which allows users to

@@ -38,7 +38,7 @@ whitespace inbetween these html nodes... -->
 <div class="toc_node"> <a href="./docs/constructors.mdx">Constructors </a> </div>
 <div class="toc_node"> <a href="./docs/combinators.mdx"> Combinators</a></div>
 <div class="toc_node"> <a href="./docs/projections.mdx"> Projections </a></div>
-<div class="toc_node"> <s><a href="./docs/collections.mdx"> Collections </a></s></div>
+<div class="toc_node"> <a href="./docs/collections.mdx"> Collections </a></div>
 </div>
 </div>
 

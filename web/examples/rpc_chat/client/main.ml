@@ -14,12 +14,10 @@ let refresh_rooms ~conn ~app_handle =
 let process_message_stream ~conn ~app_handle =
   let%bind pipe, _ = Rpc.Pipe_rpc.dispatch_exn Protocol.Message_stream.t conn () in
   Pipe.iter pipe ~f:(fun message ->
-    let input = Start.Handle.input app_handle in
-    if [%equal: Room.t option] input.App.Input.current_room (Some message.room)
-    then
-      Start.Handle.set_input
-        app_handle
-        { input with messages = List.append input.messages [ message ] };
+    Start.Handle.update_input app_handle ~f:(fun input ->
+      if [%equal: Room.t option] input.App.Input.current_room (Some message.room)
+      then { input with messages = List.append input.messages [ message ] }
+      else input);
     Deferred.unit)
 ;;
 

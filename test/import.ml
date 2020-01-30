@@ -13,5 +13,11 @@ module Event = struct
 end
 
 module Incr = Incremental.Make ()
-module Bonsai = Bonsai.Make (Incr) (Event)
+
+module Bonsai = struct
+  module Event = Event
+  module Incr = Incr
+  include Bonsai.Make (Incr) (Event)
+end
+
 module Incr_map = Incr_map.Make (Incr)

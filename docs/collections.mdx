@@ -4,6 +4,7 @@ uuid: 392f0671-b71a-48ba-93c6-331eb4566c3b
 parent: "./api_tour.mdx"
 ---
 
+
 <!--
 ```ocaml
 # open! Bonsai_mdx
@@ -11,5 +12,263 @@ parent: "./api_tour.mdx"
 ```
 -->
 
-<img style="border:0; display: block; margin: 0 auto;" src="./under_construction.gif" />
+The "Collection Combinators" in Bonsai are functions that take a Bonsai
+component and then transform its [[model or input] and result] by some collection
+type like `Option.t`, `Either.t`, and `Map.t`.  The simplest example of this is
+`Bonsai.Option.wrap_model`, which performs this transformation:
 
+```
+   ('input, 'model       , 'result       ) Bonsai.t
+-> ('input, 'model option, 'result option) Bonsai.t
+```
+
+The above function would be useful if you wanted a component whose model was
+optional, but had a component with a non-optional model.  You could transform
+the component that you have into the component that you want!
+
+Imagine a text-input component with type
+`(unit, string, Vdom.Node.t) Bonsai.t`.  If you wanted a text-input component
+that sometimes exists and sometimes doesn't, you might run it through
+`wrap_model` and get a component of type
+`(unit, string option, Vdom.Node.t option) Bonsai.t`.
+
+## <tt> Bonsai.Option </tt>
+
+The `Option` combinators transform a component's type by introducing `option`s
+into specific type parameters.  (To date, only `'model`-modifying functions
+have been written, but `'input`-modifying functions are planned.)
+
+### <tt> Bonsai.Option.wrap\_model </tt>
+
+`wrap_model` takes a component whose model is of the type `'model` and produces
+a component whose model is of the type `'model option`.  When the model is
+`Some`, then the component-being-wrapped will be executed and a return value
+will be `Some 'result`, otherwise the component-being-wrapped is not
+executed and the return value is `None`.
+
+```ocaml
+# #show Bonsai.Option.wrap_model
+val wrap_model :
+  ?on_action_for_none:(unit, 'model option)
+                      Bonsai_mdx__Import.Bonsai.on_action_mismatch ->
+  ('input, 'model, 'result) Bonsai.t ->
+  ('input, 'model option, 'result option) Bonsai.t
+```
+
+One edge case that can occur when this transformation happens in a live system
+is that the component being wrapped could schedule an event, but because of the
+model changing to `None`, that same component won't be around to handle the
+event.
+
+For example, if a user is editing a form, and the form is no longer required,
+the app may remove that form by setting the model to `None`.  If the user was
+modifying the form during the same frame that the `None` was placed in the model,
+the action that was supposed to be routed to the form wouldn't be received or
+handled.
+
+The `on_action_for_none` optional parameter is used to specify what happens when
+these actions get sent to a component that does not exist any more.  The type
+is reproduced here for convenience:
+
+```
+[ `Ignore
+| `Raise
+| `Warn
+| `Custom of (unit -> 'model)
+]
+```
+
+The default behavior is to ignore such actions.
+
+#### Example
+
+```ocaml
+# open Bonsai.Infix
+# let non_optional_model = Bonsai.id >>| fun (input, model) -> sprintf "%f %d" input model
+val non_optional_model : (float, int, string) Bonsai.t = <abstr>
+# let optional_model = Bonsai.Option.wrap_model non_optional_model
+val optional_model : (float, int option, string option) Bonsai.t = <abstr>
+```
+
+### <tt> Bonsai.Option.wrap\_model\_with\_default </tt>
+
+The same as `Bonsai.Option.wrap\_model` but with an extra parameter for
+specifying a default value to be used as the result when the model is `None`.
+
+```ocaml
+# #show Bonsai.Option.wrap_model_with_default
+val wrap_model_with_default :
+  ?on_action_for_none:(unit, 'model option)
+                      Bonsai_mdx__Import.Bonsai.on_action_mismatch ->
+  ('input, 'model, 'result) Bonsai.t ->
+  default:'result -> ('input, 'model option, 'result) Bonsai.t
+```
+
+## <tt> Bonsai.Either </tt>
+
+Very similar to their Option brethren, the Either combinators are an easy way
+to add some dynamism to an app.  Given two components, Bonsai will switch
+between the two whenever the model changes between the variants in `Either.t`.
+
+If you wanted an application with only two tabs, using `Bonsai.Either` would be
+one way to implement these tabs.  By passing two components to
+`Bonsai.Either.wrap_model`, you get an output component that switches which
+input component is currently active by changing the model.
+
+### <tt> Bonsai.Either.wrap\_model </tt>
+
+This function takes two components and produces a single component whose model
+is either the model of the first component or the model of the second
+component.  The result of the component is either the result of the first
+component or the result of the second component depending on what the state of
+the model is.
+
+```ocaml
+# #show Bonsai.Either.wrap_model
+val wrap_model :
+  ?on_action_for_other_component:([ `Action_for_first of 'm2
+                                  | `Action_for_second of 'm1 ],
+                                  ('m1, 'm2) Core_kernel._either)
+                                 Bonsai_mdx__Import.Bonsai.on_action_mismatch ->
+  ('input, 'm1, 'r1) Bonsai.t ->
+  ('input, 'm2, 'r2) Bonsai.t ->
+  ('input, ('m1, 'm2) Core_kernel._either, ('r1, 'r2) Core_kernel._either)
+  Bonsai.t
+```
+
+Similarly to `Bonsai.Option.wrap_model`, this function also needs to handle the
+case where an action designated for one component finds its way to the other
+component.  Using the previous example of tabs, an action that was raised from
+one tab may be executed when the other tab is active.
+
+By default this action is ignored, but you can set it to one of the following
+values:
+
+```
+[ `Ignore
+| `Raise
+| `Warn
+| `Custom of ([ `Action_for_first of 'm2
+              | `Action_for_second of 'm1
+              ] -> ('m1, 'm2) Either.t)
+]
+```
+
+#### Example
+
+
+```ocaml
+# let c1 = Bonsai.pure_from_model ~f:string_of_int
+val c1 : ('_weak1, int, string) Bonsai.t = <abstr>
+# let c2 = Bonsai.pure_from_model ~f:string_of_float
+val c2 : ('_weak2, float, string) Bonsai.t = <abstr>
+# let combined = Bonsai.Either.wrap_model c1 c2
+val combined :
+  ('_weak3, (int, float) Core_kernel._either,
+   (string, string) Core_kernel._either)
+  Bonsai.t = <abstr>
+```
+
+### <tt> Bonsai.Either.wrap\_model\_with\_same\_result </tt>
+
+Exactly the same as `Bonsai.Either.wrap_model` except that the
+`'result` type parameters for both components must be the same.  The
+`'result` type for the returned component is no longer tagged with
+`First` or `Second`.
+
+```ocaml
+# #show Bonsai.Either.wrap_model_with_same_result
+val wrap_model_with_same_result :
+  ?on_action_for_other_component:([ `Action_for_first of 'm2
+                                  | `Action_for_second of 'm1 ],
+                                  ('m1, 'm2) Core_kernel._either)
+                                 Bonsai_mdx__Import.Bonsai.on_action_mismatch ->
+  ('input, 'm1, 'r) Bonsai.t ->
+  ('input, 'm2, 'r) Bonsai.t ->
+  ('input, ('m1, 'm2) Core_kernel._either, 'r) Bonsai.t
+```
+
+## <tt> Bonsai.Map </tt>
+
+The Map combinators are some of the more interesting functions in Bonsai.  They
+allow you to apply a Bonsai component to every key/value pair in a `Map.t` and
+produce a new Map that contains the `'result`s of those components.
+
+### <tt> Bonsai.Map.assoc\_model </tt>
+
+Consider the following scenario: Your application has a `(k, v, _) Map.t` in
+its model.  You also have a Bonsai component of type `(_, v, r) Bonsai.t`.
+With `assoc_model`, it is possible to "map" your component over the Map in
+the model and produce a new map from `k` to `r`.
+
+Practically, this combinator is used to make multiple copies of a component,
+each with a different model being stored as the data in a map.
+
+```ocaml
+# #show Bonsai.Map.assoc_model
+val assoc_model :
+  ?comparator:('k, 'cmp) Core_kernel.Map.comparator ->
+  ('input, 'model, 'result) Bonsai.t ->
+  ('input, ('k, 'model, 'cmp) Base.Map.t, ('k, 'result, 'cmp) Base.Map.t)
+  Bonsai.t
+```
+
+#### Example
+
+See `lib/bonsai_web/examples/counters` for an example of `assoc_model`.
+
+### <tt> Bonsai.Map.associ\_model </tt>
+
+The same as `Bonsai.Map.assoc\_model` but each component also receives
+the corresponding map key as part of its input.
+
+```ocaml
+# #show Bonsai.Map.associ_model
+val associ_model :
+  ?comparator:('k, 'cmp) Map.comparator ->
+  ('k * 'input, 'model, 'result) Bonsai.t ->
+  ('input, ('k, 'model, 'cmp) Map.t, ('k, 'result, 'cmp) Map.t) Bonsai.t
+```
+
+### <tt> Bonsai.Map.assoc\_input </tt>
+
+Just like how `Bonsai.Map.assoc_model` distributes a Bonsai component across
+a map stored in the model, `assoc_input` does the same, but the incoming Map
+comes from the `'input`, and the values in each key/value pair become
+the input of the mapping component instead of the model.
+
+This function could be useful if, for example, your Map is stored on
+the server and sent to the application, which does not modify it.
+Storing it in your model wouldn't make much sense.
+
+```ocaml
+# #show Bonsai.Map.assoc_input
+val assoc_input :
+  ?comparator:('k, 'cmp) Map.comparator ->
+  ('input, 'model, 'result) Bonsai.t ->
+  (('k, 'input, 'cmp) Map.t, 'model, ('k, 'result, 'cmp) Map.t) Bonsai.t
+```
+
+#### Example
+
+```ocaml
+# let int_to_string = Bonsai.pure ~f:string_of_int
+val int_to_string : (int, '_weak4, string) Bonsai.t = <abstr>
+# let ints_to_strings = Bonsai.Map.assoc_input int_to_string
+val ints_to_strings :
+  (('_weak5, int, '_weak6) Map.t, '_weak7, ('_weak5, string, '_weak6) Map.t)
+  Bonsai.t = <abstr>
+```
+
+### <tt> Bonsai.Map.associ\_input </tt>
+
+The same as `Bonsai.Map.assoc_input` but each component also receives
+the corresponding map key as part of its input.
+
+```ocaml
+# #show Bonsai.Map.associ_input
+val associ_input :
+  ?comparator:('k, 'cmp) Map.comparator ->
+  ('k * 'input, 'model, 'result) Bonsai.t ->
+  (('k, 'input, 'cmp) Map.t, 'model, ('k, 'result, 'cmp) Map.t) Bonsai.t
+```
