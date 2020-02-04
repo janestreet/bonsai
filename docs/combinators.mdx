@@ -46,6 +46,12 @@ val ( >>> ) :
   ('r1, 'model, 'r2) Bonsai.t -> ('i1, 'model, 'r2) Bonsai.t
 ```
 
+**IMPORTANT** The `'model` type parameter must be the same in both Bonsai
+components that are being composed.  In order to get the models to match up,
+take a look at the model projections in the
+[Projections document](./projections.mdx), specifically,
+`Bonsai.Project.Model.ignore` and `Bonsai.Project.Model.field`.
+
 
 ### Examples
 
@@ -132,6 +138,19 @@ val both :
   ('input, 'model, 'r2) Bonsai.t -> ('input, 'model, 'r1 * 'r2) Bonsai.t
 ```
 
+**IMPORTANT** The `'model` type parameter must be the same in both Bonsai
+components that are being composed.  In order to get the models to match up,
+take a look at the model projections in the
+[Projections document](./projections.mdx), specifically,
+`Bonsai.Project.Model.ignore` and `Bonsai.Project.Model.field`.
+
+**IMPORTANT** The `'input` type parameter must be the same in both Bonsai
+components that are being composed.  In order to get the inputs to match up,
+take a look at the input projections in the
+[Projections document](./projections.mdx), specifically,
+`Bonsai.map_input` (also named `Bonsai.Infix.( @>> )`).
+
+
 ### Examples
 
 
@@ -156,6 +175,18 @@ val add_counter : (unit, int Int.Map.t, Vdom.Node.t) Bonsai.t
 val combined : (unit, int Int.Map.t, Vdom.Node.t * Vdom.Node.t) Bonsai.t =
   <abstr>
 ```
+
+**IMPORTANT** The `'model` type parameter must be the same in both Bonsai
+components that are being composed.  In order to get the models to match up,
+take a look at the model projections in the
+[Projections document](./projections.mdx), specifically,
+`Bonsai.Project.Model.ignore` and `Bonsai.Project.Model.field`.
+
+**IMPORTANT** The `'input` type parameter must be the same in both Bonsai
+components that are being composed.  In order to get the inputs to match up,
+take a look at the input projections in the
+[Projections document](./projections.mdx), specifically,
+`Bonsai.map_input` (also named `Bonsai.Infix.( @>> )`).
 
 ## <tt> Bonsai.Let\_syntax </tt>
 
