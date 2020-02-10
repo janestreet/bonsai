@@ -15,13 +15,12 @@ module Input = struct
 end
 
 let view { Input.room_list; inject_refresh_rooms_list; inject_change_room } =
-  let on_refresh_click = Vdom.Attr.on_click (fun _ -> inject_refresh_rooms_list ()) in
   let room_header =
     Vdom.Node.h2
       []
       [ Vdom.Node.text "Rooms"
       ; Vdom_input_widgets.Button.simple
-          ~extra_attrs:[ Vdom.Attr.id "refresh-button"; on_refresh_click ]
+          ~extra_attrs:[ Vdom.Attr.id "refresh-button" ]
           ~on_click:(fun () -> inject_refresh_rooms_list ())
           "↻"
       ]
