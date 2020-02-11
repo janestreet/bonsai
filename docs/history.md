@@ -7,7 +7,7 @@ history.
 
 Work on Bonsai started in late March 2019 after the conclusion of the first
 Tools & Compilers teach-in.  The 2nd half of the teach-in was focused on
-`Incr_dom`, and it gave us an opporitunity to look over the shoulders
+`Incr_dom`, and it gave us an opportunity to look over the shoulders
 (literally) of people writing applications using that framework.  One of the
 main frustrations from the assignments centered on the composability and
 extendability of `Incr_dom` programs, and the lack of a conceptual "component."

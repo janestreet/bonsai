@@ -10,6 +10,7 @@ module Event = struct
   let pack type_id t = Packed (t, type_id)
   let sequence events = Sequence events
   let no_op = No_op
+  let external_ string = External_event string
 end
 
 module Incr = Incremental.Make ()

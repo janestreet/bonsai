@@ -86,7 +86,7 @@ let%expect_test "switch-case" =
         print_endline "case switched to hide";
         create_case
           (Bonsai.const
-             ("hidden", Fn.const (Event.External_event "action triggered on hidden")))
+             ("hidden", Fn.const (Event.external_ "action triggered on hidden")))
           ~case_input:(Incr.return ())
           ~case_model:(Incr.return ())
           ~lift:(fun () -> Model.Hide))
@@ -235,7 +235,7 @@ let%expect_test "schedule event from outside of the component" =
     end
 
     let apply_action ~inject:_ ~schedule_event () () Action.Trigger =
-      schedule_event (Event.External_event "hello world")
+      schedule_event (Event.external_ "hello world")
     ;;
 
     let compute ~inject () () = (), inject
@@ -268,10 +268,7 @@ let%expect_test "schedule many events from outside of the component" =
     let apply_action ~inject:_ ~schedule_event () () Action.Trigger =
       schedule_event
         (Event.sequence
-           [ Event.External_event "hello world"
-           ; Event.no_op
-           ; Event.External_event "goodbye world"
-           ])
+           [ Event.external_ "hello world"; Event.no_op; Event.external_ "goodbye world" ])
     ;;
 
     let compute ~inject () () = (), inject

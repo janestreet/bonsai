@@ -2,7 +2,7 @@ open! Core_kernel
 open! Import
 
 module Event : sig
-  type t =
+  type t = private
     | Packed : 'a * 'a Type_equal.Id.t -> t
     | External_event : string -> t
     | No_op : t
@@ -11,6 +11,7 @@ module Event : sig
   val pack : 'a Type_equal.Id.t -> 'a -> t
   val sequence : t list -> t
   val no_op : t
+  val external_ : string -> t
 end
 
 module Incr : Incremental.S
