@@ -44,6 +44,8 @@ let convert_generic
       type t = extra
     end
 
+    type t = (Action.t, Model.t, unit, Extra.t) Incr_dom.Component.with_extra
+
     let create ~input ~old_model ~model ~inject =
       create_generic unpacked ~action_type_id ~input ~old_model ~model ~inject
     ;;

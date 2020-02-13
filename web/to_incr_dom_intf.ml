@@ -11,12 +11,14 @@ module type S = sig
     type t [@@deriving sexp_of]
   end
 
+  type t = (Action.t, Model.t, unit, Extra.t) Incr_dom.Component.with_extra
+
   val create
     :  input:Input.t Incr.t
     -> old_model:Model.t option Incr.t
     -> model:Model.t Incr.t
     -> inject:(Action.t -> Vdom.Event.t)
-    -> (Action.t, Model.t, unit, Extra.t) Incr_dom.Component.with_extra Incr.t
+    -> t Incr.t
 end
 
 module type To_incr_dom = sig
