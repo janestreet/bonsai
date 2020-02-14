@@ -1,3 +1,2 @@
-(executables (names counters_timetravel)
- (libraries bonsai_web bonsai_web_counters_example)
+(executables (names main) (libraries bonsai_web bonsai_web_counters_example)
  (preprocess (pps ppx_jane)))

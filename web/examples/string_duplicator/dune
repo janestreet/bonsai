@@ -1,2 +1,1 @@
-(executables (names string_duplicator) (libraries bonsai_web)
- (preprocess (pps ppx_jane)))
+(executables (names main) (libraries bonsai_web) (preprocess (pps ppx_jane)))

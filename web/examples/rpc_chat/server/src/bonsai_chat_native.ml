@@ -17,23 +17,21 @@ let main ~http_settings =
       http_settings
       (Fn.const
          Cohttp_static_handler.Single_page_handler.(
-           js_handler
+           embedded_js_handler
              (default_with_body_div ~div_id:"app")
-             ~js_files:[ "../../client/main.bc.js" ]
-             ~css_files:[ "../../client/style.css" ]
+             ~scripts:[ Embedded_files.main_dot_bc_dot_js ]
+             ~css:[ Embedded_files.style_dot_css ]
              ~on_unknown_url:`Not_found))
   in
   let server = Or_error.ok_exn server in
   Simple_web_server.close_finished server
 ;;
 
-let command_serve =
+let command =
   Command.async
-    ~summary:"start server"
+    ~summary:"Start server for example [rpc-chat]"
     (let%map_open.Command http_settings =
-       Http_settings.param ~app_name:"bonsai-chat-example" ()
+       Http_settings.param ~app_name:"bonsai-example" ()
      in
      fun () -> main ~http_settings)
 ;;
-
-let command = Command.group ~summary:"rpc_chat server" [ "serve", command_serve ]

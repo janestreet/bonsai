@@ -33,9 +33,19 @@ let switch_room ~conn ~app_handle ~room =
 ;;
 
 let handle_outgoing_bonsai_messages ~conn ~app_handle =
+  let obfuscate message =
+    String.hash message
+    |> Int.to_string
+    |> Js_of_ocaml.Js.string
+    |> (fun x -> Js_of_ocaml.Dom_html.window##btoa x)
+    |> Js_of_ocaml.Js.to_string
+    |> String.lowercase
+    |> String.filter ~f:Char.is_alpha
+  in
   let eval_event = function
     | Outgoing_command.Refresh_rooms -> refresh_rooms ~conn ~app_handle
     | Outgoing_command.Send_message contents ->
+      let contents = obfuscate contents in
       (match (Start.Handle.input app_handle).current_room with
        | None -> Deferred.unit
        | Some room -> send_message ~conn ~room ~contents)
