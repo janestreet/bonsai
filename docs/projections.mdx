@@ -5,14 +5,17 @@ parent: "./api_tour.mdx"
 ---
 
 <div id="floater">
+
 ```
 type ('input, 'model, 'result) t
 ```
-------------------- -------------------------------------------------
-<tt>**'input**</tt>   Input to component
-<tt>**'model**</tt>   Component state-machine
-<tt>**'result**</tt>  Type of computed value
-------------------- -------------------------------------------------
+
+| Parameter            | Description             |
+| -------------------- | ----------------------- |
+| <tt>**'input**</tt>  | Input to component      |
+| <tt>**'model**</tt>  | Component state-machine |
+| <tt>**'result**</tt> | Type of computed value  |
+
 </div>
 
 <!--
@@ -282,14 +285,14 @@ val ( @>> ) :
 ```
 
 `@>>` is pronounced "the drill operator", but I'm still partial to "the
-infix-operator that will pierce the heavens". 
+infix-operator that will pierce the heavens".
 
 ### !Warning!
 
-When using the drill operator, you may need more parentheses for grouping 
+When using the drill operator, you may need more parentheses for grouping
 than you may expect.
 
-For example: 
+For example:
 
 ```
 Input_from_server.response
@@ -298,7 +301,7 @@ Input_from_server.response
 @>> Queries.component
 ```
 
-should actually be written as 
+should actually be written as
 
 ```
 Input_from_server.response
