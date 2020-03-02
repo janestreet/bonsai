@@ -8,4 +8,5 @@ module Event : sig
   val no_op : t
 end
 
+module Bonsai_lib = Bonsai
 module Bonsai : Bonsai.S with module Incr = Incr and module Event = Event

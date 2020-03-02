@@ -6,19 +6,36 @@ include To_incr_dom_intf
 
 let create_generic unpacked ~action_type_id ~input ~old_model ~model ~inject =
   let%map snapshot =
-    Bonsai.Expert.eval ~input ~old_model ~model ~inject ~action_type_id unpacked
+    Bonsai_lib.Generic.Expert.eval
+      ~input
+      ~old_model
+      ~model
+      ~inject
+      ~action_type_id
+      ~incr_state:Incr.State.t
+      unpacked
   and model = model in
   let apply_action incoming_action _state ~schedule_action:_ =
     let schedule_event = Vdom.Event.Expert.handle_non_dom_event_exn in
-    Bonsai.Expert.Snapshot.apply_action snapshot ~schedule_event incoming_action
+    Bonsai_lib.Generic.Expert.Snapshot.apply_action
+      snapshot
+      ~schedule_event
+      incoming_action
   in
-  let view, extra = Bonsai.Expert.Snapshot.result snapshot in
+  let view, extra = Bonsai_lib.Generic.Expert.Snapshot.result snapshot in
   Incr_dom.Component.create_with_extra ~extra ~apply_action model view
 ;;
 
 let convert_generic
       (type input model action extra)
-      (unpacked : (input, model, action, Vdom.Node.t * extra) Bonsai.Expert.unpacked)
+      (unpacked :
+         ( input
+         , model
+         , action
+         , Vdom.Node.t * extra
+         , Incr.state_witness
+         , Vdom.Event.t )
+           Bonsai_lib.Generic.Expert.unpacked)
       ~(action_type_id : action Type_equal.Id.t)
   : (module S
       with type Model.t = model
@@ -53,7 +70,9 @@ let convert_generic
 ;;
 
 let convert_with_extra component =
-  let (T (unpacked, action_type_id)) = Bonsai.Expert.reveal component in
+  let (T (unpacked, action_type_id)) =
+    component |> Bonsai.to_generic |> Bonsai_lib.Generic.Expert.reveal
+  in
   convert_generic unpacked ~action_type_id
 ;;
 

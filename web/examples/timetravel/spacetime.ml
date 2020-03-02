@@ -54,9 +54,12 @@ let view cursor history ~inject =
 let create (type i m r) (inner_component : (i, m, r) Bonsai.t)
   : (i, m Model.t, r * Result.t) Bonsai.t
   =
-  let (T (inner_unpacked, action_type_id)) = Bonsai.Expert.reveal inner_component in
+  let (T (inner_unpacked, action_type_id)) =
+    inner_component |> Bonsai.to_generic |> Bonsai_lib.Generic.Expert.reveal
+  in
   let open Incr.Let_syntax in
-  Bonsai.Expert.of_full
+  Bonsai_lib.Generic.Expert.of_full
+    [%here]
     ~action_type_id:
       (Type_equal.Id.create
          ~name:(Source_code_position.to_string [%here])
@@ -64,17 +67,18 @@ let create (type i m r) (inner_component : (i, m, r) Bonsai.t)
            | Action.Inner a -> Type_equal.Id.to_sexp action_type_id a
            | Set_cursor cursor ->
              [%sexp "Set_cursor", (cursor : Spacetime_tree.Cursor.t)]))
-    ~f:(fun ~input ~old_model ~(model : m Model.t Incr.t) ~inject ->
+    ~f:(fun ~input ~old_model ~(model : m Model.t Incr.t) ~inject ~incr_state:_ ->
       let inject_inner a = inject (Action.Inner a) in
       let inner_model = model >>| Model.inner in
       let inner_old_model = old_model >>| Option.map ~f:Model.inner in
       let inner =
-        Bonsai.Expert.eval
+        Bonsai_lib.Generic.Expert.eval
           ~input
           ~old_model:inner_old_model
           ~model:inner_model
           ~inject:inject_inner
           ~action_type_id
+          ~incr_state:Incr.State.t
           inner_unpacked
       in
       let apply_action =
@@ -83,7 +87,7 @@ let create (type i m r) (inner_component : (i, m, r) Bonsai.t)
         fun ~schedule_event -> function
           | Action.Inner a ->
             let inner : m =
-              Bonsai.Expert.Snapshot.apply_action inner ~schedule_event a
+              Bonsai_lib.Generic.Expert.Snapshot.apply_action inner ~schedule_event a
             in
             let history, cursor =
               Spacetime_tree.append model.history model.cursor inner
@@ -96,10 +100,11 @@ let create (type i m r) (inner_component : (i, m, r) Bonsai.t)
       let result =
         let%map inner = inner
         and view = view ~inject (model >>| Model.cursor) (model >>| Model.history) in
-        Bonsai.Expert.Snapshot.result inner, view
+        Bonsai_lib.Generic.Expert.Snapshot.result inner, view
       in
       let%map apply_action = apply_action
       and result = result in
-      Bonsai.Expert.Snapshot.create ~result ~apply_action)
-  |> Bonsai.Expert.conceal
+      Bonsai_lib.Generic.Expert.Snapshot.create ~result ~apply_action)
+  |> Bonsai_lib.Generic.Expert.conceal
+  |> Bonsai.of_generic
 ;;

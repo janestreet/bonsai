@@ -95,7 +95,14 @@ let start_generic_poly
       ~(initial_input : input)
       ~(initial_model : model)
       ~bind_to_element_with_id
-      ~(component : (input_and_inject, model, action, result) Bonsai.Expert.unpacked)
+      ~(component :
+          ( input_and_inject
+          , model
+          , action
+          , result
+          , Incr.state_witness
+          , Vdom.Event.t )
+            Bonsai_lib.Generic.Expert.unpacked)
       ~(action_type_id : action Type_equal.Id.t)
   : (input, extra, incoming, outgoing) Handle.t
   =
@@ -138,13 +145,20 @@ let start_generic_poly
         get_app_input ~input ~inject_outgoing:Out_event.inject
       in
       let%map snapshot =
-        Bonsai.Expert.eval ~input ~old_model ~model ~inject component ~action_type_id
+        Bonsai_lib.Generic.Expert.eval
+          ~input
+          ~old_model
+          ~model
+          ~inject
+          ~action_type_id
+          ~incr_state:Incr.State.t
+          component
       and model = model in
-      let apply_action = Bonsai.Expert.Snapshot.apply_action snapshot in
+      let apply_action = Bonsai_lib.Generic.Expert.Snapshot.apply_action snapshot in
       let apply_action action () ~schedule_action:_ =
         apply_action ~schedule_event:Vdom.Event.Expert.handle_non_dom_event_exn action
       in
-      let result = Bonsai.Expert.Snapshot.result snapshot in
+      let result = Bonsai_lib.Generic.Expert.Snapshot.result snapshot in
       let { App_result.view; extra; inject_incoming } = get_app_result result in
       Handle.set_inject handle inject_incoming;
       Bus.write handle.extra extra;
@@ -168,7 +182,9 @@ let start_generic
       ~bind_to_element_with_id
       ~component
   =
-  let (T (unpacked, action_type_id)) = Bonsai.Expert.reveal component in
+  let (T (unpacked, action_type_id)) =
+    component |> Bonsai.to_generic |> Bonsai_lib.Generic.Expert.reveal
+  in
   start_generic_poly
     ~get_app_result
     ~initial_input

@@ -14,6 +14,7 @@ module Event = struct
 end
 
 module Incr = Incremental.Make ()
+module Bonsai_lib = Bonsai
 
 module Bonsai = struct
   module Event = Event
@@ -22,3 +23,4 @@ module Bonsai = struct
 end
 
 module Incr_map = Incr_map.Make (Incr)
+include Expect_test_helpers_kernel

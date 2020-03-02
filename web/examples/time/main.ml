@@ -3,7 +3,7 @@ open Bonsai_web
 open Bonsai.Infix
 
 let component =
-  Bonsai.Incremental.of_incr (Incr.Clock.watch_now Incr.clock)
+  Bonsai.With_incr.of_incr (Incr.Clock.watch_now Incr.clock)
   >>| Time_ns.to_string
   >>| Vdom.Node.text
 ;;

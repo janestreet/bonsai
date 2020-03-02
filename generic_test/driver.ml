@@ -1,5 +1,6 @@
 open! Core_kernel
 include Driver_intf
+module Bonsai_lib = Bonsai
 
 module Make
     (Bonsai : Bonsai.S)
@@ -14,7 +15,8 @@ struct
     ; model_var : 'm Incr.Var.t
     ; old_model_var : 'm option Incr.Var.t
     ; inject : 'a -> Event.t
-    ; snapshot : ('m, 'a, 'r) Bonsai.Expert.Snapshot.t Incr.Observer.t
+    ; snapshot :
+        ('m, 'a, 'r, Event.t) Bonsai_lib.Generic.Expert.Snapshot.t Incr.Observer.t
     ; state : 'a Event_handler.t
     }
 
@@ -30,13 +32,15 @@ struct
     let input_var = Incr.Var.create initial_input in
     let model_var = Incr.Var.create initial_model in
     let old_model_var = Incr.Var.create None in
-    let (T (component_unpacked, action_type_id)) = Bonsai.Expert.reveal component in
+    let (T (component_unpacked, action_type_id)) =
+      component |> Bonsai.to_generic |> Bonsai_lib.Generic.Expert.reveal
+    in
     (* Sadly the only way to give a name to the existential type that we just introduced
        into the environment is by defining a function like this. See
        https://github.com/ocaml/ocaml/issues/7074. *)
     let create_polymorphic
           (type a)
-          (component_unpacked : (i, m, a, r) Bonsai.Expert.unpacked)
+          (component_unpacked : (i, m, a, r, _, _) Bonsai_lib.Generic.Expert.unpacked)
           (action_type_id : a Type_equal.Id.t)
       : (i, m, r) t
       =
@@ -45,11 +49,12 @@ struct
         Packed_action.T (action, action_type_id) |> Event_handler.inject state
       in
       let snapshot =
-        Bonsai.Expert.eval
+        Bonsai_lib.Generic.Expert.eval
           component_unpacked
           ~input:(Incr.Var.watch input_var)
           ~old_model:(Incr.Var.watch old_model_var)
           ~model:(Incr.Var.watch model_var)
+          ~incr_state:Incr.State.t
           ~inject
           ~action_type_id
         |> Incr.observe
@@ -64,7 +69,9 @@ struct
     let previous_model = Incr.Var.value model_var in
     let process_event action =
       let apply_action =
-        snapshot |> Incr.Observer.value_exn |> Bonsai.Expert.Snapshot.apply_action
+        snapshot
+        |> Incr.Observer.value_exn
+        |> Bonsai_lib.Generic.Expert.Snapshot.apply_action
       in
       let new_model =
         apply_action action ~schedule_event:(fun e ->
@@ -84,5 +91,8 @@ struct
   let model (T t) = Incr.Var.value t.model_var
   let set_model (T t) = Incr.Var.set t.model_var
   let set_input (T t) = Incr.Var.set t.input_var
-  let result (T t) = Incr.Observer.value_exn t.snapshot |> Bonsai.Expert.Snapshot.result
+
+  let result (T t) =
+    Incr.Observer.value_exn t.snapshot |> Bonsai_lib.Generic.Expert.Snapshot.result
+  ;;
 end

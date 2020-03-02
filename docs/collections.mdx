@@ -49,8 +49,7 @@ executed and the return value is `None`.
 ```ocaml
 # #show Bonsai.Option.wrap_model
 val wrap_model :
-  ?on_action_for_none:(unit, 'model option)
-                      Bonsai_mdx__Import.Bonsai.on_action_mismatch ->
+  ?on_action_for_none:(unit, 'model option) Bonsai.on_action_mismatch ->
   ('input, 'model, 'result) Bonsai.t ->
   ('input, 'model option, 'result option) Bonsai.t
 ```
@@ -84,7 +83,10 @@ The default behavior is to ignore such actions.
 
 ```ocaml
 # open Bonsai.Infix
-# let non_optional_model = Bonsai.id >>| fun (input, model) -> sprintf "%f %d" input model
+# let non_optional_model = 
+  let%map.Bonsai input = Bonsai.input 
+  and            model = Bonsai.model in
+  sprintf "%f %d" input model
 val non_optional_model : (float, int, string) Bonsai.t = <abstr>
 # let optional_model = Bonsai.Option.wrap_model non_optional_model
 val optional_model : (float, int option, string option) Bonsai.t = <abstr>
@@ -98,8 +100,7 @@ specifying a default value to be used as the result when the model is `None`.
 ```ocaml
 # #show Bonsai.Option.wrap_model_with_default
 val wrap_model_with_default :
-  ?on_action_for_none:(unit, 'model option)
-                      Bonsai_mdx__Import.Bonsai.on_action_mismatch ->
+  ?on_action_for_none:(unit, 'model option) Bonsai.on_action_mismatch ->
   ('input, 'model, 'result) Bonsai.t ->
   default:'result -> ('input, 'model option, 'result) Bonsai.t
 ```
@@ -129,7 +130,7 @@ val wrap_model :
   ?on_action_for_other_component:([ `Action_for_first of 'm2
                                   | `Action_for_second of 'm1 ],
                                   ('m1, 'm2) Core_kernel._either)
-                                 Bonsai_mdx__Import.Bonsai.on_action_mismatch ->
+                                 Bonsai.on_action_mismatch ->
   ('input, 'm1, 'r1) Bonsai.t ->
   ('input, 'm2, 'r2) Bonsai.t ->
   ('input, ('m1, 'm2) Core_kernel._either, ('r1, 'r2) Core_kernel._either)
@@ -182,7 +183,7 @@ val wrap_model_with_same_result :
   ?on_action_for_other_component:([ `Action_for_first of 'm2
                                   | `Action_for_second of 'm1 ],
                                   ('m1, 'm2) Core_kernel._either)
-                                 Bonsai_mdx__Import.Bonsai.on_action_mismatch ->
+                                 Bonsai.on_action_mismatch ->
   ('input, 'm1, 'r) Bonsai.t ->
   ('input, 'm2, 'r) Bonsai.t ->
   ('input, ('m1, 'm2) Core_kernel._either, 'r) Bonsai.t
@@ -209,7 +210,8 @@ each with a different model being stored as the data in a map.
 val assoc_model :
   ?comparator:('k, 'cmp) Core_kernel.Map.comparator ->
   ('input, 'model, 'result) Bonsai.t ->
-  ('input, ('k, 'model, 'cmp) Base.Map.t, ('k, 'result, 'cmp) Base.Map.t)
+  ('input, ('k, 'model, 'cmp) Core_kernel.Map.t,
+   ('k, 'result, 'cmp) Core_kernel.Map.t)
   Bonsai.t
 ```
 

@@ -22,6 +22,8 @@ type ('input, 'model, 'result) t
 ```ocaml
 # open! Bonsai_mdx
 # open! Core_kernel
+# module Bonsai = Bonsai_mdx__Import.Bonsai
+module Bonsai = Bonsai_mdx__Import.Bonsai
 ```
 -->
 
@@ -53,7 +55,7 @@ val ( >>> ) :
 components that are being composed.  In order to get the models to match up,
 take a look at the model projections in the
 [Projections document](./projections.mdx), specifically,
-`Bonsai.Project.Model.ignore` and `Bonsai.Project.Model.field`.
+`Bonsai.Model.ignore` and `Bonsai.Model.field`.
 
 
 ### Examples
@@ -107,12 +109,12 @@ let arrow_first (t : ('i, 'm, 'r) Bonsai.t) : ('i * 'a, 'm, 'r * 'a) Bonsai.t =
 
 
 ```ocaml
-# let slider = slider |> Bonsai.Project.Model.field Model.Fields.limit
+# let slider = slider |> Bonsai.Model.field Model.Fields.limit
 val slider : (unit, Model.t, int * Vdom.Node.t) Bonsai.t = <abstr>
 
 # let limited_textbox =
     limited_textbox
-    |> Bonsai.Project.Model.field Model.Fields.text
+    |> Bonsai.Model.field Model.Fields.text
     |> arrow_first
 val limited_textbox :
   (int * '_weak1, Model.t, Vdom.Node.t * '_weak1) Bonsai.t = <abstr>
@@ -145,7 +147,7 @@ val both :
 components that are being composed.  In order to get the models to match up,
 take a look at the model projections in the
 [Projections document](./projections.mdx), specifically,
-`Bonsai.Project.Model.ignore` and `Bonsai.Project.Model.field`.
+`Bonsai.Model.ignore` and `Bonsai.Model.field`.
 
 **IMPORTANT** The `'input` type parameter must be the same in both Bonsai
 components that are being composed.  In order to get the inputs to match up,
@@ -183,7 +185,7 @@ val combined : (unit, int Int.Map.t, Vdom.Node.t * Vdom.Node.t) Bonsai.t =
 components that are being composed.  In order to get the models to match up,
 take a look at the model projections in the
 [Projections document](./projections.mdx), specifically,
-`Bonsai.Project.Model.ignore` and `Bonsai.Project.Model.field`.
+`Bonsai.Model.ignore` and `Bonsai.Model.field`.
 
 **IMPORTANT** The `'input` type parameter must be the same in both Bonsai
 components that are being composed.  In order to get the inputs to match up,

@@ -8,6 +8,8 @@ module Event = struct
   let no_op = Vdom.Event.Ignore
 end
 
+module Bonsai_lib = Bonsai
+
 module Bonsai = struct
   module Event = Event
   module Incr = Incr

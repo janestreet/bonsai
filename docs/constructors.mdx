@@ -22,6 +22,8 @@ type ('input, 'model, 'result) t
 ```ocaml
 # open! Bonsai_mdx
 # open! Core_kernel
+# module Bonsai = Bonsai_mdx.Bonsai
+module Bonsai = Bonsai_mdx.Bonsai
 ```
 -->
 
@@ -270,6 +272,58 @@ representation summarizing the set of people that like your twitter "content".
           (sprintf "%s and %d others liked your post" first_5_people others_count)))
 val users_to_summary :
   ((string, '_weak4) Set.t, '_weak5, Vdom.Node.t) Bonsai.t = <abstr>
+```
+
+## <tt>Bonsai.Model.state\_machine</tt>
+
+`Bonsai.Model.state_machine` is a function that can be used to define a component
+solely in terms of its "apply action" function.
+
+```ocaml
+# #show Bonsai.Model.state_machine
+val state_machine :
+  Lexing.position ->
+  sexp_of_action:('action -> Sexp.t) ->
+  apply_action:(inject:('action -> Bonsai.Event.t) ->
+                schedule_event:(Bonsai.Event.t -> unit) ->
+                'input -> 'model -> 'action -> 'model) ->
+  ('input, 'model, 'action -> Bonsai.Event.t) Bonsai.t
+```
+
+With just apply-action being defined, the result value of the component is just
+the inject function for the action.
+
+### Example
+
+This example shows how to define the counter-component from the `of_module` section,
+but with `state_machine` instead.
+
+```ocaml
+module Action = struct
+  type t =
+    | Increment
+    | Decrement
+  [@@deriving sexp_of]
+end
+
+let component =
+  let%map.Bonsai inject = Bonsai.Model.state_machine
+    [%here]
+    ~sexp_of_action:[%sexp_of: Action.t]
+    ~apply_action:(fun ~inject:_ ~schedule_event:_ () model -> function
+      | Action.Increment -> model + 1
+      | Action.Decrement -> model - 1)
+  and model = Bonsai.model in
+  let button label action =
+    let on_click = Vdom.Attr.on_click (fun _ -> inject action) in
+    Vdom.Node.button [ on_click ] [ Vdom.Node.text label ]
+  in
+  Vdom.Node.div
+    []
+    [ button "-1" Action.Decrement
+    ; Vdom.Node.text (Int.to_string model)
+    ; button "+1" Action.Increment
+    ]
 ```
 
 ## <tt>Bonsai.pure\_from\_model</tt>
