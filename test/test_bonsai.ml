@@ -125,7 +125,10 @@ let%expect_test "state-machine counter-component" =
     let%map.Bonsai inject =
       Bonsai.Model.state_machine
         (* We need to fake the source-code position because this test is run in
-           two files with different names *)
+           two files with different names
+
+           In particular, we can't just use [print_s ~hide_positions:true] because that
+           only hides line and column numbers, but includes the file name. *)
         Source_code_position.
           { pos_fname = "file_name.ml"; pos_lnum = 0; pos_bol = 0; pos_cnum = 0 }
         ~sexp_of_action:[%sexp_of: Action.t]
@@ -275,11 +278,18 @@ let%expect_test "incremental fn constructor" =
         doing math |}];
     let (module H) = Helpers.make ~driver ~sexp_of_result:[%sexp_of: int Int.Map.t] in
     H.show ();
-    [%expect {| ((0 1)(1 2)(2 3)) |}];
-    H.set_model (Int.Map.add_exn initial_model ~key:3 ~data:3);
     [%expect {|
+      ((0 1)
+       (1 2)
+       (2 3)) |}];
+    H.set_model (Int.Map.add_exn initial_model ~key:3 ~data:3);
+    [%expect
+      {|
         doing math
-        ((0 1)(1 2)(2 3)(3 4)) |}])
+        ((0 1)
+         (1 2)
+         (2 3)
+         (3 4)) |}])
 ;;
 
 let%expect_test "schedule event from outside of the component" =
@@ -482,15 +492,15 @@ let%expect_test "incremental module constructor" =
     [%expect {| () |}];
     let model = Set.add initial_model "hello" in
     H.set_model model;
-    [%expect {| ((5(hello))) |}];
+    [%expect {| ((5 (hello))) |}];
     let model = Set.add model "there" in
     H.set_model model;
-    [%expect {| ((5(hello there))) |}];
+    [%expect {| ((5 (hello there))) |}];
     let model = Set.add model "hi" in
     H.set_model model;
-    [%expect {| ((2(hi))(5(hello there))) |}];
+    [%expect {| ((2 (hi)) (5 (hello there))) |}];
     H.do_actions [ Char_count_component.Action.Remove_strings_of_length_5 ];
-    [%expect {| ((2(hi))) |}])
+    [%expect {| ((2 (hi))) |}])
 ;;
 
 let%expect_test "model cutoff" =
@@ -580,19 +590,19 @@ let%expect_test "input" =
       Helpers.make_with_inject ~driver ~sexp_of_result:[%sexp_of: int * string list]
     in
     H.show ();
-    [%expect {| (0()) |}];
+    [%expect {| (0 ()) |}];
     H.set_input [ "a"; "b"; "c"; "aa"; "bbb"; "cccc" ];
-    [%expect {| (0()) |}];
+    [%expect {| (0 ()) |}];
     H.do_actions [ Words_counter_component.Action.Increment ];
-    [%expect {| (1(a b c)) |}];
+    [%expect {| (1 (a b c)) |}];
     H.do_actions [ Words_counter_component.Action.Increment ];
-    [%expect {| (2(aa)) |}];
+    [%expect {| (2 (aa)) |}];
     H.do_actions [ Words_counter_component.Action.Increment ];
-    [%expect {| (3(bbb)) |}];
+    [%expect {| (3 (bbb)) |}];
     H.do_actions [ Words_counter_component.Action.Increment ];
-    [%expect {| (4(cccc)) |}];
+    [%expect {| (4 (cccc)) |}];
     H.set_input [ "aaaa"; "bbbb" ];
-    [%expect {| (4(aaaa bbbb)) |}])
+    [%expect {| (4 (aaaa bbbb)) |}])
 ;;
 
 let%expect_test "compose, pure" =
@@ -731,9 +741,13 @@ let%expect_test "assoc on input" =
         Helpers.make ~driver ~sexp_of_result:[%sexp_of: int String.Map.t]
       in
       H.show ();
-      [%expect {| ((a 1)(b 3)) |}];
+      [%expect {|
+        ((a 1)
+         (b 3)) |}];
       H.set_input (String.Map.of_alist_exn [ "a", 1; "b", 2 ]);
-      [%expect {| ((a 2)(b 3)) |}])
+      [%expect {|
+        ((a 2)
+         (b 3)) |}])
 ;;
 
 let%expect_test "Incremental.of_incr" =
