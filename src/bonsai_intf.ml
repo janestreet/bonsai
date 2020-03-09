@@ -328,24 +328,76 @@ module type S_gen = sig
     (** [arr] is the same as [pure]. *)
     val arr : ('input -> 'result) -> ('input, _, 'result) t
 
-    (** [first t] applies [t] to the first part of the input. *)
+    (** [first t] applies [t] to the first part of the input.
+
+        {v
+                                    .-----------------------.
+                                    | .-------------------. |
+                       .-- 'input --+-| 'input -> 'result |-+-- 'result --.
+                      /             | `-------------------` |              \
+       'input * 'a --+---------'a --+-----------------------+-- 'a ---------+-- 'result * 'a
+                                    `-----------------------`
+       v} *)
     val first : ('input, 'model, 'result) t -> ('input * 'a, 'model, 'result * 'a) t
 
-    (** [second t] applies [t] to the second part of the input. *)
+    (** [second t] applies [t] to the second part of the input.
+
+        {v
+                                   .-----------------------.
+                       .----- 'a --+-----------------------+-- 'a -----.
+                      /            | .-------------------. |            \
+       'a * 'input --+--- 'input --+-| 'input -> 'result |-+-- 'result --+-- 'a * 'result
+                                   | `-------------------` |
+                                   `-----------------------`
+       v} *)
     val second : ('input, 'model, 'result) t -> ('a * 'input, 'model, 'a * 'result) t
 
     (** [split t u] applies [t] to the first part of the input and [u] to the second
-        part. *)
+        part.
+
+
+        {v
+                                     .-----------------.
+                                     | .-------------. |
+                           .-- 'i1 --+-| 'i1 -> 'r1  |-+-- 'r1 --.
+                          /          | `-------------` |          \
+                         /           | .-------------. |           \
+            'i1 * 'i2 --+----- 'i2 --+-| 'i2 -> 'r2  |-+-- 'r2 -----+-- 'r1 * 'r2
+                                     | `-------------` |
+                                     `-----------------`
+       v} *)
     val split
       :  ('i1, 'model, 'r1) t
       -> ('i2, 'model, 'r2) t
       -> ('i1 * 'i2, 'model, 'r1 * 'r2) t
 
-    (** [extend_first] returns the result of a bonsai component alongside its input *)
-    val extend_first : ('i, 'm, 'r) t -> ('i, 'm, 'r * 'i) t
+    (** [extend_first] returns the result of a bonsai component alongside its input.
 
-    (** [extend_second] returns the result of a bonsai component alongside its input *)
-    val extend_second : ('i, 'm, 'r) t -> ('i, 'm, 'i * 'r) t
+        {v
+                .----------------------------.
+                |      .-------------------. |
+       'input --+-+----| 'input -> 'result |-+-- 'result --.
+                |  \   `-------------------` |              \
+                |   `------------------------+-- 'input -----+-- 'result * 'input
+                `----------------------------`
+       v} *)
+    val extend_first
+      :  ('input, 'model, 'result) t
+      -> ('input, 'model, 'result * 'input) t
+
+    (** [extend_second] returns the result of a bonsai component alongside its input.
+
+        {v
+                .----------------------------.
+                |   .------------------------+-- 'input --.
+                |  /   .-------------------. |             \
+       'input --+-+----| 'input -> 'result |-+-- 'result ---+-- 'input * 'result
+                |      `-------------------` |
+                `----------------------------`
+       v} *)
+    val extend_second
+      :  ('input, 'model, 'result) t
+      -> ('input, 'model, 'input * 'result) t
 
     (** [t *** u = split t u]. *)
     val ( *** )
@@ -354,7 +406,20 @@ module type S_gen = sig
       -> ('i1 * 'i2, 'model, 'r1 * 'r2) t
 
     (** [fanout t u] applies [t] and [u] to the same input and returns both results.  It's
-        actually just [both]. *)
+        actually just [both].
+
+        {v
+                .------------------------.
+                |      .---------------. |
+                |   .--| 'input -> 'r1 |-+-- 'r1 --.
+                |  /   `---------------` |          \
+       'input --+-+                      |           \
+                |  \   .---------------. |            \
+                |   `--| 'input -> 'r2 |-+-- 'r2 ------+-- 'r1 * 'r2
+                |      `---------------` |
+                `------------------------`
+       v} *)
+
     val fanout
       :  ('input, 'model, 'r1) t
       -> ('input, 'model, 'r2) t
