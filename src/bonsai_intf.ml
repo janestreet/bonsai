@@ -157,7 +157,10 @@ module type S_gen = sig
     (** [a >>> b] is [compose a b] *)
     val ( >>> ) : ('i1, 'model, 'r1) t -> ('r1, 'model, 'r2) t -> ('i1, 'model, 'r2) t
 
+    (** [t >>| f] is [map t ~f] *)
     val ( >>| ) : ('input, 'model, 'r1) t -> ('r1 -> 'r2) -> ('input, 'model, 'r2) t
+
+    (** [f @>> t] is the [map_input t ~f] *)
     val ( @>> ) : ('i1 -> 'i2) -> ('i2, 'model, 'result) t -> ('i1, 'model, 'result) t
   end
 
