@@ -20,7 +20,7 @@ module Handle : sig
       the page. *)
   val stop : _ t -> unit
 
-  (** A deferred that resolves after the first display occurrs.  At this
+  (** A deferred that resolves after the first display occurs.  At this
       point, there is content being shown on the screen. *)
   val started : _ t -> unit Deferred.t
 
