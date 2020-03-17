@@ -1,0 +1,4 @@
+(executables (names main)
+ (libraries async_kernel bonsai_web bonsai_web_rpgdice_example core_kernel
+  vdom_input_widgets)
+ (preprocess (pps ppx_jane js_of_ocaml-ppx ppx_pattern_bind)))
