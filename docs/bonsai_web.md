@@ -37,9 +37,9 @@ module.
 
 Both `Bonsai_web.Start.start` and `Bonsai_web.Start.start_standalone` take
 a Bonsai component as a parameter to the function, alongside the initial
-input and model that the component initially reads and writes to.  The final
-parameter is `bind_to_element_with_id:string` which will mount the component
-into a DOM element in the browser which has an ID matching the provided value.
+input that the component initially reads from.  The final parameter is
+`bind_to_element_with_id:string` which will mount the component into a DOM
+element in the browser which has an ID matching the provided value.
 
 Where `Bonsai_web.Start.start` and `Bonsai_web.Start.start_standalone` differ
 is in the type of Bonsai component that they expect, as well as the type of
@@ -56,7 +56,7 @@ These requirements are encoded in the types of the `'input` and `'result`
 type parameters of the Bonsai component that `start` is passed:
 
 ```
-(('input, 'outgoing) App_input.t, 'model, 'incoming App_result.t) Bonsai.t
+(('input, 'outgoing) App_input.t, 'incoming App_result.t) Bonsai.t
 ```
 
 ### `App_input.t`
@@ -87,7 +87,7 @@ component can receive actions from the [handle](#bonsai_web.start.handle.t).
 The purpose of `start_standalone` is to start an application that _does not_
 need to communicate with the outside world.  Because of this, the API is fairly
 straightforward.  The Bonsai component parameter has an easily understandable
-type: `('input, 'model, Vdom.Node.t) Bonsai.t`, and it returns a
+type: `('input, Vdom.Node.t) Bonsai.t`, and it returns a
 `('input, Nothing.t, Nothing.t) Bonsai_web.Start.Handle.t`.
 
 ## <tt> Bonsai\_web.Start.Handle.t </tt>

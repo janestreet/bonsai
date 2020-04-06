@@ -16,3 +16,14 @@ type ('input, 'model, 'action, 'result, 'incr, 'event) unpacked +=
       ; constructed_at : Source_code_position.t
       }
       -> ('input, 'model, 'action, 'result, 'incr, 'event) unpacked
+
+val of_full
+  :  Source_code_position.t
+  -> f:('input, 'model, 'action, 'result, 'incr, 'event) t
+  -> action_type_id:'action Type_equal.Id.t
+  -> model_type_id:'model Type_equal.Id.t
+  -> default_model:'model
+  -> model_equal:('model -> 'model -> bool)
+  -> sexp_of_model:('model -> Sexp.t)
+  -> model_of_sexp:(Sexp.t -> 'model)
+  -> ('input, 'result, 'incr, 'event) Packed.t

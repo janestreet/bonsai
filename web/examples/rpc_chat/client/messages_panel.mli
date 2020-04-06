@@ -9,4 +9,4 @@ module Input : sig
   val create : current_room:Room.t -> messages:Message.t list -> t
 end
 
-val component : (Input.t, unit, Vdom.Node.t) Bonsai.t
+val component : (Input.t, Vdom.Node.t) Bonsai.t

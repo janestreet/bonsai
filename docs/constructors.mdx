@@ -4,20 +4,6 @@ uuid: 05d4875b-921d-4ce5-aaf6-44c897f1720b
 parent: "./api_tour.mdx"
 ---
 
-<div id="floater">
-
-```
-type ('input, 'model, 'result) t
-```
-
-| Parameter            | Description             |
-| -------------------- | ----------------------- |
-| <tt>**'input**</tt>  | Input to component      |
-| <tt>**'model**</tt>  | Component state-machine |
-| <tt>**'result**</tt> | Type of computed value  |
-
-</div>
-
 <!--
 ```ocaml
 # open! Bonsai_mdx
@@ -53,7 +39,7 @@ module type S = sig
   highly recommended to put just the data that needs mutation in [Model.t], and
   the rest in [Input.t]. *)
   module Model : sig
-    type t
+    type t [@@deriving sexp, equal]
   end
 
   (** Components can change their own [Model.t] by issuing "actions" that
@@ -106,13 +92,12 @@ For more on the state-machine like nature of a bonsai component, read the
 # #show Bonsai.of_module
 val of_module :
   ('input, 'model, 'action, 'result) Bonsai.component_s ->
-  ('input, 'model, 'result) Bonsai.t
+  default_model:'model -> ('input, 'result) Bonsai.t
 ```
 
 When implementing `Bonsai.S` and `Bonsai.of_module`, it is common to
-have a
-component take up an entire file, with the submodules and functions declared as
-modules and functions at the top-most level of that file.
+have a component take up an entire file, with the submodules and functions
+declared as modules and functions at the top-most level of that file.
 
 
 ### Examples
@@ -144,8 +129,8 @@ end
 And then using that module to make a useless `Bonsai.t` component.
 
 ```ocaml
-# let useless = Bonsai.of_module (module Useless)
-val useless : (unit, unit, unit) Bonsai.t = <abstr>
+# let useless = Bonsai.of_module (module Useless) ~default_model:()
+val useless : (unit, unit) Bonsai.t = <abstr>
 ```
 
 A basic component that tracks an integer in the state machine, and whose result
@@ -204,8 +189,8 @@ end
 And then using that module to make a component.
 
 ```ocaml env=e1
-# let counter = Bonsai.of_module (module Counter);;
-val counter : (unit, int, Counter.Result.t) Bonsai.t = <abstr>
+# let counter = Bonsai.of_module (module Counter) ~default_model:0;;
+val counter : (unit, Counter.Result.t) Bonsai.t = <abstr>
 ```
 
 <!-- Use the <tt> element to get monospace text without the bright-blue that
@@ -217,7 +202,7 @@ not have an input or model. [^tick-a-model-and-input]  Compare to `Fn.const`.
 
 ```ocaml
 # Bonsai.const
-- : 'result -> ('a, 'b, 'result) Bonsai.t = <fun>
+- : 'result -> ('a, 'result) Bonsai.t = <fun>
 ```
 
 A constant component is not used frequently, but can be useful when an API that
@@ -227,18 +212,17 @@ you want to call requires a component.
 
 ```ocaml
 # let the_answer = Bonsai.const 42
-val the_answer : ('_weak1, '_weak2, int) Bonsai.t = <abstr>
+val the_answer : ('_weak1, int) Bonsai.t = <abstr>
 ```
 
 ## <tt>Bonsai.pure</tt>
 
 `Bonsai.pure` is used to create a Bonsai component that can be implemented as a
-pure function from `'input` to `'result`.  A component created in this way can
-not raise actions, and has no `'model` state-machine. [^tick-a-model]
+pure function from `'input` to `'result`.  
 
 ```ocaml
 # #show Bonsai.pure
-val pure : f:('input -> 'result) -> ('input, 'a, 'result) Bonsai.t
+val pure : f:('input -> 'result) -> ('input, 'result) Bonsai.t
 ```
 
 ### Examples
@@ -248,7 +232,7 @@ node that will display the contents of that string.
 
 ```ocaml
 # let string_to_vdom_text = Bonsai.pure ~f:(fun string -> Vdom.Node.text string);;
-val string_to_vdom_text : (string, '_weak3, Vdom.Node.t) Bonsai.t = <abstr>
+val string_to_vdom_text : (string, Vdom.Node.t) Bonsai.t = <abstr>
 ```
 
 A component whose input is a set of usernames, and whose result is a text
@@ -270,24 +254,26 @@ representation summarizing the set of people that like your twitter "content".
         let others_count = n - render_cutoff in
         Vdom.Node.text
           (sprintf "%s and %d others liked your post" first_5_people others_count)))
-val users_to_summary :
-  ((string, '_weak4) Set.t, '_weak5, Vdom.Node.t) Bonsai.t = <abstr>
+val users_to_summary : ((string, '_weak2) Set.t, Vdom.Node.t) Bonsai.t =
+  <abstr>
 ```
 
-## <tt>Bonsai.Model.state\_machine</tt>
+## <tt>Bonsai.state\_machine</tt>
 
-`Bonsai.Model.state_machine` is a function that can be used to define a component
+`Bonsai.state_machine` is a function that can be used to define a component
 solely in terms of its "apply action" function.
 
 ```ocaml
-# #show Bonsai.Model.state_machine
+# #show Bonsai.state_machine
 val state_machine :
+  (module Bonsai__.Bonsai_intf.Model with type t = 'model) ->
+  (module Bonsai__.Bonsai_intf.Action with type t = 'action) ->
   Lexing.position ->
-  sexp_of_action:('action -> Sexp.t) ->
+  default_model:'model ->
   apply_action:(inject:('action -> Bonsai.Event.t) ->
                 schedule_event:(Bonsai.Event.t -> unit) ->
                 'input -> 'model -> 'action -> 'model) ->
-  ('input, 'model, 'action -> Bonsai.Event.t) Bonsai.t
+  ('input, 'model * ('action -> Bonsai.Event.t)) Bonsai.t
 ```
 
 With just apply-action being defined, the result value of the component is just
@@ -307,13 +293,14 @@ module Action = struct
 end
 
 let component =
-  let%map.Bonsai inject = Bonsai.Model.state_machine
+  let%map.Bonsai model, inject = Bonsai.state_machine
+    (module Int)
+    (module Action)
     [%here]
-    ~sexp_of_action:[%sexp_of: Action.t]
+    ~default_model:0
     ~apply_action:(fun ~inject:_ ~schedule_event:_ () model -> function
       | Action.Increment -> model + 1
-      | Action.Decrement -> model - 1)
-  and model = Bonsai.model in
+      | Action.Decrement -> model - 1) in
   let button label action =
     let on_click = Vdom.Attr.on_click (fun _ -> inject action) in
     Vdom.Node.button [ on_click ] [ Vdom.Node.text label ]
@@ -325,106 +312,6 @@ let component =
     ; button "+1" Action.Increment
     ]
 ```
-
-## <tt>Bonsai.pure\_from\_model</tt>
-
-Very similar to `Bonsai.pure`, `Bonsai.pure_from_model` is used to create
-a Bonsai component implementable as a pure function.  Where it differs from `pure`
-is that `pure_from_model` reads from the `'model` of the component and has no
-`'input` [^tick-a-input]
-
-```ocaml
-# #show Bonsai.pure_from_model
-val pure_from_model : f:('model -> 'result) -> ('a, 'model, 'result) Bonsai.t
-```
-
-It's not obvious why you would use this function instead of `of_pure`, but
-occasionally it's easier to combine a component created via this function
-with a component that requires the model parameter than it is to combine
-components that don't share the same model.
-
-Put another way, it's easier to combine these components:
-
-```
-val a : (unit, int, _) Bonsai.t
-val b : (unit, int, _) Bonsai.t
-```
-
-than it would be to combine these:
-
-```
-val c : (unit, int,  _) Bonsai.t
-val d : (int,  unit, _) Bonsai.t
-```
-
-### Examples
-
-A component whose model is a string, and whose result is a Virtual DOM text
-node that will display the contents of that string.  Even though the string is
-in the `'model` position, it is not actually editable from within the
-component.
-
-Let's assume that there is a textbox component that has a `string` model to store
-the text currently in the textbox.
-
-<!--
-```ocaml
-let textbox : (unit, string, Vdom.Node.t) Bonsai.t = Bonsai.pure ~f:(fun () -> failwith "")
-```
--->
-
-```ocaml
-# #show textbox
-val textbox : (unit, string, Vdom.Node.t) Bonsai.t
-```
-
-We'd like to display that textbox alongside a display of how many characters
-you've typed into the textbox.  The way that both of these components access
-the string (writing to it from the textbox, and reading from it from the
-display) will be by sharing the same model.
-
-Because the display will only be reading the string, we start by using `pure`,
-but a first attempt using `pure` fails with a type error.
-
-```ocaml
-# let string_length_display s =
-      s
-      |> String.length
-      |> Int.to_string
-      |> Vdom.Node.text
-val string_length_display : string -> Vdom.Node.t = <fun>
-
-# let combined =
-    let%map.Bonsai textbox = textbox
-    and            count   = Bonsai.pure ~f:string_length_display in
-    Vdom.Node.div [] [textbox; count]
-Line 3, characters 30-66:
-Error: This expression has type (string, 'a, Vdom.Node.t) Bonsai.t
-       but an expression was expected of type (unit, string, 'b) Bonsai.t
-       Type string is not compatible with type unit 
-```
-
-But if we change the call from `pure` to `pure_from_model` the models line up
-correctly.
-
-```ocaml
-# let combined =
-    let%map.Bonsai textbox = textbox
-    and            count   = Bonsai.pure_from_model ~f:string_length_display in
-    Vdom.Node.div [] [textbox; count]
-val combined : (unit, string, Vdom.Node.t) Bonsai.t = <abstr>
-```
-
-
-[^tick-a-model-and-input]: Because the component is parametric over both input
-  and model (`('a, 'b, result) Bonsai.t`), it can be used in any place that
-  requires a component with any input or model.  The type signature means that
-  the component does not read or write to the model, or does not read from the
-  input.
-
-[^tick-a-model]: Similarly to the above, when the `'model` parameter in a
-  Bonsai component is parametric, it signifies that the component does not read
-  or write to the model, and because of that, it can use any model.
 
 [^tick-a-input]: When the `'input` parameter in a Bonsai component is
   parametric, it signifies that the component does not read from the input, so

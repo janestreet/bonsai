@@ -1,20 +1,19 @@
 open! Core_kernel
 open! Import
 
-type ('i, 'm, 'r) t
+type ('i, 'r) t
 
 val create
-  :  initial_input:'i
-  -> initial_model:'m
-  -> ('i, 'm, 'r) Bonsai.t
-  -> ('i, 'm, 'r) t
+  :  ?initial_model_sexp:Sexp.t
+  -> initial_input:'i
+  -> ('i, 'r) Bonsai.t
+  -> ('i, 'r) t
 
-val model : (_, 'm, _) t -> 'm
-val set_model : (_, 'm, _) t -> 'm -> unit
-val set_input : ('i, _, _) t -> 'i -> unit
+val set_input : ('i, _) t -> 'i -> unit
 
 (** Apply all pending actions and stabilize the incremental graph, updating [result]. *)
-val flush : (_, _, _) t -> unit
+val flush : _ t -> unit
 
 val schedule_event : _ t -> Event.t -> unit
-val result : (_, _, 'r) t -> 'r
+val result : (_, 'r) t -> 'r
+val sexp_of_model : _ t -> Sexp.t

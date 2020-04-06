@@ -15,34 +15,49 @@ struct
     ; model_var : 'm Incr.Var.t
     ; old_model_var : 'm option Incr.Var.t
     ; inject : 'a -> Event.t
+    ; sexp_of_model : 'm -> Sexp.t
     ; snapshot :
         ('m, 'a, 'r, Event.t) Bonsai_lib.Generic.Expert.Snapshot.t Incr.Observer.t
     ; state : 'a Event_handler.t
     }
 
-  type ('i, 'm, 'r) t = T : ('i, 'm, _, 'r) unpacked -> ('i, 'm, 'r) t
+  type ('i, 'r) t = T : ('i, _, _, 'r) unpacked -> ('i, 'r) t
 
   let create
-        (type i m r)
+        (type i r)
+        ?initial_model_sexp
         ~(initial_input : i)
-        ~(initial_model : m)
-        (component : (i, m, r) Bonsai.t)
-    : (i, m, r) t
+        (component : (i, r) Bonsai.t)
+    : (i, r) t
     =
     let input_var = Incr.Var.create initial_input in
-    let model_var = Incr.Var.create initial_model in
-    let old_model_var = Incr.Var.create None in
-    let (T (component_unpacked, action_type_id)) =
+    let (Bonsai_lib.Generic.Expert.T
+           { unpacked = component_unpacked
+           ; action_type_id
+           ; model =
+               { default = default_model
+               ; sexp_of = sexp_of_model
+               ; equal = _
+               ; type_id = _
+               ; of_sexp = model_of_sexp
+               }
+           })
+      =
       component |> Bonsai.to_generic |> Bonsai_lib.Generic.Expert.reveal
     in
+    let starting_model =
+      Option.value_map initial_model_sexp ~default:default_model ~f:[%of_sexp: model]
+    in
+    let old_model_var = Incr.Var.create None in
+    let model_var = Incr.Var.create starting_model in
     (* Sadly the only way to give a name to the existential type that we just introduced
        into the environment is by defining a function like this. See
        https://github.com/ocaml/ocaml/issues/7074. *)
     let create_polymorphic
           (type a)
-          (component_unpacked : (i, m, a, r, _, _) Bonsai_lib.Generic.Expert.unpacked)
+          (component_unpacked : (i, _, a, r, _, _) Bonsai_lib.Generic.Expert.unpacked)
           (action_type_id : a Type_equal.Id.t)
-      : (i, m, r) t
+      : (i, r) t
       =
       let state = Event_handler.make_state ~action_type_id in
       let inject action =
@@ -60,9 +75,13 @@ struct
         |> Incr.observe
       in
       Incr.stabilize ();
-      T { input_var; model_var; inject; snapshot; old_model_var; state }
+      T { input_var; model_var; inject; snapshot; old_model_var; state; sexp_of_model }
     in
     create_polymorphic component_unpacked action_type_id
+  ;;
+
+  let sexp_of_model (T { model_var; sexp_of_model; _ }) =
+    model_var |> Incr.Var.value |> sexp_of_model
   ;;
 
   let flush (T { state; model_var; snapshot; old_model_var; _ }) =
@@ -88,8 +107,6 @@ struct
   ;;
 
   let schedule_event (T t) = Event_handler.schedule_event t.state
-  let model (T t) = Incr.Var.value t.model_var
-  let set_model (T t) = Incr.Var.set t.model_var
   let set_input (T t) = Incr.Var.set t.input_var
 
   let result (T t) =

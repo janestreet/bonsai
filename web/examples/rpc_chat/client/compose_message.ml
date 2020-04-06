@@ -12,7 +12,7 @@ module T = struct
   end
 
   module Model = struct
-    type t = { message : string }
+    type t = { message : string } [@@deriving equal, sexp]
 
     let default = { message = "" }
   end
@@ -64,4 +64,4 @@ end
 
 include T
 
-let component = Bonsai.of_module (module T)
+let component = Bonsai.of_module (module T) ~default_model:Model.default

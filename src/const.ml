@@ -23,3 +23,8 @@ end
 include T
 
 let () = Component.define (module T)
+
+let const r =
+  Packed.T
+    { unpacked = C r; action_type_id = nothing_type_id; model = Packed.unit_model_info }
+;;

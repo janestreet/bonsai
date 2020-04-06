@@ -14,23 +14,22 @@ end
 module type S = sig
   module Bonsai : Bonsai.S
 
-  type ('i, 'm, 'r) t
+  type ('i, 'r) t
 
   val create
-    :  initial_input:'i
-    -> initial_model:'m
-    -> ('i, 'm, 'r) Bonsai.t
-    -> ('i, 'm, 'r) t
+    :  ?initial_model_sexp:Sexp.t
+    -> initial_input:'i
+    -> ('i, 'r) Bonsai.t
+    -> ('i, 'r) t
 
   val schedule_event : _ t -> Bonsai.Event.t -> unit
 
   (** Apply all pending actions and stabilize the incremental graph, updating [result]. *)
-  val flush : ('i, 'm, 'r) t -> unit
+  val flush : _ t -> unit
 
-  val model : (_, 'm, _) t -> 'm
-  val set_model : (_, 'm, _) t -> 'm -> unit
-  val set_input : ('i, _, _) t -> 'i -> unit
-  val result : (_, _, 'r) t -> 'r
+  val set_input : ('i, _) t -> 'i -> unit
+  val result : (_, 'r) t -> 'r
+  val sexp_of_model : (_, _) t -> Sexp.t
 end
 
 module type Driver = sig

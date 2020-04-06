@@ -40,3 +40,26 @@ end
 include T
 
 let () = Component.define (module T)
+
+let of_full
+      constructed_at
+      ~f
+      ~action_type_id
+      ~model_type_id
+      ~default_model
+      ~model_equal
+      ~sexp_of_model
+      ~model_of_sexp
+  =
+  Packed.T
+    { unpacked = C { f; constructed_at }
+    ; action_type_id
+    ; model =
+        { type_id = model_type_id
+        ; default = default_model
+        ; equal = model_equal
+        ; sexp_of = sexp_of_model
+        ; of_sexp = model_of_sexp
+        }
+    }
+;;

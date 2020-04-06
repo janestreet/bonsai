@@ -24,7 +24,7 @@ module Action = struct
 end
 
 let initial_model =
-  { Model.subcomponent_model = My_bonsai_component.initial_model
+  { Model.subcomponent_model = My_bonsai_component.Model.default
   ; other_model = "type into this box"
   }
 ;;

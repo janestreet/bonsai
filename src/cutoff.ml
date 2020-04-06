@@ -7,7 +7,7 @@ module T = struct
   type ('input, 'model, 'action, 'result, 'incr, 'event) unpacked +=
     | Model :
         { t : ('input, 'model, 'action, 'result, 'incr, 'event) unpacked
-        ; cutoff : 'model Incremental.Cutoff.t
+        ; model_equal : 'model -> 'model -> bool
         }
         -> ('input, 'model, 'action, 'result, 'incr, 'event) unpacked
     | Value :
@@ -16,8 +16,7 @@ module T = struct
 
   let sexp_of_unpacked (type i m a r) (component : (i, m, a, r, _, _) unpacked) =
     match component with
-    | Model { t; cutoff } ->
-      [%sexp Model_cutoff { t : unpacked; cutoff : _ Incremental.Cutoff.t }]
+    | Model { t; model_equal = _ } -> [%sexp Model_cutoff { t : unpacked }]
     | Value cutoff -> [%sexp Value_cutoff { cutoff : _ Incremental.Cutoff.t }]
     | _ -> assert false
   ;;
@@ -27,9 +26,10 @@ module T = struct
   let eval (type i m a r incr event) : (i, m, a, r, incr, event) eval_type =
     fun ~input ~old_model ~model ~inject ~action_type_id ~incr_state t ->
     match t with
-    | Model { t; cutoff } ->
+    | Model { t; model_equal } ->
       let model = model >>| Fn.id in
       let old_model = old_model >>| Fn.id in
+      let cutoff = Incremental.Cutoff.of_equal model_equal in
       Incremental.set_cutoff model cutoff;
       Incremental.set_cutoff
         old_model
@@ -51,6 +51,22 @@ end
 
 include T
 
+let value_cutoff ~cutoff =
+  Packed.T
+    { unpacked = Value cutoff
+    ; action_type_id = nothing_type_id
+    ; model = Packed.unit_model_info
+    }
+;;
+
+let model_cutoff (Packed.T { unpacked; action_type_id; model }) =
+  Packed.T
+    { unpacked = Model { t = unpacked; model_equal = model.equal }
+    ; action_type_id
+    ; model
+    }
+;;
+
 let () =
   Component.define
     (module struct
@@ -58,11 +74,13 @@ let () =
 
       let extension_constructor = [%extension_constructor Model]
 
-      let visit component visitor =
-        match component with
-        | Packed.T (Model { t; cutoff }, typ_id) ->
-          let (Packed.T (t, typ_id)) = visit_ext (Packed.T (t, typ_id)) visitor in
-          visitor.visit (Packed.T (Model { t; cutoff }, typ_id))
+      let visit (Packed.T { unpacked; action_type_id; model }) visitor =
+        match unpacked with
+        | Model { t; model_equal = _ } ->
+          let visited =
+            visit_ext (Packed.T { unpacked = t; action_type_id; model }) visitor
+          in
+          visitor.visit (model_cutoff visited)
         | _ -> assert false
       ;;
     end)

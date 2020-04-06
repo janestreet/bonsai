@@ -4,10 +4,10 @@ type 'a t =
   { value : 'a
   ; children : 'a t Int.Map.t
   }
-[@@deriving sexp]
+[@@deriving equal, sexp]
 
 module Cursor = struct
-  type t = int list [@@deriving equal, sexp_of]
+  type t = int list [@@deriving equal, sexp]
 end
 
 let create init = { value = init; children = Int.Map.empty }, []

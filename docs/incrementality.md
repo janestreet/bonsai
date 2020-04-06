@@ -17,16 +17,10 @@ other Bonsai components and joins their results.
 
 ```ocaml
 module Input = struct ... end
-module Model = struct 
-  type t = 
-    { c1_model : C1.Model.t
-    ; c2_model : C2.Model.t
-    } [@@deriving fields]
-end
 
-let super_component : (Input.t, Model.t, Vdom.Node.t) Bonsai.t = 
-  let%map c1 = component_1 |> Bonsai.Project.Model.field Model.Fields.c1_model 
-  and     c2 = component_2 |> Bonsai.Project.Model.field Model.Fields.c2_model 
+let super_component : (Input.t,  Vdom.Node.t) Bonsai.t = 
+  let%map c1 = component_1
+  and     c2 = component_2
   in Vdom.Node.div [] [ c1; c2 ]
 ```
 

@@ -14,4 +14,4 @@ module Model : sig
   val default : t
 end
 
-val component : (Input.t, Model.t, Vdom.Node.t) Bonsai.t
+val component : (Input.t, Vdom.Node.t) Bonsai.t

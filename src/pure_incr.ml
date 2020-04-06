@@ -28,3 +28,8 @@ end
 include T
 
 let () = Component.define (module T)
+
+let pure_incr ~f =
+  Packed.T
+    { unpacked = C f; action_type_id = nothing_type_id; model = Packed.unit_model_info }
+;;

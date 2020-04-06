@@ -43,7 +43,6 @@ end
 let (_ : _ Start.Handle.t) =
   Start.start_standalone
     ~initial_input:"hello"
-    ~initial_model:1
     ~bind_to_element_with_id:"app"
-    (Bonsai.of_module (module String_duplicator))
+    (Bonsai.of_module (module String_duplicator) ~default_model:1)
 ;;

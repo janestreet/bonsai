@@ -36,11 +36,12 @@ let convert_generic
          , Incr.state_witness
          , Vdom.Event.t )
            Bonsai_lib.Generic.Expert.unpacked)
+      ~default_model
       ~(action_type_id : action Type_equal.Id.t)
-  : (module S
-      with type Model.t = model
-       and type Input.t = input
-       and type Extra.t = extra)
+      ~equal_model
+      ~sexp_of_model
+      ~model_of_sexp
+  : (module S with type Input.t = input and type Extra.t = extra)
   =
   (module struct
     module Input = struct
@@ -48,7 +49,9 @@ let convert_generic
     end
 
     module Model = struct
-      type t = model
+      type t = model [@@deriving equal, sexp]
+
+      let default = default_model
     end
 
     module Action = struct
@@ -70,10 +73,16 @@ let convert_generic
 ;;
 
 let convert_with_extra component =
-  let (T (unpacked, action_type_id)) =
+  let (T { unpacked; action_type_id; model }) =
     component |> Bonsai.to_generic |> Bonsai_lib.Generic.Expert.reveal
   in
-  convert_generic unpacked ~action_type_id
+  convert_generic
+    unpacked
+    ~action_type_id
+    ~default_model:model.default
+    ~equal_model:model.equal
+    ~sexp_of_model:model.sexp_of
+    ~model_of_sexp:model.of_sexp
 ;;
 
 let convert component = convert_with_extra (Bonsai.map component ~f:(fun r -> r, ()))

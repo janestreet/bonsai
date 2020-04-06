@@ -18,6 +18,5 @@ end
 
 val component
   : ( (Input.t, Outgoing.t) Start.App_input.t
-    , Model.t
     , (unit, Nothing.t) Start.App_result.t )
       Bonsai.t

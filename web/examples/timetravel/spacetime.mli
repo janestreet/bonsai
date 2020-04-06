@@ -21,6 +21,4 @@ module Result : sig
   type t = Vdom.Node.t -> Vdom.Node.t
 end
 
-val create
-  :  ('input, 'model, 'result) Bonsai.t
-  -> ('input, 'model Model.t, 'result * Result.t) Bonsai.t
+val create : ('input, 'result) Bonsai.t -> ('input, 'result * Result.t) Bonsai.t

@@ -93,9 +93,8 @@ end
     be bound to the DOM element with id [bind_to_element_with_id]. *)
 val start_standalone
   :  initial_input:'input
-  -> initial_model:'model
   -> bind_to_element_with_id:string
-  -> ('input, 'model, Vdom.Node.t) Bonsai.t
+  -> ('input, Vdom.Node.t) Bonsai.t
   -> ('input, unit, Nothing.t, Nothing.t) Handle.t
 
 (** Start an application, receiving a handle that can schedule actions of a user-defined
@@ -108,8 +107,7 @@ val start_standalone
     - an [inject] function that accepts external actions and returns [Vdom.Event.t]s. *)
 val start
   :  initial_input:'input
-  -> initial_model:'model
   -> bind_to_element_with_id:string
-  -> (('input, 'outgoing) App_input.t, 'model, ('extra, 'incoming) App_result.t) Bonsai.t
+  -> (('input, 'outgoing) App_input.t, ('extra, 'incoming) App_result.t) Bonsai.t
   -> ('input, 'extra, 'incoming, 'outgoing) Handle.t
 

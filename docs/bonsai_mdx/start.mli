@@ -15,12 +15,12 @@ val start_standalone
   :  initial_input:'input
   -> initial_model:'model
   -> bind_to_element_with_id:string
-  -> ('input, 'model, Vdom.Node.t) Bonsai.t
+  -> ('input, Vdom.Node.t) Bonsai.t
   -> ('input, Nothing.t) Handle.t
 
 val start
   :  initial_input:'input
   -> initial_model:'model
   -> bind_to_element_with_id:string
-  -> ('input, 'model, Vdom.Node.t * ('a -> Vdom.Event.t)) Bonsai.t
+  -> ('input, Vdom.Node.t * ('a -> Vdom.Event.t)) Bonsai.t
   -> ('input, 'a) Handle.t

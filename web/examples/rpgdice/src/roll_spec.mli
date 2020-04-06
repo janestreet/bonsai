@@ -7,7 +7,7 @@ module Die : sig
   val of_int : int -> t
 end
 
-type t [@@deriving bin_io, compare, equal, sexp_of]
+type t [@@deriving bin_io, compare, equal, sexp]
 
 val roll : ?random_state:Random.State.t -> t -> Roll_result.t
 val of_dice_and_const : (int * Die.t) list -> int -> t

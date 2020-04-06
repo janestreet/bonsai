@@ -58,7 +58,6 @@ let run () =
   let app_handle =
     Start.start
       ~initial_input:App.Input.default
-      ~initial_model:Compose_message.Model.default
       ~bind_to_element_with_id:"app"
       App.component
   in

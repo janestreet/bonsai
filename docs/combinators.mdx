@@ -4,20 +4,6 @@ uuid: 16202242-ed98-49aa-804f-e72c0d51ab47
 parent: "./api_tour.mdx"
 ---
 
-<div id="floater">
-
-```
-type ('input, 'model, 'result) t
-```
-
-| Parameter            | Description             |
-| -------------------- | ----------------------- |
-| <tt>**'input**</tt>  | Input to component      |
-| <tt>**'model**</tt>  | Component state-machine |
-| <tt>**'result**</tt> | Type of computed value  |
-
-</div>
-
 <!--
 ```ocaml
 # open! Bonsai_mdx
@@ -42,28 +28,19 @@ of another component.  This is conceptually similar to function composition.
 ```ocaml
 # #show Bonsai.compose
 val compose :
-  ('i1, 'model, 'r1) Bonsai.t ->
-  ('r1, 'model, 'r2) Bonsai.t -> ('i1, 'model, 'r2) Bonsai.t
+  ('i1, 'r1) Bonsai.t -> ('r1, 'r2) Bonsai.t -> ('i1, 'r2) Bonsai.t
 
 # #show Bonsai.Infix.( >>> )
 val ( >>> ) :
-  ('i1, 'model, 'r1) Bonsai.t ->
-  ('r1, 'model, 'r2) Bonsai.t -> ('i1, 'model, 'r2) Bonsai.t
+  ('i1, 'r1) Bonsai.t -> ('r1, 'r2) Bonsai.t -> ('i1, 'r2) Bonsai.t
 ```
-
-**IMPORTANT** The `'model` type parameter must be the same in both Bonsai
-components that are being composed.  In order to get the models to match up,
-take a look at the model projections in the
-[Projections document](./projections.mdx), specifically,
-`Bonsai.Model.ignore` and `Bonsai.Model.field`.
-
 
 ### Examples
 
 <!--
 ```ocaml
-let limited_textbox: (int, string, Vdom.Node.t) Bonsai.t  = Bonsai.pure (fun _ -> failwith "")
-let slider: (unit, int, int * Vdom.Node.t) Bonsai.t  = Bonsai.pure (fun _ -> failwith "")
+let limited_textbox: (int, Vdom.Node.t) Bonsai.t  = Bonsai.pure (fun _ -> failwith "")
+let slider: (unit, int * Vdom.Node.t) Bonsai.t  = Bonsai.pure (fun _ -> failwith "")
 ```
 -->
 
@@ -74,7 +51,7 @@ A textbox component that limits the number of characters to some integer
 
 ```ocaml
 # #show limited_textbox
-val limited_textbox : (int, string, Vdom.Node.t) Bonsai.t
+val limited_textbox : (int, Vdom.Node.t) Bonsai.t
 ```
 
 A numeric slider component that takes no input but returns
@@ -82,51 +59,23 @@ the VDom node alongside its current value:
 
 ```ocaml
 # #show slider
-val slider : (unit, int, int * Vdom.Node.t) Bonsai.t
-```
-
-Before composing them, they need to share the same model, so we create a
-record to contain both of the models.
-
-```ocaml
-module Model = struct
-  type t =
-    { limit: int
-    ; text: string
-    } [@@deriving fields]
-end
+val slider : (unit, int * Vdom.Node.t) Bonsai.t
 ```
 
 
 ```ocaml
-let arrow_first (t : ('i, 'm, 'r) Bonsai.t) : ('i * 'a, 'm, 'r * 'a) Bonsai.t =
-  let open Bonsai.Let_syntax in
-  let%map x = fst @>> t
-  and y = Bonsai.pure ~f:snd in
-  x, y
-;;
-```
-
-
-```ocaml
-# let slider = slider |> Bonsai.Model.field Model.Fields.limit
-val slider : (unit, Model.t, int * Vdom.Node.t) Bonsai.t = <abstr>
-
-# let limited_textbox =
-    limited_textbox
-    |> Bonsai.Model.field Model.Fields.text
-    |> arrow_first
-val limited_textbox :
-  (int * '_weak1, Model.t, Vdom.Node.t * '_weak1) Bonsai.t = <abstr>
+# let limited_textbox = limited_textbox |> Bonsai.Arrow.first
+val limited_textbox : (int * '_weak1, Vdom.Node.t * '_weak1) Bonsai.t =
+  <abstr>
 
 # open Bonsai.Infix
 # let composed = slider >>> limited_textbox
-val composed : (unit, Model.t, Vdom.Node.t * Vdom.Node.t) Bonsai.t = <abstr>
+val composed : (unit, Vdom.Node.t * Vdom.Node.t) Bonsai.t = <abstr>
 
 # let both =
     let layout_both (slider, textbox) = Vdom.Node.div [] [slider; textbox] in
     composed >>| layout_both
-val both : (unit, Model.t, Vdom.Node.t) Bonsai.t = <abstr>
+val both : (unit, Vdom.Node.t) Bonsai.t = <abstr>
 ```
 
 ## <tt> Bonsai.Let\_syntax.Let\_syntax.both </tt>
@@ -139,15 +88,9 @@ constituent components.
 ```ocaml
 # #show Bonsai.Let_syntax.Let_syntax.both;;
 val both :
-  ('input, 'model, 'r1) Bonsai.t ->
-  ('input, 'model, 'r2) Bonsai.t -> ('input, 'model, 'r1 * 'r2) Bonsai.t
+  ('input, 'r1) Bonsai.t ->
+  ('input, 'r2) Bonsai.t -> ('input, 'r1 * 'r2) Bonsai.t
 ```
-
-**IMPORTANT** The `'model` type parameter must be the same in both Bonsai
-components that are being composed.  In order to get the models to match up,
-take a look at the model projections in the
-[Projections document](./projections.mdx), specifically,
-`Bonsai.Model.ignore` and `Bonsai.Model.field`.
 
 **IMPORTANT** The `'input` type parameter must be the same in both Bonsai
 components that are being composed.  In order to get the inputs to match up,
@@ -161,8 +104,8 @@ take a look at the input projections in the
 
 <!--
 ```ocaml
-let list_of_counters: (unit, int Int.Map.t, Vdom.Node.t) Bonsai.t = Bonsai.pure(fun _ -> failwith "")
-let add_counter: (unit, int Int.Map.t, Vdom.Node.t) Bonsai.t = Bonsai.pure(fun _ -> failwith "")
+let list_of_counters: (unit, Vdom.Node.t) Bonsai.t = Bonsai.pure(fun _ -> failwith "")
+let add_counter: (unit, Vdom.Node.t) Bonsai.t = Bonsai.pure(fun _ -> failwith "")
 ```
 -->
 
@@ -171,21 +114,14 @@ we can combine them with `both`.
 
 ```ocaml
 # #show list_of_counters;;
-val list_of_counters : (unit, int Int.Map.t, Vdom.Node.t) Bonsai.t
+val list_of_counters : (unit, Vdom.Node.t) Bonsai.t
 
 # #show add_counter;;
-val add_counter : (unit, int Int.Map.t, Vdom.Node.t) Bonsai.t
+val add_counter : (unit, Vdom.Node.t) Bonsai.t
 
 # let combined = Bonsai.Let_syntax.Let_syntax.both list_of_counters add_counter;;
-val combined : (unit, int Int.Map.t, Vdom.Node.t * Vdom.Node.t) Bonsai.t =
-  <abstr>
+val combined : (unit, Vdom.Node.t * Vdom.Node.t) Bonsai.t = <abstr>
 ```
-
-**IMPORTANT** The `'model` type parameter must be the same in both Bonsai
-components that are being composed.  In order to get the models to match up,
-take a look at the model projections in the
-[Projections document](./projections.mdx), specifically,
-`Bonsai.Model.ignore` and `Bonsai.Model.field`.
 
 **IMPORTANT** The `'input` type parameter must be the same in both Bonsai
 components that are being composed.  In order to get the inputs to match up,
@@ -204,17 +140,17 @@ components being combined must be the same.
 
 ```ocaml
 # #show list_of_counters;;
-val list_of_counters : (unit, int Int.Map.t, Vdom.Node.t) Bonsai.t
+val list_of_counters : (unit, Vdom.Node.t) Bonsai.t
 
 # #show add_counter;;
-val add_counter : (unit, int Int.Map.t, Vdom.Node.t) Bonsai.t
+val add_counter : (unit, Vdom.Node.t) Bonsai.t
 
 # let combined =
     let%map.Bonsai list_c = list_of_counters
     and add_c = add_counter in
     (* The type of the value *)
     Vdom.Node.div [] [list_c; add_c];;
-val combined : (unit, int Int.Map.t, Vdom.Node.t) Bonsai.t = <abstr>
+val combined : (unit, Vdom.Node.t) Bonsai.t = <abstr>
 ```
 
 [^history]: Bonsai actually got started as a library for "`Incr_dom` combinators!"

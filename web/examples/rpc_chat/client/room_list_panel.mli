@@ -12,4 +12,4 @@ module Input : sig
     -> t
 end
 
-val component : (Input.t, unit, Vdom.Node.t) Bonsai.t
+val component : (Input.t, Vdom.Node.t) Bonsai.t

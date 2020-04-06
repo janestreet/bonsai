@@ -1,9 +1,9 @@
 open! Core_kernel
 
-type 'a t [@@deriving sexp]
+type 'a t [@@deriving equal, sexp]
 
 module Cursor : sig
-  type t [@@deriving equal, sexp_of]
+  type t [@@deriving equal, sexp]
 end
 
 val create : 'a -> 'a t * Cursor.t

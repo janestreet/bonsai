@@ -2,27 +2,33 @@ open! Core_kernel
 open Bonsai_web
 
 module Model = struct
-  type t = int Map.M(Int).t
+  type t = unit Int.Map.t [@@deriving sexp, equal]
+
+  let default = Int.Map.empty
 end
 
 module Add_counter_component = struct
   module Input = Unit
-  module Result = Vdom.Node
   module Model = Model
 
   module Action = struct
     type t = Add_another_counter [@@deriving sexp]
   end
 
+  module Result = struct
+    type t = Model.t * Vdom.Node.t
+  end
+
   let apply_action ~inject:_ ~schedule_event:_ () model = function
     | Action.Add_another_counter ->
       let key = Map.length model in
-      Map.add_exn model ~key ~data:0
+      Map.add_exn model ~key ~data:()
   ;;
 
-  let compute ~inject () _ =
+  let compute ~inject () model =
     let on_click = Vdom.Attr.on_click (fun _ -> inject Action.Add_another_counter) in
-    Vdom.Node.button [ on_click ] [ Vdom.Node.text "Add Another Counter" ]
+    let view = Vdom.Node.button [ on_click ] [ Vdom.Node.text "Add Another Counter" ] in
+    model, view
   ;;
 
   let name = Source_code_position.to_string [%here]
@@ -61,19 +67,22 @@ module Counter_component = struct
   let name = Source_code_position.to_string [%here]
 end
 
+let single_counter = Bonsai.of_module ~default_model:0 (module Counter_component)
+
 let counters_component =
-  Bonsai.of_module (module Counter_component)
-  |> Bonsai.Map.assoc_model ~comparator:(module Int)
+  single_counter
+  |> Bonsai.Map.assoc_input (module Int)
   |> Bonsai.map ~f:(fun result_map -> Vdom.Node.div [] (Map.data result_map))
 ;;
 
-let add_counter_component = Bonsai.of_module (module Add_counter_component)
-
-let application_component =
-  let open Bonsai.Let_syntax in
-  let%map counters = counters_component
-  and add_counter = add_counter_component in
-  Vdom.Node.div [] [ add_counter; counters ]
+let add_counter_component =
+  Bonsai.of_module (module Add_counter_component) ~default_model:Model.default
 ;;
 
-let initial_model = Int.Map.empty
+let application =
+  let open Bonsai.Let_syntax in
+  let%map counters, add_button =
+    add_counter_component >>> Bonsai.Arrow.first counters_component
+  in
+  Vdom.Node.div [] [ add_button; counters ]
+;;

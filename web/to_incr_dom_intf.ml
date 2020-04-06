@@ -4,7 +4,13 @@ open! Import
 
 module type S = sig
   module Input : T
-  module Model : T
+
+  module Model : sig
+    type t [@@deriving equal, sexp]
+
+    val default : t
+  end
+
   module Extra : T
 
   module Action : sig
@@ -27,16 +33,10 @@ module type To_incr_dom = sig
   module type S = S
 
   val convert
-    :  ('input, 'model, Vdom.Node.t) Bonsai.t
-    -> (module S
-         with type Model.t = 'model
-          and type Input.t = 'input
-          and type Extra.t = unit)
+    :  ('input, Vdom.Node.t) Bonsai.t
+    -> (module S with type Input.t = 'input and type Extra.t = unit)
 
   val convert_with_extra
-    :  ('input, 'model, Vdom.Node.t * 'extra) Bonsai.t
-    -> (module S
-         with type Model.t = 'model
-          and type Input.t = 'input
-          and type Extra.t = 'extra)
+    :  ('input, Vdom.Node.t * 'extra) Bonsai.t
+    -> (module S with type Input.t = 'input and type Extra.t = 'extra)
 end

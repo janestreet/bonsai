@@ -70,7 +70,7 @@ rarely seen:
 
 Render functions quickly become complex enough that advanced memoization
 strategies are needed to prevent spending a lot of time recomputing the whole
-view for an application that is barely changing.  
+view for an application that is barely changing.
 
 UI components require internal mutable state.  Consider the humble text box:
 cursor position, selection ranges and scroll-state are all fundamental parts of
@@ -99,26 +99,22 @@ our Arrow to provide both memoization and an internal state-machine for our
 components.
 
 The arrow type that Bonsai defines is called `Bonsai.t`, or written with its
-type parameters, `('input, 'model, 'result) Bonsai.t`.  As you may have guessed
+type parameters, `('input, 'result) Bonsai.t`.  As you may have guessed
 given the name, this type is the focal point of the library; every other
 function in the library produces, manipulates, or composes values of this type.
 
-A value of type `('input, 'model, 'result) Bonsai.t` can be thought of as a
-function that goes from `'input` to `'result` with an internal state-machine of
-type `'model`.  
+A value of type `('input, 'result) Bonsai.t` can be thought of as a
+function that goes from `'input` to `'result`.
 
 
 ## Pure Bonsai
 
 Pure functions are still representable (and encouraged!) and will have the type
-signature `('input, 'a, 'result) Bonsai.t`.  The generic `'a` type in the
-`'model` type parameter location indicates that the state-machine could really
-be anything: after all, the component doesn't read or write to its state
-machine. Creating a `Bonsai.t` out of a pure function is as easy as calling
-`Bonsai.pure`, which has the type signature:
+signature `('input, 'result) Bonsai.t`.  Creating a `Bonsai.t` out of a pure
+function is as easy as calling `Bonsai.pure`, which has the type signature:
 
 ```ocaml
-val pure: f:(‘input -> ‘result) -> (‘input, _, ‘result) Bonsai.t
+val pure: f:(‘input -> ‘result) -> (‘input, ‘result) Bonsai.t
 ```
 
 ## Bonsai with State
@@ -175,15 +171,12 @@ let h a = g (f a)
 There is one huge asterisk that comes with both forms of Bonsai composition.
 
 * For parallel composition, the `'input` parameters for all the composed
-  `Bonsai.t` values must be the same.  
-* For parallel and sequential composition, the `'model` state machine type must
-  also be the same.
+  `Bonsai.t` values must be the same.
 
 On the surface, this seems like such a restrictive API that using
-composition in practice would be impossible.  However, the rest of the
-Bonsai library is there to help, with functions that transform the
-`'input`, `'model` and `'result` type parameters in the `('input, 'model,
-'result) Bonsai.t` type.
+composition in practice would be impossible.  However, it's easy to
+transform a Bonsai component's input by "un-mapping" it with a
+function.
 
 ### Input Transformation
 
@@ -192,57 +185,21 @@ transformation function to `Bonsai.map_input` or `Bonsai.Infix.( @>> )`.
 
 ```ocaml
 (* @>> changes the 'input in ('input, 'model, 'result) Bonsai.t *)
-let component : (string, _, _) Bonsai.t = string_printer
-let component : (int,    _, _) Bonsai.t = Int.to_string @>> component
+let component : (string, _) Bonsai.t = string_printer
+let component : (int,    _) Bonsai.t = Int.to_string @>> component
 ```
 
 Using the input mapping functions, it's common to decorate every component in a
 parallel composition with an input-conversion that passes on the necessary
-parts of the super-component's input to the sub-component like so: 
+parts of the super-component's input to the sub-component like so:
 
 ```ocaml
-let supercomponent = 
-  let%map a = convert_a @>> component_a 
-  and     b = convert_b @>> component_b 
-  and     c = convert_c @>> component_c 
+let supercomponent =
+  let%map a = convert_a @>> component_a
+  and     b = convert_b @>> component_b
+  and     c = convert_c @>> component_c
   in a, b, c
 ```
-
-### Model Transformation
-
-Transforming the `'model` type is considerably harder to conceptualize.  What
-does it mean to change the type of a state-machine?  Stepping back even
-further, what does it mean to compose the state-machines of multiple components
-together?
-
-To answer the first of those questions, it's possible to change the type of a
-state-machine as long as the original state-machine is still accessible through
-that new type.  That is to say, if you want to convert a Bonsai component from
-`(_, ‘inner, _) Bonsai.t` to `(_, ‘outer, _) Bonsai.t`, a function with the
-type `'outer -> ‘inner` is necessary.  However, when that component writes to
-its `'inner` state-machine, we also need a way to get that value back out into
-the `'outer` type.  This is done with a second function of type `'outer ->
-‘inner -> ‘outer`.
-
-As for the meaning of composing two state-machines together, typically this is
-done by building a super-state-machine that contains both of the
-sub-state-machines side-by-side.
-
-Both of these idioms are captured by the ever-helpful Fieldslib and
-`[@@deriving fields]`.  Fieldslib provides a `Field.get` function which
-implements the `'outer -> ‘inner` conversion function, and also `Field.fset`
-which has the `'outer -> ‘inner -> ‘outer` function signature (and the
-semantics we want).  Furthermore, building a large model with sub-models for
-our sub components is frequently desirable.
-
-To use the Fieldslib model projection functions, Bonsai has the
-`Bonsai.Project.Model.field` function, which takes a Bonsai component alongside
-a Fieldslib field, and produces a Bonsai component whose state machine has the
-same type as the record that the field lives inside.
-
-For examples of using the field projection (and input projections) read
-[the chapter on projection](./projections.mdx).
-
 
 ## Writing a Bonsai App
 

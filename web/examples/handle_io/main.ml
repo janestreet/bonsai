@@ -14,13 +14,7 @@ let component =
 ;;
 
 let () =
-  let handle =
-    Start.start
-      ~initial_input:()
-      ~initial_model:()
-      ~bind_to_element_with_id:"app"
-      component
-  in
+  let handle = Start.start ~initial_input:() ~bind_to_element_with_id:"app" component in
   don't_wait_for
   @@ Pipe.iter (Start.Handle.outgoing handle) ~f:(fun () ->
     print_endline "a thing";

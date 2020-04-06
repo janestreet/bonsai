@@ -3,13 +3,10 @@ open! Import
 
 module type S = sig
   type input
-  type model
   type action
 
   val show : unit -> unit
-  val show_model : unit -> unit
   val set_input : input -> unit
-  val set_model : model -> unit
   val do_actions : action list -> unit
 end
 
@@ -17,36 +14,20 @@ module type Helpers = sig
   module type S = S
 
   val make
-    :  driver:('input, 'model, 'result) Driver.t
-    -> sexp_of_model:('model -> Sexp.t)
+    :  driver:('input, 'result) Driver.t
     -> sexp_of_result:('result -> Sexp.t)
-    -> (module S
-         with type input = 'input
-          and type model = 'model
-          and type action = Nothing.t)
+    -> (module S with type input = 'input and type action = Nothing.t)
 
   val make_with_inject
-    :  driver:('input, 'model, 'result * ('action -> Event.t)) Driver.t
-    -> sexp_of_model:('model -> Sexp.t)
+    :  driver:('input, 'result * ('action -> Event.t)) Driver.t
     -> sexp_of_result:('result -> Sexp.t)
-    -> (module S
-         with type input = 'input
-          and type model = 'model
-          and type action = 'action)
+    -> (module S with type input = 'input and type action = 'action)
 
   val make_string
-    :  driver:('input, 'model, string) Driver.t
-    -> sexp_of_model:('model -> Sexp.t)
-    -> (module S
-         with type input = 'input
-          and type model = 'model
-          and type action = Nothing.t)
+    :  driver:('input, string) Driver.t
+    -> (module S with type input = 'input and type action = Nothing.t)
 
   val make_string_with_inject
-    :  driver:('input, 'model, string * ('action -> Event.t)) Driver.t
-    -> sexp_of_model:('model -> Sexp.t)
-    -> (module S
-         with type input = 'input
-          and type model = 'model
-          and type action = 'action)
+    :  driver:('input, string * ('action -> Event.t)) Driver.t
+    -> (module S with type input = 'input and type action = 'action)
 end

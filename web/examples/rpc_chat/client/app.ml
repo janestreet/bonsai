@@ -40,12 +40,9 @@ let convert_compose_panel_input app_input =
 
 let component =
   let open Bonsai.Infix in
-  let%map.Bonsai rooms_list =
-    convert_room_list_input @>> Room_list_panel.component |> Bonsai.Model.ignore
+  let%map.Bonsai rooms_list = convert_room_list_input @>> Room_list_panel.component
   and compose_panel = convert_compose_panel_input @>> Compose_message.component
-  and messages_panel =
-    convert_messages_panel_input @>> Messages_panel.component |> Bonsai.Model.ignore
-  in
+  and messages_panel = convert_messages_panel_input @>> Messages_panel.component in
   let view =
     Vdom.Node.div
       [ Vdom.Attr.id "container" ]

@@ -8,6 +8,7 @@ module Model = struct
     { dice : int Int.Map.t
     ; const : int
     }
+  [@@deriving equal, sexp]
 
   (* The standard RPG dice. *)
   let default_dice = Int.Set.of_list [ 4; 6; 8; 10; 12; 20; 100 ]

@@ -24,62 +24,42 @@ end
 
 module Input_method_selector = Dropdown_menu.Make (Input_method)
 
-module Model = struct
-  type t =
-    { input_method : Input_method.t
-    ; text : Dice_spec_string_input.Model.t
-    ; clicker : Dice_spec_clicker_input.Model.t
-    ; roll : Roller.Model.t
-    }
-  [@@deriving fields]
-
-  let init =
-    { input_method = Text
-    ; text = ""
-    ; clicker = Dice_spec_clicker_input.initial_model
-    ; roll = Roller.initial_model
-    }
-  ;;
-end
-
-let input : (unit, Model.t, Rpgdice.Roll_spec.t Or_error.t * Vdom.Node.t) Bonsai.t =
+let input : (Input_method.t, Rpgdice.Roll_spec.t Or_error.t * Vdom.Node.t) Bonsai.t =
   let open Bonsai.Let_syntax in
   Bonsai.enum
     (module Input_method)
-    ~which:(fun _input -> Model.input_method)
+    ~which:Fn.id
     ~handle:(function
       | Text ->
-        Bonsai.of_module (module Dice_spec_string_input)
-        |> Bonsai.Model.field Model.Fields.text
+        ignore @>> Bonsai.of_module (module Dice_spec_string_input) ~default_model:""
       | Clicker ->
         let%map result, vdom =
-          Bonsai.of_module (module Dice_spec_clicker_input)
-          |> Bonsai.Model.field Model.Fields.clicker
+          ignore
+          @>> Bonsai.of_module
+                (module Dice_spec_clicker_input)
+                ~default_model:Dice_spec_clicker_input.initial_model
         in
         Ok result, vdom)
 ;;
 
+let input_method_and_input =
+  let open Bonsai.Arrow in
+  let open Bonsai.Let_syntax in
+  let%map (spec, input), input_selector =
+    Bonsai.of_module (module Input_method_selector) ~default_model:Input_method.Text
+    >>> first input
+  in
+  spec, Vdom.Node.div [ Vdom.Attr.id "input" ] [ input_selector; input ]
+;;
+
 let app =
   let open Bonsai.Let_syntax in
-  let input =
-    let%map _, input_selector =
-      Bonsai.of_module (module Input_method_selector)
-      |> Bonsai.Model.field Model.Fields.input_method
-    and spec, input = input in
-    spec, Vdom.Node.div [ Vdom.Attr.id "input" ] [ input_selector; input ]
-  in
-  let roller =
-    Bonsai.of_module (module Roller) |> Bonsai.Model.field Model.Fields.roll
-  in
-  input
+  let roller = Bonsai.of_module (module Roller) ~default_model:Roller.initial_model in
+  input_method_and_input
   >>> Bonsai.Arrow.first roller
   |> Bonsai.map ~f:(fun (input, roller) -> Vdom.Node.div [] [ input; roller ])
 ;;
 
 let (_ : _ Start.Handle.t) =
-  Start.start_standalone
-    app
-    ~initial_input:()
-    ~initial_model:Model.init
-    ~bind_to_element_with_id:"app"
+  Start.start_standalone app ~initial_input:() ~bind_to_element_with_id:"app"
 ;;

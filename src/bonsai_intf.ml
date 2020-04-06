@@ -2,52 +2,49 @@ open! Core_kernel
 open! Import
 
 
+
+module type Model = Bonsai_types.Model
+module type Action = Bonsai_types.Action
+
 module type S_gen = sig
   module Incr : Incremental.S
   module Event : Event.S
 
 
   (** Default is [`Ignore]. *)
-  type ('extra, 'new_model) on_action_mismatch =
+  type on_action_mismatch =
     [ `Ignore
     | `Raise
     | `Warn
-    | `Custom of 'extra -> 'new_model
     ]
 
-  (** The component type ([('input, 'model, 'result) Bonsai.t]) can be thought of as a
+  (** The component type ([('input,  'result) Bonsai.t]) can be thought of as a
       function from ['model] to ['result], but where the ['result] can schedule events of
       the component's "action type".  These actions are used to produce a new ['model]
       which in turn causes the ['result] to be recomputed. Instances of the ['result] type
       can contain callbacks which schedule actions when interacted with by user (via
       button click, text input, etc). These actions are handled by the component's
       [apply_action] function, which yields a new model to be displayed. *)
-  type ('input, 'model, 'result) t
+  type ('input, 'result) t
 
-  val sexp_of_t : (_, _, _) t -> Sexp.t
+  val sexp_of_t : (_, _) t -> Sexp.t
+
 
   (** A bonsai component that just forwards the input straight through to the result.
       This is equivalent to [Bonsai.pure ~f:Fn.id]. *)
-  val input : ('input, _, 'input) t
-
-  (** A bonsai component that forwards the model into the result.
-      This is equivalent to [Bonsai.pure_of_model ~f:Fn.id]. *)
-  val model : (_, 'model, 'model) t
+  val input : ('input, 'input) t
 
   (** {1 Component Constructors} *)
 
   (** Returns a component with no action or model, only a constant result. *)
-  val const : 'result -> (_, _, 'result) t
+  val const : 'result -> (_, 'result) t
 
   (** A pure function with no model from 'input to 'result *)
-  val pure : f:('input -> 'result) -> ('input, _, 'result) t
-
-  (** Like [pure], but gets the input from the ['model]. *)
-  val pure_from_model : f:('model -> 'result) -> (_, 'model, 'result) t
+  val pure : f:('input -> 'result) -> ('input, 'result) t
 
   (** [compose a b] joins [a] and [b] together such that the result of [a] is used as the
       input of [b]. *)
-  val compose : ('i1, 'model, 'r1) t -> ('r1, 'model, 'r2) t -> ('i1, 'model, 'r2) t
+  val compose : ('i1, 'r1) t -> ('r1, 'r2) t -> ('i1, 'r2) t
 
   (** Many modules have the same shape, they declare the model, action, and result of the
       component, and then define apply_action and view over those types.
@@ -66,17 +63,13 @@ module type S_gen = sig
         to decide whether to request some data from the input or the model.  It is
         highly recommended to put just the data that needs mutation in [Model.t], and
         the rest in [Input.t]. *)
-    module Model : sig
-      type t
-    end
+    module Model : Model
 
     (** Components can change their own [Model.t] by issuing "actions" that
         perform the state transition.  If you think of the state machine as
         having state-nodes of type [Model.t], then the arrows between those nodes
         would be of type [Action.t]. *)
-    module Action : sig
-      type t [@@deriving sexp_of]
-    end
+    module Action : Action
 
     (** While UI components stereotypically produce some kind of "view", with
         Bonsai, components are small and easy enough to compose that Bonsai
@@ -127,66 +120,61 @@ module type S_gen = sig
        and type Result.t = 'result)
 
   module M (Component : S) : sig
-    type nonrec t = (Component.Input.t, Component.Model.t, Component.Result.t) t
+    type nonrec t = (Component.Input.t, Component.Result.t) t
   end
 
   val of_module
     :  ('input, 'model, 'action, 'result) component_s
-    -> ('input, 'model, 'result) t
+    -> default_model:'model
+    -> ('input, 'result) t
 
   module type Enum = sig
-    type t [@@deriving sexp_of, compare, enumerate]
+    type t [@@deriving sexp, compare, enumerate]
   end
 
   val enum
-    :  ?on_action_mismatch:('key * 'model, 'model) on_action_mismatch
-    -> (module Enum with type t = 'key)
-    -> which:('input -> 'model -> 'key)
-    -> handle:('key -> ('input, 'model, 'result) t)
-    -> ('input, 'model, 'result) t
+    :  (module Enum with type t = 'key)
+    -> which:('input -> 'key)
+    -> handle:('key -> ('input, 'result) t)
+    -> ('input, 'result) t
 
   (** [if_] is a simple application of [enum] to [(module Bool)]. *)
   val if_
-    :  ?on_action_mismatch:(bool * 'model, 'model) on_action_mismatch
-    -> ('input -> 'model -> bool)
-    -> then_:('input, 'model, 'result) t
-    -> else_:('input, 'model, 'result) t
-    -> ('input, 'model, 'result) t
+    :  ('input -> bool)
+    -> then_:('input, 'result) t
+    -> else_:('input, 'result) t
+    -> ('input, 'result) t
 
   module Infix : sig
     (** [a >>> b] is [compose a b] *)
-    val ( >>> ) : ('i1, 'model, 'r1) t -> ('r1, 'model, 'r2) t -> ('i1, 'model, 'r2) t
+    val ( >>> ) : ('i1, 'r1) t -> ('r1, 'r2) t -> ('i1, 'r2) t
 
     (** [t >>| f] is [map t ~f] *)
-    val ( >>| ) : ('input, 'model, 'r1) t -> ('r1 -> 'r2) -> ('input, 'model, 'r2) t
+    val ( >>| ) : ('input, 'r1) t -> ('r1 -> 'r2) -> ('input, 'r2) t
 
     (** [f @>> t] is the [map_input t ~f] *)
-    val ( @>> ) : ('i1 -> 'i2) -> ('i2, 'model, 'result) t -> ('i1, 'model, 'result) t
+    val ( @>> ) : ('i1 -> 'i2) -> ('i2, 'result) t -> ('i1, 'result) t
   end
 
   (** For composing components which share the same model.  For example, applying an
       action in one component changes the shared model, which is reflected in the results
       of the other component. *)
   include
-    Applicative.S3 with type ('r, 'i, 'm) t := ('i, 'm, 'r) t
+    Applicative.S2 with type ('r, 'i) t := ('i, 'r) t
 
   (** Transforms the input of a component. The signature of [f] is reversed from most
       other map functions. *)
-  val map_input : ('i2, 'model, 'result) t -> f:('i1 -> 'i2) -> ('i1, 'model, 'result) t
+  val map_input : ('i2, 'result) t -> f:('i1 -> 'i2) -> ('i1, 'result) t
 
   module Let_syntax : sig
-    val return : 'result -> (_, _, 'result) t
+    val return : 'result -> (_, 'result) t
 
     include module type of Infix
 
     module Let_syntax : sig
-      val return : 'result -> (_, _, 'result) t
-      val map : ('input, 'model, 'r1) t -> f:('r1 -> 'r2) -> ('input, 'model, 'r2) t
-
-      val both
-        :  ('input, 'model, 'r1) t
-        -> ('input, 'model, 'r2) t
-        -> ('input, 'model, 'r1 * 'r2) t
+      val return : 'result -> (_, 'result) t
+      val map : ('input, 'r1) t -> f:('r1 -> 'r2) -> ('input, 'r2) t
+      val both : ('input, 'r1) t -> ('input, 'r2) t -> ('input, 'r1 * 'r2) t
 
       module Open_on_rhs : module type of Infix
     end
@@ -194,127 +182,51 @@ module type S_gen = sig
 
   (** {1 Combinators} *)
 
-  module Model : sig
-    val f
-      :  ('input, 'm1, 'result) t
-      -> get:('m2 -> 'm1)
-      -> set:('m2 -> 'm1 -> 'm2)
-      -> ('input, 'm2, 'result) t
-
-    val ignore : ('input, unit, 'result) t -> ('input, 'model, 'result) t
-
-    val field
-      :  ('model_outer, 'model_inner) Field.t
-      -> ('input, 'model_inner, 'result) t
-      -> ('input, 'model_outer, 'result) t
-
-    val state_machine
-      :  Source_code_position.t
-      -> sexp_of_action:('action -> Sexp.t)
-      -> apply_action:(inject:('action -> Event.t)
-                       -> schedule_event:(Event.t -> unit)
-                       -> 'input
-                       -> 'model
-                       -> 'action
-                       -> 'model)
-      -> ('input, 'model, 'action -> Event.t) t
-
-    (** Takes a component that operates immutably over an input (via 'input), and
-        converts it to a component that gets its input from the model. *)
-    val to_input : ('input, unit, 'result) t -> (unit, 'input, 'result) t
-
-    (** Takes a component that operates immutably over an input (via 'input), and
-        converts it to a component that gets part of that input from the model. *)
-    val to_input_with_other
-      :  ('input * 'model, unit, 'result) t
-      -> ('input, 'model, 'result) t
-  end
+  val state_machine
+    :  (module Model with type t = 'model)
+    -> (module Action with type t = 'action)
+    -> Source_code_position.t
+    -> default_model:'model
+    -> apply_action:(inject:('action -> Event.t)
+                     -> schedule_event:(Event.t -> unit)
+                     -> 'input
+                     -> 'model
+                     -> 'action
+                     -> 'model)
+    -> ('input, 'model * ('action -> Event.t)) t
 
   module Map : sig
-    (** Transforms a component into a new component whose model and result are maps. *)
-    val assoc_model
-      :  ?comparator:('k, 'cmp) Core_kernel.Map.comparator
-      -> ('input, 'model, 'result) t
-      -> ( 'input
-         , ('k, 'model, 'cmp) Core_kernel.Map.t
-         , ('k, 'result, 'cmp) Core_kernel.Map.t )
-           t
+    module type Comparator = Bonsai_types.Comparator
 
-    (** Transforms a component into a new component whose model and result are maps.  The
-        input for the transformed component also receives its key as an input. *)
-    val associ_model
-      :  ?comparator:('k, 'cmp) Core_kernel.Map.comparator
-      -> ('k * 'input, 'model, 'result) t
-      -> ( 'input
-         , ('k, 'model, 'cmp) Core_kernel.Map.t
-         , ('k, 'result, 'cmp) Core_kernel.Map.t )
-           t
+    type ('k, 'cmp) comparator = ('k, 'cmp) Bonsai_types.comparator
 
     (** Transforms a component into a new component whose input and result are maps. *)
     val assoc_input
-      :  ?comparator:('k, 'cmp) Core_kernel.Map.comparator
-      -> ('input, 'model, 'result) t
-      -> ( ('k, 'input, 'cmp) Core_kernel.Map.t
-         , 'model
-         , ('k, 'result, 'cmp) Core_kernel.Map.t )
-           t
+      :  ('key, 'cmp) comparator
+      -> ('data, 'result) t
+      -> (('key, 'data, 'cmp) Base.Map.t, ('key, 'result, 'cmp) Base.Map.t) t
 
     (** Transforms a component into a new component whose input and result are maps.
         The input for the transformed component also receives its key as an input.  *)
     val associ_input
-      :  ?comparator:('k, 'cmp) Core_kernel.Map.comparator
-      -> ('k * 'input, 'model, 'result) t
-      -> ( ('k, 'input, 'cmp) Core_kernel.Map.t
-         , 'model
-         , ('k, 'result, 'cmp) Core_kernel.Map.t )
-           t
+      :  ('key, 'cmp) comparator
+      -> ('key * 'data, 'result) t
+      -> (('key, 'data, 'cmp) Base.Map.t, ('key, 'result, 'cmp) Base.Map.t) t
+
+    val associ_input_with_extra
+      :  ('key, 'cmp) comparator
+      -> ('key * 'data * 'input, 'result) t
+      -> (('key, 'data, 'cmp) Base.Map.t * 'input, ('key, 'result, 'cmp) Base.Map.t) t
 
     (** Given two components that produce maps, create a new component that produces a map
         that is merged according provided function [f]. *)
     val merge
-      :  ('input, 'model, ('k, 'r1, 'cmp) Base.Map.t) t
-      -> ('input, 'model, ('k, 'r2, 'cmp) Base.Map.t) t
+      :  ('input, ('k, 'r1, 'cmp) Base.Map.t) t
+      -> ('input, ('k, 'r2, 'cmp) Base.Map.t) t
       -> f:(key:'k
             -> [ `Both of 'r1 * 'r2 | `Left of 'r1 | `Right of 'r2 ]
             -> 'result option)
-      -> ('input, 'model, ('k, 'result, 'cmp) Base.Map.t) t
-  end
-
-  module Option : sig
-    val wrap_model
-      :  ?on_action_for_none:(unit, 'model option) on_action_mismatch
-      -> ('input, 'model, 'result) t
-      -> ('input, 'model option, 'result option) t
-
-    val wrap_model_with_default
-      :  ?on_action_for_none:(unit, 'model option) on_action_mismatch
-      -> ('input, 'model, 'result) t
-      -> default:'result
-      -> ('input, 'model option, 'result) t
-
-  end
-
-  module Either : sig
-    val wrap_model
-      :  ?on_action_for_other_component:( [ `Action_for_first of 'm2
-                                          | `Action_for_second of 'm1
-                                          ]
-                                        , ('m1, 'm2) Core_kernel.Either.t )
-           on_action_mismatch
-      -> ('input, 'm1, 'r1) t
-      -> ('input, 'm2, 'r2) t
-      -> ('input, ('m1, 'm2) Core_kernel.Either.t, ('r1, 'r2) Core_kernel.Either.t) t
-
-    val wrap_model_with_same_result
-      :  ?on_action_for_other_component:( [ `Action_for_first of 'm2
-                                          | `Action_for_second of 'm1
-                                          ]
-                                        , ('m1, 'm2) Core_kernel.Either.t )
-           on_action_mismatch
-      -> ('input, 'm1, 'r) t
-      -> ('input, 'm2, 'r) t
-      -> ('input, ('m1, 'm2) Core_kernel.Either.t, 'r) t
-
+      -> ('input, ('k, 'result, 'cmp) Base.Map.t) t
   end
 
   module List_deprecated : sig
@@ -329,7 +241,7 @@ module type S_gen = sig
     (** [('i, _, 'r) t] is an arrow from ['i] to ['r]. *)
 
     (** [arr] is the same as [pure]. *)
-    val arr : ('input -> 'result) -> ('input, _, 'result) t
+    val arr : ('input -> 'result) -> ('input, 'result) t
 
     (** [first t] applies [t] to the first part of the input.
 
@@ -341,7 +253,7 @@ module type S_gen = sig
        'input * 'a --+---------'a --+-----------------------+-- 'a ---------+-- 'result * 'a
                                     `-----------------------`
        v} *)
-    val first : ('input, 'model, 'result) t -> ('input * 'a, 'model, 'result * 'a) t
+    val first : ('input, 'result) t -> ('input * 'a, 'result * 'a) t
 
     (** [second t] applies [t] to the second part of the input.
 
@@ -353,7 +265,7 @@ module type S_gen = sig
                                    | `-------------------` |
                                    `-----------------------`
        v} *)
-    val second : ('input, 'model, 'result) t -> ('a * 'input, 'model, 'a * 'result) t
+    val second : ('input, 'result) t -> ('a * 'input, 'a * 'result) t
 
     (** [split t u] applies [t] to the first part of the input and [u] to the second
         part.
@@ -369,10 +281,7 @@ module type S_gen = sig
                                      | `-------------` |
                                      `-----------------`
        v} *)
-    val split
-      :  ('i1, 'model, 'r1) t
-      -> ('i2, 'model, 'r2) t
-      -> ('i1 * 'i2, 'model, 'r1 * 'r2) t
+    val split : ('i1, 'r1) t -> ('i2, 'r2) t -> ('i1 * 'i2, 'r1 * 'r2) t
 
     (** [extend_first] returns the result of a bonsai component alongside its input.
 
@@ -384,9 +293,7 @@ module type S_gen = sig
                 |   `------------------------+-- 'input -----+-- 'result * 'input
                 `----------------------------`
        v} *)
-    val extend_first
-      :  ('input, 'model, 'result) t
-      -> ('input, 'model, 'result * 'input) t
+    val extend_first : ('input, 'result) t -> ('input, 'result * 'input) t
 
     (** [extend_second] returns the result of a bonsai component alongside its input.
 
@@ -398,15 +305,10 @@ module type S_gen = sig
                 |      `-------------------` |
                 `----------------------------`
        v} *)
-    val extend_second
-      :  ('input, 'model, 'result) t
-      -> ('input, 'model, 'input * 'result) t
+    val extend_second : ('input, 'result) t -> ('input, 'input * 'result) t
 
     (** [t *** u = split t u]. *)
-    val ( *** )
-      :  ('i1, 'model, 'r1) t
-      -> ('i2, 'model, 'r2) t
-      -> ('i1 * 'i2, 'model, 'r1 * 'r2) t
+    val ( *** ) : ('i1, 'r1) t -> ('i2, 'r2) t -> ('i1 * 'i2, 'r1 * 'r2) t
 
     (** [fanout t u] applies [t] and [u] to the same input and returns both results.  It's
         actually just [both].
@@ -423,74 +325,80 @@ module type S_gen = sig
                 `------------------------`
        v} *)
 
-    val fanout
-      :  ('input, 'model, 'r1) t
-      -> ('input, 'model, 'r2) t
-      -> ('input, 'model, 'r1 * 'r2) t
+    val fanout : ('input, 'r1) t -> ('input, 'r2) t -> ('input, 'r1 * 'r2) t
 
     (** [t &&& u = fanout t u]. *)
-    val ( &&& )
-      :  ('input, 'model, 'r1) t
-      -> ('input, 'model, 'r2) t
-      -> ('input, 'model, 'r1 * 'r2) t
+    val ( &&& ) : ('input, 'r1) t -> ('input, 'r2) t -> ('input, 'r1 * 'r2) t
 
     (** [^>>] is the same as [@>>], but with a Haskell-like name. *)
-    val ( ^>> ) : ('i1 -> 'i2) -> ('i2, 'model, 'result) t -> ('i1, 'model, 'result) t
+    val ( ^>> ) : ('i1 -> 'i2) -> ('i2, 'result) t -> ('i1, 'result) t
 
     (** [>>^] is the same as [>>|], but with a Haskell-like name. *)
-    val ( >>^ ) : ('input, 'model, 'r1) t -> ('r1 -> 'r2) -> ('input, 'model, 'r2) t
+    val ( >>^ ) : ('input, 'r1) t -> ('r1 -> 'r2) -> ('input, 'r2) t
+
+    (** Composes two components where one of the outputs of the first component is one of
+        the inputs to the second.
+
+        {v
+                .--------------------------------------------.
+                |       .------------------------------.     |
+                |    .--| 'input -> 'shared * 'output1 |--+--+-- 'output1 --.
+                |   /   `------------------------------`  |  |               \
+                |  /                                      |  |                \
+       'input --|-+     .---------- 'shared --------------`  |                 \
+                |  \    |                                    |                  \
+                |   \   |  .------------------------------.  |                   \
+                |    `--+--| 'input * 'shared -> 'output2 |--+-- 'output2 --------+-- 'output1 * 'output2
+                |          `------------------------------`  |
+                `--------------------------------------------`
+       v} *)
+    val partial_compose_first
+      :  ('input, 'shared * 'output1) t
+      -> ('input * 'shared, 'output2) t
+      -> ('input, 'output1 * 'output2) t
+
+    val pipe
+      :  ('input, 'r1) t
+      -> into:('intermediate, 'r2) t
+      -> via:('input -> 'r1 -> 'intermediate)
+      -> finalize:('input -> 'r1 -> 'r2 -> 'r3)
+      -> ('input, 'r3) t
   end
 
   module With_incr : sig
-    (** Constructs a bonsai component whose result is always
-        the same as its input Incremental node.  *)
-    val of_incr : 'result Incr.t -> (_, _, 'result) t
+    (** Constructs a bonsai component whose result is always the same as its input
+        Incremental node. *)
+    val of_incr : 'result Incr.t -> (_, 'result) t
 
     (** Same as [Bonsai.pure] but allows the user to optimize using Incremental. *)
-    val pure : f:('input Incr.t -> 'result Incr.t) -> ('input, _, 'result) t
-
-    (** Same as [Bonsai.pure_from_model], but allows the user to optimize using Incremental. *)
-    val pure_from_model : f:('model Incr.t -> 'result Incr.t) -> (_, 'model, 'result) t
+    val pure : f:('input Incr.t -> 'result Incr.t) -> ('input, 'result) t
 
     (** Creates a bonsai component where the given cutoff is applied to the incremental
         node for the component's model, preventing a component from being recalculated
         unnecessarily.
 
         See [Incr.set_cutoff]. *)
-    val model_cutoff
-      :  ('input, 'model, 'result) t
-      -> cutoff:'model Incremental.Cutoff.t
-      -> ('input, 'model, 'result) t
+    val model_cutoff : ('input, 'result) t -> ('input, 'result) t
 
     (** Creates a bonsai component where the given cutoff is applied to the incremental
         node as input passes through the component, preventing a component from
         being recalculated unnecessarily.
 
         See [Incr.set_cutoff]. *)
-    val value_cutoff : cutoff:'input Incremental.Cutoff.t -> ('input, _, 'input) t
+    val value_cutoff : cutoff:'input Incremental.Cutoff.t -> ('input, 'input) t
 
     (** Transforms the result of a component, exposing the incrementality for optimization
         purposes. *)
-    val map
-      :  ('input, 'model, 'r1) t
-      -> f:('r1 Incr.t -> 'r2 Incr.t)
-      -> ('input, 'model, 'r2) t
+    val map : ('input, 'r1) t -> f:('r1 Incr.t -> 'r2 Incr.t) -> ('input, 'r2) t
 
     (** Transforms the input of a component, exposing the incrementality for optimization
         purposes. The signature of [f] is reversed from most other map functions. *)
-    val map_input
-      :  ('i2, 'model, 'result) t
-      -> f:('i1 Incr.t -> 'i2 Incr.t)
-      -> ('i1, 'model, 'result) t
+    val map_input : ('i2, 'result) t -> f:('i1 Incr.t -> 'i2 Incr.t) -> ('i1, 'result) t
 
     module type S = sig
       module Input : T
-      module Model : T
-
-      module Action : sig
-        type t [@@deriving sexp_of]
-      end
-
+      module Model : Model
+      module Action : Action
       module Result : T
 
       val apply_action
@@ -520,44 +428,41 @@ module type S_gen = sig
 
     val of_module
       :  ('input, 'model, 'action, 'result) component_s
-      -> ('input, 'model, 'result) t
+      -> default_model:'model
+      -> ('input, 'result) t
   end
 end
 
 module type Bonsai = sig
   module Generic : sig
-    type ('extra, 'new_model) on_action_mismatch =
+    type on_action_mismatch =
       [ `Ignore
       | `Raise
       | `Warn
-      | `Custom of 'extra -> 'new_model
       ]
 
-    (** The component type ([('input, 'model, 'result) Bonsai.t]) can be thought of as a
+    (** The component type ([('input,  'result) Bonsai.t]) can be thought of as a
         function from ['model] to ['result], but where the ['result] can schedule events of
         the component's "action type".  These actions are used to produce a new ['model]
         which in turn causes the ['result] to be recomputed. Instances of the ['result] type
         can contain callbacks which schedule actions when interacted with by user (via
         button click, text input, etc). These actions are handled by the component's
         [apply_action] function, which yields a new model to be displayed. *)
-    type ('input, 'model, 'result, 'incr, 'event) t =
-      ('input, 'model, 'result, 'incr, 'event) Bonsai_types.Packed.t
+    type ('input, 'result, 'incr, 'event) t =
+      ('input, 'result, 'incr, 'event) Bonsai_types.Packed.t
 
-    type ('input, 'model, 'result, 'incr, 'event) nonexpert_t :=
-      ('input, 'model, 'result, 'incr, 'event) t
+    type ('input, 'result, 'incr, 'event) nonexpert_t :=
+      ('input, 'result, 'incr, 'event) t
 
-    val sexp_of_t : (_, _, _, _, _) t -> Sexp.t
+    val sexp_of_t : (_, _, _, _) t -> Sexp.t
 
     (** {1 Component Constructors} *)
 
     (** Returns a component with no action or model, only a constant result. *)
-    val const : 'result -> (_, _, 'result, 'incr, _) t
+    val const : 'result -> (_, 'result, 'incr, _) t
 
     (** A pure function with no model from 'input to 'result *)
-    val pure : f:('input -> 'result) -> ('input, _, 'result, _, _) t
-
-    (** Like [pure], but gets the input from the ['model]. *)
-    val pure_from_model : f:('model -> 'result) -> (_, 'model, 'result, _, _) t
+    val pure : f:('input -> 'result) -> ('input, 'result, _, _) t
 
 
     (** Creates a leaf-node on the Bonsai tree.  A leaf node
@@ -567,92 +472,92 @@ module type Bonsai = sig
         Additionally [name] and [sexp_of_action] are provided to add some
         hooks for improved debugability. *)
     val leaf
-      :  apply_action:(inject:('action -> 'event)
+      :  (module Model with type t = 'model)
+      -> (module Action with type t = 'action)
+      -> name:string
+      -> default_model:'model
+      -> apply_action:(inject:('action -> 'event)
                        -> schedule_event:('event -> unit)
                        -> 'input
                        -> 'model
                        -> 'action
                        -> 'model)
       -> compute:(inject:('action -> 'event) -> 'input -> 'model -> 'result)
-      -> name:string
-      -> sexp_of_action:('action -> Sexp.t)
-      -> ('input, 'model, 'result, _, 'event) t
+      -> ('input, 'result, 'incr, 'event) t
 
     (** [compose a b] joins [a] and [b] together such that the result of [a] is used as the
         input of [b]. *)
     val compose
-      :  ('i1, 'model, 'r1, 'incr, 'event) t
-      -> ('r1, 'model, 'r2, 'incr, 'event) t
-      -> ('i1, 'model, 'r2, 'incr, 'event) t
+      :  ('i1, 'r1, 'incr, 'event) t
+      -> ('r1, 'r2, 'incr, 'event) t
+      -> ('i1, 'r2, 'incr, 'event) t
 
     module type Enum = sig
-      type t [@@deriving sexp_of, compare, enumerate]
+      type t [@@deriving sexp, compare, enumerate]
     end
 
     val enum
-      :  ?on_action_mismatch:('key * 'model, 'model) on_action_mismatch
-      -> (module Enum with type t = 'key)
-      -> which:('input -> 'model -> 'key)
-      -> handle:('key -> ('input, 'model, 'result, 'incr, 'event) t)
-      -> ('input, 'model, 'result, 'incr, 'event) t
+      :  (module Enum with type t = 'key)
+      -> which:('input -> 'key)
+      -> handle:('key -> ('input, 'result, 'incr, 'event) t)
+      -> ('input, 'result, 'incr, 'event) t
 
     (** [if_] is a simple application of [enum] to [(module Bool)]. *)
     val if_
-      :  ?on_action_mismatch:(bool * 'model, 'model) on_action_mismatch
-      -> ('input -> 'model -> bool)
-      -> then_:('input, 'model, 'result, 'incr, 'event) t
-      -> else_:('input, 'model, 'result, 'incr, 'event) t
-      -> ('input, 'model, 'result, 'incr, 'event) t
+      :  ('input -> bool)
+      -> then_:('input, 'result, 'incr, 'event) t
+      -> else_:('input, 'result, 'incr, 'event) t
+      -> ('input, 'result, 'incr, 'event) t
 
     module Infix : sig
       (** [a >>> b] is [compose a b] *)
       val ( >>> )
-        :  ('i1, 'model, 'r1, 'incr, 'event) t
-        -> ('r1, 'model, 'r2, 'incr, 'event) t
-        -> ('i1, 'model, 'r2, 'incr, 'event) t
+        :  ('i1, 'r1, 'incr, 'event) t
+        -> ('r1, 'r2, 'incr, 'event) t
+        -> ('i1, 'r2, 'incr, 'event) t
 
       val ( >>| )
-        :  ('input, 'model, 'r1, 'incr, 'event) t
+        :  ('input, 'r1, 'incr, 'event) t
         -> ('r1 -> 'r2)
-        -> ('input, 'model, 'r2, 'incr, 'event) t
+        -> ('input, 'r2, 'incr, 'event) t
 
       val ( @>> )
         :  ('i1 -> 'i2)
-        -> ('i2, 'model, 'result, 'incr, 'event) t
-        -> ('i1, 'model, 'result, 'incr, 'event) t
+        -> ('i2, 'result, 'incr, 'event) t
+        -> ('i1, 'result, 'incr, 'event) t
     end
 
     val map
-      :  ('input, 'model, 'r1, 'incr, 'event) t
+      :  ('input, 'r1, 'incr, 'event) t
       -> f:('r1 -> 'r2)
-      -> ('input, 'model, 'r2, 'incr, 'event) t
+      -> ('input, 'r2, 'incr, 'event) t
 
     (*_ include Applicative.S3 with type ('r, 'i, 'm) t := ('i, 'm, 'r) t *)
 
     (** Transforms the input of a component. The signature of [f] is reversed from most
         other map functions. *)
     val map_input
-      :  ('i2, 'model, 'result, 'incr, 'event) t
+      :  ('i2, 'result, 'incr, 'event) t
       -> f:('i1 -> 'i2)
-      -> ('i1, 'model, 'result, 'incr, 'event) t
+      -> ('i1, 'result, 'incr, 'event) t
 
     module Let_syntax : sig
-      val return : 'result -> (_, _, 'result, _, _) t
+      val return : 'result -> (_, 'result, _, _) t
 
       include module type of Infix
 
       module Let_syntax : sig
-        val return : 'result -> (_, _, 'result, _, _) t
+        val return : 'result -> (_, 'result, _, _) t
 
         val map
-          :  ('input, 'model, 'r1, 'incr, 'event) t
+          :  ('input, 'r1, 'incr, 'event) t
           -> f:('r1 -> 'r2)
-          -> ('input, 'model, 'r2, 'incr, 'event) t
+          -> ('input, 'r2, 'incr, 'event) t
 
         val both
-          :  ('input, 'model, 'r1, 'incr, 'event) t
-          -> ('input, 'model, 'r2, 'incr, 'event) t
-          -> ('input, 'model, 'r1 * 'r2, 'incr, 'event) t
+          :  ('input, 'r1, 'incr, 'event) t
+          -> ('input, 'r2, 'incr, 'event) t
+          -> ('input, 'r1 * 'r2, 'incr, 'event) t
 
         module Open_on_rhs : module type of Infix
       end
@@ -667,22 +572,24 @@ module type Bonsai = sig
 
       (** Every Bonsai component has a hidden ['action] type, which can be revealed as an
           existential by pattern matching on {!t}. *)
-      type ('input, 'model, 'result, 'incr, 'event) t = private
+      type ('input, 'result, 'incr, 'event) t = private
         | T :
-            ('input, 'model, 'action, 'result, 'incr, 'event) unpacked
-            * 'action Type_equal.Id.t
-            -> ('input, 'model, 'result, 'incr, 'event) t
+            { unpacked : ('input, 'model, 'action, 'result, 'incr, 'event) unpacked
+            ; action_type_id : 'action Type_equal.Id.t
+            ; model : 'model Bonsai_types.Packed.model_info
+            }
+            -> ('input, 'result, 'incr, 'event) t
 
       (** [reveal t] is just the identity, but it allows you to pattern match on the GADT to
           get the unpacked component (which you can [eval]) and the action's type ID. *)
       val reveal
-        :  ('input, 'model, 'result, 'incr, 'event) nonexpert_t
-        -> ('input, 'model, 'result, 'incr, 'event) t
+        :  ('input, 'result, 'incr, 'event) nonexpert_t
+        -> ('input, 'result, 'incr, 'event) t
 
       (** [conceal] is the inverse of [reveal]. *)
       val conceal
-        :  ('input, 'model, 'result, 'incr, 'event) t
-        -> ('input, 'model, 'result, 'incr, 'event) nonexpert_t
+        :  ('input, 'result, 'incr, 'event) t
+        -> ('input, 'result, 'incr, 'event) nonexpert_t
 
 
       (** Builds a component out of the incremental function from ['model Incr.t] to
@@ -698,7 +605,12 @@ module type Bonsai = sig
               -> incr_state:'incr Incremental.State.t
               -> (('model, 'action, 'result, 'event) Snapshot.t, 'incr) Incremental.t)
         -> action_type_id:'action Type_equal.Id.t
-        -> ('input, 'model, 'result, 'incr, 'event) t
+        -> model_type_id:'model Type_equal.Id.t
+        -> default_model:'model
+        -> model_equal:('model -> 'model -> bool)
+        -> sexp_of_model:('model -> Sexp.t)
+        -> model_of_sexp:(Sexp.t -> 'model)
+        -> ('input, 'result, 'incr, 'event) t
 
       (*_ Do you like GADT's? I do. That's why this function is called [eval], and not
         something that is more informative. Gotta keep those traditions alive somehow. *)
@@ -720,127 +632,72 @@ module type Bonsai = sig
           once-per-application life-cycle unless there is dynamic component tree creation
           going on (perhaps via [of_full] and [eval]). *)
       val optimize
-        :  ('input, 'model, 'result, 'incr, 'event) t
-        -> ('input, 'model, 'result, 'incr, 'event) t
+        :  ('input, 'result, 'incr, 'event) t
+        -> ('input, 'result, 'incr, 'event) t
 
       module Snapshot = Snapshot
     end
 
     (** {1 Combinators} *)
 
-    module Model : sig
-      val f
-        :  ('input, 'm1, 'result, 'incr, 'event) t
-        -> get:('m2 -> 'm1)
-        -> set:('m2 -> 'm1 -> 'm2)
-        -> ('input, 'm2, 'result, 'incr, 'event) t
-
-      val ignore
-        :  ('input, unit, 'result, 'incr, 'event) t
-        -> ('input, 'model, 'result, 'incr, 'event) t
-
-      val field
-        :  ('model_outer, 'model_inner) Field.t
-        -> ('input, 'model_inner, 'result, 'incr, 'event) t
-        -> ('input, 'model_outer, 'result, 'incr, 'event) t
-
-      val state_machine
-        :  Source_code_position.t
-        -> sexp_of_action:('action -> Sexp.t)
-        -> apply_action:(inject:('action -> 'event)
-                         -> schedule_event:('event -> unit)
-                         -> 'input
-                         -> 'model
-                         -> 'action
-                         -> 'model)
-        -> ('input, 'model, 'action -> 'event, 'incr, 'event) t
-
-      (** Takes a component that operates immutably over an input (via 'input), and
-          converts it to a component that gets its input from the model. *)
-      val to_input
-        :  ('input, unit, 'result, 'incr, 'event) t
-        -> (unit, 'input, 'result, 'incr, 'event) t
-
-      (** Takes a component that operates immutably over an input (via 'input), and
-          converts it to a component that gets part of that input from the model. *)
-      val to_input_with_other
-        :  ('input * 'model, unit, 'result, 'incr, 'event) t
-        -> ('input, 'model, 'result, 'incr, 'event) t
-    end
+    val state_machine
+      :  (module Model with type t = 'model)
+      -> (module Action with type t = 'action)
+      -> Source_code_position.t
+      -> default_model:'model
+      -> apply_action:(inject:('action -> 'event)
+                       -> schedule_event:('event -> unit)
+                       -> 'input
+                       -> 'model
+                       -> 'action
+                       -> 'model)
+      -> ('input, 'model * ('action -> 'event), 'incr, 'event) t
 
     module Map : sig
-      (** Transforms a component into a new component whose model and result are maps. *)
-      val assoc_model
-        :  ?comparator:('k, 'cmp) Map.comparator
-        -> ('input, 'model, 'result, 'incr, 'event) t
-        -> ('input, ('k, 'model, 'cmp) Map.t, ('k, 'result, 'cmp) Map.t, 'incr, 'event) t
+      (** [Comparator] is just {!Base.Comparator} plus [t_of_sexp]. *)
+      module type Comparator = Bonsai_types.Comparator
 
-      (** Transforms a component into a new component whose model and result are maps.  The
-          input for the transformed component also receives its key as an input. *)
-      val associ_model
-        :  ?comparator:('k, 'cmp) Map.comparator
-        -> ('k * 'input, 'model, 'result, 'incr, 'event) t
-        -> ('input, ('k, 'model, 'cmp) Map.t, ('k, 'result, 'cmp) Map.t, 'incr, 'event) t
+      type ('k, 'cmp) comparator = ('k, 'cmp) Bonsai_types.comparator
 
       (** Transforms a component into a new component whose input and result are maps. *)
       val assoc_input
-        :  ?comparator:('k, 'cmp) Map.comparator
-        -> ('input, 'model, 'result, 'incr, 'event) t
-        -> (('k, 'input, 'cmp) Map.t, 'model, ('k, 'result, 'cmp) Map.t, 'incr, 'event) t
+        :  ('key, 'cmp) comparator
+        -> ('data, 'result, 'incr, 'event) t
+        -> ( ('key, 'data, 'cmp) Base.Map.t
+           , ('key, 'result, 'cmp) Base.Map.t
+           , 'incr
+           , 'event )
+             t
 
       (** Transforms a component into a new component whose input and result are maps.
           The input for the transformed component also receives its key as an input.  *)
       val associ_input
-        :  ?comparator:('k, 'cmp) Map.comparator
-        -> ('k * 'input, 'model, 'result, 'incr, 'event) t
-        -> (('k, 'input, 'cmp) Map.t, 'model, ('k, 'result, 'cmp) Map.t, 'incr, 'event) t
+        :  ('key, 'cmp) comparator
+        -> ('key * 'data, 'result, 'incr, 'event) t
+        -> ( ('key, 'data, 'cmp) Base.Map.t
+           , ('key, 'result, 'cmp) Base.Map.t
+           , 'incr
+           , 'event )
+             t
+
+      val associ_input_with_extra
+        :  ('key, 'cmp) comparator
+        -> ('key * 'data * 'input, 'result, 'incr, 'event) t
+        -> ( ('key, 'data, 'cmp) Base.Map.t * 'input
+           , ('key, 'result, 'cmp) Base.Map.t
+           , 'incr
+           , 'event )
+             t
 
       (** Given two components that produce maps, create a new component that produces a map
           that is merged according provided function [f]. *)
       val merge
-        :  ('input, 'model, ('k, 'r1, 'cmp) Base.Map.t, 'incr, 'event) t
-        -> ('input, 'model, ('k, 'r2, 'cmp) Base.Map.t, 'incr, 'event) t
+        :  ('input, ('k, 'r1, 'cmp) Base.Map.t, 'incr, 'event) t
+        -> ('input, ('k, 'r2, 'cmp) Base.Map.t, 'incr, 'event) t
         -> f:(key:'k
               -> [ `Both of 'r1 * 'r2 | `Left of 'r1 | `Right of 'r2 ]
               -> 'result option)
-        -> ('input, 'model, ('k, 'result, 'cmp) Base.Map.t, 'incr, 'event) t
-    end
-
-    module Option : sig
-      val wrap_model
-        :  ?on_action_for_none:(unit, 'model option) on_action_mismatch
-        -> ('input, 'model, 'result, 'incr, 'event) t
-        -> ('input, 'model option, 'result option, 'incr, 'event) t
-
-      val wrap_model_with_default
-        :  ?on_action_for_none:(unit, 'model option) on_action_mismatch
-        -> ('input, 'model, 'result, 'incr, 'event) t
-        -> default:'result
-        -> ('input, 'model option, 'result, 'incr, 'event) t
-
-    end
-
-    module Either : sig
-      val wrap_model
-        :  ?on_action_for_other_component:( [ `Action_for_first of 'm2
-                                            | `Action_for_second of 'm1
-                                            ]
-                                          , ('m1, 'm2) Either.t )
-             on_action_mismatch
-        -> ('input, 'm1, 'r1, 'incr, 'event) t
-        -> ('input, 'm2, 'r2, 'incr, 'event) t
-        -> ('input, ('m1, 'm2) Either.t, ('r1, 'r2) Either.t, 'incr, 'event) t
-
-      val wrap_model_with_same_result
-        :  ?on_action_for_other_component:( [ `Action_for_first of 'm2
-                                            | `Action_for_second of 'm1
-                                            ]
-                                          , ('m1, 'm2) Either.t )
-             on_action_mismatch
-        -> ('input, 'm1, 'r, 'incr, 'event) t
-        -> ('input, 'm2, 'r, 'incr, 'event) t
-        -> ('input, ('m1, 'm2) Either.t, 'r, 'incr, 'event) t
-
+        -> ('input, ('k, 'result, 'cmp) Base.Map.t, 'incr, 'event) t
     end
 
     module List_deprecated : sig
@@ -855,75 +712,88 @@ module type Bonsai = sig
       (** [('i, _, 'r) t] is an arrow from ['i] to ['r]. *)
 
       (** [arr] is the same as [pure]. *)
-      val arr : ('input -> 'result) -> ('input, _, 'result, _, _) t
+      val arr : ('input -> 'result) -> ('input, 'result, _, _) t
 
       (** [first t] applies [t] to the first part of the input. *)
       val first
-        :  ('input, 'model, 'result, 'incr, 'event) t
-        -> ('input * 'a, 'model, 'result * 'a, 'incr, 'event) t
+        :  ('input, 'result, 'incr, 'event) t
+        -> ('input * 'a, 'result * 'a, 'incr, 'event) t
 
       (** [second t] applies [t] to the second part of the input. *)
       val second
-        :  ('input, 'model, 'result, 'incr, 'event) t
-        -> ('a * 'input, 'model, 'a * 'result, 'incr, 'event) t
+        :  ('input, 'result, 'incr, 'event) t
+        -> ('a * 'input, 'a * 'result, 'incr, 'event) t
 
       (** [split t u] applies [t] to the first part of the input and [u] to the second
           part. *)
       val split
-        :  ('i1, 'model, 'r1, 'incr, 'event) t
-        -> ('i2, 'model, 'r2, 'incr, 'event) t
-        -> ('i1 * 'i2, 'model, 'r1 * 'r2, 'incr, 'event) t
+        :  ('i1, 'r1, 'incr, 'event) t
+        -> ('i2, 'r2, 'incr, 'event) t
+        -> ('i1 * 'i2, 'r1 * 'r2, 'incr, 'event) t
 
       (** [t *** u = split t u]. *)
       val ( *** )
-        :  ('i1, 'model, 'r1, 'incr, 'event) t
-        -> ('i2, 'model, 'r2, 'incr, 'event) t
-        -> ('i1 * 'i2, 'model, 'r1 * 'r2, 'incr, 'event) t
+        :  ('i1, 'r1, 'incr, 'event) t
+        -> ('i2, 'r2, 'incr, 'event) t
+        -> ('i1 * 'i2, 'r1 * 'r2, 'incr, 'event) t
 
       (** [fanout t u] applies [t] and [u] to the same input and returns both results.  It's
           actually just [both]. *)
       val fanout
-        :  ('input, 'model, 'r1, 'incr, 'event) t
-        -> ('input, 'model, 'r2, 'incr, 'event) t
-        -> ('input, 'model, 'r1 * 'r2, 'incr, 'event) t
+        :  ('input, 'r1, 'incr, 'event) t
+        -> ('input, 'r2, 'incr, 'event) t
+        -> ('input, 'r1 * 'r2, 'incr, 'event) t
 
       (** [t &&& u = fanout t u]. *)
       val ( &&& )
-        :  ('input, 'model, 'r1, 'incr, 'event) t
-        -> ('input, 'model, 'r2, 'incr, 'event) t
-        -> ('input, 'model, 'r1 * 'r2, 'incr, 'event) t
+        :  ('input, 'r1, 'incr, 'event) t
+        -> ('input, 'r2, 'incr, 'event) t
+        -> ('input, 'r1 * 'r2, 'incr, 'event) t
 
       (** [^>>] is the same as [@>>], but with a Haskell-like name. *)
       val ( ^>> )
         :  ('i1 -> 'i2)
-        -> ('i2, 'model, 'result, 'incr, 'event) t
-        -> ('i1, 'model, 'result, 'incr, 'event) t
+        -> ('i2, 'result, 'incr, 'event) t
+        -> ('i1, 'result, 'incr, 'event) t
 
       (** [>>^] is the same as [>>|], but with a Haskell-like name. *)
       val ( >>^ )
-        :  ('input, 'model, 'r1, 'incr, 'event) t
+        :  ('input, 'r1, 'incr, 'event) t
         -> ('r1 -> 'r2)
-        -> ('input, 'model, 'r2, 'incr, 'event) t
+        -> ('input, 'r2, 'incr, 'event) t
+
+      (** Composes two components where one of the outputs of the first component is one
+          of the inputs to the second.*)
+      val partial_compose_first
+        :  ('input, 'shared * 'output1, 'incr, 'event) t
+        -> ('input * 'shared, 'output2, 'incr, 'event) t
+        -> ('input, 'output1 * 'output2, 'incr, 'event) t
+
+      val pipe
+        :  ('input, 'r1, 'incr, 'event) t
+        -> into:('intermediate, 'r2, 'incr, 'event) t
+        -> via:('input -> 'r1 -> 'intermediate)
+        -> finalize:('input -> 'r1 -> 'r2 -> 'r3)
+        -> ('input, 'r3, 'incr, 'event) t
     end
 
     module With_incr : sig
-      (** Constructs a bonsai component whose result is always
-          the same as this Incremental node.  *)
-      val of_incr : ('result, 'incr) Incremental.t -> (_, _, 'result, 'incr, _) t
+      (** Constructs a bonsai component whose result is always the same as this
+          Incremental node. *)
+      val of_incr : ('result, 'incr) Incremental.t -> (_, 'result, 'incr, _) t
 
       (** Same as [Bonsai.pure] but allows the user to optimize using Incremental. *)
       val pure
         :  f:(('input, 'incr) Incremental.t -> ('result, 'incr) Incremental.t)
-        -> ('input, _, 'result, 'incr, _) t
-
-      (** Same as [Bonsai.pure_from_model], but allows the user to optimize using Incremental. *)
-      val pure_from_model
-        :  f:(('model, 'incr) Incremental.t -> ('result, 'incr) Incremental.t)
-        -> (_, 'model, 'result, 'incr, _) t
+        -> ('input, 'result, 'incr, _) t
 
       (** Same as [Bonsai.leaf], but incremental *)
       val leaf
-        :  apply_action:(('input, 'incr) Incremental.t
+        :  (module Bonsai_types.Model with type t = 'model)
+        -> (module Bonsai_types.Action with type t = 'action)
+        -> name:string
+        -> default_model:'model
+        -> apply_action:(('input, 'incr) Incremental.t
                          -> ('model, 'incr) Incremental.t
                          -> inject:('action -> 'event)
                          -> ( schedule_event:('event -> unit) -> 'action -> 'model
@@ -933,9 +803,7 @@ module type Bonsai = sig
                     -> ('model, 'incr) Incremental.t
                     -> inject:('action -> 'event)
                     -> ('result, 'incr) Incremental.t)
-        -> name:string
-        -> sexp_of_action:('action -> Sexp.t)
-        -> ('input, 'model, 'result, 'incr, 'event) t
+        -> ('input, 'result, 'incr, 'event) t
 
       (** Creates a bonsai component where the given cutoff is applied to the incremental
           node for the component's model, preventing a component from being recalculated
@@ -943,27 +811,27 @@ module type Bonsai = sig
 
           See [Incr.set_cutoff]. *)
       val model_cutoff
-        :  ('input, 'model, 'result, 'incr, 'event) t
-        -> cutoff:'model Incremental.Cutoff.t
-        -> ('input, 'model, 'result, 'incr, 'event) t
+        :  ('input, 'result, 'incr, 'event) t
+        -> ('input, 'result, 'incr, 'event) t
 
-      val value_cutoff
-        :  cutoff:'input Incremental.Cutoff.t
-        -> ('input, _, 'input, _, _) t
+      (** An identity component, except that if the input changes in such a way that
+          [Incremental.Cutoff.should_cutoff cutoff ~old_value ~new_value] is true, the
+          result does not change. *)
+      val value_cutoff : cutoff:'input Incremental.Cutoff.t -> ('input, 'input, _, _) t
 
-      (** Transforms the result of a component, exposing the incrementality for optimization
-          purposes. *)
+      (** Transforms the result of a component, exposing the incrementality for
+          optimization purposes. *)
       val map
-        :  ('input, 'model, 'r1, 'incr, 'event) t
+        :  ('input, 'r1, 'incr, 'event) t
         -> f:(('r1, 'incr) Incremental.t -> ('r2, 'incr) Incremental.t)
-        -> ('input, 'model, 'r2, 'incr, 'event) t
+        -> ('input, 'r2, 'incr, 'event) t
 
       (** Transforms the input of a component, exposing the incrementality for optimization
           purposes. The signature of [f] is reversed from most other map functions. *)
       val map_input
-        :  ('i2, 'model, 'result, 'incr, 'event) t
+        :  ('i2, 'result, 'incr, 'event) t
         -> f:(('i1, 'incr) Incremental.t -> ('i2, 'incr) Incremental.t)
-        -> ('i1, 'model, 'result, 'incr, 'event) t
+        -> ('i1, 'result, 'incr, 'event) t
     end
   end
 
@@ -975,12 +843,12 @@ module type Bonsai = sig
     include S_gen with module Incr := Incr with module Event := Event
 
     val to_generic
-      :  ('i, 'm, 'r) t
-      -> ('i, 'm, 'r, Incr.state_witness, Event.t) Generic.t
+      :  ('input, 'result) t
+      -> ('input, 'result, Incr.state_witness, Event.t) Generic.t
 
     val of_generic
-      :  ('i, 'm, 'r, Incr.state_witness, Event.t) Generic.t
-      -> ('i, 'm, 'r) t
+      :  ('input, 'result, Incr.state_witness, Event.t) Generic.t
+      -> ('input, 'result) t
   end
 
   module Make (Incr : Incremental.S) (Event : Event.S) :

@@ -132,7 +132,7 @@ The name "Snapshot" was chosen because it's how I described `Incr_dom`'s
 
 > An instance of `Incr_dom.Component.t` is a snapshot of the component
 > at a particular instant in time.  Just look at the fields in the type,
-> you've got `Vdom.Node.t`: the _currrent_ view, an `apply_action` callback
+> you've got `Vdom.Node.t`: the _current_ view, an `apply_action` callback
 > which only describes the _current_ `apply_action`.  Indeed, it's the
 > `Incr.t` in `Incr_dom.Component.t Incr.t` that gives the component its
 > ability to change its view or behavior over time.
@@ -253,7 +253,7 @@ component whose `'action` parameter was the following:
 If you've ever wanted a binary tree of types, Bonsai Beta would gladly
 provide.
 
-Not only were the types unwieldly and hard to hide, they were also practically
+Not only were the types unwieldy and hard to hide, they were also practically
 worthless.  Raising another component's action -- while somewhat common in
 `Incr_dom` apps -- is better accomplished by having one component pass its
 `inject` function to another component.  Passing data from one component to
@@ -363,8 +363,65 @@ provides the 2nd form of composability:
 
 And that brings us to the end of the `Bonsai.t` API journey!  The type
 signature remains `('input, 'model, 'result) t` and although its implementation
-will likely change drastically thoughout the coming months and years, this
+will likely change drastically throughout the coming months and years, this
 core type will stay the same (I hope).
 
+### Model-less Bonsai
+
+As if to spite me, mere weeks after writing that the type parameter would
+stay the same, some of the London T&C team dared me to remove the model type
+parameter.
+
+At first I was skeptical, but after two days of prototyping, it was clear that
+not only was the removal possible, but that it simultaneously made normal usage
+of the library much easier while making most unidiomatic patterns impossible.
+
+The feature jane/bonsai/modelectomy implements the removal of the type
+parameter, changing the core type like so:
+
+```diff
+- ('input, 'model, 'result) Bonsai.t
++ ('input, 'result) Bonsai.t
+```
+
+To be clear, models are not going away.  Much like how actions still exist (but
+don’t occupy a slot in the type), models become an implementation detail of a
+component, instead of a core part of its API.
+
+Removing `'model` had many effects, some more impactful than others.  The biggest
+change is that components can no longer share models.  Much like how removing
+the action type parameter removed the ability for components to send actions to
+one another, removing the model type parameter prevents sharing of
+component-internal state.  Fortunately, during the tree-smash that came along
+with the change, I found that none of the apps or libraries that actually
+relied on two components reading and writing to the same model. There were a
+number of cases where one component performed reads and writes and another
+component only performed reads, but that pattern is expressible with the
+read+write component returning the model value as a result, passing it into the
+second component via read-only input via component composition.
+
+Another change is that a Bonsai.t value keeps track of its default model
+internally.  In practice, this means that `Bonsai.of_module` and
+`Bonsai.state_machine` have new, required, `default_model` parameters.  However,
+the application developer no longer needs to recursively construct
+`default_model` values for every sub-model in the application as they climb up
+the component tree.  Composition via `let%map` or `>>>` automatically derives a
+default model based on the default model of its constituent components.
+
+Likely the most visible change is the complete removal of all of the
+model projection functions.  No more `Bonsai.Model.field`, no more
+`Bonsai.Model.f`, no more bugs where you copy and pasted a text box
+component and forgot to change the model projection.
+
+Finally, the types that can become models appear to be more restricted.  A
+model must now be fully sexp-convertible and have a conservative equality
+implementation.  For most models, these requirements aren't too onerous -
+models should almost always contain nothing but plain data.  However, for
+models that can't meet these criteria, it is acceptable for the `sexp_of`
+function to be defined in terms of `sexp_of_opaque`, for the `of_sexp` function to
+raise an exception, and for the equality function to default to physical
+equality.  Together with the default model packed with each bonsai component,
+combinator authors have access to a lot more power to introspect running Bonsai
+apps, paving the way for powerful debugging tools.
 
 [^arrow]: [Arrow: Haskell Wiki](https://wiki.haskell.org/Arrow)

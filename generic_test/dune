@@ -1,3 +1,4 @@
-(library (name bonsai_generic_test) (libraries bonsai core_kernel)
+(library (name bonsai_generic_test)
+ (libraries bonsai core_kernel expect_test_helpers_kernel)
  (preprocess
   (pps ppx_jane ppx_pattern_bind -annotated-ignores -check-doc-comments)))

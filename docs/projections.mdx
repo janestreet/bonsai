@@ -4,20 +4,6 @@ uuid: 98a0ce0e-6f1c-4b0b-8fcc-0e46f1e4e4e4
 parent: "./api_tour.mdx"
 ---
 
-<div id="floater">
-
-```
-type ('input, 'model, 'result) t
-```
-
-| Parameter            | Description             |
-| -------------------- | ----------------------- |
-| <tt>**'input**</tt>  | Input to component      |
-| <tt>**'model**</tt>  | Component state-machine |
-| <tt>**'result**</tt> | Type of computed value  |
-
-</div>
-
 <!--
 ```ocaml
 # open! Bonsai_mdx
@@ -37,13 +23,11 @@ model_, this would be a terrible separation of concerns, not to mention that it
 would be impossible to make general-purpose, reusable components.
 
 A "Projection" is a function that takes a `Bonsai.t` and returns a `Bonsai.t`
-with differing `'input`, `'model`, or `'result` types.  Using these functions
-alongside Combinators, you can transform components to all have the same input
-and model type in order to compose them.
+with differing `'input` or `'result` types.  
 
 <!--
 ```ocaml
-let counter: (unit, int, Vdom.Node.t) Bonsai.t = Bonsai.pure ~f:(fun _ -> failwith "")
+let counter: (unit, Vdom.Node.t) Bonsai.t = Bonsai.pure ~f:(fun _ -> failwith "")
 ```
 -->
 
@@ -55,7 +39,7 @@ Bonsai component with the result type parameter transformed.
 
 ```ocaml
 # #show Bonsai.map
-val map : ('d, 'e, 'a) Bonsai.t -> f:('a -> 'b) -> ('d, 'e, 'b) Bonsai.t
+val map : ('e, 'a) Bonsai.t -> f:('a -> 'b) -> ('e, 'b) Bonsai.t
 ```
 
 Also the infix operator:
@@ -63,8 +47,7 @@ Also the infix operator:
 ```ocaml
 # #show Bonsai.Infix.( >>| )
 val ( >>| ) :
-  ('input, 'model, 'r1) Bonsai.t ->
-  ('r1 -> 'r2) -> ('input, 'model, 'r2) Bonsai.t
+  ('input, 'r1) Bonsai.t -> ('r1 -> 'r2) -> ('input, 'r2) Bonsai.t
 ```
 
 ### Examples
@@ -72,199 +55,15 @@ val ( >>| ) :
 # open Bonsai.Infix
 
 # let int_returning = Bonsai.const 5;
-val int_returning : ('_weak1, '_weak2, int) Bonsai.t = <abstr>
+val int_returning : ('_weak1, int) Bonsai.t = <abstr>
 
 # let string_returning = int_returning >>| Int.to_string
-val string_returning : ('_weak3, '_weak4, string) Bonsai.t = <abstr>
-```
-
-## <tt> Bonsai.Model.ignore </tt>
-
-Many Bonsai components don't need to have a state machine; they are pure
-functions and don't raise any actions or need to maintain state.  These
-functions naturally have a `unit` `'model` type parameter to indicate that
-their state machine is entirely empty of nodes.
-
-Because a component with a `unit` type parameter doesn't read or write to the
-`'model`, it is safe to pretend that this component has a state machine of
-*any* type!
-
-```ocaml
-# #show Bonsai.Model.ignore
-val ignore :
-  ('input, unit, 'result) Bonsai.t -> ('input, 'model, 'result) Bonsai.t
-```
-
-### Examples
-
-Joining a component that has a model with a component that doesn't have a model
-(or has a unit model) is common.  The naive way of doing this doesn't work
-because the model types don't line up, as shown here:
-
-```ocaml
-# #show counter
-val counter : (unit, int, Vdom.Node.t) Bonsai.t
-
-# let some_constant : (unit, unit, Vdom.Node.t) Bonsai.t =
-    Bonsai.const (Vdom.Node.text "hello")
-val some_constant : (unit, unit, Vdom.Node.t) Bonsai.t = <abstr>
-
-# let combined =
-  let%map.Bonsai counter = counter
-  and some_constant = some_constant in
-  Vdom.Node.div [] [ counter; some_constant ]
-Line 3, characters 23-36:
-Error: This expression has type (unit, unit, Vdom.Node.t) Bonsai.t
-       but an expression was expected of type (unit, int, 'a) Bonsai.t
-       Type unit is not compatible with type int 
-```
-
-However, by using `Bonsai.Model.ignore`, we can transform the
-unit-modeled component to be whatever model type that we need.
-
-```ocaml
-# let combined =
-  let%map.Bonsai counter = counter
-  and some_constant = Bonsai.Model.ignore some_constant in
-  Vdom.Node.div [] [ counter; some_constant ]
-val combined : (unit, int, Vdom.Node.t) Bonsai.t = <abstr>
-```
-
-## <tt> Bonsai.Model.field </tt>
-
-As components are combined together into one single large component that makes
-up the application, the models of all the application's subcomponents need to
-somehow also live within the application's model.
-
-The way that this is traditionally done is by nesting the model of a
-subcomponent as a field inside of a supercomponent.
-
-```ocaml
-type subcomponent_a_model = { count: int }
-
-type subcomponent_b_model = { name: string }
-
-type supercomponent_model =
-  { subcomponent_a_model: subcomponent_a_model
-  ; subcomponent_b_model: subcomponent_b_model
-  }
-[@@deriving fields]
-```
-
-When the models for subcomponents are contained within a larger model,
-`Bonsai.Model.field` can be used to transform a Bonsai component from
-a component whose model is the inner type, to a Bonsai component whose model is
-the outer type.
-
-```ocaml
-# #show Bonsai.Model.field
-val field :
-  ('model_outer, 'model_inner) Field.t ->
-  ('input, 'model_inner, 'result) Bonsai.t ->
-  ('input, 'model_outer, 'result) Bonsai.t
-```
-
-Although the component only reads and writes to the `'model_inner` value, it
-can pretend to be a component with a model of type `'model_outer` by reaching
-into the field -- denoted by the `Fieldslib.Field.t` parameter -- and doing all of
-its reads and writes there.
-
-### Examples
-Using the counter component defined above in the
-[of\_module](#bonsai.of_module) examples, we can transform the type of the
-state machine from an `int` to the type of a record containing an `int`.
-
-```ocaml
-module Person = struct
-  type t =
-    { name: string
-    ; age: int
-    }
-  [@@deriving fields]
-end
-```
-
-```ocaml
-# #show counter
-val counter : (unit, int, Vdom.Node.t) Bonsai.t
-
-# let age_counter = Bonsai.Model.field Person.Fields.age counter
-val age_counter : (unit, Person.t, Vdom.Node.t) Bonsai.t = <abstr>
-```
-
-Projecting the model up into a record is frequently required for use with
-the `Let_syntax`:
-
-```ocaml
-let string_component = Bonsai.pure ~f:(Vdom.Node.text) |> Bonsai.Model.to_input
-let int_component = counter
-let person_component =
-  let open Bonsai.Let_syntax in
-  let%map age = int_component |> Bonsai.Model.field Person.Fields.age
-  and name = string_component |> Bonsai.Model.field Person.Fields.name
-  in Vdom.Node.div [] [ name; age ]
-```
-```ocaml
-# #show person_component
-val person_component : (unit, Person.t, Vdom.Node.t) Bonsai.t
-```
-
-## <tt> Bonsai.Model.f </tt>
-
-The generic model projection allows you to convert a Bonsai component with a
-model of any type into a component with a model of any other type, provided
-that you can implement the `set` and `get` functions for those types.
-
-```ocaml
-# #show Bonsai.Model.f
-val f :
-  ('input, 'm1, 'result) Bonsai.t ->
-  get:('m2 -> 'm1) ->
-  set:('m2 -> 'm1 -> 'm2) -> ('input, 'm2, 'result) Bonsai.t
-```
-
-In this type signature, `'m1` is the "given model type", meaning that we
-already have a component with a model of this type.
-
-The `'m2` type is a "target model", because we would like to make a Bonsai
-component with that model.
-
-The `get` function converts from the target model type to the given model
-type.  The `set` function takes an instance of the target model type and a
-recently updated instance of the given model and asks the implementer of `get`
-to produce a new target-model with the changes indicated by the provided model
-incorporated into it.
-
-If you didn't have `Bonsai.Model.field`, here's how you would implement
-it using `Bonsai.Model.f`:
-
-```ocaml
-let project_field fieldslib_field t =
-  Bonsai.Model.f t
-    ~get:(Field.get fieldslib_field)
-    ~set:(Field.fset fieldslib_field)
-```
-### Examples
-
-Using `Bonsai.Model.f` it is possible to create a function that
-transforms the state-machine of a component from `string` to `int`, and
-during the failure on a conversion, just keeps the old integer value
-from the `int` state-machine.
-
-```ocaml
-# Bonsai.Model.f
-    ~get:Int.to_string
-    ~set:(fun old_int new_string ->
-      try Int.of_string new_string
-      with Failure _ -> old_int)
-- : ('a, string, 'b) Bonsai.t -> ('a, int, 'b) Bonsai.t = <fun>
+val string_returning : ('_weak2, string) Bonsai.t = <abstr>
 ```
 
 ## <tt> Bonsai.map\_input </tt>
 
-Making `'input` types line up is just as important for composition as `'model`.
-Unlike model projection, input projection only needs to work in one direction,
-kind of like "map" but for the input to the component instead of the output.
+Making `'input` types line up is important for composition.
 
 Because of how common this operation is (just like `>>|` and `map`), Bonsai
 provides a function and infix operator for transforming the `'input` type
@@ -273,8 +72,7 @@ of a component:
 ```ocaml
 # #show Bonsai.map_input
 val map_input :
-  ('i2, 'model, 'result) Bonsai.t ->
-  f:('i1 -> 'i2) -> ('i1, 'model, 'result) Bonsai.t
+  ('i2, 'result) Bonsai.t -> f:('i1 -> 'i2) -> ('i1, 'result) Bonsai.t
 ```
 
 There's also a right-associative operator that does the same thing.  Think of it
@@ -283,8 +81,7 @@ as a dual to `>>|`.
 ```ocaml
 # #show Bonsai.Infix.( @>> )
 val ( @>> ) :
-  ('i1 -> 'i2) ->
-  ('i2, 'model, 'result) Bonsai.t -> ('i1, 'model, 'result) Bonsai.t
+  ('i1 -> 'i2) -> ('i2, 'result) Bonsai.t -> ('i1, 'result) Bonsai.t
 ```
 
 `@>>` is pronounced "the drill operator", but I'm still partial to "the
@@ -320,13 +117,13 @@ stringifies the lengths of lists with `@>>`.
 
 ```ocaml
 # let int_to_string_component = Bonsai.pure ~f:Int.to_string
-val int_to_string_component : (int, '_weak5, string) Bonsai.t = <abstr>
+val int_to_string_component : (int, string) Bonsai.t = <abstr>
 
 # #show List.length
 val length : 'a list -> int
 
 # let list_to_len_string = List.length @>> int_to_string_component
-val list_to_len_string : ('_weak6 list, '_weak7, string) Bonsai.t = <abstr>
+val list_to_len_string : ('_weak3 list, string) Bonsai.t = <abstr>
 ```
 
 `@>>` can be used to project fields out of a record and build a
@@ -343,110 +140,7 @@ end
 
 ```ocaml
 # let print_person_age = Person.age @>> int_to_string_component
-val print_person_age : (Person.t, '_weak8, string) Bonsai.t = <abstr>
-```
-
-## <tt> Bonsai.Model.to\_input </tt>
-
-When given a component with an input of `'input` and a model of type `unit`,
-`Bonsai.Model.to_input` can produce a component where the `'input` and
-`unit` type parameters are switched, putting the `'input` type in the model
-position.
-
-```ocaml
-# #show Bonsai.Model.to_input
-val to_input :
-  ('input, unit, 'result) Bonsai.t -> (unit, 'input, 'result) Bonsai.t
-```
-
-### Examples
-
-Imagine having a component which takes as input an int and produces a string:
-
-```ocaml
-# let int_to_string_component = Bonsai.pure ~f:Int.to_string
-val int_to_string_component : (int, '_weak9, string) Bonsai.t = <abstr>
-```
-
-You could imagine wanting to combine this component with another component that has
-an int as its model like so:
-
-<!--
-```ocaml
-let counter : (unit, int, Vdom.Node.t) Bonsai.t = Bonsai.pure_from_model(fun _ -> failwith "")
-```
--->
-
-```ocaml
-# #show counter
-val counter : (unit, int, Vdom.Node.t) Bonsai.t
-```
-
-```ocaml
-# let combined =
-  let%map.Bonsai counter = counter
-  and            display = int_to_string_component in
-  Vdom.Node.div [] [ Vdom.Node.text display; counter ]
-Line 3, characters 28-51:
-Error: This expression has type (int, 'weak9, string) Bonsai.t
-       but an expression was expected of type (unit, int, 'a) Bonsai.t
-       Type int is not compatible with type unit 
-```
-
-But as you can see from the error above, it doesn't type!  The problem is that
-our components have types which are incompatible with the let-syntax:
-
-```
-val counter:                 (unit, int , Vdom.Node.t) Bonsai.t
-val int_to_string_component: (int , unit, string     ) Bonsai.t
-```
-
-With our friend `Model.to_input`, we can re-arrange the first two type
-parameters of our display component and it'll work.
-
-```ocaml
-# let int_to_string_by_model = Bonsai.Model.to_input int_to_string_component
-val int_to_string_by_model : (unit, int, string) Bonsai.t = <abstr>
-
-# let combined =
-  let%map.Bonsai counter = counter
-  and            display = int_to_string_by_model in
-  Vdom.Node.div [] [ Vdom.Node.text display; counter ]
-val combined : (unit, int, Vdom.Node.t) Bonsai.t = <abstr>
-```
-
-## <tt> Bonsai.Model.to\_input\_with\_other </tt>
-
-This function is very similar to `Bonsai.Model.to_input`, with the main
-difference being that the component has a secondary input that remains in input
-position.
-
-```ocaml
-# #show Bonsai.Model.to_input_with_other
-val to_input_with_other :
-  ('input * 'model, unit, 'result) Bonsai.t ->
-  ('input, 'model, 'result) Bonsai.t
-```
-
-### Examples
-
-Given a "string repetition component" that is pure over two pieces of data:
-
-1. The string that is going to be repeated
-2. The number of times to be repeated
-
-produce a component that takes the first of those values in the `'input`
-position, and the other in the `'model` position.
-
-```ocaml
-# let string_repeat_component =
-      Bonsai.pure ~f:(fun (string, count) ->
-        count |> List.range 0 |> List.map ~f:(Fn.const string) |> String.concat)
-val string_repeat_component : (string * int, '_weak10, string) Bonsai.t =
-  <abstr>
-
-# let projected = Bonsai.Model.to_input_with_other string_repeat_component
-val projected : (string, int, string) Bonsai.t = <abstr>
+val print_person_age : (Person.t, string) Bonsai.t = <abstr>
 ```
 
 ## <tt> Bonsai.enum </tt>
@@ -456,11 +150,9 @@ and provide a different Bonsai component that handles different cases.
 
 ```ocaml
 # Bonsai.enum
-- : ?on_action_mismatch:('key * 'model, 'model) Bonsai.on_action_mismatch ->
-    (module Bonsai.Enum with type t = 'key) ->
-    which:('input -> 'model -> 'key) ->
-    handle:('key -> ('input, 'model, 'result) Bonsai.t) ->
-    ('input, 'model, 'result) Bonsai.t
+- : (module Bonsai.Enum with type t = 'key) ->
+    which:('input -> 'key) ->
+    handle:('key -> ('input, 'result) Bonsai.t) -> ('input, 'result) Bonsai.t
 = <fun>
 ```
 
@@ -482,8 +174,7 @@ Bonsai to list all possible combinations of that type.
 #### <tt> ~which </tt>
 
 The `which` function is defined by the user to translate cases from
-the components input and model into values of their first-class
-module.
+the components input into values of their first-class module.
 
 #### <tt> ~handle </tt>
 
@@ -498,31 +189,27 @@ module Branch = struct
     | Multiple_of_ten
     | Even
     | Odd
-    | Overridden
   [@@deriving sexp, compare, enumerate]
 end
 ```
 
 ```ocaml
-# let which input model =
-    if model
-    then Branch.Overridden
-    else if input mod 10 = 0
+# let which input =
+    if input mod 10 = 0
     then Branch.Multiple_of_ten
     else if input mod 2 = 0
     then Branch.Even
     else Branch.Odd
-val which : int -> bool -> Branch.t = <fun>
+val which : int -> Branch.t = <fun>
 
 # let handle = function
     | Branch.Multiple_of_ten -> Bonsai.pure ~f:(sprintf "%d is a multiple of ten")
     | Branch.Even-> Bonsai.pure ~f:(sprintf "%d is even")
     | Branch.Odd-> Bonsai.pure ~f:(sprintf "%d is odd")
-    | Branch.Overridden -> Bonsai.const "OVERRIDDEN BY MODEL"
-val handle : Branch.t -> (int, 'a, string) Bonsai.t = <fun>
+val handle : Branch.t -> (int, string) Bonsai.t = <fun>
 
 # let component = Bonsai.enum (module Branch) ~which ~handle
-val component : (int, bool, string) Bonsai.t = <abstr>
+val component : (int, string) Bonsai.t = <abstr>
 ```
 
 ## <tt> Bonsai.if_ </tt>
@@ -531,11 +218,9 @@ val component : (int, bool, string) Bonsai.t = <abstr>
 
 ```ocaml
 # Bonsai.if_
-- : ?on_action_mismatch:(bool * 'model, 'model) Bonsai.on_action_mismatch ->
-    ('input -> 'model -> bool) ->
-    then_:('input, 'model, 'result) Bonsai.t ->
-    else_:('input, 'model, 'result) Bonsai.t ->
-    ('input, 'model, 'result) Bonsai.t
+- : ('input -> bool) ->
+    then_:('input, 'result) Bonsai.t ->
+    else_:('input, 'result) Bonsai.t -> ('input, 'result) Bonsai.t
 = <fun>
 ```
 
@@ -544,8 +229,8 @@ val component : (int, bool, string) Bonsai.t = <abstr>
 ```ocaml
 # let component =
     Bonsai.if_
-      (fun input _model -> input % 2 = 0)
+      (fun input -> input % 2 = 0)
       ~then_:(Bonsai.pure ~f:(sprintf "%d is even"))
       ~else_:(Bonsai.pure ~f:(sprintf "%d is odd"))
-val component : (int, '_weak11, string) Bonsai.t = <abstr>
+val component : (int, string) Bonsai.t = <abstr>
 ```

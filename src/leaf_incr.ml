@@ -45,4 +45,28 @@ end
 
 include T
 
+let leaf_incr
+      (type m a)
+      (module M : Model with type t = m)
+      (module A : Action with type t = a)
+      ~name
+      ~default_model
+      ~apply_action
+      ~compute
+  =
+  let action_type_id = Type_equal.Id.create ~name A.sexp_of_t in
+  let model_type_id = Type_equal.Id.create ~name M.sexp_of_t in
+  Packed.T
+    { unpacked = C { apply_action; compute; name }
+    ; action_type_id
+    ; model =
+        { default = default_model
+        ; type_id = model_type_id
+        ; equal = M.equal
+        ; sexp_of = M.sexp_of_t
+        ; of_sexp = M.t_of_sexp
+        }
+    }
+;;
+
 let () = Component.define (module T)

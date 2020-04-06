@@ -28,11 +28,17 @@ module T = struct
       | _ -> assert false
   ;;
 
-  let visit component visitor =
-    match component with
-    | Packed.T (C { t; f }, typ_id) ->
-      let (T (t, typ_id)) = visit_ext (T (t, typ_id)) visitor in
-      visitor.visit (T (C { t; f }, typ_id))
+  let map_input (Packed.T { unpacked; action_type_id; model }) ~f =
+    Packed.T { unpacked = C { t = unpacked; f }; action_type_id; model }
+  ;;
+
+  let visit (Packed.T { unpacked; action_type_id; model }) visitor =
+    match unpacked with
+    | C { t; f } ->
+      let visited =
+        visit_ext (Packed.T { unpacked = t; action_type_id; model }) visitor
+      in
+      visitor.visit (map_input visited ~f)
     | _ -> assert false
   ;;
 end

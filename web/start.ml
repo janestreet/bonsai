@@ -175,43 +175,35 @@ let start_generic_poly
   handle
 ;;
 
-let start_generic
-      ~get_app_result
-      ~initial_input
-      ~initial_model
-      ~bind_to_element_with_id
-      ~component
-  =
-  let (T (unpacked, action_type_id)) =
+let start_generic ~get_app_result ~initial_input ~bind_to_element_with_id ~component =
+  let (T { unpacked; action_type_id; model }) =
     component |> Bonsai.to_generic |> Bonsai_lib.Generic.Expert.reveal
   in
   start_generic_poly
     ~get_app_result
     ~initial_input
-    ~initial_model
+    ~initial_model:model.default
     ~bind_to_element_with_id
     ~component:unpacked
     ~action_type_id
 ;;
 
 (* I can't use currying here because of the value restriction. *)
-let start_standalone ~initial_input ~initial_model ~bind_to_element_with_id component =
+let start_standalone ~initial_input ~bind_to_element_with_id component =
   start_generic
     ~get_app_result:(fun view ->
       { App_result.view; extra = (); inject_incoming = Nothing.unreachable_code })
     ~get_app_input:(fun ~input ~inject_outgoing:_ -> input)
     ~initial_input
-    ~initial_model
     ~bind_to_element_with_id
     ~component
 ;;
 
-let start ~initial_input ~initial_model ~bind_to_element_with_id component =
+let start ~initial_input ~bind_to_element_with_id component =
   start_generic
     ~get_app_result:Fn.id
     ~get_app_input:App_input.create
     ~initial_input
-    ~initial_model
     ~bind_to_element_with_id
     ~component
 ;;

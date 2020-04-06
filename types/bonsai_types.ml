@@ -1,12 +1,29 @@
 open! Core_kernel
 module Snapshot = Snapshot
 
-type ('extra, 'new_model) on_action_mismatch =
+type on_action_mismatch =
   [ `Ignore
   | `Raise
   | `Warn
-  | `Custom of 'extra -> 'new_model
   ]
+
+module type Model = sig
+  type t [@@deriving sexp, equal]
+end
+
+module type Action = sig
+  type t [@@deriving sexp_of]
+end
+
+(** We need keys to have [t_of_sexp] and [sexp_of_t] *)
+module type Comparator = sig
+  type t [@@deriving sexp]
+
+  include Comparator.S with type t := t
+end
+
+type ('k, 'cmp) comparator =
+  (module Comparator with type t = 'k and type comparator_witness = 'cmp)
 
 type ('input, 'model, 'action, 'result, 'incr, 'event) unpacked = ..
 
@@ -20,26 +37,61 @@ type ('input, 'model, 'action, 'result, 'incr, 'event) eval_type =
   -> ('input, 'model, 'action, 'result, 'incr, 'event) unpacked
   -> (('model, 'action, 'result, 'event) Snapshot.t, 'incr) Incremental.t
 
+let unit_type_id =
+  Type_equal.Id.create ~name:(Source_code_position.to_string [%here]) [%sexp_of: unit]
+;;
+
 (* Needs to be a module so we can [include] it later in [Expert].  Otherwise, the
    compiler complains that the types (impl vs intf) are of different kinds. *)
 module Packed = struct
-  type ('input, 'model, 'result, 'incr, 'event) t =
+  type 'model model_info =
+    { default : 'model
+    ; equal : 'model -> 'model -> bool
+    ; type_id : 'model Type_equal.Id.t
+    ; sexp_of : 'model -> Sexp.t
+    ; of_sexp : Sexp.t -> 'model
+    }
+
+  let unit_model_info =
+    { type_id = unit_type_id
+    ; default = ()
+    ; equal = equal_unit
+    ; sexp_of = sexp_of_unit
+    ; of_sexp = unit_of_sexp
+    }
+  ;;
+
+  let both_model_infos model1 model2 =
+    let sexp_of = Tuple2.sexp_of_t model1.sexp_of model2.sexp_of in
+    let of_sexp = Tuple2.t_of_sexp model1.of_sexp model2.of_sexp in
+    let type_id =
+      Type_equal.Id.create
+        sexp_of
+        ~name:
+          (sprintf
+             "(%s * %s)"
+             (Type_equal.Id.name model1.type_id)
+             (Type_equal.Id.name model2.type_id))
+    in
+    let default = model1.default, model2.default in
+    let equal = Tuple2.equal ~eq1:model1.equal ~eq2:model2.equal in
+    { type_id; default; equal; sexp_of; of_sexp }
+  ;;
+
+  type ('input, 'result, 'incr, 'event) t =
     | T :
-        ('input, 'model, 'action, 'result, 'incr, 'event) unpacked
-        * 'action Type_equal.Id.t
-        -> ('input, 'model, 'result, 'incr, 'event) t
+        { unpacked : ('input, 'model, 'action, 'result, 'incr, 'event) unpacked
+        ; action_type_id : 'action Type_equal.Id.t
+        ; model : 'model model_info
+        }
+        -> ('input, 'result, 'incr, 'event) t
 end
 
 module Visitor = struct
   type t =
     { visit :
-        'input 'model 'result 'incr 'event. ( 'input
-                                            , 'model
-                                            , 'result
-                                            , 'incr
-                                            , 'event )
-          Packed.t
-        -> ('input, 'model, 'result, 'incr, 'event) Packed.t
+        'input 'model 'result 'incr 'event. ('input, 'result, 'incr, 'event) Packed.t
+        -> ('input, 'result, 'incr, 'event) Packed.t
     }
 end
 
@@ -55,9 +107,9 @@ module type Definition = sig
   val eval : ('input, 'model, 'action, 'result, 'incr, 'event) eval_type
 
   val visit
-    :  ('input, 'model, 'result, 'incr, 'event) Packed.t
+    :  ('input, 'result, 'incr, 'event) Packed.t
     -> Visitor.t
-    -> ('input, 'model, 'result, 'incr, 'event) Packed.t
+    -> ('input, 'result, 'incr, 'event) Packed.t
 end
 
 let handlers : (module Definition) Hashtbl.M(Int).t = Hashtbl.create (module Int)
@@ -80,8 +132,8 @@ let eval_ext ~input ~old_model ~model ~inject ~action_type_id ~incr_state compon
 ;;
 
 let visit_ext component visitor =
-  let (Packed.T (c, _)) = component in
-  let (module E) = fetch c in
+  let (Packed.T { unpacked; action_type_id = _; model = _ }) = component in
+  let (module E) = fetch unpacked in
   E.visit component visitor
 ;;
 
