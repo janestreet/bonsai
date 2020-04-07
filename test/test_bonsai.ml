@@ -76,12 +76,12 @@ let%expect_test "enum" =
       {|
       (component (
         Enum
-        (false (Erase_action false (Erase_model false (Map_input Pure_input))))
-        (true (Erase_action true (Erase_model true (Map_input Pure_input))))))
+        (false (Map_input Pure_input))
+        (true  (Map_input Pure_input))))
       (optimized (
         Enum
-        (false (Erase_action false (Erase_model false (Map_input Pure_input))))
-        (true (Erase_action true (Erase_model true (Map_input Pure_input)))))) |}];
+        (false (Map_input Pure_input))
+        (true  (Map_input Pure_input)))) |}];
     let (module H) = Helpers.make_string ~driver in
     H.show ();
     [%expect {| true 5 |}];
@@ -134,10 +134,8 @@ let%expect_test "enum with action handling `Ignore" =
           (Map2
             (Map_input (
               Enum
-              (false (
-                Erase_action false (
-                  Erase_model false (Map (Map_input (Leaf counter-component))))))
-              (true (Erase_action true (Erase_model true Pure_input)))))
+              (false (Map (Map_input (Leaf counter-component))))
+              (true Pure_input)))
             Pure_input))))
       (optimized (
         Map (
@@ -146,10 +144,8 @@ let%expect_test "enum with action handling `Ignore" =
           (Map2
             (Map_input (
               Enum
-              (false (
-                Erase_action false (
-                  Erase_model false (Map (Map_input (Leaf counter-component))))))
-              (true (Erase_action true (Erase_model true Pure_input)))))
+              (false (Map (Map_input (Leaf counter-component))))
+              (true Pure_input)))
             Pure_input)))) |}];
     let (module H) = Helpers.make_string_with_inject ~driver in
     H.show ();

@@ -29,7 +29,6 @@ module type S_gen = sig
 
   val sexp_of_t : (_, _) t -> Sexp.t
 
-
   (** A bonsai component that just forwards the input straight through to the result.
       This is equivalent to [Bonsai.pure ~f:Fn.id]. *)
   val input : ('input, 'input) t
@@ -129,7 +128,7 @@ module type S_gen = sig
     -> ('input, 'result) t
 
   module type Enum = sig
-    type t [@@deriving sexp, compare, enumerate]
+    type t [@@deriving compare, enumerate, sexp]
   end
 
   val enum
@@ -493,7 +492,7 @@ module type Bonsai = sig
       -> ('i1, 'r2, 'incr, 'event) t
 
     module type Enum = sig
-      type t [@@deriving sexp, compare, enumerate]
+      type t [@@deriving compare, enumerate, sexp]
     end
 
     val enum

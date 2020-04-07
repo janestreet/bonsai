@@ -3,7 +3,7 @@ open! Import
 open Component
 
 module type Enum = sig
-  type t [@@deriving sexp, compare, enumerate]
+  type t [@@deriving compare, enumerate, sexp]
 end
 
 val enum

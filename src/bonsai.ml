@@ -18,9 +18,7 @@ module Generic = struct
   let pure = Pure.pure
   let leaf = Leaf.leaf
 
-  module type Enum = sig
-    type t [@@deriving sexp, compare, enumerate]
-  end
+  module type Enum = Switch.Enum
 
   let enum = Switch.enum
   let if_ = Switch.if_

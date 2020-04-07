@@ -3,23 +3,26 @@ open! Import
 open Incremental.Let_syntax
 open Component
 
+module type Enum = sig
+  type t [@@deriving compare, enumerate, sexp]
+end
+
 module Case_action = struct
-  type t =
+  type 'key t =
     | T :
         { action : 'a
         ; type_id : 'a Type_equal.Id.t
-        ; userdata : 'u
-        ; sexp_of_userdata : 'u -> Sexp.t
+        ; key : 'key
         }
-        -> t
+        -> 'key t
 
-  let sexp_of_t (T { action; type_id; userdata; sexp_of_userdata }) =
+  let sexp_of_t sexp_of_key (T { action; type_id; key }) =
     let sexp_of_action = Type_equal.Id.to_sexp type_id in
-    [%message "Bonsai.Switch.Case_action" (action : action) (userdata : userdata)]
+    [%message "Bonsai.Switch.Case_action" (action : action) (key : key)]
   ;;
 
-  let type_id =
-    Type_equal.Id.create ~name:(Source_code_position.to_string [%here]) [%sexp_of: t]
+  let type_id sexp_of_key =
+    Type_equal.Id.create ~name:(Source_code_position.to_string [%here]) [%sexp_of: key t]
   ;;
 end
 
@@ -42,10 +45,6 @@ module Poly_model = struct
       match Type_equal.Id.same_witness t1 t2 with
       | Some T -> equal m1 m2
       | None -> false
-    ;;
-
-    let type_id =
-      Type_equal.Id.create ~name:(Source_code_position.to_string [%here]) sexp_of_t
     ;;
   end
 
@@ -78,38 +77,14 @@ end
 
 module T = struct
   type ('input, 'model, 'action, 'result, 'incr, 'event) unpacked +=
-    | Erase_model :
-        { t : ('i, 'm, 'a, 'r, 'incr, 'event) unpacked
-        ; model : 'm Packed.model_info
-        ; sexp_of_key : 'k -> Sexp.t
-        ; key : 'k
-        }
-        -> ('i, Poly_model.Packed.t, 'a, 'r, 'incr, 'event) unpacked
-    | Erase_action :
-        { t : ('i, 'm, 'a, 'r, 'incr, 'event) unpacked
-        ; action_type_id : 'a Type_equal.Id.t
-        ; sexp_of_key : 'k -> Sexp.t
-        ; key : 'k
-        ; on_action_mismatch : on_action_mismatch
-        }
-        -> ('i, 'm, Case_action.t, 'r, 'incr, 'event) unpacked
     | Enum :
-        { components :
-            ( 'key
-            , ( 'input
-              , Poly_model.Packed.t
-              , Case_action.t
-              , 'result
-              , 'incr
-              , 'event )
-                unpacked
-            , 'cmp )
-              Map.t
+        { components : ('key, ('input, 'result, 'incr, 'event) Packed.t, 'cmp) Map.t
         ; sexp_of_key : 'key -> Sexp.t
+        ; key_equal : 'key -> 'key -> bool
         ; which : 'input -> 'key
         ; key_and_cmp : ('key_and_cmp, ('key, 'cmp) Poly_model.t) Type_equal.t
         }
-        -> ('input, 'key_and_cmp, Case_action.t, 'result, 'incr, 'event) unpacked
+        -> ('input, 'key_and_cmp, 'key Case_action.t, 'result, 'incr, 'event) unpacked
 
   let sexp_of_unpacked
         (type i m a r incr event)
@@ -120,11 +95,10 @@ module T = struct
       let sexp_of_k = (Map.comparator components).sexp_of_t in
       Sexp.List
         (Sexp.Atom "Enum"
-         :: (components |> Map.to_alist |> List.map ~f:[%sexp_of: k * unpacked]))
-    | Erase_action { t; action_type_id = _; sexp_of_key; key; on_action_mismatch = _ } ->
-      [%sexp Erase_action, (key : key), (t : unpacked)]
-    | Erase_model { t; model = _; sexp_of_key; key } ->
-      [%sexp Erase_model, (key : key), (t : unpacked)]
+         :: (components
+             |> Map.to_alist
+             |> List.map ~f:(fun (k, Packed.T { unpacked; _ }) ->
+               [%sexp_of: k * unpacked] (k, unpacked))))
     | _ -> assert false
   ;;
 
@@ -135,105 +109,54 @@ module T = struct
   ;;
 
   let eval (type i m a r incr event) : (i, m, a, r, incr, event) eval_type =
-    fun ~input ~old_model ~model ~inject ~action_type_id ~incr_state t ->
+    fun ~input ~old_model ~model ~inject ~action_type_id:_ ~incr_state t ->
       match t with
-      | Enum { components; which; key_and_cmp = T; sexp_of_key = _ } ->
+      | Enum { components; which; key_and_cmp = T; sexp_of_key = _; key_equal } ->
         let map_model = model in
         let key = input >>| which in
         Incremental.set_cutoff
           key
           (Incremental.Cutoff.of_compare (Map.comparator components).compare);
         let%bind key = key in
-        let component = Map.find_exn components key in
-        let model = Incremental.map model ~f:(fun map -> Map.find_exn map key) in
+        let (Packed.T { unpacked; model = model_info; action_type_id }) =
+          Map.find_exn components key
+        in
+        let model =
+          Incremental.map model ~f:(fun map ->
+            let (Poly_model.Packed.T { model; info; t_of_sexp = _ }) =
+              Map.find_exn map key
+            in
+            let t = Type_equal.Id.same_witness_exn info.type_id model_info.type_id in
+            Type_equal.conv t model)
+        in
         let old_model =
           match%pattern_bind old_model with
-          | Some old_model -> Incremental.map old_model ~f:(fun map -> Map.find map key)
+          | Some old_model ->
+            Incremental.map old_model ~f:(fun map ->
+              let (Poly_model.Packed.T { model; info; t_of_sexp = _ }) =
+                Map.find_exn map key
+              in
+              let t = Type_equal.Id.same_witness_exn info.type_id model_info.type_id in
+              Some (Type_equal.conv t model))
           | None -> Incremental.return incr_state None
         in
+        let inject action =
+          inject (Case_action.T { action; type_id = action_type_id; key })
+        in
         let%map snapshot =
-          eval_ext ~input ~model ~old_model ~inject ~action_type_id ~incr_state component
+          eval_ext ~input ~model ~old_model ~inject ~action_type_id ~incr_state unpacked
         and map_model = map_model in
-        let apply_action ~schedule_event action =
-          let new_model = Snapshot.apply_action snapshot ~schedule_event action in
-          Map.set map_model ~key ~data:new_model
+        let apply_action ~schedule_event (Case_action.T { action; type_id; key = key' }) =
+          match key_equal key' key, Type_equal.Id.same_witness type_id action_type_id with
+          | true, Some T ->
+            let new_model = Snapshot.apply_action snapshot ~schedule_event action in
+            let new_model = wrap model_info new_model in
+            Map.set map_model ~key:key' ~data:new_model
+          | _ -> map_model
         in
         Snapshot.create ~apply_action ~result:(Snapshot.result snapshot)
-      | Erase_model { t; model = info; sexp_of_key = _; key = _ } ->
-        let unwrap_exn (type t) : t Type_equal.Id.t -> Poly_model.Packed.t -> t =
-          fun model_type_id (Poly_model.Packed.T { model; info = { type_id; _ }; _ }) ->
-            let T = Type_equal.Id.same_witness_exn type_id model_type_id in
-            model
-        in
-        let wrap m = wrap info m in
-        let model = model >>| unwrap_exn info.type_id in
-        let old_model = old_model >>| Option.map ~f:(unwrap_exn info.type_id) in
-        let%map snapshot =
-          eval_ext ~old_model ~model ~inject ~action_type_id ~incr_state ~input t
-        in
-        let apply_action ~schedule_event a =
-          let new_model = Snapshot.apply_action snapshot ~schedule_event a in
-          wrap new_model
-        in
-        let result = Snapshot.result snapshot in
-        Snapshot.create ~result ~apply_action
-      | Erase_action
-          { t = component
-          ; action_type_id = erased_action_type_id
-          ; key
-          ; sexp_of_key
-          ; on_action_mismatch
-          } ->
-        let inject action =
-          inject
-            (Case_action.T
-               { action
-               ; type_id = erased_action_type_id
-               ; userdata = key
-               ; sexp_of_userdata = sexp_of_key
-               })
-        in
-        let error_message ~action_key ~current_key =
-          [%message
-            "Component received an action for key"
-              (action_key : Sexp.t)
-              "while in the key"
-              (current_key : key)]
-        in
-        let%map model = model
-        and snapshot =
-          eval_ext
-            ~input
-            ~model
-            ~old_model
-            ~inject
-            ~action_type_id:erased_action_type_id
-            ~incr_state
-            component
-        in
-        let apply_action ~schedule_event a =
-          let (Case_action.T { action; type_id; userdata; sexp_of_userdata }) = a in
-          match Type_equal.Id.same_witness type_id erased_action_type_id with
-          | Some T -> Snapshot.apply_action snapshot ~schedule_event action
-          | None ->
-            (match on_action_mismatch with
-             | `Ignore -> model
-             | `Raise ->
-               raise_s
-                 (error_message ~action_key:([%sexp_of: userdata] userdata) ~current_key:key)
-             | `Warn ->
-               eprint_s
-                 (error_message ~action_key:([%sexp_of: userdata] userdata) ~current_key:key);
-               model)
-        in
-        let result = Snapshot.result snapshot in
-        Snapshot.create ~result ~apply_action
       | _ -> assert false
   ;;
-
-  module type Enum = sig
-    type t [@@deriving sexp, compare, enumerate]
-  end
 
   let enum
         (type k)
@@ -247,16 +170,8 @@ module T = struct
     end
     in
     let f key =
-      let (T { unpacked; action_type_id; model }) = handle key in
-      let component =
-        Erase_action
-          { t = Erase_model { t = unpacked; sexp_of_key = E.sexp_of_t; model; key }
-          ; action_type_id
-          ; key
-          ; sexp_of_key = E.sexp_of_t
-          ; on_action_mismatch = `Ignore
-          }
-      in
+      let component = handle key in
+      let (T { model; unpacked = _; action_type_id = _ }) = component in
       let default_model = wrap model model.default in
       component, default_model
     in
@@ -275,8 +190,15 @@ module T = struct
     let model_type_id = Type_equal.Id.create ~name:"poly-model" sexp_of in
     let model_equal = Map.equal Poly_model.Packed.equal in
     Packed.T
-      { unpacked = Enum { components; which; key_and_cmp = T; sexp_of_key = E.sexp_of_t }
-      ; action_type_id = Case_action.type_id
+      { unpacked =
+          Enum
+            { components
+            ; which
+            ; key_and_cmp = T
+            ; sexp_of_key = E.sexp_of_t
+            ; key_equal = [%compare.equal: E.t]
+            }
+      ; action_type_id = Case_action.type_id E.sexp_of_t
       ; model =
           { default = models
           ; type_id = model_type_id
@@ -285,6 +207,27 @@ module T = struct
           ; of_sexp
           }
       }
+  ;;
+
+  let extension_constructor = [%extension_constructor Enum]
+
+  let visit (Packed.T { unpacked; model; action_type_id }) visitor =
+    match unpacked with
+    | Enum { components; which; key_and_cmp = T; sexp_of_key; key_equal } ->
+      let components = Map.map components ~f:(fun c -> visit_ext c visitor) in
+      let models =
+        Map.map components ~f:(fun (Packed.T { model; _ }) -> wrap model model.default)
+      in
+      let repacked =
+        Packed.T
+          { unpacked =
+              Enum { components; which; key_and_cmp = T; sexp_of_key; key_equal }
+          ; action_type_id
+          ; model = { model with default = models }
+          }
+      in
+      visitor.visit repacked
+    | _ -> assert false
   ;;
 
   let if_ cond ~then_ ~else_ =
@@ -299,159 +242,4 @@ end
 
 include T
 
-let () =
-  Component.define
-    (module struct
-      include T
-
-      let extension_constructor = [%extension_constructor Erase_model]
-
-      let make (Packed.T { unpacked; action_type_id; model }) ~key ~sexp_of_key =
-        Packed.T
-          { unpacked = Erase_model { t = unpacked; model; key; sexp_of_key }
-          ; action_type_id
-          ; model =
-              { type_id = Poly_model.Packed.type_id
-              ; default = wrap model model.default
-              ; equal = Poly_model.Packed.equal
-              ; sexp_of = Poly_model.Packed.sexp_of_t
-              ; of_sexp =
-                  (fun _ -> assert false)
-                  (* Erase_model should never have its of_sexp function called because
-                     the Enum of_sexp will handle it (and bypass this of_sexp) *)
-              }
-          }
-      ;;
-
-      let visit
-            (type i r incr event)
-            (component : (i, r, incr, event) Packed.t)
-            (visitor : Visitor.t)
-        =
-        match component with
-        | Packed.T
-            { unpacked = Erase_model { t; model; sexp_of_key; key }
-            ; action_type_id
-            ; model = _
-            } ->
-          let repacked = Packed.T { unpacked = t; action_type_id; model } in
-          let visited = visit_ext repacked visitor in
-          visitor.visit (make visited ~key ~sexp_of_key)
-        | _ -> assert false
-      ;;
-    end)
-;;
-
-let () =
-  Component.define
-    (module struct
-      include T
-
-      let extension_constructor = [%extension_constructor Erase_action]
-
-      let make
-            (Packed.T { unpacked = t; action_type_id; model })
-            ~key
-            ~sexp_of_key
-            ~on_action_mismatch
-        =
-        Packed.T
-          { unpacked =
-              Erase_action { t; action_type_id; sexp_of_key; key; on_action_mismatch }
-          ; action_type_id = Case_action.type_id
-          ; model
-          }
-      ;;
-
-      let visit
-            (type i r incr event)
-            (component : (i, r, incr, event) Packed.t)
-            (visitor : Visitor.t)
-        =
-        match component with
-        | Packed.T
-            { unpacked =
-                Erase_action { t; action_type_id; sexp_of_key; key; on_action_mismatch }
-            ; action_type_id = _typ_id
-            ; model
-            } ->
-          let visited = visit_ext (T { unpacked = t; action_type_id; model }) visitor in
-          visitor.visit (make visited ~key ~sexp_of_key ~on_action_mismatch)
-        | _ -> assert false
-      ;;
-    end)
-;;
-
-let () =
-  Component.define
-    (module struct
-      include T
-
-      let extension_constructor = [%extension_constructor Enum]
-
-      let visit
-            (type i r incr event)
-            (component : (i, r, incr, event) Packed.t)
-            (visitor : Visitor.t)
-        =
-        match component with
-        | Packed.T
-            { unpacked = Enum { components; which; key_and_cmp; sexp_of_key }
-            ; action_type_id = _
-            ; model
-            } ->
-          let T = key_and_cmp in
-          let unpack_exn
-            :  _ Packed.t
-              -> Poly_model.Packed.t
-                 * (i, Poly_model.Packed.t, Case_action.t, r, incr, event) unpacked
-            =
-            fun (Packed.T
-                   { unpacked
-                   ; action_type_id = atid1
-                   ; model = { default = default_model; type_id = mtid1; _ }
-                   }) ->
-              let T = Type_equal.Id.same_witness_exn atid1 Case_action.type_id in
-              let T = Type_equal.Id.same_witness_exn mtid1 Poly_model.Packed.type_id in
-              default_model, unpacked
-          in
-          let components_empty = Map.empty (Map.comparator_s components) in
-          let models_empty = Map.empty (Map.comparator_s components) in
-          let components, models =
-            Map.fold
-              components
-              ~init:(components_empty, models_empty)
-              ~f:(fun ~key ~data:unpacked (components, models) ->
-                let packed =
-                  Packed.T
-                    { unpacked
-                    ; action_type_id = Case_action.type_id
-                    ; model =
-                        { type_id = Poly_model.Packed.type_id
-                        ; default = Map.find_exn model.default key
-                        ; equal = Poly_model.Packed.equal
-                        ; sexp_of = Poly_model.Packed.sexp_of_t
-                        ; of_sexp =
-                            (fun _ ->
-                               (* of_sexp for a packed poly-model is never called *)
-                               assert false)
-                        }
-                    }
-                in
-                let visited = visit_ext packed visitor in
-                let model, component = unpack_exn visited in
-                ( Map.add_exn components ~key ~data:component
-                , Map.add_exn models ~key ~data:model ))
-          in
-          let repacked =
-            Packed.T
-              { unpacked = Enum { components; which; key_and_cmp = T; sexp_of_key }
-              ; action_type_id = Case_action.type_id
-              ; model = { model with default = models }
-              }
-          in
-          visitor.visit repacked
-        | _ -> assert false
-      ;;
-    end)
-;;
+let () = Component.define (module T)
