@@ -184,7 +184,7 @@ Transforming the input type on a component is as easy as passing a
 transformation function to `Bonsai.map_input` or `Bonsai.Infix.( @>> )`.
 
 ```ocaml
-(* @>> changes the 'input in ('input, 'model, 'result) Bonsai.t *)
+(* @>> changes the 'input in ('input, 'result) Bonsai.t *)
 let component : (string, _) Bonsai.t = string_printer
 let component : (int,    _) Bonsai.t = Int.to_string @>> component
 ```
