@@ -49,7 +49,7 @@ overview of the library and to build a mental model for structuring Bonsai
 applications.
 
 Examples of using Bonsai in a web browser can be found in
-`lib/bonsai_web/examples`.
+`web/examples`.
 
 [^incr_dom]: 
   For interoperability between Bonsai and `Incr_dom`, see [Using Bonsai Inside
