@@ -364,6 +364,39 @@ module type S_gen = sig
       -> ('input, 'r3) t
   end
 
+  module Proc : sig
+    (** This module is intended to be used with a yet-unfinished PPX.  
+        I recommend avoiding this module until let%sub is finished. *)
+    module Val : sig
+      type 'a t
+
+      include Applicative.S with type 'a t := 'a t
+      include Applicative.Let_syntax with type 'a t := 'a t
+    end
+
+    module Computation : sig
+      type 'a t
+    end
+
+    val subst : 'a Computation.t -> f:('a Val.t -> 'b Computation.t) -> 'b Computation.t
+    val return : 'a Val.t -> 'a Computation.t
+    val apply : ('a, 'b) t -> 'a Val.t -> 'b Computation.t
+    val apply_unit : (unit, 'b) t -> 'b Computation.t
+    val proc : ('a Val.t -> 'b Computation.t) -> ('a, 'b) t
+
+    val if_
+      :  bool Val.t
+      -> then_:'a Computation.t
+      -> else_:'a Computation.t
+      -> 'a Computation.t
+
+    val enum
+      :  (module Enum with type t = 'a)
+      -> match_:'a Val.t
+      -> with_:('a -> 'b Computation.t)
+      -> 'b Computation.t
+  end
+
   module With_incr : sig
     (** Constructs a bonsai component whose result is always the same as its input
         Incremental node. *)
@@ -601,6 +634,7 @@ module type Bonsai = sig
               -> old_model:('model option, 'incr) Incremental.t
               -> model:('model, 'incr) Incremental.t
               -> inject:('action -> 'event)
+              -> environment:'incr Bonsai_types.Environment.t
               -> incr_state:'incr Incremental.State.t
               -> (('model, 'action, 'result, 'event) Snapshot.t, 'incr) Incremental.t)
         -> action_type_id:'action Type_equal.Id.t
@@ -622,6 +656,7 @@ module type Bonsai = sig
         -> model:('model, 'incr) Incremental.t
         -> inject:('action -> 'event)
         -> action_type_id:'action Type_equal.Id.t
+        -> environment:'incr Bonsai_types.Environment.t
         -> incr_state:'incr Incremental.State.t
         -> ('input, 'model, 'action, 'result, 'incr, 'event) unpacked
         -> (('model, 'action, 'result, 'event) Snapshot.t, 'incr) Incremental.t
@@ -776,6 +811,51 @@ module type Bonsai = sig
         -> ('input, 'r3, 'incr, 'event) t
     end
 
+    module Proc : sig
+      (** This module is intended to be used with a yet-unfinished PPX.  
+          I recommend avoiding this module until let%sub is finished. *)
+      module Val : sig
+        type 'a t
+
+        include Applicative.S with type 'a t := 'a t
+        include Applicative.Let_syntax with type 'a t := 'a t
+      end
+
+      module Computation : sig
+        type ('a, 'incr, 'event) t
+      end
+
+      val subst
+        :  ('a, 'incr, 'event) Computation.t
+        -> f:('a Val.t -> ('b, 'incr, 'event) Computation.t)
+        -> ('b, 'incr, 'event) Computation.t
+
+      val return : 'a Val.t -> ('a, _, _) Computation.t
+
+      val apply
+        :  ('a, 'b, 'incr, 'event) t
+        -> 'a Val.t
+        -> ('b, 'incr, 'event) Computation.t
+
+      val apply_unit : (unit, 'b, 'incr, 'event) t -> ('b, 'incr, 'event) Computation.t
+
+      val proc
+        :  ('a Val.t -> ('b, 'incr, 'event) Computation.t)
+        -> ('a, 'b, 'incr, 'event) t
+
+      val if_
+        :  bool Val.t
+        -> then_:('a, 'incr, 'event) Computation.t
+        -> else_:('a, 'incr, 'event) Computation.t
+        -> ('a, 'incr, 'event) Computation.t
+
+      val enum
+        :  (module Enum with type t = 'a)
+        -> match_:'a Val.t
+        -> with_:('a -> ('b, 'incr, 'event) Computation.t)
+        -> ('b, 'incr, 'event) Computation.t
+    end
+
     module With_incr : sig
       (** Constructs a bonsai component whose result is always the same as this
           Incremental node. *)
@@ -839,7 +919,13 @@ module type Bonsai = sig
   module type S = sig
     module Incr : Incremental.S
     module Event : Event.S
-    include S_gen with module Incr := Incr with module Event := Event
+
+    include
+      S_gen
+      with module Incr := Incr
+      with module Event := Event
+      with type 'a Proc.Computation.t =
+             ('a, Incr.state_witness, Event.t) Generic.Proc.Computation.t
 
     val to_generic
       :  ('input, 'result) t

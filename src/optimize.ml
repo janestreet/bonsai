@@ -109,15 +109,39 @@ let compose_over_pure = function
   | other -> other
 ;;
 
+let compose_into_return_input (type input result)
+  : (input, result, 'incr, 'event) Packed.t -> (input, result, 'incr, 'event) Packed.t
+  = function
+    | Packed.T
+        { unpacked = Compose.C { t1; t2 = Pure.Return_input; action_type_id1; model1; _ }
+        ; _
+        } -> Packed.T { unpacked = t1; action_type_id = action_type_id1; model = model1 }
+    | other -> other
+;;
+
+let writer_over_reader (type input result)
+  : (input, result, 'incr, 'event) Packed.t -> (input, result, 'incr, 'event) Packed.t
+  = function
+    | Packed.T
+        { unpacked = Proc.Abstraction { type_id = w; t = Proc.Var { type_id = r } }; _ } as
+      t ->
+      (match Type_equal.Id.same_witness w r with
+       | Some T -> Pure.input
+       | None -> t)
+    | other -> other
+;;
+
 let optimize component =
   let visit node =
     node
+    |> writer_over_reader
+    |> compose_into_return_input
+    |> compose_over_pure
     |> map_over_constant
     |> map_over_map
     |> map_over_map2
     |> map_over_leaf
     |> map_input_over_map_input
-    |> compose_over_pure
   in
   visit_ext component ({ visit } : Visitor.t)
 ;;

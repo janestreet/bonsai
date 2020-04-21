@@ -105,7 +105,7 @@ let () =
       let extension_constructor = [%extension_constructor C]
 
       let eval (type i m a r incr event) : (i, m, a, r, incr, event) eval_type =
-        fun ~input ~old_model ~model ~inject ~action_type_id:_ ~incr_state t ->
+        fun ~input ~old_model ~model ~inject ~action_type_id:_ ~environment ~incr_state t ->
         match t with
         | C
             { t
@@ -149,7 +149,15 @@ let () =
                 key, input, extra
               in
               let inject action = inject (key, action) in
-              eval_ext ~input ~model ~old_model ~inject ~action_type_id ~incr_state t)
+              eval_ext
+                ~input
+                ~model
+                ~old_model
+                ~inject
+                ~action_type_id
+                ~environment
+                ~incr_state
+                t)
           in
           let results_map =
             Incr_map.mapi snapshot_map ~f:(fun ~key:_ ~data:snapshot ->

@@ -3,7 +3,7 @@ open! Import
 open Composition_infix
 include Helpers_intf
 
-let sexp_to_string = Expect_test_helpers_kernel.sexp_to_string
+let sexp_to_string = Expect_test_helpers_core.sexp_to_string
 
 let make_generic
       (type input action result s)

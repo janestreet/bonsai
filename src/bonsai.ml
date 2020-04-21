@@ -24,7 +24,6 @@ module Generic = struct
   let if_ = Switch.if_
 
   (* Modifier Functions *)
-
   let compose = Compose.compose
   let map = Mapn.map
   let map2 = Mapn.map2
@@ -39,6 +38,7 @@ module Generic = struct
     let ( @>> ) f t = map_input t ~f
   end
 
+  module Proc = Proc
   open Infix
 
   let state_machine = Leaf.state_machine
@@ -150,7 +150,13 @@ end
 module type S = sig
   module Incr : Incremental.S
   module Event : Event.S
-  include S_gen with module Incr := Incr with module Event := Event
+
+  include
+    S_gen
+    with module Incr := Incr
+    with module Event := Event
+    with type 'a Proc.Computation.t =
+           ('a, Incr.state_witness, Event.t) Generic.Proc.Computation.t
 
   val to_generic : ('i, 'r) t -> ('i, 'r, Incr.state_witness, Event.t) Generic.t
   val of_generic : ('i, 'r, Incr.state_witness, Event.t) Generic.t -> ('i, 'r) t
@@ -163,6 +169,14 @@ module Make (Incr : Incremental.S) (Event : Event.S) :
   include Generic
 
   type ('i, 'r) t = ('i, 'r, Incr.state_witness, Event.t) Generic.Packed.t
+
+  module Proc = struct
+    include Generic.Proc
+
+    module Computation = struct
+      type 'a t = ('a, Incr.state_witness, Event.t) Proc.Computation.t
+    end
+  end
 
   let to_generic = Fn.id
   let of_generic = Fn.id

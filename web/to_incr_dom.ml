@@ -12,6 +12,7 @@ let create_generic unpacked ~action_type_id ~input ~old_model ~model ~inject =
       ~model
       ~inject
       ~action_type_id
+      ~environment:Bonsai_types.Environment.empty
       ~incr_state:Incr.State.t
       unpacked
   and model = model in

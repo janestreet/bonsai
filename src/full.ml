@@ -7,6 +7,7 @@ type ('input, 'model, 'action, 'result, 'incr, 'event) t =
   -> old_model:('model option, 'incr) Incremental.t
   -> model:('model, 'incr) Incremental.t
   -> inject:('action -> 'event)
+  -> environment:'incr Bonsai_types.Environment.t
   -> incr_state:'incr Incremental.State.t
   -> (('model, 'action, 'result, 'event) Snapshot.t, 'incr) Incremental.t
 
@@ -28,9 +29,10 @@ module T = struct
   let extension_constructor = [%extension_constructor C]
 
   let eval (type i m a r incr event) : (i, m, a, r, incr, event) eval_type =
-    fun ~input ~old_model ~model ~inject ~action_type_id:_ ~incr_state t ->
+    fun ~input ~old_model ~model ~inject ~action_type_id:_ ~environment ~incr_state t ->
     match t with
-    | C { f; constructed_at = _ } -> f ~input ~old_model ~model ~inject ~incr_state
+    | C { f; constructed_at = _ } ->
+      f ~input ~old_model ~model ~inject ~environment ~incr_state
     | _ -> assert false
   ;;
 

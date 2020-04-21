@@ -151,6 +151,7 @@ let start_generic_poly
           ~model
           ~inject
           ~action_type_id
+          ~environment:Bonsai_types.Environment.empty
           ~incr_state:Incr.State.t
           component
       and model = model in

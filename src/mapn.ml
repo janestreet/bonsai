@@ -35,11 +35,19 @@ module T = struct
   ;;
 
   let eval (type i m a r incr event) : (i, m, a, r, incr, event) eval_type =
-    fun ~input ~old_model ~model ~inject ~action_type_id ~incr_state t ->
+    fun ~input ~old_model ~model ~inject ~action_type_id ~environment ~incr_state t ->
       match t with
       | Map1 { t; f } ->
         let%map snapshot =
-          eval_ext ~input ~old_model ~model ~inject ~action_type_id ~incr_state t
+          eval_ext
+            ~input
+            ~old_model
+            ~model
+            ~inject
+            ~action_type_id
+            ~environment
+            ~incr_state
+            t
         in
         Snapshot.create
           ~result:(f (Snapshot.result snapshot))
@@ -57,6 +65,7 @@ module T = struct
             ~model:m1
             ~inject
             ~action_type_id:action_type_id1
+            ~environment
             ~incr_state
             t1
         and s2 =
@@ -67,6 +76,7 @@ module T = struct
             ~model:m2
             ~inject
             ~action_type_id:action_type_id2
+            ~environment
             ~incr_state
             t2
         and m1, m2 = model in

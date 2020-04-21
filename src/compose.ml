@@ -24,7 +24,7 @@ module T = struct
   let extension_constructor = [%extension_constructor C]
 
   let eval (type i m a r incr event) : (i, m, a, r, incr, event) eval_type =
-    fun ~input ~old_model ~model ~inject ~action_type_id:_ ~incr_state t ->
+    fun ~input ~old_model ~model ~inject ~action_type_id:_ ~environment ~incr_state t ->
     match t with
     | C { t1; t2; action_type_id1; action_type_id2; model1 = _; model2 = _ } ->
       let s1 =
@@ -38,6 +38,7 @@ module T = struct
           ~model
           ~inject
           ~action_type_id:action_type_id1
+          ~environment
           ~incr_state
       in
       let s2 =
@@ -51,6 +52,7 @@ module T = struct
           ~model
           ~inject
           ~action_type_id:action_type_id2
+          ~environment
           ~incr_state
       in
       let%map s1 = s1

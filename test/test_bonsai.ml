@@ -6,15 +6,27 @@ let optimize c =
   c |> Bonsai.to_generic |> reveal |> optimize |> conceal |> Bonsai.of_generic
 ;;
 
+(* We need to fake the source-code position because this test is run in
+   two files with different names
+
+   In particular, we can't just use [print_s ~hide_positions:true] because that
+   only hides line and column numbers, but includes the file name. *)
+let dummy_source_code_position =
+  Source_code_position.
+    { pos_fname = "file_name.ml"; pos_lnum = 0; pos_bol = 0; pos_cnum = 0 }
+;;
+
 let run_test ~(component : _ Bonsai.t) ~initial_input ~f =
   let optimized = optimize component in
   let optimized' = optimize optimized in
-  require_equal
-    ~message:"Optimization did not reach a fixed point"
-    [%here]
-    (module Sexp)
-    [%sexp (optimized : Bonsai.t)]
-    [%sexp (optimized' : Bonsai.t)];
+  if not (Sexp.equal ([%sexp_of: Bonsai.t] optimized) ([%sexp_of: Bonsai.t] optimized'))
+  then
+    raise_s
+      [%message
+        "Optimization did not reach a fixed point"
+          (component : Bonsai.t)
+          (optimized : Bonsai.t)
+          (optimized' : Bonsai.t)];
   let print_components () =
     print_s [%message (component : Bonsai.t)];
     print_s [%message (optimized : Bonsai.t)]
@@ -207,13 +219,7 @@ let%expect_test "state-machine counter-component" =
       Bonsai.state_machine
         (module Counter_component.Model)
         (module Counter_component.Action)
-        (* We need to fake the source-code position because this test is run in
-           two files with different names
-
-           In particular, we can't just use [print_s ~hide_positions:true] because that
-           only hides line and column numbers, but includes the file name. *)
-        Source_code_position.
-          { pos_fname = "file_name.ml"; pos_lnum = 0; pos_bol = 0; pos_cnum = 0 }
+        dummy_source_code_position
         ~default_model:0
         ~apply_action:(fun ~inject:_ ~schedule_event:_ () model -> function
           | Increment -> model + 1
@@ -670,11 +676,6 @@ let%expect_test "Incremental.of_incr" =
   let var = Incr.Var.create "hello" in
   let incr = Incr.Var.watch var in
   let component = Bonsai.With_incr.of_incr incr in
-  let optimized = optimize component in
-  print_s [%message (component : Bonsai.t) (optimized : Bonsai.t)];
-  [%expect {|
-    ((component Pure_incr)
-     (optimized Pure_incr)) |}];
   run_test
     ~component
     ~initial_input:(String.Map.of_alist_exn [ "a", 0; "b", 2 ])
@@ -693,6 +694,138 @@ let%expect_test "Incremental.of_incr" =
       Incr.Var.set var "hello")
 ;;
 
+let%expect_test "proc - if" =
+  let component =
+    let open Bonsai.Proc in
+    let a = Val.return "hello" in
+    let b = Val.return "world" in
+    proc (fun i -> if_ i ~then_:(return a) ~else_:(return b))
+  in
+  run_test ~component ~initial_input:true ~f:(fun driver ->
+    [%expect
+      {|
+  (component (
+    Proc_abstraction (
+      Compose Proc_var (
+        Enum
+        (false (Map_input Const))
+        (true  (Map_input Const))))))
+  (optimized (
+    Proc_abstraction (
+      Compose Proc_var (
+        Enum
+        (false (Map_input Const))
+        (true  (Map_input Const)))))) |}];
+    let (module H) = Helpers.make_string ~driver in
+    H.show ();
+    [%expect {| hello |}];
+    H.set_input false;
+    [%expect {| world |}])
+;;
+
+let%expect_test "proc - call" =
+  let module Let_syntax = struct
+    include Bonsai.Let_syntax.Let_syntax
+
+    let bind = Bonsai.Proc.subst
+  end
+  in
+  let add_one = Bonsai.pure ~f:(fun x -> x + 1) in
+  let component =
+    let open Bonsai.Proc in
+    proc (fun i ->
+      let%bind a = apply add_one i in
+      return a)
+  in
+  run_test ~component ~initial_input:1 ~f:(fun driver ->
+    [%expect
+      {|
+  (component (
+    Proc_abstraction (
+      Compose (Compose Proc_var Pure_input) (Proc_abstraction Proc_var))))
+  (optimized (Proc_abstraction (Map Proc_var))) |}];
+    let (module H) = Helpers.make ~driver ~sexp_of_result:[%sexp_of: int] in
+    H.show ();
+    [%expect {| 2 |}])
+;;
+
+let%expect_test "proc - chain" =
+  let module Let_syntax = struct
+    include Bonsai.Let_syntax.Let_syntax
+
+    let bind = Bonsai.Proc.subst
+  end
+  in
+  let add_one = Bonsai.pure ~f:(fun x -> x + 1) in
+  let double = Bonsai.pure ~f:(fun x -> x * 2) in
+  let component =
+    let open Bonsai.Proc in
+    proc (fun i ->
+      let%bind a = apply add_one i in
+      let%bind b = apply double a in
+      return b)
+  in
+  run_test ~component ~initial_input:1 ~f:(fun driver ->
+    [%expect
+      {|
+  (component (
+    Proc_abstraction (
+      Compose
+      (Compose Proc_var Pure_input)
+      (Proc_abstraction (
+        Compose (Compose Proc_var Pure_input) (Proc_abstraction Proc_var))))))
+  (optimized (
+    Proc_abstraction (Compose (Map Proc_var) (Proc_abstraction (Map Proc_var))))) |}];
+    let (module H) = Helpers.make ~driver ~sexp_of_result:[%sexp_of: int] in
+    H.show ();
+    [%expect {| 4 |}])
+;;
+
+let%expect_test "proc - chain + both" =
+  let module Let_syntax = struct
+    include Bonsai.Proc.Val.Let_syntax.Let_syntax
+
+    let bind = Bonsai.Proc.subst
+  end
+  in
+  let add_one = Bonsai.pure ~f:(fun x -> x + 1) in
+  let double = Bonsai.pure ~f:(fun x -> x * 2) in
+  let add = Bonsai.pure ~f:(fun (x, y) -> x + y) in
+  let component =
+    let open Bonsai.Proc in
+    proc (fun i ->
+      let%bind a = apply add_one i in
+      let%bind b = apply double a in
+      let%bind c = apply add Val.(return Tuple2.create <*> a <*> b) in
+      return c)
+  in
+  run_test ~component ~initial_input:1 ~f:(fun driver ->
+    [%expect
+      {|
+  (component (
+    Proc_abstraction (
+      Compose
+      (Compose Proc_var Pure_input)
+      (Proc_abstraction (
+        Compose
+        (Compose Proc_var Pure_input)
+        (Proc_abstraction (
+          Compose
+          (Compose (Map2 (Map2 Const Proc_var) Proc_var) Pure_input)
+          (Proc_abstraction Proc_var))))))))
+  (optimized (
+    Proc_abstraction (
+      Compose
+      (Map Proc_var)
+      (Proc_abstraction (
+        Compose
+        (Map Proc_var)
+        (Proc_abstraction (Map2 (Map2 Const Proc_var) Proc_var))))))) |}];
+    let (module H) = Helpers.make ~driver ~sexp_of_result:[%sexp_of: int] in
+    H.show ();
+    [%expect {| 6 |}])
+;;
+
 module Optimize = struct
   open Bonsai.Let_syntax
   open Bonsai.Infix
@@ -708,6 +841,22 @@ module Optimize = struct
   let%expect_test "map_over_constant" =
     run (Bonsai.const 5 >>| Int.succ);
     [%expect {| ((component (Map Const)) (optimized Const)) |}]
+  ;;
+
+  let%expect_test "writer over reader" =
+    let component = Bonsai.Proc.(proc (fun i -> return i)) in
+    run component;
+    [%expect
+      {|
+      ((component (Proc_abstraction Proc_var)) (optimized Return_input)) |}]
+  ;;
+
+  let%expect_test "compose into return_input" =
+    let component = unoptimizable >>> Bonsai.input in
+    run component;
+    [%expect
+      {|
+      ((component (Compose Pure_incr Return_input)) (optimized Pure_incr)) |}]
   ;;
 
   let%expect_test "map_over_map" =

@@ -7,6 +7,7 @@ type ('input, 'model, 'action, 'result, 'incr, 'event) t =
   -> old_model:('model option, 'incr) Incremental.t
   -> model:('model, 'incr) Incremental.t
   -> inject:('action -> 'event)
+  -> environment:'incr Bonsai_types.Environment.t
   -> incr_state:'incr Incremental.State.t
   -> (('model, 'action, 'result, 'event) Snapshot.t, 'incr) Incremental.t
 

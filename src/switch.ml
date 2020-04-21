@@ -109,7 +109,7 @@ module T = struct
   ;;
 
   let eval (type i m a r incr event) : (i, m, a, r, incr, event) eval_type =
-    fun ~input ~old_model ~model ~inject ~action_type_id:_ ~incr_state t ->
+    fun ~input ~old_model ~model ~inject ~action_type_id:_ ~environment ~incr_state t ->
       match t with
       | Enum { components; which; key_and_cmp = T; sexp_of_key = _; key_equal } ->
         let map_model = model in
@@ -144,7 +144,15 @@ module T = struct
           inject (Case_action.T { action; type_id = action_type_id; key })
         in
         let%map snapshot =
-          eval_ext ~input ~model ~old_model ~inject ~action_type_id ~incr_state unpacked
+          eval_ext
+            ~input
+            ~model
+            ~old_model
+            ~inject
+            ~action_type_id
+            ~environment
+            ~incr_state
+            unpacked
         and map_model = map_model in
         let apply_action ~schedule_event (Case_action.T { action; type_id; key = key' }) =
           match key_equal key' key, Type_equal.Id.same_witness type_id action_type_id with

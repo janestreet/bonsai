@@ -1,5 +1,6 @@
 open! Core_kernel
 module Snapshot = Snapshot
+module Environment = Environment
 
 type on_action_mismatch =
   [ `Ignore
@@ -33,6 +34,7 @@ type ('input, 'model, 'action, 'result, 'incr, 'event) eval_type =
   -> model:('model, 'incr) Incremental.t
   -> inject:('action -> 'event)
   -> action_type_id:'action Type_equal.Id.t
+  -> environment:'incr Environment.t
   -> incr_state:'incr Incremental.State.t
   -> ('input, 'model, 'action, 'result, 'incr, 'event) unpacked
   -> (('model, 'action, 'result, 'event) Snapshot.t, 'incr) Incremental.t
@@ -126,9 +128,26 @@ let fetch (component : _ unpacked) =
     (component |> Obj.Extension_constructor.of_val |> Obj.Extension_constructor.id)
 ;;
 
-let eval_ext ~input ~old_model ~model ~inject ~action_type_id ~incr_state component =
+let eval_ext
+      ~input
+      ~old_model
+      ~model
+      ~inject
+      ~action_type_id
+      ~environment
+      ~incr_state
+      component
+  =
   let (module E) = fetch component in
-  E.eval ~input ~old_model ~model ~inject ~action_type_id ~incr_state component
+  E.eval
+    ~input
+    ~old_model
+    ~model
+    ~inject
+    ~action_type_id
+    ~environment
+    ~incr_state
+    component
 ;;
 
 let visit_ext component visitor =

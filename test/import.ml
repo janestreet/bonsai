@@ -23,4 +23,4 @@ module Bonsai = struct
 end
 
 module Incr_map = Incr_map.Make (Incr)
-include Expect_test_helpers_kernel
+include Expect_test_helpers_core

@@ -11,10 +11,17 @@ module T = struct
   let extension_constructor = [%extension_constructor C]
 
   let eval (type i m a r incr event) : (i, m, a, r, incr, event) eval_type =
-    fun ~input:_ ~old_model:_ ~model:_ ~inject:_ ~action_type_id:_ ~incr_state t ->
-    match t with
-    | C result -> Incremental.return incr_state (Snapshot.create ~result ~apply_action)
-    | _ -> assert false
+    fun ~input:_
+      ~old_model:_
+      ~model:_
+      ~inject:_
+      ~action_type_id:_
+      ~environment:_
+      ~incr_state
+      t ->
+      match t with
+      | C result -> Incremental.return incr_state (Snapshot.create ~result ~apply_action)
+      | _ -> assert false
   ;;
 
   let visit component (visitor : Visitor.t) = visitor.visit component

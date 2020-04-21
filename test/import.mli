@@ -22,5 +22,5 @@ module Incr_map :
   Incr_map.S with type state_witness := Incr.state_witness and module Incr := Incr
 
 include module type of struct
-  include Expect_test_helpers_kernel
+  include Expect_test_helpers_core
 end

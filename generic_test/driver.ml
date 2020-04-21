@@ -70,6 +70,7 @@ struct
           ~old_model:(Incr.Var.watch old_model_var)
           ~model:(Incr.Var.watch model_var)
           ~incr_state:Incr.State.t
+          ~environment:Bonsai_types.Environment.empty
           ~inject
           ~action_type_id
         |> Incr.observe

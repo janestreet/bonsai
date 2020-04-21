@@ -89,7 +89,7 @@ let create (type i r) (inner_component : (i, r) Bonsai.t) : (i, r * Result.t) Bo
     ~model_equal
     ~sexp_of_model:[%sexp_of: inner_model Model.t]
     ~model_of_sexp:[%of_sexp: inner_model Model.t]
-    ~f:(fun ~input ~old_model ~model ~inject ~incr_state:_ ->
+    ~f:(fun ~input ~old_model ~model ~inject ~environment ~incr_state:_ ->
       let inject_inner a = inject (Action.Inner a) in
       let inner_model = model >>| Model.inner in
       let inner_old_model = old_model >>| Option.map ~f:Model.inner in
@@ -100,6 +100,7 @@ let create (type i r) (inner_component : (i, r) Bonsai.t) : (i, r * Result.t) Bo
           ~model:inner_model
           ~inject:inject_inner
           ~action_type_id:inner_action_type_id
+          ~environment
           ~incr_state:Incr.State.t
           inner_unpacked
       in

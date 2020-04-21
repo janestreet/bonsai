@@ -24,7 +24,7 @@ module T = struct
   let apply_action ~schedule_event:_ a = Nothing.unreachable_code a
 
   let eval (type i m a r incr event) : (i, m, a, r, incr, event) eval_type =
-    fun ~input ~old_model ~model ~inject ~action_type_id ~incr_state t ->
+    fun ~input ~old_model ~model ~inject ~action_type_id ~environment ~incr_state t ->
     match t with
     | Model { t; model_equal } ->
       let model = model >>| Fn.id in
@@ -39,7 +39,15 @@ module T = struct
            | Some old_value, Some new_value ->
              Incremental.Cutoff.should_cutoff cutoff ~old_value ~new_value
            | None, Some _ | Some _, None -> false));
-      Component.eval_ext ~input ~model ~old_model ~inject ~action_type_id ~incr_state t
+      Component.eval_ext
+        ~input
+        ~model
+        ~old_model
+        ~inject
+        ~action_type_id
+        ~environment
+        ~incr_state
+        t
     | Value cutoff ->
       let input = input >>| Fn.id in
       Incremental.set_cutoff input cutoff;
