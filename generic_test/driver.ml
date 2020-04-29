@@ -109,6 +109,7 @@ struct
 
   let schedule_event (T t) = Event_handler.schedule_event t.state
   let set_input (T t) = Incr.Var.set t.input_var
+  let input (T t) = Incr.Var.value t.input_var
 
   let result (T t) =
     Incr.Observer.value_exn t.snapshot |> Bonsai_lib.Generic.Expert.Snapshot.result

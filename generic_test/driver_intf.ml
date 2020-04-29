@@ -28,6 +28,7 @@ module type S = sig
   val flush : _ t -> unit
 
   val set_input : ('i, _) t -> 'i -> unit
+  val input : ('i, _) t -> 'i
   val result : (_, 'r) t -> 'r
   val sexp_of_model : (_, _) t -> Sexp.t
 end
