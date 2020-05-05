@@ -724,17 +724,12 @@ let%expect_test "proc - if" =
 ;;
 
 let%expect_test "proc - call" =
-  let module Let_syntax = struct
-    include Bonsai.Let_syntax.Let_syntax
-
-    let bind = Bonsai.Proc.subst
-  end
-  in
+  let open Bonsai.Let_syntax in
   let add_one = Bonsai.pure ~f:(fun x -> x + 1) in
   let component =
     let open Bonsai.Proc in
     proc (fun i ->
-      let%bind a = apply add_one i in
+      let%subst a = apply add_one i in
       return a)
   in
   run_test ~component ~initial_input:1 ~f:(fun driver ->
@@ -750,19 +745,14 @@ let%expect_test "proc - call" =
 ;;
 
 let%expect_test "proc - chain" =
-  let module Let_syntax = struct
-    include Bonsai.Let_syntax.Let_syntax
-
-    let bind = Bonsai.Proc.subst
-  end
-  in
+  let open Bonsai.Let_syntax in
   let add_one = Bonsai.pure ~f:(fun x -> x + 1) in
   let double = Bonsai.pure ~f:(fun x -> x * 2) in
   let component =
     let open Bonsai.Proc in
     proc (fun i ->
-      let%bind a = apply add_one i in
-      let%bind b = apply double a in
+      let%subst a = apply add_one i in
+      let%subst b = apply double a in
       return b)
   in
   run_test ~component ~initial_input:1 ~f:(fun driver ->
@@ -782,21 +772,16 @@ let%expect_test "proc - chain" =
 ;;
 
 let%expect_test "proc - chain + both" =
-  let module Let_syntax = struct
-    include Bonsai.Proc.Val.Let_syntax.Let_syntax
-
-    let bind = Bonsai.Proc.subst
-  end
-  in
+  let open Bonsai.Let_syntax in
   let add_one = Bonsai.pure ~f:(fun x -> x + 1) in
   let double = Bonsai.pure ~f:(fun x -> x * 2) in
   let add = Bonsai.pure ~f:(fun (x, y) -> x + y) in
   let component =
     let open Bonsai.Proc in
     proc (fun i ->
-      let%bind a = apply add_one i in
-      let%bind b = apply double a in
-      let%bind c = apply add Val.(return Tuple2.create <*> a <*> b) in
+      let%subst a = apply add_one i in
+      let%subst b = apply double a in
+      let%subst c = apply add Val.(return Tuple2.create <*> a <*> b) in
       return c)
   in
   run_test ~component ~initial_input:1 ~f:(fun driver ->

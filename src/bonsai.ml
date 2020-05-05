@@ -98,6 +98,7 @@ module Generic = struct
       let return = return
       let both = both
       let map = map
+      let subst = Proc.subst
 
       module Open_on_rhs = Infix
     end

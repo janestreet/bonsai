@@ -165,6 +165,39 @@ module type S_gen = sig
       other map functions. *)
   val map_input : ('i2, 'result) t -> f:('i1 -> 'i2) -> ('i1, 'result) t
 
+  module Proc : sig
+    (** This module is intended to be used with a yet-unfinished PPX.  
+        I recommend avoiding this module until let%sub is finished. *)
+    module Val : sig
+      type 'a t
+
+      include Applicative.S with type 'a t := 'a t
+      include Applicative.Let_syntax with type 'a t := 'a t
+    end
+
+    module Computation : sig
+      type 'a t
+    end
+
+    val subst : 'a Computation.t -> f:('a Val.t -> 'b Computation.t) -> 'b Computation.t
+    val return : 'a Val.t -> 'a Computation.t
+    val apply : ('a, 'b) t -> 'a Val.t -> 'b Computation.t
+    val apply_unit : (unit, 'b) t -> 'b Computation.t
+    val proc : ('a Val.t -> 'b Computation.t) -> ('a, 'b) t
+
+    val if_
+      :  bool Val.t
+      -> then_:'a Computation.t
+      -> else_:'a Computation.t
+      -> 'a Computation.t
+
+    val enum
+      :  (module Enum with type t = 'a)
+      -> match_:'a Val.t
+      -> with_:('a -> 'b Computation.t)
+      -> 'b Computation.t
+  end
+
   module Let_syntax : sig
     val return : 'result -> (_, 'result) t
 
@@ -174,6 +207,11 @@ module type S_gen = sig
       val return : 'result -> (_, 'result) t
       val map : ('input, 'r1) t -> f:('r1 -> 'r2) -> ('input, 'r2) t
       val both : ('input, 'r1) t -> ('input, 'r2) t -> ('input, 'r1 * 'r2) t
+
+      val subst
+        :  'a Proc.Computation.t
+        -> f:('a Proc.Val.t -> 'b Proc.Computation.t)
+        -> 'b Proc.Computation.t
 
       module Open_on_rhs : module type of Infix
     end
@@ -364,39 +402,6 @@ module type S_gen = sig
       -> ('input, 'r3) t
   end
 
-  module Proc : sig
-    (** This module is intended to be used with a yet-unfinished PPX.  
-        I recommend avoiding this module until let%sub is finished. *)
-    module Val : sig
-      type 'a t
-
-      include Applicative.S with type 'a t := 'a t
-      include Applicative.Let_syntax with type 'a t := 'a t
-    end
-
-    module Computation : sig
-      type 'a t
-    end
-
-    val subst : 'a Computation.t -> f:('a Val.t -> 'b Computation.t) -> 'b Computation.t
-    val return : 'a Val.t -> 'a Computation.t
-    val apply : ('a, 'b) t -> 'a Val.t -> 'b Computation.t
-    val apply_unit : (unit, 'b) t -> 'b Computation.t
-    val proc : ('a Val.t -> 'b Computation.t) -> ('a, 'b) t
-
-    val if_
-      :  bool Val.t
-      -> then_:'a Computation.t
-      -> else_:'a Computation.t
-      -> 'a Computation.t
-
-    val enum
-      :  (module Enum with type t = 'a)
-      -> match_:'a Val.t
-      -> with_:('a -> 'b Computation.t)
-      -> 'b Computation.t
-  end
-
   module With_incr : sig
     (** Constructs a bonsai component whose result is always the same as its input
         Incremental node. *)
@@ -573,6 +578,51 @@ module type Bonsai = sig
       -> f:('i1 -> 'i2)
       -> ('i1, 'result, 'incr, 'event) t
 
+    module Proc : sig
+      (** This module is intended to be used with a yet-unfinished PPX.  
+          I recommend avoiding this module until let%sub is finished. *)
+      module Val : sig
+        type 'a t
+
+        include Applicative.S with type 'a t := 'a t
+        include Applicative.Let_syntax with type 'a t := 'a t
+      end
+
+      module Computation : sig
+        type ('a, 'incr, 'event) t
+      end
+
+      val subst
+        :  ('a, 'incr, 'event) Computation.t
+        -> f:('a Val.t -> ('b, 'incr, 'event) Computation.t)
+        -> ('b, 'incr, 'event) Computation.t
+
+      val return : 'a Val.t -> ('a, _, _) Computation.t
+
+      val apply
+        :  ('a, 'b, 'incr, 'event) t
+        -> 'a Val.t
+        -> ('b, 'incr, 'event) Computation.t
+
+      val apply_unit : (unit, 'b, 'incr, 'event) t -> ('b, 'incr, 'event) Computation.t
+
+      val proc
+        :  ('a Val.t -> ('b, 'incr, 'event) Computation.t)
+        -> ('a, 'b, 'incr, 'event) t
+
+      val if_
+        :  bool Val.t
+        -> then_:('a, 'incr, 'event) Computation.t
+        -> else_:('a, 'incr, 'event) Computation.t
+        -> ('a, 'incr, 'event) Computation.t
+
+      val enum
+        :  (module Enum with type t = 'a)
+        -> match_:'a Val.t
+        -> with_:('a -> ('b, 'incr, 'event) Computation.t)
+        -> ('b, 'incr, 'event) Computation.t
+    end
+
     module Let_syntax : sig
       val return : 'result -> (_, 'result, _, _) t
 
@@ -580,6 +630,11 @@ module type Bonsai = sig
 
       module Let_syntax : sig
         val return : 'result -> (_, 'result, _, _) t
+
+        val subst
+          :  ('a, 'incr, 'event) Proc.Computation.t
+          -> f:('a Proc.Val.t -> ('b, 'incr, 'event) Proc.Computation.t)
+          -> ('b, 'incr, 'event) Proc.Computation.t
 
         val map
           :  ('input, 'r1, 'incr, 'event) t
@@ -809,51 +864,6 @@ module type Bonsai = sig
         -> via:('input -> 'r1 -> 'intermediate)
         -> finalize:('input -> 'r1 -> 'r2 -> 'r3)
         -> ('input, 'r3, 'incr, 'event) t
-    end
-
-    module Proc : sig
-      (** This module is intended to be used with a yet-unfinished PPX.  
-          I recommend avoiding this module until let%sub is finished. *)
-      module Val : sig
-        type 'a t
-
-        include Applicative.S with type 'a t := 'a t
-        include Applicative.Let_syntax with type 'a t := 'a t
-      end
-
-      module Computation : sig
-        type ('a, 'incr, 'event) t
-      end
-
-      val subst
-        :  ('a, 'incr, 'event) Computation.t
-        -> f:('a Val.t -> ('b, 'incr, 'event) Computation.t)
-        -> ('b, 'incr, 'event) Computation.t
-
-      val return : 'a Val.t -> ('a, _, _) Computation.t
-
-      val apply
-        :  ('a, 'b, 'incr, 'event) t
-        -> 'a Val.t
-        -> ('b, 'incr, 'event) Computation.t
-
-      val apply_unit : (unit, 'b, 'incr, 'event) t -> ('b, 'incr, 'event) Computation.t
-
-      val proc
-        :  ('a Val.t -> ('b, 'incr, 'event) Computation.t)
-        -> ('a, 'b, 'incr, 'event) t
-
-      val if_
-        :  bool Val.t
-        -> then_:('a, 'incr, 'event) Computation.t
-        -> else_:('a, 'incr, 'event) Computation.t
-        -> ('a, 'incr, 'event) Computation.t
-
-      val enum
-        :  (module Enum with type t = 'a)
-        -> match_:'a Val.t
-        -> with_:('a -> ('b, 'incr, 'event) Computation.t)
-        -> ('b, 'incr, 'event) Computation.t
     end
 
     module With_incr : sig
