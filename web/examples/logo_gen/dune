@@ -1,4 +1,4 @@
 (executables (names main)
- (libraries bonsai_web virtual_dom_svg bonsai_form_experimental
+ (libraries bonsai_web virtual_dom.svg bonsai_form_experimental
   virtual_dom.vdom_test_helpers)
  (preprocess (pps ppx_jane)))
