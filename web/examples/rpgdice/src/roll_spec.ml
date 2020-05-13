@@ -66,7 +66,7 @@ let parser =
 ;;
 
 let of_string string =
-  Angstrom.(parse_string (parser <* end_of_input)) string
+  Angstrom.(parse_string ~consume:All parser) string
   |> Result.map_error ~f:(Error.of_string >> Error.tag ~tag:"Roll_spec.of_string")
   |> ok_exn
 ;;
