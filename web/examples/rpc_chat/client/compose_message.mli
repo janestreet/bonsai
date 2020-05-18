@@ -5,7 +5,7 @@ open! Bonsai_web
 module Input : sig
   type t
 
-  val create : inject_send_message:(string -> Vdom.Event.t) -> t
+  val create : send_message:(string -> unit Effect.t) -> t
 end
 
 module Model : sig

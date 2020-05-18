@@ -6,7 +6,7 @@ module T = struct
   let name = "compose component"
 
   module Input = struct
-    type t = { inject_send_message : string -> Vdom.Event.t } [@@deriving fields]
+    type t = { send_message : string -> unit Effect.t } [@@deriving fields]
 
     let create = Fields.create
   end
@@ -27,7 +27,7 @@ module T = struct
     { Model.message }
   ;;
 
-  let compute ~inject input model =
+  let compute ~(inject : Action.t -> _) (input : Input.t) (model : Model.t) =
     let on_ret =
       let is_key_ret key =
         String.equal
@@ -41,12 +41,12 @@ module T = struct
         if is_key_ret key
         then
           Vdom.Event.Many
-            [ Input.inject_send_message input model.Model.message
-            ; inject (Action.Update "")
+            [ Effect.inject_ignoring_response (input.send_message model.message)
+            ; inject (Update "")
             ]
         else Vdom.Event.Ignore)
     in
-    let on_input = Vdom.Attr.on_input (fun _ s -> inject (Action.Update s)) in
+    let on_input = Vdom.Attr.on_input (fun _ s -> inject (Update s)) in
     let value = Vdom.Attr.string_property "value" model.message in
     let text_input =
       Vdom.Node.input [ on_ret; on_input; value ] [ Vdom.Node.text "submit" ]
@@ -54,8 +54,8 @@ module T = struct
     let submit_button =
       Vdom_input_widgets.Button.simple "send" ~on_click:(fun _ ->
         Vdom.Event.Many
-          [ Input.inject_send_message input model.Model.message
-          ; inject (Action.Update "")
+          [ Effect.inject_ignoring_response (input.send_message model.message)
+          ; inject (Update "")
           ])
     in
     Vdom.Node.div [ Vdom.Attr.id "compose" ] [ text_input; submit_button ]

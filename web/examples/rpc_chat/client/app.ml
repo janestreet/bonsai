@@ -7,24 +7,32 @@ module Input = struct
     { rooms : Room.t list
     ; current_room : Room.t option
     ; messages : Message.t list
+    ; refresh_rooms : unit Effect.t
+    ; switch_room : Room.t -> unit Effect.t
+    ; send_message : room:Room.t -> contents:string -> unit Effect.t
     }
 
-  let default = { rooms = []; current_room = None; messages = [] }
+  let default =
+    { rooms = []
+    ; current_room = None
+    ; messages = []
+    ; refresh_rooms = Effect.never
+    ; switch_room = (fun _ -> Effect.never)
+    ; send_message = (fun ~room:_ ~contents:_ -> Effect.never)
+    }
+  ;;
 end
 
 module Model = Compose_message.Model
 
-let convert_room_list_input app_input =
-  let input = Start.App_input.input app_input in
-  let inject = Start.App_input.inject_outgoing app_input in
+let convert_room_list_input (input : Input.t) =
   Room_list_panel.Input.create
-    ~room_list:input.Input.rooms
-    ~inject_refresh_rooms_list:(fun () -> inject Outgoing.Refresh_rooms)
-    ~inject_change_room:(fun s -> inject (Outgoing.Switch_room s))
+    ~room_list:input.rooms
+    ~refresh_rooms:input.refresh_rooms
+    ~change_room:input.switch_room
 ;;
 
-let convert_messages_panel_input app_input =
-  let input = Start.App_input.input app_input in
+let convert_messages_panel_input (input : Input.t) =
   let { Input.current_room; messages; _ } = input in
   let current_room =
     Option.value current_room ~default:(Room.of_string "No room selected")
@@ -32,10 +40,13 @@ let convert_messages_panel_input app_input =
   Messages_panel.Input.create ~current_room ~messages
 ;;
 
-let convert_compose_panel_input app_input =
-  let inject = Start.App_input.inject_outgoing app_input in
-  let inject_send_message message = message |> Outgoing.Send_message |> inject in
-  Compose_message.Input.create ~inject_send_message
+let convert_compose_panel_input (input : Input.t) =
+  let send_message =
+    match input.current_room with
+    | Some room -> fun contents -> input.send_message ~room ~contents
+    | None -> Fn.const Effect.never
+  in
+  Compose_message.Input.create ~send_message
 ;;
 
 let component =
@@ -43,15 +54,9 @@ let component =
   let%map.Bonsai rooms_list = convert_room_list_input @>> Room_list_panel.component
   and compose_panel = convert_compose_panel_input @>> Compose_message.component
   and messages_panel = convert_messages_panel_input @>> Messages_panel.component in
-  let view =
-    Vdom.Node.div
-      [ Vdom.Attr.id "container" ]
-      [ rooms_list
-      ; Vdom.Node.div
-          [ Vdom.Attr.id "message-container" ]
-          [ messages_panel; compose_panel ]
-      ]
-  in
-  let inject_incoming = Nothing.unreachable_code in
-  Start.App_result.create ~view ~extra:() ~inject_incoming
+  Vdom.Node.div
+    [ Vdom.Attr.id "container" ]
+    [ rooms_list
+    ; Vdom.Node.div [ Vdom.Attr.id "message-container" ] [ messages_panel; compose_panel ]
+    ]
 ;;

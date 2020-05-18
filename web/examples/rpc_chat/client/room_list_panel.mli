@@ -7,8 +7,8 @@ module Input : sig
 
   val create
     :  room_list:Room.t list
-    -> inject_refresh_rooms_list:(unit -> Vdom.Event.t)
-    -> inject_change_room:(Room.t -> Vdom.Event.t)
+    -> refresh_rooms:unit Effect.t
+    -> change_room:(Room.t -> unit Effect.t)
     -> t
 end
 

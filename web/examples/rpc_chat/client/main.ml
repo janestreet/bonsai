@@ -3,12 +3,18 @@ open! Async_kernel
 open Bonsai_web
 open Async_js
 open Bonsai_chat_common
-module Outgoing_command = Outgoing
-module Incoming_command = Nothing
+open Composition_infix
 
-let refresh_rooms ~conn ~app_handle =
+let run_refresh_rooms ~conn ~app_handle =
   let%map rooms = Rpc.Rpc.dispatch_exn Protocol.List_rooms.t conn () in
   Start.Handle.update_input app_handle ~f:(fun input -> { input with App.Input.rooms })
+;;
+
+let refresh_rooms ~conn ~app_handle =
+  let dispatch =
+    (fun () -> run_refresh_rooms ~conn ~app_handle) |> Effect.of_deferred_fun |> unstage
+  in
+  dispatch ()
 ;;
 
 let process_message_stream ~conn ~app_handle =
@@ -21,18 +27,7 @@ let process_message_stream ~conn ~app_handle =
     Deferred.unit)
 ;;
 
-let send_message ~conn ~room ~contents =
-  let message = { Message.author = ""; contents; room } in
-  Rpc.Rpc.dispatch_exn Protocol.Send_message.t conn message >>| Or_error.ok_exn
-;;
-
-let switch_room ~conn ~app_handle ~room =
-  let%map messages = Rpc.Rpc.dispatch_exn Protocol.Messages_request.t conn room in
-  Start.Handle.update_input app_handle ~f:(fun input ->
-    { input with App.Input.messages; current_room = Some room })
-;;
-
-let handle_outgoing_bonsai_messages ~conn ~app_handle =
+let send_message ~conn =
   let obfuscate message =
     String.hash message
     |> Int.to_string
@@ -42,29 +37,44 @@ let handle_outgoing_bonsai_messages ~conn ~app_handle =
     |> String.lowercase
     |> String.filter ~f:Char.is_alpha
   in
-  let eval_event = function
-    | Outgoing_command.Refresh_rooms -> refresh_rooms ~conn ~app_handle
-    | Outgoing_command.Send_message contents ->
-      let contents = obfuscate contents in
-      (match (Start.Handle.input app_handle).current_room with
-       | None -> Deferred.unit
-       | Some room -> send_message ~conn ~room ~contents)
-    | Outgoing_command.Switch_room room -> switch_room ~conn ~app_handle ~room
+  let dispatch =
+    Rpc.Rpc.dispatch_exn Protocol.Send_message.t conn
+    |> Effect.of_deferred_fun
+    |> unstage
+    >> Effect.handle_error ~f:(Fn.const Vdom.Event.Ignore)
   in
-  app_handle |> Start.Handle.outgoing |> Pipe.iter ~f:eval_event
+  fun ~room ~contents ->
+    let contents = obfuscate contents in
+    dispatch { Message.room; contents; author = "" }
+;;
+
+let switch_room ~conn ~app_handle =
+  let on_room_switch room =
+    let%map messages = Rpc.Rpc.dispatch_exn Protocol.Messages_request.t conn room in
+    Start.Handle.update_input app_handle ~f:(fun input ->
+      { input with App.Input.messages; current_room = Some room })
+  in
+  let dispatch = on_room_switch |> Effect.of_deferred_fun |> unstage in
+  fun room -> dispatch room
 ;;
 
 let run () =
   let app_handle =
-    Start.start
+    Start.start_standalone
       ~initial_input:App.Input.default
       ~bind_to_element_with_id:"app"
       App.component
   in
   let%bind conn = Rpc.Connection.client_exn () in
-  [ refresh_rooms; handle_outgoing_bonsai_messages; process_message_stream ]
-  |> List.map ~f:(fun f -> f ~conn ~app_handle)
-  |> Deferred.List.all_unit
+  don't_wait_for @@ run_refresh_rooms ~conn ~app_handle;
+  don't_wait_for @@ process_message_stream ~conn ~app_handle;
+  Start.Handle.update_input app_handle ~f:(fun input ->
+    { input with
+      switch_room = switch_room ~conn ~app_handle
+    ; send_message = send_message ~conn
+    ; refresh_rooms = refresh_rooms ~conn ~app_handle
+    });
+  Deferred.unit
 ;;
 
 let () = don't_wait_for (run ())

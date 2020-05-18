@@ -7,6 +7,9 @@ module Input : sig
     { rooms : Room.t list
     ; current_room : Room.t option
     ; messages : Message.t list
+    ; refresh_rooms : unit Effect.t
+    ; switch_room : Room.t -> unit Effect.t
+    ; send_message : room:Room.t -> contents:string -> unit Effect.t
     }
 
   val default : t
@@ -16,7 +19,4 @@ module Model : sig
   type t = Compose_message.Model.t
 end
 
-val component
-  : ( (Input.t, Outgoing.t) Start.App_input.t
-    , (unit, Nothing.t) Start.App_result.t )
-      Bonsai.t
+val component : (Input.t, Vdom.Node.t) Bonsai.t
