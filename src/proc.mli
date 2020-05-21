@@ -23,7 +23,7 @@ module Computation : sig
   type ('a, 'incr, 'event) t
 end
 
-val subst
+val sub
   :  ('a, 'incr, 'event) Computation.t
   -> f:('a Val.t -> ('b, 'incr, 'event) Computation.t)
   -> ('b, 'incr, 'event) Computation.t

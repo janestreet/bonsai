@@ -166,7 +166,7 @@ module type S_gen = sig
   val map_input : ('i2, 'result) t -> f:('i1 -> 'i2) -> ('i1, 'result) t
 
   module Proc : sig
-    (** This module is intended to be used with a yet-unfinished PPX.  
+    (** This module is intended to be used with a yet-unfinished PPX.
         I recommend avoiding this module until let%sub is finished. *)
     module Val : sig
       type 'a t
@@ -179,7 +179,7 @@ module type S_gen = sig
       type 'a t
     end
 
-    val subst : 'a Computation.t -> f:('a Val.t -> 'b Computation.t) -> 'b Computation.t
+    val sub : 'a Computation.t -> f:('a Val.t -> 'b Computation.t) -> 'b Computation.t
     val return : 'a Val.t -> 'a Computation.t
     val apply : ('a, 'b) t -> 'a Val.t -> 'b Computation.t
     val apply_unit : (unit, 'b) t -> 'b Computation.t
@@ -208,7 +208,7 @@ module type S_gen = sig
       val map : ('input, 'r1) t -> f:('r1 -> 'r2) -> ('input, 'r2) t
       val both : ('input, 'r1) t -> ('input, 'r2) t -> ('input, 'r1 * 'r2) t
 
-      val subst
+      val sub
         :  'a Proc.Computation.t
         -> f:('a Proc.Val.t -> 'b Proc.Computation.t)
         -> 'b Proc.Computation.t
@@ -579,7 +579,7 @@ module type Bonsai = sig
       -> ('i1, 'result, 'incr, 'event) t
 
     module Proc : sig
-      (** This module is intended to be used with a yet-unfinished PPX.  
+      (** This module is intended to be used with a yet-unfinished PPX.
           I recommend avoiding this module until let%sub is finished. *)
       module Val : sig
         type 'a t
@@ -592,7 +592,7 @@ module type Bonsai = sig
         type ('a, 'incr, 'event) t
       end
 
-      val subst
+      val sub
         :  ('a, 'incr, 'event) Computation.t
         -> f:('a Val.t -> ('b, 'incr, 'event) Computation.t)
         -> ('b, 'incr, 'event) Computation.t
@@ -631,7 +631,7 @@ module type Bonsai = sig
       module Let_syntax : sig
         val return : 'result -> (_, 'result, _, _) t
 
-        val subst
+        val sub
           :  ('a, 'incr, 'event) Proc.Computation.t
           -> f:('a Proc.Val.t -> ('b, 'incr, 'event) Proc.Computation.t)
           -> ('b, 'incr, 'event) Proc.Computation.t

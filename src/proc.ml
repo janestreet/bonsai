@@ -148,7 +148,7 @@ let proc f =
   abstraction ~type_id (f (Val.Named type_id))
 ;;
 
-let subst c ~f = Compose.compose c (proc f)
+let sub c ~f = Compose.compose c (proc f)
 
 let rec return : type a. a Val.t -> (a, _, _) Computation.t = function
   | Val.Constant a -> Const.const a

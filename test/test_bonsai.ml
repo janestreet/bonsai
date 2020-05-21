@@ -729,7 +729,7 @@ let%expect_test "proc - call" =
   let component =
     let open Bonsai.Proc in
     proc (fun i ->
-      let%subst a = apply add_one i in
+      let%sub a = apply add_one i in
       return a)
   in
   run_test ~component ~initial_input:1 ~f:(fun driver ->
@@ -751,8 +751,8 @@ let%expect_test "proc - chain" =
   let component =
     let open Bonsai.Proc in
     proc (fun i ->
-      let%subst a = apply add_one i in
-      let%subst b = apply double a in
+      let%sub a = apply add_one i in
+      let%sub b = apply double a in
       return b)
   in
   run_test ~component ~initial_input:1 ~f:(fun driver ->
@@ -779,9 +779,9 @@ let%expect_test "proc - chain + both" =
   let component =
     let open Bonsai.Proc in
     proc (fun i ->
-      let%subst a = apply add_one i in
-      let%subst b = apply double a in
-      let%subst c = apply add Val.(return Tuple2.create <*> a <*> b) in
+      let%sub a = apply add_one i in
+      let%sub b = apply double a in
+      let%sub c = apply add Val.(return Tuple2.create <*> a <*> b) in
       return c)
   in
   run_test ~component ~initial_input:1 ~f:(fun driver ->
