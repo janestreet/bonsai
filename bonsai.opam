@@ -1,4 +1,5 @@
 opam-version: "2.0"
+version: "v0.14.0"
 maintainer: "opensource@janestreet.com"
 authors: ["Jane Street Group, LLC <opensource@janestreet.com>"]
 homepage: "https://github.com/janestreet/bonsai"
@@ -10,15 +11,15 @@ build: [
   ["dune" "build" "-p" name "-j" jobs]
 ]
 depends: [
-  "ocaml" {>= "4.08.0"}
-  "async_kernel"
-  "core_kernel"
-  "incr_dom"
-  "incr_map"
-  "incremental"
-  "ppx_jane"
-  "ppx_pattern_bind"
-  "virtual_dom"
+  "ocaml"            {>= "4.08.0"}
+  "async_kernel"     {>= "v0.14" & < "v0.15"}
+  "core_kernel"      {>= "v0.14" & < "v0.15"}
+  "incr_dom"         {>= "v0.14" & < "v0.15"}
+  "incr_map"         {>= "v0.14" & < "v0.15"}
+  "incremental"      {>= "v0.14" & < "v0.15"}
+  "ppx_jane"         {>= "v0.14" & < "v0.15"}
+  "ppx_pattern_bind" {>= "v0.14" & < "v0.15"}
+  "virtual_dom"      {>= "v0.14" & < "v0.15"}
   "dune"             {>= "2.0.0"}
 ]
 synopsis: "A library for building dynamic webapps, using Js_of_ocaml"
