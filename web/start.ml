@@ -2,6 +2,16 @@ open! Core_kernel
 open! Async_kernel
 open! Import
 
+module type Result_spec = sig
+  type t
+  type extra
+  type incoming
+
+  val view : t -> Vdom.Node.t
+  val extra : t -> extra
+  val incoming : t -> incoming -> Vdom.Event.t
+end
+
 module Handle = struct
   module Injector = struct
     type 'a t =
@@ -85,6 +95,17 @@ module App_result = struct
   [@@deriving fields]
 
   let create = Fields.create
+
+  let of_result_spec
+        (type result extra incoming)
+        (module Result : Result_spec
+          with type t = result
+           and type extra = extra
+           and type incoming = incoming)
+        (r : Result.t)
+    =
+    { view = Result.view r; extra = Result.extra r; inject_incoming = Result.incoming r }
+  ;;
 end
 
 let start_generic_poly
@@ -95,14 +116,8 @@ let start_generic_poly
       ~(initial_input : input)
       ~(initial_model : model)
       ~bind_to_element_with_id
-      ~(component :
-          ( input_and_inject
-          , model
-          , action
-          , result
-          , Incr.state_witness
-          , Vdom.Event.t )
-            Bonsai_lib.Generic.Expert.unpacked)
+      ~(computation : (model, action, result) Bonsai.Private.Computation.t)
+      ~fresh
       ~(action_type_id : action Type_equal.Id.t)
   : (input, extra, incoming, outgoing) Handle.t
   =
@@ -137,29 +152,22 @@ let start_generic_poly
 
     let on_startup ~schedule_action:_ _ = return ()
 
-    let create model ~old_model ~inject =
+    let create model ~old_model:_ ~inject =
       let open Incr.Let_syntax in
-      let old_model = old_model >>| Option.some in
       let input =
         let%map input = Incr.Var.watch input_var in
         get_app_input ~input ~inject_outgoing:Out_event.inject
       in
-      let%map snapshot =
-        Bonsai_lib.Generic.Expert.eval
-          ~input
-          ~old_model
-          ~model
-          ~inject
-          ~action_type_id
-          ~environment:Bonsai_types.Environment.empty
-          ~incr_state:Incr.State.t
-          component
+      let environment =
+        Bonsai.Private.Environment.(empty |> add_exn ~key:fresh ~data:input)
+      in
+      let%map snapshot = Bonsai.Private.eval environment model ~inject computation
       and model = model in
-      let apply_action = Bonsai_lib.Generic.Expert.Snapshot.apply_action snapshot in
+      let apply_action = Bonsai.Private.Snapshot.apply_action snapshot in
       let apply_action action () ~schedule_action:_ =
         apply_action ~schedule_event:Vdom.Event.Expert.handle_non_dom_event_exn action
       in
-      let result = Bonsai_lib.Generic.Expert.Snapshot.result snapshot in
+      let result = Bonsai.Private.Snapshot.result snapshot in
       let { App_result.view; extra; inject_incoming } = get_app_result result in
       Handle.set_inject handle inject_incoming;
       Bus.write handle.extra extra;
@@ -177,16 +185,18 @@ let start_generic_poly
 ;;
 
 let start_generic ~get_app_result ~initial_input ~bind_to_element_with_id ~component =
-  let (T { unpacked; action_type_id; model }) =
-    component |> Bonsai.to_generic |> Bonsai_lib.Generic.Expert.reveal
-  in
+  let fresh = Type_equal.Id.create ~name:"" sexp_of_opaque in
+  let var = Bonsai.Private.Value.named fresh |> Bonsai.Private.conceal_value in
+  let computation = component var |> Bonsai.Private.reveal_computation in
+  let (Bonsai.Private.Computation.T { t; action; model }) = computation in
   start_generic_poly
     ~get_app_result
     ~initial_input
     ~initial_model:model.default
     ~bind_to_element_with_id
-    ~component:unpacked
-    ~action_type_id
+    ~computation:t
+    ~fresh
+    ~action_type_id:action
 ;;
 
 (* I can't use currying here because of the value restriction. *)
@@ -208,3 +218,51 @@ let start ~initial_input ~bind_to_element_with_id component =
     ~bind_to_element_with_id
     ~component
 ;;
+
+module Proc = struct
+  module Handle = struct
+    include Handle
+
+    type ('extra, 'incoming) t = (unit, 'extra, 'incoming, Nothing.t) Handle.t
+  end
+
+  module Result_spec = struct
+    module type S = Result_spec
+
+    type ('r, 'extra, 'incoming) t =
+      (module S with type t = 'r and type extra = 'extra and type incoming = 'incoming)
+
+    module No_extra = struct
+      type extra = unit
+
+      let extra _ = ()
+    end
+
+    module No_incoming = struct
+      type incoming = Nothing.t
+
+      let incoming _ = Nothing.unreachable_code
+    end
+
+    let just_the_view =
+      (module struct
+        type t = Vdom.Node.t
+
+        let view = Fn.id
+
+        include No_extra
+        include No_incoming
+      end : S
+        with type t = Vdom.Node.t
+         and type extra = unit
+         and type incoming = Nothing.t)
+    ;;
+  end
+
+  let start result_spec ~bind_to_element_with_id computation =
+    let bonsai =
+      Fn.const computation |> Bonsai.map ~f:(App_result.of_result_spec result_spec)
+    in
+    start ~initial_input:() ~bind_to_element_with_id bonsai
+  ;;
+end

@@ -6,10 +6,15 @@ parent: "./api_tour.mdx"
 
 <!--
 ```ocaml
-# open! Bonsai_mdx
-# open! Core_kernel
-# module Bonsai = Bonsai_mdx__Import.Bonsai
-module Bonsai = Bonsai_mdx__Import.Bonsai
+module Vdom = struct
+  module Attr = struct
+      type t
+  end
+  module Node = struct
+    type t
+    let div (_ : Attr.t list) (_: t list) : t = assert false
+  end
+end
 ```
 -->
 
@@ -28,7 +33,8 @@ of another component.  This is conceptually similar to function composition.
 ```ocaml
 # #show Bonsai.compose
 val compose :
-  ('i1, 'r1) Bonsai.t -> ('r1, 'r2) Bonsai.t -> ('i1, 'r2) Bonsai.t
+  ('input, 's) Bonsai.t ->
+  ('s, 'result) Bonsai.t -> ('input, 'result) Bonsai.t
 
 # #show Bonsai.Infix.( >>> )
 val ( >>> ) :
@@ -39,8 +45,8 @@ val ( >>> ) :
 
 <!--
 ```ocaml
-let limited_textbox: (int, Vdom.Node.t) Bonsai.t  = Bonsai.pure (fun _ -> failwith "")
-let slider: (unit, int * Vdom.Node.t) Bonsai.t  = Bonsai.pure (fun _ -> failwith "")
+let limited_textbox: (int, Vdom.Node.t) Bonsai.t  = Bonsai.pure ~f:(fun _ -> failwith "")
+let slider: (unit, int * Vdom.Node.t) Bonsai.t  = Bonsai.pure ~f:(fun _ -> failwith "")
 ```
 -->
 
@@ -65,17 +71,16 @@ val slider : (unit, int * Vdom.Node.t) Bonsai.t
 
 ```ocaml
 # let limited_textbox = limited_textbox |> Bonsai.Arrow.first
-val limited_textbox : (int * '_weak1, Vdom.Node.t * '_weak1) Bonsai.t =
-  <abstr>
+val limited_textbox : (int * '_weak1, Vdom.Node.t * '_weak1) Bonsai.t = <fun>
 
 # open Bonsai.Infix
 # let composed = slider >>> limited_textbox
-val composed : (unit, Vdom.Node.t * Vdom.Node.t) Bonsai.t = <abstr>
+val composed : (unit, Vdom.Node.t * Vdom.Node.t) Bonsai.t = <fun>
 
 # let both =
     let layout_both (slider, textbox) = Vdom.Node.div [] [slider; textbox] in
     composed >>| layout_both
-val both : (unit, Vdom.Node.t) Bonsai.t = <abstr>
+val both : (unit, Vdom.Node.t) Bonsai.t = <fun>
 ```
 
 ## <tt> Bonsai.Let\_syntax.Let\_syntax.both </tt>
@@ -104,8 +109,8 @@ take a look at the input projections in the
 
 <!--
 ```ocaml
-let list_of_counters: (unit, Vdom.Node.t) Bonsai.t = Bonsai.pure(fun _ -> failwith "")
-let add_counter: (unit, Vdom.Node.t) Bonsai.t = Bonsai.pure(fun _ -> failwith "")
+let list_of_counters: (unit, Vdom.Node.t) Bonsai.t = Bonsai.pure ~f:(fun _ -> failwith "")
+let add_counter: (unit, Vdom.Node.t) Bonsai.t = Bonsai.pure ~f:(fun _ -> failwith "")
 ```
 -->
 
@@ -120,7 +125,7 @@ val list_of_counters : (unit, Vdom.Node.t) Bonsai.t
 val add_counter : (unit, Vdom.Node.t) Bonsai.t
 
 # let combined = Bonsai.Let_syntax.Let_syntax.both list_of_counters add_counter;;
-val combined : (unit, Vdom.Node.t * Vdom.Node.t) Bonsai.t = <abstr>
+val combined : (unit, Vdom.Node.t * Vdom.Node.t) Bonsai.t = <fun>
 ```
 
 **IMPORTANT** The `'input` type parameter must be the same in both Bonsai
@@ -150,7 +155,7 @@ val add_counter : (unit, Vdom.Node.t) Bonsai.t
     and add_c = add_counter in
     (* The type of the value *)
     Vdom.Node.div [] [list_c; add_c];;
-val combined : (unit, Vdom.Node.t) Bonsai.t = <abstr>
+val combined : (unit, Vdom.Node.t) Bonsai.t = <fun>
 ```
 
 [^history]: Bonsai actually got started as a library for "`Incr_dom` combinators!"

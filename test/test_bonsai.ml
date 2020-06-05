@@ -1,11 +1,6 @@
 open! Core_kernel
 open! Import
 
-let optimize c =
-  let open Bonsai_lib.Generic.Expert in
-  c |> Bonsai.to_generic |> reveal |> optimize |> conceal |> Bonsai.of_generic
-;;
-
 (* We need to fake the source-code position because this test is run in
    two files with different names
 
@@ -17,27 +12,8 @@ let dummy_source_code_position =
 ;;
 
 let run_test ~(component : _ Bonsai.t) ~initial_input ~f =
-  let optimized = optimize component in
-  let optimized' = optimize optimized in
-  if not (Sexp.equal ([%sexp_of: Bonsai.t] optimized) ([%sexp_of: Bonsai.t] optimized'))
-  then
-    raise_s
-      [%message
-        "Optimization did not reach a fixed point"
-          (component : Bonsai.t)
-          (optimized : Bonsai.t)
-          (optimized' : Bonsai.t)];
-  let print_components () =
-    print_s [%message (component : Bonsai.t)];
-    print_s [%message (optimized : Bonsai.t)]
-  in
   let driver component = Driver.create component ~initial_input in
-  print_components ();
-  f (driver component);
-  print_components ();
-  f (driver optimized);
-  print_components ();
-  f (driver optimized')
+  f (driver component)
 ;;
 
 module Helpers = struct
@@ -84,16 +60,7 @@ let%expect_test "enum" =
         | false -> Tuple2.get2 @>> Bonsai.pure ~f:(sprintf "false %d"))
   in
   run_test ~component ~initial_input:(true, 5) ~f:(fun driver ->
-    [%expect
-      {|
-      (component (
-        Enum
-        (false (Map_input Pure_input))
-        (true  (Map_input Pure_input))))
-      (optimized (
-        Enum
-        (false (Map_input Pure_input))
-        (true  (Map_input Pure_input)))) |}];
+    [%expect {| |}];
     let (module H) = Helpers.make_string ~driver in
     H.show ();
     [%expect {| true 5 |}];
@@ -137,28 +104,7 @@ let%expect_test "enum with action handling `Ignore" =
       | Inner a -> inject_inner a )
   in
   run_test ~component ~initial_input:() ~f:(fun driver ->
-    [%expect
-      {|
-      (component (
-        Map (
-          Compose
-          (Leaf counter-component)
-          (Map2
-            (Map_input (
-              Enum
-              (false (Map (Map_input (Leaf counter-component))))
-              (true Pure_input)))
-            Pure_input))))
-      (optimized (
-        Map (
-          Compose
-          (Leaf counter-component)
-          (Map2
-            (Map_input (
-              Enum
-              (false (Map (Map_input (Leaf counter-component))))
-              (true Pure_input)))
-            Pure_input)))) |}];
+    [%expect {| |}];
     let (module H) = Helpers.make_string_with_inject ~driver in
     H.show ();
     [%expect "counter 0"];
@@ -184,9 +130,7 @@ let%expect_test "constant component" =
     ~component:(Bonsai.const "some constant value")
     ~initial_input:()
     ~f:(fun driver ->
-      [%expect {|
-        (component Const)
-        (optimized Const) |}];
+      [%expect {| |}];
       let (module H) = Helpers.make_string ~driver in
       H.show ();
       [%expect {| some constant value |}])
@@ -197,10 +141,7 @@ let%expect_test "module component" =
     ~component:(Bonsai.of_module (module Counter_component) ~default_model:0)
     ~initial_input:()
     ~f:(fun driver ->
-      [%expect
-        {|
-        (component (Leaf counter-component))
-        (optimized (Leaf counter-component)) |}];
+      [%expect {| |}];
       let (module H) = Helpers.make_string_with_inject ~driver in
       H.show ();
       [%expect "0"];
@@ -228,10 +169,7 @@ let%expect_test "state-machine counter-component" =
     Int.to_string model, inject
   in
   run_test ~component ~initial_input:() ~f:(fun driver ->
-    [%expect
-      {|
-      (component (Map (Leaf "state-machine defined at file_name.ml:0:0")))
-      (optimized (Leaf "state-machine defined at file_name.ml:0:0")) |}];
+    [%expect {| |}];
     let (module H) = Helpers.make_string_with_inject ~driver in
     H.show ();
     [%expect "0"];
@@ -253,10 +191,7 @@ let%expect_test "basic Same_model let syntax" =
     sprintf "%d | %s" a_side b_side, inject_b
   in
   run_test ~component ~initial_input:() ~f:(fun driver ->
-    [%expect
-      {|
-      (component (Map (Map2 Const (Leaf counter-component))))
-      (optimized (Map2 Const (Leaf counter-component))) |}];
+    [%expect {| |}];
     let (module H) = Helpers.make_string_with_inject ~driver in
     H.show ();
     [%expect {| 5 | 0 |}];
@@ -286,17 +221,7 @@ let%expect_test "module project field" =
       | Second b -> inject_b b )
   in
   run_test ~component ~initial_input:() ~f:(fun driver ->
-    [%expect
-      {|
-      (component (
-        Map (
-          Map2
-          (Leaf counter-component)
-          (Leaf counter-component))))
-      (optimized (
-        Map2
-        (Leaf counter-component)
-        (Leaf counter-component))) |}];
+    [%expect {| |}];
     let (module H) = Helpers.make_string_with_inject ~driver in
     H.show ();
     [%expect {| 0 | 0 |}];
@@ -316,10 +241,7 @@ let%expect_test "incremental fn constructor" =
   in
   let initial_input = [ 0, 0; 1, 1; 2, 2 ] |> Int.Map.of_alist_exn in
   run_test ~component ~initial_input ~f:(fun driver ->
-    [%expect
-      {|
-      (component Pure_incr)
-      (optimized Pure_incr)
+    [%expect {|
       doing math
       doing math
       doing math |}];
@@ -364,10 +286,7 @@ let%expect_test "schedule event from outside of the component" =
     Bonsai.of_module (module Raises_something_from_without) ~default_model:()
   in
   run_test ~component ~initial_input:() ~f:(fun driver ->
-    [%expect
-      {|
-      (component (Leaf raises-something-from-without))
-      (optimized (Leaf raises-something-from-without)) |}];
+    [%expect {| |}];
     [%expect {||}];
     let (module H) =
       Helpers.make_with_inject ~driver ~sexp_of_result:[%sexp_of: unit]
@@ -406,10 +325,7 @@ let%expect_test "schedule many events from outside of the component" =
     Bonsai.of_module (module Raises_something_from_without) ~default_model:()
   in
   run_test ~component ~initial_input:() ~f:(fun driver ->
-    [%expect
-      {|
-      (component (Leaf raises-something-from-without))
-      (optimized (Leaf raises-something-from-without)) |}];
+    [%expect {| |}];
     let (module H) =
       Helpers.make_with_inject ~driver ~sexp_of_result:[%sexp_of: unit]
     in
@@ -419,51 +335,6 @@ let%expect_test "schedule many events from outside of the component" =
       External event: hello world
       External event: goodbye world
       () |}])
-;;
-
-let%expect_test "map merge combinator" =
-  let component_a = Bonsai.pure ~f:(fun a -> a + 1) in
-  let component_b = Bonsai.pure ~f:Int.of_string in
-  let a_map = Bonsai.Map.assoc_input (module Int) component_a in
-  let b_map = Bonsai.Map.assoc_input (module Int) component_b in
-  let module Input = struct
-    type t =
-      { a : int Int.Map.t
-      ; b : string Int.Map.t
-      }
-    [@@deriving fields]
-  end
-  in
-  let component =
-    let open Bonsai.Infix in
-    let a = Input.a @>> a_map in
-    let b = Input.b @>> b_map in
-    Bonsai.Map.merge a b ~f:(fun ~key:_ ->
-      function
-      | `Both (a, b) -> Some (a + b)
-      | _ -> None)
-  in
-  let initial_input = { Input.a = Int.Map.empty; b = Int.Map.empty } in
-  run_test ~component ~initial_input ~f:(fun driver ->
-    [%expect
-      {|
-      (component (
-        Map_incr (
-          Map2
-          (Map_input (Map_input (Assoc_by_input (Map_input Pure_input))))
-          (Map_input (Map_input (Assoc_by_input (Map_input Pure_input)))))))
-      (optimized (
-        Map_incr (
-          Map2
-          (Map_input (Assoc_by_input (Map_input Pure_input)))
-          (Map_input (Assoc_by_input (Map_input Pure_input)))))) |}];
-    let (module H) = Helpers.make ~driver ~sexp_of_result:[%sexp_of: int Int.Map.t] in
-    H.show ();
-    [%expect "()"];
-    H.set_input { initial_input with a = Int.Map.singleton 1 5 };
-    [%expect "()"];
-    H.set_input { Input.a = Int.Map.singleton 1 5; b = Int.Map.singleton 1 "10" };
-    [%expect "((1 16))"])
 ;;
 
 let%expect_test "model cutoff" =
@@ -481,7 +352,7 @@ let%expect_test "model cutoff" =
     module Action = Unit
 
     module Result = struct
-      type t = string * (unit -> Bonsai.Event.t)
+      type t = string * (unit -> Ui_event.t)
     end
 
     let apply_action _input model ~inject:_ =
@@ -500,10 +371,7 @@ let%expect_test "model cutoff" =
     |> Bonsai.With_incr.model_cutoff
   in
   run_test ~component ~initial_input:() ~f:(fun driver ->
-    [%expect
-      {|
-      (component (Model_cutoff ((t (Leaf_incr "incremental of_module")))))
-      (optimized (Model_cutoff ((t (Leaf_incr "incremental of_module"))))) |}];
+    [%expect {| |}];
     let (module H) = Helpers.make_string_with_inject ~driver in
     H.show ();
     [%expect "0"];
@@ -526,10 +394,7 @@ let%expect_test "value cutoff" =
     Bonsai.With_incr.value_cutoff ~cutoff >>> Bonsai.pure ~f:Int.to_string
   in
   run_test ~component ~initial_input:1 ~f:(fun driver ->
-    [%expect
-      {|
-      (component (Compose (Value_cutoff ((cutoff (F <fun>)))) Pure_input))
-      (optimized (Map (Value_cutoff ((cutoff (F <fun>)))))) |}];
+    [%expect {| |}];
     let (module H) = Helpers.make_string ~driver in
     H.show ();
     [%expect "1"];
@@ -573,10 +438,7 @@ let%expect_test "input" =
   let component = Bonsai.of_module (module Words_counter_component) ~default_model:0 in
   let initial_input = [] in
   run_test ~component ~initial_input ~f:(fun driver ->
-    [%expect
-      {|
-      (component (Leaf words-counter-component))
-      (optimized (Leaf words-counter-component)) |}];
+    [%expect {| |}];
     let (module H) =
       Helpers.make_with_inject ~driver ~sexp_of_result:[%sexp_of: int * string list]
     in
@@ -602,10 +464,7 @@ let%expect_test "compose, pure" =
   let component_b = Bonsai.pure ~f:(fun input -> input + 2) in
   let component = component_a >>> component_b in
   run_test ~component ~initial_input:0 ~f:(fun driver ->
-    [%expect
-      {|
-      (component (Compose Pure_input Pure_input))
-      (optimized Pure_input) |}];
+    [%expect {| |}];
     let (module H) = Helpers.make ~driver ~sexp_of_result:[%sexp_of: int] in
     H.show ();
     [%expect "2"];
@@ -621,10 +480,7 @@ let%expect_test "pure_incr" =
   in
   let component = component_a >>> component_b in
   run_test ~component ~initial_input:0 ~f:(fun driver ->
-    [%expect
-      {|
-      (component (Compose Pure_input Pure_incr))
-      (optimized (Map_input Pure_incr)) |}];
+    [%expect {| |}];
     let (module H) = Helpers.make ~driver ~sexp_of_result:[%sexp_of: int] in
     H.show ();
     [%expect "2"];
@@ -636,10 +492,7 @@ let%expect_test "input projection" =
   let open Bonsai.Infix in
   let component = String.length @>> Bonsai.pure ~f:(fun input -> input + 1) in
   run_test ~component ~initial_input:"hi" ~f:(fun driver ->
-    [%expect
-      {|
-      (component (Map_input Pure_input))
-      (optimized (Map_input Pure_input)) |}];
+    [%expect {| |}];
     let (module H) = Helpers.make ~driver ~sexp_of_result:[%sexp_of: int] in
     H.show ();
     [%expect "3"];
@@ -655,10 +508,7 @@ let%expect_test "assoc on input" =
     ~component
     ~initial_input:(String.Map.of_alist_exn [ "a", 0; "b", 2 ])
     ~f:(fun driver ->
-      [%expect
-        {|
-        (component (Map_input (Assoc_by_input (Map_input Pure_input))))
-        (optimized (Map_input (Assoc_by_input (Map_input Pure_input)))) |}];
+      [%expect {| |}];
       let (module H) =
         Helpers.make ~driver ~sexp_of_result:[%sexp_of: int String.Map.t]
       in
@@ -680,9 +530,7 @@ let%expect_test "Incremental.of_incr" =
     ~component
     ~initial_input:(String.Map.of_alist_exn [ "a", 0; "b", 2 ])
     ~f:(fun driver ->
-      [%expect {|
-        (component Pure_incr)
-        (optimized Pure_incr) |}];
+      [%expect {| |}];
       let (module H) = Helpers.make_string ~driver in
       H.show ();
       [%expect {| hello |}];
@@ -697,25 +545,12 @@ let%expect_test "Incremental.of_incr" =
 let%expect_test "proc - if" =
   let component =
     let open Bonsai.Proc in
-    let a = Val.return "hello" in
-    let b = Val.return "world" in
-    proc (fun i -> if_ i ~then_:(return a) ~else_:(return b))
+    let a = Value.return "hello" in
+    let b = Value.return "world" in
+    fun i -> if_ i ~then_:(read a) ~else_:(read b)
   in
   run_test ~component ~initial_input:true ~f:(fun driver ->
-    [%expect
-      {|
-  (component (
-    Proc_abstraction (
-      Compose Proc_var (
-        Enum
-        (false (Map_input Const))
-        (true  (Map_input Const))))))
-  (optimized (
-    Proc_abstraction (
-      Compose Proc_var (
-        Enum
-        (false (Map_input Const))
-        (true  (Map_input Const)))))) |}];
+    [%expect {| |}];
     let (module H) = Helpers.make_string ~driver in
     H.show ();
     [%expect {| hello |}];
@@ -724,170 +559,61 @@ let%expect_test "proc - if" =
 ;;
 
 let%expect_test "proc - call" =
-  let open Bonsai.Let_syntax in
   let add_one = Bonsai.pure ~f:(fun x -> x + 1) in
   let component =
-    let open Bonsai.Proc in
-    proc (fun i ->
-      let%sub a = apply add_one i in
-      return a)
+    let open Bonsai.Proc.Let_syntax in
+    fun i ->
+      let%sub a = add_one i in
+      return a
   in
   run_test ~component ~initial_input:1 ~f:(fun driver ->
-    [%expect
-      {|
-  (component (
-    Proc_abstraction (
-      Compose (Compose Proc_var Pure_input) (Proc_abstraction Proc_var))))
-  (optimized (Proc_abstraction (Map Proc_var))) |}];
+    [%expect {| |}];
     let (module H) = Helpers.make ~driver ~sexp_of_result:[%sexp_of: int] in
     H.show ();
     [%expect {| 2 |}])
 ;;
 
 let%expect_test "proc - chain" =
-  let open Bonsai.Let_syntax in
   let add_one = Bonsai.pure ~f:(fun x -> x + 1) in
   let double = Bonsai.pure ~f:(fun x -> x * 2) in
   let component =
-    let open Bonsai.Proc in
-    proc (fun i ->
-      let%sub a = apply add_one i in
-      let%sub b = apply double a in
-      return b)
+    let open Bonsai.Proc.Let_syntax in
+    fun i ->
+      let%sub a = add_one i in
+      let%sub b = double a in
+      return b
   in
   run_test ~component ~initial_input:1 ~f:(fun driver ->
-    [%expect
-      {|
-  (component (
-    Proc_abstraction (
-      Compose
-      (Compose Proc_var Pure_input)
-      (Proc_abstraction (
-        Compose (Compose Proc_var Pure_input) (Proc_abstraction Proc_var))))))
-  (optimized (
-    Proc_abstraction (Compose (Map Proc_var) (Proc_abstraction (Map Proc_var))))) |}];
+    [%expect {| |}];
     let (module H) = Helpers.make ~driver ~sexp_of_result:[%sexp_of: int] in
     H.show ();
     [%expect {| 4 |}])
 ;;
 
 let%expect_test "proc - chain + both" =
-  let open Bonsai.Let_syntax in
   let add_one = Bonsai.pure ~f:(fun x -> x + 1) in
   let double = Bonsai.pure ~f:(fun x -> x * 2) in
   let add = Bonsai.pure ~f:(fun (x, y) -> x + y) in
   let component =
     let open Bonsai.Proc in
-    proc (fun i ->
-      let%sub a = apply add_one i in
-      let%sub b = apply double a in
-      let%sub c = apply add Val.(return Tuple2.create <*> a <*> b) in
-      return c)
+    let open Bonsai.Proc.Let_syntax in
+    fun i ->
+      let%sub a = add_one i in
+      let%sub b = double a in
+      let%sub c = add Value.(Tuple2.create <$> a <*> b) in
+      return c
   in
   run_test ~component ~initial_input:1 ~f:(fun driver ->
-    [%expect
-      {|
-  (component (
-    Proc_abstraction (
-      Compose
-      (Compose Proc_var Pure_input)
-      (Proc_abstraction (
-        Compose
-        (Compose Proc_var Pure_input)
-        (Proc_abstraction (
-          Compose
-          (Compose (Map2 (Map2 Const Proc_var) Proc_var) Pure_input)
-          (Proc_abstraction Proc_var))))))))
-  (optimized (
-    Proc_abstraction (
-      Compose
-      (Map Proc_var)
-      (Proc_abstraction (
-        Compose
-        (Map Proc_var)
-        (Proc_abstraction (Map2 (Map2 Const Proc_var) Proc_var))))))) |}];
+    [%expect {| |}];
     let (module H) = Helpers.make ~driver ~sexp_of_result:[%sexp_of: int] in
     H.show ();
     [%expect {| 6 |}])
 ;;
 
-module Optimize = struct
-  open Bonsai.Let_syntax
-  open Bonsai.Infix
-
-  let unoptimizable = Bonsai.With_incr.of_incr (Incr.return 5)
-  let leaf = Bonsai.of_module (module Counter_component) ~default_model:0
-
-  let run component =
-    let optimized = optimize component in
-    print_s [%message (component : Bonsai.t) (optimized : Bonsai.t)]
-  ;;
-
-  let%expect_test "map_over_constant" =
-    run (Bonsai.const 5 >>| Int.succ);
-    [%expect {| ((component (Map Const)) (optimized Const)) |}]
-  ;;
-
-  let%expect_test "writer over reader" =
-    let component = Bonsai.Proc.(proc (fun i -> return i)) in
-    run component;
-    [%expect
-      {|
-      ((component (Proc_abstraction Proc_var)) (optimized Return_input)) |}]
-  ;;
-
-  let%expect_test "compose into return_input" =
-    let component = unoptimizable >>> Bonsai.input in
-    run component;
-    [%expect
-      {|
-      ((component (Compose Pure_incr Return_input)) (optimized Pure_incr)) |}]
-  ;;
-
-  let%expect_test "map_over_map" =
-    run (unoptimizable >>| Int.succ >>| Int.succ >>| Int.succ);
-    [%expect {| ((component (Map (Map (Map Pure_incr)))) (optimized (Map Pure_incr))) |}]
-  ;;
-
-  let%expect_test "compose_over_const_and_pure" =
-    run (Bonsai.const 5 >>> Bonsai.pure ~f:(fun x -> x * 2));
-    [%expect {| ((component (Compose Const Pure_input)) (optimized Const)) |}]
-  ;;
-
-  let%expect_test "map_over_map2" =
-    run
-      ((let%map a = unoptimizable
-        and b = unoptimizable in
-        a + b)
-       >>| Int.succ);
-    [%expect
-      {|
-      ((component (Map (Map (Map2 Pure_incr Pure_incr))))
-       (optimized (Map2 Pure_incr Pure_incr))) |}]
-  ;;
-
-  let%expect_test "map_over_leaf" =
-    run (leaf >>| Tuple2.get1);
-    [%expect
-      {|
-      ((component (Map (Leaf counter-component)))
-       (optimized (Leaf counter-component))) |}]
-  ;;
-
-  (* Optimize deliberately leaves map_input-over-leaf alone. *)
-  let%expect_test "map_input_over_leaf" =
-    run (ignore @>> leaf);
-    [%expect
-      {|
-      ((component (Map_input (Leaf counter-component)))
-       (optimized (Map_input (Leaf counter-component)))) |}]
-  ;;
-end
-
 module Model_sexpification = struct
   open Bonsai.Let_syntax
 
-  let dummy (type t) (module M : Bonsai_types.Model with type t = t) ~default =
+  let dummy (type t) (module M : Bonsai.Model with type t = t) ~default =
     Bonsai.state_machine
       (module M)
       (module M)
@@ -907,7 +633,7 @@ module Model_sexpification = struct
   let%expect_test "with of_sexp" =
     let driver =
       Driver.create
-        ~initial_model_sexp:(Sexp.Atom "2")
+        ~initial_model_sexp:[%sexp [ 2; () ]]
         ~initial_input:()
         (dummy (module Int) ~default:5)
     in
@@ -924,7 +650,10 @@ module Model_sexpification = struct
       Sexp.List [ a; b ], Nothing.unreachable_code
     in
     let driver =
-      Driver.create ~initial_model_sexp:[%sexp [ "2"; "3" ]] ~initial_input:() component
+      Driver.create
+        ~initial_model_sexp:[%sexp [ [ [ "2"; () ]; [ [ "3"; () ]; () ] ]; () ]]
+        ~initial_input:()
+        component
     in
     let (module H) = Helpers.make_with_inject ~driver ~sexp_of_result:Fn.id in
     H.show ();
@@ -969,10 +698,7 @@ module Model_sexpification = struct
     print_s initial_model_sexp;
     [%expect
       {|
-      (false (
-        ((false bonsai!)
-         (true  23))
-        ())) |}];
+      (((false ()) (((false (bonsai! ())) (true ((23 ()) ()))) ())) ()) |}];
     let driver = Driver.create ~initial_model_sexp ~initial_input:() component in
     let (module H) = Helpers.make_with_inject ~driver ~sexp_of_result:Fn.id in
     H.show ();

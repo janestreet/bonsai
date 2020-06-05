@@ -1,0 +1,2 @@
+(executables (names main) (libraries bonsai_web)
+ (preprocess (pps ppx_pattern_bind js_of_ocaml-ppx ppx_jane)))

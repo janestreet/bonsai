@@ -6,11 +6,19 @@ parent: "./api_tour.mdx"
 
 <!--
 ```ocaml
-# open! Bonsai_mdx
-# open! Core_kernel
-# open! Bonsai_mdx__Import
-# module Bonsai = Bonsai_mdx.Bonsai
-module Bonsai = Bonsai_mdx.Bonsai
+open! Core_kernel
+module Vdom = struct 
+  module Attr = struct 
+      type t 
+      let on_click _ :t = assert false
+  end
+  module Node = struct 
+    type t
+    let div (_ : Attr.t list) (_: t list) : t = assert false 
+    let button (_ : Attr.t list) (_: t list) : t = assert false 
+    let text (_: string) :t = assert false
+  end
+end
 ```
 -->
 
@@ -39,7 +47,7 @@ Bonsai component with the result type parameter transformed.
 
 ```ocaml
 # #show Bonsai.map
-val map : ('e, 'a) Bonsai.t -> f:('a -> 'b) -> ('e, 'b) Bonsai.t
+val map : ('input, 'r1) Bonsai.t -> f:('r1 -> 'r2) -> ('input, 'r2) Bonsai.t
 ```
 
 Also the infix operator:
@@ -55,10 +63,10 @@ val ( >>| ) :
 # open Bonsai.Infix
 
 # let int_returning = Bonsai.const 5;
-val int_returning : ('_weak1, int) Bonsai.t = <abstr>
+val int_returning : ('_weak1, int) Bonsai.t = <fun>
 
 # let string_returning = int_returning >>| Int.to_string
-val string_returning : ('_weak2, string) Bonsai.t = <abstr>
+val string_returning : ('_weak2, string) Bonsai.t = <fun>
 ```
 
 ## <tt> Bonsai.map\_input </tt>
@@ -117,13 +125,13 @@ stringifies the lengths of lists with `@>>`.
 
 ```ocaml
 # let int_to_string_component = Bonsai.pure ~f:Int.to_string
-val int_to_string_component : (int, string) Bonsai.t = <abstr>
+val int_to_string_component : (int, string) Bonsai.t = <fun>
 
 # #show List.length
 val length : 'a list -> int
 
 # let list_to_len_string = List.length @>> int_to_string_component
-val list_to_len_string : ('_weak3 list, string) Bonsai.t = <abstr>
+val list_to_len_string : ('_weak3 list, string) Bonsai.t = <fun>
 ```
 
 `@>>` can be used to project fields out of a record and build a
@@ -140,7 +148,7 @@ end
 
 ```ocaml
 # let print_person_age = Person.age @>> int_to_string_component
-val print_person_age : (Person.t, string) Bonsai.t = <abstr>
+val print_person_age : (Person.t, string) Bonsai.t = <fun>
 ```
 
 ## <tt> Bonsai.enum </tt>
@@ -150,7 +158,7 @@ and provide a different Bonsai component that handles different cases.
 
 ```ocaml
 # Bonsai.enum
-- : (module Bonsai.Enum with type t = 'key) ->
+- : (module Bonsai__.Import.Enum with type t = 'key) ->
     which:('input -> 'key) ->
     handle:('key -> ('input, 'result) Bonsai.t) -> ('input, 'result) Bonsai.t
 = <fun>
@@ -209,7 +217,7 @@ val which : int -> Branch.t = <fun>
 val handle : Branch.t -> (int, string) Bonsai.t = <fun>
 
 # let component = Bonsai.enum (module Branch) ~which ~handle
-val component : (int, string) Bonsai.t = <abstr>
+val component : (int, string) Bonsai.t = <fun>
 ```
 
 ## <tt> Bonsai.if_ </tt>
@@ -232,5 +240,5 @@ val component : (int, string) Bonsai.t = <abstr>
       (fun input -> input % 2 = 0)
       ~then_:(Bonsai.pure ~f:(sprintf "%d is even"))
       ~else_:(Bonsai.pure ~f:(sprintf "%d is odd"))
-val component : (int, string) Bonsai.t = <abstr>
+val component : (int, string) Bonsai.t = <fun>
 ```

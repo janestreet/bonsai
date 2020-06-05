@@ -6,10 +6,22 @@ parent: "./api_tour.mdx"
 
 <!--
 ```ocaml
-# open! Bonsai_mdx
-# open! Core_kernel
-# module Bonsai = Bonsai_mdx.Bonsai
-module Bonsai = Bonsai_mdx.Bonsai
+open! Core_kernel
+module Vdom = struct
+  module Attr = struct
+      type t
+      let on_click _ :t = assert false
+  end
+
+  module Event = Ui_event
+
+  module Node = struct
+    type t
+    let div (_ : Attr.t list) (_: t list) : t = assert false
+    let button (_ : Attr.t list) (_: t list) : t = assert false
+    let text (_: string) :t = assert false
+  end
+end
 ```
 -->
 
@@ -63,12 +75,12 @@ module type S = sig
   "view computation function".
 
   This function is also given an "inject" function which converts this
-  component's [Action.t] to a global [Event.t] which can be given to
-  Bonsai to schedule.  Frequently, this Event.t is embedded within the
+  component's [Action.t] to a global [Vdom.Event.t] which can be given to
+  Bonsai to schedule.  Frequently, this Vdom.Event.t is embedded within the
   result as a handler for some kind of user input. *)
-  val compute : inject:(Action.t -> Event.t) -> Input.t -> Model.t -> Result.t
+  val compute : inject:(Action.t -> Vdom.Event.t) -> Input.t -> Model.t -> Result.t
 
-  (** When an action is raised by this component (via an Event.t), Bonsai
+  (** When an action is raised by this component (via an Vdom.Event.t), Bonsai
   will eventually pass that action back to that component's [apply_action]
   function.  This function is responsible for looking at the model and the
   incoming action and producing a new model.
@@ -76,8 +88,8 @@ module type S = sig
   If [Model.t] represents a state-node in a state-machine, then apply_action is
   the implementation of transitions between states. *)
   val apply_action
-    :  inject:(Action.t -> Event.t)
-    -> schedule_event:(Event.t -> unit)
+    :  inject:(Action.t -> Vdom.Event.t)
+    -> schedule_event:(Vdom.Event.t -> unit)
     -> Input.t
     -> Model.t
     -> Action.t
@@ -91,7 +103,7 @@ For more on the state-machine like nature of a bonsai component, read the
 ```ocaml
 # #show Bonsai.of_module
 val of_module :
-  ('input, 'model, 'action, 'result) Bonsai.component_s ->
+  ('input, 'model, 'action, 'result) Bonsai__Import.component_s ->
   default_model:'model -> ('input, 'result) Bonsai.t
 ```
 
@@ -130,7 +142,7 @@ And then using that module to make a useless `Bonsai.t` component.
 
 ```ocaml
 # let useless = Bonsai.of_module (module Useless) ~default_model:()
-val useless : (unit, unit) Bonsai.t = <abstr>
+val useless : (unit, unit) Bonsai.t = <fun>
 ```
 
 A basic component that tracks an integer in the state machine, and whose result
@@ -139,8 +151,22 @@ to increment or decrement the counter.
 
 <!--
 ```ocaml env=e1
-# open! Bonsai_mdx
-# open! Core_kernel
+open! Core_kernel
+module Vdom = struct
+  module Attr = struct
+      type t
+      let on_click _ :t = assert false
+  end
+
+  module Event = Ui_event
+
+  module Node = struct
+    type t
+    let div (_ : Attr.t list) (_: t list) : t = assert false
+    let button (_ : Attr.t list) (_: t list) : t = assert false
+    let text (_: string) :t = assert false
+  end
+end
 ```
 -->
 
@@ -190,7 +216,7 @@ And then using that module to make a component.
 
 ```ocaml env=e1
 # let counter = Bonsai.of_module (module Counter) ~default_model:0;;
-val counter : (unit, Counter.Result.t) Bonsai.t = <abstr>
+val counter : (unit, Counter.Result.t) Bonsai.t = <fun>
 ```
 
 <!-- Use the <tt> element to get monospace text without the bright-blue that
@@ -212,13 +238,13 @@ you want to call requires a component.
 
 ```ocaml
 # let the_answer = Bonsai.const 42
-val the_answer : ('_weak1, int) Bonsai.t = <abstr>
+val the_answer : ('_weak1, int) Bonsai.t = <fun>
 ```
 
 ## <tt>Bonsai.pure</tt>
 
 `Bonsai.pure` is used to create a Bonsai component that can be implemented as a
-pure function from `'input` to `'result`.  
+pure function from `'input` to `'result`.
 
 ```ocaml
 # #show Bonsai.pure
@@ -232,7 +258,7 @@ node that will display the contents of that string.
 
 ```ocaml
 # let string_to_vdom_text = Bonsai.pure ~f:(fun string -> Vdom.Node.text string);;
-val string_to_vdom_text : (string, Vdom.Node.t) Bonsai.t = <abstr>
+val string_to_vdom_text : (string, Vdom.Node.t) Bonsai.t = <fun>
 ```
 
 A component whose input is a set of usernames, and whose result is a text
@@ -255,7 +281,7 @@ representation summarizing the set of people that like your twitter "content".
         Vdom.Node.text
           (sprintf "%s and %d others liked your post" first_5_people others_count)))
 val users_to_summary : ((string, '_weak2) Set.t, Vdom.Node.t) Bonsai.t =
-  <abstr>
+  <fun>
 ```
 
 ## <tt>Bonsai.state\_machine</tt>
@@ -266,14 +292,14 @@ solely in terms of its "apply action" function.
 ```ocaml
 # #show Bonsai.state_machine
 val state_machine :
-  (module Bonsai__.Bonsai_intf.Model with type t = 'model) ->
-  (module Bonsai__.Bonsai_intf.Action with type t = 'action) ->
+  (module Bonsai.Model with type t = 'model) ->
+  (module Bonsai.Action with type t = 'action) ->
   Lexing.position ->
   default_model:'model ->
-  apply_action:(inject:('action -> Bonsai.Event.t) ->
-                schedule_event:(Bonsai.Event.t -> unit) ->
+  apply_action:(inject:('action -> Ui_event.t) ->
+                schedule_event:(Ui_event.t -> unit) ->
                 'input -> 'model -> 'action -> 'model) ->
-  ('input, 'model * ('action -> Bonsai.Event.t)) Bonsai.t
+  ('input, 'model * ('action -> Ui_event.t)) Bonsai.t
 ```
 
 With just apply-action being defined, the result value of the component is just

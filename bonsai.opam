@@ -14,8 +14,6 @@ depends: [
   "async_kernel"
   "core_kernel"
   "incr_dom"
-  "incr_map"
-  "incremental"
   "ppx_jane"
   "ppx_pattern_bind"
   "virtual_dom"

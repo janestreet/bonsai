@@ -1,0 +1,4 @@
+(executables (names main)
+ (libraries bonsai_web virtual_dom.svg bonsai_form_experimental
+  virtual_dom.vdom_test_helpers)
+ (preprocess (pps ppx_pattern_bind js_of_ocaml-ppx ppx_jane)))

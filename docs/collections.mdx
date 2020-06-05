@@ -7,7 +7,6 @@ parent: "./api_tour.mdx"
 
 <!--
 ```ocaml
-# open! Bonsai_mdx
 # open! Core_kernel
 ```
 -->
@@ -37,7 +36,7 @@ the server and sent to the application, which does not modify it.
 ```ocaml
 # #show Bonsai.Map.assoc_input
 val assoc_input :
-  ('key, 'cmp) Bonsai_types.comparator ->
+  ('key, 'cmp) Bonsai__Import.comparator ->
   ('data, 'result) Bonsai.t ->
   (('key, 'data, 'cmp) Base.Map.t, ('key, 'result, 'cmp) Base.Map.t) Bonsai.t
 ```
@@ -46,12 +45,12 @@ val assoc_input :
 
 ```ocaml
 # let int_to_string = Bonsai.pure ~f:string_of_int
-val int_to_string : (int, string) Bonsai.t = <abstr>
+val int_to_string : (int, string) Bonsai.t = <fun>
 # let ints_to_strings = Bonsai.Map.assoc_input (module Int) int_to_string
 val ints_to_strings :
-  ((int, int, Int.comparator_witness) Base.Map.t,
-   (int, string, Int.comparator_witness) Base.Map.t)
-  Bonsai.t = <abstr>
+  ((int, int, Int.comparator_witness) Map.t,
+   (int, string, Int.comparator_witness) Map.t)
+  Bonsai.t = <fun>
 ```
 
 ### <tt> Bonsai.Map.associ\_input </tt>
@@ -62,7 +61,7 @@ the corresponding map key as part of its input.
 ```ocaml
 # #show Bonsai.Map.associ_input
 val associ_input :
-  ('key, 'cmp) Bonsai_types.comparator ->
+  ('key, 'cmp) Bonsai__Import.comparator ->
   ('key * 'data, 'result) Bonsai.t ->
-  (('key, 'data, 'cmp) Base.Map.t, ('key, 'result, 'cmp) Base.Map.t) Bonsai.t
+  (('key, 'data, 'cmp) Map.t, ('key, 'result, 'cmp) Map.t) Bonsai.t
 ```

@@ -11,6 +11,8 @@ present in the output documents.
 
 ```ocaml
 # open! Bonsai_mdx
+Line 1, characters 7-17:
+Error: Unbound module Bonsai_mdx
 ```
 -->
 
@@ -25,6 +27,10 @@ are open:
 ```ocaml
 open! Core_kernel
 open! Bonsai_web
+```
+```mdx-error
+Line 2, characters 9-19:
+Error: Unbound module Bonsai_web
 ```
 
 Currently, there are no other instantiations of the Bonsai functor, but

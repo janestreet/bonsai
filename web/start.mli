@@ -111,3 +111,102 @@ val start
   -> (('input, 'outgoing) App_input.t, ('extra, 'incoming) App_result.t) Bonsai.t
   -> ('input, 'extra, 'incoming, 'outgoing) Handle.t
 
+
+module Proc : sig
+  module Handle : sig
+    (** When a Bonsai app is started, a [Handle.t] is returned to the
+        user. *)
+    type ('extra, 'incoming) t
+
+    (** [stop] ends the incremental computation performed by the app, and prevents the
+        application from modifying the page. *)
+    val stop : _ t -> unit
+
+    (** The [Deferred.t] returned by [started] completes once the application has written
+        to the page for the first time. *)
+    val started : _ t -> unit Deferred.t
+
+    (** If the application provides a way to inject actions (see
+        [Result_spec.S.incoming]), then you can schedule those actions with [schedule] *)
+    val schedule : (_, 'incoming) t -> 'incoming -> unit
+
+    (** If the application provides some "extra data" that is computed alongside the view
+        of the application, (see [Result_spec.S.extra]), then you can subscribe to those
+        changes using the bus returned by [extra] *)
+    val extra : ('extra, _) t -> ('extra -> unit) Bus.Read_only.t
+
+    (** Like [extra], but only fetches the last ['extra] produced by the computation.  If
+        the [Deferred.t] returned by [started] has completed, then the [option] returned
+        by [last_extra] will always be [Some]. *)
+    val last_extra : ('extra, _) t -> 'extra option
+  end
+
+  module Result_spec : sig
+    (** A module implementing [Result_spec.S] is a description of how to interpret the
+        ['result] value being produced by a ['result Bonsai.Proc.Computationt.t] that is
+        being run with the [start] function.
+
+        There must be a conversion from ['result] to [Vdom.Node.t], so a module
+        implementing [Result_spec.S] must define a [view] function that produces the view.
+
+        A result can also include data {e other} than the view which is computed during
+        the evaluation of the Bonsai program.  That data can be extracted with the [extra]
+        function, and has type [extra].
+
+        A result can also include a function from some type ['a] to [Bonsai.Event.t] that
+        can be used to send messages to Bonsai stateful components.  If your result has
+        one of those functions, it can be exposed via the [incoming] parameter. *)
+    module type S = sig
+      type t
+      type extra
+      type incoming
+
+      val view : t -> Vdom.Node.t
+      val extra : t -> extra
+      val incoming : t -> incoming -> Vdom.Event.t
+    end
+
+    type ('result, 'extra, 'incoming) t =
+      (module S
+        with type t = 'result
+         and type extra = 'extra
+         and type incoming = 'incoming)
+
+    (** This module can be [include]d in an implementation of [Result_spec.S] where the
+        result doesn't contain any [extra] output. *)
+    module No_extra : sig
+      type extra = unit
+
+      val extra : _ -> unit
+    end
+
+    (** This module can be [include]d in an implementation of [Result_spec.S] where the
+        result doesn't contain an [incoming] injection function. *)
+    module No_incoming : sig
+      type incoming = Nothing.t
+
+      val incoming : _ -> Nothing.t -> Vdom.Event.t
+    end
+
+    (** [just_the_view] is a prepackaged [Result_spec.S] that is made for Bonsai apps that
+        just return [Vdom.Node.t] and have no [extra] or [incoming] value. *)
+    val just_the_view : (Vdom.Node.t, unit, Nothing.t) t
+  end
+
+  (** [start] takes a value of type ['result Bonsai.Proc.Computation.t] and runs it.
+
+      The first parameter to [start] is a first-class module that defines a [view]
+      function of type ['result -> Vdom.Node.t].  If the computation has type [Vdom.Node.t
+      Bonsai.Proc.Computation.t], then {!Result_spec.just_the_view} is a suggested first
+      argument.  Read the docs in {!Result_spec} for more details.
+
+      [bind_to_element_with_id] should be the HTML id of the element in the document that
+      Bonsai will take control of.  For most apps, you'll have html that looks like this:
+      [<html><body><div id="app"></div></body></html>], so the value passed to
+      [bind_to_element_with_id] should be the string ["app"]. *)
+  val start
+    :  ('result, 'extra, 'incoming) Result_spec.t
+    -> bind_to_element_with_id:string
+    -> 'result Bonsai.Proc.Computation.t
+    -> ('extra, 'incoming) Handle.t
+end

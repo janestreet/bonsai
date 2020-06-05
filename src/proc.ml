@@ -1,175 +1,175 @@
 open! Core_kernel
 open! Import
-open Component
-open Incremental.Let_syntax
+module Var = Var
 
-module T = struct
-  type ('input, 'model, 'action, 'result, 'incr, 'event) unpacked +=
-    | Abstraction :
-        { t : (unit, 'model, 'action, 'result, 'incr, 'event) unpacked
-        ; type_id : 'a Type_equal.Id.t
-        }
-        -> ('a, 'model, 'action, 'result, 'incr, 'event) unpacked
-    | Var :
-        { type_id : 'a Type_equal.Id.t }
-        -> (unit, unit, Nothing.t, 'a, 'incr, 'event) unpacked
-
-  let eval (type i m a r incr event) : (i, m, a, r, incr, event) eval_type =
-    fun ~input ~old_model ~model ~inject ~action_type_id ~environment ~incr_state t ->
-    match t with
-    | Abstraction { t; type_id } ->
-      let return = Incremental.return incr_state in
-      let environment = Environment.add_exn environment type_id input in
-      eval_ext
-        ~input:(return ())
-        ~old_model
-        ~model
-        ~inject
-        ~action_type_id
-        ~environment
-        ~incr_state
-        t
-    | Var { type_id } ->
-      let%map read = Environment.find_exn environment type_id in
-      Snapshot.create ~result:read ~apply_action:(fun ~schedule_event:_ ->
-        Nothing.unreachable_code)
-    | _ -> assert false
-  ;;
-
-  let abstraction (Packed.T { unpacked; model; action_type_id }) ~type_id =
-    Packed.T { unpacked = Abstraction { t = unpacked; type_id }; model; action_type_id }
-  ;;
-
-  let var (type a) (type_id : a Type_equal.Id.t) : (_, a, 'incr, 'event) Packed.t =
-    Packed.T
-      { unpacked = Var { type_id }
-      ; action_type_id = nothing_type_id
-      ; model = Packed.unit_model_info
-      }
-  ;;
-
-  let sexp_of_unpacked (type i m a r) (component : (i, m, a, r, _, _) unpacked) =
-    match component with
-    | Abstraction { t; type_id = _ } -> [%sexp Proc_abstraction (t : unpacked)]
-    | Var { type_id = _ } -> [%sexp Proc_var]
-    | _ -> assert false
-  ;;
-
-  let visit
-        (type i r incr event)
-        (T { unpacked; action_type_id; model } as packed : (i, r, incr, event) Packed.t)
-        visitor
-    =
-    match unpacked with
-    | Abstraction { t; type_id } ->
-      let visited =
-        visit_ext (Packed.T { unpacked = t; action_type_id; model }) visitor
-      in
-      (visitor.visit (abstraction visited ~type_id) : (i, _, _, _) Packed.t)
-    | Var _ -> visitor.visit packed
-    | _ -> assert false
-  ;;
-end
-
-include T
-
-let () =
-  Component.define
-    (module struct
-      include T
-
-      let extension_constructor = [%extension_constructor Abstraction]
-    end)
+let sub
+      (type via)
+      (Computation.T { t = from; action = from_action; model = from_model } :
+         via Computation.packed)
+      ~f
+  =
+  let via : via Type_equal.Id.t =
+    Type_equal.Id.create
+      ~name:(Source_code_position.to_string [%here])
+      [%sexp_of: opaque]
+  in
+  let (Computation.T { t = into; action = into_action; model = into_model }) =
+    f (Value.named via)
+  in
+  Computation.T
+    { t = Subst { from; via; into }
+    ; action = Meta.Action.both from_action into_action
+    ; model = Meta.Model.both from_model into_model
+    }
 ;;
 
-let () =
-  Component.define
-    (module struct
-      include T
-
-      let extension_constructor = [%extension_constructor Var]
-    end)
+let read x =
+  Computation.T { t = Return x; model = Meta.Model.unit; action = Meta.Action.nothing }
 ;;
 
-module Val = struct
-  type 'a t =
-    | Constant : 'a -> 'a t
-    | Named : 'a Type_equal.Id.t -> 'a t
-    | Map :
-        { t : 'a t
-        ; f : 'a -> 'b
-        }
-        -> 'b t
-    | Map2 :
-        { a : 'a t
-        ; b : 'b t
-        ; f : 'a -> 'b -> 'c
-        }
-        -> 'c t
-    | Both :
-        { a : 'a t
-        ; b : 'b t
-        }
-        -> ('a * 'b) t
+let pure f i = read (Value.map i ~f)
+let const x = read (Value.return x)
 
-  module T = Applicative.Make_using_map2 (struct
-      type nonrec 'a t = 'a t
+let of_module1 (type i m a r) (component : (i, m, a, r) component_s) ~default_model input
+  =
+  let (module M) = component in
+  Computation.T
+    { t =
+        Leaf { input; apply_action = M.apply_action; compute = M.compute; name = M.name }
+    ; model = Meta.Model.of_module (module M.Model) ~name:M.name ~default:default_model
+    ; action = Meta.Action.of_module (module M.Action) ~name:M.name
+    }
+;;
 
-      let map = `Custom (fun t ~f -> Map { t; f })
-      let map2 a b ~f = Map2 { a; b; f }
-      let return a = Constant a
-    end)
+let of_module0 c ~default_model = of_module1 c ~default_model (Value.return ())
+let of_module2 c ~default_model i1 i2 = of_module1 c ~default_model (Value.both i1 i2)
 
-  include T
+let assoc
+      (type k v cmp)
+      (comparator : (k, cmp) comparator)
+      (map : (k, v, cmp) Map.t Value.t)
+      ~f
+  =
+  let key_id : k Type_equal.Id.t =
+    Type_equal.Id.create ~name:"key id" [%sexp_of: opaque]
+  in
+  let data_id : v Type_equal.Id.t =
+    Type_equal.Id.create ~name:"data id" [%sexp_of: opaque]
+  in
+  let key_var = Value.named key_id in
+  let data_var = Value.named data_id in
+  let (Computation.T { t = by; action; model }) = f key_var data_var in
+  Computation.T
+    { t =
+        Assoc
+          { map
+          ; key_id
+          ; data_id
+          ; by
+          ; model_info = model
+          ; input_by_k = T
+          ; result_by_k = T
+          ; model_by_k = T
+          }
+    ; action = Meta.Action.map comparator action
+    ; model = Meta.Model.map comparator model
+    }
+;;
 
-  module Open_on_rhs_intf = struct
-    module type S = sig end
+let enum (type k) (module E : Enum with type t = k) ~match_ ~with_ =
+  let open Enum_types in
+  let module E = struct
+    include E
+    include Comparator.Make (E)
   end
-
-  module Let_syntax = struct
-    include T
-
-    module Let_syntax = struct
-      include T
-
-      let both a b = Both { a; b }
-
-      module Open_on_rhs = struct end
-    end
-  end
-end
-
-module Computation = struct
-  type ('a, 'incr, 'event) t = (unit, 'a, 'incr, 'event) Packed.t
-end
-
-let proc f =
-  let type_id = Type_equal.Id.create ~name:"some variable" sexp_of_opaque in
-  abstraction ~type_id (f (Val.Named type_id))
+  in
+  let create_case key =
+    let component = with_ key in
+    let (Computation.T { model; t = _; action = _ }) = component in
+    let default_model = Case_model.create model model.default in
+    component, default_model
+  in
+  let components, models =
+    List.fold
+      E.all
+      ~init:(Map.empty (module E), Map.empty (module E))
+      ~f:(fun (components, models) key ->
+        let component, model = create_case key in
+        let components = Map.add_exn components ~key ~data:component in
+        let models = Map.add_exn models ~key ~data:model in
+        components, models)
+  in
+  Computation.T
+    { t =
+        Enum
+          { which = match_
+          ; out_of = components
+          ; sexp_of_key = [%sexp_of: E.t]
+          ; key_equal = [%compare.equal: E.t]
+          ; key_and_cmp = T
+          }
+    ; model = Multi_model.model_info (module E) models
+    ; action = Case_action.type_id [%sexp_of: E.t]
+    }
 ;;
-
-let sub c ~f = Compose.compose c (proc f)
-
-let rec return : type a. a Val.t -> (a, _, _) Computation.t = function
-  | Val.Constant a -> Const.const a
-  | Val.Named type_id -> var type_id
-  | Val.Map { t; f } -> Mapn.map (return t) ~f
-  | Val.Map2 { a; b; f } -> Mapn.map2 (return a) (return b) ~f
-  | Val.Both { a; b } -> Mapn.both (return a) (return b)
-;;
-
-let apply c v = Compose.compose (return v) c
-let apply_unit c = Compose.compose (Const.const ()) c
-let ignore_input = Map_input.map_input ~f:Fn.ignore
 
 let if_ cond ~then_ ~else_ =
-  Compose.compose
-    (return cond)
-    (Switch.if_ Fn.id ~then_:(ignore_input then_) ~else_:(ignore_input else_))
+  enum
+    (module Bool)
+    ~match_:cond
+    ~with_:(function
+      | true -> then_
+      | false -> else_)
 ;;
 
-let enum mdl ~match_ ~with_ =
-  Compose.compose
-    (return match_)
-    (Switch.enum mdl ~which:Fn.id ~handle:(fun a -> ignore_input (with_ a)))
+let state_machine1
+      (type m a)
+      here
+      (module M : Model with type t = m)
+      (module A : Action with type t = a)
+      ~default_model
+      ~apply_action
+      input
+  =
+  let compute ~inject _input model = model, inject in
+  let name = Source_code_position.to_string here in
+  Computation.T
+    { t = Leaf { input; apply_action; compute; name }
+    ; model = Meta.Model.of_module (module M) ~name ~default:default_model
+    ; action = Meta.Action.of_module (module A) ~name
+    }
 ;;
+
+let state_machine0 here model action ~default_model ~apply_action =
+  let apply_action ~inject ~schedule_event () model action =
+    apply_action ~inject ~schedule_event model action
+  in
+  state_machine1 here model action ~default_model ~apply_action (Value.return ())
+;;
+
+module Computation = struct
+  type 'a t = 'a Computation.packed
+end
+
+module Value = Value
+
+module Let_syntax = struct
+  let return = read
+  let ( <*> ) = Value.( <*> )
+  let ( <$> ) f = Value.map ~f
+  let ( >>| ) a f = Value.map a ~f
+
+  module Let_syntax = struct
+    let sub = sub
+    let return = Value.return
+    let map = Value.map
+    let both = Value.both
+  end
+end
+
+module Private = struct
+  let conceal_value = Fn.id
+  let reveal_value = Fn.id
+  let conceal_computation = Fn.id
+  let reveal_computation = Fn.id
+end

@@ -1,7 +1,7 @@
 # Bonsai inside of `Incr_dom`
 
 One of the main goals of Bonsai has always been good interoperability
-with `Incr_dom`.  Because of the design decisions detailed in 
+with `Incr_dom`.  Because of the design decisions detailed in
 [A History of Bonsai](./history.md), embedding a Bonsai component inside
 of an `Incr_dom` app is trivial!  (Going the other way -- embedding part
 of an `Incr_dom` program inside a Bonsai component -- is not yet possible).
@@ -50,14 +50,14 @@ components."
 It is common to use the `convert` function like so:
 
 ```ocaml
-module My_bonsai_component : sig 
+module My_bonsai_component : sig
   (* This is typically a standalone mli file *)
   include Bonsai_web.To_incr_dom.S
-end = struct 
+end = struct
   (* This is typically a standalone ml file *)
   include (val Bonsai_web.To_incr_dom.convert my_bonsai_component)
 end
 ```
 
 To see an example of these APIs in use, check out the example in
-`web/examples/inside_incr_dom/`.
+`../examples/inside_incr_dom/`.
