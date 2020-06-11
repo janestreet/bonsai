@@ -1,8 +1,4 @@
----
-title: "Bonsai Patterns"
-uuid: b30db96a-fa78-41df-8b7e-490603564207
-parent: "../README.md"
----
+# Bonsai Patterns
 When using Bonsai, several patterns for organizing and modularizing code pop up
 again and again.  This document is an attempt to record those patterns to make 
 life easier for people that are new to Bonsai.

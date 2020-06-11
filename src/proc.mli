@@ -74,7 +74,7 @@ module Computation : sig
       {[
         let open Proc.Let_syntax in
         let%sub a = some_computation in
-        let       b = a in
+        let     b = a in
         add a b
       ]}
 
@@ -114,6 +114,7 @@ module Value : sig
   type 'a t
 
   include Applicative.S with type 'a t := 'a t
+  include Mapn with type 'a t := 'a t
 end
 
 module Var : sig

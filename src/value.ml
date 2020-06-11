@@ -227,6 +227,11 @@ module T = Applicative.Make_using_map2 (struct
 
 include T
 
+let map3 t1 t2 t3 ~f = Map3 { t1; t2; t3; f }
+let map4 t1 t2 t3 t4 ~f = Map4 { t1; t2; t3; t4; f }
+let map5 t1 t2 t3 t4 t5 ~f = Map5 { t1; t2; t3; t4; t5; f }
+let map6 t1 t2 t3 t4 t5 t6 ~f = Map6 { t1; t2; t3; t4; t5; t6; f }
+let map7 t1 t2 t3 t4 t5 t6 t7 ~f = Map7 { t1; t2; t3; t4; t5; t6; t7; f }
 let of_incr x = Incr x
 
 module Open_on_rhs_intf = struct

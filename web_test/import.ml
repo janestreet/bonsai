@@ -10,4 +10,5 @@ module Event = struct
   let external_ = External_event.inject
 end
 
+module Driver = Bonsai_test.Driver
 include Expect_test_helpers_core

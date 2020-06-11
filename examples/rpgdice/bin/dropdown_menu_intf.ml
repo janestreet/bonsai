@@ -12,7 +12,7 @@ end
 module type S = sig
   type enum
 
-  val component : default_model:enum -> (enum * Vdom.Node.t) Bonsai.Proc.Computation.t
+  val component : default_model:enum -> (enum * Vdom.Node.t) Bonsai.Computation.t
 end
 
 module type Dropdown_menu = sig

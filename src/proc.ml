@@ -105,7 +105,7 @@ let enum (type k) (module E : Enum with type t = k) ~match_ ~with_ =
           { which = match_
           ; out_of = components
           ; sexp_of_key = [%sexp_of: E.t]
-          ; key_equal = [%compare.equal: E.t]
+          ; key_equal = [%equal: E.t]
           ; key_and_cmp = T
           }
     ; model = Multi_model.model_info (module E) models

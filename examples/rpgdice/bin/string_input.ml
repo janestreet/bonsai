@@ -49,5 +49,5 @@ module Make (Conv : Conv) = struct
     let name = Conv.name
   end
 
-  let component = Bonsai.Proc.of_module0 (module T)
+  let component = Bonsai.of_module0 (module T)
 end

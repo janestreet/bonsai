@@ -1,6 +1,6 @@
 open! Core_kernel
 open! Async_kernel
-open! Bonsai_web
+open! Bonsai_web.Future
 
 let build_result send_message (textbox_content, set_textbox_content) =
   let submit_and_then_clear =
@@ -33,9 +33,9 @@ let build_result send_message (textbox_content, set_textbox_content) =
 ;;
 
 let component ~send_message =
-  let open Bonsai.Proc.Let_syntax in
+  let open Bonsai.Let_syntax in
   let%sub textbox_state =
-    Bonsai.Proc.state_machine0
+    Bonsai.state_machine0
       [%here]
       (module String)
       (module String)

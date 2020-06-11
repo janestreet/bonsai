@@ -50,4 +50,4 @@ module T = struct
   let name = Source_code_position.to_string [%here]
 end
 
-let component = Bonsai.of_module (module T) ~default_model:T.Model.init
+let component = Bonsai.of_module1 (module T) ~default_model:T.Model.init

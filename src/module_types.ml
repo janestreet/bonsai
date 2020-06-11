@@ -12,7 +12,7 @@ type ('k, 'cmp) comparator =
   (module Comparator with type t = 'k and type comparator_witness = 'cmp)
 
 module type Enum = sig
-  type t [@@deriving compare, enumerate, sexp]
+  type t [@@deriving compare, enumerate, equal, sexp]
 end
 
 module type Model = sig
@@ -131,3 +131,47 @@ type ('input, 'model, 'action, 'result) component_s_incr =
      and type Model.t = 'model
      and type Action.t = 'action
      and type Result.t = 'result)
+
+module type Mapn = sig
+  type 'a t
+
+  val map3 : 'a1 t -> 'a2 t -> 'a3 t -> f:('a1 -> 'a2 -> 'a3 -> 'b) -> 'b t
+
+  val map4
+    :  'a1 t
+    -> 'a2 t
+    -> 'a3 t
+    -> 'a4 t
+    -> f:('a1 -> 'a2 -> 'a3 -> 'a4 -> 'b)
+    -> 'b t
+
+  val map5
+    :  'a1 t
+    -> 'a2 t
+    -> 'a3 t
+    -> 'a4 t
+    -> 'a5 t
+    -> f:('a1 -> 'a2 -> 'a3 -> 'a4 -> 'a5 -> 'b)
+    -> 'b t
+
+  val map6
+    :  'a1 t
+    -> 'a2 t
+    -> 'a3 t
+    -> 'a4 t
+    -> 'a5 t
+    -> 'a6 t
+    -> f:('a1 -> 'a2 -> 'a3 -> 'a4 -> 'a5 -> 'a6 -> 'b)
+    -> 'b t
+
+  val map7
+    :  'a1 t
+    -> 'a2 t
+    -> 'a3 t
+    -> 'a4 t
+    -> 'a5 t
+    -> 'a6 t
+    -> 'a7 t
+    -> f:('a1 -> 'a2 -> 'a3 -> 'a4 -> 'a5 -> 'a6 -> 'a7 -> 'b)
+    -> 'b t
+end

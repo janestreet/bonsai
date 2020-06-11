@@ -15,7 +15,7 @@ module type S = sig
 
   val component
     :  default_model:string
-    -> (conv Or_error.t * Vdom.Node.t) Bonsai.Proc.Computation.t
+    -> (conv Or_error.t * Vdom.Node.t) Bonsai.Computation.t
 end
 
 module type String_input = sig

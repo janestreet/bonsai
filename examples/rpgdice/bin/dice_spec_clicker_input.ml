@@ -89,4 +89,4 @@ module T = struct
   let name = Source_code_position.to_string [%here]
 end
 
-let component = Bonsai.Proc.of_module0 (module T) ~default_model:T.Model.init
+let component = Bonsai.of_module0 (module T) ~default_model:T.Model.init

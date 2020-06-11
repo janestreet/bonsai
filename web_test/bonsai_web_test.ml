@@ -1,3 +1,3 @@
-module Driver = Driver
+module Driver = Bonsai_test.Driver
 module Helpers = Helpers
 module Helpers_intf = Helpers_intf

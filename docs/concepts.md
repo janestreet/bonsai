@@ -123,8 +123,9 @@ Creating a Bonsai component with a state-machine is considerably more verbose
 as it needs to encompass both the evaluation of the function and a
 description of the behavior that transitions its internal state machine.
 
-I'll leave out an example here, in favor of linking to the API documentation:
-[`Bonsai.of_module`](./constructors.mdx)
+I'll leave out an example here, in favor of pointing you to the API
+documentation for `Bonsai.Proc.of_module1` in the file
+`lib/bonsai/src/proc.mli`.
 
 ## Composition
 

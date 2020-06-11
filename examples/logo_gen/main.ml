@@ -1,5 +1,5 @@
 open! Core_kernel
-open Bonsai_web
+open Bonsai_web.Future
 open Virtual_dom_svg
 module Form = Bonsai_form_experimental
 
@@ -64,11 +64,11 @@ let build_shape (config : Config.t) should_debug (others, radius) =
 ;;
 
 let shape_view text should_debug config =
-  let open Bonsai.Proc.Let_syntax in
+  let open Bonsai.Let_syntax in
   return
   @@ let%map text = text
   and should_debug = should_debug
-  and config : Config.t Bonsai.Proc.Value.t = config in
+  and config : Config.t Bonsai.Value.t = config in
   let elts, size =
     text
     |> String.to_list
@@ -134,14 +134,14 @@ let config =
   { Product.With_view.view; value }
 ;;
 
-let config = config (Bonsai.Proc.Value.return ())
+let config = config (Bonsai.Value.return ())
 
 let component =
   let open Form.Product in
-  let open Bonsai.Proc.Let_syntax in
-  let%sub text_input = Form.text_input ~default:"jsc" (Bonsai.Proc.Value.return ()) in
+  let open Bonsai.Let_syntax in
+  let%sub text_input = Form.text_input ~default:"jsc" (Bonsai.Value.return ()) in
   let%sub debug =
-    Form.checkbox_input ~label:"debug" ~default:false () (Bonsai.Proc.Value.return ())
+    Form.checkbox_input ~label:"debug" ~default:false () (Bonsai.Value.return ())
   in
   let%sub config = config in
   let%sub svg =
@@ -188,9 +188,6 @@ let component =
     ]
 ;;
 
-let (_ : _ Start.Proc.Handle.t) =
-  Start.Proc.start
-    Start.Proc.Result_spec.just_the_view
-    ~bind_to_element_with_id:"app"
-    component
+let (_ : _ Start.Handle.t) =
+  Start.start Start.Result_spec.just_the_view ~bind_to_element_with_id:"app" component
 ;;

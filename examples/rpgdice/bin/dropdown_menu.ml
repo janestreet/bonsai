@@ -31,5 +31,5 @@ module Make (Enum : Enum) = struct
     let name = Enum.name
   end
 
-  let component = Bonsai.Proc.of_module0 (module T)
+  let component = Bonsai.of_module0 (module T)
 end

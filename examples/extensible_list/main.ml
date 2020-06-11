@@ -1,5 +1,5 @@
 open! Core_kernel
-open Bonsai_web
+open Bonsai_web.Future
 
 module Model = struct
   type t =
@@ -19,7 +19,7 @@ module Action = struct
 end
 
 let state_component =
-  Bonsai.Proc.state_machine0
+  Bonsai.state_machine0
     [%here]
     (module Model)
     (module Action)
@@ -32,12 +32,10 @@ let state_component =
 ;;
 
 let add_remove component ~wrap_remove =
-  let open Bonsai.Proc.Let_syntax in
+  let open Bonsai.Let_syntax in
   let%sub state = state_component in
   let%pattern_bind { Model.data; count = _ }, inject_action = state in
-  let%sub results =
-    Bonsai.Proc.assoc (module Int) data ~f:(fun _key _data -> component)
-  in
+  let%sub results = Bonsai.assoc (module Int) data ~f:(fun _key _data -> component) in
   return
   @@ let%map results = results
   and inject_action = inject_action in
@@ -52,7 +50,7 @@ let add_remove component ~wrap_remove =
 ;;
 
 let add_remove_vdom component =
-  let open Bonsai.Proc.Let_syntax in
+  let open Bonsai.Let_syntax in
   let open Vdom in
   let%sub views_and_add_event =
     add_remove component ~wrap_remove:(fun view remove_event ->
@@ -69,9 +67,9 @@ let add_remove_vdom component =
     (Node.button [ Attr.on_click (fun _ -> add_event) ] [ Node.text "Add" ] :: views)
 ;;
 
-let (_ : _ Start.Proc.Handle.t) =
-  Start.Proc.start
-    Start.Proc.Result_spec.just_the_view
+let (_ : _ Start.Handle.t) =
+  Start.start
+    Start.Result_spec.just_the_view
     ~bind_to_element_with_id:"app"
     (add_remove_vdom Bonsai_web_counters_example.single_counter)
 ;;

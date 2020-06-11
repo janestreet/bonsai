@@ -1,6 +1,6 @@
 open! Core_kernel
 open! Async_kernel
-open! Bonsai_web
+open! Bonsai_web.Future
 open Bonsai_chat_common
 
 let view_message { Message.room = _; author; contents } =
@@ -16,6 +16,6 @@ let view messages current_room =
 ;;
 
 let component ~messages ~current_room =
-  let open Bonsai.Proc.Let_syntax in
-  Bonsai.Proc.read (view <$> messages <*> current_room)
+  let open Bonsai.Let_syntax in
+  Bonsai.read (view <$> messages <*> current_room)
 ;;

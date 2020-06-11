@@ -1,5 +1,5 @@
 open! Core_kernel
-open! Bonsai_web
+open! Bonsai_web.Future
 open Bonsai_chat_common
 
 let component
@@ -10,7 +10,7 @@ let component
       ~change_room
       ~send_message
   =
-  let open Bonsai.Proc.Let_syntax in
+  let open Bonsai.Let_syntax in
   let send_message =
     match%map current_room with
     | Some room -> fun contents -> send_message ~room ~contents

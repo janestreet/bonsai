@@ -21,8 +21,8 @@ end
 module Input_method_selector = Dropdown_menu.Make (Input_method)
 
 let input_kind ~input_method =
-  let open Bonsai.Proc.Let_syntax in
-  Bonsai.Proc.enum
+  let open Bonsai.Let_syntax in
+  Bonsai.enum
     (module Input_method)
     ~match_:input_method
     ~with_:(function
@@ -38,7 +38,7 @@ let app =
       []
       [ Vdom.Node.div [ Vdom.Attr.id "input" ] [ input_method_selector; input ]; roller ]
   in
-  let open Bonsai.Proc.Let_syntax in
+  let open Bonsai.Let_syntax in
   let%sub input_method_and_selector =
     Input_method_selector.component ~default_model:Text
   in
@@ -53,9 +53,6 @@ let app =
      build_result ~input ~roller ~input_method_selector)
 ;;
 
-let (_ : _ Start.Proc.Handle.t) =
-  Start.Proc.start
-    Start.Proc.Result_spec.just_the_view
-    ~bind_to_element_with_id:"app"
-    app
+let (_ : _ Start.Handle.t) =
+  Start.start Start.Result_spec.just_the_view ~bind_to_element_with_id:"app" app
 ;;

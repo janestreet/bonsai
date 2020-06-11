@@ -1,5 +1,5 @@
 open! Core_kernel
-open Bonsai_web
+open Bonsai_web.Future
 
 module Model = struct
   type t = unit Int.Map.t [@@deriving sexp, equal]
@@ -67,16 +67,16 @@ module Counter_component = struct
   let name = Source_code_position.to_string [%here]
 end
 
-let single_counter = Bonsai.Proc.of_module0 ~default_model:0 (module Counter_component)
+let single_counter = Bonsai.of_module0 ~default_model:0 (module Counter_component)
 
 let application =
-  let open Bonsai.Proc.Let_syntax in
+  let open Bonsai.Let_syntax in
   let%sub add_counter =
-    Bonsai.Proc.of_module0 (module Add_counter_component) ~default_model:Model.default
+    Bonsai.of_module0 (module Add_counter_component) ~default_model:Model.default
   in
   let%pattern_bind map, add_button = add_counter in
   let%sub counters =
-    Bonsai.Proc.assoc (module Int) map ~f:(fun _key _data -> single_counter)
+    Bonsai.assoc (module Int) map ~f:(fun _key _data -> single_counter)
   in
   return
   @@ let%map add_button = add_button

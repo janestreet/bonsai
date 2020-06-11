@@ -1,5 +1,5 @@
 open! Core_kernel
-open! Bonsai_web
+open! Bonsai_web.Future
 
 module String_duplicator = struct
   (* Input is declared to be the string that we want to duplicate. *)
@@ -39,9 +39,9 @@ module String_duplicator = struct
 end
 
 let string_to_repeat =
-  let open Bonsai.Proc.Let_syntax in
+  let open Bonsai.Let_syntax in
   let%sub state =
-    Bonsai.Proc.state_machine0
+    Bonsai.state_machine0
       [%here]
       (module String)
       (module String)
@@ -59,11 +59,11 @@ let string_to_repeat =
 ;;
 
 let app =
-  let open Bonsai.Proc.Let_syntax in
+  let open Bonsai.Let_syntax in
   let%sub string_to_repeat = string_to_repeat in
   let%pattern_bind string, textbox_view = string_to_repeat in
   let%sub duplicated =
-    (Bonsai.Proc.of_module1 (module String_duplicator) ~default_model:1) string
+    (Bonsai.of_module1 (module String_duplicator) ~default_model:1) string
   in
   return
   @@ let%map textbox_view = textbox_view
@@ -73,9 +73,6 @@ let app =
 
 (* Start the app off with the text "hello" and the starting
    number of repetitions at 1. *)
-let (_ : _ Start.Proc.Handle.t) =
-  Start.Proc.start
-    Start.Proc.Result_spec.just_the_view
-    ~bind_to_element_with_id:"app"
-    app
+let (_ : _ Start.Handle.t) =
+  Start.start Start.Result_spec.just_the_view ~bind_to_element_with_id:"app" app
 ;;
