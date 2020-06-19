@@ -229,6 +229,16 @@ val state_machine0
                    -> 'model)
   -> ('model * ('action -> Event.t)) Computation.t
 
+(** A frequently used state-machine is the trivial 'set-state' transition, 
+    where the action always replaces the value contained inside.  This
+    helper-function implements that state-machine, providing access to the 
+    current state, as well as an inject function that updates the state. *)
+val state
+  :  Source_code_position.t
+  -> (module Model with type t = 'model)
+  -> default_model:'model
+  -> ('model * ('model -> Event.t)) Computation.t
+
 (** The same as {!state_machine0}, but [apply_action] also takes an input from a
     [Value.t]. *)
 val state_machine1

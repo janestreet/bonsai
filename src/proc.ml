@@ -147,6 +147,15 @@ let state_machine0 here model action ~default_model ~apply_action =
   state_machine1 here model action ~default_model ~apply_action (Value.return ())
 ;;
 
+let state (type m) here (module M : Model with type t = m) ~default_model =
+  state_machine0
+    here
+    (module M : Model with type t = m)
+    (module M : Action with type t = m)
+    ~default_model
+    ~apply_action:(fun ~inject:_ ~schedule_event:_ _old_model new_model -> new_model)
+;;
+
 module Computation = struct
   type 'a t = 'a Computation.packed
 end
