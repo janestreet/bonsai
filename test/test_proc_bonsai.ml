@@ -77,3 +77,21 @@ let%expect_test "chain + both" =
   Handle.show handle;
   [%expect {| 9 |}]
 ;;
+
+let%expect_test "match_either" =
+  let var : (string, int) Either.t Bonsai.Var.t =
+    Bonsai.Var.create (Either.First "hello")
+  in
+  let component =
+    Bonsai.match_either
+      (Bonsai.Var.value var)
+      ~first:(fun s -> Bonsai.read (Bonsai.Value.map s ~f:(sprintf "%s world")))
+      ~second:(fun i -> Bonsai.read (Bonsai.Value.map i ~f:Int.to_string))
+  in
+  let handle = Handle.create (Result_spec.string (module String)) component in
+  Handle.show handle;
+  [%expect {| hello world |}];
+  Bonsai.Var.set var (Second 2);
+  Handle.show handle;
+  [%expect {| 2 |}]
+;;

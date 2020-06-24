@@ -229,9 +229,9 @@ val state_machine0
                    -> 'model)
   -> ('model * ('action -> Event.t)) Computation.t
 
-(** A frequently used state-machine is the trivial 'set-state' transition, 
+(** A frequently used state-machine is the trivial 'set-state' transition,
     where the action always replaces the value contained inside.  This
-    helper-function implements that state-machine, providing access to the 
+    helper-function implements that state-machine, providing access to the
     current state, as well as an inject function that updates the state. *)
 val state
   :  Source_code_position.t
@@ -287,6 +287,37 @@ val if_
   -> then_:'a Computation.t
   -> else_:'a Computation.t
   -> 'a Computation.t
+
+(** [match_either] enables matching on a value of type [('a, 'b) Either.t]
+    via the [first] and [second] arguments. *)
+val match_either
+  :  ('a, 'b) Either.t Value.t
+  -> first:('a Value.t -> 'c Computation.t)
+  -> second:('b Value.t -> 'c Computation.t)
+  -> 'c Computation.t
+
+(** [match_either] enables matching on a value of type [('a, 'b) Result.t]
+    via the [ok] and [err] arguments. *)
+val match_result
+  :  ('a, 'b) Result.t Value.t
+  -> ok:('a Value.t -> 'c Computation.t)
+  -> err:('b Value.t -> 'c Computation.t)
+  -> 'c Computation.t
+
+(** [map_option] is similar to [Option.map] but with Bonsai's types instead.
+    The computation produced by [f] will only be run when the input option is
+    [some]. *)
+val map_option
+  :  'a option Value.t
+  -> f:('a Value.t -> 'b Computation.t)
+  -> 'b option Computation.t
+
+(** [match_option] enables matching on a value of type ['a option]. *)
+val match_option
+  :  'a option Value.t
+  -> some:('a Value.t -> 'b Computation.t)
+  -> none:'b Computation.t
+  -> 'b Computation.t
 
 (** This [Let_syntax] module is basically just {!Value.Let_syntax} with the addition of
     the [sub] function, which operates on Computations.
