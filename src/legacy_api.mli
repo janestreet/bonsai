@@ -46,7 +46,7 @@ val of_module
 val both : ('input, 'r1) t -> ('input, 'r2) t -> ('input, 'r1 * 'r2) t
 
 (** [state_machine] is a function that is used to define a component solely in terms of
-    its [apply-action] function. The result value of the component is the value of the
+    its [apply_action] function. The result value of the component is the value of the
     current model alongside an injection function to transition the state machine *)
 val state_machine
   :  (module Model with type t = 'model)

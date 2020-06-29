@@ -1,17 +1,19 @@
 open! Core_kernel
 open! Import
 
+type ('input, 'action, 'model) apply_action =
+  inject:('action -> Event.t)
+  -> schedule_event:(Event.t -> unit)
+  -> 'input
+  -> 'model
+  -> 'action
+  -> 'model
+
 type ('model, 'action, 'result) t =
   | Return : 'result Value.t -> (unit, Nothing.t, 'result) t
   | Leaf :
       { input : 'input Value.t
-      ; apply_action :
-          inject:('action -> Event.t)
-          -> schedule_event:(Event.t -> unit)
-          -> 'input
-          -> 'model
-          -> 'action
-          -> 'model
+      ; apply_action : ('input, 'action, 'model) apply_action
       ; compute : inject:('action -> Event.t) -> 'input -> 'model -> 'result
       ; name : string
       }
@@ -58,6 +60,16 @@ type ('model, 'action, 'result) t =
       ; key_and_cmp : ('key_and_cmp, ('key, 'cmp) Enum_types.Multi_model.t) Type_equal.t
       }
       -> ('key_and_cmp, 'key Enum_types.Case_action.t, 'a) t
+  | Wrap :
+      { model_id : 'outer_model Type_equal.Id.t
+      ; inject_id : ('outer_action -> Event.t) Type_equal.Id.t
+      ; inner : ('inner_model, 'inner_action, 'result) t
+      ; apply_action : ('result, 'outer_action, 'outer_model) apply_action
+      }
+      -> ( 'outer_model * 'inner_model
+         , ('outer_action, 'inner_action) Either.t
+         , 'result )
+           t
 
 and 'a packed =
   | T :

@@ -1,5 +1,8 @@
 # Incrementality
 
+
+** NOTE: this document is out of date.  We are working to update it **
+
 If you're coming from `Incr_dom`, the Bonsai API might suprise you.  The
 `Incr.t` type that is pervasive throughout `Incr_dom` programs is (almost)
 nowhere to be found!  However, if you dig into the internals of Bonsai, you'll

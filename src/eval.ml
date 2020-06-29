@@ -139,4 +139,36 @@ let rec eval
       | _ -> model
     in
     Snapshot.create ~apply_action ~result:(Snapshot.result snapshot)
+  | Wrap { model_id; inject_id; inner; apply_action } ->
+    let%pattern_bind outer_model, inner_model = model in
+    let inject_outer a = inject (Either.First a) in
+    let inject_inner a = inject (Either.Second a) in
+    let%mapn outer_model = outer_model
+    and inner_model = inner_model
+    and inner_snapshot =
+      let environment =
+        environment
+        |> Environment.add_exn ~key:model_id ~data:outer_model
+        |> Environment.add_exn ~key:inject_id ~data:(Incr.return inject_outer)
+      in
+      eval environment inner_model ~inject:inject_inner inner
+    in
+    let inner_result = Snapshot.result inner_snapshot in
+    Snapshot.create ~result:inner_result ~apply_action:(fun ~schedule_event action ->
+      match action with
+      | First action1 ->
+        let new_outer_model =
+          apply_action
+            ~inject:inject_outer
+            ~schedule_event
+            inner_result
+            outer_model
+            action1
+        in
+        new_outer_model, inner_model
+      | Second action2 ->
+        let new_inner_model =
+          Snapshot.apply_action inner_snapshot ~schedule_event action2
+        in
+        outer_model, new_inner_model)
 ;;

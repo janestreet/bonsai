@@ -187,6 +187,34 @@ let state_machine0 here model action ~default_model ~apply_action =
   state_machine1 here model action ~default_model ~apply_action (Value.return ())
 ;;
 
+let wrap (type model action) model_module ~default_model ~apply_action ~f =
+  let model_id : model Type_equal.Id.t =
+    Type_equal.Id.create ~name:"model id" [%sexp_of: opaque]
+  in
+  let action_id : action Type_equal.Id.t =
+    Type_equal.Id.create ~name:"action id" [%sexp_of: opaque]
+  in
+  let inject_id : (action -> Event.t) Type_equal.Id.t =
+    Type_equal.Id.create ~name:"inject id" [%sexp_of: opaque]
+  in
+  let model_var = Value.named model_id in
+  let inject_var = Value.named inject_id in
+  let (Computation.T { t = inner; model = inner_model; action = inner_action }) =
+    f model_var inject_var
+  in
+  let action = Meta.Action.both action_id inner_action in
+  let model =
+    Meta.Model.both
+      (Meta.Model.of_module
+         model_module
+         ~default:default_model
+         ~name:"outer model for wrap")
+      inner_model
+  in
+  Computation.T
+    { t = Computation.Wrap { model_id; inject_id; inner; apply_action }; action; model }
+;;
+
 let state (type m) here (module M : Model with type t = m) ~default_model =
   state_machine0
     here

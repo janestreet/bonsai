@@ -78,6 +78,43 @@ let%expect_test "chain + both" =
   [%expect {| 9 |}]
 ;;
 
+let%expect_test "wrap" =
+  let component =
+    Bonsai.wrap
+      (module Int)
+      ~default_model:0
+      ~apply_action:(fun ~inject:_ ~schedule_event:_ (result, _) model () ->
+        String.length result + model)
+      ~f:(fun model inject ->
+        return
+        @@ let%map model = model
+        and inject = inject in
+        Int.to_string model, inject)
+  in
+  let handle =
+    Handle.create
+      (module struct
+        type t = string * (unit -> Event.t)
+        type incoming = unit
+
+        let view = Tuple2.get1
+        let incoming (_, x) () = x ()
+      end)
+      component
+  in
+  Handle.show handle;
+  [%expect {| 0 |}];
+  Handle.do_actions handle [ () ];
+  Handle.show handle;
+  [%expect {| 1 |}];
+  Handle.do_actions handle [ (); (); (); (); (); (); (); (); (); () ];
+  Handle.show handle;
+  [%expect {| 12 |}];
+  Handle.do_actions handle [ () ];
+  Handle.show handle;
+  [%expect {| 14 |}]
+;;
+
 let%expect_test "match_either" =
   let var : (string, int) Either.t Bonsai.Var.t =
     Bonsai.Var.create (Either.First "hello")

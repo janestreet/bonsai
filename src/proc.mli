@@ -288,6 +288,22 @@ val if_
   -> else_:'a Computation.t
   -> 'a Computation.t
 
+(** [wrap] wraps a Computation (built using [f]) and provides a model and
+    injection function that the wrapped component can use.  Especially of note
+    is that the [apply_action] for this outer-model has access to the result
+    value of the Computation being wrapped. *)
+val wrap
+  :  (module Model with type t = 'model)
+  -> default_model:'model
+  -> apply_action:(inject:('action -> Event.t)
+                   -> schedule_event:(Event.t -> unit)
+                   -> 'result
+                   -> 'model
+                   -> 'action
+                   -> 'model)
+  -> f:('model Value.t -> ('action -> Event.t) Value.t -> 'result Computation.t)
+  -> 'result Computation.t
+
 (** [match_either] enables matching on a value of type [('a, 'b) Either.t]
     via the [first] and [second] arguments. *)
 val match_either
@@ -296,7 +312,7 @@ val match_either
   -> second:('b Value.t -> 'c Computation.t)
   -> 'c Computation.t
 
-(** [match_either] enables matching on a value of type [('a, 'b) Result.t]
+(** [match_result] enables matching on a value of type [('a, 'b) Result.t]
     via the [ok] and [err] arguments. *)
 val match_result
   :  ('a, 'b) Result.t Value.t
