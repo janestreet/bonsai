@@ -175,7 +175,7 @@ val pure : ('a -> 'b) -> 'a Value.t -> 'b Computation.t
 
 (** Given a first-class module that has no input (unit input type), and the default
     value of the state machine, [of_module0] will create a [Computation] that produces
-    values of of that module's [Result.t] type. *)
+    values of that module's [Result.t] type. *)
 val of_module0 : (unit, 'm, 'a, 'r) component_s -> default_model:'m -> 'r Computation.t
 
 (** The same as {!of_module0}, but this one has an input type ['i].  Because input to the
