@@ -5,6 +5,21 @@ Bonsai is a library that is used to build browser-based frontend applications
 in OCaml.  It builds on top of the technology and lessons learned from
 `Incr_dom` [^incr_dom], an incremental frontend framework.
 
+# Getting Started
+
+The [Getting Started with Bonsai](./docs/getting_started/index.md)
+guide is good if you're new to web development entirely or just want
+to see a walkthrough of a couple simple example apps.
+
+Reading [Bonsai Concepts](./docs/concepts.md) is the best place to get an
+overview of the library and to build a mental model for structuring Bonsai
+applications.
+
+Examples of using Bonsai in a web browser can be found in the
+`examples` directory.
+
+# Differences between Incr_dom and Bonsai
+
 The main differences between `Incr_dom` and Bonsai are
 
 - Bonsai has a notion of first-class components -
@@ -14,7 +29,6 @@ The main differences between `Incr_dom` and Bonsai are
   [read more](./docs/incrementality.md)
 - Combining Bonsai components is easy
 
-
 Similarities between `Incr_dom` and Bonsai:
 
 - Both are built on top of Incremental library for performance optimizations
@@ -23,7 +37,7 @@ Similarities between `Incr_dom` and Bonsai:
   construct the view of the app.
 - Bonsai components are embeddable inside of existing `Incr_dom` apps!
 
-# Table of Contents
+# Bonsai Documentation Table of Contents
 
 <!-- This table-of-contents is very dependent on the exact whitespace present.
 Pandoc really wants to stick paragraph <p> nodes any time that there's even a trace of
@@ -36,15 +50,6 @@ whitespace inbetween these html nodes... -->
 <div class="toc_node"> <a href="./docs/bonsai_web.md"> Bonsai_web </a></div>
 </div>
 </div>
-
-# Getting Started
-
-Reading [Bonsai Concepts](./docs/concepts.md) is the best place to get an
-overview of the library and to build a mental model for structuring Bonsai
-applications.
-
-Examples of using Bonsai in a web browser can be found in the
-`examples` directory.
 
 [^incr_dom]:
   For interoperability between Bonsai and `Incr_dom`, see [Using Bonsai Inside
