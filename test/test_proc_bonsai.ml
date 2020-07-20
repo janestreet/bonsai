@@ -132,3 +132,74 @@ let%expect_test "match_either" =
   Handle.show handle;
   [%expect {| 2 |}]
 ;;
+
+let%test_module "testing Bonsai internals" =
+  (module struct
+    (* This module tests internal details of Bonsai, and the results are sensitive to
+       implementation changes. *)
+    [@@@alert "-rampantly_nondeterministic"]
+
+    let%expect_test "remove unused models in assoc" =
+      let var = Bonsai.Var.create Int.Map.empty in
+      let module State_with_setter = struct
+        type t =
+          { state : string
+          ; set_state : string -> Event.t
+          }
+      end
+      in
+      let module Action = struct
+        type t = Set of string
+      end
+      in
+      let component =
+        Bonsai.assoc
+          (module Int)
+          (Bonsai.Var.value var)
+          ~f:(fun _key _data ->
+            let%sub v = Bonsai.state [%here] (module String) ~default_model:"hello" in
+            return
+            @@ let%map state, set_state = v in
+            { State_with_setter.state; set_state })
+      in
+      let handle =
+        Handle.create
+          (module struct
+            type t = State_with_setter.t Int.Map.t
+            type incoming = int * Action.t
+
+            let incoming (map : t) (id, action) =
+              let t = Map.find_exn map id in
+              match (action : Action.t) with
+              | Set value -> t.set_state value
+            ;;
+
+            let view (map : t) =
+              map
+              |> Map.to_alist
+              |> List.map ~f:(fun (i, { state; set_state = _ }) -> i, state)
+              |> [%sexp_of: (int * string) list]
+              |> Sexp.to_string_hum
+            ;;
+          end)
+          component
+      in
+      Handle.show_model handle;
+      [%expect {|
+        (()
+         ()) |}];
+      Bonsai.Var.set var (Int.Map.of_alist_exn [ 1, (); 2, () ]);
+      Handle.show_model handle;
+      [%expect {|
+        (()
+         ()) |}];
+      (* use the setter to re-establish the default *)
+      Handle.do_actions handle [ 1, Set "test" ];
+      Handle.show_model handle;
+      [%expect {| (((1 (test ()))) ()) |}];
+      Handle.do_actions handle [ 1, Set "hello" ];
+      Handle.show_model handle;
+      [%expect {| (((1 (hello ()))) ()) |}]
+    ;;
+  end)
+;;

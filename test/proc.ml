@@ -91,4 +91,9 @@ module Handle = struct
     let _, view, _ = Driver.result handle in
     print_endline view
   ;;
+
+  let show_model handle =
+    Driver.flush handle;
+    Driver.sexp_of_model handle |> print_s
+  ;;
 end

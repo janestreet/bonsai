@@ -57,4 +57,9 @@ module Handle : sig
     :  ('result, 'incoming) Result_spec.t
     -> 'result Bonsai.Proc.Computation.t
     -> ('result, 'incoming) t
+
+  val show_model : _ t -> unit
+  [@@alert
+    rampantly_nondeterministic
+      "This function exposes Bonsai internals that may change without warning"]
 end

@@ -16,5 +16,6 @@ val flush : _ t -> unit
 
 val schedule_event : _ t -> Event.t -> unit
 val result : (_, 'r) t -> 'r
+
 val sexp_of_model : _ t -> Sexp.t
 val input : ('i, _) t -> 'i
