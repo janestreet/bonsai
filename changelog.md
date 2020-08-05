@@ -1,6 +1,11 @@
 # Bonsai Changelog
-
 <!-- Change-log notes go in this file, with newer dates at the _top_  --> 
+
+## 2020-07-14
+
+Added [Value.cutoff], a function for specifying cutoff to a greater degree than 
+otherwise available.
+
 
 ## 2020-06-25
 Bonsai Template generator added.

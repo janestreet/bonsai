@@ -5,6 +5,11 @@ type _ t =
   | Constant : 'a -> 'a t
   | Incr : 'a Incr.t -> 'a t
   | Named : 'a Type_equal.Id.t -> 'a t
+  | Cutoff :
+      { t : 'a t
+      ; equal : 'a -> 'a -> bool
+      }
+      -> 'a t
   | Map :
       { t : 'a t
       ; f : 'a -> 'b
@@ -64,6 +69,7 @@ type _ t =
 
 let rec sexp_of_t : type a. a t -> Sexp.t = function
   | Constant _ -> [%sexp "constant"]
+  | Cutoff { t; equal = _ } -> [%sexp "cutoff", (t : t)]
   | Incr _ -> [%sexp "incr"]
   | Named id -> [%sexp "named", (Type_equal.Id.name id : string)]
   | Map { t; f = _ } -> [%message "map" (t : t)]
@@ -172,15 +178,20 @@ let map t ~f:f' =
     let f t1 t2 t3 t4 t5 t6 t7 = f' (f t1 t2 t3 t4 t5 t6 t7) in
     Map7 { t1; t2; t3; t4; t5; f; t6; t7 }
   | Constant x -> Constant (f' x)
-  | (Named _ | Incr _) as other -> Map { t = other; f = f' }
+  | (Cutoff _ | Named _ | Incr _) as other -> Map { t = other; f = f' }
 ;;
 
 let named n = Named n
+let cutoff ~equal t = Cutoff { t; equal }
 
 let rec eval : type a. Environment.t -> a t -> a Incr.t =
   fun env value ->
   match value with
   | Incr x -> x
+  | Cutoff { t; equal } ->
+    let t = eval env t in
+    Incremental.set_cutoff t (Incremental.Cutoff.of_equal equal);
+    t
   | Constant x -> Incr.return x
   | Named name ->
     (match Environment.find env name with

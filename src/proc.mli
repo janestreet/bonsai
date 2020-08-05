@@ -115,6 +115,10 @@ module Value : sig
 
   include Applicative.S with type 'a t := 'a t
   include Mapn with type 'a t := 'a t
+
+  (** A [Value.t] transformed by [cutoff] will only trigger changes on its dependents when the equality
+      of the contained value has changed. *)
+  val cutoff : equal:('a -> 'a -> bool) -> 'a t -> 'a t
 end
 
 module Var : sig

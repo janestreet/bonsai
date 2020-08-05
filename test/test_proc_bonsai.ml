@@ -4,6 +4,23 @@ open Proc
 module Bonsai = Bonsai.Proc
 open Bonsai.Let_syntax
 
+let%expect_test "cutoff" =
+  let var = Bonsai.Var.create 0 in
+  let value = Bonsai.Var.value var in
+  let component =
+    return @@ Bonsai.Value.cutoff value ~equal:(fun a b -> a % 2 = b % 2)
+  in
+  let handle = Handle.create (Result_spec.string (module Int)) component in
+  Handle.show handle;
+  [%expect {| 0 |}];
+  Bonsai.Var.set var 2;
+  Handle.show handle;
+  [%expect {| 0 |}];
+  Bonsai.Var.set var 1;
+  Handle.show handle;
+  [%expect {| 1 |}]
+;;
+
 let%expect_test "if_" =
   let component input =
     let a = Bonsai.Value.return "hello" in

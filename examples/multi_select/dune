@@ -1,0 +1,2 @@
+(executables (names main) (libraries multi_select_widget)
+ (preprocess (pps ppx_jane)))
