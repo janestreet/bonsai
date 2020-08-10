@@ -53,12 +53,13 @@ val state_machine
   -> (module Action with type t = 'action)
   -> Source_code_position.t
   -> default_model:'model
-  -> apply_action:(inject:('action -> Event.t)
-                   -> schedule_event:(Event.t -> unit)
-                   -> 'input
-                   -> 'model
-                   -> 'action
-                   -> 'model)
+  -> apply_action:
+       (inject:('action -> Event.t)
+        -> schedule_event:(Event.t -> unit)
+        -> 'input
+        -> 'model
+        -> 'action
+        -> 'model)
   -> ('input, 'model * ('action -> Event.t)) t
 
 (** [enum] is how a Bonsai component can branch on its input and handle different cases

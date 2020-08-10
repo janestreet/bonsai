@@ -2,13 +2,7 @@ open! Core_kernel
 open! Bonsai_web.Future
 open Bonsai_chat_common
 
-let component
-      ~room_list
-      ~current_room
-      ~messages
-      ~refresh_rooms
-      ~change_room
-      ~send_message
+let component ~room_list ~current_room ~messages ~refresh_rooms ~change_room ~send_message
   =
   let open Bonsai.Let_syntax in
   let send_message =
@@ -19,9 +13,7 @@ let component
   let current_room =
     current_room >>| Option.value ~default:(Room.of_string "no room selected")
   in
-  let%sub rooms_list =
-    Room_list_panel.component ~room_list ~refresh_rooms ~change_room
-  in
+  let%sub rooms_list = Room_list_panel.component ~room_list ~refresh_rooms ~change_room in
   let%sub compose_panel = Compose_message.component ~send_message in
   let%sub messages_panel = Messages_panel.component ~messages ~current_room in
   return

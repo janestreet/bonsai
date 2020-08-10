@@ -55,8 +55,7 @@ module Result_spec = struct
 end
 
 module Handle = struct
-  type ('result, 'incoming) t =
-    (unit, 'result * string * ('incoming -> Event.t)) Driver.t
+  type ('result, 'incoming) t = (unit, 'result * string * ('incoming -> Event.t)) Driver.t
 
   let create
         (type result incoming)

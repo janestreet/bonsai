@@ -9,9 +9,7 @@ let sub
       ~f
   =
   let via : via Type_equal.Id.t =
-    Type_equal.Id.create
-      ~name:(Source_code_position.to_string [%here])
-      [%sexp_of: opaque]
+    Type_equal.Id.create ~name:(Source_code_position.to_string [%here]) [%sexp_of: opaque]
   in
   let (Computation.T { t = into; action = into_action; model = into_model }) =
     f (Value.named via)
@@ -30,8 +28,7 @@ let read x =
 let pure f i = read (Value.map i ~f)
 let const x = read (Value.return x)
 
-let of_module1 (type i m a r) (component : (i, m, a, r) component_s) ~default_model input
-  =
+let of_module1 (type i m a r) (component : (i, m, a, r) component_s) ~default_model input =
   let (module M) = component in
   Computation.T
     { t =

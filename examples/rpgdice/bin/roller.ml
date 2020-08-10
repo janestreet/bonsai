@@ -8,8 +8,7 @@ module T = struct
   end
 
   module Model = struct
-    type t = (Rpgdice.Roll_spec.t * Rpgdice.Roll_result.t) option
-    [@@deriving equal, sexp]
+    type t = (Rpgdice.Roll_spec.t * Rpgdice.Roll_result.t) option [@@deriving equal, sexp]
 
     let init = None
   end

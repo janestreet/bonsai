@@ -5,6 +5,7 @@ type _ t =
   | Constant : 'a -> 'a t
   | Incr : 'a Incr.t -> 'a t
   | Named : 'a Type_equal.Id.t -> 'a t
+  | Both : 'a t * 'b t -> ('a * 'b) t
   | Cutoff :
       { t : 'a t
       ; equal : 'a -> 'a -> bool
@@ -73,6 +74,7 @@ let rec sexp_of_t : type a. a t -> Sexp.t = function
   | Incr _ -> [%sexp "incr"]
   | Named id -> [%sexp "named", (Type_equal.Id.name id : string)]
   | Map { t; f = _ } -> [%message "map" (t : t)]
+  | Both (t1, t2) -> [%message "both" (t1 : t) (t2 : t)]
   | Map2 { t1; t2; f = _ } -> [%message "map2" (t1 : t) (t2 : t)]
   | Map3 { t1; t2; t3; f = _ } -> [%message "map3" (t1 : t) (t2 : t) (t3 : t)]
   | Map4 { t1; t2; t3; t4; f = _ } ->
@@ -85,102 +87,8 @@ let rec sexp_of_t : type a. a t -> Sexp.t = function
     [%message "map7" (t1 : t) (t2 : t) (t3 : t) (t4 : t) (t5 : t) (t6 : t) (t7 : t)]
 ;;
 
-let map2 t1 t2 ~f:f1 =
-  match t1, t2 with
-  (* Applicative-apply builds a left-leaning list of map2s *)
-  | Map2 { t1; t2; f = f2 }, x ->
-    Map3 { t1; t2; t3 = x; f = (fun t1 t2 x -> f1 (f2 t1 t2) x) }
-  | Map3 { t1; t2; t3; f = f2 }, x ->
-    Map4 { t1; t2; t3; t4 = x; f = (fun t1 t2 t3 x -> f1 (f2 t1 t2 t3) x) }
-  | Map4 { t1; t2; t3; t4; f = f2 }, x ->
-    Map5 { t1; t2; t3; t4; t5 = x; f = (fun t1 t2 t3 t4 x -> f1 (f2 t1 t2 t3 t4) x) }
-  | Map5 { t1; t2; t3; t4; t5; f = f2 }, x ->
-    Map6
-      { t1
-      ; t2
-      ; t3
-      ; t4
-      ; t5
-      ; t6 = x
-      ; f = (fun t1 t2 t3 t4 t5 x -> f1 (f2 t1 t2 t3 t4 t5) x)
-      }
-  | Map6 { t1; t2; t3; t4; t5; f = f2; t6 }, x ->
-    Map7
-      { t1
-      ; t2
-      ; t3
-      ; t4
-      ; t5
-      ; t6
-      ; t7 = x
-      ; f = (fun t1 t2 t3 t4 t5 t6 x -> f1 (f2 t1 t2 t3 t4 t5 t6) x)
-      }
-  (* Let-syntax builds a right-leaning list of map2s *)
-  | x, Map2 { t1; t2; f = f2 } ->
-    Map3 { t1 = x; t2 = t1; t3 = t2; f = (fun x t2 t3 -> f1 x (f2 t2 t3)) }
-  | x, Map3 { t1; t2; t3; f = f2 } ->
-    Map4
-      { t1 = x; t2 = t1; t3 = t2; t4 = t3; f = (fun x t2 t3 t4 -> f1 x (f2 t2 t3 t4)) }
-  | x, Map4 { t1; t2; t3; t4; f = f2 } ->
-    Map5
-      { t1 = x
-      ; t2 = t1
-      ; t3 = t2
-      ; t4 = t3
-      ; t5 = t4
-      ; f = (fun x t2 t3 t4 t5 -> f1 x (f2 t2 t3 t4 t5))
-      }
-  | x, Map5 { t1; t2; t3; t4; t5; f = f2 } ->
-    Map6
-      { t1 = x
-      ; t2 = t1
-      ; t3 = t2
-      ; t4 = t3
-      ; t5 = t4
-      ; t6 = t5
-      ; f = (fun x t2 t3 t4 t5 t6 -> f1 x (f2 t2 t3 t4 t5 t6))
-      }
-  | x, Map6 { t1; t2; t3; t4; t5; f = f2; t6 } ->
-    Map7
-      { t1 = x
-      ; t2 = t1
-      ; t3 = t2
-      ; t4 = t3
-      ; t5 = t4
-      ; f = (fun x t2 t3 t4 t5 t6 t7 -> f1 x (f2 t2 t3 t4 t5 t6 t7))
-      ; t6 = t5
-      ; t7 = t6
-      }
-  | t1, t2 -> Map2 { t1; t2; f = f1 }
-;;
-
-let map t ~f:f' =
-  match t with
-  | Map { t; f } ->
-    let f t1 = f' (f t1) in
-    Map { t; f }
-  | Map2 { t1; t2; f } ->
-    let f t1 t2 = f' (f t1 t2) in
-    Map2 { t1; t2; f }
-  | Map3 { t1; t2; t3; f } ->
-    let f t1 t2 t3 = f' (f t1 t2 t3) in
-    Map3 { t1; t2; t3; f }
-  | Map4 { t1; t2; t3; t4; f } ->
-    let f t1 t2 t3 t4 = f' (f t1 t2 t3 t4) in
-    Map4 { t1; t2; t3; t4; f }
-  | Map5 { t1; t2; t3; t4; t5; f } ->
-    let f t1 t2 t3 t4 t5 = f' (f t1 t2 t3 t4 t5) in
-    Map5 { t1; t2; t3; t4; t5; f }
-  | Map6 { t1; t2; t3; t4; t5; f; t6 } ->
-    let f t1 t2 t3 t4 t5 t6 = f' (f t1 t2 t3 t4 t5 t6) in
-    Map6 { t1; t2; t3; t4; t5; f; t6 }
-  | Map7 { t1; t2; t3; t4; t5; f; t6; t7 } ->
-    let f t1 t2 t3 t4 t5 t6 t7 = f' (f t1 t2 t3 t4 t5 t6 t7) in
-    Map7 { t1; t2; t3; t4; t5; f; t6; t7 }
-  | Constant x -> Constant (f' x)
-  | (Cutoff _ | Named _ | Incr _) as other -> Map { t = other; f = f' }
-;;
-
+let map2 t1 t2 ~f = Map2 { t1; t2; f }
+let map t ~f = Map { t; f }
 let named n = Named n
 let cutoff ~equal t = Cutoff { t; equal }
 
@@ -226,18 +134,59 @@ let rec eval : type a. Environment.t -> a t -> a Incr.t =
       (eval env t5)
       (eval env t6)
       (eval env t7)
+  (* Both collapsing *)
+  | Both (t1, Both (t2, Both (t3, Both (t4, Both (t5, Both (t6, t7)))))) ->
+    Incr.map7
+      (eval env t1)
+      (eval env t2)
+      (eval env t3)
+      (eval env t4)
+      (eval env t5)
+      (eval env t6)
+      (eval env t7)
+      ~f:(fun t1 t2 t3 t4 t5 t6 t7 -> t1, (t2, (t3, (t4, (t5, (t6, t7))))))
+  | Both (t1, Both (t2, Both (t3, Both (t4, Both (t5, t6))))) ->
+    Incr.map6
+      (eval env t1)
+      (eval env t2)
+      (eval env t3)
+      (eval env t4)
+      (eval env t5)
+      (eval env t6)
+      ~f:(fun t1 t2 t3 t4 t5 t6 -> t1, (t2, (t3, (t4, (t5, t6)))))
+  | Both (t1, Both (t2, Both (t3, Both (t4, t5)))) ->
+    Incr.map5
+      (eval env t1)
+      (eval env t2)
+      (eval env t3)
+      (eval env t4)
+      (eval env t5)
+      ~f:(fun t1 t2 t3 t4 t5 -> t1, (t2, (t3, (t4, t5))))
+  | Both (t1, Both (t2, Both (t3, t4))) ->
+    Incr.map4
+      (eval env t1)
+      (eval env t2)
+      (eval env t3)
+      (eval env t4)
+      ~f:(fun t1 t2 t3 t4 -> t1, (t2, (t3, t4)))
+  | Both (t1, Both (t2, t3)) ->
+    Incr.map3 (eval env t1) (eval env t2) (eval env t3) ~f:(fun t1 t2 t3 -> t1, (t2, t3))
+  | Both (t1, t2) -> Incr.both (eval env t1) (eval env t2)
 ;;
 
-module T = Applicative.Make_using_map2 (struct
+let return a = Constant a
+
+module Applicative_instance = Applicative.Make_using_map2 (struct
     type nonrec 'a t = 'a t
 
-    let map = `Custom map
-    let return a = Constant a
+    let return = return
     let map2 = map2
+    let map = `Custom map
   end)
 
-include T
+include Applicative_instance
 
+let both a b = Both (a, b)
 let map3 t1 t2 t3 ~f = Map3 { t1; t2; t3; f }
 let map4 t1 t2 t3 t4 ~f = Map4 { t1; t2; t3; t4; f }
 let map5 t1 t2 t3 t4 t5 ~f = Map5 { t1; t2; t3; t4; t5; f }
@@ -245,23 +194,32 @@ let map6 t1 t2 t3 t4 t5 t6 ~f = Map6 { t1; t2; t3; t4; t5; t6; f }
 let map7 t1 t2 t3 t4 t5 t6 t7 ~f = Map7 { t1; t2; t3; t4; t5; t6; t7; f }
 let of_incr x = Incr x
 
+module Applicative_infix = struct
+  let ( <*> ) = apply
+  let ( <* ) a b = map2 a b ~f:(fun a () -> a)
+  let ( *> ) a b = map2 a b ~f:(fun () a -> a)
+  let ( >>| ) a f = map a ~f
+end
+
 module Open_on_rhs_intf = struct
   module type S = sig end
 end
 
 module Let_syntax = struct
-  include T
+  let return = return
+
+  include Applicative_infix
 
   module Let_syntax = struct
-    include T
-
-    let both t1 t2 = map2 t1 t2 ~f:Tuple2.create
+    let return = return
+    let map = map
+    let both = both
 
     module Open_on_rhs = struct end
   end
 end
 
-let%expect_test "tree flattening with let syntax" =
+let%expect_test "tree bothing with let syntax" =
   let open Let_syntax in
   let x =
     let%map () = return ()
@@ -276,8 +234,16 @@ let%expect_test "tree flattening with let syntax" =
   print_s (sexp_of_t x);
   [%expect
     {|
-    (map7 (t1 constant) (t2 constant) (t3 constant) (t4 constant) (t5 constant)
-     (t6 constant) (t7 constant)) |}]
+    (map
+     (t
+      (both (t1 constant)
+       (t2
+        (both (t1 constant)
+         (t2
+          (both (t1 constant)
+           (t2
+            (both (t1 constant)
+             (t2 (both (t1 constant) (t2 (both (t1 constant) (t2 constant)))))))))))))) |}]
 ;;
 
 let%expect_test "tree flattening with applicative API" =
@@ -287,6 +253,15 @@ let%expect_test "tree flattening with applicative API" =
   print_s (sexp_of_t x);
   [%expect
     {|
-    (map7 (t1 constant) (t2 constant) (t3 constant) (t4 constant) (t5 constant)
-     (t6 constant) (t7 constant)) |}]
+    (map2
+     (t1
+      (map2
+       (t1
+        (map2
+         (t1
+          (map2 (t1 (map2 (t1 (map2 (t1 constant) (t2 constant))) (t2 constant)))
+           (t2 constant)))
+         (t2 constant)))
+       (t2 constant)))
+     (t2 constant)) |}]
 ;;

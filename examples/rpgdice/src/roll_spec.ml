@@ -8,9 +8,7 @@ module Die = struct
   let to_string_hum { num_faces } = "d" ^ Int.to_string num_faces
 
   let roll ?(random_state = Random.State.default) { num_faces } =
-    { Roll_result.Die.num_faces
-    ; result = Random.State.int_incl random_state 1 num_faces
-    }
+    { Roll_result.Die.num_faces; result = Random.State.int_incl random_state 1 num_faces }
   ;;
 
   let parser =

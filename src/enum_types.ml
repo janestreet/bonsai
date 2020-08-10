@@ -65,8 +65,7 @@ module Multi_model = struct
         sexp
     =
     let k_to_sexp_map = [%of_sexp: Sexp.t Map.M(K).t] sexp in
-    Map.merge k_to_sexp_map default_models ~f:(fun ~key:_ ->
-      function
+    Map.merge k_to_sexp_map default_models ~f:(fun ~key:_ -> function
       | `Both (sexp, Case_model.T { t_of_sexp; _ }) -> Some (t_of_sexp sexp)
       | `Left _sexp -> None
       | `Right default_model -> Some default_model)

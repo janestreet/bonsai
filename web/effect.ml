@@ -21,10 +21,7 @@ module Callback = struct
   ;;
 
   let request (T { request; _ }) = request
-
-  let respond_to (T { on_response; userdata; _ }) response =
-    on_response response userdata
-  ;;
+  let respond_to (T { on_response; userdata; _ }) response = on_response response userdata
 end
 
 type 'response t =

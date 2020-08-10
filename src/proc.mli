@@ -226,11 +226,12 @@ val state_machine0
   -> (module Model with type t = 'model)
   -> (module Action with type t = 'action)
   -> default_model:'model
-  -> apply_action:(inject:('action -> Event.t)
-                   -> schedule_event:(Event.t -> unit)
-                   -> 'model
-                   -> 'action
-                   -> 'model)
+  -> apply_action:
+       (inject:('action -> Event.t)
+        -> schedule_event:(Event.t -> unit)
+        -> 'model
+        -> 'action
+        -> 'model)
   -> ('model * ('action -> Event.t)) Computation.t
 
 (** A frequently used state-machine is the trivial 'set-state' transition,
@@ -250,12 +251,13 @@ val state_machine1
   -> (module Model with type t = 'model)
   -> (module Action with type t = 'action)
   -> default_model:'model
-  -> apply_action:(inject:('action -> Event.t)
-                   -> schedule_event:(Event.t -> unit)
-                   -> 'input
-                   -> 'model
-                   -> 'action
-                   -> 'model)
+  -> apply_action:
+       (inject:('action -> Event.t)
+        -> schedule_event:(Event.t -> unit)
+        -> 'input
+        -> 'model
+        -> 'action
+        -> 'model)
   -> 'input Value.t
   -> ('model * ('action -> Event.t)) Computation.t
 
@@ -299,12 +301,13 @@ val if_
 val wrap
   :  (module Model with type t = 'model)
   -> default_model:'model
-  -> apply_action:(inject:('action -> Event.t)
-                   -> schedule_event:(Event.t -> unit)
-                   -> 'result
-                   -> 'model
-                   -> 'action
-                   -> 'model)
+  -> apply_action:
+       (inject:('action -> Event.t)
+        -> schedule_event:(Event.t -> unit)
+        -> 'result
+        -> 'model
+        -> 'action
+        -> 'model)
   -> f:('model Value.t -> ('action -> Event.t) Value.t -> 'result Computation.t)
   -> 'result Computation.t
 

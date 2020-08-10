@@ -71,8 +71,7 @@ let rec eval
       } ->
     let map_input = Value.eval environment map in
     let input_and_models_map =
-      Incr_map.merge map_input model ~f:(fun ~key:_ ->
-        function
+      Incr_map.merge map_input model ~f:(fun ~key:_ -> function
         | `Left input -> Some (input, model_info.default)
         | `Right _ -> None
         | `Both input_and_models -> Some input_and_models)

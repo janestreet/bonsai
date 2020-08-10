@@ -66,10 +66,7 @@ type ('model, 'action, 'result) t =
       ; inner : ('inner_model, 'inner_action, 'result) t
       ; apply_action : ('result, 'outer_action, 'outer_model) apply_action
       }
-      -> ( 'outer_model * 'inner_model
-         , ('outer_action, 'inner_action) Either.t
-         , 'result )
-           t
+      -> ('outer_model * 'inner_model, ('outer_action, 'inner_action) Either.t, 'result) t
 
 and 'a packed =
   | T :

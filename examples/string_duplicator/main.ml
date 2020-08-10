@@ -25,9 +25,7 @@ module String_duplicator = struct
   (* The view is computed here: it includes the repeated string alongside the
      button that injects actions in to be processed in [apply_action]. *)
   let compute ~inject input model =
-    let repeated_string =
-      List.init model ~f:(Fn.const input) |> String.concat ~sep:" "
-    in
+    let repeated_string = List.init model ~f:(Fn.const input) |> String.concat ~sep:" " in
     (* [inject] is used to produce an [Event.t] which is handled by Bonsai,
        and the action comes back in to be processed by [apply_action]. *)
     let on_click = Vdom.Attr.on_click (fun _ -> inject Action.Increment) in

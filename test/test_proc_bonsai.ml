@@ -1,15 +1,14 @@
 open! Core_kernel
 open! Import
 open Proc
+module Bonsai_lib = Bonsai
 module Bonsai = Bonsai.Proc
 open Bonsai.Let_syntax
 
 let%expect_test "cutoff" =
   let var = Bonsai.Var.create 0 in
   let value = Bonsai.Var.value var in
-  let component =
-    return @@ Bonsai.Value.cutoff value ~equal:(fun a b -> a % 2 = b % 2)
-  in
+  let component = return @@ Bonsai.Value.cutoff value ~equal:(fun a b -> a % 2 = b % 2) in
   let handle = Handle.create (Result_spec.string (module Int)) component in
   Handle.show handle;
   [%expect {| 0 |}];
@@ -219,4 +218,59 @@ let%test_module "testing Bonsai internals" =
       [%expect {| (((1 (hello ()))) ()) |}]
     ;;
   end)
+;;
+
+let%expect_test "multiple maps respect cutoff" =
+  let component input =
+    input
+    |> Bonsai.Value.map ~f:(fun (_ : int) -> ())
+    |> Bonsai.Value.map ~f:(fun () -> print_endline "triggered")
+    |> return
+  in
+  let var = Bonsai.Var.create 1 in
+  let handle =
+    Handle.create (Result_spec.sexp (module Unit)) (component (Bonsai.Var.value var))
+  in
+  Handle.show handle;
+  [%expect {|
+    triggered
+    () |}];
+  Bonsai.Var.set var 2;
+  (* Cutoff happens on the unit, so "triggered" isn't printed *)
+  Handle.show handle;
+  [%expect {| () |}]
+;;
+
+let%expect_test "let syntax is collapsed upon eval" =
+  let open Bonsai_lib.Private in
+  let value =
+    let%map () = Bonsai.Value.return ()
+    and () = Bonsai.Value.return ()
+    and () = Bonsai.Value.return ()
+    and () = Bonsai.Value.return ()
+    and () = Bonsai.Value.return ()
+    and () = Bonsai.Value.return ()
+    and () = Bonsai.Value.return () in
+    ()
+  in
+  let packed = value |> reveal_value |> Value.eval Environment.empty |> Incr.pack in
+  let filename = Stdlib.Filename.temp_file "incr" "out" in
+  Incremental.Packed.save_dot filename [ packed ];
+  (match
+     filename |> Core_kernel.In_channel.read_all |> String.is_substring ~substring:"Map7"
+   with
+   | true -> print_endline "Map7 found!"
+   | false -> print_endline "No Map7 :(");
+  [%expect {| Map7 found! |}]
+;;
+
+let%test "constant prop doesn't happen" =
+  (* Just make sure that this expression doesn't crash *)
+  let (_ : int Bonsai.Computation.t) =
+    Bonsai.match_either
+      (Bonsai.Value.return (First 1))
+      ~first:Bonsai.read
+      ~second:Bonsai.read
+  in
+  true
 ;;

@@ -25,8 +25,8 @@ let create () =
         { room = Room.of_string "incr_dom-room"
         ; author = "Bonsai Developers"
         ; contents =
-            "For deep and complex security purposes your messages will be hashed so \
-             that you can't use this platform for actual chatting"
+            "For deep and complex security purposes your messages will be hashed so that \
+             you can't use this platform for actual chatting"
         }
     ]
   in
