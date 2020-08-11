@@ -56,7 +56,7 @@ module Map = struct
   ;;
 end
 
-module Arrow = struct
+include struct
   open Proc.Let_syntax
 
   let arr f = pure ~f

@@ -1,6 +1,6 @@
 open! Core_kernel
 open! Async_kernel
-open! Bonsai_web.Future
+open! Bonsai_web
 open Async_js
 open Bonsai_chat_common
 open Composition_infix

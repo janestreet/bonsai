@@ -55,7 +55,7 @@ module Handle : sig
 
   val create
     :  ('result, 'incoming) Result_spec.t
-    -> 'result Bonsai.Proc.Computation.t
+    -> 'result Bonsai.Computation.t
     -> ('result, 'incoming) t
 
   val show_model : _ t -> unit

@@ -11,7 +11,7 @@ let dummy_source_code_position =
     { pos_fname = "file_name.ml"; pos_lnum = 0; pos_bol = 0; pos_cnum = 0 }
 ;;
 
-let run_test ~(component : _ Bonsai.t) ~initial_input ~f =
+let run_test ~(component : _ Bonsai.Arrow.t) ~initial_input ~f =
   let driver component = Driver.create component ~initial_input in
   f (driver component)
 ;;
@@ -50,14 +50,14 @@ module Counter_component = struct
 end
 
 let%expect_test "enum" =
-  let open Bonsai.Infix in
+  let open Bonsai.Arrow.Infix in
   let component =
-    Bonsai.enum
+    Bonsai.Arrow.enum
       (module Bool)
       ~which:Tuple2.get1
       ~handle:(function
-        | true -> Tuple2.get2 @>> Bonsai.pure ~f:(sprintf "true %d")
-        | false -> Tuple2.get2 @>> Bonsai.pure ~f:(sprintf "false %d"))
+        | true -> Tuple2.get2 @>> Bonsai.Arrow.pure ~f:(sprintf "true %d")
+        | false -> Tuple2.get2 @>> Bonsai.Arrow.pure ~f:(sprintf "false %d"))
   in
   run_test ~component ~initial_input:(true, 5) ~f:(fun driver ->
     [%expect {| |}];
@@ -73,7 +73,7 @@ let%expect_test "enum" =
 ;;
 
 let%expect_test "enum with action handling `Ignore" =
-  let open Bonsai.Infix in
+  let open Bonsai.Arrow.Infix in
   let module Action = struct
     type t =
       | Outer of Counter_component.Action.t
@@ -81,19 +81,19 @@ let%expect_test "enum with action handling `Ignore" =
   end
   in
   let component =
-    let%map.Bonsai (result, inject_inner), inject_outer =
-      Bonsai.of_module (module Counter_component) ~default_model:1
+    let%map.Bonsai.Arrow (result, inject_inner), inject_outer =
+      Bonsai.Arrow.of_module (module Counter_component) ~default_model:1
       >>> Bonsai.Arrow.first
-            (Bonsai.enum
+            (Bonsai.Arrow.enum
                (module Bool)
                ~which:(fun digit -> Int.of_string digit mod 3 = 0)
                ~handle:(function
                  | false ->
                    Fn.ignore
-                   @>> Bonsai.of_module (module Counter_component) ~default_model:0
+                   @>> Bonsai.Arrow.of_module (module Counter_component) ~default_model:0
                    >>| Tuple2.map_fst ~f:(sprintf "counter %s")
                  | true ->
-                   Bonsai.pure ~f:(fun s ->
+                   Bonsai.Arrow.pure ~f:(fun s ->
                      let view = sprintf "pure %s" s in
                      let inj _ = failwith "can't raise actions out of this one" in
                      view, inj)))
@@ -127,7 +127,7 @@ let%expect_test "enum with action handling `Ignore" =
 
 let%expect_test "constant component" =
   run_test
-    ~component:(Bonsai.const "some constant value")
+    ~component:(Bonsai.Arrow.const "some constant value")
     ~initial_input:()
     ~f:(fun driver ->
       [%expect {| |}];
@@ -138,7 +138,7 @@ let%expect_test "constant component" =
 
 let%expect_test "module component" =
   run_test
-    ~component:(Bonsai.of_module (module Counter_component) ~default_model:0)
+    ~component:(Bonsai.Arrow.of_module (module Counter_component) ~default_model:0)
     ~initial_input:()
     ~f:(fun driver ->
       [%expect {| |}];
@@ -156,8 +156,8 @@ let%expect_test "module component" =
 
 let%expect_test "state-machine counter-component" =
   let component =
-    let%map.Bonsai model, inject =
-      Bonsai.state_machine
+    let%map.Bonsai.Arrow model, inject =
+      Bonsai.Arrow.state_machine
         (module Counter_component.Model)
         (module Counter_component.Action)
         dummy_source_code_position
@@ -183,10 +183,12 @@ let%expect_test "state-machine counter-component" =
 ;;
 
 let%expect_test "basic Same_model let syntax" =
-  let open Bonsai.Let_syntax in
-  let counter_component = Bonsai.of_module (module Counter_component) ~default_model:0 in
+  let open Bonsai.Arrow.Let_syntax in
+  let counter_component =
+    Bonsai.Arrow.of_module (module Counter_component) ~default_model:0
+  in
   let component =
-    let%map a_side = Bonsai.const 5
+    let%map a_side = Bonsai.Arrow.const 5
     and b_side, inject_b = counter_component in
     sprintf "%d | %s" a_side b_side, inject_b
   in
@@ -202,7 +204,7 @@ let%expect_test "basic Same_model let syntax" =
 ;;
 
 let%expect_test "module project field" =
-  let open Bonsai.Let_syntax in
+  let open Bonsai.Arrow.Let_syntax in
   let module Model = struct
     type t =
       { a : int
@@ -211,7 +213,9 @@ let%expect_test "module project field" =
     [@@deriving fields]
   end
   in
-  let counter_component = Bonsai.of_module (module Counter_component) ~default_model:0 in
+  let counter_component =
+    Bonsai.Arrow.of_module (module Counter_component) ~default_model:0
+  in
   let component =
     let%map a_side, inject_a = counter_component
     and b_side, inject_b = counter_component in
@@ -233,7 +237,7 @@ let%expect_test "module project field" =
 
 let%expect_test "incremental fn constructor" =
   let component =
-    Bonsai.With_incr.pure
+    Bonsai.Arrow.With_incr.pure
       ~f:
         (Incr_map.mapi ~f:(fun ~key:_ ~data ->
            print_endline "doing math";
@@ -283,7 +287,7 @@ let%expect_test "schedule event from outside of the component" =
   end
   in
   let component =
-    Bonsai.of_module (module Raises_something_from_without) ~default_model:()
+    Bonsai.Arrow.of_module (module Raises_something_from_without) ~default_model:()
   in
   run_test ~component ~initial_input:() ~f:(fun driver ->
     [%expect {| |}];
@@ -322,7 +326,7 @@ let%expect_test "schedule many events from outside of the component" =
   end
   in
   let component =
-    Bonsai.of_module (module Raises_something_from_without) ~default_model:()
+    Bonsai.Arrow.of_module (module Raises_something_from_without) ~default_model:()
   in
   run_test ~component ~initial_input:() ~f:(fun driver ->
     [%expect {| |}];
@@ -367,8 +371,8 @@ let%expect_test "model cutoff" =
   end
   in
   let component =
-    Bonsai.With_incr.of_module (module T) ~default_model:0
-    |> Bonsai.With_incr.model_cutoff
+    Bonsai.Arrow.With_incr.of_module (module T) ~default_model:0
+    |> Bonsai.Arrow.With_incr.model_cutoff
   in
   run_test ~component ~initial_input:() ~f:(fun driver ->
     [%expect {| |}];
@@ -386,12 +390,12 @@ let%expect_test "model cutoff" =
 ;;
 
 let%expect_test "value cutoff" =
-  let open Bonsai.Infix in
+  let open Bonsai.Arrow.Infix in
   let cutoff =
     Incr.Cutoff.create (fun ~old_value ~new_value -> old_value % 2 = new_value % 2)
   in
   let component =
-    Bonsai.With_incr.value_cutoff ~cutoff >>> Bonsai.pure ~f:Int.to_string
+    Bonsai.Arrow.With_incr.value_cutoff ~cutoff >>> Bonsai.Arrow.pure ~f:Int.to_string
   in
   run_test ~component ~initial_input:1 ~f:(fun driver ->
     [%expect {| |}];
@@ -435,7 +439,9 @@ let%expect_test "input" =
     let name = "words-counter-component"
   end
   in
-  let component = Bonsai.of_module (module Words_counter_component) ~default_model:0 in
+  let component =
+    Bonsai.Arrow.of_module (module Words_counter_component) ~default_model:0
+  in
   let initial_input = [] in
   run_test ~component ~initial_input ~f:(fun driver ->
     [%expect {| |}];
@@ -459,9 +465,9 @@ let%expect_test "input" =
 ;;
 
 let%expect_test "compose, pure" =
-  let open Bonsai.Infix in
-  let component_a = Bonsai.pure ~f:(fun model -> model mod 5) in
-  let component_b = Bonsai.pure ~f:(fun input -> input + 2) in
+  let open Bonsai.Arrow.Infix in
+  let component_a = Bonsai.Arrow.pure ~f:(fun model -> model mod 5) in
+  let component_b = Bonsai.Arrow.pure ~f:(fun input -> input + 2) in
   let component = component_a >>> component_b in
   run_test ~component ~initial_input:0 ~f:(fun driver ->
     [%expect {| |}];
@@ -473,10 +479,10 @@ let%expect_test "compose, pure" =
 ;;
 
 let%expect_test "pure_incr" =
-  let open Bonsai.Infix in
-  let component_a = Bonsai.pure ~f:(fun model -> model mod 5) in
+  let open Bonsai.Arrow.Infix in
+  let component_a = Bonsai.Arrow.pure ~f:(fun model -> model mod 5) in
   let component_b =
-    Bonsai.With_incr.pure ~f:(fun input -> Incr.map input ~f:(fun i -> i + 2))
+    Bonsai.Arrow.With_incr.pure ~f:(fun input -> Incr.map input ~f:(fun i -> i + 2))
   in
   let component = component_a >>> component_b in
   run_test ~component ~initial_input:0 ~f:(fun driver ->
@@ -489,8 +495,8 @@ let%expect_test "pure_incr" =
 ;;
 
 let%expect_test "input projection" =
-  let open Bonsai.Infix in
-  let component = String.length @>> Bonsai.pure ~f:(fun input -> input + 1) in
+  let open Bonsai.Arrow.Infix in
+  let component = String.length @>> Bonsai.Arrow.pure ~f:(fun input -> input + 1) in
   run_test ~component ~initial_input:"hi" ~f:(fun driver ->
     [%expect {| |}];
     let (module H) = Helpers.make ~driver ~sexp_of_result:[%sexp_of: int] in
@@ -502,7 +508,7 @@ let%expect_test "input projection" =
 
 let%expect_test "assoc on input" =
   let component =
-    Bonsai.pure ~f:(fun x -> x + 1) |> Bonsai.Map.assoc_input (module String)
+    Bonsai.Arrow.pure ~f:(fun x -> x + 1) |> Bonsai.Arrow.Map.assoc_input (module String)
   in
   run_test
     ~component
@@ -525,7 +531,7 @@ let%expect_test "assoc on input" =
 let%expect_test "Incremental.of_incr" =
   let var = Incr.Var.create "hello" in
   let incr = Incr.Var.watch var in
-  let component = Bonsai.With_incr.of_incr incr in
+  let component = Bonsai.Arrow.With_incr.of_incr incr in
   run_test
     ~component
     ~initial_input:(String.Map.of_alist_exn [ "a", 0; "b", 2 ])
@@ -543,10 +549,10 @@ let%expect_test "Incremental.of_incr" =
 ;;
 
 module Model_sexpification = struct
-  open Bonsai.Let_syntax
+  open Bonsai.Arrow.Let_syntax
 
-  let dummy (type t) (module M : Bonsai.Model with type t = t) ~default =
-    Bonsai.state_machine
+  let dummy (type t) (module M : Bonsai.Arrow.Model with type t = t) ~default =
+    Bonsai.Arrow.state_machine
       (module M)
       (module M)
       [%here]
@@ -577,7 +583,7 @@ module Model_sexpification = struct
   let%expect_test "multiple components" =
     let component =
       let%map (a, _), (b, _) =
-        Bonsai.both (dummy (module Int) ~default:5) (dummy (module Int) ~default:5)
+        Bonsai.Arrow.both (dummy (module Int) ~default:5) (dummy (module Int) ~default:5)
       in
       Sexp.List [ a; b ], Nothing.unreachable_code
     in
@@ -600,10 +606,10 @@ module Model_sexpification = struct
     end
     in
     let component =
-      let%map.Bonsai (inner, change_inner), change_outer =
+      let%map.Bonsai.Arrow (inner, change_inner), change_outer =
         dummy (module Bool) ~default:true
         >>> Bonsai.Arrow.first
-              (Bonsai.if_
+              (Bonsai.Arrow.if_
                  [%of_sexp: bool]
                  ~then_:
                    (Fn.ignore @>> dummy (module Int) ~default:0

@@ -1,6 +1,6 @@
 open! Core_kernel
 open! Async_kernel
-open! Bonsai_web.Future
+open! Bonsai_web
 
 let print_effect = Effect.of_sync_fun print_endline |> unstage
 

@@ -16,7 +16,7 @@ let create
       (type i r)
       ?initial_model_sexp
       ~(initial_input : i)
-      (component : (i, r) Bonsai.t)
+      (component : (i, r) Bonsai.Arrow.t)
   : (i, r) t
   =
   let input_var = Incr.Var.create initial_input in

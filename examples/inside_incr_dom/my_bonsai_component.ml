@@ -1,4 +1,4 @@
 open! Core_kernel
 
-include (val Bonsai_web.To_incr_dom.convert (fun (_ : unit Bonsai.Proc.Value.t) ->
+include (val Bonsai_web.To_incr_dom.convert (fun (_ : unit Bonsai.Value.t) ->
   Bonsai_web_counters_example.application))

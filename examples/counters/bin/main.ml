@@ -1,4 +1,4 @@
-open Bonsai_web.Future
+open Bonsai_web
 open Bonsai_web_counters_example
 
 let (_ : _ Start.Handle.t) =

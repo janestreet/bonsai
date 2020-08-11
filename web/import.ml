@@ -9,7 +9,6 @@ module Event = struct
 end
 
 module Bonsai = struct
-  module Event = Event
   module Incr = Incr
   include Bonsai
 end

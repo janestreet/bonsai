@@ -2,7 +2,6 @@ open! Core_kernel
 open! Import
 open Proc
 module Bonsai_lib = Bonsai
-module Bonsai = Bonsai.Proc
 open Bonsai.Let_syntax
 
 let%expect_test "cutoff" =

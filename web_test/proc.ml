@@ -2,7 +2,7 @@ open! Core_kernel
 open! Import
 
 module Result_spec = struct
-  include Bonsai_test.Proc.Result_spec
+  include Bonsai_test.Result_spec
 
   let vdom (type result) get_vdom =
     (module struct
@@ -23,7 +23,7 @@ module Result_spec = struct
 end
 
 module Handle = struct
-  include Bonsai_test.Proc.Handle
+  include Bonsai_test.Handle
   open Virtual_dom_test_helpers
 
   let get_element handle ~get_vdom ~selector =

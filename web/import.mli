@@ -9,7 +9,6 @@ module Event : sig
 end
 
 module Bonsai : sig
-  module Event = Event
   module Incr = Incr
   include module type of Bonsai
 end

@@ -73,4 +73,6 @@ let convert_with_extra component =
     ~model_of_sexp:model.of_sexp
 ;;
 
-let convert component = convert_with_extra (Bonsai.map component ~f:(fun r -> r, ()))
+let convert component =
+  convert_with_extra (Bonsai.Arrow.map component ~f:(fun r -> r, ()))
+;;

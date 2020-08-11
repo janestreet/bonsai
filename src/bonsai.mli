@@ -1,12 +1,5 @@
 open! Core_kernel
 open! Import
-include module type of Legacy_api
-
-module Proc :
-  module type of Proc
-  (*_ The following line has the effect of hiding the Private module from the public
-    API.  The values therein are exposed in {!Private} below. *)
-  with module Private := Proc.Private
 
 module Private : sig
   module Snapshot = Snapshot
@@ -26,3 +19,13 @@ module Private : sig
   val reveal_computation : 'a Proc.Computation.t -> 'a Computation.packed
   val conceal_computation : 'a Computation.packed -> 'a Proc.Computation.t
 end
+
+module type Model = Module_types.Model
+module type Action = Module_types.Action
+
+module Event = Event
+
+(*_ The following line has the effect of hiding the Private module from the public
+  API.  The values therein are exposed in {!Private} above. *)
+include module type of Proc with module Private := Proc.Private
+module Arrow : module type of Legacy_api

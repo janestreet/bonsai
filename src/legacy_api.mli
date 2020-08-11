@@ -108,58 +108,56 @@ module Map : sig
     -> (('key, 'data, 'cmp) Map.t * 'input, ('key, 'result, 'cmp) Map.t) t
 end
 
-module Arrow : sig
-  (** [arr] is the same as [pure]. *)
-  val arr : ('a -> 'b) -> ('a, 'b) t
+(** [arr] is the same as [pure]. *)
+val arr : ('a -> 'b) -> ('a, 'b) t
 
-  (** The same as [map] *)
-  val ( >>^ ) : ('a, 'b) t -> ('b -> 'c) -> ('a, 'c) t
+(** The same as [map] *)
+val ( >>^ ) : ('a, 'b) t -> ('b -> 'c) -> ('a, 'c) t
 
-  (** The same as [map_input] *)
-  val ( ^>> ) : ('a, 'b) t -> ('c -> 'a) -> ('c, 'b) t
+(** The same as [map_input] *)
+val ( ^>> ) : ('a, 'b) t -> ('c -> 'a) -> ('c, 'b) t
 
-  (** [first t] applies [t] to the first part of the input. *)
-  val first : ('input, 'result) t -> ('input * 'a, 'result * 'a) t
+(** [first t] applies [t] to the first part of the input. *)
+val first : ('input, 'result) t -> ('input * 'a, 'result * 'a) t
 
-  (** [second t] applies [t] to the second part of the input. *)
-  val second : ('input, 'result) t -> ('a * 'input, 'a * 'result) t
+(** [second t] applies [t] to the second part of the input. *)
+val second : ('input, 'result) t -> ('a * 'input, 'a * 'result) t
 
-  (** [split t u] applies [t] to the first part of the input and [u] to the second part.
-  *)
-  val split : ('i1, 'r1) t -> ('i2, 'r2) t -> ('i1 * 'i2, 'r1 * 'r2) t
+(** [split t u] applies [t] to the first part of the input and [u] to the second part.
+*)
+val split : ('i1, 'r1) t -> ('i2, 'r2) t -> ('i1 * 'i2, 'r1 * 'r2) t
 
-  (** [extend_first] returns the result of a Bonsai component alongside its input. *)
-  val extend_first : ('input, 'result) t -> ('input, 'result * 'input) t
+(** [extend_first] returns the result of a Bonsai component alongside its input. *)
+val extend_first : ('input, 'result) t -> ('input, 'result * 'input) t
 
-  (** [extend_second] returns the result of a Bonsai component alongside its input. *)
-  val extend_second : ('input, 'result) t -> ('input, 'input * 'result) t
+(** [extend_second] returns the result of a Bonsai component alongside its input. *)
+val extend_second : ('input, 'result) t -> ('input, 'input * 'result) t
 
-  (** [fanout t u] applies [t] and [u] to the same input and returns both results. It's
-      actually just [both]. *)
-  val fanout : ('input, 'r1) t -> ('input, 'r2) t -> ('input, 'r1 * 'r2) t
+(** [fanout t u] applies [t] and [u] to the same input and returns both results. It's
+    actually just [both]. *)
+val fanout : ('input, 'r1) t -> ('input, 'r2) t -> ('input, 'r1 * 'r2) t
 
-  (** [t *** u = split t u]. *)
-  val ( *** ) : ('i1, 'r1) t -> ('i2, 'r2) t -> ('i1 * 'i2, 'r1 * 'r2) t
+(** [t *** u = split t u]. *)
+val ( *** ) : ('i1, 'r1) t -> ('i2, 'r2) t -> ('i1 * 'i2, 'r1 * 'r2) t
 
-  (** [t &&& u = fanout t u]. *)
-  val ( &&& ) : ('input, 'r1) t -> ('input, 'r2) t -> ('input, 'r1 * 'r2) t
+(** [t &&& u = fanout t u]. *)
+val ( &&& ) : ('input, 'r1) t -> ('input, 'r2) t -> ('input, 'r1 * 'r2) t
 
-  (** Composes two components where one of the outputs of the first component is one of
-      the inputs to the second. *)
-  val partial_compose_first
-    :  ('input, 'shared * 'output1) t
-    -> ('input * 'shared, 'output2) t
-    -> ('input, 'output1 * 'output2) t
+(** Composes two components where one of the outputs of the first component is one of
+    the inputs to the second. *)
+val partial_compose_first
+  :  ('input, 'shared * 'output1) t
+  -> ('input * 'shared, 'output2) t
+  -> ('input, 'output1 * 'output2) t
 
-  (** [pipe] connects two components, but provides several functions that ease the
-      transference of data between the components, as well as collect the final result. *)
-  val pipe
-    :  ('input, 'r1) t
-    -> into:('intermediate, 'r2) t
-    -> via:('input -> 'r1 -> 'intermediate)
-    -> finalize:('input -> 'r1 -> 'r2 -> 'r3)
-    -> ('input, 'r3) t
-end
+(** [pipe] connects two components, but provides several functions that ease the
+    transference of data between the components, as well as collect the final result. *)
+val pipe
+  :  ('input, 'r1) t
+  -> into:('intermediate, 'r2) t
+  -> via:('input -> 'r1 -> 'intermediate)
+  -> finalize:('input -> 'r1 -> 'r2 -> 'r3)
+  -> ('input, 'r3) t
 
 module With_incr : sig
   (** Constructs a Bonsai component whose result is always the same as its input

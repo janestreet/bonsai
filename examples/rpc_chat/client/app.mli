@@ -1,5 +1,5 @@
 open! Core_kernel
-open! Bonsai_web.Future
+open! Bonsai_web
 open Bonsai_chat_common
 
 val component

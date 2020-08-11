@@ -1,5 +1,8 @@
 include Import
-module Driver = Driver
-module Helpers = Helpers
+include Proc
 module Event = Event
-module Proc = Proc
+
+module Arrow = struct
+  module Driver = Driver
+  module Helpers = Helpers
+end

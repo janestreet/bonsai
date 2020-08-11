@@ -1,5 +1,5 @@
 open! Core_kernel
-open! Bonsai_web.Future
+open! Bonsai_web
 
 module String_duplicator = struct
   (* Input is declared to be the string that we want to duplicate. *)

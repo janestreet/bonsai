@@ -1,6 +1,6 @@
 open! Core_kernel
 open! Async_kernel
-open! Bonsai_web.Future
+open! Bonsai_web
 open Bonsai_chat_common
 
 let component ~room_list ~refresh_rooms ~change_room =

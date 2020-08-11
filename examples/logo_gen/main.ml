@@ -1,5 +1,5 @@
 open! Core_kernel
-open Bonsai_web.Future
+open Bonsai_web
 open Virtual_dom_svg
 module Form = Bonsai_form_experimental
 

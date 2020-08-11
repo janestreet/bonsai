@@ -1,5 +1,5 @@
 open! Core_kernel
-open Bonsai_web.Future
+open Bonsai_web
 
 module Model = struct
   type t =

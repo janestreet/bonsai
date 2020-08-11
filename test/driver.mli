@@ -6,7 +6,7 @@ type ('i, 'r) t
 val create
   :  ?initial_model_sexp:Sexp.t
   -> initial_input:'i
-  -> ('i, 'r) Bonsai.t
+  -> ('i, 'r) Bonsai.Arrow.t
   -> ('i, 'r) t
 
 val set_input : ('i, _) t -> 'i -> unit

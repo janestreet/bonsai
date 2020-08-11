@@ -33,10 +33,10 @@ module type To_incr_dom = sig
   module type S = S
 
   val convert
-    :  ('input, Vdom.Node.t) Bonsai.t
+    :  ('input, Vdom.Node.t) Bonsai.Arrow.t
     -> (module S with type Input.t = 'input and type Extra.t = unit)
 
   val convert_with_extra
-    :  ('input, Vdom.Node.t * 'extra) Bonsai.t
+    :  ('input, Vdom.Node.t * 'extra) Bonsai.Arrow.t
     -> (module S with type Input.t = 'input and type Extra.t = 'extra)
 end

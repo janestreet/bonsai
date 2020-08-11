@@ -37,7 +37,7 @@ let input =
 ;;
 
 let bonsai =
-  let%map.Bonsai widget_result =
+  let%map.Bonsai.Arrow widget_result =
     Widget.bonsai ~all_keys:(Attribute.Set.of_list Attribute.all) ()
   in
   let open Virtual_dom.Vdom in
@@ -52,8 +52,8 @@ let bonsai =
     ]
 ;;
 
-let (_handle : _ Bonsai_web.Start.Handle.t) =
-  Bonsai_web.Start.start_standalone
+let (_handle : _ Bonsai_web.Arrow.Start.Handle.t) =
+  Bonsai_web.Arrow.Start.start_standalone
     ~initial_input:input
     ~bind_to_element_with_id:"app"
     bonsai

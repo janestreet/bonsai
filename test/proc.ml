@@ -63,8 +63,8 @@ module Handle = struct
         computation
     =
     let (module R) = result_spec in
-    let component (_ : unit Bonsai.Proc.Value.t) =
-      let open Bonsai.Proc.Let_syntax in
+    let component (_ : unit Bonsai.Value.t) =
+      let open Bonsai.Let_syntax in
       let%sub result = computation in
       return
         (let%map result = result in
