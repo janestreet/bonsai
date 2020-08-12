@@ -148,6 +148,58 @@ let%expect_test "match_either" =
   [%expect {| 2 |}]
 ;;
 
+let%expect_test "action sent to non-existent assoc element" =
+  let var = Bonsai.Var.create (Int.Map.of_alist_exn [ 1, (); 2, () ]) in
+  let component =
+    Bonsai.assoc
+      (module Int)
+      (Bonsai.Var.value var)
+      ~f:(fun _key _data -> Bonsai.state [%here] (module Int) ~default_model:0)
+  in
+  let handle =
+    Handle.create
+      (module struct
+        type t = (int * (int -> Event.t)) Int.Map.t
+        type incoming = Nothing.t
+
+        let incoming _ = Nothing.unreachable_code
+
+        let view (map : t) =
+          map
+          |> Map.to_alist
+          |> List.map ~f:(fun (i, (s, _)) -> i, s)
+          |> [%sexp_of: (int * int) list]
+          |> Sexp.to_string_hum
+        ;;
+      end)
+      component
+  in
+  Handle.show handle;
+  [%expect {|
+        ((1 0) (2 0)) |}];
+  let result = Handle.result handle in
+  let set_two what =
+    result
+    |> Fn.flip Map.find_exn 2
+    |> Tuple2.get2
+    |> Fn.flip ( @@ ) what
+    |> Ui_event.Expert.handle
+  in
+  set_two 3;
+  Handle.show handle;
+  [%expect {| ((1 0) (2 3)) |}];
+  Bonsai.Var.set var (Int.Map.of_alist_exn [ 1, () ]);
+  Handle.show handle;
+  [%expect {| ((1 0)) |}];
+  set_two 4;
+  Handle.show handle;
+  [%expect
+    {|
+    ("an action inside of Bonsai.assoc as been dropped because the computation is no longer active"
+     (key <opaque>) (action 4))
+    ((1 0)) |}]
+;;
+
 let%test_module "testing Bonsai internals" =
   (module struct
     (* This module tests internal details of Bonsai, and the results are sensitive to
@@ -241,7 +293,6 @@ let%expect_test "multiple maps respect cutoff" =
 ;;
 
 let%expect_test "let syntax is collapsed upon eval" =
-  let open Bonsai_lib.Private in
   let value =
     let%map () = Bonsai.Value.return ()
     and () = Bonsai.Value.return ()
@@ -252,18 +303,21 @@ let%expect_test "let syntax is collapsed upon eval" =
     and () = Bonsai.Value.return () in
     ()
   in
-  let packed = value |> reveal_value |> Value.eval Environment.empty |> Incr.pack in
+  let packed =
+    let open Bonsai.Private in
+    value |> reveal_value |> Value.eval Environment.empty |> Incr.pack
+  in
   let filename = Stdlib.Filename.temp_file "incr" "out" in
   Incremental.Packed.save_dot filename [ packed ];
-  (match
-     filename |> Core_kernel.In_channel.read_all |> String.is_substring ~substring:"Map7"
-   with
-   | true -> print_endline "Map7 found!"
-   | false -> print_endline "No Map7 :(");
-  [%expect {| Map7 found! |}]
+  let dot_contents = In_channel.read_all filename in
+  require
+    [%here]
+    ~if_false_then_print_s:(lazy [%message "No Map7 node found"])
+    (String.is_substring dot_contents ~substring:"Map7");
+  [%expect {| |}]
 ;;
 
-let%test "constant prop doesn't happen" =
+let%test_unit "constant prop doesn't happen" =
   (* Just make sure that this expression doesn't crash *)
   let (_ : int Bonsai.Computation.t) =
     Bonsai.match_either
@@ -271,5 +325,5 @@ let%test "constant prop doesn't happen" =
       ~first:Bonsai.read
       ~second:Bonsai.read
   in
-  true
+  ()
 ;;

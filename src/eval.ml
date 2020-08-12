@@ -65,6 +65,7 @@ let rec eval
       ; key_id
       ; data_id
       ; model_info
+      ; action_info
       ; result_by_k = T
       ; input_by_k = T
       ; model_by_k = T
@@ -99,7 +100,16 @@ let rec eval
       fun ~schedule_event action ->
         let id, action = action in
         match Map.find snapshot_map id with
-        | None -> model
+        | None ->
+          let key = Type_equal.Id.to_sexp key_id id in
+          let action = Type_equal.Id.to_sexp action_info action in
+          eprint_s
+            [%message
+              "an action inside of Bonsai.assoc as been dropped because the computation \
+               is no longer active"
+                (key : Sexp.t)
+                (action : Sexp.t)];
+          model
         (* drop it on the floor *)
         | Some snapshot ->
           let data = Snapshot.apply_action snapshot ~schedule_event action in
@@ -108,7 +118,7 @@ let rec eval
     let%mapn apply_action = apply_action
     and result = results_map in
     Snapshot.create ~result ~apply_action
-  | Enum { which; out_of; key_equal; key_and_cmp = T; sexp_of_key = _ } ->
+  | Enum { which; out_of; key_equal; key_and_cmp = T; sexp_of_key } ->
     let key = Value.eval environment which in
     Incremental.set_cutoff key (Incremental.Cutoff.of_equal key_equal);
     let%bind key = key in
@@ -135,7 +145,16 @@ let rec eval
         let new_model = Snapshot.apply_action snapshot ~schedule_event action in
         let new_model = Enum_types.Case_model.create model_info new_model in
         Enum_types.Multi_model.set model ~key ~data:new_model
-      | _ -> model
+      | _ ->
+        let key = sexp_of_key key in
+        let action = Type_equal.Id.to_sexp type_id action in
+        eprint_s
+          [%message
+            "an action inside of Bonsai.enum as been dropped because the computation is \
+             no longer active"
+              (key : Sexp.t)
+              (action : Sexp.t)];
+        model
     in
     Snapshot.create ~apply_action ~result:(Snapshot.result snapshot)
   | Wrap { model_id; inject_id; inner; apply_action } ->

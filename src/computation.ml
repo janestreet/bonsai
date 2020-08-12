@@ -47,6 +47,7 @@ type ('model, 'action, 'result) t =
       ; data_id : 'v Type_equal.Id.t
       ; by : ('model, 'action, 'result) t
       ; model_info : 'model Meta.Model.t
+      ; action_info : 'action Meta.Action.t
       ; input_by_k : ('input_by_k, ('k, 'v, 'cmp) Map.t) Type_equal.t
       ; result_by_k : ('result_by_k, ('k, 'result, 'cmp) Map.t) Type_equal.t
       ; model_by_k : ('model_by_k, ('k, 'model, 'cmp) Map.t) Type_equal.t

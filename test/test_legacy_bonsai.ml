@@ -72,7 +72,7 @@ let%expect_test "enum" =
     [%expect {| false 5 |}])
 ;;
 
-let%expect_test "enum with action handling `Ignore" =
+let%expect_test "enum with action handling `Warn" =
   let open Bonsai.Arrow.Infix in
   let module Action = struct
     type t =
@@ -120,7 +120,11 @@ let%expect_test "enum with action handling `Ignore" =
          when it gets focus again. *)
       ; Inner Increment
       ];
-    [%expect "pure 3"];
+    [%expect
+      {|
+      ("an action inside of Bonsai.enum as been dropped because the computation is no longer active"
+       (key true) (action (First Increment)))
+      pure 3|}];
     H.do_actions [ Outer Increment ];
     [%expect "counter 2"])
 ;;

@@ -176,15 +176,13 @@ let rec eval : type a. Environment.t -> a t -> a Incr.t =
 
 let return a = Constant a
 
-module Applicative_instance = Applicative.Make_using_map2 (struct
+include Applicative.Make_using_map2 (struct
     type nonrec 'a t = 'a t
 
     let return = return
     let map2 = map2
     let map = `Custom map
   end)
-
-include Applicative_instance
 
 let both a b = Both (a, b)
 let map3 t1 t2 t3 ~f = Map3 { t1; t2; t3; f }
@@ -193,13 +191,6 @@ let map5 t1 t2 t3 t4 t5 ~f = Map5 { t1; t2; t3; t4; t5; f }
 let map6 t1 t2 t3 t4 t5 t6 ~f = Map6 { t1; t2; t3; t4; t5; t6; f }
 let map7 t1 t2 t3 t4 t5 t6 t7 ~f = Map7 { t1; t2; t3; t4; t5; t6; t7; f }
 let of_incr x = Incr x
-
-module Applicative_infix = struct
-  let ( <*> ) = apply
-  let ( <* ) a b = map2 a b ~f:(fun a () -> a)
-  let ( *> ) a b = map2 a b ~f:(fun () a -> a)
-  let ( >>| ) a f = map a ~f
-end
 
 module Open_on_rhs_intf = struct
   module type S = sig end

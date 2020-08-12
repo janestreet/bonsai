@@ -64,6 +64,7 @@ let assoc
           ; data_id
           ; by
           ; model_info = model
+          ; action_info = action
           ; input_by_k = T
           ; result_by_k = T
           ; model_by_k = T
@@ -238,6 +239,8 @@ module Let_syntax = struct
     let return = Value.return
     let map = Value.map
     let both = Value.both
+
+    include (Value : Mapn with type 'a t := 'a Value.t)
   end
 end
 

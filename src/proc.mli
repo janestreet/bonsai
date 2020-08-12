@@ -371,6 +371,8 @@ module Let_syntax : sig
     val map : 'a Value.t -> f:('a -> 'b) -> 'b Value.t
     val return : 'a -> 'a Value.t
     val both : 'a Value.t -> 'b Value.t -> ('a * 'b) Value.t
+
+    include Mapn with type 'a t := 'a Value.t
   end
 end
 
