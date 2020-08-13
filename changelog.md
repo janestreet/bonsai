@@ -1,12 +1,19 @@
 # Bonsai Changelog
 <!-- Change-log notes go in this file, with newer dates at the _top_  --> 
 
+## 2020-07-27
+Added [Bonsai.lazy], a function permitting recursive components.
+
 ## 2020-07-20
 Only the [Value.t] produced from `Let_sytnax.both` are collapsed.
 
 ## 2020-07-14
 Added [Value.cutoff], a function for specifying cutoff to a greater degree than 
 otherwise available.
+
+## 2020-07-03
+- Fixed memory leak in Bonsai.assoc with models not being removed 
+  when their values are set back to the default.
 
 ## 2020-06-25
 Bonsai Template generator added.

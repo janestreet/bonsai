@@ -41,6 +41,12 @@ let of_module1 (type i m a r) (component : (i, m, a, r) component_s) ~default_mo
 let of_module0 c ~default_model = of_module1 c ~default_model (Value.return ())
 let of_module2 c ~default_model i1 i2 = of_module1 c ~default_model (Value.both i1 i2)
 
+let with_model_resetter (Computation.T { t; model; action }) =
+  let action = Meta.(Action.both unit_type_id action) in
+  Computation.T
+    { t = With_model_resetter { t; default_model = model.default }; model; action }
+;;
+
 let assoc
       (type k v cmp)
       (comparator : (k, cmp) comparator)
@@ -75,7 +81,6 @@ let assoc
 ;;
 
 let enum (type k) (module E : Enum with type t = k) ~match_ ~with_ =
-  let open Enum_types in
   let module E = struct
     include E
     include Comparator.Make (E)
@@ -84,7 +89,7 @@ let enum (type k) (module E : Enum with type t = k) ~match_ ~with_ =
   let create_case key =
     let component = with_ key in
     let (Computation.T { model; t = _; action = _ }) = component in
-    let default_model = Case_model.create model model.default in
+    let default_model = Hidden.Model.create model model.default in
     component, default_model
   in
   let components, models =
@@ -106,8 +111,8 @@ let enum (type k) (module E : Enum with type t = k) ~match_ ~with_ =
           ; key_equal = [%equal: E.t]
           ; key_and_cmp = T
           }
-    ; model = Multi_model.model_info (module E) models
-    ; action = Case_action.type_id [%sexp_of: E.t]
+    ; model = Hidden.Multi_model.model_info (module E) models
+    ; action = Hidden.Action.type_id [%sexp_of: E.t]
     }
 ;;
 
@@ -183,6 +188,22 @@ let state_machine0 here model action ~default_model ~apply_action =
     apply_action ~inject ~schedule_event model action
   in
   state_machine1 here model action ~default_model ~apply_action (Value.return ())
+;;
+
+let lazy_ t =
+  let open struct
+    type model = Hidden.Model.t option [@@deriving equal, sexp_of]
+  end in
+  let action = Hidden.Action.type_id [%sexp_of: unit] in
+  let model =
+    { Meta.Model.default = None
+    ; equal = equal_model
+    ; type_id = Type_equal.Id.create ~name:"lazy-model" [%sexp_of: model]
+    ; sexp_of = [%sexp_of: model]
+    ; of_sexp = (fun _ -> None)
+    }
+  in
+  Computation.T { t = Lazy t; action; model }
 ;;
 
 let wrap (type model action) model_module ~default_model ~apply_action ~f =

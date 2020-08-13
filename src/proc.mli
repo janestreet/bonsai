@@ -261,6 +261,19 @@ val state_machine1
   -> 'input Value.t
   -> ('model * ('action -> Event.t)) Computation.t
 
+(** Because all Bonsai computation-returning-functions are eagerly evaluated, attempting
+    to use "let rec" to construct a recursive component will recurse infinitely.  One way
+    to avoid this is to use a lazy computation and [Bonsai.lazy_] to defer evaluating the
+    [Computation.t].
+
+    {[
+      let rec some_component arg1 arg2 =
+        ...
+        let _ = Bonsai.lazy_ (lazy (some_component ...)) in
+        ...
+    ]} *)
+val lazy_ : 'a Computation.t Lazy.t -> 'a Computation.t
+
 (** [assoc] is used to apply a Bonsai computation to each element of a map.  This function
     signature is very similar to [Map.mapi] or [Incr_map.mapi'], and for good reason!
 
@@ -273,6 +286,7 @@ val assoc
   -> ('key, 'data, 'cmp) Map.t Value.t
   -> f:('key Value.t -> 'data Value.t -> 'result Computation.t)
   -> ('key, 'result, 'cmp) Map.t Computation.t
+
 
 (** [enum] is used for matching on a value and providing different behaviors on different
     values.  The type of the value must be enumerable (there must be a finite number of
@@ -341,6 +355,11 @@ val match_option
   -> some:('a Value.t -> 'b Computation.t)
   -> none:'b Computation.t
   -> 'b Computation.t
+
+(** [with_model_resetter] extends a computation with the ability to reset the
+    state machine for that computation back to its default.  This can be useful 
+    for e.g. clearing a form of all input values.*)
+val with_model_resetter : 'a Computation.t -> ('a * Event.t) Computation.t
 
 (** This [Let_syntax] module is basically just {!Value.Let_syntax} with the addition of
     the [sub] function, which operates on Computations.

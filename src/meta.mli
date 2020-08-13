@@ -6,6 +6,8 @@
 open! Core_kernel
 open! Import
 
+val unit_type_id : unit Type_equal.Id.t
+
 module Model : sig
   type 'a t =
     { default : 'a

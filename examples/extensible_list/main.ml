@@ -35,14 +35,21 @@ let add_remove component ~wrap_remove =
   let open Bonsai.Let_syntax in
   let%sub state = state_component in
   let%pattern_bind { Model.data; count = _ }, inject_action = state in
-  let%sub results = Bonsai.assoc (module Int) data ~f:(fun _key _data -> component) in
+  let%sub results =
+    Bonsai.assoc
+      (module Int)
+      data
+      ~f:(fun _key _data -> Bonsai.with_model_resetter component)
+  in
   return
   @@ let%map results = results
   and inject_action = inject_action in
   let data =
     results
-    |> Map.mapi ~f:(fun ~key ~data ->
-      let inject_remove = inject_action (Action.Remove key) in
+    |> Map.mapi ~f:(fun ~key ~data:(data, revert_event) ->
+      let inject_remove =
+        Vdom.Event.Many [ revert_event; inject_action (Action.Remove key) ]
+      in
       wrap_remove data inject_remove)
     |> Map.data
   in

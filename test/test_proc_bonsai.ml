@@ -148,6 +148,51 @@ let%expect_test "match_either" =
   [%expect {| 2 |}]
 ;;
 
+let%expect_test "map > lazy" =
+  let open Bonsai.Let_syntax in
+  let module M = struct
+    type t =
+      { label : string
+      ; children : t Int.Map.t
+      }
+  end
+  in
+  let rec f t =
+    let%pattern_bind { M.label; children }, depth = t in
+    let%sub children =
+      Bonsai.assoc
+        (module Int)
+        children
+        ~f:(fun _ v ->
+          let recursive =
+            let%map v = v
+            and depth = depth in
+            v, depth + 1
+          in
+          Bonsai.lazy_ (lazy (f recursive)))
+    in
+    return
+    @@ let%map label = label
+    and children = children
+    and depth = depth in
+    [%message label (depth : int) (children : Sexp.t Int.Map.t)]
+  in
+  let var = Bonsai.Var.create ({ M.label = "hi"; children = Int.Map.empty }, 0) in
+  let value = Bonsai.Var.value var in
+  let handle = Handle.create (Result_spec.sexp (module Sexp)) (f value) in
+  [%expect {| |}];
+  Handle.show handle;
+  [%expect {| (hi (depth 0) (children ())) |}];
+  Bonsai.Var.set
+    var
+    ( { M.label = "hi"
+      ; children = Int.Map.singleton 0 { M.label = "hello"; children = Int.Map.empty }
+      }
+    , 0 );
+  Handle.show handle;
+  [%expect {| (hi (depth 0) (children ((0 (hello (depth 1) (children ())))))) |}]
+;;
+
 let%expect_test "action sent to non-existent assoc element" =
   let var = Bonsai.Var.create (Int.Map.of_alist_exn [ 1, (); 2, () ]) in
   let component =
@@ -266,7 +311,9 @@ let%test_module "testing Bonsai internals" =
       [%expect {| (((1 (test ()))) ()) |}];
       Handle.do_actions handle [ 1, Set "hello" ];
       Handle.show_model handle;
-      [%expect {| (((1 (hello ()))) ()) |}]
+      [%expect {|
+        (()
+         ()) |}]
     ;;
   end)
 ;;

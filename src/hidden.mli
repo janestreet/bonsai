@@ -1,7 +1,7 @@
 open! Core_kernel
 open! Import
 
-module Case_action : sig
+module Action : sig
   type 'key t =
     | T :
         { action : 'a
@@ -14,7 +14,7 @@ module Case_action : sig
   val type_id : ('key -> Sexp.t) -> 'key t Type_equal.Id.t
 end
 
-module Case_model : sig
+module Model : sig
   type t =
     | T :
         { model : 'm
@@ -30,19 +30,19 @@ end
 module Multi_model : sig
   type ('k, 'cmp) t
 
-  val sexp_of_t : ('k -> Sexp.t) -> ('k, Case_model.t, 'a) Map.t -> Sexp.t
+  val sexp_of_t : ('k -> Sexp.t) -> ('k, Model.t, 'a) Map.t -> Sexp.t
 
   val t_of_sexp
     :  ('k, 'cmp) comparator
-    -> ('k, Case_model.t, 'cmp) Map.t
+    -> ('k, Model.t, 'cmp) Map.t
     -> Sexp.t
-    -> ('k, Case_model.t, 'cmp) Map.t
+    -> ('k, Model.t, 'cmp) Map.t
 
-  val find_exn : ('k, 'cmp) t -> 'k -> Case_model.t
-  val set : ('k, 'cmp) t -> key:'k -> data:Case_model.t -> ('k, 'cmp) t
+  val find_exn : ('k, 'cmp) t -> 'k -> Model.t
+  val set : ('k, 'cmp) t -> key:'k -> data:Model.t -> ('k, 'cmp) t
 
   val model_info
     :  ('k, 'cmp) comparator
-    -> ('k, Case_model.t, 'cmp) Map.t
+    -> ('k, Model.t, 'cmp) Map.t
     -> ('k, 'cmp) t Meta.Model.t
 end

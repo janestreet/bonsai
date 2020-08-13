@@ -1,7 +1,7 @@
 open! Core_kernel
 open! Import
 
-module Case_action = struct
+module Action = struct
   type 'key t =
     | T :
         { action : 'a
@@ -20,7 +20,7 @@ module Case_action = struct
   ;;
 end
 
-module Case_model = struct
+module Model = struct
   type t =
     | T :
         { model : 'm
@@ -48,25 +48,25 @@ module Case_model = struct
 end
 
 module Multi_model = struct
-  type ('k, 'cmp) t = ('k, Case_model.t, 'cmp) Map.t
+  type ('k, 'cmp) t = ('k, Model.t, 'cmp) Map.t
 
   let sexp_of_t (type k) (sexp_of_k : k -> Sexp.t) =
     let module K = struct
       type t = k [@@deriving sexp_of]
     end
     in
-    [%sexp_of: Case_model.t Map.M(K).t]
+    [%sexp_of: Model.t Map.M(K).t]
   ;;
 
   let t_of_sexp
         (type k cmp)
         ((module K) : (k, cmp) comparator)
-        (default_models : Case_model.t Map.M(K).t)
+        (default_models : Model.t Map.M(K).t)
         sexp
     =
     let k_to_sexp_map = [%of_sexp: Sexp.t Map.M(K).t] sexp in
     Map.merge k_to_sexp_map default_models ~f:(fun ~key:_ -> function
-      | `Both (sexp, Case_model.T { t_of_sexp; _ }) -> Some (t_of_sexp sexp)
+      | `Both (sexp, Model.T { t_of_sexp; _ }) -> Some (t_of_sexp sexp)
       | `Left _sexp -> None
       | `Right default_model -> Some default_model)
   ;;
@@ -79,7 +79,7 @@ module Multi_model = struct
     let of_sexp = t_of_sexp (module K) default in
     ({ default
      ; type_id = Type_equal.Id.create ~name:"poly-model" sexp_of
-     ; equal = [%equal: Case_model.t Map.M(K).t]
+     ; equal = [%equal: Model.t Map.M(K).t]
      ; sexp_of
      ; of_sexp
      }

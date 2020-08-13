@@ -58,9 +58,14 @@ type ('model, 'action, 'result) t =
       ; out_of : ('key, 'a packed, 'cmp) Map.t
       ; sexp_of_key : 'key -> Sexp.t
       ; key_equal : 'key -> 'key -> bool
-      ; key_and_cmp : ('key_and_cmp, ('key, 'cmp) Enum_types.Multi_model.t) Type_equal.t
+      ; key_and_cmp : ('key_and_cmp, ('key, 'cmp) Hidden.Multi_model.t) Type_equal.t
       }
-      -> ('key_and_cmp, 'key Enum_types.Case_action.t, 'a) t
+      -> ('key_and_cmp, 'key Hidden.Action.t, 'a) t
+  (* Lazy wraps the model in an option because otherwise you could make
+     infinitely sized models (by eagerly expanding a recursive model) which
+     would stack-overflow during eval.  [None] really means "unchanged from the
+     default", and is used to halt the the eager expansion. *)
+  | Lazy : 'a packed Lazy.t -> (Hidden.Model.t option, unit Hidden.Action.t, 'a) t
   | Wrap :
       { model_id : 'outer_model Type_equal.Id.t
       ; inject_id : ('outer_action -> Event.t) Type_equal.Id.t
@@ -68,6 +73,11 @@ type ('model, 'action, 'result) t =
       ; apply_action : ('result, 'outer_action, 'outer_model) apply_action
       }
       -> ('outer_model * 'inner_model, ('outer_action, 'inner_action) Either.t, 'result) t
+  | With_model_resetter :
+      { t : ('m, 'a, 'r) t
+      ; default_model : 'm
+      }
+      -> ('m, (unit, 'a) Either.t, 'r * Event.t) t
 
 and 'a packed =
   | T :
