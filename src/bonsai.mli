@@ -2,9 +2,10 @@ open! Core_kernel
 open! Import
 
 module Private : sig
-  module Snapshot = Snapshot
-  module Environment = Environment
   module Computation = Computation
+  module Environment = Environment
+  module Meta = Meta
+  module Snapshot = Snapshot
   module Value = Value
 
   val eval

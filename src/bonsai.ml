@@ -9,9 +9,10 @@ module type Action = Module_types.Action
 module Event = Event
 
 module Private = struct
-  module Snapshot = Snapshot
-  module Environment = Environment
   module Computation = Computation
+  module Environment = Environment
+  module Meta = Meta
+  module Snapshot = Snapshot
   module Value = Value
 
   let eval = Eval.eval
