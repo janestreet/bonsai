@@ -21,7 +21,7 @@ Calling the `Make` functor and re-exporting the result is the job of
 
 Because Bonsai and `Incr_dom` are implemented similarly, Bonsai components can
 be included in `Incr_dom` apps via the `Bonsai_web.To_incr_dom` module.  A more
-detailed explaination can be found [here](./inside_incr_dom.md), with an example
+detailed explanation can be found [here](./inside_incr_dom.md), with an example
 of the embedding at `lib/bonsai_web/examples/inside_incr_dom`.
 
 # A method for starting Bonsai apps
@@ -47,7 +47,7 @@ application handle (more on that later) that is returned.
 
 ## <tt> Bonsai\_web.Start.start </tt>
 
-This is the main entrypoint for most Bonsai apps.  It is built for apps that
+This is the main entry point for most Bonsai apps.  It is built for apps that
 communicate with the outside world (like networked RPCs), and as a result of
 this requirement, the Bonsai component that it starts needs a way to both send
 actions to the outside, as well as a way to receive actions from the outside.

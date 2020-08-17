@@ -5,7 +5,7 @@
 Added [Bonsai.lazy], a function permitting recursive components.
 
 ## 2020-07-20
-Only the [Value.t] produced from `Let_sytnax.both` are collapsed.
+Only the [Value.t] produced from `Let_syntax.both` are collapsed.
 
 ## 2020-07-14
 Added [Value.cutoff], a function for specifying cutoff to a greater degree than 

@@ -41,7 +41,7 @@ Similarities between `Incr_dom` and Bonsai:
 
 <!-- This table-of-contents is very dependent on the exact whitespace present.
 Pandoc really wants to stick paragraph <p> nodes any time that there's even a trace of
-whitespace inbetween these html nodes... -->
+whitespace in between these html nodes... -->
 <div class="toc_node"> <a href="./README.md"> [This Page] </a>
 <div class="toc_node"> <a href="./docs/concepts.md"> Bonsai Concepts </a></div>
 <div class="toc_node"> <a href="./docs/history.md"> A History of Bonsai </a></div>

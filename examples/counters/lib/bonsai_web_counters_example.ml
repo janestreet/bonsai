@@ -94,7 +94,7 @@ let application =
 
 (* [CODE_EXCERPT_END 3] *)
 
-let _appliaction_sugar_free =
+let _application_sugar_free =
   let open Bonsai.Let_syntax in
   Let_syntax.sub
     (Bonsai.of_module0 (module Add_counter_component) ~default_model:Model.default)

@@ -48,5 +48,5 @@ let%expect_test "handle error" =
     ((u "this is userdata") (r 2)) |}]
 ;;
 
-(* Asyncrhonous callback cant not be tested because you can't write Js_of_ocaml
+(* Asynchronous callback cant not be tested because you can't write Js_of_ocaml
    async tests*)

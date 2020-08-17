@@ -5,7 +5,7 @@ module String_duplicator = struct
   (* Input is declared to be the string that we want to duplicate. *)
   module Input = String
 
-  (* The result is the VDom view. *)
+  (* The result is the Vdom view. *)
   module Result = Vdom.Node
 
   (* The state machine is just a number representing the number of times we want to dupe

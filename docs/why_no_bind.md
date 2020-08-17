@@ -43,5 +43,5 @@ of.
 In practice, preventing Bonsai.t from implementing the Monad interface has
 worked out pretty well.  Every time that someone has wanted a feature that they
 could get via Monads, the Bonsai-dev team has found an alternative API that
-solved their need.  For example `Bonsai.if_` is a great substitue for the code
+solved their need.  For example `Bonsai.if_` is a great substitute for the code
 provided at the top of this post.

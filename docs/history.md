@@ -10,7 +10,7 @@ Tools & Compilers teach-in.  The 2nd half of the teach-in was focused on
 `Incr_dom`, and it gave us an opportunity to look over the shoulders
 (literally) of people writing applications using that framework.  One of the
 main frustrations from the assignments centered on the composability and
-extendability of `Incr_dom` programs, and the lack of a conceptual "component."
+extensibility of `Incr_dom` programs, and the lack of a conceptual "component."
 
 Most of the bugs that were encountered by students in the class were either due
 to the application growing too big and becoming large and messy, or due to

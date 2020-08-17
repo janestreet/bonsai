@@ -26,7 +26,7 @@ val of_event : Vdom.Event.t -> unit t
 
 (** [of_deferred_fun] is a way to convert from a deferred-returning function
     to an effect-returning function.  This function is commonly used to wrap RPC
-    calls.  Memory is allocated permenantly every time that [of_deferred_fun] is
+    calls.  Memory is allocated permanently every time that [of_deferred_fun] is
     called, so be sure to re-use the function inside the Staged.t! *)
 val of_deferred_fun : ('query -> 'result Deferred.t) -> ('query -> 'result t) Staged.t
 
@@ -57,6 +57,6 @@ val inject_with_userdata
   -> on_response:('a -> 'u -> Vdom.Event.t)
   -> Vdom.Event.t
 
-(** Transforms a result-returing [Effect.t] into an [Effect.t] that doesn't have
+(** Transforms a result-returning [Effect.t] into an [Effect.t] that doesn't have
     it's error case, by providing a callback that handles the error condition. *)
 val handle_error : ('ok, 'error) Result.t t -> f:('error -> Vdom.Event.t) -> 'ok t
