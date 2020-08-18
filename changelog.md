@@ -1,6 +1,9 @@
 # Bonsai Changelog
 <!-- Change-log notes go in this file, with newer dates at the _top_  --> 
 
+## 2020-08-13
+Added [Bonsai.state_opt], like state, but storing an option of a given model.
+
 ## 2020-07-27
 Added [Bonsai.lazy], a function permitting recursive components.
 

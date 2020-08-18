@@ -244,6 +244,14 @@ val state
   -> default_model:'model
   -> ('model * ('model -> Event.t)) Computation.t
 
+(** Similar to [state], but stores an option of the model instead.
+    [default_model] is optional and defaults to [None].  *)
+val state_opt
+  :  Source_code_position.t
+  -> ?default_model:'model
+  -> (module Model with type t = 'model)
+  -> ('model option * ('model option -> Event.t)) Computation.t
+
 (** The same as {!state_machine0}, but [apply_action] also takes an input from a
     [Value.t]. *)
 val state_machine1
@@ -357,7 +365,7 @@ val match_option
   -> 'b Computation.t
 
 (** [with_model_resetter] extends a computation with the ability to reset the
-    state machine for that computation back to its default.  This can be useful 
+    state machine for that computation back to its default.  This can be useful
     for e.g. clearing a form of all input values.*)
 val with_model_resetter : 'a Computation.t -> ('a * Event.t) Computation.t
 

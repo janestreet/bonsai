@@ -243,6 +243,15 @@ let state (type m) here (module M : Model with type t = m) ~default_model =
     ~apply_action:(fun ~inject:_ ~schedule_event:_ _old_model new_model -> new_model)
 ;;
 
+let state_opt (type m) here ?default_model (module M : Model with type t = m) =
+  state
+    here
+    ~default_model
+    (module struct
+      type t = M.t option [@@deriving equal, sexp]
+    end)
+;;
+
 module Computation = struct
   type 'a t = 'a Computation.packed
 end
