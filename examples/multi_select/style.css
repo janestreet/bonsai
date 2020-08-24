@@ -1,0 +1,15 @@
+.multi-factor-subwidget {
+    padding: .5em; margin: 1em;
+}
+
+.multi-factor-focused-subwidget {
+    border: 2px solid red;
+ }
+
+.multi-factor-unfocused-subwidget {
+    border: 2px solid #eee;
+}
+
+.multi-select-item-focused {
+    background: #ddd;
+}
