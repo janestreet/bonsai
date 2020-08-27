@@ -2,12 +2,6 @@ open! Core_kernel
 open! Async_kernel
 open! Import
 
-module Dice_spec_string_input = String_input.Make (struct
-    include Rpgdice.Roll_spec
-
-    let name = Source_code_position.to_string [%here]
-  end)
-
 module Input_method = struct
   type t =
     | Text
@@ -26,7 +20,7 @@ let input_kind ~input_method =
     (module Input_method)
     ~match_:input_method
     ~with_:(function
-      | Text -> Dice_spec_string_input.component ~default_model:""
+      | Text -> String_input.component (module Rpgdice.Roll_spec) ~default_model:""
       | Clicker ->
         let%sub result_and_vdom = Dice_spec_clicker_input.component in
         return (result_and_vdom >>| Tuple2.map_fst ~f:Result.return))

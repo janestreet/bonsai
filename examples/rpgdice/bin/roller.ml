@@ -1,52 +1,41 @@
 open! Core_kernel
 open! Async_kernel
 open! Import
+open Bonsai.Let_syntax
 
-module T = struct
-  module Input = struct
-    type t = Rpgdice.Roll_spec.t Or_error.t
-  end
-
-  module Model = struct
-    type t = (Rpgdice.Roll_spec.t * Rpgdice.Roll_result.t) option [@@deriving equal, sexp]
-
-    let init = None
-  end
-
-  module Action = struct
-    type t = Reroll [@@deriving sexp_of]
-  end
-
-  module Result = Vdom.Node
-
-  let apply_action ~inject:_ ~schedule_event:_ input _model (action : Action.t) =
-    match action with
-    | Reroll ->
-      input
-      |> Or_error.ok
-      |> Option.map ~f:(fun spec -> spec, Rpgdice.Roll_spec.roll spec)
-  ;;
-
-  let compute ~inject input (model : Model.t) =
-    let roll_result =
-      match input, model with
-      | Ok input, Some (spec, roll) when phys_equal spec input ->
-        [ Vdom.Node.pre [] [ Vdom.Node.text (Rpgdice.Roll_result.to_string_hum roll) ]
-        ; Vdom.Node.div
-            []
-            [ Vdom.Node.text (sprintf "Total: %d" (Rpgdice.Roll_result.to_int roll)) ]
-        ]
-      | _, None | _, Some _ -> []
-    in
-    Vdom.Node.div
-      [ Vdom.Attr.id "roller" ]
-      (Vdom_input_widgets.Button.simple
-         ~on_click:(fun () -> inject Action.Reroll)
-         "reroll"
-       :: roll_result)
-  ;;
-
-  let name = Source_code_position.to_string [%here]
+module Model = struct
+  type t = (Rpgdice.Roll_spec.t * Rpgdice.Roll_result.t) option [@@deriving equal, sexp]
 end
 
-let component = Bonsai.of_module1 (module T) ~default_model:T.Model.init
+let roller_state =
+  Bonsai.state_machine1
+    [%here]
+    (module Model)
+    (module Unit)
+    ~default_model:None
+    ~apply_action:(fun ~inject:_ ~schedule_event:_ roll_spec _model () ->
+      match roll_spec with
+      | Ok spec -> Some (spec, Rpgdice.Roll_spec.roll spec)
+      | Error _ -> None)
+;;
+
+let component roll_spec =
+  let%sub roller_state = roller_state roll_spec in
+  return
+  @@ let%map model, inject = roller_state
+  and roll_spec = roll_spec in
+  let roll_result =
+    match roll_spec, model with
+    | Ok roll_spec, Some (spec, roll) when phys_equal spec roll_spec ->
+      [ Vdom.Node.pre [] [ Vdom.Node.text (Rpgdice.Roll_result.to_string_hum roll) ]
+      ; Vdom.Node.div
+          []
+          [ Vdom.Node.text (sprintf "Total: %d" (Rpgdice.Roll_result.to_int roll)) ]
+      ]
+    | _, None | _, Some _ -> []
+  in
+  Vdom.Node.div
+    [ Vdom.Attr.id "roller" ]
+    (Vdom_input_widgets.Button.simple ~on_click:(fun () -> inject ()) "reroll"
+     :: roll_result)
+;;

@@ -1,40 +1,28 @@
 open! Core_kernel
 open! Bonsai_web
+open Bonsai.Let_syntax
 
-module String_duplicator = struct
-  (* Input is declared to be the string that we want to duplicate. *)
-  module Input = String
-
-  (* The result is the Vdom view. *)
-  module Result = Vdom.Node
-
-  (* The state machine is just a number representing the number of times we want to dupe
-     our string. *)
-  module Model = Int
-
-  module Action = struct
-    (* The only transition in the state machine increments the int. *)
-    type t = Increment [@@deriving sexp_of]
-  end
-
-  (* When an [Increment] action is seen, compute the new state. *)
-  let apply_action ~inject:_ ~schedule_event:_ _input model = function
-    | Action.Increment -> model + 1
-  ;;
-
-  (* The view is computed here: it includes the repeated string alongside the
-     button that injects actions in to be processed in [apply_action]. *)
-  let compute ~inject input model =
-    let repeated_string = List.init model ~f:(Fn.const input) |> String.concat ~sep:" " in
-    (* [inject] is used to produce an [Event.t] which is handled by Bonsai,
-       and the action comes back in to be processed by [apply_action]. *)
-    let on_click = Vdom.Attr.on_click (fun _ -> inject Action.Increment) in
-    let button = Vdom.Node.button [ on_click ] [ Vdom.Node.text "duplicate" ] in
-    Vdom.Node.div [] [ button; Vdom.Node.text repeated_string ]
-  ;;
-
-  let name = "string repeater component"
-end
+let string_duplicator input_string =
+  let%sub duplication_count_state =
+    Bonsai.state_machine0
+      [%here]
+      (module Int)
+      (module Unit)
+      ~default_model:1
+      ~apply_action:(fun ~inject:_ ~schedule_event:_ model () -> model + 1)
+  in
+  return
+  @@ let%map num_duplicated, inject_duplicate = duplication_count_state
+  and input_string = input_string in
+  let repeated_string =
+    List.init num_duplicated ~f:(Fn.const input_string) |> String.concat ~sep:" "
+  in
+  (* [inject] is used to produce an [Event.t] which is handled by Bonsai,
+     and the action comes back in to be processed by [apply_action]. *)
+  let on_click = Vdom.Attr.on_click (fun _ -> inject_duplicate ()) in
+  let button = Vdom.Node.button [ on_click ] [ Vdom.Node.text "duplicate" ] in
+  Vdom.Node.div [] [ button; Vdom.Node.text repeated_string ]
+;;
 
 let string_to_repeat =
   let open Bonsai.Let_syntax in
@@ -48,21 +36,23 @@ let string_to_repeat =
   in
   return
   @@ let%map state, set_state = state in
-  ( state
-  , Vdom.Node.textarea
+  let view =
+    Vdom.Node.textarea
       [ Vdom.Attr.string_property "value" state
       ; Vdom.Attr.on_input (fun _ -> set_state)
       ]
-      [] )
+      []
+  in
+  state, view
 ;;
 
 let app =
   let open Bonsai.Let_syntax in
   let%sub string_to_repeat = string_to_repeat in
+  (* Pattern-bind is used to extract the [(string * Vdom.Node.t) Bonsai.Value.t]
+     into both a [string Bonsai.Value.t] and a [Vdom.Node.t Bonsai.Value.t]. *)
   let%pattern_bind string, textbox_view = string_to_repeat in
-  let%sub duplicated =
-    (Bonsai.of_module1 (module String_duplicator) ~default_model:1) string
-  in
+  let%sub duplicated = string_duplicator string in
   return
   @@ let%map textbox_view = textbox_view
   and duplicated = duplicated in
