@@ -16,6 +16,7 @@ type ('model, 'action, 'result) t =
       ; apply_action : ('input, 'action, 'model) apply_action
       ; compute : inject:('action -> Event.t) -> 'input -> 'model -> 'result
       ; name : string
+      ; kind : string
       }
       -> ('model, 'action, 'result) t
   | Leaf_incr :
@@ -53,6 +54,17 @@ type ('model, 'action, 'result) t =
       ; model_by_k : ('model_by_k, ('k, 'model, 'cmp) Map.t) Type_equal.t
       }
       -> ('model_by_k, 'k * 'action, 'result_by_k) t
+  | Assoc_simpl :
+      { map : ('k, 'v, 'cmp) Map.t Value.t
+      ; key_id : 'k Type_equal.Id.t
+      ; data_id : 'v Type_equal.Id.t
+      ; by : 'k -> 'v -> 'result
+      ; model_info : 'model Meta.Model.t
+      ; input_by_k : ('input_by_k, ('k, 'v, 'cmp) Map.t) Type_equal.t
+      ; result_by_k : ('result_by_k, ('k, 'result, 'cmp) Map.t) Type_equal.t
+      ; model_by_k : ('model_by_k, ('k, 'model, 'cmp) Map.t) Type_equal.t
+      }
+      -> (unit, Nothing.t, 'result_by_k) t
   | Enum :
       { which : 'key Value.t
       ; out_of : ('key, 'a packed, 'cmp) Map.t
@@ -86,3 +98,21 @@ and 'a packed =
       ; model : 'model Meta.Model.t
       }
       -> 'a packed
+
+let rec sexp_of_t : type m a r. (m, a, r) t -> Sexp.t = function
+  | Return value -> [%sexp Return (value : Value.t)]
+  | Leaf { name; _ } -> [%sexp Leaf (name : string)]
+  | Leaf_incr { name; _ } -> [%sexp Leaf_incr (name : string)]
+  | Model_cutoff { t; _ } -> [%sexp Model_cutoff (t : t)]
+  | Subst { from; via; into } ->
+    [%sexp Subst { from : t; via : _ Type_equal.Id.t; into : t }]
+  | Assoc { map; by; _ } -> [%sexp Assoc { map : Value.t; by : t }]
+  | Assoc_simpl { map; _ } -> [%sexp Assoc_simpl { map : Value.t }]
+  | Enum { which; out_of; sexp_of_key; _ } ->
+    let out_of = out_of |> Map.to_alist |> List.map ~f:[%sexp_of: key * packed] in
+    [%sexp Enum { which : Value.t; out_of : Sexp.t list }]
+  | Lazy _ -> [%sexp Lazy]
+  | With_model_resetter { t; _ } -> [%sexp With_model_resetter (t : t)]
+  | Wrap { inner; _ } -> [%sexp Wrap (inner : t)]
+
+and sexp_of_packed : type r. r packed -> Sexp.t = fun (T { t; _ }) -> sexp_of_t t

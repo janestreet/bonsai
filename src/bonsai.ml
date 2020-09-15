@@ -21,6 +21,8 @@ module Private = struct
   let eval = Eval.eval
 
   include Proc.Private
+
+  let to_dot c = To_dot.to_dot (reveal_computation c)
 end
 
 include (Proc : module type of Proc with module Private := Proc.Private)

@@ -32,7 +32,13 @@ let of_module1 (type i m a r) (component : (i, m, a, r) component_s) ~default_mo
   let (module M) = component in
   Computation.T
     { t =
-        Leaf { input; apply_action = M.apply_action; compute = M.compute; name = M.name }
+        Leaf
+          { input
+          ; apply_action = M.apply_action
+          ; compute = M.compute
+          ; name = M.name
+          ; kind = "of module"
+          }
     ; model = Meta.Model.of_module (module M.Model) ~name:M.name ~default:default_model
     ; action = Meta.Action.of_module (module M.Action) ~name:M.name
     }
@@ -62,22 +68,40 @@ let assoc
   let key_var = Value.named key_id in
   let data_var = Value.named data_id in
   let (Computation.T { t = by; action; model }) = f key_var data_var in
-  Computation.T
-    { t =
-        Assoc
-          { map
-          ; key_id
-          ; data_id
-          ; by
-          ; model_info = model
-          ; action_info = action
-          ; input_by_k = T
-          ; result_by_k = T
-          ; model_by_k = T
-          }
-    ; action = Meta.Action.map comparator action
-    ; model = Meta.Model.map comparator model
-    }
+  match Simplify.function_of_'return'_computation by ~key_id ~data_id with
+  | Some by ->
+    Computation.T
+      { t =
+          Assoc_simpl
+            { map
+            ; key_id
+            ; data_id
+            ; by
+            ; model_info = model
+            ; input_by_k = T
+            ; result_by_k = T
+            ; model_by_k = T
+            }
+      ; action = Meta.Action.nothing
+      ; model = Meta.Model.unit
+      }
+  | None ->
+    Computation.T
+      { t =
+          Assoc
+            { map
+            ; key_id
+            ; data_id
+            ; by
+            ; model_info = model
+            ; action_info = action
+            ; input_by_k = T
+            ; result_by_k = T
+            ; model_by_k = T
+            }
+      ; action = Meta.Action.map comparator action
+      ; model = Meta.Model.map comparator model
+      }
 ;;
 
 let enum (type k) (module E : Enum with type t = k) ~match_ ~with_ =
@@ -177,7 +201,7 @@ let state_machine1
   let compute ~inject _input model = model, inject in
   let name = Source_code_position.to_string here in
   Computation.T
-    { t = Leaf { input; apply_action; compute; name }
+    { t = Leaf { input; apply_action; compute; name; kind = "state machine" }
     ; model = Meta.Model.of_module (module M) ~name ~default:default_model
     ; action = Meta.Action.of_module (module A) ~name
     }
@@ -235,12 +259,15 @@ let wrap (type model action) model_module ~default_model ~apply_action ~f =
 ;;
 
 let state (type m) here (module M : Model with type t = m) ~default_model =
-  state_machine0
-    here
-    (module M : Model with type t = m)
-    (module M : Action with type t = m)
-    ~default_model
-    ~apply_action:(fun ~inject:_ ~schedule_event:_ _old_model new_model -> new_model)
+  let apply_action ~inject:_ ~schedule_event:_ () _old_model new_model = new_model in
+  let compute ~inject _input model = model, inject in
+  let name = Source_code_position.to_string here in
+  let input = Value.return () in
+  Computation.T
+    { t = Leaf { input; apply_action; compute; name; kind = "state" }
+    ; model = Meta.Model.of_module (module M) ~name ~default:default_model
+    ; action = Meta.Action.of_module (module M) ~name
+    }
 ;;
 
 let state_opt (type m) here ?default_model (module M : Model with type t = m) =

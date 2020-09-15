@@ -1,8 +1,9 @@
 open! Core_kernel
 open! Import
+module Constant_id = Unique_id.Int ()
 
 type _ t =
-  | Constant : 'a -> 'a t
+  | Constant : 'a * Constant_id.t -> 'a t
   | Incr : 'a Incr.t -> 'a t
   | Named : 'a Type_equal.Id.t -> 'a t
   | Both : 'a t * 'b t -> ('a * 'b) t
@@ -100,7 +101,7 @@ let rec eval : type a. Environment.t -> a t -> a Incr.t =
     let t = eval env t in
     Incremental.set_cutoff t (Incremental.Cutoff.of_equal equal);
     t
-  | Constant x -> Incr.return x
+  | Constant (x, _id) -> Incr.return x
   | Named name ->
     (match Environment.find env name with
      | Some incremental -> incremental
@@ -174,7 +175,7 @@ let rec eval : type a. Environment.t -> a t -> a Incr.t =
   | Both (t1, t2) -> Incr.both (eval env t1) (eval env t2)
 ;;
 
-let return a = Constant a
+let return a = Constant (a, Constant_id.create ())
 
 include Applicative.Make_using_map2 (struct
     type nonrec 'a t = 'a t

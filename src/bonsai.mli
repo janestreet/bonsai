@@ -19,6 +19,7 @@ module Private : sig
   val conceal_value : 'a Value.t -> 'a Proc.Value.t
   val reveal_computation : 'a Proc.Computation.t -> 'a Computation.packed
   val conceal_computation : 'a Computation.packed -> 'a Proc.Computation.t
+  val to_dot : 'a Proc.Computation.t -> string
 end
 
 module type Model = Module_types.Model

@@ -16,7 +16,7 @@ let rec eval
     let%map result = Value.eval environment var in
     Snapshot.create ~result ~apply_action:(fun ~schedule_event:_ action ->
       Nothing.unreachable_code action)
-  | Leaf { input; apply_action; compute; name = _ } ->
+  | Leaf { input; apply_action; compute; name = _; kind = _ } ->
     let%mapn input = Value.eval environment input
     and model = model in
     let result = compute ~inject input model in
@@ -119,6 +119,21 @@ let rec eval
     in
     let%mapn apply_action = apply_action
     and result = results_map in
+    Snapshot.create ~result ~apply_action
+  | Assoc_simpl
+      { map
+      ; by
+      ; key_id = _
+      ; data_id = _
+      ; model_info = _
+      ; result_by_k = T
+      ; input_by_k = T
+      ; model_by_k = T
+      } ->
+    let map_input = Value.eval environment map in
+    let results_map = Incr_map.mapi map_input ~f:(fun ~key ~data -> by key data) in
+    let apply_action ~schedule_event:_ = Nothing.unreachable_code in
+    let%map result = results_map in
     Snapshot.create ~result ~apply_action
   | Enum { which; out_of; key_equal; key_and_cmp = T; sexp_of_key } ->
     let key = Value.eval environment which in

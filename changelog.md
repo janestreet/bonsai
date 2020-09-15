@@ -2,17 +2,20 @@
 <!-- Change-log notes go in this file, with newer dates at the _top_  --> 
 
 ## 2020-08-13
-Added [Bonsai.state_opt], like state, but storing an option of a given model.
+Added `Bonsai.state_opt`, like state, but storing an option of a given model.
 
 ## 2020-07-27
-Added [Bonsai.lazy], a function permitting recursive components.
+Added `Bonsai.lazy`, a function permitting recursive components.
 
 ## 2020-07-20
-Only the [Value.t] produced from `Let_syntax.both` are collapsed.
+Only the `Value.t` produced from `Let_syntax.both` are collapsed.
 
 ## 2020-07-14
-Added [Value.cutoff], a function for specifying cutoff to a greater degree than 
+Added `Value.cutoff`, a function for specifying cutoff to a greater degree than 
 otherwise available.
+
+## 2020-07-04
+- Added assoc-optimization and the computation simplifier
 
 ## 2020-07-03
 - Fixed memory leak in Bonsai.assoc with models not being removed 

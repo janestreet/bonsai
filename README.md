@@ -11,10 +11,6 @@ The [Getting Started with Bonsai](./docs/getting_started/index.md)
 guide is good if you're new to web development entirely or just want
 to see a walkthrough of a couple simple example apps.
 
-Reading [Bonsai Concepts](./docs/concepts.md) is the best place to get an
-overview of the library and to build a mental model for structuring Bonsai
-applications.
-
 Examples of using Bonsai in a web browser can be found in the
 `examples` directory.
 
@@ -22,8 +18,7 @@ Examples of using Bonsai in a web browser can be found in the
 
 The main differences between `Incr_dom` and Bonsai are
 
-- Bonsai has a notion of first-class components -
-  [read more](./docs/concepts.md)
+- Bonsai has a notion of first-class components
 - `Incr_dom` expects users to program in the `Incremental` monad; in Bonsai,
   incrementality is added for you under the hood -
   [read more](./docs/incrementality.md)
@@ -43,7 +38,6 @@ Similarities between `Incr_dom` and Bonsai:
 Pandoc really wants to stick paragraph <p> nodes any time that there's even a trace of
 whitespace in between these html nodes... -->
 <div class="toc_node"> <a href="./README.md"> [This Page] </a>
-<div class="toc_node"> <a href="./docs/concepts.md"> Bonsai Concepts </a></div>
 <div class="toc_node"> <a href="./docs/history.md"> A History of Bonsai </a></div>
 <div class="toc_node"> <a href="./docs/incrementality.md"> Incrementality in Bonsai </a></div>
 <div class="toc_node"> <a href="./docs/inside_incr_dom.md"> Using Bonsai inside an Incr_dom App </a></div>
