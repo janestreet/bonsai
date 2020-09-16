@@ -1,5 +1,4 @@
 open! Core_kernel
-open! Bonsai_web_test
 open Bonsai.Let_syntax
 open Virtual_dom
 open Proc
