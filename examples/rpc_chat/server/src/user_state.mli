@@ -2,6 +2,6 @@ open! Core_kernel
 open! Async
 
 type t =
-  { user : Krb.Principal.Name.t
+  { user : string
   ; connection : Rpc.Connection.t
   }

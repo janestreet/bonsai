@@ -21,8 +21,8 @@ let message_request global_state =
 let send_message global_state =
   let messages = global_state.Global_state.messages in
   let bus = global_state.Global_state.message_bus in
-  let f user_state message =
-    let author = Krb.Principal.Name.to_string user_state.User_state.user in
+  let f _user_state message =
+    let author = "author" in
     let message = { message with Message.author } in
     let room = Message.room message in
     match Room.Table.find messages room with

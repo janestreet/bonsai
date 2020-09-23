@@ -1,9 +1,7 @@
 (library (name bonsai_chat_native)
  (preprocess (pps ppx_jane -annotated-ignores))
- (libraries async_extra.async_bus bonsai_chat_common cohttp_static_handler
-  simple_web_server))
+ (libraries async_extra.async_bus bonsai_chat_common async_rpc_websocket))
 
 (rule (targets embedded_files.ml embedded_files.mli)
- (deps %{workspace_root}/app/embed-file/bin/embed_file.exe
-  ../../client/main.bc.js ../../client/style.css)
+ (deps %{bin:ocaml-embed-file} ../../client/main.bc.js ../../client/style.css)
  (action (bash "%{deps} -output embedded_files")))
