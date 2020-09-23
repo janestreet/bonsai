@@ -1,0 +1,325 @@
+This app just puts counters on the page, each with buttons to
+increment and decrement the number.
+
+## Building the example
+
+You'll notice that there are two directories there: `bin/`, where the
+`main.bc.js` file that you're building lives, and `lib/`, which houses
+the important application code. As in [the "hello world"
+example](./hello_world.mdx), the "app" consists of an *index.html*
+page that includes the JS file for the app; the app is attached to the
+"app" div on that page.
+
+To run:
+
+```sh skip
+$ cd lib/bonsai/examples/counters/bin; python3 -m http.server
+```
+
+Then navigate to http://localhost:8000
+
+## Your first components
+
+In Bonsai, you'll hear a lot about "components." What is a component?
+
+A component is an encapsulated bit of UI logic. It has **input** --
+immutable data that comes from "outside" that component, say from
+another component or from an RPC. It has a **model**, which is the
+mutable internal state of that component. And it has a **result**,
+which can be of any type, but eventually, for the top-level
+component of your app, will include a `Vdom.Node.t`.
+
+The clearest API for building a component is via
+`Bonsai.of_module`. Inspecting its type, you can see that it takes a
+module requiring these three parts: an input, a model, and a result:
+
+```ocaml
+# Bonsai.of_module0
+- : (unit, 'm, 'a, 'r) Bonsai__Import.component_s ->
+    default_model:'m -> 'r Bonsai.Computation.t
+= <fun>
+```
+
+As examples, in the Counters app, the "Add Another Counter" button is
+a component, and each counter--a number, plus two buttons to increment
+and decrement it--is another component.
+
+### Counter_component
+
+<!-- If this code changes, consider changing the corresponding docs in
+this and the next few sections! -->
+```sh
+$ sed -n -e '/\[CODE_EXCERPT_BEGIN 1\]/,/\[CODE_EXCERPT_END 1\]/p' ../../../examples/counters/lib/bonsai_web_counters_example.ml | tail -n +2 | head -n -2
+
+module Action = struct
+  type t =
+    | Increment
+    | Decrement
+  [@@deriving sexp_of]
+end
+
+let single_counter =
+  let%sub counter_state =
+    Bonsai.state_machine0
+      [%here]
+      (module Int)
+      (module Action)
+      ~default_model:0
+      ~apply_action:(fun ~inject:_ ~schedule_event:_ model -> function
+        | Action.Increment -> model + 1
+        | Action.Decrement -> model - 1)
+  in
+  return
+  @@ let%map state, inject = counter_state in
+  let button label action =
+    let on_click = Vdom.Attr.on_click (fun _ -> inject action) in
+    Vdom.Node.button [ on_click ] [ Vdom.Node.text label ]
+  in
+  Vdom.Node.div
+    []
+    [ button "-1" Action.Decrement
+    ; Vdom.Node.text (Int.to_string state)
+    ; button "+1" Action.Increment
+    ]
+;;
+```
+
+Here, the input is moot and we ignore it--for that, we use `()`. Its
+model -- the component's state machine -- is an int. That's the number
+we increment and decrement. Finally, its result is a `Vdom.Node.t`, the
+little bit of DOM that renders that individual counter:
+
+```html
+<div>
+  <button>-1</button>
+  4
+  <button>+1</button>
+</div>
+```
+
+All of the interesting code here has to do with actions, which you can
+think of as defining the state machine's transitions: here, just
+`Increment` and `Decrement`.
+
+**The compute function**
+
+The compute function is the heart of the component. Its signature is:
+
+```ocaml skip
+val compute
+  :  inject:(Action.t -> Ui_event.t)
+  -> unit
+  -> int
+  -> Vdom.Node.t
+```
+
+The unit and int are the component's `'input` and `'model` types,
+respectively, and the `Vdom.Node.t` is the component's `'result` type.
+
+In other words, this is the function that takes the component's data
+and renders its view. But what about `~inject`?
+
+**The inject function**
+
+`compute`'s inject function is just a callback that converts actions
+into DOM events. These events are how Bonsai communicates to the
+browser to actually do something when, say, a user clicks a
+button. Here, we hook up the `"on_click'` attribute of the "+1" and
+"-1" buttons to the corresponding DOM events:
+
+```ocaml skip
+let button label action =
+  let on_click = Vdom.Attr.on_click (fun _ -> inject action) in
+  Vdom.Node.button [ on_click ] [ Vdom.Node.text label ]
+in
+```
+
+**The apply\_action function**
+
+When an action is raised by a component via a `Ui_event.t`, Bonsai
+will eventually pass that action back to the component's
+`apply_action` function. This function is responsible for looking at
+the model and the incoming action and producing a new model.
+
+```ocaml skip
+val apply_action
+  :  inject:(Action.t -> Ui_event.t)
+  -> schedule_event:(Ui_event.t -> unit)
+  -> Input.t
+  -> Model.t
+  -> Action.t
+  -> Model.t
+```
+
+During the transformation, the component can also emit more actions
+via `schedule_event` or use Async to arrange for `schedule_event` to
+be called later. (For this it will use the same `inject` callback as
+before.) This enables quite a bit of UI dynamism. Here, we don't emit
+any further actions; we just increment or decrement the model:
+
+```ocaml skip
+let apply_action ~inject:_ ~schedule_event:_ () model = function
+  | Action.Increment -> model + 1
+  | Action.Decrement -> model - 1
+;;
+```
+
+**The name function**
+
+This is just for debugging.
+
+### Add\_counter\_component
+
+<!-- If this code changes, consider changing the corresponding docs in
+this and the next few sections! -->
+```sh
+$ sed -n -e '/\[CODE_EXCERPT_BEGIN 2\]/,/\[CODE_EXCERPT_END 2\]/p' ../../../examples/counters/lib/bonsai_web_counters_example.ml | tail -n +2 | head -n -2
+module Model = struct
+  type t = unit Int.Map.t [@@deriving sexp, equal]
+end
+
+let add_counter_component =
+  let%sub add_counter_state =
+    Bonsai.state_machine0
+      [%here]
+      (module Model)
+      (module Unit)
+      ~default_model:Int.Map.empty
+      ~apply_action:(fun ~inject:_ ~schedule_event:_ model () ->
+        let key = Map.length model in
+        Map.add_exn model ~key ~data:())
+  in
+  return
+  @@ let%map state, inject = add_counter_state in
+  let on_click = Vdom.Attr.on_click (fun _ -> inject ()) in
+  let view = Vdom.Node.button [ on_click ] [ Vdom.Node.text "Add Another Counter" ] in
+  state, view
+;;
+```
+
+The interesting part of this component is its use of the top-level
+component's `Model` for its own. (Notice the module inclusion via `module
+Model = Model`.) Why would we do that? And what is the "top-level
+component" anyway?
+
+In Bonsai, "everything is a component," including the app itself. That
+is, the app that we'll attach to this example's *index.html* page is a
+component made of other components. In that component, the model is a
+map from ints to units. The keys are just indexes: 0, 1, 2, etc. And
+each value in the map is a placeholder for one of the little gizmos
+defined by the Counter\_component and added one at a time by pressing
+the button defined by the Add\_counter\_component.
+
+Notice that in the `apply_action` function immediately above, we just
+initialize a new counter's model to `()` and set its index to the
+current length of the map (a trick for getting auto-incrementing
+indexes).
+
+#### Using assoc_model to make a single component out of a map
+
+Turning a map of individual counters into a single component that
+governs all of them is easy in Bonsai. Indeed, this is where you start
+seeing Bonsai's comparative advantage over Incr\_dom, our previous web
+framework. Bonsai was designed precisely with this sort of
+"projection" in mind.
+
+All it takes is this bit of code:
+
+```ocaml skip
+let%sub counters =
+  Bonsai.assoc (module Int) map ~f:(fun _key _data -> single_counter)
+in
+```
+
+`let%sub` is a ppx for variable substitution, very similar to the standard
+monadic `bind`, but with this signature:
+
+```ocaml
+# Bonsai.Let_syntax.Let_syntax.sub
+- : 'a Bonsai.Computation.t ->
+    f:('a Bonsai.Value.t -> 'b Bonsai.Computation.t) ->
+    'b Bonsai.Computation.t
+= <fun>
+```
+
+Then the `assoc` function is used to "project" the int map over the
+counter component to yield a map of counter components. Its signature
+is:
+
+```ocaml
+# Bonsai.assoc
+- : ('key, 'cmp) Bonsai__Import.comparator ->
+    ('key, 'data, 'cmp) Core_kernel.Map.t Bonsai.Value.t ->
+    f:('key Bonsai.Value.t ->
+       'data Bonsai.Value.t -> 'result Bonsai.Computation.t) ->
+    ('key, 'result, 'cmp) Core_kernel.Map.t Bonsai.Computation.t
+= <fun>
+```
+
+You can think of it as taking a single inner component and
+"projecting" it into the map—i.e., returning a map-ish
+supercomponent. The supercomponent can be used to easily add new
+copies of the inner component (here, the individual counters), remove
+them, count over them, etc.
+
+Here, all we do with `counters` is take its `Map.data`--a list of
+`Vdom.Node.t`'s--and plunk them in a div:
+
+```ocaml skip
+Vdom.Node.div [] [ add_button; Vdom.Node.div [] (Map.data counters) ]
+```
+
+#### Composing components using Bonsai.map2, sub, and the Let\_syntax
+
+It all comes together in the last few lines of the program, which
+produce our toplevel component:
+
+<!-- If this code changes, consider changing the corresponding docs in
+this and the next few sections! -->
+```sh
+$ sed -n -e '/\[CODE_EXCERPT_BEGIN 3\]/,/\[CODE_EXCERPT_END 3\]/p' ../../../examples/counters/lib/bonsai_web_counters_example.ml | tail -n +2 | head -n -2
+let application =
+  let open Bonsai.Let_syntax in
+  let%sub add_counter = add_counter_component in
+  let%pattern_bind map, add_button = add_counter in
+  let%sub counters =
+    Bonsai.assoc (module Int) map ~f:(fun _key _data -> single_counter)
+  in
+  return
+  @@ let%map add_button = add_button
+  and counters = counters in
+  Vdom.Node.div [] [ add_button; Vdom.Node.div [] (Map.data counters) ]
+;;
+```
+
+The application component is what we ultimately plug into the "app"
+div of our *index.html* file. It's a `Vdom.Node.t
+Bonsai.Computation.t`, i.e., its result is the DOM for the whole app.
+
+You can get a better sense of how Bonsai's composition works by
+looking at a de-sugared version of the `application` function:
+
+```ocaml skip
+let application_sugar_free =
+  let open Bonsai.Let_syntax in
+  Let_syntax.sub
+    (Bonsai.of_module0 (module Add_counter_component) ~default_model:Model.default)
+    ~f:(fun add_counter ->
+      let map = Bonsai.Value.map add_counter ~f:(fun (map, _) -> map) in
+      let add_button =
+        Bonsai.Value.map add_counter ~f:(fun (_, add_button) -> add_button)
+      in
+      Let_syntax.sub
+        (Bonsai.assoc (module Int) map ~f:(fun _key _data -> single_counter))
+        ~f:(fun counters ->
+          return
+            (Bonsai.Value.map2 add_button counters ~f:(fun add_button counters ->
+               Vdom.Node.div [] [ add_button; Vdom.Node.div [] (Map.data counters) ]))))
+;;
+```
+
+The `Bonsai.Value.map` is used twice on the `add_counter` to
+destructure its parts--the add button itself, and the map of
+counters. The `Bonsai.assoc` projects the `single_counter` component
+over this map. And finally, the `Bonsai.Value.map2` allows us to
+combine components.

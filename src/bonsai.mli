@@ -24,6 +24,7 @@ end
 
 module type Model = Module_types.Model
 module type Action = Module_types.Action
+module type Enum = Module_types.Enum
 module type Comparator = Module_types.Comparator
 
 type ('k, 'cmp) comparator = ('k, 'cmp) Module_types.comparator
