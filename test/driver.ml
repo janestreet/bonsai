@@ -8,6 +8,7 @@ type ('i, 'm, 'a, 'r) unpacked =
   ; sexp_of_model : 'm -> Sexp.t
   ; snapshot : ('m, 'a, 'r) Bonsai.Private.Snapshot.t Incr.Observer.t
   ; queue : 'a Queue.t
+  ; mutable last_view : string
   }
 
 type ('i, 'r) t = T : ('i, _, _, 'r) unpacked -> ('i, 'r) t
@@ -66,11 +67,16 @@ let create
     in
     let inject = A.inject in
     let snapshot =
-      Bonsai.Private.eval environment (Incr.Var.watch model_var) ~inject computation
+      Bonsai.Private.eval
+        ~environment
+        ~path:Bonsai.Private.Path.empty
+        ~model:(Incr.Var.watch model_var)
+        ~inject
+        computation
       |> Incr.observe
     in
     Incr.stabilize ();
-    T { input_var; model_var; inject; snapshot; sexp_of_model; queue }
+    T { input_var; model_var; inject; snapshot; sexp_of_model; queue; last_view = "" }
   in
   create_polymorphic component_unpacked action
 ;;
@@ -96,6 +102,8 @@ let flush (T { model_var; snapshot; queue; _ }) =
 
 let set_input (T { input_var; _ }) input = Incr.Var.set input_var input
 let input (T { input_var; _ }) = Incr.Var.value input_var
+let last_view (T { last_view; _ }) = last_view
+let store_view (T unpacked) s = unpacked.last_view <- s
 
 let result (T { snapshot; _ }) =
   Incr.Observer.value_exn snapshot |> Bonsai.Private.Snapshot.result

@@ -86,10 +86,12 @@ let assoc
       ; model = Meta.Model.unit
       }
   | None ->
+    let module Cmp = (val comparator) in
     Computation.T
       { t =
           Assoc
             { map
+            ; key_compare = Cmp.comparator.compare
             ; key_id
             ; data_id
             ; by
@@ -126,6 +128,7 @@ let enum (type k) (module E : Enum with type t = k) ~match_ ~with_ =
         let models = Map.add_exn models ~key ~data:model in
         components, models)
   in
+  let key_type_id = Type_equal.Id.create ~name:"key" E.sexp_of_t in
   Computation.T
     { t =
         Enum
@@ -133,6 +136,8 @@ let enum (type k) (module E : Enum with type t = k) ~match_ ~with_ =
           ; out_of = components
           ; sexp_of_key = [%sexp_of: E.t]
           ; key_equal = [%equal: E.t]
+          ; key_type_id
+          ; key_compare = [%compare: E.t]
           ; key_and_cmp = T
           }
     ; model = Hidden.Multi_model.model_info (module E) models

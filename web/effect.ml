@@ -49,6 +49,94 @@ let of_sync_fun (type query result) f =
   stage (fun request -> T { request; evaluator })
 ;;
 
+module For_testing = struct
+  module Svar = struct
+    type 'a state =
+      | Empty of { handlers : ('a -> unit) Bag.t }
+      | Full of 'a
+
+    type 'a t = 'a state ref
+
+    let create () = ref (Empty { handlers = Bag.create () })
+
+    let upon t handler =
+      match !t with
+      | Empty { handlers } -> ignore (Bag.add handlers handler : _ Bag.Elt.t)
+      | Full x -> handler x
+    ;;
+
+    let fill_if_empty t x =
+      match !t with
+      | Full _ -> ()
+      | Empty { handlers } ->
+        Bag.iter handlers ~f:(fun handler -> handler x);
+        t := Full x
+    ;;
+
+    let peek t =
+      match !t with
+      | Empty _ -> None
+      | Full x -> Some x
+    ;;
+  end
+
+  let of_svar_fun (type query result) f =
+    let module E =
+      Vdom.Event.Define (struct
+        module Action = struct
+          type t = (query, result) Callback.t
+        end
+
+        let handle action =
+          Svar.upon
+            (f (Callback.request action))
+            (fun result ->
+               let evt = Callback.respond_to action result in
+               Vdom.Event.Expert.handle_non_dom_event_exn evt)
+        ;;
+      end)
+    in
+    let evaluator = E.inject in
+    stage (fun request -> T { request; evaluator })
+  ;;
+
+  module Query_response_tracker = struct
+    type ('q, 'r) rpc =
+      { query : 'q
+      ; response : 'r Svar.t
+      }
+
+    type ('q, 'r) t = ('q, 'r) rpc Bag.t
+
+    let create () = Bag.create ()
+
+    let add_query t query =
+      let response = Svar.create () in
+      ignore (Bag.add t { query; response } : _ Bag.Elt.t);
+      response
+    ;;
+
+    let queries_pending_response t =
+      Bag.to_list t |> List.map ~f:(fun { query; response = _ } -> query)
+    ;;
+
+    type 'r maybe_respond =
+      | No_response_yet
+      | Respond of 'r
+
+    let maybe_respond t ~f =
+      Bag.filter_inplace t ~f:(fun { query; response } ->
+        match f query with
+        | No_response_yet -> true
+        | Respond resp ->
+          Svar.fill_if_empty response resp;
+          false)
+    ;;
+  end
+
+  let of_query_response_tracker qrt = of_svar_fun (Query_response_tracker.add_query qrt)
+end
+
 let return value =
   let f = unstage (of_sync_fun Fn.id) in
   f value

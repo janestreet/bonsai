@@ -165,7 +165,13 @@ module Arrow = struct
         let environment =
           Bonsai.Private.Environment.(empty |> add_exn ~key:fresh ~data:input)
         in
-        let%map snapshot = Bonsai.Private.eval environment model ~inject computation
+        let%map snapshot =
+          Bonsai.Private.eval
+            ~environment
+            ~path:Bonsai.Private.Path.empty
+            ~model
+            ~inject
+            computation
         and model = model in
         let apply_action = Bonsai.Private.Snapshot.apply_action snapshot in
         let apply_action action () ~schedule_action:_ =

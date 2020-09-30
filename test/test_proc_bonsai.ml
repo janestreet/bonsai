@@ -58,6 +58,19 @@ let%expect_test "call component" =
   [%expect {| 3 |}]
 ;;
 
+let%expect_test "path" =
+  let component =
+    let%sub _ = Bonsai.const () in
+    let%sub path = Bonsai.Private.path in
+    return (Bonsai.Value.map path ~f:Bonsai.Private.Path.sexp_of_t)
+  in
+  let handle = Handle.create (Result_spec.sexp (module Sexp)) component in
+  Handle.show handle;
+  (* The first of these "Subst_from" is actually a component that is 
+     added by the testing helpers. *)
+  [%expect {| (Subst_from Subst_into Subst_from) |}]
+;;
+
 let%expect_test "chain" =
   let add_one = Bonsai.pure (fun x -> x + 1) in
   let double = Bonsai.pure (fun x -> x * 2) in

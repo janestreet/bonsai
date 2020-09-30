@@ -4,13 +4,14 @@ open Incr.Let_syntax
 
 let rec eval
   : type model action result.
-    Environment.t
-    -> model Incr.t
+    environment:Environment.t
+    -> path:Path.t
+    -> model:model Incr.t
     -> inject:(action -> Event.t)
     -> (model, action, result) Computation.t
     -> (model, action, result) Snapshot.t Incr.t
   =
-  fun environment model ~inject computation ->
+  fun ~environment ~path ~model ~inject computation ->
   match computation with
   | Return var ->
     let%map result = Value.eval environment var in
@@ -30,19 +31,21 @@ let rec eval
   | Model_cutoff { t; model = { Meta.Model.equal; _ } } ->
     let model = Incr.map model ~f:Fn.id in
     Incr.set_cutoff model (Incr.Cutoff.of_equal equal);
-    eval environment model ~inject t
+    eval ~environment ~path ~model ~inject t
   | Subst { from; via; into } ->
     let from =
       let inject e = inject (First e) in
       let model = Incr.map model ~f:Tuple2.get1 in
-      eval environment model ~inject from
+      let path = Path.append path Path.Elem.Subst_from in
+      eval ~environment ~path ~model ~inject from
     in
     let from_result = Incr.map from ~f:Snapshot.result in
     let environment = Environment.add_exn environment ~key:via ~data:from_result in
     let into =
       let inject e = inject (Second e) in
       let model = Incr.map model ~f:Tuple2.get2 in
-      eval environment model ~inject into
+      let path = Path.append path Path.Elem.Subst_into in
+      eval ~environment ~path ~model ~inject into
     in
     let%mapn apply_action =
       let%mapn from = from
@@ -62,6 +65,7 @@ let rec eval
   | Assoc
       { map
       ; by
+      ; key_compare
       ; key_id
       ; data_id
       ; model_info
@@ -77,8 +81,10 @@ let rec eval
         | `Right _ -> None
         | `Both input_and_models -> Some input_and_models)
     in
+    let create_keyed = unstage (Path.Elem.keyed ~compare:key_compare key_id) in
     let snapshot_map =
       Incr_map.mapi' input_and_models_map ~f:(fun ~key ~data:input_and_models ->
+        let path = Path.append path Path.Elem.(Assoc (create_keyed key)) in
         let%pattern_bind value, model = input_and_models in
         let environment =
           (* It is safe to reuse the same [key_id] and [data_id] for each pair in the map,
@@ -88,7 +94,7 @@ let rec eval
           |> Environment.add_exn ~key:data_id ~data:value
         in
         let inject action = inject (key, action) in
-        eval environment ~inject model by)
+        eval ~environment ~path ~inject ~model by)
     in
     let results_map =
       Incr_map.mapi snapshot_map ~f:(fun ~key:_ ~data:snapshot ->
@@ -135,10 +141,14 @@ let rec eval
     let apply_action ~schedule_event:_ = Nothing.unreachable_code in
     let%map result = results_map in
     Snapshot.create ~result ~apply_action
-  | Enum { which; out_of; key_equal; key_and_cmp = T; sexp_of_key } ->
+  | Enum
+      { which; out_of; key_equal; key_type_id; key_compare; key_and_cmp = T; sexp_of_key }
+    ->
     let key = Value.eval environment which in
     Incremental.set_cutoff key (Incremental.Cutoff.of_equal key_equal);
+    let create_keyed = unstage (Path.Elem.keyed ~compare:key_compare key_type_id) in
     let%bind key = key in
+    let path = Path.append path Path.Elem.(Assoc (create_keyed key)) in
     let (T { t; model = model_info; action = action_info }) = Map.find_exn out_of key in
     let chosen_model =
       Incremental.map model ~f:(fun map ->
@@ -149,7 +159,7 @@ let rec eval
         Type_equal.conv equal model)
     in
     let inject action = inject (Hidden.Action.T { action; type_id = action_info; key }) in
-    let%mapn snapshot = eval environment chosen_model ~inject t
+    let%mapn snapshot = eval ~environment ~path ~model:chosen_model ~inject t
     and model = model in
     let apply_action ~schedule_event (Hidden.Action.T { action; type_id; key = key' }) =
       match key_equal key' key, Type_equal.Id.same_witness type_id action_info with
@@ -182,7 +192,7 @@ let rec eval
     let inject action =
       inject (Hidden.Action.T { action; type_id = action_info; key = () })
     in
-    let%map snapshot = eval environment input_model ~inject t
+    let%map snapshot = eval ~environment ~path ~model:input_model ~inject t
     and model = model in
     let apply_action ~schedule_event (Hidden.Action.T { action; type_id; key = () }) =
       match Type_equal.Id.same_witness type_id action_info with
@@ -204,7 +214,7 @@ let rec eval
         |> Environment.add_exn ~key:model_id ~data:outer_model
         |> Environment.add_exn ~key:inject_id ~data:(Incr.return inject_outer)
       in
-      eval environment inner_model ~inject:inject_inner inner
+      eval ~environment ~path ~model:inner_model ~inject:inject_inner inner
     in
     let inner_result = Snapshot.result inner_snapshot in
     Snapshot.create ~result:inner_result ~apply_action:(fun ~schedule_event action ->
@@ -227,11 +237,15 @@ let rec eval
   | With_model_resetter { t; default_model } ->
     let reset_event = inject (First ()) in
     let inject a = inject (Second a) in
-    let%map snapshot = eval environment model ~inject t in
+    let%map snapshot = eval ~environment ~path ~model ~inject t in
     Snapshot.create
       ~result:(Snapshot.result snapshot, reset_event)
       ~apply_action:(fun ~schedule_event action ->
         match action with
         | First () -> default_model
         | Second a -> Snapshot.apply_action ~schedule_event snapshot a)
+  | Path ->
+    Incr.return
+      (Snapshot.create ~result:path ~apply_action:(fun ~schedule_event:_ action ->
+         Nothing.unreachable_code action))
 ;;

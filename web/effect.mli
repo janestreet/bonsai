@@ -33,8 +33,64 @@ val of_deferred_fun : ('query -> 'result Deferred.t) -> ('query -> 'result t) St
 (** [of_sync_fun] is similar to [of_deferred_fun] but with a synchronous function
     instead of a deferred one.  This can be used for functions that are synchronous
     but side-effecting, or as a mock-function in tests that replace the usages of
-    [of_deferred_fun] in the actual app. *)
+    [of_deferred_fun] in the actual app.
+
+    Note that, unlike [of_deferred_fun], the function must return immediately, so it's not
+    possible to test the behaviour of your app between calling the function and the effect
+    becoming 'determined'. If you need to do this, see [of_svar] and
+    [of_query_response_tracker] below.
+*)
 val of_sync_fun : ('query -> 'result) -> ('query -> 'result t) Staged.t
+
+module For_testing : sig
+  module Svar : sig
+    (** You can think of an [Svar.t] as like an [Ivar.t] whose purpose is to allow us to
+        implement [of_svar] below.
+
+        (The difference between [Svar] and [Ivar] is that the former is synchronous. That
+        is, when [fill_if_empty] is called, it will directly call all of the handlers rather
+        than scheduling that they be called later. This semantics can be confusing to work
+        with in large-scale programs, as it means the control flow of your application hops
+        around a lot more. However, it does mean that you don't need a scheduler, so it's
+        easier to implement.) *)
+
+    type 'a t
+
+    val create : unit -> 'a t
+    val upon : 'a t -> ('a -> unit) -> unit
+    val fill_if_empty : 'a t -> 'a -> unit
+    val peek : 'a t -> 'a option
+  end
+
+  (** Create an effect from a function that returns an [Svar.t]. This is mostly useful in
+      testing, to emulate a ['query -> 'result Deferred.t] function that does not return
+      immediately. You may find [Query_response_tracker] a more convenient interface than
+      using [of_svar] directly.
+  *)
+  val of_svar_fun : ('query -> 'result Svar.t) -> ('query -> 'result t) Staged.t
+
+  module Query_response_tracker : sig
+    (** [Query_response_tracker] is an interface designed to make [of_svar] more convenient
+        to use. When the function returned by [of_query_response_tracker t] is called
+        (typically by your bonsai app), the query passed is stored within [t]. Your test
+        code can then call [maybe_handle_rpcs] to cause those effects to 'become
+        determined'. *)
+    type ('q, 'r) t
+
+    val create : unit -> _ t
+
+    type 'r maybe_respond =
+      | No_response_yet
+      | Respond of 'r
+
+    val maybe_respond : ('q, 'r) t -> f:('q -> 'r maybe_respond) -> unit
+    val queries_pending_response : ('q, _) t -> 'q list
+  end
+
+  val of_query_response_tracker
+    :  ('query, 'result) Query_response_tracker.t
+    -> ('query -> 'result t) Staged.t
+end
 
 (** An effect that never completes *)
 val never : _ t

@@ -1,5 +1,5 @@
 (library (name bonsai_test)
  (libraries bonsai core_kernel.composition_infix core_kernel
-  expect_test_helpers_core incr_map)
+  expect_test_helpers_core expect_test_patdiff incr_map)
  (preprocess
   (pps ppx_jane ppx_pattern_bind -annotated-ignores -check-doc-comments)))

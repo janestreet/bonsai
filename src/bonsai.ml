@@ -18,12 +18,19 @@ module Private = struct
   module Meta = Meta
   module Snapshot = Snapshot
   module Value = Value
+  module Path = Path
 
   let eval = Eval.eval
 
   include Proc.Private
 
   let to_dot c = To_dot.to_dot (reveal_computation c)
+
+  let path =
+    conceal_computation
+      (Computation.T
+         { t = Computation.Path; action = Meta.Action.nothing; model = Meta.Model.unit })
+  ;;
 end
 
 include (Proc : module type of Proc with module Private := Proc.Private)

@@ -1,6 +1,10 @@
 # Bonsai Changelog
 <!-- Change-log notes go in this file, with newer dates at the _top_  --> 
 
+## 2020-09-25
+Added `Handle.show_diff` for testing, which prints the diff between the output
+from the last call to `show` or `show_diff` and the current output.
+
 ## 2020-08-13
 Added `Bonsai.state_opt`, like state, but storing an option of a given model.
 

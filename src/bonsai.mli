@@ -7,10 +7,12 @@ module Private : sig
   module Meta = Meta
   module Snapshot = Snapshot
   module Value = Value
+  module Path = Path
 
   val eval
-    :  Environment.t
-    -> 'model Incr.t
+    :  environment:Environment.t
+    -> path:Path.t
+    -> model:'model Incr.t
     -> inject:('action -> Event.t)
     -> ('model, 'action, 'result) Computation.t
     -> ('model, 'action, 'result) Snapshot.t Incr.t
@@ -20,6 +22,7 @@ module Private : sig
   val reveal_computation : 'a Proc.Computation.t -> 'a Computation.packed
   val conceal_computation : 'a Computation.packed -> 'a Proc.Computation.t
   val to_dot : 'a Proc.Computation.t -> string
+  val path : Path.t Proc.Computation.t
 end
 
 module type Model = Module_types.Model

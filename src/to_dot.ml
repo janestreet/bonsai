@@ -293,6 +293,7 @@ let rec follow_computation
        arrow state ~from:(follow_value state input) ~to_:me;
        me)
   | Leaf_incr _ -> register_computation "leaf_incr"
+  | Path -> register_computation "path"
   | Model_cutoff { t; model = _ } ->
     let me = register_computation "model-cutoff" in
     arrow state ~from:(follow_computation state t) ~to_:me;

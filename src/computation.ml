@@ -44,6 +44,7 @@ type ('model, 'action, 'result) t =
       -> ('m1 * 'm2, ('a1, 'a2) Either.t, 'r2) t
   | Assoc :
       { map : ('k, 'v, 'cmp) Map.t Value.t
+      ; key_compare : 'k -> 'k -> int
       ; key_id : 'k Type_equal.Id.t
       ; data_id : 'v Type_equal.Id.t
       ; by : ('model, 'action, 'result) t
@@ -70,6 +71,8 @@ type ('model, 'action, 'result) t =
       ; out_of : ('key, 'a packed, 'cmp) Map.t
       ; sexp_of_key : 'key -> Sexp.t
       ; key_equal : 'key -> 'key -> bool
+      ; key_compare : 'key -> 'key -> int
+      ; key_type_id : 'key Type_equal.Id.t
       ; key_and_cmp : ('key_and_cmp, ('key, 'cmp) Hidden.Multi_model.t) Type_equal.t
       }
       -> ('key_and_cmp, 'key Hidden.Action.t, 'a) t
@@ -90,6 +93,7 @@ type ('model, 'action, 'result) t =
       ; default_model : 'm
       }
       -> ('m, (unit, 'a) Either.t, 'r * Event.t) t
+  | Path : (unit, Nothing.t, Path.t) t
 
 and 'a packed =
   | T :
@@ -114,5 +118,6 @@ let rec sexp_of_t : type m a r. (m, a, r) t -> Sexp.t = function
   | Lazy _ -> [%sexp Lazy]
   | With_model_resetter { t; _ } -> [%sexp With_model_resetter (t : t)]
   | Wrap { inner; _ } -> [%sexp Wrap (inner : t)]
+  | Path -> [%sexp Path]
 
 and sexp_of_packed : type r. r packed -> Sexp.t = fun (T { t; _ }) -> sexp_of_t t

@@ -49,7 +49,14 @@ end
 module Handle : sig
   type ('result, 'incoming) t
 
+  (** [show] prints out the result of the component as specified by
+      the [Result_spec] that was passed into [Handle.create]. *)
   val show : _ t -> unit
+
+  (** [show_diff] will print the diff of the view between now and 
+      the last time that [show] or [show_diff] was called. *)
+  val show_diff : _ t -> unit
+
   val result : ('result, _) t -> 'result
   val do_actions : (_, 'incoming) t -> 'incoming list -> unit
 
