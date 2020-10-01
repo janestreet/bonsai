@@ -6,7 +6,8 @@ type ('i, 'm, 'a, 'r) unpacked =
   ; model_var : 'm Incr.Var.t
   ; inject : 'a -> Event.t
   ; sexp_of_model : 'm -> Sexp.t
-  ; snapshot : ('m, 'a, 'r) Bonsai.Private.Snapshot.t Incr.Observer.t
+  ; apply_action : (schedule_event:(Event.t -> unit) -> 'a -> 'm) Incr.Observer.t
+  ; result : 'r Incr.Observer.t
   ; queue : 'a Queue.t
   ; mutable last_view : string
   }
@@ -73,21 +74,29 @@ let create
         ~model:(Incr.Var.watch model_var)
         ~inject
         computation
-      |> Incr.observe
     in
+    let apply_action = Bonsai.Private.Snapshot.apply_action snapshot |> Incr.observe in
+    let result = Bonsai.Private.Snapshot.result snapshot |> Incr.observe in
     Incr.stabilize ();
-    T { input_var; model_var; inject; snapshot; sexp_of_model; queue; last_view = "" }
+    T
+      { input_var
+      ; model_var
+      ; inject
+      ; apply_action
+      ; result
+      ; sexp_of_model
+      ; queue
+      ; last_view = ""
+      }
   in
   create_polymorphic component_unpacked action
 ;;
 
 let schedule_event _ = Ui_event.Expert.handle
 
-let flush (T { model_var; snapshot; queue; _ }) =
+let flush (T { model_var; apply_action; queue; _ }) =
   let process_event action =
-    let apply_action =
-      snapshot |> Incr.Observer.value_exn |> Bonsai.Private.Snapshot.apply_action
-    in
+    let apply_action = Incr.Observer.value_exn apply_action in
     let new_model = apply_action action ~schedule_event:Ui_event.Expert.handle in
     Incr.Var.set model_var new_model;
     (* We need to stabilize after every action so that [Snapshot.apply_action] is closed
@@ -102,12 +111,9 @@ let flush (T { model_var; snapshot; queue; _ }) =
 
 let set_input (T { input_var; _ }) input = Incr.Var.set input_var input
 let input (T { input_var; _ }) = Incr.Var.value input_var
+let result (T { result; _ }) = Incr.Observer.value_exn result
 let last_view (T { last_view; _ }) = last_view
 let store_view (T unpacked) s = unpacked.last_view <- s
-
-let result (T { snapshot; _ }) =
-  Incr.Observer.value_exn snapshot |> Bonsai.Private.Snapshot.result
-;;
 
 let sexp_of_model (T { sexp_of_model; model_var; _ }) =
   sexp_of_model (Incr.Var.value model_var)

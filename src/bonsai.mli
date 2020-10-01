@@ -15,7 +15,7 @@ module Private : sig
     -> model:'model Incr.t
     -> inject:('action -> Event.t)
     -> ('model, 'action, 'result) Computation.t
-    -> ('model, 'action, 'result) Snapshot.t Incr.t
+    -> ('model, 'action, 'result) Snapshot.t
 
   val reveal_value : 'a Proc.Value.t -> 'a Value.t
   val conceal_value : 'a Value.t -> 'a Proc.Value.t

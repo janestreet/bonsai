@@ -7,4 +7,4 @@ val eval
   -> model:'model Incr.t
   -> inject:('action -> Event.t)
   -> ('model, 'action, 'result) Computation.t
-  -> ('model, 'action, 'result) Snapshot.t Incr.t
+  -> ('model, 'action, 'result) Snapshot.t

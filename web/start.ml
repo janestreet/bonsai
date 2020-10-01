@@ -165,19 +165,20 @@ module Arrow = struct
         let environment =
           Bonsai.Private.Environment.(empty |> add_exn ~key:fresh ~data:input)
         in
-        let%map snapshot =
+        let snapshot =
           Bonsai.Private.eval
             ~environment
             ~path:Bonsai.Private.Path.empty
             ~model
             ~inject
             computation
+        in
+        let%map apply_action = Bonsai.Private.Snapshot.apply_action snapshot
+        and result = Bonsai.Private.Snapshot.result snapshot
         and model = model in
-        let apply_action = Bonsai.Private.Snapshot.apply_action snapshot in
         let apply_action action () ~schedule_action:_ =
           apply_action ~schedule_event:Vdom.Event.Expert.handle_non_dom_event_exn action
         in
-        let result = Bonsai.Private.Snapshot.result snapshot in
         let { App_result.view; extra; inject_incoming } = get_app_result result in
         Handle.set_inject handle inject_incoming;
         Bus.write handle.extra extra;

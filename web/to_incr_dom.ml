@@ -8,19 +8,21 @@ let create_generic computation ~fresh ~input ~model ~inject =
   let environment =
     Bonsai.Private.Environment.(empty |> add_exn ~key:fresh ~data:input)
   in
-  let%map snapshot =
+  let snapshot =
     Bonsai.Private.eval
       ~environment
       ~path:Bonsai.Private.Path.empty
       ~model
       ~inject
       computation
+  in
+  let%map view, extra = Bonsai.Private.Snapshot.result snapshot
+  and apply_action = Bonsai.Private.Snapshot.apply_action snapshot
   and model = model in
   let apply_action incoming_action _state ~schedule_action:_ =
     let schedule_event = Vdom.Event.Expert.handle_non_dom_event_exn in
-    Bonsai.Private.Snapshot.apply_action snapshot ~schedule_event incoming_action
+    apply_action ~schedule_event incoming_action
   in
-  let view, extra = Bonsai.Private.Snapshot.result snapshot in
   Incr_dom.Component.create_with_extra ~extra ~apply_action model view
 ;;
 

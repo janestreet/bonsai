@@ -13,18 +13,16 @@ type ('model, 'action, 'result) t
     enqueued to be applied to the model. *)
 val apply_action
   :  ('model, 'action, _) t
-  -> schedule_event:(Event.t -> unit)
-  -> 'action
-  -> 'model
+  -> (schedule_event:(Event.t -> unit) -> 'action -> 'model) Incr.t
 
 (** The result of a component is the primary value computed by the component in
     question. At the top level of a UI, this is generally a representation of the view,
     but it's often useful to compute other kinds of results in inner components. *)
-val result : (_, _, 'result) t -> 'result
+val result : (_, _, 'result) t -> 'result Incr.t
 
 (** Creates a new snapshot. Note that the [apply_action] provided here should apply the
     action in question to the model in force at the time [create] is called. *)
 val create
-  :  apply_action:(schedule_event:(Event.t -> unit) -> 'action -> 'model)
-  -> result:'result
+  :  apply_action:(schedule_event:(Event.t -> unit) -> 'action -> 'model) Incr.t
+  -> result:'result Incr.t
   -> ('model, 'action, 'result) t
