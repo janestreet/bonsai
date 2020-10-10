@@ -7,7 +7,7 @@ in OCaml.  It builds on top of the technology and lessons learned from
 
 # Getting Started
 
-The [Getting Started with Bonsai](./docs/getting_started/index.md)
+The [Getting Started with Bonsai](./docs/getting_started/open_source/index.md)
 guide is good if you're new to web development entirely or just want
 to see a walkthrough of a couple simple example apps.
 
