@@ -1,0 +1,3 @@
+(library (name bonsai_testing_example_lib)
+ (libraries async_kernel bonsai_web core_kernel)
+ (preprocess (pps js_of_ocaml-ppx ppx_jane ppx_pattern_bind)))

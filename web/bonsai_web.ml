@@ -11,3 +11,4 @@ module Incr = Import.Incr
 module Vdom = Import.Vdom
 module To_incr_dom = To_incr_dom
 module Effect = Effect
+module Persistent_var = Persistent_var

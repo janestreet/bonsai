@@ -1,0 +1,4 @@
+(library (name bonsai_testing_example_test)
+ (libraries async_kernel bonsai_testing_example_lib bonsai_web
+  bonsai_web_test core_kernel)
+ (preprocess (pps js_of_ocaml-ppx ppx_jane)))

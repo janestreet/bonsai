@@ -18,6 +18,7 @@ val schedule_event : _ t -> Event.t -> unit
 val result : (_, 'r) t -> 'r
 val last_view : _ t -> string
 val store_view : _ t -> string -> unit
+val trigger_on_display : _ t -> unit
 
 val sexp_of_model : _ t -> Sexp.t
 val input : ('i, _) t -> 'i

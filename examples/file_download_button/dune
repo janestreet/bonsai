@@ -1,0 +1,2 @@
+(executables (names main) (libraries bonsai_web vdom_file_download_button)
+ (preprocess (pps ppx_jane)))

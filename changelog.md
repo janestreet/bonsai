@@ -1,6 +1,17 @@
 # Bonsai Changelog
 <!-- Change-log notes go in this file, with newer dates at the _top_  --> 
 
+## 2020-10-19
+Added `Bonsai.Edge` for edge triggering computations.
+
+## 2020-10-06
+Added `Bonsai_web.Persistent_var` for defining a Var that saves its contents in
+either local-storage or session storage.
+
+## 2020-09-29
+Added `Bonsai.Incr`, a module for interacting more directly with the
+incremental implementation of Bonsai.
+
 ## 2020-09-25
 Added `Handle.show_diff` for testing, which prints the diff between the output
 from the last call to `show` or `show_diff` and the current output.

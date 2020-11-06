@@ -21,7 +21,6 @@ module Private : sig
   val conceal_value : 'a Value.t -> 'a Proc.Value.t
   val reveal_computation : 'a Proc.Computation.t -> 'a Computation.packed
   val conceal_computation : 'a Computation.packed -> 'a Proc.Computation.t
-  val to_dot : 'a Proc.Computation.t -> string
   val path : Path.t Proc.Computation.t
 end
 
@@ -33,6 +32,10 @@ module type Comparator = Module_types.Comparator
 type ('k, 'cmp) comparator = ('k, 'cmp) Module_types.comparator
 
 module Event = Event
+
+module Debug : sig
+  val to_dot : 'a Proc.Computation.t -> string
+end
 
 (*_ The following line has the effect of hiding the Private module from the public
   API.  The values therein are exposed in {!Private} above. *)

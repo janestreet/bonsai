@@ -175,14 +175,20 @@ module Arrow = struct
         in
         let%map apply_action = Bonsai.Private.Snapshot.apply_action snapshot
         and result = Bonsai.Private.Snapshot.result snapshot
+        and after_display = Bonsai.Private.Snapshot.after_display snapshot
         and model = model in
+        let schedule_event = Vdom.Event.Expert.handle_non_dom_event_exn in
         let apply_action action () ~schedule_action:_ =
-          apply_action ~schedule_event:Vdom.Event.Expert.handle_non_dom_event_exn action
+          apply_action ~schedule_event action
         in
         let { App_result.view; extra; inject_incoming } = get_app_result result in
         Handle.set_inject handle inject_incoming;
         Bus.write handle.extra extra;
-        let on_display () ~schedule_action:_ = Handle.set_started handle in
+        let on_display () ~schedule_action:_ =
+          Handle.set_started handle;
+          Option.iter after_display ~f:(fun after_display ->
+            after_display ~schedule_event)
+        in
         Incr_dom.Component.create ~apply_action ~on_display model view
       ;;
     end

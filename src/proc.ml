@@ -25,6 +25,57 @@ let read x =
   Computation.T { t = Return x; model = Meta.Model.unit; action = Meta.Action.nothing }
 ;;
 
+let switch ~match_ ~branches ~with_ =
+  let create_case key =
+    let component = with_ key in
+    let (Computation.T { model; t = _; action = _ }) = component in
+    let default_model = Hidden.Model.create model model.default in
+    component, default_model
+  in
+  let components, models =
+    List.fold
+      (List.range 0 branches)
+      ~init:(Int.Map.empty, Int.Map.empty)
+      ~f:(fun (components, models) key ->
+        let component, model = create_case key in
+        let components = Map.add_exn components ~key ~data:component in
+        let models = Map.add_exn models ~key ~data:model in
+        components, models)
+  in
+  let key_type_id = Type_equal.Id.create ~name:"key" Int.sexp_of_t in
+  Computation.T
+    { t =
+        Enum
+          { which = match_
+          ; out_of = components
+          ; sexp_of_key = [%sexp_of: int]
+          ; key_equal = [%equal: int]
+          ; key_type_id
+          ; key_compare = [%compare: int]
+          ; key_and_cmp = T
+          }
+    ; model = Hidden.Multi_model.model_info (module Int) models
+    ; action = Hidden.Action.type_id [%sexp_of: int]
+    }
+;;
+
+module Let_syntax = struct
+  let return = read
+  let ( <*> ) = Value.( <*> )
+  let ( <$> ) f = Value.map ~f
+  let ( >>| ) a f = Value.map a ~f
+
+  module Let_syntax = struct
+    let sub = sub
+    let switch = switch
+    let return = Value.return
+    let map = Value.map
+    let both = Value.both
+
+    include (Value : Mapn with type 'a t := 'a Value.t)
+  end
+end
+
 let pure f i = read (Value.map i ~f)
 let const x = read (Value.return x)
 
@@ -284,27 +335,78 @@ let state_opt (type m) here ?default_model (module M : Model with type t = m) =
     end)
 ;;
 
+module Edge = struct
+  let after_display' event_opt_value =
+    let f =
+      event_opt_value
+      |> Value.map ~f:(Option.map ~f:(fun event ~schedule_event -> schedule_event event))
+    in
+    Computation.T
+      { t = After_display f; model = Meta.Model.unit; action = Meta.Action.nothing }
+  ;;
+
+  let after_display f = after_display' (Value.map f ~f:Option.some)
+
+  let on_change' (type a) here (module M : Model with type t = a) input ~callback =
+    let open Let_syntax in
+    let%sub state, set_state = state_opt here (module M) in
+    let%sub update =
+      match%sub state with
+      | None ->
+        return
+        @@ let%map set_state = set_state
+        and input = input
+        and callback = callback in
+        Some (Ui_event.Many [ set_state (Some input); callback None input ])
+      | Some state ->
+        return
+        @@ let%map state = state
+        and set_state = set_state
+        and input = input
+        and callback = callback in
+        if M.equal state input
+        then None
+        else
+          Some (Ui_event.Many [ set_state (Some input); callback (Some state) input ])
+    in
+    after_display' update
+  ;;
+
+  let on_change here model input ~callback =
+    let callback = Value.map callback ~f:(fun callback _prev value -> callback value) in
+    on_change' here model input ~callback
+  ;;
+end
+
+module Incr = struct
+  let value_cutoff t ~equal = read (Value.cutoff ~equal t)
+
+  let model_cutoff (Computation.T { t; action; model }) =
+    Computation.T { t = Computation.Model_cutoff { t; model }; action; model }
+  ;;
+
+  let compute t ~f =
+    let apply_action _input model ~inject:_ =
+      Incr.map model ~f:(fun _model ~schedule_event:_ -> Nothing.unreachable_code)
+    in
+    let compute input _model ~inject:_ = f input in
+    Computation.T
+      { t =
+          Computation.Leaf_incr
+            { name = "incr-compute"; input = t; apply_action; compute }
+      ; action = Meta.Action.nothing
+      ; model = Meta.Model.unit
+      }
+  ;;
+
+  let to_value incr = Value.Incr incr
+end
+
 module Computation = struct
   type 'a t = 'a Computation.packed
 end
 
 module Value = Value
-
-module Let_syntax = struct
-  let return = read
-  let ( <*> ) = Value.( <*> )
-  let ( <$> ) f = Value.map ~f
-  let ( >>| ) a f = Value.map a ~f
-
-  module Let_syntax = struct
-    let sub = sub
-    let return = Value.return
-    let map = Value.map
-    let both = Value.both
-
-    include (Value : Mapn with type 'a t := 'a Value.t)
-  end
-end
 
 module Private = struct
   let conceal_value = Fn.id

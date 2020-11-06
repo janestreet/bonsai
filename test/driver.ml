@@ -8,6 +8,7 @@ type ('i, 'm, 'a, 'r) unpacked =
   ; sexp_of_model : 'm -> Sexp.t
   ; apply_action : (schedule_event:(Event.t -> unit) -> 'a -> 'm) Incr.Observer.t
   ; result : 'r Incr.Observer.t
+  ; on_display : (schedule_event:(Event.t -> unit) -> unit) option Incr.Observer.t
   ; queue : 'a Queue.t
   ; mutable last_view : string
   }
@@ -77,6 +78,7 @@ let create
     in
     let apply_action = Bonsai.Private.Snapshot.apply_action snapshot |> Incr.observe in
     let result = Bonsai.Private.Snapshot.result snapshot |> Incr.observe in
+    let after_display = Bonsai.Private.Snapshot.after_display snapshot |> Incr.observe in
     Incr.stabilize ();
     T
       { input_var
@@ -85,6 +87,7 @@ let create
       ; apply_action
       ; result
       ; sexp_of_model
+      ; on_display = after_display
       ; queue
       ; last_view = ""
       }
@@ -114,6 +117,12 @@ let input (T { input_var; _ }) = Incr.Var.value input_var
 let result (T { result; _ }) = Incr.Observer.value_exn result
 let last_view (T { last_view; _ }) = last_view
 let store_view (T unpacked) s = unpacked.last_view <- s
+
+let trigger_on_display (T { on_display; _ }) =
+  on_display
+  |> Incr.Observer.value_exn
+  |> Option.iter ~f:(fun on_display -> on_display ~schedule_event:(schedule_event ()))
+;;
 
 let sexp_of_model (T { sexp_of_model; model_var; _ }) =
   sexp_of_model (Incr.Var.value model_var)

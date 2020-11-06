@@ -16,4 +16,5 @@ let update t ~f =
   set t (f old)
 ;;
 
+let get t = Incr.Var.value t
 let value t = t |> Incr.Var.watch |> Value.of_incr

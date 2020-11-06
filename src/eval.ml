@@ -8,6 +8,43 @@ let unusable_apply_action : (schedule_event:(Event.t -> unit) -> Nothing.t -> un
   return (fun ~schedule_event:_ action -> Nothing.unreachable_code action)
 ;;
 
+let do_nothing_after_display : (schedule_event:(Event.t -> unit) -> unit) option Incr.t =
+  Incr.return None
+;;
+
+let merge_after_displays
+  :  (schedule_event:(Event.t -> unit) -> unit) option Incr.t
+    -> (schedule_event:(Event.t -> unit) -> unit) option Incr.t
+    -> (schedule_event:(Event.t -> unit) -> unit) option Incr.t
+  =
+  fun a b ->
+  match%pattern_bind Incr.both a b with
+  | None, None -> return None
+  | Some a, None | None, Some a -> a >>| Option.some
+  | Some a, Some b ->
+    let%map a = a
+    and b = b in
+    Some
+      (fun ~schedule_event ->
+         a ~schedule_event;
+         b ~schedule_event)
+;;
+
+let unzip3_mapi' map ~f =
+  let first, second_and_third =
+    Incr_map.unzip_mapi' map ~f:(fun ~key ~data ->
+      let a, b, c = f ~key ~data in
+      let bc = Incr.both b c in
+      a, bc)
+  in
+  let second, third =
+    Incr_map.unzip_mapi' second_and_third ~f:(fun ~key:_ ~data ->
+      let%pattern_bind b, c = data in
+      b, c)
+  in
+  first, second, third
+;;
+
 let rec eval
   : type model action result.
     environment:Environment.t
@@ -21,19 +58,22 @@ let rec eval
   match computation with
   | Return var ->
     let result = Value.eval environment var in
-    Snapshot.create ~result ~apply_action:unusable_apply_action
+    Snapshot.create
+      ~result
+      ~apply_action:unusable_apply_action
+      ~after_display:do_nothing_after_display
   | Leaf { input; apply_action; compute; name = _; kind = _ } ->
     let%pattern_bind result, apply_action =
       let%mapn input = Value.eval environment input
       and model = model in
       compute ~inject input model, apply_action ~inject input model
     in
-    Snapshot.create ~result ~apply_action
+    Snapshot.create ~result ~apply_action ~after_display:do_nothing_after_display
   | Leaf_incr { input; apply_action; compute; name = _ } ->
     let input = Value.eval environment input in
     let result = compute ~inject input model
     and apply_action = apply_action ~inject input model in
-    Snapshot.create ~result ~apply_action
+    Snapshot.create ~result ~apply_action ~after_display:do_nothing_after_display
   | Model_cutoff { t; model = { Meta.Model.equal; _ } } ->
     let model = Incr.map model ~f:Fn.id in
     Incr.set_cutoff model (Incr.Cutoff.of_equal equal);
@@ -62,7 +102,10 @@ let rec eval
         | First action1 -> apply_action_from action1 ~schedule_event, m2
         | Second action2 -> m1, apply_action_into action2 ~schedule_event
     and result = Snapshot.result into in
-    Snapshot.create ~result ~apply_action
+    let after_display =
+      merge_after_displays (Snapshot.after_display from) (Snapshot.after_display into)
+    in
+    Snapshot.create ~result ~apply_action ~after_display
   | Assoc
       { map
       ; by
@@ -83,8 +126,8 @@ let rec eval
         | `Both input_and_models -> Some input_and_models)
     in
     let create_keyed = unstage (Path.Elem.keyed ~compare:key_compare key_id) in
-    let results_map, apply_action_map =
-      Incr_map.unzip_mapi' input_and_models_map ~f:(fun ~key ~data:input_and_model ->
+    let results_map, apply_action_map, after_display_map =
+      unzip3_mapi' input_and_models_map ~f:(fun ~key ~data:input_and_model ->
         let path = Path.append path Path.Elem.(Assoc (create_keyed key)) in
         let%pattern_bind value, model = input_and_model in
         let environment =
@@ -96,7 +139,9 @@ let rec eval
         in
         let inject action = inject (key, action) in
         let snapshot = eval ~environment ~path ~inject ~model by in
-        Snapshot.result snapshot, Snapshot.apply_action snapshot)
+        ( Snapshot.result snapshot
+        , Snapshot.apply_action snapshot
+        , Snapshot.after_display snapshot ))
     in
     let apply_action =
       let%mapn apply_action_map = apply_action_map
@@ -121,7 +166,15 @@ let rec eval
           then Map.remove model id
           else Map.set model ~key:id ~data
     in
-    Snapshot.create ~result:results_map ~apply_action
+    let after_display =
+      let%map after_displays = Incr_map.filter_map' after_display_map ~f:Fn.id in
+      if Map.is_empty after_displays
+      then None
+      else
+        Some
+          (fun ~schedule_event -> Map.iter after_displays ~f:(fun f -> f ~schedule_event))
+    in
+    Snapshot.create ~result:results_map ~apply_action ~after_display
   | Assoc_simpl
       { map
       ; by
@@ -134,15 +187,24 @@ let rec eval
       } ->
     let map_input = Value.eval environment map in
     let result = Incr_map.mapi map_input ~f:(fun ~key ~data -> by key data) in
-    Snapshot.create ~result ~apply_action:unusable_apply_action
+    Snapshot.create
+      ~result
+      ~apply_action:unusable_apply_action
+      ~after_display:do_nothing_after_display
   | Enum
       { which; out_of; key_equal; key_type_id; key_compare; key_and_cmp = T; sexp_of_key }
     ->
     let key = Value.eval environment which in
     Incremental.set_cutoff key (Incremental.Cutoff.of_equal key_equal);
-    let%pattern_bind result, apply_action =
+    let%pattern_bind result, apply_action, after_display =
       let create_keyed = unstage (Path.Elem.keyed ~compare:key_compare key_type_id) in
-      let%map key = key in
+      let%bind key = key in
+      (* !!!This is a load-bearing bind!!!
+
+         If this bind isn't here, the scope that is created for the bind
+         doesn't exist, and old incremental nodes might still be active, and
+         with things like [match%sub] or [Bonsai.match_either] can witness old
+         nodes, which can cause [assert false] to trigger. *)
       let path = Path.append path Path.Elem.(Assoc (create_keyed key)) in
       let (T { t; model = model_info; action = action_info }) = Map.find_exn out_of key in
       let chosen_model =
@@ -177,11 +239,12 @@ let rec eval
                   (action : Sexp.t)];
             model
       in
-      Snapshot.result snapshot, apply_action
+      let%mapn result = Snapshot.result snapshot
+      and after_display = Snapshot.after_display snapshot
+      and apply_action = apply_action in
+      result, apply_action, after_display
     in
-    let apply_action = Incr.join apply_action
-    and result = Incr.join result in
-    Snapshot.create ~apply_action ~result
+    Snapshot.create ~apply_action ~result ~after_display
   | Lazy lazy_computation ->
     let (T { t; model = model_info; action = action_info }) = force lazy_computation in
     let input_model =
@@ -206,7 +269,10 @@ let rec eval
           Some (Hidden.Model.create model_info new_model)
         | None -> model
     in
-    Snapshot.create ~apply_action ~result:(Snapshot.result snapshot)
+    Snapshot.create
+      ~apply_action
+      ~result:(Snapshot.result snapshot)
+      ~after_display:(Snapshot.after_display snapshot)
   | Wrap { model_id; inject_id; inner; apply_action } ->
     let%pattern_bind outer_model, inner_model = model in
     let inject_outer a = inject (Either.First a) in
@@ -241,7 +307,10 @@ let rec eval
           let new_inner_model = inner_apply_action ~schedule_event action2 in
           outer_model, new_inner_model
     in
-    Snapshot.create ~result:inner_result ~apply_action
+    Snapshot.create
+      ~result:inner_result
+      ~apply_action
+      ~after_display:(Snapshot.after_display inner_snapshot)
   | With_model_resetter { t; default_model } ->
     let reset_event = inject (First ()) in
     let inject a = inject (Second a) in
@@ -257,10 +326,17 @@ let rec eval
       let%map result = Snapshot.result snapshot in
       result, reset_event
     in
-    Snapshot.create ~result ~apply_action
+    Snapshot.create ~result ~apply_action ~after_display:(Snapshot.after_display snapshot)
   | Path ->
     Snapshot.create
       ~result:(Incr.return path)
       ~apply_action:
         (Incr.return (fun ~schedule_event:_ action -> Nothing.unreachable_code action))
+      ~after_display:do_nothing_after_display
+  | After_display after_display ->
+    let after_display = Value.eval environment after_display in
+    Snapshot.create
+      ~result:(Incr.return ())
+      ~apply_action:unusable_apply_action
+      ~after_display
 ;;

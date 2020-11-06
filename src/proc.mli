@@ -136,6 +136,9 @@ module Var : sig
   (** Sets the value inside of [t]. *)
   val set : 'a t -> 'a -> unit
 
+  (** Gets the value inside of [t]. *)
+  val get : 'a t -> 'a
+
   (** Provides read-only access to [t] by producing a {!Value.t} which is used inside of a
       Bonsai computation. *)
   val value : 'a t -> 'a Value.t
@@ -369,6 +372,54 @@ val match_option
     for e.g. clearing a form of all input values.*)
 val with_model_resetter : 'a Computation.t -> ('a * Event.t) Computation.t
 
+module Edge : sig
+  (** All the functions in this module incorporate the concept of "edge-triggering",
+      which is the terminology that we use to describe actions that occur when a value
+      changes. *)
+
+  (** When given a value and a callback, [on_change] and [on_change'] will watch the 
+      input variable and call the callback whenever the value changes. *)
+  val on_change
+    :  Source_code_position.t
+    -> (module Model with type t = 'a)
+    -> 'a Value.t
+    -> callback:('a -> Event.t) Value.t
+    -> unit Computation.t
+
+  (** The same as [on_change], but the callback function gets access to the 
+      previous value that was witnessed. *)
+  val on_change'
+    :  Source_code_position.t
+    -> (module Model with type t = 'a)
+    -> 'a Value.t
+    -> callback:('a option -> 'a -> Event.t) Value.t
+    -> unit Computation.t
+
+  (** [after_display] and [after_display'] are lower-level functions that 
+      can be used to register an event to occur once-per-frame (after each
+      render). *)
+  val after_display : Event.t Value.t -> unit Computation.t
+
+  val after_display' : Event.t option Value.t -> unit Computation.t
+end
+
+module Incr : sig
+  (** A [Value.t] passed through [value_cutoff] will only trigger changes on its dependents when the 
+      value changes according to the provided equality function *)
+  val value_cutoff : 'a Value.t -> equal:('a -> 'a -> bool) -> 'a Computation.t
+
+  (** You can use [model_cutoff] to override the value cutoff for the model for a 
+      computation to the equality function that your computation specified via the 
+      [Model.equal] function passed to [of_module], [state], etc... *)
+  val model_cutoff : 'a Computation.t -> 'a Computation.t
+
+  (** Use [compute] to move a function from the incremental world into the bonsai world. *)
+  val compute : 'a Value.t -> f:('a Incr.t -> 'b Incr.t) -> 'b Computation.t
+
+  (** If you've got an incremental, you can convert it to a value with this function. *)
+  val to_value : 'a Incr.t -> 'a Value.t
+end
+
 (** This [Let_syntax] module is basically just {!Value.Let_syntax} with the addition of
     the [sub] function, which operates on Computations.
 
@@ -394,6 +445,12 @@ module Let_syntax : sig
         function [f] in the form of a [Value.t].  The main way to use this function is via
         the syntax extension [let%sub] which is described above. *)
     val sub : 'a Computation.t -> f:('a Value.t -> 'b Computation.t) -> 'b Computation.t
+
+    val switch
+      :  match_:int Value.t
+      -> branches:int
+      -> with_:(int -> 'a Computation.t)
+      -> 'a Computation.t
 
     val map : 'a Value.t -> f:('a -> 'b) -> 'b Value.t
     val return : 'a -> 'a Value.t

@@ -24,8 +24,6 @@ module Private = struct
 
   include Proc.Private
 
-  let to_dot c = To_dot.to_dot (reveal_computation c)
-
   let path =
     conceal_computation
       (Computation.T
@@ -34,6 +32,10 @@ module Private = struct
 end
 
 include (Proc : module type of Proc with module Private := Proc.Private)
+
+module Debug = struct
+  let to_dot c = To_dot.to_dot (Private.reveal_computation c)
+end
 
 module Arrow = struct
   include Legacy_api

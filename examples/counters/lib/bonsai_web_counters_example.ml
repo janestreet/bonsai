@@ -67,8 +67,7 @@ let single_counter =
 (* [CODE_EXCERPT_BEGIN 3] *)
 let application =
   let open Bonsai.Let_syntax in
-  let%sub add_counter = add_counter_component in
-  let%pattern_bind map, add_button = add_counter in
+  let%sub map, add_button = add_counter_component in
   let%sub counters =
     Bonsai.assoc (module Int) map ~f:(fun _key _data -> single_counter)
   in

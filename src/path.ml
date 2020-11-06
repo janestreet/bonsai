@@ -48,3 +48,30 @@ let append t ele = ele :: t
 (* reverse before doing anything *)
 let compare a b = compare (List.rev a) (List.rev b)
 let sexp_of_t l = sexp_of_t (List.rev l)
+
+let to_unique_identifier_string t =
+  let offset = Char.to_int 'a' in
+  let lower_nibble_to_alpha c = Int.bit_and c 0b1111 + offset |> Char.of_int_exn in
+  let char_to_alpha c =
+    let c = Char.to_int c in
+    let lower = lower_nibble_to_alpha c in
+    let upper = lower_nibble_to_alpha (Int.shift_right c 4) in
+    [ upper; lower ]
+  in
+  let keyed_to_string k =
+    k
+    |> Elem.Keyed.sexp_of_t
+    |> Sexp.to_string_mach
+    |> String.to_list
+    |> List.bind ~f:char_to_alpha
+    |> String.of_char_list
+  in
+  t
+  |> List.rev
+  |> List.map ~f:(function
+    | Elem.Subst_from -> "x"
+    | Subst_into -> "y"
+    | Assoc k | Enum k -> keyed_to_string k)
+  |> String.concat ~sep:"_"
+  |> ( ^ ) "bonsai_path_"
+;;

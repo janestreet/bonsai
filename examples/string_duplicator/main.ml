@@ -48,10 +48,9 @@ let string_to_repeat =
 
 let app =
   let open Bonsai.Let_syntax in
-  let%sub string_to_repeat = string_to_repeat in
-  (* Pattern-bind is used to extract the [(string * Vdom.Node.t) Bonsai.Value.t]
+  (* let%sub can decompose the [(string * Vdom.Node.t) Bonsai.Value.t]
      into both a [string Bonsai.Value.t] and a [Vdom.Node.t Bonsai.Value.t]. *)
-  let%pattern_bind string, textbox_view = string_to_repeat in
+  let%sub string, textbox_view = string_to_repeat in
   let%sub duplicated = string_duplicator string in
   return
   @@ let%map textbox_view = textbox_view

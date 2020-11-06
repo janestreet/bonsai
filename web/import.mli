@@ -8,7 +8,4 @@ module Event : sig
   val no_op : t
 end
 
-module Bonsai : sig
-  module Incr = Incr
-  include module type of Bonsai
-end
+module Bonsai = Bonsai

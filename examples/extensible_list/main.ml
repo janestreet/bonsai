@@ -33,8 +33,7 @@ let state_component =
 
 let add_remove component ~wrap_remove =
   let open Bonsai.Let_syntax in
-  let%sub state = state_component in
-  let%pattern_bind { Model.data; count = _ }, inject_action = state in
+  let%sub { Model.data; count = _ }, inject_action = state_component in
   let%sub results =
     Bonsai.assoc
       (module Int)

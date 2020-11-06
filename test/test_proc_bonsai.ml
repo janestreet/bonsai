@@ -58,15 +58,81 @@ let%expect_test "call component" =
   [%expect {| 3 |}]
 ;;
 
+let%expect_test "on_display" =
+  let component =
+    let%sub state, set_state = Bonsai.state [%here] (module Int) ~default_model:0 in
+    let update =
+      let%map state = state
+      and set_state = set_state in
+      set_state (state + 1)
+    in
+    let%sub () = Bonsai.Edge.after_display update in
+    return state
+  in
+  let handle = Handle.create (Result_spec.sexp (module Int)) component in
+  Handle.show handle;
+  [%expect {| 0 |}];
+  Handle.show handle;
+  [%expect {| 1 |}];
+  Handle.show handle;
+  [%expect {| 2 |}];
+  Handle.show handle;
+  [%expect {| 3 |}]
+;;
+
+let%expect_test "on_display for updating a state" =
+  let component input =
+    let%sub state, set_state = Bonsai.state_opt [%here] (module Int) in
+    let%sub update =
+      match%sub state with
+      | None ->
+        return
+        @@ let%map set_state = set_state
+        and input = input in
+        Some (set_state (Some input))
+      | Some state ->
+        return
+        @@ let%map state = state
+        and set_state = set_state
+        and input = input in
+        if Int.equal state input then None else Some (set_state (Some input))
+    in
+    let%sub () = Bonsai.Edge.after_display' update in
+    return (Bonsai.Value.both input state)
+  in
+  let var = Bonsai.Var.create 1 in
+  let handle =
+    Handle.create
+      (Result_spec.sexp
+         (module struct
+           type t = int * int option [@@deriving sexp_of]
+         end))
+      (component (Bonsai.Var.value var))
+  in
+  Handle.show handle;
+  [%expect {| (1 ()) |}];
+  Handle.show handle;
+  [%expect {| (1 (1)) |}];
+  Handle.show handle;
+  [%expect {| (1 (1)) |}];
+  Bonsai.Var.set var 2;
+  Handle.show handle;
+  [%expect {| (2 (1)) |}];
+  Handle.show handle;
+  [%expect {| (2 (2)) |}];
+  Handle.show handle;
+  [%expect {| (2 (2)) |}]
+;;
+
 let%expect_test "path" =
   let component =
-    let%sub _ = Bonsai.const () in
+    let%sub () = Bonsai.const () in
     let%sub path = Bonsai.Private.path in
     return (Bonsai.Value.map path ~f:Bonsai.Private.Path.sexp_of_t)
   in
   let handle = Handle.create (Result_spec.sexp (module Sexp)) component in
   Handle.show handle;
-  (* The first of these "Subst_from" is actually a component that is 
+  (* The first of these "Subst_from" is actually a component that is
      added by the testing helpers. *)
   [%expect {| (Subst_from Subst_into Subst_from) |}]
 ;;
@@ -164,6 +230,78 @@ let%expect_test "match_either" =
   Bonsai.Var.set var (Second 2);
   Handle.show handle;
   [%expect {| 2 |}]
+;;
+
+let%expect_test "match%sub" =
+  let var : (string, int) Either.t Bonsai.Var.t =
+    Bonsai.Var.create (Either.First "hello")
+  in
+  let component =
+    match%sub Bonsai.Var.value var with
+    | First s -> Bonsai.read (Bonsai.Value.map s ~f:(sprintf "%s world"))
+    | Second i -> Bonsai.read (Bonsai.Value.map i ~f:Int.to_string)
+  in
+  let handle = Handle.create (Result_spec.string (module String)) component in
+  Handle.show handle;
+  [%expect {| hello world |}];
+  Bonsai.Var.set var (Second 2);
+  Handle.show handle;
+  [%expect {| 2 |}]
+;;
+
+type thing =
+  | Loading of string
+  | Search_results of int
+
+let%expect_test "match%sub repro" =
+  let open Bonsai.Let_syntax in
+  let component current_page =
+    match%sub current_page with
+    | Loading x ->
+      Bonsai.read
+        (let%map x = x in
+         "loading " ^ x)
+    | Search_results s ->
+      Bonsai.read
+        (let%map s = s in
+         sprintf "search results %d" s)
+  in
+  let var = Bonsai.Var.create (Loading "hello") in
+  let handle =
+    Handle.create (Result_spec.string (module String)) (component (Bonsai.Var.value var))
+  in
+  Handle.show handle;
+  [%expect {| loading hello |}];
+  Bonsai.Var.set var (Search_results 5);
+  Handle.show handle;
+  [%expect {| search results 5 |}]
+;;
+
+let%expect_test "if%sub" =
+  let component input =
+    let a = Bonsai.Value.return "hello" in
+    let b = Bonsai.Value.return "world" in
+    if%sub input then Bonsai.read a else Bonsai.read b
+  in
+  let var = Bonsai.Var.create true in
+  let handle =
+    Handle.create (Result_spec.string (module String)) (component (Bonsai.Var.value var))
+  in
+  Handle.show handle;
+  [%expect {| hello |}];
+  Bonsai.Var.set var false;
+  Handle.show handle;
+  [%expect {| world |}]
+;;
+
+let%expect_test "let%sub patterns" =
+  let component =
+    let%sub a, _b = Bonsai.const ("hello world", 5) in
+    return a
+  in
+  let handle = Handle.create (Result_spec.string (module String)) component in
+  Handle.show handle;
+  [%expect {| hello world |}]
 ;;
 
 let%expect_test "assoc simplifies its inner computation, if possible" =
@@ -405,6 +543,29 @@ let%test_unit "constant prop doesn't happen" =
   ()
 ;;
 
+let%expect_test "ignored result of assoc" =
+  let var = Bonsai.Var.create (Int.Map.of_alist_exn [ 1, (); 2, () ]) in
+  let component =
+    let%sub _ =
+      Bonsai.assoc
+        (module Int)
+        (Bonsai.Var.value var)
+        ~f:(fun _key data ->
+          (* this sub is here to make sure that bonsai doesn't
+             optimize the component into an "assoc_simple" *)
+          let%sub _ = Bonsai.const () in
+          Bonsai.read data)
+    in
+    Bonsai.const ()
+  in
+  let handle = Handle.create (Result_spec.sexp (module Unit)) component in
+  Handle.show handle;
+  [%expect {| () |}];
+  Bonsai.Var.set var (Int.Map.of_alist_exn []);
+  Expect_test_helpers_core.require_does_not_raise [%here] (fun () -> Handle.show handle);
+  [%expect {| () |}]
+;;
+
 module Dot = struct
   let%expect_test "map7 dot file" =
     let c =
@@ -418,7 +579,7 @@ module Dot = struct
          and () = Bonsai.Value.return () in
          ())
     in
-    print_endline (Bonsai.Private.to_dot c);
+    print_endline (Bonsai.Debug.to_dot c);
     [%expect
       {|
     digraph {
@@ -451,7 +612,7 @@ module Dot = struct
       let%sub c = return (Bonsai.Value.both a b) in
       return (Bonsai.Value.both a c)
     in
-    print_endline (Bonsai.Private.to_dot c);
+    print_endline (Bonsai.Debug.to_dot c);
     [%expect
       {|
       digraph {

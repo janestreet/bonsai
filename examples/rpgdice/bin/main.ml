@@ -16,14 +16,12 @@ module Input_method_selector = Dropdown_menu.Make (Input_method)
 
 let input_kind ~input_method =
   let open Bonsai.Let_syntax in
-  Bonsai.enum
-    (module Input_method)
-    ~match_:input_method
-    ~with_:(function
-      | Text -> String_input.component (module Rpgdice.Roll_spec) ~default_model:""
-      | Clicker ->
-        let%sub result_and_vdom = Dice_spec_clicker_input.component in
-        return (result_and_vdom >>| Tuple2.map_fst ~f:Result.return))
+  match%sub input_method with
+  | Input_method.Text ->
+    String_input.component (module Rpgdice.Roll_spec) ~default_model:""
+  | Clicker ->
+    let%sub result_and_vdom = Dice_spec_clicker_input.component in
+    return (result_and_vdom >>| Tuple2.map_fst ~f:Result.return)
 ;;
 
 let app =
@@ -33,12 +31,10 @@ let app =
       [ Vdom.Node.div [ Vdom.Attr.id "input" ] [ input_method_selector; input ]; roller ]
   in
   let open Bonsai.Let_syntax in
-  let%sub input_method_and_selector =
+  let%sub input_method, input_method_selector =
     Input_method_selector.component ~default_model:Text
   in
-  let%pattern_bind input_method, input_method_selector = input_method_and_selector in
-  let%sub roll_spec_and_input = input_kind ~input_method in
-  let%pattern_bind roll_spec, input = roll_spec_and_input in
+  let%sub roll_spec, input = input_kind ~input_method in
   let%sub roller = Roller.component roll_spec in
   return
     (let%map input = input

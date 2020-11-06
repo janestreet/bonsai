@@ -89,7 +89,8 @@ module Handle = struct
     Driver.flush handle;
     let _, view, _ = Driver.result handle in
     Driver.store_view handle view;
-    print_endline view
+    print_endline view;
+    Driver.trigger_on_display handle
   ;;
 
   let show_diff handle =
@@ -97,7 +98,8 @@ module Handle = struct
     Driver.flush handle;
     let _, view, _ = Driver.result handle in
     Driver.store_view handle view;
-    Expect_test_patdiff.print_patdiff before view
+    Expect_test_patdiff.print_patdiff before view;
+    Driver.trigger_on_display handle
   ;;
 
   let show_model handle =
