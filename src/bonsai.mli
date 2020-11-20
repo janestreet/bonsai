@@ -6,6 +6,7 @@ module Private : sig
   module Environment = Environment
   module Meta = Meta
   module Snapshot = Snapshot
+  module Lifecycle = Lifecycle
   module Value = Value
   module Path = Path
 
@@ -32,6 +33,7 @@ module type Comparator = Module_types.Comparator
 type ('k, 'cmp) comparator = ('k, 'cmp) Module_types.comparator
 
 module Event = Event
+module Effect = Effect
 
 module Debug : sig
   val to_dot : 'a Proc.Computation.t -> string
@@ -40,4 +42,4 @@ end
 (*_ The following line has the effect of hiding the Private module from the public
   API.  The values therein are exposed in {!Private} above. *)
 include module type of Proc with module Private := Proc.Private
-module Arrow : module type of Legacy_api
+module Arrow_deprecated : module type of Legacy_api

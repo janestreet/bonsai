@@ -1,7 +1,7 @@
 open! Core_kernel
 open! Bonsai_web
 open Bonsai.Let_syntax
-module Tabs = Bonsai_ui_components_tabs
+module Tabs = Bonsai_web_ui_tabs
 
 module T = struct
   type t =

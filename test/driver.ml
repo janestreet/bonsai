@@ -8,9 +8,11 @@ type ('i, 'm, 'a, 'r) unpacked =
   ; sexp_of_model : 'm -> Sexp.t
   ; apply_action : (schedule_event:(Event.t -> unit) -> 'a -> 'm) Incr.Observer.t
   ; result : 'r Incr.Observer.t
-  ; on_display : (schedule_event:(Event.t -> unit) -> unit) option Incr.Observer.t
+  ; lifecycle : Bonsai.Private.Lifecycle.Collection.t Incr.Observer.t
   ; queue : 'a Queue.t
+  ; mutable should_replace_bonsai_path_string : bool
   ; mutable last_view : string
+  ; mutable last_lifecycle : Bonsai.Private.Lifecycle.Collection.t
   }
 
 type ('i, 'r) t = T : ('i, _, _, 'r) unpacked -> ('i, 'r) t
@@ -19,7 +21,7 @@ let create
       (type i r)
       ?initial_model_sexp
       ~(initial_input : i)
-      (component : (i, r) Bonsai.Arrow.t)
+      (component : (i, r) Bonsai.Arrow_deprecated.t)
   : (i, r) t
   =
   let input_var = Incr.Var.create initial_input in
@@ -78,7 +80,7 @@ let create
     in
     let apply_action = Bonsai.Private.Snapshot.apply_action snapshot |> Incr.observe in
     let result = Bonsai.Private.Snapshot.result snapshot |> Incr.observe in
-    let after_display = Bonsai.Private.Snapshot.after_display snapshot |> Incr.observe in
+    let lifecycle = Bonsai.Private.Snapshot.lifecycle snapshot |> Incr.observe in
     Incr.stabilize ();
     T
       { input_var
@@ -87,9 +89,11 @@ let create
       ; apply_action
       ; result
       ; sexp_of_model
-      ; on_display = after_display
+      ; lifecycle
       ; queue
+      ; should_replace_bonsai_path_string = true
       ; last_view = ""
+      ; last_lifecycle = Bonsai.Private.Lifecycle.Collection.empty
       }
   in
   create_polymorphic component_unpacked action
@@ -118,10 +122,19 @@ let result (T { result; _ }) = Incr.Observer.value_exn result
 let last_view (T { last_view; _ }) = last_view
 let store_view (T unpacked) s = unpacked.last_view <- s
 
-let trigger_on_display (T { on_display; _ }) =
-  on_display
-  |> Incr.Observer.value_exn
-  |> Option.iter ~f:(fun on_display -> on_display ~schedule_event:(schedule_event ()))
+let trigger_lifecycles (T t) =
+  let old = t.last_lifecycle in
+  let new_ = t.lifecycle |> Incr.Observer.value_exn in
+  t.last_lifecycle <- new_;
+  schedule_event () (Bonsai.Private.Lifecycle.Collection.diff old new_)
+;;
+
+let should_censor_bonsai_path (T { should_replace_bonsai_path_string; _ }) =
+  should_replace_bonsai_path_string
+;;
+
+let disable_bonsai_path_censoring (T unpacked) =
+  unpacked.should_replace_bonsai_path_string <- false
 ;;
 
 let sexp_of_model (T { sexp_of_model; model_var; _ }) =

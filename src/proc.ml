@@ -68,7 +68,7 @@ module Let_syntax = struct
   module Let_syntax = struct
     let sub = sub
     let switch = switch
-    let return = Value.return
+    let return = return
     let map = Value.map
     let both = Value.both
 
@@ -270,6 +270,58 @@ let state_machine0 here model action ~default_model ~apply_action =
   state_machine1 here model action ~default_model ~apply_action (Value.return ())
 ;;
 
+let actor1
+  : type input model action return.
+    Source_code_position.t
+    -> (module Model with type t = model)
+    -> (module Action with type t = action)
+    -> default_model:model
+    -> recv:
+         (schedule_event:(Ui_event.t -> unit)
+          -> input
+          -> model
+          -> action
+          -> model * return)
+    -> input Value.t
+    -> (model * (action -> return Effect.t)) Computation.packed
+  =
+  fun here
+    (module M : Model with type t = model)
+    (module A : Action with type t = action)
+    ~default_model
+    ~recv
+    input ->
+    let open Let_syntax in
+    let module Action_with_callback = struct
+      type t = (action, return) Effect.Private.Callback.t
+
+      let sexp_of_t cb = A.sexp_of_t (Effect.Private.Callback.request cb)
+    end
+    in
+    let%sub model_and_inject =
+      state_machine1
+        here
+        (module M)
+        (module Action_with_callback)
+        ~default_model
+        ~apply_action:(fun ~inject:_ ~schedule_event input model callback ->
+          let action = Effect.Private.Callback.request callback in
+          let new_model, response = recv ~schedule_event input model action in
+          schedule_event (Effect.Private.Callback.respond_to callback response);
+          new_model)
+        input
+    in
+    return
+    @@ let%map model, inject = model_and_inject in
+    let inject action = Effect.Private.make ~request:action ~evaluator:inject in
+    model, inject
+;;
+
+let actor0 here model action ~default_model ~recv =
+  let recv ~schedule_event _ = recv ~schedule_event in
+  actor1 here model action ~default_model ~recv (Value.return ())
+;;
+
 let lazy_ t =
   let open struct
     type model = Hidden.Model.t option [@@deriving equal, sexp_of]
@@ -336,16 +388,42 @@ let state_opt (type m) here ?default_model (module M : Model with type t = m) =
 ;;
 
 module Edge = struct
-  let after_display' event_opt_value =
-    let f =
-      event_opt_value
-      |> Value.map ~f:(Option.map ~f:(fun event ~schedule_event -> schedule_event event))
+  let lifecycle' ?on_activate ?on_deactivate ?after_display () =
+    let open Let_syntax in
+    let transpose_join : 'a option Value.t option -> 'a option Value.t = function
+      | Some a -> a
+      | None -> Value.return None
+    in
+    let tripple =
+      let%map a = transpose_join on_activate
+      and b = transpose_join on_deactivate
+      and c = transpose_join after_display in
+      a, b, c
+    in
+    let t =
+      match%map tripple with
+      | None, None, None -> None
+      | on_activate, on_deactivate, after_display ->
+        Some { Lifecycle.on_activate; on_deactivate; after_display }
     in
     Computation.T
-      { t = After_display f; model = Meta.Model.unit; action = Meta.Action.nothing }
+      { t = Lifecycle t; model = Meta.Model.unit; action = Meta.Action.nothing }
   ;;
 
-  let after_display f = after_display' (Value.map f ~f:Option.some)
+  let lifecycle ?on_activate ?on_deactivate ?after_display () =
+    lifecycle'
+      ?on_activate:(Option.map on_activate ~f:(Value.map ~f:Option.some))
+      ?on_deactivate:(Option.map on_deactivate ~f:(Value.map ~f:Option.some))
+      ?after_display:(Option.map after_display ~f:(Value.map ~f:Option.some))
+      ()
+  ;;
+
+  let after_display' event_opt_value = lifecycle' ~after_display:event_opt_value ()
+
+  let after_display event_value =
+    let event_value = Value.map event_value ~f:Option.some in
+    lifecycle' ~after_display:event_value ()
+  ;;
 
   let on_change' (type a) here (module M : Model with type t = a) input ~callback =
     let open Let_syntax in

@@ -294,7 +294,10 @@ let rec follow_computation
        me)
   | Leaf_incr _ -> register_computation "leaf_incr"
   | Path -> register_computation "path"
-  | After_display _ -> register_computation "after-display"
+  | Lifecycle v ->
+    let me = register_computation "life-cycle" in
+    arrow state ~from:(follow_value state v) ~to_:me;
+    me
   | Model_cutoff { t; model = _ } ->
     let me = register_computation "model-cutoff" in
     arrow state ~from:(follow_computation state t) ~to_:me;

@@ -4,11 +4,6 @@ module Bonsai_lib = Bonsai
 open Proc
 open Bonsai.Let_syntax
 
-let dummy_source_code_position =
-  Source_code_position.
-    { pos_fname = "file_name.ml"; pos_lnum = 0; pos_bol = 0; pos_cnum = 0 }
-;;
-
 let%expect_test "cutoff" =
   let var = Bonsai.Var.create 0 in
   let value = Bonsai.Var.value var in
@@ -566,73 +561,145 @@ let%expect_test "ignored result of assoc" =
   [%expect {| () |}]
 ;;
 
-module Dot = struct
-  let%expect_test "map7 dot file" =
-    let c =
-      Bonsai.read
-        (let%map () = Bonsai.Value.return ()
-         and () = Bonsai.Value.return ()
-         and () = Bonsai.Value.return ()
-         and () = Bonsai.Value.return ()
-         and () = Bonsai.Value.return ()
-         and () = Bonsai.Value.return ()
-         and () = Bonsai.Value.return () in
-         ())
-    in
-    print_endline (Bonsai.Debug.to_dot c);
-    [%expect
-      {|
-    digraph {
-    read_0 [ style=filled, shape = "Mrecord", label = "read"; fillcolor = "#86E3CE"; ]
-    map_1 [ style=filled, shape = "oval", label = "map"; fillcolor = "#FFDD94"; ]
-    const_2 [ style=filled, shape = "oval", label = "const"; fillcolor = "#FFDD94"; ]
-    const_3 [ style=filled, shape = "oval", label = "const"; fillcolor = "#FFDD94"; ]
-    const_4 [ style=filled, shape = "oval", label = "const"; fillcolor = "#FFDD94"; ]
-    const_5 [ style=filled, shape = "oval", label = "const"; fillcolor = "#FFDD94"; ]
-    const_6 [ style=filled, shape = "oval", label = "const"; fillcolor = "#FFDD94"; ]
-    const_7 [ style=filled, shape = "oval", label = "const"; fillcolor = "#FFDD94"; ]
-    const_8 [ style=filled, shape = "oval", label = "const"; fillcolor = "#FFDD94"; ]
-    map7_9 [ style=filled, shape = "oval", label = "map7"; fillcolor = "#FFDD94"; ]
-    const_8 -> map7_9;
-    const_7 -> map7_9;
-    const_6 -> map7_9;
-    const_5 -> map7_9;
-    const_4 -> map7_9;
-    const_3 -> map7_9;
-    const_2 -> map7_9;
-    map7_9 -> map_1;
-    map_1 -> read_0;
-    } |}]
-  ;;
+let%expect_test "on_display for updating a state (using on_change)" =
+  let effect =
+    (fun (prev, cur) -> print_s [%message "change!" (prev : int option) (cur : int)])
+    |> Bonsai.Effect.of_sync_fun
+    |> unstage
+  in
+  let callback =
+    Bonsai.Value.return (fun prev cur ->
+      Bonsai.Effect.inject_ignoring_response (effect (prev, cur)))
+  in
+  let component input = Bonsai.Edge.on_change' [%here] (module Int) ~callback input in
+  let var = Bonsai.Var.create 1 in
+  let handle =
+    Handle.create
+      (Result_spec.sexp
+         (module struct
+           type t = unit
 
-  let%expect_test "subst dot" =
-    let c =
-      let%sub a = Bonsai.state dummy_source_code_position (module Int) ~default_model:0 in
-      let%sub b = Bonsai.const () in
-      let%sub c = return (Bonsai.Value.both a b) in
-      return (Bonsai.Value.both a c)
+           let sexp_of_t () = Sexp.Atom "rendering..."
+         end))
+      (component (Bonsai.Var.value var))
+  in
+  Handle.show handle;
+  [%expect {|
+    rendering...
+    (change! (prev ()) (cur 1)) |}];
+  Handle.show handle;
+  [%expect {| rendering... |}];
+  Handle.show handle;
+  [%expect {| rendering... |}];
+  Bonsai.Var.set var 2;
+  Handle.show handle;
+  [%expect {|
+    rendering...
+    (change! (prev (1)) (cur 2)) |}];
+  Handle.show handle;
+  [%expect {| rendering... |}];
+  Handle.show handle;
+  [%expect {| rendering... |}]
+;;
+
+let%expect_test "actor" =
+  let print_int_effect = printf "%d\n" |> Bonsai.Effect.of_sync_fun |> unstage in
+  let component =
+    let%sub _, effect =
+      Bonsai.actor0
+        [%here]
+        (module Int)
+        (module Unit)
+        ~default_model:0
+        ~recv:(fun ~schedule_event:_ v () -> v + 1, v)
     in
-    print_endline (Bonsai.Debug.to_dot c);
-    [%expect
-      {|
-      digraph {
-      named_0 [ style=filled, shape = "circle", label = ""; fillcolor = "#FFFFFF"; width=.1, height=.1]
-      leaf_1 [ style=filled, shape = "Mrecord", label = "{state|file_name.ml:0:0}"; fillcolor = "#D0E6A5"; ]
-      leaf_1 -> named_0 [dir=none];
-      named_2 [ style=filled, shape = "circle", label = ""; fillcolor = "#FFFFFF"; width=.1, height=.1]
-      const_3 [ style=filled, shape = "oval", label = "const"; fillcolor = "#FFDD94"; ]
-      const_3 -> named_2 [dir=none];
-      named_4 [ style=filled, shape = "circle", label = ""; fillcolor = "#FFFFFF"; width=.1, height=.1]
-      map2_5 [ style=filled, shape = "oval", label = "map2"; fillcolor = "#FFDD94"; ]
-      named_0 -> map2_5;
-      named_2 -> map2_5;
-      map2_5 -> named_4 [dir=none];
-      read_6 [ style=filled, shape = "Mrecord", label = "read"; fillcolor = "#86E3CE"; ]
-      map2_7 [ style=filled, shape = "oval", label = "map2"; fillcolor = "#FFDD94"; ]
-      named_0 -> map2_7;
-      named_4 -> map2_7;
-      map2_7 -> read_6;
-      }
-    |}]
-  ;;
-end
+    return
+    @@ let%map effect = effect in
+    Bonsai.Effect.inject_ignoring_response
+    @@ let%bind.Bonsai.Effect i = effect () in
+    print_int_effect i
+  in
+  let handle =
+    Handle.create
+      (module struct
+        type t = Event.t
+        type incoming = unit
+
+        let view _ = ""
+        let incoming t () = t
+      end)
+      component
+  in
+  Handle.do_actions handle [ () ];
+  Handle.show handle;
+  [%expect {| 0 |}];
+  Handle.do_actions handle [ (); (); () ];
+  Handle.show handle;
+  [%expect {|
+    1
+    2
+    3 |}]
+;;
+
+let%expect_test "lifecycle" =
+  let effect =
+    (fun (action, on) -> print_s [%message (action : string) (on : string)])
+    |> Bonsai.Effect.of_sync_fun
+    |> unstage
+    |> (fun f a -> Bonsai.Value.return (Bonsai.Effect.inject_ignoring_response (f a)))
+    |> Tuple2.curry
+  in
+  let component input =
+    let rendered = Bonsai.const "" in
+    if%sub input
+    then (
+      let%sub () =
+        Bonsai.Edge.lifecycle
+          ~on_activate:(effect "activate" "a")
+          ~on_deactivate:(effect "deactivate" "a")
+          ~after_display:(effect "after-display" "a")
+          ()
+      in
+      rendered)
+    else (
+      let%sub () =
+        Bonsai.Edge.lifecycle
+          ~on_activate:(effect "activate" "b")
+          ~on_deactivate:(effect "deactivate" "b")
+          ~after_display:(effect "after-display" "b")
+          ()
+      in
+      rendered)
+  in
+  let var = Bonsai.Var.create true in
+  let handle =
+    Handle.create (Result_spec.string (module String)) (component (Bonsai.Var.value var))
+  in
+  Handle.show handle;
+  [%expect
+    {|
+    ((action activate)
+     (on     a))
+    ((action after-display)
+     (on     a)) |}];
+  Bonsai.Var.set var false;
+  Handle.show handle;
+  [%expect
+    {|
+    ((action deactivate)
+     (on     a))
+    ((action activate)
+     (on     b))
+    ((action after-display)
+     (on     b)) |}];
+  Bonsai.Var.set var true;
+  Handle.show handle;
+  [%expect
+    {|
+    ((action deactivate)
+     (on     b))
+    ((action activate)
+     (on     a))
+    ((action after-display)
+     (on     a)) |}]
+;;

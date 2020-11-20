@@ -94,12 +94,7 @@ type ('model, 'action, 'result) t =
       }
       -> ('m, (unit, 'a) Either.t, 'r * Event.t) t
   | Path : (unit, Nothing.t, Path.t) t
-  | After_display :
-      (* After_display is implemented in terms of this function to keep things
-         open for further expansion when if allow all side-effects in a future 
-         API extension. *)
-      (schedule_event:(Event.t -> unit) -> unit) option Value.t
-      -> (unit, Nothing.t, unit) t
+  | Lifecycle : Lifecycle.t option Value.t -> (unit, Nothing.t, unit) t
 
 and 'a packed =
   | T :
@@ -125,6 +120,6 @@ let rec sexp_of_t : type m a r. (m, a, r) t -> Sexp.t = function
   | With_model_resetter { t; _ } -> [%sexp With_model_resetter (t : t)]
   | Wrap { inner; _ } -> [%sexp Wrap (inner : t)]
   | Path -> [%sexp Path]
-  | After_display _ -> [%sexp After_display]
+  | Lifecycle _ -> [%sexp Lifecycle]
 
 and sexp_of_packed : type r. r packed -> Sexp.t = fun (T { t; _ }) -> sexp_of_t t

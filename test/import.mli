@@ -13,3 +13,5 @@ module Incr = Ui_incr
 include module type of struct
   include Expect_test_helpers_core
 end
+
+val dummy_source_code_position : Source_code_position.t

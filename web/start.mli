@@ -6,7 +6,7 @@ open! Core_kernel
 open! Async_kernel
 open! Import
 
-module Arrow : sig
+module Arrow_deprecated : sig
   module Handle : sig
     (** A handle represents a running app, and can be used to schedule external actions,
         determine if the app has started, and stop the app.
@@ -95,7 +95,7 @@ module Arrow : sig
   val start_standalone
     :  initial_input:'input
     -> bind_to_element_with_id:string
-    -> ('input, Vdom.Node.t) Bonsai.Arrow.t
+    -> ('input, Vdom.Node.t) Bonsai.Arrow_deprecated.t
     -> ('input, unit, Nothing.t, Nothing.t) Handle.t
 
   (** Start an application, receiving a handle that can schedule actions of a user-defined
@@ -109,7 +109,9 @@ module Arrow : sig
   val start
     :  initial_input:'input
     -> bind_to_element_with_id:string
-    -> (('input, 'outgoing) App_input.t, ('extra, 'incoming) App_result.t) Bonsai.Arrow.t
+    -> ( ('input, 'outgoing) App_input.t
+       , ('extra, 'incoming) App_result.t )
+         Bonsai.Arrow_deprecated.t
     -> ('input, 'extra, 'incoming, 'outgoing) Handle.t
 
 end

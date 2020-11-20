@@ -16,3 +16,8 @@ end
 
 module Incr = Ui_incr
 include Expect_test_helpers_core
+
+let dummy_source_code_position =
+  Source_code_position.
+    { pos_fname = "file_name.ml"; pos_lnum = 0; pos_bol = 0; pos_cnum = 0 }
+;;

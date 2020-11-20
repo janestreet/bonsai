@@ -85,21 +85,32 @@ module Handle = struct
     Driver.schedule_event handle event
   ;;
 
+  let disable_bonsai_path_censoring = Driver.disable_bonsai_path_censoring
+  let path_regex = Re.Str.regexp "bonsai_path\\(_[a-z]*\\)*"
+
+  let maybe_censor_bonsai_path handle string =
+    if Driver.should_censor_bonsai_path handle
+    then Re.Str.global_replace path_regex "bonsai_path_replaced_in_test" string
+    else string
+  ;;
+
   let show handle =
     Driver.flush handle;
     let _, view, _ = Driver.result handle in
+    let view = maybe_censor_bonsai_path handle view in
     Driver.store_view handle view;
     print_endline view;
-    Driver.trigger_on_display handle
+    Driver.trigger_lifecycles handle
   ;;
 
   let show_diff handle =
     let before = Driver.last_view handle in
     Driver.flush handle;
     let _, view, _ = Driver.result handle in
+    let view = maybe_censor_bonsai_path handle view in
     Driver.store_view handle view;
     Expect_test_patdiff.print_patdiff before view;
-    Driver.trigger_on_display handle
+    Driver.trigger_lifecycles handle
   ;;
 
   let show_model handle =

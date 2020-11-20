@@ -59,6 +59,7 @@ module Handle : sig
 
   val result : ('result, _) t -> 'result
   val do_actions : (_, 'incoming) t -> 'incoming list -> unit
+  val disable_bonsai_path_censoring : _ t -> unit
 
   val create
     :  ('result, 'incoming) Result_spec.t

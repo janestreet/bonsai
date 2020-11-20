@@ -4,6 +4,12 @@ open! Import
 open Incr.Let_syntax
 include To_incr_dom_intf
 
+module State = struct
+  type t = { mutable last_lifecycle : Bonsai.Private.Lifecycle.Collection.t }
+
+  let create () = { last_lifecycle = Bonsai.Private.Lifecycle.Collection.empty }
+end
+
 let create_generic computation ~fresh ~input ~model ~inject =
   let environment =
     Bonsai.Private.Environment.(empty |> add_exn ~key:fresh ~data:input)
@@ -18,14 +24,18 @@ let create_generic computation ~fresh ~input ~model ~inject =
   in
   let%map view, extra = Bonsai.Private.Snapshot.result snapshot
   and apply_action = Bonsai.Private.Snapshot.apply_action snapshot
-  and after_display = Bonsai.Private.Snapshot.after_display snapshot
+  and lifecycle = Bonsai.Private.Snapshot.lifecycle snapshot
   and model = model in
   let schedule_event = Vdom.Event.Expert.handle_non_dom_event_exn in
   let apply_action incoming_action _state ~schedule_action:_ =
     apply_action ~schedule_event incoming_action
   in
-  let on_display _state ~schedule_action:_ =
-    Option.iter after_display ~f:(fun on_display -> on_display ~schedule_event)
+  let on_display state ~schedule_action:_ =
+    let diff =
+      Bonsai.Private.Lifecycle.Collection.diff state.State.last_lifecycle lifecycle
+    in
+    state.State.last_lifecycle <- lifecycle;
+    Vdom.Event.Expert.handle_non_dom_event_exn diff
   in
   Incr_dom.Component.create_with_extra ~on_display ~extra ~apply_action model view
 ;;
@@ -62,7 +72,9 @@ let convert_generic
       type t = extra
     end
 
-    type t = (Action.t, Model.t, unit, Extra.t) Incr_dom.Component.with_extra
+    module State = State
+
+    type t = (Action.t, Model.t, State.t, Extra.t) Incr_dom.Component.with_extra
 
     let create ~input ~old_model:_ ~model ~inject =
       create_generic computation ~fresh ~input ~model ~inject
@@ -86,5 +98,5 @@ let convert_with_extra component =
 ;;
 
 let convert component =
-  convert_with_extra (Bonsai.Arrow.map component ~f:(fun r -> r, ()))
+  convert_with_extra (Bonsai.Arrow_deprecated.map component ~f:(fun r -> r, ()))
 ;;

@@ -18,11 +18,9 @@ let hello_user (name : string Bonsai.Value.t) : Vdom.Node.t Bonsai.Computation.t
 
 (* [HELLO_USER_COMPONENT END] *)
 
-
 (* [HELLO_TEXT_BOX_COMPONENT BEGIN] *)
 let hello_textbox : Vdom.Node.t Bonsai.Computation.t =
-  let%sub state_and_set = Bonsai.state [%here] (module String) ~default_model:"" in
-  let%pattern_bind state, set = state_and_set in
+  let%sub state, set = Bonsai.state [%here] (module String) ~default_model:"" in
   let%sub message = hello_user state in
   return
   @@ let%map message = message

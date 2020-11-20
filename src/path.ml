@@ -49,6 +49,10 @@ let append t ele = ele :: t
 let compare a b = compare (List.rev a) (List.rev b)
 let sexp_of_t l = sexp_of_t (List.rev l)
 
+include Comparable.Make_plain (struct
+    type nonrec t = t [@@deriving compare, sexp_of]
+  end)
+
 let to_unique_identifier_string t =
   let offset = Char.to_int 'a' in
   let lower_nibble_to_alpha c = Int.bit_and c 0b1111 + offset |> Char.of_int_exn in

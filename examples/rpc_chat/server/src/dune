@@ -4,6 +4,6 @@
   simple_web_server))
 
 (rule (targets embedded_files.ml embedded_files.mli)
- (deps %{workspace_root}/app/embed-file/bin/embed_file.exe
-  ../../client/main.bc.js ../../client/style.css)
+ (deps %{bin:ocaml-embed-file} ../../client/main.bc.js
+  ../../client/style.css)
  (action (bash "%{deps} -output embedded_files")))

@@ -17,7 +17,13 @@ module type S = sig
     type t [@@deriving sexp_of]
   end
 
-  type t = (Action.t, Model.t, unit, Extra.t) Incr_dom.Component.with_extra
+  module State : sig
+    type t
+
+    val create : unit -> t
+  end
+
+  type t = (Action.t, Model.t, State.t, Extra.t) Incr_dom.Component.with_extra
 
   val create
     :  input:Input.t Incr.t
@@ -29,14 +35,13 @@ end
 
 module type To_incr_dom = sig
   (** A wrapper to use Bonsai components in Incr_dom apps. *)
-
   module type S = S
 
   val convert
-    :  ('input, Vdom.Node.t) Bonsai.Arrow.t
+    :  ('input Bonsai.Value.t -> Vdom.Node.t Bonsai.Computation.t)
     -> (module S with type Input.t = 'input and type Extra.t = unit)
 
   val convert_with_extra
-    :  ('input, Vdom.Node.t * 'extra) Bonsai.Arrow.t
+    :  ('input Bonsai.Value.t -> (Vdom.Node.t * 'extra) Bonsai.Computation.t)
     -> (module S with type Input.t = 'input and type Extra.t = 'extra)
 end

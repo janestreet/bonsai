@@ -1,6 +1,9 @@
 # Bonsai Changelog
 <!-- Change-log notes go in this file, with newer dates at the _top_  --> 
 
+## 2020-11-11
+Added `Bonsai.actor` for communicating between components.
+
 ## 2020-10-19
 Added `Bonsai.Edge` for edge triggering computations.
 

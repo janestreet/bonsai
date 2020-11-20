@@ -563,12 +563,11 @@ In `Bonsai.Proc` the above code would be written like this:
 open Bonsai.Proc.Let_syntax
 
 let date_picker =
-  let%sub year_picker = year_picker in
+  let%sub year_picker = year_picker (Value.return ()) in
   let year = Value.map year_picker ~f:(fun (_, year) -> year) in
   let%sub month_picker = month_picker year in
   let month = Value.map month_picker ~f:(fun (_, month) -> month) in
-  let%sub day_picker = day_picker year month
-  let day = Value.map day_picker ~f:(fun (_, day) -> day) in
+  let%sub day_picker = day_picker year month in
   return (
     let%map year_view,  year  = year_picker
     and     month_view, month = month_picker

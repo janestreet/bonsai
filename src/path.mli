@@ -18,6 +18,8 @@ end
 
 type t [@@deriving compare, sexp_of]
 
+include Comparable.S_plain with type t := t
+
 val empty : t
 val append : t -> Elem.t -> t
 

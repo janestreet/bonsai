@@ -12,7 +12,7 @@ module type Result_spec = sig
   val incoming : t -> incoming -> Vdom.Event.t
 end
 
-module Arrow = struct
+module Arrow_deprecated = struct
   module Handle = struct
     module Injector = struct
       type 'a t =
@@ -137,6 +137,7 @@ module Arrow = struct
     in
     let input_var = Incr.Var.create initial_input in
     let handle = Handle.create ~input_var ~outgoing_pipe in
+    let prev_lifecycle = ref Bonsai.Private.Lifecycle.Collection.empty in
     let module Incr_dom_app = struct
       module Model = struct
         type t = model
@@ -175,7 +176,7 @@ module Arrow = struct
         in
         let%map apply_action = Bonsai.Private.Snapshot.apply_action snapshot
         and result = Bonsai.Private.Snapshot.result snapshot
-        and after_display = Bonsai.Private.Snapshot.after_display snapshot
+        and lifecycle = Bonsai.Private.Snapshot.lifecycle snapshot
         and model = model in
         let schedule_event = Vdom.Event.Expert.handle_non_dom_event_exn in
         let apply_action action () ~schedule_action:_ =
@@ -186,8 +187,9 @@ module Arrow = struct
         Bus.write handle.extra extra;
         let on_display () ~schedule_action:_ =
           Handle.set_started handle;
-          Option.iter after_display ~f:(fun after_display ->
-            after_display ~schedule_event)
+          schedule_event
+            (Bonsai.Private.Lifecycle.Collection.diff !prev_lifecycle lifecycle);
+          prev_lifecycle := lifecycle
         in
         Incr_dom.Component.create ~apply_action ~on_display model view
       ;;
@@ -239,9 +241,10 @@ end
 
 module Proc = struct
   module Handle = struct
-    include Arrow.Handle
+    include Arrow_deprecated.Handle
 
-    type ('extra, 'incoming) t = (unit, 'extra, 'incoming, Nothing.t) Arrow.Handle.t
+    type ('extra, 'incoming) t =
+      (unit, 'extra, 'incoming, Nothing.t) Arrow_deprecated.Handle.t
   end
 
   module Result_spec = struct
@@ -280,8 +283,9 @@ module Proc = struct
   let start result_spec ~bind_to_element_with_id computation =
     let bonsai =
       Fn.const computation
-      |> Bonsai.Arrow.map ~f:(Arrow.App_result.of_result_spec result_spec)
+      |> Bonsai.Arrow_deprecated.map
+           ~f:(Arrow_deprecated.App_result.of_result_spec result_spec)
     in
-    Arrow.start ~initial_input:() ~bind_to_element_with_id bonsai
+    Arrow_deprecated.start ~initial_input:() ~bind_to_element_with_id bonsai
   ;;
 end

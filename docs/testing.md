@@ -134,8 +134,7 @@ Here, we actually use the `hello_user` component defined previously, but the
 
 ```ocaml
 let hello_textbox : Vdom.Node.t Bonsai.Computation.t =
-  let%sub state_and_set = Bonsai.state [%here] (module String) ~default_model:"" in
-  let%pattern_bind state, set = state_and_set in
+  let%sub state, set = Bonsai.state [%here] (module String) ~default_model:"" in
   let%sub message = hello_user state in
   return
   @@ let%map message = message

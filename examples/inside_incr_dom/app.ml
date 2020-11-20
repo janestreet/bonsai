@@ -12,9 +12,7 @@ module Model = struct
   let cutoff = phys_equal
 end
 
-module State = struct
-  type t = unit
-end
+module State = My_bonsai_component.State
 
 module Action = struct
   type t =
@@ -29,17 +27,19 @@ let initial_model =
   }
 ;;
 
-let on_startup ~schedule_action:_ _model = Async_kernel.Deferred.unit
+let on_startup ~schedule_action:_ _model =
+  Async_kernel.Deferred.return (My_bonsai_component.State.create ())
+;;
 
 let apply_action model bonsai_subcomponent =
   let%map bonsai_subcomponent = bonsai_subcomponent
   and model = model in
-  fun action () ~schedule_action ->
+  fun action state ~schedule_action ->
     match action with
     | Action.Subcomponent_action a ->
       let schedule_action a = schedule_action (Action.Subcomponent_action a) in
       let new_subcomponent_model =
-        Component.apply_action bonsai_subcomponent a () ~schedule_action
+        Component.apply_action bonsai_subcomponent a state ~schedule_action
       in
       { model with Model.subcomponent_model = new_subcomponent_model }
     | Action.Update_string s -> { model with other_model = s }

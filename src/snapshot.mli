@@ -15,20 +15,19 @@ val apply_action
   :  ('model, 'action, _) t
   -> (schedule_event:(Event.t -> unit) -> 'action -> 'model) Incr.t
 
-(** [after_display] contains a function that should be called after every
-    render.  What a "render" means for a given Bonsai backend isn't well
-    defined. *)
-val after_display : _ t -> (schedule_event:(Event.t -> unit) -> unit) option Incr.t
-
 (** The result of a component is the primary value computed by the component in
     question. At the top level of a UI, this is generally a representation of the view,
     but it's often useful to compute other kinds of results in inner components. *)
 val result : (_, _, 'result) t -> 'result Incr.t
 
+(** The lifecycle component of a snapshot contains an optional map of all the activation,
+    deactivation, and after_display callbacks. *)
+val lifecycle : _ t -> Lifecycle.Collection.t Incr.t
+
 (** Creates a new snapshot. Note that the [apply_action] provided here should apply the
     action in question to the model in force at the time [create] is called. *)
 val create
   :  apply_action:(schedule_event:(Event.t -> unit) -> 'action -> 'model) Incr.t
-  -> after_display:(schedule_event:(Event.t -> unit) -> unit) option Incr.t
+  -> lifecycle:Lifecycle.Collection.t Incr.t
   -> result:'result Incr.t
   -> ('model, 'action, 'result) t

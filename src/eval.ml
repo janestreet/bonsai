@@ -8,39 +8,40 @@ let unusable_apply_action : (schedule_event:(Event.t -> unit) -> Nothing.t -> un
   return (fun ~schedule_event:_ action -> Nothing.unreachable_code action)
 ;;
 
-let do_nothing_after_display : (schedule_event:(Event.t -> unit) -> unit) option Incr.t =
-  Incr.return None
+let do_nothing_lifecycle : Lifecycle.t Path.Map.t Incr.t =
+  Incr.return Lifecycle.Collection.empty
 ;;
 
-let merge_after_displays
-  :  (schedule_event:(Event.t -> unit) -> unit) option Incr.t
-    -> (schedule_event:(Event.t -> unit) -> unit) option Incr.t
-    -> (schedule_event:(Event.t -> unit) -> unit) option Incr.t
+let raise_duplicate_path path =
+  raise_s
+    [%message
+      "BUG: [Bonsai.Path.t] should be unique for all components, but duplicate paths \
+       were discovered."
+        (path : Path.t)]
+;;
+
+let merge_lifecycles
+  :  Lifecycle.Collection.t Incr.t -> Lifecycle.Collection.t Incr.t
+    -> Lifecycle.Collection.t Incr.t
   =
   fun a b ->
-  match%pattern_bind Incr.both a b with
-  | None, None -> return None
-  | Some a, None | None, Some a -> a >>| Option.some
-  | Some a, Some b ->
-    let%map a = a
-    and b = b in
-    Some
-      (fun ~schedule_event ->
-         a ~schedule_event;
-         b ~schedule_event)
+  Incr_map.merge a b ~f:(fun ~key -> function
+    | `Both _ -> raise_duplicate_path key
+    | `Left a -> Some a
+    | `Right a -> Some a)
 ;;
 
 let unzip3_mapi' map ~f =
-  let first, second_and_third =
+  let first_and_second, third =
     Incr_map.unzip_mapi' map ~f:(fun ~key ~data ->
       let a, b, c = f ~key ~data in
-      let bc = Incr.both b c in
-      a, bc)
+      let ab = Incr.both a b in
+      ab, c)
   in
-  let second, third =
-    Incr_map.unzip_mapi' second_and_third ~f:(fun ~key:_ ~data ->
-      let%pattern_bind b, c = data in
-      b, c)
+  let first, second =
+    Incr_map.unzip_mapi' first_and_second ~f:(fun ~key:_ ~data ->
+      let%pattern_bind a, b = data in
+      a, b)
   in
   first, second, third
 ;;
@@ -61,19 +62,19 @@ let rec eval
     Snapshot.create
       ~result
       ~apply_action:unusable_apply_action
-      ~after_display:do_nothing_after_display
+      ~lifecycle:do_nothing_lifecycle
   | Leaf { input; apply_action; compute; name = _; kind = _ } ->
     let%pattern_bind result, apply_action =
       let%mapn input = Value.eval environment input
       and model = model in
       compute ~inject input model, apply_action ~inject input model
     in
-    Snapshot.create ~result ~apply_action ~after_display:do_nothing_after_display
+    Snapshot.create ~result ~apply_action ~lifecycle:do_nothing_lifecycle
   | Leaf_incr { input; apply_action; compute; name = _ } ->
     let input = Value.eval environment input in
     let result = compute ~inject input model
     and apply_action = apply_action ~inject input model in
-    Snapshot.create ~result ~apply_action ~after_display:do_nothing_after_display
+    Snapshot.create ~result ~apply_action ~lifecycle:do_nothing_lifecycle
   | Model_cutoff { t; model = { Meta.Model.equal; _ } } ->
     let model = Incr.map model ~f:Fn.id in
     Incr.set_cutoff model (Incr.Cutoff.of_equal equal);
@@ -102,10 +103,10 @@ let rec eval
         | First action1 -> apply_action_from action1 ~schedule_event, m2
         | Second action2 -> m1, apply_action_into action2 ~schedule_event
     and result = Snapshot.result into in
-    let after_display =
-      merge_after_displays (Snapshot.after_display from) (Snapshot.after_display into)
+    let lifecycle =
+      merge_lifecycles (Snapshot.lifecycle from) (Snapshot.lifecycle into)
     in
-    Snapshot.create ~result ~apply_action ~after_display
+    Snapshot.create ~result ~apply_action ~lifecycle
   | Assoc
       { map
       ; by
@@ -126,7 +127,7 @@ let rec eval
         | `Both input_and_models -> Some input_and_models)
     in
     let create_keyed = unstage (Path.Elem.keyed ~compare:key_compare key_id) in
-    let results_map, apply_action_map, after_display_map =
+    let results_map, apply_action_map, lifecycle_map =
       unzip3_mapi' input_and_models_map ~f:(fun ~key ~data:input_and_model ->
         let path = Path.append path Path.Elem.(Assoc (create_keyed key)) in
         let%pattern_bind value, model = input_and_model in
@@ -141,7 +142,7 @@ let rec eval
         let snapshot = eval ~environment ~path ~inject ~model by in
         ( Snapshot.result snapshot
         , Snapshot.apply_action snapshot
-        , Snapshot.after_display snapshot ))
+        , Snapshot.lifecycle snapshot ))
     in
     let apply_action =
       let%mapn apply_action_map = apply_action_map
@@ -166,15 +167,17 @@ let rec eval
           then Map.remove model id
           else Map.set model ~key:id ~data
     in
-    let after_display =
-      let%map after_displays = Incr_map.filter_map' after_display_map ~f:Fn.id in
-      if Map.is_empty after_displays
-      then None
-      else
-        Some
-          (fun ~schedule_event -> Map.iter after_displays ~f:(fun f -> f ~schedule_event))
+    let lifecycle =
+      Incr_map.unordered_fold_nested_maps
+        lifecycle_map
+        ~init:Path.Map.empty
+        ~add:(fun ~outer_key:_ ~inner_key:key ~data acc ->
+          Path.Map.update acc key ~f:(function
+            | Some _ -> raise_duplicate_path key
+            | None -> data))
+        ~remove:(fun ~outer_key:_ ~inner_key:key ~data:_ acc -> Path.Map.remove acc key)
     in
-    Snapshot.create ~result:results_map ~apply_action ~after_display
+    Snapshot.create ~result:results_map ~apply_action ~lifecycle
   | Assoc_simpl
       { map
       ; by
@@ -190,13 +193,13 @@ let rec eval
     Snapshot.create
       ~result
       ~apply_action:unusable_apply_action
-      ~after_display:do_nothing_after_display
+      ~lifecycle:do_nothing_lifecycle
   | Enum
       { which; out_of; key_equal; key_type_id; key_compare; key_and_cmp = T; sexp_of_key }
     ->
     let key = Value.eval environment which in
     Incremental.set_cutoff key (Incremental.Cutoff.of_equal key_equal);
-    let%pattern_bind result, apply_action, after_display =
+    let%pattern_bind result, apply_action, lifecycle =
       let create_keyed = unstage (Path.Elem.keyed ~compare:key_compare key_type_id) in
       let%bind key = key in
       (* !!!This is a load-bearing bind!!!
@@ -240,11 +243,11 @@ let rec eval
             model
       in
       let%mapn result = Snapshot.result snapshot
-      and after_display = Snapshot.after_display snapshot
+      and lifecycle = Snapshot.lifecycle snapshot
       and apply_action = apply_action in
-      result, apply_action, after_display
+      result, apply_action, lifecycle
     in
-    Snapshot.create ~apply_action ~result ~after_display
+    Snapshot.create ~apply_action ~result ~lifecycle
   | Lazy lazy_computation ->
     let (T { t; model = model_info; action = action_info }) = force lazy_computation in
     let input_model =
@@ -272,7 +275,7 @@ let rec eval
     Snapshot.create
       ~apply_action
       ~result:(Snapshot.result snapshot)
-      ~after_display:(Snapshot.after_display snapshot)
+      ~lifecycle:(Snapshot.lifecycle snapshot)
   | Wrap { model_id; inject_id; inner; apply_action } ->
     let%pattern_bind outer_model, inner_model = model in
     let inject_outer a = inject (Either.First a) in
@@ -310,7 +313,7 @@ let rec eval
     Snapshot.create
       ~result:inner_result
       ~apply_action
-      ~after_display:(Snapshot.after_display inner_snapshot)
+      ~lifecycle:(Snapshot.lifecycle inner_snapshot)
   | With_model_resetter { t; default_model } ->
     let reset_event = inject (First ()) in
     let inject a = inject (Second a) in
@@ -326,17 +329,23 @@ let rec eval
       let%map result = Snapshot.result snapshot in
       result, reset_event
     in
-    Snapshot.create ~result ~apply_action ~after_display:(Snapshot.after_display snapshot)
+    Snapshot.create ~result ~apply_action ~lifecycle:(Snapshot.lifecycle snapshot)
   | Path ->
     Snapshot.create
       ~result:(Incr.return path)
       ~apply_action:
         (Incr.return (fun ~schedule_event:_ action -> Nothing.unreachable_code action))
-      ~after_display:do_nothing_after_display
-  | After_display after_display ->
-    let after_display = Value.eval environment after_display in
+      ~lifecycle:do_nothing_lifecycle
+  | Lifecycle lifecycle ->
+    let lifecycle =
+      match%pattern_bind Value.eval environment lifecycle with
+      | Some lifecycle ->
+        let%map lifecycle = lifecycle in
+        Path.Map.singleton path lifecycle
+      | None -> do_nothing_lifecycle
+    in
     Snapshot.create
       ~result:(Incr.return ())
       ~apply_action:unusable_apply_action
-      ~after_display
+      ~lifecycle
 ;;

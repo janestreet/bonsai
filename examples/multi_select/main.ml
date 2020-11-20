@@ -19,7 +19,7 @@ module Attribute = struct
   let name_plural   = "attributes"
 end
 
-module Widget = Multi_select_widget.Multi_factor.Make (String) (Attribute)
+module Widget = Bonsai_web_ui_multi_select.Multi_factor.Make (String) (Attribute)
 
 let subwidgets =
   Attribute.all

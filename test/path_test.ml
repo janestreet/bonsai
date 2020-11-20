@@ -6,15 +6,24 @@ module Path = Bonsai.Private.Path
 
 let%expect_test "path" =
   let component =
-    let%sub _ = Bonsai.const () in
+    let%sub () = Bonsai.const () in
     let%sub path = Bonsai.Private.path in
     return (Bonsai.Value.map path ~f:Path.to_unique_identifier_string)
   in
   let handle = Handle.create (Result_spec.string (module String)) component in
+  Handle.disable_bonsai_path_censoring handle;
   Handle.show handle;
   (* The first of these "Subst_from" is actually a component that is
      added by the testing helpers. *)
   [%expect {| bonsai_path_x_y_x |}]
+;;
+
+let assert_path_unique_id_is_alphanumeric path =
+  let unique_id = Path.to_unique_identifier_string path in
+  assert (
+    String.for_all unique_id ~f:(function
+      | 'a' .. 'z' | '_' -> true
+      | _ -> false))
 ;;
 
 let%test_unit "all the values are alphanumeric" =
@@ -25,11 +34,7 @@ let%test_unit "all the values are alphanumeric" =
     ~sexp_of:[%sexp_of: string]
     ~f:(fun string ->
       let path = Path.append Path.empty (Path.Elem.Assoc (keyed string)) in
-      let unique_id = Path.to_unique_identifier_string path in
-      assert (
-        String.for_all unique_id ~f:(function
-          | 'a' .. 'z' | '_' -> true
-          | _ -> false)))
+      assert_path_unique_id_is_alphanumeric path)
 ;;
 
 let%test_unit "larger groupings of paths behave" =
@@ -59,10 +64,5 @@ let%test_unit "larger groupings of paths behave" =
       let path =
         path |> List.map ~f:P.to_path_element |> List.fold ~init:Path.empty ~f:Path.append
       in
-      let unique_id = Path.to_unique_identifier_string path in
-      assert (
-        String.for_all unique_id ~f:(function
-          (* 'p' is 0b1111 + 'a' *)
-          | '_' | 'a' .. 'z' -> true
-          | _ -> false)))
+      assert_path_unique_id_is_alphanumeric path)
 ;;

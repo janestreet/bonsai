@@ -237,6 +237,37 @@ val state_machine0
         -> 'model)
   -> ('model * ('action -> Event.t)) Computation.t
 
+(** Identical to [actor1] but it takes 0 inputs instead of 1. *)
+val actor0
+  :  Source_code_position.t
+  -> (module Model with type t = 'model)
+  -> (module Action with type t = 'action)
+  -> default_model:'model
+  -> recv:(schedule_event:(Event.t -> unit) -> 'model -> 'action -> 'model * 'return)
+  -> ('model * ('action -> 'return Effect.t)) Computation.t
+
+(** [actor1] is very similar to [state_machine1], with two major exceptions: 
+    - the [apply-action] function for state-machine is renamed [recv], and it
+      returns a "response", in addition to a new model.
+    - the 2nd value returned by the component allows for the sender of an
+      action to handle the effect and read the response.
+
+    Because the semantics of this function feel like an actor system, we've
+    decided to name the function accordingly.  *)
+val actor1
+  :  Source_code_position.t
+  -> (module Model with type t = 'model)
+  -> (module Action with type t = 'action)
+  -> default_model:'model
+  -> recv:
+       (schedule_event:(Event.t -> unit)
+        -> 'input
+        -> 'model
+        -> 'action
+        -> 'model * 'return)
+  -> 'input Value.t
+  -> ('model * ('action -> 'return Effect.t)) Computation.t
+
 (** A frequently used state-machine is the trivial 'set-state' transition,
     where the action always replaces the value contained inside.  This
     helper-function implements that state-machine, providing access to the
@@ -395,6 +426,34 @@ module Edge : sig
     -> callback:('a option -> 'a -> Event.t) Value.t
     -> unit Computation.t
 
+  (** [lifecycle] is a way to detect when a computation becomes active,
+      inactive, or an event is triggered after every rendering (roughly 60x /
+      second).  By depending on this function (with let%sub), you can install
+      events that are scheduled on either case. 
+
+      When used, the events are scheduled in this order:
+      - All deactivations
+      - All activations
+      - All "after-display"s 
+
+      and an "after-display" won't occur before an activation, or after a
+      deactivation for a given computation. *)
+  val lifecycle
+    :  ?on_activate:Event.t Value.t
+    -> ?on_deactivate:Event.t Value.t
+    -> ?after_display:Event.t Value.t
+    -> unit
+    -> unit Computation.t
+
+  (** Like [lifecycle], but the events are optional values.  If the event value
+      is None when the action occurs, nothing will happen *)
+  val lifecycle'
+    :  ?on_activate:Event.t option Value.t
+    -> ?on_deactivate:Event.t option Value.t
+    -> ?after_display:Event.t option Value.t
+    -> unit
+    -> unit Computation.t
+
   (** [after_display] and [after_display'] are lower-level functions that 
       can be used to register an event to occur once-per-frame (after each
       render). *)
@@ -453,7 +512,7 @@ module Let_syntax : sig
       -> 'a Computation.t
 
     val map : 'a Value.t -> f:('a -> 'b) -> 'b Value.t
-    val return : 'a -> 'a Value.t
+    val return : 'a Value.t -> 'a Computation.t
     val both : 'a Value.t -> 'b Value.t -> ('a * 'b) Value.t
 
     include Mapn with type 'a t := 'a Value.t
