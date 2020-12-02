@@ -1,4 +1,8 @@
-# Bonsai.Proc An elegant API for a more civilized age
+---
+title: "Bonsai.Proc An elegant API for a more civilized age"
+uuid: 468de73f-d12c-4eb7-8182-4c6d6b91ab11
+parent: "../README.md"
+---
 
 Bonsai is somewhat unique among Jane Street libraries for embracing the
 [Arrow](https://en.wikibooks.org/wiki/Haskell/Understanding_arrows) as

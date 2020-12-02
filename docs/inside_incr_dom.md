@@ -1,4 +1,8 @@
-# Bonsai inside of `Incr_dom`
+---
+title: "Bonsai inside of `Incr_dom`"
+uuid: d30c6df3-be99-48eb-83c4-a5bdd2c668a7
+parent: "../README.md"
+---
 
 One of the main goals of Bonsai has always been good interoperability
 with `Incr_dom`.  Because of the design decisions detailed in

@@ -1,4 +1,8 @@
-# Incrementality
+---
+title: "Incrementality"
+uuid: c42cc1fd-12d0-4dac-8101-20b58adacfa7
+parent: "../README.md"
+---
 
 If you're coming from `Incr_dom`, the Bonsai API might surprise you.  The
 `Incr.t` type that is pervasive throughout `Incr_dom` programs is (almost)

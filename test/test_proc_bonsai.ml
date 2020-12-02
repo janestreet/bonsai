@@ -132,6 +132,29 @@ let%expect_test "path" =
   [%expect {| (Subst_from Subst_into Subst_from) |}]
 ;;
 
+let%expect_test "assoc and enum path" =
+  let component =
+    Bonsai.assoc
+      (module Int)
+      (Bonsai.Value.return (Int.Map.of_alist_exn [ -1, (); 1, () ]))
+      ~f:(fun i _ ->
+        if%sub i >>| ( > ) 0 then Bonsai.Private.path else Bonsai.Private.path)
+  in
+  let handle =
+    Handle.create
+      (Result_spec.sexp
+         (module struct
+           type t = Bonsai.Private.Path.t Int.Map.t [@@deriving sexp_of]
+         end))
+      component
+  in
+  Handle.show handle;
+  [%expect
+    {|
+    ((-1 (Subst_from (Assoc -1) Subst_into (Enum 0)))
+     (1 (Subst_from (Assoc 1) Subst_into (Enum 1)))) |}]
+;;
+
 let%expect_test "chain" =
   let add_one = Bonsai.pure (fun x -> x + 1) in
   let double = Bonsai.pure (fun x -> x * 2) in
@@ -320,19 +343,18 @@ let%expect_test "map > lazy" =
       }
   end
   in
-  let rec f t =
-    let%pattern_bind { M.label; children }, depth = t in
+  let rec f ~t ~depth =
+    let%sub { M.label; children } = return t in
     let%sub children =
       Bonsai.assoc
         (module Int)
         children
         ~f:(fun _ v ->
-          let recursive =
-            let%map v = v
-            and depth = depth in
-            v, depth + 1
+          let depth =
+            let%map depth = depth in
+            depth + 1
           in
-          Bonsai.lazy_ (lazy (f recursive)))
+          Bonsai.lazy_ (lazy (f ~t:v ~depth)))
     in
     return
     @@ let%map label = label
@@ -340,18 +362,21 @@ let%expect_test "map > lazy" =
     and depth = depth in
     [%message label (depth : int) (children : Sexp.t Int.Map.t)]
   in
-  let var = Bonsai.Var.create ({ M.label = "hi"; children = Int.Map.empty }, 0) in
-  let value = Bonsai.Var.value var in
-  let handle = Handle.create (Result_spec.sexp (module Sexp)) (f value) in
+  let t_var = Bonsai.Var.create { M.label = "hi"; children = Int.Map.empty } in
+  let t_value = Bonsai.Var.value t_var in
+  let handle =
+    Handle.create
+      (Result_spec.sexp (module Sexp))
+      (f ~t:t_value ~depth:(Bonsai.Value.return 0))
+  in
   [%expect {| |}];
   Handle.show handle;
   [%expect {| (hi (depth 0) (children ())) |}];
   Bonsai.Var.set
-    var
-    ( { M.label = "hi"
-      ; children = Int.Map.singleton 0 { M.label = "hello"; children = Int.Map.empty }
-      }
-    , 0 );
+    t_var
+    { M.label = "hi"
+    ; children = Int.Map.singleton 0 { M.label = "hello"; children = Int.Map.empty }
+    };
   Handle.show handle;
   [%expect {| (hi (depth 0) (children ((0 (hello (depth 1) (children ())))))) |}]
 ;;
@@ -404,7 +429,7 @@ let%expect_test "action sent to non-existent assoc element" =
   [%expect
     {|
     ("an action inside of Bonsai.assoc as been dropped because the computation is no longer active"
-     (key <opaque>) (action 4))
+     (key 2) (action 4))
     ((1 0)) |}]
 ;;
 

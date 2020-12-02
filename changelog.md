@@ -1,4 +1,8 @@
-# Bonsai Changelog
+---
+title: "Bonsai Changelog"
+uuid: 502ae936-a161-47dd-8206-2f7fcfa7fb26
+parent: "./README.md"
+---
 <!-- Change-log notes go in this file, with newer dates at the _top_  --> 
 
 ## 2020-11-11

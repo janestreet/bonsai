@@ -16,6 +16,7 @@ depends: [
   "incr_dom"
   "ppx_jane"
   "ppx_pattern_bind"
+  "reversed_list"
   "virtual_dom"
   "dune"             {>= "2.0.0"}
   "js_of_ocaml-ppx"

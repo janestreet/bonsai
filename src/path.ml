@@ -40,14 +40,14 @@ end
 
 (* The path is stored with the child node first and the parent node last so that [append]
    is fast *)
-type t = Elem.t list [@@deriving compare, sexp_of]
+type t = Elem.t Reversed_list.t
 
-let empty = []
-let append t ele = ele :: t
+let empty = Reversed_list.[]
+let append t ele = Reversed_list.(ele :: t)
 
 (* reverse before doing anything *)
-let compare a b = compare (List.rev a) (List.rev b)
-let sexp_of_t l = sexp_of_t (List.rev l)
+let compare a b = Comparable.lift [%compare: Elem.t list] ~f:Reversed_list.rev a b
+let sexp_of_t t = [%sexp (Reversed_list.rev t : Elem.t list)]
 
 include Comparable.Make_plain (struct
     type nonrec t = t [@@deriving compare, sexp_of]
@@ -71,7 +71,7 @@ let to_unique_identifier_string t =
     |> String.of_char_list
   in
   t
-  |> List.rev
+  |> Reversed_list.rev
   |> List.map ~f:(function
     | Elem.Subst_from -> "x"
     | Subst_into -> "y"

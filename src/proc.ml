@@ -110,9 +110,8 @@ let assoc
       (map : (k, v, cmp) Map.t Value.t)
       ~f
   =
-  let key_id : k Type_equal.Id.t =
-    Type_equal.Id.create ~name:"key id" [%sexp_of: opaque]
-  in
+  let module C = (val comparator) in
+  let key_id = Type_equal.Id.create ~name:"key id" C.sexp_of_t in
   let data_id : v Type_equal.Id.t =
     Type_equal.Id.create ~name:"data id" [%sexp_of: opaque]
   in
@@ -318,7 +317,7 @@ let actor1
 ;;
 
 let actor0 here model action ~default_model ~recv =
-  let recv ~schedule_event _ = recv ~schedule_event in
+  let recv ~schedule_event () = recv ~schedule_event in
   actor1 here model action ~default_model ~recv (Value.return ())
 ;;
 

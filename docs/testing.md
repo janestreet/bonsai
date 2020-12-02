@@ -1,4 +1,8 @@
-# Testing a Bonsai_web application
+---
+title: "Testing a Bonsai_web application"
+uuid: a2a951ab-542e-4ed3-8b19-73ca322bd292
+parent: "../README.md"
+---
 
 Traditional approaches for testing web applications can be
 infuriating.  With tools like selenium or puppeteer, there’s an entire

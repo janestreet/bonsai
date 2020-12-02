@@ -208,7 +208,7 @@ let rec eval
          doesn't exist, and old incremental nodes might still be active, and
          with things like [match%sub] or [Bonsai.match_either] can witness old
          nodes, which can cause [assert false] to trigger. *)
-      let path = Path.append path Path.Elem.(Assoc (create_keyed key)) in
+      let path = Path.append path Path.Elem.(Enum (create_keyed key)) in
       let (T { t; model = model_info; action = action_info }) = Map.find_exn out_of key in
       let chosen_model =
         Incremental.map model ~f:(fun map ->

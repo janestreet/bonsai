@@ -1,4 +1,8 @@
-# Bonsai_web
+---
+title: "Bonsai_web"
+uuid: af1f449e-77df-4738-aced-28e1236536b4
+parent: "../README.md"
+---
 
 In theory, Bonsai can be used to implement UI frameworks for a variety of
 backends, but so far `Bonsai_web` is the only backend that has been built.

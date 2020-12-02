@@ -1,4 +1,8 @@
-# Bonsai for Incremental Users
+---
+title: "Bonsai for Incremental Users"
+uuid: 3c1c52aa-262d-406c-a0cd-bd241580d57b
+parent: "../README.md"
+---
 
 The Incremental library is a great foundation for building web applications!
 The notion that "small updates to the input should result in small (and quick!)

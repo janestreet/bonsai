@@ -1,0 +1,57 @@
+html, body, div#container {
+    height: 100vh;
+    margin:0;
+    padding:0;
+    width: 100vw;
+}
+
+div#container {
+    max-width:800px;
+    width:50vw;
+    margin:0 auto;
+
+    display:flex;
+    flex-direction:row;
+    flex-basis:100%;
+    flex: 1;
+}
+
+div#room-list-panel {
+    width: 150px;
+    display:flex;
+    flex-direction:column;
+}
+
+div#message-container {
+    display:flex;
+    flex-direction:column;
+    flex:1;
+    padding:1em;
+    padding-top:0;
+}
+
+button#refresh-button {
+    background:white;
+    border:0;
+}
+
+button#refresh-button:hover {
+    cursor: pointer;
+}
+
+div#compose {
+    display: flex;
+    flex-direction:row;
+}
+
+div#compose button {
+    width:40px;
+}
+
+div#compose input {
+    flex: 1;
+}
+
+div#messages-list {
+    flex: 1;
+}

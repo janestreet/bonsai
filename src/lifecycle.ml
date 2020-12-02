@@ -13,6 +13,7 @@ module Collection = struct
   let empty = Path.Map.empty
 
   let maybe_cons hd tl =
+    let open Reversed_list in
     match hd with
     | Some a -> a :: tl
     | None -> tl
@@ -23,7 +24,7 @@ module Collection = struct
        in a different order *)
     let after_displays =
       let collect ~key:_ ~data:{ after_display; _ } = maybe_cons after_display in
-      Map.fold new_ ~init:[] ~f:collect
+      Map.fold new_ ~init:Reversed_list.[] ~f:collect
     in
     let activations, deactivations =
       let collect (activations, deactivations) = function
@@ -34,12 +35,17 @@ module Collection = struct
         | _ -> activations, deactivations
       in
       let data_equal = phys_equal in
-      Map.fold_symmetric_diff old new_ ~data_equal ~init:([], []) ~f:collect
+      Map.fold_symmetric_diff
+        old
+        new_
+        ~data_equal
+        ~init:(Reversed_list.[], Reversed_list.[])
+        ~f:collect
     in
     Ui_event.Many
-      [ deactivations |> List.rev |> Ui_event.Many
-      ; activations |> List.rev |> Ui_event.Many
-      ; after_displays |> List.rev |> Ui_event.Many
+      [ deactivations |> Reversed_list.rev |> Ui_event.Many
+      ; activations |> Reversed_list.rev |> Ui_event.Many
+      ; after_displays |> Reversed_list.rev |> Ui_event.Many
       ]
   ;;
 end
