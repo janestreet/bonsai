@@ -49,17 +49,29 @@ end
 module Handle : sig
   type ('result, 'incoming) t
 
-  (** [show] prints out the result of the component as specified by
-      the [Result_spec] that was passed into [Handle.create]. *)
+  (** [show] prints out the result of the component as specified by the [Result_spec] that
+      was passed into [Handle.create]. *)
   val show : _ t -> unit
 
-  (** [show_diff] will print the diff of the view between now and 
-      the last time that [show] or [show_diff] was called. *)
+  (** [show_diff] will print the diff of the view between now and the last time that
+      [show] or [show_diff] was called. *)
   val show_diff : _ t -> unit
+
+  (** [store_view] is like [show] except that instead of printing the view to
+      stdout, it only stores the current view for use with [show_diff].  This 
+      can be useful if you want to print the diff of "before->after" without 
+      being required to print the entirety of "before". *)
+  val store_view : _ t -> unit
+
+  (** Flushes all the events in the event queue. This can be useful if e.g. you are
+      completing an Effect synchronously via Svar, and don't want to go through the other
+      functions which flush (like [show]) *)
+  val flush : _ t -> unit
 
   val result : ('result, _) t -> 'result
   val do_actions : (_, 'incoming) t -> 'incoming list -> unit
   val disable_bonsai_path_censoring : _ t -> unit
+  val advance_clock_by : _ t -> Time_ns.Span.t -> unit
 
   val create
     :  ('result, 'incoming) Result_spec.t

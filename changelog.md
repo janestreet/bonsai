@@ -1,9 +1,11 @@
----
-title: "Bonsai Changelog"
-uuid: 502ae936-a161-47dd-8206-2f7fcfa7fb26
-parent: "./README.md"
----
+# Bonsai Changelog
+
 <!-- Change-log notes go in this file, with newer dates at the _top_  --> 
+
+## 2020-11-18
+- Added `Bonsai.Edge.Poll`, which polls an input variable, and schedules an
+  effect when it changes.
+- Added `Bonsai.Edge.every` for scheduling events at periodic intervals.
 
 ## 2020-11-11
 Added `Bonsai.actor` for communicating between components.

@@ -1,8 +1,4 @@
----
-title: "Why no bind?"
-uuid: 5605073c-895d-4f58-bb58-2fbdd7c9da5b
-parent: "../README.md"
----
+# Why no bind?
 
 Many have asked the question "`Bonsai.Value.t` is an Applicative, why isn't it a 
 Monad?"  Certainly, for the users of a library, having a Monad gives the user 

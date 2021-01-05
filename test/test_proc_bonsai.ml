@@ -3,6 +3,7 @@ open! Import
 module Bonsai_lib = Bonsai
 open Proc
 open Bonsai.Let_syntax
+module Query_response_tracker = Bonsai.Effect.For_testing.Query_response_tracker
 
 let%expect_test "cutoff" =
   let var = Bonsai.Var.create 0 in
@@ -727,4 +728,125 @@ let%expect_test "lifecycle" =
      (on     a))
     ((action after-display)
      (on     a)) |}]
+;;
+
+let%expect_test "Edge.every" =
+  let print_hi = (fun () -> print_endline "hi") |> Bonsai.Effect.of_sync_fun |> unstage in
+  let component =
+    let%sub () =
+      Bonsai.Edge.every
+        [%here]
+        (Time_ns.Span.of_sec 3.0)
+        (Bonsai.Value.return (Bonsai.Effect.inject_ignoring_response (print_hi ())))
+    in
+    Bonsai.const ()
+  in
+  let handle = Handle.create (Result_spec.sexp (module Unit)) component in
+  let move_forward_and_show () =
+    Handle.advance_clock_by handle (Time_ns.Span.of_sec 1.0);
+    Handle.show handle
+  in
+  Handle.show handle;
+  [%expect {|
+    ()
+    hi |}];
+  move_forward_and_show ();
+  [%expect {| () |}];
+  move_forward_and_show ();
+  [%expect {| () |}];
+  move_forward_and_show ();
+  [%expect {|
+     ()
+     hi |}]
+;;
+
+let edge_poll_shared ~get_expect_output =
+  let effect_tracker = Query_response_tracker.create () in
+  let effect =
+    unstage @@ Bonsai.Effect.For_testing.of_query_response_tracker effect_tracker
+  in
+  let var = Bonsai.Var.create "hello" in
+  let component =
+    Bonsai.Edge.Poll.effect_on_change
+      [%here]
+      (module String)
+      (module String)
+      Bonsai.Edge.Poll.Starting.empty
+      (Bonsai.Var.value var)
+      ~effect:(Bonsai.Value.return effect)
+  in
+  let handle =
+    Handle.create
+      (Result_spec.sexp
+         (module struct
+           type t = string option [@@deriving sexp]
+         end))
+      component
+  in
+  let trigger_display () =
+    (* Polling is driven by [on_display] callbacks, which is triggered by
+       [Handle.show] *)
+    Handle.show handle;
+    let pending = Query_response_tracker.queries_pending_response effect_tracker in
+    let output = Sexp.of_string (get_expect_output ()) in
+    print_s [%message (pending : string list) (output : Sexp.t)]
+  in
+  var, effect_tracker, trigger_display
+;;
+
+let%expect_test "Edge.poll in order" =
+  let get_expect_output () = [%expect.output] in
+  let var, effect_tracker, trigger_display = edge_poll_shared ~get_expect_output in
+  trigger_display ();
+  [%expect {|
+    ((pending ())
+     (output  ())) |}];
+  trigger_display ();
+  [%expect {|
+    ((pending (hello)) (output ())) |}];
+  Bonsai.Var.set var "world";
+  trigger_display ();
+  [%expect {|
+    ((pending (hello)) (output ())) |}];
+  trigger_display ();
+  [%expect {|
+    ((pending (world hello)) (output ())) |}];
+  Query_response_tracker.maybe_respond effect_tracker ~f:(fun s ->
+    Respond (String.uppercase s));
+  trigger_display ();
+  [%expect {| ((pending ()) (output (WORLD))) |}]
+;;
+
+(* When completing the requests out-of-order, the last-fired effect still
+   wins *)
+let%expect_test "Edge.poll out of order" =
+  let get_expect_output () = [%expect.output] in
+  let var, effect_tracker, trigger_display = edge_poll_shared ~get_expect_output in
+  trigger_display ();
+  [%expect {|
+    ((pending ())
+     (output  ())) |}];
+  trigger_display ();
+  [%expect {|
+    ((pending (hello)) (output ())) |}];
+  Bonsai.Var.set var "world";
+  trigger_display ();
+  [%expect {|
+    ((pending (hello)) (output ())) |}];
+  trigger_display ();
+  [%expect {|
+    ((pending (world hello)) (output ())) |}];
+  Query_response_tracker.maybe_respond effect_tracker ~f:(function
+    | "world" as s -> Respond (String.uppercase s)
+    | _ -> No_response_yet);
+  trigger_display ();
+  [%expect {|
+    ((pending (hello))
+     (output  (WORLD))) |}];
+  Query_response_tracker.maybe_respond effect_tracker ~f:(function
+    | "hello" as s -> Respond (String.uppercase s)
+    | _ -> No_response_yet);
+  trigger_display ();
+  [%expect {|
+    ((pending ()) (output (WORLD))) |}]
 ;;

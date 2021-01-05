@@ -79,6 +79,8 @@ module Handle = struct
     result
   ;;
 
+  let advance_clock_by _ = Incr.Clock.advance_clock_by Incr.clock
+
   let do_actions handle actions =
     let _, _, inject_action = Driver.result handle in
     let event = actions |> List.map ~f:inject_action |> Event.sequence in
@@ -94,27 +96,30 @@ module Handle = struct
     else string
   ;;
 
-  let show handle =
+  let generic_show handle ~before ~f =
+    let before = before handle in
     Driver.flush handle;
     let _, view, _ = Driver.result handle in
     let view = maybe_censor_bonsai_path handle view in
     Driver.store_view handle view;
-    print_endline view;
+    f before view;
     Driver.trigger_lifecycles handle
   ;;
 
-  let show_diff handle =
-    let before = Driver.last_view handle in
-    Driver.flush handle;
-    let _, view, _ = Driver.result handle in
-    let view = maybe_censor_bonsai_path handle view in
-    Driver.store_view handle view;
-    Expect_test_patdiff.print_patdiff before view;
-    Driver.trigger_lifecycles handle
+  let show handle =
+    generic_show handle ~before:(Fn.const ()) ~f:(fun () view -> print_endline view)
   ;;
+
+  let show_diff handle =
+    generic_show handle ~before:Driver.last_view ~f:Expect_test_patdiff.print_patdiff
+  ;;
+
+  let store_view handle = generic_show handle ~before:(Fn.const ()) ~f:(fun () _ -> ())
 
   let show_model handle =
     Driver.flush handle;
     Driver.sexp_of_model handle |> print_s
   ;;
+
+  let flush handle = Driver.flush handle
 end

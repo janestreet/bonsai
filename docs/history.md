@@ -1,8 +1,4 @@
----
-title: "The History of Bonsai.t"
-uuid: 7c13fe7c-103e-3947-1ea6-46d57de4c86b
-parent: "../README.md"
----
+# The History of Bonsai.t
 
 This document chronicles the changes in the main `Bonsai.t` type through its
 history.

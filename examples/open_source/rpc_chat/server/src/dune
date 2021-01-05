@@ -1,7 +1,7 @@
 (library (name bonsai_chat_open_source_native)
  (preprocess (pps ppx_jane -annotated-ignores))
  (libraries async_extra.async_bus bonsai_chat_open_source_common
-  cohttp_static_handler async_rpc_websocket))
+  async_rpc_websocket cohttp-async))
 
 (rule (targets embedded_files.ml embedded_files.mli)
  (deps ../../client/main.bc.js ../../client/style.css)

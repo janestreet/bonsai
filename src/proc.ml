@@ -453,6 +453,145 @@ module Edge = struct
     let callback = Value.map callback ~f:(fun callback _prev value -> callback value) in
     on_change' here model input ~callback
   ;;
+
+  let every here span callback =
+    let input =
+      (* Even though this node has type unit (which should aggresively get cut
+         off), the documentation for [at_intervals] mentions that the node has
+         its cutoff manually overridden to never cut-off. *)
+      let%map.Incr () = Ui_incr.Clock.at_intervals Ui_incr.clock span in
+      (* The value of this node is the current time, which isn't actually used,
+         but it's a nice monotonically increasing value, so we don't need to
+         worry about cutoff issues. *)
+      Ui_incr.Clock.now Ui_incr.clock
+    in
+    let callback =
+      let open Let_syntax in
+      let%map callback = callback in
+      (* Ignore the time, which we only really used to get good cutoff behavior *)
+      fun (_ : Time_ns.t) -> callback
+    in
+    on_change
+      here
+      (module struct
+        include Time_ns.Stable.Alternate_sexp.V1
+
+        let equal = Time_ns.equal
+      end)
+      (Value.Incr input)
+      ~callback
+  ;;
+
+  module Poll = struct
+    module Starting = struct
+      type ('a, 'r) t =
+        | Empty : ('a, 'a option) t
+        | Initial : 'a -> ('a, 'a) t
+
+      let empty = Empty
+      let initial a = Initial a
+    end
+
+    let poll_effect_on_change_implementation
+          (type i r)
+          here
+          (module Input : Model with type t = i)
+          (module Result : Model with type t = r)
+          ~initial
+          ~wrap_result
+          ~effect
+          input
+      =
+      let open Let_syntax in
+      let%sub _, next_seqnum =
+        actor0
+          here
+          (module Int)
+          (module Unit)
+          ~default_model:0
+          ~recv:(fun ~schedule_event:_ i () -> i + 1, i)
+      in
+      let module State = struct
+        type t =
+          { last_seqnum : int
+          ; last_result : Result.t
+          }
+        [@@deriving sexp, equal, fields]
+      end
+      in
+      let module Action = struct
+        type t = Set of int * Result.t [@@deriving sexp_of]
+      end
+      in
+      let%sub state =
+        state_machine0
+          here
+          (module State)
+          (module Action)
+          ~apply_action:
+            (fun ~inject:_ ~schedule_event:_ model (Action.Set (seqnum, res)) ->
+               if seqnum < model.State.last_seqnum
+               then model
+               else { State.last_seqnum = seqnum; last_result = res })
+          ~default_model:{ State.last_seqnum = -1; last_result = initial }
+      in
+      let callback =
+        let%map effect = effect
+        and next_seqnum = next_seqnum
+        and _, inject_change = state in
+        fun input ->
+          Effect.inject_ignoring_response
+            (let%bind.Effect seqnum = next_seqnum () in
+             let on_response result =
+               inject_change (Action.Set (seqnum, wrap_result result))
+             in
+             Effect.of_event (Effect.inject (effect input) ~on_response))
+      in
+      let%sub () = on_change here (module Input) input ~callback in
+      return
+      @@ let%map { State.last_result; _ }, _ = state in
+      last_result
+    ;;
+
+    let effect_on_change
+      : type a o r.
+        Source_code_position.t
+        -> (module Model with type t = a)
+        -> (module Model with type t = o)
+        -> (o, r) Starting.t
+        -> a Value.t
+        -> effect:(a -> o Effect.t) Value.t
+        -> r Computation.packed
+      =
+      fun here
+        (module Input : Model with type t = a)
+        (module Result : Model with type t = o)
+        (kind : (o, r) Starting.t)
+        input
+        ~effect ->
+        match kind with
+        | Starting.Empty ->
+          poll_effect_on_change_implementation
+            here
+            (module Input)
+            (module struct
+              type t = Result.t option [@@deriving sexp, equal]
+            end)
+            ~effect
+            ~initial:None
+            ~wrap_result:Option.some
+            input
+        | Starting.Initial initial ->
+          poll_effect_on_change_implementation
+            here
+            (module Input)
+            (module Result)
+            ~effect
+            ~initial
+            ~wrap_result:Fn.id
+            input
+    ;;
+  end
 end
 
 module Incr = struct

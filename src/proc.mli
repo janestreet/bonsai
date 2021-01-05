@@ -460,6 +460,46 @@ module Edge : sig
   val after_display : Event.t Value.t -> unit Computation.t
 
   val after_display' : Event.t option Value.t -> unit Computation.t
+
+  (** An event passed to [every] is scheduled on an interval determined by 
+      the time-span argument. *)
+  val every
+    :  Source_code_position.t
+    -> Time_ns.Span.t
+    -> Event.t Value.t
+    -> unit Computation.t
+
+  module Poll : sig
+    module Starting : sig
+      type ('o, 'r) t
+
+      (** [empty] is an option to pass to the polling functions that changes
+          its return type to be ['o option Bonsai.Computation.t] and starting
+          value is [None] *)
+      val empty : ('o, 'o option) t
+
+      (** [initial x] is an option to pass to the polling functions that
+          changes its return type to be ['o Bonsai.Computation.t] and the
+          starting value is [x] *)
+      val initial : 'o -> ('o, 'o) t
+    end
+
+    (** This function runs an effect every time that the input value changes,
+        returning the most recent result as its computation.
+
+        The [Starting.t] argument controls the type of the result, and
+        depending on the value, will either return an optional value
+        [Option.None] or a default value ['o] in the time in between the 
+        computation starting and the first result coming back from the effect. *)
+    val effect_on_change
+      :  Source_code_position.t
+      -> (module Model with type t = 'a)
+      -> (module Model with type t = 'o)
+      -> ('o, 'r) Starting.t
+      -> 'a Value.t
+      -> effect:('a -> 'o Effect.t) Value.t
+      -> 'r Computation.t
+  end
 end
 
 module Incr : sig
