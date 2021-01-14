@@ -57,13 +57,13 @@ let%expect_test _ =
       | Search_results -> Second ()
     in
     let%sub body =
-      Bonsai.match_either
-        as_eithers
-        ~first:
-          (Bonsai.match_either
-             ~first:(fun _ -> Bonsai.const "1")
-             ~second:(fun _ -> Bonsai.const "2"))
-        ~second:(fun _ -> Bonsai.const "3")
+      (Bonsai.match_either
+         as_eithers
+         ~first:
+           (Bonsai.match_either
+              ~first:(fun _ -> Bonsai.const "1")
+              ~second:(fun _ -> Bonsai.const "2"))
+         ~second:(fun _ -> Bonsai.const "3") [@alert "-deprecated"])
     in
     Bonsai.read
       (let%map view = body

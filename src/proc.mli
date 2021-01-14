@@ -81,6 +81,10 @@ module Computation : sig
       Here, [a] and [b] always take on the same value.
   *)
   type 'a t
+
+  include Applicative.S with type 'a t := 'a t
+  include Applicative.Let_syntax with type 'a t := 'a t
+  include Mapn with type 'a t := 'a t
 end
 
 module Value : sig
@@ -246,7 +250,7 @@ val actor0
   -> recv:(schedule_event:(Event.t -> unit) -> 'model -> 'action -> 'model * 'return)
   -> ('model * ('action -> 'return Effect.t)) Computation.t
 
-(** [actor1] is very similar to [state_machine1], with two major exceptions: 
+(** [actor1] is very similar to [state_machine1], with two major exceptions:
     - the [apply-action] function for state-machine is renamed [recv], and it
       returns a "response", in addition to a new model.
     - the 2nd value returned by the component allows for the sender of an
@@ -349,6 +353,7 @@ val if_
   -> then_:'a Computation.t
   -> else_:'a Computation.t
   -> 'a Computation.t
+[@@deprecated "[since 2020-12] use if%sub instead"]
 
 (** [wrap] wraps a Computation (built using [f]) and provides a model and
     injection function that the wrapped component can use.  Especially of note
@@ -374,6 +379,7 @@ val match_either
   -> first:('a Value.t -> 'c Computation.t)
   -> second:('b Value.t -> 'c Computation.t)
   -> 'c Computation.t
+[@@deprecated "[since 2020-12] use match%sub instead"]
 
 (** [match_result] enables matching on a value of type [('a, 'b) Result.t]
     via the [ok] and [err] arguments. *)
@@ -382,6 +388,7 @@ val match_result
   -> ok:('a Value.t -> 'c Computation.t)
   -> err:('b Value.t -> 'c Computation.t)
   -> 'c Computation.t
+[@@deprecated "[since 2020-12] use match%sub instead"]
 
 (** [map_option] is similar to [Option.map] but with Bonsai's types instead.
     The computation produced by [f] will only be run when the input option is
@@ -397,6 +404,7 @@ val match_option
   -> some:('a Value.t -> 'b Computation.t)
   -> none:'b Computation.t
   -> 'b Computation.t
+[@@deprecated "[since 2020-12] use match%sub instead"]
 
 (** [with_model_resetter] extends a computation with the ability to reset the
     state machine for that computation back to its default.  This can be useful
@@ -408,7 +416,7 @@ module Edge : sig
       which is the terminology that we use to describe actions that occur when a value
       changes. *)
 
-  (** When given a value and a callback, [on_change] and [on_change'] will watch the 
+  (** When given a value and a callback, [on_change] and [on_change'] will watch the
       input variable and call the callback whenever the value changes. *)
   val on_change
     :  Source_code_position.t
@@ -417,7 +425,7 @@ module Edge : sig
     -> callback:('a -> Event.t) Value.t
     -> unit Computation.t
 
-  (** The same as [on_change], but the callback function gets access to the 
+  (** The same as [on_change], but the callback function gets access to the
       previous value that was witnessed. *)
   val on_change'
     :  Source_code_position.t
@@ -429,12 +437,12 @@ module Edge : sig
   (** [lifecycle] is a way to detect when a computation becomes active,
       inactive, or an event is triggered after every rendering (roughly 60x /
       second).  By depending on this function (with let%sub), you can install
-      events that are scheduled on either case. 
+      events that are scheduled on either case.
 
       When used, the events are scheduled in this order:
       - All deactivations
       - All activations
-      - All "after-display"s 
+      - All "after-display"s
 
       and an "after-display" won't occur before an activation, or after a
       deactivation for a given computation. *)
@@ -454,14 +462,14 @@ module Edge : sig
     -> unit
     -> unit Computation.t
 
-  (** [after_display] and [after_display'] are lower-level functions that 
+  (** [after_display] and [after_display'] are lower-level functions that
       can be used to register an event to occur once-per-frame (after each
       render). *)
   val after_display : Event.t Value.t -> unit Computation.t
 
   val after_display' : Event.t option Value.t -> unit Computation.t
 
-  (** An event passed to [every] is scheduled on an interval determined by 
+  (** An event passed to [every] is scheduled on an interval determined by
       the time-span argument. *)
   val every
     :  Source_code_position.t
@@ -489,7 +497,7 @@ module Edge : sig
 
         The [Starting.t] argument controls the type of the result, and
         depending on the value, will either return an optional value
-        [Option.None] or a default value ['o] in the time in between the 
+        [Option.None] or a default value ['o] in the time in between the
         computation starting and the first result coming back from the effect. *)
     val effect_on_change
       :  Source_code_position.t
@@ -503,12 +511,12 @@ module Edge : sig
 end
 
 module Incr : sig
-  (** A [Value.t] passed through [value_cutoff] will only trigger changes on its dependents when the 
+  (** A [Value.t] passed through [value_cutoff] will only trigger changes on its dependents when the
       value changes according to the provided equality function *)
   val value_cutoff : 'a Value.t -> equal:('a -> 'a -> bool) -> 'a Computation.t
 
-  (** You can use [model_cutoff] to override the value cutoff for the model for a 
-      computation to the equality function that your computation specified via the 
+  (** You can use [model_cutoff] to override the value cutoff for the model for a
+      computation to the equality function that your computation specified via the
       [Model.equal] function passed to [of_module], [state], etc... *)
   val model_cutoff : 'a Computation.t -> 'a Computation.t
 

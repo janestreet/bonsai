@@ -1,0 +1,23 @@
+table.prt-table-header {
+  border-collapse:collapse;
+}
+
+.prt-table-header td {
+  border:0px solid black;
+  padding:5px;
+  padding-right:10px; /* Space for the resizer */
+  position: relative;
+  background: #fffcf0;
+  box-sizing: content-box;
+  border:1px solid black;
+
+  font-family: sans-serif;
+  color: #06023a;
+}
+
+.prt-table-cell {
+    border-bottom:1px solid black;
+    border-left:1px solid black;
+    padding:4px;
+}
+

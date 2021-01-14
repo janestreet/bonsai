@@ -1,0 +1,2 @@
+(executables (names main) (libraries bonsai_web bonsai_drag_and_drop_example)
+ (preprocess (pps ppx_jane)))

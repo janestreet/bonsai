@@ -111,7 +111,7 @@ let assoc
       ~f
   =
   let module C = (val comparator) in
-  let key_id = Type_equal.Id.create ~name:"key id" C.sexp_of_t in
+  let key_id : k Type_equal.Id.t = Type_equal.Id.create ~name:"key id" C.sexp_of_t in
   let data_id : v Type_equal.Id.t =
     Type_equal.Id.create ~name:"data id" [%sexp_of: opaque]
   in
@@ -620,6 +620,119 @@ end
 
 module Computation = struct
   type 'a t = 'a Computation.packed
+
+  open Let_syntax
+
+  include Applicative.Make_using_map2 (struct
+      type nonrec 'a t = 'a t
+
+      let return = const
+
+      let map2 a b ~f =
+        let%sub a = a in
+        let%sub b = b in
+        read
+        @@ let%map a = a
+        and b = b in
+        f a b
+      ;;
+
+      let map a ~f =
+        let%sub a = a in
+        read
+        @@ let%map a = a in
+        f a
+      ;;
+
+      let map = `Custom map
+    end)
+
+  let map3 t1 t2 t3 ~f =
+    let%sub t1 = t1 in
+    let%sub t2 = t2 in
+    let%sub t3 = t3 in
+    read (Value.map3 t1 t2 t3 ~f)
+  ;;
+
+  let map4 t1 t2 t3 t4 ~f =
+    let%sub t1 = t1 in
+    let%sub t2 = t2 in
+    let%sub t3 = t3 in
+    let%sub t4 = t4 in
+    read (Value.map4 t1 t2 t3 t4 ~f)
+  ;;
+
+  let map5 t1 t2 t3 t4 t5 ~f =
+    let%sub t1 = t1 in
+    let%sub t2 = t2 in
+    let%sub t3 = t3 in
+    let%sub t4 = t4 in
+    let%sub t5 = t5 in
+    read (Value.map5 t1 t2 t3 t4 t5 ~f)
+  ;;
+
+  let map6 t1 t2 t3 t4 t5 t6 ~f =
+    let%sub t1 = t1 in
+    let%sub t2 = t2 in
+    let%sub t3 = t3 in
+    let%sub t4 = t4 in
+    let%sub t5 = t5 in
+    let%sub t6 = t6 in
+    read (Value.map6 t1 t2 t3 t4 t5 t6 ~f)
+  ;;
+
+  let map7 t1 t2 t3 t4 t5 t6 t7 ~f =
+    let%sub t1 = t1 in
+    let%sub t2 = t2 in
+    let%sub t3 = t3 in
+    let%sub t4 = t4 in
+    let%sub t5 = t5 in
+    let%sub t6 = t6 in
+    let%sub t7 = t7 in
+    read (Value.map7 t1 t2 t3 t4 t5 t6 t7 ~f)
+  ;;
+
+  let rec all = function
+    | [] -> return []
+    | [ t1 ] -> map t1 ~f:(fun a1 -> [ a1 ])
+    | [ t1; t2 ] -> map2 t1 t2 ~f:(fun a1 a2 -> [ a1; a2 ])
+    | [ t1; t2; t3 ] -> map3 t1 t2 t3 ~f:(fun a1 a2 a3 -> [ a1; a2; a3 ])
+    | [ t1; t2; t3; t4 ] -> map4 t1 t2 t3 t4 ~f:(fun a1 a2 a3 a4 -> [ a1; a2; a3; a4 ])
+    | [ t1; t2; t3; t4; t5 ] ->
+      map5 t1 t2 t3 t4 t5 ~f:(fun a1 a2 a3 a4 a5 -> [ a1; a2; a3; a4; a5 ])
+    | [ t1; t2; t3; t4; t5; t6 ] ->
+      map6 t1 t2 t3 t4 t5 t6 ~f:(fun a1 a2 a3 a4 a5 a6 -> [ a1; a2; a3; a4; a5; a6 ])
+    | [ t1; t2; t3; t4; t5; t6; t7 ] ->
+      map7 t1 t2 t3 t4 t5 t6 t7 ~f:(fun a1 a2 a3 a4 a5 a6 a7 ->
+        [ a1; a2; a3; a4; a5; a6; a7 ])
+    | t1 :: t2 :: t3 :: t4 :: t5 :: t6 :: t7 :: rest ->
+      let left =
+        map7 t1 t2 t3 t4 t5 t6 t7 ~f:(fun a1 a2 a3 a4 a5 a6 a7 ->
+          [ a1; a2; a3; a4; a5; a6; a7 ])
+      in
+      let right = all rest in
+      map2 left right ~f:(fun left right -> left @ right)
+  ;;
+
+  let all_unit xs = all xs |> map ~f:(fun (_ : unit list) -> ())
+
+  module Open_on_rhs_intf = struct
+    module type S = sig end
+  end
+
+  module Let_syntax = struct
+    let return = return
+
+    include Applicative_infix
+
+    module Let_syntax = struct
+      let return = return
+      let map = map
+      let both = both
+
+      module Open_on_rhs = struct end
+    end
+  end
 end
 
 module Value = Value

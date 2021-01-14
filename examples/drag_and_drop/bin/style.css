@@ -1,0 +1,52 @@
+h3 {
+  text-align: center;
+}
+
+.kanban-container {
+  display: flex;
+  flex-direction: row;
+}
+
+.kanban-column {
+  padding: 10px;
+  margin: 10px;
+  flex: 1;
+  min-height : 200px;
+  border: 3px solid white;
+}
+
+.kanban-column-active {
+  border: 3px dashed black;
+}
+
+.kanban-column-todo {
+  background-color: brown;
+}
+
+.kanban-column-in-progress {
+  background-color: lightblue;
+}
+
+.kanban-column-finished {
+  background-color: lightgreen;
+}
+
+.kanban-item {
+  background-color: purple;
+  color: white;
+  margin: 10px;
+  padding: 10px;
+}
+
+.being-dragged {
+  opacity: 0.5;
+  background-color: #990033;
+}
+
+.dragged-on-self {
+  background-color: black;
+}
+
+.disable-child-pointer-events * {
+  pointer-events: none;
+}

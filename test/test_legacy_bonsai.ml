@@ -652,9 +652,7 @@ module Model_sexpification = struct
     [%expect {| bonsai! |}];
     let initial_model_sexp = Driver.sexp_of_model driver in
     print_s initial_model_sexp;
-    [%expect
-      {|
-      (((false ()) (((false (bonsai! ())) (true ((23 ()) ()))) ())) ()) |}];
+    [%expect {| (((false ()) ((() ((0 ((23 ()) ())) (1 (bonsai! ())))) ())) ()) |}];
     let driver = Driver.create ~initial_model_sexp ~initial_input:() component in
     let (module H) = Helpers.make_with_inject ~driver ~sexp_of_result:Fn.id in
     H.show ();

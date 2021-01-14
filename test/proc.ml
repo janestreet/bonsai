@@ -96,6 +96,13 @@ module Handle = struct
     else string
   ;;
 
+  let recompute_view handle =
+    Driver.flush handle;
+    let _, view, _ = Driver.result handle in
+    let (_ : string) = maybe_censor_bonsai_path handle view in
+    Driver.trigger_lifecycles handle
+  ;;
+
   let generic_show handle ~before ~f =
     let before = before handle in
     Driver.flush handle;

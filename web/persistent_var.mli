@@ -44,3 +44,4 @@ val clear_persistence : 'a t -> unit
     threaded through your components and triggered inside an action-application
     or inside of an event listener. *)
 val effect : 'a t -> 'a -> unit Effect.t
+

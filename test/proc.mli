@@ -57,9 +57,14 @@ module Handle : sig
       [show] or [show_diff] was called. *)
   val show_diff : _ t -> unit
 
+  (** [recompute_view] is like [show], but it doesn't print anything. Calling
+      [recompute_view] between invocations of [show_diff] does not affect the
+      diff the gets shown. *)
+  val recompute_view : _ t -> unit
+
   (** [store_view] is like [show] except that instead of printing the view to
-      stdout, it only stores the current view for use with [show_diff].  This 
-      can be useful if you want to print the diff of "before->after" without 
+      stdout, it only stores the current view for use with [show_diff].  This
+      can be useful if you want to print the diff of "before->after" without
       being required to print the entirety of "before". *)
   val store_view : _ t -> unit
 

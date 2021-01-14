@@ -35,10 +35,9 @@ let enum m ~which ~handle input =
 ;;
 
 let if_ choose ~then_ ~else_ input =
+  let open Proc.Let_syntax in
   let cond = Proc.Value.map input ~f:choose in
-  let then_ = then_ input in
-  let else_ = else_ input in
-  Proc.if_ cond ~then_ ~else_
+  if%sub cond then then_ input else else_ input
 ;;
 
 module Map = struct

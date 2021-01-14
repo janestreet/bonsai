@@ -1,0 +1,9 @@
+open! Core_kernel
+open! Bonsai_web
+
+let (_ : _ Start.Handle.t) =
+  Start.start
+    Start.Result_spec.just_the_view
+    ~bind_to_element_with_id:"app"
+    Bonsai_drag_and_drop_example.app
+;;
