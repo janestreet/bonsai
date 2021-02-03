@@ -129,4 +129,9 @@ module Handle = struct
   ;;
 
   let flush handle = Driver.flush handle
+
+  let result_incr handle =
+    let%pattern_bind.Incr result, _view, _inject = Driver.result_incr handle in
+    result
+  ;;
 end

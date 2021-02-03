@@ -592,14 +592,9 @@ let%expect_test "ignored result of assoc" =
 ;;
 
 let%expect_test "on_display for updating a state (using on_change)" =
-  let effect =
-    (fun (prev, cur) -> print_s [%message "change!" (prev : int option) (cur : int)])
-    |> Bonsai.Effect.of_sync_fun
-    |> unstage
-  in
   let callback =
     Bonsai.Value.return (fun prev cur ->
-      Bonsai.Effect.inject_ignoring_response (effect (prev, cur)))
+      Ui_event.print_s [%message "change!" (prev : int option) (cur : int)])
   in
   let component input = Bonsai.Edge.on_change' [%here] (module Int) ~callback input in
   let var = Bonsai.Var.create 1 in
@@ -672,12 +667,8 @@ let%expect_test "actor" =
 ;;
 
 let%expect_test "lifecycle" =
-  let effect =
-    (fun (action, on) -> print_s [%message (action : string) (on : string)])
-    |> Bonsai.Effect.of_sync_fun
-    |> unstage
-    |> (fun f a -> Bonsai.Value.return (Bonsai.Effect.inject_ignoring_response (f a)))
-    |> Tuple2.curry
+  let effect action on =
+    Ui_event.print_s [%message (action : string) (on : string)] |> Bonsai.Value.return
   in
   let component input =
     let rendered = Bonsai.const "" in
@@ -706,32 +697,23 @@ let%expect_test "lifecycle" =
     Handle.create (Result_spec.string (module String)) (component (Bonsai.Var.value var))
   in
   Handle.show handle;
-  [%expect
-    {|
-    ((action activate)
-     (on     a))
-    ((action after-display)
-     (on     a)) |}];
+  [%expect {|
+    ((action activate) (on a))
+    ((action after-display) (on a)) |}];
   Bonsai.Var.set var false;
   Handle.show handle;
   [%expect
     {|
-    ((action deactivate)
-     (on     a))
-    ((action activate)
-     (on     b))
-    ((action after-display)
-     (on     b)) |}];
+    ((action deactivate) (on a))
+    ((action activate) (on b))
+    ((action after-display) (on b)) |}];
   Bonsai.Var.set var true;
   Handle.show handle;
   [%expect
     {|
-    ((action deactivate)
-     (on     b))
-    ((action activate)
-     (on     a))
-    ((action after-display)
-     (on     a)) |}]
+    ((action deactivate) (on b))
+    ((action activate) (on a))
+    ((action after-display) (on a)) |}]
 ;;
 
 let%expect_test "Edge.every" =

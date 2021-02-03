@@ -1,6 +1,4 @@
 (library (name bonsai_web)
  (libraries async_kernel bonsai core_kernel.bus core_kernel incr_dom
   core_kernel.moption virtual_dom.ui_event incr_dom.ui_incr virtual_dom)
- (preprocess
-  (pps ppx_jane js_of_ocaml-ppx -annotated-ignores -check-doc-comments))
- (public_name bonsai.web))
+ (preprocess (pps ppx_jane js_of_ocaml-ppx)) (public_name bonsai.web))

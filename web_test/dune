@@ -1,23 +1,19 @@
-(library (name bonsai_web_test)
+(library (name bonsai_web_test) (public_name bonsai.web_test)
  (libraries bonsai_web core_kernel expect_test_helpers_core
-  expect_test_patdiff bonsai_test incr_map virtual_dom.vdom_test_helpers)
- (preprocess
-  (pps ppx_jane ppx_pattern_bind -annotated-ignores -check-doc-comments)))
+  patdiff.expect_test_patdiff bonsai_test incr_map
+  virtual_dom.vdom_test_helpers)
+ (preprocess (pps ppx_jane ppx_pattern_bind)))
 
-(rule (targets test_legacy_bonsai.ml)
- (deps ../../bonsai/test/test_legacy_bonsai.ml)
+(rule (targets test_legacy_bonsai.ml) (deps ../test/test_legacy_bonsai.ml)
  (action (bash "cp %{deps} %{targets}")))
 
-(rule (targets test_legacy_bonsai.mli)
- (deps ../../bonsai/test/test_legacy_bonsai.mli)
+(rule (targets test_legacy_bonsai.mli) (deps ../test/test_legacy_bonsai.mli)
  (action (bash "cp %{deps} %{targets}")))
 
-(rule (targets test_proc_bonsai.ml)
- (deps ../../bonsai/test/test_proc_bonsai.ml)
+(rule (targets test_proc_bonsai.ml) (deps ../test/test_proc_bonsai.ml)
  (action (bash "cp %{deps} %{targets}")))
 
-(rule (targets test_proc_bonsai.mli)
- (deps ../../bonsai/test/test_proc_bonsai.mli)
+(rule (targets test_proc_bonsai.mli) (deps ../test/test_proc_bonsai.mli)
  (action (bash "cp %{deps} %{targets}")))
 
 (alias (name DEFAULT)

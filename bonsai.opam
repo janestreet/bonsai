@@ -13,13 +13,17 @@ depends: [
   "ocaml" {>= "4.08.0"}
   "async_kernel"
   "core_kernel"
+  "expect_test_helpers_core"
   "incr_dom"
+  "incr_map"
+  "patdiff"
   "ppx_jane"
   "ppx_pattern_bind"
   "reversed_list"
   "virtual_dom"
-  "dune"             {>= "2.0.0"}
+  "dune"                     {>= "2.0.0"}
   "js_of_ocaml-ppx"
+  "re"                       {>= "1.8.0"}
 ]
 synopsis: "A library for building dynamic webapps, using Js_of_ocaml"
 description: "

@@ -24,3 +24,4 @@ val should_censor_bonsai_path : _ t -> bool
 
 val sexp_of_model : _ t -> Sexp.t
 val input : ('i, _) t -> 'i
+val result_incr : (_, 'r) t -> 'r Incr.t

@@ -87,4 +87,6 @@ module Handle : sig
   [@@alert
     rampantly_nondeterministic
       "This function exposes Bonsai internals that may change without warning"]
+
+  val result_incr : ('r, 'i) t -> 'r Incr.t
 end

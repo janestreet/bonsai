@@ -88,10 +88,10 @@ module For_testing : sig
   val of_svar_fun : ('query -> 'result Svar.t) -> ('query -> 'result t) Staged.t
 
   module Query_response_tracker : sig
-    (** [Query_response_tracker] is an interface designed to make [of_svar] more convenient
-        to use. When the function returned by [of_query_response_tracker t] is called
-        (typically by your bonsai app), the query passed is stored within [t]. Your test
-        code can then call [maybe_handle_rpcs] to cause those effects to 'become
+    (** [Query_response_tracker] is an interface designed to make [of_svar] more
+        convenient to use. When the function returned by [of_query_response_tracker t] is
+        called (typically by your bonsai app), the query passed is stored within [t]. Your
+        test code can then call [maybe_respond] to cause those effects to 'become
         determined'. *)
     type ('q, 'r) t
 

@@ -8,6 +8,7 @@ type ('i, 'm, 'a, 'r) unpacked =
   ; sexp_of_model : 'm -> Sexp.t
   ; apply_action : (schedule_event:(Event.t -> unit) -> 'a -> 'm) Incr.Observer.t
   ; result : 'r Incr.Observer.t
+  ; result_incr : 'r Incr.t
   ; lifecycle : Bonsai.Private.Lifecycle.Collection.t Incr.Observer.t
   ; queue : 'a Queue.t
   ; mutable should_replace_bonsai_path_string : bool
@@ -78,8 +79,9 @@ let create
         ~inject
         computation
     in
+    let result_incr = Bonsai.Private.Snapshot.result snapshot in
     let apply_action = Bonsai.Private.Snapshot.apply_action snapshot |> Incr.observe in
-    let result = Bonsai.Private.Snapshot.result snapshot |> Incr.observe in
+    let result = result_incr |> Incr.observe in
     let lifecycle = Bonsai.Private.Snapshot.lifecycle snapshot |> Incr.observe in
     Incr.stabilize ();
     T
@@ -88,6 +90,7 @@ let create
       ; inject
       ; apply_action
       ; result
+      ; result_incr
       ; sexp_of_model
       ; lifecycle
       ; queue
@@ -140,3 +143,5 @@ let disable_bonsai_path_censoring (T unpacked) =
 let sexp_of_model (T { sexp_of_model; model_var; _ }) =
   sexp_of_model (Incr.Var.value model_var)
 ;;
+
+let result_incr (T { result_incr; _ }) = result_incr

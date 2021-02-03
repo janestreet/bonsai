@@ -23,6 +23,9 @@ module Handle : sig
     -> text:string
     -> unit
 
+  val focus : ('a, 'b) t -> get_vdom:('a -> Vdom.Node.t) -> selector:string -> unit
+  val blur : ('a, 'b) t -> get_vdom:('a -> Vdom.Node.t) -> selector:string -> unit
+
   val trigger_hook
     :  ('a, 'b) t
     -> get_vdom:('a -> Vdom.Node.t)
@@ -70,4 +73,5 @@ module Handle : sig
       -> action list
       -> t
   end
+
 end
