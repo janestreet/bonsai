@@ -83,7 +83,21 @@ module Computation : sig
   type 'a t
 
   include Applicative.S with type 'a t := 'a t
-  include Applicative.Let_syntax with type 'a t := 'a t
+
+  module Let_syntax : sig
+    val return : 'a -> 'a t
+
+    include Applicative.Applicative_infix with type 'a t := 'a t
+
+    module Let_syntax : sig
+      val return : 'a -> 'a t
+      val map : 'a t -> f:('a -> 'b) -> 'b t
+      val both : 'a t -> 'b t -> ('a * 'b) t
+
+      include Mapn with type 'a t := 'a t
+    end
+  end
+
   include Mapn with type 'a t := 'a t
 end
 
@@ -307,19 +321,6 @@ val state_machine1
   -> 'input Value.t
   -> ('model * ('action -> Event.t)) Computation.t
 
-(** Because all Bonsai computation-returning-functions are eagerly evaluated, attempting
-    to use "let rec" to construct a recursive component will recurse infinitely.  One way
-    to avoid this is to use a lazy computation and [Bonsai.lazy_] to defer evaluating the
-    [Computation.t].
-
-    {[
-      let rec some_component arg1 arg2 =
-        ...
-        let _ = Bonsai.lazy_ (lazy (some_component ...)) in
-        ...
-    ]} *)
-val lazy_ : 'a Computation.t Lazy.t -> 'a Computation.t
-
 (** [assoc] is used to apply a Bonsai computation to each element of a map.  This function
     signature is very similar to [Map.mapi] or [Incr_map.mapi'], and for good reason!
 
@@ -411,6 +412,25 @@ val match_option
     for e.g. clearing a form of all input values.*)
 val with_model_resetter : 'a Computation.t -> ('a * Event.t) Computation.t
 
+module Clock : sig
+  (** Functions allowing for the creation of time-dependent computations in
+      a testable way. *)
+
+  (** The current time, updated at [tick_every] intervals. *)
+  val approx_now : tick_every:Time_ns.Span.t -> Time_ns.t Computation.t
+
+  (** The current time, update as frequently as possible. *)
+  val now : Time_ns.t Computation.t
+
+  (** An event passed to [every] is scheduled on an interval determined by
+      the time-span argument. *)
+  val every
+    :  Source_code_position.t
+    -> Time_ns.Span.t
+    -> Event.t Value.t
+    -> unit Computation.t
+end
+
 module Edge : sig
   (** All the functions in this module incorporate the concept of "edge-triggering",
       which is the terminology that we use to describe actions that occur when a value
@@ -469,14 +489,6 @@ module Edge : sig
 
   val after_display' : Event.t option Value.t -> unit Computation.t
 
-  (** An event passed to [every] is scheduled on an interval determined by
-      the time-span argument. *)
-  val every
-    :  Source_code_position.t
-    -> Time_ns.Span.t
-    -> Event.t Value.t
-    -> unit Computation.t
-
   module Poll : sig
     module Starting : sig
       type ('o, 'r) t
@@ -525,6 +537,11 @@ module Incr : sig
 
   (** If you've got an incremental, you can convert it to a value with this function. *)
   val to_value : 'a Incr.t -> 'a Value.t
+
+  (** Compute some incremental value based on the global clock. Using this clock
+      instead of [Incr.clock] is the more testable approach, since it allows tests
+      to control how time moves forward. *)
+  val with_clock : (Incr.Clock.t -> 'a Incr.t) -> 'a Computation.t
 end
 
 (** This [Let_syntax] module is basically just {!Value.Let_syntax} with the addition of

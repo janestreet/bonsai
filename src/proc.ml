@@ -321,22 +321,6 @@ let actor0 here model action ~default_model ~recv =
   actor1 here model action ~default_model ~recv (Value.return ())
 ;;
 
-let lazy_ t =
-  let open struct
-    type model = Hidden.Model.t option [@@deriving equal, sexp_of]
-  end in
-  let action = Hidden.Action.type_id [%sexp_of: unit] in
-  let model =
-    { Meta.Model.default = None
-    ; equal = equal_model
-    ; type_id = Type_equal.Id.create ~name:"lazy-model" [%sexp_of: model]
-    ; sexp_of = [%sexp_of: model]
-    ; of_sexp = (fun _ -> None)
-    }
-  in
-  Computation.T { t = Lazy t; action; model }
-;;
-
 let wrap (type model action) model_module ~default_model ~apply_action ~f =
   let model_id : model Type_equal.Id.t =
     Type_equal.Id.create ~name:"model id" [%sexp_of: opaque]
@@ -454,34 +438,6 @@ module Edge = struct
     on_change' here model input ~callback
   ;;
 
-  let every here span callback =
-    let input =
-      (* Even though this node has type unit (which should aggresively get cut
-         off), the documentation for [at_intervals] mentions that the node has
-         its cutoff manually overridden to never cut-off. *)
-      let%map.Incr () = Ui_incr.Clock.at_intervals Ui_incr.clock span in
-      (* The value of this node is the current time, which isn't actually used,
-         but it's a nice monotonically increasing value, so we don't need to
-         worry about cutoff issues. *)
-      Ui_incr.Clock.now Ui_incr.clock
-    in
-    let callback =
-      let open Let_syntax in
-      let%map callback = callback in
-      (* Ignore the time, which we only really used to get good cutoff behavior *)
-      fun (_ : Time_ns.t) -> callback
-    in
-    on_change
-      here
-      (module struct
-        include Time_ns.Stable.Alternate_sexp.V1
-
-        let equal = Time_ns.equal
-      end)
-      (Value.Incr input)
-      ~callback
-  ;;
-
   module Poll = struct
     module Starting = struct
       type ('a, 'r) t =
@@ -594,6 +550,53 @@ module Edge = struct
   end
 end
 
+let with_clock f =
+  Computation.T
+    { t = Computation.Clock_incr f
+    ; action = Meta.Action.nothing
+    ; model = Meta.Model.unit
+    }
+;;
+
+module Clock = struct
+  let approx_now ~tick_every =
+    with_clock (fun clock ->
+      let%map.Incr () = Incr.Clock.at_intervals clock tick_every in
+      Incr.Clock.now clock)
+  ;;
+
+  let now = with_clock Incr.Clock.watch_now
+
+  let every here span callback =
+    let open Let_syntax in
+    let%sub input =
+      with_clock (fun clock ->
+        (* Even though this node has type unit (which should aggresively get cut
+           off), the documentation for [at_intervals] mentions that the node has
+           its cutoff manually overridden to never cut-off. *)
+        let%map.Incr () = Ui_incr.Clock.at_intervals clock span in
+        (* The value of this node is the current time, which isn't actually used,
+           but it's a nice monotonically increasing value, so we don't need to
+           worry about cutoff issues. *)
+        Ui_incr.Clock.now clock)
+    in
+    let callback =
+      let%map callback = callback in
+      (* Ignore the time, which we only really used to get good cutoff behavior *)
+      fun (_ : Time_ns.t) -> callback
+    in
+    Edge.on_change
+      here
+      (module struct
+        include Time_ns.Stable.Alternate_sexp.V1
+
+        let equal = Time_ns.equal
+      end)
+      input
+      ~callback
+  ;;
+end
+
 module Incr = struct
   let value_cutoff t ~equal = read (Value.cutoff ~equal t)
 
@@ -615,6 +618,7 @@ module Incr = struct
       }
   ;;
 
+  let with_clock = with_clock
   let to_value incr = Value.Incr incr
 end
 
@@ -647,50 +651,56 @@ module Computation = struct
       let map = `Custom map
     end)
 
-  let map3 t1 t2 t3 ~f =
-    let%sub t1 = t1 in
-    let%sub t2 = t2 in
-    let%sub t3 = t3 in
-    read (Value.map3 t1 t2 t3 ~f)
-  ;;
+  module Mapn = struct
+    let map2 = map2
 
-  let map4 t1 t2 t3 t4 ~f =
-    let%sub t1 = t1 in
-    let%sub t2 = t2 in
-    let%sub t3 = t3 in
-    let%sub t4 = t4 in
-    read (Value.map4 t1 t2 t3 t4 ~f)
-  ;;
+    let map3 t1 t2 t3 ~f =
+      let%sub t1 = t1 in
+      let%sub t2 = t2 in
+      let%sub t3 = t3 in
+      read (Value.map3 t1 t2 t3 ~f)
+    ;;
 
-  let map5 t1 t2 t3 t4 t5 ~f =
-    let%sub t1 = t1 in
-    let%sub t2 = t2 in
-    let%sub t3 = t3 in
-    let%sub t4 = t4 in
-    let%sub t5 = t5 in
-    read (Value.map5 t1 t2 t3 t4 t5 ~f)
-  ;;
+    let map4 t1 t2 t3 t4 ~f =
+      let%sub t1 = t1 in
+      let%sub t2 = t2 in
+      let%sub t3 = t3 in
+      let%sub t4 = t4 in
+      read (Value.map4 t1 t2 t3 t4 ~f)
+    ;;
 
-  let map6 t1 t2 t3 t4 t5 t6 ~f =
-    let%sub t1 = t1 in
-    let%sub t2 = t2 in
-    let%sub t3 = t3 in
-    let%sub t4 = t4 in
-    let%sub t5 = t5 in
-    let%sub t6 = t6 in
-    read (Value.map6 t1 t2 t3 t4 t5 t6 ~f)
-  ;;
+    let map5 t1 t2 t3 t4 t5 ~f =
+      let%sub t1 = t1 in
+      let%sub t2 = t2 in
+      let%sub t3 = t3 in
+      let%sub t4 = t4 in
+      let%sub t5 = t5 in
+      read (Value.map5 t1 t2 t3 t4 t5 ~f)
+    ;;
 
-  let map7 t1 t2 t3 t4 t5 t6 t7 ~f =
-    let%sub t1 = t1 in
-    let%sub t2 = t2 in
-    let%sub t3 = t3 in
-    let%sub t4 = t4 in
-    let%sub t5 = t5 in
-    let%sub t6 = t6 in
-    let%sub t7 = t7 in
-    read (Value.map7 t1 t2 t3 t4 t5 t6 t7 ~f)
-  ;;
+    let map6 t1 t2 t3 t4 t5 t6 ~f =
+      let%sub t1 = t1 in
+      let%sub t2 = t2 in
+      let%sub t3 = t3 in
+      let%sub t4 = t4 in
+      let%sub t5 = t5 in
+      let%sub t6 = t6 in
+      read (Value.map6 t1 t2 t3 t4 t5 t6 ~f)
+    ;;
+
+    let map7 t1 t2 t3 t4 t5 t6 t7 ~f =
+      let%sub t1 = t1 in
+      let%sub t2 = t2 in
+      let%sub t3 = t3 in
+      let%sub t4 = t4 in
+      let%sub t5 = t5 in
+      let%sub t6 = t6 in
+      let%sub t7 = t7 in
+      read (Value.map7 t1 t2 t3 t4 t5 t6 t7 ~f)
+    ;;
+  end
+
+  include Mapn
 
   let rec all = function
     | [] -> return []
@@ -730,6 +740,7 @@ module Computation = struct
       let map = map
       let both = both
 
+      include Mapn
       module Open_on_rhs = struct end
     end
   end

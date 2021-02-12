@@ -71,3 +71,17 @@ let%expect_test "subst dot" =
       }
     |}]
 ;;
+
+let%expect_test "model_resetter doesn't have a dash in the label name" =
+  let c = Bonsai.const () |> Bonsai.with_model_resetter in
+  print_endline (Bonsai.Debug.to_dot c);
+  [%expect
+    {|
+    digraph {
+    with_model_resetter_0 [ style=filled, shape = "Mrecord", label = "with_model_resetter"; fillcolor = "#86E3CE"; ]
+    read_1 [ style=filled, shape = "Mrecord", label = "read"; fillcolor = "#86E3CE"; ]
+    const_2 [ style=filled, shape = "oval", label = "const"; fillcolor = "#FFDD94"; ]
+    const_2 -> read_1;
+    read_1 -> with_model_resetter_0;
+    } |}]
+;;

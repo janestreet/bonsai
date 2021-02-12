@@ -18,6 +18,7 @@ let create_generic computation ~fresh ~input ~model ~inject =
     Bonsai.Private.eval
       ~environment
       ~path:Bonsai.Private.Path.empty
+      ~clock:Incr.clock
       ~model
       ~inject
       computation

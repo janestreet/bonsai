@@ -44,9 +44,10 @@ let single_counter =
       (module Int)
       (module Action)
       ~default_model:0
-      ~apply_action:(fun ~inject:_ ~schedule_event:_ model -> function
-        | Action.Increment -> model + 1
-        | Action.Decrement -> model - 1)
+      ~apply_action:
+        (fun ~inject:_ ~schedule_event:_ model -> function
+           | Action.Increment -> model + 1
+           | Action.Decrement -> model - 1)
   in
   return
   @@ let%map state, inject = counter_state in

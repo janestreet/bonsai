@@ -57,6 +57,7 @@ module Kind = struct
 end
 
 let register state kind name =
+  assert (String.for_all name ~f:(fun c -> Char.is_alphanum c || Char.equal c '_'));
   let s = [%string "%{name}_%{state.State.id#Int}"] in
   Buffer.add_string state.State.buffer s;
   Buffer.add_char state.State.buffer ' ';
@@ -293,13 +294,14 @@ let rec follow_computation
        arrow state ~from:(follow_value state input) ~to_:me;
        me)
   | Leaf_incr _ -> register_computation "leaf_incr"
+  | Clock_incr _ -> register_computation "clock_incr"
   | Path -> register_computation "path"
   | Lifecycle v ->
-    let me = register_computation "life-cycle" in
+    let me = register_computation "life_cycle" in
     arrow state ~from:(follow_value state v) ~to_:me;
     me
   | Model_cutoff { t; model = _ } ->
-    let me = register_computation "model-cutoff" in
+    let me = register_computation "model_cutoff" in
     arrow state ~from:(follow_computation state t) ~to_:me;
     me
   | Subst { from = Return from; via; into } ->
@@ -326,13 +328,12 @@ let rec follow_computation
     Map.iter out_of ~f:(fun (Computation.T { t; _ }) ->
       arrow state ~from:(follow_computation state t) ~to_:me);
     me
-  | Lazy _ -> register_computation "lazy"
   | Wrap { inner; model_id = _; inject_id = _; apply_action = _ } ->
     let me = register_computation "wrap" in
     arrow state ~from:(follow_computation state inner) ~to_:me;
     me
   | With_model_resetter { t; default_model = _ } ->
-    let me = register_computation "with-model-resetter" in
+    let me = register_computation "with_model_resetter" in
     arrow state ~from:(follow_computation state t) ~to_:me;
     me
 ;;

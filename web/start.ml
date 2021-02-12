@@ -170,6 +170,7 @@ module Arrow_deprecated = struct
           Bonsai.Private.eval
             ~environment
             ~path:Bonsai.Private.Path.empty
+            ~clock:Incr.clock
             ~model
             ~inject
             computation

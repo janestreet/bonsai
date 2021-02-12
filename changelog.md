@@ -1,7 +1,19 @@
 # Bonsai Changelog
 
+<!-- Change-log notes go in this file, with newer dates at the _top_  -->
+## 2021-01-21
+- Added `Bonsai.Clock.approx_now` and `Bonsai.Clock.now` and moved
+  `Bonsai.Edge.every` into the `Clock` module
 
-<!-- Change-log notes go in this file, with newer dates at the _top_  --> 
+## 2021-01-19
+- Added `Bonsai.Incr.with_clock` and a parameter to `Handle.create` to allow easier
+  testing of time-sensitive components.
+- Removed `Bonsai.lazy_`
+
+## 2021-01-15
+- Added `?split` parameter to `Bonsai_web_ui_typeahead.create_multi` to allow
+  adding multiple items with a single input.
+
 ## 2020-12-30
 - Deprecated `Bonsai.if_`, `Bonsai.match_either`, `Bonsai.match_result`, and
   `Bonsai.match_option` because `match%sub` expressions are always preferred.

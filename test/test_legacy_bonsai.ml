@@ -12,7 +12,7 @@ let dummy_source_code_position =
 ;;
 
 let run_test ~(component : _ Bonsai.Arrow_deprecated.t) ~initial_input ~f =
-  let driver component = Driver.create component ~initial_input in
+  let driver component = Driver.create component ~initial_input ~clock:Incr.clock in
   f (driver component)
 ;;
 
@@ -169,9 +169,10 @@ let%expect_test "state-machine counter-component" =
         (module Counter_component.Action)
         dummy_source_code_position
         ~default_model:0
-        ~apply_action:(fun ~inject:_ ~schedule_event:_ () model -> function
-          | Increment -> model + 1
-          | Decrement -> model - 1)
+        ~apply_action:
+          (fun ~inject:_ ~schedule_event:_ () model -> function
+             | Increment -> model + 1
+             | Decrement -> model - 1)
     in
     Int.to_string model, inject
   in
@@ -578,7 +579,9 @@ module Model_sexpification = struct
   ;;
 
   let%expect_test "normal operation" =
-    let driver = Driver.create ~initial_input:() (dummy (module Int) ~default:5) in
+    let driver =
+      Driver.create ~initial_input:() ~clock:Incr.clock (dummy (module Int) ~default:5)
+    in
     let (module H) = Helpers.make_with_inject ~driver ~sexp_of_result:Fn.id in
     H.show ();
     [%expect {| 5 |}]
@@ -589,6 +592,7 @@ module Model_sexpification = struct
       Driver.create
         ~initial_model_sexp:[%sexp [ 2; () ]]
         ~initial_input:()
+        ~clock:Incr.clock
         (dummy (module Int) ~default:5)
     in
     let (module H) = Helpers.make_with_inject ~driver ~sexp_of_result:Fn.id in
@@ -609,6 +613,7 @@ module Model_sexpification = struct
       Driver.create
         ~initial_model_sexp:[%sexp [ [ [ "2"; () ]; [ [ "3"; () ]; () ] ]; () ]]
         ~initial_input:()
+        ~clock:Incr.clock
         component
     in
     let (module H) = Helpers.make_with_inject ~driver ~sexp_of_result:Fn.id in
@@ -640,7 +645,7 @@ module Model_sexpification = struct
       in
       inner, inject
     in
-    let driver = Driver.create ~initial_input:() component in
+    let driver = Driver.create ~initial_input:() ~clock:Incr.clock component in
     let (module H) = Helpers.make_with_inject ~driver ~sexp_of_result:Fn.id in
     H.show ();
     [%expect {| 0 |}];
@@ -653,7 +658,9 @@ module Model_sexpification = struct
     let initial_model_sexp = Driver.sexp_of_model driver in
     print_s initial_model_sexp;
     [%expect {| (((false ()) ((() ((0 ((23 ()) ())) (1 (bonsai! ())))) ())) ()) |}];
-    let driver = Driver.create ~initial_model_sexp ~initial_input:() component in
+    let driver =
+      Driver.create ~initial_model_sexp ~initial_input:() ~clock:Incr.clock component
+    in
     let (module H) = Helpers.make_with_inject ~driver ~sexp_of_result:Fn.id in
     H.show ();
     [%expect {| bonsai! |}];

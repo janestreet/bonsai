@@ -82,7 +82,9 @@ end
 
 type t =
   { variant : My_variant.t
-  ; string : string
+  ; string_from_text : string
+  ; string_from_vert_radio : string
+  ; string_from_horiz_radio : string
   ; date : Date.t
   ; time_ns_of_day : Time_ns.Ofday.t
   ; date_time : Time_ns.Stable.Alternate_sexp.V1.t
@@ -104,6 +106,22 @@ let form =
   let%sub date = E.Date_time.date [%here] in
   let%sub time = E.Date_time.time [%here] in
   let%sub date_time = E.Date_time.datetime_local [%here] in
+  let%sub string_vert_radio =
+    E.Radio_buttons.list
+      [%here]
+      ~to_string:Fn.id
+      (module String)
+      ~layout:`Vertical
+      (Bonsai.Value.return [ "first"; "second"; "third" ])
+  in
+  let%sub string_horiz_radio =
+    E.Radio_buttons.list
+      [%here]
+      ~to_string:Fn.id
+      (module String)
+      ~layout:`Horizontal
+      (Bonsai.Value.return [ "first"; "second"; "third" ])
+  in
   let%sub bool_from_checkbox = E.Checkbox.bool [%here] ~default:false in
   let%sub date_from_string = E.Textbox.string [%here] in
   let date_from_string =
@@ -114,6 +132,9 @@ let form =
   in
   let%sub multi_select =
     E.Multiselect.list [%here] (module A_B_or_C) (Bonsai.Value.return A_B_or_C.all)
+  in
+  let%sub multi_select =
+    Form.Dynamic.collapsible_group (Bonsai.Value.return "collapsible group") multi_select
   in
   let%sub multi_select2 =
     E.Multiselect.list
@@ -145,7 +166,9 @@ let form =
   let open Form.Dynamic.Record_builder in
   Fields.make_creator
     ~variant:(field variant)
-    ~string:(field string)
+    ~string_from_text:(field string)
+    ~string_from_vert_radio:(field string_vert_radio)
+    ~string_from_horiz_radio:(field string_horiz_radio)
     ~date:(field date)
     ~time_ns_of_day:(field time)
     ~date_time:(field date_time)

@@ -20,6 +20,16 @@ let%expect_test "cutoff" =
   [%expect {| 1 |}]
 ;;
 
+let%expect_test "mapn" =
+  let (_ : unit Bonsai.Computation.t) =
+    let%mapn.Bonsai.Computation () = Bonsai.const ()
+    and () = Bonsai.const ()
+    and () = Bonsai.const () in
+    ()
+  in
+  ()
+;;
+
 let%expect_test "if_" =
   let component input =
     let a = Bonsai.Value.return "hello" in
@@ -337,53 +347,6 @@ let%expect_test "assoc simplifies its inner computation, if possible" =
   in
   print_s Bonsai_lib.Private.(Computation.sexp_of_packed (reveal_computation component));
   [%expect {| (Assoc_simpl ((map constant))) |}]
-;;
-
-let%expect_test "map > lazy" =
-  let open Bonsai.Let_syntax in
-  let module M = struct
-    type t =
-      { label : string
-      ; children : t Int.Map.t
-      }
-  end
-  in
-  let rec f ~t ~depth =
-    let%sub { M.label; children } = return t in
-    let%sub children =
-      Bonsai.assoc
-        (module Int)
-        children
-        ~f:(fun _ v ->
-          let depth =
-            let%map depth = depth in
-            depth + 1
-          in
-          Bonsai.lazy_ (lazy (f ~t:v ~depth)))
-    in
-    return
-    @@ let%map label = label
-    and children = children
-    and depth = depth in
-    [%message label (depth : int) (children : Sexp.t Int.Map.t)]
-  in
-  let t_var = Bonsai.Var.create { M.label = "hi"; children = Int.Map.empty } in
-  let t_value = Bonsai.Var.value t_var in
-  let handle =
-    Handle.create
-      (Result_spec.sexp (module Sexp))
-      (f ~t:t_value ~depth:(Bonsai.Value.return 0))
-  in
-  [%expect {| |}];
-  Handle.show handle;
-  [%expect {| (hi (depth 0) (children ())) |}];
-  Bonsai.Var.set
-    t_var
-    { M.label = "hi"
-    ; children = Int.Map.singleton 0 { M.label = "hello"; children = Int.Map.empty }
-    };
-  Handle.show handle;
-  [%expect {| (hi (depth 0) (children ((0 (hello (depth 1) (children ())))))) |}]
 ;;
 
 let%expect_test "action sent to non-existent assoc element" =
@@ -716,11 +679,11 @@ let%expect_test "lifecycle" =
     ((action after-display) (on a)) |}]
 ;;
 
-let%expect_test "Edge.every" =
+let%expect_test "Clock.every" =
   let print_hi = (fun () -> print_endline "hi") |> Bonsai.Effect.of_sync_fun |> unstage in
   let component =
     let%sub () =
-      Bonsai.Edge.every
+      Bonsai.Clock.every
         [%here]
         (Time_ns.Span.of_sec 3.0)
         (Bonsai.Value.return (Bonsai.Effect.inject_ignoring_response (print_hi ())))
@@ -835,4 +798,36 @@ let%expect_test "Edge.poll out of order" =
   trigger_display ();
   [%expect {|
     ((pending ()) (output (WORLD))) |}]
+;;
+
+let%expect_test "Clock.now" =
+  let clock = Incr.Clock.create ~start:Time_ns.epoch () in
+  let component = Bonsai.Clock.now in
+  let handle =
+    Handle.create ~clock (Result_spec.sexp (module Time_ns.Alternate_sexp)) component
+  in
+  Handle.show handle;
+  [%expect {| "1970-01-01 00:00:00Z" |}];
+  Incr.Clock.advance_clock_by clock (Time_ns.Span.of_sec 0.5);
+  Handle.show handle;
+  [%expect {| "1970-01-01 00:00:00.5Z" |}];
+  Incr.Clock.advance_clock_by clock (Time_ns.Span.of_sec 0.7);
+  Handle.show handle;
+  [%expect {| "1970-01-01 00:00:01.2Z" |}]
+;;
+
+let%expect_test "Clock.approx_now" =
+  let clock = Incr.Clock.create ~start:Time_ns.epoch () in
+  let component = Bonsai.Clock.approx_now ~tick_every:(Time_ns.Span.of_sec 1.0) in
+  let handle =
+    Handle.create ~clock (Result_spec.sexp (module Time_ns.Alternate_sexp)) component
+  in
+  Handle.show handle;
+  [%expect {| "1970-01-01 00:00:00Z" |}];
+  Incr.Clock.advance_clock_by clock (Time_ns.Span.of_sec 0.5);
+  Handle.show handle;
+  [%expect {| "1970-01-01 00:00:00Z" |}];
+  Incr.Clock.advance_clock_by clock (Time_ns.Span.of_sec 0.7);
+  Handle.show handle;
+  [%expect {| "1970-01-01 00:00:01.2Z" |}]
 ;;

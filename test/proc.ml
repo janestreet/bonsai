@@ -60,6 +60,7 @@ module Handle = struct
   let create
         (type result incoming)
         (result_spec : (result, incoming) Result_spec.t)
+        ?(clock = Incr.Clock.create ~start:Time_ns.epoch ())
         computation
     =
     let (module R) = result_spec in
@@ -70,7 +71,7 @@ module Handle = struct
         (let%map result = result in
          result, R.view result, R.incoming result)
     in
-    Driver.create ~initial_input:() component
+    Driver.create ~initial_input:() ~clock component
   ;;
 
   let result handle =
@@ -79,7 +80,8 @@ module Handle = struct
     result
   ;;
 
-  let advance_clock_by _ = Incr.Clock.advance_clock_by Incr.clock
+  let clock = Driver.clock
+  let advance_clock_by t = Incr.Clock.advance_clock_by (Driver.clock t)
 
   let do_actions handle actions =
     let _, _, inject_action = Driver.result handle in

@@ -4,6 +4,7 @@ open! Import
 type ('i, 'm, 'a, 'r) unpacked =
   { input_var : 'i Incr.Var.t
   ; model_var : 'm Incr.Var.t
+  ; clock : Incr.Clock.t
   ; inject : 'a -> Event.t
   ; sexp_of_model : 'm -> Sexp.t
   ; apply_action : (schedule_event:(Event.t -> unit) -> 'a -> 'm) Incr.Observer.t
@@ -21,6 +22,7 @@ type ('i, 'r) t = T : ('i, _, _, 'r) unpacked -> ('i, 'r) t
 let create
       (type i r)
       ?initial_model_sexp
+      ~clock
       ~(initial_input : i)
       (component : (i, r) Bonsai.Arrow_deprecated.t)
   : (i, r) t
@@ -75,6 +77,7 @@ let create
       Bonsai.Private.eval
         ~environment
         ~path:Bonsai.Private.Path.empty
+        ~clock
         ~model:(Incr.Var.watch model_var)
         ~inject
         computation
@@ -87,6 +90,7 @@ let create
     T
       { input_var
       ; model_var
+      ; clock
       ; inject
       ; apply_action
       ; result
@@ -145,3 +149,4 @@ let sexp_of_model (T { sexp_of_model; model_var; _ }) =
 ;;
 
 let result_incr (T { result_incr; _ }) = result_incr
+let clock (T { clock; _ }) = clock

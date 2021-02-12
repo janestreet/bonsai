@@ -11,7 +11,11 @@ build: [
 ]
 depends: [
   "ocaml" {>= "4.08.0"}
+  "async_extra"
+  "async_js"
   "async_kernel"
+  "async_rpc_kernel"
+  "async_rpc_websocket"
   "core_kernel"
   "expect_test_helpers_core"
   "incr_dom"
@@ -21,6 +25,7 @@ depends: [
   "ppx_pattern_bind"
   "reversed_list"
   "virtual_dom"
+  "cohttp-async"             {>= "2.5.0"}
   "dune"                     {>= "2.0.0"}
   "js_of_ocaml-ppx"
   "re"                       {>= "1.8.0"}

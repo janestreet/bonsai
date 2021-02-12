@@ -31,6 +31,7 @@ type ('model, 'action, 'result) t =
       ; name : string
       }
       -> ('model, 'action, 'result) t
+  | Clock_incr : (Incr.Clock.t -> 'result Incr.t) -> (unit, Nothing.t, 'result) t
   | Model_cutoff :
       { t : ('m, 'a, 'r) t
       ; model : 'm Meta.Model.t
@@ -76,11 +77,6 @@ type ('model, 'action, 'result) t =
       ; key_and_cmp : ('key_and_cmp, ('key, 'cmp) Hidden.Multi_model.t) Type_equal.t
       }
       -> ('key_and_cmp, 'key Hidden.Action.t, 'a) t
-  (* Lazy wraps the model in an option because otherwise you could make
-     infinitely sized models (by eagerly expanding a recursive model) which
-     would stack-overflow during eval.  [None] really means "unchanged from the
-     default", and is used to halt the the eager expansion. *)
-  | Lazy : 'a packed Lazy.t -> (Hidden.Model.t option, unit Hidden.Action.t, 'a) t
   | Wrap :
       { model_id : 'outer_model Type_equal.Id.t
       ; inject_id : ('outer_action -> Event.t) Type_equal.Id.t
@@ -108,6 +104,7 @@ let rec sexp_of_t : type m a r. (m, a, r) t -> Sexp.t = function
   | Return value -> [%sexp Return (value : Value.t)]
   | Leaf { name; _ } -> [%sexp Leaf (name : string)]
   | Leaf_incr { name; _ } -> [%sexp Leaf_incr (name : string)]
+  | Clock_incr _ -> [%sexp Clock_incr]
   | Model_cutoff { t; _ } -> [%sexp Model_cutoff (t : t)]
   | Subst { from; via; into } ->
     [%sexp Subst { from : t; via : _ Type_equal.Id.t; into : t }]
@@ -116,7 +113,6 @@ let rec sexp_of_t : type m a r. (m, a, r) t -> Sexp.t = function
   | Enum { which; out_of; sexp_of_key; _ } ->
     let out_of = out_of |> Map.to_alist |> List.map ~f:[%sexp_of: key * packed] in
     [%sexp Enum { which : Value.t; out_of : Sexp.t list }]
-  | Lazy _ -> [%sexp Lazy]
   | With_model_resetter { t; _ } -> [%sexp With_model_resetter (t : t)]
   | Wrap { inner; _ } -> [%sexp Wrap (inner : t)]
   | Path -> [%sexp Path]
