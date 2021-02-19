@@ -25,9 +25,9 @@ depends: [
   "ppx_pattern_bind"
   "reversed_list"
   "virtual_dom"
-  "cohttp-async"             {>= "2.5.0"}
+  "cohttp-async"             {>= "2.5.4"}
   "dune"                     {>= "2.0.0"}
-  "js_of_ocaml-ppx"
+  "js_of_ocaml-ppx"          {>= "3.9.0"}
   "re"                       {>= "1.8.0"}
 ]
 synopsis: "A library for building dynamic webapps, using Js_of_ocaml"

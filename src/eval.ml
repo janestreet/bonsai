@@ -73,14 +73,9 @@ let rec eval
     Snapshot.create ~result ~apply_action ~lifecycle:do_nothing_lifecycle
   | Leaf_incr { input; apply_action; compute; name = _ } ->
     let input = Value.eval environment input in
-    let result = compute ~inject input model
+    let result = compute ~inject clock input model
     and apply_action = apply_action ~inject input model in
     Snapshot.create ~result ~apply_action ~lifecycle:do_nothing_lifecycle
-  | Clock_incr f ->
-    Snapshot.create
-      ~result:(f clock)
-      ~apply_action:unusable_apply_action
-      ~lifecycle:do_nothing_lifecycle
   | Model_cutoff { t; model = { Meta.Model.equal; _ } } ->
     let model = Incr.map model ~f:Fn.id in
     Incr.set_cutoff model (Incr.Cutoff.of_equal equal);

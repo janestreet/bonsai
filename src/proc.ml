@@ -550,31 +550,54 @@ module Edge = struct
   end
 end
 
-let with_clock f =
-  Computation.T
-    { t = Computation.Clock_incr f
-    ; action = Meta.Action.nothing
-    ; model = Meta.Model.unit
-    }
-;;
+module Incr = struct
+  let value_cutoff t ~equal = read (Value.cutoff ~equal t)
+
+  let model_cutoff (Computation.T { t; action; model }) =
+    Computation.T { t = Computation.Model_cutoff { t; model }; action; model }
+  ;;
+
+  let compute_with_clock t ~f =
+    let apply_action _input model ~inject:_ =
+      Incr.map model ~f:(fun _model ~schedule_event:_ -> Nothing.unreachable_code)
+    in
+    let compute clock input _model ~inject:_ = f clock input in
+    Computation.T
+      { t =
+          Computation.Leaf_incr
+            { name = "incr-compute"; input = t; apply_action; compute }
+      ; action = Meta.Action.nothing
+      ; model = Meta.Model.unit
+      }
+  ;;
+
+  let compute t ~f = compute_with_clock t ~f:(fun _ input -> f input)
+  let with_clock f = compute_with_clock (Value.return ()) ~f:(fun clock _ -> f clock)
+  let to_value incr = Value.Incr incr
+end
 
 module Clock = struct
   let approx_now ~tick_every =
-    with_clock (fun clock ->
-      let%map.Incr () = Incr.Clock.at_intervals clock tick_every in
-      Incr.Clock.now clock)
+    Incr.with_clock (fun clock ->
+      let%map.Ui_incr () = Ui_incr.Clock.at_intervals clock tick_every in
+      Ui_incr.Clock.now clock)
   ;;
 
-  let now = with_clock Incr.Clock.watch_now
+  let now = Incr.with_clock Ui_incr.Clock.watch_now
+
+  let at time =
+    Incr.compute_with_clock time ~f:(fun clock ->
+      Ui_incr.bind ~f:(Ui_incr.Clock.at clock))
+  ;;
 
   let every here span callback =
     let open Let_syntax in
     let%sub input =
-      with_clock (fun clock ->
+      Incr.with_clock (fun clock ->
         (* Even though this node has type unit (which should aggresively get cut
            off), the documentation for [at_intervals] mentions that the node has
            its cutoff manually overridden to never cut-off. *)
-        let%map.Incr () = Ui_incr.Clock.at_intervals clock span in
+        let%map.Ui_incr () = Ui_incr.Clock.at_intervals clock span in
         (* The value of this node is the current time, which isn't actually used,
            but it's a nice monotonically increasing value, so we don't need to
            worry about cutoff issues. *)
@@ -595,31 +618,6 @@ module Clock = struct
       input
       ~callback
   ;;
-end
-
-module Incr = struct
-  let value_cutoff t ~equal = read (Value.cutoff ~equal t)
-
-  let model_cutoff (Computation.T { t; action; model }) =
-    Computation.T { t = Computation.Model_cutoff { t; model }; action; model }
-  ;;
-
-  let compute t ~f =
-    let apply_action _input model ~inject:_ =
-      Incr.map model ~f:(fun _model ~schedule_event:_ -> Nothing.unreachable_code)
-    in
-    let compute input _model ~inject:_ = f input in
-    Computation.T
-      { t =
-          Computation.Leaf_incr
-            { name = "incr-compute"; input = t; apply_action; compute }
-      ; action = Meta.Action.nothing
-      ; model = Meta.Model.unit
-      }
-  ;;
-
-  let with_clock = with_clock
-  let to_value incr = Value.Incr incr
 end
 
 module Computation = struct

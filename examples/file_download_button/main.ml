@@ -3,11 +3,15 @@ open! Bonsai_web
 
 let component =
   Bonsai.const
-    (Vdom_file_download_button.create
-       ~button_text:"click me!"
-       ~data:(fun () -> "hello there!")
-       ~output_filename:"top_secret.txt"
-       ())
+    Vdom_file_download.(
+      Button.create
+        ~button_text:"click me!"
+        ~get_download:(fun () ->
+          create
+            ~contents:"hello there!"
+            ~filename:"top_secret.txt"
+            ~mimetype:"text/plain")
+        ())
 ;;
 
 let (_ : _ Start.Handle.t) =

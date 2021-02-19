@@ -27,11 +27,14 @@ type ('model, 'action, 'result) t =
           -> inject:('action -> Event.t)
           -> (schedule_event:(Event.t -> unit) -> 'action -> 'model) Incr.t
       ; compute :
-          'input Incr.t -> 'model Incr.t -> inject:('action -> Event.t) -> 'result Incr.t
+          Incr.Clock.t
+          -> 'input Incr.t
+          -> 'model Incr.t
+          -> inject:('action -> Event.t)
+          -> 'result Incr.t
       ; name : string
       }
       -> ('model, 'action, 'result) t
-  | Clock_incr : (Incr.Clock.t -> 'result Incr.t) -> (unit, Nothing.t, 'result) t
   | Model_cutoff :
       { t : ('m, 'a, 'r) t
       ; model : 'm Meta.Model.t
@@ -104,7 +107,6 @@ let rec sexp_of_t : type m a r. (m, a, r) t -> Sexp.t = function
   | Return value -> [%sexp Return (value : Value.t)]
   | Leaf { name; _ } -> [%sexp Leaf (name : string)]
   | Leaf_incr { name; _ } -> [%sexp Leaf_incr (name : string)]
-  | Clock_incr _ -> [%sexp Clock_incr]
   | Model_cutoff { t; _ } -> [%sexp Model_cutoff (t : t)]
   | Subst { from; via; into } ->
     [%sexp Subst { from : t; via : _ Type_equal.Id.t; into : t }]

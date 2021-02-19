@@ -422,6 +422,10 @@ module Clock : sig
   (** The current time, update as frequently as possible. *)
   val now : Time_ns.t Computation.t
 
+  (** Mirrors [Incr.Clock.at], which changes from [Before] to [After] at the
+      specified time. *)
+  val at : Time_ns.t Value.t -> Ui_incr.Before_or_after.t Computation.t
+
   (** An event passed to [every] is scheduled on an interval determined by
       the time-span argument. *)
   val every

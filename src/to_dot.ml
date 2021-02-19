@@ -294,7 +294,6 @@ let rec follow_computation
        arrow state ~from:(follow_value state input) ~to_:me;
        me)
   | Leaf_incr _ -> register_computation "leaf_incr"
-  | Clock_incr _ -> register_computation "clock_incr"
   | Path -> register_computation "path"
   | Lifecycle v ->
     let me = register_computation "life_cycle" in

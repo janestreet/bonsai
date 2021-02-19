@@ -129,7 +129,11 @@ module With_incr = struct
     let (module M) = component in
     let t =
       Computation.Leaf_incr
-        { input; apply_action = M.apply_action; compute = M.compute; name = M.name }
+        { input
+        ; apply_action = M.apply_action
+        ; compute = (fun _ -> M.compute)
+        ; name = M.name
+        }
     in
     Computation.T
       { t

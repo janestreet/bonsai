@@ -1,7 +1,7 @@
 open! Core_kernel
 open! Bonsai_web
 open Bonsai.Let_syntax
-module Table = Bonsai_web_ui_partial_render_table
+module Table = Bonsai_web_ui_partial_render_table.Basic
 
 module Time_ns_option = struct
   type t = Time_ns.t option [@@deriving compare]
@@ -19,16 +19,20 @@ module Columns = struct
     val to_string : t -> string
   end
 
+  module Column = Table.Columns.Dynamic_cells
+
   let column_helper
         (type a)
         (module M : S with type t = a)
         ?visible
         (field : (_, a) Field.t)
     =
-    Table.Column_spec.column
+    Column.column
       ?visible
       ~label:(Bonsai.Value.return (Vdom.Node.text (Fieldslib.Field.name field)))
-      ~sort:(fun (_, a) (_, b) -> M.compare (Field.get field a) (Field.get field b))
+      ~sort:
+        (Bonsai.Value.return (fun (_, a) (_, b) ->
+           M.compare (Field.get field a) (Field.get field b)))
       ~cell:(fun ~key:_ ~data ->
         return
         @@ let%map data = data in
@@ -44,10 +48,17 @@ module Columns = struct
     ; column_helper (module Float) Row.Fields.bid
     ; column_helper (module Float) Row.Fields.ask
     ; column_helper (module Int) Row.Fields.asize
-    ; column_helper (module Int) Row.Fields.position ~visible:should_show_position
-    ; column_helper (module Time_ns_option) Row.Fields.last_fill
+    ; Column.group
+        ~label:(Bonsai.Value.return (Vdom.Node.text "some group"))
+        [ Column.group
+            ~label:(Bonsai.Value.return (Vdom.Node.text "small"))
+            [ column_helper (module Int) Row.Fields.position ~visible:should_show_position
+            ]
+        ; column_helper (module Time_ns_option) Row.Fields.last_fill
+        ]
     ; column_helper (module String) Row.Fields.trader
     ]
+    |> Column.lift
   ;;
 end
 
@@ -65,7 +76,7 @@ let component (data : Row.t String.Map.t Bonsai.Value.t) =
   return
   @@ let%map should_show_position = should_show_position
   and set = set
-  and { Table.view = table } = table in
+  and { Table.Result.view = table } = table in
   let button_text =
     if should_show_position then "hide position" else "show position"
   in
