@@ -4,7 +4,7 @@ open! Import
 module Result_spec = struct
   include Bonsai_test.Result_spec
 
-  let vdom (type result) ?should_print_styles get_vdom =
+  let vdom (type result) ?filter_printed_attributes get_vdom =
     (module struct
       type t = result
 
@@ -14,7 +14,7 @@ module Result_spec = struct
         result
         |> get_vdom
         |> Virtual_dom_test_helpers.Node_helpers.unsafe_convert_exn
-        |> Virtual_dom_test_helpers.Node_helpers.to_string_html ?should_print_styles
+        |> Virtual_dom_test_helpers.Node_helpers.to_string_html ?filter_printed_attributes
       ;;
     end : S
       with type t = result

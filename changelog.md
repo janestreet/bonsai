@@ -1,6 +1,9 @@
 # Bonsai Changelog
 
 <!-- Change-log notes go in this file, with newer dates at the _top_  -->
+## 2021-02-11
+- Change `should_print_styles` to the more general `filter_printed_attributes`
+
 ## 2021-01-21
 - Added `Bonsai.Clock.approx_now` and `Bonsai.Clock.now` and moved
   `Bonsai.Edge.every` into the `Clock` module

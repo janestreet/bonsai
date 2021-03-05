@@ -6,7 +6,13 @@ module Result_spec : sig
     include Bonsai_test.Result_spec
   end
 
-  val vdom : ?should_print_styles:bool -> ('a -> Vdom.Node.t) -> ('a, Nothing.t) t
+  (** [filter_printed_attributes] controls which attributes on a Node will get
+      printed analyzing the string name of the attribute. Styles correspond to
+      the string "style" and a Node's key corresponds to the string "@key" *)
+  val vdom
+    :  ?filter_printed_attributes:(string -> bool)
+    -> ('a -> Vdom.Node.t)
+    -> ('a, Nothing.t) t
 end
 
 module Handle : sig

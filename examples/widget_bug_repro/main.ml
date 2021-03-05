@@ -30,18 +30,38 @@ let widget =
 
 let widget = unstage widget
 
+let inner_html_a =
+  Vdom.Node.inner_html
+    ~tag:"div"
+    []
+    ~this_html_is_sanitized_and_is_totally_safe_trust_me:"hello"
+;;
+
+let inner_html_b =
+  Vdom.Node.inner_html
+    ~tag:"div"
+    []
+    ~this_html_is_sanitized_and_is_totally_safe_trust_me:"world"
+;;
+
 let component true_or_false ~toggle =
   return
   @@ let%map true_or_false = true_or_false in
   let widget = widget true_or_false in
-  Vdom.Node.div
-    []
-    [ widget
-    ; widget
-    ; Vdom.Node.button
-        [ Vdom.Attr.on_click (fun _ -> toggle (not true_or_false)) ]
-        [ Vdom.Node.text "click me" ]
-    ]
+  let ids =
+    Vdom.Node.div
+      []
+      [ widget
+      ; widget
+      ; Vdom.Node.button
+          [ Vdom.Attr.on_click (fun _ -> toggle (not true_or_false)) ]
+          [ Vdom.Node.text "click me" ]
+      ]
+  in
+  let inner_html =
+    Vdom.Node.div [] [ (if true_or_false then inner_html_a else inner_html_b) ]
+  in
+  Vdom.Node.div [] [ ids; inner_html ]
 ;;
 
 let (_ : _ Start.Handle.t) =
