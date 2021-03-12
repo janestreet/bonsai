@@ -98,8 +98,9 @@ type t =
   ; many : A_B_or_C.t list
   ; many2 : A_B_or_C.t list
   ; string_set : String.Set.t
+  ; files : Filename.Set.t
   }
-[@@deriving fields, sexp]
+[@@deriving fields, sexp_of]
 
 let form =
   let%sub string = E.Textbox.string [%here] in
@@ -163,6 +164,13 @@ let form =
       (module String)
       (Bonsai.Value.return [ "first"; "second"; "third"; "fourth" ])
   in
+  let%sub files =
+    E.File_select.multiple
+      [%here]
+      ~accept:[ `Mimetype "application/pdf"; `Extension ".csv" ]
+      ~on_file_select:(Bonsai.Value.return (Fn.const Ui_event.Ignore))
+      ()
+  in
   let open Form.Dynamic.Record_builder in
   Fields.make_creator
     ~variant:(field variant)
@@ -182,6 +190,7 @@ let form =
     ~a_b_or_c:(field a_b_or_c)
     ~sexp_from_string:(field sexp_from_string)
     ~string_set:(field string_set)
+    ~files:(field files)
   |> build_for_record
 ;;
 

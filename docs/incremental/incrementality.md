@@ -85,8 +85,7 @@ Bonsai library (specifically in the implementations of `Bonsai.Let_syntax.sub`
 and `Bonsai.Let_syntax.both`).
 
 Using Incremental nodes directly is possible in Bonsai, though it is not what
-we would consider "typical" use of the library.  The `Bonsai.Arrow.With_incr` module
-offers copies of many of the same functions in the regular `Bonsai` namespace, but 
-with their incremental types exposed.  These functions are recommended only if you 
-know that you can write an incremental function that is faster than the equivalent 
-non-incremental code.
+we would consider "typical" use of the library.  The `Bonsai.Incr` module
+offers various functions that bridge the Bonsai world and the Incremental world
+These functions are recommended only if you know that you can write an
+incremental function that is faster than the equivalent non-incremental code.

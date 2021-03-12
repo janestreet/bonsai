@@ -1,4 +1,4 @@
-# Testing a Bonsai_web application
+# 06 - Testing
 
 Traditional approaches for testing web applications can be
 infuriating.  With tools like selenium or puppeteer, there’s an entire
@@ -31,8 +31,7 @@ Let's see what a test for the simplest Bonsai component would look like.
 
 First the component:
 
-```sh
-$ sed -n -e '/\[HELLO_WORLD_COMPONENT BEGIN\]/,/\[HELLO_WORLD_COMPONENT END\]/p' ../examples/testing_example/lib/app.ml | tail -n +2 | head -n -2
+```ocaml
 let hello_world : Vdom.Node.t Bonsai.Computation.t =
   Bonsai.const (Vdom.Node.span [] [ Vdom.Node.text "hello world" ])
 ;;
@@ -40,8 +39,7 @@ let hello_world : Vdom.Node.t Bonsai.Computation.t =
 
 And now the test:
 
-```sh
-$ sed -n -e '/\[HELLO_WORLD_TEST BEGIN\]/,/\[HELLO_WORLD_TEST END\]/p' ../examples/testing_example/test/app_test.ml | tail -n +2 | head -n -2
+```ocaml
 module Handle = Bonsai_web_test.Handle
 module Result_spec = Bonsai_web_test.Result_spec
 
@@ -70,8 +68,7 @@ by the component.
 `Bonsai.const` can be useful, but it's certainly not the most exciting.  To
 spice things up, let's build a component that operates on its input:
 
-```sh
-$ sed -n -e '/\[HELLO_USER_COMPONENT BEGIN\]/,/\[HELLO_USER_COMPONENT END\]/p' ../examples/testing_example/lib/app.ml | tail -n +2 | head -n -2
+```ocaml
 let hello_user (name : string Bonsai.Value.t) : Vdom.Node.t Bonsai.Computation.t =
   return
   @@ let%map name = name in
@@ -85,8 +82,7 @@ from the result of another computation, or it may originate from a
 To make things easier for us, let's use `Bonsai.Var.t` to get a mutable handle
 on a `Value.t` and see what happens when we change the Var.
 
-```sh
-$ sed -n -e '/\[HELLO_USER_TEST BEGIN\]/,/\[HELLO_USER_TEST END\]/p' ../examples/testing_example/test/app_test.ml | tail -n +2 | head -n -2
+```ocaml
 let%expect_test "shows hello to a user" =
   let user_var = Bonsai.Var.create "Bob" in
   let user = Bonsai.Var.value user_var in
@@ -105,8 +101,7 @@ For tests like this, where the contents of a component are printed more than
 once, we have a helper function that will print the diff between two versions
 of the view: `Handle.show_diff`.  This is how you'd write the example above:
 
-```sh
-$ sed -n -e '/\[HELLO_USER_DIFF_TEST BEGIN\]/,/\[HELLO_USER_DIFF_TEST END\]/p' ../examples/testing_example/test/app_test.ml | tail -n +2 | head -n -2
+```ocaml
 let%expect_test "shows hello to a user" =
   let user_var = Bonsai.Var.create "Bob" in
   let user = Bonsai.Var.value user_var in
@@ -137,8 +132,7 @@ view.  Before talking about testing these components, let's first build one.
 Here, we actually use the `hello_user` component defined previously, but the
 `string Value.t` comes from the component-local state instead of a `Var`:
 
-```sh
-$ sed -n -e '/\[HELLO_TEXT_BOX_COMPONENT BEGIN\]/,/\[HELLO_TEXT_BOX_COMPONENT END\]/p' ../examples/testing_example/lib/app.ml | tail -n +2 | head -n -2
+```ocaml
 let hello_textbox : Vdom.Node.t Bonsai.Computation.t =
   let%sub state, set = Bonsai.state [%here] (module String) ~default_model:"" in
   let%sub message = hello_user state in
@@ -159,8 +153,7 @@ Testing it is similar to the first component that we tested. We'll start out wit
 just printing its starting state, but after that, `Handle.input_text` makes an
 appearance, allowing us to trigger the `on_input` event listener.
 
-```sh
-$ sed -n -e '/\[HELLO_TEXTBOX_DIFF_TEST BEGIN\]/,/\[HELLO_TEXTBOX_DIFF_TEST END\]/p' ../examples/testing_example/test/app_test.ml | tail -n +2 | head -n -2
+```ocaml
 let%expect_test "shows hello to a specified user" =
   let handle = Handle.create (Result_spec.vdom Fn.id) hello_textbox in
   Handle.show handle;
@@ -226,8 +219,7 @@ function) will require a custom view spec and a new `Handle` function.
 
 Without further ado, the test:
 
-```sh
-$ sed -n -e '/\[STATE_TEST BEGIN\]/,/\[STATE_TEST END\]/p' ../examples/testing_example/test/app_test.ml | tail -n +2 | head -n -2
+```ocaml
 module State_view_spec = struct
   type t = string * (string -> Vdom.Event.t)
   type incoming = string

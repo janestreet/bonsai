@@ -348,14 +348,6 @@ val enum
   -> with_:('k -> 'a Computation.t)
   -> 'a Computation.t
 
-(** [if_] is a special case of {!enum} for bools. *)
-val if_
-  :  bool Value.t
-  -> then_:'a Computation.t
-  -> else_:'a Computation.t
-  -> 'a Computation.t
-[@@deprecated "[since 2020-12] use if%sub instead"]
-
 (** [wrap] wraps a Computation (built using [f]) and provides a model and
     injection function that the wrapped component can use.  Especially of note
     is that the [apply_action] for this outer-model has access to the result
@@ -372,40 +364,6 @@ val wrap
         -> 'model)
   -> f:('model Value.t -> ('action -> Event.t) Value.t -> 'result Computation.t)
   -> 'result Computation.t
-
-(** [match_either] enables matching on a value of type [('a, 'b) Either.t]
-    via the [first] and [second] arguments. *)
-val match_either
-  :  ('a, 'b) Either.t Value.t
-  -> first:('a Value.t -> 'c Computation.t)
-  -> second:('b Value.t -> 'c Computation.t)
-  -> 'c Computation.t
-[@@deprecated "[since 2020-12] use match%sub instead"]
-
-(** [match_result] enables matching on a value of type [('a, 'b) Result.t]
-    via the [ok] and [err] arguments. *)
-val match_result
-  :  ('a, 'b) Result.t Value.t
-  -> ok:('a Value.t -> 'c Computation.t)
-  -> err:('b Value.t -> 'c Computation.t)
-  -> 'c Computation.t
-[@@deprecated "[since 2020-12] use match%sub instead"]
-
-(** [map_option] is similar to [Option.map] but with Bonsai's types instead.
-    The computation produced by [f] will only be run when the input option is
-    [some]. *)
-val map_option
-  :  'a option Value.t
-  -> f:('a Value.t -> 'b Computation.t)
-  -> 'b option Computation.t
-
-(** [match_option] enables matching on a value of type ['a option]. *)
-val match_option
-  :  'a option Value.t
-  -> some:('a Value.t -> 'b Computation.t)
-  -> none:'b Computation.t
-  -> 'b Computation.t
-[@@deprecated "[since 2020-12] use match%sub instead"]
 
 (** [with_model_resetter] extends a computation with the ability to reset the
     state machine for that computation back to its default.  This can be useful

@@ -2,7 +2,7 @@
 
 One of the main goals of Bonsai has always been good interoperability
 with `Incr_dom`.  Because of the design decisions detailed in
-[A History of Bonsai](./history.md), embedding a Bonsai component inside
+[A History of Bonsai](../blogs/history.md), embedding a Bonsai component inside
 of an `Incr_dom` app is trivial!  (Going the other way -- embedding part
 of an `Incr_dom` program inside a Bonsai component -- is not yet possible).
 
@@ -43,7 +43,7 @@ module type S = sig
 end
 ```
 
-If you've read the [History](./history.md) page, you'll recognize the `create`
+If you've read the [History](../blogs/history.md) page, you'll recognize the `create`
 function as what I defined as "the closest thing that `Incr_dom` has to
 components."
 

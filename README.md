@@ -21,7 +21,7 @@ The main differences between `Incr_dom` and Bonsai are
 - Bonsai has a notion of first-class components
 - `Incr_dom` expects users to program in the `Incremental` monad; in Bonsai,
   incrementality is added for you under the hood -
-  [read more](./docs/incrementality.md)
+  [read more](./docs/incremental/incrementality.md)
 - Combining Bonsai components is easy
 
 Similarities between `Incr_dom` and Bonsai:
@@ -38,14 +38,14 @@ Similarities between `Incr_dom` and Bonsai:
 Pandoc really wants to stick paragraph <p> nodes any time that there's even a trace of
 whitespace in between these html nodes... -->
 <div class="toc_node"> <a href="./README.md"> [This Page] </a>
-<div class="toc_node"> <a href="./docs/history.md"> A History of Bonsai </a></div>
-<div class="toc_node"> <a href="./docs/incrementality.md"> Incrementality in Bonsai </a></div>
-<div class="toc_node"> <a href="./docs/inside_incr_dom.md"> Using Bonsai inside an Incr_dom App </a></div>
+<div class="toc_node"> <a href="./docs/blogs/history.md"> A History of Bonsai </a></div>
+<div class="toc_node"> <a href="./docs/incremental/incrementality.md"> Incrementality in Bonsai </a></div>
+<div class="toc_node"> <a href="./docs/incremental/inside_incr_dom.md"> Using Bonsai inside an Incr_dom App </a></div>
 <div class="toc_node"> <a href="./docs/bonsai_web.md"> Bonsai_web </a></div>
 </div>
 </div>
 
 [^incr_dom]:
   For interoperability between Bonsai and `Incr_dom`, see [Using Bonsai Inside
-  Incr_dom](./docs/inside_incr_dom.md).
-  For a short history of Bonsai and `Incr_dom`, see [History](./docs/history.md)
+  Incr_dom](./docs/incremental/inside_incr_dom.md).
+  For a short history of Bonsai and `Incr_dom`, see [History](./docs/blogs/history.md)

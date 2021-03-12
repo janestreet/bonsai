@@ -195,55 +195,6 @@ let enum (type k) (module E : Enum with type t = k) ~match_ ~with_ =
     }
 ;;
 
-let if_ cond ~then_ ~else_ =
-  enum
-    (module Bool)
-    ~match_:cond
-    ~with_:(function
-      | true -> then_
-      | false -> else_)
-;;
-
-let match_either value ~first ~second =
-  let is_left = Value.map value ~f:Either.is_first in
-  if_
-    is_left
-    ~then_:
-      (first
-         (Value.map value ~f:(function
-            | First f -> f
-            | Second _ -> assert false)))
-    ~else_:
-      (second
-         (Value.map value ~f:(function
-            | Second f -> f
-            | First _ -> assert false)))
-;;
-
-let match_result value ~ok ~err =
-  match_either (Value.map value ~f:Result.to_either) ~first:ok ~second:err
-;;
-
-let option_to_either = function
-  | Some a -> Either.First a
-  | None -> Either.Second ()
-;;
-
-let map_option value ~f =
-  let first x = sub (f x) ~f:(fun res -> res |> Value.map ~f:Option.some |> read) in
-  match_either
-    (Value.map value ~f:option_to_either)
-    ~first
-    ~second:(fun (_ : unit Value.t) -> const None)
-;;
-
-let match_option value ~some ~none =
-  match_either
-    (Value.map value ~f:option_to_either)
-    ~first:some
-    ~second:(fun (_ : unit Value.t) -> none)
-;;
-
 let state_machine1
       (type m a)
       here

@@ -1,13 +1,12 @@
-# Bonsai_web
+# Bonsai Web
 
 In theory, Bonsai can be used to implement UI frameworks for a variety of
 backends, but so far `Bonsai_web` is the only backend that has been built.
 
-There are three main parts to the `Bonsai_web` library:
+There are two main parts to the `Bonsai_web` library:
 
-- An instantiation of the Bonsai functor
-- Integration code for embedding Bonsai components in `Incr_dom` apps
 - A method for starting Bonsai apps
+- Integration code for embedding Bonsai components in legacy `Incr_dom` apps
 
 # An instantiation of the Bonsai functor
 
@@ -19,8 +18,8 @@ When you `open Bonsai_web`, one of the modules that is now in scope is called
 
 Because Bonsai and `Incr_dom` are implemented similarly, Bonsai components can
 be included in `Incr_dom` apps via the `Bonsai_web.To_incr_dom` module.  A more
-detailed explanation can be found [here](./inside_incr_dom.md), with an example
-of the embedding at `lib/bonsai_web/examples/inside_incr_dom`.
+detailed explanation can be found [here](./incremental/inside_incr_dom.md),
+with an example of the embedding at `lib/bonsai_web/examples/inside_incr_dom`.
 
 # A method for starting Bonsai apps
 

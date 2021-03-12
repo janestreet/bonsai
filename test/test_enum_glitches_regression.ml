@@ -56,14 +56,15 @@ let%expect_test _ =
       | Homepage -> First (Second ())
       | Search_results -> Second ()
     in
+    (* Before, this test was preventing a bug from popping up again. However,
+       this test depended on [match_either], which has now been deleted. Thus,
+       we can't know whether this test would catch any regressions of the bug,
+       so it's just an ordinary test now *)
     let%sub body =
-      (Bonsai.match_either
-         as_eithers
-         ~first:
-           (Bonsai.match_either
-              ~first:(fun _ -> Bonsai.const "1")
-              ~second:(fun _ -> Bonsai.const "2"))
-         ~second:(fun _ -> Bonsai.const "3") [@alert "-deprecated"])
+      match%sub as_eithers with
+      | First (First _) -> Bonsai.const "1"
+      | First (Second _) -> Bonsai.const "2"
+      | Second _ -> Bonsai.const "3"
     in
     Bonsai.read
       (let%map view = body

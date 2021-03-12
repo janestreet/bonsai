@@ -1,0 +1,2 @@
+(library (name test_bonsai_web_ui_file)
+ (libraries bonsai_web_ui_file bonsai_test) (preprocess (pps ppx_jane)))

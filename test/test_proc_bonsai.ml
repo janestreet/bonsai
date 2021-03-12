@@ -30,14 +30,11 @@ let%expect_test "mapn" =
   ()
 ;;
 
-let%expect_test "if_" =
+let%expect_test "if%sub" =
   let component input =
     let a = Bonsai.Value.return "hello" in
     let b = Bonsai.Value.return "world" in
-    (Bonsai.if_
-       input
-       ~then_:(Bonsai.read a)
-       ~else_:(Bonsai.read b) [@alert "-deprecated"])
+    if%sub input then Bonsai.read a else Bonsai.read b
   in
   let var = Bonsai.Var.create true in
   let handle =
@@ -246,16 +243,14 @@ let%expect_test "wrap" =
   [%expect {| 14 |}]
 ;;
 
-let%expect_test "match_either" =
+let%expect_test "match%sub" =
   let var : (string, int) Either.t Bonsai.Var.t =
     Bonsai.Var.create (Either.First "hello")
   in
   let component =
-    (Bonsai.match_either
-       (Bonsai.Var.value var)
-       ~first:(fun s -> Bonsai.read (Bonsai.Value.map s ~f:(sprintf "%s world")))
-       ~second:(fun i -> Bonsai.read (Bonsai.Value.map i ~f:Int.to_string))
-     [@alert "-deprecated"])
+    match%sub Bonsai.Var.value var with
+    | First s -> Bonsai.read (Bonsai.Value.map s ~f:(sprintf "%s world"))
+    | Second i -> Bonsai.read (Bonsai.Value.map i ~f:Int.to_string)
   in
   let handle = Handle.create (Result_spec.string (module String)) component in
   Handle.show handle;
@@ -523,10 +518,9 @@ let%expect_test "let syntax is collapsed upon eval" =
 let%test_unit "constant prop doesn't happen" =
   (* Just make sure that this expression doesn't crash *)
   let (_ : int Bonsai.Computation.t) =
-    (Bonsai.match_either
-       (Bonsai.Value.return (First 1))
-       ~first:Bonsai.read
-       ~second:Bonsai.read [@alert "-deprecated"])
+    match%sub Bonsai.Value.return (First 1) with
+    | First x -> Bonsai.read x
+    | Second x -> Bonsai.read x
   in
   ()
 ;;

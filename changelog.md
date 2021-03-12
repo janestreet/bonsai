@@ -1,6 +1,12 @@
 # Bonsai Changelog
 
 <!-- Change-log notes go in this file, with newer dates at the _top_  -->
+## 2021-02-17
+- Added `Bonsai_web_ui_form.Elements.File_select`, for picking single
+  or multiple files.
+- Added `Bonsai_web_ui_file`, for reading files from disk once
+  selected.
+
 ## 2021-02-11
 - Change `should_print_styles` to the more general `filter_printed_attributes`
 
@@ -80,7 +86,7 @@ degree than otherwise available.
 
 ## 2020-06-10
 `Bonsai.Proc` module added.  To read more, check out
-[this document](./docs/proc.md).
+[this document](./docs/blogs/proc.md).
 
 ## 2020-03-17
 - Model type removed from `('input, 'model, 'result) Bonsai.t`.
