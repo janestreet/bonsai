@@ -16,3 +16,4 @@ module _ = Dynamism_examples
 module _ = State_examples
 module _ = Form_examples
 module _ = Effect_examples
+module _ = Flow_examples

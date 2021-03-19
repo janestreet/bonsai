@@ -119,8 +119,11 @@ module Handle = struct
     generic_show handle ~before:(Fn.const ()) ~f:(fun () view -> print_endline view)
   ;;
 
-  let show_diff handle =
-    generic_show handle ~before:Driver.last_view ~f:Expect_test_patdiff.print_patdiff
+  let show_diff ?(location_style = Patdiff_kernel.Format.Location_style.None) handle =
+    generic_show
+      handle
+      ~before:Driver.last_view
+      ~f:(Expect_test_patdiff.print_patdiff ~location_style)
   ;;
 
   let store_view handle = generic_show handle ~before:(Fn.const ()) ~f:(fun () _ -> ())

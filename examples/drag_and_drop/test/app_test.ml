@@ -59,7 +59,6 @@ let%expect_test "drag between containers" =
   Handle.show_diff handle;
   [%expect
     {|
-    -1,37 +1,37
       <div class="kanban-container">
         <div class="kanban-column kanban-column-todo"
              ondragenter={handler}
@@ -130,7 +129,6 @@ let%expect_test "appearance of dragged item and preview item while drag is happe
   Handle.show_diff handle;
   [%expect
     {|
-    -1,37 +1,41
       <div class="kanban-container">
     -|  <div class="kanban-column kanban-column-todo"
     +|  <div class="disable-child-pointer-events kanban-column kanban-column-todo"
@@ -186,7 +184,6 @@ let%expect_test "appearance of dragged item and preview item while drag is happe
   Handle.show_diff handle;
   [%expect
     {|
-    -1,27 +1,27
       <div class="kanban-container">
     -|  <div class="disable-child-pointer-events kanban-column kanban-column-todo"
     +|  <div class="disable-child-pointer-events kanban-column kanban-column-active kanban-column-todo"
@@ -226,7 +223,6 @@ let%expect_test "appearance of dragged item and preview item while drag is happe
   Handle.show_diff handle;
   [%expect
     {|
-    -1,41 +1,41
       <div class="kanban-container">
     -|  <div class="disable-child-pointer-events kanban-column kanban-column-active kanban-column-todo"
     +|  <div class="disable-child-pointer-events kanban-column kanban-column-todo"
@@ -281,7 +277,6 @@ let%expect_test "appearance of dragged item and preview item while drag is happe
   Handle.show_diff handle;
   [%expect
     {|
-    -1,41 +1,37
       <div class="kanban-container">
     -|  <div class="disable-child-pointer-events kanban-column kanban-column-todo"
     +|  <div class="kanban-column kanban-column-todo"

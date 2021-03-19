@@ -55,7 +55,7 @@ module Handle : sig
 
   (** [show_diff] will print the diff of the view between now and the last time that
       [show] or [show_diff] was called. *)
-  val show_diff : _ t -> unit
+  val show_diff : ?location_style:Patdiff_kernel.Format.Location_style.t -> _ t -> unit
 
   (** [recompute_view] is like [show], but it doesn't print anything. Calling
       [recompute_view] between invocations of [show_diff] does not affect the

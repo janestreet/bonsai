@@ -41,9 +41,7 @@ let%expect_test "shows hello to a user" =
   [%expect {| <span> hello Bob </span> |}];
   Bonsai.Var.set user_var "Alice";
   Handle.show_diff handle;
-  [%expect
-    {|
-    -1,1 +1,1
+  [%expect {|
     -|<span> hello Bob </span>
     +|<span> hello Alice </span> |}]
 ;;
@@ -64,7 +62,6 @@ let%expect_test "shows hello to a specified user" =
   Handle.show_diff handle;
   [%expect
     {|
-    -1,4 +1,4
       <div>
         <input oninput={handler}> </input>
     -|  <span> hello  </span>
@@ -74,7 +71,6 @@ let%expect_test "shows hello to a specified user" =
   Handle.show_diff handle;
   [%expect
     {|
-    -1,4 +1,4
       <div>
         <input oninput={handler}> </input>
     -|  <span> hello Bob </span>

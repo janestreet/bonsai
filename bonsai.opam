@@ -23,7 +23,6 @@ depends: [
   "patdiff"
   "ppx_jane"
   "ppx_pattern_bind"
-  "reversed_list"
   "virtual_dom"
   "cohttp-async"             {>= "2.5.4"}
   "dune"                     {>= "2.0.0"}
