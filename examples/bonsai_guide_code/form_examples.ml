@@ -18,8 +18,31 @@ let textbox_value =
 ;;
 
 (* $MDX part-end *)
-
 let () = Util.run textbox_value ~id:"form_textbox_value"
+
+let alert =
+  let eff =
+    unstage
+      (Effect.of_sync_fun (fun s ->
+         Js_of_ocaml.Dom_html.window##alert (Js_of_ocaml.Js.string s)))
+  in
+  fun s -> eff s |> Effect.inject_ignoring_response
+;;
+
+(* $MDX part-begin=view_with_submission *)
+
+let textbox_on_submit =
+  let%sub textbox = Form.Elements.Textbox.string [%here] in
+  return
+    (let%map textbox = textbox in
+     textbox
+     |> Form.label "text to alert"
+     |> Form.view_as_vdom ~on_submit:(Form.Submit.create () ~f:alert))
+;;
+
+(* $MDX part-end *)
+
+let () = Util.run textbox_on_submit ~id:"form_textbox_on_submit"
 
 (* $MDX part-begin=form_set *)
 let form_set =

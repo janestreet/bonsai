@@ -21,12 +21,20 @@ module Handle : sig
   end
 
   val click_on : ('a, 'b) t -> get_vdom:('a -> Vdom.Node.t) -> selector:string -> unit
+  val submit_form : ('a, 'b) t -> get_vdom:('a -> Vdom.Node.t) -> selector:string -> unit
 
   val input_text
     :  ('a, 'b) t
     -> get_vdom:('a -> Vdom.Node.t)
     -> selector:string
     -> text:string
+    -> unit
+
+  val change
+    :  ('a, 'b) t
+    -> get_vdom:('a -> Vdom.Node.t)
+    -> selector:string
+    -> value:string
     -> unit
 
   val focus : ('a, 'b) t -> get_vdom:('a -> Vdom.Node.t) -> selector:string -> unit

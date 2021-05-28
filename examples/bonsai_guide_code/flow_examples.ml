@@ -145,26 +145,14 @@ let add_new_person_form ~inject_add_person =
   return
     (let%map form = form
      and inject_add_person = inject_add_person in
-     let form =
-       form
-       |> Form.label "name"
-       |> Form.validate ~f:(fun name ->
-         if String.for_all name ~f:Char.is_whitespace
-         then Error (Error.of_string "name must not be empty")
-         else Ok ())
-     in
-     let button =
-       let open Vdom.Node in
-       match Form.value form with
-       | Ok name ->
-         button
-           [ Vdom.Attr.on_click (fun _ ->
-               Vdom.Event.Many [ Form.set form ""; inject_add_person name ])
-           ]
-           [ text "Add new person" ]
-       | Error _ -> button [ Vdom.Attr.disabled ] [ text "submit" ]
-     in
-     Vdom.Node.div [] [ Form.view_as_vdom form; button ])
+     let on_submit name = Vdom.Event.Many [ Form.set form ""; inject_add_person name ] in
+     form
+     |> Form.label "name"
+     |> Form.validate ~f:(fun name ->
+       if String.for_all name ~f:Char.is_whitespace
+       then Error (Error.of_string "name must not be empty")
+       else Ok ())
+     |> Form.view_as_vdom ~on_submit:(Form.Submit.create ~f:on_submit ()))
 ;;
 
 let people_table people ~inject_remove_person =

@@ -36,9 +36,19 @@ module Handle = struct
     Node_helpers.User_actions.click_on element
   ;;
 
+  let submit_form handle ~get_vdom ~selector =
+    let element = get_element handle ~get_vdom ~selector in
+    Node_helpers.User_actions.submit_form element
+  ;;
+
   let focus handle ~get_vdom ~selector =
     let element = get_element handle ~get_vdom ~selector in
     Node_helpers.User_actions.focus element
+  ;;
+
+  let change handle ~get_vdom ~selector ~value =
+    let element = get_element handle ~get_vdom ~selector in
+    Node_helpers.User_actions.change element ~value
   ;;
 
   let blur handle ~get_vdom ~selector =

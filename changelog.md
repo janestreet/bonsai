@@ -1,6 +1,15 @@
 # Bonsai Changelog
 
 <!-- Change-log notes go in this file, with newer dates at the _top_  -->
+## 2021-04-13
+- Added `Bonsai_web_ui_not_connected_warning_box`
+
+## 2021-03-17
+- Added form submission options to `Bonsai_web_ui_form`
+
+## 2021-03-16
+- Added `Bonsai_web_ui_codemirror`
+
 ## 2021-02-17
 - Added `Bonsai_web_ui_form.Elements.File_select`, for picking single
   or multiple files.

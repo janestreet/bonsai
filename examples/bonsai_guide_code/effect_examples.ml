@@ -41,21 +41,18 @@ let uppercase_rpc_sender =
   return
     (let%map textbox = textbox
      and result_state, set_result = result_state in
-     let textbox = textbox |> Forms.label "text to capitalize" in
-     let textbox_contents = Forms.value_or_default textbox ~default:"" in
-     let result = Request_state.to_string result_state in
-     let on_click : Vdom.Event.t =
-       let uppercased : string Effect.t = uppercase_e textbox_contents in
+     let on_submit contents =
+       let uppercased : string Effect.t = uppercase_e contents in
        Bonsai.Effect.inject uppercased ~on_response:(fun s -> set_result (Filled s))
      in
-     let send_rpc_button =
-       Vdom.Node.button
-         [ Vdom.Attr.on_click (fun _ -> on_click) ]
-         [ Vdom.Node.text "request uppercase" ]
+     let form_view =
+       textbox
+       |> Forms.label "text to capitalize"
+       |> Forms.view_as_vdom ~on_submit:(Forms.Submit.create ~f:on_submit ())
      in
      Vdom.Node.div
        [ Vdom.Attr.style (Css_gen.display `Inline_grid) ]
-       [ Forms.view_as_vdom textbox; Vdom.Node.text result; send_rpc_button ])
+       [ form_view; Vdom.Node.text (Request_state.to_string result_state) ])
 ;;
 
 (* $MDX part-end *)
@@ -71,24 +68,21 @@ let uppercase_rpc_sender_bind =
   return
     (let%map textbox = textbox
      and result_state, set_result = result_state in
-     let textbox = textbox |> Forms.label "text to capitalize" in
-     let textbox_contents = Forms.value_or_default textbox ~default:"" in
-     let result = Request_state.to_string result_state in
-     let on_click : Vdom.Event.t =
+     let on_submit contents =
        let open Bonsai.Effect.Let_syntax in
        Bonsai.Effect.inject_ignoring_response
          (let%bind () = set_result Pending |> Bonsai.Effect.of_event in
-          let%bind s = uppercase_e textbox_contents in
+          let%bind s = uppercase_e contents in
           set_result (Filled s) |> Bonsai.Effect.of_event)
      in
-     let send_rpc_button =
-       Vdom.Node.button
-         [ Vdom.Attr.on_click (fun _ -> on_click) ]
-         [ Vdom.Node.text "request uppercase" ]
+     let form_view =
+       textbox
+       |> Forms.label "text to capitalize"
+       |> Forms.view_as_vdom ~on_submit:(Forms.Submit.create ~f:on_submit ())
      in
      Vdom.Node.div
        [ Vdom.Attr.style (Css_gen.display `Inline_grid) ]
-       [ Forms.view_as_vdom textbox; Vdom.Node.text result; send_rpc_button ])
+       [ form_view; Vdom.Node.text (Request_state.to_string result_state) ])
 ;;
 
 (* $MDX part-end *)

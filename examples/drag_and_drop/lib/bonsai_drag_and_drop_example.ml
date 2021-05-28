@@ -135,7 +135,8 @@ let board =
   let%sub () =
     let inject_move =
       let%map inject = inject in
-      fun item_id new_column -> inject (Move { item_id; new_column })
+      fun item_id new_column ~source_element_position:_ ->
+        inject (Move { item_id; new_column })
     in
     Drag_and_drop.on_drop (module Item_id) (module Column_name) dnd ~f:inject_move
   in

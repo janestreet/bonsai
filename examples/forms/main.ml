@@ -10,10 +10,14 @@ module _ = List_form
 let component =
   let%sub big_form = Big_form.component in
   let%sub list_form = List_form.component in
+  let%sub form_with_submit = Form_with_submit.component in
   return
   @@ let%map big_form = big_form
-  and list_form = list_form in
-  Vdom.Node.div [ Vdom.Attr.style (Css_gen.flex_container ()) ] [ big_form; list_form ]
+  and list_form = list_form
+  and form_with_submit = form_with_submit in
+  Vdom.Node.div
+    [ Vdom.Attr.style (Css_gen.flex_container ()) ]
+    [ big_form; list_form; form_with_submit ]
 ;;
 
 let (_ : _ Start.Handle.t) =
