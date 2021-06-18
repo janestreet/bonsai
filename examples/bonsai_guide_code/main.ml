@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open! Bonsai_web
 
 (* !!!TURN AWAY!!! *)
@@ -17,3 +17,4 @@ module _ = State_examples
 module _ = Form_examples
 module _ = Effect_examples
 module _ = Flow_examples
+module _ = Css_examples

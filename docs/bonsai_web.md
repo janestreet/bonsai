@@ -24,7 +24,7 @@ with an example of the embedding at `lib/bonsai_web/examples/inside_incr_dom`.
 # A method for starting Bonsai apps
 
 In Bonsai, the line between "application" and "component" is blurry.  Because
-Bonsai does everything with `Bonsai.Value.t` and  `Bonsai.Computation.t`, the
+Bonsai does everything with `Value.t` and  `Computation.t`, the
 component which contains all the other components in the application is
 frequently called the "application component".
 
@@ -32,7 +32,7 @@ When you have a component that you want to put on a page, you'll want to
 start using the functionality that is defined in the `Bonsai_web.Start`
 module.
 
-`Bonsai_web.Start.start` takes a `'a Bonsai.Computation.t` as a parameter to
+`Bonsai_web.Start.start` takes a `'a Computation.t` as a parameter to
 the function, alongside a first-class module that describes how to pull a Vdom
 node from that `'a` type.  The final parameter is
 `bind_to_element_with_id:string` which will mount the component into a DOM

@@ -1,19 +1,18 @@
-open! Core_kernel
+open! Core
 open! Async_kernel
 open! Bonsai_web
 open Bonsai.Let_syntax
 
 (* $MDX part-begin=textbox *)
-let textbox : (string * Vdom.Node.t) Bonsai.Computation.t =
+let textbox : (string * Vdom.Node.t) Computation.t =
   let%sub state, set_state = Bonsai.state [%here] (module String) ~default_model:"" in
   return
     (let%map state = state
      and set_state = set_state in
      let view =
        Vdom.Node.input
-         [ Vdom.Attr.value_prop state
-         ; Vdom.Attr.on_input (fun _ new_text -> set_state new_text)
-         ]
+         ~attr:
+           Vdom.Attr.(value_prop state @ on_input (fun _ new_text -> set_state new_text))
          []
      in
      state, view)
@@ -21,10 +20,10 @@ let textbox : (string * Vdom.Node.t) Bonsai.Computation.t =
 
 (* $MDX part-end *)
 
-let () = Util.run (textbox |> Bonsai.Computation.map ~f:snd) ~id:"textbox"
+let () = Util.run (textbox |> Computation.map ~f:snd) ~id:"textbox"
 
 (* $MDX part-begin=two_textboxes *)
-let two_textboxes : Vdom.Node.t Bonsai.Computation.t =
+let two_textboxes : Vdom.Node.t Computation.t =
   let%sub textbox_a = textbox in
   let%sub textbox_b = textbox in
   return
@@ -32,7 +31,7 @@ let two_textboxes : Vdom.Node.t Bonsai.Computation.t =
      and contents_b, view_b = textbox_b in
      let display = Vdom.Node.textf "a: %s, b: %s" contents_a contents_b in
      Vdom.Node.div
-       [ Vdom.Attr.style (Css_gen.display `Inline_grid) ]
+       ~attr:(Vdom.Attr.style (Css_gen.display `Inline_grid))
        [ view_a; view_b; display ])
 ;;
 
@@ -41,7 +40,7 @@ let two_textboxes : Vdom.Node.t Bonsai.Computation.t =
 let () = Util.run two_textboxes ~id:"two_textboxes"
 
 (* $MDX part-begin=two_textboxes_shared_state *)
-let two_textboxes_shared_state : Vdom.Node.t Bonsai.Computation.t =
+let two_textboxes_shared_state : Vdom.Node.t Computation.t =
   let%sub textbox_a = textbox in
   let textbox_b = textbox_a in
   return
@@ -49,7 +48,7 @@ let two_textboxes_shared_state : Vdom.Node.t Bonsai.Computation.t =
      and contents_b, view_b = textbox_b in
      let display = Vdom.Node.textf "a: %s, b: %s" contents_a contents_b in
      Vdom.Node.div
-       [ Vdom.Attr.style (Css_gen.display `Inline_grid) ]
+       ~attr:(Vdom.Attr.style (Css_gen.display `Inline_grid))
        [ view_a; view_b; display ])
 ;;
 
@@ -58,22 +57,22 @@ let two_textboxes_shared_state : Vdom.Node.t Bonsai.Computation.t =
 let () = Util.run two_textboxes_shared_state ~id:"two_textboxes_shared_state"
 
 (* $MDX part-begin=counter_state *)
-let state_based_counter : Vdom.Node.t Bonsai.Computation.t =
+let state_based_counter : Vdom.Node.t Computation.t =
   let%sub state, set_state = Bonsai.state [%here] (module Int) ~default_model:0 in
   return
     (let%map state = state
      and set_state = set_state in
      let decrement =
        Vdom.Node.button
-         [ Vdom.Attr.on_click (fun _ -> set_state (state - 1)) ]
+         ~attr:(Vdom.Attr.on_click (fun _ -> set_state (state - 1)))
          [ Vdom.Node.text "-1" ]
      in
      let increment =
        Vdom.Node.button
-         [ Vdom.Attr.on_click (fun _ -> set_state (state + 1)) ]
+         ~attr:(Vdom.Attr.on_click (fun _ -> set_state (state + 1)))
          [ Vdom.Node.text "+1" ]
      in
-     Vdom.Node.div [] [ decrement; Vdom.Node.textf "%d" state; increment ])
+     Vdom.Node.div [ decrement; Vdom.Node.textf "%d" state; increment ])
 ;;
 
 (* $MDX part-end *)
@@ -89,7 +88,7 @@ module Action = struct
   [@@deriving sexp_of]
 end
 
-let counter_state_machine : Vdom.Node.t Bonsai.Computation.t =
+let counter_state_machine : Vdom.Node.t Computation.t =
   let%sub state, inject =
     Bonsai.state_machine0
       [%here]
@@ -106,15 +105,15 @@ let counter_state_machine : Vdom.Node.t Bonsai.Computation.t =
      and inject = inject in
      let decrement =
        Vdom.Node.button
-         [ Vdom.Attr.on_click (fun _ -> inject Decrement) ]
+         ~attr:(Vdom.Attr.on_click (fun _ -> inject Decrement))
          [ Vdom.Node.text "-1" ]
      in
      let increment =
        Vdom.Node.button
-         [ Vdom.Attr.on_click (fun _ -> inject Increment) ]
+         ~attr:(Vdom.Attr.on_click (fun _ -> inject Increment))
          [ Vdom.Node.text "+1" ]
      in
-     Vdom.Node.div [] [ decrement; Vdom.Node.textf "%d" state; increment ])
+     Vdom.Node.div [ decrement; Vdom.Node.textf "%d" state; increment ])
 ;;
 
 (* $MDX part-end *)

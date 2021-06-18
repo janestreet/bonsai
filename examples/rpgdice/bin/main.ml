@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open! Async_kernel
 open! Import
 
@@ -27,8 +27,9 @@ let input_kind ~input_method =
 let app =
   let build_result ~input ~roller ~input_method_selector =
     Vdom.Node.div
-      []
-      [ Vdom.Node.div [ Vdom.Attr.id "input" ] [ input_method_selector; input ]; roller ]
+      [ Vdom.Node.div ~attr:(Vdom.Attr.id "input") [ input_method_selector; input ]
+      ; roller
+      ]
   in
   let open Bonsai.Let_syntax in
   let%sub input_method, input_method_selector =

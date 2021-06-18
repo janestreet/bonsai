@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open! Async_kernel
 open! Bonsai_web
 open Bonsai.Let_syntax
@@ -11,7 +11,6 @@ let textbox_value =
     (let%map textbox = textbox >>| Form.label "my textbox" in
      let value = Form.value textbox in
      Vdom.Node.div
-       []
        [ Form.view_as_vdom textbox
        ; Vdom.Node.sexp_for_debugging ([%sexp_of: string Or_error.t] value)
        ])
@@ -50,10 +49,9 @@ let form_set =
   return
     (let%map textbox = textbox >>| Form.label "my textbox" in
      Vdom.Node.div
-       []
        [ Form.view_as_vdom textbox
        ; Vdom.Node.button
-           [ Vdom.Attr.on_click (fun _ -> Form.set textbox "hello world") ]
+           ~attr:(Vdom.Attr.on_click (fun _ -> Form.set textbox "hello world"))
            [ Vdom.Node.text "click me" ]
        ])
 ;;
@@ -67,7 +65,7 @@ let two_textboxes =
   let%sub textbox_a = Form.Elements.Textbox.string [%here] in
   let%sub textbox_b = Form.Elements.Textbox.string [%here] in
   let both_textboxes =
-    Bonsai.Value.map2
+    Value.map2
       ~f:Form.both
       (textbox_a >>| Form.label "textbox a")
       (textbox_b >>| Form.label "textbox b")
@@ -77,7 +75,7 @@ let two_textboxes =
      let text_a, text_b = Form.value_or_default both_textboxes ~default:("", "") in
      let display = Vdom.Node.textf "a: %s, b: %s" text_a text_b in
      Vdom.Node.div
-       [ Vdom.Attr.style (Css_gen.display `Inline_grid) ]
+       ~attr:(Vdom.Attr.style (Css_gen.display `Inline_grid))
        [ Form.view_as_vdom both_textboxes; display ])
 ;;
 
@@ -97,7 +95,7 @@ type t =
 (* $MDX part-end *)
 
 (* $MDX part-begin=record_form *)
-let form_of_t : t Form.t Bonsai.Computation.t =
+let form_of_t : t Form.t Computation.t =
   let%sub some_string = Form.Elements.Textbox.string [%here] in
   let%sub an_int = Form.Elements.Number.int [%here] ~default:0 ~step:1 () in
   let%sub on_or_off = Form.Elements.Checkbox.bool [%here] ~default:false in
@@ -114,19 +112,18 @@ let form_of_t : t Form.t Bonsai.Computation.t =
 
 let () =
   Util.run
-    (let%map.Bonsai.Computation record_form = form_of_t in
+    (let%map.Computation record_form = form_of_t in
      Form.view_as_vdom record_form)
     ~id:"record_form"
 ;;
 
 (* $MDX part-begin=record_form_view *)
-let view_for_form : Vdom.Node.t Bonsai.Computation.t =
+let view_for_form : Vdom.Node.t Computation.t =
   let%sub form = form_of_t in
   return
     (let%map form = form in
      let value = Form.value form in
      Vdom.Node.div
-       []
        [ Form.view_as_vdom form
        ; Vdom.Node.sexp_for_debugging ([%sexp_of: t Or_error.t] value)
        ])
@@ -137,7 +134,7 @@ let view_for_form : Vdom.Node.t Bonsai.Computation.t =
 let () = Util.run view_for_form ~id:"record_form_view"
 
 (* $MDX part-begin=int_textbox *)
-let int_textbox : int Form.t Bonsai.Computation.t =
+let int_textbox : int Form.t Computation.t =
   let%sub form = Form.Elements.Textbox.string [%here] in
   return
     (let%map form = form in
@@ -148,9 +145,8 @@ let int_textbox : int Form.t Bonsai.Computation.t =
 
 let () =
   Util.run
-    (let%map.Bonsai.Computation form = int_textbox in
+    (let%map.Computation form = int_textbox in
      Vdom.Node.div
-       []
        [ Form.view_as_vdom form
        ; Vdom.Node.sexp_for_debugging ([%sexp_of: int Or_error.t] (Form.value form))
        ])

@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open! Async
 
 let initialize_connection _initiated_from _addr _inet connection =

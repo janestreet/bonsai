@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open Bonsai_web
 open Bonsai.Let_syntax
 
@@ -22,7 +22,9 @@ let add_counter_component =
   return
   @@ let%map state, inject = add_counter_state in
   let on_click = Vdom.Attr.on_click (fun _ -> inject ()) in
-  let view = Vdom.Node.button [ on_click ] [ Vdom.Node.text "Add Another Counter" ] in
+  let view =
+    Vdom.Node.button ~attr:on_click [ Vdom.Node.text "Add Another Counter" ]
+  in
   state, view
 ;;
 
@@ -53,10 +55,9 @@ let single_counter =
   @@ let%map state, inject = counter_state in
   let button label action =
     let on_click = Vdom.Attr.on_click (fun _ -> inject action) in
-    Vdom.Node.button [ on_click ] [ Vdom.Node.text label ]
+    Vdom.Node.button ~attr:on_click [ Vdom.Node.text label ]
   in
   Vdom.Node.div
-    []
     [ button "-1" Action.Decrement
     ; Vdom.Node.text (Int.to_string state)
     ; button "+1" Action.Increment
@@ -75,7 +76,7 @@ let application =
   return
   @@ let%map add_button = add_button
   and counters = counters in
-  Vdom.Node.div [] [ add_button; Vdom.Node.div [] (Map.data counters) ]
+  Vdom.Node.div [ add_button; Vdom.Node.div (Map.data counters) ]
 ;;
 
 (* [CODE_EXCERPT_END 3] *)
@@ -83,14 +84,12 @@ let application =
 let _application_sugar_free =
   let open Bonsai.Let_syntax in
   Let_syntax.sub add_counter_component ~f:(fun add_counter ->
-    let map = Bonsai.Value.map add_counter ~f:(fun (map, _) -> map) in
-    let add_button =
-      Bonsai.Value.map add_counter ~f:(fun (_, add_button) -> add_button)
-    in
+    let map = Value.map add_counter ~f:(fun (map, _) -> map) in
+    let add_button = Value.map add_counter ~f:(fun (_, add_button) -> add_button) in
     Let_syntax.sub
       (Bonsai.assoc (module Int) map ~f:(fun _key _data -> single_counter))
       ~f:(fun counters ->
         return
-          (Bonsai.Value.map2 add_button counters ~f:(fun add_button counters ->
-             Vdom.Node.div [] [ add_button; Vdom.Node.div [] (Map.data counters) ]))))
+          (Value.map2 add_button counters ~f:(fun add_button counters ->
+             Vdom.Node.div [ add_button; Vdom.Node.div (Map.data counters) ]))))
 ;;

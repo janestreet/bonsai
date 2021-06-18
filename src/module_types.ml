@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 module Incr = Ui_incr
 module Event = Ui_event
 

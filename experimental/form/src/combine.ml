@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open! Import
 
 let lift ~f component = Bonsai.Arrow_deprecated.map component ~f:(Product.lift ~f)

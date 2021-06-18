@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open! Bonsai_web
 open! Import
 open Bonsai.Let_syntax
@@ -43,8 +43,7 @@ let component =
   @@ let%map form = form in
   let output = view_t ~sexp_of:[%sexp_of: t list Or_error.t] (Form.value form) in
   Vdom.Node.div
-    []
-    [ Vdom.Node.h1 [] [ Vdom.Node.text "List Form" ]
+    [ Vdom.Node.h1 [ Vdom.Node.text "List Form" ]
     ; Form.View.to_vdom (Form.view form)
     ; output
     ]

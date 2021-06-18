@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open! Async
 open Bonsai_chat_open_source_common
 

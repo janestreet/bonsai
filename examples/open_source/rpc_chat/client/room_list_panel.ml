@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open! Async_kernel
 open! Bonsai_web
 open Bonsai_chat_open_source_common
@@ -9,7 +9,6 @@ let component ~room_list ~refresh_rooms ~change_room =
   @@ let%map room_list = room_list in
   let room_header =
     Vdom.Node.h2
-      []
       [ Vdom.Node.text "Rooms"
       ; Vdom_input_widgets.Button.simple
           ~extra_attrs:[ Vdom.Attr.id "refresh-button" ]
@@ -24,6 +23,6 @@ let component ~room_list ~refresh_rooms ~change_room =
         (Room.to_string room))
   in
   Vdom.Node.div
-    [ Vdom.Attr.id "room-list-panel" ]
+    ~attr:(Vdom.Attr.id "room-list-panel")
     ([ room_header ] @ room_switching_buttons)
 ;;

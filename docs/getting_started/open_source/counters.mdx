@@ -74,10 +74,9 @@ let single_counter =
   @@ let%map state, inject = counter_state in
   let button label action =
     let on_click = Vdom.Attr.on_click (fun _ -> inject action) in
-    Vdom.Node.button [ on_click ] [ Vdom.Node.text label ]
+    Vdom.Node.button ~attr:on_click [ Vdom.Node.text label ]
   in
   Vdom.Node.div
-    []
     [ button "-1" Action.Decrement
     ; Vdom.Node.text (Int.to_string state)
     ; button "+1" Action.Increment
@@ -193,7 +192,9 @@ let add_counter_component =
   return
   @@ let%map state, inject = add_counter_state in
   let on_click = Vdom.Attr.on_click (fun _ -> inject ()) in
-  let view = Vdom.Node.button [ on_click ] [ Vdom.Node.text "Add Another Counter" ] in
+  let view =
+    Vdom.Node.button ~attr:on_click [ Vdom.Node.text "Add Another Counter" ]
+  in
   state, view
 ;;
 ```
@@ -250,10 +251,10 @@ is:
 ```ocaml
 # Bonsai.assoc
 - : ('key, 'cmp) Bonsai__Import.comparator ->
-    ('key, 'data, 'cmp) Core_kernel.Map.t Bonsai.Value.t ->
+    ('key, 'data, 'cmp) Core.Map.t Bonsai.Value.t ->
     f:('key Bonsai.Value.t ->
        'data Bonsai.Value.t -> 'result Bonsai.Computation.t) ->
-    ('key, 'result, 'cmp) Core_kernel.Map.t Bonsai.Computation.t
+    ('key, 'result, 'cmp) Core.Map.t Bonsai.Computation.t
 = <fun>
 ```
 
@@ -288,13 +289,13 @@ let application =
   return
   @@ let%map add_button = add_button
   and counters = counters in
-  Vdom.Node.div [] [ add_button; Vdom.Node.div [] (Map.data counters) ]
+  Vdom.Node.div [ add_button; Vdom.Node.div (Map.data counters) ]
 ;;
 ```
 
 The application component is what we ultimately plug into the "app"
 div of our *index.html* file. It's a `Vdom.Node.t
-Bonsai.Computation.t`, i.e., its result is the DOM for the whole app.
+Computation.t`, i.e., its result is the DOM for the whole app.
 
 You can get a better sense of how Bonsai's composition works by
 looking at a de-sugared version of the `application` function:
@@ -305,21 +306,21 @@ let application_sugar_free =
   Let_syntax.sub
     (Bonsai.of_module0 (module Add_counter_component) ~default_model:Model.default)
     ~f:(fun add_counter ->
-      let map = Bonsai.Value.map add_counter ~f:(fun (map, _) -> map) in
+      let map = Value.map add_counter ~f:(fun (map, _) -> map) in
       let add_button =
-        Bonsai.Value.map add_counter ~f:(fun (_, add_button) -> add_button)
+        Value.map add_counter ~f:(fun (_, add_button) -> add_button)
       in
       Let_syntax.sub
         (Bonsai.assoc (module Int) map ~f:(fun _key _data -> single_counter))
         ~f:(fun counters ->
           return
-            (Bonsai.Value.map2 add_button counters ~f:(fun add_button counters ->
+            (Value.map2 add_button counters ~f:(fun add_button counters ->
                Vdom.Node.div [] [ add_button; Vdom.Node.div [] (Map.data counters) ]))))
 ;;
 ```
 
-The `Bonsai.Value.map` is used twice on the `add_counter` to
+The `Value.map` is used twice on the `add_counter` to
 destructure its parts--the add button itself, and the map of
 counters. The `Bonsai.assoc` projects the `single_counter` component
-over this map. And finally, the `Bonsai.Value.map2` allows us to
+over this map. And finally, the `Value.map2` allows us to
 combine components.

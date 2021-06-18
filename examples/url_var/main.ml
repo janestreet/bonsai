@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open! Bonsai_web
 open Bonsai.Let_syntax
 module Tabs = Bonsai_web_ui_tabs
@@ -52,7 +52,7 @@ let component =
       tab_state
       ~all_tabs
       ~decorate:
-        (Bonsai.Value.return (function
+        (Value.return (function
            | T.A -> Vdom.Node.text "Tab A"
            | B None -> Vdom.Node.text "Tab B"
            | B (Some extra) -> Vdom.Node.textf "Tab B: %s" extra
@@ -63,7 +63,7 @@ let component =
           return
           @@ let%map change_tab = change_tab in
           Vdom.Node.button
-            [ Vdom.Attr.on_click (fun _ -> change_tab T.C) ]
+            ~attr:(Vdom.Attr.on_click (fun _ -> change_tab T.C))
             [ Vdom.Node.text "jump to c" ]
         | B None -> Bonsai.const (Vdom.Node.text "why are you even here")
         | B (Some extra) ->
@@ -74,10 +74,11 @@ let component =
           return
           @@ let%map extra, set_extra = extra_state in
           Vdom.Node.input
-            [ Vdom.Attr.string_property "value" (Option.value extra ~default:"")
-            ; Vdom.Attr.on_input (fun _ s ->
-                set_extra (if String.is_empty s then None else Some s))
-            ]
+            ~attr:
+              Vdom.Attr.(
+                Vdom.Attr.string_property "value" (Option.value extra ~default:"")
+                @ Vdom.Attr.on_input (fun _ s ->
+                  set_extra (if String.is_empty s then None else Some s)))
             [])
   in
   return

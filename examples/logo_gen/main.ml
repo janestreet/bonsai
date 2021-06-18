@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open Bonsai_web
 open Virtual_dom_svg
 module Form = Bonsai_form_experimental
@@ -54,10 +54,11 @@ let build_shape (config : Config.t) should_debug (others, radius) =
           |> rad_to_deg
         in
         Node.path
-          [ Attr.transform [ Attr.Rotate { x = 0.0; y = 0.0; a = `Deg rotation } ]
-          ; Attr.fill (`Hex "#000000")
-          ; Attr.d path
-          ]
+          ~attr:
+            Vdom.Attr.(
+              Attr.transform [ Attr.Rotate { x = 0.0; y = 0.0; a = `Deg rotation } ]
+              @ Attr.fill (`Hex "#000000")
+              @ Attr.d path)
           [])
     in
     out :: others, r1 +. config.spacer_thickness
@@ -68,21 +69,22 @@ let shape_view text should_debug config =
   return
   @@ let%map text = text
   and should_debug = should_debug
-  and config : Config.t Bonsai.Value.t = config in
+  and config : Config.t Value.t = config in
   let elts, size =
     text
     |> String.to_list
     |> List.fold ~init:([], config.start_radius) ~f:(build_shape config should_debug)
   in
   Node.svg
-    [ Vdom.Attr.create "xmlns" "http://www.w3.org/2000/svg"
-    ; Vdom.Attr.style (Css_gen.create ~field:"min-width" ~value:"50vw")
-    ; Attr.viewbox
-        ~min_x:(-.size)
-        ~min_y:(-.size)
-        ~width:(size *. 2.0)
-        ~height:(size *. 2.0)
-    ]
+    ~attr:
+      Vdom.Attr.(
+        Vdom.Attr.create "xmlns" "http://www.w3.org/2000/svg"
+        @ Vdom.Attr.style (Css_gen.create ~field:"min-width" ~value:"50vw")
+        @ Attr.viewbox
+            ~min_x:(-.size)
+            ~min_y:(-.size)
+            ~width:(size *. 2.0)
+            ~height:(size *. 2.0))
     elts
 ;;
 
@@ -117,12 +119,9 @@ let config =
   in
   let view =
     let o name view =
-      Vdom.Node.tr
-        []
-        [ Vdom.Node.td [] [ Vdom.Node.text name ]; Vdom.Node.td [] [ view ] ]
+      Vdom.Node.tr [ Vdom.Node.td [ Vdom.Node.text name ]; Vdom.Node.td [ view ] ]
     in
     Vdom.Node.table
-      []
       [ o "ring thickness" ring_thickness.view
       ; o "spacer thickness" spacer_thickness.view
       ; o "inner gap" inner_gap.view
@@ -134,14 +133,14 @@ let config =
   { Product.With_view.view; value }
 ;;
 
-let config = config (Bonsai.Value.return ())
+let config = config (Value.return ())
 
 let component =
   let open Form.Product in
   let open Bonsai.Let_syntax in
-  let%sub text_input = Form.text_input ~default:"jsc" (Bonsai.Value.return ()) in
+  let%sub text_input = Form.text_input ~default:"jsc" (Value.return ()) in
   let%sub debug =
-    Form.checkbox_input ~label:"debug" ~default:false () (Bonsai.Value.return ())
+    Form.checkbox_input ~label:"debug" ~default:false () (Value.return ())
   in
   let%sub config = config in
   let%sub svg =
@@ -169,9 +168,9 @@ let component =
     |> Vdom.Node.text
     |> List.return
     |> Vdom.Node.pre
-         [ Vdom.Attr.style
-             Css_gen.(max_width (`Vw (Percent.of_string "90%")) @> overflow `Auto)
-         ]
+         ~attr:
+           (Vdom.Attr.style
+              Css_gen.(max_width (`Vw (Percent.of_string "90%")) @> overflow `Auto))
   in
   let flex_with_space =
     Css_gen.(
@@ -179,11 +178,10 @@ let component =
       @> create ~field:"justify-content" ~value:"space-around")
   in
   let control_panel =
-    Vdom.Node.div [] [ text_input.value.view; debug.value.view; config.value.view ]
+    Vdom.Node.div [ text_input.value.view; debug.value.view; config.value.view ]
   in
   Vdom.Node.div
-    []
-    [ Vdom.Node.div [ Vdom.Attr.style flex_with_space ] [ control_panel; svg ]
+    [ Vdom.Node.div ~attr:(Vdom.Attr.style flex_with_space) [ control_panel; svg ]
     ; svg_text
     ]
 ;;

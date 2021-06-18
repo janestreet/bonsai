@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 include Virtual_dom
 include Bonsai_web
 

@@ -3,7 +3,7 @@
     hidden model and action types of Bonsai components.  These are stored in
     [Computation.packed]. *)
 
-open! Core_kernel
+open! Core
 open! Import
 
 val unit_type_id : unit Type_equal.Id.t

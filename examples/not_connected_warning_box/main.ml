@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open! Bonsai_web
 open Bonsai.Let_syntax
 
@@ -15,10 +15,9 @@ let component =
      and is_connected = is_connected
      and set_is_connected = set_is_connected in
      Vdom.Node.div
-       []
        [ not_connected_warning_box
        ; Vdom.Node.button
-           [ Vdom.Attr.on_click (fun _ -> set_is_connected (not is_connected)) ]
+           ~attr:(Vdom.Attr.on_click (fun _ -> set_is_connected (not is_connected)))
            [ Vdom.Node.text "toggle is_connected" ]
        ; Vdom.Node.text
            "This button simulates connecting and disconnecting from the server. This \

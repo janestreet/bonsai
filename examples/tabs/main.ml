@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open! Bonsai_web
 open Bonsai.Let_syntax
 module Tabs = Bonsai_web_ui_tabs
@@ -17,7 +17,7 @@ let component =
     Tabs.tab_ui
       (module T)
       tab_state
-      ~all_tabs:(Bonsai.Value.return T.all)
+      ~all_tabs:(Value.return T.all)
       ~f:(fun ~change_tab tab ->
         Bonsai.enum
           (module T)
@@ -27,7 +27,7 @@ let component =
               return
               @@ let%map change_tab = change_tab in
               Vdom.Node.button
-                [ Vdom.Attr.on_click (fun _ -> change_tab T.C) ]
+                ~attr:(Vdom.Attr.on_click (fun _ -> change_tab T.C))
                 [ Vdom.Node.text "jump to c" ]
             | B -> Bonsai.const (Vdom.Node.text "why are you even here")
             | C -> Bonsai.const (Vdom.Node.text "hello!")))

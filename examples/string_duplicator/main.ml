@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open! Bonsai_web
 open Bonsai.Let_syntax
 
@@ -20,8 +20,8 @@ let string_duplicator input_string =
   (* [inject] is used to produce an [Event.t] which is handled by Bonsai,
      and the action comes back in to be processed by [apply_action]. *)
   let on_click = Vdom.Attr.on_click (fun _ -> inject_duplicate ()) in
-  let button = Vdom.Node.button [ on_click ] [ Vdom.Node.text "duplicate" ] in
-  Vdom.Node.div [] [ button; Vdom.Node.text repeated_string ]
+  let button = Vdom.Node.button ~attr:on_click [ Vdom.Node.text "duplicate" ] in
+  Vdom.Node.div [ button; Vdom.Node.text repeated_string ]
 ;;
 
 let string_to_repeat =
@@ -38,9 +38,11 @@ let string_to_repeat =
   @@ let%map state, set_state = state in
   let view =
     Vdom.Node.textarea
-      [ Vdom.Attr.string_property "value" state
-      ; Vdom.Attr.on_input (fun _ -> set_state)
-      ]
+      ~attr:
+        (Vdom.Attr.many
+           [ Vdom.Attr.string_property "value" state
+           ; Vdom.Attr.on_input (fun _ -> set_state)
+           ])
       []
   in
   state, view
@@ -48,14 +50,14 @@ let string_to_repeat =
 
 let app =
   let open Bonsai.Let_syntax in
-  (* let%sub can decompose the [(string * Vdom.Node.t) Bonsai.Value.t]
-     into both a [string Bonsai.Value.t] and a [Vdom.Node.t Bonsai.Value.t]. *)
+  (* let%sub can decompose the [(string * Vdom.Node.t) Value.t]
+     into both a [string Value.t] and a [Vdom.Node.t Value.t]. *)
   let%sub string, textbox_view = string_to_repeat in
   let%sub duplicated = string_duplicator string in
   return
   @@ let%map textbox_view = textbox_view
   and duplicated = duplicated in
-  Vdom.Node.div [] [ textbox_view; duplicated ]
+  Vdom.Node.div [ textbox_view; duplicated ]
 ;;
 
 (* Start the app off with the text "hello" and the starting

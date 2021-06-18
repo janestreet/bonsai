@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open! Bonsai_web
 open Bonsai.Let_syntax
 open Vdom
@@ -34,16 +34,15 @@ let component =
   return
   @@ let%map state, inject = state in
   let button text action =
-    Node.button [ Attr.on_click (fun _ -> inject action) ] [ Node.text text ]
+    Node.button ~attr:(Attr.on_click (fun _ -> inject action)) [ Node.text text ]
   in
   let add_button = button "add" New in
   let for_each i c =
     Node.div
-      []
       [ button "-1" (Update (i, -1)); Node.textf "%d" c; button "+1" (Update (i, 1)) ]
   in
   let counters = state |> Map.data |> List.mapi ~f:for_each in
-  Node.div [] (add_button :: counters)
+  Node.div (add_button :: counters)
 ;;
 
 let (_ : _ Start.Handle.t) =

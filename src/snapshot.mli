@@ -1,6 +1,6 @@
 (** A snapshot represents the state of a component at an instant in time. *)
 
-open! Core_kernel
+open! Core
 open! Import
 
 type ('model, 'action, 'result) t

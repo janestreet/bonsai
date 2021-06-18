@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open! Import
 
 let unit_type_id = Type_equal.Id.create ~name:"()" [%sexp_of: unit]

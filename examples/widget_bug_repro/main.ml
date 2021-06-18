@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open! Bonsai_web
 open Bonsai.Let_syntax
 
@@ -33,14 +33,14 @@ let widget = unstage widget
 let inner_html_a =
   Vdom.Node.inner_html
     ~tag:"div"
-    []
+    ~attr:Vdom.Attr.empty
     ~this_html_is_sanitized_and_is_totally_safe_trust_me:"hello"
 ;;
 
 let inner_html_b =
   Vdom.Node.inner_html
     ~tag:"div"
-    []
+    ~attr:Vdom.Attr.empty
     ~this_html_is_sanitized_and_is_totally_safe_trust_me:"world"
 ;;
 
@@ -50,18 +50,17 @@ let component true_or_false ~toggle =
   let widget = widget true_or_false in
   let ids =
     Vdom.Node.div
-      []
       [ widget
       ; widget
       ; Vdom.Node.button
-          [ Vdom.Attr.on_click (fun _ -> toggle (not true_or_false)) ]
+          ~attr:(Vdom.Attr.on_click (fun _ -> toggle (not true_or_false)))
           [ Vdom.Node.text "click me" ]
       ]
   in
   let inner_html =
-    Vdom.Node.div [] [ (if true_or_false then inner_html_a else inner_html_b) ]
+    Vdom.Node.div [ (if true_or_false then inner_html_a else inner_html_b) ]
   in
-  Vdom.Node.div [] [ ids; inner_html ]
+  Vdom.Node.div [ ids; inner_html ]
 ;;
 
 let (_ : _ Start.Handle.t) =

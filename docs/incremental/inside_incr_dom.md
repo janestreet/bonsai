@@ -16,7 +16,7 @@ as output:
 
 ```ocaml
 val convert
-  :  ('input Bonsai.Value.t -> Vdom.Node.t Bonsai.Computation.t)
+  :  ('input Value.t -> Vdom.Node.t Computation.t)
   -> (module S
        with type Input.t = 'input
         and type Extra.t = unit)

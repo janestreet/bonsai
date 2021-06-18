@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open! Import
 
 type t =
@@ -11,6 +11,7 @@ module Collection = struct
   type nonrec t = t Path.Map.t
 
   let empty = Path.Map.empty
+  let has_after_display t = Map.exists t ~f:(fun t -> Option.is_some t.after_display)
 
   let maybe_cons hd tl =
     let open Reversed_list in

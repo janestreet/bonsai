@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open! Import
 open Incr.Let_syntax
 
@@ -80,6 +80,20 @@ let rec eval
     let model = Incr.map model ~f:Fn.id in
     Incr.set_cutoff model (Incr.Cutoff.of_equal equal);
     eval ~environment ~path ~clock ~model ~inject t
+  | Store { id; value; inner } ->
+    let value = Value.eval environment value in
+    let environment = Environment.add_overwriting environment ~key:id ~data:value in
+    eval ~environment ~path ~clock ~model ~inject inner
+  | Fetch id ->
+    let result =
+      match Environment.find environment id with
+      | None -> Incr.return None
+      | Some x -> x >>| Option.some
+    in
+    Snapshot.create
+      ~result
+      ~lifecycle:do_nothing_lifecycle
+      ~apply_action:unusable_apply_action
   | Subst { from; via; into } ->
     let from =
       let inject e = inject (First e) in

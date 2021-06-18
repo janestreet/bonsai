@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open! Import
 open Composition_infix
 include Helpers_intf

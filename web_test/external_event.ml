@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 
 include Bonsai_web.Vdom.Event.Define (struct
     module Action = String

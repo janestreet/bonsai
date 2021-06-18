@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open! Bonsai_web
 open Bonsai.Let_syntax
 module Table = Bonsai_web_ui_partial_render_table.Basic
@@ -8,7 +8,7 @@ module Time_ns_option = struct
 
   let to_string = function
     | None -> "-"
-    | Some t -> Time_ns.to_string t
+    | Some t -> Time_ns.to_string_utc t
   ;;
 end
 
@@ -29,9 +29,9 @@ module Columns = struct
     =
     Column.column
       ?visible
-      ~label:(Bonsai.Value.return (Vdom.Node.text (Fieldslib.Field.name field)))
+      ~label:(Value.return (Vdom.Node.text (Fieldslib.Field.name field)))
       ~sort:
-        (Bonsai.Value.return (fun (_, a) (_, b) ->
+        (Value.return (fun (_, a) (_, b) ->
            M.compare (Field.get field a) (Field.get field b)))
       ~cell:(fun ~key:_ ~data ->
         return
@@ -49,9 +49,9 @@ module Columns = struct
     ; column_helper (module Float) Row.Fields.ask
     ; column_helper (module Int) Row.Fields.asize
     ; Column.group
-        ~label:(Bonsai.Value.return (Vdom.Node.text "some group"))
+        ~label:(Value.return (Vdom.Node.text "some group"))
         [ Column.group
-            ~label:(Bonsai.Value.return (Vdom.Node.text "small"))
+            ~label:(Value.return (Vdom.Node.text "small"))
             [ column_helper (module Int) Row.Fields.position ~visible:should_show_position
             ]
         ; column_helper (module Time_ns_option) Row.Fields.last_fill
@@ -62,7 +62,7 @@ module Columns = struct
   ;;
 end
 
-let component (data : Row.t String.Map.t Bonsai.Value.t) =
+let component (data : Row.t String.Map.t Value.t) =
   let%sub should_show_position, set =
     Bonsai.state [%here] (module Bool) ~default_model:true
   in
@@ -76,21 +76,20 @@ let component (data : Row.t String.Map.t Bonsai.Value.t) =
   return
   @@ let%map should_show_position = should_show_position
   and set = set
-  and { Table.Result.view = table } = table in
+  and { Table.Result.view = table; for_testing = _ } = table in
   let button_text =
     if should_show_position then "hide position" else "show position"
   in
   Vdom.Node.div
-    []
     [ Vdom.Node.button
-        [ Vdom.Attr.on_click (fun _ -> set (not should_show_position)) ]
+        ~attr:(Vdom.Attr.on_click (fun _ -> set (not should_show_position)))
         [ Vdom.Node.text button_text ]
     ; table
     ]
 ;;
 
 let (_ : _ Start.Handle.t) =
-  let input = Bonsai.Value.return (Row.many_random 100_000) in
+  let input = Value.return (Row.many_random 100_000) in
   Start.start
     Start.Result_spec.just_the_view
     ~bind_to_element_with_id:"app"

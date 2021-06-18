@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 
 module Event : sig
   type t = Ui_event.t

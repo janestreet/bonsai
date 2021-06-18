@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open! Import
 
 (** [simplify t ~key_id ~data_id] attempts to reduce [t] to a plain (stateless) function

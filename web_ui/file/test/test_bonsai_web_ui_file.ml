@@ -1,4 +1,4 @@
-open Core_kernel
+open Core
 open Bonsai.Let_syntax
 open Bonsai_web_ui_file
 

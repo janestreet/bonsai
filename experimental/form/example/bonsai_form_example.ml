@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open Bonsai_web
 module Bonsai_form = Bonsai_form_experimental
 
@@ -50,10 +50,8 @@ let validated_print_error_next_to_it component ~sexp_of_t =
   in
   let view =
     Vdom.Node.div
-      []
       [ view
       ; Vdom.Node.pre
-          []
           [ value |> [%sexp_of: t Or_error.t] |> Sexp.to_string_hum |> Vdom.Node.text ]
       ]
   in
@@ -109,11 +107,9 @@ let form =
       ~a_b_or_c_or_all
   in
   let view =
-    let f name node = Vdom.Node.(tr [] [ td [] [ text name ]; td [] [ node ] ]) in
+    let f name node = Vdom.Node.(tr [ td [ text name ]; td [ node ] ]) in
     Vdom.Node.table
-      []
       [ Vdom.Node.tbody
-          []
           [ f "string" text_input
           ; f "date" date_input
           ; f "string validated date" date_from_string_input
@@ -134,12 +130,9 @@ let component =
   in
   let result_readback =
     Vdom.Node.div
-      []
-      [ Vdom.Node.h2 [] [ Vdom.Node.text "Result" ]
+      [ Vdom.Node.h2 [ Vdom.Node.text "Result" ]
       ; Vdom.Node.code
-          []
           [ Vdom.Node.pre
-              []
               [ Vdom.Node.text (Sexp.to_string_hum [%sexp (result : Result.t Or_error.t)])
               ]
           ]

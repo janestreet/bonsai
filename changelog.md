@@ -1,6 +1,12 @@
 # Bonsai Changelog
 
 <!-- Change-log notes go in this file, with newer dates at the _top_  -->
+## 2021-06-11
+- Added `Form.validate_via_effect`
+
+## 2021-05-12
+- Added dynamic scoping
+
 ## 2021-04-13
 - Added `Bonsai_web_ui_not_connected_warning_box`
 

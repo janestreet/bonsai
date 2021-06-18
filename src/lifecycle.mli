@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open! Import
 
 type t =
@@ -10,6 +10,7 @@ type t =
 module Collection : sig
   type nonrec t = t Path.Map.t
 
+  val has_after_display : t -> bool
   val empty : t
   val diff : t -> t -> Ui_event.t
 end

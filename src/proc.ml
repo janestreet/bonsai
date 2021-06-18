@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open! Import
 module Var = Var
 
@@ -527,6 +527,84 @@ module Incr = struct
   let to_value incr = Value.Incr incr
 end
 
+module Dynamic_scope = struct
+  open Let_syntax
+
+  type _ t =
+    | Independent :
+        { id : 'a Type_equal.Id.t
+        ; fallback : 'a
+        }
+        -> 'a t
+    | Derived :
+        { base : 'a t
+        ; get : 'a -> 'b
+        ; set : 'a -> 'b -> 'a
+        ; sexp_of : 'b -> Sexp.t
+        }
+        -> 'b t
+
+  let rec fallback : type a. a t -> a = function
+    | Independent { fallback; _ } -> fallback
+    | Derived { base; get; set = _; sexp_of = _ } -> get (fallback base)
+  ;;
+
+  let create ?(sexp_of = sexp_of_opaque) ~name ~fallback () =
+    Independent { id = Type_equal.Id.create ~name sexp_of; fallback }
+  ;;
+
+  let derived ?(sexp_of = sexp_of_opaque) base ~get ~set =
+    Derived { base; get; set; sexp_of }
+  ;;
+
+  let rec fetch : type a. a t -> a option Computation.packed = function
+    | Independent { id; _ } ->
+      Computation.T
+        { t = Computation.Fetch id
+        ; action = Meta.Action.nothing
+        ; model = Meta.Model.unit
+        }
+    | Derived { base; get; set = _; sexp_of = _ } ->
+      let%sub v = fetch base in
+      return (Value.map v ~f:(Option.map ~f:get))
+  ;;
+
+  let lookup (type a) (var : a t) =
+    let%sub value = fetch var in
+    return (value >>| Option.value ~default:(fallback var))
+  ;;
+
+  let rec store
+    : type a. a t -> a Value.t -> 'r Computation.packed -> 'r Computation.packed
+    =
+    fun var value c ->
+      match var with
+      | Independent { id; _ } ->
+        let (Computation.T { t; action; model }) = c in
+        Computation.T { t = Computation.Store { id; value; inner = t }; action; model }
+      | Derived { base; get = _; set; sexp_of = _ } ->
+        let%sub current = lookup base in
+        let%sub new_ =
+          return
+            (let%map current = current
+             and value = value in
+             set current value)
+        in
+        store base new_ c
+  ;;
+
+  type revert = { revert : 'a. 'a Computation.packed -> 'a Computation.packed }
+
+  let modify var ~change ~f =
+    let%sub current = lookup var in
+    let revert c = store var current c in
+    let value = change current in
+    store var value (f { revert })
+  ;;
+
+  let set var value ~f = modify var ~change:(fun _ -> value) ~f
+end
+
 module Clock = struct
   let approx_now ~tick_every =
     Incr.with_clock (fun clock ->
@@ -674,6 +752,14 @@ module Computation = struct
   ;;
 
   let all_unit xs = all xs |> map ~f:(fun (_ : unit list) -> ())
+
+  let all_map map_of_computations =
+    map_of_computations
+    |> Map.to_alist
+    |> List.map ~f:(fun (key, data) -> map data ~f:(Tuple2.create key))
+    |> all
+    |> map ~f:(Map.of_alist_exn (Map.comparator_s map_of_computations))
+  ;;
 
   module Open_on_rhs_intf = struct
     module type S = sig end

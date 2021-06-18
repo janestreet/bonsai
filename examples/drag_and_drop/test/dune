@@ -1,4 +1,4 @@
 (library (name bonsai_drag_and_drop_example_test)
  (libraries bonsai_drag_and_drop_example bonsai_web bonsai_web_test
-  core_kernel)
+  core_kernel.core)
  (preprocess (pps js_of_ocaml-ppx ppx_jane)))

@@ -1,4 +1,5 @@
-open! Core_kernel
+open! Core
+open! Bonsai
 open! Import
 
 module Result_spec = struct
@@ -64,7 +65,7 @@ module Handle = struct
         computation
     =
     let (module R) = result_spec in
-    let component (_ : unit Bonsai.Value.t) =
+    let component (_ : unit Value.t) =
       let open Bonsai.Let_syntax in
       let%sub result = computation in
       return
@@ -103,6 +104,15 @@ module Handle = struct
     let _, view, _ = Driver.result handle in
     let (_ : string) = maybe_censor_bonsai_path handle view in
     Driver.trigger_lifecycles handle
+  ;;
+
+  let recompute_view_until_stable ?(max_computes = 100) handle =
+    with_return (fun { return } ->
+      for _ = 1 to max_computes do
+        recompute_view handle;
+        if not (Driver.has_after_display_events handle) then return ()
+      done;
+      failwithf "view not stable after %d recomputations" max_computes ())
   ;;
 
   let generic_show handle ~before ~f =

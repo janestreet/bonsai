@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open! Import
 
 type ('i, 'r) t
@@ -20,6 +20,7 @@ val result : (_, 'r) t -> 'r
 val last_view : _ t -> string
 val store_view : _ t -> string -> unit
 val trigger_lifecycles : _ t -> unit
+val has_after_display_events : _ t -> bool
 val disable_bonsai_path_censoring : _ t -> unit
 val should_censor_bonsai_path : _ t -> bool
 

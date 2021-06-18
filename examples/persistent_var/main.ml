@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open! Bonsai_web
 open Bonsai.Let_syntax
 
@@ -23,15 +23,16 @@ let display_text_var ~doc storage_var =
   return
   @@ let%map value = Bonsai_web.Persistent_var.value storage_var in
   Vdom.Node.div
-    []
     [ Vdom.Node.text doc
-    ; Vdom.Node.br []
+    ; Vdom.Node.br Vdom.Attr.empty
     ; Vdom.Node.input
-        [ Vdom.Attr.style (Css_gen.width (`Vw (Percent.of_mult 0.5)))
-        ; Vdom.Attr.string_property "value" value
-        ; Vdom.Attr.on_input (fun _ s ->
-            Effect.inject_ignoring_response (set_effect s))
-        ]
+        ~attr:
+          (Vdom.Attr.many
+             [ Vdom.Attr.style (Css_gen.width (`Vw (Percent.of_mult 0.5)))
+             ; Vdom.Attr.string_property "value" value
+             ; Vdom.Attr.on_input (fun _ s ->
+                 Effect.inject_ignoring_response (set_effect s))
+             ])
         []
     ]
 ;;
@@ -54,7 +55,8 @@ let component =
   return
   @@ let%map local_storage_node = local_storage_node
   and session_storage_node = session_storage_node in
-  Vdom.Node.div [] [ local_storage_node; Vdom.Node.br []; session_storage_node ]
+  Vdom.Node.div
+    [ local_storage_node; Vdom.Node.br Vdom.Attr.empty; session_storage_node ]
 ;;
 
 let (_ : _ Start.Handle.t) =

@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open! Bonsai_web
 open! Import
 open Bonsai.Let_syntax
@@ -113,7 +113,7 @@ let form =
       ~to_string:Fn.id
       (module String)
       ~layout:`Vertical
-      (Bonsai.Value.return [ "first"; "second"; "third" ])
+      (Value.return [ "first"; "second"; "third" ])
   in
   let%sub string_horiz_radio =
     E.Radio_buttons.list
@@ -121,7 +121,7 @@ let form =
       ~to_string:Fn.id
       (module String)
       ~layout:`Horizontal
-      (Bonsai.Value.return [ "first"; "second"; "third" ])
+      (Value.return [ "first"; "second"; "third" ])
   in
   let%sub bool_from_checkbox = E.Checkbox.bool [%here] ~default:false in
   let%sub date_from_string = E.Textbox.string [%here] in
@@ -132,10 +132,10 @@ let form =
     E.Dropdown.enumerable [%here] (module Bool) ~to_string:Bool.to_string
   in
   let%sub multi_select =
-    E.Multiselect.list [%here] (module A_B_or_C) (Bonsai.Value.return A_B_or_C.all)
+    E.Multiselect.list [%here] (module A_B_or_C) (Value.return A_B_or_C.all)
   in
   let%sub multi_select =
-    Form.Dynamic.collapsible_group (Bonsai.Value.return "collapsible group") multi_select
+    Form.Dynamic.collapsible_group (Value.return "collapsible group") multi_select
   in
   let%sub multi_select2 =
     E.Multiselect.list
@@ -144,14 +144,14 @@ let form =
       (multi_select >>| Form.value_or_default ~default:[])
   in
   let%sub string_drop_option =
-    E.Dropdown.list_opt [%here] (module String) (Bonsai.Value.return [ "hello"; "world" ])
+    E.Dropdown.list_opt [%here] (module String) (Value.return [ "hello"; "world" ])
   in
   let%sub typeahead =
     E.Typeahead.single
       [%here]
       ~placeholder:"Typeahead here!"
       (module A_B_or_C)
-      ~all_options:(Bonsai.Value.return A_B_or_C.all)
+      ~all_options:(Value.return A_B_or_C.all)
   in
   let%sub a_b_or_c = E.Dropdown.enumerable [%here] (module A_B_or_C) in
   let%sub sexp_from_string = E.Textbox.sexpable [%here] (module Sexp) in
@@ -162,13 +162,13 @@ let form =
       [%here]
       ~to_string:Fn.id
       (module String)
-      (Bonsai.Value.return [ "first"; "second"; "third"; "fourth" ])
+      (Value.return [ "first"; "second"; "third"; "fourth" ])
   in
   let%sub files =
     E.File_select.multiple
       [%here]
       ~accept:[ `Mimetype "application/pdf"; `Extension ".csv" ]
-      ~on_file_select:(Bonsai.Value.return (Fn.const Ui_event.Ignore))
+      ~on_file_select:(Value.return (Fn.const Ui_event.Ignore))
       ()
   in
   let open Form.Dynamic.Record_builder in
@@ -200,8 +200,7 @@ let component =
   @@ let%map form = form in
   let output = view_t ~sexp_of:[%sexp_of: t Or_error.t] (Form.value form) in
   Vdom.Node.div
-    []
-    [ Vdom.Node.h1 [] [ Vdom.Node.text "Big Form" ]
+    [ Vdom.Node.h1 [ Vdom.Node.text "Big Form" ]
     ; Form.View.to_vdom (Form.view form)
     ; output
     ]

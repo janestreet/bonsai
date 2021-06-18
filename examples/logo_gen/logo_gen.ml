@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open Bonsai_web
 open Virtual_dom_svg
 open! Math
@@ -139,101 +139,113 @@ let circle ~r1 ~r2 ~gap1 ~gap2 ~rounding =
     ]
   in
   ( Node.g
-      []
-      [ Node.path [ Attr.fill (`Hex "#FFFF00AA"); Attr.d path ] []
+      [ Node.path ~attr:Vdom.Attr.(Attr.fill (`Hex "#FFFF00AA") @ Attr.d path) []
       ; Node.circle
-          [ Vdom.Attr.class_ "c_"
-          ; Attr.fill (`Hex "#FF00FFAA")
-          ; Attr.cx c'.x
-          ; Attr.cy c'.y
-          ; Attr.r 3.0
-          ]
+          ~attr:
+            Vdom.Attr.(
+              class_ "c_"
+              @ Attr.fill (`Hex "#FF00FFAA")
+              @ Attr.cx c'.x
+              @ Attr.cy c'.y
+              @ Attr.r 3.0)
           []
       ; Node.circle
-          [ Vdom.Attr.class_ "d_"
-          ; Attr.fill (`Hex "#FF00FFAA")
-          ; Attr.cx d'.x
-          ; Attr.cy d'.y
-          ; Attr.r 3.0
-          ]
+          ~attr:
+            Vdom.Attr.(
+              class_ "d_"
+              @ Attr.fill (`Hex "#FF00FFAA")
+              @ Attr.cx d'.x
+              @ Attr.cy d'.y
+              @ Attr.r 3.0)
           []
       ; Node.circle
-          [ Vdom.Attr.class_ "c"
-          ; Attr.fill (`Hex "#FF00FFAA")
-          ; Attr.cx c.x
-          ; Attr.cy c.y
-          ; Attr.r 3.0
-          ]
+          ~attr:
+            Vdom.Attr.(
+              class_ "c"
+              @ Attr.fill (`Hex "#FF00FFAA")
+              @ Attr.cx c.x
+              @ Attr.cy c.y
+              @ Attr.r 3.0)
           []
       ; Node.circle
-          [ Vdom.Attr.class_ "d"
-          ; Attr.fill (`Hex "#FF00FFAA")
-          ; Attr.cx d.x
-          ; Attr.cy d.y
-          ; Attr.r 3.0
-          ]
+          ~attr:
+            Vdom.Attr.(
+              class_ "d"
+              @ Attr.fill (`Hex "#FF00FFAA")
+              @ Attr.cx d.x
+              @ Attr.cy d.y
+              @ Attr.r 3.0)
           []
       ; Node.circle
-          [ Vdom.Attr.class_ "a"
-          ; Attr.fill (`Hex "#FF00FFAA")
-          ; Attr.cx a.x
-          ; Attr.cy a.y
-          ; Attr.r 3.0
-          ]
+          ~attr:
+            Vdom.Attr.(
+              class_ "a"
+              @ Attr.fill (`Hex "#FF00FFAA")
+              @ Attr.cx a.x
+              @ Attr.cy a.y
+              @ Attr.r 3.0)
           []
       ; Node.circle
-          [ Vdom.Attr.class_ "b"
-          ; Attr.fill (`Hex "#FF00FFAA")
-          ; Attr.cx b.x
-          ; Attr.cy b.y
-          ; Attr.r 3.0
-          ]
+          ~attr:
+            Vdom.Attr.(
+              class_ "b"
+              @ Attr.fill (`Hex "#FF00FFAA")
+              @ Attr.cx b.x
+              @ Attr.cy b.y
+              @ Attr.r 3.0)
           []
       ; Node.circle
-          [ Vdom.Attr.class_ "a_"
-          ; Attr.fill (`Hex "#FF00FFAA")
-          ; Attr.cx a'.x
-          ; Attr.cy a'.y
-          ; Attr.r 3.0
-          ]
+          ~attr:
+            Vdom.Attr.(
+              class_ "a_"
+              @ Attr.fill (`Hex "#FF00FFAA")
+              @ Attr.cx a'.x
+              @ Attr.cy a'.y
+              @ Attr.r 3.0)
           []
       ; Node.circle
-          [ Vdom.Attr.class_ "b_"
-          ; Attr.fill (`Hex "#FF00FFAA")
-          ; Attr.cx b'.x
-          ; Attr.cy b'.y
-          ; Attr.r 3.0
-          ]
+          ~attr:
+            Vdom.Attr.(
+              class_ "b_"
+              @ Attr.fill (`Hex "#FF00FFAA")
+              @ Attr.cx b'.x
+              @ Attr.cy b'.y
+              @ Attr.r 3.0)
           []
       ; Node.circle
-          [ Attr.fill (`Hex "#FF0000AA")
-          ; Attr.cx inner_start.x
-          ; Attr.cy inner_start.y
-          ; Attr.r rounding
-          ]
+          ~attr:
+            Vdom.Attr.(
+              Attr.fill (`Hex "#FF0000AA")
+              @ Attr.cx inner_start.x
+              @ Attr.cy inner_start.y
+              @ Attr.r rounding)
           []
       ; Node.circle
-          [ Attr.fill (`Hex "#FF0000AA")
-          ; Attr.cx outer_start.x
-          ; Attr.cy outer_start.y
-          ; Attr.r rounding
-          ]
+          ~attr:
+            Vdom.Attr.(
+              Attr.fill (`Hex "#FF0000AA")
+              @ Attr.cx outer_start.x
+              @ Attr.cy outer_start.y
+              @ Attr.r rounding)
           []
       ; Node.circle
-          [ Attr.fill (`Hex "#FF0000AA")
-          ; Attr.cx outer_end.x
-          ; Attr.cy outer_end.y
-          ; Attr.r rounding
-          ]
+          ~attr:
+            Vdom.Attr.(
+              Attr.fill (`Hex "#FF0000AA")
+              @ Attr.cx outer_end.x
+              @ Attr.cy outer_end.y
+              @ Attr.r rounding)
           []
       ; Node.circle
-          [ Attr.fill (`Hex "#FF0000AA")
-          ; Attr.cx inner_end.x
-          ; Attr.cy inner_end.y
-          ; Attr.r rounding
-          ]
+          ~attr:
+            Vdom.Attr.(
+              Attr.fill (`Hex "#FF0000AA")
+              @ Attr.cx inner_end.x
+              @ Attr.cy inner_end.y
+              @ Attr.r rounding)
           []
-      ; Node.g [] [ Node.path [ Attr.fill (`Hex "#FFFF00AA"); Attr.d path ] [] ]
+      ; Node.g
+          [ Node.path ~attr:Vdom.Attr.(Attr.fill (`Hex "#FFFF00AA") @ Attr.d path) [] ]
       ]
   , path )
 ;;

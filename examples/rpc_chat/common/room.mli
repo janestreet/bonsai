@@ -1,2 +1,2 @@
-open! Core_kernel
+open! Core
 include String_id.S

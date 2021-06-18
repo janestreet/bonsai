@@ -2,7 +2,7 @@
 
     Put another way, [Start] is like {!Core.Command} for Bonsai_web apps. *)
 
-open! Core_kernel
+open! Core
 open! Async_kernel
 open! Import
 
@@ -74,8 +74,8 @@ module Arrow_deprecated : sig
       a way for the holder of the [Handle.t] to send events into the application component.
 
       If the application developer doesn't want to use incoming events, they should use
-      {!Core_kernel.Nothing.t} for the ['incoming] type, and
-      {!Core_kernel.Nothing.unreachable_code} for the value of [inject_incoming]. *)
+      {!Core.Nothing.t} for the ['incoming] type, and
+      {!Core.Nothing.unreachable_code} for the value of [inject_incoming]. *)
   module App_result : sig
     type ('extra, 'incoming) t
 

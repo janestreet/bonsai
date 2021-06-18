@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open! Async_kernel
 open! Bonsai_web
 open! Bonsai.Let_syntax
@@ -51,7 +51,7 @@ let uppercase_rpc_sender =
        |> Forms.view_as_vdom ~on_submit:(Forms.Submit.create ~f:on_submit ())
      in
      Vdom.Node.div
-       [ Vdom.Attr.style (Css_gen.display `Inline_grid) ]
+       ~attr:(Vdom.Attr.style (Css_gen.display `Inline_grid))
        [ form_view; Vdom.Node.text (Request_state.to_string result_state) ])
 ;;
 
@@ -81,7 +81,7 @@ let uppercase_rpc_sender_bind =
        |> Forms.view_as_vdom ~on_submit:(Forms.Submit.create ~f:on_submit ())
      in
      Vdom.Node.div
-       [ Vdom.Attr.style (Css_gen.display `Inline_grid) ]
+       ~attr:(Vdom.Attr.style (Css_gen.display `Inline_grid))
        [ form_view; Vdom.Node.text (Request_state.to_string result_state) ])
 ;;
 

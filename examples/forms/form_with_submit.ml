@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open! Bonsai_web
 open! Import
 open Bonsai.Let_syntax
@@ -32,10 +32,9 @@ let alert_effect =
 ;;
 
 let component =
-  let%map.Bonsai.Computation form = form in
+  let%map.Computation form = form in
   Vdom.Node.div
-    []
-    [ Vdom.Node.h1 [] [ Vdom.Node.text "Form With Submit" ]
+    [ Vdom.Node.h1 [ Vdom.Node.text "Form With Submit" ]
     ; Form.view_as_vdom
         form
         ~on_submit:(Form.Submit.create ~f:(fun t -> alert_effect ([%sexp_of: t] t)) ())

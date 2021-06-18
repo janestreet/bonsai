@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open! Async_kernel
 open! Bonsai_web
 
@@ -8,7 +8,7 @@ let component =
   let on_click = Effect.inject_ignoring_response (print_effect "hello world") in
   Bonsai.const
     (Vdom.Node.button
-       [ Vdom.Attr.on_click (fun _ -> on_click) ]
+       ~attr:(Vdom.Attr.on_click (fun _ -> on_click))
        [ Vdom.Node.text "click me to print a thing to the console" ])
 ;;
 

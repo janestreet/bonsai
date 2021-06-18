@@ -1,4 +1,4 @@
-open Core_kernel
+open Core
 open Js_of_ocaml
 open Bonsai.Let_syntax
 

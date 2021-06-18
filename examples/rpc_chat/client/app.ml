@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open! Bonsai_web
 open Bonsai_chat_common
 
@@ -21,10 +21,10 @@ let component ~room_list ~current_room ~messages ~refresh_rooms ~change_room ~se
      and compose_panel = compose_panel
      and messages_panel = messages_panel in
      Vdom.Node.div
-       [ Vdom.Attr.id "container" ]
+       ~attr:(Vdom.Attr.id "container")
        [ rooms_list
        ; Vdom.Node.div
-           [ Vdom.Attr.id "message-container" ]
+           ~attr:(Vdom.Attr.id "message-container")
            [ messages_panel; compose_panel ]
        ])
 ;;

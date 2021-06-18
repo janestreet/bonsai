@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open! Import
 
 (* We need to fake the source-code position because this test is run in

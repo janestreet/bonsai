@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open! Import
 
 type ('i, 'm, 'a, 'r) unpacked =
@@ -128,6 +128,11 @@ let input (T { input_var; _ }) = Incr.Var.value input_var
 let result (T { result; _ }) = Incr.Observer.value_exn result
 let last_view (T { last_view; _ }) = last_view
 let store_view (T unpacked) s = unpacked.last_view <- s
+
+let has_after_display_events (T t) =
+  let lifecycle = t.lifecycle |> Incr.Observer.value_exn in
+  Bonsai.Private.Lifecycle.Collection.has_after_display lifecycle
+;;
 
 let trigger_lifecycles (T t) =
   let old = t.last_lifecycle in

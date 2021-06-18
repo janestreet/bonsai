@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open! Import
 module Bonsai_lib = Bonsai
 open Proc
@@ -38,7 +38,7 @@ let%expect_test _ =
         (module Choice)
         ~default_model:Choice.Homepage
         ~apply_action
-        (Bonsai.Value.return ())
+        (Bonsai_lib.Value.return ())
     in
     let%sub current_page =
       Bonsai.read

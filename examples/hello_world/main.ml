@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open! Bonsai_web
 
 let component = Bonsai.const (Vdom.Node.text "hello world")

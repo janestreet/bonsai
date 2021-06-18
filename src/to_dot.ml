@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open! Import
 
 module Id : sig
@@ -31,6 +31,7 @@ module Kind = struct
         }
     | Value of string
     | Subst
+    | Dyn
 
   let basic_shape ?(other = "") ~shape ~label ~color () =
     [%string
@@ -51,6 +52,13 @@ module Kind = struct
         ~shape:"circle"
         ~label:""
         ~color:"#FFFFFF"
+        ~other:"width=.1, height=.1"
+        ()
+    | Dyn ->
+      basic_shape
+        ~shape:"circle"
+        ~label:""
+        ~color:"#000000"
         ~other:"width=.1, height=.1"
         ()
   ;;
@@ -91,7 +99,8 @@ let arrow_from_many state ~to_ l =
   to_
 ;;
 
-let register_named state shape name =
+let register_named : type a. State.t -> Kind.t -> a Type_equal.Id.t -> Id.t =
+  fun state shape name ->
   let name = Type_equal.Id.uid name in
   Hashtbl.find_or_add state.State.type_id_to_name name ~default:(fun () ->
     register state shape "named")
@@ -105,12 +114,11 @@ let register_const state shape id =
 let rec follow_value : type a. State.t -> a Value.t -> Id.t =
   fun state value ->
   let register s = register state (Kind.Value s) s in
-  let register_named = register_named state Kind.Subst in
   let register_const = register_const state (Kind.Value "const") in
   match value with
   | Value.Constant (_, id) -> register_const id
   | Incr _ -> register "incr"
-  | Named name -> register_named name
+  | Named name -> register_named state Kind.Subst name
   | Cutoff { t; _ } ->
     let me = register "cutoff" in
     let them = follow_value state t in
@@ -237,6 +245,10 @@ let rec follow_computation
     let me = register_computation "read" in
     arrow state ~from:(follow_value state value) ~to_:me;
     me
+  | Fetch id ->
+    let me = register_computation "fetch" in
+    arrow state ~from:(register_named state Kind.Dyn id) ~to_:me;
+    me
   | Leaf { input; kind; name; _ } ->
     let me = register state (Kind.Leaf { kind; name }) "leaf" in
     (match input with
@@ -335,6 +347,11 @@ let rec follow_computation
     let me = register_computation "with_model_resetter" in
     arrow state ~from:(follow_computation state t) ~to_:me;
     me
+  | Store { id; value; inner } ->
+    let me = register_computation "dyn_set" in
+    arrow state ~from:(follow_value state value) ~to_:me;
+    arrow state ~from:me ~to_:(register_named state Kind.Dyn id);
+    follow_computation state inner
 ;;
 
 let to_dot (Computation.T { t; _ }) =

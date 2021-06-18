@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open! Async_kernel
 open! Bonsai_web
 open Bonsai.Let_syntax
@@ -17,9 +17,11 @@ let textbox =
   @@ let%map text, set_text = state in
   let view =
     Vdom.Node.input
-      [ Vdom.Attr.string_property "value" text
-      ; Vdom.Attr.on_input (fun _ -> set_text)
-      ]
+      ~attr:
+        (Vdom.Attr.many
+           [ Vdom.Attr.string_property "value" text
+           ; Vdom.Attr.on_input (fun _ -> set_text)
+           ])
       []
   in
   text, view
@@ -35,12 +37,12 @@ let component =
         (module String)
         (Starting.initial "")
         text
-        ~effect:(Bonsai.Value.return fake_slow_capitalize_string_rpc))
+        ~effect:(Value.return fake_slow_capitalize_string_rpc))
   in
   return
   @@ let%map view = view
   and capitalized = capitalized in
-  Vdom.Node.div [] [ view; Vdom.Node.text capitalized ]
+  Vdom.Node.div [ view; Vdom.Node.text capitalized ]
 ;;
 
 let (_ : _ Start.Handle.t) =

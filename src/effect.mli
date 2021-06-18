@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open! Import
 
 (** ['a Effect.t] represents some computation of type ['a] that can be performed

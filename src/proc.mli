@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open! Import
 
 type 'a private_value := 'a Value.t
@@ -83,6 +83,12 @@ module Computation : sig
   type 'a t
 
   include Applicative.S with type 'a t := 'a t
+
+  (** Similar to [all] which pulls the computation outside of a list,
+      [all_map] does the same, but with the data in a map.  This can
+      be a useful replacement for [assoc] in scenarios where the map
+      is a constant size. *)
+  val all_map : ('k, 'v t, 'cmp) Map.t -> ('k, 'v, 'cmp) Map.t t
 
   module Let_syntax : sig
     val return : 'a -> 'a t
@@ -456,12 +462,12 @@ module Edge : sig
       type ('o, 'r) t
 
       (** [empty] is an option to pass to the polling functions that changes
-          its return type to be ['o option Bonsai.Computation.t] and starting
+          its return type to be ['o option Computation.t] and starting
           value is [None] *)
       val empty : ('o, 'o option) t
 
       (** [initial x] is an option to pass to the polling functions that
-          changes its return type to be ['o Bonsai.Computation.t] and the
+          changes its return type to be ['o Computation.t] and the
           starting value is [x] *)
       val initial : 'o -> ('o, 'o) t
     end
@@ -482,6 +488,49 @@ module Edge : sig
       -> effect:('a -> 'o Effect.t) Value.t
       -> 'r Computation.t
   end
+end
+
+module Dynamic_scope : sig
+  (** This module implements dynamic variable scoping.  Once a
+      dynamic variable is created, you can store values in it, and
+      lookup those same values.  A lookup will find the nearest-most
+      grandparent [set_within] call. *)
+
+  type 'a t
+
+  (** Creates a new variable for use with the rest of the functions.
+      It is critically important that the exact same [Dynamic_scope.t] is used
+      in calls to [set_within] and the corresponding [lookup*].  *)
+  val create : ?sexp_of:('a -> Sexp.t) -> name:string -> fallback:'a -> unit -> 'a t
+
+  (** Creates a variable which is derived from another.  Typically this is used to
+      project out a field of another dynamic variable which contains a record. *)
+  val derived
+    :  ?sexp_of:('a -> Sexp.t)
+    -> 'b t
+    -> get:('b -> 'a)
+    -> set:('b -> 'a -> 'b)
+    -> 'a t
+
+  type revert = { revert : 'a. 'a Computation.t -> 'a Computation.t }
+
+  (** Given a ['a Dynamic_scope.t] and a ['a Value.t] evaluate a function
+      whose resulting Computation.t has access to the value via the
+      [lookup] function.
+
+      This one layer of scope can be undone by calling the [revert] function. *)
+  val set : 'a t -> 'a Value.t -> f:(revert -> 'r Computation.t) -> 'r Computation.t
+
+  (** Lookup attempts to find the value inside the
+      nearest scope, but if there isn't one, it falls back to
+      default specified in [create]. *)
+  val lookup : 'a t -> 'a Computation.t
+
+  val modify
+    :  'a t
+    -> change:('a Value.t -> 'a Value.t)
+    -> f:(revert -> 'r Computation.t)
+    -> 'r Computation.t
 end
 
 module Incr : sig

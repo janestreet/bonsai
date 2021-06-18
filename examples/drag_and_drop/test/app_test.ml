@@ -1,99 +1,86 @@
-open! Core_kernel
+open! Core
 open! Bonsai_web_test
 open! Bonsai_web
 module Handle = Bonsai_web_test.Handle
 module Result_spec = Bonsai_web_test.Result_spec
+module Example = Bonsai_drag_and_drop_example
 
-let component = Bonsai_drag_and_drop_example.app
-let board = Bonsai_drag_and_drop_example.board
+let board = Example.board "board"
+let run = Handle.Drag_and_drop.run ~get_vdom:Fn.id ~name:"board"
 
 let%expect_test "drag between containers" =
   let handle = Handle.create (Result_spec.vdom Fn.id) board in
   Handle.show handle;
   [%expect
     {|
-    <div class="kanban-container">
-      <div class="kanban-column kanban-column-todo"
-           ondragenter={handler}
-           ondragleave={handler}
-           ondragover={handler}
-           ondrop={handler}>
+    <div data-dnd-name="board" class="kanban-container" dnd-test-hook=<fun>>
+      <div data-drag-targetbonsai_path_replaced_in_test="todo"
+           class="kanban-column kanban-column-todo"
+           onmouseup={handler}>
         <h3> Todo </h3>
         <div>
-          <div @key=0 draggable="true" class="kanban-item" ondragend={handler} ondragstart={handler}> todo 1 </div>
-          <div @key=1 draggable="true" class="kanban-item" ondragend={handler} ondragstart={handler}> todo 2 </div>
+          <div @key=0 class="kanban-item" onmousedown={handler} style={ user-select: none; }> todo 1 </div>
+          <div @key=1 class="kanban-item" onmousedown={handler} style={ user-select: none; }> todo 2 </div>
         </div>
       </div>
-      <div class="kanban-column kanban-column-in-progress"
-           ondragenter={handler}
-           ondragleave={handler}
-           ondragover={handler}
-           ondrop={handler}>
+      <div data-drag-targetbonsai_path_replaced_in_test="in-progress"
+           class="kanban-column kanban-column-in-progress"
+           onmouseup={handler}>
         <h3> In Progress </h3>
         <div>
-          <div @key=2 draggable="true" class="kanban-item" ondragend={handler} ondragstart={handler}> in progress 1 </div>
-          <div @key=3 draggable="true" class="kanban-item" ondragend={handler} ondragstart={handler}> in progress 2 </div>
-          <div @key=4 draggable="true" class="kanban-item" ondragend={handler} ondragstart={handler}> in progress 3 </div>
+          <div @key=2 class="kanban-item" onmousedown={handler} style={ user-select: none; }> in progress 1 </div>
+          <div @key=3 class="kanban-item" onmousedown={handler} style={ user-select: none; }> in progress 2 </div>
+          <div @key=4 class="kanban-item" onmousedown={handler} style={ user-select: none; }> in progress 3 </div>
         </div>
       </div>
-      <div class="kanban-column kanban-column-finished"
-           ondragenter={handler}
-           ondragleave={handler}
-           ondragover={handler}
-           ondrop={handler}>
+      <div data-drag-targetbonsai_path_replaced_in_test="finished"
+           class="kanban-column kanban-column-finished"
+           onmouseup={handler}>
         <h3> Done </h3>
         <div>
-          <div @key=5 draggable="true" class="kanban-item" ondragend={handler} ondragstart={handler}> finished 1 </div>
-          <div @key=6 draggable="true" class="kanban-item" ondragend={handler} ondragstart={handler}> finished 2 </div>
-          <div @key=7 draggable="true" class="kanban-item" ondragend={handler} ondragstart={handler}> finished 3 </div>
+          <div @key=5 class="kanban-item" onmousedown={handler} style={ user-select: none; }> finished 1 </div>
+          <div @key=6 class="kanban-item" onmousedown={handler} style={ user-select: none; }> finished 2 </div>
+          <div @key=7 class="kanban-item" onmousedown={handler} style={ user-select: none; }> finished 3 </div>
         </div>
       </div>
-    </div> |}];
-  let (_ : Handle.Drag_and_drop.t) =
-    Handle.Drag_and_drop.run
-      handle
-      ~get_vdom:Fn.id
-      Handle.Drag_and_drop.not_dragging
-      [ Drag ".kanban-column-todo .kanban-item"; Enter ".kanban-column-finished"; Drop ]
-  in
+    </div>
+    adding window event listener
+    adding window event listener |}];
+  run handle (Start_drag "0");
+  run handle (Set_target (Some "finished"));
+  run handle Finish_drag;
   Handle.show_diff handle;
   [%expect
     {|
-      <div class="kanban-container">
-        <div class="kanban-column kanban-column-todo"
-             ondragenter={handler}
-             ondragleave={handler}
-             ondragover={handler}
-             ondrop={handler}>
+      <div data-dnd-name="board" class="kanban-container" dnd-test-hook=<fun>>
+        <div data-drag-targetbonsai_path_replaced_in_test="todo"
+             class="kanban-column kanban-column-todo"
+             onmouseup={handler}>
           <h3> Todo </h3>
           <div>
-    -|      <div @key=0 draggable="true" class="kanban-item" ondragend={handler} ondragstart={handler}> todo 1 </div>
-            <div @key=1 draggable="true" class="kanban-item" ondragend={handler} ondragstart={handler}> todo 2 </div>
+    -|      <div @key=0 class="kanban-item" onmousedown={handler} style={ user-select: none; }> todo 1 </div>
+            <div @key=1 class="kanban-item" onmousedown={handler} style={ user-select: none; }> todo 2 </div>
           </div>
         </div>
-        <div class="kanban-column kanban-column-in-progress"
-             ondragenter={handler}
-             ondragleave={handler}
-             ondragover={handler}
-             ondrop={handler}>
+        <div data-drag-targetbonsai_path_replaced_in_test="in-progress"
+             class="kanban-column kanban-column-in-progress"
+             onmouseup={handler}>
           <h3> In Progress </h3>
           <div>
-            <div @key=2 draggable="true" class="kanban-item" ondragend={handler} ondragstart={handler}> in progress 1 </div>
-            <div @key=3 draggable="true" class="kanban-item" ondragend={handler} ondragstart={handler}> in progress 2 </div>
-            <div @key=4 draggable="true" class="kanban-item" ondragend={handler} ondragstart={handler}> in progress 3 </div>
+            <div @key=2 class="kanban-item" onmousedown={handler} style={ user-select: none; }> in progress 1 </div>
+            <div @key=3 class="kanban-item" onmousedown={handler} style={ user-select: none; }> in progress 2 </div>
+            <div @key=4 class="kanban-item" onmousedown={handler} style={ user-select: none; }> in progress 3 </div>
           </div>
         </div>
-        <div class="kanban-column kanban-column-finished"
-             ondragenter={handler}
-             ondragleave={handler}
-             ondragover={handler}
-             ondrop={handler}>
+        <div data-drag-targetbonsai_path_replaced_in_test="finished"
+             class="kanban-column kanban-column-finished"
+             onmouseup={handler}>
           <h3> Done </h3>
           <div>
-    +|      <div @key=0 draggable="true" class="kanban-item" ondragend={handler} ondragstart={handler}> todo 1 </div>
-            <div @key=5 draggable="true" class="kanban-item" ondragend={handler} ondragstart={handler}> finished 1 </div>
-            <div @key=6 draggable="true" class="kanban-item" ondragend={handler} ondragstart={handler}> finished 2 </div>
-            <div @key=7 draggable="true" class="kanban-item" ondragend={handler} ondragstart={handler}> finished 3 </div>
+    +|      <div @key=0 class="kanban-item" onmousedown={handler} style={ user-select: none; }> todo 1 </div>
+            <div @key=5 class="kanban-item" onmousedown={handler} style={ user-select: none; }> finished 1 </div>
+            <div @key=6 class="kanban-item" onmousedown={handler} style={ user-select: none; }> finished 2 </div>
+            <div @key=7 class="kanban-item" onmousedown={handler} style={ user-select: none; }> finished 3 </div>
           </div>
         </div>
       </div> |}]
@@ -102,14 +89,12 @@ let%expect_test "drag between containers" =
 let%expect_test "drag to same container" =
   let handle = Handle.create (Result_spec.vdom Fn.id) board in
   Handle.store_view handle;
-  [%expect {| |}];
-  let (_ : Handle.Drag_and_drop.t) =
-    Handle.Drag_and_drop.run
-      handle
-      ~get_vdom:Fn.id
-      Handle.Drag_and_drop.not_dragging
-      [ Drag ".kanban-column-todo .kanban-item"; Enter ".kanban-column-todo"; Drop ]
-  in
+  [%expect {|
+    adding window event listener
+    adding window event listener |}];
+  run handle (Start_drag "0");
+  run handle (Set_target (Some "todo"));
+  run handle Finish_drag;
   (* No diff, since the item was dragged into the same column *)
   Handle.show_diff handle;
   [%expect {| |}]
@@ -118,375 +103,196 @@ let%expect_test "drag to same container" =
 let%expect_test "appearance of dragged item and preview item while drag is happening" =
   let handle = Handle.create (Result_spec.vdom Fn.id) board in
   Handle.store_view handle;
-  [%expect {| |}];
-  let (dnd_state : Handle.Drag_and_drop.t) =
-    Handle.Drag_and_drop.run
-      handle
-      ~get_vdom:Fn.id
-      Handle.Drag_and_drop.not_dragging
-      [ Drag ".kanban-column-todo .kanban-item" ]
-  in
+  [%expect {|
+    adding window event listener
+    adding window event listener |}];
+  run handle (Start_drag "0");
   Handle.show_diff handle;
   [%expect
     {|
-      <div class="kanban-container">
-    -|  <div class="kanban-column kanban-column-todo"
-    +|  <div class="disable-child-pointer-events kanban-column kanban-column-todo"
-             ondragenter={handler}
-             ondragleave={handler}
-             ondragover={handler}
-             ondrop={handler}>
+      <div data-dnd-name="board" class="kanban-container" dnd-test-hook=<fun>>
+        <div data-drag-targetbonsai_path_replaced_in_test="todo"
+             class="kanban-column kanban-column-todo"
+             onmouseup={handler}>
           <h3> Todo </h3>
           <div>
-    -|      <div @key=0 draggable="true" class="kanban-item" ondragend={handler} ondragstart={handler}> todo 1 </div>
+    -|      <div @key=0 class="kanban-item" onmousedown={handler} style={ user-select: none; }> todo 1 </div>
     +|      <div @key=0
-    +|           draggable="true"
     +|           class="being-dragged kanban-item"
-    +|           ondragend={handler}
-    +|           ondragstart={handler}> todo 1 </div>
-            <div @key=1 draggable="true" class="kanban-item" ondragend={handler} ondragstart={handler}> todo 2 </div>
+    +|           onmousedown={handler}
+    +|           style={
+    +|             user-select: none;
+    +|           }> todo 1 </div>
+            <div @key=1 class="kanban-item" onmousedown={handler} style={ user-select: none; }> todo 2 </div>
           </div>
         </div>
-    -|  <div class="kanban-column kanban-column-in-progress"
-    +|  <div class="disable-child-pointer-events kanban-column kanban-column-in-progress"
-             ondragenter={handler}
-             ondragleave={handler}
-             ondragover={handler}
-             ondrop={handler}>
+        <div data-drag-targetbonsai_path_replaced_in_test="in-progress"
+             class="kanban-column kanban-column-in-progress"
+             onmouseup={handler}>
           <h3> In Progress </h3>
           <div>
-            <div @key=2 draggable="true" class="kanban-item" ondragend={handler} ondragstart={handler}> in progress 1 </div>
-            <div @key=3 draggable="true" class="kanban-item" ondragend={handler} ondragstart={handler}> in progress 2 </div>
-            <div @key=4 draggable="true" class="kanban-item" ondragend={handler} ondragstart={handler}> in progress 3 </div>
+            <div @key=2 class="kanban-item" onmousedown={handler} style={ user-select: none; }> in progress 1 </div>
+            <div @key=3 class="kanban-item" onmousedown={handler} style={ user-select: none; }> in progress 2 </div>
+            <div @key=4 class="kanban-item" onmousedown={handler} style={ user-select: none; }> in progress 3 </div>
           </div>
         </div>
-    -|  <div class="kanban-column kanban-column-finished"
-    +|  <div class="disable-child-pointer-events kanban-column kanban-column-finished"
-             ondragenter={handler}
-             ondragleave={handler}
-             ondragover={handler}
-             ondrop={handler}>
+        <div data-drag-targetbonsai_path_replaced_in_test="finished"
+             class="kanban-column kanban-column-finished"
+             onmouseup={handler}>
           <h3> Done </h3>
           <div>
-            <div @key=5 draggable="true" class="kanban-item" ondragend={handler} ondragstart={handler}> finished 1 </div>
-            <div @key=6 draggable="true" class="kanban-item" ondragend={handler} ondragstart={handler}> finished 2 </div>
-            <div @key=7 draggable="true" class="kanban-item" ondragend={handler} ondragstart={handler}> finished 3 </div>
+            <div @key=5 class="kanban-item" onmousedown={handler} style={ user-select: none; }> finished 1 </div>
+            <div @key=6 class="kanban-item" onmousedown={handler} style={ user-select: none; }> finished 2 </div>
+            <div @key=7 class="kanban-item" onmousedown={handler} style={ user-select: none; }> finished 3 </div>
           </div>
+    +|  </div>
+    +|  <div style={
+    +|         position: fixed;
+    +|         top: 0px;
+    +|         left: 0px;
+    +|         pointer-events: none;
+    +|         width: 0px;
+    +|         height: 0px;
+    +|         transform: translateY(0px) translateX(0px);
+    +|       }>
+    +|    <div class="kanban-item"> todo 1 </div>
         </div>
       </div> |}];
-  let (dnd_state : Handle.Drag_and_drop.t) =
-    Handle.Drag_and_drop.run
-      handle
-      ~get_vdom:Fn.id
-      dnd_state
-      [ Enter ".kanban-column-todo" ]
-  in
+  run handle (Set_target (Some "todo"));
   Handle.show_diff handle;
   [%expect
     {|
-      <div class="kanban-container">
-    -|  <div class="disable-child-pointer-events kanban-column kanban-column-todo"
-    +|  <div class="disable-child-pointer-events kanban-column kanban-column-active kanban-column-todo"
-             ondragenter={handler}
-             ondragleave={handler}
-             ondragover={handler}
-             ondrop={handler}>
+      <div data-dnd-name="board" class="kanban-container" dnd-test-hook=<fun>>
+        <div data-drag-targetbonsai_path_replaced_in_test="todo"
+    -|       class="kanban-column kanban-column-todo"
+    +|       class="kanban-column kanban-column-active kanban-column-todo"
+             onmouseup={handler}>
           <h3> Todo </h3>
           <div>
             <div @key=0
-                 draggable="true"
     -|           class="being-dragged kanban-item"
     +|           class="dragged-on-self kanban-item"
-                 ondragend={handler}
-                 ondragstart={handler}> todo 1 </div>
-            <div @key=1 draggable="true" class="kanban-item" ondragend={handler} ondragstart={handler}> todo 2 </div>
+                 onmousedown={handler}
+                 style={
+                   user-select: none;
+                 }> todo 1 </div>
+            <div @key=1 class="kanban-item" onmousedown={handler} style={ user-select: none; }> todo 2 </div>
           </div>
         </div>
-        <div class="disable-child-pointer-events kanban-column kanban-column-in-progress"
-             ondragenter={handler}
-             ondragleave={handler}
-             ondragover={handler}
-             ondrop={handler}>
+        <div data-drag-targetbonsai_path_replaced_in_test="in-progress"
+             class="kanban-column kanban-column-in-progress"
+             onmouseup={handler}>
           <h3> In Progress </h3>
           <div>
-            <div @key=2 draggable="true" class="kanban-item" ondragend={handler} ondragstart={handler}> in progress 1 </div>
-            <div @key=3 draggable="true" class="kanban-item" ondragend={handler} ondragstart={handler}> in progress 2 </div>
-            <div @key=4 draggable="true" class="kanban-item" ondragend={handler} ondragstart={handler}> in progress 3 </div>
+            <div @key=2 class="kanban-item" onmousedown={handler} style={ user-select: none; }> in progress 1 </div>
+            <div @key=3 class="kanban-item" onmousedown={handler} style={ user-select: none; }> in progress 2 </div>
+            <div @key=4 class="kanban-item" onmousedown={handler} style={ user-select: none; }> in progress 3 </div>
           </div> |}];
-  let (dnd_state : Handle.Drag_and_drop.t) =
-    Handle.Drag_and_drop.run
-      handle
-      ~get_vdom:Fn.id
-      dnd_state
-      [ Leave; Enter ".kanban-column-finished" ]
-  in
+  run handle (Set_target (Some "finished"));
   Handle.show_diff handle;
   [%expect
     {|
-      <div class="kanban-container">
-    -|  <div class="disable-child-pointer-events kanban-column kanban-column-active kanban-column-todo"
-    +|  <div class="disable-child-pointer-events kanban-column kanban-column-todo"
-             ondragenter={handler}
-             ondragleave={handler}
-             ondragover={handler}
-             ondrop={handler}>
+      <div data-dnd-name="board" class="kanban-container" dnd-test-hook=<fun>>
+        <div data-drag-targetbonsai_path_replaced_in_test="todo"
+    -|       class="kanban-column kanban-column-active kanban-column-todo"
+    +|       class="kanban-column kanban-column-todo"
+             onmouseup={handler}>
           <h3> Todo </h3>
           <div>
     -|      <div @key=0
-    -|           draggable="true"
     -|           class="dragged-on-self kanban-item"
-    -|           ondragend={handler}
-    -|           ondragstart={handler}> todo 1 </div>
-            <div @key=1 draggable="true" class="kanban-item" ondragend={handler} ondragstart={handler}> todo 2 </div>
+    -|           onmousedown={handler}
+    -|           style={
+    -|             user-select: none;
+    -|           }> todo 1 </div>
+            <div @key=1 class="kanban-item" onmousedown={handler} style={ user-select: none; }> todo 2 </div>
           </div>
         </div>
-        <div class="disable-child-pointer-events kanban-column kanban-column-in-progress"
-             ondragenter={handler}
-             ondragleave={handler}
-             ondragover={handler}
-             ondrop={handler}>
+        <div data-drag-targetbonsai_path_replaced_in_test="in-progress"
+             class="kanban-column kanban-column-in-progress"
+             onmouseup={handler}>
           <h3> In Progress </h3>
           <div>
-            <div @key=2 draggable="true" class="kanban-item" ondragend={handler} ondragstart={handler}> in progress 1 </div>
-            <div @key=3 draggable="true" class="kanban-item" ondragend={handler} ondragstart={handler}> in progress 2 </div>
-            <div @key=4 draggable="true" class="kanban-item" ondragend={handler} ondragstart={handler}> in progress 3 </div>
+            <div @key=2 class="kanban-item" onmousedown={handler} style={ user-select: none; }> in progress 1 </div>
+            <div @key=3 class="kanban-item" onmousedown={handler} style={ user-select: none; }> in progress 2 </div>
+            <div @key=4 class="kanban-item" onmousedown={handler} style={ user-select: none; }> in progress 3 </div>
           </div>
         </div>
-    -|  <div class="disable-child-pointer-events kanban-column kanban-column-finished"
-    +|  <div class="disable-child-pointer-events kanban-column kanban-column-active kanban-column-finished"
-             ondragenter={handler}
-             ondragleave={handler}
-             ondragover={handler}
-             ondrop={handler}>
+        <div data-drag-targetbonsai_path_replaced_in_test="finished"
+    -|       class="kanban-column kanban-column-finished"
+    +|       class="kanban-column kanban-column-active kanban-column-finished"
+             onmouseup={handler}>
           <h3> Done </h3>
           <div>
     +|      <div @key=0
-    +|           draggable="true"
     +|           class="dragged-on-self kanban-item"
-    +|           ondragend={handler}
-    +|           ondragstart={handler}> todo 1 </div>
-            <div @key=5 draggable="true" class="kanban-item" ondragend={handler} ondragstart={handler}> finished 1 </div>
-            <div @key=6 draggable="true" class="kanban-item" ondragend={handler} ondragstart={handler}> finished 2 </div>
-            <div @key=7 draggable="true" class="kanban-item" ondragend={handler} ondragstart={handler}> finished 3 </div>
+    +|           onmousedown={handler}
+    +|           style={
+    +|             user-select: none;
+    +|           }> todo 1 </div>
+            <div @key=5 class="kanban-item" onmousedown={handler} style={ user-select: none; }> finished 1 </div>
+            <div @key=6 class="kanban-item" onmousedown={handler} style={ user-select: none; }> finished 2 </div>
+            <div @key=7 class="kanban-item" onmousedown={handler} style={ user-select: none; }> finished 3 </div>
           </div>
         </div>
-      </div> |}];
-  let (_ : Handle.Drag_and_drop.t) =
-    Handle.Drag_and_drop.run handle ~get_vdom:Fn.id dnd_state [ Drop ]
-  in
+        <div style={
+               position: fixed;
+               top: 0px;
+               left: 0px;
+               pointer-events: none;
+               width: 0px;
+               height: 0px;
+               transform: translateY(0px) translateX(0px);
+             }>
+          <div class="kanban-item"> todo 1 </div>
+        </div> |}];
+  run handle Finish_drag;
   Handle.show_diff handle;
   [%expect
     {|
-      <div class="kanban-container">
-    -|  <div class="disable-child-pointer-events kanban-column kanban-column-todo"
-    +|  <div class="kanban-column kanban-column-todo"
-             ondragenter={handler}
-             ondragleave={handler}
-             ondragover={handler}
-             ondrop={handler}>
           <h3> Todo </h3>
           <div>
-            <div @key=1 draggable="true" class="kanban-item" ondragend={handler} ondragstart={handler}> todo 2 </div>
+            <div @key=1 class="kanban-item" onmousedown={handler} style={ user-select: none; }> todo 2 </div>
           </div>
         </div>
-    -|  <div class="disable-child-pointer-events kanban-column kanban-column-in-progress"
-    +|  <div class="kanban-column kanban-column-in-progress"
-             ondragenter={handler}
-             ondragleave={handler}
-             ondragover={handler}
-             ondrop={handler}>
+        <div data-drag-targetbonsai_path_replaced_in_test="in-progress"
+             class="kanban-column kanban-column-in-progress"
+             onmouseup={handler}>
           <h3> In Progress </h3>
           <div>
-            <div @key=2 draggable="true" class="kanban-item" ondragend={handler} ondragstart={handler}> in progress 1 </div>
-            <div @key=3 draggable="true" class="kanban-item" ondragend={handler} ondragstart={handler}> in progress 2 </div>
-            <div @key=4 draggable="true" class="kanban-item" ondragend={handler} ondragstart={handler}> in progress 3 </div>
+            <div @key=2 class="kanban-item" onmousedown={handler} style={ user-select: none; }> in progress 1 </div>
+            <div @key=3 class="kanban-item" onmousedown={handler} style={ user-select: none; }> in progress 2 </div>
+            <div @key=4 class="kanban-item" onmousedown={handler} style={ user-select: none; }> in progress 3 </div>
           </div>
         </div>
-    -|  <div class="disable-child-pointer-events kanban-column kanban-column-active kanban-column-finished"
-    +|  <div class="kanban-column kanban-column-finished"
-             ondragenter={handler}
-             ondragleave={handler}
-             ondragover={handler}
-             ondrop={handler}>
+        <div data-drag-targetbonsai_path_replaced_in_test="finished"
+    -|       class="kanban-column kanban-column-active kanban-column-finished"
+    +|       class="kanban-column kanban-column-finished"
+             onmouseup={handler}>
           <h3> Done </h3>
           <div>
     -|      <div @key=0
-    -|           draggable="true"
     -|           class="dragged-on-self kanban-item"
-    -|           ondragend={handler}
-    -|           ondragstart={handler}> todo 1 </div>
-    +|      <div @key=0 draggable="true" class="kanban-item" ondragend={handler} ondragstart={handler}> todo 1 </div>
-            <div @key=5 draggable="true" class="kanban-item" ondragend={handler} ondragstart={handler}> finished 1 </div>
-            <div @key=6 draggable="true" class="kanban-item" ondragend={handler} ondragstart={handler}> finished 2 </div>
-            <div @key=7 draggable="true" class="kanban-item" ondragend={handler} ondragstart={handler}> finished 3 </div>
+    -|           onmousedown={handler}
+    -|           style={
+    -|             user-select: none;
+    -|           }> todo 1 </div>
+    +|      <div @key=0 class="kanban-item" onmousedown={handler} style={ user-select: none; }> todo 1 </div>
+            <div @key=5 class="kanban-item" onmousedown={handler} style={ user-select: none; }> finished 1 </div>
+            <div @key=6 class="kanban-item" onmousedown={handler} style={ user-select: none; }> finished 2 </div>
+            <div @key=7 class="kanban-item" onmousedown={handler} style={ user-select: none; }> finished 3 </div>
           </div>
+    -|  </div>
+    -|  <div style={
+    -|         position: fixed;
+    -|         top: 0px;
+    -|         left: 0px;
+    -|         pointer-events: none;
+    -|         width: 0px;
+    -|         height: 0px;
+    -|         transform: translateY(0px) translateX(0px);
+    -|       }>
+    -|    <div class="kanban-item"> todo 1 </div>
         </div>
       </div> |}]
-;;
-
-let%expect_test "drag to different universe does nothing" =
-  let handle = Handle.create (Result_spec.vdom Fn.id) component in
-  Handle.show handle;
-  [%expect
-    {|
-    <div>
-      <p>
-        You can drag items between each of the columns. When dropped, an item gets placed in a location determined by some ordering withing the column, rather than the position at which it is dropped. (This was more straightforward to implement). Items cannot be dragged between the two rows. (to demonstrate how multiple universes interact)
-      </p>
-      <div id="top-board">
-        <div class="kanban-container">
-          <div class="kanban-column kanban-column-todo"
-               ondragenter={handler}
-               ondragleave={handler}
-               ondragover={handler}
-               ondrop={handler}>
-            <h3> Todo </h3>
-            <div>
-              <div @key=0
-                   draggable="true"
-                   class="kanban-item"
-                   ondragend={handler}
-                   ondragstart={handler}> todo 1 </div>
-              <div @key=1
-                   draggable="true"
-                   class="kanban-item"
-                   ondragend={handler}
-                   ondragstart={handler}> todo 2 </div>
-            </div>
-          </div>
-          <div class="kanban-column kanban-column-in-progress"
-               ondragenter={handler}
-               ondragleave={handler}
-               ondragover={handler}
-               ondrop={handler}>
-            <h3> In Progress </h3>
-            <div>
-              <div @key=2
-                   draggable="true"
-                   class="kanban-item"
-                   ondragend={handler}
-                   ondragstart={handler}> in progress 1 </div>
-              <div @key=3
-                   draggable="true"
-                   class="kanban-item"
-                   ondragend={handler}
-                   ondragstart={handler}> in progress 2 </div>
-              <div @key=4
-                   draggable="true"
-                   class="kanban-item"
-                   ondragend={handler}
-                   ondragstart={handler}> in progress 3 </div>
-            </div>
-          </div>
-          <div class="kanban-column kanban-column-finished"
-               ondragenter={handler}
-               ondragleave={handler}
-               ondragover={handler}
-               ondrop={handler}>
-            <h3> Done </h3>
-            <div>
-              <div @key=5
-                   draggable="true"
-                   class="kanban-item"
-                   ondragend={handler}
-                   ondragstart={handler}> finished 1 </div>
-              <div @key=6
-                   draggable="true"
-                   class="kanban-item"
-                   ondragend={handler}
-                   ondragstart={handler}> finished 2 </div>
-              <div @key=7
-                   draggable="true"
-                   class="kanban-item"
-                   ondragend={handler}
-                   ondragstart={handler}> finished 3 </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div id="bottom-board">
-        <div class="kanban-container">
-          <div class="kanban-column kanban-column-todo"
-               ondragenter={handler}
-               ondragleave={handler}
-               ondragover={handler}
-               ondrop={handler}>
-            <h3> Todo </h3>
-            <div>
-              <div @key=0
-                   draggable="true"
-                   class="kanban-item"
-                   ondragend={handler}
-                   ondragstart={handler}> todo 1 </div>
-              <div @key=1
-                   draggable="true"
-                   class="kanban-item"
-                   ondragend={handler}
-                   ondragstart={handler}> todo 2 </div>
-            </div>
-          </div>
-          <div class="kanban-column kanban-column-in-progress"
-               ondragenter={handler}
-               ondragleave={handler}
-               ondragover={handler}
-               ondrop={handler}>
-            <h3> In Progress </h3>
-            <div>
-              <div @key=2
-                   draggable="true"
-                   class="kanban-item"
-                   ondragend={handler}
-                   ondragstart={handler}> in progress 1 </div>
-              <div @key=3
-                   draggable="true"
-                   class="kanban-item"
-                   ondragend={handler}
-                   ondragstart={handler}> in progress 2 </div>
-              <div @key=4
-                   draggable="true"
-                   class="kanban-item"
-                   ondragend={handler}
-                   ondragstart={handler}> in progress 3 </div>
-            </div>
-          </div>
-          <div class="kanban-column kanban-column-finished"
-               ondragenter={handler}
-               ondragleave={handler}
-               ondragover={handler}
-               ondrop={handler}>
-            <h3> Done </h3>
-            <div>
-              <div @key=5
-                   draggable="true"
-                   class="kanban-item"
-                   ondragend={handler}
-                   ondragstart={handler}> finished 1 </div>
-              <div @key=6
-                   draggable="true"
-                   class="kanban-item"
-                   ondragend={handler}
-                   ondragstart={handler}> finished 2 </div>
-              <div @key=7
-                   draggable="true"
-                   class="kanban-item"
-                   ondragend={handler}
-                   ondragstart={handler}> finished 3 </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div> |}];
-  let (_ : Handle.Drag_and_drop.t) =
-    Handle.Drag_and_drop.run
-      handle
-      ~get_vdom:Fn.id
-      Handle.Drag_and_drop.not_dragging
-      [ Drag "#top-board .kanban-column-todo .kanban-item"
-      ; Enter "#bottom-board .kanban-column-finished"
-      ; Drop
-      ]
-  in
-  (* No diff, since the item was dragged into the same column *)
-  Handle.show_diff handle;
-  [%expect {| |}]
 ;;

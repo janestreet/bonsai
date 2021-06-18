@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open Bonsai_web
 open Bonsai.Let_syntax
 module Extendy = Bonsai_web_ui_extendy
@@ -6,9 +6,8 @@ module Extendy = Bonsai_web_ui_extendy
 let component =
   let wrap_remove view remove_event =
     Vdom.Node.div
-      []
       [ Vdom.Node.button
-          [ Vdom.Attr.on_click (fun _ -> remove_event) ]
+          ~attr:(Vdom.Attr.on_click (fun _ -> remove_event))
           [ Vdom.Node.text "X" ]
       ; view
       ]
@@ -21,8 +20,9 @@ let component =
   and append = append in
   let views = Map.data contents in
   Vdom.Node.div
-    []
-    (Vdom.Node.button [ Vdom.Attr.on_click (fun _ -> append) ] [ Vdom.Node.text "Add" ]
+    (Vdom.Node.button
+       ~attr:(Vdom.Attr.on_click (fun _ -> append))
+       [ Vdom.Node.text "Add" ]
      :: views)
 ;;
 

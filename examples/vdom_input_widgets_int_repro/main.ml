@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open! Bonsai_web
 open Bonsai.Let_syntax
 
@@ -18,15 +18,15 @@ let component
   in
   let clear_button =
     Vdom.Node.button
-      [ Vdom.Attr.on_click (fun _ -> set_state None) ]
+      ~attr:(Vdom.Attr.on_click (fun _ -> set_state None))
       [ Vdom.Node.text "clear" ]
   in
   let set_constant =
     Vdom.Node.button
-      [ Vdom.Attr.on_click (fun _ -> set_state (Some some_constant_value)) ]
+      ~attr:(Vdom.Attr.on_click (fun _ -> set_state (Some some_constant_value)))
       [ Vdom.Node.text "set constant" ]
   in
-  Vdom.Node.div [] [ Vdom.Node.text name; input; clear_button; set_constant; debug ]
+  Vdom.Node.div [ Vdom.Node.text name; input; clear_button; set_constant; debug ]
 ;;
 
 let component =
@@ -49,7 +49,7 @@ let component =
   return
   @@ let%map number_input = number_input
   and string_input = string_input in
-  Vdom.Node.div [] [ number_input; string_input ]
+  Vdom.Node.div [ number_input; string_input ]
 ;;
 
 let (_ : _ Start.Handle.t) =

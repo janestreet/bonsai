@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open! Async_kernel
 open! Import
 open Bonsai.Let_syntax
@@ -17,23 +17,24 @@ let component (type t) (module Conv : Conv with type t = t) ~default_model =
   let conv = Or_error.try_with (fun () -> Conv.of_string text) in
   let textbox =
     Vdom.Node.input
-      ([ Vdom.Attr.type_ "text"
-       ; Vdom.Attr.on_input (fun _ -> set_text)
-       ; Vdom.Attr.value text
-       ]
-       @
-       match conv with
-       | Ok _ -> []
-       | Error _ -> [ Vdom.Attr.class_ "invalid" ])
+      ~attr:
+        (Vdom.Attr.many
+           [ Vdom.Attr.type_ "text"
+           ; Vdom.Attr.on_input (fun _ -> set_text)
+           ; Vdom.Attr.value text
+           ; (match conv with
+              | Ok _ -> Vdom.Attr.empty
+              | Error _ -> Vdom.Attr.class_ "invalid")
+           ])
       []
   in
   let conv_display =
-    let attrs, text =
+    let attr, text =
       match conv with
-      | Error err -> [ Vdom.Attr.class_ "invalid" ], Error.to_string_hum err
-      | Ok spec -> [], Conv.to_string_hum spec
+      | Error err -> Vdom.Attr.class_ "invalid", Error.to_string_hum err
+      | Ok spec -> Vdom.Attr.empty, Conv.to_string_hum spec
     in
-    Vdom.Node.pre attrs [ Vdom.Node.text text ]
+    Vdom.Node.pre ~attr [ Vdom.Node.text text ]
   in
-  conv, Vdom.Node.div [] [ textbox; conv_display ]
+  conv, Vdom.Node.div [ textbox; conv_display ]
 ;;

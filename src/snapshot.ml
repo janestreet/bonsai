@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open! Import
 
 type ('model, 'action, 'result) t =

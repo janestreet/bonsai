@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open! Bonsai_web_test
 open! Bonsai_web
 
@@ -90,7 +90,7 @@ module State_view_spec = struct
 end
 
 let%expect_test "test Bonsai.state" =
-  let component : (string * (string -> Vdom.Event.t)) Bonsai.Computation.t =
+  let component : (string * (string -> Vdom.Event.t)) Computation.t =
     Bonsai.state [%here] (module String) ~default_model:"hello"
   in
   let handle = Handle.create (module State_view_spec) component in

@@ -1,4 +1,4 @@
-open Core_kernel
+open Core
 open Bonsai_web
 open Bonsai.Let_syntax
 
@@ -33,10 +33,10 @@ let subwidgets =
     in
     attr, { Widget.default_selection_status = Selected; all_items })
   |> Attribute.Map.of_alist_exn
-  |> Bonsai.Value.return
+  |> Value.return
 ;;
 
-let id_prefix = Bonsai.Value.return "multi-select-widget-example"
+let id_prefix = Value.return "multi-select-widget-example"
 
 let bonsai =
   let%sub widget_result =
@@ -46,8 +46,7 @@ let bonsai =
   @@ let%map widget_result = widget_result in
   let open Virtual_dom.Vdom in
   Node.div
-    []
-    [ Node.h2 [] [ Node.text "Selection demo" ]
+    [ Node.h2 [ Node.text "Selection demo" ]
     ; Widget.Result.view_with_keydown_handler widget_result
     ; Node.text
         (sprintf

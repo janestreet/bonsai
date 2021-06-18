@@ -1,7 +1,7 @@
 module Combine = Combine
 module Product = Product
 module Validated = Validated
-open! Core_kernel
+open! Core
 open! Import
 
 

@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open! Bonsai_web
 
-val component : Vdom.Node.t Bonsai.Computation.t
+val component : Vdom.Node.t Computation.t

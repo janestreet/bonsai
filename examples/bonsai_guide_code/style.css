@@ -6,3 +6,27 @@ body {
 ul, pre {
   margin: 0;
 }
+
+.politicians table {
+  border-collapse: collapse;
+  border: 1px solid brown;
+}
+
+.politicians table td {
+  padding: 4px;
+}
+
+.politicians table thead {
+  text-align: center;
+  background: brown;
+  color: antiquewhite;
+  font-weight: bold;
+}
+
+.politicians table tr {
+  background: antiquewhite;
+}
+
+.politicians table tr:nth-child(even) {
+  background: wheat;
+}

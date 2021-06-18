@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open! Bonsai_web
 open Vdom
 open Bonsai.Let_syntax
@@ -55,10 +55,10 @@ module Ids = struct
   ;;
 end
 
-let panel_component id (_ : unit Bonsai.Value.t) =
+let panel_component id (_ : unit Value.t) =
   return
   @@ let%map id = id in
-  Node.div [] [ Node.textf !"Hello, world %{Id}!" id ]
+  Node.div [ Node.textf !"Hello, world %{Id}!" id ]
 ;;
 
 let component =

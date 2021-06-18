@@ -1,5 +1,5 @@
-open! Core_kernel
+open! Core
 open Bonsai_web
 
-val single_counter : Vdom.Node.t Bonsai.Computation.t
-val application : Vdom.Node.t Bonsai.Computation.t
+val single_counter : Vdom.Node.t Computation.t
+val application : Vdom.Node.t Computation.t

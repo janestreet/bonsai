@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open! Async_kernel
 open! Bonsai_web
 open Bonsai.Let_syntax
@@ -12,37 +12,37 @@ let textbox ~placeholder =
      and placeholder = placeholder in
      let view =
        Vdom.Node.input
-         [ Vdom.Attr.value_prop state
-         ; Vdom.Attr.on_input (fun _ new_text -> set_state new_text)
-         ; Vdom.Attr.placeholder placeholder
-         ]
+         ~attr:
+           (Vdom.Attr.many
+              [ Vdom.Attr.value_prop state
+              ; Vdom.Attr.on_input (fun _ new_text -> set_state new_text)
+              ; Vdom.Attr.placeholder placeholder
+              ])
          []
      in
      state, view)
 ;;
 
 (* $MDX part-begin=textbox_with_placeholder *)
-let textbox_with_placeholder =
-  textbox ~placeholder:(Bonsai.Value.return "the placeholder")
-;;
+let textbox_with_placeholder = textbox ~placeholder:(Value.return "the placeholder")
 
 (* $MDX part-end *)
 
 let () =
   Util.run
-    (textbox_with_placeholder |> Bonsai.Computation.map ~f:snd)
+    (textbox_with_placeholder |> Computation.map ~f:snd)
     ~id:"textbox_with_placeholder"
 ;;
 
 (* $MDX part-begin=textbox_chaining *)
 let textbox_chaining =
-  let%sub a_contents, a_view = textbox ~placeholder:(Bonsai.Value.return "") in
+  let%sub a_contents, a_view = textbox ~placeholder:(Value.return "") in
   let%sub _, b_view = textbox ~placeholder:a_contents in
   return
     (let%map a_view = a_view
      and b_view = b_view in
      let style = Vdom.Attr.style (Css_gen.display `Inline_grid) in
-     Vdom.Node.div [ style ] [ a_view; b_view ])
+     Vdom.Node.div ~attr:style [ a_view; b_view ])
 ;;
 
 (* $MDX part-end *)
@@ -52,7 +52,7 @@ let () = Util.run textbox_chaining ~id:"textbox_chaining"
 (* $MDX part-begin=textbox_chaining_match *)
 
 let textbox_matching =
-  let%sub a_contents, a_view = textbox ~placeholder:(Bonsai.Value.return "") in
+  let%sub a_contents, a_view = textbox ~placeholder:(Value.return "") in
   let a_contents =
     let%map s = a_contents in
     let s = String.strip s in
@@ -62,15 +62,15 @@ let textbox_matching =
   | None ->
     return
       (let%map a_view = a_view in
-       let message = Vdom.Node.div [] [ Vdom.Node.text "<a is empty>" ] in
-       Vdom.Node.div [] [ a_view; message ])
+       let message = Vdom.Node.div [ Vdom.Node.text "<a is empty>" ] in
+       Vdom.Node.div [ a_view; message ])
   | Some placeholder ->
     let%sub _, b_view = textbox ~placeholder in
     return
       (let%map a_view = a_view
        and b_view = b_view in
        let style = Vdom.Attr.style (Css_gen.display `Inline_grid) in
-       Vdom.Node.div [ style ] [ a_view; b_view ])
+       Vdom.Node.div ~attr:style [ a_view; b_view ])
 ;;
 
 (* $MDX part-end *)
@@ -79,24 +79,23 @@ let () = Util.run textbox_matching ~id:"textbox_chaining_match"
 
 (* $MDX part-begin=multiple_counters *)
 
-let multiple_counters (input : unit String.Map.t Bonsai.Value.t) =
+let multiple_counters (input : unit String.Map.t Value.t) =
   let%sub counters =
     Bonsai.assoc
       (module String)
       input
-      ~f:(fun _key (_ : unit Bonsai.Value.t) -> State_examples.counter_state_machine)
+      ~f:(fun _key (_ : unit Value.t) -> State_examples.counter_state_machine)
   in
   return
     (let%map counters = counters in
      Vdom.Node.table
-       []
        (counters
         |> Map.to_alist
         |> List.map ~f:(fun (key, vdom) ->
           let open Vdom.Node in
-          let name = td [] [ Vdom.Node.text key ] in
-          let counter = td [] [ vdom ] in
-          Vdom.Node.tr [] [ name; counter ])))
+          let name = td [ Vdom.Node.text key ] in
+          let counter = td [ vdom ] in
+          Vdom.Node.tr [ name; counter ])))
 ;;
 
 (* $MDX part-end *)
@@ -105,9 +104,7 @@ let multiple_counters (input : unit String.Map.t Bonsai.Value.t) =
 
 let multiple_counters_constant =
   multiple_counters
-    ([ "hello", (); "there", () ]
-     |> Map.of_alist_exn (module String)
-     |> Bonsai.Value.return)
+    ([ "hello", (); "there", () ] |> Map.of_alist_exn (module String) |> Value.return)
 ;;
 
 (* $MDX part-end *)
@@ -159,7 +156,7 @@ let people_table people ~inject_remove_person =
   Bonsai.assoc
     (module String)
     people
-    ~f:(fun name (_ : unit Bonsai.Value.t) ->
+    ~f:(fun name (_ : unit Value.t) ->
       let%sub counter = State_examples.counter_state_machine in
       return
         (let%map counter = counter
@@ -168,15 +165,14 @@ let people_table people ~inject_remove_person =
          let open Vdom.Node in
          let remove_person =
            td
-             []
              [ button
-                 [ Vdom.Attr.on_click (fun _ -> inject_remove_person name) ]
+                 ~attr:(Vdom.Attr.on_click (fun _ -> inject_remove_person name))
                  [ text "x" ]
              ]
          in
-         let name = td [] [ text name ] in
-         let counter = td [] [ counter ] in
-         tr [] [ name; counter; remove_person ]))
+         let name = td [ text name ] in
+         let counter = td [ counter ] in
+         tr [ name; counter; remove_person ]))
 ;;
 
 let kudo_tracker =
@@ -200,22 +196,13 @@ let kudo_tracker =
      and form = form in
      let open Vdom.Node in
      div
-       []
-       [ h2 [] [ text "kudos tracker" ]
+       [ h2 [ text "kudos tracker" ]
        ; table
-           []
            [ thead
-               []
-               [ tr
-                   []
-                   [ th [] [ text "Name" ]
-                   ; th [] [ text "# Kudos" ]
-                   ; th [] [ text "Remove" ]
-                   ]
-               ]
-           ; tbody [] (Map.data people_table)
+               [ tr [ th [ text "Name" ]; th [ text "# Kudos" ]; th [ text "Remove" ] ] ]
+           ; tbody (Map.data people_table)
            ]
-       ; h2 [] [ text "Add Person" ]
+       ; h2 [ text "Add Person" ]
        ; form
        ])
 ;;

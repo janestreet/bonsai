@@ -1,4 +1,4 @@
 (library (name bonsai)
- (libraries core_kernel core_kernel.reversed_list virtual_dom.ui_event
+ (libraries core_kernel.core core_kernel.reversed_list virtual_dom.ui_event
   incr_dom.ui_incr)
  (preprocess (pps ppx_jane ppx_pattern_bind)) (public_name bonsai))

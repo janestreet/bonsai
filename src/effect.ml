@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open! Import
 
 module Callback = struct
@@ -194,7 +194,7 @@ let bind (T { request; evaluator }) ~f =
     }
 ;;
 
-include Core_kernel.Monad.Make (struct
+include Core.Monad.Make (struct
     type nonrec 'a t = 'a t
 
     let return = return

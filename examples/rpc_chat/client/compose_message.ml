@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open! Async_kernel
 open! Bonsai_web
 
@@ -24,12 +24,14 @@ let build_result send_message (textbox_content, set_textbox_content) =
   let on_input = Vdom.Attr.on_input (fun _ -> set_textbox_content) in
   let value = Vdom.Attr.string_property "value" textbox_content in
   let text_input =
-    Vdom.Node.input [ on_ret; on_input; value ] [ Vdom.Node.text "submit" ]
+    Vdom.Node.input
+      ~attr:(Vdom.Attr.many [ on_ret; on_input; value ])
+      [ Vdom.Node.text "submit" ]
   in
   let submit_button =
     Vdom_input_widgets.Button.simple "send" ~on_click:(fun _ -> submit_and_then_clear)
   in
-  Vdom.Node.div [ Vdom.Attr.id "compose" ] [ text_input; submit_button ]
+  Vdom.Node.div ~attr:(Vdom.Attr.id "compose") [ text_input; submit_button ]
 ;;
 
 let component ~send_message =

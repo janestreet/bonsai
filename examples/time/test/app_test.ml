@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open! Bonsai_web_test
 open! Bonsai_web
 open Bonsai_time_example

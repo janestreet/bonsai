@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open! Import
 module Constant_id = Unique_id.Int ()
 
@@ -107,8 +107,8 @@ let rec eval : type a. Environment.t -> a t -> a Incr.t =
      | Some incremental -> incremental
      | None ->
        failwith
-         "A Bonsai.Value.t was used outside of the scope that it was declared in!  Make \
-          sure that you aren't storing any Value.t inside a ref!")
+         "A Value.t was used outside of the scope that it was declared in!  Make sure \
+          that you aren't storing any Value.t inside a ref!")
   | Map { t; f } -> Incr.map (eval env t) ~f
   | Map2 { t1; t2; f } -> Incr.map2 (eval env t1) (eval env t2) ~f
   | Map3 { t1; t2; t3; f } -> Incr.map3 (eval env t1) (eval env t2) (eval env t3) ~f

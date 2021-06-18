@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open! Import
 
 let () = Incr.State.(set_max_height_allowed t 1024)

@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open Bonsai_web
 
 module Model = struct
@@ -34,9 +34,9 @@ let draw_history ~active_cursor ~inject ~data:_ ~cursor ~children =
     then [ on_click; Vdom.Attr.class_ "current" ]
     else [ on_click ]
   in
-  let my_node = Vdom.Node.button button_attrs [ Vdom.Node.text "●" ] in
-  let children = Vdom.Node.div [ Vdom.Attr.class_ "ch" ] children in
-  Vdom.Node.div [ Vdom.Attr.class_ "cnt" ] [ my_node; children ]
+  let my_node = Vdom.Node.button ~attr:(many button_attrs) [ Vdom.Node.text "●" ] in
+  let children = Vdom.Node.div ~attr:(Vdom.Attr.class_ "ch") children in
+  Vdom.Node.div ~attr:(Vdom.Attr.class_ "cnt") [ my_node; children ]
 ;;
 
 let view cursor history ~inject =
@@ -46,9 +46,11 @@ let view cursor history ~inject =
   let spacetime =
     Spacetime_tree.traverse history ~f:(draw_history ~inject ~active_cursor:cursor)
   in
-  let spacetime = Vdom.Node.div [ Vdom.Attr.class_ "history_wrapper" ] [ spacetime ] in
+  let spacetime =
+    Vdom.Node.div ~attr:(Vdom.Attr.class_ "history_wrapper") [ spacetime ]
+  in
   fun window ->
-    Vdom.Node.div [ Vdom.Attr.class_ "history_wrapper_wrapper" ] [ window; spacetime ]
+    Vdom.Node.div ~attr:(Vdom.Attr.class_ "history_wrapper_wrapper") [ window; spacetime ]
 ;;
 
 let create (type i r) (inner_component : (i, r) Bonsai.t) : (i, r * Result.t) Bonsai.t =

@@ -1,4 +1,5 @@
-open! Core_kernel
+open! Core
+open! Bonsai
 open! Import
 
 module Result_spec : sig
@@ -62,6 +63,14 @@ module Handle : sig
       diff the gets shown. *)
   val recompute_view : _ t -> unit
 
+  (** This function calls [recompute_view] until either 
+      [max_computes] is reached (defaults to 100), or there are no more 
+      after-display lifecycle events for processing. 
+
+      This can be useful when using e.g. [Bonsai.Edge.on_change], which might
+      otherwise delay their effects until the next frame. *)
+  val recompute_view_until_stable : ?max_computes:int -> _ t -> unit
+
   (** [store_view] is like [show] except that instead of printing the view to
       stdout, it only stores the current view for use with [show_diff].  This
       can be useful if you want to print the diff of "before->after" without
@@ -82,7 +91,7 @@ module Handle : sig
   val create
     :  ('result, 'incoming) Result_spec.t
     -> ?clock:Incr.Clock.t
-    -> 'result Bonsai.Computation.t
+    -> 'result Computation.t
     -> ('result, 'incoming) t
 
   val show_model : _ t -> unit

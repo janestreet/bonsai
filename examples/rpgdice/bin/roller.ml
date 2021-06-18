@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open! Async_kernel
 open! Import
 open Bonsai.Let_syntax
@@ -27,15 +27,14 @@ let component roll_spec =
   let roll_result =
     match roll_spec, model with
     | Ok roll_spec, Some (spec, roll) when phys_equal spec roll_spec ->
-      [ Vdom.Node.pre [] [ Vdom.Node.text (Rpgdice.Roll_result.to_string_hum roll) ]
+      [ Vdom.Node.pre [ Vdom.Node.text (Rpgdice.Roll_result.to_string_hum roll) ]
       ; Vdom.Node.div
-          []
           [ Vdom.Node.text (sprintf "Total: %d" (Rpgdice.Roll_result.to_int roll)) ]
       ]
     | _, None | _, Some _ -> []
   in
   Vdom.Node.div
-    [ Vdom.Attr.id "roller" ]
+    ~attr:(Vdom.Attr.id "roller")
     (Vdom_input_widgets.Button.simple ~on_click:(fun () -> inject ()) "reroll"
      :: roll_result)
 ;;

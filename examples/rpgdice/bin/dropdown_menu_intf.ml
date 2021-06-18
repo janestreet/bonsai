@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open! Async_kernel
 open! Import
 
@@ -12,7 +12,7 @@ end
 module type S = sig
   type enum
 
-  val component : default_model:enum -> (enum * Vdom.Node.t) Bonsai.Computation.t
+  val component : default_model:enum -> (enum * Vdom.Node.t) Computation.t
 end
 
 module type Dropdown_menu = sig

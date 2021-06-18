@@ -32,7 +32,7 @@ Let's see what a test for the simplest Bonsai component would look like.
 First the component:
 
 ```ocaml
-let hello_world : Vdom.Node.t Bonsai.Computation.t =
+let hello_world : Vdom.Node.t Computation.t =
   Bonsai.const (Vdom.Node.span [] [ Vdom.Node.text "hello world" ])
 ;;
 ```
@@ -69,14 +69,14 @@ by the component.
 spice things up, let's build a component that operates on its input:
 
 ```ocaml
-let hello_user (name : string Bonsai.Value.t) : Vdom.Node.t Bonsai.Computation.t =
+let hello_user (name : string Value.t) : Vdom.Node.t Computation.t =
   return
   @@ let%map name = name in
   Vdom.Node.span [] [ Vdom.Node.textf "hello %s" name ]
 ;;
 ```
 
-Now, in your app, the `name` parameter may be a `Bonsai.Value.t` that comes
+Now, in your app, the `name` parameter may be a `Value.t` that comes
 from the result of another computation, or it may originate from a
 `Bonsai.Var.t` that is updated from an RPC (or something similar to an RPC).
 To make things easier for us, let's use `Bonsai.Var.t` to get a mutable handle
@@ -133,7 +133,7 @@ Here, we actually use the `hello_user` component defined previously, but the
 `string Value.t` comes from the component-local state instead of a `Var`:
 
 ```ocaml
-let hello_textbox : Vdom.Node.t Bonsai.Computation.t =
+let hello_textbox : Vdom.Node.t Computation.t =
   let%sub state, set = Bonsai.state [%here] (module String) ~default_model:"" in
   let%sub message = hello_user state in
   return
@@ -146,7 +146,7 @@ let hello_textbox : Vdom.Node.t Bonsai.Computation.t =
 ```
 
 This component is fully self-contained -- its type is `Vdom.Node.t
-Bonsai.Computation.t`, but that interior state is changeable by typing into the
+Computation.t`, but that interior state is changeable by typing into the
 `<input>` text-box.
 
 Testing it is similar to the first component that we tested. We'll start out with
@@ -208,7 +208,7 @@ A great example of this would be the `Bonsai.state` component, which returns
 a value of this type:
 
 ```ocaml skip
-('model * ('model -> Ui_event.t)) Bonsai.Computation.t
+('model * ('model -> Ui_event.t)) Computation.t
 ```
 
 The second part of the tuple inside of the result is what we'd call an "injection function",
@@ -229,7 +229,7 @@ module State_view_spec = struct
 end
 
 let%expect_test "test Bonsai.state" =
-  let component : (string * (string -> Vdom.Event.t)) Bonsai.Computation.t =
+  let component : (string * (string -> Vdom.Event.t)) Computation.t =
     Bonsai.state [%here] (module String) ~default_model:"hello"
   in
   let handle = Handle.create (module State_view_spec) component in

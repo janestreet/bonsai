@@ -3,7 +3,7 @@
     Bonsai_web_ui_form.Element.File_select to allow the user to select a file or files.
 *)
 
-open Core_kernel
+open Core
 
 type t [@@deriving sexp_of]
 

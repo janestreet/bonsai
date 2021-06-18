@@ -68,7 +68,7 @@ code.
 <!-- If the contents of this change, consider updating the doc! -->
 ```sh
 $ cat ../../../examples/hello_world/main.ml
-open! Core_kernel
+open! Core
 open! Bonsai_web
 
 let component = Bonsai.const (Vdom.Node.text "hello world")
@@ -79,7 +79,7 @@ let (_ : _ Start.Handle.t) =
 ```
 
 The component is a `Vdom.Node.t
-Bonsai_web.Future.Bonsai.Computation.t` constructed with the simplest
+Bonsai_web.Future.Computation.t` constructed with the simplest
 possible constructor, `Bonsai.const`, which simply returns as a result
 whatever it's passed.
 

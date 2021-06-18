@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open! Bonsai_web
 open Virtual_dom.Vdom
 open Js_of_ocaml
@@ -27,10 +27,10 @@ let run_vdom ?(include_html = false) vdom =
     if include_html
     then (
       let as_text =
-        let vdom = Node.span [] [ vdom ] in
+        let vdom = Node.span [ vdom ] in
         (Node.to_dom vdom)##.innerHTML |> Js.to_string
       in
-      Node.div [] [ Node.pre [] [ Node.text as_text ]; vdom ])
+      Node.div [ Node.pre [ Node.text as_text ]; vdom ])
     else vdom
   in
   run (Bonsai.const vdom)

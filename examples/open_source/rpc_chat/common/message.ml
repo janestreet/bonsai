@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 
 type t =
   { room : Room.t

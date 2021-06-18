@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open! Bonsai_web
 open! Import
 open Bonsai.Let_syntax
@@ -16,7 +16,7 @@ let component =
   and list_form = list_form
   and form_with_submit = form_with_submit in
   Vdom.Node.div
-    [ Vdom.Attr.style (Css_gen.flex_container ()) ]
+    ~attr:(Vdom.Attr.style (Css_gen.flex_container ()))
     [ big_form; list_form; form_with_submit ]
 ;;
 

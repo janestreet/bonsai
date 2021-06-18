@@ -1,3 +1,3 @@
-open! Core_kernel
+open! Core
 
 val command : Command.t

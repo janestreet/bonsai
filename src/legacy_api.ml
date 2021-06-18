@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open! Import
 
 module type S = Module_types.Component_s

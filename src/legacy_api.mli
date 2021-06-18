@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open! Import
 
 type ('input, 'result) t = 'input Proc.Value.t -> 'result Proc.Computation.t

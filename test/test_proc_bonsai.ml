@@ -1,6 +1,7 @@
-open! Core_kernel
+open! Core
 open! Import
 module Bonsai_lib = Bonsai
+open Bonsai_lib
 open Proc
 open Bonsai.Let_syntax
 module Query_response_tracker = Bonsai.Effect.For_testing.Query_response_tracker
@@ -8,7 +9,7 @@ module Query_response_tracker = Bonsai.Effect.For_testing.Query_response_tracker
 let%expect_test "cutoff" =
   let var = Bonsai.Var.create 0 in
   let value = Bonsai.Var.value var in
-  let component = return @@ Bonsai.Value.cutoff value ~equal:(fun a b -> a % 2 = b % 2) in
+  let component = return @@ Value.cutoff value ~equal:(fun a b -> a % 2 = b % 2) in
   let handle = Handle.create (Result_spec.string (module Int)) component in
   Handle.show handle;
   [%expect {| 0 |}];
@@ -21,8 +22,8 @@ let%expect_test "cutoff" =
 ;;
 
 let%expect_test "mapn" =
-  let (_ : unit Bonsai.Computation.t) =
-    let%mapn.Bonsai.Computation () = Bonsai.const ()
+  let (_ : unit Computation.t) =
+    let%mapn.Computation () = Bonsai.const ()
     and () = Bonsai.const ()
     and () = Bonsai.const () in
     ()
@@ -32,8 +33,8 @@ let%expect_test "mapn" =
 
 let%expect_test "if%sub" =
   let component input =
-    let a = Bonsai.Value.return "hello" in
-    let b = Bonsai.Value.return "world" in
+    let a = Value.return "hello" in
+    let b = Value.return "world" in
     if%sub input then Bonsai.read a else Bonsai.read b
   in
   let var = Bonsai.Var.create true in
@@ -104,7 +105,7 @@ let%expect_test "on_display for updating a state" =
         if Int.equal state input then None else Some (set_state (Some input))
     in
     let%sub () = Bonsai.Edge.after_display' update in
-    return (Bonsai.Value.both input state)
+    return (Value.both input state)
   in
   let var = Bonsai.Var.create 1 in
   let handle =
@@ -134,20 +135,20 @@ let%expect_test "path" =
   let component =
     let%sub () = Bonsai.const () in
     let%sub path = Bonsai.Private.path in
-    return (Bonsai.Value.map path ~f:Bonsai.Private.Path.sexp_of_t)
+    return (Value.map path ~f:Bonsai.Private.Path.sexp_of_t)
   in
   let handle = Handle.create (Result_spec.sexp (module Sexp)) component in
   Handle.show handle;
   (* The first of these "Subst_from" is actually a component that is
      added by the testing helpers. *)
-  [%expect {| (Subst_from Subst_into Subst_from) |}]
+  [%expect {| (Subst_from Subst_into Subst_into Subst_from) |}]
 ;;
 
 let%expect_test "assoc and enum path" =
   let component =
     Bonsai.assoc
       (module Int)
-      (Bonsai.Value.return (Int.Map.of_alist_exn [ -1, (); 1, () ]))
+      (Value.return (Int.Map.of_alist_exn [ -1, (); 1, () ]))
       ~f:(fun i _ ->
         if%sub i >>| ( > ) 0 then Bonsai.Private.path else Bonsai.Private.path)
   in
@@ -192,7 +193,7 @@ let%expect_test "chain + both" =
   let component input =
     let%sub a = add_one input in
     let%sub b = double a in
-    let%sub c = add (Bonsai.Value.both a b) in
+    let%sub c = add (Value.both a b) in
     return c
   in
   let var = Bonsai.Var.create 1 in
@@ -249,8 +250,8 @@ let%expect_test "match%sub" =
   in
   let component =
     match%sub Bonsai.Var.value var with
-    | First s -> Bonsai.read (Bonsai.Value.map s ~f:(sprintf "%s world"))
-    | Second i -> Bonsai.read (Bonsai.Value.map i ~f:Int.to_string)
+    | First s -> Bonsai.read (Value.map s ~f:(sprintf "%s world"))
+    | Second i -> Bonsai.read (Value.map i ~f:Int.to_string)
   in
   let handle = Handle.create (Result_spec.string (module String)) component in
   Handle.show handle;
@@ -266,8 +267,8 @@ let%expect_test "match%sub" =
   in
   let component =
     match%sub Bonsai.Var.value var with
-    | First s -> Bonsai.read (Bonsai.Value.map s ~f:(sprintf "%s world"))
-    | Second i -> Bonsai.read (Bonsai.Value.map i ~f:Int.to_string)
+    | First s -> Bonsai.read (Value.map s ~f:(sprintf "%s world"))
+    | Second i -> Bonsai.read (Value.map i ~f:Int.to_string)
   in
   let handle = Handle.create (Result_spec.string (module String)) component in
   Handle.show handle;
@@ -307,8 +308,8 @@ let%expect_test "match%sub repro" =
 
 let%expect_test "if%sub" =
   let component input =
-    let a = Bonsai.Value.return "hello" in
-    let b = Bonsai.Value.return "world" in
+    let a = Value.return "hello" in
+    let b = Value.return "world" in
     if%sub input then Bonsai.read a else Bonsai.read b
   in
   let var = Bonsai.Var.create true in
@@ -333,12 +334,12 @@ let%expect_test "let%sub patterns" =
 ;;
 
 let%expect_test "assoc simplifies its inner computation, if possible" =
-  let value = Bonsai.Value.return String.Map.empty in
+  let value = Value.return String.Map.empty in
   let component =
     Bonsai.assoc
       (module String)
       value
-      ~f:(fun key data -> Bonsai.read (Bonsai.Value.both key data))
+      ~f:(fun key data -> Bonsai.read (Value.both key data))
   in
   print_s Bonsai_lib.Private.(Computation.sexp_of_packed (reveal_computation component));
   [%expect {| (Assoc_simpl ((map constant))) |}]
@@ -472,8 +473,8 @@ let%test_module "testing Bonsai internals" =
 let%expect_test "multiple maps respect cutoff" =
   let component input =
     input
-    |> Bonsai.Value.map ~f:(fun (_ : int) -> ())
-    |> Bonsai.Value.map ~f:(fun () -> print_endline "triggered")
+    |> Value.map ~f:(fun (_ : int) -> ())
+    |> Value.map ~f:(fun () -> print_endline "triggered")
     |> return
   in
   let var = Bonsai.Var.create 1 in
@@ -492,21 +493,21 @@ let%expect_test "multiple maps respect cutoff" =
 
 let%expect_test "let syntax is collapsed upon eval" =
   let value =
-    let%map () = Bonsai.Value.return ()
-    and () = Bonsai.Value.return ()
-    and () = Bonsai.Value.return ()
-    and () = Bonsai.Value.return ()
-    and () = Bonsai.Value.return ()
-    and () = Bonsai.Value.return ()
-    and () = Bonsai.Value.return () in
+    let%map () = Value.return ()
+    and () = Value.return ()
+    and () = Value.return ()
+    and () = Value.return ()
+    and () = Value.return ()
+    and () = Value.return ()
+    and () = Value.return () in
     ()
   in
   let packed =
     let open Bonsai.Private in
-    value |> reveal_value |> Value.eval Environment.empty |> Incr.pack
+    value |> reveal_value |> Value.eval Environment.empty |> Ui_incr.pack
   in
   let filename = Stdlib.Filename.temp_file "incr" "out" in
-  Incremental.Packed.save_dot filename [ packed ];
+  Ui_incr.Packed.save_dot filename [ packed ];
   let dot_contents = In_channel.read_all filename in
   require
     [%here]
@@ -517,8 +518,8 @@ let%expect_test "let syntax is collapsed upon eval" =
 
 let%test_unit "constant prop doesn't happen" =
   (* Just make sure that this expression doesn't crash *)
-  let (_ : int Bonsai.Computation.t) =
-    match%sub Bonsai.Value.return (First 1) with
+  let (_ : int Computation.t) =
+    match%sub Value.return (First 1) with
     | First x -> Bonsai.read x
     | Second x -> Bonsai.read x
   in
@@ -550,7 +551,7 @@ let%expect_test "ignored result of assoc" =
 
 let%expect_test "on_display for updating a state (using on_change)" =
   let callback =
-    Bonsai.Value.return (fun prev cur ->
+    Value.return (fun prev cur ->
       Ui_event.print_s [%message "change!" (prev : int option) (cur : int)])
   in
   let component input = Bonsai.Edge.on_change' [%here] (module Int) ~callback input in
@@ -625,7 +626,7 @@ let%expect_test "actor" =
 
 let%expect_test "lifecycle" =
   let effect action on =
-    Ui_event.print_s [%message (action : string) (on : string)] |> Bonsai.Value.return
+    Ui_event.print_s [%message (action : string) (on : string)] |> Value.return
   in
   let component input =
     let rendered = Bonsai.const "" in
@@ -680,7 +681,7 @@ let%expect_test "Clock.every" =
       Bonsai.Clock.every
         [%here]
         (Time_ns.Span.of_sec 3.0)
-        (Bonsai.Value.return (Bonsai.Effect.inject_ignoring_response (print_hi ())))
+        (Value.return (Bonsai.Effect.inject_ignoring_response (print_hi ())))
     in
     Bonsai.const ()
   in
@@ -716,7 +717,7 @@ let edge_poll_shared ~get_expect_output =
       (module String)
       Bonsai.Edge.Poll.Starting.empty
       (Bonsai.Var.value var)
-      ~effect:(Bonsai.Value.return effect)
+      ~effect:(Value.return effect)
   in
   let handle =
     Handle.create
@@ -795,33 +796,258 @@ let%expect_test "Edge.poll out of order" =
 ;;
 
 let%expect_test "Clock.now" =
-  let clock = Incr.Clock.create ~start:Time_ns.epoch () in
+  let clock = Ui_incr.Clock.create ~start:Time_ns.epoch () in
   let component = Bonsai.Clock.now in
   let handle =
     Handle.create ~clock (Result_spec.sexp (module Time_ns.Alternate_sexp)) component
   in
   Handle.show handle;
   [%expect {| "1970-01-01 00:00:00Z" |}];
-  Incr.Clock.advance_clock_by clock (Time_ns.Span.of_sec 0.5);
+  Ui_incr.Clock.advance_clock_by clock (Time_ns.Span.of_sec 0.5);
   Handle.show handle;
   [%expect {| "1970-01-01 00:00:00.5Z" |}];
-  Incr.Clock.advance_clock_by clock (Time_ns.Span.of_sec 0.7);
+  Ui_incr.Clock.advance_clock_by clock (Time_ns.Span.of_sec 0.7);
   Handle.show handle;
   [%expect {| "1970-01-01 00:00:01.2Z" |}]
 ;;
 
 let%expect_test "Clock.approx_now" =
-  let clock = Incr.Clock.create ~start:Time_ns.epoch () in
+  let clock = Ui_incr.Clock.create ~start:Time_ns.epoch () in
   let component = Bonsai.Clock.approx_now ~tick_every:(Time_ns.Span.of_sec 1.0) in
   let handle =
     Handle.create ~clock (Result_spec.sexp (module Time_ns.Alternate_sexp)) component
   in
   Handle.show handle;
   [%expect {| "1970-01-01 00:00:00Z" |}];
-  Incr.Clock.advance_clock_by clock (Time_ns.Span.of_sec 0.5);
+  Ui_incr.Clock.advance_clock_by clock (Time_ns.Span.of_sec 0.5);
   Handle.show handle;
   [%expect {| "1970-01-01 00:00:00Z" |}];
-  Incr.Clock.advance_clock_by clock (Time_ns.Span.of_sec 0.7);
+  Ui_incr.Clock.advance_clock_by clock (Time_ns.Span.of_sec 0.7);
   Handle.show handle;
   [%expect {| "1970-01-01 00:00:01.2Z" |}]
+;;
+
+let chain_computation =
+  let%sub a = Bonsai.const "x" in
+  let%sub b, set_b = Bonsai.state [%here] (module String) ~default_model:"" in
+  let%sub c, set_c = Bonsai.state [%here] (module String) ~default_model:"" in
+  let%sub () = Bonsai.Edge.on_change [%here] (module String) a ~callback:set_b in
+  let%sub () = Bonsai.Edge.on_change [%here] (module String) b ~callback:set_c in
+  return (Value.map3 a b c ~f:(sprintf "a:%s b:%s c:%s"))
+;;
+
+let%expect_test "chained on_change" =
+  let handle = Handle.create (Result_spec.string (module String)) chain_computation in
+  Handle.show handle;
+  [%expect {| a:x b: c: |}];
+  Handle.show handle;
+  [%expect {| a:x b:x c: |}];
+  Handle.show handle;
+  [%expect {| a:x b:x c:x |}]
+;;
+
+let%expect_test "chained on_change with " =
+  let handle = Handle.create (Result_spec.string (module String)) chain_computation in
+  Handle.recompute_view_until_stable handle;
+  Handle.show handle;
+  [%expect {| a:x b:x c:x |}]
+;;
+
+let%expect_test "infinite chain!" =
+  let computation =
+    let%sub state, set_state = Bonsai.state [%here] (module Int) ~default_model:0 in
+    let callback =
+      let%map set_state = set_state in
+      fun new_state -> set_state (new_state + 1)
+    in
+    let%sub () = Bonsai.Edge.on_change [%here] (module Int) state ~callback in
+    Bonsai.const ()
+  in
+  let handle = Handle.create (Result_spec.string (module Unit)) computation in
+  Expect_test_helpers_base.require_does_raise [%here] (fun () ->
+    Handle.recompute_view_until_stable handle);
+  [%expect {| (Failure "view not stable after 100 recomputations") |}]
+;;
+
+let%expect_test "computation.all_map" =
+  let component =
+    let%map.Computation map =
+      [ 1, Bonsai.const "a"; 2, Bonsai.const "b" ]
+      |> Int.Map.of_alist_exn
+      |> Computation.all_map
+    in
+    [%sexp_of: string Int.Map.t] map
+  in
+  let handle = Handle.create (Result_spec.string (module Sexp)) component in
+  Handle.show handle;
+  [%expect {| ((1 a)(2 b)) |}]
+;;
+
+let%expect_test "dynamic lookup" =
+  let id = Bonsai.Dynamic_scope.create ~name:"my-id" ~fallback:"no" () in
+  let component =
+    Bonsai.Dynamic_scope.set id (Value.return "hello") ~f:(fun _ ->
+      Bonsai.Dynamic_scope.lookup id)
+  in
+  let handle = Handle.create (Result_spec.string (module String)) component in
+  Handle.show handle;
+  [%expect {| hello |}]
+;;
+
+let%expect_test "dynamic lookup fails" =
+  let id = Bonsai.Dynamic_scope.create ~name:"my-id" ~fallback:"no" () in
+  let component = Bonsai.Dynamic_scope.lookup id in
+  let handle = Handle.create (Result_spec.string (module String)) component in
+  Handle.show handle;
+  [%expect {| no |}]
+;;
+
+let%expect_test "eval inside one, use inside another" =
+  let id = Bonsai.Dynamic_scope.create ~name:"my-id" ~fallback:"no" () in
+  let component =
+    let%sub a =
+      Bonsai.Dynamic_scope.set id (Value.return "hello") ~f:(fun _ ->
+        Bonsai.Dynamic_scope.lookup id)
+    in
+    let%sub b =
+      Bonsai.Dynamic_scope.set id (Value.return "world") ~f:(fun _ -> Bonsai.read a)
+    in
+    return b
+  in
+  let handle = Handle.create (Result_spec.string (module String)) component in
+  Handle.show handle;
+  [%expect {| hello |}]
+;;
+
+let%expect_test "sub outside, use inside" =
+  let id = Bonsai.Dynamic_scope.create ~name:"my-id" ~fallback:"no" () in
+  let component =
+    let%sub find = Bonsai.Dynamic_scope.lookup id in
+    Bonsai.Dynamic_scope.set id (Value.return "hello") ~f:(fun _ -> return find)
+  in
+  let handle = Handle.create (Result_spec.string (module String)) component in
+  Handle.show handle;
+  [%expect {| no |}]
+;;
+
+let%expect_test "use resetter" =
+  let id = Bonsai.Dynamic_scope.create ~name:"my-id" ~fallback:"no" () in
+  let component =
+    Bonsai.Dynamic_scope.set id (Value.return "hello") ~f:(fun { revert } ->
+      revert (Bonsai.Dynamic_scope.lookup id))
+  in
+  let handle = Handle.create (Result_spec.string (module String)) component in
+  Handle.show handle;
+  [%expect {| no |}]
+;;
+
+let%expect_test "nested resetter" =
+  let id = Bonsai.Dynamic_scope.create ~name:"my-id" ~fallback:"no" () in
+  let component =
+    Bonsai.Dynamic_scope.set id (Value.return "hello") ~f:(fun _ ->
+      Bonsai.Dynamic_scope.set id (Value.return "world") ~f:(fun { revert } ->
+        revert (Bonsai.Dynamic_scope.lookup id)))
+  in
+  let handle = Handle.create (Result_spec.string (module String)) component in
+  Handle.show handle;
+  [%expect {| hello |}]
+;;
+
+let%expect_test "resetter only impacts the id you target" =
+  let id_a = Bonsai.Dynamic_scope.create ~name:"my-id" ~fallback:"no-a" () in
+  let id_b = Bonsai.Dynamic_scope.create ~name:"my-id" ~fallback:"no-b" () in
+  let component =
+    Bonsai.Dynamic_scope.set id_a (Value.return "hello") ~f:(fun { revert } ->
+      Bonsai.Dynamic_scope.set id_b (Value.return "world") ~f:(fun _ ->
+        revert
+        @@ let%sub a = Bonsai.Dynamic_scope.lookup id_a in
+        let%sub b = Bonsai.Dynamic_scope.lookup id_b in
+        return (Value.map2 a b ~f:(fun a b -> a ^ " " ^ b))))
+  in
+  let handle = Handle.create (Result_spec.string (module String)) component in
+  Handle.show handle;
+  [%expect {| no-a world |}]
+;;
+
+module M = struct
+  type t =
+    { a : string
+    ; b : int
+    }
+  [@@deriving sexp_of, fields]
+end
+
+let%expect_test "derived value" =
+  let id =
+    Bonsai.Dynamic_scope.create
+      ~sexp_of:M.sexp_of_t
+      ~name:"my-id"
+      ~fallback:{ a = "hi"; b = 5 }
+      ()
+  in
+  let a = Bonsai.Dynamic_scope.derived id ~get:M.a ~set:(Field.fset M.Fields.a) in
+  let component =
+    Bonsai.Dynamic_scope.set a (Value.return "hello") ~f:(fun _ ->
+      Bonsai.Dynamic_scope.lookup id)
+  in
+  let handle = Handle.create (Result_spec.sexp (module M)) component in
+  Handle.show handle;
+  [%expect {| ((a hello) (b 5)) |}]
+;;
+
+let%expect_test "derived value revert" =
+  let id =
+    Bonsai.Dynamic_scope.create
+      ~sexp_of:M.sexp_of_t
+      ~name:"my-id"
+      ~fallback:{ a = "hi"; b = 5 }
+      ()
+  in
+  let a = Bonsai.Dynamic_scope.derived id ~get:M.a ~set:(Field.fset M.Fields.a) in
+  let component =
+    Bonsai.Dynamic_scope.set a (Value.return "hello") ~f:(fun { revert } ->
+      revert (Bonsai.Dynamic_scope.lookup id))
+  in
+  let handle = Handle.create (Result_spec.sexp (module M)) component in
+  Handle.show handle;
+  [%expect {| ((a hi) (b 5)) |}]
+;;
+
+let%expect_test "derived value nested revert inner" =
+  let id =
+    Bonsai.Dynamic_scope.create
+      ~sexp_of:M.sexp_of_t
+      ~name:"my-id"
+      ~fallback:{ a = "hi"; b = 5 }
+      ()
+  in
+  let a = Bonsai.Dynamic_scope.derived id ~get:M.a ~set:(Field.fset M.Fields.a) in
+  let component =
+    Bonsai.Dynamic_scope.set a (Value.return "hello") ~f:(fun _ ->
+      Bonsai.Dynamic_scope.set a (Value.return "world") ~f:(fun { revert } ->
+        revert (Bonsai.Dynamic_scope.lookup id)))
+  in
+  let handle = Handle.create (Result_spec.sexp (module M)) component in
+  Handle.show handle;
+  [%expect {| ((a hello) (b 5)) |}]
+;;
+
+let%expect_test "derived value nested revert outer" =
+  let id =
+    Bonsai.Dynamic_scope.create
+      ~sexp_of:M.sexp_of_t
+      ~name:"my-id"
+      ~fallback:{ a = "hi"; b = 5 }
+      ()
+  in
+  let a = Bonsai.Dynamic_scope.derived id ~get:M.a ~set:(Field.fset M.Fields.a) in
+  let b = Bonsai.Dynamic_scope.derived id ~get:M.b ~set:(Field.fset M.Fields.b) in
+  let component =
+    Bonsai.Dynamic_scope.set a (Value.return "hello") ~f:(fun { revert } ->
+      Bonsai.Dynamic_scope.set b (Value.return 1000) ~f:(fun _ ->
+        revert (Bonsai.Dynamic_scope.lookup id)))
+  in
+  let handle = Handle.create (Result_spec.sexp (module M)) component in
+  Handle.show handle;
+  [%expect {| ((a hi) (b 1000)) |}]
 ;;

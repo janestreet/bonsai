@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open! Async_rpc_kernel
 
 module Message_stream : sig

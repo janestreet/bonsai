@@ -1,6 +1,6 @@
 # Why no bind?
 
-Many have asked the question "`Bonsai.Value.t` is an Applicative, why isn't it a 
+Many have asked the question "`Value.t` is an Applicative, why isn't it a 
 Monad?"  Certainly, for the users of a library, having a Monad gives the user 
 much more power.  For example, take a look at this code using monadic bind:
 
@@ -20,7 +20,7 @@ is only an Applicative! (Do not try to do the same with an Applicative, it is
 impossible.)
 
 The dynamism on display is quite useful, but sadly, it's dynamism that would 
-hurt Bonsai if `Bonsai.Value.t` were a Monad.  The main issue is that dynamism would 
+hurt Bonsai if `Value.t` were a Monad.  The main issue is that dynamism would 
 prevent "whole-program analysis" of the app, and this would hurt a few neat features
 of Bonsai:
 
