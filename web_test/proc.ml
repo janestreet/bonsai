@@ -36,6 +36,11 @@ module Handle = struct
     Node_helpers.User_actions.click_on element
   ;;
 
+  let set_checkbox handle ~get_vdom ~selector ~checked =
+    let element = get_element handle ~get_vdom ~selector in
+    Node_helpers.User_actions.set_checkbox element ~checked
+  ;;
+
   let submit_form handle ~get_vdom ~selector =
     let element = get_element handle ~get_vdom ~selector in
     Node_helpers.User_actions.submit_form element
@@ -65,6 +70,32 @@ module Handle = struct
     get_element handle ~get_vdom ~selector
     |> Node_helpers.trigger_hook ~type_id ~name ~arg
   ;;
+
+  let get_hook_value handle ~get_vdom ~selector ~name type_id =
+    get_element handle ~get_vdom ~selector |> Node_helpers.get_hook_value ~type_id ~name
+  ;;
+
+  module Bulk_size_tracker = struct
+    open Bonsai_web_ui_element_size_hooks
+
+    type change =
+      { selector : string
+      ; width : float
+      ; height : float
+      }
+
+    let change_sizes handle ~get_vdom changes =
+      Bulk_size_tracker.For_testing.change_sizes
+        (List.map changes ~f:(fun { selector; height; width } ->
+           ( get_hook_value
+               handle
+               ~get_vdom
+               ~selector
+               ~name:Bulk_size_tracker.For_testing.hook_name
+               Bulk_size_tracker.For_testing.type_id
+           , { Bulk_size_tracker.Dimensions.width; height } )))
+    ;;
+  end
 
   module Drag_and_drop = struct
     let run handle ~get_vdom ~name action =

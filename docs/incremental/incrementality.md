@@ -13,12 +13,9 @@ other Bonsai components and joins their results.
 open Bonsai.Let_syntax
 
 let super_component input = 
-  let%sub c1 = component_1 input in
-  let%sub c2 = component_2 input in
-  return (
-    let%map c1 = c1 
-    and     c2 = c2 in 
-    Vdom.Node.div [] [ c1; c2 ])
+  let%map.Computation c1 = component_1 input 
+  and                 c2 = component_2 input in
+  Vdom.Node.div [] [ c1; c2 ]
 ```
 
 This Bonsai function approximately lowers to the following `Incr_dom` implementation:
@@ -41,7 +38,7 @@ let super_component
   ~input:(Input.t Incr.t)
   ~model:(Model.t Incr.t)
   ~old_model:(Model.t option Incr.t)
-  ~inject:(Action.t -> Event.t)
+  ~inject:(Action.t -> unit Effect.t)
   : (Action.t, 'Model.t, unit) Incr_dom.Component.t Incr.t =
   let c1_model = model >>| Model.c1_model in 
   let c2_model = model >>| Model.c2_model in 

@@ -10,7 +10,6 @@ module type Comparator = Module_types.Comparator
 
 type ('k, 'cmp) comparator = ('k, 'cmp) Module_types.comparator
 
-module Event = Event
 module Effect = Effect
 
 module Private = struct
@@ -36,10 +35,15 @@ end
 include (Proc : module type of Proc with module Private := Proc.Private)
 
 module Debug = struct
+  let instrument_computation c ~start_timer ~stop_timer =
+    Private.reveal_computation c
+    |> Instrumentation.instrument_computation ~start_timer ~stop_timer
+    |> Private.conceal_computation
+  ;;
+
   let to_dot c = To_dot.to_dot (Private.reveal_computation c)
 end
 
 module Arrow_deprecated = struct
   include Legacy_api
-  module Event = Event
 end

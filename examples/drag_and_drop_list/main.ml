@@ -31,48 +31,37 @@ let item ~now data =
 ;;
 
 let component =
-  let input = List.init 30 ~f:(fun x -> x, x) |> Int.Map.of_alist_exn |> Value.return in
-  let%sub now = Bonsai.Clock.approx_now ~tick_every:(Time_ns.Span.of_sec 1.0) in
-  let%sub data =
-    Bonsai.assoc
-      (module Int)
-      input
-      ~f:(fun key data ->
-        let%sub item = item ~now data in
-        return (Value.both item key))
-  in
-  let%sub dnd =
-    Drag_and_drop.create
+  let%sub input, extend_input =
+    Bonsai.state_machine0
       [%here]
-      ~source_id:(module Int)
-      ~target_id:(module Int)
-      ~on_drop:(Value.return (fun a b -> Ui_event.print_s [%message (a : int) (b : int)]))
+      (module struct
+        type t = Int.Set.t [@@deriving sexp, equal]
+      end)
+      (module Unit)
+      ~default_model:(Int.Set.of_list [ 0; 1; 2 ])
+      ~apply_action:(fun ~inject:_ ~schedule_event:_ model () ->
+        Int.Set.add model (Int.Set.length model))
   in
-  let%sub sentinel = return (dnd >>| Drag_and_drop.sentinel) in
-  let%sub dragged_element = Drag_and_drop.dragged_element dnd ~f:(item ~now) in
-  let%sub list =
-    Reorderable_list.list
+  let%sub now = Bonsai.Clock.approx_now ~tick_every:(Time_ns.Span.of_sec 1.0) in
+  let%sub () =
+    Bonsai.Clock.every
+      [%here]
+      (Time_ns.Span.of_sec 1.0)
+      (let%map extend_input = extend_input in
+       extend_input ())
+  in
+  let%sub _, view =
+    Reorderable_list.simple
       (module Int)
-      ~dnd
       ~extra_item_attrs:(Value.return (Vdom.Attr.class_ S.transition_transform))
-      ~item_height:40
-      data
+      ~default_item_height:40
+      ~render:(item ~now)
+      input
   in
-  return
-    (let%map sentinel = sentinel
-     and dragged_element = dragged_element
-     and list = list in
-     Vdom.Node.div
-       ~attr:(sentinel ~name:"list")
-       [ Vdom.Node.text
-           "This cannot actually be re-ordered, since it is a demo of the re-orderable \
-            list library, which does not take responsibility for changing application \
-            state."
-       ; list
-       ; dragged_element
-       ])
+  return view
 ;;
 
 let (_ : _ Start.Handle.t) =
+  Css_gen.Expert.should_validate := false;
   Start.start Start.Result_spec.just_the_view ~bind_to_element_with_id:"app" component
 ;;

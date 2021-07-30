@@ -2,11 +2,11 @@ open! Core
 include Virtual_dom
 include Bonsai_web
 
-module Event = struct
-  type t = Vdom.Event.t
+module Effect = struct
+  type 'a t = 'a Vdom.Effect.t
 
-  let no_op = Vdom.Event.Ignore
-  let sequence xs = Vdom.Event.Many xs
+  let no_op = Vdom.Effect.Ignore
+  let sequence xs = Vdom.Effect.Many xs
   let external_ = External_event.inject
 end
 

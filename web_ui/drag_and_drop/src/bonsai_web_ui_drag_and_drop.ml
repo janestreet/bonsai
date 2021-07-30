@@ -60,7 +60,7 @@ type ('source_id, 'target_id) t =
   ; drop_target : id:'target_id -> Attr.t
   ; sentinel : name:string -> Attr.t
   ; model : ('source_id, 'target_id) State_machine_model.t
-  ; inject : ('source_id, 'target_id) Action.t -> Ui_event.t
+  ; inject : ('source_id, 'target_id) Action.t list -> unit Effect.t
   }
 [@@deriving fields]
 
@@ -102,7 +102,7 @@ module For_testing = struct
       module State = Unit
 
       module Input = struct
-        type t = Action.t -> Ui_event.t [@@deriving sexp]
+        type t = Action.t -> unit Ui_effect.t [@@deriving sexp]
 
         let combine _ second = second
       end
@@ -121,7 +121,7 @@ let add_event_listener, remove_event_listener =
     ref Bonsai.Private.Path.Map.empty
   in
   let install =
-    Effect.of_sync_fun (fun (typ, path, handler) ->
+    Bonsai.Effect.of_sync_fun (fun (typ, path, handler) ->
       if am_running_test
       then print_endline "adding window event listener"
       else (
@@ -130,14 +130,12 @@ let add_event_listener, remove_event_listener =
         in
         active := Map.update !active path ~f:(function _ -> listener);
         ()))
-    |> unstage
   in
   let uninstall =
-    Effect.of_sync_fun (fun path ->
+    Bonsai.Effect.of_sync_fun (fun path ->
       if am_running_test
       then print_endline "removing window event listener"
       else Map.find !active path |> Option.iter ~f:Dom_html.removeEventListener)
-    |> unstage
   in
   (fun typ path handler -> install (typ, path, handler)), uninstall
 ;;
@@ -156,32 +154,34 @@ let create
         type t = (Source.t, Target.t) State_machine_model.t [@@deriving sexp, equal]
       end)
       (module struct
-        type t = (Source.t, Target.t) Action.t [@@deriving sexp, equal]
+        type t = (Source.t, Target.t) Action.t list [@@deriving sexp, equal]
       end)
       on_drop
       ~default_model:Not_dragging
-      ~apply_action:(fun ~inject:_ ~schedule_event on_drop model action ->
-        match action with
-        | Started_drag { source; offset; position; size } ->
-          (match model with
-           | State_machine_model.Not_dragging -> ()
-           | Dragging _ -> bug "Started dragging before dragging finished");
-          Dragging { source; offset; position; size; target = None; has_moved = false }
-        | Set_target target ->
-          (match model with
-           | State_machine_model.Not_dragging -> Not_dragging
-           | Dragging t -> Dragging { t with target })
-        | Finished_drag ->
-          (match model with
-           | State_machine_model.Not_dragging | Dragging { target = None; _ } ->
-             Not_dragging
-           | Dragging { source; target = Some target; _ } ->
-             schedule_event (on_drop source target);
-             Not_dragging)
-        | Mouse_moved position ->
-          (match model with
-           | State_machine_model.Not_dragging -> Not_dragging
-           | Dragging t -> Dragging { t with position; has_moved = true }))
+      ~apply_action:(fun ~inject:_ ~schedule_event on_drop model actions ->
+        List.fold actions ~init:model ~f:(fun model action ->
+          match action with
+          | Action.Started_drag { source; offset; position; size } ->
+            (match model with
+             | State_machine_model.Not_dragging -> ()
+             | Dragging _ -> bug "Started dragging before dragging finished");
+            Dragging
+              { source; offset; position; size; target = None; has_moved = false }
+          | Set_target target ->
+            (match model with
+             | State_machine_model.Not_dragging -> Not_dragging
+             | Dragging t -> Dragging { t with target })
+          | Finished_drag ->
+            (match model with
+             | State_machine_model.Not_dragging | Dragging { target = None; _ } ->
+               Not_dragging
+             | Dragging { source; target = Some target; _ } ->
+               schedule_event (on_drop source target);
+               Not_dragging)
+          | Mouse_moved position ->
+            (match model with
+             | State_machine_model.Not_dragging -> Not_dragging
+             | Dragging t -> Dragging { t with position; has_moved = true })))
   in
   let%sub source =
     return
@@ -202,7 +202,7 @@ let create
                let left = Int.of_float bounding_rect##.left in
                let size = { Size.width; height } in
                let offset = { Position.x = position.x - left; y = position.y - top } in
-               inject (Started_drag { source = id; offset; position; size }))
+               inject [ Started_drag { source = id; offset; position; size } ])
            ; Attr.style (Css_gen.user_select `None)
            ])
   in
@@ -217,67 +217,65 @@ let create
       ~on_deactivate:
         (let%map path_for_mousemove = path_for_mousemove
          and path_for_mouseup = path_for_mouseup in
-         Effect.inject_ignoring_response
-         @@ let%bind.Effect () = remove_event_listener path_for_mousemove in
-         let%bind.Effect () = remove_event_listener path_for_mouseup in
-         Effect.return ())
+         Effect.all_unit
+           [ remove_event_listener path_for_mousemove
+           ; remove_event_listener path_for_mouseup
+           ])
       ~on_activate:
         (let%map inject = inject
          and path_for_mousemove = path_for_mousemove
          and path_for_mouseup = path_for_mouseup
          and universe_suffix = universe_suffix in
-         (let%bind.Effect () =
-            add_event_listener
-              Dom_html.Event.mousemove
-              path_for_mousemove
-              (fun (event : Dom_html.mouseEvent Js.t) ->
-                 let (event
-                      : < composedPath : 'a Js.js_array Js.t Js.meth
-                     ; Dom_html.mouseEvent >
-                       Js.t)
-                   =
-                   Js.Unsafe.coerce event
-                 in
-                 (* Why client coordinates and not page or screen coordinates. I've
-                    tested with all three and client coordinates is clearly the
-                    correct choice.
+         let%bind.Effect () =
+           add_event_listener
+             Dom_html.Event.mousemove
+             path_for_mousemove
+             (fun (event : Dom_html.mouseEvent Js.t) ->
+                let (event
+                     : < composedPath : 'a Js.js_array Js.t Js.meth
+                    ; Dom_html.mouseEvent >
+                      Js.t)
+                  =
+                  Js.Unsafe.coerce event
+                in
+                (* Why client coordinates and not page or screen coordinates. I've
+                   tested with all three and client coordinates is clearly the
+                   correct choice.
 
-                    - page: If you scroll while dragging, the dragged element moves
-                      away from your mouse because the diff between start and end
-                      positions gets larger even though the mouse is stationary on
-                      the screen.
-                    - screen: If you move the mouse while dragging (which can
-                      happen if you use window management keyboard shortcuts), the
-                      dragged element stays in the same position relative to the
-                      browser window, since the mouse didn't move, but this is not
-                      good because the mouse window has moved away from the mouse.
-                    - client: Scrolling or moving the window does not pull the
-                      dragged element away from the mouse.
+                   - page: If you scroll while dragging, the dragged element moves
+                     away from your mouse because the diff between start and end
+                     positions gets larger even though the mouse is stationary on
+                     the screen.
+                   - screen: If you move the mouse while dragging (which can
+                     happen if you use window management keyboard shortcuts), the
+                     dragged element stays in the same position relative to the
+                     browser window, since the mouse didn't move, but this is not
+                     good because the mouse window has moved away from the mouse.
+                   - client: Scrolling or moving the window does not pull the
+                     dragged element away from the mouse.
 
-                    It makes sense that client coordinates is correct because the
-                    dragged element itself uses fixed positioning, which is roughly
-                    equivalent to client coordinates.  *)
-                 let position = { Position.x = event##.clientX; y = event##.clientY } in
-                 let path = Js.to_array event##composedPath |> Array.to_list in
-                 let target =
-                   List.find_map path ~f:(fun element ->
-                     let%bind.Option dataset = Js.Opt.to_option element##.dataset in
-                     let%map.Option drag_target =
-                       Js.Opt.to_option
-                         (Js.Unsafe.get dataset ("dragTarget" ^ universe_suffix))
-                     in
-                     let drag_target = Js.to_string drag_target in
-                     Target.t_of_sexp (Sexp.of_string drag_target))
-                 in
-                 Event.Expert.handle_non_dom_event_exn
-                   (Event.Many
-                      [ inject (Set_target target); inject (Mouse_moved position) ]);
-                 Js._true)
-          in
-          add_event_listener Dom_html.Event.mouseup path_for_mouseup (fun _ ->
-            Event.Expert.handle_non_dom_event_exn (inject Finished_drag);
-            Js._true))
-         |> Effect.inject_ignoring_response)
+                   It makes sense that client coordinates is correct because the
+                   dragged element itself uses fixed positioning, which is roughly
+                   equivalent to client coordinates.  *)
+                let position = { Position.x = event##.clientX; y = event##.clientY } in
+                let path = Js.to_array event##composedPath |> Array.to_list in
+                let target =
+                  List.find_map path ~f:(fun element ->
+                    let%bind.Option dataset = Js.Opt.to_option element##.dataset in
+                    let%map.Option drag_target =
+                      Js.Opt.to_option
+                        (Js.Unsafe.get dataset ("dragTarget" ^ universe_suffix))
+                    in
+                    let drag_target = Js.to_string drag_target in
+                    Target.t_of_sexp (Sexp.of_string drag_target))
+                in
+                Effect.Expert.handle_non_dom_event_exn
+                  (inject [ Set_target target; Mouse_moved position ]);
+                Js._true)
+         in
+         add_event_listener Dom_html.Event.mouseup path_for_mouseup (fun _ ->
+           Effect.Expert.handle_non_dom_event_exn (inject [ Finished_drag ]);
+           Js._true))
       ()
   in
   let%sub sentinel =
@@ -288,29 +286,32 @@ let create
            [ Attr.create_hook
                "dnd-test-hook"
                (For_testing.Inject_hook.create (fun action ->
-                  Event.Many
+                  inject
                     (action
                      |> For_testing.Action.to_internal_actions
                           (module Source)
-                          (module Target)
-                     |> List.map ~f:inject)))
+                          (module Target))))
            ; Attr.create "data-dnd-name" name
+           ])
+  in
+  let%sub drop_target =
+    return
+      (let%map inject = inject
+       and universe_suffix = universe_suffix in
+       fun ~id ->
+         Attr.many
+           [ Attr.on_mouseup (fun _ -> inject [ Finished_drag ])
+           ; Attr.create
+               ("data-drag-target" ^ universe_suffix)
+               (Sexp.to_string_mach (Target.sexp_of_t id))
            ])
   in
   return
     (let%map model = model
-     and universe_suffix = universe_suffix
      and inject = inject
      and source = source
-     and sentinel = sentinel in
-     let drop_target ~id =
-       Attr.many
-         [ Attr.on_mouseup (fun _ -> inject Finished_drag)
-         ; Attr.create
-             ("data-drag-target" ^ universe_suffix)
-             (Sexp.to_string_mach (Target.sexp_of_t id))
-         ]
-     in
+     and sentinel = sentinel
+     and drop_target = drop_target in
      { model; inject; source; drop_target; sentinel })
 ;;
 

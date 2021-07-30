@@ -25,9 +25,9 @@ let create_generic computation ~fresh ~input ~model ~inject =
   in
   let%map view, extra = Bonsai.Private.Snapshot.result snapshot
   and apply_action = Bonsai.Private.Snapshot.apply_action snapshot
-  and lifecycle = Bonsai.Private.Snapshot.lifecycle snapshot
+  and lifecycle = Bonsai.Private.Snapshot.lifecycle_or_empty snapshot
   and model = model in
-  let schedule_event = Vdom.Event.Expert.handle_non_dom_event_exn in
+  let schedule_event = Vdom.Effect.Expert.handle_non_dom_event_exn in
   let apply_action incoming_action _state ~schedule_action:_ =
     apply_action ~schedule_event incoming_action
   in
@@ -36,7 +36,7 @@ let create_generic computation ~fresh ~input ~model ~inject =
       Bonsai.Private.Lifecycle.Collection.diff state.State.last_lifecycle lifecycle
     in
     state.State.last_lifecycle <- lifecycle;
-    Vdom.Event.Expert.handle_non_dom_event_exn diff
+    Vdom.Effect.Expert.handle_non_dom_event_exn diff
   in
   Incr_dom.Component.create_with_extra ~on_display ~extra ~apply_action model view
 ;;

@@ -9,7 +9,7 @@ module type Result_spec = sig
 
   val view : t -> Vdom.Node.t
   val extra : t -> extra
-  val incoming : t -> incoming -> Vdom.Event.t
+  val incoming : t -> incoming -> unit Vdom.Effect.t
 end
 
 module Arrow_deprecated = struct
@@ -17,7 +17,7 @@ module Arrow_deprecated = struct
     module Injector = struct
       type 'a t =
         | Before_app_start of 'a Queue.t
-        | Inject of ('a -> Vdom.Event.t)
+        | Inject of ('a -> unit Vdom.Effect.t)
     end
 
     type ('input, 'extra, 'incoming, 'outgoing) t =
@@ -55,7 +55,7 @@ module Arrow_deprecated = struct
 
     let schedule t a =
       match t.injector with
-      | Inject f -> f a |> Vdom.Event.Expert.handle_non_dom_event_exn
+      | Inject f -> f a |> Vdom.Effect.Expert.handle_non_dom_event_exn
       | Before_app_start queue -> Queue.enqueue queue a
     ;;
 
@@ -80,7 +80,7 @@ module Arrow_deprecated = struct
   module App_input = struct
     type ('input, 'outgoing) t =
       { input : 'input
-      ; inject_outgoing : 'outgoing -> Vdom.Event.t
+      ; inject_outgoing : 'outgoing -> unit Vdom.Effect.t
       }
     [@@deriving fields]
 
@@ -91,7 +91,7 @@ module Arrow_deprecated = struct
     type ('extra, 'incoming) t =
       { view : Vdom.Node.t
       ; extra : 'extra
-      ; inject_incoming : 'incoming -> Vdom.Event.t
+      ; inject_incoming : 'incoming -> unit Vdom.Effect.t
       }
     [@@deriving fields]
 
@@ -116,7 +116,9 @@ module Arrow_deprecated = struct
         (type input input_and_inject model action result extra incoming outgoing)
         ~(get_app_result : result -> (extra, incoming) App_result.t)
         ~(get_app_input :
-            input:input -> inject_outgoing:(outgoing -> Vdom.Event.t) -> input_and_inject)
+            input:input
+          -> inject_outgoing:(outgoing -> unit Vdom.Effect.t)
+          -> input_and_inject)
         ~(initial_input : input)
         ~(initial_model : model)
         ~bind_to_element_with_id
@@ -127,7 +129,7 @@ module Arrow_deprecated = struct
     =
     let outgoing_pipe, pipe_write = Pipe.create () in
     let module Out_event =
-      Virtual_dom.Vdom.Event.Define (struct
+      Virtual_dom.Vdom.Effect.Define (struct
         module Action = struct
           type t = outgoing
         end
@@ -177,9 +179,9 @@ module Arrow_deprecated = struct
         in
         let%map apply_action = Bonsai.Private.Snapshot.apply_action snapshot
         and result = Bonsai.Private.Snapshot.result snapshot
-        and lifecycle = Bonsai.Private.Snapshot.lifecycle snapshot
+        and lifecycle = Bonsai.Private.Snapshot.lifecycle_or_empty snapshot
         and model = model in
-        let schedule_event = Vdom.Event.Expert.handle_non_dom_event_exn in
+        let schedule_event = Vdom.Effect.Expert.handle_non_dom_event_exn in
         let apply_action action () ~schedule_action:_ =
           apply_action ~schedule_event action
         in

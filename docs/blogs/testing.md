@@ -200,7 +200,7 @@ The parameters to `Handle.input_text` are
 ## A component that exposes an injection function
 
 Many components return a computation whose result contains "inject" functions (a
-function which returns `Vdom.Event.t`).  These functions can be used to
+function which returns `unit Vdom.Effect.t`).  These functions can be used to
 provide nearby components access to a principled way of interacting with
 the state machine internal to that component.
 
@@ -208,7 +208,7 @@ A great example of this would be the `Bonsai.state` component, which returns
 a value of this type:
 
 ```ocaml skip
-('model * ('model -> Ui_event.t)) Computation.t
+('model * ('model -> unit Ui_effect.t)) Computation.t
 ```
 
 The second part of the tuple inside of the result is what we'd call an "injection function",
@@ -221,7 +221,7 @@ Without further ado, the test:
 
 ```ocaml
 module State_view_spec = struct
-  type t = string * (string -> Vdom.Event.t)
+  type t = string * (string -> unit Vdom.Effect.t)
   type incoming = string
 
   let view (view, _) = view
@@ -229,7 +229,7 @@ module State_view_spec = struct
 end
 
 let%expect_test "test Bonsai.state" =
-  let component : (string * (string -> Vdom.Event.t)) Computation.t =
+  let component : (string * (string -> unit Vdom.Effect.t)) Computation.t =
     Bonsai.state [%here] (module String) ~default_model:"hello"
   in
   let handle = Handle.create (module State_view_spec) component in

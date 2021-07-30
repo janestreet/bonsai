@@ -21,7 +21,7 @@ let apply_action ~inject ~schedule_event _ _ new_page =
 module Result = struct
   type t =
     { view : string
-    ; incoming : Choice.t -> Ui_event.t
+    ; incoming : Choice.t -> unit Ui_effect.t
     }
   [@@deriving fields]
 

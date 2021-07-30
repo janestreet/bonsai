@@ -1,8 +1,18 @@
 # Bonsai Changelog
-
 <!-- Change-log notes go in this file, with newer dates at the _top_  -->
+<!-- in vim : !date +'\%Y-\%m-\%d' -->
+
+## 2021-07-20
+- Added `Bonsai_web_ui_reorderable_list.{simple,with_inject}`
+
 ## 2021-06-11
 - Added `Form.validate_via_effect`
+
+## 2021-06-07
+- Added `Bonsai_extra`
+
+## 2021-06-02
+- Added `Bonsai.lazy_` back
 
 ## 2021-05-12
 - Added dynamic scoping

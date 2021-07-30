@@ -66,7 +66,7 @@ module Arrow_deprecated : sig
         communicate with the imperative [Handle.t] holder.  Any values injected via
         [inject_outgoing] will be present in the ['outgoing Pipe.Reader.t] that can be
         acquired via {!Handle.outgoing}. *)
-    val inject_outgoing : (_, 'outgoing) t -> 'outgoing -> Vdom.Event.t
+    val inject_outgoing : (_, 'outgoing) t -> 'outgoing -> unit Vdom.Effect.t
   end
 
   (** The result of an application-level component is a value of type ['incoming
@@ -82,7 +82,7 @@ module Arrow_deprecated : sig
     val create
       :  view:Vdom.Node.t
       -> extra:'extra
-      -> inject_incoming:('incoming -> Vdom.Event.t)
+      -> inject_incoming:('incoming -> unit Vdom.Effect.t)
       -> ('extra, 'incoming) t
   end
 
@@ -105,7 +105,7 @@ module Arrow_deprecated : sig
 
       - a [Vdom.Node.t], which will be bound to the DOM element with id
         [bind_to_element_with_id]; and
-      - an [inject] function that accepts external actions and returns [Vdom.Event.t]s. *)
+      - an [inject] function that accepts external actions and returns [unit Vdom.Effect.t]s. *)
   val start
     :  initial_input:'input
     -> bind_to_element_with_id:string
@@ -157,7 +157,7 @@ module Proc : sig
         the evaluation of the Bonsai program.  That data can be extracted with the [extra]
         function, and has type [extra].
 
-        A result can also include a function from some type ['a] to [Bonsai.Event.t] that
+        A result can also include a function from some type ['a] to [Bonsai.Effect.t] that
         can be used to send messages to Bonsai stateful components.  If your result has
         one of those functions, it can be exposed via the [incoming] parameter. *)
     module type S = sig
@@ -167,7 +167,7 @@ module Proc : sig
 
       val view : t -> Vdom.Node.t
       val extra : t -> extra
-      val incoming : t -> incoming -> Vdom.Event.t
+      val incoming : t -> incoming -> unit Vdom.Effect.t
     end
 
     type ('result, 'extra, 'incoming) t =
@@ -189,7 +189,7 @@ module Proc : sig
     module No_incoming : sig
       type incoming = Nothing.t
 
-      val incoming : _ -> Nothing.t -> Vdom.Event.t
+      val incoming : _ -> Nothing.t -> unit Vdom.Effect.t
     end
 
     (** [just_the_view] is a prepackaged [Result_spec.S] that is made for Bonsai apps that

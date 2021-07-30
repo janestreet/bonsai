@@ -21,11 +21,10 @@ let () = Util.run textbox_value ~id:"form_textbox_value"
 
 let alert =
   let eff =
-    unstage
-      (Effect.of_sync_fun (fun s ->
-         Js_of_ocaml.Dom_html.window##alert (Js_of_ocaml.Js.string s)))
+    Effect.of_sync_fun (fun s ->
+      Js_of_ocaml.Dom_html.window##alert (Js_of_ocaml.Js.string s))
   in
-  fun s -> eff s |> Effect.inject_ignoring_response
+  fun s -> eff s
 ;;
 
 (* $MDX part-begin=view_with_submission *)

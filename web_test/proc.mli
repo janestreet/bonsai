@@ -23,6 +23,13 @@ module Handle : sig
   val click_on : ('a, 'b) t -> get_vdom:('a -> Vdom.Node.t) -> selector:string -> unit
   val submit_form : ('a, 'b) t -> get_vdom:('a -> Vdom.Node.t) -> selector:string -> unit
 
+  val set_checkbox
+    :  ('a, 'b) t
+    -> get_vdom:('a -> Vdom.Node.t)
+    -> selector:string
+    -> checked:bool
+    -> unit
+
   val input_text
     :  ('a, 'b) t
     -> get_vdom:('a -> Vdom.Node.t)
@@ -45,9 +52,27 @@ module Handle : sig
     -> get_vdom:('a -> Vdom.Node.t)
     -> selector:string
     -> name:string
-    -> ('c -> Vdom.Event.t) Type_equal.Id.t
+    -> ('c -> unit Vdom.Effect.t) Type_equal.Id.t
     -> 'c
     -> unit
+
+  val get_hook_value
+    :  ('a, 'b) t
+    -> get_vdom:('a -> Vdom.Node.t)
+    -> selector:string
+    -> name:string
+    -> 'c Type_equal.Id.t
+    -> 'c
+
+  module Bulk_size_tracker : sig
+    type change =
+      { selector : string
+      ; width : float
+      ; height : float
+      }
+
+    val change_sizes : ('a, 'b) t -> get_vdom:('a -> Vdom.Node.t) -> change list -> unit
+  end
 
   module Drag_and_drop : sig
     val run

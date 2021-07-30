@@ -15,7 +15,7 @@ val set_input : ('i, _) t -> 'i -> unit
 (** Apply all pending actions and stabilize the incremental graph, updating [result]. *)
 val flush : _ t -> unit
 
-val schedule_event : _ t -> Event.t -> unit
+val schedule_event : _ t -> unit Ui_effect.t -> unit
 val result : (_, 'r) t -> 'r
 val last_view : _ t -> string
 val store_view : _ t -> string -> unit

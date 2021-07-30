@@ -29,7 +29,10 @@ module Kind = struct
         { kind : string
         ; name : string
         }
-    | Value of string
+    | Value of
+        { kind : string
+        ; here : Source_code_position.t option
+        }
     | Subst
     | Dyn
 
@@ -46,7 +49,13 @@ module Kind = struct
         ~label:[%string "{%{kind}|%{name}}"]
         ~color:"#D0E6A5"
         ()
-    | Value kind -> basic_shape ~shape:"oval" ~label:kind ~color:"#FFDD94" ()
+    | Value { kind; here } ->
+      let color = "#FFDD94" in
+      (match here with
+       | Some here ->
+         let here = Source_code_position.to_string here in
+         basic_shape ~shape:"Mrecord" ~label:[%string "{%{kind}|%{here}}"] ~color ()
+       | None -> basic_shape ~shape:"oval" ~label:kind ~color ())
     | Subst ->
       basic_shape
         ~shape:"circle"
@@ -112,9 +121,9 @@ let register_const state shape id =
 ;;
 
 let rec follow_value : type a. State.t -> a Value.t -> Id.t =
-  fun state value ->
-  let register s = register state (Kind.Value s) s in
-  let register_const = register_const state (Kind.Value "const") in
+  fun state { value; here } ->
+  let register s = register state (Kind.Value { kind = s; here }) s in
+  let register_const = register_const state (Kind.Value { kind = "const"; here }) in
   match value with
   | Value.Constant (_, id) -> register_const id
   | Incr _ -> register "incr"
@@ -181,7 +190,23 @@ let rec follow_value : type a. State.t -> a Value.t -> Id.t =
       ; follow_value state t7
       ]
       ~to_:(register "map7")
-  | Both (t1, Both (t2, Both (t3, Both (t4, Both (t5, Both (t6, t7)))))) ->
+  | Both
+      ( t1
+      , { value =
+            Both
+              ( t2
+              , { value =
+                    Both
+                      ( t3
+                      , { value =
+                            Both
+                              (t4, { value = Both (t5, { value = Both (t6, t7); _ }); _ })
+                        ; _
+                        } )
+                ; _
+                } )
+        ; _
+        } ) ->
     arrow_from_many
       state
       [ follow_value state t1
@@ -193,7 +218,16 @@ let rec follow_value : type a. State.t -> a Value.t -> Id.t =
       ; follow_value state t7
       ]
       ~to_:(register "map7")
-  | Both (t1, Both (t2, Both (t3, Both (t4, Both (t5, t6))))) ->
+  | Both
+      ( t1
+      , { value =
+            Both
+              ( t2
+              , { value = Both (t3, { value = Both (t4, { value = Both (t5, t6); _ }); _ })
+                ; _
+                } )
+        ; _
+        } ) ->
     arrow_from_many
       state
       [ follow_value state t1
@@ -204,7 +238,10 @@ let rec follow_value : type a. State.t -> a Value.t -> Id.t =
       ; follow_value state t6
       ]
       ~to_:(register "map6")
-  | Both (t1, Both (t2, Both (t3, Both (t4, t5)))) ->
+  | Both
+      ( t1
+      , { value = Both (t2, { value = Both (t3, { value = Both (t4, t5); _ }); _ }); _ }
+      ) ->
     arrow_from_many
       state
       [ follow_value state t1
@@ -214,7 +251,7 @@ let rec follow_value : type a. State.t -> a Value.t -> Id.t =
       ; follow_value state t5
       ]
       ~to_:(register "map5")
-  | Both (t1, Both (t2, Both (t3, t4))) ->
+  | Both (t1, { value = Both (t2, { value = Both (t3, t4); _ }); _ }) ->
     arrow_from_many
       state
       [ follow_value state t1
@@ -223,7 +260,7 @@ let rec follow_value : type a. State.t -> a Value.t -> Id.t =
       ; follow_value state t4
       ]
       ~to_:(register "map4")
-  | Both (t1, Both (t2, t3)) ->
+  | Both (t1, { value = Both (t2, t3); _ }) ->
     arrow_from_many
       state
       [ follow_value state t1; follow_value state t2; follow_value state t3 ]
@@ -251,7 +288,7 @@ let rec follow_computation
     me
   | Leaf { input; kind; name; _ } ->
     let me = register state (Kind.Leaf { kind; name }) "leaf" in
-    (match input with
+    (match input.value with
      | Value.Constant _ -> me
      | Value.Map2 { t1; t2; f = _ } ->
        arrow_from_many state [ follow_value state t1; follow_value state t2 ] ~to_:me
@@ -302,7 +339,7 @@ let rec follow_computation
          ; follow_value state t7
          ]
          ~to_:me
-     | input ->
+     | _ ->
        arrow state ~from:(follow_value state input) ~to_:me;
        me)
   | Leaf_incr _ -> register_computation "leaf_incr"
@@ -339,6 +376,7 @@ let rec follow_computation
     Map.iter out_of ~f:(fun (Computation.T { t; _ }) ->
       arrow state ~from:(follow_computation state t) ~to_:me);
     me
+  | Lazy _ -> register_computation "lazy"
   | Wrap { inner; model_id = _; inject_id = _; apply_action = _ } ->
     let me = register_computation "wrap" in
     arrow state ~from:(follow_computation state inner) ~to_:me;

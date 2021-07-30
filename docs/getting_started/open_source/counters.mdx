@@ -107,7 +107,7 @@ The compute function is the heart of the component. Its signature is:
 
 ```ocaml skip
 val compute
-  :  inject:(Action.t -> Ui_event.t)
+  :  inject:(Action.t -> unit Ui_effect.t)
   -> unit
   -> int
   -> Vdom.Node.t
@@ -136,15 +136,15 @@ in
 
 **The apply\_action function**
 
-When an action is raised by a component via a `Ui_event.t`, Bonsai
+When an action is raised by a component via a `unit Ui_effect.t`, Bonsai
 will eventually pass that action back to the component's
 `apply_action` function. This function is responsible for looking at
 the model and the incoming action and producing a new model.
 
 ```ocaml skip
 val apply_action
-  :  inject:(Action.t -> Ui_event.t)
-  -> schedule_event:(Ui_event.t -> unit)
+  :  inject:(Action.t -> unit Ui_effect.t)
+  -> schedule_event:(unit Ui_effect.t -> unit)
   -> Input.t
   -> Model.t
   -> Action.t

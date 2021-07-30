@@ -14,7 +14,7 @@ let component =
       ~target_id:(module Int)
       ~on_drop:
         (Bonsai.Value.return (fun source target ->
-           Ui_event.print_s
+           Ui_effect.print_s
              [%message
                (sprintf "universe %s on_drop" name) (source : int) (target : int)]))
   in
@@ -58,17 +58,17 @@ let%expect_test "remove the component with the dnd" =
     {|
     <div>
       <div data-dnd-name="1" dnd-test-hook=<fun>>
-        <div id="s1" onmousedown={handler} style={ user-select: none; }> </div>
-        <div id="s23" onmousedown={handler} style={ user-select: none; }> </div>
-        <div id="s4" onmousedown={handler} style={ user-select: none; }> </div>
+        <div id="s1" onmousedown style={ user-select: none; }> </div>
+        <div id="s23" onmousedown style={ user-select: none; }> </div>
+        <div id="s4" onmousedown style={ user-select: none; }> </div>
       </div>
       <div data-dnd-name="2" dnd-test-hook=<fun>>
-        <div id="t1" data-drag-targetbonsai_path_replaced_in_test="1" onmouseup={handler}> </div>
+        <div id="t1" data-drag-targetbonsai_path_replaced_in_test="1" onmouseup> </div>
         <div id="t23"
              data-drag-targetbonsai_path_replaced_in_test="2"
              data-drag-targetbonsai_path_replaced_in_test="3"
-             onmouseup={handler}> </div>
-        <div id="t4" data-drag-targetbonsai_path_replaced_in_test="4" onmouseup={handler}> </div>
+             onmouseup> </div>
+        <div id="t4" data-drag-targetbonsai_path_replaced_in_test="4" onmouseup> </div>
       </div>
     </div>
     adding window event listener
@@ -93,17 +93,17 @@ let%expect_test "how is it printed" =
     {|
     <div>
       <div data-dnd-name="1" dnd-test-hook=<fun>>
-        <div id="s1" onmousedown={handler} style={ user-select: none; }> </div>
-        <div id="s23" onmousedown={handler} style={ user-select: none; }> </div>
-        <div id="s4" onmousedown={handler} style={ user-select: none; }> </div>
+        <div id="s1" onmousedown style={ user-select: none; }> </div>
+        <div id="s23" onmousedown style={ user-select: none; }> </div>
+        <div id="s4" onmousedown style={ user-select: none; }> </div>
       </div>
       <div data-dnd-name="2" dnd-test-hook=<fun>>
-        <div id="t1" data-drag-targetbonsai_path_replaced_in_test="1" onmouseup={handler}> </div>
+        <div id="t1" data-drag-targetbonsai_path_replaced_in_test="1" onmouseup> </div>
         <div id="t23"
              data-drag-targetbonsai_path_replaced_in_test="2"
              data-drag-targetbonsai_path_replaced_in_test="3"
-             onmouseup={handler}> </div>
-        <div id="t4" data-drag-targetbonsai_path_replaced_in_test="4" onmouseup={handler}> </div>
+             onmouseup> </div>
+        <div id="t4" data-drag-targetbonsai_path_replaced_in_test="4" onmouseup> </div>
       </div>
     </div>
     adding window event listener

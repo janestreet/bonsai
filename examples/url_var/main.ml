@@ -31,10 +31,10 @@ module T = struct
 end
 
 let url_var = Url_var.create_exn (module T) ~fallback:T.A
-let set_url = unstage (Url_var.set_effect url_var)
+let set_url = Url_var.set_effect url_var
 
 let tab_state =
-  let set a = Effect.inject_ignoring_response (set_url a) in
+  let set a = set_url a in
   let%map current = Url_var.value url_var in
   Tabs.State.create ~current ~set
 ;;

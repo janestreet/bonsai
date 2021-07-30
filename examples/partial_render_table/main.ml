@@ -24,15 +24,22 @@ module Columns = struct
   let column_helper
         (type a)
         (module M : S with type t = a)
+        ?(disable_sort = false)
         ?visible
         (field : (_, a) Field.t)
     =
+    let sort =
+      if disable_sort
+      then None
+      else
+        Some
+          (Value.return (fun (_, a) (_, b) ->
+             M.compare (Field.get field a) (Field.get field b)))
+    in
     Column.column
       ?visible
       ~label:(Value.return (Vdom.Node.text (Fieldslib.Field.name field)))
-      ~sort:
-        (Value.return (fun (_, a) (_, b) ->
-           M.compare (Field.get field a) (Field.get field b)))
+      ?sort
       ~cell:(fun ~key:_ ~data ->
         return
         @@ let%map data = data in
@@ -52,7 +59,11 @@ module Columns = struct
         ~label:(Value.return (Vdom.Node.text "some group"))
         [ Column.group
             ~label:(Value.return (Vdom.Node.text "small"))
-            [ column_helper (module Int) Row.Fields.position ~visible:should_show_position
+            [ column_helper
+                (module Int)
+                Row.Fields.position
+                ~disable_sort:true
+                ~visible:should_show_position
             ]
         ; column_helper (module Time_ns_option) Row.Fields.last_fill
         ]

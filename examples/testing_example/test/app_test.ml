@@ -55,7 +55,7 @@ let%expect_test "shows hello to a specified user" =
   [%expect
     {|
     <div>
-      <input oninput={handler}> </input>
+      <input oninput> </input>
       <span> hello  </span>
     </div> |}];
   Handle.input_text handle ~get_vdom:Fn.id ~selector:"input" ~text:"Bob";
@@ -63,7 +63,7 @@ let%expect_test "shows hello to a specified user" =
   [%expect
     {|
       <div>
-        <input oninput={handler}> </input>
+        <input oninput> </input>
     -|  <span> hello  </span>
     +|  <span> hello Bob </span>
       </div> |}];
@@ -72,7 +72,7 @@ let%expect_test "shows hello to a specified user" =
   [%expect
     {|
       <div>
-        <input oninput={handler}> </input>
+        <input oninput> </input>
     -|  <span> hello Bob </span>
     +|  <span> hello Alice </span>
       </div> |}]
@@ -82,7 +82,7 @@ let%expect_test "shows hello to a specified user" =
 
 (* [STATE_TEST BEGIN] *)
 module State_view_spec = struct
-  type t = string * (string -> Vdom.Event.t)
+  type t = string * (string -> unit Vdom.Effect.t)
   type incoming = string
 
   let view (view, _) = view
@@ -90,7 +90,7 @@ module State_view_spec = struct
 end
 
 let%expect_test "test Bonsai.state" =
-  let component : (string * (string -> Vdom.Event.t)) Computation.t =
+  let component : (string * (string -> unit Vdom.Effect.t)) Computation.t =
     Bonsai.state [%here] (module String) ~default_model:"hello"
   in
   let handle = Handle.create (module State_view_spec) component in

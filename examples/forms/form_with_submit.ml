@@ -23,12 +23,10 @@ let form =
 
 let alert_effect =
   let eff =
-    unstage
-      (Effect.of_sync_fun (fun s ->
-         Js_of_ocaml.Dom_html.window##alert
-           (Js_of_ocaml.Js.string (Sexp.to_string_hum s))))
+    Effect.of_sync_fun (fun s ->
+      Js_of_ocaml.Dom_html.window##alert (Js_of_ocaml.Js.string (Sexp.to_string_hum s)))
   in
-  fun s -> eff s |> Effect.inject_ignoring_response
+  fun s -> eff s
 ;;
 
 let component =

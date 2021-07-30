@@ -138,7 +138,7 @@ let component =
           ]
       ]
   in
-  Vdom_layout.vbox [] [ view; result_readback ]
+  Vdom_layout.vbox [ view; result_readback ]
 ;;
 
 let (_ : _ Arrow_deprecated.Start.Handle.t) =

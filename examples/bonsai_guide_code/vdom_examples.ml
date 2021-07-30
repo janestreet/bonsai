@@ -58,7 +58,7 @@ let clicky : Vdom.Node.t =
     ~attr:
       (Vdom.Attr.on_click (fun (_evt : mouse_event) ->
          alert "hello there!";
-         Ui_event.Ignore))
+         Ui_effect.Ignore))
     [ Vdom.Node.text "click me!" ]
 ;;
 

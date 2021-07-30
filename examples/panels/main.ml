@@ -19,8 +19,8 @@ module Ids = struct
     type t =
       { ids : unit Id.Map.t
       (** A unit map, not a set, to make it easier to plug into [Bonsai.assoc] *)
-      ; inject_add_with_next_id : Bonsai.Event.t
-      ; inject_remove : Id.t -> Bonsai.Event.t
+      ; inject_add_with_next_id : unit Ui_effect.t
+      ; inject_remove : Id.t -> unit Ui_effect.t
       }
   end
 

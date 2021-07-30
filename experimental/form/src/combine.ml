@@ -11,7 +11,7 @@ module T = struct
       type nonrec ('result, 'input, 'parsed) t = ('result, 'input, 'parsed) t
 
       let return value =
-        Product.Fields.create ~value ~set:(const Bonsai.Event.Ignore)
+        Product.Fields.create ~value ~set:(const Ui_effect.Ignore)
         |> Bonsai.Arrow_deprecated.const
       ;;
 
@@ -20,7 +20,7 @@ module T = struct
         let%map_open a = a
         and b = b in
         let value = f (Product.value a) (Product.value b) in
-        let set parsed = Vdom.Event.Many [ Product.set a parsed; Product.set b parsed ] in
+        let set parsed = Vdom.Effect.Many [ Product.set a parsed; Product.set b parsed ] in
         Product.Fields.create ~value ~set
       ;;
 

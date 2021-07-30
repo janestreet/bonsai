@@ -2,9 +2,9 @@ open! Core
 open! Import
 
 type t =
-  { on_activate : Ui_event.t option
-  ; on_deactivate : Ui_event.t option
-  ; after_display : Ui_event.t option
+  { on_activate : unit Ui_effect.t option
+  ; on_deactivate : unit Ui_effect.t option
+  ; after_display : unit Ui_effect.t option
   }
 
 module Collection = struct
@@ -43,10 +43,10 @@ module Collection = struct
         ~init:(Reversed_list.[], Reversed_list.[])
         ~f:collect
     in
-    Ui_event.Many
-      [ deactivations |> Reversed_list.rev |> Ui_event.Many
-      ; activations |> Reversed_list.rev |> Ui_event.Many
-      ; after_displays |> Reversed_list.rev |> Ui_event.Many
+    Ui_effect.Many
+      [ deactivations |> Reversed_list.rev |> Ui_effect.Many
+      ; activations |> Reversed_list.rev |> Ui_effect.Many
+      ; after_displays |> Reversed_list.rev |> Ui_effect.Many
       ]
   ;;
 end

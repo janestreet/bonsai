@@ -53,10 +53,9 @@ let create (type a) (module M : Sexpable with type t = a) kind ~unique_id ~defau
   let setter t = t |> M.sexp_of_t |> Sexp.to_string_mach |> setter unique_id in
   let clear () = deleter unique_id in
   let effect =
-    unstage
-      (Effect.of_sync_fun (fun a ->
-         setter a;
-         Bonsai.Var.set var a))
+    Effect.of_sync_fun (fun a ->
+      setter a;
+      Bonsai.Var.set var a)
   in
   { var; setter; clear; effect }
 ;;

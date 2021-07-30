@@ -3,7 +3,8 @@ open! Import
 open Incr.Let_syntax
 
 (* Share this incremental node *)
-let unusable_apply_action : (schedule_event:(Event.t -> unit) -> Nothing.t -> unit) Incr.t
+let unusable_apply_action
+  : (schedule_event:(unit Effect.t -> unit) -> Nothing.t -> unit) Incr.t
   =
   return (fun ~schedule_event:_ action -> Nothing.unreachable_code action)
 ;;
@@ -32,17 +33,13 @@ let merge_lifecycles
 ;;
 
 let unzip3_mapi' map ~f =
-  let first_and_second, third =
+  let first, second_and_third =
     Incr_map.unzip_mapi' map ~f:(fun ~key ~data ->
       let a, b, c = f ~key ~data in
-      let ab = Incr.both a b in
-      ab, c)
+      let bc = Incr.both b c in
+      a, bc)
   in
-  let first, second =
-    Incr_map.unzip_mapi' first_and_second ~f:(fun ~key:_ ~data ->
-      let%pattern_bind a, b = data in
-      a, b)
-  in
+  let second, third = Incr_map.unzip second_and_third in
   first, second, third
 ;;
 
@@ -52,7 +49,7 @@ let rec eval
     -> path:Path.t
     -> clock:Incr.Clock.t
     -> model:model Incr.t
-    -> inject:(action -> Event.t)
+    -> inject:(action -> unit Effect.t)
     -> (model, action, result) Computation.t
     -> (model, action, result) Snapshot.t
   =
@@ -60,22 +57,23 @@ let rec eval
   match computation with
   | Return var ->
     let result = Value.eval environment var in
-    Snapshot.create
-      ~result
-      ~apply_action:unusable_apply_action
-      ~lifecycle:do_nothing_lifecycle
+    Snapshot.create ~result ~apply_action:unusable_apply_action ~lifecycle:None
   | Leaf { input; apply_action; compute; name = _; kind = _ } ->
     let%pattern_bind result, apply_action =
       let%mapn input = Value.eval environment input
       and model = model in
       compute ~inject input model, apply_action ~inject input model
     in
-    Snapshot.create ~result ~apply_action ~lifecycle:do_nothing_lifecycle
+    Snapshot.create ~result ~apply_action ~lifecycle:None
   | Leaf_incr { input; apply_action; compute; name = _ } ->
     let input = Value.eval environment input in
-    let result = compute ~inject clock input model
-    and apply_action = apply_action ~inject input model in
-    Snapshot.create ~result ~apply_action ~lifecycle:do_nothing_lifecycle
+    let result = compute ~inject clock input model in
+    let apply_action =
+      let%map apply_action = apply_action ~inject input
+      and model = model in
+      apply_action model
+    in
+    Snapshot.create ~result ~apply_action ~lifecycle:None
   | Model_cutoff { t; model = { Meta.Model.equal; _ } } ->
     let model = Incr.map model ~f:Fn.id in
     Incr.set_cutoff model (Incr.Cutoff.of_equal equal);
@@ -90,10 +88,7 @@ let rec eval
       | None -> Incr.return None
       | Some x -> x >>| Option.some
     in
-    Snapshot.create
-      ~result
-      ~lifecycle:do_nothing_lifecycle
-      ~apply_action:unusable_apply_action
+    Snapshot.create ~result ~lifecycle:None ~apply_action:unusable_apply_action
   | Subst { from; via; into } ->
     let from =
       let inject e = inject (First e) in
@@ -119,7 +114,10 @@ let rec eval
         | Second action2 -> m1, apply_action_into action2 ~schedule_event
     and result = Snapshot.result into in
     let lifecycle =
-      merge_lifecycles (Snapshot.lifecycle from) (Snapshot.lifecycle into)
+      match Snapshot.lifecycle from, Snapshot.lifecycle into with
+      | None, None -> None
+      | Some l, None | None, Some l -> Some l
+      | Some l1, Some l2 -> Some (merge_lifecycles l1 l2)
     in
     Snapshot.create ~result ~apply_action ~lifecycle
   | Assoc
@@ -157,7 +155,7 @@ let rec eval
         let snapshot = eval ~environment ~path ~clock ~inject ~model by in
         ( Snapshot.result snapshot
         , Snapshot.apply_action snapshot
-        , Snapshot.lifecycle snapshot ))
+        , Snapshot.lifecycle_or_empty snapshot ))
     in
     let apply_action =
       let%mapn apply_action_map = apply_action_map
@@ -192,7 +190,7 @@ let rec eval
             | None -> data))
         ~remove:(fun ~outer_key:_ ~inner_key:key ~data:_ acc -> Path.Map.remove acc key)
     in
-    Snapshot.create ~result:results_map ~apply_action ~lifecycle
+    Snapshot.create ~result:results_map ~apply_action ~lifecycle:(Some lifecycle)
   | Assoc_simpl
       { map
       ; by
@@ -204,11 +202,8 @@ let rec eval
       ; model_by_k = T
       } ->
     let map_input = Value.eval environment map in
-    let result = Incr_map.mapi map_input ~f:(fun ~key ~data -> by key data) in
-    Snapshot.create
-      ~result
-      ~apply_action:unusable_apply_action
-      ~lifecycle:do_nothing_lifecycle
+    let result = Incr_map.mapi map_input ~f:(fun ~key ~data -> by path key data) in
+    Snapshot.create ~result ~apply_action:unusable_apply_action ~lifecycle:None
   | Enum
       { which; out_of; key_equal; key_type_id; key_compare; key_and_cmp = T; sexp_of_key }
     ->
@@ -258,11 +253,39 @@ let rec eval
             model
       in
       let%mapn result = Snapshot.result snapshot
-      and lifecycle = Snapshot.lifecycle snapshot
+      and lifecycle = Snapshot.lifecycle_or_empty snapshot
       and apply_action = apply_action in
       result, apply_action, lifecycle
     in
-    Snapshot.create ~apply_action ~result ~lifecycle
+    Snapshot.create ~apply_action ~result ~lifecycle:(Some lifecycle)
+  | Lazy lazy_computation ->
+    let (T { t; model = model_info; action = action_info }) = force lazy_computation in
+    let input_model =
+      let%map model = model in
+      let (Hidden.Model.T { model; info; _ }) =
+        Option.value model ~default:(Hidden.Model.create model_info model_info.default)
+      in
+      let witness = Type_equal.Id.same_witness_exn info.type_id model_info.type_id in
+      Type_equal.conv witness model
+    in
+    let inject action =
+      inject (Hidden.Action.T { action; type_id = action_info; key = () })
+    in
+    let snapshot = eval ~environment ~path ~clock ~model:input_model ~inject t in
+    let apply_action =
+      let%map apply_action = Snapshot.apply_action snapshot
+      and model = model in
+      fun ~schedule_event (Hidden.Action.T { action; type_id; key = () }) ->
+        match Type_equal.Id.same_witness type_id action_info with
+        | Some T ->
+          let new_model = apply_action ~schedule_event action in
+          Some (Hidden.Model.create model_info new_model)
+        | None -> model
+    in
+    Snapshot.create
+      ~apply_action
+      ~result:(Snapshot.result snapshot)
+      ~lifecycle:(Snapshot.lifecycle snapshot)
   | Wrap { model_id; inject_id; inner; apply_action } ->
     let%pattern_bind outer_model, inner_model = model in
     let inject_outer a = inject (Either.First a) in
@@ -322,7 +345,7 @@ let rec eval
       ~result:(Incr.return path)
       ~apply_action:
         (Incr.return (fun ~schedule_event:_ action -> Nothing.unreachable_code action))
-      ~lifecycle:do_nothing_lifecycle
+      ~lifecycle:None
   | Lifecycle lifecycle ->
     let lifecycle =
       match%pattern_bind Value.eval environment lifecycle with
@@ -334,5 +357,5 @@ let rec eval
     Snapshot.create
       ~result:(Incr.return ())
       ~apply_action:unusable_apply_action
-      ~lifecycle
+      ~lifecycle:(Some lifecycle)
 ;;

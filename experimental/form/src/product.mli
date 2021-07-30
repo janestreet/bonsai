@@ -4,11 +4,11 @@ open! Bonsai_web
 
 type ('result, 'parsed) t =
   { value : 'result
-  ; set : 'parsed -> Vdom.Event.t
+  ; set : 'parsed -> unit Vdom.Effect.t
   }
 [@@deriving fields]
 
-val create : value:'result -> set:('parsed -> Vdom.Event.t) -> ('result, 'parsed) t
+val create : value:'result -> set:('parsed -> unit Vdom.Effect.t) -> ('result, 'parsed) t
 val lift : ('result, 'parsed1) t -> f:('parsed2 -> 'parsed1) -> ('result, 'parsed2) t
 
 module With_view : sig

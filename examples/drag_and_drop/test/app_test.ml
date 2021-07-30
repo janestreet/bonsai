@@ -16,31 +16,31 @@ let%expect_test "drag between containers" =
     <div data-dnd-name="board" class="kanban-container" dnd-test-hook=<fun>>
       <div data-drag-targetbonsai_path_replaced_in_test="todo"
            class="kanban-column kanban-column-todo"
-           onmouseup={handler}>
+           onmouseup>
         <h3> Todo </h3>
         <div>
-          <div @key=0 class="kanban-item" onmousedown={handler} style={ user-select: none; }> todo 1 </div>
-          <div @key=1 class="kanban-item" onmousedown={handler} style={ user-select: none; }> todo 2 </div>
+          <div @key=0 class="kanban-item" onmousedown style={ user-select: none; }> todo 1 </div>
+          <div @key=1 class="kanban-item" onmousedown style={ user-select: none; }> todo 2 </div>
         </div>
       </div>
       <div data-drag-targetbonsai_path_replaced_in_test="in-progress"
            class="kanban-column kanban-column-in-progress"
-           onmouseup={handler}>
+           onmouseup>
         <h3> In Progress </h3>
         <div>
-          <div @key=2 class="kanban-item" onmousedown={handler} style={ user-select: none; }> in progress 1 </div>
-          <div @key=3 class="kanban-item" onmousedown={handler} style={ user-select: none; }> in progress 2 </div>
-          <div @key=4 class="kanban-item" onmousedown={handler} style={ user-select: none; }> in progress 3 </div>
+          <div @key=2 class="kanban-item" onmousedown style={ user-select: none; }> in progress 1 </div>
+          <div @key=3 class="kanban-item" onmousedown style={ user-select: none; }> in progress 2 </div>
+          <div @key=4 class="kanban-item" onmousedown style={ user-select: none; }> in progress 3 </div>
         </div>
       </div>
       <div data-drag-targetbonsai_path_replaced_in_test="finished"
            class="kanban-column kanban-column-finished"
-           onmouseup={handler}>
+           onmouseup>
         <h3> Done </h3>
         <div>
-          <div @key=5 class="kanban-item" onmousedown={handler} style={ user-select: none; }> finished 1 </div>
-          <div @key=6 class="kanban-item" onmousedown={handler} style={ user-select: none; }> finished 2 </div>
-          <div @key=7 class="kanban-item" onmousedown={handler} style={ user-select: none; }> finished 3 </div>
+          <div @key=5 class="kanban-item" onmousedown style={ user-select: none; }> finished 1 </div>
+          <div @key=6 class="kanban-item" onmousedown style={ user-select: none; }> finished 2 </div>
+          <div @key=7 class="kanban-item" onmousedown style={ user-select: none; }> finished 3 </div>
         </div>
       </div>
     </div>
@@ -55,32 +55,32 @@ let%expect_test "drag between containers" =
       <div data-dnd-name="board" class="kanban-container" dnd-test-hook=<fun>>
         <div data-drag-targetbonsai_path_replaced_in_test="todo"
              class="kanban-column kanban-column-todo"
-             onmouseup={handler}>
+             onmouseup>
           <h3> Todo </h3>
           <div>
-    -|      <div @key=0 class="kanban-item" onmousedown={handler} style={ user-select: none; }> todo 1 </div>
-            <div @key=1 class="kanban-item" onmousedown={handler} style={ user-select: none; }> todo 2 </div>
+    -|      <div @key=0 class="kanban-item" onmousedown style={ user-select: none; }> todo 1 </div>
+            <div @key=1 class="kanban-item" onmousedown style={ user-select: none; }> todo 2 </div>
           </div>
         </div>
         <div data-drag-targetbonsai_path_replaced_in_test="in-progress"
              class="kanban-column kanban-column-in-progress"
-             onmouseup={handler}>
+             onmouseup>
           <h3> In Progress </h3>
           <div>
-            <div @key=2 class="kanban-item" onmousedown={handler} style={ user-select: none; }> in progress 1 </div>
-            <div @key=3 class="kanban-item" onmousedown={handler} style={ user-select: none; }> in progress 2 </div>
-            <div @key=4 class="kanban-item" onmousedown={handler} style={ user-select: none; }> in progress 3 </div>
+            <div @key=2 class="kanban-item" onmousedown style={ user-select: none; }> in progress 1 </div>
+            <div @key=3 class="kanban-item" onmousedown style={ user-select: none; }> in progress 2 </div>
+            <div @key=4 class="kanban-item" onmousedown style={ user-select: none; }> in progress 3 </div>
           </div>
         </div>
         <div data-drag-targetbonsai_path_replaced_in_test="finished"
              class="kanban-column kanban-column-finished"
-             onmouseup={handler}>
+             onmouseup>
           <h3> Done </h3>
           <div>
-    +|      <div @key=0 class="kanban-item" onmousedown={handler} style={ user-select: none; }> todo 1 </div>
-            <div @key=5 class="kanban-item" onmousedown={handler} style={ user-select: none; }> finished 1 </div>
-            <div @key=6 class="kanban-item" onmousedown={handler} style={ user-select: none; }> finished 2 </div>
-            <div @key=7 class="kanban-item" onmousedown={handler} style={ user-select: none; }> finished 3 </div>
+    +|      <div @key=0 class="kanban-item" onmousedown style={ user-select: none; }> todo 1 </div>
+            <div @key=5 class="kanban-item" onmousedown style={ user-select: none; }> finished 1 </div>
+            <div @key=6 class="kanban-item" onmousedown style={ user-select: none; }> finished 2 </div>
+            <div @key=7 class="kanban-item" onmousedown style={ user-select: none; }> finished 3 </div>
           </div>
         </div>
       </div> |}]
@@ -113,37 +113,32 @@ let%expect_test "appearance of dragged item and preview item while drag is happe
       <div data-dnd-name="board" class="kanban-container" dnd-test-hook=<fun>>
         <div data-drag-targetbonsai_path_replaced_in_test="todo"
              class="kanban-column kanban-column-todo"
-             onmouseup={handler}>
+             onmouseup>
           <h3> Todo </h3>
           <div>
-    -|      <div @key=0 class="kanban-item" onmousedown={handler} style={ user-select: none; }> todo 1 </div>
-    +|      <div @key=0
-    +|           class="being-dragged kanban-item"
-    +|           onmousedown={handler}
-    +|           style={
-    +|             user-select: none;
-    +|           }> todo 1 </div>
-            <div @key=1 class="kanban-item" onmousedown={handler} style={ user-select: none; }> todo 2 </div>
+    -|      <div @key=0 class="kanban-item" onmousedown style={ user-select: none; }> todo 1 </div>
+    +|      <div @key=0 class="being-dragged kanban-item" onmousedown style={ user-select: none; }> todo 1 </div>
+            <div @key=1 class="kanban-item" onmousedown style={ user-select: none; }> todo 2 </div>
           </div>
         </div>
         <div data-drag-targetbonsai_path_replaced_in_test="in-progress"
              class="kanban-column kanban-column-in-progress"
-             onmouseup={handler}>
+             onmouseup>
           <h3> In Progress </h3>
           <div>
-            <div @key=2 class="kanban-item" onmousedown={handler} style={ user-select: none; }> in progress 1 </div>
-            <div @key=3 class="kanban-item" onmousedown={handler} style={ user-select: none; }> in progress 2 </div>
-            <div @key=4 class="kanban-item" onmousedown={handler} style={ user-select: none; }> in progress 3 </div>
+            <div @key=2 class="kanban-item" onmousedown style={ user-select: none; }> in progress 1 </div>
+            <div @key=3 class="kanban-item" onmousedown style={ user-select: none; }> in progress 2 </div>
+            <div @key=4 class="kanban-item" onmousedown style={ user-select: none; }> in progress 3 </div>
           </div>
         </div>
         <div data-drag-targetbonsai_path_replaced_in_test="finished"
              class="kanban-column kanban-column-finished"
-             onmouseup={handler}>
+             onmouseup>
           <h3> Done </h3>
           <div>
-            <div @key=5 class="kanban-item" onmousedown={handler} style={ user-select: none; }> finished 1 </div>
-            <div @key=6 class="kanban-item" onmousedown={handler} style={ user-select: none; }> finished 2 </div>
-            <div @key=7 class="kanban-item" onmousedown={handler} style={ user-select: none; }> finished 3 </div>
+            <div @key=5 class="kanban-item" onmousedown style={ user-select: none; }> finished 1 </div>
+            <div @key=6 class="kanban-item" onmousedown style={ user-select: none; }> finished 2 </div>
+            <div @key=7 class="kanban-item" onmousedown style={ user-select: none; }> finished 3 </div>
           </div>
     +|  </div>
     +|  <div style={
@@ -166,28 +161,27 @@ let%expect_test "appearance of dragged item and preview item while drag is happe
         <div data-drag-targetbonsai_path_replaced_in_test="todo"
     -|       class="kanban-column kanban-column-todo"
     +|       class="kanban-column kanban-column-active kanban-column-todo"
-             onmouseup={handler}>
+             onmouseup>
           <h3> Todo </h3>
           <div>
-            <div @key=0
-    -|           class="being-dragged kanban-item"
-    +|           class="dragged-on-self kanban-item"
-                 onmousedown={handler}
-                 style={
-                   user-select: none;
-                 }> todo 1 </div>
-            <div @key=1 class="kanban-item" onmousedown={handler} style={ user-select: none; }> todo 2 </div>
+    -|      <div @key=0 class="being-dragged kanban-item" onmousedown style={ user-select: none; }> todo 1 </div>
+    +|      <div @key=0 class="dragged-on-self kanban-item" onmousedown style={ user-select: none; }> todo 1 </div>
+            <div @key=1 class="kanban-item" onmousedown style={ user-select: none; }> todo 2 </div>
           </div>
         </div>
         <div data-drag-targetbonsai_path_replaced_in_test="in-progress"
              class="kanban-column kanban-column-in-progress"
-             onmouseup={handler}>
+             onmouseup>
           <h3> In Progress </h3>
           <div>
-            <div @key=2 class="kanban-item" onmousedown={handler} style={ user-select: none; }> in progress 1 </div>
-            <div @key=3 class="kanban-item" onmousedown={handler} style={ user-select: none; }> in progress 2 </div>
-            <div @key=4 class="kanban-item" onmousedown={handler} style={ user-select: none; }> in progress 3 </div>
-          </div> |}];
+            <div @key=2 class="kanban-item" onmousedown style={ user-select: none; }> in progress 1 </div>
+            <div @key=3 class="kanban-item" onmousedown style={ user-select: none; }> in progress 2 </div>
+            <div @key=4 class="kanban-item" onmousedown style={ user-select: none; }> in progress 3 </div>
+          </div>
+        </div>
+        <div data-drag-targetbonsai_path_replaced_in_test="finished"
+             class="kanban-column kanban-column-finished"
+             onmouseup> |}];
   run handle (Set_target (Some "finished"));
   Handle.show_diff handle;
   [%expect
@@ -196,43 +190,33 @@ let%expect_test "appearance of dragged item and preview item while drag is happe
         <div data-drag-targetbonsai_path_replaced_in_test="todo"
     -|       class="kanban-column kanban-column-active kanban-column-todo"
     +|       class="kanban-column kanban-column-todo"
-             onmouseup={handler}>
+             onmouseup>
           <h3> Todo </h3>
           <div>
-    -|      <div @key=0
-    -|           class="dragged-on-self kanban-item"
-    -|           onmousedown={handler}
-    -|           style={
-    -|             user-select: none;
-    -|           }> todo 1 </div>
-            <div @key=1 class="kanban-item" onmousedown={handler} style={ user-select: none; }> todo 2 </div>
+    -|      <div @key=0 class="dragged-on-self kanban-item" onmousedown style={ user-select: none; }> todo 1 </div>
+            <div @key=1 class="kanban-item" onmousedown style={ user-select: none; }> todo 2 </div>
           </div>
         </div>
         <div data-drag-targetbonsai_path_replaced_in_test="in-progress"
              class="kanban-column kanban-column-in-progress"
-             onmouseup={handler}>
+             onmouseup>
           <h3> In Progress </h3>
           <div>
-            <div @key=2 class="kanban-item" onmousedown={handler} style={ user-select: none; }> in progress 1 </div>
-            <div @key=3 class="kanban-item" onmousedown={handler} style={ user-select: none; }> in progress 2 </div>
-            <div @key=4 class="kanban-item" onmousedown={handler} style={ user-select: none; }> in progress 3 </div>
+            <div @key=2 class="kanban-item" onmousedown style={ user-select: none; }> in progress 1 </div>
+            <div @key=3 class="kanban-item" onmousedown style={ user-select: none; }> in progress 2 </div>
+            <div @key=4 class="kanban-item" onmousedown style={ user-select: none; }> in progress 3 </div>
           </div>
         </div>
         <div data-drag-targetbonsai_path_replaced_in_test="finished"
     -|       class="kanban-column kanban-column-finished"
     +|       class="kanban-column kanban-column-active kanban-column-finished"
-             onmouseup={handler}>
+             onmouseup>
           <h3> Done </h3>
           <div>
-    +|      <div @key=0
-    +|           class="dragged-on-self kanban-item"
-    +|           onmousedown={handler}
-    +|           style={
-    +|             user-select: none;
-    +|           }> todo 1 </div>
-            <div @key=5 class="kanban-item" onmousedown={handler} style={ user-select: none; }> finished 1 </div>
-            <div @key=6 class="kanban-item" onmousedown={handler} style={ user-select: none; }> finished 2 </div>
-            <div @key=7 class="kanban-item" onmousedown={handler} style={ user-select: none; }> finished 3 </div>
+    +|      <div @key=0 class="dragged-on-self kanban-item" onmousedown style={ user-select: none; }> todo 1 </div>
+            <div @key=5 class="kanban-item" onmousedown style={ user-select: none; }> finished 1 </div>
+            <div @key=6 class="kanban-item" onmousedown style={ user-select: none; }> finished 2 </div>
+            <div @key=7 class="kanban-item" onmousedown style={ user-select: none; }> finished 3 </div>
           </div>
         </div>
         <div style={
@@ -252,35 +236,30 @@ let%expect_test "appearance of dragged item and preview item while drag is happe
     {|
           <h3> Todo </h3>
           <div>
-            <div @key=1 class="kanban-item" onmousedown={handler} style={ user-select: none; }> todo 2 </div>
+            <div @key=1 class="kanban-item" onmousedown style={ user-select: none; }> todo 2 </div>
           </div>
         </div>
         <div data-drag-targetbonsai_path_replaced_in_test="in-progress"
              class="kanban-column kanban-column-in-progress"
-             onmouseup={handler}>
+             onmouseup>
           <h3> In Progress </h3>
           <div>
-            <div @key=2 class="kanban-item" onmousedown={handler} style={ user-select: none; }> in progress 1 </div>
-            <div @key=3 class="kanban-item" onmousedown={handler} style={ user-select: none; }> in progress 2 </div>
-            <div @key=4 class="kanban-item" onmousedown={handler} style={ user-select: none; }> in progress 3 </div>
+            <div @key=2 class="kanban-item" onmousedown style={ user-select: none; }> in progress 1 </div>
+            <div @key=3 class="kanban-item" onmousedown style={ user-select: none; }> in progress 2 </div>
+            <div @key=4 class="kanban-item" onmousedown style={ user-select: none; }> in progress 3 </div>
           </div>
         </div>
         <div data-drag-targetbonsai_path_replaced_in_test="finished"
     -|       class="kanban-column kanban-column-active kanban-column-finished"
     +|       class="kanban-column kanban-column-finished"
-             onmouseup={handler}>
+             onmouseup>
           <h3> Done </h3>
           <div>
-    -|      <div @key=0
-    -|           class="dragged-on-self kanban-item"
-    -|           onmousedown={handler}
-    -|           style={
-    -|             user-select: none;
-    -|           }> todo 1 </div>
-    +|      <div @key=0 class="kanban-item" onmousedown={handler} style={ user-select: none; }> todo 1 </div>
-            <div @key=5 class="kanban-item" onmousedown={handler} style={ user-select: none; }> finished 1 </div>
-            <div @key=6 class="kanban-item" onmousedown={handler} style={ user-select: none; }> finished 2 </div>
-            <div @key=7 class="kanban-item" onmousedown={handler} style={ user-select: none; }> finished 3 </div>
+    -|      <div @key=0 class="dragged-on-self kanban-item" onmousedown style={ user-select: none; }> todo 1 </div>
+    +|      <div @key=0 class="kanban-item" onmousedown style={ user-select: none; }> todo 1 </div>
+            <div @key=5 class="kanban-item" onmousedown style={ user-select: none; }> finished 1 </div>
+            <div @key=6 class="kanban-item" onmousedown style={ user-select: none; }> finished 2 </div>
+            <div @key=7 class="kanban-item" onmousedown style={ user-select: none; }> finished 3 </div>
           </div>
     -|  </div>
     -|  <div style={

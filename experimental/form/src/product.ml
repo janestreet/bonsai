@@ -4,7 +4,7 @@ open! Bonsai_web
 
 type ('result, 'parsed) t =
   { value : 'result
-  ; set : 'parsed -> Bonsai.Event.t
+  ; set : 'parsed -> unit Bonsai.Effect.t
   }
 [@@deriving fields]
 

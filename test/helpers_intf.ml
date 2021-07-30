@@ -19,7 +19,7 @@ module type Helpers = sig
     -> (module S with type input = 'input and type action = Nothing.t)
 
   val make_with_inject
-    :  driver:('input, 'result * ('action -> Event.t)) Driver.t
+    :  driver:('input, 'result * ('action -> unit Ui_effect.t)) Driver.t
     -> sexp_of_result:('result -> Sexp.t)
     -> (module S with type input = 'input and type action = 'action)
 
@@ -28,6 +28,6 @@ module type Helpers = sig
     -> (module S with type input = 'input and type action = Nothing.t)
 
   val make_string_with_inject
-    :  driver:('input, string * ('action -> Event.t)) Driver.t
+    :  driver:('input, string * ('action -> unit Ui_effect.t)) Driver.t
     -> (module S with type input = 'input and type action = 'action)
 end

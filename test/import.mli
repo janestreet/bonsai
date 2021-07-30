@@ -1,11 +1,11 @@
 open! Core
 
-module Event : sig
-  type t = Ui_event.t
+module Effect : sig
+  type 'a t = 'a Ui_effect.t
 
-  val sequence : t list -> t
-  val no_op : t
-  val external_ : string -> t
+  val sequence : unit t list -> unit t
+  val no_op : unit t
+  val external_ : string -> unit t
 end
 
 module Incr = Ui_incr

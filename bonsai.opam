@@ -26,6 +26,7 @@ depends: [
   "virtual_dom"
   "cohttp-async"             {>= "2.5.4"}
   "dune"                     {>= "2.0.0"}
+  "gen_js_api"               {>= "1.0.8"}
   "js_of_ocaml-ppx"          {>= "3.9.0"}
   "re"                       {>= "1.8.0"}
 ]

@@ -66,7 +66,7 @@ let make_vdom_generic
       ~(driver : (input, s) Driver.t)
       ~(vdom_of_result : s -> Vdom.Node.t)
       ~(get_extra : s -> extra)
-      ~(inject_of_result : s -> action -> Vdom.Event.t)
+      ~(inject_of_result : s -> action -> unit Vdom.Effect.t)
       ?(vdom_to_string =
         fun node ->
           node
@@ -112,7 +112,7 @@ let make_vdom_generic
   end)
 ;;
 
-let make_vdom_with_inject ?vdom_to_string ~driver =
+let[@warning "-16"] make_vdom_with_inject ?vdom_to_string ~driver =
   make_vdom_generic
     ?vdom_to_string
     ~driver
@@ -122,7 +122,7 @@ let make_vdom_with_inject ?vdom_to_string ~driver =
     ()
 ;;
 
-let make_vdom_with_extra ?vdom_to_string ~driver =
+let[@warning "-16"] make_vdom_with_extra ?vdom_to_string ~driver =
   make_vdom_generic
     ?vdom_to_string
     ~driver
@@ -132,7 +132,7 @@ let make_vdom_with_extra ?vdom_to_string ~driver =
     ()
 ;;
 
-let make_vdom ?vdom_to_string ~driver =
+let[@warning "-16"] make_vdom ?vdom_to_string ~driver =
   make_vdom_generic
     ?vdom_to_string
     ~driver

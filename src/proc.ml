@@ -71,6 +71,7 @@ module Let_syntax = struct
     let return = return
     let map = Value.map
     let both = Value.both
+    let arr ?here t ~f = read { (Value.map t ~f) with here }
 
     include (Value : Mapn with type 'a t := 'a Value.t)
   end
@@ -118,7 +119,9 @@ let assoc
   let key_var = Value.named key_id in
   let data_var = Value.named data_id in
   let (Computation.T { t = by; action; model }) = f key_var data_var in
-  match Simplify.function_of_'return'_computation by ~key_id ~data_id with
+  match
+    Simplify.computation_to_function by ~key_compare:C.comparator.compare ~key_id ~data_id
+  with
   | Some by ->
     Computation.T
       { t =
@@ -227,7 +230,7 @@ let actor1
     -> (module Action with type t = action)
     -> default_model:model
     -> recv:
-         (schedule_event:(Ui_event.t -> unit)
+         (schedule_event:(unit Ui_effect.t -> unit)
           -> input
           -> model
           -> action
@@ -272,6 +275,22 @@ let actor0 here model action ~default_model ~recv =
   actor1 here model action ~default_model ~recv (Value.return ())
 ;;
 
+let lazy_ t =
+  let open struct
+    type model = Hidden.Model.t option [@@deriving equal, sexp_of]
+  end in
+  let action = Hidden.Action.type_id [%sexp_of: unit] in
+  let model =
+    { Meta.Model.default = None
+    ; equal = equal_model
+    ; type_id = Type_equal.Id.create ~name:"lazy-model" [%sexp_of: model]
+    ; sexp_of = [%sexp_of: model]
+    ; of_sexp = (fun _ -> None)
+    }
+  in
+  Computation.T { t = Lazy t; action; model }
+;;
+
 let wrap (type model action) model_module ~default_model ~apply_action ~f =
   let model_id : model Type_equal.Id.t =
     Type_equal.Id.create ~name:"model id" [%sexp_of: opaque]
@@ -279,7 +298,7 @@ let wrap (type model action) model_module ~default_model ~apply_action ~f =
   let action_id : action Type_equal.Id.t =
     Type_equal.Id.create ~name:"action id" [%sexp_of: opaque]
   in
-  let inject_id : (action -> Event.t) Type_equal.Id.t =
+  let inject_id : (action -> unit Effect.t) Type_equal.Id.t =
     Type_equal.Id.create ~name:"inject id" [%sexp_of: opaque]
   in
   let model_var = Value.named model_id in
@@ -369,7 +388,7 @@ module Edge = struct
         @@ let%map set_state = set_state
         and input = input
         and callback = callback in
-        Some (Ui_event.Many [ set_state (Some input); callback None input ])
+        Some (Ui_effect.Many [ set_state (Some input); callback None input ])
       | Some state ->
         return
         @@ let%map state = state
@@ -379,7 +398,7 @@ module Edge = struct
         if M.equal state input
         then None
         else
-          Some (Ui_event.Many [ set_state (Some input); callback (Some state) input ])
+          Some (Ui_effect.Many [ set_state (Some input); callback (Some state) input ])
     in
     after_display' update
   ;;
@@ -447,12 +466,9 @@ module Edge = struct
         and next_seqnum = next_seqnum
         and _, inject_change = state in
         fun input ->
-          Effect.inject_ignoring_response
-            (let%bind.Effect seqnum = next_seqnum () in
-             let on_response result =
-               inject_change (Action.Set (seqnum, wrap_result result))
-             in
-             Effect.of_event (Effect.inject (effect input) ~on_response))
+          let%bind.Effect seqnum = next_seqnum () in
+          let%bind.Effect result = effect input in
+          inject_change (Action.Set (seqnum, wrap_result result))
       in
       let%sub () = on_change here (module Input) input ~callback in
       return
@@ -509,8 +525,8 @@ module Incr = struct
   ;;
 
   let compute_with_clock t ~f =
-    let apply_action _input model ~inject:_ =
-      Incr.map model ~f:(fun _model ~schedule_event:_ -> Nothing.unreachable_code)
+    let apply_action _input ~inject:_ =
+      Incr.return (fun ~schedule_event:_ _model -> Nothing.unreachable_code)
     in
     let compute clock input _model ~inject:_ = f clock input in
     Computation.T
@@ -524,7 +540,7 @@ module Incr = struct
 
   let compute t ~f = compute_with_clock t ~f:(fun _ input -> f input)
   let with_clock f = compute_with_clock (Value.return ()) ~f:(fun clock _ -> f clock)
-  let to_value incr = Value.Incr incr
+  let to_value incr = { Value.value = Value.Incr incr; here = None }
 end
 
 module Dynamic_scope = struct
@@ -749,6 +765,13 @@ module Computation = struct
       in
       let right = all rest in
       map2 left right ~f:(fun left right -> left @ right)
+  ;;
+
+  let reduce_balanced xs ~f =
+    List.reduce_balanced xs ~f:(fun a b ->
+      let%sub a = a in
+      let%sub b = b in
+      f a b)
   ;;
 
   let all_unit xs = all xs |> map ~f:(fun (_ : unit list) -> ())

@@ -8,7 +8,7 @@ module Result_spec : sig
     type incoming
 
     val view : t -> string
-    val incoming : t -> incoming -> Event.t
+    val incoming : t -> incoming -> unit Effect.t
   end
 
   type ('result, 'incoming) t =
@@ -30,7 +30,7 @@ module Result_spec : sig
   module No_incoming : sig
     type incoming = Nothing.t
 
-    val incoming : _ -> Nothing.t -> Event.t
+    val incoming : _ -> Nothing.t -> unit Effect.t
   end
 
   module type Sexpable = sig
@@ -45,6 +45,7 @@ module Result_spec : sig
 
   val sexp : (module Sexpable with type t = 'a) -> ('a, Nothing.t) t
   val string : (module Stringable with type t = 'a) -> ('a, Nothing.t) t
+  val invisible : ('a, Nothing.t) t
 end
 
 module Handle : sig

@@ -44,7 +44,7 @@ module type Helpers = sig
           and type extra = unit)
 
   val make_with_inject
-    :  driver:('input, 'result * ('action -> Vdom.Event.t)) Driver.t
+    :  driver:('input, 'result * ('action -> unit Vdom.Effect.t)) Driver.t
     -> sexp_of_result:('result -> Sexp.t)
     -> (module S with type input = 'input and type action = 'action and type extra = unit)
 
@@ -56,7 +56,7 @@ module type Helpers = sig
           and type extra = unit)
 
   val make_string_with_inject
-    :  driver:('input, string * ('action -> Vdom.Event.t)) Driver.t
+    :  driver:('input, string * ('action -> unit Vdom.Effect.t)) Driver.t
     -> (module S with type input = 'input and type action = 'action and type extra = unit)
 
   val make_vdom
@@ -77,7 +77,7 @@ module type Helpers = sig
 
   val make_vdom_with_inject
     :  ?vdom_to_string:(Vdom.Node.t -> string)
-    -> driver:('input, Vdom.Node.t * ('action -> Vdom.Event.t)) Driver.t
+    -> driver:('input, Vdom.Node.t * ('action -> unit Vdom.Effect.t)) Driver.t
     -> (module S_vdom
          with type input = 'input
           and type action = 'action

@@ -5,9 +5,9 @@ type ('i, 'm, 'a, 'r) unpacked =
   { input_var : 'i Incr.Var.t
   ; model_var : 'm Incr.Var.t
   ; clock : Incr.Clock.t
-  ; inject : 'a -> Event.t
+  ; inject : 'a -> unit Ui_effect.t
   ; sexp_of_model : 'm -> Sexp.t
-  ; apply_action : (schedule_event:(Event.t -> unit) -> 'a -> 'm) Incr.Observer.t
+  ; apply_action : (schedule_event:(unit Ui_effect.t -> unit) -> 'a -> 'm) Incr.Observer.t
   ; result : 'r Incr.Observer.t
   ; result_incr : 'r Incr.t
   ; lifecycle : Bonsai.Private.Lifecycle.Collection.t Incr.Observer.t
@@ -64,7 +64,7 @@ let create
     =
     let queue = Queue.create () in
     let module A =
-      Ui_event.Define (struct
+      Ui_effect.Define (struct
         module Action = struct
           type t = a
         end
@@ -85,7 +85,7 @@ let create
     let result_incr = Bonsai.Private.Snapshot.result snapshot in
     let apply_action = Bonsai.Private.Snapshot.apply_action snapshot |> Incr.observe in
     let result = result_incr |> Incr.observe in
-    let lifecycle = Bonsai.Private.Snapshot.lifecycle snapshot |> Incr.observe in
+    let lifecycle = Bonsai.Private.Snapshot.lifecycle_or_empty snapshot |> Incr.observe in
     Incr.stabilize ();
     T
       { input_var
@@ -106,12 +106,12 @@ let create
   create_polymorphic component_unpacked action
 ;;
 
-let schedule_event _ = Ui_event.Expert.handle
+let schedule_event _ = Ui_effect.Expert.handle
 
 let flush (T { model_var; apply_action; queue; _ }) =
   let process_event action =
     let apply_action = Incr.Observer.value_exn apply_action in
-    let new_model = apply_action action ~schedule_event:Ui_event.Expert.handle in
+    let new_model = apply_action action ~schedule_event:Ui_effect.Expert.handle in
     Incr.Var.set model_var new_model;
     (* We need to stabilize after every action so that [Snapshot.apply_action] is closed
        over the latest model. *)

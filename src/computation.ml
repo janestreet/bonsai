@@ -2,8 +2,8 @@ open! Core
 open! Import
 
 type ('input, 'action, 'model) apply_action =
-  inject:('action -> Event.t)
-  -> schedule_event:(Event.t -> unit)
+  inject:('action -> unit Effect.t)
+  -> schedule_event:(unit Effect.t -> unit)
   -> 'input
   -> 'model
   -> 'action
@@ -14,7 +14,7 @@ type ('model, 'action, 'result) t =
   | Leaf :
       { input : 'input Value.t
       ; apply_action : ('input, 'action, 'model) apply_action
-      ; compute : inject:('action -> Event.t) -> 'input -> 'model -> 'result
+      ; compute : inject:('action -> unit Effect.t) -> 'input -> 'model -> 'result
       ; name : string
       ; kind : string
       }
@@ -23,14 +23,14 @@ type ('model, 'action, 'result) t =
       { input : 'input Value.t
       ; apply_action :
           'input Incr.t
-          -> 'model Incr.t
-          -> inject:('action -> Event.t)
-          -> (schedule_event:(Event.t -> unit) -> 'action -> 'model) Incr.t
+          -> inject:('action -> unit Effect.t)
+          -> (schedule_event:(unit Effect.t -> unit) -> 'model -> 'action -> 'model)
+               Incr.t
       ; compute :
           Incr.Clock.t
           -> 'input Incr.t
           -> 'model Incr.t
-          -> inject:('action -> Event.t)
+          -> inject:('action -> unit Effect.t)
           -> 'result Incr.t
       ; name : string
       }
@@ -70,7 +70,7 @@ type ('model, 'action, 'result) t =
       { map : ('k, 'v, 'cmp) Map.t Value.t
       ; key_id : 'k Type_equal.Id.t
       ; data_id : 'v Type_equal.Id.t
-      ; by : 'k -> 'v -> 'result
+      ; by : Path.t -> 'k -> 'v -> 'result
       ; model_info : 'model Meta.Model.t
       ; input_by_k : ('input_by_k, ('k, 'v, 'cmp) Map.t) Type_equal.t
       ; result_by_k : ('result_by_k, ('k, 'result, 'cmp) Map.t) Type_equal.t
@@ -87,9 +87,14 @@ type ('model, 'action, 'result) t =
       ; key_and_cmp : ('key_and_cmp, ('key, 'cmp) Hidden.Multi_model.t) Type_equal.t
       }
       -> ('key_and_cmp, 'key Hidden.Action.t, 'a) t
+  (* Lazy wraps the model in an option because otherwise you could make
+     infinitely sized models (by eagerly expanding a recursive model) which
+     would stack-overflow during eval.  [None] really means "unchanged from the
+     default", and is used to halt the the eager expansion. *)
+  | Lazy : 'a packed Lazy.t -> (Hidden.Model.t option, unit Hidden.Action.t, 'a) t
   | Wrap :
       { model_id : 'outer_model Type_equal.Id.t
-      ; inject_id : ('outer_action -> Event.t) Type_equal.Id.t
+      ; inject_id : ('outer_action -> unit Effect.t) Type_equal.Id.t
       ; inner : ('inner_model, 'inner_action, 'result) t
       ; apply_action : ('result, 'outer_action, 'outer_model) apply_action
       }
@@ -98,7 +103,7 @@ type ('model, 'action, 'result) t =
       { t : ('m, 'a, 'r) t
       ; default_model : 'm
       }
-      -> ('m, (unit, 'a) Either.t, 'r * Event.t) t
+      -> ('m, (unit, 'a) Either.t, 'r * unit Effect.t) t
   | Path : (unit, Nothing.t, Path.t) t
   | Lifecycle : Lifecycle.t option Value.t -> (unit, Nothing.t, unit) t
 
@@ -125,6 +130,7 @@ let rec sexp_of_t : type m a r. (m, a, r) t -> Sexp.t = function
   | Enum { which; out_of; sexp_of_key; _ } ->
     let out_of = out_of |> Map.to_alist |> List.map ~f:[%sexp_of: key * packed] in
     [%sexp Enum { which : Value.t; out_of : Sexp.t list }]
+  | Lazy _ -> [%sexp Lazy]
   | With_model_resetter { t; _ } -> [%sexp With_model_resetter (t : t)]
   | Wrap { inner; _ } -> [%sexp Wrap (inner : t)]
   | Path -> [%sexp Path]

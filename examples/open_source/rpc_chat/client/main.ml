@@ -12,9 +12,7 @@ let run_refresh_rooms ~conn ~rooms_list_var =
 
 let refresh_rooms ~conn ~rooms_list_var =
   let dispatch =
-    (fun () -> run_refresh_rooms ~conn ~rooms_list_var)
-    |> Effect.of_deferred_fun
-    |> unstage
+    (fun () -> run_refresh_rooms ~conn ~rooms_list_var) |> Effect.of_deferred_fun
   in
   dispatch ()
 ;;
@@ -52,8 +50,9 @@ let send_message ~conn =
   let dispatch =
     Rpc.Rpc.dispatch_exn Protocol.Send_message.t conn
     |> Effect.of_deferred_fun
-    |> unstage
-    >> Effect.handle_error ~f:(Fn.const Vdom.Event.Ignore)
+    >> Effect.bind ~f:(function
+      | Ok a -> Effect.return a
+      | Error _ -> Effect.Ignore)
   in
   fun ~room ~contents ->
     let contents = obfuscate contents in
@@ -65,7 +64,7 @@ let change_room ~conn ~room_state_var =
     let%map messages = Rpc.Rpc.dispatch_exn Protocol.Messages_request.t conn room in
     Bonsai.Var.set room_state_var { Room_state.messages; current_room = Some room }
   in
-  let dispatch = on_room_switch |> Effect.of_deferred_fun |> unstage in
+  let dispatch = on_room_switch |> Effect.of_deferred_fun in
   fun room -> dispatch room
 ;;
 

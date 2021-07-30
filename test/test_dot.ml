@@ -147,3 +147,31 @@ let%expect_test "dynamic scope" =
     const_23 -> read_22;
     } |}]
 ;;
+
+let%expect_test "arrow-syntax" =
+  let component =
+    let%sub a = Bonsai.const "hi" in
+    let%sub b = Bonsai.const 5 in
+    let%arr a = a
+    and b = b in
+    sprintf "%s %d" a b
+  in
+  print_endline (Bonsai.Debug.to_dot component);
+  [%expect
+    {|
+    digraph {
+    named_0 [ style=filled, shape = "circle", label = ""; fillcolor = "#FFFFFF"; width=.1, height=.1]
+    const_1 [ style=filled, shape = "oval", label = "const"; fillcolor = "#FFDD94"; ]
+    const_1 -> named_0 [dir=none];
+    named_2 [ style=filled, shape = "circle", label = ""; fillcolor = "#FFFFFF"; width=.1, height=.1]
+    const_3 [ style=filled, shape = "oval", label = "const"; fillcolor = "#FFDD94"; ]
+    const_3 -> named_2 [dir=none];
+    read_4 [ style=filled, shape = "Mrecord", label = "read"; fillcolor = "#86E3CE"; ]
+    map_5 [ style=filled, shape = "Mrecord", label = "{map|lib/bonsai/test/test_dot.ml:155:4}"; fillcolor = "#FFDD94"; ]
+    map2_6 [ style=filled, shape = "oval", label = "map2"; fillcolor = "#FFDD94"; ]
+    named_0 -> map2_6;
+    named_2 -> map2_6;
+    map2_6 -> map_5;
+    map_5 -> read_4;
+    } |}]
+;;

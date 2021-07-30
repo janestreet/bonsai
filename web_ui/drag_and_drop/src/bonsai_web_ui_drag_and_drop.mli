@@ -73,7 +73,7 @@ val create
   :  Source_code_position.t
   -> source_id:(module Model with type t = 'source_id)
   -> target_id:(module Model with type t = 'target_id)
-  -> on_drop:('source_id -> 'target_id -> Ui_event.t) Value.t
+  -> on_drop:('source_id -> 'target_id -> unit Ui_effect.t) Value.t
   -> ('source_id, 'target_id) t Computation.t
 
 (** A node which is follows the mouse when something is being dragged, but is
@@ -97,5 +97,5 @@ module For_testing : sig
     [@@deriving sexp, equal]
   end
 
-  val type_id : (Action.t -> Ui_event.t) Type_equal.Id.t
+  val type_id : (Action.t -> unit Ui_effect.t) Type_equal.Id.t
 end

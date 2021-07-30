@@ -21,6 +21,19 @@ let%expect_test "cutoff" =
   [%expect {| 1 |}]
 ;;
 
+let%expect_test "arrow-syntax" =
+  let component =
+    let%sub a = Bonsai.const "hi" in
+    let%sub b = Bonsai.const 5 in
+    let%arr a = a
+    and b = b in
+    sprintf "%s %d" a b
+  in
+  let handle = Handle.create (Result_spec.string (module String)) component in
+  Handle.show handle;
+  [%expect {| hi 5 |}]
+;;
+
 let%expect_test "mapn" =
   let (_ : unit Computation.t) =
     let%mapn.Computation () = Bonsai.const ()
@@ -167,6 +180,38 @@ let%expect_test "assoc and enum path" =
      (1 (Subst_from (Assoc 1) Subst_into (Enum 1)))) |}]
 ;;
 
+let%expect_test "simple-assoc works with paths" =
+  let component =
+    Bonsai.assoc
+      (module String)
+      (Value.return (String.Map.of_alist_exn [ "hello", (); "world", () ]))
+      ~f:(fun _ _ ->
+        let%sub a = Bonsai.Private.path in
+        let%sub b = Bonsai.Private.path in
+        return (Bonsai.Value.both a b))
+  in
+  let handle =
+    Handle.create
+      (Result_spec.sexp
+         (module struct
+           type t = (Bonsai.Private.Path.t * Bonsai.Private.Path.t) String.Map.t
+           [@@deriving sexp_of]
+         end))
+      component
+  in
+  Handle.show handle;
+  [%expect
+    {|
+    ((hello
+      ((Subst_from (Assoc hello) Subst_from)
+       (Subst_from (Assoc hello) Subst_into Subst_from)))
+     (world
+      ((Subst_from (Assoc world) Subst_from)
+       (Subst_from (Assoc world) Subst_into Subst_from)))) |}];
+  print_s Bonsai_lib.Private.(Computation.sexp_of_packed (reveal_computation component));
+  [%expect {| (Assoc_simpl ((map constant))) |}]
+;;
+
 let%expect_test "chain" =
   let add_one = Bonsai.pure (fun x -> x + 1) in
   let double = Bonsai.pure (fun x -> x * 2) in
@@ -223,7 +268,7 @@ let%expect_test "wrap" =
   let handle =
     Handle.create
       (module struct
-        type t = string * (unit -> Event.t)
+        type t = string * (unit -> unit Effect.t)
         type incoming = unit
 
         let view = Tuple2.get1
@@ -342,7 +387,70 @@ let%expect_test "assoc simplifies its inner computation, if possible" =
       ~f:(fun key data -> Bonsai.read (Value.both key data))
   in
   print_s Bonsai_lib.Private.(Computation.sexp_of_packed (reveal_computation component));
-  [%expect {| (Assoc_simpl ((map constant))) |}]
+  [%expect {|
+    (Assoc_simpl ((map constant))) |}]
+;;
+
+let%expect_test "assoc with sub simplifies its inner computation, if possible" =
+  let value = Bonsai.Value.return String.Map.empty in
+  let component =
+    Bonsai.assoc
+      (module String)
+      value
+      ~f:(fun key data ->
+        let%sub key = Bonsai.read key in
+        Bonsai.read (Bonsai.Value.both key data))
+  in
+  print_s Bonsai_lib.Private.(Computation.sexp_of_packed (reveal_computation component));
+  [%expect {|
+    (Assoc_simpl ((map constant))) |}]
+;;
+
+let%expect_test "map > lazy" =
+  let open Bonsai.Let_syntax in
+  let module M = struct
+    type t =
+      { label : string
+      ; children : t Int.Map.t
+      }
+  end
+  in
+  let rec f ~t ~depth =
+    let%sub { M.label; children } = return t in
+    let%sub children =
+      Bonsai.assoc
+        (module Int)
+        children
+        ~f:(fun _ v ->
+          let depth =
+            let%map depth = depth in
+            depth + 1
+          in
+          Bonsai.lazy_ (lazy (f ~t:v ~depth)))
+    in
+    return
+    @@ let%map label = label
+    and children = children
+    and depth = depth in
+    [%message label (depth : int) (children : Sexp.t Int.Map.t)]
+  in
+  let t_var = Bonsai.Var.create { M.label = "hi"; children = Int.Map.empty } in
+  let t_value = Bonsai.Var.value t_var in
+  let handle =
+    Handle.create
+      (Result_spec.sexp (module Sexp))
+      (f ~t:t_value ~depth:(Bonsai.Value.return 0))
+  in
+  [%expect {| |}];
+  Handle.show handle;
+  [%expect {| (hi (depth 0) (children ())) |}];
+  Bonsai.Var.set
+    t_var
+    { M.label = "hi"
+    ; children = Int.Map.singleton 0 { M.label = "hello"; children = Int.Map.empty }
+    };
+  Handle.show handle;
+  [%expect {| (hi (depth 0) (children ((0 (hello (depth 1) (children ())))))) |}]
 ;;
 
 let%expect_test "action sent to non-existent assoc element" =
@@ -356,7 +464,7 @@ let%expect_test "action sent to non-existent assoc element" =
   let handle =
     Handle.create
       (module struct
-        type t = (int * (int -> Event.t)) Int.Map.t
+        type t = (int * (int -> unit Effect.t)) Int.Map.t
         type incoming = Nothing.t
 
         let incoming _ = Nothing.unreachable_code
@@ -380,7 +488,7 @@ let%expect_test "action sent to non-existent assoc element" =
     |> Fn.flip Map.find_exn 2
     |> Tuple2.get2
     |> Fn.flip ( @@ ) what
-    |> Ui_event.Expert.handle
+    |> Ui_effect.Expert.handle
   in
   set_two 3;
   Handle.show handle;
@@ -408,7 +516,7 @@ let%test_module "testing Bonsai internals" =
       let module State_with_setter = struct
         type t =
           { state : string
-          ; set_state : string -> Event.t
+          ; set_state : string -> unit Effect.t
           }
       end
       in
@@ -507,7 +615,7 @@ let%expect_test "let syntax is collapsed upon eval" =
     value |> reveal_value |> Value.eval Environment.empty |> Ui_incr.pack
   in
   let filename = Stdlib.Filename.temp_file "incr" "out" in
-  Ui_incr.Packed.save_dot filename [ packed ];
+  Ui_incr.Packed.save_dot_to_file filename [ packed ];
   let dot_contents = In_channel.read_all filename in
   require
     [%here]
@@ -543,7 +651,8 @@ let%expect_test "ignored result of assoc" =
   in
   let handle = Handle.create (Result_spec.sexp (module Unit)) component in
   Handle.show handle;
-  [%expect {| () |}];
+  [%expect {|
+    () |}];
   Bonsai.Var.set var (Int.Map.of_alist_exn []);
   Expect_test_helpers_core.require_does_not_raise [%here] (fun () -> Handle.show handle);
   [%expect {| () |}]
@@ -552,7 +661,7 @@ let%expect_test "ignored result of assoc" =
 let%expect_test "on_display for updating a state (using on_change)" =
   let callback =
     Value.return (fun prev cur ->
-      Ui_event.print_s [%message "change!" (prev : int option) (cur : int)])
+      Ui_effect.print_s [%message "change!" (prev : int option) (cur : int)])
   in
   let component input = Bonsai.Edge.on_change' [%here] (module Int) ~callback input in
   let var = Bonsai.Var.create 1 in
@@ -586,7 +695,7 @@ let%expect_test "on_display for updating a state (using on_change)" =
 ;;
 
 let%expect_test "actor" =
-  let print_int_effect = printf "%d\n" |> Bonsai.Effect.of_sync_fun |> unstage in
+  let print_int_effect = printf "%d\n" |> Bonsai.Effect.of_sync_fun in
   let component =
     let%sub _, effect =
       Bonsai.actor0
@@ -598,14 +707,13 @@ let%expect_test "actor" =
     in
     return
     @@ let%map effect = effect in
-    Bonsai.Effect.inject_ignoring_response
-    @@ let%bind.Bonsai.Effect i = effect () in
+    let%bind.Bonsai.Effect i = effect () in
     print_int_effect i
   in
   let handle =
     Handle.create
       (module struct
-        type t = Event.t
+        type t = unit Effect.t
         type incoming = unit
 
         let view _ = ""
@@ -626,7 +734,7 @@ let%expect_test "actor" =
 
 let%expect_test "lifecycle" =
   let effect action on =
-    Ui_event.print_s [%message (action : string) (on : string)] |> Value.return
+    Ui_effect.print_s [%message (action : string) (on : string)] |> Value.return
   in
   let component input =
     let rendered = Bonsai.const "" in
@@ -675,13 +783,10 @@ let%expect_test "lifecycle" =
 ;;
 
 let%expect_test "Clock.every" =
-  let print_hi = (fun () -> print_endline "hi") |> Bonsai.Effect.of_sync_fun |> unstage in
+  let print_hi = (fun () -> print_endline "hi") |> Bonsai.Effect.of_sync_fun in
   let component =
     let%sub () =
-      Bonsai.Clock.every
-        [%here]
-        (Time_ns.Span.of_sec 3.0)
-        (Value.return (Bonsai.Effect.inject_ignoring_response (print_hi ())))
+      Bonsai.Clock.every [%here] (Time_ns.Span.of_sec 3.0) (Value.return (print_hi ()))
     in
     Bonsai.const ()
   in
@@ -706,9 +811,7 @@ let%expect_test "Clock.every" =
 
 let edge_poll_shared ~get_expect_output =
   let effect_tracker = Query_response_tracker.create () in
-  let effect =
-    unstage @@ Bonsai.Effect.For_testing.of_query_response_tracker effect_tracker
-  in
+  let effect = Bonsai.Effect.For_testing.of_query_response_tracker effect_tracker in
   let var = Bonsai.Var.create "hello" in
   let component =
     Bonsai.Edge.Poll.effect_on_change
@@ -1050,4 +1153,281 @@ let%expect_test "derived value nested revert outer" =
   let handle = Handle.create (Result_spec.sexp (module M)) component in
   Handle.show handle;
   [%expect {| ((a hi) (b 1000)) |}]
+;;
+
+let%expect_test "exactly once" =
+  let component =
+    Bonsai_extra.exactly_once
+      [%here]
+      (Bonsai.Value.return (Ui_effect.print_s [%message "hello!"]))
+  in
+  let handle = Handle.create (Result_spec.sexp (module Unit)) component in
+  Handle.show handle;
+  [%expect {|
+    ()
+    hello! |}];
+  Handle.show handle;
+  [%expect {| () |}]
+;;
+
+let%expect_test "yoink" =
+  let component =
+    let%sub state, set_state = Bonsai.state [%here] (module Int) ~default_model:0 in
+    let%sub get_state = Bonsai_extra.yoink state in
+    Bonsai_extra.exactly_once
+      [%here]
+      (let%map get_state = get_state
+       and set_state = set_state in
+       let%bind.Bonsai.Effect () = set_state 1 in
+       let%bind.Bonsai.Effect s = get_state in
+       Ui_effect.print_s [%message (s : int)])
+  in
+  let handle = Handle.create (Result_spec.sexp (module Unit)) component in
+  Handle.show handle;
+  [%expect {| () |}];
+  Handle.show handle;
+  [%expect {|
+    (s 1)
+    () |}]
+;;
+
+let%expect_test "freeze" =
+  let var = Bonsai.Var.create "hello" in
+  let component = Bonsai_extra.freeze [%here] (module String) (Bonsai.Var.value var) in
+  let handle = Handle.create (Result_spec.sexp (module String)) component in
+  Handle.show handle;
+  [%expect {| hello |}];
+  Bonsai.Var.set var "world";
+  Handle.show handle;
+  [%expect {| hello |}]
+;;
+
+let%expect_test "id_gen" =
+  let module Id = Bonsai_extra.Id_gen (Int) () in
+  let component =
+    let%sub next = Id.component [%here] in
+    Bonsai.Edge.after_display
+      (let%map next = next in
+       let%bind.Bonsai.Effect id = next in
+       Ui_effect.print_s [%sexp (id : Id.t)])
+  in
+  let handle = Handle.create (Result_spec.sexp (module Unit)) component in
+  Handle.recompute_view handle;
+  Handle.recompute_view handle;
+  Handle.recompute_view handle;
+  Handle.recompute_view handle;
+  Handle.recompute_view handle;
+  [%expect {|
+    0
+    1
+    2
+    3 |}]
+;;
+
+let%expect_test "state_machine_dynamic_model" =
+  let component =
+    Bonsai_extra.state_machine0_dynamic_model
+      [%here]
+      (module String)
+      (module String)
+      ~model:
+        (`Computed
+           (Bonsai.Value.return (function
+              | None -> "not set "
+              | Some s -> sprintf "set %s" s)))
+      ~apply_action:(fun ~inject:_ ~schedule_event:_ _model action -> action)
+  in
+  let handle =
+    Handle.create
+      (module struct
+        type t = string * (string -> unit Effect.t)
+        type incoming = string
+
+        let view (s, _) = s
+        let incoming (_, s) = s
+      end)
+      component
+  in
+  Handle.show handle;
+  [%expect {| not set |}];
+  Handle.do_actions handle [ "here" ];
+  Handle.show handle;
+  [%expect {| set here |}]
+;;
+
+let%expect_test "portal" =
+  let var = Bonsai.Var.create (Sexp.Atom "hello") in
+  let component =
+    Bonsai_extra.with_inject_fixed_point (fun inject ->
+      let%sub () =
+        Bonsai.Edge.on_change
+          [%here]
+          (module Sexp)
+          (Bonsai.Var.value var)
+          ~callback:inject
+      in
+      Bonsai.const ((), Ui_effect.print_s))
+  in
+  let handle = Handle.create (Result_spec.sexp (module Unit)) component in
+  (* this is only necessary because I use on_change, which uses after-display.
+     In an action-handler, the actions would be scheduled on the same frame. *)
+  Handle.recompute_view_until_stable handle;
+  [%expect {| hello |}];
+  Bonsai.Var.set var (Sexp.Atom "world");
+  Handle.recompute_view_until_stable handle;
+  [%expect {| world |}]
+;;
+
+let%expect_test "portal 2" =
+  let component =
+    Bonsai_extra.with_inject_fixed_point (fun inject_fix ->
+      let%sub state1, inject1 =
+        Bonsai.state_machine1
+          [%here]
+          (module Int)
+          (module Int)
+          ~default_model:0
+          ~apply_action:(fun ~inject:_ ~schedule_event inject model action ->
+            schedule_event (inject (model + action));
+            action)
+          inject_fix
+      in
+      let%sub (), inject2 =
+        Bonsai.state_machine1
+          [%here]
+          (module Unit)
+          (module Int)
+          ~default_model:()
+          ~apply_action:(fun ~inject:_ ~schedule_event state1 _model action ->
+            schedule_event (Ui_effect.print_s [%message (state1 : int) (action : int)]);
+            ())
+          state1
+      in
+      return @@ Bonsai.Value.both inject1 inject2)
+  in
+  let handle =
+    Handle.create
+      (module struct
+        type t = int -> unit Effect.t
+        type incoming = int
+
+        let view _ = ""
+        let incoming = Fn.id
+      end)
+      component
+  in
+  Handle.show handle;
+  [%expect {||}];
+  Handle.do_actions handle [ 1 ];
+  Handle.flush handle;
+  [%expect {| ((state1 1) (action 1)) |}];
+  Handle.do_actions handle [ 5 ];
+  Handle.flush handle;
+  [%expect {| ((state1 5) (action 6)) |}];
+  Handle.do_actions handle [ 10 ];
+  Handle.flush handle;
+  [%expect {| ((state1 10) (action 15)) |}]
+;;
+
+let%expect_test "pipe" =
+  let component =
+    let%sub push_and_pop = Bonsai_extra.pipe [%here] (module String) in
+    return
+    @@ let%map push, pop = push_and_pop in
+    let pop s =
+      let%bind.Bonsai.Effect a = pop in
+      Ui_effect.print_s [%sexp "pop", (s : string), (a : string)]
+    in
+    push, pop
+  in
+  let handle =
+    Handle.create
+      (module struct
+        type t = (string -> unit Effect.t) * (string -> unit Effect.t)
+
+        type incoming =
+          [ `Push of string
+          | `Pop of string
+          ]
+
+        let view _ = ""
+
+        let incoming (push, pop) = function
+          | `Push s -> push s
+          | `Pop s -> pop s
+        ;;
+      end)
+      component
+  in
+  Handle.do_actions handle [ `Push "hello"; `Pop "a" ];
+  Handle.flush handle;
+  [%expect {| (pop a hello) |}];
+  Handle.do_actions handle [ `Push "world" ];
+  Handle.flush handle;
+  [%expect {| |}];
+  Handle.do_actions handle [ `Pop "b" ];
+  Handle.flush handle;
+  [%expect {| (pop b world) |}];
+  Handle.do_actions handle [ `Pop "c" ];
+  Handle.flush handle;
+  [%expect {| |}];
+  Handle.do_actions handle [ `Push "foo" ];
+  Handle.flush handle;
+  [%expect {| (pop c foo) |}];
+  Handle.do_actions
+    handle
+    [ `Push "hello"; `Push "world"; `Push "foo"; `Pop "a"; `Pop "b"; `Pop "c" ];
+  Handle.flush handle;
+  [%expect {|
+    (pop a hello)
+    (pop b world)
+    (pop c foo) |}]
+;;
+
+let%expect_test "multi-thunk" =
+  let module Id = Core.Unique_id.Int () in
+  let id =
+    Bonsai_extra.thunk (fun () ->
+      print_endline "pulling id!";
+      Id.create ())
+  in
+  let component =
+    let%map.Computation a = id
+    and b = id in
+    sprintf "%s %s" (Id.to_string a) (Id.to_string b)
+  in
+  let handle = Handle.create (Result_spec.sexp (module String)) component in
+  Handle.show handle;
+  [%expect {|
+    pulling id!
+    pulling id!
+    "0 1" |}]
+;;
+
+let%expect_test "thunk-storage" =
+  let module Id = Core.Unique_id.Int () in
+  let var = Bonsai.Var.create true in
+  let id =
+    Bonsai_extra.thunk (fun () ->
+      print_endline "pulling id!";
+      Id.create ())
+  in
+  let component =
+    if%sub Bonsai.Var.value var
+    then (
+      let%map.Computation id = id in
+      Id.to_string id)
+    else Bonsai.const ""
+  in
+  let handle = Handle.create (Result_spec.sexp (module String)) component in
+  Handle.show handle;
+  [%expect {|
+    pulling id!
+    0 |}];
+  Bonsai.Var.set var false;
+  Handle.show handle;
+  [%expect {| "" |}];
+  Bonsai.Var.set var true;
+  Handle.show handle;
+  [%expect {| 0 |}]
 ;;

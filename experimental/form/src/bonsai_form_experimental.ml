@@ -59,7 +59,7 @@ let checkbox_input ?(label = "") ~default () =
 
 let inject_or_ignore inject_model = function
   | Some model -> inject_model model
-  | None -> Vdom.Event.Ignore
+  | None -> Vdom.Effect.Ignore
 ;;
 
 let date_picker_with_bad_user_experience ~default =

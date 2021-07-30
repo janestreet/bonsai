@@ -4,21 +4,18 @@ open! Import
 include Bonsai.Effect
 module Callback = Private.Callback
 
-let of_deferred_fun (type query result) f =
-  let module E =
-    Vdom.Event.Define (struct
-      module Action = struct
-        type t = (query, result) Callback.t
-      end
+module Deferred_fun_arg = struct
+  module Action = struct
+    type 'r t = T : 'a * ('a -> 'r Deferred.t) -> 'r t
+  end
 
-      let handle action =
-        don't_wait_for
-          (let%map.Deferred result = f (Callback.request action) in
-           let evt = Callback.respond_to action result in
-           Vdom.Event.Expert.handle_non_dom_event_exn evt)
-      ;;
-    end)
-  in
-  let evaluator = E.inject in
-  stage (fun request -> Private.make ~request ~evaluator)
-;;
+  let handle (Action.T (a, f)) ~on_response =
+    don't_wait_for
+      (let%map.Deferred result = f a in
+       on_response result)
+  ;;
+end
+
+module Deferred_fun = Ui_effect.Define1 (Deferred_fun_arg)
+
+let of_deferred_fun f a = Deferred_fun.inject (T (a, f))

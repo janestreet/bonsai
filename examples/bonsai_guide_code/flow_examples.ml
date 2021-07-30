@@ -142,7 +142,7 @@ let add_new_person_form ~inject_add_person =
   return
     (let%map form = form
      and inject_add_person = inject_add_person in
-     let on_submit name = Vdom.Event.Many [ Form.set form ""; inject_add_person name ] in
+     let on_submit name = Vdom.Effect.Many [ Form.set form ""; inject_add_person name ] in
      form
      |> Form.label "name"
      |> Form.validate ~f:(fun name ->

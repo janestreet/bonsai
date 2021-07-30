@@ -1,7 +1,7 @@
 open! Core
 
-module Event = struct
-  include Ui_event
+module Effect = struct
+  include Ui_effect
 
   module External = Define (struct
       module Action = String

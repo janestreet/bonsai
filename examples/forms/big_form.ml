@@ -72,9 +72,9 @@ module My_variant = struct
     in
     let set = function
       | A -> Form.set chooser `A
-      | B s -> Ui_event.Many [ Form.set chooser `B; Form.set b_textbox s ]
+      | B s -> Ui_effect.Many [ Form.set chooser `B; Form.set b_textbox s ]
       | C (i, f) ->
-        Ui_event.Many [ Form.set chooser `C; Form.set c_int i; Form.set c_float f ]
+        Ui_effect.Many [ Form.set chooser `C; Form.set c_int i; Form.set c_float f ]
     in
     Form.Expert.create ~value ~view ~set
   ;;
@@ -99,6 +99,7 @@ type t =
   ; many2 : A_B_or_C.t list
   ; string_set : String.Set.t
   ; files : Filename.Set.t
+  ; rank : string list
   }
 [@@deriving fields, sexp_of]
 
@@ -168,8 +169,19 @@ let form =
     E.File_select.multiple
       [%here]
       ~accept:[ `Mimetype "application/pdf"; `Extension ".csv" ]
-      ~on_file_select:(Value.return (Fn.const Ui_event.Ignore))
+      ~on_file_select:(Value.return (Fn.const Ui_effect.Ignore))
       ()
+  in
+  let%sub rank =
+    E.Rank.list
+      (module String)
+      (fun item ->
+         return
+           (let%map item = item in
+            Vdom.Node.text item))
+  in
+  let%sub rank =
+    Form.Dynamic.with_default (Value.return [ "aaaaaa"; "bbbbbb"; "cccccc" ]) rank
   in
   let open Form.Dynamic.Record_builder in
   Fields.make_creator
@@ -191,6 +203,7 @@ let form =
     ~sexp_from_string:(field sexp_from_string)
     ~string_set:(field string_set)
     ~files:(field files)
+    ~rank:(field rank)
   |> build_for_record
 ;;
 

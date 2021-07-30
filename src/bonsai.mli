@@ -15,7 +15,7 @@ module Private : sig
     -> path:Path.t
     -> clock:Incr.Clock.t
     -> model:'model Incr.t
-    -> inject:('action -> Event.t)
+    -> inject:('action -> unit Effect.t)
     -> ('model, 'action, 'result) Computation.t
     -> ('model, 'action, 'result) Snapshot.t
 
@@ -33,10 +33,15 @@ module type Comparator = Module_types.Comparator
 
 type ('k, 'cmp) comparator = ('k, 'cmp) Module_types.comparator
 
-module Event = Event
 module Effect = Effect
 
 module Debug : sig
+  val instrument_computation
+    :  'a Proc.Computation.t
+    -> start_timer:(string -> unit)
+    -> stop_timer:(string -> unit)
+    -> 'a Proc.Computation.t
+
   val to_dot : 'a Proc.Computation.t -> string
 end
 

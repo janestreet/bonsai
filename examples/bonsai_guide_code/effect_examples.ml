@@ -11,9 +11,7 @@ let uppercase s =
 ;;
 
 (* $MDX part-begin=uppercase_e *)
-let uppercase_e : string -> string Effect.t =
-  unstage (Bonsai_web.Effect.of_deferred_fun uppercase)
-;;
+let uppercase_e : string -> string Effect.t = Bonsai_web.Effect.of_deferred_fun uppercase
 
 (* $MDX part-end *)
 
@@ -41,9 +39,9 @@ let uppercase_rpc_sender =
   return
     (let%map textbox = textbox
      and result_state, set_result = result_state in
-     let on_submit contents =
-       let uppercased : string Effect.t = uppercase_e contents in
-       Bonsai.Effect.inject uppercased ~on_response:(fun s -> set_result (Filled s))
+     let on_submit (contents : string) : unit Effect.t =
+       let%bind.Effect s = uppercase_e contents in
+       set_result (Filled s)
      in
      let form_view =
        textbox
@@ -69,11 +67,9 @@ let uppercase_rpc_sender_bind =
     (let%map textbox = textbox
      and result_state, set_result = result_state in
      let on_submit contents =
-       let open Bonsai.Effect.Let_syntax in
-       Bonsai.Effect.inject_ignoring_response
-         (let%bind () = set_result Pending |> Bonsai.Effect.of_event in
-          let%bind s = uppercase_e contents in
-          set_result (Filled s) |> Bonsai.Effect.of_event)
+       let%bind.Effect () = set_result Pending in
+       let%bind.Effect s = uppercase_e contents in
+       set_result (Filled s)
      in
      let form_view =
        textbox

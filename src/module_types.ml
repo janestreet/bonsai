@@ -1,6 +1,6 @@
 open! Core
 module Incr = Ui_incr
-module Event = Ui_event
+module Effect = Ui_effect
 
 module type Comparator = sig
   type t [@@deriving sexp]
@@ -67,8 +67,8 @@ module type Component_s = sig
       [apply_action] may emit further actions via [schedule_event] or use Async to arrange
       for [schedule_event] to be called later. *)
   val apply_action
-    :  inject:(Action.t -> Ui_event.t)
-    -> schedule_event:(Ui_event.t -> unit)
+    :  inject:(Action.t -> unit Ui_effect.t)
+    -> schedule_event:(unit Ui_effect.t -> unit)
     -> Input.t
     -> Model.t
     -> Action.t
@@ -85,7 +85,7 @@ module type Component_s = sig
 
       For example, the result may contain a Vdom button node that has an "on click"
       handler which calls [inject] to trigger an action. *)
-  val compute : inject:(Action.t -> Ui_event.t) -> Input.t -> Model.t -> Result.t
+  val compute : inject:(Action.t -> unit Ui_effect.t) -> Input.t -> Model.t -> Result.t
 end
 
 type ('input, 'model, 'action, 'result) component_s =
@@ -114,14 +114,14 @@ module type Component_s_incr = sig
 
   val apply_action
     :  Input.t Incr.t
-    -> Model.t Incr.t
-    -> inject:(Action.t -> Ui_event.t)
-    -> (schedule_event:(Ui_event.t -> unit) -> Action.t -> Model.t) Incr.t
+    -> inject:(Action.t -> unit Ui_effect.t)
+    -> (schedule_event:(unit Ui_effect.t -> unit) -> Model.t -> Action.t -> Model.t)
+         Incr.t
 
   val compute
     :  Input.t Incr.t
     -> Model.t Incr.t
-    -> inject:(Action.t -> Ui_event.t)
+    -> inject:(Action.t -> unit Ui_effect.t)
     -> Result.t Incr.t
 end
 

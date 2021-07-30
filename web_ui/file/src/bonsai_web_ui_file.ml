@@ -142,14 +142,14 @@ module File_read = struct
   module In_browser = struct
     type t =
       { state : State.t Bonsai.Var.t
-      ; on_state_change : State.t -> Ui_event.t
+      ; on_state_change : State.t -> unit Ui_effect.t
       ; file_reader : File.fileReader Js.t
       ; result : (string, error) Result.t Svar.t
       }
 
     let update_state t ~f =
       Bonsai.Var.update t.state ~f;
-      t.on_state_change (Bonsai.Var.get t.state) |> Ui_event.Expert.handle
+      t.on_state_change (Bonsai.Var.get t.state) |> Ui_effect.Expert.handle
     ;;
 
     let update_progress t ev =
@@ -232,7 +232,7 @@ module File_read = struct
 
   let create_in_tests (test_data : Test_data.t) ~on_state_change =
     Test_data.on_state_change test_data [%here] ~f:(fun state ->
-      on_state_change state |> Ui_event.Expert.handle);
+      on_state_change state |> Ui_effect.Expert.handle);
     let result = Svar.create () in
     Svar.upon test_data.result (function
       | Ok _ as ok -> Svar.fill_if_empty result ok
@@ -255,12 +255,10 @@ module File_read = struct
     | In_tests { result; _ } -> result
   ;;
 
-  let result =
-    Bonsai.Effect.For_testing.of_svar_fun (fun (t : t) -> result_svar t) |> unstage
-  ;;
+  let result = Bonsai.Effect.For_testing.of_svar_fun (fun (t : t) -> result_svar t)
 end
 
-let read ?(on_state_change = Fn.const Ui_event.Ignore) = function
+let read ?(on_state_change = Fn.const Ui_effect.Ignore) = function
   | In_browser file -> File_read.create_in_browser file ~on_state_change
   | In_tests test_data -> File_read.create_in_tests test_data ~on_state_change
 ;;

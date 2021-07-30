@@ -1,6 +1,6 @@
 include Import
 include Proc
-module Event = Event
+module Effect = Effect
 
 module Arrow = struct
   module Driver = Driver

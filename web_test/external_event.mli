@@ -1,3 +1,3 @@
 open! Core
 
-val inject : string -> Bonsai_web.Vdom.Event.t
+val inject : string -> unit Bonsai_web.Vdom.Effect.t

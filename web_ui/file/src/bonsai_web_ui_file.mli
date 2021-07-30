@@ -54,7 +54,7 @@ val read
   :  ?on_state_change:
     (
       File_read.State.t
-      -> Ui_event.t)
+      -> unit Ui_effect.t)
   -> t
   -> File_read.t
 

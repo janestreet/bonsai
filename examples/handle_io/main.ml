@@ -2,10 +2,10 @@ open! Core
 open! Async_kernel
 open! Bonsai_web
 
-let print_effect = Effect.of_sync_fun print_endline |> unstage
+let print_effect = Effect.of_sync_fun print_endline
 
 let component =
-  let on_click = Effect.inject_ignoring_response (print_effect "hello world") in
+  let on_click = print_effect "hello world" in
   Bonsai.const
     (Vdom.Node.button
        ~attr:(Vdom.Attr.on_click (fun _ -> on_click))

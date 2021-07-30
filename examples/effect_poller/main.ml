@@ -4,8 +4,7 @@ open! Bonsai_web
 open Bonsai.Let_syntax
 
 let fake_slow_capitalize_string_rpc =
-  unstage
-  @@ Bonsai_web.Effect.of_deferred_fun (fun text ->
+  Bonsai_web.Effect.of_deferred_fun (fun text ->
     let rand_delay = Random.float_range 0.0 1.0 in
     let%map.Deferred () = Async_kernel.after (Time_ns.Span.of_sec rand_delay) in
     String.uppercase text)

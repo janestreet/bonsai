@@ -1,4 +1,5 @@
 (library (name bonsai_test) (public_name bonsai.test)
- (libraries bonsai core_kernel.composition_infix core_kernel.core
-  expect_test_helpers_core patdiff.expect_test_patdiff incr_map re)
+ (libraries bonsai bonsai_extra core_kernel.composition_infix
+  core_kernel.core expect_test_helpers_core patdiff.expect_test_patdiff
+  incr_map re)
  (preprocess (pps ppx_jane ppx_pattern_bind)))

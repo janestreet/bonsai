@@ -15,11 +15,10 @@ open Bonsai_web_ui_file
 *)
 
 let print_contents t =
-  contents t
-  |> Bonsai.Effect.inject ~on_response:(fun contents ->
-    print_s [%message "print_contents completed" (contents : string Or_error.t)];
-    Ui_event.Ignore)
-  |> Ui_event.Expert.handle
+  Ui_effect.Expert.handle
+    (let%bind.Bonsai.Effect contents = contents t in
+     print_s [%message "print_contents completed" (contents : string Or_error.t)];
+     Ui_effect.Ignore)
 ;;
 
 let set_up_read t =
@@ -37,8 +36,8 @@ let set_up_read t =
       Bonsai.Edge.lifecycle
         ~on_activate:
           (let%map set_result = set_result in
-           File_read.result read
-           |> Bonsai.Effect.inject ~on_response:(fun resp -> set_result (Some resp)))
+           let%bind.Bonsai.Effect resp = File_read.result read in
+           set_result (Some resp))
         ()
     in
     Bonsai.read

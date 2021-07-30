@@ -158,7 +158,7 @@ module With_incr = struct
         module Action = Nothing
 
         let name = "pure"
-        let apply_action _ _ ~inject:_ = Incr.return (fun ~schedule_event:_ _ -> ())
+        let apply_action _ ~inject:_ = Incr.return (fun ~schedule_event:_ _ _ -> ())
         let compute input _ ~inject:_ = f input
       end)
       ~default_model:()

@@ -4,10 +4,7 @@ open! Bonsai_web
 
 let build_result send_message (textbox_content, set_textbox_content) =
   let submit_and_then_clear =
-    Vdom.Event.Many
-      [ Effect.inject_ignoring_response (send_message textbox_content)
-      ; set_textbox_content ""
-      ]
+    Vdom.Effect.Many [ send_message textbox_content; set_textbox_content "" ]
   in
   let on_ret =
     let is_key_ret key =
@@ -19,7 +16,7 @@ let build_result send_message (textbox_content, set_textbox_content) =
          |> Js_of_ocaml.Js.to_string)
     in
     Vdom.Attr.on_keypress (fun key ->
-      if is_key_ret key then submit_and_then_clear else Vdom.Event.Ignore)
+      if is_key_ret key then submit_and_then_clear else Vdom.Effect.Ignore)
   in
   let on_input = Vdom.Attr.on_input (fun _ -> set_textbox_content) in
   let value = Vdom.Attr.string_property "value" textbox_content in

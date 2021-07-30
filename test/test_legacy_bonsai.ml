@@ -37,7 +37,7 @@ module Counter_component = struct
   end
 
   module Result = struct
-    type t = string * (Action.t -> Event.t)
+    type t = string * (Action.t -> unit Effect.t)
   end
 
   let apply_action ~inject:_ ~schedule_event:_ () model : Action.t -> Model.t = function
@@ -283,11 +283,11 @@ let%expect_test "schedule event from outside of the component" =
     end
 
     module Result = struct
-      type t = unit * (Action.t -> Event.t)
+      type t = unit * (Action.t -> unit Effect.t)
     end
 
     let apply_action ~inject:_ ~schedule_event () () Action.Trigger =
-      schedule_event (Event.external_ "hello world")
+      schedule_event (Effect.external_ "hello world")
     ;;
 
     let compute ~inject () () = (), inject
@@ -322,13 +322,16 @@ let%expect_test "schedule many events from outside of the component" =
     module Model = Unit
 
     module Result = struct
-      type t = unit * (Action.t -> Event.t)
+      type t = unit * (Action.t -> unit Effect.t)
     end
 
     let apply_action ~inject:_ ~schedule_event () () Action.Trigger =
       schedule_event
-        (Event.sequence
-           [ Event.external_ "hello world"; Event.no_op; Event.external_ "goodbye world" ])
+        (Effect.sequence
+           [ Effect.external_ "hello world"
+           ; Effect.no_op
+           ; Effect.external_ "goodbye world"
+           ])
     ;;
 
     let compute ~inject () () = (), inject
@@ -368,12 +371,11 @@ let%expect_test "model cutoff" =
     module Action = Unit
 
     module Result = struct
-      type t = string * (unit -> Ui_event.t)
+      type t = string * (unit -> unit Effect.t)
     end
 
-    let apply_action _input model ~inject:_ =
-      let%map.Incr model = model in
-      fun ~schedule_event:_ () -> model + 1
+    let apply_action _input ~inject:_ =
+      Incr.return (fun ~schedule_event:_ model () -> model + 1)
     ;;
 
     let compute _input model ~inject =
@@ -436,7 +438,7 @@ let%expect_test "input" =
     end
 
     module Result = struct
-      type t = (int * string list) * (Action.t -> Event.t)
+      type t = (int * string list) * (Action.t -> unit Effect.t)
     end
 
     let apply_action ~inject:_ ~schedule_event:_ _words model : Action.t -> Model.t

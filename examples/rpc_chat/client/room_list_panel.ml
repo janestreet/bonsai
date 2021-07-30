@@ -12,14 +12,14 @@ let component ~room_list ~refresh_rooms ~change_room =
       [ Vdom.Node.text "Rooms"
       ; Vdom_input_widgets.Button.simple
           ~extra_attrs:[ Vdom.Attr.id "refresh-button" ]
-          ~on_click:(fun () -> Effect.inject_ignoring_response refresh_rooms)
+          ~on_click:(fun () -> refresh_rooms)
           "↻"
       ]
   in
   let room_switching_buttons =
     List.map room_list ~f:(fun room ->
       Vdom_input_widgets.Button.simple
-        ~on_click:(fun () -> Effect.inject_ignoring_response (change_room room))
+        ~on_click:(fun () -> change_room room)
         (Room.to_string room))
   in
   Vdom.Node.div

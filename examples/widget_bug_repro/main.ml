@@ -65,8 +65,8 @@ let component true_or_false ~toggle =
 
 let (_ : _ Start.Handle.t) =
   let var = Bonsai.Var.create true in
-  let toggle = Bonsai.Effect.of_sync_fun (Bonsai.Var.set var) |> unstage in
-  let toggle a = Bonsai.Effect.inject_ignoring_response (toggle a) in
+  let toggle = Bonsai.Effect.of_sync_fun (Bonsai.Var.set var) in
+  let toggle a = toggle a in
   let value = Bonsai.Var.value var in
   Start.start
     Start.Result_spec.just_the_view

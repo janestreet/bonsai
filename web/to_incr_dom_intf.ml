@@ -30,7 +30,7 @@ module type S = sig
     :  input:Input.t Incr.t
     -> old_model:Model.t option Incr.t
     -> model:Model.t Incr.t
-    -> inject:(Action.t -> Vdom.Event.t)
+    -> inject:(Action.t -> unit Vdom.Effect.t)
     -> t Incr.t
 end
 

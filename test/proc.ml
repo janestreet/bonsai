@@ -8,7 +8,7 @@ module Result_spec = struct
     type incoming
 
     val view : t -> string
-    val incoming : t -> incoming -> Event.t
+    val incoming : t -> incoming -> unit Effect.t
   end
 
   type ('result, 'incoming) t =
@@ -29,6 +29,16 @@ module Result_spec = struct
 
     val to_string : t -> string
   end
+
+  let invisible (type a) : (a, Nothing.t) t =
+    (module struct
+      type t = a
+
+      include No_incoming
+
+      let view _ = ""
+    end)
+  ;;
 
   let sexp (type a) (module S : Sexpable with type t = a) =
     (module struct
@@ -56,7 +66,8 @@ module Result_spec = struct
 end
 
 module Handle = struct
-  type ('result, 'incoming) t = (unit, 'result * string * ('incoming -> Event.t)) Driver.t
+  type ('result, 'incoming) t =
+    (unit, 'result * string * ('incoming -> unit Effect.t)) Driver.t
 
   let create
         (type result incoming)
@@ -86,7 +97,7 @@ module Handle = struct
 
   let do_actions handle actions =
     let _, _, inject_action = Driver.result handle in
-    let event = actions |> List.map ~f:inject_action |> Event.sequence in
+    let event = actions |> List.map ~f:inject_action |> Effect.sequence in
     Driver.schedule_event handle event
   ;;
 
