@@ -40,6 +40,15 @@ val exactly_once
   -> unit Ui_effect.t Value.t
   -> unit Computation.t
 
+(** As its name implies, [exactly_once] runs the event passed in via [Value.t]
+    exactly once.  The return value is stored and returned.  [None] is returned 
+    while the effect is executing. *)
+val exactly_once_with_value
+  :  Source_code_position.t
+  -> (module Bonsai.Model with type t = 'a)
+  -> 'a Ui_effect.t Value.t
+  -> 'a option Computation.t
+
 (** [freeze] takes a Value.t and returns a computation whose output is frozen
     to be the first value that passed through the input. *)
 val freeze

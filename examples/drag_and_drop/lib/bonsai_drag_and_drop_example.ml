@@ -32,7 +32,7 @@ module Action = struct
   [@@deriving sexp]
 end
 
-let kanban_column ?extra_dnd ~dnd ~items ~column_name ~title =
+let[@warning "-16"] kanban_column ?extra_dnd ~dnd ~items ~column_name ~title =
   let map =
     let%map items = items
     and model = dnd >>| Drag_and_drop.model in

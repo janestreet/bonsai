@@ -82,7 +82,7 @@ let state_machine0_dynamic_model here model_mod action_mod ~model ~apply_action 
     (Bonsai.Value.return ())
 ;;
 
-let exactly_once here event =
+let exactly_once here effect =
   let%sub has_run, set_has_run = Bonsai.state here (module Bool) ~default_model:false in
   if%sub has_run
   then Bonsai.const ()
@@ -90,9 +90,26 @@ let exactly_once here event =
     Bonsai.Edge.lifecycle
       ~on_activate:
         (let%map set_has_run = set_has_run
-         and event = event in
+         and event = effect in
          Ui_effect.Many [ set_has_run true; event ])
       ()
+;;
+
+let exactly_once_with_value here modul effect =
+  let%sub value, set_value = Bonsai.state_opt here modul in
+  let%sub () =
+    match%sub value with
+    | None ->
+      Bonsai.Edge.lifecycle
+        ~on_activate:
+          (let%map set_value = set_value
+           and effect = effect in
+           let%bind.Bonsai.Effect r = effect in
+           set_value (Some r))
+        ()
+    | Some _ -> Bonsai.const ()
+  in
+  return value
 ;;
 
 let freeze here model value =

@@ -24,10 +24,11 @@ depends: [
   "ppx_jane"
   "ppx_pattern_bind"
   "virtual_dom"
-  "cohttp-async"             {>= "2.5.4"}
+  "cohttp-async"             {= "4.0.0+async"}
   "dune"                     {>= "2.0.0"}
   "gen_js_api"               {>= "1.0.8"}
   "js_of_ocaml-ppx"          {>= "3.9.0"}
+  "ocaml-embed-file"
   "re"                       {>= "1.8.0"}
 ]
 synopsis: "A library for building dynamic webapps, using Js_of_ocaml"

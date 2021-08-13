@@ -1,3 +1,2 @@
-(library (name bonsai_web_ui_file)
- (libraries bonsai js_of_ocaml core_kernel.reversed_list core_kernel.bus)
- (preprocess (pps ppx_jane js_of_ocaml-ppx)))
+(library (name bonsai_web_ui_file) (libraries core_kernel.core bonsai)
+ (preprocess (pps ppx_jane js_of_ocaml-ppx ppx_pattern_bind)))

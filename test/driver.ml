@@ -13,6 +13,7 @@ type ('i, 'm, 'a, 'r) unpacked =
   ; lifecycle : Bonsai.Private.Lifecycle.Collection.t Incr.Observer.t
   ; queue : 'a Queue.t
   ; mutable should_replace_bonsai_path_string : bool
+  ; mutable should_replace_bonsai_hash_string : bool
   ; mutable last_view : string
   ; mutable last_lifecycle : Bonsai.Private.Lifecycle.Collection.t
   }
@@ -99,6 +100,7 @@ let create
       ; lifecycle
       ; queue
       ; should_replace_bonsai_path_string = true
+      ; should_replace_bonsai_hash_string = true
       ; last_view = ""
       ; last_lifecycle = Bonsai.Private.Lifecycle.Collection.empty
       }
@@ -147,6 +149,14 @@ let should_censor_bonsai_path (T { should_replace_bonsai_path_string; _ }) =
 
 let disable_bonsai_path_censoring (T unpacked) =
   unpacked.should_replace_bonsai_path_string <- false
+;;
+
+let should_censor_bonsai_hash (T { should_replace_bonsai_hash_string; _ }) =
+  should_replace_bonsai_hash_string
+;;
+
+let disable_bonsai_hash_censoring (T unpacked) =
+  unpacked.should_replace_bonsai_hash_string <- false
 ;;
 
 let sexp_of_model (T { sexp_of_model; model_var; _ }) =

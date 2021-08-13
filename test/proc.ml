@@ -110,6 +110,15 @@ module Handle = struct
     else string
   ;;
 
+  let disable_bonsai_hash_censoring = Driver.disable_bonsai_hash_censoring
+  let hash_regex = Re.Str.regexp "_hash_[a-f0-9]+"
+
+  let maybe_censor_bonsai_hash handle string =
+    if Driver.should_censor_bonsai_hash handle
+    then Re.Str.global_replace hash_regex "_hash_replaced_in_test" string
+    else string
+  ;;
+
   let recompute_view handle =
     Driver.flush handle;
     let _, view, _ = Driver.result handle in
@@ -130,7 +139,9 @@ module Handle = struct
     let before = before handle in
     Driver.flush handle;
     let _, view, _ = Driver.result handle in
-    let view = maybe_censor_bonsai_path handle view in
+    let view =
+      view |> maybe_censor_bonsai_path handle |> maybe_censor_bonsai_hash handle
+    in
     Driver.store_view handle view;
     f before view;
     Driver.trigger_lifecycles handle

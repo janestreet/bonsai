@@ -98,7 +98,7 @@ type t =
   ; many : A_B_or_C.t list
   ; many2 : A_B_or_C.t list
   ; string_set : String.Set.t
-  ; files : Filename.Set.t
+  ; files : Bonsai_web_ui_file.t Filename.Map.t
   ; rank : string list
   }
 [@@deriving fields, sexp_of]
@@ -169,7 +169,6 @@ let form =
     E.File_select.multiple
       [%here]
       ~accept:[ `Mimetype "application/pdf"; `Extension ".csv" ]
-      ~on_file_select:(Value.return (Fn.const Ui_effect.Ignore))
       ()
   in
   let%sub rank =

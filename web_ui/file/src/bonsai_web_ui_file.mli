@@ -1,6 +1,15 @@
-(** An API that allows one to read files from the client's local disk. Reading of
-    arbitrary files is not created; typically one uses a widget using
-    Bonsai_web_ui_form.Element.File_select to allow the user to select a file or files.
+(** An API that allows one to read files from the client's local disk.
+
+    A value of [type t] can be created in two ways:
+
+    1. Using the companion library [Bonsai_web_ui_file_from_web_file], which uses the
+    Web File API to drive [t]. Note that the Web File API does not permit the reading of
+    arbitrary files on the client computer's disk. Instead, one typically uses a file
+    selector form to allow the user to specify a file to be read. See
+    [Bonsai_web_ui_form.Elements.File_picker] for a convenient wrapper.
+
+    2. For tests, one can also create a [t] which is driven manually using the
+    [For_testing] module.
 *)
 
 open Core
@@ -9,54 +18,82 @@ type t [@@deriving sexp_of]
 
 val filename : t -> string
 
-(** Read the contents of the file. For more precise control, including progress updates,
-    you can use [read] and the [File_read] API. *)
-val contents : t -> string Or_error.t Bonsai.Effect.t
+(** Get the contents of the file. For an advanced API that includes e.g. progress on
+    loading the file, and the ability to abort in-progress reads, see [read] below. *)
+val contents : t -> string Or_error.t Ui_effect.t
 
-module File_read : sig
-  (** A [File_read.t] represents an in-progress read of a file. *)
-  type t
+module Progress : sig
+  type t =
+    { loaded : int (** How many bytes have been loaded so far? *)
+    ; total : int (** How many bytes are there to read in total? *)
+    }
+  [@@deriving compare, equal, sexp]
 
-  module Progress : sig
-    type t =
-      { loaded : int (** How many bytes have been loaded so far? *)
-      ; total : int (** How many bytes are there to read in total? *)
-      }
-    [@@deriving compare, sexp_of]
-
-    val to_percentage : t -> Percent.t
-  end
-
-  module State : sig
-    type t =
-      | Contents of string
-      | Loading of Progress.t option
-      | Error of Error.t
-    [@@deriving compare, equal, sexp]
-  end
-
-  val state : t -> State.t Bonsai.Value.t
-
-  type error =
-    | Aborted
-    | Error of Error.t
-  [@@deriving compare, sexp_of]
-
-  (** Get the result of the read, or an error. Will only return [Aborted] if you call
-      [abort]. *)
-  val result : t -> (string, error) Result.t Bonsai.Effect.t
-
-  (** Abort the file read. [result] will become determined with result [Aborted] *)
-  val abort : t -> unit
+  val to_percentage : t -> Percent.t
 end
 
-val read
-  :  ?on_state_change:
-    (
-      File_read.State.t
-      -> unit Ui_effect.t)
-  -> t
-  -> File_read.t
+module Read_error : sig
+  type t =
+    | Aborted
+    | Error of Error.t
+  [@@deriving compare, equal, sexp]
+end
+
+module File_read : sig
+  (** An in-progress file read. *)
+  type t
+
+  (** Gets the result of the read. Will only return [Error Aborted] if you call [abort]. *)
+  val result : t -> (string, Read_error.t) Result.t Ui_effect.t
+
+  val abort : t -> unit Ui_effect.t
+end
+
+val read : ?on_progress:(Progress.t -> unit Ui_effect.t) -> t -> File_read.t Ui_effect.t
+
+module Read_on_change : sig
+  (** Functions that take bonsai values that contain [t], and kicking off reads whenever
+      those values change.
+
+      The arguments here are chosen to match the results from
+      [Bonsai_web_ui_form.Elements.File_picker]. So you can do things like:
+
+      {[
+        let%sub file_picker =
+          Bonsai_web_ui_form.Elements.File_picker.create [%here] ()
+        in
+        let%sub current_file =
+          Bonsai_web_ui_file.Read_on_change file_picker
+        in
+        match%sub current_file with
+        | Starting | In_progress _ -> Bonsai.const "file still loading"
+        | Complete (Error e) -> Bonsai.read (e >>| Error.to_string_hum)
+        | Complete (Ok (_filename, contents)) -> Bonsai.read contents
+      ]}
+
+      NOTE: these computations are not safe for use in Tangle as internally they require a
+      model which cannot be [of_sexp]'d.
+  *)
+
+  module Status : sig
+    type t =
+      | Starting
+      (** The file read has been kicked off but no progress has been received yet *)
+      | In_progress of Progress.t
+      | Complete of string Or_error.t
+    [@@deriving sexp_of]
+  end
+
+  val create_single : t Bonsai.Value.t -> (Filename.t * Status.t) Bonsai.Computation.t
+
+  val create_single_opt
+    :  t option Bonsai.Value.t
+    -> (Filename.t * Status.t) option Bonsai.Computation.t
+
+  val create_multiple
+    :  t Filename.Map.t Bonsai.Value.t
+    -> Status.t Filename.Map.t Bonsai.Computation.t
+end
 
 module For_testing : sig
   (** This module supports a test / simulation mode where file data can be fed in by you
@@ -89,11 +126,22 @@ module For_testing : sig
         nothing if [close] has already been called or [t] was created using
         [create_static]. *)
     val close_error : t -> Error.t -> unit
+
+    (** Describes whether a read is currently ongoing for the stream in question. *)
+    val read_status : t -> [ `Aborted | `Not_reading | `Reading ]
   end
 
   val create : Test_data.t -> t
 end
 
 module Expert : sig
-  val create : Js_of_ocaml.File.file Js_of_ocaml.Js.t -> t
+  type file_read =
+    { result : (string, Read_error.t) Result.t Ui_effect.t
+    ; abort : unit Ui_effect.t
+    }
+
+  val create
+    :  read:((Progress.t -> unit Ui_effect.t) -> file_read Ui_effect.t)
+    -> filename:string
+    -> t
 end

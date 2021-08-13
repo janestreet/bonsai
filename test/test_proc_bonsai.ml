@@ -1170,6 +1170,31 @@ let%expect_test "exactly once" =
   [%expect {| () |}]
 ;;
 
+let%expect_test "exactly once with value" =
+  let component =
+    Bonsai_extra.exactly_once_with_value
+      [%here]
+      (module String)
+      (Bonsai.Value.return
+         (let%bind.Ui_effect () = Ui_effect.print_s [%message "hello!"] in
+          Ui_effect.return "done"))
+  in
+  let handle =
+    Handle.create
+      (Result_spec.sexp
+         (module struct
+           type t = string option [@@deriving sexp, equal]
+         end))
+      component
+  in
+  Handle.show handle;
+  [%expect {|
+    ()
+    hello! |}];
+  Handle.show handle;
+  [%expect {| (done) |}]
+;;
+
 let%expect_test "yoink" =
   let component =
     let%sub state, set_state = Bonsai.state [%here] (module Int) ~default_model:0 in

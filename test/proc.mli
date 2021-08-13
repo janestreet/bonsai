@@ -86,6 +86,7 @@ module Handle : sig
   val result : ('result, _) t -> 'result
   val do_actions : (_, 'incoming) t -> 'incoming list -> unit
   val disable_bonsai_path_censoring : _ t -> unit
+  val disable_bonsai_hash_censoring : _ t -> unit
   val clock : _ t -> Incr.Clock.t
   val advance_clock_by : _ t -> Time_ns.Span.t -> unit
 
