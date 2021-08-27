@@ -24,12 +24,13 @@ let create_generic computation ~fresh ~input ~model ~inject =
       computation
   in
   let%map view, extra = Bonsai.Private.Snapshot.result snapshot
-  and apply_action = Bonsai.Private.Snapshot.apply_action snapshot
+  and apply_action =
+    Bonsai.Private.Snapshot.(Apply_action.to_incremental (apply_action snapshot))
   and lifecycle = Bonsai.Private.Snapshot.lifecycle_or_empty snapshot
   and model = model in
   let schedule_event = Vdom.Effect.Expert.handle_non_dom_event_exn in
   let apply_action incoming_action _state ~schedule_action:_ =
-    apply_action ~schedule_event incoming_action
+    apply_action ~schedule_event model incoming_action
   in
   let on_display state ~schedule_action:_ =
     let diff =

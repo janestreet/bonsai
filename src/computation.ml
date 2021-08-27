@@ -11,10 +11,17 @@ type ('input, 'action, 'model) apply_action =
 
 type ('model, 'action, 'result) t =
   | Return : 'result Value.t -> (unit, Nothing.t, 'result) t
-  | Leaf :
+  | Leaf1 :
       { input : 'input Value.t
       ; apply_action : ('input, 'action, 'model) apply_action
       ; compute : inject:('action -> unit Effect.t) -> 'input -> 'model -> 'result
+      ; name : string
+      ; kind : string
+      }
+      -> ('model, 'action, 'result) t
+  | Leaf0 :
+      { apply_action : (unit, 'action, 'model) apply_action
+      ; compute : inject:('action -> unit Effect.t) -> 'model -> 'result
       ; name : string
       ; kind : string
       }
@@ -44,8 +51,16 @@ type ('model, 'action, 'result) t =
       { from : ('m1, 'a1, 'r1) t
       ; via : 'r1 Type_equal.Id.t
       ; into : ('m2, 'a2, 'r2) t
+      ; here : Source_code_position.t option
       }
       -> ('m1 * 'm2, ('a1, 'a2) Either.t, 'r2) t
+  | Subst_stateless :
+      { from : (unit, Nothing.t, 'r1) t
+      ; via : 'r1 Type_equal.Id.t
+      ; into : ('m, 'a, 'r2) t
+      ; here : Source_code_position.t option
+      }
+      -> ('m, 'a, 'r2) t
   | Store :
       { id : 'x Type_equal.Id.t
       ; value : 'x Value.t
@@ -117,11 +132,14 @@ and 'a packed =
 
 let rec sexp_of_t : type m a r. (m, a, r) t -> Sexp.t = function
   | Return value -> [%sexp Return (value : Value.t)]
-  | Leaf { name; _ } -> [%sexp Leaf (name : string)]
+  | Leaf1 { name; _ } -> [%sexp Leaf (name : string)]
+  | Leaf0 { name; _ } -> [%sexp Leaf0 (name : string)]
   | Leaf_incr { name; _ } -> [%sexp Leaf_incr (name : string)]
   | Model_cutoff { t; _ } -> [%sexp Model_cutoff (t : t)]
-  | Subst { from; via; into } ->
-    [%sexp Subst { from : t; via : _ Type_equal.Id.t; into : t }]
+  | Subst { from; via; into; here = _ } ->
+    [%sexp Subst { from : t; via : _ Type_equal.Id.t; into : t; here = None }]
+  | Subst_stateless { from; via; into; here = _ } ->
+    [%sexp Subst_stateless { from : t; via : _ Type_equal.Id.t; into : t; here = None }]
   | Store { id; value; inner } ->
     [%sexp Store { id : _ Type_equal.Id.t; value : Value.t; inner : t }]
   | Fetch id -> [%sexp Fetch (id : _ Type_equal.Id.t)]

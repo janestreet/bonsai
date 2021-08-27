@@ -82,6 +82,11 @@ let state_machine0_dynamic_model here model_mod action_mod ~model ~apply_action 
     (Bonsai.Value.return ())
 ;;
 
+let state_dynamic_model (type m) here (module M : Bonsai.Model with type t = m) ~model =
+  let apply_action ~inject:_ ~schedule_event:_ _old_model new_model = new_model in
+  state_machine0_dynamic_model here (module M) (module M) ~model ~apply_action
+;;
+
 let exactly_once here effect =
   let%sub has_run, set_has_run = Bonsai.state here (module Bool) ~default_model:false in
   if%sub has_run

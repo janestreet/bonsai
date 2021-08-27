@@ -177,13 +177,14 @@ module Arrow_deprecated = struct
             ~inject
             computation
         in
-        let%map apply_action = Bonsai.Private.Snapshot.apply_action snapshot
+        let%map apply_action =
+          Bonsai.Private.Snapshot.(Apply_action.to_incremental (apply_action snapshot))
         and result = Bonsai.Private.Snapshot.result snapshot
         and lifecycle = Bonsai.Private.Snapshot.lifecycle_or_empty snapshot
         and model = model in
         let schedule_event = Vdom.Effect.Expert.handle_non_dom_event_exn in
         let apply_action action () ~schedule_action:_ =
-          apply_action ~schedule_event action
+          apply_action ~schedule_event model action
         in
         let { App_result.view; extra; inject_incoming } = get_app_result result in
         Handle.set_inject handle inject_incoming;

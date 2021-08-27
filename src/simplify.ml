@@ -168,36 +168,45 @@ let rec computation_to_function
   =
   fun computation ~key_id ~data_id ->
   let recurse = computation_to_function ~key_id ~data_id in
+  let handle_subst
+        (type m1 a1 r1 m2 a2 r2)
+        ~(from : (m1, a1, r1) Computation.t)
+        ~via
+        ~(into : (m2, a2, r2) Computation.t)
+    : (Path.t -> key -> data -> r2) Option_or_miss.t
+    =
+    match recurse from, recurse into with
+    (* This first ignored pattern is _spooky_.  It basically means
+       that any computations that aren't depended on just aren't counted.
+       So you could have a Bonsai.state, but if it's unused, then we just
+       drop it and consider the rest.  *)
+    | _, Some r -> Some r
+    | None, _ | _, None -> None
+    | Some from, Miss { free; gen } ->
+      let free = Free_variables.remove free via in
+      let gen env path key data =
+        let from_path = Path.(append path Elem.Subst_from) in
+        let into_path = Path.(append path Elem.Subst_into) in
+        let env = Env.add_exn env ~key:via ~data:(from from_path key data) in
+        gen env into_path key data
+      in
+      Option_or_miss.squash (Miss { free; gen })
+    | Miss { free = free_a; gen = gen_a }, Miss { free = free_b; gen = gen_b } ->
+      let free_b = Free_variables.remove free_b via in
+      let free = Free_variables.merge free_a free_b in
+      let gen env path key data =
+        let from_path = Path.(append path Elem.Subst_from) in
+        let into_path = Path.(append path Elem.Subst_into) in
+        let env = Env.add_exn env ~key:via ~data:(gen_a env from_path key data) in
+        gen_b env into_path key data
+      in
+      Option_or_miss.squash (Miss { free; gen })
+  in
   match computation with
   | Return value ->
     Option_or_miss.map (value_to_function value key_id data_id) ~f:(fun f _path -> f)
-  | Subst { from; via; into } ->
-    (match recurse from, recurse into with
-     (* This first ignored pattern is _spooky_.  It basically means
-        that any computations that aren't depended on just aren't counted.
-        So you could have a Bonsai.state, but if it's unused, then we just
-        drop it and consider the rest.  *)
-     | _, Some r -> Some r
-     | None, _ | _, None -> None
-     | Some from, Miss { free; gen } ->
-       let free = Free_variables.remove free via in
-       let gen env path key data =
-         let from_path = Path.(append path Elem.Subst_from) in
-         let into_path = Path.(append path Elem.Subst_into) in
-         let env = Env.add_exn env ~key:via ~data:(from from_path key data) in
-         gen env into_path key data
-       in
-       Option_or_miss.squash (Miss { free; gen })
-     | Miss { free = free_a; gen = gen_a }, Miss { free = free_b; gen = gen_b } ->
-       let free_b = Free_variables.remove free_b via in
-       let free = Free_variables.merge free_a free_b in
-       let gen env path key data =
-         let from_path = Path.(append path Elem.Subst_from) in
-         let into_path = Path.(append path Elem.Subst_into) in
-         let env = Env.add_exn env ~key:via ~data:(gen_a env from_path key data) in
-         gen_b env into_path key data
-       in
-       Option_or_miss.squash (Miss { free; gen }))
+  | Subst { from; via; into; here = _ } -> handle_subst ~from ~via ~into
+  | Subst_stateless { from; via; into; here = _ } -> handle_subst ~from ~via ~into
   | Path -> Some (fun path _ _ -> path)
   | _ -> None
 ;;

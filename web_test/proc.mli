@@ -7,8 +7,12 @@ module Result_spec : sig
   end
 
   (** [filter_printed_attributes] controls which attributes on a Node will get
-      printed analyzing the string name of the attribute. Styles correspond to
-      the string "style" and a Node's key corresponds to the string "@key" *)
+      printed analyzing the string name of the attribute. Style properties
+      correspond to their property name prefixed with "style.". For example, to
+      filter out the "display" CSS property, you should return false for
+      "style.display"; to filter out all CSS styles, return false when the
+      string begins with "style.". A Node's key corresponds to the string
+      "@key" *)
   val vdom
     :  ?filter_printed_attributes:(string -> bool)
     -> ('a -> Vdom.Node.t)
@@ -20,7 +24,13 @@ module Handle : sig
     include Bonsai_test.Handle
   end
 
-  val click_on : ('a, 'b) t -> get_vdom:('a -> Vdom.Node.t) -> selector:string -> unit
+  val click_on
+    :  ?shift_key_down:bool
+    -> ('a, 'b) t
+    -> get_vdom:('a -> Vdom.Node.t)
+    -> selector:string
+    -> unit
+
   val submit_form : ('a, 'b) t -> get_vdom:('a -> Vdom.Node.t) -> selector:string -> unit
 
   val set_checkbox
@@ -46,6 +56,7 @@ module Handle : sig
 
   val focus : ('a, 'b) t -> get_vdom:('a -> Vdom.Node.t) -> selector:string -> unit
   val blur : ('a, 'b) t -> get_vdom:('a -> Vdom.Node.t) -> selector:string -> unit
+  val mousemove : ('a, 'b) t -> get_vdom:('a -> Vdom.Node.t) -> selector:string -> unit
 
   val trigger_hook
     :  ('a, 'b) t

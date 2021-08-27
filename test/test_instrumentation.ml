@@ -170,8 +170,8 @@ let%expect_test "state times apply_action and compute" =
   in
   Handle.show handle;
   [%expect {|
-    start-50-leaf-compute
-    stop-50-leaf-compute
+    start-50-leaf0-compute
+    stop-50-leaf0-compute
     0 |}];
   Handle.show handle;
   [%expect {| 0 |}];
@@ -179,10 +179,10 @@ let%expect_test "state times apply_action and compute" =
   Handle.show handle;
   [%expect
     {|
-    start-50-leaf-apply_action
-    stop-50-leaf-apply_action
-    start-50-leaf-compute
-    stop-50-leaf-compute
+    start-50-leaf0-apply_action
+    stop-50-leaf0-apply_action
+    start-50-leaf0-compute
+    stop-50-leaf0-compute
     5 |}]
 ;;
 
@@ -213,8 +213,8 @@ let%expect_test "enum" =
   in
   Handle.show handle;
   [%expect {|
-    start-56-enum-return-map
-    stop-56-enum-return-map
+    start-55-enum-return-map
+    stop-55-enum-return-map
     0 |}];
   Bonsai.Var.set bool_var false;
   Handle.show handle;
@@ -225,8 +225,8 @@ let%expect_test "enum" =
   Bonsai.Var.set bool_var true;
   Handle.show handle;
   [%expect {|
-    start-56-enum-return-map
-    stop-56-enum-return-map
+    start-55-enum-return-map
+    stop-55-enum-return-map
     5 |}]
 ;;
 
@@ -272,12 +272,12 @@ let%expect_test "only instrument some computations" =
   Handle.show handle;
   [%expect
     {|
-    start-59-assoc_simpl-by
+    start-58-assoc_simpl-by
     instrumented map
-    stop-59-assoc_simpl-by
-    start-59-assoc_simpl-by
+    stop-58-assoc_simpl-by
+    start-58-assoc_simpl-by
     instrumented map
-    stop-59-assoc_simpl-by
+    stop-58-assoc_simpl-by
     non-instrument map
     2
  |}];
@@ -285,9 +285,9 @@ let%expect_test "only instrument some computations" =
   Handle.show handle;
   [%expect
     {|
-    start-59-assoc_simpl-by
+    start-58-assoc_simpl-by
     instrumented map
-    stop-59-assoc_simpl-by
+    stop-58-assoc_simpl-by
     non-instrument map
     2
 |}];
@@ -302,9 +302,9 @@ let%expect_test "only instrument some computations" =
   Handle.show handle;
   [%expect
     {|
-    start-59-assoc_simpl-by
+    start-58-assoc_simpl-by
     instrumented map
-    stop-59-assoc_simpl-by
+    stop-58-assoc_simpl-by
     non-instrument map
     5 |}]
 ;;

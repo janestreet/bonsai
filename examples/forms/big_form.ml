@@ -82,6 +82,7 @@ end
 
 type t =
   { variant : My_variant.t
+  ; int_from_range : int
   ; string_from_text : string
   ; string_from_vert_radio : string
   ; string_from_horiz_radio : string
@@ -104,6 +105,7 @@ type t =
 [@@deriving fields, sexp_of]
 
 let form =
+  let%sub range = E.Range.int [%here] ~min:0 ~max:100 ~default:0 ~step:1 () in
   let%sub string = E.Textbox.string [%here] in
   let%sub date = E.Date_time.date [%here] in
   let%sub time = E.Date_time.time [%here] in
@@ -174,10 +176,11 @@ let form =
   let%sub rank =
     E.Rank.list
       (module String)
-      (fun item ->
+      (fun ~source item ->
          return
-           (let%map item = item in
-            Vdom.Node.text item))
+           (let%map item = item
+            and source = source in
+            Vdom.Node.div ~attr:source [ Vdom.Node.text item ]))
   in
   let%sub rank =
     Form.Dynamic.with_default (Value.return [ "aaaaaa"; "bbbbbb"; "cccccc" ]) rank
@@ -185,6 +188,7 @@ let form =
   let open Form.Dynamic.Record_builder in
   Fields.make_creator
     ~variant:(field variant)
+    ~int_from_range:(field range)
     ~string_from_text:(field string)
     ~string_from_vert_radio:(field string_vert_radio)
     ~string_from_horiz_radio:(field string_horiz_radio)

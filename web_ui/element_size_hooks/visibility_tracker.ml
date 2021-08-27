@@ -29,12 +29,11 @@ let get_conservative_vis_bounds (element : Dom_html.element Js.t) : Bounds.t opt
   and window_width = Float.of_int window_width
   and client_width = Js.Optdef.get client_width (Fn.const 0.0)
   and client_height = Js.Optdef.get client_height (Fn.const 0.0) in
-  if
-    Float.O.(
-      client_y > window_height
-      || client_x > window_width
-      || client_bottom < 0.0
-      || client_right < 0.0)
+  if Float.O.(
+    client_y > window_height
+    || client_x > window_width
+    || client_bottom < 0.0
+    || client_right < 0.0)
   then (* The element is not visible *)
     None
   else

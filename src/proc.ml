@@ -4,6 +4,7 @@ module Var = Var
 
 let sub
       (type via)
+      ?here
       (Computation.T { t = from; action = from_action; model = from_model } :
          via Computation.packed)
       ~f
@@ -14,11 +15,22 @@ let sub
   let (Computation.T { t = into; action = into_action; model = into_model }) =
     f (Value.named via)
   in
-  Computation.T
-    { t = Subst { from; via; into }
-    ; action = Meta.Action.both from_action into_action
-    ; model = Meta.Model.both from_model into_model
-    }
+  match
+    ( Type_equal.Id.same_witness from_model.type_id Meta.Model.unit.type_id
+    , Type_equal.Id.same_witness from_action Meta.Action.nothing )
+  with
+  | Some T, Some T ->
+    Computation.T
+      { t = Subst_stateless { from; via; into; here }
+      ; action = into_action
+      ; model = into_model
+      }
+  | _ ->
+    Computation.T
+      { t = Subst { from; via; into; here }
+      ; action = Meta.Action.both from_action into_action
+      ; model = Meta.Model.both from_model into_model
+      }
 ;;
 
 let read x =
@@ -84,7 +96,7 @@ let of_module1 (type i m a r) (component : (i, m, a, r) component_s) ~default_mo
   let (module M) = component in
   Computation.T
     { t =
-        Leaf
+        Leaf1
           { input
           ; apply_action = M.apply_action
           ; compute = M.compute
@@ -210,7 +222,7 @@ let state_machine1
   let compute ~inject _input model = model, inject in
   let name = Source_code_position.to_string here in
   Computation.T
-    { t = Leaf { input; apply_action; compute; name; kind = "state machine" }
+    { t = Leaf1 { input; apply_action; compute; name; kind = "state machine" }
     ; model = Meta.Model.of_module (module M) ~name ~default:default_model
     ; action = Meta.Action.of_module (module A) ~name
     }
@@ -220,7 +232,13 @@ let state_machine0 here model action ~default_model ~apply_action =
   let apply_action ~inject ~schedule_event () model action =
     apply_action ~inject ~schedule_event model action
   in
-  state_machine1 here model action ~default_model ~apply_action (Value.return ())
+  let compute ~inject model = model, inject in
+  let name = Source_code_position.to_string here in
+  Computation.T
+    { t = Leaf0 { apply_action; compute; name; kind = "state machine" }
+    ; model = Meta.Model.of_module model ~name ~default:default_model
+    ; action = Meta.Action.of_module action ~name
+    }
 ;;
 
 let actor1
@@ -320,15 +338,12 @@ let wrap (type model action) model_module ~default_model ~apply_action ~f =
 ;;
 
 let state (type m) here (module M : Model with type t = m) ~default_model =
-  let apply_action ~inject:_ ~schedule_event:_ () _old_model new_model = new_model in
-  let compute ~inject _input model = model, inject in
-  let name = Source_code_position.to_string here in
-  let input = Value.return () in
-  Computation.T
-    { t = Leaf { input; apply_action; compute; name; kind = "state" }
-    ; model = Meta.Model.of_module (module M) ~name ~default:default_model
-    ; action = Meta.Action.of_module (module M) ~name
-    }
+  state_machine0
+    here
+    (module M)
+    (module M)
+    ~apply_action:(fun ~inject:_ ~schedule_event:_ _old_model new_model -> new_model)
+    ~default_model
 ;;
 
 let state_opt (type m) here ?default_model (module M : Model with type t = m) =
@@ -629,6 +644,13 @@ module Clock = struct
   ;;
 
   let now = Incr.with_clock Ui_incr.Clock.watch_now
+
+  module Before_or_after = struct
+    type t = Ui_incr.Before_or_after.t =
+      | Before
+      | After
+    [@@deriving sexp, equal]
+  end
 
   let at time =
     Incr.compute_with_clock time ~f:(fun clock ->

@@ -20,14 +20,16 @@ module S =
   }
   |}]
 
-let item ~now data =
+let item ~now ~index:_ ~source data =
   return
     (let%map now = now
+     and source = source
      and data = data in
      let now = Time_ns.to_string_utc now in
-     Vdom.Node.div
-       ~attr:Vdom.Attr.(class_ S.item)
-       [ Vdom.Node.text [%string "Item-%{data#Int} - now = %{now}"] ])
+     ( ()
+     , Vdom.Node.div
+         ~attr:Vdom.Attr.(class_ S.item @ source)
+         [ Vdom.Node.text [%string "Item-%{data#Int} - now = %{now}"] ] ))
 ;;
 
 let component =

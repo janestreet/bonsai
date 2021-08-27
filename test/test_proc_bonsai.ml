@@ -378,6 +378,36 @@ let%expect_test "let%sub patterns" =
   [%expect {| hello world |}]
 ;;
 
+let%expect_test "let%sub unit rhs optimizaiton" =
+  let component =
+    let%sub a = Bonsai.const 5 in
+    let%sub b = Bonsai.const 6 in
+    return
+      (let%map a = a
+       and b = b in
+       a + b)
+  in
+  print_s Bonsai_lib.Private.(Computation.sexp_of_packed (reveal_computation component));
+  [%expect
+    {|
+    (Subst_stateless (
+      (from (Return constant))
+      (via lib/bonsai/src/proc.ml:13:63)
+      (into (
+        Subst_stateless (
+          (from (Return constant))
+          (via lib/bonsai/src/proc.ml:13:63)
+          (into (
+            Return (
+              map (
+                t (
+                  both
+                  (t1 (named lib/bonsai/src/proc.ml:13:63))
+                  (t2 (named lib/bonsai/src/proc.ml:13:63)))))))
+          (here None))))
+      (here None))) |}]
+;;
+
 let%expect_test "assoc simplifies its inner computation, if possible" =
   let value = Value.return String.Map.empty in
   let component =

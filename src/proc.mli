@@ -404,9 +404,16 @@ module Clock : sig
   (** The current time, update as frequently as possible. *)
   val now : Time_ns.t Computation.t
 
+  module Before_or_after : sig
+    type t = Ui_incr.Before_or_after.t =
+      | Before
+      | After
+    [@@deriving sexp, equal]
+  end
+
   (** Mirrors [Incr.Clock.at], which changes from [Before] to [After] at the
       specified time. *)
-  val at : Time_ns.t Value.t -> Ui_incr.Before_or_after.t Computation.t
+  val at : Time_ns.t Value.t -> Before_or_after.t Computation.t
 
   (** An event passed to [every] is scheduled on an interval determined by
       the time-span argument. *)
@@ -597,7 +604,11 @@ module Let_syntax : sig
     (** [sub] runs a Computation, providing the result of that Computation to the
         function [f] in the form of a [Value.t].  The main way to use this function is via
         the syntax extension [let%sub] which is described above. *)
-    val sub : 'a Computation.t -> f:('a Value.t -> 'b Computation.t) -> 'b Computation.t
+    val sub
+      :  ?here:Source_code_position.t
+      -> 'a Computation.t
+      -> f:('a Value.t -> 'b Computation.t)
+      -> 'b Computation.t
 
     val switch
       :  match_:int Value.t

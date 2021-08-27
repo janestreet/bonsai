@@ -8,7 +8,7 @@ table.prt-table-header {
   padding-right:10px; /* Space for the resizer */
   position: relative;
   background: #fffcf0;
-  box-sizing: content-box;
+  box-sizing: border-box;
   border:1px solid black;
 
   font-family: sans-serif;
@@ -21,3 +21,10 @@ table.prt-table-header {
     padding:4px;
 }
 
+.prt-table-cell:last-child {
+    border-right:1px solid black;
+}
+
+.prt-table-row-even {
+  background-color:#f0f6ff;
+}

@@ -33,7 +33,7 @@ module Kind = struct
         { kind : string
         ; here : Source_code_position.t option
         }
-    | Subst
+    | Subst of Source_code_position.t option
     | Dyn
 
   let basic_shape ?(other = "") ~shape ~label ~color () =
@@ -56,13 +56,15 @@ module Kind = struct
          let here = Source_code_position.to_string here in
          basic_shape ~shape:"Mrecord" ~label:[%string "{%{kind}|%{here}}"] ~color ()
        | None -> basic_shape ~shape:"oval" ~label:kind ~color ())
-    | Subst ->
-      basic_shape
-        ~shape:"circle"
-        ~label:""
-        ~color:"#FFFFFF"
-        ~other:"width=.1, height=.1"
-        ()
+    | Subst here ->
+      let label =
+        match here with
+        | Some here ->
+          let here = Source_code_position.to_string here in
+          [%string "{%{here}}"]
+        | None -> ""
+      in
+      basic_shape ~shape:"circle" ~label ~color:"#FFFFFF" ~other:"width=.1, height=.1" ()
     | Dyn ->
       basic_shape
         ~shape:"circle"
@@ -127,7 +129,7 @@ let rec follow_value : type a. State.t -> a Value.t -> Id.t =
   match value with
   | Value.Constant (_, id) -> register_const id
   | Incr _ -> register "incr"
-  | Named name -> register_named state Kind.Subst name
+  | Named name -> register_named state (Kind.Subst here) name
   | Cutoff { t; _ } ->
     let me = register "cutoff" in
     let them = follow_value state t in
@@ -286,7 +288,8 @@ let rec follow_computation
     let me = register_computation "fetch" in
     arrow state ~from:(register_named state Kind.Dyn id) ~to_:me;
     me
-  | Leaf { input; kind; name; _ } ->
+  | Leaf0 { kind; name; _ } -> register state (Kind.Leaf { kind; name }) "leaf0"
+  | Leaf1 { input; kind; name; _ } ->
     let me = register state (Kind.Leaf { kind; name }) "leaf" in
     (match input.value with
      | Value.Constant _ -> me
@@ -352,14 +355,23 @@ let rec follow_computation
     let me = register_computation "model_cutoff" in
     arrow state ~from:(follow_computation state t) ~to_:me;
     me
-  | Subst { from = Return from; via; into } ->
-    arrow state ~from:(follow_value state from) ~to_:(register_named state Kind.Subst via);
+  | Subst { from = Return from; via; into; here } ->
+    arrow
+      state
+      ~from:(follow_value state from)
+      ~to_:(register_named state (Kind.Subst here) via);
     follow_computation state into
-  | Subst { from; via; into } ->
+  | Subst { from; via; into; here } ->
     arrow
       state
       ~from:(follow_computation state from)
-      ~to_:(register_named state Kind.Subst via);
+      ~to_:(register_named state (Kind.Subst here) via);
+    follow_computation state into
+  | Subst_stateless { from; via; into; here } ->
+    arrow
+      state
+      ~from:(follow_computation state from)
+      ~to_:(register_named state (Kind.Subst here) via);
     follow_computation state into
   | Assoc { map; by; _ } ->
     let me = register_computation "assoc" in

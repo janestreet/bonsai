@@ -659,7 +659,7 @@ module Model_sexpification = struct
     [%expect {| bonsai! |}];
     let initial_model_sexp = Driver.sexp_of_model driver in
     print_s initial_model_sexp;
-    [%expect {| (((false ()) ((() ((0 ((23 ()) ())) (1 (bonsai! ())))) ())) ()) |}];
+    [%expect {| (((false ()) (((0 ((23 ()) ())) (1 (bonsai! ()))) ())) ()) |}];
     let driver =
       Driver.create ~initial_model_sexp ~initial_input:() ~clock:Incr.clock component
     in

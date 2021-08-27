@@ -208,10 +208,10 @@ let rec instrument_computation'
   | Return value ->
     let label = total_label "return" in
     Return (instrument_value value ~label)
-  | Leaf { input; apply_action; compute; name; kind } ->
+  | Leaf1 { input; apply_action; compute; name; kind } ->
     let label = total_label "leaf" in
     let compute_label = compute_label label in
-    Leaf
+    Leaf1
       { input = instrument_value input ~label
       ; apply_action = time_apply_action ~apply_action ~label
       ; name
@@ -220,6 +220,20 @@ let rec instrument_computation'
           (fun ~inject input model ->
              start_timer compute_label;
              let computed = compute ~inject input model in
+             stop_timer compute_label;
+             computed)
+      }
+  | Leaf0 { apply_action; compute; name; kind } ->
+    let label = total_label "leaf0" in
+    let compute_label = compute_label label in
+    Leaf0
+      { apply_action = time_apply_action ~apply_action ~label
+      ; name
+      ; kind
+      ; compute =
+          (fun ~inject model ->
+             start_timer compute_label;
+             let computed = compute ~inject model in
              stop_timer compute_label;
              computed)
       }
@@ -246,12 +260,21 @@ let rec instrument_computation'
   | Model_cutoff { t; model } ->
     let label = total_label "model_cutoff" in
     Model_cutoff { t = instrument_computation' t ~label; model }
-  | Subst { from; via; into } ->
+  | Subst { from; via; into; here } ->
     let label = total_label "subst" in
     Subst
       { from = instrument_computation' from ~label:[%string "%{label}(from)"]
       ; via
       ; into = instrument_computation' into ~label:[%string "%{label}(into)"]
+      ; here
+      }
+  | Subst_stateless { from; via; into; here } ->
+    let label = total_label "subst" in
+    Subst_stateless
+      { from = instrument_computation' from ~label:[%string "%{label}(from)"]
+      ; via
+      ; into = instrument_computation' into ~label:[%string "%{label}(into)"]
+      ; here
       }
   | Store { id; value; inner } ->
     let label = total_label "store" in

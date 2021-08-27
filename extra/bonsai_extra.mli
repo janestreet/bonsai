@@ -57,7 +57,7 @@ val freeze
   -> 'a Value.t
   -> 'a Computation.t
 
-(* [thunk] will execute its argument exactly once per instantiation of the 
+(* [thunk] will execute its argument exactly once per instantiation of the
    computation. *)
 val thunk : (unit -> 'a) -> 'a Computation.t
 
@@ -98,6 +98,15 @@ val state_machine1_dynamic_model
         -> 'model)
   -> 'input Value.t
   -> ('model * ('action -> unit Ui_effect.t)) Computation.t
+
+
+(** The analog of [Bonsai.state], but with a dynamic model. Read the docs for
+    [state_machine0_dynamic_model] *)
+val state_dynamic_model
+  :  Source_code_position.t
+  -> (module Model with type t = 'model)
+  -> model:[< `Computed of ('model option -> 'model) Value.t | `Given of 'model Value.t ]
+  -> ('model * ('model -> unit Ui_effect.t)) Computation.t
 
 (** Id_gen builds a compoenent which generates unique identifiers by
     starting at 0 and incrementing by one every time that the effect is called.

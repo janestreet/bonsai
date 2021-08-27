@@ -64,15 +64,14 @@ let component =
   let buttons =
     Vdom.Node.div
       (button ~on_click:(fun () -> inject Action.Clear) "clear"
-       ::
-       Vdom.Node.br ()
-       ::
-       Vdom.Node.div
-         [ Vdom.Node.label [ Vdom.Node.text "constant adjustment" ]
-         ; button ~on_click:(fun () -> inject Action.Decrement_const) "-1"
-         ; button ~on_click:(fun () -> inject Action.Increment_const) "+1"
-         ]
-       :: Vdom.Node.br () :: (Map.keys model.dice |> List.map ~f:dice_button))
+       :: Vdom.Node.br ()
+       :: Vdom.Node.div
+            [ Vdom.Node.label [ Vdom.Node.text "constant adjustment" ]
+            ; button ~on_click:(fun () -> inject Action.Decrement_const) "-1"
+            ; button ~on_click:(fun () -> inject Action.Increment_const) "+1"
+            ]
+       :: Vdom.Node.br ()
+       :: (Map.keys model.dice |> List.map ~f:dice_button))
   in
   let spec = Model.to_spec model in
   let display = spec |> Rpgdice.Roll_spec.to_string_hum |> Vdom.Node.text in
