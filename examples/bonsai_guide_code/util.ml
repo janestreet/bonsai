@@ -6,7 +6,7 @@ open Js_of_ocaml
 let () = Async_js.init ()
 
 let run ~id computation =
-  (* Because we're iframing into this app from docpub, we look up what the 
+  (* Because we're iframing into this app from docpub, we look up what the
      current url-hash is, and only run the requested example. *)
   let current_hash = Dom_html.window##.location##.hash |> Js.to_string in
   print_s [%message (current_hash : string) (id : string)];

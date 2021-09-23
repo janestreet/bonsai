@@ -145,6 +145,19 @@ let thunk (type a) (f : unit -> a) =
     out
 ;;
 
+let toggle here ~default_model =
+  let%sub state =
+    Bonsai.state_machine0
+      here
+      (module Bool)
+      (module Unit)
+      ~apply_action:(fun ~inject:_ ~schedule_event:_ b () -> not b)
+      ~default_model
+  in
+  let%arr state, inject = state in
+  state, inject ()
+;;
+
 let pipe (type a) here (module A : Bonsai.Model with type t = a) =
   let module Model = struct
     type t =

@@ -89,22 +89,50 @@ type t =
   ; an_int : int
   ; on_or_off : bool
   }
-[@@deriving fields, sexp_of]
+[@@deriving typed_fields, sexp_of]
 
 (* $MDX part-end *)
 
 (* $MDX part-begin=record_form *)
 let form_of_t : t Form.t Computation.t =
-  let%sub some_string = Form.Elements.Textbox.string [%here] in
-  let%sub an_int = Form.Elements.Number.int [%here] ~default:0 ~step:1 () in
-  let%sub on_or_off = Form.Elements.Checkbox.bool [%here] ~default:false in
-  (* this [open] is for the [field] and [build_for_record] functions *)
-  let open Form.Dynamic.Record_builder in
-  Fields.make_creator
-    ~some_string:(field some_string)
-    ~an_int:(field an_int)
-    ~on_or_off:(field on_or_off)
-  |> build_for_record
+  Form.Typed.Record.make
+    (module struct
+      (* reimport the module that typed_fields just derived *)
+      module Typed_field = Typed_field
+
+      (* provide a form computation for each field in the record *)
+      let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t = function
+        | Some_string -> Form.Elements.Textbox.string [%here]
+        | An_int -> Form.Elements.Number.int [%here] ~default:0 ~step:1 ()
+        | On_or_off -> Form.Elements.Checkbox.bool [%here] ~default:false
+      ;;
+    end)
+;;
+
+(* $MDX part-end *)
+
+(* $MDX part-begin=variant_form *)
+
+type v =
+  | A
+  | B of int
+  | C of string
+[@@deriving typed_variants, sexp_of]
+
+let form_of_v : v Form.t Computation.t =
+  Form.Typed.Variant.make
+    (module struct
+      (* reimport the module that typed_fields just derived *)
+      module Typed_variant = Typed_variant_of_v
+
+      (* provide a form computation for constructor in the variant *)
+      let form_for_variant : type a. a Typed_variant.t -> a Form.t Computation.t
+        = function
+          | A -> Bonsai.const (Form.return ())
+          | B -> Form.Elements.Textbox.int [%here]
+          | C -> Form.Elements.Textbox.string [%here]
+      ;;
+    end)
 ;;
 
 (* $MDX part-end *)
@@ -118,13 +146,16 @@ let () =
 
 (* $MDX part-begin=record_form_view *)
 let view_for_form : Vdom.Node.t Computation.t =
-  let%sub form = form_of_t in
+  let%sub form_t = form_of_t in
+  let%sub form_v = form_of_v in
   return
-    (let%map form = form in
+    (let%map form_t = form_t
+     and form_v = form_v in
+     let form = Form.both form_t form_v in
      let value = Form.value form in
      Vdom.Node.div
        [ Form.view_as_vdom form
-       ; Vdom.Node.sexp_for_debugging ([%sexp_of: t Or_error.t] value)
+       ; Vdom.Node.sexp_for_debugging ([%sexp_of: (t * v) Or_error.t] value)
        ])
 ;;
 

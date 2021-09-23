@@ -11,11 +11,11 @@ module A_B_or_C = struct
       | Aaaa
       | Abbb
       | Cccc
-    [@@deriving enumerate, compare, sexp]
+    [@@deriving enumerate, compare, equal, sexp]
   end
 
   include T
-  include Comparable.Make (T)
+  include Comparator.Make (T)
 end
 
 module My_variant = struct
@@ -23,60 +23,24 @@ module My_variant = struct
     | A
     | B of string
     | C of int * float
-  [@@deriving sexp, equal]
-
-  module Kind = struct
-    type t =
-      [ `A
-      | `B
-      | `C
-      ]
-    [@@deriving sexp, enumerate, compare, equal]
-  end
+  [@@deriving sexp, equal, typed_variants]
 
   let form =
-    let%sub chooser = E.Dropdown.enumerable [%here] (module Kind) in
-    let%sub b_textbox = E.Textbox.string [%here] in
-    let%sub c_int = E.Textbox.int [%here] in
-    let%sub c_float = E.Textbox.float [%here] in
-    return
-    @@ let%map chooser = chooser
-    and b_textbox = b_textbox
-    and c_int = c_int
-    and c_float = c_float in
-    let b_textbox = Form.label "B string" b_textbox in
-    let c_int = Form.label "C int" c_int in
-    let c_float = Form.label "C float" c_float in
-    let which = Form.value_or_default chooser ~default:`A in
-    let value =
-      match which with
-      | `A -> Ok A
-      | `B -> b_textbox |> Form.value |> Or_error.map ~f:(fun s -> B s)
-      | `C ->
-        let%map.Or_error int_value = Form.value c_int
-        and float_value = Form.value c_float in
-        C (int_value, float_value)
-    in
-    let extra_view =
-      match which with
-      | `A -> []
-      | `B -> [ Form.view b_textbox ]
-      | `C -> [ Form.view c_int; Form.view c_float ]
-    in
-    let view =
-      Form.View.Private.Header_group
-        { label = None
-        ; header_view = Form.view chooser
-        ; view = Form.View.Private.List extra_view
-        }
-    in
-    let set = function
-      | A -> Form.set chooser `A
-      | B s -> Ui_effect.Many [ Form.set chooser `B; Form.set b_textbox s ]
-      | C (i, f) ->
-        Ui_effect.Many [ Form.set chooser `C; Form.set c_int i; Form.set c_float f ]
-    in
-    Form.Expert.create ~value ~view ~set
+    Form.Typed.Variant.make
+      (module struct
+        module Typed_variant = Typed_variant
+
+        let form_for_variant : type a. a Typed_variant.t -> a Form.t Computation.t
+          = function
+            | A -> Bonsai.const (Form.return ())
+            | B -> E.Textbox.string [%here]
+            | C ->
+              Computation.map2
+                ~f:Form.both
+                (E.Textbox.int [%here])
+                (E.Textbox.float [%here])
+        ;;
+      end)
   ;;
 end
 
@@ -102,112 +66,83 @@ type t =
   ; files : Bonsai_web_ui_file.t Filename.Map.t
   ; rank : string list
   }
-[@@deriving fields, sexp_of]
+[@@deriving typed_fields, fields, sexp_of]
+
+let ( >>|| ) a f = Bonsai.Computation.map a ~f
 
 let form =
-  let%sub range = E.Range.int [%here] ~min:0 ~max:100 ~default:0 ~step:1 () in
-  let%sub string = E.Textbox.string [%here] in
-  let%sub date = E.Date_time.date [%here] in
-  let%sub time = E.Date_time.time [%here] in
-  let%sub date_time = E.Date_time.datetime_local [%here] in
-  let%sub string_vert_radio =
-    E.Radio_buttons.list
-      [%here]
-      ~to_string:Fn.id
-      (module String)
-      ~layout:`Vertical
-      (Value.return [ "first"; "second"; "third" ])
-  in
-  let%sub string_horiz_radio =
-    E.Radio_buttons.list
-      [%here]
-      ~to_string:Fn.id
-      (module String)
-      ~layout:`Horizontal
-      (Value.return [ "first"; "second"; "third" ])
-  in
-  let%sub bool_from_checkbox = E.Checkbox.bool [%here] ~default:false in
-  let%sub date_from_string = E.Textbox.string [%here] in
-  let date_from_string =
-    date_from_string >>| Form.project ~parse_exn:Date.of_string ~unparse:Date.to_string
-  in
-  let%sub bool_from_dropdown =
-    E.Dropdown.enumerable [%here] (module Bool) ~to_string:Bool.to_string
-  in
   let%sub multi_select =
     E.Multiselect.list [%here] (module A_B_or_C) (Value.return A_B_or_C.all)
   in
-  let%sub multi_select =
-    Form.Dynamic.collapsible_group (Value.return "collapsible group") multi_select
-  in
-  let%sub multi_select2 =
-    E.Multiselect.list
-      [%here]
-      (module A_B_or_C)
-      (multi_select >>| Form.value_or_default ~default:[])
-  in
-  let%sub string_drop_option =
-    E.Dropdown.list_opt [%here] (module String) (Value.return [ "hello"; "world" ])
-  in
-  let%sub typeahead =
-    E.Typeahead.single
-      [%here]
-      ~placeholder:"Typeahead here!"
-      (module A_B_or_C)
-      ~all_options:(Value.return A_B_or_C.all)
-  in
-  let%sub a_b_or_c = E.Dropdown.enumerable [%here] (module A_B_or_C) in
-  let%sub sexp_from_string = E.Textbox.sexpable [%here] (module Sexp) in
-  let%sub sexp_from_string = Form.Dynamic.error_hint sexp_from_string in
-  let%sub variant = My_variant.form in
-  let%sub string_set =
-    E.Checkbox.set
-      [%here]
-      ~to_string:Fn.id
-      (module String)
-      (Value.return [ "first"; "second"; "third"; "fourth" ])
-  in
-  let%sub files =
-    E.File_select.multiple
-      [%here]
-      ~accept:[ `Mimetype "application/pdf"; `Extension ".csv" ]
-      ()
-  in
-  let%sub rank =
-    E.Rank.list
-      (module String)
-      (fun ~source item ->
-         return
-           (let%map item = item
-            and source = source in
-            Vdom.Node.div ~attr:source [ Vdom.Node.text item ]))
-  in
-  let%sub rank =
-    Form.Dynamic.with_default (Value.return [ "aaaaaa"; "bbbbbb"; "cccccc" ]) rank
-  in
-  let open Form.Dynamic.Record_builder in
-  Fields.make_creator
-    ~variant:(field variant)
-    ~int_from_range:(field range)
-    ~string_from_text:(field string)
-    ~string_from_vert_radio:(field string_vert_radio)
-    ~string_from_horiz_radio:(field string_horiz_radio)
-    ~date:(field date)
-    ~time_ns_of_day:(field time)
-    ~date_time:(field date_time)
-    ~date_from_string:(field date_from_string)
-    ~bool_from_checkbox:(field bool_from_checkbox)
-    ~bool_from_dropdown:(field bool_from_dropdown)
-    ~many:(field multi_select)
-    ~many2:(field multi_select2)
-    ~string_option:(field string_drop_option)
-    ~typeahead:(field typeahead)
-    ~a_b_or_c:(field a_b_or_c)
-    ~sexp_from_string:(field sexp_from_string)
-    ~string_set:(field string_set)
-    ~files:(field files)
-    ~rank:(field rank)
-  |> build_for_record
+  Form.Typed.Record.make
+    (module struct
+      module Typed_field = Typed_field
+
+      let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t = function
+        | Variant ->
+          My_variant.form >>|| Form.tooltip "Tooltips can also be on header groups"
+        | Int_from_range -> E.Range.int [%here] ~min:0 ~max:100 ~default:0 ~step:1 ()
+        | String_from_text -> E.Textbox.string [%here]
+        | String_from_vert_radio ->
+          E.Radio_buttons.list
+            [%here]
+            (module String)
+            ~layout:`Vertical
+            (Value.return [ "first"; "second"; "third" ])
+        | String_from_horiz_radio ->
+          E.Radio_buttons.list
+            [%here]
+            (module String)
+            ~layout:`Horizontal
+            (Value.return [ "first"; "second"; "third" ])
+        | Date -> E.Date_time.date [%here]
+        | Time_ns_of_day -> E.Date_time.time [%here]
+        | Date_time -> E.Date_time.datetime_local [%here]
+        | Date_from_string ->
+          E.Textbox.string [%here]
+          >>|| Form.project ~parse_exn:Date.of_string ~unparse:Date.to_string
+        | Sexp_from_string -> E.Textbox.sexpable [%here] (module Sexp)
+        | Bool_from_checkbox -> E.Checkbox.bool [%here] ~default:false
+        | Bool_from_dropdown ->
+          E.Dropdown.enumerable [%here] (module Bool) ~to_string:Bool.to_string
+        | Typeahead ->
+          E.Typeahead.single
+            [%here]
+            (module A_B_or_C)
+            ~placeholder:"Typeahead here!"
+            ~all_options:(Value.return A_B_or_C.all)
+        | String_option ->
+          E.Dropdown.list_opt [%here] (module String) (Value.return [ "hello"; "world" ])
+        | A_b_or_c -> E.Dropdown.enumerable [%here] (module A_B_or_C)
+        | Many ->
+          Form.Dynamic.collapsible_group (Value.return "collapsible group") multi_select
+        | Many2 ->
+          E.Multiselect.list
+            [%here]
+            (module A_B_or_C)
+            (multi_select >>| Form.value_or_default ~default:[])
+        | String_set ->
+          E.Checkbox.set
+            [%here]
+            (module String)
+            (Value.return [ "first"; "second"; "third"; "fourth" ])
+        | Files ->
+          E.File_select.multiple
+            [%here]
+            ~accept:[ `Mimetype "application/pdf"; `Extension ".csv" ]
+            ()
+        | Rank ->
+          let%sub rank =
+            E.Rank.list
+              (module String)
+              (fun ~source item ->
+                 let%arr item = item
+                 and source = source in
+                 Vdom.Node.div ~attr:source [ Vdom.Node.text item ])
+          in
+          Form.Dynamic.with_default (Value.return [ "aaaaaa"; "bbbbbb"; "cccccc" ]) rank
+      ;;
+    end)
 ;;
 
 let component =

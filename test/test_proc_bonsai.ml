@@ -436,6 +436,21 @@ let%expect_test "assoc with sub simplifies its inner computation, if possible" =
     (Assoc_simpl ((map constant))) |}]
 ;;
 
+let%expect_test "assoc with sub simplifies its inner computation, if possible" =
+  let value = Bonsai.Value.return String.Map.empty in
+  let component =
+    Bonsai.assoc
+      (module String)
+      value
+      ~f:(fun key data ->
+        let%sub key = Bonsai.read key in
+        Bonsai.read (Bonsai.Value.both key data))
+  in
+  print_s Bonsai_lib.Private.(Computation.sexp_of_packed (reveal_computation component));
+  [%expect {|
+    (Assoc_simpl ((map constant))) |}]
+;;
+
 let%expect_test "map > lazy" =
   let open Bonsai.Let_syntax in
   let module M = struct
@@ -960,31 +975,46 @@ let%expect_test "Clock.approx_now" =
   [%expect {| "1970-01-01 00:00:01.2Z" |}]
 ;;
 
+(* $MDX part-begin=chain-computation *)
 let chain_computation =
   let%sub a = Bonsai.const "x" in
-  let%sub b, set_b = Bonsai.state [%here] (module String) ~default_model:"" in
-  let%sub c, set_c = Bonsai.state [%here] (module String) ~default_model:"" in
+  let%sub b, set_b = Bonsai.state [%here] (module String) ~default_model:" " in
+  let%sub c, set_c = Bonsai.state [%here] (module String) ~default_model:" " in
+  let%sub d, set_d = Bonsai.state [%here] (module String) ~default_model:" " in
   let%sub () = Bonsai.Edge.on_change [%here] (module String) a ~callback:set_b in
   let%sub () = Bonsai.Edge.on_change [%here] (module String) b ~callback:set_c in
-  return (Value.map3 a b c ~f:(sprintf "a:%s b:%s c:%s"))
+  let%sub () = Bonsai.Edge.on_change [%here] (module String) c ~callback:set_d in
+  return (Value.map4 a b c d ~f:(sprintf "a:%s b:%s c:%s d:%s"))
 ;;
 
+(* $MDX part-end *)
+
+(* $MDX part-begin=chained-on-change *)
 let%expect_test "chained on_change" =
   let handle = Handle.create (Result_spec.string (module String)) chain_computation in
   Handle.show handle;
-  [%expect {| a:x b: c: |}];
+  [%expect {| a:x b:  c:  d: |}];
   Handle.show handle;
-  [%expect {| a:x b:x c: |}];
+  [%expect {| a:x b:x c:  d: |}];
   Handle.show handle;
-  [%expect {| a:x b:x c:x |}]
+  [%expect {| a:x b:x c:x d: |}];
+  Handle.show handle;
+  [%expect {| a:x b:x c:x d:x |}];
+  Handle.show handle;
+  [%expect {| a:x b:x c:x d:x |}]
 ;;
 
-let%expect_test "chained on_change with " =
+(* $MDX part-end *)
+
+(* $MDX part-begin=chained-on-change-recompute *)
+let%expect_test "chained on_change with recompute_view_until_stable" =
   let handle = Handle.create (Result_spec.string (module String)) chain_computation in
   Handle.recompute_view_until_stable handle;
   Handle.show handle;
-  [%expect {| a:x b:x c:x |}]
+  [%expect {| a:x b:x c:x d:x |}]
 ;;
+
+(* $MDX part-end *)
 
 let%expect_test "infinite chain!" =
   let computation =

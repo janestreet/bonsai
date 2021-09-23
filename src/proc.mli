@@ -430,7 +430,10 @@ module Edge : sig
       changes. *)
 
   (** When given a value and a callback, [on_change] and [on_change'] will watch the
-      input variable and call the callback whenever the value changes. *)
+      input variable and call the callback whenever the value changes.
+
+      [callback] is also called when the component is initialized, passing in the
+      first 'a value that gets witnessed. *)
   val on_change
     :  Source_code_position.t
     -> (module Model with type t = 'a)

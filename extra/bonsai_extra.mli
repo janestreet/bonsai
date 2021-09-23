@@ -4,6 +4,13 @@ open! Bonsai
 val map_of_set : ('k, 'cmp) Set.t Value.t -> ('k, unit, 'cmp) Map.t Computation.t
 val map_keys : ('k, _, 'cmp) Map.t Value.t -> ('k, 'cmp) Set.t Computation.t
 
+(* A bool-state which starts at [default_model] and flips whenever the
+   returned effect is scheduled. *)
+val toggle
+  :  Source_code_position.t
+  -> default_model:bool
+  -> (bool * unit Effect.t) Computation.t
+
 (** [with_inject_fixed_point] allows an injection function produced as the
     result of a computation to be used as the input of that same combination.
     This "tie-the-knot" operation is legal because actions are scheduled
@@ -41,7 +48,7 @@ val exactly_once
   -> unit Computation.t
 
 (** As its name implies, [exactly_once] runs the event passed in via [Value.t]
-    exactly once.  The return value is stored and returned.  [None] is returned 
+    exactly once.  The return value is stored and returned.  [None] is returned
     while the effect is executing. *)
 val exactly_once_with_value
   :  Source_code_position.t

@@ -533,7 +533,6 @@ let%expect_test "assoc on input" =
     ~component
     ~initial_input:(String.Map.of_alist_exn [ "a", 0; "b", 2 ])
     ~f:(fun driver ->
-      [%expect {| |}];
       let (module H) =
         Helpers.make ~driver ~sexp_of_result:[%sexp_of: int String.Map.t]
       in

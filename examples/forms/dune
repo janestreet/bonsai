@@ -1,2 +1,4 @@
-(executables (names main) (libraries bonsai_web bonsai_web_ui_form)
- (preprocess (pps js_of_ocaml-ppx ppx_jane)))
+(executables (names main)
+ (libraries bonsai_web bonsai_web_ui_form ppx_typed_fields.typed_variants_lib
+  ppx_typed_fields.typed_fields_lib)
+ (preprocess (pps js_of_ocaml-ppx ppx_typed_fields ppx_css ppx_jane)))

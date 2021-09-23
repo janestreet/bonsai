@@ -28,3 +28,7 @@ table.prt-table-header {
 .prt-table-row-even {
   background-color:#f0f6ff;
 }
+
+.prt-table-row-selected{
+  background: #ff6f6f;
+}

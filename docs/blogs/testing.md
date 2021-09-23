@@ -207,7 +207,8 @@ the state machine internal to that component.
 A great example of this would be the `Bonsai.state` component, which returns
 a value of this type:
 
-```ocaml skip
+<!-- $MDX skip -->
+```ocaml
 ('model * ('model -> unit Ui_effect.t)) Computation.t
 ```
 

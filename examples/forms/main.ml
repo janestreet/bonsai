@@ -1,23 +1,27 @@
 open! Core
 open! Bonsai_web
 open! Import
-open Bonsai.Let_syntax
 module Form = Bonsai_web_ui_form
 module E = Form.Elements
-module _ = Big_form
-module _ = List_form
+
+module Style =
+  [%css.raw
+    {|
+.container {
+  display: flex;
+  flex-flow: row nowrap;
+  outline: none;
+  justify-content: space-around;
+} |}]
 
 let component =
-  let%sub big_form = Big_form.component in
-  let%sub list_form = List_form.component in
-  let%sub form_with_submit = Form_with_submit.component in
-  return
-  @@ let%map big_form = big_form
-  and list_form = list_form
-  and form_with_submit = form_with_submit in
+  let%map.Computation big_form = Big_form.component
+  and list_form = List_form.component
+  and form_with_submit = Form_with_submit.component
+  and typed_record = Typed.component in
   Vdom.Node.div
-    ~attr:(Vdom.Attr.style (Css_gen.flex_container ()))
-    [ big_form; list_form; form_with_submit ]
+    ~attr:(Vdom.Attr.class_ Style.container)
+    [ big_form; list_form; form_with_submit; typed_record ]
 ;;
 
 let (_ : _ Start.Handle.t) =
