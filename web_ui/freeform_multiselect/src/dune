@@ -1,0 +1,3 @@
+(library (name bonsai_web_ui_freeform_multiselect)
+ (public_name bonsai.web_ui_freeform_multiselect)
+ (libraries core_kernel.core bonsai_web) (preprocess (pps ppx_jane)))

@@ -1,0 +1,2 @@
+(library (name bonsai_web_ui_typeahead) (public_name bonsai.web_ui_typeahead)
+ (libraries core_kernel.core bonsai_web) (preprocess (pps ppx_jane)))

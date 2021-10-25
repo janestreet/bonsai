@@ -1,0 +1,11 @@
+(executables (names main)
+ (libraries bonsai_web bonsai_web_ui_form bonsai_web_ui_notifications
+  core_kernel.nonempty_list)
+ (preprocess (pps js_of_ocaml-ppx ppx_jane)))
+
+(rule (targets style.css)
+ (deps %{workspace_root}/lib/jane_web_style/src/css/style-7.css
+  app_style.css)
+ (action (bash "cat %{deps} > %{targets}")))
+
+(alias (name DEFAULT) (deps style.css))

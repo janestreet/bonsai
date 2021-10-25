@@ -1,0 +1,212 @@
+open! Core
+open! Bonsai_web
+open! Bonsai.Let_syntax
+open! Js_of_ocaml
+open! Incr_map_collate
+
+module For_testing = struct
+  type cell =
+    { id : Int63.t
+    ; selected : bool
+    ; view : Vdom.Node.t list
+    }
+
+  type t =
+    { column_names : Vdom.Node.t list
+    ; cells : cell list
+    ; rows_before : int
+    ; rows_after : int
+    ; num_filtered : int
+    ; num_unfiltered : int
+    }
+end
+
+let sort_map_values_by_idx values =
+  if Map.is_empty values
+  then [||]
+  else (
+    let placeholder, _ = Map.max_elt_exn values in
+    let arr = Array.init (Map.length values) ~f:(fun _ -> Int63.zero, placeholder, []) in
+    let i = ref 0 in
+    Map.iteri values ~f:(fun ~key ~data:(idx, value) ->
+      Array.set arr !i (idx, key, value);
+      Int.incr i);
+    Array.sort arr ~compare:(Comparable.lift Int63.compare ~f:Tuple3.get1);
+    arr)
+;;
+
+(* This function is a little dangerous because it converts an immutable map
+   into a mutable arrow via [sort_map_values_by_idx] and puts the result in
+   a Value.t. Usually, putting mutable data inside the incremental graph is
+   a bad idea, but it is okay here because every time [cells] changes, we
+   recompute the entire array, which means it will never be physically equal to
+   the previous array, which means that it should be fine inside incremental. *)
+let instantiate_cells ~assoc remapped =
+  let%sub cells = assoc remapped in
+  return @@ Value.map cells ~f:sort_map_values_by_idx
+;;
+
+(* This function takes a vdom node and if it's an element, it adds extra attrs, classes, key,
+   and style info to it, but if it's not an element, it wraps that node in a div that has those
+   attributes, styles, key, and style.  This can be useful if you get a vdom node from the
+   user of this API, and want to avoid excessive node wrapping. *)
+let set_or_wrap ?key ?(attrs = []) ~classes ~style =
+  let open Vdom.Node in
+  function
+  | Element e ->
+    Option.value_map key ~f:(Element.with_key e) ~default:e
+    |> Fn.flip Element.add_style style
+    |> Fn.flip Element.add_classes classes
+    |> Element.map_attrs ~f:(fun old_attrs -> Vdom.Attr.many (attrs @ [ old_attrs ]))
+    |> Element
+  | other ->
+    div
+      ?key
+      ~attr:
+        (Vdom.Attr.many
+           [ Vdom.Attr.style style; Vdom.Attr.classes classes; Vdom.Attr.many attrs ])
+      [ other ]
+;;
+
+let component
+      (type key data cmp)
+      ~(comparator : (key, cmp) Bonsai.comparator)
+      ~row_height
+      ~(leaves : Header_tree.leaf list Value.t)
+      ~assoc
+      ~column_widths
+      ~(visually_focused : key option Value.t)
+      ~(row_click_handler : (key -> unit Effect.t) Value.t option)
+      (collated : (key, data) Collated.t Value.t)
+      (remapped : (key, Int63.t * data, cmp) Map.t Value.t)
+  =
+  let module Cmp = (val comparator) in
+  let leaves_info, cells =
+    let leaves_info =
+      let%map leaves = leaves in
+      let%map.List { Header_tree.visible; leaf_label; _ } = leaves in
+      visible, leaf_label
+    in
+    let cells = instantiate_cells ~assoc remapped in
+    leaves_info, cells
+  in
+  let%sub cells = cells in
+  return
+  @@ let%map cells = cells
+  and collated = collated
+  and leaves_info = leaves_info
+  and visually_focused = visually_focused
+  and row_click_handler =
+    Option.value row_click_handler ~default:(Value.return (fun _ -> Ui_effect.Ignore))
+  and column_widths = column_widths in
+  let elements_prior_to_range = Collated.num_before_range collated in
+  (* Css_gen is really slow, so we need to re-use the results of all these
+     functions whenever possible.  The difference between non-cached and
+     cached css is the difference between 200ms stabilizations and 0.2ms
+     stabiliations while scrolling.
+
+     The reason that Css_gen is so slow is because apparently "sprintf" is
+     _really_ slow. *)
+  let css_all_cells =
+    let open Css_gen in
+    let h = (row_height :> Length.t) in
+    height h
+    @> min_height h
+    @> max_height h
+    @> box_sizing `Border_box
+    @> overflow `Hidden
+    @> display `Inline_block
+    @> create ~field:"contain" ~value:"strict"
+  in
+  (* CSS-gen apparently parses and attempts to validate all of our properties
+     and it's really slow, so let's turn it off *)
+  Css_gen.Expert.should_validate := false;
+  (* Build up a list of tuples corresponding to columns in the table where each tuple contains
+     1. The x position for the start of that column
+     2. The width of that column *)
+  let calculate_position_and_css i prev_x =
+    let column_width =
+      column_widths
+      |> Fn.flip Map.find i
+      |> Option.value_map ~f:(fun (`Px w) -> w) ~default:0.0
+    in
+    let next_x = prev_x +. column_width in
+    let css_for_column =
+      let open Css_gen in
+      let w = `Px_float column_width in
+      width w @> min_width w @> max_width w
+    in
+    next_x, css_for_column
+  in
+  let _end_pos, css_for_columns =
+    List.fold_mapi leaves_info ~init:0.0 ~f:(fun i prev_x (is_visible, _) ->
+      if is_visible
+      then calculate_position_and_css i prev_x
+      else prev_x, Css_gen.display `None)
+  in
+  let for_each_cell ~idx j (css_for_column, content) =
+    (* The index assigned during collation is a good choice for the key because it's
+       semi-stable, it prints out to a string without issue, and it's guaranteed to be
+       unique (within a table). *)
+    let key = sprintf !"key_%{Int63}-%d" idx j in
+    let css = Css_gen.( @> ) css_all_cells css_for_column in
+    let classes = [ "prt-table-cell" ] in
+    set_or_wrap
+      content
+      ~key
+      ~classes
+      ~attrs:
+        [ Vdom.Attr.create "data-row-id" (sprintf "key_%s" (Int63.to_string idx)) ]
+      ~style:css
+  in
+  let row_selected key =
+    match visually_focused with
+    | None -> false
+    | Some k -> Cmp.comparator.compare k key = 0
+  in
+  let for_each_row i (idx, key, columns) =
+    let row_selected = row_selected key in
+    let offset = i + elements_prior_to_range in
+    let (`Px row_height_px) = row_height in
+    let css =
+      let open Css_gen in
+      top (`Px (offset * row_height_px))
+      @> position `Absolute
+      @> max_height (row_height :> Length.t)
+      @> Css_gen.create ~field:"width" ~value:"max-content"
+    in
+    let classes =
+      if offset % 2 = 0
+      then [ "prt-table-row"; "prt-table-row-even" ]
+      else [ "prt-table-row"; "prt-table-row-odd" ]
+    in
+    let classes =
+      if row_selected then "prt-table-row-selected" :: classes else classes
+    in
+    Vdom.Node.div
+      ~key:(Int63.to_string idx)
+      ~attr:
+        (Vdom.Attr.many
+           [ Vdom.Attr.classes classes
+           ; Vdom.Attr.style css
+           ; Vdom.Attr.on_click (fun _ -> row_click_handler key)
+           ])
+      (List.mapi (List.zip_exn css_for_columns columns) ~f:(for_each_cell ~idx))
+  in
+  let view = List.mapi (Array.to_list cells) ~f:for_each_row in
+  let for_testing =
+    lazy
+      (let column_names = leaves_info |> List.map ~f:Tuple2.get2 in
+       { For_testing.column_names
+       ; cells =
+           List.map (Array.to_list cells) ~f:(fun (id, key, view) ->
+             { For_testing.id; selected = row_selected key; view })
+       ; rows_before = Collated.num_before_range collated
+       ; rows_after = Collated.num_after_range collated
+       ; num_filtered = Collated.num_filtered_rows collated
+       ; num_unfiltered = Collated.num_unfiltered_rows collated
+       })
+  in
+  Css_gen.Expert.should_validate := true;
+  view, for_testing
+;;

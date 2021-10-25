@@ -1,5 +1,6 @@
 (executables (names bonsai_form_example)
- (libraries core_kernel.core bonsai_form_experimental bonsai_web vdom_layout)
+ (libraries core_kernel.core bonsai_form_experimental bonsai_web
+  virtual_dom.layout)
  (preprocess (pps ppx_jane)))
 
 (rule (targets jane-web-style.css)

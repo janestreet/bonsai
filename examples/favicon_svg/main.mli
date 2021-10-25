@@ -1,0 +1,1 @@
+(*_ js executable *)

@@ -16,13 +16,18 @@ depends: [
   "async_kernel"
   "async_rpc_kernel"
   "async_rpc_websocket"
+  "core"
   "core_kernel"
   "expect_test_helpers_core"
   "incr_dom"
+  "incr_dom_keyboard"
   "incr_map"
   "patdiff"
+  "ppx_css"
   "ppx_jane"
   "ppx_pattern_bind"
+  "ppx_typed_fields"
+  "textutils"
   "virtual_dom"
   "cohttp-async"             {= "4.0.0+async"}
   "dune"                     {>= "2.0.0"}
@@ -34,9 +39,5 @@ depends: [
 synopsis: "A library for building dynamic webapps, using Js_of_ocaml"
 description: "
 Bonsai is a library for building reusable UI components inside an
-Incremental-style UI framework such as Incr_dom.  The API is broken
-up into roughly two modules:
-
-- Creating components
-- Combining components
+     Incremental-style UI framework such as Incr_dom or React.
 "

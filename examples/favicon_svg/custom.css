@@ -1,0 +1,21 @@
+img.svg-preview {
+ width: 200px;
+ height: 200px;
+ border-style:solid;
+ border-color: var(--js-form-unfocused-color);
+}
+
+div.container {
+  display:flex;
+  flex-direction:column;
+  align-items: center;
+}
+
+div.section-header {
+  color: #999999;
+  font-style: italic;
+}
+
+pre {
+  padding: 1em;
+}

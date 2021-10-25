@@ -685,6 +685,11 @@ module Clock = struct
       input
       ~callback
   ;;
+
+  let get_current_time =
+    Incr.with_clock (fun clock ->
+      Ui_incr.return (Effect.of_sync_fun (fun () -> Ui_incr.Clock.now clock) ()))
+  ;;
 end
 
 module Computation = struct

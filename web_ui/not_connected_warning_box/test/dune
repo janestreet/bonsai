@@ -1,0 +1,4 @@
+(library (name bonsai_web_ui_not_connected_warning_box_test)
+ (libraries bonsai_web_ui_not_connected_warning_box bonsai_web_test
+  core_kernel.core)
+ (preprocess (pps ppx_jane)))

@@ -29,6 +29,20 @@ let yoink a =
   result ()
 ;;
 
+let scope_model
+      (type a cmp)
+      (module M : Bonsai.Comparator with type t = a and type comparator_witness = cmp)
+      ~on:v
+      computation
+  =
+  let v = Bonsai.Value.map v ~f:(fun k -> Map.singleton (module M) k ()) in
+  let%sub map = Bonsai.assoc (module M) v ~f:(fun _ _ -> computation) in
+  let%arr map = map in
+  (* This _exn is ok because we know that the map is a singleton *)
+  let _k, r = Map.max_elt_exn map in
+  r
+;;
+
 let state_machine1_dynamic_model
       (type m a)
       here
@@ -238,3 +252,68 @@ module Id_gen (T : Int_intf.S) () = struct
     fetch ()
   ;;
 end
+
+let mirror
+      (type m)
+      here
+      (module M : Bonsai.Model with type t = m)
+      ~store_set
+      ~store_value
+      ~interactive_set
+      ~interactive_value
+  =
+  let module M2 = struct
+    type t =
+      { store : M.t
+      ; interactive : M.t
+      }
+    [@@deriving sexp, equal]
+  end
+  in
+  let callback =
+    let%map store_set = store_set
+    and interactive_set = interactive_set in
+    fun old_pair { M2.store = store_value; interactive = interactive_value } ->
+      let stability =
+        if [%equal: M.t] store_value interactive_value then `Stable else `Unstable
+      in
+      match stability with
+      | `Stable ->
+        (* if both of the new values are the same, then we're done! Stability
+           has already been reached. *)
+        Ui_effect.Ignore
+      | `Unstable ->
+        (match old_pair with
+         | None ->
+           (* on_change' is triggered when the values flow through this node
+              for the first time.  In this scenario, we prioritize the
+              value in the store. *)
+           interactive_set store_value
+         | Some { M2.store = old_store_value; interactive = old_interactive_value } ->
+           let store_changed = not ([%equal: M.t] old_store_value store_value) in
+           let interactive_changed =
+             not ([%equal: M.t] old_interactive_value interactive_value)
+           in
+           (match interactive_changed, store_changed with
+            (* if the interactive-value has changed, forward that on to the store.
+               we intentionally prioritize the interactive value here, so changes to
+               the store that happened at the same instant are dropped. *)
+            | true, _ -> store_set interactive_value
+            (* finally, if the store changed but interactive did not, update the
+               interactive value. *)
+            | false, true -> interactive_set store_value
+            (* this final case should never happen.  Error message explains why.*)
+            | false, false ->
+              eprint_s
+                [%message
+                  "BUG" [%here] "on_change triggered when nothing actually changed?"];
+              Ui_effect.Ignore))
+  in
+  Bonsai.Edge.on_change'
+    here
+    (module M2)
+    (let%map store = store_value
+     and interactive = interactive_value in
+     { M2.store; interactive })
+    ~callback
+;;

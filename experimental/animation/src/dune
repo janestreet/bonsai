@@ -1,0 +1,3 @@
+(library (name bonsai_experimental_animation)
+ (libraries core_kernel.core bonsai bonsai_extra)
+ (preprocess (pps ppx_jane)))

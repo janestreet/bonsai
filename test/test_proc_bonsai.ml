@@ -959,6 +959,26 @@ let%expect_test "Clock.now" =
   [%expect {| "1970-01-01 00:00:01.2Z" |}]
 ;;
 
+let%expect_test "Clock.now" =
+  let clock = Ui_incr.Clock.create ~start:Time_ns.epoch () in
+  let component =
+    let%sub get_time = Bonsai.Clock.get_current_time in
+    Bonsai.Edge.after_display
+      (let%map get_time = get_time in
+       let%bind.Effect now = get_time in
+       Effect.print_s [%sexp (now : Time_ns.Alternate_sexp.t)])
+  in
+  let handle = Handle.create ~clock (Result_spec.sexp (module Unit)) component in
+  Handle.recompute_view handle;
+  [%expect {| "1970-01-01 00:00:00Z" |}];
+  Ui_incr.Clock.advance_clock_by clock (Time_ns.Span.of_sec 0.5);
+  Handle.recompute_view handle;
+  [%expect {| "1970-01-01 00:00:00.5Z" |}];
+  Ui_incr.Clock.advance_clock_by clock (Time_ns.Span.of_sec 0.7);
+  Handle.recompute_view handle;
+  [%expect {| "1970-01-01 00:00:01.2Z" |}]
+;;
+
 let%expect_test "Clock.approx_now" =
   let clock = Ui_incr.Clock.create ~start:Time_ns.epoch () in
   let component = Bonsai.Clock.approx_now ~tick_every:(Time_ns.Span.of_sec 1.0) in
@@ -1489,6 +1509,41 @@ let%expect_test "multi-thunk" =
     "0 1" |}]
 ;;
 
+let%expect_test "scope_model" =
+  let var = Bonsai.Var.create true in
+  let component =
+    Bonsai_extra.scope_model
+      (module Bool)
+      ~on:(Bonsai.Var.value var)
+      (Bonsai.state [%here] (module String) ~default_model:"default")
+  in
+  let handle =
+    Handle.create
+      (module struct
+        type t = string * (string -> unit Effect.t)
+        type incoming = string
+
+        let view (s, _) = s
+        let incoming (_, s) = s
+      end)
+      component
+  in
+  Handle.show handle;
+  [%expect {| default |}];
+  Handle.do_actions handle [ "a" ];
+  Handle.show handle;
+  [%expect {| a |}];
+  Bonsai.Var.set var false;
+  Handle.show handle;
+  [%expect {| default |}];
+  Handle.do_actions handle [ "b" ];
+  Handle.show handle;
+  [%expect {| b |}];
+  Bonsai.Var.set var true;
+  Handle.show handle;
+  [%expect {| a |}]
+;;
+
 let%expect_test "thunk-storage" =
   let module Id = Core.Unique_id.Int () in
   let var = Bonsai.Var.create true in
@@ -1516,3 +1571,95 @@ let%expect_test "thunk-storage" =
   Handle.show handle;
   [%expect {| 0 |}]
 ;;
+
+module Mirror = struct
+  let prepare_test ~store ~interactive =
+    let store = Bonsai.Var.create store in
+    let interactive = Bonsai.Var.create interactive in
+    let store_set =
+      (fun value ->
+         printf "store set to \"%s\"" value;
+         Bonsai.Var.set store value)
+      |> Ui_effect.of_sync_fun
+    in
+    let interactive_set =
+      (fun value ->
+         printf "interactive set to \"%s\"" value;
+         Bonsai.Var.set interactive value)
+      |> Ui_effect.of_sync_fun
+    in
+    let component =
+      let%sub () =
+        Bonsai_extra.mirror
+          [%here]
+          (module String)
+          ~store_set:(Bonsai.Value.return store_set)
+          ~interactive_set:(Bonsai.Value.return interactive_set)
+          ~store_value:(Bonsai.Var.value store)
+          ~interactive_value:(Bonsai.Var.value interactive)
+      in
+      return
+        (let%map store = Bonsai.Var.value store
+         and interactive = Bonsai.Var.value interactive in
+         sprintf "store: %s, interactive: %s" store interactive)
+    in
+    let handle = Handle.create (Result_spec.string (module String)) component in
+    handle, store, interactive
+  ;;
+
+  let%expect_test "starts stable" =
+    let handle, _store, _interactive = prepare_test ~store:"a" ~interactive:"a" in
+    Handle.show handle;
+    [%expect {| store: a, interactive: a |}]
+  ;;
+
+  let%expect_test "starts unstable" =
+    let handle, _store, _interactive = prepare_test ~store:"a" ~interactive:"b" in
+    Handle.show handle;
+    [%expect {|
+    store: a, interactive: b
+    interactive set to "a" |}];
+    Handle.show handle;
+    [%expect {| store: a, interactive: a |}]
+  ;;
+
+  let%expect_test "starts stable and then interactive changes" =
+    let handle, _store, interactive = prepare_test ~store:"a" ~interactive:"a" in
+    Handle.show handle;
+    [%expect {| store: a, interactive: a |}];
+    Bonsai.Var.set interactive "b";
+    Handle.show handle;
+    [%expect {|
+    store: a, interactive: b
+    store set to "b" |}];
+    Handle.show handle;
+    [%expect {| store: b, interactive: b |}]
+  ;;
+
+  let%expect_test "starts stable and then store changes" =
+    let handle, store, _interactive = prepare_test ~store:"a" ~interactive:"a" in
+    Handle.show handle;
+    [%expect {| store: a, interactive: a |}];
+    Bonsai.Var.set store "b";
+    Handle.show handle;
+    [%expect {|
+    store: b, interactive: a
+    interactive set to "b" |}];
+    Handle.show handle;
+    [%expect {| store: b, interactive: b |}]
+  ;;
+
+  let%expect_test "starts stable and then both change at the same time" =
+    let handle, store, interactive = prepare_test ~store:"a" ~interactive:"a" in
+    Handle.show handle;
+    [%expect {| store: a, interactive: a |}];
+    Bonsai.Var.set store "b";
+    Bonsai.Var.set interactive "c";
+    Handle.show handle;
+    [%expect {|
+    store: b, interactive: c
+    store set to "c" |}];
+    Handle.show handle;
+    [%expect {| store: c, interactive: c |}]
+  ;;
+end

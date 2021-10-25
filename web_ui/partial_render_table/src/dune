@@ -1,0 +1,4 @@
+(library (name bonsai_web_ui_partial_render_table)
+ (libraries bonsai_web core_kernel.core incr_map_collate
+  bonsai_web_ui_element_size_hooks)
+ (preprocess (pps js_of_ocaml-ppx ppx_jane ppx_pattern_bind)))

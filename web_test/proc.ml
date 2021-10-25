@@ -31,9 +31,13 @@ module Handle = struct
     Node_helpers.select_first_exn node ~selector
   ;;
 
-  let click_on ?shift_key_down handle ~get_vdom ~selector =
+  let click_on ?shift_key_down ?alt_key_down ?ctrl_key_down handle ~get_vdom ~selector =
     let element = get_element handle ~get_vdom ~selector in
-    Node_helpers.User_actions.click_on element ?shift_key_down
+    Node_helpers.User_actions.click_on
+      element
+      ?shift_key_down
+      ?alt_key_down
+      ?ctrl_key_down
   ;;
 
   let set_checkbox handle ~get_vdom ~selector ~checked =

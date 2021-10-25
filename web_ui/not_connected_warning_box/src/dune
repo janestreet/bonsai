@@ -1,0 +1,3 @@
+(library (name bonsai_web_ui_not_connected_warning_box)
+ (libraries core_kernel.core bonsai virtual_dom)
+ (preprocess (pps js_of_ocaml-ppx ppx_jane)))

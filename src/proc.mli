@@ -422,6 +422,9 @@ module Clock : sig
     -> Time_ns.Span.t
     -> unit Effect.t Value.t
     -> unit Computation.t
+
+  (** An effect for fetching the current time. *)
+  val get_current_time : Time_ns.t Effect.t Computation.t
 end
 
 module Edge : sig

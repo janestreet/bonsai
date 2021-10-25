@@ -21,6 +21,7 @@ module Options : sig
   type 'a t =
     | Prune_stale : Dimensions.t t
     | Keep_stale : Dimensions.t maybe_stale t
+    | Ignore_stale : Dimensions.t t
 end
 
 (** When attached to a Vdom node, this attribute will monitor the size of this

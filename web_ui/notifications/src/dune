@@ -1,0 +1,3 @@
+(library (name bonsai_web_ui_notifications)
+ (libraries bonsai bonsai_extra bonsai_web core_kernel.core)
+ (preprocess (pps ppx_jane ppx_css)))

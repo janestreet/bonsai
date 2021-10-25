@@ -1,0 +1,3 @@
+(library (name test_bonsai_web_ui_search_bar)
+ (libraries bonsai_web_ui_search_bar bonsai_web_test)
+ (preprocess (pps ppx_jane)))

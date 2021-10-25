@@ -26,6 +26,8 @@ module Handle : sig
 
   val click_on
     :  ?shift_key_down:bool
+    -> ?alt_key_down:bool
+    -> ?ctrl_key_down:bool
     -> ('a, 'b) t
     -> get_vdom:('a -> Vdom.Node.t)
     -> selector:string

@@ -1,0 +1,17 @@
+body main {
+    left: 0;
+    margin: auto;
+    max-width: 60%;
+}
+
+section {
+    background-color: var(--js-section-bg-color);
+    box-shadow: 0 1px 1px 0 rgba(60, 64, 67, 0.08), 0 1px 3px 1px rgba(60, 64, 67, 0.16);
+    margin: 0 auto;
+    padding: 30px;
+    margin-bottom: 50px;
+}
+
+section:first-of-type {
+    margin-top: 40px;
+}

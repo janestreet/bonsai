@@ -48,7 +48,22 @@ type ('model, 'action, 'result) t =
   }
 [@@deriving fields]
 
-let create = Fields.create
+let annotate ~name ~color t =
+  Incr.append_user_info_graphviz
+    t
+    ~label:[ name ]
+    ~attrs:(String.Map.of_alist_exn [ "style", "filled"; "fillcolor", color ])
+;;
+
+let create ~apply_action ~lifecycle ~result =
+  (match apply_action with
+   | Apply_action.Incremental apply_action ->
+     annotate ~name:"apply_action" ~color:"cornsilk" apply_action
+   | Non_incremental _ -> ());
+  Option.iter lifecycle ~f:(annotate ~name:"lifecycle" ~color:"lightsalmon");
+  annotate ~name:"result" ~color:"lightcoral" result;
+  Fields.create ~apply_action ~lifecycle ~result
+;;
 
 let lifecycle_or_empty t =
   lifecycle t |> Option.value ~default:(Incr.return Lifecycle.Collection.empty)

@@ -1,0 +1,10 @@
+(executables (names main)
+ (libraries bonsai_web bonsai_web_ui_element_size_hooks
+  virtual_dom.input_widgets)
+ (preprocess (pps ppx_jane js_of_ocaml-ppx ppx_pattern_bind)))
+
+(alias (name javascript-DEFAULT) (deps style.css))
+
+(rule (targets style.css)
+ (deps %{workspace_root}/lib/jane_web_style/src/css/style-6.css custom.css)
+ (action (bash "cat %{deps} > %{targets}")))

@@ -1,2 +1,2 @@
-(executables (names main) (libraries bonsai_web inline_css)
+(executables (names main) (libraries bonsai_web ppx_css.inline_css)
  (preprocess (pps ppx_jane ppx_css)))

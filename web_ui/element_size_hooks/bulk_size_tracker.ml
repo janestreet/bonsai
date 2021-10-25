@@ -162,6 +162,7 @@ module Options = struct
   type 'a t =
     | Prune_stale : Dimensions.t t
     | Keep_stale : Dimensions.t maybe_stale t
+    | Ignore_stale : Dimensions.t t
 end
 
 let component
@@ -184,18 +185,21 @@ let component
       match options with
       | Prune_stale -> [%sexp_of: Dimensions.t]
       | Keep_stale -> [%sexp_of: Dimensions.t Options.maybe_stale]
+      | Ignore_stale -> [%sexp_of: Dimensions.t]
     ;;
 
     let contained_of_sexp : Sexp.t -> contained =
       match options with
       | Prune_stale -> [%of_sexp: Dimensions.t]
       | Keep_stale -> [%of_sexp: Dimensions.t Options.maybe_stale]
+      | Ignore_stale -> [%of_sexp: Dimensions.t]
     ;;
 
     let equal_contained : contained -> contained -> bool =
       match options with
       | Prune_stale -> [%equal: Dimensions.t]
       | Keep_stale -> [%equal: Dimensions.t Options.maybe_stale]
+      | Ignore_stale -> [%equal: Dimensions.t]
     ;;
 
     type t = contained Map.M(Key).t [@@deriving sexp, equal]
@@ -213,8 +217,15 @@ let component
         List.fold actions ~init:model ~f:(fun model action ->
           match action, options with
           | Set (k, v), Prune_stale -> Map.set model ~key:k ~data:v
+          | Set (k, v), Ignore_stale -> Map.set model ~key:k ~data:v
           | Set (k, v), Keep_stale -> Map.set model ~key:k ~data:(Fresh v)
           | Remove k, Prune_stale -> Map.remove model k
+          | Remove k, Ignore_stale ->
+            eprint_s
+              [%message
+                "BUG: We should never be removing items from this map while in \
+                 [Ignore_stale] mode. Removing anyway."];
+            Map.remove model k
           | Remove k, Keep_stale ->
             Map.change model k ~f:(function
               | None -> None
@@ -230,6 +241,19 @@ let component
       ~on_activate:
         (let%map inject = inject
          and group_key = group_key in
+         let inject =
+           match options with
+           | Ignore_stale ->
+             fun actions ->
+               (match
+                  List.filter actions ~f:(function
+                    | Action.Remove _ -> false
+                    | _ -> true)
+                with
+                | [] -> Effect.Ignore
+                | actions -> inject actions)
+           | _ -> inject
+         in
          Trackers.set ~inject ~group_key)
       ~on_deactivate:
         (let%map group_key = group_key in

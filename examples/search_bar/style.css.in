@@ -1,0 +1,19 @@
+#main-list.ul {
+  font-family: monospace;
+}
+
+#main-list li {
+  margin-top: 5px;
+  padding: 5px;
+  background: #ddd;
+  width: fit-content;
+}
+
+#main-list div {
+  display: inline-block;
+  padding: 0 5px;
+} 
+
+.autocomplete-active {
+  background-color:lightblue;
+}

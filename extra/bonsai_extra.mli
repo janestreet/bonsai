@@ -33,6 +33,20 @@ val with_inject_fixed_point
     after it's been changed by a previous effect. *)
 val yoink : 'a Value.t -> 'a Effect.t Computation.t
 
+(** [scope_model] allows you to have a different model for the provided
+    computation, keyed by some other value.
+
+    Suppose for example, that you had a form for editing details about a
+    person.  This form should have different state for each person.  You could
+    use scope_model, where the [~on] parameter is set to a user-id, and now when
+    that value changes, the model for the other computation is set to the model
+    for that particular user. *)
+val scope_model
+  :  ('a, _) Bonsai.comparator
+  -> on:'a Bonsai.Value.t
+  -> 'b Bonsai.Computation.t
+  -> 'b Bonsai.Computation.t
+
 (** [pipe] constructs a pipe of [a] and returns a pair containing an injection
     function that enqueues items and an Effect that dequeues them.  *)
 val pipe
@@ -129,3 +143,29 @@ module Id_gen (T : Int_intf.S) () : sig
 
   val component : Source_code_position.t -> t Bonsai.Effect.t Bonsai.Computation.t
 end
+
+(** [mirror] is used to reflect state back and forth between locations.
+    Frequently this will be used to back up a components model in a more
+    persistent form of storage, such as the URL, or local-storage.
+
+    The gist of this combinator is that if you have two states that you'd
+    like to be synchronized, you can feed the "current value" and "set
+    value" functions for both states into [mirror] and they'll
+    automatically be kept up to date. Either of these can be backed by any
+    kind of structure, but there are some important differences in their
+    symmetry.
+
+    When the component is first loaded, [store] has priority, so if the
+    values are different, [store] wins, and [interactive] has its value
+    "set". From that point on, if either incoming value changes, the
+    opposite setter is called. In the case that both [store] and
+    [interactive] change at the same time, the tie is broken in favor of
+    [interactive], and [store_set] is called. *)
+val mirror
+  :  Source_code_position.t
+  -> (module Bonsai.Model with type t = 'm)
+  -> store_set:('m -> unit Ui_effect.t) Bonsai.Value.t
+  -> store_value:'m Bonsai.Value.t
+  -> interactive_set:('m -> unit Ui_effect.t) Bonsai.Value.t
+  -> interactive_value:'m Bonsai.Value.t
+  -> unit Bonsai.Computation.t

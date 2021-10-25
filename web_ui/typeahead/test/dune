@@ -1,0 +1,4 @@
+(library (name bonsai_ui_components_typeahead_test)
+ (libraries bonsai_web_ui_typeahead bonsai_web bonsai_web_test
+  core_kernel.core patdiff.expect_test_patdiff)
+ (preprocess (pps ppx_jane)))
