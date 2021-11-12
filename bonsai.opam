@@ -20,7 +20,6 @@ depends: [
   "core_kernel"
   "expect_test_helpers_core"
   "incr_dom"
-  "incr_dom_keyboard"
   "incr_map"
   "patdiff"
   "ppx_css"

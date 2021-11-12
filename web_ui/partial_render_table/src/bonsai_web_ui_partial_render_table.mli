@@ -128,7 +128,6 @@ end
 
 module Expert : sig
   open Incr_map_collate
-  module Memo := Incr_memoize
   module Focus = Focus
 
   module Result : sig
@@ -178,8 +177,6 @@ module Expert : sig
 
   val collate
     :  ?operation_order:[ `Filter_first | `Sort_first ]
-    -> ?filter_memoize_params:'filter Memo.Store_params.t
-    -> ?order_memoize_params:'order Memo.Store_params.t
     -> filter_equal:('filter -> 'filter -> bool)
     -> order_equal:('order -> 'order -> bool)
     -> filter_to_predicate:('filter -> (key:'k -> data:'v -> bool) option)

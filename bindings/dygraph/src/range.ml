@@ -6,7 +6,7 @@ type t =
   { low  : float
   ; high : float
   }
-[@@deriving sexp]
+[@@deriving sexp, equal]
 
 (* ranges in dygraphs are represented as [| low; high |]. *)
 let t_to_js { low; high } = Ojs.array_to_js Ojs.float_to_js [| low; high |]
@@ -20,7 +20,7 @@ module Spec = struct
   type nonrec t =
     | Infer
     | Specified of t
-  [@@deriving sexp]
+  [@@deriving sexp, equal]
 
   let t_to_js = function
     | Infer       -> Ojs.null

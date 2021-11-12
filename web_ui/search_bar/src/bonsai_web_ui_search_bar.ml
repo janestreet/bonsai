@@ -245,35 +245,29 @@ let create
          then
            [ Node.li
                ~attr:
-                 (Attr.many_without_merge
-                    [ Attr.on_mousedown (fun _ -> Effect.Prevent_default)
-                    ; Attr.class_ "no-cursor"
-                    ; Css_gen.(
-                        [ background_color (`Var "--js-dark-snow-color")
-                        ; width draw_width
-                        ]
-                        |> concat)
-                      |> Attr.style
-                    ])
+                 Attr.(
+                   on_mousedown (fun _ -> Effect.Prevent_default)
+                   @ class_ "no-cursor"
+                   @ style
+                       Css_gen.(
+                         background_color (`Var "--js-dark-snow-color")
+                         @> width draw_width))
                [ Node.text (sprintf "+%d more" (len - max_query_results)) ]
            ]
          else []
        in
        [ Node.div
            ~attr:
-             (Attr.many_without_merge
-                [ Attr.class_ "autocomplete"
-                ; Attr.style
-                    Css_gen.([ width draw_width; max_width draw_width ] |> concat)
-                ])
+             Attr.(
+               class_ "autocomplete"
+               @ style Css_gen.([ width draw_width; max_width draw_width ] |> concat))
            [ Node.ul
                ~attr:
-                 (Attr.many_without_merge
-                    [ Attr.class_ "autocomplete-items"
-                    ; Attr.id "autocomplete-items"
-                    ; Attr.on_mouseout (fun _ ->
-                        inject Action.Clear_focused_autocomplete_result)
-                    ])
+                 Attr.(
+                   class_ "autocomplete-items"
+                   @ id "autocomplete-items"
+                   @ on_mouseout (fun _ ->
+                     inject Action.Clear_focused_autocomplete_result))
                (Map.data entries @ hidden_query_results)
            ]
        ])

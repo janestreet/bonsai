@@ -274,7 +274,8 @@ module Multiple : sig
     :  Source_code_position.t
     -> ?element_group_label:
          (delete_button:Vdom.Node.t -> int -> 'a Or_error.t -> Vdom.Node.t)
-    -> ?add_element_text:string
+    -> ?add_element_text:string Value.t
+    -> ?button_placement:[ `Indented | `Inline ]
     -> 'a Form.t Computation.t
     -> 'a list Form.t Computation.t
 
@@ -282,7 +283,8 @@ module Multiple : sig
     :  Source_code_position.t
     -> ?element_group_label:
          (delete_button:Vdom.Node.t -> int -> 'a Or_error.t -> Vdom.Node.t)
-    -> ?add_element_text:string
+    -> ?add_element_text:string Value.t
+    -> ?button_placement:[ `Indented | `Inline ]
     -> ('a, 'cmp) Bonsai.comparator
     -> 'a Form.t Computation.t
     -> ('a, 'cmp) Set.t Form.t Computation.t
@@ -291,7 +293,8 @@ module Multiple : sig
     :  Source_code_position.t
     -> ?element_group_label:
          (delete_button:Vdom.Node.t -> int -> ('k * 'v) Or_error.t -> Vdom.Node.t)
-    -> ?add_element_text:string
+    -> ?add_element_text:string Value.t
+    -> ?button_placement:[ `Indented | `Inline ]
     -> ('k, 'cmp) Bonsai.comparator
     -> key:'k Form.t Computation.t
     -> data:'v Form.t Computation.t

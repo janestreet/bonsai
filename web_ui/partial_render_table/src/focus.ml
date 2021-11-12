@@ -207,8 +207,6 @@ module Row_machine = struct
          | None -> Indeterminate))
   ;;
 
-  module Model = Triple
-
   module Action = struct
     type 'key t =
       | Unfocus
@@ -306,7 +304,10 @@ module Row_machine = struct
                  ]
              | { current = None; shadow = None } ->
                find_by_index collated ~index:range_start
-             | { current = Some { Triple.index; _ }; _ } ->
+             | { current = Some { Triple.key; _ }; _ } ->
+               let%bind.Option { Triple.index; _ } =
+                 find_by_key collated ~key ~key_equal:Key.equal
+               in
                Option.first_some (find_by_index collated ~index:(index + 1)) model.current)
             ~how:(fun id -> To (id, `Minimal))
         | Up ->
@@ -324,7 +325,10 @@ module Row_machine = struct
                  [ lazy (find_by_index collated ~index:(index - 1))
                  ; lazy (find_by_index collated ~index)
                  ]
-             | { current = Some { Triple.index; _ }; _ } ->
+             | { current = Some { Triple.key; _ }; _ } ->
+               let%bind.Option { Triple.index; _ } =
+                 find_by_key collated ~key ~key_equal:Key.equal
+               in
                Option.first_some (find_by_index collated ~index:(index - 1)) model.current)
             ~how:(fun id -> To (id, `Minimal))
         | Page_down ->

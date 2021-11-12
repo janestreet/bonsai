@@ -118,9 +118,6 @@ let component
     @> display `Inline_block
     @> create ~field:"contain" ~value:"strict"
   in
-  (* CSS-gen apparently parses and attempts to validate all of our properties
-     and it's really slow, so let's turn it off *)
-  Css_gen.Expert.should_validate := false;
   (* Build up a list of tuples corresponding to columns in the table where each tuple contains
      1. The x position for the start of that column
      2. The width of that column *)
@@ -207,6 +204,5 @@ let component
        ; num_unfiltered = Collated.num_unfiltered_rows collated
        })
   in
-  Css_gen.Expert.should_validate := true;
   view, for_testing
 ;;

@@ -301,11 +301,14 @@ module Dynamic = struct
         let contra_map a ~f = Value.map a ~f:(contra_map ~f)
       end)
 
-    let field t fieldslib_field =
+    let field ?(group_lists = true) t fieldslib_field =
       let label = Record_builder.label_of_field fieldslib_field in
       let with_label =
         let%map t = t in
-        let view = View.suggest_label label t.view in
+        let view =
+          (if group_lists then View.group_list t.view else t.view)
+          |> View.suggest_label label
+        in
         let value = Record_builder.attach_fieldname_to_error t fieldslib_field in
         { t with view; value }
       in
@@ -321,7 +324,13 @@ module Dynamic = struct
 end
 
 module Expert = struct
-  module View = View
-
   let create = Fields_of_unbalanced.create
+end
+
+module Private = struct
+  let group_list t = { t with view = View.group_list t.view }
+
+  let suggest_label label t =
+    { t with view = View.suggest_label (Vdom.Node.text label) t.view }
+  ;;
 end

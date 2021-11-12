@@ -2,9 +2,6 @@ open! Core
 open! Bonsai_web
 open! Bonsai_web_test
 open Bonsai.Let_syntax
-module Table = Bonsai_web_ui_partial_render_table.Basic
-module Table_expert = Bonsai_web_ui_partial_render_table.Expert
-module Columns = Table.Columns.Dynamic_cells
 open Shared
 
 module Test = struct

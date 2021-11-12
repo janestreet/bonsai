@@ -15,5 +15,3 @@ module Raw_html        = Raw_html
 module Update_options  = Update_options
 module X_axis_mapping  = X_axis_mapping
 module With_bonsai     = With_bonsai
-
-let () = Css.install_css ()

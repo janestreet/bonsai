@@ -36,46 +36,53 @@ module Elem = struct
     | Assoc of Keyed.t
     | Enum of Keyed.t
   [@@deriving sexp_of, compare]
+
+  let to_string =
+    let offset = Char.to_int 'a' in
+    let lower_nibble_to_alpha c = Int.bit_and c 0b1111 + offset |> Char.of_int_exn in
+    let char_to_alpha buf c =
+      let c = Char.to_int c in
+      let lower = lower_nibble_to_alpha c in
+      let upper = lower_nibble_to_alpha (Int.shift_right c 4) in
+      Buffer.add_char buf upper;
+      Buffer.add_char buf lower
+    in
+    let keyed_to_string k =
+      let buf = Buffer.create 10 in
+      Sexp.to_buffer_gen
+        (Keyed.sexp_of_t k)
+        ~buf
+        ~add_char:char_to_alpha
+        ~add_string:(fun buf string -> String.iter string ~f:(char_to_alpha buf));
+      Buffer.contents buf
+    in
+    function
+    | Subst_from -> "x"
+    | Subst_into -> "y"
+    | Assoc k | Enum k -> keyed_to_string k
+  ;;
 end
 
-(* The path is stored with the child node first and the parent node last so that [append]
-   is fast *)
-type t = Elem.t Reversed_list.t
+type t =
+  { items : Elem.t list
+  ; string_repr : string Lazy.t
+  }
 
-let empty = Reversed_list.[]
-let append t ele = Reversed_list.(ele :: t)
+let sexp_of_t t = [%sexp_of: Elem.t list] t.items
+let compare a b = [%compare: Elem.t list] a.items b.items
+let empty = { items = []; string_repr = Lazy.return "bonsai_path" }
 
-(* reverse before doing anything *)
-let compare a b = Comparable.lift [%compare: Elem.t list] ~f:Reversed_list.rev a b
-let sexp_of_t t = [%sexp (Reversed_list.rev t : Elem.t list)]
+let append t ele =
+  { items = t.items @ [ ele ]
+  ; string_repr =
+      lazy
+        (let (lazy parent) = t.string_repr in
+         parent ^ "_" ^ Elem.to_string ele)
+  }
+;;
 
 include Comparable.Make_plain (struct
     type nonrec t = t [@@deriving compare, sexp_of]
   end)
 
-let to_unique_identifier_string t =
-  let offset = Char.to_int 'a' in
-  let lower_nibble_to_alpha c = Int.bit_and c 0b1111 + offset |> Char.of_int_exn in
-  let char_to_alpha c =
-    let c = Char.to_int c in
-    let lower = lower_nibble_to_alpha c in
-    let upper = lower_nibble_to_alpha (Int.shift_right c 4) in
-    [ upper; lower ]
-  in
-  let keyed_to_string k =
-    k
-    |> Elem.Keyed.sexp_of_t
-    |> Sexp.to_string_mach
-    |> String.to_list
-    |> List.bind ~f:char_to_alpha
-    |> String.of_char_list
-  in
-  t
-  |> Reversed_list.rev
-  |> List.map ~f:(function
-    | Elem.Subst_from -> "x"
-    | Subst_into -> "y"
-    | Assoc k | Enum k -> keyed_to_string k)
-  |> String.concat ~sep:"_"
-  |> ( ^ ) "bonsai_path_"
-;;
+let to_unique_identifier_string t = Lazy.force t.string_repr

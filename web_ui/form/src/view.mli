@@ -47,6 +47,7 @@ val suggest_error : Error_details.t -> t -> t
 val set_label : Vdom.Node.t -> t -> t
 val set_tooltip : Vdom.Node.t -> t -> t
 val group : Vdom.Node.t -> t -> t
+val group_list : t -> t
 val suggest_label : Vdom.Node.t -> t -> t
 val of_vdom : id:string -> Vdom.Node.t -> t
 val concat : t -> t -> t

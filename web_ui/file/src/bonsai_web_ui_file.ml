@@ -11,7 +11,7 @@ module Progress = struct
   let to_percentage { loaded; total } = Percent.of_mult (float loaded /. float total)
 end
 
-module File_read_state = struct
+module _ = struct
   type t =
     | Contents of string
     | Loading of Progress.t option

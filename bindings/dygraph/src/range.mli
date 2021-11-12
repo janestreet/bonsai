@@ -8,7 +8,7 @@ type t =
   { low  : float
   ; high : float
   }
-[@@deriving sexp]
+[@@deriving sexp, equal]
 
 val t_to_js : t -> Ojs.t
 val t_of_js : Ojs.t -> t
@@ -18,7 +18,7 @@ module Spec : sig
   type nonrec t =
     | Infer
     | Specified of t
-  [@@deriving sexp]
+  [@@deriving sexp, equal]
 
   val t_to_js : t -> Ojs.t
 end

@@ -103,8 +103,8 @@ let%expect_test "dynamic scope" =
   [%expect
     {|
 digraph {
-named_0 [ style=filled, shape = "circle", label = "{lib/bonsai/src/proc.ml:656:4}"; fillcolor = "#FFFFFF"; width=.1, height=.1]
-named_1 [ style=filled, shape = "circle", label = "{lib/bonsai/src/proc.ml:630:4}"; fillcolor = "#FFFFFF"; width=.1, height=.1]
+named_0 [ style=filled, shape = "circle", label = "{lib/bonsai/src/proc.ml:668:4}"; fillcolor = "#FFFFFF"; width=.1, height=.1]
+named_1 [ style=filled, shape = "circle", label = "{lib/bonsai/src/proc.ml:642:4}"; fillcolor = "#FFFFFF"; width=.1, height=.1]
 fetch_2 [ style=filled, shape = "Mrecord", label = "fetch"; fillcolor = "#86E3CE"; ]
 named_3 [ style=filled, shape = "circle", label = ""; fillcolor = "#000000"; width=.1, height=.1]
 named_3 -> fetch_2;
@@ -119,7 +119,7 @@ const_7 [ style=filled, shape = "oval", label = "const"; fillcolor = "#FFDD94"; 
 const_7 -> dyn_set_6;
 dyn_set_6 -> named_3 [dir=none];
 named_8 [ style=filled, shape = "circle", label = "{lib/bonsai/test/test_dot.ml:98:6}"; fillcolor = "#FFFFFF"; width=.1, height=.1]
-named_9 [ style=filled, shape = "circle", label = "{lib/bonsai/src/proc.ml:630:4}"; fillcolor = "#FFFFFF"; width=.1, height=.1]
+named_9 [ style=filled, shape = "circle", label = "{lib/bonsai/src/proc.ml:642:4}"; fillcolor = "#FFFFFF"; width=.1, height=.1]
 fetch_10 [ style=filled, shape = "Mrecord", label = "fetch"; fillcolor = "#86E3CE"; ]
 named_3 -> fetch_10;
 fetch_10 -> named_9 [dir=none];
@@ -135,7 +135,7 @@ named_8 -> map_15;
 map_15 -> read_14;
 read_14 -> named_13 [dir=none];
 named_16 [ style=filled, shape = "circle", label = "{lib/bonsai/test/test_dot.ml:99:6}"; fillcolor = "#FFFFFF"; width=.1, height=.1]
-named_17 [ style=filled, shape = "circle", label = "{lib/bonsai/src/proc.ml:630:4}"; fillcolor = "#FFFFFF"; width=.1, height=.1]
+named_17 [ style=filled, shape = "circle", label = "{lib/bonsai/src/proc.ml:642:4}"; fillcolor = "#FFFFFF"; width=.1, height=.1]
 fetch_18 [ style=filled, shape = "Mrecord", label = "fetch"; fillcolor = "#86E3CE"; ]
 named_3 -> fetch_18;
 fetch_18 -> named_17 [dir=none];

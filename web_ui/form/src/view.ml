@@ -76,12 +76,18 @@ let rec set_tooltip tooltip t =
   match t with
   | Empty -> Empty
   | List [] -> List []
-  (* [set_label] on a list will traverse the list and attach it to the head *)
+  (* [set_tooltip] on a list will traverse the list and attach it to the head *)
   | List (hd :: tl) -> List (set_tooltip tooltip hd :: tl)
   | Row row -> Row { row with tooltip = Some tooltip }
   | Group group -> Group { group with tooltip = Some tooltip }
   | Header_group group -> Header_group { group with tooltip = Some tooltip }
   | Submit_button _ -> t
+;;
+
+let group_list t =
+  match t with
+  | List _ -> Group { view = t; label = None; tooltip = None }
+  | _ -> t
 ;;
 
 let rec suggest_label label t =
@@ -144,7 +150,6 @@ let view_error error = view_error (Error.Internal_repr.of_info error)
 let view_error_details
       { Error_details.error; on_mouse_over; on_mouse_out; on_click; is_viewing; is_toggled }
   =
-  Css_gen.Expert.should_validate := false;
   let flag =
     Node.div
       ~attr:
@@ -184,7 +189,6 @@ let view_error_details
            [ Attr.style (Css_gen.position `Relative); Attr.class_ "bonsai-forms-error" ])
       [ flag; contents ]
   in
-  Css_gen.Expert.should_validate := true;
   result
 ;;
 

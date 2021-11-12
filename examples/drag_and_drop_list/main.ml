@@ -1,7 +1,6 @@
 open! Core
 open! Bonsai_web
 open Bonsai.Let_syntax
-module Drag_and_drop = Bonsai_web_ui_drag_and_drop
 module Reorderable_list = Bonsai_web_ui_reorderable_list
 
 module S =
@@ -64,6 +63,5 @@ let component =
 ;;
 
 let (_ : _ Start.Handle.t) =
-  Css_gen.Expert.should_validate := false;
   Start.start Start.Result_spec.just_the_view ~bind_to_element_with_id:"app" component
 ;;

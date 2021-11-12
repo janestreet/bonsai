@@ -245,9 +245,21 @@ module Dynamic : sig
          , 'a )
            Bare.Make_creator_types.handle_all_fields
       -> 'a t Computation.t
+
+    val field
+      :  ?group_lists:bool
+      -> 'a t Value.t
+      -> ([ `Read | `Set_and_create ], 'b, 'a) Base.Field.t_with_perm
+      -> ('a * 'c, 'd * 'e, 'b) Bare.Make_creator_types.accum
+      -> ('d * 'e -> 'a) * ('c, 'd * 'e, 'b) Bare.Make_creator_types.accum
   end
 end
 
 module Expert : sig
   val create : value:'a Or_error.t -> view:View.t -> set:('a -> unit Ui_effect.t) -> 'a t
+end
+
+module Private : sig
+  val suggest_label : string -> 'a t -> 'a t
+  val group_list : 'a t -> 'a t
 end

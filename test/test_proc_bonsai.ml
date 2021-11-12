@@ -1572,7 +1572,7 @@ let%expect_test "thunk-storage" =
   [%expect {| 0 |}]
 ;;
 
-module Mirror = struct
+module _ = struct
   let prepare_test ~store ~interactive =
     let store = Bonsai.Var.create store in
     let interactive = Bonsai.Var.create interactive in

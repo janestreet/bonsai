@@ -552,9 +552,150 @@ let%expect_test "setting into a paired string textbox * int textbox " =
       </div> |}]
 ;;
 
+let%expect_test "adding more things to a string list (indented button)" =
+  let component =
+    Form.Elements.Multiple.list
+      [%here]
+      ~button_placement:`Indented
+      (Form.Elements.Textbox.string [%here])
+  in
+  let handle =
+    Handle.create
+      (form_result_spec ~get_vdom:get_vdom_verbose [%sexp_of: string list])
+      component
+  in
+  Handle.show handle;
+  [%expect
+    {|
+    (Ok ())
+
+    ==============
+    <table>
+      <tbody>
+        <tr>
+          <td colspan="2" style={ padding-left: 0em; font-weight: bold; }>
+            <button onclick> Add new element </button>
+          </td>
+        </tr>
+      </tbody>
+    </table> |}];
+  Handle.click_on handle ~get_vdom:get_vdom_verbose ~selector:"button";
+  Handle.show_diff handle;
+  [%expect
+    {|
+    -|(Ok ())
+    +|(Ok (""))
+
+      ==============
+      <table>
+        <tbody>
+    +|    <tr>
+    +|      <td colspan="2" style={ padding-left: 0em; font-weight: bold; }>
+    +|        <div>
+    +|          0 -
+    +|          <button type="button"
+    +|                  onclick
+    +|                  style={
+    +|                    border: none;
+    +|                    cursor: pointer;
+    +|                    color: blue;
+    +|                    background: none;
+    +|                  }> [ remove ] </button>
+    +|        </div>
+    +|      </td>
+    +|    </tr>
+    +|    <tr @key=bonsai_path_replaced_in_test>
+    +|      <td style={
+    +|            padding-left: 1em;
+    +|            padding-right: 1em;
+    +|            text-align: left;
+    +|            font-weight: bold;
+    +|            user-select: none;
+    +|          }>  </td>
+    +|      <td>
+    +|        <input type="text"
+    +|               placeholder=""
+    +|               spellcheck="false"
+    +|               id="bonsai_path_replaced_in_test"
+    +|               value:normalized=""
+    +|               oninput> </input>
+    +|      </td>
+    +|      <td>
+    +|        <div style={ display: flex; flex-direction: row; flex-wrap: nowrap; }>   </div>
+    +|      </td>
+    +|    </tr>
+          <tr>
+            <td colspan="2" style={ padding-left: 0em; font-weight: bold; }>
+              <button onclick> Add new element </button>
+            </td>
+          </tr>
+        </tbody>
+      </table> |}];
+  Handle.input_text
+    handle
+    ~get_vdom:get_vdom_verbose
+    ~selector:"input"
+    ~text:"hello world";
+  Handle.show_diff handle;
+  [%expect
+    {|
+    -|(Ok (""))
+    +|(Ok ("hello world"))
+
+      ==============
+      <table>
+        <tbody>
+          <tr>
+            <td colspan="2" style={ padding-left: 0em; font-weight: bold; }>
+              <div>
+                0 -
+                <button type="button"
+                        onclick
+                        style={
+                          border: none;
+                          cursor: pointer;
+                          color: blue;
+                          background: none;
+                        }> [ remove ] </button>
+              </div>
+            </td>
+          </tr>
+          <tr @key=bonsai_path_replaced_in_test>
+            <td style={
+                  padding-left: 1em;
+                  padding-right: 1em;
+                  text-align: left;
+                  font-weight: bold;
+                  user-select: none;
+                }>  </td>
+            <td>
+              <input type="text"
+                     placeholder=""
+                     spellcheck="false"
+                     id="bonsai_path_replaced_in_test"
+    -|               value:normalized=""
+    +|               value:normalized="hello world"
+                     oninput> </input>
+            </td>
+            <td>
+              <div style={ display: flex; flex-direction: row; flex-wrap: nowrap; }>   </div>
+            </td>
+          </tr>
+          <tr>
+            <td colspan="2" style={ padding-left: 0em; font-weight: bold; }>
+              <button onclick> Add new element </button>
+            </td>
+          </tr>
+        </tbody>
+      </table> |}]
+;;
+
 let%expect_test "adding more things to a string list" =
   let component =
-    Form.Elements.Multiple.list [%here] (Form.Elements.Textbox.string [%here])
+    Form.Elements.Multiple.list
+      [%here]
+      ~button_placement:`Inline
+      (Form.Elements.Textbox.string [%here])
   in
   let handle = Handle.create (form_result_spec [%sexp_of: string list]) component in
   Handle.show handle;
@@ -623,7 +764,7 @@ let%expect_test "using the same component twice" =
     ==============
     <table>
       <tbody>
-        <tr @key=bonsai_path_x_x_x_x>
+        <tr @key=bonsai_path_x_x_x_x_x>
           <td style={
                 padding-left: 0em;
                 padding-right: 1em;
@@ -635,7 +776,7 @@ let%expect_test "using the same component twice" =
             <input type="text"
                    placeholder=""
                    spellcheck="false"
-                   id="bonsai_path_x_x_x_x"
+                   id="bonsai_path_x_x_x_x_x"
                    value:normalized=b
                    oninput> </input>
           </td>
@@ -643,7 +784,7 @@ let%expect_test "using the same component twice" =
             <div style={ display: flex; flex-direction: row; flex-wrap: nowrap; }>   </div>
           </td>
         </tr>
-        <tr @key=bonsai_path_x_x_x_x>
+        <tr @key=bonsai_path_x_x_x_x_x>
           <td style={
                 padding-left: 0em;
                 padding-right: 1em;
@@ -655,7 +796,7 @@ let%expect_test "using the same component twice" =
             <input type="text"
                    placeholder=""
                    spellcheck="false"
-                   id="bonsai_path_x_x_x_x"
+                   id="bonsai_path_x_x_x_x_x"
                    value:normalized=b
                    oninput> </input>
           </td>
@@ -669,7 +810,10 @@ let%expect_test "using the same component twice" =
 
 let%expect_test "setting things to a string list" =
   let component =
-    Form.Elements.Multiple.list [%here] (Form.Elements.Textbox.string [%here])
+    Form.Elements.Multiple.list
+      [%here]
+      ~button_placement:`Inline
+      (Form.Elements.Textbox.string [%here])
   in
   let handle = Handle.create (form_result_spec [%sexp_of: string list]) component in
   Handle.show handle;
@@ -712,7 +856,10 @@ let%expect_test "setting things to a string list" =
 
 let%expect_test "setting things to a string list (verbose)" =
   let component =
-    Form.Elements.Multiple.list [%here] (Form.Elements.Textbox.string [%here])
+    Form.Elements.Multiple.list
+      [%here]
+      ~button_placement:`Inline
+      (Form.Elements.Textbox.string [%here])
   in
   let handle =
     Handle.create (verbose_form_result_spec [%sexp_of: string list]) component
@@ -2844,6 +2991,114 @@ let%expect_test "add tooltip to group" =
           </td>
           <td>
             <div style={ display: flex; flex-direction: row; flex-wrap: nowrap; }>   </div>
+          </td>
+        </tr>
+      </tbody>
+    </table> |}]
+;;
+
+let%expect_test "Bonsai_form.Typed sets groups/labels correctly on nested records" =
+  let module A = struct
+    let checkbox = Form.Elements.Checkbox.bool ~default:false
+
+    module B = struct
+      type t =
+        { b_1 : bool
+        ; b_2 : bool
+        }
+      [@@deriving typed_fields, sexp]
+
+      let form () =
+        Form.Typed.Record.make
+          (module struct
+            module Typed_field = Typed_field
+
+            let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t
+              = function
+                | B_1 -> checkbox [%here]
+                | B_2 -> checkbox [%here]
+            ;;
+          end)
+      ;;
+    end
+
+    type t =
+      { a_1 : bool
+      ; a_2 : B.t
+      }
+    [@@deriving typed_fields, sexp]
+
+    let form () =
+      Form.Typed.Record.make
+        (module struct
+          module Typed_field = Typed_field
+
+          let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t
+            = function
+              | A_1 -> checkbox [%here]
+              | A_2 -> B.form ()
+          ;;
+        end)
+    ;;
+  end
+  in
+  let component = A.form () in
+  let handle =
+    Handle.create
+      (form_result_spec
+         [%sexp_of: A.t]
+         ~filter_printed_attributes:(function
+           | "style.padding-left" -> true
+           | _ -> false)
+         ~get_vdom:get_vdom_verbose)
+      component
+  in
+  Handle.show handle;
+  [%expect
+    {|
+    (Ok (
+      (a_1 false)
+      (a_2 (
+        (b_1 false)
+        (b_2 false)))))
+
+    ==============
+    <table>
+      <tbody>
+        <tr>
+          <td style={ padding-left: 0em; }>
+            <label> a_1 </label>
+          </td>
+          <td>
+            <input> </input>
+          </td>
+          <td>
+            <div>   </div>
+          </td>
+        </tr>
+        <tr>
+          <td style={ padding-left: 0em; }> a_2 </td>
+        </tr>
+        <tr>
+          <td style={ padding-left: 1em; }>
+            <label> b_1 </label>
+          </td>
+          <td>
+            <input> </input>
+          </td>
+          <td>
+            <div>   </div>
+          </td>
+        </tr>
+        <tr>
+          <td style={ padding-left: 1em; }>
+            <label> b_2 </label>
+          </td>
+          <td>
+            <input> </input>
+          </td>
+          <td>
+            <div>   </div>
           </td>
         </tr>
       </tbody>

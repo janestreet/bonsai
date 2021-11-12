@@ -49,6 +49,16 @@ module Handle : sig
     -> text:string
     -> unit
 
+  val keydown
+    :  ?shift_key_down:bool
+    -> ?alt_key_down:bool
+    -> ?ctrl_key_down:bool
+    -> ('a, 'b) t
+    -> get_vdom:('a -> Vdom.Node.t)
+    -> selector:string
+    -> key:Js_of_ocaml.Dom_html.Keyboard_code.t
+    -> unit
+
   val change
     :  ('a, 'b) t
     -> get_vdom:('a -> Vdom.Node.t)

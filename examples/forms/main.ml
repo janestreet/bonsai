@@ -1,8 +1,6 @@
 open! Core
 open! Bonsai_web
 open! Import
-module Form = Bonsai_web_ui_form
-module E = Form.Elements
 
 module Style =
   [%css.raw
@@ -11,8 +9,12 @@ module Style =
   display: flex;
   flex-flow: row nowrap;
   outline: none;
-  justify-content: space-around;
-} |}]
+}
+
+.container > div {
+  padding: 20px;
+}
+|}]
 
 let component =
   let%map.Computation big_form = Big_form.component

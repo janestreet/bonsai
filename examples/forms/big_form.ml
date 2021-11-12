@@ -44,6 +44,49 @@ module My_variant = struct
   ;;
 end
 
+module Nested_record = struct
+  let checkbox = Form.Elements.Checkbox.bool ~default:false
+
+  module Nested = struct
+    type t =
+      { b_1 : bool
+      ; b_2 : bool
+      }
+    [@@deriving typed_fields, sexp]
+
+    let form () =
+      Form.Typed.Record.make
+        (module struct
+          module Typed_field = Typed_field
+
+          let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t
+            = function
+              | B_1 -> checkbox [%here]
+              | B_2 -> checkbox [%here]
+          ;;
+        end)
+    ;;
+  end
+
+  type t =
+    { a_1 : bool
+    ; a_2 : Nested.t
+    }
+  [@@deriving typed_fields, sexp]
+
+  let form () =
+    Form.Typed.Record.make
+      (module struct
+        module Typed_field = Typed_field
+
+        let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t = function
+          | A_1 -> checkbox [%here]
+          | A_2 -> Nested.form ()
+        ;;
+      end)
+  ;;
+end
+
 type t =
   { variant : My_variant.t
   ; int_from_range : int
@@ -65,6 +108,7 @@ type t =
   ; string_set : String.Set.t
   ; files : Bonsai_web_ui_file.t Filename.Map.t
   ; rank : string list
+  ; nested_record : Nested_record.t
   }
 [@@deriving typed_fields, fields, sexp_of]
 
@@ -141,6 +185,7 @@ let form =
                  Vdom.Node.div ~attr:source [ Vdom.Node.text item ])
           in
           Form.Dynamic.with_default (Value.return [ "aaaaaa"; "bbbbbb"; "cccccc" ]) rank
+        | Nested_record -> Nested_record.form ()
       ;;
     end)
 ;;

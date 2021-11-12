@@ -2,7 +2,6 @@ open! Core
 open! Async_kernel
 open! Import
 include Bonsai.Effect
-module Callback = Private.Callback
 
 module Deferred_fun_arg = struct
   module Action = struct

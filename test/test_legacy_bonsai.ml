@@ -213,7 +213,7 @@ let%expect_test "basic Same_model let syntax" =
 
 let%expect_test "module project field" =
   let open Bonsai.Arrow_deprecated.Let_syntax in
-  let module Model = struct
+  let module _ = struct
     type t =
       { a : int
       ; b : int
@@ -566,7 +566,7 @@ let%expect_test "Incremental.of_incr" =
       Incr.Var.set var "hello")
 ;;
 
-module Model_sexpification = struct
+module _ = struct
   open Bonsai.Arrow_deprecated.Let_syntax
 
   let dummy (type t) (module M : Bonsai.Arrow_deprecated.Model with type t = t) ~default =

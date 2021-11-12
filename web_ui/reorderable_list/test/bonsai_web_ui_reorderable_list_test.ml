@@ -5,7 +5,6 @@ open Bonsai.Let_syntax
 module Reorderable_list = Bonsai_web_ui_reorderable_list
 module Drag_and_drop = Bonsai_web_ui_drag_and_drop
 module Node = Vdom.Node
-module Attr = Vdom.Attr
 
 let component =
   let%sub dnd =

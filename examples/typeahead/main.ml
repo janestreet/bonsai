@@ -48,18 +48,18 @@ let components =
   let%sub favourite_pokemon, typeahead_single_vdom, _set =
     Typeahead.create
       ~on_select_change:
-        (let%map all_options, inject_all_options = all_options in
+        (let%map _, inject_all_options = all_options in
          fun favourite_pokemon ->
            Option.value_map
              favourite_pokemon
-             ~default:all_options
+             ~default:Pokemon.all
              ~f:(fun favourite_pokemon ->
-               List.filter all_options ~f:(fun pokemon ->
+               List.filter Pokemon.all ~f:(fun pokemon ->
                  not (Pokemon.equal favourite_pokemon pokemon)))
            |> inject_all_options)
       ~to_string:(Bonsai.Value.return Pokemon.to_string)
       ~placeholder:"Select a pokemon"
-      ~all_options:(all_options >>| fst)
+      ~all_options:(Value.return Pokemon.all)
       (module Pokemon)
   in
   let%sub (_ : Pokemon.Set.t), typeahead_multi_vdom, _ =

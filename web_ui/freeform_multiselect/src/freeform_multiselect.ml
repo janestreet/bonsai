@@ -5,14 +5,6 @@ open! Bonsai_web
     doesn't aim to complete your input. Think of this control as a multi-select that
     you're free to add random values to. *)
 
-let path =
-  let open Bonsai.Let_syntax in
-  let%sub path = Bonsai.Private.path in
-  return
-  @@ let%map path = path in
-  Bonsai.Private.Path.to_unique_identifier_string path
-;;
-
 let[@warning "-16"] input ?(placeholder = "") ?(value = "") ~extra_attrs ~id ~on_input =
   Vdom.Node.input
     ~attr:
@@ -59,14 +51,7 @@ let pills ~selected_options ~on_set_change ~inject_selected_options =
       (Set.to_list selected_options |> List.map ~f:pill)
 ;;
 
-let[@warning "-16"] input
-                      ?(placeholder = "")
-                      ~extra_attrs
-                      ~split
-                      ~id
-                      ~selected_options
-                      ~on_set_change
-  =
+let input ~placeholder ~extra_attrs ~split ~id ~selected_options ~on_set_change =
   let open! Bonsai.Let_syntax in
   (* This state is held internally to force the typeahead to clear the text contents
      of the input field when an option is selected. *)
@@ -96,7 +81,7 @@ let[@warning "-16"] input
 
 let create
       ?(extra_attrs = Value.return [])
-      ?placeholder
+      ?(placeholder = "")
       ?(on_set_change = Value.return (const Ui_effect.Ignore))
       ?(split = List.return)
       ()
@@ -105,9 +90,9 @@ let create
   let%sub selected_options =
     Bonsai.state [%here] (module String.Set) ~default_model:String.Set.empty
   in
-  let%sub id = path in
+  let%sub id = Bonsai.path_id in
   let%sub input =
-    input ?placeholder ~extra_attrs ~id ~on_set_change ~split ~selected_options
+    input ~placeholder ~extra_attrs ~id ~on_set_change ~split ~selected_options
   in
   return
   @@ let%map selected_options, inject_selected_options = selected_options

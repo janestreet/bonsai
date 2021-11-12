@@ -204,6 +204,11 @@ val read : 'a Value.t -> 'a Computation.t
 (** Creates a [Computation.t] that provides a constant value. *)
 val const : 'a -> 'a Computation.t
 
+(** Retrieves the path to the current computation as a string.  This string is
+    not human-readable, but can be used as an ID which is unique to this
+    particular instance of a component. *)
+val path_id : string Computation.t
+
 (** Lifts a regular OCaml function into one that takes a Value as input, and produces
     a Computation as output. *)
 val pure : ('a -> 'b) -> 'a Value.t -> 'b Computation.t

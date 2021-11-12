@@ -1,10 +1,8 @@
 open! Core
 open! Bonsai_web
 open! Bonsai_web_test
+open! Incr_map_collate
 open! Bonsai.Let_syntax
-module Table = Bonsai_web_ui_partial_render_table.Basic
-module Table_expert = Bonsai_web_ui_partial_render_table.Expert
-module Columns = Table.Columns.Dynamic_cells
 open Shared
 
 let table_to_string
@@ -71,20 +69,19 @@ let table_to_string
 module Test = struct
   include Shared.Test
 
-  let create
+  let create_with_var
         (type a)
         ?(stabilize_height = true)
         ?(visible_range = 0, 100)
-        ?(map = small_map)
+        ?(map = Bonsai.Var.create small_map)
         ?(should_set_bounds = true)
         ~stats
         component
     =
     let min_vis, max_vis = visible_range in
-    let input_var = Bonsai.Var.create map in
     let filter_var = Bonsai.Var.create (fun ~key:_ ~data:_ -> true) in
     let { Component.component; get_vdom; get_testing; get_inject } =
-      component (Bonsai.Var.value input_var) (Bonsai.Var.value filter_var)
+      component (Bonsai.Var.value map) (Bonsai.Var.value filter_var)
     in
     let handle =
       Handle.create
@@ -100,7 +97,7 @@ module Test = struct
         end)
         component
     in
-    let t = { handle; get_vdom; input_var; filter_var } in
+    let t = { handle; get_vdom; input_var = map; filter_var } in
     if should_set_bounds then set_bounds t ~low:min_vis ~high:max_vis;
     (* Because the component uses edge-triggering to propagate rank-range, we need to
        run the view-computers twice. *)
@@ -109,6 +106,23 @@ module Test = struct
       Handle.store_view handle;
       Handle.store_view handle);
     t
+  ;;
+
+  let create
+        ?stabilize_height
+        ?visible_range
+        ?(map = small_map)
+        ?should_set_bounds
+        ~stats
+        component
+    =
+    create_with_var
+      ?stabilize_height
+      ?visible_range
+      ~map:(Bonsai.Var.create map)
+      ?should_set_bounds
+      ~stats
+      component
   ;;
 end
 
@@ -693,4 +707,269 @@ let%expect_test "actions on empty table" =
   in
   (* just make sure nothing weird happens *)
   Handle.do_actions test.handle [ Page_down; Page_up; Focus_down; Focus_up; Unfocus ]
+;;
+
+let%expect_test "moving focus down should work even when the index changes" =
+  let map =
+    [ 1; 2; 3; 4 ]
+    |> List.map ~f:(fun i -> i, { a = "hi"; b = Float.of_int (i / 2) })
+    |> Int.Map.of_alist_exn
+    |> Bonsai.Var.create
+  in
+  let test =
+    Test.create_with_var
+      ~map
+      ~visible_range:(0, 5)
+      ~stats:false
+      (Test.Component.default ~preload_rows:2 ())
+  in
+  Handle.show test.handle;
+  [%expect
+    {|
+    ┌───┬─────┬───────┬────┬──────────┐
+    │ > │ #   │ ◇ key │ a  │ ◇ b      │
+    ├───┼─────┼───────┼────┼──────────┤
+    │   │ 0   │ 1     │ hi │ 0.000000 │
+    │   │ 100 │ 2     │ hi │ 1.000000 │
+    │   │ 200 │ 3     │ hi │ 1.000000 │
+    │   │ 300 │ 4     │ hi │ 2.000000 │
+    └───┴─────┴───────┴────┴──────────┘ |}];
+  Handle.do_actions test.handle [ Focus_down; Focus_down ];
+  Handle.show test.handle;
+  [%expect
+    {|
+("scrolling to" (i 0) "minimizing scrolling")
+("scrolling to" (i 100) "minimizing scrolling")
+┌───┬─────┬───────┬────┬──────────┐
+│ > │ #   │ ◇ key │ a  │ ◇ b      │
+├───┼─────┼───────┼────┼──────────┤
+│   │ 0   │ 1     │ hi │ 0.000000 │
+│ * │ 100 │ 2     │ hi │ 1.000000 │
+│   │ 200 │ 3     │ hi │ 1.000000 │
+│   │ 300 │ 4     │ hi │ 2.000000 │
+└───┴─────┴───────┴────┴──────────┘ |}];
+  Bonsai.Var.update map ~f:(fun map -> Map.remove map 1);
+  Handle.show test.handle;
+  [%expect
+    {|
+    ┌───┬─────┬───────┬────┬──────────┐
+    │ > │ #   │ ◇ key │ a  │ ◇ b      │
+    ├───┼─────┼───────┼────┼──────────┤
+    │ * │ 100 │ 2     │ hi │ 1.000000 │
+    │   │ 200 │ 3     │ hi │ 1.000000 │
+    │   │ 300 │ 4     │ hi │ 2.000000 │
+    └───┴─────┴───────┴────┴──────────┘ |}];
+  Handle.do_actions test.handle [ Focus_down ];
+  Handle.show test.handle;
+  [%expect
+    {|
+    ("scrolling to" (i 200) "minimizing scrolling")
+    ┌───┬─────┬───────┬────┬──────────┐
+    │ > │ #   │ ◇ key │ a  │ ◇ b      │
+    ├───┼─────┼───────┼────┼──────────┤
+    │   │ 100 │ 2     │ hi │ 1.000000 │
+    │ * │ 200 │ 3     │ hi │ 1.000000 │
+    │   │ 300 │ 4     │ hi │ 2.000000 │
+    └───┴─────┴───────┴────┴──────────┘ |}]
+;;
+
+let%expect_test "moving focus up should work even when the index changes" =
+  let map =
+    [ 1; 2; 3; 4 ]
+    |> List.map ~f:(fun i -> i, { a = "hi"; b = Float.of_int (i / 2) })
+    |> Int.Map.of_alist_exn
+    |> Bonsai.Var.create
+  in
+  let test =
+    Test.create_with_var
+      ~map
+      ~visible_range:(0, 5)
+      ~stats:false
+      (Test.Component.default ~preload_rows:2 ())
+  in
+  Handle.show test.handle;
+  [%expect
+    {|
+    ┌───┬─────┬───────┬────┬──────────┐
+    │ > │ #   │ ◇ key │ a  │ ◇ b      │
+    ├───┼─────┼───────┼────┼──────────┤
+    │   │ 0   │ 1     │ hi │ 0.000000 │
+    │   │ 100 │ 2     │ hi │ 1.000000 │
+    │   │ 200 │ 3     │ hi │ 1.000000 │
+    │   │ 300 │ 4     │ hi │ 2.000000 │
+    └───┴─────┴───────┴────┴──────────┘ |}];
+  Handle.do_actions test.handle [ Focus_down; Focus_down; Focus_down ];
+  Handle.show test.handle;
+  [%expect
+    {|
+("scrolling to" (i 0) "minimizing scrolling")
+("scrolling to" (i 100) "minimizing scrolling")
+("scrolling to" (i 200) "minimizing scrolling")
+┌───┬─────┬───────┬────┬──────────┐
+│ > │ #   │ ◇ key │ a  │ ◇ b      │
+├───┼─────┼───────┼────┼──────────┤
+│   │ 0   │ 1     │ hi │ 0.000000 │
+│   │ 100 │ 2     │ hi │ 1.000000 │
+│ * │ 200 │ 3     │ hi │ 1.000000 │
+│   │ 300 │ 4     │ hi │ 2.000000 │
+└───┴─────┴───────┴────┴──────────┘ |}];
+  Bonsai.Var.update map ~f:(fun map -> Map.add_exn map ~key:0 ~data:{ a = "hi"; b = 0.0 });
+  Handle.show test.handle;
+  [%expect
+    {|
+    ┌───┬──────┬───────┬────┬──────────┐
+    │ > │ #    │ ◇ key │ a  │ ◇ b      │
+    ├───┼──────┼───────┼────┼──────────┤
+    │   │ -100 │ 0     │ hi │ 0.000000 │
+    │   │ 0    │ 1     │ hi │ 0.000000 │
+    │   │ 100  │ 2     │ hi │ 1.000000 │
+    │ * │ 200  │ 3     │ hi │ 1.000000 │
+    │   │ 300  │ 4     │ hi │ 2.000000 │
+    └───┴──────┴───────┴────┴──────────┘ |}];
+  Handle.do_actions test.handle [ Focus_up ];
+  Handle.show test.handle;
+  [%expect
+    {|
+    ("scrolling to" (i 100) "minimizing scrolling")
+    ┌───┬──────┬───────┬────┬──────────┐
+    │ > │ #    │ ◇ key │ a  │ ◇ b      │
+    ├───┼──────┼───────┼────┼──────────┤
+    │   │ -100 │ 0     │ hi │ 0.000000 │
+    │   │ 0    │ 1     │ hi │ 0.000000 │
+    │ * │ 100  │ 2     │ hi │ 1.000000 │
+    │   │ 200  │ 3     │ hi │ 1.000000 │
+    │   │ 300  │ 4     │ hi │ 2.000000 │
+    └───┴──────┴───────┴────┴──────────┘ |}]
+;;
+
+
+let%expect_test "BUG: setting rank_range to not include the first element doesn't allow \
+                 focus up/down events"
+  =
+  let module Action = struct
+    type t = Focus_down
+  end
+  in
+  let rank_range = Bonsai.Var.create (Collate.Which_range.To 2) in
+  let map =
+    [ 1; 2; 3; 4; 5; 6; 7 ]
+    |> List.map ~f:(fun i -> i, { a = "hi"; b = Float.of_int i })
+    |> Int.Map.of_alist_exn
+    |> Value.return
+  in
+  let component =
+    let%sub collate =
+      let collate =
+        let%map rank_range = Bonsai.Var.value rank_range in
+        { Collate.filter = None
+        ; order = Compare.Unchanged
+        ; key_range = Collate.Which_range.All_rows
+        ; rank_range
+        }
+      in
+      Table_expert.collate
+        ~filter_equal:phys_equal
+        ~filter_to_predicate:Fn.id
+        ~order_equal:phys_equal
+        ~order_to_compare:Fn.id
+        map
+        collate
+    in
+    Table_expert.component
+      (module Int)
+      ~focus:Table_expert.Focus.By_row
+      ~row_height:(`Px 20)
+      ~columns:
+        (Bonsai.Value.return
+         @@ [ Table_expert.Columns.Dynamic_columns.column
+                ~label:(Vdom.Node.text "a")
+                ~cell:(fun ~key:_ ~data -> Vdom.Node.text data.a)
+                ()
+            ; Table_expert.Columns.Dynamic_columns.column
+                ~label:(Vdom.Node.text "b")
+                ~cell:(fun ~key:_ ~data -> Vdom.Node.text (Float.to_string data.b))
+                ()
+            ]
+         |> Table_expert.Columns.Dynamic_columns.lift)
+      collate
+  in
+  let handle =
+    Handle.create
+      (module struct
+        type t = int Table_expert.Focus.By_row.t Table_expert.Result.t
+        type incoming = Action.t
+
+        let view { Table_expert.Result.for_testing; _ } =
+          table_to_string (Lazy.force for_testing) ~include_stats:false
+        ;;
+
+        let incoming { Table_expert.Result.focus; _ } Action.Focus_down =
+          focus.Table_expert.Focus.By_row.focus_down
+        ;;
+      end)
+      component
+  in
+  Handle.show handle;
+  [%expect
+    {|
+    ┌───┬─────┬────┬────┐
+    │ > │ #   │ a  │ b  │
+    ├───┼─────┼────┼────┤
+    │   │ 0   │ hi │ 1. │
+    │   │ 100 │ hi │ 2. │
+    │   │ 200 │ hi │ 3. │
+    └───┴─────┴────┴────┘ |}];
+  (* See that focus_down with the default rank_range works as intended *)
+  Handle.do_actions handle [ Focus_down ];
+  Handle.recompute_view_until_stable handle;
+  Handle.show handle;
+  [%expect
+    {|
+    ("scrolling to" (i 0) "minimizing scrolling")
+    ┌───┬─────┬────┬────┐
+    │ > │ #   │ a  │ b  │
+    ├───┼─────┼────┼────┤
+    │ * │ 0   │ hi │ 1. │
+    │   │ 100 │ hi │ 2. │
+    │   │ 200 │ hi │ 3. │
+    └───┴─────┴────┴────┘ |}];
+  Bonsai.Var.set rank_range (Collate.Which_range.Between (3, 5));
+  Handle.recompute_view_until_stable handle;
+  Handle.show handle;
+  [%expect
+    {|
+    ┌───┬─────┬────┬────┐
+    │ > │ #   │ a  │ b  │
+    ├───┼─────┼────┼────┤
+    │   │ 0   │ hi │ 4. │
+    │   │ 100 │ hi │ 5. │
+    │   │ 200 │ hi │ 6. │
+    └───┴─────┴────┴────┘ |}];
+  (* After setting the [rank_range], focus down no longer focuses an item *)
+  Handle.do_actions handle [ Focus_down ];
+  Handle.recompute_view_until_stable handle;
+  Handle.show handle;
+  [%expect
+    {|
+    ┌───┬─────┬────┬────┐
+    │ > │ #   │ a  │ b  │
+    ├───┼─────┼────┼────┤
+    │   │ 0   │ hi │ 4. │
+    │   │ 100 │ hi │ 5. │
+    │   │ 200 │ hi │ 6. │
+    └───┴─────┴────┴────┘ |}];
+  (* The focus didn't just stay on the element with b = 1., as demonstrated by performing
+     3 more focus down events and viewing the table *)
+  Handle.do_actions handle [ Focus_down; Focus_down; Focus_down ];
+  Handle.recompute_view_until_stable handle;
+  Handle.show handle;
+  [%expect
+    {|
+    ┌───┬─────┬────┬────┐
+    │ > │ #   │ a  │ b  │
+    ├───┼─────┼────┼────┤
+    │   │ 0   │ hi │ 4. │
+    │   │ 100 │ hi │ 5. │
+    │   │ 200 │ hi │ 6. │
+    └───┴─────┴────┴────┘ |}]
 ;;

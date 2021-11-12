@@ -2,7 +2,6 @@ open! Core
 open! Async_kernel
 open! Bonsai_web
 open! Bonsai.Let_syntax
-module Forms = Bonsai_web_ui_form
 
 (* $MDX part-begin=after_display *)
 let frame_counter =

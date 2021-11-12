@@ -12,16 +12,7 @@ open! Bonsai_web
 
     Existing typeahead controls implement a custom select using divs. While this isn't
     strictly a negative (native select dropdowns cannot be styled), using the native
-    controls where possible is nice.
-*)
-
-let path =
-  let open Bonsai.Let_syntax in
-  let%sub path = Bonsai.Private.path in
-  return
-  @@ let%map path = path in
-  Bonsai.Private.Path.to_unique_identifier_string path
-;;
+    controls where possible is nice. *)
 
 module Search = struct
   type 'a t =
@@ -123,7 +114,7 @@ let create
       ~default:(Value.return (fun (_ : M.t option) -> Ui_effect.Ignore))
   in
   let%sub selected = Bonsai.state_opt [%here] (module M) in
-  let%sub id = path in
+  let%sub id = Bonsai.path_id in
   return
   @@ let%map selected, inject_selected = selected
   and to_string        = to_string
@@ -249,7 +240,7 @@ let create_multi
   in
   let selected_options = Bonsai.state [%here] (module M.Set) ~default_model:M.Set.empty in
   let%sub selected_options = selected_options in
-  let%sub id = path in
+  let%sub id = Bonsai.path_id in
   let%sub input =
     input
       ?placeholder

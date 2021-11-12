@@ -2,7 +2,7 @@ open! Core
 open! Bonsai
 open Bonsai.Let_syntax
 
-module Float_star_float = struct
+module _ = struct
   type t = float * float [@@deriving sexp, equal]
 end
 

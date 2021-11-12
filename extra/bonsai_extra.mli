@@ -86,9 +86,9 @@ val thunk : (unit -> 'a) -> 'a Computation.t
     the [default_model] is initially unset, but can be computed or defaulted
     to a dynamic value.
 
-    This means that the model can change out from underneath the state machine
-    as the default_model value changes.  If this is undesirable, you may want
-    to [freeze] the default_model first. *)
+    This means that before an apply_action occurs, the model can change out
+    from underneath the state machine as the default_model value changes.  If
+    this is undesirable, you may want to [freeze] the default_model first. *)
 val state_machine0_dynamic_model
   :  Source_code_position.t
   -> (module Model with type t = 'model)

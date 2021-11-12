@@ -4,11 +4,8 @@ open Bonsai.Let_syntax
 module Extendy = Bonsai_web_ui_extendy
 
 let path =
-  let%sub path = Bonsai.Private.path in
-  return
-  @@ let%map path = path in
-  let path_string = Bonsai.Private.Path.to_unique_identifier_string path in
-  path_string, Vdom.Attr.id path_string
+  let%map.Computation path_id = Bonsai.path_id in
+  path_id, Vdom.Attr.id path_id
 ;;
 
 module Basic_stateful = struct
@@ -632,7 +629,8 @@ module Multiple = struct
         (type a)
         here
         ?element_group_label
-        ?(add_element_text = "Add new element")
+        ?(add_element_text = Bonsai.Value.return "Add new element")
+        ?(button_placement = `Indented)
         (t : a Form.t Computation.t)
     : a list Form.t Computation.t
     =
@@ -647,11 +645,12 @@ module Multiple = struct
           |> schedule_event)
         ~f:(fun (_ : unit Value.t) inject_outer ->
           let%sub extendy = Extendy.component here t in
-          let%sub path, _ = path in
+          let%sub path, _id = path in
           return
           @@ let%map { Extendy.contents; append; set_length; remove } = extendy
           and inject_outer = inject_outer
-          and path = path in
+          and path = path
+          and add_element_text = add_element_text in
           let elements =
             contents
             |> Map.to_alist
@@ -679,21 +678,30 @@ module Multiple = struct
               in
               View.group label (Form.view form))
           in
-          let view =
-            List.append
-              elements
-              [ View.Row
-                  { label = None
-                  ; tooltip = None
-                  ; form =
-                      Vdom.Node.button
-                        ~attr:(Vdom.Attr.on_click (fun _ -> append))
-                        [ Vdom.Node.text add_element_text ]
-                  ; id = path
-                  ; error = None
-                  }
-              ]
+          let button =
+            match button_placement with
+            | `Indented ->
+              View.Group
+                { label =
+                    [ Vdom.Node.text add_element_text ]
+                    |> Vdom.Node.button ~attr:(Vdom.Attr.on_click (fun _ -> append))
+                    |> Some
+                ; tooltip = None
+                ; view = Empty
+                }
+            | `Inline ->
+              View.Row
+                { label = None
+                ; tooltip = None
+                ; form =
+                    Vdom.Node.button
+                      ~attr:(Vdom.Attr.on_click (fun _ -> append))
+                      [ Vdom.Node.text add_element_text ]
+                ; id = path
+                ; error = None
+                }
           in
+          let view = List.append elements [ button ] in
           let view = View.List view in
           let value =
             contents |> Map.data |> List.map ~f:Form.value |> Or_error.combine_errors
@@ -711,11 +719,12 @@ module Multiple = struct
         here
         ?element_group_label
         ?add_element_text
+        ?button_placement
         (module M : Bonsai.Comparator with type t = a and type comparator_witness = cmp)
         form
     =
     computation_map
-      (list here ?element_group_label ?add_element_text form)
+      (list here ?button_placement ?element_group_label ?add_element_text form)
       ~f:(Form.project ~parse_exn:(Set.of_list (module M)) ~unparse:Set.to_list)
   ;;
 
@@ -724,6 +733,7 @@ module Multiple = struct
         here
         ?element_group_label
         ?add_element_text
+        ?button_placement
         (module M : Bonsai.Comparator with type t = a and type comparator_witness = cmp)
         ~key
         ~data
@@ -734,7 +744,7 @@ module Multiple = struct
       return @@ Value.map2 key_form value_form ~f:Form.both
     in
     computation_map
-      (list here ?element_group_label ?add_element_text both)
+      (list here ?button_placement ?element_group_label ?add_element_text both)
       ~f:(Form.project ~parse_exn:(Map.of_alist_exn (module M)) ~unparse:Map.to_alist)
   ;;
 end

@@ -35,11 +35,6 @@ module Expert = struct
     module Dynamic_columns = Column.Dynamic_columns
   end
 
-  let path =
-    let%sub path = Bonsai.Private.path in
-    Bonsai.pure Bonsai.Private.Path.to_unique_identifier_string path
-  ;;
-
   (* Go from the Bonsai comparator module to the Map comparator module.  You
      might think "hey, shouldn't this function be unnecessary; surely the
      function below is just the identity function"?  But no, first-class modules
@@ -84,7 +79,7 @@ module Expert = struct
     =
     let%sub input_map = return (collated >>| Collated.to_map_list) in
     let%sub remapped = remap key input_map in
-    let%sub path = path in
+    let%sub path = Bonsai.path_id in
     let%sub leaves = Bonsai.read (headers >>| Header_tree.leaves) in
     let%sub bounds, set_bounds =
       Bonsai.state_opt
@@ -224,8 +219,6 @@ module Expert = struct
   let collate
         (type k v cmp filter order)
         ?operation_order
-        ?filter_memoize_params
-        ?order_memoize_params
         ~filter_equal
         ~order_equal
         ~(filter_to_predicate : filter -> _)
@@ -239,8 +232,6 @@ module Expert = struct
       let%pattern_bind data, collate = data_and_collate in
       Bonsai_collate.collate
         ?operation_order
-        ?filter_memoize_params
-        ?order_memoize_params
         ~filter_equal
         ~order_equal
         ~filter_to_predicate

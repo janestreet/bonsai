@@ -75,6 +75,17 @@ module Handle = struct
     Node_helpers.User_actions.input_text element ~text
   ;;
 
+  let keydown ?shift_key_down ?alt_key_down ?ctrl_key_down handle ~get_vdom ~selector ~key
+    =
+    let element = get_element handle ~get_vdom ~selector in
+    Node_helpers.User_actions.keydown
+      ?shift_key_down
+      ?alt_key_down
+      ?ctrl_key_down
+      element
+      ~key
+  ;;
+
   let trigger_hook handle ~get_vdom ~selector ~name type_id arg =
     get_element handle ~get_vdom ~selector
     |> Node_helpers.trigger_hook ~type_id ~name ~arg

@@ -35,7 +35,8 @@ module Record = struct
         let%sub subform = M.form_for_field field in
         let%map.Computation subform = Form.Dynamic.error_hint subform in
         subform
-        |> Form.label (M.Typed_field.name field)
+        |> Form.Private.group_list
+        |> Form.Private.suggest_label (M.Typed_field.name field)
         |> attach_fieldname_to_error (M.Typed_field.name field)
       in
       The_form_values.create { f }
@@ -110,7 +111,14 @@ module Variant = struct
     let%arr inner = inner
     and picker = picker
     and get_inner_form = get_inner_form in
-    let view = Form.View.Private.List [ Form.view picker; Form.view inner ] in
+    let view =
+      Form.View.Private.Header_group
+        { header_view = Form.view picker
+        ; view = Form.view inner
+        ; label = None
+        ; tooltip = None
+        }
+    in
     let value = Form.value inner in
     let set value =
       let constructor = M.Typed_variant.which value in

@@ -355,6 +355,18 @@ let state_opt (type m) here ?default_model (module M : Model with type t = m) =
     end)
 ;;
 
+let path =
+  Computation.T
+    { t = Computation.Path; action = Meta.Action.nothing; model = Meta.Model.unit }
+;;
+
+let path_id =
+  let open Let_syntax in
+  let%sub path = path in
+  let%arr path = path in
+  Path.to_unique_identifier_string path
+;;
+
 module Edge = struct
   let lifecycle' ?on_activate ?on_deactivate ?after_display () =
     let open Let_syntax in
@@ -811,7 +823,7 @@ module Computation = struct
     |> map ~f:(Map.of_alist_exn (Map.comparator_s map_of_computations))
   ;;
 
-  module Open_on_rhs_intf = struct
+  module _ = struct
     module type S = sig end
   end
 
@@ -826,7 +838,12 @@ module Computation = struct
       let both = both
 
       include Mapn
-      module Open_on_rhs = struct end
+
+      include struct
+        [@@@warning "-unused-module"]
+
+        module Open_on_rhs = struct end
+      end
     end
   end
 end

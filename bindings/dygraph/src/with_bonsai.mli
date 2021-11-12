@@ -24,6 +24,8 @@ val create
       changed.  For more information, see
       https://reactjs.org/docs/lists-and-keys.html#keys.
 
+      Every graph in your document should have a unique [key].
+
       For a given graph, [key] should be constant.
   *)
   -> x_label:string Bonsai.Value.t

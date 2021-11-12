@@ -1,6 +1,10 @@
 open! Core
 open! Import
 
+(** !! IMPORTANT !!
+    All the documentation for Bonsai is in [./proc.mli]
+    !! IMPORTANT !! *)
+
 module Private : sig
   module Computation = Computation
   module Environment = Environment

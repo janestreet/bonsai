@@ -25,8 +25,10 @@ module Settings = struct
     in
     let%sub form =
       Fields.make_creator
-        ~dismiss_errors_automatically:(field dismiss_errors_automatically)
-        ~dismiss_notifications_after:(field dismiss_notifications_after)
+        ~dismiss_errors_automatically:
+          (field ~group_lists:false dismiss_errors_automatically)
+        ~dismiss_notifications_after:
+          (field ~group_lists:false dismiss_notifications_after)
       |> build_for_record
     in
     Form.Dynamic.with_default

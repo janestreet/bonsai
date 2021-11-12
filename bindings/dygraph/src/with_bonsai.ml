@@ -1,6 +1,16 @@
 open Core
 open Import
 
+(* This top-level side-effect installs the CSS for dygraphs.
+   We need it in this file because if the side-effect lives
+   in an otherwise-empty file, or in a file that only contains
+   module aliases, then the dead-code-eliminator will remove
+   the file (including your side-effect).
+
+   By putting it here, anyone that uses the With_bonsai module
+   will force the side-effect to be evaluated. *)
+let () = Css.install_css ()
+
 module Legend_model = struct
   type t = { visibility : bool list } [@@deriving equal, fields]
 end
