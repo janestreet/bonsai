@@ -1,7 +1,7 @@
 open! Core
 open! Async_kernel
 open! Import
-include module type of Bonsai.Effect
+include module type of Virtual_dom.Vdom.Effect
 
 (** [of_deferred_fun] is a way to convert from a deferred-returning function
     to an effect-returning function.  This function is commonly used to wrap RPC

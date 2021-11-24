@@ -83,11 +83,11 @@ let component =
   let%sub query_box =
     Query_box.create
       (module String)
-      ~placeholder:(Value.return "Filter Fruits")
       ~suggestion_list_kind
       ~max_visible_items
       ~selected_item_attr:(Value.return (Attr.class_ Css.selected_item))
       ~extra_list_container_attr:(Value.return (Attr.class_ Css.list_container))
+      ~extra_input_attr:(Value.return (Attr.placeholder "Filter Fruits"))
       ~on_select:add_item
       ~f:(fun query ->
         let%arr query = query in

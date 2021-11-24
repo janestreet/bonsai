@@ -16,12 +16,13 @@ module By_row = struct
     ; page_down : unit Ui_effect.t
     ; focus : 'k -> unit Ui_effect.t
     }
+  [@@deriving fields]
 end
 
 module Kind = struct
   type ('a, 'k) t =
     | None : (unit, 'k) t
-    | By_row : ('k By_row.t, 'k) t
+    | By_row : { on_change : ('k option -> unit Effect.t) Value.t } -> ('k By_row.t, 'k) t
 end
 
 module Scroll = struct
@@ -89,7 +90,13 @@ module Scroll = struct
   ;;
 
   let control_browser path (To (i, k)) = the_effect (i, k, path)
-  let control path = if Core.am_running_test then control_test else control_browser path
+
+  let control path =
+    match Bonsai_web.am_running_how with
+    | `Browser | `Browser_benchmark -> control_browser path
+    | `Node_test -> control_test
+    | `Node | `Node_benchmark -> fun _ -> Effect.Ignore
+  ;;
 end
 
 module Row_machine = struct
@@ -222,6 +229,7 @@ module Row_machine = struct
   let component
         (type key data cmp)
         (key : (key, cmp) Bonsai.comparator)
+        ~(on_change : (key option -> unit Effect.t) Value.t)
         ~(collated : (key, data) Incr_map_collate.Collated.t Value.t)
         ~(rows_covered_by_header : int Value.t)
         ~(range : (int * int) Value.t)
@@ -261,13 +269,18 @@ module Row_machine = struct
       let%arr collated = collated
       and path = path
       and range = range
-      and rows_covered_by_header = rows_covered_by_header in
-      collated, range, Scroll.control path, rows_covered_by_header
+      and rows_covered_by_header = rows_covered_by_header
+      and on_change = on_change in
+      collated, range, Scroll.control path, rows_covered_by_header, on_change
     in
     let apply_action
           ~inject:_
           ~schedule_event
-          (collated, (range_start, range_end), scroll_control, rows_covered_by_header)
+          ( collated
+          , (range_start, range_end)
+          , scroll_control
+          , rows_covered_by_header
+          , on_change )
           (model : Model.t)
           action
       =
@@ -355,6 +368,10 @@ module Row_machine = struct
           in
           new_focus, model.shadow
       in
+      let prev_key = model.current |> Option.map ~f:(fun t -> t.key)
+      and next_key = new_focus |> Option.map ~f:(fun t -> t.key) in
+      if not ([%equal: Key.t option] prev_key next_key)
+      then schedule_event (on_change next_key);
       { Model.current = new_focus; shadow = new_shadow }
     in
     let%sub ((model, inject) as machine) =
@@ -446,14 +463,14 @@ let component
   | None ->
     fun _ ~collated:_ ~rows_covered_by_header:_ ~range:_ ~remapped:_ ~path:_ ->
       Bonsai.const ()
-  | By_row -> Row_machine.component
+  | By_row { on_change } -> Row_machine.component ~on_change
 ;;
 
 let get_focused (type r k) : (r, k) Kind.t -> r Value.t -> k option Value.t =
   fun kind value ->
   match kind with
   | None -> Bonsai.Value.return None
-  | By_row ->
+  | By_row _ ->
     let%map { focused; _ } = value in
     focused
 ;;
@@ -464,7 +481,7 @@ let get_row_click_handler (type r k)
   fun kind value ->
   match kind with
   | None -> None
-  | By_row ->
+  | By_row _ ->
     Some
       (let%map { focus; _ } = value in
        focus)

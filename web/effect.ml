@@ -1,7 +1,7 @@
 open! Core
 open! Async_kernel
 open! Import
-include Bonsai.Effect
+include Virtual_dom.Vdom.Effect
 
 module Deferred_fun_arg = struct
   module Action = struct

@@ -239,12 +239,7 @@ let%expect_test "search string vdom" =
     {|
     <div class="multi-select-container">
       <div class="multi-select-header"> header </div>
-      <input type="text"
-             placeholder=""
-             spellcheck="false"
-             autofocus="false"
-             value:normalized=""
-             oninput> </input>
+      <input type="text" placeholder="" spellcheck="false" value:normalized="" oninput> </input>
       <div class="multi-select-select-all-none">
         Select:
         <a href="about:blank" class="multi-select-select-all" onclick> all </a>
@@ -276,13 +271,8 @@ let%expect_test "search string vdom" =
     {|
       <div class="multi-select-container">
         <div class="multi-select-header"> header </div>
-        <input type="text"
-               placeholder=""
-               spellcheck="false"
-               autofocus="false"
-    -|         value:normalized=""
-    +|         value:normalized=bar
-               oninput> </input>
+    -|  <input type="text" placeholder="" spellcheck="false" value:normalized="" oninput> </input>
+    +|  <input type="text" placeholder="" spellcheck="false" value:normalized=bar oninput> </input>
         <div class="multi-select-select-all-none">
           Select:
           <a href="about:blank" class="multi-select-select-all" onclick> all </a>
@@ -476,12 +466,7 @@ let%expect_test "html" =
     Selected items: (bar baz foo)
     <div class="multi-select-container">
       <div class="multi-select-header"> header </div>
-      <input type="text"
-             placeholder=""
-             spellcheck="false"
-             autofocus="false"
-             value:normalized=""
-             oninput> </input>
+      <input type="text" placeholder="" spellcheck="false" value:normalized="" oninput> </input>
       <div class="multi-select-select-all-none">
         Select:
         <a href="about:blank" class="multi-select-select-all" onclick> all </a>
@@ -510,12 +495,7 @@ let%expect_test "html" =
     Selected items: ()
     <div class="multi-select-container">
       <div class="multi-select-header"> header </div>
-      <input type="text"
-             placeholder=""
-             spellcheck="false"
-             autofocus="false"
-             value:normalized=""
-             oninput> </input>
+      <input type="text" placeholder="" spellcheck="false" value:normalized="" oninput> </input>
       <div class="multi-select-select-all-none">
         Select:
         <a href="about:blank" class="multi-select-select-all" onclick> all </a>
@@ -544,12 +524,7 @@ let%expect_test "html" =
     Selected items: (bar baz foo)
     <div class="multi-select-container">
       <div class="multi-select-header"> header </div>
-      <input type="text"
-             placeholder=""
-             spellcheck="false"
-             autofocus="false"
-             value:normalized=""
-             oninput> </input>
+      <input type="text" placeholder="" spellcheck="false" value:normalized="" oninput> </input>
       <div class="multi-select-select-all-none">
         Select:
         <a href="about:blank" class="multi-select-select-all" onclick> all </a>
@@ -579,12 +554,7 @@ let%expect_test "html" =
     Selected items: (bar baz foo)
     <div class="multi-select-container">
       <div class="multi-select-header"> header </div>
-      <input type="text"
-             placeholder=""
-             spellcheck="false"
-             autofocus="false"
-             value:normalized=""
-             oninput> </input>
+      <input type="text" placeholder="" spellcheck="false" value:normalized="" oninput> </input>
       <div class="multi-select-select-all-none">
         Select:
         <a href="about:blank" class="multi-select-select-all" onclick> all </a>
@@ -639,12 +609,7 @@ let%expect_test "html-custom-selected-attr" =
       Selected items: (bar baz foo)
       <div class="multi-select-container">
         <div class="multi-select-header"> header </div>
-        <input type="text"
-               placeholder=""
-               spellcheck="false"
-               autofocus="false"
-               value:normalized=""
-               oninput> </input>
+        <input type="text" placeholder="" spellcheck="false" value:normalized="" oninput> </input>
         <div class="multi-select-select-all-none">
           Select:
           <a href="about:blank" class="multi-select-select-all" onclick> all </a>

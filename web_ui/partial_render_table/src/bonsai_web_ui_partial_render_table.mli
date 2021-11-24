@@ -18,11 +18,12 @@ module Focus : sig
       ; page_down : unit Ui_effect.t
       ; focus : 'k -> unit Ui_effect.t
       }
+    [@@deriving fields]
   end
 
   type ('a, 'k) t =
     | None : (unit, 'k) t
-    | By_row : ('k By_row.t, 'k) t
+    | By_row : { on_change : ('k option -> unit Effect.t) Value.t } -> ('k By_row.t, 'k) t
 end
 
 module Basic : sig

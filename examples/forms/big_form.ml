@@ -5,6 +5,21 @@ open Bonsai.Let_syntax
 module Form = Bonsai_web_ui_form
 module E = Form.Elements
 
+module Query_box_css =
+  [%css.raw
+    {|
+  .list {
+    background: white;
+    border: solid 1px black;
+    width: 200px;
+    padding: 5px;
+  }
+
+  .selected_item {
+    background: yellow;
+  }
+  |}]
+
 module A_B_or_C = struct
   module T = struct
     type t =
@@ -108,6 +123,7 @@ type t =
   ; string_set : String.Set.t
   ; files : Bonsai_web_ui_file.t Filename.Map.t
   ; rank : string list
+  ; query_box : string
   ; nested_record : Nested_record.t
   }
 [@@deriving typed_fields, fields, sexp_of]
@@ -185,6 +201,15 @@ let form =
                  Vdom.Node.div ~attr:source [ Vdom.Node.text item ])
           in
           Form.Dynamic.with_default (Value.return [ "aaaaaa"; "bbbbbb"; "cccccc" ]) rank
+        | Query_box ->
+          Form.Elements.Query_box.stringable
+            (module String)
+            ~selected_item_attr:
+              (Value.return (Vdom.Attr.class_ Query_box_css.selected_item))
+            ~extra_list_container_attr:
+              (Value.return (Vdom.Attr.class_ Query_box_css.list))
+            (Value.return
+               (String.Map.of_alist_exn [ "abc", "abc"; "def", "def"; "ghi", "ghi" ]))
         | Nested_record -> Nested_record.form ()
       ;;
     end)
@@ -192,12 +217,18 @@ let form =
 
 let component =
   let%sub form = form in
-  return
-  @@ let%map form = form in
+  let%sub editable, toggle_editable = Bonsai_extra.toggle [%here] ~default_model:true in
+  let%arr editable = editable
+  and toggle_editable = toggle_editable
+  and form = form in
   let output = view_t ~sexp_of:[%sexp_of: t Or_error.t] (Form.value form) in
+  let editable = if editable then `Currently_yes else `Currently_no in
   Vdom.Node.div
     [ Vdom.Node.h1 [ Vdom.Node.text "Big Form" ]
-    ; Form.View.to_vdom (Form.view form)
+    ; Form.view_as_vdom ~editable form
+    ; Vdom.Node.button
+        ~attr:Vdom.Attr.(on_click (fun _ -> toggle_editable))
+        [ Vdom.Node.text "Toggle Editing" ]
     ; output
     ]
 ;;

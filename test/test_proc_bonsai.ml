@@ -1069,8 +1069,10 @@ let%expect_test "computation.all_map" =
 let%expect_test "dynamic lookup" =
   let id = Bonsai.Dynamic_scope.create ~name:"my-id" ~fallback:"no" () in
   let component =
-    Bonsai.Dynamic_scope.set id (Value.return "hello") ~f:(fun _ ->
-      Bonsai.Dynamic_scope.lookup id)
+    Bonsai.Dynamic_scope.set
+      id
+      (Value.return "hello")
+      ~inside:(Bonsai.Dynamic_scope.lookup id)
   in
   let handle = Handle.create (Result_spec.string (module String)) component in
   Handle.show handle;
@@ -1089,11 +1091,13 @@ let%expect_test "eval inside one, use inside another" =
   let id = Bonsai.Dynamic_scope.create ~name:"my-id" ~fallback:"no" () in
   let component =
     let%sub a =
-      Bonsai.Dynamic_scope.set id (Value.return "hello") ~f:(fun _ ->
-        Bonsai.Dynamic_scope.lookup id)
+      Bonsai.Dynamic_scope.set
+        id
+        (Value.return "hello")
+        ~inside:(Bonsai.Dynamic_scope.lookup id)
     in
     let%sub b =
-      Bonsai.Dynamic_scope.set id (Value.return "world") ~f:(fun _ -> Bonsai.read a)
+      Bonsai.Dynamic_scope.set id (Value.return "world") ~inside:(Bonsai.read a)
     in
     return b
   in
@@ -1106,7 +1110,7 @@ let%expect_test "sub outside, use inside" =
   let id = Bonsai.Dynamic_scope.create ~name:"my-id" ~fallback:"no" () in
   let component =
     let%sub find = Bonsai.Dynamic_scope.lookup id in
-    Bonsai.Dynamic_scope.set id (Value.return "hello") ~f:(fun _ -> return find)
+    Bonsai.Dynamic_scope.set id (Value.return "hello") ~inside:(return find)
   in
   let handle = Handle.create (Result_spec.string (module String)) component in
   Handle.show handle;
@@ -1116,7 +1120,7 @@ let%expect_test "sub outside, use inside" =
 let%expect_test "use resetter" =
   let id = Bonsai.Dynamic_scope.create ~name:"my-id" ~fallback:"no" () in
   let component =
-    Bonsai.Dynamic_scope.set id (Value.return "hello") ~f:(fun { revert } ->
+    Bonsai.Dynamic_scope.set' id (Value.return "hello") ~f:(fun { revert } ->
       revert (Bonsai.Dynamic_scope.lookup id))
   in
   let handle = Handle.create (Result_spec.string (module String)) component in
@@ -1127,9 +1131,12 @@ let%expect_test "use resetter" =
 let%expect_test "nested resetter" =
   let id = Bonsai.Dynamic_scope.create ~name:"my-id" ~fallback:"no" () in
   let component =
-    Bonsai.Dynamic_scope.set id (Value.return "hello") ~f:(fun _ ->
-      Bonsai.Dynamic_scope.set id (Value.return "world") ~f:(fun { revert } ->
-        revert (Bonsai.Dynamic_scope.lookup id)))
+    Bonsai.Dynamic_scope.set
+      id
+      (Value.return "hello")
+      ~inside:
+        (Bonsai.Dynamic_scope.set' id (Value.return "world") ~f:(fun { revert } ->
+           revert (Bonsai.Dynamic_scope.lookup id)))
   in
   let handle = Handle.create (Result_spec.string (module String)) component in
   Handle.show handle;
@@ -1140,12 +1147,15 @@ let%expect_test "resetter only impacts the id you target" =
   let id_a = Bonsai.Dynamic_scope.create ~name:"my-id" ~fallback:"no-a" () in
   let id_b = Bonsai.Dynamic_scope.create ~name:"my-id" ~fallback:"no-b" () in
   let component =
-    Bonsai.Dynamic_scope.set id_a (Value.return "hello") ~f:(fun { revert } ->
-      Bonsai.Dynamic_scope.set id_b (Value.return "world") ~f:(fun _ ->
-        revert
-        @@ let%sub a = Bonsai.Dynamic_scope.lookup id_a in
-        let%sub b = Bonsai.Dynamic_scope.lookup id_b in
-        return (Value.map2 a b ~f:(fun a b -> a ^ " " ^ b))))
+    Bonsai.Dynamic_scope.set' id_a (Value.return "hello") ~f:(fun { revert } ->
+      Bonsai.Dynamic_scope.set
+        id_b
+        (Value.return "world")
+        ~inside:
+          (revert
+           @@ let%sub a = Bonsai.Dynamic_scope.lookup id_a in
+           let%sub b = Bonsai.Dynamic_scope.lookup id_b in
+           return (Value.map2 a b ~f:(fun a b -> a ^ " " ^ b))))
   in
   let handle = Handle.create (Result_spec.string (module String)) component in
   Handle.show handle;
@@ -1170,8 +1180,10 @@ let%expect_test "derived value" =
   in
   let a = Bonsai.Dynamic_scope.derived id ~get:M.a ~set:(Field.fset M.Fields.a) in
   let component =
-    Bonsai.Dynamic_scope.set a (Value.return "hello") ~f:(fun _ ->
-      Bonsai.Dynamic_scope.lookup id)
+    Bonsai.Dynamic_scope.set
+      a
+      (Value.return "hello")
+      ~inside:(Bonsai.Dynamic_scope.lookup id)
   in
   let handle = Handle.create (Result_spec.sexp (module M)) component in
   Handle.show handle;
@@ -1188,7 +1200,7 @@ let%expect_test "derived value revert" =
   in
   let a = Bonsai.Dynamic_scope.derived id ~get:M.a ~set:(Field.fset M.Fields.a) in
   let component =
-    Bonsai.Dynamic_scope.set a (Value.return "hello") ~f:(fun { revert } ->
+    Bonsai.Dynamic_scope.set' a (Value.return "hello") ~f:(fun { revert } ->
       revert (Bonsai.Dynamic_scope.lookup id))
   in
   let handle = Handle.create (Result_spec.sexp (module M)) component in
@@ -1206,9 +1218,12 @@ let%expect_test "derived value nested revert inner" =
   in
   let a = Bonsai.Dynamic_scope.derived id ~get:M.a ~set:(Field.fset M.Fields.a) in
   let component =
-    Bonsai.Dynamic_scope.set a (Value.return "hello") ~f:(fun _ ->
-      Bonsai.Dynamic_scope.set a (Value.return "world") ~f:(fun { revert } ->
-        revert (Bonsai.Dynamic_scope.lookup id)))
+    Bonsai.Dynamic_scope.set
+      a
+      (Value.return "hello")
+      ~inside:
+        (Bonsai.Dynamic_scope.set' a (Value.return "world") ~f:(fun { revert } ->
+           revert (Bonsai.Dynamic_scope.lookup id)))
   in
   let handle = Handle.create (Result_spec.sexp (module M)) component in
   Handle.show handle;
@@ -1226,9 +1241,11 @@ let%expect_test "derived value nested revert outer" =
   let a = Bonsai.Dynamic_scope.derived id ~get:M.a ~set:(Field.fset M.Fields.a) in
   let b = Bonsai.Dynamic_scope.derived id ~get:M.b ~set:(Field.fset M.Fields.b) in
   let component =
-    Bonsai.Dynamic_scope.set a (Value.return "hello") ~f:(fun { revert } ->
-      Bonsai.Dynamic_scope.set b (Value.return 1000) ~f:(fun _ ->
-        revert (Bonsai.Dynamic_scope.lookup id)))
+    Bonsai.Dynamic_scope.set' a (Value.return "hello") ~f:(fun { revert } ->
+      Bonsai.Dynamic_scope.set
+        b
+        (Value.return 1000)
+        ~inside:(revert (Bonsai.Dynamic_scope.lookup id)))
   in
   let handle = Handle.create (Result_spec.sexp (module M)) component in
   Handle.show handle;

@@ -80,7 +80,7 @@ let component ?filter (data : Row.t String.Map.t Value.t) =
     Table.component
       (module String)
       ?filter
-      ~focus:By_row
+      ~focus:(By_row { on_change = Value.return (Fn.const Effect.Ignore) })
       ~row_height:(`Px 30)
       ~columns:(columns ~should_show_position)
       data

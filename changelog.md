@@ -2,6 +2,9 @@
 <!-- Change-log notes go in this file, with newer dates at the _top_  -->
 <!-- in vim : !date +'\%Y-\%m-\%d' -->
 
+## 2021-11-01
+- Added `Bonsai_bench`
+
 ## 2021-07-20
 - Added `Bonsai_web_ui_reorderable_list.{simple,with_inject}`
 

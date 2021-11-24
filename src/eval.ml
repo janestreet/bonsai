@@ -2,6 +2,8 @@ open! Core
 open! Import
 open Incr.Let_syntax
 
+let () = Incr.State.(set_max_height_allowed t 1024)
+
 (* Share this incremental node *)
 let unusable_apply_action : (unit, Nothing.t) Snapshot.Apply_action.t =
   Snapshot.Apply_action.non_incremental (fun ~schedule_event:_ () action ->
@@ -87,11 +89,11 @@ let rec eval
     let value = Value.eval environment value in
     let environment = Environment.add_overwriting environment ~key:id ~data:value in
     eval ~environment ~path ~clock ~model ~inject inner
-  | Fetch id ->
+  | Fetch { id; default; for_some } ->
     let result =
       match Environment.find environment id with
-      | None -> Incr.return None
-      | Some x -> x >>| Option.some
+      | None -> Incr.return default
+      | Some x -> Incr.map x ~f:(fun a -> for_some a)
     in
     Snapshot.create ~result ~lifecycle:None ~apply_action:unusable_apply_action
   | Subst { from; via; into; here = _ } ->

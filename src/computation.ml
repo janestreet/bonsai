@@ -67,7 +67,12 @@ type ('model, 'action, 'result) t =
       ; inner : ('m, 'a, 'r) t
       }
       -> ('m, 'a, 'r) t
-  | Fetch : 'r Type_equal.Id.t -> (unit, Nothing.t, 'r option) t
+  | Fetch :
+      { id : 'a Type_equal.Id.t
+      ; default : 'r
+      ; for_some : 'a -> 'r
+      }
+      -> (unit, Nothing.t, 'r) t
   | Assoc :
       { map : ('k, 'v, 'cmp) Map.t Value.t
       ; key_compare : 'k -> 'k -> int
@@ -142,7 +147,7 @@ let rec sexp_of_t : type m a r. (m, a, r) t -> Sexp.t = function
     [%sexp Subst_stateless { from : t; via : _ Type_equal.Id.t; into : t; here = None }]
   | Store { id; value; inner } ->
     [%sexp Store { id : _ Type_equal.Id.t; value : Value.t; inner : t }]
-  | Fetch id -> [%sexp Fetch (id : _ Type_equal.Id.t)]
+  | Fetch { id; _ } -> [%sexp Fetch (id : _ Type_equal.Id.t)]
   | Assoc { map; by; _ } -> [%sexp Assoc { map : Value.t; by : t }]
   | Assoc_simpl { map; _ } -> [%sexp Assoc_simpl { map : Value.t }]
   | Enum { which; out_of; sexp_of_key; _ } ->

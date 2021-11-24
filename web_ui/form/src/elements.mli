@@ -38,27 +38,32 @@ end
 module Textarea : sig
   val string
     :  ?extra_attrs:Vdom.Attr.t list Value.t
+    -> ?placeholder:string
     -> Source_code_position.t
     -> string Form.t Computation.t
 
   val int
     :  ?extra_attrs:Vdom.Attr.t list Value.t
+    -> ?placeholder:string
     -> Source_code_position.t
     -> int Form.t Computation.t
 
   val float
     :  ?extra_attrs:Vdom.Attr.t list Value.t
+    -> ?placeholder:string
     -> Source_code_position.t
     -> float Form.t Computation.t
 
   val sexpable
     :  ?extra_attrs:Vdom.Attr.t list Value.t
+    -> ?placeholder:string
     -> Source_code_position.t
     -> (module Sexpable with type t = 'a)
     -> 'a Form.t Computation.t
 
   val stringable
     :  ?extra_attrs:Vdom.Attr.t list Value.t
+    -> ?placeholder:string
     -> Source_code_position.t
     -> (module Stringable with type t = 'a)
     -> 'a Form.t Computation.t
@@ -360,4 +365,32 @@ module Rank : sig
     -> (source:Vdom.Attr.t Value.t -> 'a Value.t -> Vdom.Node.t Computation.t)
     -> 'a list Form.t Computation.t
 
+end
+
+module Query_box : sig
+  val stringable_opt
+    :  (module Bonsai.Comparator with type comparator_witness = 'cmp and type t = 'k)
+    -> ?initial_query:string
+    -> ?max_visible_items:int Value.t
+    -> ?suggestion_list_kind:Bonsai_web_ui_query_box.Suggestion_list_kind.t Value.t
+    -> ?selected_item_attr:Vdom.Attr.t Value.t
+    -> ?extra_list_container_attr:Vdom.Attr.t Value.t
+    -> ?extra_input_attr:Vdom.Attr.t Value.t
+    -> ?extra_attr:Vdom.Attr.t Value.t
+    -> ?to_view:('k -> string -> Vdom.Node.t)
+    -> ('k, string, 'cmp) Map_intf.Map.t Value.t
+    -> 'k option Form.t Computation.t
+
+  val stringable
+    :  (module Bonsai.Comparator with type comparator_witness = 'cmp and type t = 'k)
+    -> ?initial_query:string
+    -> ?max_visible_items:int Value.t
+    -> ?suggestion_list_kind:Bonsai_web_ui_query_box.Suggestion_list_kind.t Value.t
+    -> ?selected_item_attr:Vdom.Attr.t Value.t
+    -> ?extra_list_container_attr:Vdom.Attr.t Value.t
+    -> ?extra_input_attr:Vdom.Attr.t Value.t
+    -> ?extra_attr:Vdom.Attr.t Value.t
+    -> ?to_view:('k -> string -> Vdom.Node.t)
+    -> ('k, string, 'cmp) Map_intf.Map.t Value.t
+    -> 'k Form.t Computation.t
 end

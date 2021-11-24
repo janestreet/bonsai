@@ -306,6 +306,7 @@ let%expect_test "focus down" =
   [%expect
     {|
     ("scrolling to" (i 0) "minimizing scrolling")
+    (focus_changed_to (0))
     ┌───┬─────┬───────┬───────┬──────────┐
     │ > │ #   │ ◇ key │ a     │ ◇ b      │
     ├───┼─────┼───────┼───────┼──────────┤
@@ -318,6 +319,7 @@ let%expect_test "focus down" =
   [%expect
     {|
     ("scrolling to" (i 100) "minimizing scrolling")
+    (focus_changed_to (1))
     ┌───┬─────┬───────┬───────┬──────────┐
     │ > │ #   │ ◇ key │ a     │ ◇ b      │
     ├───┼─────┼───────┼───────┼──────────┤
@@ -344,6 +346,7 @@ let%expect_test "focus up" =
   [%expect
     {|
     ("scrolling to" (i 200) "minimizing scrolling")
+    (focus_changed_to (4))
     ┌───┬─────┬───────┬───────┬──────────┐
     │ > │ #   │ ◇ key │ a     │ ◇ b      │
     ├───┼─────┼───────┼───────┼──────────┤
@@ -356,6 +359,7 @@ let%expect_test "focus up" =
   [%expect
     {|
     ("scrolling to" (i 100) "minimizing scrolling")
+    (focus_changed_to (1))
     ┌───┬─────┬───────┬───────┬──────────┐
     │ > │ #   │ ◇ key │ a     │ ◇ b      │
     ├───┼─────┼───────┼───────┼──────────┤
@@ -372,6 +376,7 @@ let%expect_test "unfocus" =
   [%expect
     {|
     ("scrolling to" (i 200) "minimizing scrolling")
+    (focus_changed_to (4))
     ┌───┬─────┬───────┬───────┬──────────┐
     │ > │ #   │ ◇ key │ a     │ ◇ b      │
     ├───┼─────┼───────┼───────┼──────────┤
@@ -383,6 +388,7 @@ let%expect_test "unfocus" =
   Handle.show test.handle;
   [%expect
     {|
+    (focus_changed_to ())
     ┌───┬─────┬───────┬───────┬──────────┐
     │ > │ #   │ ◇ key │ a     │ ◇ b      │
     ├───┼─────┼───────┼───────┼──────────┤
@@ -399,7 +405,9 @@ let%expect_test "remove focused moves down if possible" =
   [%expect
     {|
     ("scrolling to" (i 0) "minimizing scrolling")
+    (focus_changed_to (0))
     ("scrolling to" (i 100) "minimizing scrolling")
+    (focus_changed_to (1))
     ┌───┬─────┬───────┬───────┬──────────┐
     │ > │ #   │ ◇ key │ a     │ ◇ b      │
     ├───┼─────┼───────┼───────┼──────────┤
@@ -426,6 +434,7 @@ let%expect_test "focus shadow (down)" =
   [%expect
     {|
     ("scrolling to" (i 0) "minimizing scrolling")
+    (focus_changed_to (0))
     ┌───┬─────┬───────┬───────┬──────────┐
     │ > │ #   │ ◇ key │ a     │ ◇ b      │
     ├───┼─────┼───────┼───────┼──────────┤
@@ -438,6 +447,7 @@ let%expect_test "focus shadow (down)" =
   [%expect
     {|
     ("scrolling to" (i 100) "minimizing scrolling")
+    (focus_changed_to (1))
     ┌───┬─────┬───────┬───────┬──────────┐
     │ > │ #   │ ◇ key │ a     │ ◇ b      │
     ├───┼─────┼───────┼───────┼──────────┤
@@ -449,6 +459,7 @@ let%expect_test "focus shadow (down)" =
   Handle.show test.handle;
   [%expect
     {|
+    (focus_changed_to ())
     ┌───┬─────┬───────┬───────┬──────────┐
     │ > │ #   │ ◇ key │ a     │ ◇ b      │
     ├───┼─────┼───────┼───────┼──────────┤
@@ -461,6 +472,7 @@ let%expect_test "focus shadow (down)" =
   [%expect
     {|
     ("scrolling to" (i 200) "minimizing scrolling")
+    (focus_changed_to (4))
     ┌───┬─────┬───────┬───────┬──────────┐
     │ > │ #   │ ◇ key │ a     │ ◇ b      │
     ├───┼─────┼───────┼───────┼──────────┤
@@ -477,6 +489,7 @@ let%expect_test "focus shadow (up)" =
   [%expect
     {|
     ("scrolling to" (i 200) "minimizing scrolling")
+    (focus_changed_to (4))
     ┌───┬─────┬───────┬───────┬──────────┐
     │ > │ #   │ ◇ key │ a     │ ◇ b      │
     ├───┼─────┼───────┼───────┼──────────┤
@@ -489,6 +502,7 @@ let%expect_test "focus shadow (up)" =
   [%expect
     {|
     ("scrolling to" (i 100) "minimizing scrolling")
+    (focus_changed_to (1))
     ┌───┬─────┬───────┬───────┬──────────┐
     │ > │ #   │ ◇ key │ a     │ ◇ b      │
     ├───┼─────┼───────┼───────┼──────────┤
@@ -500,6 +514,7 @@ let%expect_test "focus shadow (up)" =
   Handle.show test.handle;
   [%expect
     {|
+    (focus_changed_to ())
     ┌───┬─────┬───────┬───────┬──────────┐
     │ > │ #   │ ◇ key │ a     │ ◇ b      │
     ├───┼─────┼───────┼───────┼──────────┤
@@ -512,6 +527,7 @@ let%expect_test "focus shadow (up)" =
   [%expect
     {|
     ("scrolling to" (i 0) "minimizing scrolling")
+    (focus_changed_to (0))
     ┌───┬─────┬───────┬───────┬──────────┐
     │ > │ #   │ ◇ key │ a     │ ◇ b      │
     ├───┼─────┼───────┼───────┼──────────┤
@@ -528,7 +544,9 @@ let%expect_test "remove focused causes unfocus (down)" =
   [%expect
     {|
     ("scrolling to" (i 0) "minimizing scrolling")
+    (focus_changed_to (0))
     ("scrolling to" (i 100) "minimizing scrolling")
+    (focus_changed_to (1))
     ┌───┬─────┬───────┬───────┬──────────┐
     │ > │ #   │ ◇ key │ a     │ ◇ b      │
     ├───┼─────┼───────┼───────┼──────────┤
@@ -541,6 +559,7 @@ let%expect_test "remove focused causes unfocus (down)" =
   Handle.show test.handle;
   [%expect
     {|
+    (focus_changed_to ())
     ┌───┬─────┬───────┬───────┬──────────┐
     │ > │ #   │ ◇ key │ a     │ ◇ b      │
     ├───┼─────┼───────┼───────┼──────────┤
@@ -552,6 +571,7 @@ let%expect_test "remove focused causes unfocus (down)" =
   [%expect
     {|
     ("scrolling to" (i 200) "minimizing scrolling")
+    (focus_changed_to (4))
     ┌───┬─────┬───────┬───────┬──────────┐
     │ > │ #   │ ◇ key │ a     │ ◇ b      │
     ├───┼─────┼───────┼───────┼──────────┤
@@ -567,7 +587,9 @@ let%expect_test "remove focused causes unfocus (up)" =
   [%expect
     {|
     ("scrolling to" (i 0) "minimizing scrolling")
+    (focus_changed_to (0))
     ("scrolling to" (i 100) "minimizing scrolling")
+    (focus_changed_to (1))
     ┌───┬─────┬───────┬───────┬──────────┐
     │ > │ #   │ ◇ key │ a     │ ◇ b      │
     ├───┼─────┼───────┼───────┼──────────┤
@@ -580,6 +602,7 @@ let%expect_test "remove focused causes unfocus (up)" =
   Handle.show test.handle;
   [%expect
     {|
+    (focus_changed_to ())
     ┌───┬─────┬───────┬───────┬──────────┐
     │ > │ #   │ ◇ key │ a     │ ◇ b      │
     ├───┼─────┼───────┼───────┼──────────┤
@@ -591,6 +614,7 @@ let%expect_test "remove focused causes unfocus (up)" =
   [%expect
     {|
     ("scrolling to" (i 0) "minimizing scrolling")
+    (focus_changed_to (0))
     ┌───┬─────┬───────┬───────┬──────────┐
     │ > │ #   │ ◇ key │ a     │ ◇ b      │
     ├───┼─────┼───────┼───────┼──────────┤
@@ -631,6 +655,7 @@ let%expect_test "page up" =
     {|
     ("scrolling to" (i 200)
      "such that it is positioned at the bottom of the screen")
+    (focus_changed_to (6))
     ┌───┬──────┬───────┬────┬──────────┐
     │ > │ #    │ ◇ key │ a  │ ◇ b      │
     ├───┼──────┼───────┼────┼──────────┤
@@ -680,6 +705,7 @@ let%expect_test "page down" =
     {|
 ("scrolling to" (i 800)
  "such that it is positioned at the top of the screen")
+(focus_changed_to (12))
 ┌───┬──────┬───────┬────┬──────────┐
 │ > │ #    │ ◇ key │ a  │ ◇ b      │
 ├───┼──────┼───────┼────┼──────────┤
@@ -739,7 +765,9 @@ let%expect_test "moving focus down should work even when the index changes" =
   [%expect
     {|
 ("scrolling to" (i 0) "minimizing scrolling")
+(focus_changed_to (1))
 ("scrolling to" (i 100) "minimizing scrolling")
+(focus_changed_to (2))
 ┌───┬─────┬───────┬────┬──────────┐
 │ > │ #   │ ◇ key │ a  │ ◇ b      │
 ├───┼─────┼───────┼────┼──────────┤
@@ -764,6 +792,7 @@ let%expect_test "moving focus down should work even when the index changes" =
   [%expect
     {|
     ("scrolling to" (i 200) "minimizing scrolling")
+    (focus_changed_to (3))
     ┌───┬─────┬───────┬────┬──────────┐
     │ > │ #   │ ◇ key │ a  │ ◇ b      │
     ├───┼─────┼───────┼────┼──────────┤
@@ -803,8 +832,11 @@ let%expect_test "moving focus up should work even when the index changes" =
   [%expect
     {|
 ("scrolling to" (i 0) "minimizing scrolling")
+(focus_changed_to (1))
 ("scrolling to" (i 100) "minimizing scrolling")
+(focus_changed_to (2))
 ("scrolling to" (i 200) "minimizing scrolling")
+(focus_changed_to (3))
 ┌───┬─────┬───────┬────┬──────────┐
 │ > │ #   │ ◇ key │ a  │ ◇ b      │
 ├───┼─────┼───────┼────┼──────────┤
@@ -831,6 +863,7 @@ let%expect_test "moving focus up should work even when the index changes" =
   [%expect
     {|
     ("scrolling to" (i 100) "minimizing scrolling")
+    (focus_changed_to (2))
     ┌───┬──────┬───────┬────┬──────────┐
     │ > │ #    │ ◇ key │ a  │ ◇ b      │
     ├───┼──────┼───────┼────┼──────────┤
@@ -877,7 +910,7 @@ let%expect_test "BUG: setting rank_range to not include the first element doesn'
     in
     Table_expert.component
       (module Int)
-      ~focus:Table_expert.Focus.By_row
+      ~focus:(Table_expert.Focus.By_row { on_change = Test.focus_changed })
       ~row_height:(`Px 20)
       ~columns:
         (Bonsai.Value.return
@@ -926,6 +959,7 @@ let%expect_test "BUG: setting rank_range to not include the first element doesn'
   [%expect
     {|
     ("scrolling to" (i 0) "minimizing scrolling")
+    (focus_changed_to (1))
     ┌───┬─────┬────┬────┐
     │ > │ #   │ a  │ b  │
     ├───┼─────┼────┼────┤
@@ -938,6 +972,7 @@ let%expect_test "BUG: setting rank_range to not include the first element doesn'
   Handle.show handle;
   [%expect
     {|
+    (focus_changed_to ())
     ┌───┬─────┬────┬────┐
     │ > │ #   │ a  │ b  │
     ├───┼─────┼────┼────┤

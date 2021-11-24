@@ -13,8 +13,13 @@ module View : sig
   (** Converts the form to a vdom node. By default, a table. A custom converter (likely
       written using the View.Expert module) can be specified to be used instead. *)
   val to_vdom
-    :  ?custom:(?on_submit:Private.submission_options -> t -> Vdom.Node.t)
+    :  ?custom:
+      (?on_submit:Private.submission_options
+       -> ?editable:Private.editable
+       -> t
+       -> Vdom.Node.t)
     -> ?on_submit:Private.submission_options
+    -> ?editable:Private.editable
     -> t
     -> Vdom.Node.t
 
@@ -44,7 +49,7 @@ val view : _ t -> View.t
 module Submit : sig
   type 'a t
 
-  (** Creates a "submit" handler, which is intended to be used by the [view_as_vdom] function.return
+  (** Creates a "submit" handler, which is intended to be used by the [view_as_vdom] function.
 
       - [handle_enter]: when true, will render the form
         inside of a <form> element, which gives us the ability to add an
@@ -64,7 +69,27 @@ module Submit : sig
     -> 'a t
 end
 
-val view_as_vdom : ?on_submit:'a Submit.t -> 'a t -> Vdom.Node.t
+(** [view_as_vdom] produces the vdom representation of the form.
+
+    [editable] defaults to [`Yes_always], which should be used when form input can't be
+    disabled. [`Currently_yes] allows editing, but generates less diff when toggled with
+    [`Currently_no]. When [editable] is [`Currently_no], the view is wrapped in a fieldset
+    that disables all of the inputs in the form.
+
+    Regardless of the value of [editable], scheduling the [Form.set] effect
+    will still change the values in the form.
+
+    Known bugs:
+    While setting editable to `Currently_no prevents modification of most
+    browser-builtin input elements, some custom form elements like the
+    drag-and-drop, multiselect, and removing items using the pills in
+    typeahead-multi for don't currently respect this and can be modified anyway.
+    Work is underway to fix these. *)
+val view_as_vdom
+  :  ?on_submit:'a Submit.t
+  -> ?editable:[ `Yes_always | `Currently_yes | `Currently_no ]
+  -> 'a t
+  -> Vdom.Node.t
 
 (** [set] fills the form with the provided value, setting the contents of
     form-elements if possible *)

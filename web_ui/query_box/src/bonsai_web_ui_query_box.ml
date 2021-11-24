@@ -48,11 +48,11 @@ let create
       (module Key : Bonsai.Comparator with type t = k and type comparator_witness = cmp)
       ?(initial_query = "")
       ?(max_visible_items = Value.return 10)
-      ?placeholder
       ?(suggestion_list_kind = Value.return Suggestion_list_kind.Transient_overlay)
       ?(selected_item_attr = Value.return Attr.empty)
       ?(extra_list_container_attr = Value.return Attr.empty)
       ?(extra_input_attr = Value.return Attr.empty)
+      ?(extra_attr = Value.return Attr.empty)
       ~f
       ~on_select
       ()
@@ -215,9 +215,15 @@ let create
       let down = Effect.Many [ inject Move_down; Effect.Prevent_default ] in
       match Dom_html.Keyboard_code.of_event ev with
       | ArrowUp -> up
-      | Tab when Js.to_bool ev##.shiftKey -> up
+      | Tab when Js.to_bool ev##.shiftKey ->
+        (match selected_key with
+         | Some _ -> up
+         | None -> Effect.Ignore)
       | ArrowDown -> down
-      | Tab -> down
+      | Tab ->
+        (match selected_key with
+         | Some _ -> down
+         | None -> Effect.Ignore)
       | Escape -> inject Action.Close_suggestions
       | Enter ->
         (match selected_key with
@@ -231,20 +237,15 @@ let create
          | None -> inject Open_suggestions)
       | _ -> Effect.Ignore
   in
-  let%sub placeholder =
-    match placeholder with
-    | Some placeholder -> Bonsai.pure Attr.placeholder placeholder
-    | None -> Bonsai.const Attr.empty
-  in
   let%arr query = query
   and selected_key = selected_key
   and inject = inject
-  and placeholder_ = placeholder
   and handle_keydown = handle_keydown
   and suggestion_list_kind = suggestion_list_kind
   and restricted_items = restricted_items
   and extra_list_container_attr = extra_list_container_attr
-  and extra_input_attr = extra_input_attr in
+  and extra_input_attr = extra_input_attr
+  and extra_attr = extra_attr in
   let container_position, suggestions_position, is_open =
     match suggestion_list_kind with
     | Suggestion_list_kind.Transient_overlay ->
@@ -259,7 +260,6 @@ let create
       ~attr:
         Attr.(
           string_property "value" query
-          @ placeholder_
           @ on_keydown handle_keydown
           @ on_input (fun _ query -> inject (Set_query query))
           @ on_focus (fun _ -> inject Open_suggestions)
@@ -274,5 +274,44 @@ let create
       let attr = Attr.(suggestions_position @ extra_list_container_attr) in
       Node.div ~attr restricted_items
   in
-  Node.div [ input; Node.div ~attr:container_position [ suggestions ] ]
+  Node.div ~attr:extra_attr [ input; Node.div ~attr:container_position [ suggestions ] ]
+;;
+
+let stringable
+      (type k cmp)
+      (module Key : Bonsai.Comparator with type t = k and type comparator_witness = cmp)
+      ?initial_query
+      ?max_visible_items
+      ?suggestion_list_kind
+      ?selected_item_attr
+      ?extra_list_container_attr
+      ?extra_input_attr
+      ?extra_attr
+      ?(to_view = fun _ string -> Vdom.Node.text string)
+      ~on_select
+      input
+  =
+  create
+    (module Key)
+    ?initial_query
+    ?max_visible_items
+    ?suggestion_list_kind
+    ?selected_item_attr
+    ?extra_list_container_attr
+    ?extra_input_attr
+    ?extra_attr
+    ~on_select
+    ~f:(fun query ->
+      Bonsai.Incr.compute (Value.both query input) ~f:(fun incr ->
+        let%pattern_bind.Incr query, input = incr in
+        Incr_map.filter_mapi' input ~f:(fun ~key ~data:string ->
+          let%map.Incr string = string
+          and query = query in
+          if Fuzzy_match.is_match
+               ~char_equal:Char.Caseless.equal
+               ~pattern:query
+               string
+          then Some (to_view key string)
+          else None)))
+    ()
 ;;

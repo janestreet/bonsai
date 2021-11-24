@@ -60,5 +60,11 @@ type submission_options =
   ; button_text : string option
   }
 
-val to_vdom : ?on_submit:submission_options -> t -> Vdom.Node.t
+type editable =
+  [ `Yes_always
+  | `Currently_yes
+  | `Currently_no
+  ]
+
+val to_vdom : ?on_submit:submission_options -> ?editable:editable -> t -> Vdom.Node.t
 val to_vdom_plain : t -> Vdom.Node.t list

@@ -1,8 +1,6 @@
 open! Core
 open! Import
 
-let () = Incr.State.(set_max_height_allowed t 1024)
-
 module type Model = Module_types.Model
 module type Action = Module_types.Action
 module type Enum = Module_types.Enum

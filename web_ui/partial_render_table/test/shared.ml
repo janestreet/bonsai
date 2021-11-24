@@ -99,6 +99,11 @@ module Test = struct
     ; filter_var : (key:int -> data:outer -> bool) Bonsai.Var.t
     }
 
+  let focus_changed =
+    Value.return (fun focus_changed_to ->
+      Effect.print_s [%message (focus_changed_to : int option)])
+  ;;
+
   module Component = struct
     type 'a t =
       { component : 'a Computation.t
@@ -135,7 +140,7 @@ module Test = struct
       { component =
           Table.component
             (module Int)
-            ~focus:By_row
+            ~focus:(By_row { on_change = focus_changed })
             ~filter
             ?default_sort
             ~row_height:(`Px 1)
@@ -152,7 +157,7 @@ module Test = struct
       { component =
           Table.component
             (module Int)
-            ~focus:By_row
+            ~focus:(By_row { on_change = focus_changed })
             ~filter
             ~row_height:(`Px 1)
             ~preload_rows

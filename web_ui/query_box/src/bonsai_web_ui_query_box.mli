@@ -37,7 +37,6 @@ val create
   :  ('k, 'cmp) Bonsai.comparator
   -> ?initial_query:string
   -> ?max_visible_items:int Value.t
-  -> ?placeholder:string Value.t
   (** The value defaults to Transient.  Read doc comment on the type for
       more info. *)
   -> ?suggestion_list_kind:Suggestion_list_kind.t Value.t
@@ -49,6 +48,8 @@ val create
   -> ?extra_list_container_attr:Vdom.Attr.t Value.t
   (** If provided, [extra_input_attr] will be added to the query text input. *)
   -> ?extra_input_attr:Vdom.Attr.t Value.t
+  (** If provided [extra_attr] will be added to the outermost div of this component. *)
+  -> ?extra_attr:Vdom.Attr.t Value.t
   (** [f] generates the set of completion options by returning
       a map from a user-provided key ['k] to the view for that element
       in the dropdown list.  The currently entered filter from the textbox
@@ -62,3 +63,20 @@ val create
   -> unit
   -> Vdom.Node.t Computation.t
 
+
+(** [stringable] is like [create] but takes a map with possible completion options,
+    instead of a function to generate them. Completion options will be displayed if their
+    string representation [Fuzzy_match]es the current query. *)
+val stringable
+  :  ('k, 'cmp) Bonsai.comparator
+  -> ?initial_query:string
+  -> ?max_visible_items:int Value.t
+  -> ?suggestion_list_kind:Suggestion_list_kind.t Value.t
+  -> ?selected_item_attr:Vdom.Attr.t Value.t
+  -> ?extra_list_container_attr:Vdom.Attr.t Value.t
+  -> ?extra_input_attr:Vdom.Attr.t Value.t
+  -> ?extra_attr:Vdom.Attr.t Value.t
+  -> ?to_view:('k -> string -> Vdom.Node.t)
+  -> on_select:('k -> unit Effect.t) Value.t
+  -> ('k, string, 'cmp) Map.t Value.t
+  -> Vdom.Node.t Computation.t

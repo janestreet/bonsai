@@ -102,13 +102,14 @@ module Textbox = struct
 end
 
 module Textarea = struct
-  let string ?(extra_attrs = Value.return []) here =
+  let string ?(extra_attrs = Value.return []) ?placeholder here =
     let view ~id ~state ~set_state =
       let%map id = id
       and state = state
       and set_state = set_state
       and extra_attrs = extra_attrs in
       Vdom_input_widgets.Entry.text_area
+        ?placeholder
         ~extra_attrs:(id :: extra_attrs)
         ~value:state
         ~on_input:set_state
@@ -117,27 +118,41 @@ module Textarea = struct
     Basic_stateful.make (Bonsai.state here (module String) ~default_model:"") ~view
   ;;
 
-  let int ?extra_attrs here =
+  let int ?extra_attrs ?placeholder here =
     computation_map
-      (string ?extra_attrs here)
+      (string ?extra_attrs ?placeholder here)
       ~f:(Form.project ~parse_exn:Int.of_string ~unparse:Int.to_string_hum)
   ;;
 
-  let float ?extra_attrs here =
+  let float ?extra_attrs ?placeholder here =
     computation_map
-      (string ?extra_attrs here)
+      (string ?extra_attrs ?placeholder here)
       ~f:(Form.project ~parse_exn:Float.of_string ~unparse:Float.to_string_hum)
   ;;
 
-  let sexpable (type t) ?extra_attrs here (module M : Sexpable with type t = t) =
+  let sexpable
+        (type t)
+        ?extra_attrs
+        ?placeholder
+        here
+        (module M : Sexpable with type t = t)
+    =
     let parse_exn s = s |> Sexp.of_string |> M.t_of_sexp in
     let unparse t = t |> M.sexp_of_t |> Sexp.to_string_hum in
-    computation_map (string ?extra_attrs here) ~f:(Form.project ~parse_exn ~unparse)
+    computation_map
+      (string ?extra_attrs ?placeholder here)
+      ~f:(Form.project ~parse_exn ~unparse)
   ;;
 
-  let stringable (type t) ?extra_attrs here (module M : Stringable with type t = t) =
+  let stringable
+        (type t)
+        ?extra_attrs
+        ?placeholder
+        here
+        (module M : Stringable with type t = t)
+    =
     computation_map
-      (string ?extra_attrs here)
+      (string ?extra_attrs ?placeholder here)
       ~f:(Form.project ~parse_exn:M.of_string ~unparse:M.to_string)
   ;;
 end
@@ -1039,5 +1054,106 @@ module Rank = struct
       ~value:(Ok (List.map ~f:fst value))
       ~view:(View.of_vdom ~id:path view)
       ~set:(fun items -> inject [ Overwrite items ])
+  ;;
+end
+
+module Query_box = struct
+  let stringable_opt
+        (type k cmp)
+        (module Key : Bonsai.Comparator with type t = k and type comparator_witness = cmp)
+        ?initial_query
+        ?max_visible_items
+        ?suggestion_list_kind
+        ?selected_item_attr
+        ?extra_list_container_attr
+        ?extra_input_attr
+        ?(extra_attr = Value.return Vdom.Attr.empty)
+        ?to_view
+        input
+    =
+    let%sub path, id = path in
+    let%sub extra_attr =
+      let%arr extra_attr = extra_attr
+      and id = id in
+      Vdom.Attr.combine id extra_attr
+    in
+    let%sub last_selected_value, set_last_selected_value =
+      Bonsai.state_opt
+        [%here]
+        (module struct
+          type t = Key.t [@@deriving sexp]
+
+          let equal a b = Key.comparator.compare a b = 0
+        end)
+    in
+    let%sub view =
+      Bonsai_web_ui_query_box.stringable
+        (module Key)
+        ?initial_query
+        ?max_visible_items
+        ?suggestion_list_kind
+        ?selected_item_attr
+        ?extra_list_container_attr
+        ?extra_input_attr
+        ~extra_attr
+        ?to_view
+        ~on_select:
+          (let%map set_last_selected_value = set_last_selected_value in
+           fun key -> set_last_selected_value (Some key))
+        input
+    in
+    let%sub current_selection_view =
+      let%arr last_selected_value = last_selected_value
+      and input = input in
+      match last_selected_value with
+      | Some value ->
+        (match Map.find input value with
+         | Some string -> Vdom.Node.div [ Vdom.Node.text string ]
+         | None ->
+           Vdom.Node.div
+             ~attr:(Vdom.Attr.style (Css_gen.color (`Name "red")))
+             [ Vdom.Node.text "Selected item is not an input option" ])
+      | None ->
+        Vdom.Node.div
+          ~attr:(Vdom.Attr.style (Css_gen.color (`Name "gray")))
+          [ Vdom.Node.text "Nothing selected" ]
+    in
+    let%arr last_selected_value = last_selected_value
+    and set_last_selected_value = set_last_selected_value
+    and view = view
+    and current_selection_view = current_selection_view
+    and path = path in
+    let view = Vdom.Node.div [ current_selection_view; view ] in
+    Form.Expert.create
+      ~value:(Ok last_selected_value)
+      ~view:(View.of_vdom ~id:path view)
+      ~set:set_last_selected_value
+  ;;
+
+  let stringable
+        key
+        ?initial_query
+        ?max_visible_items
+        ?suggestion_list_kind
+        ?selected_item_attr
+        ?extra_list_container_attr
+        ?extra_input_attr
+        ?extra_attr
+        ?to_view
+        input
+    =
+    Computation.map
+      (stringable_opt
+         key
+         ?initial_query
+         ?max_visible_items
+         ?suggestion_list_kind
+         ?selected_item_attr
+         ?extra_list_container_attr
+         ?extra_input_attr
+         ?extra_attr
+         ?to_view
+         input)
+      ~f:optional_to_required
   ;;
 end

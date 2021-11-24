@@ -107,12 +107,12 @@ let%expect_test "keybindings and filtering behavior" =
         <div> </div>
       </div>
     </div> |}];
-  (* Tab should open the suggestion list *)
-  keydown handle Tab;
+  (* Down should open the suggestion list *)
+  keydown handle ArrowDown;
   Handle.show handle;
   [%expect
     {|
-    ("default prevented" (key Tab))
+    ("default prevented" (key ArrowDown))
     <div>
       <input> </input>
       <div>
@@ -160,11 +160,10 @@ let%expect_test "keybindings and filtering behavior" =
     </div> |}];
   (* Closing and reopening the suggestion list resets what item is selected. *)
   keydown handle Escape;
-  keydown handle Tab;
+  keydown handle Enter;
   Handle.show handle;
   [%expect
     {|
-    ("default prevented" (key Tab))
     <div>
       <input> </input>
       <div>
@@ -232,12 +231,12 @@ let%expect_test "keybindings and filtering behavior" =
         <div> </div>
       </div>
     </div> |}];
-  keydown handle ~shift_key_down:true Tab;
-  (* Shift-Tab should open the suggestion list, but with the selection set to the bottom. *)
+  keydown handle ArrowUp;
+  (* UpArrow should open the suggestion list, but with the selection set to the bottom. *)
   Handle.show handle;
   [%expect
     {|
-    ("default prevented" (key Tab))
+    ("default prevented" (key ArrowUp))
     <div>
       <input> </input>
       <div>

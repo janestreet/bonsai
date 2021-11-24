@@ -3,6 +3,16 @@ open Bonsai_web
 module Attr = Vdom.Attr
 module Node = Vdom.Node
 
+module Style =
+  [%css.raw
+    {|
+        .clear_fieldset_styles {
+          border: 0;
+          margin: 0;
+          padding: 0;
+        }
+      |}]
+
 module Error_details = struct
   type t =
     { error : Error.t
@@ -372,7 +382,20 @@ type submission_options =
   ; button_text : string option
   }
 
-let to_vdom ?on_submit view =
+type editable =
+  [ `Yes_always
+  | `Currently_yes
+  | `Currently_no
+  ]
+
+let with_fieldset ~currently_editable view =
+  let disabled_ = if currently_editable then Vdom.Attr.empty else Vdom.Attr.disabled in
+  Vdom.Node.fieldset
+    ~attr:Vdom.Attr.(disabled_ @ class_ Style.clear_fieldset_styles)
+    [ view ]
+;;
+
+let to_vdom ?on_submit ?(editable = `Yes_always) view =
   let view =
     match on_submit with
     | Some { on_submit; button_text = Some button_text; handle_enter = _ } ->
@@ -381,6 +404,12 @@ let to_vdom ?on_submit view =
     | _ -> view
   in
   let inner_table = Node.table [ Node.tbody (to_vdom view ~depth:0) ] in
+  let inner_table =
+    match editable with
+    | `Yes_always -> inner_table
+    | `Currently_yes -> with_fieldset ~currently_editable:true inner_table
+    | `Currently_no -> with_fieldset ~currently_editable:false inner_table
+  in
   match on_submit with
   | Some { on_submit; handle_enter = true; _ } ->
     let always_use = [ Vdom.Effect.Prevent_default; Vdom.Effect.Stop_propagation ] in

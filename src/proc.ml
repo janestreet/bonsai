@@ -89,6 +89,8 @@ module Let_syntax = struct
   end
 end
 
+open Let_syntax
+
 let pure f i = read (Value.map i ~f)
 let const x = read (Value.return x)
 
@@ -262,7 +264,6 @@ let actor1
     ~default_model
     ~recv
     input ->
-    let open Let_syntax in
     let module Action_with_callback = struct
       type t = (action, return) Effect.Private.Callback.t
 
@@ -282,8 +283,7 @@ let actor1
           new_model)
         input
     in
-    return
-    @@ let%map model, inject = model_and_inject in
+    let%arr model, inject = model_and_inject in
     let inject action = Effect.Private.make ~request:action ~evaluator:inject in
     model, inject
 ;;
@@ -361,7 +361,6 @@ let path =
 ;;
 
 let path_id =
-  let open Let_syntax in
   let%sub path = path in
   let%arr path = path in
   Path.to_unique_identifier_string path
@@ -369,7 +368,6 @@ let path_id =
 
 module Edge = struct
   let lifecycle' ?on_activate ?on_deactivate ?after_display () =
-    let open Let_syntax in
     let transpose_join : 'a option Value.t option -> 'a option Value.t = function
       | Some a -> a
       | None -> Value.return None
@@ -406,26 +404,22 @@ module Edge = struct
   ;;
 
   let on_change' (type a) here (module M : Model with type t = a) input ~callback =
-    let open Let_syntax in
     let%sub state, set_state = state_opt here (module M) in
     let%sub update =
       match%sub state with
       | None ->
-        return
-        @@ let%map set_state = set_state
+        let%arr set_state = set_state
         and input = input
         and callback = callback in
         Some (Ui_effect.Many [ set_state (Some input); callback None input ])
       | Some state ->
-        return
-        @@ let%map state = state
+        let%arr state = state
         and set_state = set_state
         and input = input
         and callback = callback in
         if M.equal state input
         then None
-        else
-          Some (Ui_effect.Many [ set_state (Some input); callback (Some state) input ])
+        else Some (Ui_effect.Many [ set_state (Some input); callback (Some state) input ])
     in
     after_display' update
   ;;
@@ -455,7 +449,6 @@ module Edge = struct
           ~effect
           input
       =
-      let open Let_syntax in
       let%sub _, next_seqnum =
         actor0
           here
@@ -498,8 +491,7 @@ module Edge = struct
           inject_change (Action.Set (seqnum, wrap_result result))
       in
       let%sub () = on_change here (module Input) input ~callback in
-      return
-      @@ let%map { State.last_result; _ }, _ = state in
+      let%arr { State.last_result; _ }, _ = state in
       last_result
     ;;
 
@@ -571,8 +563,6 @@ module Incr = struct
 end
 
 module Dynamic_scope = struct
-  open Let_syntax
-
   type _ t =
     | Independent :
         { id : 'a Type_equal.Id.t
@@ -600,40 +590,37 @@ module Dynamic_scope = struct
     Derived { base; get; set; sexp_of }
   ;;
 
-  let rec fetch : type a. a t -> a option Computation.packed = function
-    | Independent { id; _ } ->
-      Computation.T
-        { t = Computation.Fetch id
-        ; action = Meta.Action.nothing
-        ; model = Meta.Model.unit
-        }
-    | Derived { base; get; set = _; sexp_of = _ } ->
-      let%sub v = fetch base in
-      return (Value.map v ~f:(Option.map ~f:get))
+  let rec fetch : type a b. a t -> default:b -> for_some:(a -> b) -> b Computation.packed =
+    fun t ~default ~for_some ->
+      match t with
+      | Independent { id; _ } ->
+        Computation.T
+          { t = Computation.Fetch { id; default; for_some }
+          ; action = Meta.Action.nothing
+          ; model = Meta.Model.unit
+          }
+      | Derived { base; get; set = _; sexp_of = _ } ->
+        fetch base ~default ~for_some:(fun x -> for_some (get x))
   ;;
 
-  let lookup (type a) (var : a t) =
-    let%sub value = fetch var in
-    return (value >>| Option.value ~default:(fallback var))
-  ;;
+  let lookup (type a) (var : a t) = fetch var ~default:(fallback var) ~for_some:Fn.id
 
   let rec store
     : type a. a t -> a Value.t -> 'r Computation.packed -> 'r Computation.packed
     =
     fun var value c ->
-      match var with
-      | Independent { id; _ } ->
-        let (Computation.T { t; action; model }) = c in
-        Computation.T { t = Computation.Store { id; value; inner = t }; action; model }
-      | Derived { base; get = _; set; sexp_of = _ } ->
-        let%sub current = lookup base in
-        let%sub new_ =
-          return
-            (let%map current = current
-             and value = value in
-             set current value)
-        in
-        store base new_ c
+    match var with
+    | Independent { id; _ } ->
+      let (Computation.T { t; action; model }) = c in
+      Computation.T { t = Computation.Store { id; value; inner = t }; action; model }
+    | Derived { base; get = _; set; sexp_of = _ } ->
+      let%sub current = lookup base in
+      let%sub new_ =
+        let%arr current = current
+        and value = value in
+        set current value
+      in
+      store base new_ c
   ;;
 
   type revert = { revert : 'a. 'a Computation.packed -> 'a Computation.packed }
@@ -645,7 +632,8 @@ module Dynamic_scope = struct
     store var value (f { revert })
   ;;
 
-  let set var value ~f = modify var ~change:(fun _ -> value) ~f
+  let set t v ~inside = store t v inside
+  let set' var value ~f = modify var ~change:(fun _ -> value) ~f
 end
 
 module Clock = struct
@@ -670,7 +658,6 @@ module Clock = struct
   ;;
 
   let every here span callback =
-    let open Let_syntax in
     let%sub input =
       Incr.with_clock (fun clock ->
         (* Even though this node has type unit (which should aggresively get cut
@@ -707,8 +694,6 @@ end
 module Computation = struct
   type 'a t = 'a Computation.packed
 
-  open Let_syntax
-
   include Applicative.Make_using_map2 (struct
       type nonrec 'a t = 'a t
 
@@ -717,16 +702,14 @@ module Computation = struct
       let map2 a b ~f =
         let%sub a = a in
         let%sub b = b in
-        read
-        @@ let%map a = a
+        let%arr a = a
         and b = b in
         f a b
       ;;
 
       let map a ~f =
         let%sub a = a in
-        read
-        @@ let%map a = a in
+        let%arr a = a in
         f a
       ;;
 
@@ -823,10 +806,6 @@ module Computation = struct
     |> map ~f:(Map.of_alist_exn (Map.comparator_s map_of_computations))
   ;;
 
-  module _ = struct
-    module type S = sig end
-  end
-
   module Let_syntax = struct
     let return = return
 
@@ -838,12 +817,6 @@ module Computation = struct
       let both = both
 
       include Mapn
-
-      include struct
-        [@@@warning "-unused-module"]
-
-        module Open_on_rhs = struct end
-      end
     end
   end
 end

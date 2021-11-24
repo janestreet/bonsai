@@ -251,7 +251,7 @@ is:
 
 ```ocaml
 # Bonsai.assoc
-- : ('key, 'cmp) Bonsai__Import.comparator ->
+- : ('key, 'cmp) Bonsai.comparator ->
     ('key, 'data, 'cmp) Core.Map.t Bonsai.Value.t ->
     f:('key Bonsai.Value.t ->
        'data Bonsai.Value.t -> 'result Bonsai.Computation.t) ->

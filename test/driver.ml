@@ -4,6 +4,7 @@ open! Import
 type ('i, 'm, 'a, 'r) unpacked =
   { input_var : 'i Incr.Var.t
   ; model_var : 'm Incr.Var.t
+  ; default_model : 'm
   ; clock : Incr.Clock.t
   ; inject : 'a -> unit Ui_effect.t
   ; sexp_of_model : 'm -> Sexp.t
@@ -95,6 +96,7 @@ let create
     T
       { input_var
       ; model_var
+      ; default_model
       ; clock
       ; inject
       ; apply_action
@@ -174,3 +176,13 @@ let sexp_of_model (T { sexp_of_model; model_var; _ }) =
 
 let result_incr (T { result_incr; _ }) = result_incr
 let clock (T { clock; _ }) = clock
+
+let invalidate_observers (T { apply_action; result; lifecycle; _ }) =
+  Incr.Observer.disallow_future_use apply_action;
+  Incr.Observer.disallow_future_use result;
+  Incr.Observer.disallow_future_use lifecycle
+;;
+
+let reset_model_to_default (T { model_var; default_model; _ }) =
+  Incr.Var.set model_var default_model
+;;

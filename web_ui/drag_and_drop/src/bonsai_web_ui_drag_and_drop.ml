@@ -122,20 +122,23 @@ let add_event_listener, remove_event_listener =
   in
   let install =
     Bonsai.Effect.of_sync_fun (fun (typ, path, handler) ->
-      if am_running_test
-      then print_endline "adding window event listener"
-      else (
+      match Bonsai_web.am_running_how with
+      | `Node_test -> print_endline "adding window event listener"
+      | `Browser | `Browser_benchmark ->
         let listener =
           Dom_html.addEventListener Dom_html.window typ (Dom.handler handler) Js._true
         in
         active := Map.update !active path ~f:(function _ -> listener);
-        ()))
+        ()
+      | `Node | `Node_benchmark -> ())
   in
   let uninstall =
     Bonsai.Effect.of_sync_fun (fun path ->
-      if am_running_test
-      then print_endline "removing window event listener"
-      else Map.find !active path |> Option.iter ~f:Dom_html.removeEventListener)
+      match Bonsai_web.am_running_how with
+      | `Node_test -> print_endline "removing window event listener"
+      | `Browser | `Browser_benchmark ->
+        Map.find !active path |> Option.iter ~f:Dom_html.removeEventListener
+      | `Node | `Node_benchmark -> ())
   in
   (fun typ path handler -> install (typ, path, handler)), uninstall
 ;;

@@ -763,7 +763,7 @@ let%expect_test "table body is not recomputed more often than necessary" =
         in
         Table_expert.component
           (module Int)
-          ~focus:By_row
+          ~focus:(By_row { on_change = Value.return (Fn.const Effect.Ignore) })
           ~row_height:(`Px 10)
           ~columns
           collation

@@ -179,7 +179,6 @@ let%expect_test "html view" =
           <input type="text"
                  placeholder=""
                  spellcheck="false"
-                 autofocus="false"
                  id="test-foo-search-box-Foo"
                  value:normalized=""
                  oninput> </input>
@@ -216,7 +215,6 @@ let%expect_test "html view" =
           <input type="text"
                  placeholder=""
                  spellcheck="false"
-                 autofocus="false"
                  id="test-foo-search-box-Bar"
                  value:normalized=""
                  oninput> </input>
@@ -240,7 +238,6 @@ let%expect_test "html view" =
           <input type="text"
                  placeholder=""
                  spellcheck="false"
-                 autofocus="false"
                  id="test-foo-search-box-Baz"
                  value:normalized=""
                  oninput> </input>
@@ -288,7 +285,6 @@ let%expect_test "html view" =
           <input type="text"
                  placeholder=""
                  spellcheck="false"
-                 autofocus="false"
                  id="test-foo-search-box-Foo"
                  value:normalized=""
                  oninput> </input>
@@ -325,7 +321,6 @@ let%expect_test "html view" =
           <input type="text"
                  placeholder=""
                  spellcheck="false"
-                 autofocus="false"
                  id="test-foo-search-box-Bar"
                  value:normalized=""
                  oninput> </input>
@@ -349,7 +344,6 @@ let%expect_test "html view" =
           <input type="text"
                  placeholder=""
                  spellcheck="false"
-                 autofocus="false"
                  id="test-foo-search-box-Baz"
                  value:normalized=""
                  oninput> </input>

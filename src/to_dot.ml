@@ -36,9 +36,14 @@ module Kind = struct
     | Subst of Source_code_position.t option
     | Dyn
 
-  let basic_shape ?(other = "") ~shape ~label ~color () =
+  let basic_shape ?(other = "") ?tooltip ~shape ~label ~color () =
+    let tooltip =
+      match tooltip with
+      | Some tooltip -> [%string ", tooltip = \"%{tooltip}\""]
+      | None -> ""
+    in
     [%string
-      {|[ style=filled, shape = "%{shape}", label = "%{label}"; fillcolor = "%{color}"; %{other}]|}]
+      {|[ style=filled%{tooltip}, shape = "%{shape}", label = "%{label}"; fillcolor = "%{color}"; %{other}]|}]
   ;;
 
   let to_style = function
@@ -46,25 +51,23 @@ module Kind = struct
     | Leaf { kind; name } ->
       basic_shape
         ~shape:"Mrecord"
-        ~label:[%string "{%{kind}|%{name}}"]
+        ~tooltip:name
+        ~label:[%string "{%{kind}}"]
         ~color:"#D0E6A5"
         ()
     | Value { kind; here } ->
       let color = "#FFDD94" in
-      (match here with
-       | Some here ->
-         let here = Source_code_position.to_string here in
-         basic_shape ~shape:"Mrecord" ~label:[%string "{%{kind}|%{here}}"] ~color ()
-       | None -> basic_shape ~shape:"oval" ~label:kind ~color ())
+      let tooltip = Option.map here ~f:Source_code_position.to_string in
+      basic_shape ?tooltip ~shape:"oval" ~label:kind ~color ()
     | Subst here ->
-      let label =
-        match here with
-        | Some here ->
-          let here = Source_code_position.to_string here in
-          [%string "{%{here}}"]
-        | None -> ""
-      in
-      basic_shape ~shape:"circle" ~label ~color:"#FFFFFF" ~other:"width=.1, height=.1" ()
+      let tooltip = Option.map here ~f:Source_code_position.to_string in
+      basic_shape
+        ?tooltip
+        ~shape:"oval"
+        ~label:"subst"
+        ~color:"#FFFFFF"
+        ~other:"width=.1, height=.1"
+        ()
     | Dyn ->
       basic_shape
         ~shape:"circle"
@@ -284,7 +287,7 @@ let rec follow_computation
     let me = register_computation "read" in
     arrow state ~from:(follow_value state value) ~to_:me;
     me
-  | Fetch id ->
+  | Fetch { id; _ } ->
     let me = register_computation "fetch" in
     arrow state ~from:(register_named state Kind.Dyn id) ~to_:me;
     me

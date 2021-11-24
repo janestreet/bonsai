@@ -6,7 +6,9 @@ module View = struct
   module Private = View
   include View
 
-  let to_vdom ?(custom = View.to_vdom) ?on_submit t = custom ?on_submit t
+  let to_vdom ?(custom = View.to_vdom) ?on_submit ?editable t =
+    custom ?on_submit ?editable t
+  ;;
 end
 
 module T = struct
@@ -42,13 +44,13 @@ module Submit = struct
   ;;
 end
 
-let view_as_vdom ?on_submit t =
+let view_as_vdom ?on_submit ?(editable = `Yes_always) t =
   let on_submit =
     Option.map on_submit ~f:(fun { Submit.f; handle_enter; button_text } ->
       let on_submit = t.value |> Result.ok |> Option.map ~f in
       { View.on_submit; handle_enter; button_text })
   in
-  View.to_vdom ?on_submit t.view
+  View.to_vdom ?on_submit ~editable t.view
 ;;
 
 let is_valid t = Or_error.is_ok t.value

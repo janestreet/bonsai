@@ -10,7 +10,7 @@ let get_vdom form =
   | other -> Vdom.Node.div other
 ;;
 
-let get_vdom_verbose ?on_submit f = Form.view_as_vdom ?on_submit f
+let get_vdom_verbose ?on_submit ?editable f = Form.view_as_vdom ?on_submit ?editable f
 
 let form_result_spec (type a) ?filter_printed_attributes ?(get_vdom = get_vdom) sexp_of_a
   : (module Result_spec.S with type t = a Form.t and type incoming = a)
@@ -2892,6 +2892,122 @@ let%expect_test "slider input" =
     20 |}]
 ;;
 
+let%expect_test "slider input" =
+  let var = Bonsai.Var.create (String.Map.of_alist_exn [ "abc", "abc"; "def", "def" ]) in
+  let value = Bonsai.Var.value var in
+  let component = Form.Elements.Query_box.stringable (module String) value in
+  let get_vdom =
+    get_vdom_verbose
+      ~on_submit:
+        (Form.Submit.create () ~f:(fun x -> Ui_effect.print_s (Sexp.Atom x)) ~button:None)
+  in
+  let handle =
+    Handle.create
+      (form_result_spec
+         [%sexp_of: string]
+         ~filter_printed_attributes:(function
+           | "style.color" -> true
+           | _ -> false)
+         ~get_vdom)
+      component
+  in
+  Handle.show handle;
+  [%expect
+    {|
+    (Error "a value is required")
+
+    ==============
+    <form>
+      <table>
+        <tbody>
+          <tr>
+            <td>  </td>
+            <td>
+              <div>
+                <div style={ color: gray; }> Nothing selected </div>
+                <div>
+                  <input> </input>
+                  <div>
+                    <div> </div>
+                  </div>
+                </div>
+              </div>
+            </td>
+            <td>
+              <div>   </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </form> |}];
+  Handle.input_text handle ~get_vdom ~selector:"input" ~text:"a";
+  Handle.keydown handle ~get_vdom ~selector:"input" ~key:Enter;
+  Handle.show_diff handle;
+  [%expect
+    {|
+    ("default prevented" (key Enter))
+
+    -|(Error "a value is required")
+    +|(Ok abc)
+
+      ==============
+      <form>
+        <table>
+          <tbody>
+            <tr>
+              <td>  </td>
+              <td>
+                <div>
+    -|            <div style={ color: gray; }> Nothing selected </div>
+    +|            <div> abc </div>
+                  <div>
+                    <input> </input>
+                    <div>
+                      <div> </div>
+                    </div>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <div>   </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </form> |}];
+  Bonsai.Var.update var ~f:(fun map -> String.Map.remove map "abc");
+  Handle.show_diff handle;
+  [%expect
+    {|
+      (Ok abc)
+
+      ==============
+      <form>
+        <table>
+          <tbody>
+            <tr>
+              <td>  </td>
+              <td>
+                <div>
+    -|            <div> abc </div>
+    +|            <div style={ color: red; }> Selected item is not an input option </div>
+                  <div>
+                    <input> </input>
+                    <div>
+                      <div> </div>
+                    </div>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <div>   </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </form> |}]
+;;
+
 let%expect_test "add tooltip to form" =
   let component =
     let%map.Computation x = Form.Elements.Textbox.string [%here] in
@@ -3103,4 +3219,129 @@ let%expect_test "Bonsai_form.Typed sets groups/labels correctly on nested record
         </tr>
       </tbody>
     </table> |}]
+;;
+
+let%expect_test "view_as_vdom editable:`Currently_yes" =
+  let component = Form.Elements.Textbox.string [%here] in
+  let get_vdom = get_vdom_verbose ~editable:`Currently_yes in
+  let handle = Handle.create (form_result_spec ~get_vdom [%sexp_of: string]) component in
+  Handle.show handle;
+  [%expect
+    {|
+    (Ok "")
+
+    ==============
+    <fieldset class="clear_fieldset_styles_hash_replaced_in_test">
+      <table>
+        <tbody>
+          <tr @key=bonsai_path_replaced_in_test>
+            <td style={
+                  padding-left: 0em;
+                  padding-right: 1em;
+                  text-align: left;
+                  font-weight: bold;
+                  user-select: none;
+                }>  </td>
+            <td>
+              <input type="text"
+                     placeholder=""
+                     spellcheck="false"
+                     id="bonsai_path_replaced_in_test"
+                     value:normalized=""
+                     oninput> </input>
+            </td>
+            <td>
+              <div style={ display: flex; flex-direction: row; flex-wrap: nowrap; }>   </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </fieldset> |}]
+;;
+
+let%expect_test "view_as_vdom editable:`Currently_no" =
+  (* We can't programatically test when inputs aren't editable, because they can still be
+     set using javascript events like onclick, so just validate that there is a disabled
+     fieldset wrapping the textbox *)
+  let component = Form.Elements.Textbox.string [%here] in
+  let get_vdom = get_vdom_verbose ~editable:`Currently_no in
+  let handle = Handle.create (form_result_spec ~get_vdom [%sexp_of: string]) component in
+  Handle.show handle;
+  [%expect
+    {|
+    (Ok "")
+
+    ==============
+    <fieldset disabled="" class="clear_fieldset_styles_hash_replaced_in_test">
+      <table>
+        <tbody>
+          <tr @key=bonsai_path_replaced_in_test>
+            <td style={
+                  padding-left: 0em;
+                  padding-right: 1em;
+                  text-align: left;
+                  font-weight: bold;
+                  user-select: none;
+                }>  </td>
+            <td>
+              <input type="text"
+                     placeholder=""
+                     spellcheck="false"
+                     id="bonsai_path_replaced_in_test"
+                     value:normalized=""
+                     oninput> </input>
+            </td>
+            <td>
+              <div style={ display: flex; flex-direction: row; flex-wrap: nowrap; }>   </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </fieldset> |}]
+;;
+
+let%expect_test "view_as_vdom not editable, with on_submit" =
+  let component = Form.Elements.Textbox.string [%here] in
+  let on_submit = Form.Submit.create ~f:(fun _ -> Effect.Ignore) () in
+  let get_vdom = get_vdom_verbose ~on_submit ~editable:`Currently_no in
+  let handle = Handle.create (form_result_spec ~get_vdom [%sexp_of: string]) component in
+  Handle.show handle;
+  [%expect
+    {|
+    (Ok "")
+
+    ==============
+    <form onsubmit>
+      <fieldset disabled="" class="clear_fieldset_styles_hash_replaced_in_test">
+        <table>
+          <tbody>
+            <tr @key=bonsai_path_replaced_in_test>
+              <td style={
+                    padding-left: 0em;
+                    padding-right: 1em;
+                    text-align: left;
+                    font-weight: bold;
+                    user-select: none;
+                  }>  </td>
+              <td>
+                <input type="text"
+                       placeholder=""
+                       spellcheck="false"
+                       id="bonsai_path_replaced_in_test"
+                       value:normalized=""
+                       oninput> </input>
+              </td>
+              <td>
+                <div style={ display: flex; flex-direction: row; flex-wrap: nowrap; }>   </div>
+              </td>
+            </tr>
+            <tr>
+              <td colspan="2" style={ padding-left: 0em; }>
+                <button onclick> submit </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </fieldset>
+    </form> |}]
 ;;
