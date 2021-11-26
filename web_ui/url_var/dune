@@ -1,3 +1,3 @@
 (library (name bonsai_web_ui_url_var)
- (libraries bonsai bonsai_web core_kernel.core html5_history)
+ (libraries bonsai bonsai_web core html5_history)
  (preprocess (pps ppx_jane js_of_ocaml-ppx)))

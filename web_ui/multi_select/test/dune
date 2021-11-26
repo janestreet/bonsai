@@ -1,4 +1,4 @@
 (library (name bonsai_web_ui_multi_select_test)
- (libraries bonsai_web_test bonsai_web_ui_multi_select core_kernel.core
+ (libraries bonsai_web_test bonsai_web_ui_multi_select core
   virtual_dom.vdom_test_helpers)
  (preprocess (pps ppx_jane)))

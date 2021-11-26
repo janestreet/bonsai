@@ -1,4 +1,3 @@
 (library (name bonsai_experimental_animation_test)
- (libraries bonsai_experimental_animation core_kernel.core
-  expect_test_helpers_core)
+ (libraries bonsai_experimental_animation core expect_test_helpers_core)
  (preprocess (pps ppx_jane)))

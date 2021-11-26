@@ -5,5 +5,5 @@
   bonsai_web_ui_freeform_multiselect bonsai_web_ui_multi_select
   bonsai_web_ui_typeahead bonsai_web_ui_reorderable_list
   bonsai_web_ui_query_box ppx_typed_fields.typed_fields_lib
-  ppx_typed_fields.typed_field_map ppx_typed_fields.typed_variants_lib
-  core_kernel.core core.profunctor virtual_dom.input_widgets))
+  ppx_typed_fields.typed_field_map ppx_typed_fields.typed_variants_lib core
+  core_unix.profunctor virtual_dom.input_widgets))

@@ -1,3 +1,3 @@
 (library (name bonsai_time_test)
- (libraries bonsai_time_example bonsai_web bonsai_web_test core_kernel.core)
+ (libraries bonsai_time_example bonsai_web bonsai_web_test core)
  (preprocess (pps js_of_ocaml-ppx ppx_jane)))

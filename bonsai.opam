@@ -19,6 +19,7 @@ depends: [
   "core"
   "core_bench"
   "core_kernel"
+  "core_unix"
   "expect_test_helpers_core"
   "fuzzy_match"
   "incr_dom"
