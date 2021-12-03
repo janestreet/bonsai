@@ -1,5 +1,4 @@
 (executables (names main)
- (libraries async_kernel async_js core_kernel.composition_infix
-  core_kernel.core bonsai_web bonsai_chat_open_source_common
-  virtual_dom.input_widgets)
+ (libraries async_kernel async_js core_kernel.composition_infix core
+  bonsai_web bonsai_chat_open_source_common virtual_dom.input_widgets)
  (preprocess (pps js_of_ocaml-ppx ppx_jane)))

@@ -1,3 +1,2 @@
 (executables (names main) (preprocess (pps js_of_ocaml-ppx ppx_jane))
- (libraries core_kernel.core dygraph bonsai_web virtual_dom.input_widgets
-  timezone))
+ (libraries core dygraph bonsai_web virtual_dom.input_widgets timezone))

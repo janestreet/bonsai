@@ -1,5 +1,4 @@
 (library (name bonsai_web_ui_element_size_hooks)
  (public_name bonsai.web_ui_element_size_hooks)
- (libraries bonsai_web bonsai_extra core_kernel.core
-  core_kernel.reversed_list)
+ (libraries bonsai_web bonsai_extra core core_kernel.reversed_list)
  (preprocess (pps js_of_ocaml-ppx ppx_jane gen_js_api.ppx)))

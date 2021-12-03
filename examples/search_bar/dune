@@ -1,5 +1,5 @@
 (executables (names main)
- (libraries async_kernel bonsai bonsai_web_ui_search_bar core_kernel.core)
+ (libraries async_kernel bonsai bonsai_web_ui_search_bar core)
  (preprocess (pps ppx_jane ppx_pattern_bind)))
 
 (rule (targets style.css)

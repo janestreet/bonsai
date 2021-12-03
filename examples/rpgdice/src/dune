@@ -1,3 +1,3 @@
 (library (name bonsai_web_rpgdice_example)
- (libraries angstrom core_kernel.composition_infix core_kernel.core)
+ (libraries angstrom core_kernel.composition_infix core)
  (preprocess (pps ppx_jane)))
