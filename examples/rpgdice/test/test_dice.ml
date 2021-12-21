@@ -1,5 +1,5 @@
 open! Core
-open! Import
+open Expect_test_helpers_core
 open Bonsai_web_rpgdice_example
 
 let%expect_test "of_string" =

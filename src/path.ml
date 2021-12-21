@@ -34,7 +34,7 @@ module Elem = struct
     | Subst_from
     | Subst_into
     | Assoc of Keyed.t
-    | Enum of Keyed.t
+    | Switch of int
   [@@deriving sexp_of, compare]
 
   let to_string =
@@ -56,10 +56,16 @@ module Elem = struct
         ~add_string:(fun buf string -> String.iter string ~f:(char_to_alpha buf));
       Buffer.contents buf
     in
+    let int_to_string i =
+      let buf = Buffer.create 4 in
+      String.iter (Int.to_string i) ~f:(char_to_alpha buf);
+      Buffer.contents buf
+    in
     function
     | Subst_from -> "x"
     | Subst_into -> "y"
-    | Assoc k | Enum k -> keyed_to_string k
+    | Assoc k -> keyed_to_string k
+    | Switch i -> int_to_string i
   ;;
 end
 

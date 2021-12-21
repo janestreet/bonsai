@@ -57,54 +57,152 @@ module Series_options =
       ?axis:Which_y_axis.t ->
         ?color:Color.t ->
           ?drawPoints:bool ->
-            ?showInRangeSelector:bool ->
-              ?strokePattern:Line_pattern.t ->
-                ?strokeWidth:float -> unit -> t)
+            ?drawHighlightPointCallback:(graph:Ojs.t ->
+                                           seriesName:string option ->
+                                             context:Canvas_rendering_context_2D.t
+                                               ->
+                                               cx:float ->
+                                                 cy:float ->
+                                                   color:Ojs.t ->
+                                                     pointSize:int ->
+                                                       idx:int -> unit)
+              ->
+              ?drawPointCallback:(graph:Ojs.t ->
+                                    seriesName:string option ->
+                                      context:Canvas_rendering_context_2D.t
+                                        ->
+                                        cx:float ->
+                                          cy:float ->
+                                            color:Ojs.t ->
+                                              pointSize:int ->
+                                                idx:int -> unit)
+                ->
+                ?showInRangeSelector:bool ->
+                  ?strokePattern:Line_pattern.t ->
+                    ?strokeWidth:float -> unit -> t)
       =
       fun ?axis:(x13 : Which_y_axis.t option) ->
         fun ?color:(x14 : Color.t option) ->
           fun ?drawPoints:(x15 : bool option) ->
-            fun ?showInRangeSelector:(x16 : bool option) ->
-              fun ?strokePattern:(x17 : Line_pattern.t option) ->
-                fun ?strokeWidth:(x18 : float option) ->
-                  fun () ->
-                    let x19 = Ojs.empty_obj () in
-                    (match x13 with
-                     | Some x25 ->
-                         Ojs.set_prop_ascii x19 "axis"
-                           (Which_y_axis.t_to_js x25)
-                     | None -> ());
-                    (match x14 with
-                     | Some x24 ->
-                         Ojs.set_prop_ascii x19 "color" (Color.t_to_js x24)
-                     | None -> ());
-                    (match x15 with
-                     | Some x23 ->
-                         Ojs.set_prop_ascii x19 "drawPoints"
-                           (Ojs.bool_to_js x23)
-                     | None -> ());
-                    (match x16 with
-                     | Some x22 ->
-                         Ojs.set_prop_ascii x19 "showInRangeSelector"
-                           (Ojs.bool_to_js x22)
-                     | None -> ());
-                    (match x17 with
-                     | Some x21 ->
-                         Ojs.set_prop_ascii x19 "strokePattern"
-                           (Line_pattern.t_to_js x21)
-                     | None -> ());
-                    (match x18 with
-                     | Some x20 ->
-                         Ojs.set_prop_ascii x19 "strokeWidth"
-                           (Ojs.float_to_js x20)
-                     | None -> ());
-                    t_of_js x19
+            fun
+              ?drawHighlightPointCallback:(x16 :
+                                            (graph:Ojs.t ->
+                                               seriesName:string option ->
+                                                 context:Canvas_rendering_context_2D.t
+                                                   ->
+                                                   cx:float ->
+                                                     cy:float ->
+                                                       color:Ojs.t ->
+                                                         pointSize:int ->
+                                                           idx:int -> unit)
+                                              option)
+              ->
+              fun
+                ?drawPointCallback:(x17 :
+                                     (graph:Ojs.t ->
+                                        seriesName:string option ->
+                                          context:Canvas_rendering_context_2D.t
+                                            ->
+                                            cx:float ->
+                                              cy:float ->
+                                                color:Ojs.t ->
+                                                  pointSize:int ->
+                                                    idx:int -> unit)
+                                       option)
+                ->
+                fun ?showInRangeSelector:(x18 : bool option) ->
+                  fun ?strokePattern:(x19 : Line_pattern.t option) ->
+                    fun ?strokeWidth:(x20 : float option) ->
+                      fun () ->
+                        let x21 = Ojs.empty_obj () in
+                        (match x13 with
+                         | Some x47 ->
+                             Ojs.set_prop_ascii x21 "axis"
+                               (Which_y_axis.t_to_js x47)
+                         | None -> ());
+                        (match x14 with
+                         | Some x46 ->
+                             Ojs.set_prop_ascii x21 "color"
+                               (Color.t_to_js x46)
+                         | None -> ());
+                        (match x15 with
+                         | Some x45 ->
+                             Ojs.set_prop_ascii x21 "drawPoints"
+                               (Ojs.bool_to_js x45)
+                         | None -> ());
+                        (match x16 with
+                         | Some x35 ->
+                             Ojs.set_prop_ascii x21
+                               "drawHighlightPointCallback"
+                               (Ojs.fun_to_js 8
+                                  (fun (x36 : Ojs.t) ->
+                                     fun (x37 : Ojs.t) ->
+                                       fun (x39 : Ojs.t) ->
+                                         fun (x40 : Ojs.t) ->
+                                           fun (x41 : Ojs.t) ->
+                                             fun (x42 : Ojs.t) ->
+                                               fun (x43 : Ojs.t) ->
+                                                 fun (x44 : Ojs.t) ->
+                                                   x35 ~graph:x36
+                                                     ~seriesName:(Ojs.option_of_js
+                                                                    Ojs.string_of_js
+                                                                    x37)
+                                                     ~context:(Canvas_rendering_context_2D.t_of_js
+                                                                 x39)
+                                                     ~cx:(Ojs.float_of_js x40)
+                                                     ~cy:(Ojs.float_of_js x41)
+                                                     ~color:x42
+                                                     ~pointSize:(Ojs.int_of_js
+                                                                   x43)
+                                                     ~idx:(Ojs.int_of_js x44)))
+                         | None -> ());
+                        (match x17 with
+                         | Some x25 ->
+                             Ojs.set_prop_ascii x21 "drawPointCallback"
+                               (Ojs.fun_to_js 8
+                                  (fun (x26 : Ojs.t) ->
+                                     fun (x27 : Ojs.t) ->
+                                       fun (x29 : Ojs.t) ->
+                                         fun (x30 : Ojs.t) ->
+                                           fun (x31 : Ojs.t) ->
+                                             fun (x32 : Ojs.t) ->
+                                               fun (x33 : Ojs.t) ->
+                                                 fun (x34 : Ojs.t) ->
+                                                   x25 ~graph:x26
+                                                     ~seriesName:(Ojs.option_of_js
+                                                                    Ojs.string_of_js
+                                                                    x27)
+                                                     ~context:(Canvas_rendering_context_2D.t_of_js
+                                                                 x29)
+                                                     ~cx:(Ojs.float_of_js x30)
+                                                     ~cy:(Ojs.float_of_js x31)
+                                                     ~color:x32
+                                                     ~pointSize:(Ojs.int_of_js
+                                                                   x33)
+                                                     ~idx:(Ojs.int_of_js x34)))
+                         | None -> ());
+                        (match x18 with
+                         | Some x24 ->
+                             Ojs.set_prop_ascii x21 "showInRangeSelector"
+                               (Ojs.bool_to_js x24)
+                         | None -> ());
+                        (match x19 with
+                         | Some x23 ->
+                             Ojs.set_prop_ascii x21 "strokePattern"
+                               (Line_pattern.t_to_js x23)
+                         | None -> ());
+                        (match x20 with
+                         | Some x22 ->
+                             Ojs.set_prop_ascii x21 "strokeWidth"
+                               (Ojs.float_to_js x22)
+                         | None -> ());
+                        t_of_js x21
   end
 module Series =
   struct
     type t = Ojs.t
-    let rec t_of_js : Ojs.t -> t = fun (x27 : Ojs.t) -> x27
-    and t_to_js : t -> Ojs.t = fun (x26 : Ojs.t) -> x26
+    let rec t_of_js : Ojs.t -> t = fun (x49 : Ojs.t) -> x49
+    and t_to_js : t -> Ojs.t = fun (x48 : Ojs.t) -> x48
     let create data =
       ((data |> (List.Assoc.map ~f:Series_options.t_to_js)) |> Array.of_list)
         |> Ojs.obj
@@ -112,14 +210,14 @@ module Series =
 module Opts =
   struct
     type t = Ojs.t
-    let rec t_of_js : Ojs.t -> t = fun (x29 : Ojs.t) -> x29
-    and t_to_js : t -> Ojs.t = fun (x28 : Ojs.t) -> x28
+    let rec t_of_js : Ojs.t -> t = fun (x51 : Ojs.t) -> x51
+    and t_to_js : t -> Ojs.t = fun (x50 : Ojs.t) -> x50
   end
 module Axis_options =
   struct
     type t = Ojs.t
-    let rec t_of_js : Ojs.t -> t = fun (x31 : Ojs.t) -> x31
-    and t_to_js : t -> Ojs.t = fun (x30 : Ojs.t) -> x30
+    let rec t_of_js : Ojs.t -> t = fun (x53 : Ojs.t) -> x53
+    and t_to_js : t -> Ojs.t = fun (x52 : Ojs.t) -> x52
     let (create :
       ?axisLabelFormatter:(Number_or_js_date.t ->
                              Granularity.t -> Opts.t -> string)
@@ -142,218 +240,219 @@ module Axis_options =
                                       ?pixelsPerLabel:int -> unit -> t)
       =
       fun
-        ?axisLabelFormatter:(x32 :
+        ?axisLabelFormatter:(x54 :
                               (Number_or_js_date.t ->
                                  Granularity.t -> Opts.t -> string)
                                 option)
         ->
-        fun ?valueFormatter:(x33 : (float -> Opts.t -> string) option) ->
-          fun ?axisLabelWidth:(x34 : int option) ->
-            fun ?axisLineColor:(x35 : Color.t option) ->
-              fun ?axisLineWidth:(x36 : float option) ->
-                fun ?axisTickSize:(x37 : float option) ->
-                  fun ?drawAxis:(x38 : bool option) ->
-                    fun ?includeZero:(x39 : bool option) ->
-                      fun ?independentTicks:(x40 : bool option) ->
-                        fun ?logscale:(x41 : bool option) ->
-                          fun ?pixelsPerLabel:(x42 : int option) ->
-                            fun ?valueRange:(x43 : Range.Spec.t option) ->
-                              fun ?drawGrid:(x44 : bool option) ->
-                                fun ?gridLineColor:(x45 : Color.t option) ->
+        fun ?valueFormatter:(x55 : (float -> Opts.t -> string) option) ->
+          fun ?axisLabelWidth:(x56 : int option) ->
+            fun ?axisLineColor:(x57 : Color.t option) ->
+              fun ?axisLineWidth:(x58 : float option) ->
+                fun ?axisTickSize:(x59 : float option) ->
+                  fun ?drawAxis:(x60 : bool option) ->
+                    fun ?includeZero:(x61 : bool option) ->
+                      fun ?independentTicks:(x62 : bool option) ->
+                        fun ?logscale:(x63 : bool option) ->
+                          fun ?pixelsPerLabel:(x64 : int option) ->
+                            fun ?valueRange:(x65 : Range.Spec.t option) ->
+                              fun ?drawGrid:(x66 : bool option) ->
+                                fun ?gridLineColor:(x67 : Color.t option) ->
                                   fun
-                                    ?gridLinePattern:(x46 :
+                                    ?gridLinePattern:(x68 :
                                                        Line_pattern.t option)
                                     ->
-                                    fun ?gridLineWidth:(x47 : float option)
+                                    fun ?gridLineWidth:(x69 : float option)
                                       ->
-                                      fun ?pixelsPerLabel:(x48 : int option)
+                                      fun ?pixelsPerLabel:(x70 : int option)
                                         ->
                                         fun () ->
-                                          let x49 = Ojs.empty_obj () in
-                                          (match x32 with
-                                           | Some x68 ->
-                                               Ojs.set_prop_ascii x49
+                                          let x71 = Ojs.empty_obj () in
+                                          (match x54 with
+                                           | Some x90 ->
+                                               Ojs.set_prop_ascii x71
                                                  "axisLabelFormatter"
                                                  (Ojs.fun_to_js 3
-                                                    (fun (x69 : Ojs.t) ->
-                                                       fun (x70 : Ojs.t) ->
-                                                         fun (x71 : Ojs.t) ->
+                                                    (fun (x91 : Ojs.t) ->
+                                                       fun (x92 : Ojs.t) ->
+                                                         fun (x93 : Ojs.t) ->
                                                            Ojs.string_to_js
-                                                             (x68
+                                                             (x90
                                                                 (Number_or_js_date.t_of_js
-                                                                   x69)
+                                                                   x91)
                                                                 (Granularity.t_of_js
-                                                                   x70)
+                                                                   x92)
                                                                 (Opts.t_of_js
-                                                                   x71))))
+                                                                   x93))))
                                            | None -> ());
-                                          (match x33 with
-                                           | Some x65 ->
-                                               Ojs.set_prop_ascii x49
+                                          (match x55 with
+                                           | Some x87 ->
+                                               Ojs.set_prop_ascii x71
                                                  "valueFormatter"
                                                  (Ojs.fun_to_js 2
-                                                    (fun (x66 : Ojs.t) ->
-                                                       fun (x67 : Ojs.t) ->
+                                                    (fun (x88 : Ojs.t) ->
+                                                       fun (x89 : Ojs.t) ->
                                                          Ojs.string_to_js
-                                                           (x65
+                                                           (x87
                                                               (Ojs.float_of_js
-                                                                 x66)
+                                                                 x88)
                                                               (Opts.t_of_js
-                                                                 x67))))
+                                                                 x89))))
                                            | None -> ());
-                                          (match x34 with
-                                           | Some x64 ->
-                                               Ojs.set_prop_ascii x49
+                                          (match x56 with
+                                           | Some x86 ->
+                                               Ojs.set_prop_ascii x71
                                                  "axisLabelWidth"
-                                                 (Ojs.int_to_js x64)
+                                                 (Ojs.int_to_js x86)
                                            | None -> ());
-                                          (match x35 with
-                                           | Some x63 ->
-                                               Ojs.set_prop_ascii x49
+                                          (match x57 with
+                                           | Some x85 ->
+                                               Ojs.set_prop_ascii x71
                                                  "axisLineColor"
-                                                 (Color.t_to_js x63)
+                                                 (Color.t_to_js x85)
                                            | None -> ());
-                                          (match x36 with
-                                           | Some x62 ->
-                                               Ojs.set_prop_ascii x49
+                                          (match x58 with
+                                           | Some x84 ->
+                                               Ojs.set_prop_ascii x71
                                                  "axisLineWidth"
-                                                 (Ojs.float_to_js x62)
+                                                 (Ojs.float_to_js x84)
                                            | None -> ());
-                                          (match x37 with
-                                           | Some x61 ->
-                                               Ojs.set_prop_ascii x49
+                                          (match x59 with
+                                           | Some x83 ->
+                                               Ojs.set_prop_ascii x71
                                                  "axisTickSize"
-                                                 (Ojs.float_to_js x61)
+                                                 (Ojs.float_to_js x83)
                                            | None -> ());
-                                          (match x38 with
-                                           | Some x60 ->
-                                               Ojs.set_prop_ascii x49
+                                          (match x60 with
+                                           | Some x82 ->
+                                               Ojs.set_prop_ascii x71
                                                  "drawAxis"
-                                                 (Ojs.bool_to_js x60)
+                                                 (Ojs.bool_to_js x82)
                                            | None -> ());
-                                          (match x39 with
-                                           | Some x59 ->
-                                               Ojs.set_prop_ascii x49
+                                          (match x61 with
+                                           | Some x81 ->
+                                               Ojs.set_prop_ascii x71
                                                  "includeZero"
-                                                 (Ojs.bool_to_js x59)
+                                                 (Ojs.bool_to_js x81)
                                            | None -> ());
-                                          (match x40 with
-                                           | Some x58 ->
-                                               Ojs.set_prop_ascii x49
+                                          (match x62 with
+                                           | Some x80 ->
+                                               Ojs.set_prop_ascii x71
                                                  "independentTicks"
-                                                 (Ojs.bool_to_js x58)
+                                                 (Ojs.bool_to_js x80)
                                            | None -> ());
-                                          (match x41 with
-                                           | Some x57 ->
-                                               Ojs.set_prop_ascii x49
+                                          (match x63 with
+                                           | Some x79 ->
+                                               Ojs.set_prop_ascii x71
                                                  "logscale"
-                                                 (Ojs.bool_to_js x57)
+                                                 (Ojs.bool_to_js x79)
                                            | None -> ());
-                                          (match x42 with
-                                           | Some x56 ->
-                                               Ojs.set_prop_ascii x49
+                                          (match x64 with
+                                           | Some x78 ->
+                                               Ojs.set_prop_ascii x71
                                                  "pixelsPerLabel"
-                                                 (Ojs.int_to_js x56)
+                                                 (Ojs.int_to_js x78)
                                            | None -> ());
-                                          (match x43 with
-                                           | Some x55 ->
-                                               Ojs.set_prop_ascii x49
+                                          (match x65 with
+                                           | Some x77 ->
+                                               Ojs.set_prop_ascii x71
                                                  "valueRange"
-                                                 (Range.Spec.t_to_js x55)
+                                                 (Range.Spec.t_to_js x77)
                                            | None -> ());
-                                          (match x44 with
-                                           | Some x54 ->
-                                               Ojs.set_prop_ascii x49
+                                          (match x66 with
+                                           | Some x76 ->
+                                               Ojs.set_prop_ascii x71
                                                  "drawGrid"
-                                                 (Ojs.bool_to_js x54)
+                                                 (Ojs.bool_to_js x76)
                                            | None -> ());
-                                          (match x45 with
-                                           | Some x53 ->
-                                               Ojs.set_prop_ascii x49
+                                          (match x67 with
+                                           | Some x75 ->
+                                               Ojs.set_prop_ascii x71
                                                  "gridLineColor"
-                                                 (Color.t_to_js x53)
+                                                 (Color.t_to_js x75)
                                            | None -> ());
-                                          (match x46 with
-                                           | Some x52 ->
-                                               Ojs.set_prop_ascii x49
+                                          (match x68 with
+                                           | Some x74 ->
+                                               Ojs.set_prop_ascii x71
                                                  "gridLinePattern"
-                                                 (Line_pattern.t_to_js x52)
+                                                 (Line_pattern.t_to_js x74)
                                            | None -> ());
-                                          (match x47 with
-                                           | Some x51 ->
-                                               Ojs.set_prop_ascii x49
+                                          (match x69 with
+                                           | Some x73 ->
+                                               Ojs.set_prop_ascii x71
                                                  "gridLineWidth"
-                                                 (Ojs.float_to_js x51)
+                                                 (Ojs.float_to_js x73)
                                            | None -> ());
-                                          (match x48 with
-                                           | Some x50 ->
-                                               Ojs.set_prop_ascii x49
+                                          (match x70 with
+                                           | Some x72 ->
+                                               Ojs.set_prop_ascii x71
                                                  "pixelsPerLabel"
-                                                 (Ojs.int_to_js x50)
+                                                 (Ojs.int_to_js x72)
                                            | None -> ());
-                                          t_of_js x49
+                                          t_of_js x71
   end
 module Axes =
   struct
     type t = Ojs.t
-    let rec t_of_js : Ojs.t -> t = fun (x73 : Ojs.t) -> x73
-    and t_to_js : t -> Ojs.t = fun (x72 : Ojs.t) -> x72
+    let rec t_of_js : Ojs.t -> t = fun (x95 : Ojs.t) -> x95
+    and t_to_js : t -> Ojs.t = fun (x94 : Ojs.t) -> x94
     let (create :
       ?x:Axis_options.t ->
         ?y:Axis_options.t -> ?y2:Axis_options.t -> unit -> t)
       =
-      fun ?x:(x74 : Axis_options.t option) ->
-        fun ?y:(x75 : Axis_options.t option) ->
-          fun ?y2:(x76 : Axis_options.t option) ->
+      fun ?x:(x96 : Axis_options.t option) ->
+        fun ?y:(x97 : Axis_options.t option) ->
+          fun ?y2:(x98 : Axis_options.t option) ->
             fun () ->
-              let x77 = Ojs.empty_obj () in
-              (match x74 with
-               | Some x80 ->
-                   Ojs.set_prop_ascii x77 "x" (Axis_options.t_to_js x80)
+              let x99 = Ojs.empty_obj () in
+              (match x96 with
+               | Some x102 ->
+                   Ojs.set_prop_ascii x99 "x" (Axis_options.t_to_js x102)
                | None -> ());
-              (match x75 with
-               | Some x79 ->
-                   Ojs.set_prop_ascii x77 "y" (Axis_options.t_to_js x79)
+              (match x97 with
+               | Some x101 ->
+                   Ojs.set_prop_ascii x99 "y" (Axis_options.t_to_js x101)
                | None -> ());
-              (match x76 with
-               | Some x78 ->
-                   Ojs.set_prop_ascii x77 "y2" (Axis_options.t_to_js x78)
+              (match x98 with
+               | Some x100 ->
+                   Ojs.set_prop_ascii x99 "y2" (Axis_options.t_to_js x100)
                | None -> ());
-              t_of_js x77
+              t_of_js x99
   end
 module Highlight_series_options =
   struct
     type t = Ojs.t
-    let rec t_of_js : Ojs.t -> t = fun (x82 : Ojs.t) -> x82
-    and t_to_js : t -> Ojs.t = fun (x81 : Ojs.t) -> x81
+    let rec t_of_js : Ojs.t -> t = fun (x104 : Ojs.t) -> x104
+    and t_to_js : t -> Ojs.t = fun (x103 : Ojs.t) -> x103
     let (create :
       ?highlightCircleSize:int ->
         ?strokeWidth:float -> ?strokeBorderWidth:float -> unit -> t)
       =
-      fun ?highlightCircleSize:(x83 : int option) ->
-        fun ?strokeWidth:(x84 : float option) ->
-          fun ?strokeBorderWidth:(x85 : float option) ->
+      fun ?highlightCircleSize:(x105 : int option) ->
+        fun ?strokeWidth:(x106 : float option) ->
+          fun ?strokeBorderWidth:(x107 : float option) ->
             fun () ->
-              let x86 = Ojs.empty_obj () in
-              (match x83 with
-               | Some x89 ->
-                   Ojs.set_prop_ascii x86 "highlightCircleSize"
-                     (Ojs.int_to_js x89)
+              let x108 = Ojs.empty_obj () in
+              (match x105 with
+               | Some x111 ->
+                   Ojs.set_prop_ascii x108 "highlightCircleSize"
+                     (Ojs.int_to_js x111)
                | None -> ());
-              (match x84 with
-               | Some x88 ->
-                   Ojs.set_prop_ascii x86 "strokeWidth" (Ojs.float_to_js x88)
+              (match x106 with
+               | Some x110 ->
+                   Ojs.set_prop_ascii x108 "strokeWidth"
+                     (Ojs.float_to_js x110)
                | None -> ());
-              (match x85 with
-               | Some x87 ->
-                   Ojs.set_prop_ascii x86 "strokeBorderWidth"
-                     (Ojs.float_to_js x87)
+              (match x107 with
+               | Some x109 ->
+                   Ojs.set_prop_ascii x108 "strokeBorderWidth"
+                     (Ojs.float_to_js x109)
                | None -> ());
-              t_of_js x86
+              t_of_js x108
   end
 type t = Ojs.t
-let rec t_of_js : Ojs.t -> t = fun (x91 : Ojs.t) -> x91
-and t_to_js : t -> Ojs.t = fun (x90 : Ojs.t) -> x90
+let rec t_of_js : Ojs.t -> t = fun (x113 : Ojs.t) -> x113
+and t_to_js : t -> Ojs.t = fun (x112 : Ojs.t) -> x112
 let (create :
   ?axisLabelFontSize:int ->
     ?axisLabelWidth:int ->
@@ -557,301 +656,301 @@ let (create :
                                                                     ->
                                                                     unit -> t)
   =
-  fun ?axisLabelFontSize:(x92 : int option) ->
-    fun ?axisLabelWidth:(x93 : int option) ->
-      fun ?axisLineColor:(x94 : Color.t option) ->
-        fun ?axisLineWidth:(x95 : float option) ->
-          fun ?axisTickSize:(x96 : float option) ->
-            fun ?dateWindow:(x97 : Range.t option) ->
-              fun ?drawAxesAtZero:(x98 : bool option) ->
-                fun ?drawAxis:(x99 : bool option) ->
-                  fun ?includeZero:(x100 : bool option) ->
-                    fun ?logscale:(x101 : bool option) ->
-                      fun ?panEdgeFraction:(x102 : float option) ->
-                        fun ?valueRange:(x103 : Range.Spec.t option) ->
-                          fun ?xAxisHeight:(x104 : int option) ->
-                            fun ?xRangePad:(x105 : float option) ->
-                              fun ?yRangePad:(x106 : float option) ->
-                                fun ?customBars:(x107 : bool option) ->
-                                  fun ?errorBars:(x108 : bool option) ->
-                                    fun ?fractions:(x109 : bool option) ->
-                                      fun ?title:(x110 : string option) ->
-                                        fun ?titleHeight:(x111 : int option)
+  fun ?axisLabelFontSize:(x114 : int option) ->
+    fun ?axisLabelWidth:(x115 : int option) ->
+      fun ?axisLineColor:(x116 : Color.t option) ->
+        fun ?axisLineWidth:(x117 : float option) ->
+          fun ?axisTickSize:(x118 : float option) ->
+            fun ?dateWindow:(x119 : Range.t option) ->
+              fun ?drawAxesAtZero:(x120 : bool option) ->
+                fun ?drawAxis:(x121 : bool option) ->
+                  fun ?includeZero:(x122 : bool option) ->
+                    fun ?logscale:(x123 : bool option) ->
+                      fun ?panEdgeFraction:(x124 : float option) ->
+                        fun ?valueRange:(x125 : Range.Spec.t option) ->
+                          fun ?xAxisHeight:(x126 : int option) ->
+                            fun ?xRangePad:(x127 : float option) ->
+                              fun ?yRangePad:(x128 : float option) ->
+                                fun ?customBars:(x129 : bool option) ->
+                                  fun ?errorBars:(x130 : bool option) ->
+                                    fun ?fractions:(x131 : bool option) ->
+                                      fun ?title:(x132 : string option) ->
+                                        fun ?titleHeight:(x133 : int option)
                                           ->
                                           fun
-                                            ?xLabelHeight:(x112 : int option)
+                                            ?xLabelHeight:(x134 : int option)
                                             ->
                                             fun
-                                              ?xlabel:(x113 : string option)
+                                              ?xlabel:(x135 : string option)
                                               ->
                                               fun
-                                                ?y2label:(x114 :
+                                                ?y2label:(x136 :
                                                            string option)
                                                 ->
                                                 fun
-                                                  ?yLabelWidth:(x115 :
+                                                  ?yLabelWidth:(x137 :
                                                                  int option)
                                                   ->
                                                   fun
-                                                    ?ylabel:(x116 :
+                                                    ?ylabel:(x138 :
                                                               string option)
                                                     ->
                                                     fun
-                                                      ?axes:(x117 :
+                                                      ?axes:(x139 :
                                                               Axes.t option)
                                                       ->
                                                       fun
                                                         ?connectSeparatedPoints:
-                                                        (x118 : bool option)
+                                                        (x140 : bool option)
                                                         ->
                                                         fun
                                                           ?drawGapEdgePoints:
-                                                          (x119 :
+                                                          (x141 :
                                                             bool option)
                                                           ->
                                                           fun
                                                             ?drawPoints:
-                                                            (x120 :
+                                                            (x142 :
                                                               bool option)
                                                             ->
                                                             fun
                                                               ?fillGraph:
-                                                              (x121 :
+                                                              (x143 :
                                                                 bool option)
                                                               ->
                                                               fun
                                                                 ?pointSize:
-                                                                (x122 :
+                                                                (x144 :
                                                                   int option)
                                                                 ->
                                                                 fun
                                                                   ?stackedGraph:
-                                                                  (x123 :
+                                                                  (x145 :
                                                                     bool
                                                                     option)
                                                                   ->
                                                                   fun
                                                                     ?stackedGraphNaNFill:
-                                                                    (x124 :
+                                                                    (x146 :
                                                                     string
                                                                     option)
                                                                     ->
                                                                     fun
                                                                     ?stepPlot:
-                                                                    (x125 :
+                                                                    (x147 :
                                                                     bool
                                                                     option)
                                                                     ->
                                                                     fun
                                                                     ?strokeBorderColor:
-                                                                    (x126 :
+                                                                    (x148 :
                                                                     Color.t
                                                                     option)
                                                                     ->
                                                                     fun
                                                                     ?strokeBorderWidth:
-                                                                    (x127 :
+                                                                    (x149 :
                                                                     float
                                                                     option)
                                                                     ->
                                                                     fun
                                                                     ?strokePattern:
-                                                                    (x128 :
+                                                                    (x150 :
                                                                     Line_pattern.t
                                                                     option)
                                                                     ->
                                                                     fun
                                                                     ?strokeWidth:
-                                                                    (x129 :
+                                                                    (x151 :
                                                                     float
                                                                     option)
                                                                     ->
                                                                     fun
                                                                     ?visibility:
-                                                                    (x130 :
+                                                                    (x152 :
                                                                     bool list
                                                                     option)
                                                                     ->
                                                                     fun
                                                                     ?colorSaturation:
-                                                                    (x131 :
+                                                                    (x153 :
                                                                     float
                                                                     option)
                                                                     ->
                                                                     fun
                                                                     ?colorValue:
-                                                                    (x132 :
+                                                                    (x154 :
                                                                     float
                                                                     option)
                                                                     ->
                                                                     fun
                                                                     ?colors:
-                                                                    (x133 :
+                                                                    (x155 :
                                                                     Color.t
                                                                     array
                                                                     option)
                                                                     ->
                                                                     fun
                                                                     ?fillAlpha:
-                                                                    (x134 :
+                                                                    (x156 :
                                                                     float
                                                                     option)
                                                                     ->
                                                                     fun
                                                                     ?rollPeriod:
-                                                                    (x135 :
+                                                                    (x157 :
                                                                     int
                                                                     option)
                                                                     ->
                                                                     fun
                                                                     ?sigma:
-                                                                    (x136 :
+                                                                    (x158 :
                                                                     float
                                                                     option)
                                                                     ->
                                                                     fun
                                                                     ?wilsonInterval:
-                                                                    (x137 :
+                                                                    (x159 :
                                                                     bool
                                                                     option)
                                                                     ->
                                                                     fun
                                                                     ?drawGrid:
-                                                                    (x138 :
+                                                                    (x160 :
                                                                     bool
                                                                     option)
                                                                     ->
                                                                     fun
                                                                     ?gridLineColor:
-                                                                    (x139 :
+                                                                    (x161 :
                                                                     Color.t
                                                                     option)
                                                                     ->
                                                                     fun
                                                                     ?gridLinePattern:
-                                                                    (x140 :
+                                                                    (x162 :
                                                                     Line_pattern.t
                                                                     option)
                                                                     ->
                                                                     fun
                                                                     ?gridLineWidth:
-                                                                    (x141 :
+                                                                    (x163 :
                                                                     float
                                                                     option)
                                                                     ->
                                                                     fun
                                                                     ?animatedZooms:
-                                                                    (x142 :
+                                                                    (x164 :
                                                                     bool
                                                                     option)
                                                                     ->
                                                                     fun
                                                                     ?hideOverlayOnMouseOut:
-                                                                    (x143 :
+                                                                    (x165 :
                                                                     bool
                                                                     option)
                                                                     ->
                                                                     fun
                                                                     ?highlightCircleSize:
-                                                                    (x144 :
+                                                                    (x166 :
                                                                     int
                                                                     option)
                                                                     ->
                                                                     fun
                                                                     ?highlightSeriesBackgroundAlpha:
-                                                                    (x145 :
+                                                                    (x167 :
                                                                     float
                                                                     option)
                                                                     ->
                                                                     fun
                                                                     ?highlightSeriesBackgroundColor:
-                                                                    (x146 :
+                                                                    (x168 :
                                                                     Color.t
                                                                     option)
                                                                     ->
                                                                     fun
                                                                     ?highlightSeriesOpts:
-                                                                    (x147 :
+                                                                    (x169 :
                                                                     Highlight_series_options.t
                                                                     option)
                                                                     ->
                                                                     fun
                                                                     ?showLabelsOnHighlight:
-                                                                    (x148 :
+                                                                    (x170 :
                                                                     bool
                                                                     option)
                                                                     ->
                                                                     fun
                                                                     ?showRoller:
-                                                                    (x149 :
+                                                                    (x171 :
                                                                     bool
                                                                     option)
                                                                     ->
                                                                     fun
                                                                     ?hideOverlayOnMouseOut:
-                                                                    (x150 :
+                                                                    (x172 :
                                                                     bool
                                                                     option)
                                                                     ->
                                                                     fun
                                                                     ?labels:
-                                                                    (x151 :
+                                                                    (x173 :
                                                                     string
                                                                     list
                                                                     option)
                                                                     ->
                                                                     fun
                                                                     ?labelsDiv_string:
-                                                                    (x152 :
+                                                                    (x174 :
                                                                     string
                                                                     option)
                                                                     ->
                                                                     fun
                                                                     ?labelsDiv_el:
-                                                                    (x153 :
+                                                                    (x175 :
                                                                     Native_node.t
                                                                     option)
                                                                     ->
                                                                     fun
                                                                     ?labelsSeparateLines:
-                                                                    (x154 :
+                                                                    (x176 :
                                                                     bool
                                                                     option)
                                                                     ->
                                                                     fun
                                                                     ?labelsShowZeroValues:
-                                                                    (x155 :
+                                                                    (x177 :
                                                                     bool
                                                                     option)
                                                                     ->
                                                                     fun
                                                                     ?legend:
-                                                                    (x156 :
+                                                                    (x178 :
                                                                     Legend.t
                                                                     option)
                                                                     ->
                                                                     fun
                                                                     ?legendFormatter:
-                                                                    (x157 :
+                                                                    (x179 :
                                                                     (Legend_data.t
                                                                     -> string)
                                                                     option)
                                                                     ->
                                                                     fun
                                                                     ?showLabelsOnHighlight:
-                                                                    (x158 :
+                                                                    (x180 :
                                                                     bool
                                                                     option)
                                                                     ->
                                                                     fun
                                                                     ?height:
-                                                                    (x159 :
+                                                                    (x181 :
                                                                     int
                                                                     option)
                                                                     ->
                                                                     fun
                                                                     ?clickCallback:
-                                                                    (x160 :
+                                                                    (x182 :
                                                                     (evt:Ojs.t
                                                                     ->
                                                                     x:float
@@ -863,7 +962,7 @@ let (create :
                                                                     ->
                                                                     fun
                                                                     ?highlightCallback:
-                                                                    (x161 :
+                                                                    (x183 :
                                                                     (evt:Ojs.t
                                                                     ->
                                                                     x:float
@@ -879,14 +978,14 @@ let (create :
                                                                     ->
                                                                     fun
                                                                     ?unhighlightCallback:
-                                                                    (x162 :
+                                                                    (x184 :
                                                                     (evt:Ojs.t
                                                                     -> unit)
                                                                     option)
                                                                     ->
                                                                     fun
                                                                     ?pointClickCallback:
-                                                                    (x163 :
+                                                                    (x185 :
                                                                     (evt:Ojs.t
                                                                     ->
                                                                     point:Point.t
@@ -896,7 +995,7 @@ let (create :
                                                                     ->
                                                                     fun
                                                                     ?underlayCallback:
-                                                                    (x164 :
+                                                                    (x186 :
                                                                     (context:Canvas_rendering_context_2D.t
                                                                     ->
                                                                     area:Area.t
@@ -908,7 +1007,7 @@ let (create :
                                                                     ->
                                                                     fun
                                                                     ?zoomCallback:
-                                                                    (x165 :
+                                                                    (x187 :
                                                                     (xmin:float
                                                                     ->
                                                                     xmax:float
@@ -920,454 +1019,146 @@ let (create :
                                                                     ->
                                                                     fun
                                                                     ?pixelRatio:
-                                                                    (x166 :
+                                                                    (x188 :
                                                                     float
                                                                     option)
                                                                     ->
                                                                     fun
                                                                     ?rightGap:
-                                                                    (x167 :
+                                                                    (x189 :
                                                                     int
                                                                     option)
                                                                     ->
                                                                     fun
                                                                     ?width:
-                                                                    (x168 :
+                                                                    (x190 :
                                                                     int
                                                                     option)
                                                                     ->
                                                                     fun
                                                                     ?rangeSelectorAlpha:
-                                                                    (x169 :
+                                                                    (x191 :
                                                                     float
                                                                     option)
                                                                     ->
                                                                     fun
                                                                     ?rangeSelectorBackgroundLineWidth:
-                                                                    (x170 :
+                                                                    (x192 :
                                                                     float
                                                                     option)
                                                                     ->
                                                                     fun
                                                                     ?rangeSelectorBackgroundStrokeColor:
-                                                                    (x171 :
+                                                                    (x193 :
                                                                     Color.t
                                                                     option)
                                                                     ->
                                                                     fun
                                                                     ?rangeSelectorForegroundLineWidth:
-                                                                    (x172 :
+                                                                    (x194 :
                                                                     float
                                                                     option)
                                                                     ->
                                                                     fun
                                                                     ?rangeSelectorForegroundStrokeColor:
-                                                                    (x173 :
+                                                                    (x195 :
                                                                     Color.t
                                                                     option)
                                                                     ->
                                                                     fun
                                                                     ?rangeSelectorHeight:
-                                                                    (x174 :
+                                                                    (x196 :
                                                                     int
                                                                     option)
                                                                     ->
                                                                     fun
                                                                     ?rangeSelectorPlotFillColor:
-                                                                    (x175 :
+                                                                    (x197 :
                                                                     Color.t
                                                                     option)
                                                                     ->
                                                                     fun
                                                                     ?rangeSelectorPlotFillGradientColor:
-                                                                    (x176 :
+                                                                    (x198 :
                                                                     Color.t
                                                                     option)
                                                                     ->
                                                                     fun
                                                                     ?rangeSelectorPlotLineWidth:
-                                                                    (x177 :
+                                                                    (x199 :
                                                                     float
                                                                     option)
                                                                     ->
                                                                     fun
                                                                     ?rangeSelectorPlotStrokeColor:
-                                                                    (x178 :
+                                                                    (x200 :
                                                                     Color.t
                                                                     option)
                                                                     ->
                                                                     fun
                                                                     ?showRangeSelector:
-                                                                    (x179 :
+                                                                    (x201 :
                                                                     bool
                                                                     option)
                                                                     ->
                                                                     fun
                                                                     ?series:
-                                                                    (x180 :
+                                                                    (x202 :
                                                                     Series.t
                                                                     option)
                                                                     ->
                                                                     fun
                                                                     ?digitsAfterDecimal:
-                                                                    (x181 :
+                                                                    (x203 :
                                                                     int
                                                                     option)
                                                                     ->
                                                                     fun
                                                                     ?labelsKMB:
-                                                                    (x182 :
+                                                                    (x204 :
                                                                     bool
                                                                     option)
                                                                     ->
                                                                     fun
                                                                     ?labelsKMG2:
-                                                                    (x183 :
+                                                                    (x205 :
                                                                     bool
                                                                     option)
                                                                     ->
                                                                     fun
                                                                     ?labelsUTC:
-                                                                    (x184 :
+                                                                    (x206 :
                                                                     bool
                                                                     option)
                                                                     ->
                                                                     fun
                                                                     ?maxNumberWidth:
-                                                                    (x185 :
+                                                                    (x207 :
                                                                     int
                                                                     option)
                                                                     ->
                                                                     fun
                                                                     ?sigFigs:
-                                                                    (x186 :
+                                                                    (x208 :
                                                                     int
                                                                     option)
                                                                     ->
                                                                     fun () ->
-                                                                    let x187
+                                                                    let x209
                                                                     =
                                                                     Ojs.empty_obj
                                                                     () in
                                                                     (
-                                                                    match x92
-                                                                    with
-                                                                    | 
-                                                                    Some x307
-                                                                    ->
-                                                                    Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "axisLabelFontSize"
-                                                                    (Ojs.int_to_js
-                                                                    x307)
-                                                                    | 
-                                                                    None ->
-                                                                    ());
-                                                                    (
-                                                                    match x93
-                                                                    with
-                                                                    | 
-                                                                    Some x306
-                                                                    ->
-                                                                    Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "axisLabelWidth"
-                                                                    (Ojs.int_to_js
-                                                                    x306)
-                                                                    | 
-                                                                    None ->
-                                                                    ());
-                                                                    (
-                                                                    match x94
-                                                                    with
-                                                                    | 
-                                                                    Some x305
-                                                                    ->
-                                                                    Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "axisLineColor"
-                                                                    (Color.t_to_js
-                                                                    x305)
-                                                                    | 
-                                                                    None ->
-                                                                    ());
-                                                                    (
-                                                                    match x95
-                                                                    with
-                                                                    | 
-                                                                    Some x304
-                                                                    ->
-                                                                    Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "axisLineWidth"
-                                                                    (Ojs.float_to_js
-                                                                    x304)
-                                                                    | 
-                                                                    None ->
-                                                                    ());
-                                                                    (
-                                                                    match x96
-                                                                    with
-                                                                    | 
-                                                                    Some x303
-                                                                    ->
-                                                                    Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "axisTickSize"
-                                                                    (Ojs.float_to_js
-                                                                    x303)
-                                                                    | 
-                                                                    None ->
-                                                                    ());
-                                                                    (
-                                                                    match x97
-                                                                    with
-                                                                    | 
-                                                                    Some x302
-                                                                    ->
-                                                                    Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "dateWindow"
-                                                                    (Range.t_to_js
-                                                                    x302)
-                                                                    | 
-                                                                    None ->
-                                                                    ());
-                                                                    (
-                                                                    match x98
-                                                                    with
-                                                                    | 
-                                                                    Some x301
-                                                                    ->
-                                                                    Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "drawAxesAtZero"
-                                                                    (Ojs.bool_to_js
-                                                                    x301)
-                                                                    | 
-                                                                    None ->
-                                                                    ());
-                                                                    (
-                                                                    match x99
-                                                                    with
-                                                                    | 
-                                                                    Some x300
-                                                                    ->
-                                                                    Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "drawAxis"
-                                                                    (Ojs.bool_to_js
-                                                                    x300)
-                                                                    | 
-                                                                    None ->
-                                                                    ());
-                                                                    (
-                                                                    match x100
-                                                                    with
-                                                                    | 
-                                                                    Some x299
-                                                                    ->
-                                                                    Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "includeZero"
-                                                                    (Ojs.bool_to_js
-                                                                    x299)
-                                                                    | 
-                                                                    None ->
-                                                                    ());
-                                                                    (
-                                                                    match x101
-                                                                    with
-                                                                    | 
-                                                                    Some x298
-                                                                    ->
-                                                                    Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "logscale"
-                                                                    (Ojs.bool_to_js
-                                                                    x298)
-                                                                    | 
-                                                                    None ->
-                                                                    ());
-                                                                    (
-                                                                    match x102
-                                                                    with
-                                                                    | 
-                                                                    Some x297
-                                                                    ->
-                                                                    Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "panEdgeFraction"
-                                                                    (Ojs.float_to_js
-                                                                    x297)
-                                                                    | 
-                                                                    None ->
-                                                                    ());
-                                                                    (
-                                                                    match x103
-                                                                    with
-                                                                    | 
-                                                                    Some x296
-                                                                    ->
-                                                                    Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "valueRange"
-                                                                    (Range.Spec.t_to_js
-                                                                    x296)
-                                                                    | 
-                                                                    None ->
-                                                                    ());
-                                                                    (
-                                                                    match x104
-                                                                    with
-                                                                    | 
-                                                                    Some x295
-                                                                    ->
-                                                                    Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "xAxisHeight"
-                                                                    (Ojs.int_to_js
-                                                                    x295)
-                                                                    | 
-                                                                    None ->
-                                                                    ());
-                                                                    (
-                                                                    match x105
-                                                                    with
-                                                                    | 
-                                                                    Some x294
-                                                                    ->
-                                                                    Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "xRangePad"
-                                                                    (Ojs.float_to_js
-                                                                    x294)
-                                                                    | 
-                                                                    None ->
-                                                                    ());
-                                                                    (
-                                                                    match x106
-                                                                    with
-                                                                    | 
-                                                                    Some x293
-                                                                    ->
-                                                                    Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "yRangePad"
-                                                                    (Ojs.float_to_js
-                                                                    x293)
-                                                                    | 
-                                                                    None ->
-                                                                    ());
-                                                                    (
-                                                                    match x107
-                                                                    with
-                                                                    | 
-                                                                    Some x292
-                                                                    ->
-                                                                    Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "customBars"
-                                                                    (Ojs.bool_to_js
-                                                                    x292)
-                                                                    | 
-                                                                    None ->
-                                                                    ());
-                                                                    (
-                                                                    match x108
-                                                                    with
-                                                                    | 
-                                                                    Some x291
-                                                                    ->
-                                                                    Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "errorBars"
-                                                                    (Ojs.bool_to_js
-                                                                    x291)
-                                                                    | 
-                                                                    None ->
-                                                                    ());
-                                                                    (
-                                                                    match x109
-                                                                    with
-                                                                    | 
-                                                                    Some x290
-                                                                    ->
-                                                                    Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "fractions"
-                                                                    (Ojs.bool_to_js
-                                                                    x290)
-                                                                    | 
-                                                                    None ->
-                                                                    ());
-                                                                    (
-                                                                    match x110
-                                                                    with
-                                                                    | 
-                                                                    Some x289
-                                                                    ->
-                                                                    Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "title"
-                                                                    (Ojs.string_to_js
-                                                                    x289)
-                                                                    | 
-                                                                    None ->
-                                                                    ());
-                                                                    (
-                                                                    match x111
-                                                                    with
-                                                                    | 
-                                                                    Some x288
-                                                                    ->
-                                                                    Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "titleHeight"
-                                                                    (Ojs.int_to_js
-                                                                    x288)
-                                                                    | 
-                                                                    None ->
-                                                                    ());
-                                                                    (
-                                                                    match x112
-                                                                    with
-                                                                    | 
-                                                                    Some x287
-                                                                    ->
-                                                                    Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "xLabelHeight"
-                                                                    (Ojs.int_to_js
-                                                                    x287)
-                                                                    | 
-                                                                    None ->
-                                                                    ());
-                                                                    (
-                                                                    match x113
-                                                                    with
-                                                                    | 
-                                                                    Some x286
-                                                                    ->
-                                                                    Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "xlabel"
-                                                                    (Ojs.string_to_js
-                                                                    x286)
-                                                                    | 
-                                                                    None ->
-                                                                    ());
-                                                                    (
                                                                     match x114
                                                                     with
                                                                     | 
-                                                                    Some x285
+                                                                    Some x329
                                                                     ->
                                                                     Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "y2label"
-                                                                    (Ojs.string_to_js
-                                                                    x285)
+                                                                    x209
+                                                                    "axisLabelFontSize"
+                                                                    (Ojs.int_to_js
+                                                                    x329)
                                                                     | 
                                                                     None ->
                                                                     ());
@@ -1375,13 +1166,13 @@ let (create :
                                                                     match x115
                                                                     with
                                                                     | 
-                                                                    Some x284
+                                                                    Some x328
                                                                     ->
                                                                     Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "yLabelWidth"
+                                                                    x209
+                                                                    "axisLabelWidth"
                                                                     (Ojs.int_to_js
-                                                                    x284)
+                                                                    x328)
                                                                     | 
                                                                     None ->
                                                                     ());
@@ -1389,13 +1180,13 @@ let (create :
                                                                     match x116
                                                                     with
                                                                     | 
-                                                                    Some x283
+                                                                    Some x327
                                                                     ->
                                                                     Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "ylabel"
-                                                                    (Ojs.string_to_js
-                                                                    x283)
+                                                                    x209
+                                                                    "axisLineColor"
+                                                                    (Color.t_to_js
+                                                                    x327)
                                                                     | 
                                                                     None ->
                                                                     ());
@@ -1403,13 +1194,13 @@ let (create :
                                                                     match x117
                                                                     with
                                                                     | 
-                                                                    Some x282
+                                                                    Some x326
                                                                     ->
                                                                     Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "axes"
-                                                                    (Axes.t_to_js
-                                                                    x282)
+                                                                    x209
+                                                                    "axisLineWidth"
+                                                                    (Ojs.float_to_js
+                                                                    x326)
                                                                     | 
                                                                     None ->
                                                                     ());
@@ -1417,13 +1208,13 @@ let (create :
                                                                     match x118
                                                                     with
                                                                     | 
-                                                                    Some x281
+                                                                    Some x325
                                                                     ->
                                                                     Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "connectSeparatedPoints"
-                                                                    (Ojs.bool_to_js
-                                                                    x281)
+                                                                    x209
+                                                                    "axisTickSize"
+                                                                    (Ojs.float_to_js
+                                                                    x325)
                                                                     | 
                                                                     None ->
                                                                     ());
@@ -1431,13 +1222,13 @@ let (create :
                                                                     match x119
                                                                     with
                                                                     | 
-                                                                    Some x280
+                                                                    Some x324
                                                                     ->
                                                                     Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "drawGapEdgePoints"
-                                                                    (Ojs.bool_to_js
-                                                                    x280)
+                                                                    x209
+                                                                    "dateWindow"
+                                                                    (Range.t_to_js
+                                                                    x324)
                                                                     | 
                                                                     None ->
                                                                     ());
@@ -1445,13 +1236,13 @@ let (create :
                                                                     match x120
                                                                     with
                                                                     | 
-                                                                    Some x279
+                                                                    Some x323
                                                                     ->
                                                                     Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "drawPoints"
+                                                                    x209
+                                                                    "drawAxesAtZero"
                                                                     (Ojs.bool_to_js
-                                                                    x279)
+                                                                    x323)
                                                                     | 
                                                                     None ->
                                                                     ());
@@ -1459,13 +1250,13 @@ let (create :
                                                                     match x121
                                                                     with
                                                                     | 
-                                                                    Some x278
+                                                                    Some x322
                                                                     ->
                                                                     Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "fillGraph"
+                                                                    x209
+                                                                    "drawAxis"
                                                                     (Ojs.bool_to_js
-                                                                    x278)
+                                                                    x322)
                                                                     | 
                                                                     None ->
                                                                     ());
@@ -1473,13 +1264,13 @@ let (create :
                                                                     match x122
                                                                     with
                                                                     | 
-                                                                    Some x277
+                                                                    Some x321
                                                                     ->
                                                                     Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "pointSize"
-                                                                    (Ojs.int_to_js
-                                                                    x277)
+                                                                    x209
+                                                                    "includeZero"
+                                                                    (Ojs.bool_to_js
+                                                                    x321)
                                                                     | 
                                                                     None ->
                                                                     ());
@@ -1487,13 +1278,13 @@ let (create :
                                                                     match x123
                                                                     with
                                                                     | 
-                                                                    Some x276
+                                                                    Some x320
                                                                     ->
                                                                     Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "stackedGraph"
+                                                                    x209
+                                                                    "logscale"
                                                                     (Ojs.bool_to_js
-                                                                    x276)
+                                                                    x320)
                                                                     | 
                                                                     None ->
                                                                     ());
@@ -1501,13 +1292,13 @@ let (create :
                                                                     match x124
                                                                     with
                                                                     | 
-                                                                    Some x275
+                                                                    Some x319
                                                                     ->
                                                                     Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "stackedGraphNaNFill"
-                                                                    (Ojs.string_to_js
-                                                                    x275)
+                                                                    x209
+                                                                    "panEdgeFraction"
+                                                                    (Ojs.float_to_js
+                                                                    x319)
                                                                     | 
                                                                     None ->
                                                                     ());
@@ -1515,13 +1306,13 @@ let (create :
                                                                     match x125
                                                                     with
                                                                     | 
-                                                                    Some x274
+                                                                    Some x318
                                                                     ->
                                                                     Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "stepPlot"
-                                                                    (Ojs.bool_to_js
-                                                                    x274)
+                                                                    x209
+                                                                    "valueRange"
+                                                                    (Range.Spec.t_to_js
+                                                                    x318)
                                                                     | 
                                                                     None ->
                                                                     ());
@@ -1529,13 +1320,13 @@ let (create :
                                                                     match x126
                                                                     with
                                                                     | 
-                                                                    Some x273
+                                                                    Some x317
                                                                     ->
                                                                     Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "strokeBorderColor"
-                                                                    (Color.t_to_js
-                                                                    x273)
+                                                                    x209
+                                                                    "xAxisHeight"
+                                                                    (Ojs.int_to_js
+                                                                    x317)
                                                                     | 
                                                                     None ->
                                                                     ());
@@ -1543,13 +1334,13 @@ let (create :
                                                                     match x127
                                                                     with
                                                                     | 
-                                                                    Some x272
+                                                                    Some x316
                                                                     ->
                                                                     Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "strokeBorderWidth"
+                                                                    x209
+                                                                    "xRangePad"
                                                                     (Ojs.float_to_js
-                                                                    x272)
+                                                                    x316)
                                                                     | 
                                                                     None ->
                                                                     ());
@@ -1557,13 +1348,13 @@ let (create :
                                                                     match x128
                                                                     with
                                                                     | 
-                                                                    Some x271
+                                                                    Some x315
                                                                     ->
                                                                     Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "strokePattern"
-                                                                    (Line_pattern.t_to_js
-                                                                    x271)
+                                                                    x209
+                                                                    "yRangePad"
+                                                                    (Ojs.float_to_js
+                                                                    x315)
                                                                     | 
                                                                     None ->
                                                                     ());
@@ -1571,13 +1362,13 @@ let (create :
                                                                     match x129
                                                                     with
                                                                     | 
-                                                                    Some x270
+                                                                    Some x314
                                                                     ->
                                                                     Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "strokeWidth"
-                                                                    (Ojs.float_to_js
-                                                                    x270)
+                                                                    x209
+                                                                    "customBars"
+                                                                    (Ojs.bool_to_js
+                                                                    x314)
                                                                     | 
                                                                     None ->
                                                                     ());
@@ -1585,14 +1376,13 @@ let (create :
                                                                     match x130
                                                                     with
                                                                     | 
-                                                                    Some x268
+                                                                    Some x313
                                                                     ->
                                                                     Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "visibility"
-                                                                    (Ojs.list_to_js
-                                                                    Ojs.bool_to_js
-                                                                    x268)
+                                                                    x209
+                                                                    "errorBars"
+                                                                    (Ojs.bool_to_js
+                                                                    x313)
                                                                     | 
                                                                     None ->
                                                                     ());
@@ -1600,13 +1390,13 @@ let (create :
                                                                     match x131
                                                                     with
                                                                     | 
-                                                                    Some x267
+                                                                    Some x312
                                                                     ->
                                                                     Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "colorSaturation"
-                                                                    (Ojs.float_to_js
-                                                                    x267)
+                                                                    x209
+                                                                    "fractions"
+                                                                    (Ojs.bool_to_js
+                                                                    x312)
                                                                     | 
                                                                     None ->
                                                                     ());
@@ -1614,13 +1404,13 @@ let (create :
                                                                     match x132
                                                                     with
                                                                     | 
-                                                                    Some x266
+                                                                    Some x311
                                                                     ->
                                                                     Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "colorValue"
-                                                                    (Ojs.float_to_js
-                                                                    x266)
+                                                                    x209
+                                                                    "title"
+                                                                    (Ojs.string_to_js
+                                                                    x311)
                                                                     | 
                                                                     None ->
                                                                     ());
@@ -1628,14 +1418,13 @@ let (create :
                                                                     match x133
                                                                     with
                                                                     | 
-                                                                    Some x264
+                                                                    Some x310
                                                                     ->
                                                                     Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "colors"
-                                                                    (Ojs.array_to_js
-                                                                    Color.t_to_js
-                                                                    x264)
+                                                                    x209
+                                                                    "titleHeight"
+                                                                    (Ojs.int_to_js
+                                                                    x310)
                                                                     | 
                                                                     None ->
                                                                     ());
@@ -1643,13 +1432,13 @@ let (create :
                                                                     match x134
                                                                     with
                                                                     | 
-                                                                    Some x263
+                                                                    Some x309
                                                                     ->
                                                                     Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "fillAlpha"
-                                                                    (Ojs.float_to_js
-                                                                    x263)
+                                                                    x209
+                                                                    "xLabelHeight"
+                                                                    (Ojs.int_to_js
+                                                                    x309)
                                                                     | 
                                                                     None ->
                                                                     ());
@@ -1657,13 +1446,13 @@ let (create :
                                                                     match x135
                                                                     with
                                                                     | 
-                                                                    Some x262
+                                                                    Some x308
                                                                     ->
                                                                     Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "rollPeriod"
-                                                                    (Ojs.int_to_js
-                                                                    x262)
+                                                                    x209
+                                                                    "xlabel"
+                                                                    (Ojs.string_to_js
+                                                                    x308)
                                                                     | 
                                                                     None ->
                                                                     ());
@@ -1671,13 +1460,13 @@ let (create :
                                                                     match x136
                                                                     with
                                                                     | 
-                                                                    Some x261
+                                                                    Some x307
                                                                     ->
                                                                     Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "sigma"
-                                                                    (Ojs.float_to_js
-                                                                    x261)
+                                                                    x209
+                                                                    "y2label"
+                                                                    (Ojs.string_to_js
+                                                                    x307)
                                                                     | 
                                                                     None ->
                                                                     ());
@@ -1685,13 +1474,13 @@ let (create :
                                                                     match x137
                                                                     with
                                                                     | 
-                                                                    Some x260
+                                                                    Some x306
                                                                     ->
                                                                     Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "wilsonInterval"
-                                                                    (Ojs.bool_to_js
-                                                                    x260)
+                                                                    x209
+                                                                    "yLabelWidth"
+                                                                    (Ojs.int_to_js
+                                                                    x306)
                                                                     | 
                                                                     None ->
                                                                     ());
@@ -1699,13 +1488,13 @@ let (create :
                                                                     match x138
                                                                     with
                                                                     | 
-                                                                    Some x259
+                                                                    Some x305
                                                                     ->
                                                                     Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "drawGrid"
-                                                                    (Ojs.bool_to_js
-                                                                    x259)
+                                                                    x209
+                                                                    "ylabel"
+                                                                    (Ojs.string_to_js
+                                                                    x305)
                                                                     | 
                                                                     None ->
                                                                     ());
@@ -1713,13 +1502,13 @@ let (create :
                                                                     match x139
                                                                     with
                                                                     | 
-                                                                    Some x258
+                                                                    Some x304
                                                                     ->
                                                                     Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "gridLineColor"
-                                                                    (Color.t_to_js
-                                                                    x258)
+                                                                    x209
+                                                                    "axes"
+                                                                    (Axes.t_to_js
+                                                                    x304)
                                                                     | 
                                                                     None ->
                                                                     ());
@@ -1727,13 +1516,13 @@ let (create :
                                                                     match x140
                                                                     with
                                                                     | 
-                                                                    Some x257
+                                                                    Some x303
                                                                     ->
                                                                     Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "gridLinePattern"
-                                                                    (Line_pattern.t_to_js
-                                                                    x257)
+                                                                    x209
+                                                                    "connectSeparatedPoints"
+                                                                    (Ojs.bool_to_js
+                                                                    x303)
                                                                     | 
                                                                     None ->
                                                                     ());
@@ -1741,13 +1530,13 @@ let (create :
                                                                     match x141
                                                                     with
                                                                     | 
-                                                                    Some x256
+                                                                    Some x302
                                                                     ->
                                                                     Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "gridLineWidth"
-                                                                    (Ojs.float_to_js
-                                                                    x256)
+                                                                    x209
+                                                                    "drawGapEdgePoints"
+                                                                    (Ojs.bool_to_js
+                                                                    x302)
                                                                     | 
                                                                     None ->
                                                                     ());
@@ -1755,13 +1544,13 @@ let (create :
                                                                     match x142
                                                                     with
                                                                     | 
-                                                                    Some x255
+                                                                    Some x301
                                                                     ->
                                                                     Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "animatedZooms"
+                                                                    x209
+                                                                    "drawPoints"
                                                                     (Ojs.bool_to_js
-                                                                    x255)
+                                                                    x301)
                                                                     | 
                                                                     None ->
                                                                     ());
@@ -1769,13 +1558,13 @@ let (create :
                                                                     match x143
                                                                     with
                                                                     | 
-                                                                    Some x254
+                                                                    Some x300
                                                                     ->
                                                                     Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "hideOverlayOnMouseOut"
+                                                                    x209
+                                                                    "fillGraph"
                                                                     (Ojs.bool_to_js
-                                                                    x254)
+                                                                    x300)
                                                                     | 
                                                                     None ->
                                                                     ());
@@ -1783,13 +1572,13 @@ let (create :
                                                                     match x144
                                                                     with
                                                                     | 
-                                                                    Some x253
+                                                                    Some x299
                                                                     ->
                                                                     Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "highlightCircleSize"
+                                                                    x209
+                                                                    "pointSize"
                                                                     (Ojs.int_to_js
-                                                                    x253)
+                                                                    x299)
                                                                     | 
                                                                     None ->
                                                                     ());
@@ -1797,13 +1586,13 @@ let (create :
                                                                     match x145
                                                                     with
                                                                     | 
-                                                                    Some x252
+                                                                    Some x298
                                                                     ->
                                                                     Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "highlightSeriesBackgroundAlpha"
-                                                                    (Ojs.float_to_js
-                                                                    x252)
+                                                                    x209
+                                                                    "stackedGraph"
+                                                                    (Ojs.bool_to_js
+                                                                    x298)
                                                                     | 
                                                                     None ->
                                                                     ());
@@ -1811,13 +1600,13 @@ let (create :
                                                                     match x146
                                                                     with
                                                                     | 
-                                                                    Some x251
+                                                                    Some x297
                                                                     ->
                                                                     Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "highlightSeriesBackgroundColor"
-                                                                    (Color.t_to_js
-                                                                    x251)
+                                                                    x209
+                                                                    "stackedGraphNaNFill"
+                                                                    (Ojs.string_to_js
+                                                                    x297)
                                                                     | 
                                                                     None ->
                                                                     ());
@@ -1825,13 +1614,13 @@ let (create :
                                                                     match x147
                                                                     with
                                                                     | 
-                                                                    Some x250
+                                                                    Some x296
                                                                     ->
                                                                     Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "highlightSeriesOpts"
-                                                                    (Highlight_series_options.t_to_js
-                                                                    x250)
+                                                                    x209
+                                                                    "stepPlot"
+                                                                    (Ojs.bool_to_js
+                                                                    x296)
                                                                     | 
                                                                     None ->
                                                                     ());
@@ -1839,13 +1628,13 @@ let (create :
                                                                     match x148
                                                                     with
                                                                     | 
-                                                                    Some x249
+                                                                    Some x295
                                                                     ->
                                                                     Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "showLabelsOnHighlight"
-                                                                    (Ojs.bool_to_js
-                                                                    x249)
+                                                                    x209
+                                                                    "strokeBorderColor"
+                                                                    (Color.t_to_js
+                                                                    x295)
                                                                     | 
                                                                     None ->
                                                                     ());
@@ -1853,13 +1642,13 @@ let (create :
                                                                     match x149
                                                                     with
                                                                     | 
-                                                                    Some x248
+                                                                    Some x294
                                                                     ->
                                                                     Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "showRoller"
-                                                                    (Ojs.bool_to_js
-                                                                    x248)
+                                                                    x209
+                                                                    "strokeBorderWidth"
+                                                                    (Ojs.float_to_js
+                                                                    x294)
                                                                     | 
                                                                     None ->
                                                                     ());
@@ -1867,13 +1656,13 @@ let (create :
                                                                     match x150
                                                                     with
                                                                     | 
-                                                                    Some x247
+                                                                    Some x293
                                                                     ->
                                                                     Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "hideOverlayOnMouseOut"
-                                                                    (Ojs.bool_to_js
-                                                                    x247)
+                                                                    x209
+                                                                    "strokePattern"
+                                                                    (Line_pattern.t_to_js
+                                                                    x293)
                                                                     | 
                                                                     None ->
                                                                     ());
@@ -1881,14 +1670,13 @@ let (create :
                                                                     match x151
                                                                     with
                                                                     | 
-                                                                    Some x245
+                                                                    Some x292
                                                                     ->
                                                                     Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "labels"
-                                                                    (Ojs.list_to_js
-                                                                    Ojs.string_to_js
-                                                                    x245)
+                                                                    x209
+                                                                    "strokeWidth"
+                                                                    (Ojs.float_to_js
+                                                                    x292)
                                                                     | 
                                                                     None ->
                                                                     ());
@@ -1896,13 +1684,14 @@ let (create :
                                                                     match x152
                                                                     with
                                                                     | 
-                                                                    Some x244
+                                                                    Some x290
                                                                     ->
                                                                     Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "labelsDiv"
-                                                                    (Ojs.string_to_js
-                                                                    x244)
+                                                                    x209
+                                                                    "visibility"
+                                                                    (Ojs.list_to_js
+                                                                    Ojs.bool_to_js
+                                                                    x290)
                                                                     | 
                                                                     None ->
                                                                     ());
@@ -1910,13 +1699,13 @@ let (create :
                                                                     match x153
                                                                     with
                                                                     | 
-                                                                    Some x243
+                                                                    Some x289
                                                                     ->
                                                                     Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "labelsDiv"
-                                                                    (Native_node.t_to_js
-                                                                    x243)
+                                                                    x209
+                                                                    "colorSaturation"
+                                                                    (Ojs.float_to_js
+                                                                    x289)
                                                                     | 
                                                                     None ->
                                                                     ());
@@ -1924,13 +1713,13 @@ let (create :
                                                                     match x154
                                                                     with
                                                                     | 
-                                                                    Some x242
+                                                                    Some x288
                                                                     ->
                                                                     Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "labelsSeparateLines"
-                                                                    (Ojs.bool_to_js
-                                                                    x242)
+                                                                    x209
+                                                                    "colorValue"
+                                                                    (Ojs.float_to_js
+                                                                    x288)
                                                                     | 
                                                                     None ->
                                                                     ());
@@ -1938,13 +1727,14 @@ let (create :
                                                                     match x155
                                                                     with
                                                                     | 
-                                                                    Some x241
+                                                                    Some x286
                                                                     ->
                                                                     Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "labelsShowZeroValues"
-                                                                    (Ojs.bool_to_js
-                                                                    x241)
+                                                                    x209
+                                                                    "colors"
+                                                                    (Ojs.array_to_js
+                                                                    Color.t_to_js
+                                                                    x286)
                                                                     | 
                                                                     None ->
                                                                     ());
@@ -1952,13 +1742,13 @@ let (create :
                                                                     match x156
                                                                     with
                                                                     | 
-                                                                    Some x240
+                                                                    Some x285
                                                                     ->
                                                                     Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "legend"
-                                                                    (Legend.t_to_js
-                                                                    x240)
+                                                                    x209
+                                                                    "fillAlpha"
+                                                                    (Ojs.float_to_js
+                                                                    x285)
                                                                     | 
                                                                     None ->
                                                                     ());
@@ -1966,20 +1756,13 @@ let (create :
                                                                     match x157
                                                                     with
                                                                     | 
-                                                                    Some x238
+                                                                    Some x284
                                                                     ->
                                                                     Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "legendFormatter"
-                                                                    (Ojs.fun_to_js
-                                                                    1
-                                                                    (fun
-                                                                    (x239 :
-                                                                    Ojs.t) ->
-                                                                    Ojs.string_to_js
-                                                                    (x238
-                                                                    (Legend_data.t_of_js
-                                                                    x239))))
+                                                                    x209
+                                                                    "rollPeriod"
+                                                                    (Ojs.int_to_js
+                                                                    x284)
                                                                     | 
                                                                     None ->
                                                                     ());
@@ -1987,13 +1770,13 @@ let (create :
                                                                     match x158
                                                                     with
                                                                     | 
-                                                                    Some x237
+                                                                    Some x283
                                                                     ->
                                                                     Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "showLabelsOnHighlight"
-                                                                    (Ojs.bool_to_js
-                                                                    x237)
+                                                                    x209
+                                                                    "sigma"
+                                                                    (Ojs.float_to_js
+                                                                    x283)
                                                                     | 
                                                                     None ->
                                                                     ());
@@ -2001,13 +1784,13 @@ let (create :
                                                                     match x159
                                                                     with
                                                                     | 
-                                                                    Some x236
+                                                                    Some x282
                                                                     ->
                                                                     Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "height"
-                                                                    (Ojs.int_to_js
-                                                                    x236)
+                                                                    x209
+                                                                    "wilsonInterval"
+                                                                    (Ojs.bool_to_js
+                                                                    x282)
                                                                     | 
                                                                     None ->
                                                                     ());
@@ -2015,11 +1798,479 @@ let (create :
                                                                     match x160
                                                                     with
                                                                     | 
+                                                                    Some x281
+                                                                    ->
+                                                                    Ojs.set_prop_ascii
+                                                                    x209
+                                                                    "drawGrid"
+                                                                    (Ojs.bool_to_js
+                                                                    x281)
+                                                                    | 
+                                                                    None ->
+                                                                    ());
+                                                                    (
+                                                                    match x161
+                                                                    with
+                                                                    | 
+                                                                    Some x280
+                                                                    ->
+                                                                    Ojs.set_prop_ascii
+                                                                    x209
+                                                                    "gridLineColor"
+                                                                    (Color.t_to_js
+                                                                    x280)
+                                                                    | 
+                                                                    None ->
+                                                                    ());
+                                                                    (
+                                                                    match x162
+                                                                    with
+                                                                    | 
+                                                                    Some x279
+                                                                    ->
+                                                                    Ojs.set_prop_ascii
+                                                                    x209
+                                                                    "gridLinePattern"
+                                                                    (Line_pattern.t_to_js
+                                                                    x279)
+                                                                    | 
+                                                                    None ->
+                                                                    ());
+                                                                    (
+                                                                    match x163
+                                                                    with
+                                                                    | 
+                                                                    Some x278
+                                                                    ->
+                                                                    Ojs.set_prop_ascii
+                                                                    x209
+                                                                    "gridLineWidth"
+                                                                    (Ojs.float_to_js
+                                                                    x278)
+                                                                    | 
+                                                                    None ->
+                                                                    ());
+                                                                    (
+                                                                    match x164
+                                                                    with
+                                                                    | 
+                                                                    Some x277
+                                                                    ->
+                                                                    Ojs.set_prop_ascii
+                                                                    x209
+                                                                    "animatedZooms"
+                                                                    (Ojs.bool_to_js
+                                                                    x277)
+                                                                    | 
+                                                                    None ->
+                                                                    ());
+                                                                    (
+                                                                    match x165
+                                                                    with
+                                                                    | 
+                                                                    Some x276
+                                                                    ->
+                                                                    Ojs.set_prop_ascii
+                                                                    x209
+                                                                    "hideOverlayOnMouseOut"
+                                                                    (Ojs.bool_to_js
+                                                                    x276)
+                                                                    | 
+                                                                    None ->
+                                                                    ());
+                                                                    (
+                                                                    match x166
+                                                                    with
+                                                                    | 
+                                                                    Some x275
+                                                                    ->
+                                                                    Ojs.set_prop_ascii
+                                                                    x209
+                                                                    "highlightCircleSize"
+                                                                    (Ojs.int_to_js
+                                                                    x275)
+                                                                    | 
+                                                                    None ->
+                                                                    ());
+                                                                    (
+                                                                    match x167
+                                                                    with
+                                                                    | 
+                                                                    Some x274
+                                                                    ->
+                                                                    Ojs.set_prop_ascii
+                                                                    x209
+                                                                    "highlightSeriesBackgroundAlpha"
+                                                                    (Ojs.float_to_js
+                                                                    x274)
+                                                                    | 
+                                                                    None ->
+                                                                    ());
+                                                                    (
+                                                                    match x168
+                                                                    with
+                                                                    | 
+                                                                    Some x273
+                                                                    ->
+                                                                    Ojs.set_prop_ascii
+                                                                    x209
+                                                                    "highlightSeriesBackgroundColor"
+                                                                    (Color.t_to_js
+                                                                    x273)
+                                                                    | 
+                                                                    None ->
+                                                                    ());
+                                                                    (
+                                                                    match x169
+                                                                    with
+                                                                    | 
+                                                                    Some x272
+                                                                    ->
+                                                                    Ojs.set_prop_ascii
+                                                                    x209
+                                                                    "highlightSeriesOpts"
+                                                                    (Highlight_series_options.t_to_js
+                                                                    x272)
+                                                                    | 
+                                                                    None ->
+                                                                    ());
+                                                                    (
+                                                                    match x170
+                                                                    with
+                                                                    | 
+                                                                    Some x271
+                                                                    ->
+                                                                    Ojs.set_prop_ascii
+                                                                    x209
+                                                                    "showLabelsOnHighlight"
+                                                                    (Ojs.bool_to_js
+                                                                    x271)
+                                                                    | 
+                                                                    None ->
+                                                                    ());
+                                                                    (
+                                                                    match x171
+                                                                    with
+                                                                    | 
+                                                                    Some x270
+                                                                    ->
+                                                                    Ojs.set_prop_ascii
+                                                                    x209
+                                                                    "showRoller"
+                                                                    (Ojs.bool_to_js
+                                                                    x270)
+                                                                    | 
+                                                                    None ->
+                                                                    ());
+                                                                    (
+                                                                    match x172
+                                                                    with
+                                                                    | 
+                                                                    Some x269
+                                                                    ->
+                                                                    Ojs.set_prop_ascii
+                                                                    x209
+                                                                    "hideOverlayOnMouseOut"
+                                                                    (Ojs.bool_to_js
+                                                                    x269)
+                                                                    | 
+                                                                    None ->
+                                                                    ());
+                                                                    (
+                                                                    match x173
+                                                                    with
+                                                                    | 
+                                                                    Some x267
+                                                                    ->
+                                                                    Ojs.set_prop_ascii
+                                                                    x209
+                                                                    "labels"
+                                                                    (Ojs.list_to_js
+                                                                    Ojs.string_to_js
+                                                                    x267)
+                                                                    | 
+                                                                    None ->
+                                                                    ());
+                                                                    (
+                                                                    match x174
+                                                                    with
+                                                                    | 
+                                                                    Some x266
+                                                                    ->
+                                                                    Ojs.set_prop_ascii
+                                                                    x209
+                                                                    "labelsDiv"
+                                                                    (Ojs.string_to_js
+                                                                    x266)
+                                                                    | 
+                                                                    None ->
+                                                                    ());
+                                                                    (
+                                                                    match x175
+                                                                    with
+                                                                    | 
+                                                                    Some x265
+                                                                    ->
+                                                                    Ojs.set_prop_ascii
+                                                                    x209
+                                                                    "labelsDiv"
+                                                                    (Native_node.t_to_js
+                                                                    x265)
+                                                                    | 
+                                                                    None ->
+                                                                    ());
+                                                                    (
+                                                                    match x176
+                                                                    with
+                                                                    | 
+                                                                    Some x264
+                                                                    ->
+                                                                    Ojs.set_prop_ascii
+                                                                    x209
+                                                                    "labelsSeparateLines"
+                                                                    (Ojs.bool_to_js
+                                                                    x264)
+                                                                    | 
+                                                                    None ->
+                                                                    ());
+                                                                    (
+                                                                    match x177
+                                                                    with
+                                                                    | 
+                                                                    Some x263
+                                                                    ->
+                                                                    Ojs.set_prop_ascii
+                                                                    x209
+                                                                    "labelsShowZeroValues"
+                                                                    (Ojs.bool_to_js
+                                                                    x263)
+                                                                    | 
+                                                                    None ->
+                                                                    ());
+                                                                    (
+                                                                    match x178
+                                                                    with
+                                                                    | 
+                                                                    Some x262
+                                                                    ->
+                                                                    Ojs.set_prop_ascii
+                                                                    x209
+                                                                    "legend"
+                                                                    (Legend.t_to_js
+                                                                    x262)
+                                                                    | 
+                                                                    None ->
+                                                                    ());
+                                                                    (
+                                                                    match x179
+                                                                    with
+                                                                    | 
+                                                                    Some x260
+                                                                    ->
+                                                                    Ojs.set_prop_ascii
+                                                                    x209
+                                                                    "legendFormatter"
+                                                                    (Ojs.fun_to_js
+                                                                    1
+                                                                    (fun
+                                                                    (x261 :
+                                                                    Ojs.t) ->
+                                                                    Ojs.string_to_js
+                                                                    (x260
+                                                                    (Legend_data.t_of_js
+                                                                    x261))))
+                                                                    | 
+                                                                    None ->
+                                                                    ());
+                                                                    (
+                                                                    match x180
+                                                                    with
+                                                                    | 
+                                                                    Some x259
+                                                                    ->
+                                                                    Ojs.set_prop_ascii
+                                                                    x209
+                                                                    "showLabelsOnHighlight"
+                                                                    (Ojs.bool_to_js
+                                                                    x259)
+                                                                    | 
+                                                                    None ->
+                                                                    ());
+                                                                    (
+                                                                    match x181
+                                                                    with
+                                                                    | 
+                                                                    Some x258
+                                                                    ->
+                                                                    Ojs.set_prop_ascii
+                                                                    x209
+                                                                    "height"
+                                                                    (Ojs.int_to_js
+                                                                    x258)
+                                                                    | 
+                                                                    None ->
+                                                                    ());
+                                                                    (
+                                                                    match x182
+                                                                    with
+                                                                    | 
+                                                                    Some x253
+                                                                    ->
+                                                                    Ojs.set_prop_ascii
+                                                                    x209
+                                                                    "clickCallback"
+                                                                    (Ojs.fun_to_js
+                                                                    3
+                                                                    (fun
+                                                                    (x254 :
+                                                                    Ojs.t) ->
+                                                                    fun
+                                                                    (x255 :
+                                                                    Ojs.t) ->
+                                                                    fun
+                                                                    (x256 :
+                                                                    Ojs.t) ->
+                                                                    x253
+                                                                    ~evt:x254
+                                                                    ~x:(
+                                                                    Ojs.float_of_js
+                                                                    x255)
+                                                                    ~points:(
+                                                                    Ojs.array_of_js
+                                                                    Point.t_of_js
+                                                                    x256)))
+                                                                    | 
+                                                                    None ->
+                                                                    ());
+                                                                    (
+                                                                    match x183
+                                                                    with
+                                                                    | 
+                                                                    Some x245
+                                                                    ->
+                                                                    Ojs.set_prop_ascii
+                                                                    x209
+                                                                    "highlightCallback"
+                                                                    (Ojs.fun_to_js
+                                                                    5
+                                                                    (fun
+                                                                    (x246 :
+                                                                    Ojs.t) ->
+                                                                    fun
+                                                                    (x247 :
+                                                                    Ojs.t) ->
+                                                                    fun
+                                                                    (x248 :
+                                                                    Ojs.t) ->
+                                                                    fun
+                                                                    (x250 :
+                                                                    Ojs.t) ->
+                                                                    fun
+                                                                    (x251 :
+                                                                    Ojs.t) ->
+                                                                    x245
+                                                                    ~evt:x246
+                                                                    ~x:(
+                                                                    Ojs.float_of_js
+                                                                    x247)
+                                                                    ~points:(
+                                                                    Ojs.array_of_js
+                                                                    Point.t_of_js
+                                                                    x248)
+                                                                    ~row:(
+                                                                    Ojs.int_of_js
+                                                                    x250)
+                                                                    ~seriesName:(
+                                                                    Ojs.option_of_js
+                                                                    Ojs.string_of_js
+                                                                    x251)))
+                                                                    | 
+                                                                    None ->
+                                                                    ());
+                                                                    (
+                                                                    match x184
+                                                                    with
+                                                                    | 
+                                                                    Some x243
+                                                                    ->
+                                                                    Ojs.set_prop_ascii
+                                                                    x209
+                                                                    "unhighlightCallback"
+                                                                    (Ojs.fun_to_js
+                                                                    1
+                                                                    (fun
+                                                                    (x244 :
+                                                                    Ojs.t) ->
+                                                                    x243
+                                                                    ~evt:x244))
+                                                                    | 
+                                                                    None ->
+                                                                    ());
+                                                                    (
+                                                                    match x185
+                                                                    with
+                                                                    | 
+                                                                    Some x240
+                                                                    ->
+                                                                    Ojs.set_prop_ascii
+                                                                    x209
+                                                                    "pointClickCallback"
+                                                                    (Ojs.fun_to_js
+                                                                    2
+                                                                    (fun
+                                                                    (x241 :
+                                                                    Ojs.t) ->
+                                                                    fun
+                                                                    (x242 :
+                                                                    Ojs.t) ->
+                                                                    x240
+                                                                    ~evt:x241
+                                                                    ~point:(
+                                                                    Point.t_of_js
+                                                                    x242)))
+                                                                    | 
+                                                                    None ->
+                                                                    ());
+                                                                    (
+                                                                    match x186
+                                                                    with
+                                                                    | 
+                                                                    Some x236
+                                                                    ->
+                                                                    Ojs.set_prop_ascii
+                                                                    x209
+                                                                    "underlayCallback"
+                                                                    (Ojs.fun_to_js
+                                                                    3
+                                                                    (fun
+                                                                    (x237 :
+                                                                    Ojs.t) ->
+                                                                    fun
+                                                                    (x238 :
+                                                                    Ojs.t) ->
+                                                                    fun
+                                                                    (x239 :
+                                                                    Ojs.t) ->
+                                                                    x236
+                                                                    ~context:(
+                                                                    Canvas_rendering_context_2D.t_of_js
+                                                                    x237)
+                                                                    ~area:(
+                                                                    Area.t_of_js
+                                                                    x238)
+                                                                    ~dygraph:x239))
+                                                                    | 
+                                                                    None ->
+                                                                    ());
+                                                                    (
+                                                                    match x187
+                                                                    with
+                                                                    | 
                                                                     Some x231
                                                                     ->
                                                                     Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "clickCallback"
+                                                                    x209
+                                                                    "zoomCallback"
                                                                     (Ojs.fun_to_js
                                                                     3
                                                                     (fun
@@ -2032,492 +2283,340 @@ let (create :
                                                                     (x234 :
                                                                     Ojs.t) ->
                                                                     x231
-                                                                    ~evt:x232
-                                                                    ~x:(
+                                                                    ~xmin:(
+                                                                    Ojs.float_of_js
+                                                                    x232)
+                                                                    ~xmax:(
                                                                     Ojs.float_of_js
                                                                     x233)
-                                                                    ~points:(
+                                                                    ~yRanges:(
                                                                     Ojs.array_of_js
-                                                                    Point.t_of_js
+                                                                    Range.t_of_js
                                                                     x234)))
                                                                     | 
                                                                     None ->
                                                                     ());
                                                                     (
-                                                                    match x161
+                                                                    match x188
+                                                                    with
+                                                                    | 
+                                                                    Some x230
+                                                                    ->
+                                                                    Ojs.set_prop_ascii
+                                                                    x209
+                                                                    "pixelRatio"
+                                                                    (Ojs.float_to_js
+                                                                    x230)
+                                                                    | 
+                                                                    None ->
+                                                                    ());
+                                                                    (
+                                                                    match x189
+                                                                    with
+                                                                    | 
+                                                                    Some x229
+                                                                    ->
+                                                                    Ojs.set_prop_ascii
+                                                                    x209
+                                                                    "rightGap"
+                                                                    (Ojs.int_to_js
+                                                                    x229)
+                                                                    | 
+                                                                    None ->
+                                                                    ());
+                                                                    (
+                                                                    match x190
+                                                                    with
+                                                                    | 
+                                                                    Some x228
+                                                                    ->
+                                                                    Ojs.set_prop_ascii
+                                                                    x209
+                                                                    "width"
+                                                                    (Ojs.int_to_js
+                                                                    x228)
+                                                                    | 
+                                                                    None ->
+                                                                    ());
+                                                                    (
+                                                                    match x191
+                                                                    with
+                                                                    | 
+                                                                    Some x227
+                                                                    ->
+                                                                    Ojs.set_prop_ascii
+                                                                    x209
+                                                                    "rangeSelectorAlpha"
+                                                                    (Ojs.float_to_js
+                                                                    x227)
+                                                                    | 
+                                                                    None ->
+                                                                    ());
+                                                                    (
+                                                                    match x192
+                                                                    with
+                                                                    | 
+                                                                    Some x226
+                                                                    ->
+                                                                    Ojs.set_prop_ascii
+                                                                    x209
+                                                                    "rangeSelectorBackgroundLineWidth"
+                                                                    (Ojs.float_to_js
+                                                                    x226)
+                                                                    | 
+                                                                    None ->
+                                                                    ());
+                                                                    (
+                                                                    match x193
+                                                                    with
+                                                                    | 
+                                                                    Some x225
+                                                                    ->
+                                                                    Ojs.set_prop_ascii
+                                                                    x209
+                                                                    "rangeSelectorBackgroundStrokeColor"
+                                                                    (Color.t_to_js
+                                                                    x225)
+                                                                    | 
+                                                                    None ->
+                                                                    ());
+                                                                    (
+                                                                    match x194
+                                                                    with
+                                                                    | 
+                                                                    Some x224
+                                                                    ->
+                                                                    Ojs.set_prop_ascii
+                                                                    x209
+                                                                    "rangeSelectorForegroundLineWidth"
+                                                                    (Ojs.float_to_js
+                                                                    x224)
+                                                                    | 
+                                                                    None ->
+                                                                    ());
+                                                                    (
+                                                                    match x195
                                                                     with
                                                                     | 
                                                                     Some x223
                                                                     ->
                                                                     Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "highlightCallback"
-                                                                    (Ojs.fun_to_js
-                                                                    5
-                                                                    (fun
-                                                                    (x224 :
-                                                                    Ojs.t) ->
-                                                                    fun
-                                                                    (x225 :
-                                                                    Ojs.t) ->
-                                                                    fun
-                                                                    (x226 :
-                                                                    Ojs.t) ->
-                                                                    fun
-                                                                    (x228 :
-                                                                    Ojs.t) ->
-                                                                    fun
-                                                                    (x229 :
-                                                                    Ojs.t) ->
-                                                                    x223
-                                                                    ~evt:x224
-                                                                    ~x:(
-                                                                    Ojs.float_of_js
-                                                                    x225)
-                                                                    ~points:(
-                                                                    Ojs.array_of_js
-                                                                    Point.t_of_js
-                                                                    x226)
-                                                                    ~row:(
-                                                                    Ojs.int_of_js
-                                                                    x228)
-                                                                    ~seriesName:(
-                                                                    Ojs.option_of_js
-                                                                    Ojs.string_of_js
-                                                                    x229)))
+                                                                    x209
+                                                                    "rangeSelectorForegroundStrokeColor"
+                                                                    (Color.t_to_js
+                                                                    x223)
                                                                     | 
                                                                     None ->
                                                                     ());
                                                                     (
-                                                                    match x162
+                                                                    match x196
+                                                                    with
+                                                                    | 
+                                                                    Some x222
+                                                                    ->
+                                                                    Ojs.set_prop_ascii
+                                                                    x209
+                                                                    "rangeSelectorHeight"
+                                                                    (Ojs.int_to_js
+                                                                    x222)
+                                                                    | 
+                                                                    None ->
+                                                                    ());
+                                                                    (
+                                                                    match x197
                                                                     with
                                                                     | 
                                                                     Some x221
                                                                     ->
                                                                     Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "unhighlightCallback"
-                                                                    (Ojs.fun_to_js
-                                                                    1
-                                                                    (fun
-                                                                    (x222 :
-                                                                    Ojs.t) ->
-                                                                    x221
-                                                                    ~evt:x222))
+                                                                    x209
+                                                                    "rangeSelectorPlotFillColor"
+                                                                    (Color.t_to_js
+                                                                    x221)
                                                                     | 
                                                                     None ->
                                                                     ());
                                                                     (
-                                                                    match x163
+                                                                    match x198
+                                                                    with
+                                                                    | 
+                                                                    Some x220
+                                                                    ->
+                                                                    Ojs.set_prop_ascii
+                                                                    x209
+                                                                    "rangeSelectorPlotFillGradientColor"
+                                                                    (Color.t_to_js
+                                                                    x220)
+                                                                    | 
+                                                                    None ->
+                                                                    ());
+                                                                    (
+                                                                    match x199
+                                                                    with
+                                                                    | 
+                                                                    Some x219
+                                                                    ->
+                                                                    Ojs.set_prop_ascii
+                                                                    x209
+                                                                    "rangeSelectorPlotLineWidth"
+                                                                    (Ojs.float_to_js
+                                                                    x219)
+                                                                    | 
+                                                                    None ->
+                                                                    ());
+                                                                    (
+                                                                    match x200
                                                                     with
                                                                     | 
                                                                     Some x218
                                                                     ->
                                                                     Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "pointClickCallback"
-                                                                    (Ojs.fun_to_js
-                                                                    2
-                                                                    (fun
-                                                                    (x219 :
-                                                                    Ojs.t) ->
-                                                                    fun
-                                                                    (x220 :
-                                                                    Ojs.t) ->
-                                                                    x218
-                                                                    ~evt:x219
-                                                                    ~point:(
-                                                                    Point.t_of_js
-                                                                    x220)))
+                                                                    x209
+                                                                    "rangeSelectorPlotStrokeColor"
+                                                                    (Color.t_to_js
+                                                                    x218)
                                                                     | 
                                                                     None ->
                                                                     ());
                                                                     (
-                                                                    match x164
+                                                                    match x201
+                                                                    with
+                                                                    | 
+                                                                    Some x217
+                                                                    ->
+                                                                    Ojs.set_prop_ascii
+                                                                    x209
+                                                                    "showRangeSelector"
+                                                                    (Ojs.bool_to_js
+                                                                    x217)
+                                                                    | 
+                                                                    None ->
+                                                                    ());
+                                                                    (
+                                                                    match x202
+                                                                    with
+                                                                    | 
+                                                                    Some x216
+                                                                    ->
+                                                                    Ojs.set_prop_ascii
+                                                                    x209
+                                                                    "series"
+                                                                    (Series.t_to_js
+                                                                    x216)
+                                                                    | 
+                                                                    None ->
+                                                                    ());
+                                                                    (
+                                                                    match x203
+                                                                    with
+                                                                    | 
+                                                                    Some x215
+                                                                    ->
+                                                                    Ojs.set_prop_ascii
+                                                                    x209
+                                                                    "digitsAfterDecimal"
+                                                                    (Ojs.int_to_js
+                                                                    x215)
+                                                                    | 
+                                                                    None ->
+                                                                    ());
+                                                                    (
+                                                                    match x204
                                                                     with
                                                                     | 
                                                                     Some x214
                                                                     ->
                                                                     Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "underlayCallback"
-                                                                    (Ojs.fun_to_js
-                                                                    3
-                                                                    (fun
-                                                                    (x215 :
-                                                                    Ojs.t) ->
-                                                                    fun
-                                                                    (x216 :
-                                                                    Ojs.t) ->
-                                                                    fun
-                                                                    (x217 :
-                                                                    Ojs.t) ->
-                                                                    x214
-                                                                    ~context:(
-                                                                    Canvas_rendering_context_2D.t_of_js
-                                                                    x215)
-                                                                    ~area:(
-                                                                    Area.t_of_js
-                                                                    x216)
-                                                                    ~dygraph:x217))
-                                                                    | 
-                                                                    None ->
-                                                                    ());
-                                                                    (
-                                                                    match x165
-                                                                    with
-                                                                    | 
-                                                                    Some x209
-                                                                    ->
-                                                                    Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "zoomCallback"
-                                                                    (Ojs.fun_to_js
-                                                                    3
-                                                                    (fun
-                                                                    (x210 :
-                                                                    Ojs.t) ->
-                                                                    fun
-                                                                    (x211 :
-                                                                    Ojs.t) ->
-                                                                    fun
-                                                                    (x212 :
-                                                                    Ojs.t) ->
                                                                     x209
-                                                                    ~xmin:(
-                                                                    Ojs.float_of_js
-                                                                    x210)
-                                                                    ~xmax:(
-                                                                    Ojs.float_of_js
-                                                                    x211)
-                                                                    ~yRanges:(
-                                                                    Ojs.array_of_js
-                                                                    Range.t_of_js
-                                                                    x212)))
-                                                                    | 
-                                                                    None ->
-                                                                    ());
-                                                                    (
-                                                                    match x166
-                                                                    with
-                                                                    | 
-                                                                    Some x208
-                                                                    ->
-                                                                    Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "pixelRatio"
-                                                                    (Ojs.float_to_js
-                                                                    x208)
-                                                                    | 
-                                                                    None ->
-                                                                    ());
-                                                                    (
-                                                                    match x167
-                                                                    with
-                                                                    | 
-                                                                    Some x207
-                                                                    ->
-                                                                    Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "rightGap"
-                                                                    (Ojs.int_to_js
-                                                                    x207)
-                                                                    | 
-                                                                    None ->
-                                                                    ());
-                                                                    (
-                                                                    match x168
-                                                                    with
-                                                                    | 
-                                                                    Some x206
-                                                                    ->
-                                                                    Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "width"
-                                                                    (Ojs.int_to_js
-                                                                    x206)
-                                                                    | 
-                                                                    None ->
-                                                                    ());
-                                                                    (
-                                                                    match x169
-                                                                    with
-                                                                    | 
-                                                                    Some x205
-                                                                    ->
-                                                                    Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "rangeSelectorAlpha"
-                                                                    (Ojs.float_to_js
-                                                                    x205)
-                                                                    | 
-                                                                    None ->
-                                                                    ());
-                                                                    (
-                                                                    match x170
-                                                                    with
-                                                                    | 
-                                                                    Some x204
-                                                                    ->
-                                                                    Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "rangeSelectorBackgroundLineWidth"
-                                                                    (Ojs.float_to_js
-                                                                    x204)
-                                                                    | 
-                                                                    None ->
-                                                                    ());
-                                                                    (
-                                                                    match x171
-                                                                    with
-                                                                    | 
-                                                                    Some x203
-                                                                    ->
-                                                                    Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "rangeSelectorBackgroundStrokeColor"
-                                                                    (Color.t_to_js
-                                                                    x203)
-                                                                    | 
-                                                                    None ->
-                                                                    ());
-                                                                    (
-                                                                    match x172
-                                                                    with
-                                                                    | 
-                                                                    Some x202
-                                                                    ->
-                                                                    Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "rangeSelectorForegroundLineWidth"
-                                                                    (Ojs.float_to_js
-                                                                    x202)
-                                                                    | 
-                                                                    None ->
-                                                                    ());
-                                                                    (
-                                                                    match x173
-                                                                    with
-                                                                    | 
-                                                                    Some x201
-                                                                    ->
-                                                                    Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "rangeSelectorForegroundStrokeColor"
-                                                                    (Color.t_to_js
-                                                                    x201)
-                                                                    | 
-                                                                    None ->
-                                                                    ());
-                                                                    (
-                                                                    match x174
-                                                                    with
-                                                                    | 
-                                                                    Some x200
-                                                                    ->
-                                                                    Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "rangeSelectorHeight"
-                                                                    (Ojs.int_to_js
-                                                                    x200)
-                                                                    | 
-                                                                    None ->
-                                                                    ());
-                                                                    (
-                                                                    match x175
-                                                                    with
-                                                                    | 
-                                                                    Some x199
-                                                                    ->
-                                                                    Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "rangeSelectorPlotFillColor"
-                                                                    (Color.t_to_js
-                                                                    x199)
-                                                                    | 
-                                                                    None ->
-                                                                    ());
-                                                                    (
-                                                                    match x176
-                                                                    with
-                                                                    | 
-                                                                    Some x198
-                                                                    ->
-                                                                    Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "rangeSelectorPlotFillGradientColor"
-                                                                    (Color.t_to_js
-                                                                    x198)
-                                                                    | 
-                                                                    None ->
-                                                                    ());
-                                                                    (
-                                                                    match x177
-                                                                    with
-                                                                    | 
-                                                                    Some x197
-                                                                    ->
-                                                                    Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "rangeSelectorPlotLineWidth"
-                                                                    (Ojs.float_to_js
-                                                                    x197)
-                                                                    | 
-                                                                    None ->
-                                                                    ());
-                                                                    (
-                                                                    match x178
-                                                                    with
-                                                                    | 
-                                                                    Some x196
-                                                                    ->
-                                                                    Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "rangeSelectorPlotStrokeColor"
-                                                                    (Color.t_to_js
-                                                                    x196)
-                                                                    | 
-                                                                    None ->
-                                                                    ());
-                                                                    (
-                                                                    match x179
-                                                                    with
-                                                                    | 
-                                                                    Some x195
-                                                                    ->
-                                                                    Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "showRangeSelector"
-                                                                    (Ojs.bool_to_js
-                                                                    x195)
-                                                                    | 
-                                                                    None ->
-                                                                    ());
-                                                                    (
-                                                                    match x180
-                                                                    with
-                                                                    | 
-                                                                    Some x194
-                                                                    ->
-                                                                    Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "series"
-                                                                    (Series.t_to_js
-                                                                    x194)
-                                                                    | 
-                                                                    None ->
-                                                                    ());
-                                                                    (
-                                                                    match x181
-                                                                    with
-                                                                    | 
-                                                                    Some x193
-                                                                    ->
-                                                                    Ojs.set_prop_ascii
-                                                                    x187
-                                                                    "digitsAfterDecimal"
-                                                                    (Ojs.int_to_js
-                                                                    x193)
-                                                                    | 
-                                                                    None ->
-                                                                    ());
-                                                                    (
-                                                                    match x182
-                                                                    with
-                                                                    | 
-                                                                    Some x192
-                                                                    ->
-                                                                    Ojs.set_prop_ascii
-                                                                    x187
                                                                     "labelsKMB"
                                                                     (Ojs.bool_to_js
-                                                                    x192)
+                                                                    x214)
                                                                     | 
                                                                     None ->
                                                                     ());
                                                                     (
-                                                                    match x183
+                                                                    match x205
                                                                     with
                                                                     | 
-                                                                    Some x191
+                                                                    Some x213
                                                                     ->
                                                                     Ojs.set_prop_ascii
-                                                                    x187
+                                                                    x209
                                                                     "labelsKMG2"
                                                                     (Ojs.bool_to_js
-                                                                    x191)
+                                                                    x213)
                                                                     | 
                                                                     None ->
                                                                     ());
                                                                     (
-                                                                    match x184
+                                                                    match x206
                                                                     with
                                                                     | 
-                                                                    Some x190
+                                                                    Some x212
                                                                     ->
                                                                     Ojs.set_prop_ascii
-                                                                    x187
+                                                                    x209
                                                                     "labelsUTC"
                                                                     (Ojs.bool_to_js
-                                                                    x190)
+                                                                    x212)
                                                                     | 
                                                                     None ->
                                                                     ());
                                                                     (
-                                                                    match x185
+                                                                    match x207
                                                                     with
                                                                     | 
-                                                                    Some x189
+                                                                    Some x211
                                                                     ->
                                                                     Ojs.set_prop_ascii
-                                                                    x187
+                                                                    x209
                                                                     "maxNumberWidth"
                                                                     (Ojs.int_to_js
-                                                                    x189)
+                                                                    x211)
                                                                     | 
                                                                     None ->
                                                                     ());
                                                                     (
-                                                                    match x186
+                                                                    match x208
                                                                     with
                                                                     | 
-                                                                    Some x188
+                                                                    Some x210
                                                                     ->
                                                                     Ojs.set_prop_ascii
-                                                                    x187
+                                                                    x209
                                                                     "sigFigs"
                                                                     (Ojs.int_to_js
-                                                                    x188)
+                                                                    x210)
                                                                     | 
                                                                     None ->
                                                                     ());
                                                                     t_of_js
-                                                                    x187
+                                                                    x209
 let (legendFormatter : t -> (Legend_data.t -> string) option) =
-  fun (x308 : t) ->
+  fun (x330 : t) ->
     Ojs.option_of_js
-      (fun (x309 : Ojs.t) ->
-         fun (x310 : Legend_data.t) ->
-           Ojs.string_of_js (Ojs.apply x309 [|(Legend_data.t_to_js x310)|]))
-      (Ojs.get_prop_ascii (t_to_js x308) "legendFormatter")
+      (fun (x331 : Ojs.t) ->
+         fun (x332 : Legend_data.t) ->
+           Ojs.string_of_js (Ojs.apply x331 [|(Legend_data.t_to_js x332)|]))
+      (Ojs.get_prop_ascii (t_to_js x330) "legendFormatter")
 let (zoomCallback :
   t -> (xmin:float -> xmax:float -> yRanges:Range.t array -> unit) option) =
-  fun (x311 : t) ->
+  fun (x333 : t) ->
     Ojs.option_of_js
-      (fun (x312 : Ojs.t) ->
-         fun ~xmin:(x313 : float) ->
-           fun ~xmax:(x314 : float) ->
-             fun ~yRanges:(x315 : Range.t array) ->
+      (fun (x334 : Ojs.t) ->
+         fun ~xmin:(x335 : float) ->
+           fun ~xmax:(x336 : float) ->
+             fun ~yRanges:(x337 : Range.t array) ->
                ignore
-                 (Ojs.apply x312
-                    [|(Ojs.float_to_js x313);(Ojs.float_to_js x314);(
-                      Ojs.array_to_js Range.t_to_js x315)|]))
-      (Ojs.get_prop_ascii (t_to_js x311) "zoomCallback")
+                 (Ojs.apply x334
+                    [|(Ojs.float_to_js x335);(Ojs.float_to_js x336);(
+                      Ojs.array_to_js Range.t_to_js x337)|]))
+      (Ojs.get_prop_ascii (t_to_js x333) "zoomCallback")
 let (merge_internal : t -> prefer:t -> t) =
-  fun (x317 : t) ->
-    fun ~prefer:(x318 : t) ->
+  fun (x339 : t) ->
+    fun ~prefer:(x340 : t) ->
       t_of_js
         (Ojs.call (Ojs.get_prop_ascii Ojs.global "_") "merge"
-           [|(t_to_js x317);(t_to_js x318)|])
+           [|(t_to_js x339);(t_to_js x340)|])
 let merge t ~prefer  =
   ((create ()) |> (merge_internal ~prefer:t)) |> (merge_internal ~prefer)

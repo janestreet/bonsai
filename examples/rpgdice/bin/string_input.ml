@@ -1,6 +1,6 @@
 open! Core
 open! Async_kernel
-open! Import
+open! Bonsai_web
 open Bonsai.Let_syntax
 
 module type Conv = sig
@@ -12,8 +12,7 @@ end
 
 let component (type t) (module Conv : Conv with type t = t) ~default_model =
   let%sub text_state = Bonsai.state [%here] (module String) ~default_model in
-  return
-  @@ let%map text, set_text = text_state in
+  let%arr text, set_text = text_state in
   let conv = Or_error.try_with (fun () -> Conv.of_string text) in
   let textbox =
     Vdom.Node.input

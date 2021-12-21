@@ -11,6 +11,7 @@ module Apply_action : sig
 
   val incremental : ('m, 'a) transition Incr.t -> ('m, 'a) t
   val non_incremental : ('m, 'a) transition -> ('m, 'a) t
+  val impossible : (_, Nothing.t) t
   val to_incremental : ('m, 'a) t -> ('m, 'a) transition Incr.t
   val merge : ('a, 'b) t -> ('c, 'd) t -> ('a * 'c, ('b, 'd) Base.Either.t) t
   val map : ('a, 'b) t -> f:(('a, 'b) transition -> ('c, 'd) transition) -> ('c, 'd) t

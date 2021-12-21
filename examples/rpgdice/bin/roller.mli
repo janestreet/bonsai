@@ -1,5 +1,6 @@
 open! Core
-open! Async_kernel
-open! Import
+open! Bonsai_web
 
-val component : Rpgdice.Roll_spec.t Or_error.t Value.t -> Vdom.Node.t Computation.t
+val component
+  :  Bonsai_web_rpgdice_example.Roll_spec.t Or_error.t Value.t
+  -> Vdom.Node.t Computation.t

@@ -114,8 +114,10 @@ type t =
   ; date_from_string : Date.t
   ; sexp_from_string : Sexp.t
   ; bool_from_checkbox : bool
+  ; bool_from_toggle : bool
   ; bool_from_dropdown : bool
   ; typeahead : A_B_or_C.t
+  ; color_picker : [ `Hex of string ]
   ; string_option : string option
   ; a_b_or_c : A_B_or_C.t
   ; many : A_B_or_C.t list
@@ -163,6 +165,7 @@ let form =
           >>|| Form.project ~parse_exn:Date.of_string ~unparse:Date.to_string
         | Sexp_from_string -> E.Textbox.sexpable [%here] (module Sexp)
         | Bool_from_checkbox -> E.Checkbox.bool [%here] ~default:false
+        | Bool_from_toggle -> E.Toggle.bool ~default:false ()
         | Bool_from_dropdown ->
           E.Dropdown.enumerable [%here] (module Bool) ~to_string:Bool.to_string
         | Typeahead ->
@@ -171,6 +174,7 @@ let form =
             (module A_B_or_C)
             ~placeholder:"Typeahead here!"
             ~all_options:(Value.return A_B_or_C.all)
+        | Color_picker -> E.Color_picker.hex [%here]
         | String_option ->
           E.Dropdown.list_opt [%here] (module String) (Value.return [ "hello"; "world" ])
         | A_b_or_c -> E.Dropdown.enumerable [%here] (module A_B_or_C)

@@ -1,6 +1,7 @@
 open! Core
-open! Async_kernel
-open! Import
+open! Bonsai_web
+open Bonsai.Let_syntax
+module Rpgdice = Bonsai_web_rpgdice_example
 
 module Input_method = struct
   type t =
@@ -15,7 +16,6 @@ end
 module Input_method_selector = Dropdown_menu.Make (Input_method)
 
 let input_kind ~input_method =
-  let open Bonsai.Let_syntax in
   match%sub input_method with
   | Input_method.Text ->
     String_input.component (module Rpgdice.Roll_spec) ~default_model:""
@@ -31,17 +31,15 @@ let app =
       ; roller
       ]
   in
-  let open Bonsai.Let_syntax in
   let%sub input_method, input_method_selector =
     Input_method_selector.component ~default_model:Text
   in
   let%sub roll_spec, input = input_kind ~input_method in
   let%sub roller = Roller.component roll_spec in
-  return
-    (let%map input = input
-     and roller = roller
-     and input_method_selector = input_method_selector in
-     build_result ~input ~roller ~input_method_selector)
+  let%arr input = input
+  and roller = roller
+  and input_method_selector = input_method_selector in
+  build_result ~input ~roller ~input_method_selector
 ;;
 
 let (_ : _ Start.Handle.t) =

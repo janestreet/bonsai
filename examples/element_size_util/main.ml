@@ -7,6 +7,7 @@ module Page = struct
     | Size
     | Visibility
     | Resizer
+    | Fit
   [@@deriving enumerate, sexp, compare, equal]
 end
 
@@ -64,6 +65,38 @@ let size_component =
              ])
         [ Node.textf !"%{sexp:Size.t option}" size ]
     ]
+;;
+
+let fit =
+  let open Vdom in
+  let make s behavior =
+    Node.div
+      [ Node.h2 [ Node.text s ]
+      ; Node.div
+          ~key:"resizable-using-css"
+          ~attr:
+            (Vdom.Attr.many
+               [ Attr.class_ "resizable-using-css"
+               ; Bonsai_web_ui_element_size_hooks.Resize_to_fit
+                 .attr_for_parent__recommended
+               ])
+          [ Node.span
+              ~attr:
+                (Vdom.Attr.many
+                   [ Bonsai_web_ui_element_size_hooks.Resize_to_fit.attr ~behavior ()
+                   ; Vdom.Attr.create "contenteditable" ""
+                   ; Vdom.Attr.style (Css_gen.outline ~style:`None ())
+                   ])
+              [ Node.text "hello world" ]
+          ]
+      ]
+  in
+  Bonsai.const
+    (Node.div
+       [ make "shrink to avoid overflow" Shrink_to_avoid_overflow
+       ; make "grow to fill" Grow_to_fill
+       ; make "grow or shrink to match parent size" Grow_or_shrink_to_match_parent_size
+       ])
 ;;
 
 let visibility_component =
@@ -150,7 +183,8 @@ let component =
         | Bulk_size -> bulk_size_component
         | Size -> size_component
         | Visibility -> visibility_component
-        | Resizer -> resizer_component)
+        | Resizer -> resizer_component
+        | Fit -> fit)
   in
   return
   @@ let%map page_component = page_component

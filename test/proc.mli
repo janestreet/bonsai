@@ -64,9 +64,9 @@ module Handle : sig
       diff the gets shown. *)
   val recompute_view : _ t -> unit
 
-  (** This function calls [recompute_view] until either 
-      [max_computes] is reached (defaults to 100), or there are no more 
-      after-display lifecycle events for processing. 
+  (** This function calls [recompute_view] until either
+      [max_computes] is reached (defaults to 100), or there are no more
+      after-display lifecycle events for processing.
 
       This can be useful when using e.g. [Bonsai.Edge.on_change], which might
       otherwise delay their effects until the next frame. *)
@@ -102,4 +102,6 @@ module Handle : sig
       "This function exposes Bonsai internals that may change without warning"]
 
   val result_incr : ('r, 'i) t -> 'r Incr.t
+  val lifecycle_incr : _ t -> Incr.Packed.t
+  val apply_action_incr : _ t -> Incr.Packed.t
 end

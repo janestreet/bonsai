@@ -1,7 +1,7 @@
 open! Core
-open! Async_kernel
-open! Import
+open! Bonsai_web
 open Bonsai.Let_syntax
+module Rpgdice = Bonsai_web_rpgdice_example
 
 module Model = struct
   type t = (Rpgdice.Roll_spec.t * Rpgdice.Roll_result.t) option [@@deriving equal, sexp]
@@ -21,8 +21,7 @@ let roller_state =
 
 let component roll_spec =
   let%sub roller_state = roller_state roll_spec in
-  return
-  @@ let%map model, inject = roller_state
+  let%arr model, inject = roller_state
   and roll_spec = roll_spec in
   let roll_result =
     match roll_spec, model with

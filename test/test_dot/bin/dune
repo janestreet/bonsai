@@ -1,0 +1,16 @@
+(executables (names main)
+ (libraries core core_unix.command_unix bonsai_test_dot)
+ (preprocess (pps ppx_jane)))
+
+(rule
+ (targets tests.md cutoff.svg state.svg diamond.svg subst_tree.svg
+  dynamic_scope.svg assoc_simpl.svg assoc.svg nested_values.svg enum.svg
+  lazy.svg lazy_forced.svg)
+ (deps main.exe) (action (bash ./main.exe)))
+
+(rule (targets tests.html) (deps tests.md)
+ (action (bash "pandoc tests.md > tests.html")))
+
+(alias (name DEFAULT) (deps ./tests.md))
+
+(alias (name generate-html) (deps ./tests.html))

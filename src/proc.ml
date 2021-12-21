@@ -44,7 +44,7 @@ let switch ~match_ ~branches ~with_ =
     let default_model = Hidden.Model.create model model.default in
     component, default_model
   in
-  let components, models =
+  let arms, models =
     List.fold
       (List.range 0 branches)
       ~init:(Int.Map.empty, Int.Map.empty)
@@ -54,18 +54,8 @@ let switch ~match_ ~branches ~with_ =
         let models = Map.add_exn models ~key ~data:model in
         components, models)
   in
-  let key_type_id = Type_equal.Id.create ~name:"key" Int.sexp_of_t in
   Computation.T
-    { t =
-        Enum
-          { which = match_
-          ; out_of = components
-          ; sexp_of_key = [%sexp_of: int]
-          ; key_equal = [%equal: int]
-          ; key_type_id
-          ; key_compare = [%compare: int]
-          ; key_and_cmp = T
-          }
+    { t = Switch { match_; arms }
     ; model = Hidden.Multi_model.model_info (module Int) models
     ; action = Hidden.Action.type_id [%sexp_of: int]
     }
@@ -138,17 +128,7 @@ let assoc
   with
   | Some by ->
     Computation.T
-      { t =
-          Assoc_simpl
-            { map
-            ; key_id
-            ; data_id
-            ; by
-            ; model_info = model
-            ; input_by_k = T
-            ; result_by_k = T
-            ; model_by_k = T
-            }
+      { t = Assoc_simpl { map; key_id; data_id; by; result_by_k = T }
       ; action = Meta.Action.nothing
       ; model = Meta.Model.unit
       }
@@ -164,7 +144,6 @@ let assoc
             ; by
             ; model_info = model
             ; action_info = action
-            ; input_by_k = T
             ; result_by_k = T
             ; model_by_k = T
             }
@@ -179,37 +158,14 @@ let enum (type k) (module E : Enum with type t = k) ~match_ ~with_ =
     include Comparator.Make (E)
   end
   in
-  let create_case key =
-    let component = with_ key in
-    let (Computation.T { model; t = _; action = _ }) = component in
-    let default_model = Hidden.Model.create model model.default in
-    component, default_model
+  let forward_index = List.to_array E.all in
+  let reverse_index =
+    Map.of_alist_exn (module E) (List.mapi E.all ~f:(fun i k -> k, i))
   in
-  let components, models =
-    List.fold
-      E.all
-      ~init:(Map.empty (module E), Map.empty (module E))
-      ~f:(fun (components, models) key ->
-        let component, model = create_case key in
-        let components = Map.add_exn components ~key ~data:component in
-        let models = Map.add_exn models ~key ~data:model in
-        components, models)
-  in
-  let key_type_id = Type_equal.Id.create ~name:"key" E.sexp_of_t in
-  Computation.T
-    { t =
-        Enum
-          { which = match_
-          ; out_of = components
-          ; sexp_of_key = [%sexp_of: E.t]
-          ; key_equal = [%equal: E.t]
-          ; key_type_id
-          ; key_compare = [%compare: E.t]
-          ; key_and_cmp = T
-          }
-    ; model = Hidden.Multi_model.model_info (module E) models
-    ; action = Hidden.Action.type_id [%sexp_of: E.t]
-    }
+  let match_ = match_ >>| Map.find_exn reverse_index in
+  let branches = Array.length forward_index in
+  let with_ i = with_ (Array.get forward_index i) in
+  Let_syntax.switch ~match_ ~branches ~with_
 ;;
 
 let state_machine1
@@ -657,6 +613,17 @@ module Clock = struct
       Ui_incr.bind ~f:(Ui_incr.Clock.at clock))
   ;;
 
+  module Time_ns_model = struct
+    include Time_ns.Stable.Alternate_sexp.V1
+
+    let equal = Time_ns.equal
+  end
+
+  let get_current_time =
+    Incr.with_clock (fun clock ->
+      Ui_incr.return (Effect.of_sync_fun (fun () -> Ui_incr.Clock.now clock) ()))
+  ;;
+
   let every here span callback =
     let%sub input =
       Incr.with_clock (fun clock ->
@@ -674,20 +641,7 @@ module Clock = struct
       (* Ignore the time, which we only really used to get good cutoff behavior *)
       fun (_ : Time_ns.t) -> callback
     in
-    Edge.on_change
-      here
-      (module struct
-        include Time_ns.Stable.Alternate_sexp.V1
-
-        let equal = Time_ns.equal
-      end)
-      input
-      ~callback
-  ;;
-
-  let get_current_time =
-    Incr.with_clock (fun clock ->
-      Ui_incr.return (Effect.of_sync_fun (fun () -> Ui_incr.Clock.now clock) ()))
+    Edge.on_change here (module Time_ns_model) input ~callback
   ;;
 end
 

@@ -2,6 +2,11 @@ open! Core
 open! Bonsai_web
 module History = Html5_history.Opinionated
 
+let get_uri () =
+  let open Js_of_ocaml in
+  Dom_html.window##.location##.href |> Js.to_string |> Uri.of_string
+;;
+
 module Components = struct
   type t =
     { path : string
@@ -12,6 +17,14 @@ module Components = struct
 
   let create ?(path = "") ?(query = String.Map.empty) ?(fragment = None) () =
     { path; query; fragment }
+  ;;
+
+  let to_path_and_query { path; query; fragment } =
+    let uri = get_uri () in
+    uri
+    |> Fn.flip Uri.with_path path
+    |> Fn.flip Uri.with_query (Map.to_alist query)
+    |> Fn.flip Uri.with_fragment fragment
   ;;
 end
 
@@ -25,11 +38,6 @@ end
 module type S_via_sexp = sig
   type t [@@deriving sexp, equal]
 end
-
-let get_uri () =
-  let open Js_of_ocaml in
-  Dom_html.window##.location##.href |> Js.to_string |> Uri.of_string
-;;
 
 module Literally_just_a_gigantic_sexp (M : S_via_sexp) : S with type t = M.t = struct
   include M
@@ -79,14 +87,7 @@ let create_exn (type a) (module S : S with type t = a) ~fallback =
         Error `Not_found
     ;;
 
-    let to_path_and_query uri =
-      let { Components.path; query; fragment } = unparse uri in
-      let uri = get_uri () in
-      uri
-      |> Fn.flip Uri.with_path path
-      |> Fn.flip Uri.with_query (Map.to_alist query)
-      |> Fn.flip Uri.with_fragment fragment
-    ;;
+    let to_path_and_query uri = Components.to_path_and_query (unparse uri)
   end
   in
   let module History_state = struct

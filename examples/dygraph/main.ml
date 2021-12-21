@@ -6,10 +6,11 @@ let app =
   let%sub hide_overnight = Hide_overnights.app in
   let%sub simple = Simple.app in
   let%sub stock_chart = Stock_chart.app in
-  return
-  @@ let%map hide_overnight = hide_overnight
+  let%sub custom_points = Custom_points.app in
+  let%arr hide_overnight = hide_overnight
   and simple = simple
-  and stock_chart = stock_chart in
+  and stock_chart = stock_chart
+  and custom_points = custom_points in
   Vdom.Node.div
     [ Vdom.Node.h1 [ Vdom.Node.text "Simple" ]
     ; simple
@@ -17,6 +18,8 @@ let app =
     ; stock_chart
     ; Vdom.Node.h1 [ Vdom.Node.text "Hide Overnight" ]
     ; hide_overnight
+    ; Vdom.Node.h1 [ Vdom.Node.text "Custom points" ]
+    ; custom_points
     ]
 ;;
 

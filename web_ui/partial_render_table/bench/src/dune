@@ -1,0 +1,4 @@
+(library (name bonsai_web_ui_partial_render_table_bench)
+ (libraries bonsai bonsai_bench bonsai_web bonsai_web_ui_partial_render_table
+  core incr_map_collate)
+ (preprocess (pps ppx_jane)))

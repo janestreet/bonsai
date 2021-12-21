@@ -82,6 +82,61 @@ module Series_options : sig
         Type: boolean
         Default: false
     *)
+    -> ?drawHighlightPointCallback:
+         (graph:Ojs.t
+          -> seriesName:string option
+          -> context:Canvas_rendering_context_2D.t
+          -> cx:float
+          -> cy:float
+          -> color:
+               Ojs.t
+          -> pointSize:int
+          -> idx:int
+          -> unit)
+    (** drawHighlightPointCallback: https://dygraphs.com/options.html#drawHighlightPointCallback
+
+        Draw a custom item when a point is highlighted. Default is a small dot matching the
+        series color. This method should constrain drawing to within pointSize pixels from
+        (cx, cy) Also see drawPointCallback.
+
+        Type: function(g, seriesName, canvasContext, cx, cy, color, pointSize)
+        g: the reference graph
+        seriesName: the name of the series
+        canvasContext: the canvas to draw on
+        cx: center x coordinate
+        cy: center y coordinate
+        color: series color
+        pointSize: the radius of the image.
+        idx: the row-index of the point in the data.
+        Default: null
+    *)
+    -> ?drawPointCallback:
+         (graph:Ojs.t
+          -> seriesName:string option
+          -> context:Canvas_rendering_context_2D.t
+          -> cx:float
+          -> cy:float
+          -> color:Ojs.t
+          -> pointSize:int
+          -> idx:int
+          -> unit)
+    (** drawPointCallback: https://dygraphs.com/options.html#drawPointCallback
+
+        Draw a custom item when drawPoints is enabled. Default is a small dot matching the
+        series color. This method should constrain drawing to within pointSize pixels from
+        (cx, cy). Also see drawHighlightPointCallback.
+
+        Type: function(g, seriesName, canvasContext, cx, cy, color, pointSize)
+        g: the reference graph
+        seriesName: the name of the series
+        canvasContext: the canvas to draw on
+        cx: center x coordinate
+        cy: center y coordinate
+        color: series color
+        pointSize: the radius of the image.
+        idx: the row-index of the point in the data.
+        Default: null
+    *)
     -> ?showInRangeSelector:bool
     (** showInRangeSelector http://dygraphs.com/options.html#showInRangeSelector
 

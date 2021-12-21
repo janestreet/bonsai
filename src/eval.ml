@@ -4,12 +4,6 @@ open Incr.Let_syntax
 
 let () = Incr.State.(set_max_height_allowed t 1024)
 
-(* Share this incremental node *)
-let unusable_apply_action : (unit, Nothing.t) Snapshot.Apply_action.t =
-  Snapshot.Apply_action.non_incremental (fun ~schedule_event:_ () action ->
-    Nothing.unreachable_code action)
-;;
-
 let do_nothing_lifecycle : Lifecycle.t Path.Map.t Incr.t =
   Incr.return Lifecycle.Collection.empty
 ;;
@@ -60,7 +54,7 @@ let rec eval
   match computation with
   | Return var ->
     let result = Value.eval environment var in
-    Snapshot.create ~result ~apply_action:unusable_apply_action ~lifecycle:None
+    Snapshot.create ~result ~apply_action:Snapshot.Apply_action.impossible ~lifecycle:None
   | Leaf1 { input; apply_action; compute; name = _; kind = _ } ->
     let%pattern_bind result, apply_action =
       let%mapn input = Value.eval environment input
@@ -95,7 +89,7 @@ let rec eval
       | None -> Incr.return default
       | Some x -> Incr.map x ~f:(fun a -> for_some a)
     in
-    Snapshot.create ~result ~lifecycle:None ~apply_action:unusable_apply_action
+    Snapshot.create ~result ~lifecycle:None ~apply_action:Snapshot.Apply_action.impossible
   | Subst { from; via; into; here = _ } ->
     let from =
       let inject e = inject (First e) in
@@ -159,7 +153,6 @@ let rec eval
       ; model_info
       ; action_info
       ; result_by_k = T
-      ; input_by_k = T
       ; model_by_k = T
       } ->
     let map_input = Value.eval environment map in
@@ -224,45 +217,32 @@ let rec eval
     in
     let apply_action = Snapshot.Apply_action.incremental apply_action in
     Snapshot.create ~result:results_map ~apply_action ~lifecycle:(Some lifecycle)
-  | Assoc_simpl
-      { map
-      ; by
-      ; key_id = _
-      ; data_id = _
-      ; model_info = _
-      ; result_by_k = T
-      ; input_by_k = T
-      ; model_by_k = T
-      } ->
+  | Assoc_simpl { map; by; key_id = _; data_id = _; result_by_k = T } ->
     let map_input = Value.eval environment map in
     let result = Incr_map.mapi map_input ~f:(fun ~key ~data -> by path key data) in
-    Snapshot.create ~result ~apply_action:unusable_apply_action ~lifecycle:None
-  | Enum
-      { which; out_of; key_equal; key_type_id; key_compare; key_and_cmp = T; sexp_of_key }
-    ->
-    let key = Value.eval environment which in
-    Incremental.set_cutoff key (Incremental.Cutoff.of_equal key_equal);
+    Snapshot.create ~result ~apply_action:Snapshot.Apply_action.impossible ~lifecycle:None
+  | Switch { match_; arms } ->
+    let index = Value.eval environment match_ in
     let%pattern_bind result, apply_action, lifecycle =
-      let create_keyed = unstage (Path.Elem.keyed ~compare:key_compare key_type_id) in
-      let%bind key = key in
+      let%bind index = index in
       (* !!!This is a load-bearing bind!!!
 
          If this bind isn't here, the scope that is created for the bind
          doesn't exist, and old incremental nodes might still be active, and
          with things like [match%sub] or [Bonsai.match_either] can witness old
          nodes, which can cause [assert false] to trigger. *)
-      let path = Path.append path Path.Elem.(Enum (create_keyed key)) in
-      let (T { t; model = model_info; action = action_info }) = Map.find_exn out_of key in
+      let path = Path.append path (Path.Elem.Switch index) in
+      let (T { t; model = model_info; action = action_info }) = Map.find_exn arms index in
       let chosen_model =
         Incremental.map model ~f:(fun map ->
           let (Hidden.Model.T { model; info; t_of_sexp = _ }) =
-            Hidden.Multi_model.find_exn map key
+            Hidden.Multi_model.find_exn map index
           in
           let equal = Type_equal.Id.same_witness_exn info.type_id model_info.type_id in
           Type_equal.conv equal model)
       in
       let inject action =
-        inject (Hidden.Action.T { action; type_id = action_info; key })
+        inject (Hidden.Action.T { action; type_id = action_info; key = index })
       in
       let snapshot = eval ~environment ~model:chosen_model ~path ~clock ~inject t in
       let apply_action =
@@ -271,27 +251,26 @@ let rec eval
         in
         fun ~schedule_event
           model
-          (Hidden.Action.T { action; type_id = action_type_id; key = key' }) ->
+          (Hidden.Action.T { action; type_id = action_type_id; key = index' }) ->
           let (T { model = chosen_model; info = chosen_model_info; _ }) =
-            Hidden.Multi_model.find_exn model key
+            Hidden.Multi_model.find_exn model index
           in
           match
-            ( key_equal key' key
+            ( index = index'
             , Type_equal.Id.same_witness action_type_id action_info
             , Type_equal.Id.same_witness chosen_model_info.type_id model_info.type_id )
           with
           | true, Some T, Some T ->
             let new_model = apply_action ~schedule_event chosen_model action in
             let new_model = Hidden.Model.create model_info new_model in
-            Hidden.Multi_model.set model ~key ~data:new_model
+            Hidden.Multi_model.set model ~key:index ~data:new_model
           | _ ->
-            let key = sexp_of_key key in
             let action = Type_equal.Id.to_sexp action_type_id action in
             eprint_s
               [%message
-                "an action inside of Bonsai.enum as been dropped because the computation \
-                 is no longer active"
-                  (key : Sexp.t)
+                "an action inside of Bonsai.switch as been dropped because the \
+                 computation is no longer active"
+                  (index : int)
                   (action : Sexp.t)];
             model
       in
@@ -399,7 +378,7 @@ let rec eval
   | Path ->
     Snapshot.create
       ~result:(Incr.return path)
-      ~apply_action:unusable_apply_action
+      ~apply_action:Snapshot.Apply_action.impossible
       ~lifecycle:None
   | Lifecycle lifecycle ->
     let lifecycle =
@@ -411,6 +390,6 @@ let rec eval
     in
     Snapshot.create
       ~result:(Incr.return ())
-      ~apply_action:unusable_apply_action
+      ~apply_action:Snapshot.Apply_action.impossible
       ~lifecycle:(Some lifecycle)
 ;;

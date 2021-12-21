@@ -1,6 +1,13 @@
 open! Core
 open! Bonsai_web
 
+module type Stringable_model = sig
+  type t
+
+  include Bonsai.Model with type t := t
+  include Stringable with type t := t
+end
+
 module Textbox : sig
   val string
     :  ?extra_attrs:Vdom.Attr.t list Value.t
@@ -83,6 +90,16 @@ module Checkbox : sig
     -> ('a, 'cmp) Bonsai.comparator
     -> 'a list Value.t
     -> ('a, 'cmp) Set.t Form.t Computation.t
+end
+
+module Toggle : sig
+  (** Very similar to [Checkbox.bool], but with a different stylization.  Looks similar to
+      the rounded variant here: https://www.w3schools.com/howto/howto_css_switch.asp *)
+  val bool
+    :  ?extra_attr:Vdom.Attr.t Value.t
+    -> default:bool
+    -> unit
+    -> bool Form.t Computation.t
 end
 
 module Dropdown : sig
@@ -274,7 +291,26 @@ module Radio_buttons : sig
     -> 'a Form.t Computation.t
 end
 
+module Color_picker : sig
+  val hex
+    :  ?extra_attr:Vdom.Attr.t Value.t
+    -> Source_code_position.t
+    -> [ `Hex of string ] Form.t Computation.t
+end
+
 module Multiple : sig
+  (* [stringable_list] creates a form with a single textbox which calls [of_string] on the
+     contents of the textbox and adds it to the list, whenever enter is pressed. This is
+     preferred to [list] when the string representation of a type is easy to write. *)
+  val stringable_list
+    :  ?extra_input_attr:Vdom.Attr.t Value.t
+    -> ?extra_pill_container_attr:Vdom.Attr.t Value.t
+    -> ?extra_pill_attr:Vdom.Attr.t Value.t
+    -> ?placeholder:string
+    -> Source_code_position.t
+    -> (module Stringable_model with type t = 'a)
+    -> 'a list Form.t Computation.t
+
   val list
     :  Source_code_position.t
     -> ?element_group_label:

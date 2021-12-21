@@ -176,8 +176,8 @@ let%expect_test "assoc and enum path" =
   Handle.show handle;
   [%expect
     {|
-    ((-1 (Subst_from (Assoc -1) Subst_into (Enum 0)))
-     (1 (Subst_from (Assoc 1) Subst_into (Enum 1)))) |}]
+    ((-1 (Subst_from (Assoc -1) Subst_into (Switch 0)))
+     (1 (Subst_from (Assoc 1) Subst_into (Switch 1)))) |}]
 ;;
 
 let%expect_test "simple-assoc works with paths" =

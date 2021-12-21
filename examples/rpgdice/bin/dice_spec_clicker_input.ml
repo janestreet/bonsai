@@ -1,7 +1,7 @@
 open! Core
-open! Async_kernel
-open! Import
+open! Bonsai_web
 open Bonsai.Let_syntax
+module Rpgdice = Bonsai_web_rpgdice_example
 
 module Model = struct
   type t =
@@ -53,8 +53,7 @@ let component =
              }
            | Clear -> { const = 0; dice = Map.map model.dice ~f:(Fn.const 0) })
   in
-  return
-  @@ let%map model, inject = dice_state in
+  let%arr model, inject = dice_state in
   let button = Vdom_input_widgets.Button.simple in
   let dice_button num_faces =
     button

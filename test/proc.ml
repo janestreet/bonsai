@@ -171,4 +171,7 @@ module Handle = struct
     let%pattern_bind.Incr result, _view, _inject = Driver.result_incr handle in
     result
   ;;
+
+  let apply_action_incr = Driver.apply_action_incr
+  let lifecycle_incr = Driver.lifecycle_incr
 end

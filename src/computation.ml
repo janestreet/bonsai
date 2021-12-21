@@ -81,7 +81,6 @@ type ('model, 'action, 'result) t =
       ; by : ('model, 'action, 'result) t
       ; model_info : 'model Meta.Model.t
       ; action_info : 'action Meta.Action.t
-      ; input_by_k : ('input_by_k, ('k, 'v, 'cmp) Map.t) Type_equal.t
       ; result_by_k : ('result_by_k, ('k, 'result, 'cmp) Map.t) Type_equal.t
       ; model_by_k : ('model_by_k, ('k, 'model, 'cmp) Map.t) Type_equal.t
       }
@@ -91,22 +90,14 @@ type ('model, 'action, 'result) t =
       ; key_id : 'k Type_equal.Id.t
       ; data_id : 'v Type_equal.Id.t
       ; by : Path.t -> 'k -> 'v -> 'result
-      ; model_info : 'model Meta.Model.t
-      ; input_by_k : ('input_by_k, ('k, 'v, 'cmp) Map.t) Type_equal.t
       ; result_by_k : ('result_by_k, ('k, 'result, 'cmp) Map.t) Type_equal.t
-      ; model_by_k : ('model_by_k, ('k, 'model, 'cmp) Map.t) Type_equal.t
       }
       -> (unit, Nothing.t, 'result_by_k) t
-  | Enum :
-      { which : 'key Value.t
-      ; out_of : ('key, 'a packed, 'cmp) Map.t
-      ; sexp_of_key : 'key -> Sexp.t
-      ; key_equal : 'key -> 'key -> bool
-      ; key_compare : 'key -> 'key -> int
-      ; key_type_id : 'key Type_equal.Id.t
-      ; key_and_cmp : ('key_and_cmp, ('key, 'cmp) Hidden.Multi_model.t) Type_equal.t
+  | Switch :
+      { match_ : int Value.t
+      ; arms : 'a packed Int.Map.t
       }
-      -> ('key_and_cmp, 'key Hidden.Action.t, 'a) t
+      -> ((int, Int.comparator_witness) Hidden.Multi_model.t, int Hidden.Action.t, 'a) t
   (* Lazy wraps the model in an option because otherwise you could make
      infinitely sized models (by eagerly expanding a recursive model) which
      would stack-overflow during eval.  [None] really means "unchanged from the
@@ -150,9 +141,9 @@ let rec sexp_of_t : type m a r. (m, a, r) t -> Sexp.t = function
   | Fetch { id; _ } -> [%sexp Fetch (id : _ Type_equal.Id.t)]
   | Assoc { map; by; _ } -> [%sexp Assoc { map : Value.t; by : t }]
   | Assoc_simpl { map; _ } -> [%sexp Assoc_simpl { map : Value.t }]
-  | Enum { which; out_of; sexp_of_key; _ } ->
-    let out_of = out_of |> Map.to_alist |> List.map ~f:[%sexp_of: key * packed] in
-    [%sexp Enum { which : Value.t; out_of : Sexp.t list }]
+  | Switch { match_; arms; _ } ->
+    let arms = arms |> Map.to_alist |> List.map ~f:[%sexp_of: int * packed] in
+    [%sexp Switch { match_ : Value.t; arms : Sexp.t list }]
   | Lazy _ -> [%sexp Lazy]
   | With_model_resetter { t; _ } -> [%sexp With_model_resetter (t : t)]
   | Wrap { inner; _ } -> [%sexp Wrap (inner : t)]

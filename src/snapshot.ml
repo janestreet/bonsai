@@ -7,17 +7,25 @@ module Apply_action = struct
   type ('m, 'a) t =
     | Incremental of ('m, 'a) transition Incr.t
     | Non_incremental of ('m, 'a) transition
+    | Impossible of ('a -> Nothing.t)
 
   let incremental i = Incremental i
   let non_incremental i = Non_incremental i
+  let impossible = Impossible Fn.id
 
   let to_incremental = function
     | Incremental i -> i
     | Non_incremental i -> Incr.return i
+    | Impossible witness ->
+      Incr.return (fun ~schedule_event:_ _model action ->
+        Nothing.unreachable_code (witness action))
   ;;
 
-  let map t ~f =
+  let rec map t ~f =
     match t with
+    | Impossible witness ->
+      Non_incremental (fun ~schedule_event:_ _m a -> Nothing.unreachable_code (witness a))
+      |> map ~f
     | Incremental i ->
       Incremental
         (let%map.Incr i = i in
@@ -32,6 +40,17 @@ module Apply_action = struct
       | Second action2 -> m1, t2 ~schedule_event m2 action2
     in
     match t1, t2 with
+    | Impossible a, Impossible b ->
+      Impossible
+        (function
+          | First x -> a x
+          | Second y -> b y)
+    | Impossible a, Non_incremental b ->
+      let a ~schedule_event:_ _model action = Nothing.unreachable_code (a action) in
+      Non_incremental (join a b)
+    | Non_incremental a, Impossible b ->
+      let b ~schedule_event:_ _model action = Nothing.unreachable_code (b action) in
+      Non_incremental (join a b)
     | Non_incremental t1, Non_incremental t2 -> Non_incremental (join t1 t2)
     | _ ->
       Incremental
@@ -59,7 +78,8 @@ let create ~apply_action ~lifecycle ~result =
   (match apply_action with
    | Apply_action.Incremental apply_action ->
      annotate ~name:"apply_action" ~color:"cornsilk" apply_action
-   | Non_incremental _ -> ());
+   | Non_incremental _ -> ()
+   | Impossible _ -> ());
   Option.iter lifecycle ~f:(annotate ~name:"lifecycle" ~color:"lightsalmon");
   annotate ~name:"result" ~color:"lightcoral" result;
   Fields.create ~apply_action ~lifecycle ~result

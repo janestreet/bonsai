@@ -1,5 +1,6 @@
 open! Core
 open! Bonsai_web
+open! Bonsai_web_ui_common_components
 
 (** This provides an implementation of [inputs] with associated [datalist] element.
 
@@ -139,34 +140,6 @@ let create
   selected, Vdom.Node.div [ input; datalist ], inject_selected
 ;;
 
-let pills ~to_string ~selected_options ~on_set_change ~inject_selected_options =
-  let pill option =
-    let remove_option _ =
-      let selected_options = Set.remove selected_options option in
-      Ui_effect.Many
-        [ on_set_change selected_options; inject_selected_options selected_options ]
-    in
-    Vdom.Node.span
-      ~attr:
-        (Vdom.Attr.many_without_merge
-           [ Vdom.Attr.tabindex 0
-           ; Vdom.Attr.create "data-value" (to_string option)
-           ; Vdom.Attr.on_click remove_option
-           ; Vdom.Attr.on_keyup (fun ev ->
-               match Js_of_ocaml.Dom_html.Keyboard_code.of_event ev with
-               | Space | Enter | NumpadEnter | Backspace | Delete -> remove_option ev
-               | _ -> Ui_effect.Ignore)
-           ])
-      [ Vdom.Node.text (to_string option ^ " ×") ]
-  in
-  if Set.is_empty selected_options
-  then Vdom.Node.none
-  else
-    Vdom.Node.div
-      ~attr:(Vdom.Attr.class_ "bonsai-web-ui-typeahead-pills")
-      (Set.to_list selected_options |> List.map ~f:pill)
-;;
-
 let[@warning "-16"] input
                       ?(placeholder = "")
                       ~extra_attrs
@@ -175,6 +148,7 @@ let[@warning "-16"] input
                       ~id
                       ~all_options
                       ~selected_options
+                      ~inject_selected_options
                       ~on_set_change
   =
   let open! Bonsai.Let_syntax in
@@ -183,11 +157,12 @@ let[@warning "-16"] input
   let%sub select = Bonsai.state [%here] (module String) ~default_model:"" in
   return
   @@ let%map select, inject_select = select
-  and all_options = all_options
-  and selected_options, inject_selected_options = selected_options
-  and extra_attrs = extra_attrs
-  and id = id
-  and on_set_change = on_set_change in
+  and all_options             = all_options
+  and selected_options        = selected_options
+  and inject_selected_options = inject_selected_options
+  and extra_attrs             = extra_attrs
+  and id                      = id
+  and on_set_change           = on_set_change in
   let on_input maybe_t user_input =
     match maybe_t with
     | None ->
@@ -239,7 +214,14 @@ let create_multi
     Option.value to_string ~default:(fun a -> a |> M.sexp_of_t |> Sexp.to_string_hum)
   in
   let selected_options = Bonsai.state [%here] (module M.Set) ~default_model:M.Set.empty in
-  let%sub selected_options = selected_options in
+  let%sub selected_options, inject_selected_options = selected_options in
+  let%sub inject_selected_options =
+    let%arr inject_selected_options = inject_selected_options
+    and on_set_change = on_set_change in
+    fun selected_options ->
+      Effect.Many
+        [ on_set_change selected_options; inject_selected_options selected_options ]
+  in
   let%sub id = Bonsai.path_id in
   let%sub input =
     input
@@ -249,15 +231,25 @@ let create_multi
       ~id
       ~all_options
       ~selected_options
+      ~inject_selected_options
       ~on_set_change
       ~split
   in
+  let%sub pills =
+    Pills.of_set
+      ~extra_container_attr:
+        (Value.return Vdom.Attr.(class_ "bonsai-web-ui-typeahead-pills"))
+      ~to_string
+      ~inject_selected_options
+      selected_options
+  in
   return
-  @@ let%map selected_options, inject_selected_options = selected_options
-  and input         = input
-  and on_set_change = on_set_change
-  and id            = id
-  and all_options   = all_options in
+  @@ let%map selected_options = selected_options
+  and inject_selected_options = inject_selected_options
+  and input                   = input
+  and id                      = id
+  and all_options             = all_options
+  and pills                   = pills in
   let datalist =
     datalist
       ~id
@@ -268,9 +260,6 @@ let create_multi
          let remaining_options = Set.diff all_options selected_options in
          fun option -> Set.mem remaining_options option)
       ()
-  in
-  let pills =
-    pills ~selected_options ~on_set_change ~inject_selected_options ~to_string
   in
   selected_options, Vdom.Node.div [ input; datalist; pills ], inject_selected_options
 ;;

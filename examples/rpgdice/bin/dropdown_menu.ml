@@ -1,6 +1,5 @@
 open! Core
-open! Async_kernel
-open! Import
+open! Bonsai_web
 include Dropdown_menu_intf
 
 module Make (Enum : Enum) = struct

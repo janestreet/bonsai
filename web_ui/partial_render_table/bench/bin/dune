@@ -1,0 +1,4 @@
+(executables (names main)
+ (libraries bonsai_bench bonsai_web_ui_partial_render_table
+  bonsai_web_ui_partial_render_table_bench)
+ (preprocess (pps ppx_jane ppx_bench)))

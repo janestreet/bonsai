@@ -11,6 +11,7 @@ build: [
 ]
 depends: [
   "ocaml" {>= "4.08.0"}
+  "async"
   "async_extra"
   "async_js"
   "async_kernel"
@@ -29,9 +30,10 @@ depends: [
   "ppx_jane"
   "ppx_pattern_bind"
   "ppx_typed_fields"
+  "profunctor"
   "textutils"
   "virtual_dom"
-  "cohttp-async"             {= "4.0.0+async"}
+  "cohttp-async"             {>= "2.5.6"}
   "dune"                     {>= "2.0.0"}
   "gen_js_api"               {>= "1.0.8"}
   "js_of_ocaml-ppx"          {>= "3.9.0"}

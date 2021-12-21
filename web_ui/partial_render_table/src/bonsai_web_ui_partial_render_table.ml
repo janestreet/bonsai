@@ -267,11 +267,6 @@ module Basic = struct
   module Order = struct
     type t = (int * [ `Asc | `Desc ]) list [@@deriving sexp, equal]
 
-    let invert = function
-      | `Asc -> `Desc
-      | `Desc -> `Asc
-    ;;
-
     module Action = struct
       type t =
         | Set_sort of int
@@ -280,15 +275,15 @@ module Basic = struct
     end
 
     let apply_action ~inject:_ ~schedule_event:_ model =
-      let find_and_invert_or_ascending i =
+      let cycle_sort_direction i =
         match List.find model ~f:(fun (x, _) -> i = x) with
-        | Some (_, order) -> i, invert order
-        | None -> i, `Asc
+        | None -> [ i, `Asc ]
+        | Some (_, `Asc) -> [ i, `Desc ]
+        | Some (_, `Desc) -> []
       in
       function
-      | Action.Set_sort i -> [ find_and_invert_or_ascending i ]
-      | Add_sort i ->
-        find_and_invert_or_ascending i :: List.filter model ~f:(fun (x, _) -> i <> x)
+      | Action.Set_sort i -> cycle_sort_direction i
+      | Add_sort i -> cycle_sort_direction i @ List.filter model ~f:(fun (x, _) -> i <> x)
     ;;
 
     let to_compare ~sorters ~default_sort list =

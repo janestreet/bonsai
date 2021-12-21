@@ -3,6 +3,22 @@ open! Bonsai_web
 open Bonsai.Let_syntax
 module Extendy = Bonsai_web_ui_extendy
 
+module type Stringable_model = sig
+  type t
+
+  include Bonsai.Model with type t := t
+  include Stringable with type t := t
+end
+
+module Style =
+  [%css.raw
+    {|
+  .invalid_text_box {
+    outline: none;
+    border: 2px solid red;
+    border-radius: 2px;
+  } |}]
+
 let path =
   let%map.Computation path_id = Bonsai.path_id in
   path_id, Vdom.Attr.id path_id
@@ -168,38 +184,41 @@ let sexp_to_pretty_string sexp_of_t t =
 ;;
 
 module Checkbox = struct
+  let make_input ~extra_attrs ~state ~set_state =
+    Vdom.Node.input
+      ~attr:
+        (Vdom.Attr.many_without_merge
+           ([ Vdom.Attr.style (Css_gen.margin_left (`Px 0))
+            ; Vdom.Attr.type_ "checkbox"
+            ; Vdom.Attr.on_click (fun evt ->
+                (* try to get the actual state of the checkbox, but if
+                   that doesn't work, assume that clicking on the
+                   element toggled the state. *)
+                let checked =
+                  let open Option.Let_syntax in
+                  let open Js_of_ocaml in
+                  let%bind target = evt##.target |> Js.Opt.to_option in
+                  let%bind coerced =
+                    Dom_html.CoerceTo.input target |> Js.Opt.to_option
+                  in
+                  return (Js.to_bool coerced##.checked)
+                in
+                match checked with
+                | Some bool -> set_state bool
+                | None -> set_state (not state))
+            ; Vdom.Attr.bool_property "checked" state
+            ]
+            @ extra_attrs))
+      []
+  ;;
+
   let checkbox ?(extra_attrs = Value.return []) here default_model =
     let view ~id ~state ~set_state =
       let%map id = id
       and state = state
       and set_state = set_state
       and extra_attrs = extra_attrs in
-      Vdom.Node.input
-        ~attr:
-          (Vdom.Attr.many_without_merge
-             ([ id
-              ; Vdom.Attr.style (Css_gen.margin_left (`Px 0))
-              ; Vdom.Attr.type_ "checkbox"
-              ; Vdom.Attr.on_click (fun evt ->
-                  (* try to get the actual state of the checkbox, but if
-                     that doesn't work, assume that clicking on the
-                     element toggled the state. *)
-                  let checked =
-                    let open Option.Let_syntax in
-                    let open Js_of_ocaml in
-                    let%bind target = evt##.target |> Js.Opt.to_option in
-                    let%bind coerced =
-                      Dom_html.CoerceTo.input target |> Js.Opt.to_option
-                    in
-                    return (Js.to_bool coerced##.checked)
-                  in
-                  match checked with
-                  | Some bool -> set_state bool
-                  | None -> set_state (not state))
-              ; Vdom.Attr.bool_property "checked" state
-              ]
-              @ extra_attrs))
-        []
+      make_input ~extra_attrs:(id :: extra_attrs) ~state ~set_state
     in
     Basic_stateful.make (Bonsai.state here (module Bool) ~default_model) ~view
   ;;
@@ -243,6 +262,83 @@ module Checkbox = struct
     Basic_stateful.make
       (Bonsai.state here (module M.Set) ~default_model:M.Set.empty)
       ~view
+  ;;
+end
+
+module Toggle = struct
+  (* Most of this css is from https://www.w3schools.com/howto/howto_css_switch.asp *)
+
+  module Style =
+    [%css.raw
+      {|
+.toggle {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 22px;
+}
+
+.invisible {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc; /* change */
+  transition: 0.2s;
+  border-radius: 34px;
+}
+
+.slider::before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 2px;
+  bottom: 2px;
+  border-radius: 50%;
+  background-color: white;
+  transition: 0.2s;
+}
+
+.invisible:checked + .slider {
+  background-color: #2196F3;
+}
+
+.invisible:focused + .slider {
+  box-shadow: 0 0 1px #2196F3;
+}
+
+.invisible:checked + .slider::before {
+  transform: translateX(18px);
+}
+|}]
+
+  let bool ?(extra_attr = Value.return Vdom.Attr.empty) ~default () =
+    let view ~id ~state ~set_state =
+      let%map id = id
+      and state = state
+      and set_state = set_state
+      and extra_attr = extra_attr in
+      let checkbox =
+        Checkbox.make_input
+          ~extra_attrs:[ Vdom.Attr.many [ Vdom.Attr.class_ Style.invisible; extra_attr ] ]
+          ~state
+          ~set_state
+      in
+      let slider = Vdom.Node.span ~attr:(Vdom.Attr.class_ Style.slider) [] in
+      Vdom.Node.label
+        ~attr:(Vdom.Attr.many [ Vdom.Attr.class_ Style.toggle; id ])
+        [ checkbox; slider ]
+    in
+    Basic_stateful.make (Bonsai.state [%here] (module Bool) ~default_model:default) ~view
   ;;
 end
 
@@ -640,6 +736,81 @@ let list_rev_map2 a b ~f =
 ;;
 
 module Multiple = struct
+  let stringable_list
+        (type a)
+        ?(extra_input_attr = Value.return Vdom.Attr.empty)
+        ?(extra_pill_container_attr = Value.return Vdom.Attr.empty)
+        ?(extra_pill_attr = Value.return Vdom.Attr.empty)
+        ?(placeholder = "")
+        here
+        (module M : Stringable_model with type t = a)
+    =
+    let module M_list = struct
+      type t = M.t list [@@deriving equal, sexp]
+    end
+    in
+    let%sub invalid, inject_invalid =
+      Bonsai.state here (module Bool) ~default_model:false
+    in
+    let%sub selected_options, inject_selected_options =
+      Bonsai.state here (module M_list) ~default_model:[]
+    in
+    let%sub state, set_state = Bonsai.state here (module String) ~default_model:"" in
+    let%sub path, _ = path in
+    let%sub pills =
+      Bonsai_web_ui_common_components.Pills.of_list
+        ~extra_container_attr:extra_pill_container_attr
+        ~extra_pill_attr
+        ~to_string:M.to_string
+        ~inject_selected_options
+        selected_options
+    in
+    let%arr invalid = invalid
+    and inject_invalid = inject_invalid
+    and selected_options = selected_options
+    and inject_selected_options = inject_selected_options
+    and state = state
+    and set_state = set_state
+    and pills = pills
+    and extra_input_attr = extra_input_attr
+    and path = path in
+    let placeholder_ = placeholder in
+    let handle_keydown event =
+      match Js_of_ocaml.Dom_html.Keyboard_code.of_event event with
+      | Enter ->
+        (match Option.try_with (fun () -> M.of_string state) with
+         | None -> Effect.Many [ Effect.Prevent_default; inject_invalid true ]
+         | Some value ->
+           Effect.Many
+             [ Effect.Prevent_default
+             ; inject_selected_options (value :: selected_options)
+             ; set_state ""
+             ])
+      | _ -> Effect.Ignore
+    in
+    let invalid_attr =
+      if invalid then Vdom.Attr.class_ Style.invalid_text_box else Vdom.Attr.empty
+    in
+    let input =
+      Vdom.Node.input
+        ~attr:
+          Vdom.Attr.(
+            extra_input_attr
+            @ invalid_attr
+            @ placeholder placeholder_
+            @ value_prop state
+            @ on_input (fun _ input ->
+              Effect.Many [ inject_invalid false; set_state input ])
+            @ on_keydown handle_keydown)
+        []
+    in
+    let view = Vdom.Node.div [ input; pills ] in
+    Form.Expert.create
+      ~value:(Ok selected_options)
+      ~view:(View.of_vdom ~id:path view)
+      ~set:inject_selected_options
+  ;;
+
   let list
         (type a)
         here
@@ -936,6 +1107,30 @@ module Radio_buttons = struct
         ~layout
     =
     list here ?extra_attrs ?to_string (module E) ~layout (Value.return E.all)
+  ;;
+end
+
+module Color_picker = struct
+  let hex ?(extra_attr = Value.return Vdom.Attr.empty) here =
+    let view ~id ~state ~set_state =
+      let%map id_ = id
+      and state = state
+      and set_state = set_state
+      and extra_attr = extra_attr in
+      Vdom_input_widgets.Entry.color_picker
+        ~extra_attr:Vdom.Attr.(id_ @ extra_attr)
+        ~value:state
+        ~on_input:set_state
+        ()
+    in
+    Basic_stateful.make
+      (Bonsai.state
+         here
+         ~default_model:(`Hex "#000000")
+         (module struct
+           type t = [ `Hex of string ] [@@deriving equal, sexp]
+         end))
+      ~view
   ;;
 end
 

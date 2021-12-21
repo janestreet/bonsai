@@ -1,6 +1,5 @@
 open! Core
-open! Async_kernel
-open! Import
+open! Bonsai_web
 
 module type Enum = sig
   type t [@@deriving enumerate, equal, sexp]

@@ -29,6 +29,8 @@ val should_censor_bonsai_hash : _ t -> bool
 val sexp_of_model : _ t -> Sexp.t
 val input : ('i, _) t -> 'i
 val result_incr : (_, 'r) t -> 'r Incr.t
+val lifecycle_incr : _ t -> Incr.Packed.t
+val apply_action_incr : _ t -> Incr.Packed.t
 val clock : (_, _) t -> Incr.Clock.t
 val invalidate_observers : _ t -> unit
 val reset_model_to_default : _ t -> unit

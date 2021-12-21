@@ -1,12 +1,10 @@
 open! Core
-open! Async_kernel
 open! Bonsai_web
 open Bonsai_chat_open_source_common
+open Bonsai.Let_syntax
 
 let component ~room_list ~refresh_rooms ~change_room =
-  let open Bonsai.Let_syntax in
-  Bonsai.read
-  @@ let%map room_list = room_list in
+  let%arr room_list = room_list in
   let room_header =
     Vdom.Node.h2
       [ Vdom.Node.text "Rooms"

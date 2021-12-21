@@ -191,7 +191,7 @@ let create
       (let%map inject = inject in
        fun ~id ->
          Attr.many
-           [ Attr.on_mousedown (fun event ->
+           [ Attr.on_pointerdown (fun event ->
                let position = { Position.x = event##.clientX; y = event##.clientY } in
                let bounding_rect =
                  (Js.Opt.to_option event##.currentTarget |> Option.value_exn)##getBoundingClientRect
@@ -205,38 +205,41 @@ let create
                let left = Int.of_float bounding_rect##.left in
                let size = { Size.width; height } in
                let offset = { Position.x = position.x - left; y = position.y - top } in
-               inject [ Started_drag { source = id; offset; position; size } ])
+               match Bonsai_web.am_within_disabled_fieldset event with
+               | true -> Effect.Ignore
+               | false ->
+                 inject [ Started_drag { source = id; offset; position; size } ])
            ; Attr.style (Css_gen.user_select `None)
            ])
   in
   let%sub path = Bonsai.Private.path in
-  let%sub path_for_mousemove = Bonsai.Private.path in
-  let%sub path_for_mouseup = Bonsai.Private.path in
+  let%sub path_for_pointermove = Bonsai.Private.path in
+  let%sub path_for_pointerup = Bonsai.Private.path in
   let%sub universe_suffix =
     Bonsai.pure Bonsai.Private.Path.to_unique_identifier_string path
   in
   let%sub () =
     Bonsai.Edge.lifecycle
       ~on_deactivate:
-        (let%map path_for_mousemove = path_for_mousemove
-         and path_for_mouseup = path_for_mouseup in
+        (let%map path_for_pointermove = path_for_pointermove
+         and path_for_pointerup = path_for_pointerup in
          Effect.all_unit
-           [ remove_event_listener path_for_mousemove
-           ; remove_event_listener path_for_mouseup
+           [ remove_event_listener path_for_pointermove
+           ; remove_event_listener path_for_pointerup
            ])
       ~on_activate:
         (let%map inject = inject
-         and path_for_mousemove = path_for_mousemove
-         and path_for_mouseup = path_for_mouseup
+         and path_for_pointermove = path_for_pointermove
+         and path_for_pointerup = path_for_pointerup
          and universe_suffix = universe_suffix in
          let%bind.Effect () =
            add_event_listener
-             Dom_html.Event.mousemove
-             path_for_mousemove
-             (fun (event : Dom_html.mouseEvent Js.t) ->
+             Dom_html.Event.pointermove
+             path_for_pointermove
+             (fun (event : Dom_html.pointerEvent Js.t) ->
                 let (event
                      : < composedPath : 'a Js.js_array Js.t Js.meth
-                    ; Dom_html.mouseEvent >
+                    ; Dom_html.pointerEvent >
                       Js.t)
                   =
                   Js.Unsafe.coerce event
@@ -273,11 +276,16 @@ let create
                     Target.t_of_sexp (Sexp.of_string drag_target))
                 in
                 Effect.Expert.handle_non_dom_event_exn
-                  (inject [ Set_target target; Mouse_moved position ]);
+                  (match Bonsai_web.am_within_disabled_fieldset event with
+                   | true -> inject [ Set_target None; Mouse_moved position ]
+                   | false -> inject [ Set_target target; Mouse_moved position ]);
                 Js._true)
          in
-         add_event_listener Dom_html.Event.mouseup path_for_mouseup (fun _ ->
-           Effect.Expert.handle_non_dom_event_exn (inject [ Finished_drag ]);
+         add_event_listener Dom_html.Event.pointerup path_for_pointerup (fun event ->
+           Effect.Expert.handle_non_dom_event_exn
+             (match Bonsai_web.am_within_disabled_fieldset event with
+              | true -> inject [ Set_target None; Finished_drag ]
+              | false -> inject [ Finished_drag ]);
            Js._true))
       ()
   in
@@ -303,7 +311,10 @@ let create
        and universe_suffix = universe_suffix in
        fun ~id ->
          Attr.many
-           [ Attr.on_mouseup (fun _ -> inject [ Finished_drag ])
+           [ Attr.on_pointerup (fun event ->
+               match Bonsai_web.am_within_disabled_fieldset event with
+               | true -> inject [ Set_target None; Finished_drag ]
+               | false -> inject [ Finished_drag ])
            ; Attr.create
                ("data-drag-target" ^ universe_suffix)
                (Sexp.to_string_mach (Target.sexp_of_t id))

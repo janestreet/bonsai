@@ -1,5 +1,5 @@
 open! Core
-open! Import
+open Composition_infix
 
 module Die = struct
   type t = { num_faces : int } [@@deriving bin_io, compare, equal, sexp]

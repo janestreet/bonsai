@@ -10,9 +10,12 @@ type ('i, 'm, 'a, 'r) unpacked =
   ; sexp_of_model : 'm -> Sexp.t
   ; apply_action :
       (schedule_event:(unit Ui_effect.t -> unit) -> 'm -> 'a -> 'm) Incr.Observer.t
+  ; apply_action_incr :
+      (schedule_event:(unit Ui_effect.t -> unit) -> 'm -> 'a -> 'm) Incr.t
   ; result : 'r Incr.Observer.t
   ; result_incr : 'r Incr.t
   ; lifecycle : Bonsai.Private.Lifecycle.Collection.t Incr.Observer.t
+  ; lifecycle_incr : Bonsai.Private.Lifecycle.Collection.t Incr.t
   ; queue : 'a Queue.t
   ; mutable should_replace_bonsai_path_string : bool
   ; mutable should_replace_bonsai_hash_string : bool
@@ -86,12 +89,13 @@ let create
         computation
     in
     let result_incr = Bonsai.Private.Snapshot.result snapshot in
-    let apply_action =
+    let apply_action_incr =
       Bonsai.Private.Snapshot.(Apply_action.to_incremental (apply_action snapshot))
-      |> Incr.observe
     in
+    let apply_action = Incr.observe apply_action_incr in
     let result = result_incr |> Incr.observe in
-    let lifecycle = Bonsai.Private.Snapshot.lifecycle_or_empty snapshot |> Incr.observe in
+    let lifecycle_incr = Bonsai.Private.Snapshot.lifecycle_or_empty snapshot in
+    let lifecycle = Incr.observe lifecycle_incr in
     Incr.stabilize ();
     T
       { input_var
@@ -100,10 +104,12 @@ let create
       ; clock
       ; inject
       ; apply_action
+      ; apply_action_incr
       ; result
       ; result_incr
       ; sexp_of_model
       ; lifecycle
+      ; lifecycle_incr
       ; queue
       ; should_replace_bonsai_path_string = true
       ; should_replace_bonsai_hash_string = true
@@ -175,6 +181,8 @@ let sexp_of_model (T { sexp_of_model; model_var; _ }) =
 ;;
 
 let result_incr (T { result_incr; _ }) = result_incr
+let apply_action_incr (T { apply_action_incr; _ }) = Ui_incr.pack apply_action_incr
+let lifecycle_incr (T { lifecycle_incr; _ }) = Ui_incr.pack lifecycle_incr
 let clock (T { clock; _ }) = clock
 
 let invalidate_observers (T { apply_action; result; lifecycle; _ }) =

@@ -942,5 +942,66 @@ let%expect_test "sorting" =
 +|      <div @key=key_200-2 data-row-id="key_200" class="prt-table-cell"> 1.000000 </div>
       </div>
     </div>
-  </div> |}]
+  </div> |}];
+  (* Clicking once more reverts the sort *)
+  Handle.click_on test.handle ~selector:"td:nth-child(3) > div" ~get_vdom:test.get_vdom;
+  Handle.show_diff test.handle;
+  [%expect
+    {|
+      <div class="partial-render-table-bonsai_path_replaced_in_test">
+        <table class="prt-table-header" size_tracker=<fun>>
+          <tbody>
+            <tr>
+              <td colspan="1" freeze_width=((set <fun>)(reset <fun>)) size_tracker=<fun>>
+                <div onclick>
+                  <span> ◇  key </span>
+                </div>
+              </td>
+              <td colspan="1" freeze_width=((set <fun>)(reset <fun>)) size_tracker=<fun>>
+                <div> a </div>
+              </td>
+              <td colspan="1" freeze_width=((set <fun>)(reset <fun>)) size_tracker=<fun>>
+                <div onclick>
+    -|            <span> ⬙  b </span>
+    +|            <span> ◇  b </span>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <div bounds-change=<fun>>
+          <div @key=0 class="prt-table-row prt-table-row-even" onclick>
+    -|      <div @key=key_0-0 data-row-id="key_0" class="prt-table-cell"> 1 </div>
+    +|      <div @key=key_0-0 data-row-id="key_0" class="prt-table-cell"> 0 </div>
+            <div @key=key_0-1 data-row-id="key_0" class="prt-table-cell">
+              <input oninput> </input>
+    -|        there
+    +|        hello
+            </div>
+    -|      <div @key=key_0-2 data-row-id="key_0" class="prt-table-cell"> 2.000000 </div>
+    +|      <div @key=key_0-2 data-row-id="key_0" class="prt-table-cell"> 1.000000 </div>
+          </div>
+          <div @key=100 class="prt-table-row prt-table-row-odd" onclick>
+    -|      <div @key=key_100-0 data-row-id="key_100" class="prt-table-cell"> 4 </div>
+    +|      <div @key=key_100-0 data-row-id="key_100" class="prt-table-cell"> 1 </div>
+            <div @key=key_100-1 data-row-id="key_100" class="prt-table-cell">
+              <input oninput> </input>
+    -|        world
+    +|        there
+            </div>
+            <div @key=key_100-2 data-row-id="key_100" class="prt-table-cell"> 2.000000 </div>
+          </div>
+          <div @key=200 class="prt-table-row prt-table-row-even" onclick>
+    -|      <div @key=key_200-0 data-row-id="key_200" class="prt-table-cell"> 0 </div>
+    +|      <div @key=key_200-0 data-row-id="key_200" class="prt-table-cell"> 4 </div>
+            <div @key=key_200-1 data-row-id="key_200" class="prt-table-cell">
+              <input oninput> </input>
+    -|        hello
+    +|        world
+            </div>
+    -|      <div @key=key_200-2 data-row-id="key_200" class="prt-table-cell"> 1.000000 </div>
+    +|      <div @key=key_200-2 data-row-id="key_200" class="prt-table-cell"> 2.000000 </div>
+          </div>
+        </div>
+      </div>  |}]
 ;;

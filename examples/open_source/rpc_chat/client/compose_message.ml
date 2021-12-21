@@ -1,5 +1,4 @@
 open! Core
-open! Async_kernel
 open! Bonsai_web
 
 let build_result send_message (textbox_content, set_textbox_content) =

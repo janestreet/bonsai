@@ -385,10 +385,10 @@ let rec follow_computation
     let me = register_computation "assoc_simpl" in
     arrow state ~from:(follow_value state map) ~to_:me;
     me
-  | Enum { which; out_of; _ } ->
-    let me = register_computation "enum" in
-    arrow state ~from:(follow_value state which) ~to_:me;
-    Map.iter out_of ~f:(fun (Computation.T { t; _ }) ->
+  | Switch { match_; arms; _ } ->
+    let me = register_computation "switch" in
+    arrow state ~from:(follow_value state match_) ~to_:me;
+    Map.iter arms ~f:(fun (Computation.T { t; _ }) ->
       arrow state ~from:(follow_computation state t) ~to_:me);
     me
   | Lazy _ -> register_computation "lazy"

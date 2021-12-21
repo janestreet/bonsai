@@ -45,8 +45,7 @@ module Ids = struct
         ~default_model:State.default
         ~apply_action
     in
-    return
-    @@ let%map state, inject = state in
+    let%arr state, inject = state in
     Result.
       { ids = State.ids state
       ; inject_remove = (fun x -> inject (`Remove x))
@@ -56,8 +55,7 @@ module Ids = struct
 end
 
 let panel_component id (_ : unit Value.t) =
-  return
-  @@ let%map id = id in
+  let%arr id = id in
   Node.div [ Node.textf !"Hello, world %{Id}!" id ]
 ;;
 

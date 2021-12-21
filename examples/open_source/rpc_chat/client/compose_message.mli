@@ -1,5 +1,4 @@
 open! Core
-open! Async_kernel
 open! Bonsai_web
 
 val component

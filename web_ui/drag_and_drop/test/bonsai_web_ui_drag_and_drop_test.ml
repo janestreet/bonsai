@@ -58,17 +58,17 @@ let%expect_test "remove the component with the dnd" =
     {|
     <div>
       <div data-dnd-name="1" dnd-test-hook=<fun>>
-        <div id="s1" onmousedown style={ user-select: none; }> </div>
-        <div id="s23" onmousedown style={ user-select: none; }> </div>
-        <div id="s4" onmousedown style={ user-select: none; }> </div>
+        <div id="s1" onpointerdown style={ user-select: none; }> </div>
+        <div id="s23" onpointerdown style={ user-select: none; }> </div>
+        <div id="s4" onpointerdown style={ user-select: none; }> </div>
       </div>
       <div data-dnd-name="2" dnd-test-hook=<fun>>
-        <div id="t1" data-drag-targetbonsai_path_replaced_in_test="1" onmouseup> </div>
+        <div id="t1" data-drag-targetbonsai_path_replaced_in_test="1" onpointerup> </div>
         <div id="t23"
              data-drag-targetbonsai_path_replaced_in_test="2"
              data-drag-targetbonsai_path_replaced_in_test="3"
-             onmouseup> </div>
-        <div id="t4" data-drag-targetbonsai_path_replaced_in_test="4" onmouseup> </div>
+             onpointerup> </div>
+        <div id="t4" data-drag-targetbonsai_path_replaced_in_test="4" onpointerup> </div>
       </div>
     </div>
     adding window event listener
@@ -93,17 +93,17 @@ let%expect_test "how is it printed" =
     {|
     <div>
       <div data-dnd-name="1" dnd-test-hook=<fun>>
-        <div id="s1" onmousedown style={ user-select: none; }> </div>
-        <div id="s23" onmousedown style={ user-select: none; }> </div>
-        <div id="s4" onmousedown style={ user-select: none; }> </div>
+        <div id="s1" onpointerdown style={ user-select: none; }> </div>
+        <div id="s23" onpointerdown style={ user-select: none; }> </div>
+        <div id="s4" onpointerdown style={ user-select: none; }> </div>
       </div>
       <div data-dnd-name="2" dnd-test-hook=<fun>>
-        <div id="t1" data-drag-targetbonsai_path_replaced_in_test="1" onmouseup> </div>
+        <div id="t1" data-drag-targetbonsai_path_replaced_in_test="1" onpointerup> </div>
         <div id="t23"
              data-drag-targetbonsai_path_replaced_in_test="2"
              data-drag-targetbonsai_path_replaced_in_test="3"
-             onmouseup> </div>
-        <div id="t4" data-drag-targetbonsai_path_replaced_in_test="4" onmouseup> </div>
+             onpointerup> </div>
+        <div id="t4" data-drag-targetbonsai_path_replaced_in_test="4" onpointerup> </div>
       </div>
     </div>
     adding window event listener

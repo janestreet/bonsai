@@ -1,0 +1,2 @@
+(executables (names main) (libraries bonsai_web bonsai_web_ui_codemirror)
+ (preprocess (pps ppx_jane)))

@@ -18,6 +18,9 @@ module Private = struct
   module Lifecycle = Lifecycle
   module Value = Value
   module Path = Path
+  module Node_path = Node_path
+  module Graph_info = Graph_info
+  module Instrumentation = Instrumentation
 
   let eval = Eval.eval
 
@@ -33,13 +36,14 @@ end
 include (Proc : module type of Proc with module Private := Proc.Private)
 
 module Debug = struct
-  let instrument_computation c ~start_timer ~stop_timer =
-    Private.reveal_computation c
-    |> Instrumentation.instrument_computation ~start_timer ~stop_timer
-    |> Private.conceal_computation
-  ;;
-
   let to_dot c = To_dot.to_dot (Private.reveal_computation c)
+
+  let instrument_computation c ~start_timer ~stop_timer =
+    Instrumentation.instrument_packed
+      (Private.reveal_computation c)
+      ~start_timer
+      ~stop_timer
+  ;;
 end
 
 module Arrow_deprecated = struct

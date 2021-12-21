@@ -1,5 +1,5 @@
 open! Core
-open Bonsai_web
+open! Bonsai_web
 open Bonsai.Let_syntax
 module Extendy = Bonsai_web_ui_extendy
 
@@ -15,8 +15,7 @@ let component =
   let%sub { contents; append; _ } =
     Extendy.component' [%here] Bonsai_web_counters_example.single_counter ~wrap_remove
   in
-  return
-  @@ let%map contents = contents
+  let%arr contents = contents
   and append = append in
   let views = Map.data contents in
   Vdom.Node.div

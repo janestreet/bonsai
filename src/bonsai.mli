@@ -674,6 +674,9 @@ module Private : sig
   module Snapshot = Snapshot
   module Lifecycle = Lifecycle
   module Path = Path
+  module Node_path = Node_path
+  module Graph_info = Graph_info
+  module Instrumentation = Instrumentation
 
   val eval
     :  environment:Environment.t

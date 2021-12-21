@@ -15,6 +15,10 @@ module Components : sig
     -> ?fragment:string option
     -> unit
     -> t
+
+
+  (** Creates a URI with the the path, query, and fragment added to the URI. *)
+  val to_path_and_query : t -> Uri.t
 end
 
 (** Types that implement [S] can be parsed from a url

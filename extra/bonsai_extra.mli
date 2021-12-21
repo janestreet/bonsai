@@ -11,6 +11,12 @@ val toggle
   -> default_model:bool
   -> (bool * unit Effect.t) Computation.t
 
+val map_merge
+  :  ('k, 'v1, 'cmp) Map.t Value.t
+  -> ('k, 'v2, 'cmp) Map.t Value.t
+  -> f:(key:'k -> [ `Both of 'v1 * 'v2 | `Left of 'v1 | `Right of 'v2 ] -> 'v option)
+  -> ('k, 'v, 'cmp) Map.t Computation.t
+
 (** [with_inject_fixed_point] allows an injection function produced as the
     result of a computation to be used as the input of that same combination.
     This "tie-the-knot" operation is legal because actions are scheduled
@@ -129,7 +135,7 @@ val state_dynamic_model
   -> model:[< `Computed of ('model option -> 'model) Value.t | `Given of 'model Value.t ]
   -> ('model * ('model -> unit Ui_effect.t)) Computation.t
 
-(** Id_gen builds a compoenent which generates unique identifiers by
+(** Id_gen builds a component which generates unique identifiers by
     starting at 0 and incrementing by one every time that the effect is called.
 
     The functor is parameteraized on the size of integer (int vs int63 vs

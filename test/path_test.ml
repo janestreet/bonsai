@@ -19,7 +19,7 @@ let%expect_test "path" =
   [%expect {| bonsai_path_x_y_y_x |}]
 ;;
 
-let assert_path_unique_id_is_alphanumeric path =
+let assert_path_unique_id_is_alpha path =
   let unique_id = Path.to_unique_identifier_string path in
   assert (
     String.for_all unique_id ~f:(function
@@ -27,7 +27,7 @@ let assert_path_unique_id_is_alphanumeric path =
       | _ -> false))
 ;;
 
-let%test_unit "all the values are alphanumeric" =
+let%test_unit "all the values are alpha" =
   let string_id = Type_equal.Id.create ~name:"string" [%sexp_of: string] in
   let keyed = Path.Elem.keyed ~compare:String.compare string_id |> unstage in
   Quickcheck.test
@@ -35,7 +35,7 @@ let%test_unit "all the values are alphanumeric" =
     ~sexp_of:[%sexp_of: string]
     ~f:(fun string ->
       let path = Path.append Path.empty (Path.Elem.Assoc (keyed string)) in
-      assert_path_unique_id_is_alphanumeric path)
+      assert_path_unique_id_is_alpha path)
 ;;
 
 let%test_unit "larger groupings of paths behave" =
@@ -47,14 +47,14 @@ let%test_unit "larger groupings of paths behave" =
       | From
       | Into
       | Assoc of string
-      | Enum of string
+      | Switch of int
     [@@deriving quickcheck, sexp]
 
     let to_path_element = function
       | From -> Path.Elem.Subst_from
       | Into -> Path.Elem.Subst_into
       | Assoc s -> Path.Elem.Assoc (keyed s)
-      | Enum s -> Path.Elem.Enum (keyed s)
+      | Switch i -> Path.Elem.Switch i
     ;;
   end
   in
@@ -65,5 +65,5 @@ let%test_unit "larger groupings of paths behave" =
       let path =
         path |> List.map ~f:P.to_path_element |> List.fold ~init:Path.empty ~f:Path.append
       in
-      assert_path_unique_id_is_alphanumeric path)
+      assert_path_unique_id_is_alpha path)
 ;;

@@ -35,15 +35,15 @@ let set_url = Url_var.set_effect url_var
 
 let tab_state =
   let set a = set_url a in
-  let%map current = Url_var.value url_var in
+  let%arr current = Url_var.value url_var in
   Tabs.State.create ~current ~set
 ;;
 
 let component =
-  let%sub tab_state = Bonsai.read tab_state in
+  let%sub tab_state = tab_state in
   let%sub extra_state = Bonsai.state_opt [%here] (module String) in
-  let all_tabs =
-    let%map extra_state, _ = extra_state in
+  let%sub all_tabs =
+    let%arr extra_state, _ = extra_state in
     [ T.A; T.B extra_state; T.C ]
   in
   let%sub contents =
@@ -60,19 +60,16 @@ let component =
       ~f:(fun ~change_tab tab ->
         match%sub tab with
         | A ->
-          return
-          @@ let%map change_tab = change_tab in
+          let%arr change_tab = change_tab in
           Vdom.Node.button
             ~attr:(Vdom.Attr.on_click (fun _ -> change_tab T.C))
             [ Vdom.Node.text "jump to c" ]
         | B None -> Bonsai.const (Vdom.Node.text "why are you even here")
         | B (Some extra) ->
-          return
-          @@ let%map extra = extra in
+          let%arr extra = extra in
           Vdom.Node.textf "b with extra: %s" extra
         | C ->
-          return
-          @@ let%map extra, set_extra = extra_state in
+          let%arr extra, set_extra = extra_state in
           Vdom.Node.input
             ~attr:
               Vdom.Attr.(
@@ -81,8 +78,7 @@ let component =
                   set_extra (if String.is_empty s then None else Some s)))
             [])
   in
-  return
-  @@ let%map contents = contents in
+  let%arr contents = contents in
   Tabs.Result.combine_trivially contents
 ;;
 

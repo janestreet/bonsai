@@ -276,8 +276,10 @@ module Make (Item : Item) = struct
           ~attr:
             (Attr.many_without_merge
                [ Attr.href "about:blank"
-               ; Attr.on_click (fun _ev ->
-                   Effect.Many [ inject action; Effect.Prevent_default ])
+               ; Attr.on_click (fun ev ->
+                   match Bonsai_web.am_within_disabled_fieldset ev with
+                   | true -> Effect.Prevent_default
+                   | false -> Effect.Many [ inject action; Effect.Prevent_default ])
                ; Attr.class_ class_
                ])
           [ Node.text text ]
@@ -340,11 +342,14 @@ module Make (Item : Item) = struct
             else extra_attrs
           in
           let on_click =
-            Attr.on_click (fun _ev ->
-              Effect.Many
-                [ inject (Action.Set_focus (Some item))
-                ; inject Toggle_focused_item_selected
-                ])
+            Attr.on_click (fun ev ->
+              match Bonsai_web.am_within_disabled_fieldset ev with
+              | true -> Effect.Ignore
+              | false ->
+                Effect.Many
+                  [ inject (Action.Set_focus (Some item))
+                  ; inject Toggle_focused_item_selected
+                  ])
           in
           Node.div
             ~attr:

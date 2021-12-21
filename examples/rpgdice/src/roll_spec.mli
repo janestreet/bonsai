@@ -1,5 +1,4 @@
 open! Core
-open! Import
 
 module Die : sig
   type t [@@deriving bin_io, compare, equal, sexp_of]

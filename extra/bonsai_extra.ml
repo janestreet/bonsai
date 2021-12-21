@@ -237,6 +237,12 @@ let pipe (type a) here (module A : Bonsai.Model with type t = a) =
 let map_of_set = Bonsai.Incr.compute ~f:Ui_incr.Map.of_set
 let map_keys = Bonsai.Incr.compute ~f:Ui_incr.Map.keys
 
+let map_merge a b ~f =
+  Bonsai.Incr.compute (Bonsai.Value.both a b) ~f:(fun a_and_b ->
+    let%pattern_bind.Ui_incr a, b = a_and_b in
+    Incr_map.merge a b ~f)
+;;
+
 module Id_gen (T : Int_intf.S) () = struct
   include T
 
