@@ -39,12 +39,14 @@ module Node_info = struct
   ;;
 
   let of_computation
-        (type model action result)
-        (computation : (model, action, result) Computation.t)
+        (type model dynamic_action static_action result)
+        (computation : (model, dynamic_action, static_action, result) Computation.t)
     =
     let here =
       match computation with
-      | Subst { here; _ } | Subst_stateless { here; _ } -> here
+      | Subst { here; _ }
+      | Subst_stateless_from { here; _ }
+      | Subst_stateless_into { here; _ } -> here
       | _ -> None
     in
     let node_type =
@@ -55,7 +57,8 @@ module Node_info = struct
       | Leaf_incr _ -> "leaf_incr"
       | Model_cutoff _ -> "model_cutoff"
       | Subst _ -> "subst"
-      | Subst_stateless _ -> "subst_stateless"
+      | Subst_stateless_from _ -> "subst_stateless_from"
+      | Subst_stateless_into _ -> "subst_stateless_into"
       | Store _ -> "store"
       | Fetch _ -> "fetch"
       | Assoc _ -> "assoc"
@@ -94,8 +97,11 @@ let value_map
   let environment, add_tree_relationship, add_dag_relationship = state in
   let node_info = Node_info.of_value wrapped_value in
   (match var_from_parent with
-   | Some var_from_parent ->
-     Hashtbl.add_exn environment ~key:var_from_parent ~data:current_path
+   | Transform.Var_from_parent.One var_from_parent ->
+     Hashtbl.set environment ~key:var_from_parent ~data:current_path
+   | Two (fst, snd) ->
+     Hashtbl.set environment ~key:fst ~data:current_path;
+     Hashtbl.set environment ~key:snd ~data:current_path
    | None -> ());
   add_tree_relationship ~from:current_path ~to_:parent_path ~from_info:node_info;
   add_dag_relationship ~from:current_path ~to_:parent_path;
@@ -112,22 +118,25 @@ let value_map
 ;;
 
 let computation_map
-      (type model action result)
+      (type model dynamic_action static_action result)
       ~(recurse : _ Transform.For_computation.mapper)
       ~var_from_parent
       ~parent_path
       ~current_path
       state
-      (computation : (model, action, result) Computation.t)
-  : (model, action, result) Computation.t
+      (computation : (model, dynamic_action, static_action, result) Computation.t)
+  : (model, dynamic_action, static_action, result) Computation.t
   =
   let environment, add_tree_relationship, add_dag_relationship = state in
   let node_info = Node_info.of_computation computation in
   add_tree_relationship ~from:current_path ~to_:parent_path ~from_info:node_info;
   add_dag_relationship ~from:current_path ~to_:parent_path;
   (match var_from_parent with
-   | Some var_from_parent ->
-     Hashtbl.add_exn environment ~key:var_from_parent ~data:current_path
+   | Transform.Var_from_parent.One var_from_parent ->
+     Hashtbl.set environment ~key:var_from_parent ~data:current_path
+   | Two (fst, snd) ->
+     Hashtbl.set environment ~key:fst ~data:current_path;
+     Hashtbl.set environment ~key:snd ~data:current_path
    | None -> ());
   match recurse.f state computation with
   | Fetch { id = v_id; _ } ->
@@ -139,14 +148,16 @@ let computation_map
   | c -> c
 ;;
 
-let iter_graph_updates (t : (_, _, _) Computation.t) ~on_update =
+let iter_graph_updates (t : (_, _, _, _) Computation.t) ~on_update =
   let graph_info = ref empty in
   let add_dag_relationship ~from ~to_ =
+    let (lazy from), (lazy to_) = from, to_ in
     let gm = !graph_info in
     graph_info := { gm with dag = Map.add_multi gm.dag ~key:from ~data:to_ };
     on_update !graph_info
   in
   let add_tree_relationship ~from ~to_ ~from_info =
+    let (lazy from), (lazy to_) = from, to_ in
     let gm = !graph_info in
     graph_info
     := { gm with
@@ -163,6 +174,6 @@ let iter_graph_updates (t : (_, _, _) Computation.t) ~on_update =
     t
 ;;
 
-let iter_graph_updates (Computation.T { t; action; model }) ~on_update =
-  Computation.T { t = iter_graph_updates ~on_update t; action; model }
+let iter_graph_updates_packed (Computation.T t) ~on_update =
+  Computation.T { t with t = iter_graph_updates ~on_update t.t }
 ;;

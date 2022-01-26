@@ -114,177 +114,9 @@ let rec eval : type a. Environment.t -> a t -> a Incr.t =
      | Some incremental -> incremental
      | None ->
        failwith
-         "A Value.t was used outside of the scope that it was declared in!  Make sure \
-          that you aren't storing any Value.t inside a ref!")
-  (* let%map collapsing *)
-  | Map
-      { f
-      ; t =
-          { value =
-              Both
-                ( t1
-                , { value =
-                      Both
-                        ( t2
-                        , { value =
-                              Both
-                                ( t3
-                                , { value =
-                                      Both
-                                        ( t4
-                                        , { value = Both (t5, { value = Both (t6, t7); _ })
-                                          ; _
-                                          } )
-                                  ; _
-                                  } )
-                          ; _
-                          } )
-                  ; _
-                  } )
-          ; _
-          }
-      } ->
-    Incr.map7
-      (eval env t1)
-      (eval env t2)
-      (eval env t3)
-      (eval env t4)
-      (eval env t5)
-      (eval env t6)
-      (eval env t7)
-      ~f:(fun t1 t2 t3 t4 t5 t6 t7 -> f (t1, (t2, (t3, (t4, (t5, (t6, t7)))))))
-  | Map
-      { f
-      ; t =
-          { value =
-              Both
-                ( t1
-                , { value =
-                      Both
-                        ( t2
-                        , { value =
-                              Both
-                                ( t3
-                                , { value = Both (t4, { value = Both (t5, t6); _ }); _ }
-                                )
-                          ; _
-                          } )
-                  ; _
-                  } )
-          ; _
-          }
-      } ->
-    Incr.map6
-      (eval env t1)
-      (eval env t2)
-      (eval env t3)
-      (eval env t4)
-      (eval env t5)
-      (eval env t6)
-      ~f:(fun t1 t2 t3 t4 t5 t6 -> f (t1, (t2, (t3, (t4, (t5, t6))))))
-  | Map
-      { f
-      ; t =
-          { value =
-              Both
-                ( t1
-                , { value =
-                      Both (t2, { value = Both (t3, { value = Both (t4, t5); _ }); _ })
-                  ; _
-                  } )
-          ; _
-          }
-      } ->
-    Incr.map5
-      (eval env t1)
-      (eval env t2)
-      (eval env t3)
-      (eval env t4)
-      (eval env t5)
-      ~f:(fun t1 t2 t3 t4 t5 -> f (t1, (t2, (t3, (t4, t5)))))
-  | Map
-      { f
-      ; t =
-          { value = Both (t1, { value = Both (t2, { value = Both (t3, t4); _ }); _ }); _ }
-      } ->
-    Incr.map4
-      (eval env t1)
-      (eval env t2)
-      (eval env t3)
-      (eval env t4)
-      ~f:(fun t1 t2 t3 t4 -> f (t1, (t2, (t3, t4))))
-  | Map { f; t = { value = Both (t1, { value = Both (t2, t3); _ }); _ } } ->
-    Incr.map3 (eval env t1) (eval env t2) (eval env t3) ~f:(fun t1 t2 t3 ->
-      f (t1, (t2, t3)))
-  | Map { f; t = { value = Both (t1, t2); _ } } ->
-    Incr.map2 (eval env t1) (eval env t2) ~f:(fun t1 t2 -> f (t1, t2))
-  (* Both collapsing *)
-  | Both
-      ( t1
-      , { value =
-            Both
-              ( t2
-              , { value =
-                    Both
-                      ( t3
-                      , { value =
-                            Both
-                              (t4, { value = Both (t5, { value = Both (t6, t7); _ }); _ })
-                        ; _
-                        } )
-                ; _
-                } )
-        ; _
-        } ) ->
-    Incr.map7
-      (eval env t1)
-      (eval env t2)
-      (eval env t3)
-      (eval env t4)
-      (eval env t5)
-      (eval env t6)
-      (eval env t7)
-      ~f:(fun t1 t2 t3 t4 t5 t6 t7 -> t1, (t2, (t3, (t4, (t5, (t6, t7))))))
-  | Both
-      ( t1
-      , { value =
-            Both
-              ( t2
-              , { value = Both (t3, { value = Both (t4, { value = Both (t5, t6); _ }); _ })
-                ; _
-                } )
-        ; _
-        } ) ->
-    Incr.map6
-      (eval env t1)
-      (eval env t2)
-      (eval env t3)
-      (eval env t4)
-      (eval env t5)
-      (eval env t6)
-      ~f:(fun t1 t2 t3 t4 t5 t6 -> t1, (t2, (t3, (t4, (t5, t6)))))
-  | Both
-      ( t1
-      , { value = Both (t2, { value = Both (t3, { value = Both (t4, t5); _ }); _ }); _ }
-      ) ->
-    Incr.map5
-      (eval env t1)
-      (eval env t2)
-      (eval env t3)
-      (eval env t4)
-      (eval env t5)
-      ~f:(fun t1 t2 t3 t4 t5 -> t1, (t2, (t3, (t4, t5))))
-  | Both (t1, { value = Both (t2, { value = Both (t3, t4); _ }); _ }) ->
-    Incr.map4
-      (eval env t1)
-      (eval env t2)
-      (eval env t3)
-      (eval env t4)
-      ~f:(fun t1 t2 t3 t4 -> t1, (t2, (t3, t4)))
-  | Both (t1, { value = Both (t2, t3); _ }) ->
-    Incr.map3 (eval env t1) (eval env t2) (eval env t3) ~f:(fun t1 t2 t3 -> t1, (t2, t3))
+         "A Value.t was used outside of the scope that it was declared in! Make sure that \
+          you aren't storing any Value.t inside a ref!")
   | Both (t1, t2) -> Incr.both (eval env t1) (eval env t2)
-  (* map function *)
   | Map { t; f } -> Incr.map (eval env t) ~f
   | Map2 { t1; t2; f } -> Incr.map2 (eval env t1) (eval env t2) ~f
   | Map3 { t1; t2; t3; f } -> Incr.map3 (eval env t1) (eval env t2) (eval env t3) ~f
@@ -311,6 +143,12 @@ let rec eval : type a. Environment.t -> a t -> a Incr.t =
       (eval env t5)
       (eval env t6)
       (eval env t7)
+;;
+
+let eval env t =
+  let incr = eval env t in
+  annotate Value incr;
+  incr
 ;;
 
 let return a = { value = Constant (a, Constant_id.create ()); here = None }
@@ -377,50 +215,3 @@ module Let_syntax = struct
     module Open_on_rhs = struct end
   end
 end
-
-let%expect_test "tree bothing with let syntax" =
-  let open Let_syntax in
-  let x =
-    let%map () = return ()
-    and () = return ()
-    and () = return ()
-    and () = return ()
-    and () = return ()
-    and () = return ()
-    and () = return () in
-    ()
-  in
-  print_s (sexp_of_t x);
-  [%expect
-    {|
-   (map
-    (t
-     (both (t1 constant)
-      (t2
-       (both (t1 constant)
-        (t2
-         (both (t1 constant)
-          (t2
-           (both (t1 constant)
-            (t2 (both (t1 constant) (t2 (both (t1 constant) (t2 constant)))))))))))))) |}]
-;;
-
-let%expect_test "tree flattening with applicative API" =
-  let open Let_syntax in
-  let ( <| ) f a = apply f (return a) in
-  let x = return (fun () () () () () () -> ()) <| () <| () <| () <| () <| () <| () in
-  print_s (sexp_of_t x);
-  [%expect
-    {|
-   (map2
-    (t1
-     (map2
-      (t1
-       (map2
-        (t1
-         (map2 (t1 (map2 (t1 (map2 (t1 constant) (t2 constant))) (t2 constant)))
-          (t2 constant)))
-        (t2 constant)))
-      (t2 constant)))
-    (t2 constant)) |}]
-;;

@@ -17,9 +17,12 @@ module Pills = struct
     and selected_options = selected_options
     and inject_selected_options = inject_selected_options in
     let pill option =
-      let remove_option _ =
-        let selected_options = remove_option selected_options option in
-        inject_selected_options selected_options
+      let remove_option event =
+        if Bonsai_web.am_within_disabled_fieldset event
+        then Effect.Ignore
+        else (
+          let selected_options = remove_option selected_options option in
+          inject_selected_options selected_options)
       in
       Vdom.Node.span
         ~attr:

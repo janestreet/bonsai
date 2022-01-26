@@ -1,20 +1,17 @@
 open! Core
 open! Bonsai_web
 open! Bonsai.Let_syntax
-
-open struct
-  module Collated = Incr_map_collate.Collated
-end
+module Collated = Incr_map_collate.Collated
 
 module By_row = struct
   type 'k t =
     { focused : 'k option
-    ; unfocus : unit Ui_effect.t
-    ; focus_up : unit Ui_effect.t
-    ; focus_down : unit Ui_effect.t
-    ; page_up : unit Ui_effect.t
-    ; page_down : unit Ui_effect.t
-    ; focus : 'k -> unit Ui_effect.t
+    ; unfocus : unit Effect.t
+    ; focus_up : unit Effect.t
+    ; focus_down : unit Effect.t
+    ; page_up : unit Effect.t
+    ; page_down : unit Effect.t
+    ; focus : 'k -> unit Effect.t
     }
   [@@deriving fields]
 end
@@ -35,15 +32,15 @@ module Scroll = struct
 
   let control_test = function
     | To (i, `Minimal) ->
-      Ui_effect.print_s [%message "scrolling to" (i : Int63.t) "minimizing scrolling"]
+      Effect.print_s [%message "scrolling to" (i : Int63.t) "minimizing scrolling"]
     | To (i, `To_bottom) ->
-      Ui_effect.print_s
+      Effect.print_s
         [%message
           "scrolling to"
             (i : Int63.t)
             "such that it is positioned at the bottom of the screen"]
     | To (i, `To_top) ->
-      Ui_effect.print_s
+      Effect.print_s
         [%message
           "scrolling to"
             (i : Int63.t)
@@ -475,16 +472,14 @@ let get_focused (type r k) : (r, k) Kind.t -> r Value.t -> k option Value.t =
     focused
 ;;
 
-let get_row_click_handler (type r k)
-  : (r, k) Kind.t -> r Value.t -> (k -> unit Effect.t) Value.t option
+let get_on_row_click (type r k) (kind : (r, k) Kind.t) (value : r Value.t)
+  : (k -> unit Effect.t) Value.t
   =
-  fun kind value ->
   match kind with
-  | None -> None
+  | None -> Value.return (fun _ -> Effect.Ignore)
   | By_row _ ->
-    Some
-      (let%map { focus; _ } = value in
-       focus)
+    let%map { focus; _ } = value in
+    focus
 ;;
 
 module For_testing = struct

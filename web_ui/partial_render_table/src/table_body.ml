@@ -76,28 +76,22 @@ let component
       ~assoc
       ~column_widths
       ~(visually_focused : key option Value.t)
-      ~(row_click_handler : (key -> unit Effect.t) Value.t option)
+      ~on_row_click
       (collated : (key, data) Collated.t Value.t)
       (remapped : (key, Int63.t * data, cmp) Map.t Value.t)
   =
   let module Cmp = (val comparator) in
-  let leaves_info, cells =
-    let leaves_info =
-      let%map leaves = leaves in
-      let%map.List { Header_tree.visible; leaf_label; _ } = leaves in
-      visible, leaf_label
-    in
-    let cells = instantiate_cells ~assoc remapped in
-    leaves_info, cells
+  let%sub leaves_info =
+    let%arr leaves = leaves in
+    let%map.List { Header_tree.visible; leaf_label; _ } = leaves in
+    visible, leaf_label
   in
-  let%sub cells = cells in
-  return
-  @@ let%map cells = cells
+  let%sub cells = instantiate_cells ~assoc remapped in
+  let%arr cells = cells
   and collated = collated
   and leaves_info = leaves_info
   and visually_focused = visually_focused
-  and row_click_handler =
-    Option.value row_click_handler ~default:(Value.return (fun _ -> Ui_effect.Ignore))
+  and on_row_click = on_row_click
   and column_widths = column_widths in
   let elements_prior_to_range = Collated.num_before_range collated in
   (* Css_gen is really slow, so we need to re-use the results of all these
@@ -123,9 +117,9 @@ let component
      2. The width of that column *)
   let calculate_position_and_css i prev_x =
     let column_width =
-      column_widths
-      |> Fn.flip Map.find i
-      |> Option.value_map ~f:(fun (`Px w) -> w) ~default:0.0
+      match Map.find column_widths i with
+      | Some (`Px w) -> w
+      | None -> 0.0
     in
     let next_x = prev_x +. column_width in
     let css_for_column =
@@ -152,8 +146,7 @@ let component
       content
       ~key
       ~classes
-      ~attrs:
-        [ Vdom.Attr.create "data-row-id" (sprintf "key_%s" (Int63.to_string idx)) ]
+      ~attrs:[ Vdom.Attr.create "data-row-id" (sprintf "key_%s" (Int63.to_string idx)) ]
       ~style:css
   in
   let row_selected key =
@@ -177,16 +170,14 @@ let component
       then [ "prt-table-row"; "prt-table-row-even" ]
       else [ "prt-table-row"; "prt-table-row-odd" ]
     in
-    let classes =
-      if row_selected then "prt-table-row-selected" :: classes else classes
-    in
+    let classes = if row_selected then "prt-table-row-selected" :: classes else classes in
     Vdom.Node.div
       ~key:(Int63.to_string idx)
       ~attr:
         (Vdom.Attr.many
            [ Vdom.Attr.classes classes
            ; Vdom.Attr.style css
-           ; Vdom.Attr.on_click (fun _ -> row_click_handler key)
+           ; Vdom.Attr.on_click (fun _ -> on_row_click key)
            ])
       (List.mapi (List.zip_exn css_for_columns columns) ~f:(for_each_cell ~idx))
   in

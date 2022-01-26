@@ -1,0 +1,42 @@
+body * {
+  font-family: sans-serif;
+  font-size: 16px;
+}
+
+table.prt-table-header {
+  border-collapse:collapse;
+}
+
+.prt-table-header td {
+  border:0px solid black;
+  padding:5px;
+  padding-right:10px; /* Space for the resizer */
+  position: relative;
+  background: #fffcf0;
+  box-sizing: border-box;
+  border:1px solid black;
+
+  font-family: sans-serif;
+  color: #06023a;
+}
+
+.prt-table-cell {
+  border:0;
+  border-bottom:1px solid black;
+  border-left:1px solid black;
+  padding:4px;
+  margin:0;
+}
+
+.prt-table-cell:last-child {
+  border-right:1px solid black;
+}
+
+.prt-table-row-even {
+  background-color:#f0f6ff;
+}
+
+.prt-table-row-selected{
+  background: #ff6f6f;
+}
+

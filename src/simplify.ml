@@ -160,8 +160,8 @@ let rec value_to_function
 ;;
 
 let rec computation_to_function
-  : type key data model action result.
-    (model, action, result) Computation.t
+  : type key data model dynamic_action static_action result.
+    (model, dynamic_action, static_action, result) Computation.t
     -> key_id:key Type_equal.Id.t
     -> data_id:data Type_equal.Id.t
     -> (Path.t -> key -> data -> result) Option_or_miss.t
@@ -169,10 +169,10 @@ let rec computation_to_function
   fun computation ~key_id ~data_id ->
   let recurse = computation_to_function ~key_id ~data_id in
   let handle_subst
-        (type m1 a1 r1 m2 a2 r2)
-        ~(from : (m1, a1, r1) Computation.t)
+        (type m1 da1 sa1 r1 m2 da2 sa2 r2)
+        ~(from : (m1, da1, sa1, r1) Computation.t)
         ~via
-        ~(into : (m2, a2, r2) Computation.t)
+        ~(into : (m2, da2, sa2, r2) Computation.t)
     : (Path.t -> key -> data -> r2) Option_or_miss.t
     =
     match recurse from, recurse into with
@@ -206,7 +206,8 @@ let rec computation_to_function
   | Return value ->
     Option_or_miss.map (value_to_function value key_id data_id) ~f:(fun f _path -> f)
   | Subst { from; via; into; here = _ } -> handle_subst ~from ~via ~into
-  | Subst_stateless { from; via; into; here = _ } -> handle_subst ~from ~via ~into
+  | Subst_stateless_from { from; via; into; here = _ } -> handle_subst ~from ~via ~into
+  | Subst_stateless_into { from; via; into; here = _ } -> handle_subst ~from ~via ~into
   | Path -> Some (fun path _ _ -> path)
   | _ -> None
 ;;

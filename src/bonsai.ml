@@ -13,6 +13,7 @@ module Effect = Effect
 module Private = struct
   module Computation = Computation
   module Environment = Environment
+  module Apply_action = Apply_action
   module Meta = Meta
   module Snapshot = Snapshot
   module Lifecycle = Lifecycle
@@ -21,16 +22,13 @@ module Private = struct
   module Node_path = Node_path
   module Graph_info = Graph_info
   module Instrumentation = Instrumentation
+  module Flatten_values = Flatten_values
 
   let eval = Eval.eval
 
   include Proc.Private
 
-  let path =
-    conceal_computation
-      (Computation.T
-         { t = Computation.Path; action = Meta.Action.nothing; model = Meta.Model.unit })
-  ;;
+  let path = Proc.path
 end
 
 include (Proc : module type of Proc with module Private := Proc.Private)
@@ -44,6 +42,9 @@ module Debug = struct
       ~start_timer
       ~stop_timer
   ;;
+
+  let enable_incremental_annotations = Annotate_incr.enable
+  let disable_incremental_annotations = Annotate_incr.disable
 end
 
 module Arrow_deprecated = struct

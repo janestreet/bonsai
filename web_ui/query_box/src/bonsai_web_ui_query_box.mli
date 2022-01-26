@@ -33,6 +33,17 @@ module Suggestion_list_kind : sig
   [@@deriving sexp, compare, enumerate, equal]
 end
 
+module Expand_direction : sig
+  type t =
+    | Down
+    (** Autocomplete options appear below the textbox, with the first item at
+        the top of the list. *)
+    | Up
+    (** Autocomplete options appear above the textbox, with the first item at
+        the bottom of the list. *)
+  [@@deriving sexp, compare, enumerate, equal]
+end
+
 val create
   :  ('k, 'cmp) Bonsai.comparator
   -> ?initial_query:string
@@ -40,6 +51,8 @@ val create
   (** The value defaults to Transient.  Read doc comment on the type for
       more info. *)
   -> ?suggestion_list_kind:Suggestion_list_kind.t Value.t
+  (** The value defaults to Down. Read doc comment on the type for more info. *)
+  -> ?expand_direction:Expand_direction.t Value.t
   (** If provided, the attributes in this value will be attached to
       the vdom node representing the currently selected item in the list. *)
   -> ?selected_item_attr:Vdom.Attr.t Value.t
@@ -72,6 +85,7 @@ val stringable
   -> ?initial_query:string
   -> ?max_visible_items:int Value.t
   -> ?suggestion_list_kind:Suggestion_list_kind.t Value.t
+  -> ?expand_direction:Expand_direction.t Value.t
   -> ?selected_item_attr:Vdom.Attr.t Value.t
   -> ?extra_list_container_attr:Vdom.Attr.t Value.t
   -> ?extra_input_attr:Vdom.Attr.t Value.t

@@ -23,17 +23,16 @@ let component ?(styles = Vdom.Attr.empty) ~create_message is_connected =
         ~on_activate:(set_activation_time <*> (now >>| Option.some))
         ()
     in
-    return
-      (let%map now = now
-       and activation_time = activation_time in
-       let duration_of_visibility =
-         Time_ns.diff now (Option.value ~default:now activation_time)
-       in
-       Vdom.Node.div
-         ~attr:styles
-         [ Vdom.Node.div
-             ~attr:(Vdom.Attr.style Css_gen.(font_size (`Rem 1.5) @> font_weight `Bold))
-             [ Vdom.Node.text "Warning!" ]
-         ; Vdom.Node.div [ Vdom.Node.text (create_message duration_of_visibility) ]
-         ]))
+    let%arr now = now
+    and activation_time = activation_time in
+    let duration_of_visibility =
+      Time_ns.diff now (Option.value ~default:now activation_time)
+    in
+    Vdom.Node.div
+      ~attr:styles
+      [ Vdom.Node.div
+          ~attr:(Vdom.Attr.style Css_gen.(font_size (`Rem 1.5) @> font_weight `Bold))
+          [ Vdom.Node.text "Warning!" ]
+      ; Vdom.Node.div [ Vdom.Node.text (create_message duration_of_visibility) ]
+      ])
 ;;

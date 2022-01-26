@@ -46,13 +46,57 @@ let%expect_test ("map7 dot file" [@tags "no-js"]) =
                     │        │
                     ▼        │
                   ┌───────┐┌───────┐
-                  │  map  ││ const │
-                  └───────┘└───────┘
+                  │ read  ││ const │
+                  └───────┘└───────┘ |}]
+;;
+
+let%expect_test ("map-10 dot file" [@tags "no-js"]) =
+  let c =
+    Bonsai.read
+      (let%map _1 : unit Value.t = Value.return ()
+       and _2 : unit Value.t = Value.return ()
+       and _3 : unit Value.t = Value.return ()
+       and _4 : unit Value.t = Value.return ()
+       and _5 : unit Value.t = Value.return ()
+       and _6 : unit Value.t = Value.return ()
+       and _7 : unit Value.t = Value.return ()
+       and _8 : unit Value.t = Value.return ()
+       and _9 : unit Value.t = Value.return ()
+       and _10 : unit Value.t = Value.return () in
+       ())
+  in
+  print_graph c;
+  [%expect
+    {|
+                  ┌───────┐     ┌───────┐
+                  │ const │     │ const │
+                  └───────┘     └───────┘
+                    │             │
+                    │             │
+                    ▼             ▼
+    ┌───────┐     ┌─────────────────────┐     ┌───────┐
+    │ const │ ──▶ │        map4         │ ◀── │ const │
+    └───────┘     └─────────────────────┘     └───────┘
                     │
                     │
                     ▼
+    ┌───────┐     ┌─────────────────────┐     ┌───────┐
+    │ const │ ──▶ │                     │ ◀── │ const │
+    └───────┘     │        map7         │     └───────┘
+    ┌───────┐     │                     │     ┌───────┐
+    │ const │ ──▶ │                     │ ◀── │ const │
+    └───────┘     └─────────────────────┘     └───────┘
+                    │        ▲    ▲
+                    │        │    │
+                    ▼        │    │
+                  ┌───────┐  │  ┌───────┐
+                  │ read  │  │  │ const │
+                  └───────┘  │  └───────┘
+                             │
+                    ┌────────┘
+                    │
                   ┌───────┐
-                  │ read  │
+                  │ const │
                   └───────┘ |}]
 ;;
 
@@ -85,7 +129,7 @@ let%expect_test ("subst dot" [@tags "no-js"]) =
          │
          ▼
        ┌─────────────────┐
-       │      map2       │ ◀┐
+       │      both       │ ◀┐
        └─────────────────┘  │
          │                  │
          │                  │
@@ -103,7 +147,7 @@ let%expect_test ("subst dot" [@tags "no-js"]) =
          │                  │
          ▼                  │
        ┌─────────────────┐  │
-    ┌▶ │      map2       │  │
+    ┌▶ │      both       │  │
     │  └─────────────────┘  │
     │    │                  │
     │    │                  │
@@ -304,12 +348,6 @@ let%expect_test ("arrow-syntax" [@tags "no-js"]) =
       ▼
     ┌───────┐
     │ map2  │ ◀┐
-    └───────┘  │
-      │        │
-      │        │
-      ▼        │
-    ┌───────┐  │
-    │  map  │  │
     └───────┘  │
       │        │
       │        │

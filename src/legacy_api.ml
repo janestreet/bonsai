@@ -130,7 +130,7 @@ module With_incr = struct
     let t =
       Computation.Leaf_incr
         { input
-        ; apply_action = M.apply_action
+        ; dynamic_apply_action = M.apply_action
         ; compute = (fun _ -> M.compute)
         ; name = M.name
         }
@@ -138,7 +138,9 @@ module With_incr = struct
     Computation.T
       { t
       ; model = Meta.Model.of_module (module M.Model) ~name:M.name ~default:default_model
-      ; action = Meta.Action.of_module (module M.Action) ~name:M.name
+      ; dynamic_action = Meta.Action.of_module (module M.Action) ~name:M.name
+      ; static_action = Meta.Action.nothing
+      ; apply_static = Proc.unusable_static_apply_action
       }
     |> Proc.Private.conceal_computation
   ;;
@@ -165,12 +167,7 @@ module With_incr = struct
   ;;
 
   let map a ~f = compose a (pure ~f)
-
-  let model_cutoff f a =
-    let (Computation.T { t; model; action }) = Proc.Private.reveal_computation (f a) in
-    Computation.T { t = Computation.Model_cutoff { t; model }; model; action }
-    |> Proc.Private.conceal_computation
-  ;;
+  let model_cutoff f a = Proc.Incr.model_cutoff (f a)
 
   let value_cutoff ~cutoff =
     map input ~f:(fun input ->

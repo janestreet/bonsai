@@ -52,13 +52,13 @@ let list_rooms global_state =
 ;;
 
 let implementations global_state =
-  Rpc.Implementations.create_exn
-    ~implementations:
-      [ message_stream global_state
-      ; message_request global_state
-      ; send_message global_state
-      ; create_room global_state
-      ; list_rooms global_state
-      ]
-    ~on_unknown_rpc:`Continue
+  let implementations =
+    [ message_stream global_state
+    ; message_request global_state
+    ; send_message global_state
+    ; create_room global_state
+    ; list_rooms global_state
+    ]
+  in
+  Rpc.Implementations.create_exn ~implementations ~on_unknown_rpc:`Continue
 ;;

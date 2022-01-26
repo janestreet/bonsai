@@ -36,6 +36,6 @@ end
     required to display these notifications is handled for you via ppx_css. *)
 val to_vdom
   :  ?notification_style:Notification_style.t
-  -> ?notification_extra_attr:Vdom.Attrs.attr
+  -> ?notification_extra_attr:Vdom.Attr.t
   -> t
   -> Vdom.Node.t

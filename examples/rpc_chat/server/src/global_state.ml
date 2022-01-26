@@ -16,19 +16,18 @@ let create () =
       ~on_callback_raise:(fun error -> print_s [%sexp (error : Error.t)])
   in
   let initial_messages =
-    [ Message.
-        { room = Room.of_string "incr_dom-room"
+    Message.
+      [ { room = Room.of_string "incr_dom-room"
         ; author = "Bonsai Developers"
         ; contents = "hello world!"
         }
-    ; Message.
-        { room = Room.of_string "incr_dom-room"
+      ; { room = Room.of_string "incr_dom-room"
         ; author = "Bonsai Developers"
         ; contents =
             "For deep and complex security purposes your messages will be hashed so that \
              you can't use this platform for actual chatting"
         }
-    ]
+      ]
   in
   let messages =
     Room.Table.of_alist_exn

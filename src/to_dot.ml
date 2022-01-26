@@ -195,90 +195,16 @@ let rec follow_value : type a. State.t -> a Value.t -> Id.t =
       ; follow_value state t7
       ]
       ~to_:(register "map7")
-  | Both
-      ( t1
-      , { value =
-            Both
-              ( t2
-              , { value =
-                    Both
-                      ( t3
-                      , { value =
-                            Both
-                              (t4, { value = Both (t5, { value = Both (t6, t7); _ }); _ })
-                        ; _
-                        } )
-                ; _
-                } )
-        ; _
-        } ) ->
-    arrow_from_many
-      state
-      [ follow_value state t1
-      ; follow_value state t2
-      ; follow_value state t3
-      ; follow_value state t4
-      ; follow_value state t5
-      ; follow_value state t6
-      ; follow_value state t7
-      ]
-      ~to_:(register "map7")
-  | Both
-      ( t1
-      , { value =
-            Both
-              ( t2
-              , { value = Both (t3, { value = Both (t4, { value = Both (t5, t6); _ }); _ })
-                ; _
-                } )
-        ; _
-        } ) ->
-    arrow_from_many
-      state
-      [ follow_value state t1
-      ; follow_value state t2
-      ; follow_value state t3
-      ; follow_value state t4
-      ; follow_value state t5
-      ; follow_value state t6
-      ]
-      ~to_:(register "map6")
-  | Both
-      ( t1
-      , { value = Both (t2, { value = Both (t3, { value = Both (t4, t5); _ }); _ }); _ }
-      ) ->
-    arrow_from_many
-      state
-      [ follow_value state t1
-      ; follow_value state t2
-      ; follow_value state t3
-      ; follow_value state t4
-      ; follow_value state t5
-      ]
-      ~to_:(register "map5")
-  | Both (t1, { value = Both (t2, { value = Both (t3, t4); _ }); _ }) ->
-    arrow_from_many
-      state
-      [ follow_value state t1
-      ; follow_value state t2
-      ; follow_value state t3
-      ; follow_value state t4
-      ]
-      ~to_:(register "map4")
-  | Both (t1, { value = Both (t2, t3); _ }) ->
-    arrow_from_many
-      state
-      [ follow_value state t1; follow_value state t2; follow_value state t3 ]
-      ~to_:(register "map3")
   | Both (t1, t2) ->
     arrow_from_many
       state
       [ follow_value state t1; follow_value state t2 ]
-      ~to_:(register "map2")
+      ~to_:(register "both")
 ;;
 
 let rec follow_computation
-  : type model action result. State.t -> (model, action, result) Computation.t -> Id.t
+  : type model dynamic_action static_action result.
+    State.t -> (model, dynamic_action, static_action, result) Computation.t -> Id.t
   =
   fun state computation ->
   let register_computation kind = register state (Kind.Computation kind) kind in
@@ -370,7 +296,13 @@ let rec follow_computation
       ~from:(follow_computation state from)
       ~to_:(register_named state (Kind.Subst here) via);
     follow_computation state into
-  | Subst_stateless { from; via; into; here } ->
+  | Subst_stateless_from { from; via; into; here } ->
+    arrow
+      state
+      ~from:(follow_computation state from)
+      ~to_:(register_named state (Kind.Subst here) via);
+    follow_computation state into
+  | Subst_stateless_into { from; via; into; here } ->
     arrow
       state
       ~from:(follow_computation state from)
@@ -392,11 +324,11 @@ let rec follow_computation
       arrow state ~from:(follow_computation state t) ~to_:me);
     me
   | Lazy _ -> register_computation "lazy"
-  | Wrap { inner; model_id = _; inject_id = _; apply_action = _ } ->
+  | Wrap { inner; model_id = _; inject_id = _; dynamic_apply_action = _ } ->
     let me = register_computation "wrap" in
     arrow state ~from:(follow_computation state inner) ~to_:me;
     me
-  | With_model_resetter { t; default_model = _ } ->
+  | With_model_resetter t ->
     let me = register_computation "with_model_resetter" in
     arrow state ~from:(follow_computation state t) ~to_:me;
     me
@@ -415,6 +347,7 @@ let to_dot (Computation.T { t; _ }) =
     ; const_id_to_name = Value.Constant_id.Table.create ()
     }
   in
+  let t = Flatten_values.flatten_values t in
   let _root : Id.t = follow_computation state t in
   sprintf "digraph {\n%s}" (Buffer.contents state.buffer)
 ;;

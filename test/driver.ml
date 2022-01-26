@@ -1,29 +1,38 @@
 open! Core
 open! Import
 
-type ('i, 'm, 'a, 'r) unpacked =
+module Action = struct
+  type ('dynamic_action, 'static_action) t =
+    | Dynamic of 'dynamic_action
+    | Static of 'static_action
+end
+
+type ('i, 'm, 'dynamic_action, 'static_action, 'r) unpacked =
   { input_var : 'i Incr.Var.t
   ; model_var : 'm Incr.Var.t
   ; default_model : 'm
   ; clock : Incr.Clock.t
-  ; inject : 'a -> unit Ui_effect.t
+  ; inject : ('dynamic_action, 'static_action) Action.t -> unit Ui_effect.t
   ; sexp_of_model : 'm -> Sexp.t
-  ; apply_action :
-      (schedule_event:(unit Ui_effect.t -> unit) -> 'm -> 'a -> 'm) Incr.Observer.t
-  ; apply_action_incr :
-      (schedule_event:(unit Ui_effect.t -> unit) -> 'm -> 'a -> 'm) Incr.t
+  ; dynamic_apply_action_incr :
+      (schedule_event:(unit Ui_effect.t -> unit) -> 'm -> 'dynamic_action -> 'm) Incr.t
+  ; dynamic_apply_action :
+      (schedule_event:(unit Ui_effect.t -> unit) -> 'm -> 'dynamic_action -> 'm)
+        Incr.Observer.t
+  ; static_apply_action :
+      schedule_event:(unit Ui_effect.t -> unit) -> 'm -> 'static_action -> 'm
   ; result : 'r Incr.Observer.t
   ; result_incr : 'r Incr.t
   ; lifecycle : Bonsai.Private.Lifecycle.Collection.t Incr.Observer.t
   ; lifecycle_incr : Bonsai.Private.Lifecycle.Collection.t Incr.t
-  ; queue : 'a Queue.t
+  ; queue : ('dynamic_action, 'static_action) Action.t Queue.t
   ; mutable should_replace_bonsai_path_string : bool
   ; mutable should_replace_bonsai_hash_string : bool
   ; mutable last_view : string
   ; mutable last_lifecycle : Bonsai.Private.Lifecycle.Collection.t
   }
 
-type ('i, 'r) t = T : ('i, _, _, 'r) unpacked -> ('i, 'r) t
+type ('i, 'r) t = T : ('i, _, _, _, 'r) unpacked -> ('i, 'r) t
 
 let create
       (type i r)
@@ -40,7 +49,9 @@ let create
   let computation = component var in
   let (Bonsai.Private.Computation.T
          { t = component_unpacked
-         ; action
+         ; dynamic_action = _
+         ; static_action = _
+         ; apply_static
          ; model =
              { default = default_model
              ; sexp_of = sexp_of_model
@@ -63,36 +74,40 @@ let create
      into the environment is by defining a function like this. See
      https://github.com/ocaml/ocaml/issues/7074. *)
   let create_polymorphic
-        (type a)
-        (computation : (_, a, r) Bonsai.Private.Computation.t)
-        (_action : a Type_equal.Id.t)
+        (type dynamic_action static_action)
+        (computation : (_, dynamic_action, static_action, r) Bonsai.Private.Computation.t)
+        apply_static
     : (i, r) t
     =
     let queue = Queue.create () in
     let module A =
       Ui_effect.Define (struct
         module Action = struct
-          type t = a
+          type t = (dynamic_action, static_action) Action.t
         end
 
         let handle = Queue.enqueue queue
       end)
     in
     let inject = A.inject in
+    let inject_dynamic a = A.inject (Dynamic a) in
+    let inject_static a = A.inject (Static a) in
     let snapshot =
       Bonsai.Private.eval
         ~environment
         ~path:Bonsai.Private.Path.empty
         ~clock
         ~model:(Incr.Var.watch model_var)
-        ~inject
+        ~inject_dynamic
+        ~inject_static
         computation
     in
     let result_incr = Bonsai.Private.Snapshot.result snapshot in
-    let apply_action_incr =
-      Bonsai.Private.Snapshot.(Apply_action.to_incremental (apply_action snapshot))
+    let dynamic_apply_action_incr =
+      Bonsai.Private.Apply_action.to_incremental
+        (Bonsai.Private.Snapshot.apply_action snapshot)
     in
-    let apply_action = Incr.observe apply_action_incr in
+    let dynamic_apply_action = Incr.observe dynamic_apply_action_incr in
     let result = result_incr |> Incr.observe in
     let lifecycle_incr = Bonsai.Private.Snapshot.lifecycle_or_empty snapshot in
     let lifecycle = Incr.observe lifecycle_incr in
@@ -103,8 +118,9 @@ let create
       ; default_model
       ; clock
       ; inject
-      ; apply_action
-      ; apply_action_incr
+      ; dynamic_apply_action
+      ; dynamic_apply_action_incr
+      ; static_apply_action = apply_static ~inject:inject_static
       ; result
       ; result_incr
       ; sexp_of_model
@@ -117,24 +133,37 @@ let create
       ; last_lifecycle = Bonsai.Private.Lifecycle.Collection.empty
       }
   in
-  create_polymorphic component_unpacked action
+  create_polymorphic component_unpacked apply_static
 ;;
 
 let schedule_event _ = Ui_effect.Expert.handle
 
-let flush (T { model_var; apply_action; queue; _ }) =
-  let process_event action =
-    let apply_action = Incr.Observer.value_exn apply_action in
-    let new_model =
-      apply_action
-        (Incr.Var.value model_var)
-        action
-        ~schedule_event:Ui_effect.Expert.handle
-    in
-    Incr.Var.set model_var new_model;
-    (* We need to stabilize after every action so that [Snapshot.apply_action] is closed
-       over the latest model. *)
-    Incr.stabilize ()
+let flush (T { model_var; static_apply_action; dynamic_apply_action; queue; _ }) =
+  let update_model ~action ~apply_action =
+    (* The only difference between [Var.latest_value] and [Var.value] is that
+       if [Var.set] is called _while stabilizing_, then calling [Var.value]
+       will return the value that was set when stabilization started, whereas
+       [latest_value] will give you the value that was just [set].  Now,
+       setting a model in the middle of a stabilizaiton should never happen,
+       but I think it's important to be explicit about which behavior we use,
+       so I chose the one that would be least surprising if a stabilization
+       does happen to occur. *)
+    Incr.Var.set
+      model_var
+      (apply_action
+         ~schedule_event:Ui_effect.Expert.handle
+         (Incr.Var.latest_value model_var)
+         action)
+  in
+  let process_event (action : _ Action.t) =
+    match action with
+    | Static action -> update_model ~apply_action:static_apply_action ~action
+    | Dynamic action ->
+      (* We need to stabilize before every action so that the [input] for the
+         apply-actions are up to date. *)
+      Incr.stabilize ();
+      let apply_action = Incr.Observer.value_exn dynamic_apply_action in
+      update_model ~apply_action ~action
   in
   while not (Queue.is_empty queue) do
     process_event (Queue.dequeue_exn queue)
@@ -181,12 +210,16 @@ let sexp_of_model (T { sexp_of_model; model_var; _ }) =
 ;;
 
 let result_incr (T { result_incr; _ }) = result_incr
-let apply_action_incr (T { apply_action_incr; _ }) = Ui_incr.pack apply_action_incr
+
+let apply_action_incr (T { dynamic_apply_action_incr; _ }) =
+  Ui_incr.pack dynamic_apply_action_incr
+;;
+
 let lifecycle_incr (T { lifecycle_incr; _ }) = Ui_incr.pack lifecycle_incr
 let clock (T { clock; _ }) = clock
 
-let invalidate_observers (T { apply_action; result; lifecycle; _ }) =
-  Incr.Observer.disallow_future_use apply_action;
+let invalidate_observers (T { dynamic_apply_action; result; lifecycle; _ }) =
+  Incr.Observer.disallow_future_use dynamic_apply_action;
   Incr.Observer.disallow_future_use result;
   Incr.Observer.disallow_future_use lifecycle
 ;;

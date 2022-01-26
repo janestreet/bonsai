@@ -103,5 +103,54 @@ let%expect_test "recursive component" =
         <div>
           2
           <div id="path_0_2">
-            foobar 0 |}]
+            foobar 0 |}];
+  (* test sending an action to an inactive component *)
+  (* capture the result so that we can schedule actions from it. *)
+  let old_input = Bonsai.Var.get var in
+  let old_result = Handle.result handle in
+  Bonsai.Var.set var { M.label = "hi"; children = Int.Map.empty };
+  Handle.show handle;
+  [%expect
+    {|
+    <div id="path_0">
+      hi 0
+      <button onclick> +1 </button>
+    </div> |}];
+  Handle.click_on handle ~get_vdom:(fun _ -> old_result) ~selector:"#path_0_0_99 button";
+  Bonsai.Var.set var old_input;
+  Handle.show handle;
+  [%expect
+    {|
+    <div id="path_0">
+      hi 0
+      <button onclick> +1 </button>
+      <div>
+        0
+        <div id="path_0_0">
+          hello 0
+          <button onclick> +1 </button>
+          <div>
+            99
+            <div id="path_0_0_99">
+              another 2
+              <button onclick> +1 </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div>
+        1
+        <div id="path_0_1">
+          test 0
+          <button onclick> +1 </button>
+        </div>
+      </div>
+      <div>
+        2
+        <div id="path_0_2">
+          foobar 0
+          <button onclick> +1 </button>
+        </div>
+      </div>
+    </div> |}]
 ;;

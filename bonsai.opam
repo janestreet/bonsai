@@ -33,7 +33,7 @@ depends: [
   "profunctor"
   "textutils"
   "virtual_dom"
-  "cohttp-async"             {>= "2.5.6"}
+  "cohttp-async"             {>= "2.5.6" & < "3.0.0" | >= "5.0.0"}
   "dune"                     {>= "2.0.0"}
   "gen_js_api"               {>= "1.0.8"}
   "js_of_ocaml-ppx"          {>= "3.9.0"}

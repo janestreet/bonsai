@@ -2,6 +2,19 @@
 <!-- Change-log notes go in this file, with newer dates at the _top_  -->
 <!-- in vim : !date +'\%Y-\%m-\%d' -->
 
+## 2022-01-12
+- Expose `item_is_hovered` to the `empty_list_placeholder` parameter in the
+  `Bonsai_web_ui_reorderable_list` API.
+
+## 2021-12-21
+- Introduce both `startBonsaiDebugger` and `stopBonsaiDebugger` functions to
+  global scope. Starting the debugger instruments the Bonsai graph and opens a
+  new tab in bonsai-bug.
+
+## 2021-12-14
+- Added `?expand_direction` parameter to `Bonsai_web_ui_query_box` to have
+  suggestions appear above the input textbox.
+
 ## 2021-11-01
 - Added `Bonsai_bench`
 

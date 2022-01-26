@@ -2,6 +2,7 @@ open! Core
 open! Bonsai_web
 open! Js_of_ocaml
 
+
 module Behavior : sig
   type t =
     | Grow_to_fill

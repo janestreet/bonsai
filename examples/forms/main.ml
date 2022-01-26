@@ -1,6 +1,5 @@
 open! Core
 open! Bonsai_web
-open! Import
 
 module Style =
   [%css.raw

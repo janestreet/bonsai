@@ -80,7 +80,7 @@ module Expert = struct
     let%sub input_map = return (collated >>| Collated.to_map_list) in
     let%sub remapped = remap key input_map in
     let%sub path = Bonsai.path_id in
-    let%sub leaves = Bonsai.read (headers >>| Header_tree.leaves) in
+    let%sub leaves = return (headers >>| Header_tree.leaves) in
     let%sub bounds, set_bounds =
       Bonsai.state_opt
         [%here]
@@ -137,7 +137,7 @@ module Expert = struct
         ~remapped
         ~path
     in
-    let row_click_handler = Focus.get_row_click_handler focus_kind focus in
+    let on_row_click = Focus.get_on_row_click focus_kind focus in
     let visually_focused = Focus.get_focused focus_kind focus in
     let%sub rows, body_for_testing =
       Table_body.component
@@ -147,7 +147,7 @@ module Expert = struct
         ~assoc
         ~column_widths
         ~visually_focused
-        ~row_click_handler
+        ~on_row_click
         collated
         remapped
     in
@@ -348,24 +348,23 @@ module Basic = struct
         | Some v -> v >>| Option.some
       in
       let%sub change_sort =
-        Bonsai.read
-          (let%map change_order = change_order in
-           fun add_or_replace i ->
-             match add_or_replace with
-             | `Add -> change_order (Add_sort i)
-             | `Replace -> change_order (Set_sort i))
+        let%arr change_order = change_order in
+        fun add_or_replace i ->
+          match add_or_replace with
+          | `Add -> change_order (Add_sort i)
+          | `Replace -> change_order (Set_sort i)
       in
       let%sub sorters, headers =
         Column.headers_and_sorters value ~change_sort ~sort_order
       in
-      let collate =
-        let order =
-          let%map sort_order = sort_order
+      let%sub collate =
+        let%sub order =
+          let%arr sort_order = sort_order
           and sorters = sorters
           and default_sort = default_sort in
           Order.to_compare ~sorters ~default_sort sort_order
         in
-        let%map filter = filter
+        let%arr filter = filter
         and order = order
         and rank_range = rank_range in
         let key_range = Collate.Which_range.All_rows in

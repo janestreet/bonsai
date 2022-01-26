@@ -717,7 +717,6 @@ let%expect_test "table body is not recomputed more often than necessary" =
   Handle.flush test.handle;
   [%expect {|
     Initialized
-    Changed
     Changed |}];
   (* Sanity check: re-stabilizing after doing no actions does not cause recomputation *)
   Handle.flush test.handle;
@@ -780,7 +779,6 @@ let%expect_test "table body is not recomputed more often than necessary" =
   Handle.flush test.handle;
   [%expect {|
     Initialized
-    Changed
     Changed |}];
   (* Sanity check: re-stabilizing after doing no actions does not cause recomputation *)
   Handle.flush test.handle;
@@ -789,7 +787,7 @@ let%expect_test "table body is not recomputed more often than necessary" =
      and don't rely on result.bounds. *)
   Test.set_bounds test ~low:100 ~high:300;
   Handle.flush test.handle;
-  [%expect {| Changed |}]
+  [%expect {| |}]
 ;;
 
 let%expect_test "test is browser" =

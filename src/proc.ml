@@ -2,45 +2,100 @@ open! Core
 open! Import
 module Var = Var
 
+let unusable_static_apply_action ~inject:_ ~schedule_event:_ _model =
+  Nothing.unreachable_code
+;;
+
 let sub
       (type via)
       ?here
-      (Computation.T { t = from; action = from_action; model = from_model } :
+      (Computation.T
+         { t = from
+         ; dynamic_action = from_dynamic_action
+         ; static_action = from_static_action
+         ; model = from_model
+         ; apply_static = from_apply_static
+         } :
          via Computation.packed)
       ~f
   =
-  let via : via Type_equal.Id.t =
-    Type_equal.Id.create ~name:(Source_code_position.to_string [%here]) [%sexp_of: opaque]
-  in
-  let (Computation.T { t = into; action = into_action; model = into_model }) =
-    f (Value.named via)
-  in
-  match
-    ( Type_equal.Id.same_witness from_model.type_id Meta.Model.unit.type_id
-    , Type_equal.Id.same_witness from_action Meta.Action.nothing )
-  with
-  | Some T, Some T ->
-    Computation.T
-      { t = Subst_stateless { from; via; into; here }
-      ; action = into_action
-      ; model = into_model
-      }
+  match from with
+  | Return { here = there; value = Named _ as value } ->
+    let here = Option.first_some here there in
+    f { Value.here; value }
   | _ ->
-    Computation.T
-      { t = Subst { from; via; into; here }
-      ; action = Meta.Action.both from_action into_action
-      ; model = Meta.Model.both from_model into_model
-      }
+    let via : via Type_equal.Id.t =
+      Type_equal.Id.create
+        ~name:(Source_code_position.to_string [%here])
+        [%sexp_of: opaque]
+    in
+    let (Computation.T
+           { t = into
+           ; dynamic_action = into_dynamic_action
+           ; static_action = into_static_action
+           ; model = into_model
+           ; apply_static = into_apply_static
+           })
+      =
+      f (Value.named via)
+    in
+    (match
+       Type_equal.Id.(
+         ( ( same_witness from_model.type_id Meta.Model.unit.type_id
+           , same_witness from_dynamic_action Meta.Action.nothing
+           , same_witness from_static_action Meta.Action.nothing )
+         , ( same_witness into_model.type_id Meta.Model.unit.type_id
+           , same_witness into_dynamic_action Meta.Action.nothing
+           , same_witness into_static_action Meta.Action.nothing ) ))
+     with
+     | (Some T, Some T, Some T), _ ->
+       Computation.T
+         { t = Subst_stateless_from { from; via; into; here }
+         ; dynamic_action = into_dynamic_action
+         ; static_action = into_static_action
+         ; model = into_model
+         ; apply_static = into_apply_static
+         }
+     | _, (Some T, Some T, Some T) ->
+       Computation.T
+         { t = Subst_stateless_into { from; via; into; here }
+         ; dynamic_action = from_dynamic_action
+         ; static_action = from_static_action
+         ; model = from_model
+         ; apply_static = from_apply_static
+         }
+     | _ ->
+       let apply_static ~inject ~schedule_event (m1, m2) = function
+         | First a ->
+           let inject a = inject (First a) in
+           from_apply_static ~inject ~schedule_event m1 a, m2
+         | Second a ->
+           let inject a = inject (Second a) in
+           m1, into_apply_static ~inject ~schedule_event m2 a
+       in
+       Computation.T
+         { t = Subst { from; via; into; here }
+         ; dynamic_action = Meta.Action.both from_dynamic_action into_dynamic_action
+         ; static_action = Meta.Action.both from_static_action into_static_action
+         ; model = Meta.Model.both from_model into_model
+         ; apply_static
+         })
 ;;
 
 let read x =
-  Computation.T { t = Return x; model = Meta.Model.unit; action = Meta.Action.nothing }
+  Computation.T
+    { t = Return x
+    ; model = Meta.Model.unit
+    ; dynamic_action = Meta.Action.nothing
+    ; static_action = Meta.Action.nothing
+    ; apply_static = unusable_static_apply_action
+    }
 ;;
 
 let switch ~match_ ~branches ~with_ =
   let create_case key =
     let component = with_ key in
-    let (Computation.T { model; t = _; action = _ }) = component in
+    let (Computation.T { model; _ }) = component in
     let default_model = Hidden.Model.create model model.default in
     component, default_model
   in
@@ -54,10 +109,29 @@ let switch ~match_ ~branches ~with_ =
         let models = Map.add_exn models ~key ~data:model in
         components, models)
   in
+  let apply_static ~inject ~schedule_event model (action : int Hidden.Action.t) =
+    let (T { action; type_id = action_type_id; key = index }) = action in
+    let (T { model = chosen_model; info = chosen_model_info; _ }) =
+      Hidden.Multi_model.find_exn model index
+    in
+    let inject action =
+      inject (Hidden.Action.T { action; type_id = action_type_id; key = index })
+    in
+    let (T { t = _; model = tm; static_action = am; apply_static; dynamic_action = _ }) =
+      Map.find_exn arms index
+    in
+    let T = Type_equal.Id.same_witness_exn tm.type_id chosen_model_info.type_id in
+    let T = Type_equal.Id.same_witness_exn am action_type_id in
+    let new_model = apply_static ~inject ~schedule_event chosen_model action in
+    let new_model = Hidden.Model.create tm new_model in
+    Hidden.Multi_model.set model ~key:index ~data:new_model
+  in
   Computation.T
     { t = Switch { match_; arms }
     ; model = Hidden.Multi_model.model_info (module Int) models
-    ; action = Hidden.Action.type_id [%sexp_of: int]
+    ; dynamic_action = Hidden.Action.type_id [%sexp_of: int]
+    ; static_action = Hidden.Action.type_id [%sexp_of: int]
+    ; apply_static
     }
 ;;
 
@@ -84,29 +158,18 @@ open Let_syntax
 let pure f i = read (Value.map i ~f)
 let const x = read (Value.return x)
 
-let of_module1 (type i m a r) (component : (i, m, a, r) component_s) ~default_model input =
-  let (module M) = component in
+let with_model_resetter
+      (Computation.T { t; model; static_action; dynamic_action; apply_static })
+  =
+  let static_action = Meta.(Action.both unit_type_id static_action) in
+  let apply_static ~inject ~schedule_event m =
+    let inject a = inject (Second a) in
+    function
+    | First () -> model.default
+    | Second a -> apply_static ~inject ~schedule_event m a
+  in
   Computation.T
-    { t =
-        Leaf1
-          { input
-          ; apply_action = M.apply_action
-          ; compute = M.compute
-          ; name = M.name
-          ; kind = "of module"
-          }
-    ; model = Meta.Model.of_module (module M.Model) ~name:M.name ~default:default_model
-    ; action = Meta.Action.of_module (module M.Action) ~name:M.name
-    }
-;;
-
-let of_module0 c ~default_model = of_module1 c ~default_model (Value.return ())
-let of_module2 c ~default_model i1 i2 = of_module1 c ~default_model (Value.both i1 i2)
-
-let with_model_resetter (Computation.T { t; model; action }) =
-  let action = Meta.(Action.both unit_type_id action) in
-  Computation.T
-    { t = With_model_resetter { t; default_model = model.default }; model; action }
+    { t = With_model_resetter t; model; static_action; dynamic_action; apply_static }
 ;;
 
 let assoc
@@ -122,17 +185,33 @@ let assoc
   in
   let key_var = Value.named key_id in
   let data_var = Value.named data_id in
-  let (Computation.T { t = by; action; model }) = f key_var data_var in
+  let (Computation.T
+         { t = by; model = model_info; dynamic_action; static_action; apply_static })
+    =
+    f key_var data_var
+  in
   match
     Simplify.computation_to_function by ~key_compare:C.comparator.compare ~key_id ~data_id
   with
   | Some by ->
     Computation.T
       { t = Assoc_simpl { map; key_id; data_id; by; result_by_k = T }
-      ; action = Meta.Action.nothing
+      ; dynamic_action = Meta.Action.nothing
+      ; static_action = Meta.Action.nothing
+      ; apply_static = unusable_static_apply_action
       ; model = Meta.Model.unit
       }
   | None ->
+    let apply_static ~inject ~schedule_event model (id, action) =
+      let inject a = inject (id, a) in
+      let specific_model =
+        Map.find model id |> Option.value ~default:model_info.default
+      in
+      let data = apply_static ~inject ~schedule_event specific_model action in
+      if model_info.equal data model_info.default
+      then Map.remove model id
+      else Map.set model ~key:id ~data
+    in
     let module Cmp = (val comparator) in
     Computation.T
       { t =
@@ -142,13 +221,15 @@ let assoc
             ; key_id
             ; data_id
             ; by
-            ; model_info = model
-            ; action_info = action
+            ; model_info
+            ; action_info = dynamic_action
             ; result_by_k = T
             ; model_by_k = T
             }
-      ; action = Meta.Action.map comparator action
-      ; model = Meta.Model.map comparator model
+      ; dynamic_action = Meta.Action.map comparator dynamic_action
+      ; static_action = Meta.Action.map comparator static_action
+      ; model = Meta.Model.map comparator model_info
+      ; apply_static
       }
 ;;
 
@@ -177,26 +258,63 @@ let state_machine1
       ~apply_action
       input
   =
-  let compute ~inject _input model = model, inject in
   let name = Source_code_position.to_string here in
   Computation.T
-    { t = Leaf1 { input; apply_action; compute; name; kind = "state machine" }
+    { t =
+        Leaf1 { input; dynamic_apply_action = apply_action; name; kind = "state machine" }
     ; model = Meta.Model.of_module (module M) ~name ~default:default_model
-    ; action = Meta.Action.of_module (module A) ~name
+    ; dynamic_action = Meta.Action.of_module (module A) ~name
+    ; static_action = Meta.Action.nothing
+    ; apply_static = unusable_static_apply_action
     }
 ;;
 
+let of_module1 (type i m a r) (component : (i, m, a, r) component_s) ~default_model input =
+  let (module M) = component in
+  let%sub input = return input in
+  let%sub model_and_inject =
+    state_machine1
+      [%here]
+      (module M.Model)
+      (module M.Action)
+      ~default_model
+      ~apply_action:M.apply_action
+      input
+  in
+  let%arr model, inject = model_and_inject
+  and input = input in
+  M.compute ~inject input model
+;;
+
+let of_module2 c ~default_model i1 i2 = of_module1 c ~default_model (Value.both i1 i2)
+
 let state_machine0 here model action ~default_model ~apply_action =
-  let apply_action ~inject ~schedule_event () model action =
+  let apply_action ~inject ~schedule_event model action =
     apply_action ~inject ~schedule_event model action
   in
   let compute ~inject model = model, inject in
   let name = Source_code_position.to_string here in
   Computation.T
-    { t = Leaf0 { apply_action; compute; name; kind = "state machine" }
+    { t = Leaf0 { compute; name; kind = "state machine" }
     ; model = Meta.Model.of_module model ~name ~default:default_model
-    ; action = Meta.Action.of_module action ~name
+    ; dynamic_action = Meta.Action.nothing
+    ; static_action = Meta.Action.of_module action ~name
+    ; apply_static = apply_action
     }
+;;
+
+let of_module0 (type m a r) (component : (unit, m, a, r) component_s) ~default_model =
+  let (module M) = component in
+  let%sub model_and_inject =
+    state_machine0
+      [%here]
+      (module M.Model)
+      (module M.Action)
+      ~default_model
+      ~apply_action:(M.apply_action ())
+  in
+  let%arr model, inject = model_and_inject in
+  M.compute ~inject () model
 ;;
 
 let actor1
@@ -253,7 +371,8 @@ let lazy_ t =
   let open struct
     type model = Hidden.Model.t option [@@deriving equal, sexp_of]
   end in
-  let action = Hidden.Action.type_id [%sexp_of: unit] in
+  let dynamic_action = Hidden.Action.type_id [%sexp_of: unit] in
+  let static_action = Hidden.Action.type_id [%sexp_of: unit] in
   let model =
     { Meta.Model.default = None
     ; equal = equal_model
@@ -262,7 +381,32 @@ let lazy_ t =
     ; of_sexp = (fun _ -> None)
     }
   in
-  Computation.T { t = Lazy t; action; model }
+  let apply_static ~inject ~schedule_event model action =
+    (* forcing the lazy is fine because actions are finite in length *)
+    let (lazy
+          (Computation.T
+             { t = _
+             ; model = model_info
+             ; static_action = action_info
+             ; dynamic_action = _
+             ; apply_static
+             }))
+      =
+      t
+    in
+    let inject action =
+      inject (Hidden.Action.T { action; type_id = action_info; key = () })
+    in
+    let (Hidden.Action.T { action; type_id = action_type_id; key = () }) = action in
+    let (Hidden.Model.T { model = chosen_model; info = chosen_model_info; _ }) =
+      Option.value model ~default:(Hidden.Model.create model_info model_info.default)
+    in
+    let T = Type_equal.Id.same_witness_exn action_type_id action_info in
+    let T = Type_equal.Id.same_witness_exn chosen_model_info.type_id model_info.type_id in
+    let new_model = apply_static ~inject ~schedule_event chosen_model action in
+    Some (Hidden.Model.create model_info new_model)
+  in
+  Computation.T { t = Lazy t; dynamic_action; static_action; model; apply_static }
 ;;
 
 let wrap (type model action) model_module ~default_model ~apply_action ~f =
@@ -277,10 +421,17 @@ let wrap (type model action) model_module ~default_model ~apply_action ~f =
   in
   let model_var = Value.named model_id in
   let inject_var = Value.named inject_id in
-  let (Computation.T { t = inner; model = inner_model; action = inner_action }) =
+  let (Computation.T
+         { t = inner
+         ; model = inner_model
+         ; dynamic_action = inner_dynamic_action
+         ; static_action = inner_static_action
+         ; apply_static
+         })
+    =
     f model_var inject_var
   in
-  let action = Meta.Action.both action_id inner_action in
+  let dynamic_action = Meta.Action.both action_id inner_dynamic_action in
   let model =
     Meta.Model.both
       (Meta.Model.of_module
@@ -289,8 +440,18 @@ let wrap (type model action) model_module ~default_model ~apply_action ~f =
          ~name:"outer model for wrap")
       inner_model
   in
+  let apply_static ~inject ~schedule_event (m1, m2) action =
+    m1, apply_static ~inject ~schedule_event m2 action
+  in
   Computation.T
-    { t = Computation.Wrap { model_id; inject_id; inner; apply_action }; action; model }
+    { t =
+        Computation.Wrap
+          { model_id; inject_id; inner; dynamic_apply_action = apply_action }
+    ; dynamic_action
+    ; static_action = inner_static_action
+    ; apply_static
+    ; model
+    }
 ;;
 
 let state (type m) here (module M : Model with type t = m) ~default_model =
@@ -313,7 +474,12 @@ let state_opt (type m) here ?default_model (module M : Model with type t = m) =
 
 let path =
   Computation.T
-    { t = Computation.Path; action = Meta.Action.nothing; model = Meta.Model.unit }
+    { t = Computation.Path
+    ; dynamic_action = Meta.Action.nothing
+    ; static_action = Meta.Action.nothing
+    ; apply_static = unusable_static_apply_action
+    ; model = Meta.Model.unit
+    }
 ;;
 
 let path_id =
@@ -328,20 +494,25 @@ module Edge = struct
       | Some a -> a
       | None -> Value.return None
     in
-    let tripple =
-      let%map a = transpose_join on_activate
+    let%sub triple =
+      let%arr a = transpose_join on_activate
       and b = transpose_join on_deactivate
       and c = transpose_join after_display in
       a, b, c
     in
-    let t =
-      match%map tripple with
+    let%sub t =
+      match%arr triple with
       | None, None, None -> None
       | on_activate, on_deactivate, after_display ->
         Some { Lifecycle.on_activate; on_deactivate; after_display }
     in
     Computation.T
-      { t = Lifecycle t; model = Meta.Model.unit; action = Meta.Action.nothing }
+      { t = Lifecycle t
+      ; model = Meta.Model.unit
+      ; dynamic_action = Meta.Action.nothing
+      ; static_action = Meta.Action.nothing
+      ; apply_static = unusable_static_apply_action
+      }
   ;;
 
   let lifecycle ?on_activate ?on_deactivate ?after_display () =
@@ -373,9 +544,12 @@ module Edge = struct
         and set_state = set_state
         and input = input
         and callback = callback in
-        if M.equal state input
+        if phys_equal state input || M.equal state input
         then None
-        else Some (Ui_effect.Many [ set_state (Some input); callback (Some state) input ])
+        else
+          lazy (Ui_effect.Many [ set_state (Some input); callback (Some state) input ])
+          |> Ui_effect.lazy_
+          |> Some
     in
     after_display' update
   ;;
@@ -495,20 +669,30 @@ end
 module Incr = struct
   let value_cutoff t ~equal = read (Value.cutoff ~equal t)
 
-  let model_cutoff (Computation.T { t; action; model }) =
-    Computation.T { t = Computation.Model_cutoff { t; model }; action; model }
+  let model_cutoff
+        (Computation.T { t; dynamic_action; static_action; model; apply_static })
+    =
+    Computation.T
+      { t = Computation.Model_cutoff { t; model }
+      ; dynamic_action
+      ; static_action
+      ; apply_static
+      ; model
+      }
   ;;
 
   let compute_with_clock t ~f =
-    let apply_action _input ~inject:_ =
+    let dynamic_apply_action _input ~inject:_ =
       Incr.return (fun ~schedule_event:_ _model -> Nothing.unreachable_code)
     in
     let compute clock input _model ~inject:_ = f clock input in
     Computation.T
       { t =
           Computation.Leaf_incr
-            { name = "incr-compute"; input = t; apply_action; compute }
-      ; action = Meta.Action.nothing
+            { name = "incr-compute"; input = t; dynamic_apply_action; compute }
+      ; dynamic_action = Meta.Action.nothing
+      ; static_action = Meta.Action.nothing
+      ; apply_static = unusable_static_apply_action
       ; model = Meta.Model.unit
       }
   ;;
@@ -552,7 +736,9 @@ module Dynamic_scope = struct
       | Independent { id; _ } ->
         Computation.T
           { t = Computation.Fetch { id; default; for_some }
-          ; action = Meta.Action.nothing
+          ; dynamic_action = Meta.Action.nothing
+          ; static_action = Meta.Action.nothing
+          ; apply_static = unusable_static_apply_action
           ; model = Meta.Model.unit
           }
       | Derived { base; get; set = _; sexp_of = _ } ->
@@ -567,8 +753,8 @@ module Dynamic_scope = struct
     fun var value c ->
     match var with
     | Independent { id; _ } ->
-      let (Computation.T { t; action; model }) = c in
-      Computation.T { t = Computation.Store { id; value; inner = t }; action; model }
+      let (Computation.T t) = c in
+      Computation.T { t with t = Computation.Store { id; value; inner = t.t } }
     | Derived { base; get = _; set; sexp_of = _ } ->
       let%sub current = lookup base in
       let%sub new_ =

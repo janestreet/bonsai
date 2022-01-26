@@ -2,6 +2,18 @@ open! Core
 open! Import
 
 
+module Var_from_parent : sig
+  type t =
+    | None
+    (** The common case, in which the parent node does not introduce any variables. *)
+    | One of Type_equal.Id.Uid.t
+    (** The case in which the parent node introduces one new variable; most of
+        the time this is for [Subst] or [Subst_stateless] *)
+    | Two of Type_equal.Id.Uid.t * Type_equal.Id.Uid.t
+    (** The case in which the parent node introduces two new variables; most of
+        the time this is for [Assoc]. *)
+end
+
 (** Both [For_value.map] and [For_computation.map] involve interacting
     universally quantified functions. Since OCaml does not support first-class
     universally quantified functions, so we have to wrap the function in
@@ -29,7 +41,6 @@ open! Import
 
     Note that you could invoke the mapper either before or after transforming
     the current node (these correspond to post- and pre- order traversal). *)
-
 module For_value : sig
   type 'from_parent mapper = { f : 'a. 'from_parent -> 'a Value.t -> 'a Value.t }
 
@@ -37,9 +48,9 @@ module For_value : sig
     { f :
         'a.
           recurse:'from_parent mapper
-        -> var_from_parent:Type_equal.Id.Uid.t option
-        -> parent_path:Node_path.t
-        -> current_path:Node_path.t
+        -> var_from_parent:Var_from_parent.t
+        -> parent_path:Node_path.t Lazy.t
+        -> current_path:Node_path.t Lazy.t
         -> 'from_parent
         -> 'a Value.t
         -> 'a Value.t
@@ -49,22 +60,22 @@ end
 module For_computation : sig
   type 'from_parent mapper =
     { f :
-        'model 'action 'result.
+        'model 'dynamic_action 'static_action 'result.
           'from_parent
-        -> ('model, 'action, 'result) Computation.t
-        -> ('model, 'action, 'result) Computation.t
+        -> ('model, 'dynamic_action, 'static_action, 'result) Computation.t
+        -> ('model, 'dynamic_action, 'static_action, 'result) Computation.t
     }
 
   type 'from_parent user_mapper =
     { f :
-        'model 'action 'result.
+        'model 'dynamic_action 'static_action 'result.
           recurse:'from_parent mapper
-        -> var_from_parent:Type_equal.Id.Uid.t option
-        -> parent_path:Node_path.t
-        -> current_path:Node_path.t
+        -> var_from_parent:Var_from_parent.t
+        -> parent_path:Node_path.t Lazy.t
+        -> current_path:Node_path.t Lazy.t
         -> 'from_parent
-        -> ('model, 'action, 'result) Computation.t
-        -> ('model, 'action, 'result) Computation.t
+        -> ('model, 'dynamic_action, 'static_action, 'result) Computation.t
+        -> ('model, 'dynamic_action, 'static_action, 'result) Computation.t
     }
 end
 
@@ -72,5 +83,5 @@ val map
   :  computation_mapper:'from_parent For_computation.user_mapper
   -> value_mapper:'from_parent For_value.user_mapper
   -> init:'from_parent
-  -> ('model, 'action, 'result) Computation.t
-  -> ('model, 'action, 'result) Computation.t
+  -> ('model, 'dynamic_action, 'static_action, 'result) Computation.t
+  -> ('model, 'dynamic_action, 'static_action, 'result) Computation.t

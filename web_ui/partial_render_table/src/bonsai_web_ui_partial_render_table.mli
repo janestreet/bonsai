@@ -11,12 +11,12 @@ module Focus : sig
   module By_row : sig
     type 'k t =
       { focused : 'k option
-      ; unfocus : unit Ui_effect.t
-      ; focus_up : unit Ui_effect.t
-      ; focus_down : unit Ui_effect.t
-      ; page_up : unit Ui_effect.t
-      ; page_down : unit Ui_effect.t
-      ; focus : 'k -> unit Ui_effect.t
+      ; unfocus : unit Effect.t
+      ; focus_up : unit Effect.t
+      ; focus_down : unit Effect.t
+      ; page_up : unit Effect.t
+      ; page_down : unit Effect.t
+      ; focus : 'k -> unit Effect.t
       }
     [@@deriving fields]
   end

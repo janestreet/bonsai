@@ -1,6 +1,5 @@
 open! Core
 open! Bonsai_web
-open! Import
 open Bonsai.Let_syntax
 module Form = Bonsai_web_ui_form
 module E = Form.Elements
@@ -116,12 +115,8 @@ module Advanced_list = struct
 
   let component =
     let%sub outer_form = outer_form in
-    let%sub () =
-      Bonsai.Edge.lifecycle
-        ~on_activate:
-          (let%map outer_form = outer_form in
-           Form.set outer_form starting_value)
-        ()
+    let%sub outer_form =
+      Form.Dynamic.with_default (Bonsai.Value.return starting_value) outer_form
     in
     return outer_form
   ;;
@@ -133,12 +128,12 @@ let component =
   let%arr simple_list = simple_list
   and advanced_list = advanced_list in
   let simple_output =
-    view_t ~sexp_of:[%sexp_of: Simple_list.t list Or_error.t] (Form.value simple_list)
+    Vdom.Node.sexp_for_debugging
+      [%sexp (Form.value simple_list : Simple_list.t list Or_error.t)]
   in
   let advanced_output =
-    view_t
-      ~sexp_of:[%sexp_of: Advanced_list.t list list Or_error.t]
-      (Form.value advanced_list)
+    Vdom.Node.sexp_for_debugging
+      [%sexp (Form.value advanced_list : Advanced_list.t list list Or_error.t)]
   in
   Vdom.Node.div
     ~attr:(Vdom.Attr.class_ S.list_forms)

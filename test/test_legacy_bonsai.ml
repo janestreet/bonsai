@@ -125,7 +125,7 @@ let%expect_test "enum with action handling `Warn" =
     [%expect
       {|
       ("an action inside of Bonsai.switch as been dropped because the computation is no longer active"
-       (index 1) (action (First Increment)))
+       (index 1) (action Increment))
       pure 3|}];
     H.do_actions [ Outer Increment ];
     [%expect "counter 2"])
@@ -591,7 +591,7 @@ module _ = struct
   let%expect_test "with of_sexp" =
     let driver =
       Driver.create
-        ~initial_model_sexp:[%sexp [ 2; () ]]
+        ~initial_model_sexp:[%sexp 2]
         ~initial_input:()
         ~clock:Incr.clock
         (dummy (module Int) ~default:5)
@@ -612,7 +612,7 @@ module _ = struct
     in
     let driver =
       Driver.create
-        ~initial_model_sexp:[%sexp [ [ [ "2"; () ]; [ [ "3"; () ]; () ] ]; () ]]
+        ~initial_model_sexp:[%sexp [ "2"; "3" ]]
         ~initial_input:()
         ~clock:Incr.clock
         component
@@ -658,7 +658,10 @@ module _ = struct
     [%expect {| bonsai! |}];
     let initial_model_sexp = Driver.sexp_of_model driver in
     print_s initial_model_sexp;
-    [%expect {| (((false ()) (((0 ((23 ()) ())) (1 (bonsai! ()))) ())) ()) |}];
+    [%expect {|
+      (false (
+        (0 23)
+        (1 bonsai!))) |}];
     let driver =
       Driver.create ~initial_model_sexp ~initial_input:() ~clock:Incr.clock component
     in

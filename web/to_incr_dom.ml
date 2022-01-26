@@ -10,7 +10,24 @@ module State = struct
   let create () = { last_lifecycle = Bonsai.Private.Lifecycle.Collection.empty }
 end
 
-let create_generic computation ~fresh ~input ~model ~inject =
+module Action = struct
+  type ('dynamic_action, 'static_action) t =
+    | Dynamic of 'dynamic_action
+    | Static of 'static_action
+  [@@deriving sexp_of]
+end
+
+module Action_unshadowed = Action
+
+let create_generic
+      computation
+      ~fresh
+      ~input
+      ~model
+      ~inject_dynamic
+      ~inject_static
+      ~apply_static
+  =
   let environment =
     Bonsai.Private.Environment.(empty |> add_exn ~key:fresh ~data:input)
   in
@@ -20,17 +37,22 @@ let create_generic computation ~fresh ~input ~model ~inject =
       ~path:Bonsai.Private.Path.empty
       ~clock:Incr.clock
       ~model
-      ~inject
+      ~inject_dynamic
+      ~inject_static
       computation
   in
   let%map view, extra = Bonsai.Private.Snapshot.result snapshot
-  and apply_action =
-    Bonsai.Private.Snapshot.(Apply_action.to_incremental (apply_action snapshot))
+  and dynamic_apply_action =
+    Bonsai.Private.Apply_action.to_incremental
+      (Bonsai.Private.Snapshot.apply_action snapshot)
   and lifecycle = Bonsai.Private.Snapshot.lifecycle_or_empty snapshot
   and model = model in
   let schedule_event = Vdom.Effect.Expert.handle_non_dom_event_exn in
-  let apply_action incoming_action _state ~schedule_action:_ =
-    apply_action ~schedule_event model incoming_action
+  let apply_action action _state ~schedule_action:_ =
+    match action with
+    | Action.Dynamic action -> dynamic_apply_action model action ~schedule_event
+    | Action.Static action ->
+      apply_static ~inject:inject_static ~schedule_event model action
   in
   let on_display state ~schedule_action:_ =
     let diff =
@@ -43,11 +65,18 @@ let create_generic computation ~fresh ~input ~model ~inject =
 ;;
 
 let convert_generic
-      (type input model action extra)
+      (type input model dynamic_action static_action extra)
       ~fresh
-      ~(computation : (model, action, Vdom.Node.t * extra) Bonsai.Private.Computation.t)
+      ~(computation :
+          ( model
+          , dynamic_action
+          , static_action
+          , Vdom.Node.t * extra )
+            Bonsai.Private.Computation.t)
       ~default_model
-      ~(action_type_id : action Type_equal.Id.t)
+      ~(dynamic_action_type_id : dynamic_action Type_equal.Id.t)
+      ~(static_action_type_id : static_action Type_equal.Id.t)
+      ~apply_static
       ~equal_model
       ~sexp_of_model
       ~model_of_sexp
@@ -65,9 +94,10 @@ let convert_generic
     end
 
     module Action = struct
-      type t = action
+      let sexp_of_dynamic_action = Type_equal.Id.to_sexp dynamic_action_type_id
+      let sexp_of_static_action = Type_equal.Id.to_sexp static_action_type_id
 
-      let sexp_of_t = Type_equal.Id.to_sexp action_type_id
+      type t = (dynamic_action, static_action) Action.t [@@deriving sexp_of]
     end
 
     module Extra = struct
@@ -79,7 +109,16 @@ let convert_generic
     type t = (Action.t, Model.t, State.t, Extra.t) Incr_dom.Component.with_extra
 
     let create ~input ~old_model:_ ~model ~inject =
-      create_generic computation ~fresh ~input ~model ~inject
+      let inject_dynamic a = inject (Action_unshadowed.Dynamic a) in
+      let inject_static a = inject (Action_unshadowed.Static a) in
+      create_generic
+        computation
+        ~fresh
+        ~input
+        ~model
+        ~inject_dynamic
+        ~inject_static
+        ~apply_static
     ;;
   end)
 ;;
@@ -88,11 +127,17 @@ let convert_with_extra component =
   let fresh = Type_equal.Id.create ~name:"" sexp_of_opaque in
   let var = Bonsai.Private.(Value.named fresh |> conceal_value) in
   let component = component var |> Bonsai.Private.reveal_computation in
-  let (Bonsai.Private.Computation.T { t; model; action }) = component in
+  let (Bonsai.Private.Computation.T
+         { t; model; dynamic_action; static_action; apply_static })
+    =
+    component
+  in
   convert_generic
     ~computation:t
     ~fresh
-    ~action_type_id:action
+    ~dynamic_action_type_id:dynamic_action
+    ~static_action_type_id:static_action
+    ~apply_static
     ~default_model:model.default
     ~equal_model:model.equal
     ~sexp_of_model:model.sexp_of

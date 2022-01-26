@@ -3,9 +3,9 @@
  (preprocess (pps ppx_jane)))
 
 (rule
- (targets tests.md cutoff.svg state.svg diamond.svg subst_tree.svg
-  dynamic_scope.svg assoc_simpl.svg assoc.svg nested_values.svg enum.svg
-  lazy.svg lazy_forced.svg)
+ (targets tests.md cutoff.svg state.svg dynamic_state.svg diamond.svg
+  subst_tree.svg many_aliases.svg dynamic_scope.svg assoc_simpl.svg assoc.svg
+  nested_values.svg enum.svg lazy.svg lazy_forced.svg name_used_twice.svg)
  (deps main.exe) (action (bash ./main.exe)))
 
 (rule (targets tests.html) (deps tests.md)

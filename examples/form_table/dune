@@ -1,0 +1,5 @@
+(executables (names main)
+ (libraries bonsai_experimental_table_form bonsai_web bonsai_web_ui_form
+  bonsai_web_ui_extendy bonsai_extra username_kernel
+  bonsai_web_ui_partial_render_table)
+ (preprocess (pps ppx_typed_fields ppx_jane ppx_css)))

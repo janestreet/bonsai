@@ -5,18 +5,6 @@ open! Import
 
 type ('model, 'action, 'result) t
 
-module Apply_action : sig
-  type ('m, 'a) transition = schedule_event:(unit Effect.t -> unit) -> 'm -> 'a -> 'm
-  type ('m, 'a) t
-
-  val incremental : ('m, 'a) transition Incr.t -> ('m, 'a) t
-  val non_incremental : ('m, 'a) transition -> ('m, 'a) t
-  val impossible : (_, Nothing.t) t
-  val to_incremental : ('m, 'a) t -> ('m, 'a) transition Incr.t
-  val merge : ('a, 'b) t -> ('c, 'd) t -> ('a * 'c, ('b, 'd) Base.Either.t) t
-  val map : ('a, 'b) t -> f:(('a, 'b) transition -> ('c, 'd) transition) -> ('c, 'd) t
-end
-
 (** Applies the provided action to the model in force at the time that the snapshot was
     created.
 
@@ -43,3 +31,5 @@ val create
   -> lifecycle:Lifecycle.Collection.t Incr.t option
   -> result:'result Incr.t
   -> ('model, 'action, 'result) t
+
+val attribute_positions : Source_code_position.t option -> _ t -> unit

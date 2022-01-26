@@ -47,10 +47,10 @@ let () = Util.run_vdom css_gen ~id:"css_gen"
 type mouse_event = Js_of_ocaml.Dom_html.mouseEvent Js_of_ocaml.Js.t
 
 (* Running side-effects directly inside an event-handler is not ideal, but I
-   didn't want to take a dependency on "Effect"s before introducing Events. 
+   didn't want to take a dependency on "Effect"s before introducing Events.
 
-   In real code, prefer passing in an "inject_alert" function that is backed by 
-   [Effect.of_sync_fun].  That would make this component testable ([alert] is not 
+   In real code, prefer passing in an "inject_alert" function that is backed by
+   [Effect.of_sync_fun].  That would make this component testable ([alert] is not
    supported in nodejs) *)
 (* $MDX part-begin=clicky_button *)
 let clicky : Vdom.Node.t =

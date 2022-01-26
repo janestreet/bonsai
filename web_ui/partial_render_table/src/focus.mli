@@ -5,12 +5,12 @@ module Collated := Incr_map_collate.Collated
 module By_row : sig
   type 'k t =
     { focused : 'k option
-    ; unfocus : unit Ui_effect.t
-    ; focus_up : unit Ui_effect.t
-    ; focus_down : unit Ui_effect.t
-    ; page_up : unit Ui_effect.t
-    ; page_down : unit Ui_effect.t
-    ; focus : 'k -> unit Ui_effect.t
+    ; unfocus : unit Effect.t
+    ; focus_up : unit Effect.t
+    ; focus_down : unit Effect.t
+    ; page_up : unit Effect.t
+    ; page_down : unit Effect.t
+    ; focus : 'k -> unit Effect.t
     }
   [@@deriving fields]
 end
@@ -32,11 +32,7 @@ val component
   -> 'kind Computation.t
 
 val get_focused : ('r, 'key) Kind.t -> 'r Value.t -> 'key option Value.t
-
-val get_row_click_handler
-  :  ('r, 'key) Kind.t
-  -> 'r Value.t
-  -> ('key -> unit Ui_effect.t) Value.t option
+val get_on_row_click : ('r, 'key) Kind.t -> 'r Value.t -> ('key -> unit Effect.t) Value.t
 
 module For_testing : sig
   module Triple : sig

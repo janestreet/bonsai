@@ -6,7 +6,7 @@ open Vdom
 module Model = struct
   type 'k suggestion_list_state =
     | Selected of 'k
-    | Top_item
+    | First_item
     | Closed
   [@@deriving equal, sexp]
 
@@ -20,8 +20,8 @@ end
 module Action = struct
   type t =
     | Set_query of string
-    | Move_down
-    | Move_up
+    | Move_next
+    | Move_prev
     | Close_suggestions
     | Open_suggestions
   [@@deriving sexp]
@@ -31,6 +31,13 @@ module Suggestion_list_kind = struct
   type t =
     | Transient_overlay
     | Permanent_fixture
+  [@@deriving sexp, compare, enumerate, equal]
+end
+
+module Expand_direction = struct
+  type t =
+    | Down
+    | Up
   [@@deriving sexp, compare, enumerate, equal]
 end
 
@@ -49,6 +56,7 @@ let create
       ?(initial_query = "")
       ?(max_visible_items = Value.return 10)
       ?(suggestion_list_kind = Value.return Suggestion_list_kind.Transient_overlay)
+      ?(expand_direction = Value.return Expand_direction.Down)
       ?(selected_item_attr = Value.return Attr.empty)
       ?(extra_list_container_attr = Value.return Attr.empty)
       ?(extra_input_attr = Value.return Attr.empty)
@@ -75,8 +83,8 @@ let create
             select_key
               ~first_try:(Map.closest_key items `Less_or_equal_to key)
               ~then_try:(lazy (Map.closest_key items `Greater_or_equal_to key))
-              ~else_use:Top_item
-          | Top_item -> Top_item
+              ~else_use:First_item
+          | First_item -> First_item
           | Closed -> Closed
         in
         match action with
@@ -84,12 +92,12 @@ let create
           let suggestion_list_state =
             match suggestion_list_state with
             | Selected key -> Model.Selected key
-            | Top_item | Closed -> Top_item
+            | First_item | Closed -> First_item
           in
           { Model.query; suggestion_list_state }
-        | Open_suggestions -> { model with suggestion_list_state = Top_item }
+        | Open_suggestions -> { model with suggestion_list_state = First_item }
         | Close_suggestions -> { model with suggestion_list_state = Closed }
-        | Move_down ->
+        | Move_next ->
           let suggestion_list_state =
             match suggestion_list_state with
             | Selected key ->
@@ -97,17 +105,17 @@ let create
                 ~first_try:(Map.closest_key items `Greater_than key)
                 ~then_try:(lazy (Map.min_elt items))
                 ~else_use:(Selected key)
-            | Top_item ->
+            | First_item ->
               (match Map.min_elt items with
-               | None -> Top_item
+               | None -> First_item
                | Some (first_key, _) ->
                  (match Map.closest_key items `Greater_than first_key with
                   | None -> Selected first_key
                   | Some (second_key, _) -> Selected second_key))
-            | Closed -> Top_item
+            | Closed -> First_item
           in
           { model with suggestion_list_state }
-        | Move_up ->
+        | Move_prev ->
           let suggestion_list_state =
             match model.suggestion_list_state with
             | Selected key ->
@@ -115,9 +123,9 @@ let create
                 ~first_try:(Map.closest_key items `Less_than key)
                 ~then_try:(lazy (Map.max_elt items))
                 ~else_use:(Selected key)
-            | Top_item | Closed ->
+            | First_item | Closed ->
               (match Map.max_elt items with
-               | None -> Top_item
+               | None -> First_item
                | Some (last_key, _) -> Selected last_key)
           in
           { model with suggestion_list_state })
@@ -140,7 +148,7 @@ let create
          (match Map.closest_key items `Greater_or_equal_to key with
           | Some (key, _) -> Some key
           | None -> None))
-    | Top_item ->
+    | First_item ->
       let%arr items = items in
       (match Map.min_elt items with
        | Some (key, _) -> Some key
@@ -207,12 +215,18 @@ let create
   let%sub handle_keydown =
     let%arr inject = inject
     and selected_key = selected_key
-    and on_select = on_select in
+    and on_select = on_select
+    and expand_direction = expand_direction in
     let open Vdom in
     let open Js_of_ocaml in
     fun ev ->
-      let up = Effect.Many [ inject Move_up; Effect.Prevent_default ] in
-      let down = Effect.Many [ inject Move_down; Effect.Prevent_default ] in
+      let move_next = Effect.Many [ inject Move_next; Effect.Prevent_default ] in
+      let move_prev = Effect.Many [ inject Move_prev; Effect.Prevent_default ] in
+      let up, down =
+        match expand_direction with
+        | Up -> move_next, move_prev
+        | Down -> move_prev, move_next
+      in
       match Dom_html.Keyboard_code.of_event ev with
       | ArrowUp -> up
       | Tab when Js.to_bool ev##.shiftKey ->
@@ -242,6 +256,7 @@ let create
   and inject = inject
   and handle_keydown = handle_keydown
   and suggestion_list_kind = suggestion_list_kind
+  and expand_direction = expand_direction
   and restricted_items = restricted_items
   and extra_list_container_attr = extra_list_container_attr
   and extra_input_attr = extra_input_attr
@@ -271,10 +286,22 @@ let create
     match is_open with
     | false -> Node.div []
     | true ->
-      let attr = Attr.(suggestions_position @ extra_list_container_attr) in
-      Node.div ~attr restricted_items
+      let position_above_or_below, directed_items =
+        match expand_direction with
+        | Up -> Attr.style (Css_gen.bottom (`Px 0)), List.rev restricted_items
+        | Down -> Attr.empty, restricted_items
+      in
+      let attr =
+        Attr.(suggestions_position @ position_above_or_below @ extra_list_container_attr)
+      in
+      Node.div ~attr directed_items
   in
-  Node.div ~attr:extra_attr [ input; Node.div ~attr:container_position [ suggestions ] ]
+  let suggestions_container = Node.div ~attr:container_position [ suggestions ] in
+  Node.div
+    ~attr:extra_attr
+    (match expand_direction with
+     | Up -> [ suggestions_container; input ]
+     | Down -> [ input; suggestions_container ])
 ;;
 
 let stringable
@@ -283,6 +310,7 @@ let stringable
       ?initial_query
       ?max_visible_items
       ?suggestion_list_kind
+      ?expand_direction
       ?selected_item_attr
       ?extra_list_container_attr
       ?extra_input_attr
@@ -296,6 +324,7 @@ let stringable
     ?initial_query
     ?max_visible_items
     ?suggestion_list_kind
+    ?expand_direction
     ?selected_item_attr
     ?extra_list_container_attr
     ?extra_input_attr

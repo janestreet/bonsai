@@ -396,7 +396,7 @@ module Rank : sig
     -> ?extra_item_attrs:Vdom.Attr.t Value.t
     -> ?left:Css_gen.Length.t
     -> ?right:Css_gen.Length.t
-    -> ?empty_list_placeholder:Vdom.Node.t Value.t
+    -> ?empty_list_placeholder:(item_is_hovered:bool Value.t -> Vdom.Node.t Computation.t)
     -> ?default_item_height:int
     -> (source:Vdom.Attr.t Value.t -> 'a Value.t -> Vdom.Node.t Computation.t)
     -> 'a list Form.t Computation.t

@@ -155,7 +155,7 @@ module Computation : sig
   include Mapn with type 'a t := 'a t
 end
 
-module Effect = Effect
+module Effect = Ui_effect
 
 module Var : sig
   (** A [Var.t] is the primary method for making data obtained outside of Bonsai (maybe via
@@ -556,12 +556,12 @@ module Dynamic_scope : sig
     -> set:('b -> 'a -> 'b)
     -> 'a t
 
-  type revert = { revert : 'a. 'a Computation.t -> 'a Computation.t }
-
   (** Given a ['a Dynamic_scope.t] and a ['a Value.t] evaluate a function
       whose resulting Computation.t has access to the value via the
       [lookup] function. *)
   val set : 'a t -> 'a Value.t -> inside:'r Computation.t -> 'r Computation.t
+
+  type revert = { revert : 'a. 'a Computation.t -> 'a Computation.t }
 
   (** like [set] but with the ability to revert the value in sub-computations. *)
   val set' : 'a t -> 'a Value.t -> f:(revert -> 'r Computation.t) -> 'r Computation.t
@@ -658,6 +658,8 @@ module Debug : sig
     -> 'a Computation.t
 
   val to_dot : 'a Computation.t -> string
+  val enable_incremental_annotations : unit -> unit
+  val disable_incremental_annotations : unit -> unit
 end
 
 module Private : sig
@@ -669,6 +671,7 @@ module Private : sig
 
   module Value = Private_value
   module Computation = Private_computation
+  module Apply_action = Apply_action
   module Environment = Environment
   module Meta = Meta
   module Snapshot = Snapshot
@@ -677,15 +680,17 @@ module Private : sig
   module Node_path = Node_path
   module Graph_info = Graph_info
   module Instrumentation = Instrumentation
+  module Flatten_values = Flatten_values
 
   val eval
     :  environment:Environment.t
     -> path:Path.t
     -> clock:Ui_incr.Clock.t
     -> model:'model Ui_incr.t
-    -> inject:('action -> unit Effect.t)
-    -> ('model, 'action, 'result) Private_computation.t
-    -> ('model, 'action, 'result) Snapshot.t
+    -> inject_dynamic:('dynamic_action -> unit Effect.t)
+    -> inject_static:('static_action -> unit Effect.t)
+    -> ('model, 'dynamic_action, 'static_action, 'result) Computation.t
+    -> ('model, 'dynamic_action, 'result) Snapshot.t
 end
 
 module Arrow_deprecated : sig

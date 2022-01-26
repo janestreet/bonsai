@@ -187,146 +187,140 @@ let create
              | Dragging t -> Dragging { t with position; has_moved = true })))
   in
   let%sub source =
-    return
-      (let%map inject = inject in
-       fun ~id ->
-         Attr.many
-           [ Attr.on_pointerdown (fun event ->
-               let position = { Position.x = event##.clientX; y = event##.clientY } in
-               let bounding_rect =
-                 (Js.Opt.to_option event##.currentTarget |> Option.value_exn)##getBoundingClientRect
-               in
-               let optdef_float x =
-                 x |> Js.Optdef.to_option |> Option.value_exn |> Int.of_float
-               in
-               let width = optdef_float bounding_rect##.width in
-               let height = optdef_float bounding_rect##.height in
-               let top = Int.of_float bounding_rect##.top in
-               let left = Int.of_float bounding_rect##.left in
-               let size = { Size.width; height } in
-               let offset = { Position.x = position.x - left; y = position.y - top } in
-               match Bonsai_web.am_within_disabled_fieldset event with
-               | true -> Effect.Ignore
-               | false ->
-                 inject [ Started_drag { source = id; offset; position; size } ])
-           ; Attr.style (Css_gen.user_select `None)
-           ])
+    let%arr inject = inject in
+    fun ~id ->
+      Attr.many
+        [ Attr.on_pointerdown (fun event ->
+            let position = { Position.x = event##.clientX; y = event##.clientY } in
+            let bounding_rect =
+              (Js.Opt.to_option event##.currentTarget |> Option.value_exn)##getBoundingClientRect
+            in
+            let optdef_float x =
+              x |> Js.Optdef.to_option |> Option.value_exn |> Int.of_float
+            in
+            let width = optdef_float bounding_rect##.width in
+            let height = optdef_float bounding_rect##.height in
+            let top = Int.of_float bounding_rect##.top in
+            let left = Int.of_float bounding_rect##.left in
+            let size = { Size.width; height } in
+            let offset = { Position.x = position.x - left; y = position.y - top } in
+            match Bonsai_web.am_within_disabled_fieldset event with
+            | true -> Effect.Ignore
+            | false -> inject [ Started_drag { source = id; offset; position; size } ])
+        ; Attr.style (Css_gen.user_select `None)
+        ]
   in
   let%sub path = Bonsai.Private.path in
   let%sub path_for_pointermove = Bonsai.Private.path in
   let%sub path_for_pointerup = Bonsai.Private.path in
   let%sub universe_suffix =
-    Bonsai.pure Bonsai.Private.Path.to_unique_identifier_string path
+    let%arr path = path in
+    Bonsai.Private.Path.to_unique_identifier_string path
   in
-  let%sub () =
-    Bonsai.Edge.lifecycle
-      ~on_deactivate:
-        (let%map path_for_pointermove = path_for_pointermove
-         and path_for_pointerup = path_for_pointerup in
-         Effect.all_unit
-           [ remove_event_listener path_for_pointermove
-           ; remove_event_listener path_for_pointerup
-           ])
-      ~on_activate:
-        (let%map inject = inject
-         and path_for_pointermove = path_for_pointermove
-         and path_for_pointerup = path_for_pointerup
-         and universe_suffix = universe_suffix in
-         let%bind.Effect () =
-           add_event_listener
-             Dom_html.Event.pointermove
-             path_for_pointermove
-             (fun (event : Dom_html.pointerEvent Js.t) ->
-                let (event
-                     : < composedPath : 'a Js.js_array Js.t Js.meth
-                    ; Dom_html.pointerEvent >
-                      Js.t)
-                  =
-                  Js.Unsafe.coerce event
-                in
-                (* Why client coordinates and not page or screen coordinates. I've
-                   tested with all three and client coordinates is clearly the
-                   correct choice.
+  let%sub on_deactivate =
+    let%arr path_for_pointermove = path_for_pointermove
+    and path_for_pointerup = path_for_pointerup in
+    Effect.all_unit
+      [ remove_event_listener path_for_pointermove
+      ; remove_event_listener path_for_pointerup
+      ]
+  in
+  let%sub on_activate =
+    let%arr inject = inject
+    and path_for_pointermove = path_for_pointermove
+    and path_for_pointerup = path_for_pointerup
+    and universe_suffix = universe_suffix in
+    let%bind.Effect () =
+      add_event_listener
+        Dom_html.Event.pointermove
+        path_for_pointermove
+        (fun (event : Dom_html.pointerEvent Js.t) ->
+           let (event
+                : < composedPath : 'a Js.js_array Js.t Js.meth ; Dom_html.pointerEvent >
+                                                                 Js.t)
+             =
+             Js.Unsafe.coerce event
+           in
+           (* Why client coordinates and not page or screen coordinates. I've
+              tested with all three and client coordinates is clearly the
+              correct choice.
 
-                   - page: If you scroll while dragging, the dragged element moves
-                     away from your mouse because the diff between start and end
-                     positions gets larger even though the mouse is stationary on
-                     the screen.
-                   - screen: If you move the mouse while dragging (which can
-                     happen if you use window management keyboard shortcuts), the
-                     dragged element stays in the same position relative to the
-                     browser window, since the mouse didn't move, but this is not
-                     good because the mouse window has moved away from the mouse.
-                   - client: Scrolling or moving the window does not pull the
-                     dragged element away from the mouse.
+              - page: If you scroll while dragging, the dragged element moves
+                away from your mouse because the diff between start and end
+                positions gets larger even though the mouse is stationary on
+                the screen.
+              - screen: If you move the mouse while dragging (which can
+                happen if you use window management keyboard shortcuts), the
+                dragged element stays in the same position relative to the
+                browser window, since the mouse didn't move, but this is not
+                good because the mouse window has moved away from the mouse.
+              - client: Scrolling or moving the window does not pull the
+                dragged element away from the mouse.
 
-                   It makes sense that client coordinates is correct because the
-                   dragged element itself uses fixed positioning, which is roughly
-                   equivalent to client coordinates.  *)
-                let position = { Position.x = event##.clientX; y = event##.clientY } in
-                let path = Js.to_array event##composedPath |> Array.to_list in
-                let target =
-                  List.find_map path ~f:(fun element ->
-                    let%bind.Option dataset = Js.Opt.to_option element##.dataset in
-                    let%map.Option drag_target =
-                      Js.Opt.to_option
-                        (Js.Unsafe.get dataset ("dragTarget" ^ universe_suffix))
-                    in
-                    let drag_target = Js.to_string drag_target in
-                    Target.t_of_sexp (Sexp.of_string drag_target))
-                in
-                Effect.Expert.handle_non_dom_event_exn
-                  (match Bonsai_web.am_within_disabled_fieldset event with
-                   | true -> inject [ Set_target None; Mouse_moved position ]
-                   | false -> inject [ Set_target target; Mouse_moved position ]);
-                Js._true)
-         in
-         add_event_listener Dom_html.Event.pointerup path_for_pointerup (fun event ->
+              It makes sense that client coordinates is correct because the
+              dragged element itself uses fixed positioning, which is roughly
+              equivalent to client coordinates.  *)
+           let position = { Position.x = event##.clientX; y = event##.clientY } in
+           let path = Js.to_array event##composedPath |> Array.to_list in
+           let target =
+             List.find_map path ~f:(fun element ->
+               let%bind.Option dataset = Js.Opt.to_option element##.dataset in
+               let%map.Option drag_target =
+                 Js.Opt.to_option
+                   (Js.Unsafe.get dataset ("dragTarget" ^ universe_suffix))
+               in
+               let drag_target = Js.to_string drag_target in
+               Target.t_of_sexp (Sexp.of_string drag_target))
+           in
            Effect.Expert.handle_non_dom_event_exn
              (match Bonsai_web.am_within_disabled_fieldset event with
-              | true -> inject [ Set_target None; Finished_drag ]
-              | false -> inject [ Finished_drag ]);
-           Js._true))
-      ()
+              | true -> inject [ Set_target None; Mouse_moved position ]
+              | false -> inject [ Set_target target; Mouse_moved position ]);
+           Js._true)
+    in
+    add_event_listener Dom_html.Event.pointerup path_for_pointerup (fun event ->
+      Effect.Expert.handle_non_dom_event_exn
+        (match Bonsai_web.am_within_disabled_fieldset event with
+         | true -> inject [ Set_target None; Finished_drag ]
+         | false -> inject [ Finished_drag ]);
+      Js._true)
   in
+  let%sub () = Bonsai.Edge.lifecycle ~on_deactivate ~on_activate () in
   let%sub sentinel =
-    return
-      (let%map inject = inject in
-       fun ~name ->
-         Attr.many
-           [ Attr.create_hook
-               "dnd-test-hook"
-               (For_testing.Inject_hook.create (fun action ->
-                  inject
-                    (action
-                     |> For_testing.Action.to_internal_actions
-                          (module Source)
-                          (module Target))))
-           ; Attr.create "data-dnd-name" name
-           ])
+    let%arr inject = inject in
+    fun ~name ->
+      Attr.many
+        [ Attr.create_hook
+            "dnd-test-hook"
+            (For_testing.Inject_hook.create (fun action ->
+               inject
+                 (action
+                  |> For_testing.Action.to_internal_actions
+                       (module Source)
+                       (module Target))))
+        ; Attr.create "data-dnd-name" name
+        ]
   in
   let%sub drop_target =
-    return
-      (let%map inject = inject
-       and universe_suffix = universe_suffix in
-       fun ~id ->
-         Attr.many
-           [ Attr.on_pointerup (fun event ->
-               match Bonsai_web.am_within_disabled_fieldset event with
-               | true -> inject [ Set_target None; Finished_drag ]
-               | false -> inject [ Finished_drag ])
-           ; Attr.create
-               ("data-drag-target" ^ universe_suffix)
-               (Sexp.to_string_mach (Target.sexp_of_t id))
-           ])
+    let%arr inject = inject
+    and universe_suffix = universe_suffix in
+    fun ~id ->
+      Attr.many
+        [ Attr.on_pointerup (fun event ->
+            match Bonsai_web.am_within_disabled_fieldset event with
+            | true -> inject [ Set_target None; Finished_drag ]
+            | false -> inject [ Finished_drag ])
+        ; Attr.create
+            ("data-drag-target" ^ universe_suffix)
+            (Sexp.to_string_mach (Target.sexp_of_t id))
+        ]
   in
-  return
-    (let%map model = model
-     and inject = inject
-     and source = source
-     and sentinel = sentinel
-     and drop_target = drop_target in
-     { model; inject; source; drop_target; sentinel })
+  let%arr model = model
+  and inject = inject
+  and source = source
+  and sentinel = sentinel
+  and drop_target = drop_target in
+  { model; inject; source; drop_target; sentinel }
 ;;
 
 let dragged_element t ~f =
@@ -334,23 +328,22 @@ let dragged_element t ~f =
   | Not_dragging | Dragging { has_moved = false; _ } -> Bonsai.const Node.None
   | Dragging ({ source; _ } as dragging) ->
     let%sub item = f source in
-    return
-      (let%map { position; offset; size; _ } = dragging
-       and item = item in
-       let x = position.x - offset.x in
-       let y = position.y - offset.y in
-       Node.div
-         ~attr:
-           (Attr.style
-              Css_gen.(
-                position `Fixed ~top:(`Px 0) ~left:(`Px 0)
-                @> create ~field:"pointer-events" ~value:"none"
-                @> width (`Px size.width)
-                @> height (`Px size.height)
-                @> create
-                     ~field:"transform"
-                     ~value:[%string "translateY(%{y#Int}px) translateX(%{x#Int}px)"]))
-         [ item ])
+    let%arr { position; offset; size; _ } = dragging
+    and item = item in
+    let x = position.x - offset.x in
+    let y = position.y - offset.y in
+    Node.div
+      ~attr:
+        (Attr.style
+           Css_gen.(
+             position `Fixed ~top:(`Px 0) ~left:(`Px 0)
+             @> create ~field:"pointer-events" ~value:"none"
+             @> width (`Px size.width)
+             @> height (`Px size.height)
+             @> create
+                  ~field:"transform"
+                  ~value:[%string "translateY(%{y#Int}px) translateX(%{x#Int}px)"]))
+      [ item ]
 ;;
 
 (* A cut-down version of [State_machine_model] for users of the library *)

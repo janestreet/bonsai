@@ -1,0 +1,2 @@
+(library (name tailwind_colors) (public_name bonsai.tailwind_colors)
+ (libraries) (preprocess (pps ppx_jane)))

@@ -50,7 +50,8 @@ let am_running_how
 ;;
 
 (* [am_within_disabled_fieldset] traverses up the DOM to see whether an event occurred
-   within a fieldset element with the disabled attribute.
+   within a fieldset element with the disabled attribute. As this function requires DOM
+   interaction, it will return [false] if the code is not running in the browser.
 
    Note: because this function bubbles up from the target of the event, it's possible
    that the event occurs within a disabled fieldset, but the form element which performs
@@ -60,15 +61,18 @@ let am_running_how
    [true], even if the component which performs this check is not.
 *)
 let am_within_disabled_fieldset (event : #Dom_html.event Js.t) =
-  let (event : < composedPath : 'a Js.js_array Js.t Js.meth ; Dom_html.event > Js.t) =
-    Js.Unsafe.coerce event
-  in
-  Js.to_array event##composedPath
-  |> Array.exists ~f:(fun element ->
-    let tag_name = Js.Optdef.to_option element##.tagName in
-    let disabled = Js.Optdef.to_option element##.disabled in
-    match Option.both tag_name disabled with
-    | None -> false
-    | Some (tag_name, disabled) ->
-      String.equal (Js.to_string tag_name) "FIELDSET" && Js.to_bool disabled)
+  match am_running_how with
+  | `Node_test | `Node_benchmark | `Node -> false
+  | `Browser | `Browser_benchmark ->
+    let (event : < composedPath : 'a Js.js_array Js.t Js.meth ; Dom_html.event > Js.t) =
+      Js.Unsafe.coerce event
+    in
+    Js.to_array event##composedPath
+    |> Array.exists ~f:(fun element ->
+      let tag_name = Js.Optdef.to_option element##.tagName in
+      let disabled = Js.Optdef.to_option element##.disabled in
+      match Option.both tag_name disabled with
+      | None -> false
+      | Some (tag_name, disabled) ->
+        String.equal (Js.to_string tag_name) "FIELDSET" && Js.to_bool disabled)
 ;;

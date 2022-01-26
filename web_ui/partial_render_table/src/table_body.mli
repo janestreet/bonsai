@@ -30,7 +30,7 @@ val component
         -> ('key, Int63.t * Vdom.Node.t list, 'cmp) Map.t Computation.t)
   -> column_widths:(int, [< `Px of float ], 'c) Map.t Value.t
   -> visually_focused:'key option Value.t
-  -> row_click_handler:('key -> unit Effect.t) Value.t option
+  -> on_row_click:('key -> unit Effect.t) Value.t
   -> ('key, 'data) Collated.t Value.t
   -> ('key, Int63.t * 'data, 'cmp) Map.t Value.t
   -> (Vdom.Node.t list * For_testing.t Lazy.t) Computation.t

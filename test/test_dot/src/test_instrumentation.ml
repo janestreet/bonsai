@@ -71,7 +71,7 @@ let print_graph_info (graph_info : Graph_info.t) =
 let write_computation_to_dot filename component =
   let graph_info = ref Graph_info.empty in
   let (_ : _ Private.Computation.packed) =
-    Graph_info.iter_graph_updates
+    Graph_info.iter_graph_updates_packed
       (Bonsai.Private.reveal_computation component)
       ~on_update:(fun gm -> graph_info := gm)
   in
@@ -82,7 +82,7 @@ let instrument_computation component =
   let graph_info = ref Graph_info.empty in
   let print_graph_info_on_update = ref false in
   let c =
-    Graph_info.iter_graph_updates
+    Graph_info.iter_graph_updates_packed
       (Bonsai.Private.reveal_computation component)
       ~on_update:(fun gm ->
         graph_info := gm;
@@ -93,6 +93,52 @@ let instrument_computation component =
   print_graph_info !graph_info;
   print_graph_info_on_update := true;
   c
+;;
+
+let many_aliases () =
+  test_start [%here];
+  let%sub a = Bonsai.const 1 in
+  let%sub a = return a in
+  let%sub a = return a in
+  (* Even with an extra subst in here to break up the chain, the optimization
+     still removes all the aliases. *)
+  let%sub _ = Bonsai.const 1 in
+  let%sub a = return a in
+  let%sub a = return a in
+  let%sub a = return a in
+  return a
+;;
+
+let%expect_test _ =
+  let (_ : int Computation.t) = instrument_computation (many_aliases ()) in
+  [%expect
+    {|
+     tree:
+       1_1 return -> _1 subst_stateless_from @ 1:2
+       1_2 constant -> 1_1 return
+       2-1_1 return -> 2_1 subst_stateless_from @ 6:2
+       2-1_2 constant -> 2-1_1 return
+       2-2-1-1_1 named -> 2-2-1_2 map
+       2-2-1_1 return -> 2-2_1 subst_stateless_from @ 6:2
+       2-2-1_2 map -> 2-2-1_1 return
+       2-2-2_1 return -> 2-2_1 subst_stateless_from @ 6:2
+       2-2-2_2 named @ 9:2 -> 2-2-2_1 return
+       2-2_1 subst_stateless_from @ 6:2 -> 2_1 subst_stateless_from @ 6:2
+       2_1 subst_stateless_from @ 6:2 -> _1 subst_stateless_from @ 1:2
+       _1 subst_stateless_from @ 1:2 -> _0
+     dag:
+       1_1 return -> 2-2-2_2 named @ 9:2, _1 subst_stateless_from @ 1:2
+       1_2 constant -> 1_1 return
+       2-1_1 return -> 2-2-1-1_1 named, 2_1 subst_stateless_from @ 6:2
+       2-1_2 constant -> 2-1_1 return
+       2-2-1-1_1 named -> 2-2-1_2 map
+       2-2-1_1 return -> 2-2_1 subst_stateless_from @ 6:2
+       2-2-1_2 map -> 2-2-1_1 return
+       2-2-2_1 return -> 2-2_1 subst_stateless_from @ 6:2
+       2-2-2_2 named @ 9:2 -> 2-2-2_1 return
+       2-2_1 subst_stateless_from @ 6:2 -> 2_1 subst_stateless_from @ 6:2
+       2_1 subst_stateless_from @ 6:2 -> _1 subst_stateless_from @ 1:2
+       _1 subst_stateless_from @ 1:2 -> _0 |}]
 ;;
 
 let subst_tree () =
@@ -115,65 +161,65 @@ let%expect_test _ =
   [%expect
     {|
 tree:
-  _1 subst_stateless @ 1:2 -> _0
-  1_1 return -> _1 subst_stateless @ 1:2
+  1_1 return -> _1 subst_stateless_from @ 1:2
   1_2 constant -> 1_1 return
-  2_1 subst_stateless @ 2:2 -> _1 subst_stateless @ 1:2
-  2-1_1 return -> 2_1 subst_stateless @ 2:2
+  2-1_1 return -> 2_1 subst_stateless_from @ 2:2
   2-1_2 constant -> 2-1_1 return
-  2-2_1 subst_stateless @ 3:2 -> 2_1 subst_stateless @ 2:2
-  2-2-1_1 return -> 2-2_1 subst_stateless @ 3:2
+  2-2-1_1 return -> 2-2_1 subst_stateless_from @ 3:2
   2-2-1_2 constant -> 2-2-1_1 return
-  2-2-2_1 subst_stateless @ 4:2 -> 2-2_1 subst_stateless @ 3:2
-  2-2-2-1_1 return -> 2-2-2_1 subst_stateless @ 4:2
+  2-2-2-1_1 return -> 2-2-2_1 subst_stateless_from @ 4:2
   2-2-2-1_2 constant -> 2-2-2-1_1 return
-  2-2-2-2_1 subst_stateless @ 5:2 -> 2-2-2_1 subst_stateless @ 4:2
-  2-2-2-2-1_1 return -> 2-2-2-2_1 subst_stateless @ 5:2
+  2-2-2-2-1_1 return -> 2-2-2-2_1 subst_stateless_from @ 5:2
   2-2-2-2-1_2 constant -> 2-2-2-2-1_1 return
-  2-2-2-2-2_1 return -> 2-2-2-2_1 subst_stateless @ 5:2
-  2-2-2-2-2_2 map @ 6:2 -> 2-2-2-2-2_1 return
-  2-2-2-2-2-1_1 both -> 2-2-2-2-2_2 map @ 6:2
   2-2-2-2-2-1-1_1 named -> 2-2-2-2-2-1_1 both
-  2-2-2-2-2-1-2_1 both -> 2-2-2-2-2-1_1 both
   2-2-2-2-2-1-2-1_1 named -> 2-2-2-2-2-1-2_1 both
-  2-2-2-2-2-1-2-2_1 both -> 2-2-2-2-2-1-2_1 both
   2-2-2-2-2-1-2-2-1_1 named -> 2-2-2-2-2-1-2-2_1 both
-  2-2-2-2-2-1-2-2-2_1 both -> 2-2-2-2-2-1-2-2_1 both
   2-2-2-2-2-1-2-2-2-1_1 named -> 2-2-2-2-2-1-2-2-2_1 both
   2-2-2-2-2-1-2-2-2-2_1 named -> 2-2-2-2-2-1-2-2-2_1 both
-dag:
-  _1 subst_stateless @ 1:2 -> _0
-  1_1 return -> 2-2-2-2-2-1-1_1 named, _1 subst_stateless @ 1:2
-  1_2 constant -> 1_1 return
-  2_1 subst_stateless @ 2:2 -> _1 subst_stateless @ 1:2
-  2-1_1 return -> 2-2-2-2-2-1-2-1_1 named, 2_1 subst_stateless @ 2:2
-  2-1_2 constant -> 2-1_1 return
-  2-2_1 subst_stateless @ 3:2 -> 2_1 subst_stateless @ 2:2
-  2-2-1_1 return -> 2-2-2-2-2-1-2-2-1_1 named, 2-2_1 subst_stateless @ 3:2
-  2-2-1_2 constant -> 2-2-1_1 return
-  2-2-2_1 subst_stateless @ 4:2 -> 2-2_1 subst_stateless @ 3:2
-  2-2-2-1_1 return -> 2-2-2-2-2-1-2-2-2-1_1 named, 2-2-2_1 subst_stateless @ 4:2
-  2-2-2-1_2 constant -> 2-2-2-1_1 return
-  2-2-2-2_1 subst_stateless @ 5:2 -> 2-2-2_1 subst_stateless @ 4:2
-  2-2-2-2-1_1 return -> 2-2-2-2-2-1-2-2-2-2_1 named, 2-2-2-2_1 subst_stateless @ 5:2
-  2-2-2-2-1_2 constant -> 2-2-2-2-1_1 return
-  2-2-2-2-2_1 return -> 2-2-2-2_1 subst_stateless @ 5:2
-  2-2-2-2-2_2 map @ 6:2 -> 2-2-2-2-2_1 return
-  2-2-2-2-2-1_1 both -> 2-2-2-2-2_2 map @ 6:2
-  2-2-2-2-2-1-1_1 named -> 2-2-2-2-2-1_1 both
-  2-2-2-2-2-1-2_1 both -> 2-2-2-2-2-1_1 both
-  2-2-2-2-2-1-2-1_1 named -> 2-2-2-2-2-1-2_1 both
-  2-2-2-2-2-1-2-2_1 both -> 2-2-2-2-2-1-2_1 both
-  2-2-2-2-2-1-2-2-1_1 named -> 2-2-2-2-2-1-2-2_1 both
   2-2-2-2-2-1-2-2-2_1 both -> 2-2-2-2-2-1-2-2_1 both
+  2-2-2-2-2-1-2-2_1 both -> 2-2-2-2-2-1-2_1 both
+  2-2-2-2-2-1-2_1 both -> 2-2-2-2-2-1_1 both
+  2-2-2-2-2-1_1 both -> 2-2-2-2-2_2 map @ 6:2
+  2-2-2-2-2_1 return -> 2-2-2-2_1 subst_stateless_from @ 5:2
+  2-2-2-2-2_2 map @ 6:2 -> 2-2-2-2-2_1 return
+  2-2-2-2_1 subst_stateless_from @ 5:2 -> 2-2-2_1 subst_stateless_from @ 4:2
+  2-2-2_1 subst_stateless_from @ 4:2 -> 2-2_1 subst_stateless_from @ 3:2
+  2-2_1 subst_stateless_from @ 3:2 -> 2_1 subst_stateless_from @ 2:2
+  2_1 subst_stateless_from @ 2:2 -> _1 subst_stateless_from @ 1:2
+  _1 subst_stateless_from @ 1:2 -> _0
+dag:
+  1_1 return -> 2-2-2-2-2-1-1_1 named, _1 subst_stateless_from @ 1:2
+  1_2 constant -> 1_1 return
+  2-1_1 return -> 2-2-2-2-2-1-2-1_1 named, 2_1 subst_stateless_from @ 2:2
+  2-1_2 constant -> 2-1_1 return
+  2-2-1_1 return -> 2-2-2-2-2-1-2-2-1_1 named, 2-2_1 subst_stateless_from @ 3:2
+  2-2-1_2 constant -> 2-2-1_1 return
+  2-2-2-1_1 return -> 2-2-2-2-2-1-2-2-2-1_1 named, 2-2-2_1 subst_stateless_from @ 4:2
+  2-2-2-1_2 constant -> 2-2-2-1_1 return
+  2-2-2-2-1_1 return -> 2-2-2-2-2-1-2-2-2-2_1 named, 2-2-2-2_1 subst_stateless_from @ 5:2
+  2-2-2-2-1_2 constant -> 2-2-2-2-1_1 return
+  2-2-2-2-2-1-1_1 named -> 2-2-2-2-2-1_1 both
+  2-2-2-2-2-1-2-1_1 named -> 2-2-2-2-2-1-2_1 both
+  2-2-2-2-2-1-2-2-1_1 named -> 2-2-2-2-2-1-2-2_1 both
   2-2-2-2-2-1-2-2-2-1_1 named -> 2-2-2-2-2-1-2-2-2_1 both
-  2-2-2-2-2-1-2-2-2-2_1 named -> 2-2-2-2-2-1-2-2-2_1 both |}];
+  2-2-2-2-2-1-2-2-2-2_1 named -> 2-2-2-2-2-1-2-2-2_1 both
+  2-2-2-2-2-1-2-2-2_1 both -> 2-2-2-2-2-1-2-2_1 both
+  2-2-2-2-2-1-2-2_1 both -> 2-2-2-2-2-1-2_1 both
+  2-2-2-2-2-1-2_1 both -> 2-2-2-2-2-1_1 both
+  2-2-2-2-2-1_1 both -> 2-2-2-2-2_2 map @ 6:2
+  2-2-2-2-2_1 return -> 2-2-2-2_1 subst_stateless_from @ 5:2
+  2-2-2-2-2_2 map @ 6:2 -> 2-2-2-2-2_1 return
+  2-2-2-2_1 subst_stateless_from @ 5:2 -> 2-2-2_1 subst_stateless_from @ 4:2
+  2-2-2_1 subst_stateless_from @ 4:2 -> 2-2_1 subst_stateless_from @ 3:2
+  2-2_1 subst_stateless_from @ 3:2 -> 2_1 subst_stateless_from @ 2:2
+  2_1 subst_stateless_from @ 2:2 -> _1 subst_stateless_from @ 1:2
+  _1 subst_stateless_from @ 1:2 -> _0 |}];
   let handle = Handle.create (Result_spec.string (module Int)) c in
   Handle.show handle;
   [%expect {|
-    start-(2-2-2-2-2_2 map)
-    stop-(2-2-2-2-2_2 map)
-    15 |}]
+     start-##map 2-2-2-2-2_2
+     stop-##map 2-2-2-2-2_2
+     15 |}]
 ;;
 
 let diamond () =
@@ -191,39 +237,39 @@ let%expect_test "diamond" =
   [%expect
     {|
     tree:
-      _1 subst_stateless @ 1:2 -> _0
-      1_1 return -> _1 subst_stateless @ 1:2
+      1_1 return -> _1 subst_stateless_from @ 1:2
       1_2 constant -> 1_1 return
-      2_1 subst_stateless @ 2:2 -> _1 subst_stateless @ 1:2
-      2-1_1 return -> 2_1 subst_stateless @ 2:2
-      2-1_2 map -> 2-1_1 return
       2-1-1_1 named -> 2-1_2 map
-      2-2_1 subst_stateless @ 3:2 -> 2_1 subst_stateless @ 2:2
-      2-2-1_1 return -> 2-2_1 subst_stateless @ 3:2
-      2-2-1_2 map -> 2-2-1_1 return
+      2-1_1 return -> 2_1 subst_stateless_from @ 2:2
+      2-1_2 map -> 2-1_1 return
       2-2-1-1_1 named -> 2-2-1_2 map
-      2-2-2_1 return -> 2-2_1 subst_stateless @ 3:2
-      2-2-2_2 map @ 4:2 -> 2-2-2_1 return
-      2-2-2-1_1 both -> 2-2-2_2 map @ 4:2
+      2-2-1_1 return -> 2-2_1 subst_stateless_from @ 3:2
+      2-2-1_2 map -> 2-2-1_1 return
       2-2-2-1-1_1 named -> 2-2-2-1_1 both
       2-2-2-1-2_1 named -> 2-2-2-1_1 both
-    dag:
-      _1 subst_stateless @ 1:2 -> _0
-      1_1 return -> 2-2-1-1_1 named, 2-1-1_1 named, _1 subst_stateless @ 1:2
-      1_2 constant -> 1_1 return
-      2_1 subst_stateless @ 2:2 -> _1 subst_stateless @ 1:2
-      2-1_1 return -> 2-2-2-1-1_1 named, 2_1 subst_stateless @ 2:2
-      2-1_2 map -> 2-1_1 return
-      2-1-1_1 named -> 2-1_2 map
-      2-2_1 subst_stateless @ 3:2 -> 2_1 subst_stateless @ 2:2
-      2-2-1_1 return -> 2-2-2-1-2_1 named, 2-2_1 subst_stateless @ 3:2
-      2-2-1_2 map -> 2-2-1_1 return
-      2-2-1-1_1 named -> 2-2-1_2 map
-      2-2-2_1 return -> 2-2_1 subst_stateless @ 3:2
-      2-2-2_2 map @ 4:2 -> 2-2-2_1 return
       2-2-2-1_1 both -> 2-2-2_2 map @ 4:2
+      2-2-2_1 return -> 2-2_1 subst_stateless_from @ 3:2
+      2-2-2_2 map @ 4:2 -> 2-2-2_1 return
+      2-2_1 subst_stateless_from @ 3:2 -> 2_1 subst_stateless_from @ 2:2
+      2_1 subst_stateless_from @ 2:2 -> _1 subst_stateless_from @ 1:2
+      _1 subst_stateless_from @ 1:2 -> _0
+    dag:
+      1_1 return -> 2-2-1-1_1 named, 2-1-1_1 named, _1 subst_stateless_from @ 1:2
+      1_2 constant -> 1_1 return
+      2-1-1_1 named -> 2-1_2 map
+      2-1_1 return -> 2-2-2-1-1_1 named, 2_1 subst_stateless_from @ 2:2
+      2-1_2 map -> 2-1_1 return
+      2-2-1-1_1 named -> 2-2-1_2 map
+      2-2-1_1 return -> 2-2-2-1-2_1 named, 2-2_1 subst_stateless_from @ 3:2
+      2-2-1_2 map -> 2-2-1_1 return
       2-2-2-1-1_1 named -> 2-2-2-1_1 both
-      2-2-2-1-2_1 named -> 2-2-2-1_1 both |}]
+      2-2-2-1-2_1 named -> 2-2-2-1_1 both
+      2-2-2-1_1 both -> 2-2-2_2 map @ 4:2
+      2-2-2_1 return -> 2-2_1 subst_stateless_from @ 3:2
+      2-2-2_2 map @ 4:2 -> 2-2-2_1 return
+      2-2_1 subst_stateless_from @ 3:2 -> 2_1 subst_stateless_from @ 2:2
+      2_1 subst_stateless_from @ 2:2 -> _1 subst_stateless_from @ 1:2
+      _1 subst_stateless_from @ 1:2 -> _0 |}]
 ;;
 
 let state () =
@@ -237,15 +283,15 @@ let%expect_test "state" =
   [%expect
     {|
     tree:
-      _1 subst @ 1:2 -> _0
-      1_1 leaf0 -> _1 subst @ 1:2
-      2_1 return -> _1 subst @ 1:2
+      1_1 leaf0 -> _1 subst_stateless_into @ 1:2
+      2_1 return -> _1 subst_stateless_into @ 1:2
       2_2 named -> 2_1 return
+      _1 subst_stateless_into @ 1:2 -> _0
     dag:
-      _1 subst @ 1:2 -> _0
-      1_1 leaf0 -> 2_2 named, _1 subst @ 1:2
-      2_1 return -> _1 subst @ 1:2
-      2_2 named -> 2_1 return |}];
+      1_1 leaf0 -> 2_2 named, _1 subst_stateless_into @ 1:2
+      2_1 return -> _1 subst_stateless_into @ 1:2
+      2_2 named -> 2_1 return
+      _1 subst_stateless_into @ 1:2 -> _0 |}];
   let handle =
     Handle.create
       (module struct
@@ -259,22 +305,70 @@ let%expect_test "state" =
   in
   Handle.show handle;
   [%expect {|
-    start-(1_1 leaf0-compute)
-    stop-(1_1 leaf0-compute)
-    0 |}];
+     start-##leaf0-compute 1_1
+     stop-##leaf0-compute 1_1
+     0 |}];
   Handle.do_actions handle [ 1; 2 ];
   Handle.show handle;
+  [%expect {|
+     start-##leaf0-compute 1_1
+     stop-##leaf0-compute 1_1
+     2 |}]
+;;
+
+let dynamic_state () =
+  test_start [%here];
+  let%sub state =
+    Bonsai.state_machine1
+      [%here]
+      (module Int)
+      (module Unit)
+      ~default_model:0
+      ~apply_action:(fun ~inject:_ ~schedule_event:_ () model () -> model + 1)
+      (Value.return ())
+  in
+  return state
+;;
+
+let%expect_test "dynamic_state" =
+  let c = instrument_computation (dynamic_state ()) in
   [%expect
     {|
-    start-(1_1 leaf0-apply_action)
-    stop-(1_1 leaf0-apply_action)
-    start-(1_1 leaf0-compute)
-    stop-(1_1 leaf0-compute)
-    start-(1_1 leaf0-apply_action)
-    stop-(1_1 leaf0-apply_action)
-    start-(1_1 leaf0-compute)
-    stop-(1_1 leaf0-compute)
-    2 |}]
+    tree:
+      1_1 leaf1 -> _1 subst_stateless_into @ 1:2
+      1_2 constant -> 1_1 leaf1
+      2_1 return -> _1 subst_stateless_into @ 1:2
+      2_2 named -> 2_1 return
+      _1 subst_stateless_into @ 1:2 -> _0
+    dag:
+      1_1 leaf1 -> 2_2 named, _1 subst_stateless_into @ 1:2
+      1_2 constant -> 1_1 leaf1
+      2_1 return -> _1 subst_stateless_into @ 1:2
+      2_2 named -> 2_1 return
+      _1 subst_stateless_into @ 1:2 -> _0 |}];
+  let handle =
+    Handle.create
+      (module struct
+        type t = int * (unit -> unit Effect.t)
+        type incoming = unit
+
+        let view (state, _) = [%string "%{state#Int}"]
+        let incoming (_, increment) () = increment ()
+      end)
+      c
+  in
+  Handle.show handle;
+  [%expect {| 0 |}];
+  Handle.do_actions handle [ (); () ];
+  Handle.flush handle;
+  [%expect
+    {|
+    start-##leaf1-apply_action 1_1
+    stop-##leaf1-apply_action 1_1
+    start-##leaf1-apply_action 1_1
+    stop-##leaf1-apply_action 1_1 |}];
+  Handle.show handle;
+  [%expect {| 2 |}]
 ;;
 
 let dynamic_scope () =
@@ -294,21 +388,21 @@ let%expect_test "dynamic scope" =
   [%expect
     {|
     tree:
-      _1 store -> _0
       1_1 constant -> _1 store
-      2_1 subst_stateless @ 6:7 -> _1 store
-      2-1_1 fetch -> 2_1 subst_stateless @ 6:7
-      2-2_1 return -> 2_1 subst_stateless @ 6:7
-      2-2_2 map @ 7:7 -> 2-2_1 return
+      2-1_1 fetch -> 2_1 subst_stateless_from @ 6:7
       2-2-1_1 named -> 2-2_2 map @ 7:7
-    dag:
-      _1 store -> _0
-      1_1 constant -> 2-1_1 fetch, _1 store
-      2_1 subst_stateless @ 6:7 -> _1 store
-      2-1_1 fetch -> 2-2-1_1 named, 2_1 subst_stateless @ 6:7
-      2-2_1 return -> 2_1 subst_stateless @ 6:7
+      2-2_1 return -> 2_1 subst_stateless_from @ 6:7
       2-2_2 map @ 7:7 -> 2-2_1 return
-      2-2-1_1 named -> 2-2_2 map @ 7:7 |}]
+      2_1 subst_stateless_from @ 6:7 -> _1 store
+      _1 store -> _0
+    dag:
+      1_1 constant -> 2-1_1 fetch, _1 store
+      2-1_1 fetch -> 2-2-1_1 named, 2_1 subst_stateless_from @ 6:7
+      2-2-1_1 named -> 2-2_2 map @ 7:7
+      2-2_1 return -> 2_1 subst_stateless_from @ 6:7
+      2-2_2 map @ 7:7 -> 2-2_1 return
+      2_1 subst_stateless_from @ 6:7 -> _1 store
+      _1 store -> _0 |}]
 ;;
 
 let cutoff ?(var = Bonsai.Var.create 0) () =
@@ -322,27 +416,24 @@ let%expect_test "cutoff" =
   let c = instrument_computation (cutoff ~var ()) in
   [%expect
     {|
-  tree:
-    _1 return -> _0
-    _2 cutoff -> _1 return
-    1_1 incr -> _2 cutoff
-  dag:
-    _1 return -> _0
-    _2 cutoff -> _1 return
-    1_1 incr -> _2 cutoff
-  |}];
+     tree:
+       1_1 incr -> _2 cutoff
+       _1 return -> _0
+       _2 cutoff -> _1 return
+     dag:
+       1_1 incr -> _2 cutoff
+       _1 return -> _0
+       _2 cutoff -> _1 return
+     |}];
   let handle = Handle.create (Result_spec.string (module Int)) c in
   Handle.show handle;
-  [%expect {|
-  0 |}];
+  [%expect {| 0 |}];
   Bonsai.Var.set var 2;
   Handle.show handle;
-  [%expect {|
-  2 |}];
+  [%expect {| 2 |}];
   Bonsai.Var.set var 1;
   Handle.show handle;
-  [%expect {|
-  1 |}]
+  [%expect {| 1 |}]
 ;;
 
 let assoc_simpl () =
@@ -357,12 +448,12 @@ let%expect_test "assoc_simpl" =
   let c = instrument_computation (assoc_simpl ()) in
   [%expect
     {|
-  tree:
-    _1 assoc_simpl -> _0
-    _2 constant -> _1 assoc_simpl
-  dag:
-    _1 assoc_simpl -> _0
-    _2 constant -> _1 assoc_simpl |}];
+     tree:
+       _1 assoc_simpl -> _0
+       _2 constant -> _1 assoc_simpl
+     dag:
+       _1 assoc_simpl -> _0
+       _2 constant -> _1 assoc_simpl |}];
   let handle =
     Handle.create
       (Result_spec.sexp
@@ -374,11 +465,11 @@ let%expect_test "assoc_simpl" =
   Handle.show handle;
   [%expect
     {|
-  start-(_1 assoc_simpl-by)
-  stop-(_1 assoc_simpl-by)
-  start-(_1 assoc_simpl-by)
-  stop-(_1 assoc_simpl-by)
-  ((-1 -1) (1 1)) |}]
+     start-##assoc_simpl-by _1
+     stop-##assoc_simpl-by _1
+     start-##assoc_simpl-by _1
+     stop-##assoc_simpl-by _1
+     ((-1 -1) (1 1)) |}]
 ;;
 
 let assoc () =
@@ -397,23 +488,23 @@ let%expect_test "assoc" =
   [%expect
     {|
     tree:
-      _1 subst_stateless @ 1:2 -> _0
-      1_1 return -> _1 subst_stateless @ 1:2
+      1_1 return -> _1 subst_stateless_from @ 1:2
       1_2 constant -> 1_1 return
-      2_1 assoc -> _1 subst_stateless @ 1:2
       2-1_1 constant -> 2_1 assoc
-      2-2_1 return -> 2_1 assoc
-      2-2_2 map @ 6:6 -> 2-2_1 return
       2-2-1_1 named -> 2-2_2 map @ 6:6
-    dag:
-      _1 subst_stateless @ 1:2 -> _0
-      1_1 return -> 2-2-1_1 named, _1 subst_stateless @ 1:2
-      1_2 constant -> 1_1 return
-      2_1 assoc -> _1 subst_stateless @ 1:2
-      2-1_1 constant -> 2_1 assoc
       2-2_1 return -> 2_1 assoc
       2-2_2 map @ 6:6 -> 2-2_1 return
-      2-2-1_1 named -> 2-2_2 map @ 6:6 |}];
+      2_1 assoc -> _1 subst_stateless_from @ 1:2
+      _1 subst_stateless_from @ 1:2 -> _0
+    dag:
+      1_1 return -> 2-2-1_1 named, _1 subst_stateless_from @ 1:2
+      1_2 constant -> 1_1 return
+      2-1_1 constant -> 2_1 assoc
+      2-2-1_1 named -> 2-2_2 map @ 6:6
+      2-2_1 return -> 2_1 assoc
+      2-2_2 map @ 6:6 -> 2-2_1 return
+      2_1 assoc -> _1 subst_stateless_from @ 1:2
+      _1 subst_stateless_from @ 1:2 -> _0 |}];
   let handle =
     Handle.create
       (Result_spec.sexp
@@ -425,11 +516,11 @@ let%expect_test "assoc" =
   Handle.show handle;
   [%expect
     {|
-    start-(2-2_2 map)
-    stop-(2-2_2 map)
-    start-(2-2_2 map)
-    stop-(2-2_2 map)
-    ((-1 0) (1 0)) |}]
+     start-##map 2-2_2
+     stop-##map 2-2_2
+     start-##map 2-2_2
+     stop-##map 2-2_2
+     ((-1 0) (1 0)) |}]
 ;;
 
 let nested_values ?(a = Value.return 0) () =
@@ -451,19 +542,19 @@ let%expect_test "nested values" =
   let c = instrument_computation (nested_values ~a ()) in
   [%expect
     {|
-  tree:
-    _1 return -> _0
-    _2 map -> _1 return
-    1_1 map -> _2 map
-    1-1_1 map -> 1_1 map
-    1-1-1_1 incr -> 1-1_1 map
-  dag:
-    _1 return -> _0
-    _2 map -> _1 return
-    1_1 map -> _2 map
-    1-1_1 map -> 1_1 map
-    1-1-1_1 incr -> 1-1_1 map
-  |}];
+     tree:
+       1-1-1_1 incr -> 1-1_1 map
+       1-1_1 map -> 1_1 map
+       1_1 map -> _2 map
+       _1 return -> _0
+       _2 map -> _1 return
+     dag:
+       1-1-1_1 incr -> 1-1_1 map
+       1-1_1 map -> 1_1 map
+       1_1 map -> _2 map
+       _1 return -> _0
+       _2 map -> _1 return
+     |}];
   let handle =
     Handle.create
       (Result_spec.sexp
@@ -475,26 +566,26 @@ let%expect_test "nested values" =
   Handle.show handle;
   [%expect
     {|
-  start-(1-1_1 map)
-  stop-(1-1_1 map)
-  start-(1_1 map)
-  stop-(1_1 map)
-  start-(_2 map)
-  stop-(_2 map)
-  0
-  |}];
+     start-##map 1-1_1
+     stop-##map 1-1_1
+     start-##map 1_1
+     stop-##map 1_1
+     start-##map _2
+     stop-##map _2
+     0
+     |}];
   Bonsai.Var.set a_var 2;
   Handle.show handle;
   [%expect
     {|
-  start-(1-1_1 map)
-  stop-(1-1_1 map)
-  start-(1_1 map)
-  stop-(1_1 map)
-  start-(_2 map)
-  stop-(_2 map)
-  2
-  |}];
+     start-##map 1-1_1
+     stop-##map 1-1_1
+     start-##map 1_1
+     stop-##map 1_1
+     start-##map _2
+     stop-##map _2
+     2
+     |}];
   Handle.show handle;
   [%expect {| 2 |}]
 ;;
@@ -519,40 +610,40 @@ let%expect_test "enum" =
   let c = instrument_computation (enum ~a ~match_ ()) in
   [%expect
     {|
-  tree:
-    _1 switch -> _0
-    1_1 map -> _1 switch
-    1-1_1 incr -> 1_1 map
-    2_1 return -> _1 switch
-    2_2 incr -> 2_1 return
-    3_1 return -> _1 switch
-    3_2 map @ 6:8 -> 3_1 return
-    3-1_1 incr -> 3_2 map @ 6:8
-  dag:
-    _1 switch -> _0
-    1_1 map -> _1 switch
-    1-1_1 incr -> 1_1 map
-    2_1 return -> _1 switch
-    2_2 incr -> 2_1 return
-    3_1 return -> _1 switch
-    3_2 map @ 6:8 -> 3_1 return
-    3-1_1 incr -> 3_2 map @ 6:8
-  |}];
+     tree:
+       1-1_1 incr -> 1_1 map
+       1_1 map -> _1 switch
+       2_1 return -> _1 switch
+       2_2 incr -> 2_1 return
+       3-1_1 incr -> 3_2 map @ 6:8
+       3_1 return -> _1 switch
+       3_2 map @ 6:8 -> 3_1 return
+       _1 switch -> _0
+     dag:
+       1-1_1 incr -> 1_1 map
+       1_1 map -> _1 switch
+       2_1 return -> _1 switch
+       2_2 incr -> 2_1 return
+       3-1_1 incr -> 3_2 map @ 6:8
+       3_1 return -> _1 switch
+       3_2 map @ 6:8 -> 3_1 return
+       _1 switch -> _0
+     |}];
   let handle = Handle.create (Result_spec.sexp (module Bool)) c in
   Handle.show handle;
   [%expect
     {|
-  start-(1_1 map)
-  stop-(1_1 map)
-  start-(3_2 map)
-  stop-(3_2 map)
-  false |}];
+     start-##map 1_1
+     stop-##map 1_1
+     start-##map 3_2
+     stop-##map 3_2
+     false |}];
   Bonsai.Var.set match_var false;
   Handle.show handle;
   [%expect {|
-    start-(1_1 map)
-    stop-(1_1 map)
-    false |}];
+     start-##map 1_1
+     stop-##map 1_1
+     false |}];
   Bonsai.Var.set a_var 5;
   Handle.show handle;
   [%expect {| false |}];
@@ -560,17 +651,17 @@ let%expect_test "enum" =
   Handle.show handle;
   [%expect
     {|
-  start-(1_1 map)
-  stop-(1_1 map)
-  start-(3_2 map)
-  stop-(3_2 map)
-  true |}];
+     start-##map 1_1
+     stop-##map 1_1
+     start-##map 3_2
+     stop-##map 3_2
+     true |}];
   Bonsai.Var.set a_var 10;
   Handle.show handle;
   [%expect {|
-    start-(3_2 map)
-    stop-(3_2 map)
-    true |}]
+     start-##map 3_2
+     stop-##map 3_2
+     true |}]
 ;;
 
 let lazy_computation ?(match_ = Value.return true) () =
@@ -590,100 +681,181 @@ let%expect_test "lazy" =
   let c = instrument_computation (lazy_computation ~match_ ()) in
   [%expect
     {|
-  tree:
-    _1 switch -> _0
-    1_1 map -> _1 switch
-    1-1_1 incr -> 1_1 map
-    2_1 lazy -> _1 switch
-    3_1 return -> _1 switch
-    3_2 constant -> 3_1 return
-  dag:
-    _1 switch -> _0
-    1_1 map -> _1 switch
-    1-1_1 incr -> 1_1 map
-    2_1 lazy -> _1 switch
-    3_1 return -> _1 switch
-    3_2 constant -> 3_1 return
-  |}];
+     tree:
+       1-1_1 incr -> 1_1 map
+       1_1 map -> _1 switch
+       2_1 lazy -> _1 switch
+       3_1 return -> _1 switch
+       3_2 constant -> 3_1 return
+       _1 switch -> _0
+     dag:
+       1-1_1 incr -> 1_1 map
+       1_1 map -> _1 switch
+       2_1 lazy -> _1 switch
+       3_1 return -> _1 switch
+       3_2 constant -> 3_1 return
+       _1 switch -> _0
+     |}];
   let handle = Handle.create (Result_spec.sexp (module Int)) c in
   Handle.show handle;
   [%expect {|
-    start-(1_1 map)
-    stop-(1_1 map)
-    0 |}];
+     start-##map 1_1
+     stop-##map 1_1
+     0 |}];
   Bonsai.Var.set match_var false;
   Handle.show handle;
   [%expect
     {|
-    start-(1_1 map)
-    stop-(1_1 map)
-    tree:
-      _1 switch -> _0
-      1_1 map -> _1 switch
-      1-1_1 incr -> 1_1 map
-      2_1 lazy -> _1 switch
-      2_2 return -> 2_1 lazy
-      3_1 return -> _1 switch
-      3_2 constant -> 3_1 return
-    dag:
-      _1 switch -> _0
-      1_1 map -> _1 switch
-      1-1_1 incr -> 1_1 map
-      2_1 lazy -> _1 switch
-      3_1 return -> _1 switch
-      3_2 constant -> 3_1 return
-    tree:
-      _1 switch -> _0
-      1_1 map -> _1 switch
-      1-1_1 incr -> 1_1 map
-      2_1 lazy -> _1 switch
-      2_2 return -> 2_1 lazy
-      3_1 return -> _1 switch
-      3_2 constant -> 3_1 return
-    dag:
-      _1 switch -> _0
-      1_1 map -> _1 switch
-      1-1_1 incr -> 1_1 map
-      2_1 lazy -> _1 switch
-      2_2 return -> 2_1 lazy
-      3_1 return -> _1 switch
-      3_2 constant -> 3_1 return
-    tree:
-      _1 switch -> _0
-      1_1 map -> _1 switch
-      1-1_1 incr -> 1_1 map
-      2_1 lazy -> _1 switch
-      2_2 return -> 2_1 lazy
-      2_3 constant -> 2_2 return
-      3_1 return -> _1 switch
-      3_2 constant -> 3_1 return
-    dag:
-      _1 switch -> _0
-      1_1 map -> _1 switch
-      1-1_1 incr -> 1_1 map
-      2_1 lazy -> _1 switch
-      2_2 return -> 2_1 lazy
-      3_1 return -> _1 switch
-      3_2 constant -> 3_1 return
-    tree:
-      _1 switch -> _0
-      1_1 map -> _1 switch
-      1-1_1 incr -> 1_1 map
-      2_1 lazy -> _1 switch
-      2_2 return -> 2_1 lazy
-      2_3 constant -> 2_2 return
-      3_1 return -> _1 switch
-      3_2 constant -> 3_1 return
-    dag:
-      _1 switch -> _0
-      1_1 map -> _1 switch
-      1-1_1 incr -> 1_1 map
-      2_1 lazy -> _1 switch
-      2_2 return -> 2_1 lazy
-      2_3 constant -> 2_2 return
-      3_1 return -> _1 switch
-      3_2 constant -> 3_1 return
-    0 |}]
+     start-##map 1_1
+     stop-##map 1_1
+     tree:
+       1-1_1 incr -> 1_1 map
+       1_1 map -> _1 switch
+       2_1 lazy -> _1 switch
+       2_2 return -> 2_1 lazy
+       3_1 return -> _1 switch
+       3_2 constant -> 3_1 return
+       _1 switch -> _0
+     dag:
+       1-1_1 incr -> 1_1 map
+       1_1 map -> _1 switch
+       2_1 lazy -> _1 switch
+       3_1 return -> _1 switch
+       3_2 constant -> 3_1 return
+       _1 switch -> _0
+     tree:
+       1-1_1 incr -> 1_1 map
+       1_1 map -> _1 switch
+       2_1 lazy -> _1 switch
+       2_2 return -> 2_1 lazy
+       3_1 return -> _1 switch
+       3_2 constant -> 3_1 return
+       _1 switch -> _0
+     dag:
+       1-1_1 incr -> 1_1 map
+       1_1 map -> _1 switch
+       2_1 lazy -> _1 switch
+       2_2 return -> 2_1 lazy
+       3_1 return -> _1 switch
+       3_2 constant -> 3_1 return
+       _1 switch -> _0
+     tree:
+       1-1_1 incr -> 1_1 map
+       1_1 map -> _1 switch
+       2_1 lazy -> _1 switch
+       2_2 return -> 2_1 lazy
+       2_3 constant -> 2_2 return
+       3_1 return -> _1 switch
+       3_2 constant -> 3_1 return
+       _1 switch -> _0
+     dag:
+       1-1_1 incr -> 1_1 map
+       1_1 map -> _1 switch
+       2_1 lazy -> _1 switch
+       2_2 return -> 2_1 lazy
+       3_1 return -> _1 switch
+       3_2 constant -> 3_1 return
+       _1 switch -> _0
+     tree:
+       1-1_1 incr -> 1_1 map
+       1_1 map -> _1 switch
+       2_1 lazy -> _1 switch
+       2_2 return -> 2_1 lazy
+       2_3 constant -> 2_2 return
+       3_1 return -> _1 switch
+       3_2 constant -> 3_1 return
+       _1 switch -> _0
+     dag:
+       1-1_1 incr -> 1_1 map
+       1_1 map -> _1 switch
+       2_1 lazy -> _1 switch
+       2_2 return -> 2_1 lazy
+       2_3 constant -> 2_2 return
+       3_1 return -> _1 switch
+       3_2 constant -> 3_1 return
+       _1 switch -> _0
+     0 |}]
+;;
+
+let shared =
+  let%sub () = Bonsai.const () in
+  Bonsai.const ()
+;;
+
+let name_used_twice () =
+  test_start [%here];
+  let%sub () = shared in
+  let%sub () = shared in
+  Bonsai.const ()
+;;
+
+let%expect_test "name_used_twice" =
+  let (_ : unit Computation.t) = instrument_computation (name_used_twice ()) in
+  [%expect
+    {|
+  tree:
+    1-1_1 return -> 1_1 subst_stateless_from @ -5:2
+    1-1_2 constant -> 1-1_1 return
+    1-2-1-1_1 named -> 1-2-1_2 map
+    1-2-1_1 return -> 1-2_1 subst_stateless_from @ -5:2
+    1-2-1_2 map -> 1-2-1_1 return
+    1-2-2_1 return -> 1-2_1 subst_stateless_from @ -5:2
+    1-2-2_2 constant -> 1-2-2_1 return
+    1-2_1 subst_stateless_from @ -5:2 -> 1_1 subst_stateless_from @ -5:2
+    1_1 subst_stateless_from @ -5:2 -> _1 subst_stateless_from @ 1:2
+    2-1-1_1 named -> 2-1_2 map
+    2-1_1 return -> 2_1 subst_stateless_from @ 1:2
+    2-1_2 map -> 2-1_1 return
+    2-2-1-1_1 return -> 2-2-1_1 subst_stateless_from @ -5:2
+    2-2-1-1_2 constant -> 2-2-1-1_1 return
+    2-2-1-2-1-1_1 named -> 2-2-1-2-1_2 map
+    2-2-1-2-1_1 return -> 2-2-1-2_1 subst_stateless_from @ -5:2
+    2-2-1-2-1_2 map -> 2-2-1-2-1_1 return
+    2-2-1-2-2_1 return -> 2-2-1-2_1 subst_stateless_from @ -5:2
+    2-2-1-2-2_2 constant -> 2-2-1-2-2_1 return
+    2-2-1-2_1 subst_stateless_from @ -5:2 -> 2-2-1_1 subst_stateless_from @ -5:2
+    2-2-1_1 subst_stateless_from @ -5:2 -> 2-2_1 subst_stateless_from @ 2:2
+    2-2-2-1-1_1 named -> 2-2-2-1_2 map
+    2-2-2-1_1 return -> 2-2-2_1 subst_stateless_from @ 2:2
+    2-2-2-1_2 map -> 2-2-2-1_1 return
+    2-2-2-2_1 return -> 2-2-2_1 subst_stateless_from @ 2:2
+    2-2-2-2_2 constant -> 2-2-2-2_1 return
+    2-2-2_1 subst_stateless_from @ 2:2 -> 2-2_1 subst_stateless_from @ 2:2
+    2-2_1 subst_stateless_from @ 2:2 -> 2_1 subst_stateless_from @ 1:2
+    2_1 subst_stateless_from @ 1:2 -> _1 subst_stateless_from @ 1:2
+    _1 subst_stateless_from @ 1:2 -> _0
+  dag:
+    1-1_1 return -> 1-2-1-1_1 named, 1_1 subst_stateless_from @ -5:2
+    1-1_2 constant -> 1-1_1 return
+    1-2-1-1_1 named -> 1-2-1_2 map
+    1-2-1_1 return -> 1-2_1 subst_stateless_from @ -5:2
+    1-2-1_2 map -> 1-2-1_1 return
+    1-2-2_1 return -> 1-2_1 subst_stateless_from @ -5:2
+    1-2-2_2 constant -> 1-2-2_1 return
+    1-2_1 subst_stateless_from @ -5:2 -> 1_1 subst_stateless_from @ -5:2
+    1_1 subst_stateless_from @ -5:2 -> 2-1-1_1 named, _1 subst_stateless_from @ 1:2
+    2-1-1_1 named -> 2-1_2 map
+    2-1_1 return -> 2_1 subst_stateless_from @ 1:2
+    2-1_2 map -> 2-1_1 return
+    2-2-1-1_1 return -> 2-2-1-2-1-1_1 named, 2-2-1_1 subst_stateless_from @ -5:2
+    2-2-1-1_2 constant -> 2-2-1-1_1 return
+    2-2-1-2-1-1_1 named -> 2-2-1-2-1_2 map
+    2-2-1-2-1_1 return -> 2-2-1-2_1 subst_stateless_from @ -5:2
+    2-2-1-2-1_2 map -> 2-2-1-2-1_1 return
+    2-2-1-2-2_1 return -> 2-2-1-2_1 subst_stateless_from @ -5:2
+    2-2-1-2-2_2 constant -> 2-2-1-2-2_1 return
+    2-2-1-2_1 subst_stateless_from @ -5:2 -> 2-2-1_1 subst_stateless_from @ -5:2
+    2-2-1_1 subst_stateless_from @ -5:2 -> 2-2-2-1-1_1 named, 2-2_1 subst_stateless_from @ 2:2
+    2-2-2-1-1_1 named -> 2-2-2-1_2 map
+    2-2-2-1_1 return -> 2-2-2_1 subst_stateless_from @ 2:2
+    2-2-2-1_2 map -> 2-2-2-1_1 return
+    2-2-2-2_1 return -> 2-2-2_1 subst_stateless_from @ 2:2
+    2-2-2-2_2 constant -> 2-2-2-2_1 return
+    2-2-2_1 subst_stateless_from @ 2:2 -> 2-2_1 subst_stateless_from @ 2:2
+    2-2_1 subst_stateless_from @ 2:2 -> 2_1 subst_stateless_from @ 1:2
+    2_1 subst_stateless_from @ 1:2 -> _1 subst_stateless_from @ 1:2
+    _1 subst_stateless_from @ 1:2 -> _0
+     |}]
 ;;
 
 type packed = T : (unit -> 'a Computation.t) -> packed
@@ -702,8 +874,10 @@ let command =
          Writer.write_line writer "---";
          let%bind () =
            [ "subst_tree", T subst_tree
+           ; "many_aliases", T many_aliases
            ; "diamond", T diamond
            ; "state", T state
+           ; "dynamic_state", T dynamic_state
            ; "dynamic_scope", T dynamic_scope
            ; "cutoff", T cutoff
            ; "assoc_simpl", T assoc_simpl
@@ -711,6 +885,7 @@ let command =
            ; "nested_values", T nested_values
            ; "enum", T enum
            ; "lazy", T lazy_computation
+           ; "name_used_twice", T name_used_twice
            ]
            |> Deferred.List.iter ~f:(fun (name, T computation) ->
              print_endline [%string "Processing %{name}"];
@@ -737,7 +912,7 @@ let command =
            let () =
              let graph_info = ref Graph_info.empty in
              let (component : _ Private.Computation.packed) =
-               Graph_info.iter_graph_updates
+               Graph_info.iter_graph_updates_packed
                  (Bonsai.Private.reveal_computation component)
                  ~on_update:(fun gm -> graph_info := gm)
              in

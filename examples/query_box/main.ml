@@ -23,11 +23,17 @@ module Css =
 module Example_params = struct
   type t =
     { suggestion_list_kind : Query_box.Suggestion_list_kind.t
+    ; expand_direction : Query_box.Expand_direction.t
     ; max_visible_items : int
     }
   [@@deriving typed_fields]
 
-  let default = { suggestion_list_kind = Transient_overlay; max_visible_items = 10 }
+  let default =
+    { suggestion_list_kind = Transient_overlay
+    ; expand_direction = Down
+    ; max_visible_items = 10
+    }
+  ;;
 end
 
 let component =
@@ -73,17 +79,20 @@ let component =
             Form.Elements.Dropdown.enumerable
               [%here]
               (module Query_box.Suggestion_list_kind)
+          | Expand_direction ->
+            Form.Elements.Dropdown.enumerable [%here] (module Query_box.Expand_direction)
           | Max_visible_items -> Form.Elements.Number.int [%here] ~default:10 ~step:1 ()
         ;;
       end)
   in
-  let%sub { Example_params.suggestion_list_kind; max_visible_items } =
+  let%sub { Example_params.suggestion_list_kind; expand_direction; max_visible_items } =
     return (form >>| Form.value_or_default ~default:Example_params.default)
   in
   let%sub query_box =
     Query_box.create
       (module String)
       ~suggestion_list_kind
+      ~expand_direction
       ~max_visible_items
       ~selected_item_attr:(Value.return (Attr.class_ Css.selected_item))
       ~extra_list_container_attr:(Value.return (Attr.class_ Css.list_container))

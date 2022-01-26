@@ -1,5 +1,7 @@
 open! Core
 open! Bonsai_web
+open Bonsai.Let_syntax
+module Size_hooks = Bonsai_web_ui_element_size_hooks
 
 module Page = struct
   type t =
@@ -20,27 +22,23 @@ module Size = struct
 end
 
 let bulk_size_component =
-  let open Bonsai.Let_syntax in
-  let%sub state =
-    Bonsai_web_ui_element_size_hooks.Bulk_size_tracker.component (module Int) Prune_stale
-  in
-  return
-  @@ let%pattern_map sizes, size_attr = state in
-  let open Vdom in
+  let%sub state = Size_hooks.Bulk_size_tracker.component (module Int) Prune_stale in
+  let%arr sizes, size_attr = state in
   let mk i =
     let key = sprintf "resizable-using-css-%d" i in
-    let attr = Vdom.Attr.many [ Attr.class_ "resizable-using-css"; size_attr i ] in
-    Node.div ~key ~attr []
+    let attr =
+      Vdom.Attr.many [ Vdom.Attr.class_ Style.resizable_using_css; size_attr i ]
+    in
+    Vdom.Node.div ~key ~attr []
   in
-  Node.div
-    [ Node.h3 [ Node.text "Resize me!" ]
+  Vdom.Node.div
+    [ Vdom.Node.h3 [ Vdom.Node.text "Resize me!" ]
     ; sizes
-      |> [%sexp_of:
-        Bonsai_web_ui_element_size_hooks.Bulk_size_tracker.Dimensions.t Map.M(Int).t]
+      |> [%sexp_of: Size_hooks.Bulk_size_tracker.Dimensions.t Map.M(Int).t]
       |> Sexp.to_string_hum
       |> Vdom.Node.text
       |> List.return
-      |> Node.pre
+      |> Vdom.Node.pre ~attr:(Vdom.Attr.class_ Style.pre_for_display)
     ; mk 0
     ; mk 1
     ; mk 2
@@ -48,22 +46,19 @@ let bulk_size_component =
 ;;
 
 let size_component =
-  let open Bonsai.Let_syntax in
   let%sub state = Bonsai.state_opt [%here] (module Size) in
-  return
-  @@ let%pattern_map size, inject_size = state in
-  let open Vdom in
-  Node.div
-    [ Node.h3 [ Node.text "Resize me!" ]
-    ; Node.div
+  let%arr size, inject_size = state in
+  Vdom.Node.div
+    [ Vdom.Node.h3 [ Vdom.Node.text "Resize me!" ]
+    ; Vdom.Node.div
         ~key:"resizable-using-css"
         ~attr:
           (Vdom.Attr.many
-             [ Attr.class_ "resizable-using-css"
-             ; Bonsai_web_ui_element_size_hooks.Size_tracker.on_change
-                 (fun ~width ~height -> inject_size (Some Size.{ width; height }))
+             [ Vdom.Attr.class_ Style.resizable_using_css
+             ; Size_hooks.Size_tracker.on_change (fun ~width ~height ->
+                 inject_size (Some Size.{ width; height }))
              ])
-        [ Node.textf !"%{sexp:Size.t option}" size ]
+        [ Vdom.Node.textf !"%{sexp:Size.t option}" size ]
     ]
 ;;
 
@@ -100,97 +95,74 @@ let fit =
 ;;
 
 let visibility_component =
-  let open Bonsai.Let_syntax in
   let%sub pos_x = Bonsai.state [%here] (module Int) ~default_model:0 in
   let%sub pos_y = Bonsai.state [%here] (module Int) ~default_model:0 in
-  return
-  @@ let%pattern_map pos_x, inject_pos_x = pos_x
+  let%arr pos_x, inject_pos_x = pos_x
   and pos_y, inject_pos_y = pos_y in
   let pos_to_color pos = float_of_int pos /. 2000. *. 256. |> Float.iround_down_exn in
-  let open Vdom in
-  Node.div
-    [ Node.h3 [ Node.text "Scroll me!" ]
-    ; Node.div
-        ~attr:(Attr.class_ "visibility-parent")
-        [ Node.div
-            ~attr:
-              (Vdom.Attr.many
-                 [ Attr.class_ "visibility-child"
-                 ; Attr.style
-                     (let r = pos_to_color pos_x in
-                      let g = pos_to_color pos_y in
-                      Css_gen.background_color
-                        (`RGBA (Css_gen.Color.RGBA.create ~r ~g ~b:0 ())))
-                 ; Bonsai_web_ui_element_size_hooks.Visibility_tracker.on_change
-                     (fun
-                       (bounds :
-                          Bonsai_web_ui_element_size_hooks.Visibility_tracker.Bounds.t)
-                       ->
-                         Ui_effect.Many
-                           [ inject_pos_x bounds.min_x; inject_pos_y bounds.min_y ])
-                 ])
-            []
-        ]
+  let attributes =
+    [ Vdom.Attr.class_ Style.visibility_child
+    ; Vdom.Attr.style
+        (let r = pos_to_color pos_x in
+         let g = pos_to_color pos_y in
+         Css_gen.background_color (`RGBA (Css_gen.Color.RGBA.create ~r ~g ~b:0 ())))
+    ; Size_hooks.Visibility_tracker.on_change (fun bounds ->
+        Ui_effect.Many [ inject_pos_x bounds.min_x; inject_pos_y bounds.min_y ])
+    ]
+  in
+  Vdom.Node.div
+    [ Vdom.Node.h3 [ Vdom.Node.text "Scroll me!" ]
+    ; Vdom.Node.div
+        ~attr:(Vdom.Attr.class_ Style.visibility_parent)
+        [ Vdom.Node.div ~attr:(Vdom.Attr.many attributes) [] ]
     ]
 ;;
 
-let buttons
-      (type a)
-      (module E : Bonsai.Enum with type t = a)
-      (current : a)
-      (inject : a -> unit Vdom.Effect.t)
-  =
-  List.map E.all ~f:(fun v ->
-    let extra_attrs =
-      if E.equal v current then [ Vdom.Attr.class_ "primary" ] else []
+let buttons current inject =
+  let make_button_for_tab page =
+    let click_handler = Vdom.Attr.on_click (fun _ -> inject page) in
+    let attr =
+      if Page.equal page current
+      then Vdom.Attr.(class_ Style.primary @ click_handler)
+      else click_handler
     in
-    Vdom_input_widgets.Button.simple
-      ~extra_attrs
-      ~on_click:(fun () -> inject v)
-      (E.sexp_of_t v |> Sexp.to_string))
-  |> Vdom.Node.div
+    Vdom.Node.button ~attr [ page |> Page.sexp_of_t |> Sexp.to_string |> Vdom.Node.text ]
+  in
+  Page.all |> List.map ~f:make_button_for_tab |> Vdom.Node.div
 ;;
 
 let resizer_component =
   Bonsai.const
-  @@
-  let open Vdom in
-  Node.div
-    [ Node.h3 [ Node.text "Resize me!" ]
-    ; Node.div
-        ~attr:(Attr.class_ "resizable-using-resizer")
-        [ Node.text (String.concat (List.init 20 ~f:(Fn.const "Hello world. ")))
-        ; Node.div
-            ~attr:
-              (Attr.many
-                 [ Attr.class_ "resizer"
-                 ; Bonsai_web_ui_element_size_hooks.Expert.Resizer.attr
-                 ])
-            []
-        ]
-    ]
+    (Vdom.Node.div
+       [ Vdom.Node.h3 [ Vdom.Node.text "Resize me!" ]
+       ; Vdom.Node.div
+           ~attr:(Vdom.Attr.class_ Style.resizable_using_resizer)
+           [ Vdom.Node.text (String.concat (List.init 20 ~f:(Fn.const "Hello world. ")))
+           ; Vdom.Node.div
+               ~attr:
+                 (Vdom.Attr.many
+                    [ Vdom.Attr.class_ Style.resizer; Size_hooks.Expert.Resizer.attr ])
+               []
+           ]
+       ])
 ;;
 
 let component =
-  let open Bonsai.Let_syntax in
-  let%sub page = Bonsai.state [%here] (module Page) ~default_model:Bulk_size in
-  let%pattern_bind page, inject_page = page in
-  let%sub page_component =
-    Bonsai.enum
-      (module Page)
-      ~match_:page
-      ~with_:(function
-        | Bulk_size -> bulk_size_component
-        | Size -> size_component
-        | Visibility -> visibility_component
-        | Resizer -> resizer_component
-        | Fit -> fit)
+  let%sub page, inject_page =
+    Bonsai.state [%here] (module Page) ~default_model:Bulk_size
   in
-  return
-  @@ let%map page_component = page_component
+  let%sub page_component =
+    match%sub page with
+    | Bulk_size -> bulk_size_component
+    | Size -> size_component
+    | Visibility -> visibility_component
+    | Resizer -> resizer_component
+    | Fit -> fit
+  in
+  let%arr page_component = page_component
   and page = page
   and inject_page = inject_page in
-  let buttons = buttons (module Page) page inject_page in
+  let buttons = buttons page inject_page in
   Vdom.Node.div [ buttons; page_component ]
 ;;
 

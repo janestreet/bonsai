@@ -7,8 +7,9 @@ module Node_info : sig
     { node_type : string
     ; here : Source_code_position.t option
     }
+  [@@deriving sexp, bin_io]
 
-  val of_computation : (_, _, _) Computation.t -> t
+  val of_computation : (_, _, _, _) Computation.t -> t
   val of_value : _ Value.t -> t
 end
 
@@ -46,6 +47,11 @@ val empty : t
     require a callback for receiving all the updates, including the immediately
     traversed ones and the ones that are delayed by [Lazy]. *)
 val iter_graph_updates
+  :  ('model, 'static_action, 'dynamic_action, 'result) Computation.t
+  -> on_update:(t -> unit)
+  -> ('model, 'static_action, 'dynamic_action, 'result) Computation.t
+
+val iter_graph_updates_packed
   :  'a Computation.packed
   -> on_update:(t -> unit)
   -> 'a Computation.packed

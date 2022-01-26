@@ -1,5 +1,6 @@
 open! Core
 open! Bonsai_web
+open Bonsai.Let_syntax
 open Vdom_keyboard
 module Js = Js_of_ocaml.Js
 module Command = Keyboard_event_handler.Command
@@ -12,7 +13,7 @@ module Modifiers = struct
     }
   [@@deriving equal, sexp]
 
-  let of_event (event : Js_of_ocaml.Dom_html.keyboardEvent Js.t) =
+  let of_event event =
     { shift = Js.to_bool event##.shiftKey
     ; ctrl = Js.to_bool event##.ctrlKey
     ; alt = Js.to_bool event##.altKey
@@ -61,14 +62,10 @@ let handle_event inject =
       ]
   in
   fun event ->
-    let key : string option =
-      event##.key |> Js.Optdef.to_option |> Option.map ~f:Js.to_string
-    in
-    let code : string option =
-      event##.code |> Js.Optdef.to_option |> Option.map ~f:Js.to_string
-    in
-    let keycode : int = event##.keyCode in
-    let charcode : int option = event##.charCode |> Js.Optdef.to_option in
+    let key = event##.key |> Js.Optdef.to_option |> Option.map ~f:Js.to_string in
+    let code = event##.code |> Js.Optdef.to_option |> Option.map ~f:Js.to_string in
+    let keycode = event##.keyCode in
+    let charcode = event##.charCode |> Js.Optdef.to_option in
     let js_ocaml = Keyboard_code.of_event event in
     match Keyboard_event_handler.handle_event keyboard_handler event with
     | Some event -> event
@@ -84,8 +81,9 @@ let handle_event inject =
            })
 ;;
 
+module Style = [%css.raw {| .red { color: red } |}]
+
 let component =
-  let open Bonsai.Let_syntax in
   let%sub model_and_inject =
     Bonsai.state_machine0
       [%here]
@@ -95,17 +93,16 @@ let component =
       ~apply_action:(fun ~inject:_ ~schedule_event:_ model action ->
         List.append model [ action ])
   in
-  return
-  @@ let%pattern_map model, inject = model_and_inject in
+  let%arr model, inject = model_and_inject in
+  let last_event = List.last model in
   Vdom.Node.div
-    ~attr:Vdom.Attr.(tabindex 1 @ on_keydown (handle_event inject))
-    [ Vdom.Node.label
-        [ Vdom.Node.text "last event"
-        ; Vdom.Node.pre
-            ~attr:(Vdom.Attr.style (Css_gen.color (`Name "red")))
-            [ model |> List.last |> Vdom.Node.textf !"%{sexp#hum: Action.t option}" ]
+    ~attr:(Vdom.Attr.on_keydown (handle_event inject))
+    [ Vdom.Node.div
+        ~attr:(Vdom.Attr.class_ Style.red)
+        [ Vdom.Node.sexp_for_debugging
+            [%sexp "Last Event", (last_event : Action.t option)]
         ]
-    ; Vdom.Node.pre [ model |> Vdom.Node.textf !"%{sexp#hum: Action.t list}" ]
+    ; Vdom.Node.sexp_for_debugging [%sexp (model : Action.t list)]
     ]
 ;;
 

@@ -5,7 +5,7 @@ module Action : sig
   type 'key t =
     | T :
         { action : 'a
-        ; type_id : 'a Type_equal.Id.t
+        ; type_id : 'a Meta.Action.t
         ; key : 'key
         }
         -> 'key t

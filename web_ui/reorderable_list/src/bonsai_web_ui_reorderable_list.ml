@@ -77,7 +77,7 @@ let list
       ?(extra_item_attrs = Bonsai.Value.return Attr.empty)
       ?(left = `Px 0)
       ?(right = `Px 0)
-      ?(empty_list_placeholder = Bonsai.Value.return Node.None)
+      ?(empty_list_placeholder = fun ~item_is_hovered:_ -> Bonsai.const Node.None)
       ?(default_item_height = 50)
       input
   =
@@ -86,106 +86,102 @@ let list
     Bonsai_web_ui_element_size_hooks.Bulk_size_tracker.component (module Key) Prune_stale
   in
   let%sub model, should_render_extra_target =
-    return
-      (let%map model = dnd >>| Drag_and_drop.model
-       and input = input in
-       match model with
-       | Not_dragging -> Drag_and_drop.Model.Not_dragging, false
-       | Dragging t ->
-         (match Map.find input t.source with
-          | Some (_, source) -> Dragging { t with source = In_list source }, false
-          | None -> Dragging { t with source = External t.source }, true))
+    let%arr model = dnd >>| Drag_and_drop.model
+    and input = input in
+    match model with
+    | Not_dragging -> Drag_and_drop.Model.Not_dragging, false
+    | Dragging t ->
+      (match Map.find input t.source with
+       | Some (_, source) -> Dragging { t with source = In_list source }, false
+       | None -> Dragging { t with source = External t.source }, true)
   in
   let%sub model_info_at_index =
-    return
-      (let%map model = model in
-       fun index ->
-         let is_dragged_item =
-           match model with
-           | Dragging { source = In_list source; _ } -> source = index
-           | Not_dragging | Dragging { source = External _; _ } -> false
-         in
-         match model with
-         | Not_dragging | Dragging { target = None; _ } ->
-           { adjusted_index = index; is_target_of_external_item = false; is_dragged_item }
-         | Dragging { source = In_list source; target = Some target; _ } ->
-           { adjusted_index =
-               (if source = index
-                then target
-                else if source = target
-                then index
-                else if source < target
-                then if source < index && index <= target then index - 1 else index
-                else if source > index && index >= target
-                then index + 1
-                else index)
-           ; is_dragged_item
-           ; is_target_of_external_item = false
-           }
-         | Dragging { source = External _; target = Some target; _ } ->
-           { adjusted_index = (if index >= target then index + 1 else index)
-           ; is_dragged_item
-           ; is_target_of_external_item = index = target
-           })
+    let%arr model = model in
+    fun index ->
+      let is_dragged_item =
+        match model with
+        | Dragging { source = In_list source; _ } -> source = index
+        | Not_dragging | Dragging { source = External _; _ } -> false
+      in
+      match model with
+      | Not_dragging | Dragging { target = None; _ } ->
+        { adjusted_index = index; is_target_of_external_item = false; is_dragged_item }
+      | Dragging { source = In_list source; target = Some target; _ } ->
+        { adjusted_index =
+            (if source = index
+             then target
+             else if source = target
+             then index
+             else if source < target
+             then if source < index && index <= target then index - 1 else index
+             else if source > index && index >= target
+             then index + 1
+             else index)
+        ; is_dragged_item
+        ; is_target_of_external_item = false
+        }
+      | Dragging { source = External _; target = Some target; _ } ->
+        { adjusted_index = (if index >= target then index + 1 else index)
+        ; is_dragged_item
+        ; is_target_of_external_item = index = target
+        }
   in
   let%sub total_height, alist_for_targets =
-    return
-      (let%map input = input
-       and sizes = sizes in
-       let items =
-         Array.of_list_map (Map.to_alist input) ~f:(fun (key, (data, index)) ->
-           let size =
-             match Map.find sizes key with
-             | Some size -> Int.of_float size.height
-             | None -> default_item_height
-           in
-           ( key
-           , { data
-             ; index
-             ; y_position = 0
-             ; adjusted = 0
-             ; size
-             ; is_target_of_external_item = false
-             ; is_dragged_item = false
-             } ))
-       in
-       Array.sort items ~compare:(fun (_, { index = a; _ }) (_, { index = b; _ }) ->
-         Int.compare a b);
-       let (total_height : int) =
-         Array.fold_map_inplace items ~init:0 ~f:(fun acc (key, item) ->
-           acc + item.size, (key, { item with y_position = acc }))
-       in
-       total_height, Array.to_list items)
+    let%arr input = input
+    and sizes = sizes in
+    let items =
+      Array.of_list_map (Map.to_alist input) ~f:(fun (key, (data, index)) ->
+        let size =
+          match Map.find sizes key with
+          | Some size -> Int.of_float size.height
+          | None -> default_item_height
+        in
+        ( key
+        , { data
+          ; index
+          ; y_position = 0
+          ; adjusted = 0
+          ; size
+          ; is_target_of_external_item = false
+          ; is_dragged_item = false
+          } ))
+    in
+    Array.sort items ~compare:(fun (_, { index = a; _ }) (_, { index = b; _ }) ->
+      Int.compare a b);
+    let (total_height : int) =
+      Array.fold_map_inplace items ~init:0 ~f:(fun acc (key, item) ->
+        acc + item.size, (key, { item with y_position = acc }))
+    in
+    total_height, Array.to_list items
   in
   let%sub map_for_targets =
     return (alist_for_targets >>| Map.of_alist_exn (module Key))
   in
   let%sub map_for_items =
-    return
-      (let%map items = alist_for_targets
-       and model_info_at_index = model_info_at_index in
-       let items = Array.of_list items in
-       Array.map_inplace items ~f:(fun (key, item) ->
-         let { adjusted_index; is_target_of_external_item; is_dragged_item } =
-           model_info_at_index item.index
-         in
-         ( key
-         , { item with
-             adjusted = adjusted_index
-           ; is_dragged_item
-           ; is_target_of_external_item
-           } ));
-       Array.sort items ~compare:(fun (_, { adjusted = a; _ }) (_, { adjusted = b; _ }) ->
-         Int.compare a b);
-       Array.fold
-         items
-         ~init:(0, Map.empty (module Key))
-         ~f:(fun (acc, items) (key, item) ->
-           let adjusted =
-             if item.is_target_of_external_item then acc + default_item_height else acc
-           in
-           adjusted + item.size, Map.add_exn items ~key ~data:{ item with adjusted })
-       |> snd)
+    let%arr items = alist_for_targets
+    and model_info_at_index = model_info_at_index in
+    let items = Array.of_list items in
+    Array.map_inplace items ~f:(fun (key, item) ->
+      let { adjusted_index; is_target_of_external_item; is_dragged_item } =
+        model_info_at_index item.index
+      in
+      ( key
+      , { item with
+          adjusted = adjusted_index
+        ; is_dragged_item
+        ; is_target_of_external_item
+        } ));
+    Array.sort items ~compare:(fun (_, { adjusted = a; _ }) (_, { adjusted = b; _ }) ->
+      Int.compare a b);
+    Array.fold
+      items
+      ~init:(0, Map.empty (module Key))
+      ~f:(fun (acc, items) (key, item) ->
+        let adjusted =
+          if item.is_target_of_external_item then acc + default_item_height else acc
+        in
+        adjusted + item.size, Map.add_exn items ~key ~data:{ item with adjusted })
+    |> snd
   in
   let%sub items =
     Bonsai.assoc
@@ -193,72 +189,66 @@ let list
       map_for_items
       ~f:(fun key data ->
         let%sub key_sexp =
-          return
-            (let%map key = key in
-             let key_sexp = Key.sexp_of_t key in
-             [%string "source-%{key_sexp#Sexp}"])
+          let%arr key = key in
+          let key_sexp = Key.sexp_of_t key in
+          [%string "source-%{key_sexp#Sexp}"]
         in
         let%sub size_attr = return (size_attr <*> key) in
         let%sub { data; adjusted = y_position; is_dragged_item; _ } = return data in
-        return
-          (let%map data = data
-           and y_position = y_position
-           and is_dragged_item = is_dragged_item
-           and extra_item_attrs = extra_item_attrs
-           and size_attr = size_attr
-           and key_sexp = key_sexp in
-           Node.div
-             ~key:key_sexp
-             ~attr:
-               Attr.(
-                 size_attr
-                 @ transform_xy ~left ~right 0 y_position
-                 @ extra_item_attrs
-                 @
-                 if is_dragged_item then Attr.style (Css_gen.opacity 0.0) else Attr.empty)
-             [ data ]))
+        let%arr data = data
+        and y_position = y_position
+        and is_dragged_item = is_dragged_item
+        and extra_item_attrs = extra_item_attrs
+        and size_attr = size_attr
+        and key_sexp = key_sexp in
+        Node.div
+          ~key:key_sexp
+          ~attr:
+            Attr.(
+              size_attr
+              @ transform_xy ~left ~right 0 y_position
+              @ extra_item_attrs
+              @ if is_dragged_item then Attr.style (Css_gen.opacity 0.0) else Attr.empty)
+          [ data ])
   in
   let%sub targets =
     let%sub num_items = return (input >>| Map.length) in
     let%sub drop_target = return (dnd >>| Drag_and_drop.drop_target) in
     let single_target ~is_the_extra_target index size y_position =
       let%sub is_the_extra_target =
-        return
-          (let%map should_render_extra_target = should_render_extra_target
-           and index = index
-           and num_items = num_items in
-           ((not should_render_extra_target) && index = num_items - 1)
-           || is_the_extra_target)
+        let%arr should_render_extra_target = should_render_extra_target
+        and index = index
+        and num_items = num_items in
+        ((not should_render_extra_target) && index = num_items - 1) || is_the_extra_target
       in
-      return
-        (let%map index = index
-         and size = size
-         and y_position = y_position
-         and is_the_extra_target = is_the_extra_target
-         and drop_target = drop_target in
-         let the_height =
-           if is_the_extra_target
-           then
-             Css_gen.create
-               ~field:"height"
-               ~value:[%string "calc(100% - %{y_position#Int}px)"]
-           else Css_gen.height (`Px size)
-         in
-         Node.div
-           ~key:[%string "target-%{index#Int}"]
-           ~attr:
-             Attr.(
-               drop_target ~id:index
-               @ transform_xy ~left ~right 0 y_position
-               @ style (Css_gen.position ~top:(`Px 0) ~left ~right `Absolute)
-               @ (if enable_debug_overlay
-                  then
-                    style
-                      Css_gen.(
-                        background_color (`Hex "#10000010") @> border ~style:`Dotted ())
-                  else empty)
-               @ style the_height)
-           [])
+      let%arr index = index
+      and size = size
+      and y_position = y_position
+      and is_the_extra_target = is_the_extra_target
+      and drop_target = drop_target in
+      let the_height =
+        if is_the_extra_target
+        then
+          Css_gen.create
+            ~field:"height"
+            ~value:[%string "calc(100% - %{y_position#Int}px)"]
+        else Css_gen.height (`Px size)
+      in
+      Node.div
+        ~key:[%string "target-%{index#Int}"]
+        ~attr:
+          Attr.(
+            drop_target ~id:index
+            @ transform_xy ~left ~right 0 y_position
+            @ style (Css_gen.position ~top:(`Px 0) ~left ~right `Absolute)
+            @ (if enable_debug_overlay
+               then
+                 style
+                   Css_gen.(
+                     background_color (`Hex "#10000010") @> border ~style:`Dotted ())
+               else empty)
+            @ style the_height)
+        []
     in
     let%sub item_targets =
       Bonsai.assoc
@@ -278,37 +268,40 @@ let list
           total_height
       else Bonsai.const Vdom.Node.none
     in
-    return
-      (let%map item_targets = item_targets
-       and extra_target = extra_target in
-       extra_target :: Map.data item_targets)
+    let%arr item_targets = item_targets
+    and extra_target = extra_target in
+    extra_target :: Map.data item_targets
   in
   let%sub is_dragging =
-    return
-      (let%map dnd = dnd in
-       match Drag_and_drop.model dnd with
-       | Not_dragging -> false
-       | _ -> true)
+    let%arr dnd = dnd in
+    match Drag_and_drop.model dnd with
+    | Not_dragging -> false
+    | _ -> true
   in
-  return
-    (let%map items = items
-     and targets = targets
-     and is_dragging = is_dragging
-     and total_height = total_height
-     and empty_list_placeholder = empty_list_placeholder in
-     let items =
-       if Map.is_empty items then [ empty_list_placeholder ] else Map.data items
-     in
-     let items = if is_dragging then items @ targets else items in
-     Node.div
-       ~attr:
-         Attr.(
-           style
-             Css_gen.(
-               position `Relative
-               @> height (`Percent (Percent.of_percentage 100.0))
-               @> min_height (`Px (total_height + default_item_height))))
-       items)
+  let%sub item_is_hovered =
+    let%arr dnd = dnd in
+    match Drag_and_drop.model dnd with
+    | Dragging { target = Some _; _ } -> true
+    | _ -> false
+  in
+  let%sub empty_list_placeholder = empty_list_placeholder ~item_is_hovered in
+  let%arr items = items
+  and targets = targets
+  and is_dragging = is_dragging
+  and total_height = total_height
+  and empty_list_placeholder = empty_list_placeholder in
+  let items = if Map.is_empty items then [ empty_list_placeholder ] else Map.data items in
+  let items = if is_dragging then items @ targets else items in
+  Node.div
+    ~attr:
+      Attr.(
+        style
+          Css_gen.(
+            position `Relative
+            @> flex_container ~direction:`Column ()
+            @> height (`Percent (Percent.of_percentage 100.0))
+            @> min_height (`Px (total_height + default_item_height))))
+    items
 ;;
 
 module Action = struct
@@ -400,10 +393,9 @@ let with_inject
       ranked_input
       ~f:(fun key data ->
         let%sub source =
-          return
-            (let%map key = key
-             and source = source in
-             source ~id:key)
+          let%arr key = key
+          and source = source in
+          source ~id:key
         in
         let%sub rendered = render ~index:data ~source key in
         return (Value.both rendered data))
@@ -413,9 +405,8 @@ let with_inject
       (module Key)
       rendered_ranked_input
       ~f:(fun _ data ->
-        return
-          (let%map (_, view), rank = data in
-           view, rank))
+        let%arr (_, view), rank = data in
+        view, rank)
   in
   let%sub list =
     list
@@ -448,18 +439,16 @@ let with_inject
       | None -> Bonsai.const Vdom.Node.None)
   in
   let%sub view =
-    return
-      (let%map list = list
-       and sentinel = sentinel
-       and dragged_element = dragged_element in
-       Vdom.Node.div ~attr:(sentinel ~name:sentinel_name) [ list; dragged_element ])
+    let%arr list = list
+    and sentinel = sentinel
+    and dragged_element = dragged_element in
+    Vdom.Node.div ~attr:(sentinel ~name:sentinel_name) [ list; dragged_element ]
   in
   let%sub ranking =
-    return
-      (let%map rendered_ranked_input = rendered_ranked_input in
-       Map.to_alist rendered_ranked_input
-       |> List.sort ~compare:(fun (_, (_, a)) (_, (_, b)) -> Int.compare a b)
-       |> List.map ~f:(fun (key, ((extra, _), _)) -> key, extra))
+    let%arr rendered_ranked_input = rendered_ranked_input in
+    Map.to_alist rendered_ranked_input
+    |> List.sort ~compare:(fun (_, (_, a)) (_, (_, b)) -> Int.compare a b)
+    |> List.map ~f:(fun (key, ((extra, _), _)) -> key, extra)
   in
   return (Value.map3 ranking view inject ~f:Tuple3.create)
 ;;

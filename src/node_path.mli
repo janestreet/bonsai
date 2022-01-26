@@ -29,16 +29,20 @@ include Comparable.S_binable with type t := t
     is serialized to "1-2-3_4" *)
 include Stringable.S with type t := t
 
+type builder
+
 (** The empty node path. *)
-val empty : t
+val empty : builder
 
 (** Adds a choice point to that input path. The provided number says which of
     the choices at that point was taken. When traversing a computation or
     value, if any case has multiple recursive calls, you should add a choice
     point to the path built up in each of those calls, with each call using a
     different number. *)
-val choice_point : t -> int -> t
+val choice_point : builder -> int -> builder
 
 (** Adds an extra segment to the input path. All such segments get forgotten
     when the next choice point is added. *)
-val descend : t -> t
+val descend : builder -> builder
+
+val finalize : builder -> t

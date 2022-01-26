@@ -1,7 +1,7 @@
 open! Core
 open! Import
 
-type t =
+type builder =
   { choices : int list
   ; depth : int
   }
@@ -21,35 +21,15 @@ let to_string { choices; depth } =
   Buffer.contents buffer
 ;;
 
-let of_string string =
-  match String.split ~on:'_' string with
-  | [ choices; depth ] ->
-    let choices =
-      match choices with
-      | "" -> []
-      | choices -> String.split ~on:'-' choices |> List.map ~f:Int.of_string
-    in
-    let depth = Int.of_string depth in
-    { choices; depth }
-  | _ -> raise_s [%message [%here] "failed to deserialize node-path" (string : string)]
-;;
-
-let sexp_of_t t = Sexp.Atom (to_string t)
-let t_of_sexp s = of_string (string_of_sexp s)
 let empty = { choices = []; depth = 0 }
 let choice_point t n = { choices = t.choices @ [ n ]; depth = 0 }
 let descend t = { t with depth = t.depth + 1 }
-
-include Comparable.Make_binable (struct
-    type nonrec t = t [@@deriving compare, sexp, bin_io]
-  end)
 
 let%test_module _ =
   (module struct
     let test t =
       let s = to_string t in
-      print_endline s;
-      assert ([%compare.equal: t] t (t_of_sexp (sexp_of_t t)))
+      print_endline s
     ;;
 
     let%expect_test _ =
@@ -73,3 +53,17 @@ let%test_module _ =
     ;;
   end)
 ;;
+
+let finalize builder = to_string builder
+
+module T : sig
+  type t = string
+
+  include Sexpable.S with type t := t
+  include Binable.S with type t := t
+  include Comparable.S_binable with type t := t
+  include Stringable.S with type t := t
+end =
+  String
+
+include T

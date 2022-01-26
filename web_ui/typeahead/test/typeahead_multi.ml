@@ -73,11 +73,11 @@ let%expect_test "Select two elements" =
       <option value="Option A"> Option A </option>
 -|    <option value="Option B"> Option B </option>
 -|    <option value="Option C"> Option C </option>
+-|  </datalist>
 +|  </datalist>
 +|  <div class="bonsai-web-ui-typeahead-pills">
 +|    <span tabindex="0" data-value="Option B" onclick onkeyup> Option B × </span>
 +|    <span tabindex="0" data-value="Option C" onclick onkeyup> Option C × </span>
--|  </datalist>
 +|  </div>
   </div> |}]
 ;;

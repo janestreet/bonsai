@@ -22,12 +22,14 @@ val list
   (** The space between the left edge of an item and the list container *)
   -> ?right:Css_gen.Length.t
   (** The space between the right edge of an item and the list container *)
-  -> ?empty_list_placeholder:Vdom.Node.t Bonsai.Value.t
-  (** What to display when there are no items in the list *)
+  -> ?empty_list_placeholder:(item_is_hovered:bool Value.t -> Vdom.Node.t Computation.t)
+  (** What to display when there are no items in the list. [item_is_hovered] is
+      provided in case you wish to change the placeholder based on whether an
+      item is being hovered above the empty list.  *)
   -> ?default_item_height:int
   (** The items and drop targets are spaced evenly every item_height. In order
       to look natural, each item should have height [item_height]. *)
-  -> ('source, Vdom.Node.t * int, 'cmp) Map.t Bonsai.Value.t
+  -> ('source, Vdom.Node.t * int, 'cmp) Map.t Value.t
   (** The items that should be displayed in the list. Each item should have its
       view and its current rank. Updating the rank of an item must be done via
       the [on_drop] callback of the drag-and-drop universe. *)
@@ -42,7 +44,7 @@ val simple
   -> ?extra_item_attrs:Vdom.Attr.t Value.t
   -> ?left:Css_gen.Length.t
   -> ?right:Css_gen.Length.t
-  -> ?empty_list_placeholder:Vdom.Node.t Value.t
+  -> ?empty_list_placeholder:(item_is_hovered:bool Value.t -> Vdom.Node.t Computation.t)
   -> ?default_item_height:int
   -> render:
        (index:int Value.t
@@ -72,7 +74,7 @@ val with_inject
   -> ?extra_item_attrs:Vdom.Attr.t Value.t
   -> ?left:Css_gen.Length.t
   -> ?right:Css_gen.Length.t
-  -> ?empty_list_placeholder:Vdom.Node.t Value.t
+  -> ?empty_list_placeholder:(item_is_hovered:bool Value.t -> Vdom.Node.t Computation.t)
   -> ?default_item_height:int
   -> (index:int Value.t
       -> source:Vdom.Attr.t Value.t

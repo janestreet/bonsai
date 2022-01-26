@@ -4,8 +4,7 @@ open! Bonsai.Let_syntax
 
 let counter =
   let%sub state = Bonsai.state [%here] (module Int) ~default_model:0 in
-  return
-  @@ let%map current_value, set_value = state in
+  let%arr current_value, set_value = state in
   Vdom.Node.div
     [ Vdom.Node.textf "%d" current_value
     ; Vdom.Node.button
@@ -18,12 +17,18 @@ let counter =
 ;;
 
 let two_counters =
-  let open Bonsai.Let_syntax in
   let%sub counter_1 = counter in
   let%sub counter_2 = counter in
-  return
-  @@ let%map counter_1 = counter_1
+  let%arr counter_1 = counter_1
   and counter_2 = counter_2 in
+  Vdom.Node.div [ counter_1; counter_2 ]
+;;
+
+(* Note: because neither component that comprises [two_counters] depends on one another,
+   it could instead be written using computation's let-syntax, like so *)
+let _two_counters__computation_map_style =
+  let%map.Computation counter_1 = counter
+  and counter_2 = counter in
   Vdom.Node.div [ counter_1; counter_2 ]
 ;;
 

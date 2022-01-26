@@ -390,20 +390,20 @@ let%expect_test "let%sub unit rhs optimizaiton" =
   print_s Bonsai_lib.Private.(Computation.sexp_of_packed (reveal_computation component));
   [%expect
     {|
-    (Subst_stateless (
+    (Subst_stateless_from (
       (from (Return constant))
-      (via lib/bonsai/src/proc.ml:13:63)
+      (via lib/bonsai/src/proc.ml:29:46)
       (into (
-        Subst_stateless (
+        Subst_stateless_from (
           (from (Return constant))
-          (via lib/bonsai/src/proc.ml:13:63)
+          (via lib/bonsai/src/proc.ml:29:46)
           (into (
             Return (
               map (
                 t (
                   both
-                  (t1 (named lib/bonsai/src/proc.ml:13:63))
-                  (t2 (named lib/bonsai/src/proc.ml:13:63)))))))
+                  (t1 (named lib/bonsai/src/proc.ml:29:46))
+                  (t2 (named lib/bonsai/src/proc.ml:29:46)))))))
           (here None))))
       (here None))) |}]
 ;;
@@ -498,13 +498,20 @@ let%expect_test "map > lazy" =
   [%expect {| (hi (depth 0) (children ((0 (hello (depth 1) (children ())))))) |}]
 ;;
 
-let%expect_test "action sent to non-existent assoc element" =
+let%expect_test "dynamic action sent to non-existent assoc element" =
   let var = Bonsai.Var.create (Int.Map.of_alist_exn [ 1, (); 2, () ]) in
   let component =
     Bonsai.assoc
       (module Int)
       (Bonsai.Var.value var)
-      ~f:(fun _key _data -> Bonsai.state [%here] (module Int) ~default_model:0)
+      ~f:(fun _key _data ->
+        Bonsai.state_machine1
+          [%here]
+          (module Int)
+          (module Int)
+          ~default_model:0
+          ~apply_action:(fun ~inject:_ ~schedule_event:_ () _model new_model -> new_model)
+          (Value.return ()))
   in
   let handle =
     Handle.create
@@ -525,15 +532,11 @@ let%expect_test "action sent to non-existent assoc element" =
       component
   in
   Handle.show handle;
-  [%expect {|
-        ((1 0) (2 0)) |}];
+  [%expect {| ((1 0) (2 0)) |}];
   let result = Handle.result handle in
   let set_two what =
-    result
-    |> Fn.flip Map.find_exn 2
-    |> Tuple2.get2
-    |> Fn.flip ( @@ ) what
-    |> Ui_effect.Expert.handle
+    let _, set = Map.find_exn result 2 in
+    Ui_effect.Expert.handle (set what)
   in
   set_two 3;
   Handle.show handle;
@@ -547,7 +550,240 @@ let%expect_test "action sent to non-existent assoc element" =
     {|
     ("an action inside of Bonsai.assoc as been dropped because the computation is no longer active"
      (key 2) (action 4))
-    ((1 0)) |}]
+    ((1 0)) |}];
+  Bonsai.Var.set var (Int.Map.of_alist_exn [ 1, (); 2, () ]);
+  Handle.show handle;
+  [%expect {| ((1 0) (2 3)) |}]
+;;
+
+let%test_module "inactive delivery" =
+  (module struct
+    let rec censor_sexp = function
+      | Sexp.List l ->
+        (match List.filter_map l ~f:censor_sexp with
+         | [] -> None
+         | [ x ] -> Some x
+         | all -> Some (Sexp.List all))
+      | Sexp.Atom s ->
+        if String.is_prefix s ~prefix:"lib/bonsai" then None else Some (Atom s)
+    ;;
+
+    let print_computation computation =
+      computation
+      |> Bonsai_lib.Private.reveal_computation
+      |> Bonsai_lib.Private.Computation.sexp_of_packed
+      |> censor_sexp
+      |> Option.value ~default:(Sexp.List [])
+      |> print_s
+    ;;
+
+    let test_delivery_to_inactive_component computation =
+      print_computation computation;
+      let var = Bonsai.Var.create (Int.Map.of_alist_exn [ 1, (); 2, () ]) in
+      let component =
+        Bonsai.assoc
+          (module Int)
+          (Bonsai.Var.value var)
+          ~f:(fun _key _data -> computation)
+      in
+      let handle =
+        Handle.create
+          (module struct
+            type t = (int * (int -> unit Effect.t)) Int.Map.t
+            type incoming = Nothing.t
+
+            let incoming _ = Nothing.unreachable_code
+
+            let view (map : t) =
+              map
+              |> Map.to_alist
+              |> List.map ~f:(fun (i, (s, _)) -> i, s)
+              |> [%sexp_of: (int * int) list]
+              |> Sexp.to_string_hum
+            ;;
+          end)
+          component
+      in
+      Handle.show handle;
+      let result = Handle.result handle in
+      let set_two what =
+        let _, set = Map.find_exn result 2 in
+        Ui_effect.Expert.handle (set what)
+      in
+      set_two 3;
+      Handle.show handle;
+      Bonsai.Var.set var (Int.Map.of_alist_exn [ 1, () ]);
+      Handle.show handle;
+      set_two 4;
+      Handle.show handle;
+      Bonsai.Var.set var (Int.Map.of_alist_exn [ 1, (); 2, () ]);
+      Handle.show handle
+    ;;
+
+    let%expect_test "dynamic action inactive-delivery" =
+      test_delivery_to_inactive_component
+        (Bonsai.state_machine1
+           [%here]
+           (module Int)
+           (module Int)
+           ~default_model:0
+           ~apply_action:(fun ~inject:_ ~schedule_event:_ () _model new_model ->
+             new_model)
+           (Value.return ()));
+      [%expect
+        {|
+        Leaf
+        ((1 0) (2 0))
+        ((1 0) (2 3))
+        ((1 0))
+        ("an action inside of Bonsai.assoc as been dropped because the computation is no longer active"
+         (key 2) (action 4))
+        ((1 0))
+        ((1 0) (2 3)) |}]
+    ;;
+
+    let%expect_test "static action inactive-delivery" =
+      test_delivery_to_inactive_component
+        (Bonsai.state [%here] (module Int) ~default_model:0);
+      [%expect
+        {|
+        Leaf0
+        ((1 0) (2 0))
+        ((1 0) (2 3))
+        ((1 0))
+        ((1 0))
+        ((1 0) (2 4)) |}]
+    ;;
+
+    let%expect_test "static inside of a lazy" =
+      test_delivery_to_inactive_component
+        (Bonsai.lazy_ (lazy (Bonsai.state [%here] (module Int) ~default_model:0)));
+      [%expect
+        {|
+        Lazy
+        ((1 0) (2 0))
+        ((1 0) (2 3))
+        ((1 0))
+        ((1 0))
+        ((1 0) (2 4)) |}]
+    ;;
+
+    let%expect_test "static inside of a wrap" =
+      test_delivery_to_inactive_component
+        (Bonsai.wrap
+           (module Unit)
+           ~default_model:()
+           ~apply_action:(fun ~inject:_ ~schedule_event:_ _ () () -> ())
+           ~f:(fun _model _inject -> Bonsai.state [%here] (module Int) ~default_model:0));
+      [%expect
+        {|
+        (Wrap Leaf0)
+        ((1 0) (2 0))
+        ((1 0) (2 3))
+        ((1 0))
+        ((1 0))
+        ((1 0) (2 4)) |}]
+    ;;
+
+    let%expect_test "static inside of a match%sub" =
+      test_delivery_to_inactive_component
+        (match%sub Value.return () with
+         | () -> Bonsai.state [%here] (module Int) ~default_model:0);
+      [%expect
+        {|
+        (Subst_stateless_from (
+          (from (Return constant))
+          via
+          (into (
+            Subst_stateless_from (
+              (from (Return (map (t named))))
+              via
+              (into Leaf0)
+              (here None))))
+          (here None)))
+        ((1 0) (2 0))
+        ((1 0) (2 3))
+        ((1 0))
+        ((1 0))
+        ((1 0) (2 4)) |}]
+    ;;
+
+    let%expect_test "static inside of a with_model_resetter" =
+      test_delivery_to_inactive_component
+        (let%sub r, _reset =
+           Bonsai.with_model_resetter (Bonsai.state [%here] (module Int) ~default_model:0)
+         in
+         return r);
+      [%expect
+        {|
+        (Subst_stateless_into (
+          (from (With_model_resetter Leaf0))
+          via
+          (into (
+            Subst_stateless_from (
+              (from (Return (map (t named))))
+              via
+              (into (
+                Subst_stateless_from (
+                  (from (Return (map (t named))))
+                  via
+                  (into (Return named))
+                  (here None))))
+              (here None))))
+          (here None)))
+        ((1 0) (2 0))
+        ((1 0) (2 3))
+        ((1 0))
+        ((1 0))
+        ((1 0) (2 4)) |}]
+    ;;
+
+    let%expect_test "resetting while inactive" =
+      let which_branch = Bonsai.Var.create true in
+      let component =
+        if%sub Bonsai.Var.value which_branch
+        then
+          Bonsai.with_model_resetter (Bonsai.state [%here] (module Int) ~default_model:0)
+        else Bonsai.const ((-1, fun _ -> Effect.Ignore), Effect.Ignore)
+      in
+      let handle =
+        Handle.create
+          (module struct
+            type t = (int * (int -> unit Effect.t)) * unit Effect.t
+            type incoming = Nothing.t
+
+            let incoming _ = Nothing.unreachable_code
+            let view ((i, _), _) = Int.to_string i
+          end)
+          component
+      in
+      Handle.show handle;
+      let (_, set_value), reset = Handle.result handle in
+      let set_value i = Ui_effect.Expert.handle (set_value i) in
+      let reset () = Ui_effect.Expert.handle reset in
+      set_value 3;
+      Handle.show handle;
+      Bonsai.Var.set which_branch false;
+      Handle.show handle;
+      set_value 4;
+      Handle.show handle;
+      Bonsai.Var.set which_branch true;
+      Handle.show handle;
+      [%expect {|
+        0
+        3
+        -1
+        -1
+        4 |}];
+      Bonsai.Var.set which_branch false;
+      Handle.show handle;
+      [%expect {| -1 |}];
+      reset ();
+      Bonsai.Var.set which_branch true;
+      Handle.show handle;
+      [%expect {| 0 |}]
+    ;;
+  end)
 ;;
 
 let%test_module "testing Bonsai internals" =
@@ -603,22 +839,19 @@ let%test_module "testing Bonsai internals" =
       in
       Handle.show_model handle;
       [%expect {|
-        (()
-         ()) |}];
+        () |}];
       Bonsai.Var.set var (Int.Map.of_alist_exn [ 1, (); 2, () ]);
       Handle.show_model handle;
       [%expect {|
-        (()
-         ()) |}];
+        () |}];
       (* use the setter to re-establish the default *)
       Handle.do_actions handle [ 1, Set "test" ];
       Handle.show_model handle;
-      [%expect {| (((1 (test ()))) ()) |}];
+      [%expect {| ((1 test)) |}];
       Handle.do_actions handle [ 1, Set "hello" ];
       Handle.show_model handle;
       [%expect {|
-        (()
-         ()) |}]
+        () |}]
     ;;
   end)
 ;;
@@ -645,8 +878,8 @@ let%expect_test "multiple maps respect cutoff" =
 ;;
 
 let%expect_test "let syntax is collapsed upon eval" =
-  let value =
-    let%map () = Value.return ()
+  let computation =
+    let%arr () = Value.return ()
     and () = Value.return ()
     and () = Value.return ()
     and () = Value.return ()
@@ -657,7 +890,22 @@ let%expect_test "let syntax is collapsed upon eval" =
   in
   let packed =
     let open Bonsai.Private in
-    value |> reveal_value |> Value.eval Environment.empty |> Ui_incr.pack
+    let (T { t = computation; model; apply_static = _; static_action; dynamic_action }) =
+      reveal_computation computation
+    in
+    let T = Type_equal.Id.same_witness_exn Meta.Action.nothing static_action in
+    let T = Type_equal.Id.same_witness_exn Meta.Action.nothing dynamic_action in
+    let snapshot =
+      eval
+        ~environment:Environment.empty
+        ~path:Path.empty
+        ~clock:Ui_incr.clock
+        ~inject_dynamic:Nothing.unreachable_code
+        ~inject_static:Nothing.unreachable_code
+        ~model:(Ui_incr.return model.default)
+        computation
+    in
+    Snapshot.result snapshot |> Ui_incr.pack
   in
   let filename = Stdlib.Filename.temp_file "incr" "out" in
   Ui_incr.Packed.save_dot_to_file filename [ packed ];
@@ -1324,6 +1572,51 @@ let%expect_test "freeze" =
   [%expect {| hello |}]
 ;;
 
+let%expect_test "effect-lazy" =
+  let message = Bonsai.Var.create "hello" in
+  let on = Bonsai.Var.create true in
+  let component =
+    let%sub on_deactivate =
+      let%arr message = Bonsai.Var.value message in
+      let a =
+        print_endline "computing a...";
+        Effect.print_s [%sexp "a", (message : string)]
+      in
+      let b =
+        Effect.lazy_
+          (lazy
+            (print_endline "computing b...";
+             Effect.print_s [%sexp "b", (message : string)]))
+      in
+      Effect.Many [ a; b ]
+    in
+    if%sub Bonsai.Var.value on
+    then Bonsai.Edge.lifecycle ~on_deactivate ()
+    else Bonsai.const ()
+  in
+  let handle = Handle.create (Result_spec.sexp (module Unit)) component in
+  Handle.show handle;
+  Bonsai.Var.set message "there";
+  Handle.show handle;
+  Bonsai.Var.set message "world";
+  Handle.show handle;
+  [%expect
+    {|
+    computing a...
+    ()
+    computing a...
+    ()
+    computing a...
+    () |}];
+  Bonsai.Var.set on false;
+  Handle.show handle;
+  [%expect {|
+    ()
+    (a world)
+    computing b...
+    (b world) |}]
+;;
+
 let%expect_test "id_gen" =
   let module Id = Bonsai_extra.Id_gen (Int) () in
   let component =
@@ -1523,7 +1816,7 @@ let%expect_test "multi-thunk" =
   [%expect {|
     pulling id!
     pulling id!
-    "0 1" |}]
+    "1 0" |}]
 ;;
 
 let%expect_test "scope_model" =
@@ -1589,94 +1882,96 @@ let%expect_test "thunk-storage" =
   [%expect {| 0 |}]
 ;;
 
-module _ = struct
-  let prepare_test ~store ~interactive =
-    let store = Bonsai.Var.create store in
-    let interactive = Bonsai.Var.create interactive in
-    let store_set =
-      (fun value ->
-         printf "store set to \"%s\"" value;
-         Bonsai.Var.set store value)
-      |> Ui_effect.of_sync_fun
-    in
-    let interactive_set =
-      (fun value ->
-         printf "interactive set to \"%s\"" value;
-         Bonsai.Var.set interactive value)
-      |> Ui_effect.of_sync_fun
-    in
-    let component =
-      let%sub () =
-        Bonsai_extra.mirror
-          [%here]
-          (module String)
-          ~store_set:(Bonsai.Value.return store_set)
-          ~interactive_set:(Bonsai.Value.return interactive_set)
-          ~store_value:(Bonsai.Var.value store)
-          ~interactive_value:(Bonsai.Var.value interactive)
+let%test_module "mirror" =
+  (module struct
+    let prepare_test ~store ~interactive =
+      let store = Bonsai.Var.create store in
+      let interactive = Bonsai.Var.create interactive in
+      let store_set =
+        (fun value ->
+           printf "store set to \"%s\"" value;
+           Bonsai.Var.set store value)
+        |> Ui_effect.of_sync_fun
       in
-      return
-        (let%map store = Bonsai.Var.value store
-         and interactive = Bonsai.Var.value interactive in
-         sprintf "store: %s, interactive: %s" store interactive)
-    in
-    let handle = Handle.create (Result_spec.string (module String)) component in
-    handle, store, interactive
-  ;;
+      let interactive_set =
+        (fun value ->
+           printf "interactive set to \"%s\"" value;
+           Bonsai.Var.set interactive value)
+        |> Ui_effect.of_sync_fun
+      in
+      let component =
+        let%sub () =
+          Bonsai_extra.mirror
+            [%here]
+            (module String)
+            ~store_set:(Bonsai.Value.return store_set)
+            ~interactive_set:(Bonsai.Value.return interactive_set)
+            ~store_value:(Bonsai.Var.value store)
+            ~interactive_value:(Bonsai.Var.value interactive)
+        in
+        return
+          (let%map store = Bonsai.Var.value store
+           and interactive = Bonsai.Var.value interactive in
+           sprintf "store: %s, interactive: %s" store interactive)
+      in
+      let handle = Handle.create (Result_spec.string (module String)) component in
+      handle, store, interactive
+    ;;
 
-  let%expect_test "starts stable" =
-    let handle, _store, _interactive = prepare_test ~store:"a" ~interactive:"a" in
-    Handle.show handle;
-    [%expect {| store: a, interactive: a |}]
-  ;;
+    let%expect_test "starts stable" =
+      let handle, _store, _interactive = prepare_test ~store:"a" ~interactive:"a" in
+      Handle.show handle;
+      [%expect {| store: a, interactive: a |}]
+    ;;
 
-  let%expect_test "starts unstable" =
-    let handle, _store, _interactive = prepare_test ~store:"a" ~interactive:"b" in
-    Handle.show handle;
-    [%expect {|
+    let%expect_test "starts unstable" =
+      let handle, _store, _interactive = prepare_test ~store:"a" ~interactive:"b" in
+      Handle.show handle;
+      [%expect {|
     store: a, interactive: b
     interactive set to "a" |}];
-    Handle.show handle;
-    [%expect {| store: a, interactive: a |}]
-  ;;
+      Handle.show handle;
+      [%expect {| store: a, interactive: a |}]
+    ;;
 
-  let%expect_test "starts stable and then interactive changes" =
-    let handle, _store, interactive = prepare_test ~store:"a" ~interactive:"a" in
-    Handle.show handle;
-    [%expect {| store: a, interactive: a |}];
-    Bonsai.Var.set interactive "b";
-    Handle.show handle;
-    [%expect {|
+    let%expect_test "starts stable and then interactive changes" =
+      let handle, _store, interactive = prepare_test ~store:"a" ~interactive:"a" in
+      Handle.show handle;
+      [%expect {| store: a, interactive: a |}];
+      Bonsai.Var.set interactive "b";
+      Handle.show handle;
+      [%expect {|
     store: a, interactive: b
     store set to "b" |}];
-    Handle.show handle;
-    [%expect {| store: b, interactive: b |}]
-  ;;
+      Handle.show handle;
+      [%expect {| store: b, interactive: b |}]
+    ;;
 
-  let%expect_test "starts stable and then store changes" =
-    let handle, store, _interactive = prepare_test ~store:"a" ~interactive:"a" in
-    Handle.show handle;
-    [%expect {| store: a, interactive: a |}];
-    Bonsai.Var.set store "b";
-    Handle.show handle;
-    [%expect {|
+    let%expect_test "starts stable and then store changes" =
+      let handle, store, _interactive = prepare_test ~store:"a" ~interactive:"a" in
+      Handle.show handle;
+      [%expect {| store: a, interactive: a |}];
+      Bonsai.Var.set store "b";
+      Handle.show handle;
+      [%expect {|
     store: b, interactive: a
     interactive set to "b" |}];
-    Handle.show handle;
-    [%expect {| store: b, interactive: b |}]
-  ;;
+      Handle.show handle;
+      [%expect {| store: b, interactive: b |}]
+    ;;
 
-  let%expect_test "starts stable and then both change at the same time" =
-    let handle, store, interactive = prepare_test ~store:"a" ~interactive:"a" in
-    Handle.show handle;
-    [%expect {| store: a, interactive: a |}];
-    Bonsai.Var.set store "b";
-    Bonsai.Var.set interactive "c";
-    Handle.show handle;
-    [%expect {|
+    let%expect_test "starts stable and then both change at the same time" =
+      let handle, store, interactive = prepare_test ~store:"a" ~interactive:"a" in
+      Handle.show handle;
+      [%expect {| store: a, interactive: a |}];
+      Bonsai.Var.set store "b";
+      Bonsai.Var.set interactive "c";
+      Handle.show handle;
+      [%expect {|
     store: b, interactive: c
     store set to "c" |}];
-    Handle.show handle;
-    [%expect {| store: c, interactive: c |}]
-  ;;
-end
+      Handle.show handle;
+      [%expect {| store: c, interactive: c |}]
+    ;;
+  end)
+;;

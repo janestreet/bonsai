@@ -11,31 +11,21 @@ let string_duplicator input_string =
       ~default_model:1
       ~apply_action:(fun ~inject:_ ~schedule_event:_ model () -> model + 1)
   in
-  return
-  @@ let%map num_duplicated, inject_duplicate = duplication_count_state
+  let%arr num_duplicated, inject_duplicate = duplication_count_state
   and input_string = input_string in
   let repeated_string =
     List.init num_duplicated ~f:(Fn.const input_string) |> String.concat ~sep:" "
   in
-  (* [inject] is used to produce an [Event.t] which is handled by Bonsai,
-     and the action comes back in to be processed by [apply_action]. *)
+  (* [inject] is used to produce an [Event.t] which is handled by Bonsai, and
+     the action comes back in to be processed by [apply_action]. *)
   let on_click = Vdom.Attr.on_click (fun _ -> inject_duplicate ()) in
   let button = Vdom.Node.button ~attr:on_click [ Vdom.Node.text "duplicate" ] in
   Vdom.Node.div [ button; Vdom.Node.text repeated_string ]
 ;;
 
 let string_to_repeat =
-  let open Bonsai.Let_syntax in
-  let%sub state =
-    Bonsai.state_machine0
-      [%here]
-      (module String)
-      (module String)
-      ~default_model:"hello"
-      ~apply_action:(fun ~inject:_ ~schedule_event:_ _ -> Fn.id)
-  in
-  return
-  @@ let%map state, set_state = state in
+  let%sub state = Bonsai.state [%here] (module String) ~default_model:"hello" in
+  let%arr state, set_state = state in
   let view =
     Vdom.Node.textarea
       ~attr:
@@ -49,19 +39,15 @@ let string_to_repeat =
 ;;
 
 let app =
-  let open Bonsai.Let_syntax in
-  (* let%sub can decompose the [(string * Vdom.Node.t) Value.t]
-     into both a [string Value.t] and a [Vdom.Node.t Value.t]. *)
+  (* let%sub can decompose the [(string * Vdom.Node.t) Value.t] into both a
+     [string Value.t] and a [Vdom.Node.t Value.t]. *)
   let%sub string, textbox_view = string_to_repeat in
   let%sub duplicated = string_duplicator string in
-  return
-  @@ let%map textbox_view = textbox_view
+  let%arr textbox_view = textbox_view
   and duplicated = duplicated in
   Vdom.Node.div [ textbox_view; duplicated ]
 ;;
 
-(* Start the app off with the text "hello" and the starting
-   number of repetitions at 1. *)
 let (_ : _ Start.Handle.t) =
   Start.start Start.Result_spec.just_the_view ~bind_to_element_with_id:"app" app
 ;;

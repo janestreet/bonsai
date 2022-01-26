@@ -7,10 +7,11 @@ open Bonsai.Let_syntax
 let fruits = [ "apple"; "orange"; "kiwi"; "dragon fruit" ]
 let items = List.mapi fruits ~f:Tuple2.create |> Int.Map.of_alist_exn
 
-let create ?(items = items) () =
+let create ?expand_direction ?(items = items) () =
   let component =
     Bonsai_web_ui_query_box.create
       (module Int)
+      ?expand_direction:(Option.map expand_direction ~f:Value.return)
       ~f:(fun query ->
         let%arr query = query in
         Map.filter items ~f:(String.is_prefix ~prefix:query) |> Map.map ~f:Node.text)
@@ -463,7 +464,7 @@ let%expect_test "partial-rendering" =
     </div> |}]
 ;;
 
-let%expect_test "tabbing one item visible should exit Top_item mode" =
+let%expect_test "tabbing one item visible should exit First_item mode" =
   let handle = create () in
   input_text handle "kiwi";
   Handle.show handle;
@@ -496,7 +497,7 @@ let%expect_test "tabbing one item visible should exit Top_item mode" =
     </div> |}]
 ;;
 
-let%expect_test "shift-tabbing one item visible should exit Top_item mode" =
+let%expect_test "shift-tabbing one item visible should exit First_item mode" =
   let handle = create () in
   input_text handle "kiwi";
   Handle.show handle;
@@ -526,5 +527,120 @@ let%expect_test "shift-tabbing one item visible should exit Top_item mode" =
           <div> dragon fruit </div>
         </div>
       </div>
+    </div> |}]
+;;
+
+let%expect_test "[expand_direction=Up] reverses list order and keybindings" =
+  let handle = create ~expand_direction:Up () in
+  focus handle;
+  Handle.show handle;
+  [%expect
+    {|
+    <div>
+      <div>
+        <div>
+          <div> dragon fruit </div>
+          <div> kiwi </div>
+          <div> orange </div>
+          <div class="selected-item"> apple </div>
+        </div>
+      </div>
+      <input> </input>
+    </div> |}];
+  keydown handle Tab;
+  Handle.show handle;
+  [%expect
+    {|
+    ("default prevented" (key Tab))
+    <div>
+      <div>
+        <div>
+          <div class="selected-item"> dragon fruit </div>
+          <div> kiwi </div>
+          <div> orange </div>
+          <div> apple </div>
+        </div>
+      </div>
+      <input> </input>
+    </div> |}];
+  keydown handle Tab;
+  Handle.show handle;
+  [%expect
+    {|
+    ("default prevented" (key Tab))
+    <div>
+      <div>
+        <div>
+          <div> dragon fruit </div>
+          <div class="selected-item"> kiwi </div>
+          <div> orange </div>
+          <div> apple </div>
+        </div>
+      </div>
+      <input> </input>
+    </div> |}];
+  keydown handle ArrowDown;
+  Handle.show handle;
+  [%expect
+    {|
+    ("default prevented" (key ArrowDown))
+    <div>
+      <div>
+        <div>
+          <div> dragon fruit </div>
+          <div> kiwi </div>
+          <div class="selected-item"> orange </div>
+          <div> apple </div>
+        </div>
+      </div>
+      <input> </input>
+    </div> |}];
+  keydown handle ~shift_key_down:true Tab;
+  Handle.show handle;
+  [%expect
+    {|
+    ("default prevented" (key Tab))
+    <div>
+      <div>
+        <div>
+          <div> dragon fruit </div>
+          <div class="selected-item"> kiwi </div>
+          <div> orange </div>
+          <div> apple </div>
+        </div>
+      </div>
+      <input> </input>
+    </div> |}];
+  keydown handle ArrowUp;
+  Handle.show handle;
+  [%expect
+    {|
+    ("default prevented" (key ArrowUp))
+    <div>
+      <div>
+        <div>
+          <div class="selected-item"> dragon fruit </div>
+          <div> kiwi </div>
+          <div> orange </div>
+          <div> apple </div>
+        </div>
+      </div>
+      <input> </input>
+    </div> |}];
+  keydown handle ArrowUp;
+  Handle.show handle;
+  [%expect
+    {|
+    ("default prevented" (key ArrowUp))
+    <div>
+      <div>
+        <div>
+          <div> dragon fruit </div>
+          <div> kiwi </div>
+          <div> orange </div>
+          <div class="selected-item"> apple </div>
+        </div>
+      </div>
+      <input> </input>
     </div> |}]
 ;;
