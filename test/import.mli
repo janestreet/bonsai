@@ -15,3 +15,5 @@ include module type of struct
 end
 
 val dummy_source_code_position : Source_code_position.t
+val opaque_const : 'a -> 'a Bonsai.Computation.t
+val opaque_const_value : 'a -> 'a Bonsai.Value.t

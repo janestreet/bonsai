@@ -104,9 +104,9 @@ let%expect_test "you can customize the display of the tabs" =
 let%expect_test "you can add more attributes to the buttons" =
   let alt text = Vdom.Attr.create "alt" text in
   let additional_attrs ~is_selected:_ = function
-    | A -> [ alt "click on a!" ]
-    | B -> [ alt "click on b!" ]
-    | C -> [ alt "click on c!" ]
+    | A -> alt "click on a!"
+    | B -> alt "click on b!"
+    | C -> alt "click on c!"
   in
   let handle =
     Handle.create
@@ -134,14 +134,11 @@ let%expect_test "you can switch the tab from inside the inner component" =
       (Result_spec.vdom Fn.id)
       (basic_tab_component
          ~f:(fun ~change_tab _ ->
-           return
-           @@ let%map change_tab = change_tab in
+           let%arr change_tab = change_tab in
            Vdom.Node.button
              ~attr:
                (Vdom.Attr.many_without_merge
-                  [ Vdom.Attr.id "my-button"
-                  ; Vdom.Attr.on_click (fun _ -> change_tab C)
-                  ])
+                  [ Vdom.Attr.id "my-button"; Vdom.Attr.on_click (fun _ -> change_tab C) ])
              [ Vdom.Node.text "click to move to tab c!" ])
          ())
   in

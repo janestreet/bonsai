@@ -28,8 +28,7 @@ let bonsai
       ~view_config
       all_items
   in
-  return
-  @@ let%map result = result in
+  let%arr result = result in
   let display =
     sprintf !"Selected items: %{sexp:String.Set.t}\n" result.selected_items
     ^

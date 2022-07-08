@@ -31,64 +31,117 @@ module Handle = struct
     Node_helpers.select_first_exn node ~selector
   ;;
 
-  let click_on ?shift_key_down ?alt_key_down ?ctrl_key_down handle ~get_vdom ~selector =
+  let click_on
+        ?extra_event_fields
+        ?shift_key_down
+        ?alt_key_down
+        ?ctrl_key_down
+        handle
+        ~get_vdom
+        ~selector
+    =
     let element = get_element handle ~get_vdom ~selector in
     Node_helpers.User_actions.click_on
       element
+      ?extra_event_fields
       ?shift_key_down
       ?alt_key_down
       ?ctrl_key_down
   ;;
 
-  let set_checkbox handle ~get_vdom ~selector ~checked =
+  let set_checkbox
+        ?extra_event_fields
+        ?shift_key_down
+        ?alt_key_down
+        ?ctrl_key_down
+        handle
+        ~get_vdom
+        ~selector
+        ~checked
+    =
     let element = get_element handle ~get_vdom ~selector in
-    Node_helpers.User_actions.set_checkbox element ~checked
+    Node_helpers.User_actions.set_checkbox
+      element
+      ~checked
+      ?extra_event_fields
+      ?shift_key_down
+      ?alt_key_down
+      ?ctrl_key_down
   ;;
 
-  let submit_form handle ~get_vdom ~selector =
+  let submit_form ?extra_event_fields handle ~get_vdom ~selector =
     let element = get_element handle ~get_vdom ~selector in
-    Node_helpers.User_actions.submit_form element
+    Node_helpers.User_actions.submit_form element ?extra_event_fields
   ;;
 
-  let focus handle ~get_vdom ~selector =
+  let focus ?extra_event_fields handle ~get_vdom ~selector =
     let element = get_element handle ~get_vdom ~selector in
-    Node_helpers.User_actions.focus element
+    Node_helpers.User_actions.focus element ?extra_event_fields
   ;;
 
-  let change handle ~get_vdom ~selector ~value =
+  let change ?extra_event_fields handle ~get_vdom ~selector ~value =
     let element = get_element handle ~get_vdom ~selector in
-    Node_helpers.User_actions.change element ~value
+    Node_helpers.User_actions.change element ~value ?extra_event_fields
   ;;
 
-  let blur handle ~get_vdom ~selector =
+  let blur ?extra_event_fields ?related_target handle ~get_vdom ~selector =
     let element = get_element handle ~get_vdom ~selector in
-    Node_helpers.User_actions.blur element
+    let related_target =
+      match related_target with
+      | Some selector -> Some (get_element handle ~get_vdom ~selector)
+      | None -> None
+    in
+    Node_helpers.User_actions.blur ?related_target element ?extra_event_fields
   ;;
 
-  let mousemove handle ~get_vdom ~selector =
+  let mousemove ?extra_event_fields handle ~get_vdom ~selector =
     let element = get_element handle ~get_vdom ~selector in
-    Node_helpers.User_actions.mousemove element
+    Node_helpers.User_actions.mousemove element ?extra_event_fields
   ;;
 
-  let input_text handle ~get_vdom ~selector ~text =
+  let mouseenter ?extra_event_fields handle ~get_vdom ~selector =
     let element = get_element handle ~get_vdom ~selector in
-    Node_helpers.User_actions.input_text element ~text
+    Node_helpers.User_actions.mouseenter element ?extra_event_fields
   ;;
 
-  let keydown ?shift_key_down ?alt_key_down ?ctrl_key_down handle ~get_vdom ~selector ~key
+  let wheel ?extra_event_fields handle ~get_vdom ~selector ~delta_y =
+    let element = get_element handle ~get_vdom ~selector in
+    Node_helpers.User_actions.wheel element ~delta_y ?extra_event_fields
+  ;;
+
+  let input_text ?extra_event_fields handle ~get_vdom ~selector ~text =
+    let element = get_element handle ~get_vdom ~selector in
+    Node_helpers.User_actions.input_text element ~text ?extra_event_fields
+  ;;
+
+  let keydown
+        ?extra_event_fields
+        ?shift_key_down
+        ?alt_key_down
+        ?ctrl_key_down
+        handle
+        ~get_vdom
+        ~selector
+        ~key
     =
     let element = get_element handle ~get_vdom ~selector in
     Node_helpers.User_actions.keydown
       ?shift_key_down
       ?alt_key_down
       ?ctrl_key_down
+      ?extra_event_fields
       element
       ~key
   ;;
 
   let trigger_hook handle ~get_vdom ~selector ~name type_id arg =
     get_element handle ~get_vdom ~selector
-    |> Node_helpers.trigger_hook ~type_id ~name ~arg
+    |> Node_helpers.trigger_hook ~type_id ~name ~arg ~f:Fn.id
+  ;;
+
+  let trigger_hook_via handle ~get_vdom ~selector ~name type_id ~f arg =
+    get_element handle ~get_vdom ~selector
+    |> Node_helpers.trigger_hook ~type_id ~name ~arg ~f
   ;;
 
   let get_hook_value handle ~get_vdom ~selector ~name type_id =

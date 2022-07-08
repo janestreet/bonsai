@@ -17,15 +17,29 @@ let (destroy : t -> unit) =
   fun (x6 : t) -> ignore (Ojs.call (t_to_js x6) "destroy" [||])
 let (resize : t -> unit) =
   fun (x7 : t) -> ignore (Ojs.call (t_to_js x7) "resize" [||])
+let (resize_explicit : t -> width:int -> height:int -> unit) =
+  fun (x10 : t) ->
+    fun ~width:(x8 : int) ->
+      fun ~height:(x9 : int) ->
+        ignore
+          (Ojs.call (t_to_js x10) "resize"
+             [|(Ojs.int_to_js x8);(Ojs.int_to_js x9)|])
 let (updateOptions : t -> Update_options.t -> unit) =
-  fun (x9 : t) ->
-    fun (x8 : Update_options.t) ->
+  fun (x12 : t) ->
+    fun (x11 : Update_options.t) ->
       ignore
-        (Ojs.call (t_to_js x9) "updateOptions"
-           [|(Update_options.t_to_js x8)|])
+        (Ojs.call (t_to_js x12) "updateOptions"
+           [|(Update_options.t_to_js x11)|])
 let (getArea : t -> Area.t) =
-  fun (x10 : t) -> Area.t_of_js (Ojs.call (t_to_js x10) "getArea" [||])
+  fun (x13 : t) -> Area.t_of_js (Ojs.call (t_to_js x13) "getArea" [||])
 let (isZoomed : t -> bool) =
-  fun (x11 : t) -> Ojs.bool_of_js (Ojs.call (t_to_js x11) "isZoomed" [||])
+  fun (x14 : t) -> Ojs.bool_of_js (Ojs.call (t_to_js x14) "isZoomed" [||])
 let (resetZoom : t -> unit) =
-  fun (x12 : t) -> ignore (Ojs.call (t_to_js x12) "resetZoom" [||])
+  fun (x15 : t) -> ignore (Ojs.call (t_to_js x15) "resetZoom" [||])
+let toDomCoords ?(axis= `X)  ~x:(x : float)  ~y:(y : float)  (t : t) =
+  Ojs.array_of_js Ojs.float_of_js
+    (Ojs.call (t_to_js t) "toDomCoords"
+       [|(Ojs.float_to_js x);(Ojs.float_to_js y);(Ojs.int_to_js
+                                                    (match axis with
+                                                     | `X -> 0
+                                                     | `Y -> 1))|])

@@ -1,5 +1,6 @@
 open! Core
 open! Bonsai_web
+open Incr_map_collate
 
 module type S = sig
   type t
@@ -11,8 +12,8 @@ module type S = sig
   val instantiate_cells
     :  t
     -> (key, 'cmp) Bonsai.comparator
-    -> (key, Int63.t * data, 'cmp) Map.t Value.t
-    -> (key, Int63.t * Vdom.Node.t list, 'cmp) Map.t Computation.t
+    -> (key * data) Map_list.t Value.t
+    -> (key * Vdom.Node.t list) Map_list.t Computation.t
 end
 
 module type S_with_sorter = sig
@@ -29,8 +30,8 @@ module type S_with_sorter = sig
   val instantiate_cells
     :  t
     -> (key, 'cmp) Bonsai.comparator
-    -> (key, Int63.t * data, 'cmp) Map.t Value.t
-    -> (key, Int63.t * Vdom.Node.t list, 'cmp) Map.t Computation.t
+    -> (key * data) Map_list.t Value.t
+    -> (key * Vdom.Node.t list) Map_list.t Computation.t
 end
 
 type ('key, 'data) t =

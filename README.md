@@ -10,8 +10,8 @@ walkthrough of a couple simple example apps.
 Examples of using Bonsai in a web browser can be found in the `examples`
 directory.
 
-## Docs 
+## Docs
 
 Documentation can be found in the [docs](./docs) directory, and API documentation
-can be found in [src/proc.mli](./src/proc.mli).
+can be found in [src/bonsai.mli](./src/bonsai.mli).
 

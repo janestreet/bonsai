@@ -82,17 +82,18 @@ let rec value_to_function
   fun value key_id data_id ->
   let open Option_or_miss in
   match value.value with
-  | Constant (r, _) -> Some (fun _key _data -> r)
+  | Constant r -> Some (fun _key _data -> r)
+  | Lazy x -> Some (fun _ _ -> force x)
   | Incr _ -> None
-  | Named name ->
+  | Named ->
     let same_name = Type_equal.Id.same_witness in
-    (match same_name name key_id, same_name name data_id with
+    (match same_name value.id key_id, same_name value.id data_id with
      | Some T, _ -> Some (fun key _data -> key)
      | _, Some T -> Some (fun _key data -> data)
      | None, None ->
        Miss
-         { free = Free_variables.(add_exn empty ~key:name ~data:())
-         ; gen = (fun env _ _ -> Env.find_exn env name)
+         { free = Free_variables.(add_exn empty ~key:value.id ~data:())
+         ; gen = (fun env _ _ -> Env.find_exn env value.id)
          })
   | Cutoff _ -> None
   | Both (a, b) ->
@@ -202,7 +203,7 @@ let rec computation_to_function
       in
       Option_or_miss.squash (Miss { free; gen })
   in
-  match computation with
+  match computation.t with
   | Return value ->
     Option_or_miss.map (value_to_function value key_id data_id) ~f:(fun f _path -> f)
   | Subst { from; via; into; here = _ } -> handle_subst ~from ~via ~into

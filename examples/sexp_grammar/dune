@@ -1,0 +1,7 @@
+(executables (names main) (libraries bonsai_web bonsai_web_ui_auto_generated)
+ (preprocess (pps ppx_jane)))
+
+(rule (targets embedded_files.ml embedded_files.mli)
+ (deps %{bin:ocaml-embed-file}
+  %{workspace_root}/lib/bonsai/examples/sexp_grammar/type_intf.ml)
+ (action (bash "%{deps} -output embedded_files")))

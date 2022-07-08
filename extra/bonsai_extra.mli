@@ -1,21 +1,9 @@
 open! Core
-open! Bonsai
-
-val map_of_set : ('k, 'cmp) Set.t Value.t -> ('k, unit, 'cmp) Map.t Computation.t
-val map_keys : ('k, _, 'cmp) Map.t Value.t -> ('k, 'cmp) Set.t Computation.t
+open Bonsai.For_open
 
 (* A bool-state which starts at [default_model] and flips whenever the
    returned effect is scheduled. *)
-val toggle
-  :  Source_code_position.t
-  -> default_model:bool
-  -> (bool * unit Effect.t) Computation.t
-
-val map_merge
-  :  ('k, 'v1, 'cmp) Map.t Value.t
-  -> ('k, 'v2, 'cmp) Map.t Value.t
-  -> f:(key:'k -> [ `Both of 'v1 * 'v2 | `Left of 'v1 | `Right of 'v2 ] -> 'v option)
-  -> ('k, 'v, 'cmp) Map.t Computation.t
+val toggle : default_model:bool -> (bool * unit Effect.t) Computation.t
 
 (** [with_inject_fixed_point] allows an injection function produced as the
     result of a computation to be used as the input of that same combination.
@@ -49,44 +37,27 @@ val yoink : 'a Value.t -> 'a Effect.t Computation.t
     for that particular user. *)
 val scope_model
   :  ('a, _) Bonsai.comparator
-  -> on:'a Bonsai.Value.t
-  -> 'b Bonsai.Computation.t
-  -> 'b Bonsai.Computation.t
+  -> on:'a Value.t
+  -> 'b Computation.t
+  -> 'b Computation.t
 
 (** [pipe] constructs a pipe of [a] and returns a pair containing an injection
     function that enqueues items and an Effect that dequeues them.  *)
 val pipe
-  :  Source_code_position.t
-  -> (module Bonsai.Model with type t = 'a)
-  -> (('a -> unit Ui_effect.t) * 'a Effect.t) Bonsai.Computation.t
+  :  (module Bonsai.Model with type t = 'a)
+  -> (('a -> unit Effect.t) * 'a Effect.t) Computation.t
 
 (** As its name implies, [exactly_once] runs the event passed in via [Value.t]
     exactly once. *)
-val exactly_once
-  :  Source_code_position.t
-  -> unit Ui_effect.t Value.t
-  -> unit Computation.t
+val exactly_once : unit Effect.t Value.t -> unit Computation.t
 
 (** As its name implies, [exactly_once] runs the event passed in via [Value.t]
     exactly once.  The return value is stored and returned.  [None] is returned
     while the effect is executing. *)
 val exactly_once_with_value
-  :  Source_code_position.t
-  -> (module Bonsai.Model with type t = 'a)
-  -> 'a Ui_effect.t Value.t
+  :  (module Bonsai.Model with type t = 'a)
+  -> 'a Effect.t Value.t
   -> 'a option Computation.t
-
-(** [freeze] takes a Value.t and returns a computation whose output is frozen
-    to be the first value that passed through the input. *)
-val freeze
-  :  Source_code_position.t
-  -> (module Model with type t = 'a)
-  -> 'a Value.t
-  -> 'a Computation.t
-
-(* [thunk] will execute its argument exactly once per instantiation of the
-   computation. *)
-val thunk : (unit -> 'a) -> 'a Computation.t
 
 (** This function is identical to [Bonsai.state_machine0] except that
     the [default_model] is initially unset, but can be computed or defaulted
@@ -96,44 +67,41 @@ val thunk : (unit -> 'a) -> 'a Computation.t
     from underneath the state machine as the default_model value changes.  If
     this is undesirable, you may want to [freeze] the default_model first. *)
 val state_machine0_dynamic_model
-  :  Source_code_position.t
-  -> (module Model with type t = 'model)
-  -> (module Action with type t = 'action)
+  :  (module Bonsai.Model with type t = 'model)
+  -> (module Bonsai.Action with type t = 'action)
   -> model:[< `Computed of ('model option -> 'model) Value.t | `Given of 'model Value.t ]
   -> apply_action:
-       (inject:('action -> unit Ui_effect.t)
-        -> schedule_event:(unit Ui_effect.t -> unit)
+       (inject:('action -> unit Effect.t)
+        -> schedule_event:(unit Effect.t -> unit)
         -> 'model
         -> 'action
         -> 'model)
-  -> ('model * ('action -> unit Ui_effect.t)) Computation.t
+  -> ('model * ('action -> unit Effect.t)) Computation.t
 
 (** Read the docs for [state_machine0_dynamic_model]. This one has
     an extra ['input] value that can be taken into account when the
     [apply_action] is invoked. *)
 val state_machine1_dynamic_model
-  :  Source_code_position.t
-  -> (module Model with type t = 'model)
-  -> (module Action with type t = 'action)
+  :  (module Bonsai.Model with type t = 'model)
+  -> (module Bonsai.Action with type t = 'action)
   -> model:[< `Computed of ('model option -> 'model) Value.t | `Given of 'model Value.t ]
   -> apply_action:
-       (inject:('action -> unit Ui_effect.t)
-        -> schedule_event:(unit Ui_effect.t -> unit)
+       (inject:('action -> unit Effect.t)
+        -> schedule_event:(unit Effect.t -> unit)
         -> 'input
         -> 'model
         -> 'action
         -> 'model)
   -> 'input Value.t
-  -> ('model * ('action -> unit Ui_effect.t)) Computation.t
+  -> ('model * ('action -> unit Effect.t)) Computation.t
 
 
 (** The analog of [Bonsai.state], but with a dynamic model. Read the docs for
     [state_machine0_dynamic_model] *)
 val state_dynamic_model
-  :  Source_code_position.t
-  -> (module Model with type t = 'model)
+  :  (module Bonsai.Model with type t = 'model)
   -> model:[< `Computed of ('model option -> 'model) Value.t | `Given of 'model Value.t ]
-  -> ('model * ('model -> unit Ui_effect.t)) Computation.t
+  -> ('model * ('model -> unit Effect.t)) Computation.t
 
 (** Id_gen builds a component which generates unique identifiers by
     starting at 0 and incrementing by one every time that the effect is called.
@@ -147,7 +115,7 @@ val state_dynamic_model
 module Id_gen (T : Int_intf.S) () : sig
   include Int_intf.S
 
-  val component : Source_code_position.t -> t Bonsai.Effect.t Bonsai.Computation.t
+  val component : t Bonsai.Effect.t Computation.t
 end
 
 (** [mirror] is used to reflect state back and forth between locations.
@@ -168,10 +136,9 @@ end
     [interactive] change at the same time, the tie is broken in favor of
     [interactive], and [store_set] is called. *)
 val mirror
-  :  Source_code_position.t
-  -> (module Bonsai.Model with type t = 'm)
-  -> store_set:('m -> unit Ui_effect.t) Bonsai.Value.t
-  -> store_value:'m Bonsai.Value.t
-  -> interactive_set:('m -> unit Ui_effect.t) Bonsai.Value.t
-  -> interactive_value:'m Bonsai.Value.t
-  -> unit Bonsai.Computation.t
+  :  (module Bonsai.Model with type t = 'm)
+  -> store_set:('m -> unit Effect.t) Value.t
+  -> store_value:'m Value.t
+  -> interactive_set:('m -> unit Effect.t) Value.t
+  -> interactive_value:'m Value.t
+  -> unit Computation.t

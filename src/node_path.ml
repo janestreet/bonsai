@@ -1,3 +1,12 @@
+open Core.Core_stable
+
+module Stable = struct
+  module V1 = struct
+    include String.V1
+  end
+end
+
+open Stable
 open! Core
 open! Import
 
@@ -57,13 +66,20 @@ let%test_module _ =
 let finalize builder = to_string builder
 
 module T : sig
-  type t = string
+  type t = V1.t
+  type comparator_witness = V1.comparator_witness
 
   include Sexpable.S with type t := t
   include Binable.S with type t := t
-  include Comparable.S_binable with type t := t
+
+  include
+    Comparable.S_binable
+    with type t := t
+     and type comparator_witness := comparator_witness
+
   include Stringable.S with type t := t
-end =
-  String
+end = struct
+  include String
+end
 
 include T

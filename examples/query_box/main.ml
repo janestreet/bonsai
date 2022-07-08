@@ -36,32 +36,30 @@ module Example_params = struct
   ;;
 end
 
+let items =
+  [ "apple"
+  ; "apricot"
+  ; "avocado"
+  ; "banana"
+  ; "blackberry"
+  ; "blueberry"
+  ; "breadfruit"
+  ; "cantaloupe"
+  ; "clementine"
+  ; "fig"
+  ; "grapefruit"
+  ; "orange"
+  ; "raspberry"
+  ; "strawberry"
+  ; "tangerine"
+  ; "watermelon"
+  ]
+;;
+
 let component =
-  let fruits =
-    String.Map.of_alist_exn
-      (List.map
-         ~f:(fun x -> x, ())
-         [ "apple"
-         ; "apricot"
-         ; "avocado"
-         ; "banana"
-         ; "blackberry"
-         ; "blueberry"
-         ; "breadfruit"
-         ; "cantaloupe"
-         ; "clementine"
-         ; "fig"
-         ; "grapefruit"
-         ; "orange"
-         ; "raspberry"
-         ; "strawberry"
-         ; "tangerine"
-         ; "watermelon"
-         ])
-  in
+  let fruits = String.Map.of_alist_exn (List.map ~f:(fun x -> x, ()) items) in
   let%sub selected_items, add_item =
     Bonsai.state_machine0
-      [%here]
       (module struct
         type t = string list [@@deriving sexp, equal]
       end)
@@ -74,14 +72,14 @@ let component =
       (module struct
         module Typed_field = Example_params.Typed_field
 
+        let label_for_field = `Inferred
+
         let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t = function
           | Suggestion_list_kind ->
-            Form.Elements.Dropdown.enumerable
-              [%here]
-              (module Query_box.Suggestion_list_kind)
+            Form.Elements.Dropdown.enumerable (module Query_box.Suggestion_list_kind)
           | Expand_direction ->
-            Form.Elements.Dropdown.enumerable [%here] (module Query_box.Expand_direction)
-          | Max_visible_items -> Form.Elements.Number.int [%here] ~default:10 ~step:1 ()
+            Form.Elements.Dropdown.enumerable (module Query_box.Expand_direction)
+          | Max_visible_items -> Form.Elements.Number.int ~default:10 ~step:1 ()
         ;;
       end)
   in
@@ -111,7 +109,7 @@ let component =
   and form = form >>| Form.view_as_vdom in
   Node.div
     [ form
-    ; query_box
+    ; Query_box.view query_box
     ; Node.ul (List.map selected_items ~f:(fun item -> Node.li [ Node.text item ]))
     ]
 ;;

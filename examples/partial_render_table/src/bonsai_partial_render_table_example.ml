@@ -13,6 +13,16 @@ module Time_ns_option = struct
   ;;
 end
 
+module Style =
+  [%css.raw
+    {|
+  .show_position_toggle {
+    position: fixed;
+    top: 0px;
+    z-index: 9000;
+  }
+|}]
+
 module type S = sig
   type t [@@deriving compare]
 
@@ -41,8 +51,7 @@ let column_helper
     ~label:(Value.return (Vdom.Node.text (Fieldslib.Field.name field)))
     ?sort
     ~cell:(fun ~key:_ ~data ->
-      return
-      @@ let%map data = data in
+      let%arr data = data in
       Vdom.Node.text (M.to_string (Field.get field data)))
     ()
 ;;
@@ -73,9 +82,7 @@ let columns ~should_show_position =
 ;;
 
 let component ?filter (data : Row.t String.Map.t Value.t) =
-  let%sub should_show_position, set =
-    Bonsai.state [%here] (module Bool) ~default_model:true
-  in
+  let%sub should_show_position, set = Bonsai.state (module Bool) ~default_model:true in
   let%sub table =
     Table.component
       (module String)
@@ -85,17 +92,12 @@ let component ?filter (data : Row.t String.Map.t Value.t) =
       ~columns:(columns ~should_show_position)
       data
   in
-  return
-  @@ let%map should_show_position = should_show_position
+  let%arr should_show_position = should_show_position
   and set = set
   and { Table.Result.view = table; for_testing = _; focus } = table in
-  let button_text =
-    if should_show_position then "hide position" else "show position"
-  in
+  let button_text = if should_show_position then "hide position" else "show position" in
   let button text action =
-    Vdom.Node.button
-      ~attr:(Vdom.Attr.on_click (fun _ -> action))
-      [ Vdom.Node.text text ]
+    Vdom.Node.button ~attr:(Vdom.Attr.on_click (fun _ -> action)) [ Vdom.Node.text text ]
   in
   Vdom.Node.div
     ~attr:
@@ -110,10 +112,10 @@ let component ?filter (data : Row.t String.Map.t Value.t) =
            | _ -> None
          in
          match binding with
-         | Some b -> Ui_effect.Many [ Vdom.Effect.Prevent_default; b ]
-         | None -> Vdom.Effect.Ignore))
+         | Some b -> Effect.Many [ Effect.Prevent_default; b ]
+         | None -> Effect.Ignore))
     [ Vdom.Node.div
-        ~attr:(Vdom.Attr.style Css_gen.(position ~top:(`Px 0) `Fixed @> z_index 9000))
+        ~attr:(Vdom.Attr.class_ Style.show_position_toggle)
         [ button button_text (set (not should_show_position)) ]
     ; table
     ]

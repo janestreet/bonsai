@@ -28,9 +28,8 @@ module Result = struct
 end
 
 let tab_state (type t) (module M : Bonsai.Model with type t = t) ~initial =
-  let%sub state_result = Bonsai.state [%here] (module M) ~default_model:initial in
-  return
-  @@ let%map current, set = state_result in
+  let%sub state_result = Bonsai.state (module M) ~default_model:initial in
+  let%arr current, set = state_result in
   State.create ~current ~set
 ;;
 
@@ -44,7 +43,7 @@ let tab_ui
       ~f
   =
   let default_additional_button_attributes () =
-    Value.return (fun ~is_selected:_ _ -> [])
+    Value.return (fun ~is_selected:_ _ -> Vdom.Attr.empty)
   in
   let default_decorate sexp_of_t =
     Value.return (fun t -> t |> sexp_of_t |> Sexp.to_string_hum |> Vdom.Node.text)
@@ -61,17 +60,18 @@ let tab_ui
     and additional_button_attributes = additional_button_attributes in
     fun kind ->
       let is_selected = M.equal kind (State.current state) in
-      let selected = if is_selected then [ "selected" ] else [] in
-      let classes = Vdom.Attr.classes (selected @ [ "bonsai_ui_tab" ]) in
-      let attrs =
-        [ Vdom.Attr.on_click (fun _ -> State.set state kind)
-        ; classes
-        ; Vdom.Attr.name (kind |> M.sexp_of_t |> Sexp.to_string_mach)
-        ]
-        @ additional_button_attributes ~is_selected kind
+      let selected_attr =
+        if is_selected then Vdom.Attr.class_ "selected" else Vdom.Attr.empty
       in
-      let attrs = Vdom.Attrs.merge_classes_and_styles attrs in
-      Vdom.Node.button ~attr:(Vdom.Attr.many_without_merge attrs) [ decorate kind ]
+      let attr =
+        Vdom.Attr.(
+          on_click (fun _ -> State.set state kind)
+          @ selected_attr
+          @ class_ "bonsai_ui_tab"
+          @ name (kind |> M.sexp_of_t |> Sexp.to_string_mach)
+          @ additional_button_attributes ~is_selected kind)
+      in
+      Vdom.Node.button ~attr [ decorate kind ]
   in
   let tabs =
     let%map all_tabs = all_tabs
@@ -83,8 +83,7 @@ let tab_ui
     let current = state >>| State.current in
     f ~change_tab current
   in
-  return
-  @@ let%map current = result
+  let%arr current = result
   and tabs = tabs in
   { Result.tabs; current }
 ;;

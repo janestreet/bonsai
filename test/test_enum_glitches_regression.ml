@@ -33,7 +33,6 @@ let%expect_test _ =
   let graph =
     let%sub state_machine =
       Bonsai.state_machine1
-        [%here]
         (module Choice)
         (module Choice)
         ~default_model:Choice.Homepage

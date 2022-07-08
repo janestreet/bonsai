@@ -14,13 +14,11 @@ module Settings = struct
   let form : t Form.t Computation.t =
     let open Form.Dynamic.Record_builder in
     let%sub dismiss_errors_automatically =
-      let%map.Computation input = Form.Elements.Checkbox.bool [%here] ~default:false in
+      let%map.Computation input = Form.Elements.Checkbox.bool ~default:false () in
       Form.label "Dismiss errors automatically" input
     in
     let%sub dismiss_notifications_after =
-      let%map.Computation input =
-        Form.Elements.Textbox.sexpable [%here] (module Time_ns.Span)
-      in
+      let%map.Computation input = Form.Elements.Textbox.sexpable (module Time_ns.Span) in
       Form.label "Dismiss notifications after" input
     in
     let%sub form =
@@ -50,7 +48,6 @@ module Notification_form = struct
   let form ~sequence : t Form.t Computation.t =
     let%sub contents_chooser =
       Form.Elements.Dropdown.enumerable
-        [%here]
         (module struct
           type t =
             [ `Sequence
@@ -60,11 +57,10 @@ module Notification_form = struct
         end)
     in
     let%sub contents =
-      Form.Elements.Textbox.string [%here] ~placeholder:"Notification contents"
+      Form.Elements.Textbox.string ~placeholder:"Notification contents" ()
     in
     let%sub error_chooser =
       Form.Elements.Dropdown.enumerable
-        [%here]
         (module struct
           type t =
             [ `Success
@@ -73,16 +69,14 @@ module Notification_form = struct
           [@@deriving compare, enumerate, equal, sexp]
         end)
     in
-    let%sub error_message = Form.Elements.Textbox.string [%here] in
-    return
-    @@ let%map contents_chooser =
-         contents_chooser >>| Form.label "How to generate notification contents"
+    let%sub error_message = Form.Elements.Textbox.string () in
+    let%arr contents_chooser =
+      contents_chooser >>| Form.label "How to generate notification contents"
     and contents =
       contents
       >>| Form.label "Notification contents"
       >>| Form.validate ~f:(function
-        | "" ->
-          Or_error.error_s [%message "Notification contents cannot be empty!"]
+        | "" -> Or_error.error_s [%message "Notification contents cannot be empty!"]
         | _  -> Ok ())
     and error_chooser = error_chooser >>| Form.label "Level"
     and error_message =
@@ -154,7 +148,7 @@ let value_from_form_with_default ~f ~default form =
 let components =
   let open! Bonsai.Let_syntax in
   let%sub settings_form = Settings.form in
-  let%sub sequence = Bonsai.state [%here] ~default_model:1 (module Int) in
+  let%sub sequence = Bonsai.state ~default_model:1 (module Int) in
   let%sub notification_form = Notification_form.form ~sequence:(sequence >>| fst) in
   let%sub notifications =
     Notifications.create
@@ -168,10 +162,9 @@ let components =
            ~f:Settings.dismiss_errors_automatically
            ~default:false
            settings_form)
-      [%here]
+      ()
   in
-  return
-  @@ let%map notifications = notifications
+  let%arr notifications = notifications
   and notification_form = notification_form >>| Form.group "Add notification"
   and settings_form     = settings_form     >>| Form.group "Settings"
   and sequence, inject_sequence = sequence in
@@ -195,6 +188,7 @@ let components =
           Ui_effect.Many [ ui_effect; notification_ui_effect ])
     ; handle_enter = true
     ; button_text  = Some "Add notification"
+    ; button_attr  = Vdom.Attr.empty
     }
   in
   Vdom.Node.div

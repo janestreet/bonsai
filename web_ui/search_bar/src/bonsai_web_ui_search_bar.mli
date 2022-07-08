@@ -46,7 +46,7 @@ val create
       [item] is considered immediately selected.
 
       *)
-  -> ?extra_textbox_attrs:Vdom.Attr.t list
+  -> ?extra_textbox_attr:Vdom.Attr.t
   -> unit
   -> 'item Input.t Value.t
   -> Vdom.Node.t Computation.t

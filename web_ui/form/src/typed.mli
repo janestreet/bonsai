@@ -8,6 +8,11 @@ module Record : sig
   module type S = sig
     module Typed_field : Typed_fields_lib.S
 
+    (** The label to use for each field of your record. If this value is [`Inferred], each
+        field will be labelled with its name. If this value is [`Computed f], then each
+        field will be labelled with the result of calling [f] on it. *)
+    val label_for_field : [ `Inferred | `Computed of 'a Typed_field.t -> string ]
+
     (** For each of the fields in your record, you need to provide a form
         component which produces values of that type. *)
     val form_for_field : 'a Typed_field.t -> 'a Form.t Computation.t
@@ -22,10 +27,35 @@ module Variant : sig
          sum type. *)
     module Typed_variant : Typed_variants_lib.S
 
+    (** The label to use for each variant in your sum type in the dropdown. If this value
+        is [`Inferred], the name of the variant constructor will be used. If this value is
+        [`Computed f], then the dropdown labels will be the result of calling [f] on each
+        of the variants. *)
+    val label_for_variant : [ `Inferred | `Computed of 'a Typed_variant.t -> string ]
+
     (** For each of the variants in your sum type, you need to provide a form
         component which produces values of that type. *)
     val form_for_variant : 'a Typed_variant.t -> 'a Form.t Computation.t
   end
 
-  val make : (module S with type Typed_variant.derived_on = 'a) -> 'a Form.t Computation.t
+  (** [picker_attr] will be added to the picker for selecting a variant constructor.
+      Default appearance is a dropdown, but it can be changed through [?picker]. *)
+  val make
+    :  ?picker:
+      [ `Dropdown of [ `Init_with_first_item | `Init_with_empty ]
+      | `Radio of [ `Horizontal | `Vertical ]
+      ]
+    -> ?picker_attr:Vdom.Attr.t Value.t
+    -> (module S with type Typed_variant.derived_on = 'a)
+    -> 'a Form.t Computation.t
+
+  (* Like [make], but the dropdown/radio button list will have an extra option that parses
+     to [None] with the other options parsing to [Some (* same result as
+     with [Variant.make] *)]*)
+  val make_optional
+    :  ?picker:[ `Dropdown | `Radio of [ `Horizontal | `Vertical ] ]
+    -> ?picker_attr:Vdom.Attr.t Value.t
+    -> ?empty_label:string
+    -> (module S with type Typed_variant.derived_on = 'a)
+    -> 'a option Form.t Computation.t
 end

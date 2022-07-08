@@ -43,31 +43,38 @@ type t =
   | Group of
       { label : (Node.t option[@sexp.opaque])
       ; tooltip : (Node.t option[@sexp.opaque])
+      ; error : Error_details.t option
       ; view : t
       }
   | Header_group of
       { label : (Node.t option[@sexp.opaque])
       ; tooltip : (Node.t option[@sexp.opaque])
+      ; error : Error_details.t option
       ; header_view : t
       ; view : t
       }
   | Submit_button of
       { text : string
+      ; attr : (Vdom.Attr.t[@sexp.opaque])
       ; (* none implies that the button is disabled *)
         on_submit : (unit Ui_effect.t option[@sexp.opaque])
       }
 [@@deriving sexp_of]
 
-let suggest_error e1 = function
-  | Row row ->
-    let error =
-      match row.error with
-      (* Keep the inner error if one exists *)
-      | Some e2 -> Some e2
-      | None -> Some e1
-    in
-    Row { row with error }
-  | other -> other
+let rec suggest_error error t =
+  match t with
+  | List [] -> List []
+  (* [suggest_error] on a list will traverse the list and attach it to the head *)
+  | List (hd :: tl) -> List (suggest_error error hd :: tl)
+  | Row ({ error = None; _ } as row) -> Row { row with error = Some error }
+  | Group ({ error = None; _ } as group) -> Group { group with error = Some error }
+  | Header_group ({ error = None; _ } as group) ->
+    Header_group { group with error = Some error }
+  (* If it already has an error, keep it *)
+  | Group { error = Some _; _ }
+  | Header_group { error = Some _; _ }
+  | Row { error = Some _; _ }
+  | Empty | Submit_button _ -> t
 ;;
 
 let rec set_label label t =
@@ -96,7 +103,7 @@ let rec set_tooltip tooltip t =
 
 let group_list t =
   match t with
-  | List _ -> Group { view = t; label = None; tooltip = None }
+  | List _ -> Group { view = t; label = None; tooltip = None; error = None }
   | _ -> t
 ;;
 
@@ -117,7 +124,7 @@ let rec suggest_label label t =
   | Submit_button _ -> t
 ;;
 
-let group label view = Group { label = Some label; tooltip = None; view }
+let group label view = Group { label = Some label; tooltip = None; error = None; view }
 let of_vdom ~id form = Row { label = None; tooltip = None; form; id; error = None }
 
 let concat a b =
@@ -257,13 +264,26 @@ module Tooltip = struct
       ~attr:(Attr.class_ Css.container)
       [ Node.label
           ~attr:(Attr.class_ Css.label)
-          [ Node.input ~attr:Attr.(type_ "checkbox" @ class_ Css.checkbox) []
+          [ Node.input ~attr:Attr.(type_ "checkbox" @ class_ Css.checkbox) ()
           ; Node.span ~attr:(Attr.class_ Css.span) [ Node.text "ⓘ" ]
           ; Node.div ~attr:(Attr.class_ Css.text) [ inner ]
           ]
       ]
   ;;
 end
+
+let wrap_tooltip_and_error ~tooltip ~error =
+  match tooltip, error with
+  | None, None -> Node.none
+  | _, _ ->
+    let tooltip = Option.value_map tooltip ~f:Tooltip.view ~default:Node.none in
+    let error = Option.value_map error ~f:view_error_details ~default:(Node.text "") in
+    Node.td
+      [ Node.div
+          ~attr:(Attr.style (Css_gen.flex_container ~direction:`Row ()))
+          [ tooltip; error ]
+      ]
+;;
 
 let rec to_vdom ~depth =
   let depth_td ~extra_attrs =
@@ -272,9 +292,11 @@ let rec to_vdom ~depth =
   in
   function
   | Empty -> []
-  | Group { label; tooltip; view } ->
+  | Group { label; tooltip; view; error } ->
     let rest = to_vdom view ~depth:(depth + 1) in
-    let header_is_inhabited = Option.is_some label || Option.is_some tooltip in
+    let header_is_inhabited =
+      Option.is_some label || Option.is_some tooltip || Option.is_some error
+    in
     if header_is_inhabited
     then (
       let label =
@@ -283,16 +305,15 @@ let rec to_vdom ~depth =
           depth_td
             ~extra_attrs:Attr.(style (Css_gen.font_weight `Bold) @ colspan 2)
             [ label ]
-        | None -> Node.None
+        | None ->
+          Node.td
+            ~attr:Attr.(style (Css_gen.font_weight `Bold) @ colspan 2)
+            [ Node.text "" ]
       in
-      let tooltip =
-        match tooltip with
-        | Some tooltip -> Node.td [ Tooltip.view tooltip ]
-        | None -> Node.None
-      in
-      Node.tr [ label; tooltip ] :: rest)
+      let tooltip_and_error = wrap_tooltip_and_error ~tooltip ~error in
+      Node.tr [ label; tooltip_and_error ] :: rest)
     else rest
-  | Header_group { label; tooltip; view; header_view } ->
+  | Header_group { label; tooltip; view; header_view; error } ->
     let rest = to_vdom view ~depth:(depth + 1) in
     let header_view =
       let colspan = if Option.is_some label then Attr.empty else Attr.colspan 2 in
@@ -302,14 +323,10 @@ let rec to_vdom ~depth =
       match label with
       | Some label ->
         depth_td ~extra_attrs:(Attr.style (Css_gen.font_weight `Bold)) [ label ]
-      | None -> Node.None
+      | None -> Node.text ""
     in
-    let tooltip =
-      match tooltip with
-      | Some tooltip -> Node.td [ Tooltip.view tooltip ]
-      | None -> Node.None
-    in
-    Node.tr [ label; header_view; tooltip ] :: rest
+    let tooltip_and_error = wrap_tooltip_and_error ~tooltip ~error in
+    Node.tr [ label; header_view; tooltip_and_error ] :: rest
   | Submit_button _ as btn ->
     let button = to_vdom_plain btn in
     [ Node.tr [ depth_td ~extra_attrs:Attr.(colspan 2) button ] ]
@@ -328,16 +345,7 @@ let rec to_vdom ~depth =
           [ label ]
       | _ -> Node.text ""
     in
-    let tooltip =
-      match tooltip with
-      | Some tooltip -> Tooltip.view tooltip
-      | None -> Node.text ""
-    in
-    let error =
-      match error with
-      | None -> Node.text ""
-      | Some e -> view_error_details e
-    in
+    let tooltip_and_error = wrap_tooltip_and_error ~tooltip ~error in
     let label_attrs =
       Attr.style
         Css_gen.(
@@ -351,11 +359,7 @@ let rec to_vdom ~depth =
         ~key:id
         [ depth_td ~extra_attrs:label_attrs [ label ]
         ; Node.td [ form ]
-        ; Node.td
-            [ Node.div
-                ~attr:(Attr.style (Css_gen.flex_container ~direction:`Row ()))
-                [ tooltip; error ]
-            ]
+        ; tooltip_and_error
         ]
     ]
   | List l -> List.concat_map l ~f:(to_vdom ~depth)
@@ -363,16 +367,19 @@ let rec to_vdom ~depth =
 (* If the form is just a single row, return the view for it without wrapping *)
 and to_vdom_plain = function
   | Empty -> []
-  | Header_group { label = _; tooltip = _; header_view; view } ->
+  | Header_group { label = _; tooltip = _; header_view; view; error = _ } ->
     to_vdom_plain header_view @ to_vdom_plain view
-  | Group { label = _; tooltip = _; view } -> to_vdom_plain view
+  | Group { label = _; tooltip = _; view; error = _ } -> to_vdom_plain view
   | Row { label = _; tooltip = _; id = _; form; error = _ } -> [ form ]
   | List l -> List.concat_map l ~f:to_vdom_plain
-  | Submit_button { on_submit; text } ->
+  | Submit_button { on_submit; text; attr } ->
     (match on_submit with
      | Some event ->
        let event = Vdom.Effect.(Many [ event; Prevent_default; Stop_propagation ]) in
-       [ Node.button ~attr:(Attr.on_click (fun _ -> event)) [ Vdom.Node.text text ] ]
+       [ Node.button
+           ~attr:(Attr.combine attr (Attr.on_click (fun _ -> event)))
+           [ Vdom.Node.text text ]
+       ]
      | None -> [ Node.button ~attr:Attr.disabled [ Vdom.Node.text text ] ])
 ;;
 
@@ -380,6 +387,7 @@ type submission_options =
   { on_submit : unit Ui_effect.t option
   ; handle_enter : bool
   ; button_text : string option
+  ; button_attr : Vdom.Attr.t
   }
 
 type editable =
@@ -398,8 +406,8 @@ let with_fieldset ~currently_editable view =
 let to_vdom ?on_submit ?(editable = `Yes_always) view =
   let view =
     match on_submit with
-    | Some { on_submit; button_text = Some button_text; handle_enter = _ } ->
-      let button = Submit_button { text = button_text; on_submit } in
+    | Some { on_submit; button_text = Some button_text; button_attr; handle_enter = _ } ->
+      let button = Submit_button { text = button_text; attr = button_attr; on_submit } in
       concat view button
     | _ -> view
   in

@@ -50,7 +50,7 @@ let checkbox_input ?(label = "") ~default () =
   let view =
     Vdom_input_widgets.Checkbox.simple
       ~is_checked:value
-      ~on_toggle:(fun () -> inject (not value))
+      ~on_toggle:(inject (not value))
       ~label
       ()
   in

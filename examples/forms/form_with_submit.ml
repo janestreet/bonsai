@@ -10,9 +10,11 @@ module T = struct
     }
   [@@deriving sexp_of, typed_fields]
 
+  let label_for_field = `Inferred
+
   let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t = function
-    | A -> E.Textbox.int [%here]
-    | B -> E.Textbox.string [%here]
+    | A -> E.Textbox.int ()
+    | B -> E.Textbox.string ()
   ;;
 end
 

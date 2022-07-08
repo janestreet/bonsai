@@ -1,6 +1,5 @@
 open! Core
-open Virtual_dom
-open Bonsai
+open Bonsai_web
 
 (** To use this API, first call [create] to make a "universe" where
     drag-and-drop can happen. It is possible, and sometimes desireable to
@@ -52,6 +51,13 @@ end
     top of [drop_target]s from another universe. *)
 type ('source_id, 'target_id) t
 
+(** Turns a [('s, 'a) t]  into a [('s, 'b) t]. (Changes the type of your drag target. )*)
+val project_target
+  :  ('source, 'target_a) t
+  -> map:('target_a -> 'target_b)
+  -> unmap:('target_b -> 'target_a)
+  -> ('source, 'target_b) t
+
 (** A node with the [source] attribute will set its universe's currently
     dragged value to the input ['source_id]. *)
 val source : ('source_id, 'target_id) t -> id:'source_id -> Vdom.Attr.t
@@ -70,10 +76,9 @@ val model : ('source_id, 'target_id) t -> ('source_id, 'target_id) Model.t
 
 (** Creates a new drag-and-drop universe. *)
 val create
-  :  Source_code_position.t
-  -> source_id:(module Model with type t = 'source_id)
-  -> target_id:(module Model with type t = 'target_id)
-  -> on_drop:('source_id -> 'target_id -> unit Ui_effect.t) Value.t
+  :  source_id:(module Bonsai.Model with type t = 'source_id)
+  -> target_id:(module Bonsai.Model with type t = 'target_id)
+  -> on_drop:('source_id -> 'target_id -> unit Effect.t) Value.t
   -> ('source_id, 'target_id) t Computation.t
 
 (** A node which is follows the mouse when something is being dragged, but is
@@ -97,5 +102,5 @@ module For_testing : sig
     [@@deriving sexp, equal]
   end
 
-  val type_id : (Action.t -> unit Ui_effect.t) Type_equal.Id.t
+  val type_id : (Action.t -> unit Effect.t) Type_equal.Id.t
 end

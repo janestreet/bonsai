@@ -6,6 +6,7 @@ module Node_info : sig
   type t =
     { node_type : string
     ; here : Source_code_position.t option
+    ; id : int
     }
   [@@deriving sexp, bin_io]
 
@@ -55,3 +56,40 @@ val iter_graph_updates_packed
   :  'a Computation.packed
   -> on_update:(t -> unit)
   -> 'a Computation.packed
+
+val pull_source_locations_from_nearest_parent : t -> Node_info.t Node_path.Map.t
+
+module Stable : sig
+  module Node_info : sig
+    module V1 : sig
+      type t =
+        { node_type : string
+        ; here : Source_code_position.Stable.V1.t option
+        }
+      [@@deriving sexp, bin_io]
+    end
+
+    module V2 : sig
+      type t = Node_info.t [@@deriving sexp, bin_io, compare]
+
+      val to_v1 : t -> V1.t
+      val of_v1 : V1.t -> t
+    end
+  end
+
+  module V1 : sig
+    type t =
+      { tree : Node_path.Stable.V1.t Node_path.Stable.V1.Map.t
+      ; dag : Node_path.Stable.V1.t list Node_path.Stable.V1.Map.t
+      ; info : Node_info.V1.t Node_path.Stable.V1.Map.t
+      }
+    [@@deriving sexp, bin_io]
+  end
+
+  module V2 : sig
+    type nonrec t = t [@@deriving sexp, bin_io, compare]
+
+    val to_v1 : t -> V1.t
+    val of_v1 : V1.t -> t
+  end
+end

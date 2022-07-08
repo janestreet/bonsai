@@ -32,9 +32,7 @@ module Extendy_spec = struct
 end
 
 let handle () =
-  let component =
-    Extendy.component [%here] (Bonsai.state [%here] (module String) ~default_model:"")
-  in
+  let component = Extendy.component (Bonsai.state (module String) ~default_model:"") in
   Handle.create (module Extendy_spec) component
 ;;
 

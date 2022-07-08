@@ -24,7 +24,7 @@ let create
     Bonsai_web_ui_search_bar.create
       (module Item)
       ~placeholder:"Pick your favourite number"
-      ~extra_textbox_attrs:[ Vdom.Attr.class_ "my-test-class" ]
+      ~extra_textbox_attr:(Vdom.Attr.class_ "my-test-class")
       ~wrap_search_bar:(fun node -> Vdom.Node.div ~attr:(Vdom.Attr.id "wrapper") [ node ])
       ?max_query_results
       ?autocomplete_item

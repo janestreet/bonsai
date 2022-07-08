@@ -46,7 +46,7 @@ let bulk_size_component =
 ;;
 
 let size_component =
-  let%sub state = Bonsai.state_opt [%here] (module Size) in
+  let%sub state = Bonsai.state_opt (module Size) in
   let%arr size, inject_size = state in
   Vdom.Node.div
     [ Vdom.Node.h3 [ Vdom.Node.text "Resize me!" ]
@@ -95,8 +95,8 @@ let fit =
 ;;
 
 let visibility_component =
-  let%sub pos_x = Bonsai.state [%here] (module Int) ~default_model:0 in
-  let%sub pos_y = Bonsai.state [%here] (module Int) ~default_model:0 in
+  let%sub pos_x = Bonsai.state (module Int) ~default_model:0 in
+  let%sub pos_y = Bonsai.state (module Int) ~default_model:0 in
   let%arr pos_x, inject_pos_x = pos_x
   and pos_y, inject_pos_y = pos_y in
   let pos_to_color pos = float_of_int pos /. 2000. *. 256. |> Float.iround_down_exn in
@@ -148,9 +148,7 @@ let resizer_component =
 ;;
 
 let component =
-  let%sub page, inject_page =
-    Bonsai.state [%here] (module Page) ~default_model:Bulk_size
-  in
+  let%sub page, inject_page = Bonsai.state (module Page) ~default_model:Bulk_size in
   let%sub page_component =
     match%sub page with
     | Bulk_size -> bulk_size_component

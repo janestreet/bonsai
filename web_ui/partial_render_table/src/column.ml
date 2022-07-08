@@ -1,6 +1,7 @@
 open! Core
 open! Bonsai_web
 open! Bonsai.Let_syntax
+open Incr_map_collate
 
 module Dynamic_cells = struct
   module T = struct
@@ -36,35 +37,38 @@ module Dynamic_cells = struct
 
     let rec visible_leaves
       : type k v cmp.
-        (k, Int63.t * v, cmp) Map.t Value.t
-        -> (k, Int63.t * Vdom.Node.t list, cmp) Map.t
+        (k * v) Map_list.t Value.t
+        -> empty:(k * Vdom.Node.t list) Map_list.t
         -> (k, cmp) Bonsai.comparator
         -> (k, v) t
-        -> (k, Int63.t * Vdom.Node.t list, cmp) Map.t Computation.t list
+        -> (k * Vdom.Node.t list) Map_list.t Computation.t list
       =
-      fun map empty comparator -> function
+      fun map ~empty comparator -> function
         | Leaf { cell; visible; _ } ->
           [ (if%sub visible
              then
-               Bonsai.assoc comparator map ~f:(fun key data ->
-                 let%sub i, data = return data in
-                 let%sub r = cell ~key ~data in
-                 return
-                 @@ let%map i = i
-                 and r = r in
-                 i, [ r ])
+               Bonsai.Expert.assoc_on
+                 (module Map_list.Key)
+                 comparator
+                 map
+                 ~get_model_key:(fun _ (k, _) -> k)
+                 ~f:(fun _ data ->
+                   let%sub key, data = return data in
+                   let%sub r = cell ~key ~data in
+                   let%arr key = key
+                   and r = r in
+                   key, [ r ])
              else (
-               let f = Ui_incr.Map.map ~f:(fun (i, _) -> i, [ empty_div ]) in
+               let f = Ui_incr.Map.map ~f:(fun (k, _) -> k, [ empty_div ]) in
                Bonsai.Incr.compute map ~f))
           ]
         | Group { children; _ } | Org_group children ->
-          List.bind children ~f:(visible_leaves map empty comparator)
+          List.bind children ~f:(visible_leaves map ~empty comparator)
     ;;
 
-    let instantiate_cells (type k cmp) t (comparator : (k, cmp) Bonsai.comparator) map =
-      let module M = (val comparator) in
-      let empty = Map.empty (module M) in
-      visible_leaves map empty comparator t
+    let instantiate_cells (type k) t comparator (map : (k * _) Map_list.t Value.t) =
+      let empty = Map.empty (module Map_list.Key) in
+      visible_leaves map ~empty comparator t
       |> Computation.reduce_balanced ~f:(fun a b ->
         Bonsai.Incr.compute (Value.both a b) ~f:(fun a_and_b ->
           let%pattern_bind.Ui_incr a, b = a_and_b in
@@ -143,8 +147,7 @@ module Dynamic_columns = struct
            in that scenario, if the set of visible_leaves changes, we're recomputing the
            whole world anyway, so it doesn't buy us anything vs this bind. *)
         let%bind.Ui_incr visible_leaves = Ui_incr.map t ~f:visible_leaves in
-        Ui_incr.Map.mapi map ~f:(fun ~key ~data:(i, data) ->
-          i, visible_leaves ~key ~data))
+        Ui_incr.Map.map map ~f:(fun (key, data) -> key, visible_leaves ~key ~data))
     ;;
   end
 
@@ -189,7 +192,7 @@ module With_sorter (Tree : T2) (Container : T1) = struct
 
   let rec partition i sorters_acc ~f = function
     | Leaf { t = inside; sort } ->
-      let sorters_acc = Int.Map.add_exn sorters_acc ~key:i ~data:sort in
+      let sorters_acc = Map.add_exn (sorters_acc : _ Int.Map.t) ~key:i ~data:sort in
       let t = f i sort inside in
       let i = i + 1 in
       i, sorters_acc, t
@@ -209,11 +212,10 @@ module With_sorter (Tree : T2) (Container : T1) = struct
 end
 
 let common_header_attributes f i =
-  let open Vdom.Attr in
-  style (Css_gen.white_space `Pre)
-  @ on_click (fun mouse_event ->
-    if Js_of_ocaml.Js.to_bool mouse_event##.shiftKey then f `Add i else f `Replace i)
-  @ style (Css_gen.create ~field:"cursor" ~value:"pointer")
+  Vdom.Attr.(
+    class_ Style.column_header
+    @ on_click (fun mouse_event ->
+      if Js_of_ocaml.Js.to_bool mouse_event##.shiftKey then f `Add i else f `Replace i))
 ;;
 
 module Dynamic_cells_with_sorter = struct
@@ -229,7 +231,7 @@ module Dynamic_cells_with_sorter = struct
     let sort =
       match sort with
       | None -> Value.return None
-      | Some x -> Value.map x ~f:Option.some
+      | Some x -> x >>| Option.some
     in
     T.Leaf { sort; t = Dynamic_cells.column ?initial_width ?visible ~label ~cell () }
   ;;
@@ -316,8 +318,7 @@ module Dynamic_columns_with_sorter = struct
   module W = struct
     let headers_and_sorters t ~change_sort ~sort_order =
       let%sub sorters, tree =
-        return
-        @@ let%map t = t
+        let%arr t = t
         and change_sort = change_sort
         and sort_order = sort_order in
         let sorters, tree =

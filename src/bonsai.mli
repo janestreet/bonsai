@@ -61,7 +61,12 @@ module Value : sig
   include Mapn with type 'a t := 'a t
 
   (** A [Value.t] transformed by [cutoff] will only trigger changes on its dependents when the equality
-      of the contained value has changed. *)
+      of the contained value has changed.
+
+      Immediate nesting of cutoff nodes are combined into a single cutoff node whose equality function is
+      true when any of the composed nodes is true and is false when all of the composed nodes are false.
+      They're "or'ed together".
+  *)
   val cutoff : equal:('a -> 'a -> bool) -> 'a t -> 'a t
 end
 
@@ -156,6 +161,12 @@ module Computation : sig
 end
 
 module Effect = Ui_effect
+
+module For_open : sig
+  module Computation = Computation
+  module Effect = Effect
+  module Value = Value
+end
 
 module Var : sig
   (** A [Var.t] is the primary method for making data obtained outside of Bonsai (maybe via
@@ -266,8 +277,7 @@ val of_module2
 
     (It is very common for [inject] and [schedule_event] to be unused) *)
 val state_machine0
-  :  Source_code_position.t
-  -> (module Model with type t = 'model)
+  :  (module Model with type t = 'model)
   -> (module Action with type t = 'action)
   -> default_model:'model
   -> apply_action:
@@ -280,8 +290,7 @@ val state_machine0
 
 (** Identical to [actor1] but it takes 0 inputs instead of 1. *)
 val actor0
-  :  Source_code_position.t
-  -> (module Model with type t = 'model)
+  :  (module Model with type t = 'model)
   -> (module Action with type t = 'action)
   -> default_model:'model
   -> recv:
@@ -297,8 +306,7 @@ val actor0
     Because the semantics of this function feel like an actor system, we've
     decided to name the function accordingly.  *)
 val actor1
-  :  Source_code_position.t
-  -> (module Model with type t = 'model)
+  :  (module Model with type t = 'model)
   -> (module Action with type t = 'action)
   -> default_model:'model
   -> recv:
@@ -315,24 +323,21 @@ val actor1
     helper-function implements that state-machine, providing access to the
     current state, as well as an inject function that updates the state. *)
 val state
-  :  Source_code_position.t
-  -> (module Model with type t = 'model)
+  :  (module Model with type t = 'model)
   -> default_model:'model
   -> ('model * ('model -> unit Effect.t)) Computation.t
 
 (** Similar to [state], but stores an option of the model instead.
     [default_model] is optional and defaults to [None].  *)
 val state_opt
-  :  Source_code_position.t
-  -> ?default_model:'model
+  :  ?default_model:'model
   -> (module Model with type t = 'model)
   -> ('model option * ('model option -> unit Effect.t)) Computation.t
 
 (** The same as {!state_machine0}, but [apply_action] also takes an input from a
     [Value.t]. *)
 val state_machine1
-  :  Source_code_position.t
-  -> (module Model with type t = 'model)
+  :  (module Model with type t = 'model)
   -> (module Action with type t = 'action)
   -> default_model:'model
   -> apply_action:
@@ -344,6 +349,10 @@ val state_machine1
         -> 'model)
   -> 'input Value.t
   -> ('model * ('action -> unit Effect.t)) Computation.t
+
+(** [freeze] takes a Value.t and returns a computation whose output is frozen
+    to be the first value that passed through the input. *)
+val freeze : (module Model with type t = 'a) -> 'a Value.t -> 'a Computation.t
 
 (** Because all Bonsai computation-returning-functions are eagerly evaluated, attempting
     to use "let rec" to construct a recursive component will recurse infinitely.  One way
@@ -429,9 +438,22 @@ module Clock : sig
   val at : Time_ns.t Value.t -> Before_or_after.t Computation.t
 
   (** An event passed to [every] is scheduled on an interval determined by
-      the time-span argument. *)
+      the time-span argument.
+
+      [when_to_start_next_effect] has the following behavior
+      | `Wait_period_after_previous_effect_starts_blocking -> If the previous effect takes longer than [period], we wait until it finishes before starting the next effect.
+      | `Wait_period_after_previous_effect_finishes_blocking -> The effect will always be executed [period] after the previous effect finishes.
+      | `Every_multiple_of_period_non_blocking -> Executes the effect at a regular interval.
+      | `Every_multiple_of_period_blocking -> Same as `Every_multiple_of_second, but skips a beat if the previous effect is still running.
+  *)
   val every
-    :  Source_code_position.t
+    :  when_to_start_next_effect:
+         [ `Wait_period_after_previous_effect_starts_blocking
+         | `Wait_period_after_previous_effect_finishes_blocking
+         | `Every_multiple_of_period_non_blocking
+         | `Every_multiple_of_period_blocking
+         ]
+    -> ?trigger_on_activate:bool
     -> Time_ns.Span.t
     -> unit Effect.t Value.t
     -> unit Computation.t
@@ -451,8 +473,7 @@ module Edge : sig
       [callback] is also called when the component is initialized, passing in the
       first 'a value that gets witnessed. *)
   val on_change
-    :  Source_code_position.t
-    -> (module Model with type t = 'a)
+    :  (module Model with type t = 'a)
     -> 'a Value.t
     -> callback:('a -> unit Effect.t) Value.t
     -> unit Computation.t
@@ -460,8 +481,7 @@ module Edge : sig
   (** The same as [on_change], but the callback function gets access to the
       previous value that was witnessed. *)
   val on_change'
-    :  Source_code_position.t
-    -> (module Model with type t = 'a)
+    :  (module Model with type t = 'a)
     -> 'a Value.t
     -> callback:('a option -> 'a -> unit Effect.t) Value.t
     -> unit Computation.t
@@ -524,8 +544,7 @@ module Edge : sig
         [Option.None] or a default value ['o] in the time in between the
         computation starting and the first result coming back from the effect. *)
     val effect_on_change
-      :  Source_code_position.t
-      -> (module Model with type t = 'a)
+      :  (module Model with type t = 'a)
       -> (module Model with type t = 'o)
       -> ('o, 'r) Starting.t
       -> 'a Value.t
@@ -681,6 +700,8 @@ module Private : sig
   module Graph_info = Graph_info
   module Instrumentation = Instrumentation
   module Flatten_values = Flatten_values
+  module Skeleton = Skeleton
+  module Transform = Transform
 
   val eval
     :  environment:Environment.t
@@ -693,8 +714,104 @@ module Private : sig
     -> ('model, 'dynamic_action, 'result) Snapshot.t
 end
 
+module Expert : sig
+  val state_machine01
+    :  (module Model with type t = 'model)
+    -> (module Action with type t = 'dynamic_action)
+    -> (module Action with type t = 'static_action)
+    -> default_model:'model
+    -> apply_dynamic:
+         (inject_dynamic:('dynamic_action -> unit Effect.t)
+          -> inject_static:('static_action -> unit Effect.t)
+          -> schedule_event:(unit Effect.t -> unit)
+          -> 'input
+          -> 'model
+          -> 'dynamic_action
+          -> 'model)
+    -> apply_static:
+         (inject_dynamic:('dynamic_action -> unit Effect.t)
+          -> inject_static:('static_action -> unit Effect.t)
+          -> schedule_event:(unit Effect.t -> unit)
+          -> 'model
+          -> 'static_action
+          -> 'model)
+    -> 'input Value.t
+    -> ('model * ('dynamic_action -> unit Effect.t) * ('static_action -> unit Effect.t))
+         Computation.t
+
+  module Computation_status : sig
+    type 'input t =
+      | Active of 'input
+      | Inactive
+  end
+
+  (** Just like [state_machine1] except that the input is an option. The behavior
+      of [race] differs from [state_machine1] only when the component resides in
+      an inactive [match%sub] branch; in such cases, actions sent to [race] are
+      delivered with the input set to [None], but actions sent to
+      [state_machine1] do not get delivered at all.
+
+      The tradeoff is that [race] is potentially slightly slower, since it
+      schedules an extra, reliable action that gets applied if the original,
+      ordinary action fails to be applied (due to the state machine being
+      inactive). *)
+  val race
+    :  (module Model with type t = 'model)
+    -> (module Action with type t = 'action)
+    -> default_model:'model
+    -> apply_action:
+         (inject:('action -> unit Effect.t)
+          -> schedule_event:(unit Effect.t -> unit)
+          -> 'input Computation_status.t
+          -> 'model
+          -> 'action
+          -> 'model)
+    -> 'input Value.t
+    -> ('model * ('action -> unit Effect.t)) Computation.t
+
+  (** [thunk] will execute its argument exactly once per instantiation of the
+      computation. *)
+  val thunk : (unit -> 'a) -> 'a Computation.t
+
+  (** [assoc_on] is similar to [assoc], but allows the model to be keyed differently than
+      the input map. This comes with a few caveats:
+
+      - Inputs whose keys map to the same [model_key] will share the same model.
+      - The result of [get_model_key] is used in a bind, so it is expensive when it
+        changes.
+
+      [assoc] should almost always be used instead. Consider whether you really need the
+      additional power before reaching for this function.
+  *)
+  val assoc_on
+    :  ('io_key, 'io_cmp) comparator
+    -> ('model_key, 'model_cmp) comparator
+    -> ('io_key, 'data, 'io_cmp) Map.t Value.t
+    -> get_model_key:('io_key -> 'data -> 'model_key)
+    -> f:('io_key Value.t -> 'data Value.t -> 'result Computation.t)
+    -> ('io_key, 'result, 'io_cmp) Map.t Computation.t
+end
+
+module Map : sig
+  val of_set : ('k, 'cmp) Set.t Value.t -> ('k, unit, 'cmp) Map.t Computation.t
+  val keys : ('k, _, 'cmp) Map.t Value.t -> ('k, 'cmp) Set.t Computation.t
+
+  val merge
+    :  ('k, 'v1, 'cmp) Map.t Value.t
+    -> ('k, 'v2, 'cmp) Map.t Value.t
+    -> f:(key:'k -> ('v1, 'v2) Map.Merge_element.t -> 'v option)
+    -> ('k, 'v, 'cmp) Map.t Computation.t
+end
+
 module Arrow_deprecated : sig
   include
     Legacy_api_intf.S
     with type ('input, 'result) t = 'input Value.t -> 'result Computation.t
+end
+
+module Stable : sig
+  module Private : sig
+    module Node_path = Node_path.Stable
+    module Graph_info = Graph_info.Stable
+  end
 end

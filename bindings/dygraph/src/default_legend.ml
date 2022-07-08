@@ -51,7 +51,7 @@ module Model = struct
                  ; Vdom.Attr.on_click (fun _ev -> on_toggle ())
                  ; Vdom.Attr.bool_property "checked" is_visible
                  ])
-            []
+            ()
         ; dash
         ; Vdom.Node.span ~attr:label_style [ Vdom.Node.textf "%s: " label ]
         ; value
@@ -230,7 +230,6 @@ let create ~x_label ~per_series_info
   in
   let%sub state =
     Bonsai_extra.state_machine0_dynamic_model
-      [%here]
       (module Model )
       (module Action)
       ~model:(`Computed create_model)

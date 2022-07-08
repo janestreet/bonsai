@@ -29,5 +29,12 @@ module Action : sig
   val nothing : Nothing.t t
   val both : 'a t -> 'b t -> ('a, 'b) Either.t t
   val map : ('k, 'cmp) comparator -> 'a t -> ('k * 'a) t
+
+  val map_for_assoc_on
+    :  ('k, 'cmp) comparator
+    -> ('k2, 'cmp2) comparator
+    -> 'a t
+    -> ('k * 'k2 * 'a) t
+
   val of_module : (module Action with type t = 'a) -> name:string -> 'a t
 end

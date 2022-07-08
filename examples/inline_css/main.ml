@@ -83,9 +83,7 @@ module My_theme =
     margin: 0;
   }
 
-  .container p {
-    font-family: monospace;
-  }
+  .container p { font-family: monospace; }
 |}]
 
 let (_ : _ Start.Handle.t) =

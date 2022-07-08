@@ -44,7 +44,7 @@ let print_graph_info (graph_info : Graph_info.t) =
   let with_line_and_column_string id =
     let id_string = Node_path.to_string id in
     match Map.find graph_info.info id with
-    | Some { node_type; here } ->
+    | Some { node_type; here; id = _ } ->
       (match here with
        | Some { Source_code_position.pos_lnum; pos_cnum; pos_bol; pos_fname } ->
          let pos_lnum =
@@ -97,12 +97,12 @@ let instrument_computation component =
 
 let many_aliases () =
   test_start [%here];
-  let%sub a = Bonsai.const 1 in
+  let%sub a = opaque_const 1 in
   let%sub a = return a in
   let%sub a = return a in
   (* Even with an extra subst in here to break up the chain, the optimization
      still removes all the aliases. *)
-  let%sub _ = Bonsai.const 1 in
+  let%sub _ = opaque_const 1 in
   let%sub a = return a in
   let%sub a = return a in
   let%sub a = return a in
@@ -115,9 +115,9 @@ let%expect_test _ =
     {|
      tree:
        1_1 return -> _1 subst_stateless_from @ 1:2
-       1_2 constant -> 1_1 return
+       1_2 incr -> 1_1 return
        2-1_1 return -> 2_1 subst_stateless_from @ 6:2
-       2-1_2 constant -> 2-1_1 return
+       2-1_2 incr -> 2-1_1 return
        2-2-1-1_1 named -> 2-2-1_2 map
        2-2-1_1 return -> 2-2_1 subst_stateless_from @ 6:2
        2-2-1_2 map -> 2-2-1_1 return
@@ -128,9 +128,9 @@ let%expect_test _ =
        _1 subst_stateless_from @ 1:2 -> _0
      dag:
        1_1 return -> 2-2-2_2 named @ 9:2, _1 subst_stateless_from @ 1:2
-       1_2 constant -> 1_1 return
+       1_2 incr -> 1_1 return
        2-1_1 return -> 2-2-1-1_1 named, 2_1 subst_stateless_from @ 6:2
-       2-1_2 constant -> 2-1_1 return
+       2-1_2 incr -> 2-1_1 return
        2-2-1-1_1 named -> 2-2-1_2 map
        2-2-1_1 return -> 2-2_1 subst_stateless_from @ 6:2
        2-2-1_2 map -> 2-2-1_1 return
@@ -141,13 +141,41 @@ let%expect_test _ =
        _1 subst_stateless_from @ 1:2 -> _0 |}]
 ;;
 
+let many_aliases_constant_folding () =
+  test_start [%here];
+  let%sub a = Bonsai.const 5 in
+  let%sub a = return a in
+  let%sub a = return a in
+  (* Even with an extra subst in here to break up the chain, the optimization
+     still removes all the aliases. *)
+  let%sub _ = Bonsai.const 6 in
+  let%sub a = return a in
+  let%sub a = return a in
+  let%sub a = return a in
+  return a
+;;
+
+let%expect_test _ =
+  let (_ : int Computation.t) =
+    instrument_computation (many_aliases_constant_folding ())
+  in
+  [%expect
+    {|
+     tree:
+       _1 return -> _0
+       _2 constant @ 9:2 -> _1 return
+     dag:
+       _1 return -> _0
+       _2 constant @ 9:2 -> _1 return |}]
+;;
+
 let subst_tree () =
   test_start [%here];
-  let%sub a = Bonsai.const 1 in
-  let%sub b = Bonsai.const 2 in
-  let%sub c = Bonsai.const 3 in
-  let%sub d = Bonsai.const 4 in
-  let%sub e = Bonsai.const 5 in
+  let%sub a = opaque_const 1 in
+  let%sub b = opaque_const 2 in
+  let%sub c = opaque_const 3 in
+  let%sub d = opaque_const 4 in
+  let%sub e = opaque_const 5 in
   let%arr a = a
   and b = b
   and c = c
@@ -162,15 +190,15 @@ let%expect_test _ =
     {|
 tree:
   1_1 return -> _1 subst_stateless_from @ 1:2
-  1_2 constant -> 1_1 return
+  1_2 incr -> 1_1 return
   2-1_1 return -> 2_1 subst_stateless_from @ 2:2
-  2-1_2 constant -> 2-1_1 return
+  2-1_2 incr -> 2-1_1 return
   2-2-1_1 return -> 2-2_1 subst_stateless_from @ 3:2
-  2-2-1_2 constant -> 2-2-1_1 return
+  2-2-1_2 incr -> 2-2-1_1 return
   2-2-2-1_1 return -> 2-2-2_1 subst_stateless_from @ 4:2
-  2-2-2-1_2 constant -> 2-2-2-1_1 return
+  2-2-2-1_2 incr -> 2-2-2-1_1 return
   2-2-2-2-1_1 return -> 2-2-2-2_1 subst_stateless_from @ 5:2
-  2-2-2-2-1_2 constant -> 2-2-2-2-1_1 return
+  2-2-2-2-1_2 incr -> 2-2-2-2-1_1 return
   2-2-2-2-2-1-1_1 named -> 2-2-2-2-2-1_1 both
   2-2-2-2-2-1-2-1_1 named -> 2-2-2-2-2-1-2_1 both
   2-2-2-2-2-1-2-2-1_1 named -> 2-2-2-2-2-1-2-2_1 both
@@ -189,15 +217,15 @@ tree:
   _1 subst_stateless_from @ 1:2 -> _0
 dag:
   1_1 return -> 2-2-2-2-2-1-1_1 named, _1 subst_stateless_from @ 1:2
-  1_2 constant -> 1_1 return
+  1_2 incr -> 1_1 return
   2-1_1 return -> 2-2-2-2-2-1-2-1_1 named, 2_1 subst_stateless_from @ 2:2
-  2-1_2 constant -> 2-1_1 return
+  2-1_2 incr -> 2-1_1 return
   2-2-1_1 return -> 2-2-2-2-2-1-2-2-1_1 named, 2-2_1 subst_stateless_from @ 3:2
-  2-2-1_2 constant -> 2-2-1_1 return
+  2-2-1_2 incr -> 2-2-1_1 return
   2-2-2-1_1 return -> 2-2-2-2-2-1-2-2-2-1_1 named, 2-2-2_1 subst_stateless_from @ 4:2
-  2-2-2-1_2 constant -> 2-2-2-1_1 return
+  2-2-2-1_2 incr -> 2-2-2-1_1 return
   2-2-2-2-1_1 return -> 2-2-2-2-2-1-2-2-2-2_1 named, 2-2-2-2_1 subst_stateless_from @ 5:2
-  2-2-2-2-1_2 constant -> 2-2-2-2-1_1 return
+  2-2-2-2-1_2 incr -> 2-2-2-2-1_1 return
   2-2-2-2-2-1-1_1 named -> 2-2-2-2-2-1_1 both
   2-2-2-2-2-1-2-1_1 named -> 2-2-2-2-2-1-2_1 both
   2-2-2-2-2-1-2-2-1_1 named -> 2-2-2-2-2-1-2-2_1 both
@@ -224,7 +252,7 @@ dag:
 
 let diamond () =
   test_start [%here];
-  let%sub a = Bonsai.const 0 in
+  let%sub a = opaque_const 0 in
   let%sub b = Bonsai.pure Fn.id a in
   let%sub c = Bonsai.pure Fn.id a in
   let%arr b = b
@@ -238,7 +266,7 @@ let%expect_test "diamond" =
     {|
     tree:
       1_1 return -> _1 subst_stateless_from @ 1:2
-      1_2 constant -> 1_1 return
+      1_2 incr -> 1_1 return
       2-1-1_1 named -> 2-1_2 map
       2-1_1 return -> 2_1 subst_stateless_from @ 2:2
       2-1_2 map -> 2-1_1 return
@@ -255,7 +283,7 @@ let%expect_test "diamond" =
       _1 subst_stateless_from @ 1:2 -> _0
     dag:
       1_1 return -> 2-2-1-1_1 named, 2-1-1_1 named, _1 subst_stateless_from @ 1:2
-      1_2 constant -> 1_1 return
+      1_2 incr -> 1_1 return
       2-1-1_1 named -> 2-1_2 map
       2-1_1 return -> 2-2-2-1-1_1 named, 2_1 subst_stateless_from @ 2:2
       2-1_2 map -> 2-1_1 return
@@ -274,7 +302,7 @@ let%expect_test "diamond" =
 
 let state () =
   test_start [%here];
-  let%sub state = Bonsai.state [%here] (module Int) ~default_model:0 in
+  let%sub state = Bonsai.state (module Int) ~default_model:0 in
   return state
 ;;
 
@@ -320,12 +348,11 @@ let dynamic_state () =
   test_start [%here];
   let%sub state =
     Bonsai.state_machine1
-      [%here]
       (module Int)
       (module Unit)
       ~default_model:0
       ~apply_action:(fun ~inject:_ ~schedule_event:_ () model () -> model + 1)
-      (Value.return ())
+      (opaque_const_value ())
   in
   return state
 ;;
@@ -336,13 +363,13 @@ let%expect_test "dynamic_state" =
     {|
     tree:
       1_1 leaf1 -> _1 subst_stateless_into @ 1:2
-      1_2 constant -> 1_1 leaf1
+      1_2 incr -> 1_1 leaf1
       2_1 return -> _1 subst_stateless_into @ 1:2
       2_2 named -> 2_1 return
       _1 subst_stateless_into @ 1:2 -> _0
     dag:
       1_1 leaf1 -> 2_2 named, _1 subst_stateless_into @ 1:2
-      1_2 constant -> 1_1 leaf1
+      1_2 incr -> 1_1 leaf1
       2_1 return -> _1 subst_stateless_into @ 1:2
       2_2 named -> 2_1 return
       _1 subst_stateless_into @ 1:2 -> _0 |}];
@@ -474,7 +501,7 @@ let%expect_test "assoc_simpl" =
 
 let assoc () =
   test_start [%here];
-  let%sub a = Bonsai.const 0 in
+  let%sub a = opaque_const 0 in
   Bonsai.assoc
     (module Int)
     (Value.return (Int.Map.of_alist_exn [ -1, (); 1, () ]))
@@ -489,7 +516,7 @@ let%expect_test "assoc" =
     {|
     tree:
       1_1 return -> _1 subst_stateless_from @ 1:2
-      1_2 constant -> 1_1 return
+      1_2 incr -> 1_1 return
       2-1_1 constant -> 2_1 assoc
       2-2-1_1 named -> 2-2_2 map @ 6:6
       2-2_1 return -> 2_1 assoc
@@ -498,7 +525,7 @@ let%expect_test "assoc" =
       _1 subst_stateless_from @ 1:2 -> _0
     dag:
       1_1 return -> 2-2-1_1 named, _1 subst_stateless_from @ 1:2
-      1_2 constant -> 1_1 return
+      1_2 incr -> 1_1 return
       2-1_1 constant -> 2_1 assoc
       2-2-1_1 named -> 2-2_2 map @ 6:6
       2-2_1 return -> 2_1 assoc
@@ -520,6 +547,45 @@ let%expect_test "assoc" =
      stop-##map 2-2_2
      start-##map 2-2_2
      stop-##map 2-2_2
+     ((-1 0) (1 0)) |}]
+;;
+
+let assoc_constant_folding () =
+  test_start [%here];
+  let%sub a = Bonsai.const 0 in
+  Bonsai.assoc
+    (module Int)
+    (Value.return (Int.Map.of_alist_exn [ -1, (); 1, () ]))
+    ~f:(fun _ _ ->
+      let%arr a = a in
+      a)
+;;
+
+let%expect_test "assoc constant folding" =
+  let c = instrument_computation (assoc_constant_folding ()) in
+  [%expect
+    {|
+    tree:
+      _1 assoc_simpl -> _0
+      _2 constant -> _1 assoc_simpl
+    dag:
+      _1 assoc_simpl -> _0
+      _2 constant -> _1 assoc_simpl |}];
+  let handle =
+    Handle.create
+      (Result_spec.sexp
+         (module struct
+           type t = int Int.Map.t [@@deriving sexp_of]
+         end))
+      c
+  in
+  Handle.show handle;
+  [%expect
+    {|
+     start-##assoc_simpl-by _1
+     stop-##assoc_simpl-by _1
+     start-##assoc_simpl-by _1
+     stop-##assoc_simpl-by _1
      ((-1 0) (1 0)) |}]
 ;;
 
@@ -778,8 +844,8 @@ let%expect_test "lazy" =
 ;;
 
 let shared =
-  let%sub () = Bonsai.const () in
-  Bonsai.const ()
+  let%sub () = opaque_const () in
+  () |> Bonsai.Var.create |> Bonsai.Var.value |> return
 ;;
 
 let name_used_twice () =
@@ -795,24 +861,24 @@ let%expect_test "name_used_twice" =
     {|
   tree:
     1-1_1 return -> 1_1 subst_stateless_from @ -5:2
-    1-1_2 constant -> 1-1_1 return
+    1-1_2 incr -> 1-1_1 return
     1-2-1-1_1 named -> 1-2-1_2 map
     1-2-1_1 return -> 1-2_1 subst_stateless_from @ -5:2
     1-2-1_2 map -> 1-2-1_1 return
     1-2-2_1 return -> 1-2_1 subst_stateless_from @ -5:2
-    1-2-2_2 constant -> 1-2-2_1 return
+    1-2-2_2 incr -> 1-2-2_1 return
     1-2_1 subst_stateless_from @ -5:2 -> 1_1 subst_stateless_from @ -5:2
     1_1 subst_stateless_from @ -5:2 -> _1 subst_stateless_from @ 1:2
     2-1-1_1 named -> 2-1_2 map
     2-1_1 return -> 2_1 subst_stateless_from @ 1:2
     2-1_2 map -> 2-1_1 return
     2-2-1-1_1 return -> 2-2-1_1 subst_stateless_from @ -5:2
-    2-2-1-1_2 constant -> 2-2-1-1_1 return
+    2-2-1-1_2 incr -> 2-2-1-1_1 return
     2-2-1-2-1-1_1 named -> 2-2-1-2-1_2 map
     2-2-1-2-1_1 return -> 2-2-1-2_1 subst_stateless_from @ -5:2
     2-2-1-2-1_2 map -> 2-2-1-2-1_1 return
     2-2-1-2-2_1 return -> 2-2-1-2_1 subst_stateless_from @ -5:2
-    2-2-1-2-2_2 constant -> 2-2-1-2-2_1 return
+    2-2-1-2-2_2 incr -> 2-2-1-2-2_1 return
     2-2-1-2_1 subst_stateless_from @ -5:2 -> 2-2-1_1 subst_stateless_from @ -5:2
     2-2-1_1 subst_stateless_from @ -5:2 -> 2-2_1 subst_stateless_from @ 2:2
     2-2-2-1-1_1 named -> 2-2-2-1_2 map
@@ -826,24 +892,24 @@ let%expect_test "name_used_twice" =
     _1 subst_stateless_from @ 1:2 -> _0
   dag:
     1-1_1 return -> 1-2-1-1_1 named, 1_1 subst_stateless_from @ -5:2
-    1-1_2 constant -> 1-1_1 return
+    1-1_2 incr -> 1-1_1 return
     1-2-1-1_1 named -> 1-2-1_2 map
     1-2-1_1 return -> 1-2_1 subst_stateless_from @ -5:2
     1-2-1_2 map -> 1-2-1_1 return
     1-2-2_1 return -> 1-2_1 subst_stateless_from @ -5:2
-    1-2-2_2 constant -> 1-2-2_1 return
+    1-2-2_2 incr -> 1-2-2_1 return
     1-2_1 subst_stateless_from @ -5:2 -> 1_1 subst_stateless_from @ -5:2
     1_1 subst_stateless_from @ -5:2 -> 2-1-1_1 named, _1 subst_stateless_from @ 1:2
     2-1-1_1 named -> 2-1_2 map
     2-1_1 return -> 2_1 subst_stateless_from @ 1:2
     2-1_2 map -> 2-1_1 return
     2-2-1-1_1 return -> 2-2-1-2-1-1_1 named, 2-2-1_1 subst_stateless_from @ -5:2
-    2-2-1-1_2 constant -> 2-2-1-1_1 return
+    2-2-1-1_2 incr -> 2-2-1-1_1 return
     2-2-1-2-1-1_1 named -> 2-2-1-2-1_2 map
     2-2-1-2-1_1 return -> 2-2-1-2_1 subst_stateless_from @ -5:2
     2-2-1-2-1_2 map -> 2-2-1-2-1_1 return
     2-2-1-2-2_1 return -> 2-2-1-2_1 subst_stateless_from @ -5:2
-    2-2-1-2-2_2 constant -> 2-2-1-2-2_1 return
+    2-2-1-2-2_2 incr -> 2-2-1-2-2_1 return
     2-2-1-2_1 subst_stateless_from @ -5:2 -> 2-2-1_1 subst_stateless_from @ -5:2
     2-2-1_1 subst_stateless_from @ -5:2 -> 2-2-2-1-1_1 named, 2-2_1 subst_stateless_from @ 2:2
     2-2-2-1-1_1 named -> 2-2-2-1_2 map

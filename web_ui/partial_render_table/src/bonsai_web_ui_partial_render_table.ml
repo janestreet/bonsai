@@ -35,38 +35,6 @@ module Expert = struct
     module Dynamic_columns = Column.Dynamic_columns
   end
 
-  (* Go from the Bonsai comparator module to the Map comparator module.  You
-     might think "hey, shouldn't this function be unnecessary; surely the
-     function below is just the identity function"?  But no, first-class modules
-     need to be packed according to the signature that they wrap, so the type
-     annotation on this function is very important. *)
-  let comparator_to_comparator
-    : type k cmp. (k, cmp) Bonsai.comparator -> (k, cmp) Map.comparator
-    =
-    fun (module M) -> (module M)
-  ;;
-
-  (* Go from the list-map to the original key-value map, (keeping the int index
-     around so that we can sort on it later). *)
-  let remap
-    : type k v cmp.
-      (k, cmp) Bonsai.comparator
-      -> (Int63.t, k * v, Int63.comparator_witness) Map.t Value.t
-      -> (k, Int63.t * v, cmp) Map.t Computation.t
-    =
-    fun comparator ->
-      Bonsai.Incr.compute ~f:(fun (map_list : (Int63.t, k * v, _) Map.t Incr.t) ->
-        let by_k =
-          Incr.Map.index_by
-            ~comparator:(comparator_to_comparator comparator)
-            ~index:(fun (k, _) -> Some k)
-            map_list
-        in
-        Incr.Map.map by_k ~f:(fun data ->
-          let idx, (_k, v) = Map.min_elt_exn data in
-          idx, v))
-  ;;
-
   let implementation
         (type key data cmp)
         ~preload_rows
@@ -77,20 +45,16 @@ module Expert = struct
         ~assoc
         (collated : (key, data) Collated.t Value.t)
     =
-    let%sub input_map = return (collated >>| Collated.to_map_list) in
-    let%sub remapped = remap key input_map in
+    let%sub input_map = Bonsai.pure Collated.to_map_list collated in
     let%sub path = Bonsai.path_id in
-    let%sub leaves = return (headers >>| Header_tree.leaves) in
+    let%sub leaves = Bonsai.pure Header_tree.leaves headers in
     let%sub bounds, set_bounds =
-      Bonsai.state_opt
-        [%here]
-        (module Bonsai_web_ui_element_size_hooks.Visibility_tracker.Bounds)
+      Bonsai.state_opt (module Bonsai_web_ui_element_size_hooks.Visibility_tracker.Bounds)
       |> Bonsai.Incr.model_cutoff
     in
     let%sub column_widths, set_column_width =
       Bonsai.Incr.model_cutoff
         (Bonsai.state_machine0
-           [%here]
            (module struct
              type t = [ `Px of float ] Int.Map.t [@@deriving compare, sexp, equal]
            end)
@@ -121,7 +85,7 @@ module Expert = struct
         Float.(to_int (round_up low)), high
     in
     let%sub header_height_px, set_header_height =
-      Bonsai.state [%here] (module Int) ~default_model:0
+      Bonsai.state (module Int) ~default_model:0
     in
     let%sub rows_covered_by_header =
       let%arr header_height_px = header_height_px in
@@ -134,7 +98,6 @@ module Expert = struct
         ~collated
         ~range:range_without_preload
         ~rows_covered_by_header
-        ~remapped
         ~path
     in
     let on_row_click = Focus.get_on_row_click focus_kind focus in
@@ -149,7 +112,7 @@ module Expert = struct
         ~visually_focused
         ~on_row_click
         collated
-        remapped
+        input_map
     in
     let%sub head = Table_header.component headers ~set_column_width ~set_header_height in
     let%sub view =
@@ -158,29 +121,28 @@ module Expert = struct
       and row_count = row_count
       and rows = rows
       and path = path in
-      let total_height = row_count * row_height_px in
-      let body =
-        Vdom.Node.div
-          (* If the number is large enough, it will use scientific notation for unknown reasons.
-             However, the number is accurate, and scientific notation is in spec.
-             https://developer.mozilla.org/en-US/docs/Web/CSS/number *)
-          ~attr:
-            (Vdom.Attr.many_without_merge
-               [ Vdom.Attr.style Css_gen.(height (`Px total_height) @> position `Relative)
-               ; Bonsai_web_ui_element_size_hooks.Visibility_tracker.on_change
-                   (fun bounds -> set_bounds (Some bounds))
-               ])
-          rows
-      in
-      Vdom.Node.div
-        ~attr:
-          (Vdom.Attr.many
-             [ Vdom.Attr.style
-                 Css_gen.(
-                   create ~field:"width" ~value:"max-content" @> position `Relative)
-             ; Vdom.Attr.class_ ("partial-render-table-" ^ path)
-             ])
-        [ head; body ]
+      Vdom.Node.lazy_
+        (lazy
+          (let total_height = row_count * row_height_px in
+           let body =
+             Vdom.Node.div
+               (* If the number is large enough, it will use scientific notation for unknown reasons.
+                  However, the number is accurate, and scientific notation is in spec.
+                  https://developer.mozilla.org/en-US/docs/Web/CSS/number *)
+               ~attr:
+                 Vdom.Attr.(
+                   class_ Style.partial_render_table_body
+                   @ style Css_gen.(height (`Px total_height))
+                   @ Bonsai_web_ui_element_size_hooks.Visibility_tracker.on_change
+                       (fun bounds -> set_bounds (Some bounds)))
+               (Lazy.force rows)
+           in
+           Vdom.Node.div
+             ~attr:
+               Vdom.Attr.(
+                 Vdom.Attr.class_ Style.partial_render_table_container
+                 @ Vdom.Attr.class_ ("partial-render-table-" ^ path))
+             [ head; body ]))
     in
     let%sub range =
       let%arr low, high = range_without_preload
@@ -328,12 +290,11 @@ module Basic = struct
         Option.value_map filter ~default:(Value.return None) ~f:(Value.map ~f:Option.some)
       in
       let%sub rank_range, set_rank_range =
-        Bonsai.state [%here] (module Rank_range) ~default_model:(Collate.Which_range.To 0)
+        Bonsai.state (module Rank_range) ~default_model:(Collate.Which_range.To 0)
       in
       let%sub sort_order, change_order =
         Bonsai.Incr.model_cutoff
           (Bonsai.state_machine0
-             [%here]
              (module Order)
              (module Order.Action)
              ~default_model:[]
@@ -344,7 +305,7 @@ module Basic = struct
       let assoc = Column.instantiate_cells value comparator in
       let default_sort =
         match default_sort with
-        | None -> Bonsai.Value.return None
+        | None -> Value.return None
         | Some v -> v >>| Option.some
       in
       let%sub change_sort =
@@ -391,7 +352,6 @@ module Basic = struct
       in
       let%sub () =
         Bonsai.Edge.on_change
-          [%here]
           (module struct
             type t = int * int [@@deriving sexp, equal]
           end)
@@ -400,8 +360,7 @@ module Basic = struct
             (let%map set_rank_range = set_rank_range in
              fun (low, high) -> set_rank_range (Collate.Which_range.Between (low, high)))
       in
-      return
-        (Value.map result ~f:(fun { view; for_testing; range = _; focus } ->
-           { Result.view; for_testing; focus }))
+      let%arr { view; for_testing; range = _; focus } = result in
+      { Result.view; for_testing; focus }
   ;;
 end

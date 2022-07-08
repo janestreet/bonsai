@@ -6,7 +6,7 @@ open! Incr_map_collate
 
 module For_testing = struct
   type cell =
-    { id : Int63.t
+    { id : Map_list.Key.t
     ; selected : bool
     ; view : Vdom.Node.t list
     }
@@ -20,31 +20,6 @@ module For_testing = struct
     ; num_unfiltered : int
     }
 end
-
-let sort_map_values_by_idx values =
-  if Map.is_empty values
-  then [||]
-  else (
-    let placeholder, _ = Map.max_elt_exn values in
-    let arr = Array.init (Map.length values) ~f:(fun _ -> Int63.zero, placeholder, []) in
-    let i = ref 0 in
-    Map.iteri values ~f:(fun ~key ~data:(idx, value) ->
-      Array.set arr !i (idx, key, value);
-      Int.incr i);
-    Array.sort arr ~compare:(Comparable.lift Int63.compare ~f:Tuple3.get1);
-    arr)
-;;
-
-(* This function is a little dangerous because it converts an immutable map
-   into a mutable arrow via [sort_map_values_by_idx] and puts the result in
-   a Value.t. Usually, putting mutable data inside the incremental graph is
-   a bad idea, but it is okay here because every time [cells] changes, we
-   recompute the entire array, which means it will never be physically equal to
-   the previous array, which means that it should be fine inside incremental. *)
-let instantiate_cells ~assoc remapped =
-  let%sub cells = assoc remapped in
-  return @@ Value.map cells ~f:sort_map_values_by_idx
-;;
 
 (* This function takes a vdom node and if it's an element, it adds extra attrs, classes, key,
    and style info to it, but if it's not an element, it wraps that node in a div that has those
@@ -73,12 +48,15 @@ let component
       ~(comparator : (key, cmp) Bonsai.comparator)
       ~row_height
       ~(leaves : Header_tree.leaf list Value.t)
-      ~assoc
+      ~(assoc :
+          (key * data) Map_list.t Value.t
+        -> (key * Vdom.Node.t list) Map_list.t Computation.t)
       ~column_widths
       ~(visually_focused : key option Value.t)
       ~on_row_click
       (collated : (key, data) Collated.t Value.t)
-      (remapped : (key, Int63.t * data, cmp) Map.t Value.t)
+      (input : (key * data) Map_list.t Value.t)
+  : (Vdom.Node.t list Lazy.t * For_testing.t Lazy.t) Computation.t
   =
   let module Cmp = (val comparator) in
   let%sub leaves_info =
@@ -86,7 +64,7 @@ let component
     let%map.List { Header_tree.visible; leaf_label; _ } = leaves in
     visible, leaf_label
   in
-  let%sub cells = instantiate_cells ~assoc remapped in
+  let%sub cells = assoc input in
   let%arr cells = cells
   and collated = collated
   and leaves_info = leaves_info
@@ -139,14 +117,14 @@ let component
     (* The index assigned during collation is a good choice for the key because it's
        semi-stable, it prints out to a string without issue, and it's guaranteed to be
        unique (within a table). *)
-    let key = sprintf !"key_%{Int63}-%d" idx j in
+    let key = sprintf !"key_%s-%d" idx j in
     let css = Css_gen.( @> ) css_all_cells css_for_column in
     let classes = [ "prt-table-cell" ] in
     set_or_wrap
       content
       ~key
       ~classes
-      ~attrs:[ Vdom.Attr.create "data-row-id" (sprintf "key_%s" (Int63.to_string idx)) ]
+      ~attrs:[ Vdom.Attr.create "data-row-id" (sprintf "key_%s" idx) ]
       ~style:css
   in
   let row_selected key =
@@ -154,7 +132,7 @@ let component
     | None -> false
     | Some k -> Cmp.comparator.compare k key = 0
   in
-  let for_each_row i (idx, key, columns) =
+  let for_each_row i (idx, (key, columns)) =
     let row_selected = row_selected key in
     let offset = i + elements_prior_to_range in
     let (`Px row_height_px) = row_height in
@@ -170,9 +148,10 @@ let component
       then [ "prt-table-row"; "prt-table-row-even" ]
       else [ "prt-table-row"; "prt-table-row-odd" ]
     in
+    let idx = Map_list.Key.to_string idx in
     let classes = if row_selected then "prt-table-row-selected" :: classes else classes in
     Vdom.Node.div
-      ~key:(Int63.to_string idx)
+      ~key:idx
       ~attr:
         (Vdom.Attr.many
            [ Vdom.Attr.classes classes
@@ -181,13 +160,13 @@ let component
            ])
       (List.mapi (List.zip_exn css_for_columns columns) ~f:(for_each_cell ~idx))
   in
-  let view = List.mapi (Array.to_list cells) ~f:for_each_row in
+  let view = lazy (List.mapi (Map.to_alist cells) ~f:for_each_row) in
   let for_testing =
     lazy
       (let column_names = leaves_info |> List.map ~f:Tuple2.get2 in
        { For_testing.column_names
        ; cells =
-           List.map (Array.to_list cells) ~f:(fun (id, key, view) ->
+           List.map (Map.to_alist cells) ~f:(fun (id, (key, view)) ->
              { For_testing.id; selected = row_selected key; view })
        ; rows_before = Collated.num_before_range collated
        ; rows_after = Collated.num_after_range collated

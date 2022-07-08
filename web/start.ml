@@ -259,7 +259,7 @@ module Arrow_deprecated = struct
             match action with
             | Action.Dynamic action -> dynamic_apply_action model action ~schedule_event
             | Action.Static action ->
-              apply_static ~inject:inject_static ~schedule_event model action
+              apply_static ~inject_dynamic ~inject_static ~schedule_event model action
         and on_display =
           let%map lifecycle = Bonsai.Private.Snapshot.lifecycle_or_empty snapshot in
           fun () ~schedule_event ->

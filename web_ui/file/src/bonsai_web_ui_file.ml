@@ -255,7 +255,6 @@ module Read_on_change = struct
   let create_helper file =
     let%sub state, inject =
       Bonsai.state_machine0
-        [%here]
         (module File_state)
         (module File_state.Action)
         ~default_model:Before_first_read
@@ -267,7 +266,6 @@ module Read_on_change = struct
     in
     let%sub () =
       Bonsai.Edge.on_change
-        [%here]
         (module File)
         file
         ~callback:
@@ -314,10 +312,9 @@ module Read_on_change = struct
 
   let create_single file =
     let%sub state = create_helper file in
-    Bonsai.read
-      (let%map file = file
-       and state = state in
-       file.filename, File_state.to_status state)
+    let%arr file = file
+    and state = state in
+    file.filename, File_state.to_status state
   ;;
 
   let create_single_opt file =

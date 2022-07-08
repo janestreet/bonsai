@@ -1,6 +1,6 @@
 open! Core
 open! Async_kernel
-open! Bonsai
+open Bonsai.For_open
 open! Import
 
 module type S = sig

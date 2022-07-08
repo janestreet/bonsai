@@ -27,19 +27,17 @@ let columns ~is_column_b_visible =
       ~label:(Value.return (Vdom.Node.text "key"))
       ~sort:(Value.return (Comparable.lift [%compare: int] ~f:(fun (key, _) -> key)))
       ~cell:(fun ~key ~data:_ ->
-        return
-        @@ let%map key = key in
+        let%arr key = key in
         Vdom.Node.textf "%d" key)
       ()
   ; Columns.column
       ~label:(Value.return (Vdom.Node.text "a"))
       ~cell:(fun ~key:_ ~data ->
-        let%sub state = Bonsai.state [%here] (module String) ~default_model:"" in
-        return
-        @@ let%map { a; _ } = data
+        let%sub state = Bonsai.state (module String) ~default_model:"" in
+        let%arr { a; _ } = data
         and state, set_state = state in
         Vdom.Node.div
-          [ Vdom.Node.input ~attr:(Vdom.Attr.on_input (fun _ -> set_state)) []
+          [ Vdom.Node.input ~attr:(Vdom.Attr.on_input (fun _ -> set_state)) ()
           ; Vdom.Node.textf "%s %s" a state
           ])
       ()
@@ -48,8 +46,7 @@ let columns ~is_column_b_visible =
       ~label:(Value.return (Vdom.Node.text "b"))
       ~sort:(Value.return (Comparable.lift [%compare: float] ~f:(fun (_, { b; _ }) -> b)))
       ~cell:(fun ~key:_ ~data ->
-        return
-        @@ let%map { b; _ } = data in
+        let%arr { b; _ } = data in
         Vdom.Node.textf "%f" b)
       ()
   ]

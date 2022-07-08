@@ -12,3 +12,6 @@ end
 
 module Driver = Bonsai_test.Arrow.Driver
 include Expect_test_helpers_core
+
+let opaque_const x = Bonsai.read (Bonsai.Var.value (Bonsai.Var.create x))
+let opaque_const_value x = Bonsai.Var.value (Bonsai.Var.create x)

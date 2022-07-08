@@ -5,7 +5,6 @@ open Bonsai.Let_syntax
 let string_duplicator input_string =
   let%sub duplication_count_state =
     Bonsai.state_machine0
-      [%here]
       (module Int)
       (module Unit)
       ~default_model:1
@@ -24,7 +23,7 @@ let string_duplicator input_string =
 ;;
 
 let string_to_repeat =
-  let%sub state = Bonsai.state [%here] (module String) ~default_model:"hello" in
+  let%sub state = Bonsai.state (module String) ~default_model:"hello" in
   let%arr state, set_state = state in
   let view =
     Vdom.Node.textarea

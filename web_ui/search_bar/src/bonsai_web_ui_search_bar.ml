@@ -134,20 +134,19 @@ let create
       (module Item : Item with type t = item)
       ?(max_query_results = 10)
       ?(width = Css_gen.Length.percent100)
-      ?(placeholder = "")
+      ?placeholder:(placeholder_ = "")
       ?(initial_query = "")
       ?(wrap_search_bar = Fn.id)
       ?(autocomplete_item = default_autocomplete_item Item.to_string)
       ?(filter_choice = default_filter_choice Item.to_string)
       ?(score_choice = default_score_choice Item.to_string)
       ?(of_string = Fn.const None)
-      ?(extra_textbox_attrs = [])
+      ?(extra_textbox_attr = Vdom.Attr.empty)
       ()
       input
   =
   let%sub model, inject =
     Bonsai.state_machine1
-      [%here]
       (module struct
         include Model
 
@@ -186,42 +185,37 @@ let create
           | On_blur -> Model.hide_autocomplete t)
   in
   let%sub on_select_item =
-    return
-      (let%map inject = inject
-       and input = input in
-       fun item ->
-         let open Vdom in
-         let event_parent = Input.on_select input item in
-         let event_self = inject Action.Clear_input in
-         Effect.Many [ event_parent; event_self; Effect.Prevent_default ])
+    let%arr inject = inject
+    and input = input in
+    fun item ->
+      let event_parent = Input.on_select input item in
+      let event_self = inject Action.Clear_input in
+      Effect.Many [ event_parent; event_self; Effect.Prevent_default ]
   in
   let render_autocomplete_entry index item =
-    return
-      (let%map model = model
-       and on_select_item = on_select_item
-       and inject = inject
-       and index = index
-       and item = item in
-       let open Vdom in
-       let is_focused =
-         Model.focused_autocomplete_result model
-         |> Option.value_map ~default:false ~f:(fun i -> index = i)
-       in
-       let attributes =
-         List.filter_opt
-           [ Some (Attr.on_click (fun _ -> on_select_item item))
-           ; Some
-               (Attr.on_mouseover (fun _ ->
-                  inject (Action.Set_focused_autocomplete_result index)))
-           ; Option.some_if is_focused (Attr.class_ "autocomplete-active")
-           (* Stop the mousedown event, as we handle on_click above, and
-              the blur from mousedown would interact poorly with on_blur for the input *)
-           ; Some
-               (Attr.on_mousedown (fun _ ->
-                  Effect.Many [ Effect.Stop_propagation; Effect.Prevent_default ]))
-           ]
-       in
-       Node.li ~attr:(Attr.many_without_merge attributes) [ autocomplete_item item ])
+    let%arr model = model
+    and on_select_item = on_select_item
+    and inject = inject
+    and index = index
+    and item = item in
+    let is_focused =
+      Model.focused_autocomplete_result model
+      |> Option.value_map ~default:false ~f:(fun i -> index = i)
+    in
+    let focused_attr =
+      if is_focused then Vdom.Attr.class_ "autocomplete-active" else Vdom.Attr.empty
+    in
+    Vdom.Node.li
+      ~attr:
+        Vdom.Attr.(
+          on_click (fun _ -> on_select_item item)
+          @ on_mouseover (fun _ -> inject (Action.Set_focused_autocomplete_result index))
+          @ focused_attr
+          (* Stop the mousedown event, as we handle on_click above, and
+             the blur from mousedown would interact poorly with on_blur for the input *)
+          @ on_mousedown (fun _ ->
+            Effect.Many [ Effect.Stop_propagation; Effect.Prevent_default ]))
+      [ autocomplete_item item ]
   in
   let%sub render_autocomplete =
     let%sub entries =
@@ -233,139 +227,123 @@ let create
          |> Int.Map.of_alist_exn)
         ~f:render_autocomplete_entry
     in
-    return
-      (let%map model = model
-       and inject = inject
-       and entries = entries in
-       let open Vdom in
-       let draw_width = width in
-       let hidden_query_results =
-         let len = Model.current_choices model |> List.length in
-         if len > max_query_results
-         then
-           [ Node.li
-               ~attr:
-                 Attr.(
-                   on_mousedown (fun _ -> Effect.Prevent_default)
-                   @ class_ "no-cursor"
-                   @ style
-                       Css_gen.(
-                         background_color (`Var "--js-dark-snow-color")
-                         @> width draw_width))
-               [ Node.text (sprintf "+%d more" (len - max_query_results)) ]
-           ]
-         else []
-       in
-       [ Node.div
-           ~attr:
-             Attr.(
-               class_ "autocomplete"
-               @ style Css_gen.([ width draw_width; max_width draw_width ] |> concat))
-           [ Node.ul
-               ~attr:
-                 Attr.(
-                   class_ "autocomplete-items"
-                   @ id "autocomplete-items"
-                   @ on_mouseout (fun _ ->
-                     inject Action.Clear_focused_autocomplete_result))
-               (Map.data entries @ hidden_query_results)
-           ]
-       ])
+    let%arr model = model
+    and inject = inject
+    and entries = entries in
+    let draw_width = width in
+    let hidden_query_results =
+      let len = Model.current_choices model |> List.length in
+      if len > max_query_results
+      then
+        [ Vdom.Node.li
+            ~attr:
+              Vdom.Attr.(
+                on_mousedown (fun _ -> Effect.Prevent_default)
+                @ class_ "no-cursor"
+                @ style
+                    Css_gen.(
+                      background_color (`Var "--js-dark-snow-color") @> width draw_width))
+            [ Vdom.Node.text (sprintf "+%d more" (len - max_query_results)) ]
+        ]
+      else []
+    in
+    [ Vdom.Node.div
+        ~attr:
+          Vdom.Attr.(
+            class_ "autocomplete"
+            @ style Css_gen.(width draw_width @> max_width draw_width))
+        [ Vdom.Node.ul
+            ~attr:
+              Vdom.Attr.(
+                class_ "autocomplete-items"
+                @ id "autocomplete-items"
+                @ on_mouseout (fun _ -> inject Action.Clear_focused_autocomplete_result))
+            (Map.data entries @ hidden_query_results)
+        ]
+    ]
   in
   let%sub handle_keyup =
-    return
-      (let%map on_select_item = on_select_item
-       and model = model in
-       fun ev ->
-         let open Vdom in
-         let current_choices = Model.current_choices model in
-         match Js_of_ocaml.Dom_html.Keyboard_code.of_event ev with
-         | Enter | NumpadEnter ->
-           (match
-              ( Model.focused_autocomplete_result model
-              , Model.autocomplete_box_visible model )
-            with
-            | Some i, true -> List.nth_exn current_choices i |> on_select_item
-            | None, true ->
-              let item = of_string (Model.query model) in
-              (match item with
-               | None -> Effect.Ignore
-               | Some item ->
-                 if List.mem current_choices item ~equal:Item.equal
-                 then on_select_item item
-                 else (
-                   match current_choices with
-                   | [ item ] -> on_select_item item
-                   | _ -> Effect.Ignore))
-            | _ -> Effect.Ignore)
+    let%arr on_select_item = on_select_item
+    and model = model in
+    fun ev ->
+      let current_choices = Model.current_choices model in
+      match Js_of_ocaml.Dom_html.Keyboard_code.of_event ev with
+      | Enter | NumpadEnter ->
+        (match
+           Model.focused_autocomplete_result model, Model.autocomplete_box_visible model
+         with
+         | Some i, true -> List.nth_exn current_choices i |> on_select_item
+         | None, true ->
+           let item = of_string (Model.query model) in
+           (match item with
+            | None -> Effect.Ignore
+            | Some item ->
+              if List.mem current_choices item ~equal:Item.equal
+              then on_select_item item
+              else (
+                match current_choices with
+                | [ item ] -> on_select_item item
+                | _ -> Effect.Ignore))
          | _ -> Effect.Ignore)
+      | _ -> Effect.Ignore
   in
   let%sub handle_keydown =
-    return
-      (let%map model = model
-       and inject = inject in
-       fun ev ->
-         let open Vdom in
-         match Js_of_ocaml.Dom_html.Keyboard_code.of_event ev with
-         | ArrowUp ->
-           Vdom.Effect.Many
-             [ inject (Action.Bump_focused_autocomplete_result `Up)
-             ; Vdom.Effect.Prevent_default
-             ]
-         | ArrowDown ->
-           Vdom.Effect.Many
-             [ inject (Action.Bump_focused_autocomplete_result `Down)
-             ; Vdom.Effect.Prevent_default
-             ]
-         | Escape ->
-           if Model.autocomplete_box_visible model
-           then inject Action.Close_autocomplete_box
-           else Effect.Ignore
-         | _ -> Effect.Ignore)
+    let%arr model = model
+    and inject = inject in
+    fun ev ->
+      match Js_of_ocaml.Dom_html.Keyboard_code.of_event ev with
+      | ArrowUp ->
+        Vdom.Effect.Many
+          [ inject (Action.Bump_focused_autocomplete_result `Up)
+          ; Vdom.Effect.Prevent_default
+          ]
+      | ArrowDown ->
+        Vdom.Effect.Many
+          [ inject (Action.Bump_focused_autocomplete_result `Down)
+          ; Vdom.Effect.Prevent_default
+          ]
+      | Escape ->
+        if Model.autocomplete_box_visible model
+        then inject Action.Close_autocomplete_box
+        else Effect.Ignore
+      | _ -> Effect.Ignore
   in
-  return
-    (let%map handle_keydown = handle_keydown
-     and handle_keyup = handle_keyup
-     and render_autocomplete = render_autocomplete
-     and model = model
-     and inject = inject in
-     let open Vdom in
-     let autocomplete_items =
-       if Model.autocomplete_box_visible model
-       && not (List.is_empty (Model.current_choices model))
-       then render_autocomplete
-       else []
-     in
-     let query_as_string = Model.query model in
-     let set_text string = string |> Action.set_text_input |> inject in
-     Node.div
-       ~attr:
-         (Attr.many_without_merge
-            [ Attr.class_ "wrapper"; Attr.style (Css_gen.width width) ])
-       ([ Node.div
-            ~attr:(Attr.class_ "search-input-container")
-            [ Vdom.Node.input
-                ~attr:
-                  (Attr.many_without_merge
-                     ([ Attr.string_property "value" query_as_string
-                      ; Attr.placeholder placeholder
-                      ; Attr.tabindex 1
-                      ; Attr.on_keyup handle_keyup
-                      ; Attr.on_keydown handle_keydown
-                      ; Attr.style (Css_gen.width width)
-                      ; Attr.on_change (fun _ -> set_text)
-                      ; Attr.on_input (fun _ -> set_text)
-                      ; Attr.on_focus
-                          (fun (_ : Js_of_ocaml.Dom_html.focusEvent Js_of_ocaml.Js.t) ->
-                             inject Action.On_focus)
-                      ; Attr.on_blur
-                          (fun (_ : Js_of_ocaml.Dom_html.focusEvent Js_of_ocaml.Js.t) ->
-                             inject Action.On_blur)
-                      ]
-                      @ extra_textbox_attrs))
-                []
-            ]
-        ]
-        @ autocomplete_items)
-     |> wrap_search_bar)
+  let%arr handle_keydown = handle_keydown
+  and handle_keyup = handle_keyup
+  and render_autocomplete = render_autocomplete
+  and model = model
+  and inject = inject in
+  let autocomplete_items =
+    if Model.autocomplete_box_visible model
+    && not (List.is_empty (Model.current_choices model))
+    then render_autocomplete
+    else []
+  in
+  let query_as_string = Model.query model in
+  let set_text string = string |> Action.set_text_input |> inject in
+  Vdom.Node.div
+    ~attr:Vdom.Attr.(Vdom.Attr.class_ "wrapper" @ Vdom.Attr.style (Css_gen.width width))
+    ([ Vdom.Node.div
+         ~attr:(Vdom.Attr.class_ "search-input-container")
+         [ Vdom.Node.input
+             ~attr:
+               Vdom.Attr.(
+                 value_prop query_as_string
+                 @ placeholder placeholder_
+                 @ tabindex 1
+                 @ on_keyup handle_keyup
+                 @ on_keydown handle_keydown
+                 @ style (Css_gen.width width)
+                 @ on_change (fun _ -> set_text)
+                 @ on_input (fun _ -> set_text)
+                 @ on_focus (fun (_ : Js_of_ocaml.Dom_html.focusEvent Js_of_ocaml.Js.t) ->
+                   inject Action.On_focus)
+                 @ on_blur (fun (_ : Js_of_ocaml.Dom_html.focusEvent Js_of_ocaml.Js.t) ->
+                   inject Action.On_blur)
+                 @ extra_textbox_attr)
+             ()
+         ]
+     ]
+     @ autocomplete_items)
+  |> wrap_search_bar
 ;;

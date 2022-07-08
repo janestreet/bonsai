@@ -6,12 +6,9 @@ module Form = Bonsai_web_ui_form
 
 let component =
   let%sub interpolator_form =
-    Form.Elements.Dropdown.enumerable
-      [%here]
-      (module Animation.Interpolator)
-      ~init:`First_item
+    Form.Elements.Dropdown.enumerable (module Animation.Interpolator) ~init:`First_item
   in
-  let%sub text_picker = Form.Elements.Textbox.string [%here] in
+  let%sub text_picker = Form.Elements.Textbox.string () in
   let%sub text_picker =
     text_picker |> Form.Dynamic.with_default (Bonsai.Value.return "Marquee!")
   in
@@ -23,7 +20,7 @@ let component =
       ~fallback:(Value.return 0.0)
       ~interpolate:Animation.Interpolatable.float
   in
-  let%sub forward, set_forward = Bonsai.state [%here] (module Bool) ~default_model:true in
+  let%sub forward, set_forward = Bonsai.state (module Bool) ~default_model:true in
   let%sub get_forward = Bonsai_extra.yoink forward in
   let%sub get_interpolator = Bonsai_extra.yoink interpolator in
   let%sub get_things_started =

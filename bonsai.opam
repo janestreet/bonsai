@@ -33,12 +33,15 @@ depends: [
   "profunctor"
   "textutils"
   "virtual_dom"
+  "base64"                   {>= "3.4.0"}
   "cohttp-async"             {>= "2.5.6" & < "3.0.0" | >= "5.0.0"}
   "dune"                     {>= "2.0.0"}
   "gen_js_api"               {>= "1.0.8"}
-  "js_of_ocaml-ppx"          {>= "3.9.0"}
+  "js_of_ocaml"              {>= "4.0"}
+  "js_of_ocaml-ppx"          {>= "4.0"}
   "ocaml-embed-file"
   "re"                       {>= "1.8.0"}
+  "uri"                      {>= "3.0.0"}
 ]
 synopsis: "A library for building dynamic webapps, using Js_of_ocaml"
 description: "

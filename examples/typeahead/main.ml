@@ -39,7 +39,6 @@ let components =
   let open! Bonsai_web_ui_typeahead in
   let%sub all_options =
     Bonsai.state
-      [%here]
       (module struct
         type t = Pokemon.t list [@@deriving equal, compare, sexp]
       end)
@@ -80,8 +79,7 @@ let components =
       ~placeholder:"Select many pokemon"
       ~all_options:(all_options >>| fst)
   in
-  return
-  @@ let%map typeahead_single_vdom = typeahead_single_vdom
+  let%arr typeahead_single_vdom = typeahead_single_vdom
   and typeahead_multi_vdom = typeahead_multi_vdom in
   Vdom.Node.create
     "main"

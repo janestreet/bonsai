@@ -425,3 +425,11 @@ combinator authors have access to a lot more power to introspect running Bonsai
 apps, paving the way for powerful debugging tools.
 
 [^arrow]: [Arrow: Haskell Wiki](https://wiki.haskell.org/Arrow)
+
+### Proc-like Bonsai and beyond
+
+In early 2020, once again London T&C suggested a change to the API for the better similar to
+Haskell's Arrow's "proc" notation that changed Bonsai's API. Please see
+[proc.md](./proc.md) for the current (as of June 2022 at least) state of
+Bonsai's API.
+

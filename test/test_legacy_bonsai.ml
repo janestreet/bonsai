@@ -263,7 +263,7 @@ let%expect_test "incremental fn constructor" =
       ((0 1)
        (1 2)
        (2 3)) |}];
-    H.set_input (Int.Map.add_exn initial_input ~key:3 ~data:3);
+    H.set_input (Map.add_exn (initial_input : _ Int.Map.t) ~key:3 ~data:3);
     [%expect
       {|
       doing math

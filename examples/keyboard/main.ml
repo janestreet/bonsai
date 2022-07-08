@@ -86,7 +86,6 @@ module Style = [%css.raw {| .red { color: red } |}]
 let component =
   let%sub model_and_inject =
     Bonsai.state_machine0
-      [%here]
       (module Model)
       (module Action)
       ~default_model:[]

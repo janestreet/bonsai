@@ -31,7 +31,7 @@ end
 let set_up_read t =
   let computation =
     let%sub result, set_result =
-      Bonsai.state [%here] (module Read_state) ~default_model:Starting
+      Bonsai.state (module Read_state) ~default_model:Starting
     in
     let%sub () =
       Bonsai.Edge.lifecycle

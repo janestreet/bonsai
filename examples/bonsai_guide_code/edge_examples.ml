@@ -5,7 +5,7 @@ open! Bonsai.Let_syntax
 
 (* $MDX part-begin=after_display *)
 let frame_counter =
-  let%sub frames, set_frames = Bonsai.state [%here] (module Int) ~default_model:0 in
+  let%sub frames, set_frames = Bonsai.state (module Int) ~default_model:0 in
   let%sub () =
     Bonsai.Edge.lifecycle
       ~after_display:
@@ -14,9 +14,8 @@ let frame_counter =
          set_frames (frames + 1))
       ()
   in
-  return
-    (let%map frames = frames in
-     Vdom.Node.textf "this component has been alive for %d frames" frames)
+  let%arr frames = frames in
+  Vdom.Node.textf "this component has been alive for %d frames" frames
 ;;
 
 (* $MDX part-end *)
@@ -25,26 +24,23 @@ let () = Util.run frame_counter ~id:"after-display"
 
 (* $MDX part-begin=only_when_active *)
 let frame_toggler =
-  let%sub showing, set_showing =
-    Bonsai.state [%here] (module Bool) ~default_model:false
-  in
+  let%sub showing, set_showing = Bonsai.state (module Bool) ~default_model:false in
   let%sub output =
     match%sub showing with
     | true -> frame_counter
     | false -> Bonsai.const Vdom.Node.none
   in
-  return
-    (let%map showing = showing
-     and set_showing = set_showing
-     and output = output in
-     let toggle_showing = set_showing (not showing) in
-     let button_text = if showing then "disable counter" else "enable counter" in
-     let toggle_button =
-       Vdom.Node.button
-         ~attr:(Vdom.Attr.on_click (fun _ -> toggle_showing))
-         [ Vdom.Node.text button_text ]
-     in
-     Vdom.Node.div [ toggle_button; output ])
+  let%arr showing = showing
+  and set_showing = set_showing
+  and output = output in
+  let toggle_showing = set_showing (not showing) in
+  let button_text = if showing then "disable counter" else "enable counter" in
+  let toggle_button =
+    Vdom.Node.button
+      ~attr:(Vdom.Attr.on_click (fun _ -> toggle_showing))
+      [ Vdom.Node.text button_text ]
+  in
+  Vdom.Node.div [ toggle_button; output ]
 ;;
 
 (* $MDX part-end *)
@@ -63,10 +59,7 @@ type 'a t = 'a Extendy.t =
   }
 
 type ('a, 'b) extendy_function_signature =
-  Source_code_position.t
-  -> 'a Computation.t
-  -> wrap_remove:('a -> unit Ui_effect.t -> 'b)
-  -> 'b t Computation.t
+  'a Computation.t -> wrap_remove:('a -> unit Ui_effect.t -> 'b) -> 'b t Computation.t
 
 let extendy : ('a, 'b) extendy_function_signature = Extendy.component'
 
@@ -82,16 +75,13 @@ let wrap_remove frame_counter remove =
 ;;
 
 let many_frame_watches =
-  let%sub { contents; append; _ } = extendy [%here] frame_counter ~wrap_remove in
-  return
-    (let%map contents = contents
-     and append = append in
-     let append_button =
-       Vdom.Node.button
-         ~attr:(Vdom.Attr.on_click (fun _ -> append))
-         [ Vdom.Node.text "add" ]
-     in
-     Vdom.Node.div (append_button :: Map.data contents))
+  let%sub { contents; append; _ } = extendy frame_counter ~wrap_remove in
+  let%arr contents = contents
+  and append = append in
+  let append_button =
+    Vdom.Node.button ~attr:(Vdom.Attr.on_click (fun _ -> append)) [ Vdom.Node.text "add" ]
+  in
+  Vdom.Node.div (append_button :: Map.data contents)
 ;;
 
 (* $MDX part-end *)
@@ -100,7 +90,6 @@ let () = Util.run many_frame_watches ~id:"extendy-use"
 let logger =
   let%sub logger =
     Bonsai.state_machine0
-      [%here]
       (module struct
         type t = string list [@@deriving sexp, equal]
       end)
@@ -108,15 +97,14 @@ let logger =
       ~apply_action:(fun ~inject:_ ~schedule_event:_ model action -> action :: model)
       ~default_model:[]
   in
-  return
-    (let%map log, inject = logger in
-     let view = log |> List.rev |> List.map ~f:Vdom.Node.text |> Vdom.Node.span in
-     view, inject)
+  let%arr log, inject = logger in
+  let view = log |> List.rev |> List.map ~f:Vdom.Node.text |> Vdom.Node.span in
+  view, inject
 ;;
 
 (* $MDX part-begin=activations *)
 let frame_counter (log : (string -> unit Ui_effect.t) Value.t) =
-  let%sub frames, set_frames = Bonsai.state [%here] (module Int) ~default_model:0 in
+  let%sub frames, set_frames = Bonsai.state (module Int) ~default_model:0 in
   let%sub () =
     Bonsai.Edge.lifecycle
       ~on_activate:
@@ -131,9 +119,8 @@ let frame_counter (log : (string -> unit Ui_effect.t) Value.t) =
          set_frames (frames + 1))
       ()
   in
-  return
-    (let%map frames = frames in
-     Vdom.Node.textf "this component has been alive for %d frames" frames)
+  let%arr frames = frames in
+  Vdom.Node.textf "this component has been alive for %d frames" frames
 ;;
 
 (* $MDX part-end *)
@@ -142,7 +129,7 @@ let frame_counter (log : (string -> unit Ui_effect.t) Value.t) =
 let many_frame_watches =
   let%sub log_view, log = logger in
   let%sub { contents; append; _ } =
-    extendy [%here] (frame_counter log) ~wrap_remove:(fun frame_counter remove ->
+    extendy (frame_counter log) ~wrap_remove:(fun frame_counter remove ->
       let x_button =
         Vdom.Node.button
           ~attr:(Vdom.Attr.on_click (fun _ -> remove))
@@ -150,16 +137,13 @@ let many_frame_watches =
       in
       Vdom.Node.div [ x_button; frame_counter ])
   in
-  return
-    (let%map contents = contents
-     and append = append
-     and log_view = log_view in
-     let append_button =
-       Vdom.Node.button
-         ~attr:(Vdom.Attr.on_click (fun _ -> append))
-         [ Vdom.Node.text "add" ]
-     in
-     Vdom.Node.div (append_button :: log_view :: Map.data contents))
+  let%arr contents = contents
+  and append = append
+  and log_view = log_view in
+  let append_button =
+    Vdom.Node.button ~attr:(Vdom.Attr.on_click (fun _ -> append)) [ Vdom.Node.text "add" ]
+  in
+  Vdom.Node.div (append_button :: log_view :: Map.data contents)
 ;;
 
 (* $MDX part-end *)
@@ -167,8 +151,7 @@ let () = Util.run many_frame_watches ~id:"extendy-use-2"
 
 (* $MDX part-begin=on_change_type *)
 type 'a on_change_function_signature =
-  Source_code_position.t
-  -> (module Bonsai.Model with type t = 'a)
+  (module Bonsai.Model with type t = 'a)
   -> 'a Value.t
   -> callback:('a option -> 'a -> unit Ui_effect.t) Value.t
   -> unit Computation.t
@@ -184,19 +167,17 @@ let on_change'
       (current_value : a Value.t)
       ~(callback : (a option -> a -> unit Effect.t) Value.t)
   =
-  let%sub previous_value, set_previous_value = Bonsai.state_opt [%here] (module M) in
+  let%sub previous_value, set_previous_value = Bonsai.state_opt (module M) in
   let%sub after_display =
     match%sub previous_value with
     | None ->
-      return
-      @@ let%map set_previous_value = set_previous_value
+      let%arr set_previous_value = set_previous_value
       and current_value = current_value
       and callback = callback in
       Ui_effect.Many
         [ set_previous_value (Some current_value); callback None current_value ]
     | Some previous_value ->
-      return
-      @@ let%map previous_value = previous_value
+      let%arr previous_value = previous_value
       and set_previous_value = set_previous_value
       and current_value = current_value
       and callback = callback in
@@ -216,21 +197,20 @@ let on_change'
 let _ = on_change'
 
 let counter =
-  let%sub state, set_state = Bonsai.state [%here] (module Int) ~default_model:0 in
-  return
-    (let%map state = state
-     and set_state = set_state in
-     let decrement =
-       Vdom.Node.button
-         ~attr:(Vdom.Attr.on_click (fun _ -> set_state (state - 1)))
-         [ Vdom.Node.text "-1" ]
-     in
-     let increment =
-       Vdom.Node.button
-         ~attr:(Vdom.Attr.on_click (fun _ -> set_state (state + 1)))
-         [ Vdom.Node.text "+1" ]
-     in
-     Vdom.Node.div [ decrement; Vdom.Node.textf "%d" state; increment ], state)
+  let%sub state, set_state = Bonsai.state (module Int) ~default_model:0 in
+  let%arr state = state
+  and set_state = set_state in
+  let decrement =
+    Vdom.Node.button
+      ~attr:(Vdom.Attr.on_click (fun _ -> set_state (state - 1)))
+      [ Vdom.Node.text "-1" ]
+  in
+  let increment =
+    Vdom.Node.button
+      ~attr:(Vdom.Attr.on_click (fun _ -> set_state (state + 1)))
+      [ Vdom.Node.text "+1" ]
+  in
+  Vdom.Node.div [ decrement; Vdom.Node.textf "%d" state; increment ], state
 ;;
 
 (* $MDX part-begin=logging_counter *)
@@ -245,12 +225,11 @@ let logging_counter =
         | None -> Ui_effect.Ignore
         | Some prev -> log (if prev < cur then "🚀" else "🔥")
     in
-    Bonsai.Edge.on_change' [%here] (module Int) counter ~callback
+    Bonsai.Edge.on_change' (module Int) counter ~callback
   in
-  return
-    (let%map log_view = log_view
-     and counter_view = counter_view in
-     Vdom.Node.div [ counter_view; log_view ])
+  let%arr log_view = log_view
+  and counter_view = counter_view in
+  Vdom.Node.div [ counter_view; log_view ]
 ;;
 
 (* $MDX part-end *)

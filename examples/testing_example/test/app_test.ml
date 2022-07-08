@@ -91,7 +91,7 @@ end
 
 let%expect_test "test Bonsai.state" =
   let component : (string * (string -> unit Vdom.Effect.t)) Computation.t =
-    Bonsai.state [%here] (module String) ~default_model:"hello"
+    Bonsai.state (module String) ~default_model:"hello"
   in
   let handle = Handle.create (module State_view_spec) component in
   Handle.show handle;

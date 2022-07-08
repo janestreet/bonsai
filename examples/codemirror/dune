@@ -1,2 +1,4 @@
-(executables (names main) (libraries bonsai_web bonsai_web_ui_codemirror)
+(executables (names main)
+ (libraries bonsai_web bonsai_web_ui_codemirror bonsai_web_ui_form codemirror
+  ppx_css.inline_css)
  (preprocess (pps ppx_jane)))

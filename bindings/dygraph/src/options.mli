@@ -150,6 +150,15 @@ module Series_options : sig
         Type: boolean
         Default: null
     *)
+    -> ?stepPlot:bool
+    (** stepPlot https://dygraphs.com/options.html#stepPlot
+
+        When set, display the graph as a step plot instead of a line plot. This option may
+        either be set for the whole graph or for single series.
+
+        Type: boolean
+        Default: false
+    *)
     -> ?strokePattern:Line_pattern.t
     (** strokePattern http://dygraphs.com/options.html#strokePattern
 
@@ -1425,6 +1434,9 @@ val legendFormatter : t -> (Legend_data.t -> string) option [@@js.get]
 
 val zoomCallback    : t -> (xmin:float -> xmax:float -> yRanges:Range.t array -> unit) option
 [@@js.get]
+
+val height : t -> int option [@@js.get]
+val width  : t -> int option [@@js.get]
 
 (** This is the lodash.js deep-merge implementation *)
 val merge_internal : t -> prefer:t -> t

@@ -1,5 +1,4 @@
 open! Core
-open! Bonsai
 open! Bonsai_web
 open! Incr_map_collate
 open! Bonsai_web_ui_partial_render_table
@@ -80,14 +79,14 @@ module Input : sig
     -> 'action Bonsai_bench.Interaction.t
 end
 
-(** [create_test] produces a [Bonsai_bench.Test.t] which will benchmark the partial render
-    table, with the initial input set to [initial_vars], by running the interaction
-    produced by calling [interaction] on [initial_vars]. *)
-val create_test
+(** [create_bench] produces a [Bonsai_bench.t] which can be used to either benchmark or
+    profile the partial render table, with the initial input set to [initial_vars], by
+    running the interaction produced by calling [interaction] on [initial_vars]. *)
+val create_bench
   :  ?preload_rows:int
   -> ('key, 'cmp) Bonsai.comparator
   -> initial_vars:('key, 'data, 'cmp) Input.t
   -> columns:('key, 'data) Expert.Columns.t
   -> interaction:(('key, 'data, 'cmp) Input.t -> 'key Action.t Bonsai_bench.Interaction.t)
   -> test_name:string
-  -> Bonsai_bench.Test.t
+  -> Bonsai_bench.t

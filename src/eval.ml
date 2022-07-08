@@ -54,11 +54,11 @@ let rec eval
   =
   fun ~environment ~path ~clock ~model ~inject_dynamic ~inject_static computation ->
   annotate Model model;
-  match computation with
+  match computation.t with
   | Return value ->
     let result = Value.eval environment value in
     Snapshot.create ~result ~apply_action:Apply_action.impossible ~lifecycle:None
-  | Leaf1 { input; dynamic_apply_action; name = _; kind = _ } ->
+  | Leaf1 { input; dynamic_apply_action; name = _ } ->
     let input = Value.eval environment input in
     let result =
       let%mapn model = model in
@@ -66,11 +66,23 @@ let rec eval
     in
     let apply_action =
       let%mapn input = input in
-      dynamic_apply_action ~inject:inject_dynamic input
+      dynamic_apply_action ~inject_dynamic ~inject_static:Nothing.unreachable_code input
     in
     let apply_action = Apply_action.incremental apply_action in
     Snapshot.create ~result ~apply_action ~lifecycle:None
-  | Leaf0 { compute; name = _; kind = _ } ->
+  | Leaf01 { input; dynamic_apply_action; name = _ } ->
+    let input = Value.eval environment input in
+    let result =
+      let%mapn model = model in
+      model, inject_dynamic, inject_static
+    in
+    let apply_action =
+      let%mapn input = input in
+      dynamic_apply_action ~inject_dynamic ~inject_static input
+    in
+    let apply_action = Apply_action.incremental apply_action in
+    Snapshot.create ~result ~apply_action ~lifecycle:None
+  | Leaf0 { compute; name = _ } ->
     let result =
       let%map model = model in
       compute ~inject:inject_static model
@@ -183,6 +195,104 @@ let rec eval
       | Some l1, Some l2 -> Some (merge_lifecycles l1 l2)
     in
     Snapshot.create ~result ~apply_action ~lifecycle
+  | Assoc_on
+      { map
+      ; by
+      ; get_model_key
+      ; io_key_compare
+      ; model_key_comparator
+      ; io_key_id
+      ; data_id
+      ; model_info
+      ; action_info
+      ; result_by_k = T
+      ; model_by_model_key = T
+      } ->
+    let map_input = Value.eval environment map in
+    let model_lookup = Incr_map.Lookup.create model ~comparator:model_key_comparator in
+    let create_keyed = unstage (Path.Elem.keyed ~compare:io_key_compare io_key_id) in
+    let results_map, apply_action_map, lifecycle_map =
+      unzip3_mapi' map_input ~f:(fun ~key ~data:value ->
+        let%pattern_bind results_map, apply_action_map, lifecycle_map =
+          let path = Path.append path Path.Elem.(Assoc (create_keyed key)) in
+          let key_incr = Incr.const key in
+          annotate Assoc_key key_incr;
+          annotate Assoc_input value;
+          let environment =
+            (* It is safe to reuse the same [key_id] and [data_id] for each pair in the map,
+               since they all start with a fresh "copy" of the outer environment. *)
+            environment
+            |> Environment.add_exn ~key:io_key_id ~data:key_incr
+            |> Environment.add_exn ~key:data_id ~data:value
+          in
+          let model_key =
+            let%map value = value in
+            get_model_key key value
+          in
+          Incr.set_cutoff
+            model_key
+            (Incr.Cutoff.of_compare model_key_comparator.compare);
+          let%bind model_key = model_key in
+          let inject_dynamic action = inject_dynamic (key, model_key, action) in
+          let inject_static action = inject_static (key, model_key, action) in
+          let model =
+            let%map model = Incr_map.Lookup.find model_lookup model_key in
+            Option.value model ~default:model_info.default
+          in
+          let snapshot =
+            eval ~environment ~path ~clock ~inject_dynamic ~inject_static ~model by
+          in
+          let%mapn result = Snapshot.result snapshot
+          and apply_action =
+            Snapshot.(Apply_action.to_incremental (apply_action snapshot))
+          and lifecycle = Snapshot.lifecycle_or_empty snapshot in
+          result, apply_action, lifecycle
+        in
+        results_map, apply_action_map, lifecycle_map)
+    in
+    annotate Assoc_results results_map;
+    annotate Assoc_lifecycles lifecycle_map;
+    annotate Assoc_apply_actions apply_action_map;
+    let apply_action =
+      let%mapn apply_action_map = apply_action_map in
+      fun ~schedule_event model action ->
+        let input_id, model_id, action = action in
+        let specific_model =
+          Map.find model model_id |> Option.value ~default:model_info.default
+        in
+        match Map.find apply_action_map input_id with
+        | None ->
+          let io_key = Type_equal.Id.to_sexp io_key_id input_id in
+          let model_key = model_key_comparator.sexp_of_t model_id in
+          let action = Type_equal.Id.to_sexp action_info action in
+          eprint_s
+            [%message
+              "an action inside of Bonsai.assoc_on has been dropped because the \
+               computation is no longer active"
+                (io_key : Sexp.t)
+                (model_key : Sexp.t)
+                (action : Sexp.t)];
+          model
+        (* drop it on the floor *)
+        | Some apply_action ->
+          let data = apply_action ~schedule_event specific_model action in
+          if model_info.equal data model_info.default
+          then Map.remove model model_id
+          else Map.set model ~key:model_id ~data
+    in
+    let lifecycle =
+      Incr_map.unordered_fold_nested_maps
+        lifecycle_map
+        ~init:Path.Map.empty
+        ~add:(fun ~outer_key:_ ~inner_key:key ~data acc ->
+          Map.update acc key ~f:(function
+            | Some _ -> raise_duplicate_path key
+            | None -> data))
+        ~remove:(fun ~outer_key:_ ~inner_key:key ~data:_ acc -> Map.remove acc key)
+    in
+    annotate Assoc_lifecycles lifecycle;
+    let apply_action = Apply_action.incremental apply_action in
+    Snapshot.create ~result:results_map ~apply_action ~lifecycle:(Some lifecycle)
   | Assoc
       { map
       ; by
@@ -194,9 +304,9 @@ let rec eval
       ; result_by_k = T
       ; model_by_k = T
       } ->
-    let map_input = Value.eval environment map in
+    let input_map = Value.eval environment map in
     let input_and_models_map =
-      Incr_map.merge map_input model ~f:(fun ~key:_ -> function
+      Incr_map.merge input_map model ~f:(fun ~key:_ -> function
         | `Left input -> Some (input, model_info.default)
         | `Right _ -> None
         | `Both input_and_models -> Some input_and_models)
@@ -242,7 +352,7 @@ let rec eval
           let action = Type_equal.Id.to_sexp action_info action in
           eprint_s
             [%message
-              "an action inside of Bonsai.assoc as been dropped because the computation \
+              "an action inside of Bonsai.assoc has been dropped because the computation \
                is no longer active"
                 (key : Sexp.t)
                 (action : Sexp.t)];
@@ -259,15 +369,15 @@ let rec eval
         lifecycle_map
         ~init:Path.Map.empty
         ~add:(fun ~outer_key:_ ~inner_key:key ~data acc ->
-          Path.Map.update acc key ~f:(function
+          Map.update acc key ~f:(function
             | Some _ -> raise_duplicate_path key
             | None -> data))
-        ~remove:(fun ~outer_key:_ ~inner_key:key ~data:_ acc -> Path.Map.remove acc key)
+        ~remove:(fun ~outer_key:_ ~inner_key:key ~data:_ acc -> Map.remove acc key)
     in
     annotate Assoc_lifecycles lifecycle;
     let apply_action = Apply_action.incremental apply_action in
     Snapshot.create ~result:results_map ~apply_action ~lifecycle:(Some lifecycle)
-  | Assoc_simpl { map; by; key_id = _; data_id = _; result_by_k = T } ->
+  | Assoc_simpl { map; by; result_by_k = T } ->
     let map_input = Value.eval environment map in
     let result = Incr_map.mapi map_input ~f:(fun ~key ~data -> by path key data) in
     Snapshot.create ~result ~apply_action:Apply_action.impossible ~lifecycle:None
@@ -437,7 +547,8 @@ let rec eval
         | First action1 ->
           let new_outer_model =
             dynamic_apply_action
-              ~inject:dynamic_inject_outer
+              ~inject_dynamic:dynamic_inject_outer
+              ~inject_static:Nothing.unreachable_code
               ~schedule_event
               inner_result
               outer_model

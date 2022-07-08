@@ -5,22 +5,21 @@ open Bonsai.Let_syntax
 module Form = Bonsai_web_ui_form
 
 let textbox ~placeholder =
-  let%sub state, set_state = Bonsai.state [%here] (module String) ~default_model:"" in
-  return
-    (let%map state = state
-     and set_state = set_state
-     and placeholder = placeholder in
-     let view =
-       Vdom.Node.input
-         ~attr:
-           (Vdom.Attr.many
-              [ Vdom.Attr.value_prop state
-              ; Vdom.Attr.on_input (fun _ new_text -> set_state new_text)
-              ; Vdom.Attr.placeholder placeholder
-              ])
-         []
-     in
-     state, view)
+  let%sub state, set_state = Bonsai.state (module String) ~default_model:"" in
+  let%arr state = state
+  and set_state = set_state
+  and placeholder = placeholder in
+  let view =
+    Vdom.Node.input
+      ~attr:
+        (Vdom.Attr.many
+           [ Vdom.Attr.value_prop state
+           ; Vdom.Attr.on_input (fun _ new_text -> set_state new_text)
+           ; Vdom.Attr.placeholder placeholder
+           ])
+      ()
+  in
+  state, view
 ;;
 
 (* $MDX part-begin=textbox_with_placeholder *)
@@ -38,11 +37,10 @@ let () =
 let textbox_chaining =
   let%sub a_contents, a_view = textbox ~placeholder:(Value.return "") in
   let%sub _, b_view = textbox ~placeholder:a_contents in
-  return
-    (let%map a_view = a_view
-     and b_view = b_view in
-     let style = Vdom.Attr.style (Css_gen.display `Inline_grid) in
-     Vdom.Node.div ~attr:style [ a_view; b_view ])
+  let%arr a_view = a_view
+  and b_view = b_view in
+  let style = Vdom.Attr.style (Css_gen.display `Inline_grid) in
+  Vdom.Node.div ~attr:style [ a_view; b_view ]
 ;;
 
 (* $MDX part-end *)
@@ -60,17 +58,15 @@ let textbox_matching =
   in
   match%sub a_contents with
   | None ->
-    return
-      (let%map a_view = a_view in
-       let message = Vdom.Node.div [ Vdom.Node.text "<a is empty>" ] in
-       Vdom.Node.div [ a_view; message ])
+    let%arr a_view = a_view in
+    let message = Vdom.Node.div [ Vdom.Node.text "<a is empty>" ] in
+    Vdom.Node.div [ a_view; message ]
   | Some placeholder ->
     let%sub _, b_view = textbox ~placeholder in
-    return
-      (let%map a_view = a_view
-       and b_view = b_view in
-       let style = Vdom.Attr.style (Css_gen.display `Inline_grid) in
-       Vdom.Node.div ~attr:style [ a_view; b_view ])
+    let%arr a_view = a_view
+    and b_view = b_view in
+    let style = Vdom.Attr.style (Css_gen.display `Inline_grid) in
+    Vdom.Node.div ~attr:style [ a_view; b_view ]
 ;;
 
 (* $MDX part-end *)
@@ -86,16 +82,15 @@ let multiple_counters (input : unit String.Map.t Value.t) =
       input
       ~f:(fun _key (_ : unit Value.t) -> State_examples.counter_state_machine)
   in
-  return
-    (let%map counters = counters in
-     Vdom.Node.table
-       (counters
-        |> Map.to_alist
-        |> List.map ~f:(fun (key, vdom) ->
-          let open Vdom.Node in
-          let name = td [ Vdom.Node.text key ] in
-          let counter = td [ vdom ] in
-          Vdom.Node.tr [ name; counter ])))
+  let%arr counters = counters in
+  Vdom.Node.table
+    (counters
+     |> Map.to_alist
+     |> List.map ~f:(fun (key, vdom) ->
+       let open Vdom.Node in
+       let name = td [ Vdom.Node.text key ] in
+       let counter = td [ vdom ] in
+       Vdom.Node.tr [ name; counter ]))
 ;;
 
 (* $MDX part-end *)
@@ -127,7 +122,6 @@ end
 
 let people =
   Bonsai.state_machine0
-    [%here]
     (module Model)
     (module Action)
     ~default_model:Model.default
@@ -138,18 +132,17 @@ let people =
 ;;
 
 let add_new_person_form ~inject_add_person =
-  let%sub form = Form.Elements.Textbox.string [%here] in
-  return
-    (let%map form = form
-     and inject_add_person = inject_add_person in
-     let on_submit name = Vdom.Effect.Many [ Form.set form ""; inject_add_person name ] in
-     form
-     |> Form.label "name"
-     |> Form.validate ~f:(fun name ->
-       if String.for_all name ~f:Char.is_whitespace
-       then Error (Error.of_string "name must not be empty")
-       else Ok ())
-     |> Form.view_as_vdom ~on_submit:(Form.Submit.create ~f:on_submit ()))
+  let%sub form = Form.Elements.Textbox.string () in
+  let%arr form = form
+  and inject_add_person = inject_add_person in
+  let on_submit name = Vdom.Effect.Many [ Form.set form ""; inject_add_person name ] in
+  form
+  |> Form.label "name"
+  |> Form.validate ~f:(fun name ->
+    if String.for_all name ~f:Char.is_whitespace
+    then Error (Error.of_string "name must not be empty")
+    else Ok ())
+  |> Form.view_as_vdom ~on_submit:(Form.Submit.create ~f:on_submit ())
 ;;
 
 let people_table people ~inject_remove_person =
@@ -158,21 +151,20 @@ let people_table people ~inject_remove_person =
     people
     ~f:(fun name (_ : unit Value.t) ->
       let%sub counter = State_examples.counter_state_machine in
-      return
-        (let%map counter = counter
-         and name = name
-         and inject_remove_person = inject_remove_person in
-         let open Vdom.Node in
-         let remove_person =
-           td
-             [ button
-                 ~attr:(Vdom.Attr.on_click (fun _ -> inject_remove_person name))
-                 [ text "x" ]
-             ]
-         in
-         let name = td [ text name ] in
-         let counter = td [ counter ] in
-         tr [ name; counter; remove_person ]))
+      let%arr counter = counter
+      and name = name
+      and inject_remove_person = inject_remove_person in
+      let open Vdom.Node in
+      let remove_person =
+        td
+          [ button
+              ~attr:(Vdom.Attr.on_click (fun _ -> inject_remove_person name))
+              [ text "x" ]
+          ]
+      in
+      let name = td [ text name ] in
+      let counter = td [ counter ] in
+      tr [ name; counter; remove_person ])
 ;;
 
 let kudo_tracker =
@@ -191,20 +183,18 @@ let kudo_tracker =
     in
     people_table people ~inject_remove_person
   in
-  return
-    (let%map people_table = people_table
-     and form = form in
-     let open Vdom.Node in
-     div
-       [ h2 [ text "kudos tracker" ]
-       ; table
-           [ thead
-               [ tr [ th [ text "Name" ]; th [ text "# Kudos" ]; th [ text "Remove" ] ] ]
-           ; tbody (Map.data people_table)
-           ]
-       ; h2 [ text "Add Person" ]
-       ; form
-       ])
+  let%arr people_table = people_table
+  and form = form in
+  let open Vdom.Node in
+  div
+    [ h2 [ text "kudos tracker" ]
+    ; table
+        [ thead [ tr [ th [ text "Name" ]; th [ text "# Kudos" ]; th [ text "Remove" ] ] ]
+        ; tbody (Map.data people_table)
+        ]
+    ; h2 [ text "Add Person" ]
+    ; form
+    ]
 ;;
 
 (* $MDX part-end *)

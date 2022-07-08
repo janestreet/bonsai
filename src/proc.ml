@@ -2,8 +2,17 @@ open! Core
 open! Import
 module Var = Var
 
-let unusable_static_apply_action ~inject:_ ~schedule_event:_ _model =
+let unusable_static_apply_action
+      ~inject_dynamic:_
+      ~inject_static:_
+      ~schedule_event:_
+      _model
+  =
   Nothing.unreachable_code
+;;
+
+let with_computation_id name c =
+  { Computation.t = c; id = Type_equal.Id.create ~name sexp_of_opaque }
 ;;
 
 let sub
@@ -19,10 +28,14 @@ let sub
          via Computation.packed)
       ~f
   =
-  match from with
-  | Return { here = there; value = Named _ as value } ->
+  match from.t with
+  | Return { here = there; value = Named; id } ->
     let here = Option.first_some here there in
-    f { Value.here; value }
+    f { Value.here; value = Named; id }
+  | Return ({ here = there; value; id } as returned)
+    when Option.is_some (Value.contents_if_value_is_constant returned) ->
+    let here = Option.first_some here there in
+    f { Value.here; value; id }
   | _ ->
     let via : via Type_equal.Id.t =
       Type_equal.Id.create
@@ -50,7 +63,9 @@ let sub
      with
      | (Some T, Some T, Some T), _ ->
        Computation.T
-         { t = Subst_stateless_from { from; via; into; here }
+         { t =
+             Subst_stateless_from { from; via; into; here }
+             |> with_computation_id "subst_stateless_from"
          ; dynamic_action = into_dynamic_action
          ; static_action = into_static_action
          ; model = into_model
@@ -58,23 +73,27 @@ let sub
          }
      | _, (Some T, Some T, Some T) ->
        Computation.T
-         { t = Subst_stateless_into { from; via; into; here }
+         { t =
+             Subst_stateless_into { from; via; into; here }
+             |> with_computation_id "subst_stateless_into"
          ; dynamic_action = from_dynamic_action
          ; static_action = from_static_action
          ; model = from_model
          ; apply_static = from_apply_static
          }
      | _ ->
-       let apply_static ~inject ~schedule_event (m1, m2) = function
+       let apply_static ~inject_dynamic ~inject_static ~schedule_event (m1, m2) = function
          | First a ->
-           let inject a = inject (First a) in
-           from_apply_static ~inject ~schedule_event m1 a, m2
+           let inject_static a = inject_static (First a) in
+           let inject_dynamic a = inject_dynamic (First a) in
+           from_apply_static ~inject_dynamic ~inject_static ~schedule_event m1 a, m2
          | Second a ->
-           let inject a = inject (Second a) in
-           m1, into_apply_static ~inject ~schedule_event m2 a
+           let inject_static a = inject_static (Second a) in
+           let inject_dynamic a = inject_dynamic (Second a) in
+           m1, into_apply_static ~inject_dynamic ~inject_static ~schedule_event m2 a
        in
        Computation.T
-         { t = Subst { from; via; into; here }
+         { t = Subst { from; via; into; here } |> with_computation_id "subst"
          ; dynamic_action = Meta.Action.both from_dynamic_action into_dynamic_action
          ; static_action = Meta.Action.both from_static_action into_static_action
          ; model = Meta.Model.both from_model into_model
@@ -84,7 +103,7 @@ let sub
 
 let read x =
   Computation.T
-    { t = Return x
+    { t = Return x |> with_computation_id "read"
     ; model = Meta.Model.unit
     ; dynamic_action = Meta.Action.nothing
     ; static_action = Meta.Action.nothing
@@ -109,25 +128,36 @@ let switch ~match_ ~branches ~with_ =
         let models = Map.add_exn models ~key ~data:model in
         components, models)
   in
-  let apply_static ~inject ~schedule_event model (action : int Hidden.Action.t) =
+  let apply_static
+        ~inject_dynamic
+        ~inject_static
+        ~schedule_event
+        model
+        (action : int Hidden.Action.t)
+    =
     let (T { action; type_id = action_type_id; key = index }) = action in
     let (T { model = chosen_model; info = chosen_model_info; _ }) =
       Hidden.Multi_model.find_exn model index
     in
-    let inject action =
-      inject (Hidden.Action.T { action; type_id = action_type_id; key = index })
+    let inject_static action =
+      inject_static (Hidden.Action.T { action; type_id = action_type_id; key = index })
     in
-    let (T { t = _; model = tm; static_action = am; apply_static; dynamic_action = _ }) =
+    let (T { t = _; model = tm; static_action = am; dynamic_action = dm; apply_static }) =
       Map.find_exn arms index
     in
     let T = Type_equal.Id.same_witness_exn tm.type_id chosen_model_info.type_id in
     let T = Type_equal.Id.same_witness_exn am action_type_id in
-    let new_model = apply_static ~inject ~schedule_event chosen_model action in
+    let inject_dynamic action =
+      inject_dynamic (Hidden.Action.T { action; type_id = dm; key = index })
+    in
+    let new_model =
+      apply_static ~inject_dynamic ~inject_static ~schedule_event chosen_model action
+    in
     let new_model = Hidden.Model.create tm new_model in
     Hidden.Multi_model.set model ~key:index ~data:new_model
   in
   Computation.T
-    { t = Switch { match_; arms }
+    { t = Switch { match_; arms } |> with_computation_id "switch"
     ; model = Hidden.Multi_model.model_info (module Int) models
     ; dynamic_action = Hidden.Action.type_id [%sexp_of: int]
     ; static_action = Hidden.Action.type_id [%sexp_of: int]
@@ -162,17 +192,22 @@ let with_model_resetter
       (Computation.T { t; model; static_action; dynamic_action; apply_static })
   =
   let static_action = Meta.(Action.both unit_type_id static_action) in
-  let apply_static ~inject ~schedule_event m =
-    let inject a = inject (Second a) in
+  let apply_static ~inject_dynamic ~inject_static ~schedule_event m =
+    let inject_static a = inject_static (Second a) in
     function
     | First () -> model.default
-    | Second a -> apply_static ~inject ~schedule_event m a
+    | Second a -> apply_static ~inject_dynamic ~inject_static ~schedule_event m a
   in
   Computation.T
-    { t = With_model_resetter t; model; static_action; dynamic_action; apply_static }
+    { t = With_model_resetter t |> with_computation_id "with_model_resetter"
+    ; model
+    ; static_action
+    ; dynamic_action
+    ; apply_static
+    }
 ;;
 
-let assoc
+let attempt_to_simplify_for_assoc_like
       (type k v cmp)
       (comparator : (k, cmp) comparator)
       (map : (k, v, cmp) Map.t Value.t)
@@ -185,29 +220,53 @@ let assoc
   in
   let key_var = Value.named key_id in
   let data_var = Value.named data_id in
-  let (Computation.T
-         { t = by; model = model_info; dynamic_action; static_action; apply_static })
-    =
-    f key_var data_var
-  in
+  let (Computation.T { t = by; _ }) = f key_var data_var in
   match
     Simplify.computation_to_function by ~key_compare:C.comparator.compare ~key_id ~data_id
   with
   | Some by ->
-    Computation.T
-      { t = Assoc_simpl { map; key_id; data_id; by; result_by_k = T }
-      ; dynamic_action = Meta.Action.nothing
-      ; static_action = Meta.Action.nothing
-      ; apply_static = unusable_static_apply_action
-      ; model = Meta.Model.unit
-      }
+    Some
+      (Computation.T
+         { t =
+             Assoc_simpl { map; by; result_by_k = T } |> with_computation_id "assoc_simpl"
+         ; dynamic_action = Meta.Action.nothing
+         ; static_action = Meta.Action.nothing
+         ; apply_static = unusable_static_apply_action
+         ; model = Meta.Model.unit
+         })
+  | None -> None
+;;
+
+let assoc
+      (type k v cmp)
+      (comparator : (k, cmp) comparator)
+      (map : (k, v, cmp) Map.t Value.t)
+      ~f
+  =
+  match attempt_to_simplify_for_assoc_like comparator map ~f with
+  | Some c -> c
   | None ->
-    let apply_static ~inject ~schedule_event model (id, action) =
-      let inject a = inject (id, a) in
+    let module C = (val comparator) in
+    let key_id : k Type_equal.Id.t = Type_equal.Id.create ~name:"key id" C.sexp_of_t in
+    let data_id : v Type_equal.Id.t =
+      Type_equal.Id.create ~name:"data id" [%sexp_of: opaque]
+    in
+    let key_var = Value.named key_id in
+    let data_var = Value.named data_id in
+    let (Computation.T
+           { t = by; model = model_info; dynamic_action; static_action; apply_static })
+      =
+      f key_var data_var
+    in
+    let apply_static ~inject_dynamic ~inject_static ~schedule_event model (id, action) =
+      let inject_dynamic a = inject_dynamic (id, a) in
+      let inject_static a = inject_static (id, a) in
       let specific_model =
         Map.find model id |> Option.value ~default:model_info.default
       in
-      let data = apply_static ~inject ~schedule_event specific_model action in
+      let data =
+        apply_static ~inject_dynamic ~inject_static ~schedule_event specific_model action
+      in
       if model_info.equal data model_info.default
       then Map.remove model id
       else Map.set model ~key:id ~data
@@ -226,9 +285,80 @@ let assoc
             ; result_by_k = T
             ; model_by_k = T
             }
+          |> with_computation_id "assoc"
       ; dynamic_action = Meta.Action.map comparator dynamic_action
       ; static_action = Meta.Action.map comparator static_action
       ; model = Meta.Model.map comparator model_info
+      ; apply_static
+      }
+;;
+
+let assoc_on
+      (type model_k io_k model_cmp io_cmp v)
+      (io_comparator : (io_k, io_cmp) comparator)
+      (model_comparator : (model_k, model_cmp) comparator)
+      (map : (io_k, v, io_cmp) Map.t Value.t)
+      ~get_model_key
+      ~f
+  =
+  match attempt_to_simplify_for_assoc_like io_comparator map ~f with
+  | Some c -> c
+  | None ->
+    let module Model_comparator = (val model_comparator) in
+    let module Io_comparator = (val io_comparator) in
+    let io_key_id : io_k Type_equal.Id.t =
+      Type_equal.Id.create ~name:"key id" Io_comparator.sexp_of_t
+    in
+    let data_id : v Type_equal.Id.t =
+      Type_equal.Id.create ~name:"data id" [%sexp_of: opaque]
+    in
+    let key_var = Value.named io_key_id in
+    let data_var = Value.named data_id in
+    let (Computation.T
+           { t = by; model = model_info; dynamic_action; static_action; apply_static })
+      =
+      f key_var data_var
+    in
+    let apply_static
+          ~inject_dynamic
+          ~inject_static
+          ~schedule_event
+          model
+          (input_id, model_id, action)
+      =
+      let inject_dynamic a = inject_dynamic (input_id, model_id, a) in
+      let inject_static a = inject_static (input_id, model_id, a) in
+      let specific_model =
+        Map.find model model_id |> Option.value ~default:model_info.default
+      in
+      let data =
+        apply_static ~inject_dynamic ~inject_static ~schedule_event specific_model action
+      in
+      if model_info.equal data model_info.default
+      then Map.remove model model_id
+      else Map.set model ~key:model_id ~data
+    in
+    Computation.T
+      { t =
+          Assoc_on
+            { map
+            ; io_key_compare = Io_comparator.comparator.compare
+            ; model_key_comparator = Model_comparator.comparator
+            ; io_key_id
+            ; data_id
+            ; by
+            ; get_model_key
+            ; model_info
+            ; action_info = dynamic_action
+            ; result_by_k = T
+            ; model_by_model_key = T
+            }
+          |> with_computation_id "assoc_on"
+      ; dynamic_action =
+          Meta.Action.map_for_assoc_on io_comparator model_comparator dynamic_action
+      ; static_action =
+          Meta.Action.map_for_assoc_on io_comparator model_comparator static_action
+      ; model = Meta.Model.map model_comparator model_info
       ; apply_static
       }
 ;;
@@ -249,24 +379,49 @@ let enum (type k) (module E : Enum with type t = k) ~match_ ~with_ =
   Let_syntax.switch ~match_ ~branches ~with_
 ;;
 
+let state_machine0 model action ~default_model ~apply_action =
+  let compute ~inject model = model, inject in
+  let name = Source_code_position.to_string [%here] in
+  let apply_action ~inject_dynamic:_ ~inject_static =
+    apply_action ~inject:inject_static
+  in
+  Computation.T
+    { t = Leaf0 { compute; name } |> with_computation_id "leaf0"
+    ; model = Meta.Model.of_module model ~name ~default:default_model
+    ; dynamic_action = Meta.Action.nothing
+    ; static_action = Meta.Action.of_module action ~name
+    ; apply_static = apply_action
+    }
+;;
+
 let state_machine1
       (type m a)
-      here
       (module M : Model with type t = m)
       (module A : Action with type t = a)
       ~default_model
       ~apply_action
       input
   =
-  let name = Source_code_position.to_string here in
-  Computation.T
-    { t =
-        Leaf1 { input; dynamic_apply_action = apply_action; name; kind = "state machine" }
-    ; model = Meta.Model.of_module (module M) ~name ~default:default_model
-    ; dynamic_action = Meta.Action.of_module (module A) ~name
-    ; static_action = Meta.Action.nothing
-    ; apply_static = unusable_static_apply_action
-    }
+  match Value.contents_if_value_is_constant input with
+  | None ->
+    let name = Source_code_position.to_string [%here] in
+    let apply_action ~inject_dynamic ~inject_static:_ =
+      apply_action ~inject:inject_dynamic
+    in
+    Computation.T
+      { t =
+          Leaf1 { input; dynamic_apply_action = apply_action; name }
+          |> with_computation_id "leaf1"
+      ; model = Meta.Model.of_module (module M) ~name ~default:default_model
+      ; dynamic_action = Meta.Action.of_module (module A) ~name
+      ; static_action = Meta.Action.nothing
+      ; apply_static = unusable_static_apply_action
+      }
+  | Some constant ->
+    let apply_action ~inject ~schedule_event model action =
+      apply_action ~inject ~schedule_event (force constant) model action
+    in
+    state_machine0 (module M) (module A) ~default_model ~apply_action
 ;;
 
 let of_module1 (type i m a r) (component : (i, m, a, r) component_s) ~default_model input =
@@ -274,7 +429,6 @@ let of_module1 (type i m a r) (component : (i, m, a, r) component_s) ~default_mo
   let%sub input = return input in
   let%sub model_and_inject =
     state_machine1
-      [%here]
       (module M.Model)
       (module M.Action)
       ~default_model
@@ -288,26 +442,133 @@ let of_module1 (type i m a r) (component : (i, m, a, r) component_s) ~default_mo
 
 let of_module2 c ~default_model i1 i2 = of_module1 c ~default_model (Value.both i1 i2)
 
-let state_machine0 here model action ~default_model ~apply_action =
-  let apply_action ~inject ~schedule_event model action =
-    apply_action ~inject ~schedule_event model action
-  in
-  let compute ~inject model = model, inject in
-  let name = Source_code_position.to_string here in
+let state_machine01 model a1 a2 ~default_model ~apply_dynamic ~apply_static input =
+  let name = Source_code_position.to_string [%here] in
   Computation.T
-    { t = Leaf0 { compute; name; kind = "state machine" }
+    { t =
+        Leaf01 { name; dynamic_apply_action = apply_dynamic; input }
+        |> with_computation_id "leaf01"
     ; model = Meta.Model.of_module model ~name ~default:default_model
-    ; dynamic_action = Meta.Action.nothing
-    ; static_action = Meta.Action.of_module action ~name
-    ; apply_static = apply_action
+    ; dynamic_action = Meta.Action.of_module a1 ~name
+    ; static_action = Meta.Action.of_module a2 ~name
+    ; apply_static
     }
+;;
+
+module Computation_status = struct
+  type 'input t =
+    | Active of 'input
+    | Inactive
+end
+
+let race
+      (type m)
+      (module M : Model with type t = m)
+      action
+      ~default_model
+      ~apply_action
+      input
+  =
+  let module Model = struct
+    type t =
+      { submodel : M.t
+      ; ignore_next_static : bool
+      }
+    [@@deriving sexp, equal]
+  end
+  in
+  let default_model = { Model.submodel = default_model; ignore_next_static = false } in
+  let merge_injections ~inject_dynamic ~inject_static a =
+    Effect.Many [ inject_dynamic a; inject_static a ]
+  in
+  let%sub m, id, is =
+    state_machine01
+      (module Model)
+      action
+      action
+      ~default_model
+      ~apply_dynamic:
+        (fun ~inject_dynamic ~inject_static ~schedule_event input model action ->
+           { submodel =
+               apply_action
+                 ~inject:(merge_injections ~inject_dynamic ~inject_static)
+                 ~schedule_event
+                 (Computation_status.Active input)
+                 model.submodel
+                 action
+           ; ignore_next_static = true
+           })
+      ~apply_static:(fun ~inject_dynamic ~inject_static ~schedule_event model action ->
+        let submodel =
+          if model.ignore_next_static
+          then model.submodel
+          else
+            apply_action
+              ~inject:(merge_injections ~inject_dynamic ~inject_static)
+              ~schedule_event
+              Computation_status.Inactive
+              model.submodel
+              action
+        in
+        { submodel; ignore_next_static = false })
+      input
+  in
+  let%arr m = m
+  and inject_dynamic = id
+  and inject_static = is in
+  m.submodel, merge_injections ~inject_dynamic ~inject_static
+;;
+
+let race_dynamic_model
+      (type m a)
+      (module M : Model with type t = m)
+      (module A : Action with type t = a)
+      ~model
+      ~apply_action
+      input
+  =
+  let model_creator =
+    match model with
+    | `Given m ->
+      Value.map m ~f:(fun m -> function
+        | None -> m
+        | Some a -> a)
+    | `Computed f -> f
+  in
+  let module M_actual = struct
+    type t = M.t option [@@deriving sexp, equal]
+  end
+  in
+  let apply_action ~inject ~schedule_event computation_status model action =
+    match computation_status with
+    | Computation_status.Active (input, model_creator) ->
+      let model = Some (model_creator model) in
+      Some
+        (apply_action
+           ~inject
+           ~schedule_event
+           (Computation_status.Active input)
+           model
+           action)
+    | Inactive -> Some (apply_action ~inject ~schedule_event Inactive model action)
+  in
+  let%sub model_and_inject =
+    race
+      (module M_actual)
+      (module A)
+      ~default_model:None
+      ~apply_action
+      (Value.both input model_creator)
+  in
+  let%arr model, inject = model_and_inject
+  and model_creator = model_creator in
+  model_creator model, inject
 ;;
 
 let of_module0 (type m a r) (component : (unit, m, a, r) component_s) ~default_model =
   let (module M) = component in
   let%sub model_and_inject =
     state_machine0
-      [%here]
       (module M.Model)
       (module M.Action)
       ~default_model
@@ -319,8 +580,7 @@ let of_module0 (type m a r) (component : (unit, m, a, r) component_s) ~default_m
 
 let actor1
   : type input model action return.
-    Source_code_position.t
-    -> (module Model with type t = model)
+    (module Model with type t = model)
     -> (module Action with type t = action)
     -> default_model:model
     -> recv:
@@ -332,8 +592,7 @@ let actor1
     -> input Value.t
     -> (model * (action -> return Effect.t)) Computation.packed
   =
-  fun here
-    (module M : Model with type t = model)
+  fun (module M : Model with type t = model)
     (module A : Action with type t = action)
     ~default_model
     ~recv
@@ -344,9 +603,8 @@ let actor1
       let sexp_of_t cb = A.sexp_of_t (Effect.Private.Callback.request cb)
     end
     in
-    let%sub model_and_inject =
+    let%sub model, inject =
       state_machine1
-        here
         (module M)
         (module Action_with_callback)
         ~default_model
@@ -357,14 +615,18 @@ let actor1
           new_model)
         input
     in
-    let%arr model, inject = model_and_inject in
-    let inject action = Effect.Private.make ~request:action ~evaluator:inject in
+    let%sub inject =
+      let%arr inject = inject in
+      fun action -> Effect.Private.make ~request:action ~evaluator:inject
+    in
+    let%arr model = model
+    and inject = inject in
     model, inject
 ;;
 
-let actor0 here model action ~default_model ~recv =
+let actor0 model action ~default_model ~recv =
   let recv ~schedule_event () = recv ~schedule_event in
-  actor1 here model action ~default_model ~recv (Value.return ())
+  actor1 model action ~default_model ~recv (Value.return ())
 ;;
 
 let lazy_ t =
@@ -381,35 +643,47 @@ let lazy_ t =
     ; of_sexp = (fun _ -> None)
     }
   in
-  let apply_static ~inject ~schedule_event model action =
+  let apply_static ~inject_dynamic ~inject_static ~schedule_event model action =
     (* forcing the lazy is fine because actions are finite in length *)
     let (lazy
           (Computation.T
              { t = _
              ; model = model_info
-             ; static_action = action_info
-             ; dynamic_action = _
+             ; dynamic_action = dynamic_action_info
+             ; static_action = static_action_info
              ; apply_static
              }))
       =
       t
     in
-    let inject action =
-      inject (Hidden.Action.T { action; type_id = action_info; key = () })
+    let inject_dynamic action =
+      inject_dynamic (Hidden.Action.T { action; type_id = dynamic_action_info; key = () })
+    in
+    let inject_static action =
+      inject_static (Hidden.Action.T { action; type_id = static_action_info; key = () })
     in
     let (Hidden.Action.T { action; type_id = action_type_id; key = () }) = action in
     let (Hidden.Model.T { model = chosen_model; info = chosen_model_info; _ }) =
       Option.value model ~default:(Hidden.Model.create model_info model_info.default)
     in
-    let T = Type_equal.Id.same_witness_exn action_type_id action_info in
+    let T = Type_equal.Id.same_witness_exn action_type_id static_action_info in
     let T = Type_equal.Id.same_witness_exn chosen_model_info.type_id model_info.type_id in
-    let new_model = apply_static ~inject ~schedule_event chosen_model action in
+    let new_model =
+      apply_static ~inject_dynamic ~inject_static ~schedule_event chosen_model action
+    in
     Some (Hidden.Model.create model_info new_model)
   in
-  Computation.T { t = Lazy t; dynamic_action; static_action; model; apply_static }
+  Computation.T
+    { t = Lazy t |> with_computation_id "lazy"
+    ; dynamic_action
+    ; static_action
+    ; model
+    ; apply_static
+    }
 ;;
 
 let wrap (type model action) model_module ~default_model ~apply_action ~f =
+  let apply_action ~inject_static:_ = apply_action in
   let model_id : model Type_equal.Id.t =
     Type_equal.Id.create ~name:"model id" [%sexp_of: opaque]
   in
@@ -419,6 +693,7 @@ let wrap (type model action) model_module ~default_model ~apply_action ~f =
   let inject_id : (action -> unit Effect.t) Type_equal.Id.t =
     Type_equal.Id.create ~name:"inject id" [%sexp_of: opaque]
   in
+  let apply_action ~inject_dynamic = apply_action ~inject:inject_dynamic in
   let model_var = Value.named model_id in
   let inject_var = Value.named inject_id in
   let (Computation.T
@@ -440,13 +715,15 @@ let wrap (type model action) model_module ~default_model ~apply_action ~f =
          ~name:"outer model for wrap")
       inner_model
   in
-  let apply_static ~inject ~schedule_event (m1, m2) action =
-    m1, apply_static ~inject ~schedule_event m2 action
+  let apply_static ~inject_dynamic ~inject_static ~schedule_event (m1, m2) action =
+    let inject_dynamic a = inject_dynamic (Second a) in
+    m1, apply_static ~inject_dynamic ~inject_static ~schedule_event m2 action
   in
   Computation.T
     { t =
         Computation.Wrap
           { model_id; inject_id; inner; dynamic_apply_action = apply_action }
+        |> with_computation_id "wrap"
     ; dynamic_action
     ; static_action = inner_static_action
     ; apply_static
@@ -454,18 +731,16 @@ let wrap (type model action) model_module ~default_model ~apply_action ~f =
     }
 ;;
 
-let state (type m) here (module M : Model with type t = m) ~default_model =
+let state (type m) (module M : Model with type t = m) ~default_model =
   state_machine0
-    here
     (module M)
     (module M)
     ~apply_action:(fun ~inject:_ ~schedule_event:_ _old_model new_model -> new_model)
     ~default_model
 ;;
 
-let state_opt (type m) here ?default_model (module M : Model with type t = m) =
+let state_opt (type m) ?default_model (module M : Model with type t = m) =
   state
-    here
     ~default_model
     (module struct
       type t = M.t option [@@deriving equal, sexp]
@@ -474,7 +749,7 @@ let state_opt (type m) here ?default_model (module M : Model with type t = m) =
 
 let path =
   Computation.T
-    { t = Computation.Path
+    { t = Computation.Path |> with_computation_id "path"
     ; dynamic_action = Meta.Action.nothing
     ; static_action = Meta.Action.nothing
     ; apply_static = unusable_static_apply_action
@@ -507,7 +782,7 @@ module Edge = struct
         Some { Lifecycle.on_activate; on_deactivate; after_display }
     in
     Computation.T
-      { t = Lifecycle t
+      { t = Lifecycle t |> with_computation_id "lifecycle"
       ; model = Meta.Model.unit
       ; dynamic_action = Meta.Action.nothing
       ; static_action = Meta.Action.nothing
@@ -530,8 +805,8 @@ module Edge = struct
     lifecycle' ~after_display:event_value ()
   ;;
 
-  let on_change' (type a) here (module M : Model with type t = a) input ~callback =
-    let%sub state, set_state = state_opt here (module M) in
+  let on_change' (type a) (module M : Model with type t = a) input ~callback =
+    let%sub state, set_state = state_opt (module M) in
     let%sub update =
       match%sub state with
       | None ->
@@ -554,9 +829,9 @@ module Edge = struct
     after_display' update
   ;;
 
-  let on_change here model input ~callback =
+  let on_change model input ~callback =
     let callback = Value.map callback ~f:(fun callback _prev value -> callback value) in
-    on_change' here model input ~callback
+    on_change' model input ~callback
   ;;
 
   module Poll = struct
@@ -571,7 +846,6 @@ module Edge = struct
 
     let poll_effect_on_change_implementation
           (type i r)
-          here
           (module Input : Model with type t = i)
           (module Result : Model with type t = r)
           ~initial
@@ -581,7 +855,6 @@ module Edge = struct
       =
       let%sub _, next_seqnum =
         actor0
-          here
           (module Int)
           (module Unit)
           ~default_model:0
@@ -601,7 +874,6 @@ module Edge = struct
       in
       let%sub state =
         state_machine0
-          here
           (module State)
           (module Action)
           ~apply_action:
@@ -620,23 +892,21 @@ module Edge = struct
           let%bind.Effect result = effect input in
           inject_change (Action.Set (seqnum, wrap_result result))
       in
-      let%sub () = on_change here (module Input) input ~callback in
+      let%sub () = on_change (module Input) input ~callback in
       let%arr { State.last_result; _ }, _ = state in
       last_result
     ;;
 
     let effect_on_change
       : type a o r.
-        Source_code_position.t
-        -> (module Model with type t = a)
+        (module Model with type t = a)
         -> (module Model with type t = o)
         -> (o, r) Starting.t
         -> a Value.t
         -> effect:(a -> o Effect.t) Value.t
         -> r Computation.packed
       =
-      fun here
-        (module Input : Model with type t = a)
+      fun (module Input : Model with type t = a)
         (module Result : Model with type t = o)
         (kind : (o, r) Starting.t)
         input
@@ -644,7 +914,6 @@ module Edge = struct
         match kind with
         | Starting.Empty ->
           poll_effect_on_change_implementation
-            here
             (module Input)
             (module struct
               type t = Result.t option [@@deriving sexp, equal]
@@ -655,7 +924,6 @@ module Edge = struct
             input
         | Starting.Initial initial ->
           poll_effect_on_change_implementation
-            here
             (module Input)
             (module Result)
             ~effect
@@ -666,6 +934,33 @@ module Edge = struct
   end
 end
 
+let freeze model value =
+  let%sub state, set_state = state_opt model in
+  match%sub state with
+  | Some state -> return state
+  | None ->
+    let%sub () =
+      Edge.lifecycle
+        ~on_activate:
+          (let%map set_state = set_state
+           and value = value in
+           set_state (Some value))
+        ()
+    in
+    return value
+;;
+
+let thunk (type a) (f : unit -> a) =
+  let%sub out = return Value.(map (Var.value (Var.create ())) ~f) in
+  freeze
+    (module struct
+      type t = (a[@sexp.opaque]) [@@deriving sexp]
+
+      let equal = phys_equal
+    end)
+    out
+;;
+
 module Incr = struct
   let value_cutoff t ~equal = read (Value.cutoff ~equal t)
 
@@ -673,7 +968,7 @@ module Incr = struct
         (Computation.T { t; dynamic_action; static_action; model; apply_static })
     =
     Computation.T
-      { t = Computation.Model_cutoff { t; model }
+      { t = Computation.Model_cutoff { t; model } |> with_computation_id "model_cutoff"
       ; dynamic_action
       ; static_action
       ; apply_static
@@ -690,6 +985,7 @@ module Incr = struct
       { t =
           Computation.Leaf_incr
             { name = "incr-compute"; input = t; dynamic_apply_action; compute }
+          |> with_computation_id "leaf_incr"
       ; dynamic_action = Meta.Action.nothing
       ; static_action = Meta.Action.nothing
       ; apply_static = unusable_static_apply_action
@@ -699,7 +995,24 @@ module Incr = struct
 
   let compute t ~f = compute_with_clock t ~f:(fun _ input -> f input)
   let with_clock f = compute_with_clock (Value.return ()) ~f:(fun clock _ -> f clock)
-  let to_value incr = { Value.value = Value.Incr incr; here = None }
+
+  let to_value incr =
+    { Value.value = Value.Incr incr
+    ; here = None
+    ; id = Type_equal.Id.create ~name:"to_value" sexp_of_opaque
+    }
+  ;;
+end
+
+module Map_renamed_to_avoid_shadowing = struct
+  let of_set = Incr.compute ~f:Ui_incr.Map.of_set
+  let keys = Incr.compute ~f:Ui_incr.Map.keys
+
+  let merge a b ~f =
+    Incr.compute (Value.both a b) ~f:(fun a_and_b ->
+      let%pattern_bind.Ui_incr a, b = a_and_b in
+      Incr_map.merge a b ~f)
+  ;;
 end
 
 module Dynamic_scope = struct
@@ -735,7 +1048,7 @@ module Dynamic_scope = struct
       match t with
       | Independent { id; _ } ->
         Computation.T
-          { t = Computation.Fetch { id; default; for_some }
+          { t = Computation.Fetch { id; default; for_some } |> with_computation_id "fetch"
           ; dynamic_action = Meta.Action.nothing
           ; static_action = Meta.Action.nothing
           ; apply_static = unusable_static_apply_action
@@ -754,7 +1067,10 @@ module Dynamic_scope = struct
     match var with
     | Independent { id; _ } ->
       let (Computation.T t) = c in
-      Computation.T { t with t = Computation.Store { id; value; inner = t.t } }
+      Computation.T
+        { t with
+          t = Computation.Store { id; value; inner = t.t } |> with_computation_id "store"
+        }
     | Derived { base; get = _; set; sexp_of = _ } ->
       let%sub current = lookup base in
       let%sub new_ =
@@ -799,35 +1115,146 @@ module Clock = struct
       Ui_incr.bind ~f:(Ui_incr.Clock.at clock))
   ;;
 
-  module Time_ns_model = struct
-    include Time_ns.Stable.Alternate_sexp.V1
-
-    let equal = Time_ns.equal
-  end
-
   let get_current_time =
     Incr.with_clock (fun clock ->
       Ui_incr.return (Effect.of_sync_fun (fun () -> Ui_incr.Clock.now clock) ()))
   ;;
 
-  let every here span callback =
-    let%sub input =
-      Incr.with_clock (fun clock ->
-        (* Even though this node has type unit (which should aggresively get cut
-           off), the documentation for [at_intervals] mentions that the node has
-           its cutoff manually overridden to never cut-off. *)
-        let%map.Ui_incr () = Ui_incr.Clock.at_intervals clock span in
-        (* The value of this node is the current time, which isn't actually used,
-           but it's a nice monotonically increasing value, so we don't need to
-           worry about cutoff issues. *)
-        Ui_incr.Clock.now clock)
+  module Every_model = struct
+    type t =
+      | Waiting_for_effect_to_finish
+      | Waiting_for of Time_ns.Alternate_sexp.t
+    [@@deriving sexp, equal]
+  end
+
+  module Every_action = struct
+    type t =
+      | Schedule_effect
+      | Wait_for of Time_ns.Alternate_sexp.t
+    [@@deriving sexp, equal]
+  end
+
+  let generic_every ~create_effect ?(trigger_on_activate = true) span callback =
+    let%sub base_time =
+      let%sub now = now in
+      freeze (module Time_ns.Alternate_sexp) now
     in
-    let callback =
-      let%map callback = callback in
-      (* Ignore the time, which we only really used to get good cutoff behavior *)
-      fun (_ : Time_ns.t) -> callback
+    let%sub initial_model =
+      let%arr base_time = base_time in
+      let start_time =
+        if trigger_on_activate then base_time else Time_ns.add base_time span
+      in
+      Every_model.Waiting_for start_time
     in
-    Edge.on_change here (module Time_ns_model) input ~callback
+    let%sub get_current_time = get_current_time in
+    let%sub race_input =
+      let%arr base_time = base_time
+      and get_current_time = get_current_time
+      and callback = callback in
+      base_time, get_current_time, callback
+    in
+    let apply_action ~inject ~schedule_event input _old_model = function
+      | Every_action.Schedule_effect ->
+        schedule_event
+          (match input with
+           | Computation_status.Inactive -> Effect.Ignore
+           | Active (base_time, get_current_time, callback) ->
+             let%bind.Effect next_time =
+               create_effect ~span ~base_time ~get_current_time ~callback
+             in
+             inject (Every_action.Wait_for next_time));
+        Every_model.Waiting_for_effect_to_finish
+      | Wait_for next_time -> Waiting_for next_time
+    in
+    let%sub every_model, inject =
+      race_dynamic_model
+        (module Every_model)
+        (module Every_action)
+        ~model:(`Given initial_model)
+        ~apply_action
+        race_input
+    in
+    let%sub before_or_after =
+      match%sub every_model with
+      | Waiting_for_effect_to_finish -> const None
+      | Waiting_for time ->
+        let%sub before_or_after = at time in
+        let%arr before_or_after = before_or_after in
+        Some before_or_after
+    in
+    let%sub callback =
+      let%arr inject = inject in
+      function
+      | None | Some Before_or_after.Before -> Effect.Ignore
+      | Some After -> inject Schedule_effect
+    in
+    Edge.on_change
+      (module struct
+        type t = Before_or_after.t option [@@deriving sexp, equal]
+      end)
+      before_or_after
+      ~callback
+  ;;
+
+  let ensure_clock_advances old_time new_time =
+    Time_ns.max (Time_ns.next old_time) new_time
+  ;;
+
+  let every_wait_period_after_previous_effect_finishes_blocking =
+    generic_every ~create_effect:(fun ~span ~base_time:_ ~get_current_time ~callback ->
+      let%bind.Effect () = callback in
+      let%map.Effect now = get_current_time in
+      ensure_clock_advances now (Time_ns.add now span))
+  ;;
+
+  let every_wait_period_after_previous_effect_starts_blocking =
+    generic_every ~create_effect:(fun ~span ~base_time:_ ~get_current_time ~callback ->
+      let%bind.Effect start = get_current_time in
+      let%bind.Effect () = callback in
+      let%map.Effect now = get_current_time in
+      ensure_clock_advances now (Time_ns.add start span))
+  ;;
+
+  let every_multiple_of_period_blocking =
+    generic_every ~create_effect:(fun ~span ~base_time ~get_current_time ~callback ->
+      let%bind.Effect () = callback in
+      let%map.Effect now = get_current_time in
+      ensure_clock_advances
+        now
+        (Time_ns.next_multiple
+           ~can_equal_after:false
+           ~base:base_time
+           ~after:now
+           ~interval:(Time_ns.Span.max span (Time_ns.Span.next Time_ns.Span.zero))
+           ()))
+  ;;
+
+  let every_multiple_of_period_non_blocking ?trigger_on_activate span callback =
+    every_multiple_of_period_blocking
+      ?trigger_on_activate
+      span
+      (let%map callback = callback in
+       Effect.Many [ callback ])
+  ;;
+
+  let every
+    :  when_to_start_next_effect:
+         [ `Wait_period_after_previous_effect_starts_blocking
+         | `Wait_period_after_previous_effect_finishes_blocking
+         | `Every_multiple_of_period_non_blocking
+         | `Every_multiple_of_period_blocking
+         ]
+      -> ?trigger_on_activate:bool -> Time_ns.Span.t -> unit Effect.t Value.t
+      -> unit Computation.packed
+    =
+    fun ~when_to_start_next_effect ->
+      match when_to_start_next_effect with
+      | `Wait_period_after_previous_effect_starts_blocking ->
+        every_wait_period_after_previous_effect_starts_blocking
+      | `Wait_period_after_previous_effect_finishes_blocking ->
+        every_wait_period_after_previous_effect_finishes_blocking
+      | `Every_multiple_of_period_blocking -> every_multiple_of_period_blocking
+      | `Every_multiple_of_period_non_blocking -> every_multiple_of_period_non_blocking
   ;;
 end
 
@@ -969,3 +1396,5 @@ module Private = struct
   let conceal_computation = Fn.id
   let reveal_computation = Fn.id
 end
+
+module Map = Map_renamed_to_avoid_shadowing

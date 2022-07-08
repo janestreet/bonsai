@@ -13,7 +13,7 @@ let component =
       ]
   in
   let%sub { contents; append; _ } =
-    Extendy.component' [%here] Bonsai_web_counters_example.single_counter ~wrap_remove
+    Extendy.component' Bonsai_web_counters_example.single_counter ~wrap_remove
   in
   let%arr contents = contents
   and append = append in

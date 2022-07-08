@@ -9,7 +9,6 @@ module Node = Vdom.Node
 let component =
   let%sub dnd =
     Drag_and_drop.create
-      [%here]
       ~source_id:(module Int)
       ~target_id:(module Int)
       ~on_drop:
@@ -25,29 +24,26 @@ let component =
       input
       ~f:(fun key data ->
         let%sub item =
-          return
-            (let%map data = data in
-             Node.text (Int.to_string data))
+          let%arr data = data in
+          Node.text (Int.to_string data)
         in
         return (Value.both item key))
   in
   let%sub sentinel = return (dnd >>| Drag_and_drop.sentinel) in
   let%sub dragged_element =
     Drag_and_drop.dragged_element dnd ~f:(fun item ->
-      return
-        (let%map item = item in
-         Node.text (Int.to_string item)))
+      let%arr item = item in
+      Node.text (Int.to_string item))
   in
   let%sub source = return (dnd >>| Drag_and_drop.source) in
   let%sub list = Reorderable_list.list (module Int) ~dnd ~default_item_height:1 data in
-  return
-    (let%map sentinel = sentinel
-     and dragged_element = dragged_element
-     and source = source
-     and list = list in
-     Node.div
-       ~attr:(sentinel ~name:"dnd")
-       [ Node.div ~attr:(source ~id:10) [ Node.text "10" ]; list; dragged_element ])
+  let%arr sentinel = sentinel
+  and dragged_element = dragged_element
+  and source = source
+  and list = list in
+  Node.div
+    ~attr:(sentinel ~name:"dnd")
+    [ Node.div ~attr:(source ~id:10) [ Node.text "10" ]; list; dragged_element ]
 ;;
 
 let create_handle () =
@@ -94,50 +90,56 @@ let%expect_test "re-arrange" =
       <div>
         <div> 10 </div>
         <div>
-          <div style={ transform: translateY(0px) translateX(0px); }> 0 </div>
-          <div style={ transform: translateY(1px) translateX(0px); }> 1 </div>
-          <div style={ transform: translateY(2px) translateX(0px); }> 2 </div>
+    -|    <div style={ transform: translateY(0px) translateX(0px); }> 0 </div>
+    +|    <div style={ transform: translateY(2px) translateX(0px); }> 0 </div>
+    -|    <div style={ transform: translateY(1px) translateX(0px); }> 1 </div>
+    +|    <div style={ transform: translateY(0px) translateX(0px); }> 1 </div>
+    -|    <div style={ transform: translateY(2px) translateX(0px); }> 2 </div>
+    -|  </div>
+    +|    <div style={ transform: translateY(1px) translateX(0px); }> 2 </div>
     +|    <div style={ transform: translateY(0px) translateX(0px); }> </div>
     +|    <div style={ transform: translateY(1px) translateX(0px); }> </div>
     +|    <div style={ transform: translateY(2px) translateX(0px); }> </div>
-        </div>
+    +|  </div>
     +|  <div style={ transform: translateY(0px) translateX(0px); }> 0 </div>
       </div> |}];
   dnd_action handle (Set_target (Some "2"));
   Handle.show_diff handle;
-  [%expect
-    {|
-        <div>
-          <div> 10 </div>
-          <div>
-      -|    <div style={ transform: translateY(0px) translateX(0px); }> 0 </div>
-      +|    <div style={ transform: translateY(2px) translateX(0px); }> 0 </div>
-      -|    <div style={ transform: translateY(1px) translateX(0px); }> 1 </div>
-      +|    <div style={ transform: translateY(0px) translateX(0px); }> 1 </div>
-      -|    <div style={ transform: translateY(2px) translateX(0px); }> 2 </div>
-      +|    <div style={ transform: translateY(1px) translateX(0px); }> 2 </div>
-            <div style={ transform: translateY(0px) translateX(0px); }> </div>
-            <div style={ transform: translateY(1px) translateX(0px); }> </div>
-            <div style={ transform: translateY(2px) translateX(0px); }> </div>
-          </div>
-          <div style={ transform: translateY(0px) translateX(0px); }> 0 </div>
-        </div> |}];
-  dnd_action handle Finish_drag;
+  [%expect {| |}];
+  dnd_action handle (Set_target (Some "1"));
   Handle.show_diff handle;
   [%expect
     {|
-    (drag (source 0) (target 2))
-
       <div>
         <div> 10 </div>
         <div>
     -|    <div style={ transform: translateY(2px) translateX(0px); }> 0 </div>
-    -|    <div style={ transform: translateY(0px) translateX(0px); }> 1 </div>
+    +|    <div style={ transform: translateY(1px) translateX(0px); }> 0 </div>
+          <div style={ transform: translateY(0px) translateX(0px); }> 1 </div>
     -|    <div style={ transform: translateY(1px) translateX(0px); }> 2 </div>
-    -|    <div style={ transform: translateY(0px) translateX(0px); }> </div>
+    +|    <div style={ transform: translateY(2px) translateX(0px); }> 2 </div>
+          <div style={ transform: translateY(0px) translateX(0px); }> </div>
+          <div style={ transform: translateY(1px) translateX(0px); }> </div>
+          <div style={ transform: translateY(2px) translateX(0px); }> </div>
+        </div>
+        <div style={ transform: translateY(0px) translateX(0px); }> 0 </div>
+      </div> |}];
+  dnd_action handle Finish_drag;
+  Handle.show_diff handle;
+  [%expect
+    {|
+    (drag (source 0) (target 1))
+
+      <div>
+        <div> 10 </div>
+        <div>
+    -|    <div style={ transform: translateY(1px) translateX(0px); }> 0 </div>
     +|    <div style={ transform: translateY(0px) translateX(0px); }> 0 </div>
-    -|    <div style={ transform: translateY(1px) translateX(0px); }> </div>
+    -|    <div style={ transform: translateY(0px) translateX(0px); }> 1 </div>
     +|    <div style={ transform: translateY(1px) translateX(0px); }> 1 </div>
+    -|    <div style={ transform: translateY(2px) translateX(0px); }> 2 </div>
+    -|    <div style={ transform: translateY(0px) translateX(0px); }> </div>
+    -|    <div style={ transform: translateY(1px) translateX(0px); }> </div>
     -|    <div style={ transform: translateY(2px) translateX(0px); }> </div>
     +|    <div style={ transform: translateY(2px) translateX(0px); }> 2 </div>
         </div>
@@ -244,10 +246,9 @@ let component input =
       ~sentinel_name:"dnd"
       ~default_item_height:1
       ~render:(fun ~index:_ ~source i ->
-        return
-          (let%map i = i
-           and source = source in
-           (), Vdom.Node.div ~attr:source [ Vdom.Node.text (Int.to_string i) ]))
+        let%arr i = i
+        and source = source in
+        (), Vdom.Node.div ~attr:source [ Vdom.Node.text (Int.to_string i) ])
       input
   in
   return view
@@ -398,8 +399,10 @@ let%expect_test "removing an item should shift the rank of everything else" =
      below it to shift upward in the ranking by one. *)
   Handle.do_actions handle [ [ Set 0; Set 1 ] ];
   Handle.show handle;
-  [%expect {| ((0 0) (1 1)) |}];
+  [%expect {|
+    ((0 0) (1 1)) |}];
   Handle.do_actions handle [ [ Remove 0 ] ];
   Handle.show handle;
-  [%expect {| ((1 0)) |}]
+  [%expect {|
+    ((1 0)) |}]
 ;;

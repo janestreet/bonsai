@@ -3,39 +3,35 @@ open! Bonsai_web
 open! Bonsai.Let_syntax
 
 let text_input =
-  let%sub text_contents, set_text_contents = Bonsai.state_opt [%here] (module String) in
-  return
-  @@ let%map text_contents = text_contents
+  let%sub text_contents, set_text_contents = Bonsai.state_opt (module String) in
+  let%arr text_contents = text_contents
   and set_text_contents = set_text_contents in
   Vdom_input_widgets.Entry.text ~value:text_contents ~on_input:set_text_contents ()
 ;;
 
 let date_input =
-  let%sub date_contents, set_date_contents = Bonsai.state_opt [%here] (module Date) in
-  return
-  @@ let%map date_contents = date_contents
+  let%sub date_contents, set_date_contents = Bonsai.state_opt (module Date) in
+  let%arr date_contents = date_contents
   and set_date_contents = set_date_contents in
   Vdom_input_widgets.Entry.date ~value:date_contents ~on_input:set_date_contents ()
 ;;
 
 let text_input_first_input =
   let%sub text_input_first_contents, set_text_input_first_contents =
-    Bonsai.state [%here] (module Bool) ~default_model:false
+    Bonsai.state (module Bool) ~default_model:false
   in
-  return
-  @@ let%map text_input_first_contents = text_input_first_contents
+  let%arr text_input_first_contents = text_input_first_contents
   and set_text_input_first_contents = set_text_input_first_contents in
   ( text_input_first_contents
   , Vdom_input_widgets.Checkbox.simple
       ~is_checked:text_input_first_contents
       ~label:
-        {| When checked, the text input will be placed first in the DOM. Entry some 
-         data into both inputs below and check this box - the data in both boxes 
+        {| When checked, the text input will be placed first in the DOM. Entry some
+         data into both inputs below and check this box - the data in both boxes
          should be preserved. If this fails, check the console for an error message.
          It should be noted that this example demonstrates a bug in the virtual-dom
          library. |}
-      ~on_toggle:(fun () ->
-        set_text_input_first_contents (not text_input_first_contents))
+      ~on_toggle:(set_text_input_first_contents (not text_input_first_contents))
       () )
 ;;
 

@@ -34,6 +34,10 @@ type 'a t
     [set] and [normalize] will do nothing to the form provided by this. *)
 val return : 'a -> 'a t
 
+(** [return_settable] is identical to [return], but [set] and [normalize] will update
+    the value of the form. *)
+val return_settable : (module Bonsai.Model with type t = 'a) -> 'a -> 'a t Computation.t
+
 (** [return_error] produces a form that always fails validation. *)
 val return_error : Error.t -> _ t
 
@@ -47,7 +51,12 @@ val is_valid : _ t -> bool
 val view : _ t -> View.t
 
 module Submit : sig
-  type 'a t
+  type 'a t = private
+    { f : 'a -> unit Ui_effect.t
+    ; handle_enter : bool
+    ; button_text : string option
+    ; button_attr : Vdom.Attr.t
+    }
 
   (** Creates a "submit" handler, which is intended to be used by the [view_as_vdom] function.
 
@@ -59,11 +68,13 @@ module Submit : sig
         contents.  will be added to the end of the form.  If the form is
         currently invalid, the button will be disabled.  The default is [Some
         "Submit"].  Explicitly set it to [None] to remove the button entirely.
+      - [button_attr]: A [Vdom.Attr.t] to attach to the submit button.
       - [f]: the function which is run when the form is submitted.  *)
 
   val create
     :  ?handle_enter:bool
     -> ?button:string option
+    -> ?button_attr:Vdom.Attr.t
     -> f:('a -> unit Ui_effect.t)
     -> unit
     -> 'a t
@@ -219,6 +230,9 @@ module Dynamic : sig
      [with_default] does not set the model a second time if the form is removed
      from the page and then re-added. *)
   val with_default : 'a Value.t -> 'a t Value.t -> 'a t Computation.t
+
+  (* Sets a ['a t] to a default value every time it is (re)displayed on a page. *)
+  val with_default_always : 'a Value.t -> 'a t Value.t -> 'a t Computation.t
 
   (** Adds a clickable error hint for this form  *)
   val error_hint : 'a t Value.t -> 'a t Computation.t

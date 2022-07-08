@@ -34,7 +34,6 @@ module Css =
 
 let offset_state_machine =
   Bonsai.state_machine0
-    [%here]
     (module Int)
     (module Int)
     ~default_model:400
@@ -44,9 +43,7 @@ let offset_state_machine =
 let component =
   let%sub x, add_x = offset_state_machine in
   let%sub y, add_y = offset_state_machine in
-  let%sub show_help, set_show_help =
-    Bonsai.state [%here] (module Bool) ~default_model:false
-  in
+  let%sub show_help, set_show_help = Bonsai.state (module Bool) ~default_model:false in
   let%sub handler =
     let%arr add_x = add_x
     and add_y = add_y
@@ -147,7 +144,7 @@ let component =
                instance, if a text input is not focused. Try focusing the text input and \
                observe that the keybindings for moving the block around are sent to the \
                text input instead."
-          ; Vdom.Node.input []
+          ; Vdom.Node.input ()
           ]
       ; help_view
       ]

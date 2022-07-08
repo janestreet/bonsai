@@ -1,6 +1,6 @@
 open! Core
-open! Bonsai
 open Bonsai.Let_syntax
+open Bonsai.For_open
 
 module _ = struct
   type t = float * float [@@deriving sexp, equal]
@@ -136,7 +136,7 @@ type 'a t =
       -> unit Effect.t
   }
 
-let curtime = Bonsai.Effect.of_sync_fun (fun () -> Ui_incr.Clock.now Ui_incr.clock) ()
+let curtime = Effect.of_sync_fun (fun () -> Ui_incr.Clock.now Ui_incr.clock) ()
 
 module Interpolatable = struct
   type 'a t = 'a -> 'a -> float -> 'a
@@ -165,17 +165,15 @@ let make
     let equal (a, b) (c, d) = phys_equal a c && phys_equal b d
   end
   in
-  let%sub start_time, set_start =
-    Bonsai.state_opt [%here] (module Time_ns.Alternate_sexp)
-  in
+  let%sub start_time, set_start = Bonsai.state_opt (module Time_ns.Alternate_sexp) in
   let%sub interpolator, set_interpolator =
-    Bonsai.state [%here] (module Interpolator) ~default_model:Interpolator.Linear
+    Bonsai.state (module Interpolator) ~default_model:Interpolator.Linear
   in
-  let%sub end_time, set_end = Bonsai.state_opt [%here] (module Time_ns.Alternate_sexp) in
-  let%sub callback, set_callback = Bonsai.state_opt [%here] (module Callback) in
-  let%sub range, set_range = Bonsai.state_opt [%here] (module A_star_a) in
+  let%sub end_time, set_end = Bonsai.state_opt (module Time_ns.Alternate_sexp) in
+  let%sub callback, set_callback = Bonsai.state_opt (module Callback) in
+  let%sub range, set_range = Bonsai.state_opt (module A_star_a) in
   let%sub percent_float =
-    match%sub Bonsai.Value.both start_time end_time with
+    match%sub Value.both start_time end_time with
     | None, _ | _, None -> Bonsai.const 0.0
     | Some start_time, Some end_time ->
       let%sub before_or_after = Bonsai.Clock.at end_time in
@@ -191,11 +189,10 @@ let make
               match prev, new_ with
               | ( Some Bonsai.Clock.Before_or_after.Before
                 , Bonsai.Clock.Before_or_after.After ) ->
-                Ui_effect.Many [ remove_callback; callback ]
-              | _ -> Ui_effect.Ignore
+                Effect.Many [ remove_callback; callback ]
+              | _ -> Effect.Ignore
           in
           Bonsai.Edge.on_change'
-            [%here]
             (module Bonsai.Clock.Before_or_after)
             before_or_after
             ~callback
@@ -255,7 +252,7 @@ let make
         | None -> effects
         | Some interpolator -> set_interpolator interpolator :: effects
       in
-      Ui_effect.Many effects
+      Effect.Many effects
   in
   let%arr value = value
   and animate = animate in
@@ -270,7 +267,7 @@ let smooth m ?(with_ = Interpolator.Linear) ~duration ~interpolate v =
       and duration = duration in
       fun new_ -> animate (`For duration) ~with_ new_
     in
-    Bonsai.Edge.on_change [%here] m v ~callback
+    Bonsai.Edge.on_change m v ~callback
   in
   return value
 ;;

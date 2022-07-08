@@ -1,11 +1,25 @@
 open! Core
 open! Import
-open! Bonsai
+open Bonsai.For_open
 open Proc
 open Bonsai.Let_syntax
 module Path = Bonsai.Private.Path
 
 let%expect_test "path" =
+  let component =
+    let%sub () = opaque_const () in
+    let%sub path = Bonsai.Private.path in
+    return (Value.map path ~f:Path.to_unique_identifier_string)
+  in
+  let handle = Handle.create (Result_spec.string (module String)) component in
+  Handle.disable_bonsai_path_censoring handle;
+  Handle.show handle;
+  (* The first of these "Subst_from" is actually a component that is
+     added by the testing helpers. *)
+  [%expect {| bonsai_path_x_y_y_x |}]
+;;
+
+let%expect_test "path constant folding" =
   let component =
     let%sub () = Bonsai.const () in
     let%sub path = Bonsai.Private.path in
@@ -16,7 +30,7 @@ let%expect_test "path" =
   Handle.show handle;
   (* The first of these "Subst_from" is actually a component that is
      added by the testing helpers. *)
-  [%expect {| bonsai_path_x_y_y_x |}]
+  [%expect {| bonsai_path_x_x |}]
 ;;
 
 let assert_path_unique_id_is_alpha path =

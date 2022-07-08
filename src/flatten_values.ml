@@ -3,12 +3,9 @@ open! Import
 
 let value_map
       (type a)
-      ~(recurse : _ Transform.For_value.mapper)
-      ~var_from_parent:_
-      ~parent_path:_
-      ~current_path:_
+      (context : _ Transform.For_value.context)
       ()
-      ({ value; here } : a Value.t)
+      ({ value; here; id } : a Value.t)
   =
   let value =
     match value with
@@ -166,20 +163,17 @@ let value_map
       Map3 { f = (fun t1 t2 t3 -> t1, (t2, t3)); t1; t2; t3 }
     | v -> v
   in
-  recurse.f () { Value.here; value }
+  context.recurse () { Value.here; value; id }
 ;;
 
 let computation_map
       (type model dynamic_action static_action result)
-      ~(recurse : _ Transform.For_computation.mapper)
-      ~var_from_parent:_
-      ~parent_path:_
-      ~current_path:_
+      (context : _ Transform.For_computation.context)
       ()
       (computation : (model, dynamic_action, static_action, result) Computation.t)
   : (model, dynamic_action, static_action, result) Computation.t
   =
-  recurse.f () computation
+  context.recurse () computation
 ;;
 
 let flatten_values (t : _ Computation.t) =

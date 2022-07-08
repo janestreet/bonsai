@@ -27,17 +27,14 @@ let extract_node_path_from_entry_label label =
 let instrument_computation (t : (_, _, _, _) Computation.t) ~start_timer ~stop_timer =
   let computation_map
         (type b c x d)
-        ~(recurse : unit Transform.For_computation.mapper)
-        ~var_from_parent:_
-        ~parent_path:_
-        ~current_path
+        (context : unit Transform.For_computation.context)
         ()
         (computation : (b, c, x, d) Computation.t)
     : (b, c, x, d) Computation.t
     =
     let node_info = Graph_info.Node_info.of_computation computation in
     let entry_label node_type =
-      let (lazy current_path) = current_path in
+      let (lazy current_path) = context.current_path in
       { Entry_label.id = current_path; node_type } |> Entry_label.to_string
     in
     let compute_label = entry_label [%string "%{node_info.node_type}-compute"] in
@@ -45,61 +42,72 @@ let instrument_computation (t : (_, _, _, _) Computation.t) ~start_timer ~stop_t
       entry_label [%string "%{node_info.node_type}-apply_action"]
     in
     let by_label = entry_label [%string "%{node_info.node_type}-by"] in
-    let time_apply_action ~apply_action ~inject ~schedule_event input model action =
+    let time_apply_action
+          ~apply_action
+          ~inject_dynamic
+          ~inject_static
+          ~schedule_event
+          input
+          model
+          action
+      =
       start_timer apply_action_label;
-      let model = apply_action ~inject ~schedule_event input model action in
+      let model =
+        apply_action ~inject_dynamic ~inject_static ~schedule_event input model action
+      in
       stop_timer apply_action_label;
       model
     in
-    match recurse.f () computation with
-    | Fetch v_id -> Fetch v_id
-    | Leaf1 t ->
-      Leaf1
-        { t with
-          dynamic_apply_action = time_apply_action ~apply_action:t.dynamic_apply_action
-        }
-    | Leaf0 { compute; name; kind } ->
-      let compute ~inject model =
-        start_timer compute_label;
-        let computed = compute ~inject model in
-        stop_timer compute_label;
-        computed
-      in
-      Leaf0 { name; kind; compute }
-    | Leaf_incr { input; dynamic_apply_action; compute; name } ->
-      let dynamic_apply_action input ~inject =
-        start_timer apply_action_label;
-        let model_incr = dynamic_apply_action input ~inject in
-        stop_timer apply_action_label;
-        model_incr
-      in
-      let compute clock input model ~inject =
-        start_timer compute_label;
-        let computed = compute clock input model ~inject in
-        stop_timer compute_label;
-        computed
-      in
-      Leaf_incr { input; dynamic_apply_action; compute; name }
-    | Assoc_simpl t ->
-      let by path key value =
-        start_timer by_label;
-        let by = t.by path key value in
-        stop_timer by_label;
-        by
-      in
-      Assoc_simpl { t with by }
-    | c -> c
+    let recursed = context.recurse () computation in
+    let computation : (b, c, x, d) Computation.without_id =
+      match recursed.t with
+      | Fetch v_id -> Computation.Fetch v_id
+      | Leaf1 t ->
+        Leaf1
+          { t with
+            dynamic_apply_action = time_apply_action ~apply_action:t.dynamic_apply_action
+          }
+      | Leaf0 { compute; name } ->
+        let compute ~inject model =
+          start_timer compute_label;
+          let computed = compute ~inject model in
+          stop_timer compute_label;
+          computed
+        in
+        Leaf0 { name; compute }
+      | Leaf_incr { input; dynamic_apply_action; compute; name } ->
+        let dynamic_apply_action input ~inject =
+          start_timer apply_action_label;
+          let model_incr = dynamic_apply_action input ~inject in
+          stop_timer apply_action_label;
+          model_incr
+        in
+        let compute clock input model ~inject =
+          start_timer compute_label;
+          let computed = compute clock input model ~inject in
+          stop_timer compute_label;
+          computed
+        in
+        Leaf_incr { input; dynamic_apply_action; compute; name }
+      | Assoc_simpl t ->
+        let by path key value =
+          start_timer by_label;
+          let by = t.by path key value in
+          stop_timer by_label;
+          by
+        in
+        Assoc_simpl { t with by }
+      | computation -> computation
+    in
+    { recursed with t = computation }
   in
   let value_map
         (type a)
-        ~(recurse : unit Transform.For_value.mapper)
-        ~var_from_parent:_
-        ~parent_path:_
-        ~current_path
+        (context : unit Transform.For_value.context)
         ()
-        ({ here; value } as wrapped_value : a Value.t)
+        ({ here; value; id } as wrapped_value : a Value.t)
     =
-    let (lazy current_path) = current_path in
+    let (lazy current_path) = context.current_path in
     let node_info = Graph_info.Node_info.of_value wrapped_value in
     let entry_label =
       { Entry_label.id = current_path; node_type = node_info.node_type }
@@ -107,7 +115,7 @@ let instrument_computation (t : (_, _, _, _) Computation.t) ~start_timer ~stop_t
     in
     let value =
       match value with
-      | Constant (_, _) | Incr _ | Named _ | Both (_, _) | Cutoff _ -> value
+      | Constant _ | Lazy _ | Incr _ | Named | Both (_, _) | Cutoff _ -> value
       | Map t ->
         let f a =
           start_timer entry_label;
@@ -165,7 +173,7 @@ let instrument_computation (t : (_, _, _, _) Computation.t) ~start_timer ~stop_t
         in
         Map7 { t with f }
     in
-    recurse.f () { here; value }
+    context.recurse () { here; value; id }
   in
   Transform.map
     ~init:()

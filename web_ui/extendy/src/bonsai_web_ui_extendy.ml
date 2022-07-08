@@ -1,12 +1,13 @@
 open! Core
+open Bonsai_web
 open Bonsai.Let_syntax
 module Id = Int
 
 type 'a t =
   { contents : 'a Id.Map.t
-  ; append : unit Ui_effect.t
-  ; set_length : int -> unit Ui_effect.t
-  ; remove : Id.t -> unit Ui_effect.t
+  ; append : unit Effect.t
+  ; set_length : int -> unit Effect.t
+  ; remove : Id.t -> unit Effect.t
   }
 
 module Model = struct
@@ -33,9 +34,8 @@ module Action = struct
   [@@deriving sexp_of]
 end
 
-let state_component here =
+let state_component =
   Bonsai.state_machine0
-    here
     (module Model)
     (module Action)
     ~default_model:Model.default
@@ -45,8 +45,8 @@ let state_component here =
          | Remove key -> Model.remove model ~key)
 ;;
 
-let component' here t ~wrap_remove =
-  let%sub { Model.data; count = _ }, inject_action = state_component here in
+let component' t ~wrap_remove =
+  let%sub { Model.data; count = _ }, inject_action = state_component in
   let%sub map =
     Bonsai.assoc
       (module Int)
@@ -54,21 +54,17 @@ let component' here t ~wrap_remove =
       ~f:(fun key _data ->
         (* Model-resetter allows assoc to reclaim space after a node has been removed *)
         let%sub result = Bonsai.with_model_resetter t in
-        return
-        @@ let%map out, reset = result
+        let%arr out, reset = result
         and key = key
         and inject_action = inject_action in
-        let inject_remove =
-          Ui_effect.Many [ reset; inject_action (Action.Remove key) ]
-        in
+        let inject_remove = Effect.Many [ reset; inject_action (Action.Remove key) ] in
         out, inject_remove)
   in
   let%sub contents_map =
     Bonsai.Incr.compute map ~f:(fun map ->
       Incr_map.map map ~f:(Tuple2.uncurry wrap_remove))
   in
-  return
-  @@ let%map contents = contents_map
+  let%arr contents = contents_map
   and map = map
   and inject_action = inject_action in
   let append = inject_action (Action.Add { how_many = 1 }) in
@@ -76,16 +72,13 @@ let component' here t ~wrap_remove =
   let set_length length =
     let difference = length - Map.length map in
     match Int.sign difference with
-    | Zero -> Ui_effect.Ignore
+    | Zero -> Effect.Ignore
     | Pos -> inject_action (Action.Add { how_many = difference })
     | Neg ->
-      map
-      |> Map.data
-      |> List.rev_map ~f:Tuple2.get2
-      |> Fn.flip List.take (-difference)
-      |> Ui_effect.Many
+      let effects_in_map = List.rev_map (Map.data map) ~f:snd in
+      Effect.Many (List.take effects_in_map (-difference))
   in
   { contents; append; set_length; remove }
 ;;
 
-let component here t = component' here t ~wrap_remove:(fun a _ -> a)
+let component t = component' t ~wrap_remove:(fun a _ -> a)

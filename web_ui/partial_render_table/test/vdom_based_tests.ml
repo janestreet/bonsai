@@ -57,20 +57,22 @@ module Test = struct
   ;;
 end
 
+let sexp_of_packed (type a) (T { t; _ } : a Bonsai.Private.Computation.packed) =
+  Bonsai.Private.Skeleton.Computation.minimal_sexp_of_t
+    (Bonsai.Private.Skeleton.Computation.of_computation t)
+;;
+
 let print_assocs component =
   let rec count needle = function
     | Sexp.Atom s when String.equal needle s -> 1
     | Atom _ -> 0
     | List l -> List.sum (module Int) l ~f:(count needle)
   in
-  let structure =
-    component
-    |> Bonsai.Private.reveal_computation
-    |> Bonsai.Private.Computation.sexp_of_packed
-  in
+  let structure = component |> Bonsai.Private.reveal_computation |> sexp_of_packed in
   let assoc_count = count "Assoc" structure in
   let assoc_simple_count = count "Assoc_simpl" structure in
-  print_s [%message (assoc_count : int) (assoc_simple_count : int)]
+  let assoc_on_count = count "Assoc_on" structure in
+  print_s [%message (assoc_count : int) (assoc_simple_count : int) (assoc_on_count : int)]
 ;;
 
 let%expect_test "simplified_assocs" =
@@ -84,7 +86,7 @@ let%expect_test "simplified_assocs" =
   (* there's only one assoc because all the columns are inside of an assoc
      per-row instead of it being the other way around as you might have
      expected. *)
-  [%expect {| ((assoc_count 1) (assoc_simple_count 2)) |}]
+  [%expect {| ((assoc_count 0) (assoc_simple_count 2) (assoc_on_count 1)) |}]
 ;;
 
 let%expect_test "simplified_assocs on the dynamic columns" =
@@ -96,7 +98,7 @@ let%expect_test "simplified_assocs on the dynamic columns" =
   in
   print_assocs component;
   (* No assocs here because it just uses the Incr_map function directly *)
-  [%expect {| ((assoc_count 0) (assoc_simple_count 0)) |}]
+  [%expect {| ((assoc_count 0) (assoc_simple_count 0) (assoc_on_count 0)) |}]
 ;;
 
 let%expect_test "column visibility" =
@@ -112,39 +114,39 @@ let%expect_test "column visibility" =
   Handle.show_diff test.handle;
   [%expect
     {|
-                resize: horizontal;
-                overflow: hidden;
+          </td>
+          <td colspan="1"
+              class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
+              freeze_width=((set <fun>)(reset <fun>))
+              size_tracker=<fun>
+              style={
                 width: 50px;
               }>
             <div> a </div>
           </td>
           <td colspan="1"
+              class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
               freeze_width=((set <fun>)(reset <fun>))
               size_tracker=<fun>
               style={
-                text-align: center;
-                user-select: none;
-                font-weight: bold;
-                resize: horizontal;
-                overflow: hidden;
                 width: 50px;
 +|              display: none;
               }>
-            <div onclick style={ white-space: pre; cursor: pointer; }>
+            <div class="column_header_hash_replaced_in_test" onclick>
               <span> ◇  b </span>
             </div>
           </td>
         </tr>
       </tbody>
     </table>
-    <div bounds-change=<fun> style={ height: 3px; position: relative; }>
+    <div class="partial_render_table_body_hash_replaced_in_test"
+         bounds-change=<fun>
+         style={
+           height: 3px;
+         }>
       <div @key=0
            class="prt-table-row prt-table-row-even"
            onclick
-           style={
-             top: 0px;
-             position: absolute;
-             max-height: 1px;
 
                width: 0.00px;
                min-width: 0.00px;
@@ -265,27 +267,36 @@ let%expect_test "stabilization of view range" =
   Handle.show test.handle;
   [%expect
     {|
-<div class="partial-render-table-bonsai_path_replaced_in_test">
-  <table class="prt-table-header" size_tracker=<fun>>
+<div class="partial-render-table-bonsai_path_replaced_in_test partial_render_table_container_hash_replaced_in_test">
+  <table class="partial_render_table_header_hash_replaced_in_test prt-table-header" size_tracker=<fun>>
     <tbody>
       <tr>
-        <td colspan="1" freeze_width=((set <fun>)(reset <fun>)) size_tracker=<fun>>
-          <div onclick>
+        <td colspan="1"
+            class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
+            freeze_width=((set <fun>)(reset <fun>))
+            size_tracker=<fun>>
+          <div class="column_header_hash_replaced_in_test" onclick>
             <span> ◇  key </span>
           </div>
         </td>
-        <td colspan="1" freeze_width=((set <fun>)(reset <fun>)) size_tracker=<fun>>
+        <td colspan="1"
+            class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
+            freeze_width=((set <fun>)(reset <fun>))
+            size_tracker=<fun>>
           <div> a </div>
         </td>
-        <td colspan="1" freeze_width=((set <fun>)(reset <fun>)) size_tracker=<fun>>
-          <div onclick>
+        <td colspan="1"
+            class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
+            freeze_width=((set <fun>)(reset <fun>))
+            size_tracker=<fun>>
+          <div class="column_header_hash_replaced_in_test" onclick>
             <span> ◇  b </span>
           </div>
         </td>
       </tr>
     </tbody>
   </table>
-  <div bounds-change=<fun>>
+  <div class="partial_render_table_body_hash_replaced_in_test" bounds-change=<fun>>
     <div @key=0 class="prt-table-row prt-table-row-even" onclick>
       <div @key=key_0-0 data-row-id="key_0" class="prt-table-cell"> 0 </div>
       <div @key=key_0-1 data-row-id="key_0" class="prt-table-cell">
@@ -480,27 +491,36 @@ let%expect_test "big table" =
   Handle.show test.handle;
   [%expect
     {|
-<div class="partial-render-table-bonsai_path_replaced_in_test">
-  <table class="prt-table-header" size_tracker=<fun>>
+<div class="partial-render-table-bonsai_path_replaced_in_test partial_render_table_container_hash_replaced_in_test">
+  <table class="partial_render_table_header_hash_replaced_in_test prt-table-header" size_tracker=<fun>>
     <tbody>
       <tr>
-        <td colspan="1" freeze_width=((set <fun>)(reset <fun>)) size_tracker=<fun>>
-          <div onclick>
+        <td colspan="1"
+            class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
+            freeze_width=((set <fun>)(reset <fun>))
+            size_tracker=<fun>>
+          <div class="column_header_hash_replaced_in_test" onclick>
             <span> ◇  key </span>
           </div>
         </td>
-        <td colspan="1" freeze_width=((set <fun>)(reset <fun>)) size_tracker=<fun>>
+        <td colspan="1"
+            class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
+            freeze_width=((set <fun>)(reset <fun>))
+            size_tracker=<fun>>
           <div> a </div>
         </td>
-        <td colspan="1" freeze_width=((set <fun>)(reset <fun>)) size_tracker=<fun>>
-          <div onclick>
+        <td colspan="1"
+            class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
+            freeze_width=((set <fun>)(reset <fun>))
+            size_tracker=<fun>>
+          <div class="column_header_hash_replaced_in_test" onclick>
             <span> ◇  b </span>
           </div>
         </td>
       </tr>
     </tbody>
   </table>
-  <div bounds-change=<fun>>
+  <div class="partial_render_table_body_hash_replaced_in_test" bounds-change=<fun>>
     <div @key=0 class="prt-table-row prt-table-row-even" onclick>
       <div @key=key_0-0 data-row-id="key_0" class="prt-table-cell"> 51 </div>
       <div @key=key_0-1 data-row-id="key_0" class="prt-table-cell">
@@ -525,22 +545,22 @@ let%expect_test "big table" =
   Handle.show_diff test.handle;
   [%expect
     {|
-            <div onclick>
-              <span> ◇  key </span>
-            </div>
-          </td>
-          <td colspan="1" freeze_width=((set <fun>)(reset <fun>)) size_tracker=<fun>>
+              freeze_width=((set <fun>)(reset <fun>))
+              size_tracker=<fun>>
             <div> a </div>
           </td>
-          <td colspan="1" freeze_width=((set <fun>)(reset <fun>)) size_tracker=<fun>>
-            <div onclick>
+          <td colspan="1"
+              class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
+              freeze_width=((set <fun>)(reset <fun>))
+              size_tracker=<fun>>
+            <div class="column_header_hash_replaced_in_test" onclick>
               <span> ◇  b </span>
             </div>
           </td>
         </tr>
       </tbody>
     </table>
-    <div bounds-change=<fun>>
+    <div class="partial_render_table_body_hash_replaced_in_test" bounds-change=<fun>>
 -|    <div @key=0 class="prt-table-row prt-table-row-even" onclick>
 +|    <div @key=0 class="prt-table-row prt-table-row-odd" onclick>
 -|      <div @key=key_0-0 data-row-id="key_0" class="prt-table-cell"> 51 </div>
@@ -622,18 +642,18 @@ let%expect_test "typing into a column, leaving that column, and then coming back
   Handle.show_diff test.handle;
   [%expect
     {|
-          <td colspan="1" freeze_width=((set <fun>)(reset <fun>)) size_tracker=<fun>>
-            <div> a </div>
-          </td>
-          <td colspan="1" freeze_width=((set <fun>)(reset <fun>)) size_tracker=<fun>>
-            <div onclick>
+          <td colspan="1"
+              class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
+              freeze_width=((set <fun>)(reset <fun>))
+              size_tracker=<fun>>
+            <div class="column_header_hash_replaced_in_test" onclick>
               <span> ◇  b </span>
             </div>
           </td>
         </tr>
       </tbody>
     </table>
-    <div bounds-change=<fun>>
+    <div class="partial_render_table_body_hash_replaced_in_test" bounds-change=<fun>>
       <div @key=0 class="prt-table-row prt-table-row-even" onclick>
         <div @key=key_0-0 data-row-id="key_0" class="prt-table-cell"> 51 </div>
         <div @key=key_0-1 data-row-id="key_0" class="prt-table-cell">
@@ -663,27 +683,36 @@ let%expect_test "typing into a column, leaving that column, and then coming back
   Handle.show test.handle;
   [%expect
     {|
-<div class="partial-render-table-bonsai_path_replaced_in_test">
-  <table class="prt-table-header" size_tracker=<fun>>
+<div class="partial-render-table-bonsai_path_replaced_in_test partial_render_table_container_hash_replaced_in_test">
+  <table class="partial_render_table_header_hash_replaced_in_test prt-table-header" size_tracker=<fun>>
     <tbody>
       <tr>
-        <td colspan="1" freeze_width=((set <fun>)(reset <fun>)) size_tracker=<fun>>
-          <div onclick>
+        <td colspan="1"
+            class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
+            freeze_width=((set <fun>)(reset <fun>))
+            size_tracker=<fun>>
+          <div class="column_header_hash_replaced_in_test" onclick>
             <span> ◇  key </span>
           </div>
         </td>
-        <td colspan="1" freeze_width=((set <fun>)(reset <fun>)) size_tracker=<fun>>
+        <td colspan="1"
+            class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
+            freeze_width=((set <fun>)(reset <fun>))
+            size_tracker=<fun>>
           <div> a </div>
         </td>
-        <td colspan="1" freeze_width=((set <fun>)(reset <fun>)) size_tracker=<fun>>
-          <div onclick>
+        <td colspan="1"
+            class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
+            freeze_width=((set <fun>)(reset <fun>))
+            size_tracker=<fun>>
+          <div class="column_header_hash_replaced_in_test" onclick>
             <span> ◇  b </span>
           </div>
         </td>
       </tr>
     </tbody>
   </table>
-  <div bounds-change=<fun>>
+  <div class="partial_render_table_body_hash_replaced_in_test" bounds-change=<fun>>
     <div @key=0 class="prt-table-row prt-table-row-even" onclick>
       <div @key=key_0-0 data-row-id="key_0" class="prt-table-cell"> 51 </div>
       <div @key=key_0-1 data-row-id="key_0" class="prt-table-cell">
@@ -753,8 +782,7 @@ let%expect_test "table body is not recomputed more often than necessary" =
           [ Table_expert.Columns.Dynamic_cells.column
               ~label:(Value.return (Vdom.Node.text "key"))
               ~cell:(fun ~key ~data:_ ->
-                return
-                @@ let%map key = key in
+                let%arr key = key in
                 Vdom.Node.textf "%d" key)
               ()
           ]
@@ -802,27 +830,36 @@ let%expect_test "sorting" =
   Handle.show test.handle;
   [%expect
     {|
-<div class="partial-render-table-bonsai_path_replaced_in_test">
-  <table class="prt-table-header" size_tracker=<fun>>
+<div class="partial-render-table-bonsai_path_replaced_in_test partial_render_table_container_hash_replaced_in_test">
+  <table class="partial_render_table_header_hash_replaced_in_test prt-table-header" size_tracker=<fun>>
     <tbody>
       <tr>
-        <td colspan="1" freeze_width=((set <fun>)(reset <fun>)) size_tracker=<fun>>
-          <div onclick>
+        <td colspan="1"
+            class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
+            freeze_width=((set <fun>)(reset <fun>))
+            size_tracker=<fun>>
+          <div class="column_header_hash_replaced_in_test" onclick>
             <span> ◇  key </span>
           </div>
         </td>
-        <td colspan="1" freeze_width=((set <fun>)(reset <fun>)) size_tracker=<fun>>
+        <td colspan="1"
+            class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
+            freeze_width=((set <fun>)(reset <fun>))
+            size_tracker=<fun>>
           <div> a </div>
         </td>
-        <td colspan="1" freeze_width=((set <fun>)(reset <fun>)) size_tracker=<fun>>
-          <div onclick>
+        <td colspan="1"
+            class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
+            freeze_width=((set <fun>)(reset <fun>))
+            size_tracker=<fun>>
+          <div class="column_header_hash_replaced_in_test" onclick>
             <span> ◇  b </span>
           </div>
         </td>
       </tr>
     </tbody>
   </table>
-  <div bounds-change=<fun>>
+  <div class="partial_render_table_body_hash_replaced_in_test" bounds-change=<fun>>
     <div @key=0 class="prt-table-row prt-table-row-even" onclick>
       <div @key=key_0-0 data-row-id="key_0" class="prt-table-cell"> 0 </div>
       <div @key=key_0-1 data-row-id="key_0" class="prt-table-cell">
@@ -854,51 +891,63 @@ let%expect_test "sorting" =
   Handle.show_diff test.handle;
   [%expect
     {|
-  <div class="partial-render-table-bonsai_path_replaced_in_test">
-    <table class="prt-table-header" size_tracker=<fun>>
+  <div class="partial-render-table-bonsai_path_replaced_in_test partial_render_table_container_hash_replaced_in_test">
+    <table class="partial_render_table_header_hash_replaced_in_test prt-table-header" size_tracker=<fun>>
       <tbody>
         <tr>
-          <td colspan="1" freeze_width=((set <fun>)(reset <fun>)) size_tracker=<fun>>
-            <div onclick>
+          <td colspan="1"
+              class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
+              freeze_width=((set <fun>)(reset <fun>))
+              size_tracker=<fun>>
+            <div class="column_header_hash_replaced_in_test" onclick>
 -|            <span> ◇  key </span>
 +|            <span> ⬘  key </span>
             </div>
           </td>
-          <td colspan="1" freeze_width=((set <fun>)(reset <fun>)) size_tracker=<fun>>
+          <td colspan="1"
+              class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
+              freeze_width=((set <fun>)(reset <fun>))
+              size_tracker=<fun>>
             <div> a </div>
           </td>
-          <td colspan="1" freeze_width=((set <fun>)(reset <fun>)) size_tracker=<fun>>
-            <div onclick>
+          <td colspan="1"
+              class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
+              freeze_width=((set <fun>)(reset <fun>))
+              size_tracker=<fun>>
+            <div class="column_header_hash_replaced_in_test" onclick>
               <span> ◇  b </span>
             </div>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-    <div bounds-change=<fun>>
-      <div @key=0 class="prt-table-row prt-table-row-even" onclick>
-        <div @key=key_0-0 data-row-id="key_0" class="prt-table-cell"> 0 </div> |}];
+          </td> |}];
   (* this one actually does stuff, click on it twice for a reverse sort *)
   Handle.click_on test.handle ~selector:"td:nth-child(3) > div" ~get_vdom:test.get_vdom;
   Handle.click_on test.handle ~selector:"td:nth-child(3) > div" ~get_vdom:test.get_vdom;
   Handle.show_diff test.handle;
   [%expect
     {|
-  <div class="partial-render-table-bonsai_path_replaced_in_test">
-    <table class="prt-table-header" size_tracker=<fun>>
+  <div class="partial-render-table-bonsai_path_replaced_in_test partial_render_table_container_hash_replaced_in_test">
+    <table class="partial_render_table_header_hash_replaced_in_test prt-table-header" size_tracker=<fun>>
       <tbody>
         <tr>
-          <td colspan="1" freeze_width=((set <fun>)(reset <fun>)) size_tracker=<fun>>
-            <div onclick>
+          <td colspan="1"
+              class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
+              freeze_width=((set <fun>)(reset <fun>))
+              size_tracker=<fun>>
+            <div class="column_header_hash_replaced_in_test" onclick>
 -|            <span> ⬘  key </span>
 +|            <span> ◇  key </span>
             </div>
           </td>
-          <td colspan="1" freeze_width=((set <fun>)(reset <fun>)) size_tracker=<fun>>
+          <td colspan="1"
+              class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
+              freeze_width=((set <fun>)(reset <fun>))
+              size_tracker=<fun>>
             <div> a </div>
           </td>
-          <td colspan="1" freeze_width=((set <fun>)(reset <fun>)) size_tracker=<fun>>
-            <div onclick>
+          <td colspan="1"
+              class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
+              freeze_width=((set <fun>)(reset <fun>))
+              size_tracker=<fun>>
+            <div class="column_header_hash_replaced_in_test" onclick>
 -|            <span> ◇  b </span>
 +|            <span> ⬙  b </span>
             </div>
@@ -906,7 +955,7 @@ let%expect_test "sorting" =
         </tr>
       </tbody>
     </table>
-    <div bounds-change=<fun>>
+    <div class="partial_render_table_body_hash_replaced_in_test" bounds-change=<fun>>
       <div @key=0 class="prt-table-row prt-table-row-even" onclick>
 -|      <div @key=key_0-0 data-row-id="key_0" class="prt-table-cell"> 0 </div>
 +|      <div @key=key_0-0 data-row-id="key_0" class="prt-table-cell"> 1 </div>
@@ -946,20 +995,22 @@ let%expect_test "sorting" =
   Handle.show_diff test.handle;
   [%expect
     {|
-      <div class="partial-render-table-bonsai_path_replaced_in_test">
-        <table class="prt-table-header" size_tracker=<fun>>
-          <tbody>
-            <tr>
-              <td colspan="1" freeze_width=((set <fun>)(reset <fun>)) size_tracker=<fun>>
-                <div onclick>
+                  size_tracker=<fun>>
+                <div class="column_header_hash_replaced_in_test" onclick>
                   <span> ◇  key </span>
                 </div>
               </td>
-              <td colspan="1" freeze_width=((set <fun>)(reset <fun>)) size_tracker=<fun>>
+              <td colspan="1"
+                  class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
+                  freeze_width=((set <fun>)(reset <fun>))
+                  size_tracker=<fun>>
                 <div> a </div>
               </td>
-              <td colspan="1" freeze_width=((set <fun>)(reset <fun>)) size_tracker=<fun>>
-                <div onclick>
+              <td colspan="1"
+                  class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
+                  freeze_width=((set <fun>)(reset <fun>))
+                  size_tracker=<fun>>
+                <div class="column_header_hash_replaced_in_test" onclick>
     -|            <span> ⬙  b </span>
     +|            <span> ◇  b </span>
                 </div>
@@ -967,7 +1018,7 @@ let%expect_test "sorting" =
             </tr>
           </tbody>
         </table>
-        <div bounds-change=<fun>>
+        <div class="partial_render_table_body_hash_replaced_in_test" bounds-change=<fun>>
           <div @key=0 class="prt-table-row prt-table-row-even" onclick>
     -|      <div @key=key_0-0 data-row-id="key_0" class="prt-table-cell"> 1 </div>
     +|      <div @key=key_0-0 data-row-id="key_0" class="prt-table-cell"> 0 </div>

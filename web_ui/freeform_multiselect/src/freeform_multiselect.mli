@@ -6,7 +6,7 @@ open! Bonsai_web
     the control and option pills pretty. *)
 
 val create
-  :  ?extra_attrs:Vdom.Attr.t list Value.t
+  :  ?extra_attr:Vdom.Attr.t Value.t
   -> ?placeholder:string
   -> ?on_set_change:(String.Set.t -> unit Ui_effect.t) Value.t
   -> ?split:(string -> string list)

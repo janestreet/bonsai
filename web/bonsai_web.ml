@@ -13,12 +13,18 @@ module Bonsai = Import.Bonsai
 module Incr = Import.Incr
 module Vdom = Import.Vdom
 module To_incr_dom = To_incr_dom
-module Effect = Effect
 module Persistent_var = Persistent_var
 
-(* new *)
-module Computation = Bonsai.Computation
-module Value = Bonsai.Value
+(* [Bonsai.For_open] provides an [Effect] module, but we want to export the [Effect]
+   module from this library.  This [open struct] allows us to rename [Effect] to
+   [Bonsai_web_effect] and restore it after opening [Bonsai.For_open], without exposing
+   [Bonsai_web_effect] to users of [Bonsai_web]. *)
+open struct
+  module Bonsai_web_effect = Effect
+end
+
+include Bonsai.For_open
+module Effect = Bonsai_web_effect
 
 (* [am_running_how] provides information on how the code is currently being run:
    - [`Node_test] means that the code is being run using node as part of an expect_test

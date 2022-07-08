@@ -1,5 +1,4 @@
 open! Core
-open! Bonsai
 open! Bonsai_web
 open! Bonsai.Let_syntax
 open! Bonsai_bench
@@ -56,9 +55,8 @@ module Dynamic_cells = struct
       ~label:(Value.return (Vdom.Node.text (Fieldslib.Field.name field)))
       ~cell:(fun ~key:_ ~data ->
         (* This [state] is just here to de-optimize the dynamic-cells column. *)
-        let%sub state, _ = Bonsai.state [%here] (module Unit) ~default_model:() in
-        return
-        @@ let%map data = data
+        let%sub state, _ = Bonsai.state (module Unit) ~default_model:() in
+        let%arr data = data
         and () = state in
         Vdom.Node.text (M.to_string (Field.get field data)))
       ()
@@ -122,8 +120,8 @@ module Config = struct
   let dynamic_cells = { name = "Dynamic_cells"; columns = Dynamic_cells.all }
   let dynamic_columns = { name = "Dynamic_columns"; columns = Dynamic_columns.all }
 
-  let create_test { name; columns } ~test_name =
-    create_test ~columns ~test_name:[%string "%{name}: %{test_name}"]
+  let create { name; columns } ~test_name =
+    create_bench ~columns ~test_name:[%string "%{name}: %{test_name}"]
   ;;
 end
 
@@ -134,14 +132,14 @@ let init_rows n =
 let focus_and_unfocus ~config ~size ~in_range =
   let starting_map = init_rows size in
   let not_ = if in_range then "" else "not " in
-  Config.create_test
+  Config.create
     config
     (module Int)
     ~initial_vars:(Input.create starting_map)
     ~test_name:
       [%string "Focus by key (key %{not_}present) and unfocus in %{size#Int} element map"]
     ~interaction:(fun _ ->
-      let index = if in_range then 0 else size + 1 in
+      let index = if in_range then 1 else size + 1 in
       [ Interaction.inject (Action.Focus index)
       ; Interaction.inject Action.Unfocus
       ; Interaction.reset_model
@@ -151,7 +149,7 @@ let focus_and_unfocus ~config ~size ~in_range =
 
 let focus_up_and_down ~config ~size =
   let starting_map = init_rows size in
-  Config.create_test
+  Config.create
     config
     (module Int)
     ~initial_vars:(Input.create starting_map)
@@ -163,7 +161,7 @@ let focus_up_and_down ~config ~size =
 
 let page_up_and_down ~config ~size =
   let starting_map = init_rows size in
-  Config.create_test
+  Config.create
     config
     (module Int)
     ~initial_vars:(Input.create starting_map)
@@ -175,7 +173,7 @@ let page_up_and_down ~config ~size =
 
 let scroll ~config ~size ~start ~stop ~window_size =
   let starting_map = init_rows size in
-  Config.create_test
+  Config.create
     config
     (module Int)
     ~initial_vars:(Input.create starting_map)
@@ -192,7 +190,7 @@ let scroll ~config ~size ~start ~stop ~window_size =
 
 let apply_filters ~config ~size ~window_size =
   let starting_map = init_rows size in
-  Config.create_test
+  Config.create
     config
     (module Int)
     ~initial_vars:
@@ -213,7 +211,7 @@ let apply_filters ~config ~size ~window_size =
 
 let invert_ordering ~config ~size =
   let starting_map = init_rows size in
-  Config.create_test
+  Config.create
     config
     (module Int)
     ~initial_vars:(Input.create starting_map)
@@ -237,7 +235,7 @@ let invert_ordering ~config ~size =
 let set_map ~config ~size ~num_sets ~batch_size ~window_size =
   let starting_map = init_rows size in
   let current_map = ref starting_map in
-  Config.create_test
+  Config.create
     config
     (module Int)
     ~initial_vars:
@@ -318,8 +316,8 @@ let benchmarks_for config =
 ;;
 
 let () =
-  let quota = Core_bench_js.Quota.Span (Time.Span.of_sec 1.0) in
-  bench
+  let quota = Core_bench_js.Quota.Span (Time_float.Span.of_sec 1.0) in
+  Bonsai_bench.benchmark
     ~run_config:(Core_bench_js.Run_config.create () ~quota)
     (benchmarks_for Config.dynamic_columns @ benchmarks_for Config.dynamic_cells)
 ;;

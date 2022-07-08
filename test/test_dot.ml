@@ -15,7 +15,137 @@ let print_graph c =
   assert (Stdlib.Sys.command "graph-easy /tmp/foo --from graphviz --as boxart" = 0)
 ;;
 
+let%test_module ("regression" [@tags "no-js"]) =
+  (module struct
+    module State = struct
+      type t =
+        { a : int
+        ; b : int
+        ; c : int
+        }
+      [@@deriving fields]
+    end
+
+    let%expect_test "" =
+      let state_var = Bonsai.Var.create { State.a = 2; b = 3; c = 4 } in
+      let state = Bonsai.Var.value state_var in
+      let a = Value.map state ~f:State.a in
+      let component b =
+        let%arr a = a
+        and b = b in
+        printf "Recomputing ; a = %d\n" a;
+        a + b
+      in
+      let _this_is_normal =
+        let c = component (Value.map state ~f:State.b) in
+        print_graph c;
+        [%expect
+          {|
+          ┌──────┐
+          │ incr │
+          └──────┘
+            │
+            │
+            ▼
+          ┌──────┐
+          │ mapn │
+          └──────┘
+            │
+            │
+            ▼
+          ┌──────┐
+          │ mapn │ ◀┐
+          └──────┘  │
+            │       │
+            │       │
+            ▼       │
+          ┌──────┐  │
+          │ read │  │
+          └──────┘  │
+          ┌──────┐  │
+          │ incr │  │
+          └──────┘  │
+            │       │
+            │       │
+            ▼       │
+          ┌──────┐  │
+          │ mapn │ ─┘
+          └──────┘ |}]
+      in
+      let _this_is_weird =
+        let c = component (Value.return 3) in
+        print_graph c;
+        [%expect
+          {|
+          ┌──────┐
+          │ incr │
+          └──────┘
+            │
+            │
+            ▼
+          ┌──────┐
+          │ mapn │
+          └──────┘
+            │
+            │
+            ▼
+          ┌──────┐
+          │ mapn │
+          └──────┘
+            │
+            │
+            ▼
+          ┌──────┐
+          │ mapn │
+          └──────┘
+            │
+            │
+            ▼
+          ┌──────┐
+          │ read │
+          └──────┘ |}]
+      in
+      ()
+    ;;
+  end)
+;;
+
 let%expect_test ("map7 dot file" [@tags "no-js"]) =
+  let c =
+    Bonsai.read
+      (let%map () = opaque_const_value ()
+       and () = opaque_const_value ()
+       and () = opaque_const_value ()
+       and () = opaque_const_value ()
+       and () = opaque_const_value ()
+       and () = opaque_const_value ()
+       and () = opaque_const_value () in
+       ())
+  in
+  print_graph c;
+  [%expect
+    {|
+                 ┌──────┐┌──────┐
+                 │ incr ││ incr │
+                 └──────┘└──────┘
+                   │       │
+                   │       │
+                   ▼       ▼
+    ┌──────┐     ┌──────────────┐     ┌──────┐
+    │ incr │ ──▶ │              │ ◀── │ incr │
+    └──────┘     │     mapn     │     └──────┘
+    ┌──────┐     │              │     ┌──────┐
+    │ incr │ ──▶ │              │ ◀── │ incr │
+    └──────┘     └──────────────┘     └──────┘
+                   │       ▲
+                   │       │
+                   ▼       │
+                 ┌──────┐┌──────┐
+                 │ read ││ incr │
+                 └──────┘└──────┘ |}]
+;;
+
+let%expect_test ("map7 dot file constant folding" [@tags "no-js"]) =
   let c =
     Bonsai.read
       (let%map () = Value.return ()
@@ -30,27 +160,71 @@ let%expect_test ("map7 dot file" [@tags "no-js"]) =
   print_graph c;
   [%expect
     {|
-                  ┌───────┐┌───────┐
-                  │ const ││ const │
-                  └───────┘└───────┘
-                    │        │
-                    │        │
-                    ▼        ▼
-    ┌───────┐     ┌────────────────┐     ┌───────┐
-    │ const │ ──▶ │                │ ◀── │ const │
-    └───────┘     │      map7      │     └───────┘
-    ┌───────┐     │                │     ┌───────┐
-    │ const │ ──▶ │                │ ◀── │ const │
-    └───────┘     └────────────────┘     └───────┘
-                    │        ▲
-                    │        │
-                    ▼        │
-                  ┌───────┐┌───────┐
-                  │ read  ││ const │
-                  └───────┘└───────┘ |}]
+    ┌──────┐
+    │ lazy │
+    └──────┘
+      │
+      │
+      ▼
+    ┌──────┐
+    │ read │
+    └──────┘ |}]
 ;;
 
 let%expect_test ("map-10 dot file" [@tags "no-js"]) =
+  let c =
+    Bonsai.read
+      (let%map _1 : unit Value.t = opaque_const_value ()
+       and _2 : unit Value.t = opaque_const_value ()
+       and _3 : unit Value.t = opaque_const_value ()
+       and _4 : unit Value.t = opaque_const_value ()
+       and _5 : unit Value.t = opaque_const_value ()
+       and _6 : unit Value.t = opaque_const_value ()
+       and _7 : unit Value.t = opaque_const_value ()
+       and _8 : unit Value.t = opaque_const_value ()
+       and _9 : unit Value.t = opaque_const_value ()
+       and _10 : unit Value.t = opaque_const_value () in
+       ())
+  in
+  print_graph c;
+  [%expect
+    {|
+                 ┌──────┐     ┌──────┐
+                 │ incr │     │ incr │
+                 └──────┘     └──────┘
+                   │            │
+                   │            │
+                   ▼            ▼
+    ┌──────┐     ┌───────────────────┐     ┌──────┐
+    │ incr │ ──▶ │                   │ ◀── │ incr │
+    └──────┘     │       mapn        │     └──────┘
+    ┌──────┐     │                   │     ┌──────┐
+    │ incr │ ──▶ │                   │ ◀── │ incr │
+    └──────┘     └───────────────────┘     └──────┘
+                   │       ▲
+                   │       │
+                   ▼       │
+                 ┌──────┐  │
+                 │ read │  │
+                 └──────┘  │
+                 ┌──────┐  │
+                 │ incr │  │
+                 └──────┘  │
+                   │       │
+                   │       │
+                   ▼       │
+    ┌──────┐     ┌───────────────────┐
+    │ incr │ ──▶ │       mapn        │
+    └──────┘     └───────────────────┘
+                   ▲            ▲
+                   │            │
+                   │            │
+                 ┌──────┐     ┌──────┐
+                 │ incr │     │ incr │
+                 └──────┘     └──────┘ |}]
+;;
+
+let%expect_test ("map-10 dot file constant folding optimization" [@tags "no-js"]) =
   let c =
     Bonsai.read
       (let%map _1 : unit Value.t = Value.return ()
@@ -68,42 +242,21 @@ let%expect_test ("map-10 dot file" [@tags "no-js"]) =
   print_graph c;
   [%expect
     {|
-                  ┌───────┐     ┌───────┐
-                  │ const │     │ const │
-                  └───────┘     └───────┘
-                    │             │
-                    │             │
-                    ▼             ▼
-    ┌───────┐     ┌─────────────────────┐     ┌───────┐
-    │ const │ ──▶ │        map4         │ ◀── │ const │
-    └───────┘     └─────────────────────┘     └───────┘
-                    │
-                    │
-                    ▼
-    ┌───────┐     ┌─────────────────────┐     ┌───────┐
-    │ const │ ──▶ │                     │ ◀── │ const │
-    └───────┘     │        map7         │     └───────┘
-    ┌───────┐     │                     │     ┌───────┐
-    │ const │ ──▶ │                     │ ◀── │ const │
-    └───────┘     └─────────────────────┘     └───────┘
-                    │        ▲    ▲
-                    │        │    │
-                    ▼        │    │
-                  ┌───────┐  │  ┌───────┐
-                  │ read  │  │  │ const │
-                  └───────┘  │  └───────┘
-                             │
-                    ┌────────┘
-                    │
-                  ┌───────┐
-                  │ const │
-                  └───────┘ |}]
+    ┌──────┐
+    │ lazy │
+    └──────┘
+      │
+      │
+      ▼
+    ┌──────┐
+    │ read │
+    └──────┘ |}]
 ;;
 
-let%expect_test ("subst dot" [@tags "no-js"]) =
+let%expect_test ("subst dot constant folding" [@tags "no-js"]) =
   let c =
-    let%sub a = Bonsai.state dummy_source_code_position (module Int) ~default_model:0 in
-    let%sub b = Bonsai.const () in
+    let%sub a = Bonsai.state (module Int) ~default_model:0 in
+    let%sub b = opaque_const () in
     let%sub c = return (Value.both a b) in
     return (Value.both a c)
   in
@@ -111,7 +264,7 @@ let%expect_test ("subst dot" [@tags "no-js"]) =
   [%expect
     {|
        ┌─────────────────┐
-       │      const      │
+       │      incr       │
        └─────────────────┘
          │
          │
@@ -129,7 +282,7 @@ let%expect_test ("subst dot" [@tags "no-js"]) =
          │
          ▼
        ┌─────────────────┐
-       │      both       │ ◀┐
+       │      mapn       │ ◀┐
        └─────────────────┘  │
          │                  │
          │                  │
@@ -147,7 +300,73 @@ let%expect_test ("subst dot" [@tags "no-js"]) =
          │                  │
          ▼                  │
        ┌─────────────────┐  │
-    ┌▶ │      both       │  │
+    ┌▶ │      mapn       │  │
+    │  └─────────────────┘  │
+    │    │                  │
+    │    │                  │
+    │    ▼                  │
+    │  ┌─────────────────┐  │
+    │  │      read       │  │
+    │  └─────────────────┘  │
+    │  ┌─────────────────┐  │
+    │  │ {state machine} │  │
+    │  └─────────────────┘  │
+    │    │                  │
+    │    │                  │
+    │    │                  │
+    │  ┌─────────────────┐  │
+    └─ │      subst      │ ─┘
+       └─────────────────┘ |}]
+;;
+
+let%expect_test ("subst dot" [@tags "no-js"]) =
+  let c =
+    let%sub a = Bonsai.state (module Int) ~default_model:0 in
+    let%sub b = opaque_const () in
+    let%sub c = return (Value.both a b) in
+    return (Value.both a c)
+  in
+  print_graph c;
+  [%expect
+    {|
+       ┌─────────────────┐
+       │      incr       │
+       └─────────────────┘
+         │
+         │
+         ▼
+       ┌─────────────────┐
+       │      read       │
+       └─────────────────┘
+         │
+         │
+         │
+       ┌─────────────────┐
+       │      subst      │
+       └─────────────────┘
+         │
+         │
+         ▼
+       ┌─────────────────┐
+       │      mapn       │ ◀┐
+       └─────────────────┘  │
+         │                  │
+         │                  │
+         ▼                  │
+       ┌─────────────────┐  │
+       │      read       │  │
+       └─────────────────┘  │
+         │                  │
+         │                  │
+         │                  │
+       ┌─────────────────┐  │
+       │      subst      │  │
+       └─────────────────┘  │
+         │                  │
+         │                  │
+         ▼                  │
+       ┌─────────────────┐  │
+    ┌▶ │      mapn       │  │
     │  └─────────────────┘  │
     │    │                  │
     │    │                  │
@@ -219,13 +438,13 @@ let%expect_test ("dynamic scope" [@tags "no-js"]) =
       │             │
       ▼             │
     ┌───────┐     ┌─────────┐
-    │  map  │     │  subst  │
+    │ mapn  │     │  subst  │
     └───────┘     └─────────┘
       │             │
       │             │
       ▼             ▼
     ┌───────┐     ┌─────────┐
-    │ read  │     │   map   │
+    │ read  │     │  mapn   │
     └───────┘     └─────────┘
       │             │
       │             │
@@ -295,13 +514,13 @@ let%expect_test ("dynamic scope (with reverter)" [@tags "no-js"]) =
                     │               │
                     │               ▼
                   ┌─────────┐     ┌───────┐
-                  │  subst  │     │  map  │
+                  │  subst  │     │ mapn  │
                   └─────────┘     └───────┘
                     │               │
                     │               │
                     ▼               ▼
                   ┌─────────┐     ┌───────┐
-                  │   map   │     │ read  │
+                  │  mapn   │     │ read  │
                   └─────────┘     └───────┘
                     │               │
                     │               │
@@ -319,8 +538,8 @@ let%expect_test ("dynamic scope (with reverter)" [@tags "no-js"]) =
 
 let%expect_test ("arrow-syntax" [@tags "no-js"]) =
   let component =
-    let%sub a = Bonsai.const "hi" in
-    let%sub b = Bonsai.const 5 in
+    let%sub a = opaque_const "hi" in
+    let%sub b = opaque_const 5 in
     let%arr a = a
     and b = b in
     sprintf "%s %d" a b
@@ -329,7 +548,7 @@ let%expect_test ("arrow-syntax" [@tags "no-js"]) =
   [%expect
     {|
     ┌───────┐
-    │ const │
+    │ incr  │
     └───────┘
       │
       │
@@ -347,7 +566,7 @@ let%expect_test ("arrow-syntax" [@tags "no-js"]) =
       │
       ▼
     ┌───────┐
-    │ map2  │ ◀┐
+    │ mapn  │ ◀┐
     └───────┘  │
       │        │
       │        │
@@ -356,7 +575,7 @@ let%expect_test ("arrow-syntax" [@tags "no-js"]) =
     │ read  │  │
     └───────┘  │
     ┌───────┐  │
-    │ const │  │
+    │ incr  │  │
     └───────┘  │
       │        │
       │        │
@@ -370,4 +589,76 @@ let%expect_test ("arrow-syntax" [@tags "no-js"]) =
     ┌───────┐  │
     │ subst │ ─┘
     └───────┘ |}]
+;;
+
+let%expect_test ("both-constant-opt" [@tags "no-js"]) =
+  print_graph
+    (let%arr a = Bonsai.Value.return 1
+     and b = Bonsai.Value.return 1 in
+     sprintf "%d %d" a b);
+  [%expect
+    {|
+    ┌──────┐
+    │ lazy │
+    └──────┘
+      │
+      │
+      ▼
+    ┌──────┐
+    │ read │
+    └──────┘ |}];
+  print_graph
+    (let%arr a = opaque_const_value 1
+     and b = Bonsai.Value.return 1 in
+     sprintf "%d %d" a b);
+  [%expect
+    {|
+    ┌──────┐
+    │ incr │
+    └──────┘
+      │
+      │
+      ▼
+    ┌──────┐
+    │ mapn │
+    └──────┘
+      │
+      │
+      ▼
+    ┌──────┐
+    │ mapn │
+    └──────┘
+      │
+      │
+      ▼
+    ┌──────┐
+    │ read │
+    └──────┘ |}];
+  print_graph
+    (let%arr a = Bonsai.Value.return 1
+     and b = opaque_const_value 1 in
+     sprintf "%d %d" a b);
+  [%expect
+    {|
+    ┌──────┐
+    │ incr │
+    └──────┘
+      │
+      │
+      ▼
+    ┌──────┐
+    │ mapn │
+    └──────┘
+      │
+      │
+      ▼
+    ┌──────┐
+    │ mapn │
+    └──────┘
+      │
+      │
+      ▼
+    ┌──────┐
+    │ read │
+    └──────┘ |}]
 ;;

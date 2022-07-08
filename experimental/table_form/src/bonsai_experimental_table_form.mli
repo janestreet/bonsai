@@ -1,5 +1,5 @@
 open! Core
-open! Bonsai
+open! Bonsai_web
 module Form = Bonsai_web_ui_form
 
 module Column : sig

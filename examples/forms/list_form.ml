@@ -65,7 +65,6 @@ module Simple_list = struct
 
   let component =
     E.Multiple.stringable_list
-      [%here]
       (module T)
       ~extra_pill_container_attr:(Value.return (Vdom.Attr.class_ S.container))
       ~extra_pill_attr:(Value.return (Vdom.Attr.class_ S.pill))
@@ -84,16 +83,17 @@ module Advanced_list = struct
       (module struct
         module Typed_field = Typed_field
 
+        let label_for_field = `Inferred
+
         let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t = function
-          | A -> E.Textbox.int [%here]
-          | B -> E.Textbox.string [%here]
+          | A -> E.Textbox.int ()
+          | B -> E.Textbox.string ()
         ;;
       end)
   ;;
 
   let inner_form =
     Form.Elements.Multiple.list
-      [%here]
       form_of_t
       ~button_placement:`Indented
       ~add_element_text:(Value.return "add inner")
@@ -101,7 +101,6 @@ module Advanced_list = struct
 
   let outer_form =
     Form.Elements.Multiple.list
-      [%here]
       inner_form
       ~button_placement:`Indented
       ~add_element_text:(Value.return "add outer")

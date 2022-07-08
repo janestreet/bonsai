@@ -1,3 +1,10 @@
+module Stable = struct
+  module Private = struct
+    module Node_path = Node_path.Stable
+    module Graph_info = Graph_info.Stable
+  end
+end
+
 open! Core
 open! Import
 
@@ -23,6 +30,8 @@ module Private = struct
   module Graph_info = Graph_info
   module Instrumentation = Instrumentation
   module Flatten_values = Flatten_values
+  module Skeleton = Skeleton
+  module Transform = Transform
 
   let eval = Eval.eval
 
@@ -31,7 +40,23 @@ module Private = struct
   let path = Proc.path
 end
 
+module Expert = struct
+  let state_machine01 = Proc.state_machine01
+
+  module Computation_status = Proc.Computation_status
+
+  let race = Proc.race
+  let thunk = Proc.thunk
+  let assoc_on = Proc.assoc_on
+end
+
 include (Proc : module type of Proc with module Private := Proc.Private)
+
+module For_open = struct
+  module Computation = Computation
+  module Effect = Effect
+  module Value = Value
+end
 
 module Debug = struct
   let to_dot c = To_dot.to_dot (Private.reveal_computation c)

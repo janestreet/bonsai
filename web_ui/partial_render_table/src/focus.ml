@@ -2,6 +2,7 @@ open! Core
 open! Bonsai_web
 open! Bonsai.Let_syntax
 module Collated = Incr_map_collate.Collated
+module Map_list = Incr_map_collate.Map_list
 
 module By_row = struct
   type 'k t =
@@ -28,22 +29,22 @@ module Scroll = struct
      To (id, `Minimal) scrolls to [id], moving the screen as little as possible.
      To (id, `To_top) scrolls the table such that [id] is at the top of the screen.
      To (id, `To_bottom) scrolls the table such that [id] is at the bottom of the screen.  *)
-  type t = To of Int63.t * [ `Minimal | `To_top | `To_bottom ]
+  type t = To of Map_list.Key.t * [ `Minimal | `To_top | `To_bottom ]
 
   let control_test = function
     | To (i, `Minimal) ->
-      Effect.print_s [%message "scrolling to" (i : Int63.t) "minimizing scrolling"]
+      Effect.print_s [%message "scrolling to" (i : Map_list.Key.t) "minimizing scrolling"]
     | To (i, `To_bottom) ->
       Effect.print_s
         [%message
           "scrolling to"
-            (i : Int63.t)
+            (i : Map_list.Key.t)
             "such that it is positioned at the bottom of the screen"]
     | To (i, `To_top) ->
       Effect.print_s
         [%message
           "scrolling to"
-            (i : Int63.t)
+            (i : Map_list.Key.t)
             "such that it is positioned at the top of the screen"]
   ;;
 
@@ -65,7 +66,8 @@ module Scroll = struct
     let open Js_of_ocaml in
     Effect.of_sync_fun (fun (row_id, kind, path) ->
       let selector =
-        [%string ".partial-render-table-%{path} [data-row-id=\"key_%{row_id#Int63}\"]"]
+        [%string
+          ".partial-render-table-%{path} [data-row-id=\"key_%{row_id#Map_list.Key}\"]"]
       in
       Js.Opt.iter
         (Dom_html.document##querySelector (Js.string selector))
@@ -103,7 +105,7 @@ module Row_machine = struct
         as the result for "next row down" queries.  *)
     type 'k t =
       { key : 'k
-      ; id : Int63.t
+      ; id : Map_list.Key.t
       ; index : int
       }
     [@@deriving sexp, equal]
@@ -230,7 +232,6 @@ module Row_machine = struct
         ~(collated : (key, data) Incr_map_collate.Collated.t Value.t)
         ~(rows_covered_by_header : int Value.t)
         ~(range : (int * int) Value.t)
-        ~(remapped : (key, Int63.t * data, cmp) Map.t Value.t)
         ~path
     : key By_row.t Computation.t
     =
@@ -374,7 +375,6 @@ module Row_machine = struct
     let%sub ((model, inject) as machine) =
       Bonsai.Incr.model_cutoff
       @@ Bonsai.state_machine1
-           [%here]
            (module Model)
            (module Action)
            ~default_model:Model.empty
@@ -392,7 +392,6 @@ module Row_machine = struct
     in
     let%sub () =
       Bonsai.Edge.on_change
-        [%here]
         (module Forces_recalculation)
         (let%map range = range
          and collated = collated in
@@ -412,16 +411,18 @@ module Row_machine = struct
          - Unfocus sets the "shadow" value, which is used to resume focus when the
            user hits "up" or "down". *)
       let%sub is_present =
-        Bonsai.Incr.compute (Bonsai.Value.both model remapped) ~f:(fun both ->
+        Bonsai.Incr.compute (Bonsai.Value.both model collated) ~f:(fun both ->
           match%pattern_bind.Ui_incr both with
-          | { current = Some { key = current; _ }; _ }, map ->
-            let lookup = Ui_incr.Map.Lookup.create map ~comparator:Key.comparator in
+          | { current = Some { key = current; _ }; _ }, collated ->
+            let map =
+              let%map.Ui_incr collated = collated in
+              Incr_map_collate.Collated.to_map_list collated
+            in
             let%bind.Ui_incr current = current in
-            Ui_incr.map (Ui_incr.Map.Lookup.find lookup current) ~f:Option.is_some
+            Incr_map.exists map ~f:(fun (key, _) -> Key.equal key current)
           | { current = None; _ }, _ -> Ui_incr.return false)
       in
       Bonsai.Edge.on_change'
-        [%here]
         (module Bool)
         is_present
         ~callback:
@@ -451,22 +452,20 @@ let component
     -> collated:(key, _) Collated.t Value.t
     -> rows_covered_by_header:int Value.t
     -> range:_
-    -> remapped:(key, _, _) Map.t Value.t
     -> path:_
     -> kind Computation.t
   =
   fun kind ->
   match kind with
   | None ->
-    fun _ ~collated:_ ~rows_covered_by_header:_ ~range:_ ~remapped:_ ~path:_ ->
-      Bonsai.const ()
+    fun _ ~collated:_ ~rows_covered_by_header:_ ~range:_ ~path:_ -> Bonsai.const ()
   | By_row { on_change } -> Row_machine.component ~on_change
 ;;
 
 let get_focused (type r k) : (r, k) Kind.t -> r Value.t -> k option Value.t =
   fun kind value ->
   match kind with
-  | None -> Bonsai.Value.return None
+  | None -> Value.return None
   | By_row _ ->
     let%map { focused; _ } = value in
     focused

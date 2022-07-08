@@ -2,7 +2,15 @@ open! Core
 open! Bonsai
 open! Bonsai_test
 
-type t = Core_bench_js.Test.t
+type ('a, 'r) unpacked =
+  { clock : Incr.Clock.t
+  ; name : string
+  ; component : 'r Computation.t
+  ; get_inject : 'r -> 'a -> unit Effect.t
+  ; interaction : 'a Interaction.t
+  }
+
+type t = T : (_, _) unpacked -> t
 
 val create
   :  ?clock:Incr.Clock.t

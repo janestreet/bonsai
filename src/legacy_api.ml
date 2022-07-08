@@ -19,7 +19,7 @@ let map a ~f i =
 
 let map_input a ~f i = a (Proc.Value.map i ~f)
 let of_module = Proc.of_module1
-let state_machine model action here = Proc.state_machine1 here model action
+let state_machine model action _here = Proc.state_machine1 model action
 
 let both a b i =
   let open Proc.Let_syntax in
@@ -134,6 +134,7 @@ module With_incr = struct
         ; compute = (fun _ -> M.compute)
         ; name = M.name
         }
+      |> Proc.with_computation_id "leaf_incr"
     in
     Computation.T
       { t

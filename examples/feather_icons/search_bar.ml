@@ -34,7 +34,7 @@ let component =
       ~extra_attrs:
         (Value.return [ Vdom.Attr.classes [ Card_like.class_; Search_bar.class_ ] ])
       ~placeholder:"Search icons"
-      [%here]
+      ()
   in
   let%arr search_bar = search_bar in
   let icons =

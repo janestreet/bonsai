@@ -30,10 +30,9 @@ module Ids = struct
       { next = state.next + 1; ids = Map.add_exn ~key:state.next ~data:() state.ids }
   ;;
 
-  let component here =
+  let component =
     let%sub state =
       Bonsai.state_machine0
-        here
         (module State)
         (module struct
           type t =
@@ -60,7 +59,7 @@ let panel_component id (_ : unit Value.t) =
 ;;
 
 let component =
-  let%sub { ids; inject_add_with_next_id; inject_remove } = Ids.component [%here] in
+  let%sub { ids; inject_add_with_next_id; inject_remove } = Ids.component in
   let%sub panels = Bonsai.assoc (module Id) ids ~f:panel_component in
   Bonsai_web_ui_panels_experimental.component
     ~key:(module Id)

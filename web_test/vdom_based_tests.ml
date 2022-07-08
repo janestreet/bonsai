@@ -16,7 +16,7 @@ let%expect_test "recursive component" =
   end
   in
   let rec tree input path =
-    let%pattern_bind { M.label; children } = input in
+    let%sub { M.label; children } = return input in
     let%sub children =
       Bonsai.assoc
         (module Int)
@@ -24,14 +24,12 @@ let%expect_test "recursive component" =
         ~f:(fun index child ->
           let path = Bonsai.Value.map2 index path ~f:List.cons in
           let%sub child = Bonsai.lazy_ (lazy (tree child path)) in
-          return
-          @@ let%map child = child
+          let%arr child = child
           and index = index in
           Vdom.Node.div [ Vdom.Node.textf "%d" index; child ])
     in
-    let%sub state = Bonsai.state [%here] (module Int) ~default_model:0 in
-    return
-    @@ let%map children = children
+    let%sub state = Bonsai.state (module Int) ~default_model:0 in
+    let%arr children = children
     and label = label
     and path = path
     and state, set_state = state in
@@ -44,7 +42,7 @@ let%expect_test "recursive component" =
        :: Vdom.Node.button
             ~attr:(Vdom.Attr.on_click (fun _ -> set_state (state + 1)))
             [ Vdom.Node.text "+1" ]
-       :: Int.Map.data children)
+       :: Map.data (children : _ Int.Map.t))
   in
   let var =
     Bonsai.Var.create

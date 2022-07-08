@@ -5,12 +5,12 @@ Bindings to dygraphs, a javascript graphing library, using gen_js_api.
     Dygraphs: http://dygraphs.com/
     API: http://dygraphs.com/jsdoc/symbols/Dygraph.html
     Options Reference: http://dygraphs.com/options.html
-    
+
 ## High level overview
 
 - Graph: A dygraph.  This API is actually surprisingly small since
   almost all options live in...
-  
+
 - Options: Where you can control almost any aspect of the graph.  Each
   option should be documented, which is copied from
   http://dygraphs.com/options.html.
@@ -18,10 +18,10 @@ Bindings to dygraphs, a javascript graphing library, using gen_js_api.
 - Data: Dygraphs can take data of a few formats (the x-values can be
   floats, dates, or times).  This module provides nice [create]
   functions for each of these options.
-  
+
 - With_bonsai: **The recommended way to use a dygraph (with bonsai).**
 
-## Sharp coreners
+## Sharp corners
 
 ### CSP (content security policy)
 

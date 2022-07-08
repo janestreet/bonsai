@@ -1,0 +1,4 @@
+(library (name all_url_var_features_example)
+ (libraries bonsai bonsai_web bonsai_web_ui_url_var bonsai_web_ui_form core)
+ (preprocess
+  (pps ppx_jane ppx_css ppx_demo js_of_ocaml-ppx ppx_typed_fields)))

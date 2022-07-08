@@ -1,9 +1,22 @@
 open! Core
-open Virtual_dom
-open Bonsai
+open Bonsai_web
 open Bonsai.Let_syntax
 open Js_of_ocaml
-open Vdom
+
+module Style =
+  [%css.raw
+    {|
+  .no_select {
+    user-select: none;
+  }
+
+  .dragged_element {
+    position: fixed;
+    top: 0px;
+    left: 0px;
+    pointer-events: none;
+  }
+  |}]
 
 module Position = struct
   type t =
@@ -39,6 +52,13 @@ module State_machine_model = struct
     | Not_dragging
     | Dragging of ('source_id, 'target_id) dragging
   [@@deriving sexp, equal]
+
+  let map_target : ('source, 'a) t -> f:('a -> 'b) -> ('source, 'b) t =
+    fun t ~f ->
+    match t with
+    | Not_dragging -> Not_dragging
+    | Dragging t -> Dragging { t with target = Option.map t.target ~f }
+  ;;
 end
 
 module Action = struct
@@ -53,16 +73,42 @@ module Action = struct
     | Finished_drag
     | Mouse_moved of Position.t
   [@@deriving sexp, equal]
+
+  let map_target : ('source, 'a) t -> f:('a -> 'b) -> ('source, 'b) t =
+    fun t ~f ->
+    match t with
+    | Finished_drag -> Finished_drag
+    | Mouse_moved position -> Mouse_moved position
+    | Set_target x -> Set_target (Option.map x ~f)
+    | Started_drag { source; offset; position; size } ->
+      Started_drag { source; offset; position; size }
+  ;;
 end
 
 type ('source_id, 'target_id) t =
-  { source : id:'source_id -> Attr.t
-  ; drop_target : id:'target_id -> Attr.t
-  ; sentinel : name:string -> Attr.t
+  { source : id:'source_id -> Vdom.Attr.t
+  ; drop_target : id:'target_id -> Vdom.Attr.t
+  ; sentinel : name:string -> Vdom.Attr.t
   ; model : ('source_id, 'target_id) State_machine_model.t
   ; inject : ('source_id, 'target_id) Action.t list -> unit Effect.t
   }
 [@@deriving fields]
+
+let project_target
+  :  ('source, 'target_a) t -> map:('target_a -> 'target_b)
+    -> unmap:('target_b -> 'target_a) -> ('source, 'target_b) t
+  =
+  fun t ~map ~unmap ->
+  let source ~id = t.source ~id in
+  let drop_target ~id = t.drop_target ~id:(unmap id) in
+  let sentinel ~name = t.sentinel ~name in
+  let model = State_machine_model.map_target t.model ~f:map in
+  let inject : ('source, 'target_b) Action.t list -> unit Effect.t =
+    fun actions ->
+      t.inject (List.map actions ~f:(fun action -> Action.map_target action ~f:unmap))
+  in
+  { source; drop_target; sentinel; model; inject }
+;;
 
 let bug message =
   let message = sprintf "BUG: %s. Report to Bonsai developers" message in
@@ -79,8 +125,8 @@ module For_testing = struct
 
     let to_internal_actions
           (type source target)
-          (module Source : Model with type t = source)
-          (module Target : Model with type t = target)
+          (module Source : Bonsai.Model with type t = source)
+          (module Target : Bonsai.Model with type t = target)
       = function
         | Start_drag source ->
           [ Action.Started_drag
@@ -98,11 +144,11 @@ module For_testing = struct
     ;;
   end
 
-  module Inject_hook = Attr.Hooks.Make (struct
+  module Inject_hook = Vdom.Attr.Hooks.Make (struct
       module State = Unit
 
       module Input = struct
-        type t = Action.t -> unit Ui_effect.t [@@deriving sexp]
+        type t = Action.t -> unit Effect.t [@@deriving sexp]
 
         let combine _ second = second
       end
@@ -145,14 +191,12 @@ let add_event_listener, remove_event_listener =
 
 let create
       (type source target)
-      here
-      ~source_id:(module Source : Model with type t = source)
-      ~target_id:(module Target : Model with type t = target)
+      ~source_id:(module Source : Bonsai.Model with type t = source)
+      ~target_id:(module Target : Bonsai.Model with type t = target)
       ~on_drop
   =
   let%sub model, inject =
     Bonsai.state_machine1
-      here
       (module struct
         type t = (Source.t, Target.t) State_machine_model.t [@@deriving sexp, equal]
       end)
@@ -189,8 +233,8 @@ let create
   let%sub source =
     let%arr inject = inject in
     fun ~id ->
-      Attr.many
-        [ Attr.on_pointerdown (fun event ->
+      Vdom.Attr.many
+        [ Vdom.Attr.on_pointerdown (fun event ->
             let position = { Position.x = event##.clientX; y = event##.clientY } in
             let bounding_rect =
               (Js.Opt.to_option event##.currentTarget |> Option.value_exn)##getBoundingClientRect
@@ -207,7 +251,7 @@ let create
             match Bonsai_web.am_within_disabled_fieldset event with
             | true -> Effect.Ignore
             | false -> inject [ Started_drag { source = id; offset; position; size } ])
-        ; Attr.style (Css_gen.user_select `None)
+        ; Vdom.Attr.class_ Style.no_select
         ]
   in
   let%sub path = Bonsai.Private.path in
@@ -289,8 +333,8 @@ let create
   let%sub sentinel =
     let%arr inject = inject in
     fun ~name ->
-      Attr.many
-        [ Attr.create_hook
+      Vdom.Attr.many
+        [ Vdom.Attr.create_hook
             "dnd-test-hook"
             (For_testing.Inject_hook.create (fun action ->
                inject
@@ -298,19 +342,19 @@ let create
                   |> For_testing.Action.to_internal_actions
                        (module Source)
                        (module Target))))
-        ; Attr.create "data-dnd-name" name
+        ; Vdom.Attr.create "data-dnd-name" name
         ]
   in
   let%sub drop_target =
     let%arr inject = inject
     and universe_suffix = universe_suffix in
     fun ~id ->
-      Attr.many
-        [ Attr.on_pointerup (fun event ->
+      Vdom.Attr.many
+        [ Vdom.Attr.on_pointerup (fun event ->
             match Bonsai_web.am_within_disabled_fieldset event with
             | true -> inject [ Set_target None; Finished_drag ]
             | false -> inject [ Finished_drag ])
-        ; Attr.create
+        ; Vdom.Attr.create
             ("data-drag-target" ^ universe_suffix)
             (Sexp.to_string_mach (Target.sexp_of_t id))
         ]
@@ -325,24 +369,24 @@ let create
 
 let dragged_element t ~f =
   match%sub t >>| model with
-  | Not_dragging | Dragging { has_moved = false; _ } -> Bonsai.const Node.None
+  | Not_dragging | Dragging { has_moved = false; _ } -> Bonsai.const Vdom.Node.None
   | Dragging ({ source; _ } as dragging) ->
     let%sub item = f source in
     let%arr { position; offset; size; _ } = dragging
     and item = item in
     let x = position.x - offset.x in
     let y = position.y - offset.y in
-    Node.div
+    Vdom.Node.div
       ~attr:
-        (Attr.style
-           Css_gen.(
-             position `Fixed ~top:(`Px 0) ~left:(`Px 0)
-             @> create ~field:"pointer-events" ~value:"none"
-             @> width (`Px size.width)
-             @> height (`Px size.height)
-             @> create
-                  ~field:"transform"
-                  ~value:[%string "translateY(%{y#Int}px) translateX(%{x#Int}px)"]))
+        Vdom.Attr.(
+          class_ Style.dragged_element
+          @ style
+              Css_gen.(
+                width (`Px size.width)
+                @> height (`Px size.height)
+                @> create
+                     ~field:"transform"
+                     ~value:[%string "translateY(%{y#Int}px) translateX(%{x#Int}px)"]))
       [ item ]
 ;;
 

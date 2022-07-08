@@ -196,7 +196,7 @@ module type S = sig
     (** [a >>| f] is [map a ~f] *)
     val ( >>| ) : ('input, 'r1) t -> ('r1 -> 'r2) -> ('input, 'r2) t
 
-    (** [a @>> f] is [map_input a ~f] *)
+    (** [f @>> a] is [map_input a ~f] *)
     val ( @>> ) : ('i1 -> 'i2) -> ('i2, 'result) t -> ('i1, 'result) t
   end
 

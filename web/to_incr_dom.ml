@@ -52,7 +52,7 @@ let create_generic
     match action with
     | Action.Dynamic action -> dynamic_apply_action model action ~schedule_event
     | Action.Static action ->
-      apply_static ~inject:inject_static ~schedule_event model action
+      apply_static ~inject_dynamic ~inject_static ~schedule_event model action
   in
   let on_display state ~schedule_action:_ =
     let diff =

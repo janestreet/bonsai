@@ -91,4 +91,18 @@ module Action = struct
       ~name:(sprintf "map to %s" (Type_equal.Id.name action))
       [%sexp_of: M.t * action]
   ;;
+
+  let map_for_assoc_on
+        (type model_k io_k model_cmp io_cmp)
+        (module Model : Comparator
+          with type t = model_k
+           and type comparator_witness = model_cmp)
+        (module Io : Comparator with type t = io_k and type comparator_witness = io_cmp)
+        action
+    =
+    let sexp_of_action = Type_equal.Id.to_sexp action in
+    Type_equal.Id.create
+      ~name:(sprintf "assoc_on_map to %s" (Type_equal.Id.name action))
+      [%sexp_of: Model.t * Io.t * action]
+  ;;
 end

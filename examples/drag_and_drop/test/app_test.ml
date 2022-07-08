@@ -13,34 +13,34 @@ let%expect_test "drag between containers" =
   Handle.show handle;
   [%expect
     {|
-    <div data-dnd-name="board" class="kanban-container" dnd-test-hook=<fun>>
-      <div data-drag-targetbonsai_path_replaced_in_test="todo"
-           class="kanban-column kanban-column-todo"
+    <div data-dnd-name="board" class="kanban_container_hash_replaced_in_test" dnd-test-hook=<fun>>
+      <div data-drag-targetbonsai_path_replaced_in_test="Todo"
+           class="kanban_column_hash_replaced_in_test kanban_column_todo_hash_replaced_in_test"
            onpointerup>
-        <h3> Todo </h3>
+        <h3 class="centered_hash_replaced_in_test"> Todo </h3>
         <div>
-          <div @key=0 class="kanban-item" onpointerdown style={ user-select: none; }> todo 1 </div>
-          <div @key=1 class="kanban-item" onpointerdown style={ user-select: none; }> todo 2 </div>
+          <div @key=0 class="kanban_item_hash_replaced_in_test no_select_hash_replaced_in_test" onpointerdown> todo 1 </div>
+          <div @key=1 class="kanban_item_hash_replaced_in_test no_select_hash_replaced_in_test" onpointerdown> todo 2 </div>
         </div>
       </div>
-      <div data-drag-targetbonsai_path_replaced_in_test="in-progress"
-           class="kanban-column kanban-column-in-progress"
+      <div data-drag-targetbonsai_path_replaced_in_test="In_progress"
+           class="kanban_column_hash_replaced_in_test kanban_column_in_progress_hash_replaced_in_test"
            onpointerup>
-        <h3> In Progress </h3>
+        <h3 class="centered_hash_replaced_in_test"> In Progress </h3>
         <div>
-          <div @key=2 class="kanban-item" onpointerdown style={ user-select: none; }> in progress 1 </div>
-          <div @key=3 class="kanban-item" onpointerdown style={ user-select: none; }> in progress 2 </div>
-          <div @key=4 class="kanban-item" onpointerdown style={ user-select: none; }> in progress 3 </div>
+          <div @key=2 class="kanban_item_hash_replaced_in_test no_select_hash_replaced_in_test" onpointerdown> in progress 1 </div>
+          <div @key=3 class="kanban_item_hash_replaced_in_test no_select_hash_replaced_in_test" onpointerdown> in progress 2 </div>
+          <div @key=4 class="kanban_item_hash_replaced_in_test no_select_hash_replaced_in_test" onpointerdown> in progress 3 </div>
         </div>
       </div>
-      <div data-drag-targetbonsai_path_replaced_in_test="finished"
-           class="kanban-column kanban-column-finished"
+      <div data-drag-targetbonsai_path_replaced_in_test="Finished"
+           class="kanban_column_finished_hash_replaced_in_test kanban_column_hash_replaced_in_test"
            onpointerup>
-        <h3> Done </h3>
+        <h3 class="centered_hash_replaced_in_test"> Done </h3>
         <div>
-          <div @key=5 class="kanban-item" onpointerdown style={ user-select: none; }> finished 1 </div>
-          <div @key=6 class="kanban-item" onpointerdown style={ user-select: none; }> finished 2 </div>
-          <div @key=7 class="kanban-item" onpointerdown style={ user-select: none; }> finished 3 </div>
+          <div @key=5 class="kanban_item_hash_replaced_in_test no_select_hash_replaced_in_test" onpointerdown> finished 1 </div>
+          <div @key=6 class="kanban_item_hash_replaced_in_test no_select_hash_replaced_in_test" onpointerdown> finished 2 </div>
+          <div @key=7 class="kanban_item_hash_replaced_in_test no_select_hash_replaced_in_test" onpointerdown> finished 3 </div>
         </div>
       </div>
     </div>
@@ -52,35 +52,35 @@ let%expect_test "drag between containers" =
   Handle.show_diff handle;
   [%expect
     {|
-      <div data-dnd-name="board" class="kanban-container" dnd-test-hook=<fun>>
-        <div data-drag-targetbonsai_path_replaced_in_test="todo"
-             class="kanban-column kanban-column-todo"
+      <div data-dnd-name="board" class="kanban_container_hash_replaced_in_test" dnd-test-hook=<fun>>
+        <div data-drag-targetbonsai_path_replaced_in_test="Todo"
+             class="kanban_column_hash_replaced_in_test kanban_column_todo_hash_replaced_in_test"
              onpointerup>
-          <h3> Todo </h3>
+          <h3 class="centered_hash_replaced_in_test"> Todo </h3>
           <div>
-    -|      <div @key=0 class="kanban-item" onpointerdown style={ user-select: none; }> todo 1 </div>
-            <div @key=1 class="kanban-item" onpointerdown style={ user-select: none; }> todo 2 </div>
+    -|      <div @key=0 class="kanban_item_hash_replaced_in_test no_select_hash_replaced_in_test" onpointerdown> todo 1 </div>
+            <div @key=1 class="kanban_item_hash_replaced_in_test no_select_hash_replaced_in_test" onpointerdown> todo 2 </div>
           </div>
         </div>
-        <div data-drag-targetbonsai_path_replaced_in_test="in-progress"
-             class="kanban-column kanban-column-in-progress"
+        <div data-drag-targetbonsai_path_replaced_in_test="In_progress"
+             class="kanban_column_hash_replaced_in_test kanban_column_in_progress_hash_replaced_in_test"
              onpointerup>
-          <h3> In Progress </h3>
+          <h3 class="centered_hash_replaced_in_test"> In Progress </h3>
           <div>
-            <div @key=2 class="kanban-item" onpointerdown style={ user-select: none; }> in progress 1 </div>
-            <div @key=3 class="kanban-item" onpointerdown style={ user-select: none; }> in progress 2 </div>
-            <div @key=4 class="kanban-item" onpointerdown style={ user-select: none; }> in progress 3 </div>
+            <div @key=2 class="kanban_item_hash_replaced_in_test no_select_hash_replaced_in_test" onpointerdown> in progress 1 </div>
+            <div @key=3 class="kanban_item_hash_replaced_in_test no_select_hash_replaced_in_test" onpointerdown> in progress 2 </div>
+            <div @key=4 class="kanban_item_hash_replaced_in_test no_select_hash_replaced_in_test" onpointerdown> in progress 3 </div>
           </div>
         </div>
-        <div data-drag-targetbonsai_path_replaced_in_test="finished"
-             class="kanban-column kanban-column-finished"
+        <div data-drag-targetbonsai_path_replaced_in_test="Finished"
+             class="kanban_column_finished_hash_replaced_in_test kanban_column_hash_replaced_in_test"
              onpointerup>
-          <h3> Done </h3>
+          <h3 class="centered_hash_replaced_in_test"> Done </h3>
           <div>
-    +|      <div @key=0 class="kanban-item" onpointerdown style={ user-select: none; }> todo 1 </div>
-            <div @key=5 class="kanban-item" onpointerdown style={ user-select: none; }> finished 1 </div>
-            <div @key=6 class="kanban-item" onpointerdown style={ user-select: none; }> finished 2 </div>
-            <div @key=7 class="kanban-item" onpointerdown style={ user-select: none; }> finished 3 </div>
+    +|      <div @key=0 class="kanban_item_hash_replaced_in_test no_select_hash_replaced_in_test" onpointerdown> todo 1 </div>
+            <div @key=5 class="kanban_item_hash_replaced_in_test no_select_hash_replaced_in_test" onpointerdown> finished 1 </div>
+            <div @key=6 class="kanban_item_hash_replaced_in_test no_select_hash_replaced_in_test" onpointerdown> finished 2 </div>
+            <div @key=7 class="kanban_item_hash_replaced_in_test no_select_hash_replaced_in_test" onpointerdown> finished 3 </div>
           </div>
         </div>
       </div> |}]
@@ -110,168 +110,169 @@ let%expect_test "appearance of dragged item and preview item while drag is happe
   Handle.show_diff handle;
   [%expect
     {|
-      <div data-dnd-name="board" class="kanban-container" dnd-test-hook=<fun>>
-        <div data-drag-targetbonsai_path_replaced_in_test="todo"
-             class="kanban-column kanban-column-todo"
+      <div data-dnd-name="board" class="kanban_container_hash_replaced_in_test" dnd-test-hook=<fun>>
+        <div data-drag-targetbonsai_path_replaced_in_test="Todo"
+             class="kanban_column_hash_replaced_in_test kanban_column_todo_hash_replaced_in_test"
              onpointerup>
-          <h3> Todo </h3>
+          <h3 class="centered_hash_replaced_in_test"> Todo </h3>
           <div>
-    -|      <div @key=0 class="kanban-item" onpointerdown style={ user-select: none; }> todo 1 </div>
-    +|      <div @key=0 class="being-dragged kanban-item" onpointerdown style={ user-select: none; }> todo 1 </div>
-            <div @key=1 class="kanban-item" onpointerdown style={ user-select: none; }> todo 2 </div>
+    -|      <div @key=0 class="kanban_item_hash_replaced_in_test no_select_hash_replaced_in_test" onpointerdown> todo 1 </div>
+    +|      <div @key=0
+    +|           class="being_dragged_hash_replaced_in_test kanban_item_hash_replaced_in_test no_select_hash_replaced_in_test"
+    +|           onpointerdown> todo 1 </div>
+            <div @key=1 class="kanban_item_hash_replaced_in_test no_select_hash_replaced_in_test" onpointerdown> todo 2 </div>
           </div>
         </div>
-        <div data-drag-targetbonsai_path_replaced_in_test="in-progress"
-             class="kanban-column kanban-column-in-progress"
+        <div data-drag-targetbonsai_path_replaced_in_test="In_progress"
+             class="kanban_column_hash_replaced_in_test kanban_column_in_progress_hash_replaced_in_test"
              onpointerup>
-          <h3> In Progress </h3>
+          <h3 class="centered_hash_replaced_in_test"> In Progress </h3>
           <div>
-            <div @key=2 class="kanban-item" onpointerdown style={ user-select: none; }> in progress 1 </div>
-            <div @key=3 class="kanban-item" onpointerdown style={ user-select: none; }> in progress 2 </div>
-            <div @key=4 class="kanban-item" onpointerdown style={ user-select: none; }> in progress 3 </div>
+            <div @key=2 class="kanban_item_hash_replaced_in_test no_select_hash_replaced_in_test" onpointerdown> in progress 1 </div>
+            <div @key=3 class="kanban_item_hash_replaced_in_test no_select_hash_replaced_in_test" onpointerdown> in progress 2 </div>
+            <div @key=4 class="kanban_item_hash_replaced_in_test no_select_hash_replaced_in_test" onpointerdown> in progress 3 </div>
           </div>
         </div>
-        <div data-drag-targetbonsai_path_replaced_in_test="finished"
-             class="kanban-column kanban-column-finished"
+        <div data-drag-targetbonsai_path_replaced_in_test="Finished"
+             class="kanban_column_finished_hash_replaced_in_test kanban_column_hash_replaced_in_test"
              onpointerup>
-          <h3> Done </h3>
+          <h3 class="centered_hash_replaced_in_test"> Done </h3>
           <div>
-            <div @key=5 class="kanban-item" onpointerdown style={ user-select: none; }> finished 1 </div>
-            <div @key=6 class="kanban-item" onpointerdown style={ user-select: none; }> finished 2 </div>
-            <div @key=7 class="kanban-item" onpointerdown style={ user-select: none; }> finished 3 </div>
+            <div @key=5 class="kanban_item_hash_replaced_in_test no_select_hash_replaced_in_test" onpointerdown> finished 1 </div>
+            <div @key=6 class="kanban_item_hash_replaced_in_test no_select_hash_replaced_in_test" onpointerdown> finished 2 </div>
+            <div @key=7 class="kanban_item_hash_replaced_in_test no_select_hash_replaced_in_test" onpointerdown> finished 3 </div>
           </div>
     +|  </div>
-    +|  <div style={
-    +|         position: fixed;
-    +|         top: 0px;
-    +|         left: 0px;
-    +|         pointer-events: none;
+    +|  <div class="dragged_element_hash_replaced_in_test"
+    +|       style={
     +|         width: 0px;
     +|         height: 0px;
     +|         transform: translateY(0px) translateX(0px);
     +|       }>
-    +|    <div class="kanban-item"> todo 1 </div>
+    +|    <div class="kanban_item_hash_replaced_in_test"> todo 1 </div>
         </div>
       </div> |}];
   run handle (Set_target (Some "todo"));
   Handle.show_diff handle;
   [%expect
     {|
-      <div data-dnd-name="board" class="kanban-container" dnd-test-hook=<fun>>
-        <div data-drag-targetbonsai_path_replaced_in_test="todo"
-    -|       class="kanban-column kanban-column-todo"
-    +|       class="kanban-column kanban-column-active kanban-column-todo"
+      <div data-dnd-name="board" class="kanban_container_hash_replaced_in_test" dnd-test-hook=<fun>>
+        <div data-drag-targetbonsai_path_replaced_in_test="Todo"
+    -|       class="kanban_column_hash_replaced_in_test kanban_column_todo_hash_replaced_in_test"
+    +|       class="kanban_column_active_hash_replaced_in_test kanban_column_hash_replaced_in_test kanban_column_todo_hash_replaced_in_test"
              onpointerup>
-          <h3> Todo </h3>
+          <h3 class="centered_hash_replaced_in_test"> Todo </h3>
           <div>
-    -|      <div @key=0 class="being-dragged kanban-item" onpointerdown style={ user-select: none; }> todo 1 </div>
-    +|      <div @key=0 class="dragged-on-self kanban-item" onpointerdown style={ user-select: none; }> todo 1 </div>
-            <div @key=1 class="kanban-item" onpointerdown style={ user-select: none; }> todo 2 </div>
+            <div @key=0
+    -|           class="being_dragged_hash_replaced_in_test kanban_item_hash_replaced_in_test no_select_hash_replaced_in_test"
+    +|           class="dragged_on_self_hash_replaced_in_test kanban_item_hash_replaced_in_test no_select_hash_replaced_in_test"
+                 onpointerdown> todo 1 </div>
+            <div @key=1 class="kanban_item_hash_replaced_in_test no_select_hash_replaced_in_test" onpointerdown> todo 2 </div>
           </div>
         </div>
-        <div data-drag-targetbonsai_path_replaced_in_test="in-progress"
-             class="kanban-column kanban-column-in-progress"
+        <div data-drag-targetbonsai_path_replaced_in_test="In_progress"
+             class="kanban_column_hash_replaced_in_test kanban_column_in_progress_hash_replaced_in_test"
              onpointerup>
-          <h3> In Progress </h3>
+          <h3 class="centered_hash_replaced_in_test"> In Progress </h3>
           <div>
-            <div @key=2 class="kanban-item" onpointerdown style={ user-select: none; }> in progress 1 </div>
-            <div @key=3 class="kanban-item" onpointerdown style={ user-select: none; }> in progress 2 </div>
-            <div @key=4 class="kanban-item" onpointerdown style={ user-select: none; }> in progress 3 </div>
+            <div @key=2 class="kanban_item_hash_replaced_in_test no_select_hash_replaced_in_test" onpointerdown> in progress 1 </div>
+            <div @key=3 class="kanban_item_hash_replaced_in_test no_select_hash_replaced_in_test" onpointerdown> in progress 2 </div>
+            <div @key=4 class="kanban_item_hash_replaced_in_test no_select_hash_replaced_in_test" onpointerdown> in progress 3 </div>
           </div>
         </div>
-        <div data-drag-targetbonsai_path_replaced_in_test="finished"
-             class="kanban-column kanban-column-finished"
-             onpointerup> |}];
+        <div data-drag-targetbonsai_path_replaced_in_test="Finished"
+             class="kanban_column_finished_hash_replaced_in_test kanban_column_hash_replaced_in_test" |}];
   run handle (Set_target (Some "finished"));
   Handle.show_diff handle;
   [%expect
     {|
-      <div data-dnd-name="board" class="kanban-container" dnd-test-hook=<fun>>
-        <div data-drag-targetbonsai_path_replaced_in_test="todo"
-    -|       class="kanban-column kanban-column-active kanban-column-todo"
-    +|       class="kanban-column kanban-column-todo"
+      <div data-dnd-name="board" class="kanban_container_hash_replaced_in_test" dnd-test-hook=<fun>>
+        <div data-drag-targetbonsai_path_replaced_in_test="Todo"
+    -|       class="kanban_column_active_hash_replaced_in_test kanban_column_hash_replaced_in_test kanban_column_todo_hash_replaced_in_test"
+    +|       class="kanban_column_hash_replaced_in_test kanban_column_todo_hash_replaced_in_test"
              onpointerup>
-          <h3> Todo </h3>
+          <h3 class="centered_hash_replaced_in_test"> Todo </h3>
           <div>
-    -|      <div @key=0 class="dragged-on-self kanban-item" onpointerdown style={ user-select: none; }> todo 1 </div>
-            <div @key=1 class="kanban-item" onpointerdown style={ user-select: none; }> todo 2 </div>
+    -|      <div @key=0
+    -|           class="dragged_on_self_hash_replaced_in_test kanban_item_hash_replaced_in_test no_select_hash_replaced_in_test"
+    -|           onpointerdown> todo 1 </div>
+            <div @key=1 class="kanban_item_hash_replaced_in_test no_select_hash_replaced_in_test" onpointerdown> todo 2 </div>
           </div>
         </div>
-        <div data-drag-targetbonsai_path_replaced_in_test="in-progress"
-             class="kanban-column kanban-column-in-progress"
+        <div data-drag-targetbonsai_path_replaced_in_test="In_progress"
+             class="kanban_column_hash_replaced_in_test kanban_column_in_progress_hash_replaced_in_test"
              onpointerup>
-          <h3> In Progress </h3>
+          <h3 class="centered_hash_replaced_in_test"> In Progress </h3>
           <div>
-            <div @key=2 class="kanban-item" onpointerdown style={ user-select: none; }> in progress 1 </div>
-            <div @key=3 class="kanban-item" onpointerdown style={ user-select: none; }> in progress 2 </div>
-            <div @key=4 class="kanban-item" onpointerdown style={ user-select: none; }> in progress 3 </div>
+            <div @key=2 class="kanban_item_hash_replaced_in_test no_select_hash_replaced_in_test" onpointerdown> in progress 1 </div>
+            <div @key=3 class="kanban_item_hash_replaced_in_test no_select_hash_replaced_in_test" onpointerdown> in progress 2 </div>
+            <div @key=4 class="kanban_item_hash_replaced_in_test no_select_hash_replaced_in_test" onpointerdown> in progress 3 </div>
           </div>
         </div>
-        <div data-drag-targetbonsai_path_replaced_in_test="finished"
-    -|       class="kanban-column kanban-column-finished"
-    +|       class="kanban-column kanban-column-active kanban-column-finished"
+        <div data-drag-targetbonsai_path_replaced_in_test="Finished"
+    -|       class="kanban_column_finished_hash_replaced_in_test kanban_column_hash_replaced_in_test"
+    +|       class="kanban_column_active_hash_replaced_in_test kanban_column_finished_hash_replaced_in_test kanban_column_hash_replaced_in_test"
              onpointerup>
-          <h3> Done </h3>
+          <h3 class="centered_hash_replaced_in_test"> Done </h3>
           <div>
-    +|      <div @key=0 class="dragged-on-self kanban-item" onpointerdown style={ user-select: none; }> todo 1 </div>
-            <div @key=5 class="kanban-item" onpointerdown style={ user-select: none; }> finished 1 </div>
-            <div @key=6 class="kanban-item" onpointerdown style={ user-select: none; }> finished 2 </div>
-            <div @key=7 class="kanban-item" onpointerdown style={ user-select: none; }> finished 3 </div>
+    +|      <div @key=0
+    +|           class="dragged_on_self_hash_replaced_in_test kanban_item_hash_replaced_in_test no_select_hash_replaced_in_test"
+    +|           onpointerdown> todo 1 </div>
+            <div @key=5 class="kanban_item_hash_replaced_in_test no_select_hash_replaced_in_test" onpointerdown> finished 1 </div>
+            <div @key=6 class="kanban_item_hash_replaced_in_test no_select_hash_replaced_in_test" onpointerdown> finished 2 </div>
+            <div @key=7 class="kanban_item_hash_replaced_in_test no_select_hash_replaced_in_test" onpointerdown> finished 3 </div>
           </div>
         </div>
-        <div style={
-               position: fixed;
-               top: 0px;
-               left: 0px;
-               pointer-events: none;
+        <div class="dragged_element_hash_replaced_in_test"
+             style={
                width: 0px;
                height: 0px;
                transform: translateY(0px) translateX(0px);
              }>
-          <div class="kanban-item"> todo 1 </div>
-        </div> |}];
+          <div class="kanban_item_hash_replaced_in_test"> todo 1 </div>
+        </div>
+      </div> |}];
   run handle Finish_drag;
   Handle.show_diff handle;
   [%expect
     {|
-          <h3> Todo </h3>
+          <h3 class="centered_hash_replaced_in_test"> Todo </h3>
           <div>
-            <div @key=1 class="kanban-item" onpointerdown style={ user-select: none; }> todo 2 </div>
+            <div @key=1 class="kanban_item_hash_replaced_in_test no_select_hash_replaced_in_test" onpointerdown> todo 2 </div>
           </div>
         </div>
-        <div data-drag-targetbonsai_path_replaced_in_test="in-progress"
-             class="kanban-column kanban-column-in-progress"
+        <div data-drag-targetbonsai_path_replaced_in_test="In_progress"
+             class="kanban_column_hash_replaced_in_test kanban_column_in_progress_hash_replaced_in_test"
              onpointerup>
-          <h3> In Progress </h3>
+          <h3 class="centered_hash_replaced_in_test"> In Progress </h3>
           <div>
-            <div @key=2 class="kanban-item" onpointerdown style={ user-select: none; }> in progress 1 </div>
-            <div @key=3 class="kanban-item" onpointerdown style={ user-select: none; }> in progress 2 </div>
-            <div @key=4 class="kanban-item" onpointerdown style={ user-select: none; }> in progress 3 </div>
+            <div @key=2 class="kanban_item_hash_replaced_in_test no_select_hash_replaced_in_test" onpointerdown> in progress 1 </div>
+            <div @key=3 class="kanban_item_hash_replaced_in_test no_select_hash_replaced_in_test" onpointerdown> in progress 2 </div>
+            <div @key=4 class="kanban_item_hash_replaced_in_test no_select_hash_replaced_in_test" onpointerdown> in progress 3 </div>
           </div>
         </div>
-        <div data-drag-targetbonsai_path_replaced_in_test="finished"
-    -|       class="kanban-column kanban-column-active kanban-column-finished"
-    +|       class="kanban-column kanban-column-finished"
+        <div data-drag-targetbonsai_path_replaced_in_test="Finished"
+    -|       class="kanban_column_active_hash_replaced_in_test kanban_column_finished_hash_replaced_in_test kanban_column_hash_replaced_in_test"
+    +|       class="kanban_column_finished_hash_replaced_in_test kanban_column_hash_replaced_in_test"
              onpointerup>
-          <h3> Done </h3>
+          <h3 class="centered_hash_replaced_in_test"> Done </h3>
           <div>
-    -|      <div @key=0 class="dragged-on-self kanban-item" onpointerdown style={ user-select: none; }> todo 1 </div>
-    +|      <div @key=0 class="kanban-item" onpointerdown style={ user-select: none; }> todo 1 </div>
-            <div @key=5 class="kanban-item" onpointerdown style={ user-select: none; }> finished 1 </div>
-            <div @key=6 class="kanban-item" onpointerdown style={ user-select: none; }> finished 2 </div>
-            <div @key=7 class="kanban-item" onpointerdown style={ user-select: none; }> finished 3 </div>
+    -|      <div @key=0
+    -|           class="dragged_on_self_hash_replaced_in_test kanban_item_hash_replaced_in_test no_select_hash_replaced_in_test"
+    -|           onpointerdown> todo 1 </div>
+    +|      <div @key=0 class="kanban_item_hash_replaced_in_test no_select_hash_replaced_in_test" onpointerdown> todo 1 </div>
+            <div @key=5 class="kanban_item_hash_replaced_in_test no_select_hash_replaced_in_test" onpointerdown> finished 1 </div>
+            <div @key=6 class="kanban_item_hash_replaced_in_test no_select_hash_replaced_in_test" onpointerdown> finished 2 </div>
+            <div @key=7 class="kanban_item_hash_replaced_in_test no_select_hash_replaced_in_test" onpointerdown> finished 3 </div>
           </div>
     -|  </div>
-    -|  <div style={
-    -|         position: fixed;
-    -|         top: 0px;
-    -|         left: 0px;
-    -|         pointer-events: none;
+    -|  <div class="dragged_element_hash_replaced_in_test"
+    -|       style={
     -|         width: 0px;
     -|         height: 0px;
     -|         transform: translateY(0px) translateX(0px);
     -|       }>
-    -|    <div class="kanban-item"> todo 1 </div>
+    -|    <div class="kanban_item_hash_replaced_in_test"> todo 1 </div>
         </div>
       </div> |}]
 ;;

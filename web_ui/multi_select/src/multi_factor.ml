@@ -254,20 +254,19 @@ module Make (Item : Single_factor.Item) (Key : Key) = struct
           | Some prev_focus when Key.equal prev_focus new_focus -> Effect.Ignore
           | None | Some _ -> focus_elt ~id:(search_box_id new_focus ~id_prefix)
       in
-      Bonsai.Edge.on_change' [%here] (module Key) focus ~callback
+      Bonsai.Edge.on_change' (module Key) focus ~callback
     in
-    return
-      (let%map subwidgets = single_factors
-       and focus                    = focus
-       and inject_ring_focus_action = inject_focus_action
-       and id_prefix                = id_prefix in
-       let inject = inject ~subwidgets ~inject_ring_focus_action in
-       let selection =
-         Map.map subwidgets ~f:(fun result -> result.Single_factor.Result.selected_items)
-       in
-       let view             = view ~inject        ~subwidgets ~focus ~id_prefix in
-       let view_for_testing = view_for_testing    ~subwidgets ~focus            in
-       let key_handler      = key_handler ~inject ~subwidgets ~focus            in
-       { Result.selection; view; view_for_testing; key_handler; inject })
+    let%arr subwidgets = single_factors
+    and focus                    = focus
+    and inject_ring_focus_action = inject_focus_action
+    and id_prefix                = id_prefix in
+    let inject = inject ~subwidgets ~inject_ring_focus_action in
+    let selection =
+      Map.map subwidgets ~f:(fun result -> result.Single_factor.Result.selected_items)
+    in
+    let view             = view ~inject        ~subwidgets ~focus ~id_prefix in
+    let view_for_testing = view_for_testing    ~subwidgets ~focus            in
+    let key_handler      = key_handler ~inject ~subwidgets ~focus            in
+    { Result.selection; view; view_for_testing; key_handler; inject }
   ;;
 end

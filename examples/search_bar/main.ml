@@ -26,17 +26,14 @@ let set_model_component =
     type t = User_info.t option [@@deriving equal, sexp]
   end
   in
-  Bonsai.state [%here] (module User_opt) ~default_model:None
+  Bonsai.state (module User_opt) ~default_model:None
 ;;
 
 let to_server_input input =
   let%sub set_model = set_model_component in
-  return
-  @@ let%map current_user, inject_set_model = set_model
+  let%arr current_user, inject_set_model = set_model
   and all_users = input >>| Input.all_users in
-  let choices =
-    all_users |> Map.data |> List.map ~f:Search_bar.Username.of_user_info
-  in
+  let choices = all_users |> Map.data |> List.map ~f:Search_bar.Username.of_user_info in
   let on_select username =
     username |> Search_bar.Username.to_string |> Map.find all_users |> inject_set_model
   in
@@ -47,10 +44,9 @@ let component input =
   let%sub current_user, search_bar_input = to_server_input input in
   let%sub selected = selected_display current_user in
   let%sub search_bar = Search_bar.component search_bar_input in
-  return
-    (let%map selected = selected
-     and search_bar = search_bar in
-     Vdom.Node.div [ search_bar; selected ])
+  let%arr selected = selected
+  and search_bar = search_bar in
+  Vdom.Node.div [ search_bar; selected ]
 ;;
 
 let () =

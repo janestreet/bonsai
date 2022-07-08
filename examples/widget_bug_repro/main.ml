@@ -25,6 +25,7 @@ let widget =
       ;;
 
       let destroy ~prev_input:_ ~state:_ ~element:_ = ()
+      let to_vdom_for_testing = `Sexp_of_input
     end)
 ;;
 
@@ -45,8 +46,7 @@ let inner_html_b =
 ;;
 
 let component true_or_false ~toggle =
-  return
-  @@ let%map true_or_false = true_or_false in
+  let%arr true_or_false = true_or_false in
   let widget = widget true_or_false in
   let ids =
     Vdom.Node.div

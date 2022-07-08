@@ -12,9 +12,8 @@ module Scale = struct
 end
 
 let scale : (Scale.t * Vdom.Node.t) Computation.t =
-  let%sub scale_state = Bonsai.state [%here] (module Scale) ~default_model:`log in
-  return
-  @@ let%map scale, set_scale = scale_state in
+  let%sub scale_state = Bonsai.state (module Scale) ~default_model:`log in
+  let%arr scale, set_scale = scale_state in
   let view =
     Vdom_input_widgets.Dropdown.of_enum
       (module Scale)
@@ -70,8 +69,7 @@ let app =
       ~with_graph:(fun graph -> Js.Unsafe.set Dom_html.window "g" graph)
       ()
   in
-  return
-  @@ let%map graph = graph
+  let%arr graph = graph
   and scale_view = scale_view in
   Vdom.Node.div [ graph; Vdom.Node.textf "y-axis scale: "; scale_view ]
 ;;

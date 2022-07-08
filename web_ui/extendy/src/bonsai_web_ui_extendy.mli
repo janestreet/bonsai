@@ -1,5 +1,5 @@
 open! Core
-open! Bonsai
+open Bonsai.For_open
 
 module Id : sig
   type t [@@deriving equal, sexp]
@@ -9,19 +9,18 @@ end
 
 type 'a t =
   { contents : 'a Id.Map.t
-  ; append : unit Ui_effect.t
-  ; set_length : int -> unit Ui_effect.t
-  ; remove : Id.t -> unit Ui_effect.t
+  ; append : unit Effect.t
+  ; set_length : int -> unit Effect.t
+  ; remove : Id.t -> unit Effect.t
   }
 
 (** Given a computation, builds a new computation that can hold
     a dynamic number of the wrapped computation. *)
-val component : Source_code_position.t -> 'a Computation.t -> 'a t Computation.t
+val component : 'a Computation.t -> 'a t Computation.t
 
 (** Like [component], but with the power to extend the result of the
     input component with an event that removes itself. *)
 val component'
-  :  Source_code_position.t
-  -> 'a Computation.t
-  -> wrap_remove:('a -> unit Ui_effect.t -> 'b)
+  :  'a Computation.t
+  -> wrap_remove:('a -> unit Effect.t -> 'b)
   -> 'b t Computation.t

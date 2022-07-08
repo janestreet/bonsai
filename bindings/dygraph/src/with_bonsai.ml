@@ -17,6 +17,14 @@ end
 
 let id = Type_equal.Id.create ~name:"dygraph" [%sexp_of: opaque]
 
+(* Defaults come from Dygraph's documentation:
+
+   https://dygraphs.com/options.html#height
+   https://dygraphs.com/options.html#width
+*)
+let default_width  = 480
+let default_height = 320
+
 let widget ?with_graph ?on_zoom data options =
   (* This function tells the graph to resize itself to fit its contents.  This is
      required because at the point when the graph is created, the element [el]
@@ -39,6 +47,31 @@ let widget ?with_graph ?on_zoom data options =
       in
       let our_options = Options.create ~zoomCallback () in
       Options.merge options ~prefer:our_options
+  in
+  let resize_if_width_or_height_changed graph ~old_options ~options =
+    (* Updating the width and height via [updateOptions] does not work.
+       We need to detect when the width/height change and call
+       [Graph.resize_explicit].
+       https://dygraphs.com/jsdoc/symbols/Dygraph.html#resize *)
+    let old_width  = Options.width old_options             in
+    let old_height = Options.height old_options            in
+    let width      = Option.bind options ~f:Options.width  in
+    let height     = Option.bind options ~f:Options.height in
+    let pair_with_default w h =
+      match w, h with
+      | None  , None   -> None
+      | Some w, Some h -> Some (w, h)
+      | Some w, None   -> Some (w, default_height)
+      | None  , Some h -> Some (default_width, h)
+    in
+    let old_width_and_height = pair_with_default old_width old_height in
+    let new_width_and_height = pair_with_default width height         in
+    match old_width_and_height, new_width_and_height with
+    | None       , None                                               -> ()
+    | Some old_wh, Some new_wh when [%equal: int * int] old_wh new_wh -> ()
+    | Some _     , None                                               -> Graph.resize graph
+    | Some _, Some (width, height) | None, Some (width, height)       ->
+      Graph.resize_explicit graph ~width ~height
   in
   Vdom.Node.widget
     ()
@@ -71,11 +104,12 @@ let widget ?with_graph ?on_zoom data options =
           | true, true -> None
           | _          -> Some (override_zoom_callback ~graph options)
         in
-        match data, options with
-        | None, None -> ()
-        | _          ->
-          let updateOptions = Update_options.create ?options ?data () in
-          Graph.updateOptions graph updateOptions
+        (match data, options with
+         | None, None -> ()
+         | _, options ->
+           let updateOptions = Update_options.create ?options ?data () in
+           Graph.updateOptions graph updateOptions);
+        resize_if_width_or_height_changed graph ~old_options ~options
       in
       (data, options, on_zoom, graph, animation_id), el)
 ;;

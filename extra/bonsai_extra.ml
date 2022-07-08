@@ -1,4 +1,5 @@
 open! Core
+open Bonsai.For_open
 open Bonsai.Let_syntax
 
 let with_inject_fixed_point f =
@@ -17,15 +18,13 @@ let with_inject_fixed_point f =
 let yoink a =
   let%sub _, result =
     Bonsai.actor1
-      [%here]
       (module Unit)
       (module Unit)
       ~recv:(fun ~schedule_event:_ a () () -> (), a)
       ~default_model:()
       a
   in
-  return
-  @@ let%map result = result in
+  let%arr result = result in
   result ()
 ;;
 
@@ -35,7 +34,7 @@ let scope_model
       ~on:v
       computation
   =
-  let v = Bonsai.Value.map v ~f:(fun k -> Map.singleton (module M) k ()) in
+  let v = Value.map v ~f:(fun k -> Map.singleton (module M) k ()) in
   let%sub map = Bonsai.assoc (module M) v ~f:(fun _ _ -> computation) in
   let%arr map = map in
   (* This _exn is ok because we know that the map is a singleton *)
@@ -45,7 +44,6 @@ let scope_model
 
 let state_machine1_dynamic_model
       (type m a)
-      here
       (module M : Bonsai.Model with type t = m)
       (module A : Bonsai.Action with type t = a)
       ~model
@@ -55,7 +53,7 @@ let state_machine1_dynamic_model
   let model_creator =
     match model with
     | `Given m ->
-      Bonsai.Value.map m ~f:(fun m -> function
+      Value.map m ~f:(fun m -> function
         | None -> m
         | Some a -> a)
     | `Computed f -> f
@@ -70,39 +68,31 @@ let state_machine1_dynamic_model
   in
   let%sub model_and_inject =
     Bonsai.state_machine1
-      here
       (module M_actual)
       (module A)
       ~default_model:None
       ~apply_action
-      (Bonsai.Value.both input model_creator)
+      (Value.both input model_creator)
   in
-  return
-  @@ let%map model, inject = model_and_inject
+  let%arr model, inject = model_and_inject
   and model_creator = model_creator in
   model_creator model, inject
 ;;
 
-let state_machine0_dynamic_model here model_mod action_mod ~model ~apply_action =
+let state_machine0_dynamic_model model_mod action_mod ~model ~apply_action =
   let apply_action ~inject ~schedule_event () model action =
     apply_action ~inject ~schedule_event model action
   in
-  state_machine1_dynamic_model
-    here
-    model_mod
-    action_mod
-    ~model
-    ~apply_action
-    (Bonsai.Value.return ())
+  state_machine1_dynamic_model model_mod action_mod ~model ~apply_action (Value.return ())
 ;;
 
-let state_dynamic_model (type m) here (module M : Bonsai.Model with type t = m) ~model =
+let state_dynamic_model (type m) (module M : Bonsai.Model with type t = m) ~model =
   let apply_action ~inject:_ ~schedule_event:_ _old_model new_model = new_model in
-  state_machine0_dynamic_model here (module M) (module M) ~model ~apply_action
+  state_machine0_dynamic_model (module M) (module M) ~model ~apply_action
 ;;
 
-let exactly_once here effect =
-  let%sub has_run, set_has_run = Bonsai.state here (module Bool) ~default_model:false in
+let exactly_once effect =
+  let%sub has_run, set_has_run = Bonsai.state (module Bool) ~default_model:false in
   if%sub has_run
   then Bonsai.const ()
   else
@@ -110,12 +100,12 @@ let exactly_once here effect =
       ~on_activate:
         (let%map set_has_run = set_has_run
          and event = effect in
-         Ui_effect.Many [ set_has_run true; event ])
+         Effect.Many [ set_has_run true; event ])
       ()
 ;;
 
-let exactly_once_with_value here modul effect =
-  let%sub value, set_value = Bonsai.state_opt here modul in
+let exactly_once_with_value modul effect =
+  let%sub value, set_value = Bonsai.state_opt modul in
   let%sub () =
     match%sub value with
     | None ->
@@ -123,7 +113,7 @@ let exactly_once_with_value here modul effect =
         ~on_activate:
           (let%map set_value = set_value
            and effect = effect in
-           let%bind.Bonsai.Effect r = effect in
+           let%bind.Effect r = effect in
            set_value (Some r))
         ()
     | Some _ -> Bonsai.const ()
@@ -131,38 +121,9 @@ let exactly_once_with_value here modul effect =
   return value
 ;;
 
-let freeze here model value =
-  let%sub state, set_state = Bonsai.state_opt here model in
-  match%sub state with
-  | Some state -> return state
-  | None ->
-    let%sub () =
-      Bonsai.Edge.lifecycle
-        ~on_activate:
-          (let%map set_state = set_state
-           and value = value in
-           set_state (Some value))
-        ()
-    in
-    return value
-;;
-
-let thunk (type a) (f : unit -> a) =
-  let%sub out = return Bonsai.Value.(map (return ()) ~f) in
-  freeze
-    [%here]
-    (module struct
-      type t = (a[@sexp.opaque]) [@@deriving sexp]
-
-      let equal = phys_equal
-    end)
-    out
-;;
-
-let toggle here ~default_model =
+let toggle ~default_model =
   let%sub state =
     Bonsai.state_machine0
-      here
       (module Bool)
       (module Unit)
       ~apply_action:(fun ~inject:_ ~schedule_event:_ b () -> not b)
@@ -172,11 +133,11 @@ let toggle here ~default_model =
   state, inject ()
 ;;
 
-let pipe (type a) here (module A : Bonsai.Model with type t = a) =
+let pipe (type a) (module A : Bonsai.Model with type t = a) =
   let module Model = struct
     type t =
       { queued_actions : A.t Fdeque.t
-      ; queued_receivers : (unit, a) Bonsai.Effect.Private.Callback.t Fdeque.t
+      ; queued_receivers : (unit, a) Effect.Private.Callback.t Fdeque.t
       }
 
     let equal = phys_equal
@@ -192,7 +153,7 @@ let pipe (type a) here (module A : Bonsai.Model with type t = a) =
   let module Action = struct
     type t =
       | Add_action of a
-      | Add_receiver of (unit, a) Bonsai.Effect.Private.Callback.t
+      | Add_receiver of (unit, a) Effect.Private.Callback.t
 
     let sexp_of_t = function
       | Add_action a -> A.sexp_of_t a
@@ -202,7 +163,6 @@ let pipe (type a) here (module A : Bonsai.Model with type t = a) =
   in
   let%sub _, inject =
     Bonsai.state_machine0
-      here
       (module Model)
       (module Action)
       ~default_model:Model.default
@@ -214,7 +174,7 @@ let pipe (type a) here (module A : Bonsai.Model with type t = a) =
                 let queued_actions = Fdeque.enqueue_back model.queued_actions a in
                 { model with queued_actions }
               | Some (hd, queued_receivers) ->
-                schedule_event (Bonsai.Effect.Private.Callback.respond_to hd a);
+                schedule_event (Effect.Private.Callback.respond_to hd a);
                 { model with queued_receivers })
            | Add_receiver r ->
              (match Fdeque.dequeue_front model.queued_actions with
@@ -222,34 +182,22 @@ let pipe (type a) here (module A : Bonsai.Model with type t = a) =
                 let queued_receivers = Fdeque.enqueue_back model.queued_receivers r in
                 { model with queued_receivers }
               | Some (hd, queued_actions) ->
-                schedule_event (Bonsai.Effect.Private.Callback.respond_to r hd);
+                schedule_event (Effect.Private.Callback.respond_to r hd);
                 { model with queued_actions }))
   in
-  return
-    (let%map inject = inject in
-     let request =
-       Bonsai.Effect.Private.make ~request:() ~evaluator:(fun r ->
-         inject (Add_receiver r))
-     in
-     (fun a -> inject (Add_action a)), request)
-;;
-
-let map_of_set = Bonsai.Incr.compute ~f:Ui_incr.Map.of_set
-let map_keys = Bonsai.Incr.compute ~f:Ui_incr.Map.keys
-
-let map_merge a b ~f =
-  Bonsai.Incr.compute (Bonsai.Value.both a b) ~f:(fun a_and_b ->
-    let%pattern_bind.Ui_incr a, b = a_and_b in
-    Incr_map.merge a b ~f)
+  let%arr inject = inject in
+  let request =
+    Effect.Private.make ~request:() ~evaluator:(fun r -> inject (Add_receiver r))
+  in
+  (fun a -> inject (Add_action a)), request
 ;;
 
 module Id_gen (T : Int_intf.S) () = struct
   include T
 
-  let component here =
-    let%map.Bonsai.Computation _, fetch =
+  let component =
+    let%map.Computation _, fetch =
       Bonsai.actor0
-        here
         (module T)
         (module Unit)
         ~default_model:T.zero
@@ -261,7 +209,6 @@ end
 
 let mirror
       (type m)
-      here
       (module M : Bonsai.Model with type t = m)
       ~store_set
       ~store_value
@@ -287,7 +234,7 @@ let mirror
       | `Stable ->
         (* if both of the new values are the same, then we're done! Stability
            has already been reached. *)
-        Ui_effect.Ignore
+        Effect.Ignore
       | `Unstable ->
         (match old_pair with
          | None ->
@@ -313,10 +260,9 @@ let mirror
               eprint_s
                 [%message
                   "BUG" [%here] "on_change triggered when nothing actually changed?"];
-              Ui_effect.Ignore))
+              Effect.Ignore))
   in
   Bonsai.Edge.on_change'
-    here
     (module M2)
     (let%map store = store_value
      and interactive = interactive_value in

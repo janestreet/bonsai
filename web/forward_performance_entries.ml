@@ -133,35 +133,30 @@ module Worker : sig
       annoying details such as making sure that the web worker is ready to
       start receiving messages, serializing the messages, and batching several
       of the messages together.  *)
-  type 'a t
+  type t
 
   (** Loads a web worker from the specified URL. [on_message] is called every
       time the web worker sends a message to the main thread. *)
-  val create
-    :  url:string
-    -> on_message:(string -> unit)
-    -> bin_writer_t:'a Bin_prot.Type_class.writer
-    -> 'a t
+  val create : url:string -> on_message:(string -> unit) -> t
 
   (** Queues a message to be sent at the next call to [flush]. *)
-  val send_message : 'a t -> 'a -> unit
+  val send_message : t -> Message.t -> unit
 
   (** Sends all the queued messages to the worker as a single message *)
-  val flush : _ t -> unit
+  val flush : t -> unit
 
-  val set_error_handler : _ t -> f:(Worker.errorEvent Js.t -> unit) -> unit
-  val shutdown : _ t -> unit
+  val set_error_handler : t -> f:(Worker.errorEvent Js.t -> unit) -> unit
+  val shutdown : t -> unit
 end = struct
   (* The [acknowledged] field keeps track of whether the worker has sent back a
      message, which means that it is ready to receive messages. *)
-  type 'a t =
+  type t =
     { mutable acknowledged : bool
-    ; mutable buffer : 'a list
+    ; mutable buffer : Message.t Reversed_list.t
     ; worker : (Js.js_string Js.t, Js.js_string Js.t) Worker.worker Js.t
-    ; bin_writer_t : 'a Bin_prot.Type_class.writer
     }
 
-  let create ~url ~on_message ~bin_writer_t =
+  let create ~url ~on_message =
     (* We use a [blob] to circumvent the same-origin policy for web workers.
        Note that we aren't able to break through the browser's defenses
        totally, since the server must still configure its CSP to allow web
@@ -175,7 +170,7 @@ end = struct
       let blob_url = Dom_html.window##._URL##createObjectURL blob in
       Worker.create (Js.to_string blob_url)
     in
-    let result = { worker; acknowledged = false; buffer = []; bin_writer_t } in
+    let result = { worker; acknowledged = false; buffer = [] } in
     worker##.onmessage
     := Dom.handler (fun (message : Js.js_string Js.t Worker.messageEvent Js.t) ->
       result.acknowledged <- true;
@@ -196,9 +191,9 @@ end = struct
   let flush t =
     if t.acknowledged
     then (
+      let message = Versioned_message.V2 (Reversed_list.rev t.buffer) in
       let js_string =
-        Js.bytestring
-          (Bin_prot.Writer.to_string (List.bin_writer_t t.bin_writer_t) t.buffer)
+        Js.bytestring (Bin_prot.Writer.to_string Versioned_message.bin_writer_t message)
       in
       t.worker##postMessage js_string;
       t.buffer <- [])
@@ -222,8 +217,8 @@ let iter_entries performance_observer_entry_list ~f =
       | Some node_id -> `Bonsai node_id
     in
     let entry_type = entry##.entryType |> Js.to_bytestring in
-    let start_time = entry##.startTime |> Js.to_float in
-    let duration = entry##.duration |> Js.to_float in
+    let start_time = entry##.startTime in
+    let duration = entry##.duration in
     f { Entry.label; entry_type; start_time; duration })
 ;;
 
@@ -251,7 +246,6 @@ let instrument ~host ~port ~worker_name component =
           (Js.string "bonsai-bug")
           (Js.Opt.return (Js.string "noopener"))
         |> (ignore : Dom_html.window Js.t Js.opt -> unit))
-      ~bin_writer_t:Message.bin_writer_t
   in
   let performance_observer =
     let f new_entries observer =
@@ -288,7 +282,7 @@ let instrument ~host ~port ~worker_name component =
     if !graph_info_dirty
     then (
       graph_info_dirty := false;
-      Worker.send_message worker (Message.Graph_info !graph_info));
+      Worker.send_message worker (Graph_info !graph_info));
     Worker.flush worker;
     Javascript_profiling.clear_marks ();
     Javascript_profiling.clear_measures ());

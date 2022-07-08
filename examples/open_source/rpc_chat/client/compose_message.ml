@@ -20,7 +20,7 @@ let build_result send_message (textbox_content, set_textbox_content) =
   let on_input = Vdom.Attr.on_input (fun _ -> set_textbox_content) in
   let value = Vdom.Attr.string_property "value" textbox_content in
   let text_input =
-    Vdom.Node.input
+    (Vdom.Node.input_deprecated [@alert "-deprecated"])
       ~attr:(Vdom.Attr.many [ on_ret; on_input; value ])
       [ Vdom.Node.text "submit" ]
   in
@@ -34,7 +34,6 @@ let component ~send_message =
   let open Bonsai.Let_syntax in
   let%sub textbox_state =
     Bonsai.state_machine0
-      [%here]
       (module String)
       (module String)
       ~default_model:""

@@ -207,7 +207,6 @@ let component
   in
   let%sub sizes, inject =
     Bonsai.state_machine0
-      [%here]
       (module Model)
       (module struct
         type t = Key.t Action.t [@@deriving sexp_of]
@@ -233,7 +232,7 @@ let component
     |> Bonsai.Incr.model_cutoff
   in
   let%sub group_key =
-    Bonsai_extra.thunk (fun () ->
+    Bonsai.Expert.thunk (fun () ->
       Type_equal.Id.create ~name:"bulk_size_tracker_type_id" [%sexp_of: Key.t])
   in
   let%sub () =
@@ -261,8 +260,7 @@ let component
       ()
   in
   let%sub attr =
-    return
-    @@ let%map group_key = group_key in
+    let%arr group_key = group_key in
     fun key -> on_change ~group_key ~key
   in
   return @@ Value.both sizes attr

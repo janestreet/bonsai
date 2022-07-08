@@ -24,16 +24,14 @@ let component =
           ~match_:tab
           ~with_:(function
             | A ->
-              return
-              @@ let%map change_tab = change_tab in
+              let%arr change_tab = change_tab in
               Vdom.Node.button
                 ~attr:(Vdom.Attr.on_click (fun _ -> change_tab T.C))
                 [ Vdom.Node.text "jump to c" ]
             | B -> Bonsai.const (Vdom.Node.text "why are you even here")
             | C -> Bonsai.const (Vdom.Node.text "hello!")))
   in
-  return
-  @@ let%map contents = contents in
+  let%arr contents = contents in
   Tabs.Result.combine_trivially contents
 ;;
 

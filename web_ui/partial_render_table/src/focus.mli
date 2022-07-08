@@ -1,6 +1,7 @@
 open! Core
 open! Bonsai_web
 module Collated := Incr_map_collate.Collated
+module Map_list := Incr_map_collate.Map_list
 
 module By_row : sig
   type 'k t =
@@ -27,7 +28,6 @@ val component
   -> collated:('key, 'data) Collated.t Value.t
   -> rows_covered_by_header:int Value.t
   -> range:(int * int) Value.t
-  -> remapped:('key, Int63.t * 'data, 'cmp) Map.t Value.t
   -> path:string Value.t
   -> 'kind Computation.t
 
@@ -38,7 +38,7 @@ module For_testing : sig
   module Triple : sig
     type 'k t =
       { key : 'k
-      ; id : Int63.t
+      ; id : Map_list.Key.t
       ; index : int
       }
     [@@deriving sexp, equal]
@@ -59,7 +59,7 @@ module For_testing : sig
     :  range:int * int
     -> collated:('a, 'b) Collated.t
     -> key:'a
-    -> id:Int63.t
+    -> id:Map_list.Key.t
     -> index:int
     -> key_equal:('a -> 'a -> bool)
     -> 'a Range_response.t

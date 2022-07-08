@@ -1,0 +1,4 @@
+(library (name bonsai_web_ui_url_var) (public_name bonsai.web_ui_url_var)
+ (libraries uri bonsai bonsai_web core virtual_dom.html5_history uri_parsing
+  ppx_typed_fields.typed_fields_lib ppx_typed_fields.typed_variants_lib)
+ (preprocess (pps ppx_jane js_of_ocaml-ppx ppx_typed_fields)))

@@ -20,21 +20,19 @@ module S =
   |}]
 
 let item ~now ~index:_ ~source data =
-  return
-    (let%map now = now
-     and source = source
-     and data = data in
-     let now = Time_ns.to_string_utc now in
-     ( ()
-     , Vdom.Node.div
-         ~attr:Vdom.Attr.(class_ S.item @ source)
-         [ Vdom.Node.text [%string "Item-%{data#Int} - now = %{now}"] ] ))
+  let%arr now = now
+  and source = source
+  and data = data in
+  let now = Time_ns.to_string_utc now in
+  ( ()
+  , Vdom.Node.div
+      ~attr:Vdom.Attr.(class_ S.item @ source)
+      [ Vdom.Node.text [%string "Item-%{data#Int} - now = %{now}"] ] )
 ;;
 
 let component =
   let%sub input, extend_input =
     Bonsai.state_machine0
-      [%here]
       (module struct
         type t = Int.Set.t [@@deriving sexp, equal]
       end)
@@ -46,7 +44,8 @@ let component =
   let%sub now = Bonsai.Clock.approx_now ~tick_every:(Time_ns.Span.of_sec 1.0) in
   let%sub () =
     Bonsai.Clock.every
-      [%here]
+      ~when_to_start_next_effect:`Every_multiple_of_period_blocking
+      ~trigger_on_activate:true
       (Time_ns.Span.of_sec 1.0)
       (let%map extend_input = extend_input in
        extend_input ())

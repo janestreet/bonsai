@@ -18,11 +18,13 @@ let form_of_t =
     (module struct
       module Typed_field = Typed_field
 
+      let label_for_field = `Inferred
+
       let form_for_field (type a) (field : a Typed_field.t) : a Form.t Computation.t =
         match field with
-        | Name -> Form.Elements.Textbox.string [%here]
-        | Age -> Form.Elements.Textbox.int [%here]
-        | Likes_cats -> Form.Elements.Checkbox.bool ~default:true [%here]
+        | Name -> Form.Elements.Textbox.string ()
+        | Age -> Form.Elements.Textbox.int ()
+        | Likes_cats -> Form.Elements.Checkbox.bool ~default:true ()
       ;;
     end)
 ;;

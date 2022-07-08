@@ -2,6 +2,7 @@ open! Core
 open! Bonsai_web
 open Bonsai.Let_syntax
 module Extendy = Bonsai_web_ui_extendy
+module Selectable_style = Vdom_input_widgets.Selectable_style
 
 module type Stringable_model = sig
   type t
@@ -26,17 +27,15 @@ let path =
 
 module Basic_stateful = struct
   let make state ~view =
-    let%sub path, id = path in
-    let%sub state, set_state = state in
-    return
-    @@ let%map view = view ~id ~state ~set_state
-    and path = path
-    and state = state
-    and set_state = set_state in
-    Form.Expert.create
-      ~value:(Ok state)
-      ~view:(View.of_vdom ~id:path view)
-      ~set:set_state
+    let%sub path_and_id = path in
+    let%sub state_and_set_state = state in
+    let%arr view = view
+    and path_and_id = path_and_id
+    and state_and_set_state = state_and_set_state in
+    let path, id = path_and_id in
+    let state, set_state = state_and_set_state in
+    let view = view ~id ~state ~set_state in
+    Form.Expert.create ~value:(Ok state) ~view:(View.of_vdom ~id:path view) ~set:set_state
   ;;
 end
 
@@ -54,22 +53,20 @@ let optional_to_required =
 ;;
 
 module Textbox = struct
-  let string ?(extra_attrs = Value.return []) ?placeholder here =
-    let view ~id ~state ~set_state =
-      let%map id = id
-      and state = state
-      and set_state = set_state
-      and extra_attrs = extra_attrs in
-      Vdom_input_widgets.Entry.text
-        ?placeholder
-        ~extra_attrs:([ id ] @ extra_attrs)
-        ~value:(Some state)
-        ~on_input:(function
-          | Some s -> set_state s
-          | None -> set_state "")
-        ()
+  let string ?(extra_attrs = Value.return []) ?placeholder () =
+    let view =
+      let%map extra_attrs = extra_attrs in
+      fun ~id ~state ~set_state ->
+        Vdom_input_widgets.Entry.text
+          ?placeholder
+          ~extra_attrs:([ id ] @ extra_attrs)
+          ~value:(Some state)
+          ~on_input:(function
+            | Some s -> set_state s
+            | None -> set_state "")
+          ()
     in
-    Basic_stateful.make (Bonsai.state here (module String) ~default_model:"") ~view
+    Basic_stateful.make (Bonsai.state (module String) ~default_model:"") ~view
   ;;
 
   let int ?extra_attrs ?placeholder here =
@@ -84,23 +81,17 @@ module Textbox = struct
            ~unparse:Int.to_string_hum)
   ;;
 
-  let float ?extra_attrs ?placeholder here =
+  let float ?extra_attrs ?placeholder () =
     computation_map
-      (string ?extra_attrs ?placeholder here)
+      (string ?extra_attrs ?placeholder ())
       ~f:(Form.project ~parse_exn:Float.of_string ~unparse:Float.to_string_hum)
   ;;
 
-  let sexpable
-        (type t)
-        ?extra_attrs
-        ?placeholder
-        here
-        (module M : Sexpable with type t = t)
-    =
+  let sexpable (type t) ?extra_attrs ?placeholder (module M : Sexpable with type t = t) =
     let parse_exn s = s |> Sexp.of_string |> M.t_of_sexp in
     let unparse t = t |> M.sexp_of_t |> Sexp.to_string_hum in
     computation_map
-      (string ?extra_attrs ?placeholder here)
+      (string ?extra_attrs ?placeholder ())
       ~f:(Form.project ~parse_exn ~unparse)
   ;;
 
@@ -108,55 +99,46 @@ module Textbox = struct
         (type t)
         ?extra_attrs
         ?placeholder
-        here
         (module M : Stringable with type t = t)
     =
     computation_map
-      (string ?extra_attrs ?placeholder here)
+      (string ?extra_attrs ?placeholder ())
       ~f:(Form.project ~parse_exn:M.of_string ~unparse:M.to_string)
   ;;
 end
 
 module Textarea = struct
-  let string ?(extra_attrs = Value.return []) ?placeholder here =
-    let view ~id ~state ~set_state =
-      let%map id = id
-      and state = state
-      and set_state = set_state
-      and extra_attrs = extra_attrs in
-      Vdom_input_widgets.Entry.text_area
-        ?placeholder
-        ~extra_attrs:(id :: extra_attrs)
-        ~value:state
-        ~on_input:set_state
-        ()
+  let string ?(extra_attrs = Value.return []) ?placeholder () =
+    let view =
+      let%map extra_attrs = extra_attrs in
+      fun ~id ~state ~set_state ->
+        Vdom_input_widgets.Entry.text_area
+          ?placeholder
+          ~extra_attrs:(id :: extra_attrs)
+          ~value:state
+          ~on_input:set_state
+          ()
     in
-    Basic_stateful.make (Bonsai.state here (module String) ~default_model:"") ~view
+    Basic_stateful.make (Bonsai.state (module String) ~default_model:"") ~view
   ;;
 
-  let int ?extra_attrs ?placeholder here =
+  let int ?extra_attrs ?placeholder () =
     computation_map
-      (string ?extra_attrs ?placeholder here)
+      (string ?extra_attrs ?placeholder ())
       ~f:(Form.project ~parse_exn:Int.of_string ~unparse:Int.to_string_hum)
   ;;
 
-  let float ?extra_attrs ?placeholder here =
+  let float ?extra_attrs ?placeholder () =
     computation_map
-      (string ?extra_attrs ?placeholder here)
+      (string ?extra_attrs ?placeholder ())
       ~f:(Form.project ~parse_exn:Float.of_string ~unparse:Float.to_string_hum)
   ;;
 
-  let sexpable
-        (type t)
-        ?extra_attrs
-        ?placeholder
-        here
-        (module M : Sexpable with type t = t)
-    =
+  let sexpable (type t) ?extra_attrs ?placeholder (module M : Sexpable with type t = t) =
     let parse_exn s = s |> Sexp.of_string |> M.t_of_sexp in
     let unparse t = t |> M.sexp_of_t |> Sexp.to_string_hum in
     computation_map
-      (string ?extra_attrs ?placeholder here)
+      (string ?extra_attrs ?placeholder ())
       ~f:(Form.project ~parse_exn ~unparse)
   ;;
 
@@ -164,11 +146,10 @@ module Textarea = struct
         (type t)
         ?extra_attrs
         ?placeholder
-        here
         (module M : Stringable with type t = t)
     =
     computation_map
-      (string ?extra_attrs ?placeholder here)
+      (string ?extra_attrs ?placeholder ())
       ~f:(Form.project ~parse_exn:M.of_string ~unparse:M.to_string)
   ;;
 end
@@ -209,25 +190,23 @@ module Checkbox = struct
             ; Vdom.Attr.bool_property "checked" state
             ]
             @ extra_attrs))
-      []
+      ()
   ;;
 
-  let checkbox ?(extra_attrs = Value.return []) here default_model =
-    let view ~id ~state ~set_state =
-      let%map id = id
-      and state = state
-      and set_state = set_state
-      and extra_attrs = extra_attrs in
-      make_input ~extra_attrs:(id :: extra_attrs) ~state ~set_state
+  let checkbox ?(extra_attrs = Value.return []) default_model =
+    let view =
+      let%map extra_attrs = extra_attrs in
+      fun ~id ~state ~set_state ->
+        make_input ~extra_attrs:(id :: extra_attrs) ~state ~set_state
     in
-    Basic_stateful.make (Bonsai.state here (module Bool) ~default_model) ~view
+    Basic_stateful.make (Bonsai.state (module Bool) ~default_model) ~view
   ;;
 
-  let bool ?extra_attrs here ~default = checkbox ?extra_attrs here default
+  let bool ?extra_attrs ~default () = checkbox ?extra_attrs default
 
   let set
         (type a cmp)
-        here
+        ?(style = Value.return Selectable_style.Native)
         ?(extra_attrs = Value.return [])
         ?to_string
         (module M : Bonsai.Comparator with type t = a and type comparator_witness = cmp)
@@ -244,24 +223,22 @@ module Checkbox = struct
       let to_string = to_string
     end
     in
-    let view ~id ~state ~set_state =
-      let%map id = id
-      and state = state
-      and set_state = set_state
-      and values = values
+    let view =
+      let%map values = values
+      and style = style
       and extra_attrs = extra_attrs in
-      Vdom_input_widgets.Checklist.of_values
-        ~extra_attrs:(id :: extra_attrs)
-        (module M)
-        values
-        ~is_checked:(Set.mem state)
-        ~on_toggle:(fun item ->
-          set_state
-          @@ if Set.mem state item then Set.remove state item else Set.add state item)
+      fun ~id ~state ~set_state ->
+        Vdom_input_widgets.Checklist.of_values
+          ~extra_attrs:(id :: extra_attrs)
+          (module M)
+          values
+          ~style
+          ~is_checked:(Set.mem state)
+          ~on_toggle:(fun item ->
+            set_state
+            @@ if Set.mem state item then Set.remove state item else Set.add state item)
     in
-    Basic_stateful.make
-      (Bonsai.state here (module M.Set) ~default_model:M.Set.empty)
-      ~view
+    Basic_stateful.make (Bonsai.state (module M.Set) ~default_model:M.Set.empty) ~view
   ;;
 end
 
@@ -322,30 +299,28 @@ module Toggle = struct
 |}]
 
   let bool ?(extra_attr = Value.return Vdom.Attr.empty) ~default () =
-    let view ~id ~state ~set_state =
-      let%map id = id
-      and state = state
-      and set_state = set_state
-      and extra_attr = extra_attr in
-      let checkbox =
-        Checkbox.make_input
-          ~extra_attrs:[ Vdom.Attr.many [ Vdom.Attr.class_ Style.invisible; extra_attr ] ]
-          ~state
-          ~set_state
-      in
-      let slider = Vdom.Node.span ~attr:(Vdom.Attr.class_ Style.slider) [] in
-      Vdom.Node.label
-        ~attr:(Vdom.Attr.many [ Vdom.Attr.class_ Style.toggle; id ])
-        [ checkbox; slider ]
+    let view =
+      let%map extra_attr = extra_attr in
+      fun ~id ~state ~set_state ->
+        let checkbox =
+          Checkbox.make_input
+            ~extra_attrs:
+              [ Vdom.Attr.many [ Vdom.Attr.class_ Style.invisible; extra_attr ] ]
+            ~state
+            ~set_state
+        in
+        let slider = Vdom.Node.span ~attr:(Vdom.Attr.class_ Style.slider) [] in
+        Vdom.Node.label
+          ~attr:(Vdom.Attr.many [ Vdom.Attr.class_ Style.toggle; id ])
+          [ checkbox; slider ]
     in
-    Basic_stateful.make (Bonsai.state [%here] (module Bool) ~default_model:default) ~view
+    Basic_stateful.make (Bonsai.state (module Bool) ~default_model:default) ~view
   ;;
 end
 
 module Dropdown = struct
   let impl
         (type t)
-        here
         ?to_string
         ?(extra_attrs = Value.return [])
         (module E : Bonsai.Model with type t = t)
@@ -385,11 +360,8 @@ module Dropdown = struct
       | `Const item -> Value.return (Some item)
     in
     let%sub path, id = path in
-    let%sub state, set_state =
-      Bonsai.state here (module Opt) ~default_model:Uninitialized
-    in
-    return
-    @@ let%map id = id
+    let%sub state, set_state = Bonsai.state (module Opt) ~default_model:Uninitialized in
+    let%arr id = id
     and path = path
     and state = state
     and set_state = set_state
@@ -433,32 +405,23 @@ module Dropdown = struct
 
   let list_opt
         (type t)
-        here
         ?(init = `Empty)
         ?extra_attrs
         ?to_string
         (module E : Bonsai.Model with type t = t)
         all
     =
-    impl here ?to_string ?extra_attrs (module E) all ~include_empty:true ~init
+    impl ?to_string ?extra_attrs (module E) all ~include_empty:true ~init
   ;;
 
   let enumerable_opt
         (type t)
-        here
         ?(init = `Empty)
         ?extra_attrs
         ?to_string
         (module E : Bonsai.Enum with type t = t)
     =
-    impl
-      here
-      ?to_string
-      ?extra_attrs
-      (module E)
-      (Value.return E.all)
-      ~include_empty:true
-      ~init
+    impl ?to_string ?extra_attrs (module E) (Value.return E.all) ~include_empty:true ~init
   ;;
 
   let include_empty_from_init = function
@@ -466,10 +429,9 @@ module Dropdown = struct
     | `First_item | `This _ | `Const -> false
   ;;
 
-  let list here ?(init = `First_item) ?extra_attrs ?to_string m all =
+  let list ?(init = `First_item) ?extra_attrs ?to_string m all =
     computation_map
       (impl
-         here
          ?to_string
          ?extra_attrs
          m
@@ -481,7 +443,6 @@ module Dropdown = struct
 
   let enumerable
         (type t)
-        here
         ?(init = `First_item)
         ?extra_attrs
         ?to_string
@@ -489,7 +450,6 @@ module Dropdown = struct
     =
     computation_map
       (impl
-         here
          ?extra_attrs
          ?to_string
          (module E)
@@ -501,14 +461,7 @@ module Dropdown = struct
 end
 
 module Typeahead = struct
-  let single_opt
-        _here
-        ?(extra_attrs = Value.return [])
-        ?placeholder
-        ?to_string
-        m
-        ~all_options
-    =
+  let single_opt ?(extra_attrs = Value.return []) ?placeholder ?to_string m ~all_options =
     let%sub path, id = path in
     let extra_attrs =
       let%map id = id
@@ -523,27 +476,18 @@ module Typeahead = struct
         ~all_options
         ~extra_attrs
     in
-    return
-    @@ let%map value, view, set = typeahead
+    let%arr value, view, set = typeahead
     and path = path in
     Form.Expert.create ~value:(Ok value) ~view:(View.of_vdom ~id:path view) ~set
   ;;
 
-  let single here ?extra_attrs ?placeholder ?to_string m ~all_options =
+  let single ?extra_attrs ?placeholder ?to_string m ~all_options =
     computation_map
-      (single_opt here ?extra_attrs ?placeholder ?to_string m ~all_options)
+      (single_opt ?extra_attrs ?placeholder ?to_string m ~all_options)
       ~f:optional_to_required
   ;;
 
-  let set
-        _here
-        ?(extra_attrs = Value.return [])
-        ?placeholder
-        ?to_string
-        ?split
-        m
-        ~all_options
-    =
+  let set ?(extra_attrs = Value.return []) ?placeholder ?to_string ?split m ~all_options =
     let%sub path, id = path in
     let extra_attrs =
       let%map id = id
@@ -559,15 +503,13 @@ module Typeahead = struct
         ~extra_attrs
         ~all_options
     in
-    return
-    @@ let%map value, view, set = typeahead
+    let%arr value, view, set = typeahead
     and path = path in
     Form.Expert.create ~value:(Ok value) ~view:(View.of_vdom ~id:path view) ~set
   ;;
 
   let list
         (type a cmp)
-        here
         ?extra_attrs
         ?placeholder
         ?to_string
@@ -576,61 +518,55 @@ module Typeahead = struct
         ~all_options
     =
     computation_map
-      (set here ?extra_attrs ?placeholder ?to_string ?split (module M) ~all_options)
+      (set ?extra_attrs ?placeholder ?to_string ?split (module M) ~all_options)
       ~f:(Form.project ~parse_exn:Set.to_list ~unparse:(Set.of_list (module M)))
   ;;
 end
 
 module Date_time = struct
-  let date_opt ?(extra_attrs = Value.return []) here =
-    let view ~id ~state ~set_state =
-      let%map id = id
-      and state = state
-      and set_state = set_state
-      and extra_attrs = extra_attrs in
-      Vdom_input_widgets.Entry.date
-        ~extra_attrs:(id :: extra_attrs)
-        ~value:state
-        ~on_input:set_state
-        ()
+  let date_opt ?(extra_attrs = Value.return []) () =
+    let view =
+      let%map extra_attrs = extra_attrs in
+      fun ~id ~state ~set_state ->
+        Vdom_input_widgets.Entry.date
+          ~extra_attrs:(id :: extra_attrs)
+          ~value:state
+          ~on_input:set_state
+          ()
     in
-    Basic_stateful.make (Bonsai.state_opt here (module Date)) ~view
+    Basic_stateful.make (Bonsai.state_opt (module Date)) ~view
   ;;
 
-  let date ?extra_attrs here =
-    computation_map (date_opt ?extra_attrs here) ~f:optional_to_required
+  let date ?extra_attrs () =
+    computation_map (date_opt ?extra_attrs ()) ~f:optional_to_required
   ;;
 
-  let time_opt ?(extra_attrs = Value.return []) here =
-    let view ~id ~state ~set_state =
-      let%map id = id
-      and state = state
-      and set_state = set_state
-      and extra_attrs = extra_attrs in
-      Vdom_input_widgets.Entry.time
-        ~extra_attrs:(id :: extra_attrs)
-        ~value:state
-        ~on_input:set_state
-        ()
+  let time_opt ?(extra_attrs = Value.return []) () =
+    let view =
+      let%map extra_attrs = extra_attrs in
+      fun ~id ~state ~set_state ->
+        Vdom_input_widgets.Entry.time
+          ~extra_attrs:(id :: extra_attrs)
+          ~value:state
+          ~on_input:set_state
+          ()
     in
-    Basic_stateful.make (Bonsai.state_opt here (module Time_ns.Ofday)) ~view
+    Basic_stateful.make (Bonsai.state_opt (module Time_ns.Ofday)) ~view
   ;;
 
-  let time ?extra_attrs here =
-    computation_map (time_opt ?extra_attrs here) ~f:optional_to_required
+  let time ?extra_attrs () =
+    computation_map (time_opt ?extra_attrs ()) ~f:optional_to_required
   ;;
 
-  let datetime_local_opt ?(extra_attrs = Value.return []) here =
-    let view ~id ~state ~set_state =
-      let%map id = id
-      and state = state
-      and set_state = set_state
-      and extra_attrs = extra_attrs in
-      Vdom_input_widgets.Entry.datetime_local
-        ~extra_attrs:(id :: extra_attrs)
-        ~value:state
-        ~on_input:set_state
-        ()
+  let datetime_local_opt ?(extra_attrs = Value.return []) () =
+    let view =
+      let%map extra_attrs = extra_attrs in
+      fun ~id ~state ~set_state ->
+        Vdom_input_widgets.Entry.datetime_local
+          ~extra_attrs:(id :: extra_attrs)
+          ~value:state
+          ~on_input:set_state
+          ()
     in
     let module Time_ns = struct
       include Time_ns.Stable.Alternate_sexp.V1
@@ -638,18 +574,17 @@ module Date_time = struct
       let equal = Time_ns.equal
     end
     in
-    Basic_stateful.make (Bonsai.state_opt here (module Time_ns)) ~view
+    Basic_stateful.make (Bonsai.state_opt (module Time_ns)) ~view
   ;;
 
-  let datetime_local ?extra_attrs here =
-    computation_map (datetime_local_opt ?extra_attrs here) ~f:optional_to_required
+  let datetime_local ?extra_attrs () =
+    computation_map (datetime_local_opt ?extra_attrs ()) ~f:optional_to_required
   ;;
 end
 
 module Multiselect = struct
   let set
         (type a cmp)
-        _here
         ?(extra_attrs = Value.return [])
         ?to_string
         (module M : Bonsai.Comparator with type t = a and type comparator_witness = cmp)
@@ -684,9 +619,8 @@ module Multiselect = struct
       }
     in
     let%sub single_factor_result = Single_factor.bonsai ~view_config input_set in
-    return
-    @@ let%map { Single_factor.Result.view; inject; selected_items; key_handler; _ } =
-         single_factor_result
+    let%arr { Single_factor.Result.view; inject; selected_items; key_handler; _ } =
+      single_factor_result
     and path = path
     and extra_attrs = extra_attrs in
     let set_state set =
@@ -711,14 +645,13 @@ module Multiselect = struct
 
   let list
         (type a cmp)
-        here
         ?extra_attrs
         ?to_string
         (module M : Bonsai.Comparator with type t = a and type comparator_witness = cmp)
         input_list
     =
     computation_map
-      (set here ?extra_attrs ?to_string (module M) input_list)
+      (set ?extra_attrs ?to_string (module M) input_list)
       ~f:(Form.project ~parse_exn:Set.to_list ~unparse:(Set.of_list (module M)))
   ;;
 end
@@ -742,20 +675,17 @@ module Multiple = struct
         ?(extra_pill_container_attr = Value.return Vdom.Attr.empty)
         ?(extra_pill_attr = Value.return Vdom.Attr.empty)
         ?(placeholder = "")
-        here
         (module M : Stringable_model with type t = a)
     =
     let module M_list = struct
       type t = M.t list [@@deriving equal, sexp]
     end
     in
-    let%sub invalid, inject_invalid =
-      Bonsai.state here (module Bool) ~default_model:false
-    in
+    let%sub invalid, inject_invalid = Bonsai.state (module Bool) ~default_model:false in
     let%sub selected_options, inject_selected_options =
-      Bonsai.state here (module M_list) ~default_model:[]
+      Bonsai.state (module M_list) ~default_model:[]
     in
-    let%sub state, set_state = Bonsai.state here (module String) ~default_model:"" in
+    let%sub state, set_state = Bonsai.state (module String) ~default_model:"" in
     let%sub path, _ = path in
     let%sub pills =
       Bonsai_web_ui_common_components.Pills.of_list
@@ -802,7 +732,7 @@ module Multiple = struct
             @ on_input (fun _ input ->
               Effect.Many [ inject_invalid false; set_state input ])
             @ on_keydown handle_keydown)
-        []
+        ()
     in
     let view = Vdom.Node.div [ input; pills ] in
     Form.Expert.create
@@ -813,7 +743,6 @@ module Multiple = struct
 
   let list
         (type a)
-        here
         ?element_group_label
         ?(add_element_text = Bonsai.Value.return "Add new element")
         ?(button_placement = `Indented)
@@ -830,10 +759,9 @@ module Multiple = struct
           |> Ui_effect.Many
           |> schedule_event)
         ~f:(fun (_ : unit Value.t) inject_outer ->
-          let%sub extendy = Extendy.component here t in
+          let%sub extendy = Extendy.component t in
           let%sub path, _id = path in
-          return
-          @@ let%map { Extendy.contents; append; set_length; remove } = extendy
+          let%arr { Extendy.contents; append; set_length; remove } = extendy
           and inject_outer = inject_outer
           and path = path
           and add_element_text = add_element_text in
@@ -859,8 +787,7 @@ module Multiple = struct
               let label =
                 match element_group_label with
                 | Some label -> label ~delete_button i (Form.value form)
-                | None ->
-                  Vdom.Node.div [ Vdom.Node.textf "%d - " i; delete_button ]
+                | None -> Vdom.Node.div [ Vdom.Node.textf "%d - " i; delete_button ]
               in
               View.group label (Form.view form))
           in
@@ -874,6 +801,7 @@ module Multiple = struct
                     |> Some
                 ; tooltip = None
                 ; view = Empty
+                ; error = None
                 }
             | `Inline ->
               View.Row
@@ -902,7 +830,6 @@ module Multiple = struct
 
   let set
         (type a cmp)
-        here
         ?element_group_label
         ?add_element_text
         ?button_placement
@@ -910,13 +837,12 @@ module Multiple = struct
         form
     =
     computation_map
-      (list here ?button_placement ?element_group_label ?add_element_text form)
+      (list ?button_placement ?element_group_label ?add_element_text form)
       ~f:(Form.project ~parse_exn:(Set.of_list (module M)) ~unparse:Set.to_list)
   ;;
 
   let map
         (type a cmp)
-        here
         ?element_group_label
         ?add_element_text
         ?button_placement
@@ -930,7 +856,7 @@ module Multiple = struct
       return @@ Value.map2 key_form value_form ~f:Form.both
     in
     computation_map
-      (list here ?button_placement ?element_group_label ?add_element_text both)
+      (list ?button_placement ?element_group_label ?add_element_text both)
       ~f:(Form.project ~parse_exn:(Map.of_alist_exn (module M)) ~unparse:Map.to_alist)
   ;;
 end
@@ -961,7 +887,6 @@ module Make_number (M : sig
 struct
   let number_input
         (type a)
-        here
         ?(extra_attrs = Value.return [])
         (module S : Number_input_specification with type t = a)
     =
@@ -972,48 +897,43 @@ struct
     in
     let ( < ) a b = compare_opt a b < 0 in
     let ( > ) a b = compare_opt a b > 0 in
-    let view ~id ~state ~set_state =
+    let view =
       let min = Option.map S.min ~f:(Fn.compose Vdom.Attr.min S.to_float) in
       let max = Option.map S.max ~f:(Fn.compose Vdom.Attr.max S.to_float) in
-      let%map id = id
-      and state = state
-      and set_state = set_state
-      and extra_attrs = extra_attrs in
-      let input_widget =
-        match M.input_type with
-        | Number_input_type.Number -> Vdom_input_widgets.Entry.number
-        | Range -> Vdom_input_widgets.Entry.range
-      in
-      input_widget
-        (module S)
-        ~extra_attrs:
-          (List.concat [ [ id ]; List.filter_map [ min; max ] ~f:Fn.id; extra_attrs ])
-        ~value:(Some state)
-        ~step:(S.to_float S.step)
-        ~on_input:(function
-          | Some s -> set_state s
-          | None -> set_state S.default)
+      let%map extra_attrs = extra_attrs in
+      fun ~id ~state ~set_state ->
+        let input_widget =
+          match M.input_type with
+          | Number_input_type.Number -> Vdom_input_widgets.Entry.number
+          | Range -> Vdom_input_widgets.Entry.range
+        in
+        input_widget
+          (module S)
+          ~extra_attrs:
+            (List.concat [ [ id ]; List.filter_map [ min; max ] ~f:Fn.id; extra_attrs ])
+          ~value:(Some state)
+          ~step:(S.to_float S.step)
+          ~on_input:(function
+            | Some s -> set_state s
+            | None -> set_state S.default)
     in
     let%sub number_input =
-      Basic_stateful.make (Bonsai.state here (module S) ~default_model:S.default) ~view
+      Basic_stateful.make (Bonsai.state (module S) ~default_model:S.default) ~view
     in
-    return
-    @@ let%map number_input = number_input in
+    let%arr number_input = number_input in
     Form.validate number_input ~f:(fun value ->
       if value < S.min
       then
         Or_error.error_s
-          [%message
-            (value : S.t) "lower than allowed threshold" (S.min : S.t option)]
+          [%message (value : S.t) "lower than allowed threshold" (S.min : S.t option)]
       else if value > S.max
       then
         Or_error.error_s
-          [%message
-            (value : S.t) "higher than allowed threshold" (S.max : S.t option)]
+          [%message (value : S.t) "higher than allowed threshold" (S.max : S.t option)]
       else Ok ())
   ;;
 
-  let int here ?extra_attrs ?min:min_ ?max:max_ ~default ~step () =
+  let int ?extra_attrs ?min:min_ ?max:max_ ~default ~step () =
     let module Specification = struct
       include Int
 
@@ -1023,10 +943,10 @@ struct
       let default = default
     end
     in
-    number_input ?extra_attrs here (module Specification)
+    number_input ?extra_attrs (module Specification)
   ;;
 
-  let float here ?extra_attrs ?min:min_ ?max:max_ ~default ~step () =
+  let float ?extra_attrs ?min:min_ ?max:max_ ~default ~step () =
     let module Specification = struct
       include Float
 
@@ -1041,7 +961,7 @@ struct
       let step = step
     end
     in
-    number_input ?extra_attrs here (module Specification)
+    number_input ?extra_attrs (module Specification)
   ;;
 end
 
@@ -1056,18 +976,13 @@ module Range = Make_number (struct
 module Radio_buttons = struct
   let list
         (type t)
-        here
+        ?(style = Value.return Selectable_style.Native)
         ?(extra_attrs = Value.return [])
         ?to_string
         (module E : Bonsai.Model with type t = t)
         ~layout
         all
     =
-    let node_fun =
-      match layout with
-      | `Vertical -> Vdom_input_widgets.Radio_buttons.of_values
-      | `Horizontal -> Vdom_input_widgets.Radio_buttons.of_values_horizontal
-    in
     let module E = struct
       include E
 
@@ -1079,53 +994,54 @@ module Radio_buttons = struct
     end
     in
     let%sub path, _ = path in
-    let view ~id ~state ~set_state =
-      let%map id = id
-      and path = path
-      and state = state
-      and set_state = set_state
-      and all = all
-      and extra_attrs = extra_attrs in
-      node_fun
-        ~extra_attrs:(id :: extra_attrs)
-        (module E)
-        ~on_click:(fun value -> set_state (Some value))
-        ~selected:state
-        ~name:path
-        all
+    let view =
+      let%map all = all
+      and style = style
+      and extra_attrs = extra_attrs
+      and path = path in
+      fun ~id ~state ~set_state ->
+        let node_fun =
+          match layout with
+          | `Vertical -> Vdom_input_widgets.Radio_buttons.of_values ~style
+          | `Horizontal -> Vdom_input_widgets.Radio_buttons.of_values_horizontal ~style
+        in
+        node_fun
+          ~extra_attrs:(id :: extra_attrs)
+          (module E)
+          ~on_click:(fun value -> set_state (Some value))
+          ~selected:state
+          ~name:path
+          all
     in
-    Basic_stateful.make (Bonsai.state_opt here (module E)) ~view
+    Basic_stateful.make (Bonsai.state_opt (module E)) ~view
     |> computation_map ~f:optional_to_required
   ;;
 
   let enumerable
         (type t)
-        here
+        ?style
         ?extra_attrs
         ?to_string
         (module E : Bonsai.Enum with type t = t)
         ~layout
     =
-    list here ?extra_attrs ?to_string (module E) ~layout (Value.return E.all)
+    list ?style ?extra_attrs ?to_string (module E) ~layout (Value.return E.all)
   ;;
 end
 
 module Color_picker = struct
-  let hex ?(extra_attr = Value.return Vdom.Attr.empty) here =
-    let view ~id ~state ~set_state =
-      let%map id_ = id
-      and state = state
-      and set_state = set_state
-      and extra_attr = extra_attr in
-      Vdom_input_widgets.Entry.color_picker
-        ~extra_attr:Vdom.Attr.(id_ @ extra_attr)
-        ~value:state
-        ~on_input:set_state
-        ()
+  let hex ?(extra_attr = Value.return Vdom.Attr.empty) () =
+    let view =
+      let%map extra_attr = extra_attr in
+      fun ~id:id_ ~state ~set_state ->
+        Vdom_input_widgets.Entry.color_picker
+          ~extra_attr:Vdom.Attr.(id_ @ extra_attr)
+          ~value:state
+          ~on_input:set_state
+          ()
     in
     Basic_stateful.make
       (Bonsai.state
-         here
          ~default_model:(`Hex "#000000")
          (module struct
            type t = [ `Hex of string ] [@@deriving equal, sexp]
@@ -1142,48 +1058,43 @@ module File_select = struct
     let t_of_sexp = opaque_of_sexp
   end
 
-  let single_opt here ?(extra_attrs = Value.return []) ?accept () =
-    let view ~id ~state:_ ~set_state =
-      let%map id = id
-      and set_state = set_state
-      and extra_attrs = extra_attrs in
-      Vdom_input_widgets.File_select.single
-        ?accept
-        ~extra_attrs:(id :: extra_attrs)
-        ~on_input:(fun file ->
-          set_state (Option.map file ~f:Bonsai_web_ui_file_from_web_file.create))
-        ()
+  let single_opt ?(extra_attrs = Value.return []) ?accept () =
+    let view =
+      let%map extra_attrs = extra_attrs in
+      fun ~id ~state:_ ~set_state ->
+        Vdom_input_widgets.File_select.single
+          ?accept
+          ~extra_attrs:(id :: extra_attrs)
+          ~on_input:(fun file ->
+            set_state (Option.map file ~f:Bonsai_web_ui_file_from_web_file.create))
+          ()
     in
-    Basic_stateful.make (Bonsai.state_opt here (module File)) ~view
+    Basic_stateful.make (Bonsai.state_opt (module File)) ~view
   ;;
 
-  let single here ?(extra_attrs = Value.return []) ?accept () =
-    Bonsai.Computation.map
-      (single_opt here ~extra_attrs ?accept ())
-      ~f:optional_to_required
+  let single ?(extra_attrs = Value.return []) ?accept () =
+    Bonsai.Computation.map (single_opt ~extra_attrs ?accept ()) ~f:optional_to_required
   ;;
 
-  let multiple here ?(extra_attrs = Value.return []) ?accept () =
-    let view ~id ~state:_ ~set_state =
-      let%map id = id
-      and set_state = set_state
-      and extra_attrs = extra_attrs in
-      Vdom_input_widgets.File_select.list
-        ?accept
-        ~extra_attrs:(id :: extra_attrs)
-        ~on_input:(fun files ->
-          let files =
-            List.map files ~f:(fun file ->
-              let file = Bonsai_web_ui_file_from_web_file.create file in
-              Bonsai_web_ui_file.filename file, file)
-            |> Filename.Map.of_alist_exn
-          in
-          set_state files)
-        ()
+  let multiple ?(extra_attrs = Value.return []) ?accept () =
+    let view =
+      let%map extra_attrs = extra_attrs in
+      fun ~id ~state:_ ~set_state ->
+        Vdom_input_widgets.File_select.list
+          ?accept
+          ~extra_attrs:(id :: extra_attrs)
+          ~on_input:(fun files ->
+            let files =
+              List.map files ~f:(fun file ->
+                let file = Bonsai_web_ui_file_from_web_file.create file in
+                Bonsai_web_ui_file.filename file, file)
+              |> Filename.Map.of_alist_exn
+            in
+            set_state files)
+          ()
     in
     Basic_stateful.make
       (Bonsai.state
-         here
          (module struct
            type t = File.t Filename.Map.t [@@deriving equal, sexp]
          end)
@@ -1193,29 +1104,28 @@ module File_select = struct
 end
 
 module Freeform_multiselect = struct
-  let set ?(extra_attrs = Value.return []) ?placeholder ?split _here =
+  let set ?(extra_attr = Value.return Vdom.Attr.empty) ?placeholder ?split () =
     let%sub path, id = path in
-    let extra_attrs =
-      let%map id = id
-      and extra_attrs = extra_attrs in
-      id :: extra_attrs
+    let%sub extra_attr =
+      let%arr id_ = id
+      and extra_attr = extra_attr in
+      Vdom.Attr.(extra_attr @ id_)
     in
     let%sub freeform_multiselect =
       Bonsai_web_ui_freeform_multiselect.Freeform_multiselect.create
         ?placeholder
         ?split
-        ~extra_attrs
+        ~extra_attr
         ()
     in
-    return
-    @@ let%map value, view, set = freeform_multiselect
+    let%arr value, view, set = freeform_multiselect
     and path = path in
     Form.Expert.create ~value:(Ok value) ~view:(View.of_vdom ~id:path view) ~set
   ;;
 
-  let list ?extra_attrs ?placeholder ?split here =
+  let list ?extra_attr ?placeholder ?split () =
     computation_map
-      (set ?extra_attrs ?placeholder ?split here)
+      (set ?extra_attr ?placeholder ?split ())
       ~f:(Form.project ~parse_exn:Set.to_list ~unparse:String.Set.of_list)
   ;;
 end
@@ -1274,14 +1184,13 @@ module Query_box = struct
     in
     let%sub last_selected_value, set_last_selected_value =
       Bonsai.state_opt
-        [%here]
         (module struct
           type t = Key.t [@@deriving sexp]
 
           let equal a b = Key.comparator.compare a b = 0
         end)
     in
-    let%sub view =
+    let%sub query_box =
       Bonsai_web_ui_query_box.stringable
         (module Key)
         ?initial_query
@@ -1315,10 +1224,12 @@ module Query_box = struct
     in
     let%arr last_selected_value = last_selected_value
     and set_last_selected_value = set_last_selected_value
-    and view = view
+    and query_box = query_box
     and current_selection_view = current_selection_view
     and path = path in
-    let view = Vdom.Node.div [ current_selection_view; view ] in
+    let view =
+      Vdom.Node.div [ current_selection_view; Bonsai_web_ui_query_box.view query_box ]
+    in
     Form.Expert.create
       ~value:(Ok last_selected_value)
       ~view:(View.of_vdom ~id:path view)

@@ -51,7 +51,7 @@ val tab_state
     button nodes for each tab. *)
 val tab_ui
   :  ?decorate:('a -> Vdom.Node.t) Value.t
-  -> ?additional_button_attributes:(is_selected:bool -> 'a -> Vdom.Attr.t list) Value.t
+  -> ?additional_button_attributes:(is_selected:bool -> 'a -> Vdom.Attr.t) Value.t
   -> (module Bonsai.Model with type t = 'a)
   -> all_tabs:'a list Value.t
   -> 'a State.t Value.t

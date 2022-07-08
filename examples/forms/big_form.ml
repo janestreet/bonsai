@@ -39,17 +39,20 @@ module My_variant = struct
     | C of int * float
   [@@deriving sexp, equal, typed_variants]
 
+  let label_for_variant = `Inferred
+
   let form_for_variant : type a. a Typed_variant.t -> a Form.t Computation.t = function
     | A -> Bonsai.const (Form.return ())
-    | B -> E.Textbox.string [%here]
-    | C -> Computation.map2 ~f:Form.both (E.Textbox.int [%here]) (E.Textbox.float [%here])
+    | B -> E.Textbox.string ()
+    | C -> Computation.map2 ~f:Form.both (E.Textbox.int ()) (E.Textbox.float ())
   ;;
 end
 
 let my_variant_form = Form.Typed.Variant.make (module My_variant)
+let my_variant_optional_form = Form.Typed.Variant.make_optional (module My_variant)
 
 module Nested_record = struct
-  let checkbox = Form.Elements.Checkbox.bool ~default:false
+  let checkbox = Form.Elements.Checkbox.bool ~default:false ()
 
   module Inner = struct
     type t =
@@ -58,9 +61,11 @@ module Nested_record = struct
       }
     [@@deriving typed_fields, sexp]
 
+    let label_for_field = `Inferred
+
     let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t = function
-      | B_1 -> checkbox [%here]
-      | B_2 -> checkbox [%here]
+      | B_1 -> checkbox
+      | B_2 -> checkbox
     ;;
   end
 
@@ -73,8 +78,10 @@ module Nested_record = struct
       }
     [@@deriving typed_fields, sexp]
 
+    let label_for_field = `Inferred
+
     let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t = function
-      | A_1 -> checkbox [%here]
+      | A_1 -> checkbox
       | A_2 -> inner_form
     ;;
   end
@@ -84,6 +91,7 @@ end
 
 type t =
   { variant : My_variant.t
+  ; optional_variant : My_variant.t option
   ; int_from_range : int
   ; string_from_text : string
   ; string_from_vert_radio : string
@@ -93,6 +101,8 @@ type t =
   ; date_time : Time_ns.Stable.Alternate_sexp.V1.t
   ; date_from_string : Date.t
   ; sexp_from_string : Sexp.t
+  ; radiobutton_buttons : string
+  ; checklist_buttons : String.Set.t
   ; bool_from_checkbox : bool
   ; bool_from_toggle : bool
   ; bool_from_dropdown : bool
@@ -112,54 +122,69 @@ type t =
 
 let ( >>|| ) a f = Bonsai.Computation.map a ~f
 
+let label_for_field : type a. a Typed_field.t -> string =
+  fun field ->
+  field
+  |> Typed_field.name
+  |> String.capitalize
+  |> String.substr_replace_all ~pattern:"_" ~with_:" "
+;;
+
 let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t = function
   | Variant -> my_variant_form >>|| Form.tooltip "Tooltips can also be on header groups"
-  | Int_from_range -> E.Range.int [%here] ~min:0 ~max:100 ~default:0 ~step:1 ()
-  | String_from_text -> E.Textbox.string [%here]
+  | Optional_variant -> my_variant_optional_form
+  | Int_from_range -> E.Range.int ~min:0 ~max:100 ~default:0 ~step:1 ()
+  | String_from_text -> E.Textbox.string ()
   | String_from_vert_radio ->
     E.Radio_buttons.list
-      [%here]
       (module String)
       ~layout:`Vertical
       (Value.return [ "first"; "second"; "third" ])
   | String_from_horiz_radio ->
     E.Radio_buttons.list
-      [%here]
       (module String)
       ~layout:`Horizontal
       (Value.return [ "first"; "second"; "third" ])
-  | Date -> E.Date_time.date [%here]
-  | Time_ns_of_day -> E.Date_time.time [%here]
-  | Date_time -> E.Date_time.datetime_local [%here]
+  | Radiobutton_buttons ->
+    E.Radio_buttons.list
+      (module String)
+      ~style:(Value.return E.Selectable_style.barebones_button_like)
+      ~layout:`Horizontal
+      (Value.return [ "first"; "second"; "third" ])
+  | Date -> E.Date_time.date ()
+  | Time_ns_of_day -> E.Date_time.time ()
+  | Date_time -> E.Date_time.datetime_local ()
   | Date_from_string ->
-    E.Textbox.string [%here]
+    E.Textbox.string ()
     >>|| Form.project ~parse_exn:Date.of_string ~unparse:Date.to_string
-  | Sexp_from_string -> E.Textbox.sexpable [%here] (module Sexp)
+  | Sexp_from_string -> E.Textbox.sexpable (module Sexp)
   | Bool_from_toggle -> E.Toggle.bool ~default:false ()
-  | Bool_from_checkbox -> E.Checkbox.bool [%here] ~default:false
-  | Bool_from_dropdown ->
-    E.Dropdown.enumerable [%here] (module Bool) ~to_string:Bool.to_string
+  | Bool_from_checkbox -> E.Checkbox.bool ~default:false ()
+  | Checklist_buttons ->
+    E.Checkbox.set
+      (module String)
+      ~style:(Value.return E.Selectable_style.barebones_button_like)
+      (Value.return [ "abc"; "def" ])
+  | Bool_from_dropdown -> E.Dropdown.enumerable (module Bool) ~to_string:Bool.to_string
   | Typeahead ->
     E.Typeahead.single
-      [%here]
       (module A_B_or_C)
       ~placeholder:"Typeahead here!"
       ~all_options:(Value.return A_B_or_C.all)
   | String_option ->
-    E.Dropdown.list_opt [%here] (module String) (Value.return [ "hello"; "world" ])
-  | A_b_or_c -> E.Dropdown.enumerable [%here] (module A_B_or_C)
+    E.Dropdown.list_opt (module String) (Value.return [ "hello"; "world" ])
+  | A_b_or_c -> E.Dropdown.enumerable (module A_B_or_C)
   | Many ->
     let%sub multi_select =
-      E.Multiselect.list [%here] (module A_B_or_C) (Value.return A_B_or_C.all)
+      E.Multiselect.list (module A_B_or_C) (Value.return A_B_or_C.all)
     in
     Form.Dynamic.collapsible_group (Value.return "collapsible group") multi_select
   | Many2 ->
     let%sub multi_select =
-      E.Multiselect.list [%here] (module A_B_or_C) (Value.return A_B_or_C.all)
+      E.Multiselect.list (module A_B_or_C) (Value.return A_B_or_C.all)
     in
     let%sub multi_select2 =
       E.Multiselect.list
-        [%here]
         (module A_B_or_C)
         (multi_select >>| Form.value_or_default ~default:[])
     in
@@ -168,15 +193,9 @@ let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t = functio
     Form.both multi_select multi_select2
     |> Form.project ~parse_exn:snd ~unparse:(fun selected -> selected, selected)
   | String_set ->
-    E.Checkbox.set
-      [%here]
-      (module String)
-      (Value.return [ "first"; "second"; "third"; "fourth" ])
+    E.Checkbox.set (module String) (Value.return [ "first"; "second"; "third"; "fourth" ])
   | Files ->
-    E.File_select.multiple
-      [%here]
-      ~accept:[ `Mimetype "application/pdf"; `Extension ".csv" ]
-      ()
+    E.File_select.multiple ~accept:[ `Mimetype "application/pdf"; `Extension ".csv" ] ()
   | Rank ->
     let%sub rank =
       E.Rank.list
@@ -195,21 +214,26 @@ let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t = functio
       (Value.return
          (String.Map.of_alist_exn [ "abc", "abc"; "def", "def"; "ghi", "ghi" ]))
   | Nested_record -> Nested_record.form
-  | Color_picker -> E.Color_picker.hex [%here]
+  | Color_picker -> E.Color_picker.hex ()
 ;;
 
 let form =
-  Form.Typed.Record.make
-    (module struct
-      module Typed_field = Typed_field
+  let%sub form =
+    Form.Typed.Record.make
+      (module struct
+        module Typed_field = Typed_field
 
-      let form_for_field = form_for_field
-    end)
+        let label_for_field = `Computed label_for_field
+        let form_for_field = form_for_field
+      end)
+    |> Computation.map ~f:(Form.group "The big form")
+  in
+  Form.Dynamic.error_hint form
 ;;
 
 let component =
   let%sub form = form in
-  let%sub editable, toggle_editable = Bonsai_extra.toggle [%here] ~default_model:true in
+  let%sub editable, toggle_editable = Bonsai_extra.toggle ~default_model:true in
   let%arr editable = editable
   and toggle_editable = toggle_editable
   and form = form in

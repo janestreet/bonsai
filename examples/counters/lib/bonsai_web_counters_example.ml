@@ -2,7 +2,6 @@ open! Core
 open Bonsai_web
 open Bonsai.Let_syntax
 
-
 (* [CODE_EXCERPT_BEGIN 2] *)
 module Model = struct
   type t = unit Int.Map.t [@@deriving sexp, equal]
@@ -11,7 +10,6 @@ end
 let add_counter_component =
   let%sub add_counter_state =
     Bonsai.state_machine0
-      [%here]
       (module Model)
       (module Unit)
       ~default_model:Int.Map.empty
@@ -19,11 +17,11 @@ let add_counter_component =
         let key = Map.length model in
         Map.add_exn model ~key ~data:())
   in
-  return
-  @@ let%map state, inject = add_counter_state in
-  let on_click = Vdom.Attr.on_click (fun _ -> inject ()) in
+  let%arr state, inject = add_counter_state in
   let view =
-    Vdom.Node.button ~attr:on_click [ Vdom.Node.text "Add Another Counter" ]
+    Vdom.Node.button
+      ~attr:(Vdom.Attr.on_click (fun _ -> inject ()))
+      [ Vdom.Node.text "Add Another Counter" ]
   in
   state, view
 ;;
@@ -42,7 +40,6 @@ end
 let single_counter =
   let%sub counter_state =
     Bonsai.state_machine0
-      [%here]
       (module Int)
       (module Action)
       ~default_model:0
@@ -51,11 +48,11 @@ let single_counter =
            | Action.Increment -> model + 1
            | Action.Decrement -> model - 1)
   in
-  return
-  @@ let%map state, inject = counter_state in
+  let%arr state, inject = counter_state in
   let button label action =
-    let on_click = Vdom.Attr.on_click (fun _ -> inject action) in
-    Vdom.Node.button ~attr:on_click [ Vdom.Node.text label ]
+    Vdom.Node.button
+      ~attr:(Vdom.Attr.on_click (fun _ -> inject action))
+      [ Vdom.Node.text label ]
   in
   Vdom.Node.div
     [ button "-1" Action.Decrement
@@ -73,8 +70,7 @@ let application =
   let%sub counters =
     Bonsai.assoc (module Int) map ~f:(fun _key _data -> single_counter)
   in
-  return
-  @@ let%map add_button = add_button
+  let%arr add_button = add_button
   and counters = counters in
   Vdom.Node.div [ add_button; Vdom.Node.div (Map.data counters) ]
 ;;

@@ -21,3 +21,6 @@ let dummy_source_code_position =
   Source_code_position.
     { pos_fname = "file_name.ml"; pos_lnum = 0; pos_bol = 0; pos_cnum = 0 }
 ;;
+
+let opaque_const x = Bonsai.read (Bonsai.Var.value (Bonsai.Var.create x))
+let opaque_const_value x = Bonsai.Var.value (Bonsai.Var.create x)

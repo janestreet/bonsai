@@ -9,7 +9,6 @@ end
 
 let roller_state =
   Bonsai.state_machine1
-    [%here]
     (module Model)
     (module Unit)
     ~default_model:None

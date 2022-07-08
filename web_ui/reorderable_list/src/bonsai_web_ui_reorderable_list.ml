@@ -79,11 +79,33 @@ let list
       ?(right = `Px 0)
       ?(empty_list_placeholder = fun ~item_is_hovered:_ -> Bonsai.const Node.None)
       ?(default_item_height = 50)
+      ?(override_last_target_rank : int option Value.t option)
       input
   =
   let module Key = (val key) in
   let%sub sizes, size_attr =
     Bonsai_web_ui_element_size_hooks.Bulk_size_tracker.component (module Key) Prune_stale
+  in
+  let%sub historical_min_index =
+    let%sub historical_min_index, set_historical_min_index =
+      Bonsai.state (module Int) ~default_model:Int.max_value
+    in
+    let%sub min_index =
+      Bonsai.Incr.compute input ~f:(fun map ->
+        map
+        |> Incr_map.map_min ~comparator:(module Int) ~f:(fun (_, index) -> index)
+        |> Incr.map ~f:(Option.value ~default:Int.max_value))
+    in
+    let%sub update_min =
+      let%arr historical_min_index = historical_min_index
+      and set_historical_min_index = set_historical_min_index in
+      fun min_index ->
+        if min_index < historical_min_index
+        then set_historical_min_index min_index
+        else Effect.Ignore
+    in
+    let%sub () = Bonsai.Edge.on_change (module Int) min_index ~callback:update_min in
+    return historical_min_index
   in
   let%sub model, should_render_extra_target =
     let%arr model = dnd >>| Drag_and_drop.model
@@ -96,7 +118,8 @@ let list
        | None -> Dragging { t with source = External t.source }, true)
   in
   let%sub model_info_at_index =
-    let%arr model = model in
+    let%arr model = model
+    and historical_min_index = historical_min_index in
     fun index ->
       let is_dragged_item =
         match model with
@@ -104,9 +127,27 @@ let list
         | Not_dragging | Dragging { source = External _; _ } -> false
       in
       match model with
-      | Not_dragging | Dragging { target = None; _ } ->
+      | Not_dragging | Dragging { target = None; source = External _; _ } ->
         { adjusted_index = index; is_target_of_external_item = false; is_dragged_item }
+      | Dragging { target = None; source = In_list source } ->
+        let target = Int.max_value in
+        { adjusted_index =
+            (if source = index
+             then target
+             else if source = target
+             then index
+             else if source < target
+             then if source < index && index <= target then index - 1 else index
+             else if source > index && index >= target
+             then index + 1
+             else index)
+        ; is_dragged_item
+        ; is_target_of_external_item = false
+        }
       | Dragging { source = In_list source; target = Some target; _ } ->
+        (* Target is defaulted to Int.max_value so that the elements in the list are
+           compacted. *)
+        let target = if target < historical_min_index then Int.max_value else target in
         { adjusted_index =
             (if source = index
              then target
@@ -121,6 +162,7 @@ let list
         ; is_target_of_external_item = false
         }
       | Dragging { source = External _; target = Some target; _ } ->
+        let target = if target < historical_min_index then Int.max_value else target in
         { adjusted_index = (if index >= target then index + 1 else index)
         ; is_dragged_item
         ; is_target_of_external_item = index = target
@@ -212,7 +254,18 @@ let list
           [ data ])
   in
   let%sub targets =
-    let%sub num_items = return (input >>| Map.length) in
+    let%sub num_items =
+      let%sub override_last_target_rank =
+        match override_last_target_rank with
+        | Some override -> return override
+        | None -> Bonsai.const None
+      in
+      match%sub override_last_target_rank with
+      | None ->
+        let%arr map = input in
+        Map.fold ~init:0 map ~f:(fun ~key:_ ~data:(_, rank) acc -> Int.max rank acc) + 1
+      | Some x -> return x
+    in
     let%sub drop_target = return (dnd >>| Drag_and_drop.drop_target) in
     let single_target ~is_the_extra_target index size y_position =
       let%sub is_the_extra_target =
@@ -365,7 +418,6 @@ let with_inject
   in
   let%sub ranked_input, inject =
     Bonsai.state_machine0
-      [%here]
       (module Model)
       (module A)
       ~default_model:(Map.empty (module Key))
@@ -374,7 +426,6 @@ let with_inject
   in
   let%sub dnd =
     Bonsai_web_ui_drag_and_drop.create
-      [%here]
       ~source_id:
         (module struct
           type t = Key.t [@@deriving sexp]
@@ -481,7 +532,6 @@ let simple
   let module Key = (val key) in
   let%sub () =
     Bonsai.Edge.on_change'
-      [%here]
       (module struct
         type t = Set.M(Key).t [@@deriving sexp, equal]
       end)

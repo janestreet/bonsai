@@ -34,7 +34,7 @@ let%expect_test "render some notifications and test that they close as expected"
          ~dismiss_notifications_after:
            (Bonsai.Value.return (Time_ns.Span.create ~sec:15 ()))
          ~dismiss_errors_automatically:(Bonsai.Value.return false)
-         [%here])
+         ())
   in
   Handle.show handle;
   (* Empty notification container as nothing has raised yet. *)

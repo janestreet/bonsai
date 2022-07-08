@@ -39,7 +39,7 @@ let table_to_string
       Column.create
         "#"
         (fun { Bonsai_web_ui_partial_render_table.For_testing.Table_body.id; _ } ->
-           Int63.to_string id)
+           Map_list.Key.to_string id)
     in
     let ascii_column_of_leaf i header =
       let header = Node_h.unsafe_convert_exn header |> Node_h.inner_text in

@@ -1,5 +1,4 @@
 open! Core
-open! Bonsai
 open! Bonsai_web
 open Incr_map_collate
 open Bonsai_web_ui_partial_render_table
@@ -20,12 +19,12 @@ end
 
 module Input = struct
   type ('key, 'data, 'cmp) t =
-    { filter : (key:'key -> data:'data -> bool) option Var.t
-    ; order : ('key, 'data, 'cmp) Incr_map_collate.Compare.t Var.t
-    ; rank_range : int Collate.Which_range.t Var.t
-    ; key_range : 'key Collate.Which_range.t Var.t
-    ; map : ('key, 'data, 'cmp) Map.t Var.t
-    ; on_change : ('key option -> unit Effect.t) Var.t
+    { filter : (key:'key -> data:'data -> bool) option Bonsai.Var.t
+    ; order : ('key, 'data, 'cmp) Incr_map_collate.Compare.t Bonsai.Var.t
+    ; rank_range : int Collate.Which_range.t Bonsai.Var.t
+    ; key_range : 'key Collate.Which_range.t Bonsai.Var.t
+    ; map : ('key, 'data, 'cmp) Map.t Bonsai.Var.t
+    ; on_change : ('key option -> unit Effect.t) Bonsai.Var.t
     }
 
   let create
@@ -36,12 +35,12 @@ module Input = struct
         ?(on_change = Fn.const Effect.Ignore)
         map
     =
-    { filter = Var.create filter
-    ; order = Var.create order
-    ; rank_range = Var.create rank_range
-    ; key_range = Var.create key_range
-    ; map = Var.create map
-    ; on_change = Var.create on_change
+    { filter = Bonsai.Var.create filter
+    ; order = Bonsai.Var.create order
+    ; rank_range = Bonsai.Var.create rank_range
+    ; key_range = Bonsai.Var.create key_range
+    ; map = Bonsai.Var.create map
+    ; on_change = Bonsai.Var.create on_change
     }
   ;;
 
@@ -69,12 +68,12 @@ let component_for_bench
       ~columns
       { Input.filter; order; rank_range; key_range; map; on_change }
   =
-  let filter = Var.value filter in
-  let order = Var.value order in
-  let rank_range = Var.value rank_range in
-  let key_range = Var.value key_range in
-  let map = Var.value map in
-  let on_change = Var.value on_change in
+  let filter = Bonsai.Var.value filter in
+  let order = Bonsai.Var.value order in
+  let rank_range = Bonsai.Var.value rank_range in
+  let key_range = Bonsai.Var.value key_range in
+  let map = Bonsai.Var.value map in
+  let on_change = Bonsai.Var.value on_change in
   let%sub collate =
     let collate =
       let%map filter = filter
@@ -100,7 +99,7 @@ let component_for_bench
     collate
 ;;
 
-let create_test ?preload_rows comparator ~initial_vars ~columns ~interaction ~test_name =
+let create_bench ?preload_rows comparator ~initial_vars ~columns ~interaction ~test_name =
   let interaction = interaction initial_vars in
   let component = component_for_bench comparator ?preload_rows ~columns initial_vars in
   let get_inject { Table.Result.focus; _ } = function
@@ -111,5 +110,5 @@ let create_test ?preload_rows comparator ~initial_vars ~columns ~interaction ~te
     | Page_down -> focus.page_down
     | Focus key -> focus.focus key
   in
-  Test.create ~name:test_name ~component ~get_inject interaction
+  Bonsai_bench.create ~name:test_name ~component ~get_inject interaction
 ;;

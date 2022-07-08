@@ -6,6 +6,7 @@ open Bonsai_web
     - "Enter" invokes [on_select] with the selected suggestion. If the suggestion
       list is closed, the callback is not invoked, because of course nothing is
       selected; instead the suggestion list is opened.
+    - "Clicking" on the suggestion list invokes [on_select].
     - Focusing the the text input opens the suggestion list
     - "Escape" or unfocusing the text input closes the suggestion list
     - "Tab" and "Down Arrow" move the selected item down. If the suggestion
@@ -44,6 +45,12 @@ module Expand_direction : sig
   [@@deriving sexp, compare, enumerate, equal]
 end
 
+type 'k t =
+  { selected_item : 'k option
+  ; view : Vdom.Node.t
+  }
+[@@deriving fields]
+
 val create
   :  ('k, 'cmp) Bonsai.comparator
   -> ?initial_query:string
@@ -74,8 +81,7 @@ val create
       selected. *)
   -> on_select:('k -> unit Effect.t) Value.t
   -> unit
-  -> Vdom.Node.t Computation.t
-
+  -> 'k t Computation.t
 
 (** [stringable] is like [create] but takes a map with possible completion options,
     instead of a function to generate them. Completion options will be displayed if their
@@ -93,4 +99,4 @@ val stringable
   -> ?to_view:('k -> string -> Vdom.Node.t)
   -> on_select:('k -> unit Effect.t) Value.t
   -> ('k, string, 'cmp) Map.t Value.t
-  -> Vdom.Node.t Computation.t
+  -> 'k t Computation.t

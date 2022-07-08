@@ -330,7 +330,7 @@ module Make (Item : Item) = struct
                     if Set.mem selected_items item
                     then checked_attrs
                     else unchecked_attrs))
-              []
+              ()
           in
           let is_focused = [%compare.equal: Item.t option] (Some item) focused_item in
           let extra_attrs = extra_row_attrs ~is_focused in
@@ -399,8 +399,10 @@ module Make (Item : Item) = struct
       in
       let key = Keystroke.create' in
       Keyboard_event_handler.of_command_list_exn
-        [ command ~keys:[ key ArrowUp ] ~description:"Move focus one item up" (fun _ev ->
-            inject (Action.Move_focus `Prev))
+        [ command
+            ~keys:[ key ArrowUp ]
+            ~description:"Move focus one item up"
+            (fun _ev -> inject (Action.Move_focus `Prev))
         ; command
             ~keys:[ key ArrowDown ]
             ~description:"Move focus one item down"

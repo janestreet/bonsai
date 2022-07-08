@@ -9,13 +9,10 @@ let component
       ~some_constant_value
       ~node_creator
   =
-  let%sub textbox_state = Bonsai.state_opt [%here] (module M) in
-  return
-  @@ let%map state, set_state = textbox_state in
+  let%sub textbox_state = Bonsai.state_opt (module M) in
+  let%arr state, set_state = textbox_state in
   let input = node_creator state set_state in
-  let debug =
-    state |> [%sexp_of: M.t option] |> Sexp.to_string_hum |> Vdom.Node.text
-  in
+  let debug = state |> [%sexp_of: M.t option] |> Sexp.to_string_hum |> Vdom.Node.text in
   let clear_button =
     Vdom.Node.button
       ~attr:(Vdom.Attr.on_click (fun _ -> set_state None))
@@ -46,8 +43,7 @@ let component =
       ~node_creator:(fun value on_input ->
         Vdom_input_widgets.Entry.text ~value ~on_input ())
   in
-  return
-  @@ let%map number_input = number_input
+  let%arr number_input = number_input
   and string_input = string_input in
   Vdom.Node.div [ number_input; string_input ]
 ;;

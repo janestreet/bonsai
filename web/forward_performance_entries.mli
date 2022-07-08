@@ -1,5 +1,4 @@
 open! Core
-open! Bonsai
 
 type ('model, 'static_action, 'dynamic_action, 'result) t =
   { instrumented_computation :

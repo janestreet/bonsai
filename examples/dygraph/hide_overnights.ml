@@ -90,8 +90,7 @@ let app =
     let data = Dygraph.Data.create_time_ns raw_data in
     make_graph ~name:"with_overnights_visible" ~title:"With overnights visible" ~data ()
   in
-  return
-  @@ let%map hide_overnights_graph = hide_overnights_graph
+  let%arr hide_overnights_graph = hide_overnights_graph
   and visible_overnights_graphs = visible_overnights_graphs in
   Vdom.Node.div [ hide_overnights_graph; visible_overnights_graphs ]
 ;;

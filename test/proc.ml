@@ -1,5 +1,5 @@
 open! Core
-open! Bonsai
+open Bonsai.For_open
 open! Import
 
 module Result_spec = struct
@@ -84,6 +84,87 @@ module Handle = struct
          result, R.view result, R.incoming result)
     in
     Driver.create ~initial_input:() ~clock component
+  ;;
+
+  let node_paths_from_skeleton
+    : type a. a Bonsai.Private.Computation.packed -> Bonsai.Private.Node_path.Set.t
+    =
+    fun (Bonsai.Private.Computation.T { t; _ }) ->
+      let find_node_paths =
+        object
+          inherit
+            [Bonsai.Private.Node_path.Set.t] Bonsai.Private.Skeleton.Computation.fold as super
+
+          method! node_path node_path acc =
+            let acc = Set.add acc (Lazy.force node_path) in
+            super#node_path node_path acc
+        end
+      in
+      find_node_paths#computation
+        (Bonsai.Private.Skeleton.Computation.of_computation t)
+        Bonsai.Private.Node_path.Set.empty
+  ;;
+
+  let node_paths_from_transform
+    : type a. a Bonsai.Private.Computation.packed -> Bonsai.Private.Node_path.Set.t
+    =
+    fun (Bonsai.Private.Computation.T { t; _ }) ->
+      let node_paths = ref Bonsai.Private.Node_path.Set.empty in
+      let computation_map
+            (type model dynamic_action static_action result)
+            (context : _ Bonsai.Private.Transform.For_computation.context)
+            state
+            (computation :
+               (model, dynamic_action, static_action, result) Bonsai.Private.Computation.t)
+        =
+        node_paths := Set.add !node_paths (Lazy.force context.current_path);
+        let out = context.recurse state computation in
+        out
+      in
+      let value_map
+            (type a)
+            (context : _ Bonsai.Private.Transform.For_value.context)
+            state
+            (wrapped_value : a Bonsai.Private.Value.t)
+        =
+        node_paths := Set.add !node_paths (Lazy.force context.current_path);
+        context.recurse state wrapped_value
+      in
+      let (_ : (_, _, _, _) Bonsai.Private.Computation.t) =
+        Bonsai.Private.Transform.map
+          ~init:()
+          ~computation_mapper:{ f = computation_map }
+          ~value_mapper:{ f = value_map }
+          t
+      in
+      !node_paths
+  ;;
+
+  let assert_node_paths_identical_between_transform_and_skeleton_nodepaths
+    : type a. a Bonsai.Private.Computation.packed -> unit
+    =
+    fun computation ->
+      let from_transform = node_paths_from_transform computation in
+      let from_skeleton = node_paths_from_skeleton computation in
+      if not ([%equal: Set.M(Bonsai.Private.Node_path).t] from_transform from_skeleton)
+      then (
+        Expect_test_helpers_core.print_cr
+          [%here]
+          (Sexp.Atom "BUG IN BONSAI! Node Path Mismatch");
+        Expect_test_patdiff.print_patdiff_s
+          ([%sexp_of: Bonsai.Private.Node_path.Set.t] from_transform)
+          ([%sexp_of: Bonsai.Private.Node_path.Set.t] from_skeleton))
+  ;;
+
+  let create
+        (type result incoming)
+        (result_spec : (result, incoming) Result_spec.t)
+        ?(clock = Incr.Clock.create ~start:Time_ns.epoch ())
+        computation
+    =
+    assert_node_paths_identical_between_transform_and_skeleton_nodepaths
+      (Bonsai.Private.reveal_computation computation);
+    create ~clock result_spec computation
   ;;
 
   let result handle =

@@ -120,7 +120,7 @@ let create
       ; inject
       ; dynamic_apply_action
       ; dynamic_apply_action_incr
-      ; static_apply_action = apply_static ~inject:inject_static
+      ; static_apply_action = apply_static ~inject_dynamic ~inject_static
       ; result
       ; result_incr
       ; sexp_of_model

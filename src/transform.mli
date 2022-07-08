@@ -42,37 +42,33 @@ end
     Note that you could invoke the mapper either before or after transforming
     the current node (these correspond to post- and pre- order traversal). *)
 module For_value : sig
-  type 'from_parent mapper = { f : 'a. 'from_parent -> 'a Value.t -> 'a Value.t }
+  type 'from_parent context =
+    { recurse : 'a. 'from_parent -> 'a Value.t -> 'a Value.t
+    ; var_from_parent : Var_from_parent.t
+    ; parent_path : Node_path.t Lazy.t
+    ; current_path : Node_path.t Lazy.t
+    }
 
   type 'from_parent user_mapper =
-    { f :
-        'a.
-          recurse:'from_parent mapper
-        -> var_from_parent:Var_from_parent.t
-        -> parent_path:Node_path.t Lazy.t
-        -> current_path:Node_path.t Lazy.t
-        -> 'from_parent
-        -> 'a Value.t
-        -> 'a Value.t
-    }
+    { f : 'a. 'from_parent context -> 'from_parent -> 'a Value.t -> 'a Value.t }
 end
 
 module For_computation : sig
-  type 'from_parent mapper =
-    { f :
+  type 'from_parent context =
+    { recurse :
         'model 'dynamic_action 'static_action 'result.
           'from_parent
         -> ('model, 'dynamic_action, 'static_action, 'result) Computation.t
         -> ('model, 'dynamic_action, 'static_action, 'result) Computation.t
+    ; var_from_parent : Var_from_parent.t
+    ; parent_path : Node_path.t Lazy.t
+    ; current_path : Node_path.t Lazy.t
     }
 
   type 'from_parent user_mapper =
     { f :
         'model 'dynamic_action 'static_action 'result.
-          recurse:'from_parent mapper
-        -> var_from_parent:Var_from_parent.t
-        -> parent_path:Node_path.t Lazy.t
-        -> current_path:Node_path.t Lazy.t
+          'from_parent context
         -> 'from_parent
         -> ('model, 'dynamic_action, 'static_action, 'result) Computation.t
         -> ('model, 'dynamic_action, 'static_action, 'result) Computation.t

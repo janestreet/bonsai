@@ -11,7 +11,7 @@ module type Conv = sig
 end
 
 let component (type t) (module Conv : Conv with type t = t) ~default_model =
-  let%sub text_state = Bonsai.state [%here] (module String) ~default_model in
+  let%sub text_state = Bonsai.state (module String) ~default_model in
   let%arr text, set_text = text_state in
   let conv = Or_error.try_with (fun () -> Conv.of_string text) in
   let textbox =
@@ -25,7 +25,7 @@ let component (type t) (module Conv : Conv with type t = t) ~default_model =
               | Ok _ -> Vdom.Attr.empty
               | Error _ -> Vdom.Attr.class_ "invalid")
            ])
-      []
+      ()
   in
   let conv_display =
     let attr, text =

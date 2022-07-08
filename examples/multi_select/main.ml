@@ -42,8 +42,7 @@ let bonsai =
   let%sub widget_result =
     Widget.bonsai ~all_keys:(Attribute.Set.of_list Attribute.all) ~id_prefix subwidgets
   in
-  return
-  @@ let%map widget_result = widget_result in
+  let%arr widget_result = widget_result in
   let open Virtual_dom.Vdom in
   Node.div
     [ Node.h2 [ Node.text "Selection demo" ]

@@ -29,16 +29,19 @@ type t =
   | Group of
       { label : Vdom.Node.t option
       ; tooltip : Vdom.Node.t option
+      ; error : Error_details.t option
       ; view : t
       }
   | Header_group of
       { label : Vdom.Node.t option
       ; tooltip : Vdom.Node.t option
+      ; error : Error_details.t option
       ; header_view : t
       ; view : t
       }
   | Submit_button of
       { text : string
+      ; attr : Vdom.Attr.t
       ; (* none implies that the button is disabled *)
         on_submit : unit Ui_effect.t option
       }
@@ -54,10 +57,16 @@ val concat : t -> t -> t
 val view_error : Error.t -> Vdom.Node.t list
 val view_error_details : Error_details.t -> Vdom.Node.t
 
+val wrap_tooltip_and_error
+  :  tooltip:Vdom.Node.t option
+  -> error:Error_details.t option
+  -> Vdom.Node.t
+
 type submission_options =
   { on_submit : unit Ui_effect.t option
   ; handle_enter : bool
   ; button_text : string option
+  ; button_attr : Vdom.Attr.t
   }
 
 type editable =
@@ -66,5 +75,6 @@ type editable =
   | `Currently_no
   ]
 
+val with_fieldset : currently_editable:bool -> Vdom.Node.t -> Vdom.Node.t
 val to_vdom : ?on_submit:submission_options -> ?editable:editable -> t -> Vdom.Node.t
 val to_vdom_plain : t -> Vdom.Node.t list

@@ -37,18 +37,25 @@ module Submit = struct
     { f : 'a -> unit Ui_effect.t
     ; handle_enter : bool
     ; button_text : string option
+    ; button_attr : Vdom.Attr.t
     }
 
-  let create ?(handle_enter = true) ?(button = Some "submit") ~f () =
-    { f; handle_enter; button_text = button }
+  let create
+        ?(handle_enter = true)
+        ?(button = Some "submit")
+        ?(button_attr = Vdom.Attr.empty)
+        ~f
+        ()
+    =
+    { f; handle_enter; button_text = button; button_attr }
   ;;
 end
 
 let view_as_vdom ?on_submit ?(editable = `Yes_always) t =
   let on_submit =
-    Option.map on_submit ~f:(fun { Submit.f; handle_enter; button_text } ->
+    Option.map on_submit ~f:(fun { Submit.f; handle_enter; button_text; button_attr } ->
       let on_submit = t.value |> Result.ok |> Option.map ~f in
-      { View.on_submit; handle_enter; button_text })
+      { View.on_submit; handle_enter; button_text; button_attr })
   in
   View.to_vdom ?on_submit ~editable t.view
 ;;
@@ -57,6 +64,13 @@ let is_valid t = Or_error.is_ok t.value
 
 let return value =
   { value = Ok value; view = View.Empty; set = (fun _ -> Ui_effect.Ignore) }
+;;
+
+let return_settable (type a) (module M : Bonsai.Model with type t = a) (value : a) =
+  let%sub value, set_value = Bonsai.state (module M) ~default_model:value in
+  let%arr value = value
+  and set_value = set_value in
+  { value = Ok value; view = View.Empty; set = set_value }
 ;;
 
 let return_error error =
@@ -155,16 +169,16 @@ module Record_builder = struct
 
   let build_for_record a =
     let t = build_for_record a in
-    { t with view = View.Group { label = None; tooltip = None; view = t.view } }
+    { t with
+      view = View.Group { label = None; tooltip = None; view = t.view; error = None }
+    }
   ;;
 end
 
 module Dynamic = struct
   let with_default default form =
     let open Bonsai.Let_syntax in
-    let%sub is_loaded, set_is_loaded =
-      Bonsai.state [%here] (module Bool) ~default_model:false
-    in
+    let%sub is_loaded, set_is_loaded = Bonsai.state (module Bool) ~default_model:false in
     let%sub () =
       Bonsai.Edge.lifecycle
         ~on_activate:
@@ -180,16 +194,28 @@ module Dynamic = struct
     return form
   ;;
 
+  let with_default_always default form =
+    let open Bonsai.Let_syntax in
+    let%sub () =
+      Bonsai.Edge.lifecycle
+        ~on_activate:
+          (let%map default = default
+           and form = form in
+           set form default)
+        ()
+    in
+    return form
+  ;;
+
   let error_hint t =
     let f view ~error =
       let if_not_none value ~f = Option.value_map value ~default:Fn.id ~f in
       view |> if_not_none error ~f:View.suggest_error
     in
     let t =
-      let%sub error_hovered = Bonsai.state [%here] (module Bool) ~default_model:false in
-      let%sub error_clicked = Bonsai.state [%here] (module Bool) ~default_model:false in
-      Bonsai.read
-      @@ let%map t = t
+      let%sub error_hovered = Bonsai.state (module Bool) ~default_model:false in
+      let%sub error_clicked = Bonsai.state (module Bool) ~default_model:false in
+      let%arr t = t
       and is_error_hovered, set_error_hovered = error_hovered
       and is_clicked, set_clicked = error_clicked in
       let on_click = set_clicked (not is_clicked) in
@@ -209,9 +235,8 @@ module Dynamic = struct
   ;;
 
   let collapsible_group ?(starts_open = true) label t =
-    let%sub open_state = Bonsai.state [%here] (module Bool) ~default_model:starts_open in
-    Bonsai.read
-    @@ let%map is_open, set_is_open = open_state
+    let%sub open_state = Bonsai.state (module Bool) ~default_model:starts_open in
+    let%arr is_open, set_is_open = open_state
     and label = label
     and t = t in
     let label =
@@ -229,7 +254,7 @@ module Dynamic = struct
     let view =
       match is_open, form.view with
       | false, Group { label; tooltip; _ } ->
-        View.Group { label; tooltip; view = Empty }
+        View.Group { label; tooltip; view = Empty; error = None }
       | _, other -> other
     in
     { form with view }
@@ -253,7 +278,7 @@ module Dynamic = struct
       | Error e -> on_error e
       | Ok new_value -> f new_value
     in
-    Bonsai.Edge.on_change [%here] (module M_or_error) (value_to_watch >>| value) ~callback
+    Bonsai.Edge.on_change (module M_or_error) (value_to_watch >>| value) ~callback
   ;;
 
   let validate_via_effect
@@ -272,7 +297,6 @@ module Dynamic = struct
       let%sub validation =
         Bonsai.Edge.Poll.(
           effect_on_change
-            [%here]
             (module Input)
             (module Validated)
             Starting.empty
@@ -284,8 +308,7 @@ module Dynamic = struct
                  | Ok () -> Ok a
                  | Error e -> Error e))
       in
-      Bonsai.read
-      @@ let%map t = t
+      let%arr t = t
       and validation = validation in
       validate t ~f:(fun a ->
         match validation with
@@ -318,9 +341,10 @@ module Dynamic = struct
     ;;
 
     let build_for_record creator =
-      Bonsai.read
-      @@ let%map t = build_for_record creator in
-      { t with view = View.Group { label = None; tooltip = None; view = t.view } }
+      let%arr t = build_for_record creator in
+      { t with
+        view = View.Group { label = None; tooltip = None; view = t.view; error = None }
+      }
     ;;
   end
 end

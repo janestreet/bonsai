@@ -6,7 +6,7 @@ open! Incr_map_collate
 
 module For_testing : sig
   type cell =
-    { id : Int63.t
+    { id : Map_list.Key.t
     ; selected : bool
     ; view : Vdom.Node.t list
     }
@@ -26,11 +26,11 @@ val component
   -> row_height:[< `Px of int ]
   -> leaves:Header_tree.leaf list Value.t
   -> assoc:
-       (('key, Int63.t * 'data, 'cmp) Map.t Value.t
-        -> ('key, Int63.t * Vdom.Node.t list, 'cmp) Map.t Computation.t)
+       (('key * 'data) Map_list.t Value.t
+        -> ('key * Vdom.Node.t list) Map_list.t Computation.t)
   -> column_widths:(int, [< `Px of float ], 'c) Map.t Value.t
   -> visually_focused:'key option Value.t
   -> on_row_click:('key -> unit Effect.t) Value.t
   -> ('key, 'data) Collated.t Value.t
-  -> ('key, Int63.t * 'data, 'cmp) Map.t Value.t
-  -> (Vdom.Node.t list * For_testing.t Lazy.t) Computation.t
+  -> ('key * 'data) Map_list.t Value.t
+  -> (Vdom.Node.t list Lazy.t * For_testing.t Lazy.t) Computation.t

@@ -59,10 +59,10 @@ let table_form
     Computation.map Bonsai.Private.path ~f:Bonsai.Private.Path.to_unique_identifier_string
   in
   let%sub map, set_map =
-    Bonsai.state [%here] (module M_map) ~default_model:(Map.empty (module Key))
+    Bonsai.state (module M_map) ~default_model:(Map.empty (module Key))
   in
   let%sub textbox =
-    let%sub text_state = Bonsai.state [%here] (module String) ~default_model:"" in
+    let%sub text_state = Bonsai.state (module String) ~default_model:"" in
     let%arr text, set_text = text_state
     and map = map
     and set_map = set_map in
@@ -86,7 +86,7 @@ let table_form
                  | Enter -> on_submit ()
                  | _ -> Effect.Ignore)
              ])
-        []
+        ()
     in
     let button =
       Vdom.Node.button

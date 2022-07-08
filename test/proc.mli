@@ -1,6 +1,6 @@
 open! Core
-open! Bonsai
 open! Import
+open Bonsai.For_open
 
 module Result_spec : sig
   module type S = sig

@@ -26,7 +26,6 @@ module Range =
 let size_slider =
   Form.Elements.Range.int
     ~extra_attrs:(Value.return [ Vdom.Attr.class_ Range.class_ ])
-    [%here]
     ~min:12
     ~max:100
     ~default:default.size
@@ -37,7 +36,6 @@ let size_slider =
 let stroke_width_slider =
   Form.Elements.Range.float
     ~extra_attrs:(Value.return [ Vdom.Attr.class_ Range.class_ ])
-    [%here]
     ~min:0.5
     ~max:3.
     ~default:default.stroke_width
@@ -63,7 +61,7 @@ let color_input ?(display = Value.return true) () =
     let%arr display = display in
     if display then classes_ else Vdom.Attr.(classes_ @ display_none)
   in
-  Form.Elements.Color_picker.hex ~extra_attr [%here]
+  Form.Elements.Color_picker.hex ~extra_attr ()
 ;;
 
 module Style =

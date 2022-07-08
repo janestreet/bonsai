@@ -2,6 +2,19 @@ open! Core
 open Virtual_dom
 open Bonsai.Let_syntax
 
+module Style =
+  [%css.raw
+    {|
+  .connected {
+    display: none;
+  }
+
+  .warning {
+    font-size: 1.5rem;
+    font-weight: bold;
+  }
+|}]
+
 let message_for_async_durable time_span =
   sprintf
     "You've been disconnected from the server for %s. There is no need to refresh the \
@@ -12,10 +25,10 @@ let message_for_async_durable time_span =
 
 let component ?(styles = Vdom.Attr.empty) ~create_message is_connected =
   if%sub is_connected
-  then Bonsai.const (Vdom.Node.div ~attr:(Vdom.Attr.style (Css_gen.display `None)) [])
+  then Bonsai.const (Vdom.Node.div ~attr:(Vdom.Attr.class_ Style.connected) [])
   else (
     let%sub activation_time, set_activation_time =
-      Bonsai.state_opt [%here] (module Time_ns.Alternate_sexp)
+      Bonsai.state_opt (module Time_ns.Alternate_sexp)
     in
     let%sub now = Bonsai.Clock.approx_now ~tick_every:(Time_ns.Span.of_sec 1.0) in
     let%sub () =
@@ -30,9 +43,7 @@ let component ?(styles = Vdom.Attr.empty) ~create_message is_connected =
     in
     Vdom.Node.div
       ~attr:styles
-      [ Vdom.Node.div
-          ~attr:(Vdom.Attr.style Css_gen.(font_size (`Rem 1.5) @> font_weight `Bold))
-          [ Vdom.Node.text "Warning!" ]
+      [ Vdom.Node.div ~attr:(Vdom.Attr.class_ Style.warning) [ Vdom.Node.text "Warning!" ]
       ; Vdom.Node.div [ Vdom.Node.text (create_message duration_of_visibility) ]
       ])
 ;;

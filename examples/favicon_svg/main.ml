@@ -45,19 +45,18 @@ let slider ~min ~max ~value ~inject =
          ; Attr.value (value |> string_of_int)
          ; Attr.on_input (fun _ev value -> inject (int_of_string value))
          ])
-    []
+    ()
 ;;
 
 let component =
   let open Bonsai.Let_syntax in
-  let%sub text = Bonsai.state_opt [%here] (module String) ~default_model:"🤯" in
-  let%sub size = Bonsai.state [%here] (module Int) ~default_model:80 in
-  let%sub pos_x = Bonsai.state [%here] (module Int) ~default_model:50 in
-  let%sub pos_y = Bonsai.state [%here] (module Int) ~default_model:50 in
-  let%sub fg_color = Bonsai.state [%here] (module String) ~default_model:"#000000" in
-  let%sub bg_color = Bonsai.state [%here] (module String) ~default_model:"#ffffff" in
-  return
-  @@ let%pattern_map text, inject_text = text
+  let%sub text = Bonsai.state_opt (module String) ~default_model:"🤯" in
+  let%sub size = Bonsai.state (module Int) ~default_model:80 in
+  let%sub pos_x = Bonsai.state (module Int) ~default_model:50 in
+  let%sub pos_y = Bonsai.state (module Int) ~default_model:50 in
+  let%sub fg_color = Bonsai.state (module String) ~default_model:"#000000" in
+  let%sub bg_color = Bonsai.state (module String) ~default_model:"#ffffff" in
+  let%arr text, inject_text = text
   and size, inject_size = size
   and pos_x, inject_pos_x = pos_x
   and pos_y, inject_pos_y = pos_y
@@ -106,10 +105,7 @@ let component =
             (sprintf "~pos_y:(Percent.of_percentage %.1f)")
             (non Float.equal 50.)
             (float_of_int pos_y)
-        ; attr
-            (sprintf {|~font_color:(`Hex "%s")|})
-            (non String.equal "#000000")
-            fg_color
+        ; attr (sprintf {|~font_color:(`Hex "%s")|}) (non String.equal "#000000") fg_color
         ; attr
             (sprintf {|~background_color:(`Hex "%s")|})
             (non String.equal "#ffffff")
@@ -157,7 +153,7 @@ let component =
                   ; Attr.value fg_color
                   ; Attr.on_input (fun _ev value -> inject_fg_color value)
                   ])
-             []
+             ()
          ]
      ; spacer 5
      ; Node.div
@@ -169,7 +165,7 @@ let component =
                   ; Attr.value bg_color
                   ; Attr.on_input (fun _ev value -> inject_bg_color value)
                   ])
-             []
+             ()
          ]
      ; spacer 20
      ]

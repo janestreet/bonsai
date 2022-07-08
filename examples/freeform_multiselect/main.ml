@@ -7,8 +7,7 @@ let components =
   let%sub control =
     Freeform_multiselect.create ~placeholder:"Enter something here.." ()
   in
-  return
-  @@ let%map selected, control, (_ : String.Set.t -> unit Ui_effect.t) = control in
+  let%arr selected, control, (_ : String.Set.t -> unit Ui_effect.t) = control in
   let have_you_selected_something =
     match Set.to_list selected with
     | []       -> Vdom.Node.none

@@ -59,7 +59,7 @@ let verbose_form_result_spec (type a) sexp_of_a
 ;;
 
 let%expect_test "typing into a string textbox" =
-  let component = Form.Elements.Textbox.string [%here] in
+  let component = Form.Elements.Textbox.string () in
   let handle = Handle.create (form_result_spec [%sexp_of: string]) component in
   Handle.show handle;
   [%expect
@@ -93,7 +93,6 @@ let%expect_test "typing into a string textbox" =
 let%expect_test "dropdown starting empty" =
   let component =
     Form.Elements.Dropdown.list
-      [%here]
       (module String)
       (Value.return [ "hello"; "world" ])
       ~init:`Empty
@@ -130,7 +129,6 @@ let%expect_test "dropdown starting empty" =
 let%expect_test "dropdown with default value" =
   let component =
     Form.Elements.Dropdown.list
-      [%here]
       (module String)
       (Value.return [ "hello"; "world" ])
       ~init:(`This (Value.return "world"))
@@ -165,7 +163,6 @@ let%expect_test "dropdown with default value" =
 let%expect_test "dropdown_opt with default value" =
   let component =
     Form.Elements.Dropdown.list_opt
-      [%here]
       (module String)
       (Value.return [ "hello"; "world" ])
       ~init:(`This (Value.return "world"))
@@ -201,10 +198,7 @@ let%expect_test "dropdown_opt with default value" =
 
 let%expect_test "dropdown" =
   let component =
-    Form.Elements.Dropdown.list
-      [%here]
-      (module String)
-      (Value.return [ "hello"; "world" ])
+    Form.Elements.Dropdown.list (module String) (Value.return [ "hello"; "world" ])
   in
   let handle = Handle.create (form_result_spec [%sexp_of: string]) component in
   Handle.show handle;
@@ -234,7 +228,7 @@ let%expect_test "dropdown" =
 ;;
 
 let%expect_test "dropdown but without any elements to pick from " =
-  let component = Form.Elements.Dropdown.list [%here] (module String) (Value.return []) in
+  let component = Form.Elements.Dropdown.list (module String) (Value.return []) in
   let handle = Handle.create (form_result_spec [%sexp_of: string]) component in
   Handle.show handle;
   [%expect
@@ -249,7 +243,7 @@ let%expect_test "dropdown but without any elements to pick from " =
 
 let%expect_test "collapsible group" =
   let component =
-    let%sub textbox = Form.Elements.Textbox.string [%here] in
+    let%sub textbox = Form.Elements.Textbox.string () in
     Form.Dynamic.collapsible_group (Value.return "group-name") textbox
   in
   let get_vdom = get_vdom_verbose in
@@ -283,9 +277,6 @@ let%expect_test "collapsible group" =
                    value:normalized=""
                    oninput> </input>
           </td>
-          <td>
-            <div style={ display: flex; flex-direction: row; flex-wrap: nowrap; }>   </div>
-          </td>
         </tr>
       </tbody>
     </table> |}];
@@ -318,9 +309,6 @@ let%expect_test "collapsible group" =
     -|               id="bonsai_path_replaced_in_test"
     -|               value:normalized=""
     -|               oninput> </input>
-    -|      </td>
-    -|      <td>
-    -|        <div style={ display: flex; flex-direction: row; flex-wrap: nowrap; }>   </div>
     +|        <div onclick style={ user-select: none; cursor: pointer; }> ► group-name </div>
             </td>
           </tr>
@@ -329,7 +317,7 @@ let%expect_test "collapsible group" =
 ;;
 
 let%expect_test "setting into a string textbox" =
-  let component = Form.Elements.Textbox.string [%here] in
+  let component = Form.Elements.Textbox.string () in
   let handle = Handle.create (form_result_spec [%sexp_of: string]) component in
   Handle.show handle;
   [%expect
@@ -361,7 +349,7 @@ let%expect_test "setting into a string textbox" =
 ;;
 
 let%expect_test "typing into a int textbox" =
-  let component = Form.Elements.Textbox.int [%here] in
+  let component = Form.Elements.Textbox.int () in
   let handle = Handle.create (form_result_spec [%sexp_of: int]) component in
   Handle.show handle;
   [%expect
@@ -408,7 +396,7 @@ let%expect_test "typing into a int textbox" =
 ;;
 
 let%expect_test "setting into a int textbox" =
-  let component = Form.Elements.Textbox.int [%here] in
+  let component = Form.Elements.Textbox.int () in
   let handle = Handle.create (form_result_spec [%sexp_of: int]) component in
   Handle.show handle;
   [%expect
@@ -441,10 +429,9 @@ let%expect_test "setting into a int textbox" =
 
 let%expect_test "typing into a paired string textbox * int textbox " =
   let component =
-    let%sub string_form = Form.Elements.Textbox.string [%here] in
-    let%sub int_form = Form.Elements.Textbox.int [%here] in
-    return
-    @@ let%map string_form = string_form
+    let%sub string_form = Form.Elements.Textbox.string () in
+    let%sub int_form = Form.Elements.Textbox.int () in
+    let%arr string_form = string_form
     and int_form = int_form in
     Form.both string_form int_form
   in
@@ -498,10 +485,9 @@ let%expect_test "typing into a paired string textbox * int textbox " =
 
 let%expect_test "setting into a paired string textbox * int textbox " =
   let component =
-    let%sub string_form = Form.Elements.Textbox.string [%here] in
-    let%sub int_form = Form.Elements.Textbox.int [%here] in
-    return
-    @@ let%map string_form = string_form
+    let%sub string_form = Form.Elements.Textbox.string () in
+    let%sub int_form = Form.Elements.Textbox.int () in
+    let%arr string_form = string_form
     and int_form = int_form in
     Form.both string_form int_form
   in
@@ -555,9 +541,8 @@ let%expect_test "setting into a paired string textbox * int textbox " =
 let%expect_test "adding more things to a string list (indented button)" =
   let component =
     Form.Elements.Multiple.list
-      [%here]
       ~button_placement:`Indented
-      (Form.Elements.Textbox.string [%here])
+      (Form.Elements.Textbox.string ())
   in
   let handle =
     Handle.create
@@ -620,9 +605,6 @@ let%expect_test "adding more things to a string list (indented button)" =
     +|               value:normalized=""
     +|               oninput> </input>
     +|      </td>
-    +|      <td>
-    +|        <div style={ display: flex; flex-direction: row; flex-wrap: nowrap; }>   </div>
-    +|      </td>
     +|    </tr>
           <tr>
             <td colspan="2" style={ padding-left: 0em; font-weight: bold; }>
@@ -677,9 +659,6 @@ let%expect_test "adding more things to a string list (indented button)" =
     +|               value:normalized="hello world"
                      oninput> </input>
             </td>
-            <td>
-              <div style={ display: flex; flex-direction: row; flex-wrap: nowrap; }>   </div>
-            </td>
           </tr>
           <tr>
             <td colspan="2" style={ padding-left: 0em; font-weight: bold; }>
@@ -693,9 +672,8 @@ let%expect_test "adding more things to a string list (indented button)" =
 let%expect_test "adding more things to a string list" =
   let component =
     Form.Elements.Multiple.list
-      [%here]
       ~button_placement:`Inline
-      (Form.Elements.Textbox.string [%here])
+      (Form.Elements.Textbox.string ())
   in
   let handle = Handle.create (form_result_spec [%sexp_of: string list]) component in
   Handle.show handle;
@@ -744,7 +722,7 @@ let%expect_test "adding more things to a string list" =
 
 let%expect_test "using the same component twice" =
   let component =
-    let%sub textbox = Form.Elements.Textbox.string [%here] in
+    let%sub textbox = Form.Elements.Textbox.string () in
     return @@ Bonsai.Value.map2 ~f:Form.both textbox textbox
   in
   let handle =
@@ -780,9 +758,6 @@ let%expect_test "using the same component twice" =
                    value:normalized=b
                    oninput> </input>
           </td>
-          <td>
-            <div style={ display: flex; flex-direction: row; flex-wrap: nowrap; }>   </div>
-          </td>
         </tr>
         <tr @key=bonsai_path_x_x_x_x_x>
           <td style={
@@ -800,9 +775,6 @@ let%expect_test "using the same component twice" =
                    value:normalized=b
                    oninput> </input>
           </td>
-          <td>
-            <div style={ display: flex; flex-direction: row; flex-wrap: nowrap; }>   </div>
-          </td>
         </tr>
       </tbody>
     </table> |}]
@@ -811,9 +783,8 @@ let%expect_test "using the same component twice" =
 let%expect_test "setting things to a string list" =
   let component =
     Form.Elements.Multiple.list
-      [%here]
       ~button_placement:`Inline
-      (Form.Elements.Textbox.string [%here])
+      (Form.Elements.Textbox.string ())
   in
   let handle = Handle.create (form_result_spec [%sexp_of: string list]) component in
   Handle.show handle;
@@ -857,9 +828,8 @@ let%expect_test "setting things to a string list" =
 let%expect_test "setting things to a string list (verbose)" =
   let component =
     Form.Elements.Multiple.list
-      [%here]
       ~button_placement:`Inline
-      (Form.Elements.Textbox.string [%here])
+      (Form.Elements.Textbox.string ())
   in
   let handle =
     Handle.create (verbose_form_result_spec [%sexp_of: string list]) component
@@ -882,9 +852,6 @@ let%expect_test "setting things to a string list (verbose)" =
               }>  </td>
           <td>
             <button onclick> Add new element </button>
-          </td>
-          <td>
-            <div style={ display: flex; flex-direction: row; flex-wrap: nowrap; }>   </div>
           </td>
         </tr>
       </tbody>
@@ -930,9 +897,6 @@ let%expect_test "setting things to a string list (verbose)" =
     +|               value:normalized=hello
     +|               oninput> </input>
     +|      </td>
-    +|      <td>
-    +|        <div style={ display: flex; flex-direction: row; flex-wrap: nowrap; }>   </div>
-    +|      </td>
     +|    </tr>
     +|    <tr>
     +|      <td colspan="2" style={ padding-left: 0em; font-weight: bold; }>
@@ -964,9 +928,6 @@ let%expect_test "setting things to a string list (verbose)" =
     +|               id="bonsai_path_replaced_in_test"
     +|               value:normalized=there
     +|               oninput> </input>
-    +|      </td>
-    +|      <td>
-    +|        <div style={ display: flex; flex-direction: row; flex-wrap: nowrap; }>   </div>
     +|      </td>
     +|    </tr>
     +|    <tr>
@@ -1000,9 +961,6 @@ let%expect_test "setting things to a string list (verbose)" =
     +|               value:normalized=world
     +|               oninput> </input>
     +|      </td>
-    +|      <td>
-    +|        <div style={ display: flex; flex-direction: row; flex-wrap: nowrap; }>   </div>
-    +|      </td>
     +|    </tr>
           <tr @key=bonsai_path_replaced_in_test>
             <td style={
@@ -1015,17 +973,13 @@ let%expect_test "setting things to a string list (verbose)" =
             <td>
               <button onclick> Add new element </button>
             </td>
-            <td>
-              <div style={ display: flex; flex-direction: row; flex-wrap: nowrap; }>   </div>
-            </td>
           </tr>
-        </tbody> |}]
+        </tbody>
+      </table> |}]
 ;;
 
 let%expect_test "typing into an int number element" =
-  let component =
-    Form.Elements.Number.int [%here] ~default:0 ~step:1 ~min:(-1) ~max:10 ()
-  in
+  let component = Form.Elements.Number.int ~default:0 ~step:1 ~min:(-1) ~max:10 () in
   let handle = Handle.create (form_result_spec [%sexp_of: int]) component in
   Handle.show handle;
   [%expect
@@ -1117,9 +1071,7 @@ let%expect_test "typing into an int number element" =
 ;;
 
 let%expect_test "setting into an int number element" =
-  let component =
-    Form.Elements.Number.int [%here] ~default:0 ~step:1 ~min:(-1) ~max:10 ()
-  in
+  let component = Form.Elements.Number.int ~default:0 ~step:1 ~min:(-1) ~max:10 () in
   let handle = Handle.create (form_result_spec [%sexp_of: int]) component in
   Handle.show handle;
   [%expect
@@ -1212,7 +1164,7 @@ let%expect_test "setting into an int number element" =
 
 let%expect_test "typing into a float number element" =
   let component =
-    Form.Elements.Number.float [%here] ~default:0. ~step:1. ~min:(-1.) ~max:10.1 ()
+    Form.Elements.Number.float ~default:0. ~step:1. ~min:(-1.) ~max:10.1 ()
   in
   let handle = Handle.create (form_result_spec [%sexp_of: float]) component in
   Handle.show handle;
@@ -1306,7 +1258,7 @@ let%expect_test "typing into a float number element" =
 
 let%expect_test "setting into an int number element" =
   let component =
-    Form.Elements.Number.float [%here] ~default:0. ~step:1. ~min:(-1.) ~max:10.1 ()
+    Form.Elements.Number.float ~default:0. ~step:1. ~min:(-1.) ~max:10.1 ()
   in
   let handle = Handle.create (form_result_spec [%sexp_of: float]) component in
   Handle.show handle;
@@ -1401,7 +1353,6 @@ let%expect_test "setting into an int number element" =
 let%expect_test "clicking on radio buttons" =
   let component =
     Form.Elements.Radio_buttons.list
-      [%here]
       ~to_string:Fn.id
       (module String)
       ~layout:`Vertical
@@ -1513,7 +1464,6 @@ let%expect_test "clicking on radio buttons" =
 let%expect_test "setting into radio buttons" =
   let component =
     Form.Elements.Radio_buttons.list
-      [%here]
       ~to_string:Fn.id
       (module String)
       ~layout:`Vertical
@@ -1625,7 +1575,6 @@ let%expect_test "setting into radio buttons" =
 let%expect_test "horizontal radio buttons render with correct styles applied" =
   let component =
     Form.Elements.Radio_buttons.list
-      [%here]
       ~to_string:Fn.id
       (module String)
       ~layout:`Horizontal
@@ -1656,7 +1605,6 @@ let%expect_test "horizontal radio buttons render with correct styles applied" =
 let%expect_test "clicking a set checklist" =
   let component =
     Form.Elements.Checkbox.set
-      [%here]
       ~to_string:Fn.id
       (module String)
       (Value.return [ "first"; "second"; "third" ])
@@ -1768,7 +1716,6 @@ let%expect_test "clicking a set checklist" =
 let%expect_test "setting into a set checklist" =
   let component =
     Form.Elements.Checkbox.set
-      [%here]
       ~to_string:Fn.id
       (module String)
       (Value.return [ "first"; "second"; "third" ])
@@ -1881,16 +1828,13 @@ let%expect_test "forms using the Header_group view format/indent properly" =
      padding *)
   let get_vdom form = form |> Form.view |> Form.View.to_vdom in
   let component =
-    let%sub string1 = Form.Elements.Textbox.string [%here] in
-    let%sub string2 = Form.Elements.Textbox.string [%here] in
-    let%sub string3 = Form.Elements.Textbox.string [%here] in
-    return
-    @@ let%map string1 = string1
+    let%sub string1 = Form.Elements.Textbox.string () in
+    let%sub string2 = Form.Elements.Textbox.string () in
+    let%sub string3 = Form.Elements.Textbox.string () in
+    let%arr string1 = string1
     and string2 = string2
     and string3 = string3 in
-    let string3 =
-      Form.tooltip "innermost form" (Form.label "innermost form" string3)
-    in
+    let string3 = Form.tooltip "innermost form" (Form.label "innermost form" string3) in
     let value =
       let open Or_error.Let_syntax in
       let%bind string1 = Form.value string1 in
@@ -1904,6 +1848,7 @@ let%expect_test "forms using the Header_group view format/indent properly" =
         ; tooltip = Some (Vdom.Node.text "middle form")
         ; header_view = Form.view string2
         ; view = Form.view string3
+        ; error = None
         }
     in
     let view =
@@ -1912,6 +1857,7 @@ let%expect_test "forms using the Header_group view format/indent properly" =
         ; tooltip = Some (Vdom.Node.text "outermost form")
         ; header_view = Form.view string1
         ; view = inner_view
+        ; error = None
         }
     in
     let set (s1, s2, s3) =
@@ -1943,12 +1889,15 @@ let%expect_test "forms using the Header_group view format/indent properly" =
                     oninput> </input>
            </td>
            <td>
-             <div class="container_hash_replaced_in_test">
-               <label class="label_hash_replaced_in_test">
-                 <input type="checkbox" class="checkbox_hash_replaced_in_test"> </input>
-                 <span class="span_hash_replaced_in_test"> ⓘ </span>
-                 <div class="text_hash_replaced_in_test"> outermost form </div>
-               </label>
+             <div style={ display: flex; flex-direction: row; flex-wrap: nowrap; }>
+               <div class="container_hash_replaced_in_test">
+                 <label class="label_hash_replaced_in_test">
+                   <input type="checkbox" class="checkbox_hash_replaced_in_test"> </input>
+                   <span class="span_hash_replaced_in_test"> ⓘ </span>
+                   <div class="text_hash_replaced_in_test"> outermost form </div>
+                 </label>
+               </div>
+
              </div>
            </td>
          </tr>
@@ -1963,12 +1912,15 @@ let%expect_test "forms using the Header_group view format/indent properly" =
                     oninput> </input>
            </td>
            <td>
-             <div class="container_hash_replaced_in_test">
-               <label class="label_hash_replaced_in_test">
-                 <input type="checkbox" class="checkbox_hash_replaced_in_test"> </input>
-                 <span class="span_hash_replaced_in_test"> ⓘ </span>
-                 <div class="text_hash_replaced_in_test"> middle form </div>
-               </label>
+             <div style={ display: flex; flex-direction: row; flex-wrap: nowrap; }>
+               <div class="container_hash_replaced_in_test">
+                 <label class="label_hash_replaced_in_test">
+                   <input type="checkbox" class="checkbox_hash_replaced_in_test"> </input>
+                   <span class="span_hash_replaced_in_test"> ⓘ </span>
+                   <div class="text_hash_replaced_in_test"> middle form </div>
+                 </label>
+               </div>
+
              </div>
            </td>
          </tr>
@@ -2017,8 +1969,8 @@ let%expect_test "form of nested record of int and float" =
       [@@deriving fields, sexp]
 
       let form =
-        let%sub age = Form.Elements.Textbox.int [%here] in
-        let%sub height = Form.Elements.Textbox.float [%here] in
+        let%sub age = Form.Elements.Textbox.int () in
+        let%sub height = Form.Elements.Textbox.float () in
         Form.Dynamic.Record_builder.(
           build_for_record (Fields.make_creator ~age:(field age) ~height:(field height)))
       ;;
@@ -2104,10 +2056,12 @@ let%expect_test "form of nested record of int and float (typed fields)" =
           (module struct
             module Typed_field = Typed_field
 
+            let label_for_field = `Inferred
+
             let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t
               = function
-                | Age -> Form.Elements.Textbox.int [%here]
-                | Height -> Form.Elements.Textbox.float [%here]
+                | Age -> Form.Elements.Textbox.int ()
+                | Height -> Form.Elements.Textbox.float ()
             ;;
           end)
       ;;
@@ -2123,6 +2077,8 @@ let%expect_test "form of nested record of int and float (typed fields)" =
       Form.Typed.Record.make
         (module struct
           module Typed_field = Typed_field
+
+          let label_for_field = `Inferred
 
           let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t
             = function
@@ -2216,6 +2172,114 @@ let%expect_test "form of nested record of int and float (typed fields)" =
       </div> |}]
 ;;
 
+let%expect_test "typed records labelling overrides defaults" =
+  let module T = struct
+    module Nested = struct
+      type t =
+        { age : int
+        ; height : float
+        }
+      [@@deriving typed_fields, sexp]
+
+      let form =
+        Form.Typed.Record.make
+          (module struct
+            module Typed_field = Typed_field
+
+            let label_for_field = `Inferred
+
+            let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t
+              = function
+                | Age -> Form.Elements.Textbox.int ()
+                | Height -> Form.Elements.Textbox.float ()
+            ;;
+          end)
+      ;;
+    end
+
+    type t =
+      { unit : unit
+      ; nested : Nested.t
+      }
+    [@@deriving typed_fields, sexp]
+
+    let form =
+      Form.Typed.Record.make
+        (module struct
+          module Typed_field = Typed_field
+
+          let field_to_string : type a. a Typed_field.t -> string = function
+            | Unit -> "My awesome unit"
+            | Nested -> "A complex nested record"
+          ;;
+
+          let label_for_field = `Computed field_to_string
+
+          let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t
+            = function
+              | Unit -> Bonsai.const (Form.return ())
+              | Nested -> Nested.form
+          ;;
+        end)
+    ;;
+  end
+  in
+  let handle =
+    Handle.create
+      (form_result_spec
+         ~filter_printed_attributes:(fun _ -> false)
+         ~get_vdom:get_vdom_verbose
+         [%sexp_of: T.t])
+      T.form
+  in
+  Handle.show handle;
+  [%expect
+    {|
+    (Error (
+      "in field A complex nested record"
+      ("in field age" "Expecting an integer")
+      ("in field height" (Invalid_argument "Float.of_string "))))
+
+    ==============
+    <table>
+      <tbody>
+        <tr>
+          <td> A complex nested record </td>
+        </tr>
+        <tr>
+          <td>
+            <label> age </label>
+          </td>
+          <td>
+            <input> </input>
+          </td>
+          <td>
+            <div>
+              <div>
+                <div> ⚠ </div>
+              </div>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <label> height </label>
+          </td>
+          <td>
+            <input> </input>
+          </td>
+          <td>
+            <div>
+              <div>
+                <div> ⚠ </div>
+              </div>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table> |}]
+;;
+
 let%expect_test "typed variants recursive" =
   let module T = struct
     type me =
@@ -2228,11 +2292,13 @@ let%expect_test "typed variants recursive" =
         (module struct
           module Typed_variant = Typed_variant_of_me
 
+          let label_for_variant = `Inferred
+
           let form_for_variant : type a. a Typed_variant.t -> a Form.t Computation.t
             = function
               | Nil -> Bonsai.const (Form.return ())
               | Cons ->
-                let%map.Computation int = Form.Elements.Textbox.int [%here]
+                let%map.Computation int = Form.Elements.Textbox.int ()
                 and me = Bonsai.lazy_ (lazy (form ())) in
                 Form.both int me
           ;;
@@ -2326,11 +2392,13 @@ let%expect_test "typed variants" =
         (module struct
           module Typed_variant = Typed_variant
 
+          let label_for_variant = `Inferred
+
           let form_for_variant : type a. a Typed_variant.t -> a Form.t Computation.t
             = function
               | Unit -> Bonsai.const (Form.return ())
-              | Integer -> Form.Elements.Textbox.int [%here]
-              | Text -> Form.Elements.Textbox.string [%here]
+              | Integer -> Form.Elements.Textbox.int ()
+              | Text -> Form.Elements.Textbox.string ()
           ;;
         end)
     ;;
@@ -2424,10 +2492,445 @@ let%expect_test "typed variants" =
     </div> |}]
 ;;
 
+let%expect_test "typed optional variants" =
+  let module Nested = struct
+    type t =
+      | Unit
+      | Integer of int
+      | Text of string
+    [@@deriving typed_variants, sexp]
+  end
+  in
+  let module T = struct
+    type t = Nested.t option [@@deriving sexp]
+
+    let form =
+      Form.Typed.Variant.make_optional
+        (module struct
+          module Typed_variant = Nested.Typed_variant
+
+          let label_for_variant = `Inferred
+
+          let form_for_variant : type a. a Typed_variant.t -> a Form.t Computation.t
+            = function
+              | Unit -> Bonsai.const (Form.return ())
+              | Integer -> Form.Elements.Textbox.int ()
+              | Text -> Form.Elements.Textbox.string ()
+          ;;
+        end)
+    ;;
+  end
+  in
+  let handle = Handle.create (form_result_spec [%sexp_of: T.t]) T.form in
+  Handle.show handle;
+  [%expect
+    {|
+    (Ok ())
+
+    ==============
+    <select id="bonsai_path_replaced_in_test" class="widget-dropdown" onchange style={ width: 100.00%; }>
+      <option value="0" #selected="true"> (none) </option>
+      <option value="1" #selected="false"> unit </option>
+      <option value="2" #selected="false"> integer </option>
+      <option value="3" #selected="false"> text </option>
+    </select> |}];
+  Handle.input_text handle ~get_vdom ~selector:"select" ~text:"2";
+  Handle.show handle;
+  [%expect
+    {|
+    (Error "Expecting an integer")
+
+    ==============
+    <div>
+      <select id="bonsai_path_replaced_in_test"
+              class="widget-dropdown"
+              onchange
+              style={
+                width: 100.00%;
+              }>
+        <option value="0" #selected="false"> (none) </option>
+        <option value="1" #selected="false"> unit </option>
+        <option value="2" #selected="true"> integer </option>
+        <option value="3" #selected="false"> text </option>
+      </select>
+      <input type="text"
+             placeholder=""
+             spellcheck="false"
+             id="bonsai_path_replaced_in_test"
+             value:normalized=""
+             oninput> </input>
+    </div> |}];
+  Handle.input_text handle ~get_vdom ~selector:"input" ~text:"123";
+  Handle.show_diff handle;
+  [%expect
+    {|
+    -|(Error "Expecting an integer")
+    +|(Ok ((Integer 123)))
+
+      ==============
+      <div>
+        <select id="bonsai_path_replaced_in_test"
+                class="widget-dropdown"
+                onchange
+                style={
+                  width: 100.00%;
+                }>
+          <option value="0" #selected="false"> (none) </option>
+          <option value="1" #selected="false"> unit </option>
+          <option value="2" #selected="true"> integer </option>
+          <option value="3" #selected="false"> text </option>
+        </select>
+        <input type="text"
+               placeholder=""
+               spellcheck="false"
+               id="bonsai_path_replaced_in_test"
+    -|         value:normalized=""
+    +|         value:normalized=123
+               oninput> </input>
+      </div> |}];
+  Handle.do_actions handle [ Some Unit ];
+  Handle.show handle;
+  [%expect
+    {|
+    (Ok (Unit))
+
+    ==============
+    <select id="bonsai_path_replaced_in_test" class="widget-dropdown" onchange style={ width: 100.00%; }>
+      <option value="0" #selected="false"> (none) </option>
+      <option value="1" #selected="true"> unit </option>
+      <option value="2" #selected="false"> integer </option>
+      <option value="3" #selected="false"> text </option>
+    </select> |}];
+  Handle.do_actions handle [ Some (Text "abc") ];
+  Handle.show handle;
+  [%expect
+    {|
+    (Ok ((Text abc)))
+
+    ==============
+    <div>
+      <select id="bonsai_path_replaced_in_test"
+              class="widget-dropdown"
+              onchange
+              style={
+                width: 100.00%;
+              }>
+        <option value="0" #selected="false"> (none) </option>
+        <option value="1" #selected="false"> unit </option>
+        <option value="2" #selected="false"> integer </option>
+        <option value="3" #selected="true"> text </option>
+      </select>
+      <input type="text"
+             placeholder=""
+             spellcheck="false"
+             id="bonsai_path_replaced_in_test"
+             value:normalized=abc
+             oninput> </input>
+    </div> |}];
+  Handle.do_actions handle [ None ];
+  Handle.show handle;
+  [%expect
+    {|
+    (Ok ())
+
+    ==============
+    <select id="bonsai_path_replaced_in_test" class="widget-dropdown" onchange style={ width: 100.00%; }>
+      <option value="0" #selected="true"> (none) </option>
+      <option value="1" #selected="false"> unit </option>
+      <option value="2" #selected="false"> integer </option>
+      <option value="3" #selected="false"> text </option>
+    </select> |}]
+;;
+
+let%expect_test "typed variants with custom labels" =
+  let module T = struct
+    type t =
+      | Unit
+      | Integer of int
+      | Text of string
+    [@@deriving typed_variants, sexp]
+
+    let form =
+      Form.Typed.Variant.make
+        (module struct
+          module Typed_variant = Typed_variant
+
+          let variant_to_string : type a. a Typed_variant.t -> string = function
+            | Unit -> "My custom Unit"
+            | Integer -> "This doesn't even mention integer"
+            | Text -> "Text, please!"
+          ;;
+
+          let label_for_variant = `Computed variant_to_string
+
+          let form_for_variant : type a. a Typed_variant.t -> a Form.t Computation.t
+            = function
+              | Unit -> Bonsai.const (Form.return ())
+              | Integer -> Form.Elements.Textbox.int ()
+              | Text -> Form.Elements.Textbox.string ()
+          ;;
+        end)
+    ;;
+  end
+  in
+  let handle =
+    Handle.create
+      (form_result_spec ~filter_printed_attributes:(Fn.const false) [%sexp_of: T.t])
+      T.form
+  in
+  Handle.show handle;
+  [%expect
+    {|
+    (Ok Unit)
+
+    ==============
+    <select>
+      <option> My custom Unit </option>
+      <option> This doesn't even mention integer </option>
+      <option> Text, please! </option>
+    </select> |}]
+;;
+
+let%expect_test "typed variants: attr is applied to dropdown" =
+  let module T = struct
+    type t =
+      | Unit
+      | Integer of int
+      | Text of string
+    [@@deriving typed_variants, sexp]
+
+    let form =
+      Form.Typed.Variant.make
+        ~picker_attr:(Value.return (Vdom.Attr.class_ "foo"))
+        (module struct
+          module Typed_variant = Typed_variant
+
+          let label_for_variant = `Inferred
+
+          let form_for_variant : type a. a Typed_variant.t -> a Form.t Computation.t
+            = function
+              | Unit -> Bonsai.const (Form.return ())
+              | Integer -> Form.Elements.Textbox.int ()
+              | Text -> Form.Elements.Textbox.string ()
+          ;;
+        end)
+    ;;
+  end
+  in
+  let handle = Handle.create (form_result_spec [%sexp_of: T.t]) T.form in
+  Handle.show handle;
+  [%expect
+    {|
+    (Ok Unit)
+
+    ==============
+    <select id="bonsai_path_replaced_in_test"
+            class="foo widget-dropdown"
+            onchange
+            style={
+              width: 100.00%;
+            }>
+      <option value="0" #selected="true"> unit </option>
+      <option value="1" #selected="false"> integer </option>
+      <option value="2" #selected="false"> text </option>
+    </select> |}]
+;;
+
+let%expect_test "typed variants: radio vertical" =
+  let module T = struct
+    type t =
+      | Unit
+      | Integer of int
+      | Text of string
+    [@@deriving typed_variants, sexp]
+
+    let form =
+      Form.Typed.Variant.make
+        ~picker:(`Radio `Vertical)
+        ~picker_attr:(Value.return (Vdom.Attr.class_ "foo"))
+        (module struct
+          module Typed_variant = Typed_variant
+
+          let label_for_variant = `Inferred
+
+          let form_for_variant : type a. a Typed_variant.t -> a Form.t Computation.t
+            = function
+              | Unit -> Bonsai.const (Form.return ())
+              | Integer -> Form.Elements.Textbox.int ()
+              | Text -> Form.Elements.Textbox.string ()
+          ;;
+        end)
+    ;;
+  end
+  in
+  let handle = Handle.create (form_result_spec [%sexp_of: T.t]) T.form in
+  Handle.show handle;
+  [%expect
+    {|
+    (Ok Unit)
+
+    ==============
+    <ul id="bonsai_path_replaced_in_test"
+        class="foo radio-button-container widget-radio-buttons"
+        style={
+          list-style: none;
+          margin-left: 0px;
+        }>
+      <li style={ display: block; }>
+        <label>
+          <input type="radio"
+                 name="bonsai_path_replaced_in_test"
+                 class="radio-button"
+                 #checked="false"
+                 onclick> </input>
+          unit
+        </label>
+      </li>
+      <li style={ display: block; }>
+        <label>
+          <input type="radio"
+                 name="bonsai_path_replaced_in_test"
+                 class="radio-button"
+                 #checked="false"
+                 onclick> </input>
+          integer
+        </label>
+      </li>
+      <li style={ display: block; }>
+        <label>
+          <input type="radio"
+                 name="bonsai_path_replaced_in_test"
+                 class="radio-button"
+                 #checked="false"
+                 onclick> </input>
+          text
+        </label>
+      </li>
+    </ul> |}]
+;;
+
+let%expect_test "typed variants: radio horizontal" =
+  let module T = struct
+    type t =
+      | Unit
+      | Integer of int
+      | Text of string
+    [@@deriving typed_variants, sexp]
+
+    let form =
+      Form.Typed.Variant.make
+        ~picker:(`Radio `Horizontal)
+        ~picker_attr:(Value.return (Vdom.Attr.class_ "foo"))
+        (module struct
+          module Typed_variant = Typed_variant
+
+          let label_for_variant = `Inferred
+
+          let form_for_variant : type a. a Typed_variant.t -> a Form.t Computation.t
+            = function
+              | Unit -> Bonsai.const (Form.return ())
+              | Integer -> Form.Elements.Textbox.int ()
+              | Text -> Form.Elements.Textbox.string ()
+          ;;
+        end)
+    ;;
+  end
+  in
+  let handle = Handle.create (form_result_spec [%sexp_of: T.t]) T.form in
+  Handle.show handle;
+  [%expect
+    {|
+    (Ok Unit)
+
+    ==============
+    <ul id="bonsai_path_replaced_in_test"
+        class="foo radio-button-container widget-radio-buttons"
+        style={
+          list-style: none;
+          margin-left: 0px;
+        }>
+      <li style={ display: inline-block; }>
+        <label>
+          <input type="radio"
+                 name="bonsai_path_replaced_in_test"
+                 class="radio-button"
+                 #checked="false"
+                 onclick> </input>
+          unit
+        </label>
+      </li>
+      <li style={ display: inline-block; }>
+        <label>
+          <input type="radio"
+                 name="bonsai_path_replaced_in_test"
+                 class="radio-button"
+                 #checked="false"
+                 onclick> </input>
+          integer
+        </label>
+      </li>
+      <li style={ display: inline-block; }>
+        <label>
+          <input type="radio"
+                 name="bonsai_path_replaced_in_test"
+                 class="radio-button"
+                 #checked="false"
+                 onclick> </input>
+          text
+        </label>
+      </li>
+    </ul> |}]
+;;
+
+let%expect_test "typed variants: dropdown with initially empty picker" =
+  let module T = struct
+    type t = String of string [@@deriving typed_variants, sexp]
+
+    let form =
+      Form.Typed.Variant.make
+        ~picker:(`Dropdown `Init_with_empty)
+        ~picker_attr:(Value.return (Vdom.Attr.class_ "foo"))
+        (module struct
+          module Typed_variant = Typed_variant
+
+          let label_for_variant = `Inferred
+
+          let form_for_variant : type a. a Typed_variant.t -> a Form.t Computation.t =
+            fun String -> Form.Elements.Textbox.string ()
+          ;;
+        end)
+    ;;
+  end
+  in
+  let handle = Handle.create (form_result_spec [%sexp_of: T.t]) T.form in
+  Handle.show handle;
+  [%expect
+    {|
+    (Ok (String ""))
+
+    ==============
+    <div>
+      <select id="bonsai_path_replaced_in_test"
+              class="foo widget-dropdown"
+              onchange
+              style={
+                width: 100.00%;
+              }>
+        <option value="0" #selected="true">  </option>
+        <option value="1" #selected="false"> string </option>
+      </select>
+      <input type="text"
+             placeholder=""
+             spellcheck="false"
+             id="bonsai_path_replaced_in_test"
+             value:normalized=""
+             oninput> </input>
+    </div> |}]
+;;
+
 let%expect_test "file picker single" =
   let component =
     Form.Elements.File_select.single_opt
-      [%here]
       ~accept:[ `Extension ".txt"; `Extension "png"; `Mimetype "image/jpeg" ]
       ()
   in
@@ -2460,10 +2963,7 @@ let%expect_test "file picker single" =
 
 let%expect_test "file picker list" =
   let component =
-    Form.Elements.File_select.multiple
-      [%here]
-      ~accept:[ `Extension ".doc"; `Extension "docx" ]
-      ()
+    Form.Elements.File_select.multiple ~accept:[ `Extension ".doc"; `Extension "docx" ] ()
   in
   let handle =
     Handle.create
@@ -2506,7 +3006,7 @@ let%expect_test "file picker list" =
 
 let%expect_test "on_change handler should fire when input is changed" =
   let component =
-    let%sub input = Form.Elements.Textbox.string [%here] in
+    let%sub input = Form.Elements.Textbox.string () in
     let%sub () =
       Form.Dynamic.on_change
         (module String)
@@ -2557,7 +3057,7 @@ let submit_test_attrs = function
 ;;
 
 let%expect_test "form with both submit button and form on-submit" =
-  let component = Form.Elements.Textbox.string [%here] in
+  let component = Form.Elements.Textbox.string () in
   let get_vdom =
     get_vdom_verbose
       ~on_submit:(Form.Submit.create () ~f:(fun s -> Ui_effect.print_s (Sexp.Atom s)))
@@ -2584,9 +3084,6 @@ let%expect_test "form with both submit button and form on-submit" =
             <td>
               <input value:normalized=""> </input>
             </td>
-            <td>
-              <div>   </div>
-            </td>
           </tr>
           <tr>
             <td>
@@ -2605,8 +3102,50 @@ let%expect_test "form with both submit button and form on-submit" =
   [%expect {| "hello there" |}]
 ;;
 
+let%expect_test "form with on-submit with custom attrs" =
+  let component = Form.Elements.Textbox.string () in
+  let get_vdom =
+    get_vdom_verbose
+      ~on_submit:
+        (Form.Submit.create ~button_attr:(Vdom.Attr.class_ "my-class") () ~f:(fun s ->
+           Ui_effect.print_s (Sexp.Atom s)))
+  in
+  let handle =
+    Handle.create
+      (form_result_spec
+         [%sexp_of: string]
+         ~filter_printed_attributes:(fun attr ->
+           submit_test_attrs attr || String.equal attr "class")
+         ~get_vdom)
+      component
+  in
+  Handle.show handle;
+  [%expect
+    {|
+    (Ok "")
+
+    ==============
+    <form onsubmit>
+      <table>
+        <tbody>
+          <tr>
+            <td>  </td>
+            <td>
+              <input value:normalized=""> </input>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <button class="my-class" onclick> submit </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </form> |}]
+;;
+
 let%expect_test "both button and on-submit are disabled when the form doesn't validate" =
-  let component = Form.Elements.Textbox.int [%here] in
+  let component = Form.Elements.Textbox.int () in
   let get_vdom =
     get_vdom_verbose
       ~on_submit:
@@ -2634,9 +3173,6 @@ let%expect_test "both button and on-submit are disabled when the form doesn't va
             <td>  </td>
             <td>
               <input value:normalized=""> </input>
-            </td>
-            <td>
-              <div>   </div>
             </td>
           </tr>
           <tr>
@@ -2674,9 +3210,6 @@ let%expect_test "both button and on-submit are disabled when the form doesn't va
     -|          <input value:normalized=""> </input>
     +|          <input value:normalized=123> </input>
               </td>
-              <td>
-                <div>   </div>
-              </td>
             </tr>
             <tr>
               <td>
@@ -2690,7 +3223,7 @@ let%expect_test "both button and on-submit are disabled when the form doesn't va
 ;;
 
 let%expect_test "form with just button" =
-  let component = Form.Elements.Textbox.string [%here] in
+  let component = Form.Elements.Textbox.string () in
   let get_vdom =
     get_vdom_verbose
       ~on_submit:
@@ -2718,9 +3251,6 @@ let%expect_test "form with just button" =
           <td>
             <input value:normalized=""> </input>
           </td>
-          <td>
-            <div>   </div>
-          </td>
         </tr>
         <tr>
           <td>
@@ -2736,7 +3266,7 @@ let%expect_test "form with just button" =
 ;;
 
 let%expect_test "form with just enter" =
-  let component = Form.Elements.Textbox.string [%here] in
+  let component = Form.Elements.Textbox.string () in
   let get_vdom =
     get_vdom_verbose
       ~on_submit:
@@ -2764,9 +3294,6 @@ let%expect_test "form with just enter" =
             <td>
               <input value:normalized=""> </input>
             </td>
-            <td>
-              <div>   </div>
-            </td>
           </tr>
         </tbody>
       </table>
@@ -2785,7 +3312,7 @@ let%expect_test "form validated with an effect" =
     tracker |> Effect.For_testing.of_query_response_tracker |> Bonsai.Value.return
   in
   let component =
-    let%sub textbox = Form.Elements.Textbox.int [%here] in
+    let%sub textbox = Form.Elements.Textbox.int () in
     Form.Dynamic.validate_via_effect (module Int) textbox ~f
   in
   let handle =
@@ -2848,7 +3375,7 @@ let%expect_test "form validated with an effect" =
 ;;
 
 let%expect_test "slider input" =
-  let component = Form.Elements.Range.int [%here] ~min:0 ~max:100 ~default:0 ~step:1 () in
+  let component = Form.Elements.Range.int ~min:0 ~max:100 ~default:0 ~step:1 () in
   let get_vdom =
     get_vdom_verbose
       ~on_submit:
@@ -2878,9 +3405,6 @@ let%expect_test "slider input" =
             <td>  </td>
             <td>
               <input value:normalized=0> </input>
-            </td>
-            <td>
-              <div>   </div>
             </td>
           </tr>
         </tbody>
@@ -2933,9 +3457,6 @@ let%expect_test "slider input" =
                 </div>
               </div>
             </td>
-            <td>
-              <div>   </div>
-            </td>
           </tr>
         </tbody>
       </table>
@@ -2968,14 +3489,11 @@ let%expect_test "slider input" =
                   </div>
                 </div>
               </td>
-              <td>
-                <div>   </div>
-              </td>
             </tr>
           </tbody>
         </table>
       </form> |}];
-  Bonsai.Var.update var ~f:(fun map -> String.Map.remove map "abc");
+  Bonsai.Var.update var ~f:(fun map -> Map.remove (map : _ String.Map.t) "abc");
   Handle.show_diff handle;
   [%expect
     {|
@@ -2999,9 +3517,6 @@ let%expect_test "slider input" =
                   </div>
                 </div>
               </td>
-              <td>
-                <div>   </div>
-              </td>
             </tr>
           </tbody>
         </table>
@@ -3010,7 +3525,7 @@ let%expect_test "slider input" =
 
 let%expect_test "add tooltip to form" =
   let component =
-    let%map.Computation x = Form.Elements.Textbox.string [%here] in
+    let%map.Computation x = Form.Elements.Textbox.string () in
     Form.tooltip "tooltip" x
   in
   let handle =
@@ -3061,7 +3576,7 @@ let%expect_test "add tooltip to form" =
 
 let%expect_test "add tooltip to group" =
   let component =
-    let%map.Computation x = Form.Elements.Textbox.string [%here] in
+    let%map.Computation x = Form.Elements.Textbox.string () in
     Form.tooltip "group tooltip" (Form.group "group" x)
   in
   let handle =
@@ -3080,12 +3595,15 @@ let%expect_test "add tooltip to group" =
         <tr>
           <td colspan="2" style={ padding-left: 0em; font-weight: bold; }> group </td>
           <td>
-            <div class="container_hash_replaced_in_test">
-              <label class="label_hash_replaced_in_test">
-                <input type="checkbox" class="checkbox_hash_replaced_in_test"> </input>
-                <span class="span_hash_replaced_in_test"> ⓘ </span>
-                <div class="text_hash_replaced_in_test"> group tooltip </div>
-              </label>
+            <div style={ display: flex; flex-direction: row; flex-wrap: nowrap; }>
+              <div class="container_hash_replaced_in_test">
+                <label class="label_hash_replaced_in_test">
+                  <input type="checkbox" class="checkbox_hash_replaced_in_test"> </input>
+                  <span class="span_hash_replaced_in_test"> ⓘ </span>
+                  <div class="text_hash_replaced_in_test"> group tooltip </div>
+                </label>
+              </div>
+
             </div>
           </td>
         </tr>
@@ -3105,9 +3623,6 @@ let%expect_test "add tooltip to group" =
                    value:normalized=""
                    oninput> </input>
           </td>
-          <td>
-            <div style={ display: flex; flex-direction: row; flex-wrap: nowrap; }>   </div>
-          </td>
         </tr>
       </tbody>
     </table> |}]
@@ -3115,7 +3630,7 @@ let%expect_test "add tooltip to group" =
 
 let%expect_test "Bonsai_form.Typed sets groups/labels correctly on nested records" =
   let module A = struct
-    let checkbox = Form.Elements.Checkbox.bool ~default:false
+    let checkbox = Form.Elements.Checkbox.bool ~default:false ()
 
     module B = struct
       type t =
@@ -3129,10 +3644,12 @@ let%expect_test "Bonsai_form.Typed sets groups/labels correctly on nested record
           (module struct
             module Typed_field = Typed_field
 
+            let label_for_field = `Inferred
+
             let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t
               = function
-                | B_1 -> checkbox [%here]
-                | B_2 -> checkbox [%here]
+                | B_1 -> checkbox
+                | B_2 -> checkbox
             ;;
           end)
       ;;
@@ -3149,9 +3666,11 @@ let%expect_test "Bonsai_form.Typed sets groups/labels correctly on nested record
         (module struct
           module Typed_field = Typed_field
 
+          let label_for_field = `Inferred
+
           let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t
             = function
-              | A_1 -> checkbox [%here]
+              | A_1 -> checkbox
               | A_2 -> B.form ()
           ;;
         end)
@@ -3188,9 +3707,6 @@ let%expect_test "Bonsai_form.Typed sets groups/labels correctly on nested record
           <td>
             <input> </input>
           </td>
-          <td>
-            <div>   </div>
-          </td>
         </tr>
         <tr>
           <td style={ padding-left: 0em; }> a_2 </td>
@@ -3202,9 +3718,6 @@ let%expect_test "Bonsai_form.Typed sets groups/labels correctly on nested record
           <td>
             <input> </input>
           </td>
-          <td>
-            <div>   </div>
-          </td>
         </tr>
         <tr>
           <td style={ padding-left: 1em; }>
@@ -3213,16 +3726,13 @@ let%expect_test "Bonsai_form.Typed sets groups/labels correctly on nested record
           <td>
             <input> </input>
           </td>
-          <td>
-            <div>   </div>
-          </td>
         </tr>
       </tbody>
     </table> |}]
 ;;
 
 let%expect_test "view_as_vdom editable:`Currently_yes" =
-  let component = Form.Elements.Textbox.string [%here] in
+  let component = Form.Elements.Textbox.string () in
   let get_vdom = get_vdom_verbose ~editable:`Currently_yes in
   let handle = Handle.create (form_result_spec ~get_vdom [%sexp_of: string]) component in
   Handle.show handle;
@@ -3250,9 +3760,6 @@ let%expect_test "view_as_vdom editable:`Currently_yes" =
                      value:normalized=""
                      oninput> </input>
             </td>
-            <td>
-              <div style={ display: flex; flex-direction: row; flex-wrap: nowrap; }>   </div>
-            </td>
           </tr>
         </tbody>
       </table>
@@ -3263,7 +3770,7 @@ let%expect_test "view_as_vdom editable:`Currently_no" =
   (* We can't programatically test when inputs aren't editable, because they can still be
      set using javascript events like onclick, so just validate that there is a disabled
      fieldset wrapping the textbox *)
-  let component = Form.Elements.Textbox.string [%here] in
+  let component = Form.Elements.Textbox.string () in
   let get_vdom = get_vdom_verbose ~editable:`Currently_no in
   let handle = Handle.create (form_result_spec ~get_vdom [%sexp_of: string]) component in
   Handle.show handle;
@@ -3291,9 +3798,6 @@ let%expect_test "view_as_vdom editable:`Currently_no" =
                      value:normalized=""
                      oninput> </input>
             </td>
-            <td>
-              <div style={ display: flex; flex-direction: row; flex-wrap: nowrap; }>   </div>
-            </td>
           </tr>
         </tbody>
       </table>
@@ -3301,7 +3805,7 @@ let%expect_test "view_as_vdom editable:`Currently_no" =
 ;;
 
 let%expect_test "view_as_vdom not editable, with on_submit" =
-  let component = Form.Elements.Textbox.string [%here] in
+  let component = Form.Elements.Textbox.string () in
   let on_submit = Form.Submit.create ~f:(fun _ -> Effect.Ignore) () in
   let get_vdom = get_vdom_verbose ~on_submit ~editable:`Currently_no in
   let handle = Handle.create (form_result_spec ~get_vdom [%sexp_of: string]) component in
@@ -3331,9 +3835,6 @@ let%expect_test "view_as_vdom not editable, with on_submit" =
                        value:normalized=""
                        oninput> </input>
               </td>
-              <td>
-                <div style={ display: flex; flex-direction: row; flex-wrap: nowrap; }>   </div>
-              </td>
             </tr>
             <tr>
               <td colspan="2" style={ padding-left: 0em; }>
@@ -3344,4 +3845,213 @@ let%expect_test "view_as_vdom not editable, with on_submit" =
         </table>
       </fieldset>
     </form> |}]
+;;
+
+let%expect_test "Adding an error hint to various views" =
+  let print_view_with_error ~compute_view =
+    let component =
+      let%sub form =
+        let%map.Computation form = Form.Elements.Textbox.int () in
+        Form.Expert.create
+          ~value:(Form.value form)
+          ~set:(Form.set form)
+          ~view:(compute_view (Form.view form))
+      in
+      Form.Dynamic.error_hint form
+    in
+    let handle =
+      Handle.create
+        (form_result_spec
+           ~get_vdom:get_vdom_verbose
+           ~filter_printed_attributes:(Fn.const false)
+           [%sexp_of: int])
+        component
+    in
+    Handle.show handle
+  in
+  print_view_with_error ~compute_view:(fun view ->
+    Form.View.Private.Group
+      { label = Some (Vdom.Node.text "group"); tooltip = None; error = None; view });
+  [%expect
+    {|
+    (Error "Expecting an integer")
+
+    ==============
+    <table>
+      <tbody>
+        <tr>
+          <td> group </td>
+          <td>
+            <div>
+              <div>
+                <div> ⚠ </div>
+              </div>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td>  </td>
+          <td>
+            <input> </input>
+          </td>
+        </tr>
+      </tbody>
+    </table> |}];
+  print_view_with_error ~compute_view:(fun view ->
+    Form.View.Private.Header_group
+      { header_view = Empty
+      ; label = Some (Vdom.Node.text "header_group")
+      ; tooltip = None
+      ; error = None
+      ; view
+      });
+  [%expect
+    {|
+    (Error "Expecting an integer")
+
+    ==============
+    <table>
+      <tbody>
+        <tr>
+          <td> header_group </td>
+          <td> </td>
+          <td>
+            <div>
+              <div>
+                <div> ⚠ </div>
+              </div>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td>  </td>
+          <td>
+            <input> </input>
+          </td>
+        </tr>
+      </tbody>
+    </table> |}];
+  print_view_with_error ~compute_view:(fun view -> Form.View.Private.List [ view ]);
+  [%expect
+    {|
+    (Error "Expecting an integer")
+
+    ==============
+    <table>
+      <tbody>
+        <tr>
+          <td>  </td>
+          <td>
+            <input> </input>
+          </td>
+          <td>
+            <div>
+              <div>
+                <div> ⚠ </div>
+              </div>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table> |}]
+;;
+
+let%expect_test "difference between with_default and with_default_always" =
+  let default = Bonsai.Var.create 10 in
+  let should_show_form = Bonsai.Var.create true in
+  let create_handle ~name with_default =
+    let component =
+      match%sub Bonsai.Var.value should_show_form with
+      | true ->
+        let%sub form = Form.Elements.Textbox.int () in
+        with_default (Bonsai.Var.value default) form
+      | false -> Bonsai.const (Form.return 0)
+    in
+    Handle.create
+      (Result_spec.string
+         (module struct
+           type t = int Form.t
+
+           let to_string t =
+             let sexp = [%sexp_of: int Or_error.t] (Form.value t) in
+             [%string "%{name}: %{sexp#Sexp}"]
+           ;;
+         end))
+      component
+  in
+  let with_default_handle =
+    create_handle ~name:"with_default" Form.Dynamic.with_default
+  in
+  let with_default_always_handle =
+    create_handle ~name:"with_default_always" Form.Dynamic.with_default_always
+  in
+  let show_both () =
+    Handle.show with_default_handle;
+    Handle.show with_default_always_handle
+  in
+  show_both ();
+  [%expect
+    {|
+    with_default: (Error"Expecting an integer")
+    with_default_always: (Error"Expecting an integer") |}];
+  show_both ();
+  [%expect {|
+    with_default: (Ok 10)
+    with_default_always: (Ok 10) |}];
+  Bonsai.Var.set should_show_form false;
+  show_both ();
+  [%expect {|
+    with_default: (Ok 0)
+    with_default_always: (Ok 0) |}];
+  Bonsai.Var.set default 15;
+  Bonsai.Var.set should_show_form true;
+  show_both ();
+  [%expect {|
+    with_default: (Ok 10)
+    with_default_always: (Ok 10) |}];
+  show_both ();
+  [%expect {|
+    with_default: (Ok 10)
+    with_default_always: (Ok 15) |}];
+  Bonsai.Var.set default 20;
+  show_both ();
+  [%expect {|
+    with_default: (Ok 10)
+    with_default_always: (Ok 15) |}]
+;;
+
+let%expect_test "[Form.return] is not settable" =
+  let component = Form.return 5 |> Bonsai.const in
+  let handle = Handle.create (form_result_spec [%sexp_of: int]) component in
+  Handle.show handle;
+  [%expect {|
+    (Ok 5)
+
+    ==============
+    <div> </div> |}];
+  Handle.do_actions handle [ 10 ];
+  Handle.show handle;
+  [%expect {|
+    (Ok 5)
+
+    ==============
+    <div> </div> |}]
+;;
+
+let%expect_test "return_settable" =
+  let component = Form.return_settable (module Int) 5 in
+  let handle = Handle.create (form_result_spec [%sexp_of: int]) component in
+  Handle.show handle;
+  [%expect {|
+    (Ok 5)
+
+    ==============
+    <div> </div> |}];
+  Handle.do_actions handle [ 10 ];
+  Handle.show handle;
+  [%expect {|
+    (Ok 10)
+
+    ==============
+    <div> </div> |}]
 ;;

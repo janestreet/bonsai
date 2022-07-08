@@ -16,8 +16,7 @@ end
 module State = struct
   type t =
     { mutable id : int
-    ; type_id_to_name : (Type_equal.Id.Uid.t, Id.t) Hashtbl.t
-    ; const_id_to_name : Id.t Value.Constant_id.Table.t
+    ; type_id_to_name : (Skeleton.Id.t, Id.t) Hashtbl.t
     ; buffer : Buffer.t
     }
 end
@@ -25,10 +24,7 @@ end
 module Kind = struct
   type t =
     | Computation of string
-    | Leaf of
-        { kind : string
-        ; name : string
-        }
+    | Leaf of string
     | Value of
         { kind : string
         ; here : Source_code_position.t option
@@ -48,11 +44,11 @@ module Kind = struct
 
   let to_style = function
     | Computation kind -> basic_shape ~shape:"Mrecord" ~label:kind ~color:"#86E3CE" ()
-    | Leaf { kind; name } ->
+    | Leaf name ->
       basic_shape
         ~shape:"Mrecord"
         ~tooltip:name
-        ~label:[%string "{%{kind}}"]
+        ~label:"{state machine}"
         ~color:"#D0E6A5"
         ()
     | Value { kind; here } ->
@@ -113,241 +109,133 @@ let arrow_from_many state ~to_ l =
   to_
 ;;
 
-let register_named : type a. State.t -> Kind.t -> a Type_equal.Id.t -> Id.t =
-  fun state shape name ->
-  let name = Type_equal.Id.uid name in
+let register_named state shape name =
   Hashtbl.find_or_add state.State.type_id_to_name name ~default:(fun () ->
     register state shape "named")
 ;;
 
 let register_const state shape id =
-  Hashtbl.find_or_add state.State.const_id_to_name id ~default:(fun () ->
+  Hashtbl.find_or_add state.State.type_id_to_name id ~default:(fun () ->
     register state shape "const")
 ;;
 
-let rec follow_value : type a. State.t -> a Value.t -> Id.t =
-  fun state { value; here } ->
+let rec follow_skeleton_value
+          state
+          { Skeleton.Value.kind = value; here; node_path = _; id }
+  =
   let register s = register state (Kind.Value { kind = s; here }) s in
   let register_const = register_const state (Kind.Value { kind = "const"; here }) in
   match value with
-  | Value.Constant (_, id) -> register_const id
-  | Incr _ -> register "incr"
-  | Named name -> register_named state (Kind.Subst here) name
-  | Cutoff { t; _ } ->
+  | Skeleton.Value.Constant -> register_const id
+  | Lazy -> register "lazy"
+  | Incr -> register "incr"
+  | Named -> register_named state (Kind.Subst here) id
+  | Cutoff { t } ->
     let me = register "cutoff" in
-    let them = follow_value state t in
+    let them = follow_skeleton_value state t in
     arrow state ~from:them ~to_:me;
     me
-  | Map { t; _ } ->
-    let me = register "map" in
-    let them = follow_value state t in
-    arrow state ~from:them ~to_:me;
-    me
-  | Map2 { t1; t2; _ } ->
+  | Mapn { inputs } ->
     arrow_from_many
       state
-      [ follow_value state t1; follow_value state t2 ]
-      ~to_:(register "map2")
-  | Map3 { t1; t2; t3; _ } ->
-    arrow_from_many
-      state
-      [ follow_value state t1; follow_value state t2; follow_value state t3 ]
-      ~to_:(register "map3")
-  | Map4 { t1; t2; t3; t4; _ } ->
-    arrow_from_many
-      state
-      [ follow_value state t1
-      ; follow_value state t2
-      ; follow_value state t3
-      ; follow_value state t4
-      ]
-      ~to_:(register "map4")
-  | Map5 { t1; t2; t3; t4; t5; _ } ->
-    arrow_from_many
-      state
-      [ follow_value state t1
-      ; follow_value state t2
-      ; follow_value state t3
-      ; follow_value state t4
-      ; follow_value state t5
-      ]
-      ~to_:(register "map5")
-  | Map6 { t1; t2; t3; t4; t5; t6; _ } ->
-    arrow_from_many
-      state
-      [ follow_value state t1
-      ; follow_value state t2
-      ; follow_value state t3
-      ; follow_value state t4
-      ; follow_value state t5
-      ; follow_value state t6
-      ]
-      ~to_:(register "map6")
-  | Map7 { t1; t2; t3; t4; t5; t6; t7; _ } ->
-    arrow_from_many
-      state
-      [ follow_value state t1
-      ; follow_value state t2
-      ; follow_value state t3
-      ; follow_value state t4
-      ; follow_value state t5
-      ; follow_value state t6
-      ; follow_value state t7
-      ]
-      ~to_:(register "map7")
-  | Both (t1, t2) ->
-    arrow_from_many
-      state
-      [ follow_value state t1; follow_value state t2 ]
-      ~to_:(register "both")
+      (List.map inputs ~f:(fun value -> follow_skeleton_value state value))
+      ~to_:(register "mapn")
 ;;
 
-let rec follow_computation
-  : type model dynamic_action static_action result.
-    State.t -> (model, dynamic_action, static_action, result) Computation.t -> Id.t
-  =
-  fun state computation ->
+let follow_dynamic_skeleton_leaf state (input : Skeleton.Value.t) name =
+  let me = register state (Kind.Leaf name) "leaf" in
+  match input.kind with
+  | Skeleton.Value.Constant -> me
+  | Mapn { inputs } ->
+    arrow_from_many
+      state
+      (List.map inputs ~f:(fun value -> follow_skeleton_value state value))
+      ~to_:me
+  | _ ->
+    arrow state ~from:(follow_skeleton_value state input) ~to_:me;
+    me
+;;
+
+let rec follow_skeleton_computation state (computation : Skeleton.Computation.t) =
   let register_computation kind = register state (Kind.Computation kind) kind in
-  match computation with
-  | Return value ->
+  match computation.kind with
+  | Skeleton.Computation.Return { value } ->
     let me = register_computation "read" in
-    arrow state ~from:(follow_value state value) ~to_:me;
+    arrow state ~from:(follow_skeleton_value state value) ~to_:me;
     me
   | Fetch { id; _ } ->
     let me = register_computation "fetch" in
     arrow state ~from:(register_named state Kind.Dyn id) ~to_:me;
     me
-  | Leaf0 { kind; name; _ } -> register state (Kind.Leaf { kind; name }) "leaf0"
-  | Leaf1 { input; kind; name; _ } ->
-    let me = register state (Kind.Leaf { kind; name }) "leaf" in
-    (match input.value with
-     | Value.Constant _ -> me
-     | Value.Map2 { t1; t2; f = _ } ->
-       arrow_from_many state [ follow_value state t1; follow_value state t2 ] ~to_:me
-     | Value.Map3 { t1; t2; t3; f = _ } ->
-       arrow_from_many
-         state
-         [ follow_value state t1; follow_value state t2; follow_value state t3 ]
-         ~to_:me
-     | Value.Map4 { t1; t2; t3; t4; f = _ } ->
-       arrow_from_many
-         state
-         [ follow_value state t1
-         ; follow_value state t2
-         ; follow_value state t3
-         ; follow_value state t4
-         ]
-         ~to_:me
-     | Value.Map5 { t1; t2; t3; t4; t5; f = _ } ->
-       arrow_from_many
-         state
-         [ follow_value state t1
-         ; follow_value state t2
-         ; follow_value state t3
-         ; follow_value state t4
-         ; follow_value state t5
-         ]
-         ~to_:me
-     | Value.Map6 { t1; t2; t3; t4; t5; t6; f = _ } ->
-       arrow_from_many
-         state
-         [ follow_value state t1
-         ; follow_value state t2
-         ; follow_value state t3
-         ; follow_value state t4
-         ; follow_value state t5
-         ; follow_value state t6
-         ]
-         ~to_:me
-     | Value.Map7 { t1; t2; t3; t4; t5; t6; t7; f = _ } ->
-       arrow_from_many
-         state
-         [ follow_value state t1
-         ; follow_value state t2
-         ; follow_value state t3
-         ; follow_value state t4
-         ; follow_value state t5
-         ; follow_value state t6
-         ; follow_value state t7
-         ]
-         ~to_:me
-     | _ ->
-       arrow state ~from:(follow_value state input) ~to_:me;
-       me)
+  | Leaf0 { name; _ } -> register state (Kind.Leaf name) "leaf0"
+  | Leaf01 { input; name; _ } -> follow_dynamic_skeleton_leaf state input name
+  | Leaf1 { input; name; _ } -> follow_dynamic_skeleton_leaf state input name
   | Leaf_incr _ -> register_computation "leaf_incr"
   | Path -> register_computation "path"
-  | Lifecycle v ->
+  | Lifecycle { value } ->
     let me = register_computation "life_cycle" in
-    arrow state ~from:(follow_value state v) ~to_:me;
+    arrow state ~from:(follow_skeleton_value state value) ~to_:me;
     me
-  | Model_cutoff { t; model = _ } ->
+  | Model_cutoff { t } ->
     let me = register_computation "model_cutoff" in
-    arrow state ~from:(follow_computation state t) ~to_:me;
+    arrow state ~from:(follow_skeleton_computation state t) ~to_:me;
     me
-  | Subst { from = Return from; via; into; here } ->
+  | Sub { from; via; into; statefulness = _ } ->
     arrow
       state
-      ~from:(follow_value state from)
-      ~to_:(register_named state (Kind.Subst here) via);
-    follow_computation state into
-  | Subst { from; via; into; here } ->
-    arrow
-      state
-      ~from:(follow_computation state from)
-      ~to_:(register_named state (Kind.Subst here) via);
-    follow_computation state into
-  | Subst_stateless_from { from; via; into; here } ->
-    arrow
-      state
-      ~from:(follow_computation state from)
-      ~to_:(register_named state (Kind.Subst here) via);
-    follow_computation state into
-  | Subst_stateless_into { from; via; into; here } ->
-    arrow
-      state
-      ~from:(follow_computation state from)
-      ~to_:(register_named state (Kind.Subst here) via);
-    follow_computation state into
+      ~from:(follow_skeleton_computation state from)
+      ~to_:(register_named state (Kind.Subst computation.here) via);
+    follow_skeleton_computation state into
   | Assoc { map; by; _ } ->
     let me = register_computation "assoc" in
-    arrow state ~from:(follow_computation state by) ~to_:me;
-    arrow state ~from:(follow_value state map) ~to_:me;
+    arrow state ~from:(follow_skeleton_computation state by) ~to_:me;
+    arrow state ~from:(follow_skeleton_value state map) ~to_:me;
+    me
+  | Assoc_on { map; by; _ } ->
+    let me = register_computation "assoc_on" in
+    arrow state ~from:(follow_skeleton_computation state by) ~to_:me;
+    arrow state ~from:(follow_skeleton_value state map) ~to_:me;
     me
   | Assoc_simpl { map; _ } ->
     let me = register_computation "assoc_simpl" in
-    arrow state ~from:(follow_value state map) ~to_:me;
+    arrow state ~from:(follow_skeleton_value state map) ~to_:me;
     me
   | Switch { match_; arms; _ } ->
     let me = register_computation "switch" in
-    arrow state ~from:(follow_value state match_) ~to_:me;
-    Map.iter arms ~f:(fun (Computation.T { t; _ }) ->
-      arrow state ~from:(follow_computation state t) ~to_:me);
+    arrow state ~from:(follow_skeleton_value state match_) ~to_:me;
+    List.iter arms ~f:(fun t ->
+      arrow state ~from:(follow_skeleton_computation state t) ~to_:me);
     me
-  | Lazy _ -> register_computation "lazy"
-  | Wrap { inner; model_id = _; inject_id = _; dynamic_apply_action = _ } ->
+  | Lazy { t = None } -> register_computation "lazy"
+  | Lazy { t = Some t } ->
+    let me = register_computation "forced_lazy" in
+    arrow state ~from:(follow_skeleton_computation state t) ~to_:me;
+    me
+  | Wrap { inner; model_id = _; inject_id = _ } ->
     let me = register_computation "wrap" in
-    arrow state ~from:(follow_computation state inner) ~to_:me;
+    arrow state ~from:(follow_skeleton_computation state inner) ~to_:me;
     me
-  | With_model_resetter t ->
+  | With_model_resetter { t } ->
     let me = register_computation "with_model_resetter" in
-    arrow state ~from:(follow_computation state t) ~to_:me;
+    arrow state ~from:(follow_skeleton_computation state t) ~to_:me;
     me
   | Store { id; value; inner } ->
     let me = register_computation "dyn_set" in
-    arrow state ~from:(follow_value state value) ~to_:me;
+    arrow state ~from:(follow_skeleton_value state value) ~to_:me;
     arrow state ~from:me ~to_:(register_named state Kind.Dyn id);
-    follow_computation state inner
+    follow_skeleton_computation state inner
 ;;
 
 let to_dot (Computation.T { t; _ }) =
   let state =
     { State.id = 0
     ; buffer = Buffer.create 2014
-    ; type_id_to_name = Hashtbl.create (module Type_equal.Id.Uid)
-    ; const_id_to_name = Value.Constant_id.Table.create ()
+    ; type_id_to_name = Hashtbl.create (module Skeleton.Id)
     }
   in
-  let t = Flatten_values.flatten_values t in
-  let _root : Id.t = follow_computation state t in
+  let skeleton_computation =
+    Skeleton.Computation.of_computation (Flatten_values.flatten_values t)
+  in
+  let _root : Id.t = follow_skeleton_computation state skeleton_computation in
   sprintf "digraph {\n%s}" (Buffer.contents state.buffer)
 ;;

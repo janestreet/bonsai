@@ -4,6 +4,7 @@ open Bonsai_web_test
 open Vdom
 open Bonsai.Let_syntax
 
+let get_vdom = Bonsai_web_ui_query_box.view
 let fruits = [ "apple"; "orange"; "kiwi"; "dragon fruit" ]
 let items = List.mapi fruits ~f:Tuple2.create |> Int.Map.of_alist_exn
 
@@ -12,6 +13,7 @@ let create ?expand_direction ?(items = items) () =
     Bonsai_web_ui_query_box.create
       (module Int)
       ?expand_direction:(Option.map expand_direction ~f:Value.return)
+      ~max_visible_items:(Value.return 3)
       ~f:(fun query ->
         let%arr query = query in
         Map.filter items ~f:(String.is_prefix ~prefix:query) |> Map.map ~f:Node.text)
@@ -22,21 +24,23 @@ let create ?expand_direction ?(items = items) () =
   Handle.create
     (Result_spec.vdom
        ~filter_printed_attributes:(function
-         | "class" -> true
+         | "class" | "data-test" -> true
          | _ -> false)
-       Fn.id)
+       get_vdom)
     component
 ;;
 
-let input_text handle text =
-  Handle.input_text handle ~get_vdom:Fn.id ~selector:"input" ~text
-;;
+let input_text handle text = Handle.input_text handle ~get_vdom ~selector:"input" ~text
 
 let keydown handle ?shift_key_down key =
-  Handle.keydown ?shift_key_down handle ~get_vdom:Fn.id ~selector:"input" ~key
+  Handle.keydown ?shift_key_down handle ~get_vdom ~selector:"input" ~key
 ;;
 
-let focus handle = Handle.focus handle ~get_vdom:Fn.id ~selector:"input"
+let blur ?related_target handle selector =
+  Handle.blur handle ?related_target ~get_vdom ~selector
+;;
+
+let focus handle = Handle.focus handle ~get_vdom ~selector:"input"
 
 let%expect_test "changing text does filtering" =
   let handle = create () in
@@ -45,7 +49,7 @@ let%expect_test "changing text does filtering" =
     {|
     <div>
       <input> </input>
-      <div>
+      <div data-test="query-box-item-container">
         <div> </div>
       </div>
     </div> |}];
@@ -55,12 +59,11 @@ let%expect_test "changing text does filtering" =
     {|
     <div>
       <input> </input>
-      <div>
+      <div data-test="query-box-item-container">
         <div>
           <div class="selected-item"> apple </div>
           <div> orange </div>
           <div> kiwi </div>
-          <div> dragon fruit </div>
         </div>
       </div>
     </div> |}];
@@ -70,7 +73,7 @@ let%expect_test "changing text does filtering" =
     {|
     <div>
       <input> </input>
-      <div>
+      <div data-test="query-box-item-container">
         <div>
           <div class="selected-item"> apple </div>
         </div>
@@ -88,12 +91,11 @@ let%expect_test "keybindings and filtering behavior" =
     {|
     <div>
       <input> </input>
-      <div>
+      <div data-test="query-box-item-container">
         <div>
           <div class="selected-item"> apple </div>
           <div> orange </div>
           <div> kiwi </div>
-          <div> dragon fruit </div>
         </div>
       </div>
     </div> |}];
@@ -104,7 +106,7 @@ let%expect_test "keybindings and filtering behavior" =
     {|
     <div>
       <input> </input>
-      <div>
+      <div data-test="query-box-item-container">
         <div> </div>
       </div>
     </div> |}];
@@ -116,12 +118,11 @@ let%expect_test "keybindings and filtering behavior" =
     ("default prevented" (key ArrowDown))
     <div>
       <input> </input>
-      <div>
+      <div data-test="query-box-item-container">
         <div>
           <div class="selected-item"> apple </div>
           <div> orange </div>
           <div> kiwi </div>
-          <div> dragon fruit </div>
         </div>
       </div>
     </div> |}];
@@ -133,12 +134,11 @@ let%expect_test "keybindings and filtering behavior" =
     ("default prevented" (key Tab))
     <div>
       <input> </input>
-      <div>
+      <div data-test="query-box-item-container">
         <div>
           <div> apple </div>
           <div class="selected-item"> orange </div>
           <div> kiwi </div>
-          <div> dragon fruit </div>
         </div>
       </div>
     </div> |}];
@@ -150,12 +150,11 @@ let%expect_test "keybindings and filtering behavior" =
     ("default prevented" (key Tab))
     <div>
       <input> </input>
-      <div>
+      <div data-test="query-box-item-container">
         <div>
           <div> apple </div>
           <div> orange </div>
           <div class="selected-item"> kiwi </div>
-          <div> dragon fruit </div>
         </div>
       </div>
     </div> |}];
@@ -167,12 +166,11 @@ let%expect_test "keybindings and filtering behavior" =
     {|
     <div>
       <input> </input>
-      <div>
+      <div data-test="query-box-item-container">
         <div>
           <div class="selected-item"> apple </div>
           <div> orange </div>
           <div> kiwi </div>
-          <div> dragon fruit </div>
         </div>
       </div>
     </div> |}];
@@ -185,14 +183,13 @@ let%expect_test "keybindings and filtering behavior" =
 
       <div>
         <input> </input>
-        <div>
+        <div data-test="query-box-item-container">
           <div>
     -|      <div class="selected-item"> apple </div>
     -|      <div> orange </div>
     +|      <div> apple </div>
     +|      <div class="selected-item"> orange </div>
             <div> kiwi </div>
-            <div> dragon fruit </div>
           </div>
         </div>
       </div> |}];
@@ -212,12 +209,11 @@ let%expect_test "keybindings and filtering behavior" =
     {|
     <div>
       <input> </input>
-      <div>
+      <div data-test="query-box-item-container">
         <div>
           <div class="selected-item"> apple </div>
           <div> orange </div>
           <div> kiwi </div>
-          <div> dragon fruit </div>
         </div>
       </div>
     </div> |}];
@@ -228,7 +224,7 @@ let%expect_test "keybindings and filtering behavior" =
     {|
     <div>
       <input> </input>
-      <div>
+      <div data-test="query-box-item-container">
         <div> </div>
       </div>
     </div> |}];
@@ -240,9 +236,8 @@ let%expect_test "keybindings and filtering behavior" =
     ("default prevented" (key ArrowUp))
     <div>
       <input> </input>
-      <div>
+      <div data-test="query-box-item-container">
         <div>
-          <div> apple </div>
           <div> orange </div>
           <div> kiwi </div>
           <div class="selected-item"> dragon fruit </div>
@@ -260,7 +255,7 @@ let%expect_test "inputting text twice in the same frame shouldn't be a problem" 
     {|
     <div>
       <input> </input>
-      <div>
+      <div data-test="query-box-item-container">
         <div> </div>
       </div>
     </div> |}];
@@ -274,7 +269,7 @@ let%expect_test "inputting text twice in the same frame shouldn't be a problem" 
     ("default prevented" (key Tab))
     <div>
       <input> </input>
-      <div>
+      <div data-test="query-box-item-container">
         <div>
           <div> ab </div>
           <div> ac </div>
@@ -289,7 +284,7 @@ let%expect_test "inputting text twice in the same frame shouldn't be a problem" 
     {|
     <div>
       <input> </input>
-      <div>
+      <div data-test="query-box-item-container">
         <div>
           <div class="selected-item"> ac </div>
         </div>
@@ -340,7 +335,7 @@ let%expect_test "partial-rendering" =
          ~filter_printed_attributes:(function
            | "class" -> true
            | _ -> false)
-         Fn.id)
+         get_vdom)
       component
   in
   focus handle;
@@ -442,7 +437,7 @@ let%expect_test "partial-rendering" =
   keydown handle ArrowUp;
   keydown handle ArrowUp;
   keydown handle ArrowUp;
-  (* Observe that the selected item stays centered in the list of completions. *)
+  (* Observe that the selected item is at the top of list of completions. *)
   Handle.show handle;
   [%expect
     {|
@@ -455,10 +450,10 @@ let%expect_test "partial-rendering" =
       <input> </input>
       <div>
         <div>
-          <div> fig </div>
           <div class="selected-item"> grapefruit </div>
           <div> orange </div>
           <div> raspberry </div>
+          <div> strawberry </div>
         </div>
       </div>
     </div> |}]
@@ -472,7 +467,7 @@ let%expect_test "tabbing one item visible should exit First_item mode" =
     {|
     <div>
       <input> </input>
-      <div>
+      <div data-test="query-box-item-container">
         <div>
           <div class="selected-item"> kiwi </div>
         </div>
@@ -486,9 +481,8 @@ let%expect_test "tabbing one item visible should exit First_item mode" =
     ("default prevented" (key Tab))
     <div>
       <input> </input>
-      <div>
+      <div data-test="query-box-item-container">
         <div>
-          <div> apple </div>
           <div> orange </div>
           <div class="selected-item"> kiwi </div>
           <div> dragon fruit </div>
@@ -505,7 +499,7 @@ let%expect_test "shift-tabbing one item visible should exit First_item mode" =
     {|
     <div>
       <input> </input>
-      <div>
+      <div data-test="query-box-item-container">
         <div>
           <div class="selected-item"> kiwi </div>
         </div>
@@ -519,12 +513,11 @@ let%expect_test "shift-tabbing one item visible should exit First_item mode" =
     ("default prevented" (key Tab))
     <div>
       <input> </input>
-      <div>
+      <div data-test="query-box-item-container">
         <div>
           <div> apple </div>
           <div> orange </div>
           <div class="selected-item"> kiwi </div>
-          <div> dragon fruit </div>
         </div>
       </div>
     </div> |}]
@@ -537,9 +530,8 @@ let%expect_test "[expand_direction=Up] reverses list order and keybindings" =
   [%expect
     {|
     <div>
-      <div>
+      <div data-test="query-box-item-container">
         <div>
-          <div> dragon fruit </div>
           <div> kiwi </div>
           <div> orange </div>
           <div class="selected-item"> apple </div>
@@ -553,12 +545,11 @@ let%expect_test "[expand_direction=Up] reverses list order and keybindings" =
     {|
     ("default prevented" (key Tab))
     <div>
-      <div>
+      <div data-test="query-box-item-container">
         <div>
           <div class="selected-item"> dragon fruit </div>
           <div> kiwi </div>
           <div> orange </div>
-          <div> apple </div>
         </div>
       </div>
       <input> </input>
@@ -569,12 +560,11 @@ let%expect_test "[expand_direction=Up] reverses list order and keybindings" =
     {|
     ("default prevented" (key Tab))
     <div>
-      <div>
+      <div data-test="query-box-item-container">
         <div>
           <div> dragon fruit </div>
           <div class="selected-item"> kiwi </div>
           <div> orange </div>
-          <div> apple </div>
         </div>
       </div>
       <input> </input>
@@ -585,12 +575,11 @@ let%expect_test "[expand_direction=Up] reverses list order and keybindings" =
     {|
     ("default prevented" (key ArrowDown))
     <div>
-      <div>
+      <div data-test="query-box-item-container">
         <div>
           <div> dragon fruit </div>
           <div> kiwi </div>
           <div class="selected-item"> orange </div>
-          <div> apple </div>
         </div>
       </div>
       <input> </input>
@@ -601,12 +590,11 @@ let%expect_test "[expand_direction=Up] reverses list order and keybindings" =
     {|
     ("default prevented" (key Tab))
     <div>
-      <div>
+      <div data-test="query-box-item-container">
         <div>
           <div> dragon fruit </div>
           <div class="selected-item"> kiwi </div>
           <div> orange </div>
-          <div> apple </div>
         </div>
       </div>
       <input> </input>
@@ -617,12 +605,11 @@ let%expect_test "[expand_direction=Up] reverses list order and keybindings" =
     {|
     ("default prevented" (key ArrowUp))
     <div>
-      <div>
+      <div data-test="query-box-item-container">
         <div>
           <div class="selected-item"> dragon fruit </div>
           <div> kiwi </div>
           <div> orange </div>
-          <div> apple </div>
         </div>
       </div>
       <input> </input>
@@ -633,14 +620,216 @@ let%expect_test "[expand_direction=Up] reverses list order and keybindings" =
     {|
     ("default prevented" (key ArrowUp))
     <div>
-      <div>
+      <div data-test="query-box-item-container">
         <div>
-          <div> dragon fruit </div>
           <div> kiwi </div>
           <div> orange </div>
           <div class="selected-item"> apple </div>
         </div>
       </div>
       <input> </input>
+    </div> |}]
+;;
+
+let%expect_test "The element containing all the items should be focusable without \
+                 closing the list of items"
+  =
+  let handle = create ~expand_direction:Up () in
+  focus handle;
+  Handle.show handle;
+  [%expect
+    {|
+    <div>
+      <div data-test="query-box-item-container">
+        <div>
+          <div> kiwi </div>
+          <div> orange </div>
+          <div class="selected-item"> apple </div>
+        </div>
+      </div>
+      <input> </input>
+    </div> |}];
+  (* Blurring the input to focus the list of items doesn't close the list of items. *)
+  blur ~related_target:"[data-test=query-box-item-container]" handle "input";
+  Handle.show handle;
+  [%expect
+    {|
+     <div>
+       <div data-test="query-box-item-container">
+         <div>
+           <div> kiwi </div>
+           <div> orange </div>
+           <div class="selected-item"> apple </div>
+         </div>
+       </div>
+       <input> </input>
+     </div> |}];
+  (* However, blurring the input without focusing something else *will* close the list of items. *)
+  blur handle "input";
+  Handle.show handle;
+  [%expect
+    {|
+     <div>
+       <div data-test="query-box-item-container">
+         <div> </div>
+       </div>
+       <input> </input>
+     </div> |}];
+  focus handle;
+  Handle.show handle;
+  [%expect
+    {|
+    <div>
+      <div data-test="query-box-item-container">
+        <div>
+          <div> kiwi </div>
+          <div> orange </div>
+          <div class="selected-item"> apple </div>
+        </div>
+      </div>
+      <input> </input>
+    </div> |}];
+  (* Also, blurring the item container to focus the input will also not close the list of items. *)
+  blur ~related_target:"input" handle "[data-test=query-box-item-container]";
+  Handle.show handle;
+  [%expect
+    {|
+    <div>
+      <div data-test="query-box-item-container">
+        <div>
+          <div> kiwi </div>
+          <div> orange </div>
+          <div class="selected-item"> apple </div>
+        </div>
+      </div>
+      <input> </input>
+    </div> |}];
+  (* But blurring the item container without focusing something else *will* close the list of items. *)
+  blur handle "[data-test=query-box-item-container]";
+  Handle.show handle;
+  [%expect
+    {|
+    <div>
+      <div data-test="query-box-item-container">
+        <div> </div>
+      </div>
+      <input> </input>
+    </div> |}]
+;;
+
+let%expect_test "clicking on item invokes the callback and closes the list" =
+  let handle = create ~expand_direction:Down () in
+  focus handle;
+  Handle.show handle;
+  [%expect
+    {|
+    <div>
+      <input> </input>
+      <div data-test="query-box-item-container">
+        <div>
+          <div class="selected-item"> apple </div>
+          <div> orange </div>
+          <div> kiwi </div>
+        </div>
+      </div>
+    </div> |}];
+  Handle.click_on handle ~get_vdom ~selector:".selected-item";
+  Handle.show handle;
+  [%expect
+    {|
+    (item 0)
+    <div>
+      <input> </input>
+      <div data-test="query-box-item-container">
+        <div> </div>
+      </div>
+    </div> |}]
+;;
+
+let%expect_test "mouseenter on an item selects it, and mousewheel scrolls up and down" =
+  let handle = create ~expand_direction:Down () in
+  focus handle;
+  Handle.show handle;
+  [%expect
+    {|
+    <div>
+      <input> </input>
+      <div data-test="query-box-item-container">
+        <div>
+          <div class="selected-item"> apple </div>
+          <div> orange </div>
+          <div> kiwi </div>
+        </div>
+      </div>
+    </div> |}];
+  Handle.mouseenter
+    handle
+    ~get_vdom
+    ~selector:"[data-test=query-box-item-container] > div > div:nth-child(3)";
+  Handle.show handle;
+  [%expect
+    {|
+    <div>
+      <input> </input>
+      <div data-test="query-box-item-container">
+        <div>
+          <div> apple </div>
+          <div> orange </div>
+          <div class="selected-item"> kiwi </div>
+        </div>
+      </div>
+    </div> |}]
+;;
+
+let%expect_test "mousewheel on an item selects it" =
+  let handle = create ~expand_direction:Down () in
+  focus handle;
+  Handle.show handle;
+  [%expect
+    {|
+    <div>
+      <input> </input>
+      <div data-test="query-box-item-container">
+        <div>
+          <div class="selected-item"> apple </div>
+          <div> orange </div>
+          <div> kiwi </div>
+        </div>
+      </div>
+    </div> |}];
+  Handle.mouseenter
+    handle
+    ~get_vdom
+    ~selector:"[data-test=query-box-item-container] > div > div:nth-child(3)";
+  Handle.show handle;
+  [%expect
+    {|
+    <div>
+      <input> </input>
+      <div data-test="query-box-item-container">
+        <div>
+          <div> apple </div>
+          <div> orange </div>
+          <div class="selected-item"> kiwi </div>
+        </div>
+      </div>
+    </div> |}];
+  Handle.wheel
+    handle
+    ~get_vdom
+    ~selector:"[data-test=query-box-item-container]"
+    ~delta_y:(-1.0);
+  Handle.show handle;
+  [%expect
+    {|
+    <div>
+      <input> </input>
+      <div data-test="query-box-item-container">
+        <div>
+          <div> apple </div>
+          <div class="selected-item"> orange </div>
+          <div> kiwi </div>
+        </div>
+      </div>
     </div> |}]
 ;;

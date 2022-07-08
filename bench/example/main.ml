@@ -1,10 +1,10 @@
 open! Core
-open! Bonsai
+open Bonsai.For_open
 open! Bonsai.Let_syntax
 open! Bonsai_bench
 
 let const =
-  Test.create
+  Bonsai_bench.create
     ~name:"Bonsai.const"
     ~component:(Bonsai.const 4)
     ~get_inject:(fun _ -> Nothing.unreachable_code)
@@ -12,9 +12,9 @@ let const =
 ;;
 
 let state =
-  Test.create
+  Bonsai_bench.create
     ~name:"Bonsai.state"
-    ~component:(Bonsai.state [%here] (module Int) ~default_model:0)
+    ~component:(Bonsai.state (module Int) ~default_model:0)
     ~get_inject:(fun (_, inject) -> inject)
     Interaction.(many_with_stabilizations [ inject 1; reset_model ])
 ;;
@@ -29,7 +29,6 @@ module State_machine = struct
 
   let component =
     Bonsai.state_machine0
-      [%here]
       (module Int)
       (module Action)
       ~default_model:0
@@ -48,7 +47,7 @@ end
 let state_machine_idempotent =
   [ State_machine.incr; State_machine.decr; State_machine.incr; State_machine.decr ]
   |> Interaction.many_with_stabilizations
-  |> Test.create
+  |> Bonsai_bench.create
        ~name:"Bonsai.state_machine0: idempotent"
        ~component:State_machine.component
        ~get_inject:(fun (_, inject) -> inject)
@@ -62,27 +61,29 @@ let state_machine_idempotent =
 let state_machine_without_reset =
   [ State_machine.incr; State_machine.decr; State_machine.incr; State_machine.incr ]
   |> Interaction.many_with_stabilizations
-  |> Test.create
+  |> Bonsai_bench.create
        ~name:"Bonsai.state_machine0: not idempotent; no model reset"
        ~component:State_machine.component
        ~get_inject:(fun (_, inject) -> inject)
 ;;
 
-(* If it was important that the state machine restarted at 0 every time, then we could use
-   [create_with_resetter] to explicitly reset the model. This comes with an overhead cost,
-   though, as we must reset the model and perform a stabilization. *)
+(* If it was important that the state machine restarted from the same model every time,
+   then we could use [Test.create_with_resetter] to explicitly reset the model. This
+   comes with an overhead cost, though, as we must reset the model and perform a
+   stabilization. Note that the interaction performed in [state_machine_without_reset]
+   and [state_machine_with_reset] are identical. *)
 let state_machine_with_reset =
   [ State_machine.incr; State_machine.decr; State_machine.incr; State_machine.incr ]
   |> Interaction.many_with_stabilizations
-  |> Test.create_with_resetter
+  |> Bonsai_bench.create_with_resetter
        ~name:
          "Bonsai.state_machine0: not idempotent; model reset using create_with_resetter"
        ~component:State_machine.component
        ~get_inject:(fun (_, inject) -> inject)
 ;;
 
-(* We can also manually reset the component's model. The benchmark above is equivalent to
-   this one. *)
+(* We can also manually reset the component's model with [Interaction.reset_model]. The
+   test above with [Test.create_with_resetter] is equivalent to this one. *)
 let state_machine_with_manual_reset =
   [ State_machine.incr
   ; State_machine.decr
@@ -92,7 +93,7 @@ let state_machine_with_manual_reset =
   ; Interaction.stabilize
   ]
   |> Interaction.many_with_stabilizations
-  |> Test.create_with_resetter
+  |> Bonsai_bench.create
        ~name:"Bonsai.state_machine0: not idempotent; model reset manually"
        ~component:State_machine.component
        ~get_inject:(fun (_, inject) -> inject)
@@ -110,9 +111,9 @@ end
 (* This benchmark calls stabilize in between setting each of the components in the
    [My_triple] component. *)
 let piecewise_triple_stabilize_between_each =
-  let first = Var.create 0 in
-  let second = Var.create "" in
-  let third = Var.create 0. in
+  let first = Bonsai.Var.create 0 in
+  let second = Bonsai.Var.create "" in
+  let third = Bonsai.Var.create 0. in
   Interaction.
     [ change_input first 1
     ; change_input second "second"
@@ -122,10 +123,13 @@ let piecewise_triple_stabilize_between_each =
     ; change_input third 0.
     ]
   |> Interaction.many_with_stabilizations
-  |> Test.create
+  |> Bonsai_bench.create
        ~name:"My_triple setting components and stabilizing between each one"
        ~component:
-         (My_triple.component (Var.value first) (Var.value second) (Var.value third))
+         (My_triple.component
+            (Bonsai.Var.value first)
+            (Bonsai.Var.value second)
+            (Bonsai.Var.value third))
        ~get_inject:(fun _ -> Nothing.unreachable_code)
 ;;
 
@@ -134,18 +138,21 @@ let piecewise_triple_stabilize_between_each =
    [stabilize]s in the list of interactions, stabilization is only inserted between the
    two [many] groups below. *)
 let piecewise_triple_stabilize_after_all =
-  let first = Var.create 0 in
-  let second = Var.create "" in
-  let third = Var.create 0. in
+  let first = Bonsai.Var.create 0 in
+  let second = Bonsai.Var.create "" in
+  let third = Bonsai.Var.create 0. in
   Interaction.
     [ many [ change_input first 1; change_input second "second"; change_input third 3. ]
     ; many [ change_input first 0; change_input second ""; change_input third 0. ]
     ]
   |> Interaction.many_with_stabilizations
-  |> Test.create
+  |> Bonsai_bench.create
        ~name:"My_triple setting components and stabilizing after all three"
        ~component:
-         (My_triple.component (Var.value first) (Var.value second) (Var.value third))
+         (My_triple.component
+            (Bonsai.Var.value first)
+            (Bonsai.Var.value second)
+            (Bonsai.Var.value third))
        ~get_inject:(fun _ -> Nothing.unreachable_code)
 ;;
 
@@ -163,7 +170,7 @@ module Do_work_every_second = struct
 end
 
 let do_work_every_second_advance_by_zero =
-  Test.create
+  Bonsai_bench.create
     ~name:"Component that does work every second: advance clock by zero each run"
     ~component:Do_work_every_second.component
     ~get_inject:(fun _ -> Nothing.unreachable_code)
@@ -171,7 +178,7 @@ let do_work_every_second_advance_by_zero =
 ;;
 
 let do_work_every_second_advance_by_second =
-  Test.create
+  Bonsai_bench.create
     ~name:"Component that does work every second: advance clock by a second each run"
     ~component:Do_work_every_second.component
     ~get_inject:(fun _ -> Nothing.unreachable_code)
@@ -180,8 +187,7 @@ let do_work_every_second_advance_by_second =
 
 let two_state_machines_that_alternate =
   let component =
-    let%map.Computation which, set_which =
-      Bonsai.state [%here] (module Bool) ~default_model:true
+    let%map.Computation which, set_which = Bonsai.state (module Bool) ~default_model:true
     and state_1, inject_1 = State_machine.component
     and state_2, inject_2 = State_machine.component in
     let inject action =
@@ -193,26 +199,98 @@ let two_state_machines_that_alternate =
   in
   [ State_machine.incr; State_machine.incr; State_machine.decr; State_machine.decr ]
   |> Interaction.many_with_stabilizations
-  |> Test.create
+  |> Bonsai_bench.create
        ~name:"Alternating state machines"
        ~component
        ~get_inject:(fun (_, inject) -> inject)
 ;;
 
+let () = print_endline "======== Basic benchmarking ========"
+
+(* These computations will all be benchmarked by [Core_bench_js]. *)
 let () =
-  let quota = Core_bench_js.Quota.Span (Time.Span.of_sec 1.0) in
-  Bonsai_bench.bench
-    ~run_config:(Core_bench_js.Run_config.create () ~quota)
-    [ const
-    ; state
-    ; state_machine_idempotent
-    ; state_machine_without_reset
-    ; state_machine_with_reset
-    ; state_machine_with_manual_reset
-    ; piecewise_triple_stabilize_after_all
-    ; piecewise_triple_stabilize_between_each
-    ; do_work_every_second_advance_by_zero
-    ; do_work_every_second_advance_by_second
-    ; two_state_machines_that_alternate
-    ]
+  let quota = Core_bench_js.Quota.Span (Time_float.Span.of_sec 1.0) in
+  [ const
+  ; state
+  ; state_machine_idempotent
+  ; state_machine_without_reset
+  ; state_machine_with_reset
+  ; state_machine_with_manual_reset
+  ; piecewise_triple_stabilize_after_all
+  ; piecewise_triple_stabilize_between_each
+  ; do_work_every_second_advance_by_zero
+  ; do_work_every_second_advance_by_second
+  ; two_state_machines_that_alternate
+  ]
+  |> Bonsai_bench.benchmark ~run_config:(Core_bench_js.Run_config.create () ~quota)
+;;
+
+let () = print_endline "======== Benchmarking a computation with a bug ========"
+
+(* Sometimes, you may notice that a benchmark is suspiciously slow. In that case, it may
+   be helpful to [profile] the computation to see what's taking so long. For example,
+   consider the following: *)
+
+type r =
+  { a : int
+  ; b : Time_ns.t
+  }
+
+let do_some_work a =
+  for _ = 1 to a do
+    Sys.opaque_identity ()
+  done
+;;
+
+let component_that_does_work_too_often =
+  let component =
+    let%sub now = Bonsai.Clock.now in
+    let%sub r =
+      let%arr now = now in
+      { a = 1000000; b = now }
+    in
+    (* BUG: The below [let%arr] will get fired every time any field in the record changes,
+       i.e, whenever [Bonsai.Clock.now] updates. The body of this is expensive and depends
+       only on [a]. *)
+    let%arr { a; _ } = r in
+    do_some_work a
+  in
+  Interaction.advance_clock_by (Time_ns.Span.of_ms 1.)
+  |> Bonsai_bench.create
+       ~name:"Component that fires too often"
+       ~component
+       ~get_inject:(fun _ -> Nothing.unreachable_code)
+;;
+
+let component_that_does_work_the_right_amount =
+  let component =
+    let%sub now = Bonsai.Clock.now in
+    let%sub r =
+      let%arr now = now in
+      { a = 1000000; b = now }
+    in
+    (* This [let%sub] ensures that the below [let%arr] only depends on [a], and hence
+       doesn't run when [Bonsai.Clock.now] updates. *)
+    let%sub { a; _ } = return r in
+    let%arr a = a in
+    do_some_work a
+  in
+  Interaction.advance_clock_by (Time_ns.Span.of_ms 1.)
+  |> Bonsai_bench.create
+       ~name:"Component that fires the right amount"
+       ~component
+       ~get_inject:(fun _ -> Nothing.unreachable_code)
+;;
+
+let () =
+  let quota = Core_bench_js.Quota.Span (Time_float.Span.of_sec 1.0) in
+  [ component_that_does_work_too_often; component_that_does_work_the_right_amount ]
+  |> Bonsai_bench.benchmark ~run_config:(Core_bench_js.Run_config.create () ~quota)
+;;
+
+let () = print_endline "======== Profiling computations to find the bug ========"
+
+let () =
+  Bonsai_bench.profile
+    [ component_that_does_work_too_often; component_that_does_work_the_right_amount ]
 ;;

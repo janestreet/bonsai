@@ -24,15 +24,9 @@ let apply_action ~inject:_ ~schedule_event:_ model = function
 
 let component =
   let%sub state =
-    Bonsai.state_machine0
-      [%here]
-      (module Model)
-      (module Action)
-      ~default_model
-      ~apply_action
+    Bonsai.state_machine0 (module Model) (module Action) ~default_model ~apply_action
   in
-  return
-  @@ let%map state, inject = state in
+  let%arr state, inject = state in
   let button text action =
     Node.button ~attr:(Attr.on_click (fun _ -> inject action)) [ Node.text text ]
   in

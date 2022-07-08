@@ -98,12 +98,11 @@ type t =
 let create
       ?(dismiss_notifications_after = Value.return (Time_ns.Span.create ~sec:15 ()))
       ?(dismiss_errors_automatically = Value.return false)
-      here
+      ()
   =
-  let%sub id_generator = Notification_id.component here in
+  let%sub id_generator = Notification_id.component in
   let%sub notifications =
     Bonsai.state_machine0
-      [%here]
       (module struct
         type t = Notification.t Map.M(Notification_id).t [@@deriving equal, sexp]
       end)
@@ -128,7 +127,6 @@ let create
   in
   let%sub () =
     Bonsai.Edge.on_change
-      [%here]
       (module struct
         type t = Bonsai.Clock.Before_or_after.t Map.M(Notification_id).t
         [@@deriving equal, sexp]
@@ -172,8 +170,7 @@ let create
            Ui_effect.Many effects)
   in
   let%sub now = Bonsai.Clock.now in
-  return
-  @@ let%map notifications, inject_notification_action = notifications
+  let%arr notifications, inject_notification_action = notifications
   and now = now
   and dismiss_notifications_after = dismiss_notifications_after
   and dismiss_errors_automatically = dismiss_errors_automatically

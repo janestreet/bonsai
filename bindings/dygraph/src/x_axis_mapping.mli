@@ -46,8 +46,8 @@ val only_display_market_hours
   -> ?mkt_end_ofday:Time_ns.Ofday.t
   -> start_time:Time_ns.t
   -> end_time:Time_ns.t
-  -> zone:Time.Zone.t
+  -> zone:Time_float.Zone.t
   -> unit
   -> t
 
-val default : zone:Time.Zone.t -> t
+val default : zone:Time_float.Zone.t -> t

@@ -28,7 +28,7 @@ let alert s = Js_of_ocaml.Dom_html.window##alert (Js_of_ocaml.Js.string s)
 
 (* $MDX part-begin=input_placeholder *)
 let input_placeholder : Vdom.Node.t =
-  Vdom.Node.input ~attr:(Vdom.Attr.placeholder "placeholder text here") []
+  Vdom.Node.input ~attr:(Vdom.Attr.placeholder "placeholder text here") ()
 ;;
 
 (* $MDX part-end *)

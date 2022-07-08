@@ -1,9 +1,8 @@
 open! Core
-open! Bonsai
-open! Bonsai_test
 
 type 'action t =
-  | Change_input : 'a Var.t * 'a -> _ t
+  | Profile : string -> _ t
+  | Change_input : 'a Bonsai.Var.t * 'a -> _ t
   | Inject : 'action -> 'action t
   | Advance_clock_by : Time_ns.Span.t -> _ t
   | Stabilize : _ t
@@ -15,5 +14,6 @@ let inject action = Inject action
 let advance_clock_by span = Advance_clock_by span
 let stabilize = Stabilize
 let reset_model = Reset_model
+let profile ~name = Profile name
 let many ts = Many ts
 let many_with_stabilizations ts = Many (List.intersperse ts ~sep:Stabilize)

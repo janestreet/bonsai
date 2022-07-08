@@ -75,7 +75,7 @@ let[@warning "-16"] input
                 in
                 on_input maybe_t input)
             ]))
-    []
+    ()
 ;;
 
 let datalist ?filter_options_by ~id ~all_options ~to_string () =
@@ -114,10 +114,9 @@ let create
       on_select_change
       ~default:(Value.return (fun (_ : M.t option) -> Ui_effect.Ignore))
   in
-  let%sub selected = Bonsai.state_opt [%here] (module M) in
+  let%sub selected = Bonsai.state_opt (module M) in
   let%sub id = Bonsai.path_id in
-  return
-  @@ let%map selected, inject_selected = selected
+  let%arr selected, inject_selected = selected
   and to_string        = to_string
   and on_select_change = on_select_change
   and id               = id
@@ -154,9 +153,8 @@ let[@warning "-16"] input
   let open! Bonsai.Let_syntax in
   (* This state is held internally to force the typeahead to clear the text contents
      of the input field when an option is selected. *)
-  let%sub select = Bonsai.state [%here] (module String) ~default_model:"" in
-  return
-  @@ let%map select, inject_select = select
+  let%sub select = Bonsai.state (module String) ~default_model:"" in
+  let%arr select, inject_select = select
   and all_options             = all_options
   and selected_options        = selected_options
   and inject_selected_options = inject_selected_options
@@ -213,7 +211,7 @@ let create_multi
   let to_string =
     Option.value to_string ~default:(fun a -> a |> M.sexp_of_t |> Sexp.to_string_hum)
   in
-  let selected_options = Bonsai.state [%here] (module M.Set) ~default_model:M.Set.empty in
+  let selected_options = Bonsai.state (module M.Set) ~default_model:M.Set.empty in
   let%sub selected_options, inject_selected_options = selected_options in
   let%sub inject_selected_options =
     let%arr inject_selected_options = inject_selected_options
@@ -243,8 +241,7 @@ let create_multi
       ~inject_selected_options
       selected_options
   in
-  return
-  @@ let%map selected_options = selected_options
+  let%arr selected_options = selected_options
   and inject_selected_options = inject_selected_options
   and input                   = input
   and id                      = id

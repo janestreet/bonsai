@@ -2,6 +2,13 @@
 <!-- Change-log notes go in this file, with newer dates at the _top_  -->
 <!-- in vim : !date +'\%Y-\%m-\%d' -->
 
+## 2022-04-01
+- Moved `incr_map` wrapper functions from `bonsai_extra` to `bonsai`. They now
+  live in the `Bonsai.Map` namespace.
+
+## 2022-02-02
+- Added first version of `Bonsai_web_ui_sexp` to generate UIs/forms from Sexp grammars
+
 ## 2022-01-12
 - Expose `item_is_hovered` to the `empty_list_placeholder` parameter in the
   `Bonsai_web_ui_reorderable_list` API.

@@ -25,7 +25,8 @@ module Handle : sig
   end
 
   val click_on
-    :  ?shift_key_down:bool
+    :  ?extra_event_fields:(string * Js_of_ocaml.Js.Unsafe.any) list
+    -> ?shift_key_down:bool
     -> ?alt_key_down:bool
     -> ?ctrl_key_down:bool
     -> ('a, 'b) t
@@ -33,24 +34,35 @@ module Handle : sig
     -> selector:string
     -> unit
 
-  val submit_form : ('a, 'b) t -> get_vdom:('a -> Vdom.Node.t) -> selector:string -> unit
+  val submit_form
+    :  ?extra_event_fields:(string * Js_of_ocaml.Js.Unsafe.any) list
+    -> ('a, 'b) t
+    -> get_vdom:('a -> Vdom.Node.t)
+    -> selector:string
+    -> unit
 
   val set_checkbox
-    :  ('a, 'b) t
+    :  ?extra_event_fields:(string * Js_of_ocaml.Js.Unsafe.any) list
+    -> ?shift_key_down:bool
+    -> ?alt_key_down:bool
+    -> ?ctrl_key_down:bool
+    -> ('a, 'b) t
     -> get_vdom:('a -> Vdom.Node.t)
     -> selector:string
     -> checked:bool
     -> unit
 
   val input_text
-    :  ('a, 'b) t
+    :  ?extra_event_fields:(string * Js_of_ocaml.Js.Unsafe.any) list
+    -> ('a, 'b) t
     -> get_vdom:('a -> Vdom.Node.t)
     -> selector:string
     -> text:string
     -> unit
 
   val keydown
-    :  ?shift_key_down:bool
+    :  ?extra_event_fields:(string * Js_of_ocaml.Js.Unsafe.any) list
+    -> ?shift_key_down:bool
     -> ?alt_key_down:bool
     -> ?ctrl_key_down:bool
     -> ('a, 'b) t
@@ -60,15 +72,49 @@ module Handle : sig
     -> unit
 
   val change
-    :  ('a, 'b) t
+    :  ?extra_event_fields:(string * Js_of_ocaml.Js.Unsafe.any) list
+    -> ('a, 'b) t
     -> get_vdom:('a -> Vdom.Node.t)
     -> selector:string
     -> value:string
     -> unit
 
-  val focus : ('a, 'b) t -> get_vdom:('a -> Vdom.Node.t) -> selector:string -> unit
-  val blur : ('a, 'b) t -> get_vdom:('a -> Vdom.Node.t) -> selector:string -> unit
-  val mousemove : ('a, 'b) t -> get_vdom:('a -> Vdom.Node.t) -> selector:string -> unit
+  val focus
+    :  ?extra_event_fields:(string * Js_of_ocaml.Js.Unsafe.any) list
+    -> ('a, 'b) t
+    -> get_vdom:('a -> Vdom.Node.t)
+    -> selector:string
+    -> unit
+
+  val blur
+    :  ?extra_event_fields:(string * Js_of_ocaml.Js.Unsafe.any) list
+    -> ?related_target:string
+    -> ('a, 'b) t
+    -> get_vdom:('a -> Vdom.Node.t)
+    -> selector:string
+    -> unit
+
+  val mousemove
+    :  ?extra_event_fields:(string * Js_of_ocaml.Js.Unsafe.any) list
+    -> ('a, 'b) t
+    -> get_vdom:('a -> Vdom.Node.t)
+    -> selector:string
+    -> unit
+
+  val mouseenter
+    :  ?extra_event_fields:(string * Js_of_ocaml.Js.Unsafe.any) list
+    -> ('a, 'b) t
+    -> get_vdom:('a -> Vdom.Node.t)
+    -> selector:string
+    -> unit
+
+  val wheel
+    :  ?extra_event_fields:(string * Js_of_ocaml.Js.Unsafe.any) list
+    -> ('a, 'b) t
+    -> get_vdom:('a -> Vdom.Node.t)
+    -> selector:string
+    -> delta_y:float
+    -> unit
 
   val trigger_hook
     :  ('a, 'b) t
@@ -76,6 +122,16 @@ module Handle : sig
     -> selector:string
     -> name:string
     -> ('c -> unit Vdom.Effect.t) Type_equal.Id.t
+    -> 'c
+    -> unit
+
+  val trigger_hook_via
+    :  ('a, 'b) t
+    -> get_vdom:('a -> Vdom.Node.t)
+    -> selector:string
+    -> name:string
+    -> 't Type_equal.Id.t
+    -> f:('t -> 'c -> unit Vdom.Effect.t)
     -> 'c
     -> unit
 

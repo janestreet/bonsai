@@ -25,6 +25,31 @@ assumption that the `Virtual_dom` is the source of truth, and this lets us run
 all of our tests in just OCaml, permitting us to use other utilities like
 `ppx_expect_test`.
 
+## Getting Ready For Testing
+
+Testing a program built using Js_of_ocaml involves a few changes to your normal
+workflow.
+
+```
+(library (
+  (name my_ui_test)
+  (js_of_ocaml ())                   ; Test library must be marked with js_of_ocaml
+  (libraries (core my_ui))
+  (inline_tests (                    ; Native tests must be disabled
+    (native     dont_build_dont_run)
+    (javascript build_and_run)))))
+```
+
+Your jenga start-file also needs to specify the `javascript-runtest` alias
+for the project.
+
+```
+(alias ((name build) (deps (
+  (alias %{root}/app/my-app/test/javascript-runtest)
+  ; ... your other build targets here...
+))))
+```
+
 ## Basics of testing: printing the VDOM for a component
 
 Let's see what a test for the simplest Bonsai component would look like.
@@ -70,8 +95,7 @@ spice things up, let's build a component that operates on its input:
 
 ```ocaml
 let hello_user (name : string Value.t) : Vdom.Node.t Computation.t =
-  return
-  @@ let%map name = name in
+  let%arr name = name in
   Vdom.Node.span [] [ Vdom.Node.textf "hello %s" name ]
 ;;
 ```
@@ -136,8 +160,7 @@ Here, we actually use the `hello_user` component defined previously, but the
 let hello_textbox : Vdom.Node.t Computation.t =
   let%sub state, set = Bonsai.state [%here] (module String) ~default_model:"" in
   let%sub message = hello_user state in
-  return
-  @@ let%map message = message
+  let%arr message = message
   and set = set in
   Vdom.Node.div
     []

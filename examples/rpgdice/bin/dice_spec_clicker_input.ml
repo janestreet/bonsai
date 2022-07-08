@@ -36,7 +36,6 @@ end
 let component =
   let%sub dice_state =
     Bonsai.state_machine0
-      [%here]
       (module Model)
       (module Action)
       ~default_model:Model.init

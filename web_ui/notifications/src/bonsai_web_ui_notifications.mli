@@ -9,7 +9,7 @@ type t
 val create
   :  ?dismiss_notifications_after:Time_ns.Span.t Value.t (** default = 15s *)
   -> ?dismiss_errors_automatically:bool Value.t (** default = false *)
-  -> Source_code_position.t
+  -> unit
   -> t Computation.t
 
 (** [add_error] will create a notification with [text] in primary focus and [error] pretty

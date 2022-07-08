@@ -1,5 +1,5 @@
 (library (name bonsai_web)
  (libraries async_kernel bonsai core_kernel.bus core incr_dom
-  core_kernel.moption virtual_dom.ui_effect incr_dom.ui_incr virtual_dom
-  bonsai_protocol incr_dom.javascript_profiling)
+  core_kernel.moption core_kernel.reversed_list virtual_dom.ui_effect
+  incr_dom.ui_incr virtual_dom bonsai_protocol incr_dom.javascript_profiling)
  (preprocess (pps ppx_jane js_of_ocaml-ppx)) (public_name bonsai.web))
