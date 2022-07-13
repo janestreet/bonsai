@@ -280,7 +280,6 @@ let component (type a) (t : a t) =
           Feather_icon.Alert_triangle
           ~fill:Tailwind_colors.red500
           ~extra_attrs:[ Vdom.Attr.style (Css_gen.margin_right (`Px 16)) ]
-          ()
       ; Vdom.Node.text
           ("Error parsing! Falling back to: " ^ Sexp.to_string (M.sexp_of_t t.fallback))
       ]
@@ -298,8 +297,8 @@ let component (type a) (t : a t) =
             ; Vdom.Node.div ~attr:column (Form.View.to_vdom_plain (Form.view uri_form))
             ; Vdom.Node.div
                 ~attr:columns_wrapper
-                [ Feather_icon.svg Feather_icon.Arrow_up ()
-                ; Feather_icon.svg Feather_icon.Arrow_down ()
+                [ Feather_icon.svg Feather_icon.Arrow_up
+                ; Feather_icon.svg Feather_icon.Arrow_down
                 ]
             ; Vdom.Node.div [ Vdom.Node.text "👾 Sexp of parsed URL" ]
             ; Vdom.Node.div

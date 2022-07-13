@@ -51,7 +51,7 @@ let component =
     let gray = `Hex "#959da5" in
     Vdom.Node.div
       ~attr:(Vdom.Attr.class_ Search_icon.class_)
-      [ Feather_icon.svg Search ~stroke:gray () ]
+      [ Feather_icon.svg Search ~stroke:gray ]
   in
   let view =
     Vdom.Node.div

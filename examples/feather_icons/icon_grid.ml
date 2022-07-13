@@ -45,7 +45,6 @@ let icon_div icon ~controls =
       ~stroke_width:(`Px_float stroke_width)
       ~stroke
       ?fill
-      ()
   in
   Vdom.Node.div ~attr:(Vdom.Attr.class_ Style.icon) [ icon ]
 ;;

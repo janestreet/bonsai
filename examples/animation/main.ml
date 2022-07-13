@@ -10,7 +10,7 @@ let component =
   in
   let%sub text_picker = Form.Elements.Textbox.string () in
   let%sub text_picker =
-    text_picker |> Form.Dynamic.with_default (Bonsai.Value.return "Marquee!")
+    text_picker |> Form.Dynamic.with_default (Bonsai.Value.return "Hello Animation!")
   in
   let interpolator =
     interpolator_form >>| Form.value_or_default ~default:Animation.Interpolator.Linear
@@ -42,12 +42,17 @@ let component =
   let%arr value = value
   and text_picker = text_picker
   and interpolator_form = interpolator_form in
+  let margin = Vdom.Attr.style (Css_gen.margin_left (`Px_float value)) in
+  let color =
+    let v = Float.to_int (value /. 100.0 *. 255.0) in
+    Vdom.Attr.style (Css_gen.color (`RGBA (Css_gen.Color.RGBA.create ~r:v ~g:v ~b:v ())))
+  in
+  let text = Form.value_or_default text_picker ~default:"Marquee" in
   Vdom.Node.div
     [ Form.view_as_vdom text_picker
     ; Form.view_as_vdom interpolator_form
-    ; Vdom.Node.h1
-        ~attr:(Vdom.Attr.style Css_gen.(margin_left (`Px_float value)))
-        [ Vdom.Node.text (Form.value_or_default text_picker ~default:"Marquee") ]
+    ; Vdom.Node.h1 ~attr:margin [ Vdom.Node.text text ]
+    ; Vdom.Node.h1 ~attr:color [ Vdom.Node.text text ]
     ]
 ;;
 

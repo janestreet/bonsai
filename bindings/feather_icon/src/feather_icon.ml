@@ -586,15 +586,17 @@ let to_string t =
   |> String.tr ~target:'_' ~replacement:'-'
 ;;
 
-let svg
-      (t : t)
-      ?(size = `Px 24)
-      ?stroke
-      ?fill
-      ?(stroke_width = `Px 2)
-      ?(extra_attrs = [])
-      ()
-  =
+let svg ?size ?stroke ?fill ?stroke_width ?(extra_attrs = []) (t : t) =
+  let size =
+    match size with
+    | Some size -> (size :> Css_gen.Length.t)
+    | None -> (`Px 24 :> Css_gen.Length.t)
+  in
+  let stroke_width =
+    match stroke_width with
+    | Some stroke_width -> (stroke_width :> Css_gen.Length.t)
+    | None -> (`Px 2 :> Css_gen.Length.t)
+  in
   let module A = Vdom.Attr in
   let specific_class = "feather-" ^ to_string t in
   let fill_attr =
@@ -616,9 +618,7 @@ let svg
           ; A.string_property "height" size
           ; A.string_property "viewBox" "0 0 24 24"
           ; A.string_property "fill" fill_attr
-          ; A.string_property
-              "stroke"
-              (Css_gen.Color.to_string_css (stroke :> Css_gen.Color.t))
+          ; A.string_property "stroke" (Css_gen.Color.to_string_css stroke)
           ; A.string_property "stroke-width" (Css_gen.Length.to_string_css stroke_width)
           ; A.string_property "stroke-linecap" "round"
           ; A.string_property "stroke-linejoin" "round"

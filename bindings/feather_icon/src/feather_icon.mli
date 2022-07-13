@@ -301,13 +301,12 @@ type t =
 (* $MDX part-begin=svg *)
 
 val svg
-  :  t
-  -> ?size:Css_gen.Length.t
+  :  ?size:[< Css_gen.Length.t ]
   -> ?stroke:[< Css_gen.Color.t ]
   -> ?fill:[< Css_gen.Color.t ]
-  -> ?stroke_width:Css_gen.Length.t
+  -> ?stroke_width:[< Css_gen.Length.t ]
   -> ?extra_attrs:Vdom.Attr.t list
-  -> unit
+  -> t
   -> Vdom.Node.t
 
 (* $MDX part-end *)

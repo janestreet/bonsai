@@ -6,7 +6,7 @@ out the bonsai demo [here](https://bonsai:8547/).
 To make one, it's as easy as:
 
 ```ocaml skip
-Feather_icon.svg Alert_circle ()
+Feather_icon.svg Alert_circle
 ```
 
 `Alert_circle` is just one of 286 options.  See the rest [here](https://bonsai:8547/).
@@ -17,13 +17,12 @@ You can optionally specify the `size`, `stroke`, `stroke_width`, and
 <!-- $MDX file=./src/feather_icon.mli,part=svg -->
 ```ocaml
 val svg
-  :  t
-  -> ?size:Css_gen.Length.t
+  :  ?size:[< Css_gen.Length.t ]
   -> ?stroke:[< Css_gen.Color.t ]
   -> ?fill:[< Css_gen.Color.t ]
-  -> ?stroke_width:Css_gen.Length.t
+  -> ?stroke_width:[< Css_gen.Length.t ]
   -> ?extra_attrs:Vdom.Attr.t list
-  -> unit
+  -> t
   -> Vdom.Node.t
 ```
 

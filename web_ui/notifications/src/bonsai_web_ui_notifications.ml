@@ -91,7 +91,7 @@ type t =
   ; id_generator : Notification_id.t Ui_effect.t
   ; dismiss_notifications_after : Time_ns.Span.t
   ; dismiss_errors_automatically : bool
-  ; now : Time_ns.t
+  ; get_now : Time_ns.t Effect.t
   }
 [@@deriving fields]
 
@@ -169,9 +169,9 @@ let create
            in
            Ui_effect.Many effects)
   in
-  let%sub now = Bonsai.Clock.now in
+  let%sub get_now = Bonsai.Clock.get_current_time in
   let%arr notifications, inject_notification_action = notifications
-  and now = now
+  and get_now = get_now
   and dismiss_notifications_after = dismiss_notifications_after
   and dismiss_errors_automatically = dismiss_errors_automatically
   and id_generator = id_generator in
@@ -180,7 +180,7 @@ let create
   ; id_generator
   ; dismiss_notifications_after
   ; dismiss_errors_automatically
-  ; now
+  ; get_now
   }
 ;;
 
@@ -190,11 +190,12 @@ let add_notification
       ; id_generator
       ; dismiss_notifications_after
       ; dismiss_errors_automatically = _
-      ; now
+      ; get_now
       }
       ~text
       ~level
   =
+  let%bind.Effect now = get_now in
   let notification =
     Notification.Fields.create
       ~text
@@ -214,10 +215,10 @@ let to_vdom
       ?(notification_extra_attr = Vdom.Attr.empty)
       { notifications
       ; inject_notification_action
+      ; dismiss_errors_automatically
       ; id_generator = _
       ; dismiss_notifications_after = _
-      ; dismiss_errors_automatically
-      ; now = _
+      ; get_now = _
       }
   =
   let module Notification_style = (val notification_style) in
