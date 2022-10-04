@@ -23,8 +23,6 @@ let get_conservative_vis_bounds (element : Dom_html.element Js.t) : Bounds.t opt
   and client_height = client_bounds##.height
   and window_height = Dom_html.window##.innerHeight
   and window_width = Dom_html.window##.innerWidth in
-  let%bind.Option window_height = Js.Optdef.to_option window_height in
-  let%bind.Option window_width = Js.Optdef.to_option window_width in
   let window_height = Float.of_int window_height
   and window_width = Float.of_int window_width
   and client_width = Js.Optdef.get client_width (Fn.const 0.0)
