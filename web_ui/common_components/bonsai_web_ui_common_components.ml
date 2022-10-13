@@ -13,9 +13,10 @@ module Pills = struct
         selected_options
     =
     let%arr extra_container_attr = extra_container_attr
-    and extra_pill_attr  = extra_pill_attr
-    and selected_options = selected_options
-    and inject_selected_options = inject_selected_options in
+    and extra_pill_attr         = extra_pill_attr
+    and selected_options        = selected_options
+    and inject_selected_options = inject_selected_options
+    and to_string               = to_string in
     let pill option =
       let remove_option event =
         if Bonsai_web.am_within_disabled_fieldset event
@@ -60,10 +61,14 @@ module Pills = struct
         List.map selected_options ~f:(fun (_, option) -> option)
         |> inject_selected_options
     in
+    let%sub to_string =
+      let%arr to_string = to_string in
+      fun (_, option) -> to_string option
+    in
     component
       ~extra_container_attr
       ~extra_pill_attr
-      ~to_string:(fun (_, option) -> to_string option)
+      ~to_string
       ~to_list:Fn.id
       ~inject_selected_options
       ~remove_option:(fun selected_options (index, _) ->

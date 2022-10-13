@@ -1,175 +1,10 @@
 open! Core
 open! Import
+include Proc_min
 module Var = Var
-
-let unusable_static_apply_action
-      ~inject_dynamic:_
-      ~inject_static:_
-      ~schedule_event:_
-      _model
-  =
-  Nothing.unreachable_code
-;;
-
-let with_computation_id name c =
-  { Computation.t = c; id = Type_equal.Id.create ~name sexp_of_opaque }
-;;
-
-let sub
-      (type via)
-      ?here
-      (Computation.T
-         { t = from
-         ; dynamic_action = from_dynamic_action
-         ; static_action = from_static_action
-         ; model = from_model
-         ; apply_static = from_apply_static
-         } :
-         via Computation.packed)
-      ~f
-  =
-  match from.t with
-  | Return { here = there; value = Named; id } ->
-    let here = Option.first_some here there in
-    f { Value.here; value = Named; id }
-  | Return ({ here = there; value; id } as returned)
-    when Option.is_some (Value.contents_if_value_is_constant returned) ->
-    let here = Option.first_some here there in
-    f { Value.here; value; id }
-  | _ ->
-    let via : via Type_equal.Id.t =
-      Type_equal.Id.create
-        ~name:(Source_code_position.to_string [%here])
-        [%sexp_of: opaque]
-    in
-    let (Computation.T
-           { t = into
-           ; dynamic_action = into_dynamic_action
-           ; static_action = into_static_action
-           ; model = into_model
-           ; apply_static = into_apply_static
-           })
-      =
-      f (Value.named via)
-    in
-    (match
-       Type_equal.Id.(
-         ( ( same_witness from_model.type_id Meta.Model.unit.type_id
-           , same_witness from_dynamic_action Meta.Action.nothing
-           , same_witness from_static_action Meta.Action.nothing )
-         , ( same_witness into_model.type_id Meta.Model.unit.type_id
-           , same_witness into_dynamic_action Meta.Action.nothing
-           , same_witness into_static_action Meta.Action.nothing ) ))
-     with
-     | (Some T, Some T, Some T), _ ->
-       Computation.T
-         { t =
-             Subst_stateless_from { from; via; into; here }
-             |> with_computation_id "subst_stateless_from"
-         ; dynamic_action = into_dynamic_action
-         ; static_action = into_static_action
-         ; model = into_model
-         ; apply_static = into_apply_static
-         }
-     | _, (Some T, Some T, Some T) ->
-       Computation.T
-         { t =
-             Subst_stateless_into { from; via; into; here }
-             |> with_computation_id "subst_stateless_into"
-         ; dynamic_action = from_dynamic_action
-         ; static_action = from_static_action
-         ; model = from_model
-         ; apply_static = from_apply_static
-         }
-     | _ ->
-       let apply_static ~inject_dynamic ~inject_static ~schedule_event (m1, m2) = function
-         | First a ->
-           let inject_static a = inject_static (First a) in
-           let inject_dynamic a = inject_dynamic (First a) in
-           from_apply_static ~inject_dynamic ~inject_static ~schedule_event m1 a, m2
-         | Second a ->
-           let inject_static a = inject_static (Second a) in
-           let inject_dynamic a = inject_dynamic (Second a) in
-           m1, into_apply_static ~inject_dynamic ~inject_static ~schedule_event m2 a
-       in
-       Computation.T
-         { t = Subst { from; via; into; here } |> with_computation_id "subst"
-         ; dynamic_action = Meta.Action.both from_dynamic_action into_dynamic_action
-         ; static_action = Meta.Action.both from_static_action into_static_action
-         ; model = Meta.Model.both from_model into_model
-         ; apply_static
-         })
-;;
-
-let read x =
-  Computation.T
-    { t = Return x |> with_computation_id "read"
-    ; model = Meta.Model.unit
-    ; dynamic_action = Meta.Action.nothing
-    ; static_action = Meta.Action.nothing
-    ; apply_static = unusable_static_apply_action
-    }
-;;
-
-let switch ~match_ ~branches ~with_ =
-  let create_case key =
-    let component = with_ key in
-    let (Computation.T { model; _ }) = component in
-    let default_model = Hidden.Model.create model model.default in
-    component, default_model
-  in
-  let arms, models =
-    List.fold
-      (List.range 0 branches)
-      ~init:(Int.Map.empty, Int.Map.empty)
-      ~f:(fun (components, models) key ->
-        let component, model = create_case key in
-        let components = Map.add_exn components ~key ~data:component in
-        let models = Map.add_exn models ~key ~data:model in
-        components, models)
-  in
-  let apply_static
-        ~inject_dynamic
-        ~inject_static
-        ~schedule_event
-        model
-        (action : int Hidden.Action.t)
-    =
-    let (T { action; type_id = action_type_id; key = index }) = action in
-    let (T { model = chosen_model; info = chosen_model_info; _ }) =
-      Hidden.Multi_model.find_exn model index
-    in
-    let inject_static action =
-      inject_static (Hidden.Action.T { action; type_id = action_type_id; key = index })
-    in
-    let (T { t = _; model = tm; static_action = am; dynamic_action = dm; apply_static }) =
-      Map.find_exn arms index
-    in
-    let T = Type_equal.Id.same_witness_exn tm.type_id chosen_model_info.type_id in
-    let T = Type_equal.Id.same_witness_exn am action_type_id in
-    let inject_dynamic action =
-      inject_dynamic (Hidden.Action.T { action; type_id = dm; key = index })
-    in
-    let new_model =
-      apply_static ~inject_dynamic ~inject_static ~schedule_event chosen_model action
-    in
-    let new_model = Hidden.Model.create tm new_model in
-    Hidden.Multi_model.set model ~key:index ~data:new_model
-  in
-  Computation.T
-    { t = Switch { match_; arms } |> with_computation_id "switch"
-    ; model = Hidden.Multi_model.model_info (module Int) models
-    ; dynamic_action = Hidden.Action.type_id [%sexp_of: int]
-    ; static_action = Hidden.Action.type_id [%sexp_of: int]
-    ; apply_static
-    }
-;;
 
 module Let_syntax = struct
   let return = read
-  let ( <*> ) = Value.( <*> )
-  let ( <$> ) f = Value.map ~f
-  let ( >>| ) a f = Value.map a ~f
 
   module Let_syntax = struct
     let sub = sub
@@ -178,189 +13,26 @@ module Let_syntax = struct
     let map = Value.map
     let both = Value.both
     let arr ?here t ~f = read { (Value.map t ~f) with here }
+    let cutoff t ~equal = Value.cutoff ~added_by_let_syntax:true t ~equal
 
     include (Value : Mapn with type 'a t := 'a Value.t)
   end
+
+  let ( >>| ) a f = Let_syntax.map a ~f
+  let ( <*> ) f a = Value.map2 f a ~f:(fun f a -> f a)
+  let ( <$> ) f a = Let_syntax.map a ~f
 end
 
 open Let_syntax
 
 let pure f i = read (Value.map i ~f)
 let const x = read (Value.return x)
+let with_model_resetter' = with_model_resetter
 
-let with_model_resetter
-      (Computation.T { t; model; static_action; dynamic_action; apply_static })
-  =
-  let static_action = Meta.(Action.both unit_type_id static_action) in
-  let apply_static ~inject_dynamic ~inject_static ~schedule_event m =
-    let inject_static a = inject_static (Second a) in
-    function
-    | First () -> model.default
-    | Second a -> apply_static ~inject_dynamic ~inject_static ~schedule_event m a
-  in
-  Computation.T
-    { t = With_model_resetter t |> with_computation_id "with_model_resetter"
-    ; model
-    ; static_action
-    ; dynamic_action
-    ; apply_static
-    }
-;;
-
-let attempt_to_simplify_for_assoc_like
-      (type k v cmp)
-      (comparator : (k, cmp) comparator)
-      (map : (k, v, cmp) Map.t Value.t)
-      ~f
-  =
-  let module C = (val comparator) in
-  let key_id : k Type_equal.Id.t = Type_equal.Id.create ~name:"key id" C.sexp_of_t in
-  let data_id : v Type_equal.Id.t =
-    Type_equal.Id.create ~name:"data id" [%sexp_of: opaque]
-  in
-  let key_var = Value.named key_id in
-  let data_var = Value.named data_id in
-  let (Computation.T { t = by; _ }) = f key_var data_var in
-  match
-    Simplify.computation_to_function by ~key_compare:C.comparator.compare ~key_id ~data_id
-  with
-  | Some by ->
-    Some
-      (Computation.T
-         { t =
-             Assoc_simpl { map; by; result_by_k = T } |> with_computation_id "assoc_simpl"
-         ; dynamic_action = Meta.Action.nothing
-         ; static_action = Meta.Action.nothing
-         ; apply_static = unusable_static_apply_action
-         ; model = Meta.Model.unit
-         })
-  | None -> None
-;;
-
-let assoc
-      (type k v cmp)
-      (comparator : (k, cmp) comparator)
-      (map : (k, v, cmp) Map.t Value.t)
-      ~f
-  =
-  match attempt_to_simplify_for_assoc_like comparator map ~f with
-  | Some c -> c
-  | None ->
-    let module C = (val comparator) in
-    let key_id : k Type_equal.Id.t = Type_equal.Id.create ~name:"key id" C.sexp_of_t in
-    let data_id : v Type_equal.Id.t =
-      Type_equal.Id.create ~name:"data id" [%sexp_of: opaque]
-    in
-    let key_var = Value.named key_id in
-    let data_var = Value.named data_id in
-    let (Computation.T
-           { t = by; model = model_info; dynamic_action; static_action; apply_static })
-      =
-      f key_var data_var
-    in
-    let apply_static ~inject_dynamic ~inject_static ~schedule_event model (id, action) =
-      let inject_dynamic a = inject_dynamic (id, a) in
-      let inject_static a = inject_static (id, a) in
-      let specific_model =
-        Map.find model id |> Option.value ~default:model_info.default
-      in
-      let data =
-        apply_static ~inject_dynamic ~inject_static ~schedule_event specific_model action
-      in
-      if model_info.equal data model_info.default
-      then Map.remove model id
-      else Map.set model ~key:id ~data
-    in
-    let module Cmp = (val comparator) in
-    Computation.T
-      { t =
-          Assoc
-            { map
-            ; key_compare = Cmp.comparator.compare
-            ; key_id
-            ; data_id
-            ; by
-            ; model_info
-            ; action_info = dynamic_action
-            ; result_by_k = T
-            ; model_by_k = T
-            }
-          |> with_computation_id "assoc"
-      ; dynamic_action = Meta.Action.map comparator dynamic_action
-      ; static_action = Meta.Action.map comparator static_action
-      ; model = Meta.Model.map comparator model_info
-      ; apply_static
-      }
-;;
-
-let assoc_on
-      (type model_k io_k model_cmp io_cmp v)
-      (io_comparator : (io_k, io_cmp) comparator)
-      (model_comparator : (model_k, model_cmp) comparator)
-      (map : (io_k, v, io_cmp) Map.t Value.t)
-      ~get_model_key
-      ~f
-  =
-  match attempt_to_simplify_for_assoc_like io_comparator map ~f with
-  | Some c -> c
-  | None ->
-    let module Model_comparator = (val model_comparator) in
-    let module Io_comparator = (val io_comparator) in
-    let io_key_id : io_k Type_equal.Id.t =
-      Type_equal.Id.create ~name:"key id" Io_comparator.sexp_of_t
-    in
-    let data_id : v Type_equal.Id.t =
-      Type_equal.Id.create ~name:"data id" [%sexp_of: opaque]
-    in
-    let key_var = Value.named io_key_id in
-    let data_var = Value.named data_id in
-    let (Computation.T
-           { t = by; model = model_info; dynamic_action; static_action; apply_static })
-      =
-      f key_var data_var
-    in
-    let apply_static
-          ~inject_dynamic
-          ~inject_static
-          ~schedule_event
-          model
-          (input_id, model_id, action)
-      =
-      let inject_dynamic a = inject_dynamic (input_id, model_id, a) in
-      let inject_static a = inject_static (input_id, model_id, a) in
-      let specific_model =
-        Map.find model model_id |> Option.value ~default:model_info.default
-      in
-      let data =
-        apply_static ~inject_dynamic ~inject_static ~schedule_event specific_model action
-      in
-      if model_info.equal data model_info.default
-      then Map.remove model model_id
-      else Map.set model ~key:model_id ~data
-    in
-    Computation.T
-      { t =
-          Assoc_on
-            { map
-            ; io_key_compare = Io_comparator.comparator.compare
-            ; model_key_comparator = Model_comparator.comparator
-            ; io_key_id
-            ; data_id
-            ; by
-            ; get_model_key
-            ; model_info
-            ; action_info = dynamic_action
-            ; result_by_k = T
-            ; model_by_model_key = T
-            }
-          |> with_computation_id "assoc_on"
-      ; dynamic_action =
-          Meta.Action.map_for_assoc_on io_comparator model_comparator dynamic_action
-      ; static_action =
-          Meta.Action.map_for_assoc_on io_comparator model_comparator static_action
-      ; model = Meta.Model.map model_comparator model_info
-      ; apply_static
-      }
+let with_model_resetter inside =
+  with_model_resetter' (fun ~reset ->
+    let%sub r = inside in
+    return (Value.both r reset))
 ;;
 
 let enum (type k) (module E : Enum with type t = k) ~match_ ~with_ =
@@ -379,49 +51,18 @@ let enum (type k) (module E : Enum with type t = k) ~match_ ~with_ =
   Let_syntax.switch ~match_ ~branches ~with_
 ;;
 
-let state_machine0 model action ~default_model ~apply_action =
-  let compute ~inject model = model, inject in
-  let name = Source_code_position.to_string [%here] in
-  let apply_action ~inject_dynamic:_ ~inject_static =
-    apply_action ~inject:inject_static
-  in
-  Computation.T
-    { t = Leaf0 { compute; name } |> with_computation_id "leaf0"
-    ; model = Meta.Model.of_module model ~name ~default:default_model
-    ; dynamic_action = Meta.Action.nothing
-    ; static_action = Meta.Action.of_module action ~name
-    ; apply_static = apply_action
-    }
-;;
-
-let state_machine1
-      (type m a)
-      (module M : Model with type t = m)
-      (module A : Action with type t = a)
-      ~default_model
-      ~apply_action
-      input
+let scope_model
+      (type a cmp)
+      (module M : Comparator with type t = a and type comparator_witness = cmp)
+      ~on:v
+      computation
   =
-  match Value.contents_if_value_is_constant input with
-  | None ->
-    let name = Source_code_position.to_string [%here] in
-    let apply_action ~inject_dynamic ~inject_static:_ =
-      apply_action ~inject:inject_dynamic
-    in
-    Computation.T
-      { t =
-          Leaf1 { input; dynamic_apply_action = apply_action; name }
-          |> with_computation_id "leaf1"
-      ; model = Meta.Model.of_module (module M) ~name ~default:default_model
-      ; dynamic_action = Meta.Action.of_module (module A) ~name
-      ; static_action = Meta.Action.nothing
-      ; apply_static = unusable_static_apply_action
-      }
-  | Some constant ->
-    let apply_action ~inject ~schedule_event model action =
-      apply_action ~inject ~schedule_event (force constant) model action
-    in
-    state_machine0 (module M) (module A) ~default_model ~apply_action
+  let v = Value.map v ~f:(fun k -> Map.singleton (module M) k ()) in
+  let%sub map = assoc (module M) v ~f:(fun _ _ -> computation) in
+  let%arr map = map in
+  (* This _exn is ok because we know that the map is a singleton *)
+  let _k, r = Map.max_elt_exn map in
+  r
 ;;
 
 let of_module1 (type i m a r) (component : (i, m, a, r) component_s) ~default_model input =
@@ -441,19 +82,6 @@ let of_module1 (type i m a r) (component : (i, m, a, r) component_s) ~default_mo
 ;;
 
 let of_module2 c ~default_model i1 i2 = of_module1 c ~default_model (Value.both i1 i2)
-
-let state_machine01 model a1 a2 ~default_model ~apply_dynamic ~apply_static input =
-  let name = Source_code_position.to_string [%here] in
-  Computation.T
-    { t =
-        Leaf01 { name; dynamic_apply_action = apply_dynamic; input }
-        |> with_computation_id "leaf01"
-    ; model = Meta.Model.of_module model ~name ~default:default_model
-    ; dynamic_action = Meta.Action.of_module a1 ~name
-    ; static_action = Meta.Action.of_module a2 ~name
-    ; apply_static
-    }
-;;
 
 module Computation_status = struct
   type 'input t =
@@ -590,7 +218,7 @@ let actor1
           -> action
           -> model * return)
     -> input Value.t
-    -> (model * (action -> return Effect.t)) Computation.packed
+    -> (model * (action -> return Effect.t)) Computation.t
   =
   fun (module M : Model with type t = model)
     (module A : Action with type t = action)
@@ -629,114 +257,30 @@ let actor0 model action ~default_model ~recv =
   actor1 model action ~default_model ~recv (Value.return ())
 ;;
 
-let lazy_ t =
-  let open struct
-    type model = Hidden.Model.t option [@@deriving equal, sexp_of]
-  end in
-  let dynamic_action = Hidden.Action.type_id [%sexp_of: unit] in
-  let static_action = Hidden.Action.type_id [%sexp_of: unit] in
-  let model =
-    { Meta.Model.default = None
-    ; equal = equal_model
-    ; type_id = Type_equal.Id.create ~name:"lazy-model" [%sexp_of: model]
-    ; sexp_of = [%sexp_of: model]
-    ; of_sexp = (fun _ -> None)
-    }
-  in
-  let apply_static ~inject_dynamic ~inject_static ~schedule_event model action =
-    (* forcing the lazy is fine because actions are finite in length *)
-    let (lazy
-          (Computation.T
-             { t = _
-             ; model = model_info
-             ; dynamic_action = dynamic_action_info
-             ; static_action = static_action_info
-             ; apply_static
-             }))
-      =
-      t
-    in
-    let inject_dynamic action =
-      inject_dynamic (Hidden.Action.T { action; type_id = dynamic_action_info; key = () })
-    in
-    let inject_static action =
-      inject_static (Hidden.Action.T { action; type_id = static_action_info; key = () })
-    in
-    let (Hidden.Action.T { action; type_id = action_type_id; key = () }) = action in
-    let (Hidden.Model.T { model = chosen_model; info = chosen_model_info; _ }) =
-      Option.value model ~default:(Hidden.Model.create model_info model_info.default)
-    in
-    let T = Type_equal.Id.same_witness_exn action_type_id static_action_info in
-    let T = Type_equal.Id.same_witness_exn chosen_model_info.type_id model_info.type_id in
-    let new_model =
-      apply_static ~inject_dynamic ~inject_static ~schedule_event chosen_model action
-    in
-    Some (Hidden.Model.create model_info new_model)
-  in
-  Computation.T
-    { t = Lazy t |> with_computation_id "lazy"
-    ; dynamic_action
-    ; static_action
-    ; model
-    ; apply_static
-    }
-;;
-
-let wrap (type model action) model_module ~default_model ~apply_action ~f =
-  let apply_action ~inject_static:_ = apply_action in
-  let model_id : model Type_equal.Id.t =
-    Type_equal.Id.create ~name:"model id" [%sexp_of: opaque]
-  in
-  let action_id : action Type_equal.Id.t =
-    Type_equal.Id.create ~name:"action id" [%sexp_of: opaque]
-  in
-  let inject_id : (action -> unit Effect.t) Type_equal.Id.t =
-    Type_equal.Id.create ~name:"inject id" [%sexp_of: opaque]
-  in
-  let apply_action ~inject_dynamic = apply_action ~inject:inject_dynamic in
-  let model_var = Value.named model_id in
-  let inject_var = Value.named inject_id in
-  let (Computation.T
-         { t = inner
-         ; model = inner_model
-         ; dynamic_action = inner_dynamic_action
-         ; static_action = inner_static_action
-         ; apply_static
-         })
-    =
-    f model_var inject_var
-  in
-  let dynamic_action = Meta.Action.both action_id inner_dynamic_action in
-  let model =
-    Meta.Model.both
-      (Meta.Model.of_module
-         model_module
-         ~default:default_model
-         ~name:"outer model for wrap")
-      inner_model
-  in
-  let apply_static ~inject_dynamic ~inject_static ~schedule_event (m1, m2) action =
-    let inject_dynamic a = inject_dynamic (Second a) in
-    m1, apply_static ~inject_dynamic ~inject_static ~schedule_event m2 action
-  in
-  Computation.T
-    { t =
-        Computation.Wrap
-          { model_id; inject_id; inner; dynamic_apply_action = apply_action }
-        |> with_computation_id "wrap"
-    ; dynamic_action
-    ; static_action = inner_static_action
-    ; apply_static
-    ; model
-    }
-;;
-
 let state (type m) (module M : Model with type t = m) ~default_model =
   state_machine0
     (module M)
     (module M)
     ~apply_action:(fun ~inject:_ ~schedule_event:_ _old_model new_model -> new_model)
     ~default_model
+;;
+
+let toggle ~default_model =
+  let%sub state, inject =
+    state_machine0
+      (module Bool)
+      (module Unit)
+      ~apply_action:(fun ~inject:_ ~schedule_event:_ b () -> not b)
+      ~default_model
+  in
+  let%sub effect =
+    (* only compute the effect once for better incrementality *)
+    let%arr inject = inject in
+    inject ()
+  in
+  let%arr state = state
+  and effect = effect in
+  state, effect
 ;;
 
 let state_opt (type m) ?default_model (module M : Model with type t = m) =
@@ -747,23 +291,28 @@ let state_opt (type m) ?default_model (module M : Model with type t = m) =
     end)
 ;;
 
-let path =
-  Computation.T
-    { t = Computation.Path |> with_computation_id "path"
-    ; dynamic_action = Meta.Action.nothing
-    ; static_action = Meta.Action.nothing
-    ; apply_static = unusable_static_apply_action
-    ; model = Meta.Model.unit
-    }
-;;
-
 let path_id =
   let%sub path = path in
   let%arr path = path in
   Path.to_unique_identifier_string path
 ;;
 
+let yoink a =
+  let%sub _, result =
+    actor1
+      (module Unit)
+      (module Unit)
+      ~recv:(fun ~schedule_event:_ a () () -> (), a)
+      ~default_model:()
+      a
+  in
+  let%arr result = result in
+  result ()
+;;
+
 module Edge = struct
+  include Edge
+
   let lifecycle' ?on_activate ?on_deactivate ?after_display () =
     let transpose_join : 'a option Value.t option -> 'a option Value.t = function
       | Some a -> a
@@ -781,13 +330,7 @@ module Edge = struct
       | on_activate, on_deactivate, after_display ->
         Some { Lifecycle.on_activate; on_deactivate; after_display }
     in
-    Computation.T
-      { t = Lifecycle t |> with_computation_id "lifecycle"
-      ; model = Meta.Model.unit
-      ; dynamic_action = Meta.Action.nothing
-      ; static_action = Meta.Action.nothing
-      ; apply_static = unusable_static_apply_action
-      }
+    lifecycle t
   ;;
 
   let lifecycle ?on_activate ?on_deactivate ?after_display () =
@@ -844,14 +387,12 @@ module Edge = struct
       let initial a = Initial a
     end
 
-    let poll_effect_on_change_implementation
-          (type i r)
-          (module Input : Model with type t = i)
+    let manual_refresh_implementation
+          (type r)
           (module Result : Model with type t = r)
           ~initial
           ~wrap_result
           ~effect
-          input
       =
       let%sub _, next_seqnum =
         actor0
@@ -872,7 +413,7 @@ module Edge = struct
         type t = Set of int * Result.t [@@deriving sexp_of]
       end
       in
-      let%sub state =
+      let%sub state, inject_change =
         state_machine0
           (module State)
           (module Action)
@@ -883,18 +424,38 @@ module Edge = struct
                else { State.last_seqnum = seqnum; last_result = res })
           ~default_model:{ State.last_seqnum = -1; last_result = initial }
       in
-      let callback =
-        let%map effect = effect
+      let%sub callback =
+        let%arr effect = effect
         and next_seqnum = next_seqnum
-        and _, inject_change = state in
-        fun input ->
-          let%bind.Effect seqnum = next_seqnum () in
-          let%bind.Effect result = effect input in
-          inject_change (Action.Set (seqnum, wrap_result result))
+        and inject_change = inject_change in
+        let%bind.Effect seqnum = next_seqnum () in
+        let%bind.Effect result = effect in
+        inject_change (Action.Set (seqnum, wrap_result result))
       in
-      let%sub () = on_change (module Input) input ~callback in
-      let%arr { State.last_result; _ }, _ = state in
-      last_result
+      let%arr { State.last_result; _ } = state
+      and callback = callback in
+      last_result, callback
+    ;;
+
+    let manual_refresh
+      : type o r.
+        (module Model with type t = o)
+        -> (o, r) Starting.t
+        -> effect:o Effect.t Value.t
+        -> (r * unit Effect.t) Computation.t
+      =
+      fun (module Result : Model with type t = o) kind ~effect ->
+        match kind with
+        | Starting.Empty ->
+          manual_refresh_implementation
+            (module struct
+              type t = Result.t option [@@deriving sexp, equal]
+            end)
+            ~effect
+            ~initial:None
+            ~wrap_result:Option.some
+        | Starting.Initial initial ->
+          manual_refresh_implementation (module Result) ~effect ~initial ~wrap_result:Fn.id
     ;;
 
     let effect_on_change
@@ -904,32 +465,23 @@ module Edge = struct
         -> (o, r) Starting.t
         -> a Value.t
         -> effect:(a -> o Effect.t) Value.t
-        -> r Computation.packed
+        -> r Computation.t
       =
-      fun (module Input : Model with type t = a)
-        (module Result : Model with type t = o)
-        (kind : (o, r) Starting.t)
-        input
-        ~effect ->
-        match kind with
-        | Starting.Empty ->
-          poll_effect_on_change_implementation
-            (module Input)
-            (module struct
-              type t = Result.t option [@@deriving sexp, equal]
-            end)
-            ~effect
-            ~initial:None
-            ~wrap_result:Option.some
-            input
-        | Starting.Initial initial ->
-          poll_effect_on_change_implementation
-            (module Input)
-            (module Result)
-            ~effect
-            ~initial
-            ~wrap_result:Fn.id
-            input
+      fun (module Input) (module Result) kind input ~effect ->
+        let%sub get_input = yoink input in
+        let%sub effect =
+          let%arr get_input = get_input
+          and effect = effect in
+          let%bind.Effect input = get_input in
+          effect input
+        in
+        let%sub result, refresh = manual_refresh (module Result) kind ~effect in
+        let%sub callback =
+          let%arr refresh = refresh in
+          fun (_ : Input.t) -> refresh
+        in
+        let%sub () = on_change (module Input) input ~callback in
+        return result
     ;;
   end
 end
@@ -962,36 +514,7 @@ let thunk (type a) (f : unit -> a) =
 ;;
 
 module Incr = struct
-  let value_cutoff t ~equal = read (Value.cutoff ~equal t)
-
-  let model_cutoff
-        (Computation.T { t; dynamic_action; static_action; model; apply_static })
-    =
-    Computation.T
-      { t = Computation.Model_cutoff { t; model } |> with_computation_id "model_cutoff"
-      ; dynamic_action
-      ; static_action
-      ; apply_static
-      ; model
-      }
-  ;;
-
-  let compute_with_clock t ~f =
-    let dynamic_apply_action _input ~inject:_ =
-      Incr.return (fun ~schedule_event:_ _model -> Nothing.unreachable_code)
-    in
-    let compute clock input _model ~inject:_ = f clock input in
-    Computation.T
-      { t =
-          Computation.Leaf_incr
-            { name = "incr-compute"; input = t; dynamic_apply_action; compute }
-          |> with_computation_id "leaf_incr"
-      ; dynamic_action = Meta.Action.nothing
-      ; static_action = Meta.Action.nothing
-      ; apply_static = unusable_static_apply_action
-      ; model = Meta.Model.unit
-      }
-  ;;
+  include Proc_incr
 
   let compute t ~f = compute_with_clock t ~f:(fun _ input -> f input)
   let with_clock f = compute_with_clock (Value.return ()) ~f:(fun clock _ -> f clock)
@@ -1004,9 +527,29 @@ module Incr = struct
   ;;
 end
 
+let most_recent_some (type a) (module M : Model with type t = a) input ~f =
+  let%sub most_recent_valid_value, set_most_recent_valid_value = state_opt (module M) in
+  let%sub input = pure f input in
+  let%sub input = Incr.value_cutoff ~equal:[%equal: M.t option] input in
+  match%sub input with
+  | None -> return most_recent_valid_value
+  | Some inner ->
+    let%sub callback =
+      let%arr set_most_recent_valid_value = set_most_recent_valid_value in
+      fun x -> set_most_recent_valid_value (Some x)
+    in
+    let%sub () = Edge.on_change (module M) inner ~callback in
+    return input
+;;
+
+let most_recent_value_satisfying m input ~condition =
+  most_recent_some m input ~f:(fun a -> if condition a then Some a else None)
+;;
+
 module Map_renamed_to_avoid_shadowing = struct
   let of_set = Incr.compute ~f:Ui_incr.Map.of_set
   let keys = Incr.compute ~f:Ui_incr.Map.keys
+  let filter_mapi m ~f = Incr.compute m ~f:(Incr_map.filter_mapi ~f)
 
   let merge a b ~f =
     Incr.compute (Value.both a b) ~f:(fun a_and_b ->
@@ -1016,6 +559,8 @@ module Map_renamed_to_avoid_shadowing = struct
 end
 
 module Dynamic_scope = struct
+  include Dynamic_scope
+
   type _ t =
     | Independent :
         { id : 'a Type_equal.Id.t
@@ -1035,6 +580,30 @@ module Dynamic_scope = struct
     | Derived { base; get; set = _; sexp_of = _ } -> get (fallback base)
   ;;
 
+  let rec fetch : type a b. a t -> default:b -> for_some:(a -> b) -> b Computation.t =
+    fun t ~default ~for_some ->
+      match t with
+      | Independent { id; _ } -> Dynamic_scope.fetch ~id ~default ~for_some
+      | Derived { base; get; set = _; sexp_of = _ } ->
+        fetch base ~default ~for_some:(fun x -> for_some (get x))
+  ;;
+
+  let lookup (type a) (var : a t) = fetch var ~default:(fallback var) ~for_some:Fn.id
+
+  let rec store : type a. a t -> a Value.t -> 'r Computation.t -> 'r Computation.t =
+    fun var value inner ->
+    match var with
+    | Independent { id; _ } -> Dynamic_scope.store ~id ~value ~inner
+    | Derived { base; get = _; set; sexp_of = _ } ->
+      let%sub current = lookup base in
+      let%sub new_ =
+        let%arr current = current
+        and value = value in
+        set current value
+      in
+      store base new_ inner
+  ;;
+
   let create ?(sexp_of = sexp_of_opaque) ~name ~fallback () =
     Independent { id = Type_equal.Id.create ~name sexp_of; fallback }
   ;;
@@ -1043,45 +612,7 @@ module Dynamic_scope = struct
     Derived { base; get; set; sexp_of }
   ;;
 
-  let rec fetch : type a b. a t -> default:b -> for_some:(a -> b) -> b Computation.packed =
-    fun t ~default ~for_some ->
-      match t with
-      | Independent { id; _ } ->
-        Computation.T
-          { t = Computation.Fetch { id; default; for_some } |> with_computation_id "fetch"
-          ; dynamic_action = Meta.Action.nothing
-          ; static_action = Meta.Action.nothing
-          ; apply_static = unusable_static_apply_action
-          ; model = Meta.Model.unit
-          }
-      | Derived { base; get; set = _; sexp_of = _ } ->
-        fetch base ~default ~for_some:(fun x -> for_some (get x))
-  ;;
-
-  let lookup (type a) (var : a t) = fetch var ~default:(fallback var) ~for_some:Fn.id
-
-  let rec store
-    : type a. a t -> a Value.t -> 'r Computation.packed -> 'r Computation.packed
-    =
-    fun var value c ->
-    match var with
-    | Independent { id; _ } ->
-      let (Computation.T t) = c in
-      Computation.T
-        { t with
-          t = Computation.Store { id; value; inner = t.t } |> with_computation_id "store"
-        }
-    | Derived { base; get = _; set; sexp_of = _ } ->
-      let%sub current = lookup base in
-      let%sub new_ =
-        let%arr current = current
-        and value = value in
-        set current value
-      in
-      store base new_ c
-  ;;
-
-  type revert = { revert : 'a. 'a Computation.packed -> 'a Computation.packed }
+  type revert = { revert : 'a. 'a Computation.t -> 'a Computation.t }
 
   let modify var ~change ~f =
     let%sub current = lookup var in
@@ -1245,7 +776,7 @@ module Clock = struct
          | `Every_multiple_of_period_blocking
          ]
       -> ?trigger_on_activate:bool -> Time_ns.Span.t -> unit Effect.t Value.t
-      -> unit Computation.packed
+      -> unit Computation.t
     =
     fun ~when_to_start_next_effect ->
       match when_to_start_next_effect with
@@ -1259,7 +790,7 @@ module Clock = struct
 end
 
 module Computation = struct
-  type 'a t = 'a Computation.packed
+  type 'a t = 'a Computation.t
 
   include Applicative.Make_using_map2 (struct
       type nonrec 'a t = 'a t
@@ -1388,7 +919,11 @@ module Computation = struct
   end
 end
 
-module Value = Value
+module Value = struct
+  include Value
+
+  let cutoff t ~equal = cutoff ~added_by_let_syntax:false t ~equal
+end
 
 module Private = struct
   let conceal_value = Fn.id

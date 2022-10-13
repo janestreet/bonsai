@@ -56,8 +56,15 @@ module Handle : sig
   val show : _ t -> unit
 
   (** [show_diff] will print the diff of the view between now and the last time that
-      [show] or [show_diff] was called. *)
-  val show_diff : ?location_style:Patdiff_kernel.Format.Location_style.t -> _ t -> unit
+      [show] or [show_diff] was called.
+
+      [diff_context] can be used to adjust the number of unchanged lines before and after
+      the diffed content.  Defaults to [16] *)
+  val show_diff
+    :  ?location_style:Patdiff_kernel.Format.Location_style.t
+    -> ?diff_context:int
+    -> _ t
+    -> unit
 
   (** [recompute_view] is like [show], but it doesn't print anything. Calling
       [recompute_view] between invocations of [show_diff] does not affect the
@@ -85,14 +92,13 @@ module Handle : sig
 
   val result : ('result, _) t -> 'result
   val do_actions : (_, 'incoming) t -> 'incoming list -> unit
-  val disable_bonsai_path_censoring : _ t -> unit
-  val disable_bonsai_hash_censoring : _ t -> unit
   val clock : _ t -> Incr.Clock.t
   val advance_clock_by : _ t -> Time_ns.Span.t -> unit
 
   val create
-    :  ('result, 'incoming) Result_spec.t
-    -> ?clock:Incr.Clock.t
+    :  ?clock:Incr.Clock.t
+    -> ?optimize:bool
+    -> ('result, 'incoming) Result_spec.t
     -> 'result Computation.t
     -> ('result, 'incoming) t
 

@@ -429,3 +429,13 @@ let to_vdom ?on_submit ?(editable = `Yes_always) view =
     Node.create "form" ~attr:(Vdom.Attr.on_submit (fun _ -> event)) [ inner_table ]
   | _ -> inner_table
 ;;
+
+let sexp_to_pretty_string sexp_of_t t =
+  t
+  |> sexp_of_t
+  |> Sexp.to_string_mach
+  |> String.lowercase
+  |> String.map ~f:(function
+    | '(' | ')' | '-' | '_' -> ' '
+    | o -> o)
+;;

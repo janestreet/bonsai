@@ -37,27 +37,29 @@ module Acc = struct
   ;;
 end
 
-let rec render_header header ~level ~acc ~set_column_width =
-  let recurse = render_header ~level:(level + 1) ~set_column_width in
-  let recurse_no_level_change = render_header ~level ~set_column_width in
+let rec render_header header ~level ~acc ~column_widths ~set_column_width =
+  let recurse = render_header ~level:(level + 1) ~column_widths ~set_column_width in
+  let recurse_no_level_change = render_header ~level ~column_widths ~set_column_width in
   let colspan = attr_colspan (Header_tree.colspan header) in
   match header with
   | Leaf { visible; leaf_label; initial_width } ->
     let node index =
-      let column_width = initial_width in
+      let column_width =
+        match Map.find column_widths index with
+        | None -> initial_width
+        | Some (`Px_float width) -> (`Px_float width :> Css_gen.Length.t)
+      in
       Vdom.Node.td
         ~attr:
           (Vdom.Attr.many
              [ Bonsai_web_ui_element_size_hooks.Size_tracker.on_change
-                 (fun ~width ~height:_ -> set_column_width ~index (`Px width))
+                 (fun ~width ~height:_ -> set_column_width ~index (`Px_float width))
              ; Bonsai_web_ui_element_size_hooks.Freeze.width
              ; Vdom.Attr.colspan 1
              ; Vdom.Attr.class_ Style.header_label
              ; Vdom.Attr.class_ Style.leaf_header
              ; Vdom.Attr.style
-                 Css_gen.(
-                   width (column_width :> Length.t)
-                   @> if visible then empty else display `None)
+                 Css_gen.(width column_width @> if visible then empty else display `None)
              ])
         [ leaf_label ]
     in
@@ -75,21 +77,29 @@ let rec render_header header ~level ~acc ~set_column_width =
     List.fold children ~init:acc ~f:(fun acc -> recurse_no_level_change ~acc)
 ;;
 
-let render_header headers ~set_column_width =
-  headers |> render_header ~acc:Acc.empty ~level:0 ~set_column_width |> Acc.finalize
+let render_header headers ~column_widths ~set_column_width =
+  headers
+  |> render_header ~acc:Acc.empty ~level:0 ~column_widths ~set_column_width
+  |> Acc.finalize
 ;;
 
-let component (headers : Header_tree.t Value.t) ~set_column_width ~set_header_height =
+let component
+      (headers : Header_tree.t Value.t)
+      ~column_widths
+      ~set_column_width
+      ~set_header_client_rect
+  =
   let%arr set_column_width = set_column_width
-  and set_header_height = set_header_height
-  and headers = headers in
-  let rows = render_header headers ~set_column_width in
+  and set_header_client_rect = set_header_client_rect
+  and headers = headers
+  and column_widths = column_widths in
+  let rows = render_header headers ~set_column_width ~column_widths in
   Vdom.Node.table
     ~attr:
       (Vdom.Attr.many
-         [ Bonsai_web_ui_element_size_hooks.Size_tracker.on_change
-             (fun ~width:_ ~height ->
-                set_header_height (Float.to_int (Float.round_up height)))
+         [ Bonsai_web_ui_element_size_hooks.Visibility_tracker.detect
+             ()
+             ~client_rect_changed:set_header_client_rect
          ; Vdom.Attr.class_ Style.partial_render_table_header
          ; Vdom.Attr.class_ "prt-table-header"
          ])

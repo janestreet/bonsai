@@ -39,7 +39,7 @@ let component =
       (module Unit)
       ~default_model:(Int.Set.of_list [ 0; 1; 2 ])
       ~apply_action:(fun ~inject:_ ~schedule_event:_ model () ->
-        Int.Set.add model (Int.Set.length model))
+        Set.add model (Set.length model))
   in
   let%sub now = Bonsai.Clock.approx_now ~tick_every:(Time_ns.Span.of_sec 1.0) in
   let%sub () =

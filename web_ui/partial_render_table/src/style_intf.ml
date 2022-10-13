@@ -24,11 +24,19 @@ include
   .leaf_header {
     resize: horizontal;
     overflow: hidden;
+    box-sizing: border-box;
   }
 
   .partial_render_table_header {
     position: sticky;
     top: 0px;
     z-index: 99;
+  }
+
+  .cell {
+    box-sizing: border-box;
+    overflow:hidden;
+    display:inline-block;
+    contain: strict;
   }
   |}]

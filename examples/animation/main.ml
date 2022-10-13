@@ -21,8 +21,8 @@ let component =
       ~interpolate:Animation.Interpolatable.float
   in
   let%sub forward, set_forward = Bonsai.state (module Bool) ~default_model:true in
-  let%sub get_forward = Bonsai_extra.yoink forward in
-  let%sub get_interpolator = Bonsai_extra.yoink interpolator in
+  let%sub get_forward = Bonsai.yoink forward in
+  let%sub get_interpolator = Bonsai.yoink interpolator in
   let%sub get_things_started =
     let%arr animate = animate
     and get_forward = get_forward

@@ -2,4 +2,4 @@
  (public_name bonsai.web_ui_reorderable_list)
  (libraries core core_kernel.reversed_list bonsai_web
   bonsai_web_ui_drag_and_drop bonsai_web_ui_element_size_hooks)
- (preprocess (pps js_of_ocaml-ppx ppx_jane ppx_pattern_bind)))
+ (preprocess (pps js_of_ocaml-ppx ppx_jane ppx_pattern_bind ppx_bonsai)))

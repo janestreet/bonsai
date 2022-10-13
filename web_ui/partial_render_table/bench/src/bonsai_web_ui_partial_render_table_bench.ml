@@ -93,7 +93,7 @@ let component_for_bench
   Table.component
     ?preload_rows
     comparator
-    ~focus:(Focus.By_row { on_change })
+    ~focus:(Table.Focus.By_row { on_change; compute_presence = return })
     ~row_height:(`Px 1)
     ~columns
     collate
@@ -103,7 +103,7 @@ let create_bench ?preload_rows comparator ~initial_vars ~columns ~interaction ~t
   let interaction = interaction initial_vars in
   let component = component_for_bench comparator ?preload_rows ~columns initial_vars in
   let get_inject { Table.Result.focus; _ } = function
-    | Action.Unfocus -> focus.Focus.By_row.unfocus
+    | Action.Unfocus -> focus.Table.Focus.By_row.unfocus
     | Focus_up -> focus.focus_up
     | Focus_down -> focus.focus_down
     | Page_up -> focus.page_up

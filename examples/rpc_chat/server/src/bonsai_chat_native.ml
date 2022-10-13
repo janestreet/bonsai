@@ -32,6 +32,6 @@ let main ~http_settings =
 let command =
   Command.async
     ~summary:"Start server for example [rpc-chat]"
-    (let%map.Command http_settings = Http_settings.param ~app_name:"bonsai-example" () in
+    (let%map.Command http_settings = Http_settings.param () in
      fun () -> main ~http_settings)
 ;;

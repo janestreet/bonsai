@@ -22,14 +22,16 @@ module Model = struct
     ; current_choices : 'a list
     ; focused_autocomplete_result : int option
     ; autocomplete_box_visible : bool
+    ; num_query_results_to_show : int
     }
   [@@deriving compare, equal, fields, sexp]
 
-  let init ~query =
+  let init ~query ~max_query_results =
     { query
     ; current_choices = []
     ; focused_autocomplete_result = None
     ; autocomplete_box_visible = false
+    ; num_query_results_to_show = max_query_results
     }
   ;;
 
@@ -47,6 +49,7 @@ module Model = struct
       ; autocomplete_box_visible = true
       ; focused_autocomplete_result = None
       ; current_choices = all_choices
+      ; num_query_results_to_show = t.num_query_results_to_show
       }
     | _ ->
       let current_choices =
@@ -60,14 +63,15 @@ module Model = struct
       ; current_choices
       ; autocomplete_box_visible = true
       ; focused_autocomplete_result
+      ; num_query_results_to_show = t.num_query_results_to_show
       }
   ;;
 
-  let bump_focused_autocomplete_result t direction ~max_query_results =
+  let bump_focused_autocomplete_result t direction =
     match List.length t.current_choices with
     | 0 -> { t with focused_autocomplete_result = None }
     | n ->
-      let visible_choices_length = Int.min n max_query_results in
+      let visible_choices_length = Int.min n t.num_query_results_to_show in
       let i =
         match t.focused_autocomplete_result with
         | None ->
@@ -85,11 +89,12 @@ module Model = struct
       { t with focused_autocomplete_result = Some i }
   ;;
 
-  let clear_input t =
+  let clear_input t ~max_query_results =
     { t with
       focused_autocomplete_result = None
     ; autocomplete_box_visible = false
     ; query = ""
+    ; num_query_results_to_show = max_query_results
     }
   ;;
 
@@ -100,6 +105,7 @@ module Model = struct
   ;;
 
   let hide_autocomplete t = { t with autocomplete_box_visible = false }
+  let set_num_query_results_to_show t i = { t with num_query_results_to_show = i }
 end
 
 module Action = struct
@@ -109,6 +115,7 @@ module Action = struct
     | Clear_focused_autocomplete_result
     | Set_focused_autocomplete_result of int
     | Close_autocomplete_box
+    | Set_num_query_results_to_show of int
     | Clear_input
     | On_focus
     | On_blur
@@ -133,6 +140,7 @@ let create
       (type item)
       (module Item : Item with type t = item)
       ?(max_query_results = 10)
+      ?(additional_query_results_on_click = 10)
       ?(width = Css_gen.Length.percent100)
       ?placeholder:(placeholder_ = "")
       ?(initial_query = "")
@@ -154,7 +162,7 @@ let create
       end)
       (module Action)
       input
-      ~default_model:(Model.init ~query:initial_query)
+      ~default_model:(Model.init ~query:initial_query ~max_query_results)
       ~apply_action:
         (fun ~inject:_
           ~schedule_event:_
@@ -170,11 +178,12 @@ let create
               ~score_choice
               ~filter_choice
           | Bump_focused_autocomplete_result direction ->
-            Model.bump_focused_autocomplete_result t direction ~max_query_results
+            Model.bump_focused_autocomplete_result t direction
           | Clear_focused_autocomplete_result -> Model.clear_focused_autocomplete_result t
           | Set_focused_autocomplete_result i -> Model.set_focused_autocomplete_result t i
           | Close_autocomplete_box -> Model.close_autocomplete_box t
-          | Clear_input -> Model.clear_input t
+          | Clear_input -> Model.clear_input t ~max_query_results
+          | Set_num_query_results_to_show i -> Model.set_num_query_results_to_show t i
           | On_focus ->
             Model.set_text_input
               ~all_choices:(Input.choices input)
@@ -222,7 +231,7 @@ let create
       Bonsai.assoc
         (module Int)
         (let%map model = model in
-         List.take (Model.current_choices model) max_query_results
+         List.take (Model.current_choices model) model.num_query_results_to_show
          |> List.mapi ~f:Tuple2.create
          |> Int.Map.of_alist_exn)
         ~f:render_autocomplete_entry
@@ -233,17 +242,27 @@ let create
     let draw_width = width in
     let hidden_query_results =
       let len = Model.current_choices model |> List.length in
-      if len > max_query_results
+      if len > model.num_query_results_to_show
       then
         [ Vdom.Node.li
             ~attr:
               Vdom.Attr.(
-                on_mousedown (fun _ -> Effect.Prevent_default)
+                on_click (fun _ ->
+                  inject
+                    (Action.Set_num_query_results_to_show
+                       (Int.min
+                          len
+                          (model.num_query_results_to_show
+                           + additional_query_results_on_click))))
+                (* Stop the mousedown event, as we handle on_click above. *)
+                @ on_mousedown (fun _ ->
+                  Effect.Many [ Effect.Stop_propagation; Effect.Prevent_default ])
                 @ class_ "no-cursor"
                 @ style
                     Css_gen.(
                       background_color (`Var "--js-dark-snow-color") @> width draw_width))
-            [ Vdom.Node.text (sprintf "+%d more" (len - max_query_results)) ]
+            [ Vdom.Node.text (sprintf "+%d more" (len - model.num_query_results_to_show))
+            ]
         ]
       else []
     in

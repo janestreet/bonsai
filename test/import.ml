@@ -1,4 +1,5 @@
 open! Core
+open Bonsai.Let_syntax
 
 module Effect = struct
   include Ui_effect
@@ -24,3 +25,4 @@ let dummy_source_code_position =
 
 let opaque_const x = Bonsai.read (Bonsai.Var.value (Bonsai.Var.create x))
 let opaque_const_value x = Bonsai.Var.value (Bonsai.Var.create x)
+let opaque_computation c = if%sub opaque_const_value true then c else assert false

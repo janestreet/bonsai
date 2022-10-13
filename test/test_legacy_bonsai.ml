@@ -124,9 +124,9 @@ let%expect_test "enum with action handling `Warn" =
       ];
     [%expect
       {|
-      ("an action inside of Bonsai.switch as been dropped because the computation is no longer active"
-       (index 1) (action Increment))
-      pure 3|}];
+               ("an action inside of Bonsai.switch has been dropped because the computation is no longer active"
+                (index 1) (action Increment))
+               pure 3|}];
     H.do_actions [ Outer Increment ];
     [%expect "counter 2"])
 ;;

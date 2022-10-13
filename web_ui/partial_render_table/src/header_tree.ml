@@ -9,7 +9,7 @@ type t =
 
 and leaf =
   { leaf_label : (Vdom.Node.t[@sexp.opaque])
-  ; initial_width : [ `Px of int ]
+  ; initial_width : Css_gen.Length.t
   ; visible : bool
   }
 

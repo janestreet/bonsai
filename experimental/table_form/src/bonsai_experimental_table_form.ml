@@ -37,7 +37,7 @@ module Style =
 module Column = struct
   type t =
     { name : string
-    ; initial_width : [ `Px of int ] option
+    ; initial_width : Css_gen.Length.t option
     }
 
   let create ?initial_width name = { name; initial_width }
@@ -147,7 +147,7 @@ let table_form
     and view = view in
     forms, view
   in
-  let%sub get_forms = Bonsai_extra.yoink forms in
+  let%sub get_forms = Bonsai.yoink forms in
   let%arr forms = forms
   and get_forms = get_forms
   and table = table

@@ -1,10 +1,6 @@
 open! Core
 open Bonsai.For_open
 
-(* A bool-state which starts at [default_model] and flips whenever the
-   returned effect is scheduled. *)
-val toggle : default_model:bool -> (bool * unit Effect.t) Computation.t
-
 (** [with_inject_fixed_point] allows an injection function produced as the
     result of a computation to be used as the input of that same combination.
     This "tie-the-knot" operation is legal because actions are scheduled
@@ -19,27 +15,6 @@ val with_inject_fixed_point
   :  (('action -> unit Effect.t) Value.t
       -> ('result * ('action -> unit Effect.t)) Computation.t)
   -> 'result Computation.t
-
-(** [yoink] is a function that takes a bonsai value and produces a
-    computation producing an effect which fetches the current value out of the
-    input.  This can be useful inside of [let%bind.Effect] chains, where a
-    value that you've closed over is stale and you want to witness a value
-    after it's been changed by a previous effect. *)
-val yoink : 'a Value.t -> 'a Effect.t Computation.t
-
-(** [scope_model] allows you to have a different model for the provided
-    computation, keyed by some other value.
-
-    Suppose for example, that you had a form for editing details about a
-    person.  This form should have different state for each person.  You could
-    use scope_model, where the [~on] parameter is set to a user-id, and now when
-    that value changes, the model for the other computation is set to the model
-    for that particular user. *)
-val scope_model
-  :  ('a, _) Bonsai.comparator
-  -> on:'a Value.t
-  -> 'b Computation.t
-  -> 'b Computation.t
 
 (** [pipe] constructs a pipe of [a] and returns a pair containing an injection
     function that enqueues items and an Effect that dequeues them.  *)
@@ -142,3 +117,40 @@ val mirror
   -> interactive_set:('m -> unit Effect.t) Value.t
   -> interactive_value:'m Value.t
   -> unit Computation.t
+
+(** [with_last_modified_time] applies a cutoff to the input value and takes a
+    note of the last time the value did not cutoff (in other words, the last
+    time it was changed).
+
+    Whenever the returned computation is activated, the "last time modified" value
+    will be reset to the current time. *)
+val with_last_modified_time
+  :  equal:('a -> 'a -> bool)
+  -> 'a Value.t
+  -> ('a * Time_ns.t) Computation.t
+
+(** [is_stable] indicates whether the input value has changed (according to
+    [equal]) in the past specified time span. *)
+val is_stable
+  :  equal:('a -> 'a -> bool)
+  -> 'a Value.t
+  -> time_to_stable:Time_ns.Span.t
+  -> bool Computation.t
+
+module Stability : sig
+  type 'a t =
+    | Stable of 'a
+    | Unstable of
+        { previously_stable : 'a option
+        ; unstable_value : 'a
+        }
+  [@@deriving sexp, equal]
+end
+
+(** [value_stability] determines whether the current value has changed
+    recently, and also keeps track of the most recent stable value. *)
+val value_stability
+  :  (module Bonsai.Model with type t = 'a)
+  -> 'a Value.t
+  -> time_to_stable:Time_ns.Span.t
+  -> 'a Stability.t Computation.t

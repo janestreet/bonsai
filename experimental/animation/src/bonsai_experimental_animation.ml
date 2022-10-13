@@ -219,7 +219,7 @@ let make
     | None -> fallback
     | Some (low, high) -> interpolate low high percent_float
   in
-  let%sub get_value = Bonsai_extra.yoink value in
+  let%sub get_value = Bonsai.yoink value in
   let%sub animate =
     let%arr set_start = set_start
     and set_end = set_end

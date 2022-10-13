@@ -1,6 +1,7 @@
 (library (name bonsai_web_ui_form) (public_name bonsai.web_ui_form)
- (preprocess (pps js_of_ocaml-ppx ppx_jane ppx_css ppx_typed_fields))
- (libraries bonsai bonsai_web bonsai_extra bonsai_web_ui_common_components
+ (preprocess
+  (pps js_of_ocaml-ppx ppx_jane ppx_bonsai ppx_css ppx_typed_fields))
+ (libraries bonsai bonsai_web bonsai_web_ui_common_components
   bonsai_web_ui_extendy bonsai_web_ui_file bonsai_web_ui_file_from_web_file
   bonsai_web_ui_freeform_multiselect bonsai_web_ui_multi_select
   bonsai_web_ui_typeahead bonsai_web_ui_reorderable_list

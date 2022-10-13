@@ -45,9 +45,9 @@ module For_value = struct
     let value =
       match value with
       | Constant _ -> value
-      | Lazy _ -> value
+      | Exception _ -> value
       | Incr _ -> value
-      | Named -> value
+      | Named _ -> value
       | Both (a, b) -> Both (map 1 a, map 2 b)
       | Cutoff t -> Cutoff { t with t = map 1 t.t }
       | Map t -> Map { f = t.f; t = map 1 t.t }
@@ -101,15 +101,13 @@ module For_value = struct
       parent
       v
   ;;
+
+  let id = { f = (fun { recurse; _ } from_parent value -> recurse from_parent value) }
 end
 
 module For_computation = struct
   type 'from_parent context =
-    { recurse :
-        'model 'dynamic_action 'static_action 'result.
-          'from_parent
-        -> ('model, 'dynamic_action, 'static_action, 'result) Computation.t
-        -> ('model, 'dynamic_action, 'static_action, 'result) Computation.t
+    { recurse : 'result. 'from_parent -> 'result Computation.t -> 'result Computation.t
     ; var_from_parent : Var_from_parent.t
     ; parent_path : Node_path.t Lazy.t
     ; current_path : Node_path.t Lazy.t
@@ -117,21 +115,21 @@ module For_computation = struct
 
   type 'from_parent user_mapper =
     { f :
-        'model 'dynamic_action 'static_action 'result.
+        'result.
           'from_parent context
         -> 'from_parent
-        -> ('model, 'dynamic_action, 'static_action, 'result) Computation.t
-        -> ('model, 'dynamic_action, 'static_action, 'result) Computation.t
+        -> 'result Computation.t
+        -> 'result Computation.t
     }
 
   let rec descend
-    : type model dynamic_action static_action result.
+    : type result.
       f:'from_parent user_mapper
       -> for_value:'a For_value.user_mapper
       -> append_to:Node_path.builder
       -> 'from_parent
-      -> (model, dynamic_action, static_action, result) Computation.t
-      -> (model, dynamic_action, static_action, result) Computation.t
+      -> result Computation.t
+      -> result Computation.t
     =
     fun ~f ~for_value ~append_to parent (computation : _ Computation.t) ->
     let current_path = Node_path.descend append_to in
@@ -151,9 +149,6 @@ module For_computation = struct
         parent
         c
     in
-    let map_packed ?choice (Computation.T t) =
-      Computation.T { t with t = map ?choice t.t }
-    in
     let map_value ?(var_from_parent = Var_from_parent.None) ?choice v =
       let append_to =
         match choice with
@@ -168,39 +163,27 @@ module For_computation = struct
         parent
         v
     in
-    let t : (model, dynamic_action, static_action, result) Computation.without_id =
-      match computation.t with
+    let kind : result Computation.kind =
+      match computation.kind with
       | Return value -> Return (map_value value)
       | Leaf1 t -> Leaf1 { t with input = map_value t.input }
       | Leaf01 t -> Leaf01 { t with input = map_value t.input }
-      | Leaf0 _ -> computation.t
+      | Leaf0 _ -> computation.kind
       | Leaf_incr t -> Leaf_incr { t with input = map_value t.input }
-      | Model_cutoff t -> Model_cutoff { t with t = map t.t }
-      | Subst t ->
+      | Model_cutoff t -> Model_cutoff (map t)
+      | Sub t ->
         let from =
           map ~var_from_parent:(One (Type_equal.Id.uid t.via)) ~choice:1 t.from
         in
         let into = map ~choice:2 t.into in
-        Subst { t with from; into }
-      | Subst_stateless_from t ->
-        let from =
-          map ~var_from_parent:(One (Type_equal.Id.uid t.via)) ~choice:1 t.from
-        in
-        let into = map ~choice:2 t.into in
-        Subst_stateless_from { t with from; into }
-      | Subst_stateless_into t ->
-        let from =
-          map ~var_from_parent:(One (Type_equal.Id.uid t.via)) ~choice:1 t.from
-        in
-        let into = map ~choice:2 t.into in
-        Subst_stateless_into { t with from; into }
+        Sub { t with from; into }
       | Store t ->
         let value =
           map_value ~var_from_parent:(One (Type_equal.Id.uid t.id)) ~choice:1 t.value
         in
         let inner = map ~choice:2 t.inner in
         Store { t with value; inner }
-      | Fetch _ -> computation.t
+      | Fetch _ -> computation.kind
       | Assoc t ->
         Assoc
           { t with
@@ -226,28 +209,35 @@ module For_computation = struct
       | Assoc_simpl t -> Assoc_simpl { t with map = map_value t.map }
       | Switch { match_; arms } ->
         let index = ref 1 in
-        Switch
-          { match_ = map_value ~choice:1 match_
-          ; arms =
-              Map.map arms ~f:(fun c ->
-                incr index;
-                map_packed ~choice:!index c)
-          }
-      | Lazy t -> Lazy (Lazy.map t ~f:map_packed)
-      | Wrap t ->
+        let match_ = map_value ~choice:!index match_ in
+        let arms =
+          Map.map arms ~f:(fun c ->
+            incr index;
+            map ~choice:!index c)
+        in
+        Switch { match_; arms }
+      | Lazy t -> Lazy (Lazy.map t ~f:map)
+      | Wrap ({ model_id; inject_id; inner; _ } as t) ->
         Wrap
           { t with
             inner =
               map
                 ~var_from_parent:
-                  (Two (Type_equal.Id.uid t.model_id, Type_equal.Id.uid t.inject_id))
-                t.inner
+                  (Two (Type_equal.Id.uid model_id, Type_equal.Id.uid inject_id))
+                inner
           }
-      | With_model_resetter t -> With_model_resetter (map t)
-      | Path -> computation.t
+      | With_model_resetter { inner; reset_id } ->
+        With_model_resetter { inner = map inner; reset_id }
+      | Path -> computation.kind
       | Lifecycle t -> Lifecycle (map_value t)
+      | Identity t -> Identity (map t)
     in
-    { computation with t }
+    Proc.wrap_computation kind
+  ;;
+
+  let id =
+    { f = (fun { recurse; _ } from_parent computation -> recurse from_parent computation)
+    }
   ;;
 end
 

@@ -1,4 +1,4 @@
 (library (name bonsai_web_ui_tabs_test)
  (libraries bonsai_web_ui_tabs patdiff.expect_test_patdiff bonsai_web_test
   core)
- (preprocess (pps ppx_jane)))
+ (preprocess (pps ppx_jane ppx_bonsai)))

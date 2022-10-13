@@ -103,9 +103,9 @@ module Node_info = struct
     let node_type =
       match value with
       | Constant _ -> "constant"
-      | Lazy _ -> "lazy"
+      | Exception _ -> "exception"
       | Incr _ -> "incr"
-      | Named -> "named"
+      | Named _ -> "named"
       | Both (_, _) -> "both"
       | Cutoff _ -> "cutoff"
       | Map _ -> "map"
@@ -119,28 +119,21 @@ module Node_info = struct
     { node_type; here; id = int_of_id id }
   ;;
 
-  let of_computation
-        (type model dynamic_action static_action result)
-        (computation : (model, dynamic_action, static_action, result) Computation.t)
-    =
+  let of_computation (type result) (computation : result Computation.t) =
     let here =
-      match computation.t with
-      | Subst { here; _ }
-      | Subst_stateless_from { here; _ }
-      | Subst_stateless_into { here; _ } -> here
+      match computation.kind with
+      | Sub { here; _ } -> here
       | _ -> None
     in
     let node_type =
-      match computation.t with
+      match computation.kind with
       | Return _ -> "return"
       | Leaf1 _ -> "leaf1"
       | Leaf0 _ -> "leaf0"
       | Leaf01 _ -> "leaf01"
       | Leaf_incr _ -> "leaf_incr"
       | Model_cutoff _ -> "model_cutoff"
-      | Subst _ -> "subst"
-      | Subst_stateless_from _ -> "subst_stateless_from"
-      | Subst_stateless_into _ -> "subst_stateless_into"
+      | Sub _ -> "sub"
       | Store _ -> "store"
       | Fetch _ -> "fetch"
       | Assoc _ -> "assoc"
@@ -152,6 +145,7 @@ module Node_info = struct
       | With_model_resetter _ -> "with_model_resetter"
       | Path -> "path"
       | Lifecycle _ -> "lifecycle"
+      | Identity _ -> "identity"
     in
     { node_type; here; id = int_of_id computation.id }
   ;;
@@ -188,7 +182,7 @@ let value_map
   add_dag_relationship ~from:current_path ~to_:parent_path;
   let () =
     match value.value with
-    | Named ->
+    | Named _ ->
       (match Hashtbl.find environment (Type_equal.Id.uid value.id) with
        | Some named_id -> add_dag_relationship ~from:named_id ~to_:current_path
        | None -> print_s [%message "BUG" [%here]])
@@ -198,12 +192,12 @@ let value_map
 ;;
 
 let computation_map
-      (type model dynamic_action static_action result)
+      (type result)
       ({ recurse; var_from_parent; parent_path; current_path } :
          _ Transform.For_computation.context)
       state
-      (computation : (model, dynamic_action, static_action, result) Computation.t)
-  : (model, dynamic_action, static_action, result) Computation.t
+      (computation : result Computation.t)
+  : result Computation.t
   =
   let environment, add_tree_relationship, add_dag_relationship = state in
   let node_info = Node_info.of_computation computation in
@@ -217,7 +211,7 @@ let computation_map
      Hashtbl.set environment ~key:snd ~data:current_path
    | None -> ());
   let recursed = recurse state computation in
-  match recursed.t with
+  match recursed.kind with
   | Fetch { id = v_id; _ } ->
     let uid = Type_equal.Id.uid v_id in
     (match Hashtbl.find environment uid with
@@ -227,7 +221,7 @@ let computation_map
   | _ -> recursed
 ;;
 
-let iter_graph_updates (t : (_, _, _, _) Computation.t) ~on_update =
+let iter_graph_updates (t : _ Computation.t) ~on_update =
   let graph_info = ref empty in
   let add_dag_relationship ~from ~to_ =
     let (lazy from), (lazy to_) = from, to_ in
@@ -251,10 +245,6 @@ let iter_graph_updates (t : (_, _, _, _) Computation.t) ~on_update =
     ~computation_mapper:{ f = computation_map }
     ~value_mapper:{ f = value_map }
     t
-;;
-
-let iter_graph_updates_packed (Computation.T t) ~on_update =
-  Computation.T { t with t = iter_graph_updates ~on_update t.t }
 ;;
 
 (* A lot of nodes in the bonsai graph don't actually have source-code locations

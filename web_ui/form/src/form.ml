@@ -1,5 +1,5 @@
 open! Core
-open Bonsai_web
+open (Bonsai_web : module type of Bonsai_web with module View := Bonsai_web.View)
 open Bonsai.Let_syntax
 
 module View = struct

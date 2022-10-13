@@ -101,19 +101,21 @@ let component ?filter (data : Row.t String.Map.t Value.t) =
   in
   Vdom.Node.div
     ~attr:
-      (Vdom.Attr.on_keydown (fun kbc ->
-         let binding =
-           match Js_of_ocaml.Dom_html.Keyboard_code.of_event kbc with
-           | ArrowDown | KeyJ -> Some focus.focus_down
-           | ArrowUp | KeyK -> Some focus.focus_up
-           | PageDown -> Some focus.page_down
-           | PageUp -> Some focus.page_up
-           | Escape -> Some focus.unfocus
-           | _ -> None
-         in
-         match binding with
-         | Some b -> Effect.Many [ Effect.Prevent_default; b ]
-         | None -> Effect.Ignore))
+      (Vdom.Attr.many
+         [ Vdom.Attr.on_keydown (fun kbc ->
+             let binding =
+               match Js_of_ocaml.Dom_html.Keyboard_code.of_event kbc with
+               | ArrowDown | KeyJ -> Some focus.focus_down
+               | ArrowUp | KeyK -> Some focus.focus_up
+               | PageDown -> Some focus.page_down
+               | PageUp -> Some focus.page_up
+               | Escape -> Some focus.unfocus
+               | _ -> None
+             in
+             match binding with
+             | Some b -> Effect.Many [ Effect.Prevent_default; b ]
+             | None -> Effect.Ignore)
+         ])
     [ Vdom.Node.div
         ~attr:(Vdom.Attr.class_ Style.show_position_toggle)
         [ button button_text (set (not should_show_position)) ]

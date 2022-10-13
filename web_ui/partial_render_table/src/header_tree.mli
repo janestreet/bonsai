@@ -9,7 +9,7 @@ type t = private
 
 and leaf = private
   { leaf_label : Vdom.Node.t
-  ; initial_width : [ `Px of int ]
+  ; initial_width : Css_gen.Length.t
   ; visible : bool
   }
 
@@ -19,7 +19,7 @@ and group = private
   }
 [@@deriving sexp]
 
-val leaf : label:Vdom.Node.t -> initial_width:[ `Px of int ] -> visible:bool -> t
+val leaf : label:Vdom.Node.t -> initial_width:Css_gen.Length.t -> visible:bool -> t
 val group : label:Vdom.Node.t -> t list -> t
 val org_group : t list -> t
 val colspan : t -> int

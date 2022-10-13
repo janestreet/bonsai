@@ -23,7 +23,8 @@ let create ?expand_direction ?(items = items) () =
   in
   Handle.create
     (Result_spec.vdom
-       ~filter_printed_attributes:(function
+       ~filter_printed_attributes:(fun key _data ->
+         match key with
          | "class" | "data-test" -> true
          | _ -> false)
        get_vdom)
@@ -332,7 +333,8 @@ let%expect_test "partial-rendering" =
   let handle =
     Handle.create
       (Result_spec.vdom
-         ~filter_printed_attributes:(function
+         ~filter_printed_attributes:(fun key _data ->
+           match key with
            | "class" -> true
            | _ -> false)
          get_vdom)

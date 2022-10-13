@@ -24,13 +24,13 @@ let extract_node_path_from_entry_label label =
   else None
 ;;
 
-let instrument_computation (t : (_, _, _, _) Computation.t) ~start_timer ~stop_timer =
+let instrument_computation (t : _ Computation.t) ~start_timer ~stop_timer =
   let computation_map
-        (type b c x d)
+        (type result)
         (context : unit Transform.For_computation.context)
         ()
-        (computation : (b, c, x, d) Computation.t)
-    : (b, c, x, d) Computation.t
+        (computation : result Computation.t)
+    : result Computation.t
     =
     let node_info = Graph_info.Node_info.of_computation computation in
     let entry_label node_type =
@@ -58,37 +58,50 @@ let instrument_computation (t : (_, _, _, _) Computation.t) ~start_timer ~stop_t
       stop_timer apply_action_label;
       model
     in
+    let time_static_apply_action
+          ~apply_action
+          ~inject_dynamic
+          ~inject_static
+          ~schedule_event
+          model
+          action
+      =
+      start_timer apply_action_label;
+      let model =
+        apply_action ~inject_dynamic ~inject_static ~schedule_event model action
+      in
+      stop_timer apply_action_label;
+      model
+    in
     let recursed = context.recurse () computation in
-    let computation : (b, c, x, d) Computation.without_id =
-      match recursed.t with
+    let kind : result Computation.kind =
+      match recursed.kind with
       | Fetch v_id -> Computation.Fetch v_id
       | Leaf1 t ->
-        Leaf1
-          { t with
-            dynamic_apply_action = time_apply_action ~apply_action:t.dynamic_apply_action
-          }
-      | Leaf0 { compute; name } ->
+        Leaf1 { t with apply_action = time_apply_action ~apply_action:t.apply_action }
+      | Leaf0 t ->
         let compute ~inject model =
           start_timer compute_label;
-          let computed = compute ~inject model in
+          let result = t.compute ~inject model in
           stop_timer compute_label;
-          computed
+          result
         in
-        Leaf0 { name; compute }
-      | Leaf_incr { input; dynamic_apply_action; compute; name } ->
-        let dynamic_apply_action input ~inject =
+        let apply_action = time_static_apply_action ~apply_action:t.apply_action in
+        Leaf0 { t with compute; apply_action }
+      | Leaf_incr t ->
+        let apply_dynamic input ~inject =
           start_timer apply_action_label;
-          let model_incr = dynamic_apply_action input ~inject in
+          let model_incr = t.apply_dynamic input ~inject in
           stop_timer apply_action_label;
           model_incr
         in
         let compute clock input model ~inject =
           start_timer compute_label;
-          let computed = compute clock input model ~inject in
+          let computed = t.compute clock input model ~inject in
           stop_timer compute_label;
           computed
         in
-        Leaf_incr { input; dynamic_apply_action; compute; name }
+        Leaf_incr { t with apply_dynamic; compute }
       | Assoc_simpl t ->
         let by path key value =
           start_timer by_label;
@@ -99,7 +112,7 @@ let instrument_computation (t : (_, _, _, _) Computation.t) ~start_timer ~stop_t
         Assoc_simpl { t with by }
       | computation -> computation
     in
-    { recursed with t = computation }
+    Proc.wrap_computation kind
   in
   let value_map
         (type a)
@@ -115,7 +128,7 @@ let instrument_computation (t : (_, _, _, _) Computation.t) ~start_timer ~stop_t
     in
     let value =
       match value with
-      | Constant _ | Lazy _ | Incr _ | Named | Both (_, _) | Cutoff _ -> value
+      | Constant _ | Exception _ | Incr _ | Named _ | Both (_, _) | Cutoff _ -> value
       | Map t ->
         let f a =
           start_timer entry_label;
@@ -180,8 +193,4 @@ let instrument_computation (t : (_, _, _, _) Computation.t) ~start_timer ~stop_t
     ~computation_mapper:{ f = computation_map }
     ~value_mapper:{ f = value_map }
     t
-;;
-
-let instrument_packed (Computation.T t) ~start_timer ~stop_timer =
-  Computation.T { t with t = instrument_computation ~start_timer ~stop_timer t.t }
 ;;

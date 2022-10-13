@@ -1,4 +1,5 @@
 (library (name bonsai)
  (libraries core core_kernel.reversed_list virtual_dom.ui_effect
   incr_dom.ui_incr tailwind_colors)
- (preprocess (pps ppx_jane ppx_pattern_bind)) (public_name bonsai))
+ (preprocess (pps ppx_jane ppx_pattern_bind ppx_bonsai ppxlib.traverse))
+ (public_name bonsai))

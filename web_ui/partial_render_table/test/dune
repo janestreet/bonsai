@@ -2,4 +2,4 @@
  (libraries textutils.ascii_table_kernel virtual_dom.vdom_test_helpers
   bonsai_web_ui_element_size_hooks bonsai_web_ui_partial_render_table core
   bonsai_web_test)
- (preprocess (pps ppx_jane)))
+ (preprocess (pps ppx_jane ppx_bonsai)))

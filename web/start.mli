@@ -93,7 +93,8 @@ module Arrow_deprecated : sig
       The outermost [Bonsai.t]'s result type parameter should be a [Vdom.Node.t], which will
       be bound to the DOM element with id [bind_to_element_with_id]. *)
   val start_standalone
-    :  initial_input:'input
+    :  ?optimize:bool
+    -> initial_input:'input
     -> bind_to_element_with_id:string
     -> ('input, Vdom.Node.t) Bonsai.Arrow_deprecated.t
     -> ('input, unit, Nothing.t, Nothing.t) Handle.t
@@ -107,7 +108,8 @@ module Arrow_deprecated : sig
         [bind_to_element_with_id]; and
       - an [inject] function that accepts external actions and returns [unit Vdom.Effect.t]s. *)
   val start
-    :  initial_input:'input
+    :  ?optimize:bool
+    -> initial_input:'input
     -> bind_to_element_with_id:string
     -> ( ('input, 'outgoing) App_input.t
        , ('extra, 'incoming) App_result.t )
@@ -207,9 +209,13 @@ module Proc : sig
       [bind_to_element_with_id] should be the HTML id of the element in the document that
       Bonsai will take control of.  For most apps, you'll have html that looks like this:
       [<html><body><div id="app"></div></body></html>], so the value passed to
-      [bind_to_element_with_id] should be the string ["app"]. *)
+      [bind_to_element_with_id] should be the string ["app"].
+
+      [optimize] configures Bonsai's computation optimizations, and defaults to [true] *)
   val start
     :  ('result, 'extra, 'incoming) Result_spec.t
+    -> ?optimize:bool
+    -> ?custom_connector:(Rpc_effect.Where_to_connect.Custom.t -> Rpc_effect.Connector.t)
     -> bind_to_element_with_id:string
     -> 'result Bonsai.Computation.t
     -> ('extra, 'incoming) Handle.t

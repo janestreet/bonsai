@@ -179,11 +179,11 @@ let%expect_test "normal drag" =
     Handle.recompute_view handle;
     [%expect
       {|
-    ("universe 1 on_drop" (source 1) (target 1))
-    adding window event listener
-    adding window event listener
-    adding window event listener
-    adding window event listener |}])
+      ("universe 1 on_drop" (source 1) (target 1))
+      adding window event listener
+      adding window event listener
+      adding window event listener
+      adding window event listener |}])
 ;;
 
 let%expect_test "sources in both universes can go anywhere" =
@@ -195,11 +195,11 @@ let%expect_test "sources in both universes can go anywhere" =
     Handle.recompute_view handle;
     [%expect
       {|
-    ("universe 1 on_drop" (source 2) (target 1))
-    adding window event listener
-    adding window event listener
-    adding window event listener
-    adding window event listener |}];
+      ("universe 1 on_drop" (source 2) (target 1))
+      adding window event listener
+      adding window event listener
+      adding window event listener
+      adding window event listener |}];
     run handle ~name:"2" (Start_drag "3");
     run handle ~name:"2" (Set_target (Some "3"));
     run handle ~name:"2" Finish_drag;
@@ -221,11 +221,11 @@ let%expect_test "targets in both universes can receive anything" =
     Handle.recompute_view handle;
     [%expect
       {|
-    ("universe 1 on_drop" (source 1) (target 2))
-    adding window event listener
-    adding window event listener
-    adding window event listener
-    adding window event listener |}];
+      ("universe 1 on_drop" (source 1) (target 2))
+      adding window event listener
+      adding window event listener
+      adding window event listener
+      adding window event listener |}];
     run handle ~name:"1" (Start_drag "2");
     run handle ~name:"1" (Set_target (Some "2"));
     run handle ~name:"1" Finish_drag;

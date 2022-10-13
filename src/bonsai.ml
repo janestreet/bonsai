@@ -30,14 +30,17 @@ module Private = struct
   module Graph_info = Graph_info
   module Instrumentation = Instrumentation
   module Flatten_values = Flatten_values
+  module Constant_fold = Constant_fold
+  module Remove_identity = Remove_identity
   module Skeleton = Skeleton
   module Transform = Transform
-
-  let eval = Eval.eval
-
+  module Linter = Linter
+  module Pre_process = Pre_process
   include Proc.Private
 
   let path = Proc.path
+  let gather = Proc.gather
+  let pre_process = Pre_process.pre_process
 end
 
 module Expert = struct
@@ -59,15 +62,8 @@ module For_open = struct
 end
 
 module Debug = struct
-  let to_dot c = To_dot.to_dot (Private.reveal_computation c)
-
-  let instrument_computation c ~start_timer ~stop_timer =
-    Instrumentation.instrument_packed
-      (Private.reveal_computation c)
-      ~start_timer
-      ~stop_timer
-  ;;
-
+  let to_dot ?pre_process c = To_dot.to_dot ?pre_process (Private.reveal_computation c)
+  let instrument_computation = Instrumentation.instrument_computation
   let enable_incremental_annotations = Annotate_incr.enable
   let disable_incremental_annotations = Annotate_incr.disable
 end

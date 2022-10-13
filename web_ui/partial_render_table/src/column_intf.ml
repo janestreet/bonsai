@@ -23,8 +23,7 @@ module type S_with_sorter = sig
 
   val headers_and_sorters
     :  t
-    -> change_sort:([ `Add | `Replace ] -> int -> unit Vdom.Effect.t) Value.t
-    -> sort_order:(int * [ `Asc | `Desc ]) list Value.t
+    -> int Sortable_header.t Value.t
     -> ((key * data -> key * data -> int) Int.Map.t * Header_tree.t) Computation.t
 
   val instantiate_cells

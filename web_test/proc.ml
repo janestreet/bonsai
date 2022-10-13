@@ -4,7 +4,13 @@ open! Import
 module Result_spec = struct
   include Bonsai_test.Result_spec
 
-  let vdom (type result) ?filter_printed_attributes get_vdom =
+  let vdom
+        (type result)
+        ?filter_printed_attributes
+        ?(censor_paths = true)
+        ?(censor_hash = true)
+        get_vdom
+    =
     (module struct
       type t = result
 
@@ -14,7 +20,10 @@ module Result_spec = struct
         result
         |> get_vdom
         |> Virtual_dom_test_helpers.Node_helpers.unsafe_convert_exn
-        |> Virtual_dom_test_helpers.Node_helpers.to_string_html ?filter_printed_attributes
+        |> Virtual_dom_test_helpers.Node_helpers.to_string_html
+             ?filter_printed_attributes
+             ~censor_paths
+             ~censor_hash
       ;;
     end : S
       with type t = result
@@ -24,6 +33,39 @@ end
 
 module Handle = struct
   include Bonsai_test.Handle
+
+  let create
+        result_spec
+        ?rpc_implementations
+        ?(connectors = fun _ -> Bonsai_web.Rpc_effect.Connector.test_fallback)
+        ?clock
+        ?optimize
+        computation
+    =
+    let connectors =
+      match rpc_implementations with
+      | Some rpc_implementations ->
+        let test_fallback_connector =
+          let open Async_rpc_kernel in
+          Rpc_effect.Connector.for_test
+            (Rpc.Implementations.create_exn
+               ~on_unknown_rpc:`Continue
+               ~implementations:(Versioned_rpc.Menu.add rpc_implementations))
+            ~connection_state:(fun _ -> ())
+        in
+        fun where_to_connect ->
+          let connector = connectors where_to_connect in
+          if Bonsai_web.Rpc_effect.Private.is_test_fallback connector
+          then test_fallback_connector
+          else connector
+      | None -> connectors
+    in
+    let computation =
+      Bonsai_web.Rpc_effect.Private.with_connector connectors computation
+    in
+    Bonsai_test.Handle.create result_spec ?clock ?optimize computation
+  ;;
+
   open Virtual_dom_test_helpers
 
   let get_element handle ~get_vdom ~selector =
@@ -167,6 +209,30 @@ module Handle = struct
                ~name:Bulk_size_tracker.For_testing.hook_name
                Bulk_size_tracker.For_testing.type_id
            , { Bulk_size_tracker.Dimensions.width; height } )))
+    ;;
+  end
+
+  module Position_tracker = struct
+    open Bonsai_web_ui_element_size_hooks
+
+    type change =
+      { selector : string
+      ; top : int
+      ; left : int
+      ; width : int
+      ; height : int
+      }
+
+    let change_positions handle ~get_vdom changes =
+      Position_tracker.For_testing.change_positions
+        (List.map changes ~f:(fun { selector; top; left; height; width } ->
+           ( get_hook_value
+               handle
+               ~get_vdom
+               ~selector
+               ~name:Position_tracker.For_testing.hook_name
+               Position_tracker.For_testing.type_id
+           , { Position_tracker.Position.top; left; height; width } )))
     ;;
   end
 

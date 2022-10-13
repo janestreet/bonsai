@@ -12,11 +12,14 @@ build: [
 depends: [
   "ocaml" {>= "4.08.0"}
   "async"
+  "async_durable"
   "async_extra"
   "async_js"
   "async_kernel"
   "async_rpc_kernel"
   "async_rpc_websocket"
+  "babel"
+  "base"
   "core"
   "core_bench"
   "core_kernel"
@@ -25,12 +28,17 @@ depends: [
   "fuzzy_match"
   "incr_dom"
   "incr_map"
+  "indentation_buffer"
+  "ordinal_abbreviation"
   "patdiff"
   "ppx_css"
   "ppx_jane"
+  "ppx_let"
   "ppx_pattern_bind"
   "ppx_typed_fields"
   "profunctor"
+  "sexp_grammar"
+  "sexplib0"
   "textutils"
   "virtual_dom"
   "base64"                   {>= "3.4.0"}
@@ -40,6 +48,7 @@ depends: [
   "js_of_ocaml"              {>= "4.0"}
   "js_of_ocaml-ppx"          {>= "4.0"}
   "ocaml-embed-file"
+  "ppxlib"                   {>= "0.28.0"}
   "re"                       {>= "1.8.0"}
   "uri"                      {>= "3.0.0"}
 ]

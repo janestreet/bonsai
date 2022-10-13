@@ -1,8 +1,10 @@
 open! Core
+module Private_view = View
 open! Bonsai_web
 open Bonsai.Let_syntax
 module Extendy = Bonsai_web_ui_extendy
 module Selectable_style = Vdom_input_widgets.Selectable_style
+module View = Private_view
 
 module type Stringable_model = sig
   type t
@@ -18,7 +20,8 @@ module Style =
     outline: none;
     border: 2px solid red;
     border-radius: 2px;
-  } |}]
+  }
+  |}]
 
 let path =
   let%map.Computation path_id = Bonsai.path_id in
@@ -154,16 +157,6 @@ module Textarea = struct
   ;;
 end
 
-let sexp_to_pretty_string sexp_of_t t =
-  t
-  |> sexp_of_t
-  |> Sexp.to_string_mach
-  |> String.lowercase
-  |> String.map ~f:(function
-    | '(' | ')' | '-' | '_' -> ' '
-    | o -> o)
-;;
-
 module Checkbox = struct
   let make_input ~extra_attrs ~state ~set_state =
     Vdom.Node.input
@@ -209,12 +202,13 @@ module Checkbox = struct
         ?(style = Value.return Selectable_style.Native)
         ?(extra_attrs = Value.return [])
         ?to_string
+        ?(layout = `Vertical)
         (module M : Bonsai.Comparator with type t = a and type comparator_witness = cmp)
         values
     : (a, cmp) Set.t Form.t Computation.t
     =
     let to_string =
-      Option.value to_string ~default:(sexp_to_pretty_string [%sexp_of: M.t])
+      Option.value to_string ~default:(View.sexp_to_pretty_string [%sexp_of: M.t])
     in
     let module M = struct
       include M
@@ -229,6 +223,7 @@ module Checkbox = struct
       and extra_attrs = extra_attrs in
       fun ~id ~state ~set_state ->
         Vdom_input_widgets.Checklist.of_values
+          ~layout
           ~extra_attrs:(id :: extra_attrs)
           (module M)
           values
@@ -332,7 +327,7 @@ module Dropdown = struct
       include E
 
       let to_string =
-        Option.value to_string ~default:(sexp_to_pretty_string [%sexp_of: t])
+        Option.value to_string ~default:(View.sexp_to_pretty_string [%sexp_of: t])
       ;;
     end
     in
@@ -461,49 +456,87 @@ module Dropdown = struct
 end
 
 module Typeahead = struct
-  let single_opt ?(extra_attrs = Value.return []) ?placeholder ?to_string m ~all_options =
+  let single_opt
+        ?(extra_attrs = Value.return [])
+        ?placeholder
+        ?to_string
+        ?to_option_description
+        ?handle_unknown_option
+        m
+        ~all_options
+    =
     let%sub path, id = path in
     let extra_attrs =
       let%map id = id
       and extra_attrs = extra_attrs in
       id :: extra_attrs
     in
-    let%sub typeahead =
+    let%sub { selected = value; view; set_selected = set; _ } =
       Bonsai_web_ui_typeahead.Typeahead.create
         ?placeholder
         ?to_string
+        ?to_option_description
+        ?handle_unknown_option
         m
         ~all_options
         ~extra_attrs
     in
-    let%arr value, view, set = typeahead
+    let%arr value = value
+    and view = view
+    and set = set
     and path = path in
     Form.Expert.create ~value:(Ok value) ~view:(View.of_vdom ~id:path view) ~set
   ;;
 
-  let single ?extra_attrs ?placeholder ?to_string m ~all_options =
+  let single
+        ?extra_attrs
+        ?placeholder
+        ?to_string
+        ?to_option_description
+        ?handle_unknown_option
+        m
+        ~all_options
+    =
     computation_map
-      (single_opt ?extra_attrs ?placeholder ?to_string m ~all_options)
+      (single_opt
+         ?extra_attrs
+         ?placeholder
+         ?to_string
+         ?to_option_description
+         ?handle_unknown_option
+         m
+         ~all_options)
       ~f:optional_to_required
   ;;
 
-  let set ?(extra_attrs = Value.return []) ?placeholder ?to_string ?split m ~all_options =
+  let set
+        ?(extra_attrs = Value.return [])
+        ?placeholder
+        ?to_string
+        ?to_option_description
+        ?split
+        m
+        ~all_options
+    =
     let%sub path, id = path in
     let extra_attrs =
       let%map id = id
       and extra_attrs = extra_attrs in
       id :: extra_attrs
     in
-    let%sub typeahead =
+    let%sub { selected = value; view; set_selected = set; _ } =
       Bonsai_web_ui_typeahead.Typeahead.create_multi
         ?placeholder
         ?to_string
+        ?to_option_description
         ?split
         m
         ~extra_attrs
         ~all_options
     in
-    let%arr value, view, set = typeahead
+    let%arr value = value
+    and view = view
+    and set = set
     and path = path in
     Form.Expert.create ~value:(Ok value) ~view:(View.of_vdom ~id:path view) ~set
   ;;
@@ -513,12 +546,20 @@ module Typeahead = struct
         ?extra_attrs
         ?placeholder
         ?to_string
+        ?to_option_description
         ?split
         (module M : Bonsai.Comparator with type t = a and type comparator_witness = cmp)
         ~all_options
     =
     computation_map
-      (set ?extra_attrs ?placeholder ?to_string ?split (module M) ~all_options)
+      (set
+         ?extra_attrs
+         ?placeholder
+         ?to_string
+         ?to_option_description
+         ?split
+         (module M)
+         ~all_options)
       ~f:(Form.project ~parse_exn:Set.to_list ~unparse:(Set.of_list (module M)))
   ;;
 end
@@ -580,6 +621,121 @@ module Date_time = struct
   let datetime_local ?extra_attrs () =
     computation_map (datetime_local_opt ?extra_attrs ()) ~f:optional_to_required
   ;;
+
+  module Range = struct
+    let make_opt_range
+          (type a)
+          ?(allow_equal = false)
+          ~kind_name
+          (module M : Comparisons.S with type t = a)
+          (form : a option Form.t Computation.t)
+      =
+      let bounds_error =
+        lazy
+          (Or_error.error_string
+             (if allow_equal
+              then
+                [%string
+                  "Start %{kind_name} must be before or the same as the end %{kind_name}."]
+              else
+                [%string
+                  "Start %{kind_name} must be strictly before the end %{kind_name}."]))
+      in
+      let%sub path = Bonsai.path_id in
+      let%sub lower = form in
+      let%sub upper = form in
+      let%arr path = path
+      and lower = lower
+      and upper = upper in
+      let value =
+        match Or_error.both (Form.value lower) (Form.value upper) with
+        | Ok (lower, upper) ->
+          (match lower, upper with
+           | None, _ | _, None -> Ok (lower, upper)
+           | Some lower, Some upper ->
+             (match M.compare lower upper with
+              | 0 -> if allow_equal then Ok (Some lower, Some upper) else force bounds_error
+              | x when x < 0 -> Ok (Some lower, Some upper)
+              | x when x > 0 -> force bounds_error
+              | _ -> assert false))
+        | Error _ as err -> err
+      in
+      let view =
+        let lower_view = List.hd_exn (Form.View.to_vdom_plain (Form.view lower)) in
+        let upper_view = List.hd_exn (Form.View.to_vdom_plain (Form.view upper)) in
+        Form.View.Private.of_vdom
+          ~id:path
+          (Vdom.Node.div [ lower_view; Vdom.Node.text " - "; upper_view ])
+      in
+      let set (lower_val, upper_val) =
+        let pairwise_set =
+          Effect.Many [ Form.set lower lower_val; Form.set upper upper_val ]
+        in
+        match lower_val, upper_val with
+        | None, _ | _, None -> pairwise_set
+        | Some lower_val, Some upper_val ->
+          (match M.compare lower_val upper_val with
+           | 0 -> if allow_equal then pairwise_set else Effect.Ignore
+           | x when x < 0 -> pairwise_set
+           | x when x > 0 -> Effect.Ignore
+           | _ -> Effect.Ignore)
+      in
+      Form.Expert.create ~view ~value ~set
+    ;;
+
+    let of_opt_range form =
+      Form.project'
+        form
+        ~parse:(fun (lower, upper) ->
+          match lower, upper with
+          | Some lower, Some upper -> Ok (lower, upper)
+          | None, None -> Error (Error.of_string "Values are required for this range")
+          | None, Some _ ->
+            Error (Error.of_string "A value is required for the start of this range")
+          | Some _, None ->
+            Error (Error.of_string "A value is required for the end of this range"))
+        ~unparse:(fun (lower, upper) -> Some lower, Some upper)
+    ;;
+
+    let date_opt ?(extra_attr = Value.return Vdom.Attr.empty) ?allow_equal () =
+      let%sub extra_attrs = Bonsai.pure List.return extra_attr in
+      make_opt_range
+        ~kind_name:"date"
+        ?allow_equal
+        (module Date)
+        (date_opt ~extra_attrs ())
+    ;;
+
+    let date ?extra_attr ?allow_equal () =
+      computation_map (date_opt ?extra_attr ?allow_equal ()) ~f:of_opt_range
+    ;;
+
+    let time_opt ?(extra_attr = Value.return Vdom.Attr.empty) ?allow_equal () =
+      let%sub extra_attrs = Bonsai.pure List.return extra_attr in
+      make_opt_range
+        ~kind_name:"time"
+        ?allow_equal
+        (module Time_ns.Ofday)
+        (time_opt ~extra_attrs ())
+    ;;
+
+    let time ?extra_attr ?allow_equal () =
+      computation_map (time_opt ?extra_attr ?allow_equal ()) ~f:of_opt_range
+    ;;
+
+    let datetime_local_opt ?(extra_attr = Value.return Vdom.Attr.empty) ?allow_equal () =
+      let%sub extra_attrs = Bonsai.pure List.return extra_attr in
+      make_opt_range
+        ~kind_name:"time"
+        ?allow_equal
+        (module Time_ns)
+        (datetime_local_opt ~extra_attrs ())
+    ;;
+
+    let datetime_local ?extra_attr ?allow_equal () =
+      computation_map (datetime_local_opt ?extra_attr ?allow_equal ()) ~f:of_opt_range
+    ;;
+  end
 end
 
 module Multiselect = struct
@@ -595,7 +751,7 @@ module Multiselect = struct
       include Comparable.Make_using_comparator (M)
 
       let to_string =
-        Option.value to_string ~default:(sexp_to_pretty_string [%sexp_of: t])
+        Option.value to_string ~default:(View.sexp_to_pretty_string [%sexp_of: t])
       ;;
     end
     in
@@ -691,7 +847,7 @@ module Multiple = struct
       Bonsai_web_ui_common_components.Pills.of_list
         ~extra_container_attr:extra_pill_container_attr
         ~extra_pill_attr
-        ~to_string:M.to_string
+        ~to_string:(Value.return M.to_string)
         ~inject_selected_options
         selected_options
     in
@@ -989,7 +1145,7 @@ module Radio_buttons = struct
       let to_string (item : E.t) =
         match to_string with
         | Some f -> f item
-        | None -> sexp_to_pretty_string E.sexp_of_t item
+        | None -> View.sexp_to_pretty_string E.sexp_of_t item
       ;;
     end
     in

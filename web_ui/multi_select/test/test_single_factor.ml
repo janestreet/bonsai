@@ -282,7 +282,7 @@ let%expect_test "search string vdom" =
           <div class="multi-select-item" onclick>
             <input type="checkbox" #checked="false" onchange> </input>
             <label> bar </label>
-    -|    </div>
+          </div>
     -|    <div class="multi-select-item" onclick>
     -|      <input type="checkbox" #checked="false" onchange> </input>
     -|      <label> baz </label>
@@ -290,7 +290,7 @@ let%expect_test "search string vdom" =
     -|    <div class="multi-select-item" onclick>
     -|      <input type="checkbox" #checked="false" onchange> </input>
     -|      <label> foo </label>
-          </div>
+    -|    </div>
         </div>
       </div> |}]
 ;;

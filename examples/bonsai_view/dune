@@ -1,0 +1,4 @@
+(executables (names main)
+ (libraries bonsai_web bonsai_web_ui_form virtual_dom.vdom_test_helpers
+  auto_reload bonsai_web_ui_codemirror)
+ (preprocess (pps ppx_jane js_of_ocaml-ppx ppx_bonsai ppx_css ppx_demo)))

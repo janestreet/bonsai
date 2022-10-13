@@ -24,12 +24,13 @@ end
 module Kind = struct
   type t =
     | Computation of string
-    | Leaf of string
+    | Leaf
     | Value of
         { kind : string
         ; here : Source_code_position.t option
         }
     | Subst of Source_code_position.t option
+    | Reset_id
     | Dyn
 
   let basic_shape ?(other = "") ?tooltip ~shape ~label ~color () =
@@ -44,10 +45,10 @@ module Kind = struct
 
   let to_style = function
     | Computation kind -> basic_shape ~shape:"Mrecord" ~label:kind ~color:"#86E3CE" ()
-    | Leaf name ->
+    | Leaf ->
       basic_shape
         ~shape:"Mrecord"
-        ~tooltip:name
+        ~tooltip:"leaf"
         ~label:"{state machine}"
         ~color:"#D0E6A5"
         ()
@@ -64,7 +65,7 @@ module Kind = struct
         ~color:"#FFFFFF"
         ~other:"width=.1, height=.1"
         ()
-    | Dyn ->
+    | Reset_id | Dyn ->
       basic_shape
         ~shape:"circle"
         ~label:""
@@ -127,10 +128,10 @@ let rec follow_skeleton_value
   let register_const = register_const state (Kind.Value { kind = "const"; here }) in
   match value with
   | Skeleton.Value.Constant -> register_const id
-  | Lazy -> register "lazy"
+  | Exception -> register "exception"
   | Incr -> register "incr"
   | Named -> register_named state (Kind.Subst here) id
-  | Cutoff { t } ->
+  | Cutoff { t; added_by_let_syntax = _ } ->
     let me = register "cutoff" in
     let them = follow_skeleton_value state t in
     arrow state ~from:them ~to_:me;
@@ -142,8 +143,8 @@ let rec follow_skeleton_value
       ~to_:(register "mapn")
 ;;
 
-let follow_dynamic_skeleton_leaf state (input : Skeleton.Value.t) name =
-  let me = register state (Kind.Leaf name) "leaf" in
+let follow_dynamic_skeleton_leaf state (input : Skeleton.Value.t) =
+  let me = register state Kind.Leaf "leaf" in
   match input.kind with
   | Skeleton.Value.Constant -> me
   | Mapn { inputs } ->
@@ -167,9 +168,9 @@ let rec follow_skeleton_computation state (computation : Skeleton.Computation.t)
     let me = register_computation "fetch" in
     arrow state ~from:(register_named state Kind.Dyn id) ~to_:me;
     me
-  | Leaf0 { name; _ } -> register state (Kind.Leaf name) "leaf0"
-  | Leaf01 { input; name; _ } -> follow_dynamic_skeleton_leaf state input name
-  | Leaf1 { input; name; _ } -> follow_dynamic_skeleton_leaf state input name
+  | Leaf0 -> register state Kind.Leaf "leaf0"
+  | Leaf01 { input; _ } -> follow_dynamic_skeleton_leaf state input
+  | Leaf1 { input; _ } -> follow_dynamic_skeleton_leaf state input
   | Leaf_incr _ -> register_computation "leaf_incr"
   | Path -> register_computation "path"
   | Lifecycle { value } ->
@@ -180,7 +181,7 @@ let rec follow_skeleton_computation state (computation : Skeleton.Computation.t)
     let me = register_computation "model_cutoff" in
     arrow state ~from:(follow_skeleton_computation state t) ~to_:me;
     me
-  | Sub { from; via; into; statefulness = _ } ->
+  | Sub { from; via; into } ->
     arrow
       state
       ~from:(follow_skeleton_computation state from)
@@ -215,27 +216,31 @@ let rec follow_skeleton_computation state (computation : Skeleton.Computation.t)
     let me = register_computation "wrap" in
     arrow state ~from:(follow_skeleton_computation state inner) ~to_:me;
     me
-  | With_model_resetter { t } ->
+  | With_model_resetter { reset_id; inner } ->
     let me = register_computation "with_model_resetter" in
-    arrow state ~from:(follow_skeleton_computation state t) ~to_:me;
+    arrow state ~from:me ~to_:(register_named state Kind.Reset_id reset_id);
+    arrow state ~from:(follow_skeleton_computation state inner) ~to_:me;
     me
   | Store { id; value; inner } ->
     let me = register_computation "dyn_set" in
     arrow state ~from:(follow_skeleton_value state value) ~to_:me;
     arrow state ~from:me ~to_:(register_named state Kind.Dyn id);
     follow_skeleton_computation state inner
+  | Identity { t } ->
+    let me = register_computation "identity" in
+    arrow state ~from:(follow_skeleton_computation state t) ~to_:me;
+    me
 ;;
 
-let to_dot (Computation.T { t; _ }) =
+let to_dot ?(pre_process = true) t =
   let state =
     { State.id = 0
     ; buffer = Buffer.create 2014
     ; type_id_to_name = Hashtbl.create (module Skeleton.Id)
     }
   in
-  let skeleton_computation =
-    Skeleton.Computation.of_computation (Flatten_values.flatten_values t)
-  in
+  let computation = if pre_process then Pre_process.pre_process t else t in
+  let skeleton_computation = Skeleton.Computation.of_computation computation in
   let _root : Id.t = follow_skeleton_computation state skeleton_computation in
   sprintf "digraph {\n%s}" (Buffer.contents state.buffer)
 ;;

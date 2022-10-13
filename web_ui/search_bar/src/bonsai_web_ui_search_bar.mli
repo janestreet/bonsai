@@ -27,6 +27,9 @@ val create
   -> ?max_query_results:int
   (** If the input matches more than [max_query_results], only that many will be shown and
       the user will have a link to view more. Default is 10. *)
+  -> ?additional_query_results_on_click:int
+  (** If the user clicks on the link to view more query results,
+      [additional_query_results_on_click] more are shown. Default is 10. *)
   -> ?width:Css_gen.Length.t
   -> ?placeholder:string
   -> ?initial_query:string

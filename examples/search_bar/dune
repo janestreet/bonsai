@@ -1,6 +1,6 @@
 (executables (names main)
  (libraries async_kernel bonsai bonsai_web_ui_search_bar core)
- (preprocess (pps ppx_jane ppx_pattern_bind)))
+ (preprocess (pps ppx_bonsai ppx_jane ppx_pattern_bind)))
 
 (rule (targets style.css)
  (deps %{workspace_root}/lib/jane_web_style/src/css/style-4.css)

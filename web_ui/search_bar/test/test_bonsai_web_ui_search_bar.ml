@@ -12,6 +12,7 @@ let initial_choices = [ 1; 2; 3; 40; 100; 1000 ]
 
 let create
       ?max_query_results
+      ?additional_query_results_on_click
       ?autocomplete_item
       ?filter_choice
       ?score_choice
@@ -27,6 +28,7 @@ let create
       ~extra_textbox_attr:(Vdom.Attr.class_ "my-test-class")
       ~wrap_search_bar:(fun node -> Vdom.Node.div ~attr:(Vdom.Attr.id "wrapper") [ node ])
       ?max_query_results
+      ?additional_query_results_on_click
       ?autocomplete_item
       ?filter_choice
       ?score_choice
@@ -159,14 +161,14 @@ let%expect_test "basics" =
                    style={
                      width: 100.00%;
                    }> </input>
-    -|    </div>
+          </div>
     -|    <div class="autocomplete" style={ width: 100.00%; max-width: 100.00%; }>
     -|      <ul id="autocomplete-items" class="autocomplete-items" onmouseout>
     -|        <li onclick onmousedown onmouseover> 1 </li>
     -|        <li onclick onmousedown onmouseover> 100 </li>
     -|        <li onclick onmousedown onmouseover> 1000 </li>
     -|      </ul>
-          </div>
+    -|    </div>
         </div>
       </div> |}]
 ;;
@@ -228,7 +230,7 @@ let%expect_test "focus / blur" =
                    style={
                      width: 100.00%;
                    }> </input>
-    -|    </div>
+          </div>
     -|    <div class="autocomplete" style={ width: 100.00%; max-width: 100.00%; }>
     -|      <ul id="autocomplete-items" class="autocomplete-items" onmouseout>
     -|        <li onclick onmousedown onmouseover> 1 </li>
@@ -238,7 +240,7 @@ let%expect_test "focus / blur" =
     -|        <li onclick onmousedown onmouseover> 100 </li>
     -|        <li onclick onmousedown onmouseover> 1000 </li>
     -|      </ul>
-          </div>
+    -|    </div>
         </div>
       </div> |}];
   Bonsai_web_test.Handle.focus t.handle ~get_vdom:Fn.id ~selector:"input";
@@ -504,13 +506,13 @@ let%expect_test "filter_choice" =
                    style={
                      width: 100.00%;
                    }> </input>
-    +|    </div>
+          </div>
     +|    <div class="autocomplete" style={ width: 100.00%; max-width: 100.00%; }>
     +|      <ul id="autocomplete-items" class="autocomplete-items" onmouseout>
     +|        <li onclick onmousedown onmouseover> 1 </li>
     +|        <li onclick onmousedown onmouseover> 3 </li>
     +|      </ul>
-          </div>
+    +|    </div>
         </div>
       </div> |}];
   Bonsai_web_test.Handle.input_text t.handle ~get_vdom:Fn.id ~selector:"input" ~text:"66";
@@ -568,7 +570,7 @@ let%expect_test "filter_choice" =
                    style={
                      width: 100.00%;
                    }> </input>
-    -|    </div>
+          </div>
     -|    <div class="autocomplete" style={ width: 100.00%; max-width: 100.00%; }>
     -|      <ul id="autocomplete-items" class="autocomplete-items" onmouseout>
     -|        <li onclick onmousedown onmouseover> 2 </li>
@@ -576,7 +578,7 @@ let%expect_test "filter_choice" =
     -|        <li onclick onmousedown onmouseover> 100 </li>
     -|        <li onclick onmousedown onmouseover> 1000 </li>
     -|      </ul>
-          </div>
+    -|    </div>
         </div>
       </div> |}]
 ;;
@@ -610,14 +612,14 @@ let%expect_test "score_choice" =
                    style={
                      width: 100.00%;
                    }> </input>
-    +|    </div>
+          </div>
     +|    <div class="autocomplete" style={ width: 100.00%; max-width: 100.00%; }>
     +|      <ul id="autocomplete-items" class="autocomplete-items" onmouseout>
     +|        <li onclick onmousedown onmouseover> 1000 </li>
     +|        <li onclick onmousedown onmouseover> 100 </li>
     +|        <li onclick onmousedown onmouseover> 1 </li>
     +|      </ul>
-          </div>
+    +|    </div>
         </div>
       </div> |}]
 ;;
@@ -650,12 +652,12 @@ let%expect_test "of_string" =
                    style={
                      width: 100.00%;
                    }> </input>
-    +|    </div>
+          </div>
     +|    <div class="autocomplete" style={ width: 100.00%; max-width: 100.00%; }>
     +|      <ul id="autocomplete-items" class="autocomplete-items" onmouseout>
     +|        <li onclick onmousedown onmouseover> 40 </li>
     +|      </ul>
-          </div>
+    +|    </div>
         </div>
       </div> |}];
   Bonsai_web_test.Handle.input_text t.handle ~get_vdom:Fn.id ~selector:"input" ~text:"40";
@@ -712,19 +714,313 @@ let%expect_test "max_query_results" =
                    style={
                      width: 100.00%;
                    }> </input>
-    +|    </div>
+          </div>
     +|    <div class="autocomplete" style={ width: 100.00%; max-width: 100.00%; }>
     +|      <ul id="autocomplete-items" class="autocomplete-items" onmouseout>
     +|        <li onclick onmousedown onmouseover> 1 </li>
     +|        <li onclick onmousedown onmouseover> 100 </li>
     +|        <li class="no-cursor"
+    +|            onclick
     +|            onmousedown
     +|            style={
     +|              background-color: var(--js-dark-snow-color);
     +|              width: 100.00%;
     +|            }> +1 more </li>
     +|      </ul>
+    +|    </div>
+        </div>
+      </div> |}]
+;;
+
+let%expect_test "show additional query results" =
+  let t = create ~max_query_results:3 ~additional_query_results_on_click:2 () in
+  Bonsai_web_test.Handle.show t.handle;
+  [%expect
+    {|
+    <div id="wrapper">
+      <div class="wrapper" style={ width: 100.00%; }>
+        <div class="search-input-container">
+          <input placeholder="Pick your favourite number"
+                 tabindex="1"
+                 class="my-test-class"
+                 #value=""
+                 onblur
+                 onchange
+                 onfocus
+                 oninput
+                 onkeydown
+                 onkeyup
+                 style={
+                   width: 100.00%;
+                 }> </input>
+        </div>
+      </div>
+    </div> |}];
+  Bonsai_web_test.Handle.input_text t.handle ~get_vdom:Fn.id ~selector:"input" ~text:"";
+  Bonsai_web_test.Handle.show_diff t.handle;
+  [%expect
+    {|
+        <div class="wrapper" style={ width: 100.00%; }>
+          <div class="search-input-container">
+            <input placeholder="Pick your favourite number"
+                   tabindex="1"
+                   class="my-test-class"
+                   #value=""
+                   onblur
+                   onchange
+                   onfocus
+                   oninput
+                   onkeydown
+                   onkeyup
+                   style={
+                     width: 100.00%;
+                   }> </input>
           </div>
+    +|    <div class="autocomplete" style={ width: 100.00%; max-width: 100.00%; }>
+    +|      <ul id="autocomplete-items" class="autocomplete-items" onmouseout>
+    +|        <li onclick onmousedown onmouseover> 1 </li>
+    +|        <li onclick onmousedown onmouseover> 2 </li>
+    +|        <li onclick onmousedown onmouseover> 3 </li>
+    +|        <li class="no-cursor"
+    +|            onclick
+    +|            onmousedown
+    +|            style={
+    +|              background-color: var(--js-dark-snow-color);
+    +|              width: 100.00%;
+    +|            }> +3 more </li>
+    +|      </ul>
+    +|    </div>
+        </div>
+      </div> |}];
+  Bonsai_web_test.Handle.click_on
+    t.handle
+    ~get_vdom:Fn.id
+    ~selector:"#autocomplete-items > li:last-child";
+  Bonsai_web_test.Handle.show_diff t.handle;
+  [%expect
+    {|
+                   #value=""
+                   onblur
+                   onchange
+                   onfocus
+                   oninput
+                   onkeydown
+                   onkeyup
+                   style={
+                     width: 100.00%;
+                   }> </input>
+          </div>
+          <div class="autocomplete" style={ width: 100.00%; max-width: 100.00%; }>
+            <ul id="autocomplete-items" class="autocomplete-items" onmouseout>
+              <li onclick onmousedown onmouseover> 1 </li>
+              <li onclick onmousedown onmouseover> 2 </li>
+              <li onclick onmousedown onmouseover> 3 </li>
+    +|        <li onclick onmousedown onmouseover> 40 </li>
+    +|        <li onclick onmousedown onmouseover> 100 </li>
+              <li class="no-cursor"
+                  onclick
+                  onmousedown
+                  style={
+                    background-color: var(--js-dark-snow-color);
+                    width: 100.00%;
+    -|            }> +3 more </li>
+    +|            }> +1 more </li>
+            </ul>
+          </div>
+        </div>
+      </div> |}];
+  List.init 5 ~f:(fun _ ->
+    Bonsai_web_test.Handle.keydown
+      t.handle
+      ~get_vdom:Fn.id
+      ~selector:"input"
+      ~key:ArrowDown)
+  |> List.iter ~f:(Fn.const ());
+  Bonsai_web_test.Handle.show_diff t.handle;
+  [%expect
+    {|
+    ("default prevented" (key ArrowDown))
+    ("default prevented" (key ArrowDown))
+    ("default prevented" (key ArrowDown))
+    ("default prevented" (key ArrowDown))
+    ("default prevented" (key ArrowDown))
+
+                   onblur
+                   onchange
+                   onfocus
+                   oninput
+                   onkeydown
+                   onkeyup
+                   style={
+                     width: 100.00%;
+                   }> </input>
+          </div>
+          <div class="autocomplete" style={ width: 100.00%; max-width: 100.00%; }>
+            <ul id="autocomplete-items" class="autocomplete-items" onmouseout>
+              <li onclick onmousedown onmouseover> 1 </li>
+              <li onclick onmousedown onmouseover> 2 </li>
+              <li onclick onmousedown onmouseover> 3 </li>
+              <li onclick onmousedown onmouseover> 40 </li>
+    -|        <li onclick onmousedown onmouseover> 100 </li>
+    +|        <li class="autocomplete-active" onclick onmousedown onmouseover> 100 </li>
+              <li class="no-cursor"
+                  onclick
+                  onmousedown
+                  style={
+                    background-color: var(--js-dark-snow-color);
+                    width: 100.00%;
+                  }> +1 more </li>
+            </ul>
+          </div>
+        </div>
+      </div> |}];
+  Bonsai_web_test.Handle.keydown t.handle ~get_vdom:Fn.id ~selector:"input" ~key:ArrowDown;
+  Bonsai_web_test.Handle.show_diff t.handle;
+  [%expect
+    {|
+    ("default prevented" (key ArrowDown))
+
+            <input placeholder="Pick your favourite number"
+                   tabindex="1"
+                   class="my-test-class"
+                   #value=""
+                   onblur
+                   onchange
+                   onfocus
+                   oninput
+                   onkeydown
+                   onkeyup
+                   style={
+                     width: 100.00%;
+                   }> </input>
+          </div>
+          <div class="autocomplete" style={ width: 100.00%; max-width: 100.00%; }>
+            <ul id="autocomplete-items" class="autocomplete-items" onmouseout>
+    -|        <li onclick onmousedown onmouseover> 1 </li>
+    +|        <li class="autocomplete-active" onclick onmousedown onmouseover> 1 </li>
+              <li onclick onmousedown onmouseover> 2 </li>
+              <li onclick onmousedown onmouseover> 3 </li>
+              <li onclick onmousedown onmouseover> 40 </li>
+    -|        <li class="autocomplete-active" onclick onmousedown onmouseover> 100 </li>
+    +|        <li onclick onmousedown onmouseover> 100 </li>
+              <li class="no-cursor"
+                  onclick
+                  onmousedown
+                  style={
+                    background-color: var(--js-dark-snow-color);
+                    width: 100.00%;
+                  }> +1 more </li>
+            </ul>
+          </div>
+        </div>
+      </div> |}];
+  Bonsai_web_test.Handle.click_on
+    t.handle
+    ~get_vdom:Fn.id
+    ~selector:"#autocomplete-items > li:last-child";
+  Bonsai_web_test.Handle.show_diff t.handle;
+  [%expect
+    {|
+                   onchange
+                   onfocus
+                   oninput
+                   onkeydown
+                   onkeyup
+                   style={
+                     width: 100.00%;
+                   }> </input>
+          </div>
+          <div class="autocomplete" style={ width: 100.00%; max-width: 100.00%; }>
+            <ul id="autocomplete-items" class="autocomplete-items" onmouseout>
+              <li class="autocomplete-active" onclick onmousedown onmouseover> 1 </li>
+              <li onclick onmousedown onmouseover> 2 </li>
+              <li onclick onmousedown onmouseover> 3 </li>
+              <li onclick onmousedown onmouseover> 40 </li>
+              <li onclick onmousedown onmouseover> 100 </li>
+    -|        <li class="no-cursor"
+    -|            onclick
+    -|            onmousedown
+    -|            style={
+    -|              background-color: var(--js-dark-snow-color);
+    -|              width: 100.00%;
+    -|            }> +1 more </li>
+    +|        <li onclick onmousedown onmouseover> 1000 </li>
+            </ul>
+          </div>
+        </div>
+      </div> |}];
+  (* Selecting an item resets the number of query results to show. *)
+  Bonsai_web_test.Handle.click_on
+    t.handle
+    ~get_vdom:Fn.id
+    ~selector:"#autocomplete-items > li:first-child";
+  Bonsai_web_test.Handle.show_diff t.handle;
+  [%expect
+    {|
+    1 chosen
+
+        <div class="wrapper" style={ width: 100.00%; }>
+          <div class="search-input-container">
+            <input placeholder="Pick your favourite number"
+                   tabindex="1"
+                   class="my-test-class"
+                   #value=""
+                   onblur
+                   onchange
+                   onfocus
+                   oninput
+                   onkeydown
+                   onkeyup
+                   style={
+                     width: 100.00%;
+                   }> </input>
+          </div>
+    -|    <div class="autocomplete" style={ width: 100.00%; max-width: 100.00%; }>
+    -|      <ul id="autocomplete-items" class="autocomplete-items" onmouseout>
+    -|        <li class="autocomplete-active" onclick onmousedown onmouseover> 1 </li>
+    -|        <li onclick onmousedown onmouseover> 2 </li>
+    -|        <li onclick onmousedown onmouseover> 3 </li>
+    -|        <li onclick onmousedown onmouseover> 40 </li>
+    -|        <li onclick onmousedown onmouseover> 100 </li>
+    -|        <li onclick onmousedown onmouseover> 1000 </li>
+    -|      </ul>
+    -|    </div>
+        </div>
+      </div> |}];
+  Bonsai_web_test.Handle.focus t.handle ~get_vdom:Fn.id ~selector:"input";
+  Bonsai_web_test.Handle.show_diff t.handle;
+  [%expect
+    {|
+        <div class="wrapper" style={ width: 100.00%; }>
+          <div class="search-input-container">
+            <input placeholder="Pick your favourite number"
+                   tabindex="1"
+                   class="my-test-class"
+                   #value=""
+                   onblur
+                   onchange
+                   onfocus
+                   oninput
+                   onkeydown
+                   onkeyup
+                   style={
+                     width: 100.00%;
+                   }> </input>
+          </div>
+    +|    <div class="autocomplete" style={ width: 100.00%; max-width: 100.00%; }>
+    +|      <ul id="autocomplete-items" class="autocomplete-items" onmouseout>
+    +|        <li onclick onmousedown onmouseover> 1 </li>
+    +|        <li onclick onmousedown onmouseover> 2 </li>
+    +|        <li onclick onmousedown onmouseover> 3 </li>
+    +|        <li class="no-cursor"
+    +|            onclick
+    +|            onmousedown
+    +|            style={
+    +|              background-color: var(--js-dark-snow-color);
+    +|              width: 100.00%;
+    +|            }> +3 more </li>
+    +|      </ul>
+    +|    </div>
         </div>
       </div> |}]
 ;;

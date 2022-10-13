@@ -51,15 +51,13 @@ module For_value : sig
 
   type 'from_parent user_mapper =
     { f : 'a. 'from_parent context -> 'from_parent -> 'a Value.t -> 'a Value.t }
+
+  val id : 'from_parent user_mapper
 end
 
 module For_computation : sig
   type 'from_parent context =
-    { recurse :
-        'model 'dynamic_action 'static_action 'result.
-          'from_parent
-        -> ('model, 'dynamic_action, 'static_action, 'result) Computation.t
-        -> ('model, 'dynamic_action, 'static_action, 'result) Computation.t
+    { recurse : 'result. 'from_parent -> 'result Computation.t -> 'result Computation.t
     ; var_from_parent : Var_from_parent.t
     ; parent_path : Node_path.t Lazy.t
     ; current_path : Node_path.t Lazy.t
@@ -67,17 +65,19 @@ module For_computation : sig
 
   type 'from_parent user_mapper =
     { f :
-        'model 'dynamic_action 'static_action 'result.
+        'result.
           'from_parent context
         -> 'from_parent
-        -> ('model, 'dynamic_action, 'static_action, 'result) Computation.t
-        -> ('model, 'dynamic_action, 'static_action, 'result) Computation.t
+        -> 'result Computation.t
+        -> 'result Computation.t
     }
+
+  val id : 'from_parent user_mapper
 end
 
 val map
   :  computation_mapper:'from_parent For_computation.user_mapper
   -> value_mapper:'from_parent For_value.user_mapper
   -> init:'from_parent
-  -> ('model, 'dynamic_action, 'static_action, 'result) Computation.t
-  -> ('model, 'dynamic_action, 'static_action, 'result) Computation.t
+  -> 'result Computation.t
+  -> 'result Computation.t

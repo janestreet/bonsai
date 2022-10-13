@@ -12,7 +12,6 @@ let%expect_test "path" =
     return (Value.map path ~f:Path.to_unique_identifier_string)
   in
   let handle = Handle.create (Result_spec.string (module String)) component in
-  Handle.disable_bonsai_path_censoring handle;
   Handle.show handle;
   (* The first of these "Subst_from" is actually a component that is
      added by the testing helpers. *)
@@ -26,7 +25,6 @@ let%expect_test "path constant folding" =
     return (Value.map path ~f:Path.to_unique_identifier_string)
   in
   let handle = Handle.create (Result_spec.string (module String)) component in
-  Handle.disable_bonsai_path_censoring handle;
   Handle.show handle;
   (* The first of these "Subst_from" is actually a component that is
      added by the testing helpers. *)

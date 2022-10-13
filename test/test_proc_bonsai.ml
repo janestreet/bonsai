@@ -5,8 +5,8 @@ open Bonsai.Let_syntax
 module Query_response_tracker = Bonsai.Effect.For_testing.Query_response_tracker
 open Proc
 
-let sexp_of_packed_computation : type a. a Bonsai.Private.Computation.packed -> Sexp.t =
-  fun (Bonsai.Private.Computation.T { t; _ }) ->
+let sexp_of_packed_computation : type a. a Bonsai.Private.Computation.t -> Sexp.t =
+  fun t ->
   Bonsai.Private.Skeleton.Computation.of_computation t
   |> Bonsai.Private.Skeleton.Computation.sanitize_for_testing
   |> Bonsai.Private.Skeleton.Computation.minimal_sexp_of_t
@@ -175,6 +175,25 @@ let%expect_test "call component" =
   [%expect {| 3 |}]
 ;;
 
+let%expect_test "store named in a ref" =
+  let name_ref = ref None in
+  let component =
+    let%sub x =
+      let%sub a = opaque_const 5 in
+      name_ref := Some a;
+      let%arr a = a in
+      a
+    in
+    let%arr x = x
+    and y = Option.value_exn !name_ref in
+    x + y
+  in
+  Expect_test_helpers_core.require_does_raise [%here] (fun () ->
+    Handle.create (Result_spec.sexp (module Int)) component);
+  [%expect
+    {| "A Value.t introduced by the [let%sub] expression at TEST_FILENAME:0:0 was used outside of the scope that it was declared in. Make sure that you aren't storing it inside a ref." |}]
+;;
+
 let%expect_test "on_display" =
   let component =
     let%sub state, set_state = Bonsai.state (module Int) ~default_model:0 in
@@ -258,7 +277,7 @@ let%expect_test "assoc and enum path" =
   let component =
     Bonsai.assoc
       (module Int)
-      (Value.return (Int.Map.of_alist_exn [ -1, (); 1, () ]))
+      (opaque_const_value (Int.Map.of_alist_exn [ -1, (); 1, () ]))
       ~f:(fun i _ ->
         if%sub i >>| ( > ) 0 then Bonsai.Private.path else Bonsai.Private.path)
   in
@@ -275,6 +294,90 @@ let%expect_test "assoc and enum path" =
     {|
     ((-1 (Subst_from (Assoc -1) Subst_into (Switch 0)))
      (1 (Subst_from (Assoc 1) Subst_into (Switch 1)))) |}]
+;;
+
+let%expect_test "constant folded assoc path" =
+  let component =
+    Bonsai.assoc
+      (module Int)
+      (Value.return (Int.Map.of_alist_exn [ -1, (); 1, () ]))
+      ~f:(fun _ _ ->
+        (* NOTE: Since this test case uses both a constant map and previously
+           only made use of the path, then this combination resulted in the optimization
+           that makes a call to Map.mapi directly to trigger. To avoid this, we
+           artifically introduce some state, and more importantly, use the state trivially
+           such that the simplication optimization is not triggered. *)
+        let%sub x, _ = Bonsai.state (module Int) ~default_model:0 in
+        let%sub path = Bonsai.Private.path in
+        let%sub path, _ =
+          let%arr path = path
+          and x = x in
+          path, x
+        in
+        Bonsai.read path)
+  in
+  let handle =
+    Handle.create
+      (Result_spec.sexp
+         (module struct
+           type t = Bonsai.Private.Path.t Int.Map.t [@@deriving sexp_of]
+         end))
+      component
+  in
+  Handle.show handle;
+  [%expect
+    {|
+    ((-1
+      (Subst_from Subst_from Subst_from Subst_from Subst_into Subst_into
+       Subst_from))
+     (1
+      (Subst_from Subst_from Subst_into Subst_from Subst_from Subst_into
+       Subst_into Subst_from))) |}]
+;;
+
+let%expect_test "constant folded assoc lifecycles are unchanged" =
+  let runtest input =
+    let component =
+      let%sub _ =
+        Bonsai.assoc
+          (module Int)
+          (input (Int.Map.of_alist_exn [ -1, (); 1, () ]))
+          ~f:(fun key _ ->
+            Bonsai.Edge.lifecycle
+              ~on_activate:
+                (let%map key = key in
+                 Effect.print_s [%message (key : int)])
+              ())
+      in
+      Bonsai.const ()
+    in
+    let handle = Handle.create (Result_spec.sexp (module Unit)) component in
+    Handle.show handle
+  in
+  runtest opaque_const_value;
+  let unoptimized = Expect_test_helpers_base.expect_test_output [%here] in
+  runtest Value.return;
+  let optimized = Expect_test_helpers_base.expect_test_output [%here] in
+  print_endline (Expect_test_patdiff.patdiff ~context:0 unoptimized optimized)
+;;
+
+let%expect_test "constant map + simplifiable assoc ~f => constant map proper evaluation" =
+  (* This test case just tests that the map function is applied properly. *)
+  let component =
+    Bonsai.assoc
+      (module String)
+      (Value.return (String.Map.of_alist_exn [ "hello", 0; "world", 5 ]))
+      ~f:(fun _ v ->
+        let%arr v = v in
+        v + 100)
+  in
+  let module Model = struct
+    type t = int String.Map.t [@@deriving sexp, equal]
+  end
+  in
+  let handle = Handle.create (Result_spec.sexp (module Model)) component in
+  Handle.show handle;
+  [%expect {| ((hello 100) (world 105)) |}]
 ;;
 
 let%expect_test "assoc_on" =
@@ -346,7 +449,11 @@ let%expect_test "simplify assoc_on" =
       ~get_model_key:(fun key _data -> key % 2)
       ~f:(fun _key data -> return data)
   in
-  component |> Bonsai.Private.reveal_computation |> sexp_of_packed_computation |> print_s;
+  component
+  |> Bonsai.Private.reveal_computation
+  |> Bonsai.Private.pre_process
+  |> sexp_of_packed_computation
+  |> print_s;
   [%expect {|
     (Assoc_simpl (map Incr)) |}]
 ;;
@@ -355,7 +462,7 @@ let%expect_test "simple-assoc works with paths" =
   let component =
     Bonsai.assoc
       (module String)
-      (Value.return (String.Map.of_alist_exn [ "hello", (); "world", () ]))
+      (opaque_const_value (String.Map.of_alist_exn [ "hello", (); "world", () ]))
       ~f:(fun _ _ ->
         let%sub a = Bonsai.Private.path in
         let%sub b = Bonsai.Private.path in
@@ -379,9 +486,47 @@ let%expect_test "simple-assoc works with paths" =
      (world
       ((Subst_from (Assoc world) Subst_from)
        (Subst_from (Assoc world) Subst_into Subst_from)))) |}];
-  component |> Bonsai.Private.reveal_computation |> sexp_of_packed_computation |> print_s;
+  component
+  |> Bonsai.Private.reveal_computation
+  |> Bonsai.Private.pre_process
+  |> sexp_of_packed_computation
+  |> print_s;
   [%expect {|
-    (Assoc_simpl (map (Constant (id 0)))) |}]
+    (Assoc_simpl (map Incr)) |}]
+;;
+
+let test_assoc_simpl_on_cutoff ~added_by_let_syntax =
+  let cutoff value ~equal =
+    Bonsai.Private.reveal_value value
+    |> Bonsai.Private.Value.cutoff ~added_by_let_syntax ~equal
+    |> Bonsai.Private.conceal_value
+  in
+  let component =
+    Bonsai.assoc
+      (module String)
+      (opaque_const_value (String.Map.of_alist_exn [ "capy", (); "bara", () ]))
+      ~f:(fun _ data -> return (cutoff ~equal:(fun _ _ -> true) data))
+  in
+  print_s
+    Bonsai.Private.(
+      sexp_of_packed_computation
+        (Bonsai.Private.Pre_process.pre_process (reveal_computation component)))
+;;
+
+let%expect_test "assoc simplification behavior on cutoffs" =
+  test_assoc_simpl_on_cutoff ~added_by_let_syntax:true;
+  [%expect {|
+    (Assoc_simpl (map Incr)) |}];
+  test_assoc_simpl_on_cutoff ~added_by_let_syntax:false;
+  [%expect
+    {|
+    (Assoc
+      (map     Incr)
+      (key_id  1)
+      (cmp_id  2)
+      (data_id 3)
+      (by (
+        Return (value (Cutoff (t (Named (uid 3))) (added_by_let_syntax false)))))) |}]
 ;;
 
 let%expect_test "chain" =
@@ -540,6 +685,18 @@ let%expect_test "if%sub" =
   [%expect {| world |}]
 ;;
 
+let%expect_test "match%sub defers exceptions until runtime" =
+  let var = Bonsai.Var.create true in
+  let component =
+    match%sub Bonsai.Var.value var with
+    | true -> Bonsai.const "yay!"
+    | false -> assert false
+  in
+  let handle = Handle.create (Result_spec.string (module String)) component in
+  Handle.show handle;
+  [%expect {| yay! |}]
+;;
+
 let%expect_test "let%sub patterns" =
   let component =
     let%sub a, _b = Bonsai.const ("hello world", 5) in
@@ -548,38 +705,6 @@ let%expect_test "let%sub patterns" =
   let handle = Handle.create (Result_spec.string (module String)) component in
   Handle.show handle;
   [%expect {| hello world |}]
-;;
-
-let%expect_test "let%sub unit rhs optimization" =
-  let component =
-    let%sub a = opaque_const 5 in
-    let%sub b = opaque_const 6 in
-    return
-      (let%map a = a
-       and b = b in
-       a + b)
-  in
-  print_s Bonsai.Private.(sexp_of_packed_computation (reveal_computation component));
-  [%expect
-    {|
-    (Sub
-      (from (Return (value Incr)))
-      (via 2)
-      (into (
-        Sub
-        (from (Return (value Incr)))
-        (via 5)
-        (into (
-          Return (
-            value (
-              Mapn (
-                inputs ((
-                  Mapn (
-                    inputs (
-                      (Named (uid 2))
-                      (Named (uid 5)))))))))))
-        (statefulness Stateless_from)))
-      (statefulness Stateless_from)) |}]
 ;;
 
 let%expect_test "sub constant folding optimization" =
@@ -592,25 +717,108 @@ let%expect_test "sub constant folding optimization" =
        a + b)
   in
   print_s Bonsai.Private.(sexp_of_packed_computation (reveal_computation component));
-  [%expect {|
-    (Return (value Lazy)) |}]
+  [%expect
+    {|
+    (Sub
+      (from (Return (value (Constant (id 0)))))
+      (via 2)
+      (into (
+        Sub
+        (from (Return (value (Constant (id 3)))))
+        (via 5)
+        (into (
+          Return (
+            value (
+              Mapn (
+                inputs ((
+                  Mapn (
+                    inputs (
+                      (Named (uid 2))
+                      (Named (uid 5)))))))))))))) |}];
+  let component =
+    component
+    |> Bonsai.Private.reveal_computation
+    |> Bonsai.Private.Constant_fold.constant_fold
+    |> Bonsai.Private.conceal_computation
+  in
+  print_s Bonsai.Private.(sexp_of_packed_computation (reveal_computation component));
+  [%expect {| (Return (value (Constant (id 0)))) |}];
+  let component =
+    component
+    |> Bonsai.Private.reveal_computation
+    |> Bonsai.Private.Remove_identity.remove_identity
+    |> Bonsai.Private.conceal_computation
+  in
+  print_s Bonsai.Private.(sexp_of_packed_computation (reveal_computation component));
+  [%expect {| (Return (value (Constant (id 0)))) |}]
+;;
+
+let%expect_test "let%map constant folding optimization" =
+  let component =
+    let%sub a =
+      let%arr a = Bonsai.Value.return 5 in
+      a + 1
+    in
+    let%sub b = Bonsai.const 6 in
+    return
+      (let%map a = a
+       and b = b in
+       a + b)
+  in
+  print_s Bonsai.Private.(sexp_of_packed_computation (reveal_computation component));
+  [%expect
+    {|
+    (Sub
+      (from (Return (value (Mapn (inputs ((Constant (id 0))))))))
+      (via 3)
+      (into (
+        Sub
+        (from (Return (value (Constant (id 4)))))
+        (via 6)
+        (into (
+          Return (
+            value (
+              Mapn (
+                inputs ((
+                  Mapn (
+                    inputs (
+                      (Named (uid 3))
+                      (Named (uid 6)))))))))))))) |}];
+  let component =
+    component
+    |> Bonsai.Private.reveal_computation
+    |> Bonsai.Private.Constant_fold.constant_fold
+    |> Bonsai.Private.conceal_computation
+  in
+  print_s Bonsai.Private.(sexp_of_packed_computation (reveal_computation component));
+  [%expect {| (Return (value (Constant (id 0)))) |}];
+  let component =
+    component
+    |> Bonsai.Private.reveal_computation
+    |> Bonsai.Private.Remove_identity.remove_identity
+    |> Bonsai.Private.conceal_computation
+  in
+  print_s Bonsai.Private.(sexp_of_packed_computation (reveal_computation component));
+  [%expect {| (Return (value (Constant (id 0)))) |}]
 ;;
 
 let%expect_test "assoc simplifies its inner computation, if possible" =
-  let value = Value.return String.Map.empty in
+  let value = opaque_const_value String.Map.empty in
   let component =
     Bonsai.assoc
       (module String)
       value
       ~f:(fun key data -> Bonsai.read (Value.both key data))
   in
-  print_s Bonsai.Private.(sexp_of_packed_computation (reveal_computation component));
+  print_s
+    Bonsai.Private.(
+      sexp_of_packed_computation (pre_process (reveal_computation component)));
   [%expect {|
-    (Assoc_simpl (map (Constant (id 0)))) |}]
+    (Assoc_simpl (map Incr)) |}]
 ;;
 
 let%expect_test "assoc with sub simplifies its inner computation, if possible" =
-  let value = Bonsai.Value.return String.Map.empty in
+  let value = opaque_const_value String.Map.empty in
   let component =
     Bonsai.assoc
       (module String)
@@ -619,13 +827,15 @@ let%expect_test "assoc with sub simplifies its inner computation, if possible" =
         let%sub key = Bonsai.read key in
         Bonsai.read (Bonsai.Value.both key data))
   in
-  print_s Bonsai.Private.(sexp_of_packed_computation (reveal_computation component));
+  print_s
+    Bonsai.Private.(
+      sexp_of_packed_computation (pre_process (reveal_computation component)));
   [%expect {|
-    (Assoc_simpl (map (Constant (id 0)))) |}]
+    (Assoc_simpl (map Incr)) |}]
 ;;
 
 let%expect_test "assoc with sub simplifies its inner computation, if possible" =
-  let value = Bonsai.Value.return String.Map.empty in
+  let value = opaque_const_value String.Map.empty in
   let component =
     Bonsai.assoc
       (module String)
@@ -634,9 +844,11 @@ let%expect_test "assoc with sub simplifies its inner computation, if possible" =
         let%sub key = Bonsai.read key in
         Bonsai.read (Bonsai.Value.both key data))
   in
-  print_s Bonsai.Private.(sexp_of_packed_computation (reveal_computation component));
+  print_s
+    Bonsai.Private.(
+      sexp_of_packed_computation (pre_process (reveal_computation component)));
   [%expect {|
-    (Assoc_simpl (map (Constant (id 0)))) |}]
+    (Assoc_simpl (map Incr)) |}]
 ;;
 
 let%expect_test "map > lazy" =
@@ -811,6 +1023,7 @@ let%test_module "inactive delivery" =
     let print_computation computation =
       computation (Bonsai.Value.return ())
       |> Bonsai.Private.reveal_computation
+      |> Bonsai.Private.pre_process
       |> sexp_of_packed_computation
       |> censor_sexp
       |> Option.value ~default:(Sexp.List [])
@@ -895,7 +1108,7 @@ let%test_module "inactive delivery" =
       [%expect
         {|
         (Sub
-          (from (Leaf01 (input (Constant (id 0))) name))
+          (from (Leaf01 (input (Constant (id 0)))))
           (via 5)
           (into (
             Sub
@@ -914,17 +1127,9 @@ let%test_module "inactive delivery" =
                     value (
                       Mapn (
                         inputs (
-                          Mapn (
-                            inputs (
-                              (Named (uid 8))
-                              (Mapn (
-                                inputs (
-                                  (Named (uid 14))
-                                  (Named (uid 11)))))))))))))
-                (statefulness Stateless_from)))
-              (statefulness Stateless_from)))
-            (statefulness Stateless_from)))
-          (statefulness Stateless_into))
+                          (Named (uid 8))
+                          (Named (uid 14))
+                          (Named (uid 11)))))))))))))))
         ((1 0) (2 0))
         dynamic action
         ((1 0) (2 3))
@@ -959,7 +1164,7 @@ let%test_module "inactive delivery" =
       [%expect
         {|
         (Sub
-          (from (Leaf01 (input (Constant (id 0))) name))
+          (from (Leaf01 (input (Constant (id 0)))))
           (via 5)
           (into (
             Sub
@@ -978,17 +1183,9 @@ let%test_module "inactive delivery" =
                     value (
                       Mapn (
                         inputs (
-                          Mapn (
-                            inputs (
-                              (Named (uid 8))
-                              (Mapn (
-                                inputs (
-                                  (Named (uid 14))
-                                  (Named (uid 11)))))))))))))
-                (statefulness Stateless_from)))
-              (statefulness Stateless_from)))
-            (statefulness Stateless_from)))
-          (statefulness Stateless_into))
+                          (Named (uid 8))
+                          (Named (uid 14))
+                          (Named (uid 11)))))))))))))))
         ((1 0) (2 0))
         dynamic action
         ((1 0) (2 3))
@@ -1018,7 +1215,7 @@ let%test_module "inactive delivery" =
       |> test_delivery_to_inactive_component;
       [%expect
         {|
-        (Leaf1 (input Incr) name)
+        (Leaf1 (input Incr))
         ((1 0) (2 0))
         ((1 0) (2 3))
         ((1 0))
@@ -1047,7 +1244,7 @@ let%test_module "inactive delivery" =
       [%expect
         {|
         (Sub
-          (from (Leaf1 (input Incr) name))
+          (from (Leaf1 (input Incr)))
           (via 4)
           (into (
             Sub
@@ -1066,14 +1263,8 @@ let%test_module "inactive delivery" =
                     value (
                       Mapn (
                         inputs (
-                          Mapn (
-                            inputs (
-                              (Named (uid 7))
-                              (Named (uid 13))))))))))
-                (statefulness Stateless_from)))
-              (statefulness Stateless_from)))
-            (statefulness Stateless_from)))
-          (statefulness Stateless_into))
+                          (Named (uid 7))
+                          (Named (uid 13)))))))))))))))
         ((1 0) (2 0))
         ((1 0) (2 3))
         ((1 0))
@@ -1101,8 +1292,8 @@ let%test_module "inactive delivery" =
       [%expect
         {|
         (Sub
-          (from (Leaf0 name))
-          (via 0)
+          (from Leaf0)
+          (via  0)
           (into (
             Sub
             (from (Return (value (Mapn (inputs (Named (uid 0)))))))
@@ -1120,14 +1311,8 @@ let%test_module "inactive delivery" =
                     value (
                       Mapn (
                         inputs (
-                          Mapn (
-                            inputs (
-                              (Named (uid 3))
-                              (Named (uid 9))))))))))
-                (statefulness Stateless_from)))
-              (statefulness Stateless_from)))
-            (statefulness Stateless_from)))
-          (statefulness Stateless_into))
+                          (Named (uid 3))
+                          (Named (uid 9)))))))))))))))
         ((1 0) (2 0))
         ((1 0) (2 3))
         ((1 0))
@@ -1149,8 +1334,8 @@ let%test_module "inactive delivery" =
       [%expect
         {|
         (Sub
-          (from (Leaf0 name))
-          (via 0)
+          (from Leaf0)
+          (via  0)
           (into (
             Sub
             (from (Return (value (Mapn (inputs (Named (uid 0)))))))
@@ -1168,14 +1353,8 @@ let%test_module "inactive delivery" =
                     value (
                       Mapn (
                         inputs (
-                          Mapn (
-                            inputs (
-                              (Named (uid 3))
-                              (Named (uid 9))))))))))
-                (statefulness Stateless_from)))
-              (statefulness Stateless_from)))
-            (statefulness Stateless_from)))
-          (statefulness Stateless_into))
+                          (Named (uid 3))
+                          (Named (uid 9)))))))))))))))
         ((1 0) (2 0))
         ((1 0) (2 3))
         ((1 0))
@@ -1212,7 +1391,7 @@ let%test_module "inactive delivery" =
       [%expect
         {|
         (Sub
-          (from (Leaf01 (input (Constant (id 0))) name))
+          (from (Leaf01 (input (Constant (id 0)))))
           (via 5)
           (into (
             Sub
@@ -1227,13 +1406,8 @@ let%test_module "inactive delivery" =
                   value (
                     Mapn (
                       inputs (
-                        Mapn (
-                          inputs (
-                            (Named (uid 8))
-                            (Named (uid 11))))))))))
-              (statefulness Stateless_from)))
-            (statefulness Stateless_from)))
-          (statefulness Stateless_into))
+                        (Named (uid 8))
+                        (Named (uid 11)))))))))))))
         ((1 0) (2 0))
         ((1 0) (2 3))
         ((1 0))
@@ -1273,7 +1447,7 @@ let%test_module "inactive delivery" =
       [%expect
         {|
         (Sub
-          (from (Leaf01 (input (Constant (id 0))) name))
+          (from (Leaf01 (input (Constant (id 0)))))
           (via 5)
           (into (
             Sub
@@ -1288,13 +1462,8 @@ let%test_module "inactive delivery" =
                   value (
                     Mapn (
                       inputs (
-                        Mapn (
-                          inputs (
-                            (Named (uid 8))
-                            (Named (uid 11))))))))))
-              (statefulness Stateless_from)))
-            (statefulness Stateless_from)))
-          (statefulness Stateless_into))
+                        (Named (uid 8))
+                        (Named (uid 11)))))))))))))
         ((1 0) (2 0))
         ((1 0) (2 3))
         ((1 0))
@@ -1309,7 +1478,7 @@ let%test_module "inactive delivery" =
       |> test_delivery_to_inactive_component;
       [%expect
         {|
-        (Leaf0 name)
+        Leaf0
         ((1 0) (2 0))
         ((1 0) (2 3))
         ((1 0))
@@ -1320,11 +1489,34 @@ let%test_module "inactive delivery" =
     ;;
 
     let%expect_test "static inside of a lazy" =
+      (fun _ ->
+         opaque_computation
+           (Bonsai.lazy_ (lazy (Bonsai.state (module Int) ~default_model:0))))
+      |> test_delivery_to_inactive_component;
+      [%expect
+        {|
+        (Sub
+          (from (Return (value Incr)))
+          (via 2)
+          (into (
+            Switch
+            (match_ (Mapn (inputs (Named (uid 2)))))
+            (arms ((Lazy t) (Return (value Exception)))))))
+        ((1 0) (2 0))
+        ((1 0) (2 3))
+        ((1 0))
+        ((1 0))
+        ((1 0) (2 4))
+
+        ==== Diff between assoc and assoc_on: ==== |}]
+    ;;
+
+    let%expect_test "static inside of a lazy (optimized away)" =
       (fun _ -> Bonsai.lazy_ (lazy (Bonsai.state (module Int) ~default_model:0)))
       |> test_delivery_to_inactive_component;
       [%expect
         {|
-        (Lazy t)
+        Leaf0
         ((1 0) (2 0))
         ((1 0) (2 3))
         ((1 0))
@@ -1345,9 +1537,9 @@ let%test_module "inactive delivery" =
       [%expect
         {|
         (Wrap
-          (model_id  0)
-          (inject_id 2)
-          (inner (Leaf0 name)))
+          (model_id  12)
+          (inject_id 0)
+          (inner     Leaf0))
         ((1 0) (2 0))
         ((1 0) (2 3))
         ((1 0))
@@ -1370,10 +1562,8 @@ let%test_module "inactive delivery" =
           (into (
             Sub
             (from (Return (value (Mapn (inputs (Named (uid 2)))))))
-            (via 5)
-            (into (Leaf0 name))
-            (statefulness Stateless_from)))
-          (statefulness Stateless_from))
+            (via  5)
+            (into Leaf0))))
         ((1 0) (2 0))
         ((1 0) (2 3))
         ((1 0))
@@ -1393,20 +1583,30 @@ let%test_module "inactive delivery" =
       [%expect
         {|
         (Sub
-          (from (With_model_resetter (t (Leaf0 name))))
-          (via 0)
+          (from (
+            With_model_resetter
+            (inner (
+              Sub
+              (from Leaf0)
+              (via  1)
+              (into (
+                Return (
+                  value (
+                    Mapn (
+                      inputs (
+                        (Named (uid 1))
+                        (Named (uid 0))))))))))
+            (reset_id 0)))
+          (via 6)
           (into (
             Sub
-            (from (Return (value (Mapn (inputs (Named (uid 0)))))))
-            (via 3)
+            (from (Return (value (Mapn (inputs (Named (uid 6)))))))
+            (via 9)
             (into (
               Sub
-              (from (Return (value (Mapn (inputs (Named (uid 0)))))))
-              (via 6)
-              (into (Return (value (Named (uid 3)))))
-              (statefulness Stateless_from)))
-            (statefulness Stateless_from)))
-          (statefulness Stateless_into))
+              (from (Return (value (Mapn (inputs (Named (uid 6)))))))
+              (via 12)
+              (into (Return (value (Named (uid 9))))))))))
         ((1 0) (2 0))
         ((1 0) (2 3))
         ((1 0))
@@ -1421,6 +1621,55 @@ let%test_module "inactive delivery" =
       let component =
         if%sub Bonsai.Var.value which_branch
         then Bonsai.with_model_resetter (Bonsai.state (module Int) ~default_model:0)
+        else Bonsai.const ((-1, fun _ -> Effect.Ignore), Effect.Ignore)
+      in
+      let handle =
+        Handle.create
+          (module struct
+            type t = (int * (int -> unit Effect.t)) * unit Effect.t
+            type incoming = Nothing.t
+
+            let incoming _ = Nothing.unreachable_code
+            let view ((i, _), _) = Int.to_string i
+          end)
+          component
+      in
+      Handle.show handle;
+      let (_, set_value), reset = Handle.result handle in
+      let set_value i = Ui_effect.Expert.handle (set_value i) in
+      let reset () = Ui_effect.Expert.handle reset in
+      set_value 3;
+      Handle.show handle;
+      Bonsai.Var.set which_branch false;
+      Handle.show handle;
+      set_value 4;
+      Handle.show handle;
+      Bonsai.Var.set which_branch true;
+      Handle.show handle;
+      [%expect {|
+        0
+        3
+        -1
+        -1
+        4 |}];
+      Bonsai.Var.set which_branch false;
+      Handle.show handle;
+      [%expect {| -1 |}];
+      reset ();
+      Bonsai.Var.set which_branch true;
+      Handle.show handle;
+      [%expect {| 0 |}]
+    ;;
+
+    let%expect_test "resetting while inactive via the reset passed in" =
+      let which_branch = Bonsai.Var.create true in
+      let component =
+        if%sub Bonsai.Var.value which_branch
+        then
+          Bonsai.with_model_resetter' (fun ~reset ->
+            Bonsai.Computation.both
+              (Bonsai.state (module Int) ~default_model:0)
+              (return reset))
         else Bonsai.const ((-1, fun _ -> Effect.Ignore), Effect.Ignore)
       in
       let handle =
@@ -1523,10 +1772,12 @@ let%test_module "inactive delivery" =
       [%expect
         {|
          (Assoc_on
-           (map       Incr)
-           (io_key_id 7)
-           (data_id   8)
-           (by (Leaf1 (input Incr) name)))
+           (map          Incr)
+           (io_key_id    1)
+           (model_key_id 2)
+           (model_cmp_id 3)
+           (data_id      4)
+           (by (Leaf1 (input Incr))))
          ((1 0) (2 0))
          ((1 3) (2 3))
          ((1 3))
@@ -1592,11 +1843,11 @@ let%test_module "testing Bonsai internals" =
       in
       Handle.show_model handle;
       [%expect {|
-         () |}];
+        () |}];
       Bonsai.Var.set var (Int.Map.of_alist_exn [ 1, (); 2, () ]);
       Handle.show_model handle;
       [%expect {|
-         () |}];
+        () |}];
       (* use the setter to re-establish the default *)
       Handle.do_actions handle [ 1, Set "test" ];
       Handle.show_model handle;
@@ -1604,7 +1855,7 @@ let%test_module "testing Bonsai internals" =
       Handle.do_actions handle [ 1, Set "hello" ];
       Handle.show_model handle;
       [%expect {|
-         () |}]
+        () |}]
     ;;
   end)
 ;;
@@ -1643,20 +1894,28 @@ let%expect_test "let syntax is collapsed upon eval" =
   in
   let packed =
     let open Bonsai.Private in
-    let (T { t = computation; model; apply_static = _; static_action; dynamic_action }) =
-      reveal_computation computation
+    let computation = reveal_computation computation in
+    let (T { model; apply_static = _; static_action; dynamic_action; run }) =
+      computation |> pre_process |> gather
     in
-    let T = Type_equal.Id.same_witness_exn Meta.Action.nothing static_action in
-    let T = Type_equal.Id.same_witness_exn Meta.Action.nothing dynamic_action in
+    let T =
+      Bonsai.Private.Meta.Action.Type_id.same_witness_exn
+        Meta.Action.nothing
+        static_action
+    in
+    let T =
+      Bonsai.Private.Meta.Action.Type_id.same_witness_exn
+        Meta.Action.nothing
+        dynamic_action
+    in
     let snapshot =
-      eval
+      run
         ~environment:Environment.empty
         ~path:Path.empty
         ~clock:Ui_incr.clock
         ~inject_dynamic:Nothing.unreachable_code
         ~inject_static:Nothing.unreachable_code
         ~model:(Ui_incr.return model.default)
-        computation
     in
     Snapshot.result snapshot |> Ui_incr.pack
   in
@@ -3508,7 +3767,7 @@ let%expect_test "exactly once with value" =
 let%expect_test "yoink" =
   let component =
     let%sub state, set_state = Bonsai.state (module Int) ~default_model:0 in
-    let%sub get_state = Bonsai_extra.yoink state in
+    let%sub get_state = Bonsai.yoink state in
     Bonsai_extra.exactly_once
       (let%map get_state = get_state
        and set_state = set_state in
@@ -3772,15 +4031,15 @@ let%expect_test "multi-thunk" =
   let handle = Handle.create (Result_spec.sexp (module String)) component in
   Handle.show handle;
   [%expect {|
-         pulling id!
-         pulling id!
-         "1 0" |}]
+    pulling id!
+    pulling id!
+    "1 0" |}]
 ;;
 
 let%expect_test "scope_model" =
   let var = Bonsai.Var.create true in
   let component =
-    Bonsai_extra.scope_model
+    Bonsai.scope_model
       (module Bool)
       ~on:(Bonsai.Var.value var)
       (Bonsai.state (module String) ~default_model:"default")
@@ -3875,9 +4134,9 @@ let%expect_test "action dropped in match%sub" =
   Handle.show handle;
   [%expect
     {|
-         ("an action inside of Bonsai.switch as been dropped because the computation is no longer active"
-          (index 1) (action ()))
-         () |}]
+    ("an action inside of Bonsai.switch has been dropped because the computation is no longer active"
+     (index 1) (action ()))
+    () |}]
 ;;
 
 let%test_module "mirror" =
@@ -3973,6 +4232,30 @@ let%test_module "mirror" =
   end)
 ;;
 
+let%expect_test "let%arr cutoff destruction" =
+  let var = Bonsai.Var.create (0, 0) in
+  let value = Bonsai.Var.value var in
+  let component =
+    let%arr a, _ = value in
+    print_endline "performing work!";
+    a
+  in
+  let handle = Handle.create (Result_spec.string (module Int)) component in
+  Handle.show handle;
+  [%expect {|
+    performing work!
+    0 |}];
+  Bonsai.Var.set var (0, 1);
+  Handle.show handle;
+  (* No work is performed! *)
+  [%expect {| 0 |}];
+  Bonsai.Var.set var (1, 1);
+  Handle.show handle;
+  [%expect {|
+    performing work!
+    1 |}]
+;;
+
 let%test_module "regression" =
   (module struct
     (* The regression in question is caused by calling [Value.both] on a dynamic
@@ -4034,4 +4317,113 @@ let%test_module "regression" =
       [%expect {| 5 |}]
     ;;
   end)
+;;
+
+let%expect_test "ordering behavior of skeleton traversal" =
+  (* NOTE: This test just showcases current traversal order behavior in case it
+     were to change/matter in the future. *)
+  let all_values =
+    [ Value.return ()
+    ; Bonsai.Var.value (Bonsai.Var.create ())
+    ; Value.cutoff (Value.return ()) ~equal:phys_equal
+    ; Value.map (Value.both (Value.return ()) (Value.return ())) ~f:(fun ((), ()) -> ())
+    ]
+    |> List.reduce_exn ~f:(Value.map2 ~f:(fun () () -> ()))
+  in
+  let c =
+    let%sub v = return all_values in
+    let%sub c1 =
+      Bonsai.state_machine1
+        (module Unit)
+        (module Unit)
+        ~default_model:()
+        v
+        ~apply_action:(fun ~inject:_ ~schedule_event:_ () () () -> ())
+    in
+    let%sub c2 = Bonsai.state (module Unit) ~default_model:() in
+    let%sub c3 =
+      Bonsai.assoc
+        (module Unit)
+        (Value.return Unit.Map.empty)
+        ~f:(fun _ _ -> Bonsai.const ())
+    in
+    let%sub c4 =
+      match%sub v with
+      | () -> Bonsai.const ()
+    in
+    let%arr () = v
+    and (), _ = c1
+    and (), _ = c2
+    and _ = c3
+    and () = c4 in
+    ()
+  in
+  let skeleton =
+    Bonsai.Private.Skeleton.Computation.of_computation
+      (Bonsai.Private.reveal_computation c)
+  in
+  let pre_order_printer =
+    object
+      inherit Bonsai.Private.Skeleton.Traverse.map as super
+
+      method! value value =
+        printf "value - ";
+        print_s [%message "" ~_:(Lazy.force value.node_path : Bonsai.Private.Node_path.t)];
+        super#value value
+
+      method! computation computation =
+        printf "computation - ";
+        print_s
+          [%message "" ~_:(Lazy.force computation.node_path : Bonsai.Private.Node_path.t)];
+        super#computation computation
+    end
+  in
+  pre_order_printer#computation skeleton
+  |> (ignore : Bonsai.Private.Skeleton.Computation.t -> unit);
+  [%expect
+    {|
+    computation - _1
+    computation - 1_1
+    value - 1_2
+    value - 1-1_1
+    value - 1-1-1_1
+    value - 1-1-1-1_1
+    value - 1-1-1-2_1
+    value - 1-1-2_1
+    value - 1-1-2-1_1
+    value - 1-2_1
+    value - 1-2-1_1
+    value - 1-2-1-1_1
+    value - 1-2-1-2_1
+    computation - 2_1
+    computation - 2-1_1
+    value - 2-1_2
+    computation - 2-2_1
+    computation - 2-2-1_1
+    computation - 2-2-2_1
+    computation - 2-2-2-1_1
+    value - 2-2-2-1-1_1
+    computation - 2-2-2-1-2_1
+    value - 2-2-2-1-2_2
+    computation - 2-2-2-2_1
+    computation - 2-2-2-2-1_1
+    computation - 2-2-2-2-1-1_1
+    value - 2-2-2-2-1-1_2
+    value - 2-2-2-2-1-1-1_1
+    computation - 2-2-2-2-1-2_1
+    value - 2-2-2-2-1-2_2
+    computation - 2-2-2-2-2_1
+    value - 2-2-2-2-2_2
+    value - 2-2-2-2-2-1_1
+    value - 2-2-2-2-2-1-1_1
+    value - 2-2-2-2-2-1-2_1
+    value - 2-2-2-2-2-1-2-1_1
+    value - 2-2-2-2-2-1-2-1-1_1
+    value - 2-2-2-2-2-1-2-2_1
+    value - 2-2-2-2-2-1-2-2-1_1
+    value - 2-2-2-2-2-1-2-2-1-1_1
+    value - 2-2-2-2-2-1-2-2-2_1
+    value - 2-2-2-2-2-1-2-2-2-1_1
+    value - 2-2-2-2-2-1-2-2-2-1-1_1
+    value - 2-2-2-2-2-1-2-2-2-2_1 |}]
 ;;

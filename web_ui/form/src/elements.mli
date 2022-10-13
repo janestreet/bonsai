@@ -96,6 +96,7 @@ module Checkbox : sig
     :  ?style:Selectable_style.t Value.t
     -> ?extra_attrs:Vdom.Attr.t list Value.t
     -> ?to_string:('a -> string)
+    -> ?layout:[ `Vertical | `Horizontal ]
     -> ('a, 'cmp) Bonsai.comparator
     -> 'a list Value.t
     -> ('a, 'cmp) Set.t Form.t Computation.t
@@ -147,7 +148,9 @@ module Typeahead : sig
   val single
     :  ?extra_attrs:Vdom.Attr.t list Value.t
     -> ?placeholder:string
-    -> ?to_string:('a -> string) Bonsai.Value.t
+    -> ?to_string:('a -> string) Value.t
+    -> ?to_option_description:('a -> string) Value.t
+    -> ?handle_unknown_option:(string -> 'a option) Value.t
     -> (module Bonsai.Model with type t = 'a)
     -> all_options:'a list Value.t
     -> 'a Form.t Computation.t
@@ -155,7 +158,9 @@ module Typeahead : sig
   val single_opt
     :  ?extra_attrs:Vdom.Attr.t list Value.t
     -> ?placeholder:string
-    -> ?to_string:('a -> string) Bonsai.Value.t
+    -> ?to_string:('a -> string) Value.t
+    -> ?to_option_description:('a -> string) Value.t
+    -> ?handle_unknown_option:(string -> 'a option) Value.t
     -> (module Bonsai.Model with type t = 'a)
     -> all_options:'a list Value.t
     -> 'a option Form.t Computation.t
@@ -163,7 +168,8 @@ module Typeahead : sig
   val set
     :  ?extra_attrs:Vdom.Attr.t list Value.t
     -> ?placeholder:string
-    -> ?to_string:('a -> string)
+    -> ?to_string:('a -> string) Value.t
+    -> ?to_option_description:('a -> string) Value.t
     -> ?split:(string -> string list)
     -> ('a, 'cmp) Bonsai.comparator
     -> all_options:'a list Value.t
@@ -172,7 +178,8 @@ module Typeahead : sig
   val list
     :  ?extra_attrs:Vdom.Attr.t list Value.t
     -> ?placeholder:string
-    -> ?to_string:('a -> string)
+    -> ?to_string:('a -> string) Value.t
+    -> ?to_option_description:('a -> string) Value.t
     -> ?split:(string -> string list)
     -> ('a, _) Bonsai.comparator
     -> all_options:'a list Value.t
@@ -206,6 +213,44 @@ module Date_time : sig
     :  ?extra_attrs:Vdom.Attr.t list Value.t
     -> unit
     -> Time_ns.t option Form.t Computation.t
+
+  module Range : sig
+    val date
+      :  ?extra_attr:Vdom.Attr.t Value.t
+      -> ?allow_equal:bool
+      -> unit
+      -> (Date.t * Date.t) Form.t Computation.t
+
+    val date_opt
+      :  ?extra_attr:Vdom.Attr.t Value.t
+      -> ?allow_equal:bool
+      -> unit
+      -> (Date.t option * Date.t option) Form.t Computation.t
+
+    val time
+      :  ?extra_attr:Vdom.Attr.t Value.t
+      -> ?allow_equal:bool
+      -> unit
+      -> (Time_ns.Ofday.t * Time_ns.Ofday.t) Form.t Computation.t
+
+    val time_opt
+      :  ?extra_attr:Vdom.Attr.t Value.t
+      -> ?allow_equal:bool
+      -> unit
+      -> (Time_ns.Ofday.t option * Time_ns.Ofday.t option) Form.t Computation.t
+
+    val datetime_local
+      :  ?extra_attr:Vdom.Attr.t Value.t
+      -> ?allow_equal:bool
+      -> unit
+      -> (Time_ns.t * Time_ns.t) Form.t Computation.t
+
+    val datetime_local_opt
+      :  ?extra_attr:Vdom.Attr.t Value.t
+      -> ?allow_equal:bool
+      -> unit
+      -> (Time_ns.t option * Time_ns.t option) Form.t Computation.t
+  end
 end
 
 module Multiselect : sig

@@ -21,7 +21,7 @@ module Search = struct
     | Partial_match of 'a
     | Only_exact_matches_allowed
 
-  let find ~to_string ~haystack ~needle =
+  let find ~to_string ~haystack ~needle ~handle_unknown_option =
     List.fold_until
       haystack
       ~init:Nothing_found
@@ -40,7 +40,10 @@ module Search = struct
           | Partial_match _ -> Continue Only_exact_matches_allowed
           (* If we are in the only-exact-matches state, don't change it *)
           | Only_exact_matches_allowed -> Continue Only_exact_matches_allowed)
-        else Continue state)
+        else (
+          match handle_unknown_option needle with
+          | Some value -> Stop (Some value)
+          | None       -> Continue state))
       ~finish:(function
         | Only_exact_matches_allowed -> None
         | Nothing_found              -> None
@@ -48,14 +51,24 @@ module Search = struct
   ;;
 end
 
-let[@warning "-16"] input
-                      ?(placeholder = "")
-                      ?(value       = "")
-                      ~extra_attrs
-                      ~to_string
-                      ~id
-                      ~all_options
-                      ~on_input
+type 'a t =
+  { selected      : 'a
+  ; set_selected  : 'a -> unit Ui_effect.t
+  ; current_input : string
+  ; view          : Vdom.Node.t
+  }
+
+let input
+      ?(placeholder = "")
+      ?(value       = "")
+      ~extra_attrs
+      ~to_string
+      ~id
+      ~handle_unknown_option
+      ~all_options
+      ~on_change
+      ~on_input
+      ()
   =
   Vdom.Node.input
     ~attr:
@@ -69,20 +82,25 @@ let[@warning "-16"] input
                being used. *)
             ; Vdom.Attr.value value
             ; Vdom.Attr.string_property "value" value
+            ; Vdom.Attr.on_input (fun _ -> on_input)
             ; Vdom.Attr.on_change (fun _ input ->
                 let maybe_t =
-                  Search.find ~to_string ~needle:input ~haystack:all_options
+                  Search.find
+                    ~to_string
+                    ~needle:input
+                    ~haystack:all_options
+                    ~handle_unknown_option
                 in
-                on_input maybe_t input)
+                on_change maybe_t input)
             ]))
     ()
 ;;
 
-let datalist ?filter_options_by ~id ~all_options ~to_string () =
+let datalist ?filter_options_by ~id ~all_options ~to_string ~to_option_description () =
   let option_of_t t =
     Vdom.Node.option
       ~attr:(Vdom.Attr.value (to_string t))
-      [ Vdom.Node.text (to_string t) ]
+      [ Vdom.Node.text (to_option_description t) ]
   in
   let all_options =
     match filter_options_by with
@@ -100,6 +118,8 @@ let create
       ?placeholder
       ?on_select_change
       ?to_string
+      ?to_option_description
+      ?(handle_unknown_option = Value.return (Fn.const None))
       (module M : Bonsai.Model with type t = t)
       ~all_options
   =
@@ -107,61 +127,77 @@ let create
   let to_string =
     Option.value
       to_string
-      ~default:(Bonsai.Value.return (fun a -> a |> M.sexp_of_t |> Sexp.to_string_hum))
+      ~default:(Value.return (fun a -> a |> M.sexp_of_t |> Sexp.to_string_hum))
   in
+  let to_option_description = Option.value to_option_description ~default:to_string in
   let on_select_change =
     Option.value
       on_select_change
       ~default:(Value.return (fun (_ : M.t option) -> Ui_effect.Ignore))
   in
+  let%sub current_input = Bonsai.state (module String) ~default_model:"" in
   let%sub selected = Bonsai.state_opt (module M) in
   let%sub id = Bonsai.path_id in
   let%arr selected, inject_selected = selected
-  and to_string        = to_string
-  and on_select_change = on_select_change
-  and id               = id
-  and extra_attrs      = extra_attrs
-  and all_options      = all_options in
-  let on_input t (_ : string) =
-    Ui_effect.Many [ inject_selected t; on_select_change t ]
-  in
-  let datalist = datalist ~to_string ~id ~all_options () in
+  and current_input, inject_current_input = current_input
+  and to_string                           = to_string
+  and to_option_description               = to_option_description
+  and on_select_change                    = on_select_change
+  and id                                  = id
+  and extra_attrs                         = extra_attrs
+  and handle_unknown_option               = handle_unknown_option
+  and all_options                         = all_options in
+  let on_input input = inject_current_input input                                     in
+  let on_change t _  = Ui_effect.Many [ inject_selected t; on_select_change t ]       in
+  let datalist       = datalist ~to_option_description ~to_string ~id ~all_options () in
   let input =
     input
       ?placeholder
       ~extra_attrs
       ~id
+      ~handle_unknown_option
       ~all_options
+      ~on_change
       ~on_input
       ~to_string
-      ~value:(Option.value_map ~default:"" selected ~f:to_string)
+      ~value:current_input
+      ()
   in
-  selected, Vdom.Node.div [ input; datalist ], inject_selected
+  let set_selected selected =
+    let current_input = Option.value_map selected ~f:to_string ~default:"" in
+    Ui_effect.Many [ inject_selected selected; inject_current_input current_input ]
+  in
+  { selected; current_input; view = Vdom.Node.div [ input; datalist ]; set_selected }
 ;;
 
-let[@warning "-16"] input
-                      ?(placeholder = "")
-                      ~extra_attrs
-                      ~to_string
-                      ~split
-                      ~id
-                      ~all_options
-                      ~selected_options
-                      ~inject_selected_options
-                      ~on_set_change
+let input
+      ?(placeholder = "")
+      ~current_input
+      ~inject_current_input
+      ~extra_attrs
+      ~to_string
+      ~split
+      ~id
+      ~handle_unknown_option
+      ~all_options
+      ~selected_options
+      ~inject_selected_options
+      ~on_set_change
+      ()
   =
   let open! Bonsai.Let_syntax in
-  (* This state is held internally to force the typeahead to clear the text contents
-     of the input field when an option is selected. *)
-  let%sub select = Bonsai.state (module String) ~default_model:"" in
-  let%arr select, inject_select = select
+  let%arr current_input = current_input
+  and inject_current_input    = inject_current_input
+  and handle_unknown_option   = handle_unknown_option
   and all_options             = all_options
   and selected_options        = selected_options
   and inject_selected_options = inject_selected_options
   and extra_attrs             = extra_attrs
   and id                      = id
-  and on_set_change           = on_set_change in
-  let on_input maybe_t user_input =
+  and on_set_change           = on_set_change
+  and to_string               = to_string in
+  let on_input input = inject_current_input input in
+  let on_change maybe_t user_input =
     match maybe_t with
     | None ->
       let attempted_input_items = split user_input |> String.Set.of_list in
@@ -176,18 +212,28 @@ let[@warning "-16"] input
       Ui_effect.Many
         [ inject_selected_options selected_options
         ; (match new_selected_options with
-           | []     -> inject_select user_input
-           | _ :: _ -> inject_select "")
+           | []     -> inject_current_input user_input
+           | _ :: _ -> inject_current_input "")
         ]
     | Some t ->
       let selected_options = Set.add selected_options t in
       Ui_effect.Many
         [ on_set_change selected_options
         ; inject_selected_options selected_options
-        ; inject_select ""
+        ; inject_current_input ""
         ]
   in
-  input ~extra_attrs ~value:select ~placeholder ~id ~all_options ~on_input ~to_string
+  input
+    ~extra_attrs
+    ~value:current_input
+    ~placeholder
+    ~id
+    ~handle_unknown_option
+    ~all_options
+    ~on_input
+    ~on_change
+    ~to_string
+    ()
 ;;
 
 let create_multi
@@ -196,6 +242,8 @@ let create_multi
       ?placeholder
       ?(on_set_change = Value.return (const Ui_effect.Ignore))
       ?to_string
+      ?to_option_description
+      ?(handle_unknown_option = Value.return (Fn.const None))
       ?(split = List.return)
       (module M : Bonsai.Comparator
         with type comparator_witness = comparator_witness
@@ -209,9 +257,12 @@ let create_multi
   end
   in
   let to_string =
-    Option.value to_string ~default:(fun a -> a |> M.sexp_of_t |> Sexp.to_string_hum)
+    Option.value
+      to_string
+      ~default:(Value.return (fun a -> a |> M.sexp_of_t |> Sexp.to_string_hum))
   in
-  let selected_options = Bonsai.state (module M.Set) ~default_model:M.Set.empty in
+  let to_option_description = Option.value to_option_description ~default:to_string  in
+  let selected_options      = Bonsai.state (module M.Set) ~default_model:M.Set.empty in
   let%sub selected_options, inject_selected_options = selected_options in
   let%sub inject_selected_options =
     let%arr inject_selected_options = inject_selected_options
@@ -220,18 +271,28 @@ let create_multi
       Effect.Many
         [ on_set_change selected_options; inject_selected_options selected_options ]
   in
+  (* This state is held internally to force the typeahead to clear the text contents
+     of the input field when an option is selected, and we give users access to the value
+     as well *)
+  let%sub current_input, inject_current_input =
+    Bonsai.state (module String) ~default_model:""
+  in
   let%sub id = Bonsai.path_id in
   let%sub input =
     input
       ?placeholder
       ~extra_attrs
+      ~current_input
+      ~inject_current_input
       ~to_string
       ~id
+      ~handle_unknown_option
       ~all_options
       ~selected_options
       ~inject_selected_options
       ~on_set_change
       ~split
+      ()
   in
   let%sub pills =
     Pills.of_set
@@ -242,21 +303,29 @@ let create_multi
       selected_options
   in
   let%arr selected_options = selected_options
+  and current_input           = current_input
   and inject_selected_options = inject_selected_options
   and input                   = input
   and id                      = id
   and all_options             = all_options
-  and pills                   = pills in
+  and pills                   = pills
+  and to_string               = to_string
+  and to_option_description   = to_option_description in
   let datalist =
     datalist
       ~id
       ~all_options
       ~to_string
+      ~to_option_description
       ~filter_options_by:
         (let all_options = Set.of_list (module M) all_options in
          let remaining_options = Set.diff all_options selected_options in
          fun option -> Set.mem remaining_options option)
       ()
   in
-  selected_options, Vdom.Node.div [ input; datalist; pills ], inject_selected_options
+  { selected     = selected_options
+  ; set_selected = inject_selected_options
+  ; current_input
+  ; view         = Vdom.Node.div [ input; datalist; pills ]
+  }
 ;;

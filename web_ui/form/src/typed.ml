@@ -157,7 +157,7 @@ module Variant = struct
           in
           Form.project form_for_constructor ~parse_exn ~unparse)
     in
-    let%sub get_inner_form = Bonsai_extra.yoink inner in
+    let%sub get_inner_form = Bonsai.yoink inner in
     let%arr inner = inner
     and picker = picker
     and get_inner_form = get_inner_form in

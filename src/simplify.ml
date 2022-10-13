@@ -83,9 +83,9 @@ let rec value_to_function
   let open Option_or_miss in
   match value.value with
   | Constant r -> Some (fun _key _data -> r)
-  | Lazy x -> Some (fun _ _ -> force x)
+  | Exception _ -> None
   | Incr _ -> None
-  | Named ->
+  | Named _ ->
     let same_name = Type_equal.Id.same_witness in
     (match same_name value.id key_id, same_name value.id data_id with
      | Some T, _ -> Some (fun key _data -> key)
@@ -95,7 +95,9 @@ let rec value_to_function
          { free = Free_variables.(add_exn empty ~key:value.id ~data:())
          ; gen = (fun env _ _ -> Env.find_exn env value.id)
          })
-  | Cutoff _ -> None
+  | Cutoff { t; added_by_let_syntax = true; equal = _ } ->
+    value_to_function t key_id data_id
+  | Cutoff { t = _; equal = _; added_by_let_syntax = false } -> None
   | Both (a, b) ->
     let%map a = value_to_function a key_id data_id
     and b = value_to_function b key_id data_id in
@@ -161,19 +163,15 @@ let rec value_to_function
 ;;
 
 let rec computation_to_function
-  : type key data model dynamic_action static_action result.
-    (model, dynamic_action, static_action, result) Computation.t
+  : type key data result.
+    result Computation.t
     -> key_id:key Type_equal.Id.t
     -> data_id:data Type_equal.Id.t
     -> (Path.t -> key -> data -> result) Option_or_miss.t
   =
   fun computation ~key_id ~data_id ->
   let recurse = computation_to_function ~key_id ~data_id in
-  let handle_subst
-        (type m1 da1 sa1 r1 m2 da2 sa2 r2)
-        ~(from : (m1, da1, sa1, r1) Computation.t)
-        ~via
-        ~(into : (m2, da2, sa2, r2) Computation.t)
+  let handle_subst (type r1 r2) ~(from : r1 Computation.t) ~via ~(into : r2 Computation.t)
     : (Path.t -> key -> data -> r2) Option_or_miss.t
     =
     match recurse from, recurse into with
@@ -203,12 +201,10 @@ let rec computation_to_function
       in
       Option_or_miss.squash (Miss { free; gen })
   in
-  match computation.t with
+  match computation.kind with
   | Return value ->
     Option_or_miss.map (value_to_function value key_id data_id) ~f:(fun f _path -> f)
-  | Subst { from; via; into; here = _ } -> handle_subst ~from ~via ~into
-  | Subst_stateless_from { from; via; into; here = _ } -> handle_subst ~from ~via ~into
-  | Subst_stateless_into { from; via; into; here = _ } -> handle_subst ~from ~via ~into
+  | Sub { from; via; into; here = _ } -> handle_subst ~from ~via ~into
   | Path -> Some (fun path _ _ -> path)
   | _ -> None
 ;;

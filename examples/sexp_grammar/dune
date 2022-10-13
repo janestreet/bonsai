@@ -1,5 +1,5 @@
 (executables (names main) (libraries bonsai_web bonsai_web_ui_auto_generated)
- (preprocess (pps ppx_jane)))
+ (preprocess (pps ppx_bonsai ppx_jane)))
 
 (rule (targets embedded_files.ml embedded_files.mli)
  (deps %{bin:ocaml-embed-file}

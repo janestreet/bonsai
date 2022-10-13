@@ -122,9 +122,8 @@ open! Core
 open Bonsai.Private
 open Bonsai_protocol
 
-type ('model, 'static_action, 'dynamic_action, 'result) t =
-  { instrumented_computation :
-      ('model, 'static_action, 'dynamic_action, 'result) Bonsai.Private.Computation.t
+type 'result t =
+  { instrumented_computation : 'result Bonsai.Private.Computation.t
   ; shutdown : unit -> unit
   }
 
@@ -278,7 +277,7 @@ let instrument ~host ~port ~worker_name component =
   in
   let stop_ivar = Async_kernel.Ivar.create () in
   let stop = Async_kernel.Ivar.read stop_ivar in
-  Async_kernel.every ~stop (Time_ns.Span.of_sec 0.5) (fun () ->
+  Async_kernel.every ~stop (Time_ns.Span.of_sec 0.2) (fun () ->
     if !graph_info_dirty
     then (
       graph_info_dirty := false;

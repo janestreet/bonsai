@@ -3,6 +3,8 @@ open! Bonsai_web
 
 module Pokemon = struct
   module T = struct
+    let all_of_string = []
+
     type t =
       | Bulbasaur
       | Ivysaur
@@ -22,6 +24,7 @@ module Pokemon = struct
       | Beedrill
       | Pidgey
       | Pidgeotto
+      | Other of string
     [@@deriving compare, enumerate, equal, variants, sexp]
   end
 
@@ -29,6 +32,11 @@ module Pokemon = struct
   include Comparable.Make (T)
 
   let to_string t = sexp_of_t t |> Sexp.to_string
+
+  let of_string s =
+    try Sexp.of_string s |> t_of_sexp with
+    | _ -> Other s
+  ;;
 end
 
 (* thanks to the good folks in webdev-public, you can no longer fool this into letting you
@@ -44,7 +52,7 @@ let components =
       end)
       ~default_model:Pokemon.all
   in
-  let%sub favourite_pokemon, typeahead_single_vdom, _set =
+  let typeahead_single ?handle_unknown_option () =
     Typeahead.create
       ~on_select_change:
         (let%map _, inject_all_options = all_options in
@@ -58,13 +66,17 @@ let components =
            |> inject_all_options)
       ~to_string:(Bonsai.Value.return Pokemon.to_string)
       ~placeholder:"Select a pokemon"
+      ?handle_unknown_option
       ~all_options:(Value.return Pokemon.all)
       (module Pokemon)
   in
-  let%sub (_ : Pokemon.Set.t), typeahead_multi_vdom, _ =
+  let%sub { selected = favourite_pokemon; view = typeahead_single_vdom; _ } =
+    typeahead_single ()
+  in
+  let%sub { view = typeahead_multi_vdom; _ } =
     Typeahead.create_multi
       (module Pokemon)
-      ~to_string:Pokemon.to_string
+      ~to_string:(Value.return Pokemon.to_string)
       ~on_set_change:
         (let%map inject_all_options = all_options >>| snd
          and favourite_pokemon = favourite_pokemon in
@@ -79,8 +91,27 @@ let components =
       ~placeholder:"Select many pokemon"
       ~all_options:(all_options >>| fst)
   in
+  let%sub { view = typeahead_single_with_custom_input_vdom; _ } =
+    typeahead_single
+      ~handle_unknown_option:
+        (Value.return (fun input ->
+           Option.some_if (Int.equal 5 (String.length input)) (Pokemon.of_string input)))
+      ()
+  in
+  let%sub { view = typeahead_multi_with_custom_input_vdom; _ } =
+    Typeahead.create_multi
+      ~to_string:(Value.return Pokemon.to_string)
+      ~placeholder:"Select many pokemon"
+      ~handle_unknown_option:
+        (Value.return (fun input ->
+           Option.some_if (String.contains ~pos:0 input 'A') (Pokemon.of_string input)))
+      ~all_options:(Value.return Pokemon.all)
+      (module Pokemon)
+  in
   let%arr typeahead_single_vdom = typeahead_single_vdom
-  and typeahead_multi_vdom = typeahead_multi_vdom in
+  and typeahead_multi_vdom                    = typeahead_multi_vdom
+  and typeahead_single_with_custom_input_vdom = typeahead_single_with_custom_input_vdom
+  and typeahead_multi_with_custom_input_vdom  = typeahead_multi_with_custom_input_vdom in
   Vdom.Node.create
     "main"
     [ Vdom.Node.section
@@ -101,7 +132,26 @@ let components =
         ]
     ; Vdom.Node.section
         [ Vdom.Node.label
-            [ Vdom.Node.text "Which pokemon do you like less?"; typeahead_multi_vdom ]
+            [ Vdom.Node.text
+                "Which pokemon do you like less? You can't choose your favourite! "
+            ; typeahead_multi_vdom
+            ]
+        ]
+    ; Vdom.Node.section
+        [ Vdom.Node.label
+            [ Vdom.Node.text
+                "What's the pokemon with the best name? If you don't like any of these, \
+                 create your own! Must have five letters."
+            ; typeahead_single_with_custom_input_vdom
+            ]
+        ]
+    ; Vdom.Node.section
+        [ Vdom.Node.label
+            [ Vdom.Node.text
+                "What are all the pokemon you like? Choose from this list or input a \
+                 custom value that starts with an \"A\"."
+            ; typeahead_multi_with_custom_input_vdom
+            ]
         ]
     ]
 ;;

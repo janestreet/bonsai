@@ -78,3 +78,4 @@ type editable =
 val with_fieldset : currently_editable:bool -> Vdom.Node.t -> Vdom.Node.t
 val to_vdom : ?on_submit:submission_options -> ?editable:editable -> t -> Vdom.Node.t
 val to_vdom_plain : t -> Vdom.Node.t list
+val sexp_to_pretty_string : ('a -> Sexp.t) -> 'a -> string

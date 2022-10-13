@@ -5,7 +5,7 @@ module Dynamic_cells : sig
   type ('key, 'data) t
 
   val column
-    :  ?initial_width:[ `Px of int ]
+    :  ?initial_width:Css_gen.Length.t
     -> ?visible:bool Value.t
     -> label:Vdom.Node.t Value.t
     -> cell:(key:'key Value.t -> data:'data Value.t -> Vdom.Node.t Computation.t)
@@ -21,7 +21,7 @@ module Dynamic_columns : sig
   type ('key, 'data) t
 
   val column
-    :  ?initial_width:[ `Px of int ]
+    :  ?initial_width:Css_gen.Length.t
     -> ?visible:bool
     -> label:Vdom.Node.t
     -> cell:(key:'key -> data:'data -> Vdom.Node.t)
@@ -38,7 +38,7 @@ module Dynamic_cells_with_sorter : sig
 
   val column
     :  ?sort:('key * 'data -> 'key * 'data -> int) Value.t
-    -> ?initial_width:[ `Px of int ]
+    -> ?initial_width:Css_gen.Length.t
     -> ?visible:bool Value.t
     -> label:Vdom.Node.t Value.t
     -> cell:(key:'key Value.t -> data:'data Value.t -> Vdom.Node.t Computation.t)
@@ -55,7 +55,7 @@ module Dynamic_columns_with_sorter : sig
 
   val column
     :  ?sort:('key * 'data -> 'key * 'data -> int)
-    -> ?initial_width:[ `Px of int ]
+    -> ?initial_width:Css_gen.Length.t
     -> ?visible:bool
     -> label:Vdom.Node.t
     -> cell:(key:'key -> data:'data -> Vdom.Node.t)

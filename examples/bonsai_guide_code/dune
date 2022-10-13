@@ -1,4 +1,5 @@
 (executables (names main)
  (libraries bonsai_web async_js bonsai_web_ui_form bonsai_web_ui_extendy)
- (preprocess (pps js_of_ocaml-ppx ppx_typed_fields ppx_css ppx_jane))
+ (preprocess
+  (pps js_of_ocaml-ppx ppx_typed_fields ppx_bonsai ppx_css ppx_jane))
  (js_of_ocaml (javascript_files ./resize_iframe.js)))

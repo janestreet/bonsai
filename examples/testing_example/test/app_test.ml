@@ -6,7 +6,7 @@ let hello_world = Bonsai_testing_example_lib.hello_world
 let hello_user = Bonsai_testing_example_lib.hello_user
 let hello_textbox = Bonsai_testing_example_lib.hello_textbox
 
-(* [HELLO_WORLD_TEST BEGIN] *)
+(* $MDX part-begin=hello-world-test *)
 module Handle = Bonsai_web_test.Handle
 module Result_spec = Bonsai_web_test.Result_spec
 
@@ -16,9 +16,9 @@ let%expect_test "it shows hello world" =
   [%expect {| <span> hello world </span> |}]
 ;;
 
-(* [HELLO_WORLD_TEST END] *)
+(* $MDX part-end *)
 
-(* [HELLO_USER_TEST BEGIN] *)
+(* $MDX part-begin=hello-user-test *)
 let%expect_test "shows hello to a user" =
   let user_var = Bonsai.Var.create "Bob" in
   let user = Bonsai.Var.value user_var in
@@ -30,9 +30,9 @@ let%expect_test "shows hello to a user" =
   [%expect {| <span> hello Alice </span> |}]
 ;;
 
-(* [HELLO_USER_TEST END] *)
+(* $MDX part-end *)
 
-(* [HELLO_USER_DIFF_TEST BEGIN] *)
+(* $MDX part-begin=hello-user-diff-test *)
 let%expect_test "shows hello to a user" =
   let user_var = Bonsai.Var.create "Bob" in
   let user = Bonsai.Var.value user_var in
@@ -46,9 +46,9 @@ let%expect_test "shows hello to a user" =
     +|<span> hello Alice </span> |}]
 ;;
 
-(* [HELLO_USER_DIFF_TEST END] *)
+(* $MDX part-end *)
 
-(* [HELLO_TEXTBOX_DIFF_TEST BEGIN] *)
+(* $MDX part-begin=hello-text-box-diff-test *)
 let%expect_test "shows hello to a specified user" =
   let handle = Handle.create (Result_spec.vdom Fn.id) hello_textbox in
   Handle.show handle;
@@ -78,9 +78,9 @@ let%expect_test "shows hello to a specified user" =
       </div> |}]
 ;;
 
-(* [HELLO_TEXTBOX_DIFF_TEST END] *)
+(* $MDX part-end *)
 
-(* [STATE_TEST BEGIN] *)
+(* $MDX part-begin=state-test *)
 module State_view_spec = struct
   type t = string * (string -> unit Vdom.Effect.t)
   type incoming = string
@@ -101,4 +101,4 @@ let%expect_test "test Bonsai.state" =
   [%expect {| world |}]
 ;;
 
-(* [STATE_TEST END] *)
+(* $MDX part-end *)

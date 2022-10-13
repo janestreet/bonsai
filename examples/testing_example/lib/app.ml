@@ -2,22 +2,22 @@ open! Core
 open! Bonsai_web
 open Bonsai.Let_syntax
 
-(* [HELLO_WORLD_COMPONENT BEGIN] *)
+(* $MDX part-begin=hello-world-component *)
 let hello_world : Vdom.Node.t Computation.t =
   Bonsai.const (Vdom.Node.span [ Vdom.Node.text "hello world" ])
 ;;
 
-(* [HELLO_WORLD_COMPONENT END] *)
+(* $MDX part-end *)
 
-(* [HELLO_USER_COMPONENT BEGIN] *)
+(* $MDX part-begin=hello-user-component *)
 let hello_user (name : string Value.t) : Vdom.Node.t Computation.t =
   let%arr name = name in
   Vdom.Node.span [ Vdom.Node.textf "hello %s" name ]
 ;;
 
-(* [HELLO_USER_COMPONENT END] *)
+(* $MDX part-end *)
 
-(* [HELLO_TEXT_BOX_COMPONENT BEGIN] *)
+(* $MDX part-begin=hello-text-box-component *)
 let hello_textbox : Vdom.Node.t Computation.t =
   let%sub state, set = Bonsai.state (module String) ~default_model:"" in
   let%sub message = hello_user state in
@@ -26,5 +26,4 @@ let hello_textbox : Vdom.Node.t Computation.t =
   Vdom.Node.div
     [ Vdom.Node.input ~attr:(Vdom.Attr.on_input (fun _ text -> set text)) (); message ]
 ;;
-
-(* [HELLO_TEXT_BOX_COMPONENT BEGIN] *)
+(* $MDX part-end *)

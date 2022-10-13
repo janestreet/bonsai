@@ -8,23 +8,23 @@ let shared_computation =
     (module Data)
     ~all_options:(Value.return Data.all)
     ~placeholder:"Select a value"
-    ~to_string:Data.to_string
+    ~to_string:(Value.return Data.to_string)
     ~split:(String.split ~on:',')
 ;;
 
 let view_computation =
-  let%sub _, vdom, _ = shared_computation in
-  return vdom
+  let%sub { view; _ } = shared_computation in
+  return view
 ;;
 
 let view_and_set_computation =
-  let%sub _, vdom, set = shared_computation in
-  return (Value.both vdom set)
+  let%sub { view; set_selected = set; _ } = shared_computation in
+  return (Value.both view set)
 ;;
 
 let view_and_result_computation =
-  let%sub result, vdom, _ = shared_computation in
-  return (Value.both vdom result)
+  let%sub { view; selected = result; _ } = shared_computation in
+  return (Value.both view result)
 ;;
 
 let input_value handle value =
@@ -42,7 +42,8 @@ let%expect_test "Initial multi typeahead state" =
          placeholder="Select a value"
          value=""
          #value=""
-         onchange> </input>
+         onchange
+         oninput> </input>
   <datalist id="bonsai_path_replaced_in_test">
     <option value="Option A"> Option A </option>
     <option value="Option B"> Option B </option>
@@ -68,7 +69,8 @@ let%expect_test "Select two elements" =
            placeholder="Select a value"
            value=""
            #value=""
-           onchange> </input>
+           onchange
+           oninput> </input>
     <datalist id="bonsai_path_replaced_in_test">
       <option value="Option A"> Option A </option>
 -|    <option value="Option B"> Option B </option>
@@ -99,7 +101,8 @@ let%expect_test "Deselect an element" =
            placeholder="Select a value"
            value=""
            #value=""
-           onchange> </input>
+           onchange
+           oninput> </input>
     <datalist id="bonsai_path_replaced_in_test">
       <option value="Option A"> Option A </option>
 +|    <option value="Option B"> Option B </option>
@@ -138,7 +141,8 @@ let%expect_test "set the elements" =
            placeholder="Select a value"
            value=""
            #value=""
-           onchange> </input>
+           onchange
+           oninput> </input>
     <datalist id="bonsai_path_replaced_in_test">
       <option value="Option A"> Option A </option>
       <option value="Option B"> Option B </option>
@@ -188,7 +192,8 @@ let%expect_test "input multiple elements" =
                placeholder="Select a value"
                value=""
                #value=""
-               onchange> </input>
+               onchange
+               oninput> </input>
         <datalist id="bonsai_path_replaced_in_test">
     -|    <option value="Option A"> Option A </option>
     -|    <option value="Option B"> Option B </option>

@@ -17,3 +17,4 @@ end
 val dummy_source_code_position : Source_code_position.t
 val opaque_const : 'a -> 'a Bonsai.Computation.t
 val opaque_const_value : 'a -> 'a Bonsai.Value.t
+val opaque_computation : 'a Bonsai.Computation.t -> 'a Bonsai.Computation.t

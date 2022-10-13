@@ -30,6 +30,4 @@ open! Import
     since, again, this generates fewer incremental nodes. As with the previous
     transformation, this generalizes to an arity of 7.
 *)
-val flatten_values
-  :  ('model, 'dynamic_action, 'static_action, 'result) Computation.t
-  -> ('model, 'dynamic_action, 'static_action, 'result) Computation.t
+val flatten_values : 'result Computation.t -> 'result Computation.t

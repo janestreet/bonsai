@@ -15,33 +15,6 @@ let with_inject_fixed_point f =
   return r
 ;;
 
-let yoink a =
-  let%sub _, result =
-    Bonsai.actor1
-      (module Unit)
-      (module Unit)
-      ~recv:(fun ~schedule_event:_ a () () -> (), a)
-      ~default_model:()
-      a
-  in
-  let%arr result = result in
-  result ()
-;;
-
-let scope_model
-      (type a cmp)
-      (module M : Bonsai.Comparator with type t = a and type comparator_witness = cmp)
-      ~on:v
-      computation
-  =
-  let v = Value.map v ~f:(fun k -> Map.singleton (module M) k ()) in
-  let%sub map = Bonsai.assoc (module M) v ~f:(fun _ _ -> computation) in
-  let%arr map = map in
-  (* This _exn is ok because we know that the map is a singleton *)
-  let _k, r = Map.max_elt_exn map in
-  r
-;;
-
 let state_machine1_dynamic_model
       (type m a)
       (module M : Bonsai.Model with type t = m)
@@ -119,18 +92,6 @@ let exactly_once_with_value modul effect =
     | Some _ -> Bonsai.const ()
   in
   return value
-;;
-
-let toggle ~default_model =
-  let%sub state =
-    Bonsai.state_machine0
-      (module Bool)
-      (module Unit)
-      ~apply_action:(fun ~inject:_ ~schedule_event:_ b () -> not b)
-      ~default_model
-  in
-  let%arr state, inject = state in
-  state, inject ()
 ;;
 
 let pipe (type a) (module A : Bonsai.Model with type t = a) =
@@ -268,4 +229,77 @@ let mirror
      and interactive = interactive_value in
      { M2.store; interactive })
     ~callback
+;;
+
+let with_last_modified_time ~equal input =
+  (* Although [Bonsai.Clock.now] is generally discouraged, the cutoff only pays
+     attention to [input], so [now] shouldn't cause re-firing of this
+     computation's transitive dependencies. *)
+  let%sub now = Bonsai.Clock.now in
+  let%sub result = return (Bonsai.Value.both input now) in
+  Bonsai.Incr.value_cutoff result ~equal:(fun (a, _) (b, _) -> equal a b)
+;;
+
+let is_stable ~equal input ~time_to_stable =
+  match Time_ns.Span.sign time_to_stable with
+  | Zero | Neg ->
+    eprint_s [%message "Bonsai_extra.is_stable: [time_to_stable] should be positive"];
+    Bonsai.const false
+  | Pos ->
+    let%sub _, last_modified_time = with_last_modified_time ~equal input in
+    let%sub next_stable_time =
+      let%arr last_modified_time = last_modified_time in
+      Time_ns.add last_modified_time time_to_stable
+    in
+    let%sub at_next_stable_time = Bonsai.Clock.at next_stable_time in
+    (match%arr at_next_stable_time with
+     | Before -> false
+     | After -> true)
+;;
+
+let most_recent_value_satisfying m input ~condition =
+  Bonsai.most_recent_some m input ~f:(fun a -> if condition a then Some a else None)
+;;
+
+module Stability = struct
+  type 'a t =
+    | Stable of 'a
+    | Unstable of
+        { previously_stable : 'a option
+        ; unstable_value : 'a
+        }
+  [@@deriving sexp, equal]
+end
+
+let value_stability
+      (type a)
+      (module M : Bonsai.Model with type t = a)
+      input
+      ~time_to_stable
+  =
+  let%sub is_stable = is_stable ~equal:M.equal input ~time_to_stable in
+  let%sub most_recent_stable_and_true =
+    let%sub input_and_stability = return (Value.both input is_stable) in
+    most_recent_value_satisfying
+      (module struct
+        type t = M.t * bool [@@deriving sexp, equal]
+      end)
+      input_and_stability
+      ~condition:(fun (_input, is_stable) -> is_stable)
+  in
+  match%sub most_recent_stable_and_true with
+  | Some most_recent_stable_and_true ->
+    let%arr most_recent_stable, must_be_true = most_recent_stable_and_true
+    and is_stable = is_stable
+    and input = input in
+    (match must_be_true with
+     | true -> ()
+     | false ->
+       eprint_s [%message "BUG:" [%here] "value which passed through filter must be true"]);
+    if M.equal input most_recent_stable && is_stable
+    then Stability.Stable input
+    else Unstable { previously_stable = Some most_recent_stable; unstable_value = input }
+  | None ->
+    let%arr input = input in
+    Stability.Unstable { previously_stable = None; unstable_value = input }
 ;;

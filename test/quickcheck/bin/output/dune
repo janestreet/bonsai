@@ -1,0 +1,7 @@
+(library (name output) (libraries bonsai core)
+ (preprocess (pps ppx_jane ppx_bonsai)))
+
+(rule (targets hardcoded_fake_computation_to_string.ml) (mode promote)
+ (deps ../main.exe)
+ (action
+  (bash "../main.exe hardcoded > hardcoded_fake_computation_to_string.ml")))

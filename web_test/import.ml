@@ -1,6 +1,7 @@
 open! Core
 include Virtual_dom
 include Bonsai_web
+open Bonsai.Let_syntax
 
 module Effect = struct
   type 'a t = 'a Vdom.Effect.t
@@ -15,3 +16,4 @@ include Expect_test_helpers_core
 
 let opaque_const x = Bonsai.read (Bonsai.Var.value (Bonsai.Var.create x))
 let opaque_const_value x = Bonsai.Var.value (Bonsai.Var.create x)
+let opaque_computation c = if%sub opaque_const_value true then c else assert false

@@ -1,0 +1,4 @@
+(library (name bonsai_quickcheck) (public_name bonsai.quickcheck)
+ (libraries bonsai bonsai_test core expect_test_helpers_core
+  indentation_buffer)
+ (preprocess (pps ppx_jane ppx_bonsai)))

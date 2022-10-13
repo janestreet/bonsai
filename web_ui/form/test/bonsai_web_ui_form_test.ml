@@ -12,15 +12,21 @@ let get_vdom form =
 
 let get_vdom_verbose ?on_submit ?editable f = Form.view_as_vdom ?on_submit ?editable f
 
-let form_result_spec (type a) ?filter_printed_attributes ?(get_vdom = get_vdom) sexp_of_a
-  : (module Result_spec.S with type t = a Form.t and type incoming = a)
+let form_result_spec
+      (type a)
+      ?filter_printed_attributes
+      ?censor_paths
+      ?(get_vdom = get_vdom)
+      sexp_of_a
+  : (a Form.t, a) Result_spec.t
   =
   (module struct
     type t = a Form.t
     type incoming = a
 
     let view form =
-      let module V = (val Result_spec.vdom ?filter_printed_attributes Fn.id) in
+      let module V = (val Result_spec.vdom ?filter_printed_attributes ?censor_paths Fn.id)
+      in
       let vdom = get_vdom form in
       let vdom = V.view vdom in
       let value =
@@ -35,9 +41,7 @@ let form_result_spec (type a) ?filter_printed_attributes ?(get_vdom = get_vdom) 
   end)
 ;;
 
-let verbose_form_result_spec (type a) sexp_of_a
-  : (module Result_spec.S with type t = a Form.t and type incoming = a)
-  =
+let verbose_form_result_spec (type a) sexp_of_a : (a Form.t, a) Result_spec.t =
   (module struct
     type t = a Form.t
     type incoming = a
@@ -104,7 +108,12 @@ let%expect_test "dropdown starting empty" =
     (Error "a value is required")
 
     ==============
-    <select id="bonsai_path_replaced_in_test" class="widget-dropdown" onchange style={ width: 100.00%; }>
+    <select id="bonsai_path_replaced_in_test"
+            class="widget-dropdown"
+            onchange
+            style={
+              width: 100.00%;
+            }>
       <option value="0" #selected="true">  </option>
       <option value="1" #selected="false"> hello </option>
       <option value="2" #selected="false"> world </option>
@@ -117,7 +126,12 @@ let%expect_test "dropdown starting empty" =
     +|(Ok hello)
 
       ==============
-      <select id="bonsai_path_replaced_in_test" class="widget-dropdown" onchange style={ width: 100.00%; }>
+      <select id="bonsai_path_replaced_in_test"
+              class="widget-dropdown"
+              onchange
+              style={
+                width: 100.00%;
+              }>
     -|  <option value="0" #selected="true">  </option>
     +|  <option value="0" #selected="false">  </option>
     -|  <option value="1" #selected="false"> hello </option>
@@ -140,7 +154,12 @@ let%expect_test "dropdown with default value" =
     (Ok world)
 
     ==============
-    <select id="bonsai_path_replaced_in_test" class="widget-dropdown" onchange style={ width: 100.00%; }>
+    <select id="bonsai_path_replaced_in_test"
+            class="widget-dropdown"
+            onchange
+            style={
+              width: 100.00%;
+            }>
       <option value="0" #selected="false"> hello </option>
       <option value="1" #selected="true"> world </option>
     </select> |}];
@@ -152,7 +171,12 @@ let%expect_test "dropdown with default value" =
     +|(Ok hello)
 
       ==============
-      <select id="bonsai_path_replaced_in_test" class="widget-dropdown" onchange style={ width: 100.00%; }>
+      <select id="bonsai_path_replaced_in_test"
+              class="widget-dropdown"
+              onchange
+              style={
+                width: 100.00%;
+              }>
     -|  <option value="0" #selected="false"> hello </option>
     +|  <option value="0" #selected="true"> hello </option>
     -|  <option value="1" #selected="true"> world </option>
@@ -174,7 +198,12 @@ let%expect_test "dropdown_opt with default value" =
     (Ok (world))
 
     ==============
-    <select id="bonsai_path_replaced_in_test" class="widget-dropdown" onchange style={ width: 100.00%; }>
+    <select id="bonsai_path_replaced_in_test"
+            class="widget-dropdown"
+            onchange
+            style={
+              width: 100.00%;
+            }>
       <option value="0" #selected="false">  </option>
       <option value="1" #selected="false"> hello </option>
       <option value="2" #selected="true"> world </option>
@@ -187,7 +216,12 @@ let%expect_test "dropdown_opt with default value" =
     +|(Ok ())
 
       ==============
-      <select id="bonsai_path_replaced_in_test" class="widget-dropdown" onchange style={ width: 100.00%; }>
+      <select id="bonsai_path_replaced_in_test"
+              class="widget-dropdown"
+              onchange
+              style={
+                width: 100.00%;
+              }>
     -|  <option value="0" #selected="false">  </option>
     +|  <option value="0" #selected="true">  </option>
         <option value="1" #selected="false"> hello </option>
@@ -207,7 +241,12 @@ let%expect_test "dropdown" =
     (Ok hello)
 
     ==============
-    <select id="bonsai_path_replaced_in_test" class="widget-dropdown" onchange style={ width: 100.00%; }>
+    <select id="bonsai_path_replaced_in_test"
+            class="widget-dropdown"
+            onchange
+            style={
+              width: 100.00%;
+            }>
       <option value="0" #selected="true"> hello </option>
       <option value="1" #selected="false"> world </option>
     </select> |}];
@@ -219,7 +258,12 @@ let%expect_test "dropdown" =
     +|(Ok world)
 
       ==============
-      <select id="bonsai_path_replaced_in_test" class="widget-dropdown" onchange style={ width: 100.00%; }>
+      <select id="bonsai_path_replaced_in_test"
+              class="widget-dropdown"
+              onchange
+              style={
+                width: 100.00%;
+              }>
     -|  <option value="0" #selected="true"> hello </option>
     +|  <option value="0" #selected="false"> hello </option>
     -|  <option value="1" #selected="false"> world </option>
@@ -236,7 +280,12 @@ let%expect_test "dropdown but without any elements to pick from " =
     (Error "a value is required")
 
     ==============
-    <select id="bonsai_path_replaced_in_test" class="widget-dropdown" onchange style={ width: 100.00%; }>
+    <select id="bonsai_path_replaced_in_test"
+            class="widget-dropdown"
+            onchange
+            style={
+              width: 100.00%;
+            }>
       <option value="0" #selected="true">  </option>
     </select> |}]
 ;;
@@ -538,6 +587,398 @@ let%expect_test "setting into a paired string textbox * int textbox " =
       </div> |}]
 ;;
 
+let%expect_test "typing into a time range textbox, with strict inequality required" =
+  let component = Form.Elements.Date_time.Range.time () in
+  let handle =
+    Handle.create
+      (form_result_spec [%sexp_of: Time_ns.Ofday.t * Time_ns.Ofday.t])
+      component
+  in
+  Handle.show handle;
+  [%expect
+    {|
+    (Error "Values are required for this range")
+
+    ==============
+    <div>
+      <input type="time"
+             placeholder=""
+             spellcheck="false"
+             id="bonsai_path_replaced_in_test"
+             value:normalized=""
+             oninput> </input>
+       -
+      <input type="time"
+             placeholder=""
+             spellcheck="false"
+             id="bonsai_path_replaced_in_test"
+             value:normalized=""
+             oninput> </input>
+    </div> |}];
+  Handle.input_text handle ~get_vdom ~text:"11:11 AM" ~selector:"input:nth-child(1)";
+  Handle.show handle;
+  [%expect
+    {|
+    (Error "A value is required for the end of this range")
+
+    ==============
+    <div>
+      <input type="time"
+             placeholder=""
+             spellcheck="false"
+             id="bonsai_path_replaced_in_test"
+             value:normalized=11:11:00.000
+             oninput> </input>
+       -
+      <input type="time"
+             placeholder=""
+             spellcheck="false"
+             id="bonsai_path_replaced_in_test"
+             value:normalized=""
+             oninput> </input>
+    </div> |}];
+  Handle.input_text handle ~get_vdom ~text:"10:00 AM" ~selector:"input:nth-child(2)";
+  Handle.show handle;
+  [%expect
+    {|
+    (Error "Start time must be strictly before the end time.")
+
+    ==============
+    <div>
+      <input type="time"
+             placeholder=""
+             spellcheck="false"
+             id="bonsai_path_replaced_in_test"
+             value:normalized=11:11:00.000
+             oninput> </input>
+       -
+      <input type="time"
+             placeholder=""
+             spellcheck="false"
+             id="bonsai_path_replaced_in_test"
+             value:normalized=10:00:00.000
+             oninput> </input>
+    </div> |}];
+  Handle.input_text handle ~get_vdom ~text:"11:11 AM" ~selector:"input:nth-child(2)";
+  Handle.show handle;
+  [%expect
+    {|
+    (Error "Start time must be strictly before the end time.")
+
+    ==============
+    <div>
+      <input type="time"
+             placeholder=""
+             spellcheck="false"
+             id="bonsai_path_replaced_in_test"
+             value:normalized=11:11:00.000
+             oninput> </input>
+       -
+      <input type="time"
+             placeholder=""
+             spellcheck="false"
+             id="bonsai_path_replaced_in_test"
+             value:normalized=11:11:00.000
+             oninput> </input>
+    </div> |}];
+  Handle.input_text handle ~get_vdom ~text:"11:12 AM" ~selector:"input:nth-child(2)";
+  Handle.show handle;
+  [%expect
+    {|
+    (Ok (11:11:00.000000000 11:12:00.000000000))
+
+    ==============
+    <div>
+      <input type="time"
+             placeholder=""
+             spellcheck="false"
+             id="bonsai_path_replaced_in_test"
+             value:normalized=11:11:00.000
+             oninput> </input>
+       -
+      <input type="time"
+             placeholder=""
+             spellcheck="false"
+             id="bonsai_path_replaced_in_test"
+             value:normalized=11:12:00.000
+             oninput> </input>
+    </div> |}]
+;;
+
+let%expect_test "typing into a time range textbox, with equality allowed" =
+  let component = Form.Elements.Date_time.Range.time ~allow_equal:true () in
+  let handle =
+    Handle.create
+      (form_result_spec [%sexp_of: Time_ns.Ofday.t * Time_ns.Ofday.t])
+      component
+  in
+  Handle.show handle;
+  [%expect
+    {|
+    (Error "Values are required for this range")
+
+    ==============
+    <div>
+      <input type="time"
+             placeholder=""
+             spellcheck="false"
+             id="bonsai_path_replaced_in_test"
+             value:normalized=""
+             oninput> </input>
+       -
+      <input type="time"
+             placeholder=""
+             spellcheck="false"
+             id="bonsai_path_replaced_in_test"
+             value:normalized=""
+             oninput> </input>
+    </div> |}];
+  Handle.input_text handle ~get_vdom ~text:"11:11 AM" ~selector:"input:nth-child(1)";
+  Handle.input_text handle ~get_vdom ~text:"10:00 AM" ~selector:"input:nth-child(2)";
+  Handle.show handle;
+  [%expect
+    {|
+    (Error "Start time must be before or the same as the end time.")
+
+    ==============
+    <div>
+      <input type="time"
+             placeholder=""
+             spellcheck="false"
+             id="bonsai_path_replaced_in_test"
+             value:normalized=11:11:00.000
+             oninput> </input>
+       -
+      <input type="time"
+             placeholder=""
+             spellcheck="false"
+             id="bonsai_path_replaced_in_test"
+             value:normalized=10:00:00.000
+             oninput> </input>
+    </div> |}];
+  Handle.input_text handle ~get_vdom ~text:"11:11 AM" ~selector:"input:nth-child(2)";
+  Handle.show handle;
+  [%expect
+    {|
+    (Ok (11:11:00.000000000 11:11:00.000000000))
+
+    ==============
+    <div>
+      <input type="time"
+             placeholder=""
+             spellcheck="false"
+             id="bonsai_path_replaced_in_test"
+             value:normalized=11:11:00.000
+             oninput> </input>
+       -
+      <input type="time"
+             placeholder=""
+             spellcheck="false"
+             id="bonsai_path_replaced_in_test"
+             value:normalized=11:11:00.000
+             oninput> </input>
+    </div> |}]
+;;
+
+let%expect_test "setting into a date range, with strict inequality required" =
+  let component = Form.Elements.Date_time.Range.time () in
+  let handle =
+    Handle.create
+      (form_result_spec [%sexp_of: Time_ns.Ofday.t * Time_ns.Ofday.t])
+      component
+  in
+  let ten_am = Time_ns.Ofday.of_string "10:00 AM" in
+  let eleven_am = Time_ns.Ofday.of_string "11:00 AM" in
+  Handle.show handle;
+  [%expect
+    {|
+    (Error "Values are required for this range")
+
+    ==============
+    <div>
+      <input type="time"
+             placeholder=""
+             spellcheck="false"
+             id="bonsai_path_replaced_in_test"
+             value:normalized=""
+             oninput> </input>
+       -
+      <input type="time"
+             placeholder=""
+             spellcheck="false"
+             id="bonsai_path_replaced_in_test"
+             value:normalized=""
+             oninput> </input>
+    </div> |}];
+  (* Somehow, a bad range got set, so no setting should happen *)
+  Handle.do_actions handle [ eleven_am, ten_am ];
+  Handle.show handle;
+  [%expect
+    {|
+    (Error "Values are required for this range")
+
+    ==============
+    <div>
+      <input type="time"
+             placeholder=""
+             spellcheck="false"
+             id="bonsai_path_replaced_in_test"
+             value:normalized=""
+             oninput> </input>
+       -
+      <input type="time"
+             placeholder=""
+             spellcheck="false"
+             id="bonsai_path_replaced_in_test"
+             value:normalized=""
+             oninput> </input>
+    </div> |}];
+  (* A range where the endpoints are equal is not allowed in this case *)
+  Handle.do_actions handle [ eleven_am, eleven_am ];
+  Handle.show handle;
+  [%expect
+    {|
+    (Error "Values are required for this range")
+
+    ==============
+    <div>
+      <input type="time"
+             placeholder=""
+             spellcheck="false"
+             id="bonsai_path_replaced_in_test"
+             value:normalized=""
+             oninput> </input>
+       -
+      <input type="time"
+             placeholder=""
+             spellcheck="false"
+             id="bonsai_path_replaced_in_test"
+             value:normalized=""
+             oninput> </input>
+    </div> |}];
+  (* Finally, a good range! *)
+  Handle.do_actions handle [ ten_am, eleven_am ];
+  Handle.show handle;
+  [%expect
+    {|
+    (Ok (10:00:00.000000000 11:00:00.000000000))
+
+    ==============
+    <div>
+      <input type="time"
+             placeholder=""
+             spellcheck="false"
+             id="bonsai_path_replaced_in_test"
+             value:normalized=10:00:00.000
+             oninput> </input>
+       -
+      <input type="time"
+             placeholder=""
+             spellcheck="false"
+             id="bonsai_path_replaced_in_test"
+             value:normalized=11:00:00.000
+             oninput> </input>
+    </div> |}]
+;;
+
+let%expect_test "setting into a date range, with equality allowed" =
+  let component = Form.Elements.Date_time.Range.time ~allow_equal:true () in
+  let handle =
+    Handle.create
+      (form_result_spec [%sexp_of: Time_ns.Ofday.t * Time_ns.Ofday.t])
+      component
+  in
+  let ten_am = Time_ns.Ofday.of_string "10:00 AM" in
+  let eleven_am = Time_ns.Ofday.of_string "11:00 AM" in
+  Handle.show handle;
+  [%expect
+    {|
+    (Error "Values are required for this range")
+
+    ==============
+    <div>
+      <input type="time"
+             placeholder=""
+             spellcheck="false"
+             id="bonsai_path_replaced_in_test"
+             value:normalized=""
+             oninput> </input>
+       -
+      <input type="time"
+             placeholder=""
+             spellcheck="false"
+             id="bonsai_path_replaced_in_test"
+             value:normalized=""
+             oninput> </input>
+    </div> |}];
+  Handle.do_actions handle [ eleven_am, ten_am ];
+  Handle.show handle;
+  [%expect
+    {|
+    (Error "Values are required for this range")
+
+    ==============
+    <div>
+      <input type="time"
+             placeholder=""
+             spellcheck="false"
+             id="bonsai_path_replaced_in_test"
+             value:normalized=""
+             oninput> </input>
+       -
+      <input type="time"
+             placeholder=""
+             spellcheck="false"
+             id="bonsai_path_replaced_in_test"
+             value:normalized=""
+             oninput> </input>
+    </div> |}];
+  Handle.do_actions handle [ eleven_am, eleven_am ];
+  Handle.show handle;
+  [%expect
+    {|
+    (Ok (11:00:00.000000000 11:00:00.000000000))
+
+    ==============
+    <div>
+      <input type="time"
+             placeholder=""
+             spellcheck="false"
+             id="bonsai_path_replaced_in_test"
+             value:normalized=11:00:00.000
+             oninput> </input>
+       -
+      <input type="time"
+             placeholder=""
+             spellcheck="false"
+             id="bonsai_path_replaced_in_test"
+             value:normalized=11:00:00.000
+             oninput> </input>
+    </div> |}];
+  Handle.do_actions handle [ ten_am, eleven_am ];
+  Handle.show handle;
+  [%expect
+    {|
+    (Ok (10:00:00.000000000 11:00:00.000000000))
+
+    ==============
+    <div>
+      <input type="time"
+             placeholder=""
+             spellcheck="false"
+             id="bonsai_path_replaced_in_test"
+             value:normalized=10:00:00.000
+             oninput> </input>
+       -
+      <input type="time"
+             placeholder=""
+             spellcheck="false"
+             id="bonsai_path_replaced_in_test"
+             value:normalized=11:00:00.000
+             oninput> </input>
+    </div> |}]
+;;
+
 let%expect_test "adding more things to a string list (indented button)" =
   let component =
     Form.Elements.Multiple.list
@@ -727,10 +1168,12 @@ let%expect_test "using the same component twice" =
   in
   let handle =
     Handle.create
-      (form_result_spec ~get_vdom:get_vdom_verbose [%sexp_of: string * string])
+      (form_result_spec
+         ~censor_paths:false
+         ~get_vdom:get_vdom_verbose
+         [%sexp_of: string * string])
       component
   in
-  Handle.disable_bonsai_path_censoring handle;
   Handle.do_actions handle [ "a", "b" ];
   Handle.show handle;
   (* The real bug on display here is that two nodes have the same [key].
@@ -1373,19 +1816,31 @@ let%expect_test "clicking on radio buttons" =
         }>
       <li style={ display: block; }>
         <label>
-          <input type="radio" name="bonsai_path_replaced_in_test" class="radio-button" #checked="false" onclick> </input>
+          <input type="radio"
+                 name="bonsai_path_replaced_in_test"
+                 class="radio-button"
+                 #checked="false"
+                 onclick> </input>
           first
         </label>
       </li>
       <li style={ display: block; }>
         <label>
-          <input type="radio" name="bonsai_path_replaced_in_test" class="radio-button" #checked="false" onclick> </input>
+          <input type="radio"
+                 name="bonsai_path_replaced_in_test"
+                 class="radio-button"
+                 #checked="false"
+                 onclick> </input>
           second
         </label>
       </li>
       <li style={ display: block; }>
         <label>
-          <input type="radio" name="bonsai_path_replaced_in_test" class="radio-button" #checked="false" onclick> </input>
+          <input type="radio"
+                 name="bonsai_path_replaced_in_test"
+                 class="radio-button"
+                 #checked="false"
+                 onclick> </input>
           third
         </label>
       </li>
@@ -1406,24 +1861,27 @@ let%expect_test "clicking on radio buttons" =
           }>
         <li style={ display: block; }>
           <label>
-    -|      <input type="radio" name="bonsai_path_replaced_in_test" class="radio-button" #checked="false" onclick> </input>
-    +|      <input type="radio" name="bonsai_path_replaced_in_test" class="radio-button" #checked="true" onclick> </input>
+            <input type="radio"
+                   name="bonsai_path_replaced_in_test"
+                   class="radio-button"
+    -|             #checked="false"
+    +|             #checked="true"
+                   onclick> </input>
             first
           </label>
         </li>
         <li style={ display: block; }>
           <label>
-            <input type="radio" name="bonsai_path_replaced_in_test" class="radio-button" #checked="false" onclick> </input>
+            <input type="radio"
+                   name="bonsai_path_replaced_in_test"
+                   class="radio-button"
+                   #checked="false"
+                   onclick> </input>
             second
           </label>
         </li>
         <li style={ display: block; }>
-          <label>
-            <input type="radio" name="bonsai_path_replaced_in_test" class="radio-button" #checked="false" onclick> </input>
-            third
-          </label>
-        </li>
-      </ul> |}];
+          <label> |}];
   Handle.click_on handle ~get_vdom ~selector:"li:nth-child(2) input";
   Handle.show_diff handle;
   [%expect
@@ -1440,21 +1898,33 @@ let%expect_test "clicking on radio buttons" =
           }>
         <li style={ display: block; }>
           <label>
-    -|      <input type="radio" name="bonsai_path_replaced_in_test" class="radio-button" #checked="true" onclick> </input>
-    +|      <input type="radio" name="bonsai_path_replaced_in_test" class="radio-button" #checked="false" onclick> </input>
+            <input type="radio"
+                   name="bonsai_path_replaced_in_test"
+                   class="radio-button"
+    -|             #checked="true"
+    +|             #checked="false"
+                   onclick> </input>
             first
           </label>
         </li>
         <li style={ display: block; }>
           <label>
-    -|      <input type="radio" name="bonsai_path_replaced_in_test" class="radio-button" #checked="false" onclick> </input>
-    +|      <input type="radio" name="bonsai_path_replaced_in_test" class="radio-button" #checked="true" onclick> </input>
+            <input type="radio"
+                   name="bonsai_path_replaced_in_test"
+                   class="radio-button"
+    -|             #checked="false"
+    +|             #checked="true"
+                   onclick> </input>
             second
           </label>
         </li>
         <li style={ display: block; }>
           <label>
-            <input type="radio" name="bonsai_path_replaced_in_test" class="radio-button" #checked="false" onclick> </input>
+            <input type="radio"
+                   name="bonsai_path_replaced_in_test"
+                   class="radio-button"
+                   #checked="false"
+                   onclick> </input>
             third
           </label>
         </li>
@@ -1484,19 +1954,31 @@ let%expect_test "setting into radio buttons" =
         }>
       <li style={ display: block; }>
         <label>
-          <input type="radio" name="bonsai_path_replaced_in_test" class="radio-button" #checked="false" onclick> </input>
+          <input type="radio"
+                 name="bonsai_path_replaced_in_test"
+                 class="radio-button"
+                 #checked="false"
+                 onclick> </input>
           first
         </label>
       </li>
       <li style={ display: block; }>
         <label>
-          <input type="radio" name="bonsai_path_replaced_in_test" class="radio-button" #checked="false" onclick> </input>
+          <input type="radio"
+                 name="bonsai_path_replaced_in_test"
+                 class="radio-button"
+                 #checked="false"
+                 onclick> </input>
           second
         </label>
       </li>
       <li style={ display: block; }>
         <label>
-          <input type="radio" name="bonsai_path_replaced_in_test" class="radio-button" #checked="false" onclick> </input>
+          <input type="radio"
+                 name="bonsai_path_replaced_in_test"
+                 class="radio-button"
+                 #checked="false"
+                 onclick> </input>
           third
         </label>
       </li>
@@ -1517,24 +1999,27 @@ let%expect_test "setting into radio buttons" =
           }>
         <li style={ display: block; }>
           <label>
-    -|      <input type="radio" name="bonsai_path_replaced_in_test" class="radio-button" #checked="false" onclick> </input>
-    +|      <input type="radio" name="bonsai_path_replaced_in_test" class="radio-button" #checked="true" onclick> </input>
+            <input type="radio"
+                   name="bonsai_path_replaced_in_test"
+                   class="radio-button"
+    -|             #checked="false"
+    +|             #checked="true"
+                   onclick> </input>
             first
           </label>
         </li>
         <li style={ display: block; }>
           <label>
-            <input type="radio" name="bonsai_path_replaced_in_test" class="radio-button" #checked="false" onclick> </input>
+            <input type="radio"
+                   name="bonsai_path_replaced_in_test"
+                   class="radio-button"
+                   #checked="false"
+                   onclick> </input>
             second
           </label>
         </li>
         <li style={ display: block; }>
-          <label>
-            <input type="radio" name="bonsai_path_replaced_in_test" class="radio-button" #checked="false" onclick> </input>
-            third
-          </label>
-        </li>
-      </ul> |}];
+          <label> |}];
   Handle.do_actions handle [ "second" ];
   Handle.show_diff handle;
   [%expect
@@ -1551,21 +2036,33 @@ let%expect_test "setting into radio buttons" =
           }>
         <li style={ display: block; }>
           <label>
-    -|      <input type="radio" name="bonsai_path_replaced_in_test" class="radio-button" #checked="true" onclick> </input>
-    +|      <input type="radio" name="bonsai_path_replaced_in_test" class="radio-button" #checked="false" onclick> </input>
+            <input type="radio"
+                   name="bonsai_path_replaced_in_test"
+                   class="radio-button"
+    -|             #checked="true"
+    +|             #checked="false"
+                   onclick> </input>
             first
           </label>
         </li>
         <li style={ display: block; }>
           <label>
-    -|      <input type="radio" name="bonsai_path_replaced_in_test" class="radio-button" #checked="false" onclick> </input>
-    +|      <input type="radio" name="bonsai_path_replaced_in_test" class="radio-button" #checked="true" onclick> </input>
+            <input type="radio"
+                   name="bonsai_path_replaced_in_test"
+                   class="radio-button"
+    -|             #checked="false"
+    +|             #checked="true"
+                   onclick> </input>
             second
           </label>
         </li>
         <li style={ display: block; }>
           <label>
-            <input type="radio" name="bonsai_path_replaced_in_test" class="radio-button" #checked="false" onclick> </input>
+            <input type="radio"
+                   name="bonsai_path_replaced_in_test"
+                   class="radio-button"
+                   #checked="false"
+                   onclick> </input>
             third
           </label>
         </li>
@@ -1595,7 +2092,11 @@ let%expect_test "horizontal radio buttons render with correct styles applied" =
         }>
       <li style={ display: inline-block; }>
         <label>
-          <input type="radio" name="bonsai_path_replaced_in_test" class="radio-button" #checked="false" onclick> </input>
+          <input type="radio"
+                 name="bonsai_path_replaced_in_test"
+                 class="radio-button"
+                 #checked="false"
+                 onclick> </input>
           first
         </label>
       </li>
@@ -2227,7 +2728,7 @@ let%expect_test "typed records labelling overrides defaults" =
   let handle =
     Handle.create
       (form_result_spec
-         ~filter_printed_attributes:(fun _ -> false)
+         ~filter_printed_attributes:(fun _key _data -> false)
          ~get_vdom:get_vdom_verbose
          [%sexp_of: T.t])
       T.form
@@ -2315,7 +2816,12 @@ let%expect_test "typed variants recursive" =
     (Ok Nil)
 
     ==============
-    <select id="bonsai_path_replaced_in_test" class="widget-dropdown" onchange style={ width: 100.00%; }>
+    <select id="bonsai_path_replaced_in_test"
+            class="widget-dropdown"
+            onchange
+            style={
+              width: 100.00%;
+            }>
       <option value="0" #selected="true"> nil </option>
       <option value="1" #selected="false"> cons </option>
     </select> |}];
@@ -2327,7 +2833,12 @@ let%expect_test "typed variants recursive" =
 
     ==============
     <div>
-      <select id="bonsai_path_replaced_in_test" class="widget-dropdown" onchange style={ width: 100.00%; }>
+      <select id="bonsai_path_replaced_in_test"
+              class="widget-dropdown"
+              onchange
+              style={
+                width: 100.00%;
+              }>
         <option value="0" #selected="false"> nil </option>
         <option value="1" #selected="true"> cons </option>
       </select>
@@ -2356,7 +2867,12 @@ let%expect_test "typed variants recursive" =
 
       ==============
       <div>
-        <select id="bonsai_path_replaced_in_test" class="widget-dropdown" onchange style={ width: 100.00%; }>
+        <select id="bonsai_path_replaced_in_test"
+                class="widget-dropdown"
+                onchange
+                style={
+                  width: 100.00%;
+                }>
           <option value="0" #selected="false"> nil </option>
           <option value="1" #selected="true"> cons </option>
         </select>
@@ -2411,7 +2927,12 @@ let%expect_test "typed variants" =
     (Ok Unit)
 
     ==============
-    <select id="bonsai_path_replaced_in_test" class="widget-dropdown" onchange style={ width: 100.00%; }>
+    <select id="bonsai_path_replaced_in_test"
+            class="widget-dropdown"
+            onchange
+            style={
+              width: 100.00%;
+            }>
       <option value="0" #selected="true"> unit </option>
       <option value="1" #selected="false"> integer </option>
       <option value="2" #selected="false"> text </option>
@@ -2424,7 +2945,12 @@ let%expect_test "typed variants" =
 
     ==============
     <div>
-      <select id="bonsai_path_replaced_in_test" class="widget-dropdown" onchange style={ width: 100.00%; }>
+      <select id="bonsai_path_replaced_in_test"
+              class="widget-dropdown"
+              onchange
+              style={
+                width: 100.00%;
+              }>
         <option value="0" #selected="false"> unit </option>
         <option value="1" #selected="true"> integer </option>
         <option value="2" #selected="false"> text </option>
@@ -2445,7 +2971,12 @@ let%expect_test "typed variants" =
 
       ==============
       <div>
-        <select id="bonsai_path_replaced_in_test" class="widget-dropdown" onchange style={ width: 100.00%; }>
+        <select id="bonsai_path_replaced_in_test"
+                class="widget-dropdown"
+                onchange
+                style={
+                  width: 100.00%;
+                }>
           <option value="0" #selected="false"> unit </option>
           <option value="1" #selected="true"> integer </option>
           <option value="2" #selected="false"> text </option>
@@ -2465,7 +2996,12 @@ let%expect_test "typed variants" =
     (Ok Unit)
 
     ==============
-    <select id="bonsai_path_replaced_in_test" class="widget-dropdown" onchange style={ width: 100.00%; }>
+    <select id="bonsai_path_replaced_in_test"
+            class="widget-dropdown"
+            onchange
+            style={
+              width: 100.00%;
+            }>
       <option value="0" #selected="true"> unit </option>
       <option value="1" #selected="false"> integer </option>
       <option value="2" #selected="false"> text </option>
@@ -2478,7 +3014,12 @@ let%expect_test "typed variants" =
 
     ==============
     <div>
-      <select id="bonsai_path_replaced_in_test" class="widget-dropdown" onchange style={ width: 100.00%; }>
+      <select id="bonsai_path_replaced_in_test"
+              class="widget-dropdown"
+              onchange
+              style={
+                width: 100.00%;
+              }>
         <option value="0" #selected="false"> unit </option>
         <option value="1" #selected="false"> integer </option>
         <option value="2" #selected="true"> text </option>
@@ -2528,7 +3069,12 @@ let%expect_test "typed optional variants" =
     (Ok ())
 
     ==============
-    <select id="bonsai_path_replaced_in_test" class="widget-dropdown" onchange style={ width: 100.00%; }>
+    <select id="bonsai_path_replaced_in_test"
+            class="widget-dropdown"
+            onchange
+            style={
+              width: 100.00%;
+            }>
       <option value="0" #selected="true"> (none) </option>
       <option value="1" #selected="false"> unit </option>
       <option value="2" #selected="false"> integer </option>
@@ -2595,7 +3141,12 @@ let%expect_test "typed optional variants" =
     (Ok (Unit))
 
     ==============
-    <select id="bonsai_path_replaced_in_test" class="widget-dropdown" onchange style={ width: 100.00%; }>
+    <select id="bonsai_path_replaced_in_test"
+            class="widget-dropdown"
+            onchange
+            style={
+              width: 100.00%;
+            }>
       <option value="0" #selected="false"> (none) </option>
       <option value="1" #selected="true"> unit </option>
       <option value="2" #selected="false"> integer </option>
@@ -2634,7 +3185,12 @@ let%expect_test "typed optional variants" =
     (Ok ())
 
     ==============
-    <select id="bonsai_path_replaced_in_test" class="widget-dropdown" onchange style={ width: 100.00%; }>
+    <select id="bonsai_path_replaced_in_test"
+            class="widget-dropdown"
+            onchange
+            style={
+              width: 100.00%;
+            }>
       <option value="0" #selected="true"> (none) </option>
       <option value="1" #selected="false"> unit </option>
       <option value="2" #selected="false"> integer </option>
@@ -2675,7 +3231,9 @@ let%expect_test "typed variants with custom labels" =
   in
   let handle =
     Handle.create
-      (form_result_spec ~filter_printed_attributes:(Fn.const false) [%sexp_of: T.t])
+      (form_result_spec
+         ~filter_printed_attributes:(fun _key _data -> false)
+         [%sexp_of: T.t])
       T.form
   in
   Handle.show handle;
@@ -3066,7 +3624,7 @@ let%expect_test "form with both submit button and form on-submit" =
     Handle.create
       (form_result_spec
          [%sexp_of: string]
-         ~filter_printed_attributes:submit_test_attrs
+         ~filter_printed_attributes:(fun key _data -> submit_test_attrs key)
          ~get_vdom)
       component
   in
@@ -3114,8 +3672,8 @@ let%expect_test "form with on-submit with custom attrs" =
     Handle.create
       (form_result_spec
          [%sexp_of: string]
-         ~filter_printed_attributes:(fun attr ->
-           submit_test_attrs attr || String.equal attr "class")
+         ~filter_printed_attributes:(fun key _data ->
+           submit_test_attrs key || String.equal key "class")
          ~get_vdom)
       component
   in
@@ -3156,7 +3714,7 @@ let%expect_test "both button and on-submit are disabled when the form doesn't va
     Handle.create
       (form_result_spec
          [%sexp_of: int]
-         ~filter_printed_attributes:submit_test_attrs
+         ~filter_printed_attributes:(fun key _data -> submit_test_attrs key)
          ~get_vdom)
       component
   in
@@ -3234,7 +3792,7 @@ let%expect_test "form with just button" =
     Handle.create
       (form_result_spec
          [%sexp_of: string]
-         ~filter_printed_attributes:submit_test_attrs
+         ~filter_printed_attributes:(fun key _data -> submit_test_attrs key)
          ~get_vdom)
       component
   in
@@ -3276,7 +3834,7 @@ let%expect_test "form with just enter" =
     Handle.create
       (form_result_spec
          [%sexp_of: string]
-         ~filter_printed_attributes:submit_test_attrs
+         ~filter_printed_attributes:(fun key _data -> submit_test_attrs key)
          ~get_vdom)
       component
   in
@@ -3319,7 +3877,7 @@ let%expect_test "form validated with an effect" =
     Handle.create
       (form_result_spec
          [%sexp_of: int]
-         ~filter_printed_attributes:(Fn.const false)
+         ~filter_printed_attributes:(fun _key _data -> false)
          ~get_vdom)
       component
   in
@@ -3388,7 +3946,7 @@ let%expect_test "slider input" =
     Handle.create
       (form_result_spec
          [%sexp_of: int]
-         ~filter_printed_attributes:submit_test_attrs
+         ~filter_printed_attributes:(fun key _data -> submit_test_attrs key)
          ~get_vdom)
       component
   in
@@ -3429,7 +3987,8 @@ let%expect_test "slider input" =
     Handle.create
       (form_result_spec
          [%sexp_of: string]
-         ~filter_printed_attributes:(function
+         ~filter_printed_attributes:(fun key _data ->
+           match key with
            | "style.color" -> true
            | _ -> false)
          ~get_vdom)
@@ -3682,7 +4241,8 @@ let%expect_test "Bonsai_form.Typed sets groups/labels correctly on nested record
     Handle.create
       (form_result_spec
          [%sexp_of: A.t]
-         ~filter_printed_attributes:(function
+         ~filter_printed_attributes:(fun key _data ->
+           match key with
            | "style.padding-left" -> true
            | _ -> false)
          ~get_vdom:get_vdom_verbose)
@@ -3863,7 +4423,7 @@ let%expect_test "Adding an error hint to various views" =
       Handle.create
         (form_result_spec
            ~get_vdom:get_vdom_verbose
-           ~filter_printed_attributes:(Fn.const false)
+           ~filter_printed_attributes:(fun _key _data -> false)
            [%sexp_of: int])
         component
     in
@@ -4054,4 +4614,72 @@ let%expect_test "return_settable" =
 
     ==============
     <div> </div> |}]
+;;
+
+let%expect_test "Checkbox.set layout options" =
+  let print_handle layout =
+    let component =
+      Form.Elements.Checkbox.set
+        (module String)
+        ~layout
+        (Value.return [ "first"; "second" ])
+    in
+    let handle = Handle.create (form_result_spec [%sexp_of: String.Set.t]) component in
+    Handle.show handle
+  in
+  print_handle `Vertical;
+  let print_diff = Expect_test_patdiff.diff_printer (Some [%expect.output]) in
+  [%expect
+    {|
+    (Ok ())
+
+    ==============
+    <ul id="bonsai_path_replaced_in_test"
+        class="checkbox-container widget-checklist"
+        style={
+          list-style: none;
+          margin-left: 0px;
+        }>
+      <li style={ display: block; }>
+        <label id="bonsai_path_replaced_in_test">
+          <input type="checkbox" #checked="false" onclick> </input>
+          first
+        </label>
+      </li>
+      <li style={ display: block; }>
+        <label id="bonsai_path_replaced_in_test">
+          <input type="checkbox" #checked="false" onclick> </input>
+          second
+        </label>
+      </li>
+    </ul> |}];
+  print_handle `Horizontal;
+  unstage print_diff [%expect.output];
+  [%expect
+    {|
+    -1,23 +1,23
+      (Ok ())
+
+      ==============
+      <ul id="bonsai_path_replaced_in_test"
+          class="checkbox-container widget-checklist"
+          style={
+            list-style: none;
+            margin-left: 0px;
+          }>
+    -|  <li style={ display: block; }>
+    +|  <li style={ display: inline-block; }>
+          <label id="bonsai_path_replaced_in_test">
+            <input type="checkbox" #checked="false" onclick> </input>
+            first
+          </label>
+        </li>
+    -|  <li style={ display: block; }>
+    +|  <li style={ display: inline-block; }>
+          <label id="bonsai_path_replaced_in_test">
+            <input type="checkbox" #checked="false" onclick> </input>
+            second
+          </label>
+        </li>
+      </ul> |}]
 ;;

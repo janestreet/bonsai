@@ -14,7 +14,9 @@ module Result_spec : sig
       string begins with "style.". A Node's key corresponds to the string
       "@key" *)
   val vdom
-    :  ?filter_printed_attributes:(string -> bool)
+    :  ?filter_printed_attributes:(string -> string -> bool)
+    -> ?censor_paths:bool
+    -> ?censor_hash:bool
     -> ('a -> Vdom.Node.t)
     -> ('a, Nothing.t) t
 end
@@ -23,6 +25,18 @@ module Handle : sig
   include module type of struct
     include Bonsai_test.Handle
   end
+
+  val create
+    :  ('a, 'b) Result_spec.t
+    -> ?rpc_implementations:unit Async_rpc_kernel.Rpc.Implementation.t list
+    -> ?connectors:(Rpc_effect.Where_to_connect.t -> Rpc_effect.Connector.t)
+    (** By default [connectors] always returns
+        [Bonsai_web.Rpc_effect.Connector.test_fallback], which uses any provided
+        [rpc_implementations] to handle any dispatched RPCs. *)
+    -> ?clock:Ui_incr.Clock.t
+    -> ?optimize:bool
+    -> 'a Computation.t
+    -> ('a, 'b) t
 
   val click_on
     :  ?extra_event_fields:(string * Js_of_ocaml.Js.Unsafe.any) list
@@ -151,6 +165,22 @@ module Handle : sig
       }
 
     val change_sizes : ('a, 'b) t -> get_vdom:('a -> Vdom.Node.t) -> change list -> unit
+  end
+
+  module Position_tracker : sig
+    type change =
+      { selector : string
+      ; top : int
+      ; left : int
+      ; width : int
+      ; height : int
+      }
+
+    val change_positions
+      :  ('a, 'b) t
+      -> get_vdom:('a -> Vdom.Node.t)
+      -> change list
+      -> unit
   end
 
   module Drag_and_drop : sig

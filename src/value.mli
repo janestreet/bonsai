@@ -1,14 +1,26 @@
 open! Core
 open! Import
 
+module Name_source : sig
+  type t =
+    | Sub of Source_code_position.t option
+    | Assoc_like_key
+    | Assoc_like_data
+    | Wrap_model
+    | Wrap_inject
+    | App_input
+    | Model_resetter
+end
+
 type _ without_position =
   | Constant : 'a -> 'a without_position
   | Incr : 'a Incr.t -> 'a without_position
-  | Named : 'a without_position
+  | Named : Name_source.t -> 'a without_position
   | Both : 'a t * 'b t -> ('a * 'b) without_position
   | Cutoff :
       { t : 'a t
       ; equal : 'a -> 'a -> bool
+      ; added_by_let_syntax : bool
       }
       -> 'a without_position
   | Map :
@@ -67,7 +79,7 @@ type _ without_position =
       ; f : 't1 -> 't2 -> 't3 -> 't4 -> 't5 -> 't6 -> 't7 -> 'r
       }
       -> 'r without_position
-  | Lazy : 'a Lazy.t -> 'a without_position
+  | Exception : exn -> 'r without_position
 
 and 'a t =
   { value : 'a without_position
@@ -79,8 +91,8 @@ include Applicative.S with type 'a t := 'a t
 include Applicative.Let_syntax with type 'a t := 'a t
 include Mapn with type 'a t := 'a t
 
-val named : 'a Type_equal.Id.t -> 'a t
-val cutoff : equal:('a -> 'a -> bool) -> 'a t -> 'a t
+val named : Name_source.t -> 'a Type_equal.Id.t -> 'a t
+val cutoff : added_by_let_syntax:bool -> 'a t -> equal:('a -> 'a -> bool) -> 'a t
 val eval : Environment.t -> 'a t -> 'a Incr.t
 val of_incr : 'a Incr.t -> 'a t
-val contents_if_value_is_constant : 'a t -> 'a Lazy.t option
+val return_exn : exn -> 'a t

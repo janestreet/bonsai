@@ -14,16 +14,9 @@ open! Import
     example (in fact, the only example), when a [Lazy] gets forced, we must
     expand the graph to include what was inside the Lazy. *)
 val instrument_computation
-  :  ('model, 'dynamic_action, 'static_action, 'result) Computation.t
+  :  'result Computation.t
   -> start_timer:(string -> unit)
   -> stop_timer:(string -> unit)
-  -> ('model, 'dynamic_action, 'static_action, 'result) Computation.t
-
-(** Same as [instrument_computation] but operating on packed computations instead. *)
-val instrument_packed
-  :  'a Computation.packed
-  -> start_timer:(string -> unit)
-  -> stop_timer:(string -> unit)
-  -> 'a Computation.packed
+  -> 'result Computation.t
 
 val extract_node_path_from_entry_label : string -> Node_path.t option

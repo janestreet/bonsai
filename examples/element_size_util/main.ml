@@ -10,6 +10,7 @@ module Page = struct
     | Visibility
     | Resizer
     | Fit
+    | Position
   [@@deriving enumerate, sexp, compare, equal]
 end
 
@@ -41,6 +42,50 @@ let bulk_size_component =
       |> Vdom.Node.pre ~attr:(Vdom.Attr.class_ Style.pre_for_display)
     ; mk 0
     ; mk 1
+    ; mk 2
+    ]
+;;
+
+let position =
+  let%sub { positions; get_attr; update } =
+    Size_hooks.Position_tracker.component (module Int)
+  in
+  let module Model = struct
+    type t = Size_hooks.Position_tracker.Position.t Int.Map.t [@@deriving sexp, equal]
+  end
+  in
+  let%sub () =
+    Bonsai.Edge.on_change
+      (module Model)
+      positions
+      ~callback:
+        (Fn.const ((Effect.of_sync_fun print_endline) "position changed!") |> Value.return)
+  in
+  let%sub () =
+    Bonsai.Clock.every
+      ~when_to_start_next_effect:`Every_multiple_of_period_blocking
+      (Time_ns.Span.of_sec 2.0)
+      update
+  in
+  let%arr positions = positions
+  and get_attr = get_attr in
+  let mk i =
+    let attr =
+      Vdom.Attr.many [ Vdom.Attr.class_ Style.resizable_using_css; get_attr i ]
+    in
+    Vdom.Node.div ~attr []
+  in
+  Vdom.Node.div
+    [ Vdom.Node.h3 [ Vdom.Node.text "Resize me!" ]
+    ; positions
+      |> [%sexp_of: Size_hooks.Position_tracker.Position.t Map.M(Int).t]
+      |> Sexp.to_string_hum
+      |> Vdom.Node.text
+      |> List.return
+      |> Vdom.Node.pre ~attr:(Vdom.Attr.class_ Style.pre_for_display)
+    ; mk 0
+    ; mk 1
+    ; mk 2
     ; mk 2
     ]
 ;;
@@ -95,26 +140,49 @@ let fit =
 ;;
 
 let visibility_component =
+  let open Size_hooks.Visibility_tracker in
   let%sub pos_x = Bonsai.state (module Int) ~default_model:0 in
   let%sub pos_y = Bonsai.state (module Int) ~default_model:0 in
+  let%sub client_rect, set_client_rect = Bonsai.state_opt (module Bbox.Int) in
+  let%sub visible_rect, set_visible_rect = Bonsai.state_opt (module Bbox.Int) in
   let%arr pos_x, inject_pos_x = pos_x
-  and pos_y, inject_pos_y = pos_y in
-  let pos_to_color pos = float_of_int pos /. 2000. *. 256. |> Float.iround_down_exn in
+  and pos_y, inject_pos_y = pos_y
+  and client_rect = client_rect
+  and set_visible_rect = set_visible_rect
+  and set_client_rect = set_client_rect
+  and visible_rect = visible_rect in
+  let pos_to_color pos = float_of_int pos /. 2000. *. 360. |> Float.iround_down_exn in
   let attributes =
     [ Vdom.Attr.class_ Style.visibility_child
     ; Vdom.Attr.style
-        (let r = pos_to_color pos_x in
-         let g = pos_to_color pos_y in
-         Css_gen.background_color (`RGBA (Css_gen.Color.RGBA.create ~r ~g ~b:0 ())))
-    ; Size_hooks.Visibility_tracker.on_change (fun bounds ->
-        Ui_effect.Many [ inject_pos_x bounds.min_x; inject_pos_y bounds.min_y ])
+        (let h = pos_to_color pos_y in
+         let s = Percent.of_mult (1.0 -. (float_of_int pos_x /. 2000.)) in
+         Css_gen.background_color
+           (`HSLA (Css_gen.Color.HSLA.create ~h ~s ~l:(Percent.of_mult 0.5) ())))
+    ; Size_hooks.Visibility_tracker.detect
+        ()
+        ~visible_rect_changed:(fun bounds ->
+          Effect.Many
+            [ inject_pos_x bounds.min_x
+            ; inject_pos_y bounds.min_y
+            ; set_visible_rect (Some bounds)
+            ])
+        ~client_rect_changed:(Fn.compose set_client_rect Option.some)
     ]
   in
   Vdom.Node.div
     [ Vdom.Node.h3 [ Vdom.Node.text "Scroll me!" ]
+    ; Vdom.Node.sexp_for_debugging
+        [%message (client_rect : Bbox.Int.t option) (visible_rect : Bbox.Int.t option)]
     ; Vdom.Node.div
-        ~attr:(Vdom.Attr.class_ Style.visibility_parent)
-        [ Vdom.Node.div ~attr:(Vdom.Attr.many attributes) [] ]
+        ~attr:(Vdom.Attr.class_ Style.outer_visibility_parent)
+        [ Vdom.Node.div
+            ~attr:(Vdom.Attr.class_ Style.inner_visibility_parent)
+            [ Vdom.Node.div ~attr:(Vdom.Attr.many attributes) [] ]
+        ; Vdom.Node.div
+            ~attr:(Vdom.Attr.class_ Style.inner_visibility_parent)
+            [ Vdom.Node.text "padding..." ]
+        ]
     ]
 ;;
 
@@ -156,6 +224,7 @@ let component =
     | Visibility -> visibility_component
     | Resizer -> resizer_component
     | Fit -> fit
+    | Position -> position
   in
   let%arr page_component = page_component
   and page = page

@@ -8,7 +8,7 @@ module Dynamic_cells = struct
     type ('key, 'data) t =
       | Leaf of
           { leaf_label : Vdom.Node.t Value.t
-          ; initial_width : [ `Px of int ]
+          ; initial_width : Css_gen.Length.t
           ; cell : key:'key Value.t -> data:'data Value.t -> Vdom.Node.t Computation.t
           ; visible : bool Value.t
           }
@@ -111,7 +111,7 @@ module Dynamic_columns = struct
     type ('key, 'data) t =
       | Leaf of
           { leaf_label : Vdom.Node.t
-          ; initial_width : [ `Px of int ]
+          ; initial_width : Css_gen.Length.t
           ; cell : key:'key -> data:'data -> Vdom.Node.t
           ; visible : bool
           }
@@ -211,13 +211,6 @@ module With_sorter (Tree : T2) (Container : T1) = struct
   ;;
 end
 
-let common_header_attributes f i =
-  Vdom.Attr.(
-    class_ Style.column_header
-    @ on_click (fun mouse_event ->
-      if Js_of_ocaml.Js.to_bool mouse_event##.shiftKey then f `Add i else f `Replace i))
-;;
-
 module Dynamic_cells_with_sorter = struct
   module Container = struct
     type 'a t = 'a option Value.t
@@ -240,29 +233,18 @@ module Dynamic_cells_with_sorter = struct
   let expand ~label child = group ~label [ child ]
 
   module W = struct
-    let headers_and_sorters t ~change_sort ~sort_order =
+    let headers_and_sorters t sortable_header =
       let sorters, tree =
         T.partition t ~f:(fun i sort -> function
           | Dynamic_cells.T.Leaf { leaf_label; initial_width; cell; visible } ->
             let leaf_label =
               let%map leaf_label = leaf_label
               and has_sorter = sort >>| Option.is_some
-              and sorting = sort_order >>| (Fn.flip (List.Assoc.find ~equal:Int.equal)) i
-              and change_sort = change_sort in
-              let attr, leaf_label =
-                if has_sorter
-                then (
-                  let attr = common_header_attributes change_sort i in
-                  let precedes =
-                    match sorting with
-                    | None -> "◇ "
-                    | Some `Asc -> "⬘ "
-                    | Some `Desc -> "⬙ "
-                  in
-                  attr, Vdom.Node.span [ Vdom.Node.text precedes; leaf_label ])
-                else Vdom.Attr.empty, leaf_label
-              in
-              Vdom.Node.div ~attr [ leaf_label ]
+              and sortable_header = sortable_header in
+              if has_sorter
+              then Sortable_header.decorate sortable_header leaf_label i
+              else
+                Vdom.Node.div [ leaf_label ]
             in
             Dynamic_cells.T.Leaf { leaf_label; initial_width; cell; visible }
           | other -> (* This should never happen *) other)
@@ -316,31 +298,18 @@ module Dynamic_columns_with_sorter = struct
   let expand ~label child = group ~label [ child ]
 
   module W = struct
-    let headers_and_sorters t ~change_sort ~sort_order =
+    let headers_and_sorters t sortable_header =
       let%sub sorters, tree =
         let%arr t = t
-        and change_sort = change_sort
-        and sort_order = sort_order in
+        and sortable_header = sortable_header in
         let sorters, tree =
           T.partition t ~f:(fun i sorter -> function
             | Dynamic_columns.T.Leaf { leaf_label; initial_width; cell; visible } ->
-              let attr, leaf_label =
+              let leaf_label =
                 match sorter with
-                | Some _ ->
-                  let attr = common_header_attributes change_sort i in
-                  let precedes =
-                    match List.Assoc.find sort_order ~equal:Int.equal i with
-                    | None -> "◇ "
-                    | Some `Asc -> "⬘ "
-                    | Some `Desc -> "⬙ "
-                  in
-                  let leaf_label =
-                    Vdom.Node.span [ Vdom.Node.text precedes; leaf_label ]
-                  in
-                  attr, leaf_label
-                | None -> Vdom.Attr.empty, leaf_label
+                | Some _ -> Sortable_header.decorate sortable_header leaf_label i
+                | None -> Vdom.Node.div [ leaf_label ] ~attr:Vdom.Attr.empty
               in
-              let leaf_label = Vdom.Node.div ~attr [ leaf_label ] in
               Dynamic_columns.T.Leaf { leaf_label; initial_width; cell; visible }
             | other -> (* This should never happen *) other)
         in

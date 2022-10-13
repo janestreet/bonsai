@@ -2,6 +2,7 @@ open! Core
 open! Bonsai_web
 open Bonsai.Let_syntax
 module Form = Bonsai_web_ui_form
+module Codemirror_form = Bonsai_web_ui_codemirror_form
 module E = Form.Elements
 
 module Query_box_css =
@@ -89,6 +90,20 @@ module Nested_record = struct
   let form = Form.Typed.Record.make (module Outer)
 end
 
+module Int_blang = struct
+  module T = struct
+    type t = int Blang.t [@@deriving sexp, sexp_grammar]
+  end
+
+  include T
+
+  let form =
+    Codemirror_form.Sexp_grammar_autocomplete.sexpable
+      (module T)
+      (Value.return T.t_sexp_grammar)
+  ;;
+end
+
 type t =
   { variant : My_variant.t
   ; optional_variant : My_variant.t option
@@ -97,8 +112,12 @@ type t =
   ; string_from_vert_radio : string
   ; string_from_horiz_radio : string
   ; date : Date.t
+  ; date_range : Date.t * Date.t
   ; time_ns_of_day : Time_ns.Ofday.t
+  ; time_ns_of_day_range : Time_ns.Ofday.t * Time_ns.Ofday.t
   ; date_time : Time_ns.Stable.Alternate_sexp.V1.t
+  ; date_time_range :
+      Time_ns.Stable.Alternate_sexp.V1.t * Time_ns.Stable.Alternate_sexp.V1.t
   ; date_from_string : Date.t
   ; sexp_from_string : Sexp.t
   ; radiobutton_buttons : string
@@ -117,6 +136,7 @@ type t =
   ; rank : string list
   ; query_box : string
   ; nested_record : Nested_record.Outer.t
+  ; int_blang : Int_blang.t
   }
 [@@deriving typed_fields, fields, sexp_of]
 
@@ -152,8 +172,11 @@ let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t = functio
       ~layout:`Horizontal
       (Value.return [ "first"; "second"; "third" ])
   | Date -> E.Date_time.date ()
+  | Date_range -> E.Date_time.Range.date ()
   | Time_ns_of_day -> E.Date_time.time ()
+  | Time_ns_of_day_range -> E.Date_time.Range.time ()
   | Date_time -> E.Date_time.datetime_local ()
+  | Date_time_range -> E.Date_time.Range.datetime_local ()
   | Date_from_string ->
     E.Textbox.string ()
     >>|| Form.project ~parse_exn:Date.of_string ~unparse:Date.to_string
@@ -215,6 +238,7 @@ let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t = functio
          (String.Map.of_alist_exn [ "abc", "abc"; "def", "def"; "ghi", "ghi" ]))
   | Nested_record -> Nested_record.form
   | Color_picker -> E.Color_picker.hex ()
+  | Int_blang -> Int_blang.form
 ;;
 
 let form =
@@ -233,7 +257,7 @@ let form =
 
 let component =
   let%sub form = form in
-  let%sub editable, toggle_editable = Bonsai_extra.toggle ~default_model:true in
+  let%sub editable, toggle_editable = Bonsai.toggle ~default_model:true in
   let%arr editable = editable
   and toggle_editable = toggle_editable
   and form = form in

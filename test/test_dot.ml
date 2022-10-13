@@ -160,15 +160,15 @@ let%expect_test ("map7 dot file constant folding" [@tags "no-js"]) =
   print_graph c;
   [%expect
     {|
-    ┌──────┐
-    │ lazy │
-    └──────┘
+    ┌───────┐
+    │ const │
+    └───────┘
       │
       │
       ▼
-    ┌──────┐
-    │ read │
-    └──────┘ |}]
+    ┌───────┐
+    │ read  │
+    └───────┘ |}]
 ;;
 
 let%expect_test ("map-10 dot file" [@tags "no-js"]) =
@@ -242,15 +242,15 @@ let%expect_test ("map-10 dot file constant folding optimization" [@tags "no-js"]
   print_graph c;
   [%expect
     {|
-    ┌──────┐
-    │ lazy │
-    └──────┘
+    ┌───────┐
+    │ const │
+    └───────┘
       │
       │
       ▼
-    ┌──────┐
-    │ read │
-    └──────┘ |}]
+    ┌───────┐
+    │ read  │
+    └───────┘ |}]
 ;;
 
 let%expect_test ("subst dot constant folding" [@tags "no-js"]) =
@@ -386,16 +386,19 @@ let%expect_test ("subst dot" [@tags "no-js"]) =
 ;;
 
 let%expect_test "model_resetter doesn't have a dash in the label name" =
-  let c = Bonsai.const () |> Bonsai.with_model_resetter in
+  let c = Bonsai.with_model_resetter (Bonsai.const ()) in
   print_endline (to_dot c);
   [%expect
     {|
     digraph {
     with_model_resetter_0 [ style=filled, shape = "Mrecord", label = "with_model_resetter"; fillcolor = "#86E3CE"; ]
-    read_1 [ style=filled, shape = "Mrecord", label = "read"; fillcolor = "#86E3CE"; ]
-    const_2 [ style=filled, shape = "oval", label = "const"; fillcolor = "#FFDD94"; ]
-    const_2 -> read_1;
-    read_1 -> with_model_resetter_0;
+    named_1 [ style=filled, shape = "circle", label = ""; fillcolor = "#000000"; width=.1, height=.1]
+    with_model_resetter_0 -> named_1 [dir=none];
+    read_2 [ style=filled, shape = "Mrecord", label = "read"; fillcolor = "#86E3CE"; ]
+    mapn_3 [ style=filled, shape = "oval", label = "mapn"; fillcolor = "#FFDD94"; ]
+    named_1 -> mapn_3;
+    mapn_3 -> read_2;
+    read_2 -> with_model_resetter_0;
     } |}]
 ;;
 
@@ -598,15 +601,15 @@ let%expect_test ("both-constant-opt" [@tags "no-js"]) =
      sprintf "%d %d" a b);
   [%expect
     {|
-    ┌──────┐
-    │ lazy │
-    └──────┘
+    ┌───────┐
+    │ const │
+    └───────┘
       │
       │
       ▼
-    ┌──────┐
-    │ read │
-    └──────┘ |}];
+    ┌───────┐
+    │ read  │
+    └───────┘ |}];
   print_graph
     (let%arr a = opaque_const_value 1
      and b = Bonsai.Value.return 1 in

@@ -10,6 +10,7 @@ module Id : sig
 
   val to_int : t -> int
   val of_type_id : _ Type_equal.Id.t -> int
+  val of_model_type_id : _ Meta.Model.Type_id.t -> int
   val of_int : int -> t
 end
 
@@ -24,10 +25,13 @@ module Value : sig
 
   and kind =
     | Constant
-    | Lazy
+    | Exception
     | Incr
     | Named
-    | Cutoff of { t : t }
+    | Cutoff of
+        { t : t
+        ; added_by_let_syntax : bool
+        }
     | Mapn of { inputs : t list }
   [@@deriving sexp]
 
@@ -55,25 +59,15 @@ module Computation : sig
 
   and kind =
     | Return of { value : Value.t }
-    | Leaf01 of
-        { input : Value.t
-        ; name : string
-        }
-    | Leaf1 of
-        { input : Value.t
-        ; name : string
-        }
-    | Leaf0 of { name : string }
-    | Leaf_incr of
-        { input : Value.t
-        ; name : string
-        }
+    | Leaf01 of { input : Value.t }
+    | Leaf1 of { input : Value.t }
+    | Leaf0
+    | Leaf_incr of { input : Value.t }
     | Model_cutoff of { t : t }
     | Sub of
         { from : t
         ; via : Id.t
         ; into : t
-        ; statefulness : [ `Stateful | `Stateless_from | `Stateless_into ]
         }
     | Store of
         { id : Id.t
@@ -84,12 +78,15 @@ module Computation : sig
     | Assoc of
         { map : Value.t
         ; key_id : Id.t
+        ; cmp_id : Id.t
         ; data_id : Id.t
         ; by : t
         }
     | Assoc_on of
         { map : Value.t
         ; io_key_id : int
+        ; model_key_id : int
+        ; model_cmp_id : int
         ; data_id : int
         ; by : t
         }
@@ -104,66 +101,16 @@ module Computation : sig
         ; inject_id : Id.t
         ; inner : t
         }
-    | With_model_resetter of { t : t }
+    | With_model_resetter of
+        { reset_id : Id.t
+        ; inner : t
+        }
     | Path
     | Lifecycle of { value : Value.t }
+    | Identity of { t : t }
   [@@deriving sexp]
 
-  (**
-     Provides a nice way of folding through a [Computation.t], e.g.
-
-     {[
-       let count_uids =
-         object
-           inherit [int] fold as super
-
-           method! uid uid acc =
-             let acc = acc + 1 in
-             super#uid uid acc
-         end
-       in
-       count_uids#computation t 0
-     ]}
-  *)
-  class ['acc] fold :
-    object
-      method computation : t -> 'acc -> 'acc
-      method computation_kind : kind -> 'acc -> 'acc
-      method node_path : Node_path.t lazy_t -> 'acc -> 'acc
-      method source_code_position : Lexing.position option -> 'acc -> 'acc
-
-      method statefulness :
-        [ `Stateful | `Stateless_from | `Stateless_into ] -> 'acc -> 'acc
-
-      method string : string -> 'acc -> 'acc
-      method uid : Id.t -> 'acc -> 'acc
-      method value : Value.t -> 'acc -> 'acc
-      method value_kind : Value.kind -> 'acc -> 'acc
-    end
-
-  (**
-     Provides a nice way of mapping over computations and its elements similarly to [fold].
-  *)
-  class map :
-    object
-      method computation : t -> t
-      method computation_kind : kind -> kind
-      method node_path : Node_path.t lazy_t -> Node_path.t lazy_t
-      method source_code_position : Lexing.position option -> Lexing.position option
-
-      method statefulness :
-        [ `Stateful | `Stateless_from | `Stateless_into ]
-        -> [ `Stateful | `Stateless_from | `Stateless_into ]
-
-      method string : string -> string
-      method uid : Id.t -> Id.t
-      method value : Value.t -> Value.t
-      method value_kind : Value.kind -> Value.kind
-    end
-
-  val of_computation
-    :  ('model, 'dynamic_action, 'static_action, 'result) Computation.t
-    -> t
+  val of_computation : 'result Computation.t -> t
 
   (** Uid.t's is different between ocaml and javascript build targets, which makes
       printing uids on expect tests tricky. You can use [sanitize_uids_for_testing]
@@ -180,4 +127,55 @@ module Computation : sig
 
   (** Returns any "children" bonsai computations that the given computation has. *)
   val children : t -> t list
+end
+
+module Traverse : sig
+  (**
+     Provides a nice way of folding through a [Computation.t], e.g.
+
+     {[
+       let count_uids =
+         object
+           inherit [int] fold as super
+
+           method! id id acc =
+             let acc = acc + 1 in
+             super#id id acc
+         end
+       in
+       count_uids#computation t 0
+     ]}
+  *)
+  class ['acc] fold :
+    object
+      method bool : bool -> 'acc -> 'acc
+      method computation : Computation.t -> 'acc -> 'acc
+      method computation_kind : Computation.kind -> 'acc -> 'acc
+      method id : int -> 'acc -> 'acc
+      method lazy_ : ('a -> 'acc -> 'acc) -> 'a lazy_t -> 'acc -> 'acc
+      method list : ('a -> 'acc -> 'acc) -> 'a list -> 'acc -> 'acc
+      method node_path : Node_path.t -> 'acc -> 'acc
+      method option : ('a -> 'acc -> 'acc) -> 'a option -> 'acc -> 'acc
+      method source_code_position : Source_code_position.t -> 'acc -> 'acc
+      method value : Value.t -> 'acc -> 'acc
+      method value_kind : Value.kind -> 'acc -> 'acc
+    end
+
+  (**
+     Provides a nice way of mapping over computations and its elements similarly to [fold].
+  *)
+  class map :
+    object
+      method bool : bool -> bool
+      method computation : Computation.t -> Computation.t
+      method computation_kind : Computation.kind -> Computation.kind
+      method id : int -> int
+      method lazy_ : ('a -> 'a) -> 'a lazy_t -> 'a lazy_t
+      method list : ('a -> 'a) -> 'a list -> 'a list
+      method node_path : Node_path.t -> Node_path.t
+      method option : ('a -> 'a) -> 'a option -> 'a option
+      method source_code_position : Source_code_position.t -> Source_code_position.t
+      method value : Value.t -> Value.t
+      method value_kind : Value.kind -> Value.kind
+    end
 end

@@ -71,8 +71,9 @@ module Handle = struct
 
   let create
         (type result incoming)
-        (result_spec : (result, incoming) Result_spec.t)
         ?(clock = Incr.Clock.create ~start:Time_ns.epoch ())
+        ~optimize
+        (result_spec : (result, incoming) Result_spec.t)
         computation
     =
     let (module R) = result_spec in
@@ -83,21 +84,25 @@ module Handle = struct
         (let%map result = result in
          result, R.view result, R.incoming result)
     in
-    Driver.create ~initial_input:() ~clock component
+    Driver.create ~optimize ~initial_input:() ~clock component
   ;;
 
   let node_paths_from_skeleton
-    : type a. a Bonsai.Private.Computation.packed -> Bonsai.Private.Node_path.Set.t
+    : type a. a Bonsai.Private.Computation.t -> Bonsai.Private.Node_path.Set.t
     =
-    fun (Bonsai.Private.Computation.T { t; _ }) ->
+    fun t ->
       let find_node_paths =
         object
           inherit
-            [Bonsai.Private.Node_path.Set.t] Bonsai.Private.Skeleton.Computation.fold as super
+            [Bonsai.Private.Node_path.Set.t] Bonsai.Private.Skeleton.Traverse.fold as super
 
-          method! node_path node_path acc =
-            let acc = Set.add acc (Lazy.force node_path) in
-            super#node_path node_path acc
+          method! value value acc =
+            let acc = Set.add acc (Lazy.force value.node_path) in
+            super#value value acc
+
+          method! computation computation acc =
+            let acc = Set.add acc (Lazy.force computation.node_path) in
+            super#computation computation acc
         end
       in
       find_node_paths#computation
@@ -106,16 +111,15 @@ module Handle = struct
   ;;
 
   let node_paths_from_transform
-    : type a. a Bonsai.Private.Computation.packed -> Bonsai.Private.Node_path.Set.t
+    : type a. a Bonsai.Private.Computation.t -> Bonsai.Private.Node_path.Set.t
     =
-    fun (Bonsai.Private.Computation.T { t; _ }) ->
+    fun t ->
       let node_paths = ref Bonsai.Private.Node_path.Set.empty in
       let computation_map
-            (type model dynamic_action static_action result)
+            (type result)
             (context : _ Bonsai.Private.Transform.For_computation.context)
             state
-            (computation :
-               (model, dynamic_action, static_action, result) Bonsai.Private.Computation.t)
+            (computation : result Bonsai.Private.Computation.t)
         =
         node_paths := Set.add !node_paths (Lazy.force context.current_path);
         let out = context.recurse state computation in
@@ -130,7 +134,7 @@ module Handle = struct
         node_paths := Set.add !node_paths (Lazy.force context.current_path);
         context.recurse state wrapped_value
       in
-      let (_ : (_, _, _, _) Bonsai.Private.Computation.t) =
+      let (_ : _ Bonsai.Private.Computation.t) =
         Bonsai.Private.Transform.map
           ~init:()
           ~computation_mapper:{ f = computation_map }
@@ -141,7 +145,7 @@ module Handle = struct
   ;;
 
   let assert_node_paths_identical_between_transform_and_skeleton_nodepaths
-    : type a. a Bonsai.Private.Computation.packed -> unit
+    : type a. a Bonsai.Private.Computation.t -> unit
     =
     fun computation ->
       let from_transform = node_paths_from_transform computation in
@@ -158,13 +162,14 @@ module Handle = struct
 
   let create
         (type result incoming)
-        (result_spec : (result, incoming) Result_spec.t)
         ?(clock = Incr.Clock.create ~start:Time_ns.epoch ())
+        ?(optimize = true)
+        (result_spec : (result, incoming) Result_spec.t)
         computation
     =
     assert_node_paths_identical_between_transform_and_skeleton_nodepaths
       (Bonsai.Private.reveal_computation computation);
-    create ~clock result_spec computation
+    create ~clock ~optimize result_spec computation
   ;;
 
   let result handle =
@@ -182,28 +187,9 @@ module Handle = struct
     Driver.schedule_event handle event
   ;;
 
-  let disable_bonsai_path_censoring = Driver.disable_bonsai_path_censoring
-  let path_regex = Re.Str.regexp "bonsai_path\\(_[a-z]*\\)*"
-
-  let maybe_censor_bonsai_path handle string =
-    if Driver.should_censor_bonsai_path handle
-    then Re.Str.global_replace path_regex "bonsai_path_replaced_in_test" string
-    else string
-  ;;
-
-  let disable_bonsai_hash_censoring = Driver.disable_bonsai_hash_censoring
-  let hash_regex = Re.Str.regexp "_hash_[a-f0-9]+"
-
-  let maybe_censor_bonsai_hash handle string =
-    if Driver.should_censor_bonsai_hash handle
-    then Re.Str.global_replace hash_regex "_hash_replaced_in_test" string
-    else string
-  ;;
-
-  let recompute_view handle =
+  let recompute_view (handle : (_, 'r) Driver.t) =
     Driver.flush handle;
-    let _, view, _ = Driver.result handle in
-    let (_ : string) = maybe_censor_bonsai_path handle view in
+    let (_ : 'r) = Driver.result handle in
     Driver.trigger_lifecycles handle
   ;;
 
@@ -220,9 +206,6 @@ module Handle = struct
     let before = before handle in
     Driver.flush handle;
     let _, view, _ = Driver.result handle in
-    let view =
-      view |> maybe_censor_bonsai_path handle |> maybe_censor_bonsai_hash handle
-    in
     Driver.store_view handle view;
     f before view;
     Driver.trigger_lifecycles handle
@@ -232,11 +215,15 @@ module Handle = struct
     generic_show handle ~before:(Fn.const ()) ~f:(fun () view -> print_endline view)
   ;;
 
-  let show_diff ?(location_style = Patdiff_kernel.Format.Location_style.None) handle =
+  let show_diff
+        ?(location_style = Patdiff_kernel.Format.Location_style.None)
+        ?(diff_context = 16)
+        handle
+    =
     generic_show
       handle
       ~before:Driver.last_view
-      ~f:(Expect_test_patdiff.print_patdiff ~location_style)
+      ~f:(Expect_test_patdiff.print_patdiff ~location_style ~context:diff_context)
   ;;
 
   let store_view handle = generic_show handle ~before:(Fn.const ()) ~f:(fun () _ -> ())

@@ -3,31 +3,31 @@ open! Bonsai_web
 open! Bonsai_web_test
 open  Bonsai.Let_syntax
 
-let shared_computation =
+let shared_computation ?(to_string = Value.return Data.to_string) () =
   Bonsai_web_ui_typeahead.Typeahead.create
     (module Data)
     ~all_options:(Value.return Data.all)
     ~placeholder:"Select a value"
-    ~to_string:(Bonsai.Value.return Data.to_string)
+    ~to_string
 ;;
 
-let view_computation =
-  let%sub _, view, _ = shared_computation in
+let view_computation ?to_string () =
+  let%sub { view; _ } = shared_computation ?to_string () in
   return view
 ;;
 
 let view_and_inject_computation =
-  let%sub _, view, inject = shared_computation in
+  let%sub { view; set_selected = inject; _ } = shared_computation () in
   return (Value.both view inject)
 ;;
 
 let view_and_result_computation =
-  let%sub result, view, _ = shared_computation in
+  let%sub { view; selected = result; _ } = shared_computation () in
   return (Value.both view result)
 ;;
 
 let%expect_test "Initial typeahead state" =
-  let handle = Handle.create (Result_spec.vdom Fn.id) view_computation in
+  let handle = Handle.create (Result_spec.vdom Fn.id) (view_computation ()) in
   Handle.show handle;
   [%expect
     {|
@@ -37,7 +37,8 @@ let%expect_test "Initial typeahead state" =
            placeholder="Select a value"
            value=""
            #value=""
-           onchange> </input>
+           onchange
+           oninput> </input>
     <datalist id="bonsai_path_replaced_in_test">
       <option value="Option A"> Option A </option>
       <option value="Option B"> Option B </option>
@@ -48,7 +49,7 @@ let%expect_test "Initial typeahead state" =
 ;;
 
 let%expect_test "Change typeahead contents" =
-  let handle = Handle.create (Result_spec.vdom Fn.id) view_computation in
+  let handle = Handle.create (Result_spec.vdom Fn.id) (view_computation ()) in
   Handle.show handle;
   let before = [%expect.output] in
   Handle.input_text
@@ -62,7 +63,7 @@ let%expect_test "Change typeahead contents" =
   (* Expected change: input value should change. *)
   [%expect
     {|
--1,13 +1,13
+-1,14 +1,14
   <div>
     <input type="text"
            list="bonsai_path_replaced_in_test"
@@ -71,7 +72,8 @@ let%expect_test "Change typeahead contents" =
 +|         value="Option C"
 -|         #value=""
 +|         #value="Option C"
-           onchange> </input>
+           onchange
+           oninput> </input>
     <datalist id="bonsai_path_replaced_in_test">
       <option value="Option A"> Option A </option>
       <option value="Option B"> Option B </option>
@@ -110,14 +112,14 @@ let%expect_test "use setter" =
     +|         value="Option A"
     -|         #value=""
     +|         #value="Option A"
-               onchange> </input>
+               onchange
+               oninput> </input>
         <datalist id="bonsai_path_replaced_in_test">
           <option value="Option A"> Option A </option>
           <option value="Option B"> Option B </option>
           <option value="Option C"> Option C </option>
         </datalist>
-      </div>
-|}];
+      </div> |}];
   Handle.do_actions handle [ None ];
   Handle.show_diff  handle;
   [%expect
@@ -130,14 +132,14 @@ let%expect_test "use setter" =
     +|         value=""
     -|         #value="Option A"
     +|         #value=""
-               onchange> </input>
+               onchange
+               oninput> </input>
         <datalist id="bonsai_path_replaced_in_test">
           <option value="Option A"> Option A </option>
           <option value="Option B"> Option B </option>
           <option value="Option C"> Option C </option>
         </datalist>
-      </div>
- |}]
+      </div> |}]
 ;;
 
 let%expect_test "Select element using partial input" =
@@ -161,4 +163,32 @@ let%expect_test "Select element using partial input" =
   Handle.input_text handle ~get_vdom:Tuple2.get1 ~selector:"input" ~text:"C";
   Handle.show       handle;
   [%expect {| (Option_C) |}]
+;;
+
+let%expect_test "dynamic [to_string]." =
+  let to_string_var = Bonsai.Var.create Data.to_string                                 in
+  let to_string = Bonsai.Var.value to_string_var                                       in
+  let handle = Handle.create (Result_spec.vdom Fn.id) (view_computation ~to_string ()) in
+  Handle.store_view handle;
+  Bonsai.Var.set to_string_var (fun data -> Data.to_string data ^ "!");
+  Handle.show_diff handle;
+  [%expect
+    {|
+      <div>
+        <input type="text"
+               list="bonsai_path_replaced_in_test"
+               placeholder="Select a value"
+               value=""
+               #value=""
+               onchange
+               oninput> </input>
+        <datalist id="bonsai_path_replaced_in_test">
+    -|    <option value="Option A"> Option A </option>
+    +|    <option value="Option A!"> Option A! </option>
+    -|    <option value="Option B"> Option B </option>
+    +|    <option value="Option B!"> Option B! </option>
+    -|    <option value="Option C"> Option C </option>
+    +|    <option value="Option C!"> Option C! </option>
+        </datalist>
+      </div> |}]
 ;;

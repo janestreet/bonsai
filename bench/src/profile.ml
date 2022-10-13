@@ -231,7 +231,7 @@ let profile (T { clock; component; get_inject; interaction; name } : Config.t) =
       ~stop_timer:(fun s -> Measurement.mark_after_and_measure (Named s))
   in
   let component =
-    Graph_info.iter_graph_updates_packed
+    Graph_info.iter_graph_updates
       (Bonsai.Private.reveal_computation component)
       ~on_update:(fun gi -> graph_info := gi)
     |> Bonsai.Private.conceal_computation

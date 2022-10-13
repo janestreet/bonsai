@@ -4,8 +4,8 @@ open Bonsai.Let_syntax
 
 let component =
   let%sub state, set_state = Bonsai.state (module Int) ~default_model:0 in
-  let increment =
-    let%map state = state
+  let%sub increment =
+    let%arr state = state
     and set_state = set_state in
     set_state (state + 1)
   in

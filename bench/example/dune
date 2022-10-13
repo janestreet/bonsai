@@ -1,3 +1,3 @@
 (executables (names main)
  (libraries bonsai bonsai_bench incr_dom.javascript_profiling js_of_ocaml)
- (preprocess (pps ppx_jane js_of_ocaml-ppx)))
+ (preprocess (pps ppx_bonsai ppx_jane js_of_ocaml-ppx)))

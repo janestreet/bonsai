@@ -138,12 +138,13 @@ let component =
        is optimized for showing off the ease with which people can create different
        codemirror editors, so we do the less-preferred option. *)
     match%sub chosen_language with
-    | Which_language.Fruit -> Fruit_sexp_grammar_auto_complete.codemirror_editor
-    | Fsharp -> Fsharp_syntax_highlighting.codemirror_editor
-    | Markdown -> Markdown_syntax_highlighting.codemirror_editor
-    | Ocaml -> Ocaml_syntax_highlighting.codemirror_editor
-    | Sml -> Sml_syntax_highlighting.codemirror_editor
-    | Sql -> Sql_syntax_highlighting.codemirror_editor
+    | Which_language.Fruit ->
+      Fruit_sexp_grammar_auto_complete.codemirror_editor ~name:"fruit"
+    | Fsharp -> Fsharp_syntax_highlighting.codemirror_editor ~name:"fsharp"
+    | Markdown -> Markdown_syntax_highlighting.codemirror_editor ~name:"markdown"
+    | Ocaml -> Ocaml_syntax_highlighting.codemirror_editor ~name:"ocaml"
+    | Sml -> Sml_syntax_highlighting.codemirror_editor ~name:"sml"
+    | Sql -> Sql_syntax_highlighting.codemirror_editor ~name:"sql"
   in
   let%arr codemirror_view = codemirror_view
   and language_picker = language_picker in

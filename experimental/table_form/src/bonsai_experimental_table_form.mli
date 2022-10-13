@@ -5,7 +5,7 @@ module Form = Bonsai_web_ui_form
 module Column : sig
   type t
 
-  val create : ?initial_width:[ `Px of int ] -> string -> t
+  val create : ?initial_width:Css_gen.Length.t -> string -> t
 end
 
 (** Builds a table where each row in the table is built out of the constituent form
@@ -19,7 +19,7 @@ end
     You also need to pass the names for the columns in the same order as they would have
     appeared in the standard rendering of the Form.t *)
 val table_form
-  :  ?key_column_initial_width:[ `Px of int ]
+  :  ?key_column_initial_width:Css_gen.Length.t
   -> ('key, 'cmp) Bonsai.comparator
   -> 'a Form.t Computation.t
   -> columns:Column.t list Value.t

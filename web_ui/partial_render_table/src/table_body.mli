@@ -28,9 +28,9 @@ val component
   -> assoc:
        (('key * 'data) Map_list.t Value.t
         -> ('key * Vdom.Node.t list) Map_list.t Computation.t)
-  -> column_widths:(int, [< `Px of float ], 'c) Map.t Value.t
+  -> column_widths:(int, [ `Px_float of float ], 'c) Map.t Value.t
   -> visually_focused:'key option Value.t
   -> on_row_click:('key -> unit Effect.t) Value.t
   -> ('key, 'data) Collated.t Value.t
   -> ('key * 'data) Map_list.t Value.t
-  -> (Vdom.Node.t list Lazy.t * For_testing.t Lazy.t) Computation.t
+  -> (Vdom.Node.t * For_testing.t Lazy.t) Computation.t

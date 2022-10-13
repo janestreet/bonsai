@@ -144,22 +144,17 @@ module For_testing = struct
     ;;
   end
 
-  module Inject_hook = Vdom.Attr.Hooks.Make (struct
-      module State = Unit
-
+  module Inject_hook = Vdom.Attr.No_op_hook (struct
       module Input = struct
         type t = Action.t -> unit Effect.t [@@deriving sexp]
 
         let combine _ second = second
       end
 
-      let init _ _ = ()
-      let on_mount _ () _ = ()
-      let update ~old_input:_ ~new_input:_ () _ = ()
-      let destroy _ () _ = ()
+      let name = "dnd-test-hook"
     end)
 
-  let type_id = Inject_hook.For_testing.type_id
+  let type_id = Inject_hook.type_id
 end
 
 let add_event_listener, remove_event_listener =
@@ -334,14 +329,11 @@ let create
     let%arr inject = inject in
     fun ~name ->
       Vdom.Attr.many
-        [ Vdom.Attr.create_hook
-            "dnd-test-hook"
-            (For_testing.Inject_hook.create (fun action ->
-               inject
-                 (action
-                  |> For_testing.Action.to_internal_actions
-                       (module Source)
-                       (module Target))))
+        [ For_testing.Inject_hook.attr (fun action ->
+            inject
+              (action
+               |> For_testing.Action.to_internal_actions (module Source) (module Target)
+              ))
         ; Vdom.Attr.create "data-dnd-name" name
         ]
   in

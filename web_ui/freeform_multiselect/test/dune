@@ -1,4 +1,4 @@
 (library (name bonsai_ui_components_freeform_multiselect_test)
  (libraries bonsai_web_ui_freeform_multiselect bonsai_web bonsai_web_test
   core)
- (preprocess (pps ppx_jane)))
+ (preprocess (pps ppx_jane ppx_bonsai)))

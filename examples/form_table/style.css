@@ -32,11 +32,11 @@ table.prt-table-header {
   border-right:1px solid black;
 }
 
-.prt-table-row-even {
+.prt-table-row:nth-child(even) {
   background-color:#f0f6ff;
 }
 
-.prt-table-row-selected{
+.prt-table-row.prt-table-row-selected{
   background: #ff6f6f;
 }
 

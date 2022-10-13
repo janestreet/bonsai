@@ -1,0 +1,4 @@
+(library (name vdom_node_with_map_children)
+ (public_name bonsai.vdom_node_with_map_children)
+ (libraries bonsai_web_ui_element_size_hooks core js_of_ocaml)
+ (preprocess (pps js_of_ocaml-ppx ppx_jane)))

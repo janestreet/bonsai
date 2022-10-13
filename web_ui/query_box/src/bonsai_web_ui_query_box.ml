@@ -257,7 +257,7 @@ let create
            | Some (k, _) -> Excl k
            | None -> Unbounded)
   in
-  let%sub get_items = Bonsai_extra.yoink items in
+  let%sub get_items = Bonsai.yoink items in
   let%sub items =
     Bonsai.assoc
       (module Key)
@@ -412,7 +412,7 @@ let create
            ; Attr.tabindex (-1)
            ; Attr.on_wheel
                (let open Js_of_ocaml in
-                fun (ev : Dom_html.wheelEvent Js.t) ->
+                fun (ev : Js_of_ocaml_patches.Dom_html.wheelEvent Js.t) ->
                   let comparison =
                     match expand_direction with
                     | Down -> Float.( < ) ev##.deltaY 0.0

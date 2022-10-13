@@ -33,7 +33,7 @@ module Arrow_deprecated = struct
 
     let create ~input_var ~outgoing_pipe =
       let extra =
-        Bus.create
+        Bus.create_exn
           [%here]
           Arity1
           ~on_subscription_after_first_write:Allow_and_send_last_value
@@ -167,14 +167,11 @@ module Arrow_deprecated = struct
           -> inject_outgoing:(outgoing -> unit Vdom.Effect.t)
           -> input_and_inject)
         ~(initial_input : input)
-        ~(initial_model : model)
         ~bind_to_element_with_id
-        ~(computation :
-            (model, dynamic_action, static_action, result) Bonsai.Private.Computation.t)
+        ~(computation : result Bonsai.Private.Computation.t)
         ~fresh
-        ~(dynamic_action_type_id : dynamic_action Type_equal.Id.t)
-        ~(static_action_type_id : static_action Type_equal.Id.t)
-        ~apply_static
+        ({ model; dynamic_action; static_action; apply_static; run } as info :
+           (model, dynamic_action, static_action, result) Bonsai.Private.Computation.info)
     : (input, extra, incoming, outgoing) Handle.t
     =
     let outgoing_pipe, pipe_write = Pipe.create () in
@@ -208,8 +205,13 @@ module Arrow_deprecated = struct
       end
 
       module Action = struct
-        let sexp_of_dynamic_action = Type_equal.Id.to_sexp dynamic_action_type_id
-        let sexp_of_static_action = Type_equal.Id.to_sexp static_action_type_id
+        let sexp_of_dynamic_action =
+          Bonsai.Private.Meta.Action.Type_id.to_sexp dynamic_action
+        ;;
+
+        let sexp_of_static_action =
+          Bonsai.Private.Meta.Action.Type_id.to_sexp static_action
+        ;;
 
         type t =
           | Dynamic of dynamic_action
@@ -224,24 +226,32 @@ module Arrow_deprecated = struct
 
       let on_startup ~schedule_action:_ _ = return ()
 
-      let create model ~old_model:_ ~inject computation =
+      let create
+            model
+            ~old_model:_
+            ~inject
+            (run :
+               ( model
+               , dynamic_action
+               , static_action
+               , result )
+                 Bonsai.Private.Computation.eval_fun)
+        =
         let open Incr.Let_syntax in
         let environment =
           Bonsai.Private.Environment.(empty |> add_exn ~key:fresh ~data:input)
         in
         let inject_dynamic a = inject (Action.Dynamic a) in
         let inject_static a = inject (Action.Static a) in
-        let eval computation =
-          Bonsai.Private.eval
+        let snapshot =
+          run
             ~environment
             ~path:Bonsai.Private.Path.empty
             ~clock:Incr.clock
             ~model
             ~inject_dynamic
             ~inject_static
-            computation
         in
-        let snapshot = eval computation in
         let%map view =
           let%map { App_result.view; extra; inject_incoming } =
             snapshot |> Bonsai.Private.Snapshot.result >>| get_app_result
@@ -274,20 +284,36 @@ module Arrow_deprecated = struct
 
       let create model ~old_model ~inject =
         let open Incr.Let_syntax in
+        let safe_start computation =
+          let (T info') = Bonsai.Private.gather computation in
+          match
+            Bonsai.Private.Meta.(
+              ( Model.Type_id.same_witness info.model.type_id info'.model.type_id
+              , Action.Type_id.same_witness info.dynamic_action info'.dynamic_action
+              , Action.Type_id.same_witness info.static_action info'.static_action ))
+          with
+          | Some T, Some T, Some T -> create model ~old_model ~inject info'.run
+          | _ ->
+            print_endline
+              "Not starting debugger. An error occurred while attempting to instrument \
+               the computation; the resulting computation does not typecheck. Reusing \
+               previously gathered run information to execute";
+            create model ~old_model ~inject run
+        in
         match%bind Incr.Var.watch is_debugging_var with
         | Debugging { host; port; worker_name } ->
           let { Forward_performance_entries.instrumented_computation; shutdown } =
             make_instrumented_computation ?host ?port ?worker_name computation
           in
           debugger_shutdown := Some shutdown;
-          create model ~old_model ~inject instrumented_computation
-        | Not_debugging -> create model ~old_model ~inject computation
+          safe_start instrumented_computation
+        | Not_debugging -> safe_start computation
       ;;
     end
     in
     Incr_dom.Start_app.Private.start_bonsai
       ~bind_to_element_with_id
-      ~initial_model
+      ~initial_model:model.default
       ~stop:(Ivar.read handle.stop)
       (module Incr_dom_app);
     let start_bonsai_debugger dry_run host port worker_name =
@@ -317,30 +343,41 @@ module Arrow_deprecated = struct
     handle
   ;;
 
-  let start_generic ~get_app_result ~initial_input ~bind_to_element_with_id ~component =
+  let start_generic
+        ~optimize
+        ~get_app_result
+        ~initial_input
+        ~bind_to_element_with_id
+        ~component
+    =
     let fresh = Type_equal.Id.create ~name:"" sexp_of_opaque in
-    let var = Bonsai.Private.Value.named fresh |> Bonsai.Private.conceal_value in
-    let computation = component var |> Bonsai.Private.reveal_computation in
-    let (Bonsai.Private.Computation.T
-           { t; dynamic_action; static_action; apply_static; model })
-      =
-      computation
+    let var =
+      Bonsai.Private.Value.named App_input fresh |> Bonsai.Private.conceal_value
     in
+    let computation =
+      component var
+      |> Bonsai.Private.reveal_computation
+      |> if optimize then Bonsai.Private.pre_process else Fn.id
+    in
+    let (T info) = Bonsai.Private.gather computation in
     start_generic_poly
       ~get_app_result
       ~initial_input
-      ~initial_model:model.default
       ~bind_to_element_with_id
-      ~computation:t
+      ~computation
       ~fresh
-      ~dynamic_action_type_id:dynamic_action
-      ~static_action_type_id:static_action
-      ~apply_static
+      info
   ;;
 
   (* I can't use currying here because of the value restriction. *)
-  let start_standalone ~initial_input ~bind_to_element_with_id component =
+  let start_standalone
+        ?(optimize = true)
+        ~initial_input
+        ~bind_to_element_with_id
+        component
+    =
     start_generic
+      ~optimize
       ~get_app_result:(fun view ->
         { App_result.view; extra = (); inject_incoming = Nothing.unreachable_code })
       ~get_app_input:(fun ~input ~inject_outgoing:_ -> input)
@@ -349,8 +386,9 @@ module Arrow_deprecated = struct
       ~component
   ;;
 
-  let start ~initial_input ~bind_to_element_with_id component =
+  let start ?(optimize = true) ~initial_input ~bind_to_element_with_id component =
     start_generic
+      ~optimize
       ~get_app_result:Fn.id
       ~get_app_input:App_input.create
       ~initial_input
@@ -400,12 +438,26 @@ module Proc = struct
     ;;
   end
 
-  let start result_spec ~bind_to_element_with_id computation =
+  let start
+        result_spec
+        ?(optimize = true)
+        ?(custom_connector = fun _ -> assert false)
+        ~bind_to_element_with_id
+        computation
+    =
+    let computation =
+      Rpc_effect.Private.with_connector
+        (function
+          | Self -> Rpc_effect.Private.self_connector ()
+          | Url url -> Rpc_effect.Private.url_connector url
+          | Custom custom -> custom_connector custom)
+        computation
+    in
     let bonsai =
       Fn.const computation
       |> Bonsai.Arrow_deprecated.map
            ~f:(Arrow_deprecated.App_result.of_result_spec result_spec)
     in
-    Arrow_deprecated.start ~initial_input:() ~bind_to_element_with_id bonsai
+    Arrow_deprecated.start ~optimize ~initial_input:() ~bind_to_element_with_id bonsai
   ;;
 end

@@ -90,8 +90,9 @@ module Test = struct
   type outer = t
 
   type 'a t =
-    { handle : ('a, Action.t) Bonsai_test.Handle.t
+    { handle : ('a, Action.t) Bonsai_web_test.Handle.t
     ; get_vdom : 'a -> Vdom.Node.t
+    ; get_focus : 'a -> int Table.Focus.By_row.optional
     ; input_var : outer Int.Map.t Bonsai.Var.t
     ; filter_var : (key:int -> data:outer -> bool) Bonsai.Var.t
     }
@@ -107,10 +108,11 @@ module Test = struct
       ; get_vdom : 'a -> Vdom.Node.t
       ; get_inject : 'a -> Action.t -> unit Ui_effect.t
       ; get_testing : 'a -> Bonsai_web_ui_partial_render_table.For_testing.t Lazy.t
+      ; get_focus : 'a -> int Table.Focus.By_row.optional
       }
 
     let get_inject' t f =
-      let focus : _ Bonsai_web_ui_partial_render_table.Focus.By_row.t = f t in
+      let focus : _ Table.Focus.By_row.t = f t in
       function
       | Action.Unfocus -> focus.unfocus
       | Focus_down -> focus.focus_down
@@ -121,10 +123,7 @@ module Test = struct
     ;;
 
     let get_inject t = get_inject' t Table.Result.focus
-
-    let get_inject_expert t =
-      get_inject' t Bonsai_web_ui_partial_render_table.Expert.Result.focus
-    ;;
+    let get_inject_expert t = get_inject' t Table_expert.Result.focus
 
     let default
           ?(preload_rows = 0)
@@ -147,6 +146,7 @@ module Test = struct
       ; get_vdom = Table.Result.view
       ; get_inject
       ; get_testing = Table.Result.for_testing
+      ; get_focus = Table.Result.focus
       }
     ;;
 
@@ -164,19 +164,61 @@ module Test = struct
             input
       ; get_vdom = Table.Result.view
       ; get_testing = Table.Result.for_testing
+      ; get_focus = Table.Result.focus
       ; get_inject
+      }
+    ;;
+
+    let expert_for_testing_compute_presence ~collate ~presence () input _filter =
+      let component =
+        let%sub collation =
+          Table_expert.collate
+            ~filter_equal:[%compare.equal: unit]
+            ~order_equal:[%compare.equal: unit]
+            ~filter_to_predicate:(fun () -> None)
+            ~order_to_compare:(fun () -> Unchanged)
+            input
+            collate
+        in
+        let columns =
+          [ Table_expert.Columns.Dynamic_cells.column
+              ~label:(Value.return (Vdom.Node.text "key"))
+              ~cell:(fun ~key ~data:_ ->
+                let%arr key = key in
+                Vdom.Node.textf "%d" key)
+              ()
+          ]
+          |> Table_expert.Columns.Dynamic_cells.lift
+        in
+        Table_expert.component
+          (module Int)
+          ~focus:
+            (By_row
+               { on_change = Value.return (Fn.const Effect.Ignore)
+               ; compute_presence = (fun focus -> presence ~focus ~collation)
+               })
+          ~row_height:(`Px 10)
+          ~columns
+          collation
+      in
+      { component
+      ; get_vdom = Table_expert.Result.view
+      ; get_testing = Table_expert.Result.for_testing
+      ; get_focus = Table_expert.Result.focus
+      ; get_inject = get_inject_expert
       }
     ;;
   end
 
   let set_bounds t ~low ~high =
-    Handle.trigger_hook
+    Handle.trigger_hook_via
       t.handle
       ~get_vdom:t.get_vdom
       ~selector:"div[bounds-change]"
       ~name:"bounds-change"
       Bonsai_web_ui_element_size_hooks.Visibility_tracker.For_testing.type_id
-      { Bonsai_web_ui_element_size_hooks.Visibility_tracker.Bounds.min_x = 0
+      ~f:(fun { visible_rect_changed; _ } -> visible_rect_changed)
+      { Bonsai_web_ui_element_size_hooks.Visibility_tracker.Bbox.min_x = 0
       ; min_y = low
       ; max_x = 100
       ; max_y = high

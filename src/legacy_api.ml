@@ -127,23 +127,7 @@ module With_incr = struct
     =
     let input = Proc.Private.reveal_value input in
     let (module M) = component in
-    let t =
-      Computation.Leaf_incr
-        { input
-        ; dynamic_apply_action = M.apply_action
-        ; compute = (fun _ -> M.compute)
-        ; name = M.name
-        }
-      |> Proc.with_computation_id "leaf_incr"
-    in
-    Computation.T
-      { t
-      ; model = Meta.Model.of_module (module M.Model) ~name:M.name ~default:default_model
-      ; dynamic_action = Meta.Action.of_module (module M.Action) ~name:M.name
-      ; static_action = Meta.Action.nothing
-      ; apply_static = Proc.unusable_static_apply_action
-      }
-    |> Proc.Private.conceal_computation
+    Proc_min.Proc_incr.of_module (module M) ~default_model input
   ;;
 
   let pure (type i r) ~f =

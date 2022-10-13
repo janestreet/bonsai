@@ -32,9 +32,15 @@ include
     width: 2000px;
   }
 
-  .visibility_parent {
+  .inner_visibility_parent {
     height: 200px;
     width: 200px;
+    overflow: scroll;
+  }
+
+  .outer_visibility_parent {
+    height: 230px;
+    width: 230px;
     overflow: scroll;
   }
 

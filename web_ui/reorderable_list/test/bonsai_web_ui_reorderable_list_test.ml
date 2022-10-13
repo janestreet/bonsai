@@ -49,7 +49,8 @@ let component =
 let create_handle () =
   Handle.create
     (Result_spec.vdom
-       ~filter_printed_attributes:(function
+       ~filter_printed_attributes:(fun key _data ->
+         match key with
          | "style.transform" -> true
          | _ -> false)
        Fn.id)
@@ -257,7 +258,8 @@ let component input =
 let create_handle input =
   Handle.create
     (Result_spec.vdom
-       ~filter_printed_attributes:(function
+       ~filter_printed_attributes:(fun key _data ->
+         match key with
          | "style.transform" -> true
          | _ -> false)
        Fn.id)
@@ -336,7 +338,7 @@ let%expect_test "dynamically extend list" =
         </div>
       </div>
     </div> |}];
-  Bonsai.Var.update input_var ~f:(fun x -> Int.Set.add x 20);
+  Bonsai.Var.update input_var ~f:(fun x -> Set.add x 20);
   Handle.recompute_view handle;
   Handle.show_diff handle;
   [%expect

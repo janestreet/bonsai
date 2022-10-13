@@ -1,5 +1,8 @@
 open! Core
 open! Bonsai_web
+open Bonsai_web_ui_partial_render_table_protocol
+module Order = Order
+module Sortable_header = Sortable_header
 
 module For_testing : sig
   module Table_body = Table_body.For_testing
@@ -7,27 +10,18 @@ module For_testing : sig
   type t = { body : Table_body.t }
 end
 
-module Focus : sig
-  module By_row : sig
-    type 'k t =
-      { focused : 'k option
-      ; unfocus : unit Effect.t
-      ; focus_up : unit Effect.t
-      ; focus_down : unit Effect.t
-      ; page_up : unit Effect.t
-      ; page_down : unit Effect.t
-      ; focus : 'k -> unit Effect.t
-      }
-    [@@deriving fields]
-  end
-
-  type ('a, 'k) t =
-    | None : (unit, 'k) t
-    | By_row : { on_change : ('k option -> unit Effect.t) Value.t } -> ('k By_row.t, 'k) t
-end
+module Focus_by_row = Focus.By_row
 
 module Basic : sig
-  module Focus = Focus
+  module Focus : sig
+    module By_row = Focus.By_row
+
+    type ('a, 'p, 'k) t =
+      | None : (unit, unit, 'k) t
+      | By_row :
+          { on_change : ('k option -> unit Effect.t) Value.t }
+          -> ('k Focus_by_row.optional, 'k option, 'k) t
+  end
 
   module Result : sig
     type 'focus t =
@@ -61,7 +55,7 @@ module Basic : sig
       val column
         :  ?sort:('key * 'data -> 'key * 'data -> int) Value.t
         (** If this column is sortable, you can provide the sorting function here *)
-        -> ?initial_width:[ `Px of int ]
+        -> ?initial_width:Css_gen.Length.t
         -> ?visible:bool Value.t
         (** [visible] can be set to [false] to hide the whole column. *)
         -> label:Vdom.Node.t Value.t
@@ -95,7 +89,7 @@ module Basic : sig
       val column
         :  ?sort:('key * 'data -> 'key * 'data -> int)
         (** If this column is sortable, you can provide the sorting function here *)
-        -> ?initial_width:[ `Px of int ]
+        -> ?initial_width:Css_gen.Length.t
         -> ?visible:bool (** [visible] can be set to [false] to hide the whole column. *)
         -> label:Vdom.Node.t (** [label] determines the contents of the column header *)
         -> cell:(key:'key -> data:'data -> Vdom.Node.t)
@@ -120,7 +114,7 @@ module Basic : sig
     (** An optional function may be provided to sort the table. *)
     -> ?preload_rows:int
     -> ('key, 'cmp) Bonsai.comparator
-    -> focus:('focus, 'key) Focus.t
+    -> focus:('focus, 'presence, 'key) Focus.t
     -> row_height:[ `Px of int ]
     -> columns:('key, 'data) Columns.t
     -> ('key, 'data, 'cmp) Map.t Value.t (** The input data for the table *)
@@ -129,7 +123,21 @@ end
 
 module Expert : sig
   open Incr_map_collate
-  module Focus = Focus
+
+  module Focus : sig
+    module By_row = Focus.By_row
+
+    type ('a, 'p, 'k) t = ('a, 'p, 'k) Focus.Kind.t =
+      | None : (unit, unit, 'k) t
+      | By_row :
+          { on_change : ('k option -> unit Effect.t) Value.t
+          (** Row-selection is not required to be inside the viewport, so the selected row
+              can be offscreen such that it isn't given to the table component. [compute_presence]
+              forces the user to consider if a row is considered 'focused' or not. *)
+          ; compute_presence : 'k option Value.t -> 'p Computation.t
+          }
+          -> (('k, 'p) Focus_by_row.t, 'p, 'k) t
+  end
 
   module Result : sig
     type 'focus t =
@@ -149,7 +157,7 @@ module Expert : sig
       type ('key, 'data) t
 
       val column
-        :  ?initial_width:[ `Px of int ]
+        :  ?initial_width:Css_gen.Length.t
         -> ?visible:bool Value.t
         -> label:Vdom.Node.t Value.t
         -> cell:(key:'key Value.t -> data:'data Value.t -> Vdom.Node.t Computation.t)
@@ -164,7 +172,7 @@ module Expert : sig
       type ('key, 'data) t
 
       val column
-        :  ?initial_width:[ `Px of int ]
+        :  ?initial_width:Css_gen.Length.t
         -> ?visible:bool
         -> label:Vdom.Node.t
         -> cell:(key:'key -> data:'data -> Vdom.Node.t)
@@ -191,7 +199,7 @@ module Expert : sig
     (** [preload_rows] is the number of rows that are maintained before and after the
         viewport range.  *)
     -> ('key, 'cmp) Bonsai.comparator
-    -> focus:('focus, 'key) Focus.t
+    -> focus:('focus, 'presence, 'key) Focus.t
     -> row_height:[ `Px of int ]
     (** [row_height] is the fixed-height of every row in the table. *)
     -> columns:('key, 'row) Columns.t

@@ -39,10 +39,12 @@ module type To_incr_dom = sig
   module type S = S
 
   val convert
-    :  ('input Value.t -> Vdom.Node.t Computation.t)
+    :  ?optimize:bool
+    -> ('input Value.t -> Vdom.Node.t Computation.t)
     -> (module S with type Input.t = 'input and type Extra.t = unit)
 
   val convert_with_extra
-    :  ('input Value.t -> (Vdom.Node.t * 'extra) Computation.t)
+    :  ?optimize:bool
+    -> ('input Value.t -> (Vdom.Node.t * 'extra) Computation.t)
     -> (module S with type Input.t = 'input and type Extra.t = 'extra)
 end

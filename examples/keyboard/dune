@@ -1,2 +1,2 @@
 (executables (names main) (libraries bonsai_web virtual_dom.keyboard)
- (preprocess (pps js_of_ocaml-ppx ppx_css ppx_jane)))
+ (preprocess (pps js_of_ocaml-ppx ppx_bonsai ppx_css ppx_jane)))

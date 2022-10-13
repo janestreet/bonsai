@@ -26,8 +26,6 @@ type ('i, 'm, 'dynamic_action, 'static_action, 'r) unpacked =
   ; lifecycle : Bonsai.Private.Lifecycle.Collection.t Incr.Observer.t
   ; lifecycle_incr : Bonsai.Private.Lifecycle.Collection.t Incr.t
   ; queue : ('dynamic_action, 'static_action) Action.t Queue.t
-  ; mutable should_replace_bonsai_path_string : bool
-  ; mutable should_replace_bonsai_hash_string : bool
   ; mutable last_view : string
   ; mutable last_lifecycle : Bonsai.Private.Lifecycle.Collection.t
   }
@@ -37,6 +35,7 @@ type ('i, 'r) t = T : ('i, _, _, _, 'r) unpacked -> ('i, 'r) t
 let create
       (type i r)
       ?initial_model_sexp
+      ?(optimize = true)
       ~clock
       ~(initial_input : i)
       (component : (i, r) Bonsai.Arrow_deprecated.t)
@@ -45,23 +44,23 @@ let create
   let input_var = Incr.Var.create initial_input in
   let input = Incr.Var.watch input_var in
   let fresh = Type_equal.Id.create ~name:"fresh" sexp_of_opaque in
-  let var = Bonsai.Private.(Value.named fresh |> conceal_value) in
+  let var = Bonsai.Private.(Value.named App_input fresh |> conceal_value) in
   let computation = component var in
-  let (Bonsai.Private.Computation.T
-         { t = component_unpacked
-         ; dynamic_action = _
-         ; static_action = _
-         ; apply_static
-         ; model =
-             { default = default_model
-             ; sexp_of = sexp_of_model
-             ; equal = _
-             ; type_id = _
-             ; of_sexp = model_of_sexp
-             }
-         })
+  let (T
+         ({ model =
+              { default = default_model
+              ; sexp_of = sexp_of_model
+              ; equal = _
+              ; type_id = _
+              ; of_sexp = model_of_sexp
+              }
+          ; apply_static
+          ; _
+          } as computation_info))
     =
-    computation |> Bonsai.Private.reveal_computation
+    Bonsai.Private.reveal_computation computation
+    |> (if optimize then Bonsai.Private.pre_process else Fn.id)
+    |> Bonsai.Private.gather
   in
   let environment =
     Bonsai.Private.Environment.(empty |> add_exn ~key:fresh ~data:input)
@@ -75,7 +74,8 @@ let create
      https://github.com/ocaml/ocaml/issues/7074. *)
   let create_polymorphic
         (type dynamic_action static_action)
-        (computation : (_, dynamic_action, static_action, r) Bonsai.Private.Computation.t)
+        (computation_info :
+           (_, dynamic_action, static_action, r) Bonsai.Private.Computation.info)
         apply_static
     : (i, r) t
     =
@@ -93,14 +93,13 @@ let create
     let inject_dynamic a = A.inject (Dynamic a) in
     let inject_static a = A.inject (Static a) in
     let snapshot =
-      Bonsai.Private.eval
+      computation_info.run
         ~environment
         ~path:Bonsai.Private.Path.empty
         ~clock
         ~model:(Incr.Var.watch model_var)
         ~inject_dynamic
         ~inject_static
-        computation
     in
     let result_incr = Bonsai.Private.Snapshot.result snapshot in
     let dynamic_apply_action_incr =
@@ -127,13 +126,11 @@ let create
       ; lifecycle
       ; lifecycle_incr
       ; queue
-      ; should_replace_bonsai_path_string = true
-      ; should_replace_bonsai_hash_string = true
       ; last_view = ""
       ; last_lifecycle = Bonsai.Private.Lifecycle.Collection.empty
       }
   in
-  create_polymorphic component_unpacked apply_static
+  create_polymorphic computation_info apply_static
 ;;
 
 let schedule_event _ = Ui_effect.Expert.handle
@@ -187,22 +184,6 @@ let trigger_lifecycles (T t) =
   let new_ = t.lifecycle |> Incr.Observer.value_exn in
   t.last_lifecycle <- new_;
   schedule_event () (Bonsai.Private.Lifecycle.Collection.diff old new_)
-;;
-
-let should_censor_bonsai_path (T { should_replace_bonsai_path_string; _ }) =
-  should_replace_bonsai_path_string
-;;
-
-let disable_bonsai_path_censoring (T unpacked) =
-  unpacked.should_replace_bonsai_path_string <- false
-;;
-
-let should_censor_bonsai_hash (T { should_replace_bonsai_hash_string; _ }) =
-  should_replace_bonsai_hash_string
-;;
-
-let disable_bonsai_hash_censoring (T unpacked) =
-  unpacked.should_replace_bonsai_hash_string <- false
 ;;
 
 let sexp_of_model (T { sexp_of_model; model_var; _ }) =

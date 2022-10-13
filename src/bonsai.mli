@@ -67,7 +67,7 @@ module Value : sig
       true when any of the composed nodes is true and is false when all of the composed nodes are false.
       They're "or'ed together".
   *)
-  val cutoff : equal:('a -> 'a -> bool) -> 'a t -> 'a t
+  val cutoff : 'a t -> equal:('a -> 'a -> bool) -> 'a t
 end
 
 module Computation : sig
@@ -232,6 +232,94 @@ val path_id : string Computation.t
     a Computation as output. *)
 val pure : ('a -> 'b) -> 'a Value.t -> 'b Computation.t
 
+(** A frequently used state-machine is the trivial 'set-state' transition,
+    where the action always replaces the value contained inside.  This
+    helper-function implements that state-machine, providing access to the
+    current state, as well as an inject function that updates the state. *)
+val state
+  :  (module Model with type t = 'model)
+  -> default_model:'model
+  -> ('model * ('model -> unit Effect.t)) Computation.t
+
+(** Similar to [state], but stores an option of the model instead.
+    [default_model] is optional and defaults to [None].  *)
+val state_opt
+  :  ?default_model:'model
+  -> (module Model with type t = 'model)
+  -> ('model option * ('model option -> unit Effect.t)) Computation.t
+
+(** A bool-state which starts at [default_model] and flips whenever the
+    returned effect is scheduled. *)
+val toggle : default_model:bool -> (bool * unit Effect.t) Computation.t
+
+(** A constructor for [Computation.t] that models a simple state machine.
+    The first-class module implementing [Model] describes the states in
+    the state machine, while the first-class module implementing [Action]
+    describes the transitions between states.
+
+    [default_model] is the initial state for the state machine, and [apply_action]
+    implements the transition function that looks at the current state and the requested
+    transition, and produces a new state.
+
+    (It is very common for [inject] and [schedule_event] to be unused) *)
+val state_machine0
+  :  (module Model with type t = 'model)
+  -> (module Action with type t = 'action)
+  -> default_model:'model
+  -> apply_action:
+       (inject:('action -> unit Effect.t)
+        -> schedule_event:(unit Effect.t -> unit)
+        -> 'model
+        -> 'action
+        -> 'model)
+  -> ('model * ('action -> unit Effect.t)) Computation.t
+
+(** The same as {!state_machine0}, but [apply_action] also takes an input from a
+    [Value.t]. *)
+val state_machine1
+  :  (module Model with type t = 'model)
+  -> (module Action with type t = 'action)
+  -> default_model:'model
+  -> apply_action:
+       (inject:('action -> unit Effect.t)
+        -> schedule_event:(unit Effect.t -> unit)
+        -> 'input
+        -> 'model
+        -> 'action
+        -> 'model)
+  -> 'input Value.t
+  -> ('model * ('action -> unit Effect.t)) Computation.t
+
+(** Identical to [actor1] but it takes 0 inputs instead of 1. *)
+val actor0
+  :  (module Model with type t = 'model)
+  -> (module Action with type t = 'action)
+  -> default_model:'model
+  -> recv:
+       (schedule_event:(unit Effect.t -> unit) -> 'model -> 'action -> 'model * 'return)
+  -> ('model * ('action -> 'return Effect.t)) Computation.t
+
+(** [actor1] is very similar to [state_machine1], with two major exceptions:
+    - the [apply-action] function for state-machine is renamed [recv], and it
+      returns a "response", in addition to a new model.
+    - the 2nd value returned by the component allows for the sender of an
+      action to handle the effect and read the response.
+
+    Because the semantics of this function feel like an actor system, we've
+    decided to name the function accordingly.  *)
+val actor1
+  :  (module Model with type t = 'model)
+  -> (module Action with type t = 'action)
+  -> default_model:'model
+  -> recv:
+       (schedule_event:(unit Effect.t -> unit)
+        -> 'input
+        -> 'model
+        -> 'action
+        -> 'model * 'return)
+  -> 'input Value.t
+  -> ('model * ('action -> 'return Effect.t)) Computation.t
+
 (** Given a first-class module that has no input (unit input type), and the default
     value of the state machine, [of_module0] will create a [Computation] that produces
     values of that module's [Result.t] type. *)
@@ -266,90 +354,6 @@ val of_module2
   -> 'i2 Value.t
   -> 'r Computation.t
 
-(** A constructor for [Computation.t] that models a simple state machine.
-    The first-class module implementing [Model] describes the states in
-    the state machine, while the first-class module implementing [Action]
-    describes the transitions between states.
-
-    [default_model] is the initial state for the state machine, and [apply_action]
-    implements the transition function that looks at the current state and the requested
-    transition, and produces a new state.
-
-    (It is very common for [inject] and [schedule_event] to be unused) *)
-val state_machine0
-  :  (module Model with type t = 'model)
-  -> (module Action with type t = 'action)
-  -> default_model:'model
-  -> apply_action:
-       (inject:('action -> unit Effect.t)
-        -> schedule_event:(unit Effect.t -> unit)
-        -> 'model
-        -> 'action
-        -> 'model)
-  -> ('model * ('action -> unit Effect.t)) Computation.t
-
-(** Identical to [actor1] but it takes 0 inputs instead of 1. *)
-val actor0
-  :  (module Model with type t = 'model)
-  -> (module Action with type t = 'action)
-  -> default_model:'model
-  -> recv:
-       (schedule_event:(unit Effect.t -> unit) -> 'model -> 'action -> 'model * 'return)
-  -> ('model * ('action -> 'return Effect.t)) Computation.t
-
-(** [actor1] is very similar to [state_machine1], with two major exceptions:
-    - the [apply-action] function for state-machine is renamed [recv], and it
-      returns a "response", in addition to a new model.
-    - the 2nd value returned by the component allows for the sender of an
-      action to handle the effect and read the response.
-
-    Because the semantics of this function feel like an actor system, we've
-    decided to name the function accordingly.  *)
-val actor1
-  :  (module Model with type t = 'model)
-  -> (module Action with type t = 'action)
-  -> default_model:'model
-  -> recv:
-       (schedule_event:(unit Effect.t -> unit)
-        -> 'input
-        -> 'model
-        -> 'action
-        -> 'model * 'return)
-  -> 'input Value.t
-  -> ('model * ('action -> 'return Effect.t)) Computation.t
-
-(** A frequently used state-machine is the trivial 'set-state' transition,
-    where the action always replaces the value contained inside.  This
-    helper-function implements that state-machine, providing access to the
-    current state, as well as an inject function that updates the state. *)
-val state
-  :  (module Model with type t = 'model)
-  -> default_model:'model
-  -> ('model * ('model -> unit Effect.t)) Computation.t
-
-(** Similar to [state], but stores an option of the model instead.
-    [default_model] is optional and defaults to [None].  *)
-val state_opt
-  :  ?default_model:'model
-  -> (module Model with type t = 'model)
-  -> ('model option * ('model option -> unit Effect.t)) Computation.t
-
-(** The same as {!state_machine0}, but [apply_action] also takes an input from a
-    [Value.t]. *)
-val state_machine1
-  :  (module Model with type t = 'model)
-  -> (module Action with type t = 'action)
-  -> default_model:'model
-  -> apply_action:
-       (inject:('action -> unit Effect.t)
-        -> schedule_event:(unit Effect.t -> unit)
-        -> 'input
-        -> 'model
-        -> 'action
-        -> 'model)
-  -> 'input Value.t
-  -> ('model * ('action -> unit Effect.t)) Computation.t
-
 (** [freeze] takes a Value.t and returns a computation whose output is frozen
     to be the first value that passed through the input. *)
 val freeze : (module Model with type t = 'a) -> 'a Value.t -> 'a Computation.t
@@ -366,6 +370,41 @@ val freeze : (module Model with type t = 'a) -> 'a Value.t -> 'a Computation.t
         ...
     ]} *)
 val lazy_ : 'a Computation.t Lazy.t -> 'a Computation.t
+
+(** [scope_model] allows you to have a different model for the provided
+    computation, keyed by some other value.
+
+    Suppose for example, that you had a form for editing details about a
+    person.  This form should have different state for each person.  You could
+    use scope_model, where the [~on] parameter is set to a user-id, and now when
+    that value changes, the model for the other computation is set to the model
+    for that particular user.
+
+    [scope_model] also impacts lifecycle events; when [on] changes value,
+    edge triggers like [on_activate] and [on_deactivate] will run *)
+val scope_model
+  :  ('a, _) comparator
+  -> on:'a Value.t
+  -> 'b Computation.t
+  -> 'b Computation.t
+
+(** [most_recent_some] returns a value containing the most recent
+    output of [f] for which it returned [Some]. If the input value has never
+    contained a valid value, then the result is [None]. *)
+val most_recent_some
+  :  (module Model with type t = 'b)
+  -> 'a Value.t
+  -> f:('a -> 'b option)
+  -> 'b option Computation.t
+
+(** [most_recent_value_satisfying] returns a value containing the most recent input
+    value for which [condition] returns true. If the input value has never
+    contained a valid value, then the result is [None]. *)
+val most_recent_value_satisfying
+  :  (module Model with type t = 'a)
+  -> 'a Value.t
+  -> condition:('a -> bool)
+  -> 'a option Computation.t
 
 (** [assoc] is used to apply a Bonsai computation to each element of a map.  This function
     signature is very similar to [Map.mapi] or [Incr_map.mapi'], and for good reason!
@@ -415,6 +454,19 @@ val wrap
     state machine for that computation back to its default.  This can be useful
     for e.g. clearing a form of all input values.*)
 val with_model_resetter : 'a Computation.t -> ('a * unit Effect.t) Computation.t
+
+(** like [with_model_resetter], but makes the resetting effect available to the
+    computation being wrapped. *)
+val with_model_resetter'
+  :  (reset:unit Effect.t Value.t -> 'a Computation.t)
+  -> 'a Computation.t
+
+(** [yoink] is a function that takes a bonsai value and produces a
+    computation producing an effect which fetches the current value out of the
+    input.  This can be useful inside of [let%bind.Effect] chains, where a
+    value that you've closed over is stale and you want to witness a value
+    after it's been changed by a previous effect. *)
+val yoink : 'a Value.t -> 'a Effect.t Computation.t
 
 module Clock : sig
   (** Functions allowing for the creation of time-dependent computations in
@@ -550,6 +602,12 @@ module Edge : sig
       -> 'a Value.t
       -> effect:('a -> 'o Effect.t) Value.t
       -> 'r Computation.t
+
+    val manual_refresh
+      :  (module Model with type t = 'o)
+      -> ('o, 'r) Starting.t
+      -> effect:'o Effect.t Value.t
+      -> ('r * unit Effect.t) Computation.t
   end
 end
 
@@ -649,6 +707,8 @@ module Let_syntax : sig
       -> f:('a Value.t -> 'b Computation.t)
       -> 'b Computation.t
 
+    val cutoff : 'a Value.t -> equal:('a -> 'a -> bool) -> 'a Value.t
+
     val switch
       :  match_:int Value.t
       -> branches:int
@@ -676,7 +736,7 @@ module Debug : sig
     -> stop_timer:(string -> unit)
     -> 'a Computation.t
 
-  val to_dot : 'a Computation.t -> string
+  val to_dot : ?pre_process:bool -> 'a Computation.t -> string
   val enable_incremental_annotations : unit -> unit
   val disable_incremental_annotations : unit -> unit
 end
@@ -684,8 +744,8 @@ end
 module Private : sig
   val reveal_value : 'a Value.t -> 'a Private_value.t
   val conceal_value : 'a Private_value.t -> 'a Value.t
-  val reveal_computation : 'a Computation.t -> 'a Private_computation.packed
-  val conceal_computation : 'a Private_computation.packed -> 'a Computation.t
+  val reveal_computation : 'a Computation.t -> 'a Private_computation.t
+  val conceal_computation : 'a Private_computation.t -> 'a Computation.t
   val path : Path.t Computation.t
 
   module Value = Private_value
@@ -700,18 +760,15 @@ module Private : sig
   module Graph_info = Graph_info
   module Instrumentation = Instrumentation
   module Flatten_values = Flatten_values
+  module Constant_fold = Constant_fold
+  module Remove_identity = Remove_identity
   module Skeleton = Skeleton
   module Transform = Transform
+  module Linter = Linter
+  module Pre_process = Pre_process
 
-  val eval
-    :  environment:Environment.t
-    -> path:Path.t
-    -> clock:Ui_incr.Clock.t
-    -> model:'model Ui_incr.t
-    -> inject_dynamic:('dynamic_action -> unit Effect.t)
-    -> inject_static:('static_action -> unit Effect.t)
-    -> ('model, 'dynamic_action, 'static_action, 'result) Computation.t
-    -> ('model, 'dynamic_action, 'result) Snapshot.t
+  val gather : 'result Computation.t -> 'result Computation.packed_info
+  val pre_process : 'result Computation.t -> 'result Computation.t
 end
 
 module Expert : sig
@@ -801,6 +858,11 @@ module Map : sig
     -> ('k, 'v2, 'cmp) Map.t Value.t
     -> f:(key:'k -> ('v1, 'v2) Map.Merge_element.t -> 'v option)
     -> ('k, 'v, 'cmp) Map.t Computation.t
+
+  val filter_mapi
+    :  ('k, 'v1, 'cmp) Map.t Value.t
+    -> f:(key:'k -> data:'v1 -> 'v2 option)
+    -> ('k, 'v2, 'cmp) Map.t Computation.t
 end
 
 module Arrow_deprecated : sig

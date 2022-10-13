@@ -1,4 +1,5 @@
 open! Core
+module Form_view := View
 open Bonsai_web
 
 module View : sig
@@ -6,7 +7,7 @@ module View : sig
       a more structured view of the form. You can convert it to a Vdom
       node with the [to_vdom*] functions. *)
 
-  module Private = View
+  module Private = Form_view
 
   type t = Private.t
 

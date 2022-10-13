@@ -1,0 +1,3 @@
+(library (name ppx_bonsai_expander) (public_name bonsai.ppx_bonsai_expander)
+ (libraries base ppxlib ppx_let.expander ppx_pattern_bind)
+ (preprocess (pps ppxlib.metaquot)))

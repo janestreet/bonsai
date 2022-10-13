@@ -167,11 +167,11 @@ let value_map
 ;;
 
 let computation_map
-      (type model dynamic_action static_action result)
+      (type result)
       (context : _ Transform.For_computation.context)
       ()
-      (computation : (model, dynamic_action, static_action, result) Computation.t)
-  : (model, dynamic_action, static_action, result) Computation.t
+      (computation : result Computation.t)
+  : result Computation.t
   =
   context.recurse () computation
 ;;
