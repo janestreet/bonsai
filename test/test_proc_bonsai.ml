@@ -1710,6 +1710,448 @@ let%test_module "inactive delivery" =
       [%expect {| 0 |}]
     ;;
 
+    let%test_module "component reset" =
+      (module struct
+        type 'a action =
+          | Action of 'a
+          | Reset
+
+        let build_handle (type result incoming) component ~sexp_of =
+          Handle.create
+            (module struct
+              type t = (result * (incoming -> unit Effect.t)) * unit Effect.t
+              type nonrec incoming = incoming action
+
+              let incoming ((_result, do_action), reset) = function
+                | Action action -> do_action action
+                | Reset -> reset
+              ;;
+
+              let view ((result, _), _) = sexp_of result |> Sexp.to_string_hum
+            end)
+            (Bonsai.with_model_resetter component)
+        ;;
+
+        let%expect_test "custom reset" =
+          let component =
+            Bonsai.state (module Int) ~default_model:0 ~reset:(fun m -> m * 2)
+          in
+          let handle = build_handle component ~sexp_of:[%sexp_of: int] in
+          let set_value i = Handle.do_actions handle [ Action i ] in
+          let reset () = Handle.do_actions handle [ Reset ] in
+          Handle.show handle;
+          [%expect {| 0 |}];
+          set_value 3;
+          Handle.show handle;
+          [%expect {| 3 |}];
+          set_value 4;
+          Handle.show handle;
+          [%expect {| 4 |}];
+          reset ();
+          Handle.show handle;
+          [%expect {| 8 |}];
+          set_value 1;
+          reset ();
+          Handle.show handle;
+          [%expect {| 2 |}];
+          set_value 1;
+          reset ();
+          set_value 10;
+          Handle.show handle;
+          [%expect {| 10 |}]
+        ;;
+
+        let%expect_test "reset by bouncing back to an action (state_machine0)" =
+          let component =
+            Bonsai.state_machine0
+              (module Int)
+              (module Bool)
+              ~default_model:0
+              ~apply_action:(fun ~inject:_ ~schedule_event:_ model is_increment ->
+                if is_increment then model + 1 else 999)
+              ~reset:(fun ~inject ~schedule_event model ->
+                schedule_event (inject false);
+                model)
+          in
+          let handle = build_handle component ~sexp_of:[%sexp_of: int] in
+          let increment () = Handle.do_actions handle [ Action true ] in
+          let reset () = Handle.do_actions handle [ Reset ] in
+          Handle.show handle;
+          [%expect {| 0 |}];
+          increment ();
+          increment ();
+          Handle.show handle;
+          [%expect {| 2 |}];
+          increment ();
+          Handle.show handle;
+          [%expect {| 3 |}];
+          reset ();
+          Handle.show handle;
+          [%expect {| 999 |}]
+        ;;
+
+        let%expect_test "reset by bouncing back to an action (state_machine1)" =
+          let component =
+            Bonsai.state_machine1
+              (module Int)
+              (module Bool)
+              (opaque_const_value ())
+              ~default_model:0
+              ~apply_action:(fun ~inject:_ ~schedule_event:_ () model is_increment ->
+                if is_increment then model + 1 else 999)
+              ~reset:(fun ~inject ~schedule_event model ->
+                schedule_event (inject false);
+                model)
+          in
+          let handle = build_handle component ~sexp_of:[%sexp_of: int] in
+          let increment () = Handle.do_actions handle [ Action true ] in
+          let reset () = Handle.do_actions handle [ Reset ] in
+          Handle.show handle;
+          [%expect {| 0 |}];
+          increment ();
+          Handle.show handle;
+          [%expect {| 1 |}];
+          increment ();
+          Handle.show handle;
+          [%expect {| 2 |}];
+          reset ();
+          Handle.show handle;
+          [%expect {| 999 |}]
+        ;;
+
+        let%expect_test "inside match%sub" =
+          let component =
+            match%sub opaque_const_value true with
+            | true -> Bonsai.state (module Int) ~default_model:0 ~reset:(fun _ -> 999)
+            | false -> assert false
+          in
+          let handle = build_handle component ~sexp_of:[%sexp_of: int] in
+          let set_value i = Handle.do_actions handle [ Action i ] in
+          let reset () = Handle.do_actions handle [ Reset ] in
+          Handle.show handle;
+          [%expect {| 0 |}];
+          set_value 3;
+          Handle.show handle;
+          [%expect {| 3 |}];
+          set_value 4;
+          Handle.show handle;
+          [%expect {| 4 |}];
+          reset ();
+          Handle.show handle;
+          [%expect {| 999 |}]
+        ;;
+
+        let%expect_test "inside forced lazy" =
+          let component =
+            match%sub opaque_const_value true with
+            | true ->
+              Bonsai.lazy_
+                (lazy (Bonsai.state (module Int) ~default_model:0 ~reset:(fun _ -> 999)))
+            | false -> assert false
+          in
+          let handle = build_handle component ~sexp_of:[%sexp_of: int] in
+          let set_value i = Handle.do_actions handle [ Action i ] in
+          let reset () = Handle.do_actions handle [ Reset ] in
+          Handle.show handle;
+          [%expect {| 0 |}];
+          set_value 3;
+          Handle.show handle;
+          [%expect {| 3 |}];
+          set_value 4;
+          Handle.show handle;
+          [%expect {| 4 |}];
+          reset ();
+          Handle.show handle;
+          [%expect {| 999 |}]
+        ;;
+
+        let%expect_test "next to an inactive infinitely-recursive lazy" =
+          let rec infinitely_recursive_component () =
+            Bonsai.lazy_ (lazy (infinitely_recursive_component ()))
+          in
+          let component =
+            match%sub opaque_const_value true with
+            | true -> Bonsai.state (module Int) ~default_model:0 ~reset:(fun _ -> 999)
+            | false -> infinitely_recursive_component ()
+          in
+          let handle = build_handle component ~sexp_of:[%sexp_of: int] in
+          let set_value i = Handle.do_actions handle [ Action i ] in
+          let reset () = Handle.do_actions handle [ Reset ] in
+          Handle.show handle;
+          [%expect {| 0 |}];
+          set_value 3;
+          Handle.show handle;
+          [%expect {| 3 |}];
+          set_value 4;
+          Handle.show handle;
+          [%expect {| 4 |}];
+          reset ();
+          Handle.show handle;
+          [%expect {| 999 |}]
+        ;;
+
+        let%expect_test "inside assoc" =
+          let component =
+            let%sub map =
+              Bonsai.assoc
+                (module Int)
+                (opaque_const_value (Int.Map.of_alist_exn [ 0, (); 1, () ]))
+                ~f:(fun _ _ ->
+                  Bonsai.state
+                    (module Int)
+                    ~default_model:0
+                    ~reset:(fun _ ->
+                      print_endline "resetting";
+                      999))
+            in
+            let%arr map = map in
+            let res = Map.to_alist map |> List.map ~f:(fun (k, (v, _)) -> k, v) in
+            let setter (i, v) = (Map.find_exn map i |> Tuple2.get2) v in
+            res, setter
+          in
+          let handle = build_handle component ~sexp_of:[%sexp_of: (int * int) list] in
+          Handle.show handle;
+          [%expect {| ((0 0) (1 0)) |}];
+          let set_value i v = Handle.do_actions handle [ Action (i, v) ] in
+          let reset () = Handle.do_actions handle [ Reset ] in
+          set_value 0 3;
+          Handle.show handle;
+          [%expect {| ((0 3) (1 0)) |}];
+          set_value 1 5;
+          Handle.show handle;
+          [%expect {| ((0 3) (1 5)) |}];
+          reset ();
+          Handle.show handle;
+          [%expect
+            {|
+            resetting
+            resetting
+            ((0 999) (1 999)) |}]
+        ;;
+
+        let%expect_test "reset by bouncing back to an action (race)" =
+          let component =
+            let%sub model, inject =
+              Bonsai.Expert.race
+                (module Int)
+                (module Bool)
+                (opaque_const_value ())
+                ~default_model:0
+                ~apply_action:
+                  (fun ~inject:_
+                    ~schedule_event:_
+                    (_ : unit Bonsai.Expert.Computation_status.t)
+                    model
+                    is_increment -> if is_increment then model + 1 else 999)
+                ~reset:(fun ~inject ~schedule_event model ->
+                  schedule_event (inject false);
+                  model)
+            in
+            return (Value.both model inject)
+          in
+          let handle = build_handle component ~sexp_of:[%sexp_of: int] in
+          let increment () = Handle.do_actions handle [ Action true ] in
+          let reset () = Handle.do_actions handle [ Reset ] in
+          Handle.show handle;
+          [%expect {| 0 |}];
+          increment ();
+          Handle.show handle;
+          [%expect {| 1 |}];
+          increment ();
+          Handle.show handle;
+          [%expect {| 2 |}];
+          reset ();
+          Handle.show handle;
+          [%expect {| 999 |}]
+        ;;
+
+        let%expect_test "reset by bouncing back to an action (state_machine01 static)" =
+          let component =
+            let%sub model, _, inject =
+              Bonsai.Expert.state_machine01
+                (module Int)
+                (module Unit)
+                (module Bool)
+                (opaque_const_value ())
+                ~default_model:0
+                ~apply_static:
+                  (fun ~inject_dynamic:_
+                    ~inject_static:_
+                    ~schedule_event:_
+                    model
+                    is_increment -> if is_increment then model + 1 else 999)
+                ~apply_dynamic:
+                  (fun ~inject_dynamic:_ ~inject_static:_ ~schedule_event:_ () _ ->
+                     assert false)
+                ~reset:(fun ~inject_dynamic:_ ~inject_static ~schedule_event model ->
+                  schedule_event (inject_static false);
+                  model)
+            in
+            return (Value.both model inject)
+          in
+          let handle = build_handle component ~sexp_of:[%sexp_of: int] in
+          let increment () = Handle.do_actions handle [ Action true ] in
+          let reset () = Handle.do_actions handle [ Reset ] in
+          Handle.show handle;
+          [%expect {| 0 |}];
+          increment ();
+          Handle.show handle;
+          [%expect {| 1 |}];
+          increment ();
+          Handle.show handle;
+          [%expect {| 2 |}];
+          reset ();
+          Handle.show handle;
+          [%expect {| 999 |}]
+        ;;
+
+        let%expect_test "reset by bouncing back to an action (state_machine01 dynamic)" =
+          let component =
+            let%sub model, inject, _ =
+              Bonsai.Expert.state_machine01
+                (module Int)
+                (module Bool)
+                (module Unit)
+                (opaque_const_value ())
+                ~default_model:0
+                ~apply_dynamic:
+                  (fun ~inject_dynamic:_
+                    ~inject_static:_
+                    ~schedule_event:_
+                    ()
+                    model
+                    is_increment -> if is_increment then model + 1 else 999)
+                ~apply_static:
+                  (fun ~inject_dynamic:_ ~inject_static:_ ~schedule_event:_ _ ->
+                     assert false)
+                ~reset:(fun ~inject_dynamic ~inject_static:_ ~schedule_event model ->
+                  schedule_event (inject_dynamic false);
+                  model)
+            in
+            return (Value.both model inject)
+          in
+          let handle = build_handle component ~sexp_of:[%sexp_of: int] in
+          let increment () = Handle.do_actions handle [ Action true ] in
+          let reset () = Handle.do_actions handle [ Reset ] in
+          Handle.show handle;
+          [%expect {| 0 |}];
+          increment ();
+          Handle.show handle;
+          [%expect {| 1 |}];
+          increment ();
+          Handle.show handle;
+          [%expect {| 2 |}];
+          reset ();
+          Handle.show handle;
+          [%expect {| 999 |}]
+        ;;
+
+        let%expect_test "for wrap" =
+          let component =
+            Bonsai.wrap
+              (module Int)
+              ~default_model:0
+              ~apply_action:(fun ~inject:_ ~schedule_event:_ _ model is_increment ->
+                if is_increment then model + 1 else 999)
+              ~reset:(fun ~inject ~schedule_event model ->
+                schedule_event (inject false);
+                model)
+              ~f:(fun model inject -> return (Value.both model inject))
+          in
+          let handle = build_handle component ~sexp_of:[%sexp_of: int] in
+          let increment () = Handle.do_actions handle [ Action true ] in
+          let reset () = Handle.do_actions handle [ Reset ] in
+          Handle.show handle;
+          [%expect {| 0 |}];
+          increment ();
+          Handle.show handle;
+          [%expect {| 1 |}];
+          increment ();
+          Handle.show handle;
+          [%expect {| 2 |}];
+          reset ();
+          Handle.show handle;
+          [%expect {| 999 |}]
+        ;;
+
+        let%expect_test "inside a wrap" =
+          let component =
+            Bonsai.wrap
+              (module Unit)
+              ~default_model:()
+              ~apply_action:(fun ~inject:_ ~schedule_event:_ _ () () -> ())
+              ~f:(fun _ _ ->
+                Bonsai.state_machine0
+                  (module Int)
+                  (module Bool)
+                  ~default_model:0
+                  ~apply_action:(fun ~inject:_ ~schedule_event:_ model is_increment ->
+                    if is_increment then model + 1 else 999)
+                  ~reset:(fun ~inject ~schedule_event model ->
+                    schedule_event (inject false);
+                    model))
+          in
+          let handle = build_handle component ~sexp_of:[%sexp_of: int] in
+          let increment () = Handle.do_actions handle [ Action true ] in
+          let reset () = Handle.do_actions handle [ Reset ] in
+          Handle.show handle;
+          [%expect {| 0 |}];
+          increment ();
+          Handle.show handle;
+          [%expect {| 1 |}];
+          increment ();
+          Handle.show handle;
+          [%expect {| 2 |}];
+          reset ();
+          Handle.show handle;
+          [%expect {| 999 |}]
+        ;;
+
+        let%expect_test "inside assoc_on" =
+          let component =
+            let%sub map =
+              Bonsai.Expert.assoc_on
+                (module Int)
+                (module Bool)
+                (opaque_const_value (Int.Map.of_alist_exn [ 0, true; 1, false; 2, true ]))
+                ~get_model_key:(fun _ -> Fn.id)
+                ~f:(fun _ _ ->
+                  Bonsai.state
+                    (module Int)
+                    ~default_model:0
+                    ~reset:(fun _ ->
+                      print_endline "resetting";
+                      999))
+            in
+            let%arr map = map in
+            let res = Map.to_alist map |> List.map ~f:(fun (k, (v, _)) -> k, v) in
+            let setter (i, v) = (Map.find_exn map i |> Tuple2.get2) v in
+            res, setter
+          in
+          let handle = build_handle component ~sexp_of:[%sexp_of: (int * int) list] in
+          Handle.show handle;
+          [%expect {| ((0 0) (1 0) (2 0)) |}];
+          let set_value i v = Handle.do_actions handle [ Action (i, v) ] in
+          let reset () = Handle.do_actions handle [ Reset ] in
+          set_value 0 3;
+          Handle.show handle;
+          [%expect {| ((0 3) (1 0) (2 3)) |}];
+          set_value 1 5;
+          Handle.show handle;
+          [%expect {| ((0 3) (1 5) (2 3)) |}];
+          reset ();
+          Handle.recompute_view handle;
+          (* notice that there are two printings of 'resetting' because even though
+             there's three active components, there are only two models between them *)
+          [%expect {|
+            resetting
+            resetting |}];
+          Handle.show handle;
+          [%expect {| ((0 999) (1 999) (2 999)) |}]
+        ;;
+      end)
+    ;;
+
     let%expect_test "inactive delivery to assoc_on with shared model keys" =
       let var = Bonsai.Var.create (Int.Map.of_alist_exn [ 1, (); 2, () ]) in
       let component =
@@ -1895,7 +2337,7 @@ let%expect_test "let syntax is collapsed upon eval" =
   let packed =
     let open Bonsai.Private in
     let computation = reveal_computation computation in
-    let (T { model; apply_static = _; static_action; dynamic_action; run }) =
+    let (T { model; apply_static = _; static_action; dynamic_action; run; reset = _ }) =
       computation |> pre_process |> gather
     in
     let T =

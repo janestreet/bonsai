@@ -2,8 +2,9 @@ open! Core
 open! Bonsai_web
 
 module Css =
-  [%css.raw
-    {|
+  [%css
+    stylesheet
+      {|
   @font-face {
     font-family: "FiraCode";
     src: url(./font.ttf) format("truetype");

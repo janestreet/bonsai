@@ -46,8 +46,9 @@ let rec render_header header ~level ~acc ~column_widths ~set_column_width =
     let node index =
       let column_width =
         match Map.find column_widths index with
-        | None -> initial_width
-        | Some (`Px_float width) -> (`Px_float width :> Css_gen.Length.t)
+        | Some (Column_size.Visible { width_px = width })
+        | Some (Hidden { prev_width_px = Some width }) -> `Px_float width
+        | None | Some (Hidden { prev_width_px = None }) -> initial_width
       in
       Vdom.Node.td
         ~attr:

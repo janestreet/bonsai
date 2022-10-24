@@ -242,8 +242,9 @@ module Customization = struct
 end
 
 module Style =
-  [%css.raw
-    {|
+  [%css
+    stylesheet
+      {|
   .with_whitespace {
     white-space: pre-wrap;
   }
@@ -566,7 +567,12 @@ let maybe_set_tooltip doc view =
   | None -> view
 ;;
 
-let form (grammar : Sexp_grammar.grammar Value.t) ~on_set_error ~customizations =
+let form
+      ?textbox_for_string
+      (grammar : Sexp_grammar.grammar Value.t)
+      ~on_set_error
+      ~customizations
+  =
   let rec grammar_form (grammar : Sexp_grammar.grammar Value.t)
     : Sexp.t Form.t Computation.t
     =
@@ -577,7 +583,11 @@ let form (grammar : Sexp_grammar.grammar Value.t) ~on_set_error ~customizations 
     match%sub grammar with
     | Bool ->
       E.Checkbox.bool ~default:false () |> project_to_sexp (module Bool) |> error_hint
-    | String -> E.Textarea.string () |> project_to_sexp (module String) |> error_hint
+    | String ->
+      (match textbox_for_string with
+       | None -> E.Textarea.string () |> project_to_sexp (module String)
+       | Some () -> E.Textbox.string () |> project_to_sexp (module String))
+      |> error_hint
     | Integer ->
       E.Number.int ~default:0 ~step:1 () |> project_to_sexp (module Int) |> error_hint
     | Char ->
@@ -1074,12 +1084,13 @@ let form (grammar : Sexp_grammar.grammar Value.t) ~on_set_error ~customizations 
 let form'
       ?(on_set_error = Effect.print_s)
       ?(customizations = Customization.Defaults.Form.all)
+      ?textbox_for_string
       sexp_grammar
   =
   let%sub sexp_grammar =
     Bonsai.pure Sexp_grammar.Unroll_recursion.of_grammar_exn sexp_grammar
   in
-  let%sub form = form sexp_grammar ~on_set_error ~customizations in
+  let%sub form = form ?textbox_for_string sexp_grammar ~on_set_error ~customizations in
   let%arr form = form
   and sexp_grammar = sexp_grammar in
   let validate_sexp = Sexp_grammar.validate_sexp_untyped sexp_grammar in
@@ -1089,11 +1100,21 @@ let form'
     | Error _ -> on_set_error sexp)
 ;;
 
-let form (type a) (module M : S with type t = a) ?on_set_error ?customizations ()
+let form
+      (type a)
+      (module M : S with type t = a)
+      ?on_set_error
+      ?customizations
+      ?textbox_for_string
+      ()
   : a Form.t Computation.t
   =
   let%map.Computation form =
-    form' ?on_set_error ?customizations (Value.return M.t_sexp_grammar.untyped)
+    form'
+      ?on_set_error
+      ?customizations
+      ?textbox_for_string
+      (Value.return M.t_sexp_grammar.untyped)
   in
   Form.project form ~parse_exn:M.t_of_sexp ~unparse:M.sexp_of_t
 ;;

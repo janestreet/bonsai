@@ -72,7 +72,7 @@ module Expert = struct
       Bonsai.Incr.model_cutoff
         (Bonsai.state_machine0
            (module struct
-             type t = [ `Px_float of float ] Int.Map.t [@@deriving compare, sexp, equal]
+             type t = Column_size.t Int.Map.t [@@deriving sexp, equal]
            end)
            (module struct
              type t = int * [ `Px_float of float ] [@@deriving sexp, equal]
@@ -83,9 +83,15 @@ module Expert = struct
                 this is meant to handle the specific case when a column has
                 "display:none", in which case the width will be exactly 0.0, so
                 there is no concern about float rounding errors. *)
-             if Float.equal width 0.0
-             then model
-             else Map.set model ~key:idx ~data:(`Px_float width)))
+             Map.update model idx ~f:(fun prev ->
+               if Float.equal width 0.0
+               then (
+                 match prev with
+                 | None -> Hidden { prev_width_px = None }
+                 | Some (Visible { width_px }) ->
+                   Hidden { prev_width_px = Some width_px }
+                 | Some (Hidden _ as prev) -> prev)
+               else Visible { width_px = width })))
     in
     let%sub set_column_width =
       let%arr set_column_width = set_column_width in

@@ -170,7 +170,7 @@ module Arrow_deprecated = struct
         ~bind_to_element_with_id
         ~(computation : result Bonsai.Private.Computation.t)
         ~fresh
-        ({ model; dynamic_action; static_action; apply_static; run } as info :
+        ({ model; dynamic_action; static_action; apply_static; run; reset = _ } as info :
            (model, dynamic_action, static_action, result) Bonsai.Private.Computation.info)
     : (input, extra, incoming, outgoing) Handle.t
     =

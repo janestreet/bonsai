@@ -4,8 +4,9 @@ module Attr = Vdom.Attr
 module Node = Vdom.Node
 
 module Style =
-  [%css.raw
-    {|
+  [%css
+    stylesheet
+      {|
         .clear_fieldset_styles {
           border: 0;
           margin: 0;
@@ -23,6 +24,15 @@ module Error_details = struct
     ; is_toggled : bool
     }
   [@@deriving sexp_of]
+
+  let background_color_var = "form-error-hint-background-color"
+  let toggled_border_color_var = "form-error-hint-toggled-border-color"
+  let untoggled_border_color_var = "form-error-hint-untoggled-border-color"
+  let usage ~default var = [%string "var(--%{var},%{default})"]
+  let background_color_var_usage = usage ~default:"pink" background_color_var
+  let toggled_border_color_var_usage = usage ~default:"black" toggled_border_color_var
+  let untoggled_border_color_var_usage = usage ~default:"red" untoggled_border_color_var
+  let pane_class = "bonsai-web-ui-form-error-details-pane"
 end
 
 module Row = struct
@@ -188,15 +198,22 @@ let view_error_details
     else
       Node.div
         ~attr:
-          (Attr.style
-             Css_gen.(
-               (if is_toggled
-                then border ~width:(`Px 1) ~color:(`Name "black") ~style:`Solid ()
-                else border ~width:(`Px 1) ~color:(`Name "red") ~style:`Solid ())
-               @> position ~top:(`Px 0) ~left:(`Em 2) `Absolute
-               @> padding ~left:(`Em 1) ~right:(`Em 1) ()
-               @> border_radius (`Px 3)
-               @> background_color (`Name "pink")))
+          (Attr.many
+             [ Attr.style
+                 Css_gen.(
+                   (if is_toggled
+                    then (
+                      let color = Error_details.toggled_border_color_var_usage in
+                      border ~width:(`Px 1) ~color:(`Name color) ~style:`Solid ())
+                    else (
+                      let color = Error_details.untoggled_border_color_var_usage in
+                      border ~width:(`Px 1) ~color:(`Name color) ~style:`Solid ()))
+                   @> position ~top:(`Px 0) ~left:(`Em 2) `Absolute
+                   @> padding ~left:(`Em 1) ~right:(`Em 1) ()
+                   @> border_radius (`Px 3)
+                   @> background_color (`Name Error_details.background_color_var_usage))
+             ; Attr.class_ Error_details.pane_class
+             ])
         (view_error error)
   in
   let result =
@@ -211,8 +228,9 @@ let view_error_details
 
 module Tooltip = struct
   module Css =
-    [%css.raw
-      {|
+    [%css
+      stylesheet
+        {|
     .container {
       position: relative;
       display: inline-block;

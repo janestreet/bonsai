@@ -1,6 +1,7 @@
 include
-  [%css.raw
-    {|
+  [%css
+    stylesheet
+      {|
   .column_header {
     white-space: pre;
     cursor: pointer;

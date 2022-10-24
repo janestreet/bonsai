@@ -3,8 +3,9 @@ open! Bonsai_web
 open Bonsai.Let_syntax
 
 module Css =
-  [%css.raw
-    {|
+  [%css
+    stylesheet
+      {|
 .examples_column {
   display: flex;
   align-items: flex-start;

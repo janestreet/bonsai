@@ -48,6 +48,7 @@ end
 type 'k t =
   { selected_item : 'k option
   ; view : Vdom.Node.t
+  ; query : string
   }
 [@@deriving fields]
 
@@ -100,3 +101,53 @@ val stringable
   -> on_select:('k -> unit Effect.t) Value.t
   -> ('k, string, 'cmp) Map.t Value.t
   -> 'k t Computation.t
+
+module Collate_map_with_score : sig
+  module Scored_key : sig
+    type 'k t = int * 'k
+
+    include Comparator.S1 with type 'a t := 'a t
+
+    module M (T : T) : sig
+      type nonrec t = T.t t [@@deriving sexp]
+
+      include
+        Comparator.S with type t := t and type comparator_witness = comparator_witness
+    end
+
+    module Map : sig
+      type nonrec ('k, 'v) t = ('k t, 'v, comparator_witness) Map.t
+    end
+  end
+
+
+  (** [collate] sorts and filters the input map according to a [score] function
+      (filtering a result out is done by returning 0 from [score], and
+      transforms the data in the map according to a [to_result] function.
+
+      The performance trade-off is specific: we assume that the input map
+      doesn't change very often so that we can pre-process all the items in the
+      map ahead of time. Thus, the goal of this function is not to be as
+      incremental as possible, but rather to have as low of constants as
+      possible.
+
+      [query_is_as_strict] is used to determine whether a new query will filter
+      out at least as many items as the previous query. If so, then we can skip
+      running [score] on items that have already been filtered away.
+
+      Each time the query changes, we remember a previous query and which
+      items have been filtered away by that query. However, if the previous
+      query limits the input to fewer than [stop_trimming_input_at_count], then
+      we don't update the previous query. This allows the user to specify that
+      when the number of results is small enough that it is more worthwhile to
+      cache a more general query in order to allow backtracking through
+      previous queries without abandoning caching altogether. *)
+  val collate
+    :  preprocess:(key:'k -> data:'v -> 'preprocessed)
+    -> score:('query -> 'preprocessed -> int)
+    -> query_is_as_strict:('query -> as_:'query -> bool)
+    -> to_result:('preprocessed -> key:'k -> data:'v -> 'result)
+    -> ('k, 'v, 'cmp) Map.t Value.t
+    -> 'query Value.t
+    -> ('k, 'result) Scored_key.Map.t Computation.t
+end

@@ -105,8 +105,9 @@ let () =
 
 (* $MDX part-begin=inline_css *)
 module Style =
-  [%css.raw
-    {|
+  [%css
+    stylesheet
+      {|
 table.politicians {
   border-collapse: collapse;
   border: 1px solid brown;
@@ -174,8 +175,9 @@ let themeable_table ?(theme = Style.default) rows =
 
 (* $MDX part-begin=my_theme *)
 module My_theme =
-  [%css.raw
-    {|
+  [%css
+    stylesheet
+      {|
 table.politicians {
   border-collapse: collapse;
   border: 1px solid black;

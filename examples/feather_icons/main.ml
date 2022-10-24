@@ -23,8 +23,9 @@ h3 {
 ;;
 
 module Left_section =
-  [%css.raw
-    {|
+  [%css
+    stylesheet
+      {|
 .class_ {
   display: flex;
   flex: 1 1 auto;
@@ -42,7 +43,7 @@ let left_section ~controls =
   Vdom.Node.div ~attr:(Vdom.Attr.class_ Left_section.class_) [ search_bar; icon_grid ]
 ;;
 
-module Main = [%css.raw {|
+module Main = [%css stylesheet {|
 .class_ {
   display: flex;
   gap: 48px;
@@ -63,7 +64,7 @@ let header =
     [ Vdom.Node.text "Feather icons" ]
 ;;
 
-module App = [%css.raw {|
+module App = [%css stylesheet {|
 .class_ {
   padding: 48px;
 }

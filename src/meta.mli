@@ -55,6 +55,15 @@ module Model : sig
     -> 'a t
     -> ('k, 'a, 'cmp) Map.t t
 
+  val map_on
+    :  ('k, 'cmp) comparator
+    -> ('k_io, 'cmp_io) comparator
+    -> 'k Type_equal.Id.t
+    -> 'k_io Type_equal.Id.t
+    -> 'cmp Type_equal.Id.t
+    -> 'a t
+    -> ('k, 'k_io * 'a, 'cmp) Map.t t
+
   val of_module : (module Model with type t = 'a) -> default:'a -> name:string -> 'a t
 end
 
@@ -100,6 +109,7 @@ module Multi_model : sig
   val t_of_sexp : t -> Sexp.t -> t
   val find_exn : t -> int -> Model.Hidden.t
   val set : t -> key:int -> data:Model.Hidden.t -> t
+  val to_models : t -> Model.Hidden.t Int.Map.t
   val of_models : Model.Hidden.t Int.Map.t -> t
   val model_info : t -> t Model.t
 end

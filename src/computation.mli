@@ -27,12 +27,20 @@ type ('model, 'dynamic_action, 'static_action, 'result) eval_fun =
   -> inject_static:('static_action -> unit Effect.t)
   -> ('model, 'dynamic_action, 'result) Snapshot.t
 
+type ('dynamic_action, 'static_action, 'model) reset =
+  inject_dynamic:('dynamic_action -> unit Effect.t)
+  -> inject_static:('static_action -> unit Effect.t)
+  -> schedule_event:(unit Effect.t -> unit)
+  -> 'model
+  -> 'model
+
 type ('model, 'dynamic_action, 'static_action, 'result) info =
   { model : 'model Meta.Model.t
   ; dynamic_action : 'dynamic_action Meta.Action.t
   ; static_action : 'static_action Meta.Action.t
   ; apply_static : ('dynamic_action, 'static_action, 'model) static_apply_action
   ; run : ('model, 'dynamic_action, 'static_action, 'result) eval_fun
+  ; reset : ('dynamic_action, 'static_action, 'model) reset
   }
 
 type 'result packed_info = T : (_, _, _, 'result) info -> 'result packed_info
@@ -46,6 +54,7 @@ type 'result kind =
       ; apply_dynamic :
           ('input, 'dynamic_action, 'static_action, 'model) dynamic_apply_action
       ; apply_static : ('dynamic_action, 'static_action, 'model) static_apply_action
+      ; reset : ('dynamic_action, 'static_action, 'model) reset
       ; input : 'input Value.t
       }
       -> ('model * ('dynamic_action -> unit Effect.t) * ('static_action -> unit Effect.t))
@@ -54,6 +63,7 @@ type 'result kind =
       { model : 'model Meta.Model.t
       ; dynamic_action : 'dynamic_action Meta.Action.t
       ; apply_action : ('input, 'dynamic_action, Nothing.t, 'model) dynamic_apply_action
+      ; reset : ('dynamic_action, Nothing.t, 'model) reset
       ; input : 'input Value.t
       }
       -> ('model * ('dynamic_action -> unit Effect.t)) kind
@@ -61,6 +71,7 @@ type 'result kind =
       { model : 'model Meta.Model.t
       ; static_action : 'static_action Meta.Action.t
       ; apply_action : (Nothing.t, 'static_action, 'model) static_apply_action
+      ; reset : (Nothing.t, 'static_action, 'model) reset
       ; compute : inject:('static_action -> unit Effect.t) -> 'model -> 'result
       }
       -> 'result kind
@@ -68,6 +79,7 @@ type 'result kind =
       { model : 'model Meta.Model.t
       ; dynamic_action : 'dynamic_action Meta.Action.t
       ; input : 'input Value.t
+      ; reset : ('dynamic_action, Nothing.t, 'model) reset
       ; apply_dynamic :
           'input Incr.t
           -> inject:('dynamic_action -> unit Effect.t)
@@ -144,6 +156,7 @@ type 'result kind =
       ; inner : 'result t
       ; dynamic_apply_action :
           ('result, 'outer_dynamic_action, Nothing.t, 'outer_model) dynamic_apply_action
+      ; reset : ('outer_dynamic_action, Nothing.t, 'outer_model) reset
       }
       -> 'result kind
   | With_model_resetter :
@@ -209,6 +222,7 @@ module Proc_min (G : Gather_impl) : sig
     :  (module Model with type t = 'model)
     -> (module Action with type t = 'dynamic_action)
     -> (module Action with type t = 'static_action)
+    -> ?reset:('dynamic_action, 'static_action, 'model) reset
     -> default_model:'model
     -> apply_dynamic:
          ('input, 'dynamic_action, 'static_action, 'model) dynamic_apply_action
@@ -219,6 +233,11 @@ module Proc_min (G : Gather_impl) : sig
   val state_machine1
     :  (module Model with type t = 'model)
     -> (module Action with type t = 'action)
+    -> ?reset:
+         (inject:('action -> unit Effect.t)
+          -> schedule_event:(unit Effect.t -> unit)
+          -> 'model
+          -> 'model)
     -> default_model:'model
     -> apply_action:
          (inject:('action -> unit Effect.t)
@@ -231,7 +250,12 @@ module Proc_min (G : Gather_impl) : sig
     -> ('model * ('action -> unit Effect.t)) t
 
   val state_machine0
-    :  (module Model with type t = 'model)
+    :  ?reset:
+      (inject:('action -> unit Effect.t)
+       -> schedule_event:(unit Effect.t -> unit)
+       -> 'model
+       -> 'model)
+    -> (module Model with type t = 'model)
     -> (module Action with type t = 'action)
     -> default_model:'model
     -> apply_action:
@@ -259,7 +283,12 @@ module Proc_min (G : Gather_impl) : sig
   val lazy_ : 'a t lazy_t -> 'a t
 
   val wrap
-    :  (module Model with type t = 'model)
+    :  ?reset:
+      (inject:('action -> unit Effect.t)
+       -> schedule_event:(unit Effect.t -> unit)
+       -> 'model
+       -> 'model)
+    -> (module Model with type t = 'model)
     -> default_model:'model
     -> apply_action:
          (inject:('action -> unit Effect.t)

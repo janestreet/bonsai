@@ -6,8 +6,9 @@ module Parameters = Bonsai_web_ui_split_pane.For_testing.Parameters
 module Form = Bonsai_web_ui_form
 
 module Styles =
-  [%css.raw
-    {|
+  [%css
+    stylesheet
+      {|
 .container {
   display: flex;
   width: 100%;

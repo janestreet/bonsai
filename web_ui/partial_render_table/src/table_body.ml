@@ -73,18 +73,27 @@ let component
     let%sub row_css =
       let%arr column_widths = column_widths in
       let total_width =
-        column_widths |> Map.data |> List.sum (module Float) ~f:(fun (`Px_float w) -> w)
+        column_widths
+        |> Map.data
+        |> List.sum
+             (module Float)
+             ~f:(function
+               | Column_size.Visible { width_px } -> width_px
+               | Hidden _ -> 0.0)
       in
       let open Css_gen in
-      Css_gen.height (row_height :> Length.t) @> Css_gen.width (`Px_float total_width)
+      height (row_height :> Length.t) @> width (`Px_float total_width)
     in
     let%sub calculate_css =
       let%arr column_widths = column_widths in
       let calculate_css i =
         let column_width =
           match Map.find column_widths i with
-          | Some (`Px_float w) -> w
-          | None -> 0.0
+          | Some (Visible { width_px = w })
+          (* use the previous width even when hidden so that the layout engine has less
+             work to do when becoming visible *)
+          | Some (Hidden { prev_width_px = Some w }) -> w
+          | None | Some (Hidden { prev_width_px = None }) -> 0.0
         in
         let css_for_column =
           let open Css_gen in
@@ -99,7 +108,8 @@ let component
       let%arr leaves_info = leaves_info
       and calculate_css = calculate_css in
       List.mapi leaves_info ~f:(fun i (is_visible, _) ->
-        if is_visible then calculate_css i else Css_gen.display `None)
+        let css = calculate_css i in
+        if is_visible then css else Css_gen.(css @> display `None))
     in
     (* This assoc is needed to zip the cells together with the css for those
        specific columns, as well as adding the 'selected' class. *)

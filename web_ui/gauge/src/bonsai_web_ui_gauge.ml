@@ -4,8 +4,9 @@ module Svg = Virtual_dom_svg
 open Vdom
 
 module Styles =
-  [%css.raw
-    {|
+  [%css
+    stylesheet
+      {|
 
 .wrapper {
   display: flex;

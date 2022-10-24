@@ -4,8 +4,9 @@ open Bonsai.Let_syntax
 module Form = Bonsai_web_ui_form
 
 module Css =
-  [%css.raw
-    {|
+  [%css
+    stylesheet
+      {|
 html, body {
   font-family: 'Open Sans', sans-serif;
 }

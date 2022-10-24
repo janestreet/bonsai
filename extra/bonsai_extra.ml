@@ -303,3 +303,58 @@ let value_stability
     let%arr input = input in
     Stability.Unstable { previously_stable = None; unstable_value = input }
 ;;
+
+module One_at_a_time = struct
+  module Status = struct
+    type t =
+      | Busy
+      | Idle
+    [@@deriving sexp, equal]
+  end
+
+  module Response = struct
+    type 'a t =
+      | Result of 'a
+      | Busy
+    [@@deriving sexp]
+  end
+
+  module Lock_action = struct
+    type t =
+      | Acquire
+      | Release
+    [@@deriving sexp]
+  end
+
+  let effect f =
+    let%sub status, inject_status =
+      Bonsai.actor0
+        (module Status)
+        (module Lock_action)
+        ~default_model:Idle
+        ~recv:(fun ~schedule_event:_ model action ->
+          match action with
+          | Acquire ->
+            let response =
+              match model with
+              | Busy -> false
+              | Idle -> true
+            in
+            Busy, response
+          | Release -> Idle, true)
+    in
+    let%sub effect =
+      let%arr inject_status = inject_status
+      and f = f in
+      let open Effect.Let_syntax in
+      fun query ->
+        match%bind inject_status Acquire with
+        | false -> return Response.Busy
+        | true ->
+          let%bind result = f query in
+          let%map (_ : bool) = inject_status Release in
+          Response.Result result
+    in
+    return (Value.both effect status)
+  ;;
+end

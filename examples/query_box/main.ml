@@ -6,8 +6,9 @@ module Form = Bonsai_web_ui_form
 module Query_box = Bonsai_web_ui_query_box
 
 module Css =
-  [%css.raw
-    {|
+  [%css
+    stylesheet
+      {|
   .list_container {
     background: white;
     border: solid 1px black;

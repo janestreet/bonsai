@@ -19,7 +19,10 @@ let map a ~f i =
 
 let map_input a ~f i = a (Proc.Value.map i ~f)
 let of_module = Proc.of_module1
-let state_machine model action _here = Proc.state_machine1 model action
+
+let state_machine model action _here ~default_model ~apply_action input =
+  Proc.state_machine1 model action ~default_model ~apply_action input
+;;
 
 let both a b i =
   let open Proc.Let_syntax in

@@ -301,13 +301,13 @@ module Constant_fold (Recurse : Fix_transform.Recurse with module Types := Types
            Recurse.on_computation { constants_in_scope; evaluated } () `Directly_on into
          in
          Proc.wrap_computation (Sub { from; via; into; here }))
-    | Leaf1 { input; model; dynamic_action; apply_action } ->
+    | Leaf1 { input; model; dynamic_action; apply_action; reset } ->
       let (), (), input =
         Recurse.on_value { constants_in_scope; evaluated } () `Directly_on input
       in
       computation_exception_folder "leaf1" ~f:(fun () ->
         match contents_if_value_is_constant input with
-        | None -> Leaf1 { input; model; dynamic_action; apply_action }
+        | None -> Leaf1 { input; model; dynamic_action; apply_action; reset }
         | Some input ->
           let apply_action ~inject_dynamic ~inject_static =
             apply_action
@@ -315,8 +315,11 @@ module Constant_fold (Recurse : Fix_transform.Recurse with module Types := Types
               ~inject_dynamic:inject_static
               input
           in
+          let reset ~inject_dynamic ~inject_static =
+            reset ~inject_static:inject_dynamic ~inject_dynamic:inject_static
+          in
           let compute ~inject model = model, inject in
-          Leaf0 { model; static_action = dynamic_action; apply_action; compute })
+          Leaf0 { model; static_action = dynamic_action; apply_action; compute; reset })
     | Lazy t ->
       (match evaluated with
        | Unconditionally ->

@@ -93,6 +93,7 @@ let race
       (type m)
       (module M : Model with type t = m)
       action
+      ?reset
       ~default_model
       ~apply_action
       input
@@ -109,11 +110,18 @@ let race
   let merge_injections ~inject_dynamic ~inject_static a =
     Effect.Many [ inject_dynamic a; inject_static a ]
   in
+  let reset =
+    Option.map reset ~f:(fun reset ~inject_dynamic ~inject_static ~schedule_event model ->
+      let inject = merge_injections ~inject_dynamic ~inject_static in
+      let submodel = reset ~inject ~schedule_event model.Model.submodel in
+      { model with submodel })
+  in
   let%sub m, id, is =
     state_machine01
       (module Model)
       action
       action
+      ?reset
       ~default_model
       ~apply_dynamic:
         (fun ~inject_dynamic ~inject_static ~schedule_event input model action ->
@@ -210,6 +218,11 @@ let actor1
   : type input model action return.
     (module Model with type t = model)
     -> (module Action with type t = action)
+    -> ?reset:
+         (inject:(action -> return Effect.t)
+          -> schedule_event:(unit Effect.t -> unit)
+          -> model
+          -> model)
     -> default_model:model
     -> recv:
          (schedule_event:(unit Ui_effect.t -> unit)
@@ -222,6 +235,7 @@ let actor1
   =
   fun (module M : Model with type t = model)
     (module A : Action with type t = action)
+    ?reset
     ~default_model
     ~recv
     input ->
@@ -231,10 +245,16 @@ let actor1
       let sexp_of_t cb = A.sexp_of_t (Effect.Private.Callback.request cb)
     end
     in
+    let reset =
+      Option.map reset ~f:(fun f ~inject ~schedule_event model ->
+        let inject action = Effect.Private.make ~request:action ~evaluator:inject in
+        f ~inject ~schedule_event model)
+    in
     let%sub model, inject =
       state_machine1
         (module M)
         (module Action_with_callback)
+        ?reset
         ~default_model
         ~apply_action:(fun ~inject:_ ~schedule_event input model callback ->
           let action = Effect.Private.Callback.request callback in
@@ -252,13 +272,15 @@ let actor1
     model, inject
 ;;
 
-let actor0 model action ~default_model ~recv =
+let actor0 ?reset model action ~default_model ~recv =
   let recv ~schedule_event () = recv ~schedule_event in
-  actor1 model action ~default_model ~recv (Value.return ())
+  actor1 model action ?reset ~default_model ~recv (Value.return ())
 ;;
 
-let state (type m) (module M : Model with type t = m) ~default_model =
+let state (type m) ?reset (module M : Model with type t = m) ~default_model =
+  let reset = Option.map reset ~f:(fun reset ~inject:_ ~schedule_event:_ m -> reset m) in
   state_machine0
+    ?reset
     (module M)
     (module M)
     ~apply_action:(fun ~inject:_ ~schedule_event:_ _old_model new_model -> new_model)
@@ -283,8 +305,9 @@ let toggle ~default_model =
   state, effect
 ;;
 
-let state_opt (type m) ?default_model (module M : Model with type t = m) =
+let state_opt (type m) ?reset ?default_model (module M : Model with type t = m) =
   state
+    ?reset
     ~default_model
     (module struct
       type t = M.t option [@@deriving equal, sexp]

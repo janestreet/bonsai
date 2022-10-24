@@ -41,8 +41,9 @@ module Make (Name : Types.Name) = struct
   end
 
   module Style =
-    [%css.raw
-      {|
+    [%css
+      stylesheet
+        {|
 .map {
   position:relative;
   backface-visibility: hidden;

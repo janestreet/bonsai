@@ -17,23 +17,38 @@ struct
         | Return value ->
           let acc, up, value = User.transform_v down acc value in
           acc, up, Computation.Return value
-        | Leaf1 { model; dynamic_action; apply_action; input } ->
+        | Leaf1 { model; dynamic_action; apply_action; input; reset } ->
           let acc, up, input = User.transform_v down acc input in
-          acc, up, Leaf1 { model; dynamic_action; apply_action; input }
+          acc, up, Leaf1 { model; dynamic_action; apply_action; input; reset }
         | Leaf01
-            { model; dynamic_action; static_action; apply_dynamic; apply_static; input }
-          ->
+            { model
+            ; dynamic_action
+            ; static_action
+            ; apply_dynamic
+            ; apply_static
+            ; input
+            ; reset
+            } ->
           let acc, up, input = User.transform_v down acc input in
           let res =
             Computation.Leaf01
-              { model; dynamic_action; static_action; apply_dynamic; apply_static; input }
+              { model
+              ; dynamic_action
+              ; static_action
+              ; apply_dynamic
+              ; apply_static
+              ; input
+              ; reset
+              }
           in
           acc, up, res
-        | Leaf0 { model; static_action; apply_action; compute } ->
-          acc, empty, Leaf0 { model; static_action; apply_action; compute }
-        | Leaf_incr { model; dynamic_action; input; apply_dynamic; compute } ->
+        | Leaf0 { model; static_action; apply_action; compute; reset } ->
+          acc, empty, Leaf0 { model; static_action; apply_action; compute; reset }
+        | Leaf_incr { model; dynamic_action; input; apply_dynamic; compute; reset } ->
           let acc, up, input = User.transform_v down acc input in
-          acc, up, Leaf_incr { model; dynamic_action; input; apply_dynamic; compute }
+          ( acc
+          , up
+          , Leaf_incr { model; dynamic_action; input; apply_dynamic; compute; reset } )
         | Model_cutoff t ->
           let acc, up, inner = User.transform_c down acc t in
           acc, up, Model_cutoff inner
@@ -78,8 +93,14 @@ struct
           in
           acc, empty_for_lazy, Lazy t
         | Wrap
-            { wrapper_model; action_id; inject_id; model_id; inner; dynamic_apply_action }
-          ->
+            { wrapper_model
+            ; action_id
+            ; inject_id
+            ; model_id
+            ; inner
+            ; dynamic_apply_action
+            ; reset
+            } ->
           let acc, up, inner = User.transform_c down acc inner in
           let res =
             Computation.Wrap
@@ -89,6 +110,7 @@ struct
               ; model_id
               ; inner
               ; dynamic_apply_action
+              ; reset
               }
           in
           acc, up, res

@@ -154,3 +154,32 @@ val value_stability
   -> 'a Value.t
   -> time_to_stable:Time_ns.Span.t
   -> 'a Stability.t Computation.t
+
+module One_at_a_time : sig
+  module Status : sig
+    type t =
+      | Busy
+      | Idle
+    [@@deriving sexp]
+  end
+
+  module Response : sig
+    type 'a t =
+      | Result of 'a
+      | Busy
+    [@@deriving sexp]
+  end
+
+  (** Turns the input effect into an effect which ensures that only one instance
+      of it is running at a time. If another instance of the effect is already
+      running, then [Busy] is returned instead of running the effect. In
+      addition, this computation also exposes whether or not an instance of the
+      effect is in progress.
+
+      CAREFUL: If the effect function raises while it is executing, then the
+      status will stay at busy, since the computation is unable to witness that
+      the effect completed. *)
+  val effect
+    :  ('query -> 'response Effect.t) Value.t
+    -> (('query -> 'response Response.t Effect.t) * Status.t) Computation.t
+end

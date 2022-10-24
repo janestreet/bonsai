@@ -14,8 +14,9 @@ module type Stringable_model = sig
 end
 
 module Style =
-  [%css.raw
-    {|
+  [%css
+    stylesheet
+      {|
   .invalid_text_box {
     outline: none;
     border: 2px solid red;
@@ -55,6 +56,17 @@ let optional_to_required =
     ~unparse:(fun a -> Some a)
 ;;
 
+module Non_interactive = struct
+  let constant view value =
+    let%sub path_and_id = path in
+    let%arr path, path_id = path_and_id
+    and view = view
+    and value = value in
+    let view = View.of_vdom ~id:path (Vdom.Node.div ~attr:path_id [ view ]) in
+    Form.Expert.create ~view ~value ~set:(fun _ -> Effect.Ignore)
+  ;;
+end
+
 module Textbox = struct
   let string ?(extra_attrs = Value.return []) ?placeholder () =
     let view =
@@ -79,7 +91,7 @@ module Textbox = struct
         (Form.project'
            ~parse:(fun input ->
              match Int.of_string input with
-             | exception _ -> Or_error.errorf "Expecting an integer"
+             | exception _ -> Or_error.error_string "Expected an integer"
              | x -> Or_error.return x)
            ~unparse:Int.to_string_hum)
   ;;
@@ -87,7 +99,13 @@ module Textbox = struct
   let float ?extra_attrs ?placeholder () =
     computation_map
       (string ?extra_attrs ?placeholder ())
-      ~f:(Form.project ~parse_exn:Float.of_string ~unparse:Float.to_string_hum)
+      ~f:
+        (Form.project'
+           ~parse:(fun input ->
+             match Float.of_string input with
+             | exception _ -> Or_error.error_string "Expected a floating point number"
+             | x -> Or_error.return x)
+           ~unparse:Float.to_string_hum)
   ;;
 
   let sexpable (type t) ?extra_attrs ?placeholder (module M : Sexpable with type t = t) =
@@ -241,8 +259,9 @@ module Toggle = struct
   (* Most of this css is from https://www.w3schools.com/howto/howto_css_switch.asp *)
 
   module Style =
-    [%css.raw
-      {|
+    [%css
+      stylesheet
+        {|
 .toggle {
   position: relative;
   display: inline-block;
@@ -1134,6 +1153,7 @@ module Radio_buttons = struct
         (type t)
         ?(style = Value.return Selectable_style.Native)
         ?(extra_attrs = Value.return [])
+        ?init
         ?to_string
         (module E : Bonsai.Model with type t = t)
         ~layout
@@ -1169,7 +1189,7 @@ module Radio_buttons = struct
           ~name:path
           all
     in
-    Basic_stateful.make (Bonsai.state_opt (module E)) ~view
+    Basic_stateful.make (Bonsai.state_opt ?default_model:init (module E)) ~view
     |> computation_map ~f:optional_to_required
   ;;
 
@@ -1177,11 +1197,12 @@ module Radio_buttons = struct
         (type t)
         ?style
         ?extra_attrs
+        ?init
         ?to_string
         (module E : Bonsai.Enum with type t = t)
         ~layout
     =
-    list ?style ?extra_attrs ?to_string (module E) ~layout (Value.return E.all)
+    list ?style ?extra_attrs ?init ?to_string (module E) ~layout (Value.return E.all)
   ;;
 end
 
@@ -1319,7 +1340,7 @@ module Rank = struct
 end
 
 module Query_box = struct
-  let stringable_opt
+  let create_opt
         (type k cmp)
         (module Key : Bonsai.Comparator with type t = k and type comparator_witness = cmp)
         ?initial_query
@@ -1327,10 +1348,11 @@ module Query_box = struct
         ?suggestion_list_kind
         ?selected_item_attr
         ?extra_list_container_attr
-        ?extra_input_attr
+        ?(extra_input_attr = Value.return Vdom.Attr.empty)
         ?(extra_attr = Value.return Vdom.Attr.empty)
-        ?to_view
-        input
+        ~selection_to_string
+        ~f
+        ()
     =
     let%sub path, id = path in
     let%sub extra_attr =
@@ -1346,53 +1368,47 @@ module Query_box = struct
           let equal a b = Key.comparator.compare a b = 0
         end)
     in
-    let%sub query_box =
-      Bonsai_web_ui_query_box.stringable
+    let%sub extra_input_attr =
+      let%arr extra_input_attr = extra_input_attr
+      and last_selected_value = last_selected_value in
+      match last_selected_value with
+      | None -> extra_input_attr
+      | Some last_selected_value ->
+        let placeholder = selection_to_string last_selected_value in
+        Vdom.Attr.combine extra_input_attr (Vdom.Attr.placeholder placeholder)
+    in
+    let%sub { query; view; _ } =
+      Bonsai_web_ui_query_box.create
         (module Key)
         ?initial_query
         ?max_visible_items
         ?suggestion_list_kind
         ?selected_item_attr
         ?extra_list_container_attr
-        ?extra_input_attr
+        ~extra_input_attr
         ~extra_attr
-        ?to_view
+        ~f
         ~on_select:
           (let%map set_last_selected_value = set_last_selected_value in
            fun key -> set_last_selected_value (Some key))
-        input
-    in
-    let%sub current_selection_view =
-      let%arr last_selected_value = last_selected_value
-      and input = input in
-      match last_selected_value with
-      | Some value ->
-        (match Map.find input value with
-         | Some string -> Vdom.Node.div [ Vdom.Node.text string ]
-         | None ->
-           Vdom.Node.div
-             ~attr:(Vdom.Attr.style (Css_gen.color (`Name "red")))
-             [ Vdom.Node.text "Selected item is not an input option" ])
-      | None ->
-        Vdom.Node.div
-          ~attr:(Vdom.Attr.style (Css_gen.color (`Name "gray")))
-          [ Vdom.Node.text "Nothing selected" ]
+        ()
     in
     let%arr last_selected_value = last_selected_value
     and set_last_selected_value = set_last_selected_value
-    and query_box = query_box
-    and current_selection_view = current_selection_view
+    and query = query
+    and view = view
     and path = path in
-    let view =
-      Vdom.Node.div [ current_selection_view; Bonsai_web_ui_query_box.view query_box ]
-    in
+    (* It's important that we make the value [None] if the textbox has text in
+       it so that people don't get the impression that the textbox represents
+       the current form value. *)
+    let value = if String.is_empty query then last_selected_value else None in
     Form.Expert.create
-      ~value:(Ok last_selected_value)
+      ~value:(Ok value)
       ~view:(View.of_vdom ~id:path view)
       ~set:set_last_selected_value
   ;;
 
-  let stringable
+  let create
         key
         ?initial_query
         ?max_visible_items
@@ -1401,11 +1417,12 @@ module Query_box = struct
         ?extra_list_container_attr
         ?extra_input_attr
         ?extra_attr
-        ?to_view
-        input
+        ~selection_to_string
+        ~f
+        ()
     =
     Computation.map
-      (stringable_opt
+      (create_opt
          key
          ?initial_query
          ?max_visible_items
@@ -1414,8 +1431,9 @@ module Query_box = struct
          ?extra_list_container_attr
          ?extra_input_attr
          ?extra_attr
-         ?to_view
-         input)
+         ~selection_to_string
+         ~f
+         ())
       ~f:optional_to_required
   ;;
 end

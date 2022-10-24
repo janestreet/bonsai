@@ -5,8 +5,9 @@ module Underlying_codemirror = Codemirror
 module Codemirror = Bonsai_web_ui_codemirror
 
 module Style =
-  [%css.raw
-    {|
+  [%css
+    stylesheet
+      {|
   body {
     font-size: 18px;
     line-height: 1.5em;

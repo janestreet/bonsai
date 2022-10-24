@@ -1,8 +1,9 @@
 open! Core
 
 include
-  [%css.raw
-    {|
+  [%css
+    stylesheet
+      {|
   * {
     box-sizing: border-box;
     font-family: sans-serif;
@@ -62,4 +63,5 @@ include
     position: relative;
     overflow: hidden;
   }
-|}]
+|}
+      ~rewrite:[ "--js-form-unfocused-color", "--js-form-unfocused-color" ]]

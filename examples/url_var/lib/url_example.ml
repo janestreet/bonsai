@@ -25,8 +25,9 @@ type 'a t =
 type packed = T : 'a t -> packed
 
 module Css =
-  [%css.raw
-    {|
+  [%css
+    stylesheet
+      {|
 .paper {
   box-shadow: 0 0 8px rgba(0,0,0,0.2);
   padding: 12px;

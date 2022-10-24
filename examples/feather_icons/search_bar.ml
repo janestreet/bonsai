@@ -1,15 +1,15 @@
 open! Core
 open! Import
 
-module Search_container = [%css.raw {|
+module Search_container = [%css stylesheet {|
 .class_ {
   position: relative;
 }
 |}]
 
 module Search_icon =
-  [%css.raw
-    {|
+  [%css
+    stylesheet {|
 .class_ {
   position: absolute;
   left: 16px;
@@ -18,8 +18,9 @@ module Search_icon =
 |}]
 
 module Search_bar =
-  [%css.raw
-    {|
+  [%css
+    stylesheet
+      {|
 .class_ {
   width: 100%;
   height: 40px;

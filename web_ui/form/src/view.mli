@@ -10,6 +10,10 @@ module Error_details : sig
     ; is_viewing : bool
     ; is_toggled : bool
     }
+
+  val background_color_var : string
+  val toggled_border_color_var : string
+  val untoggled_border_color_var : string
 end
 
 module Row : sig

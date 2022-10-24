@@ -14,8 +14,9 @@ module Time_ns_option = struct
 end
 
 module Style =
-  [%css.raw
-    {|
+  [%css
+    stylesheet
+      {|
   .show_position_toggle {
     position: fixed;
     top: 0px;

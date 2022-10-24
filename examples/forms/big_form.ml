@@ -6,8 +6,9 @@ module Codemirror_form = Bonsai_web_ui_codemirror_form
 module E = Form.Elements
 
 module Query_box_css =
-  [%css.raw
-    {|
+  [%css
+    stylesheet
+      {|
   .list {
     background: white;
     border: solid 1px black;
@@ -230,12 +231,22 @@ let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t = functio
     in
     Form.Dynamic.with_default (Value.return [ "aaaaaa"; "bbbbbb"; "cccccc" ]) rank
   | Query_box ->
-    Form.Elements.Query_box.stringable
+    let%sub input =
+      Bonsai.const (String.Map.of_alist_exn [ "abc", "abc"; "def", "def"; "ghi", "ghi" ])
+    in
+    Form.Elements.Query_box.create
       (module String)
       ~selected_item_attr:(Value.return (Vdom.Attr.class_ Query_box_css.selected_item))
       ~extra_list_container_attr:(Value.return (Vdom.Attr.class_ Query_box_css.list))
-      (Value.return
-         (String.Map.of_alist_exn [ "abc", "abc"; "def", "def"; "ghi", "ghi" ]))
+      ~selection_to_string:Fn.id
+      ~f:(fun query ->
+        let%arr query = query
+        and input = input in
+        Map.filter_map input ~f:(fun data ->
+          if String.is_prefix ~prefix:query data
+          then Some (Vdom.Node.text data)
+          else None))
+      ()
   | Nested_record -> Nested_record.form
   | Color_picker -> E.Color_picker.hex ()
   | Int_blang -> Int_blang.form

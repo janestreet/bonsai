@@ -60,6 +60,7 @@ let select_key ~first_try ~then_try ~else_use =
 type 'k t =
   { selected_item : 'k option
   ; view : Vdom.Node.t
+  ; query : string
   }
 [@@deriving fields]
 
@@ -287,7 +288,7 @@ let create
             [ selected_attr
             ; Attr.on_mouseenter (fun _ -> move_to_effect)
             ; Attr.on_click (fun _ ->
-                let%bind.Effect () = move_to_effect in
+                let%bind.Effect () = inject (Set_query "") in
                 let%bind.Effect () = inject Close_suggestions in
                 on_select key)
             ]
@@ -380,6 +381,7 @@ let create
       ~attr:
         (Attr.many
            [ Attr.id input_id
+           ; Attr.type_ "text"
            ; Attr.string_property "value" query
            ; Attr.on_keydown handle_keydown
            ; Attr.on_input (fun _ query -> inject (Set_query query))
@@ -418,9 +420,12 @@ let create
                     | Down -> Float.( < ) ev##.deltaY 0.0
                     | Up -> Float.( > ) ev##.deltaY 0.0
                   in
-                  if comparison
-                  then inject Move_prev_with_fixed_offset
-                  else inject Move_next_with_fixed_offset)
+                  Effect.Many
+                    [ (if comparison
+                       then inject Move_prev_with_fixed_offset
+                       else inject Move_next_with_fixed_offset)
+                    ; Effect.Prevent_default
+                    ])
            ; on_blur
            ; container_position
            ])
@@ -433,7 +438,7 @@ let create
        | Up -> [ suggestions_container; input ]
        | Down -> [ input; suggestions_container ])
   in
-  { selected_item = selected_key; view }
+  { selected_item = selected_key; view; query }
 ;;
 
 let stringable
@@ -476,3 +481,99 @@ let stringable
           else None)))
     ()
 ;;
+
+module Collate_map_with_score = struct
+  module Scored_key = struct
+    module T = struct
+      type 'k t = int * 'k
+
+      let sexp_of_t (x, _) = sexp_of_int x
+      let t_of_sexp _ = assert false
+      let compare (a, _) (b, _) = Int.compare a b
+    end
+
+    include T
+    include Comparator.Make1 (T)
+
+    module M (T : T) = struct
+      type nonrec t = T.t t
+      type nonrec comparator_witness = comparator_witness
+
+      let sexp_of_t = sexp_of_t
+      let t_of_sexp = t_of_sexp
+      let comparator = comparator
+    end
+
+    module Map = struct
+      type nonrec ('k, 'v) t = ('k t, 'v, comparator_witness) Map.t
+    end
+  end
+
+  let collate (type k) ~preprocess ~score ~query_is_as_strict ~to_result input query =
+    let empty_result =
+      Map.empty
+        (module Scored_key.M (struct
+             type t = k
+           end))
+    in
+    Bonsai.Incr.compute (Value.both input query) ~f:(fun input_and_query ->
+      let%pattern_bind.Ui_incr input, query = input_and_query in
+      let%bind.Ui_incr input = input in
+      let len = Map.length input in
+      let array = Uniform_array.unsafe_create_uninitialized ~len in
+      let () =
+        let index = ref 0 in
+        Map.iteri input ~f:(fun ~key ~data ->
+          Uniform_array.set array !index (key, data, preprocess ~key ~data);
+          incr index)
+      in
+      (* We keep track of an arbitrary number of queries. Each
+         time the query changes, we discard any queries for which the new query
+         is not merely a refinement of. In other words, we maintain the
+         invariant that each item in this list of queries is strictly more
+         general than the previous one. *)
+      let previous_queries = ref [] in
+      (* In addition, we also keep track of the index (from the back of the
+         list of queries, rather than the front, but this doesn't matter
+         because we never use the index to get an element out of the list)
+         of the first query that eliminated an item from the set of result. *)
+      let filtered_out_at_index = Array.create ~len Int.max_value in
+      let%map.Ui_incr query = query in
+      let rec trim_queries qs =
+        match qs with
+        | [] -> []
+        | q :: qs ->
+          if query_is_as_strict query ~as_:q then q :: qs else trim_queries qs
+      in
+      previous_queries := query :: trim_queries !previous_queries;
+      let num_queries = List.length !previous_queries in
+      Uniform_array.foldi
+        array
+        ~init:empty_result
+        ~f:(fun index acc (key, data, preprocessed) ->
+          let score =
+            (* If the item was already filtered out by a previous query, we can
+               keep filtering it out. If instead it was filtered out by a query
+               that have since discarded (or, possibly, it was never filtered
+               out), then we need to re-evaluate the score. *)
+            if filtered_out_at_index.(index) < num_queries
+            then 0
+            else (
+              let score = score query preprocessed in
+              filtered_out_at_index.(index)
+              <- (if score = 0 then num_queries else Int.max_value);
+              score)
+          in
+          if score = 0
+          then acc
+          else (
+            (* The first component of the key compares equivalently to the pair
+               (score, index), but faster, since it is only an integer. Note
+               that the map comparator doesn't need to inspect the key itself,
+               since [index] already captures that ordering. Thus, this whole
+               computation remains fast even if the input map comparator is
+               extremely slow. *)
+            let new_key = (len * score) + index, key in
+            Map.add_exn acc ~key:new_key ~data:(to_result preprocessed ~key ~data))))
+  ;;
+end

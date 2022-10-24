@@ -25,8 +25,9 @@ module Notification = struct
 end
 
 module Style =
-  [%css.raw
-    {|
+  [%css
+    stylesheet
+      {|
 .notification_container {
     position: fixed;
     bottom: 20px;
@@ -65,8 +66,9 @@ module Style =
 |}]
 
 module Notification_style =
-  [%css.raw
-    {|
+  [%css
+    stylesheet
+      {|
 .success {
     background-color: #00AB66;
 }

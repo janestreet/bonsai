@@ -81,7 +81,7 @@ let handle_event inject =
            })
 ;;
 
-module Style = [%css.raw {| .red { color: red } |}]
+module Style = [%css stylesheet {| .red { color: red } |}]
 
 let component =
   let%sub model_and_inject =

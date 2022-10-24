@@ -152,9 +152,6 @@ let%expect_test "column visibility" =
         <div>
           <div class="prt-table-row" onclick style={ height: 1px; width: 0.00px; }>
 
-                 style={
-                   height: 1px;
-                   min-height: 1px;
                    max-height: 1px;
                    width: 0.00px;
                    min-width: 0.00px;
@@ -168,11 +165,11 @@ let%expect_test "column visibility" =
                    height: 1px;
                    min-height: 1px;
                    max-height: 1px;
--|                 width: 0.00px;
--|                 min-width: 0.00px;
--|                 max-width: 0.00px;
-+|                 display: none;
+                   width: 0.00px;
+                   min-width: 0.00px;
+                   max-width: 0.00px;
 -|               }> 1.000000 </div>
++|                 display: none;
 +|               }> </div>
           </div>
           <div class="prt-table-row" onclick style={ height: 1px; width: 0.00px; }>
@@ -202,11 +199,11 @@ let%expect_test "column visibility" =
                    height: 1px;
                    min-height: 1px;
                    max-height: 1px;
--|                 width: 0.00px;
--|                 min-width: 0.00px;
--|                 max-width: 0.00px;
-+|                 display: none;
+                   width: 0.00px;
+                   min-width: 0.00px;
+                   max-width: 0.00px;
 -|               }> 2.000000 </div>
++|                 display: none;
 +|               }> </div>
           </div>
           <div class="prt-table-row" onclick style={ height: 1px; width: 0.00px; }>
@@ -236,11 +233,11 @@ let%expect_test "column visibility" =
                    height: 1px;
                    min-height: 1px;
                    max-height: 1px;
--|                 width: 0.00px;
--|                 min-width: 0.00px;
--|                 max-width: 0.00px;
-+|                 display: none;
+                   width: 0.00px;
+                   min-width: 0.00px;
+                   max-width: 0.00px;
 -|               }> 2.000000 </div>
++|                 display: none;
 +|               }> </div>
           </div>
         </div>
@@ -799,7 +796,7 @@ let%expect_test "table body is not recomputed more often than necessary" =
   (* Re-setting a column to its existing width should not cause a re-fire *)
   Test.resize_column test ~idx:0 ~width:1.;
   Handle.flush test.handle;
-  [%expect {||}];
+  [%expect {| |}];
   (* Re-setting the bounds to the same value should not cause a re-fire *)
   Test.set_bounds test ~low:0 ~high:300;
   Handle.flush test.handle;

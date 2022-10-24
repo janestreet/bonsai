@@ -103,6 +103,37 @@ let both_for_profunctor a b =
   { value; view; set }
 ;;
 
+let all forms =
+  let value = Or_error.all (List.map forms ~f:(fun a -> a.value)) in
+  let view = View.List (List.map forms ~f:(fun a -> a.view)) in
+  let set edits =
+    let paired, remainder = List.zip_with_remainder forms edits in
+    let error_message =
+      match remainder with
+      | None -> Effect.Ignore
+      | Some mismatch ->
+        let form_count = List.length forms in
+        let edits_count = List.length edits in
+        let print_warning detail resolution =
+          Effect.print_s
+            [%message
+              {|WARNING: Form.set called on result of Form.all with a list value whose length doesn't match the number of forms |}
+                detail
+                (form_count : int)
+                (edits_count : int)
+                resolution]
+        in
+        (match mismatch with
+         | First (_ : _ t list) ->
+           print_warning "more forms than values" "not setting left-over forms"
+         | Second (_ : _ list) ->
+           print_warning "more values than forms" "dropping left-over values")
+    in
+    Ui_effect.Many (error_message :: List.map paired ~f:(fun (a, edit) -> a.set edit))
+  in
+  { value; view; set }
+;;
+
 let label' label t = { t with view = View.set_label label t.view }
 let label text = label' (Vdom.Node.text text)
 let tooltip' tooltip t = { t with view = View.set_tooltip tooltip t.view }

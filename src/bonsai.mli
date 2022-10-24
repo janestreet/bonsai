@@ -24,8 +24,7 @@ type ('k, 'cmp) comparator = ('k, 'cmp) Module_types.comparator
     | 'a Value.t       |                        | let c = read v   |
     | 'a Computation.t | let%sub v = c          |                  |
 
-    v}
-*)
+    v} *)
 
 module Value : sig
   (** A value of type ['a Value.t] represents a value that may change during the lifetime
@@ -53,8 +52,7 @@ module Value : sig
         let open Let_syntax in
         let%map a = a and b = b in
         a + b
-      ]}
-  *)
+      ]} *)
   type 'a t
 
   include Applicative.S with type 'a t := 'a t
@@ -65,8 +63,7 @@ module Value : sig
 
       Immediate nesting of cutoff nodes are combined into a single cutoff node whose equality function is
       true when any of the composed nodes is true and is false when all of the composed nodes are false.
-      They're "or'ed together".
-  *)
+      They're "or'ed together". *)
   val cutoff : 'a t -> equal:('a -> 'a -> bool) -> 'a t
 end
 
@@ -127,8 +124,7 @@ module Computation : sig
         add a b
       ]}
 
-      Here, [a] and [b] always take on the same value.
-  *)
+      Here, [a] and [b] always take on the same value. *)
   type 'a t
 
   include Applicative.S with type 'a t := 'a t
@@ -237,14 +233,17 @@ val pure : ('a -> 'b) -> 'a Value.t -> 'b Computation.t
     helper-function implements that state-machine, providing access to the
     current state, as well as an inject function that updates the state. *)
 val state
-  :  (module Model with type t = 'model)
+  :  ?reset:('model -> 'model)
+  (** to learn more about [reset], read the docs on [with_model_resetter] *)
+  -> (module Model with type t = 'model)
   -> default_model:'model
   -> ('model * ('model -> unit Effect.t)) Computation.t
 
 (** Similar to [state], but stores an option of the model instead.
     [default_model] is optional and defaults to [None].  *)
 val state_opt
-  :  ?default_model:'model
+  :  ?reset:('model option -> 'model option)
+  -> ?default_model:'model
   -> (module Model with type t = 'model)
   -> ('model option * ('model option -> unit Effect.t)) Computation.t
 
@@ -263,7 +262,13 @@ val toggle : default_model:bool -> (bool * unit Effect.t) Computation.t
 
     (It is very common for [inject] and [schedule_event] to be unused) *)
 val state_machine0
-  :  (module Model with type t = 'model)
+  :  ?reset:
+    (inject:('action -> unit Effect.t)
+     -> schedule_event:(unit Effect.t -> unit)
+     -> 'model
+     -> 'model)
+  (** to learn more about [reset], read the docs on [with_model_resetter] *)
+  -> (module Model with type t = 'model)
   -> (module Action with type t = 'action)
   -> default_model:'model
   -> apply_action:
@@ -279,6 +284,12 @@ val state_machine0
 val state_machine1
   :  (module Model with type t = 'model)
   -> (module Action with type t = 'action)
+  -> ?reset:
+       (inject:('action -> unit Effect.t)
+        -> schedule_event:(unit Effect.t -> unit)
+        -> 'model
+        -> 'model)
+  (** to learn more about [reset], read the docs on [with_model_resetter] *)
   -> default_model:'model
   -> apply_action:
        (inject:('action -> unit Effect.t)
@@ -292,7 +303,13 @@ val state_machine1
 
 (** Identical to [actor1] but it takes 0 inputs instead of 1. *)
 val actor0
-  :  (module Model with type t = 'model)
+  :  ?reset:
+    (inject:('action -> 'return Effect.t)
+     -> schedule_event:(unit Effect.t -> unit)
+     -> 'model
+     -> 'model)
+  (** to learn more about [reset], read the docs on [with_model_resetter] *)
+  -> (module Model with type t = 'model)
   -> (module Action with type t = 'action)
   -> default_model:'model
   -> recv:
@@ -310,6 +327,12 @@ val actor0
 val actor1
   :  (module Model with type t = 'model)
   -> (module Action with type t = 'action)
+  -> ?reset:
+       (inject:('action -> 'return Effect.t)
+        -> schedule_event:(unit Effect.t -> unit)
+        -> 'model
+        -> 'model)
+  (** to learn more about [reset], read the docs on [with_model_resetter] *)
   -> default_model:'model
   -> recv:
        (schedule_event:(unit Effect.t -> unit)
@@ -438,7 +461,12 @@ val enum
     is that the [apply_action] for this outer-model has access to the result
     value of the Computation being wrapped. *)
 val wrap
-  :  (module Model with type t = 'model)
+  :  ?reset:
+    (inject:('action -> unit Effect.t)
+     -> schedule_event:(unit Effect.t -> unit)
+     -> 'model
+     -> 'model)
+  -> (module Model with type t = 'model)
   -> default_model:'model
   -> apply_action:
        (inject:('action -> unit Effect.t)
@@ -450,9 +478,11 @@ val wrap
   -> f:('model Value.t -> ('action -> unit Effect.t) Value.t -> 'result Computation.t)
   -> 'result Computation.t
 
-(** [with_model_resetter] extends a computation with the ability to reset the
-    state machine for that computation back to its default.  This can be useful
-    for e.g. clearing a form of all input values.*)
+(** [with_model_resetter] extends a computation with the ability to reset all of the
+    models for components contained in that computation.  The default behavior for
+    a stateful component is to have its model set to the value provided by
+    [default_model], though this behavior is overridable on a component-by-component
+    basis by providing a value for the optional [reset] argument on stateful components. *)
 val with_model_resetter : 'a Computation.t -> ('a * unit Effect.t) Computation.t
 
 (** like [with_model_resetter], but makes the resetting effect available to the
@@ -776,6 +806,12 @@ module Expert : sig
     :  (module Model with type t = 'model)
     -> (module Action with type t = 'dynamic_action)
     -> (module Action with type t = 'static_action)
+    -> ?reset:
+         (inject_dynamic:('dynamic_action -> unit Effect.t)
+          -> inject_static:('static_action -> unit Effect.t)
+          -> schedule_event:(unit Effect.t -> unit)
+          -> 'model
+          -> 'model)
     -> default_model:'model
     -> apply_dynamic:
          (inject_dynamic:('dynamic_action -> unit Effect.t)
@@ -815,6 +851,11 @@ module Expert : sig
   val race
     :  (module Model with type t = 'model)
     -> (module Action with type t = 'action)
+    -> ?reset:
+         (inject:('action -> unit Effect.t)
+          -> schedule_event:(unit Effect.t -> unit)
+          -> 'model
+          -> 'model)
     -> default_model:'model
     -> apply_action:
          (inject:('action -> unit Effect.t)

@@ -5,8 +5,9 @@ module Form = Bonsai_web_ui_form
 module E = Form.Elements
 
 module S =
-  [%css.raw
-    {|
+  [%css
+    stylesheet
+      {|
     .pill {
       padding: 2px;
       background-color: #d0d0d0;

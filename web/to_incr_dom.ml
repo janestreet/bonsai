@@ -116,7 +116,7 @@ let convert_with_extra ?(optimize = false) component =
   let fresh = Type_equal.Id.create ~name:"" sexp_of_opaque in
   let var = Bonsai.Private.(Value.named App_input fresh |> conceal_value) in
   let maybe_optimize = if optimize then Bonsai.Private.pre_process else Fn.id in
-  let (T { model; dynamic_action; static_action; apply_static; run }) =
+  let (T { model; dynamic_action; static_action; apply_static; run; reset = _ }) =
     component var
     |> Bonsai.Private.reveal_computation
     |> maybe_optimize

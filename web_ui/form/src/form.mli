@@ -117,6 +117,10 @@ val normalize : _ t -> unit Ui_effect.t
     inputs in tupled form. *)
 val both : 'a t -> 'b t -> ('a * 'b) t
 
+(** Combines a list of forms into another that produces all values from the inputs in
+    list form. *)
+val all : 'a t list -> 'a list t
+
 (** [project] is the powerhouse of the library; Using this function, you
     can change the type produced. Think of it like [map].
 

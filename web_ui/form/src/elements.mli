@@ -21,6 +21,12 @@ module Selectable_style : sig
   val barebones_button_like : t
 end
 
+module Non_interactive : sig
+  (** This form always contains the specified value. Setting the form has no
+      effect. In addition, one must specify how the form should look to the user. *)
+  val constant : Vdom.Node.t Value.t -> 'a Or_error.t Value.t -> 'a Form.t Computation.t
+end
+
 module Textbox : sig
   val string
     :  ?extra_attrs:Vdom.Attr.t list Value.t
@@ -313,6 +319,7 @@ module Radio_buttons : sig
   val list
     :  ?style:Selectable_style.t Value.t
     -> ?extra_attrs:Vdom.Attr.t list Value.t
+    -> ?init:'a
     -> ?to_string:('a -> string)
     -> (module Bonsai.Model with type t = 'a)
     -> layout:[ `Vertical | `Horizontal ]
@@ -322,6 +329,7 @@ module Radio_buttons : sig
   val enumerable
     :  ?style:Selectable_style.t Value.t
     -> ?extra_attrs:Vdom.Attr.t list Value.t
+    -> ?init:'a
     -> ?to_string:('a -> string)
     -> (module Bonsai.Enum with type t = 'a)
     -> layout:[ `Vertical | `Horizontal ]
@@ -434,7 +442,7 @@ module Rank : sig
 end
 
 module Query_box : sig
-  val stringable_opt
+  val create_opt
     :  (module Bonsai.Comparator with type comparator_witness = 'cmp and type t = 'k)
     -> ?initial_query:string
     -> ?max_visible_items:int Value.t
@@ -443,11 +451,12 @@ module Query_box : sig
     -> ?extra_list_container_attr:Vdom.Attr.t Value.t
     -> ?extra_input_attr:Vdom.Attr.t Value.t
     -> ?extra_attr:Vdom.Attr.t Value.t
-    -> ?to_view:('k -> string -> Vdom.Node.t)
-    -> ('k, string, 'cmp) Map_intf.Map.t Value.t
+    -> selection_to_string:('k -> string)
+    -> f:(string Value.t -> ('k, Vdom.Node.t, 'cmp) Map.t Computation.t)
+    -> unit
     -> 'k option Form.t Computation.t
 
-  val stringable
+  val create
     :  (module Bonsai.Comparator with type comparator_witness = 'cmp and type t = 'k)
     -> ?initial_query:string
     -> ?max_visible_items:int Value.t
@@ -456,7 +465,8 @@ module Query_box : sig
     -> ?extra_list_container_attr:Vdom.Attr.t Value.t
     -> ?extra_input_attr:Vdom.Attr.t Value.t
     -> ?extra_attr:Vdom.Attr.t Value.t
-    -> ?to_view:('k -> string -> Vdom.Node.t)
-    -> ('k, string, 'cmp) Map_intf.Map.t Value.t
+    -> selection_to_string:('k -> string)
+    -> f:(string Value.t -> ('k, Vdom.Node.t, 'cmp) Map.t Computation.t)
+    -> unit
     -> 'k Form.t Computation.t
 end

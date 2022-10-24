@@ -2,8 +2,9 @@ open! Core
 open! Bonsai_web
 
 include
-  [%css.raw
-    {|
+  [%css
+    stylesheet
+      {|
   html,
   body,
   .app {

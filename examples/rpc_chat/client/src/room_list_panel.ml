@@ -5,8 +5,9 @@ open Bonsai.Let_syntax
 open Bonsai_chat_common
 
 module Style =
-  [%css.raw
-    {|
+  [%css
+    stylesheet
+      {|
   .room_list_panel {
        width: 150px;
        display:flex;

@@ -91,11 +91,17 @@ val view
 
     Grammar fields tagged with key [Ppx_sexp_conv_lib.Sexp_grammar.doc_comment_tag] will
     be converted into tooltips. This tag is added automatically to doc comments on types
-    which derive [sexp_grammar] with the [~tags_of_doc_comments] option. *)
+    which derive [sexp_grammar] with the [~tags_of_doc_comments] option.
+
+    If [textbox_for_string] is supplied, string inputs will be textboxes rather than
+    textareas (meaning the form can be submitted with Enter when those fields are active,
+    but users will not be able to input multiline strings).
+*)
 val form
   :  (module S with type t = 'a)
   -> ?on_set_error:(Sexp.t -> unit Effect.t)
   -> ?customizations:form_transformer Customization.t list
+  -> ?textbox_for_string:unit
   -> unit
   -> 'a Form.t Computation.t
 
@@ -105,6 +111,7 @@ val form
 val form'
   :  ?on_set_error:(Sexp.t -> unit Effect.t)
   -> ?customizations:form_transformer Customization.t list
+  -> ?textbox_for_string:unit
   -> Sexp_grammar.grammar Value.t
   -> Sexp.t Form.t Computation.t
 

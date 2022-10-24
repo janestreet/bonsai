@@ -12,8 +12,9 @@ type t =
 let default = { size = 24; stroke_width = 2.; stroke = `Hex "#000000"; fill = None }
 
 module Range =
-  [%css.raw
-    {|
+  [%css
+    stylesheet
+      {|
 .class_ {
   height: 4px;
   cursor: pointer;
@@ -44,8 +45,8 @@ let stroke_width_slider =
 ;;
 
 module Color_input =
-  [%css.raw
-    {|
+  [%css
+    stylesheet {|
 .class_ {
   cursor: pointer;
   height: 3em;
@@ -65,8 +66,9 @@ let color_input ?(display = Value.return true) () =
 ;;
 
 module Style =
-  [%css.raw
-    {|
+  [%css
+    stylesheet
+      {|
 .header {
   display: flex;
   justify-content: space-between;
@@ -104,8 +106,8 @@ module Fill = struct
     }
 
   module Fill =
-    [%css.raw
-      {|
+    [%css
+      stylesheet {|
 .class_ {
   display: flex;
   justify-content: space-between;

@@ -4,7 +4,7 @@ open! Bonsai_web
 open Bonsai.Let_syntax
 open Bonsai_chat_common
 
-module Style = [%css.raw {|
+module Style = [%css stylesheet {|
   .messages_list {
     flex: 1;
   }

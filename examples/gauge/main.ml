@@ -5,8 +5,9 @@ module Gauge = Bonsai_web_ui_gauge
 open Vdom
 
 module Styles =
-  [%css.raw
-    {|
+  [%css
+    stylesheet
+      {|
 html {
   font-family: "Open Sans", "Noto Color Emoji", sans-serif;
 }

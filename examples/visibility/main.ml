@@ -4,8 +4,9 @@ open! Bonsai.Let_syntax
 module Vis = Bonsai_web_ui_visibility
 
 module Style =
-  [%css.raw
-    {|
+  [%css
+    stylesheet
+      {|
 
   body {
     font-family: sans-serif;

@@ -202,8 +202,9 @@ module Interactive_vbox = struct
   ;;
 
   module Style =
-    [%css.raw
-      {|
+    [%css
+      stylesheet
+        {|
     .controls {
       background: white;
       border-radius: 3px;

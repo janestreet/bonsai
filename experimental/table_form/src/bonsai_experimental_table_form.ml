@@ -12,8 +12,9 @@ module type S = sig
 end
 
 module Style =
-  [%css.raw
-    {|
+  [%css
+    stylesheet
+      {|
 .key_column {
   white-space: pre;
 }

@@ -4,8 +4,9 @@ open Bonsai.Let_syntax
 module Reorderable_list = Bonsai_web_ui_reorderable_list
 
 module S =
-  [%css.raw
-    {|
+  [%css
+    stylesheet
+      {|
   .item {
     background-color: green;
     color: white;

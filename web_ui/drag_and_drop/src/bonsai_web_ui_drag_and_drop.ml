@@ -4,8 +4,9 @@ open Bonsai.Let_syntax
 open Js_of_ocaml
 
 module Style =
-  [%css.raw
-    {|
+  [%css
+    stylesheet
+      {|
   .no_select {
     user-select: none;
   }

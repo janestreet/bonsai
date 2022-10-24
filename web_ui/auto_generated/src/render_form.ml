@@ -6,8 +6,9 @@ open Bonsai_web_ui_form.View.Private
 
 module Tooltip = struct
   module Style =
-    [%css.raw
-      {|
+    [%css
+      stylesheet
+        {|
         .container {
           position: relative;
           display: inline-block;
@@ -43,8 +44,16 @@ module Tooltip = struct
 end
 
 module Style =
-  [%css.raw
-    {|
+  [%css
+    stylesheet
+      ~rewrite:
+        [ "--font-family", "--font-family"
+        ; "--font-size", "--font-size"
+        ; "--accent-h", "--accent-h"
+        ; "--accent-s", "--accent-s"
+        ; "--accent-l", "--accent-l"
+        ]
+      {|
       .form {
         --font-size: 12px;
         --font-family: monospace;

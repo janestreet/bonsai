@@ -28,12 +28,20 @@ module Computation = struct
     -> inject_static:('static_action -> unit Effect.t)
     -> ('model, 'dynamic_action, 'result) Snapshot.t
 
+  type ('dynamic_action, 'static_action, 'model) reset =
+    inject_dynamic:('dynamic_action -> unit Effect.t)
+    -> inject_static:('static_action -> unit Effect.t)
+    -> schedule_event:(unit Effect.t -> unit)
+    -> 'model
+    -> 'model
+
   type ('model, 'dynamic_action, 'static_action, 'result) info =
     { model : 'model Meta.Model.t
     ; dynamic_action : 'dynamic_action Meta.Action.t
     ; static_action : 'static_action Meta.Action.t
     ; apply_static : ('dynamic_action, 'static_action, 'model) static_apply_action
     ; run : ('model, 'dynamic_action, 'static_action, 'result) eval_fun
+    ; reset : ('dynamic_action, 'static_action, 'model) reset
     }
 
   type 'result packed_info = T : (_, _, _, 'result) info -> 'result packed_info
@@ -47,6 +55,7 @@ module Computation = struct
         ; apply_dynamic :
             ('input, 'dynamic_action, 'static_action, 'model) dynamic_apply_action
         ; apply_static : ('dynamic_action, 'static_action, 'model) static_apply_action
+        ; reset : ('dynamic_action, 'static_action, 'model) reset
         ; input : 'input Value.t
         }
         -> ('model
@@ -57,6 +66,7 @@ module Computation = struct
         { model : 'model Meta.Model.t
         ; dynamic_action : 'dynamic_action Meta.Action.t
         ; apply_action : ('input, 'dynamic_action, Nothing.t, 'model) dynamic_apply_action
+        ; reset : ('dynamic_action, Nothing.t, 'model) reset
         ; input : 'input Value.t
         }
         -> ('model * ('dynamic_action -> unit Effect.t)) kind
@@ -64,6 +74,7 @@ module Computation = struct
         { model : 'model Meta.Model.t
         ; static_action : 'static_action Meta.Action.t
         ; apply_action : (Nothing.t, 'static_action, 'model) static_apply_action
+        ; reset : (Nothing.t, 'static_action, 'model) reset
         ; compute : inject:('static_action -> unit Effect.t) -> 'model -> 'result
         }
         -> 'result kind
@@ -71,6 +82,7 @@ module Computation = struct
         { model : 'model Meta.Model.t
         ; dynamic_action : 'dynamic_action Meta.Action.t
         ; input : 'input Value.t
+        ; reset : ('dynamic_action, Nothing.t, 'model) reset
         ; apply_dynamic :
             'input Incr.t
             -> inject:('dynamic_action -> unit Effect.t)
@@ -147,6 +159,7 @@ module Computation = struct
         ; inner : 'result t
         ; dynamic_apply_action :
             ('result, 'outer_dynamic_action, Nothing.t, 'outer_model) dynamic_apply_action
+        ; reset : ('outer_dynamic_action, Nothing.t, 'outer_model) reset
         }
         -> 'result kind
     | With_model_resetter :
@@ -216,6 +229,22 @@ module Proc_min (G : Gather_impl) = struct
     Switch { match_; arms } |> wrap_computation
   ;;
 
+  let reset_to_default
+        ~default_model
+        ~inject_dynamic:_
+        ~inject_static:_
+        ~schedule_event:_
+        _prev_model
+    =
+    default_model
+  ;;
+
+  let build_resetter reset ~default_model ~f =
+    let ignore_absurd : (Nothing.t -> 'a) -> unit = ignore in
+    Option.value_map reset ~default:(reset_to_default ~default_model) ~f:(fun a ->
+      f ~ignore_absurd a)
+  ;;
+
   module Proc_incr = struct
     let value_cutoff t ~equal = read (Value.cutoff ~added_by_let_syntax:false ~equal t)
     let model_cutoff t = Model_cutoff t |> wrap_computation
@@ -230,6 +259,7 @@ module Proc_min (G : Gather_impl) = struct
         ; dynamic_action = Meta.Action.nothing
         ; input = t
         ; apply_dynamic = dynamic_apply_action
+        ; reset = reset_unit_model
         ; compute
         }
       |> wrap_computation
@@ -251,6 +281,7 @@ module Proc_min (G : Gather_impl) = struct
         ; dynamic_action = Meta.Action.of_module (module M.Action) ~name:M.name
         ; input
         ; apply_dynamic = M.apply_action
+        ; reset = reset_to_default ~default_model
         ; compute = (fun _ -> M.compute)
         }
       |> wrap_computation
@@ -270,11 +301,13 @@ module Proc_min (G : Gather_impl) = struct
         model
         dynamic_action
         static_action
+        ?reset
         ~default_model
         ~apply_dynamic
         ~apply_static
         input
     =
+    let reset = Option.value reset ~default:(reset_to_default ~default_model) in
     let name = Source_code_position.to_string [%here] in
     Leaf01
       { model = Meta.Model.of_module model ~name ~default:default_model
@@ -283,12 +316,21 @@ module Proc_min (G : Gather_impl) = struct
       ; apply_dynamic
       ; apply_static
       ; input
+      ; reset
       }
     |> wrap_computation
   ;;
 
-  let state_machine1 model dynamic_action ~default_model ~apply_action input =
+  let state_machine1 model dynamic_action ?reset ~default_model ~apply_action input =
     let name = Source_code_position.to_string [%here] in
+    let reset =
+      build_resetter
+        reset
+        ~default_model
+        ~f:(fun ~ignore_absurd reset ~inject_dynamic ~inject_static ->
+          ignore_absurd inject_static;
+          reset ~inject:inject_dynamic)
+    in
     let apply_action ~inject_dynamic ~inject_static:_ =
       apply_action ~inject:inject_dynamic
     in
@@ -296,20 +338,30 @@ module Proc_min (G : Gather_impl) = struct
       { model = Meta.Model.of_module model ~name ~default:default_model
       ; dynamic_action = Meta.Action.of_module dynamic_action ~name
       ; apply_action
+      ; reset
       ; input
       }
     |> wrap_computation
   ;;
 
-  let state_machine0 model static_action ~default_model ~apply_action =
+  let state_machine0 ?reset model static_action ~default_model ~apply_action =
     let name = Source_code_position.to_string [%here] in
     let apply_action ~inject_dynamic:_ ~inject_static =
       apply_action ~inject:inject_static
+    in
+    let reset =
+      build_resetter
+        reset
+        ~default_model
+        ~f:(fun ~ignore_absurd reset ~inject_dynamic ~inject_static ->
+          ignore_absurd inject_dynamic;
+          reset ~inject:inject_static)
     in
     Leaf0
       { model = Meta.Model.of_module model ~name ~default:default_model
       ; static_action = Meta.Action.of_module static_action ~name
       ; apply_action
+      ; reset
       ; compute = (fun ~inject model -> model, inject)
       }
     |> wrap_computation
@@ -377,7 +429,7 @@ module Proc_min (G : Gather_impl) = struct
 
   let lazy_ t = Lazy t |> wrap_computation
 
-  let wrap (type model action) model_module ~default_model ~apply_action ~f =
+  let wrap (type model action) ?reset model_module ~default_model ~apply_action ~f =
     let apply_action ~inject_static:_ = apply_action in
     let model_id : model Type_equal.Id.t =
       Type_equal.Id.create ~name:"model id" [%sexp_of: opaque]
@@ -387,6 +439,14 @@ module Proc_min (G : Gather_impl) = struct
 
       let sexp_of_t = [%sexp_of: opaque]
     end
+    in
+    let reset =
+      build_resetter
+        reset
+        ~default_model
+        ~f:(fun ~ignore_absurd reset ~inject_dynamic ~inject_static ->
+          ignore_absurd inject_static;
+          reset ~inject:inject_dynamic)
     in
     let action_id = Meta.Action.of_module (module M) ~name:"action id" in
     let inject_id : (action -> unit Effect.t) Type_equal.Id.t =
@@ -409,6 +469,7 @@ module Proc_min (G : Gather_impl) = struct
       ; model_id
       ; inner
       ; dynamic_apply_action = apply_action
+      ; reset
       }
     |> wrap_computation
   ;;

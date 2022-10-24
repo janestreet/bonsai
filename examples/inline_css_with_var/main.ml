@@ -2,8 +2,9 @@ open! Core
 open! Bonsai_web
 
 module Style =
-  [%css.raw
-    {|
+  [%css
+    stylesheet
+      {|
   .box {
     width:  100px;
     height: 100px;
@@ -11,7 +12,8 @@ module Style =
     border-radius: var(--radius);
     border: 3px solid black;
   }
-|}]
+|}
+      ~rewrite:[ "--my-color", "--my-color"; "--radius", "--radius" ]]
 
 let component =
   let red_box =
@@ -19,8 +21,7 @@ let component =
       ~attr:
         (Vdom.Attr.many
            [ Vdom.Attr.class_ Style.box
-           ; Vdom.Attr.css_var ~name:"radius" "30px"
-           ; Vdom.Attr.css_var ~name:"my-color" "red"
+           ; Style.Variables.set ~my_color:"red" ~radius:"30px" ()
            ])
       []
   in
@@ -28,10 +29,10 @@ let component =
     Vdom.Node.div
       ~attr:
         (Vdom.Attr.many
-           [ Vdom.Attr.class_ Style.box; Vdom.Attr.css_var ~name:"radius" "10px" ])
+           [ Vdom.Attr.class_ Style.box; Style.Variables.set ~radius:"10px" () ])
       []
   in
-  Vdom.Node.div ~attr:(Vdom.Attr.css_var ~name:"my-color" "green") [ red_box; blue_box ]
+  Vdom.Node.div ~attr:(Style.Variables.set ~my_color:"green" ()) [ red_box; blue_box ]
 ;;
 
 let (_ : _ Start.Handle.t) =

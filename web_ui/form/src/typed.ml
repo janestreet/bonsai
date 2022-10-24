@@ -82,7 +82,8 @@ module Variant = struct
 
   let make
         (type a)
-        ?(picker = `Dropdown `Init_with_first_item)
+        ?(picker = `Dropdown)
+        ?(init = `First_item)
         ?picker_attr
         (module M : S with type Typed_variant.derived_on = a)
     =
@@ -99,23 +100,13 @@ module Variant = struct
     in
     let%sub picker =
       match picker with
-      | `Dropdown default_case ->
+      | `Dropdown ->
         Elements.Dropdown.enumerable
           ?to_string
           ~init:
-            (match default_case with
-             | `Init_with_second_item ->
-               (* This is not exposed, given only for make_optional below *)
-               (match M.Typed_variant.Packed.all with
-                | [ item ] (* Provided an empty type *) | _ :: item :: _ ->
-                  `This (Value.return item)
-                | [] ->
-                  raise_s
-                    [%message
-                      "Got `Init_with_second_item even though M.Typed_variant.Packed.all \
-                       is empty"])
-             | `Init_with_first_item -> `First_item
-             | `Init_with_empty -> `Empty)
+            (match init with
+             | `First_item -> `First_item
+             | `Empty -> `Empty)
           ~extra_attrs
           (module struct
             include M.Typed_variant.Packed
@@ -123,7 +114,14 @@ module Variant = struct
             let equal = [%compare.equal: t]
           end)
       | `Radio layout ->
+        let init =
+          match init with
+          | `First_item -> List.hd M.Typed_variant.Packed.all
+          | `Empty -> None
+        in
         Elements.Radio_buttons.enumerable
+          ?to_string
+          ?init
           ~extra_attrs
           ~layout
           (module struct
@@ -185,7 +183,8 @@ module Variant = struct
 
   let make_optional
         (type a)
-        ?(picker = `Dropdown)
+        ?picker
+        ?init
         ?picker_attr
         ?(empty_label = "(none)")
         (module M : S with type Typed_variant.derived_on = a)
@@ -221,13 +220,7 @@ module Variant = struct
       ;;
     end
     in
-    let picker =
-      match picker with
-      | `Dropdown -> `Dropdown `Init_with_first_item
-      | `Radio `Vertical -> `Radio `Vertical
-      | `Radio `Horizontal -> `Radio `Horizontal
-    in
-    make ~picker ?picker_attr (module Transformed)
+    make ?picker ?init ?picker_attr (module Transformed)
     |> Computation.map
          ~f:
            (Form.project

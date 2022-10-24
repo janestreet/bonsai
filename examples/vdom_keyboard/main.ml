@@ -4,8 +4,9 @@ open Bonsai.Let_syntax
 open Vdom_keyboard
 
 module Css =
-  [%css.raw
-    {|
+  [%css
+    stylesheet
+      {|
   .block {
     position: absolute;
     width: 200px;

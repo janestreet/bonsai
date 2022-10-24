@@ -62,6 +62,24 @@ let verbose_form_result_spec (type a) sexp_of_a : (a Form.t, a) Result_spec.t =
   end)
 ;;
 
+let%expect_test "setting a constant form does nothing" =
+  let component =
+    Form.Elements.Non_interactive.constant
+      (Value.return (Vdom.Node.text "test"))
+      (Value.return (Ok "test"))
+  in
+  let handle = Handle.create (form_result_spec [%sexp_of: string]) component in
+  Handle.show handle;
+  [%expect
+    {|
+    (Ok test)
+
+    ==============
+    <div id="bonsai_path_replaced_in_test"> test </div> |}];
+  Handle.do_actions handle [ "not test" ];
+  Handle.show_diff handle
+;;
+
 let%expect_test "typing into a string textbox" =
   let component = Form.Elements.Textbox.string () in
   let handle = Handle.create (form_result_spec [%sexp_of: string]) component in
@@ -403,7 +421,7 @@ let%expect_test "typing into a int textbox" =
   Handle.show handle;
   [%expect
     {|
-    (Error "Expecting an integer")
+    (Error "Expected an integer")
 
     ==============
     <input type="text"
@@ -416,7 +434,7 @@ let%expect_test "typing into a int textbox" =
   Handle.show_diff handle;
   [%expect
     {|
-    -|(Error "Expecting an integer")
+    -|(Error "Expected an integer")
     +|(Ok 123)
 
       ==============
@@ -432,7 +450,7 @@ let%expect_test "typing into a int textbox" =
   [%expect
     {|
     -|(Ok 123)
-    +|(Error "Expecting an integer")
+    +|(Error "Expected an integer")
 
       ==============
       <input type="text"
@@ -450,7 +468,7 @@ let%expect_test "setting into a int textbox" =
   Handle.show handle;
   [%expect
     {|
-    (Error "Expecting an integer")
+    (Error "Expected an integer")
 
     ==============
     <input type="text"
@@ -463,7 +481,7 @@ let%expect_test "setting into a int textbox" =
   Handle.show_diff handle;
   [%expect
     {|
-    -|(Error "Expecting an integer")
+    -|(Error "Expected an integer")
     +|(Ok 123)
 
       ==============
@@ -488,7 +506,7 @@ let%expect_test "typing into a paired string textbox * int textbox " =
   Handle.show handle;
   [%expect
     {|
-    (Error "Expecting an integer")
+    (Error "Expected an integer")
 
     ==============
     <div>
@@ -510,7 +528,7 @@ let%expect_test "typing into a paired string textbox * int textbox " =
   Handle.show_diff handle;
   [%expect
     {|
-    -|(Error "Expecting an integer")
+    -|(Error "Expected an integer")
     +|(Ok ("hello world" 123))
 
       ==============
@@ -544,7 +562,7 @@ let%expect_test "setting into a paired string textbox * int textbox " =
   Handle.show handle;
   [%expect
     {|
-    (Error "Expecting an integer")
+    (Error "Expected an integer")
 
     ==============
     <div>
@@ -565,7 +583,7 @@ let%expect_test "setting into a paired string textbox * int textbox " =
   Handle.show_diff handle;
   [%expect
     {|
-    -|(Error "Expecting an integer")
+    -|(Error "Expected an integer")
     +|(Ok ("hello world" 123))
 
       ==============
@@ -583,6 +601,233 @@ let%expect_test "setting into a paired string textbox * int textbox " =
                id="bonsai_path_replaced_in_test"
     -|         value:normalized=""
     +|         value:normalized=123
+               oninput> </input>
+      </div> |}]
+;;
+
+let%expect_test "typing into a list of string textboxes " =
+  let component =
+    let%sub string_forms =
+      List.init 3 ~f:(fun _ -> Form.Elements.Textbox.string ()) |> Computation.all
+    in
+    let%arr string_forms = string_forms in
+    Form.all string_forms
+  in
+  let handle = Handle.create (form_result_spec [%sexp_of: string list]) component in
+  Handle.show handle;
+  [%expect
+    {|
+    (Ok ("" "" ""))
+
+    ==============
+    <div>
+      <input type="text"
+             placeholder=""
+             spellcheck="false"
+             id="bonsai_path_replaced_in_test"
+             value:normalized=""
+             oninput> </input>
+      <input type="text"
+             placeholder=""
+             spellcheck="false"
+             id="bonsai_path_replaced_in_test"
+             value:normalized=""
+             oninput> </input>
+      <input type="text"
+             placeholder=""
+             spellcheck="false"
+             id="bonsai_path_replaced_in_test"
+             value:normalized=""
+             oninput> </input>
+    </div> |}];
+  Handle.input_text handle ~get_vdom ~selector:"input:nth-child(1)" ~text:"hello world";
+  Handle.input_text handle ~get_vdom ~selector:"input:nth-child(2)" ~text:"quack";
+  Handle.show_diff handle;
+  [%expect
+    {|
+    -|(Ok ("" "" ""))
+    +|(Ok ("hello world" quack ""))
+
+      ==============
+      <div>
+        <input type="text"
+               placeholder=""
+               spellcheck="false"
+               id="bonsai_path_replaced_in_test"
+    -|         value:normalized=""
+    +|         value:normalized="hello world"
+               oninput> </input>
+        <input type="text"
+               placeholder=""
+               spellcheck="false"
+               id="bonsai_path_replaced_in_test"
+    -|         value:normalized=""
+    +|         value:normalized=quack
+               oninput> </input>
+        <input type="text"
+               placeholder=""
+               spellcheck="false"
+               id="bonsai_path_replaced_in_test"
+               value:normalized=""
+               oninput> </input>
+      </div> |}]
+;;
+
+let%expect_test "setting into a list of string textboxes " =
+  let component =
+    let%sub string_forms =
+      List.init 3 ~f:(fun _ -> Form.Elements.Textbox.string ()) |> Computation.all
+    in
+    let%arr string_forms = string_forms in
+    Form.all string_forms
+  in
+  let handle = Handle.create (form_result_spec [%sexp_of: string list]) component in
+  Handle.show handle;
+  [%expect
+    {|
+    (Ok ("" "" ""))
+
+    ==============
+    <div>
+      <input type="text"
+             placeholder=""
+             spellcheck="false"
+             id="bonsai_path_replaced_in_test"
+             value:normalized=""
+             oninput> </input>
+      <input type="text"
+             placeholder=""
+             spellcheck="false"
+             id="bonsai_path_replaced_in_test"
+             value:normalized=""
+             oninput> </input>
+      <input type="text"
+             placeholder=""
+             spellcheck="false"
+             id="bonsai_path_replaced_in_test"
+             value:normalized=""
+             oninput> </input>
+    </div> |}];
+  Handle.do_actions handle [ [ "hello world"; "quack"; "" ] ];
+  Handle.show_diff handle;
+  [%expect
+    {|
+    -|(Ok ("" "" ""))
+    +|(Ok ("hello world" quack ""))
+
+      ==============
+      <div>
+        <input type="text"
+               placeholder=""
+               spellcheck="false"
+               id="bonsai_path_replaced_in_test"
+    -|         value:normalized=""
+    +|         value:normalized="hello world"
+               oninput> </input>
+        <input type="text"
+               placeholder=""
+               spellcheck="false"
+               id="bonsai_path_replaced_in_test"
+    -|         value:normalized=""
+    +|         value:normalized=quack
+               oninput> </input>
+        <input type="text"
+               placeholder=""
+               spellcheck="false"
+               id="bonsai_path_replaced_in_test"
+               value:normalized=""
+               oninput> </input>
+      </div> |}]
+;;
+
+let%expect_test "setting into a list of string textboxes (more values than forms)" =
+  let component =
+    let%sub string_forms =
+      List.init 3 ~f:(fun _ -> Form.Elements.Textbox.string ()) |> Computation.all
+    in
+    let%arr string_forms = string_forms in
+    Form.all string_forms
+  in
+  let handle = Handle.create (form_result_spec [%sexp_of: string list]) component in
+  Handle.store_view handle;
+  Handle.do_actions handle [ [ "hello world"; "quack"; ""; "oh no" ] ];
+  Handle.show_diff handle;
+  [%expect
+    {|
+    ("WARNING: Form.set called on result of Form.all with a list value whose length doesn't match the number of forms "
+     "more values than forms" (form_count 3) (edits_count 4)
+     "dropping left-over values")
+
+    -|(Ok ("" "" ""))
+    +|(Ok ("hello world" quack ""))
+
+      ==============
+      <div>
+        <input type="text"
+               placeholder=""
+               spellcheck="false"
+               id="bonsai_path_replaced_in_test"
+    -|         value:normalized=""
+    +|         value:normalized="hello world"
+               oninput> </input>
+        <input type="text"
+               placeholder=""
+               spellcheck="false"
+               id="bonsai_path_replaced_in_test"
+    -|         value:normalized=""
+    +|         value:normalized=quack
+               oninput> </input>
+        <input type="text"
+               placeholder=""
+               spellcheck="false"
+               id="bonsai_path_replaced_in_test"
+               value:normalized=""
+               oninput> </input>
+      </div> |}]
+;;
+
+let%expect_test "setting into a list of string textboxes (more forms than values)" =
+  let component =
+    let%sub string_forms =
+      List.init 3 ~f:(fun _ -> Form.Elements.Textbox.string ()) |> Computation.all
+    in
+    let%arr string_forms = string_forms in
+    Form.all string_forms
+  in
+  let handle = Handle.create (form_result_spec [%sexp_of: string list]) component in
+  Handle.store_view handle;
+  Handle.do_actions handle [ [ "hello world"; "quack" ] ];
+  Handle.show_diff handle;
+  [%expect
+    {|
+    ("WARNING: Form.set called on result of Form.all with a list value whose length doesn't match the number of forms "
+     "more forms than values" (form_count 3) (edits_count 2)
+     "not setting left-over forms")
+
+    -|(Ok ("" "" ""))
+    +|(Ok ("hello world" quack ""))
+
+      ==============
+      <div>
+        <input type="text"
+               placeholder=""
+               spellcheck="false"
+               id="bonsai_path_replaced_in_test"
+    -|         value:normalized=""
+    +|         value:normalized="hello world"
+               oninput> </input>
+        <input type="text"
+               placeholder=""
+               spellcheck="false"
+               id="bonsai_path_replaced_in_test"
+    -|         value:normalized=""
+    +|         value:normalized=quack
+               oninput> </input>
+        <input type="text"
+               placeholder=""
+               spellcheck="false"
+               id="bonsai_path_replaced_in_test"
+               value:normalized=""
                oninput> </input>
       </div> |}]
 ;;
@@ -2497,8 +2742,8 @@ let%expect_test "form of nested record of int and float" =
     {|
     (Error (
       "in field nested"
-      ("in field age" "Expecting an integer")
-      ("in field height" (Invalid_argument "Float.of_string "))))
+      ("in field age" "Expected an integer")
+      ("in field height" "Expected a floating point number")))
 
     ==============
     <div>
@@ -2596,8 +2841,8 @@ let%expect_test "form of nested record of int and float (typed fields)" =
     {|
     (Error (
       "in field nested"
-      ("in field age" "Expecting an integer")
-      ("in field height" (Invalid_argument "Float.of_string "))))
+      ("in field age" "Expected an integer")
+      ("in field height" "Expected a floating point number")))
 
     ==============
     <div>
@@ -2738,8 +2983,8 @@ let%expect_test "typed records labelling overrides defaults" =
     {|
     (Error (
       "in field A complex nested record"
-      ("in field age" "Expecting an integer")
-      ("in field height" (Invalid_argument "Float.of_string "))))
+      ("in field age" "Expected an integer")
+      ("in field height" "Expected a floating point number")))
 
     ==============
     <table>
@@ -2829,7 +3074,7 @@ let%expect_test "typed variants recursive" =
   Handle.show handle;
   [%expect
     {|
-    (Error "Expecting an integer")
+    (Error "Expected an integer")
 
     ==============
     <div>
@@ -2862,7 +3107,7 @@ let%expect_test "typed variants recursive" =
   Handle.show_diff handle;
   [%expect
     {|
-    -|(Error "Expecting an integer")
+    -|(Error "Expected an integer")
     +|(Ok (Cons 123 Nil))
 
       ==============
@@ -2941,7 +3186,7 @@ let%expect_test "typed variants" =
   Handle.show handle;
   [%expect
     {|
-    (Error "Expecting an integer")
+    (Error "Expected an integer")
 
     ==============
     <div>
@@ -2966,7 +3211,7 @@ let%expect_test "typed variants" =
   Handle.show_diff handle;
   [%expect
     {|
-    -|(Error "Expecting an integer")
+    -|(Error "Expected an integer")
     +|(Ok (Integer 123))
 
       ==============
@@ -3084,7 +3329,7 @@ let%expect_test "typed optional variants" =
   Handle.show handle;
   [%expect
     {|
-    (Error "Expecting an integer")
+    (Error "Expected an integer")
 
     ==============
     <div>
@@ -3110,7 +3355,7 @@ let%expect_test "typed optional variants" =
   Handle.show_diff handle;
   [%expect
     {|
-    -|(Error "Expecting an integer")
+    -|(Error "Expected an integer")
     +|(Ok ((Integer 123)))
 
       ==============
@@ -3305,6 +3550,7 @@ let%expect_test "typed variants: radio vertical" =
     let form =
       Form.Typed.Variant.make
         ~picker:(`Radio `Vertical)
+        ~init:`Empty
         ~picker_attr:(Value.return (Vdom.Attr.class_ "foo"))
         (module struct
           module Typed_variant = Typed_variant
@@ -3378,6 +3624,7 @@ let%expect_test "typed variants: radio horizontal" =
     let form =
       Form.Typed.Variant.make
         ~picker:(`Radio `Horizontal)
+        ~init:`Empty
         ~picker_attr:(Value.return (Vdom.Attr.class_ "foo"))
         (module struct
           module Typed_variant = Typed_variant
@@ -3446,7 +3693,8 @@ let%expect_test "typed variants: dropdown with initially empty picker" =
 
     let form =
       Form.Typed.Variant.make
-        ~picker:(`Dropdown `Init_with_empty)
+        ~picker:`Dropdown
+        ~init:`Empty
         ~picker_attr:(Value.return (Vdom.Attr.class_ "foo"))
         (module struct
           module Typed_variant = Typed_variant
@@ -3721,7 +3969,7 @@ let%expect_test "both button and on-submit are disabled when the form doesn't va
   Handle.show handle;
   [%expect
     {|
-    (Error "Expecting an integer")
+    (Error "Expected an integer")
 
     ==============
     <form onsubmit>
@@ -3755,7 +4003,7 @@ let%expect_test "both button and on-submit are disabled when the form doesn't va
   Handle.show_diff handle;
   [%expect
     {|
-    -|(Error "Expecting an integer")
+    -|(Error "Expected an integer")
     +|(Ok 123)
 
       ==============
@@ -3974,10 +4222,22 @@ let%expect_test "slider input" =
     20 |}]
 ;;
 
-let%expect_test "slider input" =
+let%expect_test "query box" =
   let var = Bonsai.Var.create (String.Map.of_alist_exn [ "abc", "abc"; "def", "def" ]) in
   let value = Bonsai.Var.value var in
-  let component = Form.Elements.Query_box.stringable (module String) value in
+  let component =
+    Form.Elements.Query_box.create
+      (module String)
+      ~selection_to_string:Fn.id
+      ~f:(fun query ->
+        let%arr query = query
+        and value = value in
+        Map.filter_map value ~f:(fun data ->
+          if String.is_prefix ~prefix:query data
+          then Some (Vdom.Node.text data)
+          else None))
+      ()
+  in
   let get_vdom =
     get_vdom_verbose
       ~on_submit:
@@ -4007,12 +4267,9 @@ let%expect_test "slider input" =
             <td>  </td>
             <td>
               <div>
-                <div style={ color: gray; }> Nothing selected </div>
+                <input> </input>
                 <div>
-                  <input> </input>
-                  <div>
-                    <div> </div>
-                  </div>
+                  <div> </div>
                 </div>
               </div>
             </td>
@@ -4038,48 +4295,16 @@ let%expect_test "slider input" =
               <td>  </td>
               <td>
                 <div>
-    -|            <div style={ color: gray; }> Nothing selected </div>
-    +|            <div> abc </div>
+                  <input> </input>
                   <div>
-                    <input> </input>
-                    <div>
-                      <div> </div>
-                    </div>
+                    <div> </div>
                   </div>
                 </div>
               </td>
-            </tr>
-          </tbody>
-        </table>
-      </form> |}];
+            </tr> |}];
   Bonsai.Var.update var ~f:(fun map -> Map.remove (map : _ String.Map.t) "abc");
   Handle.show_diff handle;
-  [%expect
-    {|
-      (Ok abc)
-
-      ==============
-      <form>
-        <table>
-          <tbody>
-            <tr>
-              <td>  </td>
-              <td>
-                <div>
-    -|            <div> abc </div>
-    +|            <div style={ color: red; }> Selected item is not an input option </div>
-                  <div>
-                    <input> </input>
-                    <div>
-                      <div> </div>
-                    </div>
-                  </div>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </form> |}]
+  [%expect {| |}]
 ;;
 
 let%expect_test "add tooltip to form" =
@@ -4434,7 +4659,7 @@ let%expect_test "Adding an error hint to various views" =
       { label = Some (Vdom.Node.text "group"); tooltip = None; error = None; view });
   [%expect
     {|
-    (Error "Expecting an integer")
+    (Error "Expected an integer")
 
     ==============
     <table>
@@ -4467,7 +4692,7 @@ let%expect_test "Adding an error hint to various views" =
       });
   [%expect
     {|
-    (Error "Expecting an integer")
+    (Error "Expected an integer")
 
     ==============
     <table>
@@ -4494,7 +4719,7 @@ let%expect_test "Adding an error hint to various views" =
   print_view_with_error ~compute_view:(fun view -> Form.View.Private.List [ view ]);
   [%expect
     {|
-    (Error "Expecting an integer")
+    (Error "Expected an integer")
 
     ==============
     <table>
@@ -4552,8 +4777,8 @@ let%expect_test "difference between with_default and with_default_always" =
   show_both ();
   [%expect
     {|
-    with_default: (Error"Expecting an integer")
-    with_default_always: (Error"Expecting an integer") |}];
+    with_default: (Error"Expected an integer")
+    with_default_always: (Error"Expected an integer") |}];
   show_both ();
   [%expect {|
     with_default: (Ok 10)
@@ -4682,4 +4907,61 @@ let%expect_test "Checkbox.set layout options" =
           </label>
         </li>
       </ul> |}]
+;;
+
+let%expect_test "typed variant forms with radio buttons can be initialized to the first \
+                 item"
+  =
+  let module T = struct
+    type t = String of string [@@deriving typed_variants, sexp]
+
+    let form =
+      Form.Typed.Variant.make
+        ~picker:(`Radio `Vertical)
+        ~init:`First_item
+        ~picker_attr:(Value.return (Vdom.Attr.class_ "foo"))
+        (module struct
+          module Typed_variant = Typed_variant
+
+          let label_for_variant = `Inferred
+
+          let form_for_variant : type a. a Typed_variant.t -> a Form.t Computation.t =
+            fun String -> Form.Elements.Textbox.string ()
+          ;;
+        end)
+    ;;
+  end
+  in
+  let handle = Handle.create (form_result_spec [%sexp_of: T.t]) T.form in
+  Handle.show handle;
+  [%expect
+    {|
+    (Ok (String ""))
+
+    ==============
+    <div>
+      <ul id="bonsai_path_replaced_in_test"
+          class="foo radio-button-container widget-radio-buttons"
+          style={
+            list-style: none;
+            margin-left: 0px;
+          }>
+        <li style={ display: block; }>
+          <label>
+            <input type="radio"
+                   name="bonsai_path_replaced_in_test"
+                   class="radio-button"
+                   #checked="true"
+                   onclick> </input>
+            string
+          </label>
+        </li>
+      </ul>
+      <input type="text"
+             placeholder=""
+             spellcheck="false"
+             id="bonsai_path_replaced_in_test"
+             value:normalized=""
+             oninput> </input>
+    </div> |}]
 ;;

@@ -5,8 +5,9 @@ module Drag_and_drop = Bonsai_web_ui_drag_and_drop
 module Node = Vdom.Node
 
 module Style =
-  [%css.raw
-    {|
+  [%css
+    stylesheet
+      {|
   .centered {
     text-align: center;
   }
