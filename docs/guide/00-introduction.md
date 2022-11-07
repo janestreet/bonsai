@@ -11,21 +11,19 @@ degree, how Bonsai works under the hood. We hope that the latter will
 equip you with the necessary knowledge to tune the performance of your
 applications.
 
-# Web Apps at 10,000 Feet
+# Functional Web Apps at 10,000 Feet
 
-The browser understands three languages: Javascript, HTML, CSS. Jane
-Street programmers only understand one language: OCaml. Thus, we've made
-it possible to write all three of the browser languages using OCaml.
+Fundamentally, a web UI shows you a *view* (the part you can see) based
+on a *model* (structured input data and state). You interact with
+the UI by clicking buttons, entering text, scrolling, etc; in response,
+a *controller* (control logic) updates the *model*, which recalculates
+the *view*. Rinse and repeat.
 
--   `js_of_ocaml` is an OCaml-to-Javascript compiler.
--   `virtual_dom` is a library for building values that represent a
-    chunk of HTML.
--   `css_gen` is a library for writing CSS-styles in a type safe manner.
+This paradigm, [called MVC](https://www.freecodecamp.org/news/model-view-controller-mvc-explained-through-ordering-drinks-at-the-bar-efcba6255053/),
+is useful because it lets us design web UIs using the functional 
+programming patterns we know and love.
 
-The CSS situation is a little more nuanced, since we actually recommend
-writing CSS directly using `ppx_css`.
-
-A user interface is a function from *data* to *view*. In types:
+A user interface is a function from *model* to *view*:
 
 ```{=html}
 <!-- $MDX skip -->
@@ -34,21 +32,41 @@ A user interface is a function from *data* to *view*. In types:
 (* Virtual_dom.Vdom.Node.t represents your applications view *)
 open Virtual_dom
 
-val ui : Your_input_type_here.t -> Vdom.Node.t
+val ui : 'Your_input_type_here.t' -> Vdom.Node.t
+
+(* A simple example in pseudocode. We'll explain real syntax later. *)
+let ui name = 
+    <div>Hello, {name}!</div>
 ```
 
-It's easy to write composable views with such functions, since all you
-need to return is a plain old OCaml value. A small amount of boilerplate
-can turn this function into a simple web app that continuously displays
-the result of the function.
+User interactions, `setTimeout` / `setInterval` calls, and RPC server calls
+are just *side effects* in an otherwise pure function. From monads/applicatives
+to algebraic effects, we have plenty of tools to cleanly deal with those.
 
-Of course, this is a huge simplification; in a real app, you usually
-want:
+It's easy to write composable views with this paradigm, since we can represent
+the UI logic and view output as plain old OCaml functions and values.
+A small amount of boilerplate can turn our ui into a simple web app that
+continuously displays the result of the computation.
+
+# Web Apps with Bonsai
+
+The browser understands three languages: Javascript, HTML, CSS. Jane
+Street programmers only understand one language: OCaml. Thus, we've made
+it possible to write all three of the browser languages using OCaml.
+
+-   `js_of_ocaml` is an OCaml-to-Javascript compiler.
+-   `virtual_dom` is a library for building values that represent a
+    chunk of HTML.
+-   `css_gen` is a library for writing CSS styles in a type safe manner.
+
+Bonsai builds on `virtual_dom` to provide:
 
 -   *Interactivity*, so the user can click on, type into, and navigate
     through things.
 -   *Incrementality*, so that large amounts of highly dynamically data
     can be displayed without the interface lagging.
+-   *State management* primitives, which allow you to build complex,
+    interdependent apps in a clean, type-safe way.
 
 Bonsai provides these features while still encouraging the composition
 and abstraction properties of regular OCaml code. Bonsai wants you to
@@ -75,6 +93,10 @@ and [3](./03-state.md).
 
 # The Underlying Machinery
 
+<!--
+Maybe we should consider including links to more info about incremental
+and diff-and-patch vdom. 
+-->
 The incrementality in Bonsai comes from the `Incremental` library. When
 a web page loads, Bonsai compiles the top-level
 `Vdom.Node.t Computation.t` into something akin to `Vdom.Node.t Incr.t`.
