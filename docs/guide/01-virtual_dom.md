@@ -1,8 +1,18 @@
 # 01 - Virtual-dom
 
-Browser interfaces are described by a tree of HTML *elements*, each of
+The *view* (stuff you can see) of a browser interface is
+described by a tree of HTML *elements*, each of
 which can have some *attributes* attached. The `virtual_dom` library
 provides an OCaml interface for constructing these trees.
+
+You can think of this as an alternate syntax for HTML: As a general rule, instead
+of `<tag attr="value">children</tag>` we'll use `tag_func ~attr:(attr_func attr_val) children`.
+
+In this chapter, we'll:
+
+- Learn how to use the `virtual_dom` library to represent DOM structure
+- Introduce interactivity via event handlers and the `Effect` type, and
+- Discuss how this "virtual DOM" is actually rendered by the browser
 
 # Vdom.Node.t
 
@@ -22,8 +32,8 @@ let hello_world : Vdom.Node.t = Vdom.Node.text "hello world!"
 ```{=html}
 </iframe>
 ```
-The text node will frequently be the "leaf" of a view (there are no
-"children" of a text node). Let's put some text inside a bulleted list
+These text nodes will frequently be the "leaf" of a view (there are no
+"children" of a text node). For example, let's put some text inside a bulleted list
 by using some more node constructors:
 
 ```{=html}
@@ -49,7 +59,7 @@ let bulleted_list : Vdom.Node.t =
 ```{=html}
 </iframe>
 ```
-For the bulleted list, the `ul` and `li` functions are required. These
+For the bulleted list, we use the `ul` and `li` functions. These
 correspond to the [ul
 element](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/ul)
 and the [li
@@ -57,6 +67,7 @@ element](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/li),
 which MDN helpfully tells us stands for
 `<u>`{=html}U`</u>`{=html}nordered `<u>`{=html}L`</u>`{=html}ist and
 `<u>`{=html}L`</u>`{=html}ist `<u>`{=html}I`</u>`{=html}tem.
+<!-- These inline HTML tags aren't showing up, just an fyi -->
 
 `h3` is short for "header level 3", and is responsible for the larger
 font in the title text, and `div` is a ["content
@@ -67,7 +78,7 @@ and serves as a useful wrapper for the rest of the content.
 <aside>
 ```
 There is a `Vdom.Node.*` node constructor function for *almost* every
-[dom node](https://developer.mozilla.org/en-US/docs/Web/HTML/Element).
+[HTML5 dom node](https://developer.mozilla.org/en-US/docs/Web/HTML/Element).
 If a constructor is missing, `Vdom.Node.create` is available to manually
 specify the tag, but the `Virtual_dom` maintainers gladly accept
 contributions back to the main library!
@@ -85,7 +96,7 @@ and [DOM
 event_handlers](https://developer.mozilla.org/en-US/docs/Web/Guide/Events/Event_handlers).
 
 Attributes can be used to tweak the appearance and behavior of the nodes
-that they are attached to, for instance, by adding placeholder text to a
+that they are attached to. For example, you can add placeholder text to a
 textbox:
 
 ```{=html}
@@ -103,7 +114,7 @@ let input_placeholder : Vdom.Node.t =
 ```{=html}
 </iframe>
 ```
-Or coloring text with inline css:
+Or color text with inline css:
 
 ```{=html}
 <!-- $MDX file=../../examples/bonsai_guide_code/vdom_examples.ml,part=css_gen -->
@@ -123,11 +134,13 @@ let css_gen : Vdom.Node.t =
 </iframe>
 ```
 [The 8th chapter "css"](./08-css.md) goes into much more depth on the
-styling attributes.
+styling attributes. Otherwise, as with dom nodes, you can find a corresponding
+`Vdom.Attr.*` for any HTML5 attribute or property.
 
-Finally, there are "event handler" attributes which register functions
+Probably the most important attributes are "event handlers", which register functions
 that are called when a user interacts with the element (like clicking on
-buttons or typing into a text box).
+buttons or typing into a text box). In other words, handler attributes are our primitive
+for building interactive UIs.
 
 ```{=html}
 <!-- $MDX file=../../examples/bonsai_guide_code/vdom_examples.ml,part=clicky_button -->
@@ -154,24 +167,38 @@ the above example as `_evt`) alongside any useful data extracted from
 that event. For example, see the following event-handler attributes for
 mouse-clicks and typing into a textbox:
 
-`ocaml skip val Vdom.Attr.on_click : (mouse_event -> unit Vdom.Effect.t) -> Vdom.Attr.t val Vdom.Attr.on_input : (input_event -> string -> unit Vdom.Effect.t) -> Vdom.Attr.t`
-
-You'll notice that because `on_input` is used to respond to users typing
-into a textbox, the handler function is also given a string that holds
-the current contents of that textbox.
-
-The browser-level event-values like `mouse_event` and `input_event` are
-almost always ignored in Bonsai apps.
+`ocaml skip val Vdom.Attr.on_click : (mouse_event -> unit Vdom.Effect.t) -> Vdom.Attr.t`
+`ocaml skip val Vdom.Attr.on_input : (input_event -> string -> unit Vdom.Effect.t) -> Vdom.Attr.t`
 
 The return type for these event handler functions is
 `unit Vdom.Effect.t`, which is the final type that we care about in the
 `Virtual_dom` library.
 
+
+```{=html}
+<aside>
+```
+Note that in the signatures above, the `on_input` handler function is also
+given a string that holds the current contents of that textbox.
+
+This kind of design applies across most event handler `Vdom.Attr.*` signatures,
+and allows us to write simpler handler functions that don't need to worry about extracting
+data they need from the browser's low-level API.
+
+As a result, the browser-level event-values like `mouse_event` and `input_event` are
+almost always ignored in Bonsai apps.
+```{=html}
+</aside>
+```
+
 # unit Vdom.Effect.t
 
-In the example above, the `on_click` handler function returned
-`Vdom.Effect.Ignore`. However, the alert definitely fires when you click
-on it, so what is this value doing, and why must these event-handlers
+In the example above, the `on_click` handler function:
+
+1. Called the `alert` browser API as a side effect
+2. Returned `Vdom.Effect.Ignore`
+
+What is this `Vdom.Effect.Ignore` value doing, and why must these event-handlers
 return values of type `unit Vdom.Effect.t` in the first place?
 
 In reality, values of type `unit Vdom.Effect.t` are used to schedule
@@ -200,7 +227,17 @@ library, or from merlin), know that it is the same thing as
 ```{=html}
 </aside>
 ```
+
 # The Underlying Machinery
+
+Historically, frontend logic worked by listening to browser-level events, and
+manually modifying the DOM in response. This didn't scale well to complex behavior,
+because state and logic were diffused through the entire application.
+
+In contrast, modeling our UI as a function that returns a virtual-DOM view allows us
+to clearly and exhaustively define possible states, how they should be handled, and
+what the view should be in a declarative fashion. As we'll see, it also allows us to
+break our UI down into reusable, composable components.
 
 A virtual-DOM is an immutable tree of immutable UI elements that
 represents the view of the application at a point in time. This is in
@@ -219,18 +256,14 @@ have their own "virtual-DOM" libraries that all share similar goals.
 ```{=html}
 </aside>
 ```
-With the (not-virtual) DOM, the program mutates the tree of UI
-components in order to update the view, but with the virtual-DOM, the
-program produces a new tree every time the view changes. While this may
-appear to be a performance nightmare, many of the tools that we use to
-reduce duplication of work in regular programs also work well to prevent
-re-computing parts of this sub-view.
 
-The `Virtual_dom` library also contains functions that diff two versions
-of a virtual-dom tree. The diff can be used as instructions for mutating
-the DOM to reflect the contents of the "next" virtual-DOM node. These
-functions are quite fundamental, but Bonsai handles the calls to these
-functions, so application developers are solely concerned with producing
-new vdom trees.
+Essentially, the `Virtual_dom` library works by diff-ing the current and next
+virtual-DOM trees, then applying those changes to the "real" DOM using the mutative
+browser API. Because all this happens under the surface, Bonsai application developers
+are solely concerned with defining the logic for how vdom views are produced.
+
+Note that a new tree is generated every time the view changes.
+While this may appear to be a performance nightmare, Bonsai uses incremental computation
+to avoid recalculating vdom that hasn't changed. We'll explore this in the next chapter.
 
 Let's continue to [Bonsai Guide Part 2: Dynamism](./02-dynamism.md).
