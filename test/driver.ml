@@ -32,6 +32,22 @@ type ('i, 'm, 'dynamic_action, 'static_action, 'r) unpacked =
 
 type ('i, 'r) t = T : ('i, _, _, _, 'r) unpacked -> ('i, 'r) t
 
+let assert_type_equalities
+      (T a : _ Bonsai.Private.Computation.packed_info)
+      (T b : _ Bonsai.Private.Computation.packed_info)
+  =
+  let T =
+    Bonsai.Private.Meta.Model.Type_id.same_witness_exn a.model.type_id b.model.type_id
+  in
+  let T =
+    Bonsai.Private.Meta.Action.Type_id.same_witness_exn a.dynamic_action b.dynamic_action
+  in
+  let T =
+    Bonsai.Private.Meta.Action.Type_id.same_witness_exn a.static_action b.static_action
+  in
+  ()
+;;
+
 let create
       (type i r)
       ?initial_model_sexp
@@ -46,6 +62,14 @@ let create
   let fresh = Type_equal.Id.create ~name:"fresh" sexp_of_opaque in
   let var = Bonsai.Private.(Value.named App_input fresh |> conceal_value) in
   let computation = component var in
+  let unoptimized_info =
+    Bonsai.Private.gather (Bonsai.Private.reveal_computation computation)
+  in
+  let optimized_info =
+    Bonsai.Private.reveal_computation computation
+    |> (if optimize then Bonsai.Private.pre_process else Fn.id)
+    |> Bonsai.Private.gather
+  in
   let (T
          ({ model =
               { default = default_model
@@ -55,13 +79,16 @@ let create
               ; of_sexp = model_of_sexp
               }
           ; apply_static
-          ; _
+          ; dynamic_action = _
+          ; static_action = _
+          ; run = _
+          ; reset = _
           } as computation_info))
     =
-    Bonsai.Private.reveal_computation computation
-    |> (if optimize then Bonsai.Private.pre_process else Fn.id)
-    |> Bonsai.Private.gather
+    optimized_info
   in
+  assert_type_equalities unoptimized_info unoptimized_info;
+  assert_type_equalities optimized_info optimized_info;
   let environment =
     Bonsai.Private.Environment.(empty |> add_exn ~key:fresh ~data:input)
   in

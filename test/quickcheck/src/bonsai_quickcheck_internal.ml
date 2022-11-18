@@ -2,6 +2,10 @@ open! Core
 module Q = Base_quickcheck
 
 
+let log = ref []
+let clear_log () = log := []
+let read_log () = Sexp.List !log
+let log_s sexp = log := sexp :: !log
 let weight_scalar = 10.
 let size_scalar = 4
 
@@ -404,6 +408,15 @@ let rec make_comparator_and_model
     end)
 ;;
 
+let real_data_to_sexp (type a cmp) (witness : (a, cmp) Witness.t) (data : a) =
+  let module M = (val make_comparator_and_model witness) in
+  M.sexp_of_t data
+;;
+
+let real_data_to_string (type a cmp) (witness : (a, cmp) Witness.t) (data : a) : string =
+  Sexp.to_string_hum (real_data_to_sexp witness data)
+;;
+
 let rec real_data_observer : type w cmp. (w, cmp) Witness.t -> w Q.Observer.t = function
   | Unit -> quickcheck_observer_unit
   | Int -> quickcheck_observer_int
@@ -438,9 +451,9 @@ let rec real_data_generator : type w cmp. (w, cmp) Witness.t -> w Q.Generator.t 
       (real_data_generator key_witness)
       (real_data_generator value_witness)
   | Effect_func inner_witness ->
-    Q.Generator.fn
-      (real_data_observer inner_witness)
-      (Q.Generator.return Bonsai.Effect.Ignore)
+    Q.Generator.return
+      (Bonsai.Effect.of_sync_fun (fun input ->
+         log_s (real_data_to_sexp inner_witness input)))
 ;;
 
 let rec real_data_shrinker : type w cmp. (w, cmp) Witness.t -> w Q.Shrinker.t = function
@@ -457,11 +470,6 @@ let rec real_data_shrinker : type w cmp. (w, cmp) Witness.t -> w Q.Shrinker.t = 
       (real_data_shrinker key_witness)
       (real_data_shrinker value_witness)
   | Effect_func _inner_witness -> Q.Shrinker.atomic
-;;
-
-let real_data_to_string (type a cmp) (witness : (a, cmp) Witness.t) (data : a) : string =
-  let module M = (val make_comparator_and_model witness) in
-  Sexp.to_string_hum (M.sexp_of_t data)
 ;;
 
 module Function = struct
@@ -1524,16 +1532,13 @@ let rec witness_to_result_spec
 ;;
 
 let rec actions_generator
-  : type a cmp. a -> (a, cmp) Witness.t -> a incoming Q.Generator.t option
+  : type a cmp. (a, cmp) Witness.t -> a incoming Q.Generator.t option
   =
-  fun result witness ->
+  fun witness ->
   let open Q.Generator.Let_syntax in
   match witness with
   | Tuple (first_witness, second_witness) ->
-    let first, second = result in
-    (match
-       actions_generator first first_witness, actions_generator second second_witness
-     with
+    (match actions_generator first_witness, actions_generator second_witness with
      | Some first_generator, Some second_generator ->
        Some
          (match%bind Q.Generator.bool with

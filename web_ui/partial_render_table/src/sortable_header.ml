@@ -43,7 +43,7 @@ let component
     in
     let attr =
       Vdom.Attr.(
-        class_ Style.column_header
+        Style.column_header
         @ on_click (fun mouse_event ->
           if Js_of_ocaml.Js.to_bool mouse_event##.shiftKey
           then inject (Add_sort col_id)

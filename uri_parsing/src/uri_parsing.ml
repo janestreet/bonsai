@@ -15,21 +15,27 @@ module Path_pattern = struct
     }
   [@@deriving sexp, compare]
 
+  let needed_match_ord = function
+    | `All -> 1
+    | `Prefix -> 2
+  ;;
+
   (* [x] is strictly more specific than [y] if:
      - [x] has more elements in its pattern than [y]
      - [x] and [y] have the same number of elements, [x] is a total match, and [y] is a
        partial match *)
-  let compare_specificity x y =
-    let length_comparison =
-      Int.descending (List.length x.pattern) (List.length y.pattern)
+  let compare_specificity =
+    let length_comparison x y =
+      let { pattern = x; needed_match = _ } = x
+      and { pattern = y; needed_match = _ } = y in
+      Int.descending (List.length x) (List.length y)
     in
-    match length_comparison with
-    | 0 ->
-      (match x.needed_match, y.needed_match with
-       | `All, `All | `Prefix, `Prefix -> 0
-       | `Prefix, `All -> 1
-       | `All, `Prefix -> -1)
-    | x -> x
+    let needed_match_comparison x y =
+      let { needed_match = x; pattern = _ } = x
+      and { needed_match = y; pattern = _ } = y in
+      Int.ascending (needed_match_ord x) (needed_match_ord y)
+    in
+    Comparable.lexicographic [ length_comparison; needed_match_comparison ]
   ;;
 end
 

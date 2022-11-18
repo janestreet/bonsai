@@ -40,7 +40,7 @@ let left_section ~controls =
   and search_bar = search_bar
   and controls = controls in
   let icon_grid = Icon_grid.component ~icons ~controls in
-  Vdom.Node.div ~attr:(Vdom.Attr.class_ Left_section.class_) [ search_bar; icon_grid ]
+  Vdom.Node.div ~attr:Left_section.class_ [ search_bar; icon_grid ]
 ;;
 
 module Main = [%css stylesheet {|
@@ -55,7 +55,7 @@ let main =
   let%sub left_section = left_section ~controls in
   let%arr left_section = left_section
   and controls_view = controls_view in
-  Vdom.Node.main ~attr:(Vdom.Attr.class_ Main.class_) [ left_section; controls_view ]
+  Vdom.Node.main ~attr:Main.class_ [ left_section; controls_view ]
 ;;
 
 let header =
@@ -74,7 +74,7 @@ module App = [%css stylesheet {|
 let app =
   let%sub main = main in
   let%arr main = main in
-  Vdom.Node.div ~attr:(Vdom.Attr.class_ App.class_) [ header; main ]
+  Vdom.Node.div ~attr:App.class_ [ header; main ]
 ;;
 
 let (_ : _ Start.Handle.t) =

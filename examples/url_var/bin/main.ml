@@ -14,7 +14,7 @@ module Css =
 }
 |}]
 
-let c s = Vdom.Attr.class_ s
+let c s = s
 let examples_column = c Css.examples_column
 
 let component =

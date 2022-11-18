@@ -284,6 +284,133 @@ module Our_rpc = struct
   ;;
 end
 
+module Polling_state_rpc = struct
+  let dispatcher ?(on_forget_client_error = fun _ -> Effect.Ignore) rpc ~where_to_connect =
+    let open Bonsai.Let_syntax in
+    let%sub connector = Bonsai.Dynamic_scope.lookup connector_var in
+    let%sub client =
+      Bonsai.Expert.thunk (fun () -> Polling_state_rpc.Client.create rpc)
+    in
+    let%sub forget_client_on_server =
+      let perform_dispatch (connector, client) =
+        Connector.with_connection connector ~where_to_connect ~callback:(fun connection ->
+          match%map.Deferred
+            Polling_state_rpc.Client.forget_on_server client connection
+          with
+          | Ok () -> Ok ()
+          | Error _ when Rpc.Connection.is_closed connection ->
+            (* If the connection is closed, then any data for this
+               connection has been forgotten by the server anyway, so
+               the error is moot. *)
+            Ok ()
+          | Error error -> Error error)
+      in
+      let%arr connector = connector
+      and client = client in
+      match%bind.Effect Effect.of_deferred_fun perform_dispatch (connector, client) with
+      | Ok () -> Effect.Ignore
+      | Error error -> on_forget_client_error error
+    in
+    let%sub () = Bonsai.Edge.lifecycle ~on_deactivate:forget_client_on_server () in
+    let perform_query (connector, client) query =
+      Connector.with_connection connector ~where_to_connect ~callback:(fun connection ->
+        Polling_state_rpc.Client.dispatch client connection query)
+    in
+    let%arr connector = connector
+    and client = client in
+    Effect.of_deferred_fun (perform_query (connector, client))
+  ;;
+
+  module Result = struct
+    type ('query, 'response) t =
+      | No_responses_yet
+      | Error_before_any_ok_responses of
+          { error : Error.t
+          ; query : 'query
+          }
+      | Last_response_was_ok of
+          { query : 'query
+          ; response : 'response
+          }
+      | Error_after_last_ok_response of
+          { query : 'query
+          ; error : Error.t
+          ; last_ok_query : 'query
+          ; last_ok_response : 'response
+          }
+    [@@deriving sexp, equal]
+  end
+
+  let poll
+        (type query response)
+        (module Query : Bonsai.Model with type t = query)
+        (module Response : Bonsai.Model with type t = response)
+        rpc
+        ~where_to_connect
+        ~every
+        query
+    =
+    let open Bonsai.Let_syntax in
+    let%sub response, inject_response =
+      Bonsai.state_machine0
+        (module struct
+          type t = (Query.t, Response.t) Result.t [@@deriving sexp, equal]
+        end)
+        (module struct
+          type t = Query.t * Response.t Or_error.t [@@deriving sexp]
+        end)
+        ~default_model:No_responses_yet
+        ~apply_action:(fun ~inject:_ ~schedule_event:_ model (query, action) ->
+          match action with
+          | Ok response -> Last_response_was_ok { query; response }
+          | Error error ->
+            (match model with
+             | No_responses_yet | Error_before_any_ok_responses _ ->
+               Error_before_any_ok_responses { error; query }
+             | Last_response_was_ok { response = last_ok_response; query = last_ok_query }
+             | Error_after_last_ok_response
+                 { last_ok_response; last_ok_query; query = _; error = _ } ->
+               Error_after_last_ok_response
+                 { last_ok_response; last_ok_query; query; error }))
+    in
+    let%sub dispatcher = dispatcher rpc ~where_to_connect in
+    let%sub callback =
+      let%arr dispatcher = dispatcher
+      and inject_response = inject_response in
+      fun query ->
+        let%bind.Effect result = dispatcher query in
+        inject_response (query, result)
+    in
+    let%sub () = Bonsai.Edge.on_change (module Query) query ~callback in
+    let%sub () =
+      let%sub clock_effect =
+        let%arr callback = callback
+        and query = query in
+        callback query
+      in
+      Bonsai.Clock.every
+        ~when_to_start_next_effect:`Wait_period_after_previous_effect_starts_blocking
+        every
+        clock_effect
+    in
+    return response
+  ;;
+
+  (* This [poll] refines the [poll] above by resetting on deactivate to avoid
+     leaking memory (after all, an important feature of [dispatcher] is that
+     doesn't cause a memory leak on the server. *)
+  let poll q r ?(clear_when_deactivated = true) rpc ~where_to_connect ~every query =
+    let c = poll q r rpc ~where_to_connect ~every query in
+    let open Bonsai.Let_syntax in
+    if clear_when_deactivated
+    then (
+      let%sub result, reset = Bonsai.with_model_resetter c in
+      let%sub () = Bonsai.Edge.lifecycle ~on_deactivate:reset () in
+      return result)
+    else c
+  ;;
+end
+
 module Status = struct
   open Bonsai.Let_syntax
 

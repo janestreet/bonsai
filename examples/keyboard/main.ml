@@ -97,7 +97,7 @@ let component =
   Vdom.Node.div
     ~attr:(Vdom.Attr.on_keydown (handle_event inject))
     [ Vdom.Node.div
-        ~attr:(Vdom.Attr.class_ Style.red)
+        ~attr:Style.red
         [ Vdom.Node.sexp_for_debugging
             [%sexp "Last Event", (last_event : Action.t option)]
         ]

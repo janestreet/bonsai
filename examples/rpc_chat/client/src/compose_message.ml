@@ -44,5 +44,5 @@ let component ~send_message =
   let submit_button =
     Vdom_input_widgets.Button.simple "send" ~on_click:submit_and_then_clear
   in
-  Vdom.Node.div ~attr:(Vdom.Attr.class_ Style.compose) [ text_input; submit_button ]
+  Vdom.Node.div ~attr:Style.compose [ text_input; submit_button ]
 ;;

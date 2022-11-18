@@ -64,21 +64,21 @@ let component name =
   and inject = inject in
   let header =
     Vdom.Node.div
-      ~attr:(Vdom.Attr.class_ Style.header)
+      ~attr:Style.header
       [ Style.refresh_button `Dark ~on_click:(inject Action.Regenerate)
       ; Vdom.Node.text name
       ]
   in
   let body =
     Vdom.Node.div
-      ~attr:(Vdom.Attr.class_ Style.body)
+      ~attr:Style.body
       (List.map (Map.to_alist state) ~f:(fun (k, v) ->
          let color = Style.color_of_mult v in
          let border_color = Style.darker_color_of_mult v in
          Vdom.Node.div
            ~attr:
              (Vdom.Attr.many
-                [ Vdom.Attr.class_ Style.row
+                [ Style.row
                 ; Vdom.Attr.style (Css_gen.background_color (`HSLA color))
                 ; Vdom.Attr.style
                     (Css_gen.border
@@ -93,6 +93,6 @@ let component name =
            ; Vdom.Node.textf "%d" k
            ]))
   in
-  let view = Vdom.Node.div ~attr:(Vdom.Attr.class_ Style.color_list) [ header; body ] in
+  let view = Vdom.Node.div ~attr:Style.color_list [ header; body ] in
   { out = state; view; reset = inject Action.Regenerate }
 ;;

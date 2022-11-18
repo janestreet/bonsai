@@ -161,12 +161,10 @@ module Make (Name : Types.Name) = struct
 }
                          |}]
 
-  let class_ = Attr.class_
-
   let box t = function
     | [] -> Node.none
     | [ child ] -> child
-    | children -> Node.div ~attr:(class_ t) children
+    | children -> Node.div ~attr:t children
   ;;
 
   let hbox, vbox = box Style.hbox, box Style.vbox
@@ -318,7 +316,7 @@ module Make (Name : Types.Name) = struct
               ~key:(Name.to_string id)
               ~attr:
                 (Attr.many
-                   [ Attr.classes [ Style.redirect ]
+                   [ Style.redirect
                    ; Attr.create "data-kind" "redirect"
                    ; conn `Provide point_to
                    ; conn `Consume name
@@ -539,7 +537,7 @@ module Make (Name : Types.Name) = struct
         List.unzip list_to_partition, curr_id
       in
       ( ( Node.div
-            ~attr:(class_ Style.wrap)
+            ~attr:Style.wrap
             [ Node.text ("Wrapping " ^ name); vbox introduces_row; vbox body_row ]
         , Connections_state.(merge (merge_list introduces_state) (merge_list body_state))
         )
@@ -688,7 +686,7 @@ module Make (Name : Types.Name) = struct
     and curr_id = curr_id in
     let tracker, curr_id = Trackers.track_resizing trackers ~curr_id in
     ( Node.div
-        ~attr:(Vdom.Attr.many [ Attr.classes [ Style.map; Style.testcase ]; tracker ])
+        ~attr:(Attr.many [ Style.map; Style.testcase; tracker ])
         [ Virtual_dom_svg.Node.svg svgs; computation_as_html ]
     , curr_id )
   ;;

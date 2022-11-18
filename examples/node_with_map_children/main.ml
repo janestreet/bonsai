@@ -23,9 +23,7 @@ let component =
   and after_view = after_view
   and tweener = tweener
   and comparison = comparison in
-  Vdom.Node.div
-    ~attr:(Vdom.Attr.class_ Style.app)
-    [ before_view; after_view; tweener; comparison ]
+  Vdom.Node.div ~attr:Style.app [ before_view; after_view; tweener; comparison ]
 ;;
 
 let (_ : _ Start.Handle.t) =

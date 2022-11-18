@@ -93,8 +93,8 @@ let component =
       ~suggestion_list_kind
       ~expand_direction
       ~max_visible_items
-      ~selected_item_attr:(Value.return (Attr.class_ Css.selected_item))
-      ~extra_list_container_attr:(Value.return (Attr.class_ Css.list_container))
+      ~selected_item_attr:(Value.return Css.selected_item)
+      ~extra_list_container_attr:(Value.return Css.list_container)
       ~extra_input_attr:(Value.return (Attr.placeholder "Filter Fruits"))
       ~on_select:add_item
       ~f:(fun query ->

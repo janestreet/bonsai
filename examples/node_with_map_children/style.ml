@@ -188,11 +188,8 @@ let color_class color =
 let icon_button icon (color : [ `Light | `Dark ]) ~on_click =
   let color_class = color_class color in
   Vdom.Node.div
-    ~attr:
-      (Vdom.Attr.many
-         [ Vdom.Attr.class_ button_container; Vdom.Attr.on_click (fun _ -> on_click) ])
-    [ Feather_icon.svg ~extra_attrs:[ Vdom.Attr.classes [ svg_button; color_class ] ] icon
-    ]
+    ~attr:(Vdom.Attr.many [ button_container; Vdom.Attr.on_click (fun _ -> on_click) ])
+    [ Feather_icon.svg ~extra_attrs:[ svg_button; color_class ] icon ]
 ;;
 
 let refresh_button = icon_button Repeat
@@ -225,7 +222,7 @@ let chip ?key mult content =
     ?key
     ~attr:
       (Vdom.Attr.many
-         [ Vdom.Attr.class_ chip
+         [ chip
          ; Vdom.Attr.style (Css_gen.background_color (`HSLA background))
          ; Vdom.Attr.style
              (Css_gen.border ~width:(`Px 3) ~style:`Solid ~color:(`HSLA border) ())

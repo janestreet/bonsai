@@ -78,7 +78,7 @@ let table_form
       Vdom.Node.input
         ~attr:
           (Vdom.Attr.many
-             [ Vdom.Attr.class_ Style.key_input_textbox
+             [ Style.key_input_textbox
              ; Vdom.Attr.value_prop text
              ; Vdom.Attr.placeholder "key for new row"
              ; Vdom.Attr.on_input (fun _ s -> set_text s)
@@ -94,7 +94,7 @@ let table_form
         ~attr:(Vdom.Attr.on_click (fun _ -> on_submit ()))
         [ Vdom.Node.text "+" ]
     in
-    Vdom.Node.div ~attr:(Vdom.Attr.class_ Style.key_input_container) [ textbox; button ]
+    Vdom.Node.div ~attr:Style.key_input_container [ textbox; button ]
   in
   let columns =
     let%map columns = columns
@@ -123,11 +123,9 @@ let table_form
                 Vdom.Attr.on_click (fun _ -> set_map (Map.remove map key))
               in
               Vdom.Node.div
-                ~attr:(Vdom.Attr.class_ Style.key_column)
+                ~attr:Style.key_column
                 [ Vdom.Node.button
-                    ~attr:
-                      (Vdom.Attr.many
-                         [ click_handler; Vdom.Attr.class_ Style.remove_button ])
+                    ~attr:(Vdom.Attr.many [ click_handler; Style.remove_button ])
                     [ Vdom.Node.text "⊗" ]
                 ; Vdom.Node.text (Key.sexp_of_t key |> Sexp.to_string)
                 ])

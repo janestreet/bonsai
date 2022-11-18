@@ -38,22 +38,24 @@ let compare_optimization
     |> Bonsai.Private.conceal_computation
   in
   let handle = Handle.create (witness_to_result_spec witness) unpacked in
-  let result = Handle.result handle in
   let opt_handle = Handle.create (witness_to_result_spec witness) optimized in
-  let opt_result = Handle.result opt_handle in
-  (* Check that the results are initially equal *)
-  let to_ret = Witness.equal witness result opt_result in
-  (* Run randomly generated actions *)
+  let require_results_to_match () =
+    assert (Witness.equal witness (Handle.result handle) (Handle.result opt_handle))
+  in
+  require_results_to_match ();
   let random = Splittable_random.State.create (Random.State.make [| Random.bits () |]) in
-  let actions_generator = Option.value_exn (actions_generator result witness) in
+  let actions_generator = Option.value_exn (actions_generator witness) in
   let incoming_list =
     Q.Generator.generate ~size:15 ~random (Q.Generator.list_non_empty actions_generator)
   in
+  clear_log ();
   Handle.do_actions handle incoming_list;
+  let log = read_log () in
+  clear_log ();
   Handle.do_actions opt_handle incoming_list;
-  let result = Handle.result handle in
-  let opt_result = Handle.result opt_handle in
-  to_ret && Witness.equal witness result opt_result
+  let opt_log = read_log () in
+  assert (Sexp.equal log opt_log);
+  require_results_to_match ()
 ;;
 
 let%expect_test "quickcheck bad_opts" =
@@ -70,11 +72,9 @@ let%expect_test "quickcheck bad_opts" =
       ~trials:100
       Top_level_computation.quickcheck_generator
       ~f:(fun packed_comp ->
-        [%test_result: bool]
-          (let (T { unpacked; witness }) = packed_comp in
-           let f_opt = { f = Bad_opts.bad_sub } in
-           compare_optimization unpacked witness f_opt)
-          ~expect:true));
+        let (T { unpacked; witness }) = packed_comp in
+        let f_opt = { f = Bad_opts.bad_sub } in
+        compare_optimization unpacked witness f_opt));
   [%expect
     {|
     ("Base_quickcheck.Test.run: test failed"
@@ -89,11 +89,9 @@ let%expect_test "quickcheck flatten_values" =
     ~trials:100
     Top_level_computation.quickcheck_generator
     ~f:(fun comp ->
-      [%test_result: bool]
-        (let f_opt = { f = Bonsai.Private.Flatten_values.flatten_values } in
-         let (T { unpacked; witness }) = comp in
-         compare_optimization unpacked witness f_opt)
-        ~expect:true)
+      let f_opt = { f = Bonsai.Private.Flatten_values.flatten_values } in
+      let (T { unpacked; witness }) = comp in
+      compare_optimization unpacked witness f_opt)
 ;;
 
 (***** MANUAL SANITY CHECKS ******)

@@ -189,7 +189,16 @@ let rec write_data : type a cmp. buffer:Buf.t -> (a, cmp) Witness.t -> a -> unit
       write_data ~buffer (Tuple (key_witness, data_witness)) entry;
       Buf.string buffer "; ");
     Buf.string buffer "]"
-  | Effect_func _ -> Buf.string buffer "fun _ -> Bonsai.Effect.Ignore"
+  | Effect_func inner_witness ->
+    Buf.string buffer [%string "fun x -> "];
+    prep buffer;
+    Buf.string buffer "let module M = ";
+    write_model ~buffer inner_witness;
+    Buf.string buffer "in";
+    Buf.newline buffer;
+    Buf.string buffer [%string "Effect.print_s (M.sexp_of_t x)"];
+    Buf.newline buffer;
+    Buf.dedent buffer
 ;;
 
 let rec write_function

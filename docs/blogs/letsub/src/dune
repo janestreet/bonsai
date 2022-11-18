@@ -1,0 +1,2 @@
+(library (name blog_letsub) (libraries core bonsai)
+ (preprocess (pps ppx_bonsai ppx_jane)))

@@ -49,10 +49,10 @@ html, body {
 }
 |}]
 
-let paper = Vdom.Attr.class_ Css.paper
-let column = Vdom.Attr.class_ Css.column
-let row = Vdom.Attr.class_ Css.row
-let timeline_frame = Vdom.Attr.class_ Css.timeline_frame
+let paper = Css.paper
+let column = Css.column
+let row = Css.row
+let timeline_frame = Css.timeline_frame
 
 let colors =
   [| "#ff355e"

@@ -131,24 +131,21 @@ let kanban_column ~extra_dnd ~dnd ~items ~column ~title =
           | Not_dragging -> Vdom.Attr.empty
           | Dragging { source = source_item_id; target = None; _ } ->
             if Item_id.equal item_id source_item_id
-            then Vdom.Attr.class_ Style.being_dragged
+            then Style.being_dragged
             else Vdom.Attr.empty
           | Dragging { source = source_item_id; target = Some target_column; _ } ->
             if Item_id.equal item_id source_item_id
             then
               if [%equal: Column.t] target_column column
-              then Vdom.Attr.class_ Style.dragged_on_self
-              else Vdom.Attr.class_ Style.being_dragged
+              then Style.dragged_on_self
+              else Style.being_dragged
             else Vdom.Attr.empty
         in
         Node.div
           ~key:(Item_id.to_string item_id)
           ~attr:
             Vdom.Attr.(
-              source ~id:item_id
-              @ class_ Style.kanban_item
-              @ extra
-              @ extra_source ~id:item_id)
+              source ~id:item_id @ Style.kanban_item @ extra @ extra_source ~id:item_id)
           [ Node.text contents ])
   in
   let%arr items = items
@@ -162,20 +159,18 @@ let kanban_column ~extra_dnd ~dnd ~items ~column ~title =
   in
   let column_class =
     match column with
-    | Todo -> Vdom.Attr.class_ Style.kanban_column_todo
-    | In_progress -> Vdom.Attr.class_ Style.kanban_column_in_progress
-    | Finished -> Vdom.Attr.class_ Style.kanban_column_finished
+    | Todo -> Style.kanban_column_todo
+    | In_progress -> Style.kanban_column_in_progress
+    | Finished -> Style.kanban_column_finished
   in
   Node.div
     ~attr:
       Vdom.Attr.(
         drop_target ~id:column
-        @ class_ Style.kanban_column
+        @ Style.kanban_column
         @ column_class
-        @ if is_active then class_ Style.kanban_column_active else empty)
-    [ Node.h3 ~attr:(Vdom.Attr.class_ Style.centered) [ Node.text title ]
-    ; Node.div (Map.data items)
-    ]
+        @ if is_active then Style.kanban_column_active else empty)
+    [ Node.h3 ~attr:Style.centered [ Node.text title ]; Node.div (Map.data items) ]
 ;;
 
 let board ?extra_dnd name =
@@ -227,7 +222,7 @@ let board ?extra_dnd name =
         | None -> Bonsai.const "No item exists with that id"
       in
       let%arr text = text in
-      Node.div ~attr:(Vdom.Attr.class_ Style.kanban_item) [ Node.text text ])
+      Node.div ~attr:Style.kanban_item [ Node.text text ])
   in
   let%sub sentinel = Bonsai.pure Drag_and_drop.sentinel dnd in
   let%sub view =
@@ -238,7 +233,7 @@ let board ?extra_dnd name =
     and sentinel = sentinel in
     let sentinel = sentinel ~name in
     Node.div
-      ~attr:Vdom.Attr.(class_ Style.kanban_container @ sentinel)
+      ~attr:Vdom.Attr.(Style.kanban_container @ sentinel)
       [ todo; in_progress; finished; dragged_element ]
   in
   return (Bonsai.Value.both view dnd)

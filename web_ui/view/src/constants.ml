@@ -31,7 +31,21 @@ module Intent = struct
   ;;
 end
 
+module Table = struct
+  type t =
+    { body_row_even : Fg_bg.t
+    ; body_row_odd : Fg_bg.t
+    ; header_row : Fg_bg.t
+    ; header_header_border : Color.t
+    ; header_body_border : Color.t
+    ; body_body_border : Color.t
+    }
+end
+
 type t =
   { primary : Fg_bg.t
+  ; extreme : Fg_bg.t
+  ; extreme_primary_border : Color.t
   ; intent : Intent.colors
+  ; table : Table.t
   }

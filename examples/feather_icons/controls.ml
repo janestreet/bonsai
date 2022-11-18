@@ -26,7 +26,7 @@ module Range =
 
 let size_slider =
   Form.Elements.Range.int
-    ~extra_attrs:(Value.return [ Vdom.Attr.class_ Range.class_ ])
+    ~extra_attrs:(Value.return [ Range.class_ ])
     ~min:12
     ~max:100
     ~default:default.size
@@ -36,7 +36,7 @@ let size_slider =
 
 let stroke_width_slider =
   Form.Elements.Range.float
-    ~extra_attrs:(Value.return [ Vdom.Attr.class_ Range.class_ ])
+    ~extra_attrs:(Value.return [ Range.class_ ])
     ~min:0.5
     ~max:3.
     ~default:default.stroke_width
@@ -57,7 +57,7 @@ module Color_input =
 let display_none = Vdom.Attr.style (Css_gen.display `None)
 
 let color_input ?(display = Value.return true) () =
-  let classes_ = Vdom.Attr.classes [ Card_like.class_; Color_input.class_ ] in
+  let classes_ = Vdom.Attr.many [ Card_like.class_; Color_input.class_ ] in
   let%sub extra_attr =
     let%arr display = display in
     if display then classes_ else Vdom.Attr.(classes_ @ display_none)
@@ -139,12 +139,10 @@ module Fill = struct
     in
     let view =
       Vdom.Node.div
-        ~attr:(Vdom.Attr.class_ Style.control_container)
+        ~attr:Style.control_container
         (Vdom.Node.div
-           ~attr:(Vdom.Attr.class_ Fill.class_)
-           [ Vdom.Node.label
-               ~attr:(Vdom.Attr.class_ Style.label)
-               [ Vdom.Node.text "Fill" ]
+           ~attr:Fill.class_
+           [ Vdom.Node.label ~attr:Style.label [ Vdom.Node.text "Fill" ]
            ; Form.view_as_vdom fill_toggle
            ]
          :: (Form.view fill_input |> Form.View.to_vdom_plain))
@@ -179,7 +177,7 @@ let component =
     Vdom.Node.button
       ~attr:
         (Vdom.Attr.many
-           [ Vdom.Attr.classes [ Card_like.class_; Style.reset ]
+           [ Vdom.Attr.many [ Card_like.class_; Style.reset ]
            ; Vdom.Attr.on_click (fun _ ->
                let { size; stroke_width; stroke; fill = _ } = default in
                Fields.to_list
@@ -193,12 +191,12 @@ let component =
   in
   let header =
     let title = Vdom.Node.h3 [ Vdom.Node.text "Controls" ] in
-    Vdom.Node.div ~attr:(Vdom.Attr.class_ Style.header) [ title; reset ]
+    Vdom.Node.div ~attr:Style.header [ title; reset ]
   in
   let control ~form ~label =
     Vdom.Node.div
-      ~attr:(Vdom.Attr.class_ Style.control_container)
-      (Vdom.Node.label ~attr:(Vdom.Attr.class_ Style.label) [ Vdom.Node.text label ]
+      ~attr:Style.control_container
+      (Vdom.Node.label ~attr:Style.label [ Vdom.Node.text label ]
        :: (Form.view form |> Form.View.to_vdom_plain))
   in
   let size = control ~form:size_slider ~label:(sprintf "Size: %dpx" t.size) in
@@ -207,9 +205,7 @@ let component =
   in
   let stroke = control ~form:stroke_input ~label:"Stroke" in
   let view =
-    Vdom.Node.div
-      ~attr:(Vdom.Attr.class_ Style.controls)
-      [ header; size; stroke_width; stroke; fill_view ]
+    Vdom.Node.div ~attr:Style.controls [ header; size; stroke_width; stroke; fill_view ]
   in
   t, view
 ;;

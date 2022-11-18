@@ -300,6 +300,8 @@ module Range : sig
     :  ?extra_attrs:Vdom.Attr.t list Bonsai_web.Value.t
     -> ?min:int
     -> ?max:int
+    -> ?left_label:Vdom.Node.t
+    -> ?right_label:Vdom.Node.t
     -> default:int
     -> step:int
     -> unit
@@ -309,6 +311,8 @@ module Range : sig
     :  ?extra_attrs:Vdom.Attr.t list Bonsai_web.Value.t
     -> ?min:float
     -> ?max:float
+    -> ?left_label:Vdom.Node.t
+    -> ?right_label:Vdom.Node.t
     -> default:float
     -> step:float
     -> unit

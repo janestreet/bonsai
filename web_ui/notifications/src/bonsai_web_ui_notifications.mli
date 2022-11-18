@@ -25,8 +25,13 @@ module Notification_style : sig
         [to_vdom]. To customise the color of these notifications, set the
         [background-color] attribute to your desired color. *)
 
-    val error : string
-    val success : string
+    module For_referencing : sig
+      val error : string
+      val success : string
+    end
+
+    val error : Vdom.Attr.t
+    val success : Vdom.Attr.t
   end
 
   type t = (module S)

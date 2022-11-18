@@ -33,7 +33,7 @@ module Collection = struct
           activations, maybe_cons on_deactivate deactivations
         | _, `Right { on_activate; _ } ->
           maybe_cons on_activate activations, deactivations
-        | _ -> activations, deactivations
+        | _, `Unequal _ -> activations, deactivations
       in
       let data_equal = phys_equal in
       Map.fold_symmetric_diff

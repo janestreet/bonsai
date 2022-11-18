@@ -27,7 +27,7 @@ let item ~now ~index:_ ~source data =
   let now = Time_ns.to_string_utc now in
   ( ()
   , Vdom.Node.div
-      ~attr:Vdom.Attr.(class_ S.item @ source)
+      ~attr:Vdom.Attr.(S.item @ source)
       [ Vdom.Node.text [%string "Item-%{data#Int} - now = %{now}"] ] )
 ;;
 
@@ -54,7 +54,7 @@ let component =
   let%sub _, view =
     Reorderable_list.simple
       (module Int)
-      ~extra_item_attrs:(Value.return (Vdom.Attr.class_ S.transition_transform))
+      ~extra_item_attrs:(Value.return S.transition_transform)
       ~default_item_height:40
       ~render:(item ~now)
       input

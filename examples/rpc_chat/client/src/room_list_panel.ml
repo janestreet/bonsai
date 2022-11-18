@@ -27,7 +27,7 @@ let component ~room_list ~refresh_rooms ~change_room =
     Vdom.Node.h2
       [ Vdom.Node.text "Rooms"
       ; Vdom_input_widgets.Button.simple
-          ~extra_attrs:[ Vdom.Attr.class_ Style.refresh_button ]
+          ~extra_attrs:[ Style.refresh_button ]
           ~on_click:(fun () -> refresh_rooms)
           "↻"
       ]
@@ -37,7 +37,5 @@ let component ~room_list ~refresh_rooms ~change_room =
       let on_click () = change_room room in
       Vdom_input_widgets.Button.simple ~on_click (Room.to_string room))
   in
-  Vdom.Node.div
-    ~attr:(Vdom.Attr.class_ Style.room_list_panel)
-    ([ room_header ] @ room_switching_buttons)
+  Vdom.Node.div ~attr:Style.room_list_panel ([ room_header ] @ room_switching_buttons)
 ;;

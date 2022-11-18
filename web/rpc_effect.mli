@@ -28,6 +28,50 @@ module Rpc : sig
     -> ('query -> 'response Or_error.t Effect.t) Computation.t
 end
 
+module Polling_state_rpc : sig
+  (** An effect for dispatching on a particular Polling_state_rpc with a
+      particular query. When the computation is deactivated, it asks the server
+      to cleanup any cached data, so that there is no memory leak. If this
+      cleanup fails, then [on_forget_client_error] is called with the error. *)
+  val dispatcher
+    :  ?on_forget_client_error:(Error.t -> unit Effect.t)
+    -> ('query, 'response) Polling_state_rpc.t
+    -> where_to_connect:Where_to_connect.t
+    -> ('query -> 'response Or_error.t Effect.t) Computation.t
+
+  module Result : sig
+    type ('query, 'response) t =
+      | No_responses_yet
+      | Error_before_any_ok_responses of
+          { error : Error.t
+          ; query : 'query
+          }
+      | Last_response_was_ok of
+          { query : 'query
+          ; response : 'response
+          }
+      | Error_after_last_ok_response of
+          { query : 'query
+          ; error : Error.t
+          ; last_ok_query : 'query
+          ; last_ok_response : 'response
+          }
+    [@@deriving sexp]
+  end
+
+  (** A computation that periodically dispatches on a polling_state_rpc and
+      keeps track of the most recent response. *)
+  val poll
+    :  (module Bonsai.Model with type t = 'query)
+    -> (module Bonsai.Model with type t = 'response)
+    -> ?clear_when_deactivated:bool
+    -> ('query, 'response) Polling_state_rpc.t
+    -> where_to_connect:Where_to_connect.t
+    -> every:Time_ns.Span.t
+    -> 'query Value.t
+    -> ('query, 'response) Result.t Computation.t
+end
+
 module Status : sig
   module State : sig
     (** The status of an RPC connection.

@@ -1,4 +1,5 @@
 open Js_of_ocaml
+open Async_kernel
 
 (* This module has been upstreamed into js_of_ocaml, so we should remove it
    once the new compiler gets released to opam. *)
@@ -136,10 +137,10 @@ module Worker : sig
 
   (** Loads a web worker from the specified URL. [on_message] is called every
       time the web worker sends a message to the main thread. *)
-  val create : url:string -> on_message:(string -> unit) -> t
+  val create : url:string -> on_message:(t -> string -> unit) -> t
 
   (** Queues a message to be sent at the next call to [flush]. *)
-  val send_message : t -> Message.t -> unit
+  val send_message : t -> Worker_message.t -> unit
 
   (** Sends all the queued messages to the worker as a single message *)
   val flush : t -> unit
@@ -151,7 +152,7 @@ end = struct
      message, which means that it is ready to receive messages. *)
   type t =
     { mutable acknowledged : bool
-    ; mutable buffer : Message.t Reversed_list.t
+    ; mutable buffer : Worker_message.t Reversed_list.t
     ; worker : (Js.js_string Js.t, Js.js_string Js.t) Worker.worker Js.t
     }
 
@@ -173,7 +174,7 @@ end = struct
     worker##.onmessage
     := Dom.handler (fun (message : Js.js_string Js.t Worker.messageEvent Js.t) ->
       result.acknowledged <- true;
-      on_message (Js.to_string message##.data);
+      on_message result (Js.to_string message##.data);
       Js._false);
     result
   ;;
@@ -190,7 +191,7 @@ end = struct
   let flush t =
     if t.acknowledged
     then (
-      let message = Versioned_message.V2 (Reversed_list.rev t.buffer) in
+      let message = Versioned_message.V3 (Reversed_list.rev t.buffer) in
       let js_string =
         Js.bytestring (Bin_prot.Writer.to_string Versioned_message.bin_writer_t message)
       in
@@ -221,47 +222,97 @@ let iter_entries performance_observer_entry_list ~f =
     f { Entry.label; entry_type; start_time; duration })
 ;;
 
+let uuid_to_url uuid = [%string "%{Bonsai_bug_constants.script_origin}/%{uuid#Uuid}"]
+
+let generate_uuid () =
+  let random_state = Random.State.default in
+  Uuid.create_random random_state
+;;
+
 let instrument ~host ~port ~worker_name component =
-  let worker =
-    (* Once the worker sends an acknowledgement message, we can send the graph
-       info. It's possible that the worker has already received a info message,
-       but we're sending one now, just to be sure.
-
-       The reason we need to do it this way is that we have no way of knowing
-       when the web worker has set up its [onmessage] callback and is ready to
-       receive message. Thus, we wait until the worker notifies us explicitly
-       that it is ready to receive messages.
-
-       This onmessage callback is also a convenient place to receive the UUID
-       that identifies this profiling session. Since web workers cannot open
-       new windows, we must open the window from the main page. To keep the URL
-       of the server decoupled from this logic, we just receive the URL from
-       the worker. *)
-    Worker.create
-      ~url:[%string "https://%{host}:%{port#Int}/%{worker_name}"]
-      ~on_message:(fun url ->
-        Dom_html.window##open_
-          (Js.string url)
-          (Js.string "bonsai-bug")
-          (Js.Opt.return (Js.string "noopener"))
-        |> (ignore : Dom_html.window Js.t Js.opt -> unit))
+  let uuid, reused_uuid =
+    let key = Js.string "bonsai-bug-session-uuid" in
+    match Js.Optdef.to_option Dom_html.window##.sessionStorage with
+    | None ->
+      print_endline "No session storage; generating new session uuid";
+      generate_uuid (), false
+    | Some storage ->
+      (match Js.Opt.to_option (storage##getItem key) with
+       | None ->
+         print_endline "No prior session uuid found; generating a new one.";
+         let uuid = generate_uuid () in
+         storage##setItem key (Js.string (Uuid.to_string uuid));
+         uuid, false
+       | Some uuid_string ->
+         (match Option.try_with (fun () -> Uuid.of_string (Js.to_string uuid_string)) with
+          | None ->
+            print_endline
+              "Found existing session uuid, but could not parse it; generating a new one.";
+            let uuid = generate_uuid () in
+            storage##setItem key (Js.string (Uuid.to_string uuid));
+            uuid, false
+          | Some uuid ->
+            print_endline
+              "Re-using existing session uuid. If you no longer have the debugger window \
+               open, you can use the following link:";
+            print_endline (uuid_to_url uuid);
+            uuid, true))
   in
-  let performance_observer =
-    let f new_entries observer =
-      observer##takeRecords
-      |> (ignore : PerformanceObserver.performanceEntry Js.t Js.js_array Js.t -> unit);
-      iter_entries new_entries ~f:(fun entry ->
-        Worker.send_message worker (Performance_measure entry))
-    in
-    PerformanceObserver.observe ~entry_types:[ "measure" ] ~f
-  in
+  if not reused_uuid
+  then (
+    let url = uuid_to_url uuid in
+    Dom_html.window##open_
+      (Js.string url)
+      (Js.string "bonsai-bug")
+      (Js.Opt.return (Js.string "noopener"))
+    |> (ignore : Dom_html.window Js.t Js.opt -> unit));
   let graph_info_dirty = ref false in
   let graph_info = ref Graph_info.empty in
+  let stop_ivar = Ivar.create () in
+  let on_first_message worker =
+    Worker.send_message worker (Uuid uuid);
+    graph_info_dirty := true;
+    let stop = Ivar.read stop_ivar in
+    Async_kernel.every ~stop (Time_ns.Span.of_sec 0.2) (fun () ->
+      if !graph_info_dirty
+      then (
+        graph_info_dirty := false;
+        Worker.send_message worker (Message (Graph_info !graph_info)));
+      Worker.flush worker;
+      Javascript_profiling.clear_marks ();
+      Javascript_profiling.clear_measures ());
+    let performance_observer =
+      let f new_entries observer =
+        observer##takeRecords
+        |> (ignore : PerformanceObserver.performanceEntry Js.t Js.js_array Js.t -> unit);
+        iter_entries new_entries ~f:(fun entry ->
+          Worker.send_message worker (Message (Performance_measure entry)))
+      in
+      PerformanceObserver.observe ~entry_types:[ "measure" ] ~f
+    in
+    Deferred.upon stop (fun () ->
+      performance_observer##disconnect;
+      Javascript_profiling.clear_marks ();
+      Javascript_profiling.clear_measures ();
+      Worker.shutdown worker)
+  in
+  let worker =
+    (* We have no way of knowing when the web worker has set up its [onmessage]
+       callback and is ready to receive messages. Thus, before sending any
+       messages to it, we first wait until it is sends an acknowledgement
+       message. *)
+    let got_first_message = ref false in
+    Worker.create
+      ~url:[%string "https://%{host}:%{port#Int}/%{worker_name}"]
+      ~on_message:(fun worker _ ->
+        if not !got_first_message then got_first_message := true;
+        on_first_message worker)
+  in
   let component =
     Bonsai.Private.Graph_info.iter_graph_updates component ~on_update:(fun gi ->
       (* Instead of sending a message every time the graph changes, we maintain
-         the current graph_info and mark it as dirty, so that the loop at the
-         bottom of this function can send only one single message per flush. *)
+         the current graph_info and mark it as dirty, so that the [every] loop
+         send a single message per flush. *)
       graph_info := gi;
       graph_info_dirty := true)
   in
@@ -275,23 +326,7 @@ let instrument ~host ~port ~worker_name component =
         Javascript_profiling.Manual.mark after;
         Javascript_profiling.Manual.measure ~name:s ~start:before ~end_:after)
   in
-  let stop_ivar = Async_kernel.Ivar.create () in
-  let stop = Async_kernel.Ivar.read stop_ivar in
-  Async_kernel.every ~stop (Time_ns.Span.of_sec 0.2) (fun () ->
-    if !graph_info_dirty
-    then (
-      graph_info_dirty := false;
-      Worker.send_message worker (Graph_info !graph_info));
-    Worker.flush worker;
-    Javascript_profiling.clear_marks ();
-    Javascript_profiling.clear_measures ());
-  let shutdown () =
-    Async_kernel.Ivar.fill_if_empty stop_ivar ();
-    performance_observer##disconnect;
-    Javascript_profiling.clear_marks ();
-    Javascript_profiling.clear_measures ();
-    Worker.shutdown worker
-  in
+  let shutdown () = Ivar.fill_if_empty stop_ivar () in
   let shutdown () =
     match Or_error.try_with shutdown with
     | Ok () -> ()

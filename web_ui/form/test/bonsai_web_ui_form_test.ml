@@ -605,18 +605,24 @@ let%expect_test "setting into a paired string textbox * int textbox " =
       </div> |}]
 ;;
 
-let%expect_test "typing into a list of string textboxes " =
-  let component =
-    let%sub string_forms =
-      List.init 3 ~f:(fun _ -> Form.Elements.Textbox.string ()) |> Computation.all
-    in
-    let%arr string_forms = string_forms in
-    Form.all string_forms
-  in
-  let handle = Handle.create (form_result_spec [%sexp_of: string list]) component in
-  Handle.show handle;
-  [%expect
-    {|
+let%test_module "Form.all" =
+  (module struct
+    let make_handle () =
+      let component =
+        let%sub string_forms =
+          List.init 3 ~f:(fun _ -> Form.Elements.Textbox.string ()) |> Computation.all
+        in
+        let%arr string_forms = string_forms in
+        Form.all string_forms
+      in
+      Handle.create (form_result_spec [%sexp_of: string list]) component
+    ;;
+
+    let%expect_test "typing into a list of string textboxes " =
+      let handle = make_handle () in
+      Handle.show handle;
+      [%expect
+        {|
     (Ok ("" "" ""))
 
     ==============
@@ -640,11 +646,15 @@ let%expect_test "typing into a list of string textboxes " =
              value:normalized=""
              oninput> </input>
     </div> |}];
-  Handle.input_text handle ~get_vdom ~selector:"input:nth-child(1)" ~text:"hello world";
-  Handle.input_text handle ~get_vdom ~selector:"input:nth-child(2)" ~text:"quack";
-  Handle.show_diff handle;
-  [%expect
-    {|
+      Handle.input_text
+        handle
+        ~get_vdom
+        ~selector:"input:nth-child(1)"
+        ~text:"hello world";
+      Handle.input_text handle ~get_vdom ~selector:"input:nth-child(2)" ~text:"quack";
+      Handle.show_diff handle;
+      [%expect
+        {|
     -|(Ok ("" "" ""))
     +|(Ok ("hello world" quack ""))
 
@@ -671,20 +681,13 @@ let%expect_test "typing into a list of string textboxes " =
                value:normalized=""
                oninput> </input>
       </div> |}]
-;;
+    ;;
 
-let%expect_test "setting into a list of string textboxes " =
-  let component =
-    let%sub string_forms =
-      List.init 3 ~f:(fun _ -> Form.Elements.Textbox.string ()) |> Computation.all
-    in
-    let%arr string_forms = string_forms in
-    Form.all string_forms
-  in
-  let handle = Handle.create (form_result_spec [%sexp_of: string list]) component in
-  Handle.show handle;
-  [%expect
-    {|
+    let%expect_test "setting into a list of string textboxes " =
+      let handle = make_handle () in
+      Handle.show handle;
+      [%expect
+        {|
     (Ok ("" "" ""))
 
     ==============
@@ -708,10 +711,10 @@ let%expect_test "setting into a list of string textboxes " =
              value:normalized=""
              oninput> </input>
     </div> |}];
-  Handle.do_actions handle [ [ "hello world"; "quack"; "" ] ];
-  Handle.show_diff handle;
-  [%expect
-    {|
+      Handle.do_actions handle [ [ "hello world"; "quack"; "" ] ];
+      Handle.show_diff handle;
+      [%expect
+        {|
     -|(Ok ("" "" ""))
     +|(Ok ("hello world" quack ""))
 
@@ -738,22 +741,15 @@ let%expect_test "setting into a list of string textboxes " =
                value:normalized=""
                oninput> </input>
       </div> |}]
-;;
+    ;;
 
-let%expect_test "setting into a list of string textboxes (more values than forms)" =
-  let component =
-    let%sub string_forms =
-      List.init 3 ~f:(fun _ -> Form.Elements.Textbox.string ()) |> Computation.all
-    in
-    let%arr string_forms = string_forms in
-    Form.all string_forms
-  in
-  let handle = Handle.create (form_result_spec [%sexp_of: string list]) component in
-  Handle.store_view handle;
-  Handle.do_actions handle [ [ "hello world"; "quack"; ""; "oh no" ] ];
-  Handle.show_diff handle;
-  [%expect
-    {|
+    let%expect_test "setting into a list of string textboxes (more values than forms)" =
+      let handle = make_handle () in
+      Handle.store_view handle;
+      Handle.do_actions handle [ [ "hello world"; "quack"; ""; "oh no" ] ];
+      Handle.show_diff handle;
+      [%expect
+        {|
     ("WARNING: Form.set called on result of Form.all with a list value whose length doesn't match the number of forms "
      "more values than forms" (form_count 3) (edits_count 4)
      "dropping left-over values")
@@ -784,22 +780,15 @@ let%expect_test "setting into a list of string textboxes (more values than forms
                value:normalized=""
                oninput> </input>
       </div> |}]
-;;
+    ;;
 
-let%expect_test "setting into a list of string textboxes (more forms than values)" =
-  let component =
-    let%sub string_forms =
-      List.init 3 ~f:(fun _ -> Form.Elements.Textbox.string ()) |> Computation.all
-    in
-    let%arr string_forms = string_forms in
-    Form.all string_forms
-  in
-  let handle = Handle.create (form_result_spec [%sexp_of: string list]) component in
-  Handle.store_view handle;
-  Handle.do_actions handle [ [ "hello world"; "quack" ] ];
-  Handle.show_diff handle;
-  [%expect
-    {|
+    let%expect_test "setting into a list of string textboxes (more forms than values)" =
+      let handle = make_handle () in
+      Handle.store_view handle;
+      Handle.do_actions handle [ [ "hello world"; "quack" ] ];
+      Handle.show_diff handle;
+      [%expect
+        {|
     ("WARNING: Form.set called on result of Form.all with a list value whose length doesn't match the number of forms "
      "more forms than values" (form_count 3) (edits_count 2)
      "not setting left-over forms")
@@ -830,6 +819,252 @@ let%expect_test "setting into a list of string textboxes (more forms than values
                value:normalized=""
                oninput> </input>
       </div> |}]
+    ;;
+  end)
+;;
+
+let%test_module "Form.all_map" =
+  (module struct
+    let make_handle () =
+      let component =
+        let%sub string_forms =
+          List.init 3 ~f:(fun i -> i, Form.Elements.Textbox.string ())
+          |> Int.Map.of_alist_exn
+          |> Computation.all_map
+        in
+        let%arr string_forms = string_forms in
+        Form.all_map string_forms
+      in
+      Handle.create (form_result_spec [%sexp_of: string Int.Map.t]) component
+    ;;
+
+    let%expect_test "typing into a list of string textboxes " =
+      let handle = make_handle () in
+      Handle.show handle;
+      [%expect
+        {|
+    (Ok (
+      (0 "")
+      (1 "")
+      (2 "")))
+
+    ==============
+    <div>
+      <input type="text"
+             placeholder=""
+             spellcheck="false"
+             id="bonsai_path_replaced_in_test"
+             value:normalized=""
+             oninput> </input>
+      <input type="text"
+             placeholder=""
+             spellcheck="false"
+             id="bonsai_path_replaced_in_test"
+             value:normalized=""
+             oninput> </input>
+      <input type="text"
+             placeholder=""
+             spellcheck="false"
+             id="bonsai_path_replaced_in_test"
+             value:normalized=""
+             oninput> </input>
+    </div> |}];
+      Handle.input_text
+        handle
+        ~get_vdom
+        ~selector:"input:nth-child(1)"
+        ~text:"hello world";
+      Handle.input_text handle ~get_vdom ~selector:"input:nth-child(2)" ~text:"quack";
+      Handle.show_diff handle;
+      [%expect
+        {|
+      (Ok (
+    -|  (0 "")
+    +|  (0 "hello world")
+    -|  (1 "")
+    +|  (1 quack)
+        (2 "")))
+
+      ==============
+      <div>
+        <input type="text"
+               placeholder=""
+               spellcheck="false"
+               id="bonsai_path_replaced_in_test"
+    -|         value:normalized=""
+    +|         value:normalized="hello world"
+               oninput> </input>
+        <input type="text"
+               placeholder=""
+               spellcheck="false"
+               id="bonsai_path_replaced_in_test"
+    -|         value:normalized=""
+    +|         value:normalized=quack
+               oninput> </input>
+        <input type="text"
+               placeholder=""
+               spellcheck="false"
+               id="bonsai_path_replaced_in_test"
+               value:normalized=""
+               oninput> </input>
+      </div> |}]
+    ;;
+
+    let%expect_test "setting into a list of string textboxes " =
+      let handle = make_handle () in
+      Handle.show handle;
+      [%expect
+        {|
+    (Ok (
+      (0 "")
+      (1 "")
+      (2 "")))
+
+    ==============
+    <div>
+      <input type="text"
+             placeholder=""
+             spellcheck="false"
+             id="bonsai_path_replaced_in_test"
+             value:normalized=""
+             oninput> </input>
+      <input type="text"
+             placeholder=""
+             spellcheck="false"
+             id="bonsai_path_replaced_in_test"
+             value:normalized=""
+             oninput> </input>
+      <input type="text"
+             placeholder=""
+             spellcheck="false"
+             id="bonsai_path_replaced_in_test"
+             value:normalized=""
+             oninput> </input>
+    </div> |}];
+      Handle.do_actions
+        handle
+        [ Int.Map.of_alist_exn [ 0, "hello world"; 1, "quack"; 2, "" ] ];
+      Handle.show_diff handle;
+      [%expect
+        {|
+      (Ok (
+    -|  (0 "")
+    +|  (0 "hello world")
+    -|  (1 "")
+    +|  (1 quack)
+        (2 "")))
+
+      ==============
+      <div>
+        <input type="text"
+               placeholder=""
+               spellcheck="false"
+               id="bonsai_path_replaced_in_test"
+    -|         value:normalized=""
+    +|         value:normalized="hello world"
+               oninput> </input>
+        <input type="text"
+               placeholder=""
+               spellcheck="false"
+               id="bonsai_path_replaced_in_test"
+    -|         value:normalized=""
+    +|         value:normalized=quack
+               oninput> </input>
+        <input type="text"
+               placeholder=""
+               spellcheck="false"
+               id="bonsai_path_replaced_in_test"
+               value:normalized=""
+               oninput> </input>
+      </div> |}]
+    ;;
+
+    let%expect_test "setting into a list of string textboxes (more values than forms)" =
+      let handle = make_handle () in
+      Handle.store_view handle;
+      Handle.do_actions
+        handle
+        [ Int.Map.of_alist_exn [ 0, "hello world"; 1, "quack"; 2, ""; 3, "oh no" ] ];
+      Handle.show_diff handle;
+      [%expect
+        {|
+    ("WARNING: Form.set on the result of Form.all_map has mismatched keys"
+     "update contains key not present in active forms" (key 3))
+
+      (Ok (
+    -|  (0 "")
+    +|  (0 "hello world")
+    -|  (1 "")
+    +|  (1 quack)
+        (2 "")))
+
+      ==============
+      <div>
+        <input type="text"
+               placeholder=""
+               spellcheck="false"
+               id="bonsai_path_replaced_in_test"
+    -|         value:normalized=""
+    +|         value:normalized="hello world"
+               oninput> </input>
+        <input type="text"
+               placeholder=""
+               spellcheck="false"
+               id="bonsai_path_replaced_in_test"
+    -|         value:normalized=""
+    +|         value:normalized=quack
+               oninput> </input>
+        <input type="text"
+               placeholder=""
+               spellcheck="false"
+               id="bonsai_path_replaced_in_test"
+               value:normalized=""
+               oninput> </input>
+      </div> |}]
+    ;;
+
+    let%expect_test "setting into a list of string textboxes (more forms than values)" =
+      let handle = make_handle () in
+      Handle.store_view handle;
+      Handle.do_actions handle [ Int.Map.of_alist_exn [ 0, "hello world"; 1, "quack" ] ];
+      Handle.show_diff handle;
+      [%expect
+        {|
+    ("WARNING: Form.set on the result of Form.all_map has mismatched keys"
+     "update is missing key present in active form" (key 2))
+
+      (Ok (
+    -|  (0 "")
+    +|  (0 "hello world")
+    -|  (1 "")
+    +|  (1 quack)
+        (2 "")))
+
+      ==============
+      <div>
+        <input type="text"
+               placeholder=""
+               spellcheck="false"
+               id="bonsai_path_replaced_in_test"
+    -|         value:normalized=""
+    +|         value:normalized="hello world"
+               oninput> </input>
+        <input type="text"
+               placeholder=""
+               spellcheck="false"
+               id="bonsai_path_replaced_in_test"
+    -|         value:normalized=""
+    +|         value:normalized=quack
+               oninput> </input>
+        <input type="text"
+               placeholder=""
+               spellcheck="false"
+               id="bonsai_path_replaced_in_test"
+               value:normalized=""
+               oninput> </input>
+      </div> |}]
+    ;;
+  end)
 ;;
 
 let%expect_test "typing into a time range textbox, with strict inequality required" =
@@ -4964,4 +5199,240 @@ let%expect_test "typed variant forms with radio buttons can be initialized to th
              value:normalized=""
              oninput> </input>
     </div> |}]
+;;
+
+let%expect_test "labelling a range form" =
+  let label text = Some (Vdom.Node.text text) in
+  let no_label = None in
+  let all_options =
+    [ no_label, no_label, "No labels"
+    ; no_label, label "right", "Right label only"
+    ; label "left", no_label, "Left label only"
+    ; label "left", label "right", "Both sides labelled"
+    ]
+  in
+  List.iter all_options ~f:(fun (left_label, right_label, description) ->
+    print_endline description;
+    print_endline "###############";
+    let range =
+      Form.Elements.Range.int ?left_label ?right_label ~default:0 ~step:1 ()
+    in
+    let handle = Handle.create (form_result_spec [%sexp_of: int]) range in
+    Handle.show handle);
+  [%expect
+    {|
+    No labels
+    ###############
+    (Ok 0)
+
+    ==============
+    <input type="range"
+           step="1"
+           placeholder=""
+           spellcheck="false"
+           id="bonsai_path_replaced_in_test"
+           value:normalized=0
+           oninput> </input>
+
+    Right label only
+    ###############
+    (Ok 0)
+
+    ==============
+    <span style={ display: flex; flex-direction: row; flex-wrap: nowrap; }>
+      <input type="range"
+             step="1"
+             placeholder=""
+             spellcheck="false"
+             id="bonsai_path_replaced_in_test"
+             value:normalized=0
+             oninput> </input>
+      right
+    </span>
+
+    Left label only
+    ###############
+    (Ok 0)
+
+    ==============
+    <span style={ display: flex; flex-direction: row; flex-wrap: nowrap; }>
+      left
+      <input type="range"
+             step="1"
+             placeholder=""
+             spellcheck="false"
+             id="bonsai_path_replaced_in_test"
+             value:normalized=0
+             oninput> </input>
+    </span>
+
+    Both sides labelled
+    ###############
+    (Ok 0)
+
+    ==============
+    <span style={ display: flex; flex-direction: row; flex-wrap: nowrap; }>
+      left
+      <input type="range"
+             step="1"
+             placeholder=""
+             spellcheck="false"
+             id="bonsai_path_replaced_in_test"
+             value:normalized=0
+             oninput> </input>
+      right
+    </span> |}]
+;;
+
+let%test_module "Typed fields monomorphization" =
+  (module struct
+    module Record = struct
+      type ('a, 'b, 'c) t =
+        { a : 'a
+        ; b : 'b
+        ; c : 'c
+        }
+      [@@deriving sexp, typed_fields]
+
+      let form =
+        Form.Typed.Record.make
+          (module struct
+            module Typed_field =
+              Typed_fields_lib.S_of_S3 (Typed_field) (Int) (String) (Float)
+
+            let label_for_field = `Inferred
+
+            let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t
+              = function
+                | A -> Form.Elements.Textbox.int ()
+                | B -> Form.Elements.Textbox.string ()
+                | C -> Form.Elements.Textbox.float ()
+            ;;
+          end)
+      ;;
+    end
+
+    let%expect_test "record monomorphization" =
+      let handle =
+        Handle.create
+          (form_result_spec
+             ~filter_printed_attributes:(fun _key _data -> false)
+             ~get_vdom:get_vdom_verbose
+             [%sexp_of: (int, string, float) Record.t])
+          Record.form
+      in
+      Handle.show handle;
+      [%expect
+        {|
+        (Error (
+          ("in field a" "Expected an integer")
+          ("in field c" "Expected a floating point number")))
+
+        ==============
+        <table>
+          <tbody>
+            <tr>
+              <td>
+                <label> a </label>
+              </td>
+              <td>
+                <input> </input>
+              </td>
+              <td>
+                <div>
+                  <div>
+                    <div> ⚠ </div>
+                  </div>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <label> b </label>
+              </td>
+              <td>
+                <input> </input>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <label> c </label>
+              </td>
+              <td>
+                <input> </input>
+              </td>
+              <td>
+                <div>
+                  <div>
+                    <div> ⚠ </div>
+                  </div>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table> |}]
+    ;;
+
+    module Variant = struct
+      type ('a, 'b, 'c) t =
+        | A of 'a
+        | B of 'b
+        | C of 'c
+      [@@deriving sexp, typed_variants]
+
+      let form =
+        Form.Typed.Variant.make
+          (module struct
+            module Typed_variant =
+              Typed_variants_lib.S_of_S3 (Typed_variant) (Int) (String) (Float)
+
+            let label_for_variant = `Inferred
+
+            let form_for_variant : type a. a Typed_variant.t -> a Form.t Computation.t
+              = function
+                | A -> Form.Elements.Textbox.int ()
+                | B -> Form.Elements.Textbox.string ()
+                | C -> Form.Elements.Textbox.float ()
+            ;;
+          end)
+      ;;
+    end
+
+    let%expect_test "variant monomorphization" =
+      let handle =
+        Handle.create
+          (form_result_spec
+             ~filter_printed_attributes:(fun _key _data -> false)
+             ~get_vdom:get_vdom_verbose
+             [%sexp_of: (int, string, float) Variant.t])
+          Variant.form
+      in
+      Handle.show handle;
+      [%expect
+        {|
+        (Error "Expected an integer")
+
+        ==============
+        <table>
+          <tbody>
+            <tr>
+
+              <td>
+                <select>
+                  <option> a </option>
+                  <option> b </option>
+                  <option> c </option>
+                </select>
+              </td>
+            </tr>
+            <tr>
+              <td>  </td>
+              <td>
+                <input> </input>
+              </td>
+            </tr>
+          </tbody>
+        </table> |}]
+    ;;
+  end)
 ;;

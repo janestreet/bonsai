@@ -480,7 +480,7 @@ type ('a, 'b) t = 'a Value.t -> 'b Computation.t
 ```
 
 Using that as your primary arrow type, it's not hard to define `arr`,
-`compare`, and `(&&&)` using Bonsai's `let%sub` and `let%arr`:
+`compose`, and `(&&&)` using Bonsai's `let%sub` and `let%arr`:
 
 <!-- $MDX file=./letsub/src/blog_letsub.ml,part=create_arrow -->
 ```ocaml
@@ -533,8 +533,3 @@ Sure, here are my main takeaways:
   doing.  That said, actually operating on that type is awkward for
   reasons outlined [in this post](./proc.md), which is why we have
   `Value` and `Computation`.
-
-
-
-
-

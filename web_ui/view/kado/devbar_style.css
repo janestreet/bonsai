@@ -1,0 +1,61 @@
+.devbar {
+  --c1: var(--fst, #343434);
+  --c2: var(--snd, rgb(254 88 88));
+  background: var(--c1);
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+  user-select: none;
+}
+
+.devbar div.background {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: 100%;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--c1),
+    var(--c2) 0.5px,
+    var(--c2) 4em,
+    var(--c1) calc(4em + 0.5px),
+    var(--c1) 8em
+  );
+  z-index: -1;
+  transform: skew(30deg);
+}
+
+.devbar div.container {
+  width: max-content;
+  display: flex;
+  animation: marquee 5s linear infinite;
+}
+
+.devbar span {
+  display: inline-flex;
+  justify-content: center;
+
+  min-width: 4em;
+  width: 4em;
+
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+
+.devbar span {
+  color: var(--c2);
+}
+
+.devbar span:nth-child(even) {
+  color: var(--c1);
+}
+
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-8em); }
+}
+
+.devbar {
+  font-size: 0.7em;
+}

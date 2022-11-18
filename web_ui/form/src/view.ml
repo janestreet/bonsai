@@ -279,12 +279,12 @@ module Tooltip = struct
 
   let view inner =
     Node.div
-      ~attr:(Attr.class_ Css.container)
+      ~attr:Css.container
       [ Node.label
-          ~attr:(Attr.class_ Css.label)
-          [ Node.input ~attr:Attr.(type_ "checkbox" @ class_ Css.checkbox) ()
-          ; Node.span ~attr:(Attr.class_ Css.span) [ Node.text "ⓘ" ]
-          ; Node.div ~attr:(Attr.class_ Css.text) [ inner ]
+          ~attr:Css.label
+          [ Node.input ~attr:Attr.(type_ "checkbox" @ Css.checkbox) ()
+          ; Node.span ~attr:Css.span [ Node.text "ⓘ" ]
+          ; Node.div ~attr:Css.text [ inner ]
           ]
       ]
   ;;
@@ -416,9 +416,7 @@ type editable =
 
 let with_fieldset ~currently_editable view =
   let disabled_ = if currently_editable then Vdom.Attr.empty else Vdom.Attr.disabled in
-  Vdom.Node.fieldset
-    ~attr:Vdom.Attr.(disabled_ @ class_ Style.clear_fieldset_styles)
-    [ view ]
+  Vdom.Node.fieldset ~attr:Vdom.Attr.(disabled_ @ Style.clear_fieldset_styles) [ view ]
 ;;
 
 let to_vdom ?on_submit ?(editable = `Yes_always) view =

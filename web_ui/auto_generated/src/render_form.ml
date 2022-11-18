@@ -34,11 +34,11 @@ module Tooltip = struct
 
   let wrap ?tooltip_element ~attr children =
     Node.div
-      ~attr:Attr.(class_ Style.container @ attr)
+      ~attr:Attr.(Style.container @ attr)
       [ children
       ; (match tooltip_element with
          | None -> Node.none
-         | Some element -> Node.div ~attr:Attr.(class_ Style.content) [ element ])
+         | Some element -> Node.div ~attr:Style.content [ element ])
       ]
   ;;
 end
@@ -178,7 +178,7 @@ module Style =
    We need to append the CSS because [ppx_css] does not mangle classes in the pseudo
    selector*)
 let () =
-  let form = Style.form in
+  let form = Style.For_referencing.form in
   Inline_css.Private.append
     [%string
       {|
@@ -201,7 +201,7 @@ let nested_table_depth_classes =
 
 let nested_table depth children =
   let table_attr =
-    Attr.classes
+    Attr.many
       [ List.nth_exn
           nested_table_depth_classes
           (depth mod List.length nested_table_depth_classes)
@@ -228,8 +228,7 @@ let label_wrapper ?(child = Node.text "") ?(attr = Attr.empty) ?tooltip ?error (
     | [] -> None
     | elements -> Some (Node.div (List.intersperse elements ~sep:(Node.hr ())))
   in
-  Node.td
-    [ Tooltip.wrap ?tooltip_element ~attr:Attr.(classes label_classes @ attr) child ]
+  Node.td [ Tooltip.wrap ?tooltip_element ~attr:Attr.(many label_classes @ attr) child ]
 ;;
 
 let rec to_vdom ~depth = function
@@ -311,9 +310,7 @@ let to_vdom ?on_submit ?(editable = `Yes_always) view =
       concat view button
     | _ -> view
   in
-  let root_table =
-    Node.table ~attr:Attr.(class_ Style.form) [ Node.tbody (to_vdom view ~depth:0) ]
-  in
+  let root_table = Node.table ~attr:Style.form [ Node.tbody (to_vdom view ~depth:0) ] in
   let root_table =
     match editable with
     | `Yes_always -> root_table

@@ -145,7 +145,7 @@ let table_with_ppx_css rows =
       tr [ td [ textf "%d" id ]; td [ text name ]; td [ textf "%d" age ] ])
     |> tbody
   in
-  table ~attr:(Vdom.Attr.class_ Style.politicians) [ thead; tbody ]
+  table ~attr:Style.politicians [ thead; tbody ]
 ;;
 
 (* $MDX part-end *)
@@ -170,7 +170,7 @@ let themeable_table ?(theme = Style.default) rows =
       tr [ td [ textf "%d" id ]; td [ text name ]; td [ textf "%d" age ] ])
     |> tbody
   in
-  table ~attr:(Vdom.Attr.class_ Style.politicians) [ thead; tbody ]
+  table ~attr:Style.politicians [ thead; tbody ]
 ;;
 
 (* $MDX part-begin=my_theme *)

@@ -24,6 +24,12 @@ module Message : sig
   [@@deriving bin_io, sexp]
 end
 
+module Worker_message : sig
+  type t =
+    | Uuid of Uuid.t
+    | Message of Message.t
+end
+
 module Stable : sig
   module Entry : sig
     module V1 : sig
@@ -40,10 +46,19 @@ module Stable : sig
     end
 
     module V2 : sig
-      type t = Message.t [@@deriving sexp, bin_io]
+      type t = Message.t =
+        | Graph_info of Graph_info.Stable.V2.t
+        | Performance_measure of Entry.V1.t
+      [@@deriving sexp, bin_io]
 
       val to_v1 : t -> V1.t
       val of_v1 : V1.t -> t
+    end
+  end
+
+  module Worker_message : sig
+    module V1 : sig
+      type t = Worker_message.t [@@deriving sexp, bin_io]
     end
   end
 end
@@ -52,5 +67,6 @@ module Versioned_message : sig
   type t =
     | V1 of Stable.Message.V1.t list
     | V2 of Stable.Message.V2.t list
+    | V3 of Stable.Worker_message.V1.t list
   [@@deriving sexp, bin_io]
 end

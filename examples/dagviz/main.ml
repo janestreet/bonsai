@@ -142,11 +142,11 @@ module Status = struct
       | false -> []
     in
     Vdom.Node.div
-      ~attr:(Vdom.Attr.class_ Styles.progress_bar)
+      ~attr:Styles.progress_bar
       [ Vdom.Node.div
           ~attr:
             (Vdom.Attr.many
-               [ Vdom.Attr.classes ([ Styles.progress_bar_meter ] @ maybe_spin)
+               [ Vdom.Attr.many ([ Styles.progress_bar_meter ] @ maybe_spin)
                ; Vdom.Attr.style
                    (Css_gen.combine
                       (Css_gen.background_color color)
@@ -165,7 +165,7 @@ module Node_data = struct
 
     let to_vdom _ =
       Vdom.Node.div
-        ~attr:(Vdom.Attr.classes [ Styles.node; Styles.person ])
+        ~attr:(Vdom.Attr.many [ Styles.node; Styles.person ])
         [ Vdom.Node.text "I am a human BEEP BOOP!" ]
     ;;
   end
@@ -186,7 +186,7 @@ module Node_data = struct
     let status = Status.to_vdom t.status in
     let status_message =
       Vdom.Node.div
-        ~attr:(Vdom.Attr.class_ Styles.status_message)
+        ~attr:Styles.status_message
         [ Vdom.Node.text @@ Status.to_status_message t.status ]
     in
     let name =
@@ -205,18 +205,15 @@ module Node_data = struct
           (List.map t.people ~f:Person.to_vdom)
     in
     Vdom.Node.div
-      ~attr:(Vdom.Attr.class_ Styles.node)
+      ~attr:Styles.node
       [ status
       ; Vdom.Node.div
-          ~attr:(Vdom.Attr.class_ Styles.node_contents)
+          ~attr:Styles.node_contents
           [ Vdom.Node.div
               ~attr:(Vdom.Attr.style (Css_gen.flex_container ~direction:`Row ()))
               [ name
               ; Feather_icon.svg
-                  ~extra_attrs:
-                    [ Vdom.Attr.class_ Styles.cursor
-                    ; Vdom.Attr.on_click @@ Fn.const collapse
-                    ]
+                  ~extra_attrs:[ Styles.cursor; Vdom.Attr.on_click @@ Fn.const collapse ]
                   (if collapsed
                    then Feather_icon.Chevron_down
                    else Feather_icon.Chevron_up)
@@ -451,9 +448,9 @@ let component =
   in
   let%arr dag = dag in
   Vdom.Node.div
-    ~attr:(Vdom.Attr.class_ Styles.header)
+    ~attr:Styles.header
     [ Vdom.Node.div
-        ~attr:(Vdom.Attr.class_ Styles.paper)
+        ~attr:Styles.paper
         [ Vdom.Node.strong [ Vdom.Node.text "Capybara Petting Zoo" ]; dag ]
     ]
 ;;

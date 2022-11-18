@@ -47,21 +47,21 @@ let icon_div icon ~controls =
       ~stroke
       ?fill
   in
-  Vdom.Node.div ~attr:(Vdom.Attr.class_ Style.icon) [ icon ]
+  Vdom.Node.div ~attr:Style.icon [ icon ]
 ;;
 
 let component ~icons ~controls =
   Vdom.Node.div
-    ~attr:(Vdom.Attr.class_ Style.cards)
+    ~attr:Style.cards
     (List.map icons ~f:(fun icon ->
        let icon_div = icon_div icon ~controls in
        let label_span =
          Vdom.Node.span
-           ~attr:(Vdom.Attr.class_ Style.label)
+           ~attr:Style.label
            [ Vdom.Node.text (Feather_icon.to_string icon) ]
        in
        Vdom.Node.div
          ~key:(Feather_icon.to_string icon)
-         ~attr:(Vdom.Attr.classes [ Card_like.class_; Style.card ])
+         ~attr:(Vdom.Attr.many [ Card_like.class_; Style.card ])
          [ icon_div; label_span ]))
 ;;

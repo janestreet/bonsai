@@ -57,8 +57,8 @@ let rec render_header header ~level ~acc ~column_widths ~set_column_width =
                  (fun ~width ~height:_ -> set_column_width ~index (`Px_float width))
              ; Bonsai_web_ui_element_size_hooks.Freeze.width
              ; Vdom.Attr.colspan 1
-             ; Vdom.Attr.class_ Style.header_label
-             ; Vdom.Attr.class_ Style.leaf_header
+             ; Style.header_label
+             ; Style.leaf_header
              ; Vdom.Attr.style
                  Css_gen.(width column_width @> if visible then empty else display `None)
              ])
@@ -70,7 +70,7 @@ let rec render_header header ~level ~acc ~column_widths ~set_column_width =
     let acc = Acc.visit_non_leaf acc ~level ~node in
     recurse inside ~acc
   | Group { children; group_label } ->
-    let attrs = Vdom.Attr.many [ colspan; Vdom.Attr.class_ Style.header_label ] in
+    let attrs = Vdom.Attr.many [ colspan; Style.header_label ] in
     let node = Vdom.Node.td ~attr:attrs [ group_label ] in
     let acc = Acc.visit_non_leaf acc ~level ~node in
     List.fold children ~init:acc ~f:(fun acc -> recurse ~acc)
@@ -101,7 +101,7 @@ let component
          [ Bonsai_web_ui_element_size_hooks.Visibility_tracker.detect
              ()
              ~client_rect_changed:set_header_client_rect
-         ; Vdom.Attr.class_ Style.partial_render_table_header
+         ; Style.partial_render_table_header
          ; Vdom.Attr.class_ "prt-table-header"
          ])
     [ Vdom.Node.tbody rows ]

@@ -18,7 +18,7 @@ module Css =
 let component =
   Bonsai.const
     (Vdom.Node.div
-       ~attr:(Vdom.Attr.class_ Css.firacode)
+       ~attr:Css.firacode
        [ Vdom.Node.text "text with some ligatures -> ==> >>=" ])
 ;;
 

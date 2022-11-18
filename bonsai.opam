@@ -31,6 +31,7 @@ depends: [
   "indentation_buffer"
   "ordinal_abbreviation"
   "patdiff"
+  "polling_state_rpc"
   "ppx_css"
   "ppx_jane"
   "ppx_let"

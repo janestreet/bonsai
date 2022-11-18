@@ -134,6 +134,43 @@ let all forms =
   { value; view; set }
 ;;
 
+let all_map (type k cmp) (forms : (k, _, cmp) Map.t) =
+  let comparator = Map.comparator_s forms in
+  let module C = (val comparator) in
+  let forms_as_alist = Map.to_alist forms in
+  let value =
+    forms_as_alist
+    |> List.map ~f:(fun (k, form) ->
+      let%map.Or_error value = form.value in
+      k, value)
+    |> Or_error.all
+    |> Or_error.map ~f:(Map.of_alist_exn comparator)
+  in
+  let view = forms_as_alist |> List.map ~f:(fun (_, a) -> a.view) |> View.List in
+  let set edits =
+    let updates =
+      Map.fold2 forms edits ~init:[] ~f:(fun ~key ~data acc ->
+        let warning_m details =
+          Effect.print_s
+            [%message
+              {|WARNING: Form.set on the result of Form.all_map has mismatched keys|}
+                ~_:(details : string)
+                ~key:(C.comparator.sexp_of_t key : Sexp.t)]
+        in
+        match data with
+        | `Left _form ->
+          let eff = warning_m "update is missing key present in active form" in
+          eff :: acc
+        | `Right _update ->
+          let eff = warning_m "update contains key not present in active forms" in
+          eff :: acc
+        | `Both (form, update) -> form.set update :: acc)
+    in
+    Effect.Many updates
+  in
+  { value; view; set }
+;;
+
 let label' label t = { t with view = View.set_label label t.view }
 let label text = label' (Vdom.Node.text text)
 let tooltip' tooltip t = { t with view = View.set_tooltip tooltip t.view }

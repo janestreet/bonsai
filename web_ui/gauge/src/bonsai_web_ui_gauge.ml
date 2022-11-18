@@ -63,5 +63,5 @@ let gauge ~radius ~(percent : Percent.t) ~percent_to_color =
 
 let create ?percent_to_color ~radius percent =
   let gauge = gauge ~radius ~percent ~percent_to_color in
-  Node.div ~attr:(Attr.class_ Styles.wrapper) [ gauge ]
+  Node.div ~attr:Styles.wrapper [ gauge ]
 ;;

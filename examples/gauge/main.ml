@@ -134,13 +134,13 @@ let component =
   and gauge2 = gauge2
   and gauge3 = gauge3 in
   Node.div
-    ~attr:(Attr.class_ Styles.column)
+    ~attr:Styles.column
     [ Node.strong [ Node.text "Gauges" ]
     ; Node.div
-        ~attr:(Attr.class_ Styles.row)
-        [ Node.div ~attr:(Attr.class_ Styles.paper) [ gauge1 ]
-        ; Node.div ~attr:(Attr.class_ Styles.paper) [ gauge2 ]
-        ; Node.div ~attr:(Attr.class_ Styles.paper) [ gauge3 ]
+        ~attr:Styles.row
+        [ Node.div ~attr:Styles.paper [ gauge1 ]
+        ; Node.div ~attr:Styles.paper [ gauge2 ]
+        ; Node.div ~attr:Styles.paper [ gauge3 ]
         ]
     ]
 ;;

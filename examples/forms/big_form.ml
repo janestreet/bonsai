@@ -154,7 +154,15 @@ let label_for_field : type a. a Typed_field.t -> string =
 let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t = function
   | Variant -> my_variant_form >>|| Form.tooltip "Tooltips can also be on header groups"
   | Optional_variant -> my_variant_optional_form
-  | Int_from_range -> E.Range.int ~min:0 ~max:100 ~default:0 ~step:1 ()
+  | Int_from_range ->
+    E.Range.int
+      ~min:0
+      ~max:100
+      ~default:0
+      ~left_label:(Vdom.Node.text "Apple 🍎")
+      ~right_label:(Vdom.Node.text "Banana 🍌")
+      ~step:1
+      ()
   | String_from_text -> E.Textbox.string ()
   | String_from_vert_radio ->
     E.Radio_buttons.list
@@ -236,8 +244,8 @@ let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t = functio
     in
     Form.Elements.Query_box.create
       (module String)
-      ~selected_item_attr:(Value.return (Vdom.Attr.class_ Query_box_css.selected_item))
-      ~extra_list_container_attr:(Value.return (Vdom.Attr.class_ Query_box_css.list))
+      ~selected_item_attr:(Value.return Query_box_css.selected_item)
+      ~extra_list_container_attr:(Value.return Query_box_css.list)
       ~selection_to_string:Fn.id
       ~f:(fun query ->
         let%arr query = query

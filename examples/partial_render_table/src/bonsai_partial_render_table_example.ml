@@ -118,7 +118,7 @@ let component ?filter (data : Row.t String.Map.t Value.t) =
              | None -> Effect.Ignore)
          ])
     [ Vdom.Node.div
-        ~attr:(Vdom.Attr.class_ Style.show_position_toggle)
+        ~attr:Style.show_position_toggle
         [ button button_text (set (not should_show_position)) ]
     ; table
     ]

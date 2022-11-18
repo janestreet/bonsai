@@ -54,6 +54,20 @@ module Stable = struct
       ;;
     end
   end
+
+  module Worker_message = struct
+    module V1 = struct
+      type t =
+        | Uuid of Uuid.Stable.V1.t
+        | Message of Message.V2.t
+      [@@deriving bin_io, sexp]
+
+      let%expect_test _ =
+        print_endline [%bin_digest: t];
+        [%expect {| e1ff8318743ebd1c14eea6875eed5155 |}]
+      ;;
+    end
+  end
 end
 
 open! Core
@@ -64,6 +78,7 @@ module Versioned_message = struct
   type t =
     | V1 of Message.V1.t list
     | V2 of Message.V2.t list
+    | V3 of Worker_message.V1.t list
   [@@deriving sexp, bin_io]
 end
 
@@ -82,4 +97,10 @@ module Message = struct
     | Graph_info of Graph_info.t
     | Performance_measure of Entry.t
   [@@deriving bin_io, sexp]
+end
+
+module Worker_message = struct
+  type t = Worker_message.V1.t =
+    | Uuid of Uuid.Unstable.t
+    | Message of Message.t
 end

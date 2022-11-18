@@ -277,13 +277,13 @@ module Style =
   }
   |}]
 
-let error_box message = N.pre ~attr:(A.class_ Style.error) [ N.text message ]
+let error_box message = N.pre ~attr:Style.error [ N.text message ]
 
 let print_the_atom ~monospaced = function
   | Sexp.Atom a ->
     if monospaced
     then N.pre [ N.text a ]
-    else N.span ~attr:A.(class_ Style.with_whitespace) [ N.text a ]
+    else N.span ~attr:Style.with_whitespace [ N.text a ]
   | sexp ->
     error_box [%string "Error printing atom. Expected atom, but got: %{sexp#Sexp}"]
 ;;
@@ -379,7 +379,7 @@ let view grammar ~customizations =
                   | _ -> all |> List.map ~f:(fun arg -> N.li [ arg ]) |> N.ul
                 in
                 N.div
-                  [ N.span ~attr:(A.class_ Style.record_field_name) [ N.text field_name ]
+                  [ N.span ~attr:Style.record_field_name [ N.text field_name ]
                   ; N.br ()
                   ; all_view
                   ]))
@@ -404,7 +404,7 @@ let view grammar ~customizations =
              |> Some
            | false ->
              N.div
-               [ N.span ~attr:(A.class_ Style.record_field_name) [ N.text key ]
+               [ N.span ~attr:Style.record_field_name [ N.text key ]
                ; N.br ()
                ; N.pre [ N.text "Non-required field not present" ]
                ]
@@ -883,14 +883,13 @@ let form
             | _ ->
               let text = if override then "[override]" else "[default]" in
               let override_status =
-                A.class_
-                  (if override then Style.override_showing else Style.override_hidden)
+                if override then Style.override_showing else Style.override_hidden
               in
               N.div
                 ~attr:
                   A.(
                     override_status
-                    @ class_ Style.override_text
+                    @ Style.override_text
                     @ on_click (fun _ -> set_override (not override)))
                 [ N.text text ]
           in

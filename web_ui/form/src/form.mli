@@ -121,6 +121,10 @@ val both : 'a t -> 'b t -> ('a * 'b) t
     list form. *)
 val all : 'a t list -> 'a list t
 
+(** Combines a map of forms into another that produces all values from the inputs in
+    map form. *)
+val all_map : ('k, 'a t, 'cmp) Map.t -> ('k, 'a, 'cmp) Map.t t
+
 (** [project] is the powerhouse of the library; Using this function, you
     can change the type produced. Think of it like [map].
 

@@ -22,7 +22,7 @@ let component =
   and form_with_submit = Form_with_submit.component
   and typed_record = Typed.component in
   Vdom.Node.div
-    ~attr:(Vdom.Attr.class_ Style.container)
+    ~attr:Style.container
     [ big_form; list_form; form_with_submit; typed_record ]
 ;;
 

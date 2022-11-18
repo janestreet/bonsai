@@ -15,9 +15,7 @@ let to_vdom_node_map ~with_key map =
       Style.chip ?key data text)
 ;;
 
-let make_comparison_list node =
-  Vdom.Node.div ~attr:(Vdom.Attr.class_ Style.comparison_list) [ node ]
-;;
+let make_comparison_list node = Vdom.Node.div ~attr:Style.comparison_list [ node ]
 
 let view nodes =
   let%sub nodes_with_key = to_vdom_node_map ~with_key:true nodes in
@@ -33,13 +31,13 @@ let view nodes =
     Vdom_node_with_map_children.make nodes_without_key
   in
   Vdom.Node.div
-    ~attr:(Vdom.Attr.classes [ Style.color_list; Style.results ])
-    [ Vdom.Node.div ~attr:(Vdom.Attr.classes [ Style.header ]) [ Vdom.Node.text "out" ]
+    ~attr:(Vdom.Attr.many [ Style.color_list; Style.results ])
+    [ Vdom.Node.div ~attr:Style.header [ Vdom.Node.text "out" ]
     ; Vdom.Node.div
         ~attr:
           (Vdom.Attr.many
              [ Vdom.Attr.id "results"
-             ; Vdom.Attr.classes [ Style.comparison_container; Style.body ]
+             ; Vdom.Attr.many [ Style.comparison_container; Style.body ]
              ])
         [ make_comparison_list with_key_via_alist
         ; make_comparison_list without_key_via_alist

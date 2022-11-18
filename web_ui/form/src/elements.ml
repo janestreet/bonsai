@@ -318,15 +318,12 @@ module Toggle = struct
       fun ~id ~state ~set_state ->
         let checkbox =
           Checkbox.make_input
-            ~extra_attrs:
-              [ Vdom.Attr.many [ Vdom.Attr.class_ Style.invisible; extra_attr ] ]
+            ~extra_attrs:[ Vdom.Attr.many [ Style.invisible; extra_attr ] ]
             ~state
             ~set_state
         in
-        let slider = Vdom.Node.span ~attr:(Vdom.Attr.class_ Style.slider) [] in
-        Vdom.Node.label
-          ~attr:(Vdom.Attr.many [ Vdom.Attr.class_ Style.toggle; id ])
-          [ checkbox; slider ]
+        let slider = Vdom.Node.span ~attr:Style.slider [] in
+        Vdom.Node.label ~attr:(Vdom.Attr.many [ Style.toggle; id ]) [ checkbox; slider ]
     in
     Basic_stateful.make (Bonsai.state (module Bool) ~default_model:default) ~view
   ;;
@@ -893,9 +890,7 @@ module Multiple = struct
              ])
       | _ -> Effect.Ignore
     in
-    let invalid_attr =
-      if invalid then Vdom.Attr.class_ Style.invalid_text_box else Vdom.Attr.empty
-    in
+    let invalid_attr = if invalid then Style.invalid_text_box else Vdom.Attr.empty in
     let input =
       Vdom.Node.input
         ~attr:
@@ -1039,7 +1034,10 @@ end
 module Number_input_type = struct
   type t =
     | Number
-    | Range
+    | Range of
+        { left_label : Vdom.Node.t option
+        ; right_label : Vdom.Node.t option
+        }
 end
 
 module type Number_input_specification = sig
@@ -1056,31 +1054,29 @@ module type Number_input_specification = sig
   val to_float : t -> float
 end
 
-module Make_number (M : sig
-    val input_type : Number_input_type.t
-  end) =
-struct
-  let number_input
-        (type a)
-        ?(extra_attrs = Value.return [])
-        (module S : Number_input_specification with type t = a)
-    =
-    let compare_opt a b =
-      match b with
-      | Some b -> S.compare a b
-      | None -> 0
-    in
-    let ( < ) a b = compare_opt a b < 0 in
-    let ( > ) a b = compare_opt a b > 0 in
-    let view =
-      let min = Option.map S.min ~f:(Fn.compose Vdom.Attr.min S.to_float) in
-      let max = Option.map S.max ~f:(Fn.compose Vdom.Attr.max S.to_float) in
-      let%map extra_attrs = extra_attrs in
-      fun ~id ~state ~set_state ->
+let number_input
+      (type a)
+      ?(extra_attrs = Value.return [])
+      input_type
+      (module S : Number_input_specification with type t = a)
+  =
+  let compare_opt a b =
+    match b with
+    | Some b -> S.compare a b
+    | None -> 0
+  in
+  let ( < ) a b = compare_opt a b < 0 in
+  let ( > ) a b = compare_opt a b > 0 in
+  let view =
+    let min = Option.map S.min ~f:(Fn.compose Vdom.Attr.min S.to_float) in
+    let max = Option.map S.max ~f:(Fn.compose Vdom.Attr.max S.to_float) in
+    let%map extra_attrs = extra_attrs in
+    fun ~id ~state ~set_state ->
+      let input =
         let input_widget =
-          match M.input_type with
+          match input_type with
           | Number_input_type.Number -> Vdom_input_widgets.Entry.number
-          | Range -> Vdom_input_widgets.Entry.range
+          | Range _ -> Vdom_input_widgets.Entry.range
         in
         input_widget
           (module S)
@@ -1091,23 +1087,32 @@ struct
           ~on_input:(function
             | Some s -> set_state s
             | None -> set_state S.default)
-    in
-    let%sub number_input =
-      Basic_stateful.make (Bonsai.state (module S) ~default_model:S.default) ~view
-    in
-    let%arr number_input = number_input in
-    Form.validate number_input ~f:(fun value ->
-      if value < S.min
-      then
-        Or_error.error_s
-          [%message (value : S.t) "lower than allowed threshold" (S.min : S.t option)]
-      else if value > S.max
-      then
-        Or_error.error_s
-          [%message (value : S.t) "higher than allowed threshold" (S.max : S.t option)]
-      else Ok ())
-  ;;
+      in
+      match input_type with
+      | Number -> input
+      | Range { left_label; right_label } ->
+        (match List.filter_opt [ left_label; Some input; right_label ] with
+         | [ x ] -> x
+         | elements ->
+           Vdom.Node.span ~attr:(Vdom.Attr.style (Css_gen.flex_container ())) elements)
+  in
+  let%sub number_input =
+    Basic_stateful.make (Bonsai.state (module S) ~default_model:S.default) ~view
+  in
+  let%arr number_input = number_input in
+  Form.validate number_input ~f:(fun value ->
+    if value < S.min
+    then
+      Or_error.error_s
+        [%message (value : S.t) "lower than allowed threshold" (S.min : S.t option)]
+    else if value > S.max
+    then
+      Or_error.error_s
+        [%message (value : S.t) "higher than allowed threshold" (S.max : S.t option)]
+    else Ok ())
+;;
 
+module Number = struct
   let int ?extra_attrs ?min:min_ ?max:max_ ~default ~step () =
     let module Specification = struct
       include Int
@@ -1118,7 +1123,7 @@ struct
       let default = default
     end
     in
-    number_input ?extra_attrs (module Specification)
+    number_input ?extra_attrs Number (module Specification)
   ;;
 
   let float ?extra_attrs ?min:min_ ?max:max_ ~default ~step () =
@@ -1136,17 +1141,42 @@ struct
       let step = step
     end
     in
-    number_input ?extra_attrs (module Specification)
+    number_input ?extra_attrs Number (module Specification)
   ;;
 end
 
-module Number = Make_number (struct
-    let input_type = Number_input_type.Number
-  end)
+module Range = struct
+  let int ?extra_attrs ?min:min_ ?max:max_ ?left_label ?right_label ~default ~step () =
+    let module Specification = struct
+      include Int
 
-module Range = Make_number (struct
-    let input_type = Number_input_type.Range
-  end)
+      let min = min_
+      let max = max_
+      let step = step
+      let default = default
+    end
+    in
+    number_input ?extra_attrs (Range { left_label; right_label }) (module Specification)
+  ;;
+
+  let float ?extra_attrs ?min:min_ ?max:max_ ?left_label ?right_label ~default ~step () =
+    let module Specification = struct
+      include Float
+
+      (* We can't just use the default Stringable interface provided by Float, so we
+         overwrite it with a custom one. For more information, see
+         [Vdom_input_widgets.Entry.number]. *)
+      include Vdom_input_widgets.Decimal
+
+      let min = min_
+      let max = max_
+      let default = default
+      let step = step
+    end
+    in
+    number_input ?extra_attrs (Range { left_label; right_label }) (module Specification)
+  ;;
+end
 
 module Radio_buttons = struct
   let list

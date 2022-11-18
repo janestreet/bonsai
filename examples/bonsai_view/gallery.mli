@@ -14,5 +14,6 @@ end
 val make_demo : (module Demo) -> Vdom.Node.t Computation.t
 
 val make_sections
-  :  (string * string * Vdom.Node.t Computation.t list) list
+  :  theme_picker:Vdom.Node.t Value.t
+  -> (string * string * Vdom.Node.t Computation.t list) list
   -> Vdom.Node.t Computation.t

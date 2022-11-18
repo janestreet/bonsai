@@ -1,5 +1,8 @@
 open! Core
 
+val clear_log : unit -> unit
+val read_log : unit -> Sexp.t
+
 module Map_comparator : sig
   type (!'cmp_a, !'cmp_b) comparator_witness
 end
@@ -139,7 +142,4 @@ val witness_to_result_spec
   :  ('w, 'cmp) Witness.t
   -> (module Bonsai_test.Result_spec.S with type incoming = 'w incoming and type t = 'w)
 
-val actions_generator
-  :  'a
-  -> ('a, 'cmp) Witness.t
-  -> 'a incoming Quickcheck.Generator.t option
+val actions_generator : ('a, 'cmp) Witness.t -> 'a incoming Quickcheck.Generator.t option

@@ -13,4 +13,5 @@ let view ~tag t =
     ~tag
     ~attr:Vdom.Attr.empty
     ~this_html_is_sanitized_and_is_totally_safe_trust_me:t
+    ()
 ;;

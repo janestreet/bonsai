@@ -225,7 +225,7 @@ let to_vdom
   =
   let module Notification_style = (val notification_style) in
   Vdom.Node.div
-    ~attr:(Vdom.Attr.class_ Style.notification_container)
+    ~attr:Style.notification_container
     (Map.to_alist notifications
      |> List.sort ~compare:(fun (_, a) (_, b) ->
        [%compare: Time_ns.t] a.Notification.opened_at b.opened_at)
@@ -248,7 +248,7 @@ let to_vdom
                    ~key:(Notification_id.to_string notification_id)
                    ~attr:
                      Vdom.Attr.(
-                       class_ Style.notification
+                       Style.notification
                        @ on_click (fun (_ : Js_of_ocaml.Dom_html.mouseEvent Js_of_ocaml.Js.t) ->
                          inject_notification_action (Remove notification_id))
                        @ notification_extra_attr
@@ -258,7 +258,7 @@ let to_vdom
                    [ Vdom.Node.div
                        ~attr:
                          Vdom.Attr.(
-                           classes [ Style.notification_body; level_class ]
+                           many [ Style.notification_body; level_class ]
                            @
                            if should_dismiss_automatically
                            then

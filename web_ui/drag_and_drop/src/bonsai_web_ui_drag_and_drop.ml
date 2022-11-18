@@ -247,7 +247,7 @@ let create
             match Bonsai_web.am_within_disabled_fieldset event with
             | true -> Effect.Ignore
             | false -> inject [ Started_drag { source = id; offset; position; size } ])
-        ; Vdom.Attr.class_ Style.no_select
+        ; Style.no_select
         ]
   in
   let%sub path = Bonsai.Private.path in
@@ -372,7 +372,7 @@ let dragged_element t ~f =
     Vdom.Node.div
       ~attr:
         Vdom.Attr.(
-          class_ Style.dragged_element
+          Style.dragged_element
           @ style
               Css_gen.(
                 width (`Px size.width)

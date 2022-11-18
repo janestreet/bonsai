@@ -20,16 +20,12 @@ let component =
     Vdom.Node.div
       ~attr:
         (Vdom.Attr.many
-           [ Vdom.Attr.class_ Style.box
-           ; Style.Variables.set ~my_color:"red" ~radius:"30px" ()
-           ])
+           [ Style.box; Style.Variables.set ~my_color:"red" ~radius:"30px" () ])
       []
   in
   let blue_box =
     Vdom.Node.div
-      ~attr:
-        (Vdom.Attr.many
-           [ Vdom.Attr.class_ Style.box; Style.Variables.set ~radius:"10px" () ])
+      ~attr:(Vdom.Attr.many [ Style.box; Style.Variables.set ~radius:"10px" () ])
       []
   in
   Vdom.Node.div ~attr:(Style.Variables.set ~my_color:"green" ()) [ red_box; blue_box ]

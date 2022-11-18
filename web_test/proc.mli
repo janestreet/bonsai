@@ -28,7 +28,8 @@ module Handle : sig
 
   val create
     :  ('a, 'b) Result_spec.t
-    -> ?rpc_implementations:unit Async_rpc_kernel.Rpc.Implementation.t list
+    -> ?rpc_implementations:
+         Async_rpc_kernel.Rpc.Connection.t Async_rpc_kernel.Rpc.Implementation.t list
     -> ?connectors:(Rpc_effect.Where_to_connect.t -> Rpc_effect.Connector.t)
     (** By default [connectors] always returns
         [Bonsai_web.Rpc_effect.Connector.test_fallback], which uses any provided

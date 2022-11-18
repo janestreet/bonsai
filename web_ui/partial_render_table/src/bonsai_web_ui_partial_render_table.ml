@@ -17,8 +17,6 @@ end
 let default_preload = 70
 
 module Expert = struct
-  module Bonsai_collate = Incr_map_collate.Make (Ui_incr)
-
   module Focus = struct
     include Focus
     include Kind
@@ -204,7 +202,7 @@ module Expert = struct
           ~attr:
             Vdom.Attr.(
               many
-                [ class_ Style.partial_render_table_body
+                [ Style.partial_render_table_body
                 ; Vdom.Attr.style Css_gen.(height (`Px total_height))
                 ; vis_change_attr
                 ])
@@ -213,7 +211,7 @@ module Expert = struct
       Vdom.Node.div
         ~attr:
           Vdom.Attr.(
-            Vdom.Attr.class_ Style.partial_render_table_container
+            Style.partial_render_table_container
             @ Vdom.Attr.class_ ("partial-render-table-" ^ path))
         [ head; body ]
     in
@@ -271,7 +269,7 @@ module Expert = struct
     Bonsai.Incr.compute data_and_collate ~f:(fun data_and_collate ->
       let open Ui_incr.Let_syntax in
       let%pattern_bind data, collate = data_and_collate in
-      Bonsai_collate.collate
+      Incr_map_collate.collate
         ?operation_order
         ~filter_equal
         ~order_equal

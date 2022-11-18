@@ -27,9 +27,7 @@ let bulk_size_component =
   let%arr sizes, size_attr = state in
   let mk i =
     let key = sprintf "resizable-using-css-%d" i in
-    let attr =
-      Vdom.Attr.many [ Vdom.Attr.class_ Style.resizable_using_css; size_attr i ]
-    in
+    let attr = Vdom.Attr.many [ Style.resizable_using_css; size_attr i ] in
     Vdom.Node.div ~key ~attr []
   in
   Vdom.Node.div
@@ -39,7 +37,7 @@ let bulk_size_component =
       |> Sexp.to_string_hum
       |> Vdom.Node.text
       |> List.return
-      |> Vdom.Node.pre ~attr:(Vdom.Attr.class_ Style.pre_for_display)
+      |> Vdom.Node.pre ~attr:Style.pre_for_display
     ; mk 0
     ; mk 1
     ; mk 2
@@ -70,9 +68,7 @@ let position =
   let%arr positions = positions
   and get_attr = get_attr in
   let mk i =
-    let attr =
-      Vdom.Attr.many [ Vdom.Attr.class_ Style.resizable_using_css; get_attr i ]
-    in
+    let attr = Vdom.Attr.many [ Style.resizable_using_css; get_attr i ] in
     Vdom.Node.div ~attr []
   in
   Vdom.Node.div
@@ -82,7 +78,7 @@ let position =
       |> Sexp.to_string_hum
       |> Vdom.Node.text
       |> List.return
-      |> Vdom.Node.pre ~attr:(Vdom.Attr.class_ Style.pre_for_display)
+      |> Vdom.Node.pre ~attr:Style.pre_for_display
     ; mk 0
     ; mk 1
     ; mk 2
@@ -99,7 +95,7 @@ let size_component =
         ~key:"resizable-using-css"
         ~attr:
           (Vdom.Attr.many
-             [ Vdom.Attr.class_ Style.resizable_using_css
+             [ Style.resizable_using_css
              ; Size_hooks.Size_tracker.on_change (fun ~width ~height ->
                  inject_size (Some Size.{ width; height }))
              ])
@@ -153,7 +149,7 @@ let visibility_component =
   and visible_rect = visible_rect in
   let pos_to_color pos = float_of_int pos /. 2000. *. 360. |> Float.iround_down_exn in
   let attributes =
-    [ Vdom.Attr.class_ Style.visibility_child
+    [ Style.visibility_child
     ; Vdom.Attr.style
         (let h = pos_to_color pos_y in
          let s = Percent.of_mult (1.0 -. (float_of_int pos_x /. 2000.)) in
@@ -175,12 +171,12 @@ let visibility_component =
     ; Vdom.Node.sexp_for_debugging
         [%message (client_rect : Bbox.Int.t option) (visible_rect : Bbox.Int.t option)]
     ; Vdom.Node.div
-        ~attr:(Vdom.Attr.class_ Style.outer_visibility_parent)
+        ~attr:Style.outer_visibility_parent
         [ Vdom.Node.div
-            ~attr:(Vdom.Attr.class_ Style.inner_visibility_parent)
+            ~attr:Style.inner_visibility_parent
             [ Vdom.Node.div ~attr:(Vdom.Attr.many attributes) [] ]
         ; Vdom.Node.div
-            ~attr:(Vdom.Attr.class_ Style.inner_visibility_parent)
+            ~attr:Style.inner_visibility_parent
             [ Vdom.Node.text "padding..." ]
         ]
     ]
@@ -191,7 +187,7 @@ let buttons current inject =
     let click_handler = Vdom.Attr.on_click (fun _ -> inject page) in
     let attr =
       if Page.equal page current
-      then Vdom.Attr.(class_ Style.primary @ click_handler)
+      then Vdom.Attr.(Style.primary @ click_handler)
       else click_handler
     in
     Vdom.Node.button ~attr [ page |> Page.sexp_of_t |> Sexp.to_string |> Vdom.Node.text ]
@@ -204,12 +200,10 @@ let resizer_component =
     (Vdom.Node.div
        [ Vdom.Node.h3 [ Vdom.Node.text "Resize me!" ]
        ; Vdom.Node.div
-           ~attr:(Vdom.Attr.class_ Style.resizable_using_resizer)
+           ~attr:Style.resizable_using_resizer
            [ Vdom.Node.text (String.concat (List.init 20 ~f:(Fn.const "Hello world. ")))
            ; Vdom.Node.div
-               ~attr:
-                 (Vdom.Attr.many
-                    [ Vdom.Attr.class_ Style.resizer; Size_hooks.Expert.Resizer.attr ])
+               ~attr:(Vdom.Attr.many [ Style.resizer; Size_hooks.Expert.Resizer.attr ])
                []
            ]
        ])

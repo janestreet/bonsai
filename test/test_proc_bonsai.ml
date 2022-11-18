@@ -454,8 +454,7 @@ let%expect_test "simplify assoc_on" =
   |> Bonsai.Private.pre_process
   |> sexp_of_packed_computation
   |> print_s;
-  [%expect {|
-    (Assoc_simpl (map Incr)) |}]
+  [%expect {| (Assoc_simpl (map Incr)) |}]
 ;;
 
 let%expect_test "simple-assoc works with paths" =
@@ -1495,20 +1494,20 @@ let%test_module "inactive delivery" =
       |> test_delivery_to_inactive_component;
       [%expect
         {|
-        (Sub
-          (from (Return (value Incr)))
-          (via 2)
-          (into (
-            Switch
-            (match_ (Mapn (inputs (Named (uid 2)))))
-            (arms ((Lazy t) (Return (value Exception)))))))
-        ((1 0) (2 0))
-        ((1 0) (2 3))
-        ((1 0))
-        ((1 0))
-        ((1 0) (2 4))
+          (Sub
+            (from (Return (value Incr)))
+            (via 2)
+            (into (
+              Switch
+              (match_ (Mapn (inputs (Named (uid 2)))))
+              (arms ((Lazy t) (Return (value Exception)))))))
+          ((1 0) (2 0))
+          ((1 0) (2 3))
+          ((1 0))
+          ((1 0))
+          ((1 0) (2 4))
 
-        ==== Diff between assoc and assoc_on: ==== |}]
+          ==== Diff between assoc and assoc_on: ==== |}]
     ;;
 
     let%expect_test "static inside of a lazy (optimized away)" =
@@ -2144,8 +2143,8 @@ let%test_module "inactive delivery" =
           (* notice that there are two printings of 'resetting' because even though
              there's three active components, there are only two models between them *)
           [%expect {|
-            resetting
-            resetting |}];
+              resetting
+              resetting |}];
           Handle.show handle;
           [%expect {| ((0 999) (1 999) (2 999)) |}]
         ;;
@@ -2213,21 +2212,21 @@ let%test_module "inactive delivery" =
       Handle.show handle;
       [%expect
         {|
-         (Assoc_on
-           (map          Incr)
-           (io_key_id    1)
-           (model_key_id 2)
-           (model_cmp_id 3)
-           (data_id      4)
-           (by (Leaf1 (input Incr))))
-         ((1 0) (2 0))
-         ((1 3) (2 3))
-         ((1 3))
-         ("an action inside of Bonsai.assoc_on has been dropped because the computation is no longer active"
-          (io_key 2) (model_key ()) (action 4))
-         ((1 3))
-         ((1 5))
-         ((1 5) (2 5)) |}]
+          (Assoc_on
+            (map          Incr)
+            (io_key_id    1)
+            (model_key_id 2)
+            (model_cmp_id 3)
+            (data_id      4)
+            (by (Leaf1 (input Incr))))
+          ((1 0) (2 0))
+          ((1 3) (2 3))
+          ((1 3))
+          ("an action inside of Bonsai.assoc_on has been dropped because the computation is no longer active"
+           (io_key 2) (model_key ()) (action 4))
+          ((1 3))
+          ((1 5))
+          ((1 5) (2 5)) |}]
     ;;
   end)
 ;;
@@ -2367,8 +2366,7 @@ let%expect_test "let syntax is collapsed upon eval" =
   require
     [%here]
     ~if_false_then_print_s:(lazy [%message "No Map7 node found"])
-    (String.is_substring dot_contents ~substring:"Map7");
-  [%expect {| |}]
+    (String.is_substring dot_contents ~substring:"Map7")
 ;;
 
 let%test_unit "constant prop doesn't happen" =

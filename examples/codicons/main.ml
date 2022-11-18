@@ -127,7 +127,7 @@ module Icon_grid = struct
         Js_clipboard.Asynchronous.copy_text (Js_of_ocaml.Js.string variant_name);
         set_copied)
     in
-    let style = Vdom.Attr.class_ Style.icon in
+    let style = Style.icon in
     match copied with
     | `Show_icon ->
       Vdom.(
@@ -147,7 +147,7 @@ module Icon_grid = struct
     in
     let%sub cards = Bonsai.assoc (module String) icons ~f:(fun _ -> icon_card) in
     let%arr cards = cards in
-    Vdom.Node.div ~attr:(Vdom.Attr.class_ Style.grid) (Map.data cards)
+    Vdom.Node.div ~attr:Style.grid (Map.data cards)
   ;;
 end
 
@@ -173,7 +173,7 @@ module Search = struct
     in
     let view =
       Vdom.Node.div
-        ~attr:(Vdom.Attr.class_ Style.search)
+        ~attr:Style.search
         (filter_icon :: (Form.view input |> Form.View.to_vdom_plain))
     in
     filtered_icon_list, view
@@ -186,7 +186,7 @@ let app =
   let%sub grid = Icon_grid.component icons in
   let%arr grid = grid
   and _, search = search in
-  Vdom.Node.div ~attr:(Vdom.Attr.class_ Style.main) [ search; grid ]
+  Vdom.Node.div ~attr:Style.main [ search; grid ]
 ;;
 
 let (_ : _ Start.Handle.t) =

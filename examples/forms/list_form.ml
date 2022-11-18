@@ -67,8 +67,8 @@ module Simple_list = struct
   let component =
     E.Multiple.stringable_list
       (module T)
-      ~extra_pill_container_attr:(Value.return (Vdom.Attr.class_ S.container))
-      ~extra_pill_attr:(Value.return (Vdom.Attr.class_ S.pill))
+      ~extra_pill_container_attr:(Value.return S.container)
+      ~extra_pill_attr:(Value.return S.pill)
   ;;
 end
 
@@ -136,7 +136,7 @@ let component =
       [%sexp (Form.value advanced_list : Advanced_list.t list list Or_error.t)]
   in
   Vdom.Node.div
-    ~attr:(Vdom.Attr.class_ S.list_forms)
+    ~attr:S.list_forms
     [ Vdom.Node.h1 [ Vdom.Node.text "List Forms" ]
     ; Vdom.Node.h3 [ Vdom.Node.text "Simple form that accepts Pokemon starters" ]
     ; Form.View.to_vdom (Form.view simple_list)

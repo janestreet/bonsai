@@ -626,4 +626,5 @@ let svg ?size ?stroke ?fill ?stroke_width ?(extra_attrs = []) (t : t) =
           ]
           @ extra_attrs))
     ~this_html_is_sanitized_and_is_totally_safe_trust_me:(path t)
+    ()
 ;;

@@ -1,4 +1,10 @@
 (executables (names main)
- (libraries bonsai_web bonsai_web_ui_form virtual_dom.vdom_test_helpers
-  auto_reload bonsai_web_ui_codemirror)
+ (libraries bonsai_web bonsai_extra kado bonsai_web_ui_form
+  virtual_dom.vdom_test_helpers auto_reload bonsai_web_ui_codemirror
+  codemirror_themes)
  (preprocess (pps ppx_jane js_of_ocaml-ppx ppx_bonsai ppx_css ppx_demo)))
+
+(rule (targets style.ml style.mli style__generated.ml style__generated.mli)
+ (deps style.css)
+ (action
+  (bash "%{bin:css_inliner} %{deps} \"((rewrite ((cm-editor cm-editor))))\"")))

@@ -51,7 +51,7 @@ module Handle = struct
             (Rpc.Implementations.create_exn
                ~on_unknown_rpc:`Continue
                ~implementations:(Versioned_rpc.Menu.add rpc_implementations))
-            ~connection_state:(fun _ -> ())
+            ~connection_state:Fn.id
         in
         fun where_to_connect ->
           let connector = connectors where_to_connect in

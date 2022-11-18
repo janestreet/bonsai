@@ -117,7 +117,7 @@ let component
       (module Map_list.Key)
       cells
       ~f:(fun _ key_and_cells ->
-        let classes_for_each_cell = [ "prt-table-cell"; Style.cell ] in
+        let classes_for_each_cell = [ "prt-table-cell"; Style.For_referencing.cell ] in
         let for_each_cell (css_for_column, content) =
           let css = Css_gen.( @> ) css_all_cells css_for_column in
           set_or_wrap content ~classes:classes_for_each_cell ~style:css

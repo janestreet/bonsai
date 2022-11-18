@@ -47,7 +47,7 @@ open! Import
 *)
 
 module Theme : sig
-  type t = Theme.t
+  type t
 
   (** Returns the name of the theme *)
   val name : t -> string
@@ -55,18 +55,33 @@ module Theme : sig
   (** Fetches the theme currently installed into Bonsai's scope. *)
   val current : t Bonsai.Computation.t
 
+  (** Sets the given theme as 'current' for the provided computation, and registers
+      the returned Vdom node as the "application-node" giving it the power to do things
+      like set the window's background color and font-family. *)
+  val set_for_app
+    :  t Bonsai.Value.t
+    -> Vdom.Node.t Bonsai.Computation.t
+    -> Vdom.Node.t Bonsai.Computation.t
+
+  (** Same as [set_for_app] but permits the app to return an arbitrary value in addition
+      to the top-level app component *)
+  val set_for_app'
+    :  t Bonsai.Value.t
+    -> ('a * Vdom.Node.t) Bonsai.Computation.t
+    -> ('a * Vdom.Node.t) Bonsai.Computation.t
+
   (** This function allows the caller to build a new theme based on the current theme's
       constants, installing that new theme for all users inside the given computation. *)
-  val override_constants_temporarily
+  val override_constants_for_computation
     :  f:(Constants.t -> Constants.t)
-    -> inside:'a Bonsai.Computation.t
+    -> 'a Bonsai.Computation.t
     -> 'a Bonsai.Computation.t
 
   (** [set_temporarily] will install a new theme for all theme-users inside the given
       computation. *)
-  val set_temporarily
+  val set_for_computation
     :  t Bonsai.Value.t
-    -> inside:'a Bonsai.Computation.t
+    -> 'a Bonsai.Computation.t
     -> 'a Bonsai.Computation.t
 end
 
@@ -106,14 +121,34 @@ end
 (** A getter for the primary colors in a theme. *)
 val primary_colors : Theme.t -> Fg_bg.t
 
+(** A getter for the "extreme" colors.  Extreme colors mimic the primary colors,
+    but have a higher contrast ratio. *)
+val extreme_colors : Theme.t -> Fg_bg.t
+
+(* A color that is used for the border between a [primary] and [extreme] color set *)
+val extreme_primary_border_color : Theme.t -> Color.t
+
 (** A getter for the colors associated with a particular intent. *)
 val intent_colors : Theme.t -> Intent.t -> Fg_bg.t
 
-(** {1 Text}
-    The text functions render a span of text.  If an [Intent.t] is passed, it'll
-    render with the foreground and background color for the current theme's intent. *)
+type 'a format := ('a, unit, string, Vdom.Node.t) format4
 
-val text : Theme.t -> ?attr:Vdom.Attr.t -> ?intent:Intent.t -> string -> Vdom.Node.t
+(** {1 Text}
+    The text functions render a <span> of text with optional attributes.
+    [textf] can be used with format syntax. *)
+
+val text : ?attr:Vdom.Attr.t -> string -> Vdom.Node.t
+val textf : ?attr:Vdom.Attr.t -> 'a format -> 'a
+
+(* [themed_text] and [themed_textf] can be given an intent *)
+val themed_text
+  :  Theme.t
+  -> ?attr:Vdom.Attr.t
+  -> ?intent:Intent.t
+  -> string
+  -> Vdom.Node.t
+
+val themed_textf : Theme.t -> ?attr:Vdom.Attr.t -> ?intent:Intent.t -> 'a format -> 'a
 
 (** {1 Layout}
 
@@ -181,24 +216,70 @@ val vbox_wrap
 
     These node constructors are for elements that the user interacts with. *)
 
-(** Builds a basic button with text for a label. *)
+(** Builds a basic button with text for a label.
+
+    Optional and named arguments:
+
+    - [attr], if provided, will be attached to the topmost button element.
+    - [disabled] defaults to false.  If provided (and set to true), the button
+      will be marked as disabled and will be unclickable.
+    - [intent] is used by the theme to color and style the button to indicate
+      the intent of the button.
+    - [tooltip] is used to display some text near the button when hovered.
+    - [on_click] contains an effect to schedule when the button is clicked
+
+    The unnamed string parameter is used as the label for the button *)
 val button
   :  Theme.t
   -> ?attr:Vdom.Attr.t
   -> ?disabled:bool
   -> ?intent:Intent.t
+  -> ?tooltip:string
   -> on_click:unit Effect.t
   -> string
   -> Vdom.Node.t
 
-(** Builds a button with a group of vdom nodes inside it. *)
+(** Same as [button] but the contents of the button are specified as a list
+    of vdom nodes instead of as a string *)
 val button'
   :  Theme.t
   -> ?attr:Vdom.Attr.t
   -> ?disabled:bool
   -> ?intent:Intent.t
+  -> ?tooltip:string
   -> on_click:unit Effect.t
   -> Vdom.Node.t list
+  -> Vdom.Node.t
+
+module Tooltip_direction : sig
+  type t =
+    | Top
+    | Right
+    | Bottom
+    | Left
+
+end
+
+(** Tooltips can be used to provide more information to a user when they
+    hover over an element. *)
+val tooltip
+  :  Theme.t
+  -> ?container_attr:Vdom.Attr.t
+  -> ?tooltip_attr:Vdom.Attr.t
+  -> ?direction:Tooltip_direction.t
+  -> tooltip:string
+  -> string
+  -> Vdom.Node.t
+
+(** [tooltip'] is just like [tooltip] except that it allows both the tooltip
+    and the wrapped element to be arbitrary vdom nodes instead of just [string] *)
+val tooltip'
+  :  Theme.t
+  -> ?container_attr:Vdom.Attr.t
+  -> ?tooltip_attr:Vdom.Attr.t
+  -> ?direction:Tooltip_direction.t
+  -> tooltip:Vdom.Node.t
+  -> Vdom.Node.t
   -> Vdom.Node.t
 
 (** Builds a horizontally-aligned grouping of tabs, keyed on an item representing
@@ -234,15 +315,102 @@ val devbar
   -> string
   -> Vdom.Node.t
 
-module Expert : sig
-  include module type of struct
-    include Expert
+(** A module for building tables *)
+module Table : sig
+  module Col : sig
+    (** A ['a Col.t] represents a column (or set of columns) that defines a way
+        to render cells from a row in the table that has type ['a]. *)
+    type 'a t
+
+    (** [make] builds a column for a row ['a] by providing a getter ['a -> 'b] and
+        a renderer for the ['b].  The first parameter is a string that is used for
+        the label of the column.
+
+        [header_attr] is an optional attribute attached to the <th> element containing
+        the label.
+
+        [cell_attr] is for building attribute that will be attached to the <td> element
+        containing the rendered content of the cell. *)
+    val make
+      :  ?cell_attr:('b -> Vdom.Attr.t)
+      -> ?header_attr:Vdom.Attr.t
+      -> string
+      -> get:('a -> 'b)
+      -> render:(Theme.t -> 'b -> Vdom.Node.t)
+      -> 'a t
+
+    (** [make_opt] is the same as [make] except that the return value from [get] can
+        be an option *)
+    val make_opt
+      :  ?cell_attr:('b -> Vdom.Attr.t)
+      -> ?header_attr:Vdom.Attr.t
+      -> string
+      -> get:('a -> 'b option)
+      -> render:(Theme.t -> 'b -> Vdom.Node.t)
+      -> 'a t
+
+    (** [group] produces a column group over the provided list of columns with the
+        string parameter being used as the label for the group.
+
+        [header_attr] behaves the same as it does for the [make] function *)
+    val group : ?header_attr:Vdom.Attr.t -> string -> 'a t list -> 'a t
+
+    (* [lift] is used to move a column group from one type to another *)
+    val lift : 'a t -> f:('b -> 'a) -> 'b t
+
+    (** The remaining "prime" functions in this module are identical to their
+        "non-prime" versions except that the "label" argument is an arbitrary Vdom node.*)
+
+    val make'
+      :  ?cell_attr:('b -> Vdom.Attr.t)
+      -> ?header_attr:Vdom.Attr.t
+      -> Vdom.Node.t
+      -> get:('a -> 'b)
+      -> render:(Theme.t -> 'b -> Vdom.Node.t)
+      -> 'a t
+
+    val group' : ?header_attr:Vdom.Attr.t -> Vdom.Node.t -> 'a t list -> 'a t
+
+    val make_opt'
+      :  ?cell_attr:('b -> Vdom.Attr.t)
+      -> ?header_attr:Vdom.Attr.t
+      -> Vdom.Node.t
+      -> get:('a -> 'b option)
+      -> render:(Theme.t -> 'b -> Vdom.Node.t)
+      -> 'a t
   end
+
+  val render
+    :  Theme.t
+    -> ?table_attr:Vdom.Attr.t
+    -> ?row_attr:('a -> Vdom.Attr.t)
+    -> 'a Col.t list
+    -> 'a list
+    -> Vdom.Node.t
+end
+
+module For_components : sig
+  module Codemirror : sig
+    val theme : Theme.t -> For_codemirror.Theme.t option
+  end
+end
+
+module App : sig
+  val top_attr : Theme.t -> Vdom.Attr.t
+end
+
+module Expert : sig
+  open Underlying_intf
+
+  val default_theme : Theme.t
+  val override_theme : Theme.t -> f:((module S) -> (module S)) -> Theme.t
 
   (** [override_current_theme_temporarily] allows the full extension of the current theme,
       installing this theme for the given computation. *)
-  val override_current_theme_temporarily
+  val override_theme_for_computation
     :  f:((module S) -> (module S))
-    -> inside:'a Bonsai.Computation.t
     -> 'a Bonsai.Computation.t
+    -> 'a Bonsai.Computation.t
+
+  module For_codemirror = For_codemirror
 end

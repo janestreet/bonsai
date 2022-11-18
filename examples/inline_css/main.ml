@@ -40,14 +40,16 @@ module Boxes = struct
 
   let component =
     Vdom.Node.div
-      ~attr:(Vdom.Attr.class_ Style.container)
+      ~attr:Style.container
       [ Vdom.Node.div
-          ~attr:(Vdom.Attr.classes [ Style.box; Style.red (* "red_hash_#" *) ])
+          ~attr:(Vdom.Attr.many [ Style.box; Style.red (* "red_hash_#" *) ])
           []
       ; Vdom.Node.div
-          ~attr:(Vdom.Attr.classes [ Style.box; Style.green (* "green_hash_#" *) ])
+          ~attr:(Vdom.Attr.many [ Style.box; Style.green (* "green_hash_#" *) ])
           []
-      ; Vdom.Node.div ~attr:(Vdom.Attr.classes [ Style.box; "blue" (* "blue" *) ]) []
+      ; Vdom.Node.div
+          ~attr:(Vdom.Attr.many [ Style.box; Vdom.Attr.class_ "blue" (* "blue" *) ])
+          []
       ]
   ;;
 end
@@ -76,12 +78,12 @@ module Themeable = struct
         (* Sometimes it might be useful to be able to use the same class-name
            defined from another call to [%css stylesheet] which you can do using the
            "~rewrite" optional flag.*)
-        ~rewrite:[ "container", Boxes.Style.container ]]
+        ~rewrite:[ "container", Boxes.Style.For_referencing.container ]]
 
   let component ?(style = Style.default) () =
     let module Style = (val style) in
     Vdom.Node.div
-      ~attr:(Vdom.Attr.class_ Style.container)
+      ~attr:Style.container
       [ Vdom.Node.h1 [ Vdom.Node.text "this is a header" ]
       ; Vdom.Node.p [ Vdom.Node.text "this is some text" ]
       ]
