@@ -11,13 +11,16 @@ The simplest kind of state is `Bonsai.state`. It returns both a value
 tracking the state's current model, and also a function for updating
 that model.
 
-`ocaml skip val state   :  (module Model with type t = 'model)   -> default_model:'model   -> ('model * ('model -> unit Effect.t)) Computation.t`
+<!-- $MDX skip -->
+```ocaml
+val state : (module Model with type t = 'model) -> default_model:'model -> ('model * ('model -> unit Effect.t)) Computation.t
+```
 
 This function has a few types that might be a bit confusing to a new
 user of OCaml, so let's step through them one by one.
 
 1.  `(module Model with type t = 'model)`: This is a first-class module
-    that describes the type of the state. The type needs to be
+    that describes the type/structure of the state. The type needs to be
     `sexp`able and `equal`able. Typically this argument is provided by
     wrapping an already existing module inside the
     first-class-module-packing syntax; for example, you might write
@@ -32,14 +35,29 @@ Let's break down a simple, yet realistic usage of this computation.
 ```
 ``` ocaml
 let textbox : (string * Vdom.Node.t) Computation.t =
+  (* As we saw last chapter, let%sub instantiates the `Computation.t`, so
+   * we have access to `state` (the current value) and `set_state` (a function
+   * that updates the state) as `Value.t`s.
+   *)
   let%sub state, set_state = Bonsai.state (module String) ~default_model:"" in
+  (* let%arr creates a new computation dependent on the
+   * `state` and `set_state` `Value.t`s.
+   *)
   let%arr state = state
   and set_state = set_state in
   let view =
+    (* The `value_prop` attribute keeps the input's value up to date.
+     * `on_input` calls `set_state` with the new value when users type in the input element.
+     *)
     Vdom.Node.input
       ~attr:Vdom.Attr.(value_prop state @ on_input (fun _ new_text -> set_state new_text))
       ()
   in
+  (* Our incremental output is the current contents of the textbox, and the textbox view itself.
+   * The view could be combined with views returned from other components, building up increasingly
+   * complicated components.
+   * The "current value" could be passed on to other components; we'll do this later.
+   *)
   state, view
 ;;
 ```
@@ -50,40 +68,6 @@ let textbox : (string * Vdom.Node.t) Computation.t =
 ```{=html}
 </iframe>
 ```
-The computation returns the current contents of a textbox, as well as
-the textbox view itself. The view could be combined with the views from
-other components, eventually becoming the view for the entire
-application. The "current value" could be passed on to other components
-(like we'll do later).
-
-```{=html}
-<aside>
-```
-In the Bonsai ecosystem, a function that takes any number of `Value.t`
-as input and returns a `Computation.t` is considered a "component". (In
-this example, "textbox" takes no `Value.t` as inputs, but zero is still
-"any number", so `textbox` is a component.)
-```{=html}
-</aside>
-```
-`ocaml skip let%sub state, set_state = Bonsai.state (module String) ~default_model:"" in`
-
-This line creates some string state initially containing the empty
-string. We use `let%sub` to instantiate this state, giving us access to
-`state` and `set_state`, which have types `string Value.t` and
-`(string -> unit Effect.t) Value.t`, respectively.
-
-The `let%arr` expression maps over two values to produce a computation
-containing the string and the view. If we attempted to write this code
-using `state` and `set_state` directly instead of through `let%arr`, the
-resulting program would not type-check, since both of these variables
-have `Value.t` types. `let%arr` is required in order to get access to
-the data inside the values.
-
-The actual construction of the textbox virtual-dom node is quite boring;
-we add the `value_prop` property to keep the textbox contents in sync,
-and also register an event handler for `on_input`, an event that fires
-when the text in the textbox changes.
 
 ```{=html}
 <aside>
@@ -101,17 +85,13 @@ component in weirder circumstances than these basic examples, like
 2.  The textbox component is removed from the page and then added back
     again. If `value_prop` wasn't there, the textbox's default state
     would be empty!
-
 ```{=html}
 </aside>
 ```
-When the event does fire, the `set_state` function is called with the
-new string. `set_state` has type `string -> unit Effect.t`, which you
-may recognize from the last section in the
-[virtual-dom](./01-virtual_dom.md) chapter. This function is called with
-the new textbox contents, and the event which is returned schedules the
-state-setting in the Bonsai event queue.
 
+Note that the `set_state` function (once unwrapped with `let%sub` and `let%arr`)
+has type `string -> unit Effect.t`. This nearly slots into the `on_input` prop
+function, which has type `(_evt new_text -> unit Vdom.Effect.t)`.
 This is the payoff for the unanswered questions in [the virtual-dom
 Chapter](./01-virtual_dom.md):
 
@@ -124,6 +104,17 @@ Chapter](./01-virtual_dom.md):
     Bonsai event-queue guarantees that these updates occur in a
     consistent order and that downstream components witness changes made
     to upstream components.
+
+```{=html}
+<aside>
+```
+In the Bonsai ecosystem, a function that takes any number of `Value.t`
+as input and returns a `Computation.t` is considered a "component". (In
+this example, "textbox" takes no `Value.t` as inputs, but zero is still
+"any number", so `textbox` is a component.)
+```{=html}
+</aside>
+```
 
 # Multiple Textboxes
 
@@ -174,6 +165,7 @@ difference between it and the previous example is this line:
 + let textbox_b = textbox_a in
 ```
 
+<!-- I love the interactive example here!!! So great for showing the difference. -->
 ```{=html}
 <!-- $MDX file=../../examples/bonsai_guide_code/state_examples.ml,part=two_textboxes_shared_state -->
 ```
@@ -201,9 +193,9 @@ all.
 
 # State Machine
 
-While `Bonsai.state` is quite useful, sometimes the state contained
-within an application more closely resembles a state-machine with
-well-defined transitions between states.
+While `Bonsai.state` is quite useful, it is also primitive, and lacks guardrails.
+In non-trivial applications, it's safer and more robust to model a
+state-machine with well-defined transitions between states.
 
 Consider a "counter" component that stores (and displays) an integer,
 alongside buttons which increment and decrement that integer. This
@@ -280,6 +272,8 @@ Compared to `Bonsai.state`, there are several similarities:
     model value (`default_model`).
 2.  The return value is a `Computation.t` that provides the current
     state alongside a function which schedules changes to the state.
+    This function is typically called `inject`, as it injects a request
+    to apply some action to state.
 
 The main difference is the additional `Action` module, and
 `apply_action`. The apply-action parameter is a function with a fairly
@@ -292,7 +286,7 @@ produce a new model."
 <aside>
 ```
 The `inject` and `schedule_event` parameters are rarely used. They are
-only useful when a state-transition needs to schedule *another* state
+only useful when a state transition needs to schedule *another* state
 transition, either for itself (by composing `inject` with
 `schedule_event`) or for another state-machine (just calling
 `schedule_event`).
@@ -339,6 +333,8 @@ let counter_state_machine : Vdom.Node.t Computation.t =
   Vdom.Node.div [ decrement; Vdom.Node.textf "%d" state; increment ]
 ;;
 ```
+<!-- I know it's functionally the same code, but maybe we should still embed
+an example to demonstrate that -->
 
 First, an `Action` module is defined as a sum type that lists all the
 operations that can be performed on the state-machine. This module is
@@ -361,6 +357,8 @@ Bonsai will call `inject` multiple times, and they'll be processed by
 additional inputs. Compare the type signatures between `state_machine0`
 and `state_machine1`:
 
+<!-- FYI: on Bonsai.red, `-` lines show up green, and `+` don't have any color.
+Maybe a green/red (or blue/red for accessibility) scheme would be better -->
 ``` diff
 -val state_machine0
 +val state_machine1
@@ -384,7 +382,7 @@ is available inside the `apply_action` as a `'input`. This allows the
 state-transition function to depend on the results of other
 computations.
 
-There is no `state_machine2`, but implementing one would be trivial, by
+There is no `state_machine2` (or n), but implementing one would be trivial, by
 tupling the input `Value.t`, and destructuring the inputs inside
 `apply_action`.
 ```{=html}
@@ -398,7 +396,7 @@ the textbox.
 
 Sadly, many of the tools that functional programmers use for dealing
 with state almost exclusively involve moving that state out of their
-programs into a database, or by pulling mutable state out into a small
+programs into a database, or pulling mutable state out into a small "hazmat"
 part of the program. These strategies can keep the majority of programs
 relatively pure and easy to test, but sadly, they don't scale well to UI
 components for a few reasons:
@@ -420,7 +418,7 @@ to translate the unpredictable user actions into a well-understood piece
 of data.
 
 Although the fact that components are stateful might injure your
-functional programming dogmatism, in fact, it is quite in line with
+functional programming dogmatism, it is quite in line with
 functional programming principles, which aim to isolate effects. The
 most common way to isolate effects is by having a small kernel of
 effectful code invoke the pure majority of the logic; in other words, we
@@ -429,5 +427,7 @@ offers an alternative tool for isolation. With Bonsai UI components,
 effectful code gets wrapped up and managed so that the interface
 provided by the component remains pure; in other words, we isolate state
 by shifting it toward the leaves of the program.
+
+<!-- Should we introduce of_module and actor somewhere in this article? -->
 
 On to [Chapter 4: Forms](./04-forms.md).
