@@ -5,6 +5,14 @@ computations capture internal state. This chapter takes a deeper look at
 the primitives Bonsai provides for introducing and interacting with
 local state.
 
+
+In this chapter, we'll:
+
+- Go over the `Bonsai.state` primitive in more depth
+- Show how stateful components can be instantiated multiple times, and when they will/won't share state
+- Introduce `Bonsai.state_machine`, which can better model complex state transition logic, and avoid bugs
+- Explain why stateful components are a good thing, from a functional programming perspective
+
 # Simple State
 
 The simplest kind of state is `Bonsai.state`. It returns both a value

@@ -45,7 +45,7 @@ to algebraic effects, we have plenty of tools to cleanly deal with those.
 
 It's easy to write composable views with this paradigm, since we can represent
 the UI logic and view output as plain old OCaml functions and values.
-A small amount of boilerplate can turn our ui into a simple web app that
+A small amount of boilerplate can turn our UI into a simple web app that
 continuously displays the result of the computation.
 
 # Web Apps with Bonsai
@@ -59,7 +59,7 @@ it possible to write all three of the browser languages using OCaml.
     chunk of HTML.
 -   `css_gen` is a library for writing CSS styles in a type safe manner.
 
-Bonsai builds on `virtual_dom` to provide:
+Bonsai adds onto `virtual_dom`, providing:
 
 -   *Interactivity*, so the user can click on, type into, and navigate
     through things.
@@ -95,7 +95,8 @@ and [3](./03-state.md).
 
 <!--
 Maybe we should consider including links to more info about incremental
-and diff-and-patch vdom. 
+and diff-and-patch vdom. I like the Mithril.js docs on this:
+https://mithril.js.org/vnodes.html
 -->
 The incrementality in Bonsai comes from the `Incremental` library. When
 a web page loads, Bonsai compiles the top-level
