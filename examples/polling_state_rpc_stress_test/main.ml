@@ -74,7 +74,7 @@ let component =
               [ Vdom.Node.text "Remove" ]
           ; Vdom.Node.div
               [ Vdom.Node.sexp_for_debugging
-                  [%sexp (response : (int, T.t) Rpc_effect.Polling_state_rpc.Result.t)]
+                  [%sexp (response : (int, T.t) Rpc_effect.Poll_result.t)]
               ]
           ])
   in
@@ -115,10 +115,8 @@ let run () =
          ~on_unknown_rpc:`Raise)
       ~connection_state:(fun conn -> (), conn)
   in
-  let (_ : (unit, Nothing.t) Start.Handle.t) =
-    Start.start
-      Start.Result_spec.just_the_view
-      ~bind_to_element_with_id:"app"
+  let () =
+    Bonsai_web.Start.start
       ~custom_connector:(function
         | Connection -> connector
         | _ -> Rpc_effect.Connector.test_fallback)

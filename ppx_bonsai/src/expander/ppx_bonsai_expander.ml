@@ -36,11 +36,7 @@ module Sub : Ext = struct
     | _ ->
       let bindings = [ value_binding ~loc ~pat:lhs ~expr:rhs ] in
       let pattern_projections =
-        project_pattern_variables
-          ~assume_exhaustive
-          ~modul
-          ~with_location:Map.with_location
-          bindings
+        project_pattern_variables ~assume_exhaustive ~modul ~with_location:true bindings
       in
       Some
         (match pattern_projections with
@@ -54,14 +50,7 @@ module Sub : Ext = struct
            let projection_case = case ~lhs ~guard:None ~rhs:(eunit ~loc) in
            let fn = pexp_function ~loc [ projection_case ] in
            let rhs =
-             bind_apply
-               ~op_name:Map.name
-               ~loc
-               ~modul
-               ~with_location:Map.with_location
-               ~arg:rhs
-               ~fn
-               ()
+             bind_apply ~op_name:Map.name ~loc ~modul ~with_location:true ~arg:rhs ~fn ()
            in
            sub_return ~loc ~modul ~lhs:(ppat_any ~loc) ~rhs ~body
          | _ ->
@@ -73,7 +62,8 @@ module Sub : Ext = struct
     pexp_apply
       ~loc
       (eoperator ~loc:switch_loc ~modul "switch")
-      [ Labelled "match_", { case_number with pexp_loc = switch_loc }
+      [ Labelled "here", Ppx_here_expander.lift_position ~loc:switch_loc
+      ; Labelled "match_", { case_number with pexp_loc = switch_loc }
       ; Labelled "branches", eint ~loc:switch_loc (List.length case_number_cases - 1)
       ; Labelled "with_", pexp_function ~loc:switch_loc case_number_cases
       ]

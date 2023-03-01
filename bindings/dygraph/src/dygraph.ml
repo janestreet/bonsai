@@ -9,6 +9,7 @@ module Html_or_number    = Html_or_number
 module Legend_data       = Legend_data
 module Options           = Options
 module Per_series_info   = Per_series_info
+module Plotter           = Plotter
 module Point             = Point
 module Range             = Range
 module Raw_html          = Raw_html

@@ -256,6 +256,7 @@ let form_of_v : v Form.t Computation.t =
       module Typed_variant = Typed_variant_of_v
 
       let label_for_variant = `Inferred
+      let initial_choice = `First_constructor
 
       (* provide a form computation for constructor in the variant *)
       let form_for_variant : type a. a Typed_variant.t -> a Form.t Computation.t

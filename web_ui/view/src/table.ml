@@ -171,7 +171,7 @@ let render
 (* Default styling *)
 
 module Default_table_styling =
-  [%css.hash_variables
+  [%css
     stylesheet
       {|
 .table {
@@ -247,7 +247,7 @@ let table_attr (constants : Constants.t) =
       ~header_header_border:
         (Css_gen.Color.to_string_css constants.table.header_header_border)
       ~body_body_border:(Css_gen.Color.to_string_css constants.table.body_body_border)
-      ~header_body_border:(Css_gen.Color.to_string_css constants.table.body_body_border)
+      ~header_body_border:(Css_gen.Color.to_string_css constants.table.header_body_border)
       ()
   in
   Vdom.Attr.many [ vars; Default_table_styling.table ]

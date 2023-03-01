@@ -109,10 +109,8 @@ module My_theme =
   .container p { font-family: monospace; }
 |}]
 
-let (_ : _ Start.Handle.t) =
-  Start.start
-    Start.Result_spec.just_the_view
-    ~bind_to_element_with_id:"app"
+let () =
+  Bonsai_web.Start.start
     (Bonsai.const
        (Vdom.Node.div
           [ Vdom.Node.h1 [ Vdom.Node.text "Boxes" ]

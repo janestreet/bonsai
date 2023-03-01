@@ -1,33 +1,7 @@
 open! Core
+module View = View
 module Form_view := View
 open Bonsai_web
-
-module View : sig
-  (** Bonsai-web-forms has its own view type so that it can build
-      a more structured view of the form. You can convert it to a Vdom
-      node with the [to_vdom*] functions. *)
-
-  module Private = Form_view
-
-  type t = Private.t
-
-  (** Converts the form to a vdom node. By default, a table. A custom converter (likely
-      written using the View.Expert module) can be specified to be used instead. *)
-  val to_vdom
-    :  ?custom:
-      (?on_submit:Private.submission_options
-       -> ?editable:Private.editable
-       -> t
-       -> Vdom.Node.t)
-    -> ?on_submit:Private.submission_options
-    -> ?editable:Private.editable
-    -> t
-    -> Vdom.Node.t
-
-  (** This function can be used to acquire the full list of leaf-node form elements sans
-      any formatting, labeling, or error reporting. *)
-  val to_vdom_plain : t -> Vdom.Node.t list
-end
 
 type 'a t
 
@@ -49,7 +23,8 @@ val value_or_default : 'a t -> default:'a -> 'a
 (** [is_valid] returns true if [value] would return [Ok]. *)
 val is_valid : _ t -> bool
 
-val view : _ t -> View.t
+val view : _ t -> Form_view.t
+val map_view : 'a t -> f:(Form_view.t -> Form_view.t) -> 'a t
 
 module Submit : sig
   type 'a t = private
@@ -98,8 +73,9 @@ end
     typeahead-multi for don't currently respect this and can be modified anyway.
     Work is underway to fix these. *)
 val view_as_vdom
-  :  ?on_submit:'a Submit.t
-  -> ?editable:[ `Yes_always | `Currently_yes | `Currently_no ]
+  :  ?theme:View.Theme.t
+  -> ?on_submit:'a Submit.t
+  -> ?editable:Form_view.editable
   -> 'a t
   -> Vdom.Node.t
 
@@ -164,20 +140,6 @@ val tooltip : string -> 'a t -> 'a t
 (** Same as [tooltip], but it lets you use an arbitrary vdom node instead of just a string. *)
 val tooltip' : Vdom.Node.t -> 'a t -> 'a t
 
-(** Sometimes it's nice to collect a bunch of forms under a label.  Because
-    ['a t] can represent multiple rows of forms, the [group] and [group']
-    functions put those rows underneath a header.Record_builder
-
-    {v
-      group-name
-        sub1 _________
-        sub2 _________
-    v} *)
-val group : string -> 'a t -> 'a t
-
-(** Same as [group], but it lets you use an arbitrary vdom node instead of just a string. *)
-val group' : Vdom.Node.t -> 'a t -> 'a t
-
 (** [optional] takes a ['a t] and produces a ['a option t] when given a "some detector"
     and a token "none" value. [is_some none] must be false.
 
@@ -204,9 +166,10 @@ val optional'
   -> none:'a
   -> 'b option t
 
-(* Access to the raw [Record_builder] library is needed below after the module name is
-   shadowed. *)
-module Record_builder_lib := Record_builder
+
+(** [fallback_to] modifies the given form so that [Ok default] is used as the form's
+    value when it is in an [Error] state. *)
+val fallback_to : 'a t -> value:'a -> 'a t
 
 (** [Record_builder] is the primary way to compose form values using this library.
 
@@ -229,7 +192,8 @@ module Record_builder_lib := Record_builder
              ~x:(field a)
              ~y:(field b))
     ]} *)
-module Record_builder : Profunctor.Record_builder with type 'a profunctor_term := 'a t
+module Record_builder :
+  Record_builder_intf.Record_builder with type 'a profunctor_term := 'a t
 
 (** Unlike the rest of the API which operates on
     values of type [Form.t] value values, they operate on [Form.t
@@ -240,7 +204,10 @@ module Dynamic : sig
      from the page and then re-added. *)
   val with_default : 'a Value.t -> 'a t Value.t -> 'a t Computation.t
 
-  (* Sets a ['a t] to a default value every time it is (re)displayed on a page. *)
+  (* Like [with_default], but an effect is provided to produce the default value. *)
+  val with_default_from_effect : 'a Effect.t Value.t -> 'a t Value.t -> 'a t Computation.t
+
+  (* Sets a ['a t] to an initial value every time it is (re)displayed on a page. *)
   val with_default_always : 'a Value.t -> 'a t Value.t -> 'a t Computation.t
 
   (** Adds a clickable error hint for this form  *)
@@ -272,6 +239,18 @@ module Dynamic : sig
     -> 'a t Value.t
     -> unit Computation.t
 
+  (** Synchronizes a form with some external storage. The value from the store is used to
+      initially populate the form, and if the form changes, then the store is updated to
+      match.  If the contents of the store changes, the form is also updated to match.
+      If both the form and the store update at the same time, the form wins, and the store
+      is overridden. *)
+  val sync_with
+    :  (module Bonsai.Model with type t = 'a)
+    -> store_value:'a option Value.t
+    -> store_set:('a -> unit Effect.t) Value.t
+    -> 'a t Value.t
+    -> unit Computation.t
+
 
   (** Unlike [validate] which requires the validation function to be available
       locally (and synchronous), [validate_via_effect] runs an effectful computation.
@@ -284,30 +263,18 @@ module Dynamic : sig
     -> f:('a -> unit Or_error.t Effect.t) Value.t
     -> 'a t Computation.t
 
-  module Record_builder : sig
-    include Profunctor.Record_builder with type 'a profunctor_term := 'a t Value.t
-
-    val build_for_record
-      :  ( 'a
-         , _ Record_builder_lib.Hlist.cons
-         , 'a )
-           Bare.Make_creator_types.handle_all_fields
-      -> 'a t Computation.t
-
-    val field
-      :  ?group_lists:bool
-      -> 'a t Value.t
-      -> ([ `Read | `Set_and_create ], 'b, 'a) Base.Field.t_with_perm
-      -> ('a * 'c, 'd * 'e, 'b) Bare.Make_creator_types.accum
-      -> ('d * 'e -> 'a) * ('c, 'd * 'e, 'b) Bare.Make_creator_types.accum
-  end
+  module Record_builder :
+    Record_builder_intf.Dynamic_record_builder with type 'a profunctor_term := 'a t
 end
 
 module Expert : sig
-  val create : value:'a Or_error.t -> view:View.t -> set:('a -> unit Ui_effect.t) -> 'a t
+  val create
+    :  value:'a Or_error.t
+    -> view:Form_view.t
+    -> set:('a -> unit Ui_effect.t)
+    -> 'a t
 end
 
 module Private : sig
   val suggest_label : string -> 'a t -> 'a t
-  val group_list : 'a t -> 'a t
 end

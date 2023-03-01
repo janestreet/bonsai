@@ -2,7 +2,6 @@ open! Core
 open! Import
 
 (** {1 Overview}
-
     The [Vdom.Node] and [Vdom.Attr] modules contain primitives for constructing
     virtual-dom nodes which mirror the browsers DOM API. This is great for users who know
     exactly what they want the document to contain, but all-things-considered, is a pretty
@@ -96,6 +95,10 @@ end
     [Theme.override_constants_temporarily]. *)
 
 module Constants = Constants
+
+(** A getter for the constants in a theme. *)
+val constants : Theme.t -> Constants.t
+
 module Color := Css_gen.Color
 
 module Fg_bg : sig
@@ -140,15 +143,42 @@ type 'a format := ('a, unit, string, Vdom.Node.t) format4
 val text : ?attr:Vdom.Attr.t -> string -> Vdom.Node.t
 val textf : ?attr:Vdom.Attr.t -> 'a format -> 'a
 
-(* [themed_text] and [themed_textf] can be given an intent *)
+module Font_style : sig
+  type t =
+    | Regular
+    | Bold
+    | Italic
+    | Underlined
+  [@@deriving sexp, equal, compare, enumerate]
+end
+
+module Font_size : sig
+  type t =
+    | Small
+    | Regular
+    | Large
+  [@@deriving sexp, equal, compare, enumerate]
+end
+
+(* [themed_text] and [themed_textf] can be given an intent, as well as specify the font
+   style and size. *)
 val themed_text
   :  Theme.t
   -> ?attr:Vdom.Attr.t
   -> ?intent:Intent.t
+  -> ?style:Font_style.t
+  -> ?size:Font_size.t
   -> string
   -> Vdom.Node.t
 
-val themed_textf : Theme.t -> ?attr:Vdom.Attr.t -> ?intent:Intent.t -> 'a format -> 'a
+val themed_textf
+  :  Theme.t
+  -> ?attr:Vdom.Attr.t
+  -> ?intent:Intent.t
+  -> ?style:Font_style.t
+  -> ?size:Font_size.t
+  -> 'a format
+  -> 'a
 
 (** {1 Layout}
 
@@ -315,6 +345,41 @@ val devbar
   -> string
   -> Vdom.Node.t
 
+module Card_title_kind : sig
+  type t =
+    | Prominent (** Rendered in an easier to see bar. Use to make your title stand out. *)
+    | Discreet
+    (** Title is rendered alongside the top of the border of the card in a more discrete way. Use to give structure to your content. *)
+end
+
+(** A "card" is a way of highlighting important messages, and to also bring some
+    structure/sense of hierarchy to your app. This component is the conceptual equivalent
+    of "paper" in other UI component frameworks/toolkits. *)
+val card
+  :  Theme.t
+  -> ?container_attr:Vdom.Attr.t
+  -> ?title_attr:Vdom.Attr.t
+  -> ?content_attr:Vdom.Attr.t
+  -> ?intent:Intent.t
+  -> ?title:string
+  -> ?title_kind:Constants.Card_title_kind.t
+  -> ?on_click:unit Effect.t
+  -> string
+  -> Vdom.Node.t
+
+(* Like [card], but allows for arbitrary vdom nodes in the title and in the content. *)
+val card'
+  :  Theme.t
+  -> ?container_attr:Vdom.Attr.t
+  -> ?title_attr:Vdom.Attr.t
+  -> ?content_attr:Vdom.Attr.t
+  -> ?intent:Intent.t
+  -> ?title:Vdom.Node.t list
+  -> ?title_kind:Constants.Card_title_kind.t
+  -> ?on_click:unit Effect.t
+  -> Vdom.Node.t list
+  -> Vdom.Node.t
+
 (** A module for building tables *)
 module Table : sig
   module Col : sig
@@ -393,6 +458,36 @@ module For_components : sig
   module Codemirror : sig
     val theme : Theme.t -> For_codemirror.Theme.t option
   end
+
+  module Forms : sig
+    val to_vdom
+      :  Theme.t
+      -> ?on_submit:Form_view.submission_options
+      -> ?editable:Form_view.editable
+      -> Form_view.t
+      -> Vdom.Node.t
+
+    val to_vdom_plain
+      :  Theme.t
+      -> ?editable:Form_view.editable
+      -> Form_view.t
+      -> Vdom.Node.t list
+
+    val view_error : Theme.t -> Error.t -> Vdom.Node.t list
+
+    val remove_item
+      :  Theme.t
+      -> ?editable:Form_view.editable
+      -> Form_view.remove_item
+      -> index:int
+      -> Vdom.Node.t
+
+    val append_item
+      :  Theme.t
+      -> ?editable:Form_view.editable
+      -> Form_view.append_item
+      -> Vdom.Node.t
+  end
 end
 
 module App : sig
@@ -413,4 +508,5 @@ module Expert : sig
     -> 'a Bonsai.Computation.t
 
   module For_codemirror = For_codemirror
+  module Form_context = Form_context
 end

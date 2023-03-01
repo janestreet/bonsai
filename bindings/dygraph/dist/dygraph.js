@@ -1,4 +1,4 @@
-(function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.Dygraph = f()}})(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+(function(f){{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.Dygraph = f()}})(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -1407,6 +1407,7 @@ DygraphCanvasRenderer.prototype._renderLineChart = function (opt_seriesName, opt
     for (var j = 0; j < sets.length; j++) {
       setName = setNames[j];
       if (opt_seriesName && setName != opt_seriesName) continue;
+      var plotterFinishedCallback = this.dygraph_.getOption("plotterFinishedCallback", setName);
 
       var points = sets[j];
 
@@ -1442,6 +1443,9 @@ DygraphCanvasRenderer.prototype._renderLineChart = function (opt_seriesName, opt
         allSeriesPoints: sets
       });
       ctx.restore();
+      if (plotterFinishedCallback) {
+        plotterFinishedCallback(ctx);
+      }
     }
   }
 };
@@ -1461,7 +1465,49 @@ DygraphCanvasRenderer._Plotters = {
 
   errorPlotter: function errorPlotter(e) {
     DygraphCanvasRenderer._errorPlotter(e);
+  },
+
+  pointPlotter: function pointPlotter(e) {
+    DygraphCanvasRenderer._pointPlotter(e);
   }
+};
+
+/**
+ * Plotter that only renders points for a series without doing any
+ * work to compute lines connecting them.
+ * @private
+ */
+DygraphCanvasRenderer._pointPlotter = function (e) {
+  var g = e.dygraph;
+  var setName = e.setName;
+
+  if (!g.getBooleanOption("drawPoints", setName)) {
+    return;
+  }
+
+  var drawPointCallback = g.getOption("drawPointCallback", setName) || utils.Circles.DEFAULT;
+  var pointSize = g.getNumericOption("pointSize", setName);
+  var color = e.color;
+  var points = e.points;
+  var iter = utils.createIterator(points, 0, points.length, null);
+
+  var ctx = e.drawingContext;
+  var point;
+
+  // This performance hack is lifted from DygraphCanvasRenderer._drawSeries
+  var arr = iter.array_;
+  var limit = iter.end_;
+
+  ctx.save();
+  for (var i = iter.start_; i < limit; i++) {
+    point = arr[i];
+    // We compare point.canvasy against itself to discard NaNs; this is lifted
+    // from DygraphCanvasRenderer._drawSeries
+    if (point.canvasy !== null && point.canvasy == point.canvasy) {
+      drawPointCallback.call(e.dygraph, e.dygraph, e.setName, ctx, point.canvasx, point.canvasy, color, pointSize, point.idx);
+    }
+  }
+  ctx.restore();
 };
 
 /**
@@ -3316,6 +3362,13 @@ if (typeof process !== 'undefined') {
         "labels": ["Data Line display"],
         "type": "boolean",
         "description": "Draw points at the edges of gaps in the data. This improves visibility of small data segments or other data irregularities."
+      },
+      "plotterFinishedCallback": {
+        "default": "null",
+        "labels": [],
+        "type": "function(canvasContext)",
+        "parameters": [["canvasContext", "the canvas that was drawn to"]],
+        "description": "Jane Street extension"
       },
       "drawPointCallback": {
         "default": "null",
@@ -5890,7 +5943,7 @@ function createIterator(array, start, length, opt_predicate) {
 // Should be called with the window context:
 //   Dygraph.requestAnimFrame.call(window, function() {})
 var requestAnimFrame = (function () {
-  return (typeof window !== "undefined" && window.requestAnimationFrame || window.webkitRequestAnimationFrame || window.mozRequestAnimationFrame || window.oRequestAnimationFrame || window.msRequestAnimationFrame) || function (callback) {
+  return typeof window !== "undefined" && (window.requestAnimationFrame || window.webkitRequestAnimationFrame || window.mozRequestAnimationFrame || window.oRequestAnimationFrame || window.msRequestAnimationFrame) || function (callback) {
     setTimeout(callback, 1000 / 60);
   };
 })();

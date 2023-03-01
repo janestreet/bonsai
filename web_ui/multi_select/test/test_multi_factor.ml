@@ -134,7 +134,9 @@ let%expect_test "initial model settings" =
     ; ( Key.Baz
       , S.Single_factor.Initial_model_settings.create
           ~selection_status:
-            (String.Map.singleton "baz1" S.Single_factor.Selection_status.Unselected)
+            (String.Map.singleton
+               "baz1"
+               Bonsai_web_ui_multi_select.Selection_status.Unselected)
           ~focused_item:"baz2"
           () )
     ]

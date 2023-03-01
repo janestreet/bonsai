@@ -50,7 +50,7 @@ let table_form =
          ])
 ;;
 
-let (_ : _ Start.Handle.t) =
+let () =
   let app =
     let%sub table_form = table_form in
     let%sub table_form =
@@ -62,5 +62,5 @@ let (_ : _ Start.Handle.t) =
        just project out the view and return that for the application component. *)
     Bonsai.pure Form.view_as_vdom table_form
   in
-  Start.start Start.Result_spec.just_the_view ~bind_to_element_with_id:"app" app
+  Bonsai_web.Start.start app
 ;;

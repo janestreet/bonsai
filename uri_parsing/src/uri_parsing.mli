@@ -430,4 +430,7 @@ module Versioned_parser : sig
 
   (** Like [Parser.eval_for_uri] but for ['a Versioned_parser.t] *)
   val eval_for_uri : 'a t -> (Uri.t, 'a Parse_result.t) Projection.t
+
+  (** Like [Parser.all_urls], but for ['a Versioned_parser.t]. *)
+  val all_urls : 'a t -> string list
 end

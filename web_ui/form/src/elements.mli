@@ -106,6 +106,15 @@ module Checkbox : sig
     -> ('a, 'cmp) Bonsai.comparator
     -> 'a list Value.t
     -> ('a, 'cmp) Set.t Form.t Computation.t
+
+  module Private : sig
+    val make_input
+      :  id:Vdom.Attr.t
+      -> extra_attrs:Vdom.Attr.t list
+      -> state:bool
+      -> set_state:(bool -> unit Ui_effect.t)
+      -> Vdom.Node.t
+  end
 end
 
 module Toggle : sig
@@ -122,6 +131,7 @@ module Dropdown : sig
   val list
     :  ?init:[ `Empty | `First_item | `This of 'a Value.t ]
     -> ?extra_attrs:Vdom.Attr.t list Value.t
+    -> ?extra_option_attrs:('a -> Vdom.Attr.t list) Value.t
     -> ?to_string:('a -> string)
     -> (module Bonsai.Model with type t = 'a)
     -> 'a list Value.t
@@ -130,6 +140,7 @@ module Dropdown : sig
   val list_opt
     :  ?init:[ `Empty | `First_item | `This of 'a Value.t ]
     -> ?extra_attrs:Vdom.Attr.t list Value.t
+    -> ?extra_option_attrs:('a -> Vdom.Attr.t list) Value.t
     -> ?to_string:('a -> string)
     -> (module Bonsai.Model with type t = 'a)
     -> 'a list Value.t
@@ -138,6 +149,7 @@ module Dropdown : sig
   val enumerable
     :  ?init:[ `Empty | `First_item | `This of 'a Value.t ]
     -> ?extra_attrs:Vdom.Attr.t list Value.t
+    -> ?extra_option_attrs:('a -> Vdom.Attr.t list) Value.t
     -> ?to_string:('a -> string)
     -> (module Bonsai.Enum with type t = 'a)
     -> 'a Form.t Computation.t
@@ -145,9 +157,35 @@ module Dropdown : sig
   val enumerable_opt
     :  ?init:[ `Empty | `First_item | `This of 'a Value.t ]
     -> ?extra_attrs:Vdom.Attr.t list Value.t
+    -> ?extra_option_attrs:('a -> Vdom.Attr.t list) Value.t
     -> ?to_string:('a -> string)
     -> (module Bonsai.Enum with type t = 'a)
     -> 'a option Form.t Computation.t
+
+  module Private : sig
+    module Opt : sig
+      type 'a t =
+        | Uninitialized
+        | Explicitly_none
+        | Set of 'a
+      [@@deriving sexp, equal]
+
+      val to_option : 'a t -> 'a option
+    end
+
+    val make_input
+      :  ?to_string:('a -> string)
+      -> (module Bonsai.Model with type t = 'a)
+      -> id:Vdom.Attr.t
+      -> include_empty:bool
+      -> default_value:'a option
+      -> state:'a Opt.t
+      -> set_state:('a Opt.t -> unit Ui_effect.t)
+      -> extra_attrs:Vdom.Attr.t list
+      -> extra_option_attrs:('a -> Vdom.Attr.t list)
+      -> all:'a list
+      -> Vdom.Node.t
+  end
 end
 
 module Typeahead : sig
@@ -193,6 +231,13 @@ module Typeahead : sig
 end
 
 module Date_time : sig
+  module Span_unit : sig
+    type t =
+      | Seconds
+      | Minutes
+      | Hours
+  end
+
   val date : ?extra_attrs:Vdom.Attr.t list Value.t -> unit -> Date.t Form.t Computation.t
 
   val date_opt
@@ -209,6 +254,20 @@ module Date_time : sig
     :  ?extra_attrs:Vdom.Attr.t list Value.t
     -> unit
     -> Time_ns.Ofday.t option Form.t Computation.t
+
+  val time_span
+    :  ?extra_unit_attrs:Vdom.Attr.t list Value.t
+    -> ?extra_amount_attrs:Vdom.Attr.t list Value.t
+    -> ?default_unit:Span_unit.t
+    -> unit
+    -> Time_ns.Span.t Form.t Computation.t
+
+  val time_span_opt
+    :  ?extra_unit_attrs:Vdom.Attr.t list Value.t
+    -> ?extra_amount_attrs:Vdom.Attr.t list Value.t
+    -> ?default_unit:Span_unit.t
+    -> unit
+    -> Time_ns.Span.t option Form.t Computation.t
 
   val datetime_local
     :  ?extra_attrs:Vdom.Attr.t list Value.t
@@ -263,6 +322,7 @@ module Multiselect : sig
   val set
     :  ?extra_attrs:Vdom.Attr.t list Value.t
     -> ?to_string:('a -> string)
+    -> ?default_selection_status:Bonsai_web_ui_multi_select.Selection_status.t Value.t
     -> ('a, 'cmp) Bonsai.comparator
     -> 'a list Value.t
     -> ('a, 'cmp) Set.t Form.t Computation.t
@@ -270,6 +330,7 @@ module Multiselect : sig
   val list
     :  ?extra_attrs:Vdom.Attr.t list Value.t
     -> ?to_string:('a -> string)
+    -> ?default_selection_status:Bonsai_web_ui_multi_select.Selection_status.t Value.t
     -> ('a, _) Bonsai.comparator
     -> 'a list Value.t
     -> 'a list Form.t Computation.t
@@ -360,16 +421,14 @@ module Multiple : sig
     -> 'a list Form.t Computation.t
 
   val list
-    :  ?element_group_label:
-      (delete_button:Vdom.Node.t -> int -> 'a Or_error.t -> Vdom.Node.t)
+    :  ?element_group_label:(delete_button:Vdom.Node.t -> int -> Vdom.Node.t)
     -> ?add_element_text:string Value.t
     -> ?button_placement:[ `Indented | `Inline ]
     -> 'a Form.t Computation.t
     -> 'a list Form.t Computation.t
 
   val set
-    :  ?element_group_label:
-      (delete_button:Vdom.Node.t -> int -> 'a Or_error.t -> Vdom.Node.t)
+    :  ?element_group_label:(delete_button:Vdom.Node.t -> int -> Vdom.Node.t)
     -> ?add_element_text:string Value.t
     -> ?button_placement:[ `Indented | `Inline ]
     -> ('a, 'cmp) Bonsai.comparator
@@ -377,8 +436,7 @@ module Multiple : sig
     -> ('a, 'cmp) Set.t Form.t Computation.t
 
   val map
-    :  ?element_group_label:
-      (delete_button:Vdom.Node.t -> int -> ('k * 'v) Or_error.t -> Vdom.Node.t)
+    :  ?element_group_label:(delete_button:Vdom.Node.t -> int -> Vdom.Node.t)
     -> ?add_element_text:string Value.t
     -> ?button_placement:[ `Indented | `Inline ]
     -> ('k, 'cmp) Bonsai.comparator
@@ -455,7 +513,7 @@ module Query_box : sig
     -> ?extra_list_container_attr:Vdom.Attr.t Value.t
     -> ?extra_input_attr:Vdom.Attr.t Value.t
     -> ?extra_attr:Vdom.Attr.t Value.t
-    -> selection_to_string:('k -> string)
+    -> selection_to_string:('k -> string) Value.t
     -> f:(string Value.t -> ('k, Vdom.Node.t, 'cmp) Map.t Computation.t)
     -> unit
     -> 'k option Form.t Computation.t
@@ -469,8 +527,48 @@ module Query_box : sig
     -> ?extra_list_container_attr:Vdom.Attr.t Value.t
     -> ?extra_input_attr:Vdom.Attr.t Value.t
     -> ?extra_attr:Vdom.Attr.t Value.t
-    -> selection_to_string:('k -> string)
+    -> selection_to_string:('k -> string) Value.t
     -> f:(string Value.t -> ('k, Vdom.Node.t, 'cmp) Map.t Computation.t)
     -> unit
     -> 'k Form.t Computation.t
+
+  val single
+    :  ?extra_attrs:Vdom.Attr.t list Value.t
+    -> ?to_string:('a -> string) Value.t
+    -> ?to_option_description:('a -> string) Value.t
+    -> ?selected_item_attr:Vdom.Attr.t Value.t
+    -> ?extra_list_container_attr:Vdom.Attr.t Value.t
+    -> ?handle_unknown_option:(string -> 'a option) Value.t
+    -> (module Bonsai.Comparator with type t = 'a and type comparator_witness = 'cmp)
+    (* If there are duplicate items in [all_options] (according to the comparator),
+       the last of the duplicates will be the only one that show up in the list
+       of suggestions. *)
+    -> all_options:'a list Value.t
+    -> 'a Form.t Computation.t
+
+  val single_opt
+    :  ?extra_attrs:Vdom.Attr.t list Value.t
+    -> ?to_string:('a -> string) Value.t
+    -> ?to_option_description:('a -> string) Value.t
+    -> ?selected_item_attr:Vdom.Attr.t Value.t
+    -> ?extra_list_container_attr:Vdom.Attr.t Value.t
+    -> ?handle_unknown_option:(string -> 'a option) Value.t
+    -> (module Bonsai.Comparator with type t = 'a and type comparator_witness = 'cmp)
+    (* If there are duplicate items in [all_options] (according to the comparator),
+       the last of the duplicates will be the only one that show up in the list
+       of suggestions. *)
+    -> all_options:'a list Value.t
+    -> 'a option Form.t Computation.t
+end
+
+module Optional : sig
+  (* [dropdown] takes an existing form, and adds a dropdown with [some_label] and
+     [none_label] options. If the user selects the [some_label] option, the provided form
+     is used for the inner value of the option. *)
+  val dropdown
+    :  ?some_label:string (** default ["None"] *)
+    -> ?none_label:string (** default ["Some"] *)
+    -> (module T with type t = 'a)
+    -> 'a Form.t Computation.t (** shown when the [some_label] option is selected *)
+    -> 'a option Form.t Computation.t
 end

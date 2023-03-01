@@ -20,7 +20,7 @@ module Effect = Effect
 module Private = struct
   module Computation = Computation
   module Environment = Environment
-  module Apply_action = Apply_action
+  module Input = Input
   module Meta = Meta
   module Snapshot = Snapshot
   module Lifecycle = Lifecycle
@@ -31,7 +31,6 @@ module Private = struct
   module Instrumentation = Instrumentation
   module Flatten_values = Flatten_values
   module Constant_fold = Constant_fold
-  module Remove_identity = Remove_identity
   module Skeleton = Skeleton
   module Transform = Transform
   module Linter = Linter
@@ -39,16 +38,12 @@ module Private = struct
   include Proc.Private
 
   let path = Proc.path
-  let gather = Proc.gather
+  let gather = Eval.gather
   let pre_process = Pre_process.pre_process
 end
 
 module Expert = struct
   let state_machine01 = Proc.state_machine01
-
-  module Computation_status = Proc.Computation_status
-
-  let race = Proc.race
   let thunk = Proc.thunk
   let assoc_on = Proc.assoc_on
 end

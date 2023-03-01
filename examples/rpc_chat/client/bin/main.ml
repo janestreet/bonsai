@@ -64,9 +64,7 @@ let run () =
       ~change_room
       ~obfuscate_message
   in
-  let (_ : _ Start.Handle.t) =
-    Start.start Start.Result_spec.just_the_view ~bind_to_element_with_id:"app" component
-  in
+  let () = Bonsai_web.Start.start component in
   don't_wait_for (process_message_stream ~conn ~room_state_var);
   return ()
 ;;

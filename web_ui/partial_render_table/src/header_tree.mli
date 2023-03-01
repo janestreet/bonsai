@@ -25,3 +25,8 @@ val org_group : t list -> t
 val colspan : t -> int
 val height : t -> int
 val leaves : t -> leaf list
+
+(** For each leaf, [column_names] returns a list like [group_label; group_label; ...;
+    leaf_label], where the group labels are that leaf's ancestors, ordered left to right
+    from most to least distant. Used for rendering column groups in tests. *)
+val column_names : t -> Vdom.Node.t list list

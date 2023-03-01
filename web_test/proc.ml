@@ -38,7 +38,7 @@ module Handle = struct
         result_spec
         ?rpc_implementations
         ?(connectors = fun _ -> Bonsai_web.Rpc_effect.Connector.test_fallback)
-        ?clock
+        ?start_time
         ?optimize
         computation
     =
@@ -63,7 +63,7 @@ module Handle = struct
     let computation =
       Bonsai_web.Rpc_effect.Private.with_connector connectors computation
     in
-    Bonsai_test.Handle.create result_spec ?clock ?optimize computation
+    Bonsai_test.Handle.create result_spec ?start_time ?optimize computation
   ;;
 
   open Virtual_dom_test_helpers

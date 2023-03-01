@@ -307,17 +307,16 @@ let component =
 ;;
 ```
 
-To test this component reliably, we must create a new clock for the Bonsai graph
-to use.
+To test this component reliably, we must use [Handle.advance_clock_by] for the Bonsai
+graph to use.
 
 <!-- $MDX file=../../examples/time/test/app_test.ml,part=test-clock-component -->
 ```ocaml
 let%expect_test _ =
-  let clock = Incr.Clock.create ~start:Time_ns.epoch () in
-  let handle = Handle.create ~clock (Result_spec.vdom Fn.id) component in
+  let handle = Handle.create (Result_spec.vdom Fn.id) component in
   Handle.show handle;
   [%expect {| 1970-01-01 00:00:00.000000000Z |}];
-  Incr.Clock.advance_clock_by clock (Time_ns.Span.of_sec 2.0);
+  Handle.advance_clock_by handle (Time_ns.Span.of_sec 2.0);
   Handle.show handle;
   [%expect {| 1970-01-01 00:00:02.000000000Z |}]
 ;;

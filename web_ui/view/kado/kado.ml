@@ -2,7 +2,9 @@ open! Core
 open! Import
 
 module Style = struct
-  type t = Dark
+  type t =
+    | Light
+    | Dark
 end
 
 module Contrast = struct
@@ -15,9 +17,9 @@ module Version = struct
     | Bleeding
 end
 
+let c ~fg ~bg = { Fg_bg.foreground = fg; background = bg }
+
 let dark_mode_constants =
-  let c ~fg ~bg = { Fg_bg.foreground = fg; background = bg } in
-  let _placeholder = c ~fg:(`Name "blue") ~bg:(`Name "red") in
   let primary = c ~fg:(`Hex "#d1d2d3") ~bg:(`Hex "#1a1d21") in
   let extreme = c ~fg:(`Name "#e2e3e4") ~bg:(`Hex "#14181c") in
   let table_even = c ~bg:(`Hex "#21242a") ~fg:primary.foreground in
@@ -40,34 +42,99 @@ let dark_mode_constants =
       ; header_body_border = extreme_primary_border
       ; body_body_border = extreme_primary_border
       }
+  ; form =
+      { error_message = { foreground = `Name "black"; background = `Name "pink" }
+      ; error_toggle_text = `Hex "#f54646"
+      ; error_border = `Name "red"
+      ; tooltip_message = { foreground = `Name "black"; background = `Name "azure" }
+      ; tooltip_border = `Name "darkblue"
+      ; tooltip_toggle_text = `Name "blue"
+      }
+  ; small_font_size = `Em_float 0.8
+  ; large_font_size = `Em_float 1.2
+  ; is_dark = true
   }
 ;;
 
-let app_attr ~color =
-  Vdom.Attr.many [ App.Variables.set () ~bg:(color |> Color.to_string_css); App.app ]
+let light_mode_constants =
+  let primary = c ~fg:(`Hex "#101c28") ~bg:(`Hex "#e5e2de") in
+  let extreme = c ~fg:(`Name "#101c28") ~bg:(`Hex "#f0eeec") in
+  let table_even = c ~bg:(`Hex "#d9d0c4") ~fg:(`Name "#070e16") in
+  let extreme_primary_border = `Hex "#313943" in
+  let header = c ~bg:(`Hex "#312516") ~fg:(`Hex "#f7dec5") in
+  let header_header_border = `Hex "#775a34" in
+  { primary
+  ; extreme
+  ; extreme_primary_border
+  ; intent = dark_mode_constants.intent
+  ; small_font_size = dark_mode_constants.small_font_size
+  ; large_font_size = dark_mode_constants.large_font_size
+  ; table =
+      { body_row_even = table_even
+      ; body_row_odd = primary
+      ; header_row = header
+      ; header_header_border
+      ; header_body_border = header_header_border
+      ; body_body_border = extreme_primary_border
+      }
+  ; is_dark =
+      false
+  ; form =
+      { error_message = { foreground = `Name "black"; background = `Name "pink" }
+      ; error_toggle_text = `Hex "#f54646"
+      ; error_border = `Name "red"
+      ; tooltip_message = { foreground = `Name "black"; background = `Name "azure" }
+      ; tooltip_border = `Name "darkblue"
+      ; tooltip_toggle_text = `Name "blue"
+      }
+  }
 ;;
 
-let v1 =
+let app_attr ~color ~is_dark =
+  Vdom.Attr.many
+    [ App.Variables.set () ~bg:(color |> Color.to_string_css)
+    ; App.app
+    ; (if is_dark then App.dark else App.light)
+    ]
+;;
+
+let v1 ~constants ~codemirror_theme ~is_dark ~name ~version_name =
   View.Expert.override_theme View.Expert.default_theme ~f:(fun (module M) ->
     (module struct
       class c =
         object (self)
           inherit M.c
-          method! theme_name = "kado v1"
-          method! constants = dark_mode_constants
-          method! app_attr = app_attr ~color:self#constants.primary.background
-          method! devbar = Devbar.make self#constants
+          method! theme_name = [%string "%{name} %{version_name}"]
+          method! constants = constants
+          method! app_attr = app_attr ~is_dark ~color:self#constants.primary.background
+          method! devbar = Devbar.make self#constants ~is_dark
           method! tabs = Tabs.make
           method! button = Buttons.make self#constants
           method! use_intent_fg_or_bg_for_highlighting = `Bg
-          method! codemirror_theme = Some Nord
+          method! codemirror_theme = Some codemirror_theme
+          method! card = Cards.make self#constants
         end
     end))
 ;;
 
 let theme ?(contrast = Contrast.Standard) ?(style = Style.Dark) ~version () =
-  let Standard, Dark = contrast, style in
+  let is_dark, constants, name =
+    match style with
+    | Light -> false, light_mode_constants, "kado (light)"
+    | Dark -> true, dark_mode_constants, "kado"
+  in
+  let codemirror_theme : View.Expert.For_codemirror.Theme.t =
+    match style with
+    | Light -> Solarized_light
+    | Dark -> Nord
+  in
+  let Standard = contrast in
   match version with
-  | Version.V1 -> v1
-  | Bleeding -> v1
+  | Version.V1 -> v1 ~constants ~codemirror_theme ~is_dark ~name ~version_name:"v1"
+  | Bleeding -> v1 ~constants ~codemirror_theme ~is_dark ~name ~version_name:"v1"
 ;;
+
+module Unstable = struct
+  module Buttons = Buttons
+  module Input = Input
+end

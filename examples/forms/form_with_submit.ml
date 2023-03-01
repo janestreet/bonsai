@@ -5,7 +5,7 @@ module E = Form.Elements
 
 module T = struct
   type t =
-    { a : int
+    { a : int list
     ; b : string
     }
   [@@deriving sexp_of, typed_fields]
@@ -13,7 +13,7 @@ module T = struct
   let label_for_field = `Inferred
 
   let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t = function
-    | A -> E.Textbox.int ()
+    | A -> E.Multiple.list (E.Textbox.int ())
     | B -> E.Textbox.string ()
   ;;
 end

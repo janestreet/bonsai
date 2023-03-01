@@ -1,6 +1,6 @@
 (library (name kado) (public_name bonsai.kado)
  (libraries core virtual_dom bonsai bonsai_web_ui_view)
- (preprocess (pps ppx_jane ppx_css ppx_bonsai)))
+ (preprocess (pps ppx_jane ppx_css js_of_ocaml-ppx ppx_bonsai)))
 
 (rule
  (targets tabs_style.ml tabs_style.mli tabs_style__generated.ml
@@ -8,9 +8,19 @@
  (deps tabs_style.css) (action (bash "%{bin:css_inliner} %{deps}")))
 
 (rule
+ (targets checkbox_style.ml checkbox_style.mli checkbox_style__generated.ml
+  checkbox_style__generated.mli)
+ (deps checkbox_style.css) (action (bash "%{bin:css_inliner} %{deps}")))
+
+(rule
  (targets table_style.ml table_style.mli table_style__generated.ml
   table_style__generated.mli)
  (deps table_style.css) (action (bash "%{bin:css_inliner} %{deps}")))
+
+(rule
+ (targets input_style.ml input_style.mli input_style__generated.ml
+  input_style__generated.mli)
+ (deps input_style.css) (action (bash "%{bin:css_inliner} %{deps}")))
 
 (rule
  (targets devbar_style.ml devbar_style.mli devbar_style__generated.ml
@@ -21,6 +31,11 @@
  (targets app_style.ml app_style.mli app_style__generated.ml
   app_style__generated.mli)
  (deps app_style.css) (action (bash "%{bin:css_inliner} %{deps}")))
+
+(rule
+ (targets cards_style.ml cards_style.mli cards_style__generated.ml
+  cards_style__generated.mli)
+ (deps cards_style.css) (action (bash "%{bin:css_inliner} %{deps}")))
 
 (rule
  (targets button_style.ml button_style.mli button_style__generated.ml

@@ -9,12 +9,15 @@ let initialize_connection user _initiated_from _addr connection =
 let main ~http_settings =
   let global_state = Global_state.create () in
   let respond (_ : Krb.Principal.Name.t) =
-    Cohttp_static_handler.Single_page_handler.(
-      embedded_js_handler
-        (default_with_body_div ~div_id:"app")
-        ~scripts:[ Embedded_files.main_dot_bc_dot_js ]
-        ~css:[]
-        ~on_unknown_url:`Not_found)
+    let open Cohttp_static_handler in
+    Single_page_handler.create_handler
+      (Single_page_handler.default_with_body_div ~div_id:"app")
+      ~assets:
+        [ Asset.local
+            Asset.Kind.javascript
+            (Asset.What_to_serve.embedded ~contents:Embedded_files.main_dot_bc_dot_js)
+        ]
+      ~on_unknown_url:`Not_found
   in
   let%bind server =
     Simple_web_server.create
@@ -34,4 +37,5 @@ let command =
     ~summary:"Start server for example [rpc-chat]"
     (let%map.Command http_settings = Http_settings.param () in
      fun () -> main ~http_settings)
+    ~behave_nicely_in_pipeline:false
 ;;

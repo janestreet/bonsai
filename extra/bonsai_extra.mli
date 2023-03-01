@@ -34,6 +34,17 @@ val exactly_once_with_value
   -> 'a Effect.t Value.t
   -> 'a option Computation.t
 
+(** Extends a Value.t by providing a setter effect that can be used to override the
+    returned value.  The computation will initially evaluate to the input [Value.t].
+    Once the returned overriding effect is dispatched at least once, the computation
+    will evaluate to the override value provided.  The effect can be scheduled more
+    than once to update the override.  Use with [Bonsai.with_model_resetter] in order
+    to revert the override. *)
+val value_with_override
+  :  (module Bonsai.Model with type t = 'a)
+  -> 'a Value.t
+  -> ('a * ('a -> unit Effect.t)) Computation.t
+
 (** This function is identical to [Bonsai.state_machine0] except that
     the [default_model] is initially unset, but can be computed or defaulted
     to a dynamic value.
@@ -118,6 +129,17 @@ val mirror
   -> interactive_value:'m Value.t
   -> unit Computation.t
 
+(** [mirror'] is like [mirror], but the incoming values have the type ['a option Value.t]
+    instead of just ['a Value.t].  When a value is changed and its new value is None,
+    we don't propagate it to the other setter. *)
+val mirror'
+  :  (module Bonsai.Model with type t = 'm)
+  -> store_set:('m -> unit Effect.t) Value.t
+  -> store_value:'m option Value.t
+  -> interactive_set:('m -> unit Effect.t) Value.t
+  -> interactive_value:'m option Value.t
+  -> unit Computation.t
+
 (** [with_last_modified_time] applies a cutoff to the input value and takes a
     note of the last time the value did not cutoff (in other words, the last
     time it was changed).
@@ -145,6 +167,8 @@ module Stability : sig
         ; unstable_value : 'a
         }
   [@@deriving sexp, equal]
+
+  val most_recent_stable_value : 'a t -> 'a option
 end
 
 (** [value_stability] determines whether the current value has changed

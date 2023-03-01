@@ -8,4 +8,8 @@ open! Bonsai_web
     2. Using Node_with_map_children
     3. Traditional (but with elements that have ~key properties on them)
     4. Node_with_map_children (but with elements that have ~key properties on them) *)
-val view : Color_list.t Value.t -> Vdom.Node.t Computation.t
+val view
+  :  tag:string Value.t
+  -> attr:Vdom.Attr.t Value.t
+  -> Color_list.t Value.t
+  -> Vdom.Node.t Computation.t

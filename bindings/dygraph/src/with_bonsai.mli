@@ -18,6 +18,12 @@ val create_default_legend
   -> (Legend_model.t * Vdom.Node.t * (Legend_data.t -> unit Ui_effect.t))
        Bonsai.Computation.t
 
+type t =
+  { graph_view   : Vdom.Node.t
+  ; modify_graph : (Graph.t -> unit) -> unit Effect.t
+  }
+[@@deriving fields]
+
 val create
   :  key:string Bonsai.Value.t
   (** [key] is a virtualdom concept that allows it to identify which items in a list have
@@ -39,6 +45,7 @@ val create
   (** This hook may be useful if you want to, for example, bind the graph to some global
       variable on the window.  That way you can poke at the graph in the console. *)
   -> ?on_zoom:(is_zoomed:bool -> unit Vdom.Effect.t) Bonsai.Value.t
+  -> ?extra_attr:Vdom.Attr.t Bonsai.Value.t
   -> data:Data.t Bonsai.Value.t
   -> unit
-  -> Vdom.Node.t Bonsai.Computation.t
+  -> t Bonsai.Computation.t

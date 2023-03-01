@@ -10,9 +10,9 @@ module Let_syntax = struct
     let sub = sub
     let switch = switch
     let return = return
-    let map = Value.map
+    let map ?here t ~f = { (Value.map t ~f) with here }
     let both = Value.both
-    let arr ?here t ~f = read { (Value.map t ~f) with here }
+    let arr ?here t ~f = read (map ?here t ~f)
     let cutoff t ~equal = Value.cutoff ~added_by_let_syntax:true t ~equal
 
     include (Value : Mapn with type 'a t := 'a Value.t)
@@ -48,7 +48,7 @@ let enum (type k) (module E : Enum with type t = k) ~match_ ~with_ =
   let match_ = match_ >>| Map.find_exn reverse_index in
   let branches = Array.length forward_index in
   let with_ i = with_ (Array.get forward_index i) in
-  Let_syntax.switch ~match_ ~branches ~with_
+  Let_syntax.switch ~here:[%here] ~match_ ~branches ~with_
 ;;
 
 let scope_model
@@ -73,7 +73,18 @@ let of_module1 (type i m a r) (component : (i, m, a, r) component_s) ~default_mo
       (module M.Model)
       (module M.Action)
       ~default_model
-      ~apply_action:M.apply_action
+      ~apply_action:(fun ~inject ~schedule_event input model action ->
+        match input with
+        | Active input -> M.apply_action ~inject ~schedule_event input model action
+        | Inactive ->
+          eprint_s
+            [%message
+              [%here]
+                "An action sent to an [of_module1] has been dropped because its input \
+                 was not present. This happens when the [of_module1] is inactive when it \
+                 receives a message."
+                (action : M.Action.t)];
+          model)
       input
   in
   let%arr model, inject = model_and_inject
@@ -82,78 +93,6 @@ let of_module1 (type i m a r) (component : (i, m, a, r) component_s) ~default_mo
 ;;
 
 let of_module2 c ~default_model i1 i2 = of_module1 c ~default_model (Value.both i1 i2)
-
-module Computation_status = struct
-  type 'input t =
-    | Active of 'input
-    | Inactive
-end
-
-let race
-      (type m)
-      (module M : Model with type t = m)
-      action
-      ?reset
-      ~default_model
-      ~apply_action
-      input
-  =
-  let module Model = struct
-    type t =
-      { submodel : M.t
-      ; ignore_next_static : bool
-      }
-    [@@deriving sexp, equal]
-  end
-  in
-  let default_model = { Model.submodel = default_model; ignore_next_static = false } in
-  let merge_injections ~inject_dynamic ~inject_static a =
-    Effect.Many [ inject_dynamic a; inject_static a ]
-  in
-  let reset =
-    Option.map reset ~f:(fun reset ~inject_dynamic ~inject_static ~schedule_event model ->
-      let inject = merge_injections ~inject_dynamic ~inject_static in
-      let submodel = reset ~inject ~schedule_event model.Model.submodel in
-      { model with submodel })
-  in
-  let%sub m, id, is =
-    state_machine01
-      (module Model)
-      action
-      action
-      ?reset
-      ~default_model
-      ~apply_dynamic:
-        (fun ~inject_dynamic ~inject_static ~schedule_event input model action ->
-           { submodel =
-               apply_action
-                 ~inject:(merge_injections ~inject_dynamic ~inject_static)
-                 ~schedule_event
-                 (Computation_status.Active input)
-                 model.submodel
-                 action
-           ; ignore_next_static = true
-           })
-      ~apply_static:(fun ~inject_dynamic ~inject_static ~schedule_event model action ->
-        let submodel =
-          if model.ignore_next_static
-          then model.submodel
-          else
-            apply_action
-              ~inject:(merge_injections ~inject_dynamic ~inject_static)
-              ~schedule_event
-              Computation_status.Inactive
-              model.submodel
-              action
-        in
-        { submodel; ignore_next_static = false })
-      input
-  in
-  let%arr m = m
-  and inject_dynamic = id
-  and inject_static = is in
-  m.submodel, merge_injections ~inject_dynamic ~inject_static
-;;
 
 let race_dynamic_model
       (type m a)
@@ -189,7 +128,7 @@ let race_dynamic_model
     | Inactive -> Some (apply_action ~inject ~schedule_event Inactive model action)
   in
   let%sub model_and_inject =
-    race
+    state_machine1
       (module M_actual)
       (module A)
       ~default_model:None
@@ -226,7 +165,7 @@ let actor1
     -> default_model:model
     -> recv:
          (schedule_event:(unit Ui_effect.t -> unit)
-          -> input
+          -> input Computation_status.t
           -> model
           -> action
           -> model * return)
@@ -273,7 +212,7 @@ let actor1
 ;;
 
 let actor0 ?reset model action ~default_model ~recv =
-  let recv ~schedule_event () = recv ~schedule_event in
+  let recv ~schedule_event (_ : unit Computation_status.t) = recv ~schedule_event in
   actor1 model action ?reset ~default_model ~recv (Value.return ())
 ;;
 
@@ -495,7 +434,12 @@ module Edge = struct
         let%sub effect =
           let%arr get_input = get_input
           and effect = effect in
-          let%bind.Effect input = get_input in
+          let%bind.Effect input =
+            match%bind.Effect get_input with
+            | Active input -> Effect.return input
+            | Inactive ->
+              Effect.never
+          in
           effect input
         in
         let%sub result, refresh = manual_refresh (module Result) kind ~effect in
@@ -507,6 +451,133 @@ module Edge = struct
         return result
     ;;
   end
+end
+
+module Effect_throttling = struct
+  module Poll_result = struct
+    type 'a t =
+      | Aborted
+      | Finished of 'a
+    [@@deriving sexp_of]
+  end
+
+  let poll
+    : type a b.
+      (a -> b Effect.t) Value.t -> (a -> b Poll_result.t Effect.t) Computation.t
+    =
+    fun effect ->
+    let module Action = struct
+      type t =
+        | Run of (a, b Poll_result.t) Effect.Private.Callback.t
+        | Activate
+        | Finished
+
+      let sexp_of_t = sexp_of_opaque
+    end
+    in
+    let module Model = struct
+      type t =
+        { running : bool
+        ; next_up : (a, b Poll_result.t) Effect.Private.Callback.t option
+        }
+
+      let sexp_of_t = sexp_of_opaque
+      let t_of_sexp _ = assert false
+      let equal = phys_equal
+    end
+    in
+    let%sub _model, inject =
+      state_machine1
+        (module Model)
+        (module Action)
+        (* This computation does nothing on reset because users should be
+           oblivious to the fact that it has a model. I don't think there is a
+           "correct" decision in this case - this behavior just seems more
+           reasonable to me. *)
+        ~reset:(fun ~inject:_ ~schedule_event:_ model -> model)
+        ~default_model:{ running = false; next_up = None }
+        ~apply_action:(fun ~inject ~schedule_event effect { running; next_up } action ->
+          let run_effect effect callback =
+            schedule_event
+              (let%bind.Effect response =
+                 effect (Effect.Private.Callback.request callback)
+               in
+               let%bind.Effect () =
+                 Effect.Private.Callback.respond_to
+                   callback
+                   (Poll_result.Finished response)
+               in
+               inject Finished)
+          in
+          let abort callback =
+            schedule_event
+              (Effect.Private.Callback.respond_to callback Poll_result.Aborted)
+          in
+          let soft_assert_running here running =
+            if not running
+            then
+              eprint_s
+                [%message
+                  (here : Source_code_position.t)
+                    "BUG:  finished effect even though not running"]
+          in
+          (* There are a lot of cases, and perhaps this match expression could
+             be factored to be shorter, but the advantage to this is that every
+             case is extremely short, and it's easy to find which code path a
+             set of variable configurations will take. *)
+          match action, running, next_up, effect with
+          | Run callback, false, None, Inactive ->
+            { running = false; next_up = Some callback }
+          | Run callback, false, None, Active effect ->
+            run_effect effect callback;
+            { running = true; next_up = None }
+          | Run callback, false, Some next_up, Inactive ->
+            abort next_up;
+            { running = false; next_up = Some callback }
+          | Run callback, false, Some next_up, Active effect ->
+            (* This case is untested because I couldn't figure out how to reach
+               this code path in tests. It seems impossible. *)
+            run_effect effect next_up;
+            { running = true; next_up = Some callback }
+          | Run callback, true, None, (Inactive | Active _) ->
+            { running = true; next_up = Some callback }
+          | Run callback, true, Some next_up, (Inactive | Active _) ->
+            abort next_up;
+            { running = true; next_up = Some callback }
+          | Activate, running, next_up, Inactive ->
+            (* This case looks impossible because [Activate] events happen
+               after a computation is activated, so it should have access to
+               the input. However, it can happen if a computation is activated
+               and de-activated the next frame. The Activate effect doesn't run
+               until the frame in which it was deactivated, which means it
+               doesn't have access to the input. *)
+            { running; next_up }
+          | Activate, false, None, Active _ -> { running = false; next_up = None }
+          | Activate, false, Some next_up, Active effect ->
+            run_effect effect next_up;
+            { running = true; next_up = None }
+          | Activate, true, next_up, Active _ -> { running = true; next_up }
+          | Finished, running, None, (Inactive | Active _) ->
+            soft_assert_running [%here] running;
+            { running = false; next_up = None }
+          | Finished, running, Some next_up, Inactive ->
+            soft_assert_running [%here] running;
+            { running = false; next_up = Some next_up }
+          | Finished, running, Some next_up, Active effect ->
+            soft_assert_running [%here] running;
+            run_effect effect next_up;
+            { running = true; next_up = None })
+        effect
+    in
+    let%sub on_activate =
+      let%arr inject = inject in
+      inject Activate
+    in
+    let%sub () = Edge.lifecycle ~on_activate () in
+    let%arr inject = inject in
+    fun request ->
+      Effect.Private.make ~request ~evaluator:(fun callback -> inject (Run callback))
+  ;;
 end
 
 let freeze model value =
@@ -580,6 +651,38 @@ module Map_renamed_to_avoid_shadowing = struct
       Incr_map.merge a b ~f)
   ;;
 end
+
+let assoc_set m v ~f =
+  let%sub as_map = Map_renamed_to_avoid_shadowing.of_set v in
+  assoc m as_map ~f:(fun k _ -> f k)
+;;
+
+let assoc_list (type key cmp) (m : (key, cmp) comparator) list ~get_key ~f =
+  let module M = (val m) in
+  let%sub alist =
+    let%arr list = list in
+    List.map list ~f:(fun x -> get_key x, x)
+  in
+  let%sub input_map =
+    let%arr alist = alist in
+    Map.of_alist (module M) alist
+  in
+  match%sub input_map with
+  | `Ok input_map ->
+    let%sub output_map = assoc m input_map ~f in
+    let%arr alist = alist
+    and output_map = output_map in
+    `Ok
+      (List.map alist ~f:(fun (k, _) ->
+         match Map.find output_map k with
+         | Some r -> r
+         | None ->
+           raise_s
+             [%message "BUG" [%here] "Incremental glitch" ~key:(k : M.t) "not found"]))
+  | `Duplicate_key key ->
+    let%arr key = key in
+    `Duplicate_key key
+;;
 
 module Dynamic_scope = struct
   include Dynamic_scope
@@ -674,10 +777,12 @@ module Clock = struct
       Ui_incr.return (Effect.of_sync_fun (fun () -> Ui_incr.Clock.now clock) ()))
   ;;
 
+  module Trigger_id = Unique_id.Int ()
+
   module Every_model = struct
     type t =
       | Waiting_for_effect_to_finish
-      | Waiting_for of Time_ns.Alternate_sexp.t
+      | Waiting_for of Trigger_id.t option * Time_ns.Alternate_sexp.t
     [@@deriving sexp, equal]
   end
 
@@ -698,7 +803,7 @@ module Clock = struct
       let start_time =
         if trigger_on_activate then base_time else Time_ns.add base_time span
       in
-      Every_model.Waiting_for start_time
+      Every_model.Waiting_for (None, start_time)
     in
     let%sub get_current_time = get_current_time in
     let%sub race_input =
@@ -718,7 +823,7 @@ module Clock = struct
              in
              inject (Every_action.Wait_for next_time));
         Every_model.Waiting_for_effect_to_finish
-      | Wait_for next_time -> Waiting_for next_time
+      | Wait_for next_time -> Waiting_for (Some (Trigger_id.create ()), next_time)
     in
     let%sub every_model, inject =
       race_dynamic_model
@@ -731,20 +836,21 @@ module Clock = struct
     let%sub before_or_after =
       match%sub every_model with
       | Waiting_for_effect_to_finish -> const None
-      | Waiting_for time ->
+      | Waiting_for (trigger_id, time) ->
         let%sub before_or_after = at time in
-        let%arr before_or_after = before_or_after in
-        Some before_or_after
+        let%arr trigger_id = trigger_id
+        and before_or_after = before_or_after in
+        Some (trigger_id, before_or_after)
     in
     let%sub callback =
       let%arr inject = inject in
       function
-      | None | Some Before_or_after.Before -> Effect.Ignore
-      | Some After -> inject Schedule_effect
+      | None | Some (_, Before_or_after.Before) -> Effect.Ignore
+      | Some (_, After) -> inject Schedule_effect
     in
     Edge.on_change
       (module struct
-        type t = Before_or_after.t option [@@deriving sexp, equal]
+        type t = (Trigger_id.t option * Before_or_after.t) option [@@deriving sexp, equal]
       end)
       before_or_after
       ~callback
@@ -793,7 +899,7 @@ module Clock = struct
 
   let every
     :  when_to_start_next_effect:
-         [ `Wait_period_after_previous_effect_starts_blocking
+         [< `Wait_period_after_previous_effect_starts_blocking
          | `Wait_period_after_previous_effect_finishes_blocking
          | `Every_multiple_of_period_non_blocking
          | `Every_multiple_of_period_blocking
@@ -809,6 +915,96 @@ module Clock = struct
         every_wait_period_after_previous_effect_finishes_blocking
       | `Every_multiple_of_period_blocking -> every_multiple_of_period_blocking
       | `Every_multiple_of_period_non_blocking -> every_multiple_of_period_non_blocking
+  ;;
+end
+
+module Memo = struct
+  module Action = struct
+    type 'query t =
+      | Add of 'query
+      | Remove of 'query
+      | Change of 'query * 'query
+    [@@deriving sexp_of]
+  end
+
+  type ('query, 'response) t =
+    | T :
+        { responses : ('query, 'response, 'cmp) Map.t
+        ; inject : 'query Action.t -> unit Effect.t
+        }
+        -> ('query, 'response) t
+
+  let create
+        (type query cmp response)
+        (module Query : Comparator with type t = query and type comparator_witness = cmp)
+        ~(f : query Value.t -> response Computation.t)
+    =
+    let module Model = struct
+      type t = int Map.M(Query).t [@@deriving sexp, equal]
+    end
+    in
+    let module Action = struct
+      type t = Query.t Action.t [@@deriving sexp_of]
+    end
+    in
+    let apply_action ~inject:_ ~schedule_event:_ model (action : Action.t) =
+      let add model q =
+        Map.update model q ~f:(function
+          | None -> 1
+          | Some c -> c + 1)
+      in
+      let remove model q =
+        Map.change model q ~f:(function
+          | None -> None
+          | Some 1 -> None
+          | Some c -> Some (c - 1))
+      in
+      match action with
+      | Add q -> add model q
+      | Remove q -> remove model q
+      | Change (before, after) -> add (remove model before) after
+    in
+    let%sub queries, inject =
+      state_machine0
+        (module Model)
+        (module Action)
+        ~apply_action
+        ~default_model:(Map.empty (module Query))
+    in
+    let%sub responses = assoc (module Query) queries ~f:(fun query _count -> f query) in
+    let%arr responses = responses
+    and inject = inject in
+    T { responses; inject }
+  ;;
+
+  let lookup (type query response) q_mod (t : (query, response) t Value.t) query =
+    let%sub (T { inject; _ }) = return t in
+    let%sub () =
+      Edge.lifecycle
+        ()
+        ~on_activate:
+          (let%map inject = inject
+           and query = query in
+           inject (Add query))
+        ~on_deactivate:
+          (let%map inject = inject
+           and query = query in
+           inject (Remove query))
+    in
+    let%sub () =
+      let%sub callback =
+        let%arr inject = inject in
+        fun prev next ->
+          match prev, next with
+          | None, _ -> Effect.Ignore
+          | Some prev, next -> inject (Change (prev, next))
+      in
+      Edge.on_change' q_mod query ~callback
+    in
+    let%arr t = t
+    and query = query in
+    let (T { responses; _ }) = t in
+    Map.find responses query
   ;;
 end
 

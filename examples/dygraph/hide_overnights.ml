@@ -55,15 +55,19 @@ let app =
   let y_labels = [ "brownian motion" ] in
   let make_graph ~name ~title ~data ?value_formatter ?axis_label_formatter () =
     let options = options ~title ?value_formatter ?axis_label_formatter () in
-    Dygraph.With_bonsai.create
-      ~key:(Value.return name)
-      ~x_label:(Value.return x_label)
-      ~per_series_info:
-        (y_labels |> Dygraph.Per_series_info.create_all_visible |> Value.return)
-      ~options:(Value.return options)
-      ~data:(Value.return data)
-      ~with_graph:(fun graph -> Js.Unsafe.set Dom_html.window (sprintf "g_%s" name) graph)
-      ()
+    let%sub { graph_view; _ } =
+      Dygraph.With_bonsai.create
+        ~key:(Value.return name)
+        ~x_label:(Value.return x_label)
+        ~per_series_info:
+          (y_labels |> Dygraph.Per_series_info.create_all_visible |> Value.return)
+        ~options:(Value.return options)
+        ~data:(Value.return data)
+        ~with_graph:(fun graph ->
+          Js.Unsafe.set Dom_html.window (sprintf "g_%s" name) graph)
+        ()
+    in
+    return graph_view
   in
   let%sub hide_overnights_graph =
     let { Dygraph.X_axis_mapping.time_to_x_value
@@ -72,7 +76,11 @@ let app =
         ; axis_label_formatter
         }
       =
-      Dygraph.X_axis_mapping.only_display_market_hours () ~start_time ~end_time ~zone
+      Dygraph.X_axis_mapping.only_display_market_hours
+        ()
+        ~start_time
+        ~end_time
+        ~view_zone:zone
     in
     let data =
       Array.map raw_data ~f:(fun (time, values) -> time_to_x_value time, values)

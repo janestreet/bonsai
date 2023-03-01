@@ -10,16 +10,7 @@ let run ~id computation =
      current url-hash is, and only run the requested example. *)
   let current_hash = Dom_html.window##.location##.hash |> Js.to_string in
   print_s [%message (current_hash : string) (id : string)];
-  if String.equal current_hash ("#" ^ id)
-  then (
-    let (_ : _ Start.Handle.t) =
-      Start.start
-        Start.Result_spec.just_the_view
-        ~bind_to_element_with_id:"app"
-        computation
-    in
-    ())
-  else ()
+  if String.equal current_hash ("#" ^ id) then Bonsai_web.Start.start computation else ()
 ;;
 
 let run_vdom ?(include_html = false) vdom =

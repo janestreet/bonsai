@@ -7,20 +7,23 @@ module Action = struct
     | Static of 'static_action
 end
 
-type ('i, 'm, 'dynamic_action, 'static_action, 'r) unpacked =
+type ('i, 'm, 'dynamic_action, 'static_action, 'action_input, 'r) unpacked =
   { input_var : 'i Incr.Var.t
   ; model_var : 'm Incr.Var.t
   ; default_model : 'm
   ; clock : Incr.Clock.t
   ; inject : ('dynamic_action, 'static_action) Action.t -> unit Ui_effect.t
   ; sexp_of_model : 'm -> Sexp.t
-  ; dynamic_apply_action_incr :
-      (schedule_event:(unit Ui_effect.t -> unit) -> 'm -> 'dynamic_action -> 'm) Incr.t
-  ; dynamic_apply_action :
-      (schedule_event:(unit Ui_effect.t -> unit) -> 'm -> 'dynamic_action -> 'm)
-        Incr.Observer.t
+  ; action_input_incr : 'action_input Incr.t
+  ; action_input : 'action_input Incr.Observer.t
   ; static_apply_action :
       schedule_event:(unit Ui_effect.t -> unit) -> 'm -> 'static_action -> 'm
+  ; dynamic_apply_action :
+      schedule_event:(unit Ui_effect.t -> unit)
+      -> 'action_input option
+      -> 'm
+      -> 'dynamic_action
+      -> 'm
   ; result : 'r Incr.Observer.t
   ; result_incr : 'r Incr.t
   ; lifecycle : Bonsai.Private.Lifecycle.Collection.t Incr.Observer.t
@@ -30,7 +33,7 @@ type ('i, 'm, 'dynamic_action, 'static_action, 'r) unpacked =
   ; mutable last_lifecycle : Bonsai.Private.Lifecycle.Collection.t
   }
 
-type ('i, 'r) t = T : ('i, _, _, _, 'r) unpacked -> ('i, 'r) t
+type ('i, 'r) t = T : ('i, _, _, _, _, 'r) unpacked -> ('i, 'r) t
 
 let assert_type_equalities
       (T a : _ Bonsai.Private.Computation.packed_info)
@@ -78,7 +81,9 @@ let create
               ; type_id = _
               ; of_sexp = model_of_sexp
               }
+          ; input = _
           ; apply_static
+          ; apply_dynamic
           ; dynamic_action = _
           ; static_action = _
           ; run = _
@@ -100,10 +105,16 @@ let create
      into the environment is by defining a function like this. See
      https://github.com/ocaml/ocaml/issues/7074. *)
   let create_polymorphic
-        (type dynamic_action static_action)
+        (type dynamic_action static_action action_input)
         (computation_info :
-           (_, dynamic_action, static_action, r) Bonsai.Private.Computation.info)
+           ( _
+           , dynamic_action
+           , static_action
+           , action_input
+           , r )
+             Bonsai.Private.Computation.info)
         apply_static
+        apply_dynamic
     : (i, r) t
     =
     let queue = Queue.create () in
@@ -129,11 +140,10 @@ let create
         ~inject_static
     in
     let result_incr = Bonsai.Private.Snapshot.result snapshot in
-    let dynamic_apply_action_incr =
-      Bonsai.Private.Apply_action.to_incremental
-        (Bonsai.Private.Snapshot.apply_action snapshot)
+    let action_input_incr =
+      Bonsai.Private.Input.to_incremental (Bonsai.Private.Snapshot.input snapshot)
     in
-    let dynamic_apply_action = Incr.observe dynamic_apply_action_incr in
+    let action_input = Incr.observe action_input_incr in
     let result = result_incr |> Incr.observe in
     let lifecycle_incr = Bonsai.Private.Snapshot.lifecycle_or_empty snapshot in
     let lifecycle = Incr.observe lifecycle_incr in
@@ -144,9 +154,10 @@ let create
       ; default_model
       ; clock
       ; inject
-      ; dynamic_apply_action
-      ; dynamic_apply_action_incr
+      ; action_input
+      ; action_input_incr
       ; static_apply_action = apply_static ~inject_dynamic ~inject_static
+      ; dynamic_apply_action = apply_dynamic ~inject_dynamic ~inject_static
       ; result
       ; result_incr
       ; sexp_of_model
@@ -157,12 +168,14 @@ let create
       ; last_lifecycle = Bonsai.Private.Lifecycle.Collection.empty
       }
   in
-  create_polymorphic computation_info apply_static
+  create_polymorphic computation_info apply_static apply_dynamic
 ;;
 
 let schedule_event _ = Ui_effect.Expert.handle
 
-let flush (T { model_var; static_apply_action; dynamic_apply_action; queue; _ }) =
+let flush
+      (T { model_var; static_apply_action; dynamic_apply_action; action_input; queue; _ })
+  =
   let update_model ~action ~apply_action =
     (* The only difference between [Var.latest_value] and [Var.value] is that
        if [Var.set] is called _while stabilizing_, then calling [Var.value]
@@ -186,8 +199,11 @@ let flush (T { model_var; static_apply_action; dynamic_apply_action; queue; _ })
       (* We need to stabilize before every action so that the [input] for the
          apply-actions are up to date. *)
       Incr.stabilize ();
-      let apply_action = Incr.Observer.value_exn dynamic_apply_action in
-      update_model ~apply_action ~action
+      let action_input = Incr.Observer.value_exn action_input in
+      let apply_action ~schedule_event model action =
+        dynamic_apply_action ~schedule_event (Some action_input) model action
+      in
+      update_model ~action ~apply_action
   in
   while not (Queue.is_empty queue) do
     process_event (Queue.dequeue_exn queue)
@@ -218,16 +234,12 @@ let sexp_of_model (T { sexp_of_model; model_var; _ }) =
 ;;
 
 let result_incr (T { result_incr; _ }) = result_incr
-
-let apply_action_incr (T { dynamic_apply_action_incr; _ }) =
-  Ui_incr.pack dynamic_apply_action_incr
-;;
-
+let action_input_incr (T { action_input_incr; _ }) = Ui_incr.pack action_input_incr
 let lifecycle_incr (T { lifecycle_incr; _ }) = Ui_incr.pack lifecycle_incr
 let clock (T { clock; _ }) = clock
 
-let invalidate_observers (T { dynamic_apply_action; result; lifecycle; _ }) =
-  Incr.Observer.disallow_future_use dynamic_apply_action;
+let invalidate_observers (T { action_input; result; lifecycle; _ }) =
+  Incr.Observer.disallow_future_use action_input;
   Incr.Observer.disallow_future_use result;
   Incr.Observer.disallow_future_use lifecycle
 ;;

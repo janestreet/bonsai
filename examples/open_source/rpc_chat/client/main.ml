@@ -78,10 +78,8 @@ let run () =
   let change_room = change_room ~conn ~room_state_var in
   let refresh_rooms = refresh_rooms ~conn ~rooms_list_var in
   let send_message = send_message ~conn in
-  let (_ : _ Start.Handle.t) =
-    Start.start
-      Start.Result_spec.just_the_view
-      ~bind_to_element_with_id:"app"
+  let () =
+    Bonsai_web.Start.start
       (let open Bonsai.Let_syntax in
        App.component
          ~room_list:(Bonsai.Var.value rooms_list_var)

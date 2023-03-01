@@ -110,14 +110,14 @@ module Model = struct
         Series.view series ~on_toggle:(fun () -> on_toggle series.label))
     in
     (* Mostly copied from vdom_input_widgets *)
-    Vdom.Node.ul
+    Vdom.Node.div
       ~attr:
         (Vdom.Attr.many_without_merge
            [ Vdom.Attr.classes [ "widget-checklist"; "checkbox-container" ]
            ; Vdom.Attr.style
                Css_gen.(create ~field:"list-style" ~value:"none" @> margin_left (`Px 0))
            ])
-      (List.map list_elements ~f:(fun li -> Vdom.Node.li [ li ]))
+      (List.map list_elements ~f:(fun li -> Vdom.Node.div [ li ]))
   ;;
 end
 

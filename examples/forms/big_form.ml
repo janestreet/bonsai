@@ -19,6 +19,10 @@ module Query_box_css =
   .selected_item {
     background: yellow;
   }
+
+
+
+
   |}]
 
 module A_B_or_C = struct
@@ -34,6 +38,43 @@ module A_B_or_C = struct
   include Comparator.Make (T)
 end
 
+module Rodents = struct
+  module T = struct
+    let all_of_string = []
+
+    type t =
+      | Groundhog
+      | Mouse
+      | Hamster
+      | Lemming
+      | Chinchilla
+      | Capybara
+      | Muskrat
+      | Marmot
+      | Beaver
+      | Gopher
+      | Guinea_pig
+      | Gerbil
+      | Agouti
+      | Nutria
+      | Other of string
+    [@@deriving enumerate, compare, equal, sexp]
+  end
+
+  include T
+
+  let is_largest = function
+    | Capybara -> true
+    | _ -> false
+  ;;
+
+  let to_description rodent =
+    if is_largest rodent then "largest living rodent" else "not the largest living rodent"
+  ;;
+
+  include Comparator.Make (T)
+end
+
 module My_variant = struct
   type t =
     | A
@@ -42,6 +83,7 @@ module My_variant = struct
   [@@deriving sexp, equal, typed_variants]
 
   let label_for_variant = `Inferred
+  let initial_choice = `First_constructor
 
   let form_for_variant : type a. a Typed_variant.t -> a Form.t Computation.t = function
     | A -> Bonsai.const (Form.return ())
@@ -112,6 +154,7 @@ type t =
   ; string_from_text : string
   ; string_from_vert_radio : string
   ; string_from_horiz_radio : string
+  ; time_span : Time_ns.Span.t
   ; date : Date.t
   ; date_range : Date.t * Date.t
   ; time_ns_of_day : Time_ns.Ofday.t
@@ -126,7 +169,8 @@ type t =
   ; bool_from_checkbox : bool
   ; bool_from_toggle : bool
   ; bool_from_dropdown : bool
-  ; typeahead : A_B_or_C.t
+  ; typeahead : Rodents.t
+  ; query_box_as_typeahead : Rodents.t
   ; color_picker : [ `Hex of string ]
   ; string_option : string option
   ; a_b_or_c : A_B_or_C.t
@@ -180,6 +224,7 @@ let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t = functio
       ~style:(Value.return E.Selectable_style.barebones_button_like)
       ~layout:`Horizontal
       (Value.return [ "first"; "second"; "third" ])
+  | Time_span -> E.Date_time.time_span ()
   | Date -> E.Date_time.date ()
   | Date_range -> E.Date_time.Range.date ()
   | Time_ns_of_day -> E.Date_time.time ()
@@ -200,9 +245,17 @@ let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t = functio
   | Bool_from_dropdown -> E.Dropdown.enumerable (module Bool) ~to_string:Bool.to_string
   | Typeahead ->
     E.Typeahead.single
-      (module A_B_or_C)
+      (module Rodents)
       ~placeholder:"Typeahead here!"
-      ~all_options:(Value.return A_B_or_C.all)
+      ~to_option_description:(Value.return Rodents.to_description)
+      ~handle_unknown_option:(Value.return (fun s -> Some (Rodents.Other s)))
+      ~all_options:(Value.return Rodents.all)
+  | Query_box_as_typeahead ->
+    E.Query_box.single
+      (module Rodents)
+      ~to_option_description:(Value.return Rodents.to_description)
+      ~handle_unknown_option:(Value.return (fun s -> Some (Rodents.Other s)))
+      ~all_options:(Value.return Rodents.all)
   | String_option ->
     E.Dropdown.list_opt (module String) (Value.return [ "hello"; "world" ])
   | A_b_or_c -> E.Dropdown.enumerable (module A_B_or_C)
@@ -246,7 +299,7 @@ let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t = functio
       (module String)
       ~selected_item_attr:(Value.return Query_box_css.selected_item)
       ~extra_list_container_attr:(Value.return Query_box_css.list)
-      ~selection_to_string:Fn.id
+      ~selection_to_string:(Value.return Fn.id)
       ~f:(fun query ->
         let%arr query = query
         and input = input in
@@ -269,7 +322,7 @@ let form =
         let label_for_field = `Computed label_for_field
         let form_for_field = form_for_field
       end)
-    |> Computation.map ~f:(Form.group "The big form")
+    |> Computation.map ~f:(Form.label "The big form")
   in
   Form.Dynamic.error_hint form
 ;;

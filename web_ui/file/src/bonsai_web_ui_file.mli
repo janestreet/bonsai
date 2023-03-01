@@ -59,16 +59,26 @@ module Read_on_change : sig
       [Bonsai_web_ui_form.Elements.File_picker]. So you can do things like:
 
       {[
-        let%sub file_picker =
-          Bonsai_web_ui_form.Elements.File_picker.create [%here] ()
+        let%sub file_picker = Bonsai_web_ui_form.Elements.File_select.single () in
+        let%sub file_from_form =
+          let%arr file_picker = file_picker in
+          Bonsai_web_ui_form.value file_picker |> Or_error.ok
         in
-        let%sub current_file =
-          Bonsai_web_ui_file.Read_on_change file_picker
-        in
-        match%sub current_file with
-        | Starting | In_progress _ -> Bonsai.const "file still loading"
-        | Complete (Error e) -> Bonsai.read (e >>| Error.to_string_hum)
-        | Complete (Ok (_filename, contents)) -> Bonsai.read contents
+        let%sub result = Bonsai_web_ui_file.Read_on_change.create_single_opt file_from_form in
+        match%sub result with
+        | None -> Bonsai.const None
+        | Some (filename, (Bonsai_web_ui_file.Read_on_change.Status.Starting | In_progress _))
+          ->
+          let%arr filename = filename in
+          Some (filename, "file still loading")
+        | Some (filename, Complete (Error e)) ->
+          let%arr e = e
+          and filename = filename in
+          Some (filename, Error.to_string_hum e)
+        | Some (filename, Complete (Ok contents)) ->
+          let%arr filename = filename
+          and contents = contents in
+          Some (filename, contents)
       ]}
 
       NOTE: these computations are not safe for use in Tangle as internally they require a

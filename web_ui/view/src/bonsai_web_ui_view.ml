@@ -3,6 +3,9 @@ open! Import
 module Constants = Constants
 module Fg_bg = Constants.Fg_bg
 module Intent = Constants.Intent
+module Card_title_kind = Constants.Card_title_kind
+module Font_style = Constants.Font_style
+module Font_size = Constants.Font_size
 module Table = Table
 include Layout
 
@@ -84,15 +87,17 @@ let devbar ((module T) : Theme.t) ?(attr = Vdom.Attr.empty) ?(count = 100) ?inte
   T.singleton#devbar ~attr ~count ~intent text
 ;;
 
+let constants ((module T) : Theme.t) = T.singleton#constants
 let text ?attr s = Vdom.Node.span ?attr [ Vdom.Node.text s ]
 let textf ?attr format = Printf.ksprintf (text ?attr) format
 
-let themed_text ((module T) : Theme.t) ?(attr = Vdom.Attr.empty) ?intent text =
-  T.singleton#themed_text ~attr ~intent text
+let themed_text ((module T) : Theme.t) ?(attr = Vdom.Attr.empty) ?intent ?style ?size text
+  =
+  T.singleton#themed_text ~attr ~intent ~style ~size text
 ;;
 
-let themed_textf theme ?attr ?intent format =
-  Printf.ksprintf (themed_text theme ?attr ?intent) format
+let themed_textf theme ?attr ?intent ?style ?size format =
+  Printf.ksprintf (themed_text theme ?attr ?intent ?style ?size) format
 ;;
 
 module Tooltip_direction = Tooltip.Direction
@@ -114,6 +119,51 @@ let tooltip theme ?container_attr ?tooltip_attr ?direction ~tooltip tipped =
   tooltip' theme ?container_attr ?tooltip_attr ?direction ~tooltip tipped
 ;;
 
+let card'
+      ((module T) : Theme.t)
+      ?(container_attr = Vdom.Attr.empty)
+      ?(title_attr = Vdom.Attr.empty)
+      ?(content_attr = Vdom.Attr.empty)
+      ?intent
+      ?(title = [])
+      ?(title_kind = Card_title_kind.Prominent)
+      ?(on_click = Effect.Ignore)
+      content
+  =
+  T.singleton#card
+    ~container_attr
+    ~title_attr
+    ~content_attr
+    ~intent
+    ~on_click
+    ~title
+    ~title_kind
+    ~content
+;;
+
+let card
+      theme
+      ?container_attr
+      ?title_attr
+      ?content_attr
+      ?intent
+      ?title
+      ?title_kind
+      ?on_click
+      content
+  =
+  card'
+    theme
+    ?container_attr
+    ?title_attr
+    ?content_attr
+    ?intent
+    ?title:(Option.map title ~f:(fun title -> [ Vdom.Node.text title ]))
+    ?title_kind
+    ?on_click
+    [ Vdom.Node.text content ]
+;;
+
 module App = struct
   let top_attr ((module T) : Theme.t) = T.singleton#app_attr
 end
@@ -127,6 +177,26 @@ let current_theme = Bonsai.Dynamic_scope.lookup theme_dyn_var
 module For_components = struct
   module Codemirror = struct
     let theme ((module T) : Theme.t) = T.singleton#codemirror_theme
+  end
+
+  module Forms = struct
+    let to_vdom ((module T) : Theme.t) ?on_submit ?(editable = `Yes_always) =
+      T.singleton#form_to_vdom ?on_submit ~eval_context:(Form_context.default ~editable)
+    ;;
+
+    let to_vdom_plain ((module T) : Theme.t) ?(editable = `Yes_always) =
+      Form.to_vdom_plain T.singleton ~eval_context:(Form_context.default ~editable)
+    ;;
+
+    let view_error ((module T) : Theme.t) = T.singleton#form_view_error
+
+    let append_item ((module T) : Theme.t) ?(editable = `Yes_always) =
+      T.singleton#form_append_item ~eval_context:(Form_context.default ~editable)
+    ;;
+
+    let remove_item ((module T) : Theme.t) ?(editable = `Yes_always) =
+      T.singleton#form_remove_item ~eval_context:(Form_context.default ~editable)
+    ;;
   end
 end
 
@@ -148,6 +218,7 @@ module Expert = struct
   ;;
 
   module For_codemirror = For_codemirror
+  module Form_context = Form_context
 end
 
 module Theme = struct

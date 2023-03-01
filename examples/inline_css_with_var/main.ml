@@ -31,9 +31,4 @@ let component =
   Vdom.Node.div ~attr:(Style.Variables.set ~my_color:"green" ()) [ red_box; blue_box ]
 ;;
 
-let (_ : _ Start.Handle.t) =
-  Start.start
-    Start.Result_spec.just_the_view
-    ~bind_to_element_with_id:"app"
-    (Bonsai.const (Vdom.Node.div [ component ]))
-;;
+let () = Bonsai_web.Start.start (Bonsai.const (Vdom.Node.div [ component ]))

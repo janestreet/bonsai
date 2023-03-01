@@ -136,6 +136,12 @@ let%expect_test "if%sub is supported" =
             } (Let_syntax.return MY_EXPR_1)
       ~f:(fun __pattern_syntax__004_ ->
             Let_syntax.switch
+              ~here:{
+                      Ppx_here_lib.pos_fname = "_none_";
+                      pos_lnum = 1;
+                      pos_cnum = (-1);
+                      pos_bol = 0
+                    }
               ~match_:((Let_syntax.map __pattern_syntax__004_
                           ~f:(function | true -> 0 | false -> 1))
               [@ocaml.warning "-26-27"]) ~branches:2
@@ -189,7 +195,13 @@ let%expect_test "destructuring let%sub" =
                      pos_bol = 0
                    }
              (Let_syntax.return
-                ((Let_syntax.map __pattern_syntax__006_
+                ((Let_syntax.map
+                    ~here:{
+                            Ppx_here_lib.pos_fname = "_none_";
+                            pos_lnum = 1;
+                            pos_cnum = (-1);
+                            pos_bol = 0
+                          } __pattern_syntax__006_
                     ~f:(function
                         | (_, { b = _; c = __pattern_syntax__009_ }) ->
                             __pattern_syntax__009_))[@merlin.hide ]))
@@ -202,7 +214,13 @@ let%expect_test "destructuring let%sub" =
                              pos_bol = 0
                            }
                      (Let_syntax.return
-                        ((Let_syntax.map __pattern_syntax__006_
+                        ((Let_syntax.map
+                            ~here:{
+                                    Ppx_here_lib.pos_fname = "_none_";
+                                    pos_lnum = 1;
+                                    pos_cnum = (-1);
+                                    pos_bol = 0
+                                  } __pattern_syntax__006_
                             ~f:(function
                                 | (_, { b = __pattern_syntax__008_; c = _ }) ->
                                     __pattern_syntax__008_))[@merlin.hide ]))
@@ -215,7 +233,13 @@ let%expect_test "destructuring let%sub" =
                                      pos_bol = 0
                                    }
                              (Let_syntax.return
-                                ((Let_syntax.map __pattern_syntax__006_
+                                ((Let_syntax.map
+                                    ~here:{
+                                            Ppx_here_lib.pos_fname = "_none_";
+                                            pos_lnum = 1;
+                                            pos_cnum = (-1);
+                                            pos_bol = 0
+                                          } __pattern_syntax__006_
                                     ~f:(function
                                         | (__pattern_syntax__007_,
                                            { b = _; c = _ }) ->
@@ -246,6 +270,12 @@ let%expect_test "destructuring match%sub" =
            } (Let_syntax.return MY_EXPR)
      ~f:(fun __pattern_syntax__010_ ->
            Let_syntax.switch
+             ~here:{
+                     Ppx_here_lib.pos_fname = "_none_";
+                     pos_lnum = 1;
+                     pos_cnum = (-1);
+                     pos_bol = 0
+                   }
              ~match_:((Let_syntax.map __pattern_syntax__010_
                          ~f:(function
                              | Choice_1 (a, b) -> 0
@@ -262,7 +292,13 @@ let%expect_test "destructuring match%sub" =
                                    pos_bol = 0
                                  }
                            (Let_syntax.return
-                              ((Let_syntax.map __pattern_syntax__010_
+                              ((Let_syntax.map
+                                  ~here:{
+                                          Ppx_here_lib.pos_fname = "_none_";
+                                          pos_lnum = 1;
+                                          pos_cnum = (-1);
+                                          pos_bol = 0
+                                        } __pattern_syntax__010_
                                   ~f:((function
                                        | Choice_1 (_, __pattern_syntax__012_) ->
                                            __pattern_syntax__012_
@@ -277,7 +313,14 @@ let%expect_test "destructuring match%sub" =
                                            pos_bol = 0
                                          }
                                    (Let_syntax.return
-                                      ((Let_syntax.map __pattern_syntax__010_
+                                      ((Let_syntax.map
+                                          ~here:{
+                                                  Ppx_here_lib.pos_fname =
+                                                    "_none_";
+                                                  pos_lnum = 1;
+                                                  pos_cnum = (-1);
+                                                  pos_bol = 0
+                                                } __pattern_syntax__010_
                                           ~f:((function
                                                | Choice_1
                                                    (__pattern_syntax__011_, _)
@@ -320,7 +363,13 @@ let%expect_test "single-case match%sub doesn't call switch" =
                       pos_bol = 0
                     }
               (Module.Let_syntax.Let_syntax.return
-                 ((Module.Let_syntax.Let_syntax.map __pattern_syntax__013_
+                 ((Module.Let_syntax.Let_syntax.map
+                     ~here:{
+                             Ppx_here_lib.pos_fname = "_none_";
+                             pos_lnum = 1;
+                             pos_cnum = (-1);
+                             pos_bol = 0
+                           } __pattern_syntax__013_
                      ~f:(function
                          | Choice_1 __pattern_syntax__014_ ->
                              __pattern_syntax__014_))[@merlin.hide ]))
@@ -349,6 +398,12 @@ let%expect_test "module-qualified match%sub" =
            } (Module.Let_syntax.Let_syntax.return MY_EXPR)
      ~f:(fun __pattern_syntax__015_ ->
            Module.Let_syntax.Let_syntax.switch
+             ~here:{
+                     Ppx_here_lib.pos_fname = "_none_";
+                     pos_lnum = 1;
+                     pos_cnum = (-1);
+                     pos_bol = 0
+                   }
              ~match_:((Module.Let_syntax.Let_syntax.map __pattern_syntax__015_
                          ~f:(function | Choice_1 x -> 0 | Choice_2 x -> 1))
              [@ocaml.warning "-26-27"]) ~branches:2
@@ -363,7 +418,12 @@ let%expect_test "module-qualified match%sub" =
                                  }
                            (Module.Let_syntax.Let_syntax.return
                               ((Module.Let_syntax.Let_syntax.map
-                                  __pattern_syntax__015_
+                                  ~here:{
+                                          Ppx_here_lib.pos_fname = "_none_";
+                                          pos_lnum = 1;
+                                          pos_cnum = (-1);
+                                          pos_bol = 0
+                                        } __pattern_syntax__015_
                                   ~f:((function
                                        | Choice_1 __pattern_syntax__016_ ->
                                            __pattern_syntax__016_
@@ -380,7 +440,12 @@ let%expect_test "module-qualified match%sub" =
                                  }
                            (Module.Let_syntax.Let_syntax.return
                               ((Module.Let_syntax.Let_syntax.map
-                                  __pattern_syntax__015_
+                                  ~here:{
+                                          Ppx_here_lib.pos_fname = "_none_";
+                                          pos_lnum = 1;
+                                          pos_cnum = (-1);
+                                          pos_bol = 0
+                                        } __pattern_syntax__015_
                                   ~f:((function
                                        | Choice_2 __pattern_syntax__017_ ->
                                            __pattern_syntax__017_
@@ -418,7 +483,13 @@ let%expect_test "type annotations are preserved" =
                       pos_bol = 0
                     }
               (Let_syntax.return
-                 (Let_syntax.map __pattern_syntax__018_
+                 (Let_syntax.map
+                    ~here:{
+                            Ppx_here_lib.pos_fname = "_none_";
+                            pos_lnum = 1;
+                            pos_cnum = (-1);
+                            pos_bol = 0
+                          } __pattern_syntax__018_
                     ~f:(function | (_ : int) -> ()))) ~f:(fun _ -> BODY)) |}]
 ;;
 
@@ -444,6 +515,12 @@ let%expect_test "function%sub" =
               } (Let_syntax.return __let_syntax__019_)
         ~f:(fun __pattern_syntax__020_ ->
               Let_syntax.switch
+                ~here:{
+                        Ppx_here_lib.pos_fname = "_none_";
+                        pos_lnum = 1;
+                        pos_cnum = (-1);
+                        pos_bol = 0
+                      }
                 ~match_:((Let_syntax.map __pattern_syntax__020_
                             ~f:(function | Some a -> 0 | None -> 1))
                 [@ocaml.warning "-26-27"]) ~branches:2
@@ -457,7 +534,13 @@ let%expect_test "function%sub" =
                                       pos_bol = 0
                                     }
                               (Let_syntax.return
-                                 ((Let_syntax.map __pattern_syntax__020_
+                                 ((Let_syntax.map
+                                     ~here:{
+                                             Ppx_here_lib.pos_fname = "_none_";
+                                             pos_lnum = 1;
+                                             pos_cnum = (-1);
+                                             pos_bol = 0
+                                           } __pattern_syntax__020_
                                      ~f:((function
                                           | Some __pattern_syntax__021_ ->
                                               __pattern_syntax__021_

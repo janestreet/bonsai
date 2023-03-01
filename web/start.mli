@@ -201,10 +201,27 @@ module Proc : sig
 
   (** [start] takes a value of type ['result Bonsai.Proc.Computation.t] and runs it.
 
-      The first parameter to [start] is a first-class module that defines a [view]
-      function of type ['result -> Vdom.Node.t].  If the computation has type [Vdom.Node.t
-      Bonsai.Proc.Computation.t], then {!Result_spec.just_the_view} is a suggested first
-      argument.  Read the docs in {!Result_spec} for more details.
+      [bind_to_element_with_id] should be the HTML id of the element in the document that
+      Bonsai will take control of.  For most apps, you'll have html that looks like this:
+      [<html><body><div id="app"></div></body></html>], so the value passed to
+      [bind_to_element_with_id] should be the string ["app"].  The default value of this
+      parameter is "app".
+
+      [custom_connector] is for expessing custom logic for connecting to RPC endpoints.
+      Read more about it in rpc_effect.mli. *)
+  val start
+    :  ?custom_connector:(Rpc_effect.Where_to_connect.Custom.t -> Rpc_effect.Connector.t)
+    -> ?bind_to_element_with_id:string
+    -> Vdom.Node.t Bonsai.Computation.t
+    -> unit
+
+  (** [start_and_get_handle] takes a value of type ['result Bonsai.Proc.Computation.t] and
+      runs it.
+
+      The first parameter to [start_and_get_handle] is a first-class module that defines a
+      [view] function of type ['result -> Vdom.Node.t].  If the computation has type
+      [Vdom.Node.t Bonsai.Proc.Computation.t], then {!Result_spec.just_the_view} is a
+      suggested first argument.  Read the docs in {!Result_spec} for more details.
 
       [bind_to_element_with_id] should be the HTML id of the element in the document that
       Bonsai will take control of.  For most apps, you'll have html that looks like this:
@@ -212,7 +229,7 @@ module Proc : sig
       [bind_to_element_with_id] should be the string ["app"].
 
       [optimize] configures Bonsai's computation optimizations, and defaults to [true] *)
-  val start
+  val start_and_get_handle
     :  ('result, 'extra, 'incoming) Result_spec.t
     -> ?optimize:bool
     -> ?custom_connector:(Rpc_effect.Where_to_connect.Custom.t -> Rpc_effect.Connector.t)

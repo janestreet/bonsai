@@ -27,7 +27,7 @@ let attribute_packed pos t =
 module Kind = struct
   module T = struct
     type t =
-      | Apply_action
+      | Input
       | Value
       | Result
       | Lifecycle
@@ -38,9 +38,8 @@ module Kind = struct
       | Assoc_input
       | Assoc_results
       | Assoc_lifecycles
-      | Assoc_apply_actions
+      | Assoc_inputs
       | Path
-      | Impossible_apply_action
       | Lifecycle_apply_action_pair
     [@@deriving hash, compare, sexp]
   end
@@ -49,7 +48,7 @@ module Kind = struct
   include Hashable.Make (T)
 
   let name = function
-    | Apply_action -> "apply-action"
+    | Input -> "input"
     | Value -> "value"
     | Result -> "result"
     | Lifecycle -> "lifecycle"
@@ -60,9 +59,8 @@ module Kind = struct
     | Assoc_input -> "assoc input"
     | Assoc_results -> "assoc result map"
     | Assoc_lifecycles -> "assoc lifecycle map"
-    | Assoc_apply_actions -> "assoc apply-action map"
+    | Assoc_inputs -> "assoc input map"
     | Path -> "path"
-    | Impossible_apply_action -> "impossible apply-action"
     | Lifecycle_apply_action_pair -> "lifecycle/apply-action pair"
   ;;
 
@@ -73,11 +71,10 @@ module Kind = struct
     | Result -> Color.red100
     | Assoc_results -> Color.red200
     | Path -> Color.red300
-    (* apply-action
-       yellow *)
-    | Apply_action -> Color.yellow100
-    | Assoc_apply_actions -> Color.yellow200
-    | Impossible_apply_action -> Color.yellow300
+    (* input
+       amber *)
+    | Input -> Color.amber100
+    | Assoc_inputs -> Color.amber200
     (* lifecycles
        blue *)
     | Lifecycle -> Color.blue100
@@ -85,8 +82,8 @@ module Kind = struct
     | Empty_lifecycle -> Color.blue300
     (* models
        green *)
-    | Model -> Color.green100
-    | Lifecycle_apply_action_pair -> Color.green200
+    | Model -> Color.emerald100
+    | Lifecycle_apply_action_pair -> Color.emerald200
     (* assoc-related
        pink *)
     | Model_and_input -> Color.pink100

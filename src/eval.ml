@@ -11,6 +11,16 @@ let unusable_static_apply_action
   Nothing.unreachable_code
 ;;
 
+let unusable_dynamic_apply_action
+      ~inject_dynamic:_
+      ~inject_static:_
+      ~schedule_event:_
+      _input
+      _model
+  =
+  Nothing.unreachable_code
+;;
+
 let () = Incr.State.(set_max_height_allowed t 1024)
 
 let do_nothing_lifecycle : Lifecycle.t Path.Map.t Incr.t =
@@ -50,94 +60,103 @@ let unzip3_mapi' map ~f =
 
 let unit_model = Incr.return ()
 
-let rec gather_impl
-  : type result. result Computation.kind -> result Computation.packed_info
-  =
+let rec gather : type result. result Computation.t -> result Computation.packed_info =
   let open Computation in
   function
   | Return value ->
     let run ~environment ~path:_ ~clock:_ ~model:_ ~inject_dynamic:_ ~inject_static:_ =
       let result = Value.eval environment value in
-      Snapshot.create ~result ~apply_action:Apply_action.impossible ~lifecycle:None
+      Snapshot.create ~result ~input:Input.static ~lifecycle:None
     in
     T
       { model = Meta.Model.unit
+      ; input = Meta.Input.unit
       ; dynamic_action = Meta.Action.nothing
       ; static_action = Meta.Action.nothing
       ; apply_static = unusable_static_apply_action
+      ; apply_dynamic = unusable_dynamic_apply_action
       ; reset = reset_unit_model
       ; run
       }
   | Leaf01
-      { model; dynamic_action; static_action; apply_dynamic; apply_static; reset; input }
-    ->
+      { model
+      ; input_id
+      ; dynamic_action
+      ; static_action
+      ; apply_dynamic
+      ; apply_static
+      ; reset
+      ; input
+      } ->
     let run ~environment ~path:_ ~clock:_ ~model ~inject_dynamic ~inject_static =
       let input = Value.eval environment input in
       let result =
         let%mapn model = model in
         model, inject_dynamic, inject_static
       in
-      let apply_action =
-        let%mapn input = input in
-        apply_dynamic ~inject_dynamic ~inject_static input
-      in
-      let apply_action = Apply_action.incremental apply_action in
-      Snapshot.create ~result ~apply_action ~lifecycle:None
+      Snapshot.create ~result ~input:(Input.dynamic input) ~lifecycle:None
     in
-    T { model; dynamic_action; static_action; apply_static; reset; run }
-  | Leaf1 { model; dynamic_action; apply_action; input; reset } ->
+    T
+      { model
+      ; input = input_id
+      ; dynamic_action
+      ; static_action
+      ; apply_static
+      ; apply_dynamic
+      ; reset
+      ; run
+      }
+  | Leaf1 { model; input_id; dynamic_action; apply_action; input; reset } ->
     let run ~environment ~path:_ ~clock:_ ~model ~inject_dynamic ~inject_static:_ =
       let input = Value.eval environment input in
       let result =
         let%mapn model = model in
         model, inject_dynamic
       in
-      let apply_action =
-        let%mapn input = input in
-        apply_action ~inject_dynamic ~inject_static:Nothing.unreachable_code input
-      in
-      let apply_action = Apply_action.incremental apply_action in
-      Snapshot.create ~result ~apply_action ~lifecycle:None
+      Snapshot.create ~result ~input:(Input.dynamic input) ~lifecycle:None
     in
     T
       { model
+      ; input = input_id
       ; dynamic_action
       ; static_action = Meta.Action.nothing
       ; apply_static = unusable_static_apply_action
+      ; apply_dynamic = apply_action
       ; reset
       ; run
       }
-  | Leaf0 { model; static_action; apply_action; compute; reset } ->
+  | Leaf0 { model; static_action; apply_action; reset } ->
     let run ~environment:_ ~path:_ ~clock:_ ~model ~inject_dynamic:_ ~inject_static =
       let result =
         let%map model = model in
-        compute ~inject:inject_static model
+        model, inject_static
       in
-      Snapshot.create ~result ~apply_action:Apply_action.impossible ~lifecycle:None
+      Snapshot.create ~result ~input:Input.static ~lifecycle:None
     in
     T
       { model
+      ; input = Meta.Input.unit
       ; dynamic_action = Meta.Action.nothing
       ; static_action
       ; apply_static = apply_action
+      ; apply_dynamic = unusable_dynamic_apply_action
       ; reset
       ; run
       }
-  | Leaf_incr { model; dynamic_action; input; apply_dynamic; compute; reset } ->
-    let run ~environment ~path:_ ~clock ~model ~inject_dynamic ~inject_static:_ =
+  | Leaf_incr { input; input_id; compute } ->
+    let run ~environment ~path:_ ~clock ~model:_ ~inject_dynamic:_ ~inject_static:_ =
       let input = Value.eval environment input in
-      let result = compute ~inject:inject_dynamic clock input model in
-      let apply_action =
-        Apply_action.incremental (apply_dynamic ~inject:inject_dynamic input)
-      in
-      Snapshot.create ~result ~apply_action ~lifecycle:None
+      let result = compute clock input in
+      Snapshot.create ~result ~input:(Input.dynamic input) ~lifecycle:None
     in
     T
-      { model
-      ; dynamic_action
+      { model = Meta.Model.unit
+      ; input = input_id
+      ; dynamic_action = Meta.Action.nothing
       ; static_action = Meta.Action.nothing
       ; apply_static = unusable_static_apply_action
-      ; reset
+      ; apply_dynamic = unusable_dynamic_apply_action
+      ; reset = reset_unit_model
       ; run
       }
   | Model_cutoff t ->
@@ -149,25 +168,40 @@ let rec gather_impl
     in
     T
       { run
+      ; input = gathered.input
       ; model = gathered.model
       ; static_action = gathered.static_action
       ; dynamic_action = gathered.dynamic_action
       ; reset = gathered.reset
       ; apply_static = gathered.apply_static
+      ; apply_dynamic = gathered.apply_dynamic
       }
   | Sub { from; via; into; here } ->
     let (T info_from) = gather from in
     let (T info_into) = gather into in
-    (match
-       ( ( Meta.Model.Type_id.same_witness info_from.model.type_id Meta.Model.unit.type_id
-         , Meta.Action.Type_id.same_witness info_from.dynamic_action Meta.Action.nothing
-         , Meta.Action.Type_id.same_witness info_from.static_action Meta.Action.nothing )
-       , ( Meta.Model.Type_id.same_witness info_into.model.type_id Meta.Model.unit.type_id
-         , Meta.Action.Type_id.same_witness info_into.dynamic_action Meta.Action.nothing
-         , Meta.Action.Type_id.same_witness info_into.static_action Meta.Action.nothing )
-       )
-     with
-     | (Some T, Some T, Some T), _ ->
+    let from_stateless, into_stateless =
+      let same_model = Meta.Model.Type_id.same_witness in
+      let same_action = Meta.Action.Type_id.same_witness in
+      let open Option.Let_syntax in
+      let from_stateless =
+        let%bind a = same_model info_from.model.type_id Meta.Model.unit.type_id in
+        let%bind b = same_action info_from.dynamic_action Meta.Action.nothing in
+        let%bind c = same_action info_from.static_action Meta.Action.nothing in
+        Some (a, b, c)
+      in
+      match from_stateless with
+      | Some from_stateless -> Some from_stateless, None
+      | None ->
+        let into_stateless =
+          let%bind a = same_model info_into.model.type_id Meta.Model.unit.type_id in
+          let%bind b = same_action info_into.dynamic_action Meta.Action.nothing in
+          let%bind c = same_action info_into.static_action Meta.Action.nothing in
+          Some (a, b, c)
+        in
+        None, into_stateless
+    in
+    (match from_stateless, into_stateless with
+     | Some (T, T, T), _ ->
        let run ~environment ~path ~clock ~model ~inject_dynamic ~inject_static =
          let from =
            let path = Path.append path Path.Elem.Subst_from in
@@ -186,7 +220,6 @@ let rec gather_impl
            let path = Path.append path Path.Elem.Subst_into in
            info_into.run ~environment ~path ~clock ~model ~inject_dynamic ~inject_static
          in
-         let apply_action = Snapshot.apply_action into in
          let result = Snapshot.result into in
          let lifecycle =
            Option.merge
@@ -194,17 +227,20 @@ let rec gather_impl
              (Snapshot.lifecycle into)
              ~f:merge_lifecycles
          in
-         Snapshot.create ~result ~apply_action ~lifecycle
+         let input = Snapshot.input into in
+         Snapshot.create ~result ~input ~lifecycle
        in
        T
          { run
+         ; input = info_into.input
          ; model = info_into.model
          ; dynamic_action = info_into.dynamic_action
          ; static_action = info_into.static_action
          ; apply_static = info_into.apply_static
+         ; apply_dynamic = info_into.apply_dynamic
          ; reset = info_into.reset
          }
-     | _, (Some T, Some T, Some T) ->
+     | _, Some (T, T, T) ->
        let run ~environment ~path ~clock ~model ~inject_dynamic ~inject_static =
          let from =
            let path = Path.append path Path.Elem.Subst_from in
@@ -223,7 +259,6 @@ let rec gather_impl
              ~inject_dynamic:Nothing.unreachable_code
              ~inject_static:Nothing.unreachable_code
          in
-         let apply_action = Snapshot.apply_action from in
          let result = Snapshot.result into in
          let lifecycle =
            Option.merge
@@ -231,17 +266,20 @@ let rec gather_impl
              (Snapshot.lifecycle into)
              ~f:merge_lifecycles
          in
-         Snapshot.create ~result ~apply_action ~lifecycle
+         let input = Snapshot.input from in
+         Snapshot.create ~result ~input ~lifecycle
        in
        T
          { run
+         ; input = info_from.input
          ; model = info_from.model
          ; dynamic_action = info_from.dynamic_action
          ; static_action = info_from.static_action
          ; apply_static = info_from.apply_static
+         ; apply_dynamic = info_from.apply_dynamic
          ; reset = info_from.reset
          }
-     | _ ->
+     | None, None ->
        let reset ~inject_dynamic ~inject_static ~schedule_event (model_from, model_into) =
          let model_from =
            let inject_static action = inject_static (First action) in
@@ -286,6 +324,40 @@ let rec gather_impl
              in
              model_from, model_into
        in
+       let apply_dynamic
+             ~inject_dynamic
+             ~inject_static
+             ~schedule_event
+             input
+             (model_from, model_into)
+         = function
+           | First action ->
+             let inject_static action = inject_static (First action) in
+             let inject_dynamic action = inject_dynamic (First action) in
+             let model_from =
+               info_from.apply_dynamic
+                 ~inject_dynamic
+                 ~inject_static
+                 ~schedule_event
+                 (Option.map input ~f:fst)
+                 model_from
+                 action
+             in
+             model_from, model_into
+           | Second action ->
+             let inject_static action = inject_static (Second action) in
+             let inject_dynamic action = inject_dynamic (Second action) in
+             let model_into =
+               info_into.apply_dynamic
+                 ~inject_dynamic
+                 ~inject_static
+                 ~schedule_event
+                 (Option.map input ~f:snd)
+                 model_into
+                 action
+             in
+             model_from, model_into
+       in
        let run ~environment ~path ~clock ~model ~inject_dynamic ~inject_static =
          let from =
            let inject_dynamic effect = inject_dynamic (First effect) in
@@ -304,9 +376,6 @@ let rec gather_impl
            let path = Path.append path Path.Elem.Subst_into in
            info_into.run ~environment ~path ~clock ~model ~inject_dynamic ~inject_static
          in
-         let apply_action =
-           Apply_action.merge (Snapshot.apply_action from) (Snapshot.apply_action into)
-         in
          let result = Snapshot.result into in
          let lifecycle =
            Option.merge
@@ -314,7 +383,8 @@ let rec gather_impl
              (Snapshot.lifecycle into)
              ~f:merge_lifecycles
          in
-         Snapshot.create ~result ~apply_action ~lifecycle
+         let input = Input.merge (Snapshot.input from) (Snapshot.input into) in
+         Snapshot.create ~result ~input ~lifecycle
        in
        let model = Meta.Model.both info_from.model info_into.model in
        let dynamic_action =
@@ -323,7 +393,17 @@ let rec gather_impl
        let static_action =
          Meta.Action.both info_from.static_action info_into.static_action
        in
-       T { model; dynamic_action; static_action; apply_static; run; reset })
+       let input = Meta.Input.both info_from.input info_into.input in
+       T
+         { model
+         ; input
+         ; dynamic_action
+         ; static_action
+         ; apply_static
+         ; apply_dynamic
+         ; run
+         ; reset
+         })
   | Store { id; value; inner } ->
     let (T gathered) = gather inner in
     let run ~environment ~path ~clock ~model ~inject_dynamic ~inject_static =
@@ -333,10 +413,12 @@ let rec gather_impl
     in
     T
       { run
+      ; input = gathered.input
       ; model = gathered.model
       ; static_action = gathered.static_action
       ; dynamic_action = gathered.dynamic_action
       ; apply_static = gathered.apply_static
+      ; apply_dynamic = gathered.apply_dynamic
       ; reset = gathered.reset
       }
   | Fetch { id; default; for_some } ->
@@ -346,19 +428,29 @@ let rec gather_impl
         | None -> Incr.return default
         | Some x -> Incr.map x ~f:(fun a -> for_some a)
       in
-      Snapshot.create ~result ~lifecycle:None ~apply_action:Apply_action.impossible
+      Snapshot.create ~result ~lifecycle:None ~input:Input.static
     in
     T
       { model = Meta.Model.unit
+      ; input = Meta.Input.unit
       ; dynamic_action = Meta.Action.nothing
       ; static_action = Meta.Action.nothing
       ; apply_static = unusable_static_apply_action
+      ; apply_dynamic = unusable_dynamic_apply_action
       ; reset = reset_unit_model
       ; run
       }
   | Assoc { map; key_comparator; key_id; cmp_id; data_id; by } ->
     let (T
-           { model = model_info; dynamic_action; static_action; apply_static; run; reset })
+           { model = model_info
+           ; input = input_info
+           ; dynamic_action
+           ; static_action
+           ; apply_static
+           ; apply_dynamic
+           ; run
+           ; reset
+           })
       =
       gather by
     in
@@ -374,7 +466,7 @@ let rec gather_impl
       let create_keyed =
         unstage (Path.Elem.keyed ~compare:Cmp.comparator.compare key_id)
       in
-      let results_map, apply_action_map, lifecycle_map =
+      let results_map, input_map, lifecycle_map =
         unzip3_mapi' input_and_models_map ~f:(fun ~key ~data:input_and_model ->
           annotate Model_and_input input_and_model;
           let path = Path.append path Path.Elem.(Assoc (create_keyed key)) in
@@ -395,37 +487,12 @@ let rec gather_impl
             run ~environment ~path ~clock ~inject_dynamic ~inject_static ~model
           in
           ( Snapshot.result snapshot
-          , Snapshot.(Apply_action.to_incremental (apply_action snapshot))
+          , Input.to_incremental (Snapshot.input snapshot)
           , Snapshot.lifecycle_or_empty snapshot ))
       in
       annotate Assoc_results results_map;
       annotate Assoc_lifecycles lifecycle_map;
-      annotate Assoc_apply_actions apply_action_map;
-      let apply_action =
-        let%mapn apply_action_map = apply_action_map in
-        fun ~schedule_event model action ->
-          let id, action = action in
-          let specific_model =
-            Map.find model id |> Option.value ~default:model_info.default
-          in
-          match Map.find apply_action_map id with
-          | None ->
-            let key = Type_equal.Id.to_sexp key_id id in
-            let action = Meta.Action.Type_id.to_sexp dynamic_action action in
-            eprint_s
-              [%message
-                "an action inside of Bonsai.assoc has been dropped because the \
-                 computation is no longer active"
-                  (key : Sexp.t)
-                  (action : Sexp.t)];
-            model
-          (* drop it on the floor *)
-          | Some apply_action ->
-            let data = apply_action ~schedule_event specific_model action in
-            if model_info.equal data model_info.default
-            then Map.remove model id
-            else Map.set model ~key:id ~data
-      in
+      annotate Assoc_inputs input_map;
       let lifecycle =
         Incr_map.unordered_fold_nested_maps
           lifecycle_map
@@ -437,8 +504,10 @@ let rec gather_impl
           ~remove:(fun ~outer_key:_ ~inner_key:key ~data:_ acc -> Map.remove acc key)
       in
       annotate Assoc_lifecycles lifecycle;
-      let apply_action = Apply_action.incremental apply_action in
-      Snapshot.create ~result:results_map ~apply_action ~lifecycle:(Some lifecycle)
+      Snapshot.create
+        ~result:results_map
+        ~input:(Input.dynamic input_map)
+        ~lifecycle:(Some lifecycle)
     in
     let apply_static ~inject_dynamic ~inject_static ~schedule_event model (id, action) =
       let inject_dynamic a = inject_dynamic (id, a) in
@@ -453,6 +522,33 @@ let rec gather_impl
       then Map.remove model id
       else Map.set model ~key:id ~data
     in
+    let apply_dynamic
+          ~inject_dynamic
+          ~inject_static
+          ~schedule_event
+          input
+          model
+          (id, action)
+      =
+      let input = Option.bind input ~f:(fun input -> Map.find input id) in
+      let inject_dynamic a = inject_dynamic (id, a) in
+      let inject_static a = inject_static (id, a) in
+      let specific_model =
+        Map.find model id |> Option.value ~default:model_info.default
+      in
+      let data =
+        apply_dynamic
+          ~inject_dynamic
+          ~inject_static
+          ~schedule_event
+          input
+          specific_model
+          action
+      in
+      if model_info.equal data model_info.default
+      then Map.remove model id
+      else Map.set model ~key:id ~data
+    in
     let reset ~inject_dynamic ~inject_static ~schedule_event model =
       Map.filter_mapi model ~f:(fun ~key:id ~data ->
         let inject_dynamic a = inject_dynamic (id, a) in
@@ -462,9 +558,11 @@ let rec gather_impl
     in
     T
       { model = Meta.Model.map key_comparator key_id cmp_id model_info
+      ; input = Meta.Input.map key_id cmp_id input_info
       ; dynamic_action = Meta.Action.map key_id dynamic_action
       ; static_action = Meta.Action.map key_id static_action
       ; apply_static
+      ; apply_dynamic
       ; reset
       ; run
       }
@@ -473,6 +571,7 @@ let rec gather_impl
       ; io_comparator
       ; model_comparator
       ; io_key_id
+      ; io_cmp_id
       ; model_key_id
       ; model_cmp_id
       ; data_id
@@ -483,7 +582,15 @@ let rec gather_impl
     let module Io_comparator = (val io_comparator) in
     let model_key_comparator = Model_comparator.comparator in
     let (T
-           { model = model_info; dynamic_action; static_action; apply_static; run; reset })
+           { model = model_info
+           ; input = input_info
+           ; dynamic_action
+           ; static_action
+           ; apply_static
+           ; apply_dynamic
+           ; run
+           ; reset
+           })
       =
       gather by
     in
@@ -493,9 +600,9 @@ let rec gather_impl
       let create_keyed =
         unstage (Path.Elem.keyed ~compare:Io_comparator.comparator.compare io_key_id)
       in
-      let results_map, apply_action_map, lifecycle_map =
+      let results_map, input_map, lifecycle_map =
         unzip3_mapi' map_input ~f:(fun ~key ~data:value ->
-          let%pattern_bind results_map, apply_action_map, lifecycle_map =
+          let%pattern_bind results_map, input_map, lifecycle_map =
             let path = Path.append path Path.Elem.(Assoc (create_keyed key)) in
             let key_incr = Incr.const key in
             annotate Assoc_key key_incr;
@@ -526,45 +633,14 @@ let rec gather_impl
               run ~environment ~path ~clock ~inject_dynamic ~inject_static ~model
             in
             let%mapn result = Snapshot.result snapshot
-            and apply_action =
-              Snapshot.(Apply_action.to_incremental (apply_action snapshot))
+            and input = Input.to_incremental (Snapshot.input snapshot)
             and lifecycle = Snapshot.lifecycle_or_empty snapshot in
-            result, apply_action, lifecycle
+            result, input, lifecycle
           in
-          results_map, apply_action_map, lifecycle_map)
+          results_map, input_map, lifecycle_map)
       in
       annotate Assoc_results results_map;
       annotate Assoc_lifecycles lifecycle_map;
-      annotate Assoc_apply_actions apply_action_map;
-      let apply_action =
-        let%mapn apply_action_map = apply_action_map in
-        fun ~schedule_event model action ->
-          let input_id, model_id, action = action in
-          let specific_model =
-            match Map.find model model_id with
-            | None -> model_info.default
-            | Some (_prev_io_key, model) -> model
-          in
-          match Map.find apply_action_map input_id with
-          | None ->
-            let io_key = Type_equal.Id.to_sexp io_key_id input_id in
-            let model_key = model_key_comparator.sexp_of_t model_id in
-            let action = Meta.Action.Type_id.to_sexp dynamic_action action in
-            eprint_s
-              [%message
-                "an action inside of Bonsai.assoc_on has been dropped because the \
-                 computation is no longer active"
-                  (io_key : Sexp.t)
-                  (model_key : Sexp.t)
-                  (action : Sexp.t)];
-            model
-          (* drop it on the floor *)
-          | Some apply_action ->
-            let new_model = apply_action ~schedule_event specific_model action in
-            if model_info.equal new_model model_info.default
-            then Map.remove model model_id
-            else Map.set model ~key:model_id ~data:(input_id, new_model)
-      in
       let lifecycle =
         Incr_map.unordered_fold_nested_maps
           lifecycle_map
@@ -576,8 +652,10 @@ let rec gather_impl
           ~remove:(fun ~outer_key:_ ~inner_key:key ~data:_ acc -> Map.remove acc key)
       in
       annotate Assoc_lifecycles lifecycle;
-      let apply_action = Apply_action.incremental apply_action in
-      Snapshot.create ~result:results_map ~apply_action ~lifecycle:(Some lifecycle)
+      Snapshot.create
+        ~result:results_map
+        ~input:(Input.dynamic input_map)
+        ~lifecycle:(Some lifecycle)
     in
     let apply_static
           ~inject_dynamic
@@ -595,6 +673,35 @@ let rec gather_impl
       in
       let new_model =
         apply_static ~inject_dynamic ~inject_static ~schedule_event specific_model action
+      in
+      if model_info.equal new_model model_info.default
+      then Map.remove model model_id
+      else Map.set model ~key:model_id ~data:(input_id, new_model)
+    in
+    let apply_dynamic
+          ~inject_dynamic
+          ~inject_static
+          ~schedule_event
+          input
+          model
+          (input_id, model_id, action)
+      =
+      let input = Option.bind input ~f:(fun input -> Map.find input input_id) in
+      let inject_dynamic a = inject_dynamic (input_id, model_id, a) in
+      let inject_static a = inject_static (input_id, model_id, a) in
+      let specific_model =
+        match Map.find model model_id with
+        | None -> model_info.default
+        | Some (_prev_io_key, model) -> model
+      in
+      let new_model =
+        apply_dynamic
+          ~inject_dynamic
+          ~inject_static
+          ~schedule_event
+          input
+          specific_model
+          action
       in
       if model_info.equal new_model model_info.default
       then Map.remove model model_id
@@ -618,10 +725,12 @@ let rec gather_impl
             io_key_id
             model_cmp_id
             model_info
+      ; input = Meta.Input.map io_key_id io_cmp_id input_info
       ; dynamic_action =
           Meta.Action.map_for_assoc_on io_key_id model_key_id dynamic_action
       ; static_action = Meta.Action.map_for_assoc_on io_key_id model_key_id static_action
       ; apply_static
+      ; apply_dynamic
       ; reset
       ; run
       }
@@ -629,20 +738,23 @@ let rec gather_impl
     let run ~environment ~path ~clock:_ ~model:_ ~inject_dynamic:_ ~inject_static:_ =
       let map_input = Value.eval environment map in
       let result = Incr_map.mapi map_input ~f:(fun ~key ~data -> by path key data) in
-      Snapshot.create ~result ~apply_action:Apply_action.impossible ~lifecycle:None
+      Snapshot.create ~result ~input:Input.static ~lifecycle:None
     in
     T
       { model = Meta.Model.unit
+      ; input = Meta.Input.unit
       ; dynamic_action = Meta.Action.nothing
       ; static_action = Meta.Action.nothing
       ; apply_static = unusable_static_apply_action
+      ; apply_dynamic = unusable_dynamic_apply_action
       ; reset = reset_unit_model
       ; run
       }
-  | Switch { match_; arms } ->
+  | Switch { match_; arms; here = _ } ->
+    let gathered = Map.map arms ~f:gather in
     let run ~environment ~path ~clock ~model ~inject_dynamic ~inject_static =
       let index = Value.eval environment match_ in
-      let%pattern_bind result, apply_action, lifecycle =
+      let%pattern_bind result, input, lifecycle =
         let%bind index = index in
         (* !!!This is a load-bearing bind!!!
 
@@ -651,17 +763,18 @@ let rec gather_impl
            with things like [match%sub] or [Bonsai.match_either] can witness old
            nodes, which can cause [assert false] to trigger. *)
         let path = Path.append path (Path.Elem.Switch index) in
-        let t = Map.find_exn arms index in
         let (T
                { model = model_info
+               ; input = input_info
                ; dynamic_action = dynamic_action_info
                ; static_action = static_action_info
                ; apply_static = _
+               ; apply_dynamic = _
                ; reset = _
                ; run
                })
           =
-          gather t
+          Map.find_exn gathered index
         in
         let chosen_model =
           Incremental.map model ~f:(fun map ->
@@ -684,44 +797,17 @@ let rec gather_impl
         let snapshot =
           run ~environment ~model:chosen_model ~path ~clock ~inject_dynamic ~inject_static
         in
-        let apply_action =
-          let%mapn apply_action =
-            Snapshot.(Apply_action.to_incremental (apply_action snapshot))
-          in
-          fun ~schedule_event
-            model
-            (Meta.Action.Hidden.T { action; type_id = action_type_id; key = index' }) ->
-            let (T { model = chosen_model; info = chosen_model_info; _ }) =
-              Meta.Multi_model.find_exn model index
-            in
-            match
-              ( index = index'
-              , Meta.Action.Type_id.same_witness action_type_id dynamic_action_info
-              , Meta.Model.Type_id.same_witness
-                  chosen_model_info.type_id
-                  model_info.type_id )
-            with
-            | true, Some T, Some T ->
-              let new_model = apply_action ~schedule_event chosen_model action in
-              let new_model = Meta.Model.Hidden.create model_info new_model in
-              Meta.Multi_model.set model ~key:index ~data:new_model
-            | _ ->
-              let action = Meta.Action.Type_id.to_sexp action_type_id action in
-              eprint_s
-                [%message
-                  "an action inside of Bonsai.switch has been dropped because the \
-                   computation is no longer active"
-                    (index : int)
-                    (action : Sexp.t)];
-              model
+        let input =
+          let%mapn input = Input.to_incremental (Snapshot.input snapshot) in
+          Meta.Input.Hidden.T { input; type_id = input_info; key = index }
         in
         let%mapn result = Snapshot.result snapshot
         and lifecycle = Snapshot.lifecycle_or_empty snapshot
-        and apply_action = apply_action in
-        result, apply_action, lifecycle
+        and input = input in
+        result, input, lifecycle
       in
-      let apply_action = Apply_action.incremental apply_action in
-      Snapshot.create ~apply_action ~result ~lifecycle:(Some lifecycle)
+      let input = Input.dynamic input in
+      Snapshot.create ~result ~input ~lifecycle:(Some lifecycle)
     in
     let apply_static
           ~inject_dynamic
@@ -740,14 +826,16 @@ let rec gather_impl
       in
       let (T
              { model = tm
+             ; input = _
              ; static_action = am
              ; dynamic_action = dm
              ; apply_static
+             ; apply_dynamic = _
              ; run = _
              ; reset = _
              })
         =
-        gather (Map.find_exn arms index)
+        Map.find_exn gathered index
       in
       let T = Meta.Model.Type_id.same_witness_exn tm.type_id chosen_model_info.type_id in
       let T = Meta.Action.Type_id.same_witness_exn am action_type_id in
@@ -760,19 +848,99 @@ let rec gather_impl
       let new_model = Meta.Model.Hidden.create tm new_model in
       Meta.Multi_model.set model ~key:index ~data:new_model
     in
+    let apply_dynamic
+          ~inject_dynamic
+          ~inject_static
+          ~schedule_event
+          input
+          model
+          (Meta.Action.Hidden.T { action; type_id = action_type_id; key = index })
+      =
+      let (T
+             { model = tm
+             ; input = im
+             ; static_action = am
+             ; dynamic_action = dm
+             ; apply_static = _
+             ; apply_dynamic
+             ; run = _
+             ; reset = _
+             })
+        =
+        Map.find_exn gathered index
+      in
+      let (T { model = chosen_model; info = chosen_model_info; _ }) =
+        Meta.Multi_model.find_exn model index
+      in
+      match
+        ( Meta.Action.Type_id.same_witness action_type_id dm
+        , Meta.Model.Type_id.same_witness chosen_model_info.type_id tm.type_id )
+      with
+      | Some T, Some T ->
+        let inject_static action =
+          inject_static (Meta.Action.Hidden.T { action; type_id = am; key = index })
+        in
+        let inject_dynamic action =
+          inject_dynamic (Meta.Action.Hidden.T { action; type_id = dm; key = index })
+        in
+        let new_model =
+          match input with
+          | Some
+              (Meta.Input.Hidden.T
+                 { input = chosen_input; type_id = chosen_input_info; key = index' }) ->
+            (match index = index', Meta.Input.same_witness chosen_input_info im with
+             | true, Some T ->
+               apply_dynamic
+                 ~inject_dynamic
+                 ~inject_static
+                 ~schedule_event
+                 (Some chosen_input)
+                 chosen_model
+                 action
+             | _ ->
+               apply_dynamic
+                 ~inject_dynamic
+                 ~inject_static
+                 ~schedule_event
+                 None
+                 chosen_model
+                 action)
+          | None ->
+            apply_dynamic
+              ~inject_dynamic
+              ~inject_static
+              ~schedule_event
+              None
+              chosen_model
+              action
+        in
+        let new_model = Meta.Model.Hidden.create tm new_model in
+        Meta.Multi_model.set model ~key:index ~data:new_model
+      | None, None | Some T, None | None, Some T ->
+        let action = Meta.Action.Type_id.to_sexp action_type_id action in
+        eprint_s
+          [%message
+            "an action inside of Bonsai.switch has been dropped because the computation \
+             is no longer active"
+              (index : int)
+              (action : Sexp.t)];
+        model
+    in
     let reset ~inject_dynamic ~inject_static ~schedule_event model =
       let f ~key:index ~data:(model : Meta.Model.Hidden.t) =
         let (T { model = chosen_model; info = chosen_model_info; _ }) = model in
         let (T
                { model = tm
+               ; input = _
                ; static_action = am
                ; dynamic_action = dm
                ; reset
                ; apply_static = _
+               ; apply_dynamic = _
                ; run = _
                })
           =
-          gather (Map.find_exn arms index)
+          Map.find_exn gathered index
         in
         let inject_static action =
           inject_static (Meta.Action.Hidden.T { action; type_id = am; key = index })
@@ -792,17 +960,18 @@ let rec gather_impl
     in
     let model =
       let models =
-        Map.map arms ~f:(fun t ->
-          let (T { model; _ }) = gather t in
+        Map.map gathered ~f:(fun (T { model; _ }) ->
           Meta.Model.Hidden.create model model.default)
       in
       Meta.Multi_model.model_info (Meta.Multi_model.of_models models)
     in
     T
       { model
+      ; input = Meta.Input.Hidden.int
       ; dynamic_action = Meta.Action.Hidden.int
       ; static_action = Meta.Action.Hidden.int
       ; apply_static
+      ; apply_dynamic
       ; reset
       ; run
       }
@@ -810,16 +979,18 @@ let rec gather_impl
     let dynamic_action = Meta.Action.Hidden.unit in
     let static_action = Meta.Action.Hidden.unit in
     let model = Meta.Model.Hidden.lazy_ in
+    let gathered = Lazy.map lazy_computation ~f:gather in
     let run ~environment ~path ~clock ~model ~inject_dynamic ~inject_static =
       let (T
              { model = model_info
+             ; input = input_info
              ; dynamic_action = dynamic_action_info
              ; static_action = static_action_info
              ; run
              ; _
              })
         =
-        gather (force lazy_computation)
+        force gathered
       in
       let input_model =
         let%map model = model in
@@ -844,35 +1015,12 @@ let rec gather_impl
       let snapshot =
         run ~environment ~path ~clock ~model:input_model ~inject_dynamic ~inject_static
       in
-      let apply_action =
-        Apply_action.map
-          (Snapshot.apply_action snapshot)
-          ~f:(fun apply_action ~schedule_event model action ->
-            let (Meta.Action.Hidden.T { action; type_id = action_type_id; key = () }) =
-              action
-            in
-            let (Meta.Model.Hidden.T
-                   { model = chosen_model; info = chosen_model_info; _ })
-              =
-              Option.value
-                model
-                ~default:(Meta.Model.Hidden.create model_info model_info.default)
-            in
-            match
-              ( Meta.Action.Type_id.same_witness action_type_id dynamic_action_info
-              , Meta.Model.Type_id.same_witness
-                  chosen_model_info.type_id
-                  model_info.type_id )
-            with
-            | Some T, Some T ->
-              let new_model = apply_action ~schedule_event chosen_model action in
-              Some (Meta.Model.Hidden.create model_info new_model)
-            | _ ->
-              print_s [%message "BUG: type-id mismatch in Bonsai.lazy_"];
-              model)
+      let input =
+        Input.map (Snapshot.input snapshot) ~f:(fun input ->
+          Meta.Input.Hidden.T { input; type_id = input_info; key = () })
       in
       Snapshot.create
-        ~apply_action
+        ~input
         ~result:(Snapshot.result snapshot)
         ~lifecycle:(Snapshot.lifecycle snapshot)
     in
@@ -886,7 +1034,7 @@ let rec gather_impl
              ; _
              })
         =
-        gather (force lazy_computation)
+        force gathered
       in
       let inject_dynamic action =
         inject_dynamic
@@ -913,6 +1061,61 @@ let rec gather_impl
       in
       Some (Meta.Model.Hidden.create model_info new_model)
     in
+    let apply_dynamic ~inject_dynamic ~inject_static ~schedule_event input model action =
+      (* forcing the lazy is fine because actions are finite in length *)
+      let (T
+             { model = model_info
+             ; input = input_info
+             ; dynamic_action = dynamic_action_info
+             ; static_action = static_action_info
+             ; apply_dynamic
+             ; _
+             })
+        =
+        force gathered
+      in
+      let inject_dynamic action =
+        inject_dynamic
+          (Meta.Action.Hidden.T { action; type_id = dynamic_action_info; key = () })
+      in
+      let inject_static action =
+        inject_static
+          (Meta.Action.Hidden.T { action; type_id = static_action_info; key = () })
+      in
+      let (Meta.Action.Hidden.T { action; type_id = action_type_id; key = () }) =
+        action
+      in
+      let (Meta.Model.Hidden.T { model = chosen_model; info = chosen_model_info; _ }) =
+        Option.value
+          model
+          ~default:(Meta.Model.Hidden.create model_info model_info.default)
+      in
+      let T = Meta.Action.Type_id.same_witness_exn action_type_id dynamic_action_info in
+      let T =
+        Meta.Model.Type_id.same_witness_exn chosen_model_info.type_id model_info.type_id
+      in
+      let new_model =
+        match input with
+        | Some (Meta.Input.Hidden.T { input; type_id = input_type_id; key = () }) ->
+          let T = Meta.Input.same_witness_exn input_type_id input_info in
+          apply_dynamic
+            ~inject_dynamic
+            ~inject_static
+            ~schedule_event
+            (Some input)
+            chosen_model
+            action
+        | None ->
+          apply_dynamic
+            ~inject_dynamic
+            ~inject_static
+            ~schedule_event
+            None
+            chosen_model
+            action
+      in
+      Some (Meta.Model.Hidden.create model_info new_model)
+    in
     let reset' ~inject_dynamic ~inject_static ~schedule_event model =
       let (T
              { model = model_info
@@ -922,7 +1125,7 @@ let rec gather_impl
              ; _
              })
         =
-        gather (force lazy_computation)
+        force gathered
       in
       let inject_dynamic action =
         inject_dynamic
@@ -948,10 +1151,20 @@ let rec gather_impl
       | None -> None
       | Some model -> Some (reset' ~inject_dynamic ~inject_static ~schedule_event model)
     in
-    T { model; dynamic_action; static_action; apply_static; run; reset }
+    T
+      { model
+      ; input = Meta.Input.Hidden.unit
+      ; dynamic_action
+      ; static_action
+      ; apply_static
+      ; apply_dynamic
+      ; run
+      ; reset
+      }
   | Wrap
       { wrapper_model
       ; action_id
+      ; result_id
       ; inject_id
       ; model_id
       ; inner
@@ -960,9 +1173,11 @@ let rec gather_impl
       } ->
     let (T
            { model = inner_model
+           ; input = inner_input
            ; dynamic_action = inner_dynamic_action
            ; static_action = inner_static_action
            ; apply_static
+           ; apply_dynamic
            ; run
            ; reset
            })
@@ -988,33 +1203,14 @@ let rec gather_impl
           ~inject_static
       in
       let inner_result = Snapshot.result inner_snapshot in
-      let apply_action =
-        let%mapn inner_result = inner_result
-        and inner_apply_action =
-          Snapshot.(Apply_action.to_incremental (apply_action inner_snapshot))
-        in
-        fun ~schedule_event (outer_model, inner_model) action ->
-          match action with
-          | First action_outer ->
-            let new_outer_model =
-              dynamic_apply_action
-                ~inject_dynamic:dynamic_inject_outer
-                ~inject_static:Nothing.unreachable_code
-                ~schedule_event
-                inner_result
-                outer_model
-                action_outer
-            in
-            new_outer_model, inner_model
-          | Second action_inner ->
-            let new_inner_model =
-              inner_apply_action ~schedule_event inner_model action_inner
-            in
-            outer_model, new_inner_model
+      let input =
+        Input.merge
+          (Snapshot.input inner_snapshot)
+          (Input.dynamic (Snapshot.result inner_snapshot))
       in
       Snapshot.create
         ~result:inner_result
-        ~apply_action:(Apply_action.incremental apply_action)
+        ~input
         ~lifecycle:(Snapshot.lifecycle inner_snapshot)
     in
     let dynamic_action = Meta.Action.both action_id inner_dynamic_action in
@@ -1022,6 +1218,40 @@ let rec gather_impl
     let apply_static ~inject_dynamic ~inject_static ~schedule_event (m1, m2) action =
       let inject_dynamic a = inject_dynamic (Second a) in
       m1, apply_static ~inject_dynamic ~inject_static ~schedule_event m2 action
+    in
+    let apply_dynamic
+          ~inject_dynamic
+          ~inject_static
+          ~schedule_event
+          input
+          (outer_model, inner_model)
+          action
+      =
+      let dynamic_inject_outer a = inject_dynamic (Either.First a) in
+      let dynamic_inject_inner a = inject_dynamic (Either.Second a) in
+      match action with
+      | First action_outer ->
+        let new_outer_model =
+          dynamic_apply_action
+            ~inject_dynamic:dynamic_inject_outer
+            ~inject_static:Nothing.unreachable_code
+            ~schedule_event
+            (Option.map input ~f:snd)
+            outer_model
+            action_outer
+        in
+        new_outer_model, inner_model
+      | Second action_inner ->
+        let new_inner_model =
+          apply_dynamic
+            ~inject_dynamic:dynamic_inject_inner
+            ~inject_static
+            ~schedule_event
+            (Option.map input ~f:fst)
+            inner_model
+            action_inner
+        in
+        outer_model, new_inner_model
     in
     let reset ~inject_dynamic ~inject_static ~schedule_event (outer_model, inner_model) =
       let outer_model =
@@ -1040,14 +1270,26 @@ let rec gather_impl
     in
     T
       { model
+      ; input = Meta.Input.both inner_input result_id
       ; dynamic_action
       ; static_action = inner_static_action
       ; apply_static
+      ; apply_dynamic
       ; run
       ; reset
       }
   | With_model_resetter { inner; reset_id } ->
-    let (T { model; dynamic_action; static_action; apply_static; run; reset }) =
+    let (T
+           { model
+           ; input
+           ; dynamic_action
+           ; static_action
+           ; apply_static
+           ; apply_dynamic
+           ; run
+           ; reset
+           })
+      =
       gather inner
     in
     let run ~environment ~path ~clock ~model ~inject_dynamic ~inject_static =
@@ -1059,9 +1301,11 @@ let rec gather_impl
       let snapshot =
         run ~environment ~path ~model ~clock ~inject_dynamic ~inject_static
       in
-      let apply_action = Snapshot.apply_action snapshot in
       let result = Snapshot.result snapshot in
-      Snapshot.create ~result ~apply_action ~lifecycle:(Snapshot.lifecycle snapshot)
+      Snapshot.create
+        ~result
+        ~input:(Snapshot.input snapshot)
+        ~lifecycle:(Snapshot.lifecycle snapshot)
     in
     let static_action = Meta.(Action.both Action.Type_id.unit static_action) in
     let apply_static ~inject_dynamic ~inject_static ~schedule_event m =
@@ -1070,22 +1314,37 @@ let rec gather_impl
       | First () -> reset ~inject_dynamic ~inject_static ~schedule_event m
       | Second a -> apply_static ~inject_dynamic ~inject_static ~schedule_event m a
     in
+    let apply_dynamic ~inject_dynamic ~inject_static ~schedule_event i m =
+      let inject_static a = inject_static (Second a) in
+      apply_dynamic ~inject_dynamic ~inject_static ~schedule_event i m
+    in
     let reset ~inject_dynamic ~inject_static ~schedule_event m =
       let inject_static a = inject_static (Second a) in
       reset ~inject_dynamic ~inject_static ~schedule_event m
     in
-    T { model; static_action; dynamic_action; apply_static; run; reset }
+    T
+      { model
+      ; input
+      ; static_action
+      ; dynamic_action
+      ; apply_static
+      ; apply_dynamic
+      ; run
+      ; reset
+      }
   | Path ->
     let run ~environment:_ ~path ~clock:_ ~model:_ ~inject_dynamic:_ ~inject_static:_ =
       let result = Incr.return path in
       annotate Path result;
-      Snapshot.create ~result ~apply_action:Apply_action.impossible ~lifecycle:None
+      Snapshot.create ~result ~input:Input.static ~lifecycle:None
     in
     T
       { model = Meta.Model.unit
+      ; input = Meta.Input.unit
       ; dynamic_action = Meta.Action.nothing
       ; static_action = Meta.Action.nothing
       ; apply_static = unusable_static_apply_action
+      ; apply_dynamic = unusable_dynamic_apply_action
       ; reset = reset_unit_model
       ; run
       }
@@ -1100,21 +1359,17 @@ let rec gather_impl
       in
       Snapshot.create
         ~result:(Incr.return ())
-        ~apply_action:Apply_action.impossible
+        ~input:Input.static
         ~lifecycle:(Some lifecycle)
     in
     T
       { model = Meta.Model.unit
+      ; input = Meta.Input.unit
       ; dynamic_action = Meta.Action.nothing
       ; static_action = Meta.Action.nothing
       ; apply_static = unusable_static_apply_action
+      ; apply_dynamic = unusable_dynamic_apply_action
       ; reset = reset_unit_model
       ; run
       }
-  | Identity t -> gather t
-
-and gather : type result. result Computation.t -> result Computation.packed_info =
-  fun { info; _ } -> force info
 ;;
-
-let wrap_computation ~pack kind = pack kind (lazy (gather_impl kind))

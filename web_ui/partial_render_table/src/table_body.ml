@@ -12,7 +12,7 @@ module For_testing = struct
     }
 
   type t =
-    { column_names : Vdom.Node.t list
+    { column_names : Vdom.Node.t list list
     ; cells : cell list
     ; rows_before : int
     ; rows_after : int
@@ -35,11 +35,14 @@ let set_or_wrap ~classes ~style =
       [ other ]
 ;;
 
+let float_to_px_string px = Virtual_dom.Dom_float.to_string_fixed 8 px ^ "px"
+
 let component
       (type key data cmp)
       ~(comparator : (key, cmp) Bonsai.comparator)
       ~row_height
       ~(leaves : Header_tree.leaf list Value.t)
+      ~(headers : Header_tree.t Value.t)
       ~(assoc :
           (key * data) Map_list.t Value.t
         -> (key * Vdom.Node.t list) Map_list.t Computation.t)
@@ -82,7 +85,9 @@ let component
                | Hidden _ -> 0.0)
       in
       let open Css_gen in
-      height (row_height :> Length.t) @> width (`Px_float total_width)
+      height (row_height :> Length.t)
+      @> create ~field:"width" ~value:(float_to_px_string total_width)
+      @> flex_container ()
     in
     let%sub calculate_css =
       let%arr column_widths = column_widths in
@@ -97,8 +102,10 @@ let component
         in
         let css_for_column =
           let open Css_gen in
-          let w = `Px_float column_width in
-          width w @> min_width w @> max_width w
+          let w = float_to_px_string column_width in
+          create ~field:"width" ~value:w
+          @> create ~field:"min-width" ~value:w
+          @> create ~field:"max-width" ~value:w
         in
         css_for_column
       in
@@ -157,11 +164,11 @@ let component
   in
   let%sub for_testing =
     let%arr cells = cells
-    and leaves_info = leaves_info
     and collated = collated
-    and visually_focused = visually_focused in
+    and visually_focused = visually_focused
+    and headers = headers in
     lazy
-      (let column_names = leaves_info |> List.map ~f:Tuple2.get2 in
+      (let column_names = Header_tree.column_names headers in
        { For_testing.column_names
        ; cells =
            List.map (Map.to_alist cells) ~f:(fun (id, (key, view)) ->
@@ -189,7 +196,7 @@ let component
                    [ Css_gen.padding_top (`Px padding_top)
                    ; Css_gen.padding_bottom (`Px padding_bottom)
                    ]))
-           [ Vdom_node_with_map_children.make rows ]))
+           [ Vdom_node_with_map_children.make ~tag:"div" rows ]))
   in
   let%arr view = view
   and for_testing = for_testing in

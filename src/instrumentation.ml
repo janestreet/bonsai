@@ -74,45 +74,30 @@ let instrument_computation (t : _ Computation.t) ~start_timer ~stop_timer =
       model
     in
     let recursed = context.recurse () computation in
-    let kind : result Computation.kind =
-      match recursed.kind with
-      | Fetch v_id -> Computation.Fetch v_id
-      | Leaf1 t ->
-        Leaf1 { t with apply_action = time_apply_action ~apply_action:t.apply_action }
-      | Leaf0 t ->
-        let compute ~inject model =
-          start_timer compute_label;
-          let result = t.compute ~inject model in
-          stop_timer compute_label;
-          result
-        in
-        let apply_action = time_static_apply_action ~apply_action:t.apply_action in
-        Leaf0 { t with compute; apply_action }
-      | Leaf_incr t ->
-        let apply_dynamic input ~inject =
-          start_timer apply_action_label;
-          let model_incr = t.apply_dynamic input ~inject in
-          stop_timer apply_action_label;
-          model_incr
-        in
-        let compute clock input model ~inject =
-          start_timer compute_label;
-          let computed = t.compute clock input model ~inject in
-          stop_timer compute_label;
-          computed
-        in
-        Leaf_incr { t with apply_dynamic; compute }
-      | Assoc_simpl t ->
-        let by path key value =
-          start_timer by_label;
-          let by = t.by path key value in
-          stop_timer by_label;
-          by
-        in
-        Assoc_simpl { t with by }
-      | computation -> computation
-    in
-    Proc.wrap_computation kind
+    match recursed with
+    | Fetch v_id -> Computation.Fetch v_id
+    | Leaf1 t ->
+      Leaf1 { t with apply_action = time_apply_action ~apply_action:t.apply_action }
+    | Leaf0 t ->
+      Leaf0
+        { t with apply_action = time_static_apply_action ~apply_action:t.apply_action }
+    | Leaf_incr t ->
+      let compute clock input =
+        start_timer compute_label;
+        let computed = t.compute clock input in
+        stop_timer compute_label;
+        computed
+      in
+      Leaf_incr { t with compute }
+    | Assoc_simpl t ->
+      let by path key value =
+        start_timer by_label;
+        let by = t.by path key value in
+        stop_timer by_label;
+        by
+      in
+      Assoc_simpl { t with by }
+    | computation -> computation
   in
   let value_map
         (type a)

@@ -3,6 +3,8 @@ open! Bonsai_web
 open Bonsai.Let_syntax
 
 let component =
+  let%sub { tag; reset = reset_tag } = Tag.component in
+  let%sub { attr; reset = reset_attr } = Attr.component in
   let%sub { out = before_state; view = before_view; reset = reset_before } =
     Color_list.component "before"
   in
@@ -14,11 +16,13 @@ let component =
   in
   let%sub reset_all =
     let%arr reset_before = reset_before
-    and reset_after = reset_after in
-    Effect.Many [ reset_before; reset_after ]
+    and reset_after = reset_after
+    and reset_tag = reset_tag
+    and reset_attr = reset_attr in
+    Effect.Many [ reset_before; reset_after; reset_tag; reset_attr ]
   in
   let%sub () = Automator.component ~is_running ~step ~is_done ~reset_all in
-  let%sub comparison = Comparison.view state in
+  let%sub comparison = Comparison.view ~tag ~attr state in
   let%arr before_view = before_view
   and after_view = after_view
   and tweener = tweener
@@ -26,6 +30,4 @@ let component =
   Vdom.Node.div ~attr:Style.app [ before_view; after_view; tweener; comparison ]
 ;;
 
-let (_ : _ Start.Handle.t) =
-  Start.start Start.Result_spec.just_the_view ~bind_to_element_with_id:"app" component
-;;
+let () = Bonsai_web.Start.start component

@@ -6,7 +6,6 @@ module Node_info : sig
   type t =
     { node_type : string
     ; here : Source_code_position.t option
-    ; id : int
     }
   [@@deriving sexp, bin_io]
 
@@ -57,18 +56,26 @@ val pull_source_locations_from_nearest_parent : t -> Node_info.t Node_path.Map.t
 module Stable : sig
   module Node_info : sig
     module V1 : sig
-      type t =
-        { node_type : string
-        ; here : Source_code_position.Stable.V1.t option
-        }
-      [@@deriving sexp, bin_io]
+      type t = Node_info.t [@@deriving sexp, bin_io, compare]
     end
 
     module V2 : sig
-      type t = Node_info.t [@@deriving sexp, bin_io, compare]
+      type t =
+        { node_type : string
+        ; here : Source_code_position.t option
+        ; id : int
+        }
+      [@@deriving sexp, bin_io, compare]
 
       val to_v1 : t -> V1.t
       val of_v1 : V1.t -> t
+    end
+
+    module V3 : sig
+      type t = V1.t
+
+      val to_v2 : t -> V2.t
+      val of_v2 : V2.t -> t
     end
   end
 
@@ -82,9 +89,26 @@ module Stable : sig
   end
 
   module V2 : sig
-    type nonrec t = t [@@deriving sexp, bin_io, compare]
+    type t =
+      { tree : Node_path.t Node_path.Map.t
+      ; dag : Node_path.t list Node_path.Map.t
+      ; info : Node_info.V2.t Node_path.Map.t
+      }
+    [@@deriving bin_io, sexp]
 
     val to_v1 : t -> V1.t
     val of_v1 : V1.t -> t
+  end
+
+  module V3 : sig
+    type nonrec t = t =
+      { tree : Node_path.t Node_path.Map.t
+      ; dag : Node_path.t list Node_path.Map.t
+      ; info : Node_info.V3.t Node_path.Map.t
+      }
+    [@@deriving bin_io, sexp]
+
+    val to_v2 : t -> V2.t
+    val of_v2 : V2.t -> t
   end
 end

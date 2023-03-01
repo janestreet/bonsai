@@ -229,7 +229,12 @@ let make
     and get_value = get_value in
     fun ?after_finished ?with_ time target ->
       let%bind.Effect now = curtime in
-      let%bind.Effect value = get_value in
+      let%bind.Effect value =
+        match%bind.Effect get_value with
+        | Active value -> Effect.return value
+        | Inactive ->
+          Effect.never
+      in
       let target_time =
         match time with
         | `End_at time -> time

@@ -1,0 +1,4 @@
+(executables (names main)
+ (libraries core bonsai_examples_mouse_position_native
+  core_unix.command_unix)
+ (preprocess (pps ppx_jane)))

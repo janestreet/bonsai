@@ -20,8 +20,32 @@ let map a ~f i =
 let map_input a ~f i = a (Proc.Value.map i ~f)
 let of_module = Proc.of_module1
 
-let state_machine model action _here ~default_model ~apply_action input =
-  Proc.state_machine1 model action ~default_model ~apply_action input
+let state_machine
+      (type action)
+      model
+      (module Action : Action with type t = action)
+      _here
+      ~default_model
+      ~apply_action
+      input
+  =
+  Proc.state_machine1
+    model
+    (module Action)
+    ~default_model
+    ~apply_action:(fun ~inject ~schedule_event input model action ->
+      match input with
+      | Active input -> apply_action ~inject ~schedule_event input model action
+      | Inactive ->
+        eprint_s
+          [%message
+            [%here]
+              "An action sent to a [state_machine1] has been dropped because its input \
+               was not present. This happens when the [state_machine1] is inactive when \
+               it receives a message."
+              (action : Action.t)];
+        model)
+    input
 ;;
 
 let both a b i =
@@ -133,27 +157,7 @@ module With_incr = struct
     Proc_min.Proc_incr.of_module (module M) ~default_model input
   ;;
 
-  let pure (type i r) ~f =
-    of_module
-      (module struct
-        module Input = struct
-          type t = i
-        end
-
-        module Result = struct
-          type t = r
-        end
-
-        module Model = Unit
-        module Action = Nothing
-
-        let name = "pure"
-        let apply_action _ ~inject:_ = Incr.return (fun ~schedule_event:_ _ _ -> ())
-        let compute input _ ~inject:_ = f input
-      end)
-      ~default_model:()
-  ;;
-
+  let pure ~f = Proc.Incr.compute ~f
   let map a ~f = compose a (pure ~f)
   let model_cutoff f a = Proc.Incr.model_cutoff (f a)
 

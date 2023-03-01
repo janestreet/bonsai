@@ -35,9 +35,20 @@ let state_machine1_dynamic_model
     type t = M.t option [@@deriving sexp, equal]
   end
   in
-  let apply_action ~inject ~schedule_event (input, model_creator) model action =
-    let model = model_creator model in
-    Some (apply_action ~inject ~schedule_event input model action)
+  let apply_action ~inject ~schedule_event input model action =
+    match input with
+    | Bonsai.Computation_status.Active (input, model_creator) ->
+      let model = model_creator model in
+      Some (apply_action ~inject ~schedule_event input model action)
+    | Inactive ->
+      eprint_s
+        [%message
+          [%here]
+            "An action sent to a [state_machine1_dynamic_model] has been dropped because \
+             its input was not present. This happens when the \
+             [state_machine1_dynamic_model] is inactive when it receives a message."
+            (action : A.t)];
+      model
   in
   let%sub model_and_inject =
     Bonsai.state_machine1
@@ -92,6 +103,20 @@ let exactly_once_with_value modul effect =
     | Some _ -> Bonsai.const ()
   in
   return value
+;;
+
+let value_with_override (type m) (module M : Bonsai.Model with type t = m) value =
+  let%sub state, set_state = Bonsai.state_opt (module M) in
+  let%sub value =
+    match%sub state with
+    | Some override -> return override
+    | None -> return value
+  in
+  let%sub setter =
+    let%arr set_state = set_state in
+    fun v -> set_state (Some v)
+  in
+  return (Value.both value setter)
 ;;
 
 let pipe (type a) (module A : Bonsai.Model with type t = a) =
@@ -168,18 +193,18 @@ module Id_gen (T : Int_intf.S) () = struct
   ;;
 end
 
-let mirror
+let mirror'
       (type m)
       (module M : Bonsai.Model with type t = m)
-      ~store_set
-      ~store_value
-      ~interactive_set
-      ~interactive_value
+      ~(store_set : (m -> unit Effect.t) Value.t)
+      ~(store_value : m option Value.t)
+      ~(interactive_set : (m -> unit Effect.t) Value.t)
+      ~(interactive_value : m option Value.t)
   =
   let module M2 = struct
     type t =
-      { store : M.t
-      ; interactive : M.t
+      { store : M.t option
+      ; interactive : M.t option
       }
     [@@deriving sexp, equal]
   end
@@ -189,7 +214,7 @@ let mirror
     and interactive_set = interactive_set in
     fun old_pair { M2.store = store_value; interactive = interactive_value } ->
       let stability =
-        if [%equal: M.t] store_value interactive_value then `Stable else `Unstable
+        if [%equal: M.t option] store_value interactive_value then `Stable else `Unstable
       in
       match stability with
       | `Stable ->
@@ -202,20 +227,41 @@ let mirror
            (* on_change' is triggered when the values flow through this node
               for the first time.  In this scenario, we prioritize the
               value in the store. *)
-           interactive_set store_value
+           (match store_value, interactive_value with
+            | Some store_value, _ -> interactive_set store_value
+            | None, Some interactive_value -> store_set interactive_value
+            | None, None ->
+              eprint_s
+                [%message
+                  "BUG" [%here] {|if both are None, then we shouldn't be `Unstable |}];
+              Effect.Ignore)
          | Some { M2.store = old_store_value; interactive = old_interactive_value } ->
-           let store_changed = not ([%equal: M.t] old_store_value store_value) in
+           let store_changed = not ([%equal: M.t option] old_store_value store_value) in
            let interactive_changed =
-             not ([%equal: M.t] old_interactive_value interactive_value)
+             not ([%equal: M.t option] old_interactive_value interactive_value)
            in
            (match interactive_changed, store_changed with
-            (* if the interactive-value has changed, forward that on to the store.
-               we intentionally prioritize the interactive value here, so changes to
-               the store that happened at the same instant are dropped. *)
-            | true, _ -> store_set interactive_value
+            (* if both the interactive-value and store values have changed,
+               first try to forward it on to the store, but if the interactive value was
+               changed to None and the store value was changed to a Some, then the interactive
+               value gets set to the new store value. *)
+            | true, true ->
+              (match interactive_value, store_value with
+               | Some interactive_value, (Some _ | None) -> store_set interactive_value
+               | None, Some store_value -> interactive_set store_value
+               | None, None -> Effect.Ignore)
+            (* when the interactive value changed, but the store did not, set the store to
+               the new interactive value (if it's Some]. *)
+            | true, false ->
+              (match interactive_value with
+               | Some interactive_value -> store_set interactive_value
+               | None -> Effect.Ignore)
             (* finally, if the store changed but interactive did not, update the
                interactive value. *)
-            | false, true -> interactive_set store_value
+            | false, true ->
+              (match store_value with
+               | Some store_value -> interactive_set store_value
+               | None -> Effect.Ignore)
             (* this final case should never happen.  Error message explains why.*)
             | false, false ->
               eprint_s
@@ -229,6 +275,19 @@ let mirror
      and interactive = interactive_value in
      { M2.store; interactive })
     ~callback
+;;
+
+let mirror
+      (type m)
+      (module M : Bonsai.Model with type t = m)
+      ~store_set
+      ~store_value
+      ~interactive_set
+      ~interactive_value
+  =
+  let store_value = store_value >>| Option.some in
+  let interactive_value = interactive_value >>| Option.some in
+  mirror' (module M) ~store_set ~store_value ~interactive_set ~interactive_value
 ;;
 
 let with_last_modified_time ~equal input =
@@ -269,6 +328,11 @@ module Stability = struct
         ; unstable_value : 'a
         }
   [@@deriving sexp, equal]
+
+  let most_recent_stable_value = function
+    | Stable a -> Some a
+    | Unstable { previously_stable; _ } -> previously_stable
+  ;;
 end
 
 let value_stability

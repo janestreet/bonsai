@@ -72,14 +72,17 @@ let options =
 ;;
 
 let app =
-  Dygraph.With_bonsai.create
-    ()
-    ~key:("custom-drawn-points-graph" |> Value.return)
-    ~x_label:("diameter/side length" |> Value.return)
-    ~per_series_info:
-      ([ "circles"; "squares" ]
-       |> Dygraph.Per_series_info.create_all_visible
-       |> Value.return)
-    ~options:(options |> Value.return)
-    ~data:(data |> Value.return)
+  let%sub.Bonsai { graph_view; _ } =
+    Dygraph.With_bonsai.create
+      ()
+      ~key:("custom-drawn-points-graph" |> Value.return)
+      ~x_label:("diameter/side length" |> Value.return)
+      ~per_series_info:
+        ([ "circles"; "squares" ]
+         |> Dygraph.Per_series_info.create_all_visible
+         |> Value.return)
+      ~options:(options |> Value.return)
+      ~data:(data |> Value.return)
+  in
+  Bonsai.read graph_view
 ;;

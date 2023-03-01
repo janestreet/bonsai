@@ -29,8 +29,18 @@ let component =
     and get_interpolator = get_interpolator
     and set_forward = set_forward in
     let rec switch_directions () =
-      let%bind.Effect forward = get_forward in
-      let%bind.Effect interpolator = get_interpolator in
+      let%bind.Effect forward =
+        match%bind.Effect get_forward with
+        | Active forward -> Effect.return forward
+        | Inactive ->
+          Effect.never
+      in
+      let%bind.Effect interpolator =
+        match%bind.Effect get_interpolator with
+        | Active interpolator -> Effect.return interpolator
+        | Inactive ->
+          Effect.never
+      in
       let%bind.Effect () = set_forward (not forward) in
       let target = if forward then 100.0 else 0.0 in
       let duration = `For (Time_ns.Span.of_sec 0.5) in
@@ -56,6 +66,4 @@ let component =
     ]
 ;;
 
-let (_ : _ Start.Handle.t) =
-  Start.start Start.Result_spec.just_the_view ~bind_to_element_with_id:"app" component
-;;
+let () = Bonsai_web.Start.start component

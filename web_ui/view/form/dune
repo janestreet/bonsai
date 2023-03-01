@@ -1,0 +1,2 @@
+(library (name bonsai_web_ui_form_view) (public_name bonsai.web_ui_form_view)
+ (libraries core virtual_dom) (preprocess (pps ppx_jane ppx_css)))

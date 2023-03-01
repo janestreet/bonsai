@@ -5,7 +5,14 @@ module Style = Button_style
 let make constants ~attr ~disabled ~intent ~tooltip ~on_click content =
   let additional_classes =
     match (intent : Intent.t option) with
-    | None -> Style.subtle
+    | None ->
+      let subtle_stripe_color = constants.table.body_row_even.background in
+      Vdom.Attr.many
+        [ Style.subtle
+        ; Style.Variables.set
+            ~disabled_stripes:(Css_gen.Color.to_string_css subtle_stripe_color)
+            ()
+        ]
     | Some Info -> Style.primary
     | Some Success -> Style.safe
     | Some Error -> Style.danger
@@ -48,3 +55,9 @@ let make constants ~attr ~disabled ~intent ~tooltip ~on_click content =
   in
   Vdom.Node.button ~attr content
 ;;
+
+let vertical_group = Style.btn_group_vrt
+let horizontal_group = Style.btn_group_hz
+let small = Style.small
+let thinking = Style.thinking
+let pressed = Style.pressed

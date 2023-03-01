@@ -1,0 +1,23 @@
+.container {
+  width: 100%;
+  height: 100%;
+}
+
+.item {
+  padding: 10px;
+  transform: translate(-50%, -50%);
+  background-color: green;
+  transition: left 0.2s, top 0.2s;
+  user-select: none;
+}
+
+.sidebar {
+  position: absolute;
+  top: 50px;
+  left: 50px;
+}
+
+html, body {
+  width: 100%;
+  height: 100vh;
+}

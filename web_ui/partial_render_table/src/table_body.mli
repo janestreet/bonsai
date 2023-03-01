@@ -12,7 +12,7 @@ module For_testing : sig
     }
 
   type t =
-    { column_names : Vdom.Node.t list
+    { column_names : Vdom.Node.t list list (** See [Header_tree.column_names]. *)
     ; cells : cell list
     ; rows_before : int
     ; rows_after : int
@@ -25,6 +25,7 @@ val component
   :  comparator:('key, 'cmp) Bonsai.comparator
   -> row_height:[< `Px of int ]
   -> leaves:Header_tree.leaf list Value.t
+  -> headers:Header_tree.t Value.t
   -> assoc:
        (('key * 'data) Map_list.t Value.t
         -> ('key * Vdom.Node.t list) Map_list.t Computation.t)

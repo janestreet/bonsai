@@ -23,6 +23,4 @@ let component =
   Vdom.Node.div [ Vdom.Node.div ~attr:examples_column examples ]
 ;;
 
-let (_ : _ Start.Handle.t) =
-  Start.start Start.Result_spec.just_the_view ~bind_to_element_with_id:"app" component
-;;
+let () = Bonsai_web.Start.start component

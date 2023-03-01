@@ -32,6 +32,4 @@ let _two_counters__computation_map_style =
   Vdom.Node.div [ counter_1; counter_2 ]
 ;;
 
-let (_ : _ Start.Handle.t) =
-  Start.start Start.Result_spec.just_the_view ~bind_to_element_with_id:"app" two_counters
-;;
+let () = Bonsai_web.Start.start two_counters

@@ -25,7 +25,10 @@ let build_result send_message (textbox_content, set_textbox_content) =
       [ Vdom.Node.text "submit" ]
   in
   let submit_button =
-    Vdom_input_widgets.Button.simple "send" ~on_click:(fun _ -> submit_and_then_clear)
+    Vdom_input_widgets.Button.simple
+      ~merge_behavior:Legacy_dont_merge
+      "send"
+      ~on_click:(fun _ -> submit_and_then_clear)
   in
   Vdom.Node.div ~attr:(Vdom.Attr.id "compose") [ text_input; submit_button ]
 ;;

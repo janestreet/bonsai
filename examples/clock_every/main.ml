@@ -357,9 +357,20 @@ let clock
       (module Tracks_action)
       ~default_model:Tracks.empty
       ~apply_action:(fun ~inject:_ ~schedule_event:_ now tracks action ->
-        match action with
-        | Add_bar bar_id -> Tracks.add_bar tracks ~now bar_id
-        | Finish_bar bar_id -> Tracks.finish_bar tracks ~now bar_id)
+        match now with
+        | Active now ->
+          (match action with
+           | Add_bar bar_id -> Tracks.add_bar tracks ~now bar_id
+           | Finish_bar bar_id -> Tracks.finish_bar tracks ~now bar_id)
+        | Inactive ->
+          eprint_s
+            [%message
+              [%here]
+                "An action sent to a [state_machine1] has been dropped because its input \
+                 was not present. This happens when the [state_machine1] is inactive \
+                 when it receives a message."
+                (action : Tracks_action.t)];
+          tracks)
       now
   in
   let%sub timeline = timeline ~now ~tracks in
@@ -460,6 +471,4 @@ let component =
     ]
 ;;
 
-let (_ : _ Start.Handle.t) =
-  Start.start Start.Result_spec.just_the_view ~bind_to_element_with_id:"app" component
-;;
+let () = Bonsai_web.Start.start component

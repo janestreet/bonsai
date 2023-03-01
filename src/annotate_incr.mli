@@ -5,7 +5,7 @@ val disable : unit -> unit
 
 module Kind : sig
   type t =
-    | Apply_action
+    | Input
     | Value
     | Result
     | Lifecycle
@@ -16,9 +16,8 @@ module Kind : sig
     | Assoc_input
     | Assoc_results
     | Assoc_lifecycles
-    | Assoc_apply_actions
+    | Assoc_inputs
     | Path
-    | Impossible_apply_action
     | Lifecycle_apply_action_pair
 end
 

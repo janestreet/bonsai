@@ -43,11 +43,6 @@ module Basic_stateful = struct
   ;;
 end
 
-let computation_map a ~f =
-  let%sub a = a in
-  return @@ Value.map ~f a
-;;
-
 let optional_to_required =
   Form.project'
     ~parse:(function
@@ -73,6 +68,7 @@ module Textbox = struct
       let%map extra_attrs = extra_attrs in
       fun ~id ~state ~set_state ->
         Vdom_input_widgets.Entry.text
+          ~merge_behavior:Legacy_dont_merge
           ?placeholder
           ~extra_attrs:([ id ] @ extra_attrs)
           ~value:(Some state)
@@ -85,35 +81,32 @@ module Textbox = struct
   ;;
 
   let int ?extra_attrs ?placeholder here =
-    computation_map
-      (string ?extra_attrs ?placeholder here)
-      ~f:
-        (Form.project'
-           ~parse:(fun input ->
-             match Int.of_string input with
-             | exception _ -> Or_error.error_string "Expected an integer"
-             | x -> Or_error.return x)
-           ~unparse:Int.to_string_hum)
+    let parse input =
+      match Int.of_string input with
+      | exception _ -> Or_error.error_string "Expected an integer"
+      | x -> Or_error.return x
+    in
+    let unparse = Int.to_string_hum in
+    let%map.Computation form = string ?extra_attrs ?placeholder here in
+    Form.project' form ~parse ~unparse
   ;;
 
   let float ?extra_attrs ?placeholder () =
-    computation_map
-      (string ?extra_attrs ?placeholder ())
-      ~f:
-        (Form.project'
-           ~parse:(fun input ->
-             match Float.of_string input with
-             | exception _ -> Or_error.error_string "Expected a floating point number"
-             | x -> Or_error.return x)
-           ~unparse:Float.to_string_hum)
+    let parse input =
+      match Float.of_string input with
+      | exception _ -> Or_error.error_string "Expected a floating point number"
+      | x -> Or_error.return x
+    in
+    let unparse = Float.to_string_hum in
+    let%map.Computation form = string ?extra_attrs ?placeholder () in
+    Form.project' form ~parse ~unparse
   ;;
 
   let sexpable (type t) ?extra_attrs ?placeholder (module M : Sexpable with type t = t) =
     let parse_exn s = s |> Sexp.of_string |> M.t_of_sexp in
     let unparse t = t |> M.sexp_of_t |> Sexp.to_string_hum in
-    computation_map
-      (string ?extra_attrs ?placeholder ())
-      ~f:(Form.project ~parse_exn ~unparse)
+    let%map.Computation form = string ?extra_attrs ?placeholder () in
+    Form.project form ~parse_exn ~unparse
   ;;
 
   let stringable
@@ -122,9 +115,8 @@ module Textbox = struct
         ?placeholder
         (module M : Stringable with type t = t)
     =
-    computation_map
-      (string ?extra_attrs ?placeholder ())
-      ~f:(Form.project ~parse_exn:M.of_string ~unparse:M.to_string)
+    let%map.Computation form = string ?extra_attrs ?placeholder () in
+    Form.project form ~parse_exn:M.of_string ~unparse:M.to_string
   ;;
 end
 
@@ -134,6 +126,7 @@ module Textarea = struct
       let%map extra_attrs = extra_attrs in
       fun ~id ~state ~set_state ->
         Vdom_input_widgets.Entry.text_area
+          ~merge_behavior:Legacy_dont_merge
           ?placeholder
           ~extra_attrs:(id :: extra_attrs)
           ~value:state
@@ -144,23 +137,20 @@ module Textarea = struct
   ;;
 
   let int ?extra_attrs ?placeholder () =
-    computation_map
-      (string ?extra_attrs ?placeholder ())
-      ~f:(Form.project ~parse_exn:Int.of_string ~unparse:Int.to_string_hum)
+    let%map.Computation form = string ?extra_attrs ?placeholder () in
+    Form.project form ~parse_exn:Int.of_string ~unparse:Int.to_string_hum
   ;;
 
   let float ?extra_attrs ?placeholder () =
-    computation_map
-      (string ?extra_attrs ?placeholder ())
-      ~f:(Form.project ~parse_exn:Float.of_string ~unparse:Float.to_string_hum)
+    let%map.Computation form = string ?extra_attrs ?placeholder () in
+    Form.project form ~parse_exn:Float.of_string ~unparse:Float.to_string_hum
   ;;
 
   let sexpable (type t) ?extra_attrs ?placeholder (module M : Sexpable with type t = t) =
     let parse_exn s = s |> Sexp.of_string |> M.t_of_sexp in
     let unparse t = t |> M.sexp_of_t |> Sexp.to_string_hum in
-    computation_map
-      (string ?extra_attrs ?placeholder ())
-      ~f:(Form.project ~parse_exn ~unparse)
+    let%map.Computation form = string ?extra_attrs ?placeholder () in
+    Form.project form ~parse_exn ~unparse
   ;;
 
   let stringable
@@ -169,19 +159,19 @@ module Textarea = struct
         ?placeholder
         (module M : Stringable with type t = t)
     =
-    computation_map
-      (string ?extra_attrs ?placeholder ())
-      ~f:(Form.project ~parse_exn:M.of_string ~unparse:M.to_string)
+    let%map.Computation form = string ?extra_attrs ?placeholder () in
+    Form.project form ~parse_exn:M.of_string ~unparse:M.to_string
   ;;
 end
 
 module Checkbox = struct
-  let make_input ~extra_attrs ~state ~set_state =
+  let make_input ~id ~extra_attrs ~state ~set_state =
     Vdom.Node.input
       ~attr:
         (Vdom.Attr.many_without_merge
            ([ Vdom.Attr.style (Css_gen.margin_left (`Px 0))
             ; Vdom.Attr.type_ "checkbox"
+            ; id
             ; Vdom.Attr.on_click (fun evt ->
                 (* try to get the actual state of the checkbox, but if
                    that doesn't work, assume that clicking on the
@@ -207,8 +197,7 @@ module Checkbox = struct
   let checkbox ?(extra_attrs = Value.return []) default_model =
     let view =
       let%map extra_attrs = extra_attrs in
-      fun ~id ~state ~set_state ->
-        make_input ~extra_attrs:(id :: extra_attrs) ~state ~set_state
+      fun ~id ~state ~set_state -> make_input ~id ~extra_attrs ~state ~set_state
     in
     Basic_stateful.make (Bonsai.state (module Bool) ~default_model) ~view
   ;;
@@ -241,6 +230,7 @@ module Checkbox = struct
       and extra_attrs = extra_attrs in
       fun ~id ~state ~set_state ->
         Vdom_input_widgets.Checklist.of_values
+          ~merge_behavior:Legacy_dont_merge
           ~layout
           ~extra_attrs:(id :: extra_attrs)
           (module M)
@@ -253,6 +243,10 @@ module Checkbox = struct
     in
     Basic_stateful.make (Bonsai.state (module M.Set) ~default_model:M.Set.empty) ~view
   ;;
+
+  module Private = struct
+    let make_input = make_input
+  end
 end
 
 module Toggle = struct
@@ -318,6 +312,7 @@ module Toggle = struct
       fun ~id ~state ~set_state ->
         let checkbox =
           Checkbox.make_input
+            ~id
             ~extra_attrs:[ Vdom.Attr.many [ Style.invisible; extra_attr ] ]
             ~state
             ~set_state
@@ -330,14 +325,36 @@ module Toggle = struct
 end
 
 module Dropdown = struct
-  let impl
-        (type t)
+  module Opt = struct
+    type 'a t =
+      | Uninitialized
+      | Explicitly_none
+      | Set of 'a
+    [@@deriving equal, sexp]
+
+    let to_option = function
+      | Uninitialized | Explicitly_none -> None
+      | Set element -> Some element
+    ;;
+
+    let value ~default = function
+      | Uninitialized | Explicitly_none -> default
+      | Set element -> element
+    ;;
+  end
+
+  let make_input
+        (type a)
         ?to_string
-        ?(extra_attrs = Value.return [])
-        (module E : Bonsai.Model with type t = t)
-        all
+        (module E : Bonsai.Model with type t = a)
+        ~id
         ~include_empty
-        ~init
+        ~default_value
+        ~(state : a Opt.t)
+        ~(set_state : a Opt.t -> unit Effect.t)
+        ~extra_attrs
+        ~extra_option_attrs
+        ~all
     =
     let module E = struct
       include E
@@ -347,20 +364,49 @@ module Dropdown = struct
       ;;
     end
     in
-    let module Opt = struct
-      type t =
-        | Uninitialized
-        | Explicitly_none
-        | Set of E.t
-      [@@deriving sexp, equal]
+    let maker ~extra_attrs options =
+      match include_empty, default_value with
+      | true, _ | false, None ->
+        let selected =
+          match state with
+          | Uninitialized -> default_value
+          | Explicitly_none -> None
+          | Set v -> Some v
+        in
+        Vdom_input_widgets.Dropdown.of_values_opt
+          ~merge_behavior:Legacy_dont_merge
+          ~selected
+          ~on_change:(function
+            | None -> set_state Explicitly_none
+            | Some v -> set_state (Set v))
+          ~extra_attrs
+          ~extra_option_attrs
+          options
+      | false, Some default ->
+        Vdom_input_widgets.Dropdown.of_values
+          ~merge_behavior:Legacy_dont_merge
+          ~selected:(Opt.value state ~default)
+          ~on_change:(fun a -> set_state (Set a))
+          ~extra_attrs
+          ~extra_option_attrs
+          options
+    in
+    let extra_attrs = id :: extra_attrs in
+    maker (module E) all ~extra_attrs
+  ;;
 
-      let to_option t =
-        match t with
-        | Uninitialized | Explicitly_none -> None
-        | Set v -> Some v
-      ;;
-
-      let value t = Option.value (to_option t)
+  let impl
+        (type t)
+        ?to_string
+        ?(extra_attrs = Value.return [])
+        ?(extra_option_attrs = Value.return (Fn.const []))
+        (module E : Bonsai.Model with type t = t)
+        all
+        ~include_empty
+        ~init
+    =
+    let module E_opt = struct
+      type t = E.t Opt.t [@@deriving sexp, equal]
     end
     in
     let default_value =
@@ -371,37 +417,28 @@ module Dropdown = struct
       | `Const item -> Value.return (Some item)
     in
     let%sub path, id = path in
-    let%sub state, set_state = Bonsai.state (module Opt) ~default_model:Uninitialized in
+    let%sub state, set_state = Bonsai.state (module E_opt) ~default_model:Uninitialized in
     let%arr id = id
     and path = path
     and state = state
     and set_state = set_state
     and all = all
     and extra_attrs = extra_attrs
+    and extra_option_attrs = extra_option_attrs
     and default_value = default_value in
     let view =
-      let maker =
-        match include_empty, default_value with
-        | true, _ | false, None ->
-          let selected =
-            match state with
-            | Uninitialized -> default_value
-            | Explicitly_none -> None
-            | Set v -> Some v
-          in
-          Vdom_input_widgets.Dropdown.of_values_opt ~selected ~on_change:(function
-            | None -> set_state Explicitly_none
-            | Some v -> set_state (Set v))
-        | false, Some default ->
-          Vdom_input_widgets.Dropdown.of_values
-            ~selected:(Opt.value state ~default)
-            ~on_change:(fun a -> set_state (Set a))
-      in
-      let extra_attrs =
-        [ id; Vdom.Attr.style (Css_gen.width (`Percent (Percent.of_mult 1.0))) ]
-        @ extra_attrs
-      in
-      maker (module E) all ~extra_attrs
+      make_input
+        ?to_string
+        (module E)
+        ~id
+        ~include_empty
+        ~default_value
+        ~state
+        ~set_state
+        ~extra_attrs:
+          (Vdom.Attr.style (Css_gen.width (`Percent (Percent.of_mult 1.))) :: extra_attrs)
+        ~extra_option_attrs
+        ~all
     in
     let view = View.of_vdom ~id:path view in
     let value =
@@ -418,21 +455,37 @@ module Dropdown = struct
         (type t)
         ?(init = `Empty)
         ?extra_attrs
+        ?extra_option_attrs
         ?to_string
         (module E : Bonsai.Model with type t = t)
         all
     =
-    impl ?to_string ?extra_attrs (module E) all ~include_empty:true ~init
+    impl
+      ?to_string
+      ?extra_attrs
+      ?extra_option_attrs
+      (module E)
+      all
+      ~include_empty:true
+      ~init
   ;;
 
   let enumerable_opt
         (type t)
         ?(init = `Empty)
         ?extra_attrs
+        ?extra_option_attrs
         ?to_string
         (module E : Bonsai.Enum with type t = t)
     =
-    impl ?to_string ?extra_attrs (module E) (Value.return E.all) ~include_empty:true ~init
+    impl
+      ?extra_attrs
+      ?extra_option_attrs
+      ?to_string
+      (module E)
+      (Value.return E.all)
+      ~include_empty:true
+      ~init
   ;;
 
   let include_empty_from_init = function
@@ -440,35 +493,46 @@ module Dropdown = struct
     | `First_item | `This _ | `Const -> false
   ;;
 
-  let list ?(init = `First_item) ?extra_attrs ?to_string m all =
-    computation_map
-      (impl
-         ?to_string
-         ?extra_attrs
-         m
-         all
-         ~init
-         ~include_empty:(include_empty_from_init init))
-      ~f:optional_to_required
+  let list ?(init = `First_item) ?extra_attrs ?extra_option_attrs ?to_string m all =
+    let%map.Computation form =
+      impl
+        ?to_string
+        ?extra_attrs
+        ?extra_option_attrs
+        m
+        all
+        ~init
+        ~include_empty:(include_empty_from_init init)
+    in
+    optional_to_required form
   ;;
 
   let enumerable
         (type t)
         ?(init = `First_item)
         ?extra_attrs
+        ?extra_option_attrs
         ?to_string
         (module E : Bonsai.Enum with type t = t)
     =
-    computation_map
-      (impl
-         ?extra_attrs
-         ?to_string
-         (module E)
-         (Value.return E.all)
-         ~init
-         ~include_empty:(include_empty_from_init init))
-      ~f:optional_to_required
+    let%map.Computation form =
+      impl
+        ?extra_attrs
+        ?extra_option_attrs
+        ?to_string
+        (module E)
+        (Value.return E.all)
+        ~init
+        ~include_empty:(include_empty_from_init init)
+    in
+    optional_to_required form
   ;;
+
+  module Private = struct
+    module Opt = Opt
+
+    let make_input = make_input
+  end
 end
 
 module Typeahead = struct
@@ -513,16 +577,17 @@ module Typeahead = struct
         m
         ~all_options
     =
-    computation_map
-      (single_opt
-         ?extra_attrs
-         ?placeholder
-         ?to_string
-         ?to_option_description
-         ?handle_unknown_option
-         m
-         ~all_options)
-      ~f:optional_to_required
+    let%map.Computation form =
+      single_opt
+        ?extra_attrs
+        ?placeholder
+        ?to_string
+        ?to_option_description
+        ?handle_unknown_option
+        m
+        ~all_options
+    in
+    optional_to_required form
   ;;
 
   let set
@@ -567,25 +632,53 @@ module Typeahead = struct
         (module M : Bonsai.Comparator with type t = a and type comparator_witness = cmp)
         ~all_options
     =
-    computation_map
-      (set
-         ?extra_attrs
-         ?placeholder
-         ?to_string
-         ?to_option_description
-         ?split
-         (module M)
-         ~all_options)
-      ~f:(Form.project ~parse_exn:Set.to_list ~unparse:(Set.of_list (module M)))
+    let%map.Computation form =
+      set
+        ?extra_attrs
+        ?placeholder
+        ?to_string
+        ?to_option_description
+        ?split
+        (module M)
+        ~all_options
+    in
+    Form.project form ~parse_exn:Set.to_list ~unparse:(Set.of_list (module M))
   ;;
 end
 
 module Date_time = struct
+  module Span_unit = struct
+    type t =
+      | Seconds
+      | Minutes
+      | Hours
+    [@@deriving equal, sexp, compare, enumerate]
+
+    let to_string = function
+      | Seconds -> "s"
+      | Minutes -> "m"
+      | Hours -> "h"
+    ;;
+
+    let of_float = function
+      | Seconds -> Time_ns.Span.of_sec
+      | Minutes -> Time_ns.Span.of_min
+      | Hours -> Time_ns.Span.of_hr
+    ;;
+
+    let to_float = function
+      | Seconds -> Time_ns.Span.to_sec
+      | Minutes -> Time_ns.Span.to_min
+      | Hours -> Time_ns.Span.to_hr
+    ;;
+  end
+
   let date_opt ?(extra_attrs = Value.return []) () =
     let view =
       let%map extra_attrs = extra_attrs in
       fun ~id ~state ~set_state ->
         Vdom_input_widgets.Entry.date
+          ~merge_behavior:Legacy_dont_merge
           ~extra_attrs:(id :: extra_attrs)
           ~value:state
           ~on_input:set_state
@@ -595,14 +688,16 @@ module Date_time = struct
   ;;
 
   let date ?extra_attrs () =
-    computation_map (date_opt ?extra_attrs ()) ~f:optional_to_required
+    let%map.Computation form = date_opt ?extra_attrs () in
+    optional_to_required form
   ;;
 
   let time_opt ?(extra_attrs = Value.return []) () =
-    let view =
-      let%map extra_attrs = extra_attrs in
+    let%sub view =
+      let%arr extra_attrs = extra_attrs in
       fun ~id ~state ~set_state ->
         Vdom_input_widgets.Entry.time
+          ~merge_behavior:Legacy_dont_merge
           ~extra_attrs:(id :: extra_attrs)
           ~value:state
           ~on_input:set_state
@@ -612,7 +707,92 @@ module Date_time = struct
   ;;
 
   let time ?extra_attrs () =
-    computation_map (time_opt ?extra_attrs ()) ~f:optional_to_required
+    let%map.Computation form = time_opt ?extra_attrs () in
+    optional_to_required form
+  ;;
+
+  let time_span_opt
+        ?(extra_unit_attrs = Value.return [])
+        ?(extra_amount_attrs = Value.return [])
+        ?(default_unit = Span_unit.Seconds)
+        ()
+    =
+    let%sub unit, set_unit =
+      Bonsai.state (module Span_unit) ~default_model:default_unit
+    in
+    let%sub unit_view =
+      let%arr unit = unit
+      and set_unit = set_unit
+      and extra_unit_attrs = extra_unit_attrs in
+      Dropdown.Private.make_input
+        ~to_string:Span_unit.to_string
+        (module Span_unit)
+        ~id:Vdom.Attr.empty
+        ~include_empty:false
+        ~default_value:(Some default_unit)
+        ~state:(Set unit)
+        ~set_state:(function
+          | Uninitialized | Explicitly_none ->
+            (* I think these cases can't happen, because both [include_empty:false] and
+               [state:(Set unit)] are passed. *)
+            Effect.Ignore
+          | Set unit -> set_unit unit)
+        ~extra_attrs:extra_unit_attrs
+        ~extra_option_attrs:(Fn.const [])
+        ~all:Span_unit.all
+    in
+    let%sub amount, set_amount = Bonsai.state_opt (module Float) in
+    let%sub amount_view =
+      let%arr amount = amount
+      and set_amount = set_amount
+      and extra_amount_attrs = extra_amount_attrs in
+      Vdom_input_widgets.Entry.number
+        ~merge_behavior:Legacy_dont_merge
+        (module Vdom_input_widgets.Decimal)
+        ~extra_attrs:extra_amount_attrs
+        ~value:amount
+        ~step:1.0
+        ~on_input:set_amount
+    in
+    let%sub value =
+      let%arr amount = amount
+      and unit = unit in
+      Option.map amount ~f:(Span_unit.of_float unit)
+    in
+    let%sub view =
+      let%sub id = Bonsai.path_id in
+      let%arr unit_view = unit_view
+      and amount_view = amount_view
+      and id = id in
+      View.of_vdom ~id (Vdom.Node.div [ amount_view; unit_view ])
+    in
+    let%sub set =
+      let%arr set_unit = set_unit
+      and set_amount = set_amount in
+      function
+      | None -> Effect.Many [ set_unit default_unit; set_amount None ]
+      | Some time_span ->
+        let unit =
+          if Time_ns.Span.( < ) time_span (Time_ns.Span.of_min 1.)
+          then Span_unit.Seconds
+          else if Time_ns.Span.( < ) time_span (Time_ns.Span.of_hr 1.)
+          then Minutes
+          else Hours
+        in
+        Effect.Many
+          [ set_unit unit; set_amount (Some (Span_unit.to_float unit time_span)) ]
+    in
+    let%arr value = value
+    and view = view
+    and set = set in
+    Form.Expert.create ~value:(Ok value) ~view ~set
+  ;;
+
+  let time_span ?extra_unit_attrs ?extra_amount_attrs ?default_unit () =
+    let%map.Computation form =
+      time_span_opt ?extra_unit_attrs ?extra_amount_attrs ?default_unit ()
+    in
+    optional_to_required form
   ;;
 
   let datetime_local_opt ?(extra_attrs = Value.return []) () =
@@ -620,6 +800,7 @@ module Date_time = struct
       let%map extra_attrs = extra_attrs in
       fun ~id ~state ~set_state ->
         Vdom_input_widgets.Entry.datetime_local
+          ~merge_behavior:Legacy_dont_merge
           ~extra_attrs:(id :: extra_attrs)
           ~value:state
           ~on_input:set_state
@@ -635,17 +816,32 @@ module Date_time = struct
   ;;
 
   let datetime_local ?extra_attrs () =
-    computation_map (datetime_local_opt ?extra_attrs ()) ~f:optional_to_required
+    let%map.Computation form = datetime_local_opt ?extra_attrs () in
+    optional_to_required form
   ;;
 
   module Range = struct
+    module Input_element = struct
+      type 'a t =
+        extra_attrs:Vdom.Attr.t list
+        -> value:'a option
+        -> on_input:('a option -> unit Effect.t)
+        -> Vdom.Node.t
+    end
+
     let make_opt_range
           (type a)
           ?(allow_equal = false)
+          ?(extra_attr = Value.return Vdom.Attr.empty)
           ~kind_name
-          (module M : Comparisons.S with type t = a)
-          (form : a option Form.t Computation.t)
+          (module M : Bonsai.Model with type t = a)
+          (module C : Comparisons.S with type t = a)
+          (view : a Input_element.t)
       =
+      let module M_opt = struct
+        type t = M.t option [@@deriving sexp, equal]
+      end
+      in
       let bounds_error =
         lazy
           (Or_error.error_string
@@ -657,40 +853,52 @@ module Date_time = struct
                 [%string
                   "Start %{kind_name} must be strictly before the end %{kind_name}."]))
       in
-      let%sub path = Bonsai.path_id in
-      let%sub lower = form in
-      let%sub upper = form in
-      let%arr path = path
-      and lower = lower
-      and upper = upper in
+      let%sub lower_id = Bonsai.path_id in
+      let%sub upper_id = Bonsai.path_id in
+      let%sub form_id = Bonsai.path_id in
+      let%sub lower, set_lower = Bonsai.state (module M_opt) ~default_model:None in
+      let%sub upper, set_upper = Bonsai.state (module M_opt) ~default_model:None in
+      let%arr lower = lower
+      and set_lower = set_lower
+      and upper = upper
+      and set_upper = set_upper
+      and lower_id = lower_id
+      and upper_id = upper_id
+      and form_id = form_id
+      and extra_attr = extra_attr in
       let value =
-        match Or_error.both (Form.value lower) (Form.value upper) with
-        | Ok (lower, upper) ->
-          (match lower, upper with
-           | None, _ | _, None -> Ok (lower, upper)
-           | Some lower, Some upper ->
-             (match M.compare lower upper with
-              | 0 -> if allow_equal then Ok (Some lower, Some upper) else force bounds_error
-              | x when x < 0 -> Ok (Some lower, Some upper)
-              | x when x > 0 -> force bounds_error
-              | _ -> assert false))
-        | Error _ as err -> err
+        match lower, upper with
+        | Some lower, Some upper ->
+          (match C.compare lower upper with
+           | 0 -> if allow_equal then Ok (Some lower, Some upper) else force bounds_error
+           | x when x < 0 -> Ok (Some lower, Some upper)
+           | x when x > 0 -> force bounds_error
+           | _ -> assert false)
+        | t -> Ok t
       in
       let view =
-        let lower_view = List.hd_exn (Form.View.to_vdom_plain (Form.view lower)) in
-        let upper_view = List.hd_exn (Form.View.to_vdom_plain (Form.view upper)) in
-        Form.View.Private.of_vdom
-          ~id:path
+        let lower_view =
+          view
+            ~extra_attrs:[ Vdom.Attr.id lower_id; extra_attr ]
+            ~value:lower
+            ~on_input:set_lower
+        in
+        let upper_view =
+          view
+            ~extra_attrs:[ Vdom.Attr.id upper_id; extra_attr ]
+            ~value:upper
+            ~on_input:set_upper
+        in
+        View.of_vdom
+          ~id:form_id
           (Vdom.Node.div [ lower_view; Vdom.Node.text " - "; upper_view ])
       in
       let set (lower_val, upper_val) =
-        let pairwise_set =
-          Effect.Many [ Form.set lower lower_val; Form.set upper upper_val ]
-        in
+        let pairwise_set = Effect.Many [ set_lower lower_val; set_upper upper_val ] in
         match lower_val, upper_val with
         | None, _ | _, None -> pairwise_set
         | Some lower_val, Some upper_val ->
-          (match M.compare lower_val upper_val with
+          (match C.compare lower_val upper_val with
            | 0 -> if allow_equal then pairwise_set else Effect.Ignore
            | x when x < 0 -> pairwise_set
            | x when x > 0 -> Effect.Ignore
@@ -713,43 +921,55 @@ module Date_time = struct
         ~unparse:(fun (lower, upper) -> Some lower, Some upper)
     ;;
 
-    let date_opt ?(extra_attr = Value.return Vdom.Attr.empty) ?allow_equal () =
-      let%sub extra_attrs = Bonsai.pure List.return extra_attr in
+    let date_opt ?extra_attr ?allow_equal () =
       make_opt_range
         ~kind_name:"date"
+        ?extra_attr
         ?allow_equal
         (module Date)
-        (date_opt ~extra_attrs ())
+        (module Date)
+        (fun ~extra_attrs ->
+           Vdom_input_widgets.Entry.date ~merge_behavior:Legacy_dont_merge ~extra_attrs ())
     ;;
 
     let date ?extra_attr ?allow_equal () =
-      computation_map (date_opt ?extra_attr ?allow_equal ()) ~f:of_opt_range
+      let%map.Computation form = date_opt ?extra_attr ?allow_equal () in
+      of_opt_range form
     ;;
 
-    let time_opt ?(extra_attr = Value.return Vdom.Attr.empty) ?allow_equal () =
-      let%sub extra_attrs = Bonsai.pure List.return extra_attr in
+    let time_opt ?extra_attr ?allow_equal () =
       make_opt_range
         ~kind_name:"time"
+        ?extra_attr
         ?allow_equal
         (module Time_ns.Ofday)
-        (time_opt ~extra_attrs ())
+        (module Time_ns.Ofday)
+        (fun ~extra_attrs ->
+           Vdom_input_widgets.Entry.time ~merge_behavior:Legacy_dont_merge ~extra_attrs ())
     ;;
 
     let time ?extra_attr ?allow_equal () =
-      computation_map (time_opt ?extra_attr ?allow_equal ()) ~f:of_opt_range
+      let%map.Computation form = time_opt ?extra_attr ?allow_equal () in
+      of_opt_range form
     ;;
 
-    let datetime_local_opt ?(extra_attr = Value.return Vdom.Attr.empty) ?allow_equal () =
-      let%sub extra_attrs = Bonsai.pure List.return extra_attr in
+    let datetime_local_opt ?extra_attr ?allow_equal () =
       make_opt_range
         ~kind_name:"time"
+        ?extra_attr
         ?allow_equal
-        (module Time_ns)
-        (datetime_local_opt ~extra_attrs ())
+        (module Time_ns.Alternate_sexp)
+        (module Time_ns.Alternate_sexp)
+        (fun ~extra_attrs ->
+           Vdom_input_widgets.Entry.datetime_local
+             ~merge_behavior:Legacy_dont_merge
+             ~extra_attrs
+             ())
     ;;
 
     let datetime_local ?extra_attr ?allow_equal () =
-      computation_map (datetime_local_opt ?extra_attr ?allow_equal ()) ~f:of_opt_range
+      let%map.Computation form = datetime_local_opt ?extra_attr ?allow_equal () in
+      of_opt_range form
     ;;
   end
 end
@@ -759,6 +979,7 @@ module Multiselect = struct
         (type a cmp)
         ?(extra_attrs = Value.return [])
         ?to_string
+        ?default_selection_status
         (module M : Bonsai.Comparator with type t = a and type comparator_witness = cmp)
         input_list
     =
@@ -790,7 +1011,9 @@ module Multiselect = struct
       ; search_box_id = Some path
       }
     in
-    let%sub single_factor_result = Single_factor.bonsai ~view_config input_set in
+    let%sub single_factor_result =
+      Single_factor.bonsai ?default_selection_status ~view_config input_set
+    in
     let%arr { Single_factor.Result.view; inject; selected_items; key_handler; _ } =
       single_factor_result
     and path = path
@@ -798,7 +1021,9 @@ module Multiselect = struct
     let set_state set =
       inject
         (Single_factor.Action.Set_all_selection_statuses
-           (Map.of_key_set set ~f:(Fn.const Single_factor.Selection_status.Selected)))
+           (Map.of_key_set
+              set
+              ~f:(Fn.const Bonsai_web_ui_multi_select.Selection_status.Selected)))
     in
     let on_keydown =
       Vdom.Attr.on_keydown
@@ -819,12 +1044,14 @@ module Multiselect = struct
         (type a cmp)
         ?extra_attrs
         ?to_string
+        ?default_selection_status
         (module M : Bonsai.Comparator with type t = a and type comparator_witness = cmp)
         input_list
     =
-    computation_map
-      (set ?extra_attrs ?to_string (module M) input_list)
-      ~f:(Form.project ~parse_exn:Set.to_list ~unparse:(Set.of_list (module M)))
+    let%map.Computation form =
+      set ?extra_attrs ?to_string ?default_selection_status (module M) input_list
+    in
+    Form.project form ~parse_exn:Set.to_list ~unparse:(Set.of_list (module M))
   ;;
 end
 
@@ -914,11 +1141,18 @@ module Multiple = struct
   let list
         (type a)
         ?element_group_label
-        ?(add_element_text = Bonsai.Value.return "Add new element")
+        ?add_element_text
         ?(button_placement = `Indented)
         (t : a Form.t Computation.t)
     : a list Form.t Computation.t
     =
+    let%sub add_element_text =
+      match add_element_text with
+      | Some value ->
+        let%arr value = value in
+        Some value
+      | None -> Bonsai.const None
+    in
     let%sub form, _ =
       Bonsai.wrap
         (module Unit)
@@ -930,68 +1164,29 @@ module Multiple = struct
           |> schedule_event)
         ~f:(fun (_ : unit Value.t) inject_outer ->
           let%sub extendy = Extendy.component t in
-          let%sub path, _id = path in
           let%arr { Extendy.contents; append; set_length; remove } = extendy
-          and inject_outer = inject_outer
-          and path = path
-          and add_element_text = add_element_text in
-          let elements =
+          and add_element_text = add_element_text
+          and inject_outer = inject_outer in
+          let view =
             contents
             |> Map.to_alist
-            |> List.mapi ~f:(fun i (key, form) ->
-              let delete_button =
-                Vdom.Node.button
-                  ~attr:
-                    (Vdom.Attr.many_without_merge
-                       [ Vdom.Attr.type_ "button"
-                       ; Vdom.Attr.style
-                           Css_gen.(
-                             border ~style:`None ()
-                             @> create ~field:"cursor" ~value:"pointer"
-                             @> color (`Name "blue")
-                             @> create ~field:"background" ~value:"none")
-                       ; Vdom.Attr.on_click (fun _ -> remove key)
-                       ])
-                  [ Vdom.Node.text "[ remove ]" ]
-              in
-              let label =
-                match element_group_label with
-                | Some label -> label ~delete_button i (Form.value form)
-                | None -> Vdom.Node.div [ Vdom.Node.textf "%d - " i; delete_button ]
-              in
-              View.group label (Form.view form))
+            |> List.map ~f:(fun (key, form) ->
+              View.list_item
+                ~view:(Form.view form)
+                ~remove_item:
+                  (Remove_info
+                     { remove = remove key; element_label = element_group_label }))
+            |> View.list
+                 ~append_item:(Append_info { append; text = add_element_text })
+                 ~legacy_button_position:button_placement
           in
-          let button =
-            match button_placement with
-            | `Indented ->
-              View.Group
-                { label =
-                    [ Vdom.Node.text add_element_text ]
-                    |> Vdom.Node.button ~attr:(Vdom.Attr.on_click (fun _ -> append))
-                    |> Some
-                ; tooltip = None
-                ; view = Empty
-                ; error = None
-                }
-            | `Inline ->
-              View.Row
-                { label = None
-                ; tooltip = None
-                ; form =
-                    Vdom.Node.button
-                      ~attr:(Vdom.Attr.on_click (fun _ -> append))
-                      [ Vdom.Node.text add_element_text ]
-                ; id = path
-                ; error = None
-                }
-          in
-          let view = List.append elements [ button ] in
-          let view = View.List view in
           let value =
             contents |> Map.data |> List.map ~f:Form.value |> Or_error.combine_errors
           in
           let set (list : a list) =
-            Vdom.Effect.Many [ set_length (List.length list); inject_outer list ]
+            Effect.lazy_
+              (lazy
+                (Vdom.Effect.Many [ set_length (List.length list); inject_outer list ]))
           in
           Form.Expert.create ~value ~view ~set, contents)
     in
@@ -1006,9 +1201,10 @@ module Multiple = struct
         (module M : Bonsai.Comparator with type t = a and type comparator_witness = cmp)
         form
     =
-    computation_map
-      (list ?button_placement ?element_group_label ?add_element_text form)
-      ~f:(Form.project ~parse_exn:(Set.of_list (module M)) ~unparse:Set.to_list)
+    let%map.Computation form =
+      list ?button_placement ?element_group_label ?add_element_text form
+    in
+    Form.project form ~parse_exn:(Set.of_list (module M)) ~unparse:Set.to_list
   ;;
 
   let map
@@ -1025,9 +1221,10 @@ module Multiple = struct
       let%sub value_form = data in
       return @@ Value.map2 key_form value_form ~f:Form.both
     in
-    computation_map
-      (list ?button_placement ?element_group_label ?add_element_text both)
-      ~f:(Form.project ~parse_exn:(Map.of_alist_exn (module M)) ~unparse:Map.to_alist)
+    let%map.Computation form =
+      list ?button_placement ?element_group_label ?add_element_text both
+    in
+    Form.project form ~parse_exn:(Map.of_alist_exn (module M)) ~unparse:Map.to_alist
   ;;
 end
 
@@ -1087,6 +1284,7 @@ let number_input
           ~on_input:(function
             | Some s -> set_state s
             | None -> set_state S.default)
+          ~merge_behavior:Legacy_dont_merge
       in
       match input_type with
       | Number -> input
@@ -1208,8 +1406,14 @@ module Radio_buttons = struct
       fun ~id ~state ~set_state ->
         let node_fun =
           match layout with
-          | `Vertical -> Vdom_input_widgets.Radio_buttons.of_values ~style
-          | `Horizontal -> Vdom_input_widgets.Radio_buttons.of_values_horizontal ~style
+          | `Vertical ->
+            Vdom_input_widgets.Radio_buttons.of_values
+              ~merge_behavior:Legacy_dont_merge
+              ~style
+          | `Horizontal ->
+            Vdom_input_widgets.Radio_buttons.of_values_horizontal
+              ~merge_behavior:Legacy_dont_merge
+              ~style
         in
         node_fun
           ~extra_attrs:(id :: extra_attrs)
@@ -1219,8 +1423,10 @@ module Radio_buttons = struct
           ~name:path
           all
     in
-    Basic_stateful.make (Bonsai.state_opt ?default_model:init (module E)) ~view
-    |> computation_map ~f:optional_to_required
+    let%map.Computation form =
+      Basic_stateful.make (Bonsai.state_opt ?default_model:init (module E)) ~view
+    in
+    optional_to_required form
   ;;
 
   let enumerable
@@ -1242,6 +1448,7 @@ module Color_picker = struct
       let%map extra_attr = extra_attr in
       fun ~id:id_ ~state ~set_state ->
         Vdom_input_widgets.Entry.color_picker
+          ~merge_behavior:Legacy_dont_merge
           ~extra_attr:Vdom.Attr.(id_ @ extra_attr)
           ~value:state
           ~on_input:set_state
@@ -1270,6 +1477,7 @@ module File_select = struct
       let%map extra_attrs = extra_attrs in
       fun ~id ~state:_ ~set_state ->
         Vdom_input_widgets.File_select.single
+          ~merge_behavior:Legacy_dont_merge
           ?accept
           ~extra_attrs:(id :: extra_attrs)
           ~on_input:(fun file ->
@@ -1288,6 +1496,7 @@ module File_select = struct
       let%map extra_attrs = extra_attrs in
       fun ~id ~state:_ ~set_state ->
         Vdom_input_widgets.File_select.list
+          ~merge_behavior:Legacy_dont_merge
           ?accept
           ~extra_attrs:(id :: extra_attrs)
           ~on_input:(fun files ->
@@ -1331,9 +1540,8 @@ module Freeform_multiselect = struct
   ;;
 
   let list ?extra_attr ?placeholder ?split () =
-    computation_map
-      (set ?extra_attr ?placeholder ?split ())
-      ~f:(Form.project ~parse_exn:Set.to_list ~unparse:String.Set.of_list)
+    let%map.Computation form = set ?extra_attr ?placeholder ?split () in
+    Form.project form ~parse_exn:Set.to_list ~unparse:String.Set.of_list
   ;;
 end
 
@@ -1400,7 +1608,8 @@ module Query_box = struct
     in
     let%sub extra_input_attr =
       let%arr extra_input_attr = extra_input_attr
-      and last_selected_value = last_selected_value in
+      and last_selected_value = last_selected_value
+      and selection_to_string = selection_to_string in
       match last_selected_value with
       | None -> extra_input_attr
       | Some last_selected_value ->
@@ -1465,5 +1674,276 @@ module Query_box = struct
          ~f
          ())
       ~f:optional_to_required
+  ;;
+
+  module Query_box_styles =
+    [%css
+      stylesheet
+        {|
+  .list_container {
+    background: white;
+    border: solid 2px black;
+    min-width: 150px;
+    outline: none;
+    border-bottom-right-radius: 3px;
+    border-bottom-left-radius: 3px;
+    user-select: none;
+  }
+
+  .selected_item {
+    background-color: rgb(222, 222, 222);
+  }
+
+  .item {
+    padding: 5px;
+  }
+
+  .description {
+    color: #555555;
+  }
+
+  .input::placeholder {
+    color: black;
+  }
+
+  .input:focus::placeholder {
+    color: #555555;
+  }
+
+  .input:not(:focus):not(:placeholder-shown) {
+    color: red;
+  }
+
+  .selected_item .description {
+    color: black;
+  }
+
+  .matched-part {
+    font-weight: bold;
+  }
+  |}]
+
+  let optional_computation = function
+    | None -> Bonsai.const None
+    | Some value ->
+      let%arr value = value in
+      Some value
+  ;;
+
+  let optional_computation_value_map x ~default ~f =
+    match x with
+    | None -> Bonsai.const default
+    | Some x ->
+      let%arr x = x in
+      f x
+  ;;
+
+  let underlying_query_box_component
+        (type a cmp)
+        (module M : Bonsai.Comparator with type t = a and type comparator_witness = cmp)
+        ~extra_attr
+        ~(to_string : (a -> string) Value.t)
+        ~selected_item_attr
+        ~extra_list_container_attr
+        ~all_options
+        ~handle_unknown_option
+        ~to_option_description
+    =
+    create_opt
+      (module M)
+      ~extra_attr
+      ~extra_input_attr:(Value.return Query_box_styles.input)
+      ~selected_item_attr
+      ~extra_list_container_attr
+      ~selection_to_string:to_string
+      ~f:(fun query ->
+        let render_item ~to_string ~key ~to_option_description =
+          let main_item = Vdom.Node.span [ Vdom.Node.text (to_string key) ] in
+          Option.value_map
+            to_option_description
+            ~default:main_item
+            ~f:(fun to_option_description ->
+              Bonsai_web.View.vbox
+                ~attr:Query_box_styles.item
+                [ main_item
+                ; Vdom.Node.span
+                    ~attr:Query_box_styles.description
+                    [ Vdom.Node.text (to_option_description key) ]
+                ])
+        in
+        let%sub result_without_unknown_option =
+          Bonsai.Incr.compute
+            (Value.map4
+               to_string
+               to_option_description
+               query
+               all_options
+               ~f:(fun a b c d -> a, b, c, d))
+            ~f:(fun incr ->
+              let%pattern_bind.Incr to_string, to_option_description, query, all_options =
+                incr
+              in
+              let%bind.Incr query = query
+              and to_string = to_string
+              and to_option_description = to_option_description in
+              Incr_map.filter_mapi all_options ~f:(fun ~key ~data:() ->
+                match
+                  Fuzzy_match.is_match
+                    ~char_equal:Char.Caseless.equal
+                    ~pattern:query
+                    (to_string key)
+                with
+                | false -> None
+                | true -> Some (render_item ~to_string ~key ~to_option_description)))
+        in
+        let%arr result_without_unknown_option = result_without_unknown_option
+        and handle_unknown_option = handle_unknown_option
+        and query = query
+        and to_string = to_string
+        and to_option_description = to_option_description in
+        match handle_unknown_option with
+        | None -> result_without_unknown_option
+        | Some f ->
+          (match f query with
+           | None -> result_without_unknown_option
+           | Some unknown_option ->
+             (match Map.mem result_without_unknown_option unknown_option with
+              | true -> result_without_unknown_option
+              | false ->
+                let item =
+                  render_item ~to_string ~key:unknown_option ~to_option_description
+                in
+                Map.set result_without_unknown_option ~key:unknown_option ~data:item)))
+      ()
+  ;;
+
+  let single_opt
+        (type a cmp)
+        ?extra_attrs
+        ?to_string
+        ?to_option_description
+        ?selected_item_attr
+        ?extra_list_container_attr
+        ?handle_unknown_option
+        (module M : Bonsai.Comparator with type t = a and type comparator_witness = cmp)
+        ~all_options
+    : a option Form.t Computation.t
+    =
+    let%sub extra_attr =
+      optional_computation_value_map
+        extra_attrs
+        ~default:Vdom.Attr.empty
+        ~f:Vdom.Attr.many
+    in
+    let%sub to_string =
+      optional_computation_value_map
+        ~default:(Fn.compose Sexp.to_string_hum M.sexp_of_t)
+        ~f:Fn.id
+        to_string
+    in
+    let%sub to_option_description = optional_computation to_option_description in
+    let%sub handle_unknown_option = optional_computation handle_unknown_option in
+    let%sub selected_item_attr =
+      optional_computation_value_map
+        selected_item_attr
+        ~default:Query_box_styles.selected_item
+        ~f:Fn.id
+    in
+    let%sub extra_list_container_attr =
+      optional_computation_value_map
+        extra_list_container_attr
+        ~default:Query_box_styles.list_container
+        ~f:Fn.id
+    in
+    let%sub all_options =
+      let%arr all_options = all_options in
+      List.fold
+        all_options
+        ~init:(Map.empty (module M))
+        ~f:(fun acc a -> Map.set acc ~key:a ~data:())
+    in
+    underlying_query_box_component
+      (module M)
+      ~extra_attr
+      ~to_string
+      ~selected_item_attr
+      ~extra_list_container_attr
+      ~all_options
+      ~handle_unknown_option
+      ~to_option_description
+  ;;
+
+  let single
+        ?extra_attrs
+        ?to_string
+        ?to_option_description
+        ?selected_item_attr
+        ?extra_list_container_attr
+        ?handle_unknown_option
+        m
+        ~all_options
+    =
+    let%map.Computation form =
+      single_opt
+        ?extra_attrs
+        ?to_string
+        ?to_option_description
+        ?selected_item_attr
+        ?extra_list_container_attr
+        ?handle_unknown_option
+        m
+        ~all_options
+    in
+    optional_to_required form
+  ;;
+end
+
+module Optional = struct
+  let dropdown
+        (type a)
+        ?(some_label = "None")
+        ?(none_label = "Some")
+        (module T : T with type t = a)
+        (form : a Form.t Computation.t)
+    =
+    let module M = struct
+      type t =
+        | None
+        | Some of T.t
+      [@@deriving typed_variants]
+
+      let to_option : t -> a option = function
+        | None -> None
+        | Some a -> Some a
+      ;;
+
+      let of_option : a option -> t = function
+        | None -> None
+        | Some a -> Some a
+      ;;
+    end
+    in
+    let%map.Computation form =
+      Typed.Variant.make
+        (module struct
+          module Typed_variant = M.Typed_variant
+
+          let label_for_variant : type a. a Typed_variant.t -> string = function
+            | None -> none_label
+            | Some -> some_label
+          ;;
+
+          let label_for_variant = `Computed label_for_variant
+
+          let form_for_variant : type a. a Typed_variant.t -> a Form.t Computation.t
+            = function
+              | None -> Bonsai.const (Form.return ())
+              | Some -> form
+          ;;
+
+          let initial_choice = `First_constructor
+        end)
+    in
+    Form.project form ~parse_exn:M.to_option ~unparse:M.of_option
   ;;
 end

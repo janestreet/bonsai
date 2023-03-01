@@ -5,6 +5,13 @@ module Buf = Indentation_buffer
 let default_buf_size = 1024
 let data_to_string = real_data_to_string
 
+let uid_to_string table uid =
+  let mapped_id =
+    Hashtbl.find_or_add table uid ~default:(fun () -> Hashtbl.length table)
+  in
+  sprintf "x%d" mapped_id
+;;
+
 let prep buffer =
   Buf.newline buffer;
   Buf.indent buffer
@@ -228,8 +235,11 @@ let rec write_function
      | `Second -> Buf.string buffer "fun (_, x) -> Second x")
 ;;
 
-let rec write_value : type a cmp. buffer:Buf.t -> a Value.t -> (a, cmp) Witness.t -> unit =
-  fun ~buffer value witness ->
+let rec write_value
+  : type a cmp.
+    buffer:Buf.t -> uid_to_string:_ -> a Value.t -> (a, cmp) Witness.t -> unit
+  =
+  fun ~buffer ~uid_to_string value witness ->
   match value with
   | Return data ->
     Buf.string buffer "Value.return (";
@@ -239,17 +249,14 @@ let rec write_value : type a cmp. buffer:Buf.t -> a Value.t -> (a, cmp) Witness.
   | Map (inner, inner_witness, f) ->
     Buf.string buffer [%string "Value.map ("];
     prep buffer;
-    write_value ~buffer inner inner_witness;
+    write_value ~buffer ~uid_to_string inner inner_witness;
     leave buffer;
     Buf.string buffer "~f:(";
     write_function ~buffer f witness;
     Buf.string buffer ")"
   | Real_value value ->
     let { Bonsai.Private.Value.id; _ } = Bonsai.Private.reveal_value value in
-    let id_string =
-      Type_equal.Id.uid id |> Type_equal.Id.Uid.sexp_of_t |> Sexp.to_string_hum
-    in
-    Buf.string buffer [%string "x%{id_string}"]
+    Buf.string buffer (uid_to_string (Type_equal.Id.uid id))
   | Var data ->
     Buf.string buffer "Value.return (";
     prep buffer;
@@ -262,34 +269,32 @@ let rec write_value : type a cmp. buffer:Buf.t -> a Value.t -> (a, cmp) Witness.
     Buf.string buffer "Value.both ";
     prep buffer;
     Buf.string buffer "(";
-    write_value ~buffer first first_witness;
+    write_value ~buffer ~uid_to_string first first_witness;
     Buf.string buffer ")";
     Buf.newline buffer;
     Buf.string buffer "(";
-    write_value ~buffer second second_witness;
+    write_value ~buffer ~uid_to_string second second_witness;
     Buf.string buffer ")";
     Buf.newline buffer;
     Buf.dedent buffer
 ;;
 
-let real_value_to_variable_name real_value =
+let real_value_to_variable_name ~uid_to_string real_value =
   let { Bonsai.Private.Value.id; _ } = Bonsai.Private.reveal_value real_value in
-  let id_string =
-    Type_equal.Id.uid id |> Type_equal.Id.Uid.sexp_of_t |> Sexp.to_string_hum
-  in
-  [%string "x%{id_string}"]
+  uid_to_string (Type_equal.Id.uid id)
 ;;
 
 let rec write_computation
-  : type a cmp. buffer:Buf.t -> a Computation.t -> (a, cmp) Witness.t -> unit
+  : type a cmp.
+    buffer:Buf.t -> uid_to_string:_ -> a Computation.t -> (a, cmp) Witness.t -> unit
   =
-  fun ~buffer computation witness ->
+  fun ~buffer ~uid_to_string computation witness ->
   let open Bonsai.Let_syntax in
   match computation with
   | Return value ->
     Buf.string buffer "return (";
     prep buffer;
-    write_value ~buffer value witness;
+    write_value ~buffer ~uid_to_string value witness;
     leave buffer
   | Subst (inner, inner_witness, f) ->
     let real_value = ref None in
@@ -299,15 +304,15 @@ let rec write_computation
       Bonsai.const ()
     in
     let real_value = Option.value_exn !real_value in
-    let id_string = real_value_to_variable_name real_value in
+    let id_string = real_value_to_variable_name ~uid_to_string real_value in
     Buf.string buffer [%string "let%sub %{id_string} = ("];
     prep buffer;
-    write_computation ~buffer inner inner_witness;
+    write_computation ~buffer ~uid_to_string inner inner_witness;
     leave buffer;
     Buf.string buffer "in";
     Buf.newline buffer;
     let fake_computation = f (of_real_value real_value) in
-    write_computation ~buffer fake_computation witness
+    write_computation ~buffer ~uid_to_string fake_computation witness
   | Subst2 { tuple_computation; first_witness; second_witness; f } ->
     let real_first, real_second = ref None, ref None in
     let (_ : _ Bonsai.Computation.t) =
@@ -319,21 +324,21 @@ let rec write_computation
     let real_first = Option.value_exn !real_first in
     let real_second = Option.value_exn !real_second in
     let fake_comp = f (of_real_value real_first) (of_real_value real_second) in
-    let id_string_first = real_value_to_variable_name real_first in
-    let id_string_second = real_value_to_variable_name real_second in
+    let id_string_first = real_value_to_variable_name ~uid_to_string real_first in
+    let id_string_second = real_value_to_variable_name ~uid_to_string real_second in
     Buf.string buffer [%string "let%sub %{id_string_first}, %{id_string_second} = ("];
     prep buffer;
     let tuple_witness = Witness.Tuple (first_witness, second_witness) in
-    write_computation ~buffer tuple_computation tuple_witness;
+    write_computation ~buffer ~uid_to_string tuple_computation tuple_witness;
     leave buffer;
     Buf.string buffer "in";
     Buf.newline buffer;
-    write_computation ~buffer fake_comp witness
+    write_computation ~buffer ~uid_to_string fake_comp witness
   | Switch { either_value; first_witness; second_witness; f_first; f_second } ->
     let real_either_value = to_real_value either_value in
     let either_witness = Witness.Either (first_witness, second_witness) in
     Buf.string buffer "match%sub (";
-    write_value ~buffer either_value either_witness;
+    write_value ~buffer ~uid_to_string either_value either_witness;
     Buf.string buffer ") with";
     Buf.newline buffer;
     let first_real_value = ref None in
@@ -350,17 +355,17 @@ let rec write_computation
     let first_real_value = Option.value_exn !first_real_value in
     let second_real_value = Option.value_exn !second_real_value in
     let first_comp = f_first (of_real_value first_real_value) in
-    let id_string = real_value_to_variable_name first_real_value in
+    let id_string = real_value_to_variable_name ~uid_to_string first_real_value in
     Buf.string buffer [%string "| First %{id_string} -> ("];
     prep buffer;
-    write_computation ~buffer first_comp witness;
+    write_computation ~buffer ~uid_to_string first_comp witness;
     leave buffer;
     Buf.newline buffer;
     let second_comp = f_second (of_real_value second_real_value) in
-    let id_string = real_value_to_variable_name second_real_value in
+    let id_string = real_value_to_variable_name ~uid_to_string second_real_value in
     Buf.string buffer [%string "| Second %{id_string} -> ("];
     prep buffer;
-    write_computation ~buffer second_comp witness;
+    write_computation ~buffer ~uid_to_string second_comp witness;
     leave buffer
   | Assoc { map_value; key_witness; value_witness; f; result_witness } ->
     Buf.string buffer "Bonsai.assoc ";
@@ -370,7 +375,7 @@ let rec write_computation
     Buf.newline buffer;
     Buf.string buffer "(";
     prep buffer;
-    write_value ~buffer map_value map_witness;
+    write_value ~buffer ~uid_to_string map_value map_witness;
     leave buffer;
     let map = to_real_value map_value in
     let module M = (val make_comparator_and_model key_witness) in
@@ -394,12 +399,12 @@ let rec write_computation
     in
     let key_real_value = Option.value_exn !key_real_value in
     let data_real_value = Option.value_exn !data_real_value in
-    let key_id_string = real_value_to_variable_name key_real_value in
-    let data_id_string = real_value_to_variable_name data_real_value in
+    let key_id_string = real_value_to_variable_name ~uid_to_string key_real_value in
+    let data_id_string = real_value_to_variable_name ~uid_to_string data_real_value in
     Buf.string buffer [%string "~f:(fun %{key_id_string} %{data_id_string} ->"];
     prep buffer;
     let fake_comp = f (of_real_value key_real_value) (of_real_value data_real_value) in
-    write_computation ~buffer fake_comp result_witness;
+    write_computation ~buffer ~uid_to_string fake_comp result_witness;
     leave buffer;
     Buf.dedent buffer
   | State { default_model; default_witness } ->
@@ -417,9 +422,10 @@ let rec write_computation
 let packed_computation_to_ocaml_code ?(indent = 0) (packed : Computation.packed) =
   let (T { unpacked; witness }) = packed in
   let buffer = Buf.create default_buf_size in
+  let uid_to_string = uid_to_string (Type_equal.Id.Uid.Table.create ()) in
   for _ = 0 to indent - 1 do
     Buf.indent buffer
   done;
-  write_computation ~buffer unpacked witness;
+  write_computation ~buffer ~uid_to_string unpacked witness;
   Buf.contents buffer
 ;;

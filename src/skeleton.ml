@@ -213,7 +213,7 @@ module Computation0 = struct
           Node_path.choice_point current_path choice |> Node_path.descend
         in
         let node_path = finalize current_path in
-        match computation.kind with
+        match computation with
         | Return value ->
           { node_path
           ; here = None
@@ -356,11 +356,6 @@ module Computation0 = struct
               }
           in
           { node_path; here = None; kind }
-        | Identity t ->
-          { node_path
-          ; here = None
-          ; kind = Identity { t = helper ~current_path:(Node_path.descend current_path) t }
-          }
     in
     helper ~current_path:(Node_path.descend Node_path.empty) computation
   ;;

@@ -139,7 +139,8 @@ let only_display_market_hours
       ?(mkt_end_ofday   = Time_ns.Ofday.create ~hr:16        ())
       ~start_time
       ~end_time
-      ~zone
+      ~view_zone
+      ?(mkt_zone = view_zone)
       ()
   =
   let ofday_knots =
@@ -154,14 +155,14 @@ let only_display_market_hours
     if Date.is_weekend date then 0.01 else 1.
   in
   let x_axis_mapping =
-    Time_mapping.create ~start_time ~end_time ~zone ~ofday_knots ~date_to_weight
+    Time_mapping.create ~start_time ~end_time ~zone:mkt_zone ~ofday_knots ~date_to_weight
   in
   let time_to_x_value time    = Time_mapping.get         x_axis_mapping time    in
   let x_value_to_time x_value = Time_mapping.get_inverse x_axis_mapping x_value in
   let value_formatter ms_since_epoch _opts =
     let x_value = Time_ns.of_span_since_epoch (Time_ns.Span.of_ms ms_since_epoch) in
     let time    = x_value_to_time x_value                                         in
-    Time_ns.to_string_trimmed (round_time_nearest_ms time ~zone) ~zone
+    Time_ns.to_string_trimmed (round_time_nearest_ms time ~zone:view_zone) ~zone:view_zone
   in
   let date_axis_label_formatter x_value granularity opts =
     let time           = x_value_to_time x_value                               in

@@ -2,9 +2,10 @@ open! Core
 open! Bonsai_web
 open! Bonsai_web_test
 open  Bonsai.Let_syntax
+module Typeahead = Bonsai_web_ui_typeahead.Typeahead
 
 let shared_computation ?(to_string = Value.return Data.to_string) () =
-  Bonsai_web_ui_typeahead.Typeahead.create
+  Typeahead.create
     (module Data)
     ~all_options:(Value.return Data.all)
     ~placeholder:"Select a value"
@@ -37,7 +38,9 @@ let%expect_test "Initial typeahead state" =
            placeholder="Select a value"
            value=""
            #value=""
+           onblur
            onchange
+           onfocus
            oninput> </input>
     <datalist id="bonsai_path_replaced_in_test">
       <option value="Option A"> Option A </option>
@@ -46,6 +49,77 @@ let%expect_test "Initial typeahead state" =
     </datalist>
   </div>
   |}]
+;;
+
+let%expect_test "Focusing and un-focusing the input shows and hides the datalist when \
+                 not in tests"
+  =
+  let component =
+    let%sub { view; _ } =
+      Typeahead.Private.For_testing.create_with_browser_behavior_in_test
+        (module Data)
+        ~all_options:(Value.return Data.all)
+        ~placeholder:"Select a value"
+        ~to_string:(Value.return Data.to_string)
+    in
+    return view
+  in
+  let handle = Handle.create (Result_spec.vdom Fn.id) component in
+  Handle.show handle;
+  [%expect
+    {|
+    <div>
+      <input type="text"
+             list="bonsai_path_replaced_in_test"
+             placeholder="Select a value"
+             value=""
+             #value=""
+             onblur
+             onchange
+             onfocus
+             oninput> </input>
+
+    </div> |}];
+  Handle.focus     handle ~get_vdom:Fn.id ~selector:"input";
+  Handle.show_diff handle;
+  [%expect
+    {|
+      <div>
+        <input type="text"
+               list="bonsai_path_replaced_in_test"
+               placeholder="Select a value"
+               value=""
+               #value=""
+               onblur
+               onchange
+               onfocus
+               oninput> </input>
+    +|  <datalist id="bonsai_path_replaced_in_test">
+    +|    <option value="Option A"> Option A </option>
+    +|    <option value="Option B"> Option B </option>
+    +|    <option value="Option C"> Option C </option>
+    +|  </datalist>
+      </div> |}];
+  Handle.blur      handle ~get_vdom:Fn.id ~selector:"input";
+  Handle.show_diff handle;
+  [%expect
+    {|
+      <div>
+        <input type="text"
+               list="bonsai_path_replaced_in_test"
+               placeholder="Select a value"
+               value=""
+               #value=""
+               onblur
+               onchange
+               onfocus
+               oninput> </input>
+    -|  <datalist id="bonsai_path_replaced_in_test">
+    -|    <option value="Option A"> Option A </option>
+    -|    <option value="Option B"> Option B </option>
+    -|    <option value="Option C"> Option C </option>
+    -|  </datalist>
+      </div> |}]
 ;;
 
 let%expect_test "Change typeahead contents" =
@@ -63,23 +137,25 @@ let%expect_test "Change typeahead contents" =
   (* Expected change: input value should change. *)
   [%expect
     {|
--1,14 +1,14
-  <div>
-    <input type="text"
-           list="bonsai_path_replaced_in_test"
-           placeholder="Select a value"
--|         value=""
-+|         value="Option C"
--|         #value=""
-+|         #value="Option C"
-           onchange
-           oninput> </input>
-    <datalist id="bonsai_path_replaced_in_test">
-      <option value="Option A"> Option A </option>
-      <option value="Option B"> Option B </option>
-      <option value="Option C"> Option C </option>
-    </datalist>
-  </div> |}]
+     -1,16 +1,16
+       <div>
+         <input type="text"
+                list="bonsai_path_replaced_in_test"
+                placeholder="Select a value"
+     -|         value=""
+     +|         value="Option C"
+     -|         #value=""
+     +|         #value="Option C"
+                onblur
+                onchange
+                onfocus
+                oninput> </input>
+         <datalist id="bonsai_path_replaced_in_test">
+           <option value="Option A"> Option A </option>
+           <option value="Option B"> Option B </option>
+           <option value="Option C"> Option C </option>
+         </datalist>
+       </div> |}]
 ;;
 
 let%expect_test "use setter" =
@@ -112,7 +188,9 @@ let%expect_test "use setter" =
     +|         value="Option A"
     -|         #value=""
     +|         #value="Option A"
+               onblur
                onchange
+               onfocus
                oninput> </input>
         <datalist id="bonsai_path_replaced_in_test">
           <option value="Option A"> Option A </option>
@@ -132,7 +210,9 @@ let%expect_test "use setter" =
     +|         value=""
     -|         #value="Option A"
     +|         #value=""
+               onblur
                onchange
+               onfocus
                oninput> </input>
         <datalist id="bonsai_path_replaced_in_test">
           <option value="Option A"> Option A </option>
@@ -180,7 +260,9 @@ let%expect_test "dynamic [to_string]." =
                placeholder="Select a value"
                value=""
                #value=""
+               onblur
                onchange
+               onfocus
                oninput> </input>
         <datalist id="bonsai_path_replaced_in_test">
     -|    <option value="Option A"> Option A </option>

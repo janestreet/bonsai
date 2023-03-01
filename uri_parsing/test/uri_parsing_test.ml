@@ -684,14 +684,11 @@ let%expect_test "Field parser project" =
   [%expect
     {|
     URL parser looks good!
-    ┌─────────────────────────────────┐
-    │ All urls                        │
-    ├─────────────────────────────────┤
-    │ /?bar=<int>&baz=<int>&foo=<int> │
-    │ /?bar=<int>&foo=<int>           │
-    │ /?baz=<int>&foo=<int>           │
-    │ /?foo=<int>                     │
-    └─────────────────────────────────┘
+    ┌─────────────────────────────────────────────────────┐
+    │ All urls                                            │
+    ├─────────────────────────────────────────────────────┤
+    │ /?bar=<optional<int>>&baz=<optional<int>>&foo=<int> │
+    └─────────────────────────────────────────────────────┘
 
     (Record
      (label_declarations
@@ -736,14 +733,11 @@ let%expect_test "default missing field" =
   [%expect
     {|
     URL parser looks good!
-    ┌───────────────────────┐
-    │ All urls              │
-    ├───────────────────────┤
-    │ /                     │
-    │ /?bar=<int>           │
-    │ /?bar=<int>&foo=<int> │
-    │ /?foo=<int>           │
-    └───────────────────────┘
+    ┌───────────────────────────────────────────┐
+    │ All urls                                  │
+    ├───────────────────────────────────────────┤
+    │ /?bar=<optional<int>>&foo=<optional<int>> │
+    └───────────────────────────────────────────┘
 
     (Record
      (label_declarations
@@ -946,12 +940,11 @@ let%expect_test "Both fallback and default may have different values" =
   [%expect
     {|
     URL parser looks good!
-    ┌───────────────────────┐
-    │ All urls              │
-    ├───────────────────────┤
-    │ /                     │
-    │ /?foo=<fallback<int>> │
-    └───────────────────────┘
+    ┌─────────────────────────────────┐
+    │ All urls                        │
+    ├─────────────────────────────────┤
+    │ /?foo=<optional<fallback<int>>> │
+    └─────────────────────────────────┘
 
     (Record
      (label_declarations
@@ -1035,11 +1028,8 @@ let%expect_test "optional field" =
     ┌──────────────────────────────────────────────────────────────────────────────────────────┐
     │ All urls                                                                                 │
     ├──────────────────────────────────────────────────────────────────────────────────────────┤
-    │ /?bam=<multiple<int>>&bar=<float>&baz=<multiple<int>>&foo=<int>&qux=<multiple<project<in │
-    │ t>>>                                                                                     │
-    │ /?bam=<multiple<int>>&bar=<float>&baz=<multiple<int>>&qux=<multiple<project<int>>>       │
-    │ /?bam=<multiple<int>>&baz=<multiple<int>>&foo=<int>&qux=<multiple<project<int>>>         │
-    │ /?bam=<multiple<int>>&baz=<multiple<int>>&qux=<multiple<project<int>>>                   │
+    │ /?bam=<multiple<int>>&bar=<optional<float>>&baz=<multiple<int>>&foo=<optional<int>>&qux= │
+    │ <multiple<project<int>>>                                                                 │
     └──────────────────────────────────────────────────────────────────────────────────────────┘
 
     (Record
@@ -1239,21 +1229,18 @@ let%test_module "quickcheck" =
       ;;
     end
 
-    let%test_unit "round-trip generated Query.t" =
+    let%quick_test "round-trip generated Query.t" =
+      fun (t : Query.t) ->
       let parser = Parser.Variant.make ~namespace:[] (module Query) in
       let projection = Parser.eval parser in
-      Quickcheck.test
-        [%quickcheck.generator: Query.t]
-        ~sexp_of:[%sexp_of: Query.t]
-        ~f:(fun t ->
-          let { Components.query = serialized; path } =
-            projection.unparse { Parse_result.result = t; remaining = Components.empty }
-          in
-          let result = projection.parse_exn { query = serialized; path } in
-          assert (Query.equal t result.result))
+      let { Components.query = serialized; path } =
+        projection.unparse { Parse_result.result = t; remaining = Components.empty }
+      in
+      let result = projection.parse_exn { query = serialized; path } in
+      assert (Query.equal t result.result)
     ;;
 
-    let%test_unit "attempt to parse generated queries" =
+    let generator =
       let query_generator =
         let open Generator in
         let query_without_nested =
@@ -1295,6 +1282,15 @@ let%test_module "quickcheck" =
           Query.Anon_main.path_generator
           ~f:(fun query path -> query, path)
       in
+      let secondary_generator =
+        Generator.map Generator.int ~f:(fun index ->
+          String.Map.empty, [ "secondary"; Int.to_string index ])
+      in
+      Generator.bind Generator.bool ~f:(fun is_main ->
+        if is_main then main_query_and_path else secondary_generator)
+    ;;
+
+    let maps_equal original unparsed =
       let equal_values_for_field =
         List.fold
           Query.Anon_main.Typed_field.Packed.all
@@ -1306,51 +1302,40 @@ let%test_module "quickcheck" =
             | None -> acc
             | Some equal -> Map.set acc ~key ~data:equal)
       in
-      let maps_equal original unparsed =
-        Map.for_alli
-          (unparsed : _ String.Map.t)
-          ~f:(fun ~key ~data:unparsed_data ->
-            let is_equal =
-              match Map.find (original : _ String.Map.t) key with
-              | None -> false
-              | Some original_data ->
-                (match Map.find (equal_values_for_field : _ String.Map.t) key with
-                 | None -> List.equal String.equal original_data unparsed_data
-                 | Some equal -> equal original_data unparsed_data)
-            in
-            if not is_equal
-            then
-              print_s
-                [%message
-                  "Field is not equal!"
-                    (key : string)
-                    (original : string list String.Map.t)
-                    (unparsed : string list String.Map.t)];
-            is_equal)
-      in
-      let secondary_generator =
-        Generator.map Generator.int ~f:(fun index ->
-          String.Map.empty, [ "secondary"; Int.to_string index ])
-      in
-      let main_or_secondary_generator =
-        Generator.bind Generator.bool ~f:(fun is_main ->
-          if is_main then main_query_and_path else secondary_generator)
-      in
-      let parser = Parser.Variant.make ~namespace:[] (module Query) in
-      let projection = Parser.eval parser in
-      Quickcheck.test
-        main_or_secondary_generator
-        ~sexp_of:
-          (Tuple2.sexp_of_t
-             (String.Map.sexp_of_t (List.sexp_of_t String.sexp_of_t))
-             (List.sexp_of_t String.sexp_of_t))
-        ~f:(fun (query, path) ->
-          let result = projection.parse_exn { query; path } in
-          let { Components.query = unparsed_query; path = unparsed_path } =
-            projection.unparse result
+      Map.for_alli
+        (unparsed : _ String.Map.t)
+        ~f:(fun ~key ~data:unparsed_data ->
+          let is_equal =
+            match Map.find (original : _ String.Map.t) key with
+            | None -> false
+            | Some original_data ->
+              (match Map.find (equal_values_for_field : _ String.Map.t) key with
+               | None -> List.equal String.equal original_data unparsed_data
+               | Some equal -> equal original_data unparsed_data)
           in
-          assert (maps_equal query unparsed_query);
-          assert (List.equal String.equal unparsed_path path))
+          if not is_equal
+          then
+            print_s
+              [%message
+                "Field is not equal!"
+                  (key : string)
+                  (original : string list String.Map.t)
+                  (unparsed : string list String.Map.t)];
+          is_equal)
+    ;;
+
+    let%quick_test ("attempt to parse generated queries" [@generator generator]
+                    [@shrinker.disable])
+      =
+      fun ((query, path) : string list String.Map.t * string list) ->
+        let parser = Parser.Variant.make ~namespace:[] (module Query) in
+        let projection = Parser.eval parser in
+        let result = projection.parse_exn { query; path } in
+        let { Components.query = unparsed_query; path = unparsed_path } =
+          projection.unparse result
+        in
+        assert (maps_equal query unparsed_query);
+        assert (List.equal String.equal unparsed_path path)
     ;;
   end)
 ;;
@@ -3262,4 +3247,48 @@ let%expect_test "[name]" =
     ~sexp_of_t:Int.sexp_of_t
     ~expect:(fun () -> [%expect {|
    123 |}])
+;;
+
+let%expect_test "[regression] exponential url shapes" =
+  let module Url = struct
+    module T = struct
+      type t =
+        { a : string option
+        ; b : string option
+        ; c : string option
+        ; d : string option
+        ; e : string option
+        }
+      [@@deriving typed_fields, sexp, equal]
+
+      let parser_for_field : type a. a Typed_field.t -> a Parser.t = function
+        | A -> Parser.from_query_optional Value_parser.string
+        | B -> Parser.from_query_optional Value_parser.string
+        | C -> Parser.from_query_optional Value_parser.string
+        | D -> Parser.from_query_optional Value_parser.string
+        | E -> Parser.from_query_optional Value_parser.string
+      ;;
+
+      module Path_order = Parser.Record.Path_order (Typed_field)
+
+      let path_order = Path_order.T []
+    end
+
+    include T
+
+    let parser = Parser.Record.make (module T)
+  end
+  in
+  let versioned_parser = Versioned_parser.first_parser Url.parser in
+  Versioned_parser.check_ok_and_print_urls_or_errors versioned_parser;
+  (* 2^n shapes where n is the number of optional query fields. *)
+  [%expect
+    {|
+    URL parser looks good!
+    ┌──────────────────────────────────────────────────────────────────────────────────────────┐
+    │ All urls                                                                                 │
+    ├──────────────────────────────────────────────────────────────────────────────────────────┤
+    │ /?a=<optional<string>>&b=<optional<string>>&c=<optional<string>>&d=<optional<string>>&e= │
+    │ <optional<string>>                                                                       │
+    └──────────────────────────────────────────────────────────────────────────────────────────┘ |}]
 ;;

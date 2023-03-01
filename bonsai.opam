@@ -33,6 +33,7 @@ depends: [
   "patdiff"
   "polling_state_rpc"
   "ppx_css"
+  "ppx_here"
   "ppx_jane"
   "ppx_let"
   "ppx_pattern_bind"
@@ -53,6 +54,7 @@ depends: [
   "re"                       {>= "1.8.0"}
   "uri"                      {>= "3.0.0"}
 ]
+available: arch != "arm32" & arch != "x86_32"
 synopsis: "A library for building dynamic webapps, using Js_of_ocaml"
 description: "
 Bonsai is a library for building reusable UI components inside an

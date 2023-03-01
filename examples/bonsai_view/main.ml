@@ -2,6 +2,7 @@ open! Core
 open! Bonsai_web
 open! Bonsai.Let_syntax
 module Form = Bonsai_web_ui_form
+module Gallery = Bonsai_web_ui_gallery
 
 let vbox c = View.vbox ~cross_axis_alignment:Start ~gap:(`Px 5) c
 let hbox c = View.hbox ~cross_axis_alignment:Start ~gap:(`Px 5) c
@@ -21,6 +22,32 @@ module Text = struct
 
   let selector = None
   let filter_attrs = None
+end
+
+module Text_with_style_and_size = struct
+  let name = "Text With Style And Size"
+
+  let description =
+    {| You can use themed text to easily render text in a range of font styles and sizes
+    that are themable and consistent accross different components. |}
+  ;;
+
+  let view =
+    let%map.Computation theme = View.Theme.current in
+    [%demo
+      vbox
+        [ View.themed_text theme ?style:None ?size:None "default style and size"
+        ; View.themed_text theme ~style:Bold "bold text!"
+        ; View.themed_text theme ~style:Italic "italic text ..."
+        ; View.themed_text theme ~style:Underlined "this text is underlined"
+        ; View.themed_text theme ~size:Large "This text is large"
+        ; View.themed_text theme ~size:Small "This text is small"
+        ]]
+  ;;
+
+  let selector = Some "span"
+  let filter_attrs k _ = not (String.is_substring k ~substring:"padding")
+  let filter_attrs = Some filter_attrs
 end
 
 module Text_with_intent = struct
@@ -242,6 +269,14 @@ module Tooltip_directions = struct
   let filter_attrs = None
 end
 
+let rickroll =
+  Effect.of_sync_fun
+    (fun () ->
+       let url = Js_of_ocaml.Js.string "https://www.youtube.com/watch?v=dQw4w9WgXcQ" in
+       Js_of_ocaml.Dom_html.window##.location##assign url)
+    ()
+;;
+
 module Tooltip_with_arbitrary_content = struct
   let name = "Tooltips with arbitrary content"
 
@@ -251,13 +286,6 @@ module Tooltip_with_arbitrary_content = struct
 
   let view =
     let%map.Computation theme = View.Theme.current in
-    let rickroll =
-      Effect.of_sync_fun
-        (fun () ->
-           let url = Js_of_ocaml.Js.string "https://www.youtube.com/watch?v=dQw4w9WgXcQ" in
-           Js_of_ocaml.Dom_html.window##.location##replace url)
-        ()
-    in
     [%demo
       let tooltip =
         View.vbox
@@ -559,40 +587,6 @@ module Basic_tabs = struct
   let filter_attrs = None
 end
 
-module Advanced_tabs = struct
-  let name = "Customized Tabs"
-
-  let description =
-    {| Thought the theme should be doing most of the visual styling, you can also customize it. |}
-  ;;
-
-  let view =
-    let%map.Computation theme = View.Theme.current in
-    let grey_background = Vdom.Attr.style (Css_gen.background_color (`Name "grey")) in
-    let red_border =
-      Vdom.Attr.style
-        (Css_gen.border_bottom ~width:(`Px 3) ~color:(`Name "red") ~style:`Solid ())
-    in
-    [%demo
-      let on_change ~from:_ ~to_:_ = Effect.Ignore in
-      View.tabs
-        theme
-        ~attr:grey_background
-        ~per_tab_attr:(fun _i ~is_active ->
-          if is_active then red_border else Vdom.Attr.empty)
-        ~on_change
-        ~equal:[%equal: int]
-        ~active:0
-        [ 0, Vdom.Node.text "home"
-        ; 1, Vdom.Node.text "about"
-        ; 2, Vdom.Node.text "user preferences"
-        ]]
-  ;;
-
-  let selector = None
-  let filter_attrs = None
-end
-
 module Enumerable_tabs = struct
   let name = "Enumerable Tabs"
 
@@ -662,8 +656,143 @@ module Devbar_intent = struct
   let filter_attrs = Some (fun k _ -> not (String.is_prefix k ~prefix:"style"))
 end
 
+module Basic_card = struct
+  let name = "Basic Card"
+  let description = {| |}
+
+  let view =
+    let%map.Computation theme = View.Theme.current in
+    let view, text = [%demo View.card theme "The message is: You are great!"] in
+    Vdom.Node.div ~attr:(Vdom.Attr.style (Css_gen.max_width (`Px 500))) [ view ], text
+  ;;
+
+  let selector = None
+  let filter_attrs = Some (fun k _ -> not (String.is_prefix k ~prefix:"style"))
+end
+
+module Card_with_title = struct
+  let name = "Card with a title"
+  let description = {| |}
+
+  let view =
+    let%map.Computation theme = View.Theme.current in
+    let view, text =
+      [%demo View.card theme ~title:"New message!!" "The message is: You are great!"]
+    in
+    Vdom.Node.div ~attr:(Vdom.Attr.style (Css_gen.max_width (`Px 500))) [ view ], text
+  ;;
+
+  let selector = None
+  let filter_attrs = Some (fun k _ -> not (String.is_prefix k ~prefix:"style"))
+end
+
+module Cards_with_intent = struct
+  let name = "Cards with intent"
+  let description = {| |}
+
+  let view =
+    let%map.Computation theme = View.Theme.current in
+    let view, text =
+      [%demo
+        View.vbox
+          ~gap:(`Em_float 0.5)
+          [ View.card theme ?intent:None ~title:"no intent" "[message content here]"
+          ; View.card theme ~intent:Info ~title:"information" "FYI: some stuff"
+          ; View.card theme ~intent:Success ~title:"success!!!" "a good thing happened"
+          ; View.card theme ~intent:Warning ~title:"hmmm" "please be alerted"
+          ; View.card theme ~intent:Error ~title:"UH OH" "something bad happened!"
+          ]]
+    in
+    Vdom.Node.div ~attr:(Vdom.Attr.style (Css_gen.max_width (`Px 500))) [ view ], text
+  ;;
+
+  let selector = None
+  let filter_attrs = Some (fun k _ -> not (String.is_prefix k ~prefix:"style"))
+end
+
+module Cards_with_fieldset = struct
+  let name = "Cards with fieldset styling"
+  let description = {| |}
+
+  let view =
+    let%map.Computation theme = View.Theme.current in
+    let view, text =
+      [%demo
+        View.vbox
+          ~gap:(`Em_float 0.5)
+          [ View.card
+              theme
+              ?intent:None
+              ~title:"no intent"
+              ~title_kind:Discreet
+              "[message content here]"
+          ; View.card
+              theme
+              ~intent:Info
+              ~title:"information"
+              ~title_kind:Discreet
+              "FYI: some stuff"
+          ; View.card
+              theme
+              ~intent:Success
+              ~title:"success!!!"
+              ~title_kind:Discreet
+              "a good thing happened"
+          ; View.card
+              theme
+              ~intent:Warning
+              ~title:"hmmm"
+              ~title_kind:Discreet
+              "please be alerted"
+          ; View.card
+              theme
+              ~intent:Error
+              ~title:"UH OH"
+              ~title_kind:Discreet
+              "something bad happened!"
+          ]]
+    in
+    Vdom.Node.div ~attr:(Vdom.Attr.style (Css_gen.max_width (`Px 500))) [ view ], text
+  ;;
+
+  let selector = None
+  let filter_attrs = Some (fun k _ -> not (String.is_prefix k ~prefix:"style"))
+end
+
+module Card_with_rows = struct
+  let name = "Card with rows"
+
+  let description =
+    {| View.card' allows for the content to be a list of arbitrary vdom nodes which are separated vertically from one another. |}
+  ;;
+
+  let view =
+    let%map.Computation theme = View.Theme.current in
+    let view, text =
+      [%demo
+        hbox
+          [ View.card'
+              theme
+              ~intent:Info
+              ~title:[ View.text "New message!!" ]
+              [ View.text "debug message 1 "; View.text "more debug message" ]
+          ; View.card'
+              theme
+              ~intent:Info
+              ~title_kind:Discreet
+              ~title:[ View.text "New message!!" ]
+              [ View.text "debug message 1 "; View.text "more debug message" ]
+          ]]
+    in
+    Vdom.Node.div ~attr:(Vdom.Attr.style (Css_gen.max_width (`Px 500))) [ view ], text
+  ;;
+
+  let selector = None
+  let filter_attrs = Some (fun k _ -> not (String.is_prefix k ~prefix:"style"))
+end
+
 let component =
-  let%sub theme, theme_picker = Theme_picker.component in
+  let%sub theme, theme_picker = Gallery.Theme_picker.component in
   View.Theme.set_for_app
     theme
     (Gallery.make_sections
@@ -672,6 +801,7 @@ let component =
          , {| An amalgom of Vdom.Node.text and Vdom.Node.span, View.text is used to put
            (optionally formatted) text on the screen. |}
          , [ Gallery.make_demo (module Text)
+           ; Gallery.make_demo (module Text_with_style_and_size)
            ; Gallery.make_demo (module Text_with_intent)
            ] )
        ; ( "Tooltip"
@@ -705,7 +835,6 @@ let component =
          , {| Used for navigating between pages within an application, the tabs component allows
            for zero or one active tabs. |}
          , [ Gallery.make_demo (module Basic_tabs)
-           ; Gallery.make_demo (module Advanced_tabs)
            ; Gallery.make_demo (module Enumerable_tabs)
            ] )
        ; ( "Devbar"
@@ -713,11 +842,22 @@ let component =
           is intentionally large and bright and attention-grabbing |}
          , [ Gallery.make_demo (module Devbar); Gallery.make_demo (module Devbar_intent) ]
          )
+       ; ( "Card"
+         , {| Cards are a great way of organizing the structure of your app or just
+         grabbing your users attention and letting them know things are happening, not
+         happening, happened, failed, kinda failed, kinda worked, and more!
+              |}
+         , [ Gallery.make_demo (module Basic_card)
+           ; Gallery.make_demo (module Card_with_title)
+           ; Gallery.make_demo (module Cards_with_intent)
+           ; Gallery.make_demo (module Cards_with_fieldset)
+           ; Gallery.make_demo (module Card_with_rows)
+           ] )
        ])
 ;;
 
-let (_ : _ Start.Handle.t) =
+let () =
   Async_js.init ();
   Auto_reload.refresh_on_build ();
-  Start.start Start.Result_spec.just_the_view ~bind_to_element_with_id:"app" component
+  Bonsai_web.Start.start component
 ;;

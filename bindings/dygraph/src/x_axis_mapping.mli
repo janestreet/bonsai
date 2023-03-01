@@ -40,13 +40,19 @@ type t =
   }
 
 (** [only_market_hours] will squash the overnight and weekend time periods into very small
-    values on the graph's x-axis. *)
+    values on the graph's x-axis.
+
+    The mkt_start_ofday and mkt_end_ofday are defined in the mkt_zone - in the view zone,
+    the market hours might span midnight in the view zone, but we define that it won't
+    cross midnight in the mkt_zone.
+*)
 val only_display_market_hours
   :  ?mkt_start_ofday:Time_ns.Ofday.t
   -> ?mkt_end_ofday:Time_ns.Ofday.t
   -> start_time:Time_ns.t
   -> end_time:Time_ns.t
-  -> zone:Time_float.Zone.t
+  -> view_zone:Time_float.Zone.t
+  -> ?mkt_zone:Time_float.Zone.t
   -> unit
   -> t
 

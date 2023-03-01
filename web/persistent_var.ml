@@ -33,11 +33,7 @@ let create (type a) (module M : Sexpable with type t = a) kind ~unique_id ~defau
   in
   let value =
     match getter unique_id with
-    | None ->
-      eprint_s
-        [%message
-          "WARNING: Could not find a sexp for persistent_var" (unique_id : string)];
-      default
+    | None -> default
     | Some sexp ->
       (match Or_error.try_with (fun () -> M.t_of_sexp (Sexp.of_string sexp)) with
        | Ok a -> a

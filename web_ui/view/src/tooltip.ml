@@ -10,7 +10,7 @@ module Direction = struct
 end
 
 module Style =
-  [%css.hash_variables
+  [%css
     stylesheet
       {|
   .tooltip_container {

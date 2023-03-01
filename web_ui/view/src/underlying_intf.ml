@@ -1,6 +1,9 @@
 open! Core
 open! Import
 
+type 'a render =
+  eval_context:Form_context.t -> view_context:Form_view.context -> 'a -> Vdom.Node.t list
+
 module C = struct
   class type t =
     object
@@ -36,7 +39,12 @@ module C = struct
       method use_intent_fg_or_bg_for_highlighting : [ `Fg | `Bg ]
 
       method themed_text :
-        attr:Vdom.Attr.t -> intent:Constants.Intent.t option -> string -> Vdom.Node.t
+        attr:Vdom.Attr.t
+        -> intent:Constants.Intent.t option
+        -> style:Constants.Font_style.t option
+        -> size:Constants.Font_size.t option
+        -> string
+        -> Vdom.Node.t
 
       method tooltip :
         container_attr:Vdom.Attr.t
@@ -58,6 +66,88 @@ module C = struct
       method table_body_row : Vdom.Attr.t
       method table_body_cell : Vdom.Attr.t
       method table_body_cell_empty : Vdom.Attr.t
+
+      (* misc forms *)
+      method form_view_error : Error.t -> Vdom.Node.t list
+      method form_view_error_details : Error.t -> Vdom.Node.t
+      method form_view_tooltip : Vdom.Node.t -> Vdom.Node.t
+
+      method form_remove_item :
+        eval_context:Form_context.t -> Form_view.remove_item -> index:int -> Vdom.Node.t
+
+      method form_append_item :
+        eval_context:Form_context.t -> Form_view.append_item -> Vdom.Node.t
+
+      (* form constructors *)
+      method form_empty :
+        eval_context:Form_context.t
+        -> view_context:Form_view.context
+        -> unit
+        -> Vdom.Node.t list
+
+      method form_collapsible :
+        eval_context:Form_context.t
+        -> view_context:Form_view.context
+        -> Form_view.collapsible
+        -> Vdom.Node.t list
+
+      method form_raw :
+        eval_context:Form_context.t
+        -> view_context:Form_view.context
+        -> Form_view.raw
+        -> Vdom.Node.t list
+
+      method form_record :
+        eval_context:Form_context.t
+        -> view_context:Form_view.context
+        -> Form_view.field list
+        -> Vdom.Node.t list
+
+      method form_variant :
+        eval_context:Form_context.t
+        -> view_context:Form_view.context
+        -> Form_view.variant
+        -> Vdom.Node.t list
+
+      method form_tuple :
+        eval_context:Form_context.t
+        -> view_context:Form_view.context
+        -> Form_view.t list
+        -> Vdom.Node.t list
+
+      method form_option :
+        eval_context:Form_context.t
+        -> view_context:Form_view.context
+        -> Form_view.option_view
+        -> Vdom.Node.t list
+
+      method form_list :
+        eval_context:Form_context.t
+        -> view_context:Form_view.context
+        -> Form_view.list_view
+        -> Vdom.Node.t list
+
+      method form_view : eval_context:Form_context.t -> Form_view.t -> Vdom.Node.t list
+      method form_toplevel_combine : Vdom.Node.t list -> Vdom.Node.t
+
+      (* forms *)
+      method form_to_vdom :
+        ?on_submit:Form_view.submission_options
+        -> eval_context:Form_context.t
+        -> Form_view.t
+        -> Vdom.Node.t
+
+      (* card component *)
+      method card :
+        container_attr:Vdom.Attr.t
+        -> title_attr:Vdom.Attr.t
+        -> content_attr:Vdom.Attr.t
+        -> intent:Constants.Intent.t option
+        -> on_click:unit Effect.t
+        -> title:Vdom.Node.t list
+        -> title_kind:Constants.Card_title_kind.t
+        -> content:Vdom.Node.t list
+        -> Vdom.Node.t
     end
 end
 

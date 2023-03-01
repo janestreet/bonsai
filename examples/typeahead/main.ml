@@ -98,19 +98,27 @@ let components =
            Option.some_if (Int.equal 5 (String.length input)) (Pokemon.of_string input)))
       ()
   in
-  let%sub { view = typeahead_multi_with_custom_input_vdom; _ } =
+  let typeahead_multi_with_custom_input ~all_options =
     Typeahead.create_multi
       ~to_string:(Value.return Pokemon.to_string)
       ~placeholder:"Select many pokemon"
       ~handle_unknown_option:
         (Value.return (fun input ->
-           Option.some_if (String.contains ~pos:0 input 'A') (Pokemon.of_string input)))
-      ~all_options:(Value.return Pokemon.all)
+           (* custom [handle_unknown_option] that does a check on unknown inputs *)
+           Option.some_if (String.contains ~pos:0 input 'B') (Pokemon.of_string input)))
+      ~all_options
       (module Pokemon)
+  in
+  let%sub { view = typeahead_multi_with_empty_options_vdom; _ } =
+    typeahead_multi_with_custom_input ~all_options:(Value.return [])
+  in
+  let%sub { view = typeahead_multi_with_custom_input_vdom; _ } =
+    typeahead_multi_with_custom_input ~all_options:(Value.return Pokemon.all)
   in
   let%arr typeahead_single_vdom = typeahead_single_vdom
   and typeahead_multi_vdom                    = typeahead_multi_vdom
   and typeahead_single_with_custom_input_vdom = typeahead_single_with_custom_input_vdom
+  and typeahead_multi_with_empty_options_vdom = typeahead_multi_with_empty_options_vdom
   and typeahead_multi_with_custom_input_vdom  = typeahead_multi_with_custom_input_vdom in
   Vdom.Node.create
     "main"
@@ -148,14 +156,20 @@ let components =
     ; Vdom.Node.section
         [ Vdom.Node.label
             [ Vdom.Node.text
+                "What's your favorite pokemon that starts with a \"B\"? This form has no \
+                 suggestions, so be creative."
+            ; typeahead_multi_with_empty_options_vdom
+            ]
+        ]
+    ; Vdom.Node.section
+        [ Vdom.Node.label
+            [ Vdom.Node.text
                 "What are all the pokemon you like? Choose from this list or input a \
-                 custom value that starts with an \"A\"."
+                 custom value that starts with a \"B\"."
             ; typeahead_multi_with_custom_input_vdom
             ]
         ]
     ]
 ;;
 
-let (_ : _ Start.Handle.t) =
-  Start.start Start.Result_spec.just_the_view ~bind_to_element_with_id:"app" components
-;;
+let () = Bonsai_web.Start.start components

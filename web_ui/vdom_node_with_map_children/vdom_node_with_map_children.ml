@@ -4,11 +4,23 @@ open! Js_of_ocaml
 open! Bonsai.Let_syntax
 
 module Input = struct
-  type ('k, 'cmp) t = { children : ('k, Vdom.Node.t, 'cmp) Map.t } [@@unboxed]
+  type ('k, 'cmp) t =
+    { children : ('k, Vdom.Node.t, 'cmp) Map.t
+    ; tag : string
+    ; attr : Vdom.Attr.t option
+    }
+
+  let to_empty_vdom { tag; attr; children = _ } = Vdom.Node.create tag ?attr []
 end
 
+let diff_patch ~prev ~next ~element =
+  let diff = Vdom.Node.Patch.create ~previous:prev ~current:next in
+  let (_ : Js_of_ocaml.Dom_html.element Js.t) = Vdom.Node.Patch.apply diff element in
+  ()
+;;
+
 module Widget (K : Comparator.S) = struct
-  type dom = Dom_html.divElement
+  type dom = Dom_html.element
 
   module State = struct
     type t =
@@ -144,7 +156,7 @@ module Widget (K : Comparator.S) = struct
   end
 
   let create input =
-    let dom = Dom_html.createDiv Dom_html.document in
+    let dom = Vdom.Node.to_dom (Input.to_empty_vdom input) in
     let elements =
       Map.map input.Input.children ~f:(fun vdom ->
         let element = Vdom.Node.to_dom vdom in
@@ -154,23 +166,7 @@ module Widget (K : Comparator.S) = struct
     { State.elements; me = dom }, dom
   ;;
 
-  let update ~prev_input ~input ~state ~element =
-    let init = Acc.create ~state in
-    let acc =
-      Map.fold_symmetric_diff
-        ~data_equal:phys_equal
-        prev_input.Input.children
-        input.Input.children
-        ~init
-        ~f:(fun acc -> function
-          | key, `Left _vdom -> Acc.remove acc ~key
-          | key, `Right vdom -> Acc.add acc ~key ~vdom
-          | key, `Unequal (_old_vdom, current_vdom) -> Acc.change acc ~key ~current_vdom)
-    in
-    Acc.finalize acc, element
-  ;;
-
-  let destroy ~prev_input ~state ~element:_ =
+  let destroy ~prev_input ~state ~element =
     (* destroying this widget is accomplished by running through the whole
        map and removing each child individually. *)
     let acc =
@@ -180,11 +176,49 @@ module Widget (K : Comparator.S) = struct
         ~f:(fun ~key ~data:_ acc -> Acc.remove acc ~key)
     in
     let _state = Acc.finalize acc in
-    ()
+    (* If our previous input had a hook in its attr, then we need to patch in
+       a version without the attrs in order to run the hook destruction logic. *)
+    if Option.is_some prev_input.attr
+    then
+      diff_patch
+        ~prev:(Input.to_empty_vdom prev_input)
+        ~next:(Input.to_empty_vdom { prev_input with attr = None })
+        ~element
+  ;;
+
+  let update ~prev_input ~input ~state ~element =
+    if not (String.equal prev_input.Input.tag input.Input.tag)
+    then (
+      (* we can't do an in-place diff / patch on two elements that have different
+         tags, so let's just obliterate the previous one and re-create *)
+      destroy ~prev_input ~state ~element;
+      create input)
+    else (
+      if not (Option.equal phys_equal prev_input.attr input.attr)
+      then
+        diff_patch
+          ~prev:(Input.to_empty_vdom prev_input)
+          ~next:(Input.to_empty_vdom input)
+          ~element;
+      let init = Acc.create ~state in
+      let acc =
+        Map.fold_symmetric_diff
+          ~data_equal:phys_equal
+          prev_input.Input.children
+          input.Input.children
+          ~init
+          ~f:(fun acc -> function
+            | key, `Left _vdom -> Acc.remove acc ~key
+            | key, `Right vdom -> Acc.add acc ~key ~vdom
+            | key, `Unequal (_old_vdom, current_vdom) -> Acc.change acc ~key ~current_vdom)
+      in
+      Acc.finalize acc, element)
   ;;
 
   let to_vdom_for_testing =
-    `Custom (fun { Input.children } -> Vdom.Node.div (Map.data children))
+    `Custom
+      (fun { Input.children; attr; tag } ->
+         Vdom.Node.create tag ?attr (Map.data children))
   ;;
 
   module Input = struct
@@ -200,7 +234,9 @@ end
    The implementation of this function is quite scary, no doubt, but Carl claims that
    physical-equality of comparator objects is proof that the key and comparator_witness
    types are guaranteed to be equal *)
-module Instancer = struct
+module Instancer : sig
+  val get : map:('k, Vdom.Node.t, 'cmp) Map.t -> ('k, 'cmp) Input.t -> Vdom.Node.t
+end = struct
   module Weak_map = Bonsai_web_ui_element_size_hooks.Expert.Weak_map
 
   let instances : (Obj.t, Obj.t) Weak_map.t = Weak_map.create ()
@@ -223,7 +259,7 @@ module Instancer = struct
   ;;
 end
 
-let make children =
+let make ~tag ?attr children =
   let f = Instancer.get ~map:children in
-  f { Input.children }
+  f { Input.children; tag; attr }
 ;;

@@ -10,13 +10,17 @@ module Modifiers = struct
     { shift : bool
     ; ctrl : bool
     ; alt : bool
+    ; alt_graph : bool
+    ; meta : bool
     }
   [@@deriving equal, sexp]
 
-  let of_event event =
+  let of_event (event : Js_of_ocaml.Dom_html.keyboardEvent Js_of_ocaml.Js.t) =
     { shift = Js.to_bool event##.shiftKey
     ; ctrl = Js.to_bool event##.ctrlKey
     ; alt = Js.to_bool event##.altKey
+    ; alt_graph = Js.to_bool (event##getModifierState (Js.string "AltGraph"))
+    ; meta = Js.to_bool event##.metaKey
     }
   ;;
 end
@@ -30,8 +34,10 @@ module Action = struct
         ; charcode : int option
         ; modifiers : Modifiers.t
         ; js_ocaml : Keyboard_code.t
+        ; keystroke : Keystroke.t
         }
     | Enter_pressed
+    | Ctrl_alt_e_pressed
     | Ctrl_shift_slash_pressed
     | Down_arrow_pressed
   [@@deriving equal, sexp]
@@ -48,6 +54,11 @@ let handle_event inject =
         ; description = "slash"
         ; group = None
         ; handler = (fun _ -> inject Action.Ctrl_shift_slash_pressed)
+        }
+      ; { Command.keys = [ Keystroke.create' ~ctrl:() ~alt:() Keyboard_code.KeyE ]
+        ; description = "ctrl+alt+e"
+        ; group = None
+        ; handler = (fun _ -> inject Action.Ctrl_alt_e_pressed)
         }
       ; { Command.keys = [ Keystroke.create' Keyboard_code.Enter ]
         ; description = "enter"
@@ -67,9 +78,12 @@ let handle_event inject =
     let keycode = event##.keyCode in
     let charcode = event##.charCode |> Js.Optdef.to_option in
     let js_ocaml = Keyboard_code.of_event event in
-    match Keyboard_event_handler.handle_event keyboard_handler event with
-    | Some event -> event
-    | None ->
+    let specialized =
+      match Keyboard_event_handler.handle_event keyboard_handler event with
+      | Some event -> event
+      | None -> Ui_effect.Ignore
+    in
+    let something_pressed =
       inject
         (Action.Something_pressed
            { js_ocaml
@@ -78,7 +92,10 @@ let handle_event inject =
            ; keycode
            ; charcode
            ; modifiers = Modifiers.of_event event
+           ; keystroke = Keystroke.of_event event
            })
+    in
+    Effect.Many [ something_pressed; specialized ]
 ;;
 
 module Style = [%css stylesheet {| .red { color: red } |}]
@@ -105,6 +122,4 @@ let component =
     ]
 ;;
 
-let (_ : _ Start.Handle.t) =
-  Start.start Start.Result_spec.just_the_view ~bind_to_element_with_id:"app" component
-;;
+let () = Bonsai_web.Start.start component

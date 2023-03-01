@@ -1,4 +1,4 @@
-# ppx_let
+# ppx_bonsai
 
 A ppx rewriter for Bonsai's %sub and %arr let syntaxes.
 

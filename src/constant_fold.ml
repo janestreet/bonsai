@@ -40,9 +40,8 @@ include struct
   ;;
 
   let computation_exception_folder name ~f =
-    Proc.wrap_computation
-      (try f () with
-       | exn -> Computation.Return (wrap_value ~here:None name (Exception exn)))
+    try f () with
+    | exn -> Computation.Return (wrap_value ~here:None name (Exception exn))
   ;;
 
   let lazy_contents_if_value_is_constant : type a. a Value.t -> a Lazy.t option =
@@ -197,7 +196,7 @@ module Constant_fold (Recurse : Fix_transform.Recurse with module Types := Types
   let transform_c (type a) { constants_in_scope; evaluated } (t : a Computation.t)
     : a Computation.t
     =
-    match t.kind with
+    match t with
     | Assoc ({ map; key_id; data_id; by; key_comparator; _ } as assoc_t) ->
       let (), (), map_v =
         Recurse.on_value { constants_in_scope; evaluated } () `Directly_on map
@@ -211,11 +210,11 @@ module Constant_fold (Recurse : Fix_transform.Recurse with module Types := Types
               that [by] will refer to these constants and then we can recursively rely on
               the constant-folding optimizations to clean up these [Sub]s for us. *)
            let data_binding =
-             Sub { here = None; from = Proc.const data; via = data_id; into = by }
-             |> Proc.wrap_computation
+             Computation.Sub
+               { here = None; from = Proc.const data; via = data_id; into = by }
            in
-           Sub { here = None; from = Proc.const key; via = key_id; into = data_binding }
-           |> Proc.wrap_computation)
+           Computation.Sub
+             { here = None; from = Proc.const key; via = key_id; into = data_binding })
          |> Proc.Computation.all_map
          |> Recurse.on_computation { constants_in_scope; evaluated } () `Directly_on
          |> fun ((), (), r) -> r
@@ -228,8 +227,8 @@ module Constant_fold (Recurse : Fix_transform.Recurse with module Types := Types
              by
          in
          (match simplify_assoc_if_simpl ~key_comparator ~key_id ~data_id map_v by with
-          | Some kind -> Proc.wrap_computation kind
-          | None -> Proc.wrap_computation (Assoc { assoc_t with map = map_v; by })))
+          | Some kind -> kind
+          | None -> Assoc { assoc_t with map = map_v; by }))
     | Assoc_on
         ({ map; io_comparator = key_comparator; io_key_id = key_id; data_id; by; _ } as
          assoc_on_t) ->
@@ -244,9 +243,9 @@ module Constant_fold (Recurse : Fix_transform.Recurse with module Types := Types
           by
       in
       (match simplify_assoc_if_simpl ~key_comparator ~key_id ~data_id map by with
-       | Some kind -> Proc.wrap_computation kind
-       | None -> Proc.wrap_computation (Assoc_on { assoc_on_t with map; by }))
-    | Switch { match_; arms } ->
+       | Some kind -> kind
+       | None -> Assoc_on { assoc_on_t with map; by })
+    | Switch { match_; arms; here } ->
       let (), (), match_ =
         Recurse.on_value { constants_in_scope; evaluated } () `Directly_on match_
       in
@@ -278,12 +277,12 @@ module Constant_fold (Recurse : Fix_transform.Recurse with module Types := Types
              in
              r)
          in
-         Proc.wrap_computation (Switch { match_; arms }))
+         Switch { match_; arms; here })
     | Sub { from; via; into; here } ->
       let (), (), from =
         Recurse.on_computation { constants_in_scope; evaluated } () `Directly_on from
       in
-      (match from.kind with
+      (match from with
        | Return with_id when value_is_constant with_id ->
          let new_constants_in_scope =
            Constants_in_scope.add_exn ~key:via ~data:with_id constants_in_scope
@@ -300,26 +299,25 @@ module Constant_fold (Recurse : Fix_transform.Recurse with module Types := Types
          let (), (), into =
            Recurse.on_computation { constants_in_scope; evaluated } () `Directly_on into
          in
-         Proc.wrap_computation (Sub { from; via; into; here }))
-    | Leaf1 { input; model; dynamic_action; apply_action; reset } ->
+         Sub { from; via; into; here })
+    | Leaf1 { input; input_id; model; dynamic_action; apply_action; reset } ->
       let (), (), input =
         Recurse.on_value { constants_in_scope; evaluated } () `Directly_on input
       in
       computation_exception_folder "leaf1" ~f:(fun () ->
         match contents_if_value_is_constant input with
-        | None -> Leaf1 { input; model; dynamic_action; apply_action; reset }
+        | None -> Leaf1 { input; input_id; model; dynamic_action; apply_action; reset }
         | Some input ->
           let apply_action ~inject_dynamic ~inject_static =
             apply_action
               ~inject_static:inject_dynamic
               ~inject_dynamic:inject_static
-              input
+              (Some input)
           in
           let reset ~inject_dynamic ~inject_static =
             reset ~inject_static:inject_dynamic ~inject_dynamic:inject_static
           in
-          let compute ~inject model = model, inject in
-          Leaf0 { model; static_action = dynamic_action; apply_action; compute; reset })
+          Leaf0 { model; static_action = dynamic_action; apply_action; reset })
     | Lazy t ->
       (match evaluated with
        | Unconditionally ->
@@ -353,8 +351,7 @@ module Constant_fold (Recurse : Fix_transform.Recurse with module Types := Types
                t
            in
            t)
-         |> Computation.Lazy
-         |> Proc.wrap_computation)
+         |> Computation.Lazy)
     | Return _
     | Leaf0 _
     | Leaf01 _
@@ -366,8 +363,7 @@ module Constant_fold (Recurse : Fix_transform.Recurse with module Types := Types
     | With_model_resetter _
     | Path
     | Assoc_simpl _
-    | Lifecycle _
-    | Identity _ ->
+    | Lifecycle _ ->
       let (), (), c =
         Recurse.on_computation { constants_in_scope; evaluated } () `Skipping_over t
       in

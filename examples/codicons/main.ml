@@ -124,7 +124,9 @@ module Icon_grid = struct
     in
     let on_click =
       Vdom.Attr.on_click (fun _ ->
-        Js_clipboard.Asynchronous.copy_text (Js_of_ocaml.Js.string variant_name);
+        let%bind.Effect (_ : unit Or_error.t) =
+          Js_clipboard.Asynchronous.copy_text (Js_of_ocaml.Js.string variant_name)
+        in
         set_copied)
     in
     let style = Style.icon in
@@ -189,6 +191,4 @@ let app =
   Vdom.Node.div ~attr:Style.main [ search; grid ]
 ;;
 
-let (_ : _ Start.Handle.t) =
-  Start.start Start.Result_spec.just_the_view ~bind_to_element_with_id:"app" app
-;;
+let () = Bonsai_web.Start.start app

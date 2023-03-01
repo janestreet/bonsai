@@ -53,14 +53,20 @@ type 'a t
 val create_exn : (module S with type t = 'a) -> fallback:'a -> 'a t
 
 val update : 'a t -> f:('a -> 'a) -> unit
-val set : 'a t -> 'a -> unit
+
+(** [set] updates the contents of the url-var as well as the current browser
+    location. When [how] is `Push (which is the default), it will add
+    a new entry to the top of the browser's history stack, but `Replace
+    will cause it to replace the top entry of the history stack with the new URL. *)
+val set : ?how:[ `Push | `Replace ] -> 'a t -> 'a -> unit
+
 val get : 'a t -> 'a
 val value : 'a t -> 'a Value.t
 
 (** By asking for the [Url_var.t]'s effect, you get a function that can be easily threaded
     through your components and triggered inside an action-application or inside of an
     event listener. *)
-val set_effect : 'a t -> 'a -> unit Effect.t
+val set_effect : ?how:[ `Push | `Replace ] -> 'a t -> 'a -> unit Effect.t
 
 type 'a url_var = 'a t
 
@@ -69,11 +75,11 @@ type 'a url_var = 'a t
     parser, ambiguity checking and functions to make backwards compatibility easier.
     Please read [../README.mdx] first to make reading this MLI easier.
 
-    Most of this module lives in [lib/uri_parsing], a separate library. This is weird, but since
-    URL Var depends on html5_history, it can only be ran in a JavaScript/browser context.
-    This split allows you to run the same parsing/unparsing logic on both the server and client
-    which is useful if you're thinking about generating url's/doing http server route handling.
-*)
+    Most of this module lives in [lib/uri_parsing], a separate library. This is weird, but
+    since URL Var depends on html5_history, it can only be ran in a JavaScript/browser
+    context. This split allows you to run the same parsing/unparsing logic on both the
+    server and client which is useful if you're thinking about generating url's/doing http
+    server route handling. *)
 module Typed : sig
   module Components : sig
     type t = Uri_parsing.Components.t

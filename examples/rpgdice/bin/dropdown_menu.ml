@@ -20,6 +20,7 @@ module Make (Enum : Enum) = struct
     let compute ~inject () model =
       let dom_node =
         Vdom_input_widgets.Dropdown.of_enum
+          ~merge_behavior:Legacy_dont_merge
           (module Enum)
           ~selected:model
           ~on_change:(fun new_value -> inject (Action.Set_to new_value))

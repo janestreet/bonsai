@@ -67,10 +67,11 @@ module Order = struct
           let%map compare = Map.find sorters id in
           match direction with
           | `Asc -> compare
-          | `Desc -> Comparable.reverse compare)
+          | `Desc -> fun a b -> Comparable.reverse compare a b)
       in
       let compare =
-        List.append l (Option.to_list default_sort) |> Comparable.lexicographic
+        List.append l (Option.to_list default_sort)
+        |> fun cmps a b -> Comparable.lexicographic cmps a b
       in
       Custom_by_key_and_value { compare }
   ;;

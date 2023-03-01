@@ -48,18 +48,6 @@ module Row_machine = struct
     [@@deriving sexp, equal]
   end
 
-  module Range_response = struct
-    type 'k t =
-      | Yes
-      | No_but_this_one_is of 'k Triple.t
-      | Indeterminate
-  end
-
-  let collated_range collated =
-    ( Collated.num_before_range collated
-    , Collated.num_before_range collated + Collated.length collated )
-  ;;
-
   let find_by collated ~f =
     with_return_option (fun { return } ->
       let i = ref (Collated.num_before_range collated) in
@@ -73,15 +61,6 @@ module Row_machine = struct
 
   let find_by_key collated ~key:needle ~key_equal =
     find_by collated ~f:(fun ~key ~id:_ ~index:_ -> key_equal key needle)
-  ;;
-
-  let find_by_id collated ~id:needle =
-    let map = Collated.to_map_list collated in
-    match Map.find map needle, Map.rank map needle with
-    | Some (key, _), Some rank ->
-      let index = Collated.num_before_range collated + rank in
-      Some { Triple.key; id = needle; index }
-    | _ -> None
   ;;
 
   let find_by_index collated ~index:needle =
@@ -100,51 +79,6 @@ module Row_machine = struct
         | Some a -> Stop (Some a)
         | None -> Continue ())
       ~finish:(fun () -> None)
-  ;;
-
-  let fetch_or_fail collated ~index =
-    match find_by_index collated ~index with
-    | Some { Triple.key; id; index } ->
-      Range_response.No_but_this_one_is { key; id; index }
-    | None ->
-      eprint_s [%message [%here] "should be in range"];
-      Indeterminate
-  ;;
-
-  (* Lookup for the value will first attempt to find the value in this order:
-     - lookup by key
-     - lookup by index
-     - lookup by id
-
-     This function is potentially quite slow, but 99% of the time, there will
-     be a hit on the first lookup, which is O(log n). *)
-  let find_in_range ~range:(range_start, range_end) ~collated ~key ~id ~index ~key_equal =
-    let col_start, col_end = collated_range collated in
-    if col_start > range_end || col_end < col_start
-    then Range_response.Indeterminate
-    else (
-      let attempt =
-        first_some
-          [ lazy (find_by_key collated ~key ~key_equal)
-          ; lazy (find_by_index collated ~index)
-          ; lazy (find_by_id collated ~id)
-          ]
-      in
-      match attempt with
-      | Some ({ Triple.key = _; id = _; index } as triple) ->
-        if index >= range_start && index <= range_end
-        then Yes
-        else if index < range_start
-        then fetch_or_fail collated ~index:range_start
-        else if index > range_end
-        then fetch_or_fail collated ~index:range_end
-        else (
-          eprint_s [%message [%here] "unreachable" (triple : opaque Triple.t)];
-          Indeterminate)
-      | None ->
-        (match find_by_index collated ~index:range_start with
-         | Some r -> No_but_this_one_is r
-         | None -> Indeterminate))
   ;;
 
   module Action = struct
@@ -191,12 +125,12 @@ module Row_machine = struct
           unfocused, or if the element that was previously selected has been
           removed. *)
       type t =
-        { shadow : Key.t Triple.t option
-        ; current : Key.t Triple.t option
-        }
+        | No_focused_row
+        | Shadow of Key.t Triple.t
+        | Visible of Key.t Triple.t
       [@@deriving sexp, equal]
 
-      let empty = { shadow = None; current = None }
+      let empty = No_focused_row
     end
     in
     let module Input = struct
@@ -235,12 +169,12 @@ module Row_machine = struct
           (* scrolling this row to the top of the display involves
              scrolling to a pixel that is actually [header_height] _above_
              the target row. *)
-          Some ((row_height * index) - header_height, `To_top)
+          Some ((row_height * index) - header_height)
         in
         let to_bottom =
           (* scroll to the bottom of this row means scrolling to the top of
              a one-pixel element just below this row *)
-          Some (row_height * (index + 1), `To_bottom)
+          Some (row_height * (index + 1))
         in
         match force_position with
         | Some `To_top -> to_top
@@ -248,126 +182,145 @@ module Row_machine = struct
         | Some `To_bottom -> to_bottom
         | None when index >= range_end -> to_bottom
         | _ -> None)
-      |> Option.iter ~f:(fun (y_px, how) ->
+      |> Option.iter ~f:(fun y_px ->
         Scroll.to_position_inside_element
           ~x_px:midpoint_of_container
           ~y_px
           ~selector
-          how
+          `Minimal
         |> Effect.ignore_m
         |> schedule_event);
       triple
     in
-    let apply_action
-          ~inject:_
-          ~schedule_event
+    let apply_action ~inject:_ ~schedule_event input (model : Model.t) action =
+      match input with
+      | Bonsai.Computation_status.Active
           { Input.collated
           ; range = range_start, range_end
           ; path
           ; header_height
           ; on_change
           ; midpoint_of_container
-          }
-          (model : Model.t)
-          action
-      =
-      let selector = ".partial-render-table-" ^ path ^ " > div" in
-      let scroll_if_some =
-        scroll_if_some
-          ~header_height
-          ~range_start
-          ~range_end
-          ~schedule_event
-          ~selector
-          ~midpoint_of_container
-      in
-      let new_focus =
-        match (action : Action.t) with
-        | Select key ->
+          } ->
+        let selector = ".partial-render-table-" ^ path ^ " > div" in
+        let scroll_if_some =
           scroll_if_some
-            ~force_position:None
-            (find_by_key ~key ~key_equal:Key.equal collated)
-        | Unfocus -> None
-        | Down ->
-          let next =
-            match model with
-            | { current = None; shadow = Some { index; _ } } ->
-              (* If we don't have a current focus, but there is a shadow-focus, try to
-                 focus the element below it, and if that's not available, then attempting
-                 to focus the shadow row is fine too. *)
-              first_some
-                [ lazy (find_by_index collated ~index:(index + 1))
-                ; lazy (find_by_index collated ~index)
-                ]
-            | { current = None; shadow = None } ->
-              (* "down" when completely unfocused starts at the top of the visible screen *)
-              find_by_index collated ~index:range_start
-            | { current = Some { Triple.key; index = old_index; _ }; _ } ->
-              (* start by finding the index of the row we're currently focused on *)
-              (match find_by_key collated ~key ~key_equal:Key.equal with
-               | Some { Triple.index; _ } ->
-                 (* if we find it... *)
-                 Option.first_some
-                   (* try to get the next one *)
-                   (find_by_index collated ~index:(index + 1))
-                   (* if we can't, stay where we are *)
-                   model.current
-               | None ->
-                 (* if it's gone, refocus at the previous index. *)
-                 find_by_index collated ~index:old_index)
-          in
-          scroll_if_some next ~force_position:None
-        | Up ->
-          let next =
-            match model with
-            | { current = None; shadow = Some { index; _ } } ->
-              first_some
-                [ lazy (find_by_index collated ~index:(index - 1))
-                ; lazy (find_by_index collated ~index)
-                ]
-            | { current = None; shadow = None } ->
-              let index =
-                Int.min
-                  range_end
-                  (* range_end can be bigger than the actual length of the table, so
-                     clamp it to the max size of the table *)
-                  (Collated.num_after_range collated + Collated.length collated)
-              in
-              first_some
-                [ lazy (find_by_index collated ~index:(index - 1))
-                ; lazy (find_by_index collated ~index)
-                ]
-            | { current = Some { Triple.key; index = old_index; _ }; _ } ->
-              (match find_by_key collated ~key ~key_equal:Key.equal with
-               | Some { Triple.index; _ } ->
-                 Option.first_some
-                   (find_by_index collated ~index:(index - 1))
-                   model.current
-               | None -> find_by_index collated ~index:(old_index - 1))
-          in
-          scroll_if_some ~force_position:None next
-        | Page_down ->
-          scroll_if_some
-            ~force_position:(Some `To_top)
-            (find_by_index collated ~index:range_end)
-        | Page_up ->
-          scroll_if_some
-            ~force_position:(Some `To_bottom)
-            (find_by_index collated ~index:range_start)
-      in
-      let new_shadow =
-        match action, model.current with
-        | Unfocus, None -> model.shadow
-        | Unfocus, Some current -> Some current
-        | _ -> None
-      in
-      let prev_key = Option.map model.current ~f:(fun { key; _ } -> key)
-      and next_key = Option.map new_focus ~f:(fun { key; _ } -> key) in
-      if not ([%equal: Key.t option] prev_key next_key)
-      then schedule_event (on_change next_key);
-      { Model.current = new_focus; shadow = new_shadow }
+            ~header_height
+            ~range_start
+            ~range_end
+            ~schedule_event
+            ~selector
+            ~midpoint_of_container
+        in
+        let new_focus =
+          match (action : Action.t) with
+          | Select key ->
+            scroll_if_some
+              ~force_position:None
+              (find_by_key ~key ~key_equal:Key.equal collated)
+          | Unfocus -> None
+          | Down ->
+            let next =
+              match model with
+              | Shadow { index; _ } ->
+                (* If we don't have a current focus, but there is a shadow-focus, try to
+                   focus the element below it, and if that's not available, then attempting
+                   to focus the shadow row is fine too. *)
+                first_some
+                  [ lazy (find_by_index collated ~index:(index + 1))
+                  ; lazy (find_by_index collated ~index)
+                  ]
+              | No_focused_row ->
+                (* "down" when completely unfocused starts at the top of the visible screen *)
+                find_by_index collated ~index:range_start
+              | Visible ({ Triple.key; index = old_index; _ } as current) ->
+                (* start by finding the index of the row we're currently focused on *)
+                (match find_by_key collated ~key ~key_equal:Key.equal with
+                 | Some { Triple.index; _ } ->
+                   (* if we find it... *)
+                   Option.first_some
+                     (* try to get the next one *)
+                     (find_by_index collated ~index:(index + 1))
+                     (* if we can't, stay where we are *)
+                     (Some current)
+                 | None ->
+                   (* if it's gone, refocus at the previous index. *)
+                   find_by_index collated ~index:old_index)
+            in
+            scroll_if_some next ~force_position:None
+          | Up ->
+            let next =
+              match model with
+              | Shadow { index; _ } ->
+                first_some
+                  [ lazy (find_by_index collated ~index:(index - 1))
+                  ; lazy (find_by_index collated ~index)
+                  ]
+              | No_focused_row ->
+                let index =
+                  Int.min
+                    range_end
+                    (* range_end can be bigger than the actual length of the table, so
+                       clamp it to the max size of the table *)
+                    (Collated.num_after_range collated + Collated.length collated)
+                in
+                first_some
+                  [ lazy (find_by_index collated ~index:(index - 1))
+                  ; lazy (find_by_index collated ~index)
+                  ]
+              | Visible ({ Triple.key; index = old_index; _ } as current) ->
+                (match find_by_key collated ~key ~key_equal:Key.equal with
+                 | Some { Triple.index; _ } ->
+                   Option.first_some
+                     (find_by_index collated ~index:(index - 1))
+                     (Some current)
+                 | None -> find_by_index collated ~index:(old_index - 1))
+            in
+            scroll_if_some ~force_position:None next
+          | Page_down ->
+            scroll_if_some
+              ~force_position:(Some `To_top)
+              (find_by_index collated ~index:range_end)
+          | Page_up ->
+            scroll_if_some
+              ~force_position:(Some `To_bottom)
+              (find_by_index collated ~index:range_start)
+        in
+        let new_model =
+          match action with
+          | Unfocus ->
+            (match model with
+             | No_focused_row -> Model.No_focused_row
+             | Visible triple | Shadow triple -> Shadow triple)
+          | _ ->
+            (match new_focus with
+             | Some triple -> Visible triple
+             | None -> No_focused_row)
+        in
+        let prev_key =
+          match model with
+          | No_focused_row | Shadow _ -> None
+          | Visible { key; _ } -> Some key
+        in
+        let next_key =
+          match new_model with
+          | No_focused_row | Shadow _ -> None
+          | Visible { key; _ } -> Some key
+        in
+        if not ([%equal: Key.t option] prev_key next_key)
+        then schedule_event (on_change next_key);
+        new_model
+      | Inactive ->
+        eprint_s
+          [%message
+            [%here]
+              "An action sent to a [state_machine1] has been dropped because its input \
+               was not present. This happens when the [state_machine1] is inactive when \
+               it receives a message."
+              (action : Action.t)];
+        model
     in
-    let%sub { current; _ }, inject =
+    let%sub current, inject =
       Bonsai.Incr.model_cutoff
       @@ Bonsai.state_machine1
            (module Model)
@@ -393,7 +346,9 @@ module Row_machine = struct
       }
     in
     let%sub current =
-      Bonsai.pure (Option.map ~f:(fun { Triple.key; _ } -> key)) current
+      match%arr current with
+      | Visible { key; _ } -> Some key
+      | No_focused_row | Shadow _ -> None
     in
     let%sub presence = compute_presence current in
     let%arr presence = presence
@@ -454,10 +409,3 @@ let get_on_row_click
     let%map { focus; _ } = value in
     focus
 ;;
-
-module For_testing = struct
-  module Range_response = Row_machine.Range_response
-  module Triple = Row_machine.Triple
-
-  let find_in_range = Row_machine.find_in_range
-end

@@ -110,9 +110,9 @@ let component =
       let open Float in
       let p = Percent.to_percentage p in
       if p < 30.0
-      then Tailwind_colors.yellow600
+      then Tailwind_colors.amber600
       else if p < 60.0
-      then Tailwind_colors.yellow500
+      then Tailwind_colors.amber500
       else if p < 90.0
       then Tailwind_colors.red600
       else Tailwind_colors.red500
@@ -145,6 +145,4 @@ let component =
     ]
 ;;
 
-let (_ : _ Start.Handle.t) =
-  Start.start Start.Result_spec.just_the_view ~bind_to_element_with_id:"app" component
-;;
+let () = Bonsai_web.Start.start component

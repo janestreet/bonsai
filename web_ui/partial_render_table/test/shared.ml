@@ -19,13 +19,18 @@ end
 type t =
   { a : string
   ; b : float
+  ; c : string
+  ; d : int
+  ; e : string
   }
 [@@deriving fields]
 
 let columns ~is_column_b_visible =
   [ Columns.column
       ~label:(Value.return (Vdom.Node.text "key"))
-      ~sort:(Value.return (Comparable.lift [%compare: int] ~f:(fun (key, _) -> key)))
+      ~sort:
+        (Value.return (fun a b ->
+           Comparable.lift [%compare: int] ~f:(fun (key, _) -> key) a b))
       ~cell:(fun ~key ~data:_ ->
         let%arr key = key in
         Vdom.Node.textf "%d" key)
@@ -44,7 +49,9 @@ let columns ~is_column_b_visible =
   ; Columns.column
       ~visible:is_column_b_visible
       ~label:(Value.return (Vdom.Node.text "b"))
-      ~sort:(Value.return (Comparable.lift [%compare: float] ~f:(fun (_, { b; _ }) -> b)))
+      ~sort:
+        (Value.return (fun a b_1 ->
+           Comparable.lift [%compare: float] ~f:(fun (_, { b; _ }) -> b) a b_1))
       ~cell:(fun ~key:_ ~data ->
         let%arr { b; _ } = data in
         Vdom.Node.textf "%f" b)
@@ -56,34 +63,107 @@ let columns_dynamic ~is_column_b_visible =
   let module Columns = Table.Columns.Dynamic_columns in
   [ Columns.column
       ~label:(Vdom.Node.text "key")
-      ~sort:(Comparable.lift [%compare: int] ~f:(fun (key, _) -> key))
+      ~sort:(fun a b -> Comparable.lift [%compare: int] ~f:(fun (key, _) -> key) a b)
       ~cell:(fun ~key ~data:_ -> Vdom.Node.textf "%d" key)
       ()
   ; Columns.column
       ~label:(Vdom.Node.text "a")
-      ~sort:(Comparable.lift [%compare: string] ~f:(fun (_, { a; _ }) -> a))
+      ~sort:(fun a_1 b ->
+        Comparable.lift [%compare: string] ~f:(fun (_, { a; _ }) -> a) a_1 b)
       ~cell:(fun ~key:_ ~data:{ a; _ } -> Vdom.Node.textf "%s" a)
       ()
   ; Columns.column
       ~visible:is_column_b_visible
       ~label:(Vdom.Node.text "b")
-      ~sort:(Comparable.lift [%compare: float] ~f:(fun (_, { b; _ }) -> b))
+      ~sort:(fun a b_1 ->
+        Comparable.lift [%compare: float] ~f:(fun (_, { b; _ }) -> b) a b_1)
       ~cell:(fun ~key:_ ~data:{ b; _ } -> Vdom.Node.textf "%f" b)
       ()
   ]
 ;;
 
+let columns_dynamic_with_groups ~is_column_b_visible =
+  let module Columns = Table.Columns.Dynamic_columns in
+  let cols =
+    [ Columns.column
+        ~label:(Vdom.Node.text "key")
+        ~sort:(fun a b -> Comparable.lift [%compare: int] ~f:(fun (key, _) -> key) a b)
+        ~cell:(fun ~key ~data:_ -> Vdom.Node.textf "%d" key)
+        ()
+    ]
+  in
+  let group_1 =
+    Columns.group
+      ~label:(Vdom.Node.text "Basics")
+      [ Columns.column
+          ~label:(Vdom.Node.text "a")
+          ~sort:(fun a_1 b ->
+            Comparable.lift [%compare: string] ~f:(fun (_, { a; _ }) -> a) a_1 b)
+          ~cell:(fun ~key:_ ~data:{ a; _ } -> Vdom.Node.textf "%s" a)
+          ()
+      ; Columns.column
+          ~visible:is_column_b_visible
+          ~label:(Vdom.Node.text "b")
+          ~sort:(fun a b_1 ->
+            Comparable.lift [%compare: float] ~f:(fun (_, { b; _ }) -> b) a b_1)
+          ~cell:(fun ~key:_ ~data:{ b; _ } -> Vdom.Node.textf "%f" b)
+          ()
+      ]
+  in
+  let level_2 =
+    Columns.group
+      ~label:(Vdom.Node.text "Level 2")
+      [ Columns.column
+          ~label:(Vdom.Node.text "c")
+          ~sort:(fun a_1 b ->
+            Comparable.lift [%compare: string] ~f:(fun (_, { c; _ }) -> c) a_1 b)
+          ~cell:(fun ~key:_ ~data:{ c; _ } -> Vdom.Node.textf "%s" c)
+          ()
+      ; Columns.column
+          ~visible:is_column_b_visible
+          ~label:(Vdom.Node.text "d")
+          ~sort:(fun a b_1 ->
+            Comparable.lift [%compare: int] ~f:(fun (_, { d; _ }) -> d) a b_1)
+          ~cell:(fun ~key:_ ~data:{ d; _ } -> Vdom.Node.textf "%d" d)
+          ()
+      ]
+  in
+  let group_2_nested =
+    Columns.group
+      ~label:(Vdom.Node.text "Level 1")
+      [ level_2
+      ; Columns.column
+          ~label:(Vdom.Node.text "e")
+          ~sort:(fun a_1 b ->
+            Comparable.lift [%compare: string] ~f:(fun (_, { e; _ }) -> e) a_1 b)
+          ~cell:(fun ~key:_ ~data:{ e; _ } -> Vdom.Node.textf "%s" e)
+          ()
+      ]
+  in
+  cols @ [ group_1; group_2_nested ]
+;;
+
 let small_map =
   Int.Map.of_alist_exn
-    [ 0, { a = "hello"; b = 1.0 }
-    ; 1, { a = "there"; b = 2.0 }
-    ; 4, { a = "world"; b = 2.0 }
+    [ 0, { a = "hello"; b = 1.0; c = "c"; d = 1; e = "x" }
+    ; 1, { a = "there"; b = 2.0; c = "c"; d = 2; e = "y" }
+    ; 4, { a = "world"; b = 2.0; c = "c"; d = 3; e = "z" }
     ]
 ;;
 
 let big_map =
   Int.Map.of_alist_exn
-    (List.range 1 100 |> List.map ~f:(fun i -> i, { a = "hi"; b = Float.of_int (i / 2) }))
+    (List.range 1 100
+     |> List.map ~f:(fun i ->
+       i, { a = "hi"; b = Float.of_int (i / 2); c = "apple"; d = 100; e = "1st" }))
+;;
+
+let groups_map =
+  Int.Map.of_alist_exn
+    [ 0, { a = "hello"; b = 1.0; c = "apple"; d = 100; e = "1st" }
+    ; 1, { a = "there"; b = 2.0; c = "banana"; d = 100; e = "3rd" }
+    ; 4, { a = "world"; b = 2.0; c = "pear"; d = 200; e = "2nd" }
+    ]
 ;;
 
 module Test = struct
@@ -92,6 +172,7 @@ module Test = struct
   type 'a t =
     { handle : ('a, Action.t) Bonsai_web_test.Handle.t
     ; get_vdom : 'a -> Vdom.Node.t
+    ; get_num_filtered_rows : 'a -> int option
     ; get_focus : 'a -> int Table.Focus.By_row.optional
     ; input_var : outer Int.Map.t Bonsai.Var.t
     ; filter_var : (key:int -> data:outer -> bool) Bonsai.Var.t
@@ -109,6 +190,7 @@ module Test = struct
       ; get_inject : 'a -> Action.t -> unit Ui_effect.t
       ; get_testing : 'a -> Bonsai_web_ui_partial_render_table.For_testing.t Lazy.t
       ; get_focus : 'a -> int Table.Focus.By_row.optional
+      ; get_num_filtered_rows : 'a -> int option
       }
 
     let get_inject' t f =
@@ -147,10 +229,23 @@ module Test = struct
       ; get_inject
       ; get_testing = Table.Result.for_testing
       ; get_focus = Table.Result.focus
+      ; get_num_filtered_rows = (fun a -> Some (Table.Result.num_filtered_rows a))
       }
     ;;
 
-    let default' ?(preload_rows = 0) ?(is_column_b_visible = true) () input filter =
+    let default'
+          ?(with_groups = false)
+          ?(preload_rows = 0)
+          ?(is_column_b_visible = true)
+          ()
+          input
+          filter
+      =
+      let columns =
+        match with_groups with
+        | false -> columns_dynamic ~is_column_b_visible
+        | true -> columns_dynamic_with_groups ~is_column_b_visible
+      in
       { component =
           Table.component
             (module Int)
@@ -158,14 +253,13 @@ module Test = struct
             ~filter
             ~row_height:(`Px 1)
             ~preload_rows
-            ~columns:
-              (Bonsai.Value.return (columns_dynamic ~is_column_b_visible)
-               |> Table.Columns.Dynamic_columns.lift)
+            ~columns:(Bonsai.Value.return columns |> Table.Columns.Dynamic_columns.lift)
             input
       ; get_vdom = Table.Result.view
       ; get_testing = Table.Result.for_testing
       ; get_focus = Table.Result.focus
       ; get_inject
+      ; get_num_filtered_rows = (fun a -> Some (Table.Result.num_filtered_rows a))
       }
     ;;
 
@@ -206,6 +300,7 @@ module Test = struct
       ; get_testing = Table_expert.Result.for_testing
       ; get_focus = Table_expert.Result.focus
       ; get_inject = get_inject_expert
+      ; get_num_filtered_rows = (fun _ -> None)
       }
     ;;
   end

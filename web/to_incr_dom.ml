@@ -19,7 +19,16 @@ end
 
 module Action_unshadowed = Action
 
-let create_generic run ~fresh ~input ~model ~inject_dynamic ~inject_static ~apply_static =
+let create_generic
+      run
+      ~fresh
+      ~input
+      ~model
+      ~inject_dynamic
+      ~inject_static
+      ~apply_static
+      ~apply_dynamic
+  =
   let environment =
     Bonsai.Private.Environment.(empty |> add_exn ~key:fresh ~data:input)
   in
@@ -33,15 +42,20 @@ let create_generic run ~fresh ~input ~model ~inject_dynamic ~inject_static ~appl
       ~inject_static
   in
   let%map view, extra = Bonsai.Private.Snapshot.result snapshot
-  and dynamic_apply_action =
-    Bonsai.Private.Apply_action.to_incremental
-      (Bonsai.Private.Snapshot.apply_action snapshot)
+  and input = Bonsai.Private.Input.to_incremental (Bonsai.Private.Snapshot.input snapshot)
   and lifecycle = Bonsai.Private.Snapshot.lifecycle_or_empty snapshot
   and model = model in
   let schedule_event = Vdom.Effect.Expert.handle_non_dom_event_exn in
   let apply_action action _state ~schedule_action:_ =
     match action with
-    | Action.Dynamic action -> dynamic_apply_action model action ~schedule_event
+    | Action.Dynamic action ->
+      apply_dynamic
+        ~inject_dynamic
+        ~inject_static
+        ~schedule_event
+        (Some input)
+        model
+        action
     | Action.Static action ->
       apply_static ~inject_dynamic ~inject_static ~schedule_event model action
   in
@@ -56,18 +70,20 @@ let create_generic run ~fresh ~input ~model ~inject_dynamic ~inject_static ~appl
 ;;
 
 let convert_generic
-      (type input model dynamic_action static_action extra)
+      (type input action_input model dynamic_action static_action extra)
       ~fresh
       ~(run :
           ( model
           , dynamic_action
           , static_action
+          , action_input
           , Vdom.Node.t * extra )
             Bonsai.Private.Computation.eval_fun)
       ~default_model
       ~(dynamic_action_type_id : dynamic_action Bonsai.Private.Meta.Action.t)
       ~(static_action_type_id : static_action Bonsai.Private.Meta.Action.t)
       ~apply_static
+      ~apply_dynamic
       ~equal_model
       ~sexp_of_model
       ~model_of_sexp
@@ -107,7 +123,15 @@ let convert_generic
     let create ~input ~old_model:_ ~model ~inject =
       let inject_dynamic a = inject (Action_unshadowed.Dynamic a) in
       let inject_static a = inject (Action_unshadowed.Static a) in
-      create_generic run ~fresh ~input ~model ~inject_dynamic ~inject_static ~apply_static
+      create_generic
+        run
+        ~fresh
+        ~input
+        ~model
+        ~inject_dynamic
+        ~inject_static
+        ~apply_static
+        ~apply_dynamic
     ;;
   end)
 ;;
@@ -116,7 +140,17 @@ let convert_with_extra ?(optimize = false) component =
   let fresh = Type_equal.Id.create ~name:"" sexp_of_opaque in
   let var = Bonsai.Private.(Value.named App_input fresh |> conceal_value) in
   let maybe_optimize = if optimize then Bonsai.Private.pre_process else Fn.id in
-  let (T { model; dynamic_action; static_action; apply_static; run; reset = _ }) =
+  let (T
+         { model
+         ; input = _
+         ; dynamic_action
+         ; static_action
+         ; apply_static
+         ; apply_dynamic
+         ; run
+         ; reset = _
+         })
+    =
     component var
     |> Bonsai.Private.reveal_computation
     |> maybe_optimize
@@ -128,6 +162,7 @@ let convert_with_extra ?(optimize = false) component =
     ~dynamic_action_type_id:dynamic_action
     ~static_action_type_id:static_action
     ~apply_static
+    ~apply_dynamic
     ~default_model:model.default
     ~equal_model:model.equal
     ~sexp_of_model:model.sexp_of

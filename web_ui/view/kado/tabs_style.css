@@ -1,33 +1,35 @@
-.tab_container {
-  display: flex;
-  gap: 0.5em;
-}
+@layer kado.tabs {
+  .tab_container {
+    display: flex;
+    gap: 0.5em;
+  }
 
-.tab_button {
-  color: var(--fg);
-  text-underline-offset: 7px;
-  transform: translate(0, -2px);
-  opacity: 0.5;
+  .tab_button {
+    color: var(--fg);
+    text-underline-offset: 7px;
+    transform: translate(0, -2px);
+    opacity: 0.5;
 
-  cursor: pointer;
-  user-select: none;
-}
+    cursor: pointer;
+    user-select: none;
+  }
 
-.tab_button.selected,
-.tab_button.selected:hover {
-  text-decoration: underline 2px;
-}
+  .tab_button.selected,
+  .tab_button.selected:hover {
+    text-decoration: underline 2px;
+  }
 
-.tab_button.selected,
-.tab_button.selected:hover { 
-  opacity: 1.0;
-}
+  .tab_button.selected,
+  .tab_button.selected:hover { 
+    opacity: 1.0;
+  }
 
-.tab_button:hover {
-  opacity: 0.9;
-}
+  .tab_button:hover {
+    opacity: 0.9;
+  }
 
-.tab_button:hover {
-  text-decoration: underline;
-  text-decoration-style: dashed;
+  .tab_button:hover {
+    text-decoration: underline;
+    text-decoration-style: dashed;
+  }
 }

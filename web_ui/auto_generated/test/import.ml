@@ -11,7 +11,7 @@ let get_vdom form =
   | other -> Vdom.Node.div other
 ;;
 
-let get_vdom_detailed form = Form.View.to_vdom (Form.view form)
+let get_vdom_detailed form = Form.view_as_vdom form
 
 let form_result_spec (type a) ?filter_printed_attributes ?(get_vdom = get_vdom) sexp_of_a
   : (module Result_spec.S with type t = a Form.t and type incoming = a)

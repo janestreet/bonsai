@@ -12,10 +12,20 @@ let roller_state =
     (module Model)
     (module Unit)
     ~default_model:None
-    ~apply_action:(fun ~inject:_ ~schedule_event:_ roll_spec _model () ->
+    ~apply_action:(fun ~inject:_ ~schedule_event:_ roll_spec model () ->
       match roll_spec with
-      | Ok spec -> Some (spec, Rpgdice.Roll_spec.roll spec)
-      | Error _ -> None)
+      | Active roll_spec ->
+        (match roll_spec with
+         | Ok spec -> Some (spec, Rpgdice.Roll_spec.roll spec)
+         | Error _ -> None)
+      | Inactive ->
+        eprint_s
+          [%message
+            [%here]
+              "An action sent to a [state_machine1] has been dropped because its input \
+               was not present. This happens when the [state_machine1] is inactive when \
+               it receives a message."];
+        model)
 ;;
 
 let component roll_spec =
@@ -33,6 +43,9 @@ let component roll_spec =
   in
   Vdom.Node.div
     ~attr:(Vdom.Attr.id "roller")
-    (Vdom_input_widgets.Button.simple ~on_click:(fun () -> inject ()) "reroll"
+    (Vdom_input_widgets.Button.simple
+       ~merge_behavior:Legacy_dont_merge
+       ~on_click:(fun () -> inject ())
+       "reroll"
      :: roll_result)
 ;;

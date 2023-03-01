@@ -35,7 +35,7 @@ module Path_pattern = struct
       and { needed_match = y; pattern = _ } = y in
       Int.ascending (needed_match_ord x) (needed_match_ord y)
     in
-    Comparable.lexicographic [ length_comparison; needed_match_comparison ]
+    fun a b -> Comparable.lexicographic [ length_comparison; needed_match_comparison ] a b
   ;;
 end
 
@@ -1579,10 +1579,12 @@ module Parser = struct
             ~current_namespace
             ~f:Fn.id
         in
-        [ current_shape
-        ; { Url_shape.path = current_shape.path
+        [ { Url_shape.path = current_shape.path
           ; query =
-              { key; value = Value_parser.Skeleton.to_summary value_parser }
+              { key
+              ; value =
+                  [%string "<optional%{Value_parser.Skeleton.to_summary value_parser}>"]
+              }
               :: current_shape.query
           }
         ]
@@ -1979,5 +1981,15 @@ module Versioned_parser = struct
         print_endline "Cannot perform static checks on non-typed-fields parser"
     in
     loop parsers
+  ;;
+
+  let all_urls t =
+    let rec helper : type a. a t -> string list = function
+      | Non_typed_parser _ -> []
+      | First_typed_parser parser -> Parser.all_urls parser
+      | New_parser { current_parser; previous_parser; map = _ } ->
+        Parser.all_urls current_parser @ helper previous_parser
+    in
+    List.dedup_and_sort ~compare:String.compare (helper t)
   ;;
 end

@@ -72,23 +72,23 @@ let%expect_test "Demonstrate: an unused opaque is not optimized away" =
     {|
     (Sub
       (from (Return (value Incr)))
-      (via 2)
+      (via 1)
       (into (
         Sub
-        (from (Return (value (Mapn (inputs ((Named (uid 2))))))))
-        (via 5)
-        (into (Return (value (Constant (id 6)))))))) |}];
+        (from (Return (value (Mapn (inputs ((Named (uid 1))))))))
+        (via 3)
+        (into (Return (value (Constant (id 4)))))))) |}];
   print_computation (constant_fold c);
   [%expect
     {|
     (Sub
       (from (Return (value Incr)))
-      (via 2)
+      (via 1)
       (into (
         Sub
-        (from (Return (value (Mapn (inputs ((Named (uid 2))))))))
-        (via 5)
-        (into (Return (value (Constant (id 6)))))))) |}]
+        (from (Return (value (Mapn (inputs ((Named (uid 1))))))))
+        (via 3)
+        (into (Return (value (Constant (id 4)))))))) |}]
 ;;
 
 let%expect_test "opaque only used in a lazy not optimized away" =
@@ -102,23 +102,23 @@ let%expect_test "opaque only used in a lazy not optimized away" =
     {|
     (Sub
       (from (Return (value Incr)))
-      (via 2)
+      (via 1)
       (into (
         Sub
         (from (
           Sub
           (from (Return (value Incr)))
-          (via 6)
+          (via 3)
           (into (
             Switch
-            (match_ (Mapn (inputs ((Named (uid 6))))))
+            (match_ (Mapn (inputs ((Named (uid 3))))))
             (arms ((Lazy (t ())) (Return (value Exception))))))))
-        (via 13)
+        (via 7)
         (into (
           Sub
-          (from (Return (value (Mapn (inputs ((Named (uid 13))))))))
-          (via 16)
-          (into (Return (value (Constant (id 17)))))))))) |}]
+          (from (Return (value (Mapn (inputs ((Named (uid 7))))))))
+          (via 9)
+          (into (Return (value (Constant (id 10)))))))))) |}]
 ;;
 
 let%expect_test "opaque only used in a lazy not optimized away (but the lazy might)" =
@@ -132,33 +132,33 @@ let%expect_test "opaque only used in a lazy not optimized away (but the lazy mig
     {|
     (Sub
       (from (Return (value Incr)))
-      (via 2)
+      (via 1)
       (into (
         Sub
         (from (Lazy (t ())))
-        (via 4)
+        (via 2)
         (into (
           Sub
-          (from (Return (value (Mapn (inputs ((Named (uid 4))))))))
-          (via 7)
-          (into (Return (value (Constant (id 8)))))))))) |}];
+          (from (Return (value (Mapn (inputs ((Named (uid 2))))))))
+          (via 4)
+          (into (Return (value (Constant (id 5)))))))))) |}];
   constant_fold_and_diff c;
   [%expect
     {|
     -1,12 +1,12
       (Sub
         (from (Return (value Incr)))
-        (via 2)
+        (via 1)
         (into (
           Sub
-    -|    (from (Lazy (t ((Return (value (Named (uid 2))))))))
-    +|    (from (Return (value (Named (uid 2)))))
-          (via 4)
+    -|    (from (Lazy (t ((Return (value (Named (uid 1))))))))
+    +|    (from (Return (value (Named (uid 1)))))
+          (via 2)
           (into (
             Sub
-            (from (Return (value (Mapn (inputs ((Named (uid 4))))))))
-            (via 7)
-            (into (Return (value (Constant (id 8)))))))))) |}]
+            (from (Return (value (Mapn (inputs ((Named (uid 2))))))))
+            (via 4)
+            (into (Return (value (Constant (id 5)))))))))) |}]
 ;;
 
 let%expect_test "immediately-forced lazies are transparent to constant folding" =
@@ -188,10 +188,10 @@ let%expect_test "lazies inside of a switch with dynamic input are preserved" =
     {|
       (Sub
         (from (Return (value Incr)))
-        (via 2)
+        (via 1)
         (into (
           Switch
-          (match_ (Mapn (inputs ((Named (uid 2))))))
+          (match_ (Mapn (inputs ((Named (uid 1))))))
           (arms ((Lazy (t ())) (Return (value Exception))))))) |}]
 ;;
 
@@ -204,10 +204,10 @@ let%expect_test "lazies inside of a switch with static input are forced" =
     {|
       (Sub
         (from (Return (value (Constant (id 0)))))
-        (via 2)
+        (via 1)
         (into (
           Switch
-          (match_ (Mapn (inputs ((Named (uid 2))))))
+          (match_ (Mapn (inputs ((Named (uid 1))))))
           (arms ((Lazy (t ())) (Return (value Exception))))))) |}];
   print_computation (constant_fold c);
   [%expect {| (Return (value (Constant (id 0)))) |}]
@@ -393,13 +393,13 @@ let%expect_test "a constant input to assoc gets distributed to a bunch of subs" 
     {|
     (Sub
       (from (Return (value Incr)))
-      (via 2)
+      (via 1)
       (into (
         Assoc
-        (map (Constant (id 4)))
-        (key_id  5)
-        (cmp_id  6)
-        (data_id 7)
+        (map (Constant (id 3)))
+        (key_id  4)
+        (cmp_id  5)
+        (data_id 6)
         (by (
           Return (
             value (
@@ -407,24 +407,24 @@ let%expect_test "a constant input to assoc gets distributed to a bunch of subs" 
                 inputs ((
                   Mapn (
                     inputs (
-                      (Named (uid 5))
+                      (Named (uid 4))
                       (Mapn (
                         inputs (
-                          (Named (uid 7))
-                          (Named (uid 2))))))))))))))))) |}];
+                          (Named (uid 6))
+                          (Named (uid 1))))))))))))))))) |}];
   constant_fold_and_diff c;
   [%expect
     {|
     -1,21 +1,40
       (Sub
         (from (Return (value Incr)))
-        (via 2)
+        (via 1)
         (into (
     -|    Assoc
-    -|    (map (Constant (id 4)))
-    -|    (key_id  5)
-    -|    (cmp_id  6)
-    -|    (data_id 7)
+    -|    (map (Constant (id 3)))
+    -|    (key_id  4)
+    -|    (cmp_id  5)
+    -|    (data_id 6)
     -|    (by (
     +|    Sub
     +|    (from (
@@ -435,10 +435,10 @@ let%expect_test "a constant input to assoc gets distributed to a bunch of subs" 
     +|          Return (
     +|            value (
     +|              Mapn (
-    +|                inputs ((Mapn (inputs ((Mapn (inputs ((Named (uid 2))))))))))))))
-    +|        (via 29)
-    +|        (into (Return (value (Mapn (inputs ((Named (uid 29))))))))))
-    +|      (via 37)
+    +|                inputs ((Mapn (inputs ((Mapn (inputs ((Named (uid 1))))))))))))))
+    +|        (via 16)
+    +|        (into (Return (value (Mapn (inputs ((Named (uid 16))))))))))
+    +|      (via 20)
     +|      (into (
     +|        Sub
     +|        (from (
@@ -447,10 +447,10 @@ let%expect_test "a constant input to assoc gets distributed to a bunch of subs" 
     +|            Return (
     +|              value (
     +|                Mapn (
-    +|                  inputs ((Mapn (inputs ((Mapn (inputs ((Named (uid 2))))))))))))))
-    +|          (via 33)
-    +|          (into (Return (value (Mapn (inputs ((Named (uid 33))))))))))
-    +|        (via 38)
+    +|                  inputs ((Mapn (inputs ((Mapn (inputs ((Named (uid 1))))))))))))))
+    +|          (via 18)
+    +|          (into (Return (value (Mapn (inputs ((Named (uid 18))))))))))
+    +|        (via 21)
     +|        (into (
                 Return (
                   value (
@@ -458,15 +458,15 @@ let%expect_test "a constant input to assoc gets distributed to a bunch of subs" 
                       inputs ((
                         Mapn (
                           inputs (
-    -|                  (Named (uid 5))
+    -|                  (Named (uid 4))
     -|                  (Mapn (
     -|                    inputs (
-    -|                      (Named (uid 7))
-    -|                      (Named (uid 2)))))))))))))))))
-    +|                      (Named (uid 37))
-    +|                      (Named (uid 38)))))))))))))))
-    +|    (via 44)
-    +|    (into (Return (value (Mapn (inputs ((Named (uid 44))))))))))) |}]
+    -|                      (Named (uid 6))
+    -|                      (Named (uid 1)))))))))))))))))
+    +|                      (Named (uid 20))
+    +|                      (Named (uid 21)))))))))))))))
+    +|    (via 24)
+    +|    (into (Return (value (Mapn (inputs ((Named (uid 24))))))))))) |}]
 ;;
 
 let%expect_test "constant map + simplifiable assoc function => constant map" =
@@ -544,12 +544,12 @@ let%expect_test "a switch with constant input is optimized away" =
     {|
     (Sub
       (from (Return (value (Constant (id 0)))))
-      (via 2)
+      (via 1)
       (into (
         Switch
-        (match_ (Mapn (inputs ((Named (uid 2))))))
+        (match_ (Mapn (inputs ((Named (uid 1))))))
         (arms (
-          (Return (value (Constant (id 5)))) (Return (value (Constant (id 7))))))))) |}];
+          (Return (value (Constant (id 4)))) (Return (value (Constant (id 5))))))))) |}];
   print_computation (constant_fold c);
   [%expect {| (Return (value (Constant (id 0)))) |}]
 ;;
@@ -565,11 +565,11 @@ let%expect_test "an assert-false is caught (and then optimized away)" =
     {|
     (Sub
       (from (Return (value (Constant (id 0)))))
-      (via 2)
+      (via 1)
       (into (
         Switch
-        (match_ (Mapn (inputs ((Named (uid 2))))))
-        (arms ((Return (value (Constant (id 5)))) (Return (value Exception))))))) |}];
+        (match_ (Mapn (inputs ((Named (uid 1))))))
+        (arms ((Return (value (Constant (id 4)))) (Return (value Exception))))))) |}];
   print_computation (constant_fold c);
   [%expect {| (Return (value (Constant (id 0)))) |}]
 ;;
@@ -577,6 +577,7 @@ let%expect_test "an assert-false is caught (and then optimized away)" =
 let%expect_test "Static exception node on missing index of [Let_syntax.switch]." =
   let c =
     Bonsai.Let_syntax.Let_syntax.switch
+      ~here:[%here]
       ~match_:(Value.return 1)
       ~branches:1
       ~with_:(function

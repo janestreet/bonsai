@@ -23,9 +23,10 @@ let override_theme ((module M) : Theme.t) ~(f : t -> t) : Theme.t =
 ;;
 
 module Style =
-  [%css.hash_variables
+  [%css
     stylesheet
       {|
+@layer bonsai_web_ui_view.app {
   :root:has(.app) {
     font-family: sans-serif;
   }
@@ -35,13 +36,14 @@ module Style =
   :root:has(.app) *::after {
     box-sizing: border-box;
   }
+}
 |}]
 
 let default_theme =
   make_theme
     (module struct
       class c =
-        object (self)
+        object (self : #Underlying_intf.C.t)
           method theme_name = "default theme"
           method app_attr = Style.app
 
@@ -75,6 +77,19 @@ let default_theme =
                 ; header_body_border = extreme_primary_border
                 ; body_body_border = extreme_primary_border
                 }
+            ; form =
+                { error_message =
+                    { foreground = `Name "black"; background = `Name "pink" }
+                ; error_toggle_text = `Hex "#f54646"
+                ; error_border = `Name "red"
+                ; tooltip_message =
+                    { foreground = `Name "black"; background = `Name "azure" }
+                ; tooltip_border = `Name "darkblue"
+                ; tooltip_toggle_text = `Name "blue"
+                }
+            ; small_font_size = `Em_float 0.8
+            ; large_font_size = `Em_float 1.2
+            ; is_dark = false
             }
 
           method humanize_sexp sexp =
@@ -190,7 +205,7 @@ let default_theme =
           method tooltip = Tooltip.make self#constants
           method use_intent_fg_or_bg_for_highlighting : [ `Fg | `Bg ] = `Fg
 
-          method themed_text ~attr ~intent text =
+          method themed_text ~attr ~intent ~style ~size text =
             let maybe_colors =
               match intent with
               | None -> Vdom.Attr.empty
@@ -219,7 +234,23 @@ let default_theme =
                     @> create ~field:"text-underline-offset" ~value:"4px"
                     @> intense_intents)
             in
-            let attr = Vdom.Attr.many [ attr; maybe_colors ] in
+            let maybe_style =
+              match (style : Constants.Font_style.t option) with
+              | None | Some Regular -> Vdom.Attr.empty
+              | Some Bold -> Vdom.Attr.style (Css_gen.font_weight `Bold)
+              | Some Italic -> Vdom.Attr.style (Css_gen.font_style `Italic)
+              | Some Underlined ->
+                Vdom.Attr.style (Css_gen.text_decoration ~line:[ `Underline ] ())
+            in
+            let maybe_size =
+              match (size : Constants.Font_size.t option) with
+              | None | Some Regular -> Vdom.Attr.empty
+              | Some Small ->
+                Vdom.Attr.style (Css_gen.font_size self#constants.small_font_size)
+              | Some Large ->
+                Vdom.Attr.style (Css_gen.font_size self#constants.large_font_size)
+            in
+            let attr = Vdom.Attr.many [ attr; maybe_colors; maybe_size; maybe_style ] in
             Vdom.Node.span ~attr [ Vdom.Node.text text ]
 
           method codemirror_theme : For_codemirror.Theme.t option = None
@@ -233,6 +264,113 @@ let default_theme =
           method table_body_row = Table.table_body_row
           method table_body_cell = Table.table_body_cell
           method table_body_cell_empty = Table.table_body_cell_empty
+
+          (* misc forms *)
+          method form_view_error = Form.view_error
+
+          method form_view_error_details =
+            Form.view_error_details (self :> Underlying_intf.C.t)
+
+          method form_view_tooltip = Form.view_tooltip (self :> Underlying_intf.C.t)
+          method form_remove_item = Form.render_remove_item (self :> Underlying_intf.C.t)
+          method form_append_item = Form.render_append_item (self :> Underlying_intf.C.t)
+
+          (* form_constructors *)
+          method form_empty = Form.empty
+          method form_collapsible = Form.collapsible (self :> Underlying_intf.C.t)
+          method form_raw = Form.raw (self :> Underlying_intf.C.t)
+          method form_record = Form.record (self :> Underlying_intf.C.t)
+          method form_variant = Form.variant (self :> Underlying_intf.C.t)
+          method form_tuple = Form.tuple (self :> Underlying_intf.C.t)
+          method form_option = Form.option (self :> Underlying_intf.C.t)
+          method form_list = Form.list (self :> Underlying_intf.C.t)
+          method form_view = Form.view (self :> Underlying_intf.C.t)
+          method form_toplevel_combine = Form.toplevel_combine
+
+          (* forms *)
+          method form_to_vdom = Form.to_vdom (self :> Underlying_intf.C.t)
+
+          (* cards *)
+          method card
+                   ~container_attr
+                   ~title_attr
+                   ~content_attr
+                   ~intent
+                   ~on_click
+                   ~title
+                   ~title_kind
+                   ~content =
+            let open Constants in
+            let module Style = Card_style in
+            let constants = self#constants in
+            let vars =
+              let intent_fg =
+                Option.value_map
+                  intent
+                  ~default:constants.primary.foreground
+                  ~f:(fun intent -> (Intent.lookup constants.intent intent).foreground)
+                |> Css_gen.Color.to_string_css
+              in
+              let intent_bg =
+                Option.value_map
+                  intent
+                  ~default:constants.primary.background
+                  ~f:(fun intent -> (Intent.lookup constants.intent intent).background)
+                |> Css_gen.Color.to_string_css
+              in
+              let extreme_fg =
+                constants.extreme.foreground |> Css_gen.Color.to_string_css
+              in
+              Card_style.Variables.set ~extreme_fg ~intent_bg ~intent_fg ()
+            in
+            let title =
+              match title with
+              | [] -> Vdom.Node.none
+              | _ ->
+                let create_title ~f ~extra_attr =
+                  f
+                    ~attr:
+                      (Vdom.Attr.many
+                         [ Style.title_bar; Style.title_text; title_attr; extra_attr ])
+                    title
+                in
+                let title =
+                  match title_kind with
+                  | Card_title_kind.Prominent ->
+                    create_title
+                      ~f:(fun ~attr x -> Layout.hbox ~attr x)
+                      ~extra_attr:Vdom.Attr.empty
+                  | Discreet ->
+                    create_title
+                      ~f:(fun ~attr x -> Vdom.Node.legend ~attr x)
+                      ~extra_attr:Style.card_legend
+                in
+                title
+            in
+            let create_card ~f ~extra_container_attr =
+              f
+                ~attr:
+                  (Vdom.Attr.many
+                     [ container_attr
+                     ; Vdom.Attr.on_click (fun _ -> on_click)
+                     ; vars
+                     ; extra_container_attr
+                     ])
+                [ title
+                ; Layout.vbox
+                    ~attr:(Vdom.Attr.many [ content_attr; Style.content_common ])
+                    content
+                ]
+            in
+            match title_kind with
+            | Card_title_kind.Prominent ->
+              create_card
+                ~f:(fun ~attr x -> Layout.vbox ~attr x)
+                ~extra_container_attr:Style.container
+            | Discreet ->
+              create_card
+                ~f:(fun ~attr x -> Vdom.Node.fieldset ~attr x)
+                ~extra_container_attr:Style.fieldset_container
         end
     end)
 ;;

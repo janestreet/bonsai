@@ -170,17 +170,16 @@ let rec computation_to_function
     -> (Path.t -> key -> data -> result) Option_or_miss.t
   =
   fun computation ~key_id ~data_id ->
-  let recurse = computation_to_function ~key_id ~data_id in
+  let recurse computation = computation_to_function ~key_id ~data_id computation in
   let handle_subst (type r1 r2) ~(from : r1 Computation.t) ~via ~(into : r2 Computation.t)
     : (Path.t -> key -> data -> r2) Option_or_miss.t
     =
     match recurse from, recurse into with
-    (* This first ignored pattern is _spooky_.  It basically means
-       that any computations that aren't depended on just aren't counted.
-       So you could have a Bonsai.state, but if it's unused, then we just
-       drop it and consider the rest.  *)
-    | _, Some r -> Some r
+    (* If any subcomputation is not simplifiable, then bail *)
     | None, _ | _, None -> None
+    (* A rhs that isn't missing any variables can be used by ignoring the computed values
+       on the lhs. *)
+    | (Some _ | Miss _), Some r -> Some r
     | Some from, Miss { free; gen } ->
       let free = Free_variables.remove free via in
       let gen env path key data =
@@ -201,7 +200,7 @@ let rec computation_to_function
       in
       Option_or_miss.squash (Miss { free; gen })
   in
-  match computation.kind with
+  match computation with
   | Return value ->
     Option_or_miss.map (value_to_function value key_id data_id) ~f:(fun f _path -> f)
   | Sub { from; via; into; here = _ } -> handle_subst ~from ~via ~into

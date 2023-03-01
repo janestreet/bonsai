@@ -163,76 +163,70 @@ module For_computation = struct
         parent
         v
     in
-    let kind : result Computation.kind =
-      match computation.kind with
-      | Return value -> Return (map_value value)
-      | Leaf1 t -> Leaf1 { t with input = map_value t.input }
-      | Leaf01 t -> Leaf01 { t with input = map_value t.input }
-      | Leaf0 _ -> computation.kind
-      | Leaf_incr t -> Leaf_incr { t with input = map_value t.input }
-      | Model_cutoff t -> Model_cutoff (map t)
-      | Sub t ->
-        let from =
-          map ~var_from_parent:(One (Type_equal.Id.uid t.via)) ~choice:1 t.from
-        in
-        let into = map ~choice:2 t.into in
-        Sub { t with from; into }
-      | Store t ->
-        let value =
-          map_value ~var_from_parent:(One (Type_equal.Id.uid t.id)) ~choice:1 t.value
-        in
-        let inner = map ~choice:2 t.inner in
-        Store { t with value; inner }
-      | Fetch _ -> computation.kind
-      | Assoc t ->
-        Assoc
-          { t with
-            map = map_value ~choice:1 t.map
-          ; by =
-              map
-                ~var_from_parent:
-                  (Two (Type_equal.Id.uid t.key_id, Type_equal.Id.uid t.data_id))
-                ~choice:2
-                t.by
-          }
-      | Assoc_on t ->
-        Assoc_on
-          { t with
-            map = map_value ~choice:1 t.map
-          ; by =
-              map
-                ~var_from_parent:
-                  (Two (Type_equal.Id.uid t.io_key_id, Type_equal.Id.uid t.data_id))
-                ~choice:2
-                t.by
-          }
-      | Assoc_simpl t -> Assoc_simpl { t with map = map_value t.map }
-      | Switch { match_; arms } ->
-        let index = ref 1 in
-        let match_ = map_value ~choice:!index match_ in
-        let arms =
-          Map.map arms ~f:(fun c ->
-            incr index;
-            map ~choice:!index c)
-        in
-        Switch { match_; arms }
-      | Lazy t -> Lazy (Lazy.map t ~f:map)
-      | Wrap ({ model_id; inject_id; inner; _ } as t) ->
-        Wrap
-          { t with
-            inner =
-              map
-                ~var_from_parent:
-                  (Two (Type_equal.Id.uid model_id, Type_equal.Id.uid inject_id))
-                inner
-          }
-      | With_model_resetter { inner; reset_id } ->
-        With_model_resetter { inner = map inner; reset_id }
-      | Path -> computation.kind
-      | Lifecycle t -> Lifecycle (map_value t)
-      | Identity t -> Identity (map t)
-    in
-    Proc.wrap_computation kind
+    match computation with
+    | Return value -> Return (map_value value)
+    | Leaf1 t -> Leaf1 { t with input = map_value t.input }
+    | Leaf01 t -> Leaf01 { t with input = map_value t.input }
+    | Leaf0 _ -> computation
+    | Leaf_incr t -> Leaf_incr { t with input = map_value t.input }
+    | Model_cutoff t -> Model_cutoff (map t)
+    | Sub t ->
+      let from = map ~var_from_parent:(One (Type_equal.Id.uid t.via)) ~choice:1 t.from in
+      let into = map ~choice:2 t.into in
+      Sub { t with from; into }
+    | Store t ->
+      let value =
+        map_value ~var_from_parent:(One (Type_equal.Id.uid t.id)) ~choice:1 t.value
+      in
+      let inner = map ~choice:2 t.inner in
+      Store { t with value; inner }
+    | Fetch _ -> computation
+    | Assoc t ->
+      Assoc
+        { t with
+          map = map_value ~choice:1 t.map
+        ; by =
+            map
+              ~var_from_parent:
+                (Two (Type_equal.Id.uid t.key_id, Type_equal.Id.uid t.data_id))
+              ~choice:2
+              t.by
+        }
+    | Assoc_on t ->
+      Assoc_on
+        { t with
+          map = map_value ~choice:1 t.map
+        ; by =
+            map
+              ~var_from_parent:
+                (Two (Type_equal.Id.uid t.io_key_id, Type_equal.Id.uid t.data_id))
+              ~choice:2
+              t.by
+        }
+    | Assoc_simpl t -> Assoc_simpl { t with map = map_value t.map }
+    | Switch { match_; arms; here } ->
+      let index = ref 1 in
+      let match_ = map_value ~choice:!index match_ in
+      let arms =
+        Map.map arms ~f:(fun c ->
+          incr index;
+          map ~choice:!index c)
+      in
+      Switch { match_; arms; here }
+    | Lazy t -> Lazy (Lazy.map t ~f:map)
+    | Wrap ({ model_id; inject_id; inner; _ } as t) ->
+      Wrap
+        { t with
+          inner =
+            map
+              ~var_from_parent:
+                (Two (Type_equal.Id.uid model_id, Type_equal.Id.uid inject_id))
+              inner
+        }
+    | With_model_resetter { inner; reset_id } ->
+      With_model_resetter { inner = map inner; reset_id }
+    | Path -> computation
+    | Lifecycle t -> Lifecycle (map_value t)
   ;;
 
   let id =

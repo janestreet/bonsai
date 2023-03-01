@@ -34,7 +34,7 @@ module Handle : sig
     (** By default [connectors] always returns
         [Bonsai_web.Rpc_effect.Connector.test_fallback], which uses any provided
         [rpc_implementations] to handle any dispatched RPCs. *)
-    -> ?clock:Ui_incr.Clock.t
+    -> ?start_time:Time_ns.t
     -> ?optimize:bool
     -> 'a Computation.t
     -> ('a, 'b) t

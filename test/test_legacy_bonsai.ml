@@ -124,8 +124,9 @@ let%expect_test "enum with action handling `Warn" =
       ];
     [%expect
       {|
-               ("an action inside of Bonsai.switch has been dropped because the computation is no longer active"
-                (index 1) (action Increment))
+               (lib/bonsai/src/proc.ml:84:14
+                "An action sent to an [of_module1] has been dropped because its input was not present. This happens when the [of_module1] is inactive when it receives a message."
+                (action Increment))
                pure 3|}];
     H.do_actions [ Outer Increment ];
     [%expect "counter 2"])
@@ -374,12 +375,11 @@ let%expect_test "model cutoff" =
       type t = string * (unit -> unit Effect.t)
     end
 
-    let apply_action _input ~inject:_ =
-      Incr.return (fun ~schedule_event:_ model () -> model + 1)
-    ;;
+    let apply_action _input ~inject:_ ~schedule_event:_ model () = model + 1
 
     let compute _input model ~inject =
-      let%map.Incr model = model in
+      let%map.Incr model = model
+      and inject = inject in
       Int.to_string model, inject
     ;;
   end

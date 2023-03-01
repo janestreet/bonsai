@@ -16,6 +16,7 @@ let scale : (Scale.t * Vdom.Node.t) Computation.t =
   let%arr scale, set_scale = scale_state in
   let view =
     Vdom_input_widgets.Dropdown.of_enum
+      ~merge_behavior:Legacy_dont_merge
       (module Scale)
       ~selected:scale
       ~on_change:set_scale
@@ -55,7 +56,7 @@ let app =
     | `log -> options ~logscale:true
     | `linear -> options ~logscale:false
   in
-  let%sub graph =
+  let%sub { graph_view; _ } =
     Dygraph.With_bonsai.create
       ~key:("graph" |> Value.return)
       ~x_label:(x_label |> Value.return)
@@ -69,7 +70,7 @@ let app =
       ~with_graph:(fun graph -> Js.Unsafe.set Dom_html.window "g" graph)
       ()
   in
-  let%arr graph = graph
+  let%arr graph_view = graph_view
   and scale_view = scale_view in
-  Vdom.Node.div [ graph; Vdom.Node.textf "y-axis scale: "; scale_view ]
+  Vdom.Node.div [ graph_view; Vdom.Node.textf "y-axis scale: "; scale_view ]
 ;;

@@ -82,7 +82,6 @@ module Action : sig
           ; key : 'key
           }
           -> 'key t
-    [@@deriving sexp_of]
 
     val unit : unit t action
     val int : int t action
@@ -112,4 +111,30 @@ module Multi_model : sig
   val to_models : t -> Model.Hidden.t Int.Map.t
   val of_models : Model.Hidden.t Int.Map.t -> t
   val model_info : t -> t Model.t
+end
+
+module Input : sig
+  type 'a t
+
+  val same_witness : 'a t -> 'b t -> ('a, 'b) Type_equal.t option
+  val same_witness_exn : 'a t -> 'b t -> ('a, 'b) Type_equal.t
+  val unit : unit t
+  val both : 'a t -> 'b t -> ('a * 'b) t
+  val map : 'k Type_equal.Id.t -> 'cmp Type_equal.Id.t -> 'a t -> ('k, 'a, 'cmp) Map.t t
+  val create : unit -> 'a t
+
+  module Hidden : sig
+    type 'a input = 'a t
+
+    type 'key t =
+      | T :
+          { input : 'input
+          ; type_id : 'input input
+          ; key : 'key
+          }
+          -> 'key t
+
+    val unit : unit t input
+    val int : int t input
+  end
 end

@@ -202,29 +202,40 @@ let create
       on_drop
       ~default_model:Not_dragging
       ~apply_action:(fun ~inject:_ ~schedule_event on_drop model actions ->
-        List.fold actions ~init:model ~f:(fun model action ->
-          match action with
-          | Action.Started_drag { source; offset; position; size } ->
-            (match model with
-             | State_machine_model.Not_dragging -> ()
-             | Dragging _ -> bug "Started dragging before dragging finished");
-            Dragging
-              { source; offset; position; size; target = None; has_moved = false }
-          | Set_target target ->
-            (match model with
-             | State_machine_model.Not_dragging -> Not_dragging
-             | Dragging t -> Dragging { t with target })
-          | Finished_drag ->
-            (match model with
-             | State_machine_model.Not_dragging | Dragging { target = None; _ } ->
-               Not_dragging
-             | Dragging { source; target = Some target; _ } ->
-               schedule_event (on_drop source target);
-               Not_dragging)
-          | Mouse_moved position ->
-            (match model with
-             | State_machine_model.Not_dragging -> Not_dragging
-             | Dragging t -> Dragging { t with position; has_moved = true })))
+        match on_drop with
+        | Active on_drop ->
+          List.fold actions ~init:model ~f:(fun model action ->
+            match action with
+            | Action.Started_drag { source; offset; position; size } ->
+              (match model with
+               | State_machine_model.Not_dragging -> ()
+               | Dragging _ -> bug "Started dragging before dragging finished");
+              Dragging
+                { source; offset; position; size; target = None; has_moved = false }
+            | Set_target target ->
+              (match model with
+               | State_machine_model.Not_dragging -> Not_dragging
+               | Dragging t -> Dragging { t with target })
+            | Finished_drag ->
+              (match model with
+               | State_machine_model.Not_dragging | Dragging { target = None; _ } ->
+                 Not_dragging
+               | Dragging { source; target = Some target; _ } ->
+                 schedule_event (on_drop source target);
+                 Not_dragging)
+            | Mouse_moved position ->
+              (match model with
+               | State_machine_model.Not_dragging -> Not_dragging
+               | Dragging t -> Dragging { t with position; has_moved = true }))
+        | Inactive ->
+          eprint_s
+            [%message
+              [%here]
+                "An action sent to a [state_machine1] has been dropped because its input \
+                 was not present. This happens when the [state_machine1] is inactive \
+                 when it receives a message."
+                (actions : (Source.t, Target.t) Action.t list)];
+          model)
   in
   let%sub source =
     let%arr inject = inject in

@@ -2,15 +2,6 @@ open! Core
 open (Bonsai_web : module type of Bonsai_web with module View := Bonsai_web.View)
 open Bonsai.Let_syntax
 
-module View = struct
-  module Private = View
-  include View
-
-  let to_vdom ?(custom = View.to_vdom) ?on_submit ?editable t =
-    custom ?on_submit ?editable t
-  ;;
-end
-
 module T = struct
   type ('read, 'write) unbalanced =
     { value : 'read Or_error.t
@@ -51,85 +42,78 @@ module Submit = struct
   ;;
 end
 
-let view_as_vdom ?on_submit ?(editable = `Yes_always) t =
+module View = View
+
+let view t = t.view
+let map_view t ~f = { t with view = f t.view }
+
+let view_as_vdom ?theme ?on_submit ?editable t =
   let on_submit =
     Option.map on_submit ~f:(fun { Submit.f; handle_enter; button_text; button_attr } ->
-      let on_submit = t.value |> Result.ok |> Option.map ~f in
-      { View.on_submit; handle_enter; button_text; button_attr })
+      { View.on_submit = Option.map ~f (Or_error.ok t.value)
+      ; handle_enter
+      ; button_text
+      ; button_attr
+      })
   in
-  View.to_vdom ?on_submit ~editable t.view
+  View.to_vdom ?theme ?on_submit ?editable t.view
 ;;
 
 let is_valid t = Or_error.is_ok t.value
 
 let return value =
-  { value = Ok value; view = View.Empty; set = (fun _ -> Ui_effect.Ignore) }
+  { value = Ok value; view = View.empty; set = (fun _ -> Ui_effect.Ignore) }
 ;;
 
 let return_settable (type a) (module M : Bonsai.Model with type t = a) (value : a) =
   let%sub value, set_value = Bonsai.state (module M) ~default_model:value in
   let%arr value = value
   and set_value = set_value in
-  { value = Ok value; view = View.Empty; set = set_value }
+  { value = Ok value; view = View.empty; set = set_value }
 ;;
 
 let return_error error =
-  { value = Error error; view = View.Empty; set = (fun _ -> Ui_effect.Ignore) }
+  { value = Error error; view = View.empty; set = (fun _ -> Ui_effect.Ignore) }
 ;;
 
 let map_error t ~f = { t with value = t.value |> Result.map_error ~f }
 
-let map t ~f =
-  let value = Or_error.map t.value ~f in
-  { value; view = t.view; set = t.set }
-;;
-
-let contra_map t ~f =
-  let set a = t.set (f a) in
-  { value = t.value; view = t.view; set }
-;;
-
 let both a b =
   let value = Or_error.both a.value b.value in
-  let view = View.concat a.view b.view in
-  let set (ea, eb) = Ui_effect.Many [ a.set ea; b.set eb ] in
-  { value; view; set }
-;;
-
-let both_for_profunctor a b =
-  let value = Or_error.both a.value b.value in
-  let view = View.concat a.view b.view in
-  let set v = Ui_effect.Many [ a.set v; b.set v ] in
+  let view = View.tuple [ a.view; b.view ] in
+  let set (ea, eb) = Effect.lazy_ (lazy (Ui_effect.Many [ a.set ea; b.set eb ])) in
   { value; view; set }
 ;;
 
 let all forms =
   let value = Or_error.all (List.map forms ~f:(fun a -> a.value)) in
-  let view = View.List (List.map forms ~f:(fun a -> a.view)) in
+  let view = View.tuple (List.map forms ~f:(fun a -> a.view)) in
   let set edits =
-    let paired, remainder = List.zip_with_remainder forms edits in
-    let error_message =
-      match remainder with
-      | None -> Effect.Ignore
-      | Some mismatch ->
-        let form_count = List.length forms in
-        let edits_count = List.length edits in
-        let print_warning detail resolution =
-          Effect.print_s
-            [%message
-              {|WARNING: Form.set called on result of Form.all with a list value whose length doesn't match the number of forms |}
-                detail
-                (form_count : int)
-                (edits_count : int)
-                resolution]
-        in
-        (match mismatch with
-         | First (_ : _ t list) ->
-           print_warning "more forms than values" "not setting left-over forms"
-         | Second (_ : _ list) ->
-           print_warning "more values than forms" "dropping left-over values")
-    in
-    Ui_effect.Many (error_message :: List.map paired ~f:(fun (a, edit) -> a.set edit))
+    Effect.lazy_
+      (lazy
+        (let paired, remainder = List.zip_with_remainder forms edits in
+         let error_message =
+           match remainder with
+           | None -> Effect.Ignore
+           | Some mismatch ->
+             let form_count = List.length forms in
+             let edits_count = List.length edits in
+             let print_warning detail resolution =
+               Effect.print_s
+                 [%message
+                   {|WARNING: Form.set called on result of Form.all with a list value whose length doesn't match the number of forms |}
+                     detail
+                     (form_count : int)
+                     (edits_count : int)
+                     resolution]
+             in
+             (match mismatch with
+              | First (_ : _ t list) ->
+                print_warning "more forms than values" "not setting left-over forms"
+              | Second (_ : _ list) ->
+                print_warning "more values than forms" "dropping left-over values")
+         in
+         Ui_effect.Many (error_message :: List.map paired ~f:(fun (a, edit) -> a.set edit))))
   in
   { value; view; set }
 ;;
@@ -146,27 +130,29 @@ let all_map (type k cmp) (forms : (k, _, cmp) Map.t) =
     |> Or_error.all
     |> Or_error.map ~f:(Map.of_alist_exn comparator)
   in
-  let view = forms_as_alist |> List.map ~f:(fun (_, a) -> a.view) |> View.List in
+  let view = forms_as_alist |> List.map ~f:(fun (_, a) -> a.view) |> View.tuple in
   let set edits =
-    let updates =
-      Map.fold2 forms edits ~init:[] ~f:(fun ~key ~data acc ->
-        let warning_m details =
-          Effect.print_s
-            [%message
-              {|WARNING: Form.set on the result of Form.all_map has mismatched keys|}
-                ~_:(details : string)
-                ~key:(C.comparator.sexp_of_t key : Sexp.t)]
-        in
-        match data with
-        | `Left _form ->
-          let eff = warning_m "update is missing key present in active form" in
-          eff :: acc
-        | `Right _update ->
-          let eff = warning_m "update contains key not present in active forms" in
-          eff :: acc
-        | `Both (form, update) -> form.set update :: acc)
-    in
-    Effect.Many updates
+    Effect.lazy_
+      (lazy
+        (let updates =
+           Map.fold2 forms edits ~init:[] ~f:(fun ~key ~data acc ->
+             let warning_m details =
+               Effect.print_s
+                 [%message
+                   {|WARNING: Form.set on the result of Form.all_map has mismatched keys|}
+                     ~_:(details : string)
+                     ~key:(C.comparator.sexp_of_t key : Sexp.t)]
+             in
+             match data with
+             | `Left _form ->
+               let eff = warning_m "update is missing key present in active form" in
+               eff :: acc
+             | `Right _update ->
+               let eff = warning_m "update contains key not present in active forms" in
+               eff :: acc
+             | `Both (form, update) -> form.set update :: acc)
+         in
+         Effect.Many updates))
   in
   { value; view; set }
 ;;
@@ -175,14 +161,12 @@ let label' label t = { t with view = View.set_label label t.view }
 let label text = label' (Vdom.Node.text text)
 let tooltip' tooltip t = { t with view = View.set_tooltip tooltip t.view }
 let tooltip text = tooltip' (Vdom.Node.text text)
-let group' label t = { t with view = View.group label t.view }
-let group text = group' (Vdom.Node.text text)
 
 let project' t ~parse ~unparse =
   let value =
     Or_error.bind t.value ~f:(fun a -> Or_error.try_with_join (fun () -> parse a))
   in
-  let set a = t.set (unparse a) in
+  let set a = Effect.lazy_ (lazy (t.set (unparse a))) in
   { value; view = t.view; set }
 ;;
 
@@ -201,14 +185,51 @@ let optional t ~is_some ~none =
   optional' t ~parse ~unparse:Fn.id ~none
 ;;
 
-module Record_builder = struct
-  include Profunctor.Record_builder (struct
-      type ('read, 'write) t = ('read, 'write) unbalanced
+let fallback_to t ~value =
+  match t.value with
+  | Ok _ -> t
+  | Error _ -> { t with value = Ok value }
+;;
 
-      let both = both_for_profunctor
-      let map = map
-      let contra_map = contra_map
-    end)
+module For_profunctor = struct
+  type ('read, 'write) t =
+    | Return :
+        { name : string
+        ; form : ('read, 'write) unbalanced
+        }
+        -> ('read, 'write) t
+    | Both : ('a, 'write) t * ('b, 'write) t -> ('a * 'b, 'write) t
+    | Map : ('a, 'write) t * ('a -> 'b) -> ('b, 'write) t
+    | Contra_map : ('read, 'a) t * ('b -> 'a) -> ('read, 'b) t
+
+  let both a b = Both (a, b)
+  let map a ~f = Map (a, f)
+  let contra_map a ~f = Contra_map (a, f)
+
+  let rec finalize_view
+    : type read write.
+      (read, write) t -> read Or_error.t * (write -> unit Effect.t) * View.field list
+    = function
+      | Return { name; form } ->
+        form.value, form.set, [ { View.field_name = name; field_view = form.view } ]
+      | Map (form, f) ->
+        let value, set, fields = finalize_view form in
+        Or_error.map value ~f, set, fields
+      | Contra_map (form, g) ->
+        let value, set, fields = finalize_view form in
+        value, (fun x -> Effect.lazy_ (lazy (set (g x)))), fields
+      | Both (a, b) ->
+        let a_value, a_set, a_fields = finalize_view a in
+        let b_value, b_set, b_fields = finalize_view b in
+        let value = Or_error.both a_value b_value in
+        let set t = Effect.lazy_ (lazy (Effect.Many [ a_set t; b_set t ])) in
+        let fields = a_fields @ b_fields in
+        value, set, fields
+  ;;
+end
+
+module Record_builder = struct
+  include Profunctor.Record_builder (For_profunctor)
 
   let label_of_field fieldslib_field =
     fieldslib_field
@@ -216,7 +237,6 @@ module Record_builder = struct
     |> String.map ~f:(function
       | '_' -> ' '
       | other -> other)
-    |> Vdom.Node.text
   ;;
 
   let attach_fieldname_to_error t fieldslib_field =
@@ -228,104 +248,116 @@ module Record_builder = struct
   (* This function "overrides" the [field] function inside of Record_builder
      by adding a label *)
   let field t fieldslib_field =
-    let label = label_of_field fieldslib_field in
     let value = attach_fieldname_to_error t fieldslib_field in
-    let view = View.suggest_label label t.view in
-    let with_label = { t with view; value } in
+    let with_label =
+      For_profunctor.Return
+        { name = label_of_field fieldslib_field; form = { t with value } }
+    in
     field with_label fieldslib_field
   ;;
 
   let build_for_record a =
-    let t = build_for_record a in
-    { t with
-      view = View.Group { label = None; tooltip = None; view = t.view; error = None }
-    }
+    let value, set, fields = For_profunctor.finalize_view (build_for_record a) in
+    { value; set; view = View.record fields }
   ;;
 end
 
 module Dynamic = struct
-  let with_default default form =
+  let with_default_from_effect effect form =
     let open Bonsai.Let_syntax in
     let%sub is_loaded, set_is_loaded = Bonsai.state (module Bool) ~default_model:false in
     let%sub () =
-      Bonsai.Edge.lifecycle
-        ~on_activate:
-          (let%map default = default
-           and is_loaded = is_loaded
-           and set_is_loaded = set_is_loaded
-           and form = form in
-           if not is_loaded
-           then Ui_effect.Many [ set form default; set_is_loaded true ]
-           else Ui_effect.Ignore)
-        ()
+      match%sub is_loaded with
+      | true -> Bonsai.const ()
+      | false ->
+        let%sub after_display =
+          let%arr effect = effect
+          and set_is_loaded = set_is_loaded
+          and form = form in
+          let%bind.Effect default = effect in
+          Ui_effect.Many [ set form default; set_is_loaded true ]
+        in
+        Bonsai.Edge.lifecycle ~after_display ()
     in
     return form
   ;;
 
+  let sync_with m ~store_value ~store_set form =
+    let%sub interactive_value, interactive_set =
+      let%arr form = form in
+      Or_error.ok (value form), set form
+    in
+    Bonsai_extra.mirror' m ~store_value ~store_set ~interactive_value ~interactive_set
+  ;;
+
+  let with_default default form =
+    let%sub get_default = Bonsai.yoink default in
+    let%sub effect =
+      let%arr get_default = get_default in
+      match%bind.Effect get_default with
+      | Active default -> Effect.return default
+      | Inactive ->
+        Effect.never
+    in
+    with_default_from_effect effect form
+  ;;
+
   let with_default_always default form =
     let open Bonsai.Let_syntax in
+    let%sub is_loaded, set_is_loaded = Bonsai.state (module Bool) ~default_model:false in
     let%sub () =
-      Bonsai.Edge.lifecycle
-        ~on_activate:
-          (let%map default = default
-           and form = form in
-           set form default)
-        ()
+      match%sub is_loaded with
+      | true -> Bonsai.const ()
+      | false ->
+        let%sub after_display =
+          let%arr default = default
+          and set_is_loaded = set_is_loaded
+          and { set; _ } = form in
+          Effect.lazy_ (lazy (Ui_effect.Many [ set default; set_is_loaded true ]))
+        in
+        Bonsai.Edge.lifecycle ~after_display ()
+    in
+    let%sub () =
+      let%sub on_activate =
+        let%arr default = default
+        and { set; _ } = form
+        and is_loaded = is_loaded in
+        if is_loaded then Effect.lazy_ (lazy (set default)) else Effect.Ignore
+      in
+      Bonsai.Edge.lifecycle ~on_activate ()
     in
     return form
   ;;
 
   let error_hint t =
-    let f view ~error =
-      let if_not_none value ~f = Option.value_map value ~default:Fn.id ~f in
-      view |> if_not_none error ~f:View.suggest_error
-    in
-    let t =
-      let%sub error_hovered = Bonsai.state (module Bool) ~default_model:false in
-      let%sub error_clicked = Bonsai.state (module Bool) ~default_model:false in
-      let%arr t = t
-      and is_error_hovered, set_error_hovered = error_hovered
-      and is_clicked, set_clicked = error_clicked in
-      let on_click = set_clicked (not is_clicked) in
-      let error_details =
-        Option.map (Result.error t.value) ~f:(fun error ->
-          { View.Error_details.is_viewing = is_error_hovered || is_clicked
-          ; error
-          ; on_mouse_over = set_error_hovered true
-          ; on_mouse_out = set_error_hovered false
-          ; on_click
-          ; is_toggled = is_clicked
-          })
-      in
-      { t with view = f t.view ~error:error_details }
-    in
-    t
+    let%arr t = t in
+    match Result.error t.value with
+    | Some err -> { t with view = View.suggest_error err t.view }
+    | None -> t
   ;;
 
   let collapsible_group ?(starts_open = true) label t =
-    let%sub open_state = Bonsai.state (module Bool) ~default_model:starts_open in
-    let%arr is_open, set_is_open = open_state
+    let%sub open_state = Bonsai.toggle ~default_model:starts_open in
+    let%arr is_open, toggle_is_open = open_state
     and label = label
     and t = t in
     let label =
       Vdom.Node.div
         ~attr:
-          (Vdom.Attr.many_without_merge
-             [ Vdom.Attr.on_click (fun _ -> set_is_open (not is_open))
+          (Vdom.Attr.many
+             [ Vdom.Attr.on_click (fun _ -> toggle_is_open)
              ; Vdom.Attr.style
                  Css_gen.(
                    user_select `None @> Css_gen.create ~field:"cursor" ~value:"pointer")
              ])
         [ Vdom.Node.text (if is_open then "▾ " ^ label else "► " ^ label) ]
     in
-    let form = group' label t in
     let view =
-      match is_open, form.view with
-      | false, Group { label; tooltip; _ } ->
-        View.Group { label; tooltip; view = Empty; error = None }
-      | _, other -> other
+      match is_open with
+      | false -> View.collapsible ~label ~state:(Collapsed None)
+      | true -> View.collapsible ~label ~state:(Expanded t.view)
     in
-    { form with view }
+    { t with view }
   ;;
 
   let on_change
@@ -387,32 +419,29 @@ module Dynamic = struct
 
   module Record_builder = struct
     include Profunctor.Record_builder (struct
-        type ('read, 'write) t = ('read, 'write) unbalanced Value.t
+        type ('read, 'write) t = ('read, 'write) For_profunctor.t Value.t
 
-        let both a b = Value.map2 a b ~f:both_for_profunctor
-        let map a ~f = Value.map a ~f:(map ~f)
-        let contra_map a ~f = Value.map a ~f:(contra_map ~f)
+        let both a b = Value.map2 a b ~f:For_profunctor.both
+        let map a ~f = Value.map a ~f:(For_profunctor.map ~f)
+        let contra_map a ~f = Value.map a ~f:(For_profunctor.contra_map ~f)
       end)
 
-    let field ?(group_lists = true) t fieldslib_field =
-      let label = Record_builder.label_of_field fieldslib_field in
-      let with_label =
+    let field t fieldslib_field =
+      let for_profunctor =
         let%map t = t in
-        let view =
-          (if group_lists then View.group_list t.view else t.view)
-          |> View.suggest_label label
+        let t =
+          { t with value = Record_builder.attach_fieldname_to_error t fieldslib_field }
         in
-        let value = Record_builder.attach_fieldname_to_error t fieldslib_field in
-        { t with view; value }
+        For_profunctor.Return
+          { name = Record_builder.label_of_field fieldslib_field; form = t }
       in
-      field with_label fieldslib_field
+      field for_profunctor fieldslib_field
     ;;
 
     let build_for_record creator =
       let%arr t = build_for_record creator in
-      { t with
-        view = View.Group { label = None; tooltip = None; view = t.view; error = None }
-      }
+      let value, set, fields = For_profunctor.finalize_view t in
+      { value; set; view = View.record fields }
     ;;
   end
 end
@@ -422,9 +451,7 @@ module Expert = struct
 end
 
 module Private = struct
-  let group_list t = { t with view = View.group_list t.view }
-
   let suggest_label label t =
-    { t with view = View.suggest_label (Vdom.Node.text label) t.view }
+    { t with view = View.suggest_label' (Vdom.Node.text label) t.view }
   ;;
 end

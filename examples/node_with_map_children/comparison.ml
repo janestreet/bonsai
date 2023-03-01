@@ -17,18 +17,20 @@ let to_vdom_node_map ~with_key map =
 
 let make_comparison_list node = Vdom.Node.div ~attr:Style.comparison_list [ node ]
 
-let view nodes =
+let view ~tag ~attr nodes =
   let%sub nodes_with_key = to_vdom_node_map ~with_key:true nodes in
   let%sub nodes_without_key = to_vdom_node_map ~with_key:false nodes in
   let%arr nodes_with_key = nodes_with_key
-  and nodes_without_key = nodes_without_key in
-  let with_key_via_alist = Vdom.Node.div (Map.data nodes_with_key) in
+  and nodes_without_key = nodes_without_key
+  and tag = tag
+  and attr = attr in
+  let with_key_via_alist = Vdom.Node.create tag ~attr (Map.data nodes_with_key) in
   let with_key_via_map_with_node_children =
-    Vdom_node_with_map_children.make nodes_with_key
+    Vdom_node_with_map_children.make ~tag ~attr nodes_with_key
   in
-  let without_key_via_alist = Vdom.Node.div (Map.data nodes_without_key) in
+  let without_key_via_alist = Vdom.Node.create tag ~attr (Map.data nodes_without_key) in
   let without_key_via_map_with_node_children =
-    Vdom_node_with_map_children.make nodes_without_key
+    Vdom_node_with_map_children.make ~tag ~attr nodes_without_key
   in
   Vdom.Node.div
     ~attr:(Vdom.Attr.many [ Style.color_list; Style.results ])

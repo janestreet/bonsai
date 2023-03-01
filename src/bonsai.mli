@@ -228,6 +228,20 @@ val path_id : string Computation.t
     a Computation as output. *)
 val pure : ('a -> 'b) -> 'a Value.t -> 'b Computation.t
 
+module Computation_status : sig
+  (** Indicates whether a value is available, which depends on whether the
+      computation in which it is computed is active or not. Most of the time
+      values of this type are [Active], since it is unusual to interact with
+      inactive computations.
+
+      A computation is considered inactive if it resides in the inactive arm of
+      a [match%sub] or in a removed entry of a [Bonsai.assoc]. *)
+  type 'input t =
+    | Active of 'input
+    | Inactive
+  [@@deriving sexp_of]
+end
+
 (** A frequently used state-machine is the trivial 'set-state' transition,
     where the action always replaces the value contained inside.  This
     helper-function implements that state-machine, providing access to the
@@ -279,8 +293,10 @@ val state_machine0
         -> 'model)
   -> ('model * ('action -> unit Effect.t)) Computation.t
 
-(** The same as {!state_machine0}, but [apply_action] also takes an input from a
-    [Value.t]. *)
+(** The same as {!state_machine0}, but [apply_action] also takes an input from
+    a [Value.t]. The input has type ['input Computation_status.t] instead of
+    plain ['input] to account for the possibility that an action gets sent
+    while the state machine is inactive. *)
 val state_machine1
   :  (module Model with type t = 'model)
   -> (module Action with type t = 'action)
@@ -294,7 +310,7 @@ val state_machine1
   -> apply_action:
        (inject:('action -> unit Effect.t)
         -> schedule_event:(unit Effect.t -> unit)
-        -> 'input
+        -> 'input Computation_status.t
         -> 'model
         -> 'action
         -> 'model)
@@ -336,7 +352,7 @@ val actor1
   -> default_model:'model
   -> recv:
        (schedule_event:(unit Effect.t -> unit)
-        -> 'input
+        -> 'input Computation_status.t
         -> 'model
         -> 'action
         -> 'model * 'return)
@@ -442,6 +458,25 @@ val assoc
   -> f:('key Value.t -> 'data Value.t -> 'result Computation.t)
   -> ('key, 'result, 'cmp) Map.t Computation.t
 
+(** Like [assoc] except that the input value is a Set instead of a Map. *)
+val assoc_set
+  :  ('key, 'cmp) comparator
+  -> ('key, 'cmp) Set.t Value.t
+  -> f:('key Value.t -> 'result Computation.t)
+  -> ('key, 'result, 'cmp) Map.t Computation.t
+
+(** Like [assoc] except that the input value is a list instead of a Map. The output list
+    is in the same order as the input list.
+
+    This function performs O(n log(n)) work (where n is the length of the list) any time
+    that anything in the input list changes, so it may be quite slow with large lists. *)
+val assoc_list
+  :  ('key, _) comparator
+  -> 'a list Value.t
+  -> get_key:('a -> 'key)
+  -> f:('key Value.t -> 'a Value.t -> 'b Computation.t)
+  -> [ `Duplicate_key of 'key | `Ok of 'b list ] Computation.t
+
 
 (** [enum] is used for matching on a value and providing different behaviors on different
     values.  The type of the value must be enumerable (there must be a finite number of
@@ -495,8 +530,22 @@ val with_model_resetter'
     computation producing an effect which fetches the current value out of the
     input.  This can be useful inside of [let%bind.Effect] chains, where a
     value that you've closed over is stale and you want to witness a value
-    after it's been changed by a previous effect. *)
-val yoink : 'a Value.t -> 'a Effect.t Computation.t
+    after it's been changed by a previous effect.
+
+    The ['a Computation_state.t] returned by the effect means that if the value
+    was inactive at the time it got yoinked, then the effect will be unable to
+    retrieve it. *)
+val yoink : 'a Value.t -> 'a Computation_status.t Effect.t Computation.t
+
+(** [sub] instantiates a computation and provides a reference to its results to
+    [f] in the form of a [Value.t]. The main way to use this function is via
+    the [let%sub] syntax extension. [?here] is used by the Bonsai debugger
+    to tie visualizations to precise source locations. *)
+val sub
+  :  ?here:Source_code_position.t
+  -> 'a Computation.t
+  -> f:('a Value.t -> 'b Computation.t)
+  -> 'b Computation.t
 
 module Clock : sig
   (** Functions allowing for the creation of time-dependent computations in
@@ -530,7 +579,7 @@ module Clock : sig
   *)
   val every
     :  when_to_start_next_effect:
-         [ `Wait_period_after_previous_effect_starts_blocking
+         [< `Wait_period_after_previous_effect_starts_blocking
          | `Wait_period_after_previous_effect_finishes_blocking
          | `Every_multiple_of_period_non_blocking
          | `Every_multiple_of_period_blocking
@@ -641,6 +690,68 @@ module Edge : sig
   end
 end
 
+module Memo : sig
+  (** The [Memo] module can be used to share a computation between multiple
+      components, meaning that if the shared computation is stateful, then
+      the users of that computation will see the same state.
+
+      The way that [Memo] differs from just using [let%sub] on a computation
+      and then passing the resulting [Value.t] down to its children is twofold:
+      - The shared computation is not made active until it's actually requested
+        by another component
+      - Knowledge of any inputs to component are be deferred to "lookup time", when
+        components request an instance of the component.
+
+      Shared computations are refcounted, so when the last user of a memoized component
+      deactivates, the shared component is deactivated as well. *)
+
+  type ('input, 'result) t
+
+  (** Creates a memo instance that can be used by calling [lookup] *)
+  val create
+    :  ('input, 'cmp) comparator
+    -> f:('input Value.t -> 'result Computation.t)
+    -> ('input, 'result) t Computation.t
+
+  (** Requests an instance of the shared computation for a given ['input] value.
+      If an instance doesn't already exist, it will request a new computation, which
+      results in [none] being returned for a brief period of time, after which it'll
+      return a [Some] containing the result of that computation *)
+  val lookup
+    :  (module Model with type t = 'input)
+    -> ('input, 'result) t Value.t
+    -> 'input Value.t
+    -> 'result option Computation.t
+end
+
+module Effect_throttling : sig
+  module Poll_result : sig
+    type 'a t =
+      | Aborted
+      (** [Aborted] indicates that the effect was aborted before it even
+          started. If an effect starts, then it should complete with some kind
+          of result - [Effect] does not support cancellation in general. *)
+      | Finished of 'a
+      (** [Finished x] indicates that an effect successfully completed with value x. *)
+    [@@deriving sexp_of]
+  end
+
+  (** Transforms an input effect into a new effect that enforces that invariant
+      that at most one instance of the effect is running at once. Attempting to
+      run the effect while a previous run is still ongoing will cause the new
+      effect to be enqueued. Any previously enqueued item gets kicked out, thus
+      maintaining the invariant that at most one effect will be enqueued. (this
+      is important so that things like RPCs calls don't pile up)
+
+      CAUTION: This computation assumes that the input effect will always
+      complete. If a run of the effect raises, no more runs will ever get
+      executed, since they will all be waiting for the one that raised to
+      complete. *)
+  val poll
+    :  ('a -> 'b Effect.t) Value.t
+    -> ('a -> 'b Poll_result.t Effect.t) Computation.t
+end
+
 module Dynamic_scope : sig
   (** This module implements dynamic variable scoping.  Once a
       dynamic variable is created, you can store values in it, and
@@ -728,9 +839,10 @@ module Let_syntax : sig
   val ( <$> ) : ('a -> 'b) -> 'a Value.t -> 'b Value.t
 
   module Let_syntax : sig
-    (** [sub] runs a Computation, providing the result of that Computation to the
-        function [f] in the form of a [Value.t].  The main way to use this function is via
-        the syntax extension [let%sub] which is described above. *)
+    (** [sub] instantiates a computation and provides a reference to its results to
+        [f] in the form of a [Value.t]. The main way to use this function is via
+        the [let%sub] syntax extension. [?here] is used by the Bonsai debugger
+        to tie visualizations to precise source locations. *)
     val sub
       :  ?here:Source_code_position.t
       -> 'a Computation.t
@@ -740,12 +852,13 @@ module Let_syntax : sig
     val cutoff : 'a Value.t -> equal:('a -> 'a -> bool) -> 'a Value.t
 
     val switch
-      :  match_:int Value.t
+      :  here:Source_code_position.t
+      -> match_:int Value.t
       -> branches:int
       -> with_:(int -> 'a Computation.t)
       -> 'a Computation.t
 
-    val map : 'a Value.t -> f:('a -> 'b) -> 'b Value.t
+    val map : ?here:Source_code_position.t -> 'a Value.t -> f:('a -> 'b) -> 'b Value.t
     val return : 'a Value.t -> 'a Computation.t
     val both : 'a Value.t -> 'b Value.t -> ('a * 'b) Value.t
 
@@ -780,7 +893,7 @@ module Private : sig
 
   module Value = Private_value
   module Computation = Private_computation
-  module Apply_action = Apply_action
+  module Input = Input
   module Environment = Environment
   module Meta = Meta
   module Snapshot = Snapshot
@@ -791,7 +904,6 @@ module Private : sig
   module Instrumentation = Instrumentation
   module Flatten_values = Flatten_values
   module Constant_fold = Constant_fold
-  module Remove_identity = Remove_identity
   module Skeleton = Skeleton
   module Transform = Transform
   module Linter = Linter
@@ -831,41 +943,6 @@ module Expert : sig
     -> 'input Value.t
     -> ('model * ('dynamic_action -> unit Effect.t) * ('static_action -> unit Effect.t))
          Computation.t
-
-  module Computation_status : sig
-    type 'input t =
-      | Active of 'input
-      | Inactive
-  end
-
-  (** Just like [state_machine1] except that the input is an option. The behavior
-      of [race] differs from [state_machine1] only when the component resides in
-      an inactive [match%sub] branch; in such cases, actions sent to [race] are
-      delivered with the input set to [None], but actions sent to
-      [state_machine1] do not get delivered at all.
-
-      The tradeoff is that [race] is potentially slightly slower, since it
-      schedules an extra, reliable action that gets applied if the original,
-      ordinary action fails to be applied (due to the state machine being
-      inactive). *)
-  val race
-    :  (module Model with type t = 'model)
-    -> (module Action with type t = 'action)
-    -> ?reset:
-         (inject:('action -> unit Effect.t)
-          -> schedule_event:(unit Effect.t -> unit)
-          -> 'model
-          -> 'model)
-    -> default_model:'model
-    -> apply_action:
-         (inject:('action -> unit Effect.t)
-          -> schedule_event:(unit Effect.t -> unit)
-          -> 'input Computation_status.t
-          -> 'model
-          -> 'action
-          -> 'model)
-    -> 'input Value.t
-    -> ('model * ('action -> unit Effect.t)) Computation.t
 
   (** [thunk] will execute its argument exactly once per instantiation of the
       computation. *)

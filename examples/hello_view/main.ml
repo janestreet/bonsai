@@ -18,6 +18,4 @@ let app =
   View.Theme.set_for_app theme my_component
 ;;
 
-let (_ : _ Start.Handle.t) =
-  Start.start Start.Result_spec.just_the_view ~bind_to_element_with_id:"app" app
-;;
+let () = Bonsai_web.Start.start app

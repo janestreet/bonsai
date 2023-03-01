@@ -2,6 +2,7 @@
  (preprocess (pps ppx_jane ppx_bonsai)))
 
 (rule (targets hardcoded_fake_computation_to_string.ml) (mode promote)
- (deps ../main.exe)
+ (deps (:first_dep ../main.exe))
  (action
-  (bash "../main.exe hardcoded > hardcoded_fake_computation_to_string.ml")))
+  (bash
+   "%{first_dep} hardcoded | %{bin:apply-style} -ocamlformat - -original-file ./%{targets} > %{targets}")))

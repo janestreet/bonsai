@@ -1,0 +1,55 @@
+.container {
+  border-radius: 3px;
+  background:var(--bg);
+  color:var(--fg);
+  position:relative;
+}
+
+.fieldset_container {
+  padding: 0 0.5em 0.25em 0.5em;
+  border: 1px solid var(--border);
+}
+
+.fieldset_container > legend {
+  line-height: 1em;
+}
+
+.title-text {
+  font-weight: bold;
+  font-size: 0.8em;
+  padding: 0 0.5em;
+  min-height:1em;
+}
+
+:not(.card_legend).title-text {
+  color:var(--title-fg);
+}
+
+.card_legend.title-text {
+  color:var(--contrasting-fg-intent-color);
+}
+
+:not(.card_legend).title-bar {
+  background :var(--title-bg);
+
+  border: 2px solid var(--title-border);
+  border-top-left-radius: 3px;
+  border-top-right-radius: 3px;
+}
+
+.content_prominent {
+  padding: 0.25em 0.5em;
+
+  border-bottom-left-radius: 3px;
+  border-bottom-right-radius: 3px;
+  border: 1px solid var(--border);
+}
+
+.content_prominent.no-title {
+  border-top-left-radius: 3px;
+  border-top-right-radius: 3px;
+}
+
+.content_prominent.yes-title {
+  border-top:0;
+}

@@ -107,10 +107,10 @@ module Status = struct
   [@@deriving sexp, compare, quickcheck]
 
   let to_color = function
-    | Starting -> Tailwind_colors.yellow500
+    | Starting -> Tailwind_colors.amber500
     | Running _ -> Tailwind_colors.blue500
     | Failed _ -> Tailwind_colors.red500
-    | Done _ -> Tailwind_colors.green500
+    | Done _ -> Tailwind_colors.emerald500
   ;;
 
   let to_percent_complete = function
@@ -455,6 +455,4 @@ let component =
     ]
 ;;
 
-let (_ : _ Start.Handle.t) =
-  Start.start Start.Result_spec.just_the_view ~bind_to_element_with_id:"app" component
-;;
+let () = Bonsai_web.Start.start component

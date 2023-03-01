@@ -152,7 +152,7 @@ let table_form
   and table = table
   and set_map = set_map
   and id = id in
-  let view = Form.View.Private.of_vdom ~id table in
+  let view = Form.View.of_vdom ~id table in
   let value =
     forms
     |> Map.to_alist
@@ -163,7 +163,12 @@ let table_form
   in
   let set new_data =
     let%bind.Effect () = set_map (Map.map new_data ~f:(Fn.const ())) in
-    let%bind.Effect forms = get_forms in
+    let%bind.Effect forms =
+      match%bind.Effect get_forms with
+      | Active forms -> Effect.return forms
+      | Inactive ->
+        Effect.never
+    in
     Effect.Many
       (List.map2_exn (Map.data forms) (Map.data new_data) ~f:(fun form data ->
          Form.set form data))

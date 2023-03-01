@@ -1,0 +1,6 @@
+(rule
+ (deps %{workspace_root}/external/dygraphs/dist/dygraph.css
+  %{workspace_root}/external/dygraphs/dist/dygraph.js
+  %{workspace_root}/external/dygraphs/dist/dygraph.min.js)
+ (targets dygraph.css dygraph.js dygraph.min.js)
+ (action (bash "cp %{deps} .")))

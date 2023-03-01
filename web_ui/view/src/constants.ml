@@ -31,6 +31,23 @@ module Intent = struct
   ;;
 end
 
+module Font_style = struct
+  type t =
+    | Regular
+    | Bold
+    | Italic
+    | Underlined
+  [@@deriving sexp, equal, compare, enumerate]
+end
+
+module Font_size = struct
+  type t =
+    | Small
+    | Regular
+    | Large
+  [@@deriving sexp, equal, compare, enumerate]
+end
+
 module Table = struct
   type t =
     { body_row_even : Fg_bg.t
@@ -42,10 +59,31 @@ module Table = struct
     }
 end
 
+module Form = struct
+  type t =
+    { error_message : Fg_bg.t
+    ; error_toggle_text : Color.t
+    ; error_border : Color.t
+    ; tooltip_message : Fg_bg.t
+    ; tooltip_toggle_text : Color.t
+    ; tooltip_border : Color.t
+    }
+end
+
 type t =
   { primary : Fg_bg.t
   ; extreme : Fg_bg.t
   ; extreme_primary_border : Color.t
   ; intent : Intent.colors
   ; table : Table.t
+  ; form : Form.t
+  ; small_font_size : Css_gen.Length.t
+  ; large_font_size : Css_gen.Length.t
+  ; is_dark : bool
   }
+
+module Card_title_kind = struct
+  type t =
+    | Prominent
+    | Discreet
+end

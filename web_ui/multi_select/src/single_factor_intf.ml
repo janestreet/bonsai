@@ -42,13 +42,6 @@ module type S = sig
       -> t
   end
 
-  module Selection_status : sig
-    type t =
-      | Selected
-      | Unselected
-    [@@deriving compare, sexp_of]
-  end
-
   module Action : sig
     type t =
       | Update_search_string       of string

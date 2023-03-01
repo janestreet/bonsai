@@ -162,6 +162,7 @@ module Expert = struct
         ~comparator:key
         ~row_height
         ~leaves
+        ~headers
         ~assoc
         ~column_widths
         ~visually_focused
@@ -296,6 +297,7 @@ module Basic = struct
       { view : Vdom.Node.t
       ; for_testing : For_testing.t Lazy.t
       ; focus : 'focus
+      ; num_filtered_rows : int
       }
     [@@deriving fields]
   end
@@ -382,6 +384,10 @@ module Basic = struct
           map
           collate
       in
+      let%sub num_filtered_rows =
+        let%arr collated = collated in
+        Collated.num_filtered_rows collated
+      in
       let%sub ({ range = viewed_range; _ } as result) =
         Expert.implementation
           ~preload_rows
@@ -402,7 +408,8 @@ module Basic = struct
             (let%map set_rank_range = set_rank_range in
              fun (low, high) -> set_rank_range (Collate.Which_range.Between (low, high)))
       in
-      let%arr { view; for_testing; range = _; focus } = result in
-      { Result.view; for_testing; focus }
+      let%arr { view; for_testing; range = _; focus } = result
+      and num_filtered_rows = num_filtered_rows in
+      { Result.view; for_testing; focus; num_filtered_rows }
   ;;
 end

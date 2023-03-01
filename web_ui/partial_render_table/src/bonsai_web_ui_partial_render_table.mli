@@ -28,6 +28,7 @@ module Basic : sig
       { view : Vdom.Node.t
       ; for_testing : For_testing.t Lazy.t
       ; focus : 'focus
+      ; num_filtered_rows : int
       }
     [@@deriving fields]
   end

@@ -43,6 +43,7 @@ module Dyn = struct
   ;;
 
   let label_for_variant = `Computed to_string
+  let initial_choice = `First_constructor
 
   let form_for_variant : type a. a Typed_variant.t -> a Form.t Computation.t = function
     | Unit -> Bonsai.const (Form.return ())

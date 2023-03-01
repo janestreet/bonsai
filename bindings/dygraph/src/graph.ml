@@ -36,10 +36,20 @@ let (isZoomed : t -> bool) =
   fun (x14 : t) -> Ojs.bool_of_js (Ojs.call (t_to_js x14) "isZoomed" [||])
 let (resetZoom : t -> unit) =
   fun (x15 : t) -> ignore (Ojs.call (t_to_js x15) "resetZoom" [||])
-let toDomCoords ?(axis= `X)  ~x:(x : float)  ~y:(y : float)  (t : t) =
-  Ojs.array_of_js Ojs.float_of_js
-    (Ojs.call (t_to_js t) "toDomCoords"
-       [|(Ojs.float_to_js x);(Ojs.float_to_js y);(Ojs.int_to_js
-                                                    (match axis with
-                                                     | `X -> 0
-                                                     | `Y -> 1))|])
+let (primary_context : t -> Canvas_rendering_context_2D.t) =
+  fun (x16 : t) ->
+    Canvas_rendering_context_2D.t_of_js
+      (Ojs.get_prop_ascii (t_to_js x16) "hidden_ctx_")
+let (overlay_context : t -> Canvas_rendering_context_2D.t) =
+  fun (x17 : t) ->
+    Canvas_rendering_context_2D.t_of_js
+      (Ojs.get_prop_ascii (t_to_js x17) "canvas_ctx_")
+let toDomCoords ?(axis= `y1)  ~x:(x : float)  ~y:(y : float)  (t : t) =
+  let coords =
+    Ojs.call (t_to_js t) "toDomCoords"
+      [|(Ojs.float_to_js x);(Ojs.float_to_js y);(Ojs.int_to_js
+                                                   (match axis with
+                                                    | `y1 -> 0
+                                                    | `y2 -> 1))|] in
+  ((Ojs.float_of_js (Ojs.array_get coords 0)),
+    (Ojs.float_of_js (Ojs.array_get coords 1)))

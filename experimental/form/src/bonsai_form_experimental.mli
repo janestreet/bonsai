@@ -63,6 +63,12 @@ module Dropdown : sig
     -> default:'a
     -> (_, 'a Product.Same.t) Bonsai.Arrow_deprecated.t
 
+  (** Same as [of_enum] but takes a dynamically computed [default]. *)
+  val of_enum_dynamic_model
+    :  (module Enum with type t = 't)
+    -> default:'t Value.t
+    -> ('t Product.With_view.t, 't) Product.t Computation.t
+
   (** Same as [of_enum], but includes a blank first entry to represent [None]. *)
   val of_enum_opt
     :  (module Enum with type t = 'a)

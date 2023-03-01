@@ -36,13 +36,18 @@ module Variant : sig
     (** For each of the variants in your sum type, you need to provide a form
         component which produces values of that type. *)
     val form_for_variant : 'a Typed_variant.t -> 'a Form.t Computation.t
+
+    (* [initial_choice] can be used to change which constructor in the variant is
+       initially selected. *)
+    val initial_choice : [ `First_constructor | `Empty | `This of Typed_variant.Packed.t ]
   end
 
   (** [picker_attr] will be added to the picker for selecting a variant constructor.
-      Default appearance is a dropdown, but it can be changed through [?picker]. *)
+      Default appearance is a dropdown, but it can be changed through [?picker].
+
+  *)
   val make
     :  ?picker:[ `Dropdown | `Radio of [ `Horizontal | `Vertical ] ]
-    -> ?init:[ `First_item | `Empty ]
     -> ?picker_attr:Vdom.Attr.t Value.t
     -> (module S with type Typed_variant.derived_on = 'a)
     -> 'a Form.t Computation.t
@@ -52,7 +57,6 @@ module Variant : sig
      with [Variant.make] *)]*)
   val make_optional
     :  ?picker:[ `Dropdown | `Radio of [ `Horizontal | `Vertical ] ]
-    -> ?init:[ `First_item | `Empty ]
     -> ?picker_attr:Vdom.Attr.t Value.t
     -> ?empty_label:string
     -> (module S with type Typed_variant.derived_on = 'a)

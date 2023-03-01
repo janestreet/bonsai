@@ -70,7 +70,7 @@ let%expect_test "button" =
     ## basic
     ```html
     <button class="btn_hash_replaced_in_test subtle_hash_replaced_in_test"
-            custom-css-vars=((--extreme_primary_border_hash_replaced_in_test #313943)(--btn-bg_hash_replaced_in_test #14181c))
+            custom-css-vars=((--disabled-stripes_hash_replaced_in_test #21242a)(--extreme_primary_border_hash_replaced_in_test #313943)(--btn-bg_hash_replaced_in_test #14181c))
             onclick
             style={
               background-color: #14181c;
@@ -82,7 +82,7 @@ let%expect_test "button" =
     ```html
     <button disabled=""
             class="btn_hash_replaced_in_test subtle_hash_replaced_in_test"
-            custom-css-vars=((--extreme_primary_border_hash_replaced_in_test #313943)(--btn-bg_hash_replaced_in_test #14181c))
+            custom-css-vars=((--disabled-stripes_hash_replaced_in_test #21242a)(--extreme_primary_border_hash_replaced_in_test #313943)(--btn-bg_hash_replaced_in_test #14181c))
             onclick
             style={
               background-color: #14181c;
@@ -93,7 +93,7 @@ let%expect_test "button" =
     ## extra attrs
     ```html
     <button class="btn_hash_replaced_in_test subtle_hash_replaced_in_test"
-            custom-css-vars=((--extreme_primary_border_hash_replaced_in_test #313943)(--btn-bg_hash_replaced_in_test #14181c))
+            custom-css-vars=((--disabled-stripes_hash_replaced_in_test #21242a)(--extreme_primary_border_hash_replaced_in_test #313943)(--btn-bg_hash_replaced_in_test #14181c))
             onclick
             ondblclick
             style={
@@ -251,7 +251,7 @@ let%expect_test "button with tooltip" =
     ```html
     <button title="my tooltip"
             class="btn_hash_replaced_in_test subtle_hash_replaced_in_test"
-            custom-css-vars=((--extreme_primary_border_hash_replaced_in_test #313943)(--btn-bg_hash_replaced_in_test #14181c))
+            custom-css-vars=((--disabled-stripes_hash_replaced_in_test #21242a)(--extreme_primary_border_hash_replaced_in_test #313943)(--btn-bg_hash_replaced_in_test #14181c))
             onclick
             style={
               background-color: #14181c;
@@ -1060,7 +1060,7 @@ let%expect_test "devbar" =
     # kado v1
     ## basic
     ```html
-    <div class="devbar_hash_replaced_in_test">
+    <div class="dark_hash_replaced_in_test devbar_hash_replaced_in_test">
       <div class="container_hash_replaced_in_test">
         <div class="background_hash_replaced_in_test"> </div>
         <span> dev </span>
@@ -1073,7 +1073,7 @@ let%expect_test "devbar" =
 
     ## with_intent
     ```html
-    <div class="devbar_hash_replaced_in_test"
+    <div class="dark_hash_replaced_in_test devbar_hash_replaced_in_test"
          custom-css-vars=((--snd_hash_replaced_in_test #57c961)(--fst_hash_replaced_in_test black))>
       <div class="container_hash_replaced_in_test">
         <div class="background_hash_replaced_in_test"> </div>
@@ -1100,7 +1100,8 @@ let%expect_test "app" =
     # kado v1
     ## basic
     ```html
-    <div class="app_hash_replaced_in_test" custom-css-vars=((--bg_hash_replaced_in_test #1a1d21))> </div>
+    <div class="app_hash_replaced_in_test dark_hash_replaced_in_test"
+         custom-css-vars=((--bg_hash_replaced_in_test #1a1d21))> </div>
     ``` |}]
 ;;
 
@@ -1115,19 +1116,26 @@ let%expect_test "app wrapper" =
   in
   bonsai_component (component ~f:Fn.id);
   [%expect
-    {| <span class="app_hash_replaced_in_test" custom-css-vars=((--bg_hash_replaced_in_test #1a1d21))> kado v1 </span> |}];
+    {|
+      <span class="app_hash_replaced_in_test dark_hash_replaced_in_test"
+            custom-css-vars=((--bg_hash_replaced_in_test #1a1d21))> kado v1 </span> |}];
   bonsai_component (component ~f:(fun vdom -> Vdom.Node.div [ vdom ]));
   [%expect
     {|
-    <div class="app_hash_replaced_in_test" custom-css-vars=((--bg_hash_replaced_in_test #1a1d21))>
+    <div class="app_hash_replaced_in_test dark_hash_replaced_in_test"
+         custom-css-vars=((--bg_hash_replaced_in_test #1a1d21))>
       <span> kado v1 </span>
     </div> |}];
   bonsai_component (component ~f:(fun vdom -> Vdom.Node.lazy_ (lazy vdom)));
   [%expect
-    {| <span class="app_hash_replaced_in_test" custom-css-vars=((--bg_hash_replaced_in_test #1a1d21))> kado v1 </span> |}];
+    {|
+      <span class="app_hash_replaced_in_test dark_hash_replaced_in_test"
+            custom-css-vars=((--bg_hash_replaced_in_test #1a1d21))> kado v1 </span> |}];
   bonsai_component (component ~f:(fun _ -> Vdom.Node.none));
   [%expect
-    {| <div class="app_hash_replaced_in_test" custom-css-vars=((--bg_hash_replaced_in_test #1a1d21))> </div> |}];
+    {|
+      <div class="app_hash_replaced_in_test dark_hash_replaced_in_test"
+           custom-css-vars=((--bg_hash_replaced_in_test #1a1d21))> </div> |}];
   bonsai_component
     (component ~f:(fun _vdom ->
        Vdom.Node.inner_html
@@ -1137,7 +1145,8 @@ let%expect_test "app wrapper" =
          ~this_html_is_sanitized_and_is_totally_safe_trust_me:"content"));
   [%expect
     {|
-    <div class="app_hash_replaced_in_test" custom-css-vars=((--bg_hash_replaced_in_test #1a1d21))>
+    <div class="app_hash_replaced_in_test dark_hash_replaced_in_test"
+         custom-css-vars=((--bg_hash_replaced_in_test #1a1d21))>
       <foo> content </foo>
     </div> |}]
 ;;
@@ -1719,4 +1728,193 @@ let%test_module "tables" =
         ``` |}]
     ;;
   end)
+;;
+
+let%expect_test "card" =
+  let basic theme =
+    View.card theme ~on_click:Effect.Ignore ~title:"new message" "new message content"
+  in
+  let basic_no_title theme =
+    View.card theme ~on_click:Effect.Ignore "new message content"
+  in
+  let with_intent theme =
+    View.card
+      theme
+      ~on_click:Effect.Ignore
+      ~intent:Success
+      ~title:"title"
+      "new message that happens to be happy"
+  in
+  let with_field_set theme =
+    View.card theme ~on_click:Effect.Ignore ~title:"title" "Card from a fieldset"
+  in
+  themed_component
+    [ "basic", basic
+    ; "basic_no_title", basic_no_title
+    ; "with_intent", with_intent
+    ; "with_field_set", with_field_set
+    ];
+  [%expect
+    {|
+    # default theme
+    ## basic
+    ```html
+    <div class="container_hash_replaced_in_test"
+         custom-css-vars=((--intent-fg_hash_replaced_in_test black)(--intent-bg_hash_replaced_in_test white)(--extreme-fg_hash_replaced_in_test black))
+         onclick
+         style={
+           display: flex;
+           flex-direction: column;
+         }>
+      <div class="title-bar_hash_replaced_in_test title-text_hash_replaced_in_test"
+           style={
+             display: flex;
+           }> new message </div>
+      <div class="content_common_hash_replaced_in_test"
+           style={
+             display: flex;
+             flex-direction: column;
+           }> new message content </div>
+    </div>
+    ```
+
+    ## basic_no_title
+    ```html
+    <div class="container_hash_replaced_in_test"
+         custom-css-vars=((--intent-fg_hash_replaced_in_test black)(--intent-bg_hash_replaced_in_test white)(--extreme-fg_hash_replaced_in_test black))
+         onclick
+         style={
+           display: flex;
+           flex-direction: column;
+         }>
+      <div class="content_common_hash_replaced_in_test"
+           style={
+             display: flex;
+             flex-direction: column;
+           }> new message content </div>
+    </div>
+    ```
+
+    ## with_intent
+    ```html
+    <div class="container_hash_replaced_in_test"
+         custom-css-vars=((--intent-fg_hash_replaced_in_test #348203)(--intent-bg_hash_replaced_in_test #ecffe0)(--extreme-fg_hash_replaced_in_test black))
+         onclick
+         style={
+           display: flex;
+           flex-direction: column;
+         }>
+      <div class="title-bar_hash_replaced_in_test title-text_hash_replaced_in_test"
+           style={
+             display: flex;
+           }> title </div>
+      <div class="content_common_hash_replaced_in_test"
+           style={
+             display: flex;
+             flex-direction: column;
+           }> new message that happens to be happy </div>
+    </div>
+    ```
+
+    ## with_field_set
+    ```html
+    <div class="container_hash_replaced_in_test"
+         custom-css-vars=((--intent-fg_hash_replaced_in_test black)(--intent-bg_hash_replaced_in_test white)(--extreme-fg_hash_replaced_in_test black))
+         onclick
+         style={
+           display: flex;
+           flex-direction: column;
+         }>
+      <div class="title-bar_hash_replaced_in_test title-text_hash_replaced_in_test"
+           style={
+             display: flex;
+           }> title </div>
+      <div class="content_common_hash_replaced_in_test"
+           style={
+             display: flex;
+             flex-direction: column;
+           }> Card from a fieldset </div>
+    </div>
+    ```
+
+    # kado v1
+    ## basic
+    ```html
+    <div class="container_hash_replaced_in_test"
+         custom-css-vars=((--title-fg_hash_replaced_in_test #e2e3e4)(--title-border_hash_replaced_in_test #313943)(--title-bg_hash_replaced_in_test #14181c)(--fg_hash_replaced_in_test #d1d2d3)(--contrasting-fg-intent-color_hash_replaced_in_test #d1d2d3)(--border_hash_replaced_in_test #313943)(--bg_hash_replaced_in_test #1a1d21))
+         onclick
+         style={
+           display: flex;
+           flex-direction: column;
+         }>
+      <div class="title-bar_hash_replaced_in_test title-text_hash_replaced_in_test"
+           style={
+             display: flex;
+           }> new message </div>
+      <div class="content_prominent_hash_replaced_in_test yes-title_hash_replaced_in_test"
+           style={
+             display: flex;
+             flex-direction: column;
+           }> new message content </div>
+    </div>
+    ```
+
+    ## basic_no_title
+    ```html
+    <div class="container_hash_replaced_in_test"
+         custom-css-vars=((--title-fg_hash_replaced_in_test #e2e3e4)(--title-border_hash_replaced_in_test #313943)(--title-bg_hash_replaced_in_test #14181c)(--fg_hash_replaced_in_test #d1d2d3)(--contrasting-fg-intent-color_hash_replaced_in_test #d1d2d3)(--border_hash_replaced_in_test #313943)(--bg_hash_replaced_in_test #1a1d21))
+         onclick
+         style={
+           display: flex;
+           flex-direction: column;
+         }>
+      <div class="content_prominent_hash_replaced_in_test no-title_hash_replaced_in_test"
+           style={
+             display: flex;
+             flex-direction: column;
+           }> new message content </div>
+    </div>
+    ```
+
+    ## with_intent
+    ```html
+    <div class="container_hash_replaced_in_test"
+         custom-css-vars=((--title-fg_hash_replaced_in_test black)(--title-border_hash_replaced_in_test"rgba(255,255,255,0.30)")(--title-bg_hash_replaced_in_test #57c961)(--fg_hash_replaced_in_test #d1d2d3)(--contrasting-fg-intent-color_hash_replaced_in_test #57c961)(--border_hash_replaced_in_test #313943)(--bg_hash_replaced_in_test #1a1d21))
+         onclick
+         style={
+           display: flex;
+           flex-direction: column;
+         }>
+      <div class="title-bar_hash_replaced_in_test title-text_hash_replaced_in_test"
+           style={
+             display: flex;
+           }> title </div>
+      <div class="content_prominent_hash_replaced_in_test yes-title_hash_replaced_in_test"
+           style={
+             display: flex;
+             flex-direction: column;
+           }> new message that happens to be happy </div>
+    </div>
+    ```
+
+    ## with_field_set
+    ```html
+    <div class="container_hash_replaced_in_test"
+         custom-css-vars=((--title-fg_hash_replaced_in_test #e2e3e4)(--title-border_hash_replaced_in_test #313943)(--title-bg_hash_replaced_in_test #14181c)(--fg_hash_replaced_in_test #d1d2d3)(--contrasting-fg-intent-color_hash_replaced_in_test #d1d2d3)(--border_hash_replaced_in_test #313943)(--bg_hash_replaced_in_test #1a1d21))
+         onclick
+         style={
+           display: flex;
+           flex-direction: column;
+         }>
+      <div class="title-bar_hash_replaced_in_test title-text_hash_replaced_in_test"
+           style={
+             display: flex;
+           }> title </div>
+      <div class="content_prominent_hash_replaced_in_test yes-title_hash_replaced_in_test"
+           style={
+             display: flex;
+             flex-direction: column;
+           }> Card from a fieldset </div>
+    </div>
+    ``` |}]
 ;;

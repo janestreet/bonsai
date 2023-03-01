@@ -31,6 +31,7 @@ module Witness : sig
   type packed = T : ('a, 'cmp) t -> packed
 
   val equal : ('w, 'cmp) t -> 'w -> 'w -> bool
+  val to_string : _ t -> string
 end
 
 module Function : sig
@@ -63,6 +64,8 @@ module Value : sig
         ; witness : ('a, 'cmp) Witness.t
         }
         -> packed
+
+  val to_string : ('a, _) Witness.t -> 'a t -> string
 end
 
 module Computation : sig
@@ -108,6 +111,8 @@ end
 
 module Top_level_computation : sig
   val quickcheck_generator : Computation.packed Quickcheck.Generator.t
+  val quickcheck_observer : Computation.packed Quickcheck.Observer.t
+  val quickcheck_shrinker : Computation.packed Quickcheck.Shrinker.t
 end
 
 module Packed_real_computation : sig

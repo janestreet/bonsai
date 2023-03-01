@@ -1,28 +1,22 @@
 open! Core
 open! Import
 
-type ('model, 'action, 'result) t =
-  { apply_action : ('model, 'action) Apply_action.t
+type ('model, 'action, 'input, 'result) t =
+  { input : 'input Input.t
   ; lifecycle : Lifecycle.Collection.t Incr.t option
   ; result : 'result Incr.t
   }
 [@@deriving fields]
 
-let create ~apply_action ~lifecycle ~result =
-  (match (apply_action : _ Apply_action.t) with
-   | Incremental apply_action -> annotate Apply_action apply_action
-   | Join { incr; _ } -> annotate Apply_action incr
-   | Impossible _ -> ());
+let create ~input ~lifecycle ~result =
+  Input.iter_incremental input ~f:(annotate_packed Input);
   Option.iter lifecycle ~f:(annotate Lifecycle);
   annotate Result result;
-  Fields.create ~apply_action ~lifecycle ~result
+  Fields.create ~input ~lifecycle ~result
 ;;
 
 let attribute_positions here t =
-  (match t.apply_action with
-   | Join { incr; _ } -> attribute here incr
-   | Incremental apply_action -> attribute here apply_action
-   | Impossible _ -> ());
+  Input.iter_incremental t.input ~f:(attribute_packed here);
   Option.iter t.lifecycle ~f:(attribute here);
   attribute here t.result
 ;;

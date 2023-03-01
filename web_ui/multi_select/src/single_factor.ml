@@ -52,18 +52,6 @@ module Make (Item : Item) = struct
   end
 
   module T = struct
-    module Selection_status = struct
-      type t =
-        | Selected
-        | Unselected
-      [@@deriving compare, equal, sexp]
-
-      let toggle = function
-        | Selected   -> Unselected
-        | Unselected -> Selected
-      ;;
-    end
-
     module View_config = struct
       type t =
         { header               : Vdom.Node.t
@@ -263,6 +251,7 @@ module Make (Item : Item) = struct
           (Option.value_map id ~f:Attr.id ~default:Attr.empty)
       in
       Vdom_input_widgets.Entry.text
+        ~merge_behavior:Legacy_dont_merge
         ~value:(Some input.current_search)
         ~on_input
         ~extra_attrs:[ extra_attrs ]

@@ -82,8 +82,7 @@ module Original_components = Components
 
 type 'a t =
   { var : 'a Bonsai.Var.t
-  ; setter : 'a -> unit
-  ; effect : 'a -> unit Effect.t
+  ; history : 'a History.t
   }
 
 let create_exn' (type a) (module S : S with type t = a) ~on_bad_uri =
@@ -128,36 +127,33 @@ let create_exn' (type a) (module S : S with type t = a) ~on_bad_uri =
   in
   let value = History.current t in
   let var = Bonsai.Var.create value in
-  let setter = History.update t in
-  let effect =
-    Effect.of_sync_fun (fun a ->
-      setter a;
-      Bonsai.Var.set var a)
-  in
   Bus.iter_exn (History.changes_bus t) [%here] ~f:(Bonsai.Var.set var);
-  { var; setter; effect }
+  { var; history = t }
 ;;
 
 let create_exn (type a) (module S : S with type t = a) ~fallback =
   create_exn' (module S) ~on_bad_uri:(`Default_state fallback)
 ;;
 
-let set { var; setter; effect = _ } a =
-  setter a;
+let set ?(how : [ `Push | `Replace ] option) { var; history } a =
+  let how = Option.value how ~default:`Push in
+  (match how with
+   | `Push -> History.update history a
+   | `Replace -> History.replace history a);
   Bonsai.Var.set var a
 ;;
 
-let value { var; setter = _; effect = _ } = Bonsai.Var.value var
+let value { var; history = _ } = Bonsai.Var.value var
 
-let update { var; setter; effect = _ } ~f =
+let update ({ var; history = _ } as t) ~f =
   Bonsai.Var.update var ~f:(fun old ->
     let new_ = f old in
-    setter new_;
+    set t new_;
     new_)
 ;;
 
 let get { var; _ } = Bonsai.Var.get var
-let set_effect { effect; _ } = effect
+let set_effect ?how t = Effect.of_sync_fun (fun a -> set ?how t a)
 
 type 'a url_var = 'a t
 

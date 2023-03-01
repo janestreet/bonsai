@@ -40,13 +40,16 @@ let options =
 ;;
 
 let app =
-  Dygraph.With_bonsai.create
-    ()
-    ~key:("graph" |> Value.return)
-    ~x_label:("x" |> Value.return)
-    ~per_series_info:
-      ([ "x^2"; "x^3" ] |> Dygraph.Per_series_info.create_all_visible |> Value.return)
-    ~options:(options |> Value.return)
-    ~data:(data |> Value.return)
-    ~with_graph:(fun graph -> Js.Unsafe.set Dom_html.window "g" graph)
+  let%sub.Bonsai { graph_view; _ } =
+    Dygraph.With_bonsai.create
+      ()
+      ~key:("graph" |> Value.return)
+      ~x_label:("x" |> Value.return)
+      ~per_series_info:
+        ([ "x^2"; "x^3" ] |> Dygraph.Per_series_info.create_all_visible |> Value.return)
+      ~options:(options |> Value.return)
+      ~data:(data |> Value.return)
+      ~with_graph:(fun graph -> Js.Unsafe.set Dom_html.window "g" graph)
+  in
+  Bonsai.read graph_view
 ;;

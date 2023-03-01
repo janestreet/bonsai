@@ -57,7 +57,7 @@ module type S = sig
   end
 
   type per_subwidget =
-    { default_selection_status : Single_factor.Selection_status.t
+    { default_selection_status : Selection_status.t
     ; all_items                : Item.Set.t
     }
 

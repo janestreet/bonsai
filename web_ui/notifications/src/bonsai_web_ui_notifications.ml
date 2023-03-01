@@ -2,28 +2,6 @@ open! Core
 open! Bonsai_web
 open! Bonsai.Let_syntax
 
-module Level = struct
-  type t =
-    | Success
-    | Error of Error.t option
-  [@@deriving compare, sexp]
-end
-
-module Notification = struct
-  module T = struct
-    type t =
-      { text : string
-      ; level : Level.t
-      ; opened_at : Time_ns.Alternate_sexp.t
-      ; open_for_duration : Time_ns.Span.t
-      }
-    [@@deriving compare, fields, sexp]
-  end
-
-  include T
-  include Comparable.Make (T)
-end
-
 module Style =
   [%css
     stylesheet
@@ -31,8 +9,7 @@ module Style =
 .notification_container {
     position: fixed;
     bottom: 20px;
-    right: 20px;
-}
+    right: 20px; }
 
 .notification_container .notification {
     color: white;
@@ -65,10 +42,200 @@ module Style =
 }
 |}]
 
-module Notification_style =
-  [%css
-    stylesheet
-      {|
+module Notification_id = Bonsai_extra.Id_gen (Int) ()
+
+module Id = struct
+  type _ t = Notification_id.t
+end
+
+module Notification = struct
+  type 'a t =
+    { content : 'a
+    ; opened_at : Time_ns.Alternate_sexp.t
+    ; close_after : Time_ns.Span.t option
+    }
+  [@@deriving equal, sexp]
+end
+
+module Action = struct
+  type 'a t =
+    | Add of
+        { id : Notification_id.t
+        ; notification : 'a Notification.t
+        }
+    | Remove of Notification_id.t
+  [@@deriving equal, sexp]
+end
+
+type 'a t =
+  { notifications : 'a Notification.t Map.M(Notification_id).t
+  ; inject : 'a Action.t -> unit Effect.t
+  ; send_notification : ?close_after:Time_ns.Span.t -> 'a -> Notification_id.t Effect.t
+  ; modify_notification :
+      ?close_after:Time_ns.Span.t -> 'a Id.t -> 'a -> Notification_id.t Effect.t
+  }
+
+let component (type a) (module M : Bonsai.Model with type t = a) =
+  let%sub id_generator = Notification_id.component in
+  let%sub notifications, inject =
+    Bonsai.state_machine0
+      (module struct
+        type t = M.t Notification.t Map.M(Notification_id).t [@@deriving equal, sexp]
+      end)
+      (module struct
+        type t = M.t Action.t [@@deriving equal, sexp]
+      end)
+      ~default_model:(Map.empty (module Notification_id))
+      ~apply_action:(fun ~inject:_ ~schedule_event:_ notifications action ->
+        match action with
+        | Add { id; notification } -> Map.set notifications ~key:id ~data:notification
+        | Remove notification_id -> Map.remove notifications notification_id)
+  in
+  let%sub () =
+    let%sub (_ : (Notification_id.t, unit, _) Map.t) =
+      Bonsai.assoc
+        (module Notification_id)
+        notifications
+        ~f:(fun notification_id notification ->
+          let%sub { opened_at; close_after; content = _ } = return notification in
+          match%sub close_after with
+          | None -> Bonsai.const ()
+          | Some close_after ->
+            let%sub span =
+              let%arr close_after = close_after
+              and opened_at = opened_at in
+              Time_ns.add opened_at close_after
+            in
+            let%sub at = Bonsai.Clock.at span in
+            let%sub callback =
+              let%arr notification_id = notification_id
+              and inject = inject in
+              function
+              | Bonsai.Clock.Before_or_after.Before -> Effect.Ignore
+              | After -> inject (Action.Remove notification_id)
+            in
+            Bonsai.Edge.on_change (module Bonsai.Clock.Before_or_after) at ~callback)
+    in
+    Bonsai.const ()
+  in
+  let%sub send_and_modify_notifications =
+    let%sub now = Bonsai.Clock.get_current_time in
+    let%arr inject = inject
+    and id_generator = id_generator
+    and now = now in
+    let modify_notification ?close_after id content =
+      let open Effect.Let_syntax in
+      let%bind now = now in
+      let notification = { Notification.content; opened_at = now; close_after } in
+      let%bind () = inject (Add { id; notification }) in
+      return id
+    in
+    let send_notification ?close_after content =
+      let%bind.Effect id = id_generator in
+      modify_notification ?close_after id content
+    in
+    send_notification, modify_notification
+  in
+  let%arr notifications = notifications
+  and inject = inject
+  and send_notification, modify_notification = send_and_modify_notifications in
+  { notifications; inject; send_notification; modify_notification }
+;;
+
+(* [render_with_access_to_entire_notification] is just like render, but the [f] rendering
+   function also has access to the internally meaningful id of the notificaition and also
+   the data that is known about the notificaiton like when we expect it to closed an also
+   when it was sent. *)
+let render_with_access_to_entire_notification t ~f =
+  let%sub { notifications; inject; send_notification = _; modify_notification = _ } =
+    return t
+  in
+  let%sub rendered =
+    Bonsai.assoc
+      (module Notification_id)
+      notifications
+      ~f:(fun notification_id notification ->
+        let%sub close_effect =
+          let%arr notification_id = notification_id
+          and inject = inject in
+          inject (Action.Remove notification_id)
+        in
+        let%sub rendered = f ~close:close_effect ~id:notification_id notification in
+        let%arr rendered = rendered
+        and data = notification in
+        rendered, data.opened_at)
+  in
+  let%arr rendered = rendered in
+  Map.to_alist rendered
+  |> List.map ~f:(fun (notification_id, (rendered, _)) ->
+    Vdom.Node.div
+      ~key:(Notification_id.to_string notification_id)
+      ~attr:Style.notification
+      [ rendered ])
+  |> Vdom.Node.div ~attr:Style.notification_container
+;;
+
+let render t ~f =
+  render_with_access_to_entire_notification t ~f:(fun ~close ~id:_ notification ->
+    let%sub content =
+      let%arr notification = notification in
+      notification.Notification.content
+    in
+    f ~close content)
+;;
+
+let send_notification
+      ?close_after
+      { send_notification; notifications = _; inject = _; modify_notification = _ }
+  =
+  send_notification ?close_after
+;;
+
+let close_notification
+      { inject; notifications = _; send_notification = _; modify_notification = _ }
+      id
+  =
+  inject (Remove id)
+;;
+
+let modify_notification
+      ?close_after
+      { modify_notification; inject = _; notifications = _; send_notification = _ }
+      id
+      content
+  =
+  Effect.ignore_m (modify_notification ?close_after id content)
+;;
+
+module Basic = struct
+  module Level = struct
+    type t =
+      | Success
+      | Error of Error.t option
+    [@@deriving equal, sexp]
+  end
+
+  module Basic_notification = struct
+    type t =
+      { text : string
+      ; level : Level.t
+      }
+    [@@deriving equal, sexp]
+
+    let success text = { text; level = Success }
+    let error ?error text = { text; level = Error error }
+  end
+
+  type basic_t =
+    { notifications : Basic_notification.t t
+    ; dismiss_notifications_after : Time_ns.Span.t
+    ; dismiss_errors_automatically : bool
+    }
+
+  module Notification_style =
+    [%css
+      stylesheet
+        {|
 .success {
     background-color: #00AB66;
 }
@@ -78,203 +245,105 @@ module Notification_style =
 }
 |}]
 
-module Notification_id = Bonsai_extra.Id_gen (Int) ()
+  let create
+        ?(dismiss_notifications_after : Time_ns.Span.t Value.t =
+                                        Value.return (Time_ns.Span.of_sec 15.0))
+        ?(dismiss_errors_automatically : bool Value.t = Value.return false)
+        ()
+    =
+    let%sub notifications = component (module Basic_notification) in
+    let%arr notifications = notifications
+    and dismiss_notifications_after = dismiss_notifications_after
+    and dismiss_errors_automatically = dismiss_errors_automatically in
+    { notifications; dismiss_notifications_after; dismiss_errors_automatically }
+  ;;
 
-module Action = struct
-  type t =
-    | Add of Notification_id.t * Notification.t
-    | Remove of Notification_id.t
-  [@@deriving equal, sexp]
+  let add_error ?error (t : basic_t) ~text =
+    let { notifications; dismiss_notifications_after; dismiss_errors_automatically } =
+      t
+    in
+    let close_after =
+      match dismiss_errors_automatically with
+      | false -> None
+      | true -> Some dismiss_notifications_after
+    in
+    Ui_effect.ignore_m
+      (send_notification
+         ?close_after
+         notifications
+         (Basic_notification.error ?error text))
+  ;;
+
+  let add_success (t : basic_t) ~text =
+    let { notifications; dismiss_notifications_after; dismiss_errors_automatically = _ } =
+      t
+    in
+    let close_after = Some dismiss_notifications_after in
+    Ui_effect.ignore_m
+      (send_notification ?close_after notifications (Basic_notification.success text))
+  ;;
+
+  module type Style = Notification_style.S
+
+  let default_module : (module Style) = (module Notification_style)
+
+  let render
+        ?(notification_style = default_module)
+        ?(notification_extra_attr = Value.return Vdom.Attr.empty)
+        (t : basic_t Value.t)
+    =
+    let module Notification_style = (val notification_style) in
+    let%sub { notifications
+            ; dismiss_notifications_after = _
+            ; dismiss_errors_automatically = _
+            }
+      =
+      return t
+    in
+    render_with_access_to_entire_notification
+      notifications
+      ~f:(fun ~close ~id:notification_id notification ->
+        let%arr { Notification.content = { text; level }; opened_at = _; close_after } =
+          notification
+        and close = close
+        and notification_id = notification_id
+        and notification_extra_attr = notification_extra_attr in
+        let level_class =
+          match level with
+          | Success -> Notification_style.success
+          | Error _ -> Notification_style.error
+        in
+        Vdom.Node.div
+          ~key:(Notification_id.to_string notification_id)
+          ~attr:
+            Vdom.Attr.(
+              Style.notification
+              @ on_click (fun _ -> close)
+              @ notification_extra_attr
+              @ create "data-notification-id" (Notification_id.to_string notification_id))
+          [ Vdom.Node.div
+              ~attr:
+                Vdom.Attr.(
+                  many [ Style.notification_body; level_class ]
+                  @
+                  match close_after with
+                  | None -> Vdom.Attr.empty
+                  | Some close_after ->
+                    style
+                      (let open Css_gen in
+                       animation
+                         ~name:"fadeOut"
+                         ~duration:close_after
+                         ~timing_function:"ease-in"
+                         ()))
+              [ Vdom.Node.text text
+              ; (match level with
+                 | Success | Error None -> Vdom.Node.None
+                 | Error (Some error) ->
+                   Vdom.Node.pre [ Vdom.Node.text (Error.to_string_hum error) ])
+              ]
+          ])
+  ;;
+
+  type t = basic_t
 end
-
-type t =
-  { notifications : Notification.t Map.M(Notification_id).t
-  ; inject_notification_action : Action.t -> unit Ui_effect.t
-  ; id_generator : Notification_id.t Ui_effect.t
-  ; dismiss_notifications_after : Time_ns.Span.t
-  ; dismiss_errors_automatically : bool
-  ; get_now : Time_ns.t Effect.t
-  }
-[@@deriving fields]
-
-let create
-      ?(dismiss_notifications_after = Value.return (Time_ns.Span.create ~sec:15 ()))
-      ?(dismiss_errors_automatically = Value.return false)
-      ()
-  =
-  let%sub id_generator = Notification_id.component in
-  let%sub notifications =
-    Bonsai.state_machine0
-      (module struct
-        type t = Notification.t Map.M(Notification_id).t [@@deriving equal, sexp]
-      end)
-      (module Action)
-      ~default_model:(Map.empty (module Notification_id))
-      ~apply_action:(fun ~inject:_ ~schedule_event:_ notifications action ->
-        match action with
-        | Add (notification_id, notification) ->
-          Map.set notifications ~key:notification_id ~data:notification
-        | Remove notification_id -> Map.remove notifications notification_id)
-  in
-  let%sub notification_expiry_map =
-    Bonsai.assoc
-      (module Notification_id)
-      (notifications >>| fst)
-      ~f:(fun _key notification ->
-        Bonsai.Clock.at
-          (let%map { Notification.opened_at; open_for_duration; text = _; level = _ } =
-             notification
-           in
-           Time_ns.add opened_at open_for_duration))
-  in
-  let%sub () =
-    Bonsai.Edge.on_change
-      (module struct
-        type t = Bonsai.Clock.Before_or_after.t Map.M(Notification_id).t
-        [@@deriving equal, sexp]
-      end)
-      notification_expiry_map
-      ~callback:
-        (let%map notifications, inject_notification_action = notifications
-         and dismiss_errors_automatically = dismiss_errors_automatically in
-         fun notification_expiry_map ->
-           let effects =
-             Map.fold2
-               ~init:[]
-               notification_expiry_map
-               notifications
-               ~f:(fun ~key ~data accum ->
-                 match data with
-                 | `Left expiration_without_notification ->
-                   Ui_effect.print_s
-                     [%message
-                       "BUG in bonsai_web_ui_notifications: notification present in \
-                        expiration map, but not in notification map."
-                         (expiration_without_notification
-                          : Bonsai.Clock.Before_or_after.t)]
-                   :: accum
-                 | `Right notification ->
-                   Ui_effect.print_s
-                     [%message
-                       "BUG in bonsai_web_ui_notifications: notification present in \
-                        notifications map, but not in expiration map"
-                         (notification : Notification.t)]
-                   :: accum
-                 | `Both (Bonsai.Clock.Before_or_after.Before, _) -> accum
-                 | `Both (After, { Notification.level; _ }) ->
-                   (match level with
-                    | Success -> inject_notification_action (Remove key) :: accum
-                    | Error _ ->
-                      if dismiss_errors_automatically
-                      then inject_notification_action (Remove key) :: accum
-                      else accum))
-           in
-           Ui_effect.Many effects)
-  in
-  let%sub get_now = Bonsai.Clock.get_current_time in
-  let%arr notifications, inject_notification_action = notifications
-  and get_now = get_now
-  and dismiss_notifications_after = dismiss_notifications_after
-  and dismiss_errors_automatically = dismiss_errors_automatically
-  and id_generator = id_generator in
-  { notifications
-  ; inject_notification_action
-  ; id_generator
-  ; dismiss_notifications_after
-  ; dismiss_errors_automatically
-  ; get_now
-  }
-;;
-
-let add_notification
-      { notifications = _
-      ; inject_notification_action
-      ; id_generator
-      ; dismiss_notifications_after
-      ; dismiss_errors_automatically = _
-      ; get_now
-      }
-      ~text
-      ~level
-  =
-  let%bind.Effect now = get_now in
-  let notification =
-    Notification.Fields.create
-      ~text
-      ~level
-      ~opened_at:now
-      ~open_for_duration:dismiss_notifications_after
-  in
-  let%bind.Effect notification_id = id_generator in
-  inject_notification_action (Add (notification_id, notification))
-;;
-
-let add_error ?error = add_notification ~level:(Error error)
-let add_success = add_notification ~level:Success
-
-let to_vdom
-      ?(notification_style = Notification_style.default)
-      ?(notification_extra_attr = Vdom.Attr.empty)
-      { notifications
-      ; inject_notification_action
-      ; dismiss_errors_automatically
-      ; id_generator = _
-      ; dismiss_notifications_after = _
-      ; get_now = _
-      }
-  =
-  let module Notification_style = (val notification_style) in
-  Vdom.Node.div
-    ~attr:Style.notification_container
-    (Map.to_alist notifications
-     |> List.sort ~compare:(fun (_, a) (_, b) ->
-       [%compare: Time_ns.t] a.Notification.opened_at b.opened_at)
-     |> List.map
-          ~f:(fun
-               ( notification_id
-               , { Notification.text; level; opened_at = _; open_for_duration } )
-               ->
-                 let level_class =
-                   match level with
-                   | Success -> Notification_style.success
-                   | Error _ -> Notification_style.error
-                 in
-                 let should_dismiss_automatically =
-                   match level, dismiss_errors_automatically with
-                   | Success, _ | Error _, true -> true
-                   | Error _, false -> false
-                 in
-                 Vdom.Node.div
-                   ~key:(Notification_id.to_string notification_id)
-                   ~attr:
-                     Vdom.Attr.(
-                       Style.notification
-                       @ on_click (fun (_ : Js_of_ocaml.Dom_html.mouseEvent Js_of_ocaml.Js.t) ->
-                         inject_notification_action (Remove notification_id))
-                       @ notification_extra_attr
-                       @ create
-                           "data-notification-id"
-                           (Notification_id.to_string notification_id))
-                   [ Vdom.Node.div
-                       ~attr:
-                         Vdom.Attr.(
-                           many [ Style.notification_body; level_class ]
-                           @
-                           if should_dismiss_automatically
-                           then
-                             style
-                               (let open Css_gen in
-                                animation
-                                  ~name:"fadeOut"
-                                  ~duration:open_for_duration
-                                  ~timing_function:"ease-in"
-                                  ())
-                           else empty)
-                       [ Vdom.Node.text text
-                       ; (match level with
-                          | Success | Error None -> Vdom.Node.None
-                          | Error (Some error) ->
-                            Vdom.Node.pre [ Vdom.Node.text (Error.to_string_hum error) ])
-                       ]
-                   ]))
-;;

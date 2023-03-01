@@ -133,8 +133,8 @@ let%expect_test "sanity check subst" =
     Real computation:
     (Sub
       (from (Return (value (Constant (id 0)))))
-      (via 2)
-      (into (Return (value (Named (uid 2))))))
+      (via 1)
+      (into (Return (value (Named (uid 1))))))
     Optimized:
     (Return (value (Constant (id 0))))
     Result:
@@ -150,8 +150,8 @@ let%expect_test "sanity check subst" =
     Real computation:
     (Sub
       (from (Return (value (Constant (id 0)))))
-      (via 2)
-      (into (Return (value (Mapn (inputs ((Named (uid 2)))))))))
+      (via 1)
+      (into (Return (value (Mapn (inputs ((Named (uid 1)))))))))
     Optimized:
     (Return (value (Constant (id 0))))
     Result:
@@ -175,35 +175,35 @@ let%expect_test "sanity check switch" =
     Real computation:
     (Sub
       (from (Return (value Incr)))
-      (via 2)
+      (via 1)
       (into (
         Switch
-        (match_ (Mapn (inputs ((Named (uid 2))))))
+        (match_ (Mapn (inputs ((Named (uid 1))))))
         (arms (
           (Sub
-            (from (Return (value (Mapn (inputs ((Named (uid 2))))))))
-            (via 7)
-            (into (Return (value (Named (uid 7))))))
+            (from (Return (value (Mapn (inputs ((Named (uid 1))))))))
+            (via 5)
+            (into (Return (value (Named (uid 5))))))
           (Sub
-            (from (Return (value (Mapn (inputs ((Named (uid 2))))))))
-            (via 12)
-            (into (Return (value (Constant (id 13)))))))))))
+            (from (Return (value (Mapn (inputs ((Named (uid 1))))))))
+            (via 7)
+            (into (Return (value (Constant (id 8)))))))))))
     Optimized:
     (Sub
       (from (Return (value Incr)))
-      (via 2)
+      (via 1)
       (into (
         Switch
-        (match_ (Mapn (inputs ((Named (uid 2))))))
+        (match_ (Mapn (inputs ((Named (uid 1))))))
         (arms (
           (Sub
-            (from (Return (value (Mapn (inputs ((Named (uid 2))))))))
-            (via 7)
-            (into (Return (value (Named (uid 7))))))
+            (from (Return (value (Mapn (inputs ((Named (uid 1))))))))
+            (via 5)
+            (into (Return (value (Named (uid 5))))))
           (Sub
-            (from (Return (value (Mapn (inputs ((Named (uid 2))))))))
-            (via 12)
-            (into (Return (value (Constant (id 13)))))))))))
+            (from (Return (value (Mapn (inputs ((Named (uid 1))))))))
+            (via 7)
+            (into (Return (value (Constant (id 8)))))))))))
     Result:
     () |}];
   (* Check Value.Map function by adding 1 to a constant int *)
@@ -222,35 +222,35 @@ let%expect_test "sanity check switch" =
     Real computation:
     (Sub
       (from (Return (value Incr)))
-      (via 2)
+      (via 1)
       (into (
         Switch
-        (match_ (Mapn (inputs ((Named (uid 2))))))
+        (match_ (Mapn (inputs ((Named (uid 1))))))
         (arms (
           (Sub
-            (from (Return (value (Mapn (inputs ((Named (uid 2))))))))
-            (via 7)
-            (into (Return (value (Constant (id 8))))))
+            (from (Return (value (Mapn (inputs ((Named (uid 1))))))))
+            (via 5)
+            (into (Return (value (Constant (id 6))))))
           (Sub
-            (from (Return (value (Mapn (inputs ((Named (uid 2))))))))
-            (via 13)
-            (into (Return (value (Mapn (inputs ((Named (uid 13))))))))))))))
+            (from (Return (value (Mapn (inputs ((Named (uid 1))))))))
+            (via 8)
+            (into (Return (value (Mapn (inputs ((Named (uid 8))))))))))))))
     Optimized:
     (Sub
       (from (Return (value Incr)))
-      (via 2)
+      (via 1)
       (into (
         Switch
-        (match_ (Mapn (inputs ((Named (uid 2))))))
+        (match_ (Mapn (inputs ((Named (uid 1))))))
         (arms (
           (Sub
-            (from (Return (value (Mapn (inputs ((Named (uid 2))))))))
-            (via 7)
-            (into (Return (value (Constant (id 8))))))
+            (from (Return (value (Mapn (inputs ((Named (uid 1))))))))
+            (via 5)
+            (into (Return (value (Constant (id 6))))))
           (Sub
-            (from (Return (value (Mapn (inputs ((Named (uid 2))))))))
-            (via 13)
-            (into (Return (value (Mapn (inputs ((Named (uid 13))))))))))))))
+            (from (Return (value (Mapn (inputs ((Named (uid 1))))))))
+            (via 8)
+            (into (Return (value (Mapn (inputs ((Named (uid 8))))))))))))))
     Result:
     2 |}]
 ;;
@@ -272,19 +272,19 @@ let%expect_test "sanity check switch (with full constant folding)" =
     Real computation:
     (Sub
       (from (Return (value (Constant (id 0)))))
-      (via 2)
+      (via 1)
       (into (
         Switch
-        (match_ (Mapn (inputs ((Named (uid 2))))))
+        (match_ (Mapn (inputs ((Named (uid 1))))))
         (arms (
           (Sub
-            (from (Return (value (Mapn (inputs ((Named (uid 2))))))))
-            (via 7)
-            (into (Return (value (Named (uid 7))))))
+            (from (Return (value (Mapn (inputs ((Named (uid 1))))))))
+            (via 5)
+            (into (Return (value (Named (uid 5))))))
           (Sub
-            (from (Return (value (Mapn (inputs ((Named (uid 2))))))))
-            (via 12)
-            (into (Return (value (Constant (id 13)))))))))))
+            (from (Return (value (Mapn (inputs ((Named (uid 1))))))))
+            (via 7)
+            (into (Return (value (Constant (id 8)))))))))))
     Optimized:
     (Return (value (Constant (id 0))))
     Result:
@@ -305,19 +305,19 @@ let%expect_test "sanity check switch (with full constant folding)" =
     Real computation:
     (Sub
       (from (Return (value (Constant (id 0)))))
-      (via 2)
+      (via 1)
       (into (
         Switch
-        (match_ (Mapn (inputs ((Named (uid 2))))))
+        (match_ (Mapn (inputs ((Named (uid 1))))))
         (arms (
           (Sub
-            (from (Return (value (Mapn (inputs ((Named (uid 2))))))))
-            (via 7)
-            (into (Return (value (Constant (id 8))))))
+            (from (Return (value (Mapn (inputs ((Named (uid 1))))))))
+            (via 5)
+            (into (Return (value (Constant (id 6))))))
           (Sub
-            (from (Return (value (Mapn (inputs ((Named (uid 2))))))))
-            (via 13)
-            (into (Return (value (Mapn (inputs ((Named (uid 13))))))))))))))
+            (from (Return (value (Mapn (inputs ((Named (uid 1))))))))
+            (via 8)
+            (into (Return (value (Mapn (inputs ((Named (uid 8))))))))))))))
     Optimized:
     (Return (value (Constant (id 0))))
     Result:

@@ -355,6 +355,31 @@ let%expect_test "typed -> typed -> typed" =
    (Baz 1) |}])
 ;;
 
+let%expect_test "versioned parser all urls" =
+  let first_parser =
+    Parser.Variant.make (module First_url) |> Versioned_parser.first_parser
+  in
+  let second_parser =
+    Parser.Variant.make (module Second_url)
+    |> Versioned_parser.new_parser ~f:(fun (Foo x) -> New_foo x) ~previous:first_parser
+  in
+  let third_parser =
+    Parser.Variant.make (module Third_url)
+    |> Versioned_parser.new_parser
+         ~f:(function
+           | Second_url.New_foo x -> Ultra_new_foo x
+           | Bar x -> New_bar x)
+         ~previous:second_parser
+  in
+  let all_urls = Versioned_parser.all_urls third_parser in
+  print_s [%message (all_urls : string list)];
+  [%expect
+    {|
+    (all_urls
+     (/bar/<int> /baz/<float> /foo/<string> /new_bar/<int> /new_foo/<string>
+      /ultra_new_foo/<string>)) |}]
+;;
+
 let%expect_test "to_url_string" =
   let module Url = struct
     type t =

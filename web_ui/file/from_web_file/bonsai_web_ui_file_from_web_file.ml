@@ -28,7 +28,13 @@ let create file =
                let error =
                  Error.create_s
                    [%message
-                     "Error reading file" ~code:(file_reader##.error##.code : int)]
+                     "Error reading file"
+                       ~code:(file_reader##.error##.code : int)
+                       ~message:
+                         (Js.to_string
+                            (Js.Unsafe.get
+                               file_reader##.error
+                               (Js.string "message")))]
                in
                Ivar.fill_if_empty
                  result

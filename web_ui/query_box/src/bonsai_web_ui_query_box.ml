@@ -278,7 +278,12 @@ let create
           | _ -> Attr.empty
         in
         let move_to_effect =
-          let%bind.Effect items = get_items in
+          let%bind.Effect items =
+            match%bind.Effect get_items with
+            | Active items -> Effect.return items
+            | Inactive ->
+              Effect.never
+          in
           let%bind.Effect offset = Effect.of_sync_fun (Map.rank items) key in
           let offset = Option.value offset ~default:0 in
           inject (Move_to { key; offset })

@@ -80,4 +80,5 @@ let command =
        flag "port" (optional_with_default 8080 int) ~doc:"port on which to serve"
      in
      fun () -> main ~port)
+    ~behave_nicely_in_pipeline:false
 ;;

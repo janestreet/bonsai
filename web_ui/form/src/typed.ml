@@ -1,4 +1,5 @@
 open! Core
+module Form_view = View
 open! Bonsai_web
 open! Bonsai.Let_syntax
 
@@ -31,20 +32,17 @@ module Record = struct
     let module The_forms = Typed_field_map.Make (M.Typed_field) (Form) in
     let module The_results = Typed_field_map.Make (M.Typed_field) (Or_error) in
     let module To_forms = The_form_values.As_applicative.To_other_map (App) (The_forms) in
+    let get_label =
+      match M.label_for_field with
+      | `Inferred -> M.Typed_field.name
+      | `Computed f -> f
+    in
     let form_values_per_field =
-      let get_label =
-        match M.label_for_field with
-        | `Inferred -> M.Typed_field.name
-        | `Computed f -> f
-      in
       let f field =
         let label = get_label field in
         let%sub subform = M.form_for_field field in
         let%map.Computation subform = Form.Dynamic.error_hint subform in
-        subform
-        |> Form.Private.group_list
-        |> Form.Private.suggest_label label
-        |> attach_fieldname_to_error label
+        subform |> Form.Private.suggest_label label |> attach_fieldname_to_error label
       in
       The_form_values.create { f }
     in
@@ -52,8 +50,10 @@ module Record = struct
     let view =
       M.Typed_field.Packed.all
       |> List.map ~f:(fun { f = T field } ->
-        Form.view (The_forms.find forms_per_field field))
-      |> Form.View.Private.List
+        { Form_view.field_name = get_label field
+        ; field_view = Form.view (The_forms.find forms_per_field field)
+        })
+      |> Form_view.record
     in
     let value =
       let f field = Form.value (The_forms.find forms_per_field field) in
@@ -78,95 +78,148 @@ module Variant = struct
 
     val label_for_variant : [ `Inferred | `Computed of 'a Typed_variant.t -> string ]
     val form_for_variant : 'a Typed_variant.t -> 'a Form.t Computation.t
+    val initial_choice : [ `First_constructor | `Empty | `This of Typed_variant.Packed.t ]
   end
 
   let make
         (type a)
         ?(picker = `Dropdown)
-        ?(init = `First_item)
         ?picker_attr
         (module M : S with type Typed_variant.derived_on = a)
     =
     let to_string =
       match M.label_for_variant with
-      | `Inferred -> None
+      | `Inferred ->
+        fun t -> Form_view.sexp_to_pretty_string M.Typed_variant.Packed.sexp_of_t t
       | `Computed variant_to_string ->
-        Some (fun ({ f = T field } : M.Typed_variant.Packed.t) -> variant_to_string field)
+        fun ({ f = T field } : M.Typed_variant.Packed.t) -> variant_to_string field
+    in
+    let module M_opt = struct
+      type t = M.Typed_variant.Packed.t option
+      [@@deriving sexp, equal, enumerate, compare]
+
+      let to_string = function
+        | None -> ""
+        | Some t -> to_string t
+      ;;
+
+      let all_some = List.filter all ~f:Option.is_some
+      let first_some = List.hd_exn all_some
+    end
     in
     let%sub extra_attrs =
       match picker_attr with
       | None -> Bonsai.const []
       | Some attr -> Bonsai.pure List.return attr
     in
-    let%sub picker =
+    let%sub picker_value, set_picker_value, picker_view =
       match picker with
       | `Dropdown ->
-        Elements.Dropdown.enumerable
-          ?to_string
-          ~init:
-            (match init with
-             | `First_item -> `First_item
-             | `Empty -> `Empty)
-          ~extra_attrs
-          (module struct
-            include M.Typed_variant.Packed
-
-            let equal = [%compare.equal: t]
-          end)
-      | `Radio layout ->
-        let init =
-          match init with
-          | `First_item -> List.hd M.Typed_variant.Packed.all
-          | `Empty -> None
+        let default_model, all =
+          match M.initial_choice with
+          | `Empty -> None, M_opt.all
+          | `First_constructor -> M_opt.first_some, M_opt.all_some
+          | `This example -> Some example, M_opt.all_some
         in
-        Elements.Radio_buttons.enumerable
-          ?to_string
-          ?init
-          ~extra_attrs
-          ~layout
-          (module struct
-            include M.Typed_variant.Packed
+        let%sub picker_value, set_picker_value =
+          Bonsai.state (module M_opt) ~default_model
+        in
+        let%sub path = Bonsai.path_id in
+        let%arr picker_value = picker_value
+        and set_picker_value = set_picker_value
+        and path = path
+        and extra_attrs = extra_attrs in
+        let view =
+          Vdom_input_widgets.Dropdown.of_values
+            (module M_opt)
+            all
+            ~merge_behavior:Legacy_dont_merge
+            ~extra_attrs:
+              ([ Vdom.Attr.id path
+               ; Vdom.Attr.style (Css_gen.width (`Percent Percent.one_hundred_percent))
+               ]
+               @ extra_attrs)
+            ~selected:picker_value
+            ~on_change:set_picker_value
+        in
+        picker_value, set_picker_value, view
+      | `Radio layout ->
+        let default_model =
+          match M.initial_choice with
+          | `Empty -> None
+          | `First_constructor -> M_opt.first_some
+          | `This example -> Some example
+        in
+        let%sub picker_value, set_picker_value =
+          Bonsai.state (module M_opt) ~default_model
+        in
+        let%sub path = Bonsai.path_id in
+        let%arr picker_value = picker_value
+        and set_picker_value = set_picker_value
+        and extra_attrs = extra_attrs
+        and path = path in
+        let node_fun =
+          match layout with
+          | `Vertical ->
+            Vdom_input_widgets.Radio_buttons.of_values ~merge_behavior:Legacy_dont_merge
+          | `Horizontal ->
+            Vdom_input_widgets.Radio_buttons.of_values_horizontal
+              ~merge_behavior:Legacy_dont_merge
+        in
+        let view =
+          node_fun
+            ~extra_attrs:(Vdom.Attr.id path :: extra_attrs)
+            (module struct
+              include M.Typed_variant.Packed
 
-            let equal = [%compare.equal: t]
-          end)
-    in
-    let picker_value =
-      picker >>| Form.value_or_default ~default:(List.hd_exn M.Typed_variant.Packed.all)
+              let to_string = to_string
+            end)
+            ~on_click:(fun opt -> set_picker_value (Some opt))
+            ~selected:picker_value
+            ~name:path
+            M.Typed_variant.Packed.all
+        in
+        picker_value, set_picker_value, view
     in
     let%sub inner =
       Bonsai.enum
-        (module M.Typed_variant.Packed)
+        (module M_opt)
         ~match_:picker_value
-        ~with_:(fun { f = T p } ->
-          let%map.Computation form_for_constructor = M.form_for_variant p in
-          let parse_exn content = M.Typed_variant.create p content in
-          let unparse kind =
-            match M.Typed_variant.get p kind with
-            | None ->
-              let expected = M.Typed_variant.Packed.pack p in
-              let found = M.Typed_variant.which kind in
-              raise_s
-                [%message
-                  "BUG"
-                    [%here]
-                    (expected : M.Typed_variant.Packed.t)
-                    (found : M.Typed_variant.Packed.t)]
-            | Some v -> v
-          in
-          Form.project form_for_constructor ~parse_exn ~unparse)
+        ~with_:(function
+          | None ->
+            Bonsai.const (Form.return_error (Error.of_string "a value is required"))
+          | Some { f = T p } ->
+            let%map.Computation form_for_constructor = M.form_for_variant p in
+            let parse_exn content = M.Typed_variant.create p content in
+            let unparse kind =
+              match M.Typed_variant.get p kind with
+              | None ->
+                let expected = M.Typed_variant.Packed.pack p in
+                let found = M.Typed_variant.which kind in
+                raise_s
+                  [%message
+                    "BUG"
+                      [%here]
+                      (expected : M.Typed_variant.Packed.t)
+                      (found : M.Typed_variant.Packed.t)]
+              | Some v -> v
+            in
+            Form.project form_for_constructor ~parse_exn ~unparse)
     in
     let%sub get_inner_form = Bonsai.yoink inner in
     let%arr inner = inner
-    and picker = picker
+    and picker_value = picker_value
+    and picker_view = picker_view
+    and set_picker_value = set_picker_value
     and get_inner_form = get_inner_form in
     let view =
-      Form.View.Private.Header_group
-        { header_view = Form.view picker
-        ; view = Form.view inner
-        ; label = None
-        ; tooltip = None
-        ; error = None
-        }
+      match picker_value with
+      | None -> Form_view.variant ~clause_selector:picker_view ~selected_clause:None
+      | Some { f = T p } ->
+        let clause_name = M.Typed_variant.name p in
+        Form_view.variant
+          ~clause_selector:picker_view
+          ~selected_clause:(Some { Form_view.clause_name; clause_view = Form.view inner })
     in
     let value = Form.value inner in
     let set value =
@@ -174,8 +227,13 @@ module Variant = struct
       let open Ui_effect.Let_syntax in
       (* sequence this so that the result of evaluating the picker is visible
          when setting the innermost form *)
-      let%bind () = Form.set picker constructor in
-      let%bind inner = get_inner_form in
+      let%bind () = set_picker_value (Some constructor) in
+      let%bind inner =
+        match%bind.Effect get_inner_form with
+        | Active inner -> Effect.return inner
+        | Inactive ->
+          Effect.never
+      in
       Form.set inner value
     in
     Form.Expert.create ~view ~value ~set
@@ -184,7 +242,6 @@ module Variant = struct
   let make_optional
         (type a)
         ?picker
-        ?init
         ?picker_attr
         ?(empty_label = "(none)")
         (module M : S with type Typed_variant.derived_on = a)
@@ -218,9 +275,18 @@ module Variant = struct
           | None -> Computation.return (Form.return ())
           | Some subvariant -> M.form_for_variant subvariant
       ;;
+
+      let initial_choice =
+        match M.initial_choice with
+        | `First_constructor -> `First_constructor
+        | `Empty -> `Empty
+        | `This { f = T a } ->
+          let tv : Typed_variant.Packed.t = { f = T (Some a) } in
+          `This tv
+      ;;
     end
     in
-    make ?picker ?init ?picker_attr (module Transformed)
+    make ?picker ?picker_attr (module Transformed)
     |> Computation.map
          ~f:
            (Form.project

@@ -1,0 +1,1 @@
+include module type of Checkbox_style__generated

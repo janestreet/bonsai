@@ -10,7 +10,8 @@ let all_items = String.Set.of_list [ "foo"; "bar"; "baz" ]
 let bonsai
       ?(which_display = `Simple)
       ?search_string
-      ?(default_selection_status = Bonsai.Value.return S.Selection_status.Selected)
+      ?(default_selection_status =
+        Bonsai.Value.return Bonsai_web_ui_multi_select.Selection_status.Selected)
       ?selection_status
       ?focused_item
       ~view_config
@@ -215,7 +216,9 @@ let%expect_test "selections" =
     handle
     [ Set_all_selection_statuses
         (String.Map.of_alist_exn
-           [ "bar", S.Selection_status.Selected; "baz", Unselected ])
+           [ "bar", Bonsai_web_ui_multi_select.Selection_status.Selected
+           ; "baz", Unselected
+           ])
     ];
   Handle.show handle;
   [%expect
@@ -402,11 +405,13 @@ let%expect_test "changing items" =
 ;;
 
 let%expect_test "default_selection_status = Unselected" =
-  let all_items_var                = Bonsai.Var.create all_items                     in
-  let all_items                    = Bonsai.Var.value all_items_var                  in
-  let default_selection_status_var = Bonsai.Var.create S.Selection_status.Unselected in
-  let default_selection_status     = Bonsai.Var.value default_selection_status_var   in
-  let handle                       = handle ~default_selection_status ~all_items ()  in
+  let all_items_var = Bonsai.Var.create all_items     in
+  let all_items     = Bonsai.Var.value  all_items_var in
+  let default_selection_status_var =
+    Bonsai.Var.create Bonsai_web_ui_multi_select.Selection_status.Unselected
+  in
+  let default_selection_status = Bonsai.Var.value default_selection_status_var  in
+  let handle                   = handle ~default_selection_status ~all_items () in
   Handle.show handle;
   [%expect
     {|
@@ -439,7 +444,10 @@ let%expect_test "default_selection_status = Unselected" =
 let%expect_test "specifying arguments to S.Model.create" =
   let handle =
     handle
-      ~selection_status:(String.Map.singleton "bar" S.Selection_status.Unselected)
+      ~selection_status:
+        (String.Map.singleton
+           "bar"
+           Bonsai_web_ui_multi_select.Selection_status.Unselected)
       ~focused_item:"baz"
       ~search_string:"b"
       ()
@@ -454,9 +462,11 @@ let%expect_test "specifying arguments to S.Model.create" =
 ;;
 
 let%expect_test "html" =
-  let all_items_var = Bonsai.Var.create all_items                                  in
-  let all_items = Bonsai.Var.value all_items_var                                   in
-  let default_selection_status_var = Bonsai.Var.create S.Selection_status.Selected in
+  let all_items_var = Bonsai.Var.create all_items     in
+  let all_items     = Bonsai.Var.value  all_items_var in
+  let default_selection_status_var =
+    Bonsai.Var.create Bonsai_web_ui_multi_select.Selection_status.Selected
+  in
   let default_selection_status = Bonsai.Var.value default_selection_status_var     in
   let handle = handle ~default_selection_status ~all_items ~which_display:`Html () in
   Handle.show handle;
@@ -582,10 +592,12 @@ let%expect_test "html" =
 ;;
 
 let%expect_test "html-custom-selected-attr" =
-  let all_items_var                = Bonsai.Var.create all_items                   in
-  let all_items                    = Bonsai.Var.value all_items_var                in
-  let default_selection_status_var = Bonsai.Var.create S.Selection_status.Selected in
-  let default_selection_status     = Bonsai.Var.value default_selection_status_var in
+  let all_items_var = Bonsai.Var.create all_items     in
+  let all_items     = Bonsai.Var.value  all_items_var in
+  let default_selection_status_var =
+    Bonsai.Var.create Bonsai_web_ui_multi_select.Selection_status.Selected
+  in
+  let default_selection_status = Bonsai.Var.value default_selection_status_var in
   let view_config =
     Bonsai.Value.return
       (S.View_config.create

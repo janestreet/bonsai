@@ -6,14 +6,22 @@ let text_input =
   let%sub text_contents, set_text_contents = Bonsai.state_opt (module String) in
   let%arr text_contents = text_contents
   and set_text_contents = set_text_contents in
-  Vdom_input_widgets.Entry.text ~value:text_contents ~on_input:set_text_contents ()
+  Vdom_input_widgets.Entry.text
+    ~merge_behavior:Legacy_dont_merge
+    ~value:text_contents
+    ~on_input:set_text_contents
+    ()
 ;;
 
 let date_input =
   let%sub date_contents, set_date_contents = Bonsai.state_opt (module Date) in
   let%arr date_contents = date_contents
   and set_date_contents = set_date_contents in
-  Vdom_input_widgets.Entry.date ~value:date_contents ~on_input:set_date_contents ()
+  Vdom_input_widgets.Entry.date
+    ~merge_behavior:Legacy_dont_merge
+    ~value:date_contents
+    ~on_input:set_date_contents
+    ()
 ;;
 
 let text_input_first_input =
@@ -24,6 +32,7 @@ let text_input_first_input =
   and set_text_input_first_contents = set_text_input_first_contents in
   ( text_input_first_contents
   , Vdom_input_widgets.Checkbox.simple
+      ~merge_behavior:Legacy_dont_merge
       ~is_checked:text_input_first_contents
       ~label:
         {| When checked, the text input will be placed first in the DOM. Entry some
@@ -46,6 +55,4 @@ let component =
   else wrap_in_div [ text_input_first_input; date_input; text_input ]
 ;;
 
-let (_ : _ Start.Handle.t) =
-  Start.start Start.Result_spec.just_the_view ~bind_to_element_with_id:"app" component
-;;
+let () = Bonsai_web.Start.start component

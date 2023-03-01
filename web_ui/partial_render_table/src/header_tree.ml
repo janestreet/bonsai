@@ -47,6 +47,19 @@ let rec leaves = function
     List.concat_map children ~f:leaves
 ;;
 
+let column_names t =
+  let results = ref [] in
+  let rec acc list node =
+    match node with
+    | Leaf { leaf_label; _ } -> results := (leaf_label :: list |> List.rev) :: !results
+    | Spacer s -> acc list s
+    | Organizational_group ts -> List.iter ts ~f:(acc list)
+    | Group { group_label; children } -> List.iter children ~f:(acc (group_label :: list))
+  in
+  acc [] t;
+  List.rev !results
+;;
+
 let leaf ~label:leaf_label ~initial_width ~visible =
   Leaf { leaf_label; initial_width; visible }
 ;;

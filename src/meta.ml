@@ -133,101 +133,94 @@ module Model = struct
 
     exception Fail
 
-    let type_equal_id_same_witness_exn
-      : type a b. a Type_equal.Id.t -> b Type_equal.Id.t -> (a, b) Type_equal.t
-      =
-      fun a b ->
-      match Type_equal.Id.same_witness a b with
-      | Some T -> Type_equal.T
-      | None -> raise_notrace Fail
-    ;;
+    let type_equal_id_same_witness = Type_equal.Id.same_witness
 
-    let rec same_witness_exn : type a b. a t -> b t -> (a, b) Type_equal.t =
+    let rec same_witness : type a b. a t -> b t -> (a, b) Type_equal.t option =
       fun a b ->
-        match a, b with
-        | Leaf a, Leaf b ->
-          let T = type_equal_id_same_witness_exn a.type_id b.type_id in
-          (Type_equal.T : (a, b) Type_equal.t)
-        | Tuple a, Tuple b ->
-          let T = same_witness_exn a.a b.a in
-          let T = same_witness_exn a.b b.b in
-          (Type_equal.T : (a, b) Type_equal.t)
-        | Tuple3 a, Tuple3 b ->
-          let T = same_witness_exn a.a b.a in
-          let T = same_witness_exn a.b b.b in
-          let T = same_witness_exn a.c b.c in
-          (Type_equal.T : (a, b) Type_equal.t)
-        | Either a, Either b ->
-          let T = same_witness_exn a.a b.a in
-          let T = same_witness_exn a.b b.b in
-          (Type_equal.T : (a, b) Type_equal.t)
-        | Map a, Map b ->
-          let T = type_equal_id_same_witness_exn a.k b.k in
-          let T = type_equal_id_same_witness_exn a.cmp b.cmp in
-          let T = same_witness_exn a.by b.by in
-          (Type_equal.T : (a, b) Type_equal.t)
-        | Map_on a, Map_on b ->
-          let T = type_equal_id_same_witness_exn a.k_io b.k_io in
-          let T = type_equal_id_same_witness_exn a.k_model b.k_model in
-          let T = type_equal_id_same_witness_exn a.cmp b.cmp in
-          let T = same_witness_exn a.by b.by in
-          (Type_equal.T : (a, b) Type_equal.t)
-        | Multi_model a, Multi_model b ->
+      match a, b with
+      | Leaf a, Leaf b -> type_equal_id_same_witness a.type_id b.type_id
+      | Tuple a, Tuple b ->
+        let%bind.Option T = same_witness a.a b.a in
+        let%bind.Option T = same_witness a.b b.b in
+        Some (Type_equal.T : (a, b) Type_equal.t)
+      | Tuple3 a, Tuple3 b ->
+        let%bind.Option T = same_witness a.a b.a in
+        let%bind.Option T = same_witness a.b b.b in
+        let%bind.Option T = same_witness a.c b.c in
+        Some (Type_equal.T : (a, b) Type_equal.t)
+      | Either a, Either b ->
+        let%bind.Option T = same_witness a.a b.a in
+        let%bind.Option T = same_witness a.b b.b in
+        Some (Type_equal.T : (a, b) Type_equal.t)
+      | Map a, Map b ->
+        let%bind.Option T = type_equal_id_same_witness a.k b.k in
+        let%bind.Option T = type_equal_id_same_witness a.cmp b.cmp in
+        let%bind.Option T = same_witness a.by b.by in
+        Some (Type_equal.T : (a, b) Type_equal.t)
+      | Map_on a, Map_on b ->
+        let%bind.Option T = type_equal_id_same_witness a.k_io b.k_io in
+        let%bind.Option T = type_equal_id_same_witness a.k_model b.k_model in
+        let%bind.Option T = type_equal_id_same_witness a.cmp b.cmp in
+        let%bind.Option T = same_witness a.by b.by in
+        Some (Type_equal.T : (a, b) Type_equal.t)
+      | Multi_model a, Multi_model b ->
+        with_return (fun { return } ->
           Map.iter2 a.multi_model b.multi_model ~f:(fun ~key:_ ~data ->
             match data with
             | `Both (T a, T b) ->
-              let T = same_witness_exn a.info.type_id b.info.type_id in
-              ()
-            | _ -> raise_notrace Fail);
-          Type_equal.T
-        | Leaf _, Tuple _
-        | Leaf _, Tuple3 _
-        | Leaf _, Either _
-        | Leaf _, Map _
-        | Leaf _, Map_on _
-        | Leaf _, Multi_model _
-        | Tuple _, Leaf _
-        | Tuple _, Tuple3 _
-        | Tuple _, Either _
-        | Tuple _, Map _
-        | Tuple _, Map_on _
-        | Tuple _, Multi_model _
-        | Tuple3 _, Leaf _
-        | Tuple3 _, Tuple _
-        | Tuple3 _, Either _
-        | Tuple3 _, Map _
-        | Tuple3 _, Map_on _
-        | Tuple3 _, Multi_model _
-        | Either _, Leaf _
-        | Either _, Tuple _
-        | Either _, Tuple3 _
-        | Either _, Map _
-        | Either _, Map_on _
-        | Either _, Multi_model _
-        | Map _, Leaf _
-        | Map _, Tuple _
-        | Map _, Tuple3 _
-        | Map _, Either _
-        | Map _, Map_on _
-        | Map _, Multi_model _
-        | Map_on _, Leaf _
-        | Map_on _, Tuple _
-        | Map_on _, Tuple3 _
-        | Map_on _, Either _
-        | Map_on _, Map _
-        | Map_on _, Multi_model _
-        | Multi_model _, Leaf _
-        | Multi_model _, Tuple _
-        | Multi_model _, Tuple3 _
-        | Multi_model _, Either _
-        | Multi_model _, Map _
-        | Multi_model _, Map_on _ -> raise_notrace Fail
+              (match same_witness a.info.type_id b.info.type_id with
+               | None -> return None
+               | Some T -> ())
+            | _ -> return None);
+          Some Type_equal.T)
+      | Leaf _, Tuple _
+      | Leaf _, Tuple3 _
+      | Leaf _, Either _
+      | Leaf _, Map _
+      | Leaf _, Map_on _
+      | Leaf _, Multi_model _
+      | Tuple _, Leaf _
+      | Tuple _, Tuple3 _
+      | Tuple _, Either _
+      | Tuple _, Map _
+      | Tuple _, Map_on _
+      | Tuple _, Multi_model _
+      | Tuple3 _, Leaf _
+      | Tuple3 _, Tuple _
+      | Tuple3 _, Either _
+      | Tuple3 _, Map _
+      | Tuple3 _, Map_on _
+      | Tuple3 _, Multi_model _
+      | Either _, Leaf _
+      | Either _, Tuple _
+      | Either _, Tuple3 _
+      | Either _, Map _
+      | Either _, Map_on _
+      | Either _, Multi_model _
+      | Map _, Leaf _
+      | Map _, Tuple _
+      | Map _, Tuple3 _
+      | Map _, Either _
+      | Map _, Map_on _
+      | Map _, Multi_model _
+      | Map_on _, Leaf _
+      | Map_on _, Tuple _
+      | Map_on _, Tuple3 _
+      | Map_on _, Either _
+      | Map_on _, Map _
+      | Map_on _, Multi_model _
+      | Multi_model _, Leaf _
+      | Multi_model _, Tuple _
+      | Multi_model _, Tuple3 _
+      | Multi_model _, Either _
+      | Multi_model _, Map _
+      | Multi_model _, Map_on _ -> None
     ;;
 
-    let same_witness a b =
-      match same_witness_exn a b with
-      | exception Fail -> None
-      | proof -> Some proof
+    let same_witness_exn a b =
+      match same_witness a b with
+      | None -> raise_notrace Fail
+      | Some proof -> proof
     ;;
 
     let to_type_id _ = Type_equal.Id.create ~name:"module tree type id" [%sexp_of: opaque]
@@ -360,9 +353,10 @@ module Action = struct
           }
           -> 'key t
 
-    let sexp_of_t sexp_of_key (T { type_id; key; _ }) =
-      let sexp_of_action = Type_id.sexp_of_t sexp_of_opaque in
-      [%message "enum action with key" (type_id : action) (key : key)]
+    let sexp_of_t sexp_of_key (T { type_id; key; action }) =
+      let sexp_of_action = Type_id.to_sexp type_id in
+      let sexp_of_type_id = Type_id.sexp_of_t sexp_of_opaque in
+      [%message "enum action with key" (action : action) (type_id : type_id) (key : key)]
     ;;
 
     let action_id sexp_of_key =
@@ -419,4 +413,41 @@ module Multi_model = struct
     ({ default; type_id; equal = [%equal: Model.Hidden.t Int.Map.t]; sexp_of; of_sexp }
      : t Model.t)
   ;;
+end
+
+module Input = struct
+  module Type_id = Model.Type_id
+
+  type 'a t = 'a Type_id.t
+
+  let same_witness = Type_id.same_witness
+  let same_witness_exn = Type_id.same_witness_exn
+  let unit = Type_id.unit
+
+  let create () =
+    Model.Leaf { type_id = Type_equal.Id.create ~name:"input" sexp_of_opaque }
+  ;;
+
+  let both a b = Model.Tuple { a; b }
+  let map k cmp by = Model.Map { k; cmp; by }
+
+  module Hidden = struct
+    type 'a input = 'a t
+
+    type 'key t =
+      | T :
+          { input : 'input
+          ; type_id : 'input input
+          ; key : 'key
+          }
+          -> 'key t
+
+    let unit : unit t input =
+      Leaf { type_id = Type_equal.Id.create ~name:"lazy input" sexp_of_opaque }
+    ;;
+
+    let int : int t input =
+      Leaf { type_id = Type_equal.Id.create ~name:"enum input" sexp_of_opaque }
+    ;;
+  end
 end

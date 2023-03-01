@@ -15,6 +15,61 @@ module Where_to_connect : sig
     | Custom of Custom.t
 end
 
+module Poll_result : sig
+  (** The various rpc polling functions in this module return a [Poll_result.t],
+      containing the current state and some historical state of the RPC.
+
+      [last_ok_response] contains the most recent query/response pair that completed
+      successfully, even if the RPC has returned errors since then.
+
+      [last_error] contains the most recent query that produced an error, alongside
+      the error that was returned.  Unlike [last_ok_response], this field is set to
+      [None] as soon a response completes sucessfully.
+
+      [inflight_query] is [Some] when an a query has been dispatched, but has not
+      completed yet.
+
+      [refresh] can be used to manually redispatch the rpc *)
+
+  type ('query, 'response) t =
+    { last_ok_response : ('query * 'response) option
+    ; last_error : ('query * Error.t) option
+    ; inflight_query : 'query option
+    ; refresh : unit Effect.t
+    }
+  [@@deriving sexp_of]
+end
+
+module Shared_poller : sig
+  (** A [Shared_poller] is a handle to a polling-style RPC whose RPCs
+      can be shared between multiple components that might have an interest
+      in polling values with the same types.
+
+      To create a [Shared_poller], use either [Rpc_effect.Rpc.shared_poller] or
+      [Rpc_effect.Polling_state_rpc.shared_poller].  With the value returned by
+      those functions, you can call [Shared_poller.lookup] with a query value to
+      get access to the results of the given RPC with the provided query. *)
+
+  type ('query, 'response) t
+
+  (** Uses a shared-poller to either start polling an RPC, or if another user of the same
+      shared-poller is already polling with the same query, it'll immediately return the
+      most recent value. *)
+  val lookup
+    :  (module Bonsai.Model with type t = 'query)
+    -> ('query, 'response) t Bonsai.Value.t
+    -> 'query Bonsai.Value.t
+    -> ('query, 'response) Poll_result.t Bonsai.Computation.t
+
+  (** You can use [custom_create] to build a shared-poller if the
+      [Rpc_effect.Rpc.shared_poller] and [Rpc_effect.Polling_state_rpc.shared_poller]
+      aren't sufficient. *)
+  val custom_create
+    :  ('query, _) Bonsai.comparator
+    -> f:('query Value.t -> ('query, 'response) Poll_result.t Computation.t)
+    -> ('query, 'response) t Computation.t
+end
+
 module Rpc : sig
   (** An effect for sending a particular RPC to a particular place. *)
   val dispatcher
@@ -26,6 +81,41 @@ module Rpc : sig
     :  ('query -> 'response Or_error.t Deferred.t) Babel.Caller.t
     -> where_to_connect:Where_to_connect.t
     -> ('query -> 'response Or_error.t Effect.t) Computation.t
+
+  (** A computation that periodically dispatches on an RPC and
+      keeps track of the most recent response. *)
+  val poll
+    :  (module Bonsai.Model with type t = 'query)
+    -> (module Bonsai.Model with type t = 'response)
+    -> ?clear_when_deactivated:bool
+    -> ('query, 'response) Rpc.Rpc.t
+    -> where_to_connect:Where_to_connect.t
+    -> every:Time_ns.Span.t
+    -> 'query Value.t
+    -> ('query, 'response) Poll_result.t Computation.t
+
+  val shared_poller
+    :  ('query, _) Bonsai.comparator
+    -> (module Bonsai.Model with type t = 'response)
+    -> ?clear_when_deactivated:bool
+    -> ('query, 'response) Rpc.Rpc.t
+    -> where_to_connect:Where_to_connect.t
+    -> every:Time_ns.Span.t
+    -> ('query, 'response) Shared_poller.t Computation.t
+
+  (** Like [poll], but stops polling the same input query after an ok response.
+      If the query changes, the computation will resume polling until it
+      receives another ok response. If the computation receives an error
+      response, it will retry sending the RPC after waiting [retry_interval]. *)
+  val poll_until_ok
+    :  (module Bonsai.Model with type t = 'query)
+    -> (module Bonsai.Model with type t = 'response)
+    -> ?clear_when_deactivated:bool
+    -> ('query, 'response) Rpc.Rpc.t
+    -> where_to_connect:Where_to_connect.t
+    -> retry_interval:Time_ns.Span.t
+    -> 'query Value.t
+    -> ('query, 'response) Poll_result.t Computation.t
 end
 
 module Polling_state_rpc : sig
@@ -39,28 +129,10 @@ module Polling_state_rpc : sig
     -> where_to_connect:Where_to_connect.t
     -> ('query -> 'response Or_error.t Effect.t) Computation.t
 
-  module Result : sig
-    type ('query, 'response) t =
-      | No_responses_yet
-      | Error_before_any_ok_responses of
-          { error : Error.t
-          ; query : 'query
-          }
-      | Last_response_was_ok of
-          { query : 'query
-          ; response : 'response
-          }
-      | Error_after_last_ok_response of
-          { query : 'query
-          ; error : Error.t
-          ; last_ok_query : 'query
-          ; last_ok_response : 'response
-          }
-    [@@deriving sexp]
-  end
-
   (** A computation that periodically dispatches on a polling_state_rpc and
-      keeps track of the most recent response. *)
+      keeps track of the most recent response. To explicitly re-send the RPC,
+      schedule the [refresh] field of the result. It also keeps track of the current
+      query that is in-flight.*)
   val poll
     :  (module Bonsai.Model with type t = 'query)
     -> (module Bonsai.Model with type t = 'response)
@@ -69,7 +141,16 @@ module Polling_state_rpc : sig
     -> where_to_connect:Where_to_connect.t
     -> every:Time_ns.Span.t
     -> 'query Value.t
-    -> ('query, 'response) Result.t Computation.t
+    -> ('query, 'response) Poll_result.t Computation.t
+
+  val shared_poller
+    :  ('query, _) Bonsai.comparator
+    -> (module Bonsai.Model with type t = 'response)
+    -> ?clear_when_deactivated:bool
+    -> ('query, 'response) Polling_state_rpc.t
+    -> where_to_connect:Where_to_connect.t
+    -> every:Time_ns.Span.t
+    -> ('query, 'response) Shared_poller.t Computation.t
 end
 
 module Status : sig
@@ -92,7 +173,7 @@ module Status : sig
       | Connected
       | Disconnected of Error.t
       | Failed_to_connect of Error.t
-    [@@deriving sexp_of]
+    [@@deriving equal, sexp]
   end
 
   type t =

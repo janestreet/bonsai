@@ -20,12 +20,21 @@ let form_element (type t) (module M : Bonsai.Model with type t = t) here ~(defau
       new_model)
 ;;
 
+let form_element_dynamic_model
+      (type t)
+      (module M : Bonsai.Model with type t = t)
+      ~(default : t Value.t)
+  =
+  Bonsai_extra.state_dynamic_model (module M) ~model:(`Given default)
+;;
+
 let text_input ~default =
   let%map.Bonsai.Arrow_deprecated value, inject =
     form_element (module String) [%here] ~default
   in
   let view =
     Vdom_input_widgets.Entry.text
+      ~merge_behavior:Legacy_dont_merge
       ~value:(Some value)
       ~on_input:(function
         | Some s -> inject s
@@ -39,7 +48,13 @@ let textarea_input ~default =
   let%map.Bonsai.Arrow_deprecated value, inject =
     form_element (module String) [%here] ~default
   in
-  let view = Vdom_input_widgets.Entry.text_area ~value ~on_input:inject () in
+  let view =
+    Vdom_input_widgets.Entry.text_area
+      ~merge_behavior:Legacy_dont_merge
+      ~value
+      ~on_input:inject
+      ()
+  in
   { Product.value = { Product.With_view.value; view }; set = inject }
 ;;
 
@@ -49,6 +64,7 @@ let checkbox_input ?(label = "") ~default () =
   in
   let view =
     Vdom_input_widgets.Checkbox.simple
+      ~merge_behavior:Legacy_dont_merge
       ~is_checked:value
       ~on_toggle:(inject (not value))
       ~label
@@ -68,6 +84,7 @@ let date_picker_with_bad_user_experience ~default =
   in
   let view =
     Vdom_input_widgets.Entry.date
+      ~merge_behavior:Legacy_dont_merge
       ~value:(Some value)
       ~on_input:(inject_or_ignore inject)
       ()
@@ -84,7 +101,13 @@ let date_picker ~default =
       [%here]
       ~default
   in
-  let view = Vdom_input_widgets.Entry.date ~value ~on_input:inject () in
+  let view =
+    Vdom_input_widgets.Entry.date
+      ~merge_behavior:Legacy_dont_merge
+      ~value
+      ~on_input:inject
+      ()
+  in
   { Product.value = { Product.With_view.value; view }; set = inject }
 ;;
 
@@ -101,6 +124,7 @@ module Dropdown = struct
     and all = Bonsai.Arrow_deprecated.input in
     let view =
       Vdom_input_widgets.Dropdown.of_values
+        ~merge_behavior:Legacy_dont_merge
         (module M)
         all
         ~selected:value
@@ -120,6 +144,7 @@ module Dropdown = struct
     and all = Bonsai.Arrow_deprecated.input in
     let view =
       Vdom_input_widgets.Dropdown.of_values_opt
+        ~merge_behavior:Legacy_dont_merge
         (module M)
         all
         ~selected:value
@@ -139,7 +164,26 @@ module Dropdown = struct
       form_element (module M) [%here] ~default
     in
     let view =
-      Vdom_input_widgets.Dropdown.of_enum ~selected:value ~on_change:inject (module M)
+      Vdom_input_widgets.Dropdown.of_enum
+        ~merge_behavior:Legacy_dont_merge
+        ~selected:value
+        ~on_change:inject
+        (module M)
+    in
+    { Product.value = { Product.With_view.value; view }; set = inject }
+  ;;
+
+  let of_enum_dynamic_model (type t) (module M : Enum with type t = t) ~default =
+    let open Bonsai.Let_syntax in
+    let%sub value, inject = form_element_dynamic_model (module M) ~default in
+    let%arr value = value
+    and inject = inject in
+    let view =
+      Vdom_input_widgets.Dropdown.of_enum
+        ~merge_behavior:Legacy_dont_merge
+        ~selected:value
+        ~on_change:inject
+        (module M)
     in
     { Product.value = { Product.With_view.value; view }; set = inject }
   ;;
@@ -154,7 +198,11 @@ module Dropdown = struct
         ~default
     in
     let view =
-      Vdom_input_widgets.Dropdown.of_enum_opt ~selected:value ~on_change:inject (module M)
+      Vdom_input_widgets.Dropdown.of_enum_opt
+        ~merge_behavior:Legacy_dont_merge
+        ~selected:value
+        ~on_change:inject
+        (module M)
     in
     { Product.value = { Product.With_view.value; view }; set = inject }
   ;;

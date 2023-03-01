@@ -36,7 +36,9 @@ module Model = struct
   ;;
 
   let filter_choices ~score_choice ~filter_choice ~all_choices ~text =
-    let compare = Comparable.lift Int.compare ~f:(score_choice ~input_text:text) in
+    let compare a b =
+      Comparable.lift Int.compare ~f:(score_choice ~input_text:text) a b
+    in
     all_choices |> List.filter ~f:(filter_choice ~input_text:text) |> List.sort ~compare
   ;;
 
@@ -166,32 +168,43 @@ let create
       ~apply_action:
         (fun ~inject:_
           ~schedule_event:_
-          (input : item Input.t)
+          (input : item Input.t Bonsai.Computation_status.t)
           (t : item Model.t)
           (action : Action.t) ->
-          match (action : Action.t) with
-          | Set_text_input query ->
-            Model.set_text_input
-              ~all_choices:(Input.choices input)
-              t
-              query
-              ~score_choice
-              ~filter_choice
-          | Bump_focused_autocomplete_result direction ->
-            Model.bump_focused_autocomplete_result t direction
-          | Clear_focused_autocomplete_result -> Model.clear_focused_autocomplete_result t
-          | Set_focused_autocomplete_result i -> Model.set_focused_autocomplete_result t i
-          | Close_autocomplete_box -> Model.close_autocomplete_box t
-          | Clear_input -> Model.clear_input t ~max_query_results
-          | Set_num_query_results_to_show i -> Model.set_num_query_results_to_show t i
-          | On_focus ->
-            Model.set_text_input
-              ~all_choices:(Input.choices input)
-              t
-              (Model.query t)
-              ~score_choice
-              ~filter_choice
-          | On_blur -> Model.hide_autocomplete t)
+          match input with
+          | Active input ->
+            (match (action : Action.t) with
+             | Set_text_input query ->
+               Model.set_text_input
+                 ~all_choices:(Input.choices input)
+                 t
+                 query
+                 ~score_choice
+                 ~filter_choice
+             | Bump_focused_autocomplete_result direction ->
+               Model.bump_focused_autocomplete_result t direction
+             | Clear_focused_autocomplete_result -> Model.clear_focused_autocomplete_result t
+             | Set_focused_autocomplete_result i -> Model.set_focused_autocomplete_result t i
+             | Close_autocomplete_box -> Model.close_autocomplete_box t
+             | Clear_input -> Model.clear_input t ~max_query_results
+             | Set_num_query_results_to_show i -> Model.set_num_query_results_to_show t i
+             | On_focus ->
+               Model.set_text_input
+                 ~all_choices:(Input.choices input)
+                 t
+                 (Model.query t)
+                 ~score_choice
+                 ~filter_choice
+             | On_blur -> Model.hide_autocomplete t)
+          | Inactive ->
+            eprint_s
+              [%message
+                [%here]
+                  "An action sent to a [state_machine1] has been dropped because its input \
+                   was not present. This happens when the [state_machine1] is inactive \
+                   when it receives a message."
+                  (action : Action.t)];
+            t)
   in
   let%sub on_select_item =
     let%arr inject = inject

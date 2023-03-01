@@ -7,7 +7,7 @@ module Stable = struct
         { node_type : String.V1.t
         ; here : Core.Source_code_position.Stable.V1.t Option.V1.t
         }
-      [@@deriving sexp, bin_io]
+      [@@deriving sexp, bin_io, compare]
 
       let%expect_test _ =
         print_endline [%bin_digest: t];
@@ -30,6 +30,18 @@ module Stable = struct
 
       let to_v1 t = to_V1_t t
       let of_v1 t = of_V1_t t ~id:(-1)
+    end
+
+    module V3 = struct
+      type t = V1.t [@@deriving sexp, compare, bin_io]
+
+      let%expect_test _ =
+        print_endline [%bin_digest: t];
+        [%expect {| 127c33aa3895110d2fdd1b3c356bf5c3 |}]
+      ;;
+
+      let to_v2 = V2.of_v1
+      let of_v2 = V2.to_v1
     end
   end
 
@@ -70,6 +82,30 @@ module Stable = struct
       to_V1_t t ~modify_info:(Map.map ~f:Node_info.V2.to_v1)
     ;;
   end
+
+  module V3 = struct
+    type t =
+      { tree : Node_path.Stable.V1.t Node_path.Stable.V1.Map.t
+      ; dag : Node_path.Stable.V1.t list Node_path.Stable.V1.Map.t
+      ; info : Node_info.V3.t Node_path.Stable.V1.Map.t
+      }
+    [@@deriving bin_io, compare, sexp, stable_record ~version:V2.t ~modify:[ info ]]
+
+    let%expect_test _ =
+      print_endline [%bin_digest: t];
+      [%expect {| 122924cb491f2c00727ae98b5c47f343 |}]
+    ;;
+
+    let of_v2 t =
+      let open Core in
+      of_V2_t t ~modify_info:(Map.map ~f:Node_info.V3.of_v2)
+    ;;
+
+    let to_v2 t =
+      let open Core in
+      to_V2_t t ~modify_info:(Map.map ~f:Node_info.V3.to_v2)
+    ;;
+  end
 end
 
 open Stable
@@ -88,18 +124,13 @@ module Source_code_position = struct
 end
 
 module Node_info = struct
-  type t = Node_info.V2.t =
+  type t = Node_info.V1.t =
     { node_type : string
     ; here : Source_code_position.t option
-    ; id : int
     }
   [@@deriving sexp, bin_io]
 
-  let int_of_id id =
-    Int.t_of_sexp (Type_equal.Id.Uid.sexp_of_t (Type_equal.Id.uid id))
-  ;;
-
-  let of_value (type a) ({ value; here; id } : a Value.t) =
+  let of_value (type a) ({ value; here; id = _ } : a Value.t) =
     let node_type =
       match value with
       | Constant _ -> "constant"
@@ -116,17 +147,18 @@ module Node_info = struct
       | Map6 _ -> "map6"
       | Map7 _ -> "map7"
     in
-    { node_type; here; id = int_of_id id }
+    { node_type; here }
   ;;
 
   let of_computation (type result) (computation : result Computation.t) =
     let here =
-      match computation.kind with
+      match computation with
       | Sub { here; _ } -> here
+      | Switch { here; _ } -> Some here
       | _ -> None
     in
     let node_type =
-      match computation.kind with
+      match computation with
       | Return _ -> "return"
       | Leaf1 _ -> "leaf1"
       | Leaf0 _ -> "leaf0"
@@ -145,13 +177,12 @@ module Node_info = struct
       | With_model_resetter _ -> "with_model_resetter"
       | Path -> "path"
       | Lifecycle _ -> "lifecycle"
-      | Identity _ -> "identity"
     in
-    { node_type; here; id = int_of_id computation.id }
+    { node_type; here }
   ;;
 end
 
-type t = V2.t =
+type t = V3.t =
   { tree : Node_path.t Node_path.Map.t
   ; dag : Node_path.t list Node_path.Map.t
   ; info : Node_info.t Node_path.Map.t
@@ -211,7 +242,7 @@ let computation_map
      Hashtbl.set environment ~key:snd ~data:current_path
    | None -> ());
   let recursed = recurse state computation in
-  match recursed.kind with
+  match recursed with
   | Fetch { id = v_id; _ } ->
     let uid = Type_equal.Id.uid v_id in
     (match Hashtbl.find environment uid with
@@ -253,7 +284,7 @@ let iter_graph_updates (t : _ Computation.t) ~on_update =
 let pull_source_locations_from_nearest_parent t =
   let info = ref t.info in
   let rec find_and_update_nearest_here key : Source_code_position.t option =
-    let%bind.Option { Node_info.node_type; here; id } = Map.find !info key in
+    let%bind.Option { Node_info.node_type; here } = Map.find !info key in
     let here =
       match here with
       | Some here -> Some here
@@ -262,7 +293,7 @@ let pull_source_locations_from_nearest_parent t =
         let%map.Option here = find_and_update_nearest_here parent in
         { here with pos_fname = "~" ^ here.pos_fname }
     in
-    info := Map.set !info ~key ~data:{ node_type; here; id };
+    info := Map.set !info ~key ~data:{ node_type; here };
     here
   in
   let update_nearest_here key =

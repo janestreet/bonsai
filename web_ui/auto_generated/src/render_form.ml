@@ -1,8 +1,9 @@
 open! Core
 open Bonsai_web
 module Attr = Vdom.Attr
+module Form = Bonsai_web_ui_form
 module Node = Vdom.Node
-open Bonsai_web_ui_form.View.Private
+module Form_view = Form.View
 
 module Tooltip = struct
   module Style =
@@ -139,24 +140,24 @@ module Style =
         padding: 0;
       }
       .mod_depth_1 {
+        --accent-h:0;
+        --accent-s:81%;
+        --accent-l:54%;
+      }
+      .mod_depth_2 {
         --accent-h:209;
         --accent-s:100%;
         --accent-l:50%;
       }
-      .mod_depth_2 {
+      .mod_depth_3 {
         --accent-h:137;
         --accent-s:100%;
         --accent-l:36%;
       }
-      .mod_depth_3 {
+      .mod_depth_4 {
         --accent-h:32;
         --accent-s:100%;
         --accent-l:49%;
-      }
-      .mod_depth_4 {
-        --accent-h:0;
-        --accent-s:81%;
-        --accent-l:54%;
       }
       .nested_table {
         padding-left:1.3rem;
@@ -199,132 +200,201 @@ let nested_table_depth_classes =
   Style.[ mod_depth_1; mod_depth_2; mod_depth_3; mod_depth_4 ]
 ;;
 
-let nested_table depth children =
+let nested_table eval_context children =
   let table_attr =
     Attr.many
       [ List.nth_exn
           nested_table_depth_classes
-          (depth mod List.length nested_table_depth_classes)
+          (View.Expert.Form_context.depth eval_context
+           mod List.length nested_table_depth_classes)
       ; Style.nested_table
       ]
   in
   Node.tr [ Node.td ~attr:(Attr.colspan 100) [ Node.table ~attr:table_attr children ] ]
 ;;
 
-let label_wrapper ?(child = Node.text "") ?(attr = Attr.empty) ?tooltip ?error () =
+let label_wrapper ?(attr = Attr.empty) (context : Form_view.context) =
   let error =
-    Option.map error ~f:(fun { Error_details.error; _ } ->
-      Node.text (Error.to_string_hum error))
+    Option.map context.error ~f:(fun error -> Node.text (Error.to_string_hum error))
   in
+  let label = Option.value context.label ~default:(Node.text "") in
   let label_classes =
     List.filter_opt
       [ Some Style.label
-      ; Option.some_if (Option.is_some error) Style.label_error
-      ; Option.some_if (Option.is_some tooltip) Style.label_info
+      ; Option.some_if (Option.is_some context.error) Style.label_error
+      ; Option.some_if (Option.is_some context.tooltip) Style.label_info
       ]
   in
   let tooltip_element =
-    match List.filter_opt [ error; tooltip ] with
+    match List.filter_opt [ error; context.tooltip ] with
     | [] -> None
     | elements -> Some (Node.div (List.intersperse elements ~sep:(Node.hr ())))
   in
-  Node.td [ Tooltip.wrap ?tooltip_element ~attr:Attr.(many label_classes @ attr) child ]
+  Node.td [ Tooltip.wrap ?tooltip_element ~attr:Attr.(many label_classes @ attr) label ]
 ;;
 
-let rec to_vdom ~depth = function
-  | Empty -> []
-  | Group { label; tooltip; view; error } ->
-    let rest = to_vdom view ~depth:(depth + 1) in
-    let header_is_inhabited =
-      Option.is_some label || Option.is_some tooltip || Option.is_some error
-    in
-    if header_is_inhabited
-    then (
-      let label = label_wrapper ?child:label ?tooltip ?error ~attr:Attr.(colspan 2) () in
-      [ Node.tr [ label ]; nested_table depth rest ])
-    else rest
-  | Header_group { label; tooltip; view; header_view; error } ->
-    let rest = to_vdom view ~depth:(depth + 1) in
-    let header_view =
-      let colspan = if Option.is_some label then Attr.empty else Attr.colspan 2 in
-      let nodes, key = to_vdom_plain header_view in
-      Node.td ?key ~attr:colspan nodes
-    in
-    let label = label_wrapper ?child:label ?tooltip ?error () in
-    [ Node.tr [ label; header_view ]; nested_table depth rest ]
-  | Submit_button _ as btn ->
-    let button, key = to_vdom_plain btn in
-    [ Node.tr ?key button ]
-  | Row { label; tooltip; id; form; error } ->
-    let label =
-      match label with
-      | Some label ->
-        (* <label> nodes can be clicked on to focus the input element contained
-           inside.  By setting display:block, even the whitespace to the right
-           of the label is clickable, meaning that mis-clicking on particularly
-           small labels is less likely. *)
-        Node.label
-          ~attr:
-            (Attr.many_without_merge
-               [ Attr.for_ id; Attr.style (Css_gen.display `Block) ])
-          [ label ]
-      | _ -> Node.text ""
-    in
-    [ (* This key prevents inputs of different "kinds" from clobbering each other *)
-      Node.tr ~key:id [ label_wrapper ?tooltip ?error ~child:label (); Node.td [ form ] ]
-    ]
-  | List l -> List.concat_map l ~f:(to_vdom ~depth)
-
-(* If the form is just a single row, return the view for it without wrapping *)
-and to_vdom_plain = function
-  | Empty -> [], None
-  | Header_group { label = _; tooltip = _; header_view; view; error = _ } ->
-    let header, _key = to_vdom_plain header_view in
-    let body, _key = to_vdom_plain view in
-    header @ body, None
-  | Group { label = _; tooltip = _; view; error = _ } ->
-    let vdom, _key = to_vdom_plain view in
-    vdom, None
-  | Row { label = _; tooltip = _; id; form; error = _ } -> [ form ], Some id
-  | List l -> List.concat_map l ~f:(fun t -> to_vdom_plain t |> fst), None
-  | Submit_button { on_submit; text; attr } ->
-    let nodes =
-      match on_submit with
-      | Some event ->
-        let event = Vdom.Effect.(Many [ event; Prevent_default; Stop_propagation ]) in
-        [ Node.button
-            ~attr:(Attr.combine attr (Attr.on_click (fun _ -> event)))
-            [ Vdom.Node.text text ]
-        ]
-      | None ->
-        [ Node.button ~attr:(Attr.combine attr Attr.disabled) [ Vdom.Node.text text ] ]
-    in
-    nodes, None
+let header_is_inhabited view_context =
+  Option.is_some view_context.Form_view.label
+  || Option.is_some view_context.tooltip
+  || Option.is_some view_context.error
 ;;
 
-let to_vdom ?on_submit ?(editable = `Yes_always) view =
-  let view =
-    match on_submit with
-    | Some { on_submit; button_text = Some button_text; handle_enter = _; button_attr } ->
-      let button = Submit_button { text = button_text; on_submit; attr = button_attr } in
-      concat view button
-    | _ -> view
-  in
-  let root_table = Node.table ~attr:Style.form [ Node.tbody (to_vdom view ~depth:0) ] in
-  let root_table =
-    match editable with
-    | `Yes_always -> root_table
-    | `Currently_yes -> with_fieldset ~currently_editable:true root_table
-    | `Currently_no -> with_fieldset ~currently_editable:false root_table
-  in
-  match on_submit with
-  | Some { on_submit; handle_enter = true; _ } ->
-    let always_use = [ Vdom.Effect.Prevent_default; Vdom.Effect.Stop_propagation ] in
-    let event =
-      match on_submit with
-      | None -> Vdom.Effect.Many always_use
-      | Some event -> Vdom.Effect.Many (event :: always_use)
-    in
-    Node.create "form" ~attr:Attr.(on_submit (fun _ -> event)) [ root_table ]
-  | _ -> root_table
+let with_auto_generated_forms ~theme =
+  let module Form_context = View.Expert.Form_context in
+  View.Expert.override_theme theme ~f:(fun (module M) ->
+    (module struct
+      class c =
+        object (self)
+          inherit M.c
+          method! theme_name = "Bonsai_web_ui_auto_generated"
+
+          method! form_tuple ~eval_context ~view_context ts =
+            let header_is_inhabited = header_is_inhabited view_context in
+            let eval_context =
+              if header_is_inhabited
+              then Form_context.incr_depth eval_context
+              else eval_context
+            in
+            let rest = List.concat_map ts ~f:(self#form_view ~eval_context) in
+            if header_is_inhabited
+            then (
+              let label = label_wrapper ~attr:Attr.(colspan 2) view_context in
+              [ Node.tr [ label ]; nested_table eval_context rest ])
+            else rest
+
+          method! form_raw
+                  ~eval_context
+                  ~view_context
+                  ({ id; raw_view } : Form_view.raw) =
+            let view_context =
+              { view_context with
+                label =
+                  Option.map view_context.label ~f:(fun label ->
+                    Node.label
+                      ~attr:
+                        (Attr.many
+                           [ Attr.for_ id; Attr.style (Css_gen.display `Block) ])
+                      [ label ])
+              }
+            in
+            [ Node.tr
+                ~key:id
+                [ label_wrapper view_context
+                ; Node.td
+                    [ raw_view
+                        view_context
+                        ~editable:(Form_context.editable eval_context)
+                    ]
+                ]
+            ]
+
+          method! form_record ~eval_context ~view_context fields =
+            let header_is_inhabited = header_is_inhabited view_context in
+            let eval_context =
+              if header_is_inhabited
+              then Form_context.incr_depth eval_context
+              else eval_context
+            in
+            let rest =
+              List.concat_map fields ~f:(fun { field_name; field_view } ->
+                self#form_view
+                  ~eval_context
+                  (Form_view.suggest_label field_name field_view))
+            in
+            if header_is_inhabited
+            then (
+              let label = label_wrapper ~attr:Attr.(colspan 2) view_context in
+              [ Node.tr [ label ]; nested_table eval_context rest ])
+            else rest
+
+          method! form_variant
+                  ~eval_context
+                  ~view_context
+                  ({ clause_selector; selected_clause } : Form_view.variant) =
+            let eval_context = Form_context.incr_depth eval_context in
+            let rest =
+              match selected_clause with
+              | None -> []
+              | Some { clause_name = _; clause_view } ->
+                self#form_view ~eval_context clause_view
+            in
+            let label = label_wrapper view_context in
+            [ Node.tr [ label; Node.td [ clause_selector ] ]
+            ; nested_table eval_context rest
+            ]
+
+          method! form_option
+                  ~eval_context
+                  ~view_context
+                  ({ toggle; status } : Form_view.option_view) =
+            let eval_context = Form_context.incr_depth eval_context in
+            let rest =
+              match status with
+              | Currently_none None -> []
+              | Currently_some t | Currently_none (Some t) ->
+                self#form_view ~eval_context t
+            in
+            let label = label_wrapper view_context in
+            [ Node.tr [ label; Node.td [ toggle ] ]; nested_table eval_context rest ]
+
+          method! form_list
+                  ~eval_context
+                  ~view_context
+                  ({ list_items; append_item; legacy_button_position = _ } :
+                     Form_view.list_view) =
+            let header_is_inhabited = header_is_inhabited view_context in
+            let eval_context =
+              if header_is_inhabited
+              then Form_context.incr_depth eval_context
+              else eval_context
+            in
+            let rest =
+              let items_and_removals =
+                List.concat_mapi list_items ~f:(fun i { item_view; remove_item } ->
+                  let eval_context = Form_context.incr_depth eval_context in
+                  let rest = self#form_view ~eval_context item_view in
+                  let remove_button =
+                    self#form_remove_item ~eval_context remove_item ~index:i
+                  in
+                  [ Node.tr
+                      [ Node.td
+                          ~attr:
+                            (Attr.many
+                               [ Attr.colspan 2
+                               ; Attr.style (Css_gen.font_weight `Bold)
+                               ])
+                          [ remove_button ]
+                      ]
+                  ; nested_table eval_context rest
+                  ])
+              in
+              let append_item =
+                Node.tr
+                  [ Node.td
+                      ~attr:(Vdom.Attr.many [ Vdom.Attr.colspan 2; Style.label ])
+                      [ self#form_append_item ~eval_context append_item ]
+                  ]
+              in
+              items_and_removals @ [ append_item ]
+            in
+            if header_is_inhabited
+            then (
+              let label = label_wrapper ~attr:Attr.(colspan 2) view_context in
+              [ Node.tr [ label ]; nested_table eval_context rest ])
+            else rest
+
+          method! form_toplevel_combine rows =
+            Node.table ~attr:Style.form [ Node.tbody rows ]
+        end
+    end))
+;;
+
+let to_vdom ?(theme = View.Expert.default_theme) ?on_submit ?editable view =
+  Vdom.Node.lazy_
+    (lazy
+      (Form.View.to_vdom
+         ?on_submit
+         ?editable
+         view
+         ~theme:(with_auto_generated_forms ~theme)))
 ;;

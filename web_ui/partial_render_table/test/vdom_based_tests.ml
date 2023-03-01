@@ -19,7 +19,14 @@ module Test = struct
     let min_vis, max_vis = visible_range in
     let input_var = Bonsai.Var.create map in
     let filter_var = Bonsai.Var.create (fun ~key:_ ~data:_ -> true) in
-    let { Component.component; get_vdom; get_testing = _; get_focus; get_inject } =
+    let { Component.component
+        ; get_vdom
+        ; get_testing = _
+        ; get_focus
+        ; get_inject
+        ; get_num_filtered_rows
+        }
+      =
       component (Bonsai.Var.value input_var) (Bonsai.Var.value filter_var)
     in
     let handle =
@@ -42,7 +49,9 @@ module Test = struct
         end)
         component
     in
-    let t = { handle; get_vdom; get_focus; input_var; filter_var } in
+    let t =
+      { handle; get_vdom; get_focus; input_var; filter_var; get_num_filtered_rows }
+    in
     if should_set_bounds then set_bounds t ~low:min_vis ~high:max_vis;
     t
   ;;
@@ -150,12 +159,12 @@ let%expect_test "column visibility" =
          }>
       <div style={ padding-top: 0px; padding-bottom: 0px; }>
         <div>
-          <div class="prt-table-row" onclick style={ height: 1px; width: 0.00px; }>
+          <div class="prt-table-row"
 
                    max-height: 1px;
-                   width: 0.00px;
-                   min-width: 0.00px;
-                   max-width: 0.00px;
+                   width: 0.00000000px;
+                   min-width: 0.00000000px;
+                   max-width: 0.00000000px;
                  }>
               <input oninput> </input>
               hello
@@ -165,31 +174,33 @@ let%expect_test "column visibility" =
                    height: 1px;
                    min-height: 1px;
                    max-height: 1px;
-                   width: 0.00px;
-                   min-width: 0.00px;
-                   max-width: 0.00px;
+                   width: 0.00000000px;
+                   min-width: 0.00000000px;
+                   max-width: 0.00000000px;
 -|               }> 1.000000 </div>
 +|                 display: none;
 +|               }> </div>
           </div>
-          <div class="prt-table-row" onclick style={ height: 1px; width: 0.00px; }>
+          <div class="prt-table-row"
+               onclick
+               style={
+                 height: 1px;
+                 width: 0.00000000px;
+                 display: flex;
+                 flex-direction: row;
+                 flex-wrap: nowrap;
+               }>
             <div class="cell_hash_replaced_in_test prt-table-cell"
                  style={
                    height: 1px;
                    min-height: 1px;
                    max-height: 1px;
-                   width: 0.00px;
-                   min-width: 0.00px;
-                   max-width: 0.00px;
-                 }> 1 </div>
-            <div class="cell_hash_replaced_in_test prt-table-cell"
-                 style={
-                   height: 1px;
-                   min-height: 1px;
+                   width: 0.00000000px;
+
                    max-height: 1px;
-                   width: 0.00px;
-                   min-width: 0.00px;
-                   max-width: 0.00px;
+                   width: 0.00000000px;
+                   min-width: 0.00000000px;
+                   max-width: 0.00000000px;
                  }>
               <input oninput> </input>
               there
@@ -199,31 +210,33 @@ let%expect_test "column visibility" =
                    height: 1px;
                    min-height: 1px;
                    max-height: 1px;
-                   width: 0.00px;
-                   min-width: 0.00px;
-                   max-width: 0.00px;
+                   width: 0.00000000px;
+                   min-width: 0.00000000px;
+                   max-width: 0.00000000px;
 -|               }> 2.000000 </div>
 +|                 display: none;
 +|               }> </div>
           </div>
-          <div class="prt-table-row" onclick style={ height: 1px; width: 0.00px; }>
+          <div class="prt-table-row"
+               onclick
+               style={
+                 height: 1px;
+                 width: 0.00000000px;
+                 display: flex;
+                 flex-direction: row;
+                 flex-wrap: nowrap;
+               }>
             <div class="cell_hash_replaced_in_test prt-table-cell"
                  style={
                    height: 1px;
                    min-height: 1px;
                    max-height: 1px;
-                   width: 0.00px;
-                   min-width: 0.00px;
-                   max-width: 0.00px;
-                 }> 4 </div>
-            <div class="cell_hash_replaced_in_test prt-table-cell"
-                 style={
-                   height: 1px;
-                   min-height: 1px;
+                   width: 0.00000000px;
+
                    max-height: 1px;
-                   width: 0.00px;
-                   min-width: 0.00px;
-                   max-width: 0.00px;
+                   width: 0.00000000px;
+                   min-width: 0.00000000px;
+                   max-width: 0.00000000px;
                  }>
               <input oninput> </input>
               world
@@ -233,9 +246,9 @@ let%expect_test "column visibility" =
                    height: 1px;
                    min-height: 1px;
                    max-height: 1px;
-                   width: 0.00px;
-                   min-width: 0.00px;
-                   max-width: 0.00px;
+                   width: 0.00000000px;
+                   min-width: 0.00000000px;
+                   max-width: 0.00000000px;
 -|               }> 2.000000 </div>
 +|                 display: none;
 +|               }> </div>
@@ -386,10 +399,6 @@ let%expect_test "resize-column" =
           <td colspan="1"
               class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
 
-                width: 50px;
-              }>
-            <div class="column_header_hash_replaced_in_test" onclick>
-              <span> ◇  b </span>
             </div>
           </td>
         </tr>
@@ -402,28 +411,36 @@ let%expect_test "resize-column" =
          }>
       <div style={ padding-top: 0px; padding-bottom: 0px; }>
         <div>
--|        <div class="prt-table-row" onclick style={ height: 1px; width: 0.00px; }>
-+|        <div class="prt-table-row" onclick style={ height: 1px; width: 10.00px; }>
+          <div class="prt-table-row"
+               onclick
+               style={
+                 height: 1px;
+-|               width: 0.00000000px;
++|               width: 10.00000000px;
+                 display: flex;
+                 flex-direction: row;
+                 flex-wrap: nowrap;
+               }>
             <div class="cell_hash_replaced_in_test prt-table-cell"
                  style={
                    height: 1px;
                    min-height: 1px;
                    max-height: 1px;
--|                 width: 0.00px;
-+|                 width: 10.00px;
--|                 min-width: 0.00px;
-+|                 min-width: 10.00px;
--|                 max-width: 0.00px;
-+|                 max-width: 10.00px;
+-|                 width: 0.00000000px;
++|                 width: 10.00000000px;
+-|                 min-width: 0.00000000px;
++|                 min-width: 10.00000000px;
+-|                 max-width: 0.00000000px;
++|                 max-width: 10.00000000px;
                  }> 0 </div>
             <div class="cell_hash_replaced_in_test prt-table-cell"
                  style={
                    height: 1px;
                    min-height: 1px;
                    max-height: 1px;
-                   width: 0.00px;
-                   min-width: 0.00px;
-                   max-width: 0.00px;
+                   width: 0.00000000px;
+                   min-width: 0.00000000px;
+                   max-width: 0.00000000px;
                  }>
               <input oninput> </input>
               hello
@@ -433,33 +450,41 @@ let%expect_test "resize-column" =
                    height: 1px;
                    min-height: 1px;
                    max-height: 1px;
-                   width: 0.00px;
-                   min-width: 0.00px;
-                   max-width: 0.00px;
+                   width: 0.00000000px;
+                   min-width: 0.00000000px;
+                   max-width: 0.00000000px;
                  }> 1.000000 </div>
           </div>
--|        <div class="prt-table-row" onclick style={ height: 1px; width: 0.00px; }>
-+|        <div class="prt-table-row" onclick style={ height: 1px; width: 10.00px; }>
+          <div class="prt-table-row"
+               onclick
+               style={
+                 height: 1px;
+-|               width: 0.00000000px;
++|               width: 10.00000000px;
+                 display: flex;
+                 flex-direction: row;
+                 flex-wrap: nowrap;
+               }>
             <div class="cell_hash_replaced_in_test prt-table-cell"
                  style={
                    height: 1px;
                    min-height: 1px;
                    max-height: 1px;
--|                 width: 0.00px;
-+|                 width: 10.00px;
--|                 min-width: 0.00px;
-+|                 min-width: 10.00px;
--|                 max-width: 0.00px;
-+|                 max-width: 10.00px;
+-|                 width: 0.00000000px;
++|                 width: 10.00000000px;
+-|                 min-width: 0.00000000px;
++|                 min-width: 10.00000000px;
+-|                 max-width: 0.00000000px;
++|                 max-width: 10.00000000px;
                  }> 1 </div>
             <div class="cell_hash_replaced_in_test prt-table-cell"
                  style={
                    height: 1px;
                    min-height: 1px;
                    max-height: 1px;
-                   width: 0.00px;
-                   min-width: 0.00px;
-                   max-width: 0.00px;
+                   width: 0.00000000px;
+                   min-width: 0.00000000px;
+                   max-width: 0.00000000px;
                  }>
               <input oninput> </input>
               there
@@ -469,33 +494,41 @@ let%expect_test "resize-column" =
                    height: 1px;
                    min-height: 1px;
                    max-height: 1px;
-                   width: 0.00px;
-                   min-width: 0.00px;
-                   max-width: 0.00px;
+                   width: 0.00000000px;
+                   min-width: 0.00000000px;
+                   max-width: 0.00000000px;
                  }> 2.000000 </div>
           </div>
--|        <div class="prt-table-row" onclick style={ height: 1px; width: 0.00px; }>
-+|        <div class="prt-table-row" onclick style={ height: 1px; width: 10.00px; }>
+          <div class="prt-table-row"
+               onclick
+               style={
+                 height: 1px;
+-|               width: 0.00000000px;
++|               width: 10.00000000px;
+                 display: flex;
+                 flex-direction: row;
+                 flex-wrap: nowrap;
+               }>
             <div class="cell_hash_replaced_in_test prt-table-cell"
                  style={
                    height: 1px;
                    min-height: 1px;
                    max-height: 1px;
--|                 width: 0.00px;
-+|                 width: 10.00px;
--|                 min-width: 0.00px;
-+|                 min-width: 10.00px;
--|                 max-width: 0.00px;
-+|                 max-width: 10.00px;
+-|                 width: 0.00000000px;
++|                 width: 10.00000000px;
+-|                 min-width: 0.00000000px;
++|                 min-width: 10.00000000px;
+-|                 max-width: 0.00000000px;
++|                 max-width: 10.00000000px;
                  }> 4 </div>
             <div class="cell_hash_replaced_in_test prt-table-cell"
                  style={
                    height: 1px;
                    min-height: 1px;
                    max-height: 1px;
-                   width: 0.00px;
-                   min-width: 0.00px;
-                   max-width: 0.00px;
+                   width: 0.00000000px;
+                   min-width: 0.00000000px;
+                   max-width: 0.00000000px;
                  }>
               <input oninput> </input>
               world
@@ -847,6 +880,7 @@ let%expect_test "table body is not recomputed more often than necessary" =
       ; get_testing = Table_expert.Result.for_testing
       ; get_inject = Shared.Test.Component.get_inject_expert
       ; get_focus = Table_expert.Result.focus
+      ; get_num_filtered_rows = (fun _ -> None)
       })
   in
   Test.print_message_on_result_recomputation test;

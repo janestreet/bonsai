@@ -44,15 +44,17 @@ let print_graph_info (graph_info : Graph_info.t) =
   let with_line_and_column_string id =
     let id_string = Node_path.to_string id in
     match Map.find graph_info.info id with
-    | Some { node_type; here; id = _ } ->
+    | Some { node_type; here } ->
       (match here with
        | Some { Source_code_position.pos_lnum; pos_cnum; pos_bol; pos_fname } ->
-         let pos_lnum =
+         let pos_lnum, pos_fname =
            if String.equal this_file pos_fname
-           then pos_lnum - !test_location_reference_point.pos_lnum
-           else pos_lnum
+           then pos_lnum - !test_location_reference_point.pos_lnum, ""
+           else pos_lnum, pos_fname ^ ":"
          in
-         [%string "%{id_string} %{node_type} @ %{pos_lnum#Int}:%{pos_cnum - pos_bol#Int}"]
+         [%string
+           "%{id_string} %{node_type} @ %{pos_fname}%{pos_lnum#Int}:%{pos_cnum - \
+            pos_bol#Int}"]
        | None -> [%string "%{id_string} %{node_type}"])
     | _ -> id_string
   in
@@ -118,9 +120,9 @@ let%expect_test _ =
        1_2 incr -> 1_1 return
        2-1_1 return -> 2_1 sub @ 6:2
        2-1_2 incr -> 2-1_1 return
-       2-2-1-1_1 named -> 2-2-1_2 map
+       2-2-1-1_1 named -> 2-2-1_2 map @ 6:2
        2-2-1_1 return -> 2-2_1 sub @ 6:2
-       2-2-1_2 map -> 2-2-1_1 return
+       2-2-1_2 map @ 6:2 -> 2-2-1_1 return
        2-2-2_1 return -> 2-2_1 sub @ 6:2
        2-2-2_2 named @ 9:2 -> 2-2-2_1 return
        2-2_1 sub @ 6:2 -> 2_1 sub @ 6:2
@@ -131,9 +133,9 @@ let%expect_test _ =
        1_2 incr -> 1_1 return
        2-1_1 return -> 2-2-1-1_1 named, 2_1 sub @ 6:2
        2-1_2 incr -> 2-1_1 return
-       2-2-1-1_1 named -> 2-2-1_2 map
+       2-2-1-1_1 named -> 2-2-1_2 map @ 6:2
        2-2-1_1 return -> 2-2_1 sub @ 6:2
-       2-2-1_2 map -> 2-2-1_1 return
+       2-2-1_2 map @ 6:2 -> 2-2-1_1 return
        2-2-2_1 return -> 2-2_1 sub @ 6:2
        2-2-2_2 named @ 9:2 -> 2-2-2_1 return
        2-2_1 sub @ 6:2 -> 2_1 sub @ 6:2
@@ -166,9 +168,9 @@ let%expect_test _ =
      1_2 constant -> 1_1 return
      2-1_1 return -> 2_1 sub @ 6:2
      2-1_2 constant -> 2-1_1 return
-     2-2-1-1_1 named -> 2-2-1_2 map
+     2-2-1-1_1 named -> 2-2-1_2 map @ 6:2
      2-2-1_1 return -> 2-2_1 sub @ 6:2
-     2-2-1_2 map -> 2-2-1_1 return
+     2-2-1_2 map @ 6:2 -> 2-2-1_1 return
      2-2-2_1 return -> 2-2_1 sub @ 6:2
      2-2-2_2 named @ 9:2 -> 2-2-2_1 return
      2-2_1 sub @ 6:2 -> 2_1 sub @ 6:2
@@ -179,9 +181,9 @@ let%expect_test _ =
      1_2 constant -> 1_1 return
      2-1_1 return -> 2-2-1-1_1 named, 2_1 sub @ 6:2
      2-1_2 constant -> 2-1_1 return
-     2-2-1-1_1 named -> 2-2-1_2 map
+     2-2-1-1_1 named -> 2-2-1_2 map @ 6:2
      2-2-1_1 return -> 2-2_1 sub @ 6:2
-     2-2-1_2 map -> 2-2-1_1 return
+     2-2-1_2 map @ 6:2 -> 2-2-1_1 return
      2-2-2_1 return -> 2-2_1 sub @ 6:2
      2-2-2_2 named @ 9:2 -> 2-2-2_1 return
      2-2_1 sub @ 6:2 -> 2_1 sub @ 6:2
@@ -352,10 +354,7 @@ let%expect_test "state" =
       c
   in
   Handle.show handle;
-  [%expect {|
-     start-##leaf0-compute 1_1
-     stop-##leaf0-compute 1_1
-     0 |}];
+  [%expect {| 0 |}];
   Handle.do_actions handle [ 1; 2 ];
   Handle.show handle;
   [%expect
@@ -364,8 +363,6 @@ let%expect_test "state" =
      stop-##leaf0-apply_action 1_1
      start-##leaf0-apply_action 1_1
      stop-##leaf0-apply_action 1_1
-     start-##leaf0-compute 1_1
-     stop-##leaf0-compute 1_1
      2 |}]
 ;;
 
@@ -376,7 +373,12 @@ let dynamic_state () =
       (module Int)
       (module Unit)
       ~default_model:0
-      ~apply_action:(fun ~inject:_ ~schedule_event:_ () model () -> model + 1)
+      ~apply_action:(fun ~inject:_ ~schedule_event:_ input model () ->
+        match input with
+        | Active () -> model + 1
+        | Inactive ->
+          print_endline "inactive";
+          model)
       (opaque_const_value ())
   in
   return state
@@ -714,22 +716,22 @@ let%expect_test "enum" =
     {|
      tree:
        1-1_1 incr -> 1_1 map
-       1_1 map -> _1 switch
-       2_1 return -> _1 switch
+       1_1 map -> _1 switch @ lib/bonsai/src/proc.ml:51:26
+       2_1 return -> _1 switch @ lib/bonsai/src/proc.ml:51:26
        2_2 incr -> 2_1 return
        3-1_1 incr -> 3_2 map @ 6:8
-       3_1 return -> _1 switch
+       3_1 return -> _1 switch @ lib/bonsai/src/proc.ml:51:26
        3_2 map @ 6:8 -> 3_1 return
-       _1 switch -> _0
+       _1 switch @ lib/bonsai/src/proc.ml:51:26 -> _0
      dag:
        1-1_1 incr -> 1_1 map
-       1_1 map -> _1 switch
-       2_1 return -> _1 switch
+       1_1 map -> _1 switch @ lib/bonsai/src/proc.ml:51:26
+       2_1 return -> _1 switch @ lib/bonsai/src/proc.ml:51:26
        2_2 incr -> 2_1 return
        3-1_1 incr -> 3_2 map @ 6:8
-       3_1 return -> _1 switch
+       3_1 return -> _1 switch @ lib/bonsai/src/proc.ml:51:26
        3_2 map @ 6:8 -> 3_1 return
-       _1 switch -> _0
+       _1 switch @ lib/bonsai/src/proc.ml:51:26 -> _0
      |}];
   let handle = Handle.create (Result_spec.sexp (module Bool)) c in
   Handle.show handle;
@@ -785,18 +787,18 @@ let%expect_test "lazy" =
     {|
      tree:
        1-1_1 incr -> 1_1 map
-       1_1 map -> _1 switch
-       2_1 lazy -> _1 switch
-       3_1 return -> _1 switch
+       1_1 map -> _1 switch @ lib/bonsai/src/proc.ml:51:26
+       2_1 lazy -> _1 switch @ lib/bonsai/src/proc.ml:51:26
+       3_1 return -> _1 switch @ lib/bonsai/src/proc.ml:51:26
        3_2 constant -> 3_1 return
-       _1 switch -> _0
+       _1 switch @ lib/bonsai/src/proc.ml:51:26 -> _0
      dag:
        1-1_1 incr -> 1_1 map
-       1_1 map -> _1 switch
-       2_1 lazy -> _1 switch
-       3_1 return -> _1 switch
+       1_1 map -> _1 switch @ lib/bonsai/src/proc.ml:51:26
+       2_1 lazy -> _1 switch @ lib/bonsai/src/proc.ml:51:26
+       3_1 return -> _1 switch @ lib/bonsai/src/proc.ml:51:26
        3_2 constant -> 3_1 return
-       _1 switch -> _0
+       _1 switch @ lib/bonsai/src/proc.ml:51:26 -> _0
      |}];
   let handle = Handle.create (Result_spec.sexp (module Int)) c in
   Handle.show handle;
@@ -812,70 +814,70 @@ let%expect_test "lazy" =
      stop-##map 1_1
      tree:
        1-1_1 incr -> 1_1 map
-       1_1 map -> _1 switch
-       2_1 lazy -> _1 switch
+       1_1 map -> _1 switch @ lib/bonsai/src/proc.ml:51:26
+       2_1 lazy -> _1 switch @ lib/bonsai/src/proc.ml:51:26
        2_2 return -> 2_1 lazy
-       3_1 return -> _1 switch
+       3_1 return -> _1 switch @ lib/bonsai/src/proc.ml:51:26
        3_2 constant -> 3_1 return
-       _1 switch -> _0
+       _1 switch @ lib/bonsai/src/proc.ml:51:26 -> _0
      dag:
        1-1_1 incr -> 1_1 map
-       1_1 map -> _1 switch
-       2_1 lazy -> _1 switch
-       3_1 return -> _1 switch
+       1_1 map -> _1 switch @ lib/bonsai/src/proc.ml:51:26
+       2_1 lazy -> _1 switch @ lib/bonsai/src/proc.ml:51:26
+       3_1 return -> _1 switch @ lib/bonsai/src/proc.ml:51:26
        3_2 constant -> 3_1 return
-       _1 switch -> _0
+       _1 switch @ lib/bonsai/src/proc.ml:51:26 -> _0
      tree:
        1-1_1 incr -> 1_1 map
-       1_1 map -> _1 switch
-       2_1 lazy -> _1 switch
+       1_1 map -> _1 switch @ lib/bonsai/src/proc.ml:51:26
+       2_1 lazy -> _1 switch @ lib/bonsai/src/proc.ml:51:26
        2_2 return -> 2_1 lazy
-       3_1 return -> _1 switch
+       3_1 return -> _1 switch @ lib/bonsai/src/proc.ml:51:26
        3_2 constant -> 3_1 return
-       _1 switch -> _0
+       _1 switch @ lib/bonsai/src/proc.ml:51:26 -> _0
      dag:
        1-1_1 incr -> 1_1 map
-       1_1 map -> _1 switch
-       2_1 lazy -> _1 switch
+       1_1 map -> _1 switch @ lib/bonsai/src/proc.ml:51:26
+       2_1 lazy -> _1 switch @ lib/bonsai/src/proc.ml:51:26
        2_2 return -> 2_1 lazy
-       3_1 return -> _1 switch
+       3_1 return -> _1 switch @ lib/bonsai/src/proc.ml:51:26
        3_2 constant -> 3_1 return
-       _1 switch -> _0
+       _1 switch @ lib/bonsai/src/proc.ml:51:26 -> _0
      tree:
        1-1_1 incr -> 1_1 map
-       1_1 map -> _1 switch
-       2_1 lazy -> _1 switch
+       1_1 map -> _1 switch @ lib/bonsai/src/proc.ml:51:26
+       2_1 lazy -> _1 switch @ lib/bonsai/src/proc.ml:51:26
        2_2 return -> 2_1 lazy
        2_3 constant -> 2_2 return
-       3_1 return -> _1 switch
+       3_1 return -> _1 switch @ lib/bonsai/src/proc.ml:51:26
        3_2 constant -> 3_1 return
-       _1 switch -> _0
+       _1 switch @ lib/bonsai/src/proc.ml:51:26 -> _0
      dag:
        1-1_1 incr -> 1_1 map
-       1_1 map -> _1 switch
-       2_1 lazy -> _1 switch
+       1_1 map -> _1 switch @ lib/bonsai/src/proc.ml:51:26
+       2_1 lazy -> _1 switch @ lib/bonsai/src/proc.ml:51:26
        2_2 return -> 2_1 lazy
-       3_1 return -> _1 switch
+       3_1 return -> _1 switch @ lib/bonsai/src/proc.ml:51:26
        3_2 constant -> 3_1 return
-       _1 switch -> _0
+       _1 switch @ lib/bonsai/src/proc.ml:51:26 -> _0
      tree:
        1-1_1 incr -> 1_1 map
-       1_1 map -> _1 switch
-       2_1 lazy -> _1 switch
+       1_1 map -> _1 switch @ lib/bonsai/src/proc.ml:51:26
+       2_1 lazy -> _1 switch @ lib/bonsai/src/proc.ml:51:26
        2_2 return -> 2_1 lazy
        2_3 constant -> 2_2 return
-       3_1 return -> _1 switch
+       3_1 return -> _1 switch @ lib/bonsai/src/proc.ml:51:26
        3_2 constant -> 3_1 return
-       _1 switch -> _0
+       _1 switch @ lib/bonsai/src/proc.ml:51:26 -> _0
      dag:
        1-1_1 incr -> 1_1 map
-       1_1 map -> _1 switch
-       2_1 lazy -> _1 switch
+       1_1 map -> _1 switch @ lib/bonsai/src/proc.ml:51:26
+       2_1 lazy -> _1 switch @ lib/bonsai/src/proc.ml:51:26
        2_2 return -> 2_1 lazy
        2_3 constant -> 2_2 return
-       3_1 return -> _1 switch
+       3_1 return -> _1 switch @ lib/bonsai/src/proc.ml:51:26
        3_2 constant -> 3_1 return
-       _1 switch -> _0
+       _1 switch @ lib/bonsai/src/proc.ml:51:26 -> _0
      0 |}]
 ;;
 
@@ -898,28 +900,28 @@ let%expect_test "name_used_twice" =
      tree:
        1-1_1 return -> 1_1 sub @ -5:2
        1-1_2 incr -> 1-1_1 return
-       1-2-1-1_1 named -> 1-2-1_2 map
+       1-2-1-1_1 named -> 1-2-1_2 map @ -5:2
        1-2-1_1 return -> 1-2_1 sub @ -5:2
-       1-2-1_2 map -> 1-2-1_1 return
+       1-2-1_2 map @ -5:2 -> 1-2-1_1 return
        1-2-2_1 return -> 1-2_1 sub @ -5:2
        1-2-2_2 incr -> 1-2-2_1 return
        1-2_1 sub @ -5:2 -> 1_1 sub @ -5:2
        1_1 sub @ -5:2 -> _1 sub @ 1:2
-       2-1-1_1 named -> 2-1_2 map
+       2-1-1_1 named -> 2-1_2 map @ 1:2
        2-1_1 return -> 2_1 sub @ 1:2
-       2-1_2 map -> 2-1_1 return
+       2-1_2 map @ 1:2 -> 2-1_1 return
        2-2-1-1_1 return -> 2-2-1_1 sub @ -5:2
        2-2-1-1_2 incr -> 2-2-1-1_1 return
-       2-2-1-2-1-1_1 named -> 2-2-1-2-1_2 map
+       2-2-1-2-1-1_1 named -> 2-2-1-2-1_2 map @ -5:2
        2-2-1-2-1_1 return -> 2-2-1-2_1 sub @ -5:2
-       2-2-1-2-1_2 map -> 2-2-1-2-1_1 return
+       2-2-1-2-1_2 map @ -5:2 -> 2-2-1-2-1_1 return
        2-2-1-2-2_1 return -> 2-2-1-2_1 sub @ -5:2
        2-2-1-2-2_2 incr -> 2-2-1-2-2_1 return
        2-2-1-2_1 sub @ -5:2 -> 2-2-1_1 sub @ -5:2
        2-2-1_1 sub @ -5:2 -> 2-2_1 sub @ 2:2
-       2-2-2-1-1_1 named -> 2-2-2-1_2 map
+       2-2-2-1-1_1 named -> 2-2-2-1_2 map @ 2:2
        2-2-2-1_1 return -> 2-2-2_1 sub @ 2:2
-       2-2-2-1_2 map -> 2-2-2-1_1 return
+       2-2-2-1_2 map @ 2:2 -> 2-2-2-1_1 return
        2-2-2-2_1 return -> 2-2-2_1 sub @ 2:2
        2-2-2-2_2 constant -> 2-2-2-2_1 return
        2-2-2_1 sub @ 2:2 -> 2-2_1 sub @ 2:2
@@ -929,28 +931,28 @@ let%expect_test "name_used_twice" =
      dag:
        1-1_1 return -> 1-2-1-1_1 named, 1_1 sub @ -5:2
        1-1_2 incr -> 1-1_1 return
-       1-2-1-1_1 named -> 1-2-1_2 map
+       1-2-1-1_1 named -> 1-2-1_2 map @ -5:2
        1-2-1_1 return -> 1-2_1 sub @ -5:2
-       1-2-1_2 map -> 1-2-1_1 return
+       1-2-1_2 map @ -5:2 -> 1-2-1_1 return
        1-2-2_1 return -> 1-2_1 sub @ -5:2
        1-2-2_2 incr -> 1-2-2_1 return
        1-2_1 sub @ -5:2 -> 1_1 sub @ -5:2
        1_1 sub @ -5:2 -> 2-1-1_1 named, _1 sub @ 1:2
-       2-1-1_1 named -> 2-1_2 map
+       2-1-1_1 named -> 2-1_2 map @ 1:2
        2-1_1 return -> 2_1 sub @ 1:2
-       2-1_2 map -> 2-1_1 return
+       2-1_2 map @ 1:2 -> 2-1_1 return
        2-2-1-1_1 return -> 2-2-1-2-1-1_1 named, 2-2-1_1 sub @ -5:2
        2-2-1-1_2 incr -> 2-2-1-1_1 return
-       2-2-1-2-1-1_1 named -> 2-2-1-2-1_2 map
+       2-2-1-2-1-1_1 named -> 2-2-1-2-1_2 map @ -5:2
        2-2-1-2-1_1 return -> 2-2-1-2_1 sub @ -5:2
-       2-2-1-2-1_2 map -> 2-2-1-2-1_1 return
+       2-2-1-2-1_2 map @ -5:2 -> 2-2-1-2-1_1 return
        2-2-1-2-2_1 return -> 2-2-1-2_1 sub @ -5:2
        2-2-1-2-2_2 incr -> 2-2-1-2-2_1 return
        2-2-1-2_1 sub @ -5:2 -> 2-2-1_1 sub @ -5:2
        2-2-1_1 sub @ -5:2 -> 2-2-2-1-1_1 named, 2-2_1 sub @ 2:2
-       2-2-2-1-1_1 named -> 2-2-2-1_2 map
+       2-2-2-1-1_1 named -> 2-2-2-1_2 map @ 2:2
        2-2-2-1_1 return -> 2-2-2_1 sub @ 2:2
-       2-2-2-1_2 map -> 2-2-2-1_1 return
+       2-2-2-1_2 map @ 2:2 -> 2-2-2-1_1 return
        2-2-2-2_1 return -> 2-2-2_1 sub @ 2:2
        2-2-2-2_2 constant -> 2-2-2-2_1 return
        2-2-2_1 sub @ 2:2 -> 2-2_1 sub @ 2:2
@@ -988,7 +990,7 @@ let command =
            ; "lazy", T lazy_computation
            ; "name_used_twice", T name_used_twice
            ]
-           |> Deferred.List.iter ~f:(fun (name, T computation) ->
+           |> Deferred.List.iter ~how:`Sequential ~f:(fun (name, T computation) ->
              print_endline [%string "Processing %{name}"];
              write_computation_to_dot [%string "%{name}.dot"] (computation ());
              Sys_unix.command_exn
@@ -1033,4 +1035,5 @@ let command =
            Writer.flushed writer
          in
          return ())))
+    ~behave_nicely_in_pipeline:false
 ;;

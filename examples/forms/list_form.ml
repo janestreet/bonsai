@@ -73,52 +73,83 @@ module Simple_list = struct
 end
 
 module Advanced_list = struct
-  type t =
-    { a : int
-    ; b : string
-    }
-  [@@deriving sexp_of, fields, typed_fields]
+  module Config = struct
+    type t =
+      { duration_hrs : int
+      ; price : float
+      }
+    [@@deriving sexp_of, fields, typed_fields]
+  end
 
-  let form_of_t =
+  module Per_symbol = struct
+    type t =
+      { symbol : string
+      ; configs : Config.t list
+      }
+    [@@deriving sexp_of, fields, typed_fields]
+  end
+
+  let form_for_config =
     Form.Typed.Record.make
       (module struct
-        module Typed_field = Typed_field
+        module Typed_field = Config.Typed_field
 
         let label_for_field = `Inferred
 
         let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t = function
-          | A -> E.Textbox.int ()
-          | B -> E.Textbox.string ()
+          | Duration_hrs -> E.Textbox.int ()
+          | Price -> E.Textbox.float ()
         ;;
       end)
   ;;
 
-  let inner_form =
-    Form.Elements.Multiple.list
-      form_of_t
-      ~button_placement:`Indented
-      ~add_element_text:(Value.return "add inner")
+  let form_per_symbol =
+    let%sub symbol_form = E.Textbox.string () in
+    Form.Typed.Record.make
+      (module struct
+        module Typed_field = Per_symbol.Typed_field
+
+        let label_for_field = `Inferred
+
+        let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t = function
+          | Symbol -> return symbol_form
+          | Configs ->
+            let%sub add_element_text =
+              let%arr symbol_form = symbol_form in
+              let symbol = Form.value_or_default ~default:"" symbol_form in
+              sprintf "add config for %s" symbol
+            in
+            Form.Elements.Multiple.list
+              form_for_config
+              ~button_placement:`Indented
+              ~add_element_text
+        ;;
+      end)
   ;;
 
-  let outer_form =
+  let many_symbols =
     Form.Elements.Multiple.list
-      inner_form
+      form_per_symbol
       ~button_placement:`Indented
-      ~add_element_text:(Value.return "add outer")
+      ~add_element_text:(Value.return "add new symbol")
   ;;
 
   let starting_value =
-    [ [ { a = 5; b = "hello" }; { a = 15; b = "world" } ]
-    ; [ { a = 20; b = "foo" }; { a = 11; b = "bar" }; { a = 3; b = "baz" } ]
+    [ { Per_symbol.symbol = "aapl"; configs = [ { duration_hrs = 5; price = 3.14 } ] }
+    ; { Per_symbol.symbol = "tsla"
+      ; configs =
+          [ { duration_hrs = 6; price = 4.04 }; { duration_hrs = 16; price = 12.0 } ]
+      }
+    ; { Per_symbol.symbol = "msft"; configs = [] }
     ]
   ;;
 
   let component =
-    let%sub outer_form = outer_form in
-    let%sub outer_form =
-      Form.Dynamic.with_default (Bonsai.Value.return starting_value) outer_form
+    let%sub many_symbols = many_symbols in
+    let%sub many_symbols =
+      Form.Dynamic.with_default (Bonsai.Value.return starting_value) many_symbols
     in
-    return outer_form
+    return many_symbols
   ;;
 end
 
@@ -133,7 +164,7 @@ let component =
   in
   let advanced_output =
     Vdom.Node.sexp_for_debugging
-      [%sexp (Form.value advanced_list : Advanced_list.t list list Or_error.t)]
+      [%sexp (Form.value advanced_list : Advanced_list.Per_symbol.t list Or_error.t)]
   in
   Vdom.Node.div
     ~attr:S.list_forms

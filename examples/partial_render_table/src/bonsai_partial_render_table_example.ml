@@ -95,7 +95,9 @@ let component ?filter (data : Row.t String.Map.t Value.t) =
   in
   let%arr should_show_position = should_show_position
   and set = set
-  and { Table.Result.view = table; for_testing = _; focus } = table in
+  and { Table.Result.view = table; for_testing = _; num_filtered_rows = _; focus } =
+    table
+  in
   let button_text = if should_show_position then "hide position" else "show position" in
   let button text action =
     Vdom.Node.button ~attr:(Vdom.Attr.on_click (fun _ -> action)) [ Vdom.Node.text text ]

@@ -61,7 +61,6 @@ module Witness = struct
     | Tuple (_, _) -> "Tuple"
     | Map (_, _) -> "Map"
     | Effect_func _ -> "Effect_func"
-  [@@warning "-32"]
   ;;
 
   type ('a, 'b, 'cmp_a, 'cmp_b) same = T : ('a, 'a, 'cmp_a, 'cmp_a) same
@@ -175,63 +174,67 @@ module Witness = struct
       | Disabled -> 0.
     in
     let open Q.Generator.Let_syntax in
-    Q.Generator.of_lazy
-      (lazy
-        (let base_cases = [ 1., handler.f Unit; 1., handler.f Int ] in
-         match%bind Q.Generator.size with
-         | 0 -> Q.Generator.weighted_union base_cases
-         | original_size ->
-           let continue witness =
-             Q.Generator.with_size ~size:original_size (handler.f witness)
-           in
-           Q.Generator.with_size
-             ~size:(original_size - 1)
-             (Q.Generator.weighted_union
-                (base_cases
-                 @ [ ( 1.
-                     , make_witness
-                         ~no_comparator_types
-                         { f =
-                             (fun first_witness ->
-                                make_witness
-                                  ~no_comparator_types
-                                  { f =
-                                      (fun second_witness ->
-                                         continue (Either (first_witness, second_witness)))
-                                  })
-                         } )
-                   ; ( 1.
-                     , make_witness
-                         ~no_comparator_types
-                         { f =
-                             (fun first_witness ->
-                                make_witness
-                                  ~no_comparator_types
-                                  { f =
-                                      (fun second_witness ->
-                                         continue (Tuple (first_witness, second_witness)))
-                                  })
-                         } )
-                   ; ( no_comp_weight
-                     , make_witness
-                         ~no_comparator_types:Disabled
-                         { f =
-                             (fun key_witness ->
-                                make_witness
-                                  ~no_comparator_types:Enabled
-                                  { f =
-                                      (fun value_witness ->
-                                         continue (Map (key_witness, value_witness)))
-                                  })
-                         } )
-                   ; ( no_comp_weight
-                     , make_witness
-                         ~no_comparator_types:Enabled
-                         { f =
-                             (fun inner_witness ->
-                                continue (Tuple (inner_witness, Effect_func inner_witness)))
-                         } )
-                   ]))))
+    let base_cases = [ 1., handler.f Unit; 1., handler.f Int ] in
+    match%bind Q.Generator.size with
+    | 0 -> Q.Generator.weighted_union base_cases
+    | original_size ->
+      let continue witness =
+        Q.Generator.with_size ~size:original_size (handler.f witness)
+      in
+      let either_gen =
+        make_witness
+          ~no_comparator_types
+          { f =
+              (fun first_witness ->
+                 make_witness
+                   ~no_comparator_types
+                   { f =
+                       (fun second_witness ->
+                          continue (Either (first_witness, second_witness)))
+                   })
+          }
+      in
+      let tuple_gen =
+        make_witness
+          ~no_comparator_types
+          { f =
+              (fun first_witness ->
+                 make_witness
+                   ~no_comparator_types
+                   { f =
+                       (fun second_witness ->
+                          continue (Tuple (first_witness, second_witness)))
+                   })
+          }
+      in
+      let map_gen =
+        make_witness
+          ~no_comparator_types:Disabled
+          { f =
+              (fun key_witness ->
+                 make_witness
+                   ~no_comparator_types:Enabled
+                   { f = (fun value_witness -> continue (Map (key_witness, value_witness)))
+                   })
+          }
+      in
+      let effect_func_gen =
+        make_witness
+          ~no_comparator_types:Enabled
+          { f =
+              (fun inner_witness ->
+                 continue (Tuple (inner_witness, Effect_func inner_witness)))
+          }
+      in
+      Q.Generator.with_size
+        ~size:(original_size - 1)
+        (Q.Generator.weighted_union
+           (base_cases
+            @ [ 1., either_gen
+              ; 1., tuple_gen
+              ; no_comp_weight, map_gen
+              ; no_comp_weight, effect_func_gen
+              ]))
   ;;
 
   let make_witness handler = make_witness ~no_comparator_types:Enabled handler
@@ -242,45 +245,40 @@ module Witness = struct
   let rec make_effect_witness : type c. c effect_witness_handler -> c Q.Generator.t =
     fun handler ->
     let open Q.Generator.Let_syntax in
-    Q.Generator.of_lazy
-      (lazy
-        (let base_cases =
-           [ ( 1.
-             , make_witness
-                 { f =
-                     (fun inner_witness ->
-                        let effect_wit = Effect_func inner_witness in
-                        handler.f (Tuple (inner_witness, effect_wit)) effect_wit)
-                 } )
-           ]
-         in
-         match%bind Q.Generator.size with
-         | 0 -> Q.Generator.weighted_union base_cases
-         | original_size ->
-           Q.Generator.with_size
-             ~size:(original_size - 1)
-             (Q.Generator.weighted_union
-                (base_cases
-                 @ [ ( 1.
-                     , make_witness
-                         { f =
-                             (fun inner_witness ->
-                                make_effect_witness
-                                  { f =
-                                      (fun state_witness effect_witness ->
-                                         let new_effect_witness =
-                                           Effect_func inner_witness
-                                         in
-                                         Q.Generator.with_size
-                                           ~size:original_size
-                                           (handler.f
-                                              (Tuple
-                                                 ( Tuple (inner_witness, new_effect_witness)
-                                                 , state_witness ))
-                                              (Tuple (new_effect_witness, effect_witness))))
-                                  })
-                         } )
-                   ]))))
+    let base_cases =
+      let base_gen =
+        make_witness
+          { f =
+              (fun inner_witness ->
+                 let effect_wit = Effect_func inner_witness in
+                 handler.f (Tuple (inner_witness, effect_wit)) effect_wit)
+          }
+      in
+      [ 1., base_gen ]
+    in
+    match%bind Q.Generator.size with
+    | 0 -> Q.Generator.weighted_union base_cases
+    | original_size ->
+      let recur_gen =
+        make_witness
+          { f =
+              (fun inner_witness ->
+                 make_effect_witness
+                   { f =
+                       (fun state_witness effect_witness ->
+                          let new_effect_witness = Effect_func inner_witness in
+                          Q.Generator.with_size
+                            ~size:original_size
+                            (handler.f
+                               (Tuple
+                                  (Tuple (inner_witness, new_effect_witness), state_witness))
+                               (Tuple (new_effect_witness, effect_witness))))
+                   })
+          }
+      in
+      Q.Generator.with_size
+        ~size:(original_size - 1)
+        (Q.Generator.weighted_union (base_cases @ [ 1., recur_gen ]))
   ;;
 end
 
@@ -306,7 +304,7 @@ module type Packed_quickcheckable = sig
   type goal
   type packed
 
-  val quickcheck_generator : context -> goal -> packed Q.Generator.t Lazy.t
+  val quickcheck_generator : context -> goal -> packed Q.Generator.t
   val quickcheck_observer : packed Q.Observer.t Lazy.t
 end
 
@@ -317,21 +315,18 @@ module With_witness (M : Quickcheckable) :
    and type goal := M.goal = struct
   let quickcheck_generator context goal =
     let open Q.Generator.Let_syntax in
-    lazy
-      (Witness.make_witness
-         { f =
-             (fun witness ->
-                let%map unpacked = M.quickcheck_generator context goal witness in
-                M.T { unpacked; witness })
-         })
+    Witness.make_witness
+      { f =
+          (fun witness ->
+             let%map unpacked = M.quickcheck_generator context goal witness in
+             M.T { unpacked; witness })
+      }
   ;;
 
   let quickcheck_observer =
     lazy
-      (Q.Observer.of_lazy
-         (lazy
-           (Q.Observer.create (fun (M.T { unpacked; witness }) ~size ~hash ->
-              Q.Observer.observe (M.quickcheck_observer witness) unpacked ~size ~hash))))
+      (Q.Observer.create (fun (M.T { unpacked; witness }) ~size ~hash ->
+         Q.Observer.observe (M.quickcheck_observer witness) unpacked ~size ~hash))
   ;;
 end
 
@@ -472,6 +467,10 @@ let rec real_data_shrinker : type w cmp. (w, cmp) Witness.t -> w Q.Shrinker.t = 
   | Effect_func _inner_witness -> Q.Shrinker.atomic
 ;;
 
+let weighted weight make_gen =
+  if Float.equal weight 0. then [] else [ weight, make_gen () ]
+;;
+
 module Function = struct
   type ('input, 'output) t =
     | Identity : ('input, 'input) t
@@ -512,73 +511,73 @@ module Function = struct
       | Tuple _, Tuple _ -> Float.square Witness.num_constructors
       | _ -> 0.
     in
+    let identity_weighted_gen =
+      weighted identity_weight (fun () ->
+        let handler
+              (type input output cmp_in cmp_out)
+              (in_witness : (input, cmp_in) Witness.t)
+              (out_witness : (output, cmp_out) Witness.t)
+          : (input, output) t Q.Generator.t
+          =
+          let T = Witness.same_witness_exn in_witness out_witness in
+          Q.Generator.return Identity
+        in
+        handler in_witness out_witness)
+    in
+    let const_gen =
+      let%map output = real_data_generator out_witness in
+      Const output
+    in
+    let int_weighted_gen =
+      weighted int_weight (fun () ->
+        let T = Witness.same_witness_exn out_witness Int in
+        let T = Witness.same_witness_exn in_witness Int in
+        let%map add = real_data_generator in_witness in
+        (Add_const add : (input, output) t))
+    in
+    let snd_weighted_gen =
+      weighted snd_weight (fun () ->
+        let handler
+              (type input output cmp_in cmp_out)
+              (in_witness : (input, cmp_in) Witness.t)
+              (out_witness : (output, cmp_out) Witness.t)
+          : (input, output) t Q.Generator.t
+          =
+          match in_witness with
+          | Tuple (_, second_witness) ->
+            let T = Witness.same_witness_exn out_witness second_witness in
+            Q.Generator.return Snd
+          | _ -> assert false
+        in
+        handler in_witness out_witness)
+    in
     let base_cases =
-      [ ( identity_weight
-        , Q.Generator.of_lazy
-            (lazy
-              (let handler
-                     (type input output cmp_in cmp_out)
-                     (in_witness : (input, cmp_in) Witness.t)
-                     (out_witness : (output, cmp_out) Witness.t)
-                : (input, output) t Q.Generator.t
-                =
-                let T = Witness.same_witness_exn in_witness out_witness in
-                Q.Generator.return Identity
-               in
-               handler in_witness out_witness)) )
-      ; ( 1.
-        , let%map output = real_data_generator out_witness in
-          Const output )
-      ; ( int_weight
-        , Q.Generator.of_lazy
-            (lazy
-              (let T = Witness.same_witness_exn out_witness Int in
-               let T = Witness.same_witness_exn in_witness Int in
-               let%map add = real_data_generator in_witness in
-               (Add_const add : (input, output) t))) )
-      ; ( snd_weight
-        , Q.Generator.of_lazy
-            (lazy
-              (let handler
-                     (type input output cmp_in cmp_out)
-                     (in_witness : (input, cmp_in) Witness.t)
-                     (out_witness : (output, cmp_out) Witness.t)
-                : (input, output) t Q.Generator.t
-                =
-                match in_witness with
-                | Tuple (_, second_witness) ->
-                  let T = Witness.same_witness_exn out_witness second_witness in
-                  Q.Generator.return Snd
-                | _ -> assert false
-               in
-               handler in_witness out_witness)) )
-      ]
+      List.concat
+        [ identity_weighted_gen; [ 1., const_gen ]; int_weighted_gen; snd_weighted_gen ]
     in
     match%bind Q.Generator.size with
     | 0 -> Q.Generator.weighted_union base_cases
     | size ->
+      let map_tuple_weighted_gen =
+        weighted map_tuple_weight (fun () ->
+          let handler
+                (type input output cmp_in cmp_out)
+                (in_witness : (input, cmp_in) Witness.t)
+                (out_witness : (output, cmp_out) Witness.t)
+            : (input, output) t Q.Generator.t
+            =
+            match in_witness, out_witness with
+            | Tuple (in_first, in_second), Tuple (out_first, out_second) ->
+              let%bind func1 = quickcheck_generator in_first out_first in
+              let%map func2 = quickcheck_generator in_second out_second in
+              Map_tuple (func1, func2)
+            | _ -> assert false
+          in
+          handler in_witness out_witness)
+      in
       Q.Generator.with_size
         ~size:(size - 1)
-        (Q.Generator.weighted_union
-           (base_cases
-            @ [ ( map_tuple_weight
-                , Q.Generator.of_lazy
-                    (lazy
-                      (let handler
-                             (type input output cmp_in cmp_out)
-                             (in_witness : (input, cmp_in) Witness.t)
-                             (out_witness : (output, cmp_out) Witness.t)
-                        : (input, output) t Q.Generator.t
-                        =
-                        match in_witness, out_witness with
-                        | Tuple (in_first, in_second), Tuple (out_first, out_second) ->
-                          let%bind func1 = quickcheck_generator in_first out_first in
-                          let%map func2 = quickcheck_generator in_second out_second in
-                          Map_tuple (func1, func2)
-                        | _ -> assert false
-                       in
-                       handler in_witness out_witness)) )
-              ]))
+        (Q.Generator.weighted_union (List.concat [ base_cases; map_tuple_weighted_gen ]))
   ;;
 
   let rec quickcheck_observer
@@ -657,6 +656,8 @@ module Value = struct
        and type packed := packed
        and type context := context
        and type goal := goal
+
+    val to_string : ('a, _) Witness.t -> 'a t -> string
   end = struct
     type 'a t =
       | Return : 'a -> 'a t
@@ -694,7 +695,6 @@ module Value = struct
       | Both { first; first_witness; second; second_witness } ->
         [%string
           "Both (%{to_string first_witness first}, %{to_string second_witness second})"]
-    [@@warning "-32"]
     ;;
 
     let rec quickcheck_generator
@@ -714,85 +714,76 @@ module Value = struct
              defined are likely to be used *)
           | _ :: _ -> Float.square weight_scalar
         in
+        let return_gen =
+          let%map data = real_data_generator witness in
+          Return data
+        in
+        let var_gen =
+          let%map data = real_data_generator witness in
+          Var data
+        in
+        let context_weighted_gen =
+          weighted context_weight (fun () ->
+            let rec search_context : type a cmp. (a, cmp) Witness.t -> a t Q.Generator.t =
+              fun witness ->
+                let matching_witnesses =
+                  List.filter_map context ~f:(fun (T inner) ->
+                    match Witness.same_witness inner.witness witness with
+                    | Some T -> Some (inner.unpacked : a t)
+                    | None -> None)
+                in
+                match matching_witnesses with
+                | _ :: _ -> Q.Generator.of_list matching_witnesses
+                | [] ->
+                  (match witness with
+                   | Tuple (first_witness, second_witness) ->
+                     let%bind first = search_context first_witness in
+                     let%map second = search_context second_witness in
+                     Both { first; first_witness; second; second_witness }
+                   | Either (first_witness, second_witness) ->
+                     let%bind first = search_context first_witness in
+                     let%bind second = search_context second_witness in
+                     let in_tuple = Both { first; second; first_witness; second_witness } in
+                     let in_witness = Witness.Tuple (first_witness, second_witness) in
+                     let%map f =
+                       Q.Generator.of_list
+                         [ Function.Make_either `First; Function.Make_either `Second ]
+                     in
+                     Map (in_tuple, in_witness, f)
+                   | _ ->
+                     let%bind (T inner) = Q.Generator.of_list context in
+                     let%map f = Function.quickcheck_generator inner.witness witness in
+                     Map (inner.unpacked, inner.witness, f))
+            in
+            search_context witness)
+        in
         let base_cases =
-          [ ( 1. /. weight_scalar
-            , let%map data = real_data_generator witness in
-              Return data )
-          ; ( 1.
-            , let%map data = real_data_generator witness in
-              Var data )
-          ; ( context_weight
-              ,
-              Q.Generator.of_lazy
-                (lazy
-                  (let rec search_context
-                    : type a cmp. (a, cmp) Witness.t -> a t Q.Generator.t
-                    =
-                    fun witness ->
-                      let matching_witnesses =
-                        List.filter_map context ~f:(fun (T inner) ->
-                          match Witness.same_witness inner.witness witness with
-                          | Some T -> Some (inner.unpacked : a t)
-                          | None -> None)
-                      in
-                      match matching_witnesses with
-                      | _ :: _ -> Q.Generator.of_list matching_witnesses
-                      | [] ->
-                        (match witness with
-                         | Tuple (first_witness, second_witness) ->
-                           let%bind first = search_context first_witness in
-                           let%map second = search_context second_witness in
-                           Both { first; first_witness; second; second_witness }
-                         | Either (first_witness, second_witness) ->
-                           let%bind first = search_context first_witness in
-                           let%bind second = search_context second_witness in
-                           let in_tuple =
-                             Both { first; second; first_witness; second_witness }
-                           in
-                           let in_witness = Witness.Tuple (first_witness, second_witness) in
-                           let%map f =
-                             Q.Generator.of_list
-                               [ Function.Make_either `First; Function.Make_either `Second ]
-                           in
-                           Map (in_tuple, in_witness, f)
-                         | _ ->
-                           let%bind (T inner) = Q.Generator.of_list context in
-                           let%map f = Function.quickcheck_generator inner.witness witness in
-                           Map (inner.unpacked, inner.witness, f))
-                   in
-                   search_context witness)) )
-          ]
+          List.concat
+            [ [ 1. /. weight_scalar, return_gen; 1., var_gen ]; context_weighted_gen ]
         in
         match%bind Q.Generator.size with
         | 0 -> Q.Generator.weighted_union base_cases
         | size ->
+          let map_gen =
+            (* Though this case doesn't look recursive, Packed.quickcheck_generator
+               is mutually recursive with this function *)
+            let%bind (T inner) = Packed.quickcheck_generator context () in
+            let%map f = Function.quickcheck_generator inner.witness witness in
+            Map (inner.unpacked, inner.witness, f)
+          in
+          let tuple_weighted_gen =
+            weighted tuple_weight (fun () ->
+              match witness with
+              | Tuple (first_witness, second_witness) ->
+                let%bind first = quickcheck_generator context () first_witness in
+                let%map second = quickcheck_generator context () second_witness in
+                (Both { first; first_witness; second; second_witness } : w t)
+              | _ -> assert false)
+          in
           Q.Generator.with_size
             ~size:(size - 1)
             (Q.Generator.weighted_union
-               (List.append
-                  base_cases
-                  [ ( 1.
-                    (* Though this case doesn't look recursive, Packed.quickcheck_generator
-                       is mutually recursive with this function *)
-                    , let%bind (T inner) =
-                        Lazy.force (Packed.quickcheck_generator context ())
-                      in
-                      let%map f = Function.quickcheck_generator inner.witness witness in
-                      Map (inner.unpacked, inner.witness, f) )
-                  ; ( tuple_weight
-                    , Q.Generator.of_lazy
-                        (lazy
-                          (match witness with
-                           | Tuple (first_witness, second_witness) ->
-                             let%bind first =
-                               quickcheck_generator context () first_witness
-                             in
-                             let%map second =
-                               quickcheck_generator context () second_witness
-                             in
-                             (Both { first; first_witness; second; second_witness } : w t)
-                           | _ -> assert false)) )
-                  ]))
+               (List.concat [ base_cases; [ 1., map_gen ]; tuple_weighted_gen ]))
     ;;
 
     let rec quickcheck_observer : type w cmp. (w, cmp) Witness.t -> w t Q.Observer.t =
@@ -1042,130 +1033,134 @@ module Computation = struct
           ( weight_scalar *. Witness.num_constructors
           , weight_scalar *. Witness.num_constructors )
       in
+      let value_gen =
+        let%map value = Value.quickcheck_generator context () witness in
+        Return value
+      in
+      let state_weighted_gen =
+        (* Generate State Computation *)
+        weighted state_weight (fun () ->
+          let handler (type w cmp) (witness : (w, cmp) Witness.t) : w t Q.Generator.t =
+            match witness with
+            | Tuple (first_witness, second_witness) ->
+              (match
+                 Witness.same_witness_exn second_witness (Effect_func first_witness)
+               with
+               | T ->
+                 let%map data = real_data_generator first_witness in
+                 State { default_model = data; default_witness = first_witness })
+            | _ -> assert false
+          in
+          handler witness)
+      in
       (* Generate computation *)
       let base_cases =
-        [ ( 1. /. weight_scalar
-          , let%map value = Value.quickcheck_generator context () witness in
-            Return value )
-        ; ( state_weight
-            , (* Generate State Computation *)
-            Q.Generator.of_lazy
-              (lazy
-                (let handler (type w cmp) (witness : (w, cmp) Witness.t) : w t Q.Generator.t
-                  =
-                  match witness with
-                  | Tuple (first_witness, second_witness) ->
-                    (match
-                       Witness.same_witness_exn second_witness (Effect_func first_witness)
-                     with
-                     | T ->
-                       let%map data = real_data_generator first_witness in
-                       State { default_model = data; default_witness = first_witness })
-                  | _ -> assert false
-                 in
-                 handler witness)) )
-        ]
+        List.concat [ [ 1. /. weight_scalar, value_gen ]; state_weighted_gen ]
       in
       match%bind Q.Generator.size with
       | 0 -> Q.Generator.weighted_union base_cases
       | size ->
+        let subst_gen =
+          (* Generate Subst computations *)
+          let witness_handler () : _ Witness.witness_handler =
+            { f = (fun inner_witness -> subst_handler inner_witness goal_list) }
+          in
+          Witness.make_witness (witness_handler ())
+        in
+        let goal_gen =
+          let%bind index = pick_from_goal_list goal_list in
+          let T inner_witness, goal_list = remove_n_exn goal_list index in
+          subst_handler inner_witness goal_list
+        in
+        let subst2_gen =
+          (* Generate Subst2 computations *)
+          let witness_handler () : _ Witness.witness_handler =
+            { f =
+                (fun first_witness ->
+                   Witness.make_witness
+                     { f =
+                         (fun second_witness ->
+                            subst2_handler first_witness second_witness goal_list)
+                     })
+            }
+          in
+          Witness.make_witness (witness_handler ())
+        in
+        let goal2_gen =
+          let%bind index = pick_from_goal_list goal_list in
+          let T goal_witness, goal_list = remove_n_exn goal_list index in
+          let default () =
+            let%bind index = pick_from_goal_list goal_list in
+            let T second_witness, goal_list = remove_n_exn goal_list index in
+            subst2_handler goal_witness second_witness goal_list
+          in
+          match Witness.is_state_witness goal_witness with
+          | true ->
+            (match goal_witness with
+             | Tuple (first_witness, second_witness) ->
+               subst2_handler first_witness second_witness goal_list
+             | _ -> assert false)
+          | false -> default ()
+        in
+        let goal2_switch_gen =
+          (* Generate Switch computations *)
+          let%bind index = pick_from_goal_list goal_list in
+          (* Two separate goal_lists here because only one side of the Either gets used *)
+          let T first_witness, goal_first = remove_n_exn goal_list index in
+          let%bind index = pick_from_goal_list goal_list in
+          let T second_witness, goal_second = remove_n_exn goal_list index in
+          switch_handler first_witness second_witness goal_first goal_second
+        in
+        let switch_gen =
+          let witness_handler () : _ Witness.witness_handler =
+            { f =
+                (fun first_witness ->
+                   Witness.make_witness
+                     { f =
+                         (fun second_witness ->
+                            switch_handler first_witness second_witness goal_list goal_list)
+                     })
+            }
+          in
+          Witness.make_witness (witness_handler ())
+        in
+        let assoc_weighted_gen =
+          (* Generate Assoc computations *)
+          weighted assoc_weight (fun () ->
+            match witness with
+            | Map (key_witness, result_witness) ->
+              (Witness.make_witness
+                 { f =
+                     (fun value_witness ->
+                        assoc_handler key_witness value_witness result_witness goal_list)
+                 }
+               : a t Q.Generator.t)
+            | _ -> assert false)
+        in
+        let goal_assoc_weighted_gen =
+          weighted (goal_weight *. assoc_weight) (fun () ->
+            match witness with
+            | Map (key_witness, result_witness) ->
+              let%bind index = pick_from_goal_list goal_list in
+              let T value_witness, goal_list = remove_n_exn goal_list index in
+              (assoc_handler key_witness value_witness result_witness goal_list
+               : a t Q.Generator.t)
+            | _ -> assert false)
+        in
         Q.Generator.with_size
           ~size:(size - 1)
           (Q.Generator.weighted_union
-             (List.append
-                base_cases
-                [ ( 1. (* Generate Subst computations *)
-                  , let witness_handler () : _ Witness.witness_handler =
-                      { f = (fun inner_witness -> subst_handler inner_witness goal_list) }
-                    in
-                    Witness.make_witness (witness_handler ()) )
-                ; ( goal_weight
-                  , Q.Generator.of_lazy
-                      (lazy
-                        (let%bind index = pick_from_goal_list goal_list in
-                         let T inner_witness, goal_list = remove_n_exn goal_list index in
-                         subst_handler inner_witness goal_list)) )
-                ; ( 1. (* Generate Subst2 computations *)
-                  , let witness_handler () : _ Witness.witness_handler =
-                      { f =
-                          (fun first_witness ->
-                             Witness.make_witness
-                               { f =
-                                   (fun second_witness ->
-                                      subst2_handler first_witness second_witness goal_list)
-                               })
-                      }
-                    in
-                    Witness.make_witness (witness_handler ()) )
-                ; ( goal2_weight
-                  , Q.Generator.of_lazy
-                      (lazy
-                        (let%bind index = pick_from_goal_list goal_list in
-                         let T goal_witness, goal_list = remove_n_exn goal_list index in
-                         let default () =
-                           let%bind index = pick_from_goal_list goal_list in
-                           let T second_witness, goal_list = remove_n_exn goal_list index in
-                           subst2_handler goal_witness second_witness goal_list
-                         in
-                         match Witness.is_state_witness goal_witness with
-                         | true ->
-                           (match goal_witness with
-                            | Tuple (first_witness, second_witness) ->
-                              subst2_handler first_witness second_witness goal_list
-                            | _ -> assert false)
-                         | false -> default ())) )
-                ; ( goal2_weight (* Generate Switch computations *)
-                  , Q.Generator.of_lazy
-                      (lazy
-                        (let%bind index = pick_from_goal_list goal_list in
-                         (* Two separate goal_lists here because only one side of the Either gets used *)
-                         let T first_witness, goal_first = remove_n_exn goal_list index in
-                         let%bind index = pick_from_goal_list goal_list in
-                         let T second_witness, goal_second = remove_n_exn goal_list index in
-                         switch_handler first_witness second_witness goal_first goal_second))
-                  )
-                ; ( 1.
-                  , let witness_handler () : _ Witness.witness_handler =
-                      { f =
-                          (fun first_witness ->
-                             Witness.make_witness
-                               { f =
-                                   (fun second_witness ->
-                                      switch_handler
-                                        first_witness
-                                        second_witness
-                                        goal_list
-                                        goal_list)
-                               })
-                      }
-                    in
-                    Witness.make_witness (witness_handler ()) )
-                ; ( assoc_weight (* Generate Assoc computations *)
-                  , Q.Generator.of_lazy
-                      (lazy
-                        (match witness with
-                         | Map (key_witness, result_witness) ->
-                           (Witness.make_witness
-                              { f =
-                                  (fun value_witness ->
-                                     assoc_handler
-                                       key_witness
-                                       value_witness
-                                       result_witness
-                                       goal_list)
-                              }
-                            : a t Q.Generator.t)
-                         | _ -> assert false)) )
-                ; ( goal_weight *. assoc_weight
-                  , Q.Generator.of_lazy
-                      (lazy
-                        (match witness with
-                         | Map (key_witness, result_witness) ->
-                           let%bind index = pick_from_goal_list goal_list in
-                           let T value_witness, goal_list = remove_n_exn goal_list index in
-                           (assoc_handler key_witness value_witness result_witness goal_list
-                            : a t Q.Generator.t)
-                         | _ -> assert false)) )
+             (List.concat
+                [ base_cases
+                ; [ 1., subst_gen
+                  ; goal_weight, goal_gen
+                  ; 1., subst2_gen
+                  ; goal2_weight, goal2_gen
+                  ; goal2_weight, goal2_switch_gen
+                  ; 1., switch_gen
+                  ]
+                ; assoc_weighted_gen
+                ; goal_assoc_weighted_gen
                 ]))
 
   and one_argument_computation_generator
@@ -1285,8 +1280,8 @@ module Computation = struct
             default_model
             ~size
             ~hash)
-  [@@warning "-32"]
   ;;
+
 
   let packed_quickcheck_shrinker =
     Q.Shrinker.create (fun (T { unpacked; witness }) ->
@@ -1315,7 +1310,6 @@ module Computation = struct
       | State { default_model; default_witness } ->
         Sequence.singleton
           (T { unpacked = Return (Return default_model); witness = default_witness }))
-  [@@warning "-32"]
   ;;
 end
 
@@ -1377,6 +1371,8 @@ let rec to_real_computation : type w. w Computation.t -> w Bonsai.Computation.t 
 
 module Top_level_computation : sig
   val quickcheck_generator : Computation.packed Q.Generator.t
+  val quickcheck_observer : Computation.packed Q.Observer.t
+  val quickcheck_shrinker : Computation.packed Q.Shrinker.t
 end = struct
 
   let rec extract_funcs
@@ -1448,6 +1444,13 @@ end = struct
                      }))
          })
   ;;
+
+  let quickcheck_observer =
+    Q.Observer.create (fun (Computation.T { witness; unpacked }) ~size ~hash ->
+      Q.Observer.observe (Computation.quickcheck_observer witness) unpacked ~size ~hash)
+  ;;
+
+  let quickcheck_shrinker = Computation.packed_quickcheck_shrinker
 end
 
 module Packed_real_computation = struct

@@ -191,7 +191,7 @@ end = struct
   let flush t =
     if t.acknowledged
     then (
-      let message = Versioned_message.V3 (Reversed_list.rev t.buffer) in
+      let message = Versioned_message.V4 (Reversed_list.rev t.buffer) in
       let js_string =
         Js.bytestring (Bin_prot.Writer.to_string Versioned_message.bin_writer_t message)
       in
@@ -222,7 +222,7 @@ let iter_entries performance_observer_entry_list ~f =
     f { Entry.label; entry_type; start_time; duration })
 ;;
 
-let uuid_to_url uuid = [%string "%{Bonsai_bug_constants.script_origin}/%{uuid#Uuid}"]
+let uuid_to_url ~host ~port uuid = [%string "https://%{host}:%{port#Int}/%{uuid#Uuid}"]
 
 let generate_uuid () =
   let random_state = Random.State.default in
@@ -255,12 +255,12 @@ let instrument ~host ~port ~worker_name component =
             print_endline
               "Re-using existing session uuid. If you no longer have the debugger window \
                open, you can use the following link:";
-            print_endline (uuid_to_url uuid);
+            print_endline (uuid_to_url ~host ~port uuid);
             uuid, true))
   in
   if not reused_uuid
   then (
-    let url = uuid_to_url uuid in
+    let url = uuid_to_url ~host ~port uuid in
     Dom_html.window##open_
       (Js.string url)
       (Js.string "bonsai-bug")

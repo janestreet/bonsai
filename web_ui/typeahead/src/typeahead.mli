@@ -41,3 +41,30 @@ val create_multi
   -> ('a, 'cmp) Bonsai.comparator
   -> all_options:'a list Value.t
   -> ('a, 'cmp) Set.t t Computation.t
+
+module Private : sig
+  module For_testing : sig
+    val create_with_browser_behavior_in_test
+      :  ?extra_attrs:Vdom.Attr.t list Value.t
+      -> ?placeholder:string
+      -> ?on_select_change:('a option -> unit Ui_effect.t) Value.t
+      -> ?to_string:('a -> string) Value.t
+      -> ?to_option_description:('a -> string) Value.t
+      -> ?handle_unknown_option:(string -> 'a option) Value.t
+      -> (module Bonsai.Model with type t = 'a)
+      -> all_options:'a list Value.t
+      -> 'a option t Computation.t
+
+    val create_multi_with_browser_behavior_in_test
+      :  ?extra_attrs:Vdom.Attr.t list Value.t
+      -> ?placeholder:string
+      -> ?on_set_change:(('a, 'cmp) Set.t -> unit Ui_effect.t) Value.t
+      -> ?to_string:('a -> string) Value.t
+      -> ?to_option_description:('a -> string) Value.t
+      -> ?handle_unknown_option:(string -> 'a option) Value.t
+      -> ?split:(string -> string list)
+      -> ('a, 'cmp) Bonsai.comparator
+      -> all_options:'a list Value.t
+      -> ('a, 'cmp) Set.t t Computation.t
+  end
+end

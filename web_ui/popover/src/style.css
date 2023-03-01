@@ -1,0 +1,82 @@
+/* Styles for popover. These are the same styles as tooltip's styles with the exception 
+ * the "tooltip" being shown being detected by a class being present rather than the
+ * :hover pseudo selector. */
+
+.tooltip_container {
+  --dist: 0.3em;
+
+  position: relative;
+  display: inline-flex;
+  justify-content: center;
+}
+
+.tooltip {
+  /* one day "top-layer" will save us https://fullscreen.spec.whatwg.org/#top-layer */
+  z-index: 9001
+}
+
+.tooltip_container>.tooltip {
+  display: none;
+}
+
+.tooltip_container.tooltip_open>.tooltip {
+  display: block;
+  position: absolute;
+}
+
+.default_tooltip_styles {
+  padding: 0.1em 0.3em;
+  max-width: max(300px, 100%);
+  width: max-content;
+
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+.tooltip_container.top,
+.tooltip_container.bottom {
+  flex-direction: row;
+}
+
+.tooltip_container.left,
+.tooltip_container.right {
+  flex-direction: column;
+}
+
+.tooltip_container.top>.tooltip {
+  transform: translateY(calc(-100% - var(--dist)));
+}
+
+.tooltip_container.bottom>.tooltip {
+  top: calc(100% + var(--dist));
+}
+
+.tooltip_container.top.align_start>.tooltip,
+.tooltip_container.bottom.align_start>.tooltip {
+  left: 0;
+}
+
+.tooltip_container.top.align_end>.tooltip,
+.tooltip_container.bottom.align_end>.tooltip {
+  right: 0;
+}
+
+.tooltip_container.left>.tooltip {
+  transform: translateX(calc(-100% - var(--dist)));
+}
+
+.tooltip_container.right>.tooltip {
+  left: calc(100% + var(--dist));
+}
+
+.tooltip_container.left.align_start>.tooltip,
+.tooltip_container.right.align_start>.tooltip {
+  top: 0;
+}
+
+.tooltip_container.left.align_end>.tooltip,
+.tooltip_container.right.align_end>.tooltip {
+  bottom: 0;
+}

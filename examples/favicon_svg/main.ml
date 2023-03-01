@@ -63,7 +63,13 @@ let component =
   and fg_color, inject_fg_color = fg_color
   and bg_color, inject_bg_color = bg_color in
   let open Vdom in
-  let text_box = Vdom_input_widgets.Entry.text ~value:text ~on_input:inject_text () in
+  let text_box =
+    Vdom_input_widgets.Entry.text
+      ~merge_behavior:Legacy_dont_merge
+      ~value:text
+      ~on_input:inject_text
+      ()
+  in
   let size_slider = slider ~min:1. ~max:200. ~value:size ~inject:inject_size in
   let x_slider = slider ~min:0. ~max:100. ~value:pos_x ~inject:inject_pos_x in
   let y_slider = slider ~min:0. ~max:100. ~value:pos_y ~inject:inject_pos_y in
@@ -174,10 +180,7 @@ let component =
 
 let run () =
   Async_js.init ();
-  let (_ : (unit, Nothing.t) Start.Handle.t) =
-    Start.start Start.Result_spec.just_the_view ~bind_to_element_with_id:"app" component
-  in
-  ()
+  Bonsai_web.Start.start component
 ;;
 
 let () = run ()

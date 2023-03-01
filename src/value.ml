@@ -136,12 +136,30 @@ let rec eval : type a. Environment.t -> a t -> a Incr.t =
   | Cutoff { t; equal; added_by_let_syntax = _ } ->
     let incremental_node =
       let incremental_node = eval env t in
-      (* The result of evaling a [Named] value gets stored in a map, so calling
-         [set_cutoff] directly mutates/affects all usages of it. Doing a no-op map
-         prevents this. *)
+      (* In general, we have to create a fresh incremental node here (e.g. by using
+         [Ui_incr.map ~f:Fn.id] and set cutoff on the new node. Otherwise it is possible
+         that we will set a cutoff on an incremental node which is used in more than
+         one place and the cutoff may not be correct then.
+
+         E.g. the result of evaling a [Named] value gets stored in a map, so calling
+         [set_cutoff] directly mutates/affects all usages of it. Similarly for [Incr].
+
+         Nodes created by evaluating e.g. [Map] were just created by the [eval] function
+         call in which case we can set the cutoff directly on them, saving some memory
+         and performance by not creating an extra node. *)
       match t.value with
-      | Named _ -> Ui_incr.map ~f:Fn.id incremental_node
-      | _ -> incremental_node
+      | Named _ | Incr _ | Cutoff _ -> Ui_incr.map ~f:Fn.id incremental_node
+      | Constant _
+      | Exception _
+      | Both _
+      | Map _
+      | Map2 _
+      | Map3 _
+      | Map4 _
+      | Map5 _
+      | Map6 _
+      | Map7 _ ->
+        incremental_node
     in
     Incremental.set_cutoff incremental_node (Incremental.Cutoff.of_equal equal);
     incremental_node

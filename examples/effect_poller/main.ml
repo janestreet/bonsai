@@ -35,6 +35,4 @@ let component =
   Vdom.Node.div [ view; Vdom.Node.text capitalized ]
 ;;
 
-let (_ : _ Start.Handle.t) =
-  Start.start Start.Result_spec.just_the_view ~bind_to_element_with_id:"app" component
-;;
+let () = Bonsai_web.Start.start component

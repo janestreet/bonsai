@@ -93,11 +93,5 @@ let component input =
 
 let () =
   let input = Bonsai.Var.create (Input.default ()) in
-  let (_ : _ Bonsai_web.Start.Handle.t) =
-    Start.start
-      ~bind_to_element_with_id:"app"
-      Start.Result_spec.just_the_view
-      (component (Bonsai.Var.value input))
-  in
-  ()
+  Bonsai_web.Start.start (component (Bonsai.Var.value input))
 ;;

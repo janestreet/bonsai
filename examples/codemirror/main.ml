@@ -360,7 +360,7 @@ let component =
     let%arr language_picker = language_picker in
     Form.value language_picker |> Or_error.ok_exn
   in
-  let%sub theme_picker, { view = codemirror_view; _ } =
+  let%sub theme_picker, codemirror =
     (* Note: [Codemirror.with_dynamic_extensions] is generally preferred to [match%sub]ing
        and choosing a codemirror editor instance. For the purposes of this demo, the code
        is optimized for showing off the ease with which people can create different
@@ -401,6 +401,10 @@ let component =
     | Rust -> no_theme_picker @@ Rust_syntax_highlighting.codemirror_editor ~name:"rust"
     | Xml -> no_theme_picker @@ Xml_syntax_highlighting.codemirror_editor ~name:"xml"
   in
+  let%sub codemirror_view =
+    let%arr codemirror = codemirror in
+    Codemirror.view codemirror
+  in
   let%arr codemirror_view = codemirror_view
   and language_picker = language_picker
   and theme_picker = theme_picker in
@@ -415,6 +419,4 @@ let component =
     ]
 ;;
 
-let (_ : _ Start.Handle.t) =
-  Start.start Start.Result_spec.just_the_view ~bind_to_element_with_id:"app" component
-;;
+let () = Bonsai_web.Start.start component

@@ -74,9 +74,10 @@ let component ~(before_state : Color_list.t Value.t) ~(after_state : Color_list.
       (module Action)
       input
       ~default_model:{ cur = Int.Map.empty; diffs = []; pointer = 0 }
-      ~apply_action:
-        (fun ~inject:_ ~schedule_event:_ { Input.before; after } model action ->
-           match action with
+      ~apply_action:(fun ~inject:_ ~schedule_event:_ input model action ->
+        match input with
+        | Active { Input.before; after } ->
+          (match action with
            | Set_state model -> model
            | Restart ->
              let diffs = generate_diffs ~before ~after in
@@ -89,6 +90,15 @@ let component ~(before_state : Color_list.t Value.t) ~(after_state : Color_list.
              in
              let cur = List.fold packet ~init:model.cur ~f:Modification.apply in
              { model with cur; pointer = model.pointer + 1 })
+        | Inactive ->
+          eprint_s
+            [%message
+              [%here]
+                "An action sent to a [state_machine1] has been dropped because its input \
+                 was not present. This happens when the [state_machine1] is inactive \
+                 when it receives a message."
+                (action : Action.t)];
+          model)
   in
   let%sub () =
     Bonsai.Edge.on_change

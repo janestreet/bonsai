@@ -8,9 +8,12 @@ module Table = Bonsai_web_ui_partial_render_table
 
 let table_to_string
       ~include_stats
-      ~include_focus
-      (res : _ Table.Focus_by_row.t)
+      ?(include_num_column = true)
+      ?(selected_header = ">")
+      ?num_filtered_rows
+      (res : _ Table.Focus_by_row.t option)
       (for_testing : Table.For_testing.t)
+      ()
   =
   let open Ascii_table_kernel in
   let module Node_h = Virtual_dom_test_helpers.Node_helpers in
@@ -33,40 +36,53 @@ let table_to_string
   in
   let contents =
     let selected =
-      Column.create ">" (fun { Table.For_testing.Table_body.selected; _ } ->
+      Column.create selected_header (fun { Table.For_testing.Table_body.selected; _ } ->
         if selected then "*" else "")
     in
     let num_column =
       Column.create "#" (fun { Table.For_testing.Table_body.id; _ } ->
         Map_list.Key.to_string id)
     in
-    let ascii_column_of_leaf i header =
-      let header = Node_h.unsafe_convert_exn header |> Node_h.inner_text in
+    let ascii_column_of_leaf i headers =
+      let header =
+        String.concat
+          ~sep:"\n"
+          (List.map headers ~f:(fun header ->
+             Node_h.unsafe_convert_exn header |> Node_h.inner_text))
+      in
       Column.create header (fun { Table.For_testing.Table_body.view; _ } ->
         List.nth_exn view i |> Node_h.unsafe_convert_exn |> Node_h.inner_text)
     in
     let columns =
-      selected
-      :: num_column
-      :: (for_testing.body.column_names |> List.mapi ~f:ascii_column_of_leaf)
+      match include_num_column with
+      | false ->
+        selected :: (for_testing.body.column_names |> List.mapi ~f:ascii_column_of_leaf)
+      | true ->
+        selected
+        :: num_column
+        :: (for_testing.body.column_names |> List.mapi ~f:ascii_column_of_leaf)
     in
     Ascii_table_kernel.draw
       columns
       for_testing.body.cells
-      ~limit_width_to:200
+      ~limit_width_to:3000
       ~prefer_split_on_spaces:false
     |> Option.value_exn
     |> Ascii_table_kernel.Screen.to_string
          ~bars:`Unicode
          ~string_with_attr:(fun _attr str -> str)
   in
-  let focus =
-    [%message "" ~focused:(res.focused : int option)]
-    |> Sexp.to_string_hum
-    |> fun s -> s ^ "\n"
-  in
   let result = if include_stats then stats ^ contents else contents in
-  if include_focus then focus ^ result else result
+  match res with
+  | None -> result
+  | Some res ->
+    ([%message
+      ""
+        ~focused:(res.focused : int option)
+        ~num_filtered_rows:(num_filtered_rows : int option)]
+     |> Sexp.to_string_hum
+     |> fun s -> s ^ "\n")
+    ^ result
 ;;
 
 module Test = struct
@@ -83,7 +99,14 @@ module Test = struct
     =
     let min_vis, max_vis = visible_range in
     let filter_var = Bonsai.Var.create (fun ~key:_ ~data:_ -> true) in
-    let { Component.component; get_vdom; get_focus; get_testing; get_inject } =
+    let { Component.component
+        ; get_vdom
+        ; get_focus
+        ; get_testing
+        ; get_inject
+        ; get_num_filtered_rows
+        }
+      =
       component (Bonsai.Var.value map) (Bonsai.Var.value filter_var)
     in
     let handle =
@@ -94,7 +117,12 @@ module Test = struct
           let out a = Lazy.force (get_testing a)
 
           let view a =
-            table_to_string (get_focus a) (out a) ~include_stats:stats ~include_focus:true
+            table_to_string
+              (Some (get_focus a))
+              (out a)
+              ?num_filtered_rows:(get_num_filtered_rows a)
+              ~include_stats:stats
+              ()
           ;;
 
           type incoming = Action.t
@@ -103,7 +131,9 @@ module Test = struct
         end)
         component
     in
-    let t = { handle; get_vdom; get_focus; input_var = map; filter_var } in
+    let t =
+      { handle; get_vdom; get_focus; input_var = map; filter_var; get_num_filtered_rows }
+    in
     if should_set_bounds then set_bounds t ~low:min_vis ~high:max_vis;
     (* Because the component uses edge-triggering to propagate rank-range, we need to
        run the view-computers twice. *)
@@ -137,7 +167,7 @@ let%expect_test "basic table" =
   Handle.show test.handle;
   [%expect
     {|
-(focused ())
+((focused ()) (num_filtered_rows (3)))
 ┌────────────────┬───────┐
 │ metric         │ value │
 ├────────────────┼───────┤
@@ -168,7 +198,7 @@ let%expect_test "basic table with default sort" =
   Handle.show test.handle;
   [%expect
     {|
-    (focused ())
+    ((focused ()) (num_filtered_rows (3)))
     ┌────────────────┬───────┐
     │ metric         │ value │
     ├────────────────┼───────┤
@@ -197,7 +227,7 @@ let%expect_test "big table" =
   Handle.show test.handle;
   [%expect
     {|
-(focused ())
+((focused ()) (num_filtered_rows (99)))
 ┌────────────────┬───────┐
 │ metric         │ value │
 ├────────────────┼───────┤
@@ -235,7 +265,7 @@ let%expect_test "table with some preload" =
   Handle.show test.handle;
   [%expect
     {|
-(focused ())
+((focused ()) (num_filtered_rows (99)))
 ┌────────────────┬───────┐
 │ metric         │ value │
 ├────────────────┼───────┤
@@ -274,7 +304,7 @@ let%expect_test "big table filtered" =
   Handle.show test.handle;
   [%expect
     {|
-    (focused ())
+    ((focused ()) (num_filtered_rows (49)))
     ┌────────────────┬───────┐
     │ metric         │ value │
     ├────────────────┼───────┤
@@ -301,12 +331,43 @@ let%expect_test "big table filtered" =
     └───┴──────┴───────┴────┴───────────┘ |}]
 ;;
 
+let%expect_test "table with col groups" =
+  let test =
+    Test.create
+      ~stats:true
+      ~map:groups_map
+      ~visible_range:(0, 10)
+      (Test.Component.default' ~with_groups:true ())
+  in
+  Bonsai.Var.set test.filter_var (fun ~key ~data:_ -> key mod 2 = 0);
+  Handle.show test.handle;
+  [%expect
+    {|
+    ((focused ()) (num_filtered_rows (2)))
+    ┌────────────────┬───────┐
+    │ metric         │ value │
+    ├────────────────┼───────┤
+    │ rows-before    │ 0     │
+    │ rows-after     │ 0     │
+    │ num-filtered   │ 2     │
+    │ num-unfiltered │ 3     │
+    └────────────────┴───────┘
+    ┌───┬─────┬───────┬────────┬──────────┬─────────┬─────────┬─────────┐
+    │ > │ #   │ ◇ key │ Basics │ Basics   │ Level 1 │ Level 1 │ Level 1 │
+    │   │     │       │ ◇ a    │ ◇ b      │ Level 2 │ Level 2 │ ◇ e     │
+    │   │     │       │        │          │ ◇ c     │ ◇ d     │         │
+    ├───┼─────┼───────┼────────┼──────────┼─────────┼─────────┼─────────┤
+    │   │ 0   │ 0     │ hello  │ 1.000000 │ apple   │ 100     │ 1st     │
+    │   │ 100 │ 4     │ world  │ 2.000000 │ pear    │ 200     │ 2nd     │
+    └───┴─────┴───────┴────────┴──────────┴─────────┴─────────┴─────────┘ |}]
+;;
+
 let%expect_test "focus down" =
   let test = Test.create ~stats:false (Test.Component.default ()) in
   Handle.show test.handle;
   [%expect
     {|
-    (focused ())
+    ((focused ()) (num_filtered_rows (3)))
     ┌───┬─────┬───────┬───────┬──────────┐
     │ > │ #   │ ◇ key │ a     │ ◇ b      │
     ├───┼─────┼───────┼───────┼──────────┤
@@ -319,7 +380,7 @@ let%expect_test "focus down" =
   [%expect
     {|
     (focus_changed_to (0))
-    (focused (0))
+    ((focused (0)) (num_filtered_rows (3)))
     ┌───┬─────┬───────┬───────┬──────────┐
     │ > │ #   │ ◇ key │ a     │ ◇ b      │
     ├───┼─────┼───────┼───────┼──────────┤
@@ -332,7 +393,7 @@ let%expect_test "focus down" =
   [%expect
     {|
     (focus_changed_to (1))
-    (focused (1))
+    ((focused (1)) (num_filtered_rows (3)))
     ┌───┬─────┬───────┬───────┬──────────┐
     │ > │ #   │ ◇ key │ a     │ ◇ b      │
     ├───┼─────┼───────┼───────┼──────────┤
@@ -347,7 +408,7 @@ let%expect_test "focus up" =
   Handle.show test.handle;
   [%expect
     {|
-    (focused ())
+    ((focused ()) (num_filtered_rows (3)))
     ┌───┬─────┬───────┬───────┬──────────┐
     │ > │ #   │ ◇ key │ a     │ ◇ b      │
     ├───┼─────┼───────┼───────┼──────────┤
@@ -360,7 +421,7 @@ let%expect_test "focus up" =
   [%expect
     {|
     (focus_changed_to (4))
-    (focused (4))
+    ((focused (4)) (num_filtered_rows (3)))
     ┌───┬─────┬───────┬───────┬──────────┐
     │ > │ #   │ ◇ key │ a     │ ◇ b      │
     ├───┼─────┼───────┼───────┼──────────┤
@@ -373,7 +434,7 @@ let%expect_test "focus up" =
   [%expect
     {|
     (focus_changed_to (1))
-    (focused (1))
+    ((focused (1)) (num_filtered_rows (3)))
     ┌───┬─────┬───────┬───────┬──────────┐
     │ > │ #   │ ◇ key │ a     │ ◇ b      │
     ├───┼─────┼───────┼───────┼──────────┤
@@ -390,7 +451,7 @@ let%expect_test "unfocus" =
   [%expect
     {|
     (focus_changed_to (4))
-    (focused (4))
+    ((focused (4)) (num_filtered_rows (3)))
     ┌───┬─────┬───────┬───────┬──────────┐
     │ > │ #   │ ◇ key │ a     │ ◇ b      │
     ├───┼─────┼───────┼───────┼──────────┤
@@ -403,7 +464,7 @@ let%expect_test "unfocus" =
   [%expect
     {|
     (focus_changed_to ())
-    (focused ())
+    ((focused ()) (num_filtered_rows (3)))
     ┌───┬─────┬───────┬───────┬──────────┐
     │ > │ #   │ ◇ key │ a     │ ◇ b      │
     ├───┼─────┼───────┼───────┼──────────┤
@@ -421,7 +482,7 @@ let%expect_test "remove focused moves down if possible" =
     {|
     (focus_changed_to (0))
     (focus_changed_to (1))
-    (focused (1))
+    ((focused (1)) (num_filtered_rows (3)))
     ┌───┬─────┬───────┬───────┬──────────┐
     │ > │ #   │ ◇ key │ a     │ ◇ b      │
     ├───┼─────┼───────┼───────┼──────────┤
@@ -433,7 +494,7 @@ let%expect_test "remove focused moves down if possible" =
   Handle.show test.handle;
   [%expect
     {|
-    (focused ())
+    ((focused ()) (num_filtered_rows (2)))
     ┌───┬─────┬───────┬───────┬──────────┐
     │ > │ #   │ ◇ key │ a     │ ◇ b      │
     ├───┼─────┼───────┼───────┼──────────┤
@@ -449,7 +510,7 @@ let%expect_test "focus shadow (down)" =
   [%expect
     {|
     (focus_changed_to (0))
-    (focused (0))
+    ((focused (0)) (num_filtered_rows (3)))
     ┌───┬─────┬───────┬───────┬──────────┐
     │ > │ #   │ ◇ key │ a     │ ◇ b      │
     ├───┼─────┼───────┼───────┼──────────┤
@@ -462,7 +523,7 @@ let%expect_test "focus shadow (down)" =
   [%expect
     {|
     (focus_changed_to (1))
-    (focused (1))
+    ((focused (1)) (num_filtered_rows (3)))
     ┌───┬─────┬───────┬───────┬──────────┐
     │ > │ #   │ ◇ key │ a     │ ◇ b      │
     ├───┼─────┼───────┼───────┼──────────┤
@@ -475,7 +536,7 @@ let%expect_test "focus shadow (down)" =
   [%expect
     {|
     (focus_changed_to ())
-    (focused ())
+    ((focused ()) (num_filtered_rows (3)))
     ┌───┬─────┬───────┬───────┬──────────┐
     │ > │ #   │ ◇ key │ a     │ ◇ b      │
     ├───┼─────┼───────┼───────┼──────────┤
@@ -488,7 +549,7 @@ let%expect_test "focus shadow (down)" =
   [%expect
     {|
     (focus_changed_to (4))
-    (focused (4))
+    ((focused (4)) (num_filtered_rows (3)))
     ┌───┬─────┬───────┬───────┬──────────┐
     │ > │ #   │ ◇ key │ a     │ ◇ b      │
     ├───┼─────┼───────┼───────┼──────────┤
@@ -505,7 +566,7 @@ let%expect_test "focus shadow (up)" =
   [%expect
     {|
     (focus_changed_to (4))
-    (focused (4))
+    ((focused (4)) (num_filtered_rows (3)))
     ┌───┬─────┬───────┬───────┬──────────┐
     │ > │ #   │ ◇ key │ a     │ ◇ b      │
     ├───┼─────┼───────┼───────┼──────────┤
@@ -518,7 +579,7 @@ let%expect_test "focus shadow (up)" =
   [%expect
     {|
     (focus_changed_to (1))
-    (focused (1))
+    ((focused (1)) (num_filtered_rows (3)))
     ┌───┬─────┬───────┬───────┬──────────┐
     │ > │ #   │ ◇ key │ a     │ ◇ b      │
     ├───┼─────┼───────┼───────┼──────────┤
@@ -531,7 +592,7 @@ let%expect_test "focus shadow (up)" =
   [%expect
     {|
     (focus_changed_to ())
-    (focused ())
+    ((focused ()) (num_filtered_rows (3)))
     ┌───┬─────┬───────┬───────┬──────────┐
     │ > │ #   │ ◇ key │ a     │ ◇ b      │
     ├───┼─────┼───────┼───────┼──────────┤
@@ -544,7 +605,7 @@ let%expect_test "focus shadow (up)" =
   [%expect
     {|
     (focus_changed_to (0))
-    (focused (0))
+    ((focused (0)) (num_filtered_rows (3)))
     ┌───┬─────┬───────┬───────┬──────────┐
     │ > │ #   │ ◇ key │ a     │ ◇ b      │
     ├───┼─────┼───────┼───────┼──────────┤
@@ -562,7 +623,7 @@ let%expect_test "remove focused causes unfocus (down)" =
     {|
     (focus_changed_to (0))
     (focus_changed_to (1))
-    (focused (1))
+    ((focused (1)) (num_filtered_rows (3)))
     ┌───┬─────┬───────┬───────┬──────────┐
     │ > │ #   │ ◇ key │ a     │ ◇ b      │
     ├───┼─────┼───────┼───────┼──────────┤
@@ -575,7 +636,7 @@ let%expect_test "remove focused causes unfocus (down)" =
   Handle.show test.handle;
   [%expect
     {|
-    (focused ())
+    ((focused ()) (num_filtered_rows (2)))
     ┌───┬─────┬───────┬───────┬──────────┐
     │ > │ #   │ ◇ key │ a     │ ◇ b      │
     ├───┼─────┼───────┼───────┼──────────┤
@@ -587,7 +648,7 @@ let%expect_test "remove focused causes unfocus (down)" =
   [%expect
     {|
     (focus_changed_to (4))
-    (focused (4))
+    ((focused (4)) (num_filtered_rows (2)))
     ┌───┬─────┬───────┬───────┬──────────┐
     │ > │ #   │ ◇ key │ a     │ ◇ b      │
     ├───┼─────┼───────┼───────┼──────────┤
@@ -604,7 +665,7 @@ let%expect_test "remove focused causes unfocus (up)" =
     {|
     (focus_changed_to (0))
     (focus_changed_to (1))
-    (focused (1))
+    ((focused (1)) (num_filtered_rows (3)))
     ┌───┬─────┬───────┬───────┬──────────┐
     │ > │ #   │ ◇ key │ a     │ ◇ b      │
     ├───┼─────┼───────┼───────┼──────────┤
@@ -617,7 +678,7 @@ let%expect_test "remove focused causes unfocus (up)" =
   Handle.show test.handle;
   [%expect
     {|
-    (focused ())
+    ((focused ()) (num_filtered_rows (2)))
     ┌───┬─────┬───────┬───────┬──────────┐
     │ > │ #   │ ◇ key │ a     │ ◇ b      │
     ├───┼─────┼───────┼───────┼──────────┤
@@ -629,7 +690,7 @@ let%expect_test "remove focused causes unfocus (up)" =
   [%expect
     {|
     (focus_changed_to (0))
-    (focused (0))
+    ((focused (0)) (num_filtered_rows (2)))
     ┌───┬─────┬───────┬───────┬──────────┐
     │ > │ #   │ ◇ key │ a     │ ◇ b      │
     ├───┼─────┼───────┼───────┼──────────┤
@@ -649,7 +710,7 @@ let%expect_test "page up" =
   Handle.show test.handle;
   [%expect
     {|
-    (focused ())
+    ((focused ()) (num_filtered_rows (99)))
     ┌───┬──────┬───────┬────┬──────────┐
     │ > │ #    │ ◇ key │ a  │ ◇ b      │
     ├───┼──────┼───────┼────┼──────────┤
@@ -671,7 +732,7 @@ let%expect_test "page up" =
   [%expect
     {|
     (focus_changed_to (6))
-    (focused (6))
+    ((focused (6)) (num_filtered_rows (99)))
     ┌───┬──────┬───────┬────┬──────────┐
     │ > │ #    │ ◇ key │ a  │ ◇ b      │
     ├───┼──────┼───────┼────┼──────────┤
@@ -701,7 +762,7 @@ let%expect_test "page down" =
   Handle.show test.handle;
   [%expect
     {|
-    (focused ())
+    ((focused ()) (num_filtered_rows (99)))
     ┌───┬──────┬───────┬────┬──────────┐
     │ > │ #    │ ◇ key │ a  │ ◇ b      │
     ├───┼──────┼───────┼────┼──────────┤
@@ -723,7 +784,7 @@ let%expect_test "page down" =
   [%expect
     {|
 (focus_changed_to (12))
-(focused (12))
+((focused (12)) (num_filtered_rows (99)))
 ┌───┬──────┬───────┬────┬──────────┐
 │ > │ #    │ ◇ key │ a  │ ◇ b      │
 ├───┼──────┼───────┼────┼──────────┤
@@ -758,7 +819,8 @@ let%expect_test "actions on empty table" =
 let%expect_test "moving focus down should work even when the index changes" =
   let map =
     [ 1; 2; 3; 4 ]
-    |> List.map ~f:(fun i -> i, { a = "hi"; b = Float.of_int (i / 2) })
+    |> List.map ~f:(fun i ->
+      i, { a = "hi"; b = Float.of_int (i / 2); c = "c"; d = 100; e = "e" })
     |> Int.Map.of_alist_exn
     |> Bonsai.Var.create
   in
@@ -772,7 +834,7 @@ let%expect_test "moving focus down should work even when the index changes" =
   Handle.show test.handle;
   [%expect
     {|
-    (focused ())
+    ((focused ()) (num_filtered_rows (4)))
     ┌───┬─────┬───────┬────┬──────────┐
     │ > │ #   │ ◇ key │ a  │ ◇ b      │
     ├───┼─────┼───────┼────┼──────────┤
@@ -787,7 +849,7 @@ let%expect_test "moving focus down should work even when the index changes" =
     {|
 (focus_changed_to (1))
 (focus_changed_to (2))
-(focused (2))
+((focused (2)) (num_filtered_rows (4)))
 ┌───┬─────┬───────┬────┬──────────┐
 │ > │ #   │ ◇ key │ a  │ ◇ b      │
 ├───┼─────┼───────┼────┼──────────┤
@@ -800,7 +862,7 @@ let%expect_test "moving focus down should work even when the index changes" =
   Handle.show test.handle;
   [%expect
     {|
-    (focused (2))
+    ((focused (2)) (num_filtered_rows (3)))
     ┌───┬─────┬───────┬────┬──────────┐
     │ > │ #   │ ◇ key │ a  │ ◇ b      │
     ├───┼─────┼───────┼────┼──────────┤
@@ -813,7 +875,7 @@ let%expect_test "moving focus down should work even when the index changes" =
   [%expect
     {|
     (focus_changed_to (3))
-    (focused (3))
+    ((focused (3)) (num_filtered_rows (3)))
     ┌───┬─────┬───────┬────┬──────────┐
     │ > │ #   │ ◇ key │ a  │ ◇ b      │
     ├───┼─────┼───────┼────┼──────────┤
@@ -826,7 +888,8 @@ let%expect_test "moving focus down should work even when the index changes" =
 let%expect_test "moving focus up should work even when the index changes" =
   let map =
     [ 1; 2; 3; 4 ]
-    |> List.map ~f:(fun i -> i, { a = "hi"; b = Float.of_int (i / 2) })
+    |> List.map ~f:(fun i ->
+      i, { a = "hi"; b = Float.of_int (i / 2); c = "c"; d = 100; e = "e" })
     |> Int.Map.of_alist_exn
     |> Bonsai.Var.create
   in
@@ -840,7 +903,7 @@ let%expect_test "moving focus up should work even when the index changes" =
   Handle.show test.handle;
   [%expect
     {|
-    (focused ())
+    ((focused ()) (num_filtered_rows (4)))
     ┌───┬─────┬───────┬────┬──────────┐
     │ > │ #   │ ◇ key │ a  │ ◇ b      │
     ├───┼─────┼───────┼────┼──────────┤
@@ -856,7 +919,7 @@ let%expect_test "moving focus up should work even when the index changes" =
 (focus_changed_to (1))
 (focus_changed_to (2))
 (focus_changed_to (3))
-(focused (3))
+((focused (3)) (num_filtered_rows (4)))
 ┌───┬─────┬───────┬────┬──────────┐
 │ > │ #   │ ◇ key │ a  │ ◇ b      │
 ├───┼─────┼───────┼────┼──────────┤
@@ -865,11 +928,12 @@ let%expect_test "moving focus up should work even when the index changes" =
 │ * │ 200 │ 3     │ hi │ 1.000000 │
 │   │ 300 │ 4     │ hi │ 2.000000 │
 └───┴─────┴───────┴────┴──────────┘ |}];
-  Bonsai.Var.update map ~f:(fun map -> Map.add_exn map ~key:0 ~data:{ a = "hi"; b = 0.0 });
+  Bonsai.Var.update map ~f:(fun map ->
+    Map.add_exn map ~key:0 ~data:{ a = "hi"; b = 0.0; c = "c"; d = 100; e = "e" });
   Handle.show test.handle;
   [%expect
     {|
-    (focused (3))
+    ((focused (3)) (num_filtered_rows (5)))
     ┌───┬──────┬───────┬────┬──────────┐
     │ > │ #    │ ◇ key │ a  │ ◇ b      │
     ├───┼──────┼───────┼────┼──────────┤
@@ -884,7 +948,7 @@ let%expect_test "moving focus up should work even when the index changes" =
   [%expect
     {|
     (focus_changed_to (2))
-    (focused (2))
+    ((focused (2)) (num_filtered_rows (5)))
     ┌───┬──────┬───────┬────┬──────────┐
     │ > │ #    │ ◇ key │ a  │ ◇ b      │
     ├───┼──────┼───────┼────┼──────────┤
@@ -907,7 +971,8 @@ let%expect_test "BUG: setting rank_range to not include the first element doesn'
   let rank_range = Bonsai.Var.create (Collate.Which_range.To 2) in
   let map =
     [ 1; 2; 3; 4; 5; 6; 7 ]
-    |> List.map ~f:(fun i -> i, { a = "hi"; b = Float.of_int i })
+    |> List.map ~f:(fun i ->
+      i, { a = "hi"; b = Float.of_int i; c = "c"; d = 100; e = "e" })
     |> Int.Map.of_alist_exn
     |> Value.return
   in
@@ -964,11 +1029,7 @@ let%expect_test "BUG: setting rank_range to not include the first element doesn'
         type incoming = Action.t
 
         let view { Table_expert.Result.for_testing; focus; _ } =
-          table_to_string
-            focus
-            (Lazy.force for_testing)
-            ~include_stats:false
-            ~include_focus:true
+          table_to_string (Some focus) (Lazy.force for_testing) ~include_stats:false ()
         ;;
 
         let incoming { Table_expert.Result.focus; _ } Action.Focus_down =
@@ -980,7 +1041,7 @@ let%expect_test "BUG: setting rank_range to not include the first element doesn'
   Handle.show handle;
   [%expect
     {|
-    (focused ())
+    ((focused ()) (num_filtered_rows ()))
     ┌───┬─────┬────┬────┐
     │ > │ #   │ a  │ b  │
     ├───┼─────┼────┼────┤
@@ -995,7 +1056,7 @@ let%expect_test "BUG: setting rank_range to not include the first element doesn'
   [%expect
     {|
     (focus_changed_to (1))
-    (focused (1))
+    ((focused (1)) (num_filtered_rows ()))
     ┌───┬─────┬────┬────┐
     │ > │ #   │ a  │ b  │
     ├───┼─────┼────┼────┤
@@ -1008,7 +1069,7 @@ let%expect_test "BUG: setting rank_range to not include the first element doesn'
   Handle.show handle;
   [%expect
     {|
-    (focused (1))
+    ((focused (1)) (num_filtered_rows ()))
     ┌───┬─────┬────┬────┐
     │ > │ #   │ a  │ b  │
     ├───┼─────┼────┼────┤
@@ -1023,7 +1084,7 @@ let%expect_test "BUG: setting rank_range to not include the first element doesn'
   [%expect
     {|
     (focus_changed_to ())
-    (focused ())
+    ((focused ()) (num_filtered_rows ()))
     ┌───┬─────┬────┬────┐
     │ > │ #   │ a  │ b  │
     ├───┼─────┼────┼────┤
@@ -1038,7 +1099,7 @@ let%expect_test "BUG: setting rank_range to not include the first element doesn'
   Handle.show handle;
   [%expect
     {|
-    (focused ())
+    ((focused ()) (num_filtered_rows ()))
     ┌───┬─────┬────┬────┐
     │ > │ #   │ a  │ b  │
     ├───┼─────┼────┼────┤
@@ -1066,7 +1127,7 @@ let%expect_test "focus down when presence says that all responses are None" =
   Handle.show test.handle;
   [%expect
     {|
-    (focused ())
+    ((focused ()) (num_filtered_rows ()))
     ┌───┬─────┬─────┐
     │ > │ #   │ key │
     ├───┼─────┼─────┤
@@ -1080,7 +1141,7 @@ let%expect_test "focus down when presence says that all responses are None" =
      "focused" remains "()", aka 'none' *)
   [%expect
     {|
-    (focused ())
+    ((focused ()) (num_filtered_rows ()))
     ┌───┬─────┬─────┐
     │ > │ #   │ key │
     ├───┼─────┼─────┤
@@ -1092,7 +1153,7 @@ let%expect_test "focus down when presence says that all responses are None" =
   Handle.show test.handle;
   [%expect
     {|
-    (focused ())
+    ((focused ()) (num_filtered_rows ()))
     ┌───┬─────┬─────┐
     │ > │ #   │ key │
     ├───┼─────┼─────┤
@@ -1114,7 +1175,7 @@ let%expect_test "show that scrolling out of a basic table will keep the focus" =
   Handle.show test.handle;
   [%expect
     {|
-(focused ())
+((focused ()) (num_filtered_rows (99)))
 ┌────────────────┬───────┐
 │ metric         │ value │
 ├────────────────┼───────┤
@@ -1134,7 +1195,7 @@ let%expect_test "show that scrolling out of a basic table will keep the focus" =
   [%expect
     {|
     (focus_changed_to (1))
-    (focused (1))
+    ((focused (1)) (num_filtered_rows (99)))
     ┌────────────────┬───────┐
     │ metric         │ value │
     ├────────────────┼───────┤
@@ -1164,7 +1225,7 @@ let%expect_test "show that scrolling out of a basic table will keep the focus" =
   Handle.show test.handle;
   [%expect
     {|
-    (focused (1))
+    ((focused (1)) (num_filtered_rows (99)))
     ┌────────────────┬───────┐
     │ metric         │ value │
     ├────────────────┼───────┤
@@ -1195,7 +1256,7 @@ let%expect_test "show that scrolling out of a basic table will keep the focus" =
   Handle.show test.handle;
   [%expect
     {|
-    (focused (1))
+    ((focused (1)) (num_filtered_rows (99)))
     ┌────────────────┬───────┐
     │ metric         │ value │
     ├────────────────┼───────┤
@@ -1252,7 +1313,7 @@ let%expect_test "show that scrolling out of a custom table will execute the pres
   Handle.show test.handle;
   [%expect
     {|
-(focused ())
+((focused ()) (num_filtered_rows ()))
 ┌───┬──────┬─────┐
 │ > │ #    │ key │
 ├───┼──────┼─────┤
@@ -1272,7 +1333,7 @@ let%expect_test "show that scrolling out of a custom table will execute the pres
   Handle.show test.handle;
   [%expect
     {|
-    (focused (1))
+    ((focused (1)) (num_filtered_rows ()))
     ┌───┬──────┬─────┐
     │ > │ #    │ key │
     ├───┼──────┼─────┤
@@ -1294,7 +1355,7 @@ let%expect_test "show that scrolling out of a custom table will execute the pres
   (* notice that when we scrolled away, the "focused" value is set to None. *)
   [%expect
     {|
-    (focused ())
+    ((focused ()) (num_filtered_rows ()))
     ┌───┬──────┬─────┐
     │ > │ #    │ key │
     ├───┼──────┼─────┤
@@ -1315,7 +1376,7 @@ let%expect_test "show that scrolling out of a custom table will execute the pres
   Handle.show test.handle;
   [%expect
     {|
-    (focused (1))
+    ((focused (1)) (num_filtered_rows ()))
     ┌───┬──────┬─────┐
     │ > │ #    │ key │
     ├───┼──────┼─────┤

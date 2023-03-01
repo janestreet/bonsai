@@ -24,16 +24,6 @@ module Line_pattern : sig
   val t_to_js : t -> Ojs.t
 end
 
-module Which_y_axis : sig
-  type t =
-    ([ `y1
-     | `y2
-     ]
-     [@js.enum])
-
-  val t_to_js : t -> Ojs.t
-end
-
 module Legend : sig
   type t =
     ([ `always
@@ -136,6 +126,31 @@ module Series_options : sig
         pointSize: the radius of the image.
         idx: the row-index of the point in the data.
         Default: null
+    *)
+    -> ?plotter:Plotter.t
+    (** plotter (undocumented)
+
+        The Dygraph documentation merely says:
+
+        TODO(danvk): more details! May be set per-series.
+
+        Although the graph-wide default [plotter] can take an array of plotters, the
+        series-specific plotter must be a single value.
+    *)
+    -> ?plotterFinishedCallback:(context:Canvas_rendering_context_2D.t -> unit)
+    (** (Jane Street extension)
+
+        [plotterFinishedCallback] is called every time a plotter finishes rendering this
+        series.
+
+        If you specify a custom plotter for this series, this callback will be called
+        exactly once.
+
+        If you don't specify a custom plotter for this series, it will be called once for
+        each of the graph's configured plotters. Note that some plotters may not actually
+        draw anything to the canvas depending on the configured attributes of this series
+        (e.g. the error bar plotter will only draw something if you request error bars),
+        but the callback will still fire after the plotter runs.
     *)
     -> ?showInRangeSelector:bool
     (** showInRangeSelector http://dygraphs.com/options.html#showInRangeSelector
@@ -1205,6 +1220,16 @@ val create
       dygraph: the reference graph
       Default: null
   *)
+  -> ?drawCallback:(graph:Ojs.t -> isInitial:bool -> unit)
+  (**
+     When set, this callback gets called every time the dygraph is drawn. This includes
+     the initial draw, after zooming and repeatedly while panning.
+
+     Type: function(dygraph, is_initial)
+     dygraph: The graph being drawn
+     is_initial: True if this is the initial draw, false for subsequent draws.
+     Default: null
+  *)
   -> ?zoomCallback:(xmin:float -> xmax:float -> yRanges:Range.t array -> unit)
   (** zoomCallback http://dygraphs.com/options.html#zoomCallback
 
@@ -1230,6 +1255,16 @@ val create
 
       Type: float
       Default: (devicePixelRatio / context.backingStoreRatio)
+  *)
+  -> ?plotter:(Plotter.t list)
+  (** plotter https://dygraphs.com/options.html#plotter
+      A function (or array of functions) which plot each data series on the chart.
+
+      Type: array or function
+      Default: [DygraphCanvasRenderer.Plotters.fillPlotter, DygraphCanvasRenderer.Plotters.errorPlotter, DygraphCanvasRenderer.Plotters.linePlotter]
+
+      Gallery Samples:	NONE
+      Other Examples:	plotters; smooth-plots
   *)
   -> ?rightGap:int
   (** rightGap http://dygraphs.com/options.html#rightGap

@@ -71,7 +71,7 @@ module Handle = struct
 
   let create
         (type result incoming)
-        ?(clock = Incr.Clock.create ~start:Time_ns.epoch ())
+        ?(start_time = Time_ns.epoch)
         ~optimize
         (result_spec : (result, incoming) Result_spec.t)
         computation
@@ -84,6 +84,7 @@ module Handle = struct
         (let%map result = result in
          result, R.view result, R.incoming result)
     in
+    let clock = Incr.Clock.create ~start:start_time () in
     Driver.create ~optimize ~initial_input:() ~clock component
   ;;
 
@@ -162,14 +163,14 @@ module Handle = struct
 
   let create
         (type result incoming)
-        ?(clock = Incr.Clock.create ~start:Time_ns.epoch ())
+        ?start_time
         ?(optimize = true)
         (result_spec : (result, incoming) Result_spec.t)
         computation
     =
     assert_node_paths_identical_between_transform_and_skeleton_nodepaths
       (Bonsai.Private.reveal_computation computation);
-    create ~clock ~optimize result_spec computation
+    create ?start_time ~optimize result_spec computation
   ;;
 
   let result handle =
@@ -180,6 +181,7 @@ module Handle = struct
 
   let clock = Driver.clock
   let advance_clock_by t = Incr.Clock.advance_clock_by (Driver.clock t)
+  let advance_clock ~to_ t = Incr.Clock.advance_clock ~to_ (Driver.clock t)
 
   let do_actions handle actions =
     let _, _, inject_action = Driver.result handle in
@@ -240,6 +242,6 @@ module Handle = struct
     result
   ;;
 
-  let apply_action_incr = Driver.apply_action_incr
+  let action_input_incr = Driver.action_input_incr
   let lifecycle_incr = Driver.lifecycle_incr
 end

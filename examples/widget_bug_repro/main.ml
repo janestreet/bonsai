@@ -65,13 +65,10 @@ let component true_or_false ~toggle =
   Vdom.Node.div [ ids; inner_html ]
 ;;
 
-let (_ : _ Start.Handle.t) =
+let () =
   let var = Bonsai.Var.create true in
   let toggle = Bonsai.Effect.of_sync_fun (Bonsai.Var.set var) in
   let toggle a = toggle a in
   let value = Bonsai.Var.value var in
-  Start.start
-    Start.Result_spec.just_the_view
-    ~bind_to_element_with_id:"app"
-    (component value ~toggle)
+  Bonsai_web.Start.start (component value ~toggle)
 ;;

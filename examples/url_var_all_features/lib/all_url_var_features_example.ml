@@ -128,6 +128,7 @@ module Variant = struct
         ;;
 
         let label_for_variant = `Inferred
+        let initial_choice = `First_constructor
       end)
   ;;
 end
@@ -172,6 +173,7 @@ module T = struct
         ;;
 
         let label_for_variant = `Inferred
+        let initial_choice = `First_constructor
       end)
   ;;
 end
@@ -188,20 +190,11 @@ let%expect_test _ =
     │ All urls                                                                                 │
     ├──────────────────────────────────────────────────────────────────────────────────────────┤
     │ /                                                                                        │
-    │ /some_string_option                                                                      │
-    │ /some_string_option?extra=<string>                                                       │
+    │ /some_string_option?extra=<optional<string>>                                             │
     │ /unable                                                                                  │
     │ /username/<string>/id/<int>/<multiple<string>>?record.an_int=<int>&record.many_floats=<m │
-    │ ultiple<float>>&record.many_locations=<multiple<sexpable>>&record.nested.x=<int>         │
-    │ /username/<string>/id/<int>/<multiple<string>>?record.an_int=<int>&record.many_floats=<m │
     │ ultiple<float>>&record.many_locations=<multiple<sexpable>>&record.nested.x=<int>&record. │
-    │ nested.y=<int>                                                                           │
-    │ /username/<string>/id/<int>/<multiple<string>>?record.an_int=<int>&record.many_floats=<m │
-    │ ultiple<float>>&record.many_locations=<multiple<sexpable>>&record.nested.x=<int>&record. │
-    │ nested.y=<int>&record.optional_string=<string>                                           │
-    │ /username/<string>/id/<int>/<multiple<string>>?record.an_int=<int>&record.many_floats=<m │
-    │ ultiple<float>>&record.many_locations=<multiple<sexpable>>&record.nested.x=<int>&record. │
-    │ optional_string=<string>                                                                 │
+    │ nested.y=<optional<int>>&record.optional_string=<optional<string>>                       │
     │ /variant/comments                                                                        │
     │ /variant/post                                                                            │
     └──────────────────────────────────────────────────────────────────────────────────────────┘ |}]
@@ -211,24 +204,41 @@ let fallback _exn _components = T.Unable_to_parse
 
 let component ~url_var =
   let url_value = Url_var.value url_var in
+  let%sub modify_history, toggle_modify_history = Bonsai.toggle ~default_model:true in
   let%sub form =
     let%sub form = T.form_of_t in
     let%sub form = Form.Dynamic.with_default url_value form in
     let%sub () =
-      Form.Dynamic.on_change
-        (module T)
-        ~f:(Value.return (fun query -> Url_var.set_effect url_var query))
-        form
+      let%sub set_effect =
+        let%arr modify_history = modify_history in
+        let how = if modify_history then `Push else `Replace in
+        fun query -> Url_var.set_effect url_var query ~how
+      in
+      Form.Dynamic.on_change (module T) ~f:set_effect form
     in
     return form
   in
   let%arr form = form
-  and url = url_value in
+  and url = url_value
+  and modify_history = modify_history
+  and toggle_modify_history = toggle_modify_history in
+  let saved_to_history_text =
+    if modify_history
+    then "History is being saved in your browser"
+    else "History is not being saved in your browser"
+  in
   Vdom.Node.div
     [ Vdom.Node.text
         "Change form to update the URL's query! Change the URL's query to update the \
          form! (Errors are detected and routed to the fallback page!)"
     ; Form.view_as_vdom form
+    ; Vdom.Node.p
+        [ Vdom.Node.text saved_to_history_text
+        ; Vdom.Node.br ()
+        ; Vdom.Node.button
+            ~attr:(Vdom.Attr.on_click (fun _ -> toggle_modify_history))
+            [ Vdom.Node.text "Toggle history saving" ]
+        ]
     ; Vdom.Node.text "Here's what the parsed query as a sexp looks like:"
     ; Vdom.Node.code [ Vdom.Node.sexp_for_debugging (T.sexp_of_t url) ]
     ]

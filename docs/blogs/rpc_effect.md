@@ -160,7 +160,7 @@ the user a notification that they aren't connected to the server.
 -         ~send_increment_rpc:(send_increment_rpc conn)
 -         ~send_decrement_rpc:(send_decrement_rpc conn))
 +  let (_ : (unit, Nothing.t) Start.Handle.t) =
-+    Start.start Start.Result_spec.just_the_view ~bind_to_element_with_id:"app" App.app
++    Bonsai_web.Start.start Start.Result_spec.just_the_view ~bind_to_element_with_id:"app" App.app
    in
    Deferred.never ()
 ```

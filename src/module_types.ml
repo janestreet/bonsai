@@ -113,15 +113,14 @@ module type Component_s_incr = sig
   end
 
   val apply_action
-    :  Input.t Incr.t
+    :  Input.t
     -> inject:(Action.t -> unit Ui_effect.t)
     -> (schedule_event:(unit Ui_effect.t -> unit) -> Model.t -> Action.t -> Model.t)
-         Incr.t
 
   val compute
     :  Input.t Incr.t
     -> Model.t Incr.t
-    -> inject:(Action.t -> unit Ui_effect.t)
+    -> inject:(Action.t -> unit Ui_effect.t) Incr.t
     -> Result.t Incr.t
 end
 

@@ -159,8 +159,8 @@ module Arrow_deprecated = struct
   ;;
 
   let start_generic_poly
-        (type input input_and_inject model dynamic_action static_action result extra
-                incoming outgoing)
+        (type input action_input input_and_inject model dynamic_action static_action result
+                extra incoming outgoing)
         ~(get_app_result : result -> (extra, incoming) App_result.t)
         ~(get_app_input :
             input:input
@@ -170,8 +170,21 @@ module Arrow_deprecated = struct
         ~bind_to_element_with_id
         ~(computation : result Bonsai.Private.Computation.t)
         ~fresh
-        ({ model; dynamic_action; static_action; apply_static; run; reset = _ } as info :
-           (model, dynamic_action, static_action, result) Bonsai.Private.Computation.info)
+        ({ model
+         ; input = _
+         ; dynamic_action
+         ; static_action
+         ; apply_static
+         ; apply_dynamic
+         ; run
+         ; reset = _
+         } as info :
+           ( model
+           , dynamic_action
+           , static_action
+           , action_input
+           , result )
+             Bonsai.Private.Computation.info)
     : (input, extra, incoming, outgoing) Handle.t
     =
     let outgoing_pipe, pipe_write = Pipe.create () in
@@ -234,6 +247,7 @@ module Arrow_deprecated = struct
                ( model
                , dynamic_action
                , static_action
+               , action_input
                , result )
                  Bonsai.Private.Computation.eval_fun)
         =
@@ -260,14 +274,21 @@ module Arrow_deprecated = struct
           Bus.write handle.extra extra;
           view
         and apply_action =
-          let%map dynamic_apply_action =
+          let%map input =
             snapshot
-            |> Bonsai.Private.Snapshot.apply_action
-            |> Bonsai.Private.Apply_action.to_incremental
+            |> Bonsai.Private.Snapshot.input
+            |> Bonsai.Private.Input.to_incremental
           in
           fun () ~schedule_event model action ->
             match action with
-            | Action.Dynamic action -> dynamic_apply_action model action ~schedule_event
+            | Action.Dynamic action ->
+              apply_dynamic
+                ~inject_dynamic
+                ~inject_static
+                ~schedule_event
+                (Some input)
+                model
+                action
             | Action.Static action ->
               apply_static ~inject_dynamic ~inject_static ~schedule_event model action
         and on_display =
@@ -290,9 +311,10 @@ module Arrow_deprecated = struct
             Bonsai.Private.Meta.(
               ( Model.Type_id.same_witness info.model.type_id info'.model.type_id
               , Action.Type_id.same_witness info.dynamic_action info'.dynamic_action
-              , Action.Type_id.same_witness info.static_action info'.static_action ))
+              , Action.Type_id.same_witness info.static_action info'.static_action
+              , Input.same_witness info.input info'.input ))
           with
-          | Some T, Some T, Some T -> create model ~old_model ~inject info'.run
+          | Some T, Some T, Some T, Some T -> create model ~old_model ~inject info'.run
           | _ ->
             print_endline
               "Not starting debugger. An error occurred while attempting to instrument \
@@ -438,7 +460,7 @@ module Proc = struct
     ;;
   end
 
-  let start
+  let start_and_get_handle
         result_spec
         ?(optimize = true)
         ?(custom_connector = fun _ -> assert false)
@@ -459,5 +481,16 @@ module Proc = struct
            ~f:(Arrow_deprecated.App_result.of_result_spec result_spec)
     in
     Arrow_deprecated.start ~optimize ~initial_input:() ~bind_to_element_with_id bonsai
+  ;;
+
+  let start ?custom_connector ?(bind_to_element_with_id = "app") component =
+    let (_ : _ Handle.t) =
+      start_and_get_handle
+        Result_spec.just_the_view
+        ~bind_to_element_with_id
+        ?custom_connector
+        component
+    in
+    ()
   ;;
 end

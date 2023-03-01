@@ -94,9 +94,10 @@ module Handle : sig
   val do_actions : (_, 'incoming) t -> 'incoming list -> unit
   val clock : _ t -> Incr.Clock.t
   val advance_clock_by : _ t -> Time_ns.Span.t -> unit
+  val advance_clock : to_:Time_ns.t -> _ t -> unit
 
   val create
-    :  ?clock:Incr.Clock.t
+    :  ?start_time:Time_ns.t
     -> ?optimize:bool
     -> ('result, 'incoming) Result_spec.t
     -> 'result Computation.t
@@ -109,5 +110,5 @@ module Handle : sig
 
   val result_incr : ('r, 'i) t -> 'r Incr.t
   val lifecycle_incr : _ t -> Incr.Packed.t
-  val apply_action_incr : _ t -> Incr.Packed.t
+  val action_input_incr : _ t -> Incr.Packed.t
 end

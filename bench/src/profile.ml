@@ -3,6 +3,20 @@ open Bonsai_test
 open Js_of_ocaml
 module Graph_info = Bonsai.Private.Graph_info
 
+module Id = struct
+  let instance = String.Table.create ()
+
+  let of_node_path node_path =
+    let key = Bonsai.Private.Node_path.to_string node_path in
+    match Hashtbl.find instance key with
+    | Some id -> id
+    | None ->
+      let id = Hashtbl.length instance in
+      Hashtbl.set instance ~key ~data:id;
+      id
+  ;;
+end
+
 module Measurement = struct
   module Kind = struct
     module T = struct
@@ -177,13 +191,11 @@ let accumulate_measurements
           (let%bind.Option node_path =
              Bonsai.Private.Instrumentation.extract_node_path_from_entry_label label
            in
-           let%bind.Option { node_type; here; id } =
-             Map.find source_locations node_path
-           in
+           let%bind.Option { node_type; here } = Map.find source_locations node_path in
            let%map.Option here = here in
            { measurement with
              kind = Named [%string "%{node_type} (%{here#Source_code_position})"]
-           ; id = Some id
+           ; id = Some (Id.of_node_path node_path)
            }))
     |> List.fold
          ~init:(Int.Map.empty, Measurement.Kind.Map.empty)

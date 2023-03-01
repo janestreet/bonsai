@@ -659,7 +659,7 @@ let%expect_test "record's field order is preserved" =
       <tbody>
         <tr @key=bonsai_path_replaced_in_test>
           <td style={
-                padding-left: 0em;
+                padding-left: 1em;
                 padding-right: 1em;
                 text-align: left;
                 font-weight: bold;
@@ -679,7 +679,7 @@ let%expect_test "record's field order is preserved" =
         </tr>
         <tr @key=bonsai_path_replaced_in_test>
           <td style={
-                padding-left: 0em;
+                padding-left: 1em;
                 padding-right: 1em;
                 text-align: left;
                 font-weight: bold;
@@ -721,7 +721,7 @@ let%expect_test "record's field order is preserved" =
       <tbody>
         <tr @key=bonsai_path_replaced_in_test>
           <td style={
-                padding-left: 0em;
+                padding-left: 1em;
                 padding-right: 1em;
                 text-align: left;
                 font-weight: bold;
@@ -741,7 +741,7 @@ let%expect_test "record's field order is preserved" =
         </tr>
         <tr @key=bonsai_path_replaced_in_test>
           <td style={
-                padding-left: 0em;
+                padding-left: 1em;
                 padding-right: 1em;
                 text-align: left;
                 font-weight: bold;
@@ -777,17 +777,16 @@ let%expect_test "a tuple form gets labels on the elements" =
     ==============
     <table>
       <tbody>
-        <tr>
-          <td colspan="2" style={ padding-left: 0em; font-weight: bold; }> 1st </td>
-        </tr>
         <tr @key=bonsai_path_replaced_in_test>
           <td style={
-                padding-left: 1em;
+                padding-left: 0em;
                 padding-right: 1em;
                 text-align: left;
                 font-weight: bold;
                 user-select: none;
-              }>  </td>
+              }>
+            <label for="bonsai_path_replaced_in_test" style={ display: block; }> 1st </label>
+          </td>
           <td>
             <input type="number"
                    step="1"
@@ -798,17 +797,16 @@ let%expect_test "a tuple form gets labels on the elements" =
                    oninput> </input>
           </td>
         </tr>
-        <tr>
-          <td colspan="2" style={ padding-left: 0em; font-weight: bold; }> 2nd </td>
-        </tr>
         <tr @key=bonsai_path_replaced_in_test>
           <td style={
-                padding-left: 1em;
+                padding-left: 0em;
                 padding-right: 1em;
                 text-align: left;
                 font-weight: bold;
                 user-select: none;
-              }>  </td>
+              }>
+            <label for="bonsai_path_replaced_in_test" style={ display: block; }> 2nd </label>
+          </td>
           <td>
             <textarea placeholder="" id="bonsai_path_replaced_in_test" value:normalized="" oninput> </textarea>
           </td>
@@ -837,7 +835,7 @@ let%expect_test "a list field within a record form gets a label" =
       <tbody>
         <tr @key=bonsai_path_replaced_in_test>
           <td style={
-                padding-left: 0em;
+                padding-left: 1em;
                 padding-right: 1em;
                 text-align: left;
                 font-weight: bold;
@@ -856,11 +854,13 @@ let%expect_test "a list field within a record form gets a label" =
           </td>
         </tr>
         <tr>
-          <td colspan="2" style={ padding-left: 0em; font-weight: bold; }> b </td>
+          <td colspan="2" style={ padding-left: 1em; font-weight: bold; }>
+            <label style={ display: block; }> b </label>
+          </td>
         </tr>
         <tr>
           <td colspan="2" style={ padding-left: 1em; font-weight: bold; }>
-            <button onclick> Add new element </button>
+            <button type="button" onclick> Add new element </button>
           </td>
         </tr>
       </tbody>
@@ -897,7 +897,7 @@ let%expect_test "a nested record gets a label" =
       <tbody>
         <tr @key=bonsai_path_replaced_in_test>
           <td style={
-                padding-left: 0em;
+                padding-left: 1em;
                 padding-right: 1em;
                 text-align: left;
                 font-weight: bold;
@@ -916,11 +916,13 @@ let%expect_test "a nested record gets a label" =
           </td>
         </tr>
         <tr>
-          <td colspan="2" style={ padding-left: 0em; font-weight: bold; }> b </td>
+          <td colspan="2" style={ padding-left: 1em; font-weight: bold; }>
+            <label style={ display: block; }> b </label>
+          </td>
         </tr>
         <tr @key=bonsai_path_replaced_in_test>
           <td style={
-                padding-left: 1em;
+                padding-left: 2em;
                 padding-right: 1em;
                 text-align: left;
                 font-weight: bold;
@@ -934,7 +936,7 @@ let%expect_test "a nested record gets a label" =
         </tr>
         <tr @key=bonsai_path_replaced_in_test>
           <td style={
-                padding-left: 1em;
+                padding-left: 2em;
                 padding-right: 1em;
                 text-align: left;
                 font-weight: bold;
@@ -973,7 +975,7 @@ let%expect_test "record with doc comments gets a tooltip" =
       <tbody>
         <tr @key=bonsai_path_replaced_in_test>
           <td style={
-                padding-left: 0em;
+                padding-left: 1em;
                 padding-right: 1em;
                 text-align: left;
                 font-weight: bold;
@@ -987,10 +989,15 @@ let%expect_test "record with doc comments gets a tooltip" =
           <td>
             <div style={ display: flex; flex-direction: row; flex-wrap: nowrap; }>
               <div class="container_hash_replaced_in_test">
-                <label class="label_hash_replaced_in_test">
+                <label class="label_hash_replaced_in_test" style={ color: blue; }>
                   <input type="checkbox" class="checkbox_hash_replaced_in_test"> </input>
                   <span class="span_hash_replaced_in_test"> ⓘ </span>
-                  <div class="text_hash_replaced_in_test">  doc comment  </div>
+                  <div class="above_hash_replaced_in_test text_hash_replaced_in_test"
+                       style={
+                         border: 1px solid darkblue;
+                         color: black;
+                         background-color: azure;
+                       }>  doc comment  </div>
                 </label>
               </div>
 
@@ -1501,7 +1508,7 @@ let%expect_test "setting custom time form" =
            placeholder=""
            spellcheck="false"
            id="bonsai_path_replaced_in_test"
-           value:normalized=2022-04-05T09:31:55
+           value:normalized=2022-04-05T13:31:55
            oninput> </input> |}]
 ;;
 
@@ -1533,7 +1540,7 @@ let%expect_test "interacting with custom time form" =
   Handle.show handle;
   [%expect
     {|
-    (Ok "2022-04-05 13:31:00Z")
+    (Ok "2022-04-05 09:31:00Z")
 
     ==============
     <input type="datetime-local"
@@ -1571,7 +1578,7 @@ let%expect_test "customizing a tuple within a list" =
            let%arr first = first
            and second = second in
            let view =
-             Form.View.Private.List
+             Form.View.tuple
                [ Form.view (Form.label "Key" first); Form.view (Form.label "Data" second) ]
            in
            let value =
@@ -1659,8 +1666,8 @@ let%expect_test "customizing a tuple within a list" =
           </td>
         </tr>
         <tr>
-          <td colspan="2" style={ padding-left: 0em; font-weight: bold; }>
-            <button onclick> Add new element </button>
+          <td colspan="2" style={ padding-left: 1em; font-weight: bold; }>
+            <button type="button" onclick> Add new element </button>
           </td>
         </tr>
       </tbody>
@@ -1697,32 +1704,30 @@ let%expect_test "customizing an alist" =
             </div>
           </td>
         </tr>
-        <tr>
-          <td colspan="2" style={ padding-left: 1em; font-weight: bold; }> Key </td>
-        </tr>
         <tr @key=bonsai_path_replaced_in_test>
           <td style={
-                padding-left: 2em;
+                padding-left: 1em;
                 padding-right: 1em;
                 text-align: left;
                 font-weight: bold;
                 user-select: none;
-              }>  </td>
+              }>
+            <label for="bonsai_path_replaced_in_test" style={ display: block; }> Key </label>
+          </td>
           <td>
             <textarea placeholder="" id="bonsai_path_replaced_in_test" value:normalized=hi oninput> </textarea>
           </td>
         </tr>
-        <tr>
-          <td colspan="2" style={ padding-left: 1em; font-weight: bold; }> Data </td>
-        </tr>
         <tr @key=bonsai_path_replaced_in_test>
           <td style={
-                padding-left: 2em;
+                padding-left: 1em;
                 padding-right: 1em;
                 text-align: left;
                 font-weight: bold;
                 user-select: none;
-              }>  </td>
+              }>
+            <label for="bonsai_path_replaced_in_test" style={ display: block; }> Data </label>
+          </td>
           <td>
             <input type="number"
                    step="1"
@@ -1734,8 +1739,8 @@ let%expect_test "customizing an alist" =
           </td>
         </tr>
         <tr>
-          <td colspan="2" style={ padding-left: 0em; font-weight: bold; }>
-            <button onclick> Add new element </button>
+          <td colspan="2" style={ padding-left: 1em; font-weight: bold; }>
+            <button type="button" onclick> Add new element </button>
           </td>
         </tr>
       </tbody>
@@ -1772,32 +1777,30 @@ let%expect_test "customizing a map" =
             </div>
           </td>
         </tr>
-        <tr>
-          <td colspan="2" style={ padding-left: 1em; font-weight: bold; }> Key </td>
-        </tr>
         <tr @key=bonsai_path_replaced_in_test>
           <td style={
-                padding-left: 2em;
+                padding-left: 1em;
                 padding-right: 1em;
                 text-align: left;
                 font-weight: bold;
                 user-select: none;
-              }>  </td>
+              }>
+            <label for="bonsai_path_replaced_in_test" style={ display: block; }> Key </label>
+          </td>
           <td>
             <textarea placeholder="" id="bonsai_path_replaced_in_test" value:normalized=hi oninput> </textarea>
           </td>
         </tr>
-        <tr>
-          <td colspan="2" style={ padding-left: 1em; font-weight: bold; }> Data </td>
-        </tr>
         <tr @key=bonsai_path_replaced_in_test>
           <td style={
-                padding-left: 2em;
+                padding-left: 1em;
                 padding-right: 1em;
                 text-align: left;
                 font-weight: bold;
                 user-select: none;
-              }>  </td>
+              }>
+            <label for="bonsai_path_replaced_in_test" style={ display: block; }> Data </label>
+          </td>
           <td>
             <input type="number"
                    step="1"
@@ -1809,8 +1812,8 @@ let%expect_test "customizing a map" =
           </td>
         </tr>
         <tr>
-          <td colspan="2" style={ padding-left: 0em; font-weight: bold; }>
-            <button onclick> Add new element </button>
+          <td colspan="2" style={ padding-left: 1em; font-weight: bold; }>
+            <button type="button" onclick> Add new element </button>
           </td>
         </tr>
       </tbody>
@@ -2005,38 +2008,26 @@ let%expect_test "regression test: optional groups have keys attached" =
           </tr>
           <tr>
             <td colspan="100">
-              <table class="mod_depth_1_hash_replaced_in_test nested_table_hash_replaced_in_test">
+              <table class="mod_depth_2_hash_replaced_in_test nested_table_hash_replaced_in_test">
                 <tr @key=bonsai_path_replaced_in_test>
                   <td>
                     <div class="container_hash_replaced_in_test label_hash_replaced_in_test">
                       <label for="bonsai_path_replaced_in_test" style={ display: block; }> one </label>
 
-                <tr @key=bonsai_path_replaced_in_test>
-                  <td>
-                    <div class="container_hash_replaced_in_test label_hash_replaced_in_test">
-                      <label for="bonsai_path_replaced_in_test" style={ display: block; }> two </label>
-                    </div>
-                  </td>
-                  <td>
-                    <input type="checkbox"
-                           id="bonsai_path_replaced_in_test"
-                           #checked="false"
-                           onclick
-                           style={
                              margin-left: 0px;
                            }> </input>
                   </td>
                 </tr>
-    -|          <tr @key=bonsai_path_replaced_in_test>
-    +|          <tr>
-                  <td>
-    -|              <div class="container_hash_replaced_in_test label_hash_replaced_in_test">
-    -|                <label for="bonsai_path_replaced_in_test" style={ display: block; }> three </label>
-    -|              </div>
-    +|              <div class="container_hash_replaced_in_test label_hash_replaced_in_test"> three </div>
+                <tr>
+                  <td colspan="100">
+                    <table class="mod_depth_3_hash_replaced_in_test nested_table_hash_replaced_in_test"> </table>
                   </td>
-    -|            <td>
-    +|            <td @key=bonsai_path_replaced_in_test>
+                </tr>
+                <tr>
+                  <td>
+                    <div class="container_hash_replaced_in_test label_hash_replaced_in_test"> three </div>
+                  </td>
+                  <td>
                     <input type="checkbox"
                            id="bonsai_path_replaced_in_test"
     -|                     #checked="false"
@@ -2047,9 +2038,10 @@ let%expect_test "regression test: optional groups have keys attached" =
                            }> </input>
                   </td>
                 </tr>
-    +|          <tr>
-    +|            <td colspan="100">
-    +|              <table class="mod_depth_2_hash_replaced_in_test nested_table_hash_replaced_in_test">
+                <tr>
+                  <td colspan="100">
+    -|              <table class="mod_depth_3_hash_replaced_in_test nested_table_hash_replaced_in_test"> </table>
+    +|              <table class="mod_depth_3_hash_replaced_in_test nested_table_hash_replaced_in_test">
     +|                <tr @key=bonsai_path_replaced_in_test>
     +|                  <td>
     +|                    <div class="container_hash_replaced_in_test label_hash_replaced_in_test">  </div>
@@ -2062,8 +2054,8 @@ let%expect_test "regression test: optional groups have keys attached" =
     +|                  </td>
     +|                </tr>
     +|              </table>
-    +|            </td>
-    +|          </tr>
+                  </td>
+                </tr>
               </table>
             </td>
           </tr>
@@ -2096,7 +2088,7 @@ let%expect_test "regression test: optional groups have keys attached" =
           </tr>
           <tr>
             <td colspan="100">
-              <table class="mod_depth_1_hash_replaced_in_test nested_table_hash_replaced_in_test">
+              <table class="mod_depth_2_hash_replaced_in_test nested_table_hash_replaced_in_test">
                 <tr @key=bonsai_path_replaced_in_test>
                   <td>
                     <div class="container_hash_replaced_in_test label_hash_replaced_in_test">
@@ -2110,16 +2102,11 @@ let%expect_test "regression test: optional groups have keys attached" =
                               oninput> </textarea>
                   </td>
                 </tr>
-    -|          <tr @key=bonsai_path_replaced_in_test>
-    +|          <tr>
+                <tr>
                   <td>
-    -|              <div class="container_hash_replaced_in_test label_hash_replaced_in_test">
-    -|                <label for="bonsai_path_replaced_in_test" style={ display: block; }> two </label>
-    -|              </div>
-    +|              <div class="container_hash_replaced_in_test label_hash_replaced_in_test"> two </div>
+                    <div class="container_hash_replaced_in_test label_hash_replaced_in_test"> two </div>
                   </td>
-    -|            <td>
-    +|            <td @key=bonsai_path_replaced_in_test>
+                  <td>
                     <input type="checkbox"
                            id="bonsai_path_replaced_in_test"
     -|                     #checked="false"
@@ -2130,9 +2117,10 @@ let%expect_test "regression test: optional groups have keys attached" =
                            }> </input>
                   </td>
                 </tr>
-    +|          <tr>
-    +|            <td colspan="100">
-    +|              <table class="mod_depth_2_hash_replaced_in_test nested_table_hash_replaced_in_test">
+                <tr>
+                  <td colspan="100">
+    -|              <table class="mod_depth_3_hash_replaced_in_test nested_table_hash_replaced_in_test"> </table>
+    +|              <table class="mod_depth_3_hash_replaced_in_test nested_table_hash_replaced_in_test">
     +|                <tr @key=bonsai_path_replaced_in_test>
     +|                  <td>
     +|                    <div class="container_hash_replaced_in_test label_hash_replaced_in_test">  </div>
@@ -2145,13 +2133,13 @@ let%expect_test "regression test: optional groups have keys attached" =
     +|                  </td>
     +|                </tr>
     +|              </table>
-    +|            </td>
-    +|          </tr>
+                  </td>
+                </tr>
                 <tr>
                   <td>
                     <div class="container_hash_replaced_in_test label_hash_replaced_in_test"> three </div>
                   </td>
-                  <td @key=bonsai_path_replaced_in_test>
+                  <td>
                     <input type="checkbox"
                            id="bonsai_path_replaced_in_test"
                            #checked="true"
@@ -2160,9 +2148,7 @@ let%expect_test "regression test: optional groups have keys attached" =
                              margin-left: 0px;
                            }> </input>
                   </td>
-                </tr>
-                <tr>
-                  <td colspan="100"> |}]
+                </tr> |}]
 ;;
 
 let%expect_test "dynamic sexp_grammar form is rendered" =
@@ -2432,7 +2418,7 @@ let%expect_test "customizing a list to have better button text" =
       <tbody>
         <tr>
           <td colspan="2" style={ padding-left: 0em; font-weight: bold; }>
-            <button onclick> add new integer </button>
+            <button type="button" onclick> add new integer </button>
           </td>
         </tr>
       </tbody>
@@ -2480,8 +2466,8 @@ let%expect_test "customizing a list to have better button text" =
           </td>
         </tr>
         <tr>
-          <td colspan="2" style={ padding-left: 0em; font-weight: bold; }>
-            <button onclick> add new integer </button>
+          <td colspan="2" style={ padding-left: 1em; font-weight: bold; }>
+            <button type="button" onclick> add new integer </button>
           </td>
         </tr>
       </tbody>
@@ -2505,11 +2491,13 @@ let%expect_test "customizing a list in a record to have better button text" =
     <table>
       <tbody>
         <tr>
-          <td colspan="2" style={ padding-left: 0em; font-weight: bold; }> a </td>
+          <td colspan="2" style={ padding-left: 1em; font-weight: bold; }>
+            <label style={ display: block; }> a </label>
+          </td>
         </tr>
         <tr>
           <td colspan="2" style={ padding-left: 1em; font-weight: bold; }>
-            <button onclick> add new integer </button>
+            <button type="button" onclick> add new integer </button>
           </td>
         </tr>
       </tbody>
@@ -2524,7 +2512,9 @@ let%expect_test "customizing a list in a record to have better button text" =
     <table>
       <tbody>
         <tr>
-          <td colspan="2" style={ padding-left: 0em; font-weight: bold; }> a </td>
+          <td colspan="2" style={ padding-left: 1em; font-weight: bold; }>
+            <label style={ display: block; }> a </label>
+          </td>
         </tr>
         <tr>
           <td colspan="2" style={ padding-left: 1em; font-weight: bold; }>
@@ -2560,8 +2550,8 @@ let%expect_test "customizing a list in a record to have better button text" =
           </td>
         </tr>
         <tr>
-          <td colspan="2" style={ padding-left: 1em; font-weight: bold; }>
-            <button onclick> add new integer </button>
+          <td colspan="2" style={ padding-left: 2em; font-weight: bold; }>
+            <button type="button" onclick> add new integer </button>
           </td>
         </tr>
       </tbody>

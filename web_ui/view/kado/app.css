@@ -1,17 +1,27 @@
-:root:has(.app) {
-  color-scheme:dark;
-  background: var(--bg, #1a1d21);
-  font-family: 'Inter', sans-serif;
-  accent-color: #1ba1f2;
-}
+@layer kado.app {
+  :root:has(.app) {
+    font-family: 'Inter', sans-serif;
+    accent-color: #1ba1f2;
+  }
 
-:root:has(.app) *::selection {
-  background: #1ba1f2;
-  color: white;
-}
+  :root:has(.app.dark) {
+    color-scheme:dark;
+    background: var(--bg, #1a1d21);
+  }
+  
+  :root:has(.app.light) {
+    color-scheme:light;
+    background: var(--bg, #e5e2de);
+  }
 
-:root:has(.app) *,
-:root:has(.app) *::before,
-:root:has(.app) *::after {
-  box-sizing: border-box;
+  :root:has(.app) *::selection {
+    background: #1ba1f2;
+    color: white;
+  }
+
+  :root:has(.app) *,
+  :root:has(.app) *::before,
+  :root:has(.app) *::after {
+    box-sizing: border-box;
+  }
 }

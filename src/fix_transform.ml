@@ -12,16 +12,17 @@ struct
     let default_c (type a) down acc (computation : a Computation.t)
       : _ * _ * a Computation.t
       =
-      let acc, up, kind =
-        match computation.kind with
+      let acc, up, computation =
+        match computation with
         | Return value ->
           let acc, up, value = User.transform_v down acc value in
           acc, up, Computation.Return value
-        | Leaf1 { model; dynamic_action; apply_action; input; reset } ->
+        | Leaf1 { model; input_id; dynamic_action; apply_action; input; reset } ->
           let acc, up, input = User.transform_v down acc input in
-          acc, up, Leaf1 { model; dynamic_action; apply_action; input; reset }
+          acc, up, Leaf1 { model; input_id; dynamic_action; apply_action; input; reset }
         | Leaf01
             { model
+            ; input_id
             ; dynamic_action
             ; static_action
             ; apply_dynamic
@@ -33,6 +34,7 @@ struct
           let res =
             Computation.Leaf01
               { model
+              ; input_id
               ; dynamic_action
               ; static_action
               ; apply_dynamic
@@ -42,13 +44,11 @@ struct
               }
           in
           acc, up, res
-        | Leaf0 { model; static_action; apply_action; compute; reset } ->
-          acc, empty, Leaf0 { model; static_action; apply_action; compute; reset }
-        | Leaf_incr { model; dynamic_action; input; apply_dynamic; compute; reset } ->
+        | Leaf0 { model; static_action; apply_action; reset } ->
+          acc, empty, Leaf0 { model; static_action; apply_action; reset }
+        | Leaf_incr { input; input_id; compute } ->
           let acc, up, input = User.transform_v down acc input in
-          ( acc
-          , up
-          , Leaf_incr { model; dynamic_action; input; apply_dynamic; compute; reset } )
+          acc, up, Leaf_incr { input; input_id; compute }
         | Model_cutoff t ->
           let acc, up, inner = User.transform_c down acc t in
           acc, up, Model_cutoff inner
@@ -74,7 +74,7 @@ struct
         | Assoc_simpl { map; by } ->
           let acc, up, map = User.transform_v down acc map in
           acc, up, Assoc_simpl { map; by }
-        | Switch { match_; arms } ->
+        | Switch { match_; arms; here } ->
           let acc, up1, match_ = User.transform_v down acc match_ in
           let (acc, upn), arms =
             arms
@@ -84,7 +84,7 @@ struct
               (acc, combine_up up up'), (k, v))
           in
           let arms = Map.of_alist_exn (module Int) arms in
-          acc, upn, Switch { match_; arms }
+          acc, upn, Switch { match_; arms; here }
         | Lazy t ->
           let t =
             Lazy.map t ~f:(fun t ->
@@ -95,6 +95,7 @@ struct
         | Wrap
             { wrapper_model
             ; action_id
+            ; result_id
             ; inject_id
             ; model_id
             ; inner
@@ -106,6 +107,7 @@ struct
             Computation.Wrap
               { wrapper_model
               ; action_id
+              ; result_id
               ; inject_id
               ; model_id
               ; inner
@@ -121,11 +123,8 @@ struct
         | Lifecycle value ->
           let acc, up, value = User.transform_v down acc value in
           acc, up, Lifecycle value
-        | Identity inner ->
-          let acc, up, inner = User.transform_c down acc inner in
-          acc, up, Identity inner
       in
-      acc, up, Proc.wrap_computation kind
+      acc, up, computation
     ;;
 
     let reduce_up l = List.reduce l ~f:combine_up |> Option.value ~default:empty

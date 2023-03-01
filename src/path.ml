@@ -69,26 +69,57 @@ module Elem = struct
   ;;
 end
 
+module A = struct
+  type 'a t =
+    | Stringified of string
+    | Parts of
+        { parent : 'a
+        ; ele : Elem.t
+        }
+end
+
 type t =
-  { items : Elem.t list
-  ; string_repr : string Lazy.t
+  { items_rev : Elem.t Reversed_list.t
+  ; mutable items : Elem.t list Uopt.t
+  ; mutable string_repr : t A.t
   }
 
-let sexp_of_t t = [%sexp_of: Elem.t list] t.items
-let compare a b = [%compare: Elem.t list] a.items b.items
-let empty = { items = []; string_repr = Lazy.return "bonsai_path" }
+let items t =
+  match Uopt.to_option t.items with
+  | Some items -> items
+  | None ->
+    let items = Reversed_list.rev t.items_rev in
+    t.items <- Uopt.some items;
+    items
+;;
+
+let sexp_of_t t = [%sexp_of: Elem.t list] (items t)
+
+let compare a b =
+  if phys_equal a b then 0 else [%compare: Elem.t list] (items a) (items b)
+;;
+
+let empty =
+  { items = Uopt.some []; items_rev = []; string_repr = Stringified "bonsai_path" }
+;;
 
 let append t ele =
-  { items = t.items @ [ ele ]
-  ; string_repr =
-      lazy
-        (let (lazy parent) = t.string_repr in
-         parent ^ "_" ^ Elem.to_string ele)
-  }
+  let items_rev = Reversed_list.(ele :: t.items_rev) in
+  let items = Uopt.none in
+  let string_repr = A.Parts { parent = t; ele } in
+  { items_rev; items; string_repr }
 ;;
 
 include Comparable.Make_plain (struct
     type nonrec t = t [@@deriving compare, sexp_of]
   end)
 
-let to_unique_identifier_string t = Lazy.force t.string_repr
+let rec to_unique_identifier_string t =
+  match t.string_repr with
+  | Stringified s -> s
+  | Parts { ele; parent } ->
+    let parent_s = to_unique_identifier_string parent in
+    let string_repr = parent_s ^ "_" ^ Elem.to_string ele in
+    t.string_repr <- Stringified string_repr;
+    string_repr
+;;

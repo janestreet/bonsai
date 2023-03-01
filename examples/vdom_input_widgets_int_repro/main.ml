@@ -33,7 +33,12 @@ let component =
       ~name:"interger based"
       ~some_constant_value:1000
       ~node_creator:(fun value on_input ->
-        Vdom_input_widgets.Entry.number (module Int) ~value ~on_input ~step:1.)
+        Vdom_input_widgets.Entry.number
+          ~merge_behavior:Legacy_dont_merge
+          (module Int)
+          ~value
+          ~on_input
+          ~step:1.)
   in
   let%sub string_input =
     component
@@ -41,13 +46,15 @@ let component =
       ~name:"string based"
       ~some_constant_value:"hello world"
       ~node_creator:(fun value on_input ->
-        Vdom_input_widgets.Entry.text ~value ~on_input ())
+        Vdom_input_widgets.Entry.text
+          ~merge_behavior:Legacy_dont_merge
+          ~value
+          ~on_input
+          ())
   in
   let%arr number_input = number_input
   and string_input = string_input in
   Vdom.Node.div [ number_input; string_input ]
 ;;
 
-let (_ : _ Start.Handle.t) =
-  Start.start Start.Result_spec.just_the_view ~bind_to_element_with_id:"app" component
-;;
+let () = Bonsai_web.Start.start component

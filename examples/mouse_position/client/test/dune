@@ -1,0 +1,4 @@
+(library (name bonsai_examples_mouse_position_test)
+ (libraries async_kernel bonsai_examples_mouse_position_lib bonsai_web
+  bonsai_web_test core)
+ (preprocess (pps js_of_ocaml-ppx ppx_jane)))

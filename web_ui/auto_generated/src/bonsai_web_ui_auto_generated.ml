@@ -92,9 +92,7 @@ module Customization = struct
               error_hint
                 (let%sub form = recurse first in
                  let%arr form = form in
-                 let view =
-                   Form.View.Private.group (Vdom.Node.text "Key") (Form.view form)
-                 in
+                 let view = Form.View.set_label (Vdom.Node.text "Key") (Form.view form) in
                  Form.Expert.create ~view ~value:(Form.value form) ~set:(Form.set form))
             in
             let%sub second =
@@ -102,13 +100,13 @@ module Customization = struct
                 (let%sub form = recurse second in
                  let%arr form = form in
                  let view =
-                   Form.View.Private.group (Vdom.Node.text "Data") (Form.view form)
+                   Form.View.set_label (Vdom.Node.text "Data") (Form.view form)
                  in
                  Form.Expert.create ~view ~value:(Form.value form) ~set:(Form.set form))
             in
             let%arr first = first
             and second = second in
-            let view = Form.View.Private.List [ Form.view first; Form.view second ] in
+            let view = Form.View.tuple [ Form.view first; Form.view second ] in
             let value =
               match Or_error.both (Form.value first) (Form.value second) with
               | Ok (first, second) -> Ok (Sexp.List [ first; second ])
@@ -139,21 +137,6 @@ module Customization = struct
           transform_key_data_pair
       ;;
 
-      let new_button ~text vdom =
-        match (vdom : Vdom.Node.t) with
-        | Element e ->
-          (* revolting hack: grab the attrs *)
-          let attr = ref Vdom.Attr.empty in
-          let key = Vdom.Node.Element.key e in
-          let (_ : Vdom.Node.Element.t) =
-            Vdom.Node.Element.map_attrs e ~f:(fun a ->
-              attr := a;
-              a)
-          in
-          Some (Vdom.Node.button ?key ~attr:!attr [ Vdom.Node.text text ])
-        | _ -> None
-      ;;
-
       let transform_multiple_button_name
             (with_tag : Sexp_grammar.grammar Sexp_grammar.with_tag Value.t)
             ~(recurse : Sexp_grammar.grammar Value.t -> Sexp.t Form.t Computation.t)
@@ -167,32 +150,20 @@ module Customization = struct
         in
         let%arr form = form
         and text = text in
-        let new_view =
-          let open Option.Let_syntax in
-          let open Form.View.Private in
-          let%bind l =
-            match Form.view form with
-            | List l -> Some l
-            | _ -> None
-          in
-          let%bind last = List.last l
-          and all_but_last = List.drop_last l in
-          let%bind vdom, rebuild =
-            match last with
-            | Group ({ label = Some vdom; _ } as group) ->
-              Some (vdom, fun vdom -> Group { group with label = Some vdom })
-            | Row ({ form = vdom; _ } as row) ->
-              Some (vdom, fun vdom -> Row { row with form = vdom })
-            | _ -> None
-          in
-          let%bind new_vdom = new_button ~text vdom in
-          let new_view = rebuild new_vdom in
-          Some (List (all_but_last @ [ new_view ]))
+        let view =
+          let view = Form.view form in
+          match view.view with
+          | List ({ append_item = Append_info { append; text = None }; _ } as t) ->
+            { view with
+              view =
+                List { t with append_item = Append_info { append; text = Some text } }
+            }
+          | List { append_item = Append_view _; _ }
+          | List { append_item = Append_info { text = Some _; _ }; _ }
+          | Empty | Collapsible _ | Raw _ | Record _ | Variant _ | Tuple _ | Option _ ->
+            view
         in
-        match new_view with
-        | Some view ->
-          Form.Expert.create ~value:(Form.value form) ~set:(Form.set form) ~view
-        | None -> form
+        Form.Expert.create ~value:(Form.value form) ~set:(Form.set form) ~view
       ;;
 
       let transform_multiple_button_name =
@@ -563,7 +534,7 @@ let project_to_sexp
 
 let maybe_set_tooltip doc view =
   match doc with
-  | Some str -> Form.View.Private.set_tooltip (Vdom.Node.text str) view
+  | Some str -> Form.View.set_tooltip (Vdom.Node.text str) view
   | None -> view
 ;;
 
@@ -624,40 +595,62 @@ let form
         ~apply_action:(fun ~inject:_ ~schedule_event (_, inner) () sexp ->
           schedule_event (Form.set inner sexp))
         ~f:(fun (_ : unit Value.t) inject_outer ->
-          let%sub outer = E.Checkbox.bool ~default:false () in
+          let%sub outer, set_outer = Bonsai.state (module Bool) ~default_model:false in
+          let%sub toggle_view =
+            let%sub path = Bonsai.path_id in
+            let%arr outer = outer
+            and set_outer = set_outer
+            and path = path in
+            E.Checkbox.Private.make_input
+              ~id:(Vdom.Attr.id path)
+              ~extra_attrs:[]
+              ~state:outer
+              ~set_state:set_outer
+          in
           let%sub inner =
-            match%sub outer >>| Form.value_or_default ~default:false with
+            match%sub outer with
             | false -> Bonsai.const (Form.return (Sexp.List []))
             | true -> grammar_form grammar
           in
-          let%arr inner = inner
-          and outer = outer
-          and inject_outer = inject_outer in
-          let view =
-            match Form.value_or_default outer ~default:false with
-            | false -> Form.view outer
+          let%sub inner_value = Bonsai.pure Form.value inner in
+          let%sub view =
+            match%sub outer with
+            | false ->
+              let%arr toggle_view = toggle_view in
+              Form.View.option ~toggle:toggle_view ~status:(Currently_none None)
             | true ->
-              Form.View.Private.Header_group
-                { view = Form.view inner
-                ; header_view = Form.view outer
-                ; label = None
-                ; tooltip = None
-                ; error = None
-                }
+              let%arr toggle_view = toggle_view
+              and inner = inner in
+              Form.View.option
+                ~toggle:toggle_view
+                ~status:(Currently_some (Form.view inner))
           in
-          let value =
-            match Or_error.both (Form.value outer) (Form.value inner) with
-            | Ok (outer, inner) ->
-              if outer then Ok (Sexp.List [ inner ]) else Ok (Sexp.List [])
-            | Error _ as err -> err
+          let%sub value =
+            match%sub outer with
+            | false -> Bonsai.const (Ok (Sexp.List []))
+            | true ->
+              (match%sub inner_value with
+               | Ok inner ->
+                 let%arr inner = inner in
+                 Ok (Sexp.List [ inner ])
+               | Error err ->
+                 let%arr err = err in
+                 Error err)
           in
-          let set = function
-            | Sexp.List [] | Atom "None" | Atom "none" -> Form.set outer false
+          let%sub set =
+            let%arr set_outer = set_outer
+            and inject_outer = inject_outer in
+            function
+            | Sexp.List [] | Atom "None" | Atom "none" -> set_outer false
             | List [ a ] | List [ Atom ("Some" | "some"); a ] ->
-              Effect.Many [ Form.set outer true; inject_outer a ]
+              Effect.Many [ set_outer true; inject_outer a ]
             | _ as sexp ->
               on_set_error [%message "expected option sexp, but got" (sexp : Sexp.t)]
           in
+          let%arr view = view
+          and value = value
+          and set = set
+          and inner = inner in
           Form.Expert.create ~view ~value ~set, inner)
     in
     return form
@@ -683,12 +676,44 @@ let form
             let just_the_names = List.map clauses ~f:(fun clause -> clause.name) in
             just_the_names, as_map
           in
-          let%sub outer =
-            E.Dropdown.list
-              ~init:`Empty
-              ~to_string:(Form.View.Private.sexp_to_pretty_string [%sexp_of: string])
-              (module String)
-              clauses_names
+          let%sub outer, set_outer, outer_view =
+            let open E.Dropdown.Private in
+            let module Opt = struct
+              type t = string Opt.t [@@deriving sexp, equal]
+
+              let to_option = Opt.to_option
+            end
+            in
+            let%sub outer, set_outer =
+              Bonsai.state (module Opt) ~default_model:Uninitialized
+            in
+            let%sub path = Bonsai.path_id in
+            let%sub view =
+              let%arr path = path
+              and outer = outer
+              and set_outer = set_outer
+              and clause_names = clauses_names in
+              make_input
+                ~to_string:(Form.View.sexp_to_pretty_string [%sexp_of: string])
+                (module String)
+                ~id:(Vdom.Attr.id path)
+                ~include_empty:true
+                ~default_value:None
+                ~state:outer
+                ~set_state:set_outer
+                ~all:clause_names
+                ~extra_attrs:
+                  [ Vdom.Attr.style (Css_gen.width (`Percent (Percent.of_mult 1.))) ]
+                ~extra_option_attrs:(Fn.const [])
+            in
+            let%arr outer = outer
+            and set_outer = set_outer
+            and view = view in
+            ( Opt.to_option outer
+            , (function
+                | None -> set_outer Explicitly_none
+                | Some outer -> set_outer (Set outer))
+            , view )
           in
           let%sub clauses_forms =
             Bonsai.assoc
@@ -699,10 +724,10 @@ let form
                 let%sub is_active =
                   let%arr outer = outer
                   and name = name in
-                  match Form.value outer with
-                  | Error _ -> false
-                  | Ok clause_name when String.equal clause_name name -> true
-                  | Ok _ -> false
+                  match outer with
+                  | None -> false
+                  | Some clause_name when String.equal clause_name name -> true
+                  | Some _ -> false
                 in
                 if%sub is_active
                 then (
@@ -715,36 +740,41 @@ let form
           let%sub inner =
             let%arr outer = outer
             and clauses_forms = clauses_forms in
-            match outer |> Form.value with
-            | Error _ -> Form.return (Sexp.List [])
-            | Ok selected_name ->
+            match outer with
+            | None -> Form.return (Sexp.List [])
+            | Some selected_name ->
               (match Map.find clauses_forms selected_name with
                | Some form -> form
                | None ->
-                 {| BUG: auto-generated forms could not find a form with the selected variant name|}
+                 {| BUG: auto-generated forms could not find a form with the selected variant name |}
                  |> Error.of_string
                  |> Form.return_error)
           in
-          let%arr inner = inner
-          and outer = outer
-          and inject_outer = inject_outer
-          and clauses = clauses in
-          let view =
-            Form.View.Private.Header_group
-              { label = None
-              ; tooltip = None
-              ; header_view = Form.view outer
-              ; view = Form.view inner
-              ; error = None
-              }
+          let%sub view =
+            match%sub outer with
+            | None ->
+              let%arr outer_view = outer_view in
+              Form.View.variant ~clause_selector:outer_view ~selected_clause:None
+            | Some clause_name ->
+              let%arr clause_name = clause_name
+              and outer_view = outer_view
+              and inner = inner in
+              Form.View.variant
+                ~clause_selector:outer_view
+                ~selected_clause:(Some { clause_name; clause_view = Form.view inner })
           in
-          let set = function
+          let%sub set =
+            let%arr clauses = clauses
+            and set_outer = set_outer
+            and inject_outer = inject_outer in
+            function
             | Sexp.List (Sexp.Atom clause_name :: args) ->
               (match
                  List.find clauses ~f:(fun clause -> String.equal clause.name clause_name)
                with
                | Some clause ->
-                 Effect.Many [ Form.set outer clause.name; inject_outer (Sexp.List args) ]
+                 Effect.Many
+                   [ set_outer (Some clause.name); inject_outer (Sexp.List args) ]
                | None ->
                  on_set_error
                    [%message
@@ -754,7 +784,7 @@ let form
               (match
                  List.find clauses ~f:(fun clause -> String.equal clause.name clause_name)
                with
-               | Some clause -> Form.set outer clause.name
+               | Some clause -> set_outer (Some clause.name)
                | None ->
                  on_set_error
                    [%message
@@ -764,15 +794,22 @@ let form
               on_set_error
                 [%message "unexpected format while setting a clause form" (sexp : Sexp.t)]
           in
-          let value =
-            match Or_error.both (Form.value outer) (Form.value inner) with
-            | Ok (clause_name, Sexp.List []) -> Ok (Sexp.Atom clause_name)
-            | Ok (clause_name, Sexp.List args) ->
+          let%sub value =
+            let%arr outer = outer
+            and inner = inner in
+            match outer, Form.value inner with
+            | Some clause_name, Ok (Sexp.List []) -> Ok (Sexp.Atom clause_name)
+            | Some clause_name, Ok (Sexp.List args) ->
               Ok (Sexp.List (Sexp.Atom clause_name :: args))
-            | Ok (_, sexp) ->
+            | Some _, Ok sexp ->
               Or_error.error_s [%message "invalid sexp encountered" (sexp : Sexp.t)]
-            | Error _ as err -> err
+            | None, _ -> Or_error.error_s [%message "a value is required"]
+            | _, (Error _ as err) -> err
           in
+          let%arr view = view
+          and value = value
+          and set = set
+          and inner = inner in
           Form.Expert.create ~view ~value ~set, inner)
     in
     return form
@@ -788,57 +825,11 @@ let form
       | Cons _ -> true
       | Empty | Many _ | Fields _ -> false
     in
-    let rec annotate_with_ordinals (grammar : Sexp_grammar.list_grammar Value.t) ~depth =
+    let rec annotate_with_ordinals (grammar : Sexp_grammar.list_grammar Value.t) ~depth
+      : (Sexp.t Or_error.t * (Sexp.t -> unit Effect.t) * Form.View.t list) Computation.t
+      =
       match%sub grammar with
-      | Empty -> Bonsai.const (Form.return (Sexp.List []))
-      | Cons (g, rest) ->
-        let%sub g_form = grammar_form g in
-        let%sub rest_form =
-          Bonsai.lazy_ (lazy (annotate_with_ordinals rest ~depth:(depth + 1)))
-        in
-        let%sub g_form =
-          match%sub should_annotate_with_ordinals with
-          | false -> return g_form
-          | true ->
-            error_hint
-              (let%arr g_form = g_form in
-               let view =
-                 Form.View.Private.Group
-                   { view = Form.view g_form
-                   ; label = Some (Vdom.Node.text (Ordinal_abbreviation.to_string depth))
-                   ; tooltip = None
-                   ; error = None
-                   }
-               in
-               Form.Expert.create ~view ~value:(Form.value g_form) ~set:(Form.set g_form))
-        in
-        let%arr g_form = g_form
-        and rest_form = rest_form
-        and grammar = grammar in
-        let value =
-          let%bind.Or_error g = Form.value g_form
-          and rest = Form.value rest_form in
-          match rest with
-          | Sexp.Atom _ as atom ->
-            Or_error.error_s
-              [%message
-                "got unexpected atom for list grammar"
-                  (grammar : Sexp_grammar.list_grammar)
-                  (atom : Sexp.t)]
-          | List l -> Ok (Sexp.List (g :: l))
-        in
-        let set = function
-          | Sexp.List (g :: rest) ->
-            Effect.Many [ Form.set g_form g; Form.set rest_form (Sexp.List rest) ]
-          | sexp ->
-            on_set_error
-              [%message
-                "attempted to set atom into list grammar"
-                  (grammar : Sexp_grammar.list_grammar)
-                  (sexp : Sexp.t)]
-        in
-        let view = Form.View.Private.concat (Form.view g_form) (Form.view rest_form) in
-        Form.Expert.create ~view ~value ~set
+      | Empty -> Bonsai.const (Ok (Sexp.List []), (fun _ -> Effect.Ignore), [])
       | Many grammar ->
         let%map.Computation list_form = grammar_form grammar |> E.Multiple.list in
         let view = Form.view list_form in
@@ -852,10 +843,68 @@ let form
             on_set_error
               [%message "attempted to set atom into list grammar" (atom : Sexp.t)]
         in
-        Form.Expert.create ~view ~value ~set
-      | Fields f -> fields_grammar_form f
+        value, set, [ view ]
+      | Fields fields -> fields_grammar_form fields
+      | Cons (g, rest) ->
+        let%sub g_form = grammar_form g in
+        let%sub rest_value, rest_set, rest_views =
+          Bonsai.lazy_ (lazy (annotate_with_ordinals rest ~depth:(depth + 1)))
+        in
+        let%sub g_form =
+          match%sub should_annotate_with_ordinals with
+          | false -> return g_form
+          | true ->
+            error_hint
+              (let%arr g_form = g_form in
+               Form.label (Ordinal_abbreviation.to_string depth) g_form)
+        in
+        let%sub value =
+          let%arr g_form = g_form
+          and rest_value = rest_value
+          and grammar = grammar in
+          let%bind.Or_error g = Form.value g_form
+          and rest = rest_value in
+          match rest with
+          | Sexp.Atom _ as atom ->
+            Or_error.error_s
+              [%message
+                "got unexpected atom for list grammar"
+                  (grammar : Sexp_grammar.list_grammar)
+                  (atom : Sexp.t)]
+          | List l -> Ok (Sexp.List (g :: l))
+        in
+        let%sub set =
+          let%arr g_form = g_form
+          and rest_set = rest_set
+          and grammar = grammar in
+          function
+          | Sexp.List (g :: rest) ->
+            Effect.Many [ Form.set g_form g; rest_set (Sexp.List rest) ]
+          | sexp ->
+            on_set_error
+              [%message
+                "attempted to set atom into list grammar"
+                  (grammar : Sexp_grammar.list_grammar)
+                  (sexp : Sexp.t)]
+        in
+        let%sub views =
+          let%arr rest_views = rest_views
+          and g_form = g_form in
+          Form.view g_form :: rest_views
+        in
+        let%arr value = value
+        and views = views
+        and set = set in
+        value, set, views
     in
-    annotate_with_ordinals grammar ~depth:1
+    let%map.Computation value, set, views = annotate_with_ordinals grammar ~depth:1 in
+    let view =
+      match views with
+      | [] -> Form.View.empty
+      | [ single ] -> single
+      | _ -> Form.View.tuple views
+    in
+    Form.Expert.create ~value ~set ~view
   and optional_field_grammar_form (args : Sexp_grammar.list_grammar Value.t) =
     let%sub form, _ =
       Bonsai.wrap
@@ -869,13 +918,14 @@ let form
           let%sub override, set_override =
             Bonsai.state (module Bool) ~default_model:false
           in
-          let%sub label =
+          let%sub toggle =
             let%arr override = override
             and set_override = set_override
             and args = args in
             match args with
             | Empty ->
               Vdom_input_widgets.Checkbox.simple
+                ~merge_behavior:Legacy_dont_merge
                 ~is_checked:override
                 ~label:""
                 ~on_toggle:(set_override (not override))
@@ -900,28 +950,15 @@ let form
                 (Form.return_error (Error.of_string "unreachable auto-gen code"))
             | true -> list_grammar_form args
           in
-          let%sub path = Bonsai.path_id in
           let%arr override = override
           and set_override = set_override
-          and label = label
-          and path = path
+          and toggle = toggle
           and inject_outer = inject_outer
           and inner = inner in
-          let label_as_view =
-            Form.View.Private.Row
-              { label = None; tooltip = None; error = None; form = label; id = path }
-          in
           let view =
             match override with
-            | false -> label_as_view
-            | true ->
-              Form.View.Private.Header_group
-                { error = None
-                ; tooltip = None
-                ; label = None
-                ; view = Form.view inner
-                ; header_view = label_as_view
-                }
+            | false -> Form.View.option ~toggle ~status:(Currently_none None)
+            | true -> Form.View.option ~toggle ~status:(Currently_some (Form.view inner))
           in
           let value =
             match override with
@@ -992,12 +1029,10 @@ let form
       and original_field_order = original_field_order in
       List.map original_field_order ~f:(fun field_name ->
         let form, `Required _, `Doc doc = Map.find_exn forms field_name in
-        form
-        |> Form.view
-        |> Form.View.Private.group_list
-        |> Form.View.Private.suggest_label (N.text field_name)
-        |> maybe_set_tooltip doc)
-      |> Form.View.Private.List
+        { Form.View.field_view = form |> Form.view |> maybe_set_tooltip doc
+        ; field_name
+        })
+      |> Form.View.record
     in
     let%sub set =
       let%arr forms = forms
@@ -1050,7 +1085,7 @@ let form
     let%arr value = value
     and view = view
     and set = set in
-    Form.Expert.create ~value ~view ~set
+    value, set, [ view ]
   and with_tag_form (with_tag : Sexp_grammar.grammar Sexp_grammar.with_tag Value.t) =
     let%sub customization_to_use =
       let%arr with_tag = with_tag in
@@ -1124,7 +1159,7 @@ let view_as_vdom ?on_submit ?editable form =
       on_submit
       ~f:(fun { Form.Submit.f; handle_enter; button_text; button_attr } ->
         let on_submit = Form.value form |> Result.ok |> Option.map ~f in
-        { Form.View.Private.on_submit; handle_enter; button_text; button_attr })
+        { Form.View.on_submit; handle_enter; button_text; button_attr })
   in
-  Form.View.to_vdom ?on_submit ?editable ~custom:Render_form.to_vdom (Form.view form)
+  Render_form.to_vdom ?on_submit ?editable (Form.view form)
 ;;

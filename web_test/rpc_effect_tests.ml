@@ -124,7 +124,7 @@ let%expect_test "previous version of a babel RPC" =
   Deferred.unit
 ;;
 
-let incrementing_polling_state_rpc_implementation () =
+let incrementing_polling_state_rpc_implementation ?block_on () =
   let count = ref 0 in
   Rpc.Implementation.lift
     ~f:(fun connection -> connection, connection)
@@ -133,7 +133,13 @@ let incrementing_polling_state_rpc_implementation () =
        ~on_client_and_server_out_of_sync:
          (Expect_test_helpers_core.print_s ~hide_positions:true)
        ~for_first_request:(fun _ query ->
+         let%bind () =
+           match block_on with
+           | Some bvar -> Bvar.wait bvar
+           | None -> return ()
+         in
          print_s [%message "For first request" (query : int)];
+         incr count;
          return (query * !count))
        (fun _ query ->
           incr count;
@@ -153,11 +159,11 @@ let%expect_test "polling_state_rpc" =
   let%bind () = async_do_actions handle [ 1 ] in
   [%expect {|
     ("For first request" (query 1))
-    (Ok 0) |}];
+    (Ok 1) |}];
   let%bind () = async_do_actions handle [ 1 ] in
   [%expect {|
-    ("Computing diff" (from 0) (to_ 1))
-    (Ok 1) |}];
+    ("Computing diff" (from 1) (to_ 2))
+    (Ok 2) |}];
   Deferred.unit
 ;;
 
@@ -201,19 +207,19 @@ let%expect_test "multiple polling_state_rpc" =
   let%bind () = async_do_actions handle [ 1 ] in
   [%expect {|
     ("For first request" (query 1))
-    (Ok 0) |}];
+    (Ok 1) |}];
   let%bind () = async_do_actions handle [ 2 ] in
   [%expect {|
     ("For first request" (query 2))
-    (Ok 0) |}];
+    (Ok 4) |}];
   let%bind () = async_do_actions handle [ 10 ] in
   [%expect {|
     ("For first request" (query 10))
-    (Ok 0) |}];
+    (Ok 30) |}];
   let%bind () = async_do_actions handle [ 10 ] in
   [%expect {|
-    ("Computing diff" (from 0) (to_ 10))
-    (Ok 10) |}];
+    ("Computing diff" (from 30) (to_ 40))
+    (Ok 40) |}];
   Bonsai.Var.update map_var ~f:(fun map -> Map.remove map 10);
   Handle.recompute_view handle;
   let%bind () = async_do_actions handle [ 10 ] in
@@ -226,7 +232,7 @@ let%expect_test "multiple polling_state_rpc" =
   let%bind () = async_do_actions handle [ 10 ] in
   [%expect {|
     ("For first request" (query 10))
-    (Ok 10) |}];
+    (Ok 50) |}];
   Deferred.unit
 ;;
 
@@ -451,7 +457,7 @@ let%expect_test "disconnect and re-connect with polling_state_rpc" =
   let%bind () = async_do_actions handle [ 1 ] in
   [%expect {|
     ("For first request" (query 1))
-    (Ok 0) |}];
+    (Ok 1) |}];
   let%bind () =
     let connection = Option.value_exn (Conn.current_connection connection) in
     let%bind () = Rpc.Connection.close connection in
@@ -461,7 +467,7 @@ let%expect_test "disconnect and re-connect with polling_state_rpc" =
   let%bind () = async_do_actions handle [ 2 ] in
   [%expect {|
     ("For first request" (query 2))
-    (Ok 0) |}];
+    (Ok 4) |}];
   return ()
 ;;
 
@@ -632,11 +638,7 @@ let%test_module "Status.state" =
       [%expect {| () |}];
       let%bind () = kill_connection connection in
       Handle.show handle;
-      [%expect
-        {|
-        ("an action inside of Bonsai.switch has been dropped because the computation is no longer active"
-         (index 1) (action (Set (Disconnected Rpc.Connection.close))))
-        () |}];
+      [%expect {| () |}];
       Bonsai.Var.set is_active true;
       Handle.show handle;
       [%expect
@@ -678,11 +680,8 @@ let%test_module "Status.state" =
       Handle.show handle;
       let%bind () = Async_kernel_scheduler.yield_until_no_jobs_remain () in
       Handle.show handle;
-      [%expect
-        {|
+      [%expect {|
         ()
-        ("an action inside of Bonsai.switch has been dropped because the computation is no longer active"
-         (index 1) (action (Set Connected)))
         () |}];
       Bonsai.Var.set is_active true;
       Handle.show handle;
@@ -711,13 +710,23 @@ let%test_module "Status.state" =
   end)
 ;;
 
+let async_show handle =
+  Handle.show handle;
+  Async_kernel_scheduler.yield_until_no_jobs_remain ()
+;;
+
+let async_recompute_view handle =
+  Handle.recompute_view handle;
+  Async_kernel_scheduler.yield_until_no_jobs_remain ()
+;;
+
+let async_show_diff handle =
+  Handle.show_diff ~diff_context:0 handle;
+  Async_kernel_scheduler.yield_until_no_jobs_remain ()
+;;
+
 let%test_module "Polling_state_rpc.poll" =
   (module struct
-    let async_show handle =
-      Handle.show handle;
-      Async_kernel_scheduler.yield_until_no_jobs_remain ()
-    ;;
-
     let%expect_test "basic usage" =
       let input_var = Bonsai.Var.create 1 in
       let computation =
@@ -734,38 +743,50 @@ let%test_module "Polling_state_rpc.poll" =
           ~rpc_implementations:[ incrementing_polling_state_rpc_implementation () ]
           (Result_spec.sexp
              (module struct
-               type t = (int, int) Rpc_effect.Polling_state_rpc.Result.t [@@deriving sexp]
+               type t = (int, int) Rpc_effect.Poll_result.t [@@deriving sexp_of]
              end))
           computation
       in
       let%bind () = async_show handle in
       (* Initially, there is no response, but initial request got sent. *)
-      [%expect {|
-        No_responses_yet
+      [%expect
+        {|
+        ((last_ok_response ()) (last_error ()) (inflight_query ())
+         (refresh <opaque>))
         ("For first request" (query 1)) |}];
       let%bind () = async_show handle in
       (* Because the clock triggers on activate, the next frame both receives the
          first request's response and also sets off the first polling request. *)
       [%expect
         {|
-         (Last_response_was_ok (query 1) (response 0))
-         ("Computing diff" (from 0) (to_ 1)) |}];
+         ((last_ok_response ((1 1))) (last_error ()) (inflight_query ())
+          (refresh <opaque>)) |}];
       let%bind () = async_show handle in
-      (* The result stays steady this frame, and not new requests are sent off. *)
-      [%expect {| (Last_response_was_ok (query 1) (response 1)) |}];
+      (* The result stays steady this frame, and no new requests are sent off. *)
+      [%expect
+        {|
+        ((last_ok_response ((1 1))) (last_error ()) (inflight_query ())
+         (refresh <opaque>)) |}];
       Handle.advance_clock_by handle (Time_ns.Span.of_sec 1.0);
       let%bind () = async_show handle in
       (* After waiting a second, apparently the clock loop needs another frame
          to realize that its time is up. *)
-      [%expect {| (Last_response_was_ok (query 1) (response 1)) |}];
+      [%expect
+        {|
+        ((last_ok_response ((1 1))) (last_error ()) (inflight_query ())
+         (refresh <opaque>)) |}];
       let%bind () = async_show handle in
       (* But it eventually causes the next polling request to be sent. *)
       [%expect
         {|
-         (Last_response_was_ok (query 1) (response 1))
+         ((last_ok_response ((1 1))) (last_error ()) (inflight_query (1))
+          (refresh <opaque>))
          ("Computing diff" (from 1) (to_ 2)) |}];
       let%bind () = async_show handle in
-      [%expect {| (Last_response_was_ok (query 1) (response 2)) |}];
+      [%expect
+        {|
+        ((last_ok_response ((1 2))) (last_error ()) (inflight_query ())
+         (refresh <opaque>)) |}];
       Bonsai.Var.set input_var 2;
       let%bind () = async_show handle in
       (* We also trigger poll requests on query changes. Observe that the
@@ -773,11 +794,144 @@ let%test_module "Polling_state_rpc.poll" =
          in this case is different from the current query. *)
       [%expect
         {|
-         (Last_response_was_ok (query 1) (response 2))
+         ((last_ok_response ((1 2))) (last_error ()) (inflight_query ())
+          (refresh <opaque>))
          ("For first request" (query 2))
-         ("Computing diff" (from 2) (to_ 4)) |}];
+         ("Computing diff" (from 2) (to_ 6)) |}];
       let%bind () = async_show handle in
-      [%expect {| (Last_response_was_ok (query 2) (response 4)) |}];
+      [%expect
+        {|
+        ((last_ok_response ((2 6))) (last_error ()) (inflight_query ())
+         (refresh <opaque>)) |}];
+      Deferred.unit
+    ;;
+
+    let%expect_test "scheduling refresh effect" =
+      let input_var = Bonsai.Var.create 1 in
+      let computation =
+        Rpc_effect.Polling_state_rpc.poll
+          (module Int)
+          (module Int)
+          polling_state_rpc
+          ~where_to_connect:Self
+          ~every:(Time_ns.Span.of_sec 1.0)
+          (Bonsai.Var.value input_var)
+      in
+      let bvar = Async_kernel.Bvar.create () in
+      let handle =
+        Handle.create
+          ~rpc_implementations:
+            [ incrementing_polling_state_rpc_implementation ~block_on:bvar () ]
+          (module struct
+            type t = (int, int) Rpc_effect.Poll_result.t [@@deriving sexp_of]
+            type incoming = unit
+
+            let view status = Sexp.to_string ([%sexp_of: t] status)
+            let incoming (status : t) () = status.refresh
+          end)
+          computation
+      in
+      let%bind () = async_show handle in
+      (* On page load; sends rpc request.*)
+      [%expect
+        {|
+          ((last_ok_response())(last_error())(inflight_query())(refresh <opaque>)) |}];
+      Bvar.broadcast bvar ();
+      let%bind () = async_show_diff handle in
+      [%expect
+        {|
+        -|((last_ok_response())(last_error())(inflight_query())(refresh <opaque>))
+        +|((last_ok_response())(last_error())(inflight_query(1))(refresh <opaque>))
+        ("For first request" (query 1)) |}];
+      let%bind () = async_show_diff handle in
+      (* First response is received. *)
+      [%expect
+        {|
+        -|((last_ok_response())(last_error())(inflight_query(1))(refresh <opaque>))
+        +|((last_ok_response((1 1)))(last_error())(inflight_query())(refresh <opaque>)) |}];
+      Bvar.broadcast bvar ();
+      let%bind () = async_show_diff handle in
+      Bvar.broadcast bvar ();
+      let%bind () = async_show_diff handle in
+      Bvar.broadcast bvar ();
+      let%bind () = async_show_diff handle in
+      Bvar.broadcast bvar ();
+      let%bind () = async_show_diff handle in
+      Handle.do_actions handle [ () ];
+      let%bind () = async_show_diff handle in
+      [%expect
+        {|
+        -|((last_ok_response((1 1)))(last_error())(inflight_query())(refresh <opaque>))
+        +|((last_ok_response((1 1)))(last_error())(inflight_query(1))(refresh <opaque>))
+        ("Computing diff" (from 1) (to_ 2)) |}];
+      Bvar.broadcast bvar ();
+      let%bind () = async_show_diff handle in
+      [%expect
+        {|
+        -|((last_ok_response((1 1)))(last_error())(inflight_query(1))(refresh <opaque>))
+        +|((last_ok_response((1 2)))(last_error())(inflight_query())(refresh <opaque>)) |}];
+      let%bind () = async_show_diff handle in
+      [%expect {| |}];
+      (* Doing two actions in a row does not dispatch RPC twice. *)
+      Handle.do_actions handle [ (); () ];
+      let%bind () = async_show_diff handle in
+      [%expect
+        {|
+        -|((last_ok_response((1 2)))(last_error())(inflight_query())(refresh <opaque>))
+        +|((last_ok_response((1 2)))(last_error())(inflight_query(1))(refresh <opaque>))
+        ("Computing diff" (from 2) (to_ 3)) |}];
+      let%bind () = async_show_diff handle in
+      Bvar.broadcast bvar ();
+      [%expect
+        {|
+        -|((last_ok_response((1 2)))(last_error())(inflight_query(1))(refresh <opaque>))
+        +|((last_ok_response((1 3)))(last_error())(inflight_query())(refresh <opaque>)) |}];
+      let%bind () = async_show_diff handle in
+      [%expect {| |}];
+      return ()
+    ;;
+
+    let%expect_test "basic usage incrementing query ids" =
+      (* Like the basic usage test, but the query changes on each response, to observe
+         the behavior of the [inflight_request] field.*)
+      let input_var = Bonsai.Var.create 1 in
+      let computation =
+        Rpc_effect.Polling_state_rpc.poll
+          (module Int)
+          (module Int)
+          polling_state_rpc
+          ~where_to_connect:Self
+          ~every:(Time_ns.Span.of_sec 1.0)
+          (Bonsai.Var.value input_var)
+      in
+      let handle =
+        Handle.create
+          ~rpc_implementations:[ incrementing_polling_state_rpc_implementation () ]
+          (Result_spec.sexp
+             (module struct
+               type t = (int, int) Rpc_effect.Poll_result.t [@@deriving sexp_of]
+             end))
+          computation
+      in
+      let%bind () = async_show handle in
+      [%expect
+        {|
+        ((last_ok_response ()) (last_error ()) (inflight_query ())
+         (refresh <opaque>))
+        ("For first request" (query 1)) |}];
+      Bonsai.Var.set input_var 2;
+      let%bind () = async_show handle in
+      [%expect
+        {|
+         ((last_ok_response ((1 1))) (last_error ()) (inflight_query ())
+          (refresh <opaque>))
+         ("For first request" (query 2))
+         ("Computing diff" (from 1) (to_ 4)) |}];
+      let%bind () = async_show handle in
+      [%expect
+        {|
+        ((last_ok_response ((2 4))) (last_error ()) (inflight_query ())
+         (refresh <opaque>)) |}];
       Deferred.unit
     ;;
 
@@ -822,45 +976,70 @@ let%test_module "Polling_state_rpc.poll" =
           ~rpc_implementations:[ every_other_error_polling_state_rpc_implementation () ]
           (Result_spec.sexp
              (module struct
-               type t = (int, int) Rpc_effect.Polling_state_rpc.Result.t [@@deriving sexp]
+               type t = (int, int) Rpc_effect.Poll_result.t [@@deriving sexp_of]
              end))
           computation
       in
       let%bind () = async_show handle in
-      [%expect {| No_responses_yet |}];
+      [%expect
+        {|
+        ((last_ok_response ()) (last_error ()) (inflight_query ())
+         (refresh <opaque>)) |}];
       let%bind () = async_show handle in
       [%expect
         {|
-         (Error_before_any_ok_responses
-          (error
-           ((rpc_error
-             (Uncaught_exn
-              ((location "server-side rpc computation")
-               (exn (monitor.ml.Error ("Error response" (query 1)))))))
-            (connection_description <created-directly>) (rpc_name polling_state_rpc_a)
-            (rpc_version 0)))
-          (query 1)) |}];
-      let%bind () = async_show handle in
-      [%expect {| (Last_response_was_ok (query 1) (response 0)) |}];
+         ((last_ok_response ())
+          (last_error
+           ((1
+             ((rpc_error
+               (Uncaught_exn
+                ((location "server-side rpc computation")
+                 (exn (monitor.ml.Error ("Error response" (query 1)))))))
+              (connection_description <created-directly>)
+              (rpc_name polling_state_rpc_a) (rpc_version 0)))))
+          (inflight_query ()) (refresh <opaque>)) |}];
       Bonsai.Var.set input_var 2;
       let%bind () = async_show handle in
-      [%expect {| (Last_response_was_ok (query 1) (response 0)) |}];
+      [%expect
+        {|
+        ((last_ok_response ())
+         (last_error
+          ((1
+            ((rpc_error
+              (Uncaught_exn
+               ((location "server-side rpc computation")
+                (exn (monitor.ml.Error ("Error response" (query 1)))))))
+             (connection_description <created-directly>)
+             (rpc_name polling_state_rpc_a) (rpc_version 0)))))
+         (inflight_query ()) (refresh <opaque>)) |}];
       let%bind () = async_show handle in
       [%expect
         {|
-        (Error_after_last_ok_response (query 2)
-         (error
-          ((rpc_error
-            (Uncaught_exn
-             ((location "server-side rpc computation")
-              (exn (monitor.ml.Error ("Error response" (query 2)))))))
-           (connection_description <created-directly>) (rpc_name polling_state_rpc_a)
-           (rpc_version 0)))
-         (last_ok_query 1) (last_ok_response 0)) |}];
+        ((last_ok_response ((2 0))) (last_error ()) (inflight_query ())
+         (refresh <opaque>)) |}];
+      Bonsai.Var.set input_var 3;
+      let%bind () = async_show handle in
+      [%expect
+        {|
+        ((last_ok_response ((2 0))) (last_error ()) (inflight_query ())
+         (refresh <opaque>)) |}];
+      let%bind () = async_show handle in
+      [%expect
+        {|
+        ((last_ok_response ((2 0)))
+         (last_error
+          ((3
+            ((rpc_error
+              (Uncaught_exn
+               ((location "server-side rpc computation")
+                (exn (monitor.ml.Error ("Error response" (query 3)))))))
+             (connection_description <created-directly>)
+             (rpc_name polling_state_rpc_a) (rpc_version 0)))))
+         (inflight_query ()) (refresh <opaque>)) |}];
       Deferred.unit
     ;;
 
-    let%expect_test "multiple pollers from, clear on deactivate (on by default)" =
+    let%expect_test "multiple pollers, clear on deactivate (on by default)" =
       let map_var = Bonsai.Var.create (Int.Map.of_alist_exn [ 1, (); 2, (); 10, () ]) in
       let map = Bonsai.Var.value map_var in
       let computation =
@@ -881,65 +1060,105 @@ let%test_module "Polling_state_rpc.poll" =
           ~rpc_implementations:[ incrementing_polling_state_rpc_implementation () ]
           (Result_spec.sexp
              (module struct
-               type t = (int, int) Rpc_effect.Polling_state_rpc.Result.t Int.Map.t
-               [@@deriving sexp]
+               type t = (int, int) Rpc_effect.Poll_result.t Int.Map.t [@@deriving sexp_of]
              end))
           computation
       in
       let%bind () = async_show handle in
       [%expect
         {|
-        ((1 No_responses_yet) (2 No_responses_yet) (10 No_responses_yet))
+        ((1
+          ((last_ok_response ()) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (2
+          ((last_ok_response ()) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (10
+          ((last_ok_response ()) (last_error ()) (inflight_query ())
+           (refresh <opaque>))))
         ("For first request" (query 2))
         ("For first request" (query 1))
         ("For first request" (query 10)) |}];
       let%bind () = async_show handle in
+      (* NOTE: The order of the response is [2 -> 1 -> 10] hence the response of [1] and
+         [2] are the same because  [2 * 1] = [1 * 2].*)
       [%expect
         {|
-         ((1 (Last_response_was_ok (query 1) (response 0)))
-          (2 (Last_response_was_ok (query 2) (response 0)))
-          (10 (Last_response_was_ok (query 10) (response 0))))
-         ("Computing diff" (from 0) (to_ 1))
-         ("Computing diff" (from 0) (to_ 4))
-         ("Computing diff" (from 0) (to_ 30)) |}];
+         ((1
+           ((last_ok_response ((1 2))) (last_error ()) (inflight_query ())
+            (refresh <opaque>)))
+          (2
+           ((last_ok_response ((2 2))) (last_error ()) (inflight_query ())
+            (refresh <opaque>)))
+          (10
+           ((last_ok_response ((10 30))) (last_error ()) (inflight_query ())
+            (refresh <opaque>)))) |}];
       let%bind () = async_show handle in
       [%expect
         {|
-        ((1 (Last_response_was_ok (query 1) (response 1)))
-         (2 (Last_response_was_ok (query 2) (response 4)))
-         (10 (Last_response_was_ok (query 10) (response 30)))) |}];
+        ((1
+          ((last_ok_response ((1 2))) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (2
+          ((last_ok_response ((2 2))) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (10
+          ((last_ok_response ((10 30))) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))) |}];
       Bonsai.Var.update map_var ~f:(fun map -> Map.remove map 10);
       let%bind () = async_show handle in
       [%expect
         {|
-        ((1 (Last_response_was_ok (query 1) (response 1)))
-         (2 (Last_response_was_ok (query 2) (response 4)))) |}];
+        ((1
+          ((last_ok_response ((1 2))) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (2
+          ((last_ok_response ((2 2))) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))) |}];
       Bonsai.Var.update map_var ~f:(fun map -> Map.set map ~key:10 ~data:());
       let%bind () = async_show handle in
       (* since we clear the map entry when it gets de-activated, it does not
          remember its last response, and thus must poll for it again. *)
       [%expect
         {|
-        ((1 (Last_response_was_ok (query 1) (response 1)))
-         (2 (Last_response_was_ok (query 2) (response 4))) (10 No_responses_yet))
+        ((1
+          ((last_ok_response ((1 2))) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (2
+          ((last_ok_response ((2 2))) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (10
+          ((last_ok_response ()) (last_error ()) (inflight_query ())
+           (refresh <opaque>))))
         ("For first request" (query 10)) |}];
       let%bind () = async_show handle in
       [%expect
         {|
-        ((1 (Last_response_was_ok (query 1) (response 1)))
-         (2 (Last_response_was_ok (query 2) (response 4)))
-         (10 (Last_response_was_ok (query 10) (response 30))))
-        ("Computing diff" (from 30) (to_ 40)) |}];
+        ((1
+          ((last_ok_response ((1 2))) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (2
+          ((last_ok_response ((2 2))) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (10
+          ((last_ok_response ((10 40))) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))) |}];
       let%bind () = async_show handle in
       [%expect
         {|
-        ((1 (Last_response_was_ok (query 1) (response 1)))
-         (2 (Last_response_was_ok (query 2) (response 4)))
-         (10 (Last_response_was_ok (query 10) (response 40)))) |}];
+        ((1
+          ((last_ok_response ((1 2))) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (2
+          ((last_ok_response ((2 2))) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (10
+          ((last_ok_response ((10 40))) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))) |}];
       Deferred.unit
     ;;
 
-    let%expect_test "multiple pollers from, don't clear on deactivate" =
+    let%expect_test "multiple pollers, don't clear on deactivate" =
       let map_var = Bonsai.Var.create (Int.Map.of_alist_exn [ 1, (); 2, (); 10, () ]) in
       let map = Bonsai.Var.value map_var in
       let computation =
@@ -961,49 +1180,1060 @@ let%test_module "Polling_state_rpc.poll" =
           ~rpc_implementations:[ incrementing_polling_state_rpc_implementation () ]
           (Result_spec.sexp
              (module struct
-               type t = (int, int) Rpc_effect.Polling_state_rpc.Result.t Int.Map.t
-               [@@deriving sexp]
+               type t = (int, int) Rpc_effect.Poll_result.t Int.Map.t [@@deriving sexp_of]
              end))
           computation
       in
       let%bind () = async_show handle in
       [%expect
         {|
-        ((1 No_responses_yet) (2 No_responses_yet) (10 No_responses_yet))
+        ((1
+          ((last_ok_response ()) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (2
+          ((last_ok_response ()) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (10
+          ((last_ok_response ()) (last_error ()) (inflight_query ())
+           (refresh <opaque>))))
         ("For first request" (query 2))
         ("For first request" (query 1))
         ("For first request" (query 10)) |}];
       let%bind () = async_show handle in
       [%expect
         {|
-         ((1 (Last_response_was_ok (query 1) (response 0)))
-          (2 (Last_response_was_ok (query 2) (response 0)))
-          (10 (Last_response_was_ok (query 10) (response 0))))
-         ("Computing diff" (from 0) (to_ 1))
-         ("Computing diff" (from 0) (to_ 4))
-         ("Computing diff" (from 0) (to_ 30)) |}];
+         ((1
+           ((last_ok_response ((1 2))) (last_error ()) (inflight_query ())
+            (refresh <opaque>)))
+          (2
+           ((last_ok_response ((2 2))) (last_error ()) (inflight_query ())
+            (refresh <opaque>)))
+          (10
+           ((last_ok_response ((10 30))) (last_error ()) (inflight_query ())
+            (refresh <opaque>)))) |}];
       let%bind () = async_show handle in
       [%expect
         {|
-        ((1 (Last_response_was_ok (query 1) (response 1)))
-         (2 (Last_response_was_ok (query 2) (response 4)))
-         (10 (Last_response_was_ok (query 10) (response 30)))) |}];
+        ((1
+          ((last_ok_response ((1 2))) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (2
+          ((last_ok_response ((2 2))) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (10
+          ((last_ok_response ((10 30))) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))) |}];
       Bonsai.Var.update map_var ~f:(fun map -> Map.remove map 10);
       let%bind () = async_show handle in
       [%expect
         {|
-        ((1 (Last_response_was_ok (query 1) (response 1)))
-         (2 (Last_response_was_ok (query 2) (response 4)))) |}];
+        ((1
+          ((last_ok_response ((1 2))) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (2
+          ((last_ok_response ((2 2))) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))) |}];
       Bonsai.Var.update map_var ~f:(fun map -> Map.set map ~key:10 ~data:());
       let%bind () = async_show handle in
       (* since we do not clear the map entry when it gets de-activated, it does
          remember its last response, and thus does not need to poll for it again. *)
       [%expect
         {|
-        ((1 (Last_response_was_ok (query 1) (response 1)))
-         (2 (Last_response_was_ok (query 2) (response 4)))
-         (10 (Last_response_was_ok (query 10) (response 30)))) |}];
+        ((1
+          ((last_ok_response ((1 2))) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (2
+          ((last_ok_response ((2 2))) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (10
+          ((last_ok_response ((10 30))) (last_error ()) (inflight_query ())
+           (refresh <opaque>))))
+        ("For first request" (query 10)) |}];
       Deferred.unit
+    ;;
+  end)
+;;
+
+let%test_module "Rpc.poll" =
+  (module struct
+    let rpc =
+      Rpc.Rpc.create ~name:"rpc" ~version:0 ~bin_query:bin_int ~bin_response:bin_int
+    ;;
+
+    let incrementing_rpc_implementation ?block_on () =
+      let count = ref 0 in
+      Rpc.Rpc.implement rpc (fun _ query ->
+        incr count;
+        let%bind () =
+          match block_on with
+          | Some bvar -> Bvar.wait bvar
+          | None -> return ()
+        in
+        return (query * !count))
+    ;;
+
+    let%expect_test "basic usage" =
+      let input_var = Bonsai.Var.create 1 in
+      let computation =
+        Rpc_effect.Rpc.poll
+          (module Int)
+          (module Int)
+          rpc
+          ~where_to_connect:Self
+          ~every:(Time_ns.Span.of_sec 1.0)
+          (Bonsai.Var.value input_var)
+      in
+      let handle =
+        Handle.create
+          ~rpc_implementations:[ incrementing_rpc_implementation () ]
+          (Result_spec.sexp
+             (module struct
+               type t = (int, int) Rpc_effect.Poll_result.t [@@deriving sexp_of]
+             end))
+          computation
+      in
+      let%bind () = async_show handle in
+      [%expect
+        {|
+        ((last_ok_response ()) (last_error ()) (inflight_query ())
+         (refresh <opaque>)) |}];
+      let%bind () = async_show handle in
+      [%expect
+        {|
+        ((last_ok_response ()) (last_error ()) (inflight_query (1))
+         (refresh <opaque>)) |}];
+      let%bind () = async_show handle in
+      [%expect
+        {|
+        ((last_ok_response ((1 1))) (last_error ()) (inflight_query ())
+         (refresh <opaque>)) |}];
+      let%bind () = async_show handle in
+      [%expect
+        {|
+        ((last_ok_response ((1 1))) (last_error ()) (inflight_query ())
+         (refresh <opaque>)) |}];
+      Handle.advance_clock_by handle (Time_ns.Span.of_sec 1.0);
+      let%bind () = async_show handle in
+      [%expect
+        {|
+        ((last_ok_response ((1 1))) (last_error ()) (inflight_query ())
+         (refresh <opaque>)) |}];
+      let%bind () = async_show handle in
+      [%expect
+        {|
+        ((last_ok_response ((1 1))) (last_error ()) (inflight_query (1))
+         (refresh <opaque>)) |}];
+      let%bind () = async_show handle in
+      [%expect
+        {|
+        ((last_ok_response ((1 2))) (last_error ()) (inflight_query ())
+         (refresh <opaque>)) |}];
+      Bonsai.Var.set input_var 2;
+      let%bind () = async_show handle in
+      [%expect
+        {|
+        ((last_ok_response ((1 2))) (last_error ()) (inflight_query ())
+         (refresh <opaque>)) |}];
+      let%bind () = async_show handle in
+      [%expect
+        {|
+        ((last_ok_response ((1 2))) (last_error ()) (inflight_query (2))
+         (refresh <opaque>)) |}];
+      let%bind () = async_show handle in
+      [%expect
+        {|
+        ((last_ok_response ((2 6))) (last_error ()) (inflight_query ())
+         (refresh <opaque>)) |}];
+      Deferred.unit
+    ;;
+
+    let%expect_test "scheduling refresh effect" =
+      let input_var = Bonsai.Var.create 1 in
+      let computation =
+        Rpc_effect.Rpc.poll
+          (module Int)
+          (module Int)
+          rpc
+          ~where_to_connect:Self
+          ~every:(Time_ns.Span.of_sec 1.0)
+          (Bonsai.Var.value input_var)
+      in
+      let bvar = Async_kernel.Bvar.create () in
+      let broadcast () =
+        Bvar.broadcast bvar ();
+        Async_kernel_scheduler.yield_until_no_jobs_remain ()
+      in
+      let handle =
+        Handle.create
+          ~rpc_implementations:[ incrementing_rpc_implementation ~block_on:bvar () ]
+          (module struct
+            type t = (int, int) Rpc_effect.Poll_result.t [@@deriving sexp_of]
+            type incoming = unit
+
+            let view status = Sexp.to_string ([%sexp_of: t] status)
+            let incoming (status : t) () = status.refresh
+          end)
+          computation
+      in
+      let%bind () = async_show handle in
+      [%expect
+        {|
+          ((last_ok_response())(last_error())(inflight_query())(refresh <opaque>)) |}];
+      let%bind () = async_show_diff handle in
+      [%expect
+        {|
+          -|((last_ok_response())(last_error())(inflight_query())(refresh <opaque>))
+          +|((last_ok_response())(last_error())(inflight_query(1))(refresh <opaque>)) |}];
+      let%bind () = broadcast () in
+      let%bind () = async_show_diff handle in
+      [%expect
+        {|
+        -|((last_ok_response())(last_error())(inflight_query(1))(refresh <opaque>))
+        +|((last_ok_response((1 1)))(last_error())(inflight_query())(refresh <opaque>)) |}];
+      let%bind () = broadcast () in
+      let%bind () = async_show_diff handle in
+      let%bind () = broadcast () in
+      let%bind () = async_show_diff handle in
+      Handle.do_actions handle [ () ];
+      let%bind () = async_show_diff handle in
+      [%expect
+        {|
+        -|((last_ok_response((1 1)))(last_error())(inflight_query())(refresh <opaque>))
+        +|((last_ok_response((1 1)))(last_error())(inflight_query(1))(refresh <opaque>)) |}];
+      let%bind () = broadcast () in
+      let%bind () = async_show_diff handle in
+      [%expect
+        {|
+        -|((last_ok_response((1 1)))(last_error())(inflight_query(1))(refresh <opaque>))
+        +|((last_ok_response((1 2)))(last_error())(inflight_query())(refresh <opaque>)) |}];
+      (* Doing two actions causes them to be dispatched in sequence, rather
+         than twice in a row. *)
+      Handle.do_actions handle [ (); (); () ];
+      let%bind () = async_show_diff handle in
+      [%expect
+        {|
+        -|((last_ok_response((1 2)))(last_error())(inflight_query())(refresh <opaque>))
+        +|((last_ok_response((1 2)))(last_error())(inflight_query(1))(refresh <opaque>)) |}];
+      let%bind () = broadcast () in
+      let%bind () = async_show_diff handle in
+      [%expect
+        {|
+        -|((last_ok_response((1 2)))(last_error())(inflight_query(1))(refresh <opaque>))
+        +|((last_ok_response((1 3)))(last_error())(inflight_query(1))(refresh <opaque>)) |}];
+      let%bind () = broadcast () in
+      let%bind () = async_show_diff handle in
+      [%expect
+        {|
+        -|((last_ok_response((1 3)))(last_error())(inflight_query(1))(refresh <opaque>))
+        +|((last_ok_response((1 4)))(last_error())(inflight_query())(refresh <opaque>)) |}];
+      return ()
+    ;;
+
+    let every_other_error_rpc_implementation () =
+      let count = ref 0 in
+      let next_response_is_error_ref = ref true in
+      let next_result query =
+        let next_response_is_error = !next_response_is_error_ref in
+        next_response_is_error_ref := not next_response_is_error;
+        let result =
+          if next_response_is_error
+          then raise_s [%message "Error response" (query : int)]
+          else query * !count
+        in
+        return result
+      in
+      Rpc.Rpc.implement rpc (fun _ query ->
+        incr count;
+        next_result query)
+    ;;
+
+    let%expect_test "hit all possible responses from the poller" =
+      let input_var = Bonsai.Var.create 1 in
+      let computation =
+        Rpc_effect.Rpc.poll
+          (module Int)
+          (module Int)
+          rpc
+          ~where_to_connect:Self
+          ~every:(Time_ns.Span.of_sec 1.0)
+          (Bonsai.Var.value input_var)
+      in
+      let handle =
+        Handle.create
+          ~rpc_implementations:[ every_other_error_rpc_implementation () ]
+          (Result_spec.sexp
+             (module struct
+               type t = (int, int) Rpc_effect.Poll_result.t [@@deriving sexp_of]
+             end))
+          computation
+      in
+      let%bind () = async_show handle in
+      [%expect
+        {|
+        ((last_ok_response ()) (last_error ()) (inflight_query ())
+         (refresh <opaque>)) |}];
+      let%bind () = async_show handle in
+      [%expect
+        {|
+         ((last_ok_response ()) (last_error ()) (inflight_query (1))
+          (refresh <opaque>)) |}];
+      Bonsai.Var.set input_var 2;
+      let%bind () = async_show handle in
+      [%expect
+        {|
+        ((last_ok_response ())
+         (last_error
+          ((1
+            ((rpc_error
+              (Uncaught_exn
+               ((location "server-side rpc computation")
+                (exn (monitor.ml.Error ("Error response" (query 1)))))))
+             (connection_description <created-directly>) (rpc_name rpc)
+             (rpc_version 0)))))
+         (inflight_query ()) (refresh <opaque>)) |}];
+      let%bind () = async_show handle in
+      [%expect
+        {|
+        ((last_ok_response ())
+         (last_error
+          ((1
+            ((rpc_error
+              (Uncaught_exn
+               ((location "server-side rpc computation")
+                (exn (monitor.ml.Error ("Error response" (query 1)))))))
+             (connection_description <created-directly>) (rpc_name rpc)
+             (rpc_version 0)))))
+         (inflight_query (2)) (refresh <opaque>)) |}];
+      Bonsai.Var.set input_var 3;
+      let%bind () = async_show handle in
+      [%expect
+        {|
+        ((last_ok_response ((2 4))) (last_error ()) (inflight_query ())
+         (refresh <opaque>)) |}];
+      let%bind () = async_show handle in
+      [%expect
+        {|
+        ((last_ok_response ((2 4))) (last_error ()) (inflight_query (3))
+         (refresh <opaque>)) |}];
+      let%bind () = async_show handle in
+      [%expect
+        {|
+        ((last_ok_response ((2 4)))
+         (last_error
+          ((3
+            ((rpc_error
+              (Uncaught_exn
+               ((location "server-side rpc computation")
+                (exn (monitor.ml.Error ("Error response" (query 3)))))))
+             (connection_description <created-directly>) (rpc_name rpc)
+             (rpc_version 0)))))
+         (inflight_query ()) (refresh <opaque>)) |}];
+      Deferred.unit
+    ;;
+
+    let%expect_test "multiple pollers, clear on deactivate (on by default)" =
+      let map_var = Bonsai.Var.create (Int.Map.of_alist_exn [ 1, (); 2, (); 10, () ]) in
+      let map = Bonsai.Var.value map_var in
+      let computation =
+        Bonsai.assoc
+          (module Int)
+          map
+          ~f:(fun key _data ->
+            Rpc_effect.Rpc.poll
+              (module Int)
+              (module Int)
+              rpc
+              ~where_to_connect:Self
+              ~every:(Time_ns.Span.of_sec 1.0)
+              key)
+      in
+      let handle =
+        Handle.create
+          ~rpc_implementations:[ incrementing_rpc_implementation () ]
+          (Result_spec.sexp
+             (module struct
+               type t = (int, int) Rpc_effect.Poll_result.t Int.Map.t [@@deriving sexp_of]
+             end))
+          computation
+      in
+      let%bind () = async_show handle in
+      [%expect
+        {|
+        ((1
+          ((last_ok_response ()) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (2
+          ((last_ok_response ()) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (10
+          ((last_ok_response ()) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))) |}];
+      let%bind () = async_show handle in
+      [%expect
+        {|
+         ((1
+           ((last_ok_response ()) (last_error ()) (inflight_query (1))
+            (refresh <opaque>)))
+          (2
+           ((last_ok_response ()) (last_error ()) (inflight_query (2))
+            (refresh <opaque>)))
+          (10
+           ((last_ok_response ()) (last_error ()) (inflight_query (10))
+            (refresh <opaque>)))) |}];
+      let%bind () = async_show handle in
+      [%expect
+        {|
+        ((1
+          ((last_ok_response ((1 1))) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (2
+          ((last_ok_response ((2 4))) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (10
+          ((last_ok_response ((10 30))) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))) |}];
+      Bonsai.Var.update map_var ~f:(fun map -> Map.remove map 10);
+      let%bind () = async_show handle in
+      [%expect
+        {|
+        ((1
+          ((last_ok_response ((1 1))) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (2
+          ((last_ok_response ((2 4))) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))) |}];
+      Bonsai.Var.update map_var ~f:(fun map -> Map.set map ~key:10 ~data:());
+      let%bind () = async_show handle in
+      (* since we clear the map entry when it gets de-activated, it does not
+         remember its last response, and thus must poll for it again. *)
+      [%expect
+        {|
+        ((1
+          ((last_ok_response ((1 1))) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (2
+          ((last_ok_response ((2 4))) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (10
+          ((last_ok_response ()) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))) |}];
+      let%bind () = async_show handle in
+      [%expect
+        {|
+        ((1
+          ((last_ok_response ((1 1))) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (2
+          ((last_ok_response ((2 4))) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (10
+          ((last_ok_response ()) (last_error ()) (inflight_query (10))
+           (refresh <opaque>)))) |}];
+      let%bind () = async_show handle in
+      [%expect
+        {|
+        ((1
+          ((last_ok_response ((1 1))) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (2
+          ((last_ok_response ((2 4))) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (10
+          ((last_ok_response ((10 40))) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))) |}];
+      Deferred.unit
+    ;;
+
+    let%expect_test "multiple pollers, don't clear on deactivate" =
+      let map_var = Bonsai.Var.create (Int.Map.of_alist_exn [ 1, (); 2, (); 10, () ]) in
+      let map = Bonsai.Var.value map_var in
+      let computation =
+        Bonsai.assoc
+          (module Int)
+          map
+          ~f:(fun key _data ->
+            Rpc_effect.Rpc.poll
+              (module Int)
+              (module Int)
+              rpc
+              ~clear_when_deactivated:false
+              ~where_to_connect:Self
+              ~every:(Time_ns.Span.of_sec 1.0)
+              key)
+      in
+      let handle =
+        Handle.create
+          ~rpc_implementations:[ incrementing_rpc_implementation () ]
+          (Result_spec.sexp
+             (module struct
+               type t = (int, int) Rpc_effect.Poll_result.t Int.Map.t [@@deriving sexp_of]
+             end))
+          computation
+      in
+      let%bind () = async_show handle in
+      [%expect
+        {|
+        ((1
+          ((last_ok_response ()) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (2
+          ((last_ok_response ()) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (10
+          ((last_ok_response ()) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))) |}];
+      let%bind () = async_show handle in
+      [%expect
+        {|
+         ((1
+           ((last_ok_response ()) (last_error ()) (inflight_query (1))
+            (refresh <opaque>)))
+          (2
+           ((last_ok_response ()) (last_error ()) (inflight_query (2))
+            (refresh <opaque>)))
+          (10
+           ((last_ok_response ()) (last_error ()) (inflight_query (10))
+            (refresh <opaque>)))) |}];
+      let%bind () = async_show handle in
+      [%expect
+        {|
+        ((1
+          ((last_ok_response ((1 1))) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (2
+          ((last_ok_response ((2 4))) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (10
+          ((last_ok_response ((10 30))) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))) |}];
+      Bonsai.Var.update map_var ~f:(fun map -> Map.remove map 10);
+      let%bind () = async_show handle in
+      [%expect
+        {|
+        ((1
+          ((last_ok_response ((1 1))) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (2
+          ((last_ok_response ((2 4))) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))) |}];
+      Bonsai.Var.update map_var ~f:(fun map -> Map.set map ~key:10 ~data:());
+      let%bind () = async_show handle in
+      (* since we do not clear the map entry when it gets de-activated, it does
+         remember its last response, and thus does not need to poll for it again. *)
+      [%expect
+        {|
+        ((1
+          ((last_ok_response ((1 1))) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (2
+          ((last_ok_response ((2 4))) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (10
+          ((last_ok_response ((10 30))) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))) |}];
+      Deferred.unit
+    ;;
+  end)
+;;
+
+let%test_module "Rpc.poll_until_ok" =
+  (module struct
+    let rpc =
+      Rpc.Rpc.create ~name:"rpc" ~version:0 ~bin_query:bin_int ~bin_response:bin_int
+    ;;
+
+    let returns_ok_after ~iterations =
+      let count = ref 0 in
+      Rpc.Rpc.implement rpc (fun _ query ->
+        print_endline "received rpc!";
+        if !count < iterations
+        then (
+          incr count;
+          failwith "too early!");
+        incr count;
+        return (query * !count))
+    ;;
+
+    module Result_spec = struct
+      type t = (int, int) Rpc_effect.Poll_result.t
+      type incoming = Refresh
+
+      let view
+            { Rpc_effect.Poll_result.last_ok_response
+            ; last_error
+            ; inflight_query
+            ; refresh = _
+            }
+        =
+        Sexp.to_string_hum
+          [%message
+            (last_ok_response : (int * int) option)
+              (last_error : (int * Error.t) option)
+              (inflight_query : int option)]
+      ;;
+
+      let incoming
+            { Rpc_effect.Poll_result.last_ok_response = _
+            ; last_error = _
+            ; inflight_query = _
+            ; refresh
+            }
+            Refresh
+        =
+        refresh
+      ;;
+    end
+
+    let%expect_test "Stops polling after first response" =
+      let input_var = Bonsai.Var.create 1 in
+      let computation =
+        Rpc_effect.Rpc.poll_until_ok
+          (module Int)
+          (module Int)
+          rpc
+          ~where_to_connect:Self
+          ~retry_interval:(Time_ns.Span.of_sec 1.0)
+          (Bonsai.Var.value input_var)
+      in
+      let handle =
+        Handle.create
+          ~rpc_implementations:[ returns_ok_after ~iterations:0 ]
+          (module Result_spec)
+          computation
+      in
+      let%bind () = async_show handle in
+      [%expect {|
+        ((last_ok_response ()) (last_error ()) (inflight_query ())) |}];
+      let%bind () = async_recompute_view handle in
+      [%expect {| received rpc! |}];
+      let%bind () = async_show handle in
+      [%expect
+        {|
+        ((last_ok_response ((1 1))) (last_error ()) (inflight_query ())) |}];
+      let%bind () = async_show handle in
+      [%expect
+        {|
+        ((last_ok_response ((1 1))) (last_error ()) (inflight_query ())) |}];
+      (* Despite clock advancing, an rpc is not sent. *)
+      Handle.advance_clock_by handle (Time_ns.Span.of_sec 1.0);
+      let%bind () = async_recompute_view handle in
+      let%bind () = async_recompute_view handle in
+      let%bind () = async_show handle in
+      [%expect
+        {|
+        ((last_ok_response ((1 1))) (last_error ()) (inflight_query ())) |}];
+      (* Even after stopping, if the query changes, the rpc is sent again. *)
+      Bonsai.Var.set input_var 2;
+      let%bind () = async_show handle in
+      [%expect
+        {|
+        ((last_ok_response ((1 1))) (last_error ()) (inflight_query ())) |}];
+      let%bind () = async_show handle in
+      [%expect
+        {|
+        ((last_ok_response ((1 1))) (last_error ()) (inflight_query (2)))
+        received rpc! |}];
+      let%bind () = async_show handle in
+      [%expect
+        {|
+        ((last_ok_response ((2 4))) (last_error ()) (inflight_query ())) |}];
+      Deferred.unit
+    ;;
+
+    let%expect_test "If responses are an error, it continues polling until there are no \
+                     errors and stops polling after first ok resonse."
+      =
+      let input_var = Bonsai.Var.create 1 in
+      let computation =
+        Rpc_effect.Rpc.poll_until_ok
+          (module Int)
+          (module Int)
+          rpc
+          ~where_to_connect:Self
+          ~retry_interval:(Time_ns.Span.of_sec 1.0)
+          (Bonsai.Var.value input_var)
+      in
+      let handle =
+        Handle.create
+          ~rpc_implementations:[ returns_ok_after ~iterations:2 ]
+          (module Result_spec)
+          computation
+      in
+      let%bind () = async_show handle in
+      [%expect {| ((last_ok_response ()) (last_error ()) (inflight_query ())) |}];
+      let%bind () = async_recompute_view handle in
+      [%expect {| received rpc! |}];
+      let%bind () = async_show handle in
+      (* First error. *)
+      [%expect
+        {|
+        ((last_ok_response ())
+         (last_error
+          ((1
+            ((rpc_error
+              (Uncaught_exn
+               ((location "server-side rpc computation")
+                (exn (monitor.ml.Error (Failure "too early!"))))))
+             (connection_description <created-directly>) (rpc_name rpc)
+             (rpc_version 0)))))
+         (inflight_query ())) |}];
+      (* Advancing clock to send another rpc.*)
+      Handle.advance_clock_by handle (Time_ns.Span.of_sec 1.0);
+      let%bind () = async_recompute_view handle in
+      (* Retried rpc sent.*)
+      let%bind () = async_recompute_view handle in
+      [%expect {| received rpc! |}];
+      let%bind () = async_show handle in
+      [%expect
+        {|
+        ((last_ok_response ())
+         (last_error
+          ((1
+            ((rpc_error
+              (Uncaught_exn
+               ((location "server-side rpc computation")
+                (exn (monitor.ml.Error (Failure "too early!"))))))
+             (connection_description <created-directly>) (rpc_name rpc)
+             (rpc_version 0)))))
+         (inflight_query ())) |}];
+      Handle.advance_clock_by handle (Time_ns.Span.of_sec 1.0);
+      let%bind () = async_recompute_view handle in
+      (* Retried rpc sent.*)
+      let%bind () = async_recompute_view handle in
+      [%expect {| received rpc! |}];
+      (* Third rpc returns ok. *)
+      let%bind () = async_show handle in
+      [%expect
+        {|
+        ((last_ok_response ((1 3))) (last_error ()) (inflight_query ())) |}];
+      Handle.advance_clock_by handle (Time_ns.Span.of_sec 1.0);
+      (* No more rpc's are sent. *)
+      let%bind () = async_recompute_view handle in
+      let%bind () = async_recompute_view handle in
+      let%bind () = async_recompute_view handle in
+      let%bind () = async_recompute_view handle in
+      [%expect {||}];
+      Deferred.unit
+    ;;
+
+    let%expect_test "Even after stopping, if the refresh effect is scheduled, the rpc is \
+                     sent again"
+      =
+      let input_var = Bonsai.Var.create 1 in
+      let computation =
+        Rpc_effect.Rpc.poll_until_ok
+          (module Int)
+          (module Int)
+          rpc
+          ~where_to_connect:Self
+          ~retry_interval:(Time_ns.Span.of_sec 1.0)
+          (Bonsai.Var.value input_var)
+      in
+      let handle =
+        Handle.create
+          ~rpc_implementations:[ returns_ok_after ~iterations:0 ]
+          (module Result_spec)
+          computation
+      in
+      let%bind () = async_show handle in
+      [%expect {| ((last_ok_response ()) (last_error ()) (inflight_query ())) |}];
+      let%bind () = async_recompute_view handle in
+      [%expect {| received rpc! |}];
+      let%bind () = async_show handle in
+      [%expect {| ((last_ok_response ((1 1))) (last_error ()) (inflight_query ())) |}];
+      Handle.advance_clock_by handle (Time_ns.Span.of_sec 1.0);
+      let%bind () = async_recompute_view handle in
+      let%bind () = async_recompute_view handle in
+      let%bind () = async_recompute_view handle in
+      [%expect {||}];
+      Handle.advance_clock_by handle (Time_ns.Span.of_sec 1.0);
+      let%bind () = async_recompute_view handle in
+      let%bind () = async_recompute_view handle in
+      let%bind () = async_recompute_view handle in
+      [%expect {||}];
+      (* Rpc is sent when refresh is scheduled *)
+      Handle.do_actions handle [ Refresh ];
+      let%bind () = async_recompute_view handle in
+      let%bind () = async_recompute_view handle in
+      [%expect {| received rpc! |}];
+      let%bind () = async_show handle in
+      [%expect {| ((last_ok_response ((1 2))) (last_error ()) (inflight_query ())) |}];
+      (* Rpc is not resent afterwards when refresh is scheduled *)
+      Handle.advance_clock_by handle (Time_ns.Span.of_sec 1.0);
+      let%bind () = async_recompute_view handle in
+      let%bind () = async_recompute_view handle in
+      let%bind () = async_recompute_view handle in
+      [%expect {||}];
+      Deferred.unit
+    ;;
+  end)
+;;
+
+let%test_module "multi-poller" =
+  (module struct
+    open Bonsai.Let_syntax
+
+    let dummy_poller input =
+      let%sub () =
+        Bonsai.Edge.lifecycle
+          ~on_activate:
+            (let%map input = input in
+             Effect.print_s [%sexp "start", (input : int)])
+          ~on_deactivate:
+            (let%map input = input in
+             Effect.print_s [%sexp "stop", (input : int)])
+          ()
+      in
+      let%arr input = input in
+      { Rpc_effect.Poll_result.last_ok_response = Some (input, "hello")
+      ; last_error = None
+      ; inflight_query = None
+      ; refresh = Effect.Ignore
+      }
+    ;;
+
+    let%expect_test "single multi-poller" =
+      let component =
+        let%sub poller =
+          Bonsai_web.Rpc_effect.Shared_poller.custom_create (module Int) ~f:dummy_poller
+        in
+        let%sub lookup =
+          Bonsai_web.Rpc_effect.Shared_poller.lookup (module Int) poller (Value.return 5)
+        in
+        let%arr lookup = lookup in
+        [%message "" ~_:(lookup.last_ok_response : (int * string) option)]
+      in
+      let handle =
+        Bonsai_test.Handle.create (Bonsai_test.Result_spec.sexp (module Sexp)) component
+      in
+      let open Deferred.Let_syntax in
+      Handle.show handle;
+      [%expect {| () |}];
+      Handle.show handle;
+      [%expect {|
+        ((5 hello))
+        (start 5) |}];
+      Handle.show handle;
+      [%expect {| ((5 hello)) |}];
+      return ()
+    ;;
+
+    let%expect_test "two multi-pollers looking at the same key" =
+      let component =
+        let%sub poller =
+          Bonsai_web.Rpc_effect.Shared_poller.custom_create (module Int) ~f:dummy_poller
+        in
+        let%sub a =
+          Bonsai_web.Rpc_effect.Shared_poller.lookup (module Int) poller (Value.return 5)
+        in
+        let%sub b =
+          Bonsai_web.Rpc_effect.Shared_poller.lookup (module Int) poller (Value.return 5)
+        in
+        let%arr a = a
+        and b = b in
+        [%message
+          ""
+            ~a:(a.last_ok_response : (int * string) option)
+            ~b:(b.last_ok_response : (int * string) option)]
+      in
+      let handle =
+        Bonsai_test.Handle.create (Bonsai_test.Result_spec.sexp (module Sexp)) component
+      in
+      let open Deferred.Let_syntax in
+      Handle.show handle;
+      [%expect {| ((a ()) (b ())) |}];
+      Handle.show handle;
+      [%expect {|
+        ((a ((5 hello))) (b ((5 hello))))
+        (start 5) |}];
+      Handle.show handle;
+      [%expect {| ((a ((5 hello))) (b ((5 hello)))) |}];
+      return ()
+    ;;
+
+    let%expect_test "two multi-pollers looking at the different keys" =
+      let component =
+        let%sub poller =
+          Bonsai_web.Rpc_effect.Shared_poller.custom_create (module Int) ~f:dummy_poller
+        in
+        let%sub a =
+          Bonsai_web.Rpc_effect.Shared_poller.lookup (module Int) poller (Value.return 5)
+        in
+        let%sub b =
+          Bonsai_web.Rpc_effect.Shared_poller.lookup (module Int) poller (Value.return 10)
+        in
+        let%arr a = a
+        and b = b in
+        [%message
+          ""
+            ~a:(a.last_ok_response : (int * string) option)
+            ~b:(b.last_ok_response : (int * string) option)]
+      in
+      let handle =
+        Bonsai_test.Handle.create (Bonsai_test.Result_spec.sexp (module Sexp)) component
+      in
+      let open Deferred.Let_syntax in
+      Handle.show handle;
+      [%expect {| ((a ()) (b ())) |}];
+      Handle.show handle;
+      [%expect
+        {|
+        ((a ((5 hello))) (b ((10 hello))))
+        (start 5)
+        (start 10) |}];
+      Handle.show handle;
+      [%expect {| ((a ((5 hello))) (b ((10 hello)))) |}];
+      return ()
+    ;;
+
+    let%expect_test "one multi-pollers looking a key and then it quits" =
+      let bool_var = Bonsai.Var.create true in
+      let component =
+        let%sub poller =
+          Bonsai_web.Rpc_effect.Shared_poller.custom_create (module Int) ~f:dummy_poller
+        in
+        let%sub lookup =
+          if%sub Bonsai.Var.value bool_var
+          then
+            Bonsai_web.Rpc_effect.Shared_poller.lookup
+              (module Int)
+              poller
+              (Value.return 5)
+          else
+            Bonsai.const
+              { Rpc_effect.Poll_result.last_ok_response = Some (5, "INACTIVE")
+              ; last_error = None
+              ; inflight_query = None
+              ; refresh = Effect.Ignore
+              }
+        in
+        let%arr lookup = lookup in
+        [%message "" ~_:(lookup.last_ok_response : (int * string) option)]
+      in
+      let handle =
+        Bonsai_test.Handle.create (Bonsai_test.Result_spec.sexp (module Sexp)) component
+      in
+      let open Deferred.Let_syntax in
+      Handle.show handle;
+      [%expect {| () |}];
+      Handle.show handle;
+      [%expect {|
+        ((5 hello))
+        (start 5) |}];
+      Handle.show handle;
+      [%expect {| ((5 hello)) |}];
+      Bonsai.Var.set bool_var false;
+      Handle.show handle;
+      [%expect {| ((5 INACTIVE)) |}];
+      Handle.show handle;
+      [%expect {|
+        ((5 INACTIVE))
+        (stop 5) |}];
+      return ()
+    ;;
+
+    let%expect_test "two multi-pollers looking at the same key then one of them quits" =
+      let bool_var = Bonsai.Var.create true in
+      let component =
+        let%sub poller =
+          Bonsai_web.Rpc_effect.Shared_poller.custom_create (module Int) ~f:dummy_poller
+        in
+        let%sub a =
+          Bonsai_web.Rpc_effect.Shared_poller.lookup (module Int) poller (Value.return 5)
+        in
+        let%sub b =
+          if%sub Bonsai.Var.value bool_var
+          then
+            Bonsai_web.Rpc_effect.Shared_poller.lookup
+              (module Int)
+              poller
+              (Value.return 5)
+          else
+            Bonsai.const
+              { Rpc_effect.Poll_result.last_ok_response = Some (5, "INACTIVE")
+              ; last_error = None
+              ; inflight_query = None
+              ; refresh = Effect.Ignore
+              }
+        in
+        let%arr a = a
+        and b = b in
+        [%message
+          ""
+            ~a:(a.last_ok_response : (int * string) option)
+            ~b:(b.last_ok_response : (int * string) option)]
+      in
+      let handle =
+        Bonsai_test.Handle.create (Bonsai_test.Result_spec.sexp (module Sexp)) component
+      in
+      let open Deferred.Let_syntax in
+      Handle.show handle;
+      [%expect {| ((a ()) (b ())) |}];
+      Handle.show handle;
+      [%expect {|
+        ((a ((5 hello))) (b ((5 hello))))
+        (start 5) |}];
+      Handle.show handle;
+      [%expect {| ((a ((5 hello))) (b ((5 hello)))) |}];
+      Bonsai.Var.set bool_var false;
+      Handle.show handle;
+      [%expect {| ((a ((5 hello))) (b ((5 INACTIVE)))) |}];
+      return ()
+    ;;
+
+    let%expect_test "two multi-pollers looking at different keys then one of them quits" =
+      let bool_var = Bonsai.Var.create true in
+      let component =
+        let%sub poller =
+          Bonsai_web.Rpc_effect.Shared_poller.custom_create (module Int) ~f:dummy_poller
+        in
+        let%sub a =
+          Bonsai_web.Rpc_effect.Shared_poller.lookup (module Int) poller (Value.return 5)
+        in
+        let%sub b =
+          if%sub Bonsai.Var.value bool_var
+          then
+            Bonsai_web.Rpc_effect.Shared_poller.lookup
+              (module Int)
+              poller
+              (Value.return 10)
+          else
+            Bonsai.const
+              { Rpc_effect.Poll_result.last_ok_response = Some (10, "INACTIVE")
+              ; last_error = None
+              ; inflight_query = None
+              ; refresh = Effect.Ignore
+              }
+        in
+        let%arr a = a
+        and b = b in
+        [%message
+          ""
+            ~a:(a.last_ok_response : (int * string) option)
+            ~b:(b.last_ok_response : (int * string) option)]
+      in
+      let handle =
+        Bonsai_test.Handle.create (Bonsai_test.Result_spec.sexp (module Sexp)) component
+      in
+      let open Deferred.Let_syntax in
+      Handle.show handle;
+      [%expect {| ((a ()) (b ())) |}];
+      Handle.show handle;
+      [%expect
+        {|
+        ((a ((5 hello))) (b ((10 hello))))
+        (start 5)
+        (start 10) |}];
+      Handle.show handle;
+      [%expect {| ((a ((5 hello))) (b ((10 hello)))) |}];
+      Bonsai.Var.set bool_var false;
+      Handle.show handle;
+      [%expect {| ((a ((5 hello))) (b ((10 INACTIVE)))) |}];
+      Handle.show handle;
+      [%expect {|
+        ((a ((5 hello))) (b ((10 INACTIVE))))
+        (stop 10) |}];
+      return ()
     ;;
   end)
 ;;
