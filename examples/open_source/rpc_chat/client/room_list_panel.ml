@@ -23,6 +23,6 @@ let component ~room_list ~refresh_rooms ~change_room =
         (Room.to_string room))
   in
   Vdom.Node.div
-    ~attr:(Vdom.Attr.id "room-list-panel")
+    ~attrs:[ Vdom.Attr.id "room-list-panel" ]
     ([ room_header ] @ room_switching_buttons)
 ;;

@@ -19,12 +19,11 @@ let widget uri : Vdom.Node.t =
            let open Vdom in
            Node.create
              "link"
-             ~attr:
-               (Attr.many
-                  [ Attr.type_ "image/svg+xml"
-                  ; Attr.create "rel" "icon"
-                  ; Attr.href href_value
-                  ])
+             ~attrs:
+               [ Attr.type_ "image/svg+xml"
+               ; Attr.create "rel" "icon"
+               ; Attr.href href_value
+               ]
              []
            |> Node.to_dom
          in
@@ -37,14 +36,13 @@ let widget uri : Vdom.Node.t =
 let slider ~min ~max ~value ~inject =
   let open Vdom in
   Node.input
-    ~attr:
-      (Attr.many
-         [ Attr.type_ "range"
-         ; Attr.min min
-         ; Attr.max max
-         ; Attr.value (value |> string_of_int)
-         ; Attr.on_input (fun _ev value -> inject (int_of_string value))
-         ])
+    ~attrs:
+      [ Attr.type_ "range"
+      ; Attr.min min
+      ; Attr.max max
+      ; Attr.value (value |> string_of_int)
+      ; Attr.on_input (fun _ev value -> inject (int_of_string value))
+      ]
     ()
 ;;
 
@@ -89,7 +87,7 @@ let component =
   let image =
     Node.create
       "img"
-      ~attr:(Attr.many [ Attr.src (Uri.to_string uri); Attr.class_ "svg-preview" ])
+      ~attrs:[ Attr.src (Uri.to_string uri); Attr.class_ "svg-preview" ]
       []
   in
   let code_section =
@@ -119,7 +117,7 @@ let component =
         ]
       in
       let attrs = List.filter_opt attrs |> String.concat in
-      [ Node.div ~attr:(Attr.class_ "section-header") [ Node.text "Code:" ]
+      [ Node.div ~attrs:[ Attr.class_ "section-header" ] [ Node.text "Code:" ]
       ; Node.pre
           [ [%string {|
   Favicon_svg.of_unicode
@@ -129,9 +127,9 @@ let component =
           ]
       ]
   in
-  let spacer x = Node.div ~attr:(Attr.style (Css_gen.height (`Px x))) [] in
+  let spacer x = Node.div ~attrs:[ Attr.style (Css_gen.height (`Px x)) ] [] in
   Node.div
-    ~attr:(Attr.class_ "container")
+    ~attrs:[ Attr.class_ "container" ]
     ([ widget uri
      ; Node.h3
          [ Node.text "What would you like "
@@ -141,11 +139,11 @@ let component =
      ; spacer 10
      ; text_box
      ; spacer 20
-     ; Node.div ~attr:(Attr.class_ "section-header") [ Node.text "Preview:" ]
+     ; Node.div ~attrs:[ Attr.class_ "section-header" ] [ Node.text "Preview:" ]
      ; spacer 10
      ; image
      ; spacer 20
-     ; Node.div ~attr:(Attr.class_ "section-header") [ Node.text "Fine tuning:" ]
+     ; Node.div ~attrs:[ Attr.class_ "section-header" ] [ Node.text "Fine tuning:" ]
      ; spacer 5
      ; Node.div [ Node.text "Size: "; size_slider ]
      ; Node.div [ Node.text "Pos x: "; x_slider ]
@@ -153,24 +151,22 @@ let component =
      ; Node.div
          [ Node.text "Text color: "
          ; Node.input
-             ~attr:
-               (Attr.many
-                  [ Attr.type_ "color"
-                  ; Attr.value fg_color
-                  ; Attr.on_input (fun _ev value -> inject_fg_color value)
-                  ])
+             ~attrs:
+               [ Attr.type_ "color"
+               ; Attr.value fg_color
+               ; Attr.on_input (fun _ev value -> inject_fg_color value)
+               ]
              ()
          ]
      ; spacer 5
      ; Node.div
          [ Node.text "Background color: "
          ; Node.input
-             ~attr:
-               (Attr.many
-                  [ Attr.type_ "color"
-                  ; Attr.value bg_color
-                  ; Attr.on_input (fun _ev value -> inject_bg_color value)
-                  ])
+             ~attrs:
+               [ Attr.type_ "color"
+               ; Attr.value bg_color
+               ; Attr.on_input (fun _ev value -> inject_bg_color value)
+               ]
              ()
          ]
      ; spacer 20

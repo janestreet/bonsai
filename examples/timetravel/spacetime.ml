@@ -114,9 +114,7 @@ let create (type i r) (inner_component : (i, r) Bonsai.t) : (i, r * Result.t) Bo
             let inner =
               Bonsai_lib.Generic.Expert.Snapshot.apply_action inner ~schedule_event a
             in
-            let history, cursor =
-              Spacetime_tree.append model.history model.cursor inner
-            in
+            let history, cursor = Spacetime_tree.append model.history model.cursor inner in
             { Model.inner; history; cursor }
           | Action.Set_cursor cursor ->
             let inner = Spacetime_tree.find model.history cursor in

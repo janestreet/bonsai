@@ -79,7 +79,6 @@ let list
       ?(right = `Px 0)
       ?(empty_list_placeholder = fun ~item_is_hovered:_ -> Bonsai.const Node.None)
       ?(default_item_height = 50)
-      ?(override_last_target_rank : int option Value.t option)
       input
   =
   let module Key = (val key) in
@@ -245,26 +244,19 @@ let list
         and key_sexp = key_sexp in
         Node.div
           ~key:key_sexp
-          ~attr:
-            Attr.(
-              size_attr
-              @ transform_xy ~left ~right 0 y_position
-              @ extra_item_attrs
-              @ if is_dragged_item then Attr.style (Css_gen.opacity 0.0) else Attr.empty)
+          ~attrs:
+            [ Attr.(
+                size_attr
+                @ transform_xy ~left ~right 0 y_position
+                @ extra_item_attrs
+                @ if is_dragged_item then Attr.style (Css_gen.opacity 0.0) else Attr.empty)
+            ]
           [ data ])
   in
   let%sub targets =
     let%sub num_items =
-      let%sub override_last_target_rank =
-        match override_last_target_rank with
-        | Some override -> return override
-        | None -> Bonsai.const None
-      in
-      match%sub override_last_target_rank with
-      | None ->
-        let%arr map = input in
-        Map.fold ~init:0 map ~f:(fun ~key:_ ~data:(_, rank) acc -> Int.max rank acc) + 1
-      | Some x -> return x
+      let%arr map = input in
+      Map.fold ~init:(-1) map ~f:(fun ~key:_ ~data:(_, rank) acc -> Int.max rank acc) + 1
     in
     let%sub drop_target = return (dnd >>| Drag_and_drop.drop_target) in
     let single_target ~is_the_extra_target index size y_position =
@@ -289,18 +281,19 @@ let list
       in
       Node.div
         ~key:[%string "target-%{index#Int}"]
-        ~attr:
-          Attr.(
-            drop_target ~id:index
-            @ transform_xy ~left ~right 0 y_position
-            @ style (Css_gen.position ~top:(`Px 0) ~left ~right `Absolute)
-            @ (if enable_debug_overlay
-               then
-                 style
-                   Css_gen.(
-                     background_color (`Hex "#10000010") @> border ~style:`Dotted ())
-               else empty)
-            @ style the_height)
+        ~attrs:
+          [ Attr.(
+              drop_target ~id:index
+              @ transform_xy ~left ~right 0 y_position
+              @ style (Css_gen.position ~top:(`Px 0) ~left ~right `Absolute)
+              @ (if enable_debug_overlay
+                 then
+                   style
+                     Css_gen.(
+                       background_color (`Hex "#10000010") @> border ~style:`Dotted ())
+                 else empty)
+              @ style the_height)
+          ]
         []
     in
     let%sub item_targets =
@@ -346,14 +339,15 @@ let list
   let items = if Map.is_empty items then [ empty_list_placeholder ] else Map.data items in
   let items = if is_dragging then items @ targets else items in
   Node.div
-    ~attr:
-      Attr.(
-        style
-          Css_gen.(
-            position `Relative
-            @> flex_container ~direction:`Column ()
-            @> height (`Percent (Percent.of_percentage 100.0))
-            @> min_height (`Px (total_height + default_item_height))))
+    ~attrs:
+      [ Attr.(
+          style
+            Css_gen.(
+              position `Relative
+              @> flex_container ~direction:`Column ()
+              @> height (`Percent (Percent.of_percentage 100.0))
+              @> min_height (`Px (total_height + default_item_height))))
+      ]
     items
 ;;
 
@@ -493,7 +487,7 @@ let with_inject
     let%arr list = list
     and sentinel = sentinel
     and dragged_element = dragged_element in
-    Vdom.Node.div ~attr:(sentinel ~name:sentinel_name) [ list; dragged_element ]
+    Vdom.Node.div ~attrs:[ sentinel ~name:sentinel_name ] [ list; dragged_element ]
   in
   let%sub ranking =
     let%arr rendered_ranked_input = rendered_ranked_input in
@@ -545,10 +539,9 @@ let simple
                 Set.symmetric_diff old new_
                 |> Sequence.fold
                      ~init:Reversed_list.[]
-                     ~f:
-                       (fun acc -> function
-                          | Second k -> Action.Set k :: acc
-                          | First k -> Remove k :: acc)
+                     ~f:(fun acc -> function
+                       | Second k -> Action.Set k :: acc
+                       | First k -> Remove k :: acc)
                 |> Reversed_list.rev
               | None ->
                 Set.fold

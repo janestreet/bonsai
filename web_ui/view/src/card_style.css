@@ -1,49 +1,39 @@
-.container {
-  border-radius: 2px;
-  border: 1px solid var(--extreme-fg);
-}
+@layer view.card {
+  .container {
+    border-radius: 2px;
+    border: 1px solid var(--extreme-fg);
+  }
 
-.content_common {
-  padding-left: 0.25em;
-  padding-right: 0.25em;
-}
+  .content_common {
+    padding-left: 0.25em;
+    padding-right: 0.25em;
+  }
 
-.content_common>*:not(:nth-child(1)) {
-  margin-top: 0.5em;
-}
+  :not(.card_legend).title-text {
+    color:var(--intent-fg);
+    padding-left: 0.5em;
+    padding-right: 0.25em;
+  }
 
-.content_common>*:not(:nth-child(1))::before {
-  content:"";
-  display:block;
-  position: relative;
-  top: -0.25em;
-  border-top: 1px solid var(--extreme-fg);
-}
+  .card_legend.title-text {
+    color:var(--intent-fg);
+    margin-left: 0.25em;
+  }
 
-:not(.card_legend).title-text {
-  color:var(--intent-fg);
-  padding-left: 0.5em;
-  padding-right: 0.25em;
-}
+  :not(.card_legend).title-bar {
+    background :var(--intent-bg);
+    border-radius: 2px;
+  }
 
-.card_legend.title-text {
-  color:var(--intent-fg);
-  margin-left: 0.25em;
-}
+  .fieldset_container {
+    padding: 0 0.5em 0.25em 0.5em;
+    border-radius: 2px;
+    border: 1px solid var(--extreme-fg);
+    padding-left: 0px;
+    padding-right: 0px;
+  }
 
-:not(.card_legend).title-bar {
-  background :var(--intent-bg);
-  border-radius: 2px;
-}
-
-.fieldset_container {
-  padding: 0 0.5em 0.25em 0.5em;
-  border-radius: 2px;
-  border: 1px solid var(--extreme-fg);
-  padding-left: 0px;
-  padding-right: 0px;
-}
-
-.fieldset_container > legend {
-  line-height: 1em;
+  .fieldset_container > legend {
+    line-height: 1em;
+  }
 }

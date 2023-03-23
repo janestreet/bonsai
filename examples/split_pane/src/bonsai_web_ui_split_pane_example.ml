@@ -61,10 +61,10 @@ end
 
 let create_demo ~parameters =
   let first_panel =
-    Value.return (Vdom.Node.div ~attr:Styles.first_panel [ Vdom.Node.text "1" ])
+    Value.return (Vdom.Node.div ~attrs:[ Styles.first_panel ] [ Vdom.Node.text "1" ])
   in
   let second_panel =
-    Value.return (Vdom.Node.div ~attr:Styles.second_panel [ Vdom.Node.text "2" ])
+    Value.return (Vdom.Node.div ~attrs:[ Styles.second_panel ] [ Vdom.Node.text "2" ])
   in
   let%sub pane =
     Bonsai_web_ui_split_pane.For_testing.create_from_parameters
@@ -74,7 +74,7 @@ let create_demo ~parameters =
   in
   let%arr pane = pane in
   let view =
-    Node.div ~attr:Styles.resize_pane [ Bonsai_web_ui_split_pane.to_vdom pane ]
+    Node.div ~attrs:[ Styles.resize_pane ] [ Bonsai_web_ui_split_pane.to_vdom pane ]
   in
   view, Bonsai_web_ui_split_pane.inject_set_size pane
 ;;
@@ -121,13 +121,13 @@ let app =
   and demo = demo
   and inject_reset = inject_reset in
   Node.div
-    ~attr:Styles.container
-    [ Node.div ~attr:Styles.demo [ demo ]
+    ~attrs:[ Styles.container ]
+    [ Node.div ~attrs:[ Styles.demo ] [ demo ]
     ; Node.div
-        ~attr:Styles.parameters
+        ~attrs:[ Styles.parameters ]
         [ parameters_form
         ; Node.button
-            ~attr:(Attr.on_click (fun _ -> inject_reset))
+            ~attrs:[ Attr.on_click (fun _ -> inject_reset) ]
             [ Node.text "Reset to initial size" ]
         ]
     ]

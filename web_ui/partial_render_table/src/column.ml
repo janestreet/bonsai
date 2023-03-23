@@ -41,7 +41,7 @@ module Dynamic_cells = struct
         -> empty:(k * Vdom.Node.t list) Map_list.t
         -> (k, cmp) Bonsai.comparator
         -> (k, v) t
-        -> (k * Vdom.Node.t list) Map_list.t Computation.t list
+        -> (k * Vdom.Node.t) Map_list.t Computation.t list
       =
       fun map ~empty comparator -> function
         | Leaf { cell; visible; _ } ->
@@ -57,9 +57,9 @@ module Dynamic_cells = struct
                    let%sub r = cell ~key ~data in
                    let%arr key = key
                    and r = r in
-                   key, [ r ])
+                   key, r)
              else (
-               let f = Ui_incr.Map.map ~f:(fun (k, _) -> k, [ empty_div ]) in
+               let f = Ui_incr.Map.map ~f:(fun (k, _) -> k, empty_div) in
                Bonsai.Incr.compute map ~f))
           ]
         | Group { children; _ } | Org_group children ->
@@ -69,15 +69,14 @@ module Dynamic_cells = struct
     let instantiate_cells (type k) t comparator (map : (k * _) Map_list.t Value.t) =
       let empty = Map.empty (module Map_list.Key) in
       visible_leaves map ~empty comparator t
-      |> Computation.reduce_balanced ~f:(fun a b ->
-        Bonsai.Incr.compute (Value.both a b) ~f:(fun a_and_b ->
-          let%pattern_bind.Ui_incr a, b = a_and_b in
-          Ui_incr.Map.merge a b ~f:(fun ~key:_ change ->
+      |> Computation.fold_right ~init:(Value.return empty) ~f:(fun a acc ->
+        Bonsai.Incr.compute (Value.both a acc) ~f:(fun a_and_acc ->
+          let%pattern_bind.Ui_incr a, acc = a_and_acc in
+          Ui_incr.Map.merge a acc ~f:(fun ~key:_ change ->
             match change with
-            | `Left l -> Some l
-            | `Right r -> Some r
-            | `Both ((i, l), (_, r)) -> Some (i, l @ r))))
-      |> Option.value ~default:(Bonsai.const empty)
+            | `Left (i, l) -> Some (i, [ l ])
+            | `Right (i, r) -> Some (i, r)
+            | `Both ((i, l), (_, r)) -> Some (i, l :: r))))
     ;;
   end
 
@@ -308,7 +307,7 @@ module Dynamic_columns_with_sorter = struct
               let leaf_label =
                 match sorter with
                 | Some _ -> Sortable_header.decorate sortable_header leaf_label i
-                | None -> Vdom.Node.div [ leaf_label ] ~attr:Vdom.Attr.empty
+                | None -> Vdom.Node.div [ leaf_label ] ~attrs:[ Vdom.Attr.empty ]
               in
               Dynamic_columns.T.Leaf { leaf_label; initial_width; cell; visible }
             | other -> (* This should never happen *) other)

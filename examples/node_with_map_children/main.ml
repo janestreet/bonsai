@@ -27,7 +27,7 @@ let component =
   and after_view = after_view
   and tweener = tweener
   and comparison = comparison in
-  Vdom.Node.div ~attr:Style.app [ before_view; after_view; tweener; comparison ]
+  Vdom.Node.div ~attrs:[ Style.app ] [ before_view; after_view; tweener; comparison ]
 ;;
 
 let () = Bonsai_web.Start.start component

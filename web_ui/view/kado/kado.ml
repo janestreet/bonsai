@@ -90,15 +90,16 @@ let light_mode_constants =
   }
 ;;
 
-let app_attr ~color ~is_dark =
+let app_attr ~color ~is_dark ~set_min_height_to_100vh =
   Vdom.Attr.many
     [ App.Variables.set () ~bg:(color |> Color.to_string_css)
     ; App.app
     ; (if is_dark then App.dark else App.light)
+    ; (if set_min_height_to_100vh then App.set_min_height_to_100vh else Vdom.Attr.empty)
     ]
 ;;
 
-let v1 ~constants ~codemirror_theme ~is_dark ~name ~version_name =
+let v1 ~constants ~codemirror_theme ~is_dark ~name ~version_name ~set_min_height_to_100vh =
   View.Expert.override_theme View.Expert.default_theme ~f:(fun (module M) ->
     (module struct
       class c =
@@ -106,7 +107,13 @@ let v1 ~constants ~codemirror_theme ~is_dark ~name ~version_name =
           inherit M.c
           method! theme_name = [%string "%{name} %{version_name}"]
           method! constants = constants
-          method! app_attr = app_attr ~is_dark ~color:self#constants.primary.background
+
+          method! app_attr =
+            app_attr
+              ~is_dark
+              ~color:self#constants.primary.background
+              ~set_min_height_to_100vh
+
           method! devbar = Devbar.make self#constants ~is_dark
           method! tabs = Tabs.make
           method! button = Buttons.make self#constants
@@ -117,7 +124,13 @@ let v1 ~constants ~codemirror_theme ~is_dark ~name ~version_name =
     end))
 ;;
 
-let theme ?(contrast = Contrast.Standard) ?(style = Style.Dark) ~version () =
+let theme
+      ?(contrast = Contrast.Standard)
+      ?(style = Style.Dark)
+      ?set_min_height_to_100vh
+      ~version
+      ()
+  =
   let is_dark, constants, name =
     match style with
     | Light -> false, light_mode_constants, "kado (light)"
@@ -129,9 +142,24 @@ let theme ?(contrast = Contrast.Standard) ?(style = Style.Dark) ~version () =
     | Dark -> Nord
   in
   let Standard = contrast in
+  let set_min_height_to_100vh = Option.is_some set_min_height_to_100vh in
   match version with
-  | Version.V1 -> v1 ~constants ~codemirror_theme ~is_dark ~name ~version_name:"v1"
-  | Bleeding -> v1 ~constants ~codemirror_theme ~is_dark ~name ~version_name:"v1"
+  | Version.V1 ->
+    v1
+      ~constants
+      ~codemirror_theme
+      ~is_dark
+      ~name
+      ~version_name:"v1"
+      ~set_min_height_to_100vh
+  | Bleeding ->
+    v1
+      ~constants
+      ~codemirror_theme
+      ~is_dark
+      ~name
+      ~version_name:"v1"
+      ~set_min_height_to_100vh
 ;;
 
 module Unstable = struct

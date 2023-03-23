@@ -80,10 +80,10 @@ let component ~current_room ~messages ~change_room ~obfuscate_message =
   and messages_panel = messages_panel
   and connection_status = connection_status in
   Vdom.Node.div
-    ~attr:Style.container
+    ~attrs:[ Style.container ]
     [ rooms_list
     ; Vdom.Node.div
-        ~attr:Style.message_container
+        ~attrs:[ Style.message_container ]
         [ messages_panel
         ; compose_panel
         ; Vdom.Node.sexp_for_debugging ([%sexp_of: Rpc_effect.Status.t] connection_status)

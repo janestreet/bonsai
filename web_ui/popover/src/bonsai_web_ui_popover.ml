@@ -76,20 +76,13 @@ let default_popover_styles =
   Vdom.Attr.many [ vars; Style.default_tooltip_styles ]
 ;;
 
-module Action = struct
-  type t =
-    | Open
-    | Close
-    | Toggle
-  [@@deriving sexp, equal]
-end
-
 let component
       ?popover_extra_attr
       ?popover_style_attr
       ?(allow_event_propagation_when_clicked_outside :
           ([ `Left_click | `Right_click | `Escape ] -> bool) Value.t =
           Value.return (fun _ -> false))
+      ?(on_close = Value.return Effect.Ignore)
       ~close_when_clicked_outside
       ~direction
       ~alignment
@@ -103,16 +96,8 @@ let component
   let%sub popover_style_attr =
     Option.value_map popover_style_attr ~default:default_popover_styles ~f:return
   in
-  let%sub is_open, inject =
-    Bonsai.state_machine0
-      (module Bool)
-      (module Action)
-      ~default_model:false
-      ~apply_action:
-        (fun ~inject:_ ~schedule_event:_ model -> function
-           | Open -> true
-           | Close -> false
-           | Toggle -> not model)
+  let%sub { state = is_open; set_state = set_is_open; toggle } =
+    Bonsai.toggle' ~default_model:false
   in
   let%sub direction_class =
     let%arr direction = direction in
@@ -122,9 +107,10 @@ let component
     let%arr alignment = alignment in
     alignment_to_attr alignment
   in
-  let%sub open_, close, toggle =
-    let%arr inject = inject in
-    inject Open, inject Close, inject Toggle
+  let%sub open_, close =
+    let%arr set_is_open = set_is_open
+    and on_close = on_close in
+    set_is_open true, Effect.Many [ set_is_open false; on_close ]
   in
   let%sub popover =
     match%sub is_open with
@@ -177,14 +163,13 @@ let component
       and popover_extra_attr = popover_extra_attr
       and popover_style_attr = popover_style_attr in
       Vdom.Node.div
-        ~attr:
-          (Vdom.Attr.many
-             [ Style.tooltip
-             ; Vdom.Attr.id popover_id
-             ; popover_style_attr
-             ; popover_extra_attr
-             ; outside_click_listener_attr
-             ])
+        ~attrs:
+          [ Style.tooltip
+          ; Vdom.Attr.id popover_id
+          ; popover_style_attr
+          ; popover_extra_attr
+          ; outside_click_listener_attr
+          ]
         [ popover ]
   in
   let%sub open_attr =
@@ -199,9 +184,7 @@ let component
     and open_attr = open_attr in
     fun popover_base ->
       Vdom.Node.span
-        ~attr:
-          (Vdom.Attr.many
-             [ Style.tooltip_container; open_attr; direction_class; alignment_class ])
+        ~attrs:[ Style.tooltip_container; open_attr; direction_class; alignment_class ]
         [ popover_base; popover ]
   in
   let%arr open_ = open_

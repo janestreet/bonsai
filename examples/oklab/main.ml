@@ -44,7 +44,7 @@ let box_with_color ?(content = Vdom.Node.none) color =
     |> Css_gen.background_color
     |> Vdom.Attr.style
   in
-  Vdom.Node.div ~attr:(Vdom.Attr.many [ Style.box; css_color ]) [ content ]
+  Vdom.Node.div ~attrs:[ Style.box; css_color ] [ content ]
 ;;
 
 let gradient ~left ~right ~steps =
@@ -82,8 +82,8 @@ let component =
   View.vbox
     ~gap:(`Em 1)
     [ Vdom.Node.div [ view ]
-    ; View.hbox ~attr:Style.gradient_container gradient
-    ; View.hbox ~attr:Style.overlay_container overlay
+    ; View.hbox ~attrs:[ Style.gradient_container ] gradient
+    ; View.hbox ~attrs:[ Style.overlay_container ] overlay
     ]
 ;;
 

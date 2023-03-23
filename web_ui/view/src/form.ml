@@ -43,7 +43,7 @@ let render_append_item self ~eval_context append_item =
   | Append_info { append; text } ->
     let text = Option.value text ~default:"Add new element" in
     self#button
-      ~attr:(Vdom.Attr.type_ "button")
+      ~attrs:[ Vdom.Attr.type_ "button" ]
       ~disabled:(disabled_of_editable (Form_context.editable eval_context))
       ~intent:None
       ~tooltip:None
@@ -57,16 +57,17 @@ let render_remove_item self ~eval_context remove_item ~index =
   | Remove_info { remove; element_label } ->
     let delete_button =
       self#button
-        ~attr:
-          (Vdom.Attr.many
-             [ Vdom.Attr.type_ "button"
-             ; Vdom.Attr.style
-                 Css_gen.(
-                   border ~style:`None ()
-                   @> create ~field:"cursor" ~value:"pointer"
-                   @> color (`Name "blue")
-                   @> create ~field:"background" ~value:"none")
-             ])
+        ~attrs:
+          [ Vdom.Attr.many
+              [ Vdom.Attr.type_ "button"
+              ; Vdom.Attr.style
+                  Css_gen.(
+                    border ~style:`None ()
+                    @> create ~field:"cursor" ~value:"pointer"
+                    @> color (`Name "blue")
+                    @> create ~field:"background" ~value:"none")
+              ]
+          ]
         ~disabled:(disabled_of_editable (Form_context.editable eval_context))
         ~intent:None
         ~tooltip:None
@@ -116,14 +117,14 @@ let wrap_tooltip_and_error self ~tooltip ~error =
     in
     Vdom.Node.td
       [ Vdom.Node.div
-          ~attr:(Vdom.Attr.style (Css_gen.flex_container ~direction:`Row ()))
+          ~attrs:[ Vdom.Attr.style (Css_gen.flex_container ~direction:`Row ()) ]
           [ tooltip; error ]
       ]
 ;;
 
 let depth_td' ~depth ~extra_attrs =
   let attr = Vdom.Attr.(style (Css_gen.padding_left (`Em depth)) @ extra_attrs) in
-  Vdom.Node.td ~attr
+  Vdom.Node.td ~attrs:[ attr ]
 ;;
 
 let depth_td_of_context context = depth_td' ~depth:(Form_context.depth context)
@@ -141,9 +142,7 @@ let render_label
     match label with
     | None -> Vdom.Node.text ""
     | Some label ->
-      Vdom.Node.label
-        ~attr:(Vdom.Attr.many [ for_; Vdom.Attr.style (Css_gen.display `Block) ])
-        [ label ]
+      Vdom.Node.label ~attrs:[ for_; Vdom.Attr.style (Css_gen.display `Block) ] [ label ]
   in
   depth_td ~extra_attrs:(Vdom.Attr.many (colspan :: extra_attrs)) [ label ]
 ;;
@@ -352,9 +351,7 @@ let to_vdom_plain self ~eval_context t =
 
 let hidden_submit_input =
   Vdom.Node.input
-    ~attr:
-      (Vdom.Attr.many
-         [ Vdom.Attr.style (Css_gen.display `None); Vdom.Attr.type_ "submit" ])
+    ~attrs:[ Vdom.Attr.style (Css_gen.display `None); Vdom.Attr.type_ "submit" ]
     ()
 ;;
 
@@ -369,17 +366,14 @@ let to_vdom self ?on_submit ~eval_context view =
               [ (match on_submit with
                   | None ->
                     Vdom.Node.button
-                      ~attr:(Vdom.Attr.combine button_attr Vdom.Attr.disabled)
+                      ~attrs:[ button_attr; Vdom.Attr.disabled ]
                       [ Vdom.Node.text button_text ]
                   | Some event ->
                     let event =
                       Effect.(Many [ event; Prevent_default; Stop_propagation ])
                     in
                     Vdom.Node.button
-                      ~attr:
-                        (Vdom.Attr.combine
-                           button_attr
-                           (Vdom.Attr.on_click (fun _ -> event)))
+                      ~attrs:[ button_attr; Vdom.Attr.on_click (fun _ -> event) ]
                       [ Vdom.Node.text button_text ])
               ]
           ]
@@ -405,7 +399,7 @@ let to_vdom self ?on_submit ~eval_context view =
     in
     Vdom.Node.create
       "form"
-      ~attr:(Vdom.Attr.on_submit (fun _ -> event))
+      ~attrs:[ Vdom.Attr.on_submit (fun _ -> event) ]
       [ inner_table
       ; (if Option.is_none button_text then hidden_submit_input else Vdom.Node.none)
       ]

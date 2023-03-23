@@ -170,10 +170,9 @@ let%expect_test "state-machine counter-component" =
         (module Counter_component.Action)
         dummy_source_code_position
         ~default_model:0
-        ~apply_action:
-          (fun ~inject:_ ~schedule_event:_ () model -> function
-             | Increment -> model + 1
-             | Decrement -> model - 1)
+        ~apply_action:(fun ~inject:_ ~schedule_event:_ () model -> function
+          | Increment -> model + 1
+          | Decrement -> model - 1)
     in
     Int.to_string model, inject
   in
@@ -265,8 +264,7 @@ let%expect_test "incremental fn constructor" =
        (1 2)
        (2 3)) |}];
     H.set_input (Map.add_exn (initial_input : _ Int.Map.t) ~key:3 ~data:3);
-    [%expect
-      {|
+    [%expect {|
       doing math
       ((0 1)
        (1 2)
@@ -303,9 +301,7 @@ let%expect_test "schedule event from outside of the component" =
   run_test ~component ~initial_input:() ~f:(fun driver ->
     [%expect {| |}];
     [%expect {||}];
-    let (module H) =
-      Helpers.make_with_inject ~driver ~sexp_of_result:[%sexp_of: unit]
-    in
+    let (module H) = Helpers.make_with_inject ~driver ~sexp_of_result:[%sexp_of: unit] in
     H.do_actions [ Trigger ];
     [%expect {|
       External event: hello world
@@ -346,9 +342,7 @@ let%expect_test "schedule many events from outside of the component" =
   in
   run_test ~component ~initial_input:() ~f:(fun driver ->
     [%expect {| |}];
-    let (module H) =
-      Helpers.make_with_inject ~driver ~sexp_of_result:[%sexp_of: unit]
-    in
+    let (module H) = Helpers.make_with_inject ~driver ~sexp_of_result:[%sexp_of: unit] in
     H.do_actions [ Trigger ];
     [%expect
       {|

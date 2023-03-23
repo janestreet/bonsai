@@ -170,9 +170,9 @@ let render_with_access_to_entire_notification t ~f =
   |> List.map ~f:(fun (notification_id, (rendered, _)) ->
     Vdom.Node.div
       ~key:(Notification_id.to_string notification_id)
-      ~attr:Style.notification
+      ~attrs:[ Style.notification ]
       [ rendered ])
-  |> Vdom.Node.div ~attr:Style.notification_container
+  |> Vdom.Node.div ~attrs:[ Style.notification_container ]
 ;;
 
 let render t ~f =
@@ -315,27 +315,29 @@ module Basic = struct
         in
         Vdom.Node.div
           ~key:(Notification_id.to_string notification_id)
-          ~attr:
-            Vdom.Attr.(
-              Style.notification
-              @ on_click (fun _ -> close)
-              @ notification_extra_attr
-              @ create "data-notification-id" (Notification_id.to_string notification_id))
+          ~attrs:
+            [ Vdom.Attr.(
+                Style.notification
+                @ on_click (fun _ -> close)
+                @ notification_extra_attr
+                @ create "data-notification-id" (Notification_id.to_string notification_id))
+            ]
           [ Vdom.Node.div
-              ~attr:
-                Vdom.Attr.(
-                  many [ Style.notification_body; level_class ]
-                  @
-                  match close_after with
-                  | None -> Vdom.Attr.empty
-                  | Some close_after ->
-                    style
-                      (let open Css_gen in
-                       animation
-                         ~name:"fadeOut"
-                         ~duration:close_after
-                         ~timing_function:"ease-in"
-                         ()))
+              ~attrs:
+                [ Vdom.Attr.(
+                    many [ Style.notification_body; level_class ]
+                    @
+                    match close_after with
+                    | None -> Vdom.Attr.empty
+                    | Some close_after ->
+                      style
+                        (let open Css_gen in
+                         animation
+                           ~name:"fadeOut"
+                           ~duration:close_after
+                           ~timing_function:"ease-in"
+                           ()))
+                ]
               [ Vdom.Node.text text
               ; (match level with
                  | Success | Error None -> Vdom.Node.None

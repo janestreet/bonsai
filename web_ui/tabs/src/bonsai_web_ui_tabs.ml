@@ -20,9 +20,9 @@ module Result = struct
 
   let combine_trivially { tabs; current } =
     Vdom.Node.div
-      ~attr:(Vdom.Attr.class_ "bonsai_ui_tab_container")
-      [ Vdom.Node.div ~attr:(Vdom.Attr.class_ "bonsai_ui_tab_tabs") tabs
-      ; Vdom.Node.div ~attr:(Vdom.Attr.class_ "bonsai_ui_tab_body") [ current ]
+      ~attrs:[ Vdom.Attr.class_ "bonsai_ui_tab_container" ]
+      [ Vdom.Node.div ~attrs:[ Vdom.Attr.class_ "bonsai_ui_tab_tabs" ] tabs
+      ; Vdom.Node.div ~attrs:[ Vdom.Attr.class_ "bonsai_ui_tab_body" ] [ current ]
       ]
   ;;
 end
@@ -71,7 +71,7 @@ let tab_ui
           @ name (kind |> M.sexp_of_t |> Sexp.to_string_mach)
           @ additional_button_attributes ~is_selected kind)
       in
-      Vdom.Node.button ~attr [ decorate kind ]
+      Vdom.Node.button ~attrs:[ attr ] [ decorate kind ]
   in
   let tabs =
     let%map all_tabs = all_tabs

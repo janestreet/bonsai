@@ -990,7 +990,7 @@ let%expect_test "record with doc comments gets a tooltip" =
             <div style={ display: flex; flex-direction: row; flex-wrap: nowrap; }>
               <div class="container_hash_replaced_in_test">
                 <label class="label_hash_replaced_in_test" style={ color: blue; }>
-                  <input type="checkbox" class="checkbox_hash_replaced_in_test"> </input>
+                  <input type="checkbox" tabindex="-1" class="checkbox_hash_replaced_in_test"> </input>
                   <span class="span_hash_replaced_in_test"> ⓘ </span>
                   <div class="above_hash_replaced_in_test text_hash_replaced_in_test"
                        style={
@@ -2271,15 +2271,7 @@ let%expect_test "setting into a dynamic grammar form works, but should be done w
   let grammar' = [%sexp_grammar: bool] in
   let grammar_var = Bonsai.Var.create grammar.untyped in
   let grammar_value = Bonsai.Var.value grammar_var in
-  let form =
-    Auto_generated.form'
-      ~on_set_error:(fun sexp ->
-        Effect.print_s
-          [%message
-            "on_set_error: attempted to set sexp that doesn't match grammar"
-              (sexp : Sexp.t)])
-      grammar_value
-  in
+  let form = Auto_generated.form' grammar_value in
   let handle = Handle.create (form_result_spec Fn.id) form in
   (* Everything is good as long as you set sexps that match the current grammar *)
   Handle.show handle;
@@ -2341,7 +2333,12 @@ let%expect_test "setting into a dynamic grammar form works, but should be done w
      be called *)
   Handle.do_actions handle [ [%sexp_of: int] 4 ];
   [%expect
-    {| ("on_set_error: attempted to set sexp that doesn't match grammar" (sexp 4)) |}]
+    {|
+      ("BUG: Sexp representation of set form value does not match sexp grammar. Does your sexp_of_t function match your sexp grammar?"
+       (value 4)
+       (error
+        ("invalid bool"
+         (reason (Of_sexp_error "bool_of_sexp: unknown string" (invalid_sexp 4)))))) |}]
 ;;
 
 let%expect_test "customizations are applied dynamically" =

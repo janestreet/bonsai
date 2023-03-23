@@ -112,7 +112,7 @@ module T = struct
   module Input = struct
     type t =
       { client_rect_changed : int Bbox.t -> unit Vdom.Effect.t
-      ; visible_rect_changed : int Bbox.t -> unit Vdom.Effect.t
+      ; visible_rect_changed : int Bbox.t option -> unit Vdom.Effect.t
       }
 
     let sexp_of_t = sexp_of_opaque
@@ -142,7 +142,7 @@ module T = struct
   module State = struct
     type prev =
       { mutable whole_element : int Bbox.t
-      ; mutable visible_section : int Bbox.t
+      ; mutable visible_section : int Bbox.t option
       }
     [@@deriving sexp, equal]
 
@@ -165,22 +165,20 @@ module T = struct
       { State.callback
       ; prev =
           { whole_element = { min_x = 0; min_y = 0; max_x = 0; max_y = 0 }
-          ; visible_section = { min_x = 0; min_y = 0; max_x = 0; max_y = 0 }
+          ; visible_section = None
           }
       ; animation_id = request_animation_frame (Fn.const ())
       ; dirty = true
       }
     in
     let rec every_frame _frame_time =
-      let whole_element, visibility = get_accurate_vis_bounds element in
-      (match visibility with
-       | Some visible_section
-         when state.dirty
-           || not ([%equal: int Bbox.t] visible_section state.prev.visible_section) ->
-         Effect.Expert.handle_non_dom_event_exn
-           (state.callback.visible_rect_changed visible_section);
-         state.prev.visible_section <- visible_section
-       | _ -> ());
+      let whole_element, visible_section = get_accurate_vis_bounds element in
+      if state.dirty
+      || not ([%equal: int Bbox.t option] visible_section state.prev.visible_section)
+      then (
+        Effect.Expert.handle_non_dom_event_exn
+          (state.callback.visible_rect_changed visible_section);
+        state.prev.visible_section <- visible_section);
       if state.dirty || not ([%equal: int Bbox.t] whole_element state.prev.whole_element)
       then (
         Effect.Expert.handle_non_dom_event_exn

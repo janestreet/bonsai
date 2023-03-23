@@ -18,7 +18,7 @@ let string_duplicator input_string =
   (* [inject] is used to produce an [Event.t] which is handled by Bonsai, and
      the action comes back in to be processed by [apply_action]. *)
   let on_click = Vdom.Attr.on_click (fun _ -> inject_duplicate ()) in
-  let button = Vdom.Node.button ~attr:on_click [ Vdom.Node.text "duplicate" ] in
+  let button = Vdom.Node.button ~attrs:[ on_click ] [ Vdom.Node.text "duplicate" ] in
   Vdom.Node.div [ button; Vdom.Node.text repeated_string ]
 ;;
 
@@ -27,11 +27,10 @@ let string_to_repeat =
   let%arr state, set_state = state in
   let view =
     Vdom.Node.textarea
-      ~attr:
-        (Vdom.Attr.many
-           [ Vdom.Attr.string_property "value" state
-           ; Vdom.Attr.on_input (fun _ -> set_state)
-           ])
+      ~attrs:
+        [ Vdom.Attr.string_property "value" state
+        ; Vdom.Attr.on_input (fun _ -> set_state)
+        ]
       []
   in
   state, view

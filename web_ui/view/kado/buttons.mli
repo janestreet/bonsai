@@ -3,7 +3,7 @@ open! Import
 
 val make
   :  View.Constants.t
-  -> attr:Vdom.Attr.t
+  -> attrs:Vdom.Attr.t list
   -> disabled:bool
   -> intent:Intent.t option
   -> tooltip:string option

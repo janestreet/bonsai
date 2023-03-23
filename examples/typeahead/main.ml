@@ -124,10 +124,10 @@ let components =
     "main"
     [ Vdom.Node.section
         [ Vdom.Node.h4
-            ~attr:(Vdom.Attr.style (Css_gen.margin ~top:(`Px 0) ~bottom:(`Px 0) ()))
+            ~attrs:[ Vdom.Attr.style (Css_gen.margin ~top:(`Px 0) ~bottom:(`Px 0) ()) ]
             [ Vdom.Node.text "Typeaheads" ]
         ; Vdom.Node.p
-            ~attr:(Vdom.Attr.style (Css_gen.margin ~bottom:(`Px 0) ()))
+            ~attrs:[ Vdom.Attr.style (Css_gen.margin ~bottom:(`Px 0) ()) ]
             [ Vdom.Node.span
                 [ Vdom.Node.text "For the best user experience, we recommend " ]
             ; Vdom.Node.create "s" [ Vdom.Node.text "Internet Explorer 6" ]

@@ -15,6 +15,35 @@ let with_inject_fixed_point f =
   return r
 ;;
 
+let with_self_effect
+      (type a)
+      (module M : Bonsai.Model with type t = a)
+      ~(f : a Bonsai.Computation_status.t Effect.t Value.t -> a Computation.t)
+  : a Computation.t
+  =
+  Bonsai.wrap
+    (module struct
+      type t = M.t option [@@deriving sexp, equal]
+    end)
+    ~default_model:None
+    ~apply_action:(fun ~inject:_ ~schedule_event:_ result _model () -> Some result)
+    ~f:(fun model inject ->
+      let%sub current_model =
+        let%sub get_model = Bonsai.yoink model in
+        let%arr inject = inject
+        and get_model = get_model in
+        let%bind.Effect () = inject () in
+        let%map.Effect model = get_model in
+        match model with
+        | Inactive
+        (* Active None could happen if the model were reset in between the injection
+           and get_model effects *)
+        | Active None -> Bonsai.Computation_status.Inactive
+        | Active (Some v) -> Active v
+      in
+      f current_model)
+;;
+
 let state_machine1_dynamic_model
       (type m a)
       (module M : Bonsai.Model with type t = m)
@@ -152,24 +181,23 @@ let pipe (type a) (module A : Bonsai.Model with type t = a) =
       (module Model)
       (module Action)
       ~default_model:Model.default
-      ~apply_action:
-        (fun ~inject:_ ~schedule_event model -> function
-           | Add_action a ->
-             (match Fdeque.dequeue_front model.queued_receivers with
-              | None ->
-                let queued_actions = Fdeque.enqueue_back model.queued_actions a in
-                { model with queued_actions }
-              | Some (hd, queued_receivers) ->
-                schedule_event (Effect.Private.Callback.respond_to hd a);
-                { model with queued_receivers })
-           | Add_receiver r ->
-             (match Fdeque.dequeue_front model.queued_actions with
-              | None ->
-                let queued_receivers = Fdeque.enqueue_back model.queued_receivers r in
-                { model with queued_receivers }
-              | Some (hd, queued_actions) ->
-                schedule_event (Effect.Private.Callback.respond_to r hd);
-                { model with queued_actions }))
+      ~apply_action:(fun ~inject:_ ~schedule_event model -> function
+        | Add_action a ->
+          (match Fdeque.dequeue_front model.queued_receivers with
+           | None ->
+             let queued_actions = Fdeque.enqueue_back model.queued_actions a in
+             { model with queued_actions }
+           | Some (hd, queued_receivers) ->
+             schedule_event (Effect.Private.Callback.respond_to hd a);
+             { model with queued_receivers })
+        | Add_receiver r ->
+          (match Fdeque.dequeue_front model.queued_actions with
+           | None ->
+             let queued_receivers = Fdeque.enqueue_back model.queued_receivers r in
+             { model with queued_receivers }
+           | Some (hd, queued_actions) ->
+             schedule_event (Effect.Private.Callback.respond_to r hd);
+             { model with queued_actions }))
   in
   let%arr inject = inject in
   let request =

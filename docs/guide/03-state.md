@@ -37,7 +37,8 @@ let textbox : (string * Vdom.Node.t) Computation.t =
   and set_state = set_state in
   let view =
     Vdom.Node.input
-      ~attr:Vdom.Attr.(value_prop state @ on_input (fun _ new_text -> set_state new_text))
+      ~attrs:
+        [ Vdom.Attr.(value_prop state @ on_input (fun _ new_text -> set_state new_text)) ]
       ()
   in
   state, view
@@ -141,7 +142,7 @@ let two_textboxes : Vdom.Node.t Computation.t =
   and contents_b, view_b = textbox_b in
   let display = Vdom.Node.textf "a: %s, b: %s" contents_a contents_b in
   Vdom.Node.div
-    ~attr:(Vdom.Attr.style (Css_gen.display `Inline_grid))
+    ~attrs:[ Vdom.Attr.style (Css_gen.display `Inline_grid) ]
     [ view_a; view_b; display ]
 ;;
 ```
@@ -185,7 +186,7 @@ let two_textboxes_shared_state : Vdom.Node.t Computation.t =
   and contents_b, view_b = textbox_b in
   let display = Vdom.Node.textf "a: %s, b: %s" contents_a contents_b in
   Vdom.Node.div
-    ~attr:(Vdom.Attr.style (Css_gen.display `Inline_grid))
+    ~attrs:[ Vdom.Attr.style (Css_gen.display `Inline_grid) ]
     [ view_a; view_b; display ]
 ;;
 ```
@@ -219,12 +220,12 @@ let state_based_counter : Vdom.Node.t Computation.t =
   and set_state = set_state in
   let decrement =
     Vdom.Node.button
-      ~attr:(Vdom.Attr.on_click (fun _ -> set_state (state - 1)))
+      ~attrs:[ Vdom.Attr.on_click (fun _ -> set_state (state - 1)) ]
       [ Vdom.Node.text "-1" ]
   in
   let increment =
     Vdom.Node.button
-      ~attr:(Vdom.Attr.on_click (fun _ -> set_state (state + 1)))
+      ~attrs:[ Vdom.Attr.on_click (fun _ -> set_state (state + 1)) ]
       [ Vdom.Node.text "+1" ]
   in
   Vdom.Node.div [ decrement; Vdom.Node.textf "%d" state; increment ]
@@ -328,12 +329,12 @@ let counter_state_machine : Vdom.Node.t Computation.t =
   and inject = inject in
   let decrement =
     Vdom.Node.button
-      ~attr:(Vdom.Attr.on_click (fun _ -> inject Decrement))
+      ~attrs:[ Vdom.Attr.on_click (fun _ -> inject Decrement) ]
       [ Vdom.Node.text "-1" ]
   in
   let increment =
     Vdom.Node.button
-      ~attr:(Vdom.Attr.on_click (fun _ -> inject Increment))
+      ~attrs:[ Vdom.Attr.on_click (fun _ -> inject Increment) ]
       [ Vdom.Node.text "+1" ]
   in
   Vdom.Node.div [ decrement; Vdom.Node.textf "%d" state; increment ]

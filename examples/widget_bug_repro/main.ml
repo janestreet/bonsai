@@ -34,7 +34,7 @@ let widget = unstage widget
 let inner_html_a =
   Vdom.Node.inner_html
     ~tag:"div"
-    ~attr:Vdom.Attr.empty
+    ~attrs:[ Vdom.Attr.empty ]
     ~this_html_is_sanitized_and_is_totally_safe_trust_me:"hello"
     ()
 ;;
@@ -42,7 +42,7 @@ let inner_html_a =
 let inner_html_b =
   Vdom.Node.inner_html
     ~tag:"div"
-    ~attr:Vdom.Attr.empty
+    ~attrs:[ Vdom.Attr.empty ]
     ~this_html_is_sanitized_and_is_totally_safe_trust_me:"world"
     ()
 ;;
@@ -55,7 +55,7 @@ let component true_or_false ~toggle =
       [ widget
       ; widget
       ; Vdom.Node.button
-          ~attr:(Vdom.Attr.on_click (fun _ -> toggle (not true_or_false)))
+          ~attrs:[ Vdom.Attr.on_click (fun _ -> toggle (not true_or_false)) ]
           [ Vdom.Node.text "click me" ]
       ]
   in

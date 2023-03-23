@@ -40,9 +40,10 @@ let component =
   and incr = incr in
   let button =
     Vdom.Node.button
-      ~attr:
-        (Vdom.Attr.on_click (fun _ ->
-           Effect.Many [ Form.set form (List.nth_exn generated_values index); incr () ]))
+      ~attrs:
+        [ Vdom.Attr.on_click (fun _ ->
+            Effect.Many [ Form.set form (List.nth_exn generated_values index); incr () ])
+        ]
       [ Vdom.Node.text "Set form to a random value" ]
   in
   Vdom.Node.div

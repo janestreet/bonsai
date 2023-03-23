@@ -95,32 +95,33 @@ let component ?filter (data : Row.t String.Map.t Value.t) =
   in
   let%arr should_show_position = should_show_position
   and set = set
-  and { Table.Result.view = table; for_testing = _; num_filtered_rows = _; focus } =
-    table
-  in
+  and { Table.Result.view = table; for_testing = _; num_filtered_rows; focus } = table in
   let button_text = if should_show_position then "hide position" else "show position" in
   let button text action =
-    Vdom.Node.button ~attr:(Vdom.Attr.on_click (fun _ -> action)) [ Vdom.Node.text text ]
+    Vdom.Node.button
+      ~attrs:[ Vdom.Attr.on_click (fun _ -> action) ]
+      [ Vdom.Node.text text ]
   in
   Vdom.Node.div
-    ~attr:
-      (Vdom.Attr.many
-         [ Vdom.Attr.on_keydown (fun kbc ->
-             let binding =
-               match Js_of_ocaml.Dom_html.Keyboard_code.of_event kbc with
-               | ArrowDown | KeyJ -> Some focus.focus_down
-               | ArrowUp | KeyK -> Some focus.focus_up
-               | PageDown -> Some focus.page_down
-               | PageUp -> Some focus.page_up
-               | Escape -> Some focus.unfocus
-               | _ -> None
-             in
-             match binding with
-             | Some b -> Effect.Many [ Effect.Prevent_default; b ]
-             | None -> Effect.Ignore)
-         ])
+    ~attrs:
+      [ Vdom.Attr.on_keydown (fun kbc ->
+          let binding =
+            match Js_of_ocaml.Dom_html.Keyboard_code.of_event kbc with
+            | ArrowDown | KeyJ -> Some focus.focus_down
+            | ArrowUp | KeyK -> Some focus.focus_up
+            | PageDown -> Some focus.page_down
+            | PageUp -> Some focus.page_up
+            | Escape -> Some focus.unfocus
+            | Home -> Some (focus.focus_index 0)
+            | End -> Some (focus.focus_index num_filtered_rows)
+            | _ -> None
+          in
+          match binding with
+          | Some b -> Effect.Many [ Effect.Prevent_default; b ]
+          | None -> Effect.Ignore)
+      ]
     [ Vdom.Node.div
-        ~attr:Style.show_position_toggle
+        ~attrs:[ Style.show_position_toggle ]
         [ button button_text (set (not should_show_position)) ]
     ; table
     ]

@@ -59,6 +59,20 @@ module Textbox : sig
     -> 'a Form.t Computation.t
 end
 
+module Password : sig
+  val string
+    :  ?extra_attrs:Vdom.Attr.t list Value.t
+    -> ?placeholder:string
+    -> unit
+    -> string Form.t Computation.t
+
+  val stringable
+    :  ?extra_attrs:Vdom.Attr.t list Value.t
+    -> ?placeholder:string
+    -> (module Stringable with type t = 'a)
+    -> 'a Form.t Computation.t
+end
+
 module Textarea : sig
   val string
     :  ?extra_attrs:Vdom.Attr.t list Value.t
@@ -341,7 +355,7 @@ module Number : sig
     :  ?extra_attrs:Vdom.Attr.t list Value.t
     -> ?min:int
     -> ?max:int
-    -> default:int
+    -> ?default:int
     -> step:int
     -> unit
     -> int Form.t Computation.t
@@ -350,7 +364,7 @@ module Number : sig
     :  ?extra_attrs:Vdom.Attr.t list Value.t
     -> ?min:float
     -> ?max:float
-    -> default:float
+    -> ?default:float
     -> step:float
     -> unit
     -> float Form.t Computation.t
@@ -363,7 +377,7 @@ module Range : sig
     -> ?max:int
     -> ?left_label:Vdom.Node.t
     -> ?right_label:Vdom.Node.t
-    -> default:int
+    -> ?default:int
     -> step:int
     -> unit
     -> int Form.t Computation.t
@@ -374,7 +388,7 @@ module Range : sig
     -> ?max:float
     -> ?left_label:Vdom.Node.t
     -> ?right_label:Vdom.Node.t
-    -> default:float
+    -> ?default:float
     -> step:float
     -> unit
     -> float Form.t Computation.t

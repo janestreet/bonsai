@@ -2,7 +2,7 @@ open! Core
 open! Import
 module Style = Devbar_style
 
-let make constants ~is_dark ~attr ~count ~intent text =
+let make constants ~is_dark ~attrs ~count ~intent text =
   let colors = Option.map intent ~f:(View.Constants.Intent.lookup constants.intent) in
   let colors =
     match colors with
@@ -13,12 +13,12 @@ let make constants ~is_dark ~attr ~count ~intent text =
         ~snd:(Css_gen.Color.to_string_css background)
         ()
   in
-  let attr =
-    Vdom.Attr.many [ attr; colors; (if is_dark then Style.dark else Vdom.Attr.empty) ]
-  in
   let rep = List.init count ~f:(fun _ -> Vdom.Node.span [ Vdom.Node.text text ]) in
   Vdom.Node.div
-    ~attr:(Vdom.Attr.many [ Style.devbar; attr ])
-    [ Vdom.Node.div ~attr:Style.container (Vdom.Node.div ~attr:Style.background [] :: rep)
+    ~attrs:
+      (attrs @ [ Style.devbar; colors; (if is_dark then Style.dark else Vdom.Attr.empty) ])
+    [ Vdom.Node.div
+        ~attrs:[ Style.container ]
+        (Vdom.Node.div ~attrs:[ Style.background ] [] :: rep)
     ]
 ;;

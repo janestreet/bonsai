@@ -153,8 +153,7 @@ module Interpolatable = struct
 end
 
 let make
-  : type a.
-    fallback:a Value.t -> interpolate:(a -> a -> float -> a) -> a t Computation.t
+  : type a. fallback:a Value.t -> interpolate:(a -> a -> float -> a) -> a t Computation.t
   =
   fun ~fallback ~interpolate ->
   let module A_star_a = struct

@@ -121,7 +121,7 @@ let component ~(before_state : Color_list.t Value.t) ~(after_state : Color_list.
   and ff_button = ff_button in
   let header =
     Vdom.Node.div
-      ~attr:Style.header
+      ~attrs:[ Style.header ]
       [ Style.refresh_button `Dark ~on_click:(inject Restart)
       ; Vdom.Node.text "step"
       ; Style.arrow_right `Dark ~on_click:(inject Step)
@@ -142,7 +142,7 @@ let component ~(before_state : Color_list.t Value.t) ~(after_state : Color_list.
            else [ Style.packet ]
          in
          Vdom.Node.div
-           ~attr:(Vdom.Attr.many classes)
+           ~attrs:classes
            (List.map packet ~f:(fun diff ->
               let elements =
                 match diff with
@@ -161,7 +161,7 @@ let component ~(before_state : Color_list.t Value.t) ~(after_state : Color_list.
                   ]
               in
               let classes = [ Style.diff ] in
-              Vdom.Node.div ~attr:(Vdom.Attr.many classes) elements))))
+              Vdom.Node.div ~attrs:classes elements))))
   in
   let is_done = state.pointer >= List.length state.diffs in
   let debug =
@@ -169,21 +169,20 @@ let component ~(before_state : Color_list.t Value.t) ~(after_state : Color_list.
     then
       Vdom.Node.div
         [ Vdom.Node.textarea
-            ~attr:
-              (Vdom.Attr.many
-                 [ Vdom.Attr.many [ Style.header; Style.debug ]
-                 ; Vdom.Attr.value_prop ([%sexp_of: Model.t] state |> Sexp.to_string_hum)
-                 ; Vdom.Attr.on_change (fun _ text ->
-                     text
-                     |> Sexp.of_string
-                     |> [%of_sexp: Model.t]
-                     |> Action.Set_state
-                     |> inject)
-                 ])
+            ~attrs:
+              [ Vdom.Attr.many [ Style.header; Style.debug ]
+              ; Vdom.Attr.value_prop ([%sexp_of: Model.t] state |> Sexp.to_string_hum)
+              ; Vdom.Attr.on_change (fun _ text ->
+                  text
+                  |> Sexp.of_string
+                  |> [%of_sexp: Model.t]
+                  |> Action.Set_state
+                  |> inject)
+              ]
             []
         ]
     else Vdom.Node.none
   in
-  let view = Vdom.Node.div ~attr:Style.color_list [ header; debug; body ] in
+  let view = Vdom.Node.div ~attrs:[ Style.color_list ] [ header; debug; body ] in
   { state = state.cur; is_done; view; step = inject Step; is_automating }
 ;;

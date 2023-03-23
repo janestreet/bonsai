@@ -993,13 +993,11 @@ let command =
            |> Deferred.List.iter ~how:`Sequential ~f:(fun (name, T computation) ->
              print_endline [%string "Processing %{name}"];
              write_computation_to_dot [%string "%{name}.dot"] (computation ());
-             Sys_unix.command_exn
-               [%string "dot -Tsvg %{name}.dot -o %{name}.svg"];
+             Sys_unix.command_exn [%string "dot -Tsvg %{name}.dot -o %{name}.svg"];
              let%bind () = Sys.remove [%string "%{name}.dot"] in
              Writer.write
                writer
-               [%string
-                 "# %{name}\n\n![](%{name}.svg \"Graph for %{name}\")\n\n"];
+               [%string "# %{name}\n\n![](%{name}.svg \"Graph for %{name}\")\n\n"];
              Writer.flushed writer)
          in
          let%bind () =

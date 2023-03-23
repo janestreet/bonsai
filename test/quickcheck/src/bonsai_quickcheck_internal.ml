@@ -602,17 +602,9 @@ module Function = struct
           (match in_witness, out_witness with
            | Tuple (in_first, in_second), Tuple (out_first, out_second) ->
              let hash =
-               Q.Observer.observe
-                 (quickcheck_observer in_first out_first)
-                 func1
-                 ~size
-                 ~hash
+               Q.Observer.observe (quickcheck_observer in_first out_first) func1 ~size ~hash
              in
-             Q.Observer.observe
-               (quickcheck_observer in_second out_second)
-               func2
-               ~size
-               ~hash
+             Q.Observer.observe (quickcheck_observer in_second out_second) func2 ~size ~hash
            | _ -> assert false)
         | Make_either which ->
           let hash = hash_fold_int hash 5 in
@@ -834,9 +826,7 @@ module Value = struct
           | Real_value _ ->
             Sequence.singleton (T { unpacked = Return (); witness = Unit })
           | Both { first; first_witness; second; second_witness } ->
-            let first_packed : packed =
-              T { unpacked = first; witness = first_witness }
-            in
+            let first_packed : packed = T { unpacked = first; witness = first_witness } in
             let second_packed : packed =
               T { unpacked = second; witness = second_witness }
             in
@@ -1224,9 +1214,7 @@ module Computation = struct
               (quickcheck_observer witness)
           in
           let f_observer =
-            Q.Observer.fn
-              (Value.quickcheck_generator [] () first_witness)
-              f_inner_observer
+            Q.Observer.fn (Value.quickcheck_generator [] () first_witness) f_inner_observer
           in
           Q.Observer.observe f_observer f ~size ~hash
         | Switch { either_value; first_witness; second_witness; f_first; f_second } ->
@@ -1256,11 +1244,7 @@ module Computation = struct
           (* Observe value *)
           let map_witness = Witness.Map (key_witness, value_witness) in
           let hash =
-            Q.Observer.observe
-              (Value.quickcheck_observer map_witness)
-              map_value
-              ~size
-              ~hash
+            Q.Observer.observe (Value.quickcheck_observer map_witness) map_value ~size ~hash
           in
           (* Observe f *)
           let f_inner_observer =
@@ -1275,11 +1259,7 @@ module Computation = struct
         | State { default_model; default_witness } ->
           let hash = hash_fold_int hash 5 in
           (* Observe default_model *)
-          Q.Observer.observe
-            (real_data_observer default_witness)
-            default_model
-            ~size
-            ~hash)
+          Q.Observer.observe (real_data_observer default_witness) default_model ~size ~hash)
   ;;
 
 
@@ -1302,8 +1282,7 @@ module Computation = struct
         Sequence.singleton (T { unpacked = tuple_computation; witness = inner_witness })
       | Switch { either_value; first_witness; second_witness; _ } ->
         let inner_witness = Witness.Either (first_witness, second_witness) in
-        Sequence.singleton
-          (T { unpacked = Return either_value; witness = inner_witness })
+        Sequence.singleton (T { unpacked = Return either_value; witness = inner_witness })
       | Assoc { map_value; key_witness; value_witness; _ } ->
         let map_witness = Witness.Map (key_witness, value_witness) in
         Sequence.singleton (T { unpacked = Return map_value; witness = map_witness })

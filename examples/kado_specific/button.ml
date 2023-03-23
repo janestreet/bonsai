@@ -106,22 +106,40 @@ let component =
         ]
     in
     Vdom.Node.div
-      ~attr:(Parameters.Group.to_attr group)
-      [ View.button ~attr theme ~disabled ~on_click:Ui_effect.Ignore "hello"
-      ; View.button ~attr theme ~disabled ~intent:Info ~on_click:Ui_effect.Ignore "world"
-      ; View.button ~attr theme ~disabled ~intent:Success ~on_click:Ui_effect.Ignore "ok"
+      ~attrs:[ Parameters.Group.to_attr group ]
+      [ View.button ~attrs:[ attr ] theme ~disabled ~on_click:Ui_effect.Ignore "hello"
       ; View.button
-          ~attr
+          ~attrs:[ attr ]
+          theme
+          ~disabled
+          ~intent:Info
+          ~on_click:Ui_effect.Ignore
+          "world"
+      ; View.button
+          ~attrs:[ attr ]
+          theme
+          ~disabled
+          ~intent:Success
+          ~on_click:Ui_effect.Ignore
+          "ok"
+      ; View.button
+          ~attrs:[ attr ]
           theme
           ~disabled
           ~intent:Warning
           ~on_click:Ui_effect.Ignore
           "lets"
-      ; View.button ~attr theme ~disabled ~intent:Error ~on_click:Ui_effect.Ignore "go"
+      ; View.button
+          ~attrs:[ attr ]
+          theme
+          ~disabled
+          ~intent:Error
+          ~on_click:Ui_effect.Ignore
+          "go"
       ]
   in
   [ Vdom.Node.div
-      ~attr:(Vdom.Attr.style (Css_gen.create ~field:"max-width" ~value:"fit-content"))
+      ~attrs:[ Vdom.Attr.style (Css_gen.create ~field:"max-width" ~value:"fit-content") ]
       [ Form.view_as_vdom form ]
   ; button_group (Form.value_or_default form ~default:Parameters.default)
   ]

@@ -394,8 +394,7 @@ let%expect_test "from_query_many can parse empty list options from missing query
     ~path:[]
     ~query:String.Map.empty
     ~sexp_of_t:Url.sexp_of_t
-    ~expect:(fun () ->
-      (* Some []*)
+    ~expect:(fun () -> (* Some []*)
       [%expect {|
    ((strings (()))) |}])
 ;;
@@ -1129,12 +1128,7 @@ let%test_module "quickcheck" =
             bool_generator
             remaining_generator
             ~f:(fun int_ bool_ remaining ->
-              [ "main"
-              ; "path_int"
-              ; Int.to_string int_
-              ; Bool.to_string bool_
-              ; "remaining"
-              ]
+              [ "main"; "path_int"; Int.to_string int_; Bool.to_string bool_; "remaining" ]
               @ List.map remaining ~f:Int.to_string)
         ;;
 
@@ -1324,10 +1318,10 @@ let%test_module "quickcheck" =
           is_equal)
     ;;
 
-    let%quick_test ("attempt to parse generated queries" [@generator generator]
-                    [@shrinker.disable])
-      =
-      fun ((query, path) : string list String.Map.t * string list) ->
+    let%quick_test "attempt to parse generated queries" =
+      fun ((query, path) :
+             (string list String.Map.t * string list
+              [@generator generator] [@shrinker.disable])) ->
         let parser = Parser.Variant.make ~namespace:[] (module Query) in
         let projection = Parser.eval parser in
         let result = projection.parse_exn { query; path } in

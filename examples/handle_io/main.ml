@@ -8,7 +8,7 @@ let component =
   let on_click = print_effect "hello world" in
   Bonsai.const
     (Vdom.Node.button
-       ~attr:(Vdom.Attr.on_click (fun _ -> on_click))
+       ~attrs:[ Vdom.Attr.on_click (fun _ -> on_click) ]
        [ Vdom.Node.text "click me to print a thing to the console" ])
 ;;
 

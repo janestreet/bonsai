@@ -146,36 +146,34 @@ module Traverse : sig
        count_uids#computation t 0
      ]}
   *)
-  class ['acc] fold :
-    object
-      method bool : bool -> 'acc -> 'acc
-      method computation : Computation.t -> 'acc -> 'acc
-      method computation_kind : Computation.kind -> 'acc -> 'acc
-      method id : int -> 'acc -> 'acc
-      method lazy_ : ('a -> 'acc -> 'acc) -> 'a lazy_t -> 'acc -> 'acc
-      method list : ('a -> 'acc -> 'acc) -> 'a list -> 'acc -> 'acc
-      method node_path : Node_path.t -> 'acc -> 'acc
-      method option : ('a -> 'acc -> 'acc) -> 'a option -> 'acc -> 'acc
-      method source_code_position : Source_code_position.t -> 'acc -> 'acc
-      method value : Value.t -> 'acc -> 'acc
-      method value_kind : Value.kind -> 'acc -> 'acc
-    end
+  class ['acc] fold : object
+    method bool : bool -> 'acc -> 'acc
+    method computation : Computation.t -> 'acc -> 'acc
+    method computation_kind : Computation.kind -> 'acc -> 'acc
+    method id : int -> 'acc -> 'acc
+    method lazy_ : ('a -> 'acc -> 'acc) -> 'a lazy_t -> 'acc -> 'acc
+    method list : ('a -> 'acc -> 'acc) -> 'a list -> 'acc -> 'acc
+    method node_path : Node_path.t -> 'acc -> 'acc
+    method option : ('a -> 'acc -> 'acc) -> 'a option -> 'acc -> 'acc
+    method source_code_position : Source_code_position.t -> 'acc -> 'acc
+    method value : Value.t -> 'acc -> 'acc
+    method value_kind : Value.kind -> 'acc -> 'acc
+  end
 
   (**
      Provides a nice way of mapping over computations and its elements similarly to [fold].
   *)
-  class map :
-    object
-      method bool : bool -> bool
-      method computation : Computation.t -> Computation.t
-      method computation_kind : Computation.kind -> Computation.kind
-      method id : int -> int
-      method lazy_ : ('a -> 'a) -> 'a lazy_t -> 'a lazy_t
-      method list : ('a -> 'a) -> 'a list -> 'a list
-      method node_path : Node_path.t -> Node_path.t
-      method option : ('a -> 'a) -> 'a option -> 'a option
-      method source_code_position : Source_code_position.t -> Source_code_position.t
-      method value : Value.t -> Value.t
-      method value_kind : Value.kind -> Value.kind
-    end
+  class map : object
+    method bool : bool -> bool
+    method computation : Computation.t -> Computation.t
+    method computation_kind : Computation.kind -> Computation.kind
+    method id : int -> int
+    method lazy_ : ('a -> 'a) -> 'a lazy_t -> 'a lazy_t
+    method list : ('a -> 'a) -> 'a list -> 'a list
+    method node_path : Node_path.t -> Node_path.t
+    method option : ('a -> 'a) -> 'a option -> 'a option
+    method source_code_position : Source_code_position.t -> Source_code_position.t
+    method value : Value.t -> Value.t
+    method value_kind : Value.kind -> Value.kind
+  end
 end

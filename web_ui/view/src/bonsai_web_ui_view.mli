@@ -140,8 +140,8 @@ type 'a format := ('a, unit, string, Vdom.Node.t) format4
     The text functions render a <span> of text with optional attributes.
     [textf] can be used with format syntax. *)
 
-val text : ?attr:Vdom.Attr.t -> string -> Vdom.Node.t
-val textf : ?attr:Vdom.Attr.t -> 'a format -> 'a
+val text : ?attrs:Vdom.Attr.t list -> string -> Vdom.Node.t
+val textf : ?attrs:Vdom.Attr.t list -> 'a format -> 'a
 
 module Font_style : sig
   type t =
@@ -164,7 +164,7 @@ end
    style and size. *)
 val themed_text
   :  Theme.t
-  -> ?attr:Vdom.Attr.t
+  -> ?attrs:Vdom.Attr.t list
   -> ?intent:Intent.t
   -> ?style:Font_style.t
   -> ?size:Font_size.t
@@ -173,7 +173,7 @@ val themed_text
 
 val themed_textf
   :  Theme.t
-  -> ?attr:Vdom.Attr.t
+  -> ?attrs:Vdom.Attr.t list
   -> ?intent:Intent.t
   -> ?style:Font_style.t
   -> ?size:Font_size.t
@@ -198,7 +198,7 @@ module Flex = Layout.Flex
 
 (** Builds a flexbox container for elements and lays them out horizontally. *)
 val hbox
-  :  ?attr:Vdom.Attr.t
+  :  ?attrs:Vdom.Attr.t list
   -> ?gap:Css_gen.Length.t
   -> ?main_axis_alignment:Flex.Main_axis_alignment.t
   -> ?cross_axis_alignment:Flex.Cross_axis_alignment.t
@@ -208,7 +208,7 @@ val hbox
 
 (** Builds a flexbox container for elements and lays them out vertically. *)
 val vbox
-  :  ?attr:Vdom.Attr.t
+  :  ?attrs:Vdom.Attr.t list
   -> ?gap:Css_gen.Length.t
   -> ?main_axis_alignment:Flex.Main_axis_alignment.t
   -> ?cross_axis_alignment:Flex.Cross_axis_alignment.t
@@ -219,7 +219,7 @@ val vbox
 (** A horizontal flexbox container whose content will wrap
     onto multiple rows if necessary *)
 val hbox_wrap
-  :  ?attr:Vdom.Attr.t
+  :  ?attrs:Vdom.Attr.t list
   -> ?row_gap:Css_gen.Length.t
   -> ?column_gap:Css_gen.Length.t
   -> ?main_axis_alignment:Flex.Main_axis_alignment.t
@@ -232,7 +232,7 @@ val hbox_wrap
 (** A vertical flexbox container whose content will wrap
     onto multiple columns if necessary *)
 val vbox_wrap
-  :  ?attr:Vdom.Attr.t
+  :  ?attrs:Vdom.Attr.t list
   -> ?row_gap:Css_gen.Length.t
   -> ?column_gap:Css_gen.Length.t
   -> ?main_axis_alignment:Flex.Main_axis_alignment.t
@@ -261,7 +261,7 @@ val vbox_wrap
     The unnamed string parameter is used as the label for the button *)
 val button
   :  Theme.t
-  -> ?attr:Vdom.Attr.t
+  -> ?attrs:Vdom.Attr.t list
   -> ?disabled:bool
   -> ?intent:Intent.t
   -> ?tooltip:string
@@ -273,7 +273,7 @@ val button
     of vdom nodes instead of as a string *)
 val button'
   :  Theme.t
-  -> ?attr:Vdom.Attr.t
+  -> ?attrs:Vdom.Attr.t list
   -> ?disabled:bool
   -> ?intent:Intent.t
   -> ?tooltip:string
@@ -316,7 +316,7 @@ val tooltip'
     the tab, with one of those items serving to indicate the currently active tab. *)
 val tabs
   :  Theme.t
-  -> ?attr:Vdom.Attr.t
+  -> ?attrs:Vdom.Attr.t list
   -> ?per_tab_attr:('a -> is_active:bool -> Vdom.Attr.t)
   -> equal:('a -> 'a -> bool)
   -> on_change:(from:'a -> to_:'a -> unit Effect.t)
@@ -327,7 +327,7 @@ val tabs
 (** A helper function for tabs where the items representing the tabs are enumerable *)
 val tabs_enum
   :  Theme.t
-  -> ?attr:Vdom.Attr.t
+  -> ?attrs:Vdom.Attr.t list
   -> ?per_tab_attr:('a -> is_active:bool -> Vdom.Attr.t)
   -> ?tab_to_vdom:('a -> Vdom.Node.t)
   -> (module Enum with type t = 'a)
@@ -339,7 +339,7 @@ val tabs_enum
     the user isn't on a production instance of the application. *)
 val devbar
   :  Theme.t
-  -> ?attr:Vdom.Attr.t
+  -> ?attrs:Vdom.Attr.t list
   -> ?count:int
   -> ?intent:Intent.t
   -> string
@@ -500,6 +500,9 @@ module Expert : sig
   val default_theme : Theme.t
   val override_theme : Theme.t -> f:((module S) -> (module S)) -> Theme.t
 
+  (** This function allows the caller to build a new theme based on a theme. *)
+  val override_constants : Theme.t -> f:(Constants.t -> Constants.t) -> Theme.t
+
   (** [override_current_theme_temporarily] allows the full extension of the current theme,
       installing this theme for the given computation. *)
   val override_theme_for_computation
@@ -510,3 +513,8 @@ module Expert : sig
   module For_codemirror = For_codemirror
   module Form_context = Form_context
 end
+
+(** The [Raw] module contains helper functions for building vdom nodes that have styling
+    pulled from a theme, but rely on the user to properly structure and organize the nodes
+    manually.  You probably shouldn't use these APIs if the standard functions are sufficient *)
+module Raw : Raw_intf.S with module Theme := Theme

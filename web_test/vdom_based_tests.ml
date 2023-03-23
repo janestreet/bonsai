@@ -37,10 +37,10 @@ let%expect_test "recursive component" =
       String.concat ~sep:"_" ("path" :: List.rev_map path ~f:Int.to_string)
     in
     Vdom.Node.div
-      ~attr:(Vdom.Attr.id path_text)
+      ~attrs:[ Vdom.Attr.id path_text ]
       (Vdom.Node.textf "%s %d" label state
        :: Vdom.Node.button
-            ~attr:(Vdom.Attr.on_click (fun _ -> set_state (state + 1)))
+            ~attrs:[ Vdom.Attr.on_click (fun _ -> set_state (state + 1)) ]
             [ Vdom.Node.text "+1" ]
        :: Map.data (children : _ Int.Map.t))
   in

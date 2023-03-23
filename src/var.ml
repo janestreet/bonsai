@@ -18,3 +18,4 @@ let update t ~f =
 
 let get t = Incr.Var.value t
 let value t = t |> Incr.Var.watch |> Value.of_incr
+let incr_var = Fn.id

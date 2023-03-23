@@ -100,8 +100,8 @@ let component =
       let%arr table1 = table1
       and table2 = table2 in
       Vdom.Node.div
-        [ Vdom.Node.div ~attr:Css.table [ table1 ]
-        ; Vdom.Node.div ~attr:Css.table [ table2 ]
+        [ Vdom.Node.div ~attrs:[ Css.table ] [ table1 ]
+        ; Vdom.Node.div ~attrs:[ Css.table ] [ table2 ]
         ]
   in
   let%arr tables = tables
@@ -131,7 +131,7 @@ let component =
           | None -> Effect.Ignore)
       ]
   in
-  Vdom.Node.div ~attr [ Form.view_as_vdom which_form; tables ]
+  Vdom.Node.div ~attrs:[ attr ] [ Form.view_as_vdom which_form; tables ]
 ;;
 
 let () = Bonsai_web.Start.start component

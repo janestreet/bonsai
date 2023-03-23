@@ -148,7 +148,7 @@ let header_component ~inject =
         ; Attr.on_keydown handle_enter
         ]
     in
-    Node.input ~attr ()
+    Node.input ~attrs:[ attr ] ()
   in
   Node.header [ Node.h1 [ Node.text "todos" ]; custom_input ]
 ;;
@@ -176,7 +176,7 @@ let todo_item_component
         ; Attr.bool_property "checked" todo.completed
         ]
     in
-    Node.input ~attr ()
+    Node.input ~attrs:[ attr ] ()
   in
   let task_name_input =
     let handle_focus_leave evt =
@@ -198,27 +198,30 @@ let todo_item_component
         ; Attr.on_keydown handle_enter
         ]
     in
-    Node.input ~attr ()
+    Node.input ~attrs:[ attr ] ()
   in
   let view =
     let remove_task_button =
       let on_click _ = inject (Delete_todo todo.id) in
       let attr = Attr.many [ Style.destroy; Attr.on_click on_click ] in
-      Node.button ~attr []
+      Node.button ~attrs:[ attr ] []
     in
     let on_double_click _ = set_editing (not editing) in
     Node.div
-      ~attr:Style.view
+      ~attrs:[ Style.view ]
       [ is_complete_checkbox
-      ; Node.label ~attr:(Attr.on_double_click on_double_click) [ Node.text todo.title ]
+      ; Node.label
+          ~attrs:[ Attr.on_double_click on_double_click ]
+          [ Node.text todo.title ]
       ; remove_task_button
       ]
   in
   Node.li
     ~key:(Int.to_string todo.id)
-    ~attr:
-      (Dom_helpers.filtered_attrs
-         [ Style.editing, editing; Style.completed, todo.completed ])
+    ~attrs:
+      [ Dom_helpers.filtered_attrs
+          [ Style.editing, editing; Style.completed, todo.completed ]
+      ]
     [ view; task_name_input ]
 ;;
 
@@ -261,13 +264,13 @@ let todo_list (model : Model.t Value.t) ~inject =
         ; Attr.on_change handle_clicked
         ]
     in
-    Node.input ~attr ()
+    Node.input ~attrs:[ attr ] ()
   in
   Node.section
-    ~attr:Style.main
+    ~attrs:[ Style.main ]
     [ toggle_all
-    ; Node.label ~attr:(Attr.for_ "toggle-all") [ Node.text "Mark all as complete" ]
-    ; Node.ul ~attr:Style.todo_list (Map.data todo_items)
+    ; Node.label ~attrs:[ Attr.for_ "toggle-all" ] [ Node.text "Mark all as complete" ]
+    ; Node.ul ~attrs:[ Style.todo_list ] (Map.data todo_items)
     ]
 ;;
 
@@ -288,14 +291,14 @@ let footer_component
   let completed_count = Map.length completed in
   let todo_count =
     let text = Node.textf "%d %s left" active_count (pluralize active_count "item") in
-    Node.span ~attr:Style.todo_count [ Node.strong [ text ] ]
+    Node.span ~attrs:[ Style.todo_count ] [ Node.strong [ text ] ]
   in
   let filters =
     Node.ul
-      ~attr:Style.filters
-      [ Node.li [ Node.a ~attr:(Attr.href "#/") [ Node.text "All" ] ]
-      ; Node.li [ Node.a ~attr:(Attr.href "#/active") [ Node.text "Active" ] ]
-      ; Node.li [ Node.a ~attr:(Attr.href "#/completed") [ Node.text "Completed" ] ]
+      ~attrs:[ Style.filters ]
+      [ Node.li [ Node.a ~attrs:[ Attr.href "#/" ] [ Node.text "All" ] ]
+      ; Node.li [ Node.a ~attrs:[ Attr.href "#/active" ] [ Node.text "Active" ] ]
+      ; Node.li [ Node.a ~attrs:[ Attr.href "#/completed" ] [ Node.text "Completed" ] ]
       ]
   in
   let maybe_clear_completed_button =
@@ -304,25 +307,27 @@ let footer_component
     | _ ->
       let on_click _ = inject Clear_completed in
       let attr = Attr.many [ Style.clear_completed; Attr.on_click on_click ] in
-      Node.button ~attr [ Node.text "Clear completed" ]
+      Node.button ~attrs:[ attr ] [ Node.text "Clear completed" ]
   in
-  Node.footer ~attr:Style.footer [ todo_count; filters; maybe_clear_completed_button ]
+  Node.footer
+    ~attrs:[ Style.footer ]
+    [ todo_count; filters; maybe_clear_completed_button ]
 ;;
 
 let info =
   Vdom.Node.footer
-    ~attr:Style.info
+    ~attrs:[ Style.info ]
     [ Vdom.Node.p [ Vdom.Node.text "Double-click to edit a todo" ]
     ; Vdom.Node.p
         [ Vdom.Node.text "Written by "
         ; Vdom.Node.a
-            ~attr:(Vdom.Attr.href "http://github.com/samouri/")
+            ~attrs:[ Vdom.Attr.href "http://github.com/samouri/" ]
             [ Vdom.Node.text "@samouri" ]
         ]
     ; Vdom.Node.p
         [ Vdom.Node.text "Part of "
         ; Vdom.Node.a
-            ~attr:(Vdom.Attr.href "http://todomvc.com")
+            ~attrs:[ Vdom.Attr.href "http://todomvc.com" ]
             [ Vdom.Node.text "TodoMVC" ]
         ]
     ]
@@ -340,7 +345,9 @@ let root_component =
   and todo_list = todo_list
   and footer_component = footer_component in
   let app =
-    Node.section ~attr:Style.todoapp [ header_component; todo_list; footer_component ]
+    Node.section
+      ~attrs:[ Style.todoapp ]
+      [ header_component; todo_list; footer_component ]
   in
   Vdom.Node.div [ app; info ]
 ;;

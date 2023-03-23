@@ -109,9 +109,9 @@ let make
         ~border:(Color.to_string_css constants.extreme_primary_border)
         ()
     in
-    Vdom.Node.div ~attr:(Vdom.Attr.many [ Style.tooltip; tooltip_attr; vars ]) [ tooltip ]
+    Vdom.Node.div ~attrs:[ Style.tooltip; tooltip_attr; vars ] [ tooltip ]
   in
   Vdom.Node.span
-    ~attr:(Vdom.Attr.many [ container_attr; Style.tooltip_container; dir_class ])
+    ~attrs:[ container_attr; Style.tooltip_container; dir_class ]
     [ tipped; tooltip ]
 ;;

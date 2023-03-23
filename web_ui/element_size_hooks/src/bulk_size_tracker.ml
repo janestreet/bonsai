@@ -2,6 +2,7 @@ open! Core
 open! Import
 open! Bonsai_web
 open! Js_of_ocaml
+open Jsoo_weak_collections
 
 module Dimensions = struct
   type t =
@@ -109,7 +110,8 @@ module Hook = struct
         for i = 0 to entries##.length - 1 do
           let open Option.Let_syntax in
           (ignore : unit option -> unit)
-          @@ let%bind entry = Js.array_get entries i |> Js.Optdef.to_option in
+          @@
+          let%bind entry = Js.array_get entries i |> Js.Optdef.to_option in
           let%bind border_box =
             Js.array_get entry##.borderBoxSize 0 |> Js.Optdef.to_option
           in

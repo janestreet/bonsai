@@ -1,0 +1,7 @@
+(library (name bonsai_web_ui_accordion) (public_name bonsai.web_ui_accordion)
+ (preprocess (pps js_of_ocaml-ppx ppx_jane ppx_bonsai ppx_css))
+ (libraries bonsai bonsai_web core ppx_css.inline_css))
+
+(rule (targets style.ml style.mli style__generated.ml style__generated.mli)
+ (deps style.css)
+ (action (bash "%{bin:css_inliner} %{deps} \"((rewrite ()))\"")))

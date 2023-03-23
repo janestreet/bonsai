@@ -188,7 +188,7 @@ let color_class color =
 let icon_button icon (color : [ `Light | `Dark ]) ~on_click =
   let color_class = color_class color in
   Vdom.Node.div
-    ~attr:(Vdom.Attr.many [ button_container; Vdom.Attr.on_click (fun _ -> on_click) ])
+    ~attrs:[ button_container; Vdom.Attr.on_click (fun _ -> on_click) ]
     [ Feather_icon.svg ~extra_attrs:[ svg_button; color_class ] icon ]
 ;;
 
@@ -220,12 +220,11 @@ let chip ?key mult content =
   let border = darker_color_of_mult mult in
   Vdom.Node.div
     ?key
-    ~attr:
-      (Vdom.Attr.many
-         [ chip
-         ; Vdom.Attr.style (Css_gen.background_color (`HSLA background))
-         ; Vdom.Attr.style
-             (Css_gen.border ~width:(`Px 3) ~style:`Solid ~color:(`HSLA border) ())
-         ])
+    ~attrs:
+      [ chip
+      ; Vdom.Attr.style (Css_gen.background_color (`HSLA background))
+      ; Vdom.Attr.style
+          (Css_gen.border ~width:(`Px 3) ~style:`Solid ~color:(`HSLA border) ())
+      ]
     [ content ]
 ;;

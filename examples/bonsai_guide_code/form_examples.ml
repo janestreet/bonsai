@@ -47,7 +47,7 @@ let form_set =
   Vdom.Node.div
     [ Form.view_as_vdom textbox
     ; Vdom.Node.button
-        ~attr:(Vdom.Attr.on_click (fun _ -> Form.set textbox "hello world"))
+        ~attrs:[ Vdom.Attr.on_click (fun _ -> Form.set textbox "hello world") ]
         [ Vdom.Node.text "click me" ]
     ]
 ;;
@@ -70,7 +70,7 @@ let two_textboxes =
   let text_a, text_b = Form.value_or_default both_textboxes ~default:("", "") in
   let display = Vdom.Node.textf "a: %s, b: %s" text_a text_b in
   Vdom.Node.div
-    ~attr:(Vdom.Attr.style (Css_gen.display `Inline_grid))
+    ~attrs:[ Vdom.Attr.style (Css_gen.display `Inline_grid) ]
     [ Form.view_as_vdom both_textboxes; display ]
 ;;
 

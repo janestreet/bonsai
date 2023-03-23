@@ -105,7 +105,7 @@ let box
       ~(default_direction : 'direction option)
       ~(direction_to_css_gen_direction :
           'direction -> [ `Column | `Column_reverse | `Default | `Row | `Row_reverse ])
-      ?(attr = Vdom.Attr.empty)
+      ?(attrs = [])
       ?row_gap
       ?column_gap
       ?main_axis_alignment
@@ -136,27 +136,27 @@ let box
       ?column_gap
       ()
   in
-  Vdom.Node.div ~attr:Vdom.Attr.(many [ style flex_options; attr ]) children
+  Vdom.Node.div ~attrs:(Vdom.Attr.style flex_options :: attrs) children
 ;;
 
-let hbox ?attr ?gap =
+let hbox ?attrs ?gap =
   (* NOTE: Since display: flex defaults to horizontal layout, [`Default] is picked
      when a direction is not specified for hboxes. *)
   box
     ~default_direction:None
     ~direction_to_css_gen_direction:to_css_gen_horizontal_direction
-    ?attr
+    ?attrs
     ?column_gap:gap
     ?row_gap:None
     ?align_content:None
     ?wrap:None
 ;;
 
-let vbox ?attr ?gap =
+let vbox ?attrs ?gap =
   box
     ~default_direction:(Some Flex.Vertical_dir.Top_to_bottom)
     ~direction_to_css_gen_direction:to_css_gen_vertical_direction
-    ?attr
+    ?attrs
     ?row_gap:gap
     ?column_gap:None
     ?align_content:None

@@ -11,6 +11,9 @@ module By_row : sig
     ; page_up : unit Effect.t
     ; page_down : unit Effect.t
     ; focus : 'k -> unit Effect.t
+    ; focus_index : int -> unit Effect.t
+    (** [focus_index n] sets the focus to the nth row from the top of the
+        entire table. The first row is 0, the second is 1, and so on. *)
     }
   [@@deriving fields]
 
@@ -36,11 +39,8 @@ val component
   :  ('kind, 'presence, 'key) Kind.t
   -> ('key, 'cmp) Bonsai.comparator
   -> collated:('key, 'data) Collated.t Value.t
-  -> header_height:int Value.t
-  -> row_height:int
   -> range:(int * int) Value.t
-  -> midpoint_of_container:int Value.t
-  -> path:string Value.t
+  -> scroll_to_index:(int -> unit Effect.t) Value.t
   -> ('kind, 'key) t Computation.t
 
 val get_focused : ('r, 'presence, _) Kind.t -> 'r Value.t -> 'presence Value.t

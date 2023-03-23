@@ -35,11 +35,11 @@ module Tooltip = struct
 
   let wrap ?tooltip_element ~attr children =
     Node.div
-      ~attr:Attr.(Style.container @ attr)
+      ~attrs:[ Attr.(Style.container @ attr) ]
       [ children
       ; (match tooltip_element with
          | None -> Node.none
-         | Some element -> Node.div ~attr:Style.content [ element ])
+         | Some element -> Node.div ~attrs:[ Style.content ] [ element ])
       ]
   ;;
 end
@@ -210,7 +210,8 @@ let nested_table eval_context children =
       ; Style.nested_table
       ]
   in
-  Node.tr [ Node.td ~attr:(Attr.colspan 100) [ Node.table ~attr:table_attr children ] ]
+  Node.tr
+    [ Node.td ~attrs:[ Attr.colspan 100 ] [ Node.table ~attrs:[ table_attr ] children ] ]
 ;;
 
 let label_wrapper ?(attr = Attr.empty) (context : Form_view.context) =
@@ -262,18 +263,14 @@ let with_auto_generated_forms ~theme =
               [ Node.tr [ label ]; nested_table eval_context rest ])
             else rest
 
-          method! form_raw
-                  ~eval_context
-                  ~view_context
-                  ({ id; raw_view } : Form_view.raw) =
+          method! form_raw ~eval_context ~view_context ({ id; raw_view } : Form_view.raw)
+            =
             let view_context =
               { view_context with
                 label =
                   Option.map view_context.label ~f:(fun label ->
                     Node.label
-                      ~attr:
-                        (Attr.many
-                           [ Attr.for_ id; Attr.style (Css_gen.display `Block) ])
+                      ~attrs:[ Attr.for_ id; Attr.style (Css_gen.display `Block) ]
                       [ label ])
               }
             in
@@ -281,9 +278,7 @@ let with_auto_generated_forms ~theme =
                 ~key:id
                 [ label_wrapper view_context
                 ; Node.td
-                    [ raw_view
-                        view_context
-                        ~editable:(Form_context.editable eval_context)
+                    [ raw_view view_context ~editable:(Form_context.editable eval_context)
                     ]
                 ]
             ]
@@ -358,11 +353,8 @@ let with_auto_generated_forms ~theme =
                   in
                   [ Node.tr
                       [ Node.td
-                          ~attr:
-                            (Attr.many
-                               [ Attr.colspan 2
-                               ; Attr.style (Css_gen.font_weight `Bold)
-                               ])
+                          ~attrs:
+                            [ Attr.colspan 2; Attr.style (Css_gen.font_weight `Bold) ]
                           [ remove_button ]
                       ]
                   ; nested_table eval_context rest
@@ -371,7 +363,7 @@ let with_auto_generated_forms ~theme =
               let append_item =
                 Node.tr
                   [ Node.td
-                      ~attr:(Vdom.Attr.many [ Vdom.Attr.colspan 2; Style.label ])
+                      ~attrs:[ Vdom.Attr.colspan 2; Style.label ]
                       [ self#form_append_item ~eval_context append_item ]
                   ]
               in
@@ -384,7 +376,7 @@ let with_auto_generated_forms ~theme =
             else rest
 
           method! form_toplevel_combine rows =
-            Node.table ~attr:Style.form [ Node.tbody rows ]
+            Node.table ~attrs:[ Style.form ] [ Node.tbody rows ]
         end
     end))
 ;;

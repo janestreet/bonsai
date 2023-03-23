@@ -39,7 +39,7 @@ let gauge ~radius ~(percent : Percent.t) ~percent_to_color =
   in
   let base =
     Svg.Node.circle
-      ~attr:(create_roundy_gauge_attr ~color:Tailwind_colors.gray200 ~extra_attr:[])
+      ~attrs:[ create_roundy_gauge_attr ~color:Tailwind_colors.gray200 ~extra_attr:[] ]
       []
   in
   let offset = arc -. (percent_as_float /. 100. *. arc) in
@@ -50,18 +50,19 @@ let gauge ~radius ~(percent : Percent.t) ~percent_to_color =
   in
   let percent =
     Svg.Node.circle
-      ~attr:
-        (create_roundy_gauge_attr
-           ~color
-           ~extra_attr:[ Svg.Attr.stroke_dashoffset offset ])
+      ~attrs:
+        [ create_roundy_gauge_attr
+            ~color
+            ~extra_attr:[ Svg.Attr.stroke_dashoffset offset ]
+        ]
       []
   in
   Svg.Node.svg
-    ~attr:(Attr.many [ Svg.Attr.height (radius *. 2.); Svg.Attr.width (radius *. 2.) ])
+    ~attrs:[ Svg.Attr.height (radius *. 2.); Svg.Attr.width (radius *. 2.) ]
     [ base; percent ]
 ;;
 
 let create ?percent_to_color ~radius percent =
   let gauge = gauge ~radius ~percent ~percent_to_color in
-  Node.div ~attr:Styles.wrapper [ gauge ]
+  Node.div ~attrs:[ Styles.wrapper ] [ gauge ]
 ;;

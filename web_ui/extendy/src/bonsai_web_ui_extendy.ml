@@ -39,10 +39,9 @@ let state_component =
     (module Model)
     (module Action)
     ~default_model:Model.default
-    ~apply_action:
-      (fun ~inject:_ ~schedule_event:_ (model : Model.t) -> function
-         | Add { how_many } -> Fn.apply_n_times ~n:how_many Model.add_one model
-         | Remove key -> Model.remove model ~key)
+    ~apply_action:(fun ~inject:_ ~schedule_event:_ (model : Model.t) -> function
+      | Add { how_many } -> Fn.apply_n_times ~n:how_many Model.add_one model
+      | Remove key -> Model.remove model ~key)
 ;;
 
 let component' t ~wrap_remove =

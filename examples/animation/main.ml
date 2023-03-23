@@ -61,8 +61,8 @@ let component =
   Vdom.Node.div
     [ Form.view_as_vdom text_picker
     ; Form.view_as_vdom interpolator_form
-    ; Vdom.Node.h1 ~attr:margin [ Vdom.Node.text text ]
-    ; Vdom.Node.h1 ~attr:color [ Vdom.Node.text text ]
+    ; Vdom.Node.h1 ~attrs:[ margin ] [ Vdom.Node.text text ]
+    ; Vdom.Node.h1 ~attrs:[ color ] [ Vdom.Node.text text ]
     ]
 ;;
 

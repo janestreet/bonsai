@@ -24,33 +24,33 @@ let component =
     (Node.div
        (List.map Tailwind_colors.Hue.all ~f:(fun hue ->
           Node.div
-            ~attr:(Attr.style (Css_gen.flex_container ~direction:`Row ()))
+            ~attrs:[ Attr.style (Css_gen.flex_container ~direction:`Row ()) ]
             (List.map Tailwind_colors.Brightness.all ~f:(fun brightness ->
                let palette_color = Tailwind_colors.create hue brightness in
                Node.div
-                 ~attr:
-                   (Attr.style
-                      Css_gen.(
-                        position `Relative @> width (`Px 100) @> height (`Px 100)))
+                 ~attrs:
+                   [ Attr.style
+                       Css_gen.(position `Relative @> width (`Px 100) @> height (`Px 100))
+                   ]
                  [ Node.div
-                     ~attr:
-                       (Attr.style
-                          Css_gen.(
-                            background_color palette_color @> abs_position_px 0 0 0 0))
+                     ~attrs:
+                       [ Attr.style
+                           Css_gen.(
+                             background_color palette_color @> abs_position_px 0 0 0 0)
+                       ]
                      []
                  ; Node.div
-                     ~attr:
-                       (Attr.many
-                          [ Attr.style
-                              Css_gen.(
-                                font ~size:(`Px 15) ~family:[ "monospace" ] ()
-                                @> color palette_color
-                                @> text_align `Center
-                                @> abs_position_px 0 0 0 0)
-                          ; Attr.class_ "invert-on-hover"
-                          ])
+                     ~attrs:
+                       [ Attr.style
+                           Css_gen.(
+                             font ~size:(`Px 15) ~family:[ "monospace" ] ()
+                             @> color palette_color
+                             @> text_align `Center
+                             @> abs_position_px 0 0 0 0)
+                       ; Attr.class_ "invert-on-hover"
+                       ]
                      [ Node.div
-                         ~attr:(Attr.style (abs_position_px 40 60 0 0))
+                         ~attrs:[ Attr.style (abs_position_px 40 60 0 0) ]
                          [ Node.textf
                              "%s%s"
                              (Tailwind_colors.Hue.to_string hue)

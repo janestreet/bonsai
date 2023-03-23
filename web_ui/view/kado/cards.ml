@@ -41,18 +41,15 @@ let make
     | [] -> Vdom.Node.none, Vdom.Attr.many [ content_attr; Style.no_title ]
     | _ ->
       let create_title ~f ~extra_attr =
-        f
-          ~attr:
-            (Vdom.Attr.many [ Style.title_bar; Style.title_text; title_attr; extra_attr ])
-          title
+        f ~attrs:[ Style.title_bar; Style.title_text; title_attr; extra_attr ] title
       in
       let title =
         match title_kind with
         | Card_title_kind.Prominent ->
-          create_title ~f:(fun ~attr x -> View.hbox ~attr x) ~extra_attr:Vdom.Attr.empty
+          create_title ~f:(fun ~attrs x -> View.hbox ~attrs x) ~extra_attr:Vdom.Attr.empty
         | Discreet ->
           create_title
-            ~f:(fun ~attr x -> Vdom.Node.legend ~attr x)
+            ~f:(fun ~attrs x -> Vdom.Node.legend ~attrs x)
             ~extra_attr:Style.card_legend
       in
       let content_attr = Vdom.Attr.many [ content_attr; Style.yes_title ] in
@@ -76,27 +73,24 @@ let make
   in
   let create_card ~f ~extra_container_attr ~extra_items_attr =
     f
-      ~attr:
-        (Vdom.Attr.many
-           [ container_attr
-           ; Vdom.Attr.on_click (fun _ -> on_click)
-           ; vars
-           ; Style.container
-           ; extra_container_attr
-           ])
-      [ title
-      ; View.vbox ~attr:(Vdom.Attr.many [ content_attr; extra_items_attr ]) content
-      ]
+      ~attrs:
+        [ container_attr
+        ; Vdom.Attr.on_click (fun _ -> on_click)
+        ; vars
+        ; Style.container
+        ; extra_container_attr
+        ]
+      [ title; View.vbox ~attrs:[ content_attr; extra_items_attr ] content ]
   in
   match title_kind with
   | Card_title_kind.Prominent ->
     create_card
-      ~f:(fun ~attr x -> View.vbox ~attr x)
+      ~f:(fun ~attrs x -> View.vbox ~attrs x)
       ~extra_container_attr:Vdom.Attr.empty
       ~extra_items_attr:Style.content_prominent
   | Discreet ->
     create_card
-      ~f:(fun ~attr x -> Vdom.Node.fieldset ~attr x)
+      ~f:(fun ~attrs x -> Vdom.Node.fieldset ~attrs x)
       ~extra_container_attr:Style.fieldset_container
       ~extra_items_attr:Vdom.Attr.empty
 ;;

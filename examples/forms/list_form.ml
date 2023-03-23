@@ -167,7 +167,7 @@ let component =
       [%sexp (Form.value advanced_list : Advanced_list.Per_symbol.t list Or_error.t)]
   in
   Vdom.Node.div
-    ~attr:S.list_forms
+    ~attrs:[ S.list_forms ]
     [ Vdom.Node.h1 [ Vdom.Node.text "List Forms" ]
     ; Vdom.Node.h3 [ Vdom.Node.text "Simple form that accepts Pokemon starters" ]
     ; Form.View.to_vdom (Form.view simple_list)

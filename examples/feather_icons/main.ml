@@ -40,7 +40,7 @@ let left_section ~controls =
   and search_bar = search_bar
   and controls = controls in
   let icon_grid = Icon_grid.component ~icons ~controls in
-  Vdom.Node.div ~attr:Left_section.class_ [ search_bar; icon_grid ]
+  Vdom.Node.div ~attrs:[ Left_section.class_ ] [ search_bar; icon_grid ]
 ;;
 
 module Main = [%css stylesheet {|
@@ -55,12 +55,12 @@ let main =
   let%sub left_section = left_section ~controls in
   let%arr left_section = left_section
   and controls_view = controls_view in
-  Vdom.Node.main ~attr:Main.class_ [ left_section; controls_view ]
+  Vdom.Node.main ~attrs:[ Main.class_ ] [ left_section; controls_view ]
 ;;
 
 let header =
   Vdom.Node.h2
-    ~attr:(Vdom.Attr.style (Css_gen.font_weight (`Number 400)))
+    ~attrs:[ Vdom.Attr.style (Css_gen.font_weight (`Number 400)) ]
     [ Vdom.Node.text "Feather icons" ]
 ;;
 
@@ -74,7 +74,7 @@ module App = [%css stylesheet {|
 let app =
   let%sub main = main in
   let%arr main = main in
-  Vdom.Node.div ~attr:App.class_ [ header; main ]
+  Vdom.Node.div ~attrs:[ App.class_ ] [ header; main ]
 ;;
 
 let () = Bonsai_web.Start.start app

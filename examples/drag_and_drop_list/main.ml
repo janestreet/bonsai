@@ -27,7 +27,7 @@ let item ~now ~index:_ ~source data =
   let now = Time_ns.to_string_utc now in
   ( ()
   , Vdom.Node.div
-      ~attr:Vdom.Attr.(S.item @ source)
+      ~attrs:[ Vdom.Attr.(S.item @ source) ]
       [ Vdom.Node.text [%string "Item-%{data#Int} - now = %{now}"] ] )
 ;;
 

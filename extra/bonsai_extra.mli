@@ -16,6 +16,14 @@ val with_inject_fixed_point
       -> ('result * ('action -> unit Effect.t)) Computation.t)
   -> 'result Computation.t
 
+(** [with_self_effect] gives access to an effect which produces the output ['a] within
+    the body of [f]. This can be useful if you'd like to install an effect handling
+    function on [f] whose logic depends on its current value. *)
+val with_self_effect
+  :  (module Bonsai.Model with type t = 'a)
+  -> f:('a Bonsai.Computation_status.t Effect.t Value.t -> 'a Computation.t)
+  -> 'a Computation.t
+
 (** [pipe] constructs a pipe of [a] and returns a pair containing an injection
     function that enqueues items and an Effect that dequeues them.  *)
 val pipe

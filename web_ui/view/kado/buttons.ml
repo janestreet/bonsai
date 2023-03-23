@@ -2,7 +2,7 @@ open! Core
 open! Import
 module Style = Button_style
 
-let make constants ~attr ~disabled ~intent ~tooltip ~on_click content =
+let make constants ~attrs ~disabled ~intent ~tooltip ~on_click content =
   let additional_classes =
     match (intent : Intent.t option) with
     | None ->
@@ -43,17 +43,17 @@ let make constants ~attr ~disabled ~intent ~tooltip ~on_click content =
   in
   let attr =
     Vdom.Attr.many
-      [ Style.btn
-      ; additional_classes
-      ; vars
-      ; on_click_attr
-      ; disabled_attr
-      ; fg_and_bg
-      ; maybe_title
-      ; attr
-      ]
+      ([ Style.btn
+       ; additional_classes
+       ; vars
+       ; on_click_attr
+       ; disabled_attr
+       ; fg_and_bg
+       ; maybe_title
+       ]
+       @ attrs)
   in
-  Vdom.Node.button ~attr content
+  Vdom.Node.button ~attrs:[ attr ] content
 ;;
 
 let vertical_group = Style.btn_group_vrt

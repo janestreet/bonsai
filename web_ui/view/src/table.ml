@@ -3,6 +3,71 @@ open! Import
 module Constants = Constants
 module Fg_bg = Constants.Fg_bg
 
+module Raw = struct
+  module Header_cell = struct
+    type t = Theme.t -> Vdom.Node.t
+  end
+
+  module Header_row = struct
+    type t = Theme.t -> Vdom.Node.t
+  end
+
+  module Data_row = struct
+    type t = Theme.t -> Vdom.Node.t
+  end
+
+  module Data_cell = struct
+    type t = Theme.t -> Vdom.Node.t
+  end
+
+  let combine_attrs default optional =
+    match optional with
+    | None -> default
+    | Some attrs -> Vdom.Attr.many (default :: attrs)
+  ;;
+
+  let table_node ?attrs rows ((module T) : Theme.t) =
+    Vdom.Node.table ~attrs:[ combine_attrs T.singleton#table attrs ] rows
+  ;;
+
+  let thead ?attrs rows ((module T) : Theme.t) =
+    Vdom.Node.thead ~attrs:[ combine_attrs T.singleton#table_header attrs ] rows
+  ;;
+
+  let tbody ?attrs rows ((module T) : Theme.t) =
+    Vdom.Node.tbody ~attrs:[ combine_attrs T.singleton#table_body attrs ] rows
+  ;;
+
+  let header_row ?attrs cells ((module T) as theme : Theme.t) =
+    Vdom.Node.tr
+      ~attrs:[ combine_attrs T.singleton#table_header_row attrs ]
+      (List.map cells ~f:(fun cell -> cell theme))
+  ;;
+
+  let data_row ?attrs cells ((module T) as theme : Theme.t) =
+    Vdom.Node.tr
+      ~attrs:[ combine_attrs T.singleton#table_body_row attrs ]
+      (List.map cells ~f:(fun cell -> cell theme))
+  ;;
+
+  let header_cell ?attrs rows ((module T) : Theme.t) =
+    Vdom.Node.th ~attrs:[ combine_attrs T.singleton#table_header_cell attrs ] rows
+  ;;
+
+  let data_cell ?attrs rows ((module T) : Theme.t) =
+    Vdom.Node.td ~attrs:[ combine_attrs T.singleton#table_body_cell attrs ] rows
+  ;;
+
+  let table theme ?table_attr ~header_rows ~data_rows () =
+    table_node
+      ?attrs:(Option.map table_attr ~f:List.return)
+      [ thead (List.map header_rows ~f:(fun row -> row theme)) theme
+      ; tbody (List.map data_rows ~f:(fun row -> row theme)) theme
+      ]
+      theme
+  ;;
+end
+
 module Col = struct
   type 'a t =
     | Group :
@@ -127,10 +192,6 @@ let render
   =
   let mega_group = Col.group' Vdom.Node.none cols in
   let depth = Col.depth mega_group in
-  let header_cell_attr = T.singleton#table_header_cell in
-  let header_row_attr = T.singleton#table_header_row in
-  let body_cell_attr = T.singleton#table_body_cell in
-  let body_row_attr = T.singleton#table_body_row in
   let body_cell_empty = T.singleton#table_body_cell_empty in
   let for_each_level level =
     Col.headers_at_level ~level mega_group
@@ -139,11 +200,9 @@ let render
       | _, _, 0 -> None
       | node, attr, colspan ->
         let node = Option.value node ~default:Vdom.Node.none in
-        let cell_attr =
-          Vdom.Attr.many [ Vdom.Attr.colspan colspan; header_cell_attr; attr ]
-        in
-        Some (Vdom.Node.th ~attr:cell_attr [ node ]))
-    |> Vdom.Node.tr ~attr:header_row_attr
+        let cell_attr = [ Vdom.Attr.colspan colspan; attr ] in
+        Some (Raw.header_cell ~attrs:cell_attr [ node ]))
+    |> Raw.header_row
   in
   let header_rows = List.map (List.range ~stride:(-1) (depth - 1) 0) ~f:for_each_level in
   let renderers = Col.renderers mega_group in
@@ -152,20 +211,13 @@ let render
     renderers
     |> List.map ~f:(fun f ->
       match f theme row with
-      | None ->
-        Vdom.Node.td ~attr:(Vdom.Attr.many [ body_cell_attr; body_cell_empty ]) []
+      | None -> Raw.data_cell ~attrs:[ body_cell_empty ] []
       | Some (cell, extra_cell_attr) ->
-        Vdom.Node.td
-          ~attr:(Vdom.Attr.many [ body_cell_attr; extra_cell_attr ])
-          [ cell ])
-    |> Vdom.Node.tr ~attr:(Vdom.Attr.many [ body_row_attr; extra_row_attr ])
+        Raw.data_cell ~attrs:[ extra_cell_attr ] [ cell ])
+    |> Raw.data_row ~attrs:[ extra_row_attr ]
   in
-  let rows = List.map xs ~f:for_each_row in
-  Vdom.Node.table
-    ~attr:(Vdom.Attr.many [ T.singleton#table; table_attr ])
-    [ Vdom.Node.thead ~attr:T.singleton#table_header header_rows
-    ; Vdom.Node.tbody ~attr:T.singleton#table_body rows
-    ]
+  let data_rows = List.map xs ~f:for_each_row in
+  Raw.table theme ~table_attr ~header_rows ~data_rows ()
 ;;
 
 (* Default styling *)

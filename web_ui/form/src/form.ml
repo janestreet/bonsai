@@ -343,13 +343,12 @@ module Dynamic = struct
     and t = t in
     let label =
       Vdom.Node.div
-        ~attr:
-          (Vdom.Attr.many
-             [ Vdom.Attr.on_click (fun _ -> toggle_is_open)
-             ; Vdom.Attr.style
-                 Css_gen.(
-                   user_select `None @> Css_gen.create ~field:"cursor" ~value:"pointer")
-             ])
+        ~attrs:
+          [ Vdom.Attr.on_click (fun _ -> toggle_is_open)
+          ; Vdom.Attr.style
+              Css_gen.(
+                user_select `None @> Css_gen.create ~field:"cursor" ~value:"pointer")
+          ]
         [ Vdom.Node.text (if is_open then "▾ " ^ label else "► " ^ label) ]
     in
     let view =
@@ -384,37 +383,62 @@ module Dynamic = struct
   let validate_via_effect
         (type a)
         (module Input : Bonsai.Model with type t = a)
+        ?(one_at_a_time = false)
+        ?debounce_ui
         (t : a t Bonsai.Value.t)
         ~f
     =
+    let open Bonsai.Effect_throttling in
     let module Validated = struct
-      type t = Input.t Or_error.t [@@deriving sexp, equal]
+      type t = Input.t Or_error.t Poll_result.t [@@deriving sexp, equal]
     end
     in
     match%sub t >>| value with
     | Error _ -> Bonsai.read t
     | Ok value ->
       let%sub validation =
-        Bonsai.Edge.Poll.(
-          effect_on_change
-            (module Input)
-            (module Validated)
-            Starting.empty
-            value
-            ~effect:
-              (let%map f = f in
-               fun a ->
-                 match%map.Effect f a with
-                 | Ok () -> Ok a
-                 | Error e -> Error e))
+        let%sub f =
+          if one_at_a_time
+          then poll f
+          else (
+            let%arr f = f in
+            fun a ->
+              let%map.Effect result = f a in
+              Poll_result.Finished result)
+        in
+        let%sub effect =
+          let%arr f = f in
+          fun a ->
+            match%map.Effect f a with
+            | Aborted -> Poll_result.Aborted
+            | Finished (Ok ()) -> Finished (Ok a)
+            | Finished (Error e) -> Finished (Error e)
+        in
+        Bonsai.Edge.Poll.effect_on_change
+          (module Input)
+          (module Validated)
+          Bonsai.Edge.Poll.Starting.empty
+          value
+          ~effect
+      in
+      let%sub is_stable =
+        match debounce_ui with
+        | None -> Bonsai.const true
+        | Some time_to_stable ->
+          Bonsai_extra.is_stable ~equal:Input.equal value ~time_to_stable
       in
       let%arr t = t
-      and validation = validation in
+      and validation = validation
+      and is_stable = is_stable in
+      let validating_error = Error (Error.of_string "validating...") in
       validate t ~f:(fun a ->
-        match validation with
-        | Some (Ok x) when Input.equal a x -> Ok ()
-        | None | Some (Ok _) -> Error (Error.of_string "validating...")
-        | Some (Error e) -> Error e)
+        if not is_stable
+        then validating_error
+        else (
+          match validation with
+          | Some (Finished (Ok x)) when Input.equal a x -> Ok ()
+          | None | Some Aborted | Some (Finished (Ok _)) -> validating_error
+          | Some (Finished (Error e)) -> Error e))
   ;;
 
   module Record_builder = struct

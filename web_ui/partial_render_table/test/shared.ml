@@ -14,6 +14,7 @@ module Action = struct
     | Page_up
     | Page_down
     | Focus of int
+    | Focus_index of int
 end
 
 type t =
@@ -42,7 +43,7 @@ let columns ~is_column_b_visible =
         let%arr { a; _ } = data
         and state, set_state = state in
         Vdom.Node.div
-          [ Vdom.Node.input ~attr:(Vdom.Attr.on_input (fun _ -> set_state)) ()
+          [ Vdom.Node.input ~attrs:[ Vdom.Attr.on_input (fun _ -> set_state) ] ()
           ; Vdom.Node.textf "%s %s" a state
           ])
       ()
@@ -202,6 +203,7 @@ module Test = struct
       | Page_up -> focus.page_up
       | Page_down -> focus.page_down
       | Focus k -> focus.focus k
+      | Focus_index index -> focus.focus_index index
     ;;
 
     let get_inject t = get_inject' t Table.Result.focus
@@ -305,30 +307,46 @@ module Test = struct
     ;;
   end
 
-  let set_bounds t ~low ~high =
+  let set_bounds_helper handle ~get_vdom low_and_high =
     Handle.trigger_hook_via
-      t.handle
-      ~get_vdom:t.get_vdom
+      handle
+      ~get_vdom
       ~selector:"div[bounds-change]"
       ~name:"bounds-change"
       Bonsai_web_ui_element_size_hooks.Visibility_tracker.For_testing.type_id
       ~f:(fun { visible_rect_changed; _ } -> visible_rect_changed)
-      { Bonsai_web_ui_element_size_hooks.Visibility_tracker.Bbox.min_x = 0
-      ; min_y = low
-      ; max_x = 100
-      ; max_y = high
-      }
+      (Option.map low_and_high ~f:(fun (low, high) ->
+         { Bonsai_web_ui_element_size_hooks.Visibility_tracker.Bbox.min_x = 0
+         ; min_y = low
+         ; max_x = 100
+         ; max_y = high
+         }))
   ;;
 
-  let resize_column t ~idx ~width =
+  let set_bounds_for_handle handle ~get_vdom ~low ~high =
+    set_bounds_helper handle ~get_vdom (Some (low, high))
+  ;;
+
+  let set_bounds t ~low ~high =
+    set_bounds_for_handle t.handle ~get_vdom:t.get_vdom ~low ~high
+  ;;
+
+  let clear_bounds_for_handle handle ~get_vdom = set_bounds_helper handle ~get_vdom None
+  let clear_bounds t = clear_bounds_for_handle t.handle ~get_vdom:t.get_vdom
+
+  let resize_column_for_handle handle ~get_vdom ~idx ~width =
     Handle.trigger_hook
-      t.handle
-      ~get_vdom:t.get_vdom
+      handle
+      ~get_vdom
       ~selector:(sprintf "td[size_tracker]:nth-child(%d)" (idx + 1))
       ~name:"size_tracker"
       Bonsai_web_ui_element_size_hooks.Size_tracker.For_testing.type_id
       { Bonsai_web_ui_element_size_hooks.Size_tracker.For_testing.Dimensions.width
       ; height = 0.0
       }
+  ;;
+
+  let resize_column t ~idx ~width =
+    resize_column_for_handle t.handle ~get_vdom:t.get_vdom ~idx ~width
   ;;
 end

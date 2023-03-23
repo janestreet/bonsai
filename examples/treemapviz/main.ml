@@ -251,31 +251,29 @@ let create_treemap ~elements =
           elements
       in
       let%arr treemap = treemap in
-      Bonsai_experimental_treemapviz.render
-        treemap
-        ~render_on_no_more_space:(fun elements ->
+      Bonsai_experimental_treemapviz.render treemap ~f:(function
+        | No_more_space elements ->
           let length = Nonempty_list.length elements in
-          Vdom.Node.div ~attr:Style.redacted [ View.textf "+%d" length ])
-        ~f:(fun tree ~children ->
-          match children with
-          | None ->
-            View.vbox
-              ~attr:
-                (Vdom.Attr.many
-                   [ Style.tiny_margin; create_color tree.Tree.color; Style.full_width ])
-              [ View.text tree.name
-              ; (let sign = if Float.O.(tree.color > 0.0) then "+" else "" in
-                 View.text
-                   [%string "%{sign}%{Float.to_string_hum ~decimals:2 tree.color}%"])
-              ]
-          | Some children ->
-            View.vbox
-              ~attr:Style.full_width
-              [ View.hbox ~attr:Style.box_title [ View.text tree.name ]; children ])
+          Vdom.Node.div ~attrs:[ Style.redacted ] [ View.textf "+%d" length ]
+        | Leaf { element = tree; children } ->
+          (match children with
+           | None ->
+             View.vbox
+               ~attrs:
+                 [ Style.tiny_margin; create_color tree.Tree.color; Style.full_width ]
+               [ View.text tree.name
+               ; (let sign = if Float.O.(tree.color > 0.0) then "+" else "" in
+                  View.text
+                    [%string "%{sign}%{Float.to_string_hum ~decimals:2 tree.color}%"])
+               ]
+           | Some children ->
+             View.vbox
+               ~attrs:[ Style.full_width ]
+               [ View.hbox ~attrs:[ Style.box_title ] [ View.text tree.name ]; children ]))
   in
   let%arr tracker = tracker
   and treemap = treemap in
-  Vdom.Node.div ~attr:tracker [ treemap ]
+  Vdom.Node.div ~attrs:[ tracker ] [ treemap ]
 ;;
 
 let component =
@@ -294,20 +292,19 @@ let component =
       | true -> "Show capybara treemap of life"
     in
     Vdom.Node.div
-      ~attr:
-        (Vdom.Attr.many
-           [ Style.stress_button
-           ; Vdom.Attr.on_click (fun _ -> toggle_stress)
-           ; Vdom.Attr.create "role" "button"
-           ; Vdom.Attr.create "tabindex" "0"
-           ])
+      ~attrs:
+        [ Style.stress_button
+        ; Vdom.Attr.on_click (fun _ -> toggle_stress)
+        ; Vdom.Attr.create "role" "button"
+        ; Vdom.Attr.create "tabindex" "0"
+        ]
       [ Feather_icon.svg Chevrons_right ~size:(`Rem 1.5) ~stroke:(`Hex "#FACC15")
       ; View.text text
       ]
   in
   let%arr button = button
   and content = content in
-  Vdom.Node.div ~attr:Style.top [ button; content ]
+  Vdom.Node.div ~attrs:[ Style.top ] [ button; content ]
 ;;
 
 let () = Bonsai_web.Start.start component

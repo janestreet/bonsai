@@ -1,9 +1,8 @@
 open! Core
 open! Bonsai
-open! Bonsai_test
 
 type ('a, 'r) unpacked =
-  { clock : Incr.Clock.t
+  { clock : Ui_incr.Clock.t
   ; name : string
   ; component : 'r Computation.t
   ; get_inject : 'r -> 'a -> unit Effect.t
@@ -13,7 +12,7 @@ type ('a, 'r) unpacked =
 type t = T : (_, _) unpacked -> t
 
 let create
-      ?(clock = Incr.Clock.create ~start:Time_ns.epoch ())
+      ?(clock = Ui_incr.Clock.create ~start:Time_ns.epoch ())
       ~name
       ~component
       ~get_inject
@@ -23,7 +22,7 @@ let create
 ;;
 
 let create_with_resetter
-      ?(clock = Incr.Clock.create ~start:Time_ns.epoch ())
+      ?(clock = Ui_incr.Clock.create ~start:Time_ns.epoch ())
       ~name
       ~component
       ~get_inject

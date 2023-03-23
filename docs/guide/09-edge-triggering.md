@@ -75,7 +75,7 @@ let frame_toggler =
   let button_text = if showing then "disable counter" else "enable counter" in
   let toggle_button =
     Vdom.Node.button
-      ~attr:(Vdom.Attr.on_click (fun _ -> toggle_showing))
+      ~attrs:[ Vdom.Attr.on_click (fun _ -> toggle_showing) ]
       [ Vdom.Node.text button_text ]
   in
   Vdom.Node.div [ toggle_button; output ]
@@ -140,7 +140,9 @@ Let's see it in use:
 ``` ocaml
 let wrap_remove frame_counter remove =
   let x_button =
-    Vdom.Node.button ~attr:(Vdom.Attr.on_click (fun _ -> remove)) [ Vdom.Node.text "x" ]
+    Vdom.Node.button
+      ~attrs:[ Vdom.Attr.on_click (fun _ -> remove) ]
+      [ Vdom.Node.text "x" ]
   in
   Vdom.Node.div [ x_button; frame_counter ]
 ;;
@@ -150,7 +152,9 @@ let many_frame_watches =
   let%arr contents = contents
   and append = append in
   let append_button =
-    Vdom.Node.button ~attr:(Vdom.Attr.on_click (fun _ -> append)) [ Vdom.Node.text "add" ]
+    Vdom.Node.button
+      ~attrs:[ Vdom.Attr.on_click (fun _ -> append) ]
+      [ Vdom.Node.text "add" ]
   in
   Vdom.Node.div (append_button :: Map.data contents)
 ;;

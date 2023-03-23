@@ -235,28 +235,29 @@ let component =
     | Automatic ->
       View.vbox
         [ View.text
-            ~attr:(Vdom.Attr.style (Css_gen.font_family [ "monospace" ]))
+            ~attrs:[ Vdom.Attr.style (Css_gen.font_family [ "monospace" ]) ]
             (Time_ns.to_string_utc time)
         ; View.text
-            ~attr:(Vdom.Attr.style (Css_gen.font_family [ "monospace" ]))
+            ~attrs:[ Vdom.Attr.style (Css_gen.font_family [ "monospace" ]) ]
             (Time_ns.to_string_utc last)
         ]
   in
   let extras =
     match mode with
     | Manual ->
-      [ Vdom.Node.div ~attr:Style.backer []; Vdom.Node.div ~attr:Style.target [] ]
+      [ Vdom.Node.div ~attrs:[ Style.backer ] []
+      ; Vdom.Node.div ~attrs:[ Style.target ] []
+      ]
     | Help | Automatic -> []
   in
   let on_attr = if on then Style.on else Vdom.Attr.empty in
   Vdom.Node.div
-    ~attr:Style.container
-    ([ Vdom.Node.div ~attr:Style.a [ make_text ~drop:0 ]
-     ; View.vbox ~attr:Style.page [ tabs; page ]
+    ~attrs:[ Style.container ]
+    ([ Vdom.Node.div ~attrs:[ Style.a ] [ make_text ~drop:0 ]
+     ; View.vbox ~attrs:[ Style.page ] [ tabs; page ]
      ]
      @ extras
-     @ [ Vdom.Node.div ~attr:(Vdom.Attr.many [ Style.b; on_attr ]) [ make_text ~drop:5 ] ]
-    )
+     @ [ Vdom.Node.div ~attrs:[ Style.b; on_attr ] [ make_text ~drop:5 ] ])
 ;;
 
 let () = Bonsai_web.Start.start (View.Theme.set_for_app (Value.return theme) component)

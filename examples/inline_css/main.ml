@@ -40,16 +40,10 @@ module Boxes = struct
 
   let component =
     Vdom.Node.div
-      ~attr:Style.container
-      [ Vdom.Node.div
-          ~attr:(Vdom.Attr.many [ Style.box; Style.red (* "red_hash_#" *) ])
-          []
-      ; Vdom.Node.div
-          ~attr:(Vdom.Attr.many [ Style.box; Style.green (* "green_hash_#" *) ])
-          []
-      ; Vdom.Node.div
-          ~attr:(Vdom.Attr.many [ Style.box; Vdom.Attr.class_ "blue" (* "blue" *) ])
-          []
+      ~attrs:[ Style.container ]
+      [ Vdom.Node.div ~attrs:[ Style.box; Style.red (* "red_hash_#" *) ] []
+      ; Vdom.Node.div ~attrs:[ Style.box; Style.green (* "green_hash_#" *) ] []
+      ; Vdom.Node.div ~attrs:[ Style.box; Vdom.Attr.class_ "blue" (* "blue" *) ] []
       ]
   ;;
 end
@@ -83,7 +77,7 @@ module Themeable = struct
   let component ?(style = Style.default) () =
     let module Style = (val style) in
     Vdom.Node.div
-      ~attr:Style.container
+      ~attrs:[ Style.container ]
       [ Vdom.Node.h1 [ Vdom.Node.text "this is a header" ]
       ; Vdom.Node.p [ Vdom.Node.text "this is some text" ]
       ]

@@ -8,18 +8,19 @@ open! Bonsai.Let_syntax
 
 let input ~placeholder:placeholder_ ~value:value_ ~extra_attr ~id:id_ ~on_input:on_input_ =
   Vdom.Node.input
-    ~attr:
-      Vdom.Attr.(
-        extra_attr
-        @ type_       "text"
-        @ create      "list" id_
-        @ placeholder placeholder_
-        (* Both Attr.value and Attr.string_property value must be set. The former only affects
-           initial control state while the latter affects the control state whilst the form is
-           being used. *)
-        @ value       value_
-        @ value_prop  value_
-        @ on_change   (fun _ input -> on_input_ input))
+    ~attrs:
+      [ Vdom.Attr.(
+          extra_attr
+          @ type_       "text"
+          @ create      "list" id_
+          @ placeholder placeholder_
+          (* Both Attr.value and Attr.string_property value must be set. The former only affects
+             initial control state while the latter affects the control state whilst the form is
+             being used. *)
+          @ value       value_
+          @ value_prop  value_
+          @ on_change   (fun _ input -> on_input_ input))
+      ]
     ()
 ;;
 
@@ -31,22 +32,23 @@ let pills ~selected_options ~on_set_change ~inject_selected_options =
         [ on_set_change selected_options; inject_selected_options selected_options ]
     in
     Vdom.Node.span
-      ~attr:
-        Vdom.Attr.(
-          tabindex 0
-          @ create "data-value" option
-          @ on_click remove_option
-          @ on_keyup (fun ev ->
-            match Js_of_ocaml.Dom_html.Keyboard_code.of_event ev with
-            | Space | Enter | NumpadEnter | Backspace | Delete -> remove_option ev
-            | _ -> Effect.Ignore))
+      ~attrs:
+        [ Vdom.Attr.(
+            tabindex 0
+            @ create "data-value" option
+            @ on_click remove_option
+            @ on_keyup (fun ev ->
+              match Js_of_ocaml.Dom_html.Keyboard_code.of_event ev with
+              | Space | Enter | NumpadEnter | Backspace | Delete -> remove_option ev
+              | _ -> Effect.Ignore))
+        ]
       [ Vdom.Node.text (option ^ " ×") ]
   in
   if Set.is_empty selected_options
   then Vdom.Node.none
   else
     Vdom.Node.div
-      ~attr:(Vdom.Attr.class_ "bonsai-web-ui-freeform-multiselect-pills")
+      ~attrs:[ Vdom.Attr.class_ "bonsai-web-ui-freeform-multiselect-pills" ]
       (Set.to_list selected_options |> List.map ~f:pill)
 ;;
 

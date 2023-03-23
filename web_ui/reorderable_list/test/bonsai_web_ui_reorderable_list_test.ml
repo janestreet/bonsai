@@ -6,7 +6,9 @@ module Reorderable_list = Bonsai_web_ui_reorderable_list
 module Drag_and_drop = Bonsai_web_ui_drag_and_drop
 module Node = Vdom.Node
 
-let component =
+let small_list = List.range 0 3 |> List.map ~f:(fun x -> x, x) |> Int.Map.of_alist_exn
+
+let component list =
   let%sub dnd =
     Drag_and_drop.create
       ~source_id:(module Int)
@@ -15,13 +17,10 @@ let component =
         (Value.return (fun source target ->
            Ui_effect.print_s [%message "drag" (source : int) (target : int)]))
   in
-  let input =
-    List.range 0 3 |> List.map ~f:(fun x -> x, x) |> Int.Map.of_alist_exn |> Value.return
-  in
   let%sub data =
     Bonsai.assoc
       (module Int)
-      input
+      list
       ~f:(fun key data ->
         let%sub item =
           let%arr data = data in
@@ -42,23 +41,25 @@ let component =
   and source = source
   and list = list in
   Node.div
-    ~attr:(sentinel ~name:"dnd")
-    [ Node.div ~attr:(source ~id:10) [ Node.text "10" ]; list; dragged_element ]
+    ~attrs:[ sentinel ~name:"dnd" ]
+    [ Node.div ~attrs:[ source ~id:10 ] [ Node.text "10" ]; list; dragged_element ]
 ;;
 
-let create_handle () =
+let create_handle list =
   Handle.create
     (Result_spec.vdom
+       ~path_censoring_message:""
        ~filter_printed_attributes:(fun key _data ->
          match key with
          | "style.transform" -> true
+         | key when String.is_prefix key ~prefix:"data-drag-target" -> true
          | _ -> false)
        Fn.id)
-    component
+    (component list)
 ;;
 
 let%expect_test "how is it printed" =
-  let handle = create_handle () in
+  let handle = create_handle (Value.return small_list) in
   Handle.show handle;
   [%expect
     {|
@@ -79,7 +80,7 @@ let dnd_action handle action =
 ;;
 
 let%expect_test "re-arrange" =
-  let handle = create_handle () in
+  let handle = create_handle (Value.return small_list) in
   Handle.store_view handle;
   [%expect {|
     adding window event listener
@@ -93,14 +94,14 @@ let%expect_test "re-arrange" =
         <div>
     -|    <div style={ transform: translateY(0px) translateX(0px); }> 0 </div>
     +|    <div style={ transform: translateY(2px) translateX(0px); }> 0 </div>
-    -|    <div style={ transform: translateY(1px) translateX(0px); }> 1 </div>
     +|    <div style={ transform: translateY(0px) translateX(0px); }> 1 </div>
+    -|    <div style={ transform: translateY(1px) translateX(0px); }> 1 </div>
     -|    <div style={ transform: translateY(2px) translateX(0px); }> 2 </div>
     -|  </div>
     +|    <div style={ transform: translateY(1px) translateX(0px); }> 2 </div>
-    +|    <div style={ transform: translateY(0px) translateX(0px); }> </div>
-    +|    <div style={ transform: translateY(1px) translateX(0px); }> </div>
-    +|    <div style={ transform: translateY(2px) translateX(0px); }> </div>
+    +|    <div data-drag-target="0" style={ transform: translateY(0px) translateX(0px); }> </div>
+    +|    <div data-drag-target="1" style={ transform: translateY(1px) translateX(0px); }> </div>
+    +|    <div data-drag-target="2" style={ transform: translateY(2px) translateX(0px); }> </div>
     +|  </div>
     +|  <div style={ transform: translateY(0px) translateX(0px); }> 0 </div>
       </div> |}];
@@ -119,9 +120,9 @@ let%expect_test "re-arrange" =
           <div style={ transform: translateY(0px) translateX(0px); }> 1 </div>
     -|    <div style={ transform: translateY(1px) translateX(0px); }> 2 </div>
     +|    <div style={ transform: translateY(2px) translateX(0px); }> 2 </div>
-          <div style={ transform: translateY(0px) translateX(0px); }> </div>
-          <div style={ transform: translateY(1px) translateX(0px); }> </div>
-          <div style={ transform: translateY(2px) translateX(0px); }> </div>
+          <div data-drag-target="0" style={ transform: translateY(0px) translateX(0px); }> </div>
+          <div data-drag-target="1" style={ transform: translateY(1px) translateX(0px); }> </div>
+          <div data-drag-target="2" style={ transform: translateY(2px) translateX(0px); }> </div>
         </div>
         <div style={ transform: translateY(0px) translateX(0px); }> 0 </div>
       </div> |}];
@@ -135,21 +136,60 @@ let%expect_test "re-arrange" =
         <div> 10 </div>
         <div>
     -|    <div style={ transform: translateY(1px) translateX(0px); }> 0 </div>
-    +|    <div style={ transform: translateY(0px) translateX(0px); }> 0 </div>
     -|    <div style={ transform: translateY(0px) translateX(0px); }> 1 </div>
-    +|    <div style={ transform: translateY(1px) translateX(0px); }> 1 </div>
     -|    <div style={ transform: translateY(2px) translateX(0px); }> 2 </div>
-    -|    <div style={ transform: translateY(0px) translateX(0px); }> </div>
-    -|    <div style={ transform: translateY(1px) translateX(0px); }> </div>
-    -|    <div style={ transform: translateY(2px) translateX(0px); }> </div>
+    -|    <div data-drag-target="0" style={ transform: translateY(0px) translateX(0px); }> </div>
+    -|    <div data-drag-target="1" style={ transform: translateY(1px) translateX(0px); }> </div>
+    +|    <div style={ transform: translateY(0px) translateX(0px); }> 0 </div>
+    +|    <div style={ transform: translateY(1px) translateX(0px); }> 1 </div>
+    -|    <div data-drag-target="2" style={ transform: translateY(2px) translateX(0px); }> </div>
     +|    <div style={ transform: translateY(2px) translateX(0px); }> 2 </div>
         </div>
     -|  <div style={ transform: translateY(0px) translateX(0px); }> 0 </div>
       </div> |}]
 ;;
 
+let%expect_test "drop onto empty list" =
+  let handle = create_handle (Value.return Int.Map.empty) in
+  Handle.store_view handle;
+  [%expect {|
+    adding window event listener
+    adding window event listener |}];
+  dnd_action handle (Start_drag "0");
+  Handle.show_diff handle;
+  [%expect
+    {|
+      <div>
+        <div> 10 </div>
+    -|  <div> </div>
+    +|  <div>
+    +|    <div data-drag-target="0" style={ transform: translateY(0px) translateX(0px); }> </div>
+    +|  </div>
+    +|  <div style={ transform: translateY(0px) translateX(0px); }> 0 </div>
+      </div> |}];
+  dnd_action handle (Set_target (Some "10"));
+  Handle.show_diff handle;
+  [%expect {| |}];
+  dnd_action handle Finish_drag;
+  Handle.show_diff handle;
+  (* As expected, dropping an element on a non-existent target does not add the
+     item to the list. *)
+  [%expect
+    {|
+    (drag (source 0) (target 10))
+
+      <div>
+        <div> 10 </div>
+    -|  <div>
+    -|    <div data-drag-target="0" style={ transform: translateY(0px) translateX(0px); }> </div>
+    -|  </div>
+    -|  <div style={ transform: translateY(0px) translateX(0px); }> 0 </div>
+    +|  <div> </div>
+      </div> |}]
+;;
+
 let%expect_test "add item from outside the list" =
-  let handle = create_handle () in
+  let handle = create_handle (Value.return small_list) in
   Handle.store_view handle;
   [%expect {|
     adding window event listener
@@ -164,10 +204,10 @@ let%expect_test "add item from outside the list" =
           <div style={ transform: translateY(0px) translateX(0px); }> 0 </div>
           <div style={ transform: translateY(1px) translateX(0px); }> 1 </div>
           <div style={ transform: translateY(2px) translateX(0px); }> 2 </div>
-    +|    <div style={ transform: translateY(3px) translateX(0px); }> </div>
-    +|    <div style={ transform: translateY(0px) translateX(0px); }> </div>
-    +|    <div style={ transform: translateY(1px) translateX(0px); }> </div>
-    +|    <div style={ transform: translateY(2px) translateX(0px); }> </div>
+    +|    <div data-drag-target="3" style={ transform: translateY(3px) translateX(0px); }> </div>
+    +|    <div data-drag-target="0" style={ transform: translateY(0px) translateX(0px); }> </div>
+    +|    <div data-drag-target="1" style={ transform: translateY(1px) translateX(0px); }> </div>
+    +|    <div data-drag-target="2" style={ transform: translateY(2px) translateX(0px); }> </div>
         </div>
     +|  <div style={ transform: translateY(0px) translateX(0px); }> 10 </div>
       </div> |}];
@@ -183,10 +223,10 @@ let%expect_test "add item from outside the list" =
       +|    <div style={ transform: translateY(2px) translateX(0px); }> 1 </div>
       -|    <div style={ transform: translateY(2px) translateX(0px); }> 2 </div>
       +|    <div style={ transform: translateY(3px) translateX(0px); }> 2 </div>
-            <div style={ transform: translateY(3px) translateX(0px); }> </div>
-            <div style={ transform: translateY(0px) translateX(0px); }> </div>
-            <div style={ transform: translateY(1px) translateX(0px); }> </div>
-            <div style={ transform: translateY(2px) translateX(0px); }> </div>
+            <div data-drag-target="3" style={ transform: translateY(3px) translateX(0px); }> </div>
+            <div data-drag-target="0" style={ transform: translateY(0px) translateX(0px); }> </div>
+            <div data-drag-target="1" style={ transform: translateY(1px) translateX(0px); }> </div>
+            <div data-drag-target="2" style={ transform: translateY(2px) translateX(0px); }> </div>
           </div>
           <div style={ transform: translateY(0px) translateX(0px); }> 10 </div>
         </div> |}];
@@ -202,11 +242,11 @@ let%expect_test "add item from outside the list" =
           <div style={ transform: translateY(0px) translateX(0px); }> 0 </div>
     -|    <div style={ transform: translateY(2px) translateX(0px); }> 1 </div>
     -|    <div style={ transform: translateY(3px) translateX(0px); }> 2 </div>
-    -|    <div style={ transform: translateY(3px) translateX(0px); }> </div>
-    -|    <div style={ transform: translateY(0px) translateX(0px); }> </div>
-    -|    <div style={ transform: translateY(1px) translateX(0px); }> </div>
+    -|    <div data-drag-target="3" style={ transform: translateY(3px) translateX(0px); }> </div>
+    -|    <div data-drag-target="0" style={ transform: translateY(0px) translateX(0px); }> </div>
+    -|    <div data-drag-target="1" style={ transform: translateY(1px) translateX(0px); }> </div>
     +|    <div style={ transform: translateY(1px) translateX(0px); }> 1 </div>
-    -|    <div style={ transform: translateY(2px) translateX(0px); }> </div>
+    -|    <div data-drag-target="2" style={ transform: translateY(2px) translateX(0px); }> </div>
     +|    <div style={ transform: translateY(2px) translateX(0px); }> 2 </div>
         </div>
     -|  <div style={ transform: translateY(0px) translateX(0px); }> 10 </div>
@@ -214,7 +254,7 @@ let%expect_test "add item from outside the list" =
 ;;
 
 let%expect_test "re-arrange" =
-  let handle = create_handle () in
+  let handle = create_handle (Value.return small_list) in
   Handle.store_view handle;
   [%expect {|
     adding window event listener
@@ -249,7 +289,7 @@ let component input =
       ~render:(fun ~index:_ ~source i ->
         let%arr i = i
         and source = source in
-        (), Vdom.Node.div ~attr:source [ Vdom.Node.text (Int.to_string i) ])
+        (), Vdom.Node.div ~attrs:[ source ] [ Vdom.Node.text (Int.to_string i) ])
       input
   in
   return view

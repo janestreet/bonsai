@@ -1,6 +1,5 @@
 open! Core
 open Bonsai.For_open
-open! Bonsai_test
 
 (** [t] is roughly equivalent to [Core_bench_js.Test.t], but can also be used to obtain
     [profile]s of the benchmarks. See [profile] below for more details. *)
@@ -54,7 +53,7 @@ end
     have an interaction which is idempotent on the state, or have similar performance
     when the interaction is repeated many times. *)
 val create
-  :  ?clock:Incr.Clock.t
+  :  ?clock:Ui_incr.Clock.t
   -> name:string
   -> component:'r Computation.t
   -> get_inject:('r -> 'a -> unit Effect.t)
@@ -64,7 +63,7 @@ val create
 (** [create_with_resetter] is equivalent to calling [create], with interactions equal to
     [Interaction.many interactions; Interaction.reset_model; Interaction.stabilize]. *)
 val create_with_resetter
-  :  ?clock:Incr.Clock.t
+  :  ?clock:Ui_incr.Clock.t
   -> name:string
   -> component:'r Computation.t
   -> get_inject:('r -> 'a -> unit Effect.t)

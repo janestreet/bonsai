@@ -26,7 +26,8 @@ let create
       (module Item)
       ~placeholder:"Pick your favourite number"
       ~extra_textbox_attr:(Vdom.Attr.class_ "my-test-class")
-      ~wrap_search_bar:(fun node -> Vdom.Node.div ~attr:(Vdom.Attr.id "wrapper") [ node ])
+      ~wrap_search_bar:(fun node ->
+        Vdom.Node.div ~attrs:[ Vdom.Attr.id "wrapper" ] [ node ])
       ?max_query_results
       ?additional_query_results_on_click
       ?autocomplete_item

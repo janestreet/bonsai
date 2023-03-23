@@ -1,99 +1,6 @@
 open Core
 open Import
-
-module Mutable_state_tracker : sig
-  module Id : T
-
-  (** A mutable-state tracker is meant to be used in concert with
-      [Vdom.Node.widget].
-
-      [unsafe_init] is called inside the widgets [init] function and is passed some subset
-      of the widgets state.  Then, you must store the returned Id.t in the widgets state.
-      Calls to [unsafe_init] must _only_ ever happen inside of a widget [init] function.
-
-      [unsafe_destroy] must be called inside the widgets [destroy] function, and must be
-      passed the same [id] that was returned from the corresponding [create].  Calls to
-      [unsafe_destroy] must _only_ even happen inside of a widget [destroy] function
-
-      [modify] can be invoked to run some mutating function on the widgets state.  It is
-      legal to use this function anywhere that an Effect can be scheduled. *)
-  type 's t =
-    { unsafe_init    : 's           -> Id.t
-    ; unsafe_destroy : Id.t         -> unit
-    ; modify         : ('s -> unit) -> unit Effect.t
-    }
-  [@@deriving fields]
-
-  val component : unit -> 's t Computation.t
-end = struct
-  module Id = Unique_id.Int ()
-
-  type 's t =
-    { unsafe_init    : 's           -> Id.t
-    ; unsafe_destroy : Id.t         -> unit
-    ; modify         : ('s -> unit) -> unit Effect.t
-    }
-  [@@deriving fields]
-
-  module Model = struct
-    type 's t = 's Id.Map.t
-
-    let sexp_of_t, t_of_sexp = sexp_of_opaque, opaque_of_sexp
-    let equal                = phys_equal
-  end
-
-  module Action = struct
-    type 's t =
-      | Register of
-          { id    : Id.t
-          ; state : 's
-          }
-      | Destroy  of Id.t
-      | Modify   of ('s -> unit)
-
-    let sexp_of_t = sexp_of_opaque
-  end
-
-  let component (type s) () =
-    let module Model = struct
-      include Model
-
-      type nonrec t = s t
-    end
-    in
-    let module Action = struct
-      include Action
-
-      type nonrec t = s t
-    end
-    in
-    let%sub keeper =
-      Bonsai.state_machine0
-        ~reset:(fun ~inject:_ ~schedule_event:_ m -> m)
-        (module Model )
-        (module Action)
-        ~default_model:Id.Map.empty
-        ~apply_action:
-          (fun ~inject:_ ~schedule_event:_ model -> function
-             | Register { id; state } -> Map.set    model ~key:id ~data:state
-             | Destroy id             -> Map.remove model      id
-             | Modify f               ->
-               Map.iter model ~f;
-               model)
-    in
-    let%arr _, inject = keeper in
-    let unsafe_init state =
-      let id = Id.create () in
-      Effect.Expert.handle_non_dom_event_exn (inject (Register { id; state }));
-      id
-    in
-    let unsafe_destroy id =
-      Effect.Expert.handle_non_dom_event_exn (inject (Destroy id))
-    in
-    let modify f = inject (Modify f) in
-    { unsafe_init; unsafe_destroy; modify }
-  ;;
-end
+module Mutable_state_tracker = Bonsai_web_ui_widget.Low_level
 
 (* This top-level side-effect installs the CSS for dygraphs.
    We need it in this file because if the side-effect lives
@@ -171,7 +78,7 @@ let widget ?with_graph ?on_zoom data options ~graph_tracker =
     ()
     ~id
     ~destroy:(fun (_, _, _, graph, animation_id, graph_tracker_id) _el ->
-      Mutable_state_tracker.unsafe_destroy graph_tracker graph_tracker_id;
+      graph_tracker.Mutable_state_tracker.unsafe_destroy graph_tracker_id;
       (* Free resources allocated by the graph *)
       Graph.destroy graph;
       (* If for some reason the animation-frame never fired and we're already
@@ -180,7 +87,7 @@ let widget ?with_graph ?on_zoom data options ~graph_tracker =
     ~init:(fun () ->
       let el = Dom_html.createDiv Dom_html.document                                in
       let graph = Graph.create el data options                                     in
-      let graph_tracker_id = Mutable_state_tracker.unsafe_init graph_tracker graph in
+      let graph_tracker_id = graph_tracker.Mutable_state_tracker.unsafe_init graph in
       let () =
         let options       = override_zoom_callback ~graph options        in
         let updateOptions = Update_options.create ~options ?data:None () in
@@ -193,22 +100,23 @@ let widget ?with_graph ?on_zoom data options ~graph_tracker =
       in
       (data, options, on_zoom, graph, animation_id, graph_tracker_id), el)
     ~update:
-      (fun (old_data, old_options, old_on_zoom, graph, animation_id, graph_tracker_id) el ->
-         let () =
-           let data = Option.some_if (not (phys_equal old_data data)) data in
-           let options =
-             match phys_equal old_options options, phys_equal old_on_zoom on_zoom with
-             | true, true -> None
-             | _          -> Some (override_zoom_callback ~graph options)
-           in
-           (match data, options with
-            | None, None -> ()
-            | _, options ->
-              let updateOptions = Update_options.create ?options ?data () in
-              Graph.updateOptions graph updateOptions);
-           resize_if_width_or_height_changed graph ~old_options ~options
-         in
-         (data, options, on_zoom, graph, animation_id, graph_tracker_id), el)
+      (fun
+        (old_data, old_options, old_on_zoom, graph, animation_id, graph_tracker_id) el ->
+        let () =
+          let data = Option.some_if (not (phys_equal old_data data)) data in
+          let options =
+            match phys_equal old_options options, phys_equal old_on_zoom on_zoom with
+            | true, true -> None
+            | _          -> Some (override_zoom_callback ~graph options)
+          in
+          (match data, options with
+           | None, None -> ()
+           | _, options ->
+             let updateOptions = Update_options.create ?options ?data () in
+             Graph.updateOptions graph updateOptions);
+          resize_if_width_or_height_changed graph ~old_options ~options
+        in
+        (data, options, on_zoom, graph, animation_id, graph_tracker_id), el)
 ;;
 
 let create_graph ?with_graph ?on_zoom data options ~graph_tracker =
@@ -341,14 +249,13 @@ let create
   let graph_view =
     Vdom.Node.div
       ~key
-      ~attr:
-        (Vdom.Attr.many
-           [ Vdom.Attr.class_ "dygraph"
-           ; Vdom.Attr.style (Css_gen.flex_container ())
-           ; extra_attr
-           ])
+      ~attrs:
+        [ Vdom.Attr.class_ "dygraph"
+        ; Vdom.Attr.style (Css_gen.flex_container ())
+        ; extra_attr
+        ]
       [ graph; legend_view ]
   in
-  let modify_graph = Mutable_state_tracker.modify graph_tracker in
+  let modify_graph = graph_tracker.Mutable_state_tracker.modify in
   { graph_view; modify_graph }
 ;;

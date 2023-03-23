@@ -1,4 +1,4 @@
 (library (name bonsai_bench) (public_name bonsai.bench)
- (libraries bonsai bonsai_test core_bench.js incr_dom.javascript_profiling
+ (libraries bonsai bonsai_driver core_bench.js incr_dom.javascript_profiling
   js_of_ocaml)
  (preprocess (pps ppx_jane js_of_ocaml-ppx ppx_pattern_bind)))

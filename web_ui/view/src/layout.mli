@@ -59,7 +59,7 @@ module Flex : sig
 end
 
 val hbox
-  :  ?attr:Vdom.Attr.t
+  :  ?attrs:Vdom.Attr.t list
   -> ?gap:Css_gen.Length.t
   -> ?main_axis_alignment:Flex.Main_axis_alignment.t
   -> ?cross_axis_alignment:Flex.Cross_axis_alignment.t
@@ -68,7 +68,7 @@ val hbox
   -> Vdom.Node.t
 
 val vbox
-  :  ?attr:Vdom.Attr.t
+  :  ?attrs:Vdom.Attr.t list
   -> ?gap:Css_gen.Length.t
   -> ?main_axis_alignment:Flex.Main_axis_alignment.t
   -> ?cross_axis_alignment:Flex.Cross_axis_alignment.t
@@ -77,7 +77,7 @@ val vbox
   -> Vdom.Node.t
 
 val hbox_wrap
-  :  ?attr:Vdom.Attr.t
+  :  ?attrs:Vdom.Attr.t list
   -> ?row_gap:Css_gen.Length.t
   -> ?column_gap:Css_gen.Length.t
   -> ?main_axis_alignment:Flex.Main_axis_alignment.t
@@ -88,7 +88,7 @@ val hbox_wrap
   -> Vdom.Node.t
 
 val vbox_wrap
-  :  ?attr:Vdom.Attr.t
+  :  ?attrs:Vdom.Attr.t list
   -> ?row_gap:Css_gen.Length.t
   -> ?column_gap:Css_gen.Length.t
   -> ?main_axis_alignment:Flex.Main_axis_alignment.t

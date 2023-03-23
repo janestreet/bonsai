@@ -101,12 +101,10 @@ module Rpc_implementations = struct
             Time_ns.sub (Time_ns.now ()) (Time_ns.Span.of_sec 20.0)
           in
           last_move_time
-          := Map.filter !last_move_time ~f:(fun t ->
-            Time_ns.( > ) t twenty_seconds_ago);
+          := Map.filter !last_move_time ~f:(fun t -> Time_ns.( > ) t twenty_seconds_ago);
           active_users_ref
           := Map.filter_keys !active_users_ref ~f:(Map.mem !last_move_time);
-          mouse_positions
-          := Map.filter_keys !mouse_positions ~f:(Map.mem !last_move_time));
+          mouse_positions := Map.filter_keys !mouse_positions ~f:(Map.mem !last_move_time));
         [ active_users; set_mouse_position; get_mouse_position ]
       ;;
     end

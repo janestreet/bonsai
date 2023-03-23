@@ -142,16 +142,15 @@ module Status = struct
       | false -> []
     in
     Vdom.Node.div
-      ~attr:Styles.progress_bar
+      ~attrs:[ Styles.progress_bar ]
       [ Vdom.Node.div
-          ~attr:
-            (Vdom.Attr.many
-               [ Vdom.Attr.many ([ Styles.progress_bar_meter ] @ maybe_spin)
-               ; Vdom.Attr.style
-                   (Css_gen.combine
-                      (Css_gen.background_color color)
-                      (Css_gen.width (`Percent width)))
-               ])
+          ~attrs:
+            [ Vdom.Attr.many ([ Styles.progress_bar_meter ] @ maybe_spin)
+            ; Vdom.Attr.style
+                (Css_gen.combine
+                   (Css_gen.background_color color)
+                   (Css_gen.width (`Percent width)))
+            ]
           []
       ]
   ;;
@@ -165,7 +164,7 @@ module Node_data = struct
 
     let to_vdom _ =
       Vdom.Node.div
-        ~attr:(Vdom.Attr.many [ Styles.node; Styles.person ])
+        ~attrs:[ Styles.node; Styles.person ]
         [ Vdom.Node.text "I am a human BEEP BOOP!" ]
     ;;
   end
@@ -186,12 +185,12 @@ module Node_data = struct
     let status = Status.to_vdom t.status in
     let status_message =
       Vdom.Node.div
-        ~attr:Styles.status_message
+        ~attrs:[ Styles.status_message ]
         [ Vdom.Node.text @@ Status.to_status_message t.status ]
     in
     let name =
       Vdom.Node.div
-        ~attr:(Vdom.Attr.style (Css_gen.flex_container ~direction:`Row ()))
+        ~attrs:[ Vdom.Attr.style (Css_gen.flex_container ~direction:`Row ()) ]
         [ Vdom.Node.strong [ Vdom.Node.text t.name ] ]
     in
     let people =
@@ -201,16 +200,16 @@ module Node_data = struct
         Vdom.Node.div [ Vdom.Node.text [%string "%{number_of_people#Int} people"] ]
       | false ->
         Vdom.Node.div
-          ~attr:(Vdom.Attr.style (Css_gen.flex_container ~direction:`Row ()))
+          ~attrs:[ Vdom.Attr.style (Css_gen.flex_container ~direction:`Row ()) ]
           (List.map t.people ~f:Person.to_vdom)
     in
     Vdom.Node.div
-      ~attr:Styles.node
+      ~attrs:[ Styles.node ]
       [ status
       ; Vdom.Node.div
-          ~attr:Styles.node_contents
+          ~attrs:[ Styles.node_contents ]
           [ Vdom.Node.div
-              ~attr:(Vdom.Attr.style (Css_gen.flex_container ~direction:`Row ()))
+              ~attrs:[ Vdom.Attr.style (Css_gen.flex_container ~direction:`Row ()) ]
               [ name
               ; Feather_icon.svg
                   ~extra_attrs:[ Styles.cursor; Vdom.Attr.on_click @@ Fn.const collapse ]
@@ -404,26 +403,23 @@ let edge_to_svg
   in
   let bee_href = href ^ "actual_bee" in
   Virtual_dom_svg.Node.g
-    [ Virtual_dom_svg.Node.path ~attr []
+    [ Virtual_dom_svg.Node.path ~attrs:[ attr ] []
     ; Virtual_dom_svg.Node.text
-        ~attr:(Vdom.Attr.create "rotate" "180")
+        ~attrs:[ Vdom.Attr.create "rotate" "180" ]
         [ Virtual_dom_svg.Node.text_path
-            ~attr:
-              (Vdom.Attr.many
-                 [ Vdom.Attr.id bee_href; Virtual_dom_svg.Attr.href ("#" ^ href) ])
+            ~attrs:[ Vdom.Attr.id bee_href; Virtual_dom_svg.Attr.href ("#" ^ href) ]
             [ Vdom.Node.text "🐝" ]
         ]
     ; Vdom.Node.create_svg
         "animate"
-        ~attr:
-          (Vdom.Attr.many
-             [ Vdom.Attr.href ("#" ^ bee_href)
-             ; Vdom.Attr.create "attributeName" "startOffset"
-             ; Vdom.Attr.create "from" "0%"
-             ; Vdom.Attr.create "to" "100%"
-             ; Vdom.Attr.create "dur" "2s"
-             ; Vdom.Attr.create "repeatCount" "indefinite"
-             ])
+        ~attrs:
+          [ Vdom.Attr.href ("#" ^ bee_href)
+          ; Vdom.Attr.create "attributeName" "startOffset"
+          ; Vdom.Attr.create "from" "0%"
+          ; Vdom.Attr.create "to" "100%"
+          ; Vdom.Attr.create "dur" "2s"
+          ; Vdom.Attr.create "repeatCount" "indefinite"
+          ]
         []
     ]
 ;;
@@ -448,9 +444,9 @@ let component =
   in
   let%arr dag = dag in
   Vdom.Node.div
-    ~attr:Styles.header
+    ~attrs:[ Styles.header ]
     [ Vdom.Node.div
-        ~attr:Styles.paper
+        ~attrs:[ Styles.paper ]
         [ Vdom.Node.strong [ Vdom.Node.text "Capybara Petting Zoo" ]; dag ]
     ]
 ;;

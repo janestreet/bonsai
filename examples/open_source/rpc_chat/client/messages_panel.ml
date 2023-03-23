@@ -9,7 +9,7 @@ let view_message { Message.room = _; author; contents } =
 
 let view messages current_room =
   Vdom.Node.div
-    ~attr:(Vdom.Attr.id "messages-list")
+    ~attrs:[ Vdom.Attr.id "messages-list" ]
     [ Vdom.Node.h1 [ Vdom.Node.text (Room.to_string current_room) ]
     ; Vdom.Node.div (List.map messages ~f:view_message)
     ]

@@ -14,8 +14,7 @@ let component =
       ~on_drop:
         (Bonsai.Value.return (fun source target ->
            Ui_effect.print_s
-             [%message
-               (sprintf "universe %s on_drop" name) (source : int) (target : int)]))
+             [%message (sprintf "universe %s on_drop" name) (source : int) (target : int)]))
   in
   let%sub universe1 = universe "1" in
   let%sub universe2 = universe "2" in
@@ -29,16 +28,16 @@ let component =
   let sentinel2 = sentinel2 ~name:"2" in
   Node.div
     [ Node.div
-        ~attr:sentinel1
-        [ Node.div ~attr:Attr.(id "s1" @ source1 ~id:1) []
-        ; Node.div ~attr:Attr.(id "s23" @ source1 ~id:2 @ source2 ~id:3) []
-        ; Node.div ~attr:Attr.(id "s4" @ source2 ~id:4) []
+        ~attrs:[ sentinel1 ]
+        [ Node.div ~attrs:[ Attr.(id "s1" @ source1 ~id:1) ] []
+        ; Node.div ~attrs:[ Attr.(id "s23" @ source1 ~id:2 @ source2 ~id:3) ] []
+        ; Node.div ~attrs:[ Attr.(id "s4" @ source2 ~id:4) ] []
         ]
     ; Node.div
-        ~attr:sentinel2
-        [ Node.div ~attr:Attr.(id "t1" @ target1 ~id:1) []
-        ; Node.div ~attr:Attr.(id "t23" @ target1 ~id:2 @ target2 ~id:3) []
-        ; Node.div ~attr:Attr.(id "t4" @ target2 ~id:4) []
+        ~attrs:[ sentinel2 ]
+        [ Node.div ~attrs:[ Attr.(id "t1" @ target1 ~id:1) ] []
+        ; Node.div ~attrs:[ Attr.(id "t23" @ target1 ~id:2 @ target2 ~id:3) ] []
+        ; Node.div ~attrs:[ Attr.(id "t4" @ target2 ~id:4) ] []
         ]
     ]
 ;;
@@ -58,8 +57,7 @@ let project_component =
       ~on_drop:
         (Bonsai.Value.return (fun source target ->
            Ui_effect.print_s
-             [%message
-               (sprintf "universe %s on_drop" name) (source : int) (target : int)]))
+             [%message (sprintf "universe %s on_drop" name) (source : int) (target : int)]))
   in
   let%sub universe1 =
     let%sub universe = universe "1" in
@@ -83,16 +81,18 @@ let project_component =
   let sentinel2 = sentinel2 ~name:"2" in
   Node.div
     [ Node.div
-        ~attr:sentinel1
-        [ Node.div ~attr:Attr.(id "s1" @ source1 ~id:1) []
-        ; Node.div ~attr:Attr.(id "s23" @ source1 ~id:2 @ source2 ~id:3) []
-        ; Node.div ~attr:Attr.(id "s4" @ source2 ~id:4) []
+        ~attrs:[ sentinel1 ]
+        [ Node.div ~attrs:[ Attr.(id "s1" @ source1 ~id:1) ] []
+        ; Node.div ~attrs:[ Attr.(id "s23" @ source1 ~id:2 @ source2 ~id:3) ] []
+        ; Node.div ~attrs:[ Attr.(id "s4" @ source2 ~id:4) ] []
         ]
     ; Node.div
-        ~attr:sentinel2
-        [ Node.div ~attr:Attr.(id "t1" @ target1 ~id:(Positive 1)) []
-        ; Node.div ~attr:Attr.(id "t23" @ target1 ~id:(Positive 2) @ target2 ~id:3) []
-        ; Node.div ~attr:Attr.(id "t4" @ target2 ~id:4) []
+        ~attrs:[ sentinel2 ]
+        [ Node.div ~attrs:[ Attr.(id "t1" @ target1 ~id:(Positive 1)) ] []
+        ; Node.div
+            ~attrs:[ Attr.(id "t23" @ target1 ~id:(Positive 2) @ target2 ~id:3) ]
+            []
+        ; Node.div ~attrs:[ Attr.(id "t4" @ target2 ~id:4) ] []
         ]
     ]
 ;;

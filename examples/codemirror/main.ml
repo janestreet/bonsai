@@ -411,7 +411,7 @@ let component =
   Vdom.Node.div
     [ Vdom.Node.text "Choose your editor extension:"
     ; Vdom.Node.div
-        ~attr:(Vdom.Attr.style (Css_gen.flex_container ~direction:`Row ()))
+        ~attrs:[ Vdom.Attr.style (Css_gen.flex_container ~direction:`Row ()) ]
         [ Form.view_as_vdom language_picker
         ; Option.value_map ~default:Vdom.Node.none ~f:Form.view_as_vdom theme_picker
         ]

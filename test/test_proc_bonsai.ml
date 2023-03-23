@@ -281,12 +281,14 @@ let%expect_test "on_display for updating a state" =
       match%sub state with
       | None ->
         return
-        @@ let%map set_state = set_state
+        @@
+        let%map set_state = set_state
         and input = input in
         Some (set_state (Some input))
       | Some state ->
         return
-        @@ let%map state = state
+        @@
+        let%map state = state
         and set_state = set_state
         and input = input in
         if Int.equal state input then None else Some (set_state (Some input))
@@ -669,7 +671,8 @@ let%expect_test "wrap" =
         String.length result + model)
       ~f:(fun model inject ->
         return
-        @@ let%map model = model
+        @@
+        let%map model = model
         and inject = inject in
         Int.to_string model, inject)
   in
@@ -959,7 +962,8 @@ let%expect_test "map > lazy" =
           Bonsai.lazy_ (lazy (f ~t:v ~depth)))
     in
     return
-    @@ let%map label = label
+    @@
+    let%map label = label
     and children = children
     and depth = depth in
     [%message label (depth : int) (children : Sexp.t Int.Map.t)]
@@ -1052,13 +1056,14 @@ let%expect_test "ping-pong between apply-static and dynamic" =
         (module Unit)
         ~default_model:9
         ~apply_dynamic:
-          (fun ~inject_dynamic:_ ~inject_static ~schedule_event () model () ->
-             if model <= 0
-             then model
-             else (
-               printf "%d: Ping!\n" model;
-               schedule_event (inject_static ());
-               model - 1))
+          (fun
+            ~inject_dynamic:_ ~inject_static ~schedule_event () model () ->
+            if model <= 0
+            then model
+            else (
+              printf "%d: Ping!\n" model;
+              schedule_event (inject_static ());
+              model - 1))
         ~apply_static:(fun ~inject_dynamic ~inject_static:_ ~schedule_event model () ->
           printf "%d: Pong!\n" model;
           schedule_event (inject_dynamic ());
@@ -1408,15 +1413,18 @@ let%test_module "inactive delivery" =
              (module Nothing)
              ~default_model:0
              ~apply_dynamic:
-               (fun ~inject_dynamic:_
+               (fun
+                 ~inject_dynamic:_
                  ~inject_static:_
                  ~schedule_event:_
                  ()
                  _model
-                 new_model -> new_model)
+                 new_model
+                 -> new_model)
              ~apply_static:
-               (fun ~inject_dynamic:_ ~inject_static:_ ~schedule_event:_ _model ->
-                  Nothing.unreachable_code)
+               (fun
+                 ~inject_dynamic:_ ~inject_static:_ ~schedule_event:_ _model ->
+                 Nothing.unreachable_code)
              (Value.return ())
          in
          let%arr m = m
@@ -1463,11 +1471,13 @@ let%test_module "inactive delivery" =
              (module Int)
              ~default_model:0
              ~apply_dynamic:
-               (fun ~inject_dynamic:_ ~inject_static:_ ~schedule_event:_ () _model ->
-                  Nothing.unreachable_code)
+               (fun
+                 ~inject_dynamic:_ ~inject_static:_ ~schedule_event:_ () _model ->
+                 Nothing.unreachable_code)
              ~apply_static:
-               (fun ~inject_dynamic:_ ~inject_static:_ ~schedule_event:_ _model new_model ->
-                  new_model)
+               (fun
+                 ~inject_dynamic:_ ~inject_static:_ ~schedule_event:_ _model new_model ->
+                 new_model)
              (Value.return ())
          in
          let%arr m = m
@@ -1972,11 +1982,13 @@ let%test_module "inactive delivery" =
                 (opaque_const_value ())
                 ~default_model:0
                 ~apply_action:
-                  (fun ~inject:_
+                  (fun
+                    ~inject:_
                     ~schedule_event:_
                     (_ : unit Bonsai.Computation_status.t)
                     model
-                    is_increment -> if is_increment then model + 1 else 999)
+                    is_increment
+                    -> if is_increment then model + 1 else 999)
                 ~reset:(fun ~inject ~schedule_event model ->
                   schedule_event (inject false);
                   model)
@@ -2009,14 +2021,17 @@ let%test_module "inactive delivery" =
                 (opaque_const_value ())
                 ~default_model:0
                 ~apply_static:
-                  (fun ~inject_dynamic:_
+                  (fun
+                    ~inject_dynamic:_
                     ~inject_static:_
                     ~schedule_event:_
                     model
-                    is_increment -> if is_increment then model + 1 else 999)
+                    is_increment
+                    -> if is_increment then model + 1 else 999)
                 ~apply_dynamic:
-                  (fun ~inject_dynamic:_ ~inject_static:_ ~schedule_event:_ () _ ->
-                     assert false)
+                  (fun
+                    ~inject_dynamic:_ ~inject_static:_ ~schedule_event:_ () _ ->
+                    assert false)
                 ~reset:(fun ~inject_dynamic:_ ~inject_static ~schedule_event model ->
                   schedule_event (inject_static false);
                   model)
@@ -2049,15 +2064,18 @@ let%test_module "inactive delivery" =
                 (opaque_const_value ())
                 ~default_model:0
                 ~apply_dynamic:
-                  (fun ~inject_dynamic:_
+                  (fun
+                    ~inject_dynamic:_
                     ~inject_static:_
                     ~schedule_event:_
                     ()
                     model
-                    is_increment -> if is_increment then model + 1 else 999)
+                    is_increment
+                    -> if is_increment then model + 1 else 999)
                 ~apply_static:
-                  (fun ~inject_dynamic:_ ~inject_static:_ ~schedule_event:_ _ ->
-                     assert false)
+                  (fun
+                    ~inject_dynamic:_ ~inject_static:_ ~schedule_event:_ _ ->
+                    assert false)
                 ~reset:(fun ~inject_dynamic ~inject_static:_ ~schedule_event model ->
                   schedule_event (inject_dynamic false);
                   model)
@@ -2295,7 +2313,8 @@ let%test_module "testing Bonsai internals" =
           ~f:(fun _key _data ->
             let%sub v = Bonsai.state (module String) ~default_model:"hello" in
             return
-            @@ let%map state, set_state = v in
+            @@
+            let%map state, set_state = v in
             { State_with_setter.state; set_state })
       in
       let handle =
@@ -2637,7 +2656,8 @@ let%expect_test "actor" =
         ~recv:(fun ~schedule_event:_ v () -> v + 1, v)
     in
     return
-    @@ let%map effect = effect in
+    @@
+    let%map effect = effect in
     let%bind.Bonsai.Effect i = effect () in
     print_int_effect i
   in
@@ -3513,9 +3533,7 @@ let%test_module "Clock.every" =
             ]
             ~f:(fun when_to_start_next_effect ->
               let component =
-                let%sub state, set_state =
-                  Bonsai.state (module Bool) ~default_model:true
-                in
+                let%sub state, set_state = Bonsai.state (module Bool) ~default_model:true in
                 match%sub state with
                 | true ->
                   let%sub () =
@@ -3538,8 +3556,7 @@ let%test_module "Clock.every" =
                     Bonsai.Edge.after_display
                       (let%map set_state = set_state in
                        let%bind.Effect () =
-                         (Effect.of_sync_fun (fun () -> print_endline "(state := true)"))
-                           ()
+                         (Effect.of_sync_fun (fun () -> print_endline "(state := true)")) ()
                        in
                        let%bind.Effect () = set_state true in
                        print_sanitized_dropped_action_if_needed ())
@@ -4298,7 +4315,8 @@ let%expect_test "resetter only impacts the id you target" =
         (Value.return "world")
         ~inside:
           (revert
-           @@ let%sub a = Bonsai.Dynamic_scope.lookup id_a in
+           @@
+           let%sub a = Bonsai.Dynamic_scope.lookup id_a in
            let%sub b = Bonsai.Dynamic_scope.lookup id_b in
            return (Value.map2 a b ~f:(fun a b -> a ^ " " ^ b))))
   in
@@ -4538,6 +4556,60 @@ let%expect_test "id_gen" =
          3 |}]
 ;;
 
+let%expect_test "with_self_effect" =
+  let module Result_spec = struct
+    type action =
+      | Set of int
+      | Print
+
+    type t = string * (action -> unit Effect.t) [@@deriving sexp]
+    type incoming = action
+
+    let equal = phys_equal
+    let view (result, _) = result
+    let incoming (_, self_effect) = self_effect
+  end
+  in
+  let component =
+    Bonsai_extra.with_self_effect
+      (module Result_spec)
+      ~f:(fun input ->
+        let%sub state = Bonsai.state (module Int) ~default_model:0 in
+        let%arr number, set_number = state
+        and input = input in
+        let effect action =
+          match action with
+          | Result_spec.Print ->
+            (match%bind.Effect input with
+             | Active (computed, (_ : Result_spec.action -> unit Effect.t)) ->
+               Effect.print_s [%message "Active" (computed : string)]
+             | Inactive -> Effect.print_s [%message "Inactive"])
+          | Set i -> set_number i
+        in
+        let computed = sprintf "the value: [%d]" number in
+        computed, effect)
+  in
+  let handle = Handle.create (module Result_spec) component in
+  Handle.show handle;
+  [%expect {| the value: [0] |}];
+  Handle.do_actions handle [ Print ];
+  [%expect {||}];
+  Handle.show handle;
+  [%expect {|
+    (Active (computed "the value: [0]"))
+    the value: [0] |}];
+  Handle.do_actions handle [ Set 1 ];
+  Handle.show handle;
+  [%expect {| the value: [1] |}];
+  Handle.do_actions handle [ Set 5; Print; Set 6; Print ];
+  Handle.show handle;
+  [%expect
+    {|
+    (Active (computed "the value: [5]"))
+    (Active (computed "the value: [6]"))
+    the value: [6] |}]
+;;
+
 let%expect_test "state_machine_dynamic_model" =
   let component =
     Bonsai_extra.state_machine0_dynamic_model
@@ -4647,7 +4719,8 @@ let%expect_test "pipe" =
   let component =
     let%sub push_and_pop = Bonsai_extra.pipe (module String) in
     return
-    @@ let%map push, pop = push_and_pop in
+    @@
+    let%map push, pop = push_and_pop in
     let pop s =
       let%bind.Bonsai.Effect a = pop in
       Ui_effect.print_s [%sexp "pop", (s : string), (a : string)]
@@ -5335,8 +5408,9 @@ let%expect_test "ordering behavior of skeleton traversal" =
         ~default_model:()
         v
         ~apply_action:
-          (fun ~inject:_ ~schedule_event:_ (_ : unit Bonsai.Computation_status.t) () () ->
-             ())
+          (fun
+            ~inject:_ ~schedule_event:_ (_ : unit Bonsai.Computation_status.t) () () ->
+            ())
     in
     let%sub c2 = Bonsai.state (module Unit) ~default_model:() in
     let%sub c3 =
@@ -5438,8 +5512,9 @@ let%expect_test "on_activate lifecycle events are run the second frame after the
         (module Unit)
         ~default_model:()
         ~apply_action:
-          (fun ~inject:_ ~schedule_event:_ (_ : unit Bonsai.Computation_status.t) () () ->
-             print_endline "on_activate")
+          (fun
+            ~inject:_ ~schedule_event:_ (_ : unit Bonsai.Computation_status.t) () () ->
+            print_endline "on_activate")
         (Bonsai.Var.value input_var)
     in
     let%sub on_activate =
@@ -5513,4 +5588,48 @@ let%expect_test "State machine actions that are scheduled while running the acti
     (n 2)
     (n 1)
     (n 0) |}]
+;;
+
+let%expect_test "most_recent_some" =
+  let var = Bonsai.Var.create 1 in
+  let active = Bonsai.Var.create true in
+  let component =
+    match%sub Bonsai.Var.value active with
+    | true ->
+      Bonsai.most_recent_some
+        (module Int)
+        (Bonsai.Var.value var)
+        ~f:(fun x -> if x mod 2 = 0 then Some x else None)
+    | false -> Bonsai.const None
+  in
+  let handle =
+    Handle.create
+      (Result_spec.sexp
+         (module struct
+           type t = int option [@@deriving sexp]
+         end))
+      component
+  in
+  Handle.show handle;
+  [%expect {| () |}];
+  Bonsai.Var.set var 2;
+  Handle.show handle;
+  [%expect {| (2) |}];
+  Handle.show handle;
+  [%expect {| (2) |}];
+  Bonsai.Var.set active false;
+  Handle.show handle;
+  [%expect {| () |}];
+  Bonsai.Var.set active true;
+  Handle.show handle;
+  [%expect {| (2) |}];
+  Bonsai.Var.set active false;
+  Handle.show handle;
+  [%expect {| () |}];
+  Bonsai.Var.set var 6;
+  Handle.show handle;
+  [%expect {| () |}];
+  Bonsai.Var.set active true;
+  Handle.show handle;
+  [%expect {| (6) |}]
 ;;

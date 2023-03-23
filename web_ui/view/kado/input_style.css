@@ -1,79 +1,80 @@
+@layer kado.input {
+  /* textbox, date, datetime, dropdown */
 
-/* textbox, date, datetime, dropdown */
+  fieldset.container {
+      width: fit-content;
+      padding:0;
+      margin:0.6em 0.25em 0.25em 0.25em;
+      position: relative;
+      border: 1px solid var(--border);
+      border-radius:3px;
+      overflow:hidden;
+      background: inherit;
+      background: var(--bg);
+  }
 
-fieldset.container {
-    width: fit-content;
-    padding:0;
-    margin:0.6em 0.25em 0.25em 0.25em;
-    position: relative;
-    border: 1px solid var(--border);
-    border-radius:3px;
-    overflow:hidden;
-    background: inherit;
+  fieldset.container > legend {
+      height:0;
+      overflow:visible;
+      position: relative;
+      font-size: 0.8em;
+      top:-0.55em;
+      margin: 0 0.25em;
+      line-height: 1em;
+      font-weight: bold;
+      white-space:pre;
+  }
+
+  fieldset.container > input,
+  fieldset.container > select {
+      border-radius:0;
+      appearance: none;
+      position: relative;
+      background:transparent;
+      border:0;
+      outline: none;
+      font-size: 1em;
+      font-family: inherit;
+      padding: 0.25em 0.25em 0.125em 0.25em;
+      z-index:2;
+  }
+
+  fieldset.container > select {
+      width: 100%;
+  }
+
+  fieldset.container > select,
+  fieldset.container > select > option {
+    appearance: revert;
     background: var(--bg);
-}
+    overflow: visible;
+  }
 
-fieldset.container > legend {
-    height:0;
-    overflow:visible;
-    position: relative;
-    font-size: 0.8em;
-    top:-0.55em;
-    margin: 0 0.25em;
-    line-height: 1em;
-    font-weight: bold;
-    white-space:pre;
-}
+  fieldset.container > select > option:hover {
+    box-shadow: 0 0 10px 100px #1882A8 inset;
+  }
 
-fieldset.container > input,
-fieldset.container > select {
-    border-radius:0;
-    appearance: none;
-    position: relative;
-    background:transparent;
-    border:0;
-    outline: none;
-    font-size: 1em;
-    font-family: inherit;
-    padding: 0.25em 0.25em 0.125em 0.25em;
-    z-index:2;
-}
+  fieldset.container:focus-within {
+      outline:var(--touch) solid 3px;
+      outline-offset:-2px;
+      color: var(--touch);
+  }
 
-fieldset.container > select {
-    width: 100%;
-}
+  fieldset.container:focus-within > legend::before {
+      content: '';
+      display: block;
+      position: absolute;
+      background: var(--bg);
+      width: 100%;
+      height: 4px;
+      left:0;
+      top:calc(0.5em - 1px);
+      z-index: 1;
+  }
 
-fieldset.container > select,
-fieldset.container > select > option {
-  appearance: revert;
-  background: var(--bg);
-  overflow: visible;
-}
-
-fieldset.container > select > option:hover {
-  box-shadow: 0 0 10px 100px #1882A8 inset;
-}
-
-fieldset.container:focus-within {
-    outline:var(--touch) solid 3px;
-    outline-offset:-2px;
-    color: var(--touch);
-}
-
-fieldset.container:focus-within > legend::before {
-    content: '';
-    display: block;
-    position: absolute;
-    background: var(--bg);
-    width: 100%;
-    height: 4px;
-    left:0;
-    top:calc(0.5em - 1px);
-    z-index: 1;
-}
-
-fieldset.container > legend > span {
-    position: relative;
-    z-index: 3;
-    margin: 0 -1px;
+  fieldset.container > legend > span {
+      position: relative;
+      z-index: 3;
+      margin: 0 -1px;
+  }
 }

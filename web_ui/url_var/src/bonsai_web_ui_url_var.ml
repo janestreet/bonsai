@@ -144,16 +144,21 @@ let set ?(how : [ `Push | `Replace ] option) { var; history } a =
 ;;
 
 let value { var; history = _ } = Bonsai.Var.value var
+let incr { var; history = _ } = Ui_incr.Var.watch (Bonsai.Var.incr_var var)
 
-let update ({ var; history = _ } as t) ~f =
+let update ?how ({ var; history = _ } as t) ~f =
   Bonsai.Var.update var ~f:(fun old ->
     let new_ = f old in
-    set t new_;
+    set ?how t new_;
     new_)
 ;;
 
 let get { var; _ } = Bonsai.Var.get var
 let set_effect ?how t = Effect.of_sync_fun (fun a -> set ?how t a)
+
+let update_effect ?how url_var ~f =
+  Effect.of_sync_fun (fun () -> update ?how url_var ~f) ()
+;;
 
 type 'a url_var = 'a t
 

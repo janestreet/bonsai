@@ -42,7 +42,7 @@ let component roll_spec =
     | _, None | _, Some _ -> []
   in
   Vdom.Node.div
-    ~attr:(Vdom.Attr.id "roller")
+    ~attrs:[ Vdom.Attr.id "roller" ]
     (Vdom_input_widgets.Button.simple
        ~merge_behavior:Legacy_dont_merge
        ~on_click:(fun () -> inject ())

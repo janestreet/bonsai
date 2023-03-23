@@ -18,7 +18,7 @@ let component ~messages ~current_room =
   let%arr messages = messages
   and current_room = current_room in
   Vdom.Node.div
-    ~attr:Style.messages_list
+    ~attrs:[ Style.messages_list ]
     [ Vdom.Node.h1 [ Vdom.Node.text (Room.to_string current_room) ]
     ; Vdom.Node.div (List.map messages ~f:view_message)
     ]

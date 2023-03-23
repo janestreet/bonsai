@@ -131,12 +131,11 @@ module Tracker = struct
         (module Model)
         (module Action)
         ~default_model:(Map.empty (module Id))
-        ~apply_action:
-          (fun ~inject:_ ~schedule_event:_ map -> function
-             | id, Install -> Map.set map ~key:id ~data:Installed
-             | id, Remove -> Map.remove map id
-             | id, Set_visible -> Map.set map ~key:id ~data:Visible
-             | id, Set_hidden -> Map.set map ~key:id ~data:Hidden)
+        ~apply_action:(fun ~inject:_ ~schedule_event:_ map -> function
+          | id, Install -> Map.set map ~key:id ~data:Installed
+          | id, Remove -> Map.remove map id
+          | id, Set_visible -> Map.set map ~key:id ~data:Visible
+          | id, Set_hidden -> Map.set map ~key:id ~data:Hidden)
     in
     let%sub attr = Bonsai.pure attr inject in
     let%arr attr = attr
@@ -171,13 +170,13 @@ let rec with_attr attr (vdom : Vdom.Node.t) =
     let style =
       Vdom.Attr.style Css_gen.(display `Inline_block @> width (`Px 0) @> height (`Px 0))
     in
-    Vdom.Node.div ~attr:(Vdom.Attr.many [ style; attr ]) []
-  | Text _ -> Vdom.Node.span ~attr [ vdom ]
+    Vdom.Node.div ~attrs:[ style; attr ] []
+  | Text _ -> Vdom.Node.span ~attrs:[ attr ] [ vdom ]
   | Element e ->
     Element (Vdom.Node.Element.map_attrs e ~f:(fun xs -> Vdom.Attr.many [ attr; xs ]))
   | Widget _ ->
     Vdom.Node.div
-      ~attr:(Vdom.Attr.many [ Vdom.Attr.style (Css_gen.display `Inline_block); attr ])
+      ~attrs:[ Vdom.Attr.style (Css_gen.display `Inline_block); attr ]
       [ vdom ]
   | Lazy { key; t } -> Lazy { key; t = Lazy.map t ~f:(with_attr attr) }
 ;;

@@ -164,7 +164,7 @@ module Make (Name : Types.Name) = struct
   let box t = function
     | [] -> Node.none
     | [ child ] -> child
-    | children -> Node.div ~attr:t children
+    | children -> Node.div ~attrs:[ t ] children
   ;;
 
   let hbox, vbox = box Style.hbox, box Style.vbox
@@ -272,8 +272,7 @@ module Make (Name : Types.Name) = struct
           match Map.find t.dest_to_id src with
           | None -> acc
           | Some to_'s ->
-            Set.fold to_'s ~init:acc ~f:(fun acc to_ ->
-              Set.add acc { Edge.from; to_ })))
+            Set.fold to_'s ~init:acc ~f:(fun acc to_ -> Set.add acc { Edge.from; to_ })))
     ;;
   end
 
@@ -297,13 +296,12 @@ module Make (Name : Types.Name) = struct
       let nodes =
         [ [ Node.div
               ~key:(Name.to_string id)
-              ~attr:
-                (Attr.many
-                   [ Attr.create "data-kind" "singleton"
-                   ; conn `Provide point_to
-                   ; force tracker
-                   ; id_attr
-                   ])
+              ~attrs:
+                [ Attr.create "data-kind" "singleton"
+                ; conn `Provide point_to
+                ; force tracker
+                ; id_attr
+                ]
               [ node ]
           ]
         ]
@@ -314,15 +312,14 @@ module Make (Name : Types.Name) = struct
       let nodes =
         [ [ Node.div
               ~key:(Name.to_string id)
-              ~attr:
-                (Attr.many
-                   [ Style.redirect
-                   ; Attr.create "data-kind" "redirect"
-                   ; conn `Provide point_to
-                   ; conn `Consume name
-                   ; force tracker
-                   ; id_attr
-                   ])
+              ~attrs:
+                [ Style.redirect
+                ; Attr.create "data-kind" "redirect"
+                ; conn `Provide point_to
+                ; conn `Consume name
+                ; force tracker
+                ; id_attr
+                ]
               [ node ]
           ]
         ]
@@ -335,14 +332,13 @@ module Make (Name : Types.Name) = struct
       let nodes =
         [ [ Node.div
               ~key:(Name.to_string id)
-              ~attr:
-                (Attr.many
-                   [ Attr.create "data-kind" "named"
-                   ; conn `Provide point_to
-                   ; conn `Consume name
-                   ; force tracker
-                   ; id_attr
-                   ])
+              ~attrs:
+                [ Attr.create "data-kind" "named"
+                ; conn `Provide point_to
+                ; conn `Consume name
+                ; force tracker
+                ; id_attr
+                ]
               [ node ]
           ]
         ]
@@ -390,15 +386,14 @@ module Make (Name : Types.Name) = struct
       let nodes =
         [ Node.div
             ~key:(Name.to_string id)
-            ~attr:
-              (Attr.many
-                 [ Attr.create "kind" "mapn"
-                 ; conn `Consume me
-                 ; conn `Provide point_to
-                 ; id_attr
-                 ; force tracker
-                 ; Vdom.Attr.create "my-id" (Name.to_string id)
-                 ])
+            ~attrs:
+              [ Attr.create "kind" "mapn"
+              ; conn `Consume me
+              ; conn `Provide point_to
+              ; id_attr
+              ; force tracker
+              ; Vdom.Attr.create "my-id" (Name.to_string id)
+              ]
             [ node ]
         ]
         :: children
@@ -496,8 +491,7 @@ module Make (Name : Types.Name) = struct
           in
           ( curr_id
           , ( vbox (List.map column_and_states ~f:Tuple2.get1)
-            , Connections_state.merge_list (List.map column_and_states ~f:Tuple2.get2)
-            ) ))
+            , Connections_state.merge_list (List.map column_and_states ~f:Tuple2.get2) ) ))
       in
       ( ( hbox (List.map rows_and_state ~f:Tuple2.get1)
         , Connections_state.merge_list (List.map rows_and_state ~f:Tuple2.get2) )
@@ -537,7 +531,7 @@ module Make (Name : Types.Name) = struct
         List.unzip list_to_partition, curr_id
       in
       ( ( Node.div
-            ~attr:Style.wrap
+            ~attrs:[ Style.wrap ]
             [ Node.text ("Wrapping " ^ name); vbox introduces_row; vbox body_row ]
         , Connections_state.(merge (merge_list introduces_state) (merge_list body_state))
         )
@@ -643,7 +637,7 @@ module Make (Name : Types.Name) = struct
       let%arr computation_as_html = computation_as_html in
       let padding =
         Vdom.Node.div
-          ~attr:(Vdom.Attr.style Css_gen.(height (`Px 12) @> width (`Px 12)))
+          ~attrs:[ Vdom.Attr.style Css_gen.(height (`Px 12) @> width (`Px 12)) ]
           []
       in
       hbox [ padding; vbox [ padding; computation_as_html; padding ]; padding ]
@@ -686,7 +680,7 @@ module Make (Name : Types.Name) = struct
     and curr_id = curr_id in
     let tracker, curr_id = Trackers.track_resizing trackers ~curr_id in
     ( Node.div
-        ~attr:(Attr.many [ Style.map; Style.testcase; tracker ])
+        ~attrs:[ Style.map; Style.testcase; tracker ]
         [ Virtual_dom_svg.Node.svg svgs; computation_as_html ]
     , curr_id )
   ;;

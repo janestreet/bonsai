@@ -258,10 +258,11 @@ let component (type a) (t : a t) =
            |> Typed.Components.to_original_components)
       in
       Vdom.Node.button
-        ~attr:
-          (Vdom.Attr.on_click (fun _ ->
-             let%bind.Effect () = typed_url_form_set result in
-             uri_form_set_even_if_same_as_callback result))
+        ~attrs:
+          [ Vdom.Attr.on_click (fun _ ->
+              let%bind.Effect () = typed_url_form_set result in
+              uri_form_set_even_if_same_as_callback result)
+          ]
         [ Vdom.Node.text name ])
   in
   let possible_warning =
@@ -278,30 +279,30 @@ let component (type a) (t : a t) =
       ]
   in
   Vdom.Node.div
-    ~attr:(Vdom.Attr.many [ Css.paper; Css.column ])
+    ~attrs:[ Css.paper; Css.column ]
     [ Vdom.Node.h3 [ Vdom.Node.text t.title ]
-    ; Vdom.Node.p ~attr:Css.example_description [ Vdom.Node.text t.description ]
-    ; Vdom.Node.div ~attr:Css.button_row buttons
+    ; Vdom.Node.p ~attrs:[ Css.example_description ] [ Vdom.Node.text t.description ]
+    ; Vdom.Node.div ~attrs:[ Css.button_row ] buttons
     ; Vdom.Node.div
         [ Vdom.Node.div
-            ~attr:Css.paper
+            ~attrs:[ Css.paper ]
             [ Vdom.Node.div [ Vdom.Node.text "🌐 URL Bar" ]
-            ; Vdom.Node.div ~attr:Css.warning_section possible_warning
+            ; Vdom.Node.div ~attrs:[ Css.warning_section ] possible_warning
             ; Vdom.Node.div
-                ~attr:Css.column
+                ~attrs:[ Css.column ]
                 (Form.View.to_vdom_plain (Form.view uri_form))
             ; Vdom.Node.div
-                ~attr:Css.columns_wrapper
+                ~attrs:[ Css.columns_wrapper ]
                 [ Feather_icon.svg Feather_icon.Arrow_up
                 ; Feather_icon.svg Feather_icon.Arrow_down
                 ]
             ; Vdom.Node.div [ Vdom.Node.text "👾 Sexp of parsed URL" ]
             ; Vdom.Node.div
-                ~attr:Css.column
+                ~attrs:[ Css.column ]
                 (Form.View.to_vdom_plain (Form.view typed_url_form))
             ]
         ; Vdom.Node.div
-            ~attr:Css.column
+            ~attrs:[ Css.column ]
             [ Vdom.Node.text "🐪 Url module"
             ; Vdom.Node.div [ Vdom.Node.pre [ Vdom.Node.text t.demo_code ] ]
             ]
@@ -660,16 +661,16 @@ module Error_message_example =
 let error_example_component =
   let out =
     Vdom.Node.div
-      ~attr:(Vdom.Attr.many [ Css.paper; Css.column ])
+      ~attrs:[ Css.paper; Css.column ]
       [ Vdom.Node.h3 [ Vdom.Node.text "Error in URL detection." ]
       ; Vdom.Node.p
-          ~attr:Css.example_description
+          ~attrs:[ Css.example_description ]
           [ Vdom.Node.text
               "Errors in the URL can be detected before any parsing occurs inside of an \
                expect test!"
           ]
       ; Vdom.Node.div
-          ~attr:Css.column
+          ~attrs:[ Css.column ]
           [ Vdom.Node.text "🐪 Url module"
           ; Vdom.Node.div
               [ Vdom.Node.pre [ Vdom.Node.text Error_message_example.ppx_demo_string ] ]

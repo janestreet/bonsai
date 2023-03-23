@@ -28,7 +28,7 @@ let bulk_size_component =
   let mk i =
     let key = sprintf "resizable-using-css-%d" i in
     let attr = Vdom.Attr.many [ Style.resizable_using_css; size_attr i ] in
-    Vdom.Node.div ~key ~attr []
+    Vdom.Node.div ~key ~attrs:[ attr ] []
   in
   Vdom.Node.div
     [ Vdom.Node.h3 [ Vdom.Node.text "Resize me!" ]
@@ -37,7 +37,7 @@ let bulk_size_component =
       |> Sexp.to_string_hum
       |> Vdom.Node.text
       |> List.return
-      |> Vdom.Node.pre ~attr:Style.pre_for_display
+      |> Vdom.Node.pre ~attrs:[ Style.pre_for_display ]
     ; mk 0
     ; mk 1
     ; mk 2
@@ -69,7 +69,7 @@ let position =
   and get_attr = get_attr in
   let mk i =
     let attr = Vdom.Attr.many [ Style.resizable_using_css; get_attr i ] in
-    Vdom.Node.div ~attr []
+    Vdom.Node.div ~attrs:[ attr ] []
   in
   Vdom.Node.div
     [ Vdom.Node.h3 [ Vdom.Node.text "Resize me!" ]
@@ -78,7 +78,7 @@ let position =
       |> Sexp.to_string_hum
       |> Vdom.Node.text
       |> List.return
-      |> Vdom.Node.pre ~attr:Style.pre_for_display
+      |> Vdom.Node.pre ~attrs:[ Style.pre_for_display ]
     ; mk 0
     ; mk 1
     ; mk 2
@@ -93,12 +93,11 @@ let size_component =
     [ Vdom.Node.h3 [ Vdom.Node.text "Resize me!" ]
     ; Vdom.Node.div
         ~key:"resizable-using-css"
-        ~attr:
-          (Vdom.Attr.many
-             [ Style.resizable_using_css
-             ; Size_hooks.Size_tracker.on_change (fun ~width ~height ->
-                 inject_size (Some Size.{ width; height }))
-             ])
+        ~attrs:
+          [ Style.resizable_using_css
+          ; Size_hooks.Size_tracker.on_change (fun ~width ~height ->
+              inject_size (Some Size.{ width; height }))
+          ]
         [ Vdom.Node.textf !"%{sexp:Size.t option}" size ]
     ]
 ;;
@@ -110,19 +109,16 @@ let fit =
       [ Node.h2 [ Node.text s ]
       ; Node.div
           ~key:"resizable-using-css"
-          ~attr:
-            (Vdom.Attr.many
-               [ Attr.class_ "resizable-using-css"
-               ; Bonsai_web_ui_element_size_hooks.Resize_to_fit
-                 .attr_for_parent__recommended
-               ])
+          ~attrs:
+            [ Style.resizable_using_css
+            ; Bonsai_web_ui_element_size_hooks.Resize_to_fit.attr_for_parent__recommended
+            ]
           [ Node.span
-              ~attr:
-                (Vdom.Attr.many
-                   [ Bonsai_web_ui_element_size_hooks.Resize_to_fit.attr ~behavior ()
-                   ; Vdom.Attr.create "contenteditable" ""
-                   ; Vdom.Attr.style (Css_gen.outline ~style:`None ())
-                   ])
+              ~attrs:
+                [ Bonsai_web_ui_element_size_hooks.Resize_to_fit.attr ~behavior ()
+                ; Vdom.Attr.create "contenteditable" ""
+                ; Vdom.Attr.style (Css_gen.outline ~style:`None ())
+                ]
               [ Node.text "hello world" ]
           ]
       ]
@@ -159,9 +155,11 @@ let visibility_component =
         ()
         ~visible_rect_changed:(fun bounds ->
           Effect.Many
-            [ inject_pos_x bounds.min_x
-            ; inject_pos_y bounds.min_y
-            ; set_visible_rect (Some bounds)
+            [ (match bounds with
+                | Some bounds ->
+                  Effect.Many [ inject_pos_x bounds.min_x; inject_pos_y bounds.min_y ]
+                | None -> Effect.Ignore)
+            ; set_visible_rect bounds
             ])
         ~client_rect_changed:(Fn.compose set_client_rect Option.some)
     ]
@@ -171,12 +169,12 @@ let visibility_component =
     ; Vdom.Node.sexp_for_debugging
         [%message (client_rect : Bbox.Int.t option) (visible_rect : Bbox.Int.t option)]
     ; Vdom.Node.div
-        ~attr:Style.outer_visibility_parent
+        ~attrs:[ Style.outer_visibility_parent ]
         [ Vdom.Node.div
-            ~attr:Style.inner_visibility_parent
-            [ Vdom.Node.div ~attr:(Vdom.Attr.many attributes) [] ]
+            ~attrs:[ Style.inner_visibility_parent ]
+            [ Vdom.Node.div ~attrs:attributes [] ]
         ; Vdom.Node.div
-            ~attr:Style.inner_visibility_parent
+            ~attrs:[ Style.inner_visibility_parent ]
             [ Vdom.Node.text "padding..." ]
         ]
     ]
@@ -190,7 +188,9 @@ let buttons current inject =
       then Vdom.Attr.(Style.primary @ click_handler)
       else click_handler
     in
-    Vdom.Node.button ~attr [ page |> Page.sexp_of_t |> Sexp.to_string |> Vdom.Node.text ]
+    Vdom.Node.button
+      ~attrs:[ attr ]
+      [ page |> Page.sexp_of_t |> Sexp.to_string |> Vdom.Node.text ]
   in
   Page.all |> List.map ~f:make_button_for_tab |> Vdom.Node.div
 ;;
@@ -200,11 +200,9 @@ let resizer_component =
     (Vdom.Node.div
        [ Vdom.Node.h3 [ Vdom.Node.text "Resize me!" ]
        ; Vdom.Node.div
-           ~attr:Style.resizable_using_resizer
+           ~attrs:[ Style.resizable_using_resizer ]
            [ Vdom.Node.text (String.concat (List.init 20 ~f:(Fn.const "Hello world. ")))
-           ; Vdom.Node.div
-               ~attr:(Vdom.Attr.many [ Style.resizer; Size_hooks.Expert.Resizer.attr ])
-               []
+           ; Vdom.Node.div ~attrs:[ Style.resizer; Size_hooks.Expert.Resizer.attr ] []
            ]
        ])
 ;;

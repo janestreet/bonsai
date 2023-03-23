@@ -1,5 +1,4 @@
 open! Core
-open Bonsai_test
 open Js_of_ocaml
 module Graph_info = Bonsai.Private.Graph_info
 

@@ -3,4 +3,5 @@
  (libraries bonsai bonsai_web core ppx_css.inline_css))
 
 (rule (targets style.ml style.mli style__generated.ml style__generated.mli)
- (deps style.css) (action (bash "%{bin:css_inliner} %{deps}")))
+ (deps style.css)
+ (action (bash "%{bin:css_inliner} %{deps} \"((rewrite ()))\"")))

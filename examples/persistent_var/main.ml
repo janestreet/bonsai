@@ -25,12 +25,11 @@ let display_text_var ~doc storage_var =
     [ Vdom.Node.text doc
     ; Vdom.Node.br ()
     ; Vdom.Node.input
-        ~attr:
-          (Vdom.Attr.many
-             [ Vdom.Attr.style (Css_gen.width (`Vw (Percent.of_mult 0.5)))
-             ; Vdom.Attr.string_property "value" value
-             ; Vdom.Attr.on_input (fun _ s -> set_effect s)
-             ])
+        ~attrs:
+          [ Vdom.Attr.style (Css_gen.width (`Vw (Percent.of_mult 0.5)))
+          ; Vdom.Attr.string_property "value" value
+          ; Vdom.Attr.on_input (fun _ s -> set_effect s)
+          ]
         ()
     ]
 ;;

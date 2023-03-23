@@ -29,15 +29,13 @@ let component =
   let%arr effect = effect in
   Vdom.Node.div
     [ Vdom.Node.div
-        ~attr:
-          (Vdom.Attr.many
-             [ Vdom.Attr.class_ "my_box"
-             ; Vdom.Attr.style
-                 Css_gen.(background_color (`Hex "#000000") @> width (`Px 20))
-             ])
+        ~attrs:
+          [ Vdom.Attr.class_ "my_box"
+          ; Vdom.Attr.style Css_gen.(background_color (`Hex "#000000") @> width (`Px 20))
+          ]
         []
     ; Vdom.Node.button
-        ~attr:(Vdom.Attr.on_click (fun _ -> effect))
+        ~attrs:[ Vdom.Attr.on_click (fun _ -> effect) ]
         [ Vdom.Node.text "Append style!" ]
     ]
 ;;

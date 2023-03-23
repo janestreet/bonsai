@@ -24,6 +24,6 @@ let hello_textbox : Vdom.Node.t Computation.t =
   let%arr message = message
   and set = set in
   Vdom.Node.div
-    [ Vdom.Node.input ~attr:(Vdom.Attr.on_input (fun _ text -> set text)) (); message ]
+    [ Vdom.Node.input ~attrs:[ Vdom.Attr.on_input (fun _ text -> set text) ] (); message ]
 ;;
 (* $MDX part-end *)

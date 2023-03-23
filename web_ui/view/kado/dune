@@ -5,39 +5,39 @@
 (rule
  (targets tabs_style.ml tabs_style.mli tabs_style__generated.ml
   tabs_style__generated.mli)
- (deps tabs_style.css) (action (bash "%{bin:css_inliner} %{deps}")))
+ (deps tabs_style.css)
+ (action (bash "%{bin:css_inliner} %{deps} \"((rewrite ()))\"")))
 
 (rule
  (targets checkbox_style.ml checkbox_style.mli checkbox_style__generated.ml
   checkbox_style__generated.mli)
- (deps checkbox_style.css) (action (bash "%{bin:css_inliner} %{deps}")))
-
-(rule
- (targets table_style.ml table_style.mli table_style__generated.ml
-  table_style__generated.mli)
- (deps table_style.css) (action (bash "%{bin:css_inliner} %{deps}")))
+ (deps checkbox_style.css)
+ (action (bash "%{bin:css_inliner} %{deps} \"((rewrite ()))\"")))
 
 (rule
  (targets input_style.ml input_style.mli input_style__generated.ml
   input_style__generated.mli)
- (deps input_style.css) (action (bash "%{bin:css_inliner} %{deps}")))
+ (deps input_style.css)
+ (action (bash "%{bin:css_inliner} %{deps} \"((rewrite ()))\"")))
 
 (rule
  (targets devbar_style.ml devbar_style.mli devbar_style__generated.ml
   devbar_style__generated.mli)
- (deps devbar_style.css) (action (bash "%{bin:css_inliner} %{deps}")))
+ (deps devbar_style.css)
+ (action (bash "%{bin:css_inliner} %{deps} \"((rewrite ()))\"")))
 
-(rule
- (targets app_style.ml app_style.mli app_style__generated.ml
-  app_style__generated.mli)
- (deps app_style.css) (action (bash "%{bin:css_inliner} %{deps}")))
+(rule (targets app.ml app.mli app__generated.ml app__generated.mli)
+ (deps app.css)
+ (action (bash "%{bin:css_inliner} %{deps} \"((rewrite ()))\"")))
 
 (rule
  (targets cards_style.ml cards_style.mli cards_style__generated.ml
   cards_style__generated.mli)
- (deps cards_style.css) (action (bash "%{bin:css_inliner} %{deps}")))
+ (deps cards_style.css)
+ (action (bash "%{bin:css_inliner} %{deps} \"((rewrite ()))\"")))
 
 (rule
  (targets button_style.ml button_style.mli button_style__generated.ml
   button_style__generated.mli)
- (deps button_style.css) (action (bash "%{bin:css_inliner} %{deps}")))
+ (deps button_style.css)
+ (action (bash "%{bin:css_inliner} %{deps} \"((rewrite ()))\"")))

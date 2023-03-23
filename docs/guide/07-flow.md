@@ -69,7 +69,7 @@ let textbox_chaining =
   let%arr a_view = a_view
   and b_view = b_view in
   let style = Vdom.Attr.style (Css_gen.display `Inline_grid) in
-  Vdom.Node.div ~attr:style [ a_view; b_view ]
+  Vdom.Node.div ~attrs:[ style ] [ a_view; b_view ]
 ;;
 ```
 
@@ -126,7 +126,7 @@ let textbox_matching =
     let%arr a_view = a_view
     and b_view = b_view in
     let style = Vdom.Attr.style (Css_gen.display `Inline_grid) in
-    Vdom.Node.div ~attr:style [ a_view; b_view ]
+    Vdom.Node.div ~attrs:[ style ] [ a_view; b_view ]
 ;;
 ```
 
@@ -340,7 +340,7 @@ let people_table people ~inject_remove_person =
       let remove_person =
         td
           [ button
-              ~attr:(Vdom.Attr.on_click (fun _ -> inject_remove_person name))
+              ~attrs:[ Vdom.Attr.on_click (fun _ -> inject_remove_person name) ]
               [ text "x" ]
           ]
       in

@@ -26,22 +26,23 @@ module Pills = struct
           inject_selected_options selected_options)
       in
       Vdom.Node.span
-        ~attr:
-          Vdom.Attr.(
-            extra_pill_attr
-            @ tabindex 0
-            @ create   "data-value" (to_string option)
-            @ on_click remove_option
-            @ on_keyup (fun ev ->
-              match Js_of_ocaml.Dom_html.Keyboard_code.of_event ev with
-              | Space | Enter | NumpadEnter | Backspace | Delete -> remove_option ev
-              | _ -> Ui_effect.Ignore))
+        ~attrs:
+          [ Vdom.Attr.(
+              extra_pill_attr
+              @ tabindex 0
+              @ create   "data-value" (to_string option)
+              @ on_click remove_option
+              @ on_keyup (fun ev ->
+                match Js_of_ocaml.Dom_html.Keyboard_code.of_event ev with
+                | Space | Enter | NumpadEnter | Backspace | Delete -> remove_option ev
+                | _ -> Ui_effect.Ignore))
+          ]
         [ Vdom.Node.text (to_string option ^ " ×") ]
     in
     match to_list selected_options with
     | []               -> Vdom.Node.none
     | selected_options ->
-      Vdom.Node.div ~attr:extra_container_attr (List.map selected_options ~f:pill)
+      Vdom.Node.div ~attrs:[ extra_container_attr ] (List.map selected_options ~f:pill)
   ;;
 
   let of_list

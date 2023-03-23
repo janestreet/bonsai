@@ -248,13 +248,13 @@ module Style =
   }
   |}]
 
-let error_box message = N.pre ~attr:Style.error [ N.text message ]
+let error_box message = N.pre ~attrs:[ Style.error ] [ N.text message ]
 
 let print_the_atom ~monospaced = function
   | Sexp.Atom a ->
     if monospaced
     then N.pre [ N.text a ]
-    else N.span ~attr:Style.with_whitespace [ N.text a ]
+    else N.span ~attrs:[ Style.with_whitespace ] [ N.text a ]
   | sexp ->
     error_box [%string "Error printing atom. Expected atom, but got: %{sexp#Sexp}"]
 ;;
@@ -350,7 +350,7 @@ let view grammar ~customizations =
                   | _ -> all |> List.map ~f:(fun arg -> N.li [ arg ]) |> N.ul
                 in
                 N.div
-                  [ N.span ~attr:Style.record_field_name [ N.text field_name ]
+                  [ N.span ~attrs:[ Style.record_field_name ] [ N.text field_name ]
                   ; N.br ()
                   ; all_view
                   ]))
@@ -370,12 +370,13 @@ let view grammar ~customizations =
           (match required with
            | true ->
              [%string
-               "Record is missing a field named '%{key}', which is required by the grammar"]
+               "Record is missing a field named '%{key}', which is required by the \
+                grammar"]
              |> error_box
              |> Some
            | false ->
              N.div
-               [ N.span ~attr:Style.record_field_name [ N.text key ]
+               [ N.span ~attrs:[ Style.record_field_name ] [ N.text key ]
                ; N.br ()
                ; N.pre [ N.text "Non-required field not present" ]
                ]
@@ -936,11 +937,12 @@ let form
                 if override then Style.override_showing else Style.override_hidden
               in
               N.div
-                ~attr:
-                  A.(
-                    override_status
-                    @ Style.override_text
-                    @ on_click (fun _ -> set_override (not override)))
+                ~attrs:
+                  [ A.(
+                      override_status
+                      @ Style.override_text
+                      @ on_click (fun _ -> set_override (not override)))
+                  ]
                 [ N.text text ]
           in
           let%sub inner =
@@ -1029,9 +1031,7 @@ let form
       and original_field_order = original_field_order in
       List.map original_field_order ~f:(fun field_name ->
         let form, `Required _, `Doc doc = Map.find_exn forms field_name in
-        { Form.View.field_view = form |> Form.view |> maybe_set_tooltip doc
-        ; field_name
-        })
+        { Form.View.field_view = form |> Form.view |> maybe_set_tooltip doc; field_name })
       |> Form.View.record
     in
     let%sub set =
@@ -1074,10 +1074,8 @@ let form
           | Ok (Some (Sexp.Atom _ as atom)) ->
             Some
               (Or_error.error_s
-                 [%message
-                   "expected list of args from subform, but got" (atom : Sexp.t)])
-          | Ok (Some (Sexp.List value)) ->
-            Some (Ok (Sexp.List (Sexp.Atom key :: value))))
+                 [%message "expected list of args from subform, but got" (atom : Sexp.t)])
+          | Ok (Some (Sexp.List value)) -> Some (Ok (Sexp.List (Sexp.Atom key :: value))))
       in
       let%arr values = values in
       Map.data values |> Or_error.all |> Or_error.map ~f:(fun list -> Sexp.List list)
@@ -1131,7 +1129,13 @@ let form'
   Form.Expert.create ~view:(Form.view form) ~value:(Form.value form) ~set:(fun sexp ->
     match unstage validate_sexp sexp with
     | Ok () -> Form.set form sexp
-    | Error _ -> on_set_error sexp)
+    | Error error ->
+      on_set_error
+        [%message
+          "BUG: Sexp representation of set form value does not match sexp grammar. Does \
+           your sexp_of_t function match your sexp grammar?"
+            ~value:(sexp : Sexp.t)
+            (error : Error.t)])
 ;;
 
 let form

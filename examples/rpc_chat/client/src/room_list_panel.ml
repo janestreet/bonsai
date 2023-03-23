@@ -41,5 +41,5 @@ let component ~room_list ~refresh_rooms ~change_room =
         ~on_click
         (Room.to_string room))
   in
-  Vdom.Node.div ~attr:Style.room_list_panel ([ room_header ] @ room_switching_buttons)
+  Vdom.Node.div ~attrs:[ Style.room_list_panel ] ([ room_header ] @ room_switching_buttons)
 ;;

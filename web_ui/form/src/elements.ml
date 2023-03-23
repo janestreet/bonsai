@@ -57,27 +57,45 @@ module Non_interactive = struct
     let%arr path, path_id = path_and_id
     and view = view
     and value = value in
-    let view = View.of_vdom ~id:path (Vdom.Node.div ~attr:path_id [ view ]) in
+    let view = View.of_vdom ~id:path (Vdom.Node.div ~attrs:[ path_id ] [ view ]) in
     Form.Expert.create ~view ~value ~set:(fun _ -> Effect.Ignore)
   ;;
 end
 
+let string_underlying
+      ~(f :
+          ?extra_attrs:Vdom.Attr.t list
+        -> ?call_on_input_when:Vdom_input_widgets.Entry.Call_on_input_when.t
+        -> ?disabled:bool
+        -> ?placeholder:string
+        -> ?merge_behavior:Vdom_input_widgets.Merge_behavior.t
+        -> value:string option
+        -> on_input:(string option -> unit Ui_effect.t)
+        -> unit
+        -> Vdom.Node.t)
+      ?(extra_attrs = Value.return [])
+      ?placeholder
+      ()
+  =
+  let view =
+    let%map extra_attrs = extra_attrs in
+    fun ~id ~state ~set_state ->
+      f
+        ~merge_behavior:Legacy_dont_merge
+        ?placeholder
+        ~extra_attrs:([ id ] @ extra_attrs)
+        ~value:(Some state)
+        ~on_input:(function
+          | Some s -> set_state s
+          | None -> set_state "")
+        ()
+  in
+  Basic_stateful.make (Bonsai.state (module String) ~default_model:"") ~view
+;;
+
 module Textbox = struct
-  let string ?(extra_attrs = Value.return []) ?placeholder () =
-    let view =
-      let%map extra_attrs = extra_attrs in
-      fun ~id ~state ~set_state ->
-        Vdom_input_widgets.Entry.text
-          ~merge_behavior:Legacy_dont_merge
-          ?placeholder
-          ~extra_attrs:([ id ] @ extra_attrs)
-          ~value:(Some state)
-          ~on_input:(function
-            | Some s -> set_state s
-            | None -> set_state "")
-          ()
-    in
-    Basic_stateful.make (Bonsai.state (module String) ~default_model:"") ~view
+  let string ?extra_attrs ?placeholder () =
+    string_underlying ~f:Vdom_input_widgets.Entry.text ?extra_attrs ?placeholder ()
   ;;
 
   let int ?extra_attrs ?placeholder here =
@@ -107,6 +125,22 @@ module Textbox = struct
     let unparse t = t |> M.sexp_of_t |> Sexp.to_string_hum in
     let%map.Computation form = string ?extra_attrs ?placeholder () in
     Form.project form ~parse_exn ~unparse
+  ;;
+
+  let stringable
+        (type t)
+        ?extra_attrs
+        ?placeholder
+        (module M : Stringable with type t = t)
+    =
+    let%map.Computation form = string ?extra_attrs ?placeholder () in
+    Form.project form ~parse_exn:M.of_string ~unparse:M.to_string
+  ;;
+end
+
+module Password = struct
+  let string ?extra_attrs ?placeholder () =
+    string_underlying ~f:Vdom_input_widgets.Entry.password ?extra_attrs ?placeholder ()
   ;;
 
   let stringable
@@ -167,30 +201,31 @@ end
 module Checkbox = struct
   let make_input ~id ~extra_attrs ~state ~set_state =
     Vdom.Node.input
-      ~attr:
-        (Vdom.Attr.many_without_merge
-           ([ Vdom.Attr.style (Css_gen.margin_left (`Px 0))
-            ; Vdom.Attr.type_ "checkbox"
-            ; id
-            ; Vdom.Attr.on_click (fun evt ->
-                (* try to get the actual state of the checkbox, but if
-                   that doesn't work, assume that clicking on the
-                   element toggled the state. *)
-                let checked =
-                  let open Option.Let_syntax in
-                  let open Js_of_ocaml in
-                  let%bind target = evt##.target |> Js.Opt.to_option in
-                  let%bind coerced =
-                    Dom_html.CoerceTo.input target |> Js.Opt.to_option
-                  in
-                  return (Js.to_bool coerced##.checked)
-                in
-                match checked with
-                | Some bool -> set_state bool
-                | None -> set_state (not state))
-            ; Vdom.Attr.bool_property "checked" state
-            ]
-            @ extra_attrs))
+      ~attrs:
+        [ Vdom.Attr.many_without_merge
+            ([ Vdom.Attr.style (Css_gen.margin_left (`Px 0))
+             ; Vdom.Attr.type_ "checkbox"
+             ; id
+             ; Vdom.Attr.on_click (fun evt ->
+                 (* try to get the actual state of the checkbox, but if
+                    that doesn't work, assume that clicking on the
+                    element toggled the state. *)
+                 let checked =
+                   let open Option.Let_syntax in
+                   let open Js_of_ocaml in
+                   let%bind target = evt##.target |> Js.Opt.to_option in
+                   let%bind coerced =
+                     Dom_html.CoerceTo.input target |> Js.Opt.to_option
+                   in
+                   return (Js.to_bool coerced##.checked)
+                 in
+                 match checked with
+                 | Some bool -> set_state bool
+                 | None -> set_state (not state))
+             ; Vdom.Attr.bool_property "checked" state
+             ]
+             @ extra_attrs)
+        ]
       ()
   ;;
 
@@ -317,8 +352,8 @@ module Toggle = struct
             ~state
             ~set_state
         in
-        let slider = Vdom.Node.span ~attr:Style.slider [] in
-        Vdom.Node.label ~attr:(Vdom.Attr.many [ Style.toggle; id ]) [ checkbox; slider ]
+        let slider = Vdom.Node.span ~attrs:[ Style.slider ] [] in
+        Vdom.Node.label ~attrs:[ Style.toggle; id ] [ checkbox; slider ]
     in
     Basic_stateful.make (Bonsai.state (module Bool) ~default_model:default) ~view
   ;;
@@ -1031,7 +1066,7 @@ module Multiselect = struct
     in
     let view =
       Vdom.Node.div
-        ~attr:(Vdom.Attr.many_without_merge (on_keydown :: extra_attrs))
+        ~attrs:[ Vdom.Attr.many_without_merge (on_keydown :: extra_attrs) ]
         [ view ]
     in
     Form.Expert.create
@@ -1120,15 +1155,16 @@ module Multiple = struct
     let invalid_attr = if invalid then Style.invalid_text_box else Vdom.Attr.empty in
     let input =
       Vdom.Node.input
-        ~attr:
-          Vdom.Attr.(
-            extra_input_attr
-            @ invalid_attr
-            @ placeholder placeholder_
-            @ value_prop state
-            @ on_input (fun _ input ->
-              Effect.Many [ inject_invalid false; set_state input ])
-            @ on_keydown handle_keydown)
+        ~attrs:
+          [ Vdom.Attr.(
+              extra_input_attr
+              @ invalid_attr
+              @ placeholder placeholder_
+              @ value_prop state
+              @ on_input (fun _ input ->
+                Effect.Many [ inject_invalid false; set_state input ])
+              @ on_keydown handle_keydown)
+          ]
         ()
     in
     let view = Vdom.Node.div [ input; pills ] in
@@ -1246,7 +1282,7 @@ module type Number_input_specification = sig
   val min : t option
   val max : t option
   val step : t
-  val default : t
+  val default : t option
   val compare : t -> t -> int
   val to_float : t -> float
 end
@@ -1279,10 +1315,10 @@ let number_input
           (module S)
           ~extra_attrs:
             (List.concat [ [ id ]; List.filter_map [ min; max ] ~f:Fn.id; extra_attrs ])
-          ~value:(Some state)
+          ~value:state
           ~step:(S.to_float S.step)
           ~on_input:(function
-            | Some s -> set_state s
+            | Some s -> set_state (Some s)
             | None -> set_state S.default)
           ~merge_behavior:Legacy_dont_merge
       in
@@ -1292,26 +1328,29 @@ let number_input
         (match List.filter_opt [ left_label; Some input; right_label ] with
          | [ x ] -> x
          | elements ->
-           Vdom.Node.span ~attr:(Vdom.Attr.style (Css_gen.flex_container ())) elements)
+           Vdom.Node.span ~attrs:[ Vdom.Attr.style (Css_gen.flex_container ()) ] elements)
   in
   let%sub number_input =
-    Basic_stateful.make (Bonsai.state (module S) ~default_model:S.default) ~view
+    Basic_stateful.make (Bonsai.state_opt (module S) ?default_model:S.default) ~view
   in
   let%arr number_input = number_input in
-  Form.validate number_input ~f:(fun value ->
-    if value < S.min
-    then
-      Or_error.error_s
-        [%message (value : S.t) "lower than allowed threshold" (S.min : S.t option)]
-    else if value > S.max
-    then
-      Or_error.error_s
-        [%message (value : S.t) "higher than allowed threshold" (S.max : S.t option)]
-    else Ok ())
+  Form.project' number_input ~unparse:Option.return ~parse:(fun value ->
+    match value with
+    | None -> Or_error.error_s [%message "value not specified"]
+    | Some value ->
+      if value < S.min
+      then
+        Or_error.error_s
+          [%message (value : S.t) "lower than allowed threshold" (S.min : S.t option)]
+      else if value > S.max
+      then
+        Or_error.error_s
+          [%message (value : S.t) "higher than allowed threshold" (S.max : S.t option)]
+      else Ok value)
 ;;
 
 module Number = struct
-  let int ?extra_attrs ?min:min_ ?max:max_ ~default ~step () =
+  let int ?extra_attrs ?min:min_ ?max:max_ ?default ~step () =
     let module Specification = struct
       include Int
 
@@ -1324,7 +1363,7 @@ module Number = struct
     number_input ?extra_attrs Number (module Specification)
   ;;
 
-  let float ?extra_attrs ?min:min_ ?max:max_ ~default ~step () =
+  let float ?extra_attrs ?min:min_ ?max:max_ ?default ~step () =
     let module Specification = struct
       include Float
 
@@ -1344,7 +1383,7 @@ module Number = struct
 end
 
 module Range = struct
-  let int ?extra_attrs ?min:min_ ?max:max_ ?left_label ?right_label ~default ~step () =
+  let int ?extra_attrs ?min:min_ ?max:max_ ?left_label ?right_label ?default ~step () =
     let module Specification = struct
       include Int
 
@@ -1357,7 +1396,7 @@ module Range = struct
     number_input ?extra_attrs (Range { left_label; right_label }) (module Specification)
   ;;
 
-  let float ?extra_attrs ?min:min_ ?max:max_ ?left_label ?right_label ~default ~step () =
+  let float ?extra_attrs ?min:min_ ?max:max_ ?left_label ?right_label ?default ~step () =
     let module Specification = struct
       include Float
 
@@ -1764,10 +1803,10 @@ module Query_box = struct
             ~default:main_item
             ~f:(fun to_option_description ->
               Bonsai_web.View.vbox
-                ~attr:Query_box_styles.item
+                ~attrs:[ Query_box_styles.item ]
                 [ main_item
                 ; Vdom.Node.span
-                    ~attr:Query_box_styles.description
+                    ~attrs:[ Query_box_styles.description ]
                     [ Vdom.Node.text (to_option_description key) ]
                 ])
         in

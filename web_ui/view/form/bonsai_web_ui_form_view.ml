@@ -155,7 +155,5 @@ let set_tooltip tooltip t = { t with context = { t.context with tooltip = Some t
 
 let with_fieldset ~currently_editable view =
   let disabled = if currently_editable then Vdom.Attr.empty else Vdom.Attr.disabled in
-  Vdom.Node.fieldset
-    ~attr:(Vdom.Attr.many [ disabled; Style.clear_fieldset_styles ])
-    [ view ]
+  Vdom.Node.fieldset ~attrs:[ disabled; Style.clear_fieldset_styles ] [ view ]
 ;;

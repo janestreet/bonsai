@@ -43,17 +43,18 @@ module Model = struct
           ]
       in
       Vdom.Node.label
-        ~attr:style
+        ~attrs:[ style ]
         [ Vdom.Node.input
-            ~attr:
-              (Vdom.Attr.many_without_merge
-                 [ Vdom.Attr.type_ "checkbox"
-                 ; Vdom.Attr.on_click (fun _ev -> on_toggle ())
-                 ; Vdom.Attr.bool_property "checked" is_visible
-                 ])
+            ~attrs:
+              [ Vdom.Attr.many_without_merge
+                  [ Vdom.Attr.type_ "checkbox"
+                  ; Vdom.Attr.on_click (fun _ev -> on_toggle ())
+                  ; Vdom.Attr.bool_property "checked" is_visible
+                  ]
+              ]
             ()
         ; dash
-        ; Vdom.Node.span ~attr:label_style [ Vdom.Node.textf "%s: " label ]
+        ; Vdom.Node.span ~attrs:[ label_style ] [ Vdom.Node.textf "%s: " label ]
         ; value
         ]
     ;;
@@ -86,17 +87,18 @@ module Model = struct
       let open Vdom in
       let link ~text ~action ~class_ =
         Node.a
-          ~attr:
-            (Vdom.Attr.many_without_merge
-               [ Attr.href "about:blank"
-               ; Attr.on_click (fun _ev ->
-                   Effect.Many [ action (); Effect.Prevent_default ])
-               ; Attr.class_ class_
-               ])
+          ~attrs:
+            [ Vdom.Attr.many_without_merge
+                [ Attr.href "about:blank"
+                ; Attr.on_click (fun _ev ->
+                    Effect.Many [ action (); Effect.Prevent_default ])
+                ; Attr.class_ class_
+                ]
+            ]
           [ Node.text text ]
       in
       Node.div
-        ~attr:(Attr.class_ "multi-select-select-all-none")
+        ~attrs:[ Attr.class_ "multi-select-select-all-none" ]
         [ Node.text "Select: "
         ; link ~text:"all" ~action:select_all ~class_:"multi-select-select-all"
         ; Node.text "; "
@@ -111,12 +113,13 @@ module Model = struct
     in
     (* Mostly copied from vdom_input_widgets *)
     Vdom.Node.div
-      ~attr:
-        (Vdom.Attr.many_without_merge
-           [ Vdom.Attr.classes [ "widget-checklist"; "checkbox-container" ]
-           ; Vdom.Attr.style
-               Css_gen.(create ~field:"list-style" ~value:"none" @> margin_left (`Px 0))
-           ])
+      ~attrs:
+        [ Vdom.Attr.many_without_merge
+            [ Vdom.Attr.classes [ "widget-checklist"; "checkbox-container" ]
+            ; Vdom.Attr.style
+                Css_gen.(create ~field:"list-style" ~value:"none" @> margin_left (`Px 0))
+            ]
+        ]
       (List.map list_elements ~f:(fun li -> Vdom.Node.div [ li ]))
   ;;
 end
@@ -236,7 +239,8 @@ let create ~x_label ~per_series_info
       ~apply_action
   in
   return
-  @@ let%map model, inject_action = state in
+  @@
+  let%map model, inject_action = state in
   let view =
     Model.view
       model

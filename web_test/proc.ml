@@ -9,6 +9,8 @@ module Result_spec = struct
         ?filter_printed_attributes
         ?(censor_paths = true)
         ?(censor_hash = true)
+        ?path_censoring_message
+        ?hash_censoring_message
         get_vdom
     =
     (module struct
@@ -21,6 +23,8 @@ module Result_spec = struct
         |> get_vdom
         |> Virtual_dom_test_helpers.Node_helpers.unsafe_convert_exn
         |> Virtual_dom_test_helpers.Node_helpers.to_string_html
+             ?path_censoring_message
+             ?hash_censoring_message
              ?filter_printed_attributes
              ~censor_paths
              ~censor_hash

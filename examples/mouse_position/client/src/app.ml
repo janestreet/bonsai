@@ -68,17 +68,16 @@ let app =
         and mouse_position, username = info in
         Node.div
           ~key:(Session.to_string session)
-          ~attr:
-            (Attr.many
-               [ Attr.style
-                   Css_gen.(
-                     position
-                       ~top:(`Px mouse_position.y)
-                       ~left:(`Px mouse_position.x)
-                       `Absolute)
-               ; session_to_color session
-               ; Style.item
-               ])
+          ~attrs:
+            [ Attr.style
+                Css_gen.(
+                  position
+                    ~top:(`Px mouse_position.y)
+                    ~left:(`Px mouse_position.x)
+                    `Absolute)
+            ; session_to_color session
+            ; Style.item
+            ]
           [ Node.text (Username.to_string username) ])
   in
   let%sub status_sidebar =
@@ -107,7 +106,7 @@ let app =
             | None | Some (_, None) -> Vdom.Node.text "Unknown")
       ]
     in
-    Vdom.Node.div ~attr:Style.sidebar [ View.Table.render theme columns rows ]
+    Vdom.Node.div ~attrs:[ Style.sidebar ] [ View.Table.render theme columns rows ]
   in
   let%sub set_mouse_position =
     Rpc_effect.Rpc.dispatcher Protocol.Set_mouse_position.rpc ~where_to_connect:Self
@@ -116,13 +115,12 @@ let app =
   and status_sidebar = status_sidebar
   and set_mouse_position = set_mouse_position in
   Node.div
-    ~attr:
-      (Attr.many
-         [ Style.container
-         ; Attr.on_mousemove (fun event ->
-             let x = event##.clientX in
-             let y = event##.clientY in
-             Effect.ignore_m (set_mouse_position { x; y }))
-         ])
+    ~attrs:
+      [ Style.container
+      ; Attr.on_mousemove (fun event ->
+          let x = event##.clientX in
+          let y = event##.clientY in
+          Effect.ignore_m (set_mouse_position { x; y }))
+      ]
     (status_sidebar :: Map.data cursor_blocks)
 ;;

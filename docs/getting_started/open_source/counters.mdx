@@ -64,15 +64,14 @@ let single_counter =
       (module Int)
       (module Action)
       ~default_model:0
-      ~apply_action:
-        (fun ~inject:_ ~schedule_event:_ model -> function
-           | Action.Increment -> model + 1
-           | Action.Decrement -> model - 1)
+      ~apply_action:(fun ~inject:_ ~schedule_event:_ model -> function
+        | Action.Increment -> model + 1
+        | Action.Decrement -> model - 1)
   in
   let%arr state, inject = counter_state in
   let button label action =
     Vdom.Node.button
-      ~attr:(Vdom.Attr.on_click (fun _ -> inject action))
+      ~attrs:[ Vdom.Attr.on_click (fun _ -> inject action) ]
       [ Vdom.Node.text label ]
   in
   Vdom.Node.div
@@ -189,7 +188,7 @@ let add_counter_component =
   let%arr state, inject = add_counter_state in
   let view =
     Vdom.Node.button
-      ~attr:(Vdom.Attr.on_click (fun _ -> inject ()))
+      ~attrs:[ Vdom.Attr.on_click (fun _ -> inject ()) ]
       [ Vdom.Node.text "Add Another Counter" ]
   in
   state, view

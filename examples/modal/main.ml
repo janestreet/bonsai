@@ -5,7 +5,7 @@ open! Bonsai.Let_syntax
 let center = Vdom.Attr.style (Css_gen.text_align `Center)
 
 let modal_1_contents =
-  Bonsai.const (Vdom.Node.div ~attr:center [ Vdom.Node.text "Surprise!" ])
+  Bonsai.const (Vdom.Node.div ~attrs:[ center ] [ Vdom.Node.text "Surprise!" ])
 ;;
 
 let modal_2_contents n =
@@ -16,7 +16,7 @@ let modal_2_contents n =
   in
   let%arr got_ya = got_ya in
   Vdom.Node.div
-    ~attr:center
+    ~attrs:[ center ]
     [ Vdom.Node.text "Surprise!"; Vdom.Node.br (); Vdom.Node.text got_ya ]
 ;;
 
@@ -34,18 +34,17 @@ let app =
   and modal_2   = modal_2 in
   Vdom.Node.div
     [ Vdom.Node.button
-        ~attr:(Vdom.Attr.on_click (fun _ -> modal_1.show ()))
+        ~attrs:[ Vdom.Attr.on_click (fun _ -> modal_1.show ()) ]
         [ Vdom.Node.text "Click me!" ]
     ; modal_1.view
     ; Vdom.Node.br ()
     ; Vdom.Node.button
-        ~attr:
-          (Vdom.Attr.many
-             [ Vdom.Attr.on_click (fun _ ->
-                 let%bind.Ui_effect () = set_state (state + 1) in
-                 modal_2.show state)
-             ; Vdom.Attr.style    (Css_gen.margin_top (`Px 10))
-             ])
+        ~attrs:
+          [ Vdom.Attr.on_click (fun _ ->
+              let%bind.Ui_effect () = set_state (state + 1) in
+              modal_2.show state)
+          ; Vdom.Attr.style    (Css_gen.margin_top (`Px 10))
+          ]
         [ Vdom.Node.text "Click me multiple times!" ]
     ; modal_2.view
     ]

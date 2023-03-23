@@ -83,7 +83,7 @@ let app : Vdom.Node.t Bonsai.Computation.t =
   in
   let add_breaks l = List.intersperse ~sep:(N.br ()) l in
   N.div
-    ~attr:Style.app
+    ~attrs:[ Style.app ]
     (add_breaks
        [ explanation1
        ; explanation2

@@ -13,7 +13,7 @@ let%expect_test "position hook" =
     and get_attr = get_attr in
     let mk id i =
       let attr = Vdom.Attr.many [ get_attr i; Vdom.Attr.id id ] in
-      Vdom.Node.div ~attr []
+      Vdom.Node.div ~attrs:[ attr ] []
     in
     Vdom.Node.div
       [ Vdom.Node.sexp_for_debugging

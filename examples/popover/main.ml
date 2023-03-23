@@ -68,7 +68,7 @@ module Context_menu_popover = struct
           Vdom.Attr.on_contextmenu (fun _ ->
             Effect.Many [ open_; Effect.Prevent_default ])
         in
-        wrap (View.text ~attr "Right click me!")]
+        wrap (View.text ~attrs:[ attr ] "Right click me!")]
     in
     Computation.map computation ~f:(fun vdom -> vdom, demo)
   ;;

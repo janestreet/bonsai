@@ -93,7 +93,7 @@ textbox:
 ```
 ``` ocaml
 let input_placeholder : Vdom.Node.t =
-  Vdom.Node.input ~attr:(Vdom.Attr.placeholder "placeholder text here") ()
+  Vdom.Node.input ~attrs:[ Vdom.Attr.placeholder "placeholder text here" ] ()
 ;;
 ```
 
@@ -111,7 +111,7 @@ Or coloring text with inline css:
 ``` ocaml
 let css_gen : Vdom.Node.t =
   Vdom.Node.span
-    ~attr:(Vdom.Attr.style (Css_gen.color (`Name "red")))
+    ~attrs:[ Vdom.Attr.style (Css_gen.color (`Name "red")) ]
     [ Vdom.Node.text "this text is red" ]
 ;;
 ```
@@ -135,10 +135,11 @@ buttons or typing into a text box).
 ``` ocaml
 let clicky : Vdom.Node.t =
   Vdom.Node.button
-    ~attr:
-      (Vdom.Attr.on_click (fun (_evt : mouse_event) ->
-         alert "hello there!";
-         Ui_effect.Ignore))
+    ~attrs:
+      [ Vdom.Attr.on_click (fun (_evt : mouse_event) ->
+          alert "hello there!";
+          Ui_effect.Ignore)
+      ]
     [ Vdom.Node.text "click me!" ]
 ;;
 ```

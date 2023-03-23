@@ -27,38 +27,38 @@ let intent_colors ((module T) : Theme.t) (intent : Intent.t) =
 
 let button
       ((module T) : Theme.t)
-      ?(attr = Vdom.Attr.empty)
+      ?(attrs = [])
       ?(disabled = false)
       ?intent
       ?tooltip
       ~on_click
       text
   =
-  T.singleton#button ~attr ~disabled ~intent ~tooltip ~on_click [ Vdom.Node.text text ]
+  T.singleton#button ~attrs ~disabled ~intent ~tooltip ~on_click [ Vdom.Node.text text ]
 ;;
 
 let button'
       ((module T) : Theme.t)
-      ?(attr = Vdom.Attr.empty)
+      ?(attrs = [])
       ?(disabled = false)
       ?intent
       ?tooltip
       ~on_click
       content
   =
-  T.singleton#button ~attr ~disabled ~intent ~tooltip ~on_click content
+  T.singleton#button ~attrs ~disabled ~intent ~tooltip ~on_click content
 ;;
 
 let tabs
       ((module T) : Theme.t)
-      ?(attr = Vdom.Attr.empty)
+      ?(attrs = [])
       ?(per_tab_attr = fun _ ~is_active:_ -> Vdom.Attr.empty)
       ~equal
       ~on_change
       ~active
       tabs
   =
-  T.singleton#tabs ~attr ~per_tab_attr ~on_change ~equal ~active tabs
+  T.singleton#tabs ~attrs ~per_tab_attr ~on_change ~equal ~active tabs
 ;;
 
 module type Enum = sig
@@ -68,7 +68,7 @@ end
 let tabs_enum
       (type a)
       ((module T) : Theme.t)
-      ?(attr = Vdom.Attr.empty)
+      ?(attrs = [])
       ?(per_tab_attr = fun _ ~is_active:_ -> Vdom.Attr.empty)
       ?tab_to_vdom
       (module A : Enum with type t = a)
@@ -80,24 +80,23 @@ let tabs_enum
       Vdom.Node.text (T.singleton#humanize_sexp (A.sexp_of_t tab)))
   in
   let tabs = List.map A.all ~f:(fun tab -> tab, tab_to_vdom tab) in
-  T.singleton#tabs ~attr ~per_tab_attr ~on_change ~equal:A.equal ~active tabs
+  T.singleton#tabs ~attrs ~per_tab_attr ~on_change ~equal:A.equal ~active tabs
 ;;
 
-let devbar ((module T) : Theme.t) ?(attr = Vdom.Attr.empty) ?(count = 100) ?intent text =
-  T.singleton#devbar ~attr ~count ~intent text
+let devbar ((module T) : Theme.t) ?(attrs = []) ?(count = 100) ?intent text =
+  T.singleton#devbar ~attrs ~count ~intent text
 ;;
 
 let constants ((module T) : Theme.t) = T.singleton#constants
-let text ?attr s = Vdom.Node.span ?attr [ Vdom.Node.text s ]
-let textf ?attr format = Printf.ksprintf (text ?attr) format
+let text ?attrs s = Vdom.Node.span ?attrs [ Vdom.Node.text s ]
+let textf ?attrs format = Printf.ksprintf (text ?attrs) format
 
-let themed_text ((module T) : Theme.t) ?(attr = Vdom.Attr.empty) ?intent ?style ?size text
-  =
-  T.singleton#themed_text ~attr ~intent ~style ~size text
+let themed_text ((module T) : Theme.t) ?(attrs = []) ?intent ?style ?size text =
+  T.singleton#themed_text ~attrs ~intent ~style ~size text
 ;;
 
-let themed_textf theme ?attr ?intent ?style ?size format =
-  Printf.ksprintf (themed_text theme ?attr ?intent ?style ?size) format
+let themed_textf theme ?attrs ?intent ?style ?size format =
+  Printf.ksprintf (themed_text theme ?attrs ?intent ?style ?size) format
 ;;
 
 module Tooltip_direction = Tooltip.Direction
@@ -217,6 +216,8 @@ module Expert = struct
     set_theme_for_computation new_theme inside
   ;;
 
+  let override_constants = Theme.override_constants
+
   module For_codemirror = For_codemirror
   module Form_context = Form_context
 end
@@ -230,28 +231,29 @@ module Theme = struct
   let current = current_theme
   let set_for_computation theme inside = Expert.set_theme_for_computation theme inside
 
-  let rec with_attr attr (vdom : Vdom.Node.t) =
+  let rec with_attr attrs (vdom : Vdom.Node.t) =
     match vdom with
-    | None -> Vdom.Node.div ~attr []
-    | Text _ -> Vdom.Node.span ~attr [ vdom ]
+    | None -> Vdom.Node.div ~attrs []
+    | Text _ -> Vdom.Node.span ~attrs [ vdom ]
     | Element e ->
-      Element (Vdom.Node.Element.map_attrs e ~f:(fun xs -> Vdom.Attr.many [ attr; xs ]))
-    | Widget _ -> Vdom.Node.div ~attr [ vdom ]
-    | Lazy { key; t } -> Lazy { key; t = Lazy.map t ~f:(with_attr attr) }
+      Element
+        (Vdom.Node.Element.map_attrs e ~f:(fun xs -> Vdom.Attr.many (attrs @ [ xs ])))
+    | Widget _ -> Vdom.Node.div ~attrs [ vdom ]
+    | Lazy { key; t } -> Lazy { key; t = Lazy.map t ~f:(with_attr attrs) }
   ;;
 
   let set_for_app theme app =
     let%sub app_vdom = set_for_computation theme app in
     let%arr app_vdom = app_vdom
     and theme = theme in
-    with_attr (App.top_attr theme) app_vdom
+    with_attr [ App.top_attr theme ] app_vdom
   ;;
 
   let set_for_app' theme app =
     let%sub result_and_vdom = set_for_computation theme app in
     let%arr result, app_vdom = result_and_vdom
     and theme = theme in
-    result, with_attr (App.top_attr theme) app_vdom
+    result, with_attr [ App.top_attr theme ] app_vdom
   ;;
 
   let override_constants_for_computation ~f inside =
@@ -262,4 +264,8 @@ module Theme = struct
     in
     Expert.set_theme_for_computation new_theme inside
   ;;
+end
+
+module Raw = struct
+  module Table = Table.Raw
 end

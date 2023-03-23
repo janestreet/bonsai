@@ -42,14 +42,14 @@ end
     positioned elements that may still occlude the element. *)
 val detect
   :  ?client_rect_changed:(Bbox.Int.t -> unit Effect.t)
-  -> ?visible_rect_changed:(Bbox.Int.t -> unit Effect.t)
+  -> ?visible_rect_changed:(Bbox.Int.t option -> unit Effect.t)
   -> unit
   -> Vdom.Attr.t
 
 module For_testing : sig
   type t =
     { client_rect_changed : int Bbox.t -> unit Effect.t
-    ; visible_rect_changed : int Bbox.t -> unit Effect.t
+    ; visible_rect_changed : int Bbox.t option -> unit Effect.t
     }
 
   val type_id : t Type_equal.Id.t

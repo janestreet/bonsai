@@ -112,6 +112,38 @@ let%expect_test "typing into a string textbox" =
              oninput> </input> |}]
 ;;
 
+let%expect_test "typing into a string password textbox" =
+  let component = Form.Elements.Password.string () in
+  let handle = Handle.create (form_result_spec [%sexp_of: string]) component in
+  Handle.show handle;
+  [%expect
+    {|
+    (Ok "")
+
+    ==============
+    <input type="password"
+           placeholder=""
+           spellcheck="false"
+           id="bonsai_path_replaced_in_test"
+           value:normalized=""
+           oninput> </input> |}];
+  Handle.input_text handle ~get_vdom ~selector:"input" ~text:"hello world";
+  Handle.show_diff handle;
+  [%expect
+    {|
+    -|(Ok "")
+    +|(Ok "hello world")
+
+      ==============
+      <input type="password"
+             placeholder=""
+             spellcheck="false"
+             id="bonsai_path_replaced_in_test"
+    -|       value:normalized=""
+    +|       value:normalized="hello world"
+             oninput> </input> |}]
+;;
+
 let%expect_test "dropdown starting empty" =
   let component =
     Form.Elements.Dropdown.list
@@ -1989,6 +2021,62 @@ let%expect_test "setting things to a string list (verbose)" =
       </table> |}]
 ;;
 
+let%expect_test "typing into an int number element (no default)" =
+  let component = Form.Elements.Number.int ~step:1 ~min:(-1) ~max:10 () in
+  let handle = Handle.create (form_result_spec [%sexp_of: int]) component in
+  Handle.show handle;
+  [%expect
+    {|
+    (Error "value not specified")
+
+    ==============
+    <input type="number"
+           step="1"
+           placeholder=""
+           spellcheck="false"
+           id="bonsai_path_replaced_in_test"
+           min="-1"
+           max="10"
+           value:normalized=""
+           oninput> </input> |}];
+  Handle.input_text handle ~get_vdom ~selector:"input" ~text:"10";
+  Handle.show_diff handle;
+  [%expect
+    {|
+    -|(Error "value not specified")
+    +|(Ok 10)
+
+      ==============
+      <input type="number"
+             step="1"
+             placeholder=""
+             spellcheck="false"
+             id="bonsai_path_replaced_in_test"
+             min="-1"
+             max="10"
+    -|       value:normalized=""
+    +|       value:normalized=10
+             oninput> </input> |}];
+  Handle.input_text handle ~get_vdom ~selector:"input" ~text:"";
+  Handle.show_diff handle;
+  [%expect
+    {|
+    -|(Ok 10)
+    +|(Error "value not specified")
+
+      ==============
+      <input type="number"
+             step="1"
+             placeholder=""
+             spellcheck="false"
+             id="bonsai_path_replaced_in_test"
+             min="-1"
+             max="10"
+    -|       value:normalized=10
+    +|       value:normalized=""
+             oninput> </input> |}]
+;;
+
 let%expect_test "typing into an int number element" =
   let component = Form.Elements.Number.int ~default:0 ~step:1 ~min:(-1) ~max:10 () in
   let handle = Handle.create (form_result_spec [%sexp_of: int]) component in
@@ -2078,6 +2166,44 @@ let%expect_test "typing into an int number element" =
              max="10"
     -|       value:normalized=11
     +|       value:normalized=-2
+             oninput> </input> |}]
+;;
+
+let%expect_test "setting into an int number element (no default)" =
+  let component = Form.Elements.Number.int ~step:1 ~min:(-1) ~max:10 () in
+  let handle = Handle.create (form_result_spec [%sexp_of: int]) component in
+  Handle.show handle;
+  [%expect
+    {|
+    (Error "value not specified")
+
+    ==============
+    <input type="number"
+           step="1"
+           placeholder=""
+           spellcheck="false"
+           id="bonsai_path_replaced_in_test"
+           min="-1"
+           max="10"
+           value:normalized=""
+           oninput> </input> |}];
+  Handle.do_actions handle [ 10 ];
+  Handle.show_diff handle;
+  [%expect
+    {|
+    -|(Error "value not specified")
+    +|(Ok 10)
+
+      ==============
+      <input type="number"
+             step="1"
+             placeholder=""
+             spellcheck="false"
+             id="bonsai_path_replaced_in_test"
+             min="-1"
+             max="10"
+    -|       value:normalized=""
+    +|       value:normalized=10
              oninput> </input> |}]
 ;;
 
@@ -4534,6 +4660,136 @@ let%expect_test "form validated with an effect" =
     <input> </input> |}]
 ;;
 
+let%expect_test "form validated with an effect with one_at_at_time" =
+  let module Q = Effect.For_testing.Query_response_tracker in
+  let tracker = Q.create () in
+  let print_queued () = print_s [%sexp (Q.queries_pending_response tracker : int list)] in
+  let not_positive = Error (Error.of_string "not positive") in
+  let f =
+    tracker |> Effect.For_testing.of_query_response_tracker |> Bonsai.Value.return
+  in
+  let component =
+    let%sub textbox = Form.Elements.Textbox.int () in
+    Form.Dynamic.validate_via_effect (module Int) textbox ~f ~one_at_a_time:true
+  in
+  let handle =
+    Handle.create
+      (form_result_spec
+         [%sexp_of: int]
+         ~filter_printed_attributes:(fun _key _data -> false)
+         ~get_vdom)
+      component
+  in
+  Handle.input_text handle ~get_vdom ~selector:"input" ~text:"2";
+  Handle.recompute_view_until_stable handle;
+  Handle.show handle;
+  [%expect {|
+    (Error validating...)
+
+    ==============
+    <input> </input> |}];
+  print_queued ();
+  [%expect {| (2) |}];
+  Q.maybe_respond tracker ~f:(fun i ->
+    Respond (if Int.is_positive i then Ok () else not_positive));
+  Handle.recompute_view_until_stable handle;
+  Handle.show handle;
+  [%expect {|
+    (Ok 2)
+
+    ==============
+    <input> </input> |}];
+  Handle.input_text handle ~get_vdom ~selector:"input" ~text:"5";
+  Handle.recompute_view_until_stable handle;
+  Handle.input_text handle ~get_vdom ~selector:"input" ~text:"20";
+  Handle.recompute_view_until_stable handle;
+  Handle.input_text handle ~get_vdom ~selector:"input" ~text:"-3";
+  Handle.recompute_view_until_stable handle;
+  print_queued ();
+  [%expect {| (5) |}];
+  Handle.show handle;
+  [%expect {|
+    (Error validating...)
+
+    ==============
+    <input> </input> |}];
+  Q.maybe_respond tracker ~f:(function
+    | 5 -> Respond (Ok ())
+    | _ -> No_response_yet);
+  Handle.show handle;
+  [%expect {|
+    (Error validating...)
+
+    ==============
+    <input> </input> |}];
+  print_queued ();
+  [%expect {| (-3) |}];
+  Q.maybe_respond tracker ~f:(function
+    | -3 -> Respond not_positive
+    | _ -> No_response_yet);
+  Handle.show handle;
+  [%expect {|
+    (Error "not positive")
+
+    ==============
+    <input> </input> |}]
+;;
+
+let%expect_test "form validated with an effect and debounced" =
+  let module Q = Effect.For_testing.Query_response_tracker in
+  let tracker = Q.create () in
+  let print_queued () = print_s [%sexp (Q.queries_pending_response tracker : int list)] in
+  let not_positive = Error (Error.of_string "not positive") in
+  let f =
+    tracker |> Effect.For_testing.of_query_response_tracker |> Bonsai.Value.return
+  in
+  let component =
+    let%sub textbox = Form.Elements.Textbox.int () in
+    Form.Dynamic.validate_via_effect
+      ~debounce_ui:(Time_ns.Span.of_sec 1.0)
+      (module Int)
+      textbox
+      ~f
+  in
+  let handle =
+    Handle.create
+      (form_result_spec
+         [%sexp_of: int]
+         ~filter_printed_attributes:(fun _key _data -> false)
+         ~get_vdom)
+      component
+  in
+  Handle.input_text handle ~get_vdom ~selector:"input" ~text:"2";
+  Handle.recompute_view_until_stable handle;
+  Handle.show handle;
+  [%expect {|
+    (Error validating...)
+
+    ==============
+    <input> </input> |}];
+  print_queued ();
+  [%expect {| (2) |}];
+  Q.maybe_respond tracker ~f:(fun i ->
+    Respond (if Int.is_positive i then Ok () else not_positive));
+  Handle.recompute_view_until_stable handle;
+  Handle.show handle;
+  (* this should be Ok, but it isn't due to the debounce *)
+  [%expect {|
+    (Error validating...)
+
+    ==============
+    <input> </input> |}];
+  Handle.advance_clock_by handle (Time_ns.Span.of_sec 2.0);
+  Handle.recompute_view_until_stable handle;
+  Handle.show handle;
+  (* now it's good! *)
+  [%expect {|
+    (Ok 2)
+
+    ==============
+    <input> </input> |}]
+;;
+
 let%expect_test "slider input" =
   let component = Form.Elements.Range.int ~min:0 ~max:100 ~default:0 ~step:1 () in
   let get_vdom =
@@ -4588,9 +4844,7 @@ let%expect_test "query box" =
         let%arr query = query
         and value = value in
         Map.filter_map value ~f:(fun data ->
-          if String.is_prefix ~prefix:query data
-          then Some (Vdom.Node.text data)
-          else None))
+          if String.is_prefix ~prefix:query data then Some (Vdom.Node.text data) else None))
       ()
   in
   let get_vdom =
@@ -4701,7 +4955,7 @@ let%expect_test "add tooltip to form" =
             <div style={ display: flex; flex-direction: row; flex-wrap: nowrap; }>
               <div class="container_hash_replaced_in_test">
                 <label class="label_hash_replaced_in_test" style={ color: blue; }>
-                  <input type="checkbox" class="checkbox_hash_replaced_in_test"> </input>
+                  <input type="checkbox" tabindex="-1" class="checkbox_hash_replaced_in_test"> </input>
                   <span class="span_hash_replaced_in_test"> ⓘ </span>
                   <div class="above_hash_replaced_in_test text_hash_replaced_in_test"
                        style={
@@ -5513,9 +5767,7 @@ let%expect_test "labelling a range form" =
   List.iter all_options ~f:(fun (left_label, right_label, description) ->
     print_endline description;
     print_endline "###############";
-    let range =
-      Form.Elements.Range.int ?left_label ?right_label ~default:0 ~step:1 ()
-    in
+    let range = Form.Elements.Range.int ?left_label ?right_label ~default:0 ~step:1 () in
     let handle = Handle.create (form_result_spec [%sexp_of: int]) range in
     Handle.show handle);
   [%expect

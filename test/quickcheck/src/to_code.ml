@@ -236,8 +236,7 @@ let rec write_function
 ;;
 
 let rec write_value
-  : type a cmp.
-    buffer:Buf.t -> uid_to_string:_ -> a Value.t -> (a, cmp) Witness.t -> unit
+  : type a cmp. buffer:Buf.t -> uid_to_string:_ -> a Value.t -> (a, cmp) Witness.t -> unit
   =
   fun ~buffer ~uid_to_string value witness ->
   match value with

@@ -112,9 +112,9 @@ let component =
   let%arr model, inject = model_and_inject in
   let last_event = List.last model in
   Vdom.Node.div
-    ~attr:(Vdom.Attr.on_keydown (handle_event inject))
+    ~attrs:[ Vdom.Attr.on_keydown (handle_event inject) ]
     [ Vdom.Node.div
-        ~attr:Style.red
+        ~attrs:[ Style.red ]
         [ Vdom.Node.sexp_for_debugging
             [%sexp "Last Event", (last_event : Action.t option)]
         ]

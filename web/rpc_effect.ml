@@ -341,24 +341,23 @@ let generic_poll_or_error
         ; last_error = None
         ; inflight_queries = Inflight_query_key.Map.empty
         }
-      ~apply_action:
-        (fun ~inject:_ ~schedule_event:_ model -> function
-           | Finish { query; response; inflight_query_key } ->
-             let last_ok_response, last_error =
-               match response with
-               | Finished (Ok response) -> Some (query, response), None
-               | Finished (Error error) -> model.last_ok_response, Some (query, error)
-               | Aborted -> model.last_ok_response, model.last_error
-             in
-             { last_ok_response
-             ; last_error
-             ; inflight_queries = Map.remove model.inflight_queries inflight_query_key
-             }
-           | Start { query; inflight_query_key } ->
-             { model with
-               inflight_queries =
-                 Map.add_exn model.inflight_queries ~key:inflight_query_key ~data:query
-             })
+      ~apply_action:(fun ~inject:_ ~schedule_event:_ model -> function
+        | Finish { query; response; inflight_query_key } ->
+          let last_ok_response, last_error =
+            match response with
+            | Finished (Ok response) -> Some (query, response), None
+            | Finished (Error error) -> model.last_ok_response, Some (query, error)
+            | Aborted -> model.last_ok_response, model.last_error
+          in
+          { last_ok_response
+          ; last_error
+          ; inflight_queries = Map.remove model.inflight_queries inflight_query_key
+          }
+        | Start { query; inflight_query_key } ->
+          { model with
+            inflight_queries =
+              Map.add_exn model.inflight_queries ~key:inflight_query_key ~data:query
+          })
   in
   let%sub effect =
     let%arr dispatcher = dispatcher
@@ -460,13 +459,26 @@ module Our_rpc = struct
       Connector.with_connection_with_menu
         connector
         ~where_to_connect
-        ~callback:(fun connection ->
-          Babel.Caller.Rpc.dispatch_multi rpc connection query))
+        ~callback:(fun connection -> Babel.Caller.Rpc.dispatch_multi rpc connection query))
   ;;
 
   let poll q r ?clear_when_deactivated rpc ~where_to_connect ~every query =
     let open Bonsai.Let_syntax in
     let%sub dispatcher = dispatcher rpc ~where_to_connect in
+    let%sub dispatcher = Bonsai.Effect_throttling.poll dispatcher in
+    generic_poll_or_error
+      q
+      r
+      ?clear_when_deactivated
+      dispatcher
+      ~every
+      ~poll_behavior:Always
+      query
+  ;;
+
+  let babel_poll q r ?clear_when_deactivated rpc ~where_to_connect ~every query =
+    let open Bonsai.Let_syntax in
+    let%sub dispatcher = babel_dispatcher rpc ~where_to_connect in
     let%sub dispatcher = Bonsai.Effect_throttling.poll dispatcher in
     generic_poll_or_error
       q
@@ -510,6 +522,28 @@ module Our_rpc = struct
     =
     let open Bonsai.Let_syntax in
     let%sub dispatcher = dispatcher rpc ~where_to_connect in
+    let%sub dispatcher = Bonsai.Effect_throttling.poll dispatcher in
+    generic_poll_or_error
+      q
+      r
+      ?clear_when_deactivated
+      dispatcher
+      ~every:retry_interval
+      ~poll_behavior:Until_ok
+      query
+  ;;
+
+  let babel_poll_until_ok
+        q
+        r
+        ?clear_when_deactivated
+        rpc
+        ~where_to_connect
+        ~retry_interval
+        query
+    =
+    let open Bonsai.Let_syntax in
+    let%sub dispatcher = babel_dispatcher rpc ~where_to_connect in
     let%sub dispatcher = Bonsai.Effect_throttling.poll dispatcher in
     generic_poll_or_error
       q
@@ -618,15 +652,11 @@ module Status = struct
   let dispatcher ~where_to_connect =
     Our_rpc.generic_dispatcher (fun connector (writeback : State.t -> unit) ->
       match%map.Deferred
-        Connector.with_connection
-          connector
-          ~where_to_connect
-          ~callback:(fun connection ->
-            writeback Connected;
-            upon
-              (Rpc.Connection.close_reason connection ~on_close:`started)
-              (fun reason -> writeback (Disconnected (Error.of_info reason)));
-            Deferred.Or_error.return ())
+        Connector.with_connection connector ~where_to_connect ~callback:(fun connection ->
+          writeback Connected;
+          upon (Rpc.Connection.close_reason connection ~on_close:`started) (fun reason ->
+            writeback (Disconnected (Error.of_info reason)));
+          Deferred.Or_error.return ())
       with
       | Ok () -> ()
       | Error error ->

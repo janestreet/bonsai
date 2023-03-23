@@ -9,15 +9,16 @@ let component =
   let%sub copy_button =
     let%arr form = form in
     Vdom.Node.button
-      ~attr:
-        (Vdom.Attr.on_click (fun _ ->
-           match%bind.Effect
-             Js_clipboard.Asynchronous.copy_text
-               (Js.string (Form.value_or_default form ~default:""))
-           with
-           | Ok () -> Effect.Ignore
-           | Error err ->
-             Effect.print_s [%message "Failed to copy to clipboard." (err : Error.t)]))
+      ~attrs:
+        [ Vdom.Attr.on_click (fun _ ->
+            match%bind.Effect
+              Js_clipboard.Asynchronous.copy_text
+                (Js.string (Form.value_or_default form ~default:""))
+            with
+            | Ok () -> Effect.Ignore
+            | Error err ->
+              Effect.print_s [%message "Failed to copy to clipboard." (err : Error.t)])
+        ]
       [ Vdom.Node.text "copy to clipboard" ]
   in
   (* NOTE: This button copies from clipboard in a deprecated and non-recommended way. Use
@@ -26,26 +27,28 @@ let component =
   let%sub legacy_copy_button =
     let%arr form = form in
     Vdom.Node.button
-      ~attr:
-        (Vdom.Attr.on_click (fun _ ->
-           Ui_effect.Expert.handle
-             (Effect.ignore_m
-                (Js_clipboard.Asynchronous.copy_text
-                   (Js.string (Form.value_or_default form ~default:""))));
-           Effect.Ignore))
+      ~attrs:
+        [ Vdom.Attr.on_click (fun _ ->
+            Ui_effect.Expert.handle
+              (Effect.ignore_m
+                 (Js_clipboard.Asynchronous.copy_text
+                    (Js.string (Form.value_or_default form ~default:""))));
+            Effect.Ignore)
+        ]
       [ Vdom.Node.text "copy to clipboard (legacy behaviour)" ]
   in
   let%sub paste_button =
     let%arr form = form in
     Vdom.Node.button
-      ~attr:
-        (Vdom.Attr.on_click (fun _ ->
-           let%bind.Effect st = Js_clipboard.Asynchronous.read_text in
-           match st with
-           | Ok st -> Form.set form (Js.to_string st)
-           | Error error ->
-             Effect.print_s
-               [%message "Error reading from clipboard" ~_:(error : Error.t)]))
+      ~attrs:
+        [ Vdom.Attr.on_click (fun _ ->
+            let%bind.Effect st = Js_clipboard.Asynchronous.read_text in
+            match st with
+            | Ok st -> Form.set form (Js.to_string st)
+            | Error error ->
+              Effect.print_s
+                [%message "Error reading from clipboard" ~_:(error : Error.t)])
+        ]
       [ Vdom.Node.text "paste from clipboard" ]
   in
   let%arr form = form

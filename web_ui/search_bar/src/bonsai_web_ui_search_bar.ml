@@ -166,45 +166,49 @@ let create
       input
       ~default_model:(Model.init ~query:initial_query ~max_query_results)
       ~apply_action:
-        (fun ~inject:_
+        (fun
+          ~inject:_
           ~schedule_event:_
           (input : item Input.t Bonsai.Computation_status.t)
           (t : item Model.t)
-          (action : Action.t) ->
-          match input with
-          | Active input ->
-            (match (action : Action.t) with
-             | Set_text_input query ->
-               Model.set_text_input
-                 ~all_choices:(Input.choices input)
-                 t
-                 query
-                 ~score_choice
-                 ~filter_choice
-             | Bump_focused_autocomplete_result direction ->
-               Model.bump_focused_autocomplete_result t direction
-             | Clear_focused_autocomplete_result -> Model.clear_focused_autocomplete_result t
-             | Set_focused_autocomplete_result i -> Model.set_focused_autocomplete_result t i
-             | Close_autocomplete_box -> Model.close_autocomplete_box t
-             | Clear_input -> Model.clear_input t ~max_query_results
-             | Set_num_query_results_to_show i -> Model.set_num_query_results_to_show t i
-             | On_focus ->
-               Model.set_text_input
-                 ~all_choices:(Input.choices input)
-                 t
-                 (Model.query t)
-                 ~score_choice
-                 ~filter_choice
-             | On_blur -> Model.hide_autocomplete t)
-          | Inactive ->
-            eprint_s
-              [%message
-                [%here]
-                  "An action sent to a [state_machine1] has been dropped because its input \
-                   was not present. This happens when the [state_machine1] is inactive \
-                   when it receives a message."
-                  (action : Action.t)];
-            t)
+          (action : Action.t)
+          ->
+            match input with
+            | Active input ->
+              (match (action : Action.t) with
+               | Set_text_input query ->
+                 Model.set_text_input
+                   ~all_choices:(Input.choices input)
+                   t
+                   query
+                   ~score_choice
+                   ~filter_choice
+               | Bump_focused_autocomplete_result direction ->
+                 Model.bump_focused_autocomplete_result t direction
+               | Clear_focused_autocomplete_result ->
+                 Model.clear_focused_autocomplete_result t
+               | Set_focused_autocomplete_result i ->
+                 Model.set_focused_autocomplete_result t i
+               | Close_autocomplete_box -> Model.close_autocomplete_box t
+               | Clear_input -> Model.clear_input t ~max_query_results
+               | Set_num_query_results_to_show i -> Model.set_num_query_results_to_show t i
+               | On_focus ->
+                 Model.set_text_input
+                   ~all_choices:(Input.choices input)
+                   t
+                   (Model.query t)
+                   ~score_choice
+                   ~filter_choice
+               | On_blur -> Model.hide_autocomplete t)
+            | Inactive ->
+              eprint_s
+                [%message
+                  [%here]
+                    "An action sent to a [state_machine1] has been dropped because its input \
+                     was not present. This happens when the [state_machine1] is inactive \
+                     when it receives a message."
+                    (action : Action.t)];
+              t)
   in
   let%sub on_select_item =
     let%arr inject = inject
@@ -228,15 +232,17 @@ let create
       if is_focused then Vdom.Attr.class_ "autocomplete-active" else Vdom.Attr.empty
     in
     Vdom.Node.li
-      ~attr:
-        Vdom.Attr.(
-          on_click (fun _ -> on_select_item item)
-          @ on_mouseover (fun _ -> inject (Action.Set_focused_autocomplete_result index))
-          @ focused_attr
-          (* Stop the mousedown event, as we handle on_click above, and
-             the blur from mousedown would interact poorly with on_blur for the input *)
-          @ on_mousedown (fun _ ->
-            Effect.Many [ Effect.Stop_propagation; Effect.Prevent_default ]))
+      ~attrs:
+        [ Vdom.Attr.(
+            on_click (fun _ -> on_select_item item)
+            @ on_mouseover (fun _ ->
+              inject (Action.Set_focused_autocomplete_result index))
+            @ focused_attr
+            (* Stop the mousedown event, as we handle on_click above, and
+               the blur from mousedown would interact poorly with on_blur for the input *)
+            @ on_mousedown (fun _ ->
+              Effect.Many [ Effect.Stop_propagation; Effect.Prevent_default ]))
+        ]
       [ autocomplete_item item ]
   in
   let%sub render_autocomplete =
@@ -258,38 +264,41 @@ let create
       if len > model.num_query_results_to_show
       then
         [ Vdom.Node.li
-            ~attr:
-              Vdom.Attr.(
-                on_click (fun _ ->
-                  inject
-                    (Action.Set_num_query_results_to_show
-                       (Int.min
-                          len
-                          (model.num_query_results_to_show
-                           + additional_query_results_on_click))))
-                (* Stop the mousedown event, as we handle on_click above. *)
-                @ on_mousedown (fun _ ->
-                  Effect.Many [ Effect.Stop_propagation; Effect.Prevent_default ])
-                @ class_ "no-cursor"
-                @ style
-                    Css_gen.(
-                      background_color (`Var "--js-dark-snow-color") @> width draw_width))
+            ~attrs:
+              [ Vdom.Attr.(
+                  on_click (fun _ ->
+                    inject
+                      (Action.Set_num_query_results_to_show
+                         (Int.min
+                            len
+                            (model.num_query_results_to_show
+                             + additional_query_results_on_click))))
+                  (* Stop the mousedown event, as we handle on_click above. *)
+                  @ on_mousedown (fun _ ->
+                    Effect.Many [ Effect.Stop_propagation; Effect.Prevent_default ])
+                  @ class_ "no-cursor"
+                  @ style
+                      Css_gen.(
+                        background_color (`Var "--js-dark-snow-color") @> width draw_width))
+              ]
             [ Vdom.Node.text (sprintf "+%d more" (len - model.num_query_results_to_show))
             ]
         ]
       else []
     in
     [ Vdom.Node.div
-        ~attr:
-          Vdom.Attr.(
-            class_ "autocomplete"
-            @ style Css_gen.(width draw_width @> max_width draw_width))
+        ~attrs:
+          [ Vdom.Attr.(
+              class_ "autocomplete"
+              @ style Css_gen.(width draw_width @> max_width draw_width))
+          ]
         [ Vdom.Node.ul
-            ~attr:
-              Vdom.Attr.(
-                class_ "autocomplete-items"
-                @ id "autocomplete-items"
-                @ on_mouseout (fun _ -> inject Action.Clear_focused_autocomplete_result))
+            ~attrs:
+              [ Vdom.Attr.(
+                  class_ "autocomplete-items"
+                  @ id "autocomplete-items"
+                  @ on_mouseout (fun _ -> inject Action.Clear_focused_autocomplete_result))
+              ]
             (Map.data entries @ hidden_query_results)
         ]
     ]
@@ -354,25 +363,29 @@ let create
   let query_as_string = Model.query model in
   let set_text string = string |> Action.set_text_input |> inject in
   Vdom.Node.div
-    ~attr:Vdom.Attr.(Vdom.Attr.class_ "wrapper" @ Vdom.Attr.style (Css_gen.width width))
+    ~attrs:
+      [ Vdom.Attr.(Vdom.Attr.class_ "wrapper" @ Vdom.Attr.style (Css_gen.width width)) ]
     ([ Vdom.Node.div
-         ~attr:(Vdom.Attr.class_ "search-input-container")
+         ~attrs:[ Vdom.Attr.class_ "search-input-container" ]
          [ Vdom.Node.input
-             ~attr:
-               Vdom.Attr.(
-                 value_prop query_as_string
-                 @ placeholder placeholder_
-                 @ tabindex 1
-                 @ on_keyup handle_keyup
-                 @ on_keydown handle_keydown
-                 @ style (Css_gen.width width)
-                 @ on_change (fun _ -> set_text)
-                 @ on_input (fun _ -> set_text)
-                 @ on_focus (fun (_ : Js_of_ocaml.Dom_html.focusEvent Js_of_ocaml.Js.t) ->
-                   inject Action.On_focus)
-                 @ on_blur (fun (_ : Js_of_ocaml.Dom_html.focusEvent Js_of_ocaml.Js.t) ->
-                   inject Action.On_blur)
-                 @ extra_textbox_attr)
+             ~attrs:
+               [ Vdom.Attr.(
+                   value_prop query_as_string
+                   @ placeholder placeholder_
+                   @ tabindex 1
+                   @ on_keyup handle_keyup
+                   @ on_keydown handle_keydown
+                   @ style (Css_gen.width width)
+                   @ on_change (fun _ -> set_text)
+                   @ on_input (fun _ -> set_text)
+                   @ on_focus
+                       (fun (_ : Js_of_ocaml.Dom_html.focusEvent Js_of_ocaml.Js.t) ->
+                          inject Action.On_focus)
+                   @ on_blur
+                       (fun (_ : Js_of_ocaml.Dom_html.focusEvent Js_of_ocaml.Js.t) ->
+                          inject Action.On_blur)
+                   @ extra_textbox_attr)
+               ]
              ()
          ]
      ]

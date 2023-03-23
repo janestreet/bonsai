@@ -104,12 +104,12 @@ let view colors ~toggle ~inner ~direction =
     | `Right -> Css.right
   in
   Node.div
-    ~attr:Css.container
+    ~attrs:[ Css.container ]
     [ Node.label
-        ~attr:Attr.(Css.label @ Colors.toggle colors)
-        [ Node.input ~attr:Attr.(Attr.type_ "checkbox" @ Css.checkbox) ()
-        ; Node.span ~attr:Css.span [ toggle ]
-        ; Node.div ~attr:Attr.(Css.text @ Colors.inner colors @ direction_class) [ inner ]
+        ~attrs:[ Css.label; Colors.toggle colors ]
+        [ Node.input ~attrs:[ Attr.type_ "checkbox"; Css.checkbox; Attr.tabindex (-1) ] ()
+        ; Node.span ~attrs:[ Css.span ] [ toggle ]
+        ; Node.div ~attrs:[ Css.text; Colors.inner colors; direction_class ] [ inner ]
         ]
     ]
 ;;

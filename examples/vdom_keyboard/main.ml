@@ -122,7 +122,7 @@ let component =
     | true ->
       let%arr handler = handler in
       Vdom.Node.div
-        ~attr:Css.help_container
+        ~attrs:[ Css.help_container ]
         [ Help_text.view
             (Keyboard_event_handler.get_help_text handler)
             Help_text.View_spec.plain
@@ -136,7 +136,7 @@ let component =
   let view =
     Vdom.Node.div
       [ Vdom.Node.div
-          ~attr:Vdom.Attr.(Css.block @ style Css_gen.(left (`Px x) @> top (`Px y)))
+          ~attrs:[ Vdom.Attr.(Css.block @ style Css_gen.(left (`Px x) @> top (`Px y))) ]
           [ Vdom.Node.div [ Vdom.Node.text "Press ? to see help for keyboard shortcuts" ]
           ]
       ; Vdom.Node.div

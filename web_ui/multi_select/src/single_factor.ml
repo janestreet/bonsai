@@ -189,9 +189,7 @@ module Make (Item : Item) = struct
          | Some focused_item ->
            let selection_status =
              Map.update model.selection_status focused_item ~f:(fun status ->
-               let status =
-                 Option.value status ~default:input.default_selection_status
-               in
+               let status = Option.value status ~default:input.default_selection_status in
                Selection_status.toggle status)
            in
            { model with selection_status })
@@ -262,19 +260,20 @@ module Make (Item : Item) = struct
       let open Vdom in
       let link ~text ~(action : Action.t) ~class_ =
         Node.a
-          ~attr:
-            (Attr.many_without_merge
-               [ Attr.href "about:blank"
-               ; Attr.on_click (fun ev ->
-                   match Bonsai_web.am_within_disabled_fieldset ev with
-                   | true  -> Effect.Prevent_default
-                   | false -> Effect.Many [ inject action; Effect.Prevent_default ])
-               ; Attr.class_ class_
-               ])
+          ~attrs:
+            [ Attr.many_without_merge
+                [ Attr.href "about:blank"
+                ; Attr.on_click (fun ev ->
+                    match Bonsai_web.am_within_disabled_fieldset ev with
+                    | true  -> Effect.Prevent_default
+                    | false -> Effect.Many [ inject action; Effect.Prevent_default ])
+                ; Attr.class_ class_
+                ]
+            ]
           [ Node.text text ]
       in
       Node.div
-        ~attr:(Attr.class_ "multi-select-select-all-none")
+        ~attrs:[ Attr.class_ "multi-select-select-all-none" ]
         [ Node.text "Select: "
         ; link ~text:"all" ~action:Select_all ~class_:"multi-select-select-all"
         ; Node.text "; "
@@ -312,13 +311,14 @@ module Make (Item : Item) = struct
             let checked_attrs   = [ Attr.checked; Attr.bool_property "checked" true  ] in
             let unchecked_attrs = [               Attr.bool_property "checked" false ] in
             Node.input
-              ~attr:
-                (Attr.many_without_merge
-                   ([ on_change; Attr.type_ "checkbox" ]
-                    @
-                    if Set.mem selected_items item
-                    then checked_attrs
-                    else unchecked_attrs))
+              ~attrs:
+                [ Attr.many_without_merge
+                    ([ on_change; Attr.type_ "checkbox" ]
+                     @
+                     if Set.mem selected_items item
+                     then checked_attrs
+                     else unchecked_attrs)
+                ]
               ()
           in
           let is_focused  = [%compare.equal: Item.t option] (Some item) focused_item in
@@ -341,12 +341,10 @@ module Make (Item : Item) = struct
                   ])
           in
           Node.div
-            ~attr:
-              (Attr.many
-                 [ on_click; Vdom.Attr.class_ "multi-select-item"; focus_attrs ])
+            ~attrs:[ on_click; Vdom.Attr.class_ "multi-select-item"; focus_attrs ]
             [ checkbox; Node.label [ Node.text (Item.to_string item) ] ])
       in
-      Node.div ~attr:(Attr.class_ "multi-select-checkboxes") checkboxes
+      Node.div ~attrs:[ Attr.class_ "multi-select-checkboxes" ] checkboxes
     ;;
 
     let view (input : Input.t) model ~selected_items ~inject =
@@ -367,8 +365,10 @@ module Make (Item : Item) = struct
         checkboxes_view input model ~selected_items ~inject ~extra_row_attrs
       in
       Node.div
-        ~attr:(Attr.class_ "multi-select-container")
-        [ Node.div ~attr:(Attr.class_ "multi-select-header") [ input.view_config.header ]
+        ~attrs:[ Attr.class_ "multi-select-container" ]
+        [ Node.div
+            ~attrs:[ Attr.class_ "multi-select-header" ]
+            [ input.view_config.header ]
         ; search_box
         ; select_all_and_none_view
         ; checkboxes

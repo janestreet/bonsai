@@ -43,7 +43,7 @@ let%expect_test "button" =
   let extra_attrs theme =
     View.button
       theme
-      ~attr:(Vdom.Attr.on_double_click (fun _ -> on_click))
+      ~attrs:[ Vdom.Attr.on_double_click (fun _ -> on_click) ]
       ~on_click
       "button label"
   in
@@ -105,7 +105,7 @@ let%expect_test "button" =
 
 let%expect_test "text" =
   let basic _ = View.text "basic text" in
-  let with_attr _ = View.text ~attr:(Vdom.Attr.id "foo") "basic text" in
+  let with_attr _ = View.text ~attrs:[ Vdom.Attr.id "foo" ] "basic text" in
   let basic_f _ = View.textf "basic with %s format" "magic gadt" in
   themed_component
     [ "basic", basic; "disabled", with_attr; "basic with fomatting", basic_f ];
@@ -147,7 +147,9 @@ let%expect_test "text" =
 let%expect_test "themed text" =
   let basic theme = View.themed_text theme "themed text" in
   let basic_f theme = View.themed_textf theme "themed text with %d format" 42 in
-  let with_attr theme = View.themed_text theme ~attr:(Vdom.Attr.id "foo") "themed text" in
+  let with_attr theme =
+    View.themed_text theme ~attrs:[ Vdom.Attr.id "foo" ] "themed text"
+  in
   let with_intents theme =
     View.Intent.all
     |> List.map ~f:(fun intent -> View.themed_text theme ~intent "themed text")
@@ -928,7 +930,7 @@ let%expect_test "tabs" =
     in
     View.tabs
       theme
-      ~attr:grey_background
+      ~attrs:[ grey_background ]
       ~per_tab_attr:(fun _i ~is_active ->
         if is_active then red_border else Vdom.Attr.empty)
       ~on_change:(fun ~from:_ ~to_:_ -> Effect.Ignore)
@@ -1087,7 +1089,7 @@ let%expect_test "devbar" =
 ;;
 
 let%expect_test "app" =
-  let basic theme = Vdom.Node.div ~attr:(View.App.top_attr theme) [] in
+  let basic theme = Vdom.Node.div ~attrs:[ View.App.top_attr theme ] [] in
   themed_component [ "basic", basic ];
   [%expect
     {|
@@ -1141,7 +1143,7 @@ let%expect_test "app wrapper" =
        Vdom.Node.inner_html
          ()
          ~tag:"foo"
-         ~attr:Vdom.Attr.empty
+         ~attrs:[]
          ~this_html_is_sanitized_and_is_totally_safe_trust_me:"content"));
   [%expect
     {|

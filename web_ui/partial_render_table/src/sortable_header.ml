@@ -49,7 +49,7 @@ let component
           then inject (Add_sort col_id)
           else inject (Set_sort col_id)))
     in
-    Vdom.Node.div ~attr [ Vdom.Node.span [ sort_marker; label ] ]
+    Vdom.Node.div ~attrs:[ attr ] [ Vdom.Node.span [ sort_marker; label ] ]
   in
   { order; decorate }
 ;;

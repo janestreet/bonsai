@@ -252,16 +252,15 @@ let timeline ~now ~(tracks : Bar.t Fdeque.t Track_id.Map.t Value.t) =
   let starting_line =
     Virtual_dom_svg.(
       Node.line
-        ~attr:
-          (Vdom.Attr.many
-             [ Attr.x1 200.
-             ; Attr.x2 200.
-             ; Attr.y1 (-10.)
-             ; Attr.y2 105.
-             ; Attr.stroke (`Name "white")
-             ; Attr.stroke_width 4.0
-             ; Attr.stroke_dasharray [ 5.; 5. ]
-             ])
+        ~attrs:
+          [ Attr.x1 200.
+          ; Attr.x2 200.
+          ; Attr.y1 (-10.)
+          ; Attr.y2 105.
+          ; Attr.stroke (`Name "white")
+          ; Attr.stroke_width 4.0
+          ; Attr.stroke_dasharray [ 5.; 5. ]
+          ]
         [])
   in
   let%sub number_of_tracks =
@@ -287,15 +286,14 @@ let timeline ~now ~(tracks : Bar.t Fdeque.t Track_id.Map.t Value.t) =
           let y = (height +. 5.0) *. Int.to_float (Track_id.to_int track_id) in
           Virtual_dom_svg.(
             Node.rect
-              ~attr:
-                (Vdom.Attr.many
-                   [ Attr.x x
-                   ; Attr.y y
-                   ; Attr.width width
-                   ; Attr.height height
-                   ; Attr.rx 3.0
-                   ; Attr.fill (`Name (bar_id_to_color id))
-                   ])
+              ~attrs:
+                [ Attr.x x
+                ; Attr.y y
+                ; Attr.width width
+                ; Attr.height height
+                ; Attr.rx 3.0
+                ; Attr.fill (`Name (bar_id_to_color id))
+                ]
               [])))
   in
   let%sub lines =
@@ -314,16 +312,15 @@ let timeline ~now ~(tracks : Bar.t Fdeque.t Track_id.Map.t Value.t) =
       let x = timeline_width -. offset in
       Virtual_dom_svg.(
         Node.line
-          ~attr:
-            (Vdom.Attr.many
-               [ Attr.x1 x
-               ; Attr.x2 x
-               ; Attr.y1 (-10.0)
-               ; Attr.y2 105.
-               ; Attr.stroke (`Name "white")
-               ; Attr.stroke_width 3.0
-               ; Attr.stroke_dasharray [ 5.; 5. ]
-               ])
+          ~attrs:
+            [ Attr.x1 x
+            ; Attr.x2 x
+            ; Attr.y1 (-10.0)
+            ; Attr.y2 105.
+            ; Attr.stroke (`Name "white")
+            ; Attr.stroke_width 3.0
+            ; Attr.stroke_dasharray [ 5.; 5. ]
+            ]
           []))
   in
   let%arr tracks = tracks
@@ -331,14 +328,12 @@ let timeline ~now ~(tracks : Bar.t Fdeque.t Track_id.Map.t Value.t) =
   let bars =
     Virtual_dom_svg.(
       Node.g
-        ~attr:(Attr.transform [ Attr.Translate { dx = 0.0; dy = 5.0 } ])
+        ~attrs:[ Attr.transform [ Attr.Translate { dx = 0.0; dy = 5.0 } ] ]
         (List.concat (Map.data (tracks : _ Track_id.Map.t))))
   in
   Virtual_dom_svg.(
     Node.svg
-      ~attr:
-        (Vdom.Attr.many
-           [ Attr.width timeline_width; Attr.height (timeline_height +. 5.0) ])
+      ~attrs:[ Attr.width timeline_width; Attr.height (timeline_height +. 5.0) ]
       ([ bars; starting_line ] @ lines))
 ;;
 
@@ -395,12 +390,12 @@ let clock
   let%arr last_trigger_time = last_trigger_time
   and timeline = timeline in
   Vdom.Node.div
-    ~attr:(Vdom.Attr.many [ paper; column ])
+    ~attrs:[ paper; column ]
     [ Vdom.Node.strong [ Vdom.Node.text title ]
-    ; Vdom.Node.div ~attr:row [ Vdom.Node.text description ]
+    ; Vdom.Node.div ~attrs:[ row ] [ Vdom.Node.text description ]
     ; Vdom.Node.div
         [ Vdom.Node.text ("Last triggered: " ^ time_ns_to_string last_trigger_time) ]
-    ; Vdom.Node.div ~attr:(Vdom.Attr.many [ timeline_frame; row ]) [ timeline ]
+    ; Vdom.Node.div ~attrs:[ timeline_frame; row ] [ timeline ]
     ]
 ;;
 
@@ -452,22 +447,20 @@ let component =
   and wait_time_form = time_span_form
   and wait_time = wait_time in
   Vdom.Node.div
-    ~attr:column
+    ~attrs:[ column ]
     [ Vdom.Node.div
-        ~attr:column
-        [ Vdom.Node.div ~attr:row [ Vdom.Node.text "Clock ticks every 1s" ]
+        ~attrs:[ column ]
+        [ Vdom.Node.div ~attrs:[ row ] [ Vdom.Node.text "Clock ticks every 1s" ]
+        ; Vdom.Node.div ~attrs:[ paper; row ] [ Form.view_as_vdom wait_time_form ]
         ; Vdom.Node.div
-            ~attr:(Vdom.Attr.many [ paper; row ])
-            [ Form.view_as_vdom wait_time_form ]
-        ; Vdom.Node.div
-            ~attr:row
+            ~attrs:[ row ]
             [ Vdom.Node.text
                 ("Current duration: "
                  ^ Sexp.to_string (Random_time_span.sexp_of_t wait_time)
                  ^ "s + some small (but non-zero) overhead.")
             ]
         ]
-    ; Vdom.Node.div ~attr:(Vdom.Attr.many [ paper; row ]) immediate_clocks
+    ; Vdom.Node.div ~attrs:[ paper; row ] immediate_clocks
     ]
 ;;
 

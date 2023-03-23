@@ -18,4 +18,8 @@ val get : 'a t -> 'a
 
 (** Get a value that tracks the current value, for use in a computation. *)
 val value : 'a t -> 'a Value.t
+
 (* $MDX part-end *)
+
+(** Retrieves the underlying ['a t] Ui_incr.t var. *)
+val incr_var : 'a t -> 'a Ui_incr.Var.t

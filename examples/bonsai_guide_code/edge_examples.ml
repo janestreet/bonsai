@@ -37,7 +37,7 @@ let frame_toggler =
   let button_text = if showing then "disable counter" else "enable counter" in
   let toggle_button =
     Vdom.Node.button
-      ~attr:(Vdom.Attr.on_click (fun _ -> toggle_showing))
+      ~attrs:[ Vdom.Attr.on_click (fun _ -> toggle_showing) ]
       [ Vdom.Node.text button_text ]
   in
   Vdom.Node.div [ toggle_button; output ]
@@ -69,7 +69,9 @@ let extendy : ('a, 'b) extendy_function_signature = Extendy.component'
 
 let wrap_remove frame_counter remove =
   let x_button =
-    Vdom.Node.button ~attr:(Vdom.Attr.on_click (fun _ -> remove)) [ Vdom.Node.text "x" ]
+    Vdom.Node.button
+      ~attrs:[ Vdom.Attr.on_click (fun _ -> remove) ]
+      [ Vdom.Node.text "x" ]
   in
   Vdom.Node.div [ x_button; frame_counter ]
 ;;
@@ -79,7 +81,9 @@ let many_frame_watches =
   let%arr contents = contents
   and append = append in
   let append_button =
-    Vdom.Node.button ~attr:(Vdom.Attr.on_click (fun _ -> append)) [ Vdom.Node.text "add" ]
+    Vdom.Node.button
+      ~attrs:[ Vdom.Attr.on_click (fun _ -> append) ]
+      [ Vdom.Node.text "add" ]
   in
   Vdom.Node.div (append_button :: Map.data contents)
 ;;
@@ -132,7 +136,7 @@ let many_frame_watches =
     extendy (frame_counter log) ~wrap_remove:(fun frame_counter remove ->
       let x_button =
         Vdom.Node.button
-          ~attr:(Vdom.Attr.on_click (fun _ -> remove))
+          ~attrs:[ Vdom.Attr.on_click (fun _ -> remove) ]
           [ Vdom.Node.text "x" ]
       in
       Vdom.Node.div [ x_button; frame_counter ])
@@ -141,7 +145,9 @@ let many_frame_watches =
   and append = append
   and log_view = log_view in
   let append_button =
-    Vdom.Node.button ~attr:(Vdom.Attr.on_click (fun _ -> append)) [ Vdom.Node.text "add" ]
+    Vdom.Node.button
+      ~attrs:[ Vdom.Attr.on_click (fun _ -> append) ]
+      [ Vdom.Node.text "add" ]
   in
   Vdom.Node.div (append_button :: log_view :: Map.data contents)
 ;;
@@ -202,12 +208,12 @@ let counter =
   and set_state = set_state in
   let decrement =
     Vdom.Node.button
-      ~attr:(Vdom.Attr.on_click (fun _ -> set_state (state - 1)))
+      ~attrs:[ Vdom.Attr.on_click (fun _ -> set_state (state - 1)) ]
       [ Vdom.Node.text "-1" ]
   in
   let increment =
     Vdom.Node.button
-      ~attr:(Vdom.Attr.on_click (fun _ -> set_state (state + 1)))
+      ~attrs:[ Vdom.Attr.on_click (fun _ -> set_state (state + 1)) ]
       [ Vdom.Node.text "+1" ]
   in
   Vdom.Node.div [ decrement; Vdom.Node.textf "%d" state; increment ], state

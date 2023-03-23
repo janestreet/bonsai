@@ -7,4 +7,5 @@
 (rule
  (targets card_style.ml card_style.mli card_style__generated.ml
   card_style__generated.mli)
- (deps card_style.css) (action (bash "%{bin:css_inliner} %{deps}")))
+ (deps card_style.css)
+ (action (bash "%{bin:css_inliner} %{deps} \"((rewrite ()))\"")))

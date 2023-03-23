@@ -1,1 +1,0 @@
-include Style__generated

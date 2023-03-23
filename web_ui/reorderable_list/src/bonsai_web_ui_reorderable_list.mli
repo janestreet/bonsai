@@ -29,15 +29,12 @@ val list
   -> ?default_item_height:int
   (** The items and drop targets are spaced evenly every item_height. In order
       to look natural, each item should have height [item_height]. *)
-  -> ?override_last_target_rank:int option Value.t
-  (** The target that should be given to the place where you can drag an element so
-      that it's at the end of the list. If optional parameter is not given or the
-      value contains [None], then the [(maximum id of given items) + 1] is used. *)
   -> ('source, Vdom.Node.t * int, 'cmp) Map.t Value.t
   (** The items that should be displayed in the list. Each item should have its
       view and its current rank. Updating the rank of an item must be done via
       the [on_drop] callback of the drag-and-drop universe. *)
   -> Vdom.Node.t Bonsai.Computation.t
+
 
 (** Similar to [list], but creates the drag-and-drop universe and handles the
     [on_drop] event, making it fully self-contained. *)

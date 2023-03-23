@@ -27,6 +27,7 @@ let main ~http_settings ~js_file =
         ~on_unknown_url:`Not_found
     in
     Simple_web_server.create
+      ~authorize:Krb_http.Authorize.accept_all
       ~content_security_policy:
         (`Block Content_security_policy.default_for_clientside_rendering_internal)
       ~rpc_config:

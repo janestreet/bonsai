@@ -20,10 +20,10 @@ let component ~room_list ~current_room ~messages ~refresh_rooms ~change_room ~se
   and compose_panel = compose_panel
   and messages_panel = messages_panel in
   Vdom.Node.div
-    ~attr:(Vdom.Attr.id "container")
+    ~attrs:[ Vdom.Attr.id "container" ]
     [ rooms_list
     ; Vdom.Node.div
-        ~attr:(Vdom.Attr.id "message-container")
+        ~attrs:[ Vdom.Attr.id "message-container" ]
         [ messages_panel; compose_panel ]
     ]
 ;;

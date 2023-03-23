@@ -70,7 +70,7 @@ module Make (Item : Single_factor.Item) (Key : Key) = struct
         Attr.on_keydown (fun ev ->
           Vdom_keyboard.Keyboard_event_handler.handle_or_ignore_event t.key_handler ev)
       in
-      Node.div ~attr:on_keydown [ t.view ]
+      Node.div ~attrs:[ on_keydown ] [ t.view ]
     ;;
   end
 
@@ -81,12 +81,13 @@ module Make (Item : Single_factor.Item) (Key : Key) = struct
     let cross_subwidget_actions =
       let link ~text ~(action : Action.t) =
         Node.a
-          ~attr:
-            (Attr.many_without_merge
-               [ Attr.href "about:blank"
-               ; Attr.on_click (fun _ev ->
-                   Effect.Many [ inject action; Effect.Prevent_default ])
-               ])
+          ~attrs:
+            [ Attr.many_without_merge
+                [ Attr.href "about:blank"
+                ; Attr.on_click (fun _ev ->
+                    Effect.Many [ inject action; Effect.Prevent_default ])
+                ]
+            ]
           [ Node.text text ]
       in
       Node.div
@@ -100,17 +101,18 @@ module Make (Item : Single_factor.Item) (Key : Key) = struct
       Map.mapi subwidgets ~f:(fun ~key ~data:result ->
         let is_focused = [%compare.equal: Key.t] focus key in
         Node.div
-          ~attr:
-            (Attr.many_without_merge
-               [ Attr.classes
-                   [ "multi-factor-subwidget"
-                   ; (if is_focused
-                      then "multi-factor-focused-subwidget"
-                      else "multi-factor-unfocused-subwidget")
-                   ]
-               ; Attr.on_click (fun _ev -> inject (Set_focused_subwidget key))
-               ; Attr.id (sprintf !"%s-%{Key}" id_prefix key)
-               ])
+          ~attrs:
+            [ Attr.many_without_merge
+                [ Attr.classes
+                    [ "multi-factor-subwidget"
+                    ; (if is_focused
+                       then "multi-factor-focused-subwidget"
+                       else "multi-factor-unfocused-subwidget")
+                    ]
+                ; Attr.on_click (fun _ev -> inject (Set_focused_subwidget key))
+                ; Attr.id (sprintf !"%s-%{Key}" id_prefix key)
+                ]
+            ]
           [ result.Single_factor.Result.view ])
     in
     Vdom_layout.as_vbox

@@ -21,7 +21,7 @@ let build_result send_message (textbox_content, set_textbox_content) =
   let value = Vdom.Attr.string_property "value" textbox_content in
   let text_input =
     (Vdom.Node.input_deprecated [@alert "-deprecated"])
-      ~attr:(Vdom.Attr.many [ on_ret; on_input; value ])
+      ~attrs:[ on_ret; on_input; value ]
       [ Vdom.Node.text "submit" ]
   in
   let submit_button =
@@ -30,7 +30,7 @@ let build_result send_message (textbox_content, set_textbox_content) =
       "send"
       ~on_click:(fun _ -> submit_and_then_clear)
   in
-  Vdom.Node.div ~attr:(Vdom.Attr.id "compose") [ text_input; submit_button ]
+  Vdom.Node.div ~attrs:[ Vdom.Attr.id "compose" ] [ text_input; submit_button ]
 ;;
 
 let component ~send_message =

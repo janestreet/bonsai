@@ -69,15 +69,14 @@ module Make (Name : Name) : sig
     [@@deriving sexp, compare]
   end
 
-  class ['acc] fold :
-    object
-      method binding : Binding.t -> 'acc -> 'acc
-      method computation : Computation.t -> 'acc -> 'acc
-      method kind : Kind.t -> 'acc -> 'acc
-      method name : Name.t -> 'acc -> 'acc
-      method position : Lexing.position -> 'acc -> 'acc
-      method string : string -> 'acc -> 'acc
-      method value : Value.t -> 'acc -> 'acc
-      method value_kind : Value.value_without_position -> 'acc -> 'acc
-    end
+  class ['acc] fold : object
+    method binding : Binding.t -> 'acc -> 'acc
+    method computation : Computation.t -> 'acc -> 'acc
+    method kind : Kind.t -> 'acc -> 'acc
+    method name : Name.t -> 'acc -> 'acc
+    method position : Lexing.position -> 'acc -> 'acc
+    method string : string -> 'acc -> 'acc
+    method value : Value.t -> 'acc -> 'acc
+    method value_kind : Value.value_without_position -> 'acc -> 'acc
+  end
 end

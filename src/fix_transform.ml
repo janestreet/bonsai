@@ -4,8 +4,7 @@ include Fix_transform_intf
 
 module Make
     (Types : Types) (F : functor (_ : Recurse with module Types := Types) ->
-      Transform with module Types := Types) : Transform with module Types := Types =
-struct
+      Transform with module Types := Types) : Transform with module Types := Types = struct
   module rec Recurse : (Recurse with module Types := Types) = struct
     let combine_up, empty, empty_for_lazy = Types.Up.(combine, empty, empty_for_lazy)
 

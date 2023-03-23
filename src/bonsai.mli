@@ -139,6 +139,12 @@ module Computation : sig
       operating on values instead of the computations themselves *)
   val reduce_balanced : 'a t list -> f:('a Value.t -> 'a Value.t -> 'a t) -> 'a t option
 
+  val fold_right
+    :  'a t list
+    -> f:('a Value.t -> 'acc Value.t -> 'acc t)
+    -> init:'acc Value.t
+    -> 'acc t
+
   module Let_syntax : sig
     val return : 'a -> 'a t
 
@@ -185,6 +191,9 @@ module Var : sig
   (** Provides read-only access to [t] by producing a {!Value.t} which is used inside of a
       Bonsai computation. *)
   val value : 'a t -> 'a Value.t
+
+  (** Retrieves the underlying ['a t] Ui_incr.t var. *)
+  val incr_var : 'a t -> 'a Ui_incr.Var.t
 end
 
 (** Converts a [Value.t] to a [Computation.t].  Unlike most Computations, the [Computation.t]
@@ -264,6 +273,17 @@ val state_opt
 (** A bool-state which starts at [default_model] and flips whenever the
     returned effect is scheduled. *)
 val toggle : default_model:bool -> (bool * unit Effect.t) Computation.t
+
+module Toggle : sig
+  type t =
+    { state : bool
+    ; set_state : bool -> unit Effect.t
+    ; toggle : unit Effect.t
+    }
+end
+
+(** Like [toggle], but also gives a handle to set the state directly *)
+val toggle' : default_model:bool -> Toggle.t Computation.t
 
 (** A constructor for [Computation.t] that models a simple state machine.
     The first-class module implementing [Model] describes the states in
@@ -733,7 +753,20 @@ module Effect_throttling : sig
           of result - [Effect] does not support cancellation in general. *)
       | Finished of 'a
       (** [Finished x] indicates that an effect successfully completed with value x. *)
-    [@@deriving sexp_of]
+    [@@deriving sexp, equal]
+
+    (** Collapses values of type ['a Or_error.t t] a plain Or_error.t, where
+        the Aborted case is transformed into an error.
+
+        The [tag_s] parameter can be used to add additional info to the error. *)
+    val collapse_to_or_error : ?tag_s:Sexp.t lazy_t -> 'a Or_error.t t -> 'a Or_error.t
+
+    (** Like [collapse_to_or_error], but transforms a function that returns an
+        ['a Or_error.t t] instead of just the value. *)
+    val collapse_fun_to_or_error
+      :  ?sexp_of_input:('a -> Sexp.t)
+      -> ('a -> 'b Or_error.t t Effect.t)
+      -> ('a -> 'b Or_error.t Effect.t)
   end
 
   (** Transforms an input effect into a new effect that enforces that invariant

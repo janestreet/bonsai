@@ -1462,7 +1462,6 @@ val create
   -> unit
   -> t
 [@@js.builder           ]
-
 [@@@ocamlformat "enable"]
 
 val legendFormatter : t -> (Legend_data.t -> string) option [@@js.get]

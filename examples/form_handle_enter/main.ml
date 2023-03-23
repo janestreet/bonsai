@@ -25,7 +25,7 @@ let component =
   let%sub rendered_notifications =
     Bonsai_web_ui_notifications.render notifications ~f:(fun ~close:_ _ ->
       Bonsai.const
-        (Vdom.Node.div ~attr:Css.notification [ Vdom.Node.text "Submitted form" ]))
+        (Vdom.Node.div ~attrs:[ Css.notification ] [ Vdom.Node.text "Submitted form" ]))
   in
   let%sub notify =
     let%arr notifications = notifications in

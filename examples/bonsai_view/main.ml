@@ -387,7 +387,8 @@ module Basic_vbox = struct
 
   let make_box c w h =
     Vdom.Node.div
-      ~attr:(Vdom.Attr.style Css_gen.(background_color c @> min_width w @> min_height h))
+      ~attrs:
+        [ Vdom.Attr.style Css_gen.(background_color c @> min_width w @> min_height h) ]
       []
   ;;
 
@@ -437,8 +438,8 @@ module Interactive_vbox = struct
           View.hbox
             ~main_axis_alignment:End
             ~gap:(`Px 10)
-            [ Vdom.Node.label ~attr:white_space_pre [ Vdom.Node.text name ]
-            ; Vdom.Node.div ~attr:(Vdom.Attr.style (Css_gen.width (`Px 200))) [ view ]
+            [ Vdom.Node.label ~attrs:[ white_space_pre ] [ Vdom.Node.text name ]
+            ; Vdom.Node.div ~attrs:[ Vdom.Attr.style (Css_gen.width (`Px 200)) ] [ view ]
             ]
         in
         let pattern = String.Search_pattern.create ("?" ^ name) in
@@ -496,7 +497,7 @@ module Interactive_vbox = struct
         let demo =
           [%demo
             View.hbox
-              ~attr:Vdom.Attr.(many [ id "target"; Style.target ])
+              ~attrs:[ Vdom.Attr.(many [ id "target"; Style.target ]) ]
               ?direction
               ?main_axis_alignment
               ?cross_axis_alignment
@@ -508,7 +509,7 @@ module Interactive_vbox = struct
         let demo =
           [%demo
             View.vbox
-              ~attr:Vdom.Attr.(many [ id "target"; Style.target ])
+              ~attrs:[ Vdom.Attr.(many [ id "target"; Style.target ]) ]
               ?direction
               ?main_axis_alignment
               ?cross_axis_alignment
@@ -520,22 +521,17 @@ module Interactive_vbox = struct
     let controls_border = View.extreme_primary_border_color theme in
     let view =
       View.hbox
-        ~attr:(Vdom.Attr.style (Css_gen.create ~field:"flex-grow" ~value:"1"))
+        ~attrs:[ Vdom.Attr.style (Css_gen.create ~field:"flex-grow" ~value:"1") ]
         ~gap:(`Em 1)
         ~main_axis_alignment:Space_between
         ~cross_axis_alignment:Start
         [ View.vbox
-            ~attr:
-              (Vdom.Attr.many
-                 [ Style.controls
-                 ; Vdom.Attr.style (Css_gen.background_color controls_bg)
-                 ; Vdom.Attr.style
-                     (Css_gen.border
-                        ~width:(`Px 1)
-                        ~color:controls_border
-                        ~style:`Solid
-                        ())
-                 ])
+            ~attrs:
+              [ Style.controls
+              ; Vdom.Attr.style (Css_gen.background_color controls_bg)
+              ; Vdom.Attr.style
+                  (Css_gen.border ~width:(`Px 1) ~color:controls_border ~style:`Solid ())
+              ]
             ~gap:(`Px 3)
             [ axis_v; direction_v; main_axis_alignment_v; cross_axis_alignment_v ]
         ; view
@@ -625,7 +621,7 @@ module Devbar = struct
   let view =
     let%map.Computation theme = View.Theme.current in
     let view, text = [%demo View.devbar theme "DEV"] in
-    Vdom.Node.div ~attr:(Vdom.Attr.style (Css_gen.max_width (`Px 500))) [ view ], text
+    Vdom.Node.div ~attrs:[ Vdom.Attr.style (Css_gen.max_width (`Px 500)) ] [ view ], text
   ;;
 
   let selector = None
@@ -649,7 +645,7 @@ module Devbar_intent = struct
           ; View.devbar theme ~intent:Error "DEV"
           ]]
     in
-    Vdom.Node.div ~attr:(Vdom.Attr.style (Css_gen.max_width (`Px 500))) [ view ], text
+    Vdom.Node.div ~attrs:[ Vdom.Attr.style (Css_gen.max_width (`Px 500)) ] [ view ], text
   ;;
 
   let selector = None
@@ -663,7 +659,7 @@ module Basic_card = struct
   let view =
     let%map.Computation theme = View.Theme.current in
     let view, text = [%demo View.card theme "The message is: You are great!"] in
-    Vdom.Node.div ~attr:(Vdom.Attr.style (Css_gen.max_width (`Px 500))) [ view ], text
+    Vdom.Node.div ~attrs:[ Vdom.Attr.style (Css_gen.max_width (`Px 500)) ] [ view ], text
   ;;
 
   let selector = None
@@ -679,7 +675,7 @@ module Card_with_title = struct
     let view, text =
       [%demo View.card theme ~title:"New message!!" "The message is: You are great!"]
     in
-    Vdom.Node.div ~attr:(Vdom.Attr.style (Css_gen.max_width (`Px 500))) [ view ], text
+    Vdom.Node.div ~attrs:[ Vdom.Attr.style (Css_gen.max_width (`Px 500)) ] [ view ], text
   ;;
 
   let selector = None
@@ -703,7 +699,7 @@ module Cards_with_intent = struct
           ; View.card theme ~intent:Error ~title:"UH OH" "something bad happened!"
           ]]
     in
-    Vdom.Node.div ~attr:(Vdom.Attr.style (Css_gen.max_width (`Px 500))) [ view ], text
+    Vdom.Node.div ~attrs:[ Vdom.Attr.style (Css_gen.max_width (`Px 500)) ] [ view ], text
   ;;
 
   let selector = None
@@ -752,7 +748,7 @@ module Cards_with_fieldset = struct
               "something bad happened!"
           ]]
     in
-    Vdom.Node.div ~attr:(Vdom.Attr.style (Css_gen.max_width (`Px 500))) [ view ], text
+    Vdom.Node.div ~attrs:[ Vdom.Attr.style (Css_gen.max_width (`Px 500)) ] [ view ], text
   ;;
 
   let selector = None
@@ -784,7 +780,7 @@ module Card_with_rows = struct
               [ View.text "debug message 1 "; View.text "more debug message" ]
           ]]
     in
-    Vdom.Node.div ~attr:(Vdom.Attr.style (Css_gen.max_width (`Px 500))) [ view ], text
+    Vdom.Node.div ~attrs:[ Vdom.Attr.style (Css_gen.max_width (`Px 500)) ] [ view ], text
   ;;
 
   let selector = None

@@ -28,7 +28,7 @@ let component =
   in
   let%arr state, inject = state in
   let button text action =
-    Node.button ~attr:(Attr.on_click (fun _ -> inject action)) [ Node.text text ]
+    Node.button ~attrs:[ Attr.on_click (fun _ -> inject action) ] [ Node.text text ]
   in
   let add_button = button "add" New in
   let for_each i c =

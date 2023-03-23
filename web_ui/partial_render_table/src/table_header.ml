@@ -51,27 +51,25 @@ let rec render_header header ~level ~acc ~column_widths ~set_column_width =
         | None | Some (Hidden { prev_width_px = None }) -> initial_width
       in
       Vdom.Node.td
-        ~attr:
-          (Vdom.Attr.many
-             [ Bonsai_web_ui_element_size_hooks.Size_tracker.on_change
-                 (fun ~width ~height:_ -> set_column_width ~index (`Px_float width))
-             ; Bonsai_web_ui_element_size_hooks.Freeze.width
-             ; Vdom.Attr.colspan 1
-             ; Style.header_label
-             ; Style.leaf_header
-             ; Vdom.Attr.style
-                 Css_gen.(width column_width @> if visible then empty else display `None)
-             ])
+        ~attrs:
+          [ Bonsai_web_ui_element_size_hooks.Size_tracker.on_change
+              (fun ~width ~height:_ -> set_column_width ~index (`Px_float width))
+          ; Vdom.Attr.colspan 1
+          ; Style.header_label
+          ; Style.leaf_header
+          ; Vdom.Attr.style
+              Css_gen.(width column_width @> if visible then empty else display `None)
+          ]
         [ leaf_label ]
     in
     Acc.visit_leaf acc ~level ~node
   | Spacer inside ->
-    let node = Vdom.Node.td ~attr:colspan [] in
+    let node = Vdom.Node.td ~attrs:[ colspan ] [] in
     let acc = Acc.visit_non_leaf acc ~level ~node in
     recurse inside ~acc
   | Group { children; group_label } ->
     let attrs = Vdom.Attr.many [ colspan; Style.header_label ] in
-    let node = Vdom.Node.td ~attr:attrs [ group_label ] in
+    let node = Vdom.Node.td ~attrs:[ attrs ] [ group_label ] in
     let acc = Acc.visit_non_leaf acc ~level ~node in
     List.fold children ~init:acc ~f:(fun acc -> recurse ~acc)
   | Organizational_group children ->
@@ -96,13 +94,12 @@ let component
   and column_widths = column_widths in
   let rows = render_header headers ~set_column_width ~column_widths in
   Vdom.Node.table
-    ~attr:
-      (Vdom.Attr.many
-         [ Bonsai_web_ui_element_size_hooks.Visibility_tracker.detect
-             ()
-             ~client_rect_changed:set_header_client_rect
-         ; Style.partial_render_table_header
-         ; Vdom.Attr.class_ "prt-table-header"
-         ])
+    ~attrs:
+      [ Bonsai_web_ui_element_size_hooks.Visibility_tracker.detect
+          ()
+          ~client_rect_changed:set_header_client_rect
+      ; Style.partial_render_table_header
+      ; Vdom.Attr.class_ "prt-table-header"
+      ]
     [ Vdom.Node.tbody rows ]
 ;;

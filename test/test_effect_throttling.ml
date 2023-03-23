@@ -306,3 +306,29 @@ let%expect_test {| Effect_throttling.poll in an assoc |} =
     ((query 3) (result (Finished 4)))
     ((query 2) (result (Finished 4))) |}]
 ;;
+
+let%expect_test "collapse functions" =
+  let print ?tag_s input =
+    let output = Bonsai.Effect_throttling.Poll_result.collapse_to_or_error ?tag_s input in
+    print_s
+      [%message
+        ""
+          ~_:(input : unit Or_error.t Bonsai.Effect_throttling.Poll_result.t)
+          "=>"
+          ~_:(output : unit Or_error.t)]
+  in
+  print Aborted;
+  print (Finished (Error (Error.of_string "oh no!")));
+  print (Finished (Ok ()));
+  [%expect
+    {|
+    (Aborted => (Error "request was aborted"))
+    ((Finished (Error "oh no!")) => (Error "oh no!"))
+    ((Finished (Ok ())) => (Ok ())) |}];
+  print ~tag_s:(lazy (Sexp.Atom "my tag")) Aborted;
+  print ~tag_s:(lazy (Sexp.Atom "my tag")) (Finished (Error (Error.of_string "oh no!")));
+  [%expect
+    {|
+    (Aborted => (Error ("my tag" "request was aborted")))
+    ((Finished (Error "oh no!")) => (Error ("my tag" "oh no!"))) |}]
+;;

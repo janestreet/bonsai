@@ -65,9 +65,10 @@ module Two_left_click_popovers = struct
             (View.button
                theme
                ~intent:Info
-               ~attr:
-                 (Vdom.Attr.on_contextmenu (fun _ ->
-                    Effect.Many [ open_; Effect.Prevent_default ]))
+               ~attrs:
+                 [ Vdom.Attr.on_contextmenu (fun _ ->
+                     Effect.Many [ open_; Effect.Prevent_default ])
+                 ]
                ~on_click:open_
                "toggle popover")
         in

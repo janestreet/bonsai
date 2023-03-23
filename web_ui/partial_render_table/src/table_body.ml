@@ -29,10 +29,7 @@ let set_or_wrap ~classes ~style =
   let open Vdom.Node in
   function
   | Element e -> Element (Element.add_style (Element.add_classes e classes) style)
-  | other ->
-    div
-      ~attr:(Vdom.Attr.many [ Vdom.Attr.style style; Vdom.Attr.classes classes ])
-      [ other ]
+  | other -> div ~attrs:[ Vdom.Attr.style style; Vdom.Attr.classes classes ] [ other ]
 ;;
 
 let float_to_px_string px = Virtual_dom.Dom_float.to_string_fixed 8 px ^ "px"
@@ -44,8 +41,7 @@ let component
       ~(leaves : Header_tree.leaf list Value.t)
       ~(headers : Header_tree.t Value.t)
       ~(assoc :
-          (key * data) Map_list.t Value.t
-        -> (key * Vdom.Node.t list) Map_list.t Computation.t)
+          (key * data) Map_list.t Value.t -> (key * Vdom.Node.t list) Map_list.t Computation.t)
       ~column_widths
       ~(visually_focused : key option Value.t)
       ~on_row_click
@@ -74,15 +70,16 @@ let component
   let%sub cells = assoc input in
   let%sub rows =
     let%sub row_css =
-      let%arr column_widths = column_widths in
+      let%arr column_widths = column_widths
+      and leaves = leaves in
       let total_width =
-        column_widths
-        |> Map.data
-        |> List.sum
-             (module Float)
-             ~f:(function
-               | Column_size.Visible { width_px } -> width_px
-               | Hidden _ -> 0.0)
+        List.foldi leaves ~init:0.0 ~f:(fun i sum _ ->
+          let column_width =
+            match Map.find column_widths i with
+            | Some (Column_size.Visible { width_px }) -> width_px
+            | None | Some (Hidden _) -> 0.0
+          in
+          sum +. column_width)
       in
       let open Css_gen in
       height (row_height :> Length.t)
@@ -147,12 +144,11 @@ let component
           if row_selected then "prt-table-row-selected" :: classes else classes
         in
         Vdom.Node.div
-          ~attr:
-            (Vdom.Attr.many
-               [ Vdom.Attr.classes classes
-               ; Vdom.Attr.style row_css
-               ; Vdom.Attr.on_click (fun _ -> on_row_click key)
-               ])
+          ~attrs:
+            [ Vdom.Attr.classes classes
+            ; Vdom.Attr.style row_css
+            ; Vdom.Attr.on_click (fun _ -> on_row_click key)
+            ]
           (List.map (List.zip_exn css_for_columns cells) ~f:for_each_cell))
   in
   let%sub padding_top_and_bottom =
@@ -190,12 +186,13 @@ let component
     Vdom.Node.lazy_
       (lazy
         (Vdom.Node.div
-           ~attr:
-             (Vdom.Attr.style
-                (Css_gen.concat
-                   [ Css_gen.padding_top (`Px padding_top)
-                   ; Css_gen.padding_bottom (`Px padding_bottom)
-                   ]))
+           ~attrs:
+             [ Vdom.Attr.style
+                 (Css_gen.concat
+                    [ Css_gen.padding_top (`Px padding_top)
+                    ; Css_gen.padding_bottom (`Px padding_bottom)
+                    ])
+             ]
            [ Vdom_node_with_map_children.make ~tag:"div" rows ]))
   in
   let%arr view = view

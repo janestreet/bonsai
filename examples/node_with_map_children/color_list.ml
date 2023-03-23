@@ -64,35 +64,34 @@ let component name =
   and inject = inject in
   let header =
     Vdom.Node.div
-      ~attr:Style.header
+      ~attrs:[ Style.header ]
       [ Style.refresh_button `Dark ~on_click:(inject Action.Regenerate)
       ; Vdom.Node.text name
       ]
   in
   let body =
     Vdom.Node.div
-      ~attr:Style.body
+      ~attrs:[ Style.body ]
       (List.map (Map.to_alist state) ~f:(fun (k, v) ->
          let color = Style.color_of_mult v in
          let border_color = Style.darker_color_of_mult v in
          Vdom.Node.div
-           ~attr:
-             (Vdom.Attr.many
-                [ Style.row
-                ; Vdom.Attr.style (Css_gen.background_color (`HSLA color))
-                ; Vdom.Attr.style
-                    (Css_gen.border
-                       ~width:(`Px 3)
-                       ~style:`Solid
-                       ~color:(`HSLA border_color)
-                       ())
-                ])
+           ~attrs:
+             [ Style.row
+             ; Vdom.Attr.style (Css_gen.background_color (`HSLA color))
+             ; Vdom.Attr.style
+                 (Css_gen.border
+                    ~width:(`Px 3)
+                    ~style:`Solid
+                    ~color:(`HSLA border_color)
+                    ())
+             ]
            [ Vdom.Node.div
-               ~attr:(Vdom.Attr.style (Css_gen.font_size (`Em_float 0.3)))
+               ~attrs:[ Vdom.Attr.style (Css_gen.font_size (`Em_float 0.3)) ]
                [ Style.x_button `Light ~on_click:(inject (Action.Remove k)) ]
            ; Vdom.Node.textf "%d" k
            ]))
   in
-  let view = Vdom.Node.div ~attr:Style.color_list [ header; body ] in
+  let view = Vdom.Node.div ~attrs:[ Style.color_list ] [ header; body ] in
   { out = state; view; reset = inject Action.Regenerate }
 ;;

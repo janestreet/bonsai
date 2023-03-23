@@ -37,26 +37,30 @@ let options =
   let circle_series_options =
     Dygraph.Options.Series_options.create
       ~drawHighlightPointCallback:
-        (fun ~graph:_ ~seriesName:_ ~context ~cx ~cy ~color:_ ~pointSize:_ ~idx ->
-           let radius = side_lengths.(idx) /. 2. in
-           draw_circle ~context ~cx ~cy ~radius;
-           context##fill)
+        (fun
+          ~graph:_ ~seriesName:_ ~context ~cx ~cy ~color:_ ~pointSize:_ ~idx ->
+          let radius = side_lengths.(idx) /. 2. in
+          draw_circle ~context ~cx ~cy ~radius;
+          context##fill)
       ~drawPointCallback:
-        (fun ~graph:_ ~seriesName:_ ~context ~cx ~cy ~color:_ ~pointSize:_ ~idx ->
-           let radius = side_lengths.(idx) /. 2. in
-           draw_circle ~context ~cx ~cy ~radius)
+        (fun
+          ~graph:_ ~seriesName:_ ~context ~cx ~cy ~color:_ ~pointSize:_ ~idx ->
+          let radius = side_lengths.(idx) /. 2. in
+          draw_circle ~context ~cx ~cy ~radius)
       ()
   in
   let square_series_options =
     Dygraph.Options.Series_options.create
       ~drawHighlightPointCallback:
-        (fun ~graph:_ ~seriesName:_ ~context ~cx ~cy ~color:_ ~pointSize:_ ~idx ->
-           let side_length = side_lengths.(idx) in
-           draw_square ~context ~stroke_or_fill:`Fill ~cx ~cy ~side_length)
+        (fun
+          ~graph:_ ~seriesName:_ ~context ~cx ~cy ~color:_ ~pointSize:_ ~idx ->
+          let side_length = side_lengths.(idx) in
+          draw_square ~context ~stroke_or_fill:`Fill ~cx ~cy ~side_length)
       ~drawPointCallback:
-        (fun ~graph:_ ~seriesName:_ ~context ~cx ~cy ~color:_ ~pointSize:_ ~idx ->
-           let side_length = side_lengths.(idx) in
-           draw_square ~context ~stroke_or_fill:`Stroke ~cx ~cy ~side_length)
+        (fun
+          ~graph:_ ~seriesName:_ ~context ~cx ~cy ~color:_ ~pointSize:_ ~idx ->
+          let side_length = side_lengths.(idx) in
+          draw_square ~context ~stroke_or_fill:`Stroke ~cx ~cy ~side_length)
       ()
   in
   let series =

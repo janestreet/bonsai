@@ -39,18 +39,17 @@ let component =
       (module Model)
       (module Action)
       ~default_model:Model.init
-      ~apply_action:
-        (fun ~inject:_ ~schedule_event:_ model -> function
-           | Decrement_const -> { model with const = model.const - 1 }
-           | Increment_const -> { model with const = model.const + 1 }
-           | Increment { num_faces } ->
-             { model with
-               dice =
-                 Map.update model.dice num_faces ~f:(function
-                   | None -> failwith "map keys shouldn't have changed"
-                   | Some v -> v + 1)
-             }
-           | Clear -> { const = 0; dice = Map.map model.dice ~f:(Fn.const 0) })
+      ~apply_action:(fun ~inject:_ ~schedule_event:_ model -> function
+        | Decrement_const -> { model with const = model.const - 1 }
+        | Increment_const -> { model with const = model.const + 1 }
+        | Increment { num_faces } ->
+          { model with
+            dice =
+              Map.update model.dice num_faces ~f:(function
+                | None -> failwith "map keys shouldn't have changed"
+                | Some v -> v + 1)
+          }
+        | Clear -> { const = 0; dice = Map.map model.dice ~f:(Fn.const 0) })
   in
   let%arr model, inject = dice_state in
   let button = Vdom_input_widgets.Button.simple in

@@ -14,9 +14,7 @@ let create file =
                if Js.to_bool ev##.lengthComputable
                then
                  on_progress
-                   { Bonsai_web_ui_file.Progress.loaded = ev##.loaded
-                   ; total = ev##.total
-                   }
+                   { Bonsai_web_ui_file.Progress.loaded = ev##.loaded; total = ev##.total }
                  |> Ui_effect.Expert.handle
              in
              file_reader##.onprogress
@@ -32,9 +30,7 @@ let create file =
                        ~code:(file_reader##.error##.code : int)
                        ~message:
                          (Js.to_string
-                            (Js.Unsafe.get
-                               file_reader##.error
-                               (Js.string "message")))]
+                            (Js.Unsafe.get file_reader##.error (Js.string "message")))]
                in
                Ivar.fill_if_empty
                  result

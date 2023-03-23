@@ -226,22 +226,41 @@ let state (type m) ?reset (module M : Model with type t = m) ~default_model =
     ~default_model
 ;;
 
-let toggle ~default_model =
-  let%sub state, inject =
+module Toggle = struct
+  type t =
+    { state : bool
+    ; set_state : bool -> unit Effect.t
+    ; toggle : unit Effect.t
+    }
+end
+
+let toggle' ~default_model =
+  let module Action = struct
+    type t =
+      | Toggle
+      | Set of bool
+    [@@deriving sexp]
+  end
+  in
+  let%sub state_and_inject =
     state_machine0
       (module Bool)
-      (module Unit)
-      ~apply_action:(fun ~inject:_ ~schedule_event:_ b () -> not b)
+      (module Action)
       ~default_model
+      ~apply_action:(fun ~inject:_ ~schedule_event:_ state -> function
+        | Toggle -> not state
+        | Set state -> state)
   in
-  let%sub effect =
-    (* only compute the effect once for better incrementality *)
-    let%arr inject = inject in
-    inject ()
-  in
+  let%arr state_and_inject = state_and_inject in
+  let state, inject = state_and_inject in
+  { Toggle.state; set_state = (fun state -> inject (Set state)); toggle = inject Toggle }
+;;
+
+let toggle ~default_model =
+  let%sub { state; toggle; set_state = _ } = toggle' ~default_model in
   let%arr state = state
-  and effect = effect in
-  state, effect
+  and toggle = toggle in
+  state, toggle
 ;;
 
 let state_opt (type m) ?reset ?default_model (module M : Model with type t = m) =
@@ -380,10 +399,11 @@ module Edge = struct
           (module State)
           (module Action)
           ~apply_action:
-            (fun ~inject:_ ~schedule_event:_ model (Action.Set (seqnum, res)) ->
-               if seqnum < model.State.last_seqnum
-               then model
-               else { State.last_seqnum = seqnum; last_result = res })
+            (fun
+              ~inject:_ ~schedule_event:_ model (Action.Set (seqnum, res)) ->
+              if seqnum < model.State.last_seqnum
+              then model
+              else { State.last_seqnum = seqnum; last_result = res })
           ~default_model:{ State.last_seqnum = -1; last_result = initial }
       in
       let%sub callback =
@@ -458,12 +478,35 @@ module Effect_throttling = struct
     type 'a t =
       | Aborted
       | Finished of 'a
-    [@@deriving sexp_of]
+    [@@deriving sexp, equal]
+
+    let request_aborted_error = Error.of_string "request was aborted"
+
+    let collapse_to_or_error ?tag_s =
+      let maybe_tag_error error =
+        match tag_s with
+        | None -> error
+        | Some (lazy tag) -> Error.tag_s error ~tag
+      in
+      function
+      | Aborted -> Error (maybe_tag_error request_aborted_error)
+      | Finished (Error e) -> Error (maybe_tag_error e)
+      | Finished (Ok v) -> Ok v
+    ;;
+
+    let collapse_fun_to_or_error ?sexp_of_input f a =
+      let tag_s =
+        match sexp_of_input with
+        | None -> None
+        | Some sexp_of_input ->
+          Some (lazy (Sexp.List [ Sexp.Atom "for"; sexp_of_input a ]))
+      in
+      Effect.map (Effect.lazy_ (lazy (f a))) ~f:(collapse_to_or_error ?tag_s)
+    ;;
   end
 
   let poll
-    : type a b.
-      (a -> b Effect.t) Value.t -> (a -> b Poll_result.t Effect.t) Computation.t
+    : type a b. (a -> b Effect.t) Value.t -> (a -> b Poll_result.t Effect.t) Computation.t
     =
     fun effect ->
     let module Action = struct
@@ -1108,6 +1151,13 @@ module Computation = struct
 
   let reduce_balanced xs ~f =
     List.reduce_balanced xs ~f:(fun a b ->
+      let%sub a = a in
+      let%sub b = b in
+      f a b)
+  ;;
+
+  let fold_right xs ~f ~init =
+    List.fold_right xs ~init:(read init) ~f:(fun a b ->
       let%sub a = a in
       let%sub b = b in
       f a b)

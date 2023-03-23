@@ -8,5 +8,4 @@ module Position_tracker = Position_tracker
 
 module Expert = struct
   module Resizer = Resizer
-  module Weak_map = Weak_map
 end

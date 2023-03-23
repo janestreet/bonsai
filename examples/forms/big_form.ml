@@ -182,6 +182,7 @@ type t =
   ; query_box : string
   ; nested_record : Nested_record.Outer.t
   ; int_blang : Int_blang.t
+  ; password : string
   }
 [@@deriving typed_fields, fields, sexp_of]
 
@@ -288,7 +289,7 @@ let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t = functio
         (fun ~source item ->
            let%arr item = item
            and source = source in
-           Vdom.Node.div ~attr:source [ Vdom.Node.text item ])
+           Vdom.Node.div ~attrs:[ source ] [ Vdom.Node.text item ])
     in
     Form.Dynamic.with_default (Value.return [ "aaaaaa"; "bbbbbb"; "cccccc" ]) rank
   | Query_box ->
@@ -304,13 +305,12 @@ let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t = functio
         let%arr query = query
         and input = input in
         Map.filter_map input ~f:(fun data ->
-          if String.is_prefix ~prefix:query data
-          then Some (Vdom.Node.text data)
-          else None))
+          if String.is_prefix ~prefix:query data then Some (Vdom.Node.text data) else None))
       ()
   | Nested_record -> Nested_record.form
   | Color_picker -> E.Color_picker.hex ()
   | Int_blang -> Int_blang.form
+  | Password -> E.Password.string ()
 ;;
 
 let form =
@@ -341,7 +341,7 @@ let component =
     [ Vdom.Node.h1 [ Vdom.Node.text "Big Form" ]
     ; Form.view_as_vdom ~editable form
     ; Vdom.Node.button
-        ~attr:Vdom.Attr.(on_click (fun _ -> toggle_editable))
+        ~attrs:[ Vdom.Attr.(on_click (fun _ -> toggle_editable)) ]
         [ Vdom.Node.text "Toggle Editing" ]
     ; output
     ]

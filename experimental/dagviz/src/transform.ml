@@ -83,9 +83,7 @@ module Make (Name : Types.Name) = struct
     |> List.fold
          ~init:([], [], Name.Set.empty, curr_id)
          ~f:(fun (rows, down_row, missing_one_level_down, curr_id) row ->
-           let provided_here =
-             Name.Set.of_list (List.map row ~f:(fun { as_; _ } -> as_))
-           in
+           let provided_here = Name.Set.of_list (List.map row ~f:(fun { as_; _ } -> as_)) in
            let gaps = Set.diff missing_one_level_down provided_here in
            let missing_here =
              Set.union
@@ -166,8 +164,7 @@ module Make (Name : Types.Name) = struct
             n.Binding.bound.free_variables
             |> Set.to_list
             |> List.filter_map ~f:(fun free ->
-              List.findi prev ~f:(fun _ { Binding.as_; _ } ->
-                Name.equal as_ free)
+              List.findi prev ~f:(fun _ { Binding.as_; _ } -> Name.equal as_ free)
               |> Option.map ~f:(fun (i, _) -> Float.of_int i))
           in
           let pos =

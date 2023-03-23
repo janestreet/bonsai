@@ -10,8 +10,8 @@ let component =
   and focus_on_effect_attr, effect_to_focus = focus_on_effect
   and theme = theme in
   View.hbox
-    [ Vdom.Node.input ~attr:focus_on_activate_attr ()
-    ; Vdom.Node.input ~attr:focus_on_effect_attr ()
+    [ Vdom.Node.input ~attrs:[ focus_on_activate_attr ] ()
+    ; Vdom.Node.input ~attrs:[ focus_on_effect_attr ] ()
     ; View.button theme "click to focus second input" ~on_click:effect_to_focus
     ]
 ;;

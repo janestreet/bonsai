@@ -317,8 +317,7 @@ let create
              List.find_map path ~f:(fun element ->
                let%bind.Option dataset = Js.Opt.to_option element##.dataset in
                let%map.Option drag_target =
-                 Js.Opt.to_option
-                   (Js.Unsafe.get dataset ("dragTarget" ^ universe_suffix))
+                 Js.Opt.to_option (Js.Unsafe.get dataset ("dragTarget" ^ universe_suffix))
                in
                let drag_target = Js.to_string drag_target in
                Target.t_of_sexp (Sexp.of_string drag_target))
@@ -344,8 +343,7 @@ let create
         [ For_testing.Inject_hook.attr (fun action ->
             inject
               (action
-               |> For_testing.Action.to_internal_actions (module Source) (module Target)
-              ))
+               |> For_testing.Action.to_internal_actions (module Source) (module Target)))
         ; Vdom.Attr.create "data-dnd-name" name
         ]
   in
@@ -381,16 +379,17 @@ let dragged_element t ~f =
     let x = position.x - offset.x in
     let y = position.y - offset.y in
     Vdom.Node.div
-      ~attr:
-        Vdom.Attr.(
-          Style.dragged_element
-          @ style
-              Css_gen.(
-                width (`Px size.width)
-                @> height (`Px size.height)
-                @> create
-                     ~field:"transform"
-                     ~value:[%string "translateY(%{y#Int}px) translateX(%{x#Int}px)"]))
+      ~attrs:
+        [ Vdom.Attr.(
+            Style.dragged_element
+            @ style
+                Css_gen.(
+                  width (`Px size.width)
+                  @> height (`Px size.height)
+                  @> create
+                       ~field:"transform"
+                       ~value:[%string "translateY(%{y#Int}px) translateX(%{x#Int}px)"]))
+        ]
       [ item ]
 ;;
 

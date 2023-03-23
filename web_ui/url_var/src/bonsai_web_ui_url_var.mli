@@ -52,16 +52,20 @@ type 'a t
     fallback value which will be used if [S.parse_exn] throws. *)
 val create_exn : (module S with type t = 'a) -> fallback:'a -> 'a t
 
-val update : 'a t -> f:('a -> 'a) -> unit
-
 (** [set] updates the contents of the url-var as well as the current browser
     location. When [how] is `Push (which is the default), it will add
     a new entry to the top of the browser's history stack, but `Replace
     will cause it to replace the top entry of the history stack with the new URL. *)
 val set : ?how:[ `Push | `Replace ] -> 'a t -> 'a -> unit
 
+(** [update] is like [set], but gives you access to the previous value of the url right
+    before setting it.*)
+val update : ?how:[ `Push | `Replace ] -> 'a t -> f:('a -> 'a) -> unit
+
+val update_effect : ?how:[ `Push | `Replace ] -> 'a t -> f:('a -> 'a) -> unit Effect.t
 val get : 'a t -> 'a
 val value : 'a t -> 'a Value.t
+val incr : 'a t -> 'a Ui_incr.t
 
 (** By asking for the [Url_var.t]'s effect, you get a function that can be easily threaded
     through your components and triggered inside an action-application or inside of an

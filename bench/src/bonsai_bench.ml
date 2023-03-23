@@ -13,6 +13,7 @@ let to_core_bench_test (T { clock; name; component; get_inject; interaction } : 
         ~interaction
         ~filter_profiles:true
     in
+    Cleanup.register_driver runner;
     fun () -> Runner.run_interactions runner ~handle_profile:(Fn.const ())
   in
   Core_bench_js.Test.create_with_initialization ~name bonsai_bench_initialize_run

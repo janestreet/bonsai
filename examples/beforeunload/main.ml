@@ -4,8 +4,9 @@ open! Bonsai_web
 let component =
   Bonsai.const
     (Vdom.Node.div
-       ~attr:
-         (Vdom.Attr.Global_listeners.beforeunload (fun _ -> Effect.return `Show_warning))
+       ~attrs:
+         [ Vdom.Attr.Global_listeners.beforeunload (fun _ -> Effect.return `Show_warning)
+         ]
        [ Vdom.Node.text "attempting to leave this page will show a warning" ])
 ;;
 

@@ -255,10 +255,19 @@ module Dynamic : sig
   (** Unlike [validate] which requires the validation function to be available
       locally (and synchronous), [validate_via_effect] runs an effectful computation.
       The asynchrony makes this function interesting:
+
       When a value is in the midst of validated, the resultant form is resolved
-      to an Error.  *)
+      to an Error.
+
+      [one_at_a_time] (defaults to false) when set to true, will use
+      Bonsai.Effect_throttling.poll to make sure that only one instance of the effect
+
+      [debounce_ui] can be set to a timespan.  When set, the validation status won't
+      update until the input form value has been stable for the given span of time *)
   val validate_via_effect
     :  (module Bonsai.Model with type t = 'a)
+    -> ?one_at_a_time:bool
+    -> ?debounce_ui:Time_ns.Span.t
     -> 'a t Value.t
     -> f:('a -> unit Or_error.t Effect.t) Value.t
     -> 'a t Computation.t

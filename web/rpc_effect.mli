@@ -83,12 +83,26 @@ module Rpc : sig
     -> ('query -> 'response Or_error.t Effect.t) Computation.t
 
   (** A computation that periodically dispatches on an RPC and
-      keeps track of the most recent response. *)
+      keeps track of the most recent response.
+
+      [clear_when_deactivated] determines whether the most recent response should be
+      discarded when the component is deactivated. Default is true. *)
   val poll
     :  (module Bonsai.Model with type t = 'query)
     -> (module Bonsai.Model with type t = 'response)
     -> ?clear_when_deactivated:bool
     -> ('query, 'response) Rpc.Rpc.t
+    -> where_to_connect:Where_to_connect.t
+    -> every:Time_ns.Span.t
+    -> 'query Value.t
+    -> ('query, 'response) Poll_result.t Computation.t
+
+  (** Analagous to [poll] for babel RPCs. See [poll] for details. *)
+  val babel_poll
+    :  (module Bonsai.Model with type t = 'query)
+    -> (module Bonsai.Model with type t = 'response)
+    -> ?clear_when_deactivated:bool
+    -> ('query -> 'response Or_error.t Deferred.t) Babel.Caller.t
     -> where_to_connect:Where_to_connect.t
     -> every:Time_ns.Span.t
     -> 'query Value.t
@@ -112,6 +126,16 @@ module Rpc : sig
     -> (module Bonsai.Model with type t = 'response)
     -> ?clear_when_deactivated:bool
     -> ('query, 'response) Rpc.Rpc.t
+    -> where_to_connect:Where_to_connect.t
+    -> retry_interval:Time_ns.Span.t
+    -> 'query Value.t
+    -> ('query, 'response) Poll_result.t Computation.t
+
+  val babel_poll_until_ok
+    :  (module Bonsai.Model with type t = 'query)
+    -> (module Bonsai.Model with type t = 'response)
+    -> ?clear_when_deactivated:bool
+    -> ('query -> 'response Or_error.t Deferred.t) Babel.Caller.t
     -> where_to_connect:Where_to_connect.t
     -> retry_interval:Time_ns.Span.t
     -> 'query Value.t

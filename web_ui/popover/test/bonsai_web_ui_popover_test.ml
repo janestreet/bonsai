@@ -171,7 +171,7 @@ let%expect_test "Popover changing directions" =
 
 let button ~on_click s =
   Vdom.Node.button
-    ~attr:(Vdom.Attr.many [ Vdom.Attr.id s; Vdom.Attr.on_click (fun _ -> on_click) ])
+    ~attrs:[ Vdom.Attr.id s; Vdom.Attr.on_click (fun _ -> on_click) ]
     [ Vdom.Node.text s ]
 ;;
 
@@ -247,9 +247,7 @@ let%expect_test "Opening from base and closing from dialog" =
         ~popover:(fun ~close ->
           let%arr close = close in
           Vdom.Node.button
-            ~attr:
-              (Vdom.Attr.many
-                 [ Vdom.Attr.id "close"; Vdom.Attr.on_click (fun _ -> close) ])
+            ~attrs:[ Vdom.Attr.id "close"; Vdom.Attr.on_click (fun _ -> close) ]
             [ Vdom.Node.text "close" ])
         ()
     in
@@ -260,8 +258,7 @@ let%expect_test "Opening from base and closing from dialog" =
     in
     ( wrap
         (Vdom.Node.button
-           ~attr:
-             (Vdom.Attr.many [ Vdom.Attr.id "open"; Vdom.Attr.on_click (fun _ -> open_) ])
+           ~attrs:[ Vdom.Attr.id "open"; Vdom.Attr.on_click (fun _ -> open_) ]
            [ Vdom.Node.text "open" ])
     , popover )
   in

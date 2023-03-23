@@ -73,10 +73,7 @@ let make_vdom_generic
           |> Virtual_dom_test_helpers.Node_helpers.unsafe_convert_exn
           |> Virtual_dom_test_helpers.Node_helpers.to_string_html)
       ()
-  : (module S_vdom
-      with type input = input
-       and type action = action
-       and type extra = extra)
+  : (module S_vdom with type input = input and type action = action and type extra = extra)
   =
   let open Virtual_dom_test_helpers in
   let (module H) =

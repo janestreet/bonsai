@@ -612,19 +612,18 @@ let svg ?size ?stroke ?fill ?stroke_width ?(extra_attrs = []) (t : t) =
   let size = Css_gen.Length.to_string_css size in
   Vdom.Node.inner_html_svg
     ~tag:"svg"
-    ~attr:
-      (A.many
-         ([ A.string_property "width" size
-          ; A.string_property "height" size
-          ; A.string_property "viewBox" "0 0 24 24"
-          ; A.string_property "fill" fill_attr
-          ; A.string_property "stroke" (Css_gen.Color.to_string_css stroke)
-          ; A.string_property "stroke-width" (Css_gen.Length.to_string_css stroke_width)
-          ; A.string_property "stroke-linecap" "round"
-          ; A.string_property "stroke-linejoin" "round"
-          ; A.classes [ "feather"; specific_class ]
-          ]
-          @ extra_attrs))
+    ~attrs:
+      ([ A.string_property "width" size
+       ; A.string_property "height" size
+       ; A.string_property "viewBox" "0 0 24 24"
+       ; A.string_property "fill" fill_attr
+       ; A.string_property "stroke" (Css_gen.Color.to_string_css stroke)
+       ; A.string_property "stroke-width" (Css_gen.Length.to_string_css stroke_width)
+       ; A.string_property "stroke-linecap" "round"
+       ; A.string_property "stroke-linejoin" "round"
+       ; A.classes [ "feather"; specific_class ]
+       ]
+       @ extra_attrs)
     ~this_html_is_sanitized_and_is_totally_safe_trust_me:(path t)
     ()
 ;;

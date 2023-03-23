@@ -10,7 +10,9 @@ module Input = struct
     ; attr : Vdom.Attr.t option
     }
 
-  let to_empty_vdom { tag; attr; children = _ } = Vdom.Node.create tag ?attr []
+  let to_empty_vdom { tag; attr; children = _ } =
+    Vdom.Node.create tag ?attrs:(Option.map attr ~f:(fun attr -> [ attr ])) []
+  ;;
 end
 
 let diff_patch ~prev ~next ~element =
@@ -218,7 +220,10 @@ module Widget (K : Comparator.S) = struct
   let to_vdom_for_testing =
     `Custom
       (fun { Input.children; attr; tag } ->
-         Vdom.Node.create tag ?attr (Map.data children))
+         Vdom.Node.create
+           tag
+           ?attrs:(Option.map attr ~f:(fun attr -> [ attr ]))
+           (Map.data children))
   ;;
 
   module Input = struct
@@ -237,7 +242,7 @@ end
 module Instancer : sig
   val get : map:('k, Vdom.Node.t, 'cmp) Map.t -> ('k, 'cmp) Input.t -> Vdom.Node.t
 end = struct
-  module Weak_map = Bonsai_web_ui_element_size_hooks.Expert.Weak_map
+  module Weak_map = Jsoo_weak_collections.Weak_map
 
   let instances : (Obj.t, Obj.t) Weak_map.t = Weak_map.create ()
 

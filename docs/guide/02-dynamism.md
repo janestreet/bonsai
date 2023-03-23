@@ -113,7 +113,7 @@ let (counter_button : Vdom.Node.t Computation.t) =
   Vdom.Node.div
     [ Vdom.Node.text [%string "Counter value: %{count#Int}"]
     ; Vdom.Node.button
-        ~attr:(Vdom.Attr.on_click (fun _ -> set_count (count + 1)))
+        ~attrs:[ Vdom.Attr.on_click (fun _ -> set_count (count + 1)) ]
         [ Vdom.Node.text "increment count" ]
     ]
 ;;

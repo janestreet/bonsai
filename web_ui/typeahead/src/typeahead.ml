@@ -78,30 +78,31 @@ let input
   Vdom.Node.lazy_
     (lazy
       (Vdom.Node.input
-         ~attr:
-           (Vdom.Attr.many_without_merge
-              (extra_attrs
-               @ [ Vdom.Attr.type_           "text"
-                 ; Vdom.Attr.create          "list" id
-                 ; Vdom.Attr.placeholder     placeholder
-                 (* Both Attr.value and Attr.string_property value must be set. The former only affects
-                    initial control state while the latter affects the control state whilst the form is
-                    being used. *)
-                 ; Vdom.Attr.value           value
-                 ; Vdom.Attr.on_focus        (fun _ -> set_focused true)
-                 ; Vdom.Attr.on_blur         (fun _ -> set_focused false)
-                 ; Vdom.Attr.string_property "value" value
-                 ; Vdom.Attr.on_input        (fun _ -> on_input)
-                 ; Vdom.Attr.on_change       (fun _ input ->
-                     let maybe_t =
-                       Search.find
-                         ~to_string
-                         ~needle:input
-                         ~haystack:all_options
-                         ~handle_unknown_option
-                     in
-                     on_change maybe_t input)
-                 ]))
+         ~attrs:
+           [ Vdom.Attr.many_without_merge
+               (extra_attrs
+                @ [ Vdom.Attr.type_           "text"
+                  ; Vdom.Attr.create          "list" id
+                  ; Vdom.Attr.placeholder     placeholder
+                  (* Both Attr.value and Attr.string_property value must be set. The former only affects
+                     initial control state while the latter affects the control state whilst the form is
+                     being used. *)
+                  ; Vdom.Attr.value           value
+                  ; Vdom.Attr.on_focus        (fun _ -> set_focused true)
+                  ; Vdom.Attr.on_blur         (fun _ -> set_focused false)
+                  ; Vdom.Attr.string_property "value" value
+                  ; Vdom.Attr.on_input        (fun _ -> on_input)
+                  ; Vdom.Attr.on_change       (fun _ input ->
+                      let maybe_t =
+                        Search.find
+                          ~to_string
+                          ~needle:input
+                          ~haystack:all_options
+                          ~handle_unknown_option
+                      in
+                      on_change maybe_t input)
+                  ])
+           ]
          ()))
 ;;
 
@@ -110,7 +111,7 @@ let datalist ?filter_options_by ~id ~all_options ~to_string ~to_option_descripti
     (lazy
       (let option_of_t t =
          Vdom.Node.option
-           ~attr:(Vdom.Attr.value (to_string t))
+           ~attrs:[ Vdom.Attr.value (to_string t) ]
            [ Vdom.Node.text (to_option_description t) ]
        in
        let all_options =
@@ -120,7 +121,7 @@ let datalist ?filter_options_by ~id ~all_options ~to_string ~to_option_descripti
            List.filter_map all_options ~f:(fun item ->
              if filter_options_by item then Some (option_of_t item) else None)
        in
-       Vdom.Node.datalist ~attr:(Vdom.Attr.id id) all_options))
+       Vdom.Node.datalist ~attrs:[ Vdom.Attr.id id ] all_options))
 ;;
 
 let show_datalist ~focused ~show_datalist_in_test =

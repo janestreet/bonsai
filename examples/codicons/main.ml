@@ -134,12 +134,12 @@ module Icon_grid = struct
     | `Show_icon ->
       Vdom.(
         Node.button
-          ~attr:(Vdom.Attr.combine on_click style)
+          ~attrs:[ Vdom.Attr.combine on_click style ]
           [ Codicons.svg icon; Node.p [ Node.text name ] ])
     | `Show_copied ->
       Vdom.(
         Node.div
-          ~attr:style
+          ~attrs:[ style ]
           [ Codicons.svg Copy; Node.p [ Node.text [%string "Copied %{variant_name}!"] ] ])
   ;;
 
@@ -149,7 +149,7 @@ module Icon_grid = struct
     in
     let%sub cards = Bonsai.assoc (module String) icons ~f:(fun _ -> icon_card) in
     let%arr cards = cards in
-    Vdom.Node.div ~attr:Style.grid (Map.data cards)
+    Vdom.Node.div ~attrs:[ Style.grid ] (Map.data cards)
   ;;
 end
 
@@ -175,7 +175,7 @@ module Search = struct
     in
     let view =
       Vdom.Node.div
-        ~attr:Style.search
+        ~attrs:[ Style.search ]
         (filter_icon :: (Form.view input |> Form.View.to_vdom_plain))
     in
     filtered_icon_list, view
@@ -188,7 +188,7 @@ let app =
   let%sub grid = Icon_grid.component icons in
   let%arr grid = grid
   and _, search = search in
-  Vdom.Node.div ~attr:Style.main [ search; grid ]
+  Vdom.Node.div ~attrs:[ Style.main ] [ search; grid ]
 ;;
 
 let () = Bonsai_web.Start.start app

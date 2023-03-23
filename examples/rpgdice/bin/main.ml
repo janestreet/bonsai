@@ -27,7 +27,7 @@ let input_kind ~input_method =
 let app =
   let build_result ~input ~roller ~input_method_selector =
     Vdom.Node.div
-      [ Vdom.Node.div ~attr:(Vdom.Attr.id "input") [ input_method_selector; input ]
+      [ Vdom.Node.div ~attrs:[ Vdom.Attr.id "input" ] [ input_method_selector; input ]
       ; roller
       ]
   in

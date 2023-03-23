@@ -439,8 +439,8 @@ module Parser = struct
           | With_remaining_path { needed_path; _ } ->
             Some (prefix @ List.map needed_path ~f:(fun x -> `Match x), `Stop_remaining_path)
           | Record { record_module; _ } ->
-            let module M = (val record_module : Record.Cached_s
-                            with type Typed_field.derived_on = a)
+            let module M =
+              (val record_module : Record.Cached_s with type Typed_field.derived_on = a)
             in
             List.fold M.path_order ~init:None ~f:(fun acc { f = T f } ->
               match acc with
@@ -565,14 +565,14 @@ module Parser = struct
     | Project { input; _ } -> needs_to_appear_on_path_order input
     | Optional_query_fields { t } -> needs_to_appear_on_path_order t
     | Record { record_module; _ } ->
-      let module M = (val record_module : Record.Cached_s
-                      with type Typed_field.derived_on = a)
+      let module M =
+        (val record_module : Record.Cached_s with type Typed_field.derived_on = a)
       in
       List.exists M.Typed_field.Packed.all ~f:(fun { f = T f } ->
         needs_to_appear_on_path_order (M.parser_for_field f))
     | Variant { variant_module; _ } ->
-      let module M = (val variant_module : Variant.Cached_s
-                      with type Typed_variant.derived_on = a)
+      let module M =
+        (val variant_module : Variant.Cached_s with type Typed_variant.derived_on = a)
       in
       List.exists M.Typed_variant.Packed.all ~f:(fun { f = T v } ->
         needs_to_appear_on_path_order (M.parser_for_variant v))
@@ -1382,8 +1382,8 @@ module Parser = struct
       | With_remaining_path { needed_path; t } ->
         With_remaining_path { needed_path; t = of_parser t }
       | Record { record_module; override_namespace } ->
-        let module M = (val record_module : Record.Cached_s
-                        with type Typed_field.derived_on = a)
+        let module M =
+          (val record_module : Record.Cached_s with type Typed_field.derived_on = a)
         in
         let label_declarations =
           List.fold
@@ -1400,8 +1400,8 @@ module Parser = struct
         in
         Record { override_namespace; label_declarations; path_order }
       | Variant { variant_module; override_namespace } ->
-        let module M = (val variant_module : Variant.Cached_s
-                        with type Typed_variant.derived_on = a)
+        let module M =
+          (val variant_module : Variant.Cached_s with type Typed_variant.derived_on = a)
         in
         let constructor_declarations =
           List.fold
@@ -1724,16 +1724,16 @@ module Parser = struct
     | With_prefix { t; _ } -> check_that_path_orders_are_ok t
     | With_remaining_path { t; _ } -> check_that_path_orders_are_ok t
     | Record { record_module; _ } ->
-      let module M = (val record_module : Record.Cached_s
-                      with type Typed_field.derived_on = a)
+      let module M =
+        (val record_module : Record.Cached_s with type Typed_field.derived_on = a)
       in
       Eval.raise_if_path_order_has_duplicates (module M);
       Eval.raise_if_path_field_does_not_have_order (module M);
       List.iter M.Typed_field.Packed.all ~f:(fun { f = T f } ->
         check_that_path_orders_are_ok (M.parser_for_field f))
     | Variant { variant_module; _ } ->
-      let module M = (val variant_module : Variant.Cached_s
-                      with type Typed_variant.derived_on = a)
+      let module M =
+        (val variant_module : Variant.Cached_s with type Typed_variant.derived_on = a)
       in
       List.iter M.Typed_variant.Packed.all ~f:(fun { f = T v } ->
         check_that_path_orders_are_ok (M.parser_for_variant v))
@@ -1772,16 +1772,16 @@ module Parser = struct
         if not (List.is_empty needed_path) then check_more_path_parsing_allowed ~allowed;
         check_that_with_remaining_path_has_no_path_parsers_after_it ~allowed:false t
       | Record { record_module; _ } ->
-        let module M = (val record_module : Record.Cached_s
-                        with type Typed_field.derived_on = a)
+        let module M =
+          (val record_module : Record.Cached_s with type Typed_field.derived_on = a)
         in
         List.iter M.Typed_field.Packed.all ~f:(fun { f = T f } ->
           check_that_with_remaining_path_has_no_path_parsers_after_it
             ~allowed
             (M.parser_for_field f))
       | Variant { variant_module; _ } ->
-        let module M = (val variant_module : Variant.Cached_s
-                        with type Typed_variant.derived_on = a)
+        let module M =
+          (val variant_module : Variant.Cached_s with type Typed_variant.derived_on = a)
         in
         List.iter M.Typed_variant.Packed.all ~f:(fun { f = T v } ->
           check_that_with_remaining_path_has_no_path_parsers_after_it
@@ -1806,8 +1806,8 @@ module Parser = struct
       | Optional_query_fields { t; _ } ->
         check_that_there_are_no_ambiguous_parsers_at_any_level t
       | Variant { variant_module; _ } ->
-        let module M = (val variant_module : Variant.Cached_s
-                        with type Typed_variant.derived_on = a)
+        let module M =
+          (val variant_module : Variant.Cached_s with type Typed_variant.derived_on = a)
         in
         let all_patterns =
           List.map M.Typed_variant.Packed.all ~f:(fun { f = T v } ->

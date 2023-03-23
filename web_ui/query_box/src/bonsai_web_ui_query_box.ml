@@ -89,99 +89,100 @@ let create
       ~default_model:
         { Model.query = initial_query; suggestion_list_state = Closed; offset = 0 }
       ~apply_action:
-        (fun ~inject:_ ~schedule_event:_ (_, _, items, max_visible_items) model action ->
-           let suggestion_list_state =
-             (* We normalize which item is selected in case the list has changed
-                since the last action. Normalization just means setting the
-                selected key to the closest thing that actually exists. *)
-             match model.suggestion_list_state with
-             | Selected key ->
-               select_key
-                 ~first_try:(Map.closest_key items `Less_or_equal_to key)
-                 ~then_try:(lazy (Map.closest_key items `Greater_or_equal_to key))
-                 ~else_use:First_item
-             | First_item -> First_item
-             | Closed -> Closed
-           in
-           let next_suggestion_list_state () =
-             match suggestion_list_state with
-             | Selected key ->
-               select_key
-                 ~first_try:(Map.closest_key items `Greater_than key)
-                 ~then_try:(lazy (Map.min_elt items))
-                 ~else_use:(Selected key)
-             | First_item ->
-               (match Map.min_elt items with
-                | None -> First_item
-                | Some (first_key, _) ->
-                  (match Map.closest_key items `Greater_than first_key with
-                   | None -> Selected first_key
-                   | Some (second_key, _) -> Selected second_key))
-             | Closed -> First_item
-           in
-           let prev_suggestion_list_state () =
-             match model.suggestion_list_state with
-             | Selected key ->
-               select_key
-                 ~first_try:(Map.closest_key items `Less_than key)
-                 ~then_try:(lazy (Map.max_elt items))
-                 ~else_use:(Selected key)
-             | First_item | Closed ->
-               (match Map.max_elt items with
-                | None -> First_item
-                | Some (last_key, _) -> Selected last_key)
-           in
-           match action with
-           | Action.Set_query query ->
-             let suggestion_list_state =
-               match suggestion_list_state with
-               | Selected key -> Model.Selected key
-               | First_item | Closed -> First_item
-             in
-             let offset = model.offset in
-             { Model.query; suggestion_list_state; offset }
-           | Open_suggestions -> { model with suggestion_list_state = First_item }
-           | Close_suggestions -> { model with suggestion_list_state = Closed }
-           | Move_next ->
-             let suggestion_list_state = next_suggestion_list_state () in
-             let offset =
-               let comparison =
-                 Model.compare_suggestion_list_state
-                   (Map.comparator items).compare
-                   model.suggestion_list_state
-                   suggestion_list_state
-               in
-               if comparison = 0
-               then model.offset
-               else if comparison < 0
-               then min (max_visible_items - 1) (model.offset + 1)
-               else 0
-             in
-             { model with suggestion_list_state; offset }
-           | Move_prev ->
-             let suggestion_list_state = prev_suggestion_list_state () in
-             let offset =
-               let comparison =
-                 Model.compare_suggestion_list_state
-                   (Map.comparator items).compare
-                   model.suggestion_list_state
-                   suggestion_list_state
-               in
-               if comparison = 0
-               then model.offset
-               else if comparison < 0
-               then max_visible_items - 1
-               else max 0 (model.offset - 1)
-             in
-             { model with suggestion_list_state; offset }
-           | Move_to { key; offset } ->
-             if Map.mem items key
-             then { model with suggestion_list_state = Selected key; offset }
-             else model
-           | Move_next_with_fixed_offset ->
-             { model with suggestion_list_state = next_suggestion_list_state () }
-           | Move_prev_with_fixed_offset ->
-             { model with suggestion_list_state = prev_suggestion_list_state () })
+        (fun
+          ~inject:_ ~schedule_event:_ (_, _, items, max_visible_items) model action ->
+          let suggestion_list_state =
+            (* We normalize which item is selected in case the list has changed
+               since the last action. Normalization just means setting the
+               selected key to the closest thing that actually exists. *)
+            match model.suggestion_list_state with
+            | Selected key ->
+              select_key
+                ~first_try:(Map.closest_key items `Less_or_equal_to key)
+                ~then_try:(lazy (Map.closest_key items `Greater_or_equal_to key))
+                ~else_use:First_item
+            | First_item -> First_item
+            | Closed -> Closed
+          in
+          let next_suggestion_list_state () =
+            match suggestion_list_state with
+            | Selected key ->
+              select_key
+                ~first_try:(Map.closest_key items `Greater_than key)
+                ~then_try:(lazy (Map.min_elt items))
+                ~else_use:(Selected key)
+            | First_item ->
+              (match Map.min_elt items with
+               | None -> First_item
+               | Some (first_key, _) ->
+                 (match Map.closest_key items `Greater_than first_key with
+                  | None -> Selected first_key
+                  | Some (second_key, _) -> Selected second_key))
+            | Closed -> First_item
+          in
+          let prev_suggestion_list_state () =
+            match model.suggestion_list_state with
+            | Selected key ->
+              select_key
+                ~first_try:(Map.closest_key items `Less_than key)
+                ~then_try:(lazy (Map.max_elt items))
+                ~else_use:(Selected key)
+            | First_item | Closed ->
+              (match Map.max_elt items with
+               | None -> First_item
+               | Some (last_key, _) -> Selected last_key)
+          in
+          match action with
+          | Action.Set_query query ->
+            let suggestion_list_state =
+              match suggestion_list_state with
+              | Selected key -> Model.Selected key
+              | First_item | Closed -> First_item
+            in
+            let offset = model.offset in
+            { Model.query; suggestion_list_state; offset }
+          | Open_suggestions -> { model with suggestion_list_state = First_item }
+          | Close_suggestions -> { model with suggestion_list_state = Closed }
+          | Move_next ->
+            let suggestion_list_state = next_suggestion_list_state () in
+            let offset =
+              let comparison =
+                Model.compare_suggestion_list_state
+                  (Map.comparator items).compare
+                  model.suggestion_list_state
+                  suggestion_list_state
+              in
+              if comparison = 0
+              then model.offset
+              else if comparison < 0
+              then min (max_visible_items - 1) (model.offset + 1)
+              else 0
+            in
+            { model with suggestion_list_state; offset }
+          | Move_prev ->
+            let suggestion_list_state = prev_suggestion_list_state () in
+            let offset =
+              let comparison =
+                Model.compare_suggestion_list_state
+                  (Map.comparator items).compare
+                  model.suggestion_list_state
+                  suggestion_list_state
+              in
+              if comparison = 0
+              then model.offset
+              else if comparison < 0
+              then max_visible_items - 1
+              else max 0 (model.offset - 1)
+            in
+            { model with suggestion_list_state; offset }
+          | Move_to { key; offset } ->
+            if Map.mem items key
+            then { model with suggestion_list_state = Selected key; offset }
+            else model
+          | Move_next_with_fixed_offset ->
+            { model with suggestion_list_state = next_suggestion_list_state () }
+          | Move_prev_with_fixed_offset ->
+            { model with suggestion_list_state = prev_suggestion_list_state () })
       ~f:(fun model inject ->
         let%sub { Model.query; _ } = return model in
         let%sub items = f query in
@@ -298,7 +299,7 @@ let create
                 on_select key)
             ]
         in
-        Node.div ~attr [ item ])
+        Node.div ~attrs:[ attr ] [ item ])
   in
   let%sub handle_keydown =
     let%arr inject = inject
@@ -383,17 +384,16 @@ let create
   in
   let input =
     Node.input
-      ~attr:
-        (Attr.many
-           [ Attr.id input_id
-           ; Attr.type_ "text"
-           ; Attr.string_property "value" query
-           ; Attr.on_keydown handle_keydown
-           ; Attr.on_input (fun _ query -> inject (Set_query query))
-           ; Attr.on_focus (fun _ -> inject Open_suggestions)
-           ; on_blur
-           ; extra_input_attr
-           ])
+      ~attrs:
+        [ Attr.id input_id
+        ; Attr.type_ "text"
+        ; Attr.string_property "value" query
+        ; Attr.on_keydown handle_keydown
+        ; Attr.on_input (fun _ query -> inject (Set_query query))
+        ; Attr.on_focus (fun _ -> inject Open_suggestions)
+        ; on_blur
+        ; extra_input_attr
+        ]
       ()
   in
   let suggestions =
@@ -408,37 +408,36 @@ let create
       let attr =
         Attr.(suggestions_position @ position_above_or_below @ extra_list_container_attr)
       in
-      Node.div ~attr directed_items
+      Node.div ~attrs:[ attr ] directed_items
   in
   let suggestions_container =
     Node.div
-      ~attr:
-        (Attr.many
-           [ Attr.create "data-test" "query-box-item-container"
-           ; Attr.id suggestion_container_id
-           ; Attr.tabindex (-1)
-           ; Attr.on_wheel
-               (let open Js_of_ocaml in
-                fun (ev : Js_of_ocaml_patches.Dom_html.wheelEvent Js.t) ->
-                  let comparison =
-                    match expand_direction with
-                    | Down -> Float.( < ) ev##.deltaY 0.0
-                    | Up -> Float.( > ) ev##.deltaY 0.0
-                  in
-                  Effect.Many
-                    [ (if comparison
-                       then inject Move_prev_with_fixed_offset
-                       else inject Move_next_with_fixed_offset)
-                    ; Effect.Prevent_default
-                    ])
-           ; on_blur
-           ; container_position
-           ])
+      ~attrs:
+        [ Attr.create "data-test" "query-box-item-container"
+        ; Attr.id suggestion_container_id
+        ; Attr.tabindex (-1)
+        ; Attr.on_wheel
+            (let open Js_of_ocaml in
+             fun (ev : Js_of_ocaml_patches.Dom_html.wheelEvent Js.t) ->
+               let comparison =
+                 match expand_direction with
+                 | Down -> Float.( < ) ev##.deltaY 0.0
+                 | Up -> Float.( > ) ev##.deltaY 0.0
+               in
+               Effect.Many
+                 [ (if comparison
+                    then inject Move_prev_with_fixed_offset
+                    else inject Move_next_with_fixed_offset)
+                 ; Effect.Prevent_default
+                 ])
+        ; on_blur
+        ; container_position
+        ]
       [ suggestions ]
   in
   let view =
     Node.div
-      ~attr:extra_attr
+      ~attrs:[ extra_attr ]
       (match expand_direction with
        | Up -> [ suggestions_container; input ]
        | Down -> [ input; suggestions_container ])
@@ -478,10 +477,7 @@ let stringable
         Incr_map.filter_mapi' input ~f:(fun ~key ~data:string ->
           let%map.Incr string = string
           and query = query in
-          if Fuzzy_match.is_match
-               ~char_equal:Char.Caseless.equal
-               ~pattern:query
-               string
+          if Fuzzy_match.is_match ~char_equal:Char.Caseless.equal ~pattern:query string
           then Some (to_view key string)
           else None)))
     ()
@@ -547,8 +543,7 @@ module Collate_map_with_score = struct
       let rec trim_queries qs =
         match qs with
         | [] -> []
-        | q :: qs ->
-          if query_is_as_strict query ~as_:q then q :: qs else trim_queries qs
+        | q :: qs -> if query_is_as_strict query ~as_:q then q :: qs else trim_queries qs
       in
       previous_queries := query :: trim_queries !previous_queries;
       let num_queries = List.length !previous_queries in

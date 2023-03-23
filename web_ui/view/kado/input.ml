@@ -17,20 +17,18 @@ let generic_input ~constants ~input_attr ~container_attr ~title f =
       ()
   in
   Vdom.Node.fieldset
-    ~attr:(Vdom.Attr.many [ Style.container; container_attr; colors ])
+    ~attrs:[ Vdom.Attr.many [ Style.container; container_attr; colors ] ]
     [ title; f input_attr ]
 ;;
 
 let dropdown ~constants ~input_attr ~container_attr ~title ~on_change ~options =
   generic_input ~constants ~input_attr ~container_attr ~title (fun attr ->
     Vdom.Node.select
-      ~attr:
-        (Vdom.Attr.many [ attr; Vdom.Attr.on_change (fun _ value -> on_change value) ])
+      ~attrs:
+        [ Vdom.Attr.many [ attr; Vdom.Attr.on_change (fun _ value -> on_change value) ] ]
       (List.map options ~f:(fun (value, selected, view) ->
          Vdom.Node.option
-           ~attr:
-             (Vdom.Attr.many
-                [ Vdom.Attr.bool_property "selected" selected; Vdom.Attr.value value ])
+           ~attrs:[ Vdom.Attr.bool_property "selected" selected; Vdom.Attr.value value ]
            [ view ])))
 ;;
 
@@ -41,7 +39,7 @@ let extend ~input_attr ~on_change =
 let textbox ~constants ~input_attr ~container_attr ~title ~on_change ~value =
   let input_attr = extend ~input_attr ~on_change in
   generic_input ~constants ~input_attr ~container_attr ~title (fun attr ->
-    Vdom.Node.input ~attr:(Vdom.Attr.many [ Vdom.Attr.value_prop value; attr ]) ())
+    Vdom.Node.input ~attrs:[ Vdom.Attr.value_prop value; attr ] ())
 ;;
 
 let date ~constants ~input_attr ~container_attr ~title ~on_change ~value =
@@ -77,19 +75,19 @@ let generic_button_box ~constants ~input_attr ~container_attr ~label ~on_change 
       ]
   in
   Vdom.Node.label
-    ~attr:(Vdom.Attr.many [ Style.button_box_container; container_attr; colors ])
+    ~attrs:[ Style.button_box_container; container_attr; colors ]
     [ f input_attr; label ]
 ;;
 
 let checkbox =
   generic_button_box (fun attr ->
-    Vdom.Node.input ~attr:(Vdom.Attr.many [ attr; Vdom.Attr.type_ "checkbox" ]) ())
+    Vdom.Node.input ~attrs:[ attr; Vdom.Attr.type_ "checkbox" ] ())
 ;;
 
 (* radio-buttons currently look bad, disable for now *)
 let _radiobutton =
   generic_button_box (fun attr ->
-    Vdom.Node.input ~attr:(Vdom.Attr.many [ attr; Vdom.Attr.type_ "radio" ]) ())
+    Vdom.Node.input ~attrs:[ attr; Vdom.Attr.type_ "radio" ] ())
 ;;
 
-let button_vbox children = Vdom.Node.div ~attr:Checkbox_style.vbox children
+let button_vbox children = Vdom.Node.div ~attrs:[ Checkbox_style.vbox ] children

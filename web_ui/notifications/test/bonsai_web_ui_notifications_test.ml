@@ -239,13 +239,9 @@ let%test_module "generic notification test" =
             let%arr element = element
             and close = close in
             Vdom.Node.div
-              ~attr:
-                (Vdom.Attr.many
-                   [ Notification_type.to_attr element
-                   ; Vdom.Attr.on_click (fun _ -> close)
-                   ])
-              [ Vdom.Node.sexp_for_debugging [%message (element : Notification_type.t)]
-              ])
+              ~attrs:
+                [ Notification_type.to_attr element; Vdom.Attr.on_click (fun _ -> close) ]
+              [ Vdom.Node.sexp_for_debugging [%message (element : Notification_type.t)] ])
         in
         let%arr vdom = vdom
         and notifications = notifications in
@@ -407,13 +403,9 @@ let%test_module "generic notification test" =
             let%arr element = element
             and close = close in
             Vdom.Node.div
-              ~attr:
-                (Vdom.Attr.many
-                   [ Notification_type.to_attr element
-                   ; Vdom.Attr.on_click (fun _ -> close)
-                   ])
-              [ Vdom.Node.sexp_for_debugging [%message (element : Notification_type.t)]
-              ])
+              ~attrs:
+                [ Notification_type.to_attr element; Vdom.Attr.on_click (fun _ -> close) ]
+              [ Vdom.Node.sexp_for_debugging [%message (element : Notification_type.t)] ])
         in
         let%arr vdom = vdom
         and notifications = notifications in
@@ -513,9 +505,8 @@ let%test_module "generic notification test" =
           Notifications.render notifications ~f:(fun ~close:_ element ->
             let%arr element = element in
             Vdom.Node.div
-              ~attr:(Notification_type.to_attr element)
-              [ Vdom.Node.sexp_for_debugging [%message (element : Notification_type.t)]
-              ])
+              ~attrs:[ Notification_type.to_attr element ]
+              [ Vdom.Node.sexp_for_debugging [%message (element : Notification_type.t)] ])
         in
         let%arr vdom = vdom
         and notifications = notifications in

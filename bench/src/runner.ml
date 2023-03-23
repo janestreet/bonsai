@@ -1,12 +1,10 @@
 open! Core
 open Bonsai
-open Bonsai_test
-open Bonsai_test.Arrow
 
 type t =
   | T :
-      { driver : (unit, 'r) Driver.t
-      ; clock : Incr.Clock.t
+      { driver : 'r Bonsai_driver.t
+      ; clock : Ui_incr.Clock.t
       ; inject_action : 'a -> unit Effect.t
       ; interactions : 'a Interaction.t array
       }
@@ -17,11 +15,11 @@ type wrap_create = { f : 'a. (unit -> 'a) -> 'a } [@@unboxed]
 let handle_interaction ~driver ~clock ~inject_action ~handle_profile interaction =
   match (interaction : _ Interaction.t) with
   | Profile name -> handle_profile name
-  | Stabilize -> Driver.flush driver
-  | Reset_model -> Driver.reset_model_to_default driver
+  | Stabilize -> Bonsai_driver.flush driver
+  | Reset_model -> Bonsai_driver.Expert.reset_model_to_default driver
   | Change_input (var, value) -> Var.set var value
-  | Inject action -> Driver.schedule_event driver (inject_action action)
-  | Advance_clock_by span -> Incr.Clock.advance_clock_by clock span
+  | Inject action -> Bonsai_driver.schedule_event driver (inject_action action)
+  | Advance_clock_by span -> Ui_incr.Clock.advance_clock_by clock span
   | Many _ ->
     (* We flatten the interaction structure prior to running the benchmark. *)
     assert false
@@ -54,14 +52,11 @@ let initialize
       ~get_inject
       ~interaction
   =
-  let component (_ : _ Value.t) = component in
-  let driver =
-    wrap_driver_creation.f (fun () -> Driver.create ~clock ~initial_input:() component)
-  in
+  let driver = wrap_driver_creation.f (fun () -> Bonsai_driver.create ~clock component) in
   let inject_action action =
     (* Calling Driver.result every time that inject_action is called
        is important because the value can change during stabilization *)
-    let result = Driver.result driver in
+    let result = Bonsai_driver.result driver in
     (get_inject result) action
   in
   let interactions =
@@ -88,4 +83,4 @@ let run_interactions (T { driver; clock; inject_action; interactions }) ~handle_
     ~f:(handle_interaction ~driver ~clock ~inject_action ~handle_profile)
 ;;
 
-let invalidate_observers (T t) = Driver.invalidate_observers t.driver
+let invalidate_observers (T t) = Bonsai_driver.Expert.invalidate_observers t.driver

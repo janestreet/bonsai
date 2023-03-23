@@ -143,9 +143,10 @@ let kanban_column ~extra_dnd ~dnd ~items ~column ~title =
         in
         Node.div
           ~key:(Item_id.to_string item_id)
-          ~attr:
-            Vdom.Attr.(
-              source ~id:item_id @ Style.kanban_item @ extra @ extra_source ~id:item_id)
+          ~attrs:
+            [ Vdom.Attr.(
+                source ~id:item_id @ Style.kanban_item @ extra @ extra_source ~id:item_id)
+            ]
           [ Node.text contents ])
   in
   let%arr items = items
@@ -164,13 +165,14 @@ let kanban_column ~extra_dnd ~dnd ~items ~column ~title =
     | Finished -> Style.kanban_column_finished
   in
   Node.div
-    ~attr:
-      Vdom.Attr.(
-        drop_target ~id:column
-        @ Style.kanban_column
-        @ column_class
-        @ if is_active then Style.kanban_column_active else empty)
-    [ Node.h3 ~attr:Style.centered [ Node.text title ]; Node.div (Map.data items) ]
+    ~attrs:
+      [ Vdom.Attr.(
+          drop_target ~id:column
+          @ Style.kanban_column
+          @ column_class
+          @ if is_active then Style.kanban_column_active else empty)
+      ]
+    [ Node.h3 ~attrs:[ Style.centered ] [ Node.text title ]; Node.div (Map.data items) ]
 ;;
 
 let board ?extra_dnd name =
@@ -191,9 +193,10 @@ let board ?extra_dnd name =
          |> List.mapi ~f:(fun i item -> Item_id.of_int i, item)
          |> Map.of_alist_exn (module Item_id))
       ~apply_action:
-        (fun ~inject:_ ~schedule_event:_ model (Move { item_id; new_column }) ->
-           let change_col (contents, _) ~new_column = contents, new_column in
-           Map.change model item_id ~f:(Option.map ~f:(change_col ~new_column)))
+        (fun
+          ~inject:_ ~schedule_event:_ model (Move { item_id; new_column }) ->
+          let change_col (contents, _) ~new_column = contents, new_column in
+          Map.change model item_id ~f:(Option.map ~f:(change_col ~new_column)))
   in
   let%sub dnd =
     Drag_and_drop.create
@@ -222,7 +225,7 @@ let board ?extra_dnd name =
         | None -> Bonsai.const "No item exists with that id"
       in
       let%arr text = text in
-      Node.div ~attr:Style.kanban_item [ Node.text text ])
+      Node.div ~attrs:[ Style.kanban_item ] [ Node.text text ])
   in
   let%sub sentinel = Bonsai.pure Drag_and_drop.sentinel dnd in
   let%sub view =
@@ -233,7 +236,7 @@ let board ?extra_dnd name =
     and sentinel = sentinel in
     let sentinel = sentinel ~name in
     Node.div
-      ~attr:Vdom.Attr.(Style.kanban_container @ sentinel)
+      ~attrs:[ Vdom.Attr.(Style.kanban_container @ sentinel) ]
       [ todo; in_progress; finished; dragged_element ]
   in
   return (Bonsai.Value.both view dnd)

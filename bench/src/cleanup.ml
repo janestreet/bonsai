@@ -1,7 +1,6 @@
 open! Core
-open! Bonsai_test.Arrow
 
-type packed = T : _ Driver.t -> packed
+type packed = T : Runner.t -> packed
 
 let (most_recent_driver : packed option ref) = ref None
 let register_driver driver = most_recent_driver := Some (T driver)
@@ -12,7 +11,7 @@ let invalidate_observers =
     (fun `init ->
        (match !most_recent_driver with
         | None -> ()
-        | Some (T driver) -> Driver.invalidate_observers driver);
+        | Some (T driver) -> Runner.invalidate_observers driver);
        most_recent_driver := None;
        fun () -> ())
 ;;

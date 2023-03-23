@@ -20,7 +20,7 @@ let examples_column = c Css.examples_column
 let component =
   let%sub examples = Bonsai_web_ui_url_var_example_urls.examples in
   let%arr examples = examples in
-  Vdom.Node.div [ Vdom.Node.div ~attr:examples_column examples ]
+  Vdom.Node.div [ Vdom.Node.div ~attrs:[ examples_column ] examples ]
 ;;
 
 let () = Bonsai_web.Start.start component

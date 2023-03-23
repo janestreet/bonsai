@@ -34,7 +34,8 @@ let politicians =
 
 let () =
   Util.run
-    (Bonsai.const (Vdom.Node.div ~attr:(Vdom.Attr.class_ "politicians") [ politicians ]))
+    (Bonsai.const
+       (Vdom.Node.div ~attrs:[ Vdom.Attr.class_ "politicians" ] [ politicians ]))
     ~id:"politician-table"
 ;;
 
@@ -71,7 +72,7 @@ let basic_table_attr rows =
   let open Vdom.Node in
   let thead =
     thead
-      ~attr:(Vdom.Attr.style thead_styles)
+      ~attrs:[ Vdom.Attr.style thead_styles ]
       [ td [ text "id" ]; td [ text "name" ]; td [ text "age" ] ]
   in
   let tbody =
@@ -79,14 +80,14 @@ let basic_table_attr rows =
     |> List.mapi ~f:(fun i { id; name; age } ->
       let tr_style = if Int.( % ) i 2 = 0 then tr_even else tr_odd in
       tr
-        ~attr:(Vdom.Attr.style tr_style)
-        [ td ~attr:(Vdom.Attr.style td_styles) [ textf "%d" id ]
-        ; td ~attr:(Vdom.Attr.style td_styles) [ text name ]
-        ; td ~attr:(Vdom.Attr.style td_styles) [ textf "%d" age ]
+        ~attrs:[ Vdom.Attr.style tr_style ]
+        [ td ~attrs:[ Vdom.Attr.style td_styles ] [ textf "%d" id ]
+        ; td ~attrs:[ Vdom.Attr.style td_styles ] [ text name ]
+        ; td ~attrs:[ Vdom.Attr.style td_styles ] [ textf "%d" age ]
         ])
     |> tbody
   in
-  table ~attr:(Vdom.Attr.style table_styles) [ thead; tbody ]
+  table ~attrs:[ Vdom.Attr.style table_styles ] [ thead; tbody ]
 ;;
 
 let politicians =
@@ -145,7 +146,7 @@ let table_with_ppx_css rows =
       tr [ td [ textf "%d" id ]; td [ text name ]; td [ textf "%d" age ] ])
     |> tbody
   in
-  table ~attr:Style.politicians [ thead; tbody ]
+  table ~attrs:[ Style.politicians ] [ thead; tbody ]
 ;;
 
 (* $MDX part-end *)
@@ -170,7 +171,7 @@ let themeable_table ?(theme = Style.default) rows =
       tr [ td [ textf "%d" id ]; td [ text name ]; td [ textf "%d" age ] ])
     |> tbody
   in
-  table ~attr:Style.politicians [ thead; tbody ]
+  table ~attrs:[ Style.politicians ] [ thead; tbody ]
 ;;
 
 (* $MDX part-begin=my_theme *)

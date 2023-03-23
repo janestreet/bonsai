@@ -14,7 +14,9 @@ let textbox =
   let%sub state = Bonsai.state (module String) ~default_model:"" in
   let%arr text, set_text = state in
   let view =
-    Vdom.Node.input ~attr:Vdom.Attr.(value_prop text @ on_input (fun _ -> set_text)) ()
+    Vdom.Node.input
+      ~attrs:[ Vdom.Attr.(value_prop text @ on_input (fun _ -> set_text)) ]
+      ()
   in
   text, view
 ;;

@@ -205,40 +205,53 @@ let fallback _exn _components = T.Unable_to_parse
 let component ~url_var =
   let url_value = Url_var.value url_var in
   let%sub modify_history, toggle_modify_history = Bonsai.toggle ~default_model:true in
-  let%sub form =
-    let%sub form = T.form_of_t in
-    let%sub form = Form.Dynamic.with_default url_value form in
-    let%sub () =
-      let%sub set_effect =
-        let%arr modify_history = modify_history in
-        let how = if modify_history then `Push else `Replace in
-        fun query -> Url_var.set_effect url_var query ~how
-      in
-      Form.Dynamic.on_change (module T) ~f:set_effect form
+  let%sub set_url_var =
+    let%arr modify_history = modify_history in
+    let how = if modify_history then `Push else `Replace in
+    fun query -> Url_var.set_effect url_var query ~how
+  in
+  let%sub form = T.form_of_t in
+  let%sub store_value =
+    let%arr url_value = url_value in
+    Some url_value
+  in
+  let%sub () =
+    Form.Dynamic.sync_with (module T) ~store_value ~store_set:set_url_var form
+  in
+  let%sub update_button =
+    let%sub update_effect =
+      let%arr modify_history = modify_history in
+      let how = if modify_history then `Push else `Replace in
+      fun ~f -> Url_var.update_effect url_var ~how ~f
     in
-    return form
+    let%arr update_effect = update_effect in
+    Vdom.Node.button
+      ~attrs:[ Vdom.Attr.on_click (fun _ -> update_effect ~f:(fun _ -> Homepage)) ]
+      [ Vdom.Node.text "Go to homepage via [update]" ]
   in
   let%arr form = form
   and url = url_value
   and modify_history = modify_history
-  and toggle_modify_history = toggle_modify_history in
+  and toggle_modify_history = toggle_modify_history
+  and update_button = update_button in
   let saved_to_history_text =
     if modify_history
     then "History is being saved in your browser"
     else "History is not being saved in your browser"
   in
-  Vdom.Node.div
+  View.vbox
     [ Vdom.Node.text
         "Change form to update the URL's query! Change the URL's query to update the \
          form! (Errors are detected and routed to the fallback page!)"
-    ; Form.view_as_vdom form
+    ; View.hbox [ Form.view_as_vdom form ]
     ; Vdom.Node.p
         [ Vdom.Node.text saved_to_history_text
         ; Vdom.Node.br ()
         ; Vdom.Node.button
-            ~attr:(Vdom.Attr.on_click (fun _ -> toggle_modify_history))
+            ~attrs:[ Vdom.Attr.on_click (fun _ -> toggle_modify_history) ]
             [ Vdom.Node.text "Toggle history saving" ]
         ]
+    ; View.hbox [ update_button ]
     ; Vdom.Node.text "Here's what the parsed query as a sexp looks like:"
     ; Vdom.Node.code [ Vdom.Node.sexp_for_debugging (T.sexp_of_t url) ]
     ]

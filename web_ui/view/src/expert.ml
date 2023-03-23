@@ -100,7 +100,7 @@ let default_theme =
                 | o -> o)
             | _ -> Sexp.to_string_hum sexp
 
-          method button ~attr ~disabled ~intent ~tooltip ~on_click content =
+          method button ~attrs ~disabled ~intent ~tooltip ~on_click content =
             let on_click_attr = Vdom.Attr.on_click (fun _ -> on_click) in
             let disabled_attr =
               if disabled then Vdom.Attr.disabled else Vdom.Attr.empty
@@ -124,21 +124,20 @@ let default_theme =
               | None -> Vdom.Attr.empty
               | Some s -> Vdom.Attr.title s
             in
-            let attr =
-              Vdom.Attr.many
-                [ attr; on_click_attr; disabled_attr; maybe_colors; maybe_title ]
+            let attrs =
+              attrs @ [ on_click_attr; disabled_attr; maybe_colors; maybe_title ]
             in
-            Vdom.Node.button ~attr content
+            Vdom.Node.button ~attrs content
 
           method tabs
-            : type a.  attr:Vdom.Attr.t
+            : type a.  attrs:Vdom.Attr.t list
               -> per_tab_attr:(a -> is_active:bool -> Vdom.Attr.t)
               -> on_change:(from:a -> to_:a -> unit Effect.t)
               -> equal:(a -> a -> bool)
               -> active:a
               -> (a * Vdom.Node.t) list
               -> Vdom.Node.t =
-            fun ~attr ~per_tab_attr ~on_change ~equal ~active tabs ->
+            fun ~attrs ~per_tab_attr ~on_change ~equal ~active tabs ->
             let color = self#constants.primary.foreground in
             let all_attr =
               Vdom.Attr.style (Css_gen.create ~field:"cursor" ~value:"pointer")
@@ -159,17 +158,16 @@ let default_theme =
             in
             List.map tabs ~f:(fun (i, tab) ->
               let is_active = equal active i in
-              let attr =
-                Vdom.Attr.many
+              Vdom.Node.div
+                ~attrs:
                   [ (if is_active then active_attr else inactive_attr i)
                   ; all_attr
                   ; per_tab_attr i ~is_active
                   ]
-              in
-              Vdom.Node.div ~attr [ tab ])
-            |> Layout.hbox ~attr ~gap:(`Em_float 0.5)
+                [ tab ])
+            |> Layout.hbox ~attrs ~gap:(`Em_float 0.5)
 
-          method devbar ~attr ~count ~intent text =
+          method devbar ~attrs ~count ~intent text =
             let intent = Option.value intent ~default:Constants.Intent.Error in
             let even_attr, odd_attr =
               let both_style =
@@ -197,15 +195,16 @@ let default_theme =
                   max_width (`Percent Percent.one_hundred_percent) @> overflow `Hidden)
             in
             Layout.hbox
-              ~attr:(Vdom.Attr.many [ attr; main_attr ])
+              ~attrs:(attrs @ [ main_attr ])
               (List.init count ~f:(fun i ->
-                 let attr = if i % 2 = 0 then even_attr else odd_attr in
-                 Vdom.Node.span ~attr [ Vdom.Node.text text ]))
+                 Vdom.Node.span
+                   ~attrs:[ (if i % 2 = 0 then even_attr else odd_attr) ]
+                   [ Vdom.Node.text text ]))
 
           method tooltip = Tooltip.make self#constants
           method use_intent_fg_or_bg_for_highlighting : [ `Fg | `Bg ] = `Fg
 
-          method themed_text ~attr ~intent ~style ~size text =
+          method themed_text ~attrs ~intent ~style ~size text =
             let maybe_colors =
               match intent with
               | None -> Vdom.Attr.empty
@@ -250,8 +249,9 @@ let default_theme =
               | Some Large ->
                 Vdom.Attr.style (Css_gen.font_size self#constants.large_font_size)
             in
-            let attr = Vdom.Attr.many [ attr; maybe_colors; maybe_size; maybe_style ] in
-            Vdom.Node.span ~attr [ Vdom.Node.text text ]
+            Vdom.Node.span
+              ~attrs:(attrs @ [ maybe_colors; maybe_size; maybe_style ])
+              [ Vdom.Node.text text ]
 
           method codemirror_theme : For_codemirror.Theme.t option = None
 
@@ -329,47 +329,42 @@ let default_theme =
               | _ ->
                 let create_title ~f ~extra_attr =
                   f
-                    ~attr:
-                      (Vdom.Attr.many
-                         [ Style.title_bar; Style.title_text; title_attr; extra_attr ])
+                    ~attrs:[ Style.title_bar; Style.title_text; title_attr; extra_attr ]
                     title
                 in
                 let title =
                   match title_kind with
                   | Card_title_kind.Prominent ->
                     create_title
-                      ~f:(fun ~attr x -> Layout.hbox ~attr x)
+                      ~f:(fun ~attrs x -> Layout.hbox ~attrs x)
                       ~extra_attr:Vdom.Attr.empty
                   | Discreet ->
                     create_title
-                      ~f:(fun ~attr x -> Vdom.Node.legend ~attr x)
+                      ~f:(fun ~attrs x -> Vdom.Node.legend ~attrs x)
                       ~extra_attr:Style.card_legend
                 in
                 title
             in
             let create_card ~f ~extra_container_attr =
               f
-                ~attr:
-                  (Vdom.Attr.many
-                     [ container_attr
-                     ; Vdom.Attr.on_click (fun _ -> on_click)
-                     ; vars
-                     ; extra_container_attr
-                     ])
+                ~attrs:
+                  [ container_attr
+                  ; Vdom.Attr.on_click (fun _ -> on_click)
+                  ; vars
+                  ; extra_container_attr
+                  ]
                 [ title
-                ; Layout.vbox
-                    ~attr:(Vdom.Attr.many [ content_attr; Style.content_common ])
-                    content
+                ; Layout.vbox ~attrs:[ content_attr; Style.content_common ] content
                 ]
             in
             match title_kind with
             | Card_title_kind.Prominent ->
               create_card
-                ~f:(fun ~attr x -> Layout.vbox ~attr x)
+                ~f:(fun ~attrs x -> Layout.vbox ~attrs x)
                 ~extra_container_attr:Style.container
             | Discreet ->
               create_card
-                ~f:(fun ~attr x -> Vdom.Node.fieldset ~attr x)
+                ~f:(fun ~attrs x -> Vdom.Node.fieldset ~attrs x)
                 ~extra_container_attr:Style.fieldset_container
         end
     end)

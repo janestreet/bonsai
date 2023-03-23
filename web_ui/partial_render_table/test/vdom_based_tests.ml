@@ -127,10 +127,11 @@ let%expect_test "column visibility" =
   Handle.show_diff test.handle;
   [%expect
     {|
+              <span> ◇  key </span>
+            </div>
           </td>
           <td colspan="1"
               class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
-              freeze_width=((set <fun>)(reset <fun>))
               size_tracker=<fun>
               style={
                 width: 50px;
@@ -139,7 +140,6 @@ let%expect_test "column visibility" =
           </td>
           <td colspan="1"
               class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
-              freeze_width=((set <fun>)(reset <fun>))
               size_tracker=<fun>
               style={
                 width: 50px;
@@ -274,7 +274,6 @@ let%expect_test "stabilization of view range" =
       <tr>
         <td colspan="1"
             class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
-            freeze_width=((set <fun>)(reset <fun>))
             size_tracker=<fun>>
           <div class="column_header_hash_replaced_in_test" onclick>
             <span> ◇  key </span>
@@ -282,13 +281,11 @@ let%expect_test "stabilization of view range" =
         </td>
         <td colspan="1"
             class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
-            freeze_width=((set <fun>)(reset <fun>))
             size_tracker=<fun>>
           <div> a </div>
         </td>
         <td colspan="1"
             class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
-            freeze_width=((set <fun>)(reset <fun>))
             size_tracker=<fun>>
           <div class="column_header_hash_replaced_in_test" onclick>
             <span> ◇  b </span>
@@ -377,7 +374,6 @@ let%expect_test "resize-column" =
         <tr>
           <td colspan="1"
               class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
-              freeze_width=((set <fun>)(reset <fun>))
               size_tracker=<fun>
               style={
 -|              width: 50px;
@@ -389,7 +385,6 @@ let%expect_test "resize-column" =
           </td>
           <td colspan="1"
               class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
-              freeze_width=((set <fun>)(reset <fun>))
               size_tracker=<fun>
               style={
                 width: 50px;
@@ -398,6 +393,7 @@ let%expect_test "resize-column" =
           </td>
           <td colspan="1"
               class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
+              size_tracker=<fun>
 
             </div>
           </td>
@@ -555,7 +551,6 @@ let%expect_test "big table" =
       <tr>
         <td colspan="1"
             class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
-            freeze_width=((set <fun>)(reset <fun>))
             size_tracker=<fun>>
           <div class="column_header_hash_replaced_in_test" onclick>
             <span> ◇  key </span>
@@ -563,13 +558,11 @@ let%expect_test "big table" =
         </td>
         <td colspan="1"
             class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
-            freeze_width=((set <fun>)(reset <fun>))
             size_tracker=<fun>>
           <div> a </div>
         </td>
         <td colspan="1"
             class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
-            freeze_width=((set <fun>)(reset <fun>))
             size_tracker=<fun>>
           <div class="column_header_hash_replaced_in_test" onclick>
             <span> ◇  b </span>
@@ -607,10 +600,10 @@ let%expect_test "big table" =
   Handle.show_diff test.handle;
   [%expect
     {|
+            <div> a </div>
           </td>
           <td colspan="1"
               class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
-              freeze_width=((set <fun>)(reset <fun>))
               size_tracker=<fun>>
             <div class="column_header_hash_replaced_in_test" onclick>
               <span> ◇  b </span>
@@ -711,7 +704,7 @@ let%expect_test "typing into a column, leaving that column, and then coming back
   Handle.show_diff test.handle;
   [%expect
     {|
-              freeze_width=((set <fun>)(reset <fun>))
+              class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
               size_tracker=<fun>>
             <div class="column_header_hash_replaced_in_test" onclick>
               <span> ◇  b </span>
@@ -761,7 +754,6 @@ let%expect_test "typing into a column, leaving that column, and then coming back
       <tr>
         <td colspan="1"
             class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
-            freeze_width=((set <fun>)(reset <fun>))
             size_tracker=<fun>>
           <div class="column_header_hash_replaced_in_test" onclick>
             <span> ◇  key </span>
@@ -769,13 +761,11 @@ let%expect_test "typing into a column, leaving that column, and then coming back
         </td>
         <td colspan="1"
             class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
-            freeze_width=((set <fun>)(reset <fun>))
             size_tracker=<fun>>
           <div> a </div>
         </td>
         <td colspan="1"
             class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
-            freeze_width=((set <fun>)(reset <fun>))
             size_tracker=<fun>>
           <div class="column_header_hash_replaced_in_test" onclick>
             <span> ◇  b </span>
@@ -919,7 +909,6 @@ let%expect_test "sorting" =
       <tr>
         <td colspan="1"
             class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
-            freeze_width=((set <fun>)(reset <fun>))
             size_tracker=<fun>>
           <div class="column_header_hash_replaced_in_test" onclick>
             <span> ◇  key </span>
@@ -927,13 +916,11 @@ let%expect_test "sorting" =
         </td>
         <td colspan="1"
             class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
-            freeze_width=((set <fun>)(reset <fun>))
             size_tracker=<fun>>
           <div> a </div>
         </td>
         <td colspan="1"
             class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
-            freeze_width=((set <fun>)(reset <fun>))
             size_tracker=<fun>>
           <div class="column_header_hash_replaced_in_test" onclick>
             <span> ◇  b </span>
@@ -985,7 +972,6 @@ let%expect_test "sorting" =
             <tr>
               <td colspan="1"
                   class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
-                  freeze_width=((set <fun>)(reset <fun>))
                   size_tracker=<fun>>
                 <div class="column_header_hash_replaced_in_test" onclick>
     -|            <span> ◇  key </span>
@@ -994,18 +980,18 @@ let%expect_test "sorting" =
               </td>
               <td colspan="1"
                   class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
-                  freeze_width=((set <fun>)(reset <fun>))
                   size_tracker=<fun>>
                 <div> a </div>
               </td>
               <td colspan="1"
                   class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
-                  freeze_width=((set <fun>)(reset <fun>))
                   size_tracker=<fun>>
                 <div class="column_header_hash_replaced_in_test" onclick>
                   <span> ◇  b </span>
                 </div>
-              </td> |}];
+              </td>
+            </tr>
+          </tbody> |}];
   (* this one actually does stuff, click on it twice for a reverse sort *)
   Handle.click_on test.handle ~selector:"td:nth-child(3) > div" ~get_vdom:test.get_vdom;
   Handle.click_on test.handle ~selector:"td:nth-child(3) > div" ~get_vdom:test.get_vdom;
@@ -1019,7 +1005,6 @@ let%expect_test "sorting" =
         <tr>
           <td colspan="1"
               class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
-              freeze_width=((set <fun>)(reset <fun>))
               size_tracker=<fun>>
             <div class="column_header_hash_replaced_in_test" onclick>
 -|            <span> ⬘  key </span>
@@ -1028,13 +1013,11 @@ let%expect_test "sorting" =
           </td>
           <td colspan="1"
               class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
-              freeze_width=((set <fun>)(reset <fun>))
               size_tracker=<fun>>
             <div> a </div>
           </td>
           <td colspan="1"
               class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
-              freeze_width=((set <fun>)(reset <fun>))
               size_tracker=<fun>>
             <div class="column_header_hash_replaced_in_test" onclick>
 -|            <span> ◇  b </span>
@@ -1087,6 +1070,8 @@ let%expect_test "sorting" =
   Handle.show_diff test.handle;
   [%expect
     {|
+              <td colspan="1"
+                  class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
                   size_tracker=<fun>>
                 <div class="column_header_hash_replaced_in_test" onclick>
                   <span> ◇  key </span>
@@ -1094,13 +1079,11 @@ let%expect_test "sorting" =
               </td>
               <td colspan="1"
                   class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
-                  freeze_width=((set <fun>)(reset <fun>))
                   size_tracker=<fun>>
                 <div> a </div>
               </td>
               <td colspan="1"
                   class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
-                  freeze_width=((set <fun>)(reset <fun>))
                   size_tracker=<fun>>
                 <div class="column_header_hash_replaced_in_test" onclick>
     -|            <span> ⬙  b </span>
@@ -1149,4 +1132,293 @@ let%expect_test "sorting" =
           </div>
         </div>
       </div> |}]
+;;
+
+let%expect_test "removed columns still count toward the total table width" =
+  let module Table = Bonsai_web_ui_partial_render_table in
+  let map = Value.return (Int.Map.of_alist_exn [ 1, 1; 2, 2 ]) in
+  let column_a =
+    Table.Basic.Columns.Dynamic_columns.column
+      ~label:(Vdom.Node.text "a")
+      ~cell:(fun ~key:_ ~data -> Vdom.Node.text (Int.to_string data))
+      ()
+  in
+  let column_b =
+    Table.Basic.Columns.Dynamic_columns.column
+      ~label:(Vdom.Node.text "b")
+      ~cell:(fun ~key:_ ~data -> Vdom.Node.text (Int.to_string (data * 2)))
+      ()
+  in
+  let column_c =
+    Table.Basic.Columns.Dynamic_columns.column
+      ~label:(Vdom.Node.text "c")
+      ~cell:(fun ~key:_ ~data -> Vdom.Node.text (Int.to_string (data * 3)))
+      ()
+  in
+  let columns_var = Bonsai.Var.create [ column_a; column_b ] in
+  let component =
+    Table.Basic.component
+      (module Int)
+      ~focus:None
+      ~row_height:(`Px 20)
+      ~columns:(Table.Basic.Columns.Dynamic_columns.lift (Bonsai.Var.value columns_var))
+      map
+  in
+  let get_vdom { Table.Basic.Result.view; _ } = view in
+  let handle =
+    Handle.create
+      (Result_spec.vdom
+         ~filter_printed_attributes:(fun key _data -> String.equal key "style.width")
+         get_vdom)
+      component
+  in
+  let resize_column ~idx ~width =
+    Shared.Test.resize_column_for_handle handle ~get_vdom ~idx ~width
+  in
+  Handle.recompute_view handle;
+  Handle.show handle;
+  [%expect
+    {|
+    <div>
+      <table>
+        <tbody>
+          <tr>
+            <td style={ width: 50px; }>
+              <div> a </div>
+            </td>
+            <td style={ width: 50px; }>
+              <div> b </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <div>
+        <div>
+          <div>
+            <div style={ width: 0.00000000px; }>
+              <div style={ width: 0.00000000px; }> 1 </div>
+              <div style={ width: 0.00000000px; }> 2 </div>
+            </div>
+            <div style={ width: 0.00000000px; }>
+              <div style={ width: 0.00000000px; }> 2 </div>
+              <div style={ width: 0.00000000px; }> 4 </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div> |}];
+  resize_column ~idx:0 ~width:10.;
+  resize_column ~idx:1 ~width:20.;
+  Handle.show handle;
+  [%expect
+    {|
+    <div>
+      <table>
+        <tbody>
+          <tr>
+            <td style={ width: 10.00px; }>
+              <div> a </div>
+            </td>
+            <td style={ width: 20.00px; }>
+              <div> b </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <div>
+        <div>
+          <div>
+            <div style={ width: 30.00000000px; }>
+              <div style={ width: 10.00000000px; }> 1 </div>
+              <div style={ width: 20.00000000px; }> 2 </div>
+            </div>
+            <div style={ width: 30.00000000px; }>
+              <div style={ width: 10.00000000px; }> 2 </div>
+              <div style={ width: 20.00000000px; }> 4 </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div> |}];
+  Bonsai.Var.set columns_var [ column_a; column_b; column_c ];
+  resize_column ~idx:2 ~width:30.;
+  Handle.show handle;
+  [%expect
+    {|
+    <div>
+      <table>
+        <tbody>
+          <tr>
+            <td style={ width: 10.00px; }>
+              <div> a </div>
+            </td>
+            <td style={ width: 20.00px; }>
+              <div> b </div>
+            </td>
+            <td style={ width: 30.00px; }>
+              <div> c </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <div>
+        <div>
+          <div>
+            <div style={ width: 60.00000000px; }>
+              <div style={ width: 10.00000000px; }> 1 </div>
+              <div style={ width: 20.00000000px; }> 2 </div>
+              <div style={ width: 30.00000000px; }> 3 </div>
+            </div>
+            <div style={ width: 60.00000000px; }>
+              <div style={ width: 10.00000000px; }> 2 </div>
+              <div style={ width: 20.00000000px; }> 4 </div>
+              <div style={ width: 30.00000000px; }> 6 </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div> |}];
+  Bonsai.Var.set columns_var [ column_b; column_c ];
+  Handle.show handle;
+  [%expect
+    {|
+    <div>
+      <table>
+        <tbody>
+          <tr>
+            <td style={ width: 10.00px; }>
+              <div> b </div>
+            </td>
+            <td style={ width: 20.00px; }>
+              <div> c </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <div>
+        <div>
+          <div>
+            <div style={ width: 30.00000000px; }>
+              <div style={ width: 10.00000000px; }> 2 </div>
+              <div style={ width: 20.00000000px; }> 3 </div>
+            </div>
+            <div style={ width: 30.00000000px; }>
+              <div style={ width: 10.00000000px; }> 4 </div>
+              <div style={ width: 20.00000000px; }> 6 </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div> |}]
+;;
+
+let%expect_test "removed columns still count toward the total table width" =
+  let module Table = Bonsai_web_ui_partial_render_table in
+  let map = Value.return (Int.Map.of_alist_exn (List.init 100 ~f:(fun i -> i, i))) in
+  let column_a =
+    Table.Basic.Columns.Dynamic_columns.column
+      ~label:(Vdom.Node.text "a")
+      ~cell:(fun ~key:_ ~data -> Vdom.Node.text (Int.to_string data))
+      ()
+  in
+  let component =
+    Table.Basic.component
+      (module Int)
+      ~focus:None
+      ~row_height:(`Px 1)
+      ~preload_rows:1
+      ~columns:(Table.Basic.Columns.Dynamic_columns.lift (Value.return [ column_a ]))
+      map
+  in
+  let get_vdom { Table.Basic.Result.view; _ } = view in
+  let handle =
+    Handle.create
+      (Result_spec.vdom
+         ~filter_printed_attributes:(fun key _data ->
+           String.equal key "style.padding-top" || String.equal key "style.padding-bottom")
+         get_vdom)
+      component
+  in
+  Test.set_bounds_for_handle handle ~get_vdom ~low:5 ~high:10;
+  Handle.recompute_view handle;
+  Handle.show handle;
+  [%expect
+    {|
+    <div>
+      <table>
+        <tbody>
+          <tr>
+            <td>
+              <div> a </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <div>
+        <div style={ padding-top: 4px; padding-bottom: 87px; }>
+          <div>
+            <div>
+              <div> 4 </div>
+            </div>
+            <div>
+              <div> 5 </div>
+            </div>
+            <div>
+              <div> 6 </div>
+            </div>
+            <div>
+              <div> 7 </div>
+            </div>
+            <div>
+              <div> 8 </div>
+            </div>
+            <div>
+              <div> 9 </div>
+            </div>
+            <div>
+              <div> 10 </div>
+            </div>
+            <div>
+              <div> 11 </div>
+            </div>
+            <div>
+              <div> 12 </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div> |}];
+  Test.clear_bounds_for_handle handle ~get_vdom;
+  Handle.show_diff handle;
+  [%expect {| |}];
+  Handle.show handle;
+  (* Note that clearing the visible bounds causes the padding to go to 0. *)
+  [%expect
+    {|
+    <div>
+      <table>
+        <tbody>
+          <tr>
+            <td>
+              <div> a </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <div>
+        <div style={ padding-top: 0px; padding-bottom: 97px; }>
+          <div>
+            <div>
+              <div> 0 </div>
+            </div>
+            <div>
+              <div> 1 </div>
+            </div>
+            <div>
+              <div> 2 </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div> |}]
 ;;

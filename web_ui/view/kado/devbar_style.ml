@@ -1,1 +1,0 @@
-include Devbar_style__generated

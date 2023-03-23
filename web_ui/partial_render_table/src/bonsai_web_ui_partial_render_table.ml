@@ -7,6 +7,7 @@ module Bbox = Bonsai_web_ui_element_size_hooks.Visibility_tracker.Bbox
 module Order = Order
 module Sortable_header = Sortable_header
 module Focus_by_row = Focus.By_row
+module Scroll = Bonsai_web_ui_scroll_utilities
 
 module For_testing = struct
   module Table_body = Table_body.For_testing
@@ -86,8 +87,7 @@ module Expert = struct
                then (
                  match prev with
                  | None -> Hidden { prev_width_px = None }
-                 | Some (Visible { width_px }) ->
-                   Hidden { prev_width_px = Some width_px }
+                 | Some (Visible { width_px }) -> Hidden { prev_width_px = Some width_px }
                  | Some (Hidden _ as prev) -> prev)
                else Visible { width_px = width })))
     in
@@ -135,8 +135,15 @@ module Expert = struct
           /. Float.of_int row_height_px
         in
         Float.(to_int (round_nearest low)), Float.(to_int (round_nearest high))
-      (* Q.E.D. *)
-      | _ -> 0, 1
+      | _ ->
+        (* This can happen if the number of rows in the table shrinks such that
+           the table becomes invisible. By providing a small index, we ensure
+           that the padding around the table does not force the page to remain
+           large enough for the existing scroll position. With the padding
+           removed, the browser should automatically reduce the range of the
+           scrollbar, and possibly bringing the table back in view, which would
+           quickly correct this value to something more useful. *)
+        0, 1
     in
     let%sub midpoint_of_container =
       let%arr table_body_visible_rect = table_body_visible_rect in
@@ -144,17 +151,48 @@ module Expert = struct
       | None -> 0
       | Some rect -> (rect.max_x + rect.min_x) / 2
     in
+    let%sub scroll_to_index =
+      let%arr header_height_px = header_height_px
+      and range_start, range_end = range_without_preload
+      and midpoint_of_container = midpoint_of_container
+      and path = path in
+      fun index ->
+        let to_top =
+          (* scrolling this row to the top of the display involves
+             scrolling to a pixel that is actually [header_height] _above_
+             the target row. *)
+          Some ((row_height_px * index) - header_height_px)
+        in
+        let to_bottom =
+          (* scroll to the bottom of this row means scrolling to the top of
+             a one-pixel element just below this row *)
+          Some (row_height_px * (index + 1))
+        in
+        let y_px =
+          if index <= range_start
+          then to_top
+          else if index >= range_end
+          then to_bottom
+          else None
+        in
+        let selector = ".partial-render-table-" ^ path ^ " > div" in
+        match y_px with
+        | Some y_px ->
+          Scroll.to_position_inside_element
+            ~x_px:midpoint_of_container
+            ~y_px
+            ~selector
+            `Minimal
+          |> Effect.ignore_m
+        | None -> Effect.Ignore
+    in
     let%sub { focus; visually_focused } =
-      let (`Px row_height) = row_height in
       Focus.component
         focus_kind
         key
         ~collated
         ~range:range_without_preload
-        ~header_height:header_height_px
-        ~row_height
-        ~midpoint_of_container
-        ~path
+        ~scroll_to_index
     in
     let on_row_click = Focus.get_on_row_click focus_kind focus in
     let%sub rows, body_for_testing =
@@ -184,7 +222,7 @@ module Expert = struct
         Bonsai_web_ui_element_size_hooks.Visibility_tracker.detect
           ()
           ~client_rect_changed:(fun bounds -> set_table_body_client_rect (Some bounds))
-          ~visible_rect_changed:(fun bounds -> set_table_body_visible_rect (Some bounds))
+          ~visible_rect_changed:set_table_body_visible_rect
       in
       let%sub total_height =
         let%arr row_count = row_count in
@@ -200,20 +238,22 @@ module Expert = struct
           (* If the number is large enough, it will use scientific notation for unknown reasons.
              However, the number is accurate, and scientific notation is in spec.
              https://developer.mozilla.org/en-US/docs/Web/CSS/number *)
-          ~attr:
-            Vdom.Attr.(
-              many
-                [ Style.partial_render_table_body
-                ; Vdom.Attr.style Css_gen.(height (`Px total_height))
-                ; vis_change_attr
-                ])
+          ~attrs:
+            [ Vdom.Attr.(
+                many
+                  [ Style.partial_render_table_body
+                  ; Vdom.Attr.style Css_gen.(height (`Px total_height))
+                  ; vis_change_attr
+                  ])
+            ]
           [ rows ]
       in
       Vdom.Node.div
-        ~attr:
-          Vdom.Attr.(
-            Style.partial_render_table_container
-            @ Vdom.Attr.class_ ("partial-render-table-" ^ path))
+        ~attrs:
+          [ Vdom.Attr.(
+              Style.partial_render_table_container
+              @ Vdom.Attr.class_ ("partial-render-table-" ^ path))
+          ]
         [ head; body ]
     in
     let%sub range =
