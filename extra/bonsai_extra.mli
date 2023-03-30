@@ -78,7 +78,7 @@ val state_machine0_dynamic_model
 val state_machine1_dynamic_model
   :  (module Bonsai.Model with type t = 'model)
   -> (module Bonsai.Action with type t = 'action)
-  -> model:[< `Computed of ('model option -> 'model) Value.t | `Given of 'model Value.t ]
+  -> model:[< `Computed of ('input -> 'model option -> 'model) Value.t | `Given of 'model Value.t ]
   -> apply_action:
        (inject:('action -> unit Effect.t)
         -> schedule_event:(unit Effect.t -> unit)

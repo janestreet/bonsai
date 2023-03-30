@@ -54,9 +54,9 @@ let state_machine1_dynamic_model
   =
   let model_creator =
     match model with
-    | `Given m ->
-      Value.map m ~f:(fun m -> function
-        | None -> m
+    | `Given default ->
+      Value.map default ~f:(fun default _i -> function
+        | None -> default
         | Some a -> a)
     | `Computed f -> f
   in
@@ -67,7 +67,7 @@ let state_machine1_dynamic_model
   let apply_action ~inject ~schedule_event input model action =
     match input with
     | Bonsai.Computation_status.Active (input, model_creator) ->
-      let model = model_creator model in
+      let model = model_creator input model in
       Some (apply_action ~inject ~schedule_event input model action)
     | Inactive ->
       eprint_s
@@ -88,11 +88,18 @@ let state_machine1_dynamic_model
       (Value.both input model_creator)
   in
   let%arr model, inject = model_and_inject
-  and model_creator = model_creator in
-  model_creator model, inject
+  and model_creator = model_creator
+  and input = input in
+  model_creator input model, inject
 ;;
 
 let state_machine0_dynamic_model model_mod action_mod ~model ~apply_action =
+  let model = 
+    match model with
+    | `Given m -> `Given m
+    | `Computed setter ->
+      `Computed (Value.map setter ~f:(fun setter _i m -> setter m))
+  in
   let apply_action ~inject ~schedule_event () model action =
     apply_action ~inject ~schedule_event model action
   in
