@@ -69,11 +69,13 @@ module Sub : Ext = struct
       ]
   ;;
 
-  let expand_match ~loc ~modul expr = function
+  let expand_match ~loc ~modul ~locality expr = function
     | [] -> assert false
     | [ (case : case) ] ->
       let returned_expr = qualified_return ~loc ~modul expr in
-      let fn = maybe_destruct ~destruct ~loc ~modul ~lhs:case.pc_lhs ~body:case.pc_rhs in
+      let fn =
+        maybe_destruct ~destruct ~loc ~modul ~locality ~lhs:case.pc_lhs ~body:case.pc_rhs
+      in
       bind_apply ~op_name:name ~loc ~modul ~with_location ~arg:returned_expr ~fn ()
     | _ :: _ :: _ as cases ->
       let var_name = gen_symbol ~prefix:"__pattern_syntax" () in
@@ -253,7 +255,11 @@ module Arr : Ext = struct
 
   let destruct ~assume_exhaustive:_ ~loc:_ ~modul:_ ~lhs:_ ~rhs:_ ~body:_ = None
 
-  let expand_match ~loc ~modul expr cases =
+  let expand_match ~loc ~modul ~locality expr cases =
+    (match locality with
+     | `global -> ()
+     | `local ->
+       Location.raise_errorf ~loc "ppx_bonsai supports neither [bindl] nor [mapl]");
     bind_apply
       ~loc
       ~modul

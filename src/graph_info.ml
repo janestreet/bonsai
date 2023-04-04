@@ -164,7 +164,6 @@ module Node_info = struct
       | Leaf0 _ -> "leaf0"
       | Leaf01 _ -> "leaf01"
       | Leaf_incr _ -> "leaf_incr"
-      | Model_cutoff _ -> "model_cutoff"
       | Sub _ -> "sub"
       | Store _ -> "store"
       | Fetch _ -> "fetch"

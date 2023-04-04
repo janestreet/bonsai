@@ -356,7 +356,6 @@ module Constant_fold (Recurse : Fix_transform.Recurse with module Types := Types
     | Leaf0 _
     | Leaf01 _
     | Leaf_incr _
-    | Model_cutoff _
     | Store _
     | Fetch _
     | Wrap _

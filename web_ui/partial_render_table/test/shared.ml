@@ -21,7 +21,7 @@ type t =
   { a : string
   ; b : float
   ; c : string
-  ; d : int
+  ; d : int option
   ; e : string
   }
 [@@deriving fields]
@@ -56,6 +56,14 @@ let columns ~is_column_b_visible =
       ~cell:(fun ~key:_ ~data ->
         let%arr { b; _ } = data in
         Vdom.Node.textf "%f" b)
+      ()
+  ; Columns.column
+      ~label:(Value.return (Vdom.Node.text "d"))
+      ~cell:(fun ~key:_ ~data ->
+        let%arr { d; _ } = data in
+        match d with
+        | None -> Vdom.Node.textf "---"
+        | Some d -> Vdom.Node.textf "%d" d)
       ()
   ]
 ;;
@@ -121,11 +129,13 @@ let columns_dynamic_with_groups ~is_column_b_visible =
           ~cell:(fun ~key:_ ~data:{ c; _ } -> Vdom.Node.textf "%s" c)
           ()
       ; Columns.column
-          ~visible:is_column_b_visible
           ~label:(Vdom.Node.text "d")
           ~sort:(fun a b_1 ->
-            Comparable.lift [%compare: int] ~f:(fun (_, { d; _ }) -> d) a b_1)
-          ~cell:(fun ~key:_ ~data:{ d; _ } -> Vdom.Node.textf "%d" d)
+            Comparable.lift [%compare: int option] ~f:(fun (_, { d; _ }) -> d) a b_1)
+          ~cell:(fun ~key:_ ~data:{ d; _ } ->
+            match d with
+            | None -> Vdom.Node.textf "---"
+            | Some d -> Vdom.Node.textf "%d" d)
           ()
       ]
   in
@@ -146,9 +156,9 @@ let columns_dynamic_with_groups ~is_column_b_visible =
 
 let small_map =
   Int.Map.of_alist_exn
-    [ 0, { a = "hello"; b = 1.0; c = "c"; d = 1; e = "x" }
-    ; 1, { a = "there"; b = 2.0; c = "c"; d = 2; e = "y" }
-    ; 4, { a = "world"; b = 2.0; c = "c"; d = 3; e = "z" }
+    [ 0, { a = "hello"; b = 1.0; c = "c"; d = Some 1; e = "x" }
+    ; 1, { a = "there"; b = 2.0; c = "c"; d = Some 2; e = "y" }
+    ; 4, { a = "world"; b = 2.0; c = "c"; d = None; e = "z" }
     ]
 ;;
 
@@ -156,14 +166,15 @@ let big_map =
   Int.Map.of_alist_exn
     (List.range 1 100
      |> List.map ~f:(fun i ->
-       i, { a = "hi"; b = Float.of_int (i / 2); c = "apple"; d = 100; e = "1st" }))
+       i, { a = "hi"; b = Float.of_int (i / 2); c = "apple"; d = Some 100; e = "1st" })
+    )
 ;;
 
 let groups_map =
   Int.Map.of_alist_exn
-    [ 0, { a = "hello"; b = 1.0; c = "apple"; d = 100; e = "1st" }
-    ; 1, { a = "there"; b = 2.0; c = "banana"; d = 100; e = "3rd" }
-    ; 4, { a = "world"; b = 2.0; c = "pear"; d = 200; e = "2nd" }
+    [ 0, { a = "hello"; b = 1.0; c = "apple"; d = Some 100; e = "1st" }
+    ; 1, { a = "there"; b = 2.0; c = "banana"; d = Some 200; e = "3rd" }
+    ; 4, { a = "world"; b = 2.0; c = "pear"; d = None; e = "2nd" }
     ]
 ;;
 
@@ -213,6 +224,7 @@ module Test = struct
           ?(preload_rows = 0)
           ?(is_column_b_visible = Value.return true)
           ?default_sort
+          ?(row_height = Value.return (`Px 1))
           ()
           input
           filter
@@ -223,7 +235,7 @@ module Test = struct
             ~focus:(By_row { on_change = focus_changed })
             ~filter
             ?default_sort
-            ~row_height:(`Px 1)
+            ~row_height
             ~preload_rows
             ~columns:(columns ~is_column_b_visible |> Columns.lift)
             input
@@ -253,7 +265,7 @@ module Test = struct
             (module Int)
             ~focus:(By_row { on_change = focus_changed })
             ~filter
-            ~row_height:(`Px 1)
+            ~row_height:(Value.return (`Px 1))
             ~preload_rows
             ~columns:(Bonsai.Value.return columns |> Table.Columns.Dynamic_columns.lift)
             input
@@ -293,7 +305,7 @@ module Test = struct
                { on_change = Value.return (Fn.const Effect.Ignore)
                ; compute_presence = (fun focus -> presence ~focus ~collation)
                })
-          ~row_height:(`Px 10)
+          ~row_height:(Value.return (`Px 10))
           ~columns
           collation
       in

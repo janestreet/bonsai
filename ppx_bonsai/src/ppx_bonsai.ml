@@ -2,12 +2,14 @@ open Ppxlib
 open Ppx_let_expander
 open Ppx_bonsai_expander
 
+let locality = `global
+
 let ext t extension_kind =
   Extension.declare_with_path_arg
-    (ext_full_name t extension_kind)
+    (ext_full_name t ~locality extension_kind)
     Extension.Context.expression
     Ast_pattern.(single_expr_payload __)
-    (fun ~loc:_ ~path:_ ~arg expr -> expand t extension_kind ~modul:arg expr)
+    (fun ~loc:_ ~path:_ ~arg expr -> expand t extension_kind ~locality ~modul:arg expr)
 ;;
 
 let () =

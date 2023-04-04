@@ -48,9 +48,6 @@ module Make
         | Leaf_incr { input; input_id; compute } ->
           let acc, up, input = User.transform_v down acc input in
           acc, up, Leaf_incr { input; input_id; compute }
-        | Model_cutoff t ->
-          let acc, up, inner = User.transform_c down acc t in
-          acc, up, Model_cutoff inner
         | Sub { from; via; into; here } ->
           let acc, up1, from = User.transform_c down acc from in
           let acc, up2, into = User.transform_c down acc into in

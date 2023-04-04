@@ -24,14 +24,15 @@ let component
     let apply_action model action = Order.apply_action model (module Col_id) action
   end
   in
-  let%sub state =
+  let%sub order, inject =
     Bonsai_extra.state_machine0_dynamic_model
       (module State)
       (module Action)
       ~model:(`Given initial_order)
       ~apply_action:(fun ~inject:_ ~schedule_event:_ -> State.apply_action)
-    |> Bonsai.Incr.model_cutoff
   in
+  let%sub order = return (Value.cutoff ~equal:[%equal: State.t] order) in
+  let state = Value.both order inject in
   let%arr order, inject = state in
   let decorate label col_id =
     let sort_marker =

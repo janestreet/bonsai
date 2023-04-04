@@ -18,7 +18,6 @@ val switch
 
 module Proc_incr : sig
   val value_cutoff : 'a Value.t -> equal:('a -> 'a -> bool) -> 'a Computation.t
-  val model_cutoff : 'a Computation.t -> 'a Computation.t
 
   val compute_with_clock
     :  'a Value.t

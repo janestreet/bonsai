@@ -39,6 +39,8 @@ module Test = struct
             |> get_vdom
             |> Virtual_dom_test_helpers.Node_helpers.unsafe_convert_exn
             |> Virtual_dom_test_helpers.Node_helpers.to_string_html
+                 ~path_censoring_message:""
+                 ~hash_censoring_message:""
                  ~filter_printed_attributes:(fun key _data ->
                    should_print_styles || not (String.is_prefix ~prefix:"style." key))
           ;;
@@ -99,7 +101,7 @@ let%expect_test "simplified_assocs" =
   (* there's only one assoc because all the columns are inside of an assoc
      per-row instead of it being the other way around as you might have
      expected. *)
-  [%expect {| ((assoc_count 1) (assoc_simple_count 2) (assoc_on_count 1)) |}]
+  [%expect {| ((assoc_count 1) (assoc_simple_count 3) (assoc_on_count 1)) |}]
 ;;
 
 let%expect_test "simplified_assocs on the dynamic columns" =
@@ -127,39 +129,42 @@ let%expect_test "column visibility" =
   Handle.show_diff test.handle;
   [%expect
     {|
+  <div class="partial-render-table- partial_render_table_container">
+    <table class="partial_render_table_header prt-table-header" bounds-change=<opaque>>
+      <tbody>
+        <tr>
+          <td colspan="1" class="header_label leaf_header" size_tracker=<fun> style={ width: 50px; }>
+            <div class="column_header" onclick>
               <span> ◇  key </span>
             </div>
           </td>
-          <td colspan="1"
-              class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
-              size_tracker=<fun>
-              style={
-                width: 50px;
-              }>
+          <td colspan="1" class="header_label leaf_header" size_tracker=<fun> style={ width: 50px; }>
             <div> a </div>
           </td>
-          <td colspan="1"
-              class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
-              size_tracker=<fun>
-              style={
-                width: 50px;
+-|        <td colspan="1" class="header_label leaf_header" size_tracker=<fun> style={ width: 50px; }>
++|        <td colspan="1"
++|            class="header_label leaf_header"
++|            size_tracker=<fun>
++|            style={
++|              width: 50px;
 +|              display: none;
-              }>
-            <div class="column_header_hash_replaced_in_test" onclick>
++|            }>
+            <div class="column_header" onclick>
               <span> ◇  b </span>
             </div>
+          </td>
+          <td colspan="1" class="header_label leaf_header" size_tracker=<fun> style={ width: 50px; }>
+            <div> d </div>
           </td>
         </tr>
       </tbody>
     </table>
-    <div class="partial_render_table_body_hash_replaced_in_test"
-         bounds-change=<opaque>
-         style={
-           height: 3px;
-         }>
+    <div class="partial_render_table_body" bounds-change=<opaque> style={ height: 3px; }>
       <div style={ padding-top: 0px; padding-bottom: 0px; }>
         <div>
           <div class="prt-table-row"
+               onclick
+               style={
 
                    max-height: 1px;
                    width: 0.00000000px;
@@ -169,7 +174,7 @@ let%expect_test "column visibility" =
               <input oninput> </input>
               hello
             </div>
-            <div class="cell_hash_replaced_in_test prt-table-cell"
+            <div class="cell prt-table-cell"
                  style={
                    height: 1px;
                    min-height: 1px;
@@ -180,6 +185,15 @@ let%expect_test "column visibility" =
 -|               }> 1.000000 </div>
 +|                 display: none;
 +|               }> </div>
+            <div class="cell prt-table-cell"
+                 style={
+                   height: 1px;
+                   min-height: 1px;
+                   max-height: 1px;
+                   width: 0.00000000px;
+                   min-width: 0.00000000px;
+                   max-width: 0.00000000px;
+                 }> 1 </div>
           </div>
           <div class="prt-table-row"
                onclick
@@ -187,15 +201,6 @@ let%expect_test "column visibility" =
                  height: 1px;
                  width: 0.00000000px;
                  display: flex;
-                 flex-direction: row;
-                 flex-wrap: nowrap;
-               }>
-            <div class="cell_hash_replaced_in_test prt-table-cell"
-                 style={
-                   height: 1px;
-                   min-height: 1px;
-                   max-height: 1px;
-                   width: 0.00000000px;
 
                    max-height: 1px;
                    width: 0.00000000px;
@@ -205,7 +210,7 @@ let%expect_test "column visibility" =
               <input oninput> </input>
               there
             </div>
-            <div class="cell_hash_replaced_in_test prt-table-cell"
+            <div class="cell prt-table-cell"
                  style={
                    height: 1px;
                    min-height: 1px;
@@ -216,6 +221,15 @@ let%expect_test "column visibility" =
 -|               }> 2.000000 </div>
 +|                 display: none;
 +|               }> </div>
+            <div class="cell prt-table-cell"
+                 style={
+                   height: 1px;
+                   min-height: 1px;
+                   max-height: 1px;
+                   width: 0.00000000px;
+                   min-width: 0.00000000px;
+                   max-width: 0.00000000px;
+                 }> 2 </div>
           </div>
           <div class="prt-table-row"
                onclick
@@ -223,15 +237,6 @@ let%expect_test "column visibility" =
                  height: 1px;
                  width: 0.00000000px;
                  display: flex;
-                 flex-direction: row;
-                 flex-wrap: nowrap;
-               }>
-            <div class="cell_hash_replaced_in_test prt-table-cell"
-                 style={
-                   height: 1px;
-                   min-height: 1px;
-                   max-height: 1px;
-                   width: 0.00000000px;
 
                    max-height: 1px;
                    width: 0.00000000px;
@@ -241,7 +246,7 @@ let%expect_test "column visibility" =
               <input oninput> </input>
               world
             </div>
-            <div class="cell_hash_replaced_in_test prt-table-cell"
+            <div class="cell prt-table-cell"
                  style={
                    height: 1px;
                    min-height: 1px;
@@ -252,6 +257,15 @@ let%expect_test "column visibility" =
 -|               }> 2.000000 </div>
 +|                 display: none;
 +|               }> </div>
+            <div class="cell prt-table-cell"
+                 style={
+                   height: 1px;
+                   min-height: 1px;
+                   max-height: 1px;
+                   width: 0.00000000px;
+                   min-width: 0.00000000px;
+                   max-width: 0.00000000px;
+                 }> --- </div>
           </div>
         </div>
       </div>
@@ -267,51 +281,49 @@ let%expect_test "stabilization of view range" =
   Handle.show test.handle;
   [%expect
     {|
-<div class="partial-render-table-bonsai_path_replaced_in_test partial_render_table_container_hash_replaced_in_test">
-  <table class="partial_render_table_header_hash_replaced_in_test prt-table-header"
-         bounds-change=<opaque>>
+<div class="partial-render-table- partial_render_table_container">
+  <table class="partial_render_table_header prt-table-header" bounds-change=<opaque>>
     <tbody>
       <tr>
-        <td colspan="1"
-            class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
-            size_tracker=<fun>>
-          <div class="column_header_hash_replaced_in_test" onclick>
+        <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
+          <div class="column_header" onclick>
             <span> ◇  key </span>
           </div>
         </td>
-        <td colspan="1"
-            class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
-            size_tracker=<fun>>
+        <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
           <div> a </div>
         </td>
-        <td colspan="1"
-            class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
-            size_tracker=<fun>>
-          <div class="column_header_hash_replaced_in_test" onclick>
+        <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
+          <div class="column_header" onclick>
             <span> ◇  b </span>
           </div>
+        </td>
+        <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
+          <div> d </div>
         </td>
       </tr>
     </tbody>
   </table>
-  <div class="partial_render_table_body_hash_replaced_in_test" bounds-change=<opaque>>
+  <div class="partial_render_table_body" bounds-change=<opaque>>
     <div>
       <div>
         <div class="prt-table-row" onclick>
-          <div class="cell_hash_replaced_in_test prt-table-cell"> 0 </div>
-          <div class="cell_hash_replaced_in_test prt-table-cell">
+          <div class="cell prt-table-cell"> 0 </div>
+          <div class="cell prt-table-cell">
             <input oninput> </input>
             hello
           </div>
-          <div class="cell_hash_replaced_in_test prt-table-cell"> 1.000000 </div>
+          <div class="cell prt-table-cell"> 1.000000 </div>
+          <div class="cell prt-table-cell"> 1 </div>
         </div>
         <div class="prt-table-row" onclick>
-          <div class="cell_hash_replaced_in_test prt-table-cell"> 1 </div>
-          <div class="cell_hash_replaced_in_test prt-table-cell">
+          <div class="cell prt-table-cell"> 1 </div>
+          <div class="cell prt-table-cell">
             <input oninput> </input>
             there
           </div>
-          <div class="cell_hash_replaced_in_test prt-table-cell"> 2.000000 </div>
+          <div class="cell prt-table-cell"> 2.000000 </div>
+          <div class="cell prt-table-cell"> 2 </div>
         </div>
       </div>
     </div>
@@ -328,29 +340,30 @@ let%expect_test "stabilization of view range" =
   Handle.show_diff test.handle;
   [%expect
     {|
-              <div class="prt-table-row" onclick>
-                <div class="cell_hash_replaced_in_test prt-table-cell"> 0 </div>
-                <div class="cell_hash_replaced_in_test prt-table-cell">
+                <div class="cell prt-table-cell">
                   <input oninput> </input>
                   hello
                 </div>
-                <div class="cell_hash_replaced_in_test prt-table-cell"> 1.000000 </div>
+                <div class="cell prt-table-cell"> 1.000000 </div>
+                <div class="cell prt-table-cell"> 1 </div>
               </div>
               <div class="prt-table-row" onclick>
-                <div class="cell_hash_replaced_in_test prt-table-cell"> 1 </div>
-                <div class="cell_hash_replaced_in_test prt-table-cell">
+                <div class="cell prt-table-cell"> 1 </div>
+                <div class="cell prt-table-cell">
                   <input oninput> </input>
                   there
                 </div>
-                <div class="cell_hash_replaced_in_test prt-table-cell"> 2.000000 </div>
+                <div class="cell prt-table-cell"> 2.000000 </div>
+                <div class="cell prt-table-cell"> 2 </div>
               </div>
     +|        <div class="prt-table-row" onclick>
-    +|          <div class="cell_hash_replaced_in_test prt-table-cell"> 4 </div>
-    +|          <div class="cell_hash_replaced_in_test prt-table-cell">
+    +|          <div class="cell prt-table-cell"> 4 </div>
+    +|          <div class="cell prt-table-cell">
     +|            <input oninput> </input>
     +|            world
     +|          </div>
-    +|          <div class="cell_hash_replaced_in_test prt-table-cell"> 2.000000 </div>
+    +|          <div class="cell prt-table-cell"> 2.000000 </div>
+    +|          <div class="cell prt-table-cell"> --- </div>
     +|        </div>
             </div>
           </div>
@@ -367,44 +380,36 @@ let%expect_test "resize-column" =
   Handle.show_diff test.handle;
   [%expect
     {|
-  <div class="partial-render-table-bonsai_path_replaced_in_test partial_render_table_container_hash_replaced_in_test">
-    <table class="partial_render_table_header_hash_replaced_in_test prt-table-header"
-           bounds-change=<opaque>>
+  <div class="partial-render-table- partial_render_table_container">
+    <table class="partial_render_table_header prt-table-header" bounds-change=<opaque>>
       <tbody>
         <tr>
-          <td colspan="1"
-              class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
-              size_tracker=<fun>
-              style={
--|              width: 50px;
+-|        <td colspan="1" class="header_label leaf_header" size_tracker=<fun> style={ width: 50px; }>
++|        <td colspan="1"
++|            class="header_label leaf_header"
++|            size_tracker=<fun>
++|            style={
 +|              width: 10.00px;
-              }>
-            <div class="column_header_hash_replaced_in_test" onclick>
++|            }>
+            <div class="column_header" onclick>
               <span> ◇  key </span>
             </div>
           </td>
-          <td colspan="1"
-              class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
-              size_tracker=<fun>
-              style={
-                width: 50px;
-              }>
+          <td colspan="1" class="header_label leaf_header" size_tracker=<fun> style={ width: 50px; }>
             <div> a </div>
           </td>
-          <td colspan="1"
-              class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
-              size_tracker=<fun>
-
+          <td colspan="1" class="header_label leaf_header" size_tracker=<fun> style={ width: 50px; }>
+            <div class="column_header" onclick>
+              <span> ◇  b </span>
             </div>
+          </td>
+          <td colspan="1" class="header_label leaf_header" size_tracker=<fun> style={ width: 50px; }>
+            <div> d </div>
           </td>
         </tr>
       </tbody>
     </table>
-    <div class="partial_render_table_body_hash_replaced_in_test"
-         bounds-change=<opaque>
-         style={
-           height: 3px;
-         }>
+    <div class="partial_render_table_body" bounds-change=<opaque> style={ height: 3px; }>
       <div style={ padding-top: 0px; padding-bottom: 0px; }>
         <div>
           <div class="prt-table-row"
@@ -417,7 +422,7 @@ let%expect_test "resize-column" =
                  flex-direction: row;
                  flex-wrap: nowrap;
                }>
-            <div class="cell_hash_replaced_in_test prt-table-cell"
+            <div class="cell prt-table-cell"
                  style={
                    height: 1px;
                    min-height: 1px;
@@ -429,7 +434,7 @@ let%expect_test "resize-column" =
 -|                 max-width: 0.00000000px;
 +|                 max-width: 10.00000000px;
                  }> 0 </div>
-            <div class="cell_hash_replaced_in_test prt-table-cell"
+            <div class="cell prt-table-cell"
                  style={
                    height: 1px;
                    min-height: 1px;
@@ -441,7 +446,13 @@ let%expect_test "resize-column" =
               <input oninput> </input>
               hello
             </div>
-            <div class="cell_hash_replaced_in_test prt-table-cell"
+            <div class="cell prt-table-cell"
+                 style={
+                   height: 1px;
+
+                   max-width: 0.00000000px;
+                 }> 1.000000 </div>
+            <div class="cell prt-table-cell"
                  style={
                    height: 1px;
                    min-height: 1px;
@@ -449,7 +460,7 @@ let%expect_test "resize-column" =
                    width: 0.00000000px;
                    min-width: 0.00000000px;
                    max-width: 0.00000000px;
-                 }> 1.000000 </div>
+                 }> 1 </div>
           </div>
           <div class="prt-table-row"
                onclick
@@ -461,7 +472,7 @@ let%expect_test "resize-column" =
                  flex-direction: row;
                  flex-wrap: nowrap;
                }>
-            <div class="cell_hash_replaced_in_test prt-table-cell"
+            <div class="cell prt-table-cell"
                  style={
                    height: 1px;
                    min-height: 1px;
@@ -473,7 +484,7 @@ let%expect_test "resize-column" =
 -|                 max-width: 0.00000000px;
 +|                 max-width: 10.00000000px;
                  }> 1 </div>
-            <div class="cell_hash_replaced_in_test prt-table-cell"
+            <div class="cell prt-table-cell"
                  style={
                    height: 1px;
                    min-height: 1px;
@@ -485,7 +496,13 @@ let%expect_test "resize-column" =
               <input oninput> </input>
               there
             </div>
-            <div class="cell_hash_replaced_in_test prt-table-cell"
+            <div class="cell prt-table-cell"
+                 style={
+                   height: 1px;
+
+                   max-width: 0.00000000px;
+                 }> 2.000000 </div>
+            <div class="cell prt-table-cell"
                  style={
                    height: 1px;
                    min-height: 1px;
@@ -493,7 +510,7 @@ let%expect_test "resize-column" =
                    width: 0.00000000px;
                    min-width: 0.00000000px;
                    max-width: 0.00000000px;
-                 }> 2.000000 </div>
+                 }> 2 </div>
           </div>
           <div class="prt-table-row"
                onclick
@@ -505,7 +522,7 @@ let%expect_test "resize-column" =
                  flex-direction: row;
                  flex-wrap: nowrap;
                }>
-            <div class="cell_hash_replaced_in_test prt-table-cell"
+            <div class="cell prt-table-cell"
                  style={
                    height: 1px;
                    min-height: 1px;
@@ -517,7 +534,7 @@ let%expect_test "resize-column" =
 -|                 max-width: 0.00000000px;
 +|                 max-width: 10.00000000px;
                  }> 4 </div>
-            <div class="cell_hash_replaced_in_test prt-table-cell"
+            <div class="cell prt-table-cell"
                  style={
                    height: 1px;
                    min-height: 1px;
@@ -529,7 +546,7 @@ let%expect_test "resize-column" =
               <input oninput> </input>
               world
             </div>
-            <div class="cell_hash_replaced_in_test prt-table-cell"
+            <div class="cell prt-table-cell"
                  style={
                    height: 1px; |}]
 ;;
@@ -544,51 +561,49 @@ let%expect_test "big table" =
   Handle.show test.handle;
   [%expect
     {|
-<div class="partial-render-table-bonsai_path_replaced_in_test partial_render_table_container_hash_replaced_in_test">
-  <table class="partial_render_table_header_hash_replaced_in_test prt-table-header"
-         bounds-change=<opaque>>
+<div class="partial-render-table- partial_render_table_container">
+  <table class="partial_render_table_header prt-table-header" bounds-change=<opaque>>
     <tbody>
       <tr>
-        <td colspan="1"
-            class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
-            size_tracker=<fun>>
-          <div class="column_header_hash_replaced_in_test" onclick>
+        <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
+          <div class="column_header" onclick>
             <span> ◇  key </span>
           </div>
         </td>
-        <td colspan="1"
-            class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
-            size_tracker=<fun>>
+        <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
           <div> a </div>
         </td>
-        <td colspan="1"
-            class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
-            size_tracker=<fun>>
-          <div class="column_header_hash_replaced_in_test" onclick>
+        <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
+          <div class="column_header" onclick>
             <span> ◇  b </span>
           </div>
+        </td>
+        <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
+          <div> d </div>
         </td>
       </tr>
     </tbody>
   </table>
-  <div class="partial_render_table_body_hash_replaced_in_test" bounds-change=<opaque>>
+  <div class="partial_render_table_body" bounds-change=<opaque>>
     <div>
       <div>
         <div class="prt-table-row" onclick>
-          <div class="cell_hash_replaced_in_test prt-table-cell"> 51 </div>
-          <div class="cell_hash_replaced_in_test prt-table-cell">
+          <div class="cell prt-table-cell"> 51 </div>
+          <div class="cell prt-table-cell">
             <input oninput> </input>
             hi
           </div>
-          <div class="cell_hash_replaced_in_test prt-table-cell"> 25.000000 </div>
+          <div class="cell prt-table-cell"> 25.000000 </div>
+          <div class="cell prt-table-cell"> 100 </div>
         </div>
         <div class="prt-table-row" onclick>
-          <div class="cell_hash_replaced_in_test prt-table-cell"> 52 </div>
-          <div class="cell_hash_replaced_in_test prt-table-cell">
+          <div class="cell prt-table-cell"> 52 </div>
+          <div class="cell prt-table-cell">
             <input oninput> </input>
             hi
           </div>
-          <div class="cell_hash_replaced_in_test prt-table-cell"> 26.000000 </div>
+          <div class="cell prt-table-cell"> 26.000000 </div>
+          <div class="cell prt-table-cell"> 100 </div>
         </div>
       </div>
     </div>
@@ -600,88 +615,96 @@ let%expect_test "big table" =
   Handle.show_diff test.handle;
   [%expect
     {|
-            <div> a </div>
           </td>
-          <td colspan="1"
-              class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
-              size_tracker=<fun>>
-            <div class="column_header_hash_replaced_in_test" onclick>
+          <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
+            <div class="column_header" onclick>
               <span> ◇  b </span>
             </div>
+          </td>
+          <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
+            <div> d </div>
           </td>
         </tr>
       </tbody>
     </table>
-    <div class="partial_render_table_body_hash_replaced_in_test" bounds-change=<opaque>>
+    <div class="partial_render_table_body" bounds-change=<opaque>>
       <div>
         <div>
           <div class="prt-table-row" onclick>
--|          <div class="cell_hash_replaced_in_test prt-table-cell"> 51 </div>
-+|          <div class="cell_hash_replaced_in_test prt-table-cell"> 55 </div>
-            <div class="cell_hash_replaced_in_test prt-table-cell">
+-|          <div class="cell prt-table-cell"> 51 </div>
++|          <div class="cell prt-table-cell"> 55 </div>
+            <div class="cell prt-table-cell">
               <input oninput> </input>
               hi
             </div>
--|          <div class="cell_hash_replaced_in_test prt-table-cell"> 25.000000 </div>
-+|          <div class="cell_hash_replaced_in_test prt-table-cell"> 27.000000 </div>
+-|          <div class="cell prt-table-cell"> 25.000000 </div>
++|          <div class="cell prt-table-cell"> 27.000000 </div>
+            <div class="cell prt-table-cell"> 100 </div>
           </div>
           <div class="prt-table-row" onclick>
--|          <div class="cell_hash_replaced_in_test prt-table-cell"> 52 </div>
-+|          <div class="cell_hash_replaced_in_test prt-table-cell"> 56 </div>
-            <div class="cell_hash_replaced_in_test prt-table-cell">
+-|          <div class="cell prt-table-cell"> 52 </div>
++|          <div class="cell prt-table-cell"> 56 </div>
+            <div class="cell prt-table-cell">
               <input oninput> </input>
               hi
             </div>
--|          <div class="cell_hash_replaced_in_test prt-table-cell"> 26.000000 </div>
-+|          <div class="cell_hash_replaced_in_test prt-table-cell"> 28.000000 </div>
+-|          <div class="cell prt-table-cell"> 26.000000 </div>
++|          <div class="cell prt-table-cell"> 28.000000 </div>
++|          <div class="cell prt-table-cell"> 100 </div>
 +|        </div>
 +|        <div class="prt-table-row" onclick>
-+|          <div class="cell_hash_replaced_in_test prt-table-cell"> 57 </div>
-+|          <div class="cell_hash_replaced_in_test prt-table-cell">
++|          <div class="cell prt-table-cell"> 57 </div>
++|          <div class="cell prt-table-cell">
 +|            <input oninput> </input>
 +|            hi
 +|          </div>
-+|          <div class="cell_hash_replaced_in_test prt-table-cell"> 28.000000 </div>
++|          <div class="cell prt-table-cell"> 28.000000 </div>
++|          <div class="cell prt-table-cell"> 100 </div>
 +|        </div>
 +|        <div class="prt-table-row" onclick>
-+|          <div class="cell_hash_replaced_in_test prt-table-cell"> 58 </div>
-+|          <div class="cell_hash_replaced_in_test prt-table-cell">
++|          <div class="cell prt-table-cell"> 58 </div>
++|          <div class="cell prt-table-cell">
 +|            <input oninput> </input>
 +|            hi
 +|          </div>
-+|          <div class="cell_hash_replaced_in_test prt-table-cell"> 29.000000 </div>
++|          <div class="cell prt-table-cell"> 29.000000 </div>
++|          <div class="cell prt-table-cell"> 100 </div>
 +|        </div>
 +|        <div class="prt-table-row" onclick>
-+|          <div class="cell_hash_replaced_in_test prt-table-cell"> 59 </div>
-+|          <div class="cell_hash_replaced_in_test prt-table-cell">
++|          <div class="cell prt-table-cell"> 59 </div>
++|          <div class="cell prt-table-cell">
 +|            <input oninput> </input>
 +|            hi
 +|          </div>
-+|          <div class="cell_hash_replaced_in_test prt-table-cell"> 29.000000 </div>
++|          <div class="cell prt-table-cell"> 29.000000 </div>
++|          <div class="cell prt-table-cell"> 100 </div>
 +|        </div>
 +|        <div class="prt-table-row" onclick>
-+|          <div class="cell_hash_replaced_in_test prt-table-cell"> 60 </div>
-+|          <div class="cell_hash_replaced_in_test prt-table-cell">
++|          <div class="cell prt-table-cell"> 60 </div>
++|          <div class="cell prt-table-cell">
 +|            <input oninput> </input>
 +|            hi
 +|          </div>
-+|          <div class="cell_hash_replaced_in_test prt-table-cell"> 30.000000 </div>
++|          <div class="cell prt-table-cell"> 30.000000 </div>
++|          <div class="cell prt-table-cell"> 100 </div>
 +|        </div>
 +|        <div class="prt-table-row" onclick>
-+|          <div class="cell_hash_replaced_in_test prt-table-cell"> 61 </div>
-+|          <div class="cell_hash_replaced_in_test prt-table-cell">
++|          <div class="cell prt-table-cell"> 61 </div>
++|          <div class="cell prt-table-cell">
 +|            <input oninput> </input>
 +|            hi
 +|          </div>
-+|          <div class="cell_hash_replaced_in_test prt-table-cell"> 30.000000 </div>
++|          <div class="cell prt-table-cell"> 30.000000 </div>
++|          <div class="cell prt-table-cell"> 100 </div>
 +|        </div>
 +|        <div class="prt-table-row" onclick>
-+|          <div class="cell_hash_replaced_in_test prt-table-cell"> 62 </div>
-+|          <div class="cell_hash_replaced_in_test prt-table-cell">
++|          <div class="cell prt-table-cell"> 62 </div>
++|          <div class="cell prt-table-cell">
 +|            <input oninput> </input>
 +|            hi
 +|          </div>
-+|          <div class="cell_hash_replaced_in_test prt-table-cell"> 31.000000 </div>
++|          <div class="cell prt-table-cell"> 31.000000 </div>
+            <div class="cell prt-table-cell"> 100 </div>
           </div>
         </div>
       </div>
@@ -704,39 +727,40 @@ let%expect_test "typing into a column, leaving that column, and then coming back
   Handle.show_diff test.handle;
   [%expect
     {|
-              class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
-              size_tracker=<fun>>
-            <div class="column_header_hash_replaced_in_test" onclick>
               <span> ◇  b </span>
             </div>
+          </td>
+          <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
+            <div> d </div>
           </td>
         </tr>
       </tbody>
     </table>
-    <div class="partial_render_table_body_hash_replaced_in_test" bounds-change=<opaque>>
+    <div class="partial_render_table_body" bounds-change=<opaque>>
       <div>
         <div>
           <div class="prt-table-row" onclick>
-            <div class="cell_hash_replaced_in_test prt-table-cell"> 51 </div>
-            <div class="cell_hash_replaced_in_test prt-table-cell">
+            <div class="cell prt-table-cell"> 51 </div>
+            <div class="cell prt-table-cell">
               <input oninput> </input>
 -|            hi
 +|            hi hello world
             </div>
-            <div class="cell_hash_replaced_in_test prt-table-cell"> 25.000000 </div>
+            <div class="cell prt-table-cell"> 25.000000 </div>
+            <div class="cell prt-table-cell"> 100 </div>
           </div>
           <div class="prt-table-row" onclick>
-            <div class="cell_hash_replaced_in_test prt-table-cell"> 52 </div>
-            <div class="cell_hash_replaced_in_test prt-table-cell">
+            <div class="cell prt-table-cell"> 52 </div>
+            <div class="cell prt-table-cell">
               <input oninput> </input>
               hi
             </div>
-            <div class="cell_hash_replaced_in_test prt-table-cell"> 26.000000 </div>
+            <div class="cell prt-table-cell"> 26.000000 </div>
+            <div class="cell prt-table-cell"> 100 </div>
           </div>
         </div>
       </div>
-    </div>
-  </div> |}];
+    </div> |}];
   (* move out of bounds (really 99-25 through 100) *)
   Test.set_bounds test ~low:99 ~high:99;
   Handle.recompute_view_until_stable test.handle;
@@ -747,51 +771,49 @@ let%expect_test "typing into a column, leaving that column, and then coming back
   Handle.show test.handle;
   [%expect
     {|
-<div class="partial-render-table-bonsai_path_replaced_in_test partial_render_table_container_hash_replaced_in_test">
-  <table class="partial_render_table_header_hash_replaced_in_test prt-table-header"
-         bounds-change=<opaque>>
+<div class="partial-render-table- partial_render_table_container">
+  <table class="partial_render_table_header prt-table-header" bounds-change=<opaque>>
     <tbody>
       <tr>
-        <td colspan="1"
-            class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
-            size_tracker=<fun>>
-          <div class="column_header_hash_replaced_in_test" onclick>
+        <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
+          <div class="column_header" onclick>
             <span> ◇  key </span>
           </div>
         </td>
-        <td colspan="1"
-            class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
-            size_tracker=<fun>>
+        <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
           <div> a </div>
         </td>
-        <td colspan="1"
-            class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
-            size_tracker=<fun>>
-          <div class="column_header_hash_replaced_in_test" onclick>
+        <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
+          <div class="column_header" onclick>
             <span> ◇  b </span>
           </div>
+        </td>
+        <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
+          <div> d </div>
         </td>
       </tr>
     </tbody>
   </table>
-  <div class="partial_render_table_body_hash_replaced_in_test" bounds-change=<opaque>>
+  <div class="partial_render_table_body" bounds-change=<opaque>>
     <div>
       <div>
         <div class="prt-table-row" onclick>
-          <div class="cell_hash_replaced_in_test prt-table-cell"> 51 </div>
-          <div class="cell_hash_replaced_in_test prt-table-cell">
+          <div class="cell prt-table-cell"> 51 </div>
+          <div class="cell prt-table-cell">
             <input oninput> </input>
             hi hello world
           </div>
-          <div class="cell_hash_replaced_in_test prt-table-cell"> 25.000000 </div>
+          <div class="cell prt-table-cell"> 25.000000 </div>
+          <div class="cell prt-table-cell"> 100 </div>
         </div>
         <div class="prt-table-row" onclick>
-          <div class="cell_hash_replaced_in_test prt-table-cell"> 52 </div>
-          <div class="cell_hash_replaced_in_test prt-table-cell">
+          <div class="cell prt-table-cell"> 52 </div>
+          <div class="cell prt-table-cell">
             <input oninput> </input>
             hi
           </div>
-          <div class="cell_hash_replaced_in_test prt-table-cell"> 26.000000 </div>
+          <div class="cell prt-table-cell"> 26.000000 </div>
+          <div class="cell prt-table-cell"> 100 </div>
         </div>
       </div>
     </div>
@@ -861,7 +883,7 @@ let%expect_test "table body is not recomputed more often than necessary" =
                { on_change = Value.return (Fn.const Effect.Ignore)
                ; compute_presence = (fun focus -> return focus)
                })
-          ~row_height:(`Px 10)
+          ~row_height:(Value.return (`Px 10))
           ~columns
           collation
       in
@@ -902,59 +924,58 @@ let%expect_test "sorting" =
   Handle.show test.handle;
   [%expect
     {|
-<div class="partial-render-table-bonsai_path_replaced_in_test partial_render_table_container_hash_replaced_in_test">
-  <table class="partial_render_table_header_hash_replaced_in_test prt-table-header"
-         bounds-change=<opaque>>
+<div class="partial-render-table- partial_render_table_container">
+  <table class="partial_render_table_header prt-table-header" bounds-change=<opaque>>
     <tbody>
       <tr>
-        <td colspan="1"
-            class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
-            size_tracker=<fun>>
-          <div class="column_header_hash_replaced_in_test" onclick>
+        <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
+          <div class="column_header" onclick>
             <span> ◇  key </span>
           </div>
         </td>
-        <td colspan="1"
-            class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
-            size_tracker=<fun>>
+        <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
           <div> a </div>
         </td>
-        <td colspan="1"
-            class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
-            size_tracker=<fun>>
-          <div class="column_header_hash_replaced_in_test" onclick>
+        <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
+          <div class="column_header" onclick>
             <span> ◇  b </span>
           </div>
+        </td>
+        <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
+          <div> d </div>
         </td>
       </tr>
     </tbody>
   </table>
-  <div class="partial_render_table_body_hash_replaced_in_test" bounds-change=<opaque>>
+  <div class="partial_render_table_body" bounds-change=<opaque>>
     <div>
       <div>
         <div class="prt-table-row" onclick>
-          <div class="cell_hash_replaced_in_test prt-table-cell"> 0 </div>
-          <div class="cell_hash_replaced_in_test prt-table-cell">
+          <div class="cell prt-table-cell"> 0 </div>
+          <div class="cell prt-table-cell">
             <input oninput> </input>
             hello
           </div>
-          <div class="cell_hash_replaced_in_test prt-table-cell"> 1.000000 </div>
+          <div class="cell prt-table-cell"> 1.000000 </div>
+          <div class="cell prt-table-cell"> 1 </div>
         </div>
         <div class="prt-table-row" onclick>
-          <div class="cell_hash_replaced_in_test prt-table-cell"> 1 </div>
-          <div class="cell_hash_replaced_in_test prt-table-cell">
+          <div class="cell prt-table-cell"> 1 </div>
+          <div class="cell prt-table-cell">
             <input oninput> </input>
             there
           </div>
-          <div class="cell_hash_replaced_in_test prt-table-cell"> 2.000000 </div>
+          <div class="cell prt-table-cell"> 2.000000 </div>
+          <div class="cell prt-table-cell"> 2 </div>
         </div>
         <div class="prt-table-row" onclick>
-          <div class="cell_hash_replaced_in_test prt-table-cell"> 4 </div>
-          <div class="cell_hash_replaced_in_test prt-table-cell">
+          <div class="cell prt-table-cell"> 4 </div>
+          <div class="cell prt-table-cell">
             <input oninput> </input>
             world
           </div>
-          <div class="cell_hash_replaced_in_test prt-table-cell"> 2.000000 </div>
+          <div class="cell prt-table-cell"> 2.000000 </div>
+          <div class="cell prt-table-cell"> --- </div>
         </div>
       </div>
     </div>
@@ -965,102 +986,99 @@ let%expect_test "sorting" =
   Handle.show_diff test.handle;
   [%expect
     {|
-      <div class="partial-render-table-bonsai_path_replaced_in_test partial_render_table_container_hash_replaced_in_test">
-        <table class="partial_render_table_header_hash_replaced_in_test prt-table-header"
-               bounds-change=<opaque>>
+      <div class="partial-render-table- partial_render_table_container">
+        <table class="partial_render_table_header prt-table-header" bounds-change=<opaque>>
           <tbody>
             <tr>
-              <td colspan="1"
-                  class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
-                  size_tracker=<fun>>
-                <div class="column_header_hash_replaced_in_test" onclick>
+              <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
+                <div class="column_header" onclick>
     -|            <span> ◇  key </span>
     +|            <span> ⬘  key </span>
                 </div>
               </td>
-              <td colspan="1"
-                  class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
-                  size_tracker=<fun>>
+              <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
                 <div> a </div>
               </td>
-              <td colspan="1"
-                  class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
-                  size_tracker=<fun>>
-                <div class="column_header_hash_replaced_in_test" onclick>
+              <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
+                <div class="column_header" onclick>
                   <span> ◇  b </span>
                 </div>
               </td>
+              <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
+                <div> d </div>
+              </td>
             </tr>
-          </tbody> |}];
+          </tbody>
+        </table> |}];
   (* this one actually does stuff, click on it twice for a reverse sort *)
   Handle.click_on test.handle ~selector:"td:nth-child(3) > div" ~get_vdom:test.get_vdom;
   Handle.click_on test.handle ~selector:"td:nth-child(3) > div" ~get_vdom:test.get_vdom;
   Handle.show_diff test.handle;
   [%expect
     {|
-  <div class="partial-render-table-bonsai_path_replaced_in_test partial_render_table_container_hash_replaced_in_test">
-    <table class="partial_render_table_header_hash_replaced_in_test prt-table-header"
-           bounds-change=<opaque>>
+  <div class="partial-render-table- partial_render_table_container">
+    <table class="partial_render_table_header prt-table-header" bounds-change=<opaque>>
       <tbody>
         <tr>
-          <td colspan="1"
-              class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
-              size_tracker=<fun>>
-            <div class="column_header_hash_replaced_in_test" onclick>
+          <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
+            <div class="column_header" onclick>
 -|            <span> ⬘  key </span>
 +|            <span> ◇  key </span>
             </div>
           </td>
-          <td colspan="1"
-              class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
-              size_tracker=<fun>>
+          <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
             <div> a </div>
           </td>
-          <td colspan="1"
-              class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
-              size_tracker=<fun>>
-            <div class="column_header_hash_replaced_in_test" onclick>
+          <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
+            <div class="column_header" onclick>
 -|            <span> ◇  b </span>
 +|            <span> ⬙  b </span>
             </div>
           </td>
+          <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
+            <div> d </div>
+          </td>
         </tr>
       </tbody>
     </table>
-    <div class="partial_render_table_body_hash_replaced_in_test" bounds-change=<opaque>>
+    <div class="partial_render_table_body" bounds-change=<opaque>>
       <div>
         <div>
 -|        <div class="prt-table-row" onclick>
--|          <div class="cell_hash_replaced_in_test prt-table-cell"> 0 </div>
--|          <div class="cell_hash_replaced_in_test prt-table-cell">
+-|          <div class="cell prt-table-cell"> 0 </div>
+-|          <div class="cell prt-table-cell">
 -|            <input oninput> </input>
 -|            hello
 -|          </div>
--|          <div class="cell_hash_replaced_in_test prt-table-cell"> 1.000000 </div>
+-|          <div class="cell prt-table-cell"> 1.000000 </div>
+-|          <div class="cell prt-table-cell"> 1 </div>
 -|        </div>
           <div class="prt-table-row" onclick>
-            <div class="cell_hash_replaced_in_test prt-table-cell"> 1 </div>
-            <div class="cell_hash_replaced_in_test prt-table-cell">
+            <div class="cell prt-table-cell"> 1 </div>
+            <div class="cell prt-table-cell">
               <input oninput> </input>
               there
             </div>
-            <div class="cell_hash_replaced_in_test prt-table-cell"> 2.000000 </div>
+            <div class="cell prt-table-cell"> 2.000000 </div>
+            <div class="cell prt-table-cell"> 2 </div>
           </div>
           <div class="prt-table-row" onclick>
-            <div class="cell_hash_replaced_in_test prt-table-cell"> 4 </div>
-            <div class="cell_hash_replaced_in_test prt-table-cell">
+            <div class="cell prt-table-cell"> 4 </div>
+            <div class="cell prt-table-cell">
               <input oninput> </input>
               world
             </div>
-            <div class="cell_hash_replaced_in_test prt-table-cell"> 2.000000 </div>
+            <div class="cell prt-table-cell"> 2.000000 </div>
+            <div class="cell prt-table-cell"> --- </div>
           </div>
 +|        <div class="prt-table-row" onclick>
-+|          <div class="cell_hash_replaced_in_test prt-table-cell"> 0 </div>
-+|          <div class="cell_hash_replaced_in_test prt-table-cell">
++|          <div class="cell prt-table-cell"> 0 </div>
++|          <div class="cell prt-table-cell">
 +|            <input oninput> </input>
 +|            hello
 +|          </div>
-+|          <div class="cell_hash_replaced_in_test prt-table-cell"> 1.000000 </div>
++|          <div class="cell prt-table-cell"> 1.000000 </div>
++|          <div class="cell prt-table-cell"> 1 </div>
 +|        </div>
         </div>
       </div>
@@ -1070,63 +1088,68 @@ let%expect_test "sorting" =
   Handle.show_diff test.handle;
   [%expect
     {|
-              <td colspan="1"
-                  class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
-                  size_tracker=<fun>>
-                <div class="column_header_hash_replaced_in_test" onclick>
+      <div class="partial-render-table- partial_render_table_container">
+        <table class="partial_render_table_header prt-table-header" bounds-change=<opaque>>
+          <tbody>
+            <tr>
+              <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
+                <div class="column_header" onclick>
                   <span> ◇  key </span>
                 </div>
               </td>
-              <td colspan="1"
-                  class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
-                  size_tracker=<fun>>
+              <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
                 <div> a </div>
               </td>
-              <td colspan="1"
-                  class="header_label_hash_replaced_in_test leaf_header_hash_replaced_in_test"
-                  size_tracker=<fun>>
-                <div class="column_header_hash_replaced_in_test" onclick>
+              <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
+                <div class="column_header" onclick>
     -|            <span> ⬙  b </span>
     +|            <span> ◇  b </span>
                 </div>
               </td>
+              <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
+                <div> d </div>
+              </td>
             </tr>
           </tbody>
         </table>
-        <div class="partial_render_table_body_hash_replaced_in_test" bounds-change=<opaque>>
+        <div class="partial_render_table_body" bounds-change=<opaque>>
           <div>
             <div>
     +|        <div class="prt-table-row" onclick>
-    +|          <div class="cell_hash_replaced_in_test prt-table-cell"> 0 </div>
-    +|          <div class="cell_hash_replaced_in_test prt-table-cell">
+    +|          <div class="cell prt-table-cell"> 0 </div>
+    +|          <div class="cell prt-table-cell">
     +|            <input oninput> </input>
     +|            hello
     +|          </div>
-    +|          <div class="cell_hash_replaced_in_test prt-table-cell"> 1.000000 </div>
+    +|          <div class="cell prt-table-cell"> 1.000000 </div>
+    +|          <div class="cell prt-table-cell"> 1 </div>
     +|        </div>
               <div class="prt-table-row" onclick>
-                <div class="cell_hash_replaced_in_test prt-table-cell"> 1 </div>
-                <div class="cell_hash_replaced_in_test prt-table-cell">
+                <div class="cell prt-table-cell"> 1 </div>
+                <div class="cell prt-table-cell">
                   <input oninput> </input>
                   there
                 </div>
-                <div class="cell_hash_replaced_in_test prt-table-cell"> 2.000000 </div>
+                <div class="cell prt-table-cell"> 2.000000 </div>
+                <div class="cell prt-table-cell"> 2 </div>
               </div>
               <div class="prt-table-row" onclick>
-                <div class="cell_hash_replaced_in_test prt-table-cell"> 4 </div>
-                <div class="cell_hash_replaced_in_test prt-table-cell">
+                <div class="cell prt-table-cell"> 4 </div>
+                <div class="cell prt-table-cell">
                   <input oninput> </input>
                   world
                 </div>
-                <div class="cell_hash_replaced_in_test prt-table-cell"> 2.000000 </div>
+                <div class="cell prt-table-cell"> 2.000000 </div>
+                <div class="cell prt-table-cell"> --- </div>
               </div>
     -|        <div class="prt-table-row" onclick>
-    -|          <div class="cell_hash_replaced_in_test prt-table-cell"> 0 </div>
-    -|          <div class="cell_hash_replaced_in_test prt-table-cell">
+    -|          <div class="cell prt-table-cell"> 0 </div>
+    -|          <div class="cell prt-table-cell">
     -|            <input oninput> </input>
     -|            hello
     -|          </div>
-    -|          <div class="cell_hash_replaced_in_test prt-table-cell"> 1.000000 </div>
+    -|          <div class="cell prt-table-cell"> 1.000000 </div>
+    -|          <div class="cell prt-table-cell"> 1 </div>
     -|        </div>
             </div>
           </div>
@@ -1160,7 +1183,7 @@ let%expect_test "removed columns still count toward the total table width" =
     Table.Basic.component
       (module Int)
       ~focus:None
-      ~row_height:(`Px 20)
+      ~row_height:(Value.return (`Px 20))
       ~columns:(Table.Basic.Columns.Dynamic_columns.lift (Bonsai.Var.value columns_var))
       map
   in
@@ -1325,7 +1348,7 @@ let%expect_test "removed columns still count toward the total table width" =
     Table.Basic.component
       (module Int)
       ~focus:None
-      ~row_height:(`Px 1)
+      ~row_height:(Value.return (`Px 1))
       ~preload_rows:1
       ~columns:(Table.Basic.Columns.Dynamic_columns.lift (Value.return [ column_a ]))
       map

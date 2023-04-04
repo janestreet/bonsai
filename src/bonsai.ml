@@ -61,6 +61,18 @@ module Debug = struct
   let instrument_computation = Instrumentation.instrument_computation
   let enable_incremental_annotations = Annotate_incr.enable
   let disable_incremental_annotations = Annotate_incr.disable
+
+  open Let_syntax
+
+  let on_change v ~f =
+    (* Use [after_display] because the incremental node is always considered to be in use.*)
+    Edge.after_display
+      (let%map v = v in
+       f v;
+       Effect.Ignore)
+  ;;
+
+  let on_change_print_s v sexp_of = on_change v ~f:(fun a -> print_s (sexp_of a))
 end
 
 module Arrow_deprecated = struct

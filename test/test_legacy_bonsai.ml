@@ -351,52 +351,6 @@ let%expect_test "schedule many events from outside of the component" =
       () |}])
 ;;
 
-let%expect_test "model cutoff" =
-  let module T = struct
-    let name = "incremental of_module"
-
-    module Input = Unit
-
-    module Model = struct
-      include Int
-
-      let equal a b = if a > 2 then true else Int.equal a b
-    end
-
-    module Action = Unit
-
-    module Result = struct
-      type t = string * (unit -> unit Effect.t)
-    end
-
-    let apply_action _input ~inject:_ ~schedule_event:_ model () = model + 1
-
-    let compute _input model ~inject =
-      let%map.Incr model = model
-      and inject = inject in
-      Int.to_string model, inject
-    ;;
-  end
-  in
-  let component =
-    Bonsai.Arrow_deprecated.With_incr.of_module (module T) ~default_model:0
-    |> Bonsai.Arrow_deprecated.With_incr.model_cutoff
-  in
-  run_test ~component ~initial_input:() ~f:(fun driver ->
-    [%expect {| |}];
-    let (module H) = Helpers.make_string_with_inject ~driver in
-    H.show ();
-    [%expect "0"];
-    H.do_actions [ () ];
-    [%expect "1"];
-    H.do_actions [ () ];
-    [%expect "2"];
-    H.do_actions [ () ];
-    [%expect "3"];
-    H.do_actions [ () ];
-    [%expect "3"])
-;;
-
 let%expect_test "value cutoff" =
   let open Bonsai.Arrow_deprecated.Infix in
   let cutoff =

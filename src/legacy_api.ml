@@ -159,7 +159,6 @@ module With_incr = struct
 
   let pure ~f = Proc.Incr.compute ~f
   let map a ~f = compose a (pure ~f)
-  let model_cutoff f a = Proc.Incr.model_cutoff (f a)
 
   let value_cutoff ~cutoff =
     map input ~f:(fun input ->

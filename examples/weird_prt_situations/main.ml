@@ -62,7 +62,7 @@ let component =
     Table.component
       (module Int)
       ~focus:(By_row { on_change = on_change First_table })
-      ~row_height:(`Px 30)
+      ~row_height:(Value.return (`Px 30))
       ~columns
       data
   in
@@ -70,7 +70,7 @@ let component =
     Table.component
       (module Int)
       ~focus:(By_row { on_change = on_change Second_table })
-      ~row_height:(`Px 30)
+      ~row_height:(Value.return (`Px 30))
       ~columns
       data
   in

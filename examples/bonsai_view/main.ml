@@ -788,7 +788,7 @@ module Card_with_rows = struct
 end
 
 let component =
-  let%sub theme, theme_picker = Gallery.Theme_picker.component in
+  let%sub theme, theme_picker = Gallery.Theme_picker.component () in
   View.Theme.set_for_app
     theme
     (Gallery.make_sections

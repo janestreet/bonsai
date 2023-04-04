@@ -2,6 +2,7 @@ open! Core
 open! Bonsai_web
 open Bonsai.Let_syntax
 module Table = Bonsai_web_ui_partial_render_table.Basic
+module Form = Bonsai_web_ui_form
 module Row = Row
 
 module Time_ns_option = struct
@@ -17,9 +18,10 @@ module Style =
   [%css
     stylesheet
       {|
-  .show_position_toggle {
+  .form_container {
     position: fixed;
     top: 0px;
+    right: 0px;
     z-index: 9000;
   }
 |}]
@@ -75,7 +77,12 @@ let columns ~should_show_position =
               ~disable_sort:true
               ~visible:should_show_position
           ]
-      ; column_helper (module Time_ns_option) Row.Fields.last_fill
+      ; Column.column
+          ~label:(Value.return (Vdom.Node.text "last fill"))
+          ~cell:(fun ~key:_ ~data ->
+            let%arr data = data in
+            Vdom.Node.text (Time_ns_option.to_string data.Row.last_fill))
+          ()
       ]
   ; column_helper (module String) Row.Fields.trader
   ]
@@ -83,25 +90,40 @@ let columns ~should_show_position =
 ;;
 
 let component ?filter (data : Row.t String.Map.t Value.t) =
-  let%sub should_show_position, set = Bonsai.state (module Bool) ~default_model:true in
+  let module Params = struct
+    type t =
+      { show_position : bool
+      ; row_height : [ `Px of int ]
+      }
+    [@@deriving typed_fields]
+
+    let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t = function
+      | Show_position -> Form.Elements.Toggle.bool ~default:true ()
+      | Row_height ->
+        let%sub form = Form.Elements.Range.int ~min:0 ~max:100 ~step:1 () ~default:30 in
+        let%arr form = form in
+        Form.project form ~parse_exn:(fun x -> `Px x) ~unparse:(fun (`Px x) -> x)
+    ;;
+
+    let label_for_field = `Inferred
+  end
+  in
+  let%sub form = Form.Typed.Record.make (module Params) in
+  let%sub { row_height; show_position = should_show_position } =
+    let%arr form = form in
+    Form.value_or_default form ~default:{ show_position = true; row_height = `Px 30 }
+  in
   let%sub table =
     Table.component
       (module String)
       ?filter
       ~focus:(By_row { on_change = Value.return (Fn.const Effect.Ignore) })
-      ~row_height:(`Px 30)
+      ~row_height
       ~columns:(columns ~should_show_position)
       data
   in
-  let%arr should_show_position = should_show_position
-  and set = set
-  and { Table.Result.view = table; for_testing = _; num_filtered_rows; focus } = table in
-  let button_text = if should_show_position then "hide position" else "show position" in
-  let button text action =
-    Vdom.Node.button
-      ~attrs:[ Vdom.Attr.on_click (fun _ -> action) ]
-      [ Vdom.Node.text text ]
-  in
+  let%arr { Table.Result.view = table; for_testing = _; num_filtered_rows; focus } = table
+  and form = form in
   Vdom.Node.div
     ~attrs:
       [ Vdom.Attr.on_keydown (fun kbc ->
@@ -120,9 +142,5 @@ let component ?filter (data : Row.t String.Map.t Value.t) =
           | Some b -> Effect.Many [ Effect.Prevent_default; b ]
           | None -> Effect.Ignore)
       ]
-    [ Vdom.Node.div
-        ~attrs:[ Style.show_position_toggle ]
-        [ button button_text (set (not should_show_position)) ]
-    ; table
-    ]
+    [ Vdom.Node.div ~attrs:[ Style.form_container ] [ Form.view_as_vdom form ]; table ]
 ;;

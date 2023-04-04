@@ -169,7 +169,6 @@ module For_computation = struct
     | Leaf01 t -> Leaf01 { t with input = map_value t.input }
     | Leaf0 _ -> computation
     | Leaf_incr t -> Leaf_incr { t with input = map_value t.input }
-    | Model_cutoff t -> Model_cutoff (map t)
     | Sub t ->
       let from = map ~var_from_parent:(One (Type_equal.Id.uid t.via)) ~choice:1 t.from in
       let into = map ~choice:2 t.into in

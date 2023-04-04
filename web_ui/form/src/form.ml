@@ -29,16 +29,18 @@ module Submit = struct
     ; handle_enter : bool
     ; button_text : string option
     ; button_attr : Vdom.Attr.t
+    ; button_location : View.button_location
     }
 
   let create
         ?(handle_enter = true)
         ?(button = Some "submit")
         ?(button_attr = Vdom.Attr.empty)
+        ?(button_location = `After)
         ~f
         ()
     =
-    { f; handle_enter; button_text = button; button_attr }
+    { f; handle_enter; button_text = button; button_attr; button_location }
   ;;
 end
 
@@ -49,12 +51,15 @@ let map_view t ~f = { t with view = f t.view }
 
 let view_as_vdom ?theme ?on_submit ?editable t =
   let on_submit =
-    Option.map on_submit ~f:(fun { Submit.f; handle_enter; button_text; button_attr } ->
-      { View.on_submit = Option.map ~f (Or_error.ok t.value)
-      ; handle_enter
-      ; button_text
-      ; button_attr
-      })
+    Option.map
+      on_submit
+      ~f:(fun { Submit.f; handle_enter; button_text; button_attr; button_location } ->
+        { View.on_submit = Option.map ~f (Or_error.ok t.value)
+        ; handle_enter
+        ; button_text
+        ; button_attr
+        ; button_location
+        })
   in
   View.to_vdom ?theme ?on_submit ?editable t.view
 ;;

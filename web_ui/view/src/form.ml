@@ -358,7 +358,13 @@ let hidden_submit_input =
 let to_vdom self ?on_submit ~eval_context view =
   let submit_button =
     match on_submit with
-    | Some { on_submit; handle_enter = _; button_text = Some button_text; button_attr } ->
+    | Some
+        { on_submit
+        ; handle_enter = _
+        ; button_text = Some button_text
+        ; button_attr
+        ; button_location = _
+        } ->
       [ Vdom.Node.tr
           [ depth_td'
               ~depth:0
@@ -381,7 +387,12 @@ let to_vdom self ?on_submit ~eval_context view =
     | None | Some _ -> []
   in
   let inner_table =
-    self#form_toplevel_combine (self#form_view ~eval_context view @ submit_button)
+    let form_parts =
+      match Option.map on_submit ~f:(fun o -> o.button_location) with
+      | None | Some `After -> self#form_view ~eval_context view @ submit_button
+      | Some `Before -> submit_button @ self#form_view ~eval_context view
+    in
+    self#form_toplevel_combine form_parts
   in
   let inner_table =
     match Form_context.editable eval_context with

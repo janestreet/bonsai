@@ -159,23 +159,6 @@ let rec gather : type result. result Computation.t -> result Computation.packed_
       ; reset = reset_unit_model
       ; run
       }
-  | Model_cutoff t ->
-    let (T gathered) = gather t in
-    let run ~environment ~path ~clock ~model ~inject_dynamic ~inject_static =
-      let model = Incr.map model ~f:Fn.id in
-      Incr.set_cutoff model (Incr.Cutoff.of_equal gathered.model.equal);
-      gathered.run ~environment ~path ~clock ~model ~inject_dynamic ~inject_static
-    in
-    T
-      { run
-      ; input = gathered.input
-      ; model = gathered.model
-      ; static_action = gathered.static_action
-      ; dynamic_action = gathered.dynamic_action
-      ; reset = gathered.reset
-      ; apply_static = gathered.apply_static
-      ; apply_dynamic = gathered.apply_dynamic
-      }
   | Sub { from; via; into; here } ->
     let (T info_from) = gather from in
     let (T info_into) = gather into in

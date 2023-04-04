@@ -116,7 +116,9 @@ module Basic : sig
     -> ?preload_rows:int
     -> ('key, 'cmp) Bonsai.comparator
     -> focus:('focus, 'presence, 'key) Focus.t
-    -> row_height:[ `Px of int ]
+    -> row_height:[ `Px of int ] Value.t
+    (** [row_height] is the height of every row in the table. If the row height
+        is specified to be 0px or less, we instead use 1px. *)
     -> columns:('key, 'data) Columns.t
     -> ('key, 'data, 'cmp) Map.t Value.t (** The input data for the table *)
     -> 'focus Result.t Computation.t
@@ -201,8 +203,9 @@ module Expert : sig
         viewport range.  *)
     -> ('key, 'cmp) Bonsai.comparator
     -> focus:('focus, 'presence, 'key) Focus.t
-    -> row_height:[ `Px of int ]
-    (** [row_height] is the fixed-height of every row in the table. *)
+    -> row_height:[ `Px of int ] Value.t
+    (** [row_height] is the height of every row in the table. If the row height
+        is specified to be 0px or less, we instead use 1px. *)
     -> columns:('key, 'row) Columns.t
     -> ('key, 'row) Collated.t Value.t
     (** The collated value is the proper input to the component.

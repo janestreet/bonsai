@@ -27,6 +27,21 @@ let%expect_test "cutoff" =
   [%expect {| 1 |}]
 ;;
 
+let%expect_test "debug on change" =
+  let var = Bonsai.Var.create 0 in
+  let value = Bonsai.Var.value var in
+  let component = Bonsai.Debug.on_change value ~f:(fun i -> printf "%d" i) in
+  let handle = Handle.create Result_spec.invisible component in
+  Handle.show handle;
+  [%expect {| 0 |}];
+  Bonsai.Var.set var 1;
+  Handle.show handle;
+  [%expect {| 1 |}];
+  Bonsai.Var.set var 2;
+  Handle.show handle;
+  [%expect {| 2 |}]
+;;
+
 let%expect_test "Setting cutoff on Bonsai values should not change previously set cutoffs"
   =
   let var = Bonsai.Var.create (0, 0) in
@@ -5588,6 +5603,47 @@ let%expect_test "State machine actions that are scheduled while running the acti
     (n 2)
     (n 1)
     (n 0) |}]
+;;
+
+let%expect_test "Bonsai.previous_value" =
+  let input_var = Bonsai.Var.create 0 in
+  let active_var = Bonsai.Var.create true in
+  let component =
+    match%sub Bonsai.Var.value active_var with
+    | true -> Bonsai.previous_value (module Int) (Bonsai.Var.value input_var)
+    | false -> Bonsai.const None
+  in
+  let handle =
+    Handle.create
+      (Result_spec.sexp
+         (module struct
+           type t = int option [@@deriving sexp, equal]
+         end))
+      component
+  in
+  Handle.show handle;
+  [%expect {| () |}];
+  Handle.show handle;
+  [%expect {| (0) |}];
+  Bonsai.Var.set input_var 1;
+  Handle.show handle;
+  [%expect {| (0) |}];
+  Bonsai.Var.set input_var 2;
+  Handle.show handle;
+  [%expect {| (1) |}];
+  Handle.show handle;
+  [%expect {| (2) |}];
+  Bonsai.Var.set active_var false;
+  Handle.show handle;
+  [%expect {| () |}];
+  Bonsai.Var.set input_var 3;
+  Handle.show handle;
+  [%expect {| () |}];
+  Bonsai.Var.set active_var true;
+  Handle.show handle;
+  [%expect {| (2) |}];
+  Handle.show handle;
+  [%expect {| (3) |}]
 ;;
 
 let%expect_test "most_recent_some" =

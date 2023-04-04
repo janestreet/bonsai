@@ -40,56 +40,83 @@ module Expert = struct
     module Dynamic_columns = Column.Dynamic_columns
   end
 
+  module Row_height_model = struct
+    type t = [ `Px of int ] [@@deriving sexp, equal]
+  end
+
+  let print_in_tests f =
+    match Bonsai_web.am_running_how with
+    | `Browser | `Browser_benchmark | `Node | `Node_benchmark -> Effect.Ignore
+    | `Node_test -> Effect.of_sync_fun (fun () -> print_endline (f ())) ()
+  ;;
+
   let implementation
         (type key presence data cmp)
         ~preload_rows
         (key : (key, cmp) Bonsai.comparator)
         ~(focus : (_, presence, key) Focus.Kind.t)
-        ~row_height:(`Px row_height_px as row_height)
+        ~row_height
         ~headers
         ~assoc
         (collated : (key, data) Collated.t Value.t)
     =
+    let%sub row_height =
+      let%arr (`Px row_height) = row_height in
+      `Px (Int.max 1 row_height)
+    in
     let focus_kind = focus in
     let%sub input_map = Bonsai.pure Collated.to_map_list collated in
     let%sub path = Bonsai.path_id in
     let%sub leaves = Bonsai.pure Header_tree.leaves headers in
     let%sub header_client_rect, set_header_client_rect =
-      Bonsai.Incr.model_cutoff (Bonsai.state_opt (module Bbox.Int))
+      Bonsai.state_opt (module Bbox.Int)
+    in
+    let%sub header_client_rect =
+      return (Value.cutoff ~equal:[%equal: Bbox.Int.t option] header_client_rect)
     in
     let%sub set_header_client_rect =
       let%arr set_header_client_rect = set_header_client_rect in
       fun b -> set_header_client_rect (Some b)
     in
     let%sub table_body_visible_rect, set_table_body_visible_rect =
-      Bonsai.Incr.model_cutoff (Bonsai.state_opt (module Bbox.Int))
+      Bonsai.state_opt (module Bbox.Int)
+    in
+    let%sub table_body_visible_rect =
+      return (Value.cutoff ~equal:[%equal: Bbox.Int.t option] table_body_visible_rect)
     in
     let%sub table_body_client_rect, set_table_body_client_rect =
-      Bonsai.Incr.model_cutoff (Bonsai.state_opt (module Bbox.Int))
+      Bonsai.state_opt (module Bbox.Int)
+    in
+    let%sub table_body_client_rect =
+      return (Value.cutoff ~equal:[%equal: Bbox.Int.t option] table_body_client_rect)
+    in
+    let module Column_widths_model = struct
+      type t = Column_size.t Int.Map.t [@@deriving sexp, equal]
+    end
     in
     let%sub column_widths, set_column_width =
-      Bonsai.Incr.model_cutoff
-        (Bonsai.state_machine0
-           (module struct
-             type t = Column_size.t Int.Map.t [@@deriving sexp, equal]
-           end)
-           (module struct
-             type t = int * [ `Px_float of float ] [@@deriving sexp, equal]
-           end)
-           ~default_model:Int.Map.empty
-           ~apply_action:(fun ~inject:_ ~schedule_event:_ model (idx, `Px_float width) ->
-             (* While checking for float equality is usually not a good idea,
-                this is meant to handle the specific case when a column has
-                "display:none", in which case the width will be exactly 0.0, so
-                there is no concern about float rounding errors. *)
-             Map.update model idx ~f:(fun prev ->
-               if Float.equal width 0.0
-               then (
-                 match prev with
-                 | None -> Hidden { prev_width_px = None }
-                 | Some (Visible { width_px }) -> Hidden { prev_width_px = Some width_px }
-                 | Some (Hidden _ as prev) -> prev)
-               else Visible { width_px = width })))
+      Bonsai.state_machine0
+        (module Column_widths_model)
+        (module struct
+          type t = int * [ `Px_float of float ] [@@deriving sexp, equal]
+        end)
+        ~default_model:Int.Map.empty
+        ~apply_action:(fun ~inject:_ ~schedule_event:_ model (idx, `Px_float width) ->
+          (* While checking for float equality is usually not a good idea,
+             this is meant to handle the specific case when a column has
+             "display:none", in which case the width will be exactly 0.0, so
+             there is no concern about float rounding errors. *)
+          Map.update model idx ~f:(fun prev ->
+            if Float.equal width 0.0
+            then (
+              match prev with
+              | None -> Hidden { prev_width_px = None }
+              | Some (Visible { width_px }) -> Hidden { prev_width_px = Some width_px }
+              | Some (Hidden _ as prev) -> prev)
+            else Visible { width_px = width }))
+    in
+    let%sub column_widths =
+      return (Value.cutoff ~equal:[%equal: Column_widths_model.t] column_widths)
     in
     let%sub set_column_width =
       let%arr set_column_width = set_column_width in
@@ -111,39 +138,32 @@ module Expert = struct
       and table_body_client_rect = table_body_client_rect
       and header_client_rect = header_client_rect
       and header_height_px = header_height_px in
-      match table_body_visible_rect, table_body_client_rect, header_client_rect with
-      | Some { min_y = body_min_y; max_y = body_max_y; _ }, _, None ->
-        (* if we don't have the header-height yet, just assume that there's
-           no overlap. *)
-        let low = Float.of_int body_min_y /. Float.of_int row_height_px in
-        let high =
-          (Float.of_int body_max_y -. Float.of_int row_height_px +. 2.)
-          /. Float.of_int row_height_px
-        in
-        Float.(to_int (round_nearest low)), Float.(to_int (round_nearest high))
-      | ( Some { min_y = body_min_y; max_y = body_max_y; _ }
-        , Some { min_y = client_body_min_y; _ }
-        , Some { max_y = header_max_y; _ } ) ->
-        let header_overlap =
-          Int.min header_height_px (header_max_y - client_body_min_y)
-        in
-        let low =
-          Float.of_int (body_min_y + header_overlap) /. Float.of_int row_height_px
-        in
-        let high =
-          (Float.of_int body_max_y -. Float.of_int row_height_px +. 2.)
-          /. Float.of_int row_height_px
-        in
-        Float.(to_int (round_nearest low)), Float.(to_int (round_nearest high))
-      | _ ->
-        (* This can happen if the number of rows in the table shrinks such that
-           the table becomes invisible. By providing a small index, we ensure
-           that the padding around the table does not force the page to remain
-           large enough for the existing scroll position. With the padding
-           removed, the browser should automatically reduce the range of the
-           scrollbar, and possibly bringing the table back in view, which would
-           quickly correct this value to something more useful. *)
-        0, 1
+      fun (`Px row_height_px) ->
+        match table_body_visible_rect, table_body_client_rect, header_client_rect with
+        | Some { min_y = body_min_y; max_y = body_max_y; _ }, _, None ->
+          (* if we don't have the header-height yet, just assume that there's
+             no overlap. *)
+          let low = Float.of_int body_min_y /. Float.of_int row_height_px in
+          let high =
+            (Float.of_int body_max_y -. Float.of_int row_height_px +. 2.)
+            /. Float.of_int row_height_px
+          in
+          Some (Float.(to_int (round_nearest low)), Float.(to_int (round_nearest high)))
+        | ( Some { min_y = body_min_y; max_y = body_max_y; _ }
+          , Some { min_y = client_body_min_y; _ }
+          , Some { max_y = header_max_y; _ } ) ->
+          let header_overlap =
+            Int.min header_height_px (header_max_y - client_body_min_y)
+          in
+          let low =
+            Float.of_int (body_min_y + header_overlap) /. Float.of_int row_height_px
+          in
+          let high =
+            (Float.of_int body_max_y -. Float.of_int row_height_px +. 2.)
+            /. Float.of_int row_height_px
+          in
+          Some (Float.(to_int (round_nearest low)), Float.(to_int (round_nearest high)))
+        | _ -> None
     in
     let%sub midpoint_of_container =
       let%arr table_body_visible_rect = table_body_visible_rect in
@@ -153,10 +173,22 @@ module Expert = struct
     in
     let%sub scroll_to_index =
       let%arr header_height_px = header_height_px
-      and range_start, range_end = range_without_preload
+      and range_without_preload = range_without_preload
       and midpoint_of_container = midpoint_of_container
-      and path = path in
+      and path = path
+      and (`Px row_height_px) = row_height in
       fun index ->
+        let range_start, range_end =
+          (* [range_without_preload] can be [None] if the number of rows in
+             the table shrinks such that the table becomes invisible. By
+             providing a small index, we ensure that the padding around the
+             table does not force the page to remain large enough for the
+             existing scroll position. With the padding removed, the browser
+             should automatically reduce the range of the scrollbar, and
+             possibly bringing the table back in view, which would quickly
+             correct this value to something more useful. *)
+          range_without_preload (`Px row_height_px) |> Option.value ~default:(0, 1)
+        in
         let to_top =
           (* scrolling this row to the top of the display involves
              scrolling to a pixel that is actually [header_height] _above_
@@ -178,13 +210,98 @@ module Expert = struct
         let selector = ".partial-render-table-" ^ path ^ " > div" in
         match y_px with
         | Some y_px ->
+          let%bind.Effect () =
+            print_in_tests (fun () ->
+              [%string "scrolling to index %{index#Int} at %{y_px#Int}px"])
+          in
           Scroll.to_position_inside_element
             ~x_px:midpoint_of_container
             ~y_px
             ~selector
             `Minimal
           |> Effect.ignore_m
-        | None -> Effect.Ignore
+        | None ->
+          print_in_tests (fun () -> "skipping scroll because target already in view")
+    in
+    let%sub keep_top_row_in_position =
+      let%arr range_without_preload = range_without_preload
+      and header_height_px = header_height_px
+      and midpoint_of_container = midpoint_of_container
+      and path = path
+      and table_body_visible_rect = table_body_visible_rect in
+      fun (`Px old_row_height_px) (`Px new_row_height_px) ->
+        match range_without_preload (`Px old_row_height_px), table_body_visible_rect with
+        | None, None | None, Some _ ->
+          (* If there are no rows visible [range_without_preload] will return
+             [None]. In this case we should do nothing because the scroll
+             position is outside the tables jurisdiction. *)
+          Effect.Ignore
+        | Some _, None ->
+          (* [range_without_preload] is expected to return a range only if the
+             table body is partly visible, so this case is unexpected. We don't
+             do anything except print because we need to visible rect to do
+             anything correct. *)
+          Effect.print_s
+            [%message
+              [%here]
+                "BUG: the visible rect shouldn't be none when there is range of rows"]
+        | Some (range_start, _range_end), Some table_body_visible_rect ->
+          (* If some rows of the table are visible, we scroll such that the top
+             visible row remains in the same position in the viewport. *)
+          let old_y_px = old_row_height_px * range_start in
+          let new_y_px = new_row_height_px * range_start in
+          let selector = ".partial-render-table-" ^ path ^ " > div" in
+          let y_px =
+            match new_y_px < old_y_px with
+            | true -> new_y_px - header_height_px
+            | false ->
+              new_y_px
+              - header_height_px
+              + (table_body_visible_rect.max_y - table_body_visible_rect.min_y)
+              - 1
+          in
+          let%bind.Effect () =
+            print_in_tests (fun () ->
+              [%string "scrolling position %{y_px#Int}px into view"])
+          in
+          Scroll.to_position_inside_element
+            ~x_px:midpoint_of_container
+            ~y_px
+            ~selector
+            `Minimal
+          |> Effect.ignore_m
+    in
+    let%sub () =
+      (* If [row_height] changes, we want scrolling to follow the visible set
+         of rows to their new location. To do this, we calculate the new
+         position of the current top row, and then scroll their immediately. *)
+      let%sub callback =
+        let%arr keep_top_row_in_position = keep_top_row_in_position in
+        fun prev_row_height new_row_height ->
+          match prev_row_height with
+          | Some prev_row_height ->
+            keep_top_row_in_position prev_row_height new_row_height
+          | None -> Effect.Ignore
+      in
+      Bonsai.Edge.on_change' (module Row_height_model) row_height ~callback
+    in
+    let%sub range_without_preload =
+      let%sub prev_row_height =
+        Bonsai.previous_value (module Row_height_model) row_height
+      in
+      let%arr prev_row_height = prev_row_height
+      and row_height = row_height
+      and range_without_preload = range_without_preload in
+      (* If the [row_height] just changed, then we will be scrolling to a new
+         position that will leave [range_without_preload] unchanged. Thus, we
+         should intentionally _not_ account for the new change in row_height
+         yet, since otherwise we will get flickering in the UI. *)
+      let range =
+        match prev_row_height with
+        | Some prev_row_height -> range_without_preload prev_row_height
+        | None -> range_without_preload row_height
+      in
+      Option.value range ~default:(0, 1)
     in
     let%sub { focus; visually_focused } =
       Focus.component
@@ -225,7 +342,8 @@ module Expert = struct
           ~visible_rect_changed:set_table_body_visible_rect
       in
       let%sub total_height =
-        let%arr row_count = row_count in
+        let%arr row_count = row_count
+        and (`Px row_height_px) = row_height in
         row_count * row_height_px
       in
       let%arr head = head
@@ -261,7 +379,7 @@ module Expert = struct
       and row_count = row_count in
       let low = Int.max 0 (low - preload_rows) in
       let low =
-        (* always fetch an even number of rows in order to make
+        (* always fetch a range starting at an even index in order to make
            css-selecting on even and odd rows work. *)
         low - (low % 2)
       in
@@ -360,7 +478,7 @@ module Basic = struct
       -> ?preload_rows:int
       -> (key, cmp) Bonsai.comparator
       -> focus:(focus, presence, key) Focus.t
-      -> row_height:[ `Px of int ]
+      -> row_height:[ `Px of int ] Value.t
       -> columns:(key, data) Column_intf.with_sorter
       -> (key, data, cmp) Map.t Value.t
       -> focus Result.t Computation.t

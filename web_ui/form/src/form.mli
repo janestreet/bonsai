@@ -32,6 +32,7 @@ module Submit : sig
     ; handle_enter : bool
     ; button_text : string option
     ; button_attr : Vdom.Attr.t
+    ; button_location : Form_view.button_location
     }
 
   (** Creates a "submit" handler, which is intended to be used by the [view_as_vdom] function.
@@ -51,6 +52,7 @@ module Submit : sig
     :  ?handle_enter:bool
     -> ?button:string option
     -> ?button_attr:Vdom.Attr.t
+    -> ?button_location:Form_view.button_location
     -> f:('a -> unit Ui_effect.t)
     -> unit
     -> 'a t

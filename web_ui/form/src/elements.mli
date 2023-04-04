@@ -580,9 +580,8 @@ module Optional : sig
      [none_label] options. If the user selects the [some_label] option, the provided form
      is used for the inner value of the option. *)
   val dropdown
-    :  ?some_label:string (** default ["None"] *)
-    -> ?none_label:string (** default ["Some"] *)
-    -> (module T with type t = 'a)
+    :  ?some_label:string (** default ["Some"] *)
+    -> ?none_label:string (** default ["None"] *)
     -> 'a Form.t Computation.t (** shown when the [some_label] option is selected *)
     -> 'a option Form.t Computation.t
 end

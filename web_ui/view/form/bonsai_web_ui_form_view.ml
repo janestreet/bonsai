@@ -18,11 +18,17 @@ type editable =
   | `Currently_no
   ]
 
+type button_location =
+  [ `Before
+  | `After
+  ]
+
 type submission_options =
   { on_submit : unit Ui_effect.t option
   ; handle_enter : bool
   ; button_text : string option
   ; button_attr : Vdom.Attr.t
+  ; button_location : button_location
   }
 
 (* For creating *)

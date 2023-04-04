@@ -1,6 +1,7 @@
 open Core
 open Ppxlib
 
+let locality = `global
 let loc = Location.none
 let print_expr expr = Pprintast.string_of_expression expr |> print_string
 
@@ -9,6 +10,7 @@ let%expect_test "single let%sub " =
     Ppx_bonsai_expander.sub
     Ppx_let_expander.Extension_kind.default
     ~modul:None
+    ~locality
     [%expr
       let a = MY_EXPR in
       MY_BODY]
@@ -29,6 +31,7 @@ let%expect_test "single pattern sub with modul" =
     Ppx_bonsai_expander.sub
     Ppx_let_expander.Extension_kind.default
     ~modul:(Some { txt = Longident.Lident "X"; loc = Location.none })
+    ~locality
     [%expr
       let a = MY_EXPR in
       MY_BODY]
@@ -62,6 +65,7 @@ let%expect_test "double pattern let%sub" =
       Ppx_bonsai_expander.sub
       Ppx_let_expander.Extension_kind.default
       ~modul:None
+      ~locality
       [%expr
         let a = MY_EXPR_1
         and b = MY_EXPR_2 in
@@ -75,6 +79,7 @@ let%expect_test "single pattern sub open" =
     Ppx_bonsai_expander.sub
     Ppx_let_expander.Extension_kind.default
     ~modul:None
+    ~locality
     [%expr
       let a = MY_EXPR_1 in
       MY_BODY]
@@ -96,6 +101,7 @@ let%expect_test "double pattern map open" =
       Ppx_bonsai_expander.sub
       Ppx_let_expander.Extension_kind.default_open
       ~modul:None
+      ~locality
       [%expr
         let a = MY_EXPR_1
         and b = MY_EXPR_2 in
@@ -110,6 +116,7 @@ let%expect_test "while%sub is banned" =
       Ppx_bonsai_expander.sub
       Ppx_let_expander.Extension_kind.default_open
       ~modul:None
+      ~locality
       [%expr
         while a = MY_EXPR_1 do
           MY_BODY
@@ -123,6 +130,7 @@ let%expect_test "if%sub is supported" =
     Ppx_bonsai_expander.sub
     Ppx_let_expander.Extension_kind.default
     ~modul:None
+    ~locality
     [%expr if MY_EXPR_1 then BODY_1 else BODY_2]
   |> print_expr;
   [%expect
@@ -153,6 +161,7 @@ let%expect_test "very simple match%sub" =
     Ppx_bonsai_expander.sub
     Ppx_let_expander.Extension_kind.default
     ~modul:None
+    ~locality
     [%expr
       match MY_EXPR_1 with
       | a -> BODY_1]
@@ -173,6 +182,7 @@ let%expect_test "destructuring let%sub" =
     Ppx_bonsai_expander.sub
     Ppx_let_expander.Extension_kind.default
     ~modul:None
+    ~locality
     [%expr
       let a, { b; c } = MY_EXPR in
       MY_BODY]
@@ -253,6 +263,7 @@ let%expect_test "destructuring match%sub" =
     Ppx_bonsai_expander.sub
     Ppx_let_expander.Extension_kind.default
     ~modul:None
+    ~locality
     [%expr
       match MY_EXPR with
       | Choice_1 (a, b) -> CHOICE_1_BODY
@@ -341,6 +352,7 @@ let%expect_test "single-case match%sub doesn't call switch" =
     Ppx_bonsai_expander.sub
     Ppx_let_expander.Extension_kind.default
     ~modul
+    ~locality
     [%expr
       match MY_EXPR with
       | Choice_1 x -> CHOICE_1_BODY]
@@ -382,6 +394,7 @@ let%expect_test "module-qualified match%sub" =
     Ppx_bonsai_expander.sub
     Ppx_let_expander.Extension_kind.default
     ~modul
+    ~locality
     [%expr
       match MY_EXPR with
       | Choice_1 x -> CHOICE_1_BODY
@@ -461,6 +474,7 @@ let%expect_test "type annotations are preserved" =
     Ppx_bonsai_expander.sub
     Ppx_let_expander.Extension_kind.default
     ~modul:None
+    ~locality
     [%expr
       let (_ : int) = EXPR in
       BODY]
@@ -498,6 +512,7 @@ let%expect_test "function%sub" =
     Ppx_bonsai_expander.sub
     Ppx_let_expander.Extension_kind.default
     ~modul:None
+    ~locality
     [%expr
       function
       | Some a -> EXPR_SOME
@@ -556,6 +571,7 @@ let%expect_test "function%arr" =
     Ppx_bonsai_expander.arr
     Ppx_let_expander.Extension_kind.default
     ~modul:None
+    ~locality
     [%expr
       function
       | Some a -> EXPR_SOME
@@ -579,6 +595,7 @@ let%expect_test "destructuring let%arr uses cutoff" =
     Ppx_bonsai_expander.arr
     Ppx_let_expander.Extension_kind.default
     ~modul:None
+    ~locality
     [%expr
       let a, { b; c; _ } = MY_EXPR in
       MY_BODY]
@@ -616,6 +633,7 @@ let%expect_test "destructuring let%arr uses cutoff (multiple arms)" =
     Ppx_bonsai_expander.arr
     Ppx_let_expander.Extension_kind.default
     ~modul:None
+    ~locality
     [%expr
       let a, { b; c; _ } = MY_EXPR
       and x, { y; z; _ } = OTHER_EXPR in
@@ -678,6 +696,7 @@ let%expect_test "one arm of destructuring let%arr uses cutoff" =
     Ppx_bonsai_expander.arr
     Ppx_let_expander.Extension_kind.default
     ~modul:None
+    ~locality
     [%expr
       let a, { b; c; _ } = MY_EXPR
       and y = OTHER_EXPR in
@@ -723,6 +742,7 @@ let%expect_test "Destructuring does not happen when there is no ignoring" =
     Ppx_bonsai_expander.arr
     Ppx_let_expander.Extension_kind.default
     ~modul:None
+    ~locality
     [%expr
       let a, { b; c; d } = MY_EXPR in
       MY_BODY]
@@ -744,6 +764,7 @@ let%expect_test "Destructuring does not happen when there is no ignoring (multip
     Ppx_bonsai_expander.arr
     Ppx_let_expander.Extension_kind.default
     ~modul:None
+    ~locality
     [%expr
       let a, { b; c; d } = MY_EXPR
       and x, { y; z; w } = OTHER_EXPR in
@@ -772,6 +793,7 @@ let%test_module "Destructuring vs. no destructuring criteria." =
            Ppx_bonsai_expander.arr
            Ppx_let_expander.Extension_kind.default
            ~modul:None
+           ~locality
       |> print_expr
     ;;
 
@@ -1075,6 +1097,7 @@ let%expect_test "current match%arr behavior" =
     Ppx_bonsai_expander.arr
     Ppx_let_expander.Extension_kind.default
     ~modul:None
+    ~locality
     [%expr
       match EXPR with
       | A (a, _) -> MY_BODY

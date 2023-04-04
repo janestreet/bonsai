@@ -7,7 +7,12 @@ module Record = struct
   module type S = sig
     module Typed_field : Typed_fields_lib.S
 
-    val label_for_field : [ `Inferred | `Computed of 'a Typed_field.t -> string ]
+    val label_for_field
+      : [ `Inferred
+        | `Computed of 'a Typed_field.t -> string
+        | `Dynamic of (Typed_field.Packed.t -> string) Value.t
+        ]
+
     val form_for_field : 'a Typed_field.t -> 'a Form.t Computation.t
   end
 
@@ -17,11 +22,11 @@ module Record = struct
 
   let make (type a) (module M : S with type Typed_field.derived_on = a) =
     let module Form_value = struct
-      type 'a t = 'a Form.t Bonsai.Computation.t
+      type 'a t = 'a Form.t Computation.t
     end
     in
     let module App = struct
-      include Bonsai.Computation
+      include Computation
 
       type 'a s = 'a Form.t
 
@@ -34,23 +39,29 @@ module Record = struct
     let module To_forms = The_form_values.As_applicative.To_other_map (App) (The_forms) in
     let get_label =
       match M.label_for_field with
-      | `Inferred -> M.Typed_field.name
-      | `Computed f -> f
+      | `Inferred ->
+        Value.return (fun { M.Typed_field.Packed.f = T t } -> M.Typed_field.name t)
+      | `Computed f -> Value.return (fun { M.Typed_field.Packed.f = T t } -> f t)
+      | `Dynamic f -> f
     in
     let form_values_per_field =
       let f field =
-        let label = get_label field in
         let%sub subform = M.form_for_field field in
-        let%map.Computation subform = Form.Dynamic.error_hint subform in
+        let%sub subform = Form.Dynamic.error_hint subform in
+        let%arr subform = subform
+        and get_label = get_label in
+        let label = get_label { f = T field } in
         subform |> Form.Private.suggest_label label |> attach_fieldname_to_error label
       in
       The_form_values.create { f }
     in
-    let%map.Computation forms_per_field = To_forms.run form_values_per_field in
+    let%sub forms_per_field = To_forms.run form_values_per_field in
+    let%arr forms_per_field = forms_per_field
+    and get_label = get_label in
     let view =
       M.Typed_field.Packed.all
       |> List.map ~f:(fun { f = T field } ->
-        { Form_view.field_name = get_label field
+        { Form_view.field_name = get_label (M.Typed_field.Packed.pack field)
         ; field_view = Form.view (The_forms.find forms_per_field field)
         })
       |> Form_view.record
@@ -76,7 +87,12 @@ module Variant = struct
   module type S = sig
     module Typed_variant : Typed_variants_lib.S
 
-    val label_for_variant : [ `Inferred | `Computed of 'a Typed_variant.t -> string ]
+    val label_for_variant
+      : [ `Inferred
+        | `Computed of 'a Typed_variant.t -> string
+        | `Dynamic of (Typed_variant.Packed.t -> string) Value.t
+        ]
+
     val form_for_variant : 'a Typed_variant.t -> 'a Form.t Computation.t
     val initial_choice : [ `First_constructor | `Empty | `This of Typed_variant.Packed.t ]
   end
@@ -90,18 +106,16 @@ module Variant = struct
     let to_string =
       match M.label_for_variant with
       | `Inferred ->
-        fun t -> Form_view.sexp_to_pretty_string M.Typed_variant.Packed.sexp_of_t t
+        Value.return (fun t ->
+          Form_view.sexp_to_pretty_string M.Typed_variant.Packed.sexp_of_t t)
       | `Computed variant_to_string ->
-        fun ({ f = T field } : M.Typed_variant.Packed.t) -> variant_to_string field
+        Value.return (fun ({ f = T field } : M.Typed_variant.Packed.t) ->
+          variant_to_string field)
+      | `Dynamic variant_to_string -> variant_to_string
     in
     let module M_opt = struct
       type t = M.Typed_variant.Packed.t option
       [@@deriving sexp, equal, enumerate, compare]
-
-      let to_string = function
-        | None -> ""
-        | Some t -> to_string t
-      ;;
 
       let all_some = List.filter all ~f:Option.is_some
       let first_some = List.hd_exn all_some
@@ -128,10 +142,19 @@ module Variant = struct
         let%arr picker_value = picker_value
         and set_picker_value = set_picker_value
         and path = path
-        and extra_attrs = extra_attrs in
+        and extra_attrs = extra_attrs
+        and to_string = to_string in
         let view =
           Vdom_input_widgets.Dropdown.of_values
-            (module M_opt)
+            (module struct
+              include M_opt
+
+              let to_string t =
+                match t with
+                | None -> ""
+                | Some x -> to_string x
+              ;;
+            end)
             all
             ~merge_behavior:Legacy_dont_merge
             ~extra_attrs:
@@ -157,7 +180,8 @@ module Variant = struct
         let%arr picker_value = picker_value
         and set_picker_value = set_picker_value
         and extra_attrs = extra_attrs
-        and path = path in
+        and path = path
+        and to_string = to_string in
         let node_fun =
           match layout with
           | `Vertical ->
@@ -259,20 +283,30 @@ module Variant = struct
         | Some of Original.t [@subvariant]
       [@@deriving typed_variants, variants]
 
-      let label_for_variant : [ `Inferred | `Computed of 'a Typed_variant.t -> string ] =
-        `Computed
-          (fun (type a) (v : a Typed_variant.t) ->
+      let label_for_variant =
+        `Dynamic
+          (* The fact we can't sub + arr here is a little bit sad, but note that the
+             [let%map] is not doing anything expensive, just wrapping the provided
+             function (which is usually constant). *)
+          (let%map to_string =
+             match M.label_for_variant with
+             | `Inferred ->
+               Value.return (fun ({ f = T field } : Original.Typed_variant.Packed.t) ->
+                 M.Typed_variant.name field)
+             | `Computed f ->
+               Value.return (fun ({ f = T field } : Original.Typed_variant.Packed.t) ->
+                 f field)
+             | `Dynamic f -> f
+           in
+           fun ({ f = T v } : Typed_variant.Packed.t) ->
              match v with
              | None -> empty_label
-             | Some subvariant ->
-               (match M.label_for_variant with
-                | `Inferred -> M.Typed_variant.name subvariant
-                | `Computed f -> f subvariant))
+             | Some subvariant -> to_string { f = T subvariant })
       ;;
 
       let form_for_variant : type a. a Typed_variant.t -> a Form.t Computation.t
         = function
-          | None -> Computation.return (Form.return ())
+          | None -> Bonsai.const (Form.return ())
           | Some subvariant -> M.form_for_variant subvariant
       ;;
 

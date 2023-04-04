@@ -3379,6 +3379,81 @@ let%expect_test "typed records labelling overrides defaults" =
     </table> |}]
 ;;
 
+let%expect_test "typed records: dynamic labelling" =
+  let module T = struct
+    type t = { int : int } [@@deriving typed_fields, sexp]
+
+    let form (int_label : string Value.t) =
+      Form.Typed.Record.make
+        (module struct
+          module Typed_field = Typed_field
+
+          let label_for_field =
+            let%map int_label = int_label in
+            fun ({ f = T field } : Typed_field.Packed.t) ->
+              match field with
+              | Int -> int_label
+          ;;
+
+          let label_for_field = `Dynamic label_for_field
+
+          let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t
+            = function
+              | Int -> Form.Elements.Number.int ~step:1 ~default:0 ()
+          ;;
+        end)
+    ;;
+  end
+  in
+  let label = Bonsai.Var.create "initial label" in
+  let handle =
+    Handle.create
+      (form_result_spec
+         ~filter_printed_attributes:(fun _key _data -> false)
+         ~get_vdom:get_vdom_verbose
+         [%sexp_of: T.t])
+      (T.form (Bonsai.Var.value label))
+  in
+  Handle.show handle;
+  [%expect
+    {|
+    (Ok ((int 0)))
+
+    ==============
+    <table>
+      <tbody>
+        <tr>
+          <td>
+            <label> initial label </label>
+          </td>
+          <td>
+            <input> </input>
+          </td>
+        </tr>
+      </tbody>
+    </table> |}];
+  Bonsai.Var.set label "updated label";
+  Handle.show_diff handle;
+  [%expect
+    {|
+      (Ok ((int 0)))
+
+      ==============
+      <table>
+        <tbody>
+          <tr>
+            <td>
+    -|        <label> initial label </label>
+    +|        <label> updated label </label>
+            </td>
+            <td>
+              <input> </input>
+            </td>
+          </tr>
+        </tbody>
+      </table> |}]
+;;
+
 let%expect_test "typed variants recursive" =
   let module T = struct
     type me =
@@ -3631,6 +3706,87 @@ let%expect_test "typed variants" =
              value:normalized=abc
              oninput> </input>
     </div> |}]
+;;
+
+let%expect_test "typed variants: dynamic labelling" =
+  let module T = struct
+    type t = Integer of int [@@deriving typed_variants, sexp]
+
+    let form int_label =
+      Form.Typed.Variant.make
+        (module struct
+          module Typed_variant = Typed_variant
+
+          let label_for_variant =
+            let%map int_label = int_label in
+            fun ({ f = T variant } : Typed_variant.Packed.t) ->
+              match variant with
+              | Integer -> int_label
+          ;;
+
+          let label_for_variant = `Dynamic label_for_variant
+          let initial_choice = `First_constructor
+
+          let form_for_variant : type a. a Typed_variant.t -> a Form.t Computation.t
+            = function
+              | Integer -> Form.Elements.Number.int ~default:0 ~step:1 ()
+          ;;
+        end)
+    ;;
+  end
+  in
+  let label = Bonsai.Var.create "initial label" in
+  let handle =
+    Handle.create (form_result_spec [%sexp_of: T.t]) (T.form (Bonsai.Var.value label))
+  in
+  Handle.show handle;
+  [%expect
+    {|
+    (Ok (Integer 0))
+
+    ==============
+    <div>
+      <select id="bonsai_path_replaced_in_test"
+              class="widget-dropdown"
+              onchange
+              style={
+                width: 100.00%;
+              }>
+        <option value="0" #selected="true"> initial label </option>
+      </select>
+      <input type="number"
+             step="1"
+             placeholder=""
+             spellcheck="false"
+             id="bonsai_path_replaced_in_test"
+             value:normalized=0
+             oninput> </input>
+    </div> |}];
+  Bonsai.Var.set label "updated label";
+  Handle.show_diff handle;
+  [%expect
+    {|
+      (Ok (Integer 0))
+
+      ==============
+      <div>
+        <select id="bonsai_path_replaced_in_test"
+                class="widget-dropdown"
+                onchange
+                style={
+                  width: 100.00%;
+                }>
+    -|    <option value="0" #selected="true"> initial label </option>
+    +|    <option value="0" #selected="true"> updated label </option>
+        </select>
+        <input type="number"
+               step="1"
+               placeholder=""
+               spellcheck="false"
+               id="bonsai_path_replaced_in_test"
+               value:normalized=0
+               oninput> </input>
+      </div> |}]
 ;;
 
 let%expect_test "typed optional variants" =

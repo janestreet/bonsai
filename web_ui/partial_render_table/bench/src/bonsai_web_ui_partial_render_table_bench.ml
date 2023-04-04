@@ -94,7 +94,7 @@ let component_for_bench
     ?preload_rows
     comparator
     ~focus:(Table.Focus.By_row { on_change; compute_presence = return })
-    ~row_height:(`Px 1)
+    ~row_height:(Value.return (`Px 1))
     ~columns
     collate
 ;;

@@ -623,6 +623,11 @@ module Effect_throttling = struct
   ;;
 end
 
+module Incr = struct
+  include Proc_min.Proc_incr
+  include Incr0
+end
+
 let freeze model value =
   let%sub state, set_state = state_opt model in
   match%sub state with
@@ -650,20 +655,6 @@ let thunk (type a) (f : unit -> a) =
     out
 ;;
 
-module Incr = struct
-  include Proc_incr
-
-  let compute t ~f = compute_with_clock t ~f:(fun _ input -> f input)
-  let with_clock f = compute_with_clock (Value.return ()) ~f:(fun clock _ -> f clock)
-
-  let to_value incr =
-    { Value.value = Value.Incr incr
-    ; here = None
-    ; id = Type_equal.Id.create ~name:"to_value" sexp_of_opaque
-    }
-  ;;
-end
-
 let most_recent_some (type a) (module M : Model with type t = a) input ~f =
   let%sub most_recent_valid_value, set_most_recent_valid_value = state_opt (module M) in
   let%sub input = pure f input in
@@ -683,20 +674,21 @@ let most_recent_value_satisfying m input ~condition =
   most_recent_some m input ~f:(fun a -> if condition a then Some a else None)
 ;;
 
-module Map_renamed_to_avoid_shadowing = struct
-  let of_set = Incr.compute ~f:Ui_incr.Map.of_set
-  let keys = Incr.compute ~f:Ui_incr.Map.keys
-  let filter_mapi m ~f = Incr.compute m ~f:(Incr_map.filter_mapi ~f)
-
-  let merge a b ~f =
-    Incr.compute (Value.both a b) ~f:(fun a_and_b ->
-      let%pattern_bind.Ui_incr a, b = a_and_b in
-      Incr_map.merge a b ~f)
-  ;;
-end
+let previous_value
+  : (module Model with type t = 'a) -> 'a Value.t -> 'a option Computation.t
+  =
+  fun model input ->
+  let%sub prev, set_prev = state_opt model in
+  let%sub callback =
+    let%arr set_prev = set_prev in
+    fun input -> set_prev (Some input)
+  in
+  let%sub () = Edge.on_change model input ~callback in
+  return prev
+;;
 
 let assoc_set m v ~f =
-  let%sub as_map = Map_renamed_to_avoid_shadowing.of_set v in
+  let%sub as_map = Map0.of_set v in
   assoc m as_map ~f:(fun k _ -> f k)
 ;;
 
@@ -1201,4 +1193,4 @@ module Private = struct
   let reveal_computation = Fn.id
 end
 
-module Map = Map_renamed_to_avoid_shadowing
+module Map = Map0

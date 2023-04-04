@@ -23,7 +23,7 @@ end
 
 val component
   :  comparator:('key, 'cmp) Bonsai.comparator
-  -> row_height:[< `Px of int ]
+  -> row_height:[< `Px of int ] Value.t
   -> leaves:Header_tree.leaf list Value.t
   -> headers:Header_tree.t Value.t
   -> assoc:

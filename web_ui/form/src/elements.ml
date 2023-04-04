@@ -1940,15 +1940,14 @@ end
 module Optional = struct
   let dropdown
         (type a)
-        ?(some_label = "None")
-        ?(none_label = "Some")
-        (module T : T with type t = a)
+        ?(some_label = "Some")
+        ?(none_label = "None")
         (form : a Form.t Computation.t)
     =
     let module M = struct
       type t =
         | None
-        | Some of T.t
+        | Some of a
       [@@deriving typed_variants]
 
       let to_option : t -> a option = function

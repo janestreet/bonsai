@@ -260,14 +260,14 @@ module Row_machine = struct
         model
     in
     let%sub current, inject =
-      Bonsai.Incr.model_cutoff
-      @@ Bonsai.state_machine1
-           (module Model)
-           (module Action)
-           ~default_model:Model.empty
-           ~apply_action
-           input
+      Bonsai.state_machine1
+        (module Model)
+        (module Action)
+        ~default_model:Model.empty
+        ~apply_action
+        input
     in
+    let%sub current = return (Value.cutoff ~equal:[%equal: Model.t] current) in
     let%sub everything_injectable =
       (* By depending on only [inject] (which is a constant), we can build the vast majority
          of this record, leaving only the "focused" field left unset, which we quickly fix.

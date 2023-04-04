@@ -251,12 +251,6 @@ module Computation0 = struct
                     Value.of_value' ~initial_path:(Node_path.descend current_path) input
                 }
           }
-        | Model_cutoff t ->
-          { node_path
-          ; here = None
-          ; kind =
-              Model_cutoff { t = helper ~current_path:(Node_path.descend current_path) t }
-          }
         | Sub { from; via; into; here } ->
           let kind =
             Sub

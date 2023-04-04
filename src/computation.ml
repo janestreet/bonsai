@@ -84,7 +84,6 @@ type 'result t =
       ; compute : Incr.Clock.t -> 'input Incr.t -> 'result Incr.t
       }
       -> 'result t
-  | Model_cutoff : 'result t -> 'result t
   | Sub :
       { from : 'via t
       ; via : 'via Type_equal.Id.t

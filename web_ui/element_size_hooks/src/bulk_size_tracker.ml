@@ -231,8 +231,8 @@ let component
             Map.change model k ~f:(function
               | None -> None
               | Some (Stale v | Fresh v) -> Some (Stale v))))
-    |> Bonsai.Incr.model_cutoff
   in
+  let%sub sizes = return (Value.cutoff ~equal:[%equal: Model.t] sizes) in
   let%sub group_key =
     Bonsai.Expert.thunk (fun () ->
       Type_equal.Id.create ~name:"bulk_size_tracker_type_id" [%sexp_of: Key.t])

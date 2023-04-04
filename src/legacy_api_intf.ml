@@ -175,13 +175,6 @@ module type S = sig
     val pure : f:('i Incr.t -> 'r Incr.t) -> ('i, 'r) t
 
     (** Creates a Bonsai component where the given cutoff is applied to the incremental node
-        for the component's model, preventing a component from being recalculated
-        unnecessarily.
-
-        See [Incr.set_cutoff]. *)
-    val model_cutoff : ('i, 'r) t -> ('i, 'r) t
-
-    (** Creates a Bonsai component where the given cutoff is applied to the incremental node
         as input passes through the component, preventing a component from being
         recalculated unnecessarily.
 

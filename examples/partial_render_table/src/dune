@@ -1,3 +1,3 @@
 (library (name bonsai_partial_render_table_example)
- (libraries bonsai_web bonsai_web_ui_partial_render_table)
+ (libraries bonsai_web bonsai_web_ui_partial_render_table bonsai_web_ui_form)
  (preprocess (pps ppx_bonsai ppx_css ppx_jane ppx_typed_fields)))

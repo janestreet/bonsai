@@ -56,8 +56,9 @@ let component
 
      The reason that Css_gen is so slow is because apparently "sprintf" is
      _really_ slow. *)
-  let css_all_cells =
+  let%sub css_all_cells =
     let open Css_gen in
+    let%arr row_height = row_height in
     let h = (row_height :> Length.t) in
     height h @> min_height h @> max_height h
   in
@@ -71,7 +72,8 @@ let component
   let%sub rows =
     let%sub row_css =
       let%arr column_widths = column_widths
-      and leaves = leaves in
+      and leaves = leaves
+      and row_height = row_height in
       let total_width =
         List.foldi leaves ~init:0.0 ~f:(fun i sum _ ->
           let column_width =
@@ -122,10 +124,6 @@ let component
       cells
       ~f:(fun _ key_and_cells ->
         let classes_for_each_cell = [ "prt-table-cell"; Style.For_referencing.cell ] in
-        let for_each_cell (css_for_column, content) =
-          let css = Css_gen.( @> ) css_all_cells css_for_column in
-          set_or_wrap content ~classes:classes_for_each_cell ~style:css
-        in
         let%sub row_selected =
           let%sub key, _ = return key_and_cells in
           let%arr visually_focused = visually_focused
@@ -138,8 +136,13 @@ let component
         and key, cells = key_and_cells
         and css_for_columns = css_for_columns
         and on_row_click = on_row_click
-        and row_css = row_css in
+        and row_css = row_css
+        and css_all_cells = css_all_cells in
         let classes = [ "prt-table-row" ] in
+        let for_each_cell (css_for_column, content) =
+          let css = Css_gen.( @> ) css_all_cells css_for_column in
+          set_or_wrap content ~classes:classes_for_each_cell ~style:css
+        in
         let classes =
           if row_selected then "prt-table-row-selected" :: classes else classes
         in
@@ -152,8 +155,8 @@ let component
           (List.map (List.zip_exn css_for_columns cells) ~f:for_each_cell))
   in
   let%sub padding_top_and_bottom =
-    let%arr collated = collated in
-    let (`Px row_height_px) = row_height in
+    let%arr collated = collated
+    and (`Px row_height_px) = row_height in
     let padding_top = Collated.num_before_range collated * row_height_px in
     let padding_bottom = Collated.num_after_range collated * row_height_px in
     padding_top, padding_bottom

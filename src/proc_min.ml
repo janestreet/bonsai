@@ -176,7 +176,6 @@ let state_machine0 ?reset model static_action ~default_model ~apply_action =
 
 module Proc_incr = struct
   let value_cutoff t ~equal = read (Value.cutoff ~added_by_let_syntax:false ~equal t)
-  let model_cutoff t = Model_cutoff t
 
   let compute_with_clock t ~f =
     Computation.Leaf_incr { input = t; input_id = Meta.Input.create (); compute = f }

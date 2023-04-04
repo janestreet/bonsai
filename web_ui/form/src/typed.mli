@@ -11,7 +11,14 @@ module Record : sig
     (** The label to use for each field of your record. If this value is [`Inferred], each
         field will be labelled with its name. If this value is [`Computed f], then each
         field will be labelled with the result of calling [f] on it. *)
-    val label_for_field : [ `Inferred | `Computed of 'a Typed_field.t -> string ]
+    val label_for_field
+      : [ `Inferred
+        | `Computed of 'a Typed_field.t -> string
+        (** The value passed to [`Dynamic] is used in many [let%arr]s within [make]. Thus,
+            it's possible to accidentally duplicate work, if the provided value is built
+            using [let%map] instead of [let%arr]. *)
+        | `Dynamic of (Typed_field.Packed.t -> string) Value.t
+        ]
 
     (** For each of the fields in your record, you need to provide a form
         component which produces values of that type. *)
@@ -31,7 +38,14 @@ module Variant : sig
         is [`Inferred], the name of the variant constructor will be used. If this value is
         [`Computed f], then the dropdown labels will be the result of calling [f] on each
         of the variants. *)
-    val label_for_variant : [ `Inferred | `Computed of 'a Typed_variant.t -> string ]
+    val label_for_variant
+      : [ `Inferred
+        | `Computed of 'a Typed_variant.t -> string
+        (** The value passed to [`Dynamic] is used in many [let%arr]s within [make]. Thus,
+            it's possible to accidentally duplicate work, if the provided value is built
+            using [let%map] instead of [let%arr]. *)
+        | `Dynamic of (Typed_variant.Packed.t -> string) Value.t
+        ]
 
     (** For each of the variants in your sum type, you need to provide a form
         component which produces values of that type. *)

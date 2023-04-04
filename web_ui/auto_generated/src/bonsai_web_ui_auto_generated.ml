@@ -1161,9 +1161,11 @@ let view_as_vdom ?on_submit ?editable form =
   let on_submit =
     Option.map
       on_submit
-      ~f:(fun { Form.Submit.f; handle_enter; button_text; button_attr } ->
-        let on_submit = Form.value form |> Result.ok |> Option.map ~f in
-        { Form.View.on_submit; handle_enter; button_text; button_attr })
+      ~f:
+        (fun
+          { Form.Submit.f; handle_enter; button_text; button_attr; button_location } ->
+          let on_submit = Form.value form |> Result.ok |> Option.map ~f in
+          { Form.View.on_submit; handle_enter; button_text; button_attr; button_location })
   in
   Render_form.to_vdom ?on_submit ?editable (Form.view form)
 ;;

@@ -139,7 +139,12 @@ let table_form
     let%sub forms = Bonsai.assoc (module Key) map ~f:(fun _key _data -> form_of_t) in
     let%sub { view; _ } =
       let columns = C.lift columns in
-      Table.component (module Key) ~focus:None ~row_height:(`Px 25) ~columns forms
+      Table.component
+        (module Key)
+        ~focus:None
+        ~row_height:(Value.return (`Px 25))
+        ~columns
+        forms
     in
     let%arr forms = forms
     and view = view in
