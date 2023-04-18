@@ -44,11 +44,11 @@ depends: [
   "textutils"
   "virtual_dom"
   "base64"                   {>= "3.4.0"}
-  "cohttp-async"             {>= "2.5.7" & < "3.0.0" | >= "5.0.1" & < "6.0.0"}
+  "cohttp-async"             {>= "2.5.7" & < "3.0.0" | >= "5.1.1" & < "6.0.0"}
   "dune"                     {>= "2.0.0"}
   "gen_js_api"               {>= "1.0.8"}
-  "js_of_ocaml"              {>= "4.0"}
-  "js_of_ocaml-ppx"          {>= "4.0"}
+  "js_of_ocaml"              {>= "5.1.1"}
+  "js_of_ocaml-ppx"          {>= "5.1.1"}
   "ocaml-embed-file"
   "ppxlib"                   {>= "0.28.0"}
   "re"                       {>= "1.8.0"}
