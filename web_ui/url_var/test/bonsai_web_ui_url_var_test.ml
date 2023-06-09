@@ -404,3 +404,35 @@ let%expect_test "to_url_string" =
   print_endline (Url_var.Typed.to_url_string parser { a = 1; b = 2; c = 3. });
   [%expect {| 1?b=2&c=3. |}]
 ;;
+
+let%expect_test "self-documenting error for typed api." =
+  let module Url = struct
+    type t = { int : int } [@@deriving sexp, equal, typed_fields]
+
+    let parser_for_field : type a. a Typed_field.t -> a Parser.t = function
+      | Int -> Parser.from_path Value_parser.int
+    ;;
+
+    module Path_order = Parser.Record.Path_order (Typed_field)
+
+    let path_order = Path_order.T [ Int ]
+  end
+  in
+  let parser = Parser.Record.make (module Url) in
+  let versioned_parser = Versioned_parser.first_parser parser in
+  (match
+     Url_var.Typed.make
+       (module Url)
+       ~fallback:(fun _ _ -> { Url.int = 1 })
+       versioned_parser
+   with
+   | _ -> failwith "creating should fail in test"
+   | exception Failure message -> print_endline message);
+  [%expect
+    {|
+    Error: Bonsai_web_ui_url_var.create_exn is not supported within a nodejs
+    environment because it relies on the browser's history API. One way to fix this
+    is by having your app receive the url value as a parameter, and passing some
+    mock implementation in tests instead of the real implementation provided by this
+    library. |}]
+;;

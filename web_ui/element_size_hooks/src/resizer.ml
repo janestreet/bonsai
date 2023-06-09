@@ -6,7 +6,7 @@ open! Js_of_ocaml
 
 let set_cursor s = Dom_html.window##.document##.body##.style##.cursor := Js.string s
 
-module Mouse_event = struct
+module Pointer_event = struct
   module T = struct
     type t =
       | Down
@@ -19,39 +19,44 @@ module Mouse_event = struct
   include Comparable.Make (T)
 
   let to_dom_html = function
-    | Down -> Dom_html.Event.mousedown
-    | Up -> Dom_html.Event.mouseup
-    | Move -> Dom_html.Event.mousemove
+    | Down -> Dom_html.Event.pointerdown
+    | Up -> Dom_html.Event.pointerup
+    | Move -> Dom_html.Event.pointermove
   ;;
 end
 
 module State = struct
   type t =
-    { mutable listeners : Dom.event_listener_id Mouse_event.Map.t
+    { mutable listeners : Dom.event_listener_id Pointer_event.Map.t
     ; mutable animation_id : Dom_html.animation_frame_request_id
-    ; mutable mouse_x : int option
+    ; mutable pointer_x : float option
+    ; mutable last_pointer_x : float option
     }
   [@@deriving fields]
 
   let create () =
     let animation_id = request_animation_frame (Fn.const ()) in
-    Fields.create ~listeners:Mouse_event.Map.empty ~animation_id ~mouse_x:None
+    Fields.create
+      ~listeners:Pointer_event.Map.empty
+      ~animation_id
+      ~pointer_x:None
+      ~last_pointer_x:None
   ;;
 
   let remove_event_listener = Option.iter ~f:Dom_html.removeEventListener
 
-  let destroy { listeners; animation_id; mouse_x = _ } =
+  let destroy { listeners; animation_id; _ } =
     Map.iter listeners ~f:Dom_html.removeEventListener;
     cancel_animation_frame animation_id
   ;;
 
-  let on_mouse_event state element ~f ~event =
+  let on_pointer_event state element ~f ~event =
     remove_event_listener (Map.find state.listeners event);
-    let id = add_event_listener element (Mouse_event.to_dom_html event) ~f in
+    let id = add_event_listener element (Pointer_event.to_dom_html event) ~f in
     state.listeners <- Map.set state.listeners ~key:event ~data:id
   ;;
 
-  let remove_mouse_event state ~event =
+  let remove_pointer_event state ~event =
     remove_event_listener (Map.find state.listeners event)
   ;;
 
@@ -62,8 +67,9 @@ module State = struct
     state.animation_id <- request_animation_frame f
   ;;
 
-  let set_mouse_x state x = state.mouse_x <- Some x
-  let clear_mouse_x state = state.mouse_x <- None
+  let set_pointer_x state x = state.pointer_x <- Some x
+  let clear_pointer_x state = state.pointer_x <- None
+  let clear_pointer_start state = state.last_pointer_x <- None
 end
 
 let get_parent element =
@@ -74,16 +80,18 @@ let get_parent element =
 let rec do_update_width target state =
   let (_ : unit option) =
     let open Option.Let_syntax in
-    let%bind mouse_x = State.mouse_x state in
+    let%bind pointer_x = State.pointer_x state in
+    let%bind last_pointer_x = State.last_pointer_x state in
     let%bind target = Js.Opt.to_option target in
     let%bind parent = get_parent target in
-    let rect = parent##getBoundingClientRect in
-    let left = rect##.left in
-    let new_width = Int.to_float mouse_x -. left in
+    let parent_rect = parent##getBoundingClientRect in
+    let%bind parent_width = Js.Optdef.to_option parent_rect##.width in
+    let new_width = parent_width +. (pointer_x -. last_pointer_x) in
+    State.set_last_pointer_x state (Some pointer_x);
     set_width parent new_width;
     return ()
   in
-  State.clear_mouse_x state;
+  State.clear_pointer_x state;
   State.schedule state ~f:(fun _ -> do_update_width target state)
 ;;
 
@@ -98,22 +106,27 @@ module T = struct
 
   let init () element =
     let state = State.create () in
-    let on_mouse_move _ event = State.set_mouse_x state event##.clientX in
-    let on_mouse_up _ _ =
+    let on_pointer_move _ event =
+      State.set_pointer_x state (Float.of_int event##.clientX)
+    in
+    let on_pointer_up _ _ =
       set_cursor "initial";
-      State.remove_mouse_event state ~event:Move;
-      State.remove_mouse_event state ~event:Up;
+      State.clear_pointer_start state;
+      State.clear_pointer_x state;
+      State.remove_pointer_event state ~event:Move;
+      State.remove_pointer_event state ~event:Up;
       State.cancel_schedule state
     in
-    let on_mouse_down _ event =
+    let on_pointer_down _ event =
       let target = event##.target in
-      State.clear_mouse_x state;
+      let clientX : int = event##.clientX in
+      State.set_last_pointer_x state (Some (Float.of_int clientX));
       do_update_width target state;
-      State.on_mouse_event ~event:Move state Dom_html.document ~f:on_mouse_move;
-      State.on_mouse_event ~event:Up state Dom_html.document ~f:on_mouse_up;
+      State.on_pointer_event ~event:Move state Dom_html.document ~f:on_pointer_move;
+      State.on_pointer_event ~event:Up state Dom_html.document ~f:on_pointer_up;
       set_cursor "col-resize"
     in
-    State.on_mouse_event state element ~f:on_mouse_down ~event:Down;
+    State.on_pointer_event state element ~f:on_pointer_down ~event:Down;
     state
   ;;
 

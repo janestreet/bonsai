@@ -1,10 +1,14 @@
 open! Core
 open! Bonsai_web
 
+module type Model = sig
+  type t [@@deriving sexp_of]
+end
+
 module type Stringable_model = sig
   type t
 
-  include Bonsai.Model with type t := t
+  include Model with type t := t
   include Stringable with type t := t
 end
 
@@ -147,7 +151,8 @@ module Dropdown : sig
     -> ?extra_attrs:Vdom.Attr.t list Value.t
     -> ?extra_option_attrs:('a -> Vdom.Attr.t list) Value.t
     -> ?to_string:('a -> string)
-    -> (module Bonsai.Model with type t = 'a)
+    -> (module Model with type t = 'a)
+    -> equal:('a -> 'a -> bool)
     -> 'a list Value.t
     -> 'a Form.t Computation.t
 
@@ -156,7 +161,8 @@ module Dropdown : sig
     -> ?extra_attrs:Vdom.Attr.t list Value.t
     -> ?extra_option_attrs:('a -> Vdom.Attr.t list) Value.t
     -> ?to_string:('a -> string)
-    -> (module Bonsai.Model with type t = 'a)
+    -> (module Model with type t = 'a)
+    -> equal:('a -> 'a -> bool)
     -> 'a list Value.t
     -> 'a option Form.t Computation.t
 
@@ -189,7 +195,8 @@ module Dropdown : sig
 
     val make_input
       :  ?to_string:('a -> string)
-      -> (module Bonsai.Model with type t = 'a)
+      -> (module Model with type t = 'a)
+      -> equal:('a -> 'a -> bool)
       -> id:Vdom.Attr.t
       -> include_empty:bool
       -> default_value:'a option
@@ -210,6 +217,7 @@ module Typeahead : sig
     -> ?to_option_description:('a -> string) Value.t
     -> ?handle_unknown_option:(string -> 'a option) Value.t
     -> (module Bonsai.Model with type t = 'a)
+    -> equal:('a -> 'a -> bool)
     -> all_options:'a list Value.t
     -> 'a Form.t Computation.t
 
@@ -220,6 +228,7 @@ module Typeahead : sig
     -> ?to_option_description:('a -> string) Value.t
     -> ?handle_unknown_option:(string -> 'a option) Value.t
     -> (module Bonsai.Model with type t = 'a)
+    -> equal:('a -> 'a -> bool)
     -> all_options:'a list Value.t
     -> 'a option Form.t Computation.t
 
@@ -400,7 +409,8 @@ module Radio_buttons : sig
     -> ?extra_attrs:Vdom.Attr.t list Value.t
     -> ?init:'a
     -> ?to_string:('a -> string)
-    -> (module Bonsai.Model with type t = 'a)
+    -> (module Model with type t = 'a)
+    -> equal:('a -> 'a -> bool)
     -> layout:[ `Vertical | `Horizontal ]
     -> 'a list Value.t
     -> 'a Form.t Computation.t
@@ -432,6 +442,7 @@ module Multiple : sig
     -> ?extra_pill_attr:Vdom.Attr.t Value.t
     -> ?placeholder:string
     -> (module Stringable_model with type t = 'a)
+    -> equal:('a -> 'a -> bool)
     -> 'a list Form.t Computation.t
 
   val list
@@ -505,7 +516,7 @@ end
 
 module Rank : sig
   val list
-    :  ('a, 'b) Bonsai.comparator
+    :  ('a, 'b) Bonsai_web_ui_reorderable_list.comparator
     -> ?enable_debug_overlay:bool
     -> ?extra_item_attrs:Vdom.Attr.t Value.t
     -> ?left:Css_gen.Length.t

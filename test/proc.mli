@@ -85,14 +85,9 @@ module Handle : sig
       being required to print the entirety of "before". *)
   val store_view : _ t -> unit
 
-  (** Flushes all the events in the event queue. This can be useful if e.g. you are
-      completing an Effect synchronously via Svar, and don't want to go through the other
-      functions which flush (like [show]) *)
-  val flush : _ t -> unit
-
-  val result : ('result, _) t -> 'result
+  val last_result : ('result, _) t -> 'result
   val do_actions : (_, 'incoming) t -> 'incoming list -> unit
-  val clock : _ t -> Incr.Clock.t
+  val clock : _ t -> Bonsai.Time_source.t
   val advance_clock_by : _ t -> Time_ns.Span.t -> unit
   val advance_clock : to_:Time_ns.t -> _ t -> unit
 
@@ -111,4 +106,5 @@ module Handle : sig
   val result_incr : ('r, 'i) t -> 'r Incr.t
   val lifecycle_incr : _ t -> Incr.Packed.t
   val action_input_incr : _ t -> Incr.Packed.t
+  val has_after_display_events : ('result, 'incoming) t -> bool
 end

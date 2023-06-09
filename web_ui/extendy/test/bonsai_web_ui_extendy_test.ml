@@ -32,7 +32,10 @@ module Extendy_spec = struct
 end
 
 let handle () =
-  let component = Extendy.component (Bonsai.state (module String) ~default_model:"") in
+  let component =
+    Extendy.component
+      (Bonsai.state "" ~sexp_of_model:[%sexp_of: String.t] ~equal:[%equal: String.t])
+  in
   Handle.create (module Extendy_spec) component
 ;;
 
@@ -60,7 +63,7 @@ let%expect_test "write" =
   let handle = handle () in
   let id = Extendy.Id.t_of_sexp (Sexp.Atom "0") in
   Handle.do_actions handle [ Append ];
-  Handle.flush handle;
+  Handle.recompute_view handle;
   Handle.do_actions handle [ Write (id, "hello") ];
   Handle.show handle;
   [%expect {| ((0 hello)) |}]
@@ -69,7 +72,7 @@ let%expect_test "write" =
 let%expect_test "delete" =
   let handle = handle () in
   Handle.do_actions handle [ Append; Append ];
-  Handle.flush handle;
+  Handle.recompute_view handle;
   let id = Extendy.Id.t_of_sexp (Sexp.Atom "0") in
   Handle.do_actions handle [ Write (id, "hello") ];
   Handle.show handle;

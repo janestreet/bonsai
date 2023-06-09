@@ -70,8 +70,8 @@ let return value =
   { value = Ok value; view = View.empty; set = (fun _ -> Ui_effect.Ignore) }
 ;;
 
-let return_settable (type a) (module M : Bonsai.Model with type t = a) (value : a) =
-  let%sub value, set_value = Bonsai.state (module M) ~default_model:value in
+let return_settable ?sexp_of_model ~equal value =
+  let%sub value, set_value = Bonsai.state value ?sexp_of_model ~equal in
   let%arr value = value
   and set_value = set_value in
   { value = Ok value; view = View.empty; set = set_value }
@@ -270,7 +270,9 @@ end
 module Dynamic = struct
   let with_default_from_effect effect form =
     let open Bonsai.Let_syntax in
-    let%sub is_loaded, set_is_loaded = Bonsai.state (module Bool) ~default_model:false in
+    let%sub is_loaded, set_is_loaded =
+      Bonsai.state false ~sexp_of_model:[%sexp_of: Bool.t] ~equal:[%equal: Bool.t]
+    in
     let%sub () =
       match%sub is_loaded with
       | true -> Bonsai.const ()
@@ -287,12 +289,19 @@ module Dynamic = struct
     return form
   ;;
 
-  let sync_with m ~store_value ~store_set form =
+  let sync_with ?sexp_of_model ~equal ~store_value ~store_set form =
     let%sub interactive_value, interactive_set =
       let%arr form = form in
       Or_error.ok (value form), set form
     in
-    Bonsai_extra.mirror' m ~store_value ~store_set ~interactive_value ~interactive_set
+    Bonsai_extra.mirror'
+      ()
+      ?sexp_of_model
+      ~equal
+      ~store_value
+      ~store_set
+      ~interactive_value
+      ~interactive_set
   ;;
 
   let with_default default form =
@@ -309,7 +318,9 @@ module Dynamic = struct
 
   let with_default_always default form =
     let open Bonsai.Let_syntax in
-    let%sub is_loaded, set_is_loaded = Bonsai.state (module Bool) ~default_model:false in
+    let%sub is_loaded, set_is_loaded =
+      Bonsai.state false ~sexp_of_model:[%sexp_of: Bool.t] ~equal:[%equal: Bool.t]
+    in
     let%sub () =
       match%sub is_loaded with
       | true -> Bonsai.const ()
@@ -367,12 +378,18 @@ module Dynamic = struct
   let on_change
         (type a)
         ?(on_error = Value.return (Fn.const Ui_effect.Ignore))
-        (module M : Bonsai.Model with type t = a)
+        ?sexp_of_model
+        ~equal
         ~f
         value_to_watch
     =
     let module M_or_error = struct
-      type t = M.t Or_error.t [@@deriving equal, sexp]
+      type model = a
+
+      let equal_model = equal
+      let sexp_of_model = Option.value ~default:sexp_of_opaque sexp_of_model
+
+      type t = model Or_error.t [@@deriving equal, sexp_of]
     end
     in
     let callback =
@@ -382,12 +399,17 @@ module Dynamic = struct
       | Error e -> on_error e
       | Ok new_value -> f new_value
     in
-    Bonsai.Edge.on_change (module M_or_error) (value_to_watch >>| value) ~callback
+    Bonsai.Edge.on_change
+      ~sexp_of_model:[%sexp_of: M_or_error.t]
+      ~equal:[%equal: M_or_error.t]
+      (value_to_watch >>| value)
+      ~callback
   ;;
 
   let validate_via_effect
         (type a)
-        (module Input : Bonsai.Model with type t = a)
+        ?sexp_of_model
+        ~equal
         ?(one_at_a_time = false)
         ?debounce_ui
         (t : a t Bonsai.Value.t)
@@ -395,7 +417,10 @@ module Dynamic = struct
     =
     let open Bonsai.Effect_throttling in
     let module Validated = struct
-      type t = Input.t Or_error.t Poll_result.t [@@deriving sexp, equal]
+      let equal_a = equal
+      let sexp_of_a = Option.value ~default:sexp_of_opaque sexp_of_model
+
+      type t = a Or_error.t Poll_result.t [@@deriving sexp_of, equal]
     end
     in
     match%sub t >>| value with
@@ -420,8 +445,10 @@ module Dynamic = struct
             | Finished (Error e) -> Finished (Error e)
         in
         Bonsai.Edge.Poll.effect_on_change
-          (module Input)
-          (module Validated)
+          ?sexp_of_input:sexp_of_model
+          ~sexp_of_result:[%sexp_of: Validated.t]
+          ~equal_input:equal
+          ~equal_result:[%equal: Validated.t]
           Bonsai.Edge.Poll.Starting.empty
           value
           ~effect
@@ -429,8 +456,7 @@ module Dynamic = struct
       let%sub is_stable =
         match debounce_ui with
         | None -> Bonsai.const true
-        | Some time_to_stable ->
-          Bonsai_extra.is_stable ~equal:Input.equal value ~time_to_stable
+        | Some time_to_stable -> Bonsai_extra.is_stable ~equal value ~time_to_stable
       in
       let%arr t = t
       and validation = validation
@@ -441,7 +467,7 @@ module Dynamic = struct
         then validating_error
         else (
           match validation with
-          | Some (Finished (Ok x)) when Input.equal a x -> Ok ()
+          | Some (Finished (Ok x)) when equal a x -> Ok ()
           | None | Some Aborted | Some (Finished (Ok _)) -> validating_error
           | Some (Finished (Error e)) -> Error e))
   ;;

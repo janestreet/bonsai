@@ -931,8 +931,7 @@ let%expect_test "tabs" =
     View.tabs
       theme
       ~attrs:[ grey_background ]
-      ~per_tab_attr:(fun _i ~is_active ->
-        if is_active then red_border else Vdom.Attr.empty)
+      ~per_tab_attrs:(fun _i ~is_active -> if is_active then [ red_border ] else [])
       ~on_change:(fun ~from:_ ~to_:_ -> Effect.Ignore)
       ~equal:[%equal: int]
       ~active:0
@@ -1646,22 +1645,22 @@ let%test_module "tables" =
     ;;
 
     let%expect_test "table with extras" =
-      let test_attr name = Vdom.Attr.create "test" name in
-      let test_attr' key value = Vdom.Attr.create ("test-" ^ key) value in
+      let test_attr name = [ Vdom.Attr.create "test" name ] in
+      let test_attr' key value = [ Vdom.Attr.create ("test-" ^ key) value ] in
       let basic theme =
         let columns =
           let render_text _ string = View.text string in
           [ View.Table.Col.make
               "trader"
-              ~cell_attr:(test_attr' "cell")
-              ~header_attr:(test_attr "header")
+              ~cell_attrs:(test_attr' "cell")
+              ~header_attrs:(test_attr "header")
               ~get:sym
               ~render:render_text
           ]
         in
         View.Table.render
-          ~row_attr:(fun { sym; _ } -> test_attr' "row" sym)
-          ~table_attr:(test_attr "table")
+          ~row_attrs:(fun { sym; _ } -> test_attr' "row" sym)
+          ~table_attrs:(test_attr "table")
           theme
           columns
           data

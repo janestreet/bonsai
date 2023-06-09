@@ -4,7 +4,7 @@ open! Bonsai_web_test
 open Bonsai.Let_syntax
 module Table = Bonsai_web_ui_partial_render_table.Basic
 module Table_expert = Bonsai_web_ui_partial_render_table.Expert
-module Columns = Table.Columns.Dynamic_cells
+module Sort_state = Bonsai_web_ui_partial_render_table_protocol.Sort_state
 
 module Action = struct
   type t =
@@ -26,9 +26,28 @@ type t =
   }
 [@@deriving fields]
 
-let columns ~is_column_b_visible =
+(* This is a "natural option sorting" comparison function that
+   always sorts Nones to the bottom *)
+let special_compare_option how compare_inner a b =
+  match a, b with
+  | None, None -> 0
+  | Some _, None -> -1
+  | None, Some _ -> 1
+  | Some a, Some b ->
+    (match how with
+     | `Ascending -> compare_inner a b
+     | `Descending -> -compare_inner a b)
+;;
+
+let columns ?(use_legacy_header = false) ~is_column_b_visible () =
+  let module Columns = Table.Columns.Dynamic_cells in
+  let render_header str =
+    if use_legacy_header
+    then Value.return (Columns.Header_helpers.legacy (Vdom.Node.text str))
+    else Value.return (Columns.Header_helpers.default (Vdom.Node.text str))
+  in
   [ Columns.column
-      ~label:(Value.return (Vdom.Node.text "key"))
+      ~header:(render_header "key")
       ~sort:
         (Value.return (fun a b ->
            Comparable.lift [%compare: int] ~f:(fun (key, _) -> key) a b))
@@ -37,9 +56,11 @@ let columns ~is_column_b_visible =
         Vdom.Node.textf "%d" key)
       ()
   ; Columns.column
-      ~label:(Value.return (Vdom.Node.text "a"))
+      ~header:(render_header "a")
       ~cell:(fun ~key:_ ~data ->
-        let%sub state = Bonsai.state (module String) ~default_model:"" in
+        let%sub state =
+          Bonsai.state "" ~sexp_of_model:[%sexp_of: String.t] ~equal:[%equal: String.t]
+        in
         let%arr { a; _ } = data
         and state, set_state = state in
         Vdom.Node.div
@@ -49,7 +70,7 @@ let columns ~is_column_b_visible =
       ()
   ; Columns.column
       ~visible:is_column_b_visible
-      ~label:(Value.return (Vdom.Node.text "b"))
+      ~header:(render_header "b")
       ~sort:
         (Value.return (fun a b_1 ->
            Comparable.lift [%compare: float] ~f:(fun (_, { b; _ }) -> b) a b_1))
@@ -58,7 +79,21 @@ let columns ~is_column_b_visible =
         Vdom.Node.textf "%f" b)
       ()
   ; Columns.column
-      ~label:(Value.return (Vdom.Node.text "d"))
+      ~header:(render_header "d")
+      ~sort:
+        (Value.return (fun a b_1 ->
+           Comparable.lift
+             (special_compare_option `Ascending [%compare: int])
+             ~f:(fun (_, { d; _ }) -> d)
+             a
+             b_1))
+      ~sort_reversed:
+        (Value.return (fun a b_1 ->
+           Comparable.lift
+             (special_compare_option `Descending [%compare: int])
+             ~f:(fun (_, { d; _ }) -> d)
+             a
+             b_1))
       ~cell:(fun ~key:_ ~data ->
         let%arr { d; _ } = data in
         match d with
@@ -70,20 +105,21 @@ let columns ~is_column_b_visible =
 
 let columns_dynamic ~is_column_b_visible =
   let module Columns = Table.Columns.Dynamic_columns in
+  let render_header text = Columns.Header_helpers.default (Vdom.Node.text text) in
   [ Columns.column
-      ~label:(Vdom.Node.text "key")
+      ~header:(render_header "key")
       ~sort:(fun a b -> Comparable.lift [%compare: int] ~f:(fun (key, _) -> key) a b)
       ~cell:(fun ~key ~data:_ -> Vdom.Node.textf "%d" key)
       ()
   ; Columns.column
-      ~label:(Vdom.Node.text "a")
+      ~header:(render_header "a")
       ~sort:(fun a_1 b ->
         Comparable.lift [%compare: string] ~f:(fun (_, { a; _ }) -> a) a_1 b)
       ~cell:(fun ~key:_ ~data:{ a; _ } -> Vdom.Node.textf "%s" a)
       ()
   ; Columns.column
       ~visible:is_column_b_visible
-      ~label:(Vdom.Node.text "b")
+      ~header:(render_header "b")
       ~sort:(fun a b_1 ->
         Comparable.lift [%compare: float] ~f:(fun (_, { b; _ }) -> b) a b_1)
       ~cell:(fun ~key:_ ~data:{ b; _ } -> Vdom.Node.textf "%f" b)
@@ -93,9 +129,10 @@ let columns_dynamic ~is_column_b_visible =
 
 let columns_dynamic_with_groups ~is_column_b_visible =
   let module Columns = Table.Columns.Dynamic_columns in
+  let render_header str = Columns.Header_helpers.default (Vdom.Node.text str) in
   let cols =
     [ Columns.column
-        ~label:(Vdom.Node.text "key")
+        ~header:(render_header "key")
         ~sort:(fun a b -> Comparable.lift [%compare: int] ~f:(fun (key, _) -> key) a b)
         ~cell:(fun ~key ~data:_ -> Vdom.Node.textf "%d" key)
         ()
@@ -105,14 +142,14 @@ let columns_dynamic_with_groups ~is_column_b_visible =
     Columns.group
       ~label:(Vdom.Node.text "Basics")
       [ Columns.column
-          ~label:(Vdom.Node.text "a")
+          ~header:(render_header "a")
           ~sort:(fun a_1 b ->
             Comparable.lift [%compare: string] ~f:(fun (_, { a; _ }) -> a) a_1 b)
           ~cell:(fun ~key:_ ~data:{ a; _ } -> Vdom.Node.textf "%s" a)
           ()
       ; Columns.column
           ~visible:is_column_b_visible
-          ~label:(Vdom.Node.text "b")
+          ~header:(render_header "b")
           ~sort:(fun a b_1 ->
             Comparable.lift [%compare: float] ~f:(fun (_, { b; _ }) -> b) a b_1)
           ~cell:(fun ~key:_ ~data:{ b; _ } -> Vdom.Node.textf "%f" b)
@@ -123,13 +160,14 @@ let columns_dynamic_with_groups ~is_column_b_visible =
     Columns.group
       ~label:(Vdom.Node.text "Level 2")
       [ Columns.column
-          ~label:(Vdom.Node.text "c")
+          ~header:(render_header "c")
           ~sort:(fun a_1 b ->
             Comparable.lift [%compare: string] ~f:(fun (_, { c; _ }) -> c) a_1 b)
           ~cell:(fun ~key:_ ~data:{ c; _ } -> Vdom.Node.textf "%s" c)
           ()
       ; Columns.column
-          ~label:(Vdom.Node.text "d")
+          ~visible:is_column_b_visible
+          ~header:(render_header "d")
           ~sort:(fun a b_1 ->
             Comparable.lift [%compare: int option] ~f:(fun (_, { d; _ }) -> d) a b_1)
           ~cell:(fun ~key:_ ~data:{ d; _ } ->
@@ -144,7 +182,7 @@ let columns_dynamic_with_groups ~is_column_b_visible =
       ~label:(Vdom.Node.text "Level 1")
       [ level_2
       ; Columns.column
-          ~label:(Vdom.Node.text "e")
+          ~header:(render_header "e")
           ~sort:(fun a_1 b ->
             Comparable.lift [%compare: string] ~f:(fun (_, { e; _ }) -> e) a_1 b)
           ~cell:(fun ~key:_ ~data:{ e; _ } -> Vdom.Node.textf "%s" e)
@@ -223,21 +261,25 @@ module Test = struct
     let default
           ?(preload_rows = 0)
           ?(is_column_b_visible = Value.return true)
+          ?override_sort
           ?default_sort
+          ?(use_legacy_header = false)
           ?(row_height = Value.return (`Px 1))
           ()
           input
           filter
       =
+      let module Column = Table.Columns.Dynamic_cells in
       { component =
           Table.component
             (module Int)
             ~focus:(By_row { on_change = focus_changed })
             ~filter
+            ?override_sort
             ?default_sort
             ~row_height
             ~preload_rows
-            ~columns:(columns ~is_column_b_visible |> Columns.lift)
+            ~columns:(columns ~use_legacy_header ~is_column_b_visible () |> Column.lift)
             input
       ; get_vdom = Table.Result.view
       ; get_inject
@@ -290,7 +332,7 @@ module Test = struct
         in
         let columns =
           [ Table_expert.Columns.Dynamic_cells.column
-              ~label:(Value.return (Vdom.Node.text "key"))
+              ~header:(Value.return (Vdom.Node.text "key"))
               ~cell:(fun ~key ~data:_ ->
                 let%arr key = key in
                 Vdom.Node.textf "%d" key)

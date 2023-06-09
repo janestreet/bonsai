@@ -36,7 +36,7 @@ let create_generic
     run
       ~environment
       ~path:Bonsai.Private.Path.empty
-      ~clock:Incr.clock
+      ~clock:(Bonsai.Time_source.create ~start:(Time_ns.now ()))
       ~model
       ~inject_dynamic
       ~inject_static
@@ -86,7 +86,6 @@ let convert_generic
       ~apply_dynamic
       ~equal_model
       ~sexp_of_model
-      ~model_of_sexp
   : (module S with type Input.t = input and type Extra.t = extra)
   =
   (module struct
@@ -95,7 +94,7 @@ let convert_generic
     end
 
     module Model = struct
-      type t = model [@@deriving equal, sexp]
+      type t = model [@@deriving equal, sexp_of]
 
       let default = default_model
     end
@@ -166,7 +165,6 @@ let convert_with_extra ?(optimize = false) component =
     ~default_model:model.default
     ~equal_model:model.equal
     ~sexp_of_model:model.sexp_of
-    ~model_of_sexp:model.of_sexp
 ;;
 
 let convert ?optimize component =

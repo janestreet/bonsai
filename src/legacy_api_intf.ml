@@ -38,7 +38,9 @@ module type S = sig
       takes a first-class module of type [Component_s], as well as the default model for the
       component. For more details, please read the docs for [Component_s]. *)
   val of_module
-    :  ('input, 'model, 'action, 'result) component_s
+    :  ?sexp_of_model:('model -> Sexp.t)
+    -> ('input, 'model, 'action, 'result) component_s
+    -> ?equal:('model -> 'model -> bool)
     -> default_model:'model
     -> ('input, 'result) t
 
@@ -50,8 +52,9 @@ module type S = sig
       its [apply_action] function. The result value of the component is the value of the
       current model alongside an injection function to transition the state machine *)
   val state_machine
-    :  (module Model with type t = 'model)
-    -> (module Action with type t = 'action)
+    :  sexp_of_action:('action -> Sexp.t)
+    -> ?sexp_of_model:('model -> Sexp.t)
+    -> equal:('model -> 'model -> bool)
     -> Source_code_position.t
     -> default_model:'model
     -> apply_action:
@@ -165,7 +168,12 @@ module type S = sig
         Incremental node. *)
     val of_incr : 'a Incr.t -> (_, 'a) t
 
-    val of_module : ('i, 'm, 'a, 'r) component_s_incr -> default_model:'m -> ('i, 'r) t
+    val of_module
+      :  ?sexp_of_model:('m -> Sexp.t)
+      -> ('i, 'm, 'a, 'r) component_s_incr
+      -> equal:('m -> 'm -> bool)
+      -> default_model:'m
+      -> ('i, 'r) t
 
     (** Transforms the result of a component, exposing the incrementality for optimization
         purposes. *)

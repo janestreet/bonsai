@@ -49,6 +49,8 @@ type 'k t =
   { selected_item : 'k option
   ; view : Vdom.Node.t
   ; query : string
+  ; set_query : string -> unit Effect.t
+  ; focus_input : unit Effect.t
   }
 [@@deriving fields]
 

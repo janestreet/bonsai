@@ -149,14 +149,13 @@ let component (type key cmp) (key : (key, cmp) Bonsai.comparator) =
 
       let equal = phys_equal
       let sexp_of_t = sexp_of_opaque
-      let t_of_sexp _ = failwith "serializing dom elements is not supported"
     end
 
     type t =
       { position_tracker : Position.t Map.M(Key).t
       ; dom_node_tracker : Dom_element.t Map.M(Key).t
       }
-    [@@deriving sexp, equal]
+    [@@deriving sexp_of, equal]
 
     let empty =
       { position_tracker = Map.empty (module Key)
@@ -210,10 +209,10 @@ let component (type key cmp) (key : (key, cmp) Bonsai.comparator) =
   in
   let%sub mapping, apply_action =
     Bonsai.state_machine0
-      (module Model)
-      (module struct
-        type t = Key.t Action.t [@@deriving sexp_of]
-      end)
+      ()
+      ~sexp_of_model:[%sexp_of: Model.t]
+      ~equal:[%equal: Model.t]
+      ~sexp_of_action:[%sexp_of: Key.t Action.t]
       ~default_model:Model.empty
       ~apply_action:Model.apply_action
   in

@@ -114,7 +114,7 @@ let () = Util.run view_for_counter ~id:"counter"
 
 (* $MDX part-begin=counter_button *)
 let (counter_button : Vdom.Node.t Computation.t) =
-  let%sub count, set_count = Bonsai.state (module Int) ~default_model:0 in
+  let%sub count, set_count = Bonsai.state 0 in
   let%arr count = count
   and set_count = set_count in
   (* view-construction logic *)

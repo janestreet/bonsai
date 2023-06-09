@@ -148,6 +148,7 @@ let%expect_test "dropdown starting empty" =
   let component =
     Form.Elements.Dropdown.list
       (module String)
+      ~equal:[%equal: String.t]
       (Value.return [ "hello"; "world" ])
       ~init:`Empty
   in
@@ -194,6 +195,7 @@ let%expect_test "dropdown with default value" =
   let component =
     Form.Elements.Dropdown.list
       (module String)
+      ~equal:[%equal: String.t]
       (Value.return [ "hello"; "world" ])
       ~init:(`This (Value.return "world"))
   in
@@ -238,6 +240,7 @@ let%expect_test "dropdown_opt with default value" =
   let component =
     Form.Elements.Dropdown.list_opt
       (module String)
+      ~equal:[%equal: String.t]
       (Value.return [ "hello"; "world" ])
       ~init:(`This (Value.return "world"))
   in
@@ -282,7 +285,10 @@ let%expect_test "dropdown_opt with default value" =
 
 let%expect_test "dropdown" =
   let component =
-    Form.Elements.Dropdown.list (module String) (Value.return [ "hello"; "world" ])
+    Form.Elements.Dropdown.list
+      (module String)
+      ~equal:[%equal: String.t]
+      (Value.return [ "hello"; "world" ])
   in
   let handle = Handle.create (form_result_spec [%sexp_of: string]) component in
   Handle.show handle;
@@ -322,7 +328,12 @@ let%expect_test "dropdown" =
 ;;
 
 let%expect_test "dropdown but without any elements to pick from " =
-  let component = Form.Elements.Dropdown.list (module String) (Value.return []) in
+  let component =
+    Form.Elements.Dropdown.list
+      (module String)
+      ~equal:[%equal: String.t]
+      (Value.return [])
+  in
   let handle = Handle.create (form_result_spec [%sexp_of: string]) component in
   Handle.show handle;
   [%expect
@@ -2492,6 +2503,7 @@ let%expect_test "clicking on radio buttons" =
     Form.Elements.Radio_buttons.list
       ~to_string:Fn.id
       (module String)
+      ~equal:[%equal: String.t]
       ~layout:`Vertical
       (Value.return [ "first"; "second"; "third" ])
   in
@@ -2630,6 +2642,7 @@ let%expect_test "setting into radio buttons" =
     Form.Elements.Radio_buttons.list
       ~to_string:Fn.id
       (module String)
+      ~equal:[%equal: String.t]
       ~layout:`Vertical
       (Value.return [ "first"; "second"; "third" ])
   in
@@ -2768,6 +2781,7 @@ let%expect_test "horizontal radio buttons render with correct styles applied" =
     Form.Elements.Radio_buttons.list
       ~to_string:Fn.id
       (module String)
+      ~equal:[%equal: String.t]
       ~layout:`Horizontal
       (Value.return [ "first" ])
   in
@@ -2837,6 +2851,7 @@ let%expect_test "clicking a set checklist" =
       </li>
     </ul> |}];
   Handle.click_on handle ~get_vdom ~selector:"li:nth-child(1) input";
+  Handle.recompute_view handle;
   Handle.click_on handle ~get_vdom ~selector:"li:nth-child(2) input";
   Handle.show_diff handle;
   [%expect
@@ -4408,7 +4423,8 @@ let%expect_test "on_change handler should fire when input is changed" =
     let%sub input = Form.Elements.Textbox.string () in
     let%sub () =
       Form.Dynamic.on_change
-        (module String)
+        ~sexp_of_model:[%sexp_of: String.t]
+        ~equal:[%equal: String.t]
         ~f:
           (Value.return
            @@ fun new_value ->
@@ -4493,10 +4509,12 @@ let%expect_test "form with both submit button and form on-submit" =
       </table>
     </form> |}];
   Handle.input_text handle ~get_vdom ~selector:"input" ~text:"hello world";
+  Handle.recompute_view handle;
   Handle.click_on handle ~get_vdom ~selector:"button";
-  Handle.flush handle;
+  Handle.recompute_view handle;
   [%expect {| "hello world" |}];
   Handle.input_text handle ~get_vdom ~selector:"input" ~text:"hello there";
+  Handle.recompute_view handle;
   Handle.submit_form handle ~get_vdom ~selector:"form";
   [%expect {| "hello there" |}]
 ;;
@@ -4627,13 +4645,14 @@ let%expect_test "both button and on-submit are disabled when the form doesn't va
   (* This form submission does nothing.  Well, it does prevent-default and
      stop-propagation, but the callback certainly doesn't fire. *)
   Handle.submit_form handle ~get_vdom ~selector:"form";
-  Handle.flush handle;
+  Handle.recompute_view handle;
   [%expect {||}];
   (* Once we put a valid number in, the form will be clickable, and
      submittable *)
   Handle.input_text handle ~get_vdom ~selector:"input" ~text:"123";
+  Handle.recompute_view handle;
   Handle.submit_form handle ~get_vdom ~selector:"form";
-  Handle.flush handle;
+  Handle.recompute_view handle;
   [%expect {| 123 |}];
   Handle.show_diff handle;
   [%expect
@@ -4701,8 +4720,9 @@ let%expect_test "form with just button" =
       </tbody>
     </table> |}];
   Handle.input_text handle ~get_vdom ~selector:"input" ~text:"hello world";
+  Handle.recompute_view handle;
   Handle.click_on handle ~get_vdom ~selector:"button";
-  Handle.flush handle;
+  Handle.recompute_view handle;
   [%expect {| "hello world" |}]
 ;;
 
@@ -4741,6 +4761,7 @@ let%expect_test "form with just enter" =
       <input> </input>
     </form> |}];
   Handle.input_text handle ~get_vdom ~selector:"input" ~text:"hello there";
+  Handle.recompute_view handle;
   Handle.submit_form handle ~get_vdom ~selector:"form";
   [%expect {| "hello there" |}]
 ;;
@@ -4755,7 +4776,11 @@ let%expect_test "form validated with an effect" =
   in
   let component =
     let%sub textbox = Form.Elements.Textbox.int () in
-    Form.Dynamic.validate_via_effect (module Int) textbox ~f
+    Form.Dynamic.validate_via_effect
+      ~sexp_of_model:[%sexp_of: Int.t]
+      textbox
+      ~f
+      ~equal:[%equal: Int.t]
   in
   let handle =
     Handle.create
@@ -4826,7 +4851,12 @@ let%expect_test "form validated with an effect with one_at_at_time" =
   in
   let component =
     let%sub textbox = Form.Elements.Textbox.int () in
-    Form.Dynamic.validate_via_effect (module Int) textbox ~f ~one_at_a_time:true
+    Form.Dynamic.validate_via_effect
+      ~sexp_of_model:[%sexp_of: Int.t]
+      textbox
+      ~f
+      ~one_at_a_time:true
+      ~equal:[%equal: Int.t]
   in
   let handle =
     Handle.create
@@ -4903,7 +4933,8 @@ let%expect_test "form validated with an effect and debounced" =
     let%sub textbox = Form.Elements.Textbox.int () in
     Form.Dynamic.validate_via_effect
       ~debounce_ui:(Time_ns.Span.of_sec 1.0)
-      (module Int)
+      ~sexp_of_model:[%sexp_of: Int.t]
+      ~equal:[%equal: Int.t]
       textbox
       ~f
   in
@@ -4984,6 +5015,7 @@ let%expect_test "slider input" =
       <input> </input>
     </form> |}];
   Handle.input_text handle ~get_vdom ~selector:"input" ~text:"20";
+  Handle.recompute_view handle;
   Handle.submit_form handle ~get_vdom ~selector:"form";
   [%expect {|
     20 |}]
@@ -5044,6 +5076,7 @@ let%expect_test "query box" =
       <input> </input>
     </form> |}];
   Handle.input_text handle ~get_vdom ~selector:"input" ~text:"a";
+  Handle.recompute_view handle;
   Handle.keydown handle ~get_vdom ~selector:"input" ~key:Enter;
   Handle.show_diff handle;
   [%expect
@@ -5768,7 +5801,9 @@ let%expect_test "[Form.return] is not settable" =
 ;;
 
 let%expect_test "return_settable" =
-  let component = Form.return_settable (module Int) 5 in
+  let component =
+    Form.return_settable ~sexp_of_model:[%sexp_of: Int.t] 5 ~equal:[%equal: Int.t]
+  in
   let handle = Handle.create (form_result_spec [%sexp_of: int]) component in
   Handle.show handle;
   [%expect {|

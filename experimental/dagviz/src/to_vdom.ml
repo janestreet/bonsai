@@ -255,9 +255,9 @@ module Make (Name : Types.Name) = struct
         : Name.Set.t Name.Map.t -> Name.Set.t Name.Map.t -> Name.Set.t Name.Map.t
         =
         fun a b ->
-          Map.merge a b ~f:(fun ~key:_ -> function
-            | `Both (a, b) -> Some (Set.union a b)
-            | `Left x | `Right x -> Some x)
+        Map.merge a b ~f:(fun ~key:_ -> function
+          | `Both (a, b) -> Some (Set.union a b)
+          | `Left x | `Right x -> Some x)
       in
       { id_to_source = merge_maps ta.id_to_source tb.id_to_source
       ; dest_to_id = merge_maps ta.dest_to_id tb.dest_to_id
@@ -579,9 +579,8 @@ module Make (Name : Types.Name) = struct
         Fn.const update_position_tracker
       in
       Bonsai.Edge.on_change
-        (module struct
-          type t = Bulk_size_tracker.Dimensions.t Name.Map.t [@@deriving equal, sexp]
-        end)
+        ~sexp_of_model:[%sexp_of: Bulk_size_tracker.Dimensions.t Name.Map.t]
+        ~equal:[%equal: Bulk_size_tracker.Dimensions.t Name.Map.t]
         sizes
         ~callback
     in

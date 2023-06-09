@@ -1,2 +1,2 @@
 (executables (names main) (libraries bonsai_web)
- (preprocess (pps ppx_bonsai)))
+ (preprocess (pps ppx_bonsai ppx_jane)))

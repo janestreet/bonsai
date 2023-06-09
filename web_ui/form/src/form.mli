@@ -11,7 +11,11 @@ val return : 'a -> 'a t
 
 (** [return_settable] is identical to [return], but [set] and [normalize] will update
     the value of the form. *)
-val return_settable : (module Bonsai.Model with type t = 'a) -> 'a -> 'a t Computation.t
+val return_settable
+  :  ?sexp_of_model:('a -> Sexp.t)
+  -> equal:('a -> 'a -> bool)
+  -> 'a
+  -> 'a t Computation.t
 
 (** [return_error] produces a form that always fails validation. *)
 val return_error : Error.t -> _ t
@@ -236,7 +240,8 @@ module Dynamic : sig
       3. the form initializes with an error *)
   val on_change
     :  ?on_error:(Error.t -> unit Ui_effect.t) Value.t
-    -> (module Bonsai.Model with type t = 'a)
+    -> ?sexp_of_model:('a -> Sexp.t)
+    -> equal:('a -> 'a -> bool)
     -> f:('a -> unit Ui_effect.t) Value.t
     -> 'a t Value.t
     -> unit Computation.t
@@ -247,7 +252,8 @@ module Dynamic : sig
       If both the form and the store update at the same time, the form wins, and the store
       is overridden. *)
   val sync_with
-    :  (module Bonsai.Model with type t = 'a)
+    :  ?sexp_of_model:('a -> Sexp.t)
+    -> equal:('a -> 'a -> bool)
     -> store_value:'a option Value.t
     -> store_set:('a -> unit Effect.t) Value.t
     -> 'a t Value.t
@@ -267,7 +273,8 @@ module Dynamic : sig
       [debounce_ui] can be set to a timespan.  When set, the validation status won't
       update until the input form value has been stable for the given span of time *)
   val validate_via_effect
-    :  (module Bonsai.Model with type t = 'a)
+    :  ?sexp_of_model:('a -> Sexp.t)
+    -> equal:('a -> 'a -> bool)
     -> ?one_at_a_time:bool
     -> ?debounce_ui:Time_ns.Span.t
     -> 'a t Value.t

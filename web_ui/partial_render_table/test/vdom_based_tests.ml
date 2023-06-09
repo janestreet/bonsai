@@ -126,20 +126,25 @@ let%expect_test "column visibility" =
   Handle.store_view test.handle;
   Bonsai.Var.set is_column_b_visible_var false;
   Handle.recompute_view_until_stable test.handle;
-  Handle.show_diff test.handle;
+  Handle.show_diff ~location_style:Separator test.handle;
   [%expect
     {|
-  <div class="partial-render-table- partial_render_table_container">
-    <table class="partial_render_table_header prt-table-header" bounds-change=<opaque>>
-      <tbody>
-        <tr>
-          <td colspan="1" class="header_label leaf_header" size_tracker=<fun> style={ width: 50px; }>
-            <div class="column_header" onclick>
-              <span> ◇  key </span>
+=== DIFF HUNK ===
+                     flex-direction: row;
+                     flex-wrap: nowrap;
+                     align-items: baseline;
+                     column-gap: 6px;
+                   }>
+                <span> key </span>
+              </div>
             </div>
           </td>
           <td colspan="1" class="header_label leaf_header" size_tracker=<fun> style={ width: 50px; }>
-            <div> a </div>
+            <div>
+              <div>
+                <span> a </span>
+              </div>
+            </div>
           </td>
 -|        <td colspan="1" class="header_label leaf_header" size_tracker=<fun> style={ width: 50px; }>
 +|        <td colspan="1"
@@ -150,22 +155,22 @@ let%expect_test "column visibility" =
 +|              display: none;
 +|            }>
             <div class="column_header" onclick>
-              <span> ◇  b </span>
+              <div style={
+                     display: flex;
+                     flex-direction: row;
+                     flex-wrap: nowrap;
+                     align-items: baseline;
+                     column-gap: 6px;
+                   }>
+                <span> b </span>
+              </div>
             </div>
           </td>
           <td colspan="1" class="header_label leaf_header" size_tracker=<fun> style={ width: 50px; }>
-            <div> d </div>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-    <div class="partial_render_table_body" bounds-change=<opaque> style={ height: 3px; }>
-      <div style={ padding-top: 0px; padding-bottom: 0px; }>
-        <div>
-          <div class="prt-table-row"
-               onclick
-               style={
-
+            <div class="column_header" onclick>
+              <div style={
+                     display: flex;
+=== DIFF HUNK ===
                    max-height: 1px;
                    width: 0.00000000px;
                    min-width: 0.00000000px;
@@ -201,7 +206,7 @@ let%expect_test "column visibility" =
                  height: 1px;
                  width: 0.00000000px;
                  display: flex;
-
+=== DIFF HUNK ===
                    max-height: 1px;
                    width: 0.00000000px;
                    min-width: 0.00000000px;
@@ -237,7 +242,7 @@ let%expect_test "column visibility" =
                  height: 1px;
                  width: 0.00000000px;
                  display: flex;
-
+=== DIFF HUNK ===
                    max-height: 1px;
                    width: 0.00000000px;
                    min-width: 0.00000000px;
@@ -287,19 +292,31 @@ let%expect_test "stabilization of view range" =
       <tr>
         <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
           <div class="column_header" onclick>
-            <span> ◇  key </span>
+            <div>
+              <span> key </span>
+            </div>
           </div>
         </td>
         <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
-          <div> a </div>
+          <div>
+            <div>
+              <span> a </span>
+            </div>
+          </div>
         </td>
         <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
           <div class="column_header" onclick>
-            <span> ◇  b </span>
+            <div>
+              <span> b </span>
+            </div>
           </div>
         </td>
         <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
-          <div> d </div>
+          <div class="column_header" onclick>
+            <div>
+              <span> d </span>
+            </div>
+          </div>
         </td>
       </tr>
     </tbody>
@@ -330,16 +347,17 @@ let%expect_test "stabilization of view range" =
   </div>
 </div> |}];
   (* Change the visibility to show the rest of the nodes *)
-  Handle.show_diff test.handle;
+  Handle.show_diff ~location_style:Separator test.handle;
   [%expect {||}];
   Handle.recompute_view_until_stable test.handle;
-  Handle.show_diff test.handle;
+  Handle.show_diff ~location_style:Separator test.handle;
   [%expect {||}];
   Test.set_bounds test ~low:0 ~high:100;
   Handle.recompute_view_until_stable test.handle;
-  Handle.show_diff test.handle;
+  Handle.show_diff ~location_style:Separator test.handle;
   [%expect
     {|
+    === DIFF HUNK ===
                 <div class="cell prt-table-cell">
                   <input oninput> </input>
                   hello
@@ -377,9 +395,10 @@ let%expect_test "resize-column" =
   Handle.store_view test.handle;
   Test.resize_column test ~idx:0 ~width:10.0;
   Handle.recompute_view_until_stable test.handle;
-  Handle.show_diff test.handle;
+  Handle.show_diff ~location_style:Separator test.handle;
   [%expect
     {|
+=== DIFF HUNK ===
   <div class="partial-render-table- partial_render_table_container">
     <table class="partial_render_table_header prt-table-header" bounds-change=<opaque>>
       <tbody>
@@ -392,19 +411,27 @@ let%expect_test "resize-column" =
 +|              width: 10.00px;
 +|            }>
             <div class="column_header" onclick>
-              <span> ◇  key </span>
+              <div style={
+                     display: flex;
+                     flex-direction: row;
+                     flex-wrap: nowrap;
+                     align-items: baseline;
+                     column-gap: 6px;
+                   }>
+                <span> key </span>
+              </div>
             </div>
           </td>
           <td colspan="1" class="header_label leaf_header" size_tracker=<fun> style={ width: 50px; }>
-            <div> a </div>
-          </td>
-          <td colspan="1" class="header_label leaf_header" size_tracker=<fun> style={ width: 50px; }>
-            <div class="column_header" onclick>
-              <span> ◇  b </span>
+            <div>
+              <div>
+                <span> a </span>
+=== DIFF HUNK ===
+                     column-gap: 6px;
+                   }>
+                <span> d </span>
+              </div>
             </div>
-          </td>
-          <td colspan="1" class="header_label leaf_header" size_tracker=<fun> style={ width: 50px; }>
-            <div> d </div>
           </td>
         </tr>
       </tbody>
@@ -449,7 +476,7 @@ let%expect_test "resize-column" =
             <div class="cell prt-table-cell"
                  style={
                    height: 1px;
-
+=== DIFF HUNK ===
                    max-width: 0.00000000px;
                  }> 1.000000 </div>
             <div class="cell prt-table-cell"
@@ -499,7 +526,7 @@ let%expect_test "resize-column" =
             <div class="cell prt-table-cell"
                  style={
                    height: 1px;
-
+=== DIFF HUNK ===
                    max-width: 0.00000000px;
                  }> 2.000000 </div>
             <div class="cell prt-table-cell"
@@ -567,19 +594,31 @@ let%expect_test "big table" =
       <tr>
         <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
           <div class="column_header" onclick>
-            <span> ◇  key </span>
+            <div>
+              <span> key </span>
+            </div>
           </div>
         </td>
         <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
-          <div> a </div>
+          <div>
+            <div>
+              <span> a </span>
+            </div>
+          </div>
         </td>
         <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
           <div class="column_header" onclick>
-            <span> ◇  b </span>
+            <div>
+              <span> b </span>
+            </div>
           </div>
         </td>
         <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
-          <div> d </div>
+          <div class="column_header" onclick>
+            <div>
+              <span> d </span>
+            </div>
+          </div>
         </td>
       </tr>
     </tbody>
@@ -612,17 +651,18 @@ let%expect_test "big table" =
   (* extending the range upwards should only add to the end *)
   Test.set_bounds test ~low:55 ~high:60;
   Handle.recompute_view_until_stable test.handle;
-  Handle.show_diff test.handle;
+  Handle.show_diff ~location_style:Separator test.handle;
   [%expect
     {|
-          </td>
-          <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
-            <div class="column_header" onclick>
-              <span> ◇  b </span>
+=== DIFF HUNK ===
             </div>
           </td>
           <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
-            <div> d </div>
+            <div class="column_header" onclick>
+              <div>
+                <span> d </span>
+              </div>
+            </div>
           </td>
         </tr>
       </tbody>
@@ -724,14 +764,15 @@ let%expect_test "typing into a column, leaving that column, and then coming back
     ~selector:".prt-table-cell:nth-child(2) input"
     ~text:"hello world";
   Handle.recompute_view_until_stable test.handle;
-  Handle.show_diff test.handle;
+  Handle.show_diff ~location_style:Separator test.handle;
   [%expect
     {|
-              <span> ◇  b </span>
+=== DIFF HUNK ===
+            <div class="column_header" onclick>
+              <div>
+                <span> d </span>
+              </div>
             </div>
-          </td>
-          <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
-            <div> d </div>
           </td>
         </tr>
       </tbody>
@@ -777,19 +818,31 @@ let%expect_test "typing into a column, leaving that column, and then coming back
       <tr>
         <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
           <div class="column_header" onclick>
-            <span> ◇  key </span>
+            <div>
+              <span> key </span>
+            </div>
           </div>
         </td>
         <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
-          <div> a </div>
+          <div>
+            <div>
+              <span> a </span>
+            </div>
+          </div>
         </td>
         <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
           <div class="column_header" onclick>
-            <span> ◇  b </span>
+            <div>
+              <span> b </span>
+            </div>
           </div>
         </td>
         <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
-          <div> d </div>
+          <div class="column_header" onclick>
+            <div>
+              <span> d </span>
+            </div>
+          </div>
         </td>
       </tr>
     </tbody>
@@ -830,21 +883,22 @@ let%expect_test "table body is not recomputed more often than necessary" =
   let test = Test.create (Test.Component.default ()) in
   Test.print_message_on_result_recomputation test;
   Test.resize_column test ~idx:0 ~width:1.;
+  Handle.recompute_view test.handle;
   Test.set_bounds test ~low:0 ~high:300;
-  Handle.flush test.handle;
+  Handle.recompute_view test.handle;
   [%expect {|
     Initialized
     Changed |}];
   (* Sanity check: re-stabilizing after doing no actions does not cause recomputation *)
-  Handle.flush test.handle;
-  [%expect {||}];
+  Handle.recompute_view test.handle;
+  [%expect {| |}];
   (* Re-setting a column to its existing width should not cause a re-fire *)
   Test.resize_column test ~idx:0 ~width:1.;
-  Handle.flush test.handle;
+  Handle.recompute_view test.handle;
   [%expect {| |}];
   (* Re-setting the bounds to the same value should not cause a re-fire *)
   Test.set_bounds test ~low:0 ~high:300;
-  Handle.flush test.handle;
+  Handle.recompute_view test.handle;
   [%expect {||}]
 ;;
 
@@ -868,7 +922,7 @@ let%expect_test "table body is not recomputed more often than necessary" =
         in
         let columns =
           [ Table_expert.Columns.Dynamic_cells.column
-              ~label:(Value.return (Vdom.Node.text "key"))
+              ~header:(Value.return (Vdom.Node.text "key"))
               ~cell:(fun ~key ~data:_ ->
                 let%arr key = key in
                 Vdom.Node.textf "%d" key)
@@ -896,19 +950,20 @@ let%expect_test "table body is not recomputed more often than necessary" =
       })
   in
   Test.print_message_on_result_recomputation test;
+  Handle.recompute_view test.handle;
   Test.resize_column test ~idx:0 ~width:1.;
   Test.set_bounds test ~low:0 ~high:300;
-  Handle.flush test.handle;
+  Handle.recompute_view test.handle;
   [%expect {|
     Initialized
     Changed |}];
   (* Sanity check: re-stabilizing after doing no actions does not cause recomputation *)
-  Handle.flush test.handle;
+  Handle.recompute_view test.handle;
   [%expect {||}];
   (* Changing the bounds should not cause a re-fire because we are doing our own collation
      and don't rely on result.bounds. *)
   Test.set_bounds test ~low:100 ~high:300;
-  Handle.flush test.handle;
+  Handle.recompute_view test.handle;
   [%expect {||}]
 ;;
 
@@ -918,8 +973,8 @@ let%expect_test "test is browser" =
   [%expect {| false |}]
 ;;
 
-let%expect_test "sorting" =
-  let test = Test.create (Test.Component.default ()) in
+let%expect_test "sorting legacy renderer" =
+  let test = Test.create (Test.Component.default ~use_legacy_header:true ()) in
   Handle.recompute_view_until_stable test.handle;
   Handle.show test.handle;
   [%expect
@@ -942,7 +997,9 @@ let%expect_test "sorting" =
           </div>
         </td>
         <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
-          <div> d </div>
+          <div class="column_header" onclick>
+            <span> ◇  d </span>
+          </div>
         </td>
       </tr>
     </tbody>
@@ -983,9 +1040,10 @@ let%expect_test "sorting" =
 </div> |}];
   (* this one is the key, clicking on it does nothing (it's already sorted by the key) *)
   Handle.click_on test.handle ~selector:"td:nth-child(1) > div" ~get_vdom:test.get_vdom;
-  Handle.show_diff test.handle;
+  Handle.show_diff ~location_style:Separator test.handle;
   [%expect
     {|
+    === DIFF HUNK ===
       <div class="partial-render-table- partial_render_table_container">
         <table class="partial_render_table_header prt-table-header" bounds-change=<opaque>>
           <tbody>
@@ -1005,17 +1063,18 @@ let%expect_test "sorting" =
                 </div>
               </td>
               <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
-                <div> d </div>
+                <div class="column_header" onclick>
+                  <span> ◇  d </span>
+                </div>
               </td>
-            </tr>
-          </tbody>
-        </table> |}];
+            </tr> |}];
   (* this one actually does stuff, click on it twice for a reverse sort *)
   Handle.click_on test.handle ~selector:"td:nth-child(3) > div" ~get_vdom:test.get_vdom;
   Handle.click_on test.handle ~selector:"td:nth-child(3) > div" ~get_vdom:test.get_vdom;
-  Handle.show_diff test.handle;
+  Handle.show_diff ~location_style:Separator test.handle;
   [%expect
     {|
+=== DIFF HUNK ===
   <div class="partial-render-table- partial_render_table_container">
     <table class="partial_render_table_header prt-table-header" bounds-change=<opaque>>
       <tbody>
@@ -1036,7 +1095,9 @@ let%expect_test "sorting" =
             </div>
           </td>
           <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
-            <div> d </div>
+            <div class="column_header" onclick>
+              <span> ◇  d </span>
+            </div>
           </td>
         </tr>
       </tbody>
@@ -1085,9 +1146,10 @@ let%expect_test "sorting" =
     </div>
   </div> |}];
   Handle.click_on test.handle ~selector:"td:nth-child(3) > div" ~get_vdom:test.get_vdom;
-  Handle.show_diff test.handle;
+  Handle.show_diff ~location_style:Separator test.handle;
   [%expect
     {|
+    === DIFF HUNK ===
       <div class="partial-render-table- partial_render_table_container">
         <table class="partial_render_table_header prt-table-header" bounds-change=<opaque>>
           <tbody>
@@ -1107,7 +1169,453 @@ let%expect_test "sorting" =
                 </div>
               </td>
               <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
-                <div> d </div>
+                <div class="column_header" onclick>
+                  <span> ◇  d </span>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="partial_render_table_body" bounds-change=<opaque>>
+          <div>
+            <div>
+    +|        <div class="prt-table-row" onclick>
+    +|          <div class="cell prt-table-cell"> 0 </div>
+    +|          <div class="cell prt-table-cell">
+    +|            <input oninput> </input>
+    +|            hello
+    +|          </div>
+    +|          <div class="cell prt-table-cell"> 1.000000 </div>
+    +|          <div class="cell prt-table-cell"> 1 </div>
+    +|        </div>
+              <div class="prt-table-row" onclick>
+                <div class="cell prt-table-cell"> 1 </div>
+                <div class="cell prt-table-cell">
+                  <input oninput> </input>
+                  there
+                </div>
+                <div class="cell prt-table-cell"> 2.000000 </div>
+                <div class="cell prt-table-cell"> 2 </div>
+              </div>
+              <div class="prt-table-row" onclick>
+                <div class="cell prt-table-cell"> 4 </div>
+                <div class="cell prt-table-cell">
+                  <input oninput> </input>
+                  world
+                </div>
+                <div class="cell prt-table-cell"> 2.000000 </div>
+                <div class="cell prt-table-cell"> --- </div>
+              </div>
+    -|        <div class="prt-table-row" onclick>
+    -|          <div class="cell prt-table-cell"> 0 </div>
+    -|          <div class="cell prt-table-cell">
+    -|            <input oninput> </input>
+    -|            hello
+    -|          </div>
+    -|          <div class="cell prt-table-cell"> 1.000000 </div>
+    -|          <div class="cell prt-table-cell"> 1 </div>
+    -|        </div>
+            </div>
+          </div>
+        </div>
+      </div> |}];
+  (* specialized reverse sort *)
+  (* for these items, nothing changes for the primary sort*)
+  Handle.click_on test.handle ~selector:"td:nth-child(4) > div" ~get_vdom:test.get_vdom;
+  Handle.show_diff test.handle;
+  [%expect
+    {|
+            <tr>
+              <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
+                <div class="column_header" onclick>
+                  <span> ◇  key </span>
+                </div>
+              </td>
+              <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
+                <div> a </div>
+              </td>
+              <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
+                <div class="column_header" onclick>
+                  <span> ◇  b </span>
+                </div>
+              </td>
+              <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
+                <div class="column_header" onclick>
+    -|            <span> ◇  d </span>
+    +|            <span> ⬘  d </span>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="partial_render_table_body" bounds-change=<opaque>>
+          <div>
+            <div>
+              <div class="prt-table-row" onclick>
+                <div class="cell prt-table-cell"> 0 </div>
+                <div class="cell prt-table-cell">
+                  <input oninput> </input>
+                  hello
+                </div>
+                <div class="cell prt-table-cell"> 1.000000 </div>
+                <div class="cell prt-table-cell"> 1 </div>
+      |}];
+  (* but in reverse, notice that [None]s stay on the bottom *)
+  Handle.click_on test.handle ~selector:"td:nth-child(4) > div" ~get_vdom:test.get_vdom;
+  Handle.show_diff test.handle;
+  [%expect
+    {|
+            <tr>
+              <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
+                <div class="column_header" onclick>
+                  <span> ◇  key </span>
+                </div>
+              </td>
+              <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
+                <div> a </div>
+              </td>
+              <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
+                <div class="column_header" onclick>
+                  <span> ◇  b </span>
+                </div>
+              </td>
+              <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
+                <div class="column_header" onclick>
+    -|            <span> ⬘  d </span>
+    +|            <span> ⬙  d </span>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="partial_render_table_body" bounds-change=<opaque>>
+          <div>
+            <div>
+    +|        <div class="prt-table-row" onclick>
+    +|          <div class="cell prt-table-cell"> 1 </div>
+    +|          <div class="cell prt-table-cell">
+    +|            <input oninput> </input>
+    +|            there
+    +|          </div>
+    +|          <div class="cell prt-table-cell"> 2.000000 </div>
+    +|          <div class="cell prt-table-cell"> 2 </div>
+    +|        </div>
+              <div class="prt-table-row" onclick>
+                <div class="cell prt-table-cell"> 0 </div>
+                <div class="cell prt-table-cell">
+                  <input oninput> </input>
+                  hello
+                </div>
+                <div class="cell prt-table-cell"> 1.000000 </div>
+                <div class="cell prt-table-cell"> 1 </div>
+              </div>
+    -|        <div class="prt-table-row" onclick>
+    -|          <div class="cell prt-table-cell"> 1 </div>
+    -|          <div class="cell prt-table-cell">
+    -|            <input oninput> </input>
+    -|            there
+    -|          </div>
+    -|          <div class="cell prt-table-cell"> 2.000000 </div>
+    -|          <div class="cell prt-table-cell"> 2 </div>
+    -|        </div>
+              <div class="prt-table-row" onclick>
+                <div class="cell prt-table-cell"> 4 </div>
+                <div class="cell prt-table-cell">
+                  <input oninput> </input>
+                  world
+                </div>
+                <div class="cell prt-table-cell"> 2.000000 </div>
+                <div class="cell prt-table-cell"> --- </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div> |}]
+;;
+
+let%expect_test "sorting default renderer" =
+  let test = Test.create (Test.Component.default ()) in
+  Handle.recompute_view_until_stable test.handle;
+  Handle.show test.handle;
+  [%expect
+    {|
+<div class="partial-render-table- partial_render_table_container">
+  <table class="partial_render_table_header prt-table-header" bounds-change=<opaque>>
+    <tbody>
+      <tr>
+        <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
+          <div class="column_header" onclick>
+            <div>
+              <span> key </span>
+            </div>
+          </div>
+        </td>
+        <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
+          <div>
+            <div>
+              <span> a </span>
+            </div>
+          </div>
+        </td>
+        <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
+          <div class="column_header" onclick>
+            <div>
+              <span> b </span>
+            </div>
+          </div>
+        </td>
+        <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
+          <div class="column_header" onclick>
+            <div>
+              <span> d </span>
+            </div>
+          </div>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="partial_render_table_body" bounds-change=<opaque>>
+    <div>
+      <div>
+        <div class="prt-table-row" onclick>
+          <div class="cell prt-table-cell"> 0 </div>
+          <div class="cell prt-table-cell">
+            <input oninput> </input>
+            hello
+          </div>
+          <div class="cell prt-table-cell"> 1.000000 </div>
+          <div class="cell prt-table-cell"> 1 </div>
+        </div>
+        <div class="prt-table-row" onclick>
+          <div class="cell prt-table-cell"> 1 </div>
+          <div class="cell prt-table-cell">
+            <input oninput> </input>
+            there
+          </div>
+          <div class="cell prt-table-cell"> 2.000000 </div>
+          <div class="cell prt-table-cell"> 2 </div>
+        </div>
+        <div class="prt-table-row" onclick>
+          <div class="cell prt-table-cell"> 4 </div>
+          <div class="cell prt-table-cell">
+            <input oninput> </input>
+            world
+          </div>
+          <div class="cell prt-table-cell"> 2.000000 </div>
+          <div class="cell prt-table-cell"> --- </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div> |}];
+  (* this one is the key, clicking on it does nothing (it's already sorted by the key) *)
+  Handle.click_on test.handle ~selector:"td:nth-child(1) > div" ~get_vdom:test.get_vdom;
+  Handle.show_diff ~location_style:Separator test.handle;
+  [%expect
+    {|
+    === DIFF HUNK ===
+      <div class="partial-render-table- partial_render_table_container">
+        <table class="partial_render_table_header prt-table-header" bounds-change=<opaque>>
+          <tbody>
+            <tr>
+              <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
+                <div class="column_header" onclick>
+                  <div>
+                    <span> key </span>
+    +|              <span class="prt-sort-indicator"> ▲ </span>
+                  </div>
+                </div>
+              </td>
+              <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
+                <div>
+                  <div>
+                    <span> a </span>
+                  </div>
+                </div>
+              </td>
+              <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
+                <div class="column_header" onclick>
+                  <div>
+                    <span> b </span>
+                  </div>
+                </div> |}];
+  (* this one actually does stuff, click on it twice for a reverse sort *)
+  Handle.click_on test.handle ~selector:"td:nth-child(3) > div" ~get_vdom:test.get_vdom;
+  Handle.click_on test.handle ~selector:"td:nth-child(3) > div" ~get_vdom:test.get_vdom;
+  Handle.show_diff ~location_style:Separator test.handle;
+  [%expect
+    {|
+=== DIFF HUNK ===
+  <div class="partial-render-table- partial_render_table_container">
+    <table class="partial_render_table_header prt-table-header" bounds-change=<opaque>>
+      <tbody>
+        <tr>
+          <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
+            <div class="column_header" onclick>
+              <div>
+                <span> key </span>
+-|              <span class="prt-sort-indicator"> ▲ </span>
+              </div>
+            </div>
+          </td>
+          <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
+            <div>
+              <div>
+                <span> a </span>
+              </div>
+            </div>
+          </td>
+          <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
+            <div class="column_header" onclick>
+              <div>
+                <span> b </span>
++|              <span class="prt-sort-indicator"> ▼ </span>
+              </div>
+            </div>
+          </td>
+          <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
+            <div class="column_header" onclick>
+              <div>
+                <span> d </span>
+              </div>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="partial_render_table_body" bounds-change=<opaque>>
+      <div>
+        <div>
+-|        <div class="prt-table-row" onclick>
+-|          <div class="cell prt-table-cell"> 0 </div>
+-|          <div class="cell prt-table-cell">
+-|            <input oninput> </input>
+-|            hello
+-|          </div>
+-|          <div class="cell prt-table-cell"> 1.000000 </div>
+-|          <div class="cell prt-table-cell"> 1 </div>
+-|        </div>
+          <div class="prt-table-row" onclick>
+            <div class="cell prt-table-cell"> 1 </div>
+            <div class="cell prt-table-cell">
+              <input oninput> </input>
+              there
+            </div>
+            <div class="cell prt-table-cell"> 2.000000 </div>
+            <div class="cell prt-table-cell"> 2 </div>
+          </div>
+          <div class="prt-table-row" onclick>
+            <div class="cell prt-table-cell"> 4 </div>
+            <div class="cell prt-table-cell">
+              <input oninput> </input>
+              world
+            </div>
+            <div class="cell prt-table-cell"> 2.000000 </div>
+            <div class="cell prt-table-cell"> --- </div>
+          </div>
++|        <div class="prt-table-row" onclick>
++|          <div class="cell prt-table-cell"> 0 </div>
++|          <div class="cell prt-table-cell">
++|            <input oninput> </input>
++|            hello
++|          </div>
++|          <div class="cell prt-table-cell"> 1.000000 </div>
++|          <div class="cell prt-table-cell"> 1 </div>
++|        </div>
+        </div>
+      </div>
+    </div>
+  </div> |}];
+  (* Click on second column, creating a multi-sort  *)
+  Handle.click_on
+    ~shift_key_down:true
+    test.handle
+    ~selector:"td:nth-child(1) > div"
+    ~get_vdom:test.get_vdom;
+  Handle.show_diff ~location_style:Separator test.handle;
+  [%expect
+    {|
+    === DIFF HUNK ===
+      <div class="partial-render-table- partial_render_table_container">
+        <table class="partial_render_table_header prt-table-header" bounds-change=<opaque>>
+          <tbody>
+            <tr>
+              <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
+                <div class="column_header" onclick>
+                  <div>
+                    <span> key </span>
+    +|              <span class="prt-sort-indicator"> ▲ 2 </span>
+                  </div>
+                </div>
+              </td>
+              <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
+                <div>
+                  <div>
+                    <span> a </span>
+                  </div>
+                </div>
+              </td>
+              <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
+                <div class="column_header" onclick>
+                  <div>
+                    <span> b </span>
+    -|              <span class="prt-sort-indicator"> ▼ </span>
+    +|              <span class="prt-sort-indicator"> ▼ 1 </span>
+                  </div>
+                </div>
+              </td>
+              <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
+                <div class="column_header" onclick>
+                  <div>
+                    <span> d </span>
+                  </div>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="partial_render_table_body" bounds-change=<opaque>>
+          <div>
+            <div> |}];
+  (* Third column is already reverse sorted, so clicking it again removes all sorts. *)
+  Handle.click_on test.handle ~selector:"td:nth-child(3) > div" ~get_vdom:test.get_vdom;
+  Handle.show_diff ~location_style:Separator test.handle;
+  [%expect
+    {|
+    === DIFF HUNK ===
+      <div class="partial-render-table- partial_render_table_container">
+        <table class="partial_render_table_header prt-table-header" bounds-change=<opaque>>
+          <tbody>
+            <tr>
+              <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
+                <div class="column_header" onclick>
+                  <div>
+                    <span> key </span>
+    -|              <span class="prt-sort-indicator"> ▲ 2 </span>
+                  </div>
+                </div>
+              </td>
+              <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
+                <div>
+                  <div>
+                    <span> a </span>
+                  </div>
+                </div>
+              </td>
+              <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
+                <div class="column_header" onclick>
+                  <div>
+                    <span> b </span>
+    -|              <span class="prt-sort-indicator"> ▼ 1 </span>
+                  </div>
+                </div>
+              </td>
+              <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
+                <div class="column_header" onclick>
+                  <div>
+                    <span> d </span>
+                  </div>
+                </div>
               </td>
             </tr>
           </tbody>
@@ -1159,22 +1667,24 @@ let%expect_test "sorting" =
 
 let%expect_test "removed columns still count toward the total table width" =
   let module Table = Bonsai_web_ui_partial_render_table in
+  let module Column = Table.Basic.Columns.Dynamic_columns in
   let map = Value.return (Int.Map.of_alist_exn [ 1, 1; 2, 2 ]) in
+  let render_header str = Column.Header_helpers.default (Vdom.Node.text str) in
   let column_a =
-    Table.Basic.Columns.Dynamic_columns.column
-      ~label:(Vdom.Node.text "a")
+    Column.column
+      ~header:(render_header "a")
       ~cell:(fun ~key:_ ~data -> Vdom.Node.text (Int.to_string data))
       ()
   in
   let column_b =
-    Table.Basic.Columns.Dynamic_columns.column
-      ~label:(Vdom.Node.text "b")
+    Column.column
+      ~header:(render_header "b")
       ~cell:(fun ~key:_ ~data -> Vdom.Node.text (Int.to_string (data * 2)))
       ()
   in
   let column_c =
-    Table.Basic.Columns.Dynamic_columns.column
-      ~label:(Vdom.Node.text "c")
+    Column.column
+      ~header:(render_header "c")
       ~cell:(fun ~key:_ ~data -> Vdom.Node.text (Int.to_string (data * 3)))
       ()
   in
@@ -1184,7 +1694,7 @@ let%expect_test "removed columns still count toward the total table width" =
       (module Int)
       ~focus:None
       ~row_height:(Value.return (`Px 20))
-      ~columns:(Table.Basic.Columns.Dynamic_columns.lift (Bonsai.Var.value columns_var))
+      ~columns:(Column.lift (Bonsai.Var.value columns_var))
       map
   in
   let get_vdom { Table.Basic.Result.view; _ } = view in
@@ -1207,10 +1717,18 @@ let%expect_test "removed columns still count toward the total table width" =
         <tbody>
           <tr>
             <td style={ width: 50px; }>
-              <div> a </div>
+              <div>
+                <div>
+                  <span> a </span>
+                </div>
+              </div>
             </td>
             <td style={ width: 50px; }>
-              <div> b </div>
+              <div>
+                <div>
+                  <span> b </span>
+                </div>
+              </div>
             </td>
           </tr>
         </tbody>
@@ -1240,10 +1758,18 @@ let%expect_test "removed columns still count toward the total table width" =
         <tbody>
           <tr>
             <td style={ width: 10.00px; }>
-              <div> a </div>
+              <div>
+                <div>
+                  <span> a </span>
+                </div>
+              </div>
             </td>
             <td style={ width: 20.00px; }>
-              <div> b </div>
+              <div>
+                <div>
+                  <span> b </span>
+                </div>
+              </div>
             </td>
           </tr>
         </tbody>
@@ -1264,6 +1790,7 @@ let%expect_test "removed columns still count toward the total table width" =
       </div>
     </div> |}];
   Bonsai.Var.set columns_var [ column_a; column_b; column_c ];
+  Handle.recompute_view handle;
   resize_column ~idx:2 ~width:30.;
   Handle.show handle;
   [%expect
@@ -1273,13 +1800,25 @@ let%expect_test "removed columns still count toward the total table width" =
         <tbody>
           <tr>
             <td style={ width: 10.00px; }>
-              <div> a </div>
+              <div>
+                <div>
+                  <span> a </span>
+                </div>
+              </div>
             </td>
             <td style={ width: 20.00px; }>
-              <div> b </div>
+              <div>
+                <div>
+                  <span> b </span>
+                </div>
+              </div>
             </td>
             <td style={ width: 30.00px; }>
-              <div> c </div>
+              <div>
+                <div>
+                  <span> c </span>
+                </div>
+              </div>
             </td>
           </tr>
         </tbody>
@@ -1310,10 +1849,18 @@ let%expect_test "removed columns still count toward the total table width" =
         <tbody>
           <tr>
             <td style={ width: 10.00px; }>
-              <div> b </div>
+              <div>
+                <div>
+                  <span> b </span>
+                </div>
+              </div>
             </td>
             <td style={ width: 20.00px; }>
-              <div> c </div>
+              <div>
+                <div>
+                  <span> c </span>
+                </div>
+              </div>
             </td>
           </tr>
         </tbody>
@@ -1337,10 +1884,11 @@ let%expect_test "removed columns still count toward the total table width" =
 
 let%expect_test "removed columns still count toward the total table width" =
   let module Table = Bonsai_web_ui_partial_render_table in
+  let module Columns = Table.Basic.Columns.Dynamic_columns in
   let map = Value.return (Int.Map.of_alist_exn (List.init 100 ~f:(fun i -> i, i))) in
   let column_a =
-    Table.Basic.Columns.Dynamic_columns.column
-      ~label:(Vdom.Node.text "a")
+    Columns.column
+      ~header:(Columns.Header_helpers.default (Vdom.Node.text "a"))
       ~cell:(fun ~key:_ ~data -> Vdom.Node.text (Int.to_string data))
       ()
   in
@@ -1350,7 +1898,7 @@ let%expect_test "removed columns still count toward the total table width" =
       ~focus:None
       ~row_height:(Value.return (`Px 1))
       ~preload_rows:1
-      ~columns:(Table.Basic.Columns.Dynamic_columns.lift (Value.return [ column_a ]))
+      ~columns:(Columns.lift (Value.return [ column_a ]))
       map
   in
   let get_vdom { Table.Basic.Result.view; _ } = view in
@@ -1372,7 +1920,11 @@ let%expect_test "removed columns still count toward the total table width" =
         <tbody>
           <tr>
             <td>
-              <div> a </div>
+              <div>
+                <div>
+                  <span> a </span>
+                </div>
+              </div>
             </td>
           </tr>
         </tbody>
@@ -1412,7 +1964,7 @@ let%expect_test "removed columns still count toward the total table width" =
       </div>
     </div> |}];
   Test.clear_bounds_for_handle handle ~get_vdom;
-  Handle.show_diff handle;
+  Handle.show_diff ~location_style:Separator handle;
   [%expect {| |}];
   Handle.show handle;
   (* Note that clearing the visible bounds causes the padding to go to 0. *)
@@ -1423,7 +1975,11 @@ let%expect_test "removed columns still count toward the total table width" =
         <tbody>
           <tr>
             <td>
-              <div> a </div>
+              <div>
+                <div>
+                  <span> a </span>
+                </div>
+              </div>
             </td>
           </tr>
         </tbody>

@@ -128,7 +128,9 @@ let apply_action ~inject:_ ~schedule_event (model : Model.t) (action : Action.t)
 ;;
 
 let header_component ~inject =
-  let%sub state, set_state = Bonsai.state (module String) ~default_model:"" in
+  let%sub state, set_state =
+    Bonsai.state "" ~sexp_of_model:[%sexp_of: String.t] ~equal:[%equal: String.t]
+  in
   let%arr state = state
   and set_state = set_state
   and inject = inject in
@@ -157,7 +159,9 @@ let todo_item_component
       (todo : Model.todo Value.t)
       ~(inject : (Action.t -> unit Effect.t) Value.t)
   =
-  let%sub editing, set_editing = Bonsai.state (module Bool) ~default_model:false in
+  let%sub editing, set_editing =
+    Bonsai.state false ~sexp_of_model:[%sexp_of: Bool.t] ~equal:[%equal: Bool.t]
+  in
   let%arr inject = inject
   and todo = todo
   and editing = editing
@@ -336,7 +340,13 @@ let info =
 let root_component =
   let default_model = Bonsai_web.Persistent_var.get persisted_model in
   let%sub state, inject =
-    Bonsai.state_machine0 (module Model) (module Action) ~default_model ~apply_action
+    Bonsai.state_machine0
+      ()
+      ~sexp_of_model:[%sexp_of: Model.t]
+      ~sexp_of_action:[%sexp_of: Action.t]
+      ~default_model
+      ~apply_action
+      ~equal:[%equal: Model.t]
   in
   let%sub header_component = header_component ~inject in
   let%sub todo_list = todo_list ~inject state in

@@ -54,7 +54,8 @@ let position =
   in
   let%sub () =
     Bonsai.Edge.on_change
-      (module Model)
+      ~sexp_of_model:[%sexp_of: Model.t]
+      ~equal:[%equal: Model.t]
       positions
       ~callback:
         (Fn.const ((Effect.of_sync_fun print_endline) "position changed!") |> Value.return)
@@ -87,7 +88,9 @@ let position =
 ;;
 
 let size_component =
-  let%sub state = Bonsai.state_opt (module Size) in
+  let%sub state =
+    Bonsai.state_opt () ~sexp_of_model:[%sexp_of: Size.t] ~equal:[%equal: Size.t]
+  in
   let%arr size, inject_size = state in
   Vdom.Node.div
     [ Vdom.Node.h3 [ Vdom.Node.text "Resize me!" ]
@@ -133,10 +136,18 @@ let fit =
 
 let visibility_component =
   let open Size_hooks.Visibility_tracker in
-  let%sub pos_x = Bonsai.state (module Int) ~default_model:0 in
-  let%sub pos_y = Bonsai.state (module Int) ~default_model:0 in
-  let%sub client_rect, set_client_rect = Bonsai.state_opt (module Bbox.Int) in
-  let%sub visible_rect, set_visible_rect = Bonsai.state_opt (module Bbox.Int) in
+  let%sub pos_x =
+    Bonsai.state 0 ~sexp_of_model:[%sexp_of: Int.t] ~equal:[%equal: Int.t]
+  in
+  let%sub pos_y =
+    Bonsai.state 0 ~sexp_of_model:[%sexp_of: Int.t] ~equal:[%equal: Int.t]
+  in
+  let%sub client_rect, set_client_rect =
+    Bonsai.state_opt () ~sexp_of_model:[%sexp_of: Bbox.Int.t] ~equal:[%equal: Bbox.Int.t]
+  in
+  let%sub visible_rect, set_visible_rect =
+    Bonsai.state_opt () ~sexp_of_model:[%sexp_of: Bbox.Int.t] ~equal:[%equal: Bbox.Int.t]
+  in
   let%arr pos_x, inject_pos_x = pos_x
   and pos_y, inject_pos_y = pos_y
   and client_rect = client_rect
@@ -208,7 +219,9 @@ let resizer_component =
 ;;
 
 let component =
-  let%sub page, inject_page = Bonsai.state (module Page) ~default_model:Bulk_size in
+  let%sub page, inject_page =
+    Bonsai.state Bulk_size ~sexp_of_model:[%sexp_of: Page.t] ~equal:[%equal: Page.t]
+  in
   let%sub page_component =
     match%sub page with
     | Bulk_size -> bulk_size_component

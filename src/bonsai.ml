@@ -16,6 +16,7 @@ module type Comparator = Module_types.Comparator
 type ('k, 'cmp) comparator = ('k, 'cmp) Module_types.comparator
 
 module Effect = Effect
+module Time_source = Time_source
 
 module Private = struct
   module Computation = Computation

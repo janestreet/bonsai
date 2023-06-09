@@ -223,7 +223,12 @@ module Dimensions = struct
 end
 
 let create_treemap ~elements =
-  let%sub dimensions, set_dimensions = Bonsai.state_opt (module Dimensions) in
+  let%sub dimensions, set_dimensions =
+    Bonsai.state_opt
+      ()
+      ~sexp_of_model:[%sexp_of: Dimensions.t]
+      ~equal:[%equal: Dimensions.t]
+  in
   let%sub tracker =
     let%arr set_dimensions = set_dimensions in
     Bonsai_web_ui_element_size_hooks.Size_tracker.on_change (fun ~width ~height ->

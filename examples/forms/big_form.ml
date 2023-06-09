@@ -212,16 +212,19 @@ let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t = functio
   | String_from_vert_radio ->
     E.Radio_buttons.list
       (module String)
+      ~equal:[%equal: String.t]
       ~layout:`Vertical
       (Value.return [ "first"; "second"; "third" ])
   | String_from_horiz_radio ->
     E.Radio_buttons.list
       (module String)
+      ~equal:[%equal: String.t]
       ~layout:`Horizontal
       (Value.return [ "first"; "second"; "third" ])
   | Radiobutton_buttons ->
     E.Radio_buttons.list
       (module String)
+      ~equal:[%equal: String.t]
       ~style:(Value.return E.Selectable_style.barebones_button_like)
       ~layout:`Horizontal
       (Value.return [ "first"; "second"; "third" ])
@@ -247,6 +250,7 @@ let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t = functio
   | Typeahead ->
     E.Typeahead.single
       (module Rodents)
+      ~equal:[%equal: Rodents.t]
       ~placeholder:"Typeahead here!"
       ~to_option_description:(Value.return Rodents.to_description)
       ~handle_unknown_option:(Value.return (fun s -> Some (Rodents.Other s)))
@@ -258,7 +262,10 @@ let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t = functio
       ~handle_unknown_option:(Value.return (fun s -> Some (Rodents.Other s)))
       ~all_options:(Value.return Rodents.all)
   | String_option ->
-    E.Dropdown.list_opt (module String) (Value.return [ "hello"; "world" ])
+    E.Dropdown.list_opt
+      (module String)
+      ~equal:[%equal: String.t]
+      (Value.return [ "hello"; "world" ])
   | A_b_or_c -> E.Dropdown.enumerable (module A_B_or_C)
   | Many ->
     let%sub multi_select =
@@ -296,7 +303,7 @@ let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t = functio
     let%sub input =
       Bonsai.const (String.Map.of_alist_exn [ "abc", "abc"; "def", "def"; "ghi", "ghi" ])
     in
-    Form.Elements.Query_box.create
+    E.Query_box.create
       (module String)
       ~selected_item_attr:(Value.return Query_box_css.selected_item)
       ~extra_list_container_attr:(Value.return Query_box_css.list)

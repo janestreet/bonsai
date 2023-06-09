@@ -20,8 +20,10 @@ val with_inject_fixed_point
     the body of [f]. This can be useful if you'd like to install an effect handling
     function on [f] whose logic depends on its current value. *)
 val with_self_effect
-  :  (module Bonsai.Model with type t = 'a)
+  :  ?sexp_of_model:('a -> Sexp.t)
+  -> ?equal:('a -> 'a -> bool)
   -> f:('a Bonsai.Computation_status.t Effect.t Value.t -> 'a Computation.t)
+  -> unit
   -> 'a Computation.t
 
 (** [pipe] constructs a pipe of [a] and returns a pair containing an injection
@@ -38,7 +40,8 @@ val exactly_once : unit Effect.t Value.t -> unit Computation.t
     exactly once.  The return value is stored and returned.  [None] is returned
     while the effect is executing. *)
 val exactly_once_with_value
-  :  (module Bonsai.Model with type t = 'a)
+  :  ?sexp_of_model:('a -> Sexp.t)
+  -> ?equal:('a -> 'a -> bool)
   -> 'a Effect.t Value.t
   -> 'a option Computation.t
 
@@ -49,7 +52,8 @@ val exactly_once_with_value
     than once to update the override.  Use with [Bonsai.with_model_resetter] in order
     to revert the override. *)
 val value_with_override
-  :  (module Bonsai.Model with type t = 'a)
+  :  ?sexp_of_model:('a -> Sexp.t)
+  -> ?equal:('a -> 'a -> bool)
   -> 'a Value.t
   -> ('a * ('a -> unit Effect.t)) Computation.t
 
@@ -61,7 +65,8 @@ val value_with_override
     from underneath the state machine as the default_model value changes.  If
     this is undesirable, you may want to [freeze] the default_model first. *)
 val state_machine0_dynamic_model
-  :  (module Bonsai.Model with type t = 'model)
+  :  ?sexp_of_model:('model -> Sexp.t)
+  -> ?equal:('model -> 'model -> bool)
   -> (module Bonsai.Action with type t = 'action)
   -> model:[< `Computed of ('model option -> 'model) Value.t | `Given of 'model Value.t ]
   -> apply_action:
@@ -76,8 +81,9 @@ val state_machine0_dynamic_model
     an extra ['input] value that can be taken into account when the
     [apply_action] is invoked. *)
 val state_machine1_dynamic_model
-  :  (module Bonsai.Model with type t = 'model)
-  -> (module Bonsai.Action with type t = 'action)
+  :  (module Bonsai.Action with type t = 'action)
+  -> ?sexp_of_model:('model -> Sexp.t)
+  -> ?equal:('model -> 'model -> bool)
   -> model:[< `Computed of ('model option -> 'model) Value.t | `Given of 'model Value.t ]
   -> apply_action:
        (inject:('action -> unit Effect.t)
@@ -93,8 +99,10 @@ val state_machine1_dynamic_model
 (** The analog of [Bonsai.state], but with a dynamic model. Read the docs for
     [state_machine0_dynamic_model] *)
 val state_dynamic_model
-  :  (module Bonsai.Model with type t = 'model)
+  :  ?sexp_of_model:('model -> Sexp.t)
+  -> ?equal:('model -> 'model -> bool)
   -> model:[< `Computed of ('model option -> 'model) Value.t | `Given of 'model Value.t ]
+  -> unit
   -> ('model * ('model -> unit Effect.t)) Computation.t
 
 (** Id_gen builds a component which generates unique identifiers by
@@ -130,22 +138,26 @@ end
     [interactive] change at the same time, the tie is broken in favor of
     [interactive], and [store_set] is called. *)
 val mirror
-  :  (module Bonsai.Model with type t = 'm)
+  :  ?sexp_of_model:('m -> Sexp.t)
+  -> equal:('m -> 'm -> bool)
   -> store_set:('m -> unit Effect.t) Value.t
   -> store_value:'m Value.t
   -> interactive_set:('m -> unit Effect.t) Value.t
   -> interactive_value:'m Value.t
+  -> unit
   -> unit Computation.t
 
 (** [mirror'] is like [mirror], but the incoming values have the type ['a option Value.t]
     instead of just ['a Value.t].  When a value is changed and its new value is None,
     we don't propagate it to the other setter. *)
 val mirror'
-  :  (module Bonsai.Model with type t = 'm)
+  :  ?sexp_of_model:('m -> Sexp.t)
+  -> equal:('m -> 'm -> bool)
   -> store_set:('m -> unit Effect.t) Value.t
   -> store_value:'m option Value.t
   -> interactive_set:('m -> unit Effect.t) Value.t
   -> interactive_value:'m option Value.t
+  -> unit
   -> unit Computation.t
 
 (** [with_last_modified_time] applies a cutoff to the input value and takes a
@@ -182,7 +194,8 @@ end
 (** [value_stability] determines whether the current value has changed
     recently, and also keeps track of the most recent stable value. *)
 val value_stability
-  :  (module Bonsai.Model with type t = 'a)
+  :  ?sexp_of_model:('a -> Sexp.t)
+  -> equal:('a -> 'a -> bool)
   -> 'a Value.t
   -> time_to_stable:Time_ns.Span.t
   -> 'a Stability.t Computation.t

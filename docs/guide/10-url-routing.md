@@ -6,7 +6,7 @@ experience: they automatically give your app some very useful features
 
 1.  Users can save and share links to specific navigational states
     within the app
-2.  The browsers forward and back buttons allow quick historical
+2.  The browser's forward and back buttons allow quick historical
     navigation
 3.  Reading and editing URLs can be used (as a last resort maybe) for
     precise navigation

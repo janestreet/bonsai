@@ -31,7 +31,7 @@ been updated.
 ```
 ``` ocaml
 let frame_counter =
-  let%sub frames, set_frames = Bonsai.state (module Int) ~default_model:0 in
+  let%sub frames, set_frames = Bonsai.state 0 in
   let%sub () =
     Bonsai.Edge.lifecycle
       ~after_display:
@@ -62,7 +62,7 @@ what "active" means.
 ```
 ``` ocaml
 let frame_toggler =
-  let%sub showing, set_showing = Bonsai.state (module Bool) ~default_model:false in
+  let%sub showing, set_showing = Bonsai.state false in
   let%sub output =
     match%sub showing with
     | true -> frame_counter
@@ -200,7 +200,7 @@ Ok, on to the extension of `frame_counter`:
 ```
 ``` ocaml
 let frame_counter (log : (string -> unit Ui_effect.t) Value.t) =
-  let%sub frames, set_frames = Bonsai.state (module Int) ~default_model:0 in
+  let%sub frames, set_frames = Bonsai.state 0 in
   let%sub () =
     Bonsai.Edge.lifecycle
       ~on_activate:
@@ -300,7 +300,11 @@ let logging_counter =
         | None -> Ui_effect.Ignore
         | Some prev -> log (if prev < cur then "🚀" else "🔥")
     in
-    Bonsai.Edge.on_change' (module Int) counter ~callback
+    Bonsai.Edge.on_change'
+      ~sexp_of_model:[%sexp_of: Int.t]
+      ~equal:[%equal: Int.t]
+      counter
+      ~callback
   in
   let%arr log_view = log_view
   and counter_view = counter_view in
@@ -337,12 +341,36 @@ of `on_changes`:
 ``` ocaml
 let chain_computation =
   let%sub a = Bonsai.const "x" in
-  let%sub b, set_b = Bonsai.state (module String) ~default_model:" " in
-  let%sub c, set_c = Bonsai.state (module String) ~default_model:" " in
-  let%sub d, set_d = Bonsai.state (module String) ~default_model:" " in
-  let%sub () = Bonsai.Edge.on_change (module String) a ~callback:set_b in
-  let%sub () = Bonsai.Edge.on_change (module String) b ~callback:set_c in
-  let%sub () = Bonsai.Edge.on_change (module String) c ~callback:set_d in
+  let%sub b, set_b =
+    Bonsai.state " " ~sexp_of_model:[%sexp_of: String.t] ~equal:[%equal: String.t]
+  in
+  let%sub c, set_c =
+    Bonsai.state " " ~sexp_of_model:[%sexp_of: String.t] ~equal:[%equal: String.t]
+  in
+  let%sub d, set_d =
+    Bonsai.state " " ~sexp_of_model:[%sexp_of: String.t] ~equal:[%equal: String.t]
+  in
+  let%sub () =
+    Bonsai.Edge.on_change
+      ~sexp_of_model:[%sexp_of: String.t]
+      ~equal:[%equal: String.t]
+      a
+      ~callback:set_b
+  in
+  let%sub () =
+    Bonsai.Edge.on_change
+      ~sexp_of_model:[%sexp_of: String.t]
+      ~equal:[%equal: String.t]
+      b
+      ~callback:set_c
+  in
+  let%sub () =
+    Bonsai.Edge.on_change
+      ~sexp_of_model:[%sexp_of: String.t]
+      ~equal:[%equal: String.t]
+      c
+      ~callback:set_d
+  in
   return (Value.map4 a b c d ~f:(sprintf "a:%s b:%s c:%s d:%s"))
 ;;
 ```

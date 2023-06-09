@@ -20,7 +20,9 @@ let component =
       ~fallback:(Value.return 0.0)
       ~interpolate:Animation.Interpolatable.float
   in
-  let%sub forward, set_forward = Bonsai.state (module Bool) ~default_model:true in
+  let%sub forward, set_forward =
+    Bonsai.state true ~sexp_of_model:[%sexp_of: Bool.t] ~equal:[%equal: Bool.t]
+  in
   let%sub get_forward = Bonsai.yoink forward in
   let%sub get_interpolator = Bonsai.yoink interpolator in
   let%sub get_things_started =

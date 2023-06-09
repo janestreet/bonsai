@@ -21,7 +21,7 @@ let form =
     | Some (filename, Complete (Ok contents)) ->
       let%arr filename = filename
       and contents = contents in
-      Vdom.Node.sexp_for_debugging [%message filename (contents : string)]
+      Vdom.Node.sexp_for_debugging [%message filename (contents : Bigstring.t)]
   in
   let%arr result = result
   and file_picker = file_picker in

@@ -246,6 +246,8 @@ module Make (Item : Single_factor.Item) (Key : Key) = struct
     let%sub focus, inject_focus_action =
       Bonsai.of_module0
         (module Ring_focus)
+        ~sexp_of_model:[%sexp_of: Ring_focus.Model.t]
+        ~equal:[%equal: Ring_focus.Model.t]
         ~default_model:(Focus_ring.of_nonempty_list_exn (Set.to_list all_keys))
     in
     let%sub () =
@@ -256,7 +258,11 @@ module Make (Item : Single_factor.Item) (Key : Key) = struct
           | Some prev_focus when Key.equal prev_focus new_focus -> Effect.Ignore
           | None | Some _ -> focus_elt ~id:(search_box_id new_focus ~id_prefix)
       in
-      Bonsai.Edge.on_change' (module Key) focus ~callback
+      Bonsai.Edge.on_change'
+        ~sexp_of_model:[%sexp_of: Key.t]
+        ~equal:[%equal: Key.t]
+        focus
+        ~callback
     in
     let%arr subwidgets = single_factors
     and focus                    = focus

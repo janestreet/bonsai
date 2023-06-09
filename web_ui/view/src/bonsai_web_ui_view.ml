@@ -52,13 +52,13 @@ let button'
 let tabs
       ((module T) : Theme.t)
       ?(attrs = [])
-      ?(per_tab_attr = fun _ ~is_active:_ -> Vdom.Attr.empty)
+      ?(per_tab_attrs = fun _ ~is_active:_ -> [])
       ~equal
       ~on_change
       ~active
       tabs
   =
-  T.singleton#tabs ~attrs ~per_tab_attr ~on_change ~equal ~active tabs
+  T.singleton#tabs ~attrs ~per_tab_attrs ~on_change ~equal ~active tabs
 ;;
 
 module type Enum = sig
@@ -69,7 +69,7 @@ let tabs_enum
       (type a)
       ((module T) : Theme.t)
       ?(attrs = [])
-      ?(per_tab_attr = fun _ ~is_active:_ -> Vdom.Attr.empty)
+      ?(per_tab_attrs = fun _ ~is_active:_ -> [])
       ?tab_to_vdom
       (module A : Enum with type t = a)
       ~on_change
@@ -80,7 +80,7 @@ let tabs_enum
       Vdom.Node.text (T.singleton#humanize_sexp (A.sexp_of_t tab)))
   in
   let tabs = List.map A.all ~f:(fun tab -> tab, tab_to_vdom tab) in
-  T.singleton#tabs ~attrs ~per_tab_attr ~on_change ~equal:A.equal ~active tabs
+  T.singleton#tabs ~attrs ~per_tab_attrs ~on_change ~equal:A.equal ~active tabs
 ;;
 
 let devbar ((module T) : Theme.t) ?(attrs = []) ?(count = 100) ?intent text =
@@ -103,26 +103,26 @@ module Tooltip_direction = Tooltip.Direction
 
 let tooltip'
       ((module T) : Theme.t)
-      ?(container_attr = Vdom.Attr.empty)
-      ?(tooltip_attr = Vdom.Attr.empty)
+      ?(container_attrs = [])
+      ?(tooltip_attrs = [])
       ?(direction = Tooltip.Direction.Top)
       ~tooltip
       tipped
   =
-  T.singleton#tooltip ~container_attr ~tooltip_attr ~direction ~tipped ~tooltip
+  T.singleton#tooltip ~container_attrs ~tooltip_attrs ~direction ~tipped ~tooltip
 ;;
 
-let tooltip theme ?container_attr ?tooltip_attr ?direction ~tooltip tipped =
+let tooltip theme ?container_attrs ?tooltip_attrs ?direction ~tooltip tipped =
   let tipped = Vdom.Node.text tipped in
   let tooltip = Vdom.Node.text tooltip in
-  tooltip' theme ?container_attr ?tooltip_attr ?direction ~tooltip tipped
+  tooltip' theme ?container_attrs ?tooltip_attrs ?direction ~tooltip tipped
 ;;
 
 let card'
       ((module T) : Theme.t)
-      ?(container_attr = Vdom.Attr.empty)
-      ?(title_attr = Vdom.Attr.empty)
-      ?(content_attr = Vdom.Attr.empty)
+      ?(container_attrs = [])
+      ?(title_attrs = [])
+      ?(content_attrs = [])
       ?intent
       ?(title = [])
       ?(title_kind = Card_title_kind.Prominent)
@@ -130,9 +130,9 @@ let card'
       content
   =
   T.singleton#card
-    ~container_attr
-    ~title_attr
-    ~content_attr
+    ~container_attrs
+    ~title_attrs
+    ~content_attrs
     ~intent
     ~on_click
     ~title
@@ -142,9 +142,9 @@ let card'
 
 let card
       theme
-      ?container_attr
-      ?title_attr
-      ?content_attr
+      ?container_attrs
+      ?title_attrs
+      ?content_attrs
       ?intent
       ?title
       ?title_kind
@@ -153,9 +153,9 @@ let card
   =
   card'
     theme
-    ?container_attr
-    ?title_attr
-    ?content_attr
+    ?container_attrs
+    ?title_attrs
+    ?content_attrs
     ?intent
     ?title:(Option.map title ~f:(fun title -> [ Vdom.Node.text title ]))
     ?title_kind

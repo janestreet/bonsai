@@ -242,10 +242,10 @@ module Arr : Ext = struct
       -> expression
     =
     fun ~loc ~modul value_bindings expression ~expand ->
-      let value_bindings =
-        List.map value_bindings ~f:(maybe_add_cutoff_to_value_binding ~loc ~modul)
-      in
-      expand ~loc value_bindings expression
+    let value_bindings =
+      List.map value_bindings ~f:(maybe_add_cutoff_to_value_binding ~loc ~modul)
+    in
+    expand ~loc value_bindings expression
   ;;
 
   let disallow_expression _ = function

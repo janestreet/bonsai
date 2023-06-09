@@ -42,7 +42,8 @@ end
    When the ['a] changes, the [interpolate] method is used to in-between the
    value to the new value.  *)
 val smooth
-  :  (module Bonsai.Model with type t = 'a)
+  :  ?sexp_of_model:('a -> Sexp.t)
+  -> equal:('a -> 'a -> bool)
   -> ?with_:Interpolator.t
   -> duration:Time_ns.Span.t Value.t
   -> interpolate:'a Interpolatable.t

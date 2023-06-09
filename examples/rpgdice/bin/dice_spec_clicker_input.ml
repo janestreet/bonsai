@@ -36,8 +36,10 @@ end
 let component =
   let%sub dice_state =
     Bonsai.state_machine0
-      (module Model)
-      (module Action)
+      ()
+      ~sexp_of_model:[%sexp_of: Model.t]
+      ~equal:[%equal: Model.t]
+      ~sexp_of_action:[%sexp_of: Action.t]
       ~default_model:Model.init
       ~apply_action:(fun ~inject:_ ~schedule_event:_ model -> function
         | Decrement_const -> { model with const = model.const - 1 }

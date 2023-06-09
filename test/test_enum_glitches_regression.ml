@@ -33,8 +33,9 @@ let%expect_test _ =
   let graph =
     let%sub state_machine =
       Bonsai.state_machine1
-        (module Choice)
-        (module Choice)
+        ~sexp_of_model:[%sexp_of: Choice.t]
+        ~equal:[%equal: Choice.t]
+        ~sexp_of_action:[%sexp_of: Choice.t]
         ~default_model:Choice.Homepage
         ~apply_action
         (Bonsai_lib.Value.return ())

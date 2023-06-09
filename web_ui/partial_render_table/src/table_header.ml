@@ -42,7 +42,7 @@ let rec render_header header ~level ~acc ~column_widths ~set_column_width =
   let recurse_no_level_change = render_header ~level ~column_widths ~set_column_width in
   let colspan = attr_colspan (Header_tree.colspan header) in
   match header with
-  | Leaf { visible; leaf_label; initial_width } ->
+  | Leaf { visible; leaf_header; initial_width } ->
     let node index =
       let column_width =
         match Map.find column_widths index with
@@ -60,16 +60,16 @@ let rec render_header header ~level ~acc ~column_widths ~set_column_width =
           ; Vdom.Attr.style
               Css_gen.(width column_width @> if visible then empty else display `None)
           ]
-        [ leaf_label ]
+        [ leaf_header ]
     in
     Acc.visit_leaf acc ~level ~node
   | Spacer inside ->
     let node = Vdom.Node.td ~attrs:[ colspan ] [] in
     let acc = Acc.visit_non_leaf acc ~level ~node in
     recurse inside ~acc
-  | Group { children; group_label } ->
+  | Group { children; group_header } ->
     let attrs = Vdom.Attr.many [ colspan; Style.header_label ] in
-    let node = Vdom.Node.td ~attrs:[ attrs ] [ group_label ] in
+    let node = Vdom.Node.td ~attrs:[ attrs ] [ group_header ] in
     let acc = Acc.visit_non_leaf acc ~level ~node in
     List.fold children ~init:acc ~f:(fun acc -> recurse ~acc)
   | Organizational_group children ->

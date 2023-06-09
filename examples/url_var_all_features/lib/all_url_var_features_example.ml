@@ -133,11 +133,45 @@ module Variant = struct
   ;;
 end
 
+module Query_variant = struct
+  type t =
+    | A of int
+    | B of float
+    | C of string
+  [@@deriving sexp, equal, compare, typed_variants]
+
+  let parser_for_variant : type a. a Typed_variant.t -> a Parser.t = function
+    | A -> Parser.from_query_required Value_parser.int
+    | B -> Parser.from_query_required Value_parser.float
+    | C -> Parser.from_query_required Value_parser.string
+  ;;
+
+  let identifier_for_variant = Typed_variant.name
+
+  let form_of_t =
+    Form.Typed.Variant.make
+      (module struct
+        module Typed_variant = Typed_variant
+
+        let form_for_variant : type a. a Typed_variant.t -> a Form.t Computation.t
+          = function
+            | A -> Form.Elements.Textbox.int ()
+            | B -> Form.Elements.Textbox.float ()
+            | C -> Form.Elements.Textbox.string ()
+        ;;
+
+        let label_for_variant = `Inferred
+        let initial_choice = `First_constructor
+      end)
+  ;;
+end
+
 module T = struct
   type t =
     | Homepage
     | Some_string_option of string option
     | Variant of Variant.t
+    | Query_variant of Query_variant.t
     | Record of Record.t
     | Unable_to_parse
   [@@deriving sexp, equal, compare, typed_variants]
@@ -147,6 +181,7 @@ module T = struct
     | Some_string_option -> Parser.from_query_optional ~key:"extra" Value_parser.string
     | Variant -> Parser.Variant.make (module Variant)
     | Record -> Parser.Record.make (module Record)
+    | Query_variant -> Parser.Query_based_variant.make ~key:"page" (module Query_variant)
     | Unable_to_parse -> Parser.with_remaining_path [ "unable" ] Parser.unit
   ;;
 
@@ -167,6 +202,7 @@ module T = struct
                   | "" -> false
                   | _ -> true)
                 ~none:""
+            | Query_variant -> Query_variant.form_of_t
             | Variant -> Variant.form_of_t
             | Record -> Record.form_of_t
             | Unable_to_parse -> Bonsai.const (Form.return ())
@@ -190,6 +226,9 @@ let%expect_test _ =
     │ All urls                                                                                 │
     ├──────────────────────────────────────────────────────────────────────────────────────────┤
     │ /                                                                                        │
+    │ /query_variant?page=a&query_variant.a=<int>                                              │
+    │ /query_variant?page=b&query_variant.b=<float>                                            │
+    │ /query_variant?page=c&query_variant.c=<string>                                           │
     │ /some_string_option?extra=<optional<string>>                                             │
     │ /unable                                                                                  │
     │ /username/<string>/id/<int>/<multiple<string>>?record.an_int=<int>&record.many_floats=<m │
@@ -216,7 +255,12 @@ let component ~url_var =
     Some url_value
   in
   let%sub () =
-    Form.Dynamic.sync_with (module T) ~store_value ~store_set:set_url_var form
+    Form.Dynamic.sync_with
+      ~sexp_of_model:[%sexp_of: T.t]
+      ~equal:[%equal: T.t]
+      ~store_value
+      ~store_set:set_url_var
+      form
   in
   let%sub update_button =
     let%sub update_effect =

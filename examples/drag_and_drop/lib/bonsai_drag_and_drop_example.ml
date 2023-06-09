@@ -178,8 +178,10 @@ let kanban_column ~extra_dnd ~dnd ~items ~column ~title =
 let board ?extra_dnd name =
   let%sub items, inject =
     Bonsai.state_machine0
-      (module Kanban_board)
-      (module Action)
+      ()
+      ~sexp_of_model:[%sexp_of: Kanban_board.t]
+      ~equal:[%equal: Kanban_board.t]
+      ~sexp_of_action:[%sexp_of: Action.t]
       ~default_model:
         ([ "todo 1", Column.Todo
          ; "todo 2", Todo

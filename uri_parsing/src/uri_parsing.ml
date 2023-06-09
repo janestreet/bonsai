@@ -48,6 +48,9 @@ module Value_parser = struct
         }
         -> 'a t
     | Int : (string, int) Projection.t -> int t
+    | Time_ns :
+        (string, Time_ns.Alternate_sexp.t) Projection.t
+        -> Time_ns.Alternate_sexp.t t
     | Float : (string, float) Projection.t -> float t
     | Bool : (string, bool) Projection.t -> bool t
     | Stringable : (string, 'a) Projection.t -> 'a t
@@ -69,6 +72,7 @@ module Value_parser = struct
   let rec eval : type a. a t -> (string, a) Projection.t = function
     | String projection -> projection
     | Int projection -> projection
+    | Time_ns projection -> projection
     | Float projection -> projection
     | Bool projection -> projection
     | Stringable projection -> projection
@@ -104,6 +108,7 @@ module Value_parser = struct
       | String
       | Project of t
       | Int
+      | Time_ns
       | Float
       | Bool
       | Stringable
@@ -121,6 +126,7 @@ module Value_parser = struct
       | String _ -> String
       | Project { input; _ } -> Project (of_parser input)
       | Int _ -> Int
+      | Time_ns _ -> Time_ns
       | Float _ -> Float
       | Bool _ -> Bool
       | Stringable _ -> Stringable
@@ -135,6 +141,7 @@ module Value_parser = struct
       | String -> "<string>"
       | Project input -> [%string "<project%{to_summary input}>"]
       | Int -> "<int>"
+      | Time_ns -> "<time_ns>"
       | Float -> "<float>"
       | Bool -> "<bool>"
       | Stringable -> "<string>"
@@ -157,6 +164,17 @@ module Value_parser = struct
       eval (project string ~parse_exn:Int.of_string ~unparse:Int.to_string)
     in
     Int projection
+  ;;
+
+  let time_ns =
+    let projection =
+      eval
+        (project
+           string
+           ~parse_exn:(fun str -> Int63.of_string str |> Time_ns.of_int63_ns_since_epoch)
+           ~unparse:(fun ts -> Time_ns.to_int63_ns_since_epoch ts |> Int63.to_string))
+    in
+    Time_ns projection
   ;;
 
   let float =
@@ -240,6 +258,7 @@ module Parse_result = struct
     { result : 'a
     ; remaining : Components.t
     }
+  [@@deriving sexp_of]
 
   let create a = { result = a; remaining = Components.empty }
 end
@@ -296,6 +315,13 @@ module Parser = struct
           { variant_module :
               (module Variant.Cached_s with type Typed_variant.derived_on = 'a)
           ; override_namespace : string list option
+          }
+          -> 'a t
+      | Query_based_variant :
+          { variant_module :
+              (module Query_based_variant.S with type Typed_variant.derived_on = 'a)
+          ; override_namespace : string list option
+          ; key : string
           }
           -> 'a t
       | Optional_query_fields : { t : 'a t } -> 'a option t
@@ -358,10 +384,10 @@ module Parser = struct
       let rec calc_path_order : Path_order(M.Typed_field).t -> M.Typed_field.Packed.t list
         =
         fun path_order ->
-          let (T unpacked) = path_order in
-          match unpacked with
-          | [] -> []
-          | hd :: tl -> { M.Typed_field.Packed.f = T hd } :: calc_path_order (T tl)
+        let (T unpacked) = path_order in
+        match unpacked with
+        | [] -> []
+        | hd :: tl -> { M.Typed_field.Packed.f = T hd } :: calc_path_order (T tl)
       in
       let module Cached = struct
         include M
@@ -425,31 +451,32 @@ module Parser = struct
                option
         =
         fun ~prefix t ->
-          match t with
-          | Unit -> None
-          | Project { input; _ } -> next_declared_path_pattern ~prefix input
-          | From_query_required _ -> None
-          | From_query_optional _ -> None
-          | From_query_optional_with_default _ -> None
-          | From_query_many _ -> None
-          | From_path _ -> Some (prefix @ [ `Ignore ], `Continue)
-          | From_remaining_path _ -> Some (prefix, `Continue)
-          | With_prefix { prefix = inner_prefix; _ } ->
-            Some (prefix @ List.map inner_prefix ~f:(fun x -> `Match x), `Stop_prefix)
-          | With_remaining_path { needed_path; _ } ->
-            Some (prefix @ List.map needed_path ~f:(fun x -> `Match x), `Stop_remaining_path)
-          | Record { record_module; _ } ->
-            let module M =
-              (val record_module : Record.Cached_s with type Typed_field.derived_on = a)
-            in
-            List.fold M.path_order ~init:None ~f:(fun acc { f = T f } ->
-              match acc with
-              | Some (_, `Stop_prefix) | Some (_, `Stop_remaining_path) -> acc
-              | None -> next_declared_path_pattern ~prefix (M.parser_for_field f)
-              | Some (prefix, `Continue) ->
-                next_declared_path_pattern ~prefix (M.parser_for_field f))
-          | Variant _ -> None
-          | Optional_query_fields { t } -> next_declared_path_pattern ~prefix t
+        match t with
+        | Unit -> None
+        | Project { input; _ } -> next_declared_path_pattern ~prefix input
+        | From_query_required _ -> None
+        | From_query_optional _ -> None
+        | From_query_optional_with_default _ -> None
+        | From_query_many _ -> None
+        | From_path _ -> Some (prefix @ [ `Ignore ], `Continue)
+        | From_remaining_path _ -> Some (prefix, `Continue)
+        | With_prefix { prefix = inner_prefix; _ } ->
+          Some (prefix @ List.map inner_prefix ~f:(fun x -> `Match x), `Stop_prefix)
+        | With_remaining_path { needed_path; _ } ->
+          Some (prefix @ List.map needed_path ~f:(fun x -> `Match x), `Stop_remaining_path)
+        | Record { record_module; _ } ->
+          let module M =
+            (val record_module : Record.Cached_s with type Typed_field.derived_on = a)
+          in
+          List.fold M.path_order ~init:None ~f:(fun acc { f = T f } ->
+            match acc with
+            | Some (_, `Stop_prefix) | Some (_, `Stop_remaining_path) -> acc
+            | None -> next_declared_path_pattern ~prefix (M.parser_for_field f)
+            | Some (prefix, `Continue) ->
+              next_declared_path_pattern ~prefix (M.parser_for_field f))
+        | Variant _ -> None
+        | Query_based_variant _ -> None
+        | Optional_query_fields { t } -> next_declared_path_pattern ~prefix t
       in
       match next_declared_path_pattern ~prefix:[] t with
       | None -> None
@@ -506,12 +533,63 @@ module Parser = struct
 
         let pattern_for_variant : type a. a Typed_variant.t -> Path_pattern.t =
           fun v ->
-            let pattern, _ = pattern_for_variant v in
-            pattern
+          let pattern, _ = pattern_for_variant v in
+          pattern
         ;;
       end
       in
       T.Variant { variant_module = (module Cached); override_namespace = namespace }
+    ;;
+  end
+
+  and Query_based_variant : sig
+    module type S = sig
+      module Typed_variant : Typed_variants_lib.S
+
+      val parser_for_variant : 'a Typed_variant.t -> 'a T.t
+      val identifier_for_variant : 'a Typed_variant.t -> string
+    end
+
+    val make
+      :  ?namespace:string list
+      -> (module S with type Typed_variant.derived_on = 'a)
+      -> key:string
+      -> 'a T.t
+  end = struct
+    module type S = sig
+      module Typed_variant : Typed_variants_lib.S
+
+      val parser_for_variant : 'a Typed_variant.t -> 'a T.t
+      val identifier_for_variant : 'a Typed_variant.t -> string
+    end
+
+    let make
+          (type a)
+          ?namespace
+          (module M : S with type Typed_variant.derived_on = a)
+          ~key
+      =
+      let module Parser_map = Typed_field_map.Make (M.Typed_variant) (T) in
+      let parsers_by_variant = Parser_map.create { f = M.parser_for_variant } in
+      let module Identifier_map =
+        Typed_field_map.Make
+          (M.Typed_variant)
+          (struct
+            type _ t = string
+          end)
+      in
+      let identifiers_by_variant =
+        Identifier_map.create { f = M.identifier_for_variant }
+      in
+      let module Cached = struct
+        include M
+
+        let parser_for_variant v = Parser_map.find parsers_by_variant v
+        let identifier_for_variant v = Identifier_map.find identifiers_by_variant v
+      end
+      in
+      T.Query_based_variant
+        { variant_module = (module Cached); override_namespace = namespace; key }
     ;;
   end
 
@@ -573,6 +651,13 @@ module Parser = struct
     | Variant { variant_module; _ } ->
       let module M =
         (val variant_module : Variant.Cached_s with type Typed_variant.derived_on = a)
+      in
+      List.exists M.Typed_variant.Packed.all ~f:(fun { f = T v } ->
+        needs_to_appear_on_path_order (M.parser_for_variant v))
+    | Query_based_variant { variant_module; _ } ->
+      let module M =
+        (val variant_module
+          : Query_based_variant.S with type Typed_variant.derived_on = a)
       in
       List.exists M.Typed_variant.Packed.all ~f:(fun { f = T v } ->
         needs_to_appear_on_path_order (M.parser_for_variant v))
@@ -1191,26 +1276,131 @@ module Parser = struct
         in
         { Projection.parse_exn; unparse }
 
+    and eval_query_based_variant
+      : type a.
+        (module Query_based_variant.S with type Typed_variant.derived_on = a)
+        -> override_namespace:string list option
+        -> more_path_parsing_allowed:bool
+        -> current_namespace:string list
+        -> parent_namespace:string list
+        -> key:string
+        -> (Components.t, a Parse_result.t) Projection.t
+      =
+      fun (module M)
+        ~override_namespace
+        ~more_path_parsing_allowed
+        ~current_namespace
+        ~parent_namespace
+        ~key ->
+        (* Caching evaluated projections *)
+        let module Projection_map =
+          Typed_field_map.Make
+            (M.Typed_variant)
+            (struct
+              type 'a t = (Components.t, 'a Parse_result.t) Projection.t
+            end)
+        in
+        let eval_constructor v =
+          let inferred_constructor_name = M.Typed_variant.name v in
+          eval
+            ~more_path_parsing_allowed
+            ~current_namespace:
+              (namespace_for_record_field
+                 ~current_namespace
+                 ~override_namespace
+                 ~parent_namespace)
+            ~inferred_name_from_parent:(Some inferred_constructor_name)
+            ~parent_namespace:[ inferred_constructor_name ]
+            (M.parser_for_variant v)
+        in
+        let projections_by_variant = Projection_map.create { f = eval_constructor } in
+        let projection_for_variant v = Projection_map.find projections_by_variant v in
+        let variant_by_identifier =
+          (* Fails at eval_time if two different variants expect the same value. *)
+          List.fold M.Typed_variant.Packed.all ~init:String.Map.empty ~f:(fun acc variant ->
+            let key =
+              let { f = T v } = variant in
+              M.identifier_for_variant v
+            in
+            match Map.add acc ~key ~data:variant with
+            | `Duplicate -> raise_s [%message "found duplicate identifier!" key]
+            | `Ok acc -> acc)
+        in
+        let parse_exn (components : Components.t) =
+          match Map.find components.query key with
+          | None | Some [] ->
+            raise_s
+              [%message
+                [%string
+                  {|Error while parsing url! Expected key "%{key}=<page>" inside of the url's query.|}]]
+          | Some (_ :: _ :: _) ->
+            raise_s
+              [%message
+                [%string
+                  {|Error while parsing! Got multiple "%{key}" query parameters, but expected just one.|}]]
+          | Some [ single_identifier ] ->
+            (match Map.find variant_by_identifier single_identifier with
+             | None ->
+               let expected_one_of =
+                 List.map M.Typed_variant.Packed.all ~f:(fun { f = T v } ->
+                   M.Typed_variant.name v, M.identifier_for_variant v)
+               in
+               raise_s
+                 [%message
+                   [%string
+                     {|Error while parsing! Got unexpected value "%{single_identifier}" for "%{key}" query parameter.|}]
+                     (expected_one_of : (string * string) list)]
+             | Some { f = T v } ->
+               let components =
+                 { components with query = Map.remove components.query key }
+               in
+               let projection = projection_for_variant v in
+               let parse_result = projection.parse_exn components in
+               let variant = M.Typed_variant.create v parse_result.result in
+               { Parse_result.result = variant; remaining = parse_result.remaining })
+        in
+        let unparse (result : a Parse_result.t) =
+          let { f = T v } = M.Typed_variant.which result.result in
+          let inner_result = M.Typed_variant.get v result.result |> Option.value_exn in
+          let projection = projection_for_variant v in
+          let query =
+            match
+              Map.add result.remaining.query ~key ~data:[ M.identifier_for_variant v ]
+            with
+            | `Ok query -> query
+            | `Duplicate ->
+              raise_s
+                [%message
+                  "query key was added multiple times while unparsing a URL. This likely \
+                   indicates an illegal URL structure, which will be caught if you run \
+                   [check_ok_and_print_urls_or_errors]. If that function doesn't complain, \
+                   this is a bug."]
+          in
+          let remaining = { result.remaining with query } in
+          projection.unparse { Parse_result.result = inner_result; remaining }
+        in
+        { Projection.parse_exn; unparse }
+
     and eval_optional_query_fields
       : type a.
         (Components.t, a Parse_result.t) Projection.t
         -> (Components.t, a option Parse_result.t) Projection.t
       =
       fun t ->
-        let parse_exn (components : Components.t) =
-          try
-            let result = t.parse_exn components in
-            { Parse_result.result = Some result.result; remaining = result.remaining }
-          with
-          | Missing_key _ -> { Parse_result.result = None; remaining = components }
-        in
-        let unparse (parse_result : a option Parse_result.t) =
-          match parse_result.result with
-          | None -> parse_result.remaining
-          | Some result ->
-            t.unparse { Parse_result.result; remaining = parse_result.remaining }
-        in
-        { Projection.parse_exn; unparse }
+      let parse_exn (components : Components.t) =
+        try
+          let result = t.parse_exn components in
+          { Parse_result.result = Some result.result; remaining = result.remaining }
+        with
+        | Missing_key _ -> { Parse_result.result = None; remaining = components }
+      in
+      let unparse (parse_result : a option Parse_result.t) =
+        match parse_result.result with
+        | None -> parse_result.remaining
+        | Some result ->
+          t.unparse { Parse_result.result; remaining = parse_result.remaining }
+      in
+      { Projection.parse_exn; unparse }
 
     and eval
       : type a.
@@ -1304,6 +1494,14 @@ module Parser = struct
             ~more_path_parsing_allowed
             ~current_namespace
             ~parent_namespace
+        | Query_based_variant { variant_module; override_namespace; key } ->
+          eval_query_based_variant
+            variant_module
+            ~override_namespace
+            ~more_path_parsing_allowed
+            ~current_namespace
+            ~parent_namespace
+            ~key
         | Optional_query_fields { t } ->
           let t =
             eval
@@ -1356,6 +1554,12 @@ module Parser = struct
           { constructor_declarations : t String.Map.t
           ; patterns : Path_pattern.t String.Map.t
           ; override_namespace : string list option
+          }
+      | Query_based_variant of
+          { constructor_declarations : t String.Map.t
+          ; identifiers : string String.Map.t
+          ; override_namespace : string list option
+          ; key : string
           }
       | Optional_query_fields of { t : t }
     [@@deriving sexp]
@@ -1421,6 +1625,30 @@ module Parser = struct
               Map.set acc ~key:(M.Typed_variant.name v) ~data:(M.pattern_for_variant v))
         in
         Variant { override_namespace; constructor_declarations; patterns }
+      | Query_based_variant { variant_module; override_namespace; key } ->
+        let module M =
+          (val variant_module
+            : Query_based_variant.S with type Typed_variant.derived_on = a)
+        in
+        let constructor_declarations =
+          List.fold
+            M.Typed_variant.Packed.all
+            ~init:String.Map.empty
+            ~f:(fun acc { f = T v } ->
+              Map.set
+                acc
+                ~key:(M.Typed_variant.name v)
+                ~data:(of_parser (M.parser_for_variant v)))
+        in
+        let identifiers =
+          List.fold
+            M.Typed_variant.Packed.all
+            ~init:String.Map.empty
+            ~f:(fun acc { f = T v } ->
+              Map.set acc ~key:(M.Typed_variant.name v) ~data:(M.identifier_for_variant v))
+        in
+        Query_based_variant
+          { override_namespace; constructor_declarations; identifiers; key }
       | Optional_query_fields { t } -> Optional_query_fields { t = of_parser t }
     ;;
 
@@ -1432,7 +1660,8 @@ module Parser = struct
       | From_query_optional_with_default _
       | From_path _
       | Record _
-      | Variant _ -> false
+      | Variant _
+      | Query_based_variant _ -> false
       | Project t
       | With_prefix { t; _ }
       | With_remaining_path { t; _ }
@@ -1451,7 +1680,8 @@ module Parser = struct
       | With_prefix _
       | With_remaining_path _
       | Record _
-      | Variant _ -> true
+      | Variant _
+      | Query_based_variant _ -> true
     ;;
   end
 
@@ -1649,6 +1879,34 @@ module Parser = struct
               ~current_namespace:namespace
               ~parent_namespace:[ constructor_name ]
               ~inferred_name_from_parent:(Some constructor_name))
+      | Query_based_variant
+          { constructor_declarations; override_namespace; identifiers; key } ->
+        let namespace =
+          Eval.namespace_for_record_field
+            ~current_namespace
+            ~override_namespace
+            ~parent_namespace
+        in
+        List.concat_map
+          (Map.to_alist constructor_declarations)
+          ~f:(fun (constructor_name, declaration) ->
+            let current_shape =
+              { current_shape with
+                query =
+                  { Query_tag.key
+                  ; value =
+                      Map.find identifiers constructor_name
+                      |> Option.value ~default:"<string>"
+                  }
+                  :: current_shape.query
+              }
+            in
+            all_url_shapes
+              declaration
+              ~current_shape
+              ~current_namespace:namespace
+              ~parent_namespace:[ constructor_name ]
+              ~inferred_name_from_parent:(Some constructor_name))
       | Optional_query_fields { t; _ } ->
         current_shape
         :: all_url_shapes
@@ -1737,6 +1995,13 @@ module Parser = struct
       in
       List.iter M.Typed_variant.Packed.all ~f:(fun { f = T v } ->
         check_that_path_orders_are_ok (M.parser_for_variant v))
+    | Query_based_variant { variant_module; _ } ->
+      let module M =
+        (val variant_module
+          : Query_based_variant.S with type Typed_variant.derived_on = a)
+      in
+      List.iter M.Typed_variant.Packed.all ~f:(fun { f = T v } ->
+        check_that_path_orders_are_ok (M.parser_for_variant v))
   ;;
 
   let check_more_path_parsing_allowed ~allowed =
@@ -1753,73 +2018,101 @@ module Parser = struct
     : type a. ?allowed:bool -> a T.t -> unit
     =
     fun ?(allowed = true) t ->
-      match t with
-      | Unit -> ()
-      | Project { input; _ } ->
-        check_that_with_remaining_path_has_no_path_parsers_after_it ~allowed input
-      | Optional_query_fields { t; _ } ->
-        check_that_with_remaining_path_has_no_path_parsers_after_it ~allowed t
-      | From_query_required _ -> ()
-      | From_query_optional _ -> ()
-      | From_query_optional_with_default _ -> ()
-      | From_query_many _ -> ()
-      | From_path _ -> check_more_path_parsing_allowed ~allowed
-      | From_remaining_path _ -> check_more_path_parsing_allowed ~allowed
-      | With_prefix { t; prefix } ->
-        if not (List.is_empty prefix) then check_more_path_parsing_allowed ~allowed;
-        check_that_with_remaining_path_has_no_path_parsers_after_it ~allowed t
-      | With_remaining_path { t; needed_path } ->
-        if not (List.is_empty needed_path) then check_more_path_parsing_allowed ~allowed;
-        check_that_with_remaining_path_has_no_path_parsers_after_it ~allowed:false t
-      | Record { record_module; _ } ->
-        let module M =
-          (val record_module : Record.Cached_s with type Typed_field.derived_on = a)
-        in
-        List.iter M.Typed_field.Packed.all ~f:(fun { f = T f } ->
-          check_that_with_remaining_path_has_no_path_parsers_after_it
-            ~allowed
-            (M.parser_for_field f))
-      | Variant { variant_module; _ } ->
-        let module M =
-          (val variant_module : Variant.Cached_s with type Typed_variant.derived_on = a)
-        in
-        List.iter M.Typed_variant.Packed.all ~f:(fun { f = T v } ->
-          check_that_with_remaining_path_has_no_path_parsers_after_it
-            ~allowed
-            (M.parser_for_variant v))
+    match t with
+    | Unit -> ()
+    | Project { input; _ } ->
+      check_that_with_remaining_path_has_no_path_parsers_after_it ~allowed input
+    | Optional_query_fields { t; _ } ->
+      check_that_with_remaining_path_has_no_path_parsers_after_it ~allowed t
+    | From_query_required _ -> ()
+    | From_query_optional _ -> ()
+    | From_query_optional_with_default _ -> ()
+    | From_query_many _ -> ()
+    | From_path _ -> check_more_path_parsing_allowed ~allowed
+    | From_remaining_path _ -> check_more_path_parsing_allowed ~allowed
+    | With_prefix { t; prefix } ->
+      if not (List.is_empty prefix) then check_more_path_parsing_allowed ~allowed;
+      check_that_with_remaining_path_has_no_path_parsers_after_it ~allowed t
+    | With_remaining_path { t; needed_path } ->
+      if not (List.is_empty needed_path) then check_more_path_parsing_allowed ~allowed;
+      check_that_with_remaining_path_has_no_path_parsers_after_it ~allowed:false t
+    | Record { record_module; _ } ->
+      let module M =
+        (val record_module : Record.Cached_s with type Typed_field.derived_on = a)
+      in
+      List.iter M.Typed_field.Packed.all ~f:(fun { f = T f } ->
+        check_that_with_remaining_path_has_no_path_parsers_after_it
+          ~allowed
+          (M.parser_for_field f))
+    | Variant { variant_module; _ } ->
+      let module M =
+        (val variant_module : Variant.Cached_s with type Typed_variant.derived_on = a)
+      in
+      List.iter M.Typed_variant.Packed.all ~f:(fun { f = T v } ->
+        check_that_with_remaining_path_has_no_path_parsers_after_it
+          ~allowed
+          (M.parser_for_variant v))
+    | Query_based_variant { variant_module; _ } ->
+      let module M =
+        (val variant_module
+          : Query_based_variant.S with type Typed_variant.derived_on = a)
+      in
+      List.iter M.Typed_variant.Packed.all ~f:(fun { f = T v } ->
+        check_that_with_remaining_path_has_no_path_parsers_after_it
+          ~allowed
+          (M.parser_for_variant v))
   ;;
 
   let rec check_that_there_are_no_ambiguous_parsers_at_any_level : type a. a T.t -> unit =
     fun t ->
-      match t with
-      | Unit
-      | From_query_required _
-      | From_query_optional _
-      | From_query_optional_with_default _
-      | From_query_many _
-      | From_path _
-      | From_remaining_path _
-      | With_prefix _
-      | With_remaining_path _
-      | Record _ -> ()
-      | Project { input; _ } -> check_that_there_are_no_ambiguous_parsers_at_any_level input
-      | Optional_query_fields { t; _ } ->
-        check_that_there_are_no_ambiguous_parsers_at_any_level t
-      | Variant { variant_module; _ } ->
-        let module M =
-          (val variant_module : Variant.Cached_s with type Typed_variant.derived_on = a)
-        in
-        let all_patterns =
-          List.map M.Typed_variant.Packed.all ~f:(fun { f = T v } ->
-            M.pattern_for_variant v)
-        in
-        let dup_patterns = List.find_all_dups ~compare:Path_pattern.compare all_patterns in
-        (match dup_patterns with
-         | [] -> ()
-         | duplicate_patterns ->
-           raise_s
-             [%message
-               "Duplicate patterns found!" (duplicate_patterns : Path_pattern.t list)])
+    match t with
+    | Unit
+    | From_query_required _
+    | From_query_optional _
+    | From_query_optional_with_default _
+    | From_query_many _
+    | From_path _
+    | From_remaining_path _
+    | With_prefix _
+    | With_remaining_path _
+    | Record _ -> ()
+    | Project { input; _ } -> check_that_there_are_no_ambiguous_parsers_at_any_level input
+    | Optional_query_fields { t; _ } ->
+      check_that_there_are_no_ambiguous_parsers_at_any_level t
+    | Variant { variant_module; _ } ->
+      let module M =
+        (val variant_module : Variant.Cached_s with type Typed_variant.derived_on = a)
+      in
+      let all_patterns =
+        List.map M.Typed_variant.Packed.all ~f:(fun { f = T v } ->
+          M.pattern_for_variant v)
+      in
+      let dup_patterns = List.find_all_dups ~compare:Path_pattern.compare all_patterns in
+      (match dup_patterns with
+       | [] -> ()
+       | duplicate_patterns ->
+         raise_s
+           [%message
+             "Duplicate patterns found!" (duplicate_patterns : Path_pattern.t list)])
+    | Query_based_variant { variant_module; _ } ->
+      let module M =
+        (val variant_module
+          : Query_based_variant.S with type Typed_variant.derived_on = a)
+      in
+      let all_identifiers =
+        List.map M.Typed_variant.Packed.all ~f:(fun { f = T v } ->
+          M.identifier_for_variant v)
+      in
+      let duplicate_identifiers =
+        List.find_all_dups ~compare:[%compare: string] all_identifiers
+      in
+      (match duplicate_identifiers with
+       | [] -> ()
+       | duplicate_identifiers ->
+         raise_s
+           [%message
+             "Duplicate identifiers to distinguish variants found!"
+               (duplicate_identifiers : string list)])
   ;;
 
   let run_check ~name ~f = name, Or_error.try_with f

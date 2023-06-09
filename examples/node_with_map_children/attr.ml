@@ -10,12 +10,10 @@ type t =
 let component =
   let%sub attr, inject =
     Bonsai.state_machine0
-      (module struct
-        type t = Vdom.Attr.t
-
-        let sexp_of_t, t_of_sexp, equal = sexp_of_opaque, opaque_of_sexp, phys_equal
-      end)
-      (module Unit)
+      ()
+      ~sexp_of_model:[%sexp_of: opaque]
+      ~equal:phys_equal
+      ~sexp_of_action:[%sexp_of: Unit.t]
       ~default_model:Vdom.Attr.empty
       ~apply_action:(fun ~inject:_ ~schedule_event:_ _model () ->
         match Random.int 4 with

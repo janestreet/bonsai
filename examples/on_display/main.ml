@@ -3,7 +3,9 @@ open! Bonsai_web
 open Bonsai.Let_syntax
 
 let component =
-  let%sub state, set_state = Bonsai.state (module Int) ~default_model:0 in
+  let%sub state, set_state =
+    Bonsai.state 0 ~sexp_of_model:[%sexp_of: Int.t] ~equal:[%equal: Int.t]
+  in
   let%sub increment =
     let%arr state = state
     and set_state = set_state in

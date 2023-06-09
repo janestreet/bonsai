@@ -61,10 +61,10 @@ let component =
   let fruits = String.Map.of_alist_exn (List.map ~f:(fun x -> x, ()) items) in
   let%sub selected_items, add_item =
     Bonsai.state_machine0
-      (module struct
-        type t = string list [@@deriving sexp, equal]
-      end)
-      (module String)
+      ()
+      ~sexp_of_model:[%sexp_of: string list]
+      ~equal:[%equal: string list]
+      ~sexp_of_action:[%sexp_of: String.t]
       ~default_model:[]
       ~apply_action:(fun ~inject:_ ~schedule_event:_ items item -> item :: items)
   in
@@ -112,6 +112,9 @@ let component =
     [ form
     ; Query_box.view query_box
     ; Node.ul (List.map selected_items ~f:(fun item -> Node.li [ Node.text item ]))
+    ; Node.button
+        ~attrs:[ Attr.on_click (fun _ -> Query_box.focus_input query_box) ]
+        [ Node.text "Focus the query_box" ]
     ]
 ;;
 

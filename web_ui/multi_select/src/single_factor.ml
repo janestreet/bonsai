@@ -46,6 +46,8 @@ module Make (Item : Item) = struct
     let bonsai ~initial input =
       Bonsai.of_module1
         (module T)
+        ~sexp_of_model:[%sexp_of: T.Model.t]
+        ~equal:[%equal: T.Model.t]
         ~default_model:initial
         input
     ;;
@@ -81,7 +83,7 @@ module Make (Item : Item) = struct
         { selection_status : Selection_status.t Map.M(Item).t
         ; focused_item     : Item.t option
         }
-      [@@deriving compare, equal, fields, sexp]
+      [@@deriving compare, equal, fields, sexp_of]
 
       let create ?(selection_status = Item.Map.empty) ?focused_item () =
         { selection_status; focused_item }
@@ -418,7 +420,9 @@ module Make (Item : Item) = struct
 
   include T
 
-  let bonsai' input = Bonsai.of_module1 (module T) input
+  let bonsai' ?equal input =
+    Bonsai.of_module1 ?equal (module T) ~sexp_of_model:[%sexp_of: T.Model.t] input
+  ;;
 
   module _ = struct
     type t =
@@ -467,6 +471,7 @@ module Make (Item : Item) = struct
       }
     in
     bonsai'
+      ~equal:[%equal: T.Model.t]
       ~default_model:
         (T.Model.create
            ?selection_status:initial_model_settings.selection_status

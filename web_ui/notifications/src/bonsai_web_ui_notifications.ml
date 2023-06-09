@@ -75,16 +75,23 @@ type 'a t =
       ?close_after:Time_ns.Span.t -> 'a Id.t -> 'a -> Notification_id.t Effect.t
   }
 
-let component (type a) (module M : Bonsai.Model with type t = a) =
+let component (type a) (module M : Bonsai.Model with type t = a) ~equal =
   let%sub id_generator = Notification_id.component in
   let%sub notifications, inject =
+    let module Model = struct
+      type a = M.t
+
+      let equal_a = equal
+      let sexp_of_a = M.sexp_of_t
+
+      type t = a Notification.t Map.M(Notification_id).t [@@deriving equal, sexp_of]
+    end
+    in
     Bonsai.state_machine0
-      (module struct
-        type t = M.t Notification.t Map.M(Notification_id).t [@@deriving equal, sexp]
-      end)
-      (module struct
-        type t = M.t Action.t [@@deriving equal, sexp]
-      end)
+      ()
+      ~sexp_of_model:[%sexp_of: Model.t]
+      ~equal:[%equal: Model.t]
+      ~sexp_of_action:(Action.sexp_of_t M.sexp_of_t)
       ~default_model:(Map.empty (module Notification_id))
       ~apply_action:(fun ~inject:_ ~schedule_event:_ notifications action ->
         match action with
@@ -114,7 +121,11 @@ let component (type a) (module M : Bonsai.Model with type t = a) =
               | Bonsai.Clock.Before_or_after.Before -> Effect.Ignore
               | After -> inject (Action.Remove notification_id)
             in
-            Bonsai.Edge.on_change (module Bonsai.Clock.Before_or_after) at ~callback)
+            Bonsai.Edge.on_change
+              ~sexp_of_model:[%sexp_of: Bonsai.Clock.Before_or_after.t]
+              ~equal:[%equal: Bonsai.Clock.Before_or_after.t]
+              at
+              ~callback)
     in
     Bonsai.const ()
   in
@@ -251,7 +262,9 @@ module Basic = struct
         ?(dismiss_errors_automatically : bool Value.t = Value.return false)
         ()
     =
-    let%sub notifications = component (module Basic_notification) in
+    let%sub notifications =
+      component (module Basic_notification) ~equal:[%equal: Basic_notification.t]
+    in
     let%arr notifications = notifications
     and dismiss_notifications_after = dismiss_notifications_after
     and dismiss_errors_automatically = dismiss_errors_automatically in

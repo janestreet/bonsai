@@ -29,24 +29,16 @@ let rpc =
 let component =
   let%sub (_, items), inject =
     Bonsai.state_machine0
-      (module struct
-        type t = int * unit Int.Map.t [@@deriving sexp, equal]
-      end)
-      (module struct
-        type t =
-          [ `Add
-          | `Remove of int
-          ]
-        [@@deriving sexp]
-      end)
+      ()
+      ~sexp_of_model:[%sexp_of: int * unit Int.Map.t]
+      ~equal:[%equal: int * unit Int.Map.t]
+      ~sexp_of_action:[%sexp_of: [ `Add | `Remove of int ]]
       ~default_model:(0, Int.Map.empty)
       ~apply_action:(fun ~inject:_ ~schedule_event:_ (last_index, map) action ->
         match action with
         | `Add ->
           let map =
-            if Map.length map > 100
-            then Map.remove map (fst (Map.min_elt_exn map))
-            else map
+            if Map.length map > 100 then Map.remove map (fst (Map.min_elt_exn map)) else map
           in
           last_index + 1, Map.set map ~key:last_index ~data:()
         | `Remove i -> last_index, Map.remove map i)
@@ -58,8 +50,10 @@ let component =
       ~f:(fun key _data ->
         let%sub response =
           Rpc_effect.Polling_state_rpc.poll
-            (module Int)
-            (module T)
+            ~sexp_of_query:[%sexp_of: Int.t]
+            ~sexp_of_response:[%sexp_of: T.t]
+            ~equal_query:[%equal: Int.t]
+            ~equal_response:[%equal: T.t]
             rpc
             ~where_to_connect:(Custom Connection)
             ~every:(Time_ns.Span.of_sec 1.0)

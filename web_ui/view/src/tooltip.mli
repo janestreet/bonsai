@@ -11,8 +11,8 @@ end
 
 val make
   :  Constants.t
-  -> container_attr:Vdom.Attr.t
-  -> tooltip_attr:Vdom.Attr.t
+  -> container_attrs:Vdom.Attr.t list
+  -> tooltip_attrs:Vdom.Attr.t list
   -> direction:Direction.t
   -> tipped:Vdom.Node.t
   -> tooltip:Vdom.Node.t

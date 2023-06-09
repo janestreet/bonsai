@@ -232,7 +232,7 @@ let create
     Bonsai.Value.map per_series_info ~f:(List.map ~f:Per_series_info.label)
   in
   let visibility =
-    let num_series = Bonsai.Value.map per_series_info ~f:List.length in
+    let num_series = Bonsai.Value.map per_series_info ~f:(List.length :> _ -> _) in
     visibility ~legend_model ~num_series
   in
   let legendFormatter = Bonsai.Value.map2 inject_legend_data options ~f:format_legend in

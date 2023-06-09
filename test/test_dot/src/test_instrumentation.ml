@@ -324,7 +324,9 @@ let%expect_test "diamond" =
 
 let state () =
   test_start [%here];
-  let%sub state = Bonsai.state (module Int) ~default_model:0 in
+  let%sub state =
+    Bonsai.state 0 ~sexp_of_model:[%sexp_of: Int.t] ~equal:[%equal: Int.t]
+  in
   return state
 ;;
 
@@ -370,8 +372,9 @@ let dynamic_state () =
   test_start [%here];
   let%sub state =
     Bonsai.state_machine1
-      (module Int)
-      (module Unit)
+      ~sexp_of_model:[%sexp_of: Int.t]
+      ~equal:[%equal: Int.t]
+      ~sexp_of_action:[%sexp_of: Unit.t]
       ~default_model:0
       ~apply_action:(fun ~inject:_ ~schedule_event:_ input model () ->
         match input with
@@ -414,7 +417,7 @@ let%expect_test "dynamic_state" =
   Handle.show handle;
   [%expect {| 0 |}];
   Handle.do_actions handle [ (); () ];
-  Handle.flush handle;
+  Handle.recompute_view handle;
   [%expect
     {|
      start-##leaf1-apply_action 1_1

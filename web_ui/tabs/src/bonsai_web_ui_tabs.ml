@@ -27,8 +27,8 @@ module Result = struct
   ;;
 end
 
-let tab_state (type t) (module M : Bonsai.Model with type t = t) ~initial =
-  let%sub state_result = Bonsai.state (module M) ~default_model:initial in
+let tab_state (type t) ?equal (module M : Bonsai.Model with type t = t) ~initial =
+  let%sub state_result = Bonsai.state initial ~sexp_of_model:[%sexp_of: M.t] ?equal in
   let%arr current, set = state_result in
   State.create ~current ~set
 ;;
@@ -39,6 +39,7 @@ let tab_ui
       ?additional_button_attributes
       (module M : Bonsai.Model with type t = t)
       ~all_tabs
+      ~equal
       state
       ~f
   =
@@ -59,7 +60,7 @@ let tab_ui
     and decorate = decorate
     and additional_button_attributes = additional_button_attributes in
     fun kind ->
-      let is_selected = M.equal kind (State.current state) in
+      let is_selected = equal kind (State.current state) in
       let selected_attr =
         if is_selected then Vdom.Attr.class_ "selected" else Vdom.Attr.empty
       in

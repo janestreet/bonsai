@@ -233,7 +233,11 @@ let%test_module "generic notification test" =
 
     let%expect_test "opening and closing a single notification" =
       let computation =
-        let%sub notifications = Notifications.component (module Notification_type) in
+        let%sub notifications =
+          Notifications.component
+            (module Notification_type)
+            ~equal:[%equal: Notification_type.t]
+        in
         let%sub vdom =
           Notifications.render notifications ~f:(fun ~close element ->
             let%arr element = element
@@ -280,7 +284,11 @@ let%test_module "generic notification test" =
     ;;
 
     let bare_bones_notification_ui =
-      let%sub notifications = Notifications.component (module Notification_type) in
+      let%sub notifications =
+        Notifications.component
+          (module Notification_type)
+          ~equal:[%equal: Notification_type.t]
+      in
       let%sub vdom =
         Notifications.render notifications ~f:(fun ~close:_ element ->
           let%arr element = element in
@@ -293,7 +301,7 @@ let%test_module "generic notification test" =
 
     let%expect_test "manually closing a notification" =
       let handle = Handle.create (module Result_spec) bare_bones_notification_ui in
-      let _, notification_handle = Handle.result handle in
+      let _, notification_handle = Handle.last_result handle in
       let id_ref = ref None in
       Effect.Expert.handle_non_dom_event_exn
         (let%bind.Effect id1 =
@@ -343,7 +351,7 @@ let%test_module "generic notification test" =
 
     let%expect_test "manually modifying a notification" =
       let handle = Handle.create (module Result_spec) bare_bones_notification_ui in
-      let _, notification_handle = Handle.result handle in
+      let _, notification_handle = Handle.last_result handle in
       let id_ref = ref None in
       Effect.Expert.handle_non_dom_event_exn
         (let%bind.Effect id1 =
@@ -397,7 +405,11 @@ let%test_module "generic notification test" =
 
     let%expect_test "opening and closing many notifications" =
       let computation =
-        let%sub notifications = Notifications.component (module Notification_type) in
+        let%sub notifications =
+          Notifications.component
+            (module Notification_type)
+            ~equal:[%equal: Notification_type.t]
+        in
         let%sub vdom =
           Notifications.render notifications ~f:(fun ~close element ->
             let%arr element = element
@@ -500,7 +512,11 @@ let%test_module "generic notification test" =
 
     let%expect_test "notification closig due to time expiry at different times" =
       let computation =
-        let%sub notifications = Notifications.component (module Notification_type) in
+        let%sub notifications =
+          Notifications.component
+            (module Notification_type)
+            ~equal:[%equal: Notification_type.t]
+        in
         let%sub vdom =
           Notifications.render notifications ~f:(fun ~close:_ element ->
             let%arr element = element in

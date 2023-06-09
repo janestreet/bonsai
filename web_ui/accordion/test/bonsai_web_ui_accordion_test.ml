@@ -44,7 +44,7 @@ end
 let%expect_test "Clicking open and close" =
   let accordion =
     Accordion.component
-      ~extra_title_attr:(Value.return (Vdom.Attr.create "data-test" "title"))
+      ~extra_title_attrs:(Value.return [ Vdom.Attr.create "data-test" "title" ])
       ~starts_open:false
       ~title:(Value.return (Vdom.Node.text "Title"))
       ~content:(Bonsai.const (Vdom.Node.text "Content"))

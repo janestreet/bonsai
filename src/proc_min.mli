@@ -21,7 +21,7 @@ module Proc_incr : sig
 
   val compute_with_clock
     :  'a Value.t
-    -> f:(Incr.Clock.t -> 'a Incr.t -> 'b Incr.t)
+    -> f:(Time_source.t -> 'a Incr.t -> 'b Incr.t)
     -> 'b Computation.t
 
   val of_module
@@ -29,6 +29,8 @@ module Proc_incr : sig
          with type Input.t = 'input
           and type Model.t = 'model
           and type Result.t = 'result)
+    -> ?sexp_of_model:('model -> Sexp.t)
+    -> equal:('model -> 'model -> bool)
     -> default_model:'model
     -> 'input Value.t
     -> 'result Computation.t
@@ -53,10 +55,11 @@ module Edge : sig
 end
 
 val state_machine01
-  :  (module Model with type t = 'model)
-  -> (module Action with type t = 'dynamic_action)
-  -> (module Action with type t = 'static_action)
+  :  ?sexp_of_dynamic_action:('dynamic_action -> Sexp.t)
+  -> ?sexp_of_static_action:('static_action -> Sexp.t)
   -> ?reset:('dynamic_action, 'static_action, 'model) Computation.reset
+  -> ?sexp_of_model:('model -> Sexp.t)
+  -> ?equal:('model -> 'model -> bool)
   -> default_model:'model
   -> apply_dynamic:
        (inject_dynamic:('dynamic_action -> unit Effect.t)
@@ -80,13 +83,14 @@ module Computation_status : sig
 end
 
 val state_machine1
-  :  (module Model with type t = 'model)
-  -> (module Action with type t = 'action)
+  :  ?sexp_of_action:('action -> Sexp.t)
   -> ?reset:
        (inject:('action -> unit Effect.t)
         -> schedule_event:(unit Effect.t -> unit)
         -> 'model
         -> 'model)
+  -> ?sexp_of_model:('model -> Sexp.t)
+  -> ?equal:('model -> 'model -> bool)
   -> default_model:'model
   -> apply_action:
        (inject:('action -> unit Effect.t)
@@ -104,8 +108,9 @@ val state_machine0
      -> schedule_event:(unit Effect.t -> unit)
      -> 'model
      -> 'model)
-  -> (module Model with type t = 'model)
-  -> (module Action with type t = 'action)
+  -> ?sexp_of_model:('model -> Sexp.t)
+  -> ?sexp_of_action:('action -> Sexp.t)
+  -> ?equal:('model -> 'model -> bool)
   -> default_model:'model
   -> apply_action:
        (inject:('action -> unit Effect.t)
@@ -113,6 +118,7 @@ val state_machine0
         -> 'model
         -> 'action
         -> 'model)
+  -> unit
   -> ('model * ('action -> unit Effect.t)) Computation.t
 
 val assoc
@@ -137,7 +143,8 @@ val wrap
      -> schedule_event:(unit Effect.t -> unit)
      -> 'model
      -> 'model)
-  -> (module Model with type t = 'model)
+  -> ?sexp_of_model:('model -> Sexp.t)
+  -> ?equal:('model -> 'model -> bool)
   -> default_model:'model
   -> apply_action:
        (inject:('action -> unit Effect.t)
@@ -147,6 +154,7 @@ val wrap
         -> 'action
         -> 'model)
   -> f:('model Value.t -> ('action -> unit Effect.t) Value.t -> 'a Computation.t)
+  -> unit
   -> 'a Computation.t
 
 val with_model_resetter

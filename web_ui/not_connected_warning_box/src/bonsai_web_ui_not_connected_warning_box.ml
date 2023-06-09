@@ -29,7 +29,10 @@ let component ?(styles = Vdom.Attr.empty) ~create_message is_connected =
   then Bonsai.const (Vdom.Node.div ~attrs:[ Style.connected ] [])
   else (
     let%sub activation_time, set_activation_time =
-      Bonsai.state_opt (module Time_ns.Alternate_sexp)
+      Bonsai.state_opt
+        ()
+        ~sexp_of_model:[%sexp_of: Time_ns.Alternate_sexp.t]
+        ~equal:[%equal: Time_ns.Alternate_sexp.t]
     in
     let%sub now = Bonsai.Clock.approx_now ~tick_every:(Time_ns.Span.of_sec 1.0) in
     let%sub () =

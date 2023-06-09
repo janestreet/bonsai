@@ -21,29 +21,31 @@ let map_input a ~f i = a (Proc.Value.map i ~f)
 let of_module = Proc.of_module1
 
 let state_machine
-      (type action)
-      model
-      (module Action : Action with type t = action)
+      ~sexp_of_action
+      ?sexp_of_model
+      ~equal
       _here
       ~default_model
       ~apply_action
       input
   =
   Proc.state_machine1
-    model
-    (module Action)
+    ~sexp_of_action
+    ?sexp_of_model
+    ~equal
     ~default_model
     ~apply_action:(fun ~inject ~schedule_event input model action ->
       match input with
       | Active input -> apply_action ~inject ~schedule_event input model action
       | Inactive ->
+        let action = sexp_of_action action in
         eprint_s
           [%message
             [%here]
               "An action sent to a [state_machine1] has been dropped because its input \
                was not present. This happens when the [state_machine1] is inactive when \
                it receives a message."
-              (action : Action.t)];
+              (action : Sexp.t)];
         model)
     input
 ;;
@@ -147,14 +149,16 @@ module With_incr = struct
 
   let of_module
         (type i m a r)
+        ?sexp_of_model
         (component : (i, m, a, r) component_s_incr)
+        ~equal
         ~default_model
         input
     : r Proc.Computation.t
     =
     let input = Proc.Private.reveal_value input in
     let (module M) = component in
-    Proc_min.Proc_incr.of_module (module M) ~default_model input
+    Proc_min.Proc_incr.of_module (module M) ?sexp_of_model ~equal ~default_model input
   ;;
 
   let pure ~f = Proc.Incr.compute ~f

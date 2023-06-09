@@ -206,6 +206,7 @@ module Arrow_deprecated = struct
     let prev_lifecycle = ref Bonsai.Private.Lifecycle.Collection.empty in
     let is_debugging_var = Incr.Var.create Not_debugging in
     let debugger_shutdown = ref None in
+    let bonsai_clock = Bonsai.Time_source.create ~start:(Time_ns.now ()) in
     let module Incr_dom_app = struct
       module Model = struct
         type t = model
@@ -239,6 +240,11 @@ module Arrow_deprecated = struct
 
       let on_startup ~schedule_action:_ _ = return ()
 
+      let advance_clock_to to_ =
+        Bonsai.Time_source.advance_clock bonsai_clock ~to_;
+        Bonsai.Time_source.Private.flush bonsai_clock
+      ;;
+
       let create
             model
             ~old_model:_
@@ -261,7 +267,7 @@ module Arrow_deprecated = struct
           run
             ~environment
             ~path:Bonsai.Private.Path.empty
-            ~clock:Incr.clock
+            ~clock:bonsai_clock
             ~model
             ~inject_dynamic
             ~inject_static

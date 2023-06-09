@@ -33,14 +33,10 @@ module Ids = struct
   let component =
     let%sub state =
       Bonsai.state_machine0
-        (module State)
-        (module struct
-          type t =
-            [ `Remove of Id.t
-            | `Add_with_next_id
-            ]
-          [@@deriving sexp, equal]
-        end)
+        ()
+        ~sexp_of_model:[%sexp_of: State.t]
+        ~equal:[%equal: State.t]
+        ~sexp_of_action:[%sexp_of: [ `Remove of Id.t | `Add_with_next_id ]]
         ~default_model:State.default
         ~apply_action
     in

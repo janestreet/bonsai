@@ -49,9 +49,12 @@ let column_helper
         (Value.return (fun (_, a) (_, b) ->
            M.compare (Field.get field a) (Field.get field b)))
   in
+  let render_header text =
+    Value.return (Column.Header_helpers.default (Vdom.Node.text text))
+  in
   Column.column
     ?visible
-    ~label:(Value.return (Vdom.Node.text (Fieldslib.Field.name field)))
+    ~header:(render_header (Fieldslib.Field.name field))
     ?sort
     ~cell:(fun ~key:_ ~data ->
       let%arr data = data in
@@ -59,7 +62,21 @@ let column_helper
     ()
 ;;
 
+let special_compare_option how compare_inner a b =
+  match a, b with
+  | None, None -> 0
+  | Some _, None -> -1
+  | None, Some _ -> 1
+  | Some a, Some b ->
+    (match how with
+     | `Ascending -> compare_inner a b
+     | `Descending -> -compare_inner a b)
+;;
+
 let columns ~should_show_position =
+  let render_header text =
+    Value.return (Column.Header_helpers.default (Vdom.Node.text text))
+  in
   [ column_helper (module String) Row.Fields.symbol
   ; column_helper (module Float) Row.Fields.edge
   ; column_helper (module Float) Row.Fields.max_edge
@@ -78,7 +95,21 @@ let columns ~should_show_position =
               ~visible:should_show_position
           ]
       ; Column.column
-          ~label:(Value.return (Vdom.Node.text "last fill"))
+          ~header:(render_header "last fill")
+          ~sort:
+            (Value.return (fun (_key1, a) (_key2, b) ->
+               special_compare_option
+                 `Ascending
+                 [%compare: Time_ns.t]
+                 a.Row.last_fill
+                 b.Row.last_fill))
+          ~sort_reversed:
+            (Value.return (fun (_key1, a) (_key2, b) ->
+               special_compare_option
+                 `Descending
+                 [%compare: Time_ns.t]
+                 a.Row.last_fill
+                 b.Row.last_fill))
           ~cell:(fun ~key:_ ~data ->
             let%arr data = data in
             Vdom.Node.text (Time_ns_option.to_string data.Row.last_fill))
@@ -122,7 +153,14 @@ let component ?filter (data : Row.t String.Map.t Value.t) =
       ~columns:(columns ~should_show_position)
       data
   in
-  let%arr { Table.Result.view = table; for_testing = _; num_filtered_rows; focus } = table
+  let%arr { Table.Result.view = table
+          ; for_testing = _
+          ; sortable_header = _
+          ; num_filtered_rows
+          ; focus
+          }
+    =
+    table
   and form = form in
   Vdom.Node.div
     ~attrs:

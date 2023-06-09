@@ -1072,6 +1072,18 @@ let%test_module "quickcheck" =
         let path_order = Path_order.T []
       end
 
+      module Time_ns = struct
+        include Time_ns
+
+        module Alternate_sexp = struct
+          include Time_ns.Alternate_sexp
+
+          let quickcheck_generator = Time_ns.quickcheck_generator
+          let quickcheck_observer = Time_ns.quickcheck_observer
+          let quickcheck_shrinker = Time_ns.quickcheck_shrinker
+        end
+      end
+
       type t =
         | Main of
             { int_field : int
@@ -1082,6 +1094,7 @@ let%test_module "quickcheck" =
             ; sexpable : Point.t
             ; stringable : Player_id.t
             ; nested : Point.t
+            ; time_ns_field : Time_ns.Alternate_sexp.t
             ; list_projection : Player_id.t list
             ; int_list_with_fallback : int list
             ; at_least_one_int :
@@ -1105,6 +1118,7 @@ let%test_module "quickcheck" =
           | Int_field -> from_query_required int
           | Int_list_field -> int |> from_query_many
           | Float_list_field -> float |> from_query_many
+          | Time_ns_field -> time_ns |> from_query_required
           | Sexpable -> sexpable (module Point) |> from_query_required
           | Stringable -> stringable (module Player_id) |> from_query_required
           | Nested -> Parser.Record.make (module Point)
@@ -1143,6 +1157,10 @@ let%test_module "quickcheck" =
           function
           | Int_field ->
             Some (map quickcheck_generator_int ~f:(fun x -> [ Int.to_string x ]))
+          | Time_ns_field ->
+            Some
+              (map Time_ns.Alternate_sexp.quickcheck_generator ~f:(fun x ->
+                 [ Time_ns.to_int63_ns_since_epoch x |> Int63.to_string ]))
           | Int_list_field -> Some (map quickcheck_generator_int ~f:Int.to_string |> list)
           | Float_list_field ->
             (* No roundtrip guarantees on nans. *)
@@ -1186,6 +1204,7 @@ let%test_module "quickcheck" =
           : type a. a Typed_field.t -> (string list -> string list -> bool) option
           = function
             | Int_field -> Some string_list_equal
+            | Time_ns_field -> Some string_list_equal
             | Int_list_field -> Some string_list_equal
             | Float_list_field -> Some string_list_equal
             | Sexpable -> Some string_list_equal
@@ -1321,7 +1340,7 @@ let%test_module "quickcheck" =
     let%quick_test "attempt to parse generated queries" =
       fun ((query, path) :
              (string list String.Map.t * string list
-              [@generator generator] [@shrinker.disable])) ->
+              [@generator generator] [@shrinker Shrinker.atomic])) ->
         let parser = Parser.Variant.make ~namespace:[] (module Query) in
         let projection = Parser.eval parser in
         let result = projection.parse_exn { query; path } in
@@ -3285,4 +3304,224 @@ let%expect_test "[regression] exponential url shapes" =
     │ /?a=<optional<string>>&b=<optional<string>>&c=<optional<string>>&d=<optional<string>>&e= │
     │ <optional<string>>                                                                       │
     └──────────────────────────────────────────────────────────────────────────────────────────┘ |}]
+;;
+
+let%test_module "query-based variant" =
+  (module struct
+    module Well_behaved_url = struct
+      type t =
+        | A of string
+        | B
+        | C
+      [@@deriving sexp_of, typed_variants]
+
+      let parser_for_variant : type a. a Typed_variant.t -> a Parser.t = function
+        | A -> Parser.from_query_required Value_parser.string
+        | B -> Parser.unit
+        | C -> Parser.unit
+      ;;
+
+      let identifier_for_variant : type a. a Typed_variant.t -> string = function
+        | A -> "a"
+        | B -> "bee"
+        | C -> "c"
+      ;;
+    end
+
+    let parser =
+      Uri_parsing.Parser.Query_based_variant.make (module Well_behaved_url) ~key:"page"
+    ;;
+
+    let versioned_parser = Versioned_parser.first_parser parser
+    let projection = Versioned_parser.eval_for_uri versioned_parser
+
+    let%expect_test "check ok" =
+      Versioned_parser.check_ok_and_print_urls_or_errors versioned_parser;
+      [%expect
+        {|
+        URL parser looks good!
+        ┌─────────────────────┐
+        │ All urls            │
+        ├─────────────────────┤
+        │ /?a=<string>&page=a │
+        │ /?page=bee          │
+        │ /?page=c            │
+        └─────────────────────┘ |}]
+    ;;
+
+    let%expect_test "parse unparse (a)" =
+      let original = Uri.make ~query:[ "page", [ "a" ]; "a", [ "beep boop" ] ] () in
+      print_endline (Uri.to_string original);
+      [%expect {| ?page=a&a=beep%20boop |}];
+      let parsed = projection.parse_exn original in
+      print_s [%sexp (parsed : Well_behaved_url.t Parse_result.t)];
+      [%expect {| ((result (A "beep boop")) (remaining ((path ("")) (query ())))) |}];
+      let unparsed = projection.unparse parsed in
+      print_endline (Uri.to_string unparsed);
+      [%expect {| ?a=beep%20boop&page=a |}]
+    ;;
+
+    let%expect_test "parse unparse (b)" =
+      let original = Uri.make ~query:[ "page", [ "bee" ] ] () in
+      print_endline (Uri.to_string original);
+      [%expect {| ?page=bee |}];
+      let parsed = projection.parse_exn original in
+      print_s [%sexp (parsed : Well_behaved_url.t Parse_result.t)];
+      [%expect {| ((result B) (remaining ((path ("")) (query ())))) |}];
+      let unparsed = projection.unparse parsed in
+      print_endline (Uri.to_string unparsed);
+      [%expect {| ?page=bee |}]
+    ;;
+
+    let%expect_test "parse unknown (beep boop)" =
+      let original = Uri.make ~query:[ "page", [ "beep boop" ] ] () in
+      print_endline (Uri.to_string original);
+      [%expect {| ?page=beep%20boop |}];
+      Expect_test_helpers_base.require_does_raise [%here] (fun () ->
+        projection.parse_exn original);
+      [%expect
+        {|
+        ("Error while parsing! Got unexpected value \"beep boop\" for \"page\" query parameter."
+         (expected_one_of (
+           (a a)
+           (b bee)
+           (c c)))) |}]
+    ;;
+
+    let%expect_test "parse no key found" =
+      let original = Uri.make () in
+      print_endline (Uri.to_string original);
+      [%expect {| |}];
+      Expect_test_helpers_base.require_does_raise [%here] (fun () ->
+        projection.parse_exn original);
+      [%expect
+        {|
+        "Error while parsing url! Expected key \"page=<page>\" inside of the url's query." |}]
+    ;;
+
+    let%expect_test "duplicate query identifiers" =
+      let module Url = struct
+        type t =
+          | A
+          | B
+        [@@deriving typed_variants]
+
+        let parser_for_variant : type a. a Typed_variant.t -> a Parser.t = function
+          | A -> Parser.unit
+          | B -> Parser.unit
+        ;;
+
+        let identifier_for_variant _ = "a"
+      end
+      in
+      let parser = Parser.Query_based_variant.make ~key:"page" (module Url) in
+      let versioned_parser = Versioned_parser.first_parser parser in
+      Versioned_parser.check_ok_and_print_urls_or_errors versioned_parser;
+      [%expect
+        {|
+        Error with parser.
+        ┌─────────────────────────────────────────────────────────┬──────────────────────────────────────────────────────────────────────────────────────────┐
+        │ Check name                                              │ Error message                                                                            │
+        ├─────────────────────────────────────────────────────────┼──────────────────────────────────────────────────────────────────────────────────────────┤
+        │ Ambiguous choices for picking variant constructor check │ ("Duplicate identifiers to distinguish variants found!"                                  │
+        │                                                         │  (duplicate_identifiers (a)))                                                            │
+        │ Duplicate urls check                                    │ ("Ambiguous, duplicate urls expressed in parser! This was probably caused due to conflic │
+        │                                                         │ ting renames with [with_prefix] or [with_remaining_path]."                               │
+        │                                                         │  (duplicate_urls (/?page=a)))                                                            │
+        └─────────────────────────────────────────────────────────┴──────────────────────────────────────────────────────────────────────────────────────────┘ |}]
+    ;;
+
+    let%expect_test "collision with other query parameter" =
+      let module Url = struct
+        type t =
+          | A of int
+          | B
+        [@@deriving typed_variants]
+
+        let parser_for_variant : type a. a Typed_variant.t -> a Parser.t = function
+          | A -> Parser.from_query_required ~key:"page" Value_parser.int
+          | B -> Parser.unit
+        ;;
+
+        let identifier_for_variant = Typed_variant.name
+      end
+      in
+      let parser = Parser.Query_based_variant.make ~key:"page" (module Url) in
+      let versioned_parser = Versioned_parser.first_parser parser in
+      Versioned_parser.check_ok_and_print_urls_or_errors versioned_parser;
+      [%expect
+        {|
+        Error with parser.
+        ┌──────────────────────┬──────────────────────────────────────────────────────────────────────────────────────────┐
+        │ Check name           │ Error message                                                                            │
+        ├──────────────────────┼──────────────────────────────────────────────────────────────────────────────────────────┤
+        │ Duplicate keys check │ ("Duplicate query keys found! This probably occurred due at least one [~key] being renam │
+        │                      │ ed to the same string in a [from_query_*] parser. Another possibility is that a renamed  │
+        │                      │ key conflicted with an inferred parser."                                                 │
+        │                      │  (duplicate_query_keys_by_url ((/?page=<int>&page=a (page)))))                           │
+        └──────────────────────┴──────────────────────────────────────────────────────────────────────────────────────────┘ |}]
+    ;;
+
+    let%expect_test "namespaces respected" =
+      let module Nested_record = struct
+        type t =
+          { a : int
+          ; b : int
+          }
+        [@@deriving typed_fields]
+
+        let parser_for_field : type a. a Typed_field.t -> a Parser.t = function
+          | A -> Parser.from_query_required Value_parser.int
+          | B -> Parser.from_query_required Value_parser.int
+        ;;
+
+        module Path_order = Parser.Record.Path_order (Typed_field)
+
+        let path_order = Path_order.T []
+      end
+      in
+      let module Nested_variant = struct
+        type t =
+          | A of Nested_record.t
+          | B of Nested_record.t
+        [@@deriving typed_variants]
+
+        let parser_for_variant : type a. a Typed_variant.t -> a Parser.t = function
+          | A -> Parser.Record.make (module Nested_record)
+          | B -> Parser.Record.make ~namespace:[ "beep"; "boop" ] (module Nested_record)
+        ;;
+
+        let identifier_for_variant = Typed_variant.name
+      end
+      in
+      let module Url = struct
+        type t =
+          | C of Nested_variant.t
+          | D of Nested_variant.t
+        [@@deriving typed_variants]
+
+        let parser_for_variant : type a. a Typed_variant.t -> a Parser.t = function
+          | C -> Parser.Query_based_variant.make ~key:"child-page" (module Nested_variant)
+          | D -> Parser.Query_based_variant.make ~key:"child-page" (module Nested_variant)
+        ;;
+
+        let identifier_for_variant = Typed_variant.name
+      end
+      in
+      let parser = Parser.Query_based_variant.make ~key:"parent-page" (module Url) in
+      let versioned_parser = Versioned_parser.first_parser parser in
+      Versioned_parser.check_ok_and_print_urls_or_errors versioned_parser;
+      [%expect
+        {|
+        URL parser looks good!
+        ┌──────────────────────────────────────────────────────────────────────┐
+        │ All urls                                                             │
+        ├──────────────────────────────────────────────────────────────────────┤
+        │ /?c.a.a=<int>&c.a.b=<int>&child-page=a&parent-page=c                 │
+        │ /?c.beep.boop.a=<int>&c.beep.boop.b=<int>&child-page=b&parent-page=c │
+        │ /?child-page=a&d.a.a=<int>&d.a.b=<int>&parent-page=d                 │
+        │ /?child-page=b&d.beep.boop.a=<int>&d.beep.boop.b=<int>&parent-page=d │
+        └──────────────────────────────────────────────────────────────────────┘ |}]
+    ;;
+  end)
 ;;

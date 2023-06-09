@@ -4,9 +4,9 @@ module Style = Cards_style
 
 let make
       constants
-      ~container_attr
-      ~title_attr
-      ~content_attr
+      ~container_attrs
+      ~title_attrs
+      ~content_attrs
       ~intent
       ~on_click
       ~title
@@ -38,10 +38,14 @@ let make
   in
   let title, content_attr =
     match title with
-    | [] -> Vdom.Node.none, Vdom.Attr.many [ content_attr; Style.no_title ]
+    | [] ->
+      Vdom.Node.none, Vdom.Attr.many [ Vdom.Attr.many content_attrs; Style.no_title ]
     | _ ->
       let create_title ~f ~extra_attr =
-        f ~attrs:[ Style.title_bar; Style.title_text; title_attr; extra_attr ] title
+        f
+          ~attrs:
+            [ Style.title_bar; Style.title_text; Vdom.Attr.many title_attrs; extra_attr ]
+          title
       in
       let title =
         match title_kind with
@@ -52,7 +56,9 @@ let make
             ~f:(fun ~attrs x -> Vdom.Node.legend ~attrs x)
             ~extra_attr:Style.card_legend
       in
-      let content_attr = Vdom.Attr.many [ content_attr; Style.yes_title ] in
+      let content_attr =
+        Vdom.Attr.many [ Vdom.Attr.many content_attrs; Style.yes_title ]
+      in
       title, content_attr
   in
   let contrasting_fg_intent_color =
@@ -74,7 +80,7 @@ let make
   let create_card ~f ~extra_container_attr ~extra_items_attr =
     f
       ~attrs:
-        [ container_attr
+        [ Vdom.Attr.many container_attrs
         ; Vdom.Attr.on_click (fun _ -> on_click)
         ; vars
         ; Style.container

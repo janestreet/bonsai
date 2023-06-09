@@ -29,6 +29,7 @@ module Basic : sig
       ; for_testing : For_testing.t Lazy.t
       ; focus : 'focus
       ; num_filtered_rows : int
+      ; sortable_header : int Sortable_header.t
       }
     [@@deriving fields]
   end
@@ -56,11 +57,13 @@ module Basic : sig
       val column
         :  ?sort:('key * 'data -> 'key * 'data -> int) Value.t
         (** If this column is sortable, you can provide the sorting function here *)
+        -> ?sort_reversed:('key * 'data -> 'key * 'data -> int) Value.t
+        (** If the column has a specialized "reverse order", you can provide it here. *)
         -> ?initial_width:Css_gen.Length.t
         -> ?visible:bool Value.t
         (** [visible] can be set to [false] to hide the whole column. *)
-        -> label:Vdom.Node.t Value.t
-        (** [label] determines the contents of the column header *)
+        -> header:(Sort_state.t -> Vdom.Node.t) Value.t
+        (** [header] determines the contents of the column header *)
         -> cell:(key:'key Value.t -> data:'data Value.t -> Vdom.Node.t Computation.t)
         (** [cell] is the function determines the contents of every cell in this column. *)
         -> unit
@@ -75,6 +78,10 @@ module Basic : sig
 
       (** [lift] pulls a list of columns out into a column specification for use in the primary APIs  *)
       val lift : ('key, 'data) t list -> ('key, 'data) columns
+
+      (** [Header_helpers] provides helper functions for constructing table headers with
+          sort indicators *)
+      module Header_helpers = Column.Dynamic_cells_with_sorter.Header_helpers
     end
 
     module Dynamic_columns : sig
@@ -90,9 +97,12 @@ module Basic : sig
       val column
         :  ?sort:('key * 'data -> 'key * 'data -> int)
         (** If this column is sortable, you can provide the sorting function here *)
+        -> ?sort_reversed:('key * 'data -> 'key * 'data -> int)
+        (** If the column has a specialized "reverse order", you can provide it here. *)
         -> ?initial_width:Css_gen.Length.t
         -> ?visible:bool (** [visible] can be set to [false] to hide the whole column. *)
-        -> label:Vdom.Node.t (** [label] determines the contents of the column header *)
+        -> header:(Sort_state.t -> Vdom.Node.t)
+        (** [header] determines the contents of the column header *)
         -> cell:(key:'key -> data:'data -> Vdom.Node.t)
         (** [cell] is the function determines the contents of every cell in this column. *)
         -> unit
@@ -104,14 +114,24 @@ module Basic : sig
 
       (** [lift] pulls a list of columns out into a column specification for use in the primary APIs  *)
       val lift : ('key, 'data) t list Value.t -> ('key, 'data) columns
+
+      (** [Header_helpers] provides helper functions for constructing table headers with
+          sort indicators *)
+      module Header_helpers = Column.Dynamic_columns_with_sorter.Header_helpers
     end
   end
+
+  type 'a compare := 'a -> 'a -> int
 
   (** This is the main UI component for the table content. *)
   val component
     :  ?filter:(key:'key -> data:'data -> bool) Value.t
     (** An optional function may be provided, which filters the rows in the table. *)
-    -> ?default_sort:('key * 'data -> 'key * 'data -> int) Value.t
+    -> ?override_sort:(('key * 'data) compare -> ('key * 'data) compare) Value.t
+    (** override_sort is an optional function that transforms the tables current sort,
+        taking into account the default-sort and any user-provided sorts that they've added
+        by clicking on column headers. *)
+    -> ?default_sort:('key * 'data) compare Value.t
     (** An optional function may be provided to sort the table. *)
     -> ?preload_rows:int
     -> ('key, 'cmp) Bonsai.comparator
@@ -162,13 +182,17 @@ module Expert : sig
       val column
         :  ?initial_width:Css_gen.Length.t
         -> ?visible:bool Value.t
-        -> label:Vdom.Node.t Value.t
+        -> header:Vdom.Node.t Value.t
         -> cell:(key:'key Value.t -> data:'data Value.t -> Vdom.Node.t Computation.t)
         -> unit
         -> ('key, 'data) t
 
       val group : label:Vdom.Node.t Value.t -> ('key, 'data) t list -> ('key, 'data) t
       val lift : ('key, 'data) t list -> ('key, 'data) columns
+
+      (** [Header_helpers] provides helper functions for constructing table headers with
+          sort indicators *)
+      module Header_helpers = Column.Dynamic_cells.Header_helpers
     end
 
     module Dynamic_columns : sig
@@ -177,13 +201,17 @@ module Expert : sig
       val column
         :  ?initial_width:Css_gen.Length.t
         -> ?visible:bool
-        -> label:Vdom.Node.t
+        -> header:Vdom.Node.t
         -> cell:(key:'key -> data:'data -> Vdom.Node.t)
         -> unit
         -> ('key, 'data) t
 
       val group : label:Vdom.Node.t -> ('key, 'data) t list -> ('key, 'data) t
       val lift : ('key, 'data) t list Value.t -> ('key, 'data) columns
+
+      (** [Header_helpers] provides helper functions for constructing table headers with
+          sort indicators *)
+      module Header_helpers = Column.Dynamic_columns.Header_helpers
     end
   end
 

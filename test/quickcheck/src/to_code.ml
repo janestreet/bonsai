@@ -87,8 +87,8 @@ let rec write_comparator : type a cmp. buffer:Buf.t -> (a, cmp) Witness.t -> uni
 let rec write_model : type a cmp. buffer:Buf.t -> (a, cmp) Witness.t -> unit =
   fun ~buffer witness ->
   match witness with
-  | Unit -> Buf.string buffer "(module Unit) "
-  | Int -> Buf.string buffer "(module Int) "
+  | Unit -> Buf.string buffer "~equal:Unit.equal ~sexp_of_model:Unit.sexp_of_t "
+  | Int -> Buf.string buffer "~equal:Int.equal ~sexp_of_model:Int.sexp_of_t "
   | Either (first_witness, second_witness) ->
     Buf.string buffer "(";
     prep buffer;
@@ -382,7 +382,6 @@ let rec write_computation
       include M
 
       let sexp_of_t = M.comparator.sexp_of_t
-      let t_of_sexp _ = assert false
     end
     in
     let key_real_value = ref None in
@@ -409,7 +408,7 @@ let rec write_computation
   | State { default_model; default_witness } ->
     Buf.string buffer "Bonsai.state ";
     prep buffer;
-    Buf.string buffer "~default_model:";
+    Buf.string buffer "";
     write_data ~buffer default_witness default_model;
     Buf.newline buffer;
     write_model ~buffer default_witness;

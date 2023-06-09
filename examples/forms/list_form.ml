@@ -67,6 +67,7 @@ module Simple_list = struct
   let component =
     E.Multiple.stringable_list
       (module T)
+      ~equal:[%equal: T.t]
       ~extra_pill_container_attr:(Value.return S.container)
       ~extra_pill_attr:(Value.return S.pill)
   ;;

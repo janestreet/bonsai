@@ -9,8 +9,9 @@ end
 
 let roller_state =
   Bonsai.state_machine1
-    (module Model)
-    (module Unit)
+    ~sexp_of_model:[%sexp_of: Model.t]
+    ~equal:[%equal: Model.t]
+    ~sexp_of_action:[%sexp_of: Unit.t]
     ~default_model:None
     ~apply_action:(fun ~inject:_ ~schedule_event:_ roll_spec model () ->
       match roll_spec with
@@ -22,9 +23,9 @@ let roller_state =
         eprint_s
           [%message
             [%here]
-              "An action sent to a [state_machine1] has been dropped because its input \
-               was not present. This happens when the [state_machine1] is inactive when \
-               it receives a message."];
+              "An action sent to a [state_machine1] has been dropped because its input was \
+               not present. This happens when the [state_machine1] is inactive when it \
+               receives a message."];
         model)
 ;;
 

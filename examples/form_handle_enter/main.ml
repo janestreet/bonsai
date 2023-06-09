@@ -21,7 +21,9 @@ module Css = [%css stylesheet {|
 } |}]
 
 let component =
-  let%sub notifications = Bonsai_web_ui_notifications.component (module Unit) in
+  let%sub notifications =
+    Bonsai_web_ui_notifications.component (module Unit) ~equal:[%equal: Unit.t]
+  in
   let%sub rendered_notifications =
     Bonsai_web_ui_notifications.render notifications ~f:(fun ~close:_ _ ->
       Bonsai.const

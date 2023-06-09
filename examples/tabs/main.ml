@@ -12,10 +12,11 @@ module T = struct
 end
 
 let component =
-  let%sub tab_state = Tabs.tab_state (module T) ~initial:T.A in
+  let%sub tab_state = Tabs.tab_state (module T) ~initial:T.A ~equal:[%equal: T.t] in
   let%sub contents =
     Tabs.tab_ui
       (module T)
+      ~equal:[%equal: T.t]
       tab_state
       ~all_tabs:(Value.return T.all)
       ~f:(fun ~change_tab tab ->

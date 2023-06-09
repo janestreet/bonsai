@@ -1,0 +1,3 @@
+(library (name bonsai_guide_code_test) (public_name bonsai.guide_code_test)
+ (libraries bonsai_web_test async_js.async_test)
+ (preprocess (pps ppx_jane ppx_bonsai)))

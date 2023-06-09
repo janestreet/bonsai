@@ -11,9 +11,9 @@ type t =
   }
 
 let component
-      ?(extra_container_attr = Value.return Vdom.Attr.empty)
-      ?(extra_title_attr = Value.return Vdom.Attr.empty)
-      ?(extra_content_attr = Value.return Vdom.Attr.empty)
+      ?(extra_container_attrs = Value.return [])
+      ?(extra_title_attrs = Value.return [])
+      ?(extra_content_attrs = Value.return [])
       ~starts_open
       ~title
       ~content
@@ -28,22 +28,21 @@ let component
   in
   let%sub view =
     let%sub theme = View.Theme.current in
-    let%sub title_attr =
-      let%arr extra_title_attr = extra_title_attr
+    let%sub title_attrs =
+      let%arr extra_title_attrs = extra_title_attrs
       and toggle = toggle
       and theme = theme
       and is_open = is_open in
       let constants = View.constants theme in
-      Vdom.Attr.many
-        [ Style.title
-        ; Vdom.Attr.on_click (fun _ -> toggle)
-        ; (if is_open then Style.title_open else Style.title_closed)
-        ; Style.Variables.set
-            ~border:(Css_gen.Color.to_string_css constants.extreme_primary_border)
-            ~fg_text:(Css_gen.Color.to_string_css constants.extreme.foreground)
-            ()
-        ; extra_title_attr
-        ]
+      [ Style.title
+      ; Vdom.Attr.on_click (fun _ -> toggle)
+      ; (if is_open then Style.title_open else Style.title_closed)
+      ; Style.Variables.set
+          ~border:(Css_gen.Color.to_string_css constants.extreme_primary_border)
+          ~fg_text:(Css_gen.Color.to_string_css constants.extreme.foreground)
+          ()
+      ; Vdom.Attr.many extra_title_attrs
+      ]
     in
     let%sub title =
       let%arr is_open = is_open
@@ -65,14 +64,14 @@ let component
     | false ->
       let%arr theme = theme
       and title = title
-      and title_attr = title_attr
-      and extra_content_attr = extra_content_attr
-      and extra_container_attr = extra_container_attr in
+      and title_attrs = title_attrs
+      and extra_content_attrs = extra_content_attrs
+      and extra_container_attrs = extra_container_attrs in
       View.card'
         theme
-        ~content_attr:(Vdom.Attr.many [ Style.no_padding; extra_content_attr ])
-        ~container_attr:extra_container_attr
-        ~title_attr
+        ~content_attrs:[ Style.no_padding; Vdom.Attr.many extra_content_attrs ]
+        ~container_attrs:extra_container_attrs
+        ~title_attrs
         ~title
         [ Vdom.Node.none ]
     | true ->
@@ -80,14 +79,14 @@ let component
       let%arr theme = theme
       and content = content
       and title = title
-      and title_attr = title_attr
-      and extra_container_attr = extra_container_attr
-      and extra_content_attr = extra_content_attr in
+      and title_attrs = title_attrs
+      and extra_container_attrs = extra_container_attrs
+      and extra_content_attrs = extra_content_attrs in
       View.card'
         theme
-        ~container_attr:extra_container_attr
-        ~content_attr:extra_content_attr
-        ~title_attr
+        ~container_attrs:extra_container_attrs
+        ~content_attrs:extra_content_attrs
+        ~title_attrs
         ~title
         [ content ]
   in

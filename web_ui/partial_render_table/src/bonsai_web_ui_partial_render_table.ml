@@ -69,7 +69,10 @@ module Expert = struct
     let%sub path = Bonsai.path_id in
     let%sub leaves = Bonsai.pure Header_tree.leaves headers in
     let%sub header_client_rect, set_header_client_rect =
-      Bonsai.state_opt (module Bbox.Int)
+      Bonsai.state_opt
+        ()
+        ~sexp_of_model:[%sexp_of: Bbox.Int.t]
+        ~equal:[%equal: Bbox.Int.t]
     in
     let%sub header_client_rect =
       return (Value.cutoff ~equal:[%equal: Bbox.Int.t option] header_client_rect)
@@ -79,13 +82,19 @@ module Expert = struct
       fun b -> set_header_client_rect (Some b)
     in
     let%sub table_body_visible_rect, set_table_body_visible_rect =
-      Bonsai.state_opt (module Bbox.Int)
+      Bonsai.state_opt
+        ()
+        ~sexp_of_model:[%sexp_of: Bbox.Int.t]
+        ~equal:[%equal: Bbox.Int.t]
     in
     let%sub table_body_visible_rect =
       return (Value.cutoff ~equal:[%equal: Bbox.Int.t option] table_body_visible_rect)
     in
     let%sub table_body_client_rect, set_table_body_client_rect =
-      Bonsai.state_opt (module Bbox.Int)
+      Bonsai.state_opt
+        ()
+        ~sexp_of_model:[%sexp_of: Bbox.Int.t]
+        ~equal:[%equal: Bbox.Int.t]
     in
     let%sub table_body_client_rect =
       return (Value.cutoff ~equal:[%equal: Bbox.Int.t option] table_body_client_rect)
@@ -96,10 +105,10 @@ module Expert = struct
     in
     let%sub column_widths, set_column_width =
       Bonsai.state_machine0
-        (module Column_widths_model)
-        (module struct
-          type t = int * [ `Px_float of float ] [@@deriving sexp, equal]
-        end)
+        ()
+        ~sexp_of_model:[%sexp_of: Column_widths_model.t]
+        ~equal:[%equal: Column_widths_model.t]
+        ~sexp_of_action:[%sexp_of: int * [ `Px_float of float ]]
         ~default_model:Int.Map.empty
         ~apply_action:(fun ~inject:_ ~schedule_event:_ model (idx, `Px_float width) ->
           (* While checking for float equality is usually not a good idea,
@@ -283,11 +292,18 @@ module Expert = struct
             keep_top_row_in_position prev_row_height new_row_height
           | None -> Effect.Ignore
       in
-      Bonsai.Edge.on_change' (module Row_height_model) row_height ~callback
+      Bonsai.Edge.on_change'
+        ~sexp_of_model:[%sexp_of: Row_height_model.t]
+        ~equal:[%equal: Row_height_model.t]
+        row_height
+        ~callback
     in
     let%sub range_without_preload =
       let%sub prev_row_height =
-        Bonsai.previous_value (module Row_height_model) row_height
+        Bonsai.previous_value
+          ~sexp_of_model:[%sexp_of: Row_height_model.t]
+          ~equal:[%equal: Row_height_model.t]
+          row_height
       in
       let%arr prev_row_height = prev_row_height
       and row_height = row_height
@@ -435,7 +451,8 @@ module Expert = struct
         ~filter_to_predicate
         ~order_to_compare
         data
-        collate)
+        collate
+      |> Incr_map_collate.collated)
   ;;
 end
 
@@ -456,6 +473,7 @@ module Basic = struct
       ; for_testing : For_testing.t Lazy.t
       ; focus : 'focus
       ; num_filtered_rows : int
+      ; sortable_header : int Sortable_header.t
       }
     [@@deriving fields]
   end
@@ -471,10 +489,13 @@ module Basic = struct
     type t = int Collate.Which_range.t [@@deriving sexp, equal]
   end
 
+  type 'a compare = 'a -> 'a -> int
+
   let component
     : type key presence focus data cmp.
       ?filter:(key:key -> data:data -> bool) Value.t
-      -> ?default_sort:(key * data -> key * data -> int) Value.t
+      -> ?override_sort:((key * data) compare -> (key * data) compare) Value.t
+      -> ?default_sort:(key * data) compare Value.t
       -> ?preload_rows:int
       -> (key, cmp) Bonsai.comparator
       -> focus:(focus, presence, key) Focus.t
@@ -484,6 +505,7 @@ module Basic = struct
       -> focus Result.t Computation.t
     =
     fun ?filter
+      ?override_sort
       ?default_sort
       ?(preload_rows = default_preload)
       comparator
@@ -508,7 +530,10 @@ module Basic = struct
         Option.value_map filter ~default:(Value.return None) ~f:(Value.map ~f:Option.some)
       in
       let%sub rank_range, set_rank_range =
-        Bonsai.state (module Rank_range) ~default_model:(Collate.Which_range.To 0)
+        Bonsai.state
+          (Collate.Which_range.To 0)
+          ~sexp_of_model:[%sexp_of: Rank_range.t]
+          ~equal:[%equal: Rank_range.t]
       in
       let%sub sortable_header = Sortable_header.component (module Int) in
       let (Y { value; vtable }) = columns in
@@ -521,11 +546,21 @@ module Basic = struct
       in
       let%sub sorters, headers = Column.headers_and_sorters value sortable_header in
       let%sub collate =
+        let%sub override_sort =
+          match override_sort with
+          | None -> Bonsai.const None
+          | Some override -> return (override >>| Option.some)
+        in
         let%sub order =
           let%arr sorters = sorters
           and default_sort = default_sort
-          and sortable_header = sortable_header in
-          Order.to_compare (Sortable_header.order sortable_header) ~sorters ~default_sort
+          and sortable_header = sortable_header
+          and override_sort = override_sort in
+          Order.to_compare
+            (Sortable_header.order sortable_header)
+            ?override_sort
+            ~sorters
+            ~default_sort
         in
         let%arr filter = filter
         and order = order
@@ -558,16 +593,16 @@ module Basic = struct
       in
       let%sub () =
         Bonsai.Edge.on_change
-          (module struct
-            type t = int * int [@@deriving sexp, equal]
-          end)
+          ~sexp_of_model:[%sexp_of: int * int]
+          ~equal:[%equal: int * int]
           viewed_range
           ~callback:
             (let%map set_rank_range = set_rank_range in
              fun (low, high) -> set_rank_range (Collate.Which_range.Between (low, high)))
       in
       let%arr { view; for_testing; range = _; focus } = result
-      and num_filtered_rows = num_filtered_rows in
-      { Result.view; for_testing; focus; num_filtered_rows }
+      and num_filtered_rows = num_filtered_rows
+      and sortable_header = sortable_header in
+      { Result.view; for_testing; focus; num_filtered_rows; sortable_header }
   ;;
 end

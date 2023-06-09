@@ -364,8 +364,9 @@ let%expect_test "nested cutoffs get merged" =
 let%expect_test "state_machine1 with constant input is converted to state_machine0" =
   let c =
     Bonsai.state_machine1
-      (module Int)
-      (module Int)
+      ~sexp_of_model:[%sexp_of: Int.t]
+      ~equal:[%equal: Int.t]
+      ~sexp_of_action:[%sexp_of: Int.t]
       ~default_model:0
       ~apply_action:(fun ~inject:_ ~schedule_event:_ _model action _input -> action)
       (Value.return 5)

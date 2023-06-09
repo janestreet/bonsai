@@ -7,15 +7,17 @@ module Table = Bonsai_web_ui_partial_render_table.Basic
 module Column = Table.Columns.Dynamic_cells
 module Form = Bonsai_web_ui_form
 
+let header text = Column.Header_helpers.default (Vdom.Node.text text) |> Value.return
+
 let columns =
   [ Column.column
-      ~label:(Value.return (Vdom.Node.text "i"))
+      ~header:(header "i")
       ~cell:(fun ~key ~data:_ ->
         let%arr key = key in
         Vdom.Node.text (Int.to_string key))
       ()
   ; Column.column
-      ~label:(Value.return (Vdom.Node.text "i * 3"))
+      ~header:(header "i * 3")
       ~cell:(fun ~key ~data:_ ->
         let%arr key = key in
         Vdom.Node.text (Int.to_string (key * 3)))
@@ -50,7 +52,10 @@ let component =
     Bonsai.const (Int.Map.of_alist_exn (List.init 100 ~f:(fun i -> i, ())))
   in
   let%sub focused_table, set_focused_table =
-    Bonsai.state (module Table_id) ~default_model:First_table
+    Bonsai.state
+      First_table
+      ~sexp_of_model:[%sexp_of: Table_id.t]
+      ~equal:[%equal: Table_id.t]
   in
   let on_change which =
     let%map set_focused_table = set_focused_table in
@@ -76,7 +81,8 @@ let component =
   in
   let%sub () =
     Bonsai.Edge.on_change
-      (module Table_id)
+      ~sexp_of_model:[%sexp_of: Table_id.t]
+      ~equal:[%equal: Table_id.t]
       focused_table
       ~callback:
         (let%map focus1 = focus1

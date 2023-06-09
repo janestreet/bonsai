@@ -5,8 +5,10 @@ open Bonsai.Let_syntax
 let with_inject_fixed_point f =
   let%sub r, _ =
     Bonsai.wrap
-      (module Unit)
+      ()
+      ~sexp_of_model:[%sexp_of: Unit.t]
       ~default_model:()
+      ~equal:[%equal: Unit.t]
       ~apply_action:(fun ~inject:_ ~schedule_event (_result, inject) () action ->
         (* speedy thing go in, speedy thing come out *)
         schedule_event (inject action))
@@ -17,14 +19,16 @@ let with_inject_fixed_point f =
 
 let with_self_effect
       (type a)
-      (module M : Bonsai.Model with type t = a)
+      ?sexp_of_model
+      ?equal
       ~(f : a Bonsai.Computation_status.t Effect.t Value.t -> a Computation.t)
+      ()
   : a Computation.t
   =
   Bonsai.wrap
-    (module struct
-      type t = M.t option [@@deriving sexp, equal]
-    end)
+    ()
+    ?sexp_of_model:(Option.map ~f:Option.sexp_of_t sexp_of_model)
+    ?equal:(Option.map ~f:Option.equal equal)
     ~default_model:None
     ~apply_action:(fun ~inject:_ ~schedule_event:_ result _model () -> Some result)
     ~f:(fun model inject ->
@@ -45,9 +49,10 @@ let with_self_effect
 ;;
 
 let state_machine1_dynamic_model
-      (type m a)
-      (module M : Bonsai.Model with type t = m)
+      (type a)
       (module A : Bonsai.Action with type t = a)
+      ?sexp_of_model
+      ?equal
       ~model
       ~apply_action
       input
@@ -59,10 +64,6 @@ let state_machine1_dynamic_model
         | None -> m
         | Some a -> a)
     | `Computed f -> f
-  in
-  let module M_actual = struct
-    type t = M.t option [@@deriving sexp, equal]
-  end
   in
   let apply_action ~inject ~schedule_event input model action =
     match input with
@@ -81,8 +82,9 @@ let state_machine1_dynamic_model
   in
   let%sub model_and_inject =
     Bonsai.state_machine1
-      (module M_actual)
-      (module A)
+      ?sexp_of_model:(Option.map ~f:Option.sexp_of_t sexp_of_model)
+      ~sexp_of_action:[%sexp_of: A.t]
+      ?equal:(Option.map ~f:Option.equal equal)
       ~default_model:None
       ~apply_action
       (Value.both input model_creator)
@@ -92,20 +94,34 @@ let state_machine1_dynamic_model
   model_creator model, inject
 ;;
 
-let state_machine0_dynamic_model model_mod action_mod ~model ~apply_action =
+let state_machine0_dynamic_model ?sexp_of_model ?equal action_mod ~model ~apply_action =
   let apply_action ~inject ~schedule_event () model action =
     apply_action ~inject ~schedule_event model action
   in
-  state_machine1_dynamic_model model_mod action_mod ~model ~apply_action (Value.return ())
+  state_machine1_dynamic_model
+    action_mod
+    ?sexp_of_model
+    ?equal
+    ~model
+    ~apply_action
+    (Value.return ())
 ;;
 
-let state_dynamic_model (type m) (module M : Bonsai.Model with type t = m) ~model =
+let state_dynamic_model (type m) ?sexp_of_model ?equal ~model () =
+  let module M = struct
+    type t = m
+
+    let sexp_of_t = Option.value ~default:sexp_of_opaque sexp_of_model
+  end
+  in
   let apply_action ~inject:_ ~schedule_event:_ _old_model new_model = new_model in
-  state_machine0_dynamic_model (module M) (module M) ~model ~apply_action
+  state_machine0_dynamic_model (module M) ?sexp_of_model ?equal ~model ~apply_action
 ;;
 
 let exactly_once effect =
-  let%sub has_run, set_has_run = Bonsai.state (module Bool) ~default_model:false in
+  let%sub has_run, set_has_run =
+    Bonsai.state ~equal:[%equal: Bool.t] false ~sexp_of_model:[%sexp_of: Bool.t]
+  in
   if%sub has_run
   then Bonsai.const ()
   else
@@ -117,8 +133,8 @@ let exactly_once effect =
       ()
 ;;
 
-let exactly_once_with_value modul effect =
-  let%sub value, set_value = Bonsai.state_opt modul in
+let exactly_once_with_value ?sexp_of_model ?equal effect =
+  let%sub value, set_value = Bonsai.state_opt ?sexp_of_model ?equal () in
   let%sub () =
     match%sub value with
     | None ->
@@ -134,8 +150,8 @@ let exactly_once_with_value modul effect =
   return value
 ;;
 
-let value_with_override (type m) (module M : Bonsai.Model with type t = m) value =
-  let%sub state, set_state = Bonsai.state_opt (module M) in
+let value_with_override ?sexp_of_model ?equal value =
+  let%sub state, set_state = Bonsai.state_opt () ?sexp_of_model ?equal in
   let%sub value =
     match%sub state with
     | Some override -> return override
@@ -158,11 +174,6 @@ let pipe (type a) (module A : Bonsai.Model with type t = a) =
     let equal = phys_equal
     let default = { queued_actions = Fdeque.empty; queued_receivers = Fdeque.empty }
     let sexp_of_t { queued_actions; _ } = [%sexp_of: A.t Fdeque.t] queued_actions
-
-    let t_of_sexp sexp =
-      let queued_actions = [%of_sexp: A.t Fdeque.t] sexp in
-      { default with queued_actions }
-    ;;
   end
   in
   let module Action = struct
@@ -178,8 +189,10 @@ let pipe (type a) (module A : Bonsai.Model with type t = a) =
   in
   let%sub _, inject =
     Bonsai.state_machine0
-      (module Model)
-      (module Action)
+      ()
+      ~sexp_of_model:[%sexp_of: Model.t]
+      ~equal:[%equal: Model.t]
+      ~sexp_of_action:[%sexp_of: Action.t]
       ~default_model:Model.default
       ~apply_action:(fun ~inject:_ ~schedule_event model -> function
         | Add_action a ->
@@ -212,10 +225,12 @@ module Id_gen (T : Int_intf.S) () = struct
   let component =
     let%map.Computation _, fetch =
       Bonsai.actor0
-        (module T)
-        (module Unit)
+        ~sexp_of_model:[%sexp_of: T.t]
+        ~equal:[%equal: T.t]
+        ~sexp_of_action:[%sexp_of: Unit.t]
         ~default_model:T.zero
         ~recv:(fun ~schedule_event:_ i () -> T.( + ) i T.one, i)
+        ()
     in
     fetch ()
   ;;
@@ -223,18 +238,31 @@ end
 
 let mirror'
       (type m)
-      (module M : Bonsai.Model with type t = m)
+      ?sexp_of_model
+      ~equal
       ~(store_set : (m -> unit Effect.t) Value.t)
       ~(store_value : m option Value.t)
       ~(interactive_set : (m -> unit Effect.t) Value.t)
       ~(interactive_value : m option Value.t)
+      ()
   =
+  let module M = struct
+    type t = m
+
+    let sexp_of_t = Option.value ~default:sexp_of_opaque sexp_of_model
+  end
+  in
   let module M2 = struct
+    type model = M.t
+
+    let equal_model = equal
+    let sexp_of_model = M.sexp_of_t
+
     type t =
-      { store : M.t option
-      ; interactive : M.t option
+      { store : model option
+      ; interactive : model option
       }
-    [@@deriving sexp, equal]
+    [@@deriving sexp_of, equal]
   end
   in
   let callback =
@@ -242,7 +270,7 @@ let mirror'
     and interactive_set = interactive_set in
     fun old_pair { M2.store = store_value; interactive = interactive_value } ->
       let stability =
-        if [%equal: M.t option] store_value interactive_value then `Stable else `Unstable
+        if Option.equal equal store_value interactive_value then `Stable else `Unstable
       in
       match stability with
       | `Stable ->
@@ -264,9 +292,9 @@ let mirror'
                   "BUG" [%here] {|if both are None, then we shouldn't be `Unstable |}];
               Effect.Ignore)
          | Some { M2.store = old_store_value; interactive = old_interactive_value } ->
-           let store_changed = not ([%equal: M.t option] old_store_value store_value) in
+           let store_changed = not (Option.equal equal old_store_value store_value) in
            let interactive_changed =
-             not ([%equal: M.t option] old_interactive_value interactive_value)
+             not (Option.equal equal old_interactive_value interactive_value)
            in
            (match interactive_changed, store_changed with
             (* if both the interactive-value and store values have changed,
@@ -298,7 +326,8 @@ let mirror'
               Effect.Ignore))
   in
   Bonsai.Edge.on_change'
-    (module M2)
+    ~sexp_of_model:[%sexp_of: M2.t]
+    ~equal:[%equal: M2.t]
     (let%map store = store_value
      and interactive = interactive_value in
      { M2.store; interactive })
@@ -306,16 +335,24 @@ let mirror'
 ;;
 
 let mirror
-      (type m)
-      (module M : Bonsai.Model with type t = m)
+      ?sexp_of_model
+      ~equal
       ~store_set
       ~store_value
       ~interactive_set
       ~interactive_value
+      ()
   =
   let store_value = store_value >>| Option.some in
   let interactive_value = interactive_value >>| Option.some in
-  mirror' (module M) ~store_set ~store_value ~interactive_set ~interactive_value
+  mirror'
+    ()
+    ?sexp_of_model
+    ~equal
+    ~store_set
+    ~store_value
+    ~interactive_set
+    ~interactive_value
 ;;
 
 let with_last_modified_time ~equal input =
@@ -344,8 +381,9 @@ let is_stable ~equal input ~time_to_stable =
      | After -> true)
 ;;
 
-let most_recent_value_satisfying m input ~condition =
-  Bonsai.most_recent_some m input ~f:(fun a -> if condition a then Some a else None)
+let most_recent_value_satisfying ?sexp_of_model ~equal input ~condition =
+  Bonsai.most_recent_some ?sexp_of_model ~equal input ~f:(fun a ->
+    if condition a then Some a else None)
 ;;
 
 module Stability = struct
@@ -363,19 +401,25 @@ module Stability = struct
   ;;
 end
 
-let value_stability
-      (type a)
-      (module M : Bonsai.Model with type t = a)
-      input
-      ~time_to_stable
-  =
-  let%sub is_stable = is_stable ~equal:M.equal input ~time_to_stable in
+let value_stability (type a) ?sexp_of_model ~equal:input_equal input ~time_to_stable =
+  let module M = struct
+    type t = a
+
+    let sexp_of_t = Option.value ~default:sexp_of_opaque sexp_of_model
+  end
+  in
+  let%sub is_stable = is_stable ~equal:input_equal input ~time_to_stable in
   let%sub most_recent_stable_and_true =
     let%sub input_and_stability = return (Value.both input is_stable) in
+    let module M = struct
+      include M
+
+      let equal = input_equal
+    end
+    in
     most_recent_value_satisfying
-      (module struct
-        type t = M.t * bool [@@deriving sexp, equal]
-      end)
+      ~sexp_of_model:[%sexp_of: M.t * bool]
+      ~equal:[%equal: M.t * bool]
       input_and_stability
       ~condition:(fun (_input, is_stable) -> is_stable)
   in
@@ -388,7 +432,7 @@ let value_stability
      | true -> ()
      | false ->
        eprint_s [%message "BUG:" [%here] "value which passed through filter must be true"]);
-    if M.equal input most_recent_stable && is_stable
+    if input_equal input most_recent_stable && is_stable
     then Stability.Stable input
     else Unstable { previously_stable = Some most_recent_stable; unstable_value = input }
   | None ->
@@ -421,8 +465,10 @@ module One_at_a_time = struct
   let effect f =
     let%sub status, inject_status =
       Bonsai.actor0
-        (module Status)
-        (module Lock_action)
+        ()
+        ~sexp_of_model:[%sexp_of: Status.t]
+        ~equal:[%equal: Status.t]
+        ~sexp_of_action:[%sexp_of: Lock_action.t]
         ~default_model:Idle
         ~recv:(fun ~schedule_event:_ model action ->
           match action with

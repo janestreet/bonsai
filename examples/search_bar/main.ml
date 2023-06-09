@@ -68,7 +68,7 @@ let set_model_component =
     type t = User_info.t option [@@deriving equal, sexp]
   end
   in
-  Bonsai.state (module User_opt) ~default_model:None
+  Bonsai.state None ~sexp_of_model:[%sexp_of: User_opt.t] ~equal:[%equal: User_opt.t]
 ;;
 
 let to_server_input input =

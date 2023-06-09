@@ -161,6 +161,7 @@ let%expect_test "keybindings and filtering behavior" =
     </div> |}];
   (* Closing and reopening the suggestion list resets what item is selected. *)
   keydown handle Escape;
+  Handle.recompute_view handle;
   keydown handle Enter;
   Handle.show handle;
   [%expect
@@ -261,7 +262,9 @@ let%expect_test "inputting text twice in the same frame shouldn't be a problem" 
       </div>
     </div> |}];
   focus handle;
+  Handle.recompute_view handle;
   keydown handle Tab;
+  Handle.recompute_view handle;
   keydown handle Tab;
   Handle.show handle;
   [%expect

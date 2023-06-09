@@ -2,7 +2,7 @@ open! Core
 open! Bonsai
 
 type ('a, 'r) unpacked =
-  { clock : Ui_incr.Clock.t
+  { clock : Bonsai.Time_source.t
   ; name : string
   ; component : 'r Computation.t
   ; get_inject : 'r -> 'a -> unit Effect.t
@@ -12,7 +12,7 @@ type ('a, 'r) unpacked =
 type t = T : (_, _) unpacked -> t
 
 val create
-  :  ?clock:Ui_incr.Clock.t
+  :  ?clock:Bonsai.Time_source.t
   -> name:string
   -> component:'r Computation.t
   -> get_inject:('r -> 'a -> unit Effect.t)
@@ -20,7 +20,7 @@ val create
   -> t
 
 val create_with_resetter
-  :  ?clock:Ui_incr.Clock.t
+  :  ?clock:Bonsai.Time_source.t
   -> name:string
   -> component:'r Computation.t
   -> get_inject:('r -> 'a -> unit Effect.t)

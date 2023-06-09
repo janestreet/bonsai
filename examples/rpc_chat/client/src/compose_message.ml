@@ -22,7 +22,9 @@ module Style =
 |}]
 
 let component ~send_message =
-  let%sub textbox_state = Bonsai.state (module String) ~default_model:"" in
+  let%sub textbox_state =
+    Bonsai.state "" ~sexp_of_model:[%sexp_of: String.t] ~equal:[%equal: String.t]
+  in
   let%arr textbox_content, set_textbox_content = textbox_state
   and send_message = send_message in
   let submit_and_then_clear () =

@@ -5,8 +5,10 @@ open Bonsai.Let_syntax
 let component =
   let%sub height, increase_height =
     Bonsai.state_machine0
-      (module Int)
-      (module Unit)
+      ()
+      ~sexp_of_model:[%sexp_of: Int.t]
+      ~equal:[%equal: Int.t]
+      ~sexp_of_action:[%sexp_of: Unit.t]
       ~default_model:0
       ~apply_action:(fun ~inject:_ ~schedule_event:_ old_model () -> old_model + 10)
   in

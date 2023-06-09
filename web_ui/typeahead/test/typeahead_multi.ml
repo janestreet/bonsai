@@ -134,6 +134,7 @@ let%expect_test "Select two elements" =
   let handle = Handle.create (Result_spec.vdom Fn.id) view_computation in
   Handle.store_view handle;
   input_value handle Data.Option_B;
+  Handle.recompute_view handle;
   input_value handle Data.Option_C;
   Handle.show_diff handle;
   (* Expected change: Selected options should disappear from <datalist> and appear as pills
@@ -166,6 +167,7 @@ let%expect_test "Select two elements" =
 let%expect_test "Deselect an element" =
   let handle = Handle.create (Result_spec.vdom Fn.id) view_computation in
   input_value handle Data.Option_B;
+  Handle.recompute_view handle;
   input_value handle Data.Option_C;
   Handle.store_view handle;
   Handle.click_on   handle ~get_vdom:Fn.id ~selector:"[data-value=Option B]";

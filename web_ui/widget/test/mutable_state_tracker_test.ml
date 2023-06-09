@@ -16,12 +16,12 @@ let%expect_test _ =
       end)
       computation
   in
-  let { Mst.unsafe_init; unsafe_destroy; modify; read } = Handle.result handle in
+  let { Mst.unsafe_init; unsafe_destroy; modify; read } = Handle.last_result handle in
   let print () =
     Ui_effect.Expert.handle
       (let%map.Ui_effect strings = read Ref.( ! ) in
        print_s [%sexp (strings : string list)]);
-    Handle.flush handle
+    Handle.recompute_view handle
   in
   let ref_a = ref "hello" in
   let id_a = unsafe_init ref_a in

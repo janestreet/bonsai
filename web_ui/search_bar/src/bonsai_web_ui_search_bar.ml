@@ -156,13 +156,16 @@ let create
       input
   =
   let%sub model, inject =
-    Bonsai.state_machine1
-      (module struct
-        include Model
+    let module M = struct
+      include Model
 
-        type nonrec t = Item.t t [@@deriving sexp, equal]
-      end)
-      (module Action)
+      type nonrec t = Item.t t [@@deriving sexp, equal]
+    end
+    in
+    Bonsai.state_machine1
+      ~sexp_of_model:[%sexp_of: M.t]
+      ~equal:[%equal: M.t]
+      ~sexp_of_action:[%sexp_of: Action.t]
       input
       ~default_model:(Model.init ~query:initial_query ~max_query_results)
       ~apply_action:
@@ -185,10 +188,8 @@ let create
                    ~filter_choice
                | Bump_focused_autocomplete_result direction ->
                  Model.bump_focused_autocomplete_result t direction
-               | Clear_focused_autocomplete_result ->
-                 Model.clear_focused_autocomplete_result t
-               | Set_focused_autocomplete_result i ->
-                 Model.set_focused_autocomplete_result t i
+               | Clear_focused_autocomplete_result -> Model.clear_focused_autocomplete_result t
+               | Set_focused_autocomplete_result i -> Model.set_focused_autocomplete_result t i
                | Close_autocomplete_box -> Model.close_autocomplete_box t
                | Clear_input -> Model.clear_input t ~max_query_results
                | Set_num_query_results_to_show i -> Model.set_num_query_results_to_show t i
@@ -205,8 +206,8 @@ let create
                 [%message
                   [%here]
                     "An action sent to a [state_machine1] has been dropped because its input \
-                     was not present. This happens when the [state_machine1] is inactive \
-                     when it receives a message."
+                     was not present. This happens when the [state_machine1] is inactive when \
+                     it receives a message."
                     (action : Action.t)];
               t)
   in

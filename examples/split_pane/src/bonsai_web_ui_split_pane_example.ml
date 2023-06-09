@@ -86,7 +86,8 @@ let create_parameters_form =
   in
   let%sub last_ok =
     Bonsai.most_recent_value_satisfying
-      (module Parameters_or_error)
+      ~sexp_of_model:[%sexp_of: Parameters_or_error.t]
+      ~equal:[%equal: Parameters_or_error.t]
       (form >>| Form.value)
       ~condition:(function
         | Ok _ -> true

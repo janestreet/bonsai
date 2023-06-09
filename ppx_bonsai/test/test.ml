@@ -105,16 +105,16 @@ module Arrow_example = struct
 
   let _arrow_example_8 : default:'a -> 'a option X.v -> 'a X.c =
     fun ~default ->
-      function%arr
-      | Some a -> a
-      | None -> default
+    function%arr
+    | Some a -> a
+    | None -> default
   ;;
 
   let _arrow_example_9 : default:'a X.v -> 'a option X.v -> 'a X.c =
     fun ~default ->
-      function%sub
-      | Some a -> return a
-      | None -> return default
+    function%sub
+    | Some a -> return a
+    | None -> return default
   ;;
 
   let (_ : _) =

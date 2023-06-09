@@ -4,7 +4,7 @@ open Bonsai
 type t =
   | T :
       { driver : 'r Bonsai_driver.t
-      ; clock : Ui_incr.Clock.t
+      ; clock : Bonsai.Time_source.t
       ; inject_action : 'a -> unit Effect.t
       ; interactions : 'a Interaction.t array
       }
@@ -19,7 +19,7 @@ let handle_interaction ~driver ~clock ~inject_action ~handle_profile interaction
   | Reset_model -> Bonsai_driver.Expert.reset_model_to_default driver
   | Change_input (var, value) -> Var.set var value
   | Inject action -> Bonsai_driver.schedule_event driver (inject_action action)
-  | Advance_clock_by span -> Ui_incr.Clock.advance_clock_by clock span
+  | Advance_clock_by span -> Bonsai.Time_source.advance_clock_by clock span
   | Many _ ->
     (* We flatten the interaction structure prior to running the benchmark. *)
     assert false

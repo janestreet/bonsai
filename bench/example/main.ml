@@ -14,7 +14,7 @@ let const =
 let state =
   Bonsai_bench.create
     ~name:"Bonsai.state"
-    ~component:(Bonsai.state (module Int) ~default_model:0)
+    ~component:(Bonsai.state 0 ~sexp_of_model:[%sexp_of: Int.t] ~equal:[%equal: Int.t])
     ~get_inject:(fun (_, inject) -> inject)
     Interaction.(many_with_stabilizations [ inject 1; reset_model ])
 ;;
@@ -29,8 +29,10 @@ module State_machine = struct
 
   let component =
     Bonsai.state_machine0
-      (module Int)
-      (module Action)
+      ()
+      ~sexp_of_model:[%sexp_of: Int.t]
+      ~equal:[%equal: Int.t]
+      ~sexp_of_action:[%sexp_of: Action.t]
       ~default_model:0
       ~apply_action:(fun ~inject:_ ~schedule_event:_ model action ->
         match action with
@@ -159,7 +161,9 @@ let piecewise_triple_stabilize_after_all =
 module Do_work_every_second = struct
   let component =
     Bonsai.Incr.with_clock (fun clock ->
-      let%map.Ui_incr () = Ui_incr.Clock.at_intervals clock (Time_ns.Span.of_sec 1.0) in
+      let%map.Ui_incr () =
+        Bonsai.Time_source.at_intervals clock (Time_ns.Span.of_sec 1.0)
+      in
       for _ = 1 to 1000 do
         ()
       done)
@@ -187,7 +191,8 @@ let do_work_every_second_advance_by_second =
 
 let two_state_machines_that_alternate =
   let component =
-    let%map.Computation which, set_which = Bonsai.state (module Bool) ~default_model:true
+    let%map.Computation which, set_which =
+      Bonsai.state true ~sexp_of_model:[%sexp_of: Bool.t] ~equal:[%equal: Bool.t]
     and state_1, inject_1 = State_machine.component
     and state_2, inject_2 = State_machine.component in
     let inject action =

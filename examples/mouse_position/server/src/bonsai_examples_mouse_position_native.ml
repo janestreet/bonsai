@@ -71,7 +71,6 @@ let command_for_bonsai_example_server =
          let js_file = [%string "%{tempdir}/mouse_position.js"] in
          match%bind
            Exe_server_client.Exe_client.download_file
-             ~exe_server_mode:`Prod
              ~remote:
                Path.(
                  empty /^ "prod" /^ "bonsai" /^ "examples-server" /^ "mouse_position.js")

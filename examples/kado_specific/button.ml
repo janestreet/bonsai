@@ -85,7 +85,9 @@ let component =
   in
   let%sub () =
     Bonsai_extra.mirror
-      (module Parameters)
+      ()
+      ~sexp_of_model:[%sexp_of: Parameters.t]
+      ~equal:[%equal: Parameters.t]
       ~store_set:(Value.return (Persistent_var.effect form_store))
       ~store_value:(Persistent_var.value form_store)
       ~interactive_value:

@@ -12,7 +12,8 @@ let dummy_source_code_position =
 ;;
 
 let run_test ~(component : _ Bonsai.Arrow_deprecated.t) ~initial_input ~f =
-  let driver component = Driver.create component ~initial_input ~clock:Incr.clock in
+  let clock = Bonsai.Time_source.create ~start:(Time_ns.now ()) in
+  let driver component = Driver.create component ~initial_input ~clock in
   f (driver component)
 ;;
 
@@ -82,7 +83,11 @@ let%expect_test "enum with action handling `Warn" =
   in
   let component =
     let%map.Bonsai.Arrow_deprecated (result, inject_inner), inject_outer =
-      Bonsai.Arrow_deprecated.of_module (module Counter_component) ~default_model:1
+      Bonsai.Arrow_deprecated.of_module
+        (module Counter_component)
+        ~sexp_of_model:[%sexp_of: Counter_component.Model.t]
+        ~equal:[%equal: Int.t]
+        ~default_model:1
       >>> Bonsai.Arrow_deprecated.first
             (Bonsai.Arrow_deprecated.enum
                (module Bool)
@@ -92,6 +97,8 @@ let%expect_test "enum with action handling `Warn" =
                    Fn.ignore
                    @>> Bonsai.Arrow_deprecated.of_module
                          (module Counter_component)
+                         ~sexp_of_model:[%sexp_of: Counter_component.Model.t]
+                         ~equal:[%equal: Counter_component.Model.t]
                          ~default_model:0
                    >>| Tuple2.map_fst ~f:(sprintf "counter %s")
                  | true ->
@@ -124,7 +131,7 @@ let%expect_test "enum with action handling `Warn" =
       ];
     [%expect
       {|
-               (lib/bonsai/src/proc.ml:84:14
+               (lib/bonsai/src/proc.ml:92:14
                 "An action sent to an [of_module1] has been dropped because its input was not present. This happens when the [of_module1] is inactive when it receives a message."
                 (action Increment))
                pure 3|}];
@@ -146,7 +153,11 @@ let%expect_test "constant component" =
 let%expect_test "module component" =
   run_test
     ~component:
-      (Bonsai.Arrow_deprecated.of_module (module Counter_component) ~default_model:0)
+      (Bonsai.Arrow_deprecated.of_module
+         (module Counter_component)
+         ~sexp_of_model:[%sexp_of: Counter_component.Model.t]
+         ~default_model:0
+         ~equal:[%equal: Counter_component.Model.t])
     ~initial_input:()
     ~f:(fun driver ->
       [%expect {| |}];
@@ -166,8 +177,9 @@ let%expect_test "state-machine counter-component" =
   let component =
     let%map.Bonsai.Arrow_deprecated model, inject =
       Bonsai.Arrow_deprecated.state_machine
-        (module Counter_component.Model)
-        (module Counter_component.Action)
+        ~sexp_of_model:[%sexp_of: Counter_component.Model.t]
+        ~sexp_of_action:[%sexp_of: Counter_component.Action.t]
+        ~equal:[%equal: Counter_component.Model.t]
         dummy_source_code_position
         ~default_model:0
         ~apply_action:(fun ~inject:_ ~schedule_event:_ () model -> function
@@ -193,7 +205,11 @@ let%expect_test "state-machine counter-component" =
 let%expect_test "basic Same_model let syntax" =
   let open Bonsai.Arrow_deprecated.Let_syntax in
   let counter_component =
-    Bonsai.Arrow_deprecated.of_module (module Counter_component) ~default_model:0
+    Bonsai.Arrow_deprecated.of_module
+      (module Counter_component)
+      ~sexp_of_model:[%sexp_of: Counter_component.Model.t]
+      ~default_model:0
+      ~equal:[%equal: Counter_component.Model.t]
   in
   let component =
     let%map a_side = Bonsai.Arrow_deprecated.const 5
@@ -222,7 +238,11 @@ let%expect_test "module project field" =
   end
   in
   let counter_component =
-    Bonsai.Arrow_deprecated.of_module (module Counter_component) ~default_model:0
+    Bonsai.Arrow_deprecated.of_module
+      (module Counter_component)
+      ~sexp_of_model:[%sexp_of: Counter_component.Model.t]
+      ~default_model:0
+      ~equal:[%equal: Counter_component.Model.t]
   in
   let component =
     let%map a_side, inject_a = counter_component
@@ -296,6 +316,8 @@ let%expect_test "schedule event from outside of the component" =
   let component =
     Bonsai.Arrow_deprecated.of_module
       (module Raises_something_from_without)
+      ~sexp_of_model:[%sexp_of: Raises_something_from_without.Model.t]
+      ~equal:[%equal: Raises_something_from_without.Model.t]
       ~default_model:()
   in
   run_test ~component ~initial_input:() ~f:(fun driver ->
@@ -338,6 +360,8 @@ let%expect_test "schedule many events from outside of the component" =
   let component =
     Bonsai.Arrow_deprecated.of_module
       (module Raises_something_from_without)
+      ~sexp_of_model:[%sexp_of: Raises_something_from_without.Model.t]
+      ~equal:[%equal: Raises_something_from_without.Model.t]
       ~default_model:()
   in
   run_test ~component ~initial_input:() ~f:(fun driver ->
@@ -403,7 +427,11 @@ let%expect_test "input" =
   end
   in
   let component =
-    Bonsai.Arrow_deprecated.of_module (module Words_counter_component) ~default_model:0
+    Bonsai.Arrow_deprecated.of_module
+      (module Words_counter_component)
+      ~sexp_of_model:[%sexp_of: Words_counter_component.Model.t]
+      ~default_model:0
+      ~equal:[%equal: Words_counter_component.Model.t]
   in
   let initial_input = [] in
   run_test ~component ~initial_input ~f:(fun driver ->
@@ -517,10 +545,16 @@ let%expect_test "Incremental.of_incr" =
 module _ = struct
   open Bonsai.Arrow_deprecated.Let_syntax
 
-  let dummy (type t) (module M : Bonsai.Arrow_deprecated.Model with type t = t) ~default =
+  let dummy
+        (type t)
+        (module M : Bonsai.Arrow_deprecated.Model with type t = t)
+        ~default
+        ~equal
+    =
     Bonsai.Arrow_deprecated.state_machine
-      (module M)
-      (module M)
+      ~sexp_of_model:[%sexp_of: M.t]
+      ~equal
+      ~sexp_of_action:[%sexp_of: M.t]
       [%here]
       ~default_model:default
       ~apply_action:(fun ~inject:_ ~schedule_event:_ () _model -> Fn.id)
@@ -529,94 +563,13 @@ module _ = struct
 
   let%expect_test "normal operation" =
     let driver =
-      Driver.create ~initial_input:() ~clock:Incr.clock (dummy (module Int) ~default:5)
+      Driver.create
+        ~initial_input:()
+        ~clock:(Bonsai.Time_source.create ~start:(Time_ns.now ()))
+        (dummy (module Int) ~equal:[%equal: Int.t] ~default:5)
     in
     let (module H) = Helpers.make_with_inject ~driver ~sexp_of_result:Fn.id in
     H.show ();
     [%expect {| 5 |}]
-  ;;
-
-  let%expect_test "with of_sexp" =
-    let driver =
-      Driver.create
-        ~initial_model_sexp:[%sexp 2]
-        ~initial_input:()
-        ~clock:Incr.clock
-        (dummy (module Int) ~default:5)
-    in
-    let (module H) = Helpers.make_with_inject ~driver ~sexp_of_result:Fn.id in
-    H.show ();
-    [%expect {| 2 |}]
-  ;;
-
-  let%expect_test "multiple components" =
-    let component =
-      let%map (a, _), (b, _) =
-        Bonsai.Arrow_deprecated.both
-          (dummy (module Int) ~default:5)
-          (dummy (module Int) ~default:5)
-      in
-      Sexp.List [ a; b ], Nothing.unreachable_code
-    in
-    let driver =
-      Driver.create
-        ~initial_model_sexp:[%sexp [ "2"; "3" ]]
-        ~initial_input:()
-        ~clock:Incr.clock
-        component
-    in
-    let (module H) = Helpers.make_with_inject ~driver ~sexp_of_result:Fn.id in
-    H.show ();
-    [%expect {| (2 3) |}]
-  ;;
-
-  let%expect_test "enum" =
-    let module Action = struct
-      type t =
-        | Outer of bool
-        | Inner of string
-    end
-    in
-    let component =
-      let%map.Bonsai.Arrow_deprecated (inner, change_inner), change_outer =
-        dummy (module Bool) ~default:true
-        >>> Bonsai.Arrow_deprecated.first
-              (Bonsai.Arrow_deprecated.if_
-                 [%of_sexp: bool]
-                 ~then_:
-                   (Fn.ignore @>> dummy (module Int) ~default:0
-                    >>| Tuple2.map_snd ~f:(fun inject s -> s |> int_of_string |> inject))
-                 ~else_:(Fn.ignore @>> dummy (module String) ~default:"world"))
-      in
-      let inject = function
-        | Action.Outer b -> change_outer b
-        | Inner s -> change_inner s
-      in
-      inner, inject
-    in
-    let driver = Driver.create ~initial_input:() ~clock:Incr.clock component in
-    let (module H) = Helpers.make_with_inject ~driver ~sexp_of_result:Fn.id in
-    H.show ();
-    [%expect {| 0 |}];
-    H.do_actions [ Action.Inner "23" ];
-    [%expect {| 23 |}];
-    H.do_actions [ Action.Outer false ];
-    [%expect {| world |}];
-    H.do_actions [ Action.Inner "bonsai!" ];
-    [%expect {| bonsai! |}];
-    let initial_model_sexp = Driver.sexp_of_model driver in
-    print_s initial_model_sexp;
-    [%expect {|
-      (false (
-        (0 23)
-        (1 bonsai!))) |}];
-    let driver =
-      Driver.create ~initial_model_sexp ~initial_input:() ~clock:Incr.clock component
-    in
-    let (module H) = Helpers.make_with_inject ~driver ~sexp_of_result:Fn.id in
-    H.show ();
-    [%expect {| bonsai! |}];
-    H.do_actions [ Action.Outer true ];
-    [%expect {| 23 |}]
   ;;
 end

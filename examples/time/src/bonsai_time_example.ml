@@ -12,7 +12,7 @@ let _untestable_component =
 
 (* $MDX part-begin=testable-clock-component *)
 let component =
-  let%sub now = Bonsai.Incr.with_clock Incr.Clock.watch_now in
+  let%sub now = Bonsai.Incr.with_clock Bonsai.Time_source.watch_now in
   return (now >>| Time_ns.to_string_utc >>| Vdom.Node.text)
 ;;
 

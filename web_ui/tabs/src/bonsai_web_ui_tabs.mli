@@ -1,6 +1,7 @@
 open! Core
 open! Bonsai_web
 
+
 module State : sig
   type 'a t
 
@@ -38,7 +39,8 @@ end
 (** [tab_state] is used to build a basic state that can be used to store the
     state for a current tab. *)
 val tab_state
-  :  (module Bonsai.Model with type t = 'a)
+  :  ?equal:('a -> 'a -> bool)
+  -> (module Bonsai.Model with type t = 'a)
   -> initial:'a
   -> 'a State.t Computation.t
 
@@ -54,6 +56,7 @@ val tab_ui
   -> ?additional_button_attributes:(is_selected:bool -> 'a -> Vdom.Attr.t) Value.t
   -> (module Bonsai.Model with type t = 'a)
   -> all_tabs:'a list Value.t
+  -> equal:('a -> 'a -> bool)
   -> 'a State.t Value.t
   -> f:
        (change_tab:('a -> unit Vdom.Effect.t) Value.t

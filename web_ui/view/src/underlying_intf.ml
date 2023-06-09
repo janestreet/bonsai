@@ -20,7 +20,7 @@ module C = struct
 
     method tabs :
       attrs:Vdom.Attr.t list
-      -> per_tab_attr:('a -> is_active:bool -> Vdom.Attr.t)
+      -> per_tab_attrs:('a -> is_active:bool -> Vdom.Attr.t list)
       -> on_change:(from:'a -> to_:'a -> unit Effect.t)
       -> equal:('a -> 'a -> bool)
       -> active:'a
@@ -46,8 +46,8 @@ module C = struct
       -> Vdom.Node.t
 
     method tooltip :
-      container_attr:Vdom.Attr.t
-      -> tooltip_attr:Vdom.Attr.t
+      container_attrs:Vdom.Attr.t list
+      -> tooltip_attrs:Vdom.Attr.t list
       -> direction:Tooltip.Direction.t
       -> tipped:Vdom.Node.t
       -> tooltip:Vdom.Node.t
@@ -138,9 +138,9 @@ module C = struct
 
     (* card component *)
     method card :
-      container_attr:Vdom.Attr.t
-      -> title_attr:Vdom.Attr.t
-      -> content_attr:Vdom.Attr.t
+      container_attrs:Vdom.Attr.t list
+      -> title_attrs:Vdom.Attr.t list
+      -> content_attrs:Vdom.Attr.t list
       -> intent:Constants.Intent.t option
       -> on_click:unit Effect.t
       -> title:Vdom.Node.t list

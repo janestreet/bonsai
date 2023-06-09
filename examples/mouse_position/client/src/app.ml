@@ -12,15 +12,18 @@ let colors =
 ;;
 
 let session_to_color session =
-  Attr.style
-    (Css_gen.background_color colors.(Session.to_int_exn session % Array.length colors))
+  [ Attr.style
+      (Css_gen.background_color colors.(Session.to_int_exn session % Array.length colors))
+  ]
 ;;
 
 let app =
   let%sub { last_ok_response; _ } =
     Rpc_effect.Polling_state_rpc.poll
-      (module Unit)
-      (module Active_users)
+      ~sexp_of_query:[%sexp_of: Unit.t]
+      ~sexp_of_response:[%sexp_of: Active_users.t]
+      ~equal_query:[%equal: Unit.t]
+      ~equal_response:[%equal: Active_users.t]
       Protocol.Active_users.rpc
       ~where_to_connect:Self
       ~every:(Time_ns.Span.of_sec 1.0)
@@ -38,10 +41,10 @@ let app =
       ~f:(fun session username ->
         let%sub result =
           Rpc_effect.Rpc.poll
-            (module Session)
-            (module struct
-              type t = Mouse_position.t option [@@deriving equal, sexp]
-            end)
+            ~sexp_of_query:[%sexp_of: Session.t]
+            ~sexp_of_response:[%sexp_of: Mouse_position.t option]
+            ~equal_query:[%equal: Session.t]
+            ~equal_response:[%equal: Mouse_position.t option]
             Protocol.Get_mouse_position.rpc
             ~where_to_connect:Self
             ~every:(Time_ns.Span.of_sec 0.1)
@@ -75,7 +78,7 @@ let app =
                     ~top:(`Px mouse_position.y)
                     ~left:(`Px mouse_position.x)
                     `Absolute)
-            ; session_to_color session
+            ; Vdom.Attr.many (session_to_color session)
             ; Style.item
             ]
           [ Node.text (Username.to_string username) ])
@@ -90,7 +93,7 @@ let app =
           "Session"
           ~get:(fun (session, _) -> session)
           ~render:(fun _ session -> Vdom.Node.text (Session.to_string session))
-          ~cell_attr:session_to_color
+          ~cell_attrs:session_to_color
       ; View.Table.Col.make
           "Username"
           ~get:(fun (_, (_, username)) -> username)

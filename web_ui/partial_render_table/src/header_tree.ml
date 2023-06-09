@@ -8,14 +8,14 @@ type t =
   | Spacer of t
 
 and leaf =
-  { leaf_label : (Vdom.Node.t[@sexp.opaque])
+  { leaf_header : (Vdom.Node.t[@sexp.opaque])
   ; initial_width : Css_gen.Length.t
   ; visible : bool
   }
 
 and group =
   { children : t list
-  ; group_label : (Vdom.Node.t[@sexp.opaque])
+  ; group_header : (Vdom.Node.t[@sexp.opaque])
   }
 [@@deriving sexp]
 
@@ -51,17 +51,18 @@ let column_names t =
   let results = ref [] in
   let rec acc list node =
     match node with
-    | Leaf { leaf_label; _ } -> results := (leaf_label :: list |> List.rev) :: !results
+    | Leaf { leaf_header; _ } -> results := (leaf_header :: list |> List.rev) :: !results
     | Spacer s -> acc list s
     | Organizational_group ts -> List.iter ts ~f:(acc list)
-    | Group { group_label; children } -> List.iter children ~f:(acc (group_label :: list))
+    | Group { group_header; children } ->
+      List.iter children ~f:(acc (group_header :: list))
   in
   acc [] t;
   List.rev !results
 ;;
 
-let leaf ~label:leaf_label ~initial_width ~visible =
-  Leaf { leaf_label; initial_width; visible }
+let leaf ~header:leaf_header ~initial_width ~visible =
+  Leaf { leaf_header; initial_width; visible }
 ;;
 
 let spacer t = Spacer t
@@ -78,7 +79,7 @@ let org_group children =
   Organizational_group balanced
 ;;
 
-let group ~label:group_label children =
+let group ~header:group_header children =
   let children = balance children in
-  Group { children; group_label }
+  Group { children; group_header }
 ;;

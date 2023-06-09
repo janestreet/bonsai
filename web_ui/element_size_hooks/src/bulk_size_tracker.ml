@@ -190,13 +190,6 @@ let component
       | Ignore_stale -> [%sexp_of: Dimensions.t]
     ;;
 
-    let contained_of_sexp : Sexp.t -> contained =
-      match options with
-      | Prune_stale -> [%of_sexp: Dimensions.t]
-      | Keep_stale -> [%of_sexp: Dimensions.t Options.maybe_stale]
-      | Ignore_stale -> [%of_sexp: Dimensions.t]
-    ;;
-
     let equal_contained : contained -> contained -> bool =
       match options with
       | Prune_stale -> [%equal: Dimensions.t]
@@ -204,15 +197,15 @@ let component
       | Ignore_stale -> [%equal: Dimensions.t]
     ;;
 
-    type t = contained Map.M(Key).t [@@deriving sexp, equal]
+    type t = contained Map.M(Key).t [@@deriving sexp_of, equal]
   end
   in
   let%sub sizes, inject =
     Bonsai.state_machine0
-      (module Model)
-      (module struct
-        type t = Key.t Action.t [@@deriving sexp_of]
-      end)
+      ()
+      ~sexp_of_model:[%sexp_of: Model.t]
+      ~equal:[%equal: Model.t]
+      ~sexp_of_action:[%sexp_of: Key.t Action.t]
       ~default_model:(Map.empty (module Key))
       ~apply_action:(fun ~inject:_ ~schedule_event:_ model actions ->
         List.fold actions ~init:model ~f:(fun model action ->

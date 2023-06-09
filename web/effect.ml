@@ -19,6 +19,7 @@ end
 module Deferred_fun = Ui_effect.Define1 (Deferred_fun_arg)
 
 let of_deferred_fun f a = Deferred_fun.inject (T (a, f))
+let of_deferred_thunk f = of_deferred_fun f ()
 
 module Focus = struct
   let on_effect =
@@ -52,3 +53,11 @@ module Focus = struct
     return attr
   ;;
 end
+
+let reload_page =
+  of_thunk (fun () ->
+    match Util.am_running_how with
+    | `Browser -> Dom_html.window##.location##reload
+    | `Node_test | `Node | `Node_benchmark | `Browser_benchmark ->
+      Core.print_s [%message "Reloading page skipped in test"])
+;;

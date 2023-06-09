@@ -46,20 +46,20 @@ include struct
 
   let lazy_contents_if_value_is_constant : type a. a Value.t -> a Lazy.t option =
     fun { value; here = _; id = _ } ->
-      match value with
-      | Incr _
-      | Named _
-      | Both _
-      | Cutoff _
-      | Map _
-      | Map2 _
-      | Map3 _
-      | Map4 _
-      | Map5 _
-      | Map6 _
-      | Map7 _ -> None
-      | Constant x -> Some (lazy x)
-      | Exception ex -> Some (lazy (raise ex))
+    match value with
+    | Incr _
+    | Named _
+    | Both _
+    | Cutoff _
+    | Map _
+    | Map2 _
+    | Map3 _
+    | Map4 _
+    | Map5 _
+    | Map6 _
+    | Map7 _ -> None
+    | Constant x -> Some (lazy x)
+    | Exception ex -> Some (lazy (raise ex))
   ;;
 
   let contents_if_value_is_constant value =

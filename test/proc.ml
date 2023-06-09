@@ -84,7 +84,7 @@ module Handle = struct
         (let%map result = result in
          result, R.view result, R.incoming result)
     in
-    let clock = Incr.Clock.create ~start:start_time () in
+    let clock = Bonsai.Time_source.create ~start:start_time in
     Driver.create ~optimize ~initial_input:() ~clock component
   ;;
 
@@ -92,73 +92,73 @@ module Handle = struct
     : type a. a Bonsai.Private.Computation.t -> Bonsai.Private.Node_path.Set.t
     =
     fun t ->
-      let find_node_paths =
-        object
-          inherit
-            [Bonsai.Private.Node_path.Set.t] Bonsai.Private.Skeleton.Traverse.fold as super
+    let find_node_paths =
+      object
+        inherit
+          [Bonsai.Private.Node_path.Set.t] Bonsai.Private.Skeleton.Traverse.fold as super
 
-          method! value value acc =
-            let acc = Set.add acc (Lazy.force value.node_path) in
-            super#value value acc
+        method! value value acc =
+          let acc = Set.add acc (Lazy.force value.node_path) in
+          super#value value acc
 
-          method! computation computation acc =
-            let acc = Set.add acc (Lazy.force computation.node_path) in
-            super#computation computation acc
-        end
-      in
-      find_node_paths#computation
-        (Bonsai.Private.Skeleton.Computation.of_computation t)
-        Bonsai.Private.Node_path.Set.empty
+        method! computation computation acc =
+          let acc = Set.add acc (Lazy.force computation.node_path) in
+          super#computation computation acc
+      end
+    in
+    find_node_paths#computation
+      (Bonsai.Private.Skeleton.Computation.of_computation t)
+      Bonsai.Private.Node_path.Set.empty
   ;;
 
   let node_paths_from_transform
     : type a. a Bonsai.Private.Computation.t -> Bonsai.Private.Node_path.Set.t
     =
     fun t ->
-      let node_paths = ref Bonsai.Private.Node_path.Set.empty in
-      let computation_map
-            (type result)
-            (context : _ Bonsai.Private.Transform.For_computation.context)
-            state
-            (computation : result Bonsai.Private.Computation.t)
-        =
-        node_paths := Set.add !node_paths (Lazy.force context.current_path);
-        let out = context.recurse state computation in
-        out
-      in
-      let value_map
-            (type a)
-            (context : _ Bonsai.Private.Transform.For_value.context)
-            state
-            (wrapped_value : a Bonsai.Private.Value.t)
-        =
-        node_paths := Set.add !node_paths (Lazy.force context.current_path);
-        context.recurse state wrapped_value
-      in
-      let (_ : _ Bonsai.Private.Computation.t) =
-        Bonsai.Private.Transform.map
-          ~init:()
-          ~computation_mapper:{ f = computation_map }
-          ~value_mapper:{ f = value_map }
-          t
-      in
-      !node_paths
+    let node_paths = ref Bonsai.Private.Node_path.Set.empty in
+    let computation_map
+          (type result)
+          (context : _ Bonsai.Private.Transform.For_computation.context)
+          state
+          (computation : result Bonsai.Private.Computation.t)
+      =
+      node_paths := Set.add !node_paths (Lazy.force context.current_path);
+      let out = context.recurse state computation in
+      out
+    in
+    let value_map
+          (type a)
+          (context : _ Bonsai.Private.Transform.For_value.context)
+          state
+          (wrapped_value : a Bonsai.Private.Value.t)
+      =
+      node_paths := Set.add !node_paths (Lazy.force context.current_path);
+      context.recurse state wrapped_value
+    in
+    let (_ : _ Bonsai.Private.Computation.t) =
+      Bonsai.Private.Transform.map
+        ~init:()
+        ~computation_mapper:{ f = computation_map }
+        ~value_mapper:{ f = value_map }
+        t
+    in
+    !node_paths
   ;;
 
   let assert_node_paths_identical_between_transform_and_skeleton_nodepaths
     : type a. a Bonsai.Private.Computation.t -> unit
     =
     fun computation ->
-      let from_transform = node_paths_from_transform computation in
-      let from_skeleton = node_paths_from_skeleton computation in
-      if not ([%equal: Set.M(Bonsai.Private.Node_path).t] from_transform from_skeleton)
-      then (
-        Expect_test_helpers_core.print_cr
-          [%here]
-          (Sexp.Atom "BUG IN BONSAI! Node Path Mismatch");
-        Expect_test_patdiff.print_patdiff_s
-          ([%sexp_of: Bonsai.Private.Node_path.Set.t] from_transform)
-          ([%sexp_of: Bonsai.Private.Node_path.Set.t] from_skeleton))
+    let from_transform = node_paths_from_transform computation in
+    let from_skeleton = node_paths_from_skeleton computation in
+    if not ([%equal: Set.M(Bonsai.Private.Node_path).t] from_transform from_skeleton)
+    then (
+      Expect_test_helpers_core.print_cr
+        [%here]
+        (Sexp.Atom "BUG IN BONSAI! Node Path Mismatch");
+      Expect_test_patdiff.print_patdiff_s
+        ([%sexp_of: Bonsai.Private.Node_path.Set.t] from_transform)
+        ([%sexp_of: Bonsai.Private.Node_path.Set.t] from_skeleton))
   ;;
 
   let create
@@ -173,15 +173,14 @@ module Handle = struct
     create ?start_time ~optimize result_spec computation
   ;;
 
-  let result handle =
-    Driver.flush handle;
+  let last_result handle =
     let result, _, _ = Driver.result handle in
     result
   ;;
 
   let clock = Driver.clock
-  let advance_clock_by t = Incr.Clock.advance_clock_by (Driver.clock t)
-  let advance_clock ~to_ t = Incr.Clock.advance_clock ~to_ (Driver.clock t)
+  let advance_clock_by t = Bonsai.Time_source.advance_clock_by (Driver.clock t)
+  let advance_clock ~to_ t = Bonsai.Time_source.advance_clock ~to_ (Driver.clock t)
 
   let do_actions handle actions =
     let _, _, inject_action = Driver.result handle in
@@ -235,8 +234,6 @@ module Handle = struct
     Driver.sexp_of_model handle |> print_s
   ;;
 
-  let flush handle = Driver.flush handle
-
   let result_incr handle =
     let%pattern_bind.Incr result, _view, _inject = Driver.result_incr handle in
     result
@@ -244,4 +241,5 @@ module Handle = struct
 
   let action_input_incr = Driver.action_input_incr
   let lifecycle_incr = Driver.lifecycle_incr
+  let has_after_display_events = Driver.has_after_display_events
 end

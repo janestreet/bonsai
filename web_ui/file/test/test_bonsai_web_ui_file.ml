@@ -31,7 +31,10 @@ end
 let set_up_read t =
   let computation =
     let%sub result, set_result =
-      Bonsai.state (module Read_state) ~default_model:Starting
+      Bonsai.state
+        Starting
+        ~sexp_of_model:[%sexp_of: Read_state.t]
+        ~equal:[%equal: Read_state.t]
     in
     let%sub () =
       Bonsai.Edge.lifecycle
@@ -46,7 +49,7 @@ let set_up_read t =
            in
            let%bind () = set_result (Reading file_read) in
            let%bind read_result = File_read.result file_read in
-           set_result (Finished read_result))
+           set_result (Finished (Result.map ~f:Bigstring.to_string read_result)))
         ()
     in
     Bonsai.read result

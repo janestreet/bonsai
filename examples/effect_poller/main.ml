@@ -11,7 +11,9 @@ let fake_slow_capitalize_string_rpc =
 ;;
 
 let textbox =
-  let%sub state = Bonsai.state (module String) ~default_model:"" in
+  let%sub state =
+    Bonsai.state "" ~sexp_of_model:[%sexp_of: String.t] ~equal:[%equal: String.t]
+  in
   let%arr text, set_text = state in
   let view =
     Vdom.Node.input
@@ -26,8 +28,10 @@ let component =
   let%sub capitalized =
     Bonsai.Edge.Poll.(
       effect_on_change
-        (module String)
-        (module String)
+        ~sexp_of_input:[%sexp_of: String.t]
+        ~sexp_of_result:[%sexp_of: String.t]
+        ~equal_input:[%equal: String.t]
+        ~equal_result:[%equal: String.t]
         (Starting.initial "")
         text
         ~effect:(Value.return fake_slow_capitalize_string_rpc))

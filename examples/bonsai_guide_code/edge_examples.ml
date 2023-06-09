@@ -5,7 +5,7 @@ open! Bonsai.Let_syntax
 
 (* $MDX part-begin=after_display *)
 let frame_counter =
-  let%sub frames, set_frames = Bonsai.state (module Int) ~default_model:0 in
+  let%sub frames, set_frames = Bonsai.state 0 in
   let%sub () =
     Bonsai.Edge.lifecycle
       ~after_display:
@@ -24,7 +24,7 @@ let () = Util.run frame_counter ~id:"after-display"
 
 (* $MDX part-begin=only_when_active *)
 let frame_toggler =
-  let%sub showing, set_showing = Bonsai.state (module Bool) ~default_model:false in
+  let%sub showing, set_showing = Bonsai.state false in
   let%sub output =
     match%sub showing with
     | true -> frame_counter
@@ -94,10 +94,8 @@ let () = Util.run many_frame_watches ~id:"extendy-use"
 let logger =
   let%sub logger =
     Bonsai.state_machine0
-      (module struct
-        type t = string list [@@deriving sexp, equal]
-      end)
-      (module String)
+      ()
+      ~sexp_of_action:[%sexp_of: String.t]
       ~apply_action:(fun ~inject:_ ~schedule_event:_ model action -> action :: model)
       ~default_model:[]
   in
@@ -108,7 +106,7 @@ let logger =
 
 (* $MDX part-begin=activations *)
 let frame_counter (log : (string -> unit Ui_effect.t) Value.t) =
-  let%sub frames, set_frames = Bonsai.state (module Int) ~default_model:0 in
+  let%sub frames, set_frames = Bonsai.state 0 in
   let%sub () =
     Bonsai.Edge.lifecycle
       ~on_activate:
@@ -157,7 +155,8 @@ let () = Util.run many_frame_watches ~id:"extendy-use-2"
 
 (* $MDX part-begin=on_change_type *)
 type 'a on_change_function_signature =
-  (module Bonsai.Model with type t = 'a)
+  ?sexp_of_model:('a -> Sexp.t)
+  -> equal:('a -> 'a -> bool)
   -> 'a Value.t
   -> callback:('a option -> 'a -> unit Ui_effect.t) Value.t
   -> unit Computation.t
@@ -170,10 +169,13 @@ let _on_change' : _ on_change_function_signature = Bonsai.Edge.on_change'
 let on_change'
       (type a)
       (module M : Bonsai.Model with type t = a)
+      ~equal
       (current_value : a Value.t)
       ~(callback : (a option -> a -> unit Effect.t) Value.t)
   =
-  let%sub previous_value, set_previous_value = Bonsai.state_opt (module M) in
+  let%sub previous_value, set_previous_value =
+    Bonsai.state_opt () ~sexp_of_model:[%sexp_of: M.t] ~equal
+  in
   let%sub after_display =
     match%sub previous_value with
     | None ->
@@ -187,7 +189,7 @@ let on_change'
       and set_previous_value = set_previous_value
       and current_value = current_value
       and callback = callback in
-      if M.equal previous_value current_value
+      if equal previous_value current_value
       then Ui_effect.Ignore
       else
         Ui_effect.Many
@@ -203,7 +205,7 @@ let on_change'
 let _ = on_change'
 
 let counter =
-  let%sub state, set_state = Bonsai.state (module Int) ~default_model:0 in
+  let%sub state, set_state = Bonsai.state 0 in
   let%arr state = state
   and set_state = set_state in
   let decrement =
@@ -231,7 +233,11 @@ let logging_counter =
         | None -> Ui_effect.Ignore
         | Some prev -> log (if prev < cur then "🚀" else "🔥")
     in
-    Bonsai.Edge.on_change' (module Int) counter ~callback
+    Bonsai.Edge.on_change'
+      ~sexp_of_model:[%sexp_of: Int.t]
+      ~equal:[%equal: Int.t]
+      counter
+      ~callback
   in
   let%arr log_view = log_view
   and counter_view = counter_view in

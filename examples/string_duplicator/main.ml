@@ -5,8 +5,10 @@ open Bonsai.Let_syntax
 let string_duplicator input_string =
   let%sub duplication_count_state =
     Bonsai.state_machine0
-      (module Int)
-      (module Unit)
+      ()
+      ~sexp_of_model:[%sexp_of: Int.t]
+      ~equal:[%equal: Int.t]
+      ~sexp_of_action:[%sexp_of: Unit.t]
       ~default_model:1
       ~apply_action:(fun ~inject:_ ~schedule_event:_ model () -> model + 1)
   in
@@ -23,7 +25,9 @@ let string_duplicator input_string =
 ;;
 
 let string_to_repeat =
-  let%sub state = Bonsai.state (module String) ~default_model:"hello" in
+  let%sub state =
+    Bonsai.state "hello" ~sexp_of_model:[%sexp_of: String.t] ~equal:[%equal: String.t]
+  in
   let%arr state, set_state = state in
   let view =
     Vdom.Node.textarea

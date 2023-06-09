@@ -10,9 +10,9 @@ type t =
   }
 
 val component
-  :  ?extra_container_attr:Vdom.Attr.t Value.t
-  -> ?extra_title_attr:Vdom.Attr.t Value.t
-  -> ?extra_content_attr:Vdom.Attr.t Value.t
+  :  ?extra_container_attrs:Vdom.Attr.t list Value.t
+  -> ?extra_title_attrs:Vdom.Attr.t list Value.t
+  -> ?extra_content_attrs:Vdom.Attr.t list Value.t
   -> starts_open:bool
   -> title:Vdom.Node.t Value.t
   -> content:Vdom.Node.t Computation.t

@@ -10,7 +10,7 @@ end
 type ('m, 'dynamic_action, 'static_action, 'action_input, 'r) unpacked =
   { model_var : 'm Incr.Var.t
   ; default_model : 'm
-  ; clock : Incr.Clock.t
+  ; clock : Bonsai.Time_source.t
   ; inject : ('dynamic_action, 'static_action) Action.t -> unit Ui_effect.t
   ; sexp_of_model : 'm -> Sexp.t
   ; action_input_incr : 'action_input Incr.t
@@ -49,13 +49,7 @@ let assert_type_equalities
   ()
 ;;
 
-let create
-      (type r)
-      ?initial_model_sexp
-      ?(optimize = true)
-      ~clock
-      (computation : r Bonsai.Computation.t)
-  : r t
+let create (type r) ?(optimize = true) ~clock (computation : r Bonsai.Computation.t) : r t
   =
   let unoptimized_info =
     Bonsai.Private.gather (Bonsai.Private.reveal_computation computation)
@@ -67,12 +61,7 @@ let create
   in
   let (T
          ({ model =
-              { default = default_model
-              ; sexp_of = sexp_of_model
-              ; equal = _
-              ; type_id = _
-              ; of_sexp = model_of_sexp
-              }
+              { default = default_model; sexp_of = sexp_of_model; equal = _; type_id = _ }
           ; input = _
           ; apply_static
           ; apply_dynamic
@@ -87,9 +76,7 @@ let create
   assert_type_equalities unoptimized_info unoptimized_info;
   assert_type_equalities optimized_info optimized_info;
   let environment = Bonsai.Private.Environment.empty in
-  let starting_model =
-    Option.value_map initial_model_sexp ~default:default_model ~f:[%of_sexp: model]
-  in
+  let starting_model = default_model in
   let model_var = Incr.Var.create starting_model in
   (* Sadly the only way to give a name to the existential type that we just introduced
      into the environment is by defining a function like this. See
@@ -157,8 +144,17 @@ let create
 let schedule_event _ = Ui_effect.Expert.handle
 
 let flush
-      (T { model_var; static_apply_action; dynamic_apply_action; action_input; queue; _ })
+      (T
+         { model_var
+         ; static_apply_action
+         ; dynamic_apply_action
+         ; action_input
+         ; queue
+         ; clock
+         ; _
+         })
   =
+  Bonsai.Time_source.Private.flush clock;
   let update_model ~action ~apply_action =
     (* The only difference between [Var.latest_value] and [Var.value] is that
        if [Var.set] is called _while stabilizing_, then calling [Var.value]

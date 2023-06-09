@@ -61,6 +61,8 @@ type 'k t =
   { selected_item : 'k option
   ; view : Vdom.Node.t
   ; query : string
+  ; set_query : string -> unit Effect.t
+  ; focus_input : unit Effect.t
   }
 [@@deriving fields]
 
@@ -80,12 +82,16 @@ let create
       ()
   =
   let%sub { Model.query; suggestion_list_state; offset }, inject, items, _ =
-    Bonsai.wrap
-      (module struct
-        type t = Key.t Model.t [@@deriving sexp]
+    let module M = struct
+      type t = Key.t Model.t [@@deriving sexp_of]
 
-        let equal a b = Model.equal (fun a b -> Key.comparator.compare a b = 0) a b
-      end)
+      let equal a b = Model.equal (fun a b -> Key.comparator.compare a b = 0) a b
+    end
+    in
+    Bonsai.wrap
+      ()
+      ~sexp_of_model:[%sexp_of: M.t]
+      ~equal:[%equal: M.t]
       ~default_model:
         { Model.query = initial_query; suggestion_list_state = Closed; offset = 0 }
       ~apply_action:
@@ -342,6 +348,9 @@ let create
   in
   let%sub suggestion_container_id = Bonsai.path_id in
   let%sub input_id = Bonsai.path_id in
+  let%sub focus_attr, focus_input =
+    Bonsai_web.Effect.Focus.on_effect ~name_for_testing:"query-box" ()
+  in
   let%arr query = query
   and selected_key = selected_key
   and inject = inject
@@ -353,7 +362,9 @@ let create
   and extra_input_attr = extra_input_attr
   and extra_attr = extra_attr
   and suggestion_container_id = suggestion_container_id
-  and input_id = input_id in
+  and input_id = input_id
+  and focus_attr = focus_attr
+  and focus_input = focus_input in
   let container_position, suggestions_position, is_open =
     match suggestion_list_kind with
     | Suggestion_list_kind.Transient_overlay ->
@@ -391,6 +402,7 @@ let create
         ; Attr.on_keydown handle_keydown
         ; Attr.on_input (fun _ query -> inject (Set_query query))
         ; Attr.on_focus (fun _ -> inject Open_suggestions)
+        ; focus_attr
         ; on_blur
         ; extra_input_attr
         ]
@@ -442,7 +454,12 @@ let create
        | Up -> [ suggestions_container; input ]
        | Down -> [ input; suggestions_container ])
   in
-  { selected_item = selected_key; view; query }
+  { selected_item = selected_key
+  ; view
+  ; query
+  ; set_query = (fun query -> inject (Set_query query))
+  ; focus_input
+  }
 ;;
 
 let stringable

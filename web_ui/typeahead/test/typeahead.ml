@@ -7,6 +7,7 @@ module Typeahead = Bonsai_web_ui_typeahead.Typeahead
 let shared_computation ?(to_string = Value.return Data.to_string) () =
   Typeahead.create
     (module Data)
+    ~equal:[%equal: Data.t]
     ~all_options:(Value.return Data.all)
     ~placeholder:"Select a value"
     ~to_string
@@ -58,6 +59,7 @@ let%expect_test "Focusing and un-focusing the input shows and hides the datalist
     let%sub { view; _ } =
       Typeahead.Private.For_testing.create_with_browser_behavior_in_test
         (module Data)
+        ~equal:[%equal: Data.t]
         ~all_options:(Value.return Data.all)
         ~placeholder:"Select a value"
         ~to_string:(Value.return Data.to_string)

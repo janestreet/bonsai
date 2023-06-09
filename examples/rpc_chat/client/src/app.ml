@@ -46,9 +46,8 @@ let component ~current_room ~messages ~change_room ~obfuscate_message =
   in
   let%sub room_list, refresh_rooms =
     Bonsai.Edge.Poll.manual_refresh
-      (module struct
-        type t = Room.t list [@@deriving sexp, equal]
-      end)
+      ~sexp_of_model:[%sexp_of: Room.t list]
+      ~equal:[%equal: Room.t list]
       (Bonsai.Edge.Poll.Starting.initial [])
       ~effect:fetch_room_list
   in

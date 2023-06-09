@@ -84,8 +84,9 @@ module Temporary_toggle = struct
   let state ~base ~temporary timeout =
     let%sub state =
       Bonsai.state
-        (module Time_ns.Alternate_sexp)
-        ~default_model:Time_ns.min_value_representable
+        Time_ns.min_value_representable
+        ~sexp_of_model:[%sexp_of: Time_ns.Alternate_sexp.t]
+        ~equal:[%equal: Time_ns.Alternate_sexp.t]
     in
     let toggle_back_time =
       Value.map state ~f:(fun (last_set_time, _) -> Time_ns.add last_set_time timeout)

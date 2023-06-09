@@ -28,7 +28,9 @@ let%expect_test "recursive component" =
           and index = index in
           Vdom.Node.div [ Vdom.Node.textf "%d" index; child ])
     in
-    let%sub state = Bonsai.state (module Int) ~default_model:0 in
+    let%sub state =
+      Bonsai.state 0 ~sexp_of_model:[%sexp_of: Int.t] ~equal:[%equal: Int.t]
+    in
     let%arr children = children
     and label = label
     and path = path
@@ -105,7 +107,7 @@ let%expect_test "recursive component" =
   (* test sending an action to an inactive component *)
   (* capture the result so that we can schedule actions from it. *)
   let old_input = Bonsai.Var.get var in
-  let old_result = Handle.result handle in
+  let old_result = Handle.last_result handle in
   Bonsai.Var.set var { M.label = "hi"; children = Int.Map.empty };
   Handle.show handle;
   [%expect

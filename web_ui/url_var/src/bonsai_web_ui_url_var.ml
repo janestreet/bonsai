@@ -86,6 +86,15 @@ type 'a t =
   }
 
 let create_exn' (type a) (module S : S with type t = a) ~on_bad_uri =
+  (match am_running_how with
+   | `Browser | `Browser_benchmark -> ()
+   | `Node | `Node_benchmark | `Node_test ->
+     failwith
+       "Error: Bonsai_web_ui_url_var.create_exn is not supported within a nodejs\n\
+        environment because it relies on the browser's history API. One way to fix this\n\
+        is by having your app receive the url value as a parameter, and passing some\n\
+        mock implementation in tests instead of the real implementation provided by this\n\
+        library.");
   let module Uri_routing = struct
     include S
 

@@ -59,11 +59,11 @@ module Edge = struct
 end
 
 let state_machine01
-      (type da)
-      model
-      (module Dynamic_action : Action with type t = da)
-      static_action
+      ?(sexp_of_dynamic_action = sexp_of_opaque)
+      ?(sexp_of_static_action = sexp_of_opaque)
       ?reset
+      ?sexp_of_model
+      ?equal
       ~default_model
       ~apply_dynamic
       ~apply_static
@@ -76,19 +76,25 @@ let state_machine01
     | Some input ->
       apply_dynamic ~inject_dynamic ~inject_static ~schedule_event input model action
     | None ->
+      let action = sexp_of_dynamic_action action in
       eprint_s
         [%message
           "An action sent to a [state_machine01] has been dropped because its input was \
            not present. This happens when the [state_machine01] is inactive when it \
            receives a message."
-            (action : Dynamic_action.t)];
+            (action : Sexp.t)];
       model
   in
   Leaf01
-    { model = Meta.Model.of_module model ~name ~default:default_model
+    { model =
+        Meta.Model.of_module
+          ~sexp_of_model:(Option.value sexp_of_model ~default:sexp_of_opaque)
+          ~equal
+          ~name
+          ~default:default_model
     ; input_id = Meta.Input.create ()
-    ; dynamic_action = Meta.Action.of_module (module Dynamic_action) ~name
-    ; static_action = Meta.Action.of_module static_action ~name
+    ; dynamic_action = Meta.Action.of_module ~sexp_of_action:sexp_of_dynamic_action ~name
+    ; static_action = Meta.Action.of_module ~sexp_of_action:sexp_of_static_action ~name
     ; apply_dynamic
     ; apply_static
     ; input
@@ -96,7 +102,15 @@ let state_machine01
     }
 ;;
 
-let state_machine1_safe model dynamic_action ?reset ~default_model ~apply_action input =
+let state_machine1_safe
+      ?(sexp_of_action = sexp_of_opaque)
+      ~sexp_of_model
+      ?reset
+      ~equal
+      ~default_model
+      ~apply_action
+      input
+  =
   let name = Source_code_position.to_string [%here] in
   let reset =
     build_resetter
@@ -110,9 +124,9 @@ let state_machine1_safe model dynamic_action ?reset ~default_model ~apply_action
     apply_action ~inject:inject_dynamic
   in
   Leaf1
-    { model = Meta.Model.of_module model ~name ~default:default_model
+    { model = Meta.Model.of_module ~sexp_of_model ~equal ~name ~default:default_model
     ; input_id = Meta.Input.create ()
-    ; dynamic_action = Meta.Action.of_module dynamic_action ~name
+    ; dynamic_action = Meta.Action.of_module ~sexp_of_action ~name
     ; apply_action
     ; reset
     ; input
@@ -132,10 +146,10 @@ module Computation_status = struct
 end
 
 let state_machine1
-      model
-      (type da)
-      (module Dynamic_action : Action with type t = da)
+      ?sexp_of_action
       ?reset
+      ?sexp_of_model
+      ?equal
       ~default_model
       ~apply_action
       input
@@ -145,15 +159,24 @@ let state_machine1
     apply_action ~inject ~schedule_event input model action
   in
   state_machine1_safe
-    model
-    (module Dynamic_action)
+    ?sexp_of_action
+    ~sexp_of_model:(Option.value sexp_of_model ~default:sexp_of_opaque)
     ?reset
+    ~equal
     ~default_model
     ~apply_action
     input
 ;;
 
-let state_machine0 ?reset model static_action ~default_model ~apply_action =
+let state_machine0
+      ?reset
+      ?sexp_of_model
+      ?(sexp_of_action = sexp_of_opaque)
+      ?equal
+      ~default_model
+      ~apply_action
+      ()
+  =
   let name = Source_code_position.to_string [%here] in
   let apply_action ~inject_dynamic:_ ~inject_static =
     apply_action ~inject:inject_static
@@ -167,8 +190,13 @@ let state_machine0 ?reset model static_action ~default_model ~apply_action =
         reset ~inject:inject_static)
   in
   Leaf0
-    { model = Meta.Model.of_module model ~name ~default:default_model
-    ; static_action = Meta.Action.of_module static_action ~name
+    { model =
+        Meta.Model.of_module
+          ~sexp_of_model:(Option.value ~default:sexp_of_opaque sexp_of_model)
+          ~equal
+          ~name
+          ~default:default_model
+    ; static_action = Meta.Action.of_module ~sexp_of_action ~name
     ; apply_action
     ; reset
     }
@@ -187,14 +215,17 @@ module Proc_incr = struct
           with type Input.t = input
            and type Model.t = model
            and type Result.t = result)
+        ?sexp_of_model
+        ~equal
         ~(default_model : model)
         (input : input Value.t)
     : result Computation.t
     =
     sub
       (state_machine1
-         (module M.Model)
-         (module M.Action)
+         ~sexp_of_action:M.Action.sexp_of_t
+         ?sexp_of_model
+         ~equal
          ~default_model
          ~apply_action:(fun ~inject ~schedule_event input model action ->
            match input with
@@ -280,15 +311,18 @@ let assoc_on
 
 let lazy_ t = Lazy t
 
-let wrap (type model action) ?reset model_module ~default_model ~apply_action ~f =
+let wrap
+      (type model action)
+      ?reset
+      ?sexp_of_model
+      ?equal
+      ~default_model
+      ~apply_action
+      ~f
+      ()
+  =
   let model_id : model Type_equal.Id.t =
     Type_equal.Id.create ~name:"model id" [%sexp_of: opaque]
-  in
-  let module M = struct
-    type t = action
-
-    let sexp_of_t = [%sexp_of: opaque]
-  end
   in
   let reset =
     build_resetter
@@ -298,7 +332,9 @@ let wrap (type model action) ?reset model_module ~default_model ~apply_action ~f
         ignore_absurd inject_static;
         reset ~inject:inject_dynamic)
   in
-  let action_id = Meta.Action.of_module (module M) ~name:"action id" in
+  let action_id =
+    Meta.Action.of_module ~sexp_of_action:sexp_of_opaque ~name:"action id"
+  in
   let result_id = Meta.Input.create () in
   let inject_id : (action -> unit Effect.t) Type_equal.Id.t =
     Type_equal.Id.create ~name:"inject id" [%sexp_of: opaque]
@@ -308,18 +344,23 @@ let wrap (type model action) ?reset model_module ~default_model ~apply_action ~f
     | Some result ->
       apply_action ~inject:inject_dynamic ~schedule_event result model action
     | None ->
+      let action = sexp_of_opaque action in
       eprint_s
         [%message
           "An action sent to a [wrap] has been dropped because its input was not \
            present. This happens when the [wrap] is inactive when it receives a message."
-            (action : M.t)];
+            (action : Sexp.t)];
       model
   in
   let model_var = Value.named Wrap_model model_id in
   let inject_var = Value.named Wrap_inject inject_id in
   let inner = f model_var inject_var in
   let wrapper_model =
-    Meta.Model.of_module model_module ~default:default_model ~name:"outer model for wrap"
+    Meta.Model.of_module
+      ~sexp_of_model:(Option.value sexp_of_model ~default:sexp_of_opaque)
+      ~equal
+      ~default:default_model
+      ~name:"outer model for wrap"
   in
   Wrap
     { wrapper_model

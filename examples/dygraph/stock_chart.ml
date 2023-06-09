@@ -12,7 +12,9 @@ module Scale = struct
 end
 
 let scale : (Scale.t * Vdom.Node.t) Computation.t =
-  let%sub scale_state = Bonsai.state (module Scale) ~default_model:`log in
+  let%sub scale_state =
+    Bonsai.state `log ~sexp_of_model:[%sexp_of: Scale.t] ~equal:[%equal: Scale.t]
+  in
   let%arr scale, set_scale = scale_state in
   let view =
     Vdom_input_widgets.Dropdown.of_enum

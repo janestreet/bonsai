@@ -73,7 +73,7 @@ module Handle = struct
   open Virtual_dom_test_helpers
 
   let get_element handle ~get_vdom ~selector =
-    let node = handle |> result |> get_vdom |> Node_helpers.unsafe_convert_exn in
+    let node = handle |> last_result |> get_vdom |> Node_helpers.unsafe_convert_exn in
     Node_helpers.select_first_exn node ~selector
   ;;
 

@@ -1,6 +1,14 @@
 open! Core
 open! Bonsai_web
 open Incr_map_collate
+module Sort_kind = Bonsai_web_ui_partial_render_table_protocol.Sort_kind
+
+module type Header_helpers = sig
+  module Sort_state := Bonsai_web_ui_partial_render_table_protocol.Sort_state
+
+  val legacy : Vdom.Node.t -> Sort_state.t -> Vdom.Node.t
+  val default : Vdom.Node.t -> Sort_state.t -> Vdom.Node.t
+end
 
 module type S = sig
   type t
@@ -24,7 +32,7 @@ module type S_with_sorter = sig
   val headers_and_sorters
     :  t
     -> int Sortable_header.t Value.t
-    -> ((key * data -> key * data -> int) Int.Map.t * Header_tree.t) Computation.t
+    -> ((key, data) Sort_kind.t Int.Map.t * Header_tree.t) Computation.t
 
   val instantiate_cells
     :  t

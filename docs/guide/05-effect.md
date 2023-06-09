@@ -118,7 +118,12 @@ end
 
 let uppercase_rpc_sender =
   let%sub textbox = Forms.Elements.Textbox.string () in
-  let%sub result_state = Bonsai.state (module Request_state) ~default_model:Empty in
+  let%sub result_state =
+    Bonsai.state
+      Empty
+      ~sexp_of_model:[%sexp_of: Request_state.t]
+      ~equal:[%equal: Request_state.t]
+  in
   let%arr textbox = textbox
   and result_state, set_result = result_state in
   let on_submit (contents : string) : unit Effect.t =

@@ -11,13 +11,13 @@ module T = struct
   [@@deriving sexp, sexp_grammar, quickcheck]
 
   type binary_tree =
-    | Leaf of { value : int }
+    | Leaf of { value : int } (** This is a leaf node of the binary tree *)
     | Node of
         { value : int
         ; left : binary_tree option
         ; right : binary_tree option
-        }
-  [@@deriving sexp, sexp_grammar, quickcheck]
+        } (** This is a node of the binary tree which may have children *)
+  [@@deriving sexp, sexp_grammar ~tags_of_doc_comments, quickcheck]
 
   type t =
     | Int of int

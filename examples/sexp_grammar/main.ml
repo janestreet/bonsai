@@ -28,8 +28,10 @@ let component =
   in
   let%sub index, incr =
     Bonsai.state_machine0
-      (module Int)
-      (module Unit)
+      ()
+      ~sexp_of_model:[%sexp_of: Int.t]
+      ~equal:[%equal: Int.t]
+      ~sexp_of_action:[%sexp_of: Unit.t]
       ~default_model:0
       ~apply_action:(fun ~inject:_ ~schedule_event:_ index () ->
         (index + 1) mod generation_count)

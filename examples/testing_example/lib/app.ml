@@ -19,7 +19,9 @@ let hello_user (name : string Value.t) : Vdom.Node.t Computation.t =
 
 (* $MDX part-begin=hello-text-box-component *)
 let hello_textbox : Vdom.Node.t Computation.t =
-  let%sub state, set = Bonsai.state (module String) ~default_model:"" in
+  let%sub state, set =
+    Bonsai.state "" ~sexp_of_model:[%sexp_of: String.t] ~equal:[%equal: String.t]
+  in
   let%sub message = hello_user state in
   let%arr message = message
   and set = set in

@@ -3,9 +3,9 @@ open! Import
 
 val make
   :  View.Constants.t
-  -> container_attr:Vdom.Attr.t
-  -> title_attr:Vdom.Attr.t
-  -> content_attr:Vdom.Attr.t
+  -> container_attrs:Vdom.Attr.t list
+  -> title_attrs:Vdom.Attr.t list
+  -> content_attrs:Vdom.Attr.t list
   -> intent:Intent.t option
   -> on_click:unit Effect.t
   -> title:Vdom.Node.t list

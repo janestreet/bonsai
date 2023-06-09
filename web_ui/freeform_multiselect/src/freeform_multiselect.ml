@@ -55,7 +55,9 @@ let pills ~selected_options ~on_set_change ~inject_selected_options =
 let input ~placeholder ~extra_attr ~split ~id ~selected_options ~on_set_change =
   (* This state is held internally to force the typeahead to clear the text contents
      of the input field when an option is selected. *)
-  let%sub select = Bonsai.state (module String) ~default_model:"" in
+  let%sub select =
+    Bonsai.state "" ~sexp_of_model:[%sexp_of: String.t] ~equal:[%equal: String.t]
+  in
   let%arr select, inject_select = select
   and selected_options, inject_selected_options = selected_options
   and extra_attr = extra_attr
@@ -86,7 +88,10 @@ let create
       ()
   =
   let%sub selected_options =
-    Bonsai.state (module String.Set) ~default_model:String.Set.empty
+    Bonsai.state
+      String.Set.empty
+      ~sexp_of_model:[%sexp_of: String.Set.t]
+      ~equal:[%equal: String.Set.t]
   in
   let%sub id = Bonsai.path_id in
   let%sub input =

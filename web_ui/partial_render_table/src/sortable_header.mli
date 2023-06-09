@@ -5,7 +5,11 @@
 
 open! Core
 open Bonsai_web
-open Bonsai_web_ui_partial_render_table_protocol
+module Protocol := Bonsai_web_ui_partial_render_table_protocol
+module Sort_state := Protocol.Sort_state
+module Order := Protocol.Order
+
+module type Col_id := Protocol.Col_id
 
 type 'col_id t
 
@@ -16,7 +20,15 @@ type 'col_id t
 *)
 val decorate : 'col_id t -> Vdom.Node.t -> 'col_id -> Vdom.Node.t
 
+val render
+  :  'col_id t
+  -> column_id:'col_id
+  -> sortable:bool
+  -> (Sort_state.t -> Vdom.Node.t)
+  -> Vdom.Node.t
+
 val order : 'col_id t -> 'col_id Order.t
+val inject : 'col_id t -> 'col_id Order.Action.t -> unit Effect.t
 
 val component
   :  ?initial_order:'col_id Order.t Value.t

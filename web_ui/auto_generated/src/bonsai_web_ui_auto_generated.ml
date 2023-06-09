@@ -246,6 +246,20 @@ module Style =
   pre {
     margin: 0;
   }
+
+  .inline_padding {
+    padding-inline: 5px;
+  }
+
+  .bold_text {
+    font-weight: 700;
+  }
+
+  .scrollable_tooltip {
+    overflow-y: auto;
+    /* arbitrary value from eyeballing */
+    max-height: 14rem;
+  }
   |}]
 
 let error_box message = N.pre ~attrs:[ Style.error ] [ N.text message ]
@@ -591,12 +605,16 @@ let form
   and option_form (grammar : Sexp_grammar.grammar Value.t) =
     let%sub form, _ =
       Bonsai.wrap
-        (module Unit)
+        ()
+        ~sexp_of_model:[%sexp_of: Unit.t]
+        ~equal:[%equal: Unit.t]
         ~default_model:()
         ~apply_action:(fun ~inject:_ ~schedule_event (_, inner) () sexp ->
           schedule_event (Form.set inner sexp))
         ~f:(fun (_ : unit Value.t) inject_outer ->
-          let%sub outer, set_outer = Bonsai.state (module Bool) ~default_model:false in
+          let%sub outer, set_outer =
+            Bonsai.state false ~sexp_of_model:[%sexp_of: Bool.t] ~equal:[%equal: Bool.t]
+          in
           let%sub toggle_view =
             let%sub path = Bonsai.path_id in
             let%arr outer = outer
@@ -659,22 +677,29 @@ let form
     =
     let%sub form, _ =
       Bonsai.wrap
-        (module Unit)
+        ()
+        ~sexp_of_model:[%sexp_of: Unit.t]
+        ~equal:[%equal: Unit.t]
         ~default_model:()
         ~apply_action:(fun ~inject:_ ~schedule_event (_, inner) () sexp ->
           schedule_event (Form.set inner sexp))
         ~f:(fun (_ : unit Value.t) inject_outer ->
-          let%sub clauses =
+          let%sub clauses_and_docs =
             let%arr clauses = clauses in
-            List.map clauses ~f:Grammar_helper.Tags.strip_tags
+            List.map clauses ~f:(fun clause ->
+              let clause, tags = Grammar_helper.Tags.collect_and_strip_tags clause in
+              clause, Grammar_helper.Tags.find_doc_tag tags)
           in
           let%sub clauses_names, clauses_as_map =
-            let%arr clauses = clauses in
+            let%arr clauses_and_docs = clauses_and_docs in
             let as_map =
               String.Map.of_alist_exn
-                (List.map clauses ~f:(fun clause -> clause.name, clause))
+                (List.map clauses_and_docs ~f:(fun ((clause, _doc) as clause_and_tag) ->
+                   clause.name, clause_and_tag))
             in
-            let just_the_names = List.map clauses ~f:(fun clause -> clause.name) in
+            let just_the_names =
+              List.map clauses_and_docs ~f:(fun (clause, _doc) -> clause.name)
+            in
             just_the_names, as_map
           in
           let%sub outer, set_outer, outer_view =
@@ -686,26 +711,64 @@ let form
             end
             in
             let%sub outer, set_outer =
-              Bonsai.state (module Opt) ~default_model:Uninitialized
+              Bonsai.state
+                Uninitialized
+                ~sexp_of_model:[%sexp_of: Opt.t]
+                ~equal:[%equal: Opt.t]
             in
             let%sub path = Bonsai.path_id in
             let%sub view =
-              let%arr path = path
-              and outer = outer
-              and set_outer = set_outer
-              and clause_names = clauses_names in
-              make_input
-                ~to_string:(Form.View.sexp_to_pretty_string [%sexp_of: string])
-                (module String)
-                ~id:(Vdom.Attr.id path)
-                ~include_empty:true
-                ~default_value:None
-                ~state:outer
-                ~set_state:set_outer
-                ~all:clause_names
-                ~extra_attrs:
-                  [ Vdom.Attr.style (Css_gen.width (`Percent (Percent.of_mult 1.))) ]
-                ~extra_option_attrs:(Fn.const [])
+              let%sub dropdown =
+                let%arr path = path
+                and outer = outer
+                and set_outer = set_outer
+                and clause_names = clauses_names in
+                make_input
+                  ~to_string:(Form.View.sexp_to_pretty_string [%sexp_of: string])
+                  (module String)
+                  ~equal:[%equal: String.t]
+                  ~id:(Vdom.Attr.id path)
+                  ~include_empty:true
+                  ~default_value:None
+                  ~state:outer
+                  ~set_state:set_outer
+                  ~all:clause_names
+                  ~extra_attrs:
+                    [ Vdom.Attr.style (Css_gen.width (`Percent (Percent.of_mult 1.))) ]
+                  ~extra_option_attrs:(Fn.const [])
+              in
+              let%sub theme = View.Theme.current in
+              let%arr clauses_as_map = clauses_as_map
+              and theme = theme
+              and dropdown = dropdown in
+              let info =
+                Map.fold
+                  clauses_as_map
+                  ~init:[]
+                  ~f:(fun ~key:name ~data:(_clause, doc) acc ->
+                    match doc with
+                    | None -> acc
+                    | Some doc ->
+                      View.vbox
+                        [ Vdom.Node.span ~attrs:[ Style.bold_text ] [ Vdom.Node.text name ]
+                        ; Vdom.Node.text doc
+                        ]
+                      :: acc)
+                |> List.rev
+              in
+              match info with
+              | [] -> dropdown
+              | info ->
+                View.hbox
+                  [ dropdown
+                  ; View.tooltip'
+                      theme
+                      ~direction:Right
+                      ~tooltip_attrs:[ Style.scrollable_tooltip ]
+                      ~container_attrs:[ Style.inline_padding ]
+                      ~tooltip:(View.vbox ~gap:(`Rem 0.15) info)
+                      (Vdom.Node.text "?")
+                  ]
             in
             let%arr outer = outer
             and set_outer = set_outer
@@ -721,7 +784,7 @@ let form
               (module String)
               clauses_as_map
               ~f:(fun name clause ->
-                let%sub { Sexp_grammar.clause_kind; _ } = return clause in
+                let%sub { Sexp_grammar.clause_kind; _ }, _doc = return clause in
                 let%sub is_active =
                   let%arr outer = outer
                   and name = name in
@@ -765,15 +828,16 @@ let form
                 ~selected_clause:(Some { clause_name; clause_view = Form.view inner })
           in
           let%sub set =
-            let%arr clauses = clauses
+            let%arr clauses_and_docs = clauses_and_docs
             and set_outer = set_outer
             and inject_outer = inject_outer in
             function
             | Sexp.List (Sexp.Atom clause_name :: args) ->
               (match
-                 List.find clauses ~f:(fun clause -> String.equal clause.name clause_name)
+                 List.find clauses_and_docs ~f:(fun (clause, _docs) ->
+                   String.equal clause.name clause_name)
                with
-               | Some clause ->
+               | Some (clause, _docs) ->
                  Effect.Many
                    [ set_outer (Some clause.name); inject_outer (Sexp.List args) ]
                | None ->
@@ -783,9 +847,10 @@ let form
                        (clause_name : string)])
             | Sexp.Atom clause_name ->
               (match
-                 List.find clauses ~f:(fun clause -> String.equal clause.name clause_name)
+                 List.find clauses_and_docs ~f:(fun (clause, _docs) ->
+                   String.equal clause.name clause_name)
                with
-               | Some clause -> set_outer (Some clause.name)
+               | Some (clause, _docs) -> set_outer (Some clause.name)
                | None ->
                  on_set_error
                    [%message
@@ -909,7 +974,9 @@ let form
   and optional_field_grammar_form (args : Sexp_grammar.list_grammar Value.t) =
     let%sub form, _ =
       Bonsai.wrap
-        (module Unit)
+        ()
+        ~sexp_of_model:[%sexp_of: Unit.t]
+        ~equal:[%equal: Unit.t]
         ~default_model:()
         ~apply_action:(fun ~inject:_ ~schedule_event (_, inner) () inner_value ->
           schedule_event (Form.set inner inner_value))
@@ -917,7 +984,7 @@ let form
           (* We can't use toggle here because we need to be able to set the value directly
              as part of [Form.set] *)
           let%sub override, set_override =
-            Bonsai.state (module Bool) ~default_model:false
+            Bonsai.state false ~sexp_of_model:[%sexp_of: Bool.t] ~equal:[%equal: Bool.t]
           in
           let%sub toggle =
             let%arr override = override

@@ -56,6 +56,15 @@ type model_info_at_index =
   ; adjusted_index : int
   }
 
+module type Comparator = sig
+  type t [@@deriving sexp]
+
+  include Comparator.S with type t := t
+end
+
+type ('k, 'cmp) comparator =
+  (module Comparator with type t = 'k and type comparator_witness = 'cmp)
+
 (* The implementation of this function is nuanced, so it deserves a high-level
    explanation.
 
@@ -71,7 +80,7 @@ type model_info_at_index =
    bottom. *)
 let list
       (type src cmp)
-      (key : (src, cmp) Bonsai.comparator)
+      (key : (src, cmp) comparator)
       ~(dnd : (src, int) Bonsai_web_ui_drag_and_drop.t Bonsai.Value.t)
       ?(enable_debug_overlay = false)
       ?(extra_item_attrs = Bonsai.Value.return Attr.empty)
@@ -87,7 +96,7 @@ let list
   in
   let%sub historical_min_index =
     let%sub historical_min_index, set_historical_min_index =
-      Bonsai.state (module Int) ~default_model:Int.max_value
+      Bonsai.state Int.max_value ~sexp_of_model:[%sexp_of: Int.t] ~equal:[%equal: Int.t]
     in
     let%sub min_index =
       Bonsai.Incr.compute input ~f:(fun map ->
@@ -103,7 +112,13 @@ let list
         then set_historical_min_index min_index
         else Effect.Ignore
     in
-    let%sub () = Bonsai.Edge.on_change (module Int) min_index ~callback:update_min in
+    let%sub () =
+      Bonsai.Edge.on_change
+        ~sexp_of_model:[%sexp_of: Int.t]
+        ~equal:[%equal: Int.t]
+        min_index
+        ~callback:update_min
+    in
     return historical_min_index
   in
   let%sub model, should_render_extra_target =
@@ -187,8 +202,8 @@ let list
           ; is_dragged_item = false
           } ))
     in
-    Array.sort items ~compare:(fun (_, { index = a; _ }) (_, { index = b; _ }) ->
-      Int.compare a b);
+    Array.sort items ~compare:(fun a b ->
+      Comparable.lift Int.compare ~f:(fun (_, { index; _ }) -> index) a b);
     let (total_height : int) =
       Array.fold_map_inplace items ~init:0 ~f:(fun acc (key, item) ->
         acc + item.size, (key, { item with y_position = acc }))
@@ -212,8 +227,8 @@ let list
         ; is_dragged_item
         ; is_target_of_external_item
         } ));
-    Array.sort items ~compare:(fun (_, { adjusted = a; _ }) (_, { adjusted = b; _ }) ->
-      Int.compare a b);
+    Array.sort items ~compare:(fun a b ->
+      Comparable.lift Int.compare ~f:(fun (_, { adjusted; _ }) -> adjusted) a b);
     Array.fold
       items
       ~init:(0, Map.empty (module Key))
@@ -351,6 +366,51 @@ let list
     items
 ;;
 
+module Reorderable_list (Key : Comparator) : sig
+  type t = int Map.M(Key).t [@@deriving sexp, equal]
+
+  val of_list : Key.t list -> t
+  val empty : t
+  val move : t -> Key.t -> int -> t
+  val set : t -> Key.t -> t
+  val remove : t -> Key.t -> t
+end = struct
+  type t = int Map.M(Key).t [@@deriving sexp, equal]
+
+  let of_list sources =
+    List.mapi sources ~f:(fun index source -> source, index)
+    |> Map.of_alist_exn (module Key)
+  ;;
+
+  let empty = Map.empty (module Key)
+
+  let set model source =
+    Map.update model source ~f:(function
+      | Some index -> index
+      | None -> Map.length model)
+  ;;
+
+  let move model source target =
+    let model = set model source in
+    let source = Map.find_exn model source in
+    Map.map model ~f:(fun index ->
+      if source = index
+      then target
+      else if source = target
+      then index
+      else if source < target
+      then if source < index && index <= target then index - 1 else index
+      else if source > index && index >= target
+      then index + 1
+      else index)
+  ;;
+
+  let remove model source =
+    let moved_to_end = move model source (Map.length model) in
+    Map.remove moved_to_end source
+  ;;
+end
+
 module Action = struct
   type 'a item =
     | Move of 'a * int
@@ -364,7 +424,7 @@ end
 
 let with_inject
       (type src cmp)
-      (key : (src, cmp) Bonsai.comparator)
+      (key : (src, cmp) comparator)
       ?(sentinel_name = "dnd")
       ?enable_debug_overlay
       ?extra_item_attrs
@@ -374,58 +434,37 @@ let with_inject
       ?default_item_height
       render
   =
-  let module Key = (val key) in
+  let module Key = struct
+    include (val key)
+
+    let equal a b = comparator.compare a b = 0
+  end
+  in
   let module A = struct
-    type t = Key.t Action.t [@@deriving sexp]
+    type t = Key.t Action.t [@@deriving sexp_of]
   end
   in
-  let module Model = struct
-    type t = int Map.M(Key).t [@@deriving sexp, equal]
-  end
-  in
-  let move model source target =
-    let source = Map.find_exn model source in
-    Map.map model ~f:(fun index ->
-      if source = index
-      then target
-      else if source = target
-      then index
-      else if source < target
-      then if source < index && index <= target then index - 1 else index
-      else if source > index && index >= target
-      then index + 1
-      else index)
-  in
+  let module Model = Reorderable_list (Key) in
   let apply_action model (action : Key.t Action.item) =
     match action with
-    | Move (source, target) -> move model source target
-    | Set source ->
-      Map.update model source ~f:(function
-        | Some index -> index
-        | None -> Map.length model)
-    | Remove source ->
-      let moved_to_end = move model source (Map.length model) in
-      Map.remove moved_to_end source
-    | Overwrite sources ->
-      List.mapi sources ~f:(fun index source -> source, index)
-      |> Map.of_alist_exn (module Key)
+    | Move (source, target) -> Model.move model source target
+    | Set source -> Model.set model source
+    | Remove source -> Model.remove model source
+    | Overwrite sources -> Model.of_list sources
   in
   let%sub ranked_input, inject =
     Bonsai.state_machine0
-      (module Model)
-      (module A)
+      ()
+      ~sexp_of_model:[%sexp_of: Model.t]
+      ~equal:[%equal: Model.t]
+      ~sexp_of_action:[%sexp_of: A.t]
       ~default_model:(Map.empty (module Key))
       ~apply_action:(fun ~inject:_ ~schedule_event:_ model actions ->
         List.fold actions ~init:model ~f:apply_action)
   in
   let%sub dnd =
     Bonsai_web_ui_drag_and_drop.create
-      ~source_id:
-        (module struct
-          type t = Key.t [@@deriving sexp]
-
-          let equal a b = Key.comparator.compare a b = 0
-        end)
+      ~source_id:(module Key)
       ~target_id:(module Int)
       ~on_drop:
         (let%map inject = inject in
@@ -492,15 +531,46 @@ let with_inject
   let%sub ranking =
     let%arr rendered_ranked_input = rendered_ranked_input in
     Map.to_alist rendered_ranked_input
-    |> List.sort ~compare:(fun (_, (_, a)) (_, (_, b)) -> Int.compare a b)
+    |> List.sort ~compare:(fun a b ->
+      Comparable.lift Int.compare ~f:(fun (_, (_, rank)) -> rank) a b)
     |> List.map ~f:(fun (key, ((extra, _), _)) -> key, extra)
   in
   return (Value.map3 ranking view inject ~f:Tuple3.create)
 ;;
 
+let sync_with_set
+      (type a cmp)
+      (module Key : Comparator with type t = a and type comparator_witness = cmp)
+      (input : (a, cmp) Set.t Value.t)
+      ~inject
+      ~add
+      ~remove
+  =
+  let%sub callback =
+    let%arr inject = inject
+    and add = add
+    and remove = remove in
+    fun old new_ ->
+      inject
+        (match old with
+         | Some old ->
+           Set.symmetric_diff old new_
+           |> Sequence.fold
+                ~init:Reversed_list.[]
+                ~f:(fun acc -> function
+                  | Second k -> add k :: acc
+                  | First k -> remove k :: acc)
+           |> Reversed_list.rev
+         | None ->
+           Set.fold new_ ~init:Reversed_list.[] ~f:(fun acc key -> add key :: acc)
+           |> Reversed_list.rev)
+  in
+  Bonsai.Edge.on_change' ~equal:[%equal: Set.M(Key).t] input ~callback
+;;
+
 let simple
       (type src cmp)
-      (key : (src, cmp) Bonsai.comparator)
+      (key : (src, cmp) comparator)
       ?sentinel_name
       ?enable_debug_overlay
       ?extra_item_attrs
@@ -525,30 +595,291 @@ let simple
   in
   let module Key = (val key) in
   let%sub () =
-    Bonsai.Edge.on_change'
-      (module struct
-        type t = Set.M(Key).t [@@deriving sexp, equal]
-      end)
+    sync_with_set
+      (module Key)
       input
-      ~callback:
-        (let%map inject = inject in
-         fun old new_ ->
-           inject
-             (match old with
-              | Some old ->
-                Set.symmetric_diff old new_
-                |> Sequence.fold
-                     ~init:Reversed_list.[]
-                     ~f:(fun acc -> function
-                       | Second k -> Action.Set k :: acc
-                       | First k -> Remove k :: acc)
-                |> Reversed_list.rev
-              | None ->
-                Set.fold
-                  new_
-                  ~init:Reversed_list.[]
-                  ~f:(fun acc key -> Action.Set key :: acc)
-                |> Reversed_list.rev))
+      ~inject
+      ~add:(Value.return (fun key -> Action.Set key))
+      ~remove:(Value.return (fun key -> Action.Remove key))
   in
   return (Value.both value view)
 ;;
+
+module Multi = struct
+  module Multi_reorderable_list (Which : Comparator) (Key : Comparator) : sig
+    type t = Reorderable_list(Key).t Map.M(Which).t [@@deriving sexp, equal]
+
+    val of_lists : Key.t list Map.M(Which).t -> t
+    val empty : t
+    val move : t -> Key.t -> Which.t -> int -> t
+    val set : t -> Which.t -> Key.t -> t
+    val remove : t -> Key.t -> t
+  end = struct
+    module Reorderable_list = Reorderable_list (Key)
+
+    type t = Reorderable_list.t Map.M(Which).t [@@deriving sexp, equal]
+
+    let of_lists sources = Map.map sources ~f:Reorderable_list.of_list
+    let empty = Map.empty (module Which)
+
+    let update_list_exn t which ~f =
+      Map.update t which ~f:(function
+        | None -> f Reorderable_list.empty
+        | Some list -> f list)
+    ;;
+
+    let move t source target_which target =
+      let t = Map.map t ~f:(fun list -> Reorderable_list.remove list source) in
+      update_list_exn t target_which ~f:(fun list ->
+        Reorderable_list.move list source target)
+    ;;
+
+    let set model which key =
+      Map.update model which ~f:(fun list ->
+        let list = Option.value ~default:Reorderable_list.empty list in
+        Reorderable_list.set list key)
+    ;;
+
+    let remove t key = Map.map t ~f:(fun list -> Reorderable_list.remove list key)
+  end
+
+  module Action = struct
+    type ('key, 'which, 'which_cmp) item =
+      | Move of 'key * 'which * int
+      | Set of 'which * 'key
+      | Remove of 'key
+      | Overwrite of ('which, 'key list, 'which_cmp) Map.t
+
+    type ('key, 'which, 'which_cmp) t = ('key, 'which, 'which_cmp) item list
+  end
+
+  let with_inject
+        (type src cmp which which_cmp)
+        (key : (src, cmp) comparator)
+        (which : (which, which_cmp) comparator)
+        ?(sentinel_name = "dnd")
+        ?enable_debug_overlay
+        ?extra_item_attrs
+        ?left
+        ?right
+        ?empty_list_placeholder
+        ?default_item_height
+        ~(lists : (which, which_cmp) Set.t Value.t)
+        (render :
+           index:int Value.t
+         -> source:Vdom.Attr.t Value.t
+         -> which Value.t
+         -> src Value.t
+         -> (_ * Vdom.Node.t) Computation.t)
+    =
+    let module Key = struct
+      include (val key)
+
+      let equal a b = comparator.compare a b = 0
+    end
+    in
+    let module Which = struct
+      include (val which)
+
+      let equal a b = comparator.compare a b = 0
+    end
+    in
+    let module Action = struct
+      type item = (Key.t, Which.t, Which.comparator_witness) Action.item
+
+      let sexp_of_t = sexp_of_opaque
+    end
+    in
+    let module Model = Multi_reorderable_list (Which) (Key) in
+    let apply_action model (action : Action.item) =
+      match action with
+      | Move (source, target_which, target) -> Model.move model source target_which target
+      | Set (which, source) -> Model.set model which source
+      | Remove source -> Model.remove model source
+      | Overwrite sources -> Model.of_lists sources
+    in
+    let%sub ranked_input, inject =
+      Bonsai.state_machine0
+        ()
+        ~sexp_of_action:[%sexp_of: Action.t]
+        ~equal:[%equal: Model.t]
+        ~default_model:Model.empty
+        ~apply_action:(fun ~inject:_ ~schedule_event:_ model actions ->
+          List.fold actions ~init:model ~f:apply_action)
+    in
+    let%sub dnd =
+      Bonsai_web_ui_drag_and_drop.create
+        ~source_id:(module Key)
+        ~target_id:
+          (module struct
+            type t = Which.t * Int.t [@@deriving equal, sexp]
+          end)
+        ~on_drop:
+          (let%map inject = inject in
+           fun source (target_which, target) ->
+             inject [ Move (source, target_which, target) ])
+    in
+    let%sub source = return (dnd >>| Bonsai_web_ui_drag_and_drop.source) in
+    let%sub rendered_ranked_input =
+      let%sub ranked_input =
+        Bonsai.Incr.compute ranked_input ~f:(fun ranked_input ->
+          Incr_map.collapse ~comparator:(module Key) ranked_input
+          |> Incr_map.mapi ~f:(fun ~key:(which, _key) ~data -> which, data)
+          |> Incr_map.rekey
+               ~comparator:(module Key)
+               ~f:(fun ~key:(_which, key) ~data:_ -> key))
+      in
+      Bonsai.assoc
+        (module Key)
+        ranked_input
+        ~f:(fun key data ->
+          let%sub source =
+            let%arr key = key
+            and source = source in
+            source ~id:key
+          in
+          let%sub which, index = return data in
+          let%sub rendered = render ~index ~source which key in
+          return (Value.both rendered data))
+    in
+    let%sub results =
+      Bonsai.assoc_set
+        (module Which)
+        lists
+        ~f:(fun which ->
+          let%sub rendered_ranked_input =
+            Bonsai.Incr.compute
+              (Value.both which rendered_ranked_input)
+              ~f:(fun which_and_map ->
+                let%pattern_bind.Incr which, map = which_and_map in
+                (* NOTE: This [bind] only runs once (The key (which) from [assoc_set] does
+                   not change). *)
+                let%bind.Incr current_which = which in
+                Incr_map.filter_map map ~f:(fun (data, (which, index)) ->
+                  match Which.equal which current_which with
+                  | false -> None
+                  | true -> Some (data, index)))
+          in
+          let%sub input =
+            Bonsai.assoc
+              (module Key)
+              rendered_ranked_input
+              ~f:(fun _ data ->
+                let%arr (_, view), rank = data in
+                view, rank)
+          in
+          let%sub dnd =
+            let%arr dnd = dnd
+            and which = which in
+            Drag_and_drop.project_target
+              dnd
+              ~map:(fun (target_which, index) ->
+                if Which.equal target_which which then index else -1)
+              ~unmap:(fun index -> which, index)
+          in
+          let%sub view =
+            list
+              (module Key)
+              ~dnd
+              ?enable_debug_overlay
+              ?extra_item_attrs
+              ?left
+              ?right
+              ?empty_list_placeholder:
+                (Option.map empty_list_placeholder ~f:(fun f ~item_is_hovered ->
+                   f ~item_is_hovered which))
+              ?default_item_height
+              input
+          in
+          let%sub value =
+            let%arr rendered_ranked_input = rendered_ranked_input in
+            Map.to_alist rendered_ranked_input
+            |> List.sort ~compare:(fun a b ->
+              Comparable.lift Int.compare ~f:(fun (_, (_, rank)) -> rank) a b)
+            |> List.map ~f:(fun (key, ((extra, _), _)) -> key, extra)
+          in
+          return (Value.map3 value view rendered_ranked_input ~f:Tuple3.create))
+    in
+    let%sub sentinel = return (dnd >>| Drag_and_drop.sentinel) in
+    let%sub dragged_element =
+      Drag_and_drop.dragged_element dnd ~f:(fun target ->
+        let%sub result =
+          Bonsai.Incr.compute (Value.both target results) ~f:(fun target_and_results ->
+            let%pattern_bind.Ui_incr source, results = target_and_results in
+            let%map.Ui_incr source = source
+            and results = results in
+            List.find_map (Map.to_alist results) ~f:(fun (_, (_, _, list)) ->
+              Map.find list source))
+        in
+        match%sub result with
+        | Some ((_, view), _) -> return view
+        | None -> Bonsai.const Vdom.Node.None)
+    in
+    let%sub results =
+      Bonsai.assoc
+        (module Which)
+        results
+        ~f:(fun _key data ->
+          let%arr value, view, _ = data in
+          value, view)
+    in
+    let%arr results = results
+    and sentinel = sentinel
+    and dragged_element = dragged_element
+    and inject = inject in
+    let view =
+      Vdom.Node.div ~attrs:[ sentinel ~name:sentinel_name ] [ dragged_element ]
+    in
+    results, view, inject
+  ;;
+
+  let simple
+        (type src cmp which which_cmp)
+        (key : (src, cmp) comparator)
+        (which : (which, which_cmp) comparator)
+        ?sentinel_name
+        ?enable_debug_overlay
+        ?extra_item_attrs
+        ?left
+        ?right
+        ?empty_list_placeholder
+        ?default_item_height
+        ~(render :
+            index:int Value.t
+          -> source:Vdom.Attr.t Value.t
+          -> which Value.t
+          -> src Value.t
+          -> (_ * Vdom.Node.t) Computation.t)
+        ~(lists : (which, which_cmp) Set.t Value.t)
+        ~default_list
+        (input : (src, cmp) Set.t Value.t)
+    =
+    let%sub value, view, inject =
+      with_inject
+        key
+        which
+        ?sentinel_name
+        ?enable_debug_overlay
+        ?extra_item_attrs
+        ?left
+        ?right
+        ?empty_list_placeholder
+        ?default_item_height
+        ~lists
+        render
+    in
+    let%sub () =
+      let%sub add =
+        let%arr default_list = default_list in
+        fun k -> Action.Set (default_list, k)
+      in
+      sync_with_set
+        key
+        input
+        ~inject
+        ~add
+        ~remove:(Value.return (fun key -> Action.Remove key))
+    in
+    return (Value.both value view)
+  ;;
+end

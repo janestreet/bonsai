@@ -40,7 +40,10 @@ let compare_optimization
   let handle = Handle.create (witness_to_result_spec witness) unpacked in
   let opt_handle = Handle.create (witness_to_result_spec witness) optimized in
   let require_results_to_match () =
-    assert (Witness.equal witness (Handle.result handle) (Handle.result opt_handle))
+    Handle.recompute_view handle;
+    Handle.recompute_view opt_handle;
+    assert (
+      Witness.equal witness (Handle.last_result handle) (Handle.last_result opt_handle))
   in
   require_results_to_match ();
   let random = Splittable_random.State.create (Random.State.make [| Random.bits () |]) in

@@ -55,6 +55,11 @@ include
     top: 0px;
     position: absolute;
     cursor: col-resize;
+    transition: all 150ms;
+  }
+
+  .resizer:active {
+    background-color: rgb(100, 100, 100);
   }
 
   .resizable_using_resizer {

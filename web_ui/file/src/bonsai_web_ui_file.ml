@@ -13,7 +13,7 @@ end
 
 module _ = struct
   type t =
-    | Contents of string
+    | Contents of Bigstring.t
     | Loading of Progress.t option
     | Error of Error.t
   [@@deriving compare, equal, sexp]
@@ -28,7 +28,7 @@ end
 
 module File_read = struct
   type t =
-    { result : (string, Read_error.t) Result.t Ui_effect.t
+    { result : (Bigstring.t, Read_error.t) Result.t Ui_effect.t
     ; abort : unit Ui_effect.t
     }
   [@@deriving fields]
@@ -53,7 +53,7 @@ let contents t =
 
 module Expert = struct
   type file_read = File_read.t =
-    { result : (string, Read_error.t) Result.t Ui_effect.t
+    { result : (Bigstring.t, Read_error.t) Result.t Ui_effect.t
     ; abort : unit Ui_effect.t
     }
 
@@ -63,7 +63,7 @@ end
 module For_testing = struct
   module Test_data = struct
     type data =
-      | Closed of string Or_error.t
+      | Closed of Bigstring.t Or_error.t
       | Open of
           { chunks : string Queue.t
           ; total_bytes : int
@@ -71,7 +71,7 @@ module For_testing = struct
 
     type read_callbacks =
       { on_progress : Progress.t -> unit
-      ; on_finished : string Or_error.t -> unit
+      ; on_finished : Bigstring.t Or_error.t -> unit
       }
 
     module Read_state = struct
@@ -101,7 +101,10 @@ module For_testing = struct
     ;;
 
     let create_static ~filename ~contents =
-      { filename; data = Closed (Ok contents); read_state = Not_reading }
+      { filename
+      ; data = Closed (Ok (Bigstring.of_string contents))
+      ; read_state = Not_reading
+      }
     ;;
 
     let read_status t =
@@ -141,7 +144,19 @@ module For_testing = struct
       match t.data with
       | Closed _ -> ()
       | Open { chunks; total_bytes = _ } ->
-        let result = Ok (Queue.to_list chunks |> String.concat) in
+        let result = Bigstring.create (Queue.sum (module Int) chunks ~f:String.length) in
+        let len =
+          Queue.fold ~init:0 chunks ~f:(fun dst_pos src ->
+            Bigstring.From_string.blit
+              ~src
+              ~src_pos:0
+              ~dst:result
+              ~dst_pos
+              ~len:(String.length src);
+            dst_pos + String.length src)
+        in
+        assert (Bigstring.length result = len);
+        let result = Ok result in
         t.data <- Closed result;
         Read_state.iter t.read_state ~f:(fun read -> read.on_finished result)
     ;;
@@ -159,7 +174,7 @@ module For_testing = struct
   let create test_data =
     let module Svar = Ui_effect.For_testing.Svar in
     let read on_progress =
-      let (result_var : (string, Read_error.t) Result.t Svar.t) = Svar.create () in
+      let (result_var : (Bigstring.t, Read_error.t) Result.t Svar.t) = Svar.create () in
       let result =
         Ui_effect.For_testing.of_svar_fun
           (fun () ->
@@ -206,7 +221,7 @@ module Read_on_change = struct
     type t =
       | Starting
       | In_progress of Progress.t
-      | Complete of string Or_error.t
+      | Complete of Bigstring.t Or_error.t
     [@@deriving compare, equal, sexp]
   end
 
@@ -255,10 +270,12 @@ module Read_on_change = struct
   let create_helper file =
     let%sub state, inject =
       Bonsai.state_machine0
-        (module File_state)
-        (module File_state.Action)
+        ~sexp_of_model:[%sexp_of: File_state.t]
+        ~equal:[%equal: File_state.t]
+        ~sexp_of_action:[%sexp_of: File_state.Action.t]
         ~default_model:Before_first_read
         ~apply_action:File_state.apply_action
+        ()
     in
     let%sub () =
       let%sub abort = File_state.abort_read_if_applicable state in
@@ -266,7 +283,8 @@ module Read_on_change = struct
     in
     let%sub () =
       Bonsai.Edge.on_change
-        (module File)
+        ~sexp_of_model:[%sexp_of: File.t]
+        ~equal:[%equal: File.t]
         file
         ~callback:
           (let%map inject = inject in

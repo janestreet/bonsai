@@ -348,8 +348,9 @@ let clock
   let%sub next_bar_id = Bar_id.component in
   let%sub { tracks; last_trigger_time; _ }, update_tracks =
     Bonsai.state_machine1
-      (module Tracks)
-      (module Tracks_action)
+      ~sexp_of_model:[%sexp_of: Tracks.t]
+      ~equal:[%equal: Tracks.t]
+      ~sexp_of_action:[%sexp_of: Tracks_action.t]
       ~default_model:Tracks.empty
       ~apply_action:(fun ~inject:_ ~schedule_event:_ now tracks action ->
         match now with
@@ -436,7 +437,12 @@ let component =
     Form.value_or_default time_span_form ~default:Random_time_span.default
   in
   let%sub now = Bonsai.Clock.now in
-  let%sub initial_time = Bonsai.freeze (module Time_ns.Alternate_sexp) now in
+  let%sub initial_time =
+    Bonsai.freeze
+      ~sexp_of_model:[%sexp_of: Time_ns.Alternate_sexp.t]
+      now
+      ~equal:[%equal: Time_ns.Alternate_sexp.t]
+  in
   let%sub delta_time =
     let%arr initial_time = initial_time
     and now = now in

@@ -3,7 +3,7 @@ module Incr = Ui_incr
 module Effect = Ui_effect
 
 module type Comparator = sig
-  type t [@@deriving sexp]
+  type t [@@deriving sexp_of]
 
   include Comparator.S with type t := t
 end
@@ -12,11 +12,11 @@ type ('k, 'cmp) comparator =
   (module Comparator with type t = 'k and type comparator_witness = 'cmp)
 
 module type Enum = sig
-  type t [@@deriving compare, enumerate, equal, sexp]
+  type t [@@deriving compare, enumerate, equal, sexp_of]
 end
 
 module type Model = sig
-  type t [@@deriving sexp, equal]
+  type t [@@deriving sexp_of]
 end
 
 module type Action = sig

@@ -761,7 +761,7 @@ let rec gather : type result. result Computation.t -> result Computation.packed_
         in
         let chosen_model =
           Incremental.map model ~f:(fun map ->
-            let (Meta.Model.Hidden.T { model; info; t_of_sexp = _ }) =
+            let (Meta.Model.Hidden.T { model; info }) =
               Meta.Multi_model.find_exn map index
             in
             let equal =

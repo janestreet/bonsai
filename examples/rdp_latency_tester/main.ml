@@ -195,9 +195,14 @@ end
 let theme = Kado.theme ~version:Bleeding ()
 
 let component =
-  let%sub ((mode, _) as mode_state) = Bonsai.state (module Mode) ~default_model:Manual in
+  let%sub ((mode, _) as mode_state) =
+    Bonsai.state Manual ~sexp_of_model:[%sexp_of: Mode.t] ~equal:[%equal: Mode.t]
+  in
   let%sub last, set_last =
-    Bonsai.state (module Time_ns.Alternate_sexp) ~default_model:Time_ns.epoch
+    Bonsai.state
+      Time_ns.epoch
+      ~sexp_of_model:[%sexp_of: Time_ns.Alternate_sexp.t]
+      ~equal:[%equal: Time_ns.Alternate_sexp.t]
   in
   let%sub is_on, time =
     match%sub mode with

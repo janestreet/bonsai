@@ -48,12 +48,28 @@ let slider ~min ~max ~value ~inject =
 
 let component =
   let open Bonsai.Let_syntax in
-  let%sub text = Bonsai.state_opt (module String) ~default_model:"🤯" in
-  let%sub size = Bonsai.state (module Int) ~default_model:80 in
-  let%sub pos_x = Bonsai.state (module Int) ~default_model:50 in
-  let%sub pos_y = Bonsai.state (module Int) ~default_model:50 in
-  let%sub fg_color = Bonsai.state (module String) ~default_model:"#000000" in
-  let%sub bg_color = Bonsai.state (module String) ~default_model:"#ffffff" in
+  let%sub text =
+    Bonsai.state_opt
+      ()
+      ~sexp_of_model:[%sexp_of: String.t]
+      ~equal:[%equal: String.t]
+      ~default_model:"🤯"
+  in
+  let%sub size =
+    Bonsai.state 80 ~sexp_of_model:[%sexp_of: Int.t] ~equal:[%equal: Int.t]
+  in
+  let%sub pos_x =
+    Bonsai.state 50 ~sexp_of_model:[%sexp_of: Int.t] ~equal:[%equal: Int.t]
+  in
+  let%sub pos_y =
+    Bonsai.state 50 ~sexp_of_model:[%sexp_of: Int.t] ~equal:[%equal: Int.t]
+  in
+  let%sub fg_color =
+    Bonsai.state "#000000" ~sexp_of_model:[%sexp_of: String.t] ~equal:[%equal: String.t]
+  in
+  let%sub bg_color =
+    Bonsai.state "#ffffff" ~sexp_of_model:[%sexp_of: String.t] ~equal:[%equal: String.t]
+  in
   let%arr text, inject_text = text
   and size, inject_size = size
   and pos_x, inject_pos_x = pos_x

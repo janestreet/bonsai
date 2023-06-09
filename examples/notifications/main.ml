@@ -35,7 +35,9 @@ module User_defined_notification = struct
       module Notifications = Bonsai_web_ui_notifications
 
       let component =
-        let%sub notifications = Notifications.component (module Notification) in
+        let%sub notifications =
+          Notifications.component (module Notification) ~equal:[%equal: Notification.t]
+        in
         let%sub vdom = Notifications.render notifications ~f:Notification.render in
         let%arr vdom = vdom
         and notifications = notifications in

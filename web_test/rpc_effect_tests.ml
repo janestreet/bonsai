@@ -167,6 +167,123 @@ let%expect_test "polling_state_rpc" =
   Deferred.unit
 ;;
 
+let%expect_test "inactive delivery of a response will be ignored when \
+                 [clear_when_deactivated] is true"
+  =
+  let is_active = Bonsai.Var.create true in
+  let block = Bvar.create () in
+  let computation =
+    let open Bonsai.Let_syntax in
+    if%sub Bonsai.Var.value is_active
+    then (
+      let%sub status =
+        Rpc_effect.Polling_state_rpc.poll
+          polling_state_rpc
+          ~equal_query:[%equal: int]
+          ~equal_response:[%equal: int]
+          ~where_to_connect:Self
+          ~every:(Time_ns.Span.of_sec 1.0)
+          ~clear_when_deactivated:true
+          (Value.return 0)
+      in
+      return (status >>| Option.some))
+    else Bonsai.const None
+  in
+  let handle =
+    Handle.create
+      ~rpc_implementations:
+        [ incrementing_polling_state_rpc_implementation ~block_on:block () ]
+      (Result_spec.sexp
+         (module struct
+           type t = (int, int) Rpc_effect.Poll_result.t option [@@deriving sexp_of]
+         end))
+      computation
+  in
+  Handle.show handle;
+  let%bind () = Async_kernel_scheduler.yield_until_no_jobs_remain () in
+  [%expect
+    {|
+    (((last_ok_response ()) (last_error ()) (inflight_query ())
+      (refresh <opaque>))) |}];
+  Bonsai.Var.set is_active false;
+  Handle.show handle;
+  let%bind () = Async_kernel_scheduler.yield_until_no_jobs_remain () in
+  [%expect {| () |}];
+  Handle.show handle;
+  let%bind () = Async_kernel_scheduler.yield_until_no_jobs_remain () in
+  [%expect {| () |}];
+  Bonsai.Var.set is_active true;
+  Handle.show handle;
+  let%bind () = Async_kernel_scheduler.yield_until_no_jobs_remain () in
+  [%expect
+    {|
+    (((last_ok_response ()) (last_error ()) (inflight_query ())
+      (refresh <opaque>))) |}];
+  Deferred.unit
+;;
+
+let%expect_test "BUG: completing an RPC at the same time as a disconnect" =
+  let is_active = Bonsai.Var.create true in
+  let block = Bvar.create () in
+  let computation =
+    let open Bonsai.Let_syntax in
+    if%sub Bonsai.Var.value is_active
+    then (
+      let%sub status =
+        Rpc_effect.Polling_state_rpc.poll
+          polling_state_rpc
+          ~equal_query:[%equal: int]
+          ~equal_response:[%equal: int]
+          ~where_to_connect:Self
+          ~every:(Time_ns.Span.of_sec 1.0)
+          (Value.return 0)
+      in
+      return (status >>| Option.some))
+    else Bonsai.const None
+  in
+  let handle =
+    Handle.create
+      ~rpc_implementations:
+        [ incrementing_polling_state_rpc_implementation ~block_on:block () ]
+      (Result_spec.sexp
+         (module struct
+           type t = (int, int) Rpc_effect.Poll_result.t option [@@deriving sexp_of]
+         end))
+      computation
+  in
+  Handle.show handle;
+  let%bind () = Async_kernel_scheduler.yield_until_no_jobs_remain () in
+  [%expect
+    {|
+    (((last_ok_response ()) (last_error ()) (inflight_query ())
+      (refresh <opaque>))) |}];
+  Bonsai.Var.set is_active false;
+  Bvar.broadcast block ();
+  Handle.show handle;
+  let%bind () = Async_kernel_scheduler.yield_until_no_jobs_remain () in
+  [%expect {|
+    ()
+    ("For first request" (query 0)) |}];
+  Bonsai.Var.set is_active true;
+  Handle.show handle;
+  let%bind () = Async_kernel_scheduler.yield_until_no_jobs_remain () in
+  [%expect
+    {|
+    (((last_ok_response ())
+      (last_error
+       ((0
+         ((rpc_error
+           (Uncaught_exn
+            ((location "server-side rpc computation")
+             (exn
+              (monitor.ml.Error
+               ("Ivar.fill_exn called on full ivar" (t (Full _))))))))
+          (connection_description <created-directly>)
+          (rpc_name polling_state_rpc_a) (rpc_version 0)))))
+      (inflight_query ()) (refresh <opaque>))) |}];
+  Deferred.unit
+;;
+
 let%expect_test "multiple polling_state_rpc" =
   let map_var = Bonsai.Var.create (Int.Map.of_alist_exn [ 1, (); 2, (); 10, () ]) in
   let map = Bonsai.Var.value map_var in
@@ -731,8 +848,10 @@ let%test_module "Polling_state_rpc.poll" =
       let input_var = Bonsai.Var.create 1 in
       let computation =
         Rpc_effect.Polling_state_rpc.poll
-          (module Int)
-          (module Int)
+          ~sexp_of_query:[%sexp_of: Int.t]
+          ~sexp_of_response:[%sexp_of: Int.t]
+          ~equal_query:[%equal: Int.t]
+          ~equal_response:[%equal: Int.t]
           polling_state_rpc
           ~where_to_connect:Self
           ~every:(Time_ns.Span.of_sec 1.0)
@@ -810,8 +929,10 @@ let%test_module "Polling_state_rpc.poll" =
       let input_var = Bonsai.Var.create 1 in
       let computation =
         Rpc_effect.Polling_state_rpc.poll
-          (module Int)
-          (module Int)
+          ~sexp_of_query:[%sexp_of: Int.t]
+          ~sexp_of_response:[%sexp_of: Int.t]
+          ~equal_query:[%equal: Int.t]
+          ~equal_response:[%equal: Int.t]
           polling_state_rpc
           ~where_to_connect:Self
           ~every:(Time_ns.Span.of_sec 1.0)
@@ -897,8 +1018,10 @@ let%test_module "Polling_state_rpc.poll" =
       let input_var = Bonsai.Var.create 1 in
       let computation =
         Rpc_effect.Polling_state_rpc.poll
-          (module Int)
-          (module Int)
+          ~sexp_of_query:[%sexp_of: Int.t]
+          ~sexp_of_response:[%sexp_of: Int.t]
+          ~equal_query:[%equal: Int.t]
+          ~equal_response:[%equal: Int.t]
           polling_state_rpc
           ~where_to_connect:Self
           ~every:(Time_ns.Span.of_sec 1.0)
@@ -964,8 +1087,15 @@ let%test_module "Polling_state_rpc.poll" =
       let input_var = Bonsai.Var.create 1 in
       let computation =
         Rpc_effect.Polling_state_rpc.poll
-          (module Int)
-          (module Int)
+          ~sexp_of_query:[%sexp_of: Int.t]
+          ~sexp_of_response:[%sexp_of: Int.t]
+          ~equal_query:[%equal: Int.t]
+          ~equal_response:[%equal: Int.t]
+          ~on_response_received:
+            (Value.return (fun query response ->
+               Effect.print_s
+                 [%message
+                   "on_response_received" (query : int) (response : int Or_error.t)]))
           polling_state_rpc
           ~where_to_connect:Self
           ~every:(Time_ns.Span.of_sec 1.0)
@@ -984,7 +1114,16 @@ let%test_module "Polling_state_rpc.poll" =
       [%expect
         {|
         ((last_ok_response ()) (last_error ()) (inflight_query ())
-         (refresh <opaque>)) |}];
+         (refresh <opaque>))
+        (on_response_received (query 1)
+         (response
+          (Error
+           ((rpc_error
+             (Uncaught_exn
+              ((location "server-side rpc computation")
+               (exn (monitor.ml.Error ("Error response" (query 1)))))))
+            (connection_description <created-directly>)
+            (rpc_name polling_state_rpc_a) (rpc_version 0))))) |}];
       let%bind () = async_show handle in
       [%expect
         {|
@@ -1011,7 +1150,8 @@ let%test_module "Polling_state_rpc.poll" =
                 (exn (monitor.ml.Error ("Error response" (query 1)))))))
              (connection_description <created-directly>)
              (rpc_name polling_state_rpc_a) (rpc_version 0)))))
-         (inflight_query ()) (refresh <opaque>)) |}];
+         (inflight_query ()) (refresh <opaque>))
+        (on_response_received (query 2) (response (Ok 0))) |}];
       let%bind () = async_show handle in
       [%expect
         {|
@@ -1022,7 +1162,16 @@ let%test_module "Polling_state_rpc.poll" =
       [%expect
         {|
         ((last_ok_response ((2 0))) (last_error ()) (inflight_query ())
-         (refresh <opaque>)) |}];
+         (refresh <opaque>))
+        (on_response_received (query 3)
+         (response
+          (Error
+           ((rpc_error
+             (Uncaught_exn
+              ((location "server-side rpc computation")
+               (exn (monitor.ml.Error ("Error response" (query 3)))))))
+            (connection_description <created-directly>)
+            (rpc_name polling_state_rpc_a) (rpc_version 0))))) |}];
       let%bind () = async_show handle in
       [%expect
         {|
@@ -1048,8 +1197,10 @@ let%test_module "Polling_state_rpc.poll" =
           map
           ~f:(fun key _data ->
             Rpc_effect.Polling_state_rpc.poll
-              (module Int)
-              (module Int)
+              ~sexp_of_query:[%sexp_of: Int.t]
+              ~sexp_of_response:[%sexp_of: Int.t]
+              ~equal_query:[%equal: Int.t]
+              ~equal_response:[%equal: Int.t]
               polling_state_rpc
               ~where_to_connect:Self
               ~every:(Time_ns.Span.of_sec 1.0)
@@ -1167,8 +1318,10 @@ let%test_module "Polling_state_rpc.poll" =
           map
           ~f:(fun key _data ->
             Rpc_effect.Polling_state_rpc.poll
-              (module Int)
-              (module Int)
+              ~sexp_of_query:[%sexp_of: Int.t]
+              ~sexp_of_response:[%sexp_of: Int.t]
+              ~equal_query:[%equal: Int.t]
+              ~equal_response:[%equal: Int.t]
               polling_state_rpc
               ~clear_when_deactivated:false
               ~where_to_connect:Self
@@ -1276,8 +1429,10 @@ let%test_module "Rpc.poll" =
       let input_var = Bonsai.Var.create 1 in
       let computation =
         Rpc_effect.Rpc.poll
-          (module Int)
-          (module Int)
+          ~sexp_of_query:[%sexp_of: Int.t]
+          ~sexp_of_response:[%sexp_of: Int.t]
+          ~equal_query:[%equal: Int.t]
+          ~equal_response:[%equal: Int.t]
           rpc
           ~where_to_connect:Self
           ~every:(Time_ns.Span.of_sec 1.0)
@@ -1351,8 +1506,10 @@ let%test_module "Rpc.poll" =
       let input_var = Bonsai.Var.create 1 in
       let computation =
         Rpc_effect.Rpc.poll
-          (module Int)
-          (module Int)
+          ~sexp_of_query:[%sexp_of: Int.t]
+          ~sexp_of_response:[%sexp_of: Int.t]
+          ~equal_query:[%equal: Int.t]
+          ~equal_response:[%equal: Int.t]
           rpc
           ~where_to_connect:Self
           ~every:(Time_ns.Span.of_sec 1.0)
@@ -1451,8 +1608,15 @@ let%test_module "Rpc.poll" =
       let input_var = Bonsai.Var.create 1 in
       let computation =
         Rpc_effect.Rpc.poll
-          (module Int)
-          (module Int)
+          ~sexp_of_query:[%sexp_of: Int.t]
+          ~sexp_of_response:[%sexp_of: Int.t]
+          ~equal_query:[%equal: Int.t]
+          ~equal_response:[%equal: Int.t]
+          ~on_response_received:
+            (Value.return (fun query response ->
+               Effect.print_s
+                 [%message
+                   "on_response_received" (query : int) (response : int Or_error.t)]))
           rpc
           ~where_to_connect:Self
           ~every:(Time_ns.Span.of_sec 1.0)
@@ -1476,7 +1640,16 @@ let%test_module "Rpc.poll" =
       [%expect
         {|
          ((last_ok_response ()) (last_error ()) (inflight_query (1))
-          (refresh <opaque>)) |}];
+          (refresh <opaque>))
+         (on_response_received (query 1)
+          (response
+           (Error
+            ((rpc_error
+              (Uncaught_exn
+               ((location "server-side rpc computation")
+                (exn (monitor.ml.Error ("Error response" (query 1)))))))
+             (connection_description <created-directly>) (rpc_name rpc)
+             (rpc_version 0))))) |}];
       Bonsai.Var.set input_var 2;
       let%bind () = async_show handle in
       [%expect
@@ -1503,7 +1676,8 @@ let%test_module "Rpc.poll" =
                 (exn (monitor.ml.Error ("Error response" (query 1)))))))
              (connection_description <created-directly>) (rpc_name rpc)
              (rpc_version 0)))))
-         (inflight_query (2)) (refresh <opaque>)) |}];
+         (inflight_query (2)) (refresh <opaque>))
+        (on_response_received (query 2) (response (Ok 4))) |}];
       Bonsai.Var.set input_var 3;
       let%bind () = async_show handle in
       [%expect
@@ -1514,7 +1688,16 @@ let%test_module "Rpc.poll" =
       [%expect
         {|
         ((last_ok_response ((2 4))) (last_error ()) (inflight_query (3))
-         (refresh <opaque>)) |}];
+         (refresh <opaque>))
+        (on_response_received (query 3)
+         (response
+          (Error
+           ((rpc_error
+             (Uncaught_exn
+              ((location "server-side rpc computation")
+               (exn (monitor.ml.Error ("Error response" (query 3)))))))
+            (connection_description <created-directly>) (rpc_name rpc)
+            (rpc_version 0))))) |}];
       let%bind () = async_show handle in
       [%expect
         {|
@@ -1540,8 +1723,10 @@ let%test_module "Rpc.poll" =
           map
           ~f:(fun key _data ->
             Rpc_effect.Rpc.poll
-              (module Int)
-              (module Int)
+              ~sexp_of_query:[%sexp_of: Int.t]
+              ~sexp_of_response:[%sexp_of: Int.t]
+              ~equal_query:[%equal: Int.t]
+              ~equal_response:[%equal: Int.t]
               rpc
               ~where_to_connect:Self
               ~every:(Time_ns.Span.of_sec 1.0)
@@ -1653,8 +1838,10 @@ let%test_module "Rpc.poll" =
           map
           ~f:(fun key _data ->
             Rpc_effect.Rpc.poll
-              (module Int)
-              (module Int)
+              ~sexp_of_query:[%sexp_of: Int.t]
+              ~sexp_of_response:[%sexp_of: Int.t]
+              ~equal_query:[%equal: Int.t]
+              ~equal_response:[%equal: Int.t]
               rpc
               ~clear_when_deactivated:false
               ~where_to_connect:Self
@@ -1788,8 +1975,10 @@ let%test_module "Rpc.poll_until_ok" =
       let input_var = Bonsai.Var.create 1 in
       let computation =
         Rpc_effect.Rpc.poll_until_ok
-          (module Int)
-          (module Int)
+          ~sexp_of_query:[%sexp_of: Int.t]
+          ~sexp_of_response:[%sexp_of: Int.t]
+          ~equal_query:[%equal: Int.t]
+          ~equal_response:[%equal: Int.t]
           rpc
           ~where_to_connect:Self
           ~retry_interval:(Time_ns.Span.of_sec 1.0)
@@ -1805,7 +1994,8 @@ let%test_module "Rpc.poll_until_ok" =
       [%expect {|
         ((last_ok_response ()) (last_error ()) (inflight_query ())) |}];
       let%bind () = async_recompute_view handle in
-      [%expect {| received rpc! |}];
+      [%expect {|
+        received rpc! |}];
       let%bind () = async_show handle in
       [%expect
         {|
@@ -1846,8 +2036,10 @@ let%test_module "Rpc.poll_until_ok" =
       let input_var = Bonsai.Var.create 1 in
       let computation =
         Rpc_effect.Rpc.poll_until_ok
-          (module Int)
-          (module Int)
+          ~sexp_of_query:[%sexp_of: Int.t]
+          ~sexp_of_response:[%sexp_of: Int.t]
+          ~equal_query:[%equal: Int.t]
+          ~equal_response:[%equal: Int.t]
           rpc
           ~where_to_connect:Self
           ~retry_interval:(Time_ns.Span.of_sec 1.0)
@@ -1862,7 +2054,8 @@ let%test_module "Rpc.poll_until_ok" =
       let%bind () = async_show handle in
       [%expect {| ((last_ok_response ()) (last_error ()) (inflight_query ())) |}];
       let%bind () = async_recompute_view handle in
-      [%expect {| received rpc! |}];
+      [%expect {|
+        received rpc! |}];
       let%bind () = async_show handle in
       (* First error. *)
       [%expect
@@ -1882,7 +2075,8 @@ let%test_module "Rpc.poll_until_ok" =
       let%bind () = async_recompute_view handle in
       (* Retried rpc sent.*)
       let%bind () = async_recompute_view handle in
-      [%expect {| received rpc! |}];
+      [%expect {|
+        received rpc! |}];
       let%bind () = async_show handle in
       [%expect
         {|
@@ -1900,7 +2094,8 @@ let%test_module "Rpc.poll_until_ok" =
       let%bind () = async_recompute_view handle in
       (* Retried rpc sent.*)
       let%bind () = async_recompute_view handle in
-      [%expect {| received rpc! |}];
+      [%expect {|
+        received rpc! |}];
       (* Third rpc returns ok. *)
       let%bind () = async_show handle in
       [%expect
@@ -1922,8 +2117,10 @@ let%test_module "Rpc.poll_until_ok" =
       let input_var = Bonsai.Var.create 1 in
       let computation =
         Rpc_effect.Rpc.poll_until_ok
-          (module Int)
-          (module Int)
+          ~sexp_of_query:[%sexp_of: Int.t]
+          ~sexp_of_response:[%sexp_of: Int.t]
+          ~equal_query:[%equal: Int.t]
+          ~equal_response:[%equal: Int.t]
           rpc
           ~where_to_connect:Self
           ~retry_interval:(Time_ns.Span.of_sec 1.0)
@@ -1938,9 +2135,12 @@ let%test_module "Rpc.poll_until_ok" =
       let%bind () = async_show handle in
       [%expect {| ((last_ok_response ()) (last_error ()) (inflight_query ())) |}];
       let%bind () = async_recompute_view handle in
-      [%expect {| received rpc! |}];
+      [%expect {|
+        received rpc! |}];
       let%bind () = async_show handle in
-      [%expect {| ((last_ok_response ((1 1))) (last_error ()) (inflight_query ())) |}];
+      [%expect
+        {|
+        ((last_ok_response ((1 1))) (last_error ()) (inflight_query ())) |}];
       Handle.advance_clock_by handle (Time_ns.Span.of_sec 1.0);
       let%bind () = async_recompute_view handle in
       let%bind () = async_recompute_view handle in
@@ -1955,7 +2155,8 @@ let%test_module "Rpc.poll_until_ok" =
       Handle.do_actions handle [ Refresh ];
       let%bind () = async_recompute_view handle in
       let%bind () = async_recompute_view handle in
-      [%expect {| received rpc! |}];
+      [%expect {|
+        received rpc! |}];
       let%bind () = async_show handle in
       [%expect {| ((last_ok_response ((1 2))) (last_error ()) (inflight_query ())) |}];
       (* Rpc is not resent afterwards when refresh is scheduled *)
@@ -1998,7 +2199,11 @@ let%test_module "multi-poller" =
           Bonsai_web.Rpc_effect.Shared_poller.custom_create (module Int) ~f:dummy_poller
         in
         let%sub lookup =
-          Bonsai_web.Rpc_effect.Shared_poller.lookup (module Int) poller (Value.return 5)
+          Bonsai_web.Rpc_effect.Shared_poller.lookup
+            ~sexp_of_model:[%sexp_of: Int.t]
+            ~equal:[%equal: Int.t]
+            poller
+            (Value.return 5)
         in
         let%arr lookup = lookup in
         [%message "" ~_:(lookup.last_ok_response : (int * string) option)]
@@ -2024,10 +2229,18 @@ let%test_module "multi-poller" =
           Bonsai_web.Rpc_effect.Shared_poller.custom_create (module Int) ~f:dummy_poller
         in
         let%sub a =
-          Bonsai_web.Rpc_effect.Shared_poller.lookup (module Int) poller (Value.return 5)
+          Bonsai_web.Rpc_effect.Shared_poller.lookup
+            ~sexp_of_model:[%sexp_of: Int.t]
+            ~equal:[%equal: Int.t]
+            poller
+            (Value.return 5)
         in
         let%sub b =
-          Bonsai_web.Rpc_effect.Shared_poller.lookup (module Int) poller (Value.return 5)
+          Bonsai_web.Rpc_effect.Shared_poller.lookup
+            ~sexp_of_model:[%sexp_of: Int.t]
+            ~equal:[%equal: Int.t]
+            poller
+            (Value.return 5)
         in
         let%arr a = a
         and b = b in
@@ -2057,10 +2270,18 @@ let%test_module "multi-poller" =
           Bonsai_web.Rpc_effect.Shared_poller.custom_create (module Int) ~f:dummy_poller
         in
         let%sub a =
-          Bonsai_web.Rpc_effect.Shared_poller.lookup (module Int) poller (Value.return 5)
+          Bonsai_web.Rpc_effect.Shared_poller.lookup
+            ~sexp_of_model:[%sexp_of: Int.t]
+            ~equal:[%equal: Int.t]
+            poller
+            (Value.return 5)
         in
         let%sub b =
-          Bonsai_web.Rpc_effect.Shared_poller.lookup (module Int) poller (Value.return 10)
+          Bonsai_web.Rpc_effect.Shared_poller.lookup
+            ~sexp_of_model:[%sexp_of: Int.t]
+            ~equal:[%equal: Int.t]
+            poller
+            (Value.return 10)
         in
         let%arr a = a
         and b = b in
@@ -2096,7 +2317,8 @@ let%test_module "multi-poller" =
           if%sub Bonsai.Var.value bool_var
           then
             Bonsai_web.Rpc_effect.Shared_poller.lookup
-              (module Int)
+              ~sexp_of_model:[%sexp_of: Int.t]
+              ~equal:[%equal: Int.t]
               poller
               (Value.return 5)
           else
@@ -2139,13 +2361,18 @@ let%test_module "multi-poller" =
           Bonsai_web.Rpc_effect.Shared_poller.custom_create (module Int) ~f:dummy_poller
         in
         let%sub a =
-          Bonsai_web.Rpc_effect.Shared_poller.lookup (module Int) poller (Value.return 5)
+          Bonsai_web.Rpc_effect.Shared_poller.lookup
+            ~sexp_of_model:[%sexp_of: Int.t]
+            ~equal:[%equal: Int.t]
+            poller
+            (Value.return 5)
         in
         let%sub b =
           if%sub Bonsai.Var.value bool_var
           then
             Bonsai_web.Rpc_effect.Shared_poller.lookup
-              (module Int)
+              ~sexp_of_model:[%sexp_of: Int.t]
+              ~equal:[%equal: Int.t]
               poller
               (Value.return 5)
           else
@@ -2188,13 +2415,18 @@ let%test_module "multi-poller" =
           Bonsai_web.Rpc_effect.Shared_poller.custom_create (module Int) ~f:dummy_poller
         in
         let%sub a =
-          Bonsai_web.Rpc_effect.Shared_poller.lookup (module Int) poller (Value.return 5)
+          Bonsai_web.Rpc_effect.Shared_poller.lookup
+            ~sexp_of_model:[%sexp_of: Int.t]
+            ~equal:[%equal: Int.t]
+            poller
+            (Value.return 5)
         in
         let%sub b =
           if%sub Bonsai.Var.value bool_var
           then
             Bonsai_web.Rpc_effect.Shared_poller.lookup
-              (module Int)
+              ~sexp_of_model:[%sexp_of: Int.t]
+              ~equal:[%equal: Int.t]
               poller
               (Value.return 10)
           else

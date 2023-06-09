@@ -1,14 +1,13 @@
 # 00 - Introduction
 
 This guide will teach you how to build user interfaces in the browser
-using several of libraries, primarily `Bonsai` and `Virtual_dom`.
-Together, these libraries will allow you to build applications in a pure
-functional style without needing to be exposed to the impure, stateful
-API that browsers provide.
+using several libraries, primarily `Bonsai` and `Virtual_dom`. Together,
+these libraries allow you to build applications in a functional style
+instead of the imperative style encouraged by the browser's API.
 
-In this guide we aim to explain how to use Bonsai, and to a certain
+In this guide we aim to explain how to use Bonsai, and, to a lesser
 degree, how Bonsai works under the hood. We hope that the latter will
-equip you with the necessary knowledge to tune the performance of your
+equip you with the knowledge necessary to tune the performance of your
 applications.
 
 # Web Apps at 10,000 Feet
@@ -20,7 +19,7 @@ it possible to write all three of the browser languages using OCaml.
 -   `js_of_ocaml` is an OCaml-to-Javascript compiler.
 -   `virtual_dom` is a library for building values that represent a
     chunk of HTML.
--   `css_gen` is a library for writing CSS-styles in a type safe manner.
+-   `css_gen` is a library for writing CSS styles in a type safe manner.
 
 The CSS situation is a little more nuanced, since we actually recommend
 writing CSS directly using `ppx_css`.
@@ -31,7 +30,7 @@ A user interface is a function from *data* to *view*. In types:
 <!-- $MDX skip -->
 ```
 ``` ocaml
-(* Virtual_dom.Vdom.Node.t represents your applications view *)
+(* Virtual_dom.Vdom.Node.t represents your application's view *)
 open Virtual_dom
 
 val ui : Your_input_type_here.t -> Vdom.Node.t
@@ -68,7 +67,7 @@ the output is wrapped with `Computation.t`. While there is slightly more
 friction, writing re-usable UI components is just as easy. In addition,
 we've expanded the kinds of components you can write, since
 `Computation.t` encapsulates incremental state machines, which is how
-interactivity is added to a page.
+interactivity is added to an interface.
 
 Both these types are covered in detail in chapters [2](./02-dynamism.md)
 and [3](./03-state.md).

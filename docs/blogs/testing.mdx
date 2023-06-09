@@ -162,7 +162,9 @@ Here, we actually use the `hello_user` component defined previously, but the
 <!-- $MDX file=../../examples/testing_example/lib/app.ml,part=hello-text-box-component -->
 ```ocaml
 let hello_textbox : Vdom.Node.t Computation.t =
-  let%sub state, set = Bonsai.state (module String) ~default_model:"" in
+  let%sub state, set =
+    Bonsai.state "" ~sexp_of_model:[%sexp_of: String.t] ~equal:[%equal: String.t]
+  in
   let%sub message = hello_user state in
   let%arr message = message
   and set = set in
@@ -257,7 +259,7 @@ end
 
 let%expect_test "test Bonsai.state" =
   let component : (string * (string -> unit Vdom.Effect.t)) Computation.t =
-    Bonsai.state (module String) ~default_model:"hello"
+    Bonsai.state "hello" ~sexp_of_model:[%sexp_of: String.t] ~equal:[%equal: String.t]
   in
   let handle = Handle.create (module State_view_spec) component in
   Handle.show handle;
@@ -280,7 +282,7 @@ its arguments on to the value setter function that the view spec extracted.
 
 Sometimes the behavior of a component depends on time. For example,
 a double-click component will want to check whether two clicks happened close
-together. An event simpler example is a basic clock component whicch might be
+together. An even simpler example is a basic clock component that might be
 implemented in the following way:
 
 <!-- $MDX file=../../examples/time/src/bonsai_time_example.ml,part=untestable-clock-component -->
@@ -302,7 +304,7 @@ incremental clock that was passed to the Bonsai graph.
 <!-- $MDX file=../../examples/time/src/bonsai_time_example.ml,part=testable-clock-component -->
 ```ocaml
 let component =
-  let%sub now = Bonsai.Incr.with_clock Incr.Clock.watch_now in
+  let%sub now = Bonsai.Incr.with_clock Bonsai.Time_source.watch_now in
   return (now >>| Time_ns.to_string_utc >>| Vdom.Node.text)
 ;;
 ```

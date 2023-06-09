@@ -122,7 +122,7 @@ module Row_machine = struct
         | No_focused_row
         | Shadow of Key.t Currently_selected_row.t
         | Visible of Key.t Currently_selected_row.t
-      [@@deriving sexp, equal]
+      [@@deriving sexp_of, equal]
 
       let empty = No_focused_row
     end
@@ -261,8 +261,9 @@ module Row_machine = struct
     in
     let%sub current, inject =
       Bonsai.state_machine1
-        (module Model)
-        (module Action)
+        ~sexp_of_model:[%sexp_of: Model.t]
+        ~equal:[%equal: Model.t]
+        ~sexp_of_action:[%sexp_of: Action.t]
         ~default_model:Model.empty
         ~apply_action
         input
@@ -298,9 +299,8 @@ module Row_machine = struct
     in
     let%sub () =
       Bonsai.Edge.on_change
-        (module struct
-          type t = Model.t * Key.t option [@@deriving sexp, equal]
-        end)
+        ~sexp_of_model:[%sexp_of: Model.t * Key.t option]
+        ~equal:[%equal: Model.t * Key.t option]
         (Value.both current visually_focused)
         ~callback:
           (let%map inject = inject in

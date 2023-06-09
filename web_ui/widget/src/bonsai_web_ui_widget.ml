@@ -20,7 +20,6 @@ module Low_level = struct
     type 's t = 's Id.Map.t
 
     let sexp_of_t = sexp_of_opaque
-    let t_of_sexp = opaque_of_sexp
     let equal = phys_equal
   end
 
@@ -32,8 +31,6 @@ module Low_level = struct
           }
       | Destroy of Id.t
       | Modify of ('s -> unit)
-
-    let sexp_of_t = sexp_of_opaque
   end
 
   let component (type s) () =
@@ -43,20 +40,16 @@ module Low_level = struct
       type nonrec t = s t
     end
     in
-    let module Action = struct
-      include Action
-
-      type nonrec t = s t
-    end
-    in
     let%sub model, inject =
       Bonsai.state_machine0
-        (module Model)
-        (module Action)
+        ()
+        ~sexp_of_model:[%sexp_of: Model.t]
+        ~equal:[%equal: Model.t]
+        ~sexp_of_action:sexp_of_opaque
         ~reset:(fun ~inject:_ ~schedule_event:_ m -> m)
         ~default_model:Id.Map.empty
         ~apply_action:(fun ~inject:_ ~schedule_event:_ model -> function
-          | Register { id; state } -> Map.set model ~key:id ~data:state
+          | Action.Register { id; state } -> Map.set model ~key:id ~data:state
           | Destroy id -> Map.remove model id
           | Modify f ->
             Map.iter model ~f;
@@ -116,10 +109,13 @@ let component
       (module M : S with type input = input and type state = state)
       input
   =
-  let id = Type_equal.Id.create ~name:"widget" sexp_of_opaque in
+  let%sub id =
+    Bonsai.Expert.thunk (fun () -> Type_equal.Id.create ~name:"widget" sexp_of_opaque)
+  in
   let%sub state_tracker = Low_level.component () in
   let%sub view =
     let%arr input = input
+    and id = id
     and { unsafe_init; unsafe_destroy; _ } = state_tracker in
     Vdom.Node.widget
       ~vdom_for_testing:(lazy (vdom_for_testing input))

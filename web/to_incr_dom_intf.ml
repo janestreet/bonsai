@@ -7,7 +7,7 @@ module type S = sig
   module Input : T
 
   module Model : sig
-    type t [@@deriving equal, sexp]
+    type t [@@deriving equal, sexp_of]
 
     val default : t
   end

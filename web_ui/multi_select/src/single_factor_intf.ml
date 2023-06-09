@@ -3,9 +3,9 @@ open! Import
 open  Bonsai_web
 
 module type Item = sig
-  type t [@@deriving equal, sexp]
+  type t [@@deriving equal, sexp_of]
 
-  include Comparable.S with type t := t
+  include Comparable.S_plain with type t := t
 
   val to_string : t -> string
 end

@@ -10,8 +10,10 @@ end
 let add_counter_component =
   let%sub add_counter_state =
     Bonsai.state_machine0
-      (module Model)
-      (module Unit)
+      ()
+      ~sexp_of_model:[%sexp_of: Model.t]
+      ~equal:[%equal: Model.t]
+      ~sexp_of_action:[%sexp_of: Unit.t]
       ~default_model:Int.Map.empty
       ~apply_action:(fun ~inject:_ ~schedule_event:_ model () ->
         let key = Map.length model in
@@ -40,8 +42,10 @@ end
 let single_counter =
   let%sub counter_state =
     Bonsai.state_machine0
-      (module Int)
-      (module Action)
+      ()
+      ~sexp_of_model:[%sexp_of: Int.t]
+      ~equal:[%equal: Int.t]
+      ~sexp_of_action:[%sexp_of: Action.t]
       ~default_model:0
       ~apply_action:(fun ~inject:_ ~schedule_event:_ model -> function
         | Action.Increment -> model + 1

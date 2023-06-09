@@ -255,7 +255,7 @@ let%expect_test ("map-10 dot file constant folding optimization" [@tags "no-js"]
 
 let%expect_test ("subst dot constant folding" [@tags "no-js"]) =
   let c =
-    let%sub a = Bonsai.state (module Int) ~default_model:0 in
+    let%sub a = Bonsai.state 0 ~sexp_of_model:[%sexp_of: Int.t] ~equal:[%equal: Int.t] in
     let%sub b = opaque_const () in
     let%sub c = return (Value.both a b) in
     return (Value.both a c)
@@ -321,7 +321,7 @@ let%expect_test ("subst dot constant folding" [@tags "no-js"]) =
 
 let%expect_test ("subst dot" [@tags "no-js"]) =
   let c =
-    let%sub a = Bonsai.state (module Int) ~default_model:0 in
+    let%sub a = Bonsai.state 0 ~sexp_of_model:[%sexp_of: Int.t] ~equal:[%equal: Int.t] in
     let%sub b = opaque_const () in
     let%sub c = return (Value.both a b) in
     return (Value.both a c)

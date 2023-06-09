@@ -276,8 +276,8 @@ module Shared_poller = struct
   let create = Bonsai.Memo.create
   let custom_create = create
 
-  let lookup q_mod memo query =
-    let%sub res = Bonsai.Memo.lookup q_mod memo query in
+  let lookup ?sexp_of_model ~equal memo query =
+    let%sub res = Bonsai.Memo.lookup ?sexp_of_model ~equal memo query in
     match%arr res with
     | Some x -> x
     | None ->
@@ -301,21 +301,40 @@ end
 
 let generic_poll_or_error
       (type query response)
-      (module Query : Bonsai.Model with type t = query)
-      (module Response : Bonsai.Model with type t = response)
+      ~sexp_of_query
+      ~sexp_of_response
+      ~equal_query
+      ?(equal_response = phys_equal)
+      ~clear_when_deactivated
+      ~on_response_received
       dispatcher
       ~every
       ~poll_behavior
       query
   =
+  let module Query = struct
+    type t = query
+
+    let sexp_of_t = Option.value ~default:sexp_of_opaque sexp_of_query
+  end
+  in
+  let module Response = struct
+    type t = response
+
+    let sexp_of_t = Option.value ~default:sexp_of_opaque sexp_of_response
+  end
+  in
   let open Bonsai.Let_syntax in
   let module Model = struct
+    let sexp_of_query = Query.sexp_of_t
+    let sexp_of_response = Response.sexp_of_t
+
     type t =
-      { last_ok_response : (Query.t * Response.t) option
-      ; last_error : (Query.t * Error.t) option
-      ; inflight_queries : Query.t Inflight_query_key.Map.t
+      { last_ok_response : (query * response) option
+      ; last_error : (query * Error.t) option
+      ; inflight_queries : query Inflight_query_key.Map.t
       }
-    [@@deriving sexp, equal]
+    [@@deriving sexp_of, equal]
   end
   in
   let module Action = struct
@@ -332,43 +351,64 @@ let generic_poll_or_error
     [@@deriving sexp_of]
   end
   in
+  let default_model =
+    { Model.last_ok_response = None
+    ; last_error = None
+    ; inflight_queries = Inflight_query_key.Map.empty
+    }
+  in
   let%sub response, inject_response =
-    Bonsai.state_machine0
-      (module Model)
-      (module Action)
-      ~default_model:
-        { last_ok_response = None
-        ; last_error = None
-        ; inflight_queries = Inflight_query_key.Map.empty
-        }
-      ~apply_action:(fun ~inject:_ ~schedule_event:_ model -> function
-        | Finish { query; response; inflight_query_key } ->
-          let last_ok_response, last_error =
-            match response with
-            | Finished (Ok response) -> Some (query, response), None
-            | Finished (Error error) -> model.last_ok_response, Some (query, error)
-            | Aborted -> model.last_ok_response, model.last_error
-          in
-          { last_ok_response
-          ; last_error
-          ; inflight_queries = Map.remove model.inflight_queries inflight_query_key
-          }
-        | Start { query; inflight_query_key } ->
-          { model with
-            inflight_queries =
-              Map.add_exn model.inflight_queries ~key:inflight_query_key ~data:query
-          })
+    (* using a state_machine1 is important because we need add check the Computation_status
+       to see if we should drop the action (due to [clear_when_responded]) *)
+    Bonsai.state_machine1
+      (* Use a var here to prevent bonsai from optimizing the [state_machine1] down to a
+         [state_machine0] *)
+      Bonsai.Var.(create () |> value)
+      ~sexp_of_model:[%sexp_of: Model.t]
+      ~sexp_of_action:[%sexp_of: Action.t]
+      ~equal:[%equal: Model.t]
+      ~default_model
+      ~apply_action:(fun ~inject:_ ~schedule_event:_ computation_status model action ->
+        let should_ignore =
+          match computation_status with
+          | Inactive -> clear_when_deactivated
+          | Active () -> false
+        in
+        if should_ignore
+        then default_model
+        else (
+          match action with
+          | Finish { query; response; inflight_query_key } ->
+            let last_ok_response, last_error =
+              match response with
+              | Finished (Ok response) -> Some (query, response), None
+              | Finished (Error error) -> model.last_ok_response, Some (query, error)
+              | Aborted -> model.last_ok_response, model.last_error
+            in
+            { last_ok_response
+            ; last_error
+            ; inflight_queries = Map.remove model.inflight_queries inflight_query_key
+            }
+          | Start { query; inflight_query_key } ->
+            { model with
+              inflight_queries =
+                Map.add_exn model.inflight_queries ~key:inflight_query_key ~data:query
+            }))
   in
   let%sub effect =
     let%arr dispatcher = dispatcher
-    and inject_response = inject_response in
+    and inject_response = inject_response
+    and on_response_received = on_response_received in
     fun query ->
-      let%bind.Effect inflight_query_key =
-        Effect.of_sync_fun Inflight_query_key.create ()
-      in
-      let%bind.Effect () = inject_response (Start { query; inflight_query_key }) in
-      let%bind.Effect response = dispatcher query in
-      inject_response (Finish { query; response; inflight_query_key })
+      let open Effect.Let_syntax in
+      let%bind inflight_query_key = Effect.of_sync_fun Inflight_query_key.create () in
+      let%bind () = inject_response (Start { query; inflight_query_key }) in
+      let%bind response = dispatcher query in
+      let%bind () = inject_response (Finish { query; response; inflight_query_key }) in
+      match response with
+      | Bonsai.Effect_throttling.Poll_result.Aborted -> Effect.Ignore
+      | Bonsai.Effect_throttling.Poll_result.Finished response ->
+        on_response_received query response
   in
   (* Below are three constructs that schedule the effect to run. The tricky part
      of this is that [Clock.every] and [Edge.on_change] both run effects on
@@ -382,7 +422,13 @@ let generic_poll_or_error
       | Some _ -> effect query
       | None -> Effect.Ignore
   in
-  let%sub () = Bonsai.Edge.on_change' (module Query) query ~callback in
+  let%sub () =
+    Bonsai.Edge.on_change'
+      ~sexp_of_model:[%sexp_of: Query.t]
+      ~equal:equal_query
+      query
+      ~callback
+  in
   let%sub send_rpc_effect =
     let%arr effect = effect
     and query = query in
@@ -420,15 +466,30 @@ let generic_poll_or_error
    leak on the server, so it would be shame if we didn't also defend against
    memory leaks on the client. *)
 let generic_poll_or_error
-      q
-      r
+      ~sexp_of_query
+      ~sexp_of_response
+      ~equal_query
+      ?equal_response
       ?(clear_when_deactivated = true)
+      ?(on_response_received = Bonsai.Value.return (fun _ _ -> Effect.Ignore))
       dispatcher
       ~every
       ~poll_behavior
       query
   =
-  let c = generic_poll_or_error q r dispatcher ~every ~poll_behavior query in
+  let c =
+    generic_poll_or_error
+      ~sexp_of_query
+      ~sexp_of_response
+      ~equal_query
+      ?equal_response
+      ~on_response_received
+      ~clear_when_deactivated
+      dispatcher
+      ~every
+      ~poll_behavior
+      query
+  in
   let open Bonsai.Let_syntax in
   if clear_when_deactivated
   then (
@@ -462,28 +523,56 @@ module Our_rpc = struct
         ~callback:(fun connection -> Babel.Caller.Rpc.dispatch_multi rpc connection query))
   ;;
 
-  let poll q r ?clear_when_deactivated rpc ~where_to_connect ~every query =
+  let poll
+        ?sexp_of_query
+        ?sexp_of_response
+        ~equal_query
+        ?equal_response
+        ?clear_when_deactivated
+        ?on_response_received
+        rpc
+        ~where_to_connect
+        ~every
+        query
+    =
     let open Bonsai.Let_syntax in
     let%sub dispatcher = dispatcher rpc ~where_to_connect in
     let%sub dispatcher = Bonsai.Effect_throttling.poll dispatcher in
     generic_poll_or_error
-      q
-      r
+      ~sexp_of_query
+      ~sexp_of_response
+      ~equal_query
+      ?equal_response
       ?clear_when_deactivated
+      ?on_response_received
       dispatcher
       ~every
       ~poll_behavior:Always
       query
   ;;
 
-  let babel_poll q r ?clear_when_deactivated rpc ~where_to_connect ~every query =
+  let babel_poll
+        ?sexp_of_query
+        ?sexp_of_response
+        ~equal_query
+        ?equal_response
+        ?clear_when_deactivated
+        ?on_response_received
+        rpc
+        ~where_to_connect
+        ~every
+        query
+    =
     let open Bonsai.Let_syntax in
     let%sub dispatcher = babel_dispatcher rpc ~where_to_connect in
     let%sub dispatcher = Bonsai.Effect_throttling.poll dispatcher in
     generic_poll_or_error
-      q
-      r
+      ~sexp_of_query
+      ~sexp_of_response
+      ~equal_query
+      ?equal_response
       ?clear_when_deactivated
+      ?on_response_received
       dispatcher
       ~every
       ~poll_behavior:Always
@@ -493,8 +582,10 @@ module Our_rpc = struct
   let shared_poller
         (type q cmp)
         (module Q : Bonsai.Comparator with type t = q and type comparator_witness = cmp)
-        r
+        ?sexp_of_response
+        ?equal_response
         ?clear_when_deactivated
+        ?on_response_received
         rpc
         ~where_to_connect
         ~every
@@ -508,13 +599,26 @@ module Our_rpc = struct
     Shared_poller.create
       (module Q)
       ~f:(fun query ->
-        poll (module M) r ?clear_when_deactivated rpc ~where_to_connect ~every query)
+        poll
+          ~sexp_of_query:M.sexp_of_t
+          ?sexp_of_response
+          ~equal_query:M.equal
+          ?equal_response
+          ?clear_when_deactivated
+          ?on_response_received
+          rpc
+          ~where_to_connect
+          ~every
+          query)
   ;;
 
   let poll_until_ok
-        q
-        r
+        ?sexp_of_query
+        ?sexp_of_response
+        ~equal_query
+        ?equal_response
         ?clear_when_deactivated
+        ?on_response_received
         rpc
         ~where_to_connect
         ~retry_interval
@@ -524,9 +628,12 @@ module Our_rpc = struct
     let%sub dispatcher = dispatcher rpc ~where_to_connect in
     let%sub dispatcher = Bonsai.Effect_throttling.poll dispatcher in
     generic_poll_or_error
-      q
-      r
+      ~sexp_of_query
+      ~sexp_of_response
+      ~equal_query
+      ?equal_response
       ?clear_when_deactivated
+      ?on_response_received
       dispatcher
       ~every:retry_interval
       ~poll_behavior:Until_ok
@@ -534,9 +641,12 @@ module Our_rpc = struct
   ;;
 
   let babel_poll_until_ok
-        q
-        r
+        ?sexp_of_query
+        ?sexp_of_response
+        ~equal_query
+        ?equal_response
         ?clear_when_deactivated
+        ?on_response_received
         rpc
         ~where_to_connect
         ~retry_interval
@@ -546,9 +656,12 @@ module Our_rpc = struct
     let%sub dispatcher = babel_dispatcher rpc ~where_to_connect in
     let%sub dispatcher = Bonsai.Effect_throttling.poll dispatcher in
     generic_poll_or_error
-      q
-      r
+      ~sexp_of_query
+      ~sexp_of_response
+      ~equal_query
+      ?equal_response
       ?clear_when_deactivated
+      ?on_response_received
       dispatcher
       ~every:retry_interval
       ~poll_behavior:Until_ok
@@ -593,7 +706,18 @@ module Polling_state_rpc = struct
     Effect.of_deferred_fun (perform_query (connector, client))
   ;;
 
-  let poll q r ?clear_when_deactivated rpc ~where_to_connect ~every query =
+  let poll
+        ?sexp_of_query
+        ?sexp_of_response
+        ~equal_query
+        ?equal_response
+        ?clear_when_deactivated
+        ?on_response_received
+        rpc
+        ~where_to_connect
+        ~every
+        query
+    =
     let open Bonsai.Let_syntax in
     let%sub dispatcher = dispatcher rpc ~where_to_connect in
     let%sub dispatcher =
@@ -603,9 +727,12 @@ module Polling_state_rpc = struct
         Bonsai.Effect_throttling.Poll_result.Finished result
     in
     generic_poll_or_error
-      q
-      r
+      ~sexp_of_query
+      ~sexp_of_response
+      ~equal_query
+      ?equal_response
       ?clear_when_deactivated
+      ?on_response_received
       dispatcher
       ~every
       ~poll_behavior:Always
@@ -615,8 +742,10 @@ module Polling_state_rpc = struct
   let shared_poller
         (type q cmp)
         (module Q : Bonsai.Comparator with type t = q and type comparator_witness = cmp)
-        r
+        ?sexp_of_response
+        ?equal_response
         ?clear_when_deactivated
+        ?on_response_received
         rpc
         ~where_to_connect
         ~every
@@ -630,7 +759,17 @@ module Polling_state_rpc = struct
     Shared_poller.create
       (module Q)
       ~f:(fun query ->
-        poll (module M) r ?clear_when_deactivated rpc ~where_to_connect ~every query)
+        poll
+          ~sexp_of_query:M.sexp_of_t
+          ?sexp_of_response
+          ~equal_query:[%equal: M.t]
+          ?equal_response
+          ?clear_when_deactivated
+          ?on_response_received
+          rpc
+          ~where_to_connect
+          ~every
+          query)
   ;;
 end
 
@@ -673,7 +812,7 @@ module Status = struct
 
     type nonrec t =
       { state : state
-      ; clock : (Ui_incr.Clock.t option[@sexp.opaque] [@equal.ignore])
+      ; clock : (Bonsai.Time_source.t option[@sexp.opaque] [@equal.ignore])
       ; connecting_since : Time_ns.Alternate_sexp.t option
       }
     [@@deriving sexp, equal]
@@ -682,7 +821,7 @@ module Status = struct
   module Action = struct
     type nonrec t =
       | Set of State.t
-      | Activate of Ui_incr.Clock.t
+      | Activate of (Bonsai.Time_source.t[@sexp.opaque])
     [@@deriving sexp_of]
   end
 
@@ -698,8 +837,9 @@ module Status = struct
     let%sub dispatcher = dispatcher ~where_to_connect in
     let%sub model, inject =
       Bonsai.state_machine1
-        (module Model)
-        (module Action)
+        ~sexp_of_model:[%sexp_of: Model.t]
+        ~equal:[%equal: Model.t]
+        ~sexp_of_action:[%sexp_of: Action.t]
         dispatcher
         ~default_model:{ state = Initial; clock = None; connecting_since = None }
         ~apply_action:(fun ~inject ~schedule_event dispatcher model action ->
@@ -733,7 +873,7 @@ module Status = struct
             | Set _ -> model.clock
           in
           let connecting_since =
-            let now () = Option.map ~f:Ui_incr.Clock.now clock in
+            let now () = Option.map ~f:Bonsai.Time_source.now clock in
             match state with
             | State Connected ->
               (match new_state with

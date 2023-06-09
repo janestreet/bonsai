@@ -69,15 +69,19 @@ let radius = 30.
 let ticker =
   let%sub percentage, increase =
     Bonsai.state_machine0
-      (module Int)
-      (module Unit)
+      ()
+      ~sexp_of_model:[%sexp_of: Int.t]
+      ~equal:[%equal: Int.t]
+      ~sexp_of_action:[%sexp_of: Unit.t]
       ~default_model:0
       ~apply_action:(fun ~inject:_ ~schedule_event:_ model () -> (model + 1) % 101)
   in
   let%sub color_index, increment =
     Bonsai.state_machine0
-      (module Int)
-      (module Unit)
+      ()
+      ~sexp_of_model:[%sexp_of: Int.t]
+      ~equal:[%equal: Int.t]
+      ~sexp_of_action:[%sexp_of: Unit.t]
       ~default_model:0
       ~apply_action:(fun ~inject:_ ~schedule_event:_ prev () ->
         prev + (1 % Array.length colors))

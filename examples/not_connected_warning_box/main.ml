@@ -4,7 +4,7 @@ open Bonsai.Let_syntax
 
 let component =
   let%sub is_connected, set_is_connected =
-    Bonsai.state (module Bool) ~default_model:false
+    Bonsai.state false ~sexp_of_model:[%sexp_of: Bool.t] ~equal:[%equal: Bool.t]
   in
   let%sub not_connected_warning_box =
     Bonsai_web_ui_not_connected_warning_box.(

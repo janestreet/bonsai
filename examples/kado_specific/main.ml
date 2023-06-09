@@ -5,8 +5,9 @@ open! Bonsai.Let_syntax
 let card ~theme ~name ~content =
   View.card'
     theme
-    ~title_attr:(Vdom.Attr.style (Css_gen.flex_container ~justify_content:`Center ()))
-    ~container_attr:(Vdom.Attr.style (Css_gen.create ~field:"width" ~value:"fit-content"))
+    ~title_attrs:[ Vdom.Attr.style (Css_gen.flex_container ~justify_content:`Center ()) ]
+    ~container_attrs:
+      [ Vdom.Attr.style (Css_gen.create ~field:"width" ~value:"fit-content") ]
     ~title:[ Vdom.Node.text name ]
     content
 ;;

@@ -9,7 +9,6 @@ type ('i, 'r) t =
 
 let create
       (type i r)
-      ?initial_model_sexp
       ?(optimize = true)
       ~clock
       ~(initial_input : i)
@@ -27,7 +26,7 @@ let create
     in
     input_var, computation
   in
-  let handle = Bonsai_driver.create ?initial_model_sexp ~optimize ~clock computation in
+  let handle = Bonsai_driver.create ~optimize ~clock computation in
   { input_var; last_view = ""; handle }
 ;;
 

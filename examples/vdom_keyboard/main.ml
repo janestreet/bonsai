@@ -35,8 +35,10 @@ module Css =
 
 let offset_state_machine =
   Bonsai.state_machine0
-    (module Int)
-    (module Int)
+    ()
+    ~sexp_of_model:[%sexp_of: Int.t]
+    ~equal:[%equal: Int.t]
+    ~sexp_of_action:[%sexp_of: Int.t]
     ~default_model:400
     ~apply_action:(fun ~inject:_ ~schedule_event:_ x delta -> x + delta)
 ;;
@@ -44,7 +46,9 @@ let offset_state_machine =
 let component =
   let%sub x, add_x = offset_state_machine in
   let%sub y, add_y = offset_state_machine in
-  let%sub show_help, set_show_help = Bonsai.state (module Bool) ~default_model:false in
+  let%sub show_help, set_show_help =
+    Bonsai.state false ~sexp_of_model:[%sexp_of: Bool.t] ~equal:[%equal: Bool.t]
+  in
   let%sub handler =
     let%arr add_x = add_x
     and add_y = add_y

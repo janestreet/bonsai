@@ -11,19 +11,10 @@ The simplest kind of state is `Bonsai.state`. It returns both a value
 tracking the state's current model, and also a function for updating
 that model.
 
-`ocaml skip val state   :  (module Model with type t = 'model)   -> default_model:'model   -> ('model * ('model -> unit Effect.t)) Computation.t`
+`ocaml skip val state : 'model -> ('model * ('model -> unit Effect.t)) Computation.t`
 
-This function has a few types that might be a bit confusing to a new
-user of OCaml, so let's step through them one by one.
-
-1.  `(module Model with type t = 'model)`: This is a first-class module
-    that describes the type of the state. The type needs to be
-    `sexp`able and `equal`able. Typically this argument is provided by
-    wrapping an already existing module inside the
-    first-class-module-packing syntax; for example, you might write
-    `(module String)`.
-2.  `default_model:'model`: This is the initial value contained in the
-    state.
+-   `'model`: This is the initial value contained in the state, its
+    "default" "model".
 
 Let's break down a simple, yet realistic usage of this computation.
 
@@ -32,13 +23,15 @@ Let's break down a simple, yet realistic usage of this computation.
 ```
 ``` ocaml
 let textbox : (string * Vdom.Node.t) Computation.t =
-  let%sub state, set_state = Bonsai.state (module String) ~default_model:"" in
+  let%sub state, set_state = Bonsai.state "" in
   let%arr state = state
   and set_state = set_state in
   let view =
     Vdom.Node.input
       ~attrs:
-        [ Vdom.Attr.(value_prop state @ on_input (fun _ new_text -> set_state new_text)) ]
+        [ Vdom.Attr.value_prop state
+        ; Vdom.Attr.on_input (fun _ new_text -> set_state new_text)
+        ]
       ()
   in
   state, view
@@ -67,7 +60,7 @@ this example, "textbox" takes no `Value.t` as inputs, but zero is still
 ```{=html}
 </aside>
 ```
-`ocaml skip let%sub state, set_state = Bonsai.state (module String) ~default_model:"" in`
+`ocaml skip let%sub state, set_state = Bonsai.state "" in`
 
 This line creates some string state initially containing the empty
 string. We use `let%sub` to instantiate this state, giving us access to
@@ -215,7 +208,7 @@ component can easily be implemented using `Bonsai.state`:
 ```
 ``` ocaml
 let state_based_counter : Vdom.Node.t Computation.t =
-  let%sub state, set_state = Bonsai.state (module Int) ~default_model:0 in
+  let%sub state, set_state = Bonsai.state 0 in
   let%arr state = state
   and set_state = set_state in
   let decrement =
@@ -263,8 +256,7 @@ Fortunately, `Bonsai.state_machine0` is here to help! It has this type:
 ```
 ``` ocaml
 val Bonsai.state_machine0
-  :  (module Model with type t = 'model)
-  -> (module Action with type t = 'action)
+  :  (module Action with type t = 'action)
   -> default_model:'model
   -> apply_action:
        (inject:('action -> unit Effect.t)
@@ -317,8 +309,8 @@ end
 let counter_state_machine : Vdom.Node.t Computation.t =
   let%sub state, inject =
     Bonsai.state_machine0
-      (module Int)
-      (module Action)
+      ()
+      ~sexp_of_action:[%sexp_of: Action.t]
       ~default_model:0
       ~apply_action:(fun ~inject:_ ~schedule_event:_ model action ->
         match action with
@@ -365,9 +357,7 @@ and `state_machine1`:
 ``` diff
 -val state_machine0
 +val state_machine1
-   :  Source_code_position.t
-   -> (module Model with type t = 'model)
-   -> (module Action with type t = 'action)
+   :  (module Action with type t = 'action)
    -> default_model:'model
    -> apply_action:
         (inject:('action -> unit Effect.t)

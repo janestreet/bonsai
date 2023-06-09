@@ -3,7 +3,9 @@ open! Bonsai_web
 open! Bonsai.Let_syntax
 
 let text_input =
-  let%sub text_contents, set_text_contents = Bonsai.state_opt (module String) in
+  let%sub text_contents, set_text_contents =
+    Bonsai.state_opt () ~sexp_of_model:[%sexp_of: String.t] ~equal:[%equal: String.t]
+  in
   let%arr text_contents = text_contents
   and set_text_contents = set_text_contents in
   Vdom_input_widgets.Entry.text
@@ -14,7 +16,9 @@ let text_input =
 ;;
 
 let date_input =
-  let%sub date_contents, set_date_contents = Bonsai.state_opt (module Date) in
+  let%sub date_contents, set_date_contents =
+    Bonsai.state_opt () ~sexp_of_model:[%sexp_of: Date.t] ~equal:[%equal: Date.t]
+  in
   let%arr date_contents = date_contents
   and set_date_contents = set_date_contents in
   Vdom_input_widgets.Entry.date
@@ -26,7 +30,7 @@ let date_input =
 
 let text_input_first_input =
   let%sub text_input_first_contents, set_text_input_first_contents =
-    Bonsai.state (module Bool) ~default_model:false
+    Bonsai.state false ~sexp_of_model:[%sexp_of: Bool.t] ~equal:[%equal: Bool.t]
   in
   let%arr text_input_first_contents = text_input_first_contents
   and set_text_input_first_contents = set_text_input_first_contents in

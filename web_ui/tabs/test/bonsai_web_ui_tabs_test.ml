@@ -25,12 +25,13 @@ let basic_tab_component ?additional_button_attributes ?decorate ?f () =
           | B -> Bonsai.const (Vdom.Node.text "b")
           | C -> Bonsai.const (Vdom.Node.text "c")))
   in
-  let%sub state = Tabs.tab_state (module My_tabs) ~initial:A in
+  let%sub state = Tabs.tab_state (module My_tabs) ~initial:A ~equal:[%equal: My_tabs.t] in
   let%sub tab_result =
     Tabs.tab_ui
       ?additional_button_attributes
       ?decorate
       (module My_tabs)
+      ~equal:[%equal: My_tabs.t]
       ~all_tabs:(Value.return My_tabs.all)
       state
       ~f

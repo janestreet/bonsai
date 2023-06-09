@@ -24,7 +24,13 @@ let apply_action ~inject:_ ~schedule_event:_ model = function
 
 let component =
   let%sub state =
-    Bonsai.state_machine0 (module Model) (module Action) ~default_model ~apply_action
+    Bonsai.state_machine0
+      ()
+      ~sexp_of_model:[%sexp_of: Model.t]
+      ~equal:[%equal: Model.t]
+      ~sexp_of_action:[%sexp_of: Action.t]
+      ~default_model
+      ~apply_action
   in
   let%arr state, inject = state in
   let button text action =

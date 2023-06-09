@@ -74,10 +74,14 @@ val drop_target : ('source_id, 'target_id) t -> id:'target_id -> Vdom.Attr.t
     visual feedback about what will happen if an item is dropped *)
 val model : ('source_id, 'target_id) t -> ('source_id, 'target_id) Model.t
 
+module type S = sig
+  type t [@@deriving sexp, equal]
+end
+
 (** Creates a new drag-and-drop universe. *)
 val create
-  :  source_id:(module Bonsai.Model with type t = 'source_id)
-  -> target_id:(module Bonsai.Model with type t = 'target_id)
+  :  source_id:(module S with type t = 'source_id)
+  -> target_id:(module S with type t = 'target_id)
   -> on_drop:('source_id -> 'target_id -> unit Effect.t) Value.t
   -> ('source_id, 'target_id) t Computation.t
 

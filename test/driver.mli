@@ -4,9 +4,8 @@ open! Import
 type ('i, 'r) t
 
 val create
-  :  ?initial_model_sexp:Sexp.t
-  -> ?optimize:bool
-  -> clock:Incr.Clock.t
+  :  ?optimize:bool
+  -> clock:Bonsai.Time_source.t
   -> initial_input:'i
   -> ('i, 'r) Bonsai.Arrow_deprecated.t
   -> ('i, 'r) t
@@ -28,6 +27,6 @@ val input : ('i, _) t -> 'i
 val result_incr : (_, 'r) t -> 'r Incr.t
 val lifecycle_incr : _ t -> Incr.Packed.t
 val action_input_incr : _ t -> Incr.Packed.t
-val clock : (_, _) t -> Incr.Clock.t
+val clock : (_, _) t -> Bonsai.Time_source.t
 val invalidate_observers : _ t -> unit
 val reset_model_to_default : _ t -> unit

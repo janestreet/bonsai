@@ -128,8 +128,10 @@ module Tracker = struct
   let component =
     let%sub state, inject =
       Bonsai.state_machine0
-        (module Model)
-        (module Action)
+        ()
+        ~sexp_of_model:[%sexp_of: Model.t]
+        ~equal:[%equal: Model.t]
+        ~sexp_of_action:[%sexp_of: Action.t]
         ~default_model:(Map.empty (module Id))
         ~apply_action:(fun ~inject:_ ~schedule_event:_ map -> function
           | id, Install -> Map.set map ~key:id ~data:Installed
@@ -159,7 +161,7 @@ end
 module Vdom_model = struct
   type t = Vdom.Node.t
 
-  let equal, sexp_of_t, t_of_sexp = phys_equal, sexp_of_opaque, opaque_of_sexp
+  let equal, sexp_of_t = phys_equal, sexp_of_opaque
 end
 
 let rec with_attr attr (vdom : Vdom.Node.t) =
@@ -193,7 +195,12 @@ let only_when_visible' ?visible_attr ?hidden_attr c =
     | None -> Value.return Fn.id
   in
   let%sub state, attr = Tracker.component in
-  let%sub prev_vdom, set_prev_vdom = Bonsai.state_opt (module Vdom_model) in
+  let%sub prev_vdom, set_prev_vdom =
+    Bonsai.state_opt
+      ()
+      ~sexp_of_model:[%sexp_of: Vdom_model.t]
+      ~equal:[%equal: Vdom_model.t]
+  in
   let%sub vdom_and_other =
     match%sub Value.both state prev_vdom with
     (* Always render the component at least once, so even in the None case,
@@ -203,7 +210,8 @@ let only_when_visible' ?visible_attr ?hidden_attr c =
       let%sub vdom, other = c in
       let%sub () =
         Bonsai.Edge.on_change
-          (module Vdom_model)
+          ~sexp_of_model:[%sexp_of: Vdom_model.t]
+          ~equal:[%equal: Vdom_model.t]
           vdom
           ~callback:
             (let%map set_prev_vdom = set_prev_vdom in

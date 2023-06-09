@@ -128,8 +128,8 @@ let form =
   let card_helper theme title form =
     View.card'
       theme
-      ~title_attr:Style.form_title
-      ~content_attr:Style.card_content
+      ~title_attrs:[ Style.form_title ]
+      ~content_attrs:[ Style.card_content ]
       ~title:[ Vdom.Node.text title ]
       [ Form.view_as_vdom form ]
   in

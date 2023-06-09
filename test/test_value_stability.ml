@@ -328,7 +328,8 @@ let%test_module "Bonsai.most_recent_value_satisfying" =
   (module struct
     module Common (M : sig
         val most_recent_value_satisfying
-          :  (module Bonsai.Model with type t = 'a)
+          :  ?sexp_of_model:('a -> Sexp.t)
+          -> equal:('a -> 'a -> bool)
           -> 'a Value.t
           -> condition:('a -> bool)
           -> 'a option Computation.t
@@ -342,7 +343,11 @@ let%test_module "Bonsai.most_recent_value_satisfying" =
         let v' = Bonsai.Var.create 1 in
         let v = Bonsai.Var.value v' in
         let c =
-          M.most_recent_value_satisfying (module Int) v ~condition:(fun x -> x % 2 = 0)
+          M.most_recent_value_satisfying
+            ~sexp_of_model:[%sexp_of: Int.t]
+            ~equal:[%equal: Int.t]
+            v
+            ~condition:(fun x -> x % 2 = 0)
         in
         let handle =
           Handle.create
@@ -375,7 +380,8 @@ let%test_module "Bonsai.most_recent_value_satisfying" =
           | true ->
             let%sub x =
               M.most_recent_value_satisfying
-                (module Int)
+                ~sexp_of_model:[%sexp_of: Int.t]
+                ~equal:[%equal: Int.t]
                 v
                 ~condition:(fun x -> x % 2 = 0)
             in
@@ -437,24 +443,34 @@ let%test_module "Bonsai_extra.value_stability" =
   (module struct
     let alternate_value_stability_implementation
           (type a)
-          (module M : Bonsai.Model with type t = a)
+          ?sexp_of_model
+          ~equal
           input
           ~time_to_stable
       =
+      let module M = struct
+        type t = a
+
+        let sexp_of_t = Option.value ~default:sexp_of_opaque sexp_of_model
+      end
+      in
       let%sub input =
         (* apply cutoff as an optimistic performance improvement *)
-        Bonsai.Incr.value_cutoff input ~equal:M.equal
+        Bonsai.Incr.value_cutoff input ~equal
       in
       let module T = struct
         module Model = struct
+          let equal_a = equal
+          let sexp_of_a = M.sexp_of_t
+
           type stability =
-            | Inactive of { previously_stable : M.t option }
+            | Inactive of { previously_stable : a option }
             | Unstable of
-                { previously_stable : M.t option
-                ; unstable_value : M.t
+                { previously_stable : a option
+                ; unstable_value : a
                 }
-            | Stable of M.t
-          [@@deriving sexp, equal]
+            | Stable of a
+          [@@deriving sexp_of, equal]
 
           let set_value new_value = function
             | Inactive { previously_stable } ->
@@ -469,7 +485,7 @@ let%test_module "Bonsai_extra.value_stability" =
             { stability : stability
             ; time_to_next_stable : Time_ns.Alternate_sexp.t option
             }
-          [@@deriving sexp, equal]
+          [@@deriving sexp_of, equal]
 
           let default =
             { stability = Inactive { previously_stable = None }
@@ -490,8 +506,10 @@ let%test_module "Bonsai_extra.value_stability" =
       let open T in
       let%sub { stability; time_to_next_stable }, inject =
         Bonsai.state_machine0
-          (module Model)
-          (module Action)
+          ()
+          ~sexp_of_model:[%sexp_of: Model.t]
+          ~equal:[%equal: Model.t]
+          ~sexp_of_action:[%sexp_of: Action.t]
           ~default_model:Model.default
           ~apply_action:(fun ~inject:_ ~schedule_event:_ model action ->
             match action, model with
@@ -522,7 +540,7 @@ let%test_module "Bonsai_extra.value_stability" =
                  ; time_to_next_stable = Some (Time_ns.add now time_to_stable)
                  }
                | Stable previously_stable ->
-                 if M.equal previously_stable stable
+                 if equal previously_stable stable
                  then { stability = Stable stable; time_to_next_stable = None }
                  else
                    { stability =
@@ -534,7 +552,7 @@ let%test_module "Bonsai_extra.value_stability" =
                    }
                | Unstable { unstable_value; previously_stable } ->
                  let candidate_time_to_next_stable = Time_ns.add now time_to_stable in
-                 (match M.equal unstable_value stable, time_to_next_stable with
+                 (match equal unstable_value stable, time_to_next_stable with
                   | true, Some time_to_next_stable
                     when Time_ns.( >= ) now time_to_next_stable ->
                     { stability = Stable stable; time_to_next_stable = None }
@@ -560,7 +578,7 @@ let%test_module "Bonsai_extra.value_stability" =
           let%arr bounce = bounce in
           fun _ -> bounce
         in
-        Bonsai.Edge.on_change (module M) input ~callback
+        Bonsai.Edge.on_change ~sexp_of_model:[%sexp_of: M.t] ~equal input ~callback
       in
       let%sub () =
         let%sub on_deactivate =
@@ -592,14 +610,15 @@ let%test_module "Bonsai_extra.value_stability" =
           in
           let%sub before_or_after = Bonsai.Clock.at next_stable in
           Bonsai.Edge.on_change'
-            (module Bonsai.Clock.Before_or_after)
+            ~sexp_of_model:[%sexp_of: Bonsai.Clock.Before_or_after.t]
+            ~equal:[%equal: Bonsai.Clock.Before_or_after.t]
             before_or_after
             ~callback
       in
       let%arr stability = stability
       and input = input in
       match stability with
-      | Stable input' when M.equal input' input -> Bonsai_extra.Stability.Stable input
+      | Stable input' when equal input' input -> Bonsai_extra.Stability.Stable input
       | Stable previously_stable ->
         (* Even if the state-machine claims that the value is stable, we can still witness
            instability one frame before the lifecycle events run. *)
@@ -612,7 +631,8 @@ let%test_module "Bonsai_extra.value_stability" =
 
     module Common (M : sig
         val value_stability
-          :  (module Bonsai.Model with type t = 'a)
+          :  ?sexp_of_model:('a -> Sexp.t)
+          -> equal:('a -> 'a -> bool)
           -> 'a Value.t
           -> time_to_stable:Time_ns.Span.t
           -> 'a Bonsai_extra.Stability.t Computation.t
@@ -626,7 +646,11 @@ let%test_module "Bonsai_extra.value_stability" =
         let v' = Bonsai.Var.create 1 in
         let v = Bonsai.Var.value v' in
         let c =
-          M.value_stability (module Int) v ~time_to_stable:(Time_ns.Span.of_sec 1.0)
+          M.value_stability
+            ~sexp_of_model:[%sexp_of: Int.t]
+            ~equal:[%equal: Int.t]
+            v
+            ~time_to_stable:(Time_ns.Span.of_sec 1.0)
         in
         let handle =
           Handle.create
@@ -685,7 +709,11 @@ let%test_module "Bonsai_extra.value_stability" =
           match%sub on with
           | true ->
             let%sub x =
-              M.value_stability (module Int) v ~time_to_stable:(Time_ns.Span.of_sec 1.0)
+              M.value_stability
+                ~sexp_of_model:[%sexp_of: Int.t]
+                ~equal:[%equal: Int.t]
+                v
+                ~time_to_stable:(Time_ns.Span.of_sec 1.0)
             in
             let%arr x = x in
             Some x

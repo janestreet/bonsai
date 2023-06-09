@@ -58,9 +58,9 @@ module Raw = struct
     Vdom.Node.td ~attrs:[ combine_attrs T.singleton#table_body_cell attrs ] rows
   ;;
 
-  let table theme ?table_attr ~header_rows ~data_rows () =
+  let table theme ?(table_attrs = []) ~header_rows ~data_rows () =
     table_node
-      ?attrs:(Option.map table_attr ~f:List.return)
+      ~attrs:table_attrs
       [ thead (List.map header_rows ~f:(fun row -> row theme)) theme
       ; tbody (List.map data_rows ~f:(fun row -> row theme)) theme
       ]
@@ -72,7 +72,7 @@ module Col = struct
   type 'a t =
     | Group :
         { header : Vdom.Node.t option
-        ; header_attr : Vdom.Attr.t
+        ; header_attrs : Vdom.Attr.t list
         ; children : 'a t list
         ; depth : int
         }
@@ -81,8 +81,8 @@ module Col = struct
         { header : Vdom.Node.t
         ; get : 'a -> 'b option
         ; render : Theme.t -> 'b -> Vdom.Node.t
-        ; cell_attr : 'b -> Vdom.Attr.t
-        ; header_attr : Vdom.Attr.t
+        ; cell_attrs : 'b -> Vdom.Attr.t list
+        ; header_attrs : Vdom.Attr.t list
         }
         -> 'a t
     | Lift :
@@ -99,39 +99,28 @@ module Col = struct
 
   let lift t ~f = Lift { t; f }
 
-  let make_opt'
-        ?(cell_attr = fun _ -> Vdom.Attr.empty)
-        ?(header_attr = Vdom.Attr.empty)
-        header
-        ~get
-        ~render
-    =
-    Leaf { header; get; render; cell_attr; header_attr }
+  let make_opt' ?(cell_attrs = fun _ -> []) ?(header_attrs = []) header ~get ~render =
+    Leaf { header; get; render; cell_attrs; header_attrs }
   ;;
 
-  let make_opt ?cell_attr ?header_attr header =
-    make_opt' ?cell_attr ?header_attr (Vdom.Node.text header)
+  let make_opt ?cell_attrs ?header_attrs header =
+    make_opt' ?cell_attrs ?header_attrs (Vdom.Node.text header)
   ;;
 
-  let make' ?cell_attr ?header_attr header ~get =
+  let make' ?cell_attrs ?header_attrs header ~get =
     let get x = Some (get x) in
-    make_opt' ?cell_attr ?header_attr header ~get
+    make_opt' ?cell_attrs ?header_attrs header ~get
   ;;
 
-  let make ?cell_attr ?header_attr header ~get =
-    make' ?cell_attr ?header_attr (Vdom.Node.text header) ~get
+  let make ?cell_attrs ?header_attrs header ~get =
+    make' ?cell_attrs ?header_attrs (Vdom.Node.text header) ~get
   ;;
 
   let empty_group col =
-    Group
-      { header = None
-      ; header_attr = Vdom.Attr.empty
-      ; children = [ col ]
-      ; depth = depth col + 1
-      }
+    Group { header = None; header_attrs = []; children = [ col ]; depth = depth col + 1 }
   ;;
 
-  let group' ?(header_attr = Vdom.Attr.empty) header children =
+  let group' ?(header_attrs = []) header children =
     let max_depth =
       match List.max_elt (List.map children ~f:depth) ~compare:[%compare: int] with
       | None -> 0
@@ -142,11 +131,11 @@ module Col = struct
         let delta = max_depth - depth child in
         Fn.apply_n_times ~n:delta empty_group child)
     in
-    Group { header = Some header; header_attr; children; depth = max_depth + 1 }
+    Group { header = Some header; header_attrs; children; depth = max_depth + 1 }
   ;;
 
-  let group ?header_attr header children =
-    group' ?header_attr (Vdom.Node.text header) children
+  let group ?header_attrs header children =
+    group' ?header_attrs (Vdom.Node.text header) children
   ;;
 
   let rec colspan : type a. a t -> int = function
@@ -157,25 +146,25 @@ module Col = struct
 
   let rec headers_at_level : type a. level:_ -> a t -> _ =
     fun ~level col ->
-      if depth col = level
-      then (
-        match col with
-        | Group { header; header_attr; _ } -> [ header, header_attr, colspan col ]
-        | Leaf { header; header_attr; _ } -> [ Some header, header_attr, 1 ]
-        | Lift { t; _ } -> headers_at_level ~level t)
-      else (
-        match col with
-        | Group { children; _ } -> List.bind children ~f:(headers_at_level ~level)
-        | Leaf _ -> []
-        | Lift { t; _ } -> headers_at_level ~level t)
+    if depth col = level
+    then (
+      match col with
+      | Group { header; header_attrs; _ } -> [ header, header_attrs, colspan col ]
+      | Leaf { header; header_attrs; _ } -> [ Some header, header_attrs, 1 ]
+      | Lift { t; _ } -> headers_at_level ~level t)
+    else (
+      match col with
+      | Group { children; _ } -> List.bind children ~f:(headers_at_level ~level)
+      | Leaf _ -> []
+      | Lift { t; _ } -> headers_at_level ~level t)
   ;;
 
   let rec renderers : type a. a t -> (_ -> a -> _) list = function
-    | Leaf { render; get; cell_attr; _ } ->
+    | Leaf { render; get; cell_attrs; _ } ->
       [ (fun theme x ->
           match get x with
           | None -> None
-          | Some x -> Some (render theme x, cell_attr x))
+          | Some x -> Some (render theme x, cell_attrs x))
       ]
     | Group { children; _ } -> List.bind children ~f:renderers
     | Lift { t; f } ->
@@ -185,8 +174,8 @@ end
 
 let render
       (((module T) : Theme.t) as theme)
-      ?(table_attr = Vdom.Attr.empty)
-      ?(row_attr = fun _ -> Vdom.Attr.empty)
+      ?(table_attrs = [])
+      ?(row_attrs = fun _ -> [])
       cols
       xs
   =
@@ -198,26 +187,25 @@ let render
     |> List.filter_map ~f:(function
       (* empty groups have a colspan of 0, don't include them *)
       | _, _, 0 -> None
-      | node, attr, colspan ->
+      | node, attrs, colspan ->
         let node = Option.value node ~default:Vdom.Node.none in
-        let cell_attr = [ Vdom.Attr.colspan colspan; attr ] in
+        let cell_attr = [ Vdom.Attr.colspan colspan; Vdom.Attr.many attrs ] in
         Some (Raw.header_cell ~attrs:cell_attr [ node ]))
     |> Raw.header_row
   in
   let header_rows = List.map (List.range ~stride:(-1) (depth - 1) 0) ~f:for_each_level in
   let renderers = Col.renderers mega_group in
   let for_each_row row =
-    let extra_row_attr = row_attr row in
+    let extra_row_attrs = row_attrs row in
     renderers
     |> List.map ~f:(fun f ->
       match f theme row with
       | None -> Raw.data_cell ~attrs:[ body_cell_empty ] []
-      | Some (cell, extra_cell_attr) ->
-        Raw.data_cell ~attrs:[ extra_cell_attr ] [ cell ])
-    |> Raw.data_row ~attrs:[ extra_row_attr ]
+      | Some (cell, extra_cell_attrs) -> Raw.data_cell ~attrs:extra_cell_attrs [ cell ])
+    |> Raw.data_row ~attrs:extra_row_attrs
   in
   let data_rows = List.map xs ~f:for_each_row in
-  Raw.table theme ~table_attr ~header_rows ~data_rows ()
+  Raw.table theme ~table_attrs ~header_rows ~data_rows ()
 ;;
 
 (* Default styling *)

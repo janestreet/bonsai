@@ -106,7 +106,7 @@ let project_target
   let model = State_machine_model.map_target t.model ~f:map in
   let inject : ('source, 'target_b) Action.t list -> unit Effect.t =
     fun actions ->
-      t.inject (List.map actions ~f:(fun action -> Action.map_target action ~f:unmap))
+    t.inject (List.map actions ~f:(fun action -> Action.map_target action ~f:unmap))
   in
   { source; drop_target; sentinel; model; inject }
 ;;
@@ -115,6 +115,10 @@ let bug message =
   let message = sprintf "BUG: %s. Report to Bonsai developers" message in
   eprint_s [%message message]
 ;;
+
+module type S = sig
+  type t [@@deriving sexp, equal]
+end
 
 module For_testing = struct
   module Action = struct
@@ -126,8 +130,8 @@ module For_testing = struct
 
     let to_internal_actions
           (type source target)
-          (module Source : Bonsai.Model with type t = source)
-          (module Target : Bonsai.Model with type t = target)
+          (module Source : S with type t = source)
+          (module Target : S with type t = target)
       = function
         | Start_drag source ->
           [ Action.Started_drag
@@ -187,18 +191,15 @@ let add_event_listener, remove_event_listener =
 
 let create
       (type source target)
-      ~source_id:(module Source : Bonsai.Model with type t = source)
-      ~target_id:(module Target : Bonsai.Model with type t = target)
+      ~source_id:(module Source : S with type t = source)
+      ~target_id:(module Target : S with type t = target)
       ~on_drop
   =
   let%sub model, inject =
     Bonsai.state_machine1
-      (module struct
-        type t = (Source.t, Target.t) State_machine_model.t [@@deriving sexp, equal]
-      end)
-      (module struct
-        type t = (Source.t, Target.t) Action.t list [@@deriving sexp, equal]
-      end)
+      ~sexp_of_model:[%sexp_of: (Source.t, Target.t) State_machine_model.t]
+      ~equal:[%equal: (Source.t, Target.t) State_machine_model.t]
+      ~sexp_of_action:[%sexp_of: (Source.t, Target.t) Action.t list]
       on_drop
       ~default_model:Not_dragging
       ~apply_action:(fun ~inject:_ ~schedule_event on_drop model actions ->
@@ -210,8 +211,7 @@ let create
               (match model with
                | State_machine_model.Not_dragging -> ()
                | Dragging _ -> bug "Started dragging before dragging finished");
-              Dragging
-                { source; offset; position; size; target = None; has_moved = false }
+              Dragging { source; offset; position; size; target = None; has_moved = false }
             | Set_target target ->
               (match model with
                | State_machine_model.Not_dragging -> Not_dragging
@@ -232,8 +232,8 @@ let create
             [%message
               [%here]
                 "An action sent to a [state_machine1] has been dropped because its input \
-                 was not present. This happens when the [state_machine1] is inactive \
-                 when it receives a message."
+                 was not present. This happens when the [state_machine1] is inactive when \
+                 it receives a message."
                 (actions : (Source.t, Target.t) Action.t list)];
           model)
   in

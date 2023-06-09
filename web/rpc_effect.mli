@@ -56,7 +56,8 @@ module Shared_poller : sig
       shared-poller is already polling with the same query, it'll immediately return the
       most recent value. *)
   val lookup
-    :  (module Bonsai.Model with type t = 'query)
+    :  ?sexp_of_model:('query -> Sexp.t)
+    -> equal:('query -> 'query -> bool)
     -> ('query, 'response) t Bonsai.Value.t
     -> 'query Bonsai.Value.t
     -> ('query, 'response) Poll_result.t Bonsai.Computation.t
@@ -88,9 +89,12 @@ module Rpc : sig
       [clear_when_deactivated] determines whether the most recent response should be
       discarded when the component is deactivated. Default is true. *)
   val poll
-    :  (module Bonsai.Model with type t = 'query)
-    -> (module Bonsai.Model with type t = 'response)
+    :  ?sexp_of_query:('query -> Sexp.t)
+    -> ?sexp_of_response:('response -> Sexp.t)
+    -> equal_query:('query -> 'query -> bool)
+    -> ?equal_response:('response -> 'response -> bool)
     -> ?clear_when_deactivated:bool
+    -> ?on_response_received:('query -> 'response Or_error.t -> unit Effect.t) Value.t
     -> ('query, 'response) Rpc.Rpc.t
     -> where_to_connect:Where_to_connect.t
     -> every:Time_ns.Span.t
@@ -99,9 +103,12 @@ module Rpc : sig
 
   (** Analagous to [poll] for babel RPCs. See [poll] for details. *)
   val babel_poll
-    :  (module Bonsai.Model with type t = 'query)
-    -> (module Bonsai.Model with type t = 'response)
+    :  ?sexp_of_query:('query -> Sexp.t)
+    -> ?sexp_of_response:('response -> Sexp.t)
+    -> equal_query:('query -> 'query -> bool)
+    -> ?equal_response:('response -> 'response -> bool)
     -> ?clear_when_deactivated:bool
+    -> ?on_response_received:('query -> 'response Or_error.t -> unit Effect.t) Value.t
     -> ('query -> 'response Or_error.t Deferred.t) Babel.Caller.t
     -> where_to_connect:Where_to_connect.t
     -> every:Time_ns.Span.t
@@ -110,8 +117,10 @@ module Rpc : sig
 
   val shared_poller
     :  ('query, _) Bonsai.comparator
-    -> (module Bonsai.Model with type t = 'response)
+    -> ?sexp_of_response:('response -> Sexp.t)
+    -> ?equal_response:('response -> 'response -> bool)
     -> ?clear_when_deactivated:bool
+    -> ?on_response_received:('query -> 'response Or_error.t -> unit Effect.t) Value.t
     -> ('query, 'response) Rpc.Rpc.t
     -> where_to_connect:Where_to_connect.t
     -> every:Time_ns.Span.t
@@ -122,9 +131,12 @@ module Rpc : sig
       receives another ok response. If the computation receives an error
       response, it will retry sending the RPC after waiting [retry_interval]. *)
   val poll_until_ok
-    :  (module Bonsai.Model with type t = 'query)
-    -> (module Bonsai.Model with type t = 'response)
+    :  ?sexp_of_query:('query -> Sexp.t)
+    -> ?sexp_of_response:('response -> Sexp.t)
+    -> equal_query:('query -> 'query -> bool)
+    -> ?equal_response:('response -> 'response -> bool)
     -> ?clear_when_deactivated:bool
+    -> ?on_response_received:('query -> 'response Or_error.t -> unit Effect.t) Value.t
     -> ('query, 'response) Rpc.Rpc.t
     -> where_to_connect:Where_to_connect.t
     -> retry_interval:Time_ns.Span.t
@@ -132,9 +144,12 @@ module Rpc : sig
     -> ('query, 'response) Poll_result.t Computation.t
 
   val babel_poll_until_ok
-    :  (module Bonsai.Model with type t = 'query)
-    -> (module Bonsai.Model with type t = 'response)
+    :  ?sexp_of_query:('query -> Sexp.t)
+    -> ?sexp_of_response:('response -> Sexp.t)
+    -> equal_query:('query -> 'query -> bool)
+    -> ?equal_response:('response -> 'response -> bool)
     -> ?clear_when_deactivated:bool
+    -> ?on_response_received:('query -> 'response Or_error.t -> unit Effect.t) Value.t
     -> ('query -> 'response Or_error.t Deferred.t) Babel.Caller.t
     -> where_to_connect:Where_to_connect.t
     -> retry_interval:Time_ns.Span.t
@@ -158,9 +173,12 @@ module Polling_state_rpc : sig
       schedule the [refresh] field of the result. It also keeps track of the current
       query that is in-flight.*)
   val poll
-    :  (module Bonsai.Model with type t = 'query)
-    -> (module Bonsai.Model with type t = 'response)
+    :  ?sexp_of_query:('query -> Sexp.t)
+    -> ?sexp_of_response:('response -> Sexp.t)
+    -> equal_query:('query -> 'query -> bool)
+    -> ?equal_response:('response -> 'response -> bool)
     -> ?clear_when_deactivated:bool
+    -> ?on_response_received:('query -> 'response Or_error.t -> unit Effect.t) Value.t
     -> ('query, 'response) Polling_state_rpc.t
     -> where_to_connect:Where_to_connect.t
     -> every:Time_ns.Span.t
@@ -169,8 +187,10 @@ module Polling_state_rpc : sig
 
   val shared_poller
     :  ('query, _) Bonsai.comparator
-    -> (module Bonsai.Model with type t = 'response)
+    -> ?sexp_of_response:('response -> Sexp.t)
+    -> ?equal_response:('response -> 'response -> bool)
     -> ?clear_when_deactivated:bool
+    -> ?on_response_received:('query -> 'response Or_error.t -> unit Effect.t) Value.t
     -> ('query, 'response) Polling_state_rpc.t
     -> where_to_connect:Where_to_connect.t
     -> every:Time_ns.Span.t

@@ -3,7 +3,9 @@ open! Bonsai_web
 open! Bonsai.Let_syntax
 
 let counter =
-  let%sub state = Bonsai.state (module Int) ~default_model:0 in
+  let%sub state =
+    Bonsai.state 0 ~sexp_of_model:[%sexp_of: Int.t] ~equal:[%equal: Int.t]
+  in
   let%arr current_value, set_value = state in
   Vdom.Node.div
     [ Vdom.Node.textf "%d" current_value

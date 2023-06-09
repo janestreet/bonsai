@@ -88,8 +88,8 @@ module Style =
 
 let make
       (constants : Constants.t)
-      ~container_attr
-      ~tooltip_attr
+      ~container_attrs
+      ~tooltip_attrs
       ~direction
       ~tipped
       ~tooltip
@@ -109,9 +109,9 @@ let make
         ~border:(Color.to_string_css constants.extreme_primary_border)
         ()
     in
-    Vdom.Node.div ~attrs:[ Style.tooltip; tooltip_attr; vars ] [ tooltip ]
+    Vdom.Node.div ~attrs:[ Style.tooltip; Vdom.Attr.many tooltip_attrs; vars ] [ tooltip ]
   in
   Vdom.Node.span
-    ~attrs:[ container_attr; Style.tooltip_container; dir_class ]
+    ~attrs:[ Vdom.Attr.many container_attrs; Style.tooltip_container; dir_class ]
     [ tipped; tooltip ]
 ;;

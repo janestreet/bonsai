@@ -21,7 +21,7 @@ module type S = sig
 
     val table
       :  Theme.t
-      -> ?table_attr:Vdom.Attr.t
+      -> ?table_attrs:Vdom.Attr.t list
       -> header_rows:Header_row.t list
       -> data_rows:Data_row.t list
       -> unit

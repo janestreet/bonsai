@@ -6,10 +6,14 @@ module Extendy = Bonsai_web_ui_extendy
 module Selectable_style = Vdom_input_widgets.Selectable_style
 module View = Private_view
 
+module type Model = sig
+  type t [@@deriving sexp_of]
+end
+
 module type Stringable_model = sig
   type t
 
-  include Bonsai.Model with type t := t
+  include Model with type t := t
   include Stringable with type t := t
 end
 
@@ -90,7 +94,9 @@ let string_underlying
           | None -> set_state "")
         ()
   in
-  Basic_stateful.make (Bonsai.state (module String) ~default_model:"") ~view
+  Basic_stateful.make
+    (Bonsai.state "" ~sexp_of_model:[%sexp_of: String.t] ~equal:[%equal: String.t])
+    ~view
 ;;
 
 module Textbox = struct
@@ -167,7 +173,9 @@ module Textarea = struct
           ~on_input:set_state
           ()
     in
-    Basic_stateful.make (Bonsai.state (module String) ~default_model:"") ~view
+    Basic_stateful.make
+      (Bonsai.state "" ~sexp_of_model:[%sexp_of: String.t] ~equal:[%equal: String.t])
+      ~view
   ;;
 
   let int ?extra_attrs ?placeholder () =
@@ -234,7 +242,12 @@ module Checkbox = struct
       let%map extra_attrs = extra_attrs in
       fun ~id ~state ~set_state -> make_input ~id ~extra_attrs ~state ~set_state
     in
-    Basic_stateful.make (Bonsai.state (module Bool) ~default_model) ~view
+    Basic_stateful.make
+      (Bonsai.state
+         default_model
+         ~sexp_of_model:[%sexp_of: Bool.t]
+         ~equal:[%equal: Bool.t])
+      ~view
   ;;
 
   let bool ?extra_attrs ~default () = checkbox ?extra_attrs default
@@ -254,7 +267,7 @@ module Checkbox = struct
     in
     let module M = struct
       include M
-      include Comparable.Make_using_comparator (M)
+      include Comparable.Make_plain_using_comparator (M)
 
       let to_string = to_string
     end
@@ -276,7 +289,12 @@ module Checkbox = struct
             set_state
             @@ if Set.mem state item then Set.remove state item else Set.add state item)
     in
-    Basic_stateful.make (Bonsai.state (module M.Set) ~default_model:M.Set.empty) ~view
+    Basic_stateful.make
+      (Bonsai.state
+         M.Set.empty
+         ~sexp_of_model:[%sexp_of: M.Set.t]
+         ~equal:[%equal: M.Set.t])
+      ~view
   ;;
 
   module Private = struct
@@ -355,7 +373,9 @@ module Toggle = struct
         let slider = Vdom.Node.span ~attrs:[ Style.slider ] [] in
         Vdom.Node.label ~attrs:[ Style.toggle; id ] [ checkbox; slider ]
     in
-    Basic_stateful.make (Bonsai.state (module Bool) ~default_model:default) ~view
+    Basic_stateful.make
+      (Bonsai.state default ~sexp_of_model:[%sexp_of: Bool.t] ~equal:[%equal: Bool.t])
+      ~view
   ;;
 end
 
@@ -381,7 +401,8 @@ module Dropdown = struct
   let make_input
         (type a)
         ?to_string
-        (module E : Bonsai.Model with type t = a)
+        (module E : Model with type t = a)
+        ~equal
         ~id
         ~include_empty
         ~default_value
@@ -397,6 +418,8 @@ module Dropdown = struct
       let to_string =
         Option.value to_string ~default:(View.sexp_to_pretty_string [%sexp_of: t])
       ;;
+
+      let equal = equal
     end
     in
     let maker ~extra_attrs options =
@@ -435,13 +458,20 @@ module Dropdown = struct
         ?to_string
         ?(extra_attrs = Value.return [])
         ?(extra_option_attrs = Value.return (Fn.const []))
-        (module E : Bonsai.Model with type t = t)
+        (module E : Model with type t = t)
+        ~equal
         all
         ~include_empty
         ~init
     =
+    let module E = struct
+      include E
+
+      let equal = equal
+    end
+    in
     let module E_opt = struct
-      type t = E.t Opt.t [@@deriving sexp, equal]
+      type t = E.t Opt.t [@@deriving sexp_of, equal]
     end
     in
     let default_value =
@@ -452,7 +482,12 @@ module Dropdown = struct
       | `Const item -> Value.return (Some item)
     in
     let%sub path, id = path in
-    let%sub state, set_state = Bonsai.state (module E_opt) ~default_model:Uninitialized in
+    let%sub state, set_state =
+      Bonsai.state
+        Uninitialized
+        ~sexp_of_model:[%sexp_of: E_opt.t]
+        ~equal:[%equal: E_opt.t]
+    in
     let%arr id = id
     and path = path
     and state = state
@@ -465,6 +500,7 @@ module Dropdown = struct
       make_input
         ?to_string
         (module E)
+        ~equal
         ~id
         ~include_empty
         ~default_value
@@ -492,7 +528,8 @@ module Dropdown = struct
         ?extra_attrs
         ?extra_option_attrs
         ?to_string
-        (module E : Bonsai.Model with type t = t)
+        (module E : Model with type t = t)
+        ~equal
         all
     =
     impl
@@ -500,6 +537,7 @@ module Dropdown = struct
       ?extra_attrs
       ?extra_option_attrs
       (module E)
+      ~equal
       all
       ~include_empty:true
       ~init
@@ -518,6 +556,7 @@ module Dropdown = struct
       ?extra_option_attrs
       ?to_string
       (module E)
+      ~equal:E.equal
       (Value.return E.all)
       ~include_empty:true
       ~init
@@ -528,13 +567,14 @@ module Dropdown = struct
     | `First_item | `This _ | `Const -> false
   ;;
 
-  let list ?(init = `First_item) ?extra_attrs ?extra_option_attrs ?to_string m all =
+  let list ?(init = `First_item) ?extra_attrs ?extra_option_attrs ?to_string m ~equal all =
     let%map.Computation form =
       impl
         ?to_string
         ?extra_attrs
         ?extra_option_attrs
         m
+        ~equal
         all
         ~init
         ~include_empty:(include_empty_from_init init)
@@ -556,6 +596,7 @@ module Dropdown = struct
         ?extra_option_attrs
         ?to_string
         (module E)
+        ~equal:E.equal
         (Value.return E.all)
         ~init
         ~include_empty:(include_empty_from_init init)
@@ -572,12 +613,14 @@ end
 
 module Typeahead = struct
   let single_opt
+        (type a)
         ?(extra_attrs = Value.return [])
         ?placeholder
         ?to_string
         ?to_option_description
         ?handle_unknown_option
-        m
+        (module M : Bonsai.Model with type t = a)
+        ~equal
         ~all_options
     =
     let%sub path, id = path in
@@ -592,7 +635,8 @@ module Typeahead = struct
         ?to_string
         ?to_option_description
         ?handle_unknown_option
-        m
+        (module M)
+        ~equal
         ~all_options
         ~extra_attrs
     in
@@ -610,6 +654,7 @@ module Typeahead = struct
         ?to_option_description
         ?handle_unknown_option
         m
+        ~equal
         ~all_options
     =
     let%map.Computation form =
@@ -620,6 +665,7 @@ module Typeahead = struct
         ?to_option_description
         ?handle_unknown_option
         m
+        ~equal
         ~all_options
     in
     optional_to_required form
@@ -719,7 +765,9 @@ module Date_time = struct
           ~on_input:set_state
           ()
     in
-    Basic_stateful.make (Bonsai.state_opt (module Date)) ~view
+    Basic_stateful.make
+      (Bonsai.state_opt () ~sexp_of_model:[%sexp_of: Date.t] ~equal:[%equal: Date.t])
+      ~view
   ;;
 
   let date ?extra_attrs () =
@@ -738,7 +786,12 @@ module Date_time = struct
           ~on_input:set_state
           ()
     in
-    Basic_stateful.make (Bonsai.state_opt (module Time_ns.Ofday)) ~view
+    Basic_stateful.make
+      (Bonsai.state_opt
+         ()
+         ~sexp_of_model:[%sexp_of: Time_ns.Ofday.t]
+         ~equal:[%equal: Time_ns.Ofday.t])
+      ~view
   ;;
 
   let time ?extra_attrs () =
@@ -753,7 +806,10 @@ module Date_time = struct
         ()
     =
     let%sub unit, set_unit =
-      Bonsai.state (module Span_unit) ~default_model:default_unit
+      Bonsai.state
+        default_unit
+        ~sexp_of_model:[%sexp_of: Span_unit.t]
+        ~equal:[%equal: Span_unit.t]
     in
     let%sub unit_view =
       let%arr unit = unit
@@ -762,6 +818,7 @@ module Date_time = struct
       Dropdown.Private.make_input
         ~to_string:Span_unit.to_string
         (module Span_unit)
+        ~equal:[%equal: Span_unit.t]
         ~id:Vdom.Attr.empty
         ~include_empty:false
         ~default_value:(Some default_unit)
@@ -776,7 +833,9 @@ module Date_time = struct
         ~extra_option_attrs:(Fn.const [])
         ~all:Span_unit.all
     in
-    let%sub amount, set_amount = Bonsai.state_opt (module Float) in
+    let%sub amount, set_amount =
+      Bonsai.state_opt () ~sexp_of_model:[%sexp_of: Float.t] ~equal:[%equal: Float.t]
+    in
     let%sub amount_view =
       let%arr amount = amount
       and set_amount = set_amount
@@ -847,7 +906,12 @@ module Date_time = struct
       let equal = Time_ns.equal
     end
     in
-    Basic_stateful.make (Bonsai.state_opt (module Time_ns)) ~view
+    Basic_stateful.make
+      (Bonsai.state_opt
+         ()
+         ~sexp_of_model:[%sexp_of: Time_ns.t]
+         ~equal:[%equal: Time_ns.t])
+      ~view
   ;;
 
   let datetime_local ?extra_attrs () =
@@ -869,12 +933,19 @@ module Date_time = struct
           ?(allow_equal = false)
           ?(extra_attr = Value.return Vdom.Attr.empty)
           ~kind_name
-          (module M : Bonsai.Model with type t = a)
+          (module M : Model with type t = a)
+          ~equal
           (module C : Comparisons.S with type t = a)
           (view : a Input_element.t)
       =
+      let module M = struct
+        include M
+
+        let equal = equal
+      end
+      in
       let module M_opt = struct
-        type t = M.t option [@@deriving sexp, equal]
+        type t = M.t option [@@deriving sexp_of, equal]
       end
       in
       let bounds_error =
@@ -891,8 +962,12 @@ module Date_time = struct
       let%sub lower_id = Bonsai.path_id in
       let%sub upper_id = Bonsai.path_id in
       let%sub form_id = Bonsai.path_id in
-      let%sub lower, set_lower = Bonsai.state (module M_opt) ~default_model:None in
-      let%sub upper, set_upper = Bonsai.state (module M_opt) ~default_model:None in
+      let%sub lower, set_lower =
+        Bonsai.state None ~sexp_of_model:[%sexp_of: M_opt.t] ~equal:[%equal: M_opt.t]
+      in
+      let%sub upper, set_upper =
+        Bonsai.state None ~sexp_of_model:[%sexp_of: M_opt.t] ~equal:[%equal: M_opt.t]
+      in
       let%arr lower = lower
       and set_lower = set_lower
       and upper = upper
@@ -962,6 +1037,7 @@ module Date_time = struct
         ?extra_attr
         ?allow_equal
         (module Date)
+        ~equal:[%equal: Date.t]
         (module Date)
         (fun ~extra_attrs ->
            Vdom_input_widgets.Entry.date ~merge_behavior:Legacy_dont_merge ~extra_attrs ())
@@ -978,6 +1054,7 @@ module Date_time = struct
         ?extra_attr
         ?allow_equal
         (module Time_ns.Ofday)
+        ~equal:[%equal: Time_ns.Ofday.t]
         (module Time_ns.Ofday)
         (fun ~extra_attrs ->
            Vdom_input_widgets.Entry.time ~merge_behavior:Legacy_dont_merge ~extra_attrs ())
@@ -994,6 +1071,7 @@ module Date_time = struct
         ?extra_attr
         ?allow_equal
         (module Time_ns.Alternate_sexp)
+        ~equal:[%equal: Time_ns.Alternate_sexp.t]
         (module Time_ns.Alternate_sexp)
         (fun ~extra_attrs ->
            Vdom_input_widgets.Entry.datetime_local
@@ -1020,7 +1098,7 @@ module Multiselect = struct
     =
     let module Item = struct
       include M
-      include Comparable.Make_using_comparator (M)
+      include Comparable.Make_plain_using_comparator (M)
 
       let to_string =
         Option.value to_string ~default:(View.sexp_to_pretty_string [%sexp_of: t])
@@ -1110,16 +1188,27 @@ module Multiple = struct
         ?(extra_pill_attr = Value.return Vdom.Attr.empty)
         ?(placeholder = "")
         (module M : Stringable_model with type t = a)
+        ~equal
     =
-    let module M_list = struct
-      type t = M.t list [@@deriving equal, sexp]
+    let module M = struct
+      include M
+
+      let equal = equal
     end
     in
-    let%sub invalid, inject_invalid = Bonsai.state (module Bool) ~default_model:false in
-    let%sub selected_options, inject_selected_options =
-      Bonsai.state (module M_list) ~default_model:[]
+    let module M_list = struct
+      type t = M.t list [@@deriving equal, sexp_of]
+    end
     in
-    let%sub state, set_state = Bonsai.state (module String) ~default_model:"" in
+    let%sub invalid, inject_invalid =
+      Bonsai.state false ~sexp_of_model:[%sexp_of: Bool.t] ~equal:[%equal: Bool.t]
+    in
+    let%sub selected_options, inject_selected_options =
+      Bonsai.state [] ~sexp_of_model:[%sexp_of: M_list.t] ~equal:[%equal: M_list.t]
+    in
+    let%sub state, set_state =
+      Bonsai.state "" ~sexp_of_model:[%sexp_of: String.t] ~equal:[%equal: String.t]
+    in
     let%sub path, _ = path in
     let%sub pills =
       Bonsai_web_ui_common_components.Pills.of_list
@@ -1191,7 +1280,9 @@ module Multiple = struct
     in
     let%sub form, _ =
       Bonsai.wrap
-        (module Unit)
+        ()
+        ~sexp_of_model:[%sexp_of: Unit.t]
+        ~equal:[%equal: Unit.t]
         ~default_model:()
         ~apply_action:(fun ~inject:_ ~schedule_event (_, forms) () list_of_values ->
           list_rev_map2 (Map.data forms) list_of_values ~f:(fun form value ->
@@ -1276,7 +1367,7 @@ end
 module type Number_input_specification = sig
   type t [@@deriving sexp_of]
 
-  include Bonsai.Model with type t := t
+  include Model with type t := t
   include Stringable.S with type t := t
 
   val min : t option
@@ -1292,7 +1383,14 @@ let number_input
       ?(extra_attrs = Value.return [])
       input_type
       (module S : Number_input_specification with type t = a)
+      ~equal
   =
+  let module S = struct
+    include S
+
+    let equal = equal
+  end
+  in
   let compare_opt a b =
     match b with
     | Some b -> S.compare a b
@@ -1331,7 +1429,13 @@ let number_input
            Vdom.Node.span ~attrs:[ Vdom.Attr.style (Css_gen.flex_container ()) ] elements)
   in
   let%sub number_input =
-    Basic_stateful.make (Bonsai.state_opt (module S) ?default_model:S.default) ~view
+    Basic_stateful.make
+      (Bonsai.state_opt
+         ()
+         ~sexp_of_model:[%sexp_of: S.t]
+         ?default_model:S.default
+         ~equal:S.equal)
+      ~view
   in
   let%arr number_input = number_input in
   Form.project' number_input ~unparse:Option.return ~parse:(fun value ->
@@ -1360,7 +1464,11 @@ module Number = struct
       let default = default
     end
     in
-    number_input ?extra_attrs Number (module Specification)
+    number_input
+      ?extra_attrs
+      Number
+      (module Specification)
+      ~equal:[%equal: Specification.t]
   ;;
 
   let float ?extra_attrs ?min:min_ ?max:max_ ?default ~step () =
@@ -1378,7 +1486,11 @@ module Number = struct
       let step = step
     end
     in
-    number_input ?extra_attrs Number (module Specification)
+    number_input
+      ?extra_attrs
+      Number
+      (module Specification)
+      ~equal:[%equal: Specification.t]
   ;;
 end
 
@@ -1393,7 +1505,11 @@ module Range = struct
       let default = default
     end
     in
-    number_input ?extra_attrs (Range { left_label; right_label }) (module Specification)
+    number_input
+      ?extra_attrs
+      (Range { left_label; right_label })
+      (module Specification)
+      ~equal:[%equal: Specification.t]
   ;;
 
   let float ?extra_attrs ?min:min_ ?max:max_ ?left_label ?right_label ?default ~step () =
@@ -1411,7 +1527,11 @@ module Range = struct
       let step = step
     end
     in
-    number_input ?extra_attrs (Range { left_label; right_label }) (module Specification)
+    number_input
+      ?extra_attrs
+      (Range { left_label; right_label })
+      (module Specification)
+      ~equal:[%equal: Specification.t]
   ;;
 end
 
@@ -1422,12 +1542,15 @@ module Radio_buttons = struct
         ?(extra_attrs = Value.return [])
         ?init
         ?to_string
-        (module E : Bonsai.Model with type t = t)
+        (module E : Model with type t = t)
+        ~equal
         ~layout
         all
     =
     let module E = struct
       include E
+
+      let equal = equal
 
       let to_string (item : E.t) =
         match to_string with
@@ -1463,7 +1586,13 @@ module Radio_buttons = struct
           all
     in
     let%map.Computation form =
-      Basic_stateful.make (Bonsai.state_opt ?default_model:init (module E)) ~view
+      Basic_stateful.make
+        (Bonsai.state_opt
+           ?default_model:init
+           ()
+           ~sexp_of_model:[%sexp_of: E.t]
+           ~equal:E.equal)
+        ~view
     in
     optional_to_required form
   ;;
@@ -1477,7 +1606,15 @@ module Radio_buttons = struct
         (module E : Bonsai.Enum with type t = t)
         ~layout
     =
-    list ?style ?extra_attrs ?init ?to_string (module E) ~layout (Value.return E.all)
+    list
+      ?style
+      ?extra_attrs
+      ?init
+      ?to_string
+      (module E)
+      ~equal:E.equal
+      ~layout
+      (Value.return E.all)
   ;;
 end
 
@@ -1495,10 +1632,9 @@ module Color_picker = struct
     in
     Basic_stateful.make
       (Bonsai.state
-         ~default_model:(`Hex "#000000")
-         (module struct
-           type t = [ `Hex of string ] [@@deriving equal, sexp]
-         end))
+         (`Hex "#000000")
+         ~sexp_of_model:[%sexp_of: [ `Hex of string ]]
+         ~equal:[%equal: [ `Hex of string ]])
       ~view
   ;;
 end
@@ -1508,7 +1644,6 @@ module File_select = struct
     type t = Bonsai_web_ui_file.t [@@deriving sexp_of]
 
     let equal = phys_equal
-    let t_of_sexp = opaque_of_sexp
   end
 
   let single_opt ?(extra_attrs = Value.return []) ?accept () =
@@ -1523,7 +1658,9 @@ module File_select = struct
             set_state (Option.map file ~f:Bonsai_web_ui_file_from_web_file.create))
           ()
     in
-    Basic_stateful.make (Bonsai.state_opt (module File)) ~view
+    Basic_stateful.make
+      (Bonsai.state_opt () ~sexp_of_model:[%sexp_of: File.t] ~equal:[%equal: File.t])
+      ~view
   ;;
 
   let single ?(extra_attrs = Value.return []) ?accept () =
@@ -1550,10 +1687,9 @@ module File_select = struct
     in
     Basic_stateful.make
       (Bonsai.state
-         (module struct
-           type t = File.t Filename.Map.t [@@deriving equal, sexp]
-         end)
-         ~default_model:Filename.Map.empty)
+         Filename.Map.empty
+         ~sexp_of_model:[%sexp_of: File.t Filename.Map.t]
+         ~equal:[%equal: File.t Filename.Map.t])
       ~view
   ;;
 end
@@ -1638,12 +1774,13 @@ module Query_box = struct
       Vdom.Attr.combine id extra_attr
     in
     let%sub last_selected_value, set_last_selected_value =
-      Bonsai.state_opt
-        (module struct
-          type t = Key.t [@@deriving sexp]
+      let module M = struct
+        type t = Key.t [@@deriving sexp_of]
 
-          let equal a b = Key.comparator.compare a b = 0
-        end)
+        let equal a b = Key.comparator.compare a b = 0
+      end
+      in
+      Bonsai.state_opt () ~sexp_of_model:[%sexp_of: M.t] ~equal:[%equal: M.t]
     in
     let%sub extra_input_attr =
       let%arr extra_input_attr = extra_input_attr

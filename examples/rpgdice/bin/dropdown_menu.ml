@@ -31,5 +31,10 @@ module Make (Enum : Enum) = struct
     let name = Enum.name
   end
 
-  let component = Bonsai.of_module0 (module T)
+  let component =
+    Bonsai.of_module0
+      (module T)
+      ~sexp_of_model:[%sexp_of: T.Model.t]
+      ~equal:[%equal: T.Model.t]
+  ;;
 end

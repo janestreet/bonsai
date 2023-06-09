@@ -65,13 +65,21 @@ let scope_model
   r
 ;;
 
-let of_module1 (type i m a r) (component : (i, m, a, r) component_s) ~default_model input =
+let of_module1
+      (type i m a r)
+      ?sexp_of_model
+      (component : (i, m, a, r) component_s)
+      ?equal
+      ~default_model
+      input
+  =
   let (module M) = component in
   let%sub input = return input in
   let%sub model_and_inject =
     state_machine1
-      (module M.Model)
-      (module M.Action)
+      ~sexp_of_action:M.Action.sexp_of_t
+      ?sexp_of_model
+      ?equal
       ~default_model
       ~apply_action:(fun ~inject ~schedule_event input model action ->
         match input with
@@ -92,12 +100,15 @@ let of_module1 (type i m a r) (component : (i, m, a, r) component_s) ~default_mo
   M.compute ~inject input model
 ;;
 
-let of_module2 c ~default_model i1 i2 = of_module1 c ~default_model (Value.both i1 i2)
+let of_module2 ?sexp_of_model c ?equal ~default_model i1 i2 =
+  of_module1 ?sexp_of_model c ?equal ~default_model (Value.both i1 i2)
+;;
 
 let race_dynamic_model
-      (type m a)
-      (module M : Model with type t = m)
-      (module A : Action with type t = a)
+      (type m)
+      ?sexp_of_action
+      ?sexp_of_model
+      ~equal
       ~model
       ~apply_action
       input
@@ -111,7 +122,11 @@ let race_dynamic_model
     | `Computed f -> f
   in
   let module M_actual = struct
-    type t = M.t option [@@deriving sexp, equal]
+    type model = m
+
+    let equal_model = equal
+
+    type t = model option [@@deriving equal]
   end
   in
   let apply_action ~inject ~schedule_event computation_status model action =
@@ -129,8 +144,9 @@ let race_dynamic_model
   in
   let%sub model_and_inject =
     state_machine1
-      (module M_actual)
-      (module A)
+      ?sexp_of_action
+      ?sexp_of_model:(Option.map sexp_of_model ~f:Option.sexp_of_t)
+      ~equal:[%equal: M_actual.t]
       ~default_model:None
       ~apply_action
       (Value.both input model_creator)
@@ -140,12 +156,20 @@ let race_dynamic_model
   model_creator model, inject
 ;;
 
-let of_module0 (type m a r) (component : (unit, m, a, r) component_s) ~default_model =
+let of_module0
+      (type m a r)
+      ?sexp_of_model
+      ?equal
+      (component : (unit, m, a, r) component_s)
+      ~default_model
+  =
   let (module M) = component in
   let%sub model_and_inject =
     state_machine0
-      (module M.Model)
-      (module M.Action)
+      ()
+      ~sexp_of_action:M.Action.sexp_of_t
+      ?sexp_of_model
+      ?equal
       ~default_model
       ~apply_action:(M.apply_action ())
   in
@@ -155,13 +179,14 @@ let of_module0 (type m a r) (component : (unit, m, a, r) component_s) ~default_m
 
 let actor1
   : type input model action return.
-    (module Model with type t = model)
-    -> (module Action with type t = action)
+    ?sexp_of_action:(action -> Sexp.t)
     -> ?reset:
          (inject:(action -> return Effect.t)
           -> schedule_event:(unit Effect.t -> unit)
           -> model
           -> model)
+    -> ?sexp_of_model:(model -> Sexp.t)
+    -> ?equal:(model -> model -> bool)
     -> default_model:model
     -> recv:
          (schedule_event:(unit Ui_effect.t -> unit)
@@ -172,16 +197,15 @@ let actor1
     -> input Value.t
     -> (model * (action -> return Effect.t)) Computation.t
   =
-  fun (module M : Model with type t = model)
-    (module A : Action with type t = action)
+  fun ?(sexp_of_action = sexp_of_opaque)
     ?reset
+    ?sexp_of_model
+    ?equal
     ~default_model
     ~recv
     input ->
     let module Action_with_callback = struct
-      type t = (action, return) Effect.Private.Callback.t
-
-      let sexp_of_t cb = A.sexp_of_t (Effect.Private.Callback.request cb)
+      let sexp_of_t cb = sexp_of_action (Effect.Private.Callback.request cb)
     end
     in
     let reset =
@@ -191,9 +215,10 @@ let actor1
     in
     let%sub model, inject =
       state_machine1
-        (module M)
-        (module Action_with_callback)
+        ~sexp_of_action:[%sexp_of: Action_with_callback.t]
+        ?sexp_of_model
         ?reset
+        ?equal
         ~default_model
         ~apply_action:(fun ~inject:_ ~schedule_event input model callback ->
           let action = Effect.Private.Callback.request callback in
@@ -211,19 +236,32 @@ let actor1
     model, inject
 ;;
 
-let actor0 ?reset model action ~default_model ~recv =
+let actor0 ?reset ?sexp_of_model ?sexp_of_action ?equal ~default_model ~recv () =
   let recv ~schedule_event (_ : unit Computation_status.t) = recv ~schedule_event in
-  actor1 model action ?reset ~default_model ~recv (Value.return ())
+  actor1
+    ?sexp_of_action
+    ?sexp_of_model
+    ?equal
+    ?reset
+    ~default_model
+    ~recv
+    (Value.return ())
 ;;
 
-let state (type m) ?reset (module M : Model with type t = m) ~default_model =
+let state ?reset ?sexp_of_model ?equal default_model =
+  let sexp_of_action =
+    (* NOTE: The model and the action for [state] are the same. *)
+    Option.value ~default:sexp_of_opaque sexp_of_model
+  in
   let reset = Option.map reset ~f:(fun reset ~inject:_ ~schedule_event:_ m -> reset m) in
   state_machine0
     ?reset
-    (module M)
-    (module M)
+    ~sexp_of_action
+    ?sexp_of_model
+    ?equal
     ~apply_action:(fun ~inject:_ ~schedule_event:_ _old_model new_model -> new_model)
     ~default_model
+    ()
 ;;
 
 module Toggle = struct
@@ -244,12 +282,14 @@ let toggle' ~default_model =
   in
   let%sub state_and_inject =
     state_machine0
-      (module Bool)
-      (module Action)
+      ~sexp_of_model:[%sexp_of: Bool.t]
+      ~sexp_of_action:[%sexp_of: Action.t]
+      ~equal:[%equal: Bool.t]
       ~default_model
       ~apply_action:(fun ~inject:_ ~schedule_event:_ state -> function
         | Toggle -> not state
         | Set state -> state)
+      ()
   in
   let%arr state_and_inject = state_and_inject in
   let state, inject = state_and_inject in
@@ -263,13 +303,12 @@ let toggle ~default_model =
   state, toggle
 ;;
 
-let state_opt (type m) ?reset ?default_model (module M : Model with type t = m) =
+let state_opt ?reset ?default_model ?sexp_of_model ?equal () =
   state
     ?reset
-    ~default_model
-    (module struct
-      type t = M.t option [@@deriving equal, sexp]
-    end)
+    default_model
+    ?equal:(Option.map ~f:Option.equal equal)
+    ?sexp_of_model:(Option.map ~f:Option.sexp_of_t sexp_of_model)
 ;;
 
 let path_id =
@@ -281,8 +320,9 @@ let path_id =
 let yoink a =
   let%sub _, result =
     actor1
-      (module Unit)
-      (module Unit)
+      ~sexp_of_model:[%sexp_of: Unit.t]
+      ~sexp_of_action:[%sexp_of: Unit.t]
+      ~equal:[%equal: Unit.t]
       ~recv:(fun ~schedule_event:_ a () () -> (), a)
       ~default_model:()
       a
@@ -329,8 +369,13 @@ module Edge = struct
     lifecycle' ~after_display:event_value ()
   ;;
 
-  let on_change' (type a) (module M : Model with type t = a) input ~callback =
-    let%sub state, set_state = state_opt (module M) in
+  let wait_after_display =
+    Incr0.with_clock (fun clock ->
+      Ui_incr.return (Time_source.sleep clock Time_ns.Span.zero))
+  ;;
+
+  let on_change' ?sexp_of_model ~equal input ~callback =
+    let%sub state, set_state = state_opt ?sexp_of_model ~equal () in
     let%sub update =
       match%sub state with
       | None ->
@@ -343,7 +388,7 @@ module Edge = struct
         and set_state = set_state
         and input = input
         and callback = callback in
-        if phys_equal state input || M.equal state input
+        if phys_equal state input || equal state input
         then None
         else
           lazy (Ui_effect.Many [ set_state (Some input); callback (Some state) input ])
@@ -353,9 +398,9 @@ module Edge = struct
     after_display' update
   ;;
 
-  let on_change model input ~callback =
+  let on_change ?sexp_of_model ~equal input ~callback =
     let callback = Value.map callback ~f:(fun callback _prev value -> callback value) in
-    on_change' model input ~callback
+    on_change' ?sexp_of_model ~equal input ~callback
   ;;
 
   module Poll = struct
@@ -370,34 +415,48 @@ module Edge = struct
 
     let manual_refresh_implementation
           (type r)
-          (module Result : Model with type t = r)
+          ?sexp_of_model
+          ?equal
           ~initial
           ~wrap_result
           ~effect
+          ()
       =
       let%sub _, next_seqnum =
         actor0
-          (module Int)
-          (module Unit)
+          ~sexp_of_model:[%sexp_of: Int.t]
+          ~sexp_of_action:[%sexp_of: Unit.t]
+          ~equal:[%equal: Int.t]
           ~default_model:0
           ~recv:(fun ~schedule_event:_ i () -> i + 1, i)
+          ()
       in
       let module State = struct
+        type result = r
+
+        let sexp_of_result = Option.value ~default:sexp_of_opaque sexp_of_model
+        let equal_result = Option.value equal ~default:phys_equal
+
         type t =
           { last_seqnum : int
-          ; last_result : Result.t
+          ; last_result : result
           }
-        [@@deriving sexp, equal, fields]
+        [@@deriving sexp_of, equal, fields]
       end
       in
       let module Action = struct
-        type t = Set of int * Result.t [@@deriving sexp_of]
+        type result = r
+
+        let sexp_of_result = Option.value ~default:sexp_of_opaque sexp_of_model
+
+        type t = Set of int * result [@@deriving sexp_of]
       end
       in
       let%sub state, inject_change =
         state_machine0
-          (module State)
-          (module Action)
+          ~sexp_of_model:[%sexp_of: State.t]
+          ~sexp_of_action:[%sexp_of: Action.t]
+          ~equal:[%equal: State.t]
           ~apply_action:
             (fun
               ~inject:_ ~schedule_event:_ model (Action.Set (seqnum, res)) ->
@@ -405,6 +464,7 @@ module Edge = struct
               then model
               else { State.last_seqnum = seqnum; last_result = res })
           ~default_model:{ State.last_seqnum = -1; last_result = initial }
+          ()
       in
       let%sub callback =
         let%arr effect = effect
@@ -421,54 +481,67 @@ module Edge = struct
 
     let manual_refresh
       : type o r.
-        (module Model with type t = o)
+        ?sexp_of_model:(o -> Sexp.t)
+        -> ?equal:(o -> o -> bool)
         -> (o, r) Starting.t
         -> effect:o Effect.t Value.t
         -> (r * unit Effect.t) Computation.t
       =
-      fun (module Result : Model with type t = o) kind ~effect ->
-        match kind with
-        | Starting.Empty ->
-          manual_refresh_implementation
-            (module struct
-              type t = Result.t option [@@deriving sexp, equal]
-            end)
-            ~effect
-            ~initial:None
-            ~wrap_result:Option.some
-        | Starting.Initial initial ->
-          manual_refresh_implementation (module Result) ~effect ~initial ~wrap_result:Fn.id
+      fun ?sexp_of_model ?equal kind ~effect ->
+      match kind with
+      | Starting.Empty ->
+        manual_refresh_implementation
+          ?sexp_of_model:(Option.map ~f:Option.sexp_of_t sexp_of_model)
+          ?equal:(Option.map ~f:Option.equal equal)
+          ~effect
+          ~initial:None
+          ~wrap_result:Option.some
+          ()
+      | Starting.Initial initial ->
+        manual_refresh_implementation
+          ?sexp_of_model
+          ?equal
+          ~effect
+          ~initial
+          ~wrap_result:Fn.id
+          ()
     ;;
 
     let effect_on_change
       : type a o r.
-        (module Model with type t = a)
-        -> (module Model with type t = o)
+        ?sexp_of_input:(a -> Sexp.t)
+        -> ?sexp_of_result:(o -> Sexp.t)
+        -> equal_input:(a -> a -> bool)
+        -> ?equal_result:(o -> o -> bool)
         -> (o, r) Starting.t
         -> a Value.t
         -> effect:(a -> o Effect.t) Value.t
         -> r Computation.t
       =
-      fun (module Input) (module Result) kind input ~effect ->
-        let%sub get_input = yoink input in
-        let%sub effect =
-          let%arr get_input = get_input
-          and effect = effect in
-          let%bind.Effect input =
-            match%bind.Effect get_input with
-            | Active input -> Effect.return input
-            | Inactive ->
-              Effect.never
-          in
-          effect input
+      fun ?sexp_of_input ?sexp_of_result ~equal_input ?equal_result kind input ~effect ->
+      let%sub get_input = yoink input in
+      let%sub effect =
+        let%arr get_input = get_input
+        and effect = effect in
+        let%bind.Effect input =
+          match%bind.Effect get_input with
+          | Active input -> Effect.return input
+          | Inactive ->
+            Effect.never
         in
-        let%sub result, refresh = manual_refresh (module Result) kind ~effect in
-        let%sub callback =
-          let%arr refresh = refresh in
-          fun (_ : Input.t) -> refresh
-        in
-        let%sub () = on_change (module Input) input ~callback in
-        return result
+        effect input
+      in
+      let%sub result, refresh =
+        manual_refresh ?sexp_of_model:sexp_of_result ?equal:equal_result kind ~effect
+      in
+      let%sub callback =
+        let%arr refresh = refresh in
+        fun (_ : a) -> refresh
+      in
+      let%sub () =
+        on_change ?sexp_of_model:sexp_of_input ~equal:equal_input input ~callback
+      in
+      return result
     ;;
   end
 end
@@ -525,14 +598,14 @@ module Effect_throttling = struct
         }
 
       let sexp_of_t = sexp_of_opaque
-      let t_of_sexp _ = assert false
       let equal = phys_equal
     end
     in
     let%sub _model, inject =
       state_machine1
-        (module Model)
-        (module Action)
+        ~sexp_of_action:[%sexp_of: Action.t]
+        ~sexp_of_model:[%sexp_of: Model.t]
+        ~equal:[%equal: Model.t]
         (* This computation does nothing on reset because users should be
            oblivious to the fact that it has a model. I don't think there is a
            "correct" decision in this case - this behavior just seems more
@@ -550,7 +623,7 @@ module Effect_throttling = struct
                    callback
                    (Poll_result.Finished response)
                in
-               inject Finished)
+               inject Action.Finished)
           in
           let abort callback =
             schedule_event
@@ -628,8 +701,8 @@ module Incr = struct
   include Incr0
 end
 
-let freeze model value =
-  let%sub state, set_state = state_opt model in
+let freeze ?sexp_of_model ?equal value =
+  let%sub state, set_state = state_opt ?sexp_of_model ?equal () in
   match%sub state with
   | Some state -> return state
   | None ->
@@ -646,19 +719,15 @@ let freeze model value =
 
 let thunk (type a) (f : unit -> a) =
   let%sub out = return Value.(map (Var.value (Var.create ())) ~f) in
-  freeze
-    (module struct
-      type t = (a[@sexp.opaque]) [@@deriving sexp]
-
-      let equal = phys_equal
-    end)
-    out
+  freeze ~sexp_of_model:[%sexp_of: opaque] ~equal:phys_equal out
 ;;
 
-let most_recent_some (type a) (module M : Model with type t = a) input ~f =
-  let%sub most_recent_valid_value, set_most_recent_valid_value = state_opt (module M) in
+let most_recent_some ?sexp_of_model ~equal input ~f =
+  let%sub most_recent_valid_value, set_most_recent_valid_value =
+    state_opt ?sexp_of_model ~equal ()
+  in
   let%sub input = pure f input in
-  let%sub input = Incr.value_cutoff ~equal:[%equal: M.t option] input in
+  let%sub input = Incr.value_cutoff ~equal:(Option.equal equal) input in
   match%sub input with
   | None -> return most_recent_valid_value
   | Some inner ->
@@ -666,24 +735,26 @@ let most_recent_some (type a) (module M : Model with type t = a) input ~f =
       let%arr set_most_recent_valid_value = set_most_recent_valid_value in
       fun x -> set_most_recent_valid_value (Some x)
     in
-    let%sub () = Edge.on_change (module M) inner ~callback in
+    let%sub () = Edge.on_change ?sexp_of_model ~equal inner ~callback in
     return input
 ;;
 
-let most_recent_value_satisfying m input ~condition =
-  most_recent_some m input ~f:(fun a -> if condition a then Some a else None)
+let most_recent_value_satisfying ?sexp_of_model ~equal input ~condition =
+  most_recent_some ?sexp_of_model ~equal input ~f:(fun a ->
+    if condition a then Some a else None)
 ;;
 
 let previous_value
-  : (module Model with type t = 'a) -> 'a Value.t -> 'a option Computation.t
+  :  ?sexp_of_model:('a -> Sexp.t) -> equal:('a -> 'a -> bool) -> 'a Value.t
+    -> 'a option Computation.t
   =
-  fun model input ->
-  let%sub prev, set_prev = state_opt model in
+  fun ?sexp_of_model ~equal input ->
+  let%sub prev, set_prev = state_opt ?sexp_of_model ~equal () in
   let%sub callback =
     let%arr set_prev = set_prev in
     fun input -> set_prev (Some input)
   in
-  let%sub () = Edge.on_change model input ~callback in
+  let%sub () = Edge.on_change ?sexp_of_model ~equal input ~callback in
   return prev
 ;;
 
@@ -743,10 +814,10 @@ module Dynamic_scope = struct
 
   let rec fetch : type a b. a t -> default:b -> for_some:(a -> b) -> b Computation.t =
     fun t ~default ~for_some ->
-      match t with
-      | Independent { id; _ } -> Dynamic_scope.fetch ~id ~default ~for_some
-      | Derived { base; get; set = _; sexp_of = _ } ->
-        fetch base ~default ~for_some:(fun x -> for_some (get x))
+    match t with
+    | Independent { id; _ } -> Dynamic_scope.fetch ~id ~default ~for_some
+    | Derived { base; get; set = _; sexp_of = _ } ->
+      fetch base ~default ~for_some:(fun x -> for_some (get x))
   ;;
 
   let lookup (type a) (var : a t) = fetch var ~default:(fallback var) ~for_some:Fn.id
@@ -789,11 +860,11 @@ end
 module Clock = struct
   let approx_now ~tick_every =
     Incr.with_clock (fun clock ->
-      let%map.Ui_incr () = Ui_incr.Clock.at_intervals clock tick_every in
-      Ui_incr.Clock.now clock)
+      let%map.Ui_incr () = Time_source.at_intervals clock tick_every in
+      Time_source.now clock)
   ;;
 
-  let now = Incr.with_clock Ui_incr.Clock.watch_now
+  let now = Incr.with_clock Time_source.watch_now
 
   module Before_or_after = struct
     type t = Ui_incr.Before_or_after.t =
@@ -803,14 +874,16 @@ module Clock = struct
   end
 
   let at time =
-    Incr.compute_with_clock time ~f:(fun clock ->
-      Ui_incr.bind ~f:(Ui_incr.Clock.at clock))
+    Incr.compute_with_clock time ~f:(fun clock -> Ui_incr.bind ~f:(Time_source.at clock))
   ;;
 
   let get_current_time =
     Incr.with_clock (fun clock ->
-      Ui_incr.return (Effect.of_sync_fun (fun () -> Ui_incr.Clock.now clock) ()))
+      Ui_incr.return (Effect.of_sync_fun (fun () -> Time_source.now clock) ()))
   ;;
+
+  let sleep = Incr.with_clock (fun clock -> Ui_incr.return (Time_source.sleep clock))
+  let until = Incr.with_clock (fun clock -> Ui_incr.return (Time_source.until clock))
 
   module Trigger_id = Unique_id.Int ()
 
@@ -831,7 +904,10 @@ module Clock = struct
   let generic_every ~create_effect ?(trigger_on_activate = true) span callback =
     let%sub base_time =
       let%sub now = now in
-      freeze (module Time_ns.Alternate_sexp) now
+      freeze
+        ~equal:[%equal: Time_ns.Alternate_sexp.t]
+        now
+        ~sexp_of_model:[%sexp_of: Time_ns.Alternate_sexp.t]
     in
     let%sub initial_model =
       let%arr base_time = base_time in
@@ -862,8 +938,9 @@ module Clock = struct
     in
     let%sub every_model, inject =
       race_dynamic_model
-        (module Every_model)
-        (module Every_action)
+        ~sexp_of_model:[%sexp_of: Every_model.t]
+        ~sexp_of_action:[%sexp_of: Every_action.t]
+        ~equal:[%equal: Every_model.t]
         ~model:(`Given initial_model)
         ~apply_action
         race_input
@@ -884,9 +961,8 @@ module Clock = struct
       | Some (_, After) -> inject Schedule_effect
     in
     Edge.on_change
-      (module struct
-        type t = (Trigger_id.t option * Before_or_after.t) option [@@deriving sexp, equal]
-      end)
+      ~sexp_of_model:[%sexp_of: (Trigger_id.t option * Before_or_after.t) option]
+      ~equal:[%equal: (Trigger_id.t option * Before_or_after.t) option]
       before_or_after
       ~callback
   ;;
@@ -943,13 +1019,13 @@ module Clock = struct
       -> unit Computation.t
     =
     fun ~when_to_start_next_effect ->
-      match when_to_start_next_effect with
-      | `Wait_period_after_previous_effect_starts_blocking ->
-        every_wait_period_after_previous_effect_starts_blocking
-      | `Wait_period_after_previous_effect_finishes_blocking ->
-        every_wait_period_after_previous_effect_finishes_blocking
-      | `Every_multiple_of_period_blocking -> every_multiple_of_period_blocking
-      | `Every_multiple_of_period_non_blocking -> every_multiple_of_period_non_blocking
+    match when_to_start_next_effect with
+    | `Wait_period_after_previous_effect_starts_blocking ->
+      every_wait_period_after_previous_effect_starts_blocking
+    | `Wait_period_after_previous_effect_finishes_blocking ->
+      every_wait_period_after_previous_effect_finishes_blocking
+    | `Every_multiple_of_period_blocking -> every_multiple_of_period_blocking
+    | `Every_multiple_of_period_non_blocking -> every_multiple_of_period_non_blocking
   ;;
 end
 
@@ -975,7 +1051,7 @@ module Memo = struct
         ~(f : query Value.t -> response Computation.t)
     =
     let module Model = struct
-      type t = int Map.M(Query).t [@@deriving sexp, equal]
+      type t = int Map.M(Query).t [@@deriving sexp_of, equal]
     end
     in
     let module Action = struct
@@ -1001,10 +1077,12 @@ module Memo = struct
     in
     let%sub queries, inject =
       state_machine0
-        (module Model)
-        (module Action)
+        ~sexp_of_model:[%sexp_of: Model.t]
+        ~sexp_of_action:[%sexp_of: Action.t]
+        ~equal:[%equal: Model.t]
         ~apply_action
         ~default_model:(Map.empty (module Query))
+        ()
     in
     let%sub responses = assoc (module Query) queries ~f:(fun query _count -> f query) in
     let%arr responses = responses
@@ -1012,7 +1090,13 @@ module Memo = struct
     T { responses; inject }
   ;;
 
-  let lookup (type query response) q_mod (t : (query, response) t Value.t) query =
+  let lookup
+        (type query response)
+        ?sexp_of_model
+        ~equal
+        (t : (query, response) t Value.t)
+        query
+    =
     let%sub (T { inject; _ }) = return t in
     let%sub () =
       Edge.lifecycle
@@ -1034,7 +1118,7 @@ module Memo = struct
           | None, _ -> Effect.Ignore
           | Some prev, next -> inject (Change (prev, next))
       in
-      Edge.on_change' q_mod query ~callback
+      Edge.on_change' ?sexp_of_model ~equal query ~callback
     in
     let%arr t = t
     and query = query in

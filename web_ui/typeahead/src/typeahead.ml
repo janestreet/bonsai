@@ -142,6 +142,7 @@ let create_internal
       ?to_option_description
       ?(handle_unknown_option = Value.return (Fn.const None))
       (module M : Bonsai.Model with type t = t)
+      ~equal
       ~all_options
       ~show_datalist_in_test
   =
@@ -157,11 +158,15 @@ let create_internal
       on_select_change
       ~default:(Value.return (fun (_ : M.t option) -> Ui_effect.Ignore))
   in
-  let%sub focused, set_focused = Bonsai.state (module Bool) ~default_model:false in
-  let%sub current_input, set_current_input =
-    Bonsai.state (module String) ~default_model:""
+  let%sub focused, set_focused =
+    Bonsai.state false ~sexp_of_model:[%sexp_of: Bool.t] ~equal:[%equal: Bool.t]
   in
-  let%sub selected, set_selected = Bonsai.state_opt (module M) in
+  let%sub current_input, set_current_input =
+    Bonsai.state "" ~sexp_of_model:[%sexp_of: String.t] ~equal:[%equal: String.t]
+  in
+  let%sub selected, set_selected =
+    Bonsai.state_opt () ~sexp_of_model:[%sexp_of: M.t] ~equal
+  in
   let%sub id = Bonsai.path_id in
   let%sub input =
     let%arr set_focused = set_focused
@@ -312,7 +317,7 @@ let create_multi_internal
   let open Bonsai.Let_syntax in
   let module M = struct
     include M
-    include Comparable.Make_using_comparator (M)
+    include Comparable.Make_plain_using_comparator (M)
   end
   in
   let to_string =
@@ -320,9 +325,13 @@ let create_multi_internal
       to_string
       ~default:(Value.return (fun a -> a |> M.sexp_of_t |> Sexp.to_string_hum))
   in
-  let to_option_description = Option.value to_option_description ~default:to_string  in
-  let selected_options      = Bonsai.state (module M.Set) ~default_model:M.Set.empty in
-  let focused               = Bonsai.state (module Bool) ~default_model:false        in
+  let to_option_description = Option.value to_option_description ~default:to_string in
+  let selected_options =
+    Bonsai.state M.Set.empty ~sexp_of_model:[%sexp_of: M.Set.t] ~equal:[%equal: M.Set.t]
+  in
+  let focused =
+    Bonsai.state false ~sexp_of_model:[%sexp_of: Bool.t] ~equal:[%equal: Bool.t]
+  in
   let%sub selected_options, inject_selected_options = selected_options in
   let%sub focused, set_focused = focused in
   let%sub inject_selected_options =
@@ -336,7 +345,7 @@ let create_multi_internal
      of the input field when an option is selected, and we give users access to the value
      as well *)
   let%sub current_input, inject_current_input =
-    Bonsai.state (module String) ~default_model:""
+    Bonsai.state "" ~sexp_of_model:[%sexp_of: String.t] ~equal:[%equal: String.t]
   in
   let%sub id = Bonsai.path_id in
   let%sub input =

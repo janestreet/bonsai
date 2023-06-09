@@ -16,6 +16,7 @@ module Value_parser : sig
 
   val int : int t
   val string : string t
+  val time_ns : Time_ns.t t
   val float : float t
   val bool : bool t
   val stringable : (module Stringable with type t = 'a) -> 'a t
@@ -81,6 +82,7 @@ module Parse_result : sig
     { result : 'a
     ; remaining : Components.t
     }
+  [@@deriving sexp_of]
 
   val create : 'a -> 'a t
 end
@@ -240,6 +242,59 @@ module Parser : sig
     val make
       :  ?namespace:string list
       -> (module S with type Typed_variant.derived_on = 'a)
+      -> 'a t
+  end
+
+  module Query_based_variant : sig
+    (** This module is like the [Variant] module, but instead of picking the variant based
+        on the path of the url, it is instead picked based on the value of a query field.
+
+        (e.g. ?page=Home or ?page=Settings). *)
+
+    module type S = sig
+      (** Given a typed variant, it should return the parser that you want to use for
+          that variant's constructor. For example:
+
+          {[
+
+            module My_url = struct
+              type t =
+                | Foo
+                | Bar of int
+              [@@deriving typed_variants, sexp, equal]
+
+              let parser_for_variant : type a. a Typed_variant.t -> a Parser.t = function
+                | Foo -> Parser.unit
+                | Bar -> Parser.from_path Value_parser.int
+
+              let identifier_for_variant : type a. a Typed_variant.t -> a Parser.t = function
+                | Foo -> "foo"
+                | Bar -> "settings"
+            end
+
+            let my_parser = Query_based_variant.make ~key:"page" (module My_url)
+          ]}
+
+          Since we picked "foo", for the "Foo" constructor, and also "settings" for the "Bar"
+          constructor, when "?page=foo", we'll go with Foo, and when "?page=settings" we'll
+          go with Bar.
+      *)
+
+      include Variant.S
+
+      (** The identifier that each identifier has. Each identifier _must_ be unique
+          amongst each other within the scope of this function. *)
+      val identifier_for_variant : 'a Typed_variant.t -> string
+    end
+
+    (** Makes a parser for 'a where 'a is a Variant.
+
+        For documentation/examples on the ?namespace optional parameter, please read the
+        documentation on Record.make *)
+    val make
+      :  ?namespace:string list
+      -> (module S with type Typed_variant.derived_on = 'a)
+      -> key:string
       -> 'a t
   end
 

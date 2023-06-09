@@ -5,9 +5,8 @@ type 'r t
 
 (** Builds a new driver for a bonsai component. *)
 val create
-  :  ?initial_model_sexp:Sexp.t
-  -> ?optimize:bool
-  -> clock:Incr.Clock.t
+  :  ?optimize:bool
+  -> clock:Bonsai.Time_source.t
   -> 'r Bonsai.Computation.t
   -> 'r t
 
@@ -47,7 +46,7 @@ module Expert : sig
   val action_input_incr : _ t -> Incr.Packed.t
 
   (** Access the clock that was used when creating the handle *)
-  val clock : _ t -> Incr.Clock.t
+  val clock : _ t -> Bonsai.Time_source.t
 
   (** Kill everything in this handle by invalidating all the incremental observers.
       After this function is called, other functions in this module may begin to

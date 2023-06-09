@@ -5,7 +5,9 @@ open Bonsai.Let_syntax
 module Form = Bonsai_web_ui_form
 
 let textbox ~placeholder =
-  let%sub state, set_state = Bonsai.state (module String) ~default_model:"" in
+  let%sub state, set_state =
+    Bonsai.state "" ~sexp_of_model:[%sexp_of: String.t] ~equal:[%equal: String.t]
+  in
   let%arr state = state
   and set_state = set_state
   and placeholder = placeholder in
@@ -121,8 +123,10 @@ end
 
 let people =
   Bonsai.state_machine0
-    (module Model)
-    (module Action)
+    ()
+    ~sexp_of_model:[%sexp_of: Model.t]
+    ~equal:[%equal: Model.t]
+    ~sexp_of_action:[%sexp_of: Action.t]
     ~default_model:Model.default
     ~apply_action:(fun ~inject:_ ~schedule_event:_ model action ->
       match action with

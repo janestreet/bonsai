@@ -237,7 +237,9 @@ let component (type a) (t : a t) =
   in
   let%sub () =
     Bonsai_extra.mirror
-      (module T)
+      ()
+      ~sexp_of_model:[%sexp_of: T.t]
+      ~equal:[%equal: T.t]
       ~store_set:typed_url_form_set
       ~store_value:typed_url_form_value
       ~interactive_set:uri_form_set

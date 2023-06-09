@@ -25,7 +25,6 @@ module Model : sig
     ; equal : 'a -> 'a -> bool
     ; type_id : 'a Type_id.t
     ; sexp_of : 'a -> Sexp.t
-    ; of_sexp : Sexp.t -> 'a
     }
 
   module Hidden : sig
@@ -35,7 +34,6 @@ module Model : sig
       | T :
           { model : 'm
           ; info : 'm model
-          ; t_of_sexp : Sexp.t -> t
           }
           -> t
     [@@deriving equal, sexp_of]
@@ -64,7 +62,12 @@ module Model : sig
     -> 'a t
     -> ('k, 'k_io * 'a, 'cmp) Map.t t
 
-  val of_module : (module Model with type t = 'a) -> default:'a -> name:string -> 'a t
+  val of_module
+    :  sexp_of_model:('a -> Sexp.t)
+    -> equal:('a -> 'a -> bool) option
+    -> default:'a
+    -> name:string
+    -> 'a t
 end
 
 module Action : sig
@@ -98,14 +101,13 @@ module Action : sig
     -> 'a t
     -> ('io_key * 'model_key * 'a) t
 
-  val of_module : (module Action with type t = 'a) -> name:string -> 'a t
+  val of_module : sexp_of_action:('a -> Sexp.t) -> name:string -> 'a t
 end
 
 module Multi_model : sig
   type t
 
   val sexp_of_t : (int -> Sexp.t) -> t -> Sexp.t
-  val t_of_sexp : t -> Sexp.t -> t
   val find_exn : t -> int -> Model.Hidden.t
   val set : t -> key:int -> data:Model.Hidden.t -> t
   val to_models : t -> Model.Hidden.t Int.Map.t

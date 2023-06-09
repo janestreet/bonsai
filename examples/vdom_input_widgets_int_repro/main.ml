@@ -5,11 +5,12 @@ open Bonsai.Let_syntax
 let component
       (type a)
       (module M : Bonsai.Model with type t = a)
+      ~equal
       ~name
       ~some_constant_value
       ~node_creator
   =
-  let%sub textbox_state = Bonsai.state_opt (module M) in
+  let%sub textbox_state = Bonsai.state_opt () ~sexp_of_model:[%sexp_of: M.t] ~equal in
   let%arr state, set_state = textbox_state in
   let input = node_creator state set_state in
   let debug = state |> [%sexp_of: M.t option] |> Sexp.to_string_hum |> Vdom.Node.text in
@@ -30,6 +31,7 @@ let component =
   let%sub number_input =
     component
       (module Int)
+      ~equal:[%equal: Int.t]
       ~name:"interger based"
       ~some_constant_value:1000
       ~node_creator:(fun value on_input ->
@@ -43,6 +45,7 @@ let component =
   let%sub string_input =
     component
       (module String)
+      ~equal:[%equal: String.t]
       ~name:"string based"
       ~some_constant_value:"hello world"
       ~node_creator:(fun value on_input ->

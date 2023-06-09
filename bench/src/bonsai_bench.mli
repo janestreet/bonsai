@@ -53,7 +53,7 @@ end
     have an interaction which is idempotent on the state, or have similar performance
     when the interaction is repeated many times. *)
 val create
-  :  ?clock:Ui_incr.Clock.t
+  :  ?clock:Bonsai.Time_source.t
   -> name:string
   -> component:'r Computation.t
   -> get_inject:('r -> 'a -> unit Effect.t)
@@ -63,7 +63,7 @@ val create
 (** [create_with_resetter] is equivalent to calling [create], with interactions equal to
     [Interaction.many interactions; Interaction.reset_model; Interaction.stabilize]. *)
 val create_with_resetter
-  :  ?clock:Ui_incr.Clock.t
+  :  ?clock:Bonsai.Time_source.t
   -> name:string
   -> component:'r Computation.t
   -> get_inject:('r -> 'a -> unit Effect.t)

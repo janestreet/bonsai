@@ -46,6 +46,7 @@ val component
   -> ?allow_event_propagation_when_clicked_outside:
        ([ `Left_click | `Right_click | `Escape ] -> bool) Value.t
   -> ?on_close:unit Effect.t Value.t
+  -> ?keep_popover_inside_window:bool Value.t
   -> close_when_clicked_outside:bool
   -> direction:Direction.t Value.t
   -> alignment:Alignment.t Value.t

@@ -81,8 +81,9 @@ let%expect_test "sm1_with_const_input_gets_warning" =
   test_start [%here];
   let state_machine =
     Bonsai.state_machine1
-      (module Int)
-      (module Int)
+      ~sexp_of_model:[%sexp_of: Int.t]
+      ~sexp_of_action:[%sexp_of: Int.t]
+      ~equal:[%equal: Int.t]
       ~default_model:0
       ~apply_action:(fun ~inject:_ ~schedule_event:_ _ _ _ -> 3)
       (Value.return 5)
@@ -95,8 +96,9 @@ let%expect_test "sm1_optimized_gets_no_warnings" =
   test_start [%here];
   let state_machine =
     Bonsai.state_machine1
-      (module Int)
-      (module Int)
+      ~sexp_of_model:[%sexp_of: Int.t]
+      ~sexp_of_action:[%sexp_of: Int.t]
+      ~equal:[%equal: Int.t]
       ~default_model:0
       ~apply_action:(fun ~inject:_ ~schedule_event:_ _ _ _ -> 3)
       (Value.return 5)
@@ -110,8 +112,9 @@ let%expect_test "map2_with_unfolded_constants_and_sm1_with_const_input_both_warn
   let c =
     let%sub value, _inject =
       Bonsai.state_machine1
-        (module Int)
-        (module Int)
+        ~sexp_of_model:[%sexp_of: Int.t]
+        ~sexp_of_action:[%sexp_of: Int.t]
+        ~equal:[%equal: Int.t]
         ~default_model:0
         ~apply_action:(fun ~inject:_ ~schedule_event:_ _ _ _ -> 3)
         (Value.return 5)
@@ -128,5 +131,5 @@ let%expect_test "map2_with_unfolded_constants_and_sm1_with_const_input_both_warn
   [%expect
     {|
     lib/bonsai/test/test_linter.ml:2:4: state_machine1 can be optimized to a state_machine0
-    lib/bonsai/test/test_linter.ml:10:4: unfolded constant |}]
+    lib/bonsai/test/test_linter.ml:11:4: unfolded constant |}]
 ;;

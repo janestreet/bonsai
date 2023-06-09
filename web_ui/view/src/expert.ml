@@ -131,13 +131,13 @@ let default_theme =
 
           method tabs
             : type a.  attrs:Vdom.Attr.t list
-              -> per_tab_attr:(a -> is_active:bool -> Vdom.Attr.t)
+              -> per_tab_attrs:(a -> is_active:bool -> Vdom.Attr.t list)
               -> on_change:(from:a -> to_:a -> unit Effect.t)
               -> equal:(a -> a -> bool)
               -> active:a
               -> (a * Vdom.Node.t) list
               -> Vdom.Node.t =
-            fun ~attrs ~per_tab_attr ~on_change ~equal ~active tabs ->
+            fun ~attrs ~per_tab_attrs ~on_change ~equal ~active tabs ->
             let color = self#constants.primary.foreground in
             let all_attr =
               Vdom.Attr.style (Css_gen.create ~field:"cursor" ~value:"pointer")
@@ -162,7 +162,7 @@ let default_theme =
                 ~attrs:
                   [ (if is_active then active_attr else inactive_attr i)
                   ; all_attr
-                  ; per_tab_attr i ~is_active
+                  ; Vdom.Attr.many (per_tab_attrs i ~is_active)
                   ]
                 [ tab ])
             |> Layout.hbox ~attrs ~gap:(`Em_float 0.5)
@@ -292,9 +292,9 @@ let default_theme =
 
           (* cards *)
           method card
-                   ~container_attr
-                   ~title_attr
-                   ~content_attr
+                   ~container_attrs
+                   ~title_attrs
+                   ~content_attrs
                    ~intent
                    ~on_click
                    ~title
@@ -329,7 +329,12 @@ let default_theme =
               | _ ->
                 let create_title ~f ~extra_attr =
                   f
-                    ~attrs:[ Style.title_bar; Style.title_text; title_attr; extra_attr ]
+                    ~attrs:
+                      [ Style.title_bar
+                      ; Style.title_text
+                      ; Vdom.Attr.many title_attrs
+                      ; extra_attr
+                      ]
                     title
                 in
                 let title =
@@ -348,13 +353,15 @@ let default_theme =
             let create_card ~f ~extra_container_attr =
               f
                 ~attrs:
-                  [ container_attr
+                  [ Vdom.Attr.many container_attrs
                   ; Vdom.Attr.on_click (fun _ -> on_click)
                   ; vars
                   ; extra_container_attr
                   ]
                 [ title
-                ; Layout.vbox ~attrs:[ content_attr; Style.content_common ] content
+                ; Layout.vbox
+                    ~attrs:[ Vdom.Attr.many content_attrs; Style.content_common ]
+                    content
                 ]
             in
             match title_kind with

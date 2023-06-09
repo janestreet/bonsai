@@ -1008,6 +1008,115 @@ let%expect_test "record with doc comments gets a tooltip" =
     </table> |}]
 ;;
 
+let%expect_test "variant with doc comments gets a tooltip" =
+  let module T = struct
+    type t =
+      | Foo (** This is a foo! *)
+      | Bar (** This is a bar! *)
+    [@@deriving sexp, sexp_grammar ~tags_of_doc_comments]
+  end
+  in
+  let handle = sexp_form_handle ~get_vdom:get_vdom_detailed (module T) in
+  Handle.do_actions handle [ Foo ];
+  (* Note: we see there's a tooltip with "This is a foo!" inside *)
+  Handle.show handle;
+  [%expect
+    {|
+    (Ok Foo)
+
+    ==============
+    <table>
+      <tbody>
+        <tr>
+          <td style={
+                padding-left: 0em;
+                padding-right: 1em;
+                text-align: left;
+                font-weight: bold;
+                user-select: none;
+              }>  </td>
+          <td>
+            <div style={ display: flex; }>
+              <select id="bonsai_path_replaced_in_test"
+                      class="widget-dropdown"
+                      onchange
+                      style={
+                        width: 100.00%;
+                      }>
+                <option value="0" #selected="false">  </option>
+                <option value="1" #selected="true"> foo </option>
+                <option value="2" #selected="false"> bar </option>
+              </select>
+              <span class="inline_padding_hash_replaced_in_test right_hash_replaced_in_test tooltip_container_hash_replaced_in_test">
+                ?
+                <div class="scrollable_tooltip_hash_replaced_in_test tooltip_hash_replaced_in_test"
+                     custom-css-vars=((--fg_hash_replaced_in_test black)(--border_hash_replaced_in_test grey)(--bg_hash_replaced_in_test white))>
+                  <div style={ display: flex; flex-direction: column; row-gap: 0.15rem; }>
+                    <div style={ display: flex; flex-direction: column; }>
+                      <span class="bold_text_hash_replaced_in_test"> Bar </span>
+                       This is a bar!
+                    </div>
+                    <div style={ display: flex; flex-direction: column; }>
+                      <span class="bold_text_hash_replaced_in_test"> Foo </span>
+                       This is a foo!
+                    </div>
+                  </div>
+                </div>
+              </span>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table> |}];
+  Handle.do_actions handle [ Bar ];
+  Handle.show_diff handle;
+  [%expect
+    {|
+    -|(Ok Foo)
+    +|(Ok Bar)
+
+      ==============
+      <table>
+        <tbody>
+          <tr>
+            <td style={
+                  padding-left: 0em;
+                  padding-right: 1em;
+                  text-align: left;
+                  font-weight: bold;
+                  user-select: none;
+                }>  </td>
+            <td>
+              <div style={ display: flex; }>
+                <select id="bonsai_path_replaced_in_test"
+                        class="widget-dropdown"
+                        onchange
+                        style={
+                          width: 100.00%;
+                        }>
+                  <option value="0" #selected="false">  </option>
+    -|            <option value="1" #selected="true"> foo </option>
+    +|            <option value="1" #selected="false"> foo </option>
+    -|            <option value="2" #selected="false"> bar </option>
+    +|            <option value="2" #selected="true"> bar </option>
+                </select>
+                <span class="inline_padding_hash_replaced_in_test right_hash_replaced_in_test tooltip_container_hash_replaced_in_test">
+                  ?
+                  <div class="scrollable_tooltip_hash_replaced_in_test tooltip_hash_replaced_in_test"
+                       custom-css-vars=((--fg_hash_replaced_in_test black)(--border_hash_replaced_in_test grey)(--bg_hash_replaced_in_test white))>
+                    <div style={ display: flex; flex-direction: column; row-gap: 0.15rem; }>
+                      <div style={ display: flex; flex-direction: column; }>
+                        <span class="bold_text_hash_replaced_in_test"> Bar </span>
+                         This is a bar!
+                      </div>
+                      <div style={ display: flex; flex-direction: column; }>
+                        <span class="bold_text_hash_replaced_in_test"> Foo </span>
+                         This is a foo!
+                      </div>
+                    </div>
+                  </div> |}]
+;;
+
 let%expect_test "setting variant forms" =
   let module T = struct
     type t =
@@ -1860,7 +1969,9 @@ let%expect_test "interacting with an optional field" =
       <textarea placeholder="" id="bonsai_path_replaced_in_test" value:normalized="" oninput> </textarea>
     </div> |}];
   Handle.input_text handle ~get_vdom ~selector:"textarea" ~text:"foo";
+  Handle.recompute_view handle;
   Handle.click_on handle ~get_vdom ~selector:"div > div";
+  Handle.recompute_view handle;
   Handle.input_text handle ~get_vdom ~selector:"div > input" ~text:"1";
   Handle.show handle;
   [%expect
@@ -2583,6 +2694,7 @@ let%expect_test "model state is not shared between variants even when they have 
       <option value="2" #selected="false"> b </option>
     </select> |}];
   Handle.change handle ~get_vdom ~selector:"select" ~value:"1";
+  Handle.recompute_view handle;
   Handle.input_text handle ~get_vdom ~selector:"input" ~text:"2";
   Handle.show handle;
   [%expect

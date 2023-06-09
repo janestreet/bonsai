@@ -14,7 +14,10 @@ type 'a t
 
 (** Creates a component that acts as a store for notifications.  The type of a
     notification is ['a], allowing it to be determinable by the user. *)
-val component : (module Bonsai.Model with type t = 'a) -> 'a t Computation.t
+val component
+  :  (module Bonsai.Model with type t = 'a)
+  -> equal:('a -> 'a -> bool)
+  -> 'a t Computation.t
 
 (** [render] allows you to defined the rendering logic for your notification component.
     Each notification is rendered by calling the [f] function. The [close] value passed to

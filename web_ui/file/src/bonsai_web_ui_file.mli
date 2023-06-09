@@ -20,7 +20,7 @@ val filename : t -> string
 
 (** Get the contents of the file. For an advanced API that includes e.g. progress on
     loading the file, and the ability to abort in-progress reads, see [read] below. *)
-val contents : t -> string Or_error.t Ui_effect.t
+val contents : t -> Bigstring.t Or_error.t Ui_effect.t
 
 module Progress : sig
   type t =
@@ -44,7 +44,7 @@ module File_read : sig
   type t
 
   (** Gets the result of the read. Will only return [Error Aborted] if you call [abort]. *)
-  val result : t -> (string, Read_error.t) Result.t Ui_effect.t
+  val result : t -> (Bigstring.t, Read_error.t) Result.t Ui_effect.t
 
   val abort : t -> unit Ui_effect.t
 end
@@ -90,7 +90,7 @@ module Read_on_change : sig
       | Starting
       (** The file read has been kicked off but no progress has been received yet *)
       | In_progress of Progress.t
-      | Complete of string Or_error.t
+      | Complete of Bigstring.t Or_error.t
     [@@deriving sexp_of]
   end
 
@@ -146,7 +146,7 @@ end
 
 module Expert : sig
   type file_read =
-    { result : (string, Read_error.t) Result.t Ui_effect.t
+    { result : (Bigstring.t, Read_error.t) Result.t Ui_effect.t
     ; abort : unit Ui_effect.t
     }
 

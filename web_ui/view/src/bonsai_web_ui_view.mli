@@ -294,8 +294,8 @@ end
     hover over an element. *)
 val tooltip
   :  Theme.t
-  -> ?container_attr:Vdom.Attr.t
-  -> ?tooltip_attr:Vdom.Attr.t
+  -> ?container_attrs:Vdom.Attr.t list
+  -> ?tooltip_attrs:Vdom.Attr.t list
   -> ?direction:Tooltip_direction.t
   -> tooltip:string
   -> string
@@ -305,8 +305,8 @@ val tooltip
     and the wrapped element to be arbitrary vdom nodes instead of just [string] *)
 val tooltip'
   :  Theme.t
-  -> ?container_attr:Vdom.Attr.t
-  -> ?tooltip_attr:Vdom.Attr.t
+  -> ?container_attrs:Vdom.Attr.t list
+  -> ?tooltip_attrs:Vdom.Attr.t list
   -> ?direction:Tooltip_direction.t
   -> tooltip:Vdom.Node.t
   -> Vdom.Node.t
@@ -317,7 +317,7 @@ val tooltip'
 val tabs
   :  Theme.t
   -> ?attrs:Vdom.Attr.t list
-  -> ?per_tab_attr:('a -> is_active:bool -> Vdom.Attr.t)
+  -> ?per_tab_attrs:('a -> is_active:bool -> Vdom.Attr.t list)
   -> equal:('a -> 'a -> bool)
   -> on_change:(from:'a -> to_:'a -> unit Effect.t)
   -> active:'a
@@ -328,7 +328,7 @@ val tabs
 val tabs_enum
   :  Theme.t
   -> ?attrs:Vdom.Attr.t list
-  -> ?per_tab_attr:('a -> is_active:bool -> Vdom.Attr.t)
+  -> ?per_tab_attrs:('a -> is_active:bool -> Vdom.Attr.t list)
   -> ?tab_to_vdom:('a -> Vdom.Node.t)
   -> (module Enum with type t = 'a)
   -> on_change:(from:'a -> to_:'a -> unit Effect.t)
@@ -357,9 +357,9 @@ end
     of "paper" in other UI component frameworks/toolkits. *)
 val card
   :  Theme.t
-  -> ?container_attr:Vdom.Attr.t
-  -> ?title_attr:Vdom.Attr.t
-  -> ?content_attr:Vdom.Attr.t
+  -> ?container_attrs:Vdom.Attr.t list
+  -> ?title_attrs:Vdom.Attr.t list
+  -> ?content_attrs:Vdom.Attr.t list
   -> ?intent:Intent.t
   -> ?title:string
   -> ?title_kind:Constants.Card_title_kind.t
@@ -370,9 +370,9 @@ val card
 (* Like [card], but allows for arbitrary vdom nodes in the title and in the content. *)
 val card'
   :  Theme.t
-  -> ?container_attr:Vdom.Attr.t
-  -> ?title_attr:Vdom.Attr.t
-  -> ?content_attr:Vdom.Attr.t
+  -> ?container_attrs:Vdom.Attr.t list
+  -> ?title_attrs:Vdom.Attr.t list
+  -> ?content_attrs:Vdom.Attr.t list
   -> ?intent:Intent.t
   -> ?title:Vdom.Node.t list
   -> ?title_kind:Constants.Card_title_kind.t
@@ -397,8 +397,8 @@ module Table : sig
         [cell_attr] is for building attribute that will be attached to the <td> element
         containing the rendered content of the cell. *)
     val make
-      :  ?cell_attr:('b -> Vdom.Attr.t)
-      -> ?header_attr:Vdom.Attr.t
+      :  ?cell_attrs:('b -> Vdom.Attr.t list)
+      -> ?header_attrs:Vdom.Attr.t list
       -> string
       -> get:('a -> 'b)
       -> render:(Theme.t -> 'b -> Vdom.Node.t)
@@ -407,8 +407,8 @@ module Table : sig
     (** [make_opt] is the same as [make] except that the return value from [get] can
         be an option *)
     val make_opt
-      :  ?cell_attr:('b -> Vdom.Attr.t)
-      -> ?header_attr:Vdom.Attr.t
+      :  ?cell_attrs:('b -> Vdom.Attr.t list)
+      -> ?header_attrs:Vdom.Attr.t list
       -> string
       -> get:('a -> 'b option)
       -> render:(Theme.t -> 'b -> Vdom.Node.t)
@@ -418,7 +418,7 @@ module Table : sig
         string parameter being used as the label for the group.
 
         [header_attr] behaves the same as it does for the [make] function *)
-    val group : ?header_attr:Vdom.Attr.t -> string -> 'a t list -> 'a t
+    val group : ?header_attrs:Vdom.Attr.t list -> string -> 'a t list -> 'a t
 
     (* [lift] is used to move a column group from one type to another *)
     val lift : 'a t -> f:('b -> 'a) -> 'b t
@@ -427,18 +427,18 @@ module Table : sig
         "non-prime" versions except that the "label" argument is an arbitrary Vdom node.*)
 
     val make'
-      :  ?cell_attr:('b -> Vdom.Attr.t)
-      -> ?header_attr:Vdom.Attr.t
+      :  ?cell_attrs:('b -> Vdom.Attr.t list)
+      -> ?header_attrs:Vdom.Attr.t list
       -> Vdom.Node.t
       -> get:('a -> 'b)
       -> render:(Theme.t -> 'b -> Vdom.Node.t)
       -> 'a t
 
-    val group' : ?header_attr:Vdom.Attr.t -> Vdom.Node.t -> 'a t list -> 'a t
+    val group' : ?header_attrs:Vdom.Attr.t list -> Vdom.Node.t -> 'a t list -> 'a t
 
     val make_opt'
-      :  ?cell_attr:('b -> Vdom.Attr.t)
-      -> ?header_attr:Vdom.Attr.t
+      :  ?cell_attrs:('b -> Vdom.Attr.t list)
+      -> ?header_attrs:Vdom.Attr.t list
       -> Vdom.Node.t
       -> get:('a -> 'b option)
       -> render:(Theme.t -> 'b -> Vdom.Node.t)
@@ -447,8 +447,8 @@ module Table : sig
 
   val render
     :  Theme.t
-    -> ?table_attr:Vdom.Attr.t
-    -> ?row_attr:('a -> Vdom.Attr.t)
+    -> ?table_attrs:Vdom.Attr.t list
+    -> ?row_attrs:('a -> Vdom.Attr.t list)
     -> 'a Col.t list
     -> 'a list
     -> Vdom.Node.t

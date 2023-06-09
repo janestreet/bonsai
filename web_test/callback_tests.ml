@@ -43,13 +43,13 @@ let%expect_test "of_deferred_fun" =
   [%expect {||}];
   print_s [%sexp (Hashtbl.keys state : int list)];
   [%expect {| (1 3 2) |}];
-  Ivar.fill (Hashtbl.find_and_remove state 1 |> Option.value_exn) 42;
+  Ivar.fill_exn (Hashtbl.find_and_remove state 1 |> Option.value_exn) 42;
   (* Nothing yet, because the scheduler has not run a cycle *)
   [%expect {||}];
   (* Tell async_kernel to run a cycle manually to see that the effect is responded to *)
   Async_kernel_scheduler.Private.run_cycles_until_no_jobs_remain ();
   [%expect {| ("this is userdata" (r 42)) |}];
-  Hashtbl.iteri state ~f:(fun ~key:query ~data:ivar -> Ivar.fill ivar (10 * query));
+  Hashtbl.iteri state ~f:(fun ~key:query ~data:ivar -> Ivar.fill_exn ivar (10 * query));
   Async_kernel_scheduler.Private.run_cycles_until_no_jobs_remain ();
   [%expect {|
     ("this is userdata" (r 20))

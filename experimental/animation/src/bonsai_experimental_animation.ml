@@ -10,7 +10,6 @@ module Callback = struct
   type t = unit Effect.t
 
   let sexp_of_t = sexp_of_opaque
-  let t_of_sexp _ = failwith "stop using tangle"
   let equal = phys_equal
 end
 
@@ -160,17 +159,33 @@ let make
     type t = a * a
 
     let sexp_of_t = sexp_of_opaque
-    let t_of_sexp _ = assert false
     let equal (a, b) (c, d) = phys_equal a c && phys_equal b d
   end
   in
-  let%sub start_time, set_start = Bonsai.state_opt (module Time_ns.Alternate_sexp) in
-  let%sub interpolator, set_interpolator =
-    Bonsai.state (module Interpolator) ~default_model:Interpolator.Linear
+  let%sub start_time, set_start =
+    Bonsai.state_opt
+      ()
+      ~sexp_of_model:[%sexp_of: Time_ns.Alternate_sexp.t]
+      ~equal:[%equal: Time_ns.Alternate_sexp.t]
   in
-  let%sub end_time, set_end = Bonsai.state_opt (module Time_ns.Alternate_sexp) in
-  let%sub callback, set_callback = Bonsai.state_opt (module Callback) in
-  let%sub range, set_range = Bonsai.state_opt (module A_star_a) in
+  let%sub interpolator, set_interpolator =
+    Bonsai.state
+      Interpolator.Linear
+      ~sexp_of_model:[%sexp_of: Interpolator.t]
+      ~equal:[%equal: Interpolator.t]
+  in
+  let%sub end_time, set_end =
+    Bonsai.state_opt
+      ()
+      ~sexp_of_model:[%sexp_of: Time_ns.Alternate_sexp.t]
+      ~equal:[%equal: Time_ns.Alternate_sexp.t]
+  in
+  let%sub callback, set_callback =
+    Bonsai.state_opt () ~sexp_of_model:[%sexp_of: Callback.t] ~equal:[%equal: Callback.t]
+  in
+  let%sub range, set_range =
+    Bonsai.state_opt () ~sexp_of_model:[%sexp_of: A_star_a.t] ~equal:[%equal: A_star_a.t]
+  in
   let%sub percent_float =
     match%sub Value.both start_time end_time with
     | None, _ | _, None -> Bonsai.const 0.0
@@ -192,7 +207,8 @@ let make
               | _ -> Effect.Ignore
           in
           Bonsai.Edge.on_change'
-            (module Bonsai.Clock.Before_or_after)
+            ~sexp_of_model:[%sexp_of: Bonsai.Clock.Before_or_after.t]
+            ~equal:[%equal: Bonsai.Clock.Before_or_after.t]
             before_or_after
             ~callback
       in
@@ -263,7 +279,7 @@ let make
   { value; animate }
 ;;
 
-let smooth m ?(with_ = Interpolator.Linear) ~duration ~interpolate v =
+let smooth ?sexp_of_model ~equal ?(with_ = Interpolator.Linear) ~duration ~interpolate v =
   let%sub { value; animate } = make ~fallback:v ~interpolate in
   let%sub () =
     let callback =
@@ -271,7 +287,7 @@ let smooth m ?(with_ = Interpolator.Linear) ~duration ~interpolate v =
       and duration = duration in
       fun new_ -> animate (`For duration) ~with_ new_
     in
-    Bonsai.Edge.on_change m v ~callback
+    Bonsai.Edge.on_change ?sexp_of_model ~equal v ~callback
   in
   return value
 ;;

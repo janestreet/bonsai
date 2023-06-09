@@ -106,7 +106,7 @@ current value and `set_count` is a function for updating that value.
 ```
 ``` ocaml
 let (counter_button : Vdom.Node.t Computation.t) =
-  let%sub count, set_count = Bonsai.state (module Int) ~default_model:0 in
+  let%sub count, set_count = Bonsai.state 0 in
   let%arr count = count
   and set_count = set_count in
   (* view-construction logic *)

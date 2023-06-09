@@ -136,7 +136,10 @@ module Variant = struct
           | `This example -> Some example, M_opt.all_some
         in
         let%sub picker_value, set_picker_value =
-          Bonsai.state (module M_opt) ~default_model
+          Bonsai.state
+            default_model
+            ~sexp_of_model:[%sexp_of: M_opt.t]
+            ~equal:[%equal: M_opt.t]
         in
         let%sub path = Bonsai.path_id in
         let%arr picker_value = picker_value
@@ -174,7 +177,10 @@ module Variant = struct
           | `This example -> Some example
         in
         let%sub picker_value, set_picker_value =
-          Bonsai.state (module M_opt) ~default_model
+          Bonsai.state
+            default_model
+            ~sexp_of_model:[%sexp_of: M_opt.t]
+            ~equal:[%equal: M_opt.t]
         in
         let%sub path = Bonsai.path_id in
         let%arr picker_value = picker_value

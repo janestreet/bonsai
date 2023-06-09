@@ -66,18 +66,18 @@ module T = struct
 end
 
 let canvas_thing =
+  let%sub scope_form = Form.Elements.Number.int ~default:1 ~step:1 () in
   let%sub how_many = Form.Elements.Number.int ~default:1 ~step:1 () in
   let%sub color_picker = Form.Elements.Color_picker.hex () in
   let%sub color =
     Bonsai.pure (Form.value_or_default ~default:(`Hex "#000")) color_picker
   in
-  let%sub widget = Widget.component (module T) color in
+  let%sub scope = Bonsai.pure (Form.value_or_default ~default:0) scope_form in
+  let%sub widget =
+    Bonsai.scope_model (module Int) ~on:scope (Widget.component (module T) color)
+  in
   let%sub last_values, set_values =
-    Bonsai.state
-      (module struct
-        type t = int list [@@deriving sexp, equal]
-      end)
-      ~default_model:[]
+    Bonsai.state [] ~sexp_of_model:[%sexp_of: int list] ~equal:[%equal: int list]
   in
   let%sub reset_effect =
     let%arr { modify; _ } = widget in
@@ -93,6 +93,10 @@ let canvas_thing =
     let%arr color_picker = color_picker in
     color_picker |> Form.label "color" |> Form.view_as_vdom
   in
+  let%sub scope_form =
+    let%arr scope_form = scope_form in
+    scope_form |> Form.label "scope" |> Form.view_as_vdom
+  in
   let%sub theme = View.Theme.current in
   let%arr { view; _ } = widget
   and color_picker = color_picker
@@ -100,6 +104,7 @@ let canvas_thing =
   and reset_effect = reset_effect
   and last_values = last_values
   and read_effect = read_effect
+  and scope_form = scope_form
   and how_many = how_many in
   let how_many_view = Form.view_as_vdom how_many in
   let how_many = Form.value_or_default how_many ~default:1 in
@@ -108,6 +113,7 @@ let canvas_thing =
     [ View.vbox (List.init how_many ~f:(fun _ -> view))
     ; View.vbox
         [ color_picker
+        ; scope_form
         ; how_many_view
         ; View.button theme ~on_click:reset_effect "reset"
         ; View.button theme ~on_click:read_effect "fetch"

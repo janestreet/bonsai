@@ -27,6 +27,7 @@ val create
   -> ?to_option_description:('a -> string) Value.t
   -> ?handle_unknown_option:(string -> 'a option) Value.t
   -> (module Bonsai.Model with type t = 'a)
+  -> equal:('a -> 'a -> bool)
   -> all_options:'a list Value.t
   -> 'a option t Computation.t
 
@@ -52,6 +53,7 @@ module Private : sig
       -> ?to_option_description:('a -> string) Value.t
       -> ?handle_unknown_option:(string -> 'a option) Value.t
       -> (module Bonsai.Model with type t = 'a)
+      -> equal:('a -> 'a -> bool)
       -> all_options:'a list Value.t
       -> 'a option t Computation.t
 

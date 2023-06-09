@@ -33,7 +33,9 @@ let driver ~reset_all ~step ~is_done ~set_has_error =
 ;;
 
 let component ~is_running ~reset_all ~step ~is_done =
-  let%sub has_error, set_has_error = Bonsai.state (module Bool) ~default_model:false in
+  let%sub has_error, set_has_error =
+    Bonsai.state false ~sexp_of_model:[%sexp_of: Bool.t] ~equal:[%equal: Bool.t]
+  in
   let%sub active =
     let%arr is_running = is_running
     and has_error = has_error in

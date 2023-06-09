@@ -37,8 +37,10 @@ let component ~send_message =
   let open Bonsai.Let_syntax in
   let%sub textbox_state =
     Bonsai.state_machine0
-      (module String)
-      (module String)
+      ()
+      ~sexp_of_model:[%sexp_of: String.t]
+      ~equal:[%equal: String.t]
+      ~sexp_of_action:[%sexp_of: String.t]
       ~default_model:""
       ~apply_action:(fun ~inject:_ ~schedule_event:_ _ new_state -> new_state)
   in

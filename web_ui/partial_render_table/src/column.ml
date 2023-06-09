@@ -2,31 +2,75 @@ open! Core
 open! Bonsai_web
 open! Bonsai.Let_syntax
 open Incr_map_collate
+open Bonsai_web_ui_partial_render_table_protocol
+module Sort_kind = Column_intf.Sort_kind
+
+module Header_helpers = struct
+  open Vdom
+
+  let legacy (label : Node.t) (sort_spec : Sort_state.t) =
+    let get_icon = function
+      | `None -> Icons.neutral
+      | `Asc -> Icons.ascending
+      | `Desc -> Icons.descending
+    in
+    let render ~dir = Node.span [ Node.text (get_icon dir); label ] in
+    match sort_spec with
+    | Not_sortable -> label
+    | Not_sorted -> render ~dir:`None
+    | Single_sort dir | Multi_sort { dir; _ } -> render ~dir
+  ;;
+
+  let default (label : Node.t) (sort_state : Sort_state.t) =
+    match sort_state with
+    | Not_sortable -> Node.div [ Node.span [ label ] ]
+    | _ ->
+      let get_arrow = function
+        | `Asc -> "▲"
+        | `Desc -> "▼"
+      in
+      let sort_indicator =
+        let%map.Option indicator =
+          match sort_state with
+          | Not_sortable | Not_sorted -> None
+          | Single_sort dir -> Some (get_arrow dir)
+          | Multi_sort { dir; index } -> Some [%string "%{get_arrow dir} %{index#Int}"]
+        in
+        Node.span ~attrs:[ Attr.class_ "prt-sort-indicator" ] [ Node.text indicator ]
+      in
+      Node.div
+        ~attrs:
+          [ Attr.style
+              (Css_gen.flex_container ~column_gap:(`Px 6) ~align_items:`Baseline ())
+          ]
+        [ Node.span [ label ]; sort_indicator |> Option.value ~default:Node.none ]
+  ;;
+end
 
 module Dynamic_cells = struct
   module T = struct
     type ('key, 'data) t =
       | Leaf of
-          { leaf_label : Vdom.Node.t Value.t
+          { leaf_header : Vdom.Node.t Value.t
           ; initial_width : Css_gen.Length.t
           ; cell : key:'key Value.t -> data:'data Value.t -> Vdom.Node.t Computation.t
           ; visible : bool Value.t
           }
       | Group of
           { children : ('key, 'data) t list
-          ; group_label : Vdom.Node.t Value.t
+          ; group_header : Vdom.Node.t Value.t
           }
       | Org_group of ('key, 'data) t list
 
     let rec headers = function
-      | Leaf { leaf_label; visible; initial_width; cell = _ } ->
-        let%map label = leaf_label
+      | Leaf { leaf_header; visible; initial_width; cell = _ } ->
+        let%map header = leaf_header
         and visible = visible in
-        Header_tree.leaf ~label ~visible ~initial_width
-      | Group { children; group_label } ->
-        let%map label = group_label
+        Header_tree.leaf ~header ~visible ~initial_width
+      | Group { children; group_header } ->
+        let%map header = group_header
         and children = Value.all (List.map children ~f:headers) in
-        Header_tree.group ~label children
+        Header_tree.group ~header children
       | Org_group children ->
         let%map children = List.map children ~f:headers |> Value.all in
         Header_tree.org_group children
@@ -82,11 +126,11 @@ module Dynamic_cells = struct
 
   type ('key, 'data) t = ('key, 'data) T.t
 
-  let column ?(initial_width = `Px 50) ?(visible = Value.return true) ~label ~cell () =
-    T.Leaf { leaf_label = label; initial_width; cell; visible }
+  let column ?(initial_width = `Px 50) ?(visible = Value.return true) ~header ~cell () =
+    T.Leaf { leaf_header = header; initial_width; cell; visible }
   ;;
 
-  let group ~label children = T.Group { group_label = label; children }
+  let group ~label children = T.Group { group_header = label; children }
   let expand ~label child = group ~label [ child ]
 
   let lift : type key data. (key, data) T.t list -> (key, data) Column_intf.t =
@@ -103,29 +147,31 @@ module Dynamic_cells = struct
       let value = T.Org_group columns in
       Column_intf.T { value; vtable = (module X) }
   ;;
+
+  module Header_helpers = Header_helpers
 end
 
 module Dynamic_columns = struct
   module T = struct
     type ('key, 'data) t =
       | Leaf of
-          { leaf_label : Vdom.Node.t
+          { leaf_header : Vdom.Node.t
           ; initial_width : Css_gen.Length.t
           ; cell : key:'key -> data:'data -> Vdom.Node.t
           ; visible : bool
           }
       | Group of
           { children : ('key, 'data) t list
-          ; group_label : Vdom.Node.t
+          ; group_header : Vdom.Node.t
           }
       | Org_group of ('key, 'data) t list
 
     let rec translate = function
-      | Leaf { leaf_label = label; initial_width; visible; cell = _ } ->
-        Header_tree.leaf ~label ~visible ~initial_width
-      | Group { children; group_label = label } ->
+      | Leaf { leaf_header = header; initial_width; visible; cell = _ } ->
+        Header_tree.leaf ~header ~visible ~initial_width
+      | Group { children; group_header = header } ->
         let children = List.map children ~f:translate in
-        Header_tree.group ~label children
+        Header_tree.group ~header children
       | Org_group children -> Header_tree.org_group (List.map children ~f:translate)
     ;;
 
@@ -134,7 +180,7 @@ module Dynamic_columns = struct
     let rec visible_leaves structure ~key ~data =
       match structure with
       | Leaf { cell; visible; _ } -> if visible then [ cell ~key ~data ] else []
-      | Org_group children | Group { children; group_label = _ } ->
+      | Org_group children | Group { children; group_header = _ } ->
         List.concat_map children ~f:(visible_leaves ~key ~data)
     ;;
 
@@ -152,11 +198,11 @@ module Dynamic_columns = struct
 
   type ('key, 'data) t = ('key, 'data) T.t
 
-  let column ?(initial_width = `Px 50) ?(visible = true) ~label ~cell () =
-    T.Leaf { leaf_label = label; initial_width; cell; visible }
+  let column ?(initial_width = `Px 50) ?(visible = true) ~header ~cell () =
+    T.Leaf { leaf_header = header; initial_width; cell; visible }
   ;;
 
-  let group ~label children = T.Group { group_label = label; children }
+  let group ~label children = T.Group { group_header = label; children }
   let expand ~label child = group ~label [ child ]
 
   let lift : type key data. (key, data) T.t list Value.t -> (key, data) Column_intf.t =
@@ -176,13 +222,16 @@ module Dynamic_columns = struct
       in
       Column_intf.T { value; vtable = (module X) }
   ;;
+
+  module Header_helpers = Header_helpers
 end
 
-module With_sorter (Tree : T2) (Container : T1) = struct
+module With_sorter (Tree : T2) (Dynamic_or_static : T1) = struct
   type ('key, 'data) t =
     | Leaf of
-        { t : ('key, 'data) Tree.t
-        ; sort : ('key * 'data -> 'key * 'data -> int) Container.t
+        { t : Vdom.Node.t Dynamic_or_static.t -> ('key, 'data) Tree.t
+        ; sort : ('key, 'data) Sort_kind.t option Dynamic_or_static.t
+        ; header : (Sort_state.t -> Vdom.Node.t) Dynamic_or_static.t
         }
     | Group of
         { build : ('key, 'data) Tree.t list -> ('key, 'data) Tree.t
@@ -190,9 +239,9 @@ module With_sorter (Tree : T2) (Container : T1) = struct
         }
 
   let rec partition i sorters_acc ~f = function
-    | Leaf { t = inside; sort } ->
+    | Leaf { t = inside; sort; header } ->
       let sorters_acc = Map.add_exn (sorters_acc : _ Int.Map.t) ~key:i ~data:sort in
-      let t = f i sort inside in
+      let t = f i inside sort header in
       let i = i + 1 in
       i, sorters_acc, t
     | Group { build; children } ->
@@ -211,21 +260,27 @@ module With_sorter (Tree : T2) (Container : T1) = struct
 end
 
 module Dynamic_cells_with_sorter = struct
-  module Container = struct
-    type 'a t = 'a option Value.t
-  end
-
-  module T = With_sorter (Dynamic_cells.T) (Container)
+  module T = With_sorter (Dynamic_cells.T) (Value)
 
   type ('key, 'data) t = ('key, 'data) T.t
 
-  let column ?sort ?initial_width ?visible ~label ~cell () =
+  let column ?sort ?sort_reversed ?initial_width ?visible ~header ~cell () =
     let sort =
-      match sort with
-      | None -> Value.return None
-      | Some x -> x >>| Option.some
+      match sort, sort_reversed with
+      | None, None -> Value.return None
+      | Some forward, Some reverse ->
+        let%map forward = forward
+        and reverse = reverse in
+        Some { Sort_kind.forward; reverse }
+      | Some forward, None ->
+        let%map forward = forward in
+        Some (Sort_kind.reversible ~forward)
+      | None, Some reverse ->
+        let%map reverse = reverse in
+        Some (Sort_kind.reversible' ~reverse)
     in
-    T.Leaf { sort; t = Dynamic_cells.column ?initial_width ?visible ~label ~cell () }
+    let t node = Dynamic_cells.column ?initial_width ?visible ~header:node ~cell () in
+    T.Leaf { sort; t; header }
   ;;
 
   let group ~label children = T.Group { build = Dynamic_cells.group ~label; children }
@@ -234,19 +289,18 @@ module Dynamic_cells_with_sorter = struct
   module W = struct
     let headers_and_sorters t sortable_header =
       let sorters, tree =
-        T.partition t ~f:(fun i sort -> function
-          | Dynamic_cells.T.Leaf { leaf_label; initial_width; cell; visible } ->
-            let leaf_label =
-              let%map leaf_label = leaf_label
-              and has_sorter = sort >>| Option.is_some
-              and sortable_header = sortable_header in
-              if has_sorter
-              then Sortable_header.decorate sortable_header leaf_label i
-              else
-                Vdom.Node.div [ leaf_label ]
-            in
-            Dynamic_cells.T.Leaf { leaf_label; initial_width; cell; visible }
-          | other -> (* This should never happen *) other)
+        T.partition t ~f:(fun i col sort render_header ->
+          let leaf_header =
+            let%map render_header = render_header
+            and sortable_header = sortable_header
+            and sort = sort in
+            Sortable_header.render
+              ~sortable:(Option.is_some sort)
+              ~column_id:i
+              sortable_header
+              render_header
+          in
+          col leaf_header)
       in
       let sorters =
         sorters
@@ -262,7 +316,18 @@ module Dynamic_cells_with_sorter = struct
     ;;
 
     let instantiate_cells t =
-      let _sorters, tree = T.partition t ~f:(fun _i _sort -> Fn.id) in
+      let _sorters, tree =
+        T.partition t ~f:(fun _i col sort render_header ->
+          let header_node =
+            let%map render_header = render_header
+            and sort = sort in
+            let sort_state : Sort_state.t =
+              if Option.is_none sort then Not_sortable else Not_sorted
+            in
+            render_header sort_state
+          in
+          col header_node)
+      in
       Dynamic_cells.T.instantiate_cells tree
     ;;
   end
@@ -282,15 +347,29 @@ module Dynamic_cells_with_sorter = struct
       in
       Column_intf.Y { value; vtable = (module X) }
   ;;
+
+  module Header_helpers = Header_helpers
 end
 
 module Dynamic_columns_with_sorter = struct
-  module T = With_sorter (Dynamic_columns.T) (Option)
+  module Static = struct
+    type 'a t = 'a
+  end
+
+  module T = With_sorter (Dynamic_columns.T) (Static)
 
   type ('key, 'data) t = ('key, 'data) T.t
 
-  let column ?sort ?initial_width ?visible ~label ~cell () =
-    T.Leaf { sort; t = Dynamic_columns.column ?initial_width ?visible ~label ~cell () }
+  let column ?sort ?sort_reversed ?initial_width ?visible ~header ~cell () =
+    let sort =
+      match sort, sort_reversed with
+      | None, None -> None
+      | Some forward, Some reverse -> Some { Sort_kind.forward; reverse }
+      | Some forward, None -> Some (Sort_kind.reversible ~forward)
+      | None, Some reverse -> Some (Sort_kind.reversible' ~reverse)
+    in
+    let t node = Dynamic_columns.column ?initial_width ?visible ~header:node ~cell () in
+    T.Leaf { sort; header; t }
   ;;
 
   let group ~label children = T.Group { build = Dynamic_columns.group ~label; children }
@@ -302,15 +381,12 @@ module Dynamic_columns_with_sorter = struct
         let%arr t = t
         and sortable_header = sortable_header in
         let sorters, tree =
-          T.partition t ~f:(fun i sorter -> function
-            | Dynamic_columns.T.Leaf { leaf_label; initial_width; cell; visible } ->
-              let leaf_label =
-                match sorter with
-                | Some _ -> Sortable_header.decorate sortable_header leaf_label i
-                | None -> Vdom.Node.div [ leaf_label ] ~attrs:[ Vdom.Attr.empty ]
-              in
-              Dynamic_columns.T.Leaf { leaf_label; initial_width; cell; visible }
-            | other -> (* This should never happen *) other)
+          T.partition t ~f:(fun i col sort render_header ->
+            let sortable = Option.is_some sort in
+            let header_node =
+              Sortable_header.render ~sortable ~column_id:i sortable_header render_header
+            in
+            col header_node)
         in
         let sorters =
           sorters
@@ -328,7 +404,13 @@ module Dynamic_columns_with_sorter = struct
     let instantiate_cells t =
       let tree =
         let%map t = t in
-        let _sorters, tree = T.partition t ~f:(fun _i _sort -> Fn.id) in
+        let _sorters, tree =
+          T.partition t ~f:(fun _i col sort render_header ->
+            let sort_state : Sort_state.t =
+              if Option.is_none sort then Not_sortable else Not_sorted
+            in
+            col (render_header sort_state))
+        in
         tree
       in
       Dynamic_columns.T.instantiate_cells tree
@@ -353,5 +435,7 @@ module Dynamic_columns_with_sorter = struct
       in
       Column_intf.Y { value; vtable = (module X) }
   ;;
+
+  module Header_helpers = Header_helpers
 end
 

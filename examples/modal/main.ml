@@ -22,12 +22,20 @@ let modal_2_contents n =
 
 let app =
   let%sub modal_1 =
-    Bonsai_web_ui_modal.create (module Unit) (fun _ ~hide_self:_ -> modal_1_contents)
+    Bonsai_web_ui_modal.create
+      (module Unit)
+      (fun _ ~hide_self:_ -> modal_1_contents)
+      ~equal:[%equal: Unit.t]
   in
   let%sub modal_2 =
-    Bonsai_web_ui_modal.create (module Int) (fun n ~hide_self:_ -> modal_2_contents n)
+    Bonsai_web_ui_modal.create
+      (module Int)
+      (fun n ~hide_self:_ -> modal_2_contents n)
+      ~equal:[%equal: Int.t]
   in
-  let%sub state, set_state = Bonsai.state (module Int) ~default_model:1 in
+  let%sub state, set_state =
+    Bonsai.state 1 ~sexp_of_model:[%sexp_of: Int.t] ~equal:[%equal: Int.t]
+  in
   let%arr state = state
   and set_state = set_state
   and modal_1   = modal_1

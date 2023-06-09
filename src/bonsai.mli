@@ -258,8 +258,9 @@ end
 val state
   :  ?reset:('model -> 'model)
   (** to learn more about [reset], read the docs on [with_model_resetter] *)
-  -> (module Model with type t = 'model)
-  -> default_model:'model
+  -> ?sexp_of_model:('model -> Sexp.t)
+  -> ?equal:('model -> 'model -> bool)
+  -> 'model
   -> ('model * ('model -> unit Effect.t)) Computation.t
 
 (** Similar to [state], but stores an option of the model instead.
@@ -267,7 +268,9 @@ val state
 val state_opt
   :  ?reset:('model option -> 'model option)
   -> ?default_model:'model
-  -> (module Model with type t = 'model)
+  -> ?sexp_of_model:('model -> Sexp.t)
+  -> ?equal:('model -> 'model -> bool)
+  -> unit
   -> ('model option * ('model option -> unit Effect.t)) Computation.t
 
 (** A bool-state which starts at [default_model] and flips whenever the
@@ -302,8 +305,9 @@ val state_machine0
      -> 'model
      -> 'model)
   (** to learn more about [reset], read the docs on [with_model_resetter] *)
-  -> (module Model with type t = 'model)
-  -> (module Action with type t = 'action)
+  -> ?sexp_of_model:('model -> Sexp.t)
+  -> ?sexp_of_action:('action -> Sexp.t)
+  -> ?equal:('model -> 'model -> bool)
   -> default_model:'model
   -> apply_action:
        (inject:('action -> unit Effect.t)
@@ -311,6 +315,7 @@ val state_machine0
         -> 'model
         -> 'action
         -> 'model)
+  -> unit
   -> ('model * ('action -> unit Effect.t)) Computation.t
 
 (** The same as {!state_machine0}, but [apply_action] also takes an input from
@@ -318,14 +323,15 @@ val state_machine0
     plain ['input] to account for the possibility that an action gets sent
     while the state machine is inactive. *)
 val state_machine1
-  :  (module Model with type t = 'model)
-  -> (module Action with type t = 'action)
+  :  ?sexp_of_action:('action -> Sexp.t)
   -> ?reset:
        (inject:('action -> unit Effect.t)
         -> schedule_event:(unit Effect.t -> unit)
         -> 'model
         -> 'model)
   (** to learn more about [reset], read the docs on [with_model_resetter] *)
+  -> ?sexp_of_model:('model -> Sexp.t)
+  -> ?equal:('model -> 'model -> bool)
   -> default_model:'model
   -> apply_action:
        (inject:('action -> unit Effect.t)
@@ -345,11 +351,13 @@ val actor0
      -> 'model
      -> 'model)
   (** to learn more about [reset], read the docs on [with_model_resetter] *)
-  -> (module Model with type t = 'model)
-  -> (module Action with type t = 'action)
+  -> ?sexp_of_model:('model -> Sexp.t)
+  -> ?sexp_of_action:('action -> Sexp.t)
+  -> ?equal:('model -> 'model -> bool)
   -> default_model:'model
   -> recv:
        (schedule_event:(unit Effect.t -> unit) -> 'model -> 'action -> 'model * 'return)
+  -> unit
   -> ('model * ('action -> 'return Effect.t)) Computation.t
 
 (** [actor1] is very similar to [state_machine1], with two major exceptions:
@@ -361,14 +369,15 @@ val actor0
     Because the semantics of this function feel like an actor system, we've
     decided to name the function accordingly.  *)
 val actor1
-  :  (module Model with type t = 'model)
-  -> (module Action with type t = 'action)
+  :  ?sexp_of_action:('action -> Sexp.t)
   -> ?reset:
        (inject:('action -> 'return Effect.t)
         -> schedule_event:(unit Effect.t -> unit)
         -> 'model
         -> 'model)
   (** to learn more about [reset], read the docs on [with_model_resetter] *)
+  -> ?sexp_of_model:('model -> Sexp.t)
+  -> ?equal:('model -> 'model -> bool)
   -> default_model:'model
   -> recv:
        (schedule_event:(unit Effect.t -> unit)
@@ -382,7 +391,12 @@ val actor1
 (** Given a first-class module that has no input (unit input type), and the default
     value of the state machine, [of_module0] will create a [Computation] that produces
     values of that module's [Result.t] type. *)
-val of_module0 : (unit, 'm, 'a, 'r) component_s -> default_model:'m -> 'r Computation.t
+val of_module0
+  :  ?sexp_of_model:('m -> Sexp.t)
+  -> ?equal:('m -> 'm -> bool)
+  -> (unit, 'm, 'a, 'r) component_s
+  -> default_model:'m
+  -> 'r Computation.t
 
 (** The same as {!of_module0}, but this one has an input type ['i].  Because input to the
     component is required, this function also expects a [Value.t] that provides its input.
@@ -400,14 +414,18 @@ val of_module0 : (unit, 'm, 'a, 'r) component_s -> default_model:'m -> 'r Comput
 
     Where the [Value.t] values are passed in later. *)
 val of_module1
-  :  ('i, 'm, 'a, 'r) component_s
+  :  ?sexp_of_model:('m -> Sexp.t)
+  -> ('i, 'm, 'a, 'r) component_s
+  -> ?equal:('m -> 'm -> bool)
   -> default_model:'m
   -> 'i Value.t
   -> 'r Computation.t
 
 (** The same as {!of_module1} but with two inputs. *)
 val of_module2
-  :  ('i1 * 'i2, 'm, 'a, 'r) component_s
+  :  ?sexp_of_model:('m -> Sexp.t)
+  -> ('i1 * 'i2, 'm, 'a, 'r) component_s
+  -> ?equal:('m -> 'm -> bool)
   -> default_model:'m
   -> 'i1 Value.t
   -> 'i2 Value.t
@@ -415,7 +433,11 @@ val of_module2
 
 (** [freeze] takes a Value.t and returns a computation whose output is frozen
     to be the first value that passed through the input. *)
-val freeze : (module Model with type t = 'a) -> 'a Value.t -> 'a Computation.t
+val freeze
+  :  ?sexp_of_model:('a -> Sexp.t)
+  -> ?equal:('a -> 'a -> bool)
+  -> 'a Value.t
+  -> 'a Computation.t
 
 (** Because all Bonsai computation-returning-functions are eagerly evaluated, attempting
     to use "let rec" to construct a recursive component will recurse infinitely.  One way
@@ -451,7 +473,8 @@ val scope_model
     output of [f] for which it returned [Some]. If the input value has never
     contained a valid value, then the result is [None]. *)
 val most_recent_some
-  :  (module Model with type t = 'b)
+  :  ?sexp_of_model:('b -> Sexp.t)
+  -> equal:('b -> 'b -> bool)
   -> 'a Value.t
   -> f:('a -> 'b option)
   -> 'b option Computation.t
@@ -460,7 +483,8 @@ val most_recent_some
     value for which [condition] returns true. If the input value has never
     contained a valid value, then the result is [None]. *)
 val most_recent_value_satisfying
-  :  (module Model with type t = 'a)
+  :  ?sexp_of_model:('a -> Sexp.t)
+  -> equal:('a -> 'a -> bool)
   -> 'a Value.t
   -> condition:('a -> bool)
   -> 'a option Computation.t
@@ -473,7 +497,8 @@ val most_recent_value_satisfying
     changes to the input are assumed to have occurred exactly when the
     component was re-activated. *)
 val previous_value
-  :  (module Model with type t = 'a)
+  :  ?sexp_of_model:('a -> Sexp.t)
+  -> equal:('a -> 'a -> bool)
   -> 'a Value.t
   -> 'a option Computation.t
 
@@ -533,7 +558,8 @@ val wrap
      -> schedule_event:(unit Effect.t -> unit)
      -> 'model
      -> 'model)
-  -> (module Model with type t = 'model)
+  -> ?sexp_of_model:('model -> Sexp.t)
+  -> ?equal:('model -> 'model -> bool)
   -> default_model:'model
   -> apply_action:
        (inject:('action -> unit Effect.t)
@@ -543,6 +569,7 @@ val wrap
         -> 'action
         -> 'model)
   -> f:('model Value.t -> ('action -> unit Effect.t) Value.t -> 'result Computation.t)
+  -> unit
   -> 'result Computation.t
 
 (** [with_model_resetter] extends a computation with the ability to reset all of the
@@ -623,6 +650,14 @@ module Clock : sig
 
   (** An effect for fetching the current time. *)
   val get_current_time : Time_ns.t Effect.t Computation.t
+
+  (** The function in this computation produces an effect that completes after
+      the specified amount of time. *)
+  val sleep : (Time_ns.Span.t -> unit Effect.t) Computation.t
+
+  (** Like [sleep], but waits until a specific time, rather than a time
+      relative to now. *)
+  val until : (Time_ns.t -> unit Effect.t) Computation.t
 end
 
 module Edge : sig
@@ -636,7 +671,8 @@ module Edge : sig
       [callback] is also called when the component is initialized, passing in the
       first 'a value that gets witnessed. *)
   val on_change
-    :  (module Model with type t = 'a)
+    :  ?sexp_of_model:('a -> Sexp.t)
+    -> equal:('a -> 'a -> bool)
     -> 'a Value.t
     -> callback:('a -> unit Effect.t) Value.t
     -> unit Computation.t
@@ -644,7 +680,8 @@ module Edge : sig
   (** The same as [on_change], but the callback function gets access to the
       previous value that was witnessed. *)
   val on_change'
-    :  (module Model with type t = 'a)
+    :  ?sexp_of_model:('a -> Sexp.t)
+    -> equal:('a -> 'a -> bool)
     -> 'a Value.t
     -> callback:('a option -> 'a -> unit Effect.t) Value.t
     -> unit Computation.t
@@ -684,6 +721,9 @@ module Edge : sig
 
   val after_display' : unit Effect.t option Value.t -> unit Computation.t
 
+  (** [wait_after_display] is an effect that will complete after the next frame. *)
+  val wait_after_display : unit Effect.t Computation.t
+
   module Poll : sig
     module Starting : sig
       type ('o, 'r) t
@@ -707,15 +747,18 @@ module Edge : sig
         [Option.None] or a default value ['o] in the time in between the
         computation starting and the first result coming back from the effect. *)
     val effect_on_change
-      :  (module Model with type t = 'a)
-      -> (module Model with type t = 'o)
+      :  ?sexp_of_input:('a -> Sexp.t)
+      -> ?sexp_of_result:('o -> Sexp.t)
+      -> equal_input:('a -> 'a -> bool)
+      -> ?equal_result:('o -> 'o -> bool)
       -> ('o, 'r) Starting.t
       -> 'a Value.t
       -> effect:('a -> 'o Effect.t) Value.t
       -> 'r Computation.t
 
     val manual_refresh
-      :  (module Model with type t = 'o)
+      :  ?sexp_of_model:('o -> Sexp.t)
+      -> ?equal:('o -> 'o -> bool)
       -> ('o, 'r) Starting.t
       -> effect:'o Effect.t Value.t
       -> ('r * unit Effect.t) Computation.t
@@ -750,7 +793,8 @@ module Memo : sig
       results in [none] being returned for a brief period of time, after which it'll
       return a [Some] containing the result of that computation *)
   val lookup
-    :  (module Model with type t = 'input)
+    :  ?sexp_of_model:('input -> Sexp.t)
+    -> equal:('input -> 'input -> bool)
     -> ('input, 'result) t Value.t
     -> 'input Value.t
     -> 'result option Computation.t
@@ -852,10 +896,10 @@ module Incr : sig
   (** If you've got an incremental, you can convert it to a value with this function. *)
   val to_value : 'a Incr.t -> 'a Value.t
 
-  (** Compute some incremental value based on the global clock. Using this clock
+  (** Compute some incremental value based on the time source. Using this time source
       instead of [Incr.clock] is the more testable approach, since it allows tests
       to control how time moves forward. *)
-  val with_clock : (Incr.Clock.t -> 'a Incr.t) -> 'a Computation.t
+  val with_clock : (Time_source.t -> 'a Incr.t) -> 'a Computation.t
 end
 
 (** This [Let_syntax] module is basically just {!Value.Let_syntax} with the addition of
@@ -912,6 +956,8 @@ module Let_syntax : sig
   end
 end
 
+module Time_source = Time_source
+
 module Debug : sig
   (** [on_change v ~f] executes the function [f] every time that [v] is recomputed. *)
   val on_change : 'a Value.t -> f:('a -> unit) -> unit Computation.t
@@ -962,15 +1008,16 @@ end
 
 module Expert : sig
   val state_machine01
-    :  (module Model with type t = 'model)
-    -> (module Action with type t = 'dynamic_action)
-    -> (module Action with type t = 'static_action)
+    :  ?sexp_of_dynamic_action:('dynamic_action -> Sexp.t)
+    -> ?sexp_of_static_action:('static_action -> Sexp.t)
     -> ?reset:
          (inject_dynamic:('dynamic_action -> unit Effect.t)
           -> inject_static:('static_action -> unit Effect.t)
           -> schedule_event:(unit Effect.t -> unit)
           -> 'model
           -> 'model)
+    -> ?sexp_of_model:('model -> Sexp.t)
+    -> ?equal:('model -> 'model -> bool)
     -> default_model:'model
     -> apply_dynamic:
          (inject_dynamic:('dynamic_action -> unit Effect.t)

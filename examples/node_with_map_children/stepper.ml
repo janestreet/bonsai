@@ -70,8 +70,9 @@ let component ~(before_state : Color_list.t Value.t) ~(after_state : Color_list.
   in
   let%sub state, inject =
     Bonsai.state_machine1
-      (module Model)
-      (module Action)
+      ~sexp_of_model:[%sexp_of: Model.t]
+      ~equal:[%equal: Model.t]
+      ~sexp_of_action:[%sexp_of: Action.t]
       input
       ~default_model:{ cur = Int.Map.empty; diffs = []; pointer = 0 }
       ~apply_action:(fun ~inject:_ ~schedule_event:_ input model action ->
@@ -95,14 +96,15 @@ let component ~(before_state : Color_list.t Value.t) ~(after_state : Color_list.
             [%message
               [%here]
                 "An action sent to a [state_machine1] has been dropped because its input \
-                 was not present. This happens when the [state_machine1] is inactive \
-                 when it receives a message."
+                 was not present. This happens when the [state_machine1] is inactive when \
+                 it receives a message."
                 (action : Action.t)];
           model)
   in
   let%sub () =
     Bonsai.Edge.on_change
-      (module Input)
+      ~sexp_of_model:[%sexp_of: Input.t]
+      ~equal:[%equal: Input.t]
       input
       ~callback:
         (let%map inject = inject in

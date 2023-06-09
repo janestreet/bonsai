@@ -49,7 +49,7 @@ let create file =
                     [%message
                       "BUG: could not coerce fileReader result to arrayBuffer"]
                 | Some array_buffer ->
-                  let contents = Typed_array.String.of_arrayBuffer array_buffer in
+                  let contents = Typed_array.Bigstring.of_arrayBuffer array_buffer in
                   Ivar.fill_if_empty result (Ok contents));
                Js._true);
              file_reader##readAsArrayBuffer file;

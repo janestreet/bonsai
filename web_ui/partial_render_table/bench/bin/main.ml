@@ -52,10 +52,12 @@ module Dynamic_cells = struct
     =
     Column.column
       ?visible
-      ~label:(Value.return (Vdom.Node.text (Fieldslib.Field.name field)))
+      ~header:(Value.return (Vdom.Node.text (Fieldslib.Field.name field)))
       ~cell:(fun ~key:_ ~data ->
         (* This [state] is just here to de-optimize the dynamic-cells column. *)
-        let%sub state, _ = Bonsai.state (module Unit) ~default_model:() in
+        let%sub state, _ =
+          Bonsai.state () ~sexp_of_model:[%sexp_of: Unit.t] ~equal:[%equal: Unit.t]
+        in
         let%arr data = data
         and () = state in
         Vdom.Node.text (M.to_string (Field.get field data)))
@@ -92,7 +94,7 @@ module Dynamic_columns = struct
     =
     Column.column
       ?visible
-      ~label:(Vdom.Node.text (Fieldslib.Field.name field))
+      ~header:(Vdom.Node.text (Fieldslib.Field.name field))
       ~cell:(fun ~key:_ ~data -> Vdom.Node.text (M.to_string (Field.get field data)))
       ()
   ;;

@@ -71,6 +71,7 @@ let y =
     in
     Codemirror.with_dynamic_extensions
       (module Codemirror_themes)
+      ~equal:[%equal: Codemirror_themes.t]
       ~initial_state:(create_state (create_extensions Codemirror_themes.Material_dark))
       ~compute_extensions:(Value.return create_extensions)
       theme

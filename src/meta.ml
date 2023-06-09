@@ -54,14 +54,12 @@ module Model = struct
     ; equal : 'a -> 'a -> bool
     ; type_id : 'a id
     ; sexp_of : 'a -> Sexp.t
-    ; of_sexp : Sexp.t -> 'a
     }
 
   and hidden =
     | T :
         { model : 'm
         ; info : 'm t
-        ; t_of_sexp : Sexp.t -> hidden
         }
         -> hidden
 
@@ -101,14 +99,14 @@ module Model = struct
       | Map { k; by; _ } ->
         let result : type k by. k Type_equal.Id.t -> by id -> (k, by, _) Map.t -> Sexp.t =
           fun k by ->
-            let module Key = struct
-              type t = k
+          let module Key = struct
+            type t = k
 
-              let sexp_of_t : t -> Sexp.t = Type_equal.Id.to_sexp k
-            end
-            in
-            let sexp_of_by = to_sexp by in
-            [%sexp_of: by Map.M(Key).t]
+            let sexp_of_t : t -> Sexp.t = Type_equal.Id.to_sexp k
+          end
+          in
+          let sexp_of_by = to_sexp by in
+          [%sexp_of: by Map.M(Key).t]
         in
         result k by
       | Map_on { k_model; k_io; by; _ } ->
@@ -229,21 +227,15 @@ module Model = struct
   end
 
   let unit =
-    { type_id = Type_id.unit
-    ; default = ()
-    ; equal = equal_unit
-    ; sexp_of = sexp_of_unit
-    ; of_sexp = unit_of_sexp
-    }
+    { type_id = Type_id.unit; default = (); equal = equal_unit; sexp_of = sexp_of_unit }
   ;;
 
   let both model1 model2 =
     let sexp_of = Tuple2.sexp_of_t model1.sexp_of model2.sexp_of in
-    let of_sexp = Tuple2.t_of_sexp model1.of_sexp model2.of_sexp in
     let type_id = Tuple { a = model1.type_id; b = model2.type_id } in
     let default = model1.default, model2.default in
     let equal = Tuple2.equal ~eq1:model1.equal ~eq2:model2.equal in
-    { type_id; default; equal; sexp_of; of_sexp }
+    { type_id; default; equal; sexp_of }
   ;;
 
   let map
@@ -254,14 +246,12 @@ module Model = struct
         model
     =
     let sexp_of_model = model.sexp_of in
-    let model_of_sexp = model.of_sexp in
     let sexp_of_map_model = [%sexp_of: model Map.M(M).t] in
     let model_map_type_id = Map { k; cmp; by = model.type_id } in
     { type_id = model_map_type_id
     ; default = Map.empty (module M)
     ; equal = Map.equal model.equal
     ; sexp_of = sexp_of_map_model
-    ; of_sexp = [%of_sexp: model Map.M(M).t]
     }
   ;;
 
@@ -275,7 +265,6 @@ module Model = struct
         model
     =
     let sexp_of_model = model.sexp_of in
-    let model_of_sexp = model.of_sexp in
     let sexp_of_map_model = [%sexp_of: (M_io.t * model) Map.M(M).t] in
     let model_map_type_id = Map_on { k_model; k_io; cmp; by = model.type_id } in
     let io_equal a b = M_io.comparator.compare a b = 0 in
@@ -283,18 +272,13 @@ module Model = struct
     ; default = Map.empty (module M)
     ; equal = Map.equal (Tuple2.equal ~eq1:io_equal ~eq2:model.equal)
     ; sexp_of = sexp_of_map_model
-    ; of_sexp = [%of_sexp: (M_io.t * model) Map.M(M).t]
     }
   ;;
 
-  let of_module (type t) (module M : Model with type t = t) ~default ~name =
-    let type_id = Type_equal.Id.create ~name:(sprintf "%s-model" name) M.sexp_of_t in
-    { type_id = Leaf { type_id }
-    ; default
-    ; equal = M.equal
-    ; sexp_of = M.sexp_of_t
-    ; of_sexp = M.t_of_sexp
-    }
+  let of_module ~sexp_of_model ~equal ~default ~name =
+    let equal = Option.value ~default:phys_equal equal in
+    let type_id = Type_equal.Id.create ~name:(sprintf "%s-model" name) sexp_of_model in
+    { type_id = Leaf { type_id }; default; equal; sexp_of = sexp_of_model }
   ;;
 
   module Hidden = struct
@@ -304,7 +288,6 @@ module Model = struct
       | T :
           { model : 'm
           ; info : 'm model
-          ; t_of_sexp : Sexp.t -> hidden
           }
           -> t
 
@@ -320,8 +303,7 @@ module Model = struct
     ;;
 
     let create (info : _ model) =
-      let rec t_of_sexp sexp = wrap (info.of_sexp sexp)
-      and wrap m = T { model = m; info; t_of_sexp } in
+      let wrap m = T { model = m; info } in
       wrap
     ;;
 
@@ -331,7 +313,6 @@ module Model = struct
       ; type_id =
           Leaf { type_id = Type_equal.Id.create ~name:"lazy-model" [%sexp_of: t option] }
       ; sexp_of = [%sexp_of: t option]
-      ; of_sexp = Fn.const None
       }
     ;;
   end
@@ -377,9 +358,9 @@ module Action = struct
       { a = Leaf { type_id = io_k }; b = Leaf { type_id = model_k }; c = action }
   ;;
 
-  let of_module (type t) (module M : Action with type t = t) ~name =
+  let of_module ~sexp_of_action ~name =
     Model.Leaf
-      { type_id = Type_equal.Id.create ~name:(sprintf "%s-action" name) M.sexp_of_t }
+      { type_id = Type_equal.Id.create ~name:(sprintf "%s-action" name) sexp_of_action }
   ;;
 end
 
@@ -394,23 +375,14 @@ module Multi_model = struct
     [%sexp_of: Model.Hidden.t Map.M(K).t]
   ;;
 
-  let t_of_sexp (default_models : t) sexp =
-    let k_to_sexp_map = [%of_sexp: Sexp.t Int.Map.t] sexp in
-    Map.merge k_to_sexp_map default_models ~f:(fun ~key:_ -> function
-      | `Both (sexp, Model.Hidden.T { t_of_sexp; _ }) -> Some (t_of_sexp sexp)
-      | `Left _sexp -> None
-      | `Right default_model -> Some default_model)
-  ;;
-
   let find_exn = Map.find_exn
   let set = Map.set
   let to_models, of_models = Fn.id, Fn.id
 
   let model_info default =
     let sexp_of = [%sexp_of: int t] in
-    let of_sexp = t_of_sexp default in
     let type_id = Model.Multi_model { multi_model = default } in
-    ({ default; type_id; equal = [%equal: Model.Hidden.t Int.Map.t]; sexp_of; of_sexp }
+    ({ default; type_id; equal = [%equal: Model.Hidden.t Int.Map.t]; sexp_of }
      : t Model.t)
   ;;
 end

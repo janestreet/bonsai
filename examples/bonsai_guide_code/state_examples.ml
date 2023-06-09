@@ -5,13 +5,15 @@ open Bonsai.Let_syntax
 
 (* $MDX part-begin=textbox *)
 let textbox : (string * Vdom.Node.t) Computation.t =
-  let%sub state, set_state = Bonsai.state (module String) ~default_model:"" in
+  let%sub state, set_state = Bonsai.state "" in
   let%arr state = state
   and set_state = set_state in
   let view =
     Vdom.Node.input
       ~attrs:
-        [ Vdom.Attr.(value_prop state @ on_input (fun _ new_text -> set_state new_text)) ]
+        [ Vdom.Attr.value_prop state
+        ; Vdom.Attr.on_input (fun _ new_text -> set_state new_text)
+        ]
       ()
   in
   state, view
@@ -55,7 +57,7 @@ let () = Util.run two_textboxes_shared_state ~id:"two_textboxes_shared_state"
 
 (* $MDX part-begin=counter_state *)
 let state_based_counter : Vdom.Node.t Computation.t =
-  let%sub state, set_state = Bonsai.state (module Int) ~default_model:0 in
+  let%sub state, set_state = Bonsai.state 0 in
   let%arr state = state
   and set_state = set_state in
   let decrement =
@@ -87,8 +89,8 @@ end
 let counter_state_machine : Vdom.Node.t Computation.t =
   let%sub state, inject =
     Bonsai.state_machine0
-      (module Int)
-      (module Action)
+      ()
+      ~sexp_of_action:[%sexp_of: Action.t]
       ~default_model:0
       ~apply_action:(fun ~inject:_ ~schedule_event:_ model action ->
         match action with

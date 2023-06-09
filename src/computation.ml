@@ -21,7 +21,7 @@ type ('dynamic_action, 'static_action, 'model) static_apply_action =
 type ('model, 'dynamic_action, 'static_action, 'input, 'result) eval_fun =
   environment:Environment.t
   -> path:Path.t
-  -> clock:Incr.Clock.t
+  -> clock:Time_source.t
   -> model:'model Incr.t
   -> inject_dynamic:('dynamic_action -> unit Effect.t)
   -> inject_static:('static_action -> unit Effect.t)
@@ -81,7 +81,7 @@ type 'result t =
   | Leaf_incr :
       { input : 'input Value.t
       ; input_id : 'input Meta.Input.t
-      ; compute : Incr.Clock.t -> 'input Incr.t -> 'result Incr.t
+      ; compute : Time_source.t -> 'input Incr.t -> 'result Incr.t
       }
       -> 'result t
   | Sub :

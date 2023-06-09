@@ -65,8 +65,8 @@ let component
   let module Cmp = (val comparator) in
   let%sub leaves_info =
     let%arr leaves = leaves in
-    let%map.List { Header_tree.visible; leaf_label; _ } = leaves in
-    visible, leaf_label
+    let%map.List { Header_tree.visible; leaf_header; _ } = leaves in
+    visible, leaf_header
   in
   let%sub cells = assoc input in
   let%sub rows =

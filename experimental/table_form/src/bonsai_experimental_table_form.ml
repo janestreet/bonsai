@@ -5,11 +5,16 @@ module Form = Bonsai_web_ui_form
 module Table = Bonsai_web_ui_partial_render_table.Basic
 module C = Table.Columns.Dynamic_columns
 
+let header text = C.Header_helpers.legacy (Vdom.Node.text text)
+
 module type S = sig
   type t [@@deriving sexp, equal, compare]
 
   include Comparator.S with type t := t
 end
+
+type ('k, 'cmp) comparator =
+  (module S with type t = 'k and type comparator_witness = 'cmp)
 
 module Style =
   [%css
@@ -47,23 +52,28 @@ end
 let table_form
       (type k cmp)
       ?key_column_initial_width
-      (key : (k, cmp) Bonsai.comparator)
+      (key : (k, cmp) comparator)
       form_of_t
       ~columns
   =
   let module Key = (val key) in
   let module M_map = struct
-    type t = Unit.t Map.M(Key).t [@@deriving sexp, equal, compare]
+    type t = Unit.t Map.M(Key).t [@@deriving sexp_of, equal, compare]
   end
   in
   let%sub id =
     Computation.map Bonsai.Private.path ~f:Bonsai.Private.Path.to_unique_identifier_string
   in
   let%sub map, set_map =
-    Bonsai.state (module M_map) ~default_model:(Map.empty (module Key))
+    Bonsai.state
+      (Map.empty (module Key))
+      ~sexp_of_model:[%sexp_of: M_map.t]
+      ~equal:[%equal: M_map.t]
   in
   let%sub textbox =
-    let%sub text_state = Bonsai.state (module String) ~default_model:"" in
+    let%sub text_state =
+      Bonsai.state "" ~sexp_of_model:[%sexp_of: String.t] ~equal:[%equal: String.t]
+    in
     let%arr text, set_text = text_state
     and map = map
     and set_map = set_map in
@@ -104,7 +114,7 @@ let table_form
       List.mapi columns ~f:(fun i { Column.name; initial_width } ->
         C.column
           ?initial_width
-          ~label:(Vdom.Node.text name)
+          ~header:(header name)
           ~cell:(fun ~key:_ ~data:form ->
             form
             |> Form.view
@@ -116,7 +126,7 @@ let table_form
     List.concat
       [ [ C.column
             ?initial_width:key_column_initial_width
-            ~label:(Vdom.Node.text "key")
+            ~header:(header "key")
             ~cell:(fun ~key ~data:_ ->
               let click_handler =
                 Vdom.Attr.on_click (fun _ -> set_map (Map.remove map key))

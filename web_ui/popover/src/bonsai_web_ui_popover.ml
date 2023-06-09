@@ -45,18 +45,18 @@ let has_clicked_outside : popover_id:string -> Dom.node Js.t Js.opt -> bool =
   fun ~popover_id element ->
   let rec loop : Dom.node Js.t Js.opt -> bool =
     fun element ->
-      match Js.Opt.to_option element with
-      | None -> true
-      | Some element ->
-        (match Dom.nodeType element with
-         | Attr _ | Text _ | Other _ -> loop element##.parentNode
-         | Element element ->
-           (match Js.Opt.to_option (element##getAttribute (Js.string "id")) with
-            | None -> loop element##.parentNode
-            | Some id ->
-              if String.equal (Js.to_string id) popover_id
-              then false
-              else loop element##.parentNode))
+    match Js.Opt.to_option element with
+    | None -> true
+    | Some element ->
+      (match Dom.nodeType element with
+       | Attr _ | Text _ | Other _ -> loop element##.parentNode
+       | Element element ->
+         (match Js.Opt.to_option (element##getAttribute (Js.string "id")) with
+          | None -> loop element##.parentNode
+          | Some id ->
+            if String.equal (Js.to_string id) popover_id
+            then false
+            else loop element##.parentNode))
   in
   loop element
 ;;
@@ -83,6 +83,7 @@ let component
           ([ `Left_click | `Right_click | `Escape ] -> bool) Value.t =
           Value.return (fun _ -> false))
       ?(on_close = Value.return Effect.Ignore)
+      ?(keep_popover_inside_window = Value.return false)
       ~close_when_clicked_outside
       ~direction
       ~alignment
@@ -161,11 +162,18 @@ let component
       and popover_id = popover_id
       and outside_click_listener_attr = outside_click_listener_attr
       and popover_extra_attr = popover_extra_attr
-      and popover_style_attr = popover_style_attr in
+      and popover_style_attr = popover_style_attr
+      and keep_popover_inside_window = keep_popover_inside_window in
+      let reposition_hook =
+        match keep_popover_inside_window with
+        | true -> Vdom.Attr.create_hook "reposition" (Reposition_hook.create ())
+        | false -> Vdom.Attr.empty
+      in
       Vdom.Node.div
         ~attrs:
           [ Style.tooltip
           ; Vdom.Attr.id popover_id
+          ; reposition_hook
           ; popover_style_attr
           ; popover_extra_attr
           ; outside_click_listener_attr

@@ -36,8 +36,10 @@ end
 
 let state_component =
   Bonsai.state_machine0
-    (module Model)
-    (module Action)
+    ()
+    ~sexp_of_model:[%sexp_of: Model.t]
+    ~equal:[%equal: Model.t]
+    ~sexp_of_action:[%sexp_of: Action.t]
     ~default_model:Model.default
     ~apply_action:(fun ~inject:_ ~schedule_event:_ (model : Model.t) -> function
       | Add { how_many } -> Fn.apply_n_times ~n:how_many Model.add_one model

@@ -6,8 +6,17 @@ open Bonsai_web_ui_partial_render_table_protocol
 type 'col_id t =
   { order : 'col_id Order.t
   ; decorate : Vdom.Node.t -> 'col_id -> Vdom.Node.t
+  ; render :
+      column_id:'col_id -> sortable:bool -> (Sort_state.t -> Vdom.Node.t) -> Vdom.Node.t
+  ; inject : 'col_id Order.Action.t -> unit Effect.t
   }
 [@@deriving fields]
+
+let assoc_findi ~f list =
+  match List.findi list ~f:(fun _i (key, _) -> f key) with
+  | None -> None
+  | Some (index, (_k, v)) -> Some (index, v)
+;;
 
 let component
       (type col_id)
@@ -26,7 +35,8 @@ let component
   in
   let%sub order, inject =
     Bonsai_extra.state_machine0_dynamic_model
-      (module State)
+      ~sexp_of_model:[%sexp_of: State.t]
+      ~equal:[%equal: State.t]
       (module Action)
       ~model:(`Given initial_order)
       ~apply_action:(fun ~inject:_ ~schedule_event:_ -> State.apply_action)
@@ -34,6 +44,12 @@ let component
   let%sub order = return (Value.cutoff ~equal:[%equal: State.t] order) in
   let state = Value.both order inject in
   let%arr order, inject = state in
+  let handle_click col_id =
+    Vdom.Attr.on_click (fun mouse_event ->
+      if Js_of_ocaml.Js.to_bool mouse_event##.shiftKey
+      then inject (Add_sort col_id)
+      else inject (Set_sort col_id))
+  in
   let decorate label col_id =
     let sort_marker =
       Vdom.Node.text
@@ -42,15 +58,28 @@ let component
          | Some `Desc -> Icons.descending
          | None -> Icons.neutral)
     in
-    let attr =
-      Vdom.Attr.(
-        Style.column_header
-        @ on_click (fun mouse_event ->
-          if Js_of_ocaml.Js.to_bool mouse_event##.shiftKey
-          then inject (Add_sort col_id)
-          else inject (Set_sort col_id)))
-    in
-    Vdom.Node.div ~attrs:[ attr ] [ Vdom.Node.span [ sort_marker; label ] ]
+    Vdom.Node.div
+      ~attrs:[ Style.column_header; handle_click col_id ]
+      [ Vdom.Node.span [ sort_marker; label ] ]
   in
-  { order; decorate }
+  let render ~column_id ~sortable f =
+    let (sort_state : Sort_state.t) =
+      if not sortable
+      then Not_sortable
+      else (
+        let col_state = assoc_findi ~f:(Col_id.equal column_id) order in
+        match col_state with
+        | None -> Not_sorted
+        | Some (index, dir) ->
+          if List.length order = 1
+          then Single_sort dir
+          else Multi_sort { dir; index = index + 1 })
+    in
+    let header_node = f sort_state in
+    let attrs =
+      if sortable then [ Style.column_header; handle_click column_id ] else []
+    in
+    Vdom.Node.div ~attrs [ header_node ]
+  in
+  { order; decorate; render; inject }
 ;;

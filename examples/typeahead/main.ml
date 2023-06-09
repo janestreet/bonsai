@@ -47,10 +47,9 @@ let components =
   let open! Bonsai_web_ui_typeahead in
   let%sub all_options =
     Bonsai.state
-      (module struct
-        type t = Pokemon.t list [@@deriving equal, compare, sexp]
-      end)
-      ~default_model:Pokemon.all
+      Pokemon.all
+      ~sexp_of_model:[%sexp_of: Pokemon.t list]
+      ~equal:[%equal: Pokemon.t list]
   in
   let typeahead_single ?handle_unknown_option () =
     Typeahead.create
@@ -69,6 +68,7 @@ let components =
       ?handle_unknown_option
       ~all_options:(Value.return Pokemon.all)
       (module Pokemon)
+      ~equal:[%equal: Pokemon.t]
   in
   let%sub { selected = favourite_pokemon; view = typeahead_single_vdom; _ } =
     typeahead_single ()
