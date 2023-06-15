@@ -288,6 +288,13 @@ end
 (** Like [toggle], but also gives a handle to set the state directly *)
 val toggle' : default_model:bool -> Toggle.t Computation.t
 
+module Apply_action_context : sig
+  type 'action t = 'action Apply_action_context.t
+
+  val inject : 'action t -> 'action -> unit Effect.t
+  val schedule_event : _ t -> unit Effect.t -> unit
+end
+
 (** A constructor for [Computation.t] that models a simple state machine.
     The first-class module implementing [Model] describes the states in
     the state machine, while the first-class module implementing [Action]
@@ -299,22 +306,13 @@ val toggle' : default_model:bool -> Toggle.t Computation.t
 
     (It is very common for [inject] and [schedule_event] to be unused) *)
 val state_machine0
-  :  ?reset:
-    (inject:('action -> unit Effect.t)
-     -> schedule_event:(unit Effect.t -> unit)
-     -> 'model
-     -> 'model)
+  :  ?reset:('action Apply_action_context.t -> 'model -> 'model)
   (** to learn more about [reset], read the docs on [with_model_resetter] *)
   -> ?sexp_of_model:('model -> Sexp.t)
   -> ?sexp_of_action:('action -> Sexp.t)
   -> ?equal:('model -> 'model -> bool)
   -> default_model:'model
-  -> apply_action:
-       (inject:('action -> unit Effect.t)
-        -> schedule_event:(unit Effect.t -> unit)
-        -> 'model
-        -> 'action
-        -> 'model)
+  -> apply_action:('action Apply_action_context.t -> 'model -> 'action -> 'model)
   -> unit
   -> ('model * ('action -> unit Effect.t)) Computation.t
 
@@ -324,18 +322,13 @@ val state_machine0
     while the state machine is inactive. *)
 val state_machine1
   :  ?sexp_of_action:('action -> Sexp.t)
-  -> ?reset:
-       (inject:('action -> unit Effect.t)
-        -> schedule_event:(unit Effect.t -> unit)
-        -> 'model
-        -> 'model)
+  -> ?reset:('action Apply_action_context.t -> 'model -> 'model)
   (** to learn more about [reset], read the docs on [with_model_resetter] *)
   -> ?sexp_of_model:('model -> Sexp.t)
   -> ?equal:('model -> 'model -> bool)
   -> default_model:'model
   -> apply_action:
-       (inject:('action -> unit Effect.t)
-        -> schedule_event:(unit Effect.t -> unit)
+       ('action Apply_action_context.t
         -> 'input Computation_status.t
         -> 'model
         -> 'action
@@ -553,21 +546,12 @@ val enum
     is that the [apply_action] for this outer-model has access to the result
     value of the Computation being wrapped. *)
 val wrap
-  :  ?reset:
-    (inject:('action -> unit Effect.t)
-     -> schedule_event:(unit Effect.t -> unit)
-     -> 'model
-     -> 'model)
+  :  ?reset:('action Apply_action_context.t -> 'model -> 'model)
   -> ?sexp_of_model:('model -> Sexp.t)
   -> ?equal:('model -> 'model -> bool)
   -> default_model:'model
   -> apply_action:
-       (inject:('action -> unit Effect.t)
-        -> schedule_event:(unit Effect.t -> unit)
-        -> 'result
-        -> 'model
-        -> 'action
-        -> 'model)
+       ('action Apply_action_context.t -> 'result -> 'model -> 'action -> 'model)
   -> f:('model Value.t -> ('action -> unit Effect.t) Value.t -> 'result Computation.t)
   -> unit
   -> 'result Computation.t

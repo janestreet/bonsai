@@ -74,7 +74,8 @@ let ticker =
       ~equal:[%equal: Int.t]
       ~sexp_of_action:[%sexp_of: Unit.t]
       ~default_model:0
-      ~apply_action:(fun ~inject:_ ~schedule_event:_ model () -> (model + 1) % 101)
+      ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) model () ->
+        (model + 1) % 101)
   in
   let%sub color_index, increment =
     Bonsai.state_machine0
@@ -83,7 +84,7 @@ let ticker =
       ~equal:[%equal: Int.t]
       ~sexp_of_action:[%sexp_of: Unit.t]
       ~default_model:0
-      ~apply_action:(fun ~inject:_ ~schedule_event:_ prev () ->
+      ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) prev () ->
         prev + (1 % Array.length colors))
   in
   let%sub () =

@@ -15,7 +15,7 @@ let add_counter_component =
       ~equal:[%equal: Model.t]
       ~sexp_of_action:[%sexp_of: Unit.t]
       ~default_model:Int.Map.empty
-      ~apply_action:(fun ~inject:_ ~schedule_event:_ model () ->
+      ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) model () ->
         let key = Map.length model in
         Map.add_exn model ~key ~data:())
   in
@@ -47,7 +47,7 @@ let single_counter =
       ~equal:[%equal: Int.t]
       ~sexp_of_action:[%sexp_of: Action.t]
       ~default_model:0
-      ~apply_action:(fun ~inject:_ ~schedule_event:_ model -> function
+      ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) model -> function
         | Action.Increment -> model + 1
         | Action.Decrement -> model - 1)
   in

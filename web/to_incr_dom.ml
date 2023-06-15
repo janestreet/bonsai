@@ -36,7 +36,7 @@ let create_generic
     run
       ~environment
       ~path:Bonsai.Private.Path.empty
-      ~clock:(Bonsai.Time_source.create ~start:(Time_ns.now ()))
+      ~clock:Incr_dom.Start_app.Private.time_source
       ~model
       ~inject_dynamic
       ~inject_static
@@ -64,7 +64,9 @@ let create_generic
       Bonsai.Private.Lifecycle.Collection.diff state.State.last_lifecycle lifecycle
     in
     state.State.last_lifecycle <- lifecycle;
-    Vdom.Effect.Expert.handle_non_dom_event_exn diff
+    Vdom.Effect.Expert.handle_non_dom_event_exn diff;
+    Bonsai.Time_source.Private.trigger_after_display
+      Incr_dom.Start_app.Private.time_source
   in
   Incr_dom.Component.create_with_extra ~on_display ~extra ~apply_action model view
 ;;

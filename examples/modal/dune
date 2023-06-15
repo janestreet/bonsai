@@ -1,2 +1,3 @@
-(executables (names main) (libraries bonsai_web bonsai_web_ui_modal)
+(executables (names main)
+ (libraries bonsai_web bonsai_web_ui_modal draft_modal)
  (preprocess (pps ppx_bonsai ppx_jane)))

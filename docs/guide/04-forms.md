@@ -134,8 +134,8 @@ field being called with the value of the fully-validated form. The two
 options for submitting the form are
 
 1.  `handle_enter`, when `true` will cause the form to be submitted
-    whenever the `<enter>` key hit when focusing a form element inside
-    this form.
+    whenever the `<enter>` key is pressed while focusing on a form
+    element inside this form.
 2.  `button`, if `Some`, a button with the provided text will be added
     to the form. This button will be disabled whenever the form is in an
     error state, but when the form is valid, the button will be enabled

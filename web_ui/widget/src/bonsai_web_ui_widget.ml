@@ -46,9 +46,9 @@ module Low_level = struct
         ~sexp_of_model:[%sexp_of: Model.t]
         ~equal:[%equal: Model.t]
         ~sexp_of_action:sexp_of_opaque
-        ~reset:(fun ~inject:_ ~schedule_event:_ m -> m)
+        ~reset:(fun (_ : _ Bonsai.Apply_action_context.t) m -> m)
         ~default_model:Id.Map.empty
-        ~apply_action:(fun ~inject:_ ~schedule_event:_ model -> function
+        ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) model -> function
           | Action.Register { id; state } -> Map.set model ~key:id ~data:state
           | Destroy id -> Map.remove model id
           | Modify f ->

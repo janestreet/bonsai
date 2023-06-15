@@ -145,7 +145,7 @@ module Connector = struct
     let open Async_kernel in
     let to_server = Pipe.create () in
     let to_client = Pipe.create () in
-    let one_connection implementations pipe_to pipe_from =
+    let one_connection implementations ~connection_state pipe_to pipe_from =
       let transport =
         Pipe_transport.create Pipe_transport.Kind.string (fst pipe_to) (snd pipe_from)
       in
@@ -155,9 +155,13 @@ module Connector = struct
       return (Result.ok_exn conn)
     in
     don't_wait_for
-      (let%bind server_conn = one_connection (Some implementations) to_server to_client in
+      (let%bind server_conn =
+         one_connection (Some implementations) ~connection_state to_server to_client
+       in
        Rpc.Connection.close_finished server_conn);
-    let connection = one_connection None to_client to_server in
+    let connection =
+      one_connection None ~connection_state:(fun _conn -> ()) to_client to_server
+    in
     Connection
       { connection
       ; menu =
@@ -368,32 +372,34 @@ let generic_poll_or_error
       ~sexp_of_action:[%sexp_of: Action.t]
       ~equal:[%equal: Model.t]
       ~default_model
-      ~apply_action:(fun ~inject:_ ~schedule_event:_ computation_status model action ->
-        let should_ignore =
-          match computation_status with
-          | Inactive -> clear_when_deactivated
-          | Active () -> false
-        in
-        if should_ignore
-        then default_model
-        else (
-          match action with
-          | Finish { query; response; inflight_query_key } ->
-            let last_ok_response, last_error =
-              match response with
-              | Finished (Ok response) -> Some (query, response), None
-              | Finished (Error error) -> model.last_ok_response, Some (query, error)
-              | Aborted -> model.last_ok_response, model.last_error
-            in
-            { last_ok_response
-            ; last_error
-            ; inflight_queries = Map.remove model.inflight_queries inflight_query_key
-            }
-          | Start { query; inflight_query_key } ->
-            { model with
-              inflight_queries =
-                Map.add_exn model.inflight_queries ~key:inflight_query_key ~data:query
-            }))
+      ~apply_action:
+        (fun
+          (_ : _ Bonsai.Apply_action_context.t) computation_status model action ->
+          let should_ignore =
+            match computation_status with
+            | Inactive -> clear_when_deactivated
+            | Active () -> false
+          in
+          if should_ignore
+          then default_model
+          else (
+            match action with
+            | Finish { query; response; inflight_query_key } ->
+              let last_ok_response, last_error =
+                match response with
+                | Finished (Ok response) -> Some (query, response), None
+                | Finished (Error error) -> model.last_ok_response, Some (query, error)
+                | Aborted -> model.last_ok_response, model.last_error
+              in
+              { last_ok_response
+              ; last_error
+              ; inflight_queries = Map.remove model.inflight_queries inflight_query_key
+              }
+            | Start { query; inflight_query_key } ->
+              { model with
+                inflight_queries =
+                  Map.add_exn model.inflight_queries ~key:inflight_query_key ~data:query
+              }))
   in
   let%sub effect =
     let%arr dispatcher = dispatcher
@@ -523,6 +529,12 @@ module Our_rpc = struct
         ~callback:(fun connection -> Babel.Caller.Rpc.dispatch_multi rpc connection query))
   ;;
 
+  let streamable_dispatcher rpc ~where_to_connect =
+    generic_dispatcher (fun connector query ->
+      Connector.with_connection connector ~where_to_connect ~callback:(fun connection ->
+        Streamable.Plain_rpc.dispatch rpc connection query))
+  ;;
+
   let poll
         ?sexp_of_query
         ?sexp_of_response
@@ -565,6 +577,34 @@ module Our_rpc = struct
     =
     let open Bonsai.Let_syntax in
     let%sub dispatcher = babel_dispatcher rpc ~where_to_connect in
+    let%sub dispatcher = Bonsai.Effect_throttling.poll dispatcher in
+    generic_poll_or_error
+      ~sexp_of_query
+      ~sexp_of_response
+      ~equal_query
+      ?equal_response
+      ?clear_when_deactivated
+      ?on_response_received
+      dispatcher
+      ~every
+      ~poll_behavior:Always
+      query
+  ;;
+
+  let streamable_poll
+        ?sexp_of_query
+        ?sexp_of_response
+        ~equal_query
+        ?equal_response
+        ?clear_when_deactivated
+        ?on_response_received
+        rpc
+        ~where_to_connect
+        ~every
+        query
+    =
+    let open Bonsai.Let_syntax in
+    let%sub dispatcher = streamable_dispatcher rpc ~where_to_connect in
     let%sub dispatcher = Bonsai.Effect_throttling.poll dispatcher in
     generic_poll_or_error
       ~sexp_of_query
@@ -842,8 +882,12 @@ module Status = struct
         ~sexp_of_action:[%sexp_of: Action.t]
         dispatcher
         ~default_model:{ state = Initial; clock = None; connecting_since = None }
-        ~apply_action:(fun ~inject ~schedule_event dispatcher model action ->
-          let writeback a = schedule_event (inject (Set a)) in
+        ~apply_action:(fun context dispatcher model action ->
+          let writeback a =
+            Bonsai.Apply_action_context.schedule_event
+              context
+              (Bonsai.Apply_action_context.inject context (Set a))
+          in
           let state = model.state in
           let new_state =
             match action, dispatcher with
@@ -853,7 +897,7 @@ module Status = struct
             | Activate _, Active dispatch ->
               (match state with
                | Initial | State (Disconnected _ | Failed_to_connect _) ->
-                 schedule_event (dispatch writeback);
+                 Bonsai.Apply_action_context.schedule_event context (dispatch writeback);
                  State Connecting
                | State (Connecting | Connected) ->
                  (* We got activated, but we're still listening to the previous connection. *)
@@ -862,7 +906,7 @@ module Status = struct
               (match new_state with
                | Failed_to_connect _ | Disconnected _ ->
                  (* we failed, but we're still active, so try to reconnect *)
-                 schedule_event (dispatch writeback)
+                 Bonsai.Apply_action_context.schedule_event context (dispatch writeback)
                | Connected | Connecting -> ());
               State new_state
             | Set new_state, Inactive -> State new_state

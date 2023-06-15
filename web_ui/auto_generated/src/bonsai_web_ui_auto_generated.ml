@@ -609,8 +609,8 @@ let form
         ~sexp_of_model:[%sexp_of: Unit.t]
         ~equal:[%equal: Unit.t]
         ~default_model:()
-        ~apply_action:(fun ~inject:_ ~schedule_event (_, inner) () sexp ->
-          schedule_event (Form.set inner sexp))
+        ~apply_action:(fun context (_, inner) () sexp ->
+          Bonsai.Apply_action_context.schedule_event context (Form.set inner sexp))
         ~f:(fun (_ : unit Value.t) inject_outer ->
           let%sub outer, set_outer =
             Bonsai.state false ~sexp_of_model:[%sexp_of: Bool.t] ~equal:[%equal: Bool.t]
@@ -681,8 +681,8 @@ let form
         ~sexp_of_model:[%sexp_of: Unit.t]
         ~equal:[%equal: Unit.t]
         ~default_model:()
-        ~apply_action:(fun ~inject:_ ~schedule_event (_, inner) () sexp ->
-          schedule_event (Form.set inner sexp))
+        ~apply_action:(fun context (_, inner) () sexp ->
+          Bonsai.Apply_action_context.schedule_event context (Form.set inner sexp))
         ~f:(fun (_ : unit Value.t) inject_outer ->
           let%sub clauses_and_docs =
             let%arr clauses = clauses in
@@ -978,8 +978,8 @@ let form
         ~sexp_of_model:[%sexp_of: Unit.t]
         ~equal:[%equal: Unit.t]
         ~default_model:()
-        ~apply_action:(fun ~inject:_ ~schedule_event (_, inner) () inner_value ->
-          schedule_event (Form.set inner inner_value))
+        ~apply_action:(fun context (_, inner) () inner_value ->
+          Bonsai.Apply_action_context.schedule_event context (Form.set inner inner_value))
         ~f:(fun (_ : unit Value.t) inject_outer ->
           (* We can't use toggle here because we need to be able to set the value directly
              as part of [Form.set] *)

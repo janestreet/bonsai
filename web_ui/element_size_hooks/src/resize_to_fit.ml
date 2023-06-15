@@ -146,10 +146,9 @@ module T = struct
     adjust ~state
   ;;
 
-  let destroy _old_input { State.observer; _ } _element =
-    Option.iter observer ~f:(fun observer -> observer##disconnect)
-  [@@ocaml.warning
-     "-68"]
+  let destroy _old_input state =
+    let { State.observer; _ } = state in
+    fun _element -> Option.iter observer ~f:(fun observer -> observer##disconnect)
   ;;
 end
 

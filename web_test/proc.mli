@@ -41,6 +41,24 @@ module Handle : sig
     -> 'a Computation.t
     -> ('a, 'b) t
 
+  (** Runs [recompute_view] and [Async_kernel_scheduler.yield_until_no_jobs_remain] 
+      in a loop until nothing remains to be done. This is a good sledgehammer 
+      function to use if you want to wait until all the effects of a user-action 
+      have completed.
+
+      Between each iteration, "------ between bonsai frame ------" to
+      demonstrate when side-effects occur, and how long it took for a stable
+      state to be reached.
+
+      [max_iterations] controls how many loop iterations are allowed before the
+      function aborts with an exception, in case the default of 100 is too low.
+      However, you should rarely, if ever need this parameter.
+  *)
+  val flush_async_and_bonsai
+    :  ?max_iterations:int
+    -> ('a, 'b) t
+    -> unit Async_kernel.Deferred.t
+
   val click_on
     :  ?extra_event_fields:(string * Js_of_ocaml.Js.Unsafe.any) list
     -> ?shift_key_down:bool

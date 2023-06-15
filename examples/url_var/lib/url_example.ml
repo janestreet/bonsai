@@ -161,9 +161,13 @@ let typed_url_form
             ; remaining = Bonsai_web_ui_url_var.Typed.Components.empty
             }
         in
-        Typed.Components.to_original_components typed_components)
+        Typed.Components.to_original_components
+          ~encoding_behavior:Correct
+          typed_components)
       ~unparse:(fun components ->
-        let typed_components = Typed.Components.of_original_components components in
+        let typed_components =
+          Typed.Components.of_original_components ~encoding_behavior:Correct components
+        in
         try (Projection.parse_exn parser typed_components).result with
         | _ -> fallback)
   in
@@ -179,7 +183,9 @@ let component (type a) (t : a t) =
          let (_ : a Parse_result.t) =
            Projection.parse_exn
              t.parser
-             (Typed.Components.of_original_components components)
+             (Typed.Components.of_original_components
+                ~encoding_behavior:Correct
+                components)
          in
          false
        with
@@ -190,7 +196,7 @@ let component (type a) (t : a t) =
       Projection.unparse
         t.parser
         { Parse_result.result = t.fallback; remaining = Url_var.Typed.Components.empty }
-      |> Url_var.Typed.Components.to_original_components
+      |> Url_var.Typed.Components.to_original_components ~encoding_behavior:Correct
     in
     Url_var.Components.equal fallback_components components
   in
@@ -257,7 +263,7 @@ let component (type a) (t : a t) =
           (Projection.unparse
              t.parser
              { Parse_result.result = element; remaining = Typed.Components.empty }
-           |> Typed.Components.to_original_components)
+           |> Typed.Components.to_original_components ~encoding_behavior:Correct)
       in
       Vdom.Node.button
         ~attrs:
@@ -345,7 +351,8 @@ module Homepage_and_settings = Homepage_and_settings_demo.Homepage_and_settings
 
 let home_and_settings : Homepage_and_settings.t t =
   { starting_components = Url_var.Components.create ~path:"" ()
-  ; parser = Homepage_and_settings_demo.parser |> Projection.make
+  ; parser =
+      Homepage_and_settings_demo.parser |> Projection.make ~encoding_behavior:Correct
   ; type_ = (module Homepage_and_settings)
   ; fallback = Homepage
   ; title = "Path renaming"
@@ -387,7 +394,9 @@ module Foo_bar_example =
 
 let foo_bar_example =
   { starting_components = Url_var.Components.create ~path:"foo" ~query:String.Map.empty ()
-  ; parser = Parser.Variant.make (module Foo_bar_example.My_url) |> Projection.make
+  ; parser =
+      Parser.Variant.make (module Foo_bar_example.My_url)
+      |> Projection.make ~encoding_behavior:Correct
   ; type_ = (module Foo_bar_example.My_url)
   ; fallback = Foo_bar_example.My_url.Foo
   ; title = "Variants example"
@@ -490,7 +499,9 @@ module Partial_match_example =
 let folder_example : Partial_match_example.My_url.t t =
   { starting_components =
       Url_var.Components.create ~path:"library" ~query:String.Map.empty ()
-  ; parser = Parser.Variant.make (module Partial_match_example.My_url) |> Projection.make
+  ; parser =
+      Parser.Variant.make (module Partial_match_example.My_url)
+      |> Projection.make ~encoding_behavior:Correct
   ; type_ = (module Partial_match_example.My_url)
   ; fallback = Partial_match_example.My_url.Library_search
   ; title = "Folder-like urls"
@@ -541,7 +552,8 @@ module Reading_from_query =
 let reading_from_query =
   { starting_components =
       Url_var.Components.create ~query:(String.Map.of_alist_exn [ "video", [ "123" ] ]) ()
-  ; parser = Reading_from_query.My_url.parser |> Projection.make
+  ; parser =
+      Reading_from_query.My_url.parser |> Projection.make ~encoding_behavior:Correct
   ; type_ = (module Reading_from_query.My_url)
   ; fallback = 0
   ; title = "Reading from query"
@@ -573,7 +585,7 @@ module Reading_from_path =
 
 let reading_from_path =
   { starting_components = Url_var.Components.create ~path:"123" ()
-  ; parser = Reading_from_path.My_url.parser |> Projection.make
+  ; parser = Reading_from_path.My_url.parser |> Projection.make ~encoding_behavior:Correct
   ; type_ = (module Reading_from_path.My_url)
   ; fallback = 0
   ; title = "Reading from path"
@@ -618,7 +630,7 @@ let search_example =
         ~path:"search"
         ~query:(String.Map.of_alist_exn [ "q", [ "capybara" ] ])
         ()
-  ; parser = Search.parser |> Projection.make
+  ; parser = Search.parser |> Projection.make ~encoding_behavior:Correct
   ; type_ = (module Search.My_url)
   ; fallback = Homepage
   ; title = "Google clone example"
@@ -721,7 +733,7 @@ let simple_record_example =
         ~path:"hello"
         ~query:(String.Map.of_alist_exn [ "foo", [ "123" ] ])
         ()
-  ; parser = Simple_record_example.parser |> Projection.make
+  ; parser = Simple_record_example.parser |> Projection.make ~encoding_behavior:Correct
   ; type_ = (module Simple_record_example.My_url)
   ; fallback = { Simple_record_example.My_url.foo = 1; bar = "hi" }
   ; title = "Simple record"
@@ -784,7 +796,7 @@ let anonymous_record_example =
           (String.Map.of_alist_exn
              [ "video_id", [ "dQw4w9WgXcQ" ]; "channel", [ "abcd" ] ])
         ()
-  ; parser = Anonymous_record_example.parser |> Projection.make
+  ; parser = Anonymous_record_example.parser |> Projection.make ~encoding_behavior:Correct
   ; type_ = (module Anonymous_record_example.My_youtube_clone)
   ; fallback = Homepage
   ; title = "Anonymous records"
@@ -839,7 +851,7 @@ let tuple_example =
       Url_var.Components.create
         ~query:(String.Map.of_alist_exn [ "t_1", [ "1" ]; "t_2", [ "hello" ] ])
         ()
-  ; parser = Tuple_example.parser |> Projection.make
+  ; parser = Tuple_example.parser |> Projection.make ~encoding_behavior:Correct
   ; type_ = (module Tuple_example.My_tuple_url)
   ; fallback = 1, "hello"
   ; title = "Tuple example"

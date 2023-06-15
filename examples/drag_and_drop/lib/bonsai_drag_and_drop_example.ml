@@ -196,7 +196,7 @@ let board ?extra_dnd name =
          |> Map.of_alist_exn (module Item_id))
       ~apply_action:
         (fun
-          ~inject:_ ~schedule_event:_ model (Move { item_id; new_column }) ->
+          (_ : _ Bonsai.Apply_action_context.t) model (Move { item_id; new_column }) ->
           let change_col (contents, _) ~new_column = contents, new_column in
           Map.change model item_id ~f:(Option.map ~f:(change_col ~new_column)))
   in

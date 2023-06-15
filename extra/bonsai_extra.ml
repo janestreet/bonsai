@@ -9,9 +9,9 @@ let with_inject_fixed_point f =
       ~sexp_of_model:[%sexp_of: Unit.t]
       ~default_model:()
       ~equal:[%equal: Unit.t]
-      ~apply_action:(fun ~inject:_ ~schedule_event (_result, inject) () action ->
+      ~apply_action:(fun context (_result, inject) () action ->
         (* speedy thing go in, speedy thing come out *)
-        schedule_event (inject action))
+        Bonsai.Apply_action_context.schedule_event context (inject action))
       ~f:(fun _model inject -> f inject)
   in
   return r
@@ -30,7 +30,8 @@ let with_self_effect
     ?sexp_of_model:(Option.map ~f:Option.sexp_of_t sexp_of_model)
     ?equal:(Option.map ~f:Option.equal equal)
     ~default_model:None
-    ~apply_action:(fun ~inject:_ ~schedule_event:_ result _model () -> Some result)
+    ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) result _model () ->
+      Some result)
     ~f:(fun model inject ->
       let%sub current_model =
         let%sub get_model = Bonsai.yoink model in
@@ -65,11 +66,11 @@ let state_machine1_dynamic_model
         | Some a -> a)
     | `Computed f -> f
   in
-  let apply_action ~inject ~schedule_event input model action =
+  let apply_action context input model action =
     match input with
     | Bonsai.Computation_status.Active (input, model_creator) ->
       let model = model_creator model in
-      Some (apply_action ~inject ~schedule_event input model action)
+      Some (apply_action context input model action)
     | Inactive ->
       eprint_s
         [%message
@@ -95,9 +96,7 @@ let state_machine1_dynamic_model
 ;;
 
 let state_machine0_dynamic_model ?sexp_of_model ?equal action_mod ~model ~apply_action =
-  let apply_action ~inject ~schedule_event () model action =
-    apply_action ~inject ~schedule_event model action
-  in
+  let apply_action context () model action = apply_action context model action in
   state_machine1_dynamic_model
     action_mod
     ?sexp_of_model
@@ -114,7 +113,9 @@ let state_dynamic_model (type m) ?sexp_of_model ?equal ~model () =
     let sexp_of_t = Option.value ~default:sexp_of_opaque sexp_of_model
   end
   in
-  let apply_action ~inject:_ ~schedule_event:_ _old_model new_model = new_model in
+  let apply_action (_ : _ Bonsai.Apply_action_context.t) _old_model new_model =
+    new_model
+  in
   state_machine0_dynamic_model (module M) ?sexp_of_model ?equal ~model ~apply_action
 ;;
 
@@ -194,14 +195,16 @@ let pipe (type a) (module A : Bonsai.Model with type t = a) =
       ~equal:[%equal: Model.t]
       ~sexp_of_action:[%sexp_of: Action.t]
       ~default_model:Model.default
-      ~apply_action:(fun ~inject:_ ~schedule_event model -> function
+      ~apply_action:(fun context model -> function
         | Add_action a ->
           (match Fdeque.dequeue_front model.queued_receivers with
            | None ->
              let queued_actions = Fdeque.enqueue_back model.queued_actions a in
              { model with queued_actions }
            | Some (hd, queued_receivers) ->
-             schedule_event (Effect.Private.Callback.respond_to hd a);
+             Bonsai.Apply_action_context.schedule_event
+               context
+               (Effect.Private.Callback.respond_to hd a);
              { model with queued_receivers })
         | Add_receiver r ->
           (match Fdeque.dequeue_front model.queued_actions with
@@ -209,12 +212,15 @@ let pipe (type a) (module A : Bonsai.Model with type t = a) =
              let queued_receivers = Fdeque.enqueue_back model.queued_receivers r in
              { model with queued_receivers }
            | Some (hd, queued_actions) ->
-             schedule_event (Effect.Private.Callback.respond_to r hd);
+             Bonsai.Apply_action_context.schedule_event
+               context
+               (Effect.Private.Callback.respond_to r hd);
              { model with queued_actions }))
   in
   let%arr inject = inject in
   let request =
-    Effect.Private.make ~request:() ~evaluator:(fun r -> inject (Add_receiver r))
+    Effect.Private.make ~request:() ~evaluator:(fun r ->
+      Effect.Expert.handle (inject (Add_receiver r)))
   in
   (fun a -> inject (Add_action a)), request
 ;;

@@ -33,7 +33,7 @@ let component =
       ~equal:[%equal: Int.t]
       ~sexp_of_action:[%sexp_of: Unit.t]
       ~default_model:0
-      ~apply_action:(fun ~inject:_ ~schedule_event:_ index () ->
+      ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) index () ->
         (index + 1) mod generation_count)
   in
   let%arr form = form

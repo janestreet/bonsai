@@ -207,7 +207,7 @@ let component
       ~equal:[%equal: Model.t]
       ~sexp_of_action:[%sexp_of: Key.t Action.t]
       ~default_model:(Map.empty (module Key))
-      ~apply_action:(fun ~inject:_ ~schedule_event:_ model actions ->
+      ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) model actions ->
         List.fold actions ~init:model ~f:(fun model action ->
           match action, options with
           | Set (k, v), Prune_stale -> Map.set model ~key:k ~data:v

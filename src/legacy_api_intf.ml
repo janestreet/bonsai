@@ -50,7 +50,7 @@ module type S = sig
 
   (** [state_machine] is a function that is used to define a component solely in terms of
       its [apply_action] function. The result value of the component is the value of the
-      current model alongside an injection function to transition the state machine *)
+      current model alongside "context" that includes an injection function to transition the state machine *)
   val state_machine
     :  sexp_of_action:('action -> Sexp.t)
     -> ?sexp_of_model:('model -> Sexp.t)
@@ -58,12 +58,7 @@ module type S = sig
     -> Source_code_position.t
     -> default_model:'model
     -> apply_action:
-         (inject:('action -> unit Effect.t)
-          -> schedule_event:(unit Effect.t -> unit)
-          -> 'input
-          -> 'model
-          -> 'action
-          -> 'model)
+         ('action Apply_action_context.t -> 'input -> 'model -> 'action -> 'model)
     -> ('input, 'model * ('action -> unit Effect.t)) t
 
   (** [enum] is how a Bonsai component can branch on its input and handle different cases

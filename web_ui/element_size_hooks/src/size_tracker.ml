@@ -71,10 +71,9 @@ module T = struct
     state.callback ~width:state.last_width ~height:state.last_height
   ;;
 
-  let destroy _ { State.observer; _ } _ =
-    Option.iter observer ~f:(fun observer -> observer##disconnect)
-  [@@ocaml.warning
-     "-68"]
+  let destroy _ state =
+    let { State.observer; _ } = state in
+    fun _ -> Option.iter observer ~f:(fun observer -> observer##disconnect)
   ;;
 end
 

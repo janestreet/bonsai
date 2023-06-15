@@ -16,7 +16,7 @@ end
 
 let default_model = Int.Map.empty
 
-let apply_action ~inject:_ ~schedule_event:_ model = function
+let apply_action (_ : _ Bonsai.Apply_action_context.t) model = function
   | Action.New -> Map.add_exn model ~key:(Map.length model) ~data:0
   | Update (location, diff) ->
     Map.update model location ~f:(Option.value_map ~default:0 ~f:(( + ) diff))

@@ -133,7 +133,11 @@ module Action = struct
   [@@deriving equal, sexp]
 end
 
-let apply_action ~inject:_ ~schedule_event:_ (model : Model.t) (action : Action.t) =
+let apply_action
+      (_ : _ Bonsai.Apply_action_context.t)
+      (model : Model.t)
+      (action : Action.t)
+  =
   let map_series ~f = { model with series = List.map model.series ~f } in
   match action with
   | From_graph legend_data ->

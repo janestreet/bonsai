@@ -368,7 +368,8 @@ let%expect_test "state_machine1 with constant input is converted to state_machin
       ~equal:[%equal: Int.t]
       ~sexp_of_action:[%sexp_of: Int.t]
       ~default_model:0
-      ~apply_action:(fun ~inject:_ ~schedule_event:_ _model action _input -> action)
+      ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) _model action _input ->
+        action)
       (Value.return 5)
   in
   print_computation c;

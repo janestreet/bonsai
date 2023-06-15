@@ -96,7 +96,8 @@ let logger =
     Bonsai.state_machine0
       ()
       ~sexp_of_action:[%sexp_of: String.t]
-      ~apply_action:(fun ~inject:_ ~schedule_event:_ model action -> action :: model)
+      ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) model action ->
+        action :: model)
       ~default_model:[]
   in
   let%arr log, inject = logger in

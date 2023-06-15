@@ -133,7 +133,7 @@ module Tracker = struct
         ~equal:[%equal: Model.t]
         ~sexp_of_action:[%sexp_of: Action.t]
         ~default_model:(Map.empty (module Id))
-        ~apply_action:(fun ~inject:_ ~schedule_event:_ map -> function
+        ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) map -> function
           | id, Install -> Map.set map ~key:id ~data:Installed
           | id, Remove -> Map.remove map id
           | id, Set_visible -> Map.set map ~key:id ~data:Visible

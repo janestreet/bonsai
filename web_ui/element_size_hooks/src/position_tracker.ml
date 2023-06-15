@@ -191,17 +191,16 @@ let component (type key cmp) (key : (key, cmp) Bonsai.comparator) =
       { old_model with dom_node_tracker }
     ;;
 
-    let apply_action
-          ~(inject : key Action.t -> unit Effect.t)
-          ~(schedule_event : unit Effect.t -> unit)
-          old_model
-          action
-      =
+    let apply_action context old_model action =
       List.fold action ~init:old_model ~f:(fun acc -> function
         | Action.Set (key, position) -> set acc key position
         | Remove key -> remove acc key
         | Observe (key, dom_node) ->
-          schedule_event (inject [ Action.Set (key, dom_element_to_position dom_node) ]);
+          Bonsai.Apply_action_context.schedule_event
+            context
+            (Bonsai.Apply_action_context.inject
+               context
+               [ Action.Set (key, dom_element_to_position dom_node) ]);
           observe acc key dom_node
         | Unobserve key -> unobserve acc key)
     ;;

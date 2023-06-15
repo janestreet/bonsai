@@ -70,8 +70,10 @@ module Components : sig
     ; query : string list String.Map.t
     (** "?foo=1&bar=2" -> String.Map.of_alist_exn ["foo", ["1"]; "bar", ["2"]] *)
     }
-  [@@deriving sexp]
+  [@@deriving sexp, equal]
 
+  val encode_path : string list -> string
+  val decode_path : string -> string list
   val empty : t
 end
 
@@ -87,6 +89,45 @@ module Parse_result : sig
   val create : 'a -> 'a t
 end
 
+module Percent_encoding_behavior : sig
+  (** TLDR: New apps should always choose [Correct].
+
+      TLDR pt2: Updating old apps to [Correct] is also recommended. However, if the app
+      also does its own percent encoding, additional testing should be done to ensure
+      backwards compatibility.
+
+      The first implementation of bonsai_web_ui_url/uri_parsing originally
+      mishandled pct encoding (e.g. sometimes " " got translated to %20, but 
+      when translated back, it sometimes translated back to "%20" instead of
+      to " ")
+
+      Changing this behavior is ~generally _not_ a breaking change, but could
+      be a breaking change in the following contrived situation:
+
+      1. Your app handled the pct_encoding bug, but defensively doing pct encoding/decoding.
+      2. Correcting the behavior on [uri_parsing] still results in your parsing being 
+      able to parse/unparse url's, but the change in behavior is that now things are
+      percent encoded twice, but your app should still be able to decode it correctly as
+      it'd also be decoded twice.
+      3. The change in behavior is that if you had an _already existing_ URL whose value
+      correct happens to look like a pct_encoded string, and you then pct_encoded it once
+      (now it looks like a pct_encoded string twice), before you only decoded it one step,
+      but after the change you would've decoded it twice.
+
+      New links are not affected by this; only old links are.
+
+      We expect this situation to be rare, but (in a contrived scenario) an app's links 
+      could generate links that look pct_encoded all the time, and if your users sent a lot
+      of links _all_ of the old links would stop working.
+
+      If your app generates "normal"-looking links (without %'s in them or anything that looks
+      to be %-encoded). It is totally safe/no changes in behavior (other than you should now be
+      able to correctly put % in the path) are expected. *)
+  type t =
+    | Legacy_incorrect
+    | Correct
+end
+
 module Parser : sig
   (** ['a t] represents a parser that can parse a URL into 'a and unparse 'a into a URL. *)
   type 'a t
@@ -100,10 +141,16 @@ module Parser : sig
 
   (** "Evaluates" a ['a t] into a projection that parses to/from [Components.t] to
       ['a Parse_result.t]. *)
-  val eval : 'a t -> (Components.t, 'a Parse_result.t) Projection.t
+  val eval
+    :  encoding_behavior:Percent_encoding_behavior.t
+    -> 'a t
+    -> (Components.t, 'a Parse_result.t) Projection.t
 
   (** Like [eval] but parses/unparses from/into a [Uri.t] *)
-  val eval_for_uri : 'a t -> (Uri.t, 'a Parse_result.t) Projection.t
+  val eval_for_uri
+    :  encoding_behavior:Percent_encoding_behavior.t
+    -> 'a t
+    -> (Uri.t, 'a Parse_result.t) Projection.t
 
   (** Returns a list of the shapes of all the URLs given that the parser can parse. *)
   val all_urls : 'a t -> string list
@@ -481,11 +528,22 @@ module Versioned_parser : sig
   val new_parser : 'new_ Parser.t -> previous:'prev t -> f:('prev -> 'new_) -> 'new_ t
 
   (** Like [Parser.eval] but for a ['a Versioned_parser.t]. *)
-  val eval : 'a t -> (Components.t, 'a Parse_result.t) Projection.t
+  val eval
+    :  encoding_behavior:Percent_encoding_behavior.t
+    -> 'a t
+    -> (Components.t, 'a Parse_result.t) Projection.t
 
   (** Like [Parser.eval_for_uri] but for ['a Versioned_parser.t] *)
-  val eval_for_uri : 'a t -> (Uri.t, 'a Parse_result.t) Projection.t
+  val eval_for_uri
+    :  encoding_behavior:Percent_encoding_behavior.t
+    -> 'a t
+    -> (Uri.t, 'a Parse_result.t) Projection.t
 
   (** Like [Parser.all_urls], but for ['a Versioned_parser.t]. *)
   val all_urls : 'a t -> string list
+
+  (** Creates a URL that you can attach to an [a] tag as an href to reference another URL
+      from your site. The function is staged because it "evaluates" the parser which _could_
+      be an expensive operation. *)
+  val to_string : 'a t -> ('a -> string) Staged.t
 end

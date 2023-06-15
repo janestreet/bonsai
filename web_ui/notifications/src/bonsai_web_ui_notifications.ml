@@ -93,7 +93,7 @@ let component (type a) (module M : Bonsai.Model with type t = a) ~equal =
       ~equal:[%equal: Model.t]
       ~sexp_of_action:(Action.sexp_of_t M.sexp_of_t)
       ~default_model:(Map.empty (module Notification_id))
-      ~apply_action:(fun ~inject:_ ~schedule_event:_ notifications action ->
+      ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) notifications action ->
         match action with
         | Add { id; notification } -> Map.set notifications ~key:id ~data:notification
         | Remove notification_id -> Map.remove notifications notification_id)
@@ -157,7 +157,11 @@ let component (type a) (module M : Bonsai.Model with type t = a) ~equal =
    function also has access to the internally meaningful id of the notificaition and also
    the data that is known about the notificaiton like when we expect it to closed an also
    when it was sent. *)
-let render_with_access_to_entire_notification t ~f =
+let render_with_access_to_entire_notification
+      ?(notification_container_extra_attr = Value.return Vdom.Attr.empty)
+      t
+      ~f
+  =
   let%sub { notifications; inject; send_notification = _; modify_notification = _ } =
     return t
   in
@@ -176,14 +180,16 @@ let render_with_access_to_entire_notification t ~f =
         and data = notification in
         rendered, data.opened_at)
   in
-  let%arr rendered = rendered in
+  let%arr rendered = rendered
+  and notification_container_extra_attr = notification_container_extra_attr in
   Map.to_alist rendered
   |> List.map ~f:(fun (notification_id, (rendered, _)) ->
     Vdom.Node.div
       ~key:(Notification_id.to_string notification_id)
       ~attrs:[ Style.notification ]
       [ rendered ])
-  |> Vdom.Node.div ~attrs:[ Style.notification_container ]
+  |> Vdom.Node.div
+       ~attrs:[ Style.notification_container; notification_container_extra_attr ]
 ;;
 
 let render t ~f =
@@ -303,6 +309,7 @@ module Basic = struct
   let render
         ?(notification_style = default_module)
         ?(notification_extra_attr = Value.return Vdom.Attr.empty)
+        ?notification_container_extra_attr
         (t : basic_t Value.t)
     =
     let module Notification_style = (val notification_style) in
@@ -315,6 +322,7 @@ module Basic = struct
     in
     render_with_access_to_entire_notification
       notifications
+      ?notification_container_extra_attr
       ~f:(fun ~close ~id:notification_id notification ->
         let%arr { Notification.content = { text; level }; opened_at = _; close_after } =
           notification

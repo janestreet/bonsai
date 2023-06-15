@@ -50,7 +50,7 @@ let component name =
       ~equal:[%equal: Model.t]
       ~sexp_of_action:[%sexp_of: Action.t]
       ~default_model:Int.Map.empty
-      ~apply_action:(fun ~inject:_ ~schedule_event:_ model action ->
+      ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) model action ->
         match action with
         | Regenerate -> generate_random ()
         | Remove i -> Map.remove model i)

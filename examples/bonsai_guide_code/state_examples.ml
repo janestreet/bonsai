@@ -92,7 +92,7 @@ let counter_state_machine : Vdom.Node.t Computation.t =
       ()
       ~sexp_of_action:[%sexp_of: Action.t]
       ~default_model:0
-      ~apply_action:(fun ~inject:_ ~schedule_event:_ model action ->
+      ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) model action ->
         match action with
         | Increment -> model + 1
         | Decrement -> model - 1)

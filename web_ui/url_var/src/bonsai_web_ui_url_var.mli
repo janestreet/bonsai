@@ -89,8 +89,16 @@ module Typed : sig
     type t = Uri_parsing.Components.t
 
     val empty : t
-    val to_original_components : t -> Components.t
-    val of_original_components : Components.t -> t
+
+    val to_original_components
+      :  encoding_behavior:Uri_parsing.Percent_encoding_behavior.t
+      -> t
+      -> Components.t
+
+    val of_original_components
+      :  encoding_behavior:Uri_parsing.Percent_encoding_behavior.t
+      -> Components.t
+      -> t
   end
 
   module Value_parser = Uri_parsing.Value_parser
@@ -105,7 +113,8 @@ module Typed : sig
     (** Are you migrating your site to use [Url_var]'s [Typed] API and you don't want to
         break your existing links? Use [of_non_typed_parser] instead of [first_parser]. *)
     val of_non_typed_parser
-      :  parse_exn:(Original_components.t -> 'a)
+      :  encoding_behavior:Uri_parsing.Percent_encoding_behavior.t
+      -> parse_exn:(Original_components.t -> 'a)
       -> unparse:('a -> Original_components.t)
       -> 'a t
 
@@ -139,6 +148,7 @@ module Typed : sig
     :  ?on_fallback_raises:'a
     -> (module T with type t = 'a)
     -> 'a Versioned_parser.t
+    -> encoding_behavior:Uri_parsing.Percent_encoding_behavior.t
     -> fallback:(Exn.t -> Original_components.t -> 'a)
     -> 'a url_var
 
@@ -150,12 +160,17 @@ module Typed : sig
   val make_projection
     :  ?on_fallback_raises:'a
     -> 'a Versioned_parser.t
+    -> encoding_behavior:Uri_parsing.Percent_encoding_behavior.t
     -> fallback:(Exn.t -> Original_components.t -> 'a)
     -> (Original_components.t, 'a) Projection.t
 
   (** Creates a URL of everything after the domain name. This might be useful if you're
       sending URLs in emails or need to automatically create URLs. *)
-  val to_url_string : 'a Parser.t -> 'a -> string
+  val to_url_string
+    :  encoding_behavior:Uri_parsing.Percent_encoding_behavior.t
+    -> 'a Parser.t
+    -> 'a
+    -> string
 end
 
 module For_testing : sig
@@ -164,8 +179,16 @@ module For_testing : sig
   module Projection : sig
     type 'a t
 
-    val make : 'a Typed.Parser.t -> 'a t
-    val make_of_versioned_parser : 'a Typed.Versioned_parser.t -> 'a t
+    val make
+      :  encoding_behavior:Uri_parsing.Percent_encoding_behavior.t
+      -> 'a Typed.Parser.t
+      -> 'a t
+
+    val make_of_versioned_parser
+      :  encoding_behavior:Uri_parsing.Percent_encoding_behavior.t
+      -> 'a Typed.Versioned_parser.t
+      -> 'a t
+
     val parse_exn : 'a t -> Typed.Components.t -> 'a Parse_result.t
     val unparse : 'a t -> 'a Parse_result.t -> Typed.Components.t
   end

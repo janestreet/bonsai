@@ -75,7 +75,7 @@ let component ~(before_state : Color_list.t Value.t) ~(after_state : Color_list.
       ~sexp_of_action:[%sexp_of: Action.t]
       input
       ~default_model:{ cur = Int.Map.empty; diffs = []; pointer = 0 }
-      ~apply_action:(fun ~inject:_ ~schedule_event:_ input model action ->
+      ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) input model action ->
         match input with
         | Active { Input.before; after } ->
           (match action with

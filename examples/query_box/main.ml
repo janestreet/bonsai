@@ -66,7 +66,8 @@ let component =
       ~equal:[%equal: string list]
       ~sexp_of_action:[%sexp_of: String.t]
       ~default_model:[]
-      ~apply_action:(fun ~inject:_ ~schedule_event:_ items item -> item :: items)
+      ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) items item ->
+        item :: items)
   in
   let%sub form =
     Form.Typed.Record.make

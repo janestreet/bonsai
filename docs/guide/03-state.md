@@ -312,7 +312,7 @@ let counter_state_machine : Vdom.Node.t Computation.t =
       ()
       ~sexp_of_action:[%sexp_of: Action.t]
       ~default_model:0
-      ~apply_action:(fun ~inject:_ ~schedule_event:_ model action ->
+      ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) model action ->
         match action with
         | Increment -> model + 1
         | Decrement -> model - 1)
@@ -387,12 +387,12 @@ UI programming is inherently stateful. Even a UI element as simple as a
 textbox needs to keep some state around to store the current contents of
 the textbox.
 
-Sadly, many of the tools that functional programmers use for dealing
-with state almost exclusively involve moving that state out of their
-programs into a database, or by pulling mutable state out into a small
-part of the program. These strategies can keep the majority of programs
-relatively pure and easy to test, but sadly, they don't scale well to UI
-components for a few reasons:
+Many of the tools that functional programmers use for dealing with state
+almost exclusively involve moving that state out of their programs into
+a database, or by pulling mutable state out into a small part of the
+program. These strategies can keep the majority of programs relatively
+pure and easy to test, but sadly, they don't scale well to UI components
+for a few reasons:
 
 1.  The stateful nature is something that is desirable to test!
 2.  Bonsai needs to know when the state for a component changes so that

@@ -80,7 +80,7 @@ module Action = struct
 end
 
 (* Apply state transitions. Also persist state to localStorage on each modification. *)
-let apply_action ~inject:_ ~schedule_event (model : Model.t) (action : Action.t) =
+let apply_action context (model : Model.t) (action : Action.t) =
   let warn ~id message = eprint_s [%message message "for item" ~_:(id : int)] in
   let new_model : Model.t =
     match action with
@@ -123,7 +123,7 @@ let apply_action ~inject:_ ~schedule_event (model : Model.t) (action : Action.t)
       else set_subset_completed_to false
   in
   let set_persisted_model = Bonsai_web.Persistent_var.effect persisted_model in
-  schedule_event (set_persisted_model new_model);
+  Bonsai.Apply_action_context.schedule_event context (set_persisted_model new_model);
   new_model
 ;;
 

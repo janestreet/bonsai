@@ -69,12 +69,7 @@ val state_machine0_dynamic_model
   -> ?equal:('model -> 'model -> bool)
   -> (module Bonsai.Action with type t = 'action)
   -> model:[< `Computed of ('model option -> 'model) Value.t | `Given of 'model Value.t ]
-  -> apply_action:
-       (inject:('action -> unit Effect.t)
-        -> schedule_event:(unit Effect.t -> unit)
-        -> 'model
-        -> 'action
-        -> 'model)
+  -> apply_action:('action Bonsai.Apply_action_context.t -> 'model -> 'action -> 'model)
   -> ('model * ('action -> unit Effect.t)) Computation.t
 
 (** Read the docs for [state_machine0_dynamic_model]. This one has
@@ -86,12 +81,7 @@ val state_machine1_dynamic_model
   -> ?equal:('model -> 'model -> bool)
   -> model:[< `Computed of ('model option -> 'model) Value.t | `Given of 'model Value.t ]
   -> apply_action:
-       (inject:('action -> unit Effect.t)
-        -> schedule_event:(unit Effect.t -> unit)
-        -> 'input
-        -> 'model
-        -> 'action
-        -> 'model)
+       ('action Bonsai.Apply_action_context.t -> 'input -> 'model -> 'action -> 'model)
   -> 'input Value.t
   -> ('model * ('action -> unit Effect.t)) Computation.t
 

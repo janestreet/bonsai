@@ -303,6 +303,7 @@ module Arrow_deprecated = struct
             Handle.set_started handle;
             schedule_event
               (Bonsai.Private.Lifecycle.Collection.diff !prev_lifecycle lifecycle);
+            Bonsai.Time_source.Private.trigger_after_display bonsai_clock;
             prev_lifecycle := lifecycle
         in
         let update_visibility model ~schedule_event:_ = model in
@@ -466,10 +467,18 @@ module Proc = struct
     ;;
   end
 
+  let default_custom_connector _connector =
+    raise_s
+      [%message
+        "The Bonsai app used a custom connector, but none was provided when the app was \
+         started. To fix this, use the [~custom_connector] argument when calling \
+         [Bonsai_web.Start.start]"]
+  ;;
+
   let start_and_get_handle
         result_spec
         ?(optimize = true)
-        ?(custom_connector = fun _ -> assert false)
+        ?(custom_connector = default_custom_connector)
         ~bind_to_element_with_id
         computation
     =

@@ -352,7 +352,7 @@ let clock
       ~equal:[%equal: Tracks.t]
       ~sexp_of_action:[%sexp_of: Tracks_action.t]
       ~default_model:Tracks.empty
-      ~apply_action:(fun ~inject:_ ~schedule_event:_ now tracks action ->
+      ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) now tracks action ->
         match now with
         | Active now ->
           (match action with

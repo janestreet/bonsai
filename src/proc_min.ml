@@ -116,12 +116,12 @@ let state_machine1_safe
     build_resetter
       reset
       ~default_model
-      ~f:(fun ~ignore_absurd reset ~inject_dynamic ~inject_static ->
+      ~f:(fun ~ignore_absurd reset ~inject_dynamic ~inject_static ~schedule_event ->
         ignore_absurd inject_static;
-        reset ~inject:inject_dynamic)
+        reset (Apply_action_context.create ~inject:inject_dynamic ~schedule_event))
   in
-  let apply_action ~inject_dynamic ~inject_static:_ =
-    apply_action ~inject:inject_dynamic
+  let apply_action ~inject_dynamic ~inject_static:_ ~schedule_event =
+    apply_action (Apply_action_context.create ~inject:inject_dynamic ~schedule_event)
   in
   Leaf1
     { model = Meta.Model.of_module ~sexp_of_model ~equal ~name ~default:default_model
@@ -154,9 +154,9 @@ let state_machine1
       ~apply_action
       input
   =
-  let apply_action ~inject ~schedule_event input model action =
+  let apply_action context input model action =
     let input = Computation_status.of_option input in
-    apply_action ~inject ~schedule_event input model action
+    apply_action context input model action
   in
   state_machine1_safe
     ?sexp_of_action
@@ -178,16 +178,16 @@ let state_machine0
       ()
   =
   let name = Source_code_position.to_string [%here] in
-  let apply_action ~inject_dynamic:_ ~inject_static =
-    apply_action ~inject:inject_static
+  let apply_action ~inject_dynamic:_ ~inject_static ~schedule_event =
+    apply_action (Apply_action_context.create ~inject:inject_static ~schedule_event)
   in
   let reset =
     build_resetter
       reset
       ~default_model
-      ~f:(fun ~ignore_absurd reset ~inject_dynamic ~inject_static ->
+      ~f:(fun ~ignore_absurd reset ~inject_dynamic ~inject_static ~schedule_event ->
         ignore_absurd inject_dynamic;
-        reset ~inject:inject_static)
+        reset (Apply_action_context.create ~inject:inject_static ~schedule_event))
   in
   Leaf0
     { model =
@@ -227,7 +227,10 @@ module Proc_incr = struct
          ?sexp_of_model
          ~equal
          ~default_model
-         ~apply_action:(fun ~inject ~schedule_event input model action ->
+         ~apply_action:(fun context input model action ->
+           let%tydi { inject; schedule_event } =
+             Apply_action_context.Private.reveal context
+           in
            match input with
            | Active input -> M.apply_action input ~inject ~schedule_event model action
            | Inactive ->
@@ -328,9 +331,9 @@ let wrap
     build_resetter
       reset
       ~default_model
-      ~f:(fun ~ignore_absurd reset ~inject_dynamic ~inject_static ->
+      ~f:(fun ~ignore_absurd reset ~inject_dynamic ~inject_static ~schedule_event ->
         ignore_absurd inject_static;
-        reset ~inject:inject_dynamic)
+        reset (Apply_action_context.create ~inject:inject_dynamic ~schedule_event))
   in
   let action_id =
     Meta.Action.of_module ~sexp_of_action:sexp_of_opaque ~name:"action id"
@@ -342,7 +345,11 @@ let wrap
   let apply_action ~inject_dynamic ~inject_static:_ ~schedule_event result model action =
     match result with
     | Some result ->
-      apply_action ~inject:inject_dynamic ~schedule_event result model action
+      apply_action
+        (Apply_action_context.create ~inject:inject_dynamic ~schedule_event)
+        result
+        model
+        action
     | None ->
       let action = sexp_of_opaque action in
       eprint_s

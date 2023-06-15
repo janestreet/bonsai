@@ -24,7 +24,7 @@ module Ids = struct
       }
   end
 
-  let apply_action ~inject:_ ~schedule_event:_ (state : State.t) = function
+  let apply_action (_ : _ Bonsai.Apply_action_context.t) (state : State.t) = function
     | `Remove x -> { state with ids = Map.remove state.ids x }
     | `Add_with_next_id ->
       { next = state.next + 1; ids = Map.add_exn ~key:state.next ~data:() state.ids }

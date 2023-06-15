@@ -42,6 +42,61 @@ let polling_state_rpc =
     (module Diffable_int)
 ;;
 
+module Streamable_plain_rpc = struct
+  module Response = struct
+    module T = struct
+      type t = int Map.M(Int).t [@@deriving bin_io, sexp_of]
+
+      module Update = struct
+        module Diff = struct
+          type t =
+            | Set of
+                { key : int
+                ; data : int
+                }
+            | Remove of { key : int }
+          [@@deriving sexp, bin_io]
+        end
+
+        type t = Diff.t list [@@deriving sexp, bin_io]
+      end
+
+      let update t (diffs : Update.t) =
+        List.fold diffs ~init:t ~f:(fun t (diff : Update.Diff.t) ->
+          match diff with
+          | Set { key; data } -> Map.set t ~key ~data
+          | Remove { key } -> Map.remove t key)
+      ;;
+
+      let diffs ~from ~to_ =
+        Map.symmetric_diff from to_ ~data_equal:[%equal: int]
+        |> Sequence.map ~f:(fun (key, change) ->
+          match change with
+          | `Left _value -> Update.Diff.Remove { key }
+          | `Right data | `Unequal (_, data) -> Update.Diff.Set { key; data })
+        |> Sequence.to_list
+      ;;
+
+      let to_diffs t = diffs ~from:(Map.empty (module Int)) ~to_:t
+      let of_diffs diffs = update (Map.empty (module Int)) diffs
+    end
+
+    include T
+    include Diffable.Make_streamable_rpc (T) (T.Update.Diff)
+  end
+
+  include Streamable.Plain_rpc.Make (struct
+      let name = "streamable-plain-rpc"
+      let version = 0
+      let client_pushes_back = false
+
+      module Response = Response
+
+      type query = unit [@@deriving bin_io]
+      type response = Response.t
+    end)
+end
+
 let async_do_actions handle actions =
   Handle.do_actions handle actions;
   Async_kernel_scheduler.yield_until_no_jobs_remain ()
@@ -121,6 +176,34 @@ let%expect_test "previous version of a babel RPC" =
   in
   let%bind.Deferred () = async_do_actions handle [ 0 ] in
   [%expect {| (Ok 0) |}];
+  Deferred.unit
+;;
+
+let%expect_test "streamable plain rpc works on a type that isn't atomic" =
+  let computation =
+    Rpc_effect.Rpc.streamable_dispatcher Streamable_plain_rpc.rpc ~where_to_connect:Self
+  in
+  let handle =
+    Handle.create
+      ~rpc_implementations:
+        [ Streamable.Plain_rpc.implement Streamable_plain_rpc.rpc (fun _ () ->
+            Map.of_alist_exn (module Int) [ 1, 2; 3, 4 ] |> Deferred.Or_error.return)
+        ]
+      (module struct
+        type t = unit -> Streamable_plain_rpc.Response.t Or_error.t Effect.t
+        type incoming = unit
+
+        let view _ = ""
+
+        let incoming f () =
+          let%bind.Effect result = f () in
+          Effect.print_s ([%sexp_of: Streamable_plain_rpc.Response.t Or_error.t] result)
+        ;;
+      end)
+      computation
+  in
+  let%bind.Deferred () = async_do_actions handle [ () ] in
+  [%expect {| (Ok ((1 2) (3 4))) |}];
   Deferred.unit
 ;;
 

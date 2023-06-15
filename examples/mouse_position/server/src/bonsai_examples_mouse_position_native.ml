@@ -75,8 +75,6 @@ let command_for_bonsai_example_server =
                Path.(
                  empty /^ "prod" /^ "bonsai" /^ "examples-server" /^ "mouse_position.js")
              ~local:js_file
-             ~tag_constraints:None
-             ~allow_deprecated:false
              ~file_cache:`Default
              ()
          with

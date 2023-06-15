@@ -26,7 +26,7 @@ module Make (Item : Single_factor.Item) (Key : Key) = struct
 
     module Input = Unit
 
-    let apply_action ~inject:_ ~schedule_event:_ () model action =
+    let apply_action (_ : _ Bonsai.Apply_action_context.t) () model action =
       match (action : Action.t) with
       | Cycle_focused_subwidget `Next -> Focus_ring.next model
       | Cycle_focused_subwidget `Prev -> Focus_ring.prev model

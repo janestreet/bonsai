@@ -27,6 +27,7 @@ module Fruit_sexp_grammar_auto_complete = struct
       | Blueberry
       | Banana
       | Pineapple
+      | Custom of string
     [@@deriving sexp, equal, sexp_grammar]
   end
 

@@ -213,3 +213,81 @@ let table =
 (* $MDX part-end *)
 
 let () = Util.run (Bonsai.const (Vdom.Node.div [ table ])) ~id:"themeable-table"
+
+module _ = struct
+  (* $MDX part-begin=tomato-square-ppx-css *)
+  module Style =
+    [%css
+      stylesheet
+        {|
+.square {
+  background-color: tomato;
+  height: 100px;
+  width: 100px;
+  }
+|}]
+  (* $MDX part-end *)
+
+  (* $MDX part-begin=tomato-square *)
+  let square = Vdom.Node.div ~attrs:[ Style.square ] []
+  (* $MDX part-end *)
+
+  let () = Util.run (Bonsai.const (Vdom.Node.div [ square ])) ~id:"tomato-square"
+end
+
+module _ = struct
+  module Style =
+    [%css
+      stylesheet
+        {|
+:root {
+  --red: #ff5a5a;
+  --green: #5aff5a;
+  --blue: #5a5aff;
+}
+
+.button {
+  /* Add common styles */
+}
+
+.button.red-button {
+  background-color: var(--red);
+}
+
+.button.green-button {
+  background-color: var(--green);
+}
+
+.button.blue-button {
+  background-color: var(--blue);
+}
+|}]
+
+  type theme =
+    | Light
+    | Dark
+
+  let _ = Light
+  let theme = Dark
+
+  (* $MDX part-begin=css-variables *)
+  let square =
+    Vdom.Node.div
+      ~attrs:
+        [ Style.Variables.set
+            ~red:
+              (match theme with
+               | Dark -> "tomato"
+               | Light -> "#ff5a5a")
+            ()
+        ]
+      [ Vdom.Node.button ~attrs:[ Style.red_button ] [ View.text "red" ]
+      ; Vdom.Node.button ~attrs:[ Style.blue_button ] [ View.text "blue" ]
+      ; Vdom.Node.button ~attrs:[ Style.green_button ] [ View.text "green" ]
+      ]
+  ;;
+
+  (* $MDX part-end *)
+
+  let () = Util.run (Bonsai.const (Vdom.Node.div [ square ])) ~id:"variables"
+end

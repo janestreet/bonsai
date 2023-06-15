@@ -34,7 +34,7 @@ module State_machine = struct
       ~equal:[%equal: Int.t]
       ~sexp_of_action:[%sexp_of: Action.t]
       ~default_model:0
-      ~apply_action:(fun ~inject:_ ~schedule_event:_ model action ->
+      ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) model action ->
         match action with
         | Incr -> model + 1
         | Decr -> model - 1)

@@ -81,9 +81,9 @@ let of_module1
       ?sexp_of_model
       ?equal
       ~default_model
-      ~apply_action:(fun ~inject ~schedule_event input model action ->
+      ~apply_action:(fun context input model action ->
         match input with
-        | Active input -> M.apply_action ~inject ~schedule_event input model action
+        | Active input -> M.apply_action context input model action
         | Inactive ->
           eprint_s
             [%message
@@ -129,7 +129,8 @@ let race_dynamic_model
     type t = model option [@@deriving equal]
   end
   in
-  let apply_action ~inject ~schedule_event computation_status model action =
+  let apply_action context computation_status model action =
+    let%tydi { inject; schedule_event } = Apply_action_context.Private.reveal context in
     match computation_status with
     | Computation_status.Active (input, model_creator) ->
       let model = Some (model_creator model) in
@@ -171,7 +172,7 @@ let of_module0
       ?sexp_of_model
       ?equal
       ~default_model
-      ~apply_action:(M.apply_action ())
+      ~apply_action:(fun context model action -> M.apply_action context () model action)
   in
   let%arr model, inject = model_and_inject in
   M.compute ~inject () model
@@ -209,8 +210,12 @@ let actor1
     end
     in
     let reset =
-      Option.map reset ~f:(fun f ~inject ~schedule_event model ->
-        let inject action = Effect.Private.make ~request:action ~evaluator:inject in
+      Option.map reset ~f:(fun f context model ->
+        let%tydi { inject; schedule_event } = Apply_action_context.Private.reveal context in
+        let inject action =
+          Effect.Private.make ~request:action ~evaluator:(fun action ->
+            schedule_event (inject action))
+        in
         f ~inject ~schedule_event model)
     in
     let%sub model, inject =
@@ -220,7 +225,10 @@ let actor1
         ?reset
         ?equal
         ~default_model
-        ~apply_action:(fun ~inject:_ ~schedule_event input model callback ->
+        ~apply_action:(fun context input model callback ->
+          let%tydi { inject = _; schedule_event } =
+            Apply_action_context.Private.reveal context
+          in
           let action = Effect.Private.Callback.request callback in
           let new_model, response = recv ~schedule_event input model action in
           schedule_event (Effect.Private.Callback.respond_to callback response);
@@ -229,7 +237,9 @@ let actor1
     in
     let%sub inject =
       let%arr inject = inject in
-      fun action -> Effect.Private.make ~request:action ~evaluator:inject
+      fun action ->
+        Effect.Private.make ~request:action ~evaluator:(fun action ->
+          Effect.Expert.handle (inject action))
     in
     let%arr model = model
     and inject = inject in
@@ -253,13 +263,15 @@ let state ?reset ?sexp_of_model ?equal default_model =
     (* NOTE: The model and the action for [state] are the same. *)
     Option.value ~default:sexp_of_opaque sexp_of_model
   in
-  let reset = Option.map reset ~f:(fun reset ~inject:_ ~schedule_event:_ m -> reset m) in
+  let reset =
+    Option.map reset ~f:(fun reset (_ : _ Apply_action_context.t) m -> reset m)
+  in
   state_machine0
     ?reset
     ~sexp_of_action
     ?sexp_of_model
     ?equal
-    ~apply_action:(fun ~inject:_ ~schedule_event:_ _old_model new_model -> new_model)
+    ~apply_action:(fun (_ : _ Apply_action_context.t) _old_model new_model -> new_model)
     ~default_model
     ()
 ;;
@@ -286,7 +298,7 @@ let toggle' ~default_model =
       ~sexp_of_action:[%sexp_of: Action.t]
       ~equal:[%equal: Bool.t]
       ~default_model
-      ~apply_action:(fun ~inject:_ ~schedule_event:_ state -> function
+      ~apply_action:(fun (_ : _ Apply_action_context.t) state -> function
         | Toggle -> not state
         | Set state -> state)
       ()
@@ -370,8 +382,7 @@ module Edge = struct
   ;;
 
   let wait_after_display =
-    Incr0.with_clock (fun clock ->
-      Ui_incr.return (Time_source.sleep clock Time_ns.Span.zero))
+    Incr0.with_clock (fun clock -> Ui_incr.return (Time_source.wait_after_display clock))
   ;;
 
   let on_change' ?sexp_of_model ~equal input ~callback =
@@ -459,7 +470,7 @@ module Edge = struct
           ~equal:[%equal: State.t]
           ~apply_action:
             (fun
-              ~inject:_ ~schedule_event:_ model (Action.Set (seqnum, res)) ->
+              (_ : _ Apply_action_context.t) model (Action.Set (seqnum, res)) ->
               if seqnum < model.State.last_seqnum
               then model
               else { State.last_seqnum = seqnum; last_result = res })
@@ -610,9 +621,12 @@ module Effect_throttling = struct
            oblivious to the fact that it has a model. I don't think there is a
            "correct" decision in this case - this behavior just seems more
            reasonable to me. *)
-        ~reset:(fun ~inject:_ ~schedule_event:_ model -> model)
+        ~reset:(fun (_ : _ Apply_action_context.t) model -> model)
         ~default_model:{ running = false; next_up = None }
-        ~apply_action:(fun ~inject ~schedule_event effect { running; next_up } action ->
+        ~apply_action:(fun context effect { running; next_up } action ->
+          let%tydi { inject; schedule_event } =
+            Apply_action_context.Private.reveal context
+          in
           let run_effect effect callback =
             schedule_event
               (let%bind.Effect response =
@@ -692,7 +706,8 @@ module Effect_throttling = struct
     let%sub () = Edge.lifecycle ~on_activate () in
     let%arr inject = inject in
     fun request ->
-      Effect.Private.make ~request ~evaluator:(fun callback -> inject (Run callback))
+      Effect.Private.make ~request ~evaluator:(fun callback ->
+        Effect.Expert.handle (inject (Run callback)))
   ;;
 end
 
@@ -1058,7 +1073,7 @@ module Memo = struct
       type t = Query.t Action.t [@@deriving sexp_of]
     end
     in
-    let apply_action ~inject:_ ~schedule_event:_ model (action : Action.t) =
+    let apply_action (_ : _ Apply_action_context.t) model (action : Action.t) =
       let add model q =
         Map.update model q ~f:(function
           | None -> 1
@@ -1126,6 +1141,8 @@ module Memo = struct
     Map.find responses query
   ;;
 end
+
+module Apply_action_context = Apply_action_context
 
 module Computation = struct
   type 'a t = 'a Computation.t

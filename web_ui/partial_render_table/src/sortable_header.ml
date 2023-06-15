@@ -39,7 +39,7 @@ let component
       ~equal:[%equal: State.t]
       (module Action)
       ~model:(`Given initial_order)
-      ~apply_action:(fun ~inject:_ ~schedule_event:_ -> State.apply_action)
+      ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) -> State.apply_action)
   in
   let%sub order = return (Value.cutoff ~equal:[%equal: State.t] order) in
   let state = Value.both order inject in

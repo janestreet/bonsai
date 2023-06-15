@@ -23,7 +23,7 @@ module Make (Item : Item) = struct
       module Model  = String
       module Action = String
 
-      let apply_action ~inject:_ ~schedule_event:_ _input _model new_search = new_search
+      let apply_action _ _input _model new_search = new_search
 
       let compute ~inject all_items search_string =
         let items_matching_search =
@@ -163,13 +163,7 @@ module Make (Item : Item) = struct
       Set.union explicitly_selected defaults
     ;;
 
-    let apply_action
-          ~inject:_
-          ~schedule_event
-          (input  : Input.t )
-          (model  : Model.t )
-          (action : Action.t)
-      =
+    let apply_action context (input : Input.t) (model : Model.t) (action : Action.t) =
       match action with
       | Update_search_string search_string ->
         let focused_item =
@@ -178,7 +172,9 @@ module Make (Item : Item) = struct
             then None
             else Some focused_item)
         in
-        schedule_event (input.update_search search_string);
+        Bonsai.Apply_action_context.schedule_event
+          context
+          (input.update_search search_string);
         { model with focused_item }
       | Set_item_selected { item; status }          ->
         { model with

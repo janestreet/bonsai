@@ -42,7 +42,7 @@ let component ~send_message =
       ~equal:[%equal: String.t]
       ~sexp_of_action:[%sexp_of: String.t]
       ~default_model:""
-      ~apply_action:(fun ~inject:_ ~schedule_event:_ _ new_state -> new_state)
+      ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) _ new_state -> new_state)
   in
   return (build_result <$> send_message <*> textbox_state)
 ;;

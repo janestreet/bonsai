@@ -33,6 +33,7 @@ let%expect_test "Catch all when there is a fallback that fails" =
   let projection =
     Url_var.Typed.make_projection
       ~on_fallback_raises:Url.Catch_all
+      ~encoding_behavior:Legacy_incorrect
       versioned_parser
       ~fallback:(fun _ -> failwith "error!")
   in
@@ -53,10 +54,11 @@ let%expect_test "first non-typed projection test" =
   in
   let versioned_parser =
     Url_var.Typed.Versioned_parser.of_non_typed_parser
+      ~encoding_behavior:Legacy_incorrect
       ~parse_exn:Old_url.parse_exn
       ~unparse:Old_url.unparse
   in
-  let projection = Versioned_parser.eval versioned_parser in
+  let projection = Versioned_parser.eval ~encoding_behavior:Correct versioned_parser in
   Uri_parsing_test.expect_output_and_identity_roundtrip
     projection
     ~path:[ "something!" ]
@@ -110,6 +112,7 @@ let%expect_test "non-typed -> typed -> typed" =
   in
   let first_parser =
     Url_var.Typed.Versioned_parser.of_non_typed_parser
+      ~encoding_behavior:Legacy_incorrect
       ~parse_exn:Old_url.parse_exn
       ~unparse:Old_url.unparse
   in
@@ -150,7 +153,7 @@ let%expect_test "non-typed -> typed -> typed" =
         | Bar x -> New_bar x)
       ~previous:second_parser
   in
-  let projection = Versioned_parser.eval third_parser in
+  let projection = Versioned_parser.eval ~encoding_behavior:Correct third_parser in
   Uri_parsing_test.expect_output_and_identity_roundtrip
     ~expect_diff:(fun () ->
       [%expect {|
@@ -268,7 +271,7 @@ let%expect_test "typed -> typed -> typed" =
     ├───────────────┤
     │ /foo/<string> │
     └───────────────┘ |}];
-  let projection = Versioned_parser.eval third_parser in
+  let projection = Versioned_parser.eval ~encoding_behavior:Correct third_parser in
   Expect_test_helpers_core.require_does_raise [%here] (fun () ->
     projection.parse_exn { query = String.Map.empty; path = [ "unknown" ] });
   [%expect
@@ -401,7 +404,11 @@ let%expect_test "to_url_string" =
   end
   in
   let parser = Parser.Record.make (module Url) in
-  print_endline (Url_var.Typed.to_url_string parser { a = 1; b = 2; c = 3. });
+  print_endline
+    (Url_var.Typed.to_url_string
+       ~encoding_behavior:Correct
+       parser
+       { a = 1; b = 2; c = 3. });
   [%expect {| 1?b=2&c=3. |}]
 ;;
 
@@ -424,6 +431,7 @@ let%expect_test "self-documenting error for typed api." =
      Url_var.Typed.make
        (module Url)
        ~fallback:(fun _ _ -> { Url.int = 1 })
+       ~encoding_behavior:Correct
        versioned_parser
    with
    | _ -> failwith "creating should fail in test"

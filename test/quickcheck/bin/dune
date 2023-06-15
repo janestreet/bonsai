@@ -1,3 +1,0 @@
-(executables (names main)
- (libraries core core_unix.command_unix bonsai_quickcheck indentation_buffer)
- (preprocess (pps ppx_jane)))

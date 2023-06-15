@@ -1,5 +1,5 @@
 (library (name feather_icon) (public_name bonsai.feather_icon)
- (libraries core virtual_dom) (preprocess (pps ppx_jane)))
+ (libraries core bonsai_web) (preprocess (pps ppx_jane)))
 
 (rule (targets paths.ml paths.mli)
  (deps %{bin:ocaml-embed-file} paths/activity.svg paths/corner-down-left.svg

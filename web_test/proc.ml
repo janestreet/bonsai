@@ -70,6 +70,25 @@ module Handle = struct
     Bonsai_test.Handle.create result_spec ?start_time ?optimize computation
   ;;
 
+  let flush_async_and_bonsai ?(max_iterations = 100) handle =
+    let open Async_kernel in
+    let rec loop i =
+      if i = 0
+      then
+        raise_s [%message [%string "not stable after %{max_iterations#Int} iterations"]];
+      if i < max_iterations then print_endline "------ between bonsai frame ------";
+      let%bind.Eager_deferred () =
+        Async_kernel_scheduler.yield_until_no_jobs_remain ~may_return_immediately:true ()
+      in
+      recompute_view handle;
+      if has_after_display_events handle || Async_kernel_scheduler.num_pending_jobs () > 0
+      then loop (i - 1)
+      else Deferred.unit
+    in
+    recompute_view handle;
+    loop max_iterations
+  ;;
+
   open Virtual_dom_test_helpers
 
   let get_element handle ~get_vdom ~selector =

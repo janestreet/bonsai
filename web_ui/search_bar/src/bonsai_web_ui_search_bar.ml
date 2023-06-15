@@ -170,8 +170,7 @@ let create
       ~default_model:(Model.init ~query:initial_query ~max_query_results)
       ~apply_action:
         (fun
-          ~inject:_
-          ~schedule_event:_
+          (_ : _ Bonsai.Apply_action_context.t)
           (input : item Input.t Bonsai.Computation_status.t)
           (t : item Model.t)
           (action : Action.t)

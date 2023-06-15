@@ -143,12 +143,14 @@ module Row_machine = struct
       and scroll_to_index = scroll_to_index in
       { Input.collated; range; on_change; scroll_to_index }
     in
-    let apply_action ~inject:_ ~schedule_event input (model : Model.t) action =
+    let apply_action context input (model : Model.t) action =
       match input with
       | Bonsai.Computation_status.Active
           { Input.collated; range = range_start, range_end; on_change; scroll_to_index }
         ->
-        let scroll_to_index index = schedule_event (scroll_to_index index) in
+        let scroll_to_index index =
+          Bonsai.Apply_action_context.schedule_event context (scroll_to_index index)
+        in
         let update_focused_index ~f =
           let original_index =
             match model with
@@ -247,7 +249,7 @@ module Row_machine = struct
           | Visible (At_key { key; _ }) -> Some key
         in
         if not ([%equal: Key.t option] prev_key next_key)
-        then schedule_event (on_change next_key);
+        then Bonsai.Apply_action_context.schedule_event context (on_change next_key);
         new_model
       | Inactive ->
         eprint_s

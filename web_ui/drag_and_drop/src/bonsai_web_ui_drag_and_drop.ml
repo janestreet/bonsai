@@ -202,7 +202,7 @@ let create
       ~sexp_of_action:[%sexp_of: (Source.t, Target.t) Action.t list]
       on_drop
       ~default_model:Not_dragging
-      ~apply_action:(fun ~inject:_ ~schedule_event on_drop model actions ->
+      ~apply_action:(fun context on_drop model actions ->
         match on_drop with
         | Active on_drop ->
           List.fold actions ~init:model ~f:(fun model action ->
@@ -221,7 +221,7 @@ let create
                | State_machine_model.Not_dragging | Dragging { target = None; _ } ->
                  Not_dragging
                | Dragging { source; target = Some target; _ } ->
-                 schedule_event (on_drop source target);
+                 Bonsai.Apply_action_context.schedule_event context (on_drop source target);
                  Not_dragging)
             | Mouse_moved position ->
               (match model with

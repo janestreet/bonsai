@@ -34,9 +34,9 @@ let state_machine
     ?sexp_of_model
     ~equal
     ~default_model
-    ~apply_action:(fun ~inject ~schedule_event input model action ->
+    ~apply_action:(fun context input model action ->
       match input with
-      | Active input -> apply_action ~inject ~schedule_event input model action
+      | Active input -> apply_action context input model action
       | Inactive ->
         let action = sexp_of_action action in
         eprint_s

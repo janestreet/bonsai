@@ -7,7 +7,7 @@ let component =
   let%sub focus_on_effect = Effect.Focus.on_effect () in
   let%sub theme = View.Theme.current in
   let%arr focus_on_activate_attr = focus_on_activate_attr
-  and focus_on_effect_attr, effect_to_focus = focus_on_effect
+  and { attr = focus_on_effect_attr; focus = effect_to_focus; blur = _ } = focus_on_effect
   and theme = theme in
   View.hbox
     [ Vdom.Node.input ~attrs:[ focus_on_activate_attr ] ()

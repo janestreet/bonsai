@@ -586,44 +586,67 @@ let to_string t =
   |> String.tr ~target:'_' ~replacement:'-'
 ;;
 
+let or_default_size size =
+  Css_gen.Length.to_string_css
+    (match size with
+     | Some size -> (size :> Css_gen.Length.t)
+     | None -> (`Px 24 :> Css_gen.Length.t))
+;;
+
+let or_default_stroke_width stroke_width =
+  Css_gen.Length.to_string_css
+    (match stroke_width with
+     | Some stroke_width -> (stroke_width :> Css_gen.Length.t)
+     | None -> (`Px 2 :> Css_gen.Length.t))
+;;
+
+let or_default_fill fill =
+  match fill with
+  | None -> "none"
+  | Some color -> Css_gen.Color.to_string_css (color :> Css_gen.Color.t)
+;;
+
+let or_default_stroke stroke =
+  Css_gen.Color.to_string_css
+    (match stroke with
+     | None -> (`Name "currentColor" :> Css_gen.Color.t)
+     | Some stroke -> (stroke :> Css_gen.Color.t))
+;;
+
+let svg_string ?size ?stroke ?fill ?stroke_width (t : t) =
+  let size = or_default_size size in
+  let stroke_width = or_default_stroke_width stroke_width in
+  let fill = or_default_fill fill in
+  let stroke = or_default_stroke stroke in
+  [%string
+    {| <svg xmlns="http://www.w3.org/2000/svg" width="%{size}" height="%{size}" viewBox="0 0 24 24" fill="%{fill}" stroke="%{stroke}" stroke-width="%{stroke_width}" stroke-linecap="round" stroke-linejoin="round">%{path t}</svg> |}]
+;;
+
 let svg ?size ?stroke ?fill ?stroke_width ?(extra_attrs = []) (t : t) =
-  let size =
-    match size with
-    | Some size -> (size :> Css_gen.Length.t)
-    | None -> (`Px 24 :> Css_gen.Length.t)
-  in
-  let stroke_width =
-    match stroke_width with
-    | Some stroke_width -> (stroke_width :> Css_gen.Length.t)
-    | None -> (`Px 2 :> Css_gen.Length.t)
-  in
+  let size = or_default_size size in
+  let stroke_width = or_default_stroke_width stroke_width in
+  let fill = or_default_fill fill in
+  let stroke = or_default_stroke stroke in
   let module A = Vdom.Attr in
   let specific_class = "feather-" ^ to_string t in
-  let fill_attr =
-    match fill with
-    | None -> "none"
-    | Some color -> Css_gen.Color.to_string_css (color :> Css_gen.Color.t)
-  in
-  let stroke =
-    match stroke with
-    | None -> (`Name "currentColor" :> Css_gen.Color.t)
-    | Some stroke -> (stroke :> Css_gen.Color.t)
-  in
-  let size = Css_gen.Length.to_string_css size in
-  Vdom.Node.inner_html_svg
-    ~tag:"svg"
-    ~attrs:
-      ([ A.string_property "width" size
-       ; A.string_property "height" size
-       ; A.string_property "viewBox" "0 0 24 24"
-       ; A.string_property "fill" fill_attr
-       ; A.string_property "stroke" (Css_gen.Color.to_string_css stroke)
-       ; A.string_property "stroke-width" (Css_gen.Length.to_string_css stroke_width)
-       ; A.string_property "stroke-linecap" "round"
-       ; A.string_property "stroke-linejoin" "round"
-       ; A.classes [ "feather"; specific_class ]
-       ]
-       @ extra_attrs)
-    ~this_html_is_sanitized_and_is_totally_safe_trust_me:(path t)
-    ()
+  match Bonsai_web.am_running_how with
+  | `Browser | `Browser_benchmark | `Node | `Node_benchmark ->
+    Vdom.Node.inner_html_svg
+      ~tag:"svg"
+      ~attrs:
+        ([ A.string_property "width" size
+         ; A.string_property "height" size
+         ; A.string_property "viewBox" "0 0 24 24"
+         ; A.string_property "fill" fill
+         ; A.string_property "stroke" stroke
+         ; A.string_property "stroke-width" stroke_width
+         ; A.string_property "stroke-linecap" "round"
+         ; A.string_property "stroke-linejoin" "round"
+         ; A.classes [ "feather"; specific_class ]
+         ]
+         @ extra_attrs)
+      ~this_html_is_sanitized_and_is_totally_safe_trust_me:(path t)
+      ()
+  | `Node_test ->
+    Vdom.Node.create ~attrs:extra_attrs [%string "feather_icons.%{to_string t}"] []
 ;;

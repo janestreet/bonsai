@@ -459,7 +459,7 @@ let with_inject
       ~equal:[%equal: Model.t]
       ~sexp_of_action:[%sexp_of: A.t]
       ~default_model:(Map.empty (module Key))
-      ~apply_action:(fun ~inject:_ ~schedule_event:_ model actions ->
+      ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) model actions ->
         List.fold actions ~init:model ~f:apply_action)
   in
   let%sub dnd =
@@ -704,7 +704,7 @@ module Multi = struct
         ~sexp_of_action:[%sexp_of: Action.t]
         ~equal:[%equal: Model.t]
         ~default_model:Model.empty
-        ~apply_action:(fun ~inject:_ ~schedule_event:_ model actions ->
+        ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) model actions ->
           List.fold actions ~init:model ~f:apply_action)
     in
     let%sub dnd =

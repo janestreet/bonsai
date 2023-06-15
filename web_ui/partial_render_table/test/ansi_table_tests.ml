@@ -2648,3 +2648,68 @@ let%expect_test "dynamic row height" =
     │   │ 0 │ 1   │ hi │ 0.000000 │ 100 │
     └───┴───┴─────┴────┴──────────┴─────┘ |}]
 ;;
+
+let%test_module "dynamic columns with visibility" =
+  (module struct
+    let setup ~visibility_starts_out_as =
+      let visibility_of_first_column = Bonsai.Var.create visibility_starts_out_as in
+      let map =
+        [ 1; 2; 3; 4; 5; 6; 7 ]
+        |> List.map ~f:(fun i -> i, i)
+        |> Int.Map.of_alist_exn
+        |> Value.return
+      in
+      let component =
+        let%sub collate =
+          let collate =
+            { Collate.filter = None
+            ; order = Compare.Unchanged
+            ; key_range = Collate.Which_range.All_rows
+            ; rank_range = Collate.Which_range.All_rows
+            }
+          in
+          Table_expert.collate
+            ~filter_equal:phys_equal
+            ~filter_to_predicate:Fn.id
+            ~order_equal:phys_equal
+            ~order_to_compare:Fn.id
+            map
+            (Value.return collate)
+        in
+        let%sub { view; _ } =
+          Table_expert.component
+            (module Int)
+            ~focus:Table_expert.Focus.None
+            ~row_height:(Value.return (`Px 20))
+            ~columns:
+              ((let%map visibility_of_first_column =
+                  Bonsai.Var.value visibility_of_first_column
+                in
+                [ Table_expert.Columns.Dynamic_columns.column
+                    ~header:(Vdom.Node.text "a")
+                    ~cell:(fun ~key:_ ~data -> Vdom.Node.textf "%d" data)
+                    ~visible:visibility_of_first_column
+                    ()
+                ])
+               |> Table_expert.Columns.Dynamic_columns.lift)
+            collate
+        in
+        return view
+      in
+      component, Bonsai.Var.set visibility_of_first_column
+    ;;
+
+    let%expect_test "REGRESSION: starting a column as invisible shouldn't crash" =
+      let component, _set_visibility = setup ~visibility_starts_out_as:false in
+      let (_ : _ Handle.t) = Handle.create (Result_spec.vdom Fn.id) component in
+      ()
+    ;;
+
+    let%expect_test "REGRESSION: toggling a column to be invisible shouldn't crash" =
+      let component, set_visibility = setup ~visibility_starts_out_as:true in
+      let handle = Handle.create (Result_spec.vdom Fn.id) component in
+      set_visibility false;
+      Handle.recompute_view handle
+    ;;
+  end)
+;;

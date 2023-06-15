@@ -1,4 +1,0 @@
-open! Core
-include Bonsai_quickcheck_internal
-
-let packed_computation_to_ocaml_code = To_code.packed_computation_to_ocaml_code

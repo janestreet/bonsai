@@ -15,7 +15,7 @@ module Make (Enum : Enum) = struct
       type t = Enum.t * Vdom.Node.t
     end
 
-    let apply_action ~inject:_ ~schedule_event:_ () _ (Action.Set_to model) = model
+    let apply_action _ () _ (Action.Set_to model) = model
 
     let compute ~inject () model =
       let dom_node =

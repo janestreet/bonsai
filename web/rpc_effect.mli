@@ -83,6 +83,11 @@ module Rpc : sig
     -> where_to_connect:Where_to_connect.t
     -> ('query -> 'response Or_error.t Effect.t) Computation.t
 
+  val streamable_dispatcher
+    :  ('query, 'response) Streamable.Plain_rpc.t
+    -> where_to_connect:Where_to_connect.t
+    -> ('query -> 'response Or_error.t Effect.t) Computation.t
+
   (** A computation that periodically dispatches on an RPC and
       keeps track of the most recent response.
 
@@ -110,6 +115,20 @@ module Rpc : sig
     -> ?clear_when_deactivated:bool
     -> ?on_response_received:('query -> 'response Or_error.t -> unit Effect.t) Value.t
     -> ('query -> 'response Or_error.t Deferred.t) Babel.Caller.t
+    -> where_to_connect:Where_to_connect.t
+    -> every:Time_ns.Span.t
+    -> 'query Value.t
+    -> ('query, 'response) Poll_result.t Computation.t
+
+  (** Analagous to [poll] for Streamable plain RPCs. See [poll] for details. *)
+  val streamable_poll
+    :  ?sexp_of_query:('query -> Sexp.t)
+    -> ?sexp_of_response:('response -> Sexp.t)
+    -> equal_query:('query -> 'query -> bool)
+    -> ?equal_response:('response -> 'response -> bool)
+    -> ?clear_when_deactivated:bool
+    -> ?on_response_received:('query -> 'response Or_error.t -> unit Effect.t) Value.t
+    -> ('query, 'response) Streamable.Plain_rpc.t
     -> where_to_connect:Where_to_connect.t
     -> every:Time_ns.Span.t
     -> 'query Value.t

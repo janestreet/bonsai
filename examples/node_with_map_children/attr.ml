@@ -15,7 +15,7 @@ let component =
       ~equal:phys_equal
       ~sexp_of_action:[%sexp_of: Unit.t]
       ~default_model:Vdom.Attr.empty
-      ~apply_action:(fun ~inject:_ ~schedule_event:_ _model () ->
+      ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) _model () ->
         match Random.int 4 with
         | 0 -> Vdom.Attr.empty
         | 1 -> Vdom.Attr.create "foo" "5"

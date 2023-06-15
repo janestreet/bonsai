@@ -246,13 +246,15 @@ module Read_on_change = struct
       [@@deriving equal, sexp]
     end
 
-    let apply_action ~inject:_ ~schedule_event t (action : Action.t) =
+    let apply_action context t (action : Action.t) =
       match action with
       | Start_read file_read ->
         (match t with
          | Before_first_read -> ()
          | Reading { file_read = old_file_read; status = _ } ->
-           schedule_event (File_read.abort old_file_read));
+           Bonsai.Apply_action_context.schedule_event
+             context
+             (File_read.abort old_file_read));
         Reading { file_read; status = Starting }
       | Set_status status ->
         (match t with

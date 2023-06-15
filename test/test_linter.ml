@@ -85,7 +85,7 @@ let%expect_test "sm1_with_const_input_gets_warning" =
       ~sexp_of_action:[%sexp_of: Int.t]
       ~equal:[%equal: Int.t]
       ~default_model:0
-      ~apply_action:(fun ~inject:_ ~schedule_event:_ _ _ _ -> 3)
+      ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) _ _ _ -> 3)
       (Value.return 5)
   in
   test_lint state_machine;
@@ -100,7 +100,7 @@ let%expect_test "sm1_optimized_gets_no_warnings" =
       ~sexp_of_action:[%sexp_of: Int.t]
       ~equal:[%equal: Int.t]
       ~default_model:0
-      ~apply_action:(fun ~inject:_ ~schedule_event:_ _ _ _ -> 3)
+      ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) _ _ _ -> 3)
       (Value.return 5)
   in
   test_lint (constant_fold state_machine);
@@ -116,7 +116,7 @@ let%expect_test "map2_with_unfolded_constants_and_sm1_with_const_input_both_warn
         ~sexp_of_action:[%sexp_of: Int.t]
         ~equal:[%equal: Int.t]
         ~default_model:0
-        ~apply_action:(fun ~inject:_ ~schedule_event:_ _ _ _ -> 3)
+        ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) _ _ _ -> 3)
         (Value.return 5)
     in
     let%arr value = value

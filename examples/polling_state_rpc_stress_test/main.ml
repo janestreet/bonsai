@@ -34,7 +34,7 @@ let component =
       ~equal:[%equal: int * unit Int.Map.t]
       ~sexp_of_action:[%sexp_of: [ `Add | `Remove of int ]]
       ~default_model:(0, Int.Map.empty)
-      ~apply_action:(fun ~inject:_ ~schedule_event:_ (last_index, map) action ->
+      ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) (last_index, map) action ->
         match action with
         | `Add ->
           let map =

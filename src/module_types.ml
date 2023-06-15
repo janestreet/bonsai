@@ -67,8 +67,7 @@ module type Component_s = sig
       [apply_action] may emit further actions via [schedule_event] or use Async to arrange
       for [schedule_event] to be called later. *)
   val apply_action
-    :  inject:(Action.t -> unit Ui_effect.t)
-    -> schedule_event:(unit Ui_effect.t -> unit)
+    :  Action.t Apply_action_context.t
     -> Input.t
     -> Model.t
     -> Action.t

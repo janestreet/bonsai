@@ -40,7 +40,7 @@ let offset_state_machine =
     ~equal:[%equal: Int.t]
     ~sexp_of_action:[%sexp_of: Int.t]
     ~default_model:400
-    ~apply_action:(fun ~inject:_ ~schedule_event:_ x delta -> x + delta)
+    ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) x delta -> x + delta)
 ;;
 
 let component =

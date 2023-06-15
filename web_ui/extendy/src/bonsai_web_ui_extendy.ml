@@ -41,7 +41,7 @@ let state_component =
     ~equal:[%equal: Model.t]
     ~sexp_of_action:[%sexp_of: Action.t]
     ~default_model:Model.default
-    ~apply_action:(fun ~inject:_ ~schedule_event:_ (model : Model.t) -> function
+    ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) (model : Model.t) -> function
       | Add { how_many } -> Fn.apply_n_times ~n:how_many Model.add_one model
       | Remove key -> Model.remove model ~key)
 ;;

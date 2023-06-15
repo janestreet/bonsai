@@ -120,10 +120,10 @@ module Bonsai : sig
     -> inject: ('action -> Event.t)
     -> ('model, 'action, 'result) Snapshot.t Incr.t
 
-val both
-  :  ('model, 'action_1, 'result_1) t
-  -> ('model, 'action_2, 'result_2) t
-  -> ('model, ('action_1, 'action_2) Either.t, 'result_1 * 'result_2) t
+  val both
+    :  ('model, 'action_1, 'result_1) t
+    -> ('model, 'action_2, 'result_2) t
+    -> ('model, ('action_1, 'action_2) Either.t, 'result_1 * 'result_2) t
 end
 ```
 

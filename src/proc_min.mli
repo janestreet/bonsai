@@ -84,17 +84,12 @@ end
 
 val state_machine1
   :  ?sexp_of_action:('action -> Sexp.t)
-  -> ?reset:
-       (inject:('action -> unit Effect.t)
-        -> schedule_event:(unit Effect.t -> unit)
-        -> 'model
-        -> 'model)
+  -> ?reset:('action Apply_action_context.t -> 'model -> 'model)
   -> ?sexp_of_model:('model -> Sexp.t)
   -> ?equal:('model -> 'model -> bool)
   -> default_model:'model
   -> apply_action:
-       (inject:('action -> unit Effect.t)
-        -> schedule_event:(unit Effect.t -> unit)
+       ('action Apply_action_context.t
         -> 'input Computation_status.t
         -> 'model
         -> 'action
@@ -103,21 +98,12 @@ val state_machine1
   -> ('model * ('action -> unit Effect.t)) Computation.t
 
 val state_machine0
-  :  ?reset:
-    (inject:('action -> unit Effect.t)
-     -> schedule_event:(unit Effect.t -> unit)
-     -> 'model
-     -> 'model)
+  :  ?reset:('action Apply_action_context.t -> 'model -> 'model)
   -> ?sexp_of_model:('model -> Sexp.t)
   -> ?sexp_of_action:('action -> Sexp.t)
   -> ?equal:('model -> 'model -> bool)
   -> default_model:'model
-  -> apply_action:
-       (inject:('action -> unit Effect.t)
-        -> schedule_event:(unit Effect.t -> unit)
-        -> 'model
-        -> 'action
-        -> 'model)
+  -> apply_action:('action Apply_action_context.t -> 'model -> 'action -> 'model)
   -> unit
   -> ('model * ('action -> unit Effect.t)) Computation.t
 
@@ -138,21 +124,11 @@ val assoc_on
 val lazy_ : 'a Computation.t lazy_t -> 'a Computation.t
 
 val wrap
-  :  ?reset:
-    (inject:('action -> unit Effect.t)
-     -> schedule_event:(unit Effect.t -> unit)
-     -> 'model
-     -> 'model)
+  :  ?reset:('action Apply_action_context.t -> 'model -> 'model)
   -> ?sexp_of_model:('model -> Sexp.t)
   -> ?equal:('model -> 'model -> bool)
   -> default_model:'model
-  -> apply_action:
-       (inject:('action -> unit Effect.t)
-        -> schedule_event:(unit Effect.t -> unit)
-        -> 'a
-        -> 'model
-        -> 'action
-        -> 'model)
+  -> apply_action:('action Apply_action_context.t -> 'a -> 'model -> 'action -> 'model)
   -> f:('model Value.t -> ('action -> unit Effect.t) Value.t -> 'a Computation.t)
   -> unit
   -> 'a Computation.t

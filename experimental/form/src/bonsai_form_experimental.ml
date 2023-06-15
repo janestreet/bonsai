@@ -16,8 +16,9 @@ let form_element (type t) (module M : Bonsai.Model with type t = t) here ~(defau
     ~sexp_of_action:[%sexp_of: M.t]
     here
     ~default_model:default
-    ~apply_action:(fun ~inject:_ ~schedule_event:_ _input _old_model new_model ->
-      new_model)
+    ~apply_action:
+      (fun
+        (_ : _ Bonsai.Apply_action_context.t) _input _old_model new_model -> new_model)
 ;;
 
 let form_element_dynamic_model (type t) ?sexp_of_model ?equal ~(default : t Value.t) () =

@@ -1,7 +1,7 @@
 # 11 - RPCs
 
-Historically, the recommended structure of a web app app that sends RPCs
-was something like this:
+Historically, the recommended structure of a web app that sends RPCs was
+something like this:
 
 1.  Use `persistent_connection` to establish a connection the server and
     client can use to communicate.

@@ -41,7 +41,7 @@ module Counter_component = struct
     type t = string * (Action.t -> unit Effect.t)
   end
 
-  let apply_action ~inject:_ ~schedule_event:_ () model : Action.t -> Model.t = function
+  let apply_action _ () model : Action.t -> Model.t = function
     | Increment -> model + 1
     | Decrement -> model - 1
   ;;
@@ -182,7 +182,7 @@ let%expect_test "state-machine counter-component" =
         ~equal:[%equal: Counter_component.Model.t]
         dummy_source_code_position
         ~default_model:0
-        ~apply_action:(fun ~inject:_ ~schedule_event:_ () model -> function
+        ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) () model -> function
           | Increment -> model + 1
           | Decrement -> model - 1)
     in
@@ -305,8 +305,8 @@ let%expect_test "schedule event from outside of the component" =
       type t = unit * (Action.t -> unit Effect.t)
     end
 
-    let apply_action ~inject:_ ~schedule_event () () Action.Trigger =
-      schedule_event (Effect.external_ "hello world")
+    let apply_action context () () Action.Trigger =
+      Bonsai.Apply_action_context.schedule_event context (Effect.external_ "hello world")
     ;;
 
     let compute ~inject () () = (), inject
@@ -344,8 +344,9 @@ let%expect_test "schedule many events from outside of the component" =
       type t = unit * (Action.t -> unit Effect.t)
     end
 
-    let apply_action ~inject:_ ~schedule_event () () Action.Trigger =
-      schedule_event
+    let apply_action context () () Action.Trigger =
+      Bonsai.Apply_action_context.schedule_event
+        context
         (Effect.sequence
            [ Effect.external_ "hello world"
            ; Effect.no_op
@@ -413,7 +414,8 @@ let%expect_test "input" =
       type t = (int * string list) * (Action.t -> unit Effect.t)
     end
 
-    let apply_action ~inject:_ ~schedule_event:_ _words model : Action.t -> Model.t
+    let apply_action (_ : _ Bonsai.Apply_action_context.t) _words model
+      : Action.t -> Model.t
       = function
         | Increment -> model + 1
     ;;
@@ -557,7 +559,7 @@ module _ = struct
       ~sexp_of_action:[%sexp_of: M.t]
       [%here]
       ~default_model:default
-      ~apply_action:(fun ~inject:_ ~schedule_event:_ () _model -> Fn.id)
+      ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) () _model -> Fn.id)
     >>| Tuple2.map_fst ~f:M.sexp_of_t
   ;;
 

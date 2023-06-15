@@ -1,5 +1,7 @@
 # 08 - Css
 
+```{=html}
+```
 Styling an application is very important. Not only is it critical for
 making an app *look* good, but "styling" is also responsible for
 component layout.
@@ -210,7 +212,7 @@ let style: Css_gen.t =
   text_align `Center @> background_color (`Name "red")
 ```
 
-makes use of the `@>` operator in order to merge two `Css_gen.t`'s,
+makes use of the `@>` operator in order to merge two `Css_gen.t`s,
 producing kv-pairs which contain `text-align: center; background: red;`.
 
 If we ported the table example to use the inline style attribute, our

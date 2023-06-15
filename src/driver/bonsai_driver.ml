@@ -195,13 +195,15 @@ let result (T { result; _ }) = Incr.Observer.value_exn result
 let has_after_display_events (T t) =
   let lifecycle = t.lifecycle |> Incr.Observer.value_exn in
   Bonsai.Private.Lifecycle.Collection.has_after_display lifecycle
+  || Bonsai.Time_source.Private.has_after_display_events t.clock
 ;;
 
 let trigger_lifecycles (T t) =
   let old = t.last_lifecycle in
   let new_ = t.lifecycle |> Incr.Observer.value_exn in
   t.last_lifecycle <- new_;
-  schedule_event () (Bonsai.Private.Lifecycle.Collection.diff old new_)
+  schedule_event () (Bonsai.Private.Lifecycle.Collection.diff old new_);
+  Bonsai.Time_source.Private.trigger_after_display t.clock
 ;;
 
 module Expert = struct

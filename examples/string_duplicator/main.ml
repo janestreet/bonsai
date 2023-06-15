@@ -10,7 +10,7 @@ let string_duplicator input_string =
       ~equal:[%equal: Int.t]
       ~sexp_of_action:[%sexp_of: Unit.t]
       ~default_model:1
-      ~apply_action:(fun ~inject:_ ~schedule_event:_ model () -> model + 1)
+      ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) model () -> model + 1)
   in
   let%arr num_duplicated, inject_duplicate = duplication_count_state
   and input_string = input_string in

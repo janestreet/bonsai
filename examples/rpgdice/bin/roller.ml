@@ -13,7 +13,7 @@ let roller_state =
     ~equal:[%equal: Model.t]
     ~sexp_of_action:[%sexp_of: Unit.t]
     ~default_model:None
-    ~apply_action:(fun ~inject:_ ~schedule_event:_ roll_spec model () ->
+    ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) roll_spec model () ->
       match roll_spec with
       | Active roll_spec ->
         (match roll_spec with

@@ -41,7 +41,7 @@ let component =
       ~equal:[%equal: Model.t]
       ~sexp_of_action:[%sexp_of: Action.t]
       ~default_model:Model.init
-      ~apply_action:(fun ~inject:_ ~schedule_event:_ model -> function
+      ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) model -> function
         | Decrement_const -> { model with const = model.const - 1 }
         | Increment_const -> { model with const = model.const + 1 }
         | Increment { num_faces } ->

@@ -145,6 +145,13 @@ module Basic : sig
 end
 
 module Expert : sig
+  (** In the [Basic] module, you pass the component all of the table data at once. In the
+      [Expert] module, by contrast, you give it a "collation" -- that is, a filtered,
+      sorted, range-restricted window -- of the full table. This can be useful when the
+      table data is too large to pass to the client directly, or when you'd like to update
+      your table via RPC. *)
+
+
   open Incr_map_collate
 
   module Focus : sig
@@ -218,17 +225,32 @@ module Expert : sig
   val collate
     :  ?operation_order:[ `Filter_first | `Sort_first ]
     -> filter_equal:('filter -> 'filter -> bool)
+    (** [filter_equal] is used to decide when the filters have actually changed, requiring
+        a recomputation of the collation. *)
     -> order_equal:('order -> 'order -> bool)
+    (** [order_equal] is used to decide when the sorting params have actually changed,
+        requiring a recomputation of the collation. *)
     -> filter_to_predicate:('filter -> (key:'k -> data:'v -> bool) option)
+    (** [filter_to_predicate] takes the current set of filters ['filter] and optionally
+        returns a function that can apply those filters to each row. When
+        [filter_to_predicate] returns [None], no filtering is done. *)
     -> order_to_compare:('order -> ('k, 'v, 'cmp) Compare.t)
+    (** [order_to_compare] takes the current set of sort params ['order] and uses the
+        [Compare] specification to decide how to apply them. Return [Unchanged] to perform
+        no sorting. *)
     -> ('k, 'v, 'cmp) Map.t Value.t
+    (** A [Map.t] containing the source for all the table data, pre-collation. *)
     -> ('k, 'filter, 'order) Collate.t Value.t
+    (** A [Collate.t] is a specification for how to perform collation: it's where the
+        ['filter], ['order], and rank range are defined. *)
     -> ('k, 'v) Collated.t Computation.t
 
   val component
     :  ?preload_rows:int
     (** [preload_rows] is the number of rows that are maintained before and after the
-        viewport range.  *)
+        viewport range. This number can have a significant effect on performance: too
+        small and scrolling might be choppy; too large and you start to lose some of the
+        benefits of partial rendering. *)
     -> ('key, 'cmp) Bonsai.comparator
     -> focus:('focus, 'presence, 'key) Focus.t
     -> row_height:[ `Px of int ] Value.t

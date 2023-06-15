@@ -47,6 +47,8 @@ module Header_helpers = struct
   ;;
 end
 
+let empty_div = Vdom.Node.div []
+
 module Dynamic_cells = struct
   module T = struct
     type ('key, 'data) t =
@@ -77,7 +79,6 @@ module Dynamic_cells = struct
     ;;
 
     let headers t = return (headers t)
-    let empty_div = Vdom.Node.div []
 
     let rec visible_leaves
       : type k v cmp.
@@ -179,7 +180,8 @@ module Dynamic_columns = struct
 
     let rec visible_leaves structure ~key ~data =
       match structure with
-      | Leaf { cell; visible; _ } -> if visible then [ cell ~key ~data ] else []
+      | Leaf { cell; visible; _ } ->
+        if visible then [ cell ~key ~data ] else [ empty_div ]
       | Org_group children | Group { children; group_header = _ } ->
         List.concat_map children ~f:(visible_leaves ~key ~data)
     ;;

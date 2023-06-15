@@ -110,19 +110,21 @@ module Expert = struct
         ~equal:[%equal: Column_widths_model.t]
         ~sexp_of_action:[%sexp_of: int * [ `Px_float of float ]]
         ~default_model:Int.Map.empty
-        ~apply_action:(fun ~inject:_ ~schedule_event:_ model (idx, `Px_float width) ->
-          (* While checking for float equality is usually not a good idea,
-             this is meant to handle the specific case when a column has
-             "display:none", in which case the width will be exactly 0.0, so
-             there is no concern about float rounding errors. *)
-          Map.update model idx ~f:(fun prev ->
-            if Float.equal width 0.0
-            then (
-              match prev with
-              | None -> Hidden { prev_width_px = None }
-              | Some (Visible { width_px }) -> Hidden { prev_width_px = Some width_px }
-              | Some (Hidden _ as prev) -> prev)
-            else Visible { width_px = width }))
+        ~apply_action:
+          (fun
+            (_ : _ Bonsai.Apply_action_context.t) model (idx, `Px_float width) ->
+            (* While checking for float equality is usually not a good idea,
+               this is meant to handle the specific case when a column has
+               "display:none", in which case the width will be exactly 0.0, so
+               there is no concern about float rounding errors. *)
+            Map.update model idx ~f:(fun prev ->
+              if Float.equal width 0.0
+              then (
+                match prev with
+                | None -> Hidden { prev_width_px = None }
+                | Some (Visible { width_px }) -> Hidden { prev_width_px = Some width_px }
+                | Some (Hidden _ as prev) -> prev)
+              else Visible { width_px = width }))
     in
     let%sub column_widths =
       return (Value.cutoff ~equal:[%equal: Column_widths_model.t] column_widths)

@@ -86,6 +86,7 @@ module Basic : sig
   val render
     :  ?notification_style:(module Notification_style.S)
     -> ?notification_extra_attr:Vdom.Attr.t Value.t
+    -> ?notification_container_extra_attr:Vdom.Attr.t Value.t
     -> t Value.t
     -> Vdom.Node.t Computation.t
 end

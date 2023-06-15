@@ -148,10 +148,68 @@ module All_primitives_query = struct
   let path_order = Path_order.T []
 end
 
+let assert_is_equal_and_eval ~old_eval ~equal_from ~equal parser =
+  let incorrect_projection =
+    old_eval ~encoding_behavior:Percent_encoding_behavior.Legacy_incorrect parser
+  in
+  let correct_projection = old_eval ~encoding_behavior:Correct parser in
+  let parse_exn components =
+    let incorrect = incorrect_projection.Projection.parse_exn components in
+    let correct = correct_projection.parse_exn components in
+    assert (equal correct.Parse_result.result incorrect.result);
+    correct
+  in
+  let unparse result =
+    let incorrect = incorrect_projection.unparse result in
+    let correct = correct_projection.unparse result in
+    assert (equal_from correct incorrect);
+    correct
+  in
+  { Projection.parse_exn; unparse }
+;;
+
+module Parser = struct
+  include Parser
+
+  let original_eval = eval
+
+  let eval ~equal parser =
+    assert_is_equal_and_eval
+      ~old_eval:original_eval
+      ~equal_from:Components.equal
+      ~equal
+      parser
+  ;;
+
+  let original_eval_for_uri = eval_for_uri
+
+  let eval_for_uri ~equal parser =
+    assert_is_equal_and_eval
+      ~old_eval:original_eval_for_uri
+      ~equal_from:Uri.equal
+      ~equal
+      parser
+  ;;
+end
+
+module Versioned_parser = struct
+  include Versioned_parser
+
+  let original_eval_for_uri = eval_for_uri
+
+  let eval_for_uri ~equal parser =
+    assert_is_equal_and_eval
+      ~old_eval:original_eval_for_uri
+      ~equal_from:Uri.equal
+      ~equal
+      parser
+  ;;
+end
+
 let%expect_test "all primitives parser" =
   let module Query = All_primitives_query in
   let parser = Parser.Record.make (module Query) in
-  let projection = Parser.eval parser in
+  let projection = Parser.eval ~equal:[%equal: Query.t] parser in
   let query =
     String.Map.of_alist_exn
       [ "int_field", [ "10" ]
@@ -240,7 +298,7 @@ let%expect_test "nested query parser" =
   end
   in
   let parser = Parser.Record.make (module Query) in
-  let projection = Parser.eval parser in
+  let projection = Parser.eval ~equal:[%equal: Query.t] parser in
   expect_output_and_identity_roundtrip
     projection
     ~path:[]
@@ -275,7 +333,7 @@ let%expect_test "nested query parser" =
 
 let%expect_test "missing field exn" =
   let parser = Parser.Record.make (module Simple_record) in
-  let projection = Parser.eval parser in
+  let projection = Parser.eval ~equal:[%equal: Simple_record.t] parser in
   (* field "bar" is missing. *)
   let query = String.Map.of_alist_exn [ "foo", [ "1" ] ] in
   Expect_test_helpers_core.require_does_raise [%here] (fun () ->
@@ -287,7 +345,7 @@ let%expect_test "missing field exn" =
 
 let%expect_test "field fails to parse" =
   let parser = Parser.Record.make (module Simple_record) in
-  let projection = Parser.eval parser in
+  let projection = Parser.eval ~equal:[%equal: Simple_record.t] parser in
   let query = String.Map.of_alist_exn [ "foo", [ "1" ]; "bar", [ "not a float" ] ] in
   Expect_test_helpers_core.require_does_raise [%here] (fun () ->
     projection.parse_exn { query; path = [] });
@@ -301,7 +359,7 @@ let%expect_test "field fails to parse" =
 
 let%expect_test "many parser" =
   let parser = Parser.Record.make (module Many_query) in
-  let projection = Parser.eval parser in
+  let projection = Parser.eval ~equal:[%equal: Many_query.t] parser in
   expect_output_and_identity_roundtrip
     projection
     ~path:[]
@@ -351,7 +409,7 @@ let%expect_test "from_query_many can parse empty lists from missing query fields
     ├──────────────────────────────┤
     │ /?strings=<multiple<string>> │
     └──────────────────────────────┘ |}];
-  let projection = Parser.eval parser in
+  let projection = Parser.eval ~equal:[%equal: Url.t] parser in
   expect_output_and_identity_roundtrip
     ~expect_diff:(fun () -> [%expect {| |}])
     projection
@@ -387,7 +445,7 @@ let%expect_test "from_query_many can parse empty list options from missing query
     │ /                            │
     │ /?strings=<multiple<string>> │
     └──────────────────────────────┘ |}];
-  let projection = Parser.eval parser in
+  let projection = Parser.eval ~equal:[%equal: Url.t] parser in
   expect_output_and_identity_roundtrip
     ~expect_diff:(fun () -> [%expect {| |}])
     projection
@@ -401,7 +459,7 @@ let%expect_test "from_query_many can parse empty list options from missing query
 
 let%expect_test "many parser - single value fails => entire parse fails" =
   let parser = Parser.Record.make (module Many_query) in
-  let projection = Parser.eval parser in
+  let projection = Parser.eval ~equal:[%equal: Many_query.t] parser in
   let query =
     String.Map.of_alist_exn
       [ "ints", [ "1"; "2"; "3.1" (* <-- Not an int! *) ]
@@ -425,7 +483,7 @@ let%expect_test "many parser - single value fails => entire parse fails" =
 
 let%expect_test "many parser - works on empty list" =
   let parser = Parser.Record.make (module Many_query) in
-  let projection = Parser.eval parser in
+  let projection = Parser.eval ~equal:[%equal: Many_query.t] parser in
   let query = String.Map.of_alist_exn [ "ints", []; "floats", [ "3.1"; "1.2"; "2.3" ] ] in
   expect_output_and_identity_roundtrip
     projection
@@ -477,7 +535,7 @@ end
 
 let%expect_test "many1 parser - fails on empty list" =
   let parser = Parser.Record.make (module Many1_query) in
-  let projection = Parser.eval parser in
+  let projection = Parser.eval ~equal:[%equal: Many1_query.t] parser in
   let query = String.Map.of_alist_exn [ "ints", []; "floats", [ "3.1"; "1.2"; "2.3" ] ] in
   (* Parsing query... *)
   Expect_test_helpers_core.require_does_raise [%here] (fun () ->
@@ -494,7 +552,7 @@ let%expect_test "many1 parser - fails on empty list" =
 
 let%expect_test "many1 parser - works on non-empty list" =
   let parser = Parser.Record.make (module Many1_query) in
-  let projection = Parser.eval parser in
+  let projection = Parser.eval ~equal:[%equal: Many1_query.t] parser in
   (* Parsing query... *)
   let query =
     String.Map.of_alist_exn
@@ -564,7 +622,7 @@ let%expect_test "Value parser project" =
   end
   in
   let parser = Parser.Record.make (module Query) in
-  let projection = Parser.eval parser in
+  let projection = Parser.eval ~equal:[%equal: Query.t] parser in
   let query =
     String.Map.of_alist_exn
       [ "game_id", [ "10" ]; "players", [ "foo"; "bar" ]; "watchers", [ "baz"; "bam" ] ]
@@ -620,7 +678,7 @@ let%expect_test "project parse_exn fails" =
   end
   in
   let parser = Parser.Record.make (module Query) in
-  let projection = Parser.eval parser in
+  let projection = Parser.eval ~equal:[%equal: Query.t] parser in
   let query = String.Map.of_alist_exn [ "game_id", [ "10" ] ] in
   (* Parsing query... *)
   Expect_test_helpers_core.require_does_raise [%here] (fun () ->
@@ -668,7 +726,7 @@ let%expect_test "Field parser project" =
   end
   in
   let parser = Parser.Record.make (module Query) in
-  let projection = Parser.eval parser in
+  let projection = Parser.eval ~equal:[%equal: Query.t] parser in
   let query = String.Map.of_alist_exn [ "foo", [ "10" ]; "bar", [ "12" ] ] in
   expect_output_and_identity_roundtrip
     projection
@@ -718,7 +776,7 @@ end
 
 let%expect_test "default missing field" =
   let parser = Parser.Record.make (module Default_when_missing_query) in
-  let projection = Parser.eval parser in
+  let projection = Parser.eval ~equal:[%equal: Default_when_missing_query.t] parser in
   (* field "bar" is missing, but "foo" is present. *)
   let query = String.Map.of_alist_exn [ "foo", [ "42" ] ] in
   expect_output_and_identity_roundtrip
@@ -747,7 +805,7 @@ let%expect_test "default missing field" =
 
 let%expect_test "default missing field fails if underlying parser fails." =
   let parser = Parser.Record.make (module Default_when_missing_query) in
-  let projection = Parser.eval parser in
+  let projection = Parser.eval ~equal:[%equal: Default_when_missing_query.t] parser in
   (* fields "bar" and "baz" are missing; "foo" is present, but "foo" fails to parse. *)
   let query = String.Map.of_alist_exn [ "foo", [ "not an int!" ] ] in
   Expect_test_helpers_core.require_does_raise [%here] (fun () ->
@@ -762,7 +820,7 @@ let%expect_test "default missing field fails if underlying parser fails." =
 
 let%expect_test "field is present, but has no values" =
   let parser = Parser.Record.make (module Default_when_missing_query) in
-  let projection = Parser.eval parser in
+  let projection = Parser.eval ~equal:[%equal: Default_when_missing_query.t] parser in
   (* fields "bar" and "baz" are missing; "foo" is present, but "foo" fails to parse. *)
   let query = String.Map.of_alist_exn [ "foo", [] ] in
   Expect_test_helpers_core.require_does_raise [%here] (fun () ->
@@ -824,7 +882,7 @@ end
 let%expect_test "fallback proper behavior" =
   let module Query = Fallback_query in
   let parser = Parser.Record.make (module Query) in
-  let projection = Parser.eval parser in
+  let projection = Parser.eval ~equal:[%equal: Query.t] parser in
   let query =
     String.Map.of_alist_exn
       [ "foo", [ "1" ]
@@ -883,7 +941,7 @@ let%expect_test "fallback proper behavior" =
 let%expect_test "Fallback does not fix missing fields." =
   let module Query = Fallback_query in
   let parser = Parser.Record.make (module Query) in
-  let projection = Parser.eval parser in
+  let projection = Parser.eval ~equal:[%equal: Query.t] parser in
   (* Field "bar" is missing. *)
   let query =
     String.Map.of_alist_exn
@@ -915,7 +973,7 @@ let%expect_test "Both fallback and default may have different values" =
   end
   in
   let parser = Parser.Record.make (module Query) in
-  let projection = Parser.eval parser in
+  let projection = Parser.eval ~equal:[%equal: Query.t] parser in
   let failing_query = String.Map.of_alist_exn [ "foo", [ "not an int" ] ] in
   let missing_query = String.Map.empty in
   let result = projection.parse_exn { query = failing_query; path = [] } in
@@ -1003,7 +1061,7 @@ let%expect_test "optional field" =
   end
   in
   let parser = Parser.Record.make (module Query) in
-  let projection = Parser.eval parser in
+  let projection = Parser.eval ~equal:[%equal: Query.t] parser in
   let query =
     String.Map.of_alist_exn
       [ "qux", [ "1"; "2"; "3" ]; "bam", [ "1"; "2"; "3" ]; "baz", [] ]
@@ -1245,7 +1303,7 @@ let%test_module "quickcheck" =
     let%quick_test "round-trip generated Query.t" =
       fun (t : Query.t) ->
       let parser = Parser.Variant.make ~namespace:[] (module Query) in
-      let projection = Parser.eval parser in
+      let projection = Parser.eval ~equal:[%equal: Query.t] parser in
       let { Components.query = serialized; path } =
         projection.unparse { Parse_result.result = t; remaining = Components.empty }
       in
@@ -1342,7 +1400,7 @@ let%test_module "quickcheck" =
              (string list String.Map.t * string list
               [@generator generator] [@shrinker Shrinker.atomic])) ->
         let parser = Parser.Variant.make ~namespace:[] (module Query) in
-        let projection = Parser.eval parser in
+        let projection = Parser.eval ~equal:[%equal: Query.t] parser in
         let result = projection.parse_exn { query; path } in
         let { Components.query = unparsed_query; path = unparsed_path } =
           projection.unparse result
@@ -1443,7 +1501,7 @@ end
 
 let%expect_test "url path queries" =
   let parser = Parser.Record.make (module Path_query) in
-  let projection = Parser.eval parser in
+  let projection = Parser.eval ~equal:[%equal: Path_query.t] parser in
   let query = String.Map.empty in
   let path = [ "bar"; "1234"; "foo"; "hello" ] in
   let result = projection.parse_exn { query; path } in
@@ -1471,7 +1529,7 @@ let%expect_test "url path queries" =
 
 let%expect_test "Path with url that does not match" =
   let parser = Parser.Record.make (module Path_query) in
-  let projection = Parser.eval parser in
+  let projection = Parser.eval ~equal:[%equal: Path_query.t] parser in
   let query = String.Map.empty in
   (* "/foo/" is missing! *)
   let path = [ "bar"; "1234" ] in
@@ -1492,14 +1550,45 @@ let%expect_test "Path with url that does not match" =
         (query ())))) |}]
 ;;
 
-let%expect_test "slash escaping" =
+let%expect_test "slash escaping (legacy test)" =
+  (* This test shows current behavior. Before, slash escaping occurred one-off at the
+     `Parser.t`'s (Components.t <=> 'a) level. Now it occurs at the top level once at the
+     (Uri.t <=> 'a) level. This test shows that path parsing does not occur by
+     `Projection.parse_exn`*)
   let parser = Parser.Record.make (module Path_query) in
-  let projection = Parser.eval parser in
+  let projection = Parser.original_eval ~encoding_behavior:Legacy_incorrect parser in
   let query = String.Map.empty in
   let path = [ "bar"; "1234"; "foo"; "hi%2Fworld%2Fthese%2Fare%2Fslashes" ] in
   let result = projection.parse_exn { query; path } in
   print_s (Path_query.sexp_of_t result.result);
   [%expect {| ((foo hi/world/these/are/slashes) (bar 1234)) |}];
+  let { Components.query = _; path = unparsed_path } = projection.unparse result in
+  diff_paths path unparsed_path;
+  show_structure parser;
+  [%expect
+    {|
+    URL parser looks good!
+    ┌─────────────────────────┐
+    │ All urls                │
+    ├─────────────────────────┤
+    │ /bar/<int>/foo/<string> │
+    └─────────────────────────┘
+
+    (Record
+     (label_declarations
+      ((bar (With_prefix (prefix (bar)) (t (From_path Int))))
+       (foo (With_prefix (prefix (foo)) (t (From_path String))))))
+     (path_order (bar foo))) |}]
+;;
+
+let%expect_test "slash escaping (correct)" =
+  let parser = Parser.Record.make (module Path_query) in
+  let projection = Parser.original_eval ~encoding_behavior:Correct parser in
+  let query = String.Map.empty in
+  let path = [ "bar"; "1234"; "foo"; "hi%2Fworld%2Fthese%2Fare%2Fslashes" ] in
+  let result = projection.parse_exn { query; path } in
+  print_s (Path_query.sexp_of_t result.result);
+  [%expect {| ((foo hi%2Fworld%2Fthese%2Fare%2Fslashes) (bar 1234)) |}];
   let { Components.query = _; path = unparsed_path } = projection.unparse result in
   diff_paths path unparsed_path;
   show_structure parser;
@@ -1543,7 +1632,7 @@ let%expect_test "path with different length prefixes" =
   end
   in
   let parser = Parser.Record.make (module Query) in
-  let projection = Parser.eval parser in
+  let projection = Parser.eval ~equal:[%equal: Query.t] parser in
   let query = String.Map.empty in
   let path = [ "true"; "bar"; "100"; "foo"; "goes_here"; "hi" ] in
   let result = projection.parse_exn { query; path } in
@@ -1572,7 +1661,7 @@ let%expect_test "path with different length prefixes" =
 
 let%expect_test "url path queries" =
   let parser = Parser.Record.make (module Path_query) in
-  let projection = Parser.eval parser in
+  let projection = Parser.eval ~equal:[%equal: Path_query.t] parser in
   let query = String.Map.empty in
   let path = [ "bar"; "1234"; "foo"; "hello" ] in
   let result = projection.parse_exn { query; path } in
@@ -1620,7 +1709,7 @@ let%expect_test "position matters" =
   end
   in
   let parser = Parser.Record.make (module Query) in
-  let projection = Parser.eval parser in
+  let projection = Parser.eval ~equal:[%equal: Query.t] parser in
   let query = String.Map.empty in
   (* Username is "comment_id" which is the same prefix used for the comment id. *)
   let path = [ "username"; "comment_id"; "comment_id"; "1234" ] in
@@ -1674,7 +1763,7 @@ let%expect_test "path with value parser project" =
   end
   in
   let parser = Parser.Record.make (module Query) in
-  let projection = Parser.eval parser in
+  let projection = Parser.eval ~equal:[%equal: Query.t] parser in
   let query = String.Map.empty in
   let path = [ "bar"; "42"; "foo"; "hello" ] in
   let result = projection.parse_exn { query; path } in
@@ -1729,7 +1818,7 @@ let%expect_test "path with field parser project" =
   end
   in
   let parser = Parser.Record.make (module Query) in
-  let projection = Parser.eval parser in
+  let projection = Parser.eval ~equal:[%equal: Query.t] parser in
   let query = String.Map.empty in
   let path = [ "bar"; "42"; "foo"; "hello" ] in
   let result = projection.parse_exn { query; path } in
@@ -1777,7 +1866,7 @@ let%expect_test "path and remaining path working together" =
   end
   in
   let parser = Parser.Record.make (module Query) in
-  let projection = Parser.eval parser in
+  let projection = Parser.eval ~equal:[%equal: Query.t] parser in
   let query = String.Map.empty in
   let path = [ "foo"; "42"; "remaining"; "1"; "2"; "3"; "4" ] in
   let result = projection.parse_exn { query; path } in
@@ -1817,7 +1906,7 @@ let%expect_test "variants test" =
   end
   in
   let parser = Parser.Variant.make (module Query) in
-  let projection = Parser.eval parser in
+  let projection = Parser.eval ~equal:[%equal: Query.t] parser in
   expect_output_and_identity_roundtrip
     projection
     ~path:[ "foo" ]
@@ -1886,7 +1975,7 @@ let%expect_test "variants with renaming" =
   end
   in
   let parser = Parser.Variant.make ~namespace:[] (module Query) in
-  let projection = Parser.eval parser in
+  let projection = Parser.eval ~equal:[%equal: Query.t] parser in
   show_structure parser;
   [%expect
     {|
@@ -2012,7 +2101,7 @@ let%expect_test "/user/comments, /user/posts, and /feed" =
       ((feed ((pattern ((Match feed))) (needed_match Prefix)))
        (user ((pattern ((Match user))) (needed_match Prefix)))))
      (override_namespace ())) |}];
-  let projection = Parser.eval parser in
+  let projection = Parser.eval ~equal:[%equal: Url.t] parser in
   expect_output_and_identity_roundtrip
     projection
     ~path:[ "user"; "comments" ]
@@ -2084,7 +2173,7 @@ let%expect_test "/user/:user_id/comment/:comment_id" =
          (override_namespace ())))
        (user_id (With_prefix (prefix (user)) (t (From_path Int))))))
      (path_order (user_id nested))) |}];
-  let projection = Parser.eval parser in
+  let projection = Parser.eval ~equal:[%equal: Url.t] parser in
   expect_output_and_identity_roundtrip
     projection
     ~path:[ "user"; "123"; "comment"; "321" ]
@@ -2128,7 +2217,7 @@ let%expect_test "/user/:user_id/comment/:comment_id without nesting" =
       ((comment_id (With_prefix (prefix (comment)) (t (From_path Int))))
        (user_id (With_prefix (prefix (user)) (t (From_path Int))))))
      (path_order (user_id comment_id))) |}];
-  let projection = Parser.eval parser in
+  let projection = Parser.eval ~equal:[%equal: Url.t] parser in
   expect_output_and_identity_roundtrip
     projection
     ~path:[ "user"; "123"; "comment"; "321" ]
@@ -2254,7 +2343,7 @@ let%expect_test "/user/:user_id/comment/:comment_id?foo=123&bar=200 , \
   end
   in
   let parser = Parser.Variant.make (module Url) in
-  let projection = Parser.eval parser in
+  let projection = Parser.eval ~equal:[%equal: Url.t] parser in
   show_structure parser;
   [%expect
     {|
@@ -2353,7 +2442,7 @@ let%expect_test "variant directly on query" =
   end
   in
   let parser = Parser.Variant.make ~namespace:[] (module Query) in
-  let projection = Parser.eval parser in
+  let projection = Parser.eval ~equal:[%equal: Query.t] parser in
   expect_output_and_identity_roundtrip
     projection
     ~path:[ "foo" ]
@@ -2428,7 +2517,7 @@ let%expect_test "fully-qualified variant(record) field" =
   end
   in
   let parser = Parser.Variant.make ~namespace:[ "topmost" ] (module Url) in
-  let projection = Parser.eval parser in
+  let projection = Parser.eval ~equal:[%equal: Url.t] parser in
   show_structure parser;
   [%expect
     {|
@@ -2599,7 +2688,7 @@ let%expect_test "Non-record, non-variant" =
   end
   in
   let parser = Url.parser in
-  let projection = Parser.eval parser in
+  let projection = Parser.eval ~equal:[%equal: Url.t] parser in
   show_structure parser;
   [%expect
     {|
@@ -2734,7 +2823,7 @@ let%expect_test "/library, /library/nyc, library/nyc/book, library/nyc/book/dune
     │ /library/<string>/movie          │
     │ /library/<string>/movie/<string> │
     └──────────────────────────────────┘ |}];
-  let projection = Parser.eval parser in
+  let projection = Parser.eval ~equal:[%equal: Url.t] parser in
   expect_output_and_identity_roundtrip
     projection
     ~path:[ "library" ]
@@ -3006,7 +3095,7 @@ let%expect_test "Weird lookahead urls" =
       ((bar ((pattern (Ignore (Match d))) (needed_match Prefix)))
        (foo ((pattern (Ignore (Match b))) (needed_match Prefix)))))
      (override_namespace ())) |}];
-  let projection = Parser.eval parser in
+  let projection = Parser.eval ~equal:[%equal: Url.t] parser in
   expect_output_and_identity_roundtrip
     projection
     ~path:[ "12"; "b"; "132" ]
@@ -3055,7 +3144,7 @@ let%expect_test "optional" =
     │ /                    │
     │ /a/b?a=<int>&b=<int> │
     └──────────────────────┘ |}];
-  let projection = Parser.eval Url.parser in
+  let projection = Parser.eval ~equal:[%equal: Url.t] Url.parser in
   expect_output_and_identity_roundtrip
     ~expect_diff:(fun () -> [%expect {| |}])
     projection
@@ -3109,7 +3198,7 @@ let%expect_test "optional continues after failure" =
     │ /a/b/a/b/a/b/<int>?first.a=<int>&first.b=<int>&second.a=<int>&second.b=<int>&third.a=<in │
     │ t>&third.b=<int>                                                                         │
     └──────────────────────────────────────────────────────────────────────────────────────────┘ |}];
-  let projection = Parser.eval parser in
+  let projection = Parser.eval ~equal:[%equal: Url.t] parser in
   expect_output_and_identity_roundtrip
     ~expect_diff:(fun () -> [%expect {| |}])
     projection
@@ -3196,7 +3285,7 @@ let%expect_test "uri projection" =
     ├────────────────────────┤
     │ /<int>?b=<int>&c=<int> │
     └────────────────────────┘ |}];
-  let projection = Parser.eval_for_uri parser in
+  let projection = Parser.eval_for_uri ~equal:[%equal: Url.t] parser in
   let result = projection.parse_exn (Uri.of_string "/23?b=1&c=2") in
   print_s [%message (result.result : Url.t)];
   [%expect {| (result.result ((a 23) (b 1) (c 2))) |}];
@@ -3229,7 +3318,7 @@ let%expect_test "[name]" =
     │ /?q=<project<fallback<int>>> │
     └──────────────────────────────┘ |}];
   let module Named_url = struct
-    type t = int
+    type t = int [@@deriving equal]
 
     let parser : t Parser.t =
       Parser.from_query_required
@@ -3252,7 +3341,7 @@ let%expect_test "[name]" =
     ├───────────────┤
     │ /?q=<my_type> │
     └───────────────┘ |}];
-  let projection = Parser.eval Named_url.parser in
+  let projection = Parser.eval ~equal:[%equal: Named_url.t] Named_url.parser in
   expect_output_and_identity_roundtrip
     projection
     ~path:[]
@@ -3313,7 +3402,7 @@ let%test_module "query-based variant" =
         | A of string
         | B
         | C
-      [@@deriving sexp_of, typed_variants]
+      [@@deriving sexp_of, typed_variants, equal]
 
       let parser_for_variant : type a. a Typed_variant.t -> a Parser.t = function
         | A -> Parser.from_query_required Value_parser.string
@@ -3333,7 +3422,10 @@ let%test_module "query-based variant" =
     ;;
 
     let versioned_parser = Versioned_parser.first_parser parser
-    let projection = Versioned_parser.eval_for_uri versioned_parser
+
+    let projection =
+      Versioned_parser.eval_for_uri ~equal:[%equal: Well_behaved_url.t] versioned_parser
+    ;;
 
     let%expect_test "check ok" =
       Versioned_parser.check_ok_and_print_urls_or_errors versioned_parser;
@@ -3524,4 +3616,144 @@ let%test_module "query-based variant" =
         └──────────────────────────────────────────────────────────────────────┘ |}]
     ;;
   end)
+;;
+
+let%expect_test "path parsing encode decode" =
+  let parser = Parser.from_path Value_parser.string in
+  let versioned_parser = Versioned_parser.first_parser parser in
+  Versioned_parser.check_ok_and_print_urls_or_errors versioned_parser;
+  [%expect
+    {|
+    URL parser looks good!
+    ┌───────────┐
+    │ All urls  │
+    ├───────────┤
+    │ /<string> │
+    └───────────┘ |}];
+  let projection =
+    Versioned_parser.original_eval_for_uri ~encoding_behavior:Correct versioned_parser
+  in
+  let incorrect_projection =
+    Versioned_parser.original_eval_for_uri
+      ~encoding_behavior:Legacy_incorrect
+      versioned_parser
+  in
+  let original = Uri.make ~path:"beep boop" () in
+  print_endline (Uri.to_string original);
+  [%expect {| beep%20boop |}];
+  let parsed = projection.parse_exn original in
+  print_s [%sexp (parsed : string Parse_result.t)];
+  [%expect {| ((result "beep boop") (remaining ((path ()) (query ())))) |}];
+  let incorrect_parsed = incorrect_projection.parse_exn original in
+  print_s [%message (incorrect_parsed : string Parse_result.t)];
+  [%expect
+    {| (incorrect_parsed ((result beep%20boop) (remaining ((path ()) (query ()))))) |}];
+  let unparsed = projection.unparse parsed in
+  print_endline (Uri.to_string unparsed);
+  [%expect {| beep%20boop |}]
+;;
+
+let%expect_test "query parsing encode decode" =
+  let parser = Parser.from_query_required ~key:"q" Value_parser.string in
+  let versioned_parser = Versioned_parser.first_parser parser in
+  Versioned_parser.check_ok_and_print_urls_or_errors versioned_parser;
+  [%expect
+    {|
+    URL parser looks good!
+    ┌──────────────┐
+    │ All urls     │
+    ├──────────────┤
+    │ /?q=<string> │
+    └──────────────┘ |}];
+  let projection =
+    Versioned_parser.original_eval_for_uri ~encoding_behavior:Correct versioned_parser
+  in
+  let original = Uri.make ~query:[ "q", [ "beep boop" ] ] () in
+  print_endline (Uri.to_string original);
+  [%expect {| ?q=beep%20boop |}];
+  let parsed = projection.parse_exn original in
+  print_s [%sexp (parsed : string Parse_result.t)];
+  [%expect {| ((result "beep boop") (remaining ((path ("")) (query ())))) |}];
+  let unparsed = projection.unparse parsed in
+  print_endline (Uri.to_string unparsed);
+  [%expect {| ?q=beep%20boop |}]
+;;
+
+let%expect_test "double path parsing encode decode" =
+  let parser = Parser.from_path Value_parser.string in
+  let versioned_parser = Versioned_parser.first_parser parser in
+  Versioned_parser.check_ok_and_print_urls_or_errors versioned_parser;
+  [%expect
+    {|
+    URL parser looks good!
+    ┌───────────┐
+    │ All urls  │
+    ├───────────┤
+    │ /<string> │
+    └───────────┘ |}];
+  let projection =
+    Versioned_parser.original_eval_for_uri ~encoding_behavior:Correct versioned_parser
+  in
+  let incorrect_projection =
+    Versioned_parser.original_eval_for_uri
+      ~encoding_behavior:Legacy_incorrect
+      versioned_parser
+  in
+  (* [Uri.pct_decode "beep%2520boop"] = "beep%20boop" *)
+  let original = Uri.make ~path:"beep%2520boop" () in
+  print_endline (Uri.to_string original);
+  [%expect {| beep%2520boop |}];
+  let parsed = projection.parse_exn original in
+  print_s [%sexp (parsed : string Parse_result.t)];
+  [%expect {| ((result beep%20boop) (remaining ((path ()) (query ())))) |}];
+  let incorrect_parsed = incorrect_projection.parse_exn original in
+  print_s [%message (incorrect_parsed : string Parse_result.t)];
+  [%expect
+    {|
+    (incorrect_parsed
+     ((result beep%2520boop) (remaining ((path ()) (query ()))))) |}];
+  let unparsed = projection.unparse parsed in
+  print_endline (Uri.to_string unparsed);
+  [%expect {| beep%2520boop |}]
+;;
+
+let%expect_test "double query parsing encode decode" =
+  let parser = Parser.from_query_required ~key:"q" Value_parser.string in
+  let versioned_parser = Versioned_parser.first_parser parser in
+  Versioned_parser.check_ok_and_print_urls_or_errors versioned_parser;
+  [%expect
+    {|
+    URL parser looks good!
+    ┌──────────────┐
+    │ All urls     │
+    ├──────────────┤
+    │ /?q=<string> │
+    └──────────────┘ |}];
+  let projection =
+    Versioned_parser.original_eval_for_uri ~encoding_behavior:Correct versioned_parser
+  in
+  (* [Uri.pct_decode "beep%2520boop"] = "beep%20boop" *)
+  let original = Uri.make ~query:[ "q", [ "beep%20boop" ] ] () in
+  print_endline (Uri.to_string original);
+  [%expect {| ?q=beep%2520boop |}];
+  let parsed = projection.parse_exn original in
+  print_s [%sexp (parsed : string Parse_result.t)];
+  [%expect {| ((result beep%20boop) (remaining ((path ("")) (query ())))) |}];
+  let unparsed = projection.unparse parsed in
+  print_endline (Uri.to_string unparsed);
+  [%expect {| ?q=beep%2520boop |}]
+;;
+
+let%expect_test "uri parsing to direct string" =
+  let to_string =
+    Parser.from_query_required ~key:"q" Value_parser.string
+    |> Versioned_parser.first_parser
+    |> Versioned_parser.to_string
+    |> Staged.unstage
+  in
+  let test s = print_endline (to_string s) in
+  test "hi";
+  [%expect {| /?q=hi |}];
+  test "hi";
+  [%expect {| /?q=hi |}]
 ;;

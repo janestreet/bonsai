@@ -52,8 +52,8 @@ let () = Util.run textbox_chaining ~id:"textbox_chaining"
 
 let textbox_matching =
   let%sub a_contents, a_view = textbox ~placeholder:(Value.return "") in
-  let a_contents =
-    let%map s = a_contents in
+  let%sub a_contents =
+    let%arr s = a_contents in
     let s = String.strip s in
     if String.is_empty s then None else Some s
   in
@@ -128,7 +128,7 @@ let people =
     ~equal:[%equal: Model.t]
     ~sexp_of_action:[%sexp_of: Action.t]
     ~default_model:Model.default
-    ~apply_action:(fun ~inject:_ ~schedule_event:_ model action ->
+    ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) model action ->
       match action with
       | Add name -> Map.set model ~key:name ~data:()
       | Remove name -> Map.remove model name)
@@ -173,15 +173,15 @@ let people_table people ~inject_remove_person =
 let kudo_tracker =
   let%sub people, inject_action = people in
   let%sub form =
-    let inject_add_person =
-      let%map inject_action = inject_action in
+    let%sub inject_add_person =
+      let%arr inject_action = inject_action in
       fun name -> inject_action (Add name)
     in
     add_new_person_form ~inject_add_person
   in
   let%sub people_table =
-    let inject_remove_person =
-      let%map inject_action = inject_action in
+    let%sub inject_remove_person =
+      let%arr inject_action = inject_action in
       fun name -> inject_action (Remove name)
     in
     people_table people ~inject_remove_person

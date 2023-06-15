@@ -376,7 +376,7 @@ let dynamic_state () =
       ~equal:[%equal: Int.t]
       ~sexp_of_action:[%sexp_of: Unit.t]
       ~default_model:0
-      ~apply_action:(fun ~inject:_ ~schedule_event:_ input model () ->
+      ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) input model () ->
         match input with
         | Active () -> model + 1
         | Inactive ->

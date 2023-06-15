@@ -108,17 +108,19 @@ module Collate_map_with_score : sig
   module Scored_key : sig
     type 'k t = int * 'k
 
-    include Comparator.S1 with type 'a t := 'a t
+    include Comparator.Derived with type 'a t := 'a t
 
-    module M (T : T) : sig
-      type nonrec t = T.t t [@@deriving sexp]
+    module M (T : Comparator.S) : sig
+      type nonrec t = T.t t [@@deriving sexp_of]
 
       include
-        Comparator.S with type t := t and type comparator_witness = comparator_witness
+        Comparator.S
+        with type t := t
+         and type comparator_witness = T.comparator_witness comparator_witness
     end
 
     module Map : sig
-      type nonrec ('k, 'v) t = ('k t, 'v, comparator_witness) Map.t
+      type nonrec ('k, 'v, 'cmp) t = ('k t, 'v, 'cmp comparator_witness) Map.t
     end
   end
 
@@ -145,11 +147,12 @@ module Collate_map_with_score : sig
       cache a more general query in order to allow backtracking through
       previous queries without abandoning caching altogether. *)
   val collate
-    :  preprocess:(key:'k -> data:'v -> 'preprocessed)
+    :  (module Comparator.S with type t = 'k and type comparator_witness = 'cmp)
+    -> preprocess:(key:'k -> data:'v -> 'preprocessed)
     -> score:('query -> 'preprocessed -> int)
     -> query_is_as_strict:('query -> as_:'query -> bool)
     -> to_result:('preprocessed -> key:'k -> data:'v -> 'result)
     -> ('k, 'v, 'cmp) Map.t Value.t
     -> 'query Value.t
-    -> ('k, 'result) Scored_key.Map.t Computation.t
+    -> ('k, 'result, 'cmp) Scored_key.Map.t Computation.t
 end

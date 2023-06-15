@@ -11,10 +11,13 @@ module Choice = struct
   [@@deriving sexp, equal]
 end
 
-let apply_action ~inject ~schedule_event _ _ new_page =
+let apply_action context _ _ new_page =
   (match new_page with
    | Choice.Homepage | Search_results -> ()
-   | Loading -> schedule_event (inject Choice.Search_results));
+   | Loading ->
+     Bonsai.Apply_action_context.schedule_event
+       context
+       (Bonsai.Apply_action_context.inject context Choice.Search_results));
   new_page
 ;;
 

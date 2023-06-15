@@ -1284,11 +1284,11 @@ module Multiple = struct
         ~sexp_of_model:[%sexp_of: Unit.t]
         ~equal:[%equal: Unit.t]
         ~default_model:()
-        ~apply_action:(fun ~inject:_ ~schedule_event (_, forms) () list_of_values ->
+        ~apply_action:(fun context (_, forms) () list_of_values ->
           list_rev_map2 (Map.data forms) list_of_values ~f:(fun form value ->
             Form.set form value)
           |> Ui_effect.Many
-          |> schedule_event)
+          |> Bonsai.Apply_action_context.schedule_event context)
         ~f:(fun (_ : unit Value.t) inject_outer ->
           let%sub extendy = Extendy.component t in
           let%arr { Extendy.contents; append; set_length; remove } = extendy

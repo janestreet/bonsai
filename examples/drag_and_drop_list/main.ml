@@ -55,7 +55,7 @@ let component =
       ~equal:[%equal: Int.Set.t]
       ~sexp_of_action:[%sexp_of: Unit.t]
       ~default_model:(Int.Set.of_list [ 0; 1; 2 ])
-      ~apply_action:(fun ~inject:_ ~schedule_event:_ model () ->
+      ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) model () ->
         Set.add model (Set.length model))
   in
   let%sub () =

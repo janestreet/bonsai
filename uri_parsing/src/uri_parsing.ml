@@ -8,6 +8,12 @@ module Projection = struct
   [@@deriving sexp_of]
 end
 
+module Percent_encoding_behavior = struct
+  type t =
+    | Legacy_incorrect
+    | Correct
+end
+
 module Path_pattern = struct
   type t =
     { pattern : [ `Ignore | `Match of string ] list
@@ -228,18 +234,35 @@ module Components = struct
     { path : string list
     ; query : string list String.Map.t
     }
-  [@@deriving sexp]
+  [@@deriving sexp, equal]
 
   let empty = { path = []; query = String.Map.empty }
 
-  let to_uri { path; query } =
-    let path = String.concat ~sep:"/" path in
+  let encode_path path =
+    String.concat ~sep:"/" (List.map ~f:(Uri.pct_encode ~component:`Path) path)
+  ;;
+
+  let decode_path path =
+    String.chop_prefix_if_exists ~prefix:"/" path
+    |> String.split ~on:'/'
+    |> List.map ~f:Uri.pct_decode
+  ;;
+
+  let to_uri ~encoding_behavior { path; query } =
+    let path =
+      match encoding_behavior with
+      | Percent_encoding_behavior.Legacy_incorrect -> String.concat ~sep:"/" path
+      | Correct -> encode_path path
+    in
     Uri.empty |> Fn.flip Uri.with_path path |> Fn.flip Uri.with_query (Map.to_alist query)
   ;;
 
-  let of_uri uri =
+  let of_uri ~encoding_behavior uri =
     let path =
-      Uri.path uri |> String.chop_prefix_if_exists ~prefix:"/" |> String.split ~on:'/'
+      match encoding_behavior with
+      | Percent_encoding_behavior.Legacy_incorrect ->
+        Uri.path uri |> String.chop_prefix_if_exists ~prefix:"/" |> String.split ~on:'/'
+      | Correct -> decode_path (Uri.path uri)
     in
     let query =
       uri
@@ -1704,24 +1727,35 @@ module Parser = struct
 
   let parse_unicode_slashes s = Re.Str.global_replace unicode_slash_regexp "/" s
 
-  let eval (t : 'a t) : (Components.t, 'a Parse_result.t) Projection.t =
+  let eval ~(encoding_behavior : Percent_encoding_behavior.t) (t : 'a t)
+    : (Components.t, 'a Parse_result.t) Projection.t
+    =
     let projection : (Components.t, 'a Parse_result.t) Projection.t = eval t in
     let parse_exn (components : Components.t) =
       projection.parse_exn
-        { components with path = List.map ~f:parse_unicode_slashes components.path }
+        (match encoding_behavior with
+         | Legacy_incorrect ->
+           { components with path = List.map ~f:parse_unicode_slashes components.path }
+         | Correct -> components)
     in
     let unparse (result : 'a Parse_result.t) =
-      let components = projection.unparse result in
-      { components with path = List.map ~f:sanitize_slashes components.path }
+      match encoding_behavior with
+      | Legacy_incorrect ->
+        let components = projection.unparse result in
+        { components with path = List.map ~f:sanitize_slashes components.path }
+      | Correct -> projection.unparse result
     in
     { Projection.parse_exn; unparse }
   ;;
 
-  let eval_for_uri (t : 'a t) : (Uri.t, 'a Parse_result.t) Projection.t =
-    let projection = eval t in
-    let parse_exn (uri : Uri.t) = projection.parse_exn (Components.of_uri uri) in
+  let eval_for_uri ~encoding_behavior (t : 'a t) : (Uri.t, 'a Parse_result.t) Projection.t
+    =
+    let projection = eval ~encoding_behavior t in
+    let parse_exn (uri : Uri.t) =
+      projection.parse_exn (Components.of_uri ~encoding_behavior uri)
+    in
     let unparse (result : 'a Parse_result.t) =
-      Components.to_uri (projection.unparse result)
+      Components.to_uri ~encoding_behavior (projection.unparse result)
     in
     { Projection.parse_exn; unparse }
   ;;
@@ -2215,34 +2249,52 @@ module Versioned_parser = struct
     { Projection.parse_exn; unparse }
   ;;
 
-  let rec eval : type a. a t -> (Components.t, a Parse_result.t) Projection.t = function
-    | Non_typed_parser projection -> eval_non_typed_parser projection
-    | First_typed_parser parser -> Parser.eval parser
-    | New_parser { current_parser; map; previous_parser } ->
-      let current_projection = Parser.eval current_parser in
-      let previous_projection = eval previous_parser in
-      let parse_exn (components : Components.t) =
-        try current_projection.parse_exn components with
-        | error ->
-          print_s
-            [%message
-              "URL unrecognized, maybe this is an old URL? Attempting to parse with a \
-               previous URL parser. Here's the error of the current parser:"
-                (error : Exn.t)];
-          let result = previous_projection.parse_exn components in
-          { Parse_result.result = map result.result; remaining = result.remaining }
-      in
-      let unparse result = current_projection.unparse result in
-      { Projection.parse_exn; unparse }
+  let rec eval
+    : type a.
+      encoding_behavior:Percent_encoding_behavior.t
+      -> a t
+      -> (Components.t, a Parse_result.t) Projection.t
+    =
+    fun ~encoding_behavior -> function
+      | Non_typed_parser projection -> eval_non_typed_parser projection
+      | First_typed_parser parser -> Parser.eval ~encoding_behavior parser
+      | New_parser { current_parser; map; previous_parser } ->
+        let current_projection = Parser.eval ~encoding_behavior current_parser in
+        let previous_projection = eval ~encoding_behavior previous_parser in
+        let parse_exn (components : Components.t) =
+          try current_projection.parse_exn components with
+          | error ->
+            print_s
+              [%message
+                "URL unrecognized, maybe this is an old URL? Attempting to parse with a \
+                 previous URL parser. Here's the error of the current parser:"
+                  (error : Exn.t)];
+            let result = previous_projection.parse_exn components in
+            { Parse_result.result = map result.result; remaining = result.remaining }
+        in
+        let unparse result = current_projection.unparse result in
+        { Projection.parse_exn; unparse }
   ;;
 
-  let eval_for_uri (t : 'a t) : (Uri.t, 'a Parse_result.t) Projection.t =
-    let projection = eval t in
-    let parse_exn (uri : Uri.t) = projection.parse_exn (Components.of_uri uri) in
+  let eval_for_uri ~encoding_behavior (t : 'a t) : (Uri.t, 'a Parse_result.t) Projection.t
+    =
+    let projection = eval ~encoding_behavior t in
+    let parse_exn (uri : Uri.t) =
+      projection.parse_exn (Components.of_uri ~encoding_behavior uri)
+    in
     let unparse (result : 'a Parse_result.t) =
-      Components.to_uri (projection.unparse result)
+      Components.to_uri ~encoding_behavior (projection.unparse result)
     in
     { Projection.parse_exn; unparse }
+  ;;
+
+  let to_string (t : 'a t) : ('a -> string) Staged.t =
+    let projection = eval_for_uri ~encoding_behavior:Correct t in
+    let to_string a =
+      let parsed = projection.unparse (Parse_result.create a) in
+      "/" ^ Uri.to_string parsed
+    in
+    Staged.stage to_string
   ;;
 
   type packed_parser = T : 'a Parser.t -> packed_parser

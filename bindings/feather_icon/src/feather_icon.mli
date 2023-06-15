@@ -298,6 +298,15 @@ type t =
   | Shield
 [@@deriving compare, enumerate, equal, sexp]
 
+(** Useful for favicons and css backgrounds *)
+val svg_string
+  :  ?size:[< Css_gen.Length.t ]
+  -> ?stroke:[< Css_gen.Color.t ]
+  -> ?fill:[< Css_gen.Color.t ]
+  -> ?stroke_width:[< Css_gen.Length.t ]
+  -> t
+  -> string
+
 (* $MDX part-begin=svg *)
 
 val svg

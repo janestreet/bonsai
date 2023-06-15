@@ -108,7 +108,7 @@ let component =
       ~equal:[%equal: Model.t]
       ~sexp_of_action:[%sexp_of: Action.t]
       ~default_model:[]
-      ~apply_action:(fun ~inject:_ ~schedule_event:_ model action ->
+      ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) model action ->
         List.append model [ action ])
   in
   let%arr model, inject = model_and_inject in

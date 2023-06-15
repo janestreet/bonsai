@@ -511,7 +511,7 @@ let%test_module "Bonsai_extra.value_stability" =
           ~equal:[%equal: Model.t]
           ~sexp_of_action:[%sexp_of: Action.t]
           ~default_model:Model.default
-          ~apply_action:(fun ~inject:_ ~schedule_event:_ model action ->
+          ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) model action ->
             match action, model with
             | Deactivate, { stability; _ } ->
               let stability =
