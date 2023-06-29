@@ -86,9 +86,23 @@ val create
   -> unit
   -> 'k t Computation.t
 
+module Filter_strategy : sig
+  type t =
+    | Fuzzy_match
+    | Fuzzy_search_and_score
+  [@@deriving compare, enumerate, equal, sexp_of]
+end
+
 (** [stringable] is like [create] but takes a map with possible completion options,
-    instead of a function to generate them. Completion options will be displayed if their
-    string representation [Fuzzy_match]es the current query. *)
+    instead of a function to generate them. Items are filtered and sorted based on [filter_strategy].
+
+    - [`Fuzzy_match]: uses the [fuzzy_match] library to only display items that
+      match the current pattern. Items are displayed in the order they appear in
+      the input map.
+
+    - [`Fuzzy_search_and_score]: uses the [fuzzy_search] library to only display
+      items that match the current pattern. It also scores how well each item
+      matches in order to sort the matching items. *)
 val stringable
   :  ('k, 'cmp) Bonsai.comparator
   -> ?initial_query:string
@@ -100,6 +114,7 @@ val stringable
   -> ?extra_input_attr:Vdom.Attr.t Value.t
   -> ?extra_attr:Vdom.Attr.t Value.t
   -> ?to_view:('k -> string -> Vdom.Node.t)
+  -> filter_strategy:Filter_strategy.t
   -> on_select:('k -> unit Effect.t) Value.t
   -> ('k, string, 'cmp) Map.t Value.t
   -> 'k t Computation.t

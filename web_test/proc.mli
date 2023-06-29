@@ -46,9 +46,12 @@ module Handle : sig
       function to use if you want to wait until all the effects of a user-action 
       have completed.
 
-      Between each iteration, "------ between bonsai frame ------" to
-      demonstrate when side-effects occur, and how long it took for a stable
-      state to be reached.
+      Between each iteration, this function prints "------ between bonsai frame ------" 
+      to demonstrate when side-effects occur, and how long it took for a stable 
+      state to be reached. This line is just extra documentation; it is not
+      necessarily a sign that something is wrong (unless, of course, the
+      behavior of the thing you're trying to test shouldn't result in an extra
+      frame).
 
       [max_iterations] controls how many loop iterations are allowed before the
       function aborts with an exception, in case the default of 100 is too low.

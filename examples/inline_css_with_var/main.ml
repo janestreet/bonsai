@@ -24,7 +24,14 @@ let component =
   let blue_box =
     Vdom.Node.div ~attrs:[ Style.box; Style.Variables.set ~radius:"10px" () ] []
   in
-  Vdom.Node.div ~attrs:[ Style.Variables.set ~my_color:"green" () ] [ red_box; blue_box ]
+  let other_box =
+    Vdom.Node.div
+      ~attrs:[ Style.box; Style.Variables.set_all ~radius:"4rem" ~my_color:"tomato" ]
+      []
+  in
+  Vdom.Node.div
+    ~attrs:[ Style.Variables.set ~my_color:"green" () ]
+    [ red_box; blue_box; other_box ]
 ;;
 
 let () = Bonsai_web.Start.start (Bonsai.const (Vdom.Node.div [ component ]))

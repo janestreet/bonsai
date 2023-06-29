@@ -21,11 +21,20 @@ module Css =
 
   |}]
 
+module Input_source = struct
+  type t =
+    | Small_and_static_list_of_fruits
+    | Large_and_rapidly_changing_filepaths
+  [@@deriving enumerate, sexp, equal, compare]
+end
+
 module Example_params = struct
   type t =
     { suggestion_list_kind : Query_box.Suggestion_list_kind.t
     ; expand_direction : Query_box.Expand_direction.t
     ; max_visible_items : int
+    ; input_source : Input_source.t
+    ; filter_strategy : Query_box.Filter_strategy.t
     }
   [@@deriving typed_fields]
 
@@ -33,6 +42,8 @@ module Example_params = struct
     { suggestion_list_kind = Transient_overlay
     ; expand_direction = Down
     ; max_visible_items = 10
+    ; input_source = Small_and_static_list_of_fruits
+    ; filter_strategy = Fuzzy_search_and_score
     }
   ;;
 end
@@ -58,7 +69,6 @@ let items =
 ;;
 
 let component =
-  let fruits = String.Map.of_alist_exn (List.map ~f:(fun x -> x, ()) items) in
   let%sub selected_items, add_item =
     Bonsai.state_machine0
       ()
@@ -82,29 +92,97 @@ let component =
           | Expand_direction ->
             Form.Elements.Dropdown.enumerable (module Query_box.Expand_direction)
           | Max_visible_items -> Form.Elements.Number.int ~default:10 ~step:1 ()
+          | Input_source -> Form.Elements.Dropdown.enumerable (module Input_source)
+          | Filter_strategy ->
+            Form.Elements.Dropdown.enumerable (module Query_box.Filter_strategy)
         ;;
       end)
   in
-  let%sub { Example_params.suggestion_list_kind; expand_direction; max_visible_items } =
+  let%sub { suggestion_list_kind
+          ; expand_direction
+          ; max_visible_items
+          ; input_source
+          ; filter_strategy
+          }
+    =
     return (form >>| Form.value_or_default ~default:Example_params.default)
   in
+  let%sub data =
+    match%sub input_source with
+    | Small_and_static_list_of_fruits ->
+      Bonsai.const (String.Map.of_alist_exn (List.map ~f:(fun x -> x, x) items))
+    | Large_and_rapidly_changing_filepaths ->
+      let module Action = struct
+        let quickcheck_generator_string =
+          Quickcheck.Generator.map
+            (List.quickcheck_generator (Quickcheck.Generator.of_list items))
+            ~f:(String.concat ~sep:"/")
+        ;;
+
+        type t =
+          | Add of string
+          | Remove of string [@quickcheck.weight 1. /. 5.]
+        [@@deriving sexp_of, quickcheck]
+      end
+      in
+      let%sub map, inject =
+        Bonsai.state_machine0
+          ~default_model:String.Map.empty
+          ~apply_action:(fun _context model action ->
+            match action with
+            | Action.Add key -> Map.set model ~key ~data:key
+            | Remove key -> Map.remove model key)
+          ()
+      in
+      let%sub add_random_item =
+        let%arr inject = inject in
+        let%bind.Effect item =
+          Effect.of_sync_fun
+            (fun () ->
+               Quickcheck.Generator.generate
+                 Action.quickcheck_generator
+                 ~size:6
+                 ~random:(Splittable_random.State.create Random.State.default))
+            ()
+        in
+        inject item
+      in
+      let%sub () =
+        Bonsai.Clock.every
+          ~when_to_start_next_effect:`Wait_period_after_previous_effect_starts_blocking
+          (Time_ns.Span.of_sec 0.2)
+          add_random_item
+      in
+      return map
+  in
   let%sub query_box =
-    Query_box.create
-      (module String)
-      ~suggestion_list_kind
-      ~expand_direction
-      ~max_visible_items
-      ~selected_item_attr:(Value.return Css.selected_item)
-      ~extra_list_container_attr:(Value.return Css.list_container)
-      ~extra_input_attr:(Value.return (Attr.placeholder "Filter Fruits"))
-      ~on_select:add_item
-      ~f:(fun query ->
-        let%arr query = query in
-        Map.filter_mapi fruits ~f:(fun ~key:fruit ~data:() ->
-          if Fuzzy_match.is_match ~char_equal:Char.Caseless.equal fruit ~pattern:query
-          then Some (Node.div [ Node.text fruit ])
-          else None))
-      ()
+    (* [filter_strategy] is not a dynamic parameter to [Query_box.stringable],
+       so we have to add introduce dynamism ourselves with [match%sub]. *)
+    match%sub filter_strategy with
+    | Fuzzy_match ->
+      Query_box.stringable
+        (module String)
+        ~suggestion_list_kind
+        ~expand_direction
+        ~max_visible_items
+        ~selected_item_attr:(Value.return Css.selected_item)
+        ~extra_list_container_attr:(Value.return Css.list_container)
+        ~extra_input_attr:(Value.return (Attr.placeholder "Filter Fruits"))
+        ~filter_strategy:Fuzzy_search_and_score
+        ~on_select:add_item
+        data
+    | Fuzzy_search_and_score ->
+      Query_box.stringable
+        (module String)
+        ~suggestion_list_kind
+        ~expand_direction
+        ~max_visible_items
+        ~selected_item_attr:(Value.return Css.selected_item)
+        ~extra_list_container_attr:(Value.return Css.list_container)
+        ~extra_input_attr:(Value.return (Attr.placeholder "Filter Fruits"))
+        ~filter_strategy:Fuzzy_match
+        ~on_select:add_item
+        data
   in
   let%arr selected_items = selected_items
   and query_box = query_box

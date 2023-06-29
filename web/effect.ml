@@ -74,3 +74,7 @@ let reload_page =
     | `Node_test | `Node | `Node_benchmark | `Browser_benchmark ->
       Core.print_s [%message "Reloading page skipped in test"])
 ;;
+
+let alert =
+  of_sync_fun (fun s -> Js_of_ocaml.Dom_html.window##alert (Js_of_ocaml.Js.string s))
+;;

@@ -148,7 +148,15 @@ module All_primitives_query = struct
   let path_order = Path_order.T []
 end
 
-let assert_is_equal_and_eval ~old_eval ~equal_from ~equal parser =
+let assert_is_equal_and_eval
+      ~(old_eval :
+          ?encoding_behavior:Percent_encoding_behavior.t
+        -> 'a
+        -> ('b, 'c Parse_result.t) Projection.t)
+      ~equal_from
+      ~equal
+      parser
+  =
   let incorrect_projection =
     old_eval ~encoding_behavior:Percent_encoding_behavior.Legacy_incorrect parser
   in

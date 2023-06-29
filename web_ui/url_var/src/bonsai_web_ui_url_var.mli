@@ -91,12 +91,12 @@ module Typed : sig
     val empty : t
 
     val to_original_components
-      :  encoding_behavior:Uri_parsing.Percent_encoding_behavior.t
+      :  ?encoding_behavior:Uri_parsing.Percent_encoding_behavior.t
       -> t
       -> Components.t
 
     val of_original_components
-      :  encoding_behavior:Uri_parsing.Percent_encoding_behavior.t
+      :  ?encoding_behavior:Uri_parsing.Percent_encoding_behavior.t
       -> Components.t
       -> t
   end
@@ -113,9 +113,10 @@ module Typed : sig
     (** Are you migrating your site to use [Url_var]'s [Typed] API and you don't want to
         break your existing links? Use [of_non_typed_parser] instead of [first_parser]. *)
     val of_non_typed_parser
-      :  encoding_behavior:Uri_parsing.Percent_encoding_behavior.t
+      :  ?encoding_behavior:Uri_parsing.Percent_encoding_behavior.t
       -> parse_exn:(Original_components.t -> 'a)
       -> unparse:('a -> Original_components.t)
+      -> unit
       -> 'a t
 
     (** Need to change your URL? Use [new_parser] to "fallback" to [previous] if the new
@@ -146,9 +147,9 @@ module Typed : sig
   *)
   val make
     :  ?on_fallback_raises:'a
+    -> ?encoding_behavior:Uri_parsing.Percent_encoding_behavior.t
     -> (module T with type t = 'a)
     -> 'a Versioned_parser.t
-    -> encoding_behavior:Uri_parsing.Percent_encoding_behavior.t
     -> fallback:(Exn.t -> Original_components.t -> 'a)
     -> 'a url_var
 
@@ -159,15 +160,15 @@ module Typed : sig
       tests of your own! *)
   val make_projection
     :  ?on_fallback_raises:'a
+    -> ?encoding_behavior:Uri_parsing.Percent_encoding_behavior.t
     -> 'a Versioned_parser.t
-    -> encoding_behavior:Uri_parsing.Percent_encoding_behavior.t
     -> fallback:(Exn.t -> Original_components.t -> 'a)
     -> (Original_components.t, 'a) Projection.t
 
   (** Creates a URL of everything after the domain name. This might be useful if you're
       sending URLs in emails or need to automatically create URLs. *)
   val to_url_string
-    :  encoding_behavior:Uri_parsing.Percent_encoding_behavior.t
+    :  ?encoding_behavior:Uri_parsing.Percent_encoding_behavior.t
     -> 'a Parser.t
     -> 'a
     -> string
@@ -180,12 +181,12 @@ module For_testing : sig
     type 'a t
 
     val make
-      :  encoding_behavior:Uri_parsing.Percent_encoding_behavior.t
+      :  ?encoding_behavior:Uri_parsing.Percent_encoding_behavior.t
       -> 'a Typed.Parser.t
       -> 'a t
 
     val make_of_versioned_parser
-      :  encoding_behavior:Uri_parsing.Percent_encoding_behavior.t
+      :  ?encoding_behavior:Uri_parsing.Percent_encoding_behavior.t
       -> 'a Typed.Versioned_parser.t
       -> 'a t
 

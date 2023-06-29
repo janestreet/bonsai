@@ -466,44 +466,6 @@ let create
   }
 ;;
 
-let stringable
-      (type k cmp)
-      (module Key : Bonsai.Comparator with type t = k and type comparator_witness = cmp)
-      ?initial_query
-      ?max_visible_items
-      ?suggestion_list_kind
-      ?expand_direction
-      ?selected_item_attr
-      ?extra_list_container_attr
-      ?extra_input_attr
-      ?extra_attr
-      ?(to_view = fun _ string -> Vdom.Node.text string)
-      ~on_select
-      input
-  =
-  create
-    (module Key)
-    ?initial_query
-    ?max_visible_items
-    ?suggestion_list_kind
-    ?expand_direction
-    ?selected_item_attr
-    ?extra_list_container_attr
-    ?extra_input_attr
-    ?extra_attr
-    ~on_select
-    ~f:(fun query ->
-      Bonsai.Incr.compute (Value.both query input) ~f:(fun incr ->
-        let%pattern_bind.Incr query, input = incr in
-        Incr_map.filter_mapi' input ~f:(fun ~key ~data:string ->
-          let%map.Incr string = string
-          and query = query in
-          if Fuzzy_match.is_match ~char_equal:Char.Caseless.equal ~pattern:query string
-          then Some (to_view key string)
-          else None)))
-    ()
-;;
-
 module Collate_map_with_score = struct
   module Scored_key = struct
     module T = struct
@@ -600,7 +562,98 @@ module Collate_map_with_score = struct
                since [index] already captures that ordering. Thus, this whole
                computation remains fast even if the input map comparator is
                extremely slow. *)
-            let new_key = (len * score) + index, key in
+            let new_key = score, key in
             Map.add_exn acc ~key:new_key ~data:(to_result preprocessed ~key ~data))))
   ;;
 end
+
+module Filter_strategy = struct
+  type t =
+    | Fuzzy_match
+    | Fuzzy_search_and_score
+  [@@deriving compare, enumerate, equal, sexp_of]
+end
+
+let stringable
+      (type k cmp)
+      (module Key : Bonsai.Comparator with type t = k and type comparator_witness = cmp)
+      ?initial_query
+      ?max_visible_items
+      ?suggestion_list_kind
+      ?expand_direction
+      ?selected_item_attr
+      ?extra_list_container_attr
+      ?extra_input_attr
+      ?extra_attr
+      ?(to_view = fun _ string -> Vdom.Node.text string)
+      ~filter_strategy
+      ~on_select
+      input
+  =
+  (* [filter_strategy] is not a [Value.t]; it would be easy to make it one by
+     using [match%sub] here, but then the model would not be shared between the
+     two branches, which is potentially confusing. If make both key modules be
+     [Scored_key], then we could move the branch into [f] where the filtering
+     actually happens; this would have the downside of causing the
+     [Fuzzy_match] case to pay the cost of the extra data in the key. Since we
+     don't expect this parameter to be changed at runtime, it is probably not
+     worth the cost to make the parameter dynamic. *)
+  match filter_strategy with
+  | Filter_strategy.Fuzzy_match ->
+    create
+      (module Key)
+      ?initial_query
+      ?max_visible_items
+      ?suggestion_list_kind
+      ?expand_direction
+      ?selected_item_attr
+      ?extra_list_container_attr
+      ?extra_input_attr
+      ?extra_attr
+      ~on_select
+      ~f:(fun query ->
+        Bonsai.Incr.compute (Value.both query input) ~f:(fun incr ->
+          let%pattern_bind.Incr query, input = incr in
+          Incr_map.filter_mapi' input ~f:(fun ~key ~data:string ->
+            let%map.Incr string = string
+            and query = query in
+            if Fuzzy_match.is_match ~char_equal:Char.Caseless.equal ~pattern:query string
+            then Some (to_view key string)
+            else None)))
+      ()
+  | Fuzzy_search_and_score ->
+    let%sub on_select =
+      let%arr on_select = on_select in
+      fun (_, key) -> on_select key
+    in
+    let%sub result =
+      create
+        (module Collate_map_with_score.Scored_key.M (Key))
+        ?initial_query
+        ?max_visible_items
+        ?suggestion_list_kind
+        ?expand_direction
+        ?selected_item_attr
+        ?extra_list_container_attr
+        ?extra_input_attr
+        ?extra_attr
+        ~on_select
+        ~f:(fun query ->
+          let%sub query =
+            let%arr query = query in
+            query, Fuzzy_search.Query.create query
+          in
+          Collate_map_with_score.collate
+            (module Key)
+            input
+            query
+            ~preprocess:(fun ~key:_ ~data -> data)
+            ~score:(fun (_, query) item -> Fuzzy_search.score query ~item)
+            ~query_is_as_strict:(fun (q, _) ~as_:(as_, _) ->
+              String.is_substring q ~substring:as_)
+            ~to_result:(fun item ~key:_ ~data:_ -> Node.div [ Node.text item ]))
+        ()
+    in
+    let%arr result = result in
+    { result with selected_item = Option.map result.selected_item ~f:snd }
+;;

@@ -3,14 +3,12 @@ open (Bonsai_web : module type of Bonsai_web with module View := Bonsai_web.View
 open Bonsai.Let_syntax
 
 module T = struct
-  type ('read, 'write) unbalanced =
-    { value : 'read Or_error.t
+  type 'a t =
+    { value : 'a Or_error.t
     ; view : View.t
-    ; set : 'write -> unit Vdom.Effect.t
+    ; set : 'a -> unit Vdom.Effect.t
     }
   [@@deriving fields]
-
-  type 'a t = ('a, 'a) unbalanced
 
   let value_or_default t ~default = t |> value |> Or_error.ok |> Option.value ~default
 
@@ -197,6 +195,15 @@ let fallback_to t ~value =
 ;;
 
 module For_profunctor = struct
+  type ('read, 'write) unbalanced =
+    { value : 'read Or_error.t
+    ; view : View.t
+    ; set : 'write -> unit Vdom.Effect.t
+    }
+  [@@deriving fields]
+
+  let unbalanced_of_t ({ value; view; set } : _ t) : _ unbalanced = { value; view; set }
+
   type ('read, 'write) t =
     | Return :
         { name : string
@@ -256,7 +263,9 @@ module Record_builder = struct
     let value = attach_fieldname_to_error t fieldslib_field in
     let with_label =
       For_profunctor.Return
-        { name = label_of_field fieldslib_field; form = { t with value } }
+        { name = label_of_field fieldslib_field
+        ; form = { (For_profunctor.unbalanced_of_t t) with value }
+        }
     in
     field with_label fieldslib_field
   ;;
@@ -488,7 +497,9 @@ module Dynamic = struct
           { t with value = Record_builder.attach_fieldname_to_error t fieldslib_field }
         in
         For_profunctor.Return
-          { name = Record_builder.label_of_field fieldslib_field; form = t }
+          { name = Record_builder.label_of_field fieldslib_field
+          ; form = For_profunctor.unbalanced_of_t t
+          }
       in
       field for_profunctor fieldslib_field
     ;;
@@ -502,7 +513,7 @@ module Dynamic = struct
 end
 
 module Expert = struct
-  let create = Fields_of_unbalanced.create
+  let create = Fields.create
 end
 
 module Private = struct

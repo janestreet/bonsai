@@ -168,8 +168,15 @@ module Handle = struct
         (result_spec : (result, incoming) Result_spec.t)
         computation
     =
-    assert_node_paths_identical_between_transform_and_skeleton_nodepaths
-      (Bonsai.Private.reveal_computation computation);
+    (* [assert_node_paths_identical_between_transform_and_skeleton_nodepaths] is a useful 
+       function to verify that the skeleton code correctly generates node_path identifiers.
+       It's nice to run on every test, but was taking up ~20% of the run time for most 
+       tests, so we disable it here, keeping the code around in case there's any major 
+       changes to the skeleton code and want to easily run it on every test in the tree *)
+    if false
+    then
+      assert_node_paths_identical_between_transform_and_skeleton_nodepaths
+        (Bonsai.Private.reveal_computation computation);
     create ?start_time ~optimize result_spec computation
   ;;
 

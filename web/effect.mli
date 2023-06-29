@@ -34,3 +34,6 @@ end
 (** [reload_page] will cause a page reload if running normally in a browser. When running
     in node/benchmarks/tests, it will just print that a reload would normally occur. *)
 val reload_page : unit Effect.t
+
+(** [alert] will cause an alert box to pop up with your provided message. *)
+val alert : string -> unit Effect.t

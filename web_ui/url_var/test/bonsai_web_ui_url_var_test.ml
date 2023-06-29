@@ -57,6 +57,7 @@ let%expect_test "first non-typed projection test" =
       ~encoding_behavior:Legacy_incorrect
       ~parse_exn:Old_url.parse_exn
       ~unparse:Old_url.unparse
+      ()
   in
   let projection = Versioned_parser.eval ~encoding_behavior:Correct versioned_parser in
   Uri_parsing_test.expect_output_and_identity_roundtrip
@@ -115,6 +116,7 @@ let%expect_test "non-typed -> typed -> typed" =
       ~encoding_behavior:Legacy_incorrect
       ~parse_exn:Old_url.parse_exn
       ~unparse:Old_url.unparse
+      ()
   in
   let second_parser = Parser.Variant.make (module Second_url) in
   Parser.check_ok_and_print_urls_or_errors second_parser;

@@ -838,3 +838,149 @@ let%expect_test "mousewheel on an item selects it" =
       </div>
     </div> |}]
 ;;
+
+let%expect_test {|key stays on the same item if the list of items changes (simple string map)|}
+  =
+  let items = Bonsai.Var.create (Int.Map.of_alist_exn [ 1, "a"; 3, "c"; 5, "e" ]) in
+  let component =
+    Bonsai_web_ui_query_box.create
+      (module Int)
+      ~max_visible_items:(Value.return 3)
+      ~f:(fun query ->
+        let%arr query = query
+        and items = Bonsai.Var.value items in
+        Map.filter items ~f:(String.is_prefix ~prefix:query) |> Map.map ~f:Node.text)
+      ~selected_item_attr:(Value.return (Attr.class_ "selected-item"))
+      ~on_select:(Value.return (fun item -> Effect.print_s [%message (item : int)]))
+      ()
+  in
+  let handle =
+    Handle.create
+      (Result_spec.vdom
+         ~filter_printed_attributes:(fun key _data ->
+           match key with
+           | "class" | "data-test" -> true
+           | _ -> false)
+         get_vdom)
+      component
+  in
+  focus handle;
+  keydown handle ArrowDown;
+  Handle.show handle;
+  [%expect
+    {|
+    ("default prevented" (key ArrowDown))
+    <div>
+      <input> </input>
+      <div data-test="query-box-item-container">
+        <div>
+          <div> a </div>
+          <div class="selected-item"> c </div>
+          <div> e </div>
+        </div>
+      </div>
+    </div> |}];
+  Bonsai.Var.update items ~f:(fun map -> Map.set map ~key:2 ~data:"b");
+  Handle.show handle;
+  [%expect
+    {|
+    <div>
+      <input> </input>
+      <div data-test="query-box-item-container">
+        <div>
+          <div> b </div>
+          <div class="selected-item"> c </div>
+          <div> e </div>
+        </div>
+      </div>
+    </div> |}];
+  Bonsai.Var.update items ~f:(fun map -> Map.set map ~key:4 ~data:"d");
+  Handle.show handle;
+  [%expect
+    {|
+    <div>
+      <input> </input>
+      <div data-test="query-box-item-container">
+        <div>
+          <div> b </div>
+          <div class="selected-item"> c </div>
+          <div> d </div>
+        </div>
+      </div>
+    </div> |}]
+;;
+
+let%expect_test {|key stays on the same item if the list of items changes (collation)|} =
+  let items = Bonsai.Var.create (Int.Map.of_alist_exn [ 1, "a"; 3, "c"; 5, "e" ]) in
+  let component =
+    Bonsai_web_ui_query_box.create
+      (module Bonsai_web_ui_query_box.Collate_map_with_score.Scored_key.M (Int))
+      ~max_visible_items:(Value.return 3)
+      ~f:(fun query ->
+        Bonsai_web_ui_query_box.Collate_map_with_score.collate
+          (module Int)
+          (Bonsai.Var.value items)
+          query
+          ~preprocess:(fun ~key:_ ~data -> data)
+          ~score:(fun _query _item -> 1)
+          ~query_is_as_strict:(fun q ~as_ -> String.is_substring q ~substring:as_)
+          ~to_result:(fun item ~key:_ ~data:_ -> Node.text item))
+      ~selected_item_attr:(Value.return (Attr.class_ "selected-item"))
+      ~on_select:(Value.return (fun (_, item) -> Effect.print_s [%message (item : int)]))
+      ()
+  in
+  let handle =
+    Handle.create
+      (Result_spec.vdom
+         ~filter_printed_attributes:(fun key _data ->
+           match key with
+           | "class" | "data-test" -> true
+           | _ -> false)
+         get_vdom)
+      component
+  in
+  focus handle;
+  keydown handle ArrowDown;
+  Handle.show handle;
+  [%expect
+    {|
+    ("default prevented" (key ArrowDown))
+    <div>
+      <input> </input>
+      <div data-test="query-box-item-container">
+        <div>
+          <div> a </div>
+          <div class="selected-item"> c </div>
+          <div> e </div>
+        </div>
+      </div>
+    </div> |}];
+  Bonsai.Var.update items ~f:(fun map -> Map.set map ~key:2 ~data:"b");
+  Handle.show handle;
+  [%expect
+    {|
+    <div>
+      <input> </input>
+      <div data-test="query-box-item-container">
+        <div>
+          <div> b </div>
+          <div class="selected-item"> c </div>
+          <div> e </div>
+        </div>
+      </div>
+    </div> |}];
+  Bonsai.Var.update items ~f:(fun map -> Map.set map ~key:4 ~data:"d");
+  Handle.show handle;
+  [%expect
+    {|
+    <div>
+      <input> </input>
+      <div data-test="query-box-item-container">
+        <div>
+          <div> b </div>
+          <div class="selected-item"> c </div>
+          <div> d </div>
+        </div>
+      </div>
+    </div> |}]
+;;

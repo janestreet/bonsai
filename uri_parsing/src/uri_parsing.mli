@@ -142,13 +142,13 @@ module Parser : sig
   (** "Evaluates" a ['a t] into a projection that parses to/from [Components.t] to
       ['a Parse_result.t]. *)
   val eval
-    :  encoding_behavior:Percent_encoding_behavior.t
+    :  ?encoding_behavior:Percent_encoding_behavior.t
     -> 'a t
     -> (Components.t, 'a Parse_result.t) Projection.t
 
   (** Like [eval] but parses/unparses from/into a [Uri.t] *)
   val eval_for_uri
-    :  encoding_behavior:Percent_encoding_behavior.t
+    :  ?encoding_behavior:Percent_encoding_behavior.t
     -> 'a t
     -> (Uri.t, 'a Parse_result.t) Projection.t
 
@@ -529,13 +529,13 @@ module Versioned_parser : sig
 
   (** Like [Parser.eval] but for a ['a Versioned_parser.t]. *)
   val eval
-    :  encoding_behavior:Percent_encoding_behavior.t
+    :  ?encoding_behavior:Percent_encoding_behavior.t
     -> 'a t
     -> (Components.t, 'a Parse_result.t) Projection.t
 
   (** Like [Parser.eval_for_uri] but for ['a Versioned_parser.t] *)
   val eval_for_uri
-    :  encoding_behavior:Percent_encoding_behavior.t
+    :  ?encoding_behavior:Percent_encoding_behavior.t
     -> 'a t
     -> (Uri.t, 'a Parse_result.t) Projection.t
 

@@ -186,7 +186,7 @@ module Typed = struct
     let parse_unicode_slashes s = Re.Str.global_replace unicode_slash_regexp "/" s
 
     let of_original_components
-          ~(encoding_behavior : Uri_parsing.Percent_encoding_behavior.t)
+          ?(encoding_behavior : Uri_parsing.Percent_encoding_behavior.t = Correct)
           (original : Components.t)
       =
       let split_path =
@@ -202,7 +202,7 @@ module Typed = struct
     ;;
 
     let to_original_components
-          ~(encoding_behavior : Uri_parsing.Percent_encoding_behavior.t)
+          ?(encoding_behavior : Uri_parsing.Percent_encoding_behavior.t = Correct)
           (typed_components : t)
       =
       { Components.path =
@@ -223,16 +223,17 @@ module Typed = struct
     include Uri_parsing.Versioned_parser
 
     let of_non_typed_parser
-          ~(encoding_behavior : Uri_parsing.Percent_encoding_behavior.t)
+          ?encoding_behavior
           ~(parse_exn : Original_components.t -> 'a)
           ~(unparse : 'a -> Original_components.t)
+          ()
       =
       let projection =
         let parse_exn components =
-          parse_exn (Components.to_original_components ~encoding_behavior components)
+          parse_exn (Components.to_original_components ?encoding_behavior components)
         in
         let unparse result =
-          Components.of_original_components ~encoding_behavior (unparse result)
+          Components.of_original_components ?encoding_behavior (unparse result)
         in
         { Projection.parse_exn; unparse }
       in
@@ -243,11 +244,12 @@ module Typed = struct
   let make'
         (type a)
         (parser : a Uri_parsing.Versioned_parser.t)
-        ~(encoding_behavior : Uri_parsing.Percent_encoding_behavior.t)
+        ?encoding_behavior
         ~(fallback : Exn.t -> Original_components.t -> a)
         ~on_fallback_raises
+        ()
     =
-    let projection = Uri_parsing.Versioned_parser.eval ~encoding_behavior parser in
+    let projection = Uri_parsing.Versioned_parser.eval ?encoding_behavior parser in
     let try_with_backup ~f =
       try f () with
       | e -> Option.value_or_thunk on_fallback_raises ~default:(fun () -> raise e)
@@ -255,7 +257,7 @@ module Typed = struct
     let parse_exn (components : Original_components.t) =
       try
         let typed_components =
-          Components.of_original_components ~encoding_behavior components
+          Components.of_original_components ?encoding_behavior components
         in
         let result : a Uri_parsing.Parse_result.t =
           projection.parse_exn typed_components
@@ -275,7 +277,7 @@ module Typed = struct
           ; remaining = Uri_parsing.Components.empty
           }
       in
-      Components.to_original_components ~encoding_behavior typed_components
+      Components.to_original_components ?encoding_behavior typed_components
     in
     { Projection.parse_exn; unparse }
   ;;
@@ -283,13 +285,13 @@ module Typed = struct
   let make
         (type a)
         ?on_fallback_raises
+        ?encoding_behavior
         (module T : T with type t = a)
         (parser : a Uri_parsing.Versioned_parser.t)
-        ~encoding_behavior
         ~(fallback : Exn.t -> Original_components.t -> a)
     : a url_var
     =
-    let projection = make' parser ~encoding_behavior ~fallback ~on_fallback_raises in
+    let projection = make' parser ?encoding_behavior ~fallback ~on_fallback_raises () in
     let module S = struct
       include T
 
@@ -303,17 +305,17 @@ module Typed = struct
   let make_projection
         (type a)
         ?on_fallback_raises
+        ?encoding_behavior
         (parser : a Uri_parsing.Versioned_parser.t)
-        ~encoding_behavior
         ~(fallback : Exn.t -> Original_components.t -> a)
     =
-    make' parser ~encoding_behavior ~fallback ~on_fallback_raises
+    make' parser ?encoding_behavior ~fallback ~on_fallback_raises ()
   ;;
 
   module Value_parser = Uri_parsing.Value_parser
 
-  let to_url_string (type a) ~encoding_behavior (parser : a Parser.t) a =
-    let projection = Parser.eval ~encoding_behavior parser in
+  let to_url_string (type a) ?encoding_behavior (parser : a Parser.t) a =
+    let projection = Parser.eval ?encoding_behavior parser in
     let components =
       projection.unparse
         { Uri_parsing.Parse_result.result = a; remaining = Components.empty }
@@ -340,8 +342,8 @@ module For_testing = struct
 
     let parse_unicode_slashes s = Re.Str.global_replace unicode_slash_regexp "/" s
 
-    let make ~encoding_behavior (parser : 'a Typed.Parser.t) =
-      let projection = Typed.Parser.eval ~encoding_behavior parser in
+    let make ?encoding_behavior (parser : 'a Typed.Parser.t) =
+      let projection = Typed.Parser.eval ?encoding_behavior parser in
       let parse_exn (components : Typed.Components.t) =
         projection.parse_exn
           { components with path = List.map ~f:parse_unicode_slashes components.path }
@@ -354,10 +356,10 @@ module For_testing = struct
     ;;
 
     let make_of_versioned_parser
-          ~encoding_behavior
+          ?encoding_behavior
           (versioned_parser : 'a Typed.Versioned_parser.t)
       =
-      Uri_parsing.Versioned_parser.eval ~encoding_behavior versioned_parser
+      Uri_parsing.Versioned_parser.eval ?encoding_behavior versioned_parser
     ;;
 
     let parse_exn (projection : 'a t) = projection.parse_exn
