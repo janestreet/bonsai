@@ -79,6 +79,7 @@ let default_popover_styles =
 let component
       ?popover_extra_attr
       ?popover_style_attr
+      ?base_extra_attr
       ?(allow_event_propagation_when_clicked_outside :
           ([ `Left_click | `Right_click | `Escape ] -> bool) Value.t =
           Value.return (fun _ -> false))
@@ -96,6 +97,9 @@ let component
   in
   let%sub popover_style_attr =
     Option.value_map popover_style_attr ~default:default_popover_styles ~f:return
+  in
+  let%sub base_extra_attr =
+    Option.value_map base_extra_attr ~default:(Bonsai.const Vdom.Attr.empty) ~f:return
   in
   let%sub { state = is_open; set_state = set_is_open; toggle } =
     Bonsai.toggle' ~default_model:false
@@ -189,10 +193,17 @@ let component
     let%arr popover = popover
     and direction_class = direction_class
     and alignment_class = alignment_class
-    and open_attr = open_attr in
+    and open_attr = open_attr
+    and base_extra_attr = base_extra_attr in
     fun popover_base ->
       Vdom.Node.span
-        ~attrs:[ Style.tooltip_container; open_attr; direction_class; alignment_class ]
+        ~attrs:
+          [ Style.tooltip_container
+          ; open_attr
+          ; direction_class
+          ; alignment_class
+          ; base_extra_attr
+          ]
         [ popover_base; popover ]
   in
   let%arr open_ = open_

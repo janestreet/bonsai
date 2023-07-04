@@ -787,3 +787,31 @@ let%test_module "interactions with [with_model_resetter]" =
     ;;
   end)
 ;;
+
+let%expect_test "popover with an extra base attr" =
+  let popover =
+    let%sub ({ Popover.Result.wrap; _ } as popover) =
+      Popover.component
+        ~close_when_clicked_outside:false
+        ~base_extra_attr:
+          (Value.return (Vdom.Attr.create "data-test" "I am attached as a base attr."))
+        ~direction:(Value.return Popover.Direction.Right)
+        ~alignment:(Value.return Popover.Alignment.Center)
+        ~popover:(fun ~close:_ -> Bonsai.const (View.text "Popover content!"))
+        ()
+    in
+    let%arr wrap = wrap
+    and popover = popover in
+    wrap (View.text "Popover base!"), popover
+  in
+  let handle = Handle.create (module Popover_result_spec) popover in
+  Handle.show handle;
+  [%expect
+    {|
+    is_open: false
+    -----------------
+    <span data-test="I am attached as a base attr."
+          class="right_hash_replaced_in_test tooltip_container_hash_replaced_in_test">
+      <span> Popover base! </span>
+    </span> |}]
+;;

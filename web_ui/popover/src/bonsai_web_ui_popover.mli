@@ -38,11 +38,15 @@ end
     [popover_extra_attr]. The popover element itself also has some default styling of its own
     which you can override using [popover_style_attr].
 
+    [component] will "wrap" your "base" around a [Vdom.Node.span]. If you want to attach
+    attributes to the wrapping span, you can use [?base_extra_attr].
+
     [close_when_clicked_outside], when set to true, will close the popover if
     a click occurs outside of the popover. *)
 val component
   :  ?popover_extra_attr:Vdom.Attr.t Value.t
   -> ?popover_style_attr:Vdom.Attr.t Value.t
+  -> ?base_extra_attr:Vdom.Attr.t Value.t
   -> ?allow_event_propagation_when_clicked_outside:
        ([ `Left_click | `Right_click | `Escape ] -> bool) Value.t
   -> ?on_close:unit Effect.t Value.t
