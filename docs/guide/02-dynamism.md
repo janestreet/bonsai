@@ -190,7 +190,7 @@ expansion of `let%map`, except it wraps the entire thing in a call to
 
 expands to
 
-`ocaml skip let f (x : int Value.t) : int Computation.t =   (let%arr x = x in      x + 1)`
+`ocaml skip let f (x : int Value.t) : int Computation.t =   return     (let%map x = x in      x + 1)`
 
 which further expands to
 

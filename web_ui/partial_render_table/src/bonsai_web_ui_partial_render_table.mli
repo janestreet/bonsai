@@ -127,10 +127,15 @@ module Basic : sig
   val component
     :  ?filter:(key:'key -> data:'data -> bool) Value.t
     (** An optional function may be provided, which filters the rows in the table. *)
-    -> ?override_sort:(('key * 'data) compare -> ('key * 'data) compare) Value.t
+    -> ?override_sort:
+         ('key compare -> ('key * 'data) compare -> ('key * 'data) compare) Value.t
     (** override_sort is an optional function that transforms the tables current sort,
-        taking into account the default-sort and any user-provided sorts that they've added
-        by clicking on column headers. *)
+        taking into account the default-sort and any user-provided sorts that they've
+        added by clicking on column headers.
+
+        [override_sort] is also given the comparison function for the key of the table,
+        which the overrider can use as a fall-back for when the the ('key * 'data)
+        comparison function returns 0. *)
     -> ?default_sort:('key * 'data) compare Value.t
     (** An optional function may be provided to sort the table. *)
     -> ?preload_rows:int

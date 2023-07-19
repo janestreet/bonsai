@@ -217,7 +217,7 @@ let%expect_test "basic table with default sort" =
 ;;
 
 let%expect_test "basic table with overriden default sort" =
-  let override_sort_var = Bonsai.Var.create Fn.id in
+  let override_sort_var = Bonsai.Var.create (fun _k c -> c) in
   let override_sort = Bonsai.Var.value override_sort_var in
   let test =
     Test.create
@@ -248,7 +248,7 @@ let%expect_test "basic table with overriden default sort" =
     │   │ 100 │ 1   │ there │ 2.000000 │ 2   │
     │   │ 200 │ 0   │ hello │ 1.000000 │ 1   │
     └───┴─────┴─────┴───────┴──────────┴─────┘ |}];
-  Bonsai.Var.set override_sort_var (fun c -> Comparable.reverse c);
+  Bonsai.Var.set override_sort_var (fun _k c -> Comparable.reverse c);
   Handle.show test.handle;
   [%expect
     {|
@@ -271,7 +271,7 @@ let%expect_test "basic table with overriden default sort" =
 ;;
 
 let%expect_test "basic table with overriden column sort" =
-  let override_sort_var = Bonsai.Var.create Fn.id in
+  let override_sort_var = Bonsai.Var.create (fun _k c -> c) in
   let override_sort = Bonsai.Var.value override_sort_var in
   let test =
     Test.create
@@ -303,7 +303,7 @@ let%expect_test "basic table with overriden column sort" =
     │   │ 100 │ 1     │ there │ 2.000000 │ 2   │
     │   │ 200 │ 4     │ world │ 2.000000 │ --- │
     └───┴─────┴───────┴───────┴──────────┴─────┘ |}];
-  Bonsai.Var.set override_sort_var (fun c -> Comparable.reverse c);
+  Bonsai.Var.set override_sort_var (fun _k c -> Comparable.reverse c);
   Handle.show test.handle;
   [%expect
     {|
@@ -323,6 +323,50 @@ let%expect_test "basic table with overriden column sort" =
     │   │ 100 │ 1     │ there │ 2.000000 │ 2   │
     │   │ 200 │ 0     │ hello │ 1.000000 │ 1   │
     └───┴─────┴───────┴───────┴──────────┴─────┘ |}]
+;;
+
+let%expect_test "REGRESSION: basic table with overriden column sort but no default sort \
+                 applies the override to the wrong comparator"
+  =
+  let override_sort_var =
+    Bonsai.Var.create (fun by_key c ->
+      Comparable.lexicographic [ c; Comparable.lift by_key ~f:Tuple2.get1 ])
+  in
+  let override_sort = Bonsai.Var.value override_sort_var in
+  let test = Test.create ~stats:false (Test.Component.default ~override_sort ()) in
+  Handle.show test.handle;
+  [%expect
+    {|
+    ((focused ()) (num_filtered_rows (3)))
+    ┌───┬─────┬─────┬───────┬──────────┬─────┐
+    │ > │ #   │ key │ a     │ b        │ d   │
+    ├───┼─────┼─────┼───────┼──────────┼─────┤
+    │   │ 0   │ 0   │ hello │ 1.000000 │ 1   │
+    │   │ 100 │ 1   │ there │ 2.000000 │ 2   │
+    │   │ 200 │ 4   │ world │ 2.000000 │ --- │
+    └───┴─────┴─────┴───────┴──────────┴─────┘ |}];
+  let override_called = ref false in
+  Bonsai.Var.set override_sort_var (fun by_key c a b ->
+    override_called := true;
+    Comparable.reverse
+      (Comparable.lexicographic [ c; Comparable.lift by_key ~f:Tuple2.get1 ])
+      a
+      b);
+  Handle.show test.handle;
+  [%expect
+    {|
+    ((focused ()) (num_filtered_rows (3)))
+    ┌───┬─────┬─────┬───────┬──────────┬─────┐
+    │ > │ #   │ key │ a     │ b        │ d   │
+    ├───┼─────┼─────┼───────┼──────────┼─────┤
+    │   │ 0   │ 4   │ world │ 2.000000 │ --- │
+    │   │ 100 │ 1   │ there │ 2.000000 │ 2   │
+    │   │ 200 │ 0   │ hello │ 1.000000 │ 1   │
+    └───┴─────┴─────┴───────┴──────────┴─────┘ |}];
+  (* We can observe that the override is, in fact, being called. *)
+  print_s [%message (!override_called : bool)];
+  [%expect {| (!override_called true) |}];
+  ()
 ;;
 
 let%expect_test "big table" =

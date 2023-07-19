@@ -71,9 +71,8 @@ module T = struct
     state.callback ~width:state.last_width ~height:state.last_height
   ;;
 
-  let destroy _ state =
-    let { State.observer; _ } = state in
-    fun _ -> Option.iter observer ~f:(fun observer -> observer##disconnect)
+  let destroy _ state _ =
+    Option.iter state.observer ~f:(fun observer -> observer##disconnect)
   ;;
 end
 

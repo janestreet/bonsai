@@ -41,17 +41,18 @@ module Handle : sig
     -> 'a Computation.t
     -> ('a, 'b) t
 
-  (** Runs [recompute_view] and [Async_kernel_scheduler.yield_until_no_jobs_remain] 
-      in a loop until nothing remains to be done. This is a good sledgehammer 
-      function to use if you want to wait until all the effects of a user-action 
+  (** Runs [recompute_view] and [Async_kernel_scheduler.yield_until_no_jobs_remain]
+      in a loop until nothing remains to be done. This is a good sledgehammer
+      function to use if you want to wait until all the effects of a user-action
       have completed.
 
-      Between each iteration, this function prints "------ between bonsai frame ------" 
-      to demonstrate when side-effects occur, and how long it took for a stable 
-      state to be reached. This line is just extra documentation; it is not
-      necessarily a sign that something is wrong (unless, of course, the
-      behavior of the thing you're trying to test shouldn't result in an extra
-      frame).
+      By default, this function prints "------ between bonsai frame ------" in between
+      each iteration to demonstrate when side-effects occur, and how long it took for a
+      stable state to be reached. This line is just extra documentation; it is not
+      necessarily a sign that something is wrong (unless, of course, the behavior of the
+      thing you're trying to test shouldn't result in an extra frame). These lines can be
+      removed by passing [~silence_between_frames:true] in case your tests take a
+      non-deterministic number of iterations to stabilize.
 
       [max_iterations] controls how many loop iterations are allowed before the
       function aborts with an exception, in case the default of 100 is too low.
@@ -59,6 +60,7 @@ module Handle : sig
   *)
   val flush_async_and_bonsai
     :  ?max_iterations:int
+    -> ?silence_between_frames:bool
     -> ('a, 'b) t
     -> unit Async_kernel.Deferred.t
 

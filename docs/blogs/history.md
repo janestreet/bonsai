@@ -426,6 +426,379 @@ apps, paving the way for powerful debugging tools.
 
 [^arrow]: [Arrow: Haskell Wiki](https://wiki.haskell.org/Arrow)
 
+### Leo's "Wormhole" proposal
+#### ACT 1
+##### Leo's Combinator Proposal: Wormhole
+
+```ocaml
+val wormhole
+  : (read:(_, 'value) Bonsai.t -> ('input, 'r2) Bonsai.t)
+  -> ('input * 'value, 'result) Packed.t
+```
+
+##### Implementation
+
+During the construction of the incremental tree (what bonsai-devs call
+"eval-time"), maintain an environment that maps the "read" Bonsai.t
+back to the Incr.t that it is using.
+
+In concrete: a `Univ_map` from `'a Type_equal.Id.t` to `'a Incr.t`.
+
+    ../../src/env.ml
+
+
+##### Benefits of wormhole: Ergonomics
+
+Instead of threading some extraneous state through the bonsai graph via arrow
+combinators, you can use this "read" component only in the places where you
+care about the `'value` value.
+
+```ocaml
+wormhole (fun ~read ->
+  let%map a = ...
+  and     b = ...
+  and     c = ...
+  and     d = Bonsai.Map.assoc (module Int) (Bonsai.both (...) read)
+)
+```
+
+##### Benefits of wormhole: Better incremental graph
+
+The graph produced with wormhole is more direct!
+
+```
+o -- o -- o -- o
+    /
+o -`
+```
+
+```
+o -- o -- o -- o
+              /
+o -----------`
+```
+
+##### Benefits of wormhole: Better semantics
+
+This is confusing to some people:
+
+```ocaml
+let a: _ Bonsai.t = ... in
+let%map b = a >>| f
+and     c = a >>| g in
+h b c
+
+(both (Bonsai.input) a) >>> (wormhole (fun ~read ->
+  let%map b = read >>| f
+  and     c = read >>| g in
+  h b c
+))
+```
+
+But if 'a' is the `read` end of a wormhole, there's no duplication!
+
+##### Bind-like
+
+```ocaml
+val bind_like
+  :  ('input, 'r1) Bonsai.t
+  -> f:((_, 'r1) Bonsai.t -> ('input, 'r2) Bonsai.t)
+  -> ('input, 'r2) Bonsai.t
+
+
+(both (Bonsai.input) a) >>> (wormhole (fun ~read ->
+  let%map b = read >>| f
+  and     c = read >>| g in
+  h b c
+))
+
+bind_like a (fun read ->
+  let%map b = read >>| f
+  and     c = read >>| g in
+  h b c
+)
+```
+
+##### Real world usage
+
+```
+    extend_second paging
+>>> extend_second sorting
+>>> extend_second cell_focus
+>>> extend_second tbody
+>>> extend_second merge_key_handlers
+>>> extend_second table
+>>| make_result
+
+old: ../../../../../../+share+/lib/bonsai_ui_components/src/table/table.ml
+new : ../../../bonsai_ui_components/src/table/table.ml
+```
+
+
+#### ACT 2
+
+```diff
+ module Let_syntax : sig
+   module Let_syntax : sig
++    val bind
++      :  ('input, 'r1) Bonsai.t
++      -> f:((_, 'r1) Bonsai.t -> ('input, 'r2) Bonsai.t)
++      -> ('input, 'r2) Bonsai.t
+   end
+ end
+```
+
+##### Pros
+
+Huge ergonomics + performance win for basically all code that would currently
+be implemented via the arrow combinators.
+
+New API's are easy to write, like the following for writing a tabbed-ui interface:
+
+```diff
+-val tabs
+-  :  (module Enum with type t = 'a)
+-  -> specialize:
+-       (  'a
+-       -> ('input * ('a -> Vdom.Event.t), Vdom.node.t) Bonsai.t)
+-  -> ('input, Vdom.Node.t) Bonsai.t
+
++val tabs
++  :  (module Enum with type t = 'a)
++  -> specialize:
++       (  set_tab:(_, 'a -> Event.t) Bonsai.t
++       -> 'a
++       -> ('input, Vdom.node.t) Bonsai.t)
++  -> ('input, Vdom.Node.t) Bonsai.t
+```
+
+Using that API
+
+```ocaml
+module My_tabs = struct
+  type t = A | B | C [@@deriving sexp, enumerate]
+end
+
+tabs (module My_tabs) ~specialize:(fun set_tab -> function
+  | A -> a_component
+  | B -> b_component
+  | C -> build_c_component set_tab)
+```
+
+
+
+##### Cons
+
+It's not _really_ bind?  I wish we could use the new let-op
+syntax in ocaml.
+
+`and` doesn't work.  We'd need something like co-both for it to work?
+Leo has a proposal here that I need to read more carefully.
+
+No storing these vars!
+
+
+#### ACT 3
+
+##### Unit For All!
+
+```diff
+-val bind_like
+-  :  ('input, 'r1) Bonsai.t
+-  -> f:((_, 'r1) Bonsai.t -> ('input, 'r2) Bonsai.t)
+-  -> ('input, 'r2) Bonsai.t
+
++val bind_like
++  :  (unit, 'r1) Bonsai.t
++  -> f:((unit, 'r1) Bonsai.t -> (unit, 'r2) Bonsai.t)
++  -> (unit, 'r2) Bonsai.t
+```
+
+##### Proc
+
+```ocaml
+val proc
+  :  ((unit, 'input) Bonsai.t -> (unit, 'result) Bonsai.t)
+  -> ('input, 'result) Bonsai.t
+
+proc (fun input ->
+
+  let%bind a = input
+  let%bind b = apply some_component (let%map a = a and input = input in a, input)
+)
+```
+
+##### Proc in use
+
+```ocaml
+let my_arrow = proc (fun i ->
+  let%bind x = some_arrow <<< (i >>| a_field) in
+  let%bind y = another_arrow <<<
+    let%map x = x
+    and     i = i in
+    g x i
+  in
+  let%bind z = yet_another_arrow <<<
+    let%map x = x
+    and     y = y
+    and     i = i in
+    h x y i
+  in
+  z)
+```
+#### ACT 4
+
+##### REMOVE BONSAI.T
+
+It's pretty clear that regular `('input, 'result) Bonsai.t` and `(unit,
+'result) Bonsai.t` are pretty different.  Specifically the semantics
+of `map` being different on the "read" end of a bind, makes me think that
+these should be different types.
+
+
+```ocaml
+module Fun : sig
+  type ('input, 'result) t
+end
+
+module Val : sig
+  type 'a t
+end
+```
+
+##### Proc & other helpers
+
+```ocaml
+val proc : ('a Val.t -> 'b Val.t) -> ('a, 'b) Fun.t
+val call : ('a, 'b) Fun.t -> 'a Val.t -> 'b Val.t
+```
+
+##### Syntax
+
+Only define a let-syntax for Val.t
+
+```
+moduel Val : sig
+  module Let_syntax : sig
+    val sub: 'a Val.t -> f: ('a Val.t -> 'b Val.t) -> 'b Val.t
+  end
+end
+```
+
+##### DELETE ARROW
+
+```diff
+-module Arrow : sig
+-  val first : ('input, 'result) t -> ('input * 'a, 'result * 'a) t
+-  val second : ('input, 'result) t -> ('a * 'input, 'a * 'result) t
+-  val split : ('i1, 'r1) t -> ('i2, 'r2) t -> ('i1 * 'i2, 'r1 * 'r2) t
+-  val extend_first : ('input, 'result) t -> ('input, 'result * 'input) t
+-  val extend_second : ('input, 'result) t -> ('input, 'input * 'result) t
+-  val ( *** ) : ('i1, 'r1) t -> ('i2, 'r2) t -> ('i1 * 'i2, 'r1 * 'r2) t
+-  val fanout : ('input, 'r1) t -> ('input, 'r2) t -> ('input, 'r1 * 'r2) t
+-  val ( &&& ) : ('input, 'r1) t -> ('input, 'r2) t -> ('input, 'r1 * 'r2) t
+-  val ( ^>> ) : ('i1 -> 'i2) -> ('i2, 'result) t -> ('i1, 'result) t
+-  val ( >>^ ) : ('input, 'r1) t -> ('r1 -> 'r2) -> ('input, 'r2) t
+-  val partial_compose_first
+-    :  ('input, 'shared * 'output1) t
+-    -> ('input * 'shared, 'output2) t
+-    -> ('input, 'output1 * 'output2) t
+-  val pipe
+-    :  ('input, 'r1) t
+-    -> into:('intermediate, 'r2) t
+-    -> via:('input -> 'r1 -> 'intermediate)
+-    -> finalize:('input -> 'r1 -> 'r2 -> 'r3)
+-    -> ('input, 'r3) t
+-end
+```
+
+##### Fin
+
+```ocaml
+module Fun : sig
+  type ('a, 'b) t
+  (* arrow*)
+end
+
+module Val : sig
+  type 'a t (* = | Lookup 'a Type_equal.Id.t | Map of 'a t * 'a -> 'b | Both 'a t * 'b t  *)
+  (* applicative *)
+
+  (* make applicative syntax *)
+
+  val map
+    :  'a t
+    -> f:('a -> 'b)
+    -> 'b t
+
+  val return: 'a -> 'a t
+  val both : 'a t -> 'b t -> ('a * 'b) t
+end
+
+module Computation : sig
+  type 'a t (* = (unit, 'a) Bonsai.t *)
+end
+
+val apply
+  :  ('a, 'b) Fun.t
+  -> 'a Val.t
+  -> 'b Computation.t
+
+val bind
+  :  'a Computation.t
+  -> f:('a Val.t -> 'b Computation.t)
+  -> 'b Computation.t
+
+val const: 'a -> 'a Computation.t
+
+val return: 'a Val.t -> 'a Computation.t
+
+val proc
+  :  ('a Val.t -> 'b Computation.t)
+  -> ('a, 'b) Fun.t
+
+
+let syntax :
+  sub - kinda like bind - defined on computation.t
+  map -                 - defined on Val.t
+
+val bind
+  : 'a Val.t
+  -> f:('a Val.t -> 'b Val.t)
+  -> 'b Val.t
+
+let call arrow value =
+  let%bind result = value >>> arrow in
+  result
+
+  bind (value >>> arrow)  ~f:(fun r -> r)
+
+let a = call arrow x
+let
+
+
+val bind
+  :  ('a, 'b) Fun.t
+  -> f:('b Val.t -> ('b, 'c) Fun.t)
+  -> ('a, 'c) Fun.t
+
+val read : 'a Val.t -> (_, 'a) Fun.t
+
+type 'a computation
+val call: ('a, 'b) Fun.t -> 'a Var.t -> 'a computation
+val bind
+  :  'a computation
+  -> f:('a Val.t -> 'b computation)
+  -> 'b computation
+
+let a = call f x in
+let%map a = a
+and     b = b
+in (a, b)
+```
+
+Bonsai is not a UI framework, it's a programming language
+
 ### Proc-like Bonsai and beyond
 
 In early 2020, once again London T&C suggested a change to the API for the better similar to

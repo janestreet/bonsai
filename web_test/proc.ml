@@ -70,13 +70,18 @@ module Handle = struct
     Bonsai_test.Handle.create result_spec ?start_time ?optimize computation
   ;;
 
-  let flush_async_and_bonsai ?(max_iterations = 100) handle =
+  let flush_async_and_bonsai
+        ?(max_iterations = 100)
+        ?(silence_between_frames = false)
+        handle
+    =
     let open Async_kernel in
     let rec loop i =
       if i = 0
       then
         raise_s [%message [%string "not stable after %{max_iterations#Int} iterations"]];
-      if i < max_iterations then print_endline "------ between bonsai frame ------";
+      if i < max_iterations && not silence_between_frames
+      then print_endline "------ between bonsai frame ------";
       let%bind.Eager_deferred () =
         Async_kernel_scheduler.yield_until_no_jobs_remain ~may_return_immediately:true ()
       in

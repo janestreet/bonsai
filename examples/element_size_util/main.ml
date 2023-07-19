@@ -11,6 +11,7 @@ module Page = struct
     | Resizer
     | Fit
     | Position
+    | Scroll
   [@@deriving enumerate, sexp, compare, equal]
 end
 
@@ -218,6 +219,37 @@ let resizer_component =
        ])
 ;;
 
+let scroll_tracker_component =
+  let%sub state =
+    Bonsai.state_opt
+      ()
+      ~sexp_of_model:[%sexp_of: Size_hooks.Scroll_tracker.Scrollable.t]
+      ~equal:[%equal: Size_hooks.Scroll_tracker.Scrollable.t]
+  in
+  let%arr scrollable, set_scrollable = state in
+  let status =
+    match scrollable with
+    | None -> "<none>"
+    | Some scrollable ->
+      scrollable |> Size_hooks.Scroll_tracker.Scrollable.sexp_of_t |> Sexp.to_string
+  in
+  Vdom.Node.div
+    [ Vdom.Node.h3 [ Vdom.Node.text "Resize me!" ]
+    ; Vdom.Node.div
+        ~key:"resizable-using-css"
+        ~attrs:[ Style.resizable_using_css ]
+        [ Vdom.Node.div
+            ~attrs:
+              [ Size_hooks.Scroll_tracker.on_change (fun scrollable ->
+                  set_scrollable (Some scrollable))
+              ; Style.resizable_using_css
+              ; Style.child_with_size
+              ]
+            [ Vdom.Node.textf "You have these scrollbars: %s" status ]
+        ]
+    ]
+;;
+
 let component =
   let%sub page, inject_page =
     Bonsai.state Bulk_size ~sexp_of_model:[%sexp_of: Page.t] ~equal:[%equal: Page.t]
@@ -230,6 +262,7 @@ let component =
     | Resizer -> resizer_component
     | Fit -> fit
     | Position -> position
+    | Scroll -> scroll_tracker_component
   in
   let%arr page_component = page_component
   and page = page

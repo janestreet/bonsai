@@ -496,7 +496,8 @@ module Basic = struct
   let component
     : type key presence focus data cmp.
       ?filter:(key:key -> data:data -> bool) Value.t
-      -> ?override_sort:((key * data) compare -> (key * data) compare) Value.t
+      -> ?override_sort:
+           (key compare -> (key * data) compare -> (key * data) compare) Value.t
       -> ?default_sort:(key * data) compare Value.t
       -> ?preload_rows:int
       -> (key, cmp) Bonsai.comparator
@@ -515,6 +516,7 @@ module Basic = struct
       ~row_height
       ~columns
       map ->
+      let module Cmp = (val comparator) in
       let focus : (focus, presence, key) Expert.Focus.Kind.t =
         match focus with
         | None -> None
@@ -558,6 +560,10 @@ module Basic = struct
           and default_sort = default_sort
           and sortable_header = sortable_header
           and override_sort = override_sort in
+          let override_sort =
+            Option.map override_sort ~f:(fun override_sort ->
+              override_sort Cmp.comparator.compare)
+          in
           Order.to_compare
             (Sortable_header.order sortable_header)
             ?override_sort

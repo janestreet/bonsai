@@ -99,3 +99,26 @@ let%expect_test _ =
     (iteration (count 5))
     (exn (monitor.ml.Error "not stable after 5 iterations")) |}]
 ;;
+
+let%expect_test _ =
+  let rpc_implementations = [ Rpc.Rpc.implement' rpc_a (fun _ query -> query) ] in
+  let handle =
+    Handle.create ~rpc_implementations (Result_spec.string (module Unit)) (computation 10)
+  in
+  match%map
+    Async_kernel.try_with (fun () ->
+      Handle.flush_async_and_bonsai ~max_iterations:5 ~silence_between_frames:true handle)
+  with
+  | Ok () -> ()
+  | Error exn ->
+    print_s [%message (exn : exn)];
+    [%expect
+      {|
+    (iteration (count 0))
+    (iteration (count 1))
+    (iteration (count 2))
+    (iteration (count 3))
+    (iteration (count 4))
+    (iteration (count 5))
+    (exn (monitor.ml.Error "not stable after 5 iterations")) |}]
+;;

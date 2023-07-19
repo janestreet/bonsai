@@ -1,2 +1,0 @@
-(executables (names main) (libraries bonsai_web kado)
- (preprocess (pps ppx_jane ppx_css ppx_bonsai)))

@@ -68,5 +68,11 @@ include
     position: relative;
     overflow: hidden;
   }
+
+  .child_with_size {
+    width: 200px;
+    height: 200px;
+    border: 2px solid red;
+  }
 |}
       ~rewrite:[ "--js-form-unfocused-color", "--js-form-unfocused-color" ]]
