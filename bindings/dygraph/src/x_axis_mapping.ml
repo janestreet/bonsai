@@ -92,7 +92,7 @@ module Time_mapping = struct
      function *)
   include Piecewise_linear_kernel.Make_invertible (Time_ns) (Time_ns)
 
-  let create ~start_time ~end_time ~zone ~ofday_knots ~date_to_weight : t =
+  let create ~start_time ~end_time ~zone ~ofday_knots ~date_to_weight : t Or_error.t =
     let start_date = Time_ns.to_date start_time ~zone                 in
     let end_date   = Time_ns.to_date end_time ~zone                   in
     let dates      = Date.dates_between ~min:start_date ~max:end_date in
@@ -125,12 +125,13 @@ module Time_mapping = struct
         time, x_value_time)
     in
     match create knots_in_time with
-    | Ok t        -> t
+    | Ok t        -> Ok t
     | Error error ->
-      Error.raise_s
+      Or_error.error_s
         [%message
           "Failed to create a piecewise linear mapping between x axis time and real time"
-            (error : Error.t)]
+            (error : Error.t)
+            (knots_in_time : (Time_ns.t * Time_ns.t) list)]
   ;;
 end
 
@@ -144,6 +145,24 @@ let only_display_market_hours
       ()
   =
   let ofday_knots =
+    (* Why do we have a [latest_allowable_mkt_end_of_day]?  It's because of the fact that
+       2 large ints can map to the same float value.
+
+       Time_ns is stored as an int.  [Time_ns.Ofday.approximate_end_of_day] is 1 ns away
+       from the start of the next day.  This is all fine.
+
+       The problem comes when we map our Time_ns.ts to float (because Piecewise_linear
+       works with floats).  We do this by converting the time to the number of nanos since
+       epoch.  These are large ints.  Then we convert that to a float.  This results in 2
+       time knots that map to the same float.  Piecewise_linear then complains with the
+       error "knot keys are not strictly increasing".
+    *)
+    let mkt_end_ofday =
+      let latest_allowable_mkt_end_of_day =
+        Time_ns.Ofday.(sub_exn approximate_end_of_day Time_ns.Span.millisecond)
+      in
+      Time_ns.Ofday.min latest_allowable_mkt_end_of_day mkt_end_ofday
+    in
     (* These knots represent how the time within a day should be spaced out on the x-axis.
        We give the time between 00:00 and 09:30 only 0.01 of the x-axis space, the time
        between 09:30 and 16:00 0.98 of the space, and the time between 16:00 and 24:00
@@ -154,7 +173,7 @@ let only_display_market_hours
     (* We only give 1/100th the x-axis space to weekends as we do to weekdays *)
     if Date.is_weekend date then 0.01 else 1.
   in
-  let x_axis_mapping =
+  let%map.Or_error x_axis_mapping =
     Time_mapping.create ~start_time ~end_time ~zone:mkt_zone ~ofday_knots ~date_to_weight
   in
   let time_to_x_value time    = Time_mapping.get         x_axis_mapping time    in

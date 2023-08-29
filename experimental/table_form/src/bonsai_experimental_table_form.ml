@@ -166,7 +166,7 @@ let table_form
   and table = table
   and set_map = set_map
   and id = id in
-  let view = Form.View.of_vdom ~id table in
+  let view = Form.View.of_vdom ~unique_key:id table in
   let value =
     forms
     |> Map.to_alist

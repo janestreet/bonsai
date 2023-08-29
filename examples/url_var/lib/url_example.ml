@@ -861,6 +861,50 @@ let tuple_example =
   }
 ;;
 
+module Catchall_url =
+  [%demo
+    module Catchall_url = struct
+      type t =
+        | Foo of int
+        | Bar
+        | Catchall of string
+      [@@deriving typed_variants, sexp, equal]
+
+      let parser_for_variant : type a. a Typed_variant.t -> a Parser.t = function
+        | Foo -> Parser.from_path Value_parser.int
+        | Bar -> Parser.unit
+        | Catchall -> Parser.with_prefix [] (Parser.from_path Value_parser.string)
+      ;;
+    end
+
+    let parser = Parser.Variant.make (module Catchall_url)
+
+    let%expect_test _ =
+      Parser.check_ok_and_print_urls_or_errors parser;
+      [%expect
+        {|
+        URL parser looks good!
+        ┌────────────┐
+        │ All urls   │
+        ├────────────┤
+        │ /<string>  │
+        │ /bar       │
+        │ /foo/<int> │
+        └────────────┘ |}]
+    ;;]
+
+let catchall_example =
+  { starting_components = Url_var.Components.create ~path:"i-am-a-catchall" ()
+  ; parser = Catchall_url.parser |> Projection.make ~encoding_behavior:Correct
+  ; type_ = (module Catchall_url.Catchall_url)
+  ; fallback = Bar
+  ; title = "Catchall example"
+  ; description = "Supports urls of shape [/bar | /foo/<int> | /<string>]"
+  ; demo_code = Catchall_url.ppx_demo_string
+  ; example_urls = []
+  }
+;;
+
 let examples =
   List.map [ T reading_from_query; T reading_from_path ] ~f:(fun (T example) ->
     component example)
@@ -873,6 +917,7 @@ let examples =
       ; T anonymous_record_example
       ; T tuple_example
       ; T folder_example
+      ; T catchall_example
       ]
       ~f:(fun (T example) -> component example)
   |> Computation.all

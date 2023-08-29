@@ -31,14 +31,14 @@ module File_read = struct
     { result : (Bigstring.t, Read_error.t) Result.t Ui_effect.t
     ; abort : unit Ui_effect.t
     }
-  [@@deriving fields]
+  [@@deriving fields ~getters]
 end
 
 type t =
   { read : (Progress.t -> unit Ui_effect.t) -> File_read.t Ui_effect.t
   ; filename : string
   }
-[@@deriving fields]
+[@@deriving fields ~getters ~iterators:create]
 
 let sexp_of_t t = Sexp.Atom [%string "<file %{filename t#String}>"]
 let read ?(on_progress = fun _progress -> Ui_effect.Ignore) t = t.read on_progress

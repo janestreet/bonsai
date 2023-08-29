@@ -30,7 +30,7 @@ module Expert = struct
       ; for_testing : For_testing.t Lazy.t
       ; focus : 'focus
       }
-    [@@deriving fields]
+    [@@deriving fields ~getters]
   end
 
   module Columns = struct
@@ -68,36 +68,25 @@ module Expert = struct
     let%sub input_map = Bonsai.pure Collated.to_map_list collated in
     let%sub path = Bonsai.path_id in
     let%sub leaves = Bonsai.pure Header_tree.leaves headers in
-    let%sub header_client_rect, set_header_client_rect =
-      Bonsai.state_opt
-        ()
-        ~sexp_of_model:[%sexp_of: Bbox.Int.t]
-        ~equal:[%equal: Bbox.Int.t]
-    in
+    let%sub header_client_rect, set_header_client_rect = Bonsai.state_opt () in
     let%sub header_client_rect =
-      return (Value.cutoff ~equal:[%equal: Bbox.Int.t option] header_client_rect)
+      return (Value.cutoff ~equal:[%equal: Bbox.t option] header_client_rect)
     in
     let%sub set_header_client_rect =
       let%arr set_header_client_rect = set_header_client_rect in
       fun b -> set_header_client_rect (Some b)
     in
     let%sub table_body_visible_rect, set_table_body_visible_rect =
-      Bonsai.state_opt
-        ()
-        ~sexp_of_model:[%sexp_of: Bbox.Int.t]
-        ~equal:[%equal: Bbox.Int.t]
+      Bonsai.state_opt ~equal:[%equal: Bbox.t] ()
     in
     let%sub table_body_visible_rect =
-      return (Value.cutoff ~equal:[%equal: Bbox.Int.t option] table_body_visible_rect)
+      return (Value.cutoff ~equal:[%equal: Bbox.t option] table_body_visible_rect)
     in
     let%sub table_body_client_rect, set_table_body_client_rect =
-      Bonsai.state_opt
-        ()
-        ~sexp_of_model:[%sexp_of: Bbox.Int.t]
-        ~equal:[%equal: Bbox.Int.t]
+      Bonsai.state_opt () ~equal:[%equal: Bbox.t]
     in
     let%sub table_body_client_rect =
-      return (Value.cutoff ~equal:[%equal: Bbox.Int.t option] table_body_client_rect)
+      return (Value.cutoff ~equal:[%equal: Bbox.t option] table_body_client_rect)
     in
     let module Column_widths_model = struct
       type t = Column_size.t Int.Map.t [@@deriving sexp, equal]
@@ -136,8 +125,8 @@ module Expert = struct
     let row_count = collated >>| Collated.num_filtered_rows in
     let%sub header_height_px =
       match%arr header_client_rect with
-      | None -> 0
-      | Some table_body_visible_rect -> Bbox.Int.height table_body_visible_rect
+      | None -> 0.0
+      | Some table_body_visible_rect -> Bbox.height table_body_visible_rect
     in
     let%sub range_without_preload =
       (* The goal of this value is to track the index range of the rows that would be
@@ -150,37 +139,30 @@ module Expert = struct
       and header_client_rect = header_client_rect
       and header_height_px = header_height_px in
       fun (`Px row_height_px) ->
+        let row_height_px = Float.of_int row_height_px in
         match table_body_visible_rect, table_body_client_rect, header_client_rect with
         | Some { min_y = body_min_y; max_y = body_max_y; _ }, _, None ->
           (* if we don't have the header-height yet, just assume that there's
              no overlap. *)
-          let low = Float.of_int body_min_y /. Float.of_int row_height_px in
-          let high =
-            (Float.of_int body_max_y -. Float.of_int row_height_px +. 2.)
-            /. Float.of_int row_height_px
-          in
+          let low = body_min_y /. row_height_px in
+          let high = (body_max_y -. row_height_px +. 2.) /. row_height_px in
           Some (Float.(to_int (round_nearest low)), Float.(to_int (round_nearest high)))
         | ( Some { min_y = body_min_y; max_y = body_max_y; _ }
           , Some { min_y = client_body_min_y; _ }
           , Some { max_y = header_max_y; _ } ) ->
           let header_overlap =
-            Int.min header_height_px (header_max_y - client_body_min_y)
+            Float.min header_height_px (header_max_y -. client_body_min_y)
           in
-          let low =
-            Float.of_int (body_min_y + header_overlap) /. Float.of_int row_height_px
-          in
-          let high =
-            (Float.of_int body_max_y -. Float.of_int row_height_px +. 2.)
-            /. Float.of_int row_height_px
-          in
+          let low = (body_min_y +. header_overlap) /. row_height_px in
+          let high = (body_max_y -. row_height_px +. 2.) /. row_height_px in
           Some (Float.(to_int (round_nearest low)), Float.(to_int (round_nearest high)))
         | _ -> None
     in
     let%sub midpoint_of_container =
       let%arr table_body_visible_rect = table_body_visible_rect in
       match table_body_visible_rect with
-      | None -> 0
-      | Some rect -> (rect.max_x + rect.min_x) / 2
+      | None -> 0.0
+      | Some rect -> (rect.max_x +. rect.min_x) /. 2.0
     in
     let%sub scroll_to_index =
       let%arr header_height_px = header_height_px
@@ -200,16 +182,17 @@ module Expert = struct
              correct this value to something more useful. *)
           range_without_preload (`Px row_height_px) |> Option.value ~default:(0, 1)
         in
+        let row_height_px = Float.of_int row_height_px in
         let to_top =
           (* scrolling this row to the top of the display involves
              scrolling to a pixel that is actually [header_height] _above_
              the target row. *)
-          Some ((row_height_px * index) - header_height_px)
+          Some ((row_height_px *. Float.of_int index) -. header_height_px)
         in
         let to_bottom =
           (* scroll to the bottom of this row means scrolling to the top of
              a one-pixel element just below this row *)
-          Some (row_height_px * (index + 1))
+          Some (row_height_px *. Float.of_int (index + 1))
         in
         let y_px =
           if index <= range_start
@@ -223,7 +206,7 @@ module Expert = struct
         | Some y_px ->
           let%bind.Effect () =
             print_in_tests (fun () ->
-              [%string "scrolling to index %{index#Int} at %{y_px#Int}px"])
+              [%string "scrolling to index %{index#Int} at %{y_px#Float}0px"])
           in
           Scroll.to_position_inside_element
             ~x_px:midpoint_of_container
@@ -257,23 +240,26 @@ module Expert = struct
               [%here]
                 "BUG: the visible rect shouldn't be none when there is range of rows"]
         | Some (range_start, _range_end), Some table_body_visible_rect ->
+          let old_row_height_px, new_row_height_px =
+            Float.of_int old_row_height_px, Float.of_int new_row_height_px
+          in
           (* If some rows of the table are visible, we scroll such that the top
              visible row remains in the same position in the viewport. *)
-          let old_y_px = old_row_height_px * range_start in
-          let new_y_px = new_row_height_px * range_start in
+          let old_y_px = old_row_height_px *. Float.of_int range_start in
+          let new_y_px = new_row_height_px *. Float.of_int range_start in
           let selector = ".partial-render-table-" ^ path ^ " > div" in
           let y_px =
-            match new_y_px < old_y_px with
-            | true -> new_y_px - header_height_px
+            match Float.(new_y_px < old_y_px) with
+            | true -> new_y_px -. header_height_px
             | false ->
               new_y_px
-              - header_height_px
-              + (table_body_visible_rect.max_y - table_body_visible_rect.min_y)
-              - 1
+              -. header_height_px
+              +. (table_body_visible_rect.max_y -. table_body_visible_rect.min_y)
+              -. 1.0
           in
           let%bind.Effect () =
             print_in_tests (fun () ->
-              [%string "scrolling position %{y_px#Int}px into view"])
+              [%string "scrolling position %{y_px#Float}px into view"])
           in
           Scroll.to_position_inside_element
             ~x_px:midpoint_of_container
@@ -477,7 +463,7 @@ module Basic = struct
       ; num_filtered_rows : int
       ; sortable_header : int Sortable_header.t
       }
-    [@@deriving fields]
+    [@@deriving fields ~getters]
   end
 
   module Columns = struct
@@ -530,9 +516,7 @@ module Basic = struct
           in
           By_row { on_change; compute_presence }
       in
-      let filter =
-        Option.value_map filter ~default:(Value.return None) ~f:(Value.map ~f:Option.some)
-      in
+      let filter = Value.of_opt filter in
       let%sub rank_range, set_rank_range =
         Bonsai.state
           (Collate.Which_range.To 0)

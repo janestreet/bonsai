@@ -719,22 +719,22 @@ let%expect_test "enum" =
     {|
      tree:
        1-1_1 incr -> 1_1 map
-       1_1 map -> _1 switch @ lib/bonsai/src/proc.ml:51:26
-       2_1 return -> _1 switch @ lib/bonsai/src/proc.ml:51:26
+       1_1 map -> _1 switch @ lib/bonsai/src/proc.ml:61:26
+       2_1 return -> _1 switch @ lib/bonsai/src/proc.ml:61:26
        2_2 incr -> 2_1 return
        3-1_1 incr -> 3_2 map @ 6:8
-       3_1 return -> _1 switch @ lib/bonsai/src/proc.ml:51:26
+       3_1 return -> _1 switch @ lib/bonsai/src/proc.ml:61:26
        3_2 map @ 6:8 -> 3_1 return
-       _1 switch @ lib/bonsai/src/proc.ml:51:26 -> _0
+       _1 switch @ lib/bonsai/src/proc.ml:61:26 -> _0
      dag:
        1-1_1 incr -> 1_1 map
-       1_1 map -> _1 switch @ lib/bonsai/src/proc.ml:51:26
-       2_1 return -> _1 switch @ lib/bonsai/src/proc.ml:51:26
+       1_1 map -> _1 switch @ lib/bonsai/src/proc.ml:61:26
+       2_1 return -> _1 switch @ lib/bonsai/src/proc.ml:61:26
        2_2 incr -> 2_1 return
        3-1_1 incr -> 3_2 map @ 6:8
-       3_1 return -> _1 switch @ lib/bonsai/src/proc.ml:51:26
+       3_1 return -> _1 switch @ lib/bonsai/src/proc.ml:61:26
        3_2 map @ 6:8 -> 3_1 return
-       _1 switch @ lib/bonsai/src/proc.ml:51:26 -> _0
+       _1 switch @ lib/bonsai/src/proc.ml:61:26 -> _0
      |}];
   let handle = Handle.create (Result_spec.sexp (module Bool)) c in
   Handle.show handle;
@@ -779,7 +779,7 @@ let lazy_computation ?(match_ = Value.return true) () =
     ~match_
     ~with_:(function
       | true -> return a
-      | false -> Bonsai.lazy_ (lazy (return a)))
+      | false -> (Bonsai.lazy_ [@alert "-deprecated"]) (lazy (return a)))
 ;;
 
 let%expect_test "lazy" =
@@ -790,18 +790,18 @@ let%expect_test "lazy" =
     {|
      tree:
        1-1_1 incr -> 1_1 map
-       1_1 map -> _1 switch @ lib/bonsai/src/proc.ml:51:26
-       2_1 lazy -> _1 switch @ lib/bonsai/src/proc.ml:51:26
-       3_1 return -> _1 switch @ lib/bonsai/src/proc.ml:51:26
+       1_1 map -> _1 switch @ lib/bonsai/src/proc.ml:61:26
+       2_1 lazy -> _1 switch @ lib/bonsai/src/proc.ml:61:26
+       3_1 return -> _1 switch @ lib/bonsai/src/proc.ml:61:26
        3_2 constant -> 3_1 return
-       _1 switch @ lib/bonsai/src/proc.ml:51:26 -> _0
+       _1 switch @ lib/bonsai/src/proc.ml:61:26 -> _0
      dag:
        1-1_1 incr -> 1_1 map
-       1_1 map -> _1 switch @ lib/bonsai/src/proc.ml:51:26
-       2_1 lazy -> _1 switch @ lib/bonsai/src/proc.ml:51:26
-       3_1 return -> _1 switch @ lib/bonsai/src/proc.ml:51:26
+       1_1 map -> _1 switch @ lib/bonsai/src/proc.ml:61:26
+       2_1 lazy -> _1 switch @ lib/bonsai/src/proc.ml:61:26
+       3_1 return -> _1 switch @ lib/bonsai/src/proc.ml:61:26
        3_2 constant -> 3_1 return
-       _1 switch @ lib/bonsai/src/proc.ml:51:26 -> _0
+       _1 switch @ lib/bonsai/src/proc.ml:61:26 -> _0
      |}];
   let handle = Handle.create (Result_spec.sexp (module Int)) c in
   Handle.show handle;
@@ -817,70 +817,70 @@ let%expect_test "lazy" =
      stop-##map 1_1
      tree:
        1-1_1 incr -> 1_1 map
-       1_1 map -> _1 switch @ lib/bonsai/src/proc.ml:51:26
-       2_1 lazy -> _1 switch @ lib/bonsai/src/proc.ml:51:26
+       1_1 map -> _1 switch @ lib/bonsai/src/proc.ml:61:26
+       2_1 lazy -> _1 switch @ lib/bonsai/src/proc.ml:61:26
        2_2 return -> 2_1 lazy
-       3_1 return -> _1 switch @ lib/bonsai/src/proc.ml:51:26
+       3_1 return -> _1 switch @ lib/bonsai/src/proc.ml:61:26
        3_2 constant -> 3_1 return
-       _1 switch @ lib/bonsai/src/proc.ml:51:26 -> _0
+       _1 switch @ lib/bonsai/src/proc.ml:61:26 -> _0
      dag:
        1-1_1 incr -> 1_1 map
-       1_1 map -> _1 switch @ lib/bonsai/src/proc.ml:51:26
-       2_1 lazy -> _1 switch @ lib/bonsai/src/proc.ml:51:26
-       3_1 return -> _1 switch @ lib/bonsai/src/proc.ml:51:26
+       1_1 map -> _1 switch @ lib/bonsai/src/proc.ml:61:26
+       2_1 lazy -> _1 switch @ lib/bonsai/src/proc.ml:61:26
+       3_1 return -> _1 switch @ lib/bonsai/src/proc.ml:61:26
        3_2 constant -> 3_1 return
-       _1 switch @ lib/bonsai/src/proc.ml:51:26 -> _0
+       _1 switch @ lib/bonsai/src/proc.ml:61:26 -> _0
      tree:
        1-1_1 incr -> 1_1 map
-       1_1 map -> _1 switch @ lib/bonsai/src/proc.ml:51:26
-       2_1 lazy -> _1 switch @ lib/bonsai/src/proc.ml:51:26
+       1_1 map -> _1 switch @ lib/bonsai/src/proc.ml:61:26
+       2_1 lazy -> _1 switch @ lib/bonsai/src/proc.ml:61:26
        2_2 return -> 2_1 lazy
-       3_1 return -> _1 switch @ lib/bonsai/src/proc.ml:51:26
+       3_1 return -> _1 switch @ lib/bonsai/src/proc.ml:61:26
        3_2 constant -> 3_1 return
-       _1 switch @ lib/bonsai/src/proc.ml:51:26 -> _0
+       _1 switch @ lib/bonsai/src/proc.ml:61:26 -> _0
      dag:
        1-1_1 incr -> 1_1 map
-       1_1 map -> _1 switch @ lib/bonsai/src/proc.ml:51:26
-       2_1 lazy -> _1 switch @ lib/bonsai/src/proc.ml:51:26
+       1_1 map -> _1 switch @ lib/bonsai/src/proc.ml:61:26
+       2_1 lazy -> _1 switch @ lib/bonsai/src/proc.ml:61:26
        2_2 return -> 2_1 lazy
-       3_1 return -> _1 switch @ lib/bonsai/src/proc.ml:51:26
+       3_1 return -> _1 switch @ lib/bonsai/src/proc.ml:61:26
        3_2 constant -> 3_1 return
-       _1 switch @ lib/bonsai/src/proc.ml:51:26 -> _0
+       _1 switch @ lib/bonsai/src/proc.ml:61:26 -> _0
      tree:
        1-1_1 incr -> 1_1 map
-       1_1 map -> _1 switch @ lib/bonsai/src/proc.ml:51:26
-       2_1 lazy -> _1 switch @ lib/bonsai/src/proc.ml:51:26
+       1_1 map -> _1 switch @ lib/bonsai/src/proc.ml:61:26
+       2_1 lazy -> _1 switch @ lib/bonsai/src/proc.ml:61:26
        2_2 return -> 2_1 lazy
        2_3 constant -> 2_2 return
-       3_1 return -> _1 switch @ lib/bonsai/src/proc.ml:51:26
+       3_1 return -> _1 switch @ lib/bonsai/src/proc.ml:61:26
        3_2 constant -> 3_1 return
-       _1 switch @ lib/bonsai/src/proc.ml:51:26 -> _0
+       _1 switch @ lib/bonsai/src/proc.ml:61:26 -> _0
      dag:
        1-1_1 incr -> 1_1 map
-       1_1 map -> _1 switch @ lib/bonsai/src/proc.ml:51:26
-       2_1 lazy -> _1 switch @ lib/bonsai/src/proc.ml:51:26
+       1_1 map -> _1 switch @ lib/bonsai/src/proc.ml:61:26
+       2_1 lazy -> _1 switch @ lib/bonsai/src/proc.ml:61:26
        2_2 return -> 2_1 lazy
-       3_1 return -> _1 switch @ lib/bonsai/src/proc.ml:51:26
+       3_1 return -> _1 switch @ lib/bonsai/src/proc.ml:61:26
        3_2 constant -> 3_1 return
-       _1 switch @ lib/bonsai/src/proc.ml:51:26 -> _0
+       _1 switch @ lib/bonsai/src/proc.ml:61:26 -> _0
      tree:
        1-1_1 incr -> 1_1 map
-       1_1 map -> _1 switch @ lib/bonsai/src/proc.ml:51:26
-       2_1 lazy -> _1 switch @ lib/bonsai/src/proc.ml:51:26
+       1_1 map -> _1 switch @ lib/bonsai/src/proc.ml:61:26
+       2_1 lazy -> _1 switch @ lib/bonsai/src/proc.ml:61:26
        2_2 return -> 2_1 lazy
        2_3 constant -> 2_2 return
-       3_1 return -> _1 switch @ lib/bonsai/src/proc.ml:51:26
+       3_1 return -> _1 switch @ lib/bonsai/src/proc.ml:61:26
        3_2 constant -> 3_1 return
-       _1 switch @ lib/bonsai/src/proc.ml:51:26 -> _0
+       _1 switch @ lib/bonsai/src/proc.ml:61:26 -> _0
      dag:
        1-1_1 incr -> 1_1 map
-       1_1 map -> _1 switch @ lib/bonsai/src/proc.ml:51:26
-       2_1 lazy -> _1 switch @ lib/bonsai/src/proc.ml:51:26
+       1_1 map -> _1 switch @ lib/bonsai/src/proc.ml:61:26
+       2_1 lazy -> _1 switch @ lib/bonsai/src/proc.ml:61:26
        2_2 return -> 2_1 lazy
        2_3 constant -> 2_2 return
-       3_1 return -> _1 switch @ lib/bonsai/src/proc.ml:51:26
+       3_1 return -> _1 switch @ lib/bonsai/src/proc.ml:61:26
        3_2 constant -> 3_1 return
-       _1 switch @ lib/bonsai/src/proc.ml:51:26 -> _0
+       _1 switch @ lib/bonsai/src/proc.ml:61:26 -> _0
      0 |}]
 ;;
 

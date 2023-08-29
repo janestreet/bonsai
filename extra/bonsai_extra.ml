@@ -405,6 +405,14 @@ module Stability = struct
     | Stable a -> Some a
     | Unstable { previously_stable; _ } -> previously_stable
   ;;
+
+  let prefer_stable_value = function
+    | Stable a -> a
+    | Unstable { previously_stable; unstable_value } ->
+      (match previously_stable with
+       | Some a -> a
+       | None -> unstable_value)
+  ;;
 end
 
 let value_stability (type a) ?sexp_of_model ~equal:input_equal input ~time_to_stable =

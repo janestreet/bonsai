@@ -354,7 +354,6 @@ module Constant_fold (Recurse : Fix_transform.Recurse with module Types := Types
          |> Computation.Lazy)
     | Return _
     | Leaf0 _
-    | Leaf01 _
     | Leaf_incr _
     | Store _
     | Fetch _

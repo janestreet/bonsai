@@ -116,7 +116,7 @@ module Multi_model : sig
 end
 
 module Input : sig
-  type 'a t
+  type 'a t [@@deriving sexp_of]
 
   val same_witness : 'a t -> 'b t -> ('a, 'b) Type_equal.t option
   val same_witness_exn : 'a t -> 'b t -> ('a, 'b) Type_equal.t

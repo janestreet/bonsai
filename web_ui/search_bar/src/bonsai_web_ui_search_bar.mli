@@ -19,7 +19,7 @@ module Input : sig
     { choices : 'a list
     ; on_select : 'a -> unit Vdom.Effect.t
     }
-  [@@deriving fields]
+  [@@deriving fields ~iterators:create]
 end
 
 val create

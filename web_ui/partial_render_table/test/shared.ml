@@ -24,7 +24,6 @@ type t =
   ; d : int option
   ; e : string
   }
-[@@deriving fields]
 
 (* This is a "natural option sorting" comparison function that
    always sorts Nones to the bottom *)
@@ -370,10 +369,10 @@ module Test = struct
       Bonsai_web_ui_element_size_hooks.Visibility_tracker.For_testing.type_id
       ~f:(fun { visible_rect_changed; _ } -> visible_rect_changed)
       (Option.map low_and_high ~f:(fun (low, high) ->
-         { Bonsai_web_ui_element_size_hooks.Visibility_tracker.Bbox.min_x = 0
-         ; min_y = low
-         ; max_x = 100
-         ; max_y = high
+         { Bonsai_web_ui_element_size_hooks.Visibility_tracker.Bbox.min_x = 0.0
+         ; min_y = Float.of_int low
+         ; max_x = 100.0
+         ; max_y = Float.of_int high
          }))
   ;;
 

@@ -263,19 +263,21 @@ let with_auto_generated_forms ~theme =
               [ Node.tr [ label ]; nested_table eval_context rest ])
             else rest
 
-          method! form_raw ~eval_context ~view_context ({ id; raw_view } : Form_view.raw)
-            =
+          method! form_raw
+                  ~eval_context
+                  ~view_context
+                  ({ unique_key; raw_view } : Form_view.raw) =
             let view_context =
               { view_context with
                 label =
                   Option.map view_context.label ~f:(fun label ->
                     Node.label
-                      ~attrs:[ Attr.for_ id; Attr.style (Css_gen.display `Block) ]
+                      ~attrs:[ Attr.for_ unique_key; Attr.style (Css_gen.display `Block) ]
                       [ label ])
               }
             in
             [ Node.tr
-                ~key:id
+                ~key:unique_key
                 [ label_wrapper view_context
                 ; Node.td
                     [ raw_view view_context ~editable:(Form_context.editable eval_context)

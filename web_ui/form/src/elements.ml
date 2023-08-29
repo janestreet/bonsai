@@ -43,7 +43,10 @@ module Basic_stateful = struct
     let path, id = path_and_id in
     let state, set_state = state_and_set_state in
     let view = view ~id ~state ~set_state in
-    Form.Expert.create ~value:(Ok state) ~view:(View.of_vdom ~id:path view) ~set:set_state
+    Form.Expert.create
+      ~value:(Ok state)
+      ~view:(View.of_vdom ~unique_key:path view)
+      ~set:set_state
   ;;
 end
 
@@ -61,7 +64,9 @@ module Non_interactive = struct
     let%arr path, path_id = path_and_id
     and view = view
     and value = value in
-    let view = View.of_vdom ~id:path (Vdom.Node.div ~attrs:[ path_id ] [ view ]) in
+    let view =
+      View.of_vdom ~unique_key:path (Vdom.Node.div ~attrs:[ path_id ] [ view ])
+    in
     Form.Expert.create ~view ~value ~set:(fun _ -> Effect.Ignore)
   ;;
 end
@@ -511,7 +516,7 @@ module Dropdown = struct
         ~extra_option_attrs
         ~all
     in
-    let view = View.of_vdom ~id:path view in
+    let view = View.of_vdom ~unique_key:path view in
     let value =
       match state, default_value with
       | Uninitialized, Some default_value -> Some default_value
@@ -644,7 +649,7 @@ module Typeahead = struct
     and view = view
     and set = set
     and path = path in
-    Form.Expert.create ~value:(Ok value) ~view:(View.of_vdom ~id:path view) ~set
+    Form.Expert.create ~value:(Ok value) ~view:(View.of_vdom ~unique_key:path view) ~set
   ;;
 
   let single
@@ -700,7 +705,7 @@ module Typeahead = struct
     and view = view
     and set = set
     and path = path in
-    Form.Expert.create ~value:(Ok value) ~view:(View.of_vdom ~id:path view) ~set
+    Form.Expert.create ~value:(Ok value) ~view:(View.of_vdom ~unique_key:path view) ~set
   ;;
 
   let list
@@ -858,7 +863,7 @@ module Date_time = struct
       let%arr unit_view = unit_view
       and amount_view = amount_view
       and id = id in
-      View.of_vdom ~id (Vdom.Node.div [ amount_view; unit_view ])
+      View.of_vdom ~unique_key:id (Vdom.Node.div [ amount_view; unit_view ])
     in
     let%sub set =
       let%arr set_unit = set_unit
@@ -1000,7 +1005,7 @@ module Date_time = struct
             ~on_input:set_upper
         in
         View.of_vdom
-          ~id:form_id
+          ~unique_key:form_id
           (Vdom.Node.div [ lower_view; Vdom.Node.text " - "; upper_view ])
       in
       let set (lower_val, upper_val) =
@@ -1149,7 +1154,7 @@ module Multiselect = struct
     in
     Form.Expert.create
       ~value:(Ok selected_items)
-      ~view:(View.of_vdom ~id:path view)
+      ~view:(View.of_vdom ~unique_key:path view)
       ~set:set_state
   ;;
 
@@ -1259,7 +1264,7 @@ module Multiple = struct
     let view = Vdom.Node.div [ input; pills ] in
     Form.Expert.create
       ~value:(Ok selected_options)
-      ~view:(View.of_vdom ~id:path view)
+      ~view:(View.of_vdom ~unique_key:path view)
       ~set:inject_selected_options
   ;;
 
@@ -1711,7 +1716,7 @@ module Freeform_multiselect = struct
     in
     let%arr value, view, set = freeform_multiselect
     and path = path in
-    Form.Expert.create ~value:(Ok value) ~view:(View.of_vdom ~id:path view) ~set
+    Form.Expert.create ~value:(Ok value) ~view:(View.of_vdom ~unique_key:path view) ~set
   ;;
 
   let list ?extra_attr ?placeholder ?split () =
@@ -1747,7 +1752,7 @@ module Rank = struct
     and path = return (path >>| Bonsai.Private.Path.to_unique_identifier_string) in
     Form.Expert.create
       ~value:(Ok (List.map ~f:fst value))
-      ~view:(View.of_vdom ~id:path view)
+      ~view:(View.of_vdom ~unique_key:path view)
       ~set:(fun items -> inject [ Overwrite items ])
   ;;
 end
@@ -1819,7 +1824,7 @@ module Query_box = struct
     let value = if String.is_empty query then last_selected_value else None in
     Form.Expert.create
       ~value:(Ok value)
-      ~view:(View.of_vdom ~id:path view)
+      ~view:(View.of_vdom ~unique_key:path view)
       ~set:set_last_selected_value
   ;;
 

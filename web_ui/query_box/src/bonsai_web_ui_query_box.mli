@@ -52,7 +52,7 @@ type 'k t =
   ; set_query : string -> unit Effect.t
   ; focus_input : unit Effect.t
   }
-[@@deriving fields]
+[@@deriving fields ~getters]
 
 val create
   :  ('k, 'cmp) Bonsai.comparator
@@ -73,6 +73,9 @@ val create
   -> ?extra_input_attr:Vdom.Attr.t Value.t
   (** If provided [extra_attr] will be added to the outermost div of this component. *)
   -> ?extra_attr:Vdom.Attr.t Value.t
+  (** If provided [on_blur] will be called whenever a blur triggered outside of the
+      query box (including both input and item list) occurs. *)
+  -> ?on_blur:unit Ui_effect.t Value.t
   (** [f] generates the set of completion options by returning
       a map from a user-provided key ['k] to the view for that element
       in the dropdown list.  The currently entered filter from the textbox

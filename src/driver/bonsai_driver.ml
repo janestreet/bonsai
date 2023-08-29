@@ -226,3 +226,14 @@ module Expert = struct
     Incr.Var.set model_var default_model
   ;;
 end
+
+module For_testing = struct
+  let dump_dot (T { result_incr; lifecycle_incr; action_input_incr; _ }) =
+    let tempfile = "/tmp/dump.dot" in
+    Out_channel.with_file tempfile ~f:(fun oc ->
+      Ui_incr.Packed.save_dot
+        oc
+        [ Incr.pack result_incr; Incr.pack lifecycle_incr; Incr.pack action_input_incr ]);
+    In_channel.read_all tempfile
+  ;;
+end

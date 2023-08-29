@@ -44,7 +44,6 @@ module Private = struct
 end
 
 module Expert = struct
-  let state_machine01 = Proc.state_machine01
   let thunk = Proc.thunk
   let assoc_on = Proc.assoc_on
 end

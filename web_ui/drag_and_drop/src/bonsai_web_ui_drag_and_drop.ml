@@ -93,7 +93,7 @@ type ('source_id, 'target_id) t =
   ; model : ('source_id, 'target_id) State_machine_model.t
   ; inject : ('source_id, 'target_id) Action.t list -> unit Effect.t
   }
-[@@deriving fields]
+[@@deriving fields ~getters]
 
 let project_target
   :  ('source, 'target_a) t -> map:('target_a -> 'target_b)

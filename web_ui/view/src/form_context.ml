@@ -5,7 +5,7 @@ type t =
   { depth : int
   ; editable : editable
   }
-[@@deriving fields]
+[@@deriving fields ~getters]
 
 let default ~editable = { depth = 0; editable }
 let incr_depth t = { t with depth = t.depth + 1 }

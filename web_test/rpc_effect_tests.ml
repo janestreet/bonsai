@@ -28,9 +28,6 @@ module Diffable_int = struct
     print_s [%message "Computing diff" (from : int) (to_ : int)];
     [ to_ ]
   ;;
-
-  let to_diffs t = [ t ]
-  let of_diffs diffs = Option.value ~default:0 (List.last diffs)
 end
 
 let polling_state_rpc =

@@ -5,7 +5,7 @@ module Die : sig
     { num_faces : int
     ; result : int
     }
-  [@@deriving bin_io, compare, equal, fields, sexp]
+  [@@deriving bin_io, compare, equal, sexp]
 end
 
 type t =

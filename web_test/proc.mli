@@ -12,9 +12,28 @@ module Result_spec : sig
       filter out the "display" CSS property, you should return false for
       "style.display"; to filter out all CSS styles, return false when the
       string begins with "style.". A Node's key corresponds to the string
-      "@key" *)
+      "@key".
+
+      In the snippet:
+
+      ```html
+      <div key1="data1" key2="data2"></div>
+      ```
+
+      "key"'s are the left hand side of the equal and "data"'s are the right hand
+      side of the equal sign. This is different from the naming convention mentioned in
+      mdn's https://developer.mozilla.org/en-US/docs/Web/HTML/Attributes name's and
+      value's. 
+
+      ┌───────┬────────┐
+      │ mdn   │ bonsai │
+      ├───────┼────────┤
+      │ name  │ key    │
+      │ value │ data   │
+      └───────┴────────┘
+  *)
   val vdom
-    :  ?filter_printed_attributes:(string -> string -> bool)
+    :  ?filter_printed_attributes:(key:string -> data:string -> bool)
     -> ?censor_paths:bool
     -> ?censor_hash:bool
     -> ?path_censoring_message:string

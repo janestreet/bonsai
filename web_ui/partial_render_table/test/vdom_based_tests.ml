@@ -41,7 +41,7 @@ module Test = struct
             |> Virtual_dom_test_helpers.Node_helpers.to_string_html
                  ~path_censoring_message:""
                  ~hash_censoring_message:""
-                 ~filter_printed_attributes:(fun key _data ->
+                 ~filter_printed_attributes:(fun ~key ~data:_ ->
                    should_print_styles || not (String.is_prefix ~prefix:"style." key))
           ;;
 
@@ -1701,7 +1701,7 @@ let%expect_test "removed columns still count toward the total table width" =
   let handle =
     Handle.create
       (Result_spec.vdom
-         ~filter_printed_attributes:(fun key _data -> String.equal key "style.width")
+         ~filter_printed_attributes:(fun ~key ~data:_ -> String.equal key "style.width")
          get_vdom)
       component
   in
@@ -1905,7 +1905,7 @@ let%expect_test "removed columns still count toward the total table width" =
   let handle =
     Handle.create
       (Result_spec.vdom
-         ~filter_printed_attributes:(fun key _data ->
+         ~filter_printed_attributes:(fun ~key ~data:_ ->
            String.equal key "style.padding-top" || String.equal key "style.padding-bottom")
          get_vdom)
       component

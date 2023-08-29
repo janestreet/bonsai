@@ -65,6 +65,10 @@ module Value : sig
       true when any of the composed nodes is true and is false when all of the composed nodes are false.
       They're "or'ed together". *)
   val cutoff : 'a t -> equal:('a -> 'a -> bool) -> 'a t
+
+  (** flips the option position in a ['a Value.t option] into an ['a option Value.t]. It's
+      useful for optional args that take values. *)
+  val of_opt : 'a t option -> 'a option t
 end
 
 module Computation : sig
@@ -444,6 +448,36 @@ val freeze
         ...
     ]} *)
 val lazy_ : 'a Computation.t Lazy.t -> 'a Computation.t
+[@@deprecated "[since 2023-07] Use Bonsai.fix "]
+
+(** A fixed-point combinator for bonsai components.  This is used to build recursive
+    components like so:
+
+    {[
+      let my_recursive_component ~some_input = 
+        Bonsai.fix some_input ~f:(fun ~recurse some_input -> 
+          (* call [recurse] to instantiate a nested instance of the component *)
+        )
+    ]}
+*)
+val fix
+  :  'input Value.t
+  -> f:
+       (recurse:('input Value.t -> 'result Computation.t)
+        -> 'input Value.t
+        -> 'result Computation.t)
+  -> 'result Computation.t
+
+(** Like [fix], but for two arguments instead of just one. *)
+val fix2
+  :  'a Value.t
+  -> 'b Value.t
+  -> f:
+       (recurse:('a Value.t -> 'b Value.t -> 'result Computation.t)
+        -> 'a Value.t
+        -> 'b Value.t
+        -> 'result Computation.t)
+  -> 'result Computation.t
 
 (** [scope_model] allows you to have a different model for the provided
     computation, keyed by some other value.
@@ -991,37 +1025,6 @@ module Private : sig
 end
 
 module Expert : sig
-  val state_machine01
-    :  ?sexp_of_dynamic_action:('dynamic_action -> Sexp.t)
-    -> ?sexp_of_static_action:('static_action -> Sexp.t)
-    -> ?reset:
-         (inject_dynamic:('dynamic_action -> unit Effect.t)
-          -> inject_static:('static_action -> unit Effect.t)
-          -> schedule_event:(unit Effect.t -> unit)
-          -> 'model
-          -> 'model)
-    -> ?sexp_of_model:('model -> Sexp.t)
-    -> ?equal:('model -> 'model -> bool)
-    -> default_model:'model
-    -> apply_dynamic:
-         (inject_dynamic:('dynamic_action -> unit Effect.t)
-          -> inject_static:('static_action -> unit Effect.t)
-          -> schedule_event:(unit Effect.t -> unit)
-          -> 'input
-          -> 'model
-          -> 'dynamic_action
-          -> 'model)
-    -> apply_static:
-         (inject_dynamic:('dynamic_action -> unit Effect.t)
-          -> inject_static:('static_action -> unit Effect.t)
-          -> schedule_event:(unit Effect.t -> unit)
-          -> 'model
-          -> 'static_action
-          -> 'model)
-    -> 'input Value.t
-    -> ('model * ('dynamic_action -> unit Effect.t) * ('static_action -> unit Effect.t))
-         Computation.t
-
   (** [thunk] will execute its argument exactly once per instantiation of the
       computation. *)
   val thunk : (unit -> 'a) -> 'a Computation.t

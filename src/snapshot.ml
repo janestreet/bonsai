@@ -6,7 +6,7 @@ type ('model, 'action, 'input, 'result) t =
   ; lifecycle : Lifecycle.Collection.t Incr.t option
   ; result : 'result Incr.t
   }
-[@@deriving fields]
+[@@deriving fields ~getters ~iterators:create]
 
 let create ~input ~lifecycle ~result =
   Input.iter_incremental input ~f:(annotate_packed Input);

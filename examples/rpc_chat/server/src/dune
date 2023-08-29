@@ -1,6 +1,6 @@
 (library (name bonsai_chat_native)
  (libraries async_extra.async_bus bonsai_chat_common cohttp_static_handler
-  simple_web_server)
+  csp_monoid simple_web_server)
  (preprocess (pps ppx_jane)))
 
 (rule (targets embedded_files.ml embedded_files.mli)

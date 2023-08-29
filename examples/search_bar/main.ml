@@ -8,7 +8,7 @@ module User_info = struct
     { name : string
     ; int_id : int
     }
-  [@@deriving compare, equal, fields, sexp]
+  [@@deriving compare, equal, fields ~getters ~iterators:create, sexp]
 
   let sample_data =
     List.mapi [ "prod"; "dev"; "test" ] ~f:(fun i suffix ->
@@ -23,7 +23,8 @@ end
 
 module Search_bar = struct
   module Username = struct
-    type t = { username : string } [@@deriving compare, equal, fields, sexp]
+    type t = { username : string }
+    [@@deriving compare, equal, fields ~getters ~iterators:create, sexp]
 
     let of_user_info user_info = Fields.create ~username:(User_info.name user_info)
     let to_string t = username t
@@ -47,7 +48,7 @@ module Search_bar = struct
 end
 
 module Input = struct
-  type t = { all_users : User_info.t String.Map.t } [@@deriving fields]
+  type t = { all_users : User_info.t String.Map.t } [@@deriving fields ~getters]
 
   let default () = { all_users = User_info.sample_data }
 end

@@ -13,7 +13,7 @@ module Input = struct
     { choices : 'a list
     ; on_select : 'a -> unit Vdom.Effect.t
     }
-  [@@deriving fields]
+  [@@deriving fields ~getters ~iterators:create]
 end
 
 module Model = struct
@@ -24,7 +24,7 @@ module Model = struct
     ; autocomplete_box_visible : bool
     ; num_query_results_to_show : int
     }
-  [@@deriving compare, equal, fields, sexp]
+  [@@deriving compare, equal, fields ~getters, sexp]
 
   let init ~query ~max_query_results =
     { query

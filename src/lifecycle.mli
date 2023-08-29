@@ -13,4 +13,5 @@ module Collection : sig
   val has_after_display : t -> bool
   val empty : t
   val diff : t -> t -> unit Ui_effect.t
+  val merge : t Incr.t -> t Incr.t -> t Incr.t
 end

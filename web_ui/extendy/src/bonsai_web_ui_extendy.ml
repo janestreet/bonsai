@@ -15,7 +15,7 @@ module Model = struct
     { data : unit Id.Map.t
     ; count : int
     }
-  [@@deriving fields, equal, sexp]
+  [@@deriving equal, sexp]
 
   let default = { data = Int.Map.empty; count = 0 }
 

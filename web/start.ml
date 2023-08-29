@@ -83,7 +83,7 @@ module Arrow_deprecated = struct
       { input : 'input
       ; inject_outgoing : 'outgoing -> unit Vdom.Effect.t
       }
-    [@@deriving fields]
+    [@@deriving fields ~getters ~iterators:create]
 
     let create = Fields.create
   end
@@ -94,7 +94,7 @@ module Arrow_deprecated = struct
       ; extra : 'extra
       ; inject_incoming : 'incoming -> unit Vdom.Effect.t
       }
-    [@@deriving fields]
+    [@@deriving fields ~iterators:create]
 
     let create = Fields.create
 

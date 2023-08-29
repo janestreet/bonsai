@@ -45,11 +45,17 @@ module Focus = struct
       of_sync_fun (control_focus ~on_element:(fun element -> element##blur))
     in
     let open Bonsai.Let_syntax in
-    fun ?(name_for_testing = "element") () ->
+    fun ?name_for_testing () ->
       match Util.am_running_how with
       | `Node_test | `Node_benchmark | `Node ->
-        let print_effect_focus = print_s [%message "focus effect for" name_for_testing] in
-        let print_effect_blur = print_s [%message "blur effect for" name_for_testing] in
+        let print_effect_focus, print_effect_blur =
+          Option.value_map
+            name_for_testing
+            ~f:(fun name_for_testing ->
+              ( print_s [%message "focus effect for" name_for_testing]
+              , print_s [%message "blur effect for" name_for_testing] ))
+            ~default:(Ignore, Ignore)
+        in
         Bonsai.const
           { attr = Vdom.Attr.empty; focus = print_effect_focus; blur = print_effect_blur }
       | `Browser | `Browser_benchmark ->

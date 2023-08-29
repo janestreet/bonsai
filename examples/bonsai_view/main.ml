@@ -29,7 +29,7 @@ module Text_with_style_and_size = struct
 
   let description =
     {| You can use themed text to easily render text in a range of font styles and sizes
-    that are themable and consistent accross different components. |}
+    that are themable and consistent across different components. |}
   ;;
 
   let view =
@@ -91,7 +91,7 @@ module Table = struct
       [%demo
         [@@@ocamlformat "disable"]
 
-        type t = { sym : string ; bid : float ; ask : float } [@@deriving fields]
+        type t = { sym : string ; bid : float ; ask : float } [@@deriving fields ~getters]
 
         [@@@ocamlformat "enable"]
 
@@ -145,7 +145,7 @@ module Table_with_group = struct
         ; bid : float
         ; ask : float
         }
-      [@@deriving fields]
+      [@@deriving fields ~getters]
 
       include
         [%demo
@@ -195,7 +195,7 @@ module Table_with_empty_cells = struct
         { sym : string
         ; trader : string option
         }
-      [@@deriving fields]
+      [@@deriving fields ~getters]
 
       include
         [%demo

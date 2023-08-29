@@ -69,7 +69,7 @@ and view =
   | Option of option_view
 
 and raw =
-  { id : string
+  { unique_key : string
   ; raw_view : context -> editable:editable -> Vdom.Node.t
   }
 
@@ -118,18 +118,18 @@ and field =
   }
 [@@deriving sexp_of]
 
-(** [of_vdom] creates a Form's view from a raw [Vdom.Node.t]. [id] is used to disambiguate
+(** [of_vdom] creates a Form's view from a raw [Vdom.Node.t]. [unique_key] is used to disambiguate
     different input fields during [Vdom] diffing and patching, as well as linking a label
-    to the input. That is, if you attach the supplied [id] to a text input, then users who
+    to the input. That is, if you attach the supplied [unique_key] to a text input, then users who
     click on the label will focus the textbox.
 
-    Because ids are required to be unique, you should ~always use [Bonsai.path_id] to
-    generate the [id] that you pass. *)
-val of_vdom : id:string -> Vdom.Node.t -> t
+    Because unique keys are required to be unique, you should ~always use [Bonsai.path_id]
+    to generate the [unique keys] that you pass. *)
+val of_vdom : unique_key:string -> Vdom.Node.t -> t
 
 (** [of_vdom'] is like [of_vdom], but allows access to some extra metadata that is stored
     in the form's view. *)
-val of_vdom' : id:string -> (context -> editable:editable -> Vdom.Node.t) -> t
+val of_vdom' : unique_key:string -> (context -> editable:editable -> Vdom.Node.t) -> t
 
 (** An [empty] form view. *)
 val empty : t

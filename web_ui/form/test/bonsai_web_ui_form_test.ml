@@ -3040,7 +3040,7 @@ let%expect_test "form of nested record of int and float" =
         { age : int
         ; height : float
         }
-      [@@deriving fields, sexp]
+      [@@deriving fields ~iterators:make_creator, sexp]
 
       let form =
         let%sub age = Form.Elements.Textbox.int () in
@@ -3054,7 +3054,7 @@ let%expect_test "form of nested record of int and float" =
       { unit : unit
       ; nested : Nested.t
       }
-    [@@deriving fields, sexp]
+    [@@deriving fields ~iterators:make_creator, sexp]
 
     let form =
       let unit = Form.return () |> Value.return in
@@ -3219,6 +3219,8 @@ let%expect_test "form of nested record of int and float (typed fields)" =
   Handle.show_diff handle;
   [%expect
     {|
+    "Form.return was set, but setting is ignored."
+
       (Ok (
         (unit ())
         (nested (
@@ -3301,7 +3303,7 @@ let%expect_test "typed records labelling overrides defaults" =
   let handle =
     Handle.create
       (form_result_spec
-         ~filter_printed_attributes:(fun _key _data -> false)
+         ~filter_printed_attributes:(fun ~key:_ ~data:_ -> false)
          ~get_vdom:get_vdom_verbose
          [%sexp_of: T.t])
       T.form
@@ -3424,7 +3426,7 @@ let%expect_test "typed records: dynamic labelling" =
   let handle =
     Handle.create
       (form_result_spec
-         ~filter_printed_attributes:(fun _key _data -> false)
+         ~filter_printed_attributes:(fun ~key:_ ~data:_ -> false)
          ~get_vdom:get_vdom_verbose
          [%sexp_of: T.t])
       (T.form (Bonsai.Var.value label))
@@ -3489,7 +3491,7 @@ let%expect_test "typed variants recursive" =
               | Nil -> Bonsai.const (Form.return ())
               | Cons ->
                 let%map.Computation int = Form.Elements.Textbox.int ()
-                and me = Bonsai.lazy_ (lazy (form ())) in
+                and me = (Bonsai.lazy_ [@alert "-deprecated"]) (lazy (form ())) in
                 Form.both int me
           ;;
         end)
@@ -3683,6 +3685,7 @@ let%expect_test "typed variants" =
   Handle.show handle;
   [%expect
     {|
+    "Form.return was set, but setting is ignored."
     (Ok Unit)
 
     ==============
@@ -3910,6 +3913,7 @@ let%expect_test "typed optional variants" =
   Handle.show handle;
   [%expect
     {|
+    "Form.return was set, but setting is ignored."
     (Ok (Unit))
 
     ==============
@@ -3954,6 +3958,7 @@ let%expect_test "typed optional variants" =
   Handle.show handle;
   [%expect
     {|
+    "Form.return was set, but setting is ignored."
     (Ok ())
 
     ==============
@@ -4005,7 +4010,7 @@ let%expect_test "typed variants with custom labels" =
   let handle =
     Handle.create
       (form_result_spec
-         ~filter_printed_attributes:(fun _key _data -> false)
+         ~filter_printed_attributes:(fun ~key:_ ~data:_ -> false)
          [%sexp_of: T.t])
       T.form
   in
@@ -4481,7 +4486,7 @@ let%expect_test "form with both submit button and form on-submit" =
     Handle.create
       (form_result_spec
          [%sexp_of: string]
-         ~filter_printed_attributes:(fun key _data -> submit_test_attrs key)
+         ~filter_printed_attributes:(fun ~key ~data:_ -> submit_test_attrs key)
          ~get_vdom)
       component
   in
@@ -4531,7 +4536,7 @@ let%expect_test "form with on-submit with custom attrs" =
     Handle.create
       (form_result_spec
          [%sexp_of: string]
-         ~filter_printed_attributes:(fun key _data ->
+         ~filter_printed_attributes:(fun ~key ~data:_ ->
            submit_test_attrs key || String.equal key "class")
          ~get_vdom)
       component
@@ -4573,7 +4578,7 @@ let%expect_test "form with on-submit with custom attrs and invalid form" =
     Handle.create
       (form_result_spec
          [%sexp_of: int]
-         ~filter_printed_attributes:(fun key _data ->
+         ~filter_printed_attributes:(fun ~key ~data:_ ->
            submit_test_attrs key || String.equal key "class")
          ~get_vdom)
       component
@@ -4615,7 +4620,7 @@ let%expect_test "both button and on-submit are disabled when the form doesn't va
     Handle.create
       (form_result_spec
          [%sexp_of: int]
-         ~filter_printed_attributes:(fun key _data -> submit_test_attrs key)
+         ~filter_printed_attributes:(fun ~key ~data:_ -> submit_test_attrs key)
          ~get_vdom)
       component
   in
@@ -4694,7 +4699,7 @@ let%expect_test "form with just button" =
     Handle.create
       (form_result_spec
          [%sexp_of: string]
-         ~filter_printed_attributes:(fun key _data -> submit_test_attrs key)
+         ~filter_printed_attributes:(fun ~key ~data:_ -> submit_test_attrs key)
          ~get_vdom)
       component
   in
@@ -4737,7 +4742,7 @@ let%expect_test "form with just enter" =
     Handle.create
       (form_result_spec
          [%sexp_of: string]
-         ~filter_printed_attributes:(fun key _data -> submit_test_attrs key)
+         ~filter_printed_attributes:(fun ~key ~data:_ -> submit_test_attrs key)
          ~get_vdom)
       component
   in
@@ -4766,6 +4771,84 @@ let%expect_test "form with just enter" =
   [%expect {| "hello there" |}]
 ;;
 
+let%expect_test "form projected witha an effect" =
+  let module Q = Effect.For_testing.Query_response_tracker in
+  let tracker = Q.create () in
+  let print_queued () = print_s [%sexp (Q.queries_pending_response tracker : int list)] in
+  let not_positive = Error (Error.of_string "not positive") in
+  let parse =
+    tracker |> Effect.For_testing.of_query_response_tracker |> Bonsai.Value.return
+  in
+  let component =
+    let%sub textbox = Form.Elements.Textbox.int () in
+    Form.Dynamic.project_via_effect
+      ~sexp_of_input:[%sexp_of: int]
+      ~sexp_of_result:[%sexp_of: string]
+      ~equal_input:[%equal: int]
+      ~equal_result:[%equal: string]
+      textbox
+      ~parse
+      ~unparse:Int.of_string
+  in
+  let handle =
+    Handle.create
+      (form_result_spec
+         [%sexp_of: string]
+         ~filter_printed_attributes:(fun ~key:_ ~data:_ -> false)
+         ~get_vdom)
+      component
+  in
+  Handle.input_text handle ~get_vdom ~selector:"input" ~text:"2";
+  Handle.recompute_view_until_stable handle;
+  Handle.show handle;
+  [%expect {|
+    (Error validating...)
+
+    ==============
+    <input> </input> |}];
+  print_queued ();
+  [%expect {| (2) |}];
+  Q.maybe_respond tracker ~f:(fun i ->
+    Respond (if Int.is_positive i then Ok (Int.to_string i) else not_positive));
+  Handle.recompute_view_until_stable handle;
+  Handle.show handle;
+  [%expect {|
+    (Ok 2)
+
+    ==============
+    <input> </input> |}];
+  Handle.input_text handle ~get_vdom ~selector:"input" ~text:"5";
+  Handle.recompute_view_until_stable handle;
+  Handle.input_text handle ~get_vdom ~selector:"input" ~text:"-3";
+  Handle.recompute_view_until_stable handle;
+  print_queued ();
+  [%expect {| (-3 5) |}];
+  Handle.show handle;
+  [%expect {|
+    (Error validating...)
+
+    ==============
+    <input> </input> |}];
+  Q.maybe_respond tracker ~f:(function
+    | 5 -> Respond (Ok "5")
+    | _ -> No_response_yet);
+  Handle.show handle;
+  [%expect {|
+    (Error validating...)
+
+    ==============
+    <input> </input> |}];
+  Q.maybe_respond tracker ~f:(function
+    | -3 -> Respond not_positive
+    | _ -> No_response_yet);
+  Handle.show handle;
+  [%expect {|
+    (Error "not positive")
+
+    ==============
+    <input> </input> |}]
+;;
+
 let%expect_test "form validated with an effect" =
   let module Q = Effect.For_testing.Query_response_tracker in
   let tracker = Q.create () in
@@ -4786,7 +4869,7 @@ let%expect_test "form validated with an effect" =
     Handle.create
       (form_result_spec
          [%sexp_of: int]
-         ~filter_printed_attributes:(fun _key _data -> false)
+         ~filter_printed_attributes:(fun ~key:_ ~data:_ -> false)
          ~get_vdom)
       component
   in
@@ -4862,7 +4945,7 @@ let%expect_test "form validated with an effect with one_at_at_time" =
     Handle.create
       (form_result_spec
          [%sexp_of: int]
-         ~filter_printed_attributes:(fun _key _data -> false)
+         ~filter_printed_attributes:(fun ~key:_ ~data:_ -> false)
          ~get_vdom)
       component
   in
@@ -4942,7 +5025,7 @@ let%expect_test "form validated with an effect and debounced" =
     Handle.create
       (form_result_spec
          [%sexp_of: int]
-         ~filter_printed_attributes:(fun _key _data -> false)
+         ~filter_printed_attributes:(fun ~key:_ ~data:_ -> false)
          ~get_vdom)
       component
   in
@@ -4991,7 +5074,7 @@ let%expect_test "slider input" =
     Handle.create
       (form_result_spec
          [%sexp_of: int]
-         ~filter_printed_attributes:(fun key _data -> submit_test_attrs key)
+         ~filter_printed_attributes:(fun ~key ~data:_ -> submit_test_attrs key)
          ~get_vdom)
       component
   in
@@ -5044,7 +5127,7 @@ let%expect_test "query box" =
     Handle.create
       (form_result_spec
          [%sexp_of: string]
-         ~filter_printed_attributes:(fun key _data ->
+         ~filter_printed_attributes:(fun ~key ~data:_ ->
            match key with
            | "style.color" -> true
            | _ -> false)
@@ -5216,7 +5299,7 @@ let%expect_test "Bonsai_form.Typed sets groups/labels correctly on nested record
     Handle.create
       (form_result_spec
          [%sexp_of: A.t]
-         ~filter_printed_attributes:(fun key _data ->
+         ~filter_printed_attributes:(fun ~key ~data:_ ->
            match key with
            | "style.padding-left" -> true
            | _ -> false)
@@ -5401,7 +5484,7 @@ let%expect_test "Adding error hints to the top level of various views" =
       Handle.create
         (form_result_spec
            ~get_vdom:get_vdom_verbose
-           ~filter_printed_attributes:(fun _key _data -> false)
+           ~filter_printed_attributes:(fun ~key:_ ~data:_ -> false)
            [%sexp_of: int])
         component
     in
@@ -5793,8 +5876,79 @@ let%expect_test "[Form.return] is not settable" =
     <div> </div> |}];
   Handle.do_actions handle [ 10 ];
   Handle.show handle;
+  [%expect
+    {|
+    "Form.return was set, but setting is ignored."
+    (Ok 5)
+
+    ==============
+    <div> </div> |}]
+;;
+
+let%expect_test "[Form.return] is not settable, but can log the attempted set if a \
+                 [sexp_of] function is supplied"
+  =
+  let component = Form.return ~sexp_of_t:[%sexp_of: int] 5 |> Bonsai.const in
+  let handle = Handle.create (form_result_spec [%sexp_of: int]) component in
+  Handle.show handle;
   [%expect {|
     (Ok 5)
+
+    ==============
+    <div> </div> |}];
+  Handle.do_actions handle [ 10 ];
+  Handle.show handle;
+  [%expect
+    {|
+    ("Form.return was set, but setting is ignored." (set_value 10))
+    (Ok 5)
+
+    ==============
+    <div> </div> |}]
+;;
+
+let%expect_test "Partially settable form via [Form.return] and [Form.return_settable]" =
+  let module Record = struct
+    type t =
+      { form_return : int
+      ; form_return_settable : int
+      ; another_form_return : int
+      }
+    [@@deriving typed_fields, sexp_of]
+
+    let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t = function
+      | Form_return -> Bonsai.const (Form.return ~sexp_of_t:[%sexp_of: int] 1)
+      | Form_return_settable -> Form.return_settable ~equal:[%equal: int] 2
+      | Another_form_return -> Bonsai.const (Form.return ~sexp_of_t:[%sexp_of: int] 3)
+    ;;
+
+    let label_for_field = `Inferred
+  end
+  in
+  let component = Form.Typed.Record.make (module Record) in
+  let handle = Handle.create (form_result_spec [%sexp_of: Record.t]) component in
+  Handle.show handle;
+  [%expect
+    {|
+    (Ok (
+      (form_return          1)
+      (form_return_settable 2)
+      (another_form_return  3)))
+
+    ==============
+    <div> </div> |}];
+  Handle.do_actions
+    handle
+    [ { form_return = 10; form_return_settable = 20; another_form_return = 30 } ];
+  Handle.show handle;
+  [%expect
+    {|
+    ("Form.return was set, but setting is ignored." (set_value 10))
+    ("Form.return was set, but setting is ignored." (set_value 30))
+    (Ok (
+      (form_return          1)
+      (form_return_settable 20)
+      (another_form_return  3)))
 
     ==============
     <div> </div> |}]
@@ -6058,7 +6212,7 @@ let%test_module "Typed fields monomorphization" =
       let handle =
         Handle.create
           (form_result_spec
-             ~filter_printed_attributes:(fun _key _data -> false)
+             ~filter_printed_attributes:(fun ~key:_ ~data:_ -> false)
              ~get_vdom:get_vdom_verbose
              [%sexp_of: (int, string, float) Record.t])
           Record.form
@@ -6161,7 +6315,7 @@ let%test_module "Typed fields monomorphization" =
       let handle =
         Handle.create
           (form_result_spec
-             ~filter_printed_attributes:(fun _key _data -> false)
+             ~filter_printed_attributes:(fun ~key:_ ~data:_ -> false)
              ~get_vdom:get_vdom_verbose
              [%sexp_of: (int, string, float) Variant.t])
           Variant.form
@@ -6623,7 +6777,7 @@ let%test_module "Querybox as typeahead" =
             ~all_options:(Value.return Data.all)
             ~handle_unknown_option:
               (Value.return (fun _ ->
-                 print_endline "in handle_uknown_option";
+                 print_endline "in handle_unknown_option";
                  Some Data.Option_A))
         in
         let%arr form = form in
@@ -6631,12 +6785,12 @@ let%test_module "Querybox as typeahead" =
       in
       let handle = Handle.create (Result_spec.vdom Fn.id) computation in
       Handle.store_view handle;
-      [%expect {| in handle_uknown_option |}];
+      [%expect {| |}];
       Handle.input_text handle ~get_vdom:Fn.id ~selector:"input" ~text:"unknown option";
       Handle.show_diff handle;
       [%expect
         {|
-        in handle_uknown_option
+        in handle_unknown_option
 
           <table>
             <tbody>

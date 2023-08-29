@@ -1266,7 +1266,7 @@ let%test_module "tables" =
       ; price : float
       ; trader : string option
       }
-    [@@deriving fields]
+    [@@deriving fields ~getters]
 
     let data =
       [ { sym = "aapl"; price = 1.0; trader = None }
@@ -1666,7 +1666,8 @@ let%test_module "tables" =
           data
       in
       themed_component
-        ~filter_printed_attributes:(fun k _ -> String.is_prefix k ~prefix:"test")
+        ~filter_printed_attributes:(fun ~key:k ~data:_ ->
+          String.is_prefix k ~prefix:"test")
         [ "basic", basic ];
       [%expect
         {|

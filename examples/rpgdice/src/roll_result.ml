@@ -6,7 +6,7 @@ module Die = struct
     { num_faces : int
     ; result : int
     }
-  [@@deriving bin_io, compare, equal, fields, sexp]
+  [@@deriving bin_io, compare, equal, fields ~getters, sexp]
 end
 
 type t =

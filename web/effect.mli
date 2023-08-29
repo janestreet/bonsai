@@ -22,12 +22,18 @@ module Focus : sig
   (** [on_effect] returns a [Vdom.Attr.t] and two [unit Effect.t]s that focus/blur the
       [Vdom.Node.t] containing the [Vdom.Attr.t]. The attr should not be used on more than
       one [Vdom.Node.t], as only the first element will be focused/blurred when the effect
-      runs. *)
+      runs.
+
+      When [name_for_testing] is provided, the focus and blur effects will print in test mode.
+      They will be a no-op otherwise. *)
   val on_effect : ?name_for_testing:string -> unit -> t Computation.t
 
   (** [on_activate] will focus the element that the returned attr is attached to when
       this computation is activated.  See [Bonsai.Edge] for more details on the component
-      lifecycle. *)
+      lifecycle.
+
+      When [name_for_testing] is provided, the focus will print in test mode.
+      It will be a no-op otherwise. *)
   val on_activate : ?name_for_testing:string -> unit -> Vdom.Attr.t Computation.t
 end
 

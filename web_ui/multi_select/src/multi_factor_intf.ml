@@ -45,7 +45,7 @@ module type S = sig
       (** [selection] is the set of all selected items, by key. *)
       ; selection        : Item.Set.t Key.Map.t
       }
-    [@@deriving fields]
+    [@@deriving fields ~getters]
 
     (** A DOM node very similar to [t.view], but with a keydown handler attached to deal
         with keyboard events. We provide both this and [view] / [key_handler] separately,

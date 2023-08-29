@@ -29,6 +29,16 @@ let pure f i = read (Value.map i ~f)
 let const x = read (Value.return x)
 let with_model_resetter' = with_model_resetter
 
+let fix input ~f =
+  let rec recurse i2 = lazy_ (lazy (f ~recurse i2)) in
+  f ~recurse input
+;;
+
+let fix2 a b ~f =
+  let rec recurse a b = lazy_ (lazy (f ~recurse a b)) in
+  f ~recurse a b
+;;
+
 let with_model_resetter inside =
   with_model_resetter' (fun ~reset ->
     let%sub r = inside in
@@ -452,7 +462,7 @@ module Edge = struct
           { last_seqnum : int
           ; last_result : result
           }
-        [@@deriving sexp_of, equal, fields]
+        [@@deriving sexp_of, equal]
       end
       in
       let module Action = struct

@@ -162,7 +162,6 @@ module Node_info = struct
       | Return _ -> "return"
       | Leaf1 _ -> "leaf1"
       | Leaf0 _ -> "leaf0"
-      | Leaf01 _ -> "leaf01"
       | Leaf_incr _ -> "leaf_incr"
       | Sub _ -> "sub"
       | Store _ -> "store"

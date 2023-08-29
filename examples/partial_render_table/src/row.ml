@@ -12,7 +12,7 @@ type t =
   ; last_fill : Time_ns.t option
   ; trader : string
   }
-[@@deriving compare, fields, typed_fields]
+[@@deriving compare, fields ~fields, typed_fields]
 
 let random_time_ns () =
   let now = Time_ns.now () |> Time_ns.to_span_since_epoch |> Time_ns.Span.to_ms in

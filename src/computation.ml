@@ -49,19 +49,6 @@ type 'result packed_info = T : (_, _, _, _, 'result) info -> 'result packed_info
 
 type 'result t =
   | Return : 'result Value.t -> 'result t
-  | Leaf01 :
-      { model : 'model Meta.Model.t
-      ; input_id : 'input Meta.Input.t
-      ; dynamic_action : 'dynamic_action Meta.Action.t
-      ; static_action : 'static_action Meta.Action.t
-      ; apply_dynamic :
-          ('input, 'dynamic_action, 'static_action, 'model) dynamic_apply_action
-      ; apply_static : ('dynamic_action, 'static_action, 'model) static_apply_action
-      ; reset : ('dynamic_action, 'static_action, 'model) reset
-      ; input : 'input Value.t
-      }
-      -> ('model * ('dynamic_action -> unit Effect.t) * ('static_action -> unit Effect.t))
-           t
   | Leaf1 :
       { model : 'model Meta.Model.t
       ; input_id : 'input Meta.Input.t
@@ -80,7 +67,6 @@ type 'result t =
       -> ('model * ('static_action -> unit Effect.t)) t
   | Leaf_incr :
       { input : 'input Value.t
-      ; input_id : 'input Meta.Input.t
       ; compute : Time_source.t -> 'input Incr.t -> 'result Incr.t
       }
       -> 'result t

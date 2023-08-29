@@ -296,7 +296,7 @@ type t =
   | Copy
   | Linkedin
   | Shield
-[@@deriving compare, enumerate, equal, sexp]
+[@@deriving compare, enumerate, equal, sexp, sexp_grammar]
 
 (** Useful for favicons and css backgrounds *)
 val svg_string

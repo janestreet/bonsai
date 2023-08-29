@@ -54,6 +54,6 @@ val only_display_market_hours
   -> view_zone:Time_float.Zone.t
   -> ?mkt_zone:Time_float.Zone.t
   -> unit
-  -> t
+  -> t Or_error.t
 
 val default : zone:Time_float.Zone.t -> t

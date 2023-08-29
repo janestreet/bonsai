@@ -131,7 +131,7 @@ let%expect_test "enum with action handling `Warn" =
       ];
     [%expect
       {|
-               (lib/bonsai/src/proc.ml:92:14
+               (lib/bonsai/src/proc.ml:102:14
                 "An action sent to an [of_module1] has been dropped because its input was not present. This happens when the [of_module1] is inactive when it receives a message."
                 (action Increment))
                pure 3|}];
@@ -230,11 +230,10 @@ let%expect_test "basic Same_model let syntax" =
 let%expect_test "module project field" =
   let open Bonsai.Arrow_deprecated.Let_syntax in
   let module _ = struct
-    type t =
+    type _t =
       { a : int
       ; b : int
       }
-    [@@deriving fields]
   end
   in
   let counter_component =

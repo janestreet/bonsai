@@ -13,7 +13,7 @@ module Mutable_state_tracker = Bonsai_web_ui_widget.Low_level
 let () = Css.install_css ()
 
 module Legend_model = struct
-  type t = { visibility : bool list } [@@deriving equal, fields]
+  type t = { visibility : bool list } [@@deriving equal, fields ~getters]
 end
 
 let id = Type_equal.Id.create ~name:"dygraph" [%sexp_of: opaque]
@@ -43,8 +43,7 @@ let widget ?with_graph ?on_zoom data options ~graph_tracker =
         let caller's_zoom_callback = Options.zoomCallback options in
         fun ~xmin ~xmax ~yRanges ->
           Option.iter caller's_zoom_callback ~f:(fun f -> f ~xmin ~xmax ~yRanges);
-          let is_zoomed = Graph.isZoomed graph in
-          Vdom.Effect.Expert.handle_non_dom_event_exn (on_zoom ~is_zoomed)
+          Vdom.Effect.Expert.handle_non_dom_event_exn (on_zoom graph ~xmin ~xmax ~yRanges)
       in
       let our_options = Options.create ~zoomCallback () in
       Options.merge options ~prefer:our_options
@@ -201,7 +200,6 @@ type t =
   { graph_view   : Vdom.Node.t
   ; modify_graph : (Graph.t -> unit) -> unit Effect.t
   }
-[@@deriving fields]
 
 let create
       ~key

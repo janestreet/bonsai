@@ -94,7 +94,9 @@ let%expect_test "Demonstrate: an unused opaque is not optimized away" =
 let%expect_test "opaque only used in a lazy not optimized away" =
   let c =
     let%sub a = opaque_const 5 in
-    let%sub _ = opaque_computation (Bonsai.lazy_ (lazy (return a))) in
+    let%sub _ =
+      opaque_computation ((Bonsai.lazy_ [@alert "-deprecated"]) (lazy (return a)))
+    in
     Bonsai.const 3
   in
   constant_fold_and_assert_no_op c;
@@ -124,7 +126,7 @@ let%expect_test "opaque only used in a lazy not optimized away" =
 let%expect_test "opaque only used in a lazy not optimized away (but the lazy might)" =
   let c =
     let%sub a = opaque_const 5 in
-    let%sub _ = Bonsai.lazy_ (lazy (return a)) in
+    let%sub _ = (Bonsai.lazy_ [@alert "-deprecated"]) (lazy (return a)) in
     Bonsai.const 3
   in
   print_computation c;
@@ -162,7 +164,7 @@ let%expect_test "opaque only used in a lazy not optimized away (but the lazy mig
 ;;
 
 let%expect_test "immediately-forced lazies are transparent to constant folding" =
-  let c = Bonsai.lazy_ (lazy (Bonsai.const 5)) in
+  let c = (Bonsai.lazy_ [@alert "-deprecated"]) (lazy (Bonsai.const 5)) in
   print_computation c;
   [%expect {| (Lazy (t ())) |}];
   print_computation (constant_fold c);
@@ -170,7 +172,10 @@ let%expect_test "immediately-forced lazies are transparent to constant folding" 
 ;;
 
 let%expect_test "nested immediate lazies are forced" =
-  let c = Bonsai.lazy_ (lazy (Bonsai.lazy_ (lazy (Bonsai.const 5)))) in
+  let c =
+    (Bonsai.lazy_ [@alert "-deprecated"])
+      (lazy ((Bonsai.lazy_ [@alert "-deprecated"]) (lazy (Bonsai.const 5))))
+  in
   print_computation c;
   [%expect {| (Lazy (t ())) |}];
   print_computation (constant_fold c);
@@ -180,7 +185,7 @@ let%expect_test "nested immediate lazies are forced" =
 let%expect_test "lazies inside of a switch with dynamic input are preserved" =
   let c =
     if%sub opaque_const_value true
-    then Bonsai.lazy_ (lazy (Bonsai.const 5))
+    then (Bonsai.lazy_ [@alert "-deprecated"]) (lazy (Bonsai.const 5))
     else assert false
   in
   constant_fold_and_assert_no_op c;
@@ -197,7 +202,9 @@ let%expect_test "lazies inside of a switch with dynamic input are preserved" =
 
 let%expect_test "lazies inside of a switch with static input are forced" =
   let c =
-    if%sub Value.return true then Bonsai.lazy_ (lazy (Bonsai.const 5)) else assert false
+    if%sub Value.return true
+    then (Bonsai.lazy_ [@alert "-deprecated"]) (lazy (Bonsai.const 5))
+    else assert false
   in
   print_computation c;
   [%expect
@@ -218,7 +225,7 @@ let%expect_test "lazies inside of an assoc with static input are forced" =
     Bonsai.assoc
       (module Int)
       (Value.return (Int.Map.of_alist_exn [ 1, (); 2, () ]))
-      ~f:(fun _ _ -> Bonsai.lazy_ (lazy (Bonsai.const 5)))
+      ~f:(fun _ _ -> (Bonsai.lazy_ [@alert "-deprecated"]) (lazy (Bonsai.const 5)))
   in
   print_computation c;
   [%expect
@@ -238,7 +245,7 @@ let%expect_test "lazies inside of an assoc with dynamic input are not forced" =
     Bonsai.assoc
       (module Int)
       (opaque_const_value (Int.Map.of_alist_exn [ 1, (); 2, () ]))
-      ~f:(fun _ _ -> Bonsai.lazy_ (lazy (Bonsai.const 5)))
+      ~f:(fun _ _ -> (Bonsai.lazy_ [@alert "-deprecated"]) (lazy (Bonsai.const 5)))
   in
   constant_fold_and_assert_no_op c;
   [%expect

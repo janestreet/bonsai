@@ -79,7 +79,7 @@ module Advanced_list = struct
       { duration_hrs : int
       ; price : float
       }
-    [@@deriving sexp_of, fields, typed_fields]
+    [@@deriving sexp_of, typed_fields]
   end
 
   module Per_symbol = struct
@@ -87,7 +87,7 @@ module Advanced_list = struct
       { symbol : string
       ; configs : Config.t list
       }
-    [@@deriving sexp_of, fields, typed_fields]
+    [@@deriving sexp_of, typed_fields]
   end
 
   let form_for_config =

@@ -7,7 +7,7 @@ module Model = struct
     { subcomponent_model : My_bonsai_component.Model.t
     ; other_model : string
     }
-  [@@deriving fields]
+  [@@deriving fields ~getters]
 
   let cutoff = phys_equal
 end

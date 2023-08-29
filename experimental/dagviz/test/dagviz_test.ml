@@ -78,7 +78,7 @@ let create_handle ~dag ~curr_id =
   in
   Handle.create
     (Result_spec.vdom
-       ~filter_printed_attributes:(fun key _ ->
+       ~filter_printed_attributes:(fun ~key ~data:_ ->
          match key with
          | "bulk_position_tracker" | "bulk_size_tracker" -> false
          | s when String.is_prefix s ~prefix:"style" -> false

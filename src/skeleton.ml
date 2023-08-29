@@ -223,15 +223,6 @@ module Computation0 = struct
                   Value.of_value' ~initial_path:(Node_path.descend current_path) value
               }
         }
-      | Leaf01 { input; _ } ->
-        { node_path
-        ; here = None
-        ; kind =
-            Leaf01
-              { input =
-                  Value.of_value' ~initial_path:(Node_path.descend current_path) input
-              }
-        }
       | Leaf1 { input; _ } ->
         { node_path
         ; here = None

@@ -3765,3 +3765,33 @@ let%expect_test "uri parsing to direct string" =
   test "hi";
   [%expect {| /?q=hi |}]
 ;;
+
+let%expect_test "Catchall parser" =
+  let module T = struct
+    type t =
+      | Foo of int
+      | Bar
+      | Catchall of string
+    [@@deriving typed_variants]
+
+    let parser_for_variant : type a. a Typed_variant.t -> a Parser.t = function
+      | Foo -> Parser.from_path Value_parser.int
+      | Bar -> Parser.unit
+      | Catchall -> Parser.with_prefix [] (Parser.from_path Value_parser.string)
+    ;;
+  end
+  in
+  let parser = Parser.Variant.make (module T) in
+  let versioned_parser = Versioned_parser.first_parser parser in
+  Versioned_parser.check_ok_and_print_urls_or_errors versioned_parser;
+  [%expect
+    {|
+    URL parser looks good!
+    ┌────────────┐
+    │ All urls   │
+    ├────────────┤
+    │ /<string>  │
+    │ /bar       │
+    │ /foo/<int> │
+    └────────────┘ |}]
+;;

@@ -179,6 +179,10 @@ module Stability : sig
   [@@deriving sexp, equal]
 
   val most_recent_stable_value : 'a t -> 'a option
+
+  (** Return the [most_recent_stable_value] if there is one, otherwise fall back to the
+      [unstable_value].f *)
+  val prefer_stable_value : 'a t -> 'a
 end
 
 (** [value_stability] determines whether the current value has changed

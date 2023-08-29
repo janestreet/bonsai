@@ -613,17 +613,13 @@ let%expect_test "destructuring let%arr uses cutoff" =
         ~equal:(fun
                   (__old_for_cutoff__028_,
                    { b = __old_for_cutoff__026_; c = __old_for_cutoff__024_;_})
+                  (__new_for_cutoff__027_,
+                   { b = __new_for_cutoff__025_; c = __new_for_cutoff__023_;_})
                   ->
-                  fun
-                    (__new_for_cutoff__027_,
-                     { b = __new_for_cutoff__025_; c = __new_for_cutoff__023_;_})
-                    ->
-                    (phys_equal __old_for_cutoff__028_ __new_for_cutoff__027_)
-                      &&
-                      ((phys_equal __old_for_cutoff__026_ __new_for_cutoff__025_)
-                         &&
-                         (phys_equal __old_for_cutoff__024_
-                            __new_for_cutoff__023_))))
+                  (phys_equal __old_for_cutoff__028_ __new_for_cutoff__027_) &&
+                    ((phys_equal __old_for_cutoff__026_ __new_for_cutoff__025_)
+                       &&
+                       (phys_equal __old_for_cutoff__024_ __new_for_cutoff__023_))))
      ~f:(fun (a, { b; c;_}) -> MY_BODY)
    |}]
 ;;
@@ -656,37 +652,33 @@ let%expect_test "destructuring let%arr uses cutoff (multiple arms)" =
                      (__old_for_cutoff__037_,
                       { b = __old_for_cutoff__035_;
                         c = __old_for_cutoff__033_;_})
+                     (__new_for_cutoff__036_,
+                      { b = __new_for_cutoff__034_;
+                        c = __new_for_cutoff__032_;_})
                      ->
-                     fun
-                       (__new_for_cutoff__036_,
-                        { b = __new_for_cutoff__034_;
-                          c = __new_for_cutoff__032_;_})
-                       ->
-                       (phys_equal __old_for_cutoff__037_ __new_for_cutoff__036_)
-                         &&
-                         ((phys_equal __old_for_cutoff__035_
-                             __new_for_cutoff__034_)
-                            &&
-                            (phys_equal __old_for_cutoff__033_
-                               __new_for_cutoff__032_))))
+                     (phys_equal __old_for_cutoff__037_ __new_for_cutoff__036_)
+                       &&
+                       ((phys_equal __old_for_cutoff__035_
+                           __new_for_cutoff__034_)
+                          &&
+                          (phys_equal __old_for_cutoff__033_
+                             __new_for_cutoff__032_))))
         (Let_syntax.cutoff __let_syntax__031_
            ~equal:(fun
                      (__old_for_cutoff__043_,
                       { y = __old_for_cutoff__041_;
                         z = __old_for_cutoff__039_;_})
+                     (__new_for_cutoff__042_,
+                      { y = __new_for_cutoff__040_;
+                        z = __new_for_cutoff__038_;_})
                      ->
-                     fun
-                       (__new_for_cutoff__042_,
-                        { y = __new_for_cutoff__040_;
-                          z = __new_for_cutoff__038_;_})
-                       ->
-                       (phys_equal __old_for_cutoff__043_ __new_for_cutoff__042_)
-                         &&
-                         ((phys_equal __old_for_cutoff__041_
-                             __new_for_cutoff__040_)
-                            &&
-                            (phys_equal __old_for_cutoff__039_
-                               __new_for_cutoff__038_)))))
+                     (phys_equal __old_for_cutoff__043_ __new_for_cutoff__042_)
+                       &&
+                       ((phys_equal __old_for_cutoff__041_
+                           __new_for_cutoff__040_)
+                          &&
+                          (phys_equal __old_for_cutoff__039_
+                             __new_for_cutoff__038_)))))
      ~f:(fun ((a, { b; c;_}), (x, { y; z;_})) -> MY_BODY)
    |}]
 ;;
@@ -720,19 +712,17 @@ let%expect_test "one arm of destructuring let%arr uses cutoff" =
                      (__old_for_cutoff__052_,
                       { b = __old_for_cutoff__050_;
                         c = __old_for_cutoff__048_;_})
+                     (__new_for_cutoff__051_,
+                      { b = __new_for_cutoff__049_;
+                        c = __new_for_cutoff__047_;_})
                      ->
-                     fun
-                       (__new_for_cutoff__051_,
-                        { b = __new_for_cutoff__049_;
-                          c = __new_for_cutoff__047_;_})
-                       ->
-                       (phys_equal __old_for_cutoff__052_ __new_for_cutoff__051_)
-                         &&
-                         ((phys_equal __old_for_cutoff__050_
-                             __new_for_cutoff__049_)
-                            &&
-                            (phys_equal __old_for_cutoff__048_
-                               __new_for_cutoff__047_)))) __let_syntax__046_)
+                     (phys_equal __old_for_cutoff__052_ __new_for_cutoff__051_)
+                       &&
+                       ((phys_equal __old_for_cutoff__050_
+                           __new_for_cutoff__049_)
+                          &&
+                          (phys_equal __old_for_cutoff__048_
+                             __new_for_cutoff__047_)))) __let_syntax__046_)
      ~f:(fun ((a, { b; c;_}), y) -> MY_BODY)
    |}]
 ;;
@@ -881,9 +871,9 @@ let%test_module "Destructuring vs. no destructuring criteria." =
               pos_bol = 0
             }
       (Let_syntax.cutoff ((DESTRUCT)[@ppxlib.enter_value a])
-         ~equal:(fun ((_ as __old_for_cutoff__066_), _) ->
-                   fun ((_ as __new_for_cutoff__065_), _) ->
-                     phys_equal __old_for_cutoff__066_ __new_for_cutoff__065_))
+         ~equal:(fun ((_ as __old_for_cutoff__066_), _)
+                   ((_ as __new_for_cutoff__065_), _) ->
+                   phys_equal __old_for_cutoff__066_ __new_for_cutoff__065_))
       ~f:(fun ((_ as a), _) -> BODY) |}]
     ;;
 
@@ -905,13 +895,9 @@ let%test_module "Destructuring vs. no destructuring criteria." =
             }
       (Let_syntax.cutoff DESTRUCT
          ~equal:(fun (((__old_for_cutoff__071_, _) : t), __old_for_cutoff__069_)
-                   ->
-                   fun
-                     (((__new_for_cutoff__070_, _) : t), __new_for_cutoff__068_)
-                     ->
-                     (phys_equal __old_for_cutoff__071_ __new_for_cutoff__070_)
-                       &&
-                       (phys_equal __old_for_cutoff__069_ __new_for_cutoff__068_)))
+                   (((__new_for_cutoff__070_, _) : t), __new_for_cutoff__068_) ->
+                   (phys_equal __old_for_cutoff__071_ __new_for_cutoff__070_) &&
+                     (phys_equal __old_for_cutoff__069_ __new_for_cutoff__068_)))
       ~f:(fun (((b, _) : t), c) -> BODY) |}]
     ;;
 
@@ -938,27 +924,19 @@ let%test_module "Destructuring vs. no destructuring criteria." =
          (Let_syntax.cutoff __let_syntax__073_
             ~equal:(fun
                       (((__old_for_cutoff__078_, _) : t), __old_for_cutoff__076_)
+                      (((__new_for_cutoff__077_, _) : t), __new_for_cutoff__075_)
                       ->
-                      fun
-                        (((__new_for_cutoff__077_, _) : t),
-                         __new_for_cutoff__075_)
-                        ->
-                        (phys_equal __old_for_cutoff__078_ __new_for_cutoff__077_)
-                          &&
-                          (phys_equal __old_for_cutoff__076_
-                             __new_for_cutoff__075_)))
+                      (phys_equal __old_for_cutoff__078_ __new_for_cutoff__077_)
+                        &&
+                        (phys_equal __old_for_cutoff__076_ __new_for_cutoff__075_)))
          (Let_syntax.cutoff __let_syntax__074_
             ~equal:(fun
                       (((__old_for_cutoff__082_, _) : t), __old_for_cutoff__080_)
+                      (((__new_for_cutoff__081_, _) : t), __new_for_cutoff__079_)
                       ->
-                      fun
-                        (((__new_for_cutoff__081_, _) : t),
-                         __new_for_cutoff__079_)
-                        ->
-                        (phys_equal __old_for_cutoff__082_ __new_for_cutoff__081_)
-                          &&
-                          (phys_equal __old_for_cutoff__080_
-                             __new_for_cutoff__079_))))
+                      (phys_equal __old_for_cutoff__082_ __new_for_cutoff__081_)
+                        &&
+                        (phys_equal __old_for_cutoff__080_ __new_for_cutoff__079_))))
       ~f:(fun ((((b, _) : t), c), (((d, _) : t), e)) -> BODY) |}]
     ;;
 
@@ -1032,14 +1010,11 @@ let%test_module "Destructuring vs. no destructuring criteria." =
          ~equal:(fun
                    (({ a = __old_for_cutoff__092_; b = (module _)  } : t),
                     __old_for_cutoff__090_)
+                   (({ a = __new_for_cutoff__091_; b = (module _)  } : t),
+                    __new_for_cutoff__089_)
                    ->
-                   fun
-                     (({ a = __new_for_cutoff__091_; b = (module _)  } : t),
-                      __new_for_cutoff__089_)
-                     ->
-                     (phys_equal __old_for_cutoff__092_ __new_for_cutoff__091_)
-                       &&
-                       (phys_equal __old_for_cutoff__090_ __new_for_cutoff__089_)))
+                   (phys_equal __old_for_cutoff__092_ __new_for_cutoff__091_) &&
+                     (phys_equal __old_for_cutoff__090_ __new_for_cutoff__089_)))
       ~f:(fun (({ a; b = (module _)  } : t), c) -> BODY) |}]
     ;;
 
@@ -1056,7 +1031,7 @@ let%test_module "Destructuring vs. no destructuring criteria." =
               pos_lnum = 1;
               pos_cnum = (-1);
               pos_bol = 0
-            } (Let_syntax.cutoff ALWAYS_EQUAL ~equal:(fun _ -> fun _ -> true))
+            } (Let_syntax.cutoff ALWAYS_EQUAL ~equal:(fun _ _ -> true))
       ~f:(fun (({ a = _; b = (module _)  } : t), _) -> BODY) |}]
     ;;
 
@@ -1080,13 +1055,9 @@ let%test_module "Destructuring vs. no destructuring criteria." =
                 }
           (Let_syntax.cutoff ((EXPR)[@ppxlib.enter_value a])
              ~equal:(fun { a = __old_for_cutoff__098_; b = __old_for_cutoff__098_;_}
-                       ->
-                       fun
-                         { a = __new_for_cutoff__097_; b = __new_for_cutoff__097_;_}
-                         ->
-                         (phys_equal __old_for_cutoff__098_ __new_for_cutoff__097_)
-                           &&
-                           (phys_equal __old_for_cutoff__096_ __new_for_cutoff__095_)))
+                       { a = __new_for_cutoff__097_; b = __new_for_cutoff__097_;_} ->
+                       (phys_equal __old_for_cutoff__098_ __new_for_cutoff__097_) &&
+                         (phys_equal __old_for_cutoff__096_ __new_for_cutoff__095_)))
           ~f:(fun { a; b = a;_} -> BODY) |}]
     ;;
   end)

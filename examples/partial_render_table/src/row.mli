@@ -12,6 +12,6 @@ type t =
   ; last_fill : Time_ns.t option
   ; trader : string
   }
-[@@deriving compare, fields, typed_fields]
+[@@deriving compare, fields ~fields, typed_fields]
 
 val many_random : int -> t String.Map.t

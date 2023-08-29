@@ -44,7 +44,7 @@ let create_time_ns_option data =
   create' data ~x_to_js:time_ns_to_js ~y_to_js:(Ojs.option_to_js Ojs.float_to_js)
 ;;
 
-let create_from_independent_time_series' series =
+let create_from_independent_series' ~min ~equal series =
   if Array.length series = 0
   then [||]
   else (
@@ -52,41 +52,50 @@ let create_from_independent_time_series' series =
     let safe_get series ~idx =
       if idx < Array.length series then Some series.(idx) else None
     in
-    let next_time () =
-      Array.fold2_exn ~init:None current_idxes series ~f:(fun earliest_time idx series ->
+    let next_x () =
+      Array.fold2_exn ~init:None current_idxes series ~f:(fun earliest_x idx series ->
         match safe_get series ~idx with
-        | None           -> earliest_time
-        | Some (time, _) ->
+        | None        -> earliest_x
+        | Some (x, _) ->
           Some
-            (match earliest_time with
-             | None               -> time
-             | Some earliest_time -> Time_ns.min time earliest_time))
+            (match earliest_x with
+             | None            -> x
+             | Some earliest_x -> min x earliest_x))
     in
     (* This loop will make an array (in chronological order) of:
-       {[ (Time_ns.t * (float option array)) ]}
+       {[ (x-value * (float option array)) ]}
 
-       With points at the union of all series' times.
+       With points at the union of all series' xs.
     *)
     let rec loop ~data_acc =
-      match next_time () with
-      | None           -> Array.of_list_rev data_acc
-      | Some next_time ->
+      match next_x () with
+      | None        -> Array.of_list_rev data_acc
+      | Some next_x ->
         let next_row =
           Array.mapi series ~f:(fun i series ->
             let idx = current_idxes.(i) in
             match safe_get series ~idx with
-            | None               -> None
-            | Some (time, value) ->
-              if Time_ns.(time = next_time)
+            | None            -> None
+            | Some (x, value) ->
+              if equal x next_x
               then (
                 (* increment index *)
                 current_idxes.(i) <- idx + 1;
                 Some value)
               else None)
         in
-        loop ~data_acc:((next_time, next_row) :: data_acc)
+        loop ~data_acc:((next_x, next_row) :: data_acc)
     in
     loop ~data_acc:[])
+;;
+
+let create_from_independent_series series =
+  let data = create_from_independent_series' ~min:Float.min ~equal:Float.equal series in
+  create_option data
+;;
+
+let create_from_independent_time_series' series =
+  create_from_independent_series' ~min:Time_ns.min ~equal:Time_ns.equal series
 ;;
 
 let create_from_independent_time_series series =

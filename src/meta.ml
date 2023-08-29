@@ -1,7 +1,7 @@
 open! Core
 open! Import
 
-let unit_type_id = Type_equal.Id.create ~name:"()" [%sexp_of: unit]
+let unit_type_id = Type_equal.Id.create ~name:"unit" [%sexp_of: unit]
 let nothing_type_id = Type_equal.Id.create ~name:"Nothing.t" [%sexp_of: Nothing.t]
 
 module type Type_id = sig
@@ -390,7 +390,7 @@ end
 module Input = struct
   module Type_id = Model.Type_id
 
-  type 'a t = 'a Type_id.t
+  type 'a t = 'a Type_id.t [@@deriving sexp_of]
 
   let same_witness = Type_id.same_witness
   let same_witness_exn = Type_id.same_witness_exn

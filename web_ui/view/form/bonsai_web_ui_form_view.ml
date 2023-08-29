@@ -72,7 +72,7 @@ and view =
   | Option of option_view
 
 and raw =
-  { id : string
+  { unique_key : string
   ; raw_view : (context -> editable:editable -> Vdom.Node.t[@sexp.opaque])
   }
 
@@ -123,8 +123,8 @@ and option_status =
 
 let empty_context = { tooltip = None; error = None; label = None }
 let wrap_view view = { context = empty_context; view }
-let of_vdom' ~id raw_view = wrap_view (Raw { id; raw_view })
-let of_vdom ~id vdom = of_vdom' ~id (fun _context ~editable:_ -> vdom)
+let of_vdom' ~unique_key raw_view = wrap_view (Raw { unique_key; raw_view })
+let of_vdom ~unique_key vdom = of_vdom' ~unique_key (fun _context ~editable:_ -> vdom)
 let empty = wrap_view Empty
 let tuple ts = wrap_view (Tuple ts)
 let record fields = wrap_view (Record fields)

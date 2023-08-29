@@ -28,10 +28,10 @@ val create_time_ns : (Time_ns.t * float array) array                    -> t
 (** [create_time_ns_option] is for when your x-values are times and your y-values are options. *)
 val create_time_ns_option : (Time_ns.t * float option array) array -> t
 
-(** [create_from_independent_time_series] is a helper function for when you are creating a
-    single graph from multiple time series which do not necessarily have points at the
-    same time.  This function will produce points at the union of all input time series'
-    times.
+(** [create_from_independent_series] and [create_from_independent_time_series] are helper
+    functions for when you are creating a single graph from multiple series which do not
+    necessarily have points at the same x-values. This function will produce points at the
+    union of all input series' x-values.
 
     Note: This function will *not* interpolate or fill-forward, but rather fill in missing
     values with None (null).  See http://dygraphs.com/tests/independent-series.html
@@ -40,4 +40,5 @@ val create_time_ns_option : (Time_ns.t * float option array) array -> t
     [Ts_server_protocol_kernel.Time_series_data.transpose].
 *)
 
+val create_from_independent_series      : (float     * float) array array -> t
 val create_from_independent_time_series : (Time_ns.t * float) array array -> t

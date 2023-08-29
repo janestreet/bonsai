@@ -13,8 +13,8 @@ open! Bonsai_web
 val to_position_inside_element
   :  ?smooth:bool
   -> selector:string
-  -> x_px:int
-  -> y_px:int
+  -> x_px:float
+  -> y_px:float
   -> [ `Minimal | `To_bottom | `To_top ]
   -> unit Or_error.t Effect.t
 

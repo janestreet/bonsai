@@ -300,7 +300,9 @@ let view grammar ~customizations =
         (match%map.Computation view_list s with
          | [] -> N.pre [ N.text "[]" ]
          | all -> list_kind (List.map all ~f:(fun a -> N.li [ a ])))
-    | Lazy g -> fun s -> Bonsai.lazy_ (Lazy.map g ~f:(fun g -> view_grammar g s))
+    | Lazy g ->
+      fun s ->
+        (Bonsai.lazy_ [@alert "-deprecated"]) (Lazy.map g ~f:(fun g -> view_grammar g s))
     | Tagged with_tag -> view_with_tag view_grammar with_tag
     | Variant { case_sensitivity = _; clauses = [] } -> fun _ -> Bonsai.const N.none
     | Variant { case_sensitivity; clauses } -> view_clauses case_sensitivity clauses
@@ -491,7 +493,7 @@ let view grammar ~customizations =
             and xs = view_list_grammar rest xs in
             a :: xs
           | List [] ->
-            Bonsai.lazy_
+            (Bonsai.lazy_ [@alert "-deprecated"])
               (lazy
                 (let cons = [%sexp (cons : Sexp_grammar.list_grammar)] in
                  [%string
@@ -562,7 +564,7 @@ let form
   let rec grammar_form (grammar : Sexp_grammar.grammar Value.t)
     : Sexp.t Form.t Computation.t
     =
-    Bonsai.lazy_ (lazy (grammar_form_impl grammar))
+    (Bonsai.lazy_ [@alert "-deprecated"]) (lazy (grammar_form_impl grammar))
   and grammar_form_impl (grammar : Sexp_grammar.grammar Value.t)
     : Sexp.t Form.t Computation.t
     =
@@ -585,7 +587,7 @@ let form
     | Option g -> option_form g
     | List l -> list_grammar_form l
     | Lazy g ->
-      Bonsai.lazy_
+      (Bonsai.lazy_ [@alert "-deprecated"])
         (lazy
           (let%sub g = Bonsai.pure force g in
            grammar_form_impl g))
@@ -880,7 +882,7 @@ let form
     in
     return form
   and list_grammar_form (grammar : Sexp_grammar.list_grammar Value.t) =
-    Bonsai.lazy_ (lazy (list_grammar_form_impl grammar))
+    (Bonsai.lazy_ [@alert "-deprecated"]) (lazy (list_grammar_form_impl grammar))
   and list_grammar_form_impl (grammar : Sexp_grammar.list_grammar Value.t) =
     (* Tuples don't have labels, so we annotate their arguments with ordinals. The
        special-case check for a singleton list is because we don't want to add an ordinal
@@ -914,7 +916,8 @@ let form
       | Cons (g, rest) ->
         let%sub g_form = grammar_form g in
         let%sub rest_value, rest_set, rest_views =
-          Bonsai.lazy_ (lazy (annotate_with_ordinals rest ~depth:(depth + 1)))
+          (Bonsai.lazy_ [@alert "-deprecated"])
+            (lazy (annotate_with_ordinals rest ~depth:(depth + 1)))
         in
         let%sub g_form =
           match%sub should_annotate_with_ordinals with

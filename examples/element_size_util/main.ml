@@ -137,30 +137,22 @@ let fit =
 
 let visibility_component =
   let open Size_hooks.Visibility_tracker in
-  let%sub pos_x =
-    Bonsai.state 0 ~sexp_of_model:[%sexp_of: Int.t] ~equal:[%equal: Int.t]
-  in
-  let%sub pos_y =
-    Bonsai.state 0 ~sexp_of_model:[%sexp_of: Int.t] ~equal:[%equal: Int.t]
-  in
-  let%sub client_rect, set_client_rect =
-    Bonsai.state_opt () ~sexp_of_model:[%sexp_of: Bbox.Int.t] ~equal:[%equal: Bbox.Int.t]
-  in
-  let%sub visible_rect, set_visible_rect =
-    Bonsai.state_opt () ~sexp_of_model:[%sexp_of: Bbox.Int.t] ~equal:[%equal: Bbox.Int.t]
-  in
+  let%sub pos_x = Bonsai.state 0.0 in
+  let%sub pos_y = Bonsai.state 0.0 in
+  let%sub client_rect, set_client_rect = Bonsai.state_opt () in
+  let%sub visible_rect, set_visible_rect = Bonsai.state_opt () in
   let%arr pos_x, inject_pos_x = pos_x
   and pos_y, inject_pos_y = pos_y
   and client_rect = client_rect
   and set_visible_rect = set_visible_rect
   and set_client_rect = set_client_rect
   and visible_rect = visible_rect in
-  let pos_to_color pos = float_of_int pos /. 2000. *. 360. |> Float.iround_down_exn in
+  let pos_to_color pos = pos /. 2000. *. 360. |> Float.iround_down_exn in
   let attributes =
     [ Style.visibility_child
     ; Vdom.Attr.style
         (let h = pos_to_color pos_y in
-         let s = Percent.of_mult (1.0 -. (float_of_int pos_x /. 2000.)) in
+         let s = Percent.of_mult (1.0 -. (pos_x /. 2000.)) in
          Css_gen.background_color
            (`HSLA (Css_gen.Color.HSLA.create ~h ~s ~l:(Percent.of_mult 0.5) ())))
     ; Size_hooks.Visibility_tracker.detect
@@ -179,11 +171,11 @@ let visibility_component =
   Vdom.Node.div
     [ Vdom.Node.h3 [ Vdom.Node.text "Scroll me!" ]
     ; Vdom.Node.sexp_for_debugging
-        [%message (client_rect : Bbox.Int.t option) (visible_rect : Bbox.Int.t option)]
+        [%message (client_rect : Bbox.t option) (visible_rect : Bbox.t option)]
     ; Vdom.Node.div
-        ~attrs:[ Style.outer_visibility_parent ]
+        ~attrs:[ Style.outer_visibility_parent; Style.resizable_using_css ]
         [ Vdom.Node.div
-            ~attrs:[ Style.inner_visibility_parent ]
+            ~attrs:[ Style.inner_visibility_parent; Style.resizable_using_css ]
             [ Vdom.Node.div ~attrs:attributes [] ]
         ; Vdom.Node.div
             ~attrs:[ Style.inner_visibility_parent ]
@@ -214,7 +206,9 @@ let resizer_component =
        ; Vdom.Node.div
            ~attrs:[ Style.resizable_using_resizer ]
            [ Vdom.Node.text (String.concat (List.init 20 ~f:(Fn.const "Hello world. ")))
-           ; Vdom.Node.div ~attrs:[ Style.resizer; Size_hooks.Expert.Resizer.attr ] []
+           ; Vdom.Node.div
+               ~attrs:[ Style.resizer; Size_hooks.Expert.Resizer.attr ~side:Right ]
+               []
            ]
        ])
 ;;

@@ -83,7 +83,7 @@ module Make (Item : Item) = struct
         { selection_status : Selection_status.t Map.M(Item).t
         ; focused_item     : Item.t option
         }
-      [@@deriving compare, equal, fields, sexp_of]
+      [@@deriving compare, equal, sexp_of]
 
       let create ?(selection_status = Item.Map.empty) ?focused_item () =
         { selection_status; focused_item }
@@ -421,12 +421,11 @@ module Make (Item : Item) = struct
   ;;
 
   module _ = struct
-    type t =
+    type _t =
       { all_items                : Item.Set.t
       ; default_selection_status : Selection_status.t
       ; view_config              : View_config.t
       }
-    [@@deriving fields]
   end
 
   module Initial_model_settings = struct

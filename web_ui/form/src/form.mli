@@ -3,11 +3,13 @@ module View = View
 module Form_view := View
 open Bonsai_web
 
-type 'a t
+type 'a t = ('a, Form_view.t) Bonsai_web_ui_form_underlying.t
 
-(** [return] produces a bonsai form that will always produce the same value.
-    [set] and [normalize] will do nothing to the form provided by this. *)
-val return : 'a -> 'a t
+(** [return] produces a bonsai form that will always produce the same value. [set] and
+    [normalize] will do nothing to the form provided by this. [sexp_of_t] can be provided
+    to provide better warning messages when actions are ignored by setting into the form.
+*)
+val return : ?sexp_of_t:('a -> Sexp.t) -> 'a -> 'a t
 
 (** [return_settable] is identical to [return], but [set] and [normalize] will update
     the value of the form. *)
@@ -280,6 +282,20 @@ module Dynamic : sig
     -> 'a t Value.t
     -> f:('a -> unit Or_error.t Effect.t) Value.t
     -> 'a t Computation.t
+
+  (** This works the same as [validate_via_effect], but keeps track of the result and
+      uses that as the value for the form. *)
+  val project_via_effect
+    :  ?sexp_of_input:('a -> Sexp.t)
+    -> ?sexp_of_result:('b -> Sexp.t)
+    -> equal_input:('a -> 'a -> bool)
+    -> equal_result:('b -> 'b -> bool)
+    -> ?one_at_a_time:bool
+    -> ?debounce_ui:Time_ns.Span.t
+    -> 'a t Value.t
+    -> unparse:('b -> 'a)
+    -> parse:('a -> 'b Or_error.t Effect.t) Value.t
+    -> 'b t Computation.t
 
   module Record_builder :
     Record_builder_intf.Dynamic_record_builder with type 'a profunctor_term := 'a t

@@ -1,0 +1,4 @@
+(library (name bonsai_web_ui_nav_link_test)
+ (libraries bonsai_web_ui_nav_link bonsai_web_test async_js.async_test core
+  expect_test_helpers_core.expect_test_helpers_base)
+ (preprocess (pps ppx_jane ppx_quick_test)))

@@ -12,7 +12,6 @@ let%expect_test "recursive component" =
       { label : string
       ; children : t Int.Map.t
       }
-    [@@deriving fields]
   end
   in
   let rec tree input path =
@@ -23,7 +22,9 @@ let%expect_test "recursive component" =
         children
         ~f:(fun index child ->
           let path = Bonsai.Value.map2 index path ~f:List.cons in
-          let%sub child = Bonsai.lazy_ (lazy (tree child path)) in
+          let%sub child =
+            (Bonsai.lazy_ [@alert "-deprecated"]) (lazy (tree child path))
+          in
           let%arr child = child
           and index = index in
           Vdom.Node.div [ Vdom.Node.textf "%d" index; child ])

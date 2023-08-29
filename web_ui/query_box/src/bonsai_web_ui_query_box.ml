@@ -64,7 +64,7 @@ type 'k t =
   ; set_query : string -> unit Effect.t
   ; focus_input : unit Effect.t
   }
-[@@deriving fields]
+[@@deriving fields ~getters]
 
 let create
       (type k cmp)
@@ -77,10 +77,18 @@ let create
       ?(extra_list_container_attr = Value.return Attr.empty)
       ?(extra_input_attr = Value.return Attr.empty)
       ?(extra_attr = Value.return Attr.empty)
+      ?(on_blur = Value.return (Effect.return ()))
       ~f
       ~on_select
       ()
   =
+  let%sub suggestion_list_is_initialized, initialize_suggestion_list =
+    Bonsai.state false
+  in
+  let%sub inject_initialize_suggestion_list =
+    let%arr initialize_suggestion_list = initialize_suggestion_list in
+    initialize_suggestion_list true
+  in
   let%sub { Model.query; suggestion_list_state; offset }, inject, items, _ =
     let module M = struct
       type t = Key.t Model.t [@@deriving sexp_of]
@@ -195,7 +203,11 @@ let create
               { model with suggestion_list_state = prev_suggestion_list_state () })
       ~f:(fun model inject ->
         let%sub { Model.query; _ } = return model in
-        let%sub items = f query in
+        let%sub items =
+          if%sub suggestion_list_is_initialized
+          then f query
+          else Bonsai.const (Map.empty (module Key))
+        in
         let%arr model = model
         and inject = inject
         and items = items
@@ -304,18 +316,22 @@ let create
             [ selected_attr
             ; Attr.on_mouseenter (fun _ -> move_to_effect)
             ; Attr.on_click (fun _ ->
-                let%bind.Effect () = inject (Set_query "") in
-                let%bind.Effect () = inject Close_suggestions in
-                on_select key)
+                Effect.Many
+                  [ on_select key; inject (Set_query ""); inject Close_suggestions ])
             ]
         in
         Node.div ~attrs:[ attr ] [ item ])
+  in
+  let%sub { attr = focus_attr; focus = focus_input; blur = blur_input } =
+    Bonsai_web.Effect.Focus.on_effect ~name_for_testing:"query-box" ()
   in
   let%sub handle_keydown =
     let%arr inject = inject
     and selected_key = selected_key
     and on_select = on_select
-    and expand_direction = expand_direction in
+    and expand_direction = expand_direction
+    and suggestion_list_state = suggestion_list_state
+    and blur_input = blur_input in
     let open Vdom in
     let open Js_of_ocaml in
     fun ev ->
@@ -337,7 +353,10 @@ let create
         (match selected_key with
          | Some _ -> down
          | None -> Effect.Ignore)
-      | Escape -> inject Action.Close_suggestions
+      | Escape ->
+        (match suggestion_list_state with
+         | Closed -> blur_input
+         | First_item | Selected _ -> inject Action.Close_suggestions)
       | Enter ->
         (match selected_key with
          | Some key ->
@@ -352,9 +371,6 @@ let create
   in
   let%sub suggestion_container_id = Bonsai.path_id in
   let%sub input_id = Bonsai.path_id in
-  let%sub { attr = focus_attr; focus = focus_input; blur = _ } =
-    Bonsai_web.Effect.Focus.on_effect ~name_for_testing:"query-box" ()
-  in
   let%arr query = query
   and selected_key = selected_key
   and inject = inject
@@ -368,7 +384,9 @@ let create
   and suggestion_container_id = suggestion_container_id
   and input_id = input_id
   and focus_attr = focus_attr
-  and focus_input = focus_input in
+  and focus_input = focus_input
+  and inject_initialize_suggestion_list = inject_initialize_suggestion_list
+  and on_blur = on_blur in
   let container_position, suggestions_position, is_open =
     match suggestion_list_kind with
     | Suggestion_list_kind.Transient_overlay ->
@@ -394,8 +412,8 @@ let create
            let id = Js.to_string related_target##.id in
            if String.equal id suggestion_container_id || String.equal id input_id
            then Effect.Ignore
-           else inject Close_suggestions
-         | None -> inject Close_suggestions)
+           else Effect.Many [ inject Close_suggestions; on_blur ]
+         | None -> Effect.Many [ inject Close_suggestions; on_blur ])
   in
   let input =
     Node.input
@@ -403,9 +421,18 @@ let create
         [ Attr.id input_id
         ; Attr.type_ "text"
         ; Attr.string_property "value" query
-        ; Attr.on_keydown handle_keydown
-        ; Attr.on_input (fun _ query -> inject (Set_query query))
-        ; Attr.on_focus (fun _ -> inject Open_suggestions)
+        ; Attr.on_keydown (fun ev ->
+            Effect.all_unit [ inject_initialize_suggestion_list; handle_keydown ev ])
+        ; Attr.on_input (fun _ query ->
+            (* It may seem weird to set the query first and then initialize the suggestion
+               list, but injecting the suggestion list will call the user's provided
+               [f:(query -> options)] function. Thus, if we initialize the suggestions
+               first, we'll call [f ""] and then [f query]. This ordering ensures we only
+               call [f query]. *)
+            Effect.all_unit
+              [ inject (Set_query query); inject_initialize_suggestion_list ])
+        ; Attr.on_focus (fun _ ->
+            Effect.all_unit [ inject_initialize_suggestion_list; inject Open_suggestions ])
         ; focus_attr
         ; on_blur
         ; extra_input_attr

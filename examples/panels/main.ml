@@ -10,7 +10,7 @@ module Ids = struct
       { next : Id.t
       ; ids : unit Id.Map.t
       }
-    [@@deriving sexp, equal, fields]
+    [@@deriving sexp, equal, fields ~getters]
 
     let default = { next = 0; ids = Id.Map.empty }
   end

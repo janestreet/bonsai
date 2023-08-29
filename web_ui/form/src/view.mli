@@ -11,7 +11,7 @@ val suggest_label' : Vdom.Node.t -> t -> t
 val suggest_label : string -> t -> t
 val set_label : Vdom.Node.t -> t -> t
 val set_tooltip : Vdom.Node.t -> t -> t
-val of_vdom : id:string -> Vdom.Node.t -> t
+val of_vdom : unique_key:string -> Vdom.Node.t -> t
 
 val to_vdom
   :  ?theme:View.Theme.t

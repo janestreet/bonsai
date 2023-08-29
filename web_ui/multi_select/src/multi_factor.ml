@@ -52,7 +52,7 @@ module Make (Item : Single_factor.Item) (Key : Key) = struct
     { default_selection_status : Selection_status.t
     ; all_items                : Item.Set.t
     }
-  [@@deriving fields]
+  [@@deriving fields ~getters]
 
   module Result = struct
     type t =
@@ -62,7 +62,7 @@ module Make (Item : Single_factor.Item) (Key : Key) = struct
       ; inject           : Action.t -> unit Vdom.Effect.t
       ; selection        : Item.Set.t Key.Map.t
       }
-    [@@deriving fields]
+    [@@deriving fields ~getters]
 
     let view_with_keydown_handler t =
       let open Vdom in

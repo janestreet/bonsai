@@ -123,3 +123,11 @@ let rec to_unique_identifier_string t =
     t.string_repr <- Stringified string_repr;
     string_repr
 ;;
+
+let raise_duplicate path =
+  raise_s
+    [%message
+      "BUG: [Bonsai.Path.t] should be unique for all components, but duplicate paths \
+       were discovered."
+        (path : t)]
+;;

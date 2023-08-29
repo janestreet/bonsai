@@ -6,6 +6,17 @@ let initialize_connection user _initiated_from _addr connection =
   { User_state.user; connection }
 ;;
 
+let csp =
+  Csp_monoid.reduce
+    [ Csp_monoid.default_for_clientside
+    ; Csp_monoid.frame_ancestor "https://localhost:*"
+    (* allow to be iframed in localhost addresses for local dev *)
+    ; Csp_monoid.frame_ancestor "https://bonsai:*"
+      (* allow to be iframed in https://bonsai/ *)
+    ]
+  |> Csp_monoid.finalize
+;;
+
 let main ~http_settings =
   let global_state = Global_state.create () in
   let respond (_ : Krb.Principal.Name.t) =
@@ -26,6 +37,7 @@ let main ~http_settings =
         (Simple_web_server.Rpc_config.create
            ~implementations:(Rpc_implementations.implementations global_state)
            ~initial_connection_state:initialize_connection)
+      ~content_security_policy:(`Block csp)
       http_settings
       respond
   in

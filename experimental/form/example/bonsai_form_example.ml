@@ -35,7 +35,7 @@ module Result = struct
     ; string_option : string option
     ; a_b_or_c_or_all : A_B_or_C_or_all.t
     }
-  [@@deriving fields, sexp]
+  [@@deriving fields ~getters ~iterators:create, sexp]
 end
 
 let or_all_dropdown =

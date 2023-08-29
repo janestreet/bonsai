@@ -26,10 +26,19 @@ let main ~http_settings ~js_file =
         ~assets:[ javascript; sourcemap ]
         ~on_unknown_url:`Not_found
     in
+    let csp =
+      Csp_monoid.reduce
+        [ Csp_monoid.default_for_clientside
+        ; Csp_monoid.frame_ancestor "https://localhost:*"
+        (* allow to be iframed in localhost addresses like for local dev *)
+        ; Csp_monoid.frame_ancestor "https://bonsai:*"
+          (* allow to be iframed in https://bonsai/ *)
+        ]
+      |> Csp_monoid.finalize
+    in
     Simple_web_server.create
       ~authorize:Krb_http.Authorize.accept_all
-      ~content_security_policy:
-        (`Block Content_security_policy.default_for_clientside_rendering_internal)
+      ~content_security_policy:(`Block csp)
       ~rpc_config:
         (Simple_web_server.Rpc_config.create
            ~implementations:

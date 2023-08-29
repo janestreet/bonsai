@@ -985,7 +985,7 @@ let%expect_test "map > lazy" =
             let%map depth = depth in
             depth + 1
           in
-          Bonsai.lazy_ (lazy (f ~t:v ~depth)))
+          (Bonsai.lazy_ [@alert "-deprecated"]) (lazy (f ~t:v ~depth)))
     in
     return
     @@
@@ -1011,6 +1011,123 @@ let%expect_test "map > lazy" =
     };
   Handle.show handle;
   [%expect {| (hi (depth 0) (children ((0 (hello (depth 1) (children ())))))) |}]
+;;
+
+let%expect_test "map > fix2" =
+  let open Bonsai.Let_syntax in
+  let module M = struct
+    type t =
+      { label : string
+      ; children : t Int.Map.t
+      }
+  end
+  in
+  let f ~t ~depth =
+    Bonsai.fix2 t depth ~f:(fun ~recurse t depth ->
+      let%sub { M.label; children } = return t in
+      let%sub children =
+        Bonsai.assoc
+          (module Int)
+          children
+          ~f:(fun _ v ->
+            let depth =
+              let%map depth = depth in
+              depth + 1
+            in
+            recurse v depth)
+      in
+      return
+      @@
+      let%map label = label
+      and children = children
+      and depth = depth in
+      [%message label (depth : int) (children : Sexp.t Int.Map.t)])
+  in
+  let t_var = Bonsai.Var.create { M.label = "hi"; children = Int.Map.empty } in
+  let t_value = Bonsai.Var.value t_var in
+  let handle =
+    Handle.create
+      (Result_spec.sexp (module Sexp))
+      (f ~t:t_value ~depth:(Bonsai.Value.return 0))
+  in
+  [%expect {| |}];
+  Handle.show handle;
+  [%expect {| (hi (depth 0) (children ())) |}];
+  Bonsai.Var.set
+    t_var
+    { M.label = "hi"
+    ; children = Int.Map.singleton 0 { M.label = "hello"; children = Int.Map.empty }
+    };
+  Handle.show handle;
+  [%expect {| (hi (depth 0) (children ((0 (hello (depth 1) (children ())))))) |}]
+;;
+
+let%expect_test "Using fix to implement mutual recursion (collatz)" =
+  let open Bonsai.Let_syntax in
+  let step ~f state even odd =
+    let%sub n, depth = return state in
+    let%sub n =
+      let%arr n = n in
+      f n
+    in
+    let%sub is_even =
+      let%arr n = n in
+      n % 2 = 0
+    in
+    let%sub depth =
+      let%arr depth = depth in
+      depth + 1
+    in
+    let%sub state =
+      let%arr n = n
+      and depth = depth in
+      n, depth
+    in
+    if%sub is_even then even state else odd state
+  in
+  let even odd state =
+    Bonsai.fix state ~f:(fun ~recurse state -> step ~f:(fun n -> n / 2) state recurse odd)
+  in
+  let odd state =
+    Bonsai.fix state ~f:(fun ~recurse state ->
+      let%sub one =
+        let%arr n, _ = state in
+        n = 1
+      in
+      if%sub one
+      then (
+        let%arr _, depth = state in
+        depth)
+      else step ~f:(fun n -> (3 * n) + 1) state (even recurse) recurse)
+  in
+  let even = even odd in
+  let collatz n =
+    let%sub state =
+      let%arr n = n in
+      n, -1
+    in
+    step ~f:(fun x -> x) state even odd
+  in
+  let var = Bonsai.Var.create 5 in
+  let value = Bonsai.Var.value var in
+  let handle =
+    Handle.create
+      (module struct
+        type t = int
+        type incoming = Nothing.t
+
+        let view = Int.to_string
+        let incoming _ = Nothing.unreachable_code
+      end)
+      (collatz value)
+  in
+  Handle.show handle;
+  (* 5 -> 16 -> 8 -> 4 -> 2 -> 1 *)
+  [%expect {| 5 |}];
+  Bonsai.Var.set var 6;
+  Handle.show handle;
+  (* 6 -> 3 -> 10 -> 5 -> 16 -> 8 -> 4 -> 2 -> 1 *)
+  [%expect {| 8 |}]
 ;;
 
 let%expect_test "dynamic action sent to non-existent assoc element" =
@@ -1074,61 +1191,6 @@ let%expect_test "dynamic action sent to non-existent assoc element" =
   Bonsai.Var.set var (Int.Map.of_alist_exn [ 1, (); 2, () ]);
   Handle.show handle;
   [%expect {| ((1 0) (2 3)) |}]
-;;
-
-let%expect_test "ping-pong between apply-static and dynamic" =
-  let component =
-    let%sub m, i, _ =
-      Bonsai.Expert.state_machine01
-        ~sexp_of_model:[%sexp_of: Int.t]
-        ~equal:[%equal: Int.t]
-        ~sexp_of_dynamic_action:[%sexp_of: Unit.t]
-        ~sexp_of_static_action:[%sexp_of: Unit.t]
-        ~default_model:9
-        ~apply_dynamic:
-          (fun
-            ~inject_dynamic:_ ~inject_static ~schedule_event () model () ->
-            if model <= 0
-            then model
-            else (
-              printf "%d: Ping!\n" model;
-              schedule_event (inject_static ());
-              model - 1))
-        ~apply_static:(fun ~inject_dynamic ~inject_static:_ ~schedule_event model () ->
-          printf "%d: Pong!\n" model;
-          schedule_event (inject_dynamic ());
-          model - 1)
-        (Value.return ())
-    in
-    let%arr m = m
-    and i = i in
-    m, i
-  in
-  let handle =
-    Handle.create
-      (module struct
-        type t = int * (unit -> unit Effect.t)
-        type incoming = unit
-
-        let incoming (_, i) = i
-        let view (x, _) = Int.to_string x
-      end)
-      component
-  in
-  Handle.do_actions handle [ () ];
-  Handle.recompute_view handle;
-  [%expect
-    {|
-    9: Ping!
-    8: Pong!
-    7: Ping!
-    6: Pong!
-    5: Ping!
-    4: Pong!
-    3: Ping!
-    2: Pong!
-    1: Ping!
-    0: Pong! |}]
 ;;
 
 let%test_module "inactive delivery" =
@@ -1447,117 +1509,6 @@ let%test_module "inactive delivery" =
         ==== Diff between assoc and assoc_on: ==== |}]
     ;;
 
-    let%expect_test "dynamic action stat_machine01 inactive-delivery" =
-      (fun _ ->
-         let%sub m, i, _ =
-           Bonsai.Expert.state_machine01
-             ~sexp_of_model:[%sexp_of: Int.t]
-             ~equal:[%equal: Int.t]
-             ~sexp_of_dynamic_action:[%sexp_of: Int.t]
-             ~sexp_of_static_action:[%sexp_of: Nothing.t]
-             ~default_model:0
-             ~apply_dynamic:
-               (fun
-                 ~inject_dynamic:_
-                 ~inject_static:_
-                 ~schedule_event:_
-                 ()
-                 _model
-                 new_model
-                 -> new_model)
-             ~apply_static:
-               (fun
-                 ~inject_dynamic:_ ~inject_static:_ ~schedule_event:_ _model ->
-                 Nothing.unreachable_code)
-             (Value.return ())
-         in
-         let%arr m = m
-         and i = i in
-         m, i)
-      |> test_delivery_to_inactive_component;
-      [%expect
-        {|
-        (Sub
-          (from (Leaf01 (input (Constant (id 0)))))
-          (via 5)
-          (into (
-            Sub
-            (from (Return (value (Mapn (inputs (Named (uid 5)))))))
-            (via 7)
-            (into (
-              Sub
-              (from (Return (value (Mapn (inputs (Named (uid 5)))))))
-              (via 9)
-              (into (
-                Return (
-                  value (
-                    Mapn (
-                      inputs (
-                        (Named (uid 7))
-                        (Named (uid 9)))))))))))))
-        ((1 0) (2 0))
-        ((1 0) (2 3))
-        ((1 0))
-        ("An action sent to a [state_machine01] has been dropped because its input was not present. This happens when the [state_machine01] is inactive when it receives a message."
-         (action 4))
-        ((1 0))
-        ((1 0) (2 3))
-
-        ==== Diff between assoc and assoc_on: ==== |}]
-    ;;
-
-    let%expect_test "static action stat_machine01 inactive-delivery" =
-      (fun _ ->
-         let%sub m, _, i =
-           Bonsai.Expert.state_machine01
-             ~sexp_of_model:[%sexp_of: Int.t]
-             ~equal:[%equal: Int.t]
-             ~sexp_of_dynamic_action:[%sexp_of: Nothing.t]
-             ~sexp_of_static_action:[%sexp_of: Int.t]
-             ~default_model:0
-             ~apply_dynamic:
-               (fun
-                 ~inject_dynamic:_ ~inject_static:_ ~schedule_event:_ () _model ->
-                 Nothing.unreachable_code)
-             ~apply_static:
-               (fun
-                 ~inject_dynamic:_ ~inject_static:_ ~schedule_event:_ _model new_model ->
-                 new_model)
-             (Value.return ())
-         in
-         let%arr m = m
-         and i = i in
-         m, i)
-      |> test_delivery_to_inactive_component;
-      [%expect
-        {|
-        (Sub
-          (from (Leaf01 (input (Constant (id 0)))))
-          (via 5)
-          (into (
-            Sub
-            (from (Return (value (Mapn (inputs (Named (uid 5)))))))
-            (via 7)
-            (into (
-              Sub
-              (from (Return (value (Mapn (inputs (Named (uid 5)))))))
-              (via 9)
-              (into (
-                Return (
-                  value (
-                    Mapn (
-                      inputs (
-                        (Named (uid 7))
-                        (Named (uid 9)))))))))))))
-        ((1 0) (2 0))
-        ((1 0) (2 3))
-        ((1 0))
-        ((1 0))
-        ((1 0) (2 4))
-
-        ==== Diff between assoc and assoc_on: ==== |}]
-    ;;
-
     let%expect_test "static action inactive-delivery" =
       (fun _ -> Bonsai.state 0 ~sexp_of_model:[%sexp_of: Int.t] ~equal:[%equal: Int.t])
       |> test_delivery_to_inactive_component;
@@ -1576,7 +1527,7 @@ let%test_module "inactive delivery" =
     let%expect_test "static inside of a lazy" =
       (fun _ ->
          opaque_computation
-           (Bonsai.lazy_
+           ((Bonsai.lazy_ [@alert "-deprecated"])
               (lazy
                 (Bonsai.state 0 ~sexp_of_model:[%sexp_of: Int.t] ~equal:[%equal: Int.t]))))
       |> test_delivery_to_inactive_component;
@@ -1600,8 +1551,63 @@ let%test_module "inactive delivery" =
 
     let%expect_test "static inside of a lazy (optimized away)" =
       (fun _ ->
-         Bonsai.lazy_
+         (Bonsai.lazy_ [@alert "-deprecated"])
            (lazy (Bonsai.state 0 ~sexp_of_model:[%sexp_of: Int.t] ~equal:[%equal: Int.t])))
+      |> test_delivery_to_inactive_component;
+      [%expect
+        {|
+        Leaf0
+        ((1 0) (2 0))
+        ((1 0) (2 3))
+        ((1 0))
+        ((1 0))
+        ((1 0) (2 4))
+
+        ==== Diff between assoc and assoc_on: ==== |}]
+    ;;
+
+    let%expect_test "static inside of a fix" =
+      (fun _ ->
+         opaque_computation
+           (Bonsai.fix (opaque_const_value true) ~f:(fun ~recurse v ->
+              match%sub v with
+              | true -> recurse (opaque_const_value false)
+              | false ->
+                Bonsai.state 0 ~sexp_of_model:[%sexp_of: Int.t] ~equal:[%equal: Int.t])))
+      |> test_delivery_to_inactive_component;
+      [%expect
+        {|
+          (Sub
+            (from (Return (value Incr)))
+            (via 8)
+            (into (
+              Switch
+              (match_ (Mapn (inputs (Named (uid 8)))))
+              (arms (
+                (Sub
+                  (from (Return (value Incr)))
+                  (via 1)
+                  (into (
+                    Switch
+                    (match_ (Mapn (inputs (Named (uid 1)))))
+                    (arms ((Lazy t) Leaf0)))))
+                (Return (value Exception)))))))
+          ((1 0) (2 0))
+          ((1 0) (2 3))
+          ((1 0))
+          ((1 0))
+          ((1 0) (2 4))
+
+          ==== Diff between assoc and assoc_on: ==== |}]
+    ;;
+
+    let%expect_test "static inside of a fix (optimized away)" =
+      (fun _ ->
+         Bonsai.fix (Value.return true) ~f:(fun ~recurse v ->
+           match%sub v with
+           | true -> recurse (Value.return false)
+           | false ->
+             Bonsai.state 0 ~sexp_of_model:[%sexp_of: Int.t] ~equal:[%equal: Int.t]))
       |> test_delivery_to_inactive_component;
       [%expect
         {|
@@ -1964,7 +1970,7 @@ let%test_module "inactive delivery" =
           let component =
             match%sub opaque_const_value true with
             | true ->
-              Bonsai.lazy_
+              (Bonsai.lazy_ [@alert "-deprecated"])
                 (lazy
                   (Bonsai.state
                      0
@@ -1991,7 +1997,8 @@ let%test_module "inactive delivery" =
 
         let%expect_test "next to an inactive infinitely-recursive lazy" =
           let rec infinitely_recursive_component () =
-            Bonsai.lazy_ (lazy (infinitely_recursive_component ()))
+            (Bonsai.lazy_ [@alert "-deprecated"])
+              (lazy (infinitely_recursive_component ()))
           in
           let component =
             match%sub opaque_const_value true with
@@ -2002,6 +2009,36 @@ let%test_module "inactive delivery" =
                 ~reset:(fun _ -> 999)
                 ~equal:[%equal: Int.t]
             | false -> infinitely_recursive_component ()
+          in
+          let handle = build_handle component ~sexp_of:[%sexp_of: int] in
+          let set_value i = Handle.do_actions handle [ Action i ] in
+          let reset () = Handle.do_actions handle [ Reset ] in
+          Handle.show handle;
+          [%expect {| 0 |}];
+          set_value 3;
+          Handle.show handle;
+          [%expect {| 3 |}];
+          set_value 4;
+          Handle.show handle;
+          [%expect {| 4 |}];
+          reset ();
+          Handle.show handle;
+          [%expect {| 999 |}]
+        ;;
+
+        let%expect_test "next to an inactive infinitely-recursive fix" =
+          let infinitely_recursive_component =
+            Bonsai.fix (Value.return ()) ~f:(fun ~recurse v -> recurse v)
+          in
+          let component =
+            match%sub opaque_const_value true with
+            | true ->
+              Bonsai.state
+                0
+                ~sexp_of_model:[%sexp_of: Int.t]
+                ~reset:(fun _ -> 999)
+                ~equal:[%equal: Int.t]
+            | false -> infinitely_recursive_component
           in
           let handle = build_handle component ~sexp_of:[%sexp_of: int] in
           let set_value i = Handle.do_actions handle [ Action i ] in
@@ -2079,95 +2116,6 @@ let%test_module "inactive delivery" =
                   Bonsai.Apply_action_context.schedule_event
                     context
                     (Bonsai.Apply_action_context.inject context false);
-                  model)
-            in
-            return (Value.both model inject)
-          in
-          let handle = build_handle component ~sexp_of:[%sexp_of: int] in
-          let increment () = Handle.do_actions handle [ Action true ] in
-          let reset () = Handle.do_actions handle [ Reset ] in
-          Handle.show handle;
-          [%expect {| 0 |}];
-          increment ();
-          Handle.show handle;
-          [%expect {| 1 |}];
-          increment ();
-          Handle.show handle;
-          [%expect {| 2 |}];
-          reset ();
-          Handle.show handle;
-          [%expect {| 999 |}]
-        ;;
-
-        let%expect_test "reset by bouncing back to an action (state_machine01 static)" =
-          let component =
-            let%sub model, _, inject =
-              Bonsai.Expert.state_machine01
-                ~sexp_of_model:[%sexp_of: Int.t]
-                ~equal:[%equal: Int.t]
-                ~sexp_of_dynamic_action:[%sexp_of: Unit.t]
-                ~sexp_of_static_action:[%sexp_of: Bool.t]
-                (opaque_const_value ())
-                ~default_model:0
-                ~apply_static:
-                  (fun
-                    ~inject_dynamic:_
-                    ~inject_static:_
-                    ~schedule_event:_
-                    model
-                    is_increment
-                    -> if is_increment then model + 1 else 999)
-                ~apply_dynamic:
-                  (fun
-                    ~inject_dynamic:_ ~inject_static:_ ~schedule_event:_ () _ ->
-                    assert false)
-                ~reset:(fun ~inject_dynamic:_ ~inject_static ~schedule_event model ->
-                  schedule_event (inject_static false);
-                  model)
-            in
-            return (Value.both model inject)
-          in
-          let handle = build_handle component ~sexp_of:[%sexp_of: int] in
-          let increment () = Handle.do_actions handle [ Action true ] in
-          let reset () = Handle.do_actions handle [ Reset ] in
-          Handle.show handle;
-          [%expect {| 0 |}];
-          increment ();
-          Handle.show handle;
-          [%expect {| 1 |}];
-          increment ();
-          Handle.show handle;
-          [%expect {| 2 |}];
-          reset ();
-          Handle.show handle;
-          [%expect {| 999 |}]
-        ;;
-
-        let%expect_test "reset by bouncing back to an action (state_machine01 dynamic)" =
-          let component =
-            let%sub model, inject, _ =
-              Bonsai.Expert.state_machine01
-                ~sexp_of_model:[%sexp_of: Int.t]
-                ~equal:[%equal: Int.t]
-                ~sexp_of_dynamic_action:[%sexp_of: Bool.t]
-                ~sexp_of_static_action:[%sexp_of: Unit.t]
-                (opaque_const_value ())
-                ~default_model:0
-                ~apply_dynamic:
-                  (fun
-                    ~inject_dynamic:_
-                    ~inject_static:_
-                    ~schedule_event:_
-                    ()
-                    model
-                    is_increment
-                    -> if is_increment then model + 1 else 999)
-                ~apply_static:
-                  (fun
-                    ~inject_dynamic:_ ~inject_static:_ ~schedule_event:_ _ ->
-                    assert false)
-                ~reset:(fun ~inject_dynamic ~inject_static:_ ~schedule_event model ->
-                  schedule_event (inject_dynamic false);
                   model)
             in
             return (Value.both model inject)
@@ -2453,20 +2401,17 @@ let%test_module "testing Bonsai internals" =
           component
       in
       Handle.show_model handle;
-      [%expect {|
-        () |}];
+      [%expect {| () |}];
       Bonsai.Var.set var (Int.Map.of_alist_exn [ 1, (); 2, () ]);
       Handle.show_model handle;
-      [%expect {|
-        () |}];
+      [%expect {| () |}];
       (* use the setter to re-establish the default *)
       Handle.do_actions handle [ 1, Set "test" ];
       Handle.show_model handle;
       [%expect {| ((1 test)) |}];
       Handle.do_actions handle [ 1, Set "hello" ];
       Handle.show_model handle;
-      [%expect {|
-        () |}]
+      [%expect {| () |}]
     ;;
   end)
 ;;
@@ -4839,7 +4784,7 @@ module M = struct
     { a : string
     ; b : int
     }
-  [@@deriving sexp_of, fields]
+  [@@deriving sexp_of, fields ~getters ~fields]
 end
 
 let%expect_test "derived value" =
@@ -5318,6 +5263,207 @@ let%expect_test "multi-thunk" =
     pulling id!
     pulling id!
     "1 0" |}]
+;;
+
+let%expect_test "evaluation of pure values under a match%sub" =
+  let depending_on = Bonsai.Var.create 0 in
+  let determines_use = Bonsai.Var.create false in
+  let component =
+    let%sub used_somewhere =
+      match%sub opaque_const_value true with
+      | true ->
+        let%sub () =
+          Bonsai.Edge.lifecycle
+            ()
+            ~on_activate:(Value.return (Effect.print_s [%message "activating!"]))
+        in
+        let%arr depending_on = Bonsai.Var.value depending_on in
+        print_s [%message "doing work" (depending_on : int)];
+        depending_on
+      | false -> assert false
+    in
+    match%sub Bonsai.Var.value determines_use with
+    | true -> return used_somewhere
+    | false -> Bonsai.const (-1)
+  in
+  let handle = Handle.create (Result_spec.sexp (module Int)) component in
+  (* Even though [determines_use] is false in this and other cases, we do work
+     unnecessarily. *)
+  Handle.show handle;
+  [%expect {|
+    ("doing work" (depending_on 0))
+    -1
+    activating! |}];
+  Bonsai.Var.set determines_use true;
+  Handle.show handle;
+  [%expect {| 0 |}];
+  Bonsai.Var.set determines_use false;
+  Handle.show handle;
+  [%expect {| -1 |}];
+  Bonsai.Var.set depending_on 1;
+  Handle.show handle;
+  [%expect {|
+    ("doing work" (depending_on 1))
+    -1 |}];
+  Bonsai.Var.set depending_on 2;
+  Handle.show handle;
+  [%expect {|
+    ("doing work" (depending_on 2))
+    -1 |}]
+;;
+
+let%expect_test "evaluation of pure values under an assoc" =
+  let depending_on = Bonsai.Var.create 0 in
+  let determines_use = Bonsai.Var.create false in
+  let component =
+    let%sub used_somewhere =
+      Bonsai.assoc
+        (module Int)
+        (opaque_const_value (Int.Map.of_alist_exn [ 1, () ]))
+        ~f:(fun _key data ->
+          let%sub () =
+            Bonsai.Edge.lifecycle
+              ()
+              ~on_activate:(Value.return (Effect.print_s [%message "activating!"]))
+          in
+          let%arr depending_on = Bonsai.Var.value depending_on
+          and () = data in
+          print_s [%message "doing work" (depending_on : int)];
+          depending_on)
+    in
+    match%sub Bonsai.Var.value determines_use with
+    | true -> return used_somewhere
+    | false -> Bonsai.const Int.Map.empty
+  in
+  let handle =
+    Handle.create
+      (Result_spec.sexp
+         (module struct
+           type t = int Map.M(Int).t [@@deriving sexp_of]
+         end))
+      component
+  in
+  Handle.show handle;
+  [%expect {|
+    ("doing work" (depending_on 0))
+    ()
+    activating! |}];
+  Bonsai.Var.set determines_use true;
+  Handle.show handle;
+  [%expect {|
+    ((1 0)) |}];
+  Bonsai.Var.set determines_use false;
+  Handle.show handle;
+  [%expect {| () |}];
+  Bonsai.Var.set depending_on 1;
+  Handle.show handle;
+  [%expect {|
+    ("doing work" (depending_on 1))
+    () |}];
+  Bonsai.Var.set depending_on 2;
+  Handle.show handle;
+  [%expect {|
+    ("doing work" (depending_on 2))
+    () |}]
+;;
+
+let%expect_test "evaluation of pure values as an input to an assoc (with a state in the \
+                 assoc)"
+  =
+  let depending_on = Bonsai.Var.create 0 in
+  let determines_use = Bonsai.Var.create false in
+  let component =
+    let%sub input_map =
+      let%arr depending_on = Bonsai.Var.value depending_on in
+      print_endline "doing work";
+      Int.Map.of_alist_exn [ depending_on, () ]
+    in
+    let%sub used_somewhere =
+      let%sub intermediate =
+        Bonsai.assoc
+          (module Int)
+          input_map
+          ~f:(fun _key _data ->
+            let%sub _ = Bonsai.state () in
+            Bonsai.const ())
+      in
+      Bonsai.Map.cutoff intermediate ~equal:phys_equal
+    in
+    match%sub Bonsai.Var.value determines_use with
+    | true -> return used_somewhere
+    | false -> Bonsai.const Int.Map.empty
+  in
+  let handle =
+    Handle.create
+      (module struct
+        type t = unit Map.M(Int).t
+
+        include Result_spec.No_incoming
+
+        let view map = [%sexp (map : unit Map.M(Int).t)] |> Sexp.to_string
+      end)
+      component
+  in
+  Handle.show handle;
+  [%expect {|
+    doing work
+    () |}];
+  Handle.show handle;
+  [%expect {| () |}];
+  Bonsai.Var.set depending_on 1;
+  Handle.show handle;
+  [%expect {|
+    doing work
+    () |}];
+  Bonsai.Var.set depending_on 2;
+  Handle.show handle;
+  [%expect {|
+    doing work
+    () |}]
+;;
+
+let%expect_test "evaluation of pure values as an input to an assoc (without a state in \
+                 the assoc)"
+  =
+  let depending_on = Bonsai.Var.create 0 in
+  let determines_use = Bonsai.Var.create false in
+  let component =
+    let%sub input_map =
+      let%arr depending_on = Bonsai.Var.value depending_on in
+      print_endline "doing work";
+      Int.Map.of_alist_exn [ depending_on, () ]
+    in
+    let%sub used_somewhere =
+      let%sub intermediate =
+        Bonsai.assoc (module Int) input_map ~f:(fun _key _data -> Bonsai.const ())
+      in
+      Bonsai.Map.cutoff intermediate ~equal:phys_equal
+    in
+    match%sub Bonsai.Var.value determines_use with
+    | true -> return used_somewhere
+    | false -> Bonsai.const Int.Map.empty
+  in
+  let handle =
+    Handle.create
+      (module struct
+        type t = unit Map.M(Int).t
+
+        include Result_spec.No_incoming
+
+        let view map = [%sexp (map : unit Map.M(Int).t)] |> Sexp.to_string
+      end)
+      component
+  in
+  Handle.show handle;
+  [%expect {| () |}];
+  Handle.show handle;
+  [%expect {| () |}];
+  Bonsai.Var.set depending_on 1;
+  Handle.show handle;
+  [%expect {| () |}];
+  Bonsai.Var.set depending_on 2;
+  Handle.show handle;
+  [%expect {| () |}]
 ;;
 
 let%expect_test "scope_model" =
@@ -5799,7 +5945,7 @@ let%test_module "regression" =
         ; b : int
         ; c : int
         }
-      [@@deriving fields]
+      [@@deriving fields ~getters]
     end
 
     let%expect_test "" =

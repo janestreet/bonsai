@@ -19,7 +19,7 @@ module Model : sig
       ; is_visible     : bool
       ; is_highlighted : bool
       }
-    [@@deriving equal, fields, sexp]
+    [@@deriving equal, fields ~getters, sexp]
   end
 
   type t =

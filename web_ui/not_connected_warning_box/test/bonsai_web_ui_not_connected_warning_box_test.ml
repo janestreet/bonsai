@@ -11,7 +11,7 @@ let%expect_test _ =
   let is_connected = Bonsai.Var.create true in
   let handle =
     Handle.create
-      (Result_spec.vdom ~filter_printed_attributes:(fun _key _data -> false) Fn.id)
+      (Result_spec.vdom ~filter_printed_attributes:(fun ~key:_ ~data:_ -> false) Fn.id)
       (component (Bonsai.Var.value is_connected))
   in
   Handle.show handle;

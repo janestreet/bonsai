@@ -184,7 +184,7 @@ type t =
   ; int_blang : Int_blang.t
   ; password : string
   }
-[@@deriving typed_fields, fields, sexp_of]
+[@@deriving typed_fields, sexp_of]
 
 let ( >>|| ) a f = Bonsai.Computation.map a ~f
 

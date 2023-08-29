@@ -58,50 +58,6 @@ module Edge = struct
   let lifecycle t = Lifecycle t
 end
 
-let state_machine01
-      ?(sexp_of_dynamic_action = sexp_of_opaque)
-      ?(sexp_of_static_action = sexp_of_opaque)
-      ?reset
-      ?sexp_of_model
-      ?equal
-      ~default_model
-      ~apply_dynamic
-      ~apply_static
-      input
-  =
-  let reset = Option.value reset ~default:(reset_to_default ~default_model) in
-  let name = Source_code_position.to_string [%here] in
-  let apply_dynamic ~inject_dynamic ~inject_static ~schedule_event input model action =
-    match input with
-    | Some input ->
-      apply_dynamic ~inject_dynamic ~inject_static ~schedule_event input model action
-    | None ->
-      let action = sexp_of_dynamic_action action in
-      eprint_s
-        [%message
-          "An action sent to a [state_machine01] has been dropped because its input was \
-           not present. This happens when the [state_machine01] is inactive when it \
-           receives a message."
-            (action : Sexp.t)];
-      model
-  in
-  Leaf01
-    { model =
-        Meta.Model.of_module
-          ~sexp_of_model:(Option.value sexp_of_model ~default:sexp_of_opaque)
-          ~equal
-          ~name
-          ~default:default_model
-    ; input_id = Meta.Input.create ()
-    ; dynamic_action = Meta.Action.of_module ~sexp_of_action:sexp_of_dynamic_action ~name
-    ; static_action = Meta.Action.of_module ~sexp_of_action:sexp_of_static_action ~name
-    ; apply_dynamic
-    ; apply_static
-    ; input
-    ; reset
-    }
-;;
-
 let state_machine1_safe
       ?(sexp_of_action = sexp_of_opaque)
       ~sexp_of_model
@@ -204,10 +160,7 @@ let state_machine0
 
 module Proc_incr = struct
   let value_cutoff t ~equal = read (Value.cutoff ~added_by_let_syntax:false ~equal t)
-
-  let compute_with_clock t ~f =
-    Computation.Leaf_incr { input = t; input_id = Meta.Input.create (); compute = f }
-  ;;
+  let compute_with_clock t ~f = Computation.Leaf_incr { input = t; compute = f }
 
   let of_module
         (type input model result)

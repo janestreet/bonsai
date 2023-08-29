@@ -11,7 +11,7 @@ module Model = struct
       ; is_visible     : bool
       ; is_highlighted : bool
       }
-    [@@deriving equal, fields, sexp]
+    [@@deriving equal, fields ~getters, sexp]
 
     let toggle_visibility t = { t with is_visible = not t.is_visible }
 

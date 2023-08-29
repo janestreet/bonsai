@@ -60,3 +60,7 @@ module Expert : sig
       benchmarking *)
   val reset_model_to_default : _ t -> unit
 end
+
+module For_testing : sig
+  val dump_dot : _ t -> string
+end

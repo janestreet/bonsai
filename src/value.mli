@@ -96,3 +96,4 @@ val cutoff : added_by_let_syntax:bool -> 'a t -> equal:('a -> 'a -> bool) -> 'a 
 val eval : Environment.t -> 'a t -> 'a Incr.t
 val of_incr : 'a Incr.t -> 'a t
 val return_exn : exn -> 'a t
+val of_opt : 'a t option -> 'a option t

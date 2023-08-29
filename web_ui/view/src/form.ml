@@ -130,14 +130,14 @@ let depth_td' ~depth ~extra_attrs =
 let depth_td_of_context context = depth_td' ~depth:(Form_context.depth context)
 
 let render_label
-      ?id
+      ?unique_key
       ?colspan
       ?(extra_attrs = [])
       label
       ~(depth_td : extra_attrs:Vdom.Attr.t -> ?key:string -> Vdom.Node.t list -> Vdom.Node.t)
   =
   let colspan = Option.value_map colspan ~default:Vdom.Attr.empty ~f:Vdom.Attr.colspan in
-  let for_ = Option.value_map id ~default:Vdom.Attr.empty ~f:Vdom.Attr.for_ in
+  let for_ = Option.value_map unique_key ~default:Vdom.Attr.empty ~f:Vdom.Attr.for_ in
   let label =
     match label with
     | None -> Vdom.Node.text ""
@@ -170,7 +170,7 @@ let render_context_above self ~view_context ~eval_context =
     [ Vdom.Node.tr [ label; tooltip_and_error self ] ]
 ;;
 
-let render_context_inline self ?id inline_view ~view_context ~eval_context =
+let render_context_inline self ?unique_key inline_view ~view_context ~eval_context =
   let depth_td = depth_td_of_context eval_context in
   let inline_view = Vdom.Node.td [ inline_view ] in
   let label_attrs =
@@ -182,12 +182,14 @@ let render_context_inline self ?id inline_view ~view_context ~eval_context =
           @> user_select `None)
     ]
   in
-  let label = render_label ?id ~extra_attrs:label_attrs ~depth_td view_context.label in
+  let label =
+    render_label ?unique_key ~extra_attrs:label_attrs ~depth_td view_context.label
+  in
   let tooltip_and_error =
     wrap_tooltip_and_error ~tooltip:view_context.tooltip ~error:view_context.error
   in
   (* This key prevents inputs of different "kinds" from clobbering each other *)
-  Vdom.Node.tr ?key:id [ label; inline_view; tooltip_and_error self ]
+  Vdom.Node.tr ?key:unique_key [ label; inline_view; tooltip_and_error self ]
 ;;
 
 let empty ~eval_context:_ ~view_context:_ () = []
@@ -225,10 +227,10 @@ let tuple self ~eval_context ~view_context ts =
   @ List.concat_map ts ~f:(self#form_view ~eval_context)
 ;;
 
-let raw self ~eval_context ~view_context ({ raw_view; id } : Form_view.raw) =
+let raw self ~eval_context ~view_context ({ raw_view; unique_key } : Form_view.raw) =
   [ render_context_inline
       self
-      ~id
+      ~unique_key
       (raw_view view_context ~editable:(Form_context.editable eval_context))
       ~view_context
       ~eval_context

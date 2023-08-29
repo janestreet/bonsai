@@ -49,7 +49,7 @@ let create_handle list =
   Handle.create
     (Result_spec.vdom
        ~path_censoring_message:""
-       ~filter_printed_attributes:(fun key _data ->
+       ~filter_printed_attributes:(fun ~key ~data:_ ->
          match key with
          | "style.transform" -> true
          | key when String.is_prefix key ~prefix:"data-drag-target" -> true
@@ -298,7 +298,7 @@ let component input =
 let create_handle input =
   Handle.create
     (Result_spec.vdom
-       ~filter_printed_attributes:(fun key _data ->
+       ~filter_printed_attributes:(fun ~key ~data:_ ->
          match key with
          | "style.transform" -> true
          | _ -> false)

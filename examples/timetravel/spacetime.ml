@@ -7,7 +7,7 @@ module Model = struct
     ; cursor : Spacetime_tree.Cursor.t
     ; history : 'm Spacetime_tree.t
     }
-  [@@deriving equal, fields, sexp]
+  [@@deriving equal, sexp]
 
   let create m =
     let history, cursor = Spacetime_tree.create m in

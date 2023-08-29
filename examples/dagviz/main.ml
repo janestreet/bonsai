@@ -35,7 +35,7 @@ module Styles =
      justify-content: center;
   }
 
-  @keyframes linear-progress-bar-stripes{0%{background-position:0 0}to{background-position:30px 0}}
+  @keyframes linear-progress-bar-stripes{0% {background-position:0 0}to{background-position:30px 0}}
 
   .spinning_progress_bar {
     animation-duration: 0.3s;
@@ -174,7 +174,7 @@ module Node_data = struct
     ; name : string
     ; people : Person.t list
     }
-  [@@deriving sexp, compare, quickcheck, fields]
+  [@@deriving sexp, compare, quickcheck, fields ~iterators:create]
 
   let to_vdom (id : Id.t Value.t) (t : t Value.t) : Vdom.Node.t Computation.t =
     let%sub collapsed, collapse = Bonsai.toggle ~default_model:true in

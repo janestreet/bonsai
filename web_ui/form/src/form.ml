@@ -1,15 +1,15 @@
 open! Core
 open (Bonsai_web : module type of Bonsai_web with module View := Bonsai_web.View)
 open Bonsai.Let_syntax
+open Bonsai_web_ui_form_underlying
 
 module T = struct
-  type 'a t =
-    { value : 'a Or_error.t
-    ; view : View.t
-    ; set : 'a -> unit Vdom.Effect.t
-    }
-  [@@deriving fields]
+  type nonrec 'a t = ('a, View.t) t
 
+  let value t = t.value
+  let view t = t.view
+  let set t = t.set
+  let create ~value ~view ~set = { value; view; set }
   let value_or_default t ~default = t |> value |> Or_error.ok |> Option.value ~default
 
   let normalize { value; set; view = _ } =
@@ -44,7 +44,6 @@ end
 
 module View = View
 
-let view t = t.view
 let map_view t ~f = { t with view = f t.view }
 
 let view_as_vdom ?theme ?on_submit ?editable t =
@@ -64,8 +63,15 @@ let view_as_vdom ?theme ?on_submit ?editable t =
 
 let is_valid t = Or_error.is_ok t.value
 
-let return value =
-  { value = Ok value; view = View.empty; set = (fun _ -> Ui_effect.Ignore) }
+let return ?sexp_of_t value =
+  let set value =
+    match sexp_of_t with
+    | Some sexp_of_t ->
+      Effect.print_s
+        [%message "Form.return was set, but setting is ignored." ~set_value:(value : t)]
+    | None -> Effect.print_s [%message "Form.return was set, but setting is ignored."]
+  in
+  { value = Ok value; view = View.empty; set }
 ;;
 
 let return_settable ?sexp_of_model ~equal value =
@@ -200,7 +206,6 @@ module For_profunctor = struct
     ; view : View.t
     ; set : 'write -> unit Vdom.Effect.t
     }
-  [@@deriving fields]
 
   let unbalanced_of_t ({ value; view; set } : _ t) : _ unbalanced = { value; view; set }
 
@@ -415,70 +420,116 @@ module Dynamic = struct
       ~callback
   ;;
 
-  let validate_via_effect
-        (type a)
-        ?sexp_of_model
-        ~equal
+  let project_via_effect
+        (type a b)
+        ?sexp_of_input
+        ?sexp_of_result
+        ~equal_input
+        ~equal_result
         ?(one_at_a_time = false)
         ?debounce_ui
         (t : a t Bonsai.Value.t)
-        ~f
+        ~unparse
+        ~parse
     =
     let open Bonsai.Effect_throttling in
     let module Validated = struct
-      let equal_a = equal
-      let sexp_of_a = Option.value ~default:sexp_of_opaque sexp_of_model
+      let equal_a = equal_input
+      let equal_b = equal_result
 
-      type t = a Or_error.t Poll_result.t [@@deriving sexp_of, equal]
+      type t = (a * b) Or_error.t Poll_result.t [@@deriving equal]
     end
     in
-    match%sub t >>| value with
-    | Error _ -> Bonsai.read t
-    | Ok value ->
-      let%sub validation =
-        let%sub f =
-          if one_at_a_time
-          then poll f
-          else (
-            let%arr f = f in
-            fun a ->
-              let%map.Effect result = f a in
-              Poll_result.Finished result)
-        in
-        let%sub effect =
-          let%arr f = f in
+    let value = t >>| value in
+    let%sub validation =
+      let%sub parse =
+        if one_at_a_time
+        then poll parse
+        else (
+          let%arr parse = parse in
           fun a ->
-            match%map.Effect f a with
-            | Aborted -> Poll_result.Aborted
-            | Finished (Ok ()) -> Finished (Ok a)
-            | Finished (Error e) -> Finished (Error e)
+            let%map.Effect result = parse a in
+            Poll_result.Finished result)
+      in
+      let%sub effect =
+        let%arr parse = parse in
+        function
+        | Error e -> Poll_result.Finished (Error e) |> Ui_effect.return
+        | Ok a ->
+          (match%map.Effect parse a with
+           | Aborted -> Poll_result.Aborted
+           | Finished (Ok b) -> Finished (Ok (a, b))
+           | Finished (Error e) -> Finished (Error e))
+      in
+      let sexp_of_result =
+        let f sexp_of_input sexp_of_result =
+          Poll_result.sexp_of_t
+            (Or_error.sexp_of_t (sexp_of_pair sexp_of_input sexp_of_result))
         in
-        Bonsai.Edge.Poll.effect_on_change
-          ?sexp_of_input:sexp_of_model
-          ~sexp_of_result:[%sexp_of: Validated.t]
-          ~equal_input:equal
-          ~equal_result:[%equal: Validated.t]
-          Bonsai.Edge.Poll.Starting.empty
-          value
-          ~effect
+        Option.map2 sexp_of_input sexp_of_result ~f
       in
-      let%sub is_stable =
-        match debounce_ui with
-        | None -> Bonsai.const true
-        | Some time_to_stable -> Bonsai_extra.is_stable ~equal value ~time_to_stable
-      in
-      let%arr t = t
-      and validation = validation
-      and is_stable = is_stable in
-      let validating_error = Error (Error.of_string "validating...") in
-      validate t ~f:(fun a ->
+      Bonsai.Edge.Poll.effect_on_change
+        ?sexp_of_input:(Option.map sexp_of_input ~f:Or_error.sexp_of_t)
+        ?sexp_of_result
+        ~equal_input:(Or_error.equal equal_input)
+        ~equal_result:[%equal: Validated.t]
+        Bonsai.Edge.Poll.Starting.empty
+        value
+        ~effect
+    in
+    let%sub is_stable =
+      match%sub value with
+      | Error _ -> Bonsai.const false
+      | Ok value ->
+        (match debounce_ui with
+         | None -> Bonsai.const true
+         | Some time_to_stable ->
+           Bonsai_extra.is_stable ~equal:equal_input value ~time_to_stable)
+    in
+    let%arr t = t
+    and validation = validation
+    and is_stable = is_stable in
+    let validating_error = Error (Error.of_string "validating...") in
+    project'
+      t
+      ~parse:(fun x ->
         if not is_stable
         then validating_error
         else (
           match validation with
-          | Some (Finished (Ok x)) when equal a x -> Ok ()
+          | Some (Finished (Ok (a, b))) when equal_input a x -> Ok b
           | None | Some Aborted | Some (Finished (Ok _)) -> validating_error
           | Some (Finished (Error e)) -> Error e))
+      ~unparse
+  ;;
+
+  let validate_via_effect
+        (type a)
+        ?sexp_of_model
+        ~equal
+        ?one_at_a_time
+        ?debounce_ui
+        (t : a t Bonsai.Value.t)
+        ~f
+    =
+    let%sub parse =
+      let%arr f = f in
+      fun value ->
+        let%bind.Effect validation = f value in
+        Effect.return
+          (let%bind.Or_error () = validation in
+           Ok value)
+    in
+    project_via_effect
+      ?sexp_of_input:sexp_of_model
+      ?sexp_of_result:sexp_of_model
+      ~equal_input:equal
+      ~equal_result:equal
+      ?one_at_a_time
+      ?debounce_ui
+      t
+      ~unparse:Fn.id
+      ~parse
   ;;
 
   module Record_builder = struct
@@ -513,7 +564,7 @@ module Dynamic = struct
 end
 
 module Expert = struct
-  let create = Fields.create
+  let create = create
 end
 
 module Private = struct

@@ -17,7 +17,7 @@ module Row = struct
       ; ask : float
       ; asize : int
       }
-    [@@deriving compare, fields, sexp]
+    [@@deriving compare, fields ~fields, sexp]
   end
 
   include T

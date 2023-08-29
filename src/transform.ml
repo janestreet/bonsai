@@ -166,7 +166,6 @@ module For_computation = struct
     match computation with
     | Return value -> Return (map_value value)
     | Leaf1 t -> Leaf1 { t with input = map_value t.input }
-    | Leaf01 t -> Leaf01 { t with input = map_value t.input }
     | Leaf0 _ -> computation
     | Leaf_incr t -> Leaf_incr { t with input = map_value t.input }
     | Sub t ->

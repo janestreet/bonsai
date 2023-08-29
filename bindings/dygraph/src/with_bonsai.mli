@@ -4,7 +4,7 @@ open  Import
 (** The recommended way to create dygraphs (with bonsai). *)
 
 module Legend_model : sig
-  type t = { visibility : bool list } [@@deriving equal, fields]
+  type t = { visibility : bool list } [@@deriving equal, fields ~getters]
 end
 
 (** This is the legend that [create] will when nothing is passed to [custom_legend].
@@ -22,7 +22,6 @@ type t =
   { graph_view   : Vdom.Node.t
   ; modify_graph : (Graph.t -> unit) -> unit Effect.t
   }
-[@@deriving fields]
 
 val create
   :  key:string Bonsai.Value.t
@@ -44,7 +43,13 @@ val create
   -> ?with_graph:(Graph.t -> unit)
   (** This hook may be useful if you want to, for example, bind the graph to some global
       variable on the window.  That way you can poke at the graph in the console. *)
-  -> ?on_zoom:(is_zoomed:bool -> unit Vdom.Effect.t) Bonsai.Value.t
+  -> ?on_zoom:
+       (Graph.t
+        -> xmin:float
+        -> xmax:float
+        -> yRanges:Range.t array
+        -> unit Vdom.Effect.t)
+         Bonsai.Value.t
   -> ?extra_attr:Vdom.Attr.t Bonsai.Value.t
   -> data:Data.t Bonsai.Value.t
   -> unit

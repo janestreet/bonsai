@@ -10,7 +10,7 @@ module Room_state = struct
     { messages : Message.t list
     ; current_room : Room.t option
     }
-  [@@deriving fields]
+  [@@deriving fields ~getters]
 end
 
 let process_message_stream ~conn ~room_state_var =

@@ -15,7 +15,7 @@ module By_row : sig
     (** [focus_index n] sets the focus to the nth row from the top of the
         entire table. The first row is 0, the second is 1, and so on. *)
     }
-  [@@deriving fields]
+  [@@deriving fields ~getters]
 
   type 'k optional = ('k, 'k option) t
 end

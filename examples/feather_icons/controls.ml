@@ -7,7 +7,7 @@ type t =
   ; stroke : [ `Hex of string ]
   ; fill : [ `Hex of string ] option
   }
-[@@deriving sexp, fields]
+[@@deriving sexp, fields ~iterators:to_list]
 
 let default = { size = 24; stroke_width = 2.; stroke = `Hex "#000000"; fill = None }
 

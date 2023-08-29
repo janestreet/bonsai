@@ -233,12 +233,6 @@ module Widget (K : Comparator.S) = struct
   end
 end
 
-(* js-only: The instancer is a weak-map from comparator objects to a widget-implemented vdom
-   function. This is so that each kind of map will get its own widget for safe diffing.
-
-   The implementation of this function is quite scary, no doubt, but Carl claims that
-   physical-equality of comparator objects is proof that the key and comparator_witness
-   types are guaranteed to be equal *)
 module Instancer : sig
   val get : map:('k, Vdom.Node.t, 'cmp) Map.t -> ('k, 'cmp) Input.t -> Vdom.Node.t
 end = struct

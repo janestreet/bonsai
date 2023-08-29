@@ -5,34 +5,26 @@ open! Gen_js_api
 type ('a, 'b) t = Ojs.t
 let rec t_of_js :
   'a 'b . (Ojs.t -> 'a) -> (Ojs.t -> 'b) -> Ojs.t -> ('a, 'b) t =
-  fun (type __a) ->
-    fun (type __b) ->
-      fun (__a_of_js : Ojs.t -> __a) ->
-        fun (__b_of_js : Ojs.t -> __b) -> fun (x2 : Ojs.t) -> x2
+  fun (type __a) (type __b) (__a_of_js : Ojs.t -> __a)
+    (__b_of_js : Ojs.t -> __b) (x2 : Ojs.t) -> x2
 and t_to_js : 'a 'b . ('a -> Ojs.t) -> ('b -> Ojs.t) -> ('a, 'b) t -> Ojs.t =
-  fun (type __a) ->
-    fun (type __b) ->
-      fun (__a_to_js : __a -> Ojs.t) ->
-        fun (__b_to_js : __b -> Ojs.t) -> fun (x1 : Ojs.t) -> x1
+  fun (type __a) (type __b) (__a_to_js : __a -> Ojs.t)
+    (__b_to_js : __b -> Ojs.t) (x1 : Ojs.t) -> x1
 let (create : unit -> ('a, 'b) t) =
   fun () ->
     t_of_js Obj.magic Obj.magic
       (Ojs.new_obj (Ojs.get_prop_ascii Ojs.global "WeakMap") [||])
 let (set : ('a, 'b) t -> 'a -> 'b -> unit) =
-  fun (x7 : ('a, 'b) t) ->
-    fun (x5 : 'a) ->
-      fun (x6 : 'b) ->
-        ignore
-          (Ojs.call (t_to_js Obj.magic Obj.magic x7) "set"
-             [|(Obj.magic x5);(Obj.magic x6)|])
+  fun (x7 : ('a, 'b) t) (x5 : 'a) (x6 : 'b) ->
+    ignore
+      (Ojs.call (t_to_js Obj.magic Obj.magic x7) "set"
+         [|(Obj.magic x5);(Obj.magic x6)|])
 let (get : ('a, 'b) t -> 'a -> 'b option) =
-  fun (x11 : ('a, 'b) t) ->
-    fun (x10 : 'a) ->
-      Ojs.option_of_js Obj.magic
-        (Ojs.call (t_to_js Obj.magic Obj.magic x11) "get" [|(Obj.magic x10)|])
+  fun (x11 : ('a, 'b) t) (x10 : 'a) ->
+    Ojs.option_of_js Obj.magic
+      (Ojs.call (t_to_js Obj.magic Obj.magic x11) "get" [|(Obj.magic x10)|])
 let (delete : ('a, 'b) t -> 'a -> unit) =
-  fun (x16 : ('a, 'b) t) ->
-    fun (x15 : 'a) ->
-      ignore
-        (Ojs.call (t_to_js Obj.magic Obj.magic x16) "delete"
-           [|(Obj.magic x15)|])
+  fun (x16 : ('a, 'b) t) (x15 : 'a) ->
+    ignore
+      (Ojs.call (t_to_js Obj.magic Obj.magic x16) "delete"
+         [|(Obj.magic x15)|])

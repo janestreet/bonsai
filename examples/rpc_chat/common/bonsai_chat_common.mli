@@ -7,7 +7,7 @@ module Message : sig
     ; author : string
     ; contents : string
     }
-  [@@deriving sexp, bin_io, fields]
+  [@@deriving sexp, bin_io, fields ~getters]
 end
 
 module Protocol : sig

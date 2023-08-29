@@ -532,7 +532,7 @@ let%expect_test "focus down" =
   Handle.show test.handle;
   [%expect
     {|
-    scrolling to index 0 at 0px
+    scrolling to index 0 at 0.0px
     (focus_changed_to (0))
     ((focused (0)) (num_filtered_rows (3)))
     ┌───┬─────┬─────┬───────┬──────────┬─────┐
@@ -575,7 +575,7 @@ let%expect_test "focus up" =
   Handle.show test.handle;
   [%expect
     {|
-    scrolling to index 101 at 102px
+    scrolling to index 101 at 102.0px
     (focus_changed_to (4))
     ((focused (4)) (num_filtered_rows (3)))
     ┌───┬─────┬─────┬───────┬──────────┬─────┐
@@ -607,7 +607,7 @@ let%expect_test "unfocus" =
   Handle.show test.handle;
   [%expect
     {|
-    scrolling to index 101 at 102px
+    scrolling to index 101 at 102.0px
     (focus_changed_to (4))
     ((focused (4)) (num_filtered_rows (3)))
     ┌───┬─────┬─────┬───────┬──────────┬─────┐
@@ -638,7 +638,7 @@ let%expect_test "remove focused moves down if possible" =
   Handle.show test.handle;
   [%expect
     {|
-    scrolling to index 0 at 0px
+    scrolling to index 0 at 0.0px
     (focus_changed_to (0))
     skipping scroll because target already in view
     (focus_changed_to (1))
@@ -669,7 +669,7 @@ let%expect_test "focus shadow (down)" =
   Handle.show test.handle;
   [%expect
     {|
-    scrolling to index 0 at 0px
+    scrolling to index 0 at 0.0px
     (focus_changed_to (0))
     ((focused (0)) (num_filtered_rows (3)))
     ┌───┬─────┬─────┬───────┬──────────┬─────┐
@@ -728,7 +728,7 @@ let%expect_test "focus shadow (up)" =
   Handle.show test.handle;
   [%expect
     {|
-    scrolling to index 101 at 102px
+    scrolling to index 101 at 102.0px
     (focus_changed_to (4))
     ((focused (4)) (num_filtered_rows (3)))
     ┌───┬─────┬─────┬───────┬──────────┬─────┐
@@ -769,7 +769,7 @@ let%expect_test "focus shadow (up)" =
   Handle.show test.handle;
   [%expect
     {|
-    scrolling to index 0 at 0px
+    scrolling to index 0 at 0.0px
     (focus_changed_to (0))
     ((focused (0)) (num_filtered_rows (3)))
     ┌───┬─────┬─────┬───────┬──────────┬─────┐
@@ -787,7 +787,7 @@ let%expect_test "remove focused causes unfocus (down)" =
   Handle.show test.handle;
   [%expect
     {|
-    scrolling to index 0 at 0px
+    scrolling to index 0 at 0.0px
     (focus_changed_to (0))
     skipping scroll because target already in view
     (focus_changed_to (1))
@@ -832,7 +832,7 @@ let%expect_test "remove focused causes unfocus (up)" =
   Handle.show test.handle;
   [%expect
     {|
-    scrolling to index 0 at 0px
+    scrolling to index 0 at 0.0px
     (focus_changed_to (0))
     skipping scroll because target already in view
     (focus_changed_to (1))
@@ -860,7 +860,7 @@ let%expect_test "remove focused causes unfocus (up)" =
   Handle.show test.handle;
   [%expect
     {|
-    scrolling to index 0 at 0px
+    scrolling to index 0 at 0.0px
     (focus_changed_to (0))
     ((focused (0)) (num_filtered_rows (2)))
     ┌───┬─────┬─────┬───────┬──────────┬─────┐
@@ -922,7 +922,7 @@ let%expect_test "select index" =
   (* Jump to the first row. *)
   [%expect
     {|
-    scrolling to index 0 at 0px
+    scrolling to index 0 at 0.0px
     (focus_changed_to (1))
     ((focused (1)) (num_filtered_rows (99)))
     ┌───┬─────┬─────┬────┬──────────┬─────┐
@@ -943,7 +943,7 @@ let%expect_test "select index" =
   (* Jump to a negative row (should be handled robustly by the table) *)
   [%expect
     {|
-    scrolling to index -10 at -10px
+    scrolling to index -10 at -10.0px
     ((focused (1)) (num_filtered_rows (99)))
     ┌───┬─────┬─────┬────┬──────────┬─────┐
     │ > │ #   │ key │ a  │ b        │ d   │
@@ -963,7 +963,7 @@ let%expect_test "select index" =
   (* Jump to a row out of view. *)
   [%expect
     {|
-    scrolling to index 30 at 31px
+    scrolling to index 30 at 31.0px
     (focus_changed_to ())
     ((focused ()) (num_filtered_rows (99)))
     ┌───┬─────┬─────┬────┬──────────┬─────┐
@@ -1109,7 +1109,7 @@ let%expect_test "page up" =
   Handle.show test.handle;
   [%expect
     {|
-    scrolling to index 5 at 5px
+    scrolling to index 5 at 5.0px
     (focus_changed_to (6))
     ((focused (6)) (num_filtered_rows (99)))
     ┌───┬──────┬─────┬────┬──────────┬─────┐
@@ -1163,7 +1163,7 @@ let%expect_test "page down and page up" =
   (* Page down starts the focus at the bottom of the visible range. *)
   [%expect
     {|
-    scrolling to index 11 at 12px
+    scrolling to index 11 at 12.0px
     (focus_changed_to (12))
     ((focused (12)) (num_filtered_rows (99)))
     ┌───┬──────┬─────┬────┬──────────┬─────┐
@@ -1190,7 +1190,7 @@ let%expect_test "page down and page up" =
      visible, you can infer that this is what happened. *)
   [%expect
     {|
-    scrolling to index 17 at 18px
+    scrolling to index 17 at 18.0px
     (focus_changed_to ())
     ((focused ()) (num_filtered_rows (99)))
     ┌───┬──────┬─────┬────┬──────────┬─────┐
@@ -1217,7 +1217,7 @@ let%expect_test "page down and page up" =
      visible. *)
   [%expect
     {|
-    scrolling to index 23 at 24px
+    scrolling to index 23 at 24.0px
     ((focused ()) (num_filtered_rows (99)))
     ┌───┬──────┬─────┬────┬──────────┬─────┐
     │ > │ #    │ key │ a  │ b        │ d   │
@@ -1317,7 +1317,7 @@ let%expect_test "page down and page up" =
      some restraint. *)
   [%expect
     {|
-    scrolling to index 18 at 18px
+    scrolling to index 18 at 18.0px
     (focus_changed_to (19))
     ((focused (19)) (num_filtered_rows (99)))
     ┌───┬──────┬─────┬────┬───────────┬─────┐
@@ -1340,7 +1340,7 @@ let%expect_test "page down and page up" =
   (* A second page up brings the focus out of view. *)
   [%expect
     {|
-    scrolling to index 12 at 12px
+    scrolling to index 12 at 12.0px
     (focus_changed_to ())
     ((focused ()) (num_filtered_rows (99)))
     ┌───┬──────┬─────┬────┬───────────┬─────┐
@@ -1363,7 +1363,7 @@ let%expect_test "page down and page up" =
   (* Page up brings the focus even further out of view. *)
   [%expect
     {|
-    scrolling to index 6 at 6px
+    scrolling to index 6 at 6.0px
     ((focused ()) (num_filtered_rows (99)))
     ┌───┬──────┬─────┬────┬───────────┬─────┐
     │ > │ #    │ key │ a  │ b         │ d   │
@@ -1459,7 +1459,7 @@ let%expect_test "page up stops at the top of the table (when it is in view)" =
   (* The first page up puts focus at the top of the table. *)
   [%expect
     {|
-    scrolling to index 0 at 0px
+    scrolling to index 0 at 0.0px
     (focus_changed_to (1))
     ((focused (1)) (num_filtered_rows (99)))
     ┌───┬─────┬─────┬────┬──────────┬─────┐
@@ -1480,7 +1480,7 @@ let%expect_test "page up stops at the top of the table (when it is in view)" =
   (* A subsequent page up does nothing, since the focus is as high as it possible can be. *)
   [%expect
     {|
-    scrolling to index -6 at -6px
+    scrolling to index -6 at -6.0px
     ((focused (1)) (num_filtered_rows (99)))
     ┌───┬─────┬─────┬────┬──────────┬─────┐
     │ > │ #   │ key │ a  │ b        │ d   │
@@ -1529,13 +1529,13 @@ let%expect_test "page up stops at the top of the table (when it is out of view)"
   (* A few page ups should put the focus at the top of the table and stop there. *)
   [%expect
     {|
-    scrolling to index 10 at 10px
+    scrolling to index 10 at 10.0px
     (focus_changed_to (11))
-    scrolling to index 4 at 4px
+    scrolling to index 4 at 4.0px
     (focus_changed_to ())
-    scrolling to index -2 at -2px
-    scrolling to index -6 at -6px
-    scrolling to index -6 at -6px
+    scrolling to index -2 at -2.0px
+    scrolling to index -6 at -6.0px
+    scrolling to index -6 at -6.0px
     ((focused ()) (num_filtered_rows (99)))
     ┌───┬──────┬─────┬────┬──────────┬─────┐
     │ > │ #    │ key │ a  │ b        │ d   │
@@ -1602,7 +1602,7 @@ let%expect_test "page down stops at the bottom of the table (when it is in view)
   (* The first page down puts focus at the bottom of the table. *)
   [%expect
     {|
-    scrolling to index 111 at 112px
+    scrolling to index 111 at 112.0px
     (focus_changed_to (99))
     ((focused (99)) (num_filtered_rows (99)))
     ┌───┬─────┬─────┬────┬───────────┬─────┐
@@ -1621,7 +1621,7 @@ let%expect_test "page down stops at the bottom of the table (when it is in view)
   (* A subsequent page down does nothing, since the focus is as low as it possible can be. *)
   [%expect
     {|
-    scrolling to index 111 at 112px
+    scrolling to index 111 at 112.0px
     ((focused (99)) (num_filtered_rows (99)))
     ┌───┬─────┬─────┬────┬───────────┬─────┐
     │ > │ #   │ key │ a  │ b         │ d   │
@@ -1669,13 +1669,13 @@ let%expect_test "page down stops at the bottom of the table (when it is out of v
   (* A few page downs should put the focus at the bottom of the table and stop there. *)
   [%expect
     {|
-    scrolling to index 91 at 92px
+    scrolling to index 91 at 92.0px
     (focus_changed_to (92))
-    scrolling to index 97 at 98px
+    scrolling to index 97 at 98.0px
     (focus_changed_to ())
-    scrolling to index 103 at 104px
-    scrolling to index 104 at 105px
-    scrolling to index 104 at 105px
+    scrolling to index 103 at 104.0px
+    scrolling to index 104 at 105.0px
+    scrolling to index 104 at 105.0px
     ((focused ()) (num_filtered_rows (99)))
     ┌───┬──────┬─────┬────┬───────────┬─────┐
     │ > │ #    │ key │ a  │ b         │ d   │
@@ -1757,7 +1757,7 @@ let%expect_test "moving focus down should work even when the index changes" =
   Handle.show test.handle;
   [%expect
     {|
-scrolling to index 0 at 0px
+scrolling to index 0 at 0.0px
 (focus_changed_to (1))
 skipping scroll because target already in view
 (focus_changed_to (2))
@@ -1831,7 +1831,7 @@ let%expect_test "moving focus down should work even when the index changes and f
   Handle.show test.handle;
   [%expect
     {|
-scrolling to index 0 at 0px
+scrolling to index 0 at 0.0px
 (focus_changed_to (1))
 skipping scroll because target already in view
 (focus_changed_to (2))
@@ -1916,7 +1916,7 @@ let%expect_test "moving focus up should work even when the index changes" =
   Handle.show test.handle;
   [%expect
     {|
-scrolling to index 0 at 0px
+scrolling to index 0 at 0.0px
 (focus_changed_to (1))
 skipping scroll because target already in view
 (focus_changed_to (2))
@@ -1997,7 +1997,7 @@ let%expect_test "moving focus up should work even when the index changes and foc
   Handle.show test.handle;
   [%expect
     {|
-scrolling to index 0 at 0px
+scrolling to index 0 at 0.0px
 (focus_changed_to (1))
 skipping scroll because target already in view
 (focus_changed_to (2))
@@ -2155,7 +2155,7 @@ let%expect_test "Pseudo-BUG: setting rank_range does not change the which rows t
   Handle.show handle;
   [%expect
     {|
-    scrolling to index 0 at 0px
+    scrolling to index 0 at 0.0px
     (focus_changed_to (1))
     ((focused (1)) (num_filtered_rows ()))
     ┌───┬─────┬────┬────┐
@@ -2184,7 +2184,7 @@ let%expect_test "Pseudo-BUG: setting rank_range does not change the which rows t
   Handle.show handle;
   [%expect
     {|
-    scrolling to index 1 at 40px
+    scrolling to index 1 at 40.0px
     (focus_changed_to ())
     ((focused ()) (num_filtered_rows ()))
     ┌───┬─────┬────┬────┐
@@ -2201,10 +2201,10 @@ let%expect_test "Pseudo-BUG: setting rank_range does not change the which rows t
   Handle.show handle;
   [%expect
     {|
-    scrolling to index 2 at 60px
-    scrolling to index 3 at 80px
+    scrolling to index 2 at 60.0px
+    scrolling to index 3 at 80.0px
     (focus_changed_to (4))
-    scrolling to index 4 at 100px
+    scrolling to index 4 at 100.0px
     (focus_changed_to (5))
     ((focused (5)) (num_filtered_rows ()))
     ┌───┬─────┬────┬────┐
@@ -2248,7 +2248,7 @@ let%expect_test "focus down when presence says that all responses are None" =
      "focused" remains "()", aka 'none' *)
   [%expect
     {|
-    scrolling to index 0 at 0px
+    scrolling to index 0 at 0.0px
     ((focused ()) (num_filtered_rows ()))
     ┌───┬─────┬─────┐
     │ > │ #   │ key │
@@ -2303,7 +2303,7 @@ let%expect_test "show that scrolling out of a basic table will keep the focus" =
   Handle.show test.handle;
   [%expect
     {|
-    scrolling to index 0 at 0px
+    scrolling to index 0 at 0.0px
     (focus_changed_to (1))
     ((focused (1)) (num_filtered_rows (99)))
     ┌────────────────┬───────┐
@@ -2443,7 +2443,7 @@ let%expect_test "show that scrolling out of a custom table will execute the pres
   Handle.show test.handle;
   [%expect
     {|
-    scrolling to index 0 at 0px
+    scrolling to index 0 at 0.0px
     ((focused (1)) (num_filtered_rows ()))
     ┌───┬──────┬─────┐
     │ > │ #    │ key │
@@ -2591,7 +2591,7 @@ let%expect_test "dynamic row height" =
     │   │ 700 │ 12  │ hi │ 6.000000 │ 100 │
     └───┴─────┴─────┴────┴──────────┴─────┘
 
-    scrolling position 14px into view |}];
+    scrolling position 14.px into view |}];
   Handle.show test.handle;
   [%expect
     {|
@@ -2622,7 +2622,7 @@ let%expect_test "dynamic row height" =
     │   │ 100  │ 6   │ hi │ 3.000000 │ 100 │
     └───┴──────┴─────┴────┴──────────┴─────┘
 
-    scrolling position 3px into view |}];
+    scrolling position 3.px into view |}];
   Handle.show test.handle;
   [%expect
     {|
@@ -2653,7 +2653,7 @@ let%expect_test "dynamic row height" =
     │   │ 700 │ 12  │ hi │ 6.000000 │ 100 │
     └───┴─────┴─────┴────┴──────────┴─────┘
 
-    scrolling position 50004px into view |}];
+    scrolling position 50004.px into view |}];
   Handle.show test.handle;
   [%expect
     {|
@@ -2681,7 +2681,7 @@ let%expect_test "dynamic row height" =
     │   │ 0 │ 1   │ hi │ 0.000000 │ 100 │
     └───┴───┴─────┴────┴──────────┴─────┘
 
-    scrolling position 4px into view |}];
+    scrolling position 4.px into view |}];
   Handle.show test.handle;
   [%expect
     {|

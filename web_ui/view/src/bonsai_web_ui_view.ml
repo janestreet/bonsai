@@ -234,6 +234,7 @@ module Theme = struct
   let rec with_attr attrs (vdom : Vdom.Node.t) =
     match vdom with
     | None -> Vdom.Node.div ~attrs []
+    | Fragment children -> Vdom.Node.div ~attrs children
     | Text _ -> Vdom.Node.span ~attrs [ vdom ]
     | Element e ->
       Element

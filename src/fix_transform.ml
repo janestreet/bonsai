@@ -19,35 +19,11 @@ module Make
         | Leaf1 { model; input_id; dynamic_action; apply_action; input; reset } ->
           let acc, up, input = User.transform_v down acc input in
           acc, up, Leaf1 { model; input_id; dynamic_action; apply_action; input; reset }
-        | Leaf01
-            { model
-            ; input_id
-            ; dynamic_action
-            ; static_action
-            ; apply_dynamic
-            ; apply_static
-            ; input
-            ; reset
-            } ->
-          let acc, up, input = User.transform_v down acc input in
-          let res =
-            Computation.Leaf01
-              { model
-              ; input_id
-              ; dynamic_action
-              ; static_action
-              ; apply_dynamic
-              ; apply_static
-              ; input
-              ; reset
-              }
-          in
-          acc, up, res
         | Leaf0 { model; static_action; apply_action; reset } ->
           acc, empty, Leaf0 { model; static_action; apply_action; reset }
-        | Leaf_incr { input; input_id; compute } ->
+        | Leaf_incr { input; compute } ->
           let acc, up, input = User.transform_v down acc input in
-          acc, up, Leaf_incr { input; input_id; compute }
+          acc, up, Leaf_incr { input; compute }
         | Sub { from; via; into; here } ->
           let acc, up1, from = User.transform_c down acc from in
           let acc, up2, into = User.transform_c down acc into in

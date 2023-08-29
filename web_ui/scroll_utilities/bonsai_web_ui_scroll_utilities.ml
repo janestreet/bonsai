@@ -73,8 +73,10 @@ module To_position_inside_element = struct
     | Some parent ->
       let new_node = Dom_html.createDiv Dom_html.document in
       new_node##.style##.position := Js.string "absolute";
-      new_node##.style##.left := Js.string (Int.to_string x_px ^ "px");
-      new_node##.style##.top := Js.string (Int.to_string y_px ^ "px");
+      new_node##.style##.left
+      := Js.string (Virtual_dom.Dom_float.to_string_fixed 5 x_px ^ "px");
+      new_node##.style##.top
+      := Js.string (Virtual_dom.Dom_float.to_string_fixed 5 y_px ^ "px");
       let (_ : Dom.node Js.t) = parent##appendChild (new_node :> Dom.node Js.t) in
       Scroll_into_view.f ~smooth new_node ~how;
       let (_ : _ Js.t) = parent##removeChild (new_node :> Dom.node Js.t) in

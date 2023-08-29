@@ -81,6 +81,7 @@ let app =
         ~start_time
         ~end_time
         ~view_zone:zone
+      |> Or_error.ok_exn
     in
     let data =
       Array.map raw_data ~f:(fun (time, values) -> time_to_x_value time, values)

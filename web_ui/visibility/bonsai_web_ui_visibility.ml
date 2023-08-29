@@ -181,6 +181,7 @@ let rec with_attr attr (vdom : Vdom.Node.t) =
       ~attrs:[ Vdom.Attr.style (Css_gen.display `Inline_block); attr ]
       [ vdom ]
   | Lazy { key; t } -> Lazy { key; t = Lazy.map t ~f:(with_attr attr) }
+  | Fragment children -> Vdom.Node.div ~attrs:[ attr ] children
 ;;
 
 let only_when_visible' ?visible_attr ?hidden_attr c =

@@ -21,7 +21,7 @@ module Accordion_result_spec = struct
       (val Result_spec.vdom
              ~path_censoring_message:""
              ~hash_censoring_message:""
-             ~filter_printed_attributes:(fun key _data ->
+             ~filter_printed_attributes:(fun ~key ~data:_ ->
                not
                  (String.is_substring key ~substring:"style"
                   || String.equal key "custom-css-vars"))

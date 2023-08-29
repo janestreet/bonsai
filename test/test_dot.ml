@@ -23,7 +23,7 @@ let%test_module ("regression" [@tags "no-js"]) =
         ; b : int
         ; c : int
         }
-      [@@deriving fields]
+      [@@deriving fields ~getters]
     end
 
     let%expect_test "" =

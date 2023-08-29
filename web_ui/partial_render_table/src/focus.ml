@@ -14,7 +14,7 @@ module By_row = struct
     ; focus : 'k -> unit Effect.t
     ; focus_index : int -> unit Effect.t
     }
-  [@@deriving fields]
+  [@@deriving fields ~getters]
 
   type 'k optional = ('k, 'k option) t
 end

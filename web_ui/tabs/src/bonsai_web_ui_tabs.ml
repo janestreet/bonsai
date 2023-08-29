@@ -7,7 +7,7 @@ module State = struct
     { current : 'a
     ; set : 'a -> unit Ui_effect.t
     }
-  [@@deriving fields]
+  [@@deriving fields ~getters ~iterators:create]
 
   let create = Fields.create
 end

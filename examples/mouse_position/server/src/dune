@@ -1,5 +1,5 @@
 (library (name bonsai_examples_mouse_position_native)
- (libraries polling_state_rpc cohttp_static_handler simple_web_server
-  bonsai_examples_mouse_position_common exe_server_client exe_server_protocol
-  tempfile core_unix.filename_unix)
+ (libraries polling_state_rpc cohttp_static_handler csp_monoid
+  simple_web_server bonsai_examples_mouse_position_common exe_server_client
+  exe_server_protocol tempfile core_unix.filename_unix)
  (preprocess (pps ppx_jane)))

@@ -31,7 +31,7 @@ module Basic : sig
       ; num_filtered_rows : int
       ; sortable_header : int Sortable_header.t
       }
-    [@@deriving fields]
+    [@@deriving fields ~getters]
   end
 
   module Columns : sig
@@ -181,7 +181,7 @@ module Expert : sig
       ; for_testing : For_testing.t Lazy.t
       ; focus : 'focus
       }
-    [@@deriving fields]
+    [@@deriving fields ~getters]
   end
 
   module Columns : sig

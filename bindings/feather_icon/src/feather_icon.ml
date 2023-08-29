@@ -288,7 +288,7 @@ type t =
   | Copy
   | Linkedin
   | Shield
-[@@deriving compare, enumerate, equal, sexp]
+[@@deriving compare, enumerate, equal, sexp, sexp_grammar]
 
 let path = function
   | Activity -> Paths.activity_dot_svg

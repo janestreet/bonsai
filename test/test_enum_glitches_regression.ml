@@ -26,7 +26,7 @@ module Result = struct
     { view : string
     ; incoming : Choice.t -> unit Ui_effect.t
     }
-  [@@deriving fields]
+  [@@deriving fields ~getters]
 
   type incoming = Choice.t
 end

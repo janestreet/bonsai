@@ -23,29 +23,6 @@ let unusable_dynamic_apply_action
 
 let () = Incr.State.(set_max_height_allowed t 1024)
 
-let do_nothing_lifecycle : Lifecycle.t Path.Map.t Incr.t =
-  Incr.return Lifecycle.Collection.empty
-;;
-
-let raise_duplicate_path path =
-  raise_s
-    [%message
-      "BUG: [Bonsai.Path.t] should be unique for all components, but duplicate paths \
-       were discovered."
-        (path : Path.t)]
-;;
-
-let merge_lifecycles
-  :  Lifecycle.Collection.t Incr.t -> Lifecycle.Collection.t Incr.t
-    -> Lifecycle.Collection.t Incr.t
-  =
-  fun a b ->
-  Incr_map.merge a b ~f:(fun ~key -> function
-    | `Both _ -> raise_duplicate_path key
-    | `Left a -> Some a
-    | `Right a -> Some a)
-;;
-
 let unzip3_mapi' map ~f =
   let first, second_and_third =
     Incr_map.unzip_mapi' map ~f:(fun ~key ~data ->
@@ -58,7 +35,7 @@ let unzip3_mapi' map ~f =
   first, second, third
 ;;
 
-let unit_model = Incr.return ()
+let do_nothing_lifecycle = Incr.return Lifecycle.Collection.empty
 
 let rec gather : type result. result Computation.t -> result Computation.packed_info =
   let open Computation in
@@ -76,34 +53,6 @@ let rec gather : type result. result Computation.t -> result Computation.packed_
       ; apply_static = unusable_static_apply_action
       ; apply_dynamic = unusable_dynamic_apply_action
       ; reset = reset_unit_model
-      ; run
-      }
-  | Leaf01
-      { model
-      ; input_id
-      ; dynamic_action
-      ; static_action
-      ; apply_dynamic
-      ; apply_static
-      ; reset
-      ; input
-      } ->
-    let run ~environment ~path:_ ~clock:_ ~model ~inject_dynamic ~inject_static =
-      let input = Value.eval environment input in
-      let result =
-        let%mapn model = model in
-        model, inject_dynamic, inject_static
-      in
-      Snapshot.create ~result ~input:(Input.dynamic input) ~lifecycle:None
-    in
-    T
-      { model
-      ; input = input_id
-      ; dynamic_action
-      ; static_action
-      ; apply_static
-      ; apply_dynamic
-      ; reset
       ; run
       }
   | Leaf1 { model; input_id; dynamic_action; apply_action; input; reset } ->
@@ -143,15 +92,15 @@ let rec gather : type result. result Computation.t -> result Computation.packed_
       ; reset
       ; run
       }
-  | Leaf_incr { input; input_id; compute } ->
+  | Leaf_incr { input; compute } ->
     let run ~environment ~path:_ ~clock ~model:_ ~inject_dynamic:_ ~inject_static:_ =
       let input = Value.eval environment input in
       let result = compute clock input in
-      Snapshot.create ~result ~input:(Input.dynamic input) ~lifecycle:None
+      Snapshot.create ~result ~input:Input.static ~lifecycle:None
     in
     T
       { model = Meta.Model.unit
-      ; input = input_id
+      ; input = Meta.Input.unit
       ; dynamic_action = Meta.Action.nothing
       ; static_action = Meta.Action.nothing
       ; apply_static = unusable_static_apply_action
@@ -162,231 +111,40 @@ let rec gather : type result. result Computation.t -> result Computation.packed_
   | Sub { from; via; into; here } ->
     let (T info_from) = gather from in
     let (T info_into) = gather into in
-    let from_stateless, into_stateless =
-      let same_model = Meta.Model.Type_id.same_witness in
-      let same_action = Meta.Action.Type_id.same_witness in
-      let open Option.Let_syntax in
-      let from_stateless =
-        let%bind a = same_model info_from.model.type_id Meta.Model.unit.type_id in
-        let%bind b = same_action info_from.dynamic_action Meta.Action.nothing in
-        let%bind c = same_action info_from.static_action Meta.Action.nothing in
-        Some (a, b, c)
-      in
-      match from_stateless with
-      | Some from_stateless -> Some from_stateless, None
-      | None ->
-        let into_stateless =
-          let%bind a = same_model info_into.model.type_id Meta.Model.unit.type_id in
-          let%bind b = same_action info_into.dynamic_action Meta.Action.nothing in
-          let%bind c = same_action info_into.static_action Meta.Action.nothing in
-          Some (a, b, c)
-        in
-        None, into_stateless
+    let is_unit x = Meta.Model.Type_id.same_witness Meta.Model.unit.type_id x in
+    let is_nothing x = Meta.Action.Type_id.same_witness Meta.Action.nothing x in
+    let from_model = is_unit info_from.model.type_id in
+    let from_static_action = is_nothing info_from.dynamic_action in
+    let from_dynamic_action = is_nothing info_from.static_action in
+    let open Option.Let_syntax in
+    let can_run_from_stateless =
+      let%bind a = from_model in
+      let%bind b = from_static_action in
+      let%bind c = from_dynamic_action in
+      Some (a, b, c)
     in
-    (match from_stateless, into_stateless with
-     | Some (T, T, T), _ ->
-       let run ~environment ~path ~clock ~model ~inject_dynamic ~inject_static =
-         let from =
-           let path = Path.append path Path.Elem.Subst_from in
-           info_from.run
-             ~environment
-             ~path
-             ~clock
-             ~model:unit_model
-             ~inject_dynamic:Nothing.unreachable_code
-             ~inject_static:Nothing.unreachable_code
-         in
-         Snapshot.attribute_positions here from;
-         let from_result = Snapshot.result from in
-         let environment = Environment.add_exn environment ~key:via ~data:from_result in
-         let into =
-           let path = Path.append path Path.Elem.Subst_into in
-           info_into.run ~environment ~path ~clock ~model ~inject_dynamic ~inject_static
-         in
-         let result = Snapshot.result into in
-         let lifecycle =
-           Option.merge
-             (Snapshot.lifecycle from)
-             (Snapshot.lifecycle into)
-             ~f:merge_lifecycles
-         in
-         let input = Snapshot.input into in
-         Snapshot.create ~result ~input ~lifecycle
+    (match can_run_from_stateless with
+     | Some (T, T, T) -> Eval_sub.from_stateless ~here ~info_from ~info_into ~via
+     | None ->
+       let into_model = is_unit info_into.model.type_id in
+       let into_static_action = is_nothing info_into.dynamic_action in
+       let into_dynamic_action = is_nothing info_into.static_action in
+       let can_run_into_stateless =
+         let%bind a = into_model in
+         let%bind b = into_static_action in
+         let%bind c = into_dynamic_action in
+         Some (a, b, c)
        in
-       T
-         { run
-         ; input = info_into.input
-         ; model = info_into.model
-         ; dynamic_action = info_into.dynamic_action
-         ; static_action = info_into.static_action
-         ; apply_static = info_into.apply_static
-         ; apply_dynamic = info_into.apply_dynamic
-         ; reset = info_into.reset
-         }
-     | _, Some (T, T, T) ->
-       let run ~environment ~path ~clock ~model ~inject_dynamic ~inject_static =
-         let from =
-           let path = Path.append path Path.Elem.Subst_from in
-           info_from.run ~environment ~path ~clock ~model ~inject_dynamic ~inject_static
-         in
-         Snapshot.attribute_positions here from;
-         let from_result = Snapshot.result from in
-         let environment = Environment.add_exn environment ~key:via ~data:from_result in
-         let into =
-           let path = Path.append path Path.Elem.Subst_into in
-           info_into.run
-             ~environment
-             ~path
-             ~clock
-             ~model:unit_model
-             ~inject_dynamic:Nothing.unreachable_code
-             ~inject_static:Nothing.unreachable_code
-         in
-         let result = Snapshot.result into in
-         let lifecycle =
-           Option.merge
-             (Snapshot.lifecycle from)
-             (Snapshot.lifecycle into)
-             ~f:merge_lifecycles
-         in
-         let input = Snapshot.input from in
-         Snapshot.create ~result ~input ~lifecycle
-       in
-       T
-         { run
-         ; input = info_from.input
-         ; model = info_from.model
-         ; dynamic_action = info_from.dynamic_action
-         ; static_action = info_from.static_action
-         ; apply_static = info_from.apply_static
-         ; apply_dynamic = info_from.apply_dynamic
-         ; reset = info_from.reset
-         }
-     | None, None ->
-       let reset ~inject_dynamic ~inject_static ~schedule_event (model_from, model_into) =
-         let model_from =
-           let inject_static action = inject_static (First action) in
-           let inject_dynamic action = inject_dynamic (First action) in
-           info_from.reset ~inject_dynamic ~inject_static ~schedule_event model_from
-         in
-         let model_into =
-           let inject_static action = inject_static (Second action) in
-           let inject_dynamic action = inject_dynamic (Second action) in
-           info_into.reset ~inject_dynamic ~inject_static ~schedule_event model_into
-         in
-         model_from, model_into
-       in
-       let apply_static
-             ~inject_dynamic
-             ~inject_static
-             ~schedule_event
-             (model_from, model_into)
-         = function
-           | First action ->
-             let inject_static action = inject_static (First action) in
-             let inject_dynamic action = inject_dynamic (First action) in
-             let model_from =
-               info_from.apply_static
-                 ~inject_dynamic
-                 ~inject_static
-                 ~schedule_event
-                 model_from
-                 action
-             in
-             model_from, model_into
-           | Second action ->
-             let inject_static action = inject_static (Second action) in
-             let inject_dynamic action = inject_dynamic (Second action) in
-             let model_into =
-               info_into.apply_static
-                 ~inject_dynamic
-                 ~inject_static
-                 ~schedule_event
-                 model_into
-                 action
-             in
-             model_from, model_into
-       in
-       let apply_dynamic
-             ~inject_dynamic
-             ~inject_static
-             ~schedule_event
-             input
-             (model_from, model_into)
-         = function
-           | First action ->
-             let inject_static action = inject_static (First action) in
-             let inject_dynamic action = inject_dynamic (First action) in
-             let model_from =
-               info_from.apply_dynamic
-                 ~inject_dynamic
-                 ~inject_static
-                 ~schedule_event
-                 (Option.map input ~f:fst)
-                 model_from
-                 action
-             in
-             model_from, model_into
-           | Second action ->
-             let inject_static action = inject_static (Second action) in
-             let inject_dynamic action = inject_dynamic (Second action) in
-             let model_into =
-               info_into.apply_dynamic
-                 ~inject_dynamic
-                 ~inject_static
-                 ~schedule_event
-                 (Option.map input ~f:snd)
-                 model_into
-                 action
-             in
-             model_from, model_into
-       in
-       let run ~environment ~path ~clock ~model ~inject_dynamic ~inject_static =
-         let from =
-           let inject_dynamic effect = inject_dynamic (First effect) in
-           let inject_static effect = inject_static (First effect) in
-           let model = Incr.map model ~f:Tuple2.get1 in
-           let path = Path.append path Path.Elem.Subst_from in
-           info_from.run ~environment ~path ~clock ~model ~inject_dynamic ~inject_static
-         in
-         Snapshot.attribute_positions here from;
-         let from_result = Snapshot.result from in
-         let environment = Environment.add_exn environment ~key:via ~data:from_result in
-         let into =
-           let inject_dynamic effect = inject_dynamic (Second effect) in
-           let inject_static effect = inject_static (Second effect) in
-           let model = Incr.map model ~f:Tuple2.get2 in
-           let path = Path.append path Path.Elem.Subst_into in
-           info_into.run ~environment ~path ~clock ~model ~inject_dynamic ~inject_static
-         in
-         let result = Snapshot.result into in
-         let lifecycle =
-           Option.merge
-             (Snapshot.lifecycle from)
-             (Snapshot.lifecycle into)
-             ~f:merge_lifecycles
-         in
-         let input = Input.merge (Snapshot.input from) (Snapshot.input into) in
-         Snapshot.create ~result ~input ~lifecycle
-       in
-       let model = Meta.Model.both info_from.model info_into.model in
-       let dynamic_action =
-         Meta.Action.both info_from.dynamic_action info_into.dynamic_action
-       in
-       let static_action =
-         Meta.Action.both info_from.static_action info_into.static_action
-       in
-       let input = Meta.Input.both info_from.input info_into.input in
-       T
-         { model
-         ; input
-         ; dynamic_action
-         ; static_action
-         ; apply_static
-         ; apply_dynamic
-         ; run
-         ; reset
-         })
+       (match can_run_into_stateless with
+        | Some (T, T, T) -> Eval_sub.into_stateless ~here ~info_from ~info_into ~via
+        | None ->
+          (match Option.both from_static_action into_static_action with
+           | Some (T, T) -> Eval_sub.no_static_actions ~here ~info_from ~info_into ~via
+           | None ->
+             (match Option.both from_dynamic_action into_dynamic_action with
+              | Some (T, T) ->
+                Eval_sub.no_dynamic_actions ~here ~info_from ~info_into ~via
+              | None -> Eval_sub.baseline ~here ~info_from ~info_into ~via))))
   | Store { id; value; inner } ->
     let (T gathered) = gather inner in
     let run ~environment ~path ~clock ~model ~inject_dynamic ~inject_static =
@@ -482,7 +240,7 @@ let rec gather : type result. result Computation.t -> result Computation.packed_
           ~init:Path.Map.empty
           ~add:(fun ~outer_key:_ ~inner_key:key ~data acc ->
             Map.update acc key ~f:(function
-              | Some _ -> raise_duplicate_path key
+              | Some _ -> Path.raise_duplicate key
               | None -> data))
           ~remove:(fun ~outer_key:_ ~inner_key:key ~data:_ acc -> Map.remove acc key)
       in
@@ -630,7 +388,7 @@ let rec gather : type result. result Computation.t -> result Computation.packed_
           ~init:Path.Map.empty
           ~add:(fun ~outer_key:_ ~inner_key:key ~data acc ->
             Map.update acc key ~f:(function
-              | Some _ -> raise_duplicate_path key
+              | Some _ -> Path.raise_duplicate key
               | None -> data))
           ~remove:(fun ~outer_key:_ ~inner_key:key ~data:_ acc -> Map.remove acc key)
       in
@@ -1263,58 +1021,82 @@ let rec gather : type result. result Computation.t -> result Computation.packed_
       }
   | With_model_resetter { inner; reset_id } ->
     let (T
-           { model
-           ; input
-           ; dynamic_action
-           ; static_action
-           ; apply_static
-           ; apply_dynamic
-           ; run
-           ; reset
-           })
+           ({ model
+            ; input
+            ; dynamic_action
+            ; static_action
+            ; apply_static
+            ; apply_dynamic
+            ; run
+            ; reset
+            } as gathered_inner))
       =
       gather inner
     in
-    let run ~environment ~path ~clock ~model ~inject_dynamic ~inject_static =
-      let reset_event = inject_static (First ()) in
-      let inject_static a = inject_static (Second a) in
-      let environment =
-        environment |> Environment.add_exn ~key:reset_id ~data:(Incr.return reset_event)
-      in
-      let snapshot =
-        run ~environment ~path ~model ~clock ~inject_dynamic ~inject_static
-      in
-      let result = Snapshot.result snapshot in
-      Snapshot.create
-        ~result
-        ~input:(Snapshot.input snapshot)
-        ~lifecycle:(Snapshot.lifecycle snapshot)
+    let inner_stateless =
+      let same_model = Meta.Model.Type_id.same_witness in
+      let same_action = Meta.Action.Type_id.same_witness in
+      let open Option.Let_syntax in
+      let%bind a = same_model model.type_id Meta.Model.unit.type_id in
+      let%bind b = same_action dynamic_action Meta.Action.nothing in
+      let%bind c = same_action static_action Meta.Action.nothing in
+      Some (a, b, c)
     in
-    let static_action = Meta.(Action.both Action.Type_id.unit static_action) in
-    let apply_static ~inject_dynamic ~inject_static ~schedule_event m =
-      let inject_static a = inject_static (Second a) in
-      function
-      | First () -> reset ~inject_dynamic ~inject_static ~schedule_event m
-      | Second a -> apply_static ~inject_dynamic ~inject_static ~schedule_event m a
-    in
-    let apply_dynamic ~inject_dynamic ~inject_static ~schedule_event i m =
-      let inject_static a = inject_static (Second a) in
-      apply_dynamic ~inject_dynamic ~inject_static ~schedule_event i m
-    in
-    let reset ~inject_dynamic ~inject_static ~schedule_event m =
-      let inject_static a = inject_static (Second a) in
-      reset ~inject_dynamic ~inject_static ~schedule_event m
-    in
-    T
-      { model
-      ; input
-      ; static_action
-      ; dynamic_action
-      ; apply_static
-      ; apply_dynamic
-      ; run
-      ; reset
-      }
+    (match inner_stateless with
+     | Some (T, T, T) ->
+       let run ~environment:env ~path ~clock ~model:_ ~inject_dynamic:_ ~inject_static:_ =
+         let environment = Environment.add_exn ~key:reset_id ~data:ignore_effect env in
+         run
+           ~environment
+           ~path
+           ~clock
+           ~model:unit_model
+           ~inject_dynamic:Nothing.unreachable_code
+           ~inject_static:Nothing.unreachable_code
+       in
+       T { gathered_inner with run }
+     | None ->
+       let run ~environment ~path ~clock ~model ~inject_dynamic ~inject_static =
+         let reset_event = inject_static (First ()) in
+         let inject_static a = inject_static (Second a) in
+         let environment =
+           environment
+           |> Environment.add_exn ~key:reset_id ~data:(Incr.return reset_event)
+         in
+         let snapshot =
+           run ~environment ~path ~model ~clock ~inject_dynamic ~inject_static
+         in
+         let result = Snapshot.result snapshot in
+         Snapshot.create
+           ~result
+           ~input:(Snapshot.input snapshot)
+           ~lifecycle:(Snapshot.lifecycle snapshot)
+       in
+       let static_action = Meta.(Action.both Action.Type_id.unit static_action) in
+       let apply_static ~inject_dynamic ~inject_static ~schedule_event m =
+         let inject_static a = inject_static (Second a) in
+         function
+         | First () -> reset ~inject_dynamic ~inject_static ~schedule_event m
+         | Second a -> apply_static ~inject_dynamic ~inject_static ~schedule_event m a
+       in
+       let apply_dynamic ~inject_dynamic ~inject_static ~schedule_event i m =
+         let inject_static a = inject_static (Second a) in
+         apply_dynamic ~inject_dynamic ~inject_static ~schedule_event i m
+       in
+       let reset ~inject_dynamic ~inject_static ~schedule_event m =
+         let inject_static a = inject_static (Second a) in
+         reset ~inject_dynamic ~inject_static ~schedule_event m
+       in
+       T
+         { model
+         ; input
+         ; static_action
+         ; dynamic_action
+         ; apply_static
+         ; apply_dynamic
+         ; run
+         ; reset
+         })
   | Path ->
     let run ~environment:_ ~path ~clock:_ ~model:_ ~inject_dynamic:_ ~inject_static:_ =
       let result = Incr.return path in

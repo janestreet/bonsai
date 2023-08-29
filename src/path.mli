@@ -32,3 +32,5 @@ val append : t -> Elem.t -> t
 
     [a != b] implies [sexp_of a != sexp_of b] *)
 val to_unique_identifier_string : t -> string
+
+val raise_duplicate : t -> 'a

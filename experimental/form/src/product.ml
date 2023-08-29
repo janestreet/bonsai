@@ -6,7 +6,7 @@ type ('result, 'parsed) t =
   { value : 'result
   ; set : 'parsed -> unit Bonsai.Effect.t
   }
-[@@deriving fields]
+[@@deriving fields ~iterators:create]
 
 let create = Fields.create
 
@@ -20,7 +20,7 @@ module With_view = struct
     { value : 'a
     ; view : Vdom.Node.t
     }
-  [@@deriving fields]
+  [@@deriving fields ~iterators:create]
 
   let create = Fields.create
 end

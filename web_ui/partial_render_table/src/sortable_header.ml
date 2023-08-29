@@ -10,7 +10,7 @@ type 'col_id t =
       column_id:'col_id -> sortable:bool -> (Sort_state.t -> Vdom.Node.t) -> Vdom.Node.t
   ; inject : 'col_id Order.Action.t -> unit Effect.t
   }
-[@@deriving fields]
+[@@deriving fields ~getters]
 
 let assoc_findi ~f list =
   match List.findi list ~f:(fun _i (key, _) -> f key) with

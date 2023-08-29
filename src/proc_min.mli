@@ -54,27 +54,6 @@ module Edge : sig
   val lifecycle : Lifecycle.t option Value.t -> unit Computation.t
 end
 
-val state_machine01
-  :  ?sexp_of_dynamic_action:('dynamic_action -> Sexp.t)
-  -> ?sexp_of_static_action:('static_action -> Sexp.t)
-  -> ?reset:('dynamic_action, 'static_action, 'model) Computation.reset
-  -> ?sexp_of_model:('model -> Sexp.t)
-  -> ?equal:('model -> 'model -> bool)
-  -> default_model:'model
-  -> apply_dynamic:
-       (inject_dynamic:('dynamic_action -> unit Effect.t)
-        -> inject_static:('static_action -> unit Effect.t)
-        -> schedule_event:(unit Effect.t -> unit)
-        -> 'input
-        -> 'model
-        -> 'dynamic_action
-        -> 'model)
-  -> apply_static:
-       ('dynamic_action, 'static_action, 'model) Computation.static_apply_action
-  -> 'input Value.t
-  -> ('model * ('dynamic_action -> unit Effect.t) * ('static_action -> unit Effect.t))
-       Computation.t
-
 module Computation_status : sig
   type 'input t =
     | Active of 'input
