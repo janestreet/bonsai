@@ -35,9 +35,9 @@ module State_machine = struct
       ~sexp_of_action:[%sexp_of: Action.t]
       ~default_model:0
       ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) model action ->
-        match action with
-        | Incr -> model + 1
-        | Decr -> model - 1)
+      match action with
+      | Incr -> model + 1
+      | Decr -> model - 1)
   ;;
 
   let incr = Interaction.inject Action.Incr

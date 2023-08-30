@@ -15,9 +15,9 @@ module Time_ns_option = struct
 end
 
 module Style =
-  [%css
-    stylesheet
-      {|
+[%css
+stylesheet
+  {|
   .form_container {
     position: fixed;
     top: 0px;
@@ -35,11 +35,11 @@ end
 module Column = Table.Columns.Dynamic_cells
 
 let column_helper
-      (type a)
-      (module M : S with type t = a)
-      ?(disable_sort = false)
-      ?visible
-      (field : (_, a) Field.t)
+  (type a)
+  (module M : S with type t = a)
+  ?(disable_sort = false)
+  ?visible
+  (field : (_, a) Field.t)
   =
   let sort =
     if disable_sort

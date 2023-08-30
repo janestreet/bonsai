@@ -1,7 +1,7 @@
 open! Core
 open! Import
-open  Bonsai.Let_syntax
-open  Bonsai_web_test
+open Bonsai.Let_syntax
+open Bonsai_web_test
 
 module Key = struct
   module T = struct
@@ -17,7 +17,7 @@ module Key = struct
   include Sexpable.To_stringable (T)
 
   let name_singular = "foo"
-  let name_plural   = "foos"
+  let name_plural = "foos"
 end
 
 module S = Bonsai_web_ui_multi_select.Multi_factor.Make (String) (Key)
@@ -34,11 +34,11 @@ let default_per_subwidget =
 ;;
 
 let make_handle
-      ?initial_model_settings
-      ?(all_keys = default_all_keys)
-      ?(per_subwidget = default_per_subwidget)
-      ?(id_prefix = Bonsai.Value.return "test-foo")
-      which_display
+  ?initial_model_settings
+  ?(all_keys = default_all_keys)
+  ?(per_subwidget = default_per_subwidget)
+  ?(id_prefix = Bonsai.Value.return "test-foo")
+  which_display
   =
   let bonsai =
     let%sub result =
@@ -46,26 +46,26 @@ let make_handle
     in
     result
     |> Bonsai.Value.map ~f:(fun result ->
-      let display =
-        sprintf
-          !"Selected items: %{sexp: String.Set.t Key.Map.t}\n"
-          (S.Result.selection result)
-        ^
-        match which_display with
-        | `Simple -> Lazy.force result.view_for_testing
-        | `Html   ->
-          Virtual_dom_test_helpers.Node_helpers.(
-            unsafe_convert_exn result.view |> to_string_html)
-      in
-      display, result.inject)
+         let display =
+           sprintf
+             !"Selected items: %{sexp: String.Set.t Key.Map.t}\n"
+             (S.Result.selection result)
+           ^
+           match which_display with
+           | `Simple -> Lazy.force result.view_for_testing
+           | `Html ->
+             Virtual_dom_test_helpers.Node_helpers.(
+               unsafe_convert_exn result.view |> to_string_html)
+         in
+         display, result.inject)
     |> return
   in
   Handle.create
     (module struct
-      type t        = string * (S.Action.t -> unit Ui_effect.t)
+      type t = string * (S.Action.t -> unit Ui_effect.t)
       type incoming = S.Action.t
 
-      let view     (s, _     ) = s
+      let view (s, _) = s
       let incoming (_, inject) = inject
     end)
     bonsai
@@ -101,7 +101,7 @@ let%expect_test "simple view" =
   │    * foo3         │                   │                   │
   └───────────────────┴───────────────────┴───────────────────┘ |}];
   Handle.do_actions handle [ Cycle_focused_subwidget `Next ];
-  Handle.show       handle;
+  Handle.show handle;
   [%expect
     {|
   Selected items: ((Foo (foo1 foo2 foo3)) (Bar ()) (Baz (baz1 baz2)))
@@ -114,7 +114,7 @@ let%expect_test "simple view" =
   │    * foo3         │                   │                   │
   └───────────────────┴───────────────────┴───────────────────┘ |}];
   Handle.do_actions handle [ Select_on_all_subwidgets `None ];
-  Handle.show       handle;
+  Handle.show handle;
   [%expect
     {|
   Selected items: ((Foo ()) (Bar ()) (Baz ()))
@@ -264,7 +264,7 @@ let%expect_test "html view" =
     </div>
   </div> |}];
   Handle.do_actions handle [ Cycle_focused_subwidget `Next ];
-  Handle.show       handle;
+  Handle.show handle;
   [%expect
     {|
   Selected items: ((Foo (foo1 foo2 foo3)) (Bar ()) (Baz (baz1 baz2)))

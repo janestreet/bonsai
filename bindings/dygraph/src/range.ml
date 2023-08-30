@@ -1,9 +1,9 @@
-open  Core
+open Core
 open! Import
-open  Gen_js_api
+open Gen_js_api
 
 type t =
-  { low  : float
+  { low : float
   ; high : float
   }
 [@@deriving sexp, equal]
@@ -23,7 +23,7 @@ module Spec = struct
   [@@deriving sexp, equal]
 
   let t_to_js = function
-    | Infer       -> Ojs.null
+    | Infer -> Ojs.null
     | Specified t -> t_to_js t
   ;;
 end

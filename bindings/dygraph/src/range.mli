@@ -1,11 +1,11 @@
 open! Core
 open! Import
-open  Gen_js_api
+open Gen_js_api
 
 (** Ranges in dygraphs are represented as a number array with two elements.  This makes
     them a bit easier to work with. *)
 type t =
-  { low  : float
+  { low : float
   ; high : float
   }
 [@@deriving sexp, equal]

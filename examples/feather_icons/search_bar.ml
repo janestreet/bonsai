@@ -8,8 +8,8 @@ module Search_container = [%css stylesheet {|
 |}]
 
 module Search_icon =
-  [%css
-    stylesheet {|
+[%css
+stylesheet {|
 .class_ {
   position: absolute;
   left: 16px;
@@ -18,9 +18,9 @@ module Search_icon =
 |}]
 
 module Search_bar =
-  [%css
-    stylesheet
-      {|
+[%css
+stylesheet
+  {|
 .class_ {
   width: 100%;
   height: 40px;

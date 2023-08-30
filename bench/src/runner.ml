@@ -45,12 +45,12 @@ let dedup_stabilizations interactions =
    [Stabilize]s don't add anything to benchmarks and would add a function call of
    overhead. *)
 let initialize
-      ~filter_profiles
-      ~wrap_driver_creation
-      ~clock
-      ~component
-      ~get_inject
-      ~interaction
+  ~filter_profiles
+  ~wrap_driver_creation
+  ~clock
+  ~component
+  ~get_inject
+  ~interaction
   =
   let driver = wrap_driver_creation.f (fun () -> Bonsai_driver.create ~clock component) in
   let inject_action action =
@@ -68,9 +68,9 @@ let initialize
       ]
     |> flatten_interactions_to_list
     |> List.filter ~f:(fun interaction ->
-      match filter_profiles, interaction with
-      | true, Profile _ -> false
-      | _ -> true)
+         match filter_profiles, interaction with
+         | true, Profile _ -> false
+         | _ -> true)
     |> dedup_stabilizations
     |> Array.of_list
   in

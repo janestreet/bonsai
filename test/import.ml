@@ -5,10 +5,10 @@ module Effect = struct
   include Ui_effect
 
   module External = Define (struct
-      module Action = String
+    module Action = String
 
-      let handle str = printf "External event: %s\n" str
-    end)
+    let handle str = printf "External event: %s\n" str
+  end)
 
   let sequence l = Many l
   let no_op = Ignore

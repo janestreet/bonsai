@@ -3,7 +3,6 @@ open! Bonsai_web_test
 open! Bonsai_web
 open Bonsai_examples_mouse_position_lib
 
-
 let%expect_test "basic page appearance" =
   let handle = Handle.create (Result_spec.vdom Fn.id) App.app in
   Handle.show handle;

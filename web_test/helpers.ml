@@ -5,12 +5,12 @@ include Helpers_intf
 let sexp_to_string = Expect_test_helpers_core.sexp_to_string
 
 let make_generic
-      (type input extra action result s)
-      ~(driver : (input, s) Driver.t)
-      ~(string_of_result : result -> string)
-      ~(get_result : s -> result)
-      ~(get_extra : s -> extra)
-      ~(schedule_action : s -> action -> unit)
+  (type input extra action result s)
+  ~(driver : (input, s) Driver.t)
+  ~(string_of_result : result -> string)
+  ~(get_result : s -> result)
+  ~(get_extra : s -> extra)
+  ~(schedule_action : s -> action -> unit)
   : (module S with type input = input and type action = action and type extra = extra)
   =
   (module struct
@@ -23,7 +23,6 @@ let make_generic
     ;;
 
     let show_model () =
-
       (* Cleans up a sexp by
          - removing empty lists (unit models are common in bonsai)
          - flattening lists that contain a single element *)
@@ -46,7 +45,6 @@ let make_generic
 
     let get_extra () = driver |> Driver.result |> get_extra
 
-
     let set_input input =
       Driver.set_input driver input;
       Driver.flush driver;
@@ -62,17 +60,17 @@ let make_generic
 ;;
 
 let make_vdom_generic
-      (type input action extra s)
-      ~(driver : (input, s) Driver.t)
-      ~(vdom_of_result : s -> Vdom.Node.t)
-      ~(get_extra : s -> extra)
-      ~(inject_of_result : s -> action -> unit Vdom.Effect.t)
-      ?(vdom_to_string =
-        fun node ->
-          node
-          |> Virtual_dom_test_helpers.Node_helpers.unsafe_convert_exn
-          |> Virtual_dom_test_helpers.Node_helpers.to_string_html)
-      ()
+  (type input action extra s)
+  ~(driver : (input, s) Driver.t)
+  ~(vdom_of_result : s -> Vdom.Node.t)
+  ~(get_extra : s -> extra)
+  ~(inject_of_result : s -> action -> unit Vdom.Effect.t)
+  ?(vdom_to_string =
+    fun node ->
+      node
+      |> Virtual_dom_test_helpers.Node_helpers.unsafe_convert_exn
+      |> Virtual_dom_test_helpers.Node_helpers.to_string_html)
+  ()
   : (module S_vdom with type input = input and type action = action and type extra = extra)
   =
   let open Virtual_dom_test_helpers in
@@ -83,7 +81,7 @@ let make_vdom_generic
       ~get_result:vdom_of_result
       ~get_extra
       ~schedule_action:(fun s action ->
-        Driver.schedule_event driver ((inject_of_result s) action))
+      Driver.schedule_event driver ((inject_of_result s) action))
   in
   (module struct
     include H
@@ -164,7 +162,7 @@ let make_string_with_inject ~driver =
     ~get_result:fst
     ~get_extra:(Fn.const ())
     ~schedule_action:(fun (_, inject) action ->
-      Driver.schedule_event driver (inject action))
+    Driver.schedule_event driver (inject action))
 ;;
 
 let make_with_inject ~driver ~sexp_of_result =

@@ -16,9 +16,9 @@ module Progress = struct
 end
 
 module Styles =
-  [%css
-    stylesheet
-      {|
+[%css
+stylesheet
+  {|
 .paper {
   box-shadow: 0 0 8px rgba(0,0,0,0.2);
   padding: 12px;
@@ -346,10 +346,10 @@ let face_point : Position.t -> [ `Top | `Left | `Bottom | `Right ] -> Point.t =
 ;;
 
 let edge_to_svg
-      ~(direction : [ `Top_down | `Left_to_right ])
-      ~(edge : Edge.t Value.t)
-      ~(from : Position.t Value.t)
-      ~(to_ : Position.t Value.t)
+  ~(direction : [ `Top_down | `Left_to_right ])
+  ~(edge : Edge.t Value.t)
+  ~(from : Position.t Value.t)
+  ~(to_ : Position.t Value.t)
   =
   let%arr edge = edge
   and from = from

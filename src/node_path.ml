@@ -74,8 +74,8 @@ module T : sig
 
   include
     Comparable.S_binable
-    with type t := t
-     and type comparator_witness := comparator_witness
+      with type t := t
+       and type comparator_witness := comparator_witness
 
   include Stringable.S with type t := t
 end = struct

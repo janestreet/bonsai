@@ -1,16 +1,15 @@
 open! Core
 open! Import
 
-
 module Var_from_parent : sig
   type t =
     | None
-    (** The common case, in which the parent node does not introduce any variables. *)
+        (** The common case, in which the parent node does not introduce any variables. *)
     | One of Type_equal.Id.Uid.t
-    (** The case in which the parent node introduces one new variable; most of
+        (** The case in which the parent node introduces one new variable; most of
         the time this is for [Subst] or [Subst_stateless] *)
     | Two of Type_equal.Id.Uid.t * Type_equal.Id.Uid.t
-    (** The case in which the parent node introduces two new variables; most of
+        (** The case in which the parent node introduces two new variables; most of
         the time this is for [Assoc]. *)
 end
 
@@ -66,7 +65,7 @@ module For_computation : sig
   type 'from_parent user_mapper =
     { f :
         'result.
-          'from_parent context
+        'from_parent context
         -> 'from_parent
         -> 'result Computation.t
         -> 'result Computation.t

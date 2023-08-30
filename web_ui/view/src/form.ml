@@ -130,11 +130,11 @@ let depth_td' ~depth ~extra_attrs =
 let depth_td_of_context context = depth_td' ~depth:(Form_context.depth context)
 
 let render_label
-      ?unique_key
-      ?colspan
-      ?(extra_attrs = [])
-      label
-      ~(depth_td : extra_attrs:Vdom.Attr.t -> ?key:string -> Vdom.Node.t list -> Vdom.Node.t)
+  ?unique_key
+  ?colspan
+  ?(extra_attrs = [])
+  label
+  ~(depth_td : extra_attrs:Vdom.Attr.t -> ?key:string -> Vdom.Node.t list -> Vdom.Node.t)
   =
   let colspan = Option.value_map colspan ~default:Vdom.Attr.empty ~f:Vdom.Attr.colspan in
   let for_ = Option.value_map unique_key ~default:Vdom.Attr.empty ~f:Vdom.Attr.for_ in
@@ -195,10 +195,10 @@ let render_context_inline self ?unique_key inline_view ~view_context ~eval_conte
 let empty ~eval_context:_ ~view_context:_ () = []
 
 let collapsible
-      self
-      ~eval_context
-      ~view_context
-      ({ collapse_label; state } : Form_view.collapsible)
+  self
+  ~eval_context
+  ~view_context
+  ({ collapse_label; state } : Form_view.collapsible)
   =
   let tooltip_and_error =
     wrap_tooltip_and_error self ~tooltip:view_context.tooltip ~error:view_context.error
@@ -248,10 +248,10 @@ let record self ~eval_context ~view_context fields =
 ;;
 
 let variant
-      self
-      ~eval_context
-      ~view_context
-      ({ clause_selector; selected_clause } : Form_view.variant)
+  self
+  ~eval_context
+  ~view_context
+  ({ clause_selector; selected_clause } : Form_view.variant)
   =
   let rest =
     match selected_clause with
@@ -275,10 +275,10 @@ let option self ~eval_context ~view_context ({ toggle; status } : Form_view.opti
 ;;
 
 let list
-      self
-      ~eval_context
-      ~view_context
-      ({ list_items; append_item; legacy_button_position } : Form_view.list_view)
+  self
+  ~eval_context
+  ~view_context
+  ({ list_items; append_item; legacy_button_position } : Form_view.list_view)
   =
   let items_and_removals =
     List.concat_mapi list_items ~f:(fun i { item_view; remove_item } ->
@@ -372,17 +372,17 @@ let to_vdom self ?on_submit ~eval_context view =
               ~depth:0
               ~extra_attrs:(Vdom.Attr.colspan 3)
               [ (match on_submit with
-                  | None ->
-                    Vdom.Node.button
-                      ~attrs:[ button_attr; Vdom.Attr.disabled ]
-                      [ Vdom.Node.text button_text ]
-                  | Some event ->
-                    let event =
-                      Effect.(Many [ event; Prevent_default; Stop_propagation ])
-                    in
-                    Vdom.Node.button
-                      ~attrs:[ button_attr; Vdom.Attr.on_click (fun _ -> event) ]
-                      [ Vdom.Node.text button_text ])
+                 | None ->
+                   Vdom.Node.button
+                     ~attrs:[ button_attr; Vdom.Attr.disabled ]
+                     [ Vdom.Node.text button_text ]
+                 | Some event ->
+                   let event =
+                     Effect.(Many [ event; Prevent_default; Stop_propagation ])
+                   in
+                   Vdom.Node.button
+                     ~attrs:[ button_attr; Vdom.Attr.on_click (fun _ -> event) ]
+                     [ Vdom.Node.text button_text ])
               ]
           ]
       ]

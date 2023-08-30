@@ -20,14 +20,14 @@ end
 module Action_unshadowed = Action
 
 let create_generic
-      run
-      ~fresh
-      ~input
-      ~model
-      ~inject_dynamic
-      ~inject_static
-      ~apply_static
-      ~apply_dynamic
+  run
+  ~fresh
+  ~input
+  ~model
+  ~inject_dynamic
+  ~inject_static
+  ~apply_static
+  ~apply_dynamic
   =
   let environment =
     Bonsai.Private.Environment.(empty |> add_exn ~key:fresh ~data:input)
@@ -72,22 +72,22 @@ let create_generic
 ;;
 
 let convert_generic
-      (type input action_input model dynamic_action static_action extra)
-      ~fresh
-      ~(run :
-          ( model
-          , dynamic_action
-          , static_action
-          , action_input
-          , Vdom.Node.t * extra )
-            Bonsai.Private.Computation.eval_fun)
-      ~default_model
-      ~(dynamic_action_type_id : dynamic_action Bonsai.Private.Meta.Action.t)
-      ~(static_action_type_id : static_action Bonsai.Private.Meta.Action.t)
-      ~apply_static
-      ~apply_dynamic
-      ~equal_model
-      ~sexp_of_model
+  (type input action_input model dynamic_action static_action extra)
+  ~fresh
+  ~(run :
+      ( model
+      , dynamic_action
+      , static_action
+      , action_input
+      , Vdom.Node.t * extra )
+      Bonsai.Private.Computation.eval_fun)
+  ~default_model
+  ~(dynamic_action_type_id : dynamic_action Bonsai.Private.Meta.Action.t)
+  ~(static_action_type_id : static_action Bonsai.Private.Meta.Action.t)
+  ~apply_static
+  ~apply_dynamic
+  ~equal_model
+  ~sexp_of_model
   : (module S with type Input.t = input and type Extra.t = extra)
   =
   (module struct
@@ -142,15 +142,15 @@ let convert_with_extra ?(optimize = false) component =
   let var = Bonsai.Private.(Value.named App_input fresh |> conceal_value) in
   let maybe_optimize = if optimize then Bonsai.Private.pre_process else Fn.id in
   let (T
-         { model
-         ; input = _
-         ; dynamic_action
-         ; static_action
-         ; apply_static
-         ; apply_dynamic
-         ; run
-         ; reset = _
-         })
+        { model
+        ; input = _
+        ; dynamic_action
+        ; static_action
+        ; apply_static
+        ; apply_dynamic
+        ; run
+        ; reset = _
+        })
     =
     component var
     |> Bonsai.Private.reveal_computation

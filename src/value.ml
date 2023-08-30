@@ -158,8 +158,7 @@ let rec eval : type a. Environment.t -> a t -> a Incr.t =
       | Map4 _
       | Map5 _
       | Map6 _
-      | Map7 _ ->
-        incremental_node
+      | Map7 _ -> incremental_node
     in
     Incremental.set_cutoff incremental_node (Incremental.Cutoff.of_equal equal);
     incremental_node
@@ -214,12 +213,12 @@ let return_exn exn = { value = Exception exn; here = None; id = value_id "return
 let of_opt opt = Option.value_map opt ~default:(return None) ~f:(map ~f:Option.some)
 
 include Applicative.Make_using_map2 (struct
-    type nonrec 'a t = 'a t
+  type nonrec 'a t = 'a t
 
-    let return = return
-    let map2 = map2
-    let map = `Custom map
-  end)
+  let return = return
+  let map2 = map2
+  let map = `Custom map
+end)
 
 let both a b = { value = Both (a, b); here = None; id = value_id "both" }
 

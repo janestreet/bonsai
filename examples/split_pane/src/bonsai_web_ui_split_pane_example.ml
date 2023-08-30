@@ -6,9 +6,9 @@ module Parameters = Bonsai_web_ui_split_pane.For_testing.Parameters
 module Form = Bonsai_web_ui_form
 
 module Styles =
-  [%css
-    stylesheet
-      {|
+[%css
+stylesheet
+  {|
 .container {
   display: flex;
   width: 100%;
@@ -90,8 +90,8 @@ let create_parameters_form =
       ~equal:[%equal: Parameters_or_error.t]
       (form >>| Form.value)
       ~condition:(function
-        | Ok _ -> true
-        | Error _ -> false)
+      | Ok _ -> true
+      | Error _ -> false)
   in
   let%arr last_ok = last_ok
   and form = form in

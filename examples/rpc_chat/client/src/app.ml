@@ -4,9 +4,9 @@ open Bonsai.Let_syntax
 open Bonsai_chat_common
 
 module Style =
-  [%css
-    stylesheet
-      {|
+[%css
+stylesheet
+  {|
   html, body, .container {
       height: 100vh;
       margin:0;

@@ -31,9 +31,9 @@ let process_message_stream ~conn ~room_state_var =
     Bonsai.Var.update
       room_state_var
       ~f:(fun ({ Room_state.messages; current_room } as prev) ->
-        if [%equal: Room.t option] current_room (Some message.room)
-        then { prev with messages = List.append messages [ message ] }
-        else prev);
+      if [%equal: Room.t option] current_room (Some message.room)
+      then { prev with messages = List.append messages [ message ] }
+      else prev);
     Deferred.unit)
 ;;
 
@@ -51,8 +51,8 @@ let send_message ~conn =
     Rpc.Rpc.dispatch_exn Protocol.Send_message.t conn
     |> Effect.of_deferred_fun
     >> Effect.bind ~f:(function
-      | Ok a -> Effect.return a
-      | Error _ -> Effect.Ignore)
+         | Ok a -> Effect.return a
+         | Error _ -> Effect.Ignore)
   in
   fun ~room ~contents ->
     let contents = obfuscate contents in

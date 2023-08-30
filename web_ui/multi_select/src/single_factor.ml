@@ -1,9 +1,9 @@
 open! Core
 open! Import
-open  Bonsai_web
-open  Single_factor_intf
+open Bonsai_web
+open Single_factor_intf
 
-module type S    = S
+module type S = S
 module type Item = Item
 
 module Make (Item : Item) = struct
@@ -15,12 +15,12 @@ module Make (Item : Item) = struct
       module Result = struct
         type t =
           { items_matching_search : Item.Set.t
-          ; update_search         : string -> unit Bonsai.Effect.t
-          ; current_search        : string
+          ; update_search : string -> unit Bonsai.Effect.t
+          ; current_search : string
           }
       end
 
-      module Model  = String
+      module Model = String
       module Action = String
 
       let apply_action _ _input _model new_search = new_search
@@ -28,12 +28,10 @@ module Make (Item : Item) = struct
       let compute ~inject all_items search_string =
         let items_matching_search =
           Set.filter all_items ~f:(fun item ->
-            String.Caseless.is_substring
-              (Item.to_string item)
-              ~substring:search_string)
+            String.Caseless.is_substring (Item.to_string item) ~substring:search_string)
         in
         { Result.items_matching_search
-        ; update_search  = inject
+        ; update_search = inject
         ; current_search = search_string
         }
       ;;
@@ -56,10 +54,10 @@ module Make (Item : Item) = struct
   module T = struct
     module View_config = struct
       type t =
-        { header               : Vdom.Node.t
+        { header : Vdom.Node.t
         ; autofocus_search_box : bool
-        ; search_box_id        : string option
-        ; extra_row_attrs      : (is_focused:bool -> Vdom.Attr.t) option
+        ; search_box_id : string option
+        ; extra_row_attrs : (is_focused:bool -> Vdom.Attr.t) option
         }
 
       let create ?extra_row_attrs ?(autofocus_search_box = false) ?id ~header () =
@@ -69,19 +67,19 @@ module Make (Item : Item) = struct
 
     module Input = struct
       type t =
-        { items_matching_search    : Item.Set.t
-        ; update_search            : string -> unit Bonsai.Effect.t
-        ; all_items                : Item.Set.t
+        { items_matching_search : Item.Set.t
+        ; update_search : string -> unit Bonsai.Effect.t
+        ; all_items : Item.Set.t
         ; default_selection_status : Selection_status.t
-        ; current_search           : string
-        ; view_config              : View_config.t
+        ; current_search : string
+        ; view_config : View_config.t
         }
     end
 
     module Model = struct
       type t =
         { selection_status : Selection_status.t Map.M(Item).t
-        ; focused_item     : Item.t option
+        ; focused_item : Item.t option
         }
       [@@deriving compare, equal, sexp_of]
 
@@ -92,15 +90,15 @@ module Make (Item : Item) = struct
 
     module Action = struct
       type t =
-        | Update_search_string       of string
-        | Set_item_selected          of
-            { item   : Item.t
+        | Update_search_string of string
+        | Set_item_selected of
+            { item : Item.t
             ; status : Selection_status.t
             }
         | Set_all_selection_statuses of Selection_status.t Item.Map.t
         | Toggle_focused_item_selected
-        | Set_focus                  of Item.t option
-        | Move_focus                 of [ `Next | `Prev ]
+        | Set_focus of Item.t option
+        | Move_focus of [ `Next | `Prev ]
         | Select_all
         | Select_none
       [@@deriving sexp_of]
@@ -108,24 +106,24 @@ module Make (Item : Item) = struct
 
     module Result = struct
       type t =
-        { view             : Vdom.Node.t
+        { view : Vdom.Node.t
         ; view_for_testing : string Lazy.t
-        ; key_handler      : Vdom_keyboard.Keyboard_event_handler.t
-        ; inject           : Action.t -> unit Bonsai.Effect.t
-        ; selected_items   : Item.Set.t
+        ; key_handler : Vdom_keyboard.Keyboard_event_handler.t
+        ; inject : Action.t -> unit Bonsai.Effect.t
+        ; selected_items : Item.Set.t
         }
     end
 
     let move_in_set set element ~dir =
       match element with
-      | None         ->
+      | None ->
         (match dir with
          | `Prev -> Set.max_elt set
          | `Next -> Set.min_elt set)
       | Some element ->
         let sequence =
           match dir with
-          | `Prev -> Set.to_sequence set ~less_or_equal_to:   element ~order:`Decreasing
+          | `Prev -> Set.to_sequence set ~less_or_equal_to:element ~order:`Decreasing
           | `Next -> Set.to_sequence set ~greater_or_equal_to:element ~order:`Increasing
         in
         (* The first element in the sequence will be [element], since the arguments that
@@ -143,7 +141,7 @@ module Make (Item : Item) = struct
         Map.find model.selection_status item
         |> Option.value ~default:input.default_selection_status
       with
-      | Selected   -> true
+      | Selected -> true
       | Unselected -> false
     ;;
 
@@ -151,14 +149,14 @@ module Make (Item : Item) = struct
       let explicitly_selected =
         List.filter_map (Map.to_alist model.selection_status) ~f:(fun (item, status) ->
           match status with
-          | Selected   -> Some item
+          | Selected -> Some item
           | Unselected -> None)
         |> Item.Set.of_list
       in
       let defaults =
         match input.default_selection_status with
         | Unselected -> Item.Set.empty
-        | Selected   -> Set.diff input.all_items (Set.of_map_keys model.selection_status)
+        | Selected -> Set.diff input.all_items (Set.of_map_keys model.selection_status)
       in
       Set.union explicitly_selected defaults
     ;;
@@ -176,14 +174,14 @@ module Make (Item : Item) = struct
           context
           (input.update_search search_string);
         { model with focused_item }
-      | Set_item_selected { item; status }          ->
+      | Set_item_selected { item; status } ->
         { model with
           selection_status = Map.set model.selection_status ~key:item ~data:status
         }
       | Set_all_selection_statuses selection_status -> { model with selection_status }
-      | Toggle_focused_item_selected                ->
+      | Toggle_focused_item_selected ->
         (match focused_item input model with
-         | None              -> model
+         | None -> model
          | Some focused_item ->
            let selection_status =
              Map.update model.selection_status focused_item ~f:(fun status ->
@@ -197,7 +195,7 @@ module Make (Item : Item) = struct
           move_in_set input.items_matching_search (focused_item input model) ~dir
         in
         (match focused_item with
-         | None              -> model
+         | None -> model
          | Some focused_item -> { model with focused_item = Some focused_item })
       | Select_all ->
         let selection_status =
@@ -222,23 +220,23 @@ module Make (Item : Item) = struct
         ~sep:"\n"
         (sprintf "Search string: '%s'" input.current_search
          :: List.map (Set.to_list input.items_matching_search) ~f:(fun item ->
-           let is_focused =
-             match model.focused_item with
-             | None       -> false
-             | Some item' -> Item.( = ) item item'
-           in
-           let is_selected = is_item_selected input model ~item in
-           sprintf
-             !"%s %s %{Item}"
-             (if is_focused  then "->" else "  ")
-             (if is_selected then "*"  else " " )
-             item))
+              let is_focused =
+                match model.focused_item with
+                | None -> false
+                | Some item' -> Item.( = ) item item'
+              in
+              let is_selected = is_item_selected input model ~item in
+              sprintf
+                !"%s %s %{Item}"
+                (if is_focused then "->" else "  ")
+                (if is_selected then "*" else " ")
+                item))
     ;;
 
     let search_box_view (input : Input.t) ~inject ~autofocus ~id =
       let open Vdom in
       let on_input = function
-        | None      -> inject (Action.Update_search_string ""  )
+        | None -> inject (Action.Update_search_string "")
         | Some text -> inject (Action.Update_search_string text)
       in
       let extra_attrs =
@@ -263,7 +261,7 @@ module Make (Item : Item) = struct
                 [ Attr.href "about:blank"
                 ; Attr.on_click (fun ev ->
                     match Bonsai_web.am_within_disabled_fieldset ev with
-                    | true  -> Effect.Prevent_default
+                    | true -> Effect.Prevent_default
                     | false -> Effect.Many [ inject action; Effect.Prevent_default ])
                 ; Attr.class_ class_
                 ]
@@ -280,11 +278,11 @@ module Make (Item : Item) = struct
     ;;
 
     let checkboxes_view
-          (input : Input.t)
-          (model : Model.t)
-          ~extra_row_attrs
-          ~selected_items
-          ~inject
+      (input : Input.t)
+      (model : Model.t)
+      ~extra_row_attrs
+      ~selected_items
+      ~inject
       =
       let open Vdom in
       let focused_item = focused_item input model in
@@ -295,7 +293,7 @@ module Make (Item : Item) = struct
               Attr.on_change (fun ev _new_value ->
                 let status =
                   match Js_of_ocaml.Js.Opt.to_option ev##.target with
-                  | None   ->
+                  | None ->
                     Js_of_ocaml.Firebug.console##error "Target missing";
                     assert false
                   | Some t ->
@@ -306,8 +304,8 @@ module Make (Item : Item) = struct
                 in
                 inject (Action.Set_item_selected { item; status }))
             in
-            let checked_attrs   = [ Attr.checked; Attr.bool_property "checked" true  ] in
-            let unchecked_attrs = [               Attr.bool_property "checked" false ] in
+            let checked_attrs = [ Attr.checked; Attr.bool_property "checked" true ] in
+            let unchecked_attrs = [ Attr.bool_property "checked" false ] in
             Node.input
               ~attrs:
                 [ Attr.many_without_merge
@@ -319,8 +317,8 @@ module Make (Item : Item) = struct
                 ]
               ()
           in
-          let is_focused  = [%compare.equal: Item.t option] (Some item) focused_item in
-          let extra_attrs = extra_row_attrs ~is_focused                              in
+          let is_focused = [%compare.equal: Item.t option] (Some item) focused_item in
+          let extra_attrs = extra_row_attrs ~is_focused in
           let focus_attrs =
             if is_focused
             then
@@ -331,7 +329,7 @@ module Make (Item : Item) = struct
           let on_click =
             Attr.on_click (fun ev ->
               match Bonsai_web.am_within_disabled_fieldset ev with
-              | true  -> Effect.Ignore
+              | true -> Effect.Ignore
               | false ->
                 Effect.Many
                   [ inject (Action.Set_focus (Some item))
@@ -379,8 +377,8 @@ module Make (Item : Item) = struct
         let handler =
           let open Keyboard_event_handler.Handler in
           match cond with
-          | None      -> with_prevent_default f
-          | Some cond -> only_handle_if cond  f ~prevent_default:()
+          | None -> with_prevent_default f
+          | Some cond -> only_handle_if cond f ~prevent_default:()
         in
         { Keyboard_event_handler.Command.keys; description; group = None; handler }
       in
@@ -404,8 +402,8 @@ module Make (Item : Item) = struct
     let compute ~inject input model =
       let selected_items = selected_items input model in
       { Result.view_for_testing = lazy (view_for_testing input model)
-      ; view                    = view input model ~selected_items ~inject
-      ; key_handler             = key_handler ~inject
+      ; view = view input model ~selected_items ~inject
+      ; key_handler = key_handler ~inject
       ; selected_items
       ; inject
       }
@@ -422,17 +420,17 @@ module Make (Item : Item) = struct
 
   module _ = struct
     type _t =
-      { all_items                : Item.Set.t
+      { all_items : Item.Set.t
       ; default_selection_status : Selection_status.t
-      ; view_config              : View_config.t
+      ; view_config : View_config.t
       }
   end
 
   module Initial_model_settings = struct
     type t =
-      { search_string    : string
+      { search_string : string
       ; selection_status : Selection_status.t Item.Map.t option
-      ; focused_item     : Item.t option
+      ; focused_item : Item.t option
       }
 
     let create ?(search_string = "") ?selection_status ?focused_item () =
@@ -441,19 +439,19 @@ module Make (Item : Item) = struct
   end
 
   let bonsai
-        ?(initial_model_settings = Initial_model_settings.create ())
-        ?(default_selection_status = Value.return Selection_status.Unselected)
-        ~view_config
-        all_items
+    ?(initial_model_settings = Initial_model_settings.create ())
+    ?(default_selection_status = Value.return Selection_status.Unselected)
+    ~view_config
+    all_items
     =
     let open Bonsai.Let_syntax in
     let%sub search_results =
       Searcher.bonsai ~initial:initial_model_settings.search_string all_items
     in
     let input_for_t =
-      let%map all_items                = all_items
-      and     view_config              = view_config
-      and     default_selection_status = default_selection_status
+      let%map all_items = all_items
+      and view_config = view_config
+      and default_selection_status = default_selection_status
       and { Searcher.Result.items_matching_search; update_search; current_search } =
         search_results
       in
@@ -475,4 +473,3 @@ module Make (Item : Item) = struct
       input_for_t
   ;;
 end
-

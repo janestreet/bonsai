@@ -1,6 +1,6 @@
 open! Base
-open  Import
-open  Gen_js_api
+open Import
+open Gen_js_api
 
 module type S = sig
   type t

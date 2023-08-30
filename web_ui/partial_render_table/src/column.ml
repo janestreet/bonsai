@@ -89,39 +89,39 @@ module Dynamic_cells = struct
         -> (k * Vdom.Node.t) Map_list.t Computation.t list
       =
       fun map ~empty comparator -> function
-        | Leaf { cell; visible; _ } ->
-          [ (if%sub visible
-             then
-               Bonsai.Expert.assoc_on
-                 (module Map_list.Key)
-                 comparator
-                 map
-                 ~get_model_key:(fun _ (k, _) -> k)
-                 ~f:(fun _ data ->
-                   let%sub key, data = return data in
-                   let%sub r = cell ~key ~data in
-                   let%arr key = key
-                   and r = r in
-                   key, r)
-             else (
-               let f = Ui_incr.Map.map ~f:(fun (k, _) -> k, empty_div) in
-               Bonsai.Incr.compute map ~f))
-          ]
-        | Group { children; _ } | Org_group children ->
-          List.bind children ~f:(visible_leaves map ~empty comparator)
+      | Leaf { cell; visible; _ } ->
+        [ (if%sub visible
+           then
+             Bonsai.Expert.assoc_on
+               (module Map_list.Key)
+               comparator
+               map
+               ~get_model_key:(fun _ (k, _) -> k)
+               ~f:(fun _ data ->
+                 let%sub key, data = return data in
+                 let%sub r = cell ~key ~data in
+                 let%arr key = key
+                 and r = r in
+                 key, r)
+           else (
+             let f = Ui_incr.Map.map ~f:(fun (k, _) -> k, empty_div) in
+             Bonsai.Incr.compute map ~f))
+        ]
+      | Group { children; _ } | Org_group children ->
+        List.bind children ~f:(visible_leaves map ~empty comparator)
     ;;
 
     let instantiate_cells (type k) t comparator (map : (k * _) Map_list.t Value.t) =
       let empty = Map.empty (module Map_list.Key) in
       visible_leaves map ~empty comparator t
       |> Computation.fold_right ~init:(Value.return empty) ~f:(fun a acc ->
-        Bonsai.Incr.compute (Value.both a acc) ~f:(fun a_and_acc ->
-          let%pattern_bind.Ui_incr a, acc = a_and_acc in
-          Ui_incr.Map.merge a acc ~f:(fun ~key:_ change ->
-            match change with
-            | `Left (i, l) -> Some (i, [ l ])
-            | `Right (i, r) -> Some (i, r)
-            | `Both ((i, l), (_, r)) -> Some (i, l :: r))))
+           Bonsai.Incr.compute (Value.both a acc) ~f:(fun a_and_acc ->
+             let%pattern_bind.Ui_incr a, acc = a_and_acc in
+             Ui_incr.Map.merge a acc ~f:(fun ~key:_ change ->
+               match change with
+               | `Left (i, l) -> Some (i, [ l ])
+               | `Right (i, r) -> Some (i, r)
+               | `Both ((i, l), (_, r)) -> Some (i, l :: r))))
     ;;
   end
 
@@ -308,8 +308,8 @@ module Dynamic_cells_with_sorter = struct
         sorters
         |> Map.to_alist
         |> List.map ~f:(fun (i, sorter) ->
-          let%map sorter = sorter in
-          Option.map sorter ~f:(fun sorter -> i, sorter))
+             let%map sorter = sorter in
+             Option.map sorter ~f:(fun sorter -> i, sorter))
         |> Value.all
         >>| Fn.compose Int.Map.of_alist_exn List.filter_opt
       in
@@ -394,7 +394,7 @@ module Dynamic_columns_with_sorter = struct
           sorters
           |> Map.to_alist
           |> List.filter_map ~f:(fun (i, sorter) ->
-            Option.map sorter ~f:(fun sorter -> i, sorter))
+               Option.map sorter ~f:(fun sorter -> i, sorter))
           |> Int.Map.of_alist_exn
         in
         sorters, tree
@@ -440,4 +440,3 @@ module Dynamic_columns_with_sorter = struct
 
   module Header_helpers = Header_helpers
 end
-

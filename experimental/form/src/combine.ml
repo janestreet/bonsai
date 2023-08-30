@@ -8,24 +8,24 @@ module T = struct
     ('input, ('result, 'parsed) Product.t) Bonsai.Arrow_deprecated.t
 
   include Applicative.Make3_using_map2 (struct
-      type nonrec ('result, 'input, 'parsed) t = ('result, 'input, 'parsed) t
+    type nonrec ('result, 'input, 'parsed) t = ('result, 'input, 'parsed) t
 
-      let return value =
-        Product.Fields.create ~value ~set:(const Ui_effect.Ignore)
-        |> Bonsai.Arrow_deprecated.const
-      ;;
+    let return value =
+      Product.Fields.create ~value ~set:(const Ui_effect.Ignore)
+      |> Bonsai.Arrow_deprecated.const
+    ;;
 
-      let map2 a b ~f =
-        let open Bonsai.Arrow_deprecated.Let_syntax in
-        let%map_open a = a
-        and b = b in
-        let value = f (Product.value a) (Product.value b) in
-        let set parsed = Vdom.Effect.Many [ Product.set a parsed; Product.set b parsed ] in
-        Product.Fields.create ~value ~set
-      ;;
+    let map2 a b ~f =
+      let open Bonsai.Arrow_deprecated.Let_syntax in
+      let%map_open a = a
+      and b = b in
+      let value = f (Product.value a) (Product.value b) in
+      let set parsed = Vdom.Effect.Many [ Product.set a parsed; Product.set b parsed ] in
+      Product.Fields.create ~value ~set
+    ;;
 
-      let map = `Define_using_map2
-    end)
+    let map = `Define_using_map2
+  end)
 end
 
 include T

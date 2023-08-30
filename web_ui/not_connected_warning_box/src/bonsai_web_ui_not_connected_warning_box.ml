@@ -3,9 +3,9 @@ open Virtual_dom
 open Bonsai.Let_syntax
 
 module Style =
-  [%css
-    stylesheet
-      {|
+[%css
+stylesheet
+  {|
   .connected {
     display: none;
   }

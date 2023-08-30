@@ -37,9 +37,9 @@ module T = struct
   end
 
   let process_entries
-        (state : State.t Lazy.t)
-        (entries : IntersectionObserver.intersectionObserverEntry Js.t Js.js_array Js.t)
-        _observer
+    (state : State.t Lazy.t)
+    (entries : IntersectionObserver.intersectionObserverEntry Js.t Js.js_array Js.t)
+    _observer
     =
     let state = Lazy.force state in
     Array.iter (Js.to_array entries) ~f:(fun entry ->

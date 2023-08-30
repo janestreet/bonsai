@@ -17,8 +17,8 @@ let times : Time_ns.t list =
     ~compare:Time_ns.compare
     ~stride:(fun t -> Time_ns.add t (Time_ns.Span.of_min 1.))
   |> List.filter ~f:(fun t ->
-    let ofday = Time_ns.to_ofday t ~zone in
-    Time_ns.Ofday.( >= ) ofday start_ofday && Time_ns.Ofday.( <= ) ofday stop_ofday)
+       let ofday = Time_ns.to_ofday t ~zone in
+       Time_ns.Ofday.( >= ) ofday start_ofday && Time_ns.Ofday.( <= ) ofday stop_ofday)
 ;;
 
 (* a brownian motion *)

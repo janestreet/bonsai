@@ -203,7 +203,7 @@ let big_map =
   Int.Map.of_alist_exn
     (List.range 1 100
      |> List.map ~f:(fun i ->
-       i, { a = "hi"; b = Float.of_int (i / 2); c = "apple"; d = Some 100; e = "1st" })
+          i, { a = "hi"; b = Float.of_int (i / 2); c = "apple"; d = Some 100; e = "1st" })
     )
 ;;
 
@@ -258,15 +258,15 @@ module Test = struct
     let get_inject_expert t = get_inject' t Table_expert.Result.focus
 
     let default
-          ?(preload_rows = 0)
-          ?(is_column_b_visible = Value.return true)
-          ?override_sort
-          ?default_sort
-          ?(use_legacy_header = false)
-          ?(row_height = Value.return (`Px 1))
-          ()
-          input
-          filter
+      ?(preload_rows = 0)
+      ?(is_column_b_visible = Value.return true)
+      ?override_sort
+      ?default_sort
+      ?(use_legacy_header = false)
+      ?(row_height = Value.return (`Px 1))
+      ()
+      input
+      filter
       =
       let module Column = Table.Columns.Dynamic_cells in
       { component =
@@ -289,12 +289,12 @@ module Test = struct
     ;;
 
     let default'
-          ?(with_groups = false)
-          ?(preload_rows = 0)
-          ?(is_column_b_visible = true)
-          ()
-          input
-          filter
+      ?(with_groups = false)
+      ?(preload_rows = 0)
+      ?(is_column_b_visible = true)
+      ()
+      input
+      filter
       =
       let columns =
         match with_groups with

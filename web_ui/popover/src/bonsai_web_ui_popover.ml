@@ -61,7 +61,6 @@ let has_clicked_outside : popover_id:string -> Dom.node Js.t Js.opt -> bool =
   loop element
 ;;
 
-
 let default_popover_styles =
   let%sub theme = View.Theme.current in
   let%arr theme = theme in
@@ -77,19 +76,19 @@ let default_popover_styles =
 ;;
 
 let component
-      ?popover_extra_attr
-      ?popover_style_attr
-      ?base_extra_attr
-      ?(allow_event_propagation_when_clicked_outside :
-          ([ `Left_click | `Right_click | `Escape ] -> bool) Value.t =
-          Value.return (fun _ -> false))
-      ?(on_close = Value.return Effect.Ignore)
-      ?(keep_popover_inside_window = Value.return false)
-      ~close_when_clicked_outside
-      ~direction
-      ~alignment
-      ~popover
-      ()
+  ?popover_extra_attr
+  ?popover_style_attr
+  ?base_extra_attr
+  ?(allow_event_propagation_when_clicked_outside :
+      ([ `Left_click | `Right_click | `Escape ] -> bool) Value.t =
+    Value.return (fun _ -> false))
+  ?(on_close = Value.return Effect.Ignore)
+  ?(keep_popover_inside_window = Value.return false)
+  ~close_when_clicked_outside
+  ~direction
+  ~alignment
+  ~popover
+  ()
   =
   let%sub popover_id = Bonsai.path_id in
   let%sub popover_extra_attr =
@@ -143,7 +142,7 @@ let component
                  Effect.Many
                    [ close
                    ; Effect.Stop_propagation
-                   (* Prevents other listeners/from trigerring their events. *)
+                     (* Prevents other listeners/from trigerring their events. *)
                    ; Effect.Prevent_default
                      (* Prevents non-event interactions like context menus from opening
                         and interactions with form elements + clicking on links. *)

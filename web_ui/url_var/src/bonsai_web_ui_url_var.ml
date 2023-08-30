@@ -36,8 +36,8 @@ module Components = struct
       |> Uri.query
       |> String.Map.of_alist_multi
       |> Map.filter_map ~f:(function
-        | [ value ] -> Some value
-        | _ -> None)
+           | [ value ] -> Some value
+           | _ -> None)
     in
     let fragment = Uri.fragment uri in
     { path; query; fragment }
@@ -116,12 +116,12 @@ let create_exn' (type a) (module S : S with type t = a) ~on_bad_uri =
     include S
 
     include Binable.Of_sexpable_with_uuid (struct
-        include S
+      include S
 
-        let caller_identity =
-          Bin_prot.Shape.Uuid.of_string "918e794b-02c3-4f27-ad86-3f406a41fc4b"
-        ;;
-      end)
+      let caller_identity =
+        Bin_prot.Shape.Uuid.of_string "918e794b-02c3-4f27-ad86-3f406a41fc4b"
+      ;;
+    end)
 
     let to_uri_routing = Fn.id
     let of_uri_routing = Fn.id
@@ -186,8 +186,8 @@ module Typed = struct
     let parse_unicode_slashes s = Re.Str.global_replace unicode_slash_regexp "/" s
 
     let of_original_components
-          ?(encoding_behavior : Uri_parsing.Percent_encoding_behavior.t = Correct)
-          (original : Components.t)
+      ?(encoding_behavior : Uri_parsing.Percent_encoding_behavior.t = Correct)
+      (original : Components.t)
       =
       let split_path =
         match original.path with
@@ -202,8 +202,8 @@ module Typed = struct
     ;;
 
     let to_original_components
-          ?(encoding_behavior : Uri_parsing.Percent_encoding_behavior.t = Correct)
-          (typed_components : t)
+      ?(encoding_behavior : Uri_parsing.Percent_encoding_behavior.t = Correct)
+      (typed_components : t)
       =
       { Components.path =
           (match encoding_behavior with
@@ -223,10 +223,10 @@ module Typed = struct
     include Uri_parsing.Versioned_parser
 
     let of_non_typed_parser
-          ?encoding_behavior
-          ~(parse_exn : Original_components.t -> 'a)
-          ~(unparse : 'a -> Original_components.t)
-          ()
+      ?encoding_behavior
+      ~(parse_exn : Original_components.t -> 'a)
+      ~(unparse : 'a -> Original_components.t)
+      ()
       =
       let projection =
         let parse_exn components =
@@ -242,12 +242,12 @@ module Typed = struct
   end
 
   let make'
-        (type a)
-        (parser : a Uri_parsing.Versioned_parser.t)
-        ?encoding_behavior
-        ~(fallback : Exn.t -> Original_components.t -> a)
-        ~on_fallback_raises
-        ()
+    (type a)
+    (parser : a Uri_parsing.Versioned_parser.t)
+    ?encoding_behavior
+    ~(fallback : Exn.t -> Original_components.t -> a)
+    ~on_fallback_raises
+    ()
     =
     let projection = Uri_parsing.Versioned_parser.eval ?encoding_behavior parser in
     let try_with_backup ~f =
@@ -283,12 +283,12 @@ module Typed = struct
   ;;
 
   let make
-        (type a)
-        ?on_fallback_raises
-        ?encoding_behavior
-        (module T : T with type t = a)
-        (parser : a Uri_parsing.Versioned_parser.t)
-        ~(fallback : Exn.t -> Original_components.t -> a)
+    (type a)
+    ?on_fallback_raises
+    ?encoding_behavior
+    (module T : T with type t = a)
+    (parser : a Uri_parsing.Versioned_parser.t)
+    ~(fallback : Exn.t -> Original_components.t -> a)
     : a url_var
     =
     let projection = make' parser ?encoding_behavior ~fallback ~on_fallback_raises () in
@@ -303,11 +303,11 @@ module Typed = struct
   ;;
 
   let make_projection
-        (type a)
-        ?on_fallback_raises
-        ?encoding_behavior
-        (parser : a Uri_parsing.Versioned_parser.t)
-        ~(fallback : Exn.t -> Original_components.t -> a)
+    (type a)
+    ?on_fallback_raises
+    ?encoding_behavior
+    (parser : a Uri_parsing.Versioned_parser.t)
+    ~(fallback : Exn.t -> Original_components.t -> a)
     =
     make' parser ?encoding_behavior ~fallback ~on_fallback_raises ()
   ;;
@@ -356,8 +356,8 @@ module For_testing = struct
     ;;
 
     let make_of_versioned_parser
-          ?encoding_behavior
-          (versioned_parser : 'a Typed.Versioned_parser.t)
+      ?encoding_behavior
+      (versioned_parser : 'a Typed.Versioned_parser.t)
       =
       Uri_parsing.Versioned_parser.eval ?encoding_behavior versioned_parser
     ;;

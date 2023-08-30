@@ -28,12 +28,12 @@ module Input = struct
     }
 
   let create
-        ?(filter = None)
-        ?(order = Compare.Unchanged)
-        ?(rank_range = Collate.Which_range.To 100)
-        ?(key_range = Collate.Which_range.All_rows)
-        ?(on_change = Fn.const Effect.Ignore)
-        map
+    ?(filter = None)
+    ?(order = Compare.Unchanged)
+    ?(rank_range = Collate.Which_range.To 100)
+    ?(key_range = Collate.Which_range.All_rows)
+    ?(on_change = Fn.const Effect.Ignore)
+    map
     =
     { filter = Bonsai.Var.create filter
     ; order = Bonsai.Var.create order
@@ -55,18 +55,18 @@ module Input = struct
     let stride = if start > stop then -1 else 1 in
     List.range ~stride start stop
     |> List.map ~f:(fun i ->
-      Interaction.change_input
-        t.rank_range
-        (Collate.Which_range.Between (i, i + window_size - 1)))
+         Interaction.change_input
+           t.rank_range
+           (Collate.Which_range.Between (i, i + window_size - 1)))
     |> Interaction.many_with_stabilizations
   ;;
 end
 
 let component_for_bench
-      ?preload_rows
-      comparator
-      ~columns
-      { Input.filter; order; rank_range; key_range; map; on_change }
+  ?preload_rows
+  comparator
+  ~columns
+  { Input.filter; order; rank_range; key_range; map; on_change }
   =
   let filter = Bonsai.Var.value filter in
   let order = Bonsai.Var.value order in

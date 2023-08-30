@@ -3,9 +3,9 @@ open! Bonsai_web
 open! Bonsai.Let_syntax
 
 module Style =
-  [%css
-    stylesheet
-      {|
+[%css
+stylesheet
+  {|
 .notification_container {
     position: fixed;
     bottom: 20px;
@@ -158,9 +158,9 @@ let component (type a) (module M : Bonsai.Model with type t = a) ~equal =
    the data that is known about the notificaiton like when we expect it to closed an also
    when it was sent. *)
 let render_with_access_to_entire_notification
-      ?(notification_container_extra_attr = Value.return Vdom.Attr.empty)
-      t
-      ~f
+  ?(notification_container_extra_attr = Value.return Vdom.Attr.empty)
+  t
+  ~f
   =
   let%sub { notifications; inject; send_notification = _; modify_notification = _ } =
     return t
@@ -184,10 +184,10 @@ let render_with_access_to_entire_notification
   and notification_container_extra_attr = notification_container_extra_attr in
   Map.to_alist rendered
   |> List.map ~f:(fun (notification_id, (rendered, _)) ->
-    Vdom.Node.div
-      ~key:(Notification_id.to_string notification_id)
-      ~attrs:[ Style.notification ]
-      [ rendered ])
+       Vdom.Node.div
+         ~key:(Notification_id.to_string notification_id)
+         ~attrs:[ Style.notification ]
+         [ rendered ])
   |> Vdom.Node.div
        ~attrs:[ Style.notification_container; notification_container_extra_attr ]
 ;;
@@ -202,24 +202,24 @@ let render t ~f =
 ;;
 
 let send_notification
-      ?close_after
-      { send_notification; notifications = _; inject = _; modify_notification = _ }
+  ?close_after
+  { send_notification; notifications = _; inject = _; modify_notification = _ }
   =
   send_notification ?close_after
 ;;
 
 let close_notification
-      { inject; notifications = _; send_notification = _; modify_notification = _ }
-      id
+  { inject; notifications = _; send_notification = _; modify_notification = _ }
+  id
   =
   inject (Remove id)
 ;;
 
 let modify_notification
-      ?close_after
-      { modify_notification; inject = _; notifications = _; send_notification = _ }
-      id
-      content
+  ?close_after
+  { modify_notification; inject = _; notifications = _; send_notification = _ }
+  id
+  content
   =
   Effect.ignore_m (modify_notification ?close_after id content)
 ;;
@@ -250,9 +250,9 @@ module Basic = struct
     }
 
   module Notification_style =
-    [%css
-      stylesheet
-        {|
+  [%css
+  stylesheet
+    {|
 .success {
     background-color: #00AB66;
 }
@@ -263,10 +263,10 @@ module Basic = struct
 |}]
 
   let create
-        ?(dismiss_notifications_after : Time_ns.Span.t Value.t =
-                                        Value.return (Time_ns.Span.of_sec 15.0))
-        ?(dismiss_errors_automatically : bool Value.t = Value.return false)
-        ()
+    ?(dismiss_notifications_after : Time_ns.Span.t Value.t =
+      Value.return (Time_ns.Span.of_sec 15.0))
+    ?(dismiss_errors_automatically : bool Value.t = Value.return false)
+    ()
     =
     let%sub notifications =
       component (module Basic_notification) ~equal:[%equal: Basic_notification.t]
@@ -307,10 +307,10 @@ module Basic = struct
   let default_module : (module Style) = (module Notification_style)
 
   let render
-        ?(notification_style = default_module)
-        ?(notification_extra_attr = Value.return Vdom.Attr.empty)
-        ?notification_container_extra_attr
-        (t : basic_t Value.t)
+    ?(notification_style = default_module)
+    ?(notification_extra_attr = Value.return Vdom.Attr.empty)
+    ?notification_container_extra_attr
+    (t : basic_t Value.t)
     =
     let module Notification_style = (val notification_style) in
     let%sub { notifications
@@ -324,48 +324,48 @@ module Basic = struct
       notifications
       ?notification_container_extra_attr
       ~f:(fun ~close ~id:notification_id notification ->
-        let%arr { Notification.content = { text; level }; opened_at = _; close_after } =
-          notification
-        and close = close
-        and notification_id = notification_id
-        and notification_extra_attr = notification_extra_attr in
-        let level_class =
-          match level with
-          | Success -> Notification_style.success
-          | Error _ -> Notification_style.error
-        in
-        Vdom.Node.div
-          ~key:(Notification_id.to_string notification_id)
-          ~attrs:
-            [ Vdom.Attr.(
-                Style.notification
-                @ on_click (fun _ -> close)
-                @ notification_extra_attr
-                @ create "data-notification-id" (Notification_id.to_string notification_id))
-            ]
-          [ Vdom.Node.div
-              ~attrs:
-                [ Vdom.Attr.(
-                    many [ Style.notification_body; level_class ]
-                    @
-                    match close_after with
-                    | None -> Vdom.Attr.empty
-                    | Some close_after ->
-                      style
-                        (let open Css_gen in
-                         animation
-                           ~name:"fadeOut"
-                           ~duration:close_after
-                           ~timing_function:"ease-in"
-                           ()))
-                ]
-              [ Vdom.Node.text text
-              ; (match level with
-                 | Success | Error None -> Vdom.Node.None
-                 | Error (Some error) ->
-                   Vdom.Node.pre [ Vdom.Node.text (Error.to_string_hum error) ])
+      let%arr { Notification.content = { text; level }; opened_at = _; close_after } =
+        notification
+      and close = close
+      and notification_id = notification_id
+      and notification_extra_attr = notification_extra_attr in
+      let level_class =
+        match level with
+        | Success -> Notification_style.success
+        | Error _ -> Notification_style.error
+      in
+      Vdom.Node.div
+        ~key:(Notification_id.to_string notification_id)
+        ~attrs:
+          [ Vdom.Attr.(
+              Style.notification
+              @ on_click (fun _ -> close)
+              @ notification_extra_attr
+              @ create "data-notification-id" (Notification_id.to_string notification_id))
+          ]
+        [ Vdom.Node.div
+            ~attrs:
+              [ Vdom.Attr.(
+                  many [ Style.notification_body; level_class ]
+                  @
+                  match close_after with
+                  | None -> Vdom.Attr.empty
+                  | Some close_after ->
+                    style
+                      (let open Css_gen in
+                       animation
+                         ~name:"fadeOut"
+                         ~duration:close_after
+                         ~timing_function:"ease-in"
+                         ()))
               ]
-          ])
+            [ Vdom.Node.text text
+            ; (match level with
+               | Success | Error None -> Vdom.Node.None
+               | Error (Some error) ->
+                 Vdom.Node.pre [ Vdom.Node.text (Error.to_string_hum error) ])
+            ]
+        ])
   ;;
 
   type t = basic_t

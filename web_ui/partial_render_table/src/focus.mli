@@ -12,7 +12,7 @@ module By_row : sig
     ; page_down : unit Effect.t
     ; focus : 'k -> unit Effect.t
     ; focus_index : int -> unit Effect.t
-    (** [focus_index n] sets the focus to the nth row from the top of the
+        (** [focus_index n] sets the focus to the nth row from the top of the
         entire table. The first row is 0, the second is 1, and so on. *)
     }
   [@@deriving fields ~getters]

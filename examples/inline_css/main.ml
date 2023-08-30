@@ -3,9 +3,9 @@ open! Bonsai_web
 
 module Boxes = struct
   module Style =
-    [%css
-      stylesheet
-        {|
+  [%css
+  stylesheet
+    {|
   .container {
     display: inline-block;
   }
@@ -27,7 +27,7 @@ module Boxes = struct
     background-color: blue;
   }
 |}
-        (* [ppx_css] appends a hash to the end of each classname to allow you to be able
+    (* [ppx_css] appends a hash to the end of each classname to allow you to be able
            to re-use classnames in multiple calls to [%css stylesheet] avoiding sadness
            for css identifier collisions like in this example where container is used
            multiple times.
@@ -36,7 +36,7 @@ module Boxes = struct
            classnames for CSS customization, hashing could get in your way, so you can override
            hashing behavior by using the optional "~rewrite" parameter.
         *)
-        ~rewrite:[ "blue", "blue" ]]
+    ~rewrite:[ "blue", "blue" ]]
 
   let component =
     Vdom.Node.div
@@ -50,9 +50,9 @@ end
 
 module Themeable = struct
   module Style =
-    [%css
-      stylesheet
-        {|
+  [%css
+  stylesheet
+    {|
     .container {
       padding: 1em;
       border: 1px solid black;
@@ -69,10 +69,10 @@ module Themeable = struct
       font-family: sans-serif;
     }
 |}
-        (* Sometimes it might be useful to be able to use the same class-name
+    (* Sometimes it might be useful to be able to use the same class-name
            defined from another call to [%css stylesheet] which you can do using the
            "~rewrite" optional flag.*)
-        ~rewrite:[ "container", Boxes.Style.For_referencing.container ]]
+    ~rewrite:[ "container", Boxes.Style.For_referencing.container ]]
 
   let component ?(style = Style.default) () =
     let module Style = (val style) in
@@ -85,9 +85,9 @@ module Themeable = struct
 end
 
 module My_theme =
-  [%css
-    stylesheet
-      {|
+[%css
+stylesheet
+  {|
   .container {
     border: 1px solid red;
     display: inline-block;

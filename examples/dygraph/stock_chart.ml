@@ -66,7 +66,7 @@ let app =
         (y_labels |> Dygraph.Per_series_info.create_all_visible |> Value.return)
       ~options
       ~data
-      (* By setting the graph to global variable "g", I'm able to access the graph in the
+        (* By setting the graph to global variable "g", I'm able to access the graph in the
          chrome console and look at things, e.g. g.getOptions("series").  This is purely
          for debugging/convenience. *)
       ~with_graph:(fun graph -> Js.Unsafe.set Dom_html.window "g" graph)

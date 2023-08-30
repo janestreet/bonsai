@@ -21,10 +21,10 @@ let create_handle component =
 ;;
 
 module Common (M : sig
-    val poll
-      :  ('a -> 'b Effect.t) Value.t
-      -> ('a -> 'b Bonsai.Effect_throttling.Poll_result.t Effect.t) Computation.t
-  end) =
+  val poll
+    :  ('a -> 'b Effect.t) Value.t
+    -> ('a -> 'b Bonsai.Effect_throttling.Poll_result.t Effect.t) Computation.t
+end) =
 struct
   let%expect_test {| Effect_throttling.poll only runs one instance of an effect at a time |}
     =
@@ -103,23 +103,22 @@ struct
 end
 
 module _ = Common (struct
-    let poll = Bonsai.Effect_throttling.poll
-  end)
+  let poll = Bonsai.Effect_throttling.poll
+end)
 
 module _ = Common (struct
-    let poll effect =
-      let open Bonsai.Let_syntax in
-      let%sub effect = Bonsai.Effect_throttling.poll effect in
-      let%sub effect = Bonsai.Effect_throttling.poll effect in
-      let%arr effect = effect in
-      fun int ->
-        match%map.Effect effect int with
-        | Aborted -> Bonsai.Effect_throttling.Poll_result.Aborted
-        | Finished (Finished result) -> Finished result
-        | Finished Aborted -> raise_s [%message "Unexpected finished of aborted"]
-    ;;
-  end)
-
+  let poll effect =
+    let open Bonsai.Let_syntax in
+    let%sub effect = Bonsai.Effect_throttling.poll effect in
+    let%sub effect = Bonsai.Effect_throttling.poll effect in
+    let%arr effect = effect in
+    fun int ->
+      match%map.Effect effect int with
+      | Aborted -> Bonsai.Effect_throttling.Poll_result.Aborted
+      | Finished (Finished result) -> Finished result
+      | Finished Aborted -> raise_s [%message "Unexpected finished of aborted"]
+  ;;
+end)
 
 let%expect_test {| Effect_throttling.poll deactivation |} =
   let qrt = Effect.For_testing.Query_response_tracker.create () in

@@ -63,10 +63,10 @@ module Order = struct
   end
 
   let apply_action
-        (type col_id)
-        t
-        (module Col_id : Col_id with type t = col_id)
-        (action : col_id Action.t)
+    (type col_id)
+    t
+    (module Col_id : Col_id with type t = col_id)
+    (action : col_id Action.t)
     =
     let equal = Col_id.equal in
     let cycle_sort_direction id =

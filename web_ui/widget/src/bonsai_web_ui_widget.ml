@@ -104,10 +104,10 @@ module type S = sig
 end
 
 let component
-      (type input state)
-      ?(vdom_for_testing = fun _ -> Vdom.Node.create "widget" [])
-      (module M : S with type input = input and type state = state)
-      input
+  (type input state)
+  ?(vdom_for_testing = fun _ -> Vdom.Node.create "widget" [])
+  (module M : S with type input = input and type state = state)
+  input
   =
   let%sub id =
     Bonsai.Expert.thunk (fun () -> Type_equal.Id.create ~name:"widget" sexp_of_opaque)

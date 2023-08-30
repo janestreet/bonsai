@@ -1,3 +1,3 @@
 open! Core
-open  Import
+open Import
 include Js_obj.S with type t = Js.date Js.t

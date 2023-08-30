@@ -25,25 +25,25 @@ module type S = sig
   open! Core
   open! Import
   module Item : Single_factor.Item
-  module Key  : Key
+  module Key : Key
   module Single_factor : module type of Single_factor.Make (Item)
 
   module Action : sig
     type t =
-      | Cycle_focused_subwidget  of [ `Next | `Prev ]
-      | Set_focused_subwidget    of Key.t
-      | Subwidget_action         of Key.t * Single_factor.Action.t
+      | Cycle_focused_subwidget of [ `Next | `Prev ]
+      | Set_focused_subwidget of Key.t
+      | Subwidget_action of Key.t * Single_factor.Action.t
       | Select_on_all_subwidgets of [ `All | `None ]
   end
 
   module Result : sig
     type t =
-      { view             : Vdom.Node.t
+      { view : Vdom.Node.t
       ; view_for_testing : string Lazy.t
-      ; key_handler      : Vdom_keyboard.Keyboard_event_handler.t
-      ; inject           : Action.t -> unit Vdom.Effect.t
-      (** [selection] is the set of all selected items, by key. *)
-      ; selection        : Item.Set.t Key.Map.t
+      ; key_handler : Vdom_keyboard.Keyboard_event_handler.t
+      ; inject : Action.t -> unit Vdom.Effect.t
+          (** [selection] is the set of all selected items, by key. *)
+      ; selection : Item.Set.t Key.Map.t
       }
     [@@deriving fields ~getters]
 
@@ -58,7 +58,7 @@ module type S = sig
 
   type per_subwidget =
     { default_selection_status : Selection_status.t
-    ; all_items                : Item.Set.t
+    ; all_items : Item.Set.t
     }
 
   val bonsai
@@ -70,7 +70,7 @@ module type S = sig
 end
 
 module type Multi_factor = sig
-  module type S   = S
+  module type S = S
   module type Key = Key
 
   module Make (Item : Single_factor.Item) (Key : Key) :

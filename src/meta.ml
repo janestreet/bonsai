@@ -68,17 +68,17 @@ module Model = struct
 
     let rec sexp_of_t : type a. (a -> Sexp.t) -> a t -> Sexp.t =
       fun sexp_of_a -> function
-        | Leaf { type_id } -> [%sexp (type_id : a Type_equal.Id.t)]
-        | Tuple { a; b } -> [%sexp (a : opaque t), (b : opaque t)]
-        | Tuple3 { a; b; c } -> [%sexp (a : opaque t), (b : opaque t), (c : opaque t)]
-        | Either { a; b; _ } -> [%sexp Either, (a : opaque t), (b : opaque t)]
-        | Map { by; _ } -> [%sexp (by : opaque t)]
-        | Map_on { by; _ } -> [%sexp (by : opaque t)]
-        | Multi_model { multi_model } ->
-          let sexp_of_hidden (T { info = { type_id; _ }; _ }) =
-            [%sexp (type_id : opaque t)]
-          in
-          [%sexp (multi_model : hidden Int.Map.t)]
+      | Leaf { type_id } -> [%sexp (type_id : a Type_equal.Id.t)]
+      | Tuple { a; b } -> [%sexp (a : opaque t), (b : opaque t)]
+      | Tuple3 { a; b; c } -> [%sexp (a : opaque t), (b : opaque t), (c : opaque t)]
+      | Either { a; b; _ } -> [%sexp Either, (a : opaque t), (b : opaque t)]
+      | Map { by; _ } -> [%sexp (by : opaque t)]
+      | Map_on { by; _ } -> [%sexp (by : opaque t)]
+      | Multi_model { multi_model } ->
+        let sexp_of_hidden (T { info = { type_id; _ }; _ }) =
+          [%sexp (type_id : opaque t)]
+        in
+        [%sexp (multi_model : hidden Int.Map.t)]
     ;;
 
     let rec to_sexp : type a. a t -> a -> Sexp.t = function
@@ -239,11 +239,11 @@ module Model = struct
   ;;
 
   let map
-        (type k cmp)
-        (module M : Comparator with type t = k and type comparator_witness = cmp)
-        k
-        cmp
-        model
+    (type k cmp)
+    (module M : Comparator with type t = k and type comparator_witness = cmp)
+    k
+    cmp
+    model
     =
     let sexp_of_model = model.sexp_of in
     let sexp_of_map_model = [%sexp_of: model Map.M(M).t] in
@@ -256,13 +256,13 @@ module Model = struct
   ;;
 
   let map_on
-        (type k cmp k_io cmp_io)
-        (module M : Comparator with type t = k and type comparator_witness = cmp)
-        (module M_io : Comparator with type t = k_io and type comparator_witness = cmp_io)
-        k_model
-        k_io
-        cmp
-        model
+    (type k cmp k_io cmp_io)
+    (module M : Comparator with type t = k and type comparator_witness = cmp)
+    (module M_io : Comparator with type t = k_io and type comparator_witness = cmp_io)
+    k_model
+    k_io
+    cmp
+    model
     =
     let sexp_of_model = model.sexp_of in
     let sexp_of_map_model = [%sexp_of: (M_io.t * model) Map.M(M).t] in
@@ -294,8 +294,8 @@ module Model = struct
     let sexp_of_t (T { model; info = { sexp_of; _ }; _ }) = sexp_of model
 
     let equal
-          (T { model = m1; info = { type_id = t1; equal; _ }; _ })
-          (T { model = m2; info = { type_id = t2; _ }; _ })
+      (T { model = m1; info = { type_id = t1; equal; _ }; _ })
+      (T { model = m2; info = { type_id = t2; _ }; _ })
       =
       match Type_id.same_witness t1 t2 with
       | Some T -> equal m1 m2
@@ -383,7 +383,7 @@ module Multi_model = struct
     let sexp_of = [%sexp_of: int t] in
     let type_id = Model.Multi_model { multi_model = default } in
     ({ default; type_id; equal = [%equal: Model.Hidden.t Int.Map.t]; sexp_of }
-     : t Model.t)
+      : t Model.t)
   ;;
 end
 

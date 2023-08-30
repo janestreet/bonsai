@@ -160,9 +160,9 @@ let visibility_component =
         ~visible_rect_changed:(fun bounds ->
           Effect.Many
             [ (match bounds with
-                | Some bounds ->
-                  Effect.Many [ inject_pos_x bounds.min_x; inject_pos_y bounds.min_y ]
-                | None -> Effect.Ignore)
+               | Some bounds ->
+                 Effect.Many [ inject_pos_x bounds.min_x; inject_pos_y bounds.min_y ]
+               | None -> Effect.Ignore)
             ; set_visible_rect bounds
             ])
         ~client_rect_changed:(Fn.compose set_client_rect Option.some)

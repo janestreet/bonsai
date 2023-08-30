@@ -68,9 +68,9 @@ module Streamable_plain_rpc = struct
       let diffs ~from ~to_ =
         Map.symmetric_diff from to_ ~data_equal:[%equal: int]
         |> Sequence.map ~f:(fun (key, change) ->
-          match change with
-          | `Left _value -> Update.Diff.Remove { key }
-          | `Right data | `Unequal (_, data) -> Update.Diff.Set { key; data })
+             match change with
+             | `Left _value -> Update.Diff.Remove { key }
+             | `Right data | `Unequal (_, data) -> Update.Diff.Set { key; data })
         |> Sequence.to_list
       ;;
 
@@ -83,15 +83,15 @@ module Streamable_plain_rpc = struct
   end
 
   include Streamable.Plain_rpc.Make (struct
-      let name = "streamable-plain-rpc"
-      let version = 0
-      let client_pushes_back = false
+    let name = "streamable-plain-rpc"
+    let version = 0
+    let client_pushes_back = false
 
-      module Response = Response
+    module Response = Response
 
-      type query = unit [@@deriving bin_io]
-      type response = Response.t
-    end)
+    type query = unit [@@deriving bin_io]
+    type response = Response.t
+  end)
 end
 
 let async_do_actions handle actions =
@@ -222,8 +222,8 @@ let incrementing_polling_state_rpc_implementation ?block_on () =
          incr count;
          return (query * !count))
        (fun _ query ->
-          incr count;
-          return (query * !count)))
+         incr count;
+         return (query * !count)))
 ;;
 
 let%expect_test "polling_state_rpc" =
@@ -482,7 +482,7 @@ let%expect_test "disconnect and re-connect async_durable" =
   [%expect {| (Ok 0) |}];
   is_broken := true;
   implementations
-  := Versioned_rpc.Menu.add [ Rpc.Rpc.implement' rpc_b (fun _ _query -> 1) ];
+    := Versioned_rpc.Menu.add [ Rpc.Rpc.implement' rpc_b (fun _ _query -> 1) ];
   let%bind () = async_do_actions handle [ 0 ] in
   [%expect {| (Ok 1) |}];
   return ()
@@ -524,7 +524,7 @@ let%expect_test "disconnect and re-connect persistent_connection" =
     Rpc.Connection.close_finished connection
   in
   implementations
-  := Versioned_rpc.Menu.add [ Rpc.Rpc.implement' rpc_b (fun _ _query -> 1) ];
+    := Versioned_rpc.Menu.add [ Rpc.Rpc.implement' rpc_b (fun _ _query -> 1) ];
   let%bind _connection = Conn.connected connection in
   let%bind () = async_do_actions handle [ 0 ] in
   [%expect {| (Ok 1) |}];
@@ -568,7 +568,7 @@ let%expect_test "connect without menu" =
       (rpc_version 1))) |}];
   is_broken := true;
   implementations
-  := Versioned_rpc.Menu.add [ Rpc.Rpc.implement' rpc_b (fun _ _query -> 1) ];
+    := Versioned_rpc.Menu.add [ Rpc.Rpc.implement' rpc_b (fun _ _query -> 1) ];
   let%bind () = async_do_actions handle [ 0 ] in
   [%expect {| (Ok 1) |}];
   return ()
@@ -708,12 +708,12 @@ let%test_module "Rvar tests" =
 let%test_module "Status.state" =
   (module struct
     module Conn = Persistent_connection_kernel.Make (struct
-        type t = Rpc.Connection.t
+      type t = Rpc.Connection.t
 
-        let close t = Rpc.Connection.close t
-        let is_closed t = Rpc.Connection.is_closed t
-        let close_finished t = Rpc.Connection.close_finished t
-      end)
+      let close t = Rpc.Connection.close t
+      let is_closed t = Rpc.Connection.is_closed t
+      let close_finished t = Rpc.Connection.close_finished t
+    end)
 
     module Status_option = struct
       type t = Rpc_effect.Status.t option [@@deriving sexp_of]
@@ -1159,8 +1159,8 @@ let%test_module "Polling_state_rpc.poll" =
              (Expect_test_helpers_core.print_s ~hide_positions:true)
            ~for_first_request:(fun _ query -> next_result query)
            (fun _ query ->
-              incr count;
-              next_result query))
+             incr count;
+             next_result query))
     ;;
 
     let%expect_test "hit all possible responses from the poller" =
@@ -2026,11 +2026,11 @@ let%test_module "Rpc.poll_until_ok" =
       type incoming = Refresh
 
       let view
-            { Rpc_effect.Poll_result.last_ok_response
-            ; last_error
-            ; inflight_query
-            ; refresh = _
-            }
+        { Rpc_effect.Poll_result.last_ok_response
+        ; last_error
+        ; inflight_query
+        ; refresh = _
+        }
         =
         Sexp.to_string_hum
           [%message
@@ -2040,12 +2040,12 @@ let%test_module "Rpc.poll_until_ok" =
       ;;
 
       let incoming
-            { Rpc_effect.Poll_result.last_ok_response = _
-            ; last_error = _
-            ; inflight_query = _
-            ; refresh
-            }
-            Refresh
+        { Rpc_effect.Poll_result.last_ok_response = _
+        ; last_error = _
+        ; inflight_query = _
+        ; refresh
+        }
+        Refresh
         =
         refresh
       ;;

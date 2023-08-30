@@ -121,8 +121,8 @@ let register_const state shape id =
 ;;
 
 let rec follow_skeleton_value
-          state
-          { Skeleton.Value.kind = value; here; node_path = _; id }
+  state
+  { Skeleton.Value.kind = value; here; node_path = _; id }
   =
   let register s = register state (Kind.Value { kind = s; here }) s in
   let register_const = register_const state (Kind.Value { kind = "const"; here }) in

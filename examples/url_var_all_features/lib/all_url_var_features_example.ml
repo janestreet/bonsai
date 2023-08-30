@@ -123,8 +123,8 @@ module Variant = struct
 
         let form_for_variant : type a. a Typed_variant.t -> a Form.t Computation.t
           = function
-            | Post -> Bonsai.const (Form.return ())
-            | Comments -> Bonsai.const (Form.return ())
+          | Post -> Bonsai.const (Form.return ())
+          | Comments -> Bonsai.const (Form.return ())
         ;;
 
         let label_for_variant = `Inferred
@@ -155,9 +155,9 @@ module Query_variant = struct
 
         let form_for_variant : type a. a Typed_variant.t -> a Form.t Computation.t
           = function
-            | A -> Form.Elements.Textbox.int ()
-            | B -> Form.Elements.Textbox.float ()
-            | C -> Form.Elements.Textbox.string ()
+          | A -> Form.Elements.Textbox.int ()
+          | B -> Form.Elements.Textbox.float ()
+          | C -> Form.Elements.Textbox.string ()
         ;;
 
         let label_for_variant = `Inferred
@@ -192,20 +192,20 @@ module T = struct
 
         let form_for_variant : type a. a Typed_variant.t -> a Form.t Computation.t
           = function
-            | Homepage -> Bonsai.const (Form.return ())
-            | Some_string_option ->
-              let%sub text = Form.Elements.Textbox.string () in
-              let%arr text = text in
-              Form.optional
-                text
-                ~is_some:(function
-                  | "" -> false
-                  | _ -> true)
-                ~none:""
-            | Query_variant -> Query_variant.form_of_t
-            | Variant -> Variant.form_of_t
-            | Record -> Record.form_of_t
-            | Unable_to_parse -> Bonsai.const (Form.return ())
+          | Homepage -> Bonsai.const (Form.return ())
+          | Some_string_option ->
+            let%sub text = Form.Elements.Textbox.string () in
+            let%arr text = text in
+            Form.optional
+              text
+              ~is_some:(function
+                | "" -> false
+                | _ -> true)
+              ~none:""
+          | Query_variant -> Query_variant.form_of_t
+          | Variant -> Variant.form_of_t
+          | Record -> Record.form_of_t
+          | Unable_to_parse -> Bonsai.const (Form.return ())
         ;;
 
         let label_for_variant = `Inferred

@@ -1,7 +1,6 @@
 open! Core
 open! Import
 
-
 module type S = sig
   type input
   type action
@@ -31,17 +30,17 @@ module type Helpers = sig
     -> get_extra:('s -> 'extra)
     -> schedule_action:('s -> 'action -> unit)
     -> (module S
-         with type action = 'action
-          and type input = 'input
-          and type extra = 'extra)
+          with type action = 'action
+           and type input = 'input
+           and type extra = 'extra)
 
   val make
     :  driver:('input, 'result) Driver.t
     -> sexp_of_result:('result -> Sexp.t)
     -> (module S
-         with type input = 'input
-          and type action = Nothing.t
-          and type extra = unit)
+          with type input = 'input
+           and type action = Nothing.t
+           and type extra = unit)
 
   val make_with_inject
     :  driver:('input, 'result * ('action -> unit Vdom.Effect.t)) Driver.t
@@ -51,9 +50,9 @@ module type Helpers = sig
   val make_string
     :  driver:('input, string) Driver.t
     -> (module S
-         with type input = 'input
-          and type action = Nothing.t
-          and type extra = unit)
+          with type input = 'input
+           and type action = Nothing.t
+           and type extra = unit)
 
   val make_string_with_inject
     :  driver:('input, string * ('action -> unit Vdom.Effect.t)) Driver.t
@@ -63,23 +62,23 @@ module type Helpers = sig
     :  ?vdom_to_string:(Vdom.Node.t -> string)
     -> driver:('input, Vdom.Node.t) Driver.t
     -> (module S_vdom
-         with type input = 'input
-          and type action = Nothing.t
-          and type extra = unit)
+          with type input = 'input
+           and type action = Nothing.t
+           and type extra = unit)
 
   val make_vdom_with_extra
     :  ?vdom_to_string:(Vdom.Node.t -> string)
     -> driver:('input, Vdom.Node.t * 'extra) Driver.t
     -> (module S_vdom
-         with type input = 'input
-          and type action = Nothing.t
-          and type extra = 'extra)
+          with type input = 'input
+           and type action = Nothing.t
+           and type extra = 'extra)
 
   val make_vdom_with_inject
     :  ?vdom_to_string:(Vdom.Node.t -> string)
     -> driver:('input, Vdom.Node.t * ('action -> unit Vdom.Effect.t)) Driver.t
     -> (module S_vdom
-         with type input = 'input
-          and type action = 'action
-          and type extra = unit)
+          with type input = 'input
+           and type action = 'action
+           and type extra = unit)
 end

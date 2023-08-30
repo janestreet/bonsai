@@ -2,9 +2,9 @@ open! Core
 open! Import
 
 module Style =
-  [%css
-    stylesheet
-      {|
+[%css
+stylesheet
+  {|
 .cards {
   display: flex;
   flex-wrap: wrap;

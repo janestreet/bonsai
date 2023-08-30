@@ -2,8 +2,8 @@ open! Core
 
 include
   [%css
-    stylesheet
-      {|
+  stylesheet
+    {|
   * {
     box-sizing: border-box;
     font-family: sans-serif;
@@ -75,4 +75,4 @@ include
     border: 2px solid red;
   }
 |}
-      ~rewrite:[ "--js-form-unfocused-color", "--js-form-unfocused-color" ]]
+    ~rewrite:[ "--js-form-unfocused-color", "--js-form-unfocused-color" ]]

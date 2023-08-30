@@ -52,7 +52,7 @@ module Handle : sig
     -> ?rpc_implementations:
          Async_rpc_kernel.Rpc.Connection.t Async_rpc_kernel.Rpc.Implementation.t list
     -> ?connectors:(Rpc_effect.Where_to_connect.t -> Rpc_effect.Connector.t)
-    (** By default [connectors] always returns
+         (** By default [connectors] always returns
         [Bonsai_web.Rpc_effect.Connector.test_fallback], which uses any provided
         [rpc_implementations] to handle any dispatched RPCs. *)
     -> ?start_time:Time_ns.t
@@ -236,6 +236,4 @@ module Handle : sig
       -> Bonsai_web_ui_drag_and_drop.For_testing.Action.t
       -> unit
   end
-
-
 end

@@ -4,7 +4,6 @@ open! Js_of_ocaml
 open! Incr_map_collate
 open! Bonsai.Let_syntax
 
-
 let attr_colspan i =
   match i with
   | 0 -> Vdom.Attr.style (Css_gen.display `None)
@@ -83,10 +82,10 @@ let render_header headers ~column_widths ~set_column_width =
 ;;
 
 let component
-      (headers : Header_tree.t Value.t)
-      ~column_widths
-      ~set_column_width
-      ~set_header_client_rect
+  (headers : Header_tree.t Value.t)
+  ~column_widths
+  ~set_column_width
+  ~set_header_client_rect
   =
   let%arr set_column_width = set_column_width
   and set_header_client_rect = set_header_client_rect

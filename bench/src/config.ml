@@ -12,21 +12,21 @@ type ('a, 'r) unpacked =
 type t = T : (_, _) unpacked -> t
 
 let create
-      ?(clock = Bonsai.Time_source.create ~start:Time_ns.epoch)
-      ~name
-      ~component
-      ~get_inject
-      interaction
+  ?(clock = Bonsai.Time_source.create ~start:Time_ns.epoch)
+  ~name
+  ~component
+  ~get_inject
+  interaction
   =
   T { clock; name; component; get_inject; interaction }
 ;;
 
 let create_with_resetter
-      ?(clock = Bonsai.Time_source.create ~start:Time_ns.epoch)
-      ~name
-      ~component
-      ~get_inject
-      interaction
+  ?(clock = Bonsai.Time_source.create ~start:Time_ns.epoch)
+  ~name
+  ~component
+  ~get_inject
+  interaction
   =
   T
     { clock

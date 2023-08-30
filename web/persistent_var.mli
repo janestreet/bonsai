@@ -4,8 +4,6 @@ open! Import
 
 type 'a t
 
-
-
 (** A Persistent_var.t is similar to Bonsai.Var.t, but the contents of
     the var are persisted into either local storage or session storage.
 
@@ -44,4 +42,3 @@ val clear_persistence : 'a t -> unit
     threaded through your components and triggered inside an action-application
     or inside of an event listener. *)
 val effect : 'a t -> 'a -> unit Effect.t
-

@@ -11,14 +11,14 @@ type t =
 let initial_choices = [ 1; 2; 3; 40; 100; 1000 ]
 
 let create
-      ?max_query_results
-      ?additional_query_results_on_click
-      ?autocomplete_item
-      ?filter_choice
-      ?score_choice
-      ?of_string
-      ?initial_query
-      ()
+  ?max_query_results
+  ?additional_query_results_on_click
+  ?autocomplete_item
+  ?filter_choice
+  ?score_choice
+  ?of_string
+  ?initial_query
+  ()
   =
   let choices_var = Bonsai.Var.create initial_choices in
   let component =
@@ -40,8 +40,8 @@ let create
        { Bonsai_web_ui_search_bar.Input.choices
        ; on_select =
            (fun i ->
-              printf "%d chosen\n" i;
-              Ui_effect.Ignore)
+             printf "%d chosen\n" i;
+             Ui_effect.Ignore)
        })
   in
   let handle =

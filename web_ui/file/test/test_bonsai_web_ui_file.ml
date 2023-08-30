@@ -184,7 +184,6 @@ let%expect_test "abort" =
   [%expect {| ("Read result"(Finished(Error Aborted))) |}]
 ;;
 
-
 module Test_read_on_change = struct
   let%expect_test "create_single" =
     let t_var = Bonsai.Var.create None in

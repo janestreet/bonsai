@@ -8,12 +8,12 @@ module Test = struct
   include Shared.Test
 
   let create
-        (type a)
-        ?(visible_range = 0, 100)
-        ?(map = small_map)
-        ?(should_print_styles = false)
-        ?(should_set_bounds = true)
-        component
+    (type a)
+    ?(visible_range = 0, 100)
+    ?(map = small_map)
+    ?(should_print_styles = false)
+    ?(should_set_bounds = true)
+    component
     : a t
     =
     let min_vis, max_vis = visible_range in
@@ -42,7 +42,7 @@ module Test = struct
                  ~path_censoring_message:""
                  ~hash_censoring_message:""
                  ~filter_printed_attributes:(fun ~key ~data:_ ->
-                   should_print_styles || not (String.is_prefix ~prefix:"style." key))
+                 should_print_styles || not (String.is_prefix ~prefix:"style." key))
           ;;
 
           type incoming = Action.t

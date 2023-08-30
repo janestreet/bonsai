@@ -31,12 +31,12 @@ module Submit = struct
     }
 
   let create
-        ?(handle_enter = true)
-        ?(button = Some "submit")
-        ?(button_attr = Vdom.Attr.empty)
-        ?(button_location = `After)
-        ~f
-        ()
+    ?(handle_enter = true)
+    ?(button = Some "submit")
+    ?(button_attr = Vdom.Attr.empty)
+    ?(button_location = `After)
+    ~f
+    ()
     =
     { f; handle_enter; button_text = button; button_attr; button_location }
   ;;
@@ -51,12 +51,12 @@ let view_as_vdom ?theme ?on_submit ?editable t =
     Option.map
       on_submit
       ~f:(fun { Submit.f; handle_enter; button_text; button_attr; button_location } ->
-        { View.on_submit = Option.map ~f (Or_error.ok t.value)
-        ; handle_enter
-        ; button_text
-        ; button_attr
-        ; button_location
-        })
+      { View.on_submit = Option.map ~f (Or_error.ok t.value)
+      ; handle_enter
+      ; button_text
+      ; button_attr
+      ; button_location
+      })
   in
   View.to_vdom ?theme ?on_submit ?editable t.view
 ;;
@@ -134,8 +134,8 @@ let all_map (type k cmp) (forms : (k, _, cmp) Map.t) =
   let value =
     forms_as_alist
     |> List.map ~f:(fun (k, form) ->
-      let%map.Or_error value = form.value in
-      k, value)
+         let%map.Or_error value = form.value in
+         k, value)
     |> Or_error.all
     |> Or_error.map ~f:(Map.of_alist_exn comparator)
   in
@@ -227,21 +227,21 @@ module For_profunctor = struct
     : type read write.
       (read, write) t -> read Or_error.t * (write -> unit Effect.t) * View.field list
     = function
-      | Return { name; form } ->
-        form.value, form.set, [ { View.field_name = name; field_view = form.view } ]
-      | Map (form, f) ->
-        let value, set, fields = finalize_view form in
-        Or_error.map value ~f, set, fields
-      | Contra_map (form, g) ->
-        let value, set, fields = finalize_view form in
-        value, (fun x -> Effect.lazy_ (lazy (set (g x)))), fields
-      | Both (a, b) ->
-        let a_value, a_set, a_fields = finalize_view a in
-        let b_value, b_set, b_fields = finalize_view b in
-        let value = Or_error.both a_value b_value in
-        let set t = Effect.lazy_ (lazy (Effect.Many [ a_set t; b_set t ])) in
-        let fields = a_fields @ b_fields in
-        value, set, fields
+    | Return { name; form } ->
+      form.value, form.set, [ { View.field_name = name; field_view = form.view } ]
+    | Map (form, f) ->
+      let value, set, fields = finalize_view form in
+      Or_error.map value ~f, set, fields
+    | Contra_map (form, g) ->
+      let value, set, fields = finalize_view form in
+      value, (fun x -> Effect.lazy_ (lazy (set (g x)))), fields
+    | Both (a, b) ->
+      let a_value, a_set, a_fields = finalize_view a in
+      let b_value, b_set, b_fields = finalize_view b in
+      let value = Or_error.both a_value b_value in
+      let set t = Effect.lazy_ (lazy (Effect.Many [ a_set t; b_set t ])) in
+      let fields = a_fields @ b_fields in
+      value, set, fields
   ;;
 end
 
@@ -252,8 +252,8 @@ module Record_builder = struct
     fieldslib_field
     |> Fieldslib.Field.name
     |> String.map ~f:(function
-      | '_' -> ' '
-      | other -> other)
+         | '_' -> ' '
+         | other -> other)
   ;;
 
   let attach_fieldname_to_error t fieldslib_field =
@@ -324,8 +324,7 @@ module Dynamic = struct
       let%arr get_default = get_default in
       match%bind.Effect get_default with
       | Active default -> Effect.return default
-      | Inactive ->
-        Effect.never
+      | Inactive -> Effect.never
     in
     with_default_from_effect effect form
   ;;
@@ -390,12 +389,12 @@ module Dynamic = struct
   ;;
 
   let on_change
-        (type a)
-        ?(on_error = Value.return (Fn.const Ui_effect.Ignore))
-        ?sexp_of_model
-        ~equal
-        ~f
-        value_to_watch
+    (type a)
+    ?(on_error = Value.return (Fn.const Ui_effect.Ignore))
+    ?sexp_of_model
+    ~equal
+    ~f
+    value_to_watch
     =
     let module M_or_error = struct
       type model = a
@@ -421,16 +420,16 @@ module Dynamic = struct
   ;;
 
   let project_via_effect
-        (type a b)
-        ?sexp_of_input
-        ?sexp_of_result
-        ~equal_input
-        ~equal_result
-        ?(one_at_a_time = false)
-        ?debounce_ui
-        (t : a t Bonsai.Value.t)
-        ~unparse
-        ~parse
+    (type a b)
+    ?sexp_of_input
+    ?sexp_of_result
+    ~equal_input
+    ~equal_result
+    ?(one_at_a_time = false)
+    ?debounce_ui
+    (t : a t Bonsai.Value.t)
+    ~unparse
+    ~parse
     =
     let open Bonsai.Effect_throttling in
     let module Validated = struct
@@ -504,13 +503,13 @@ module Dynamic = struct
   ;;
 
   let validate_via_effect
-        (type a)
-        ?sexp_of_model
-        ~equal
-        ?one_at_a_time
-        ?debounce_ui
-        (t : a t Bonsai.Value.t)
-        ~f
+    (type a)
+    ?sexp_of_model
+    ~equal
+    ?one_at_a_time
+    ?debounce_ui
+    (t : a t Bonsai.Value.t)
+    ~f
     =
     let%sub parse =
       let%arr f = f in
@@ -534,12 +533,12 @@ module Dynamic = struct
 
   module Record_builder = struct
     include Profunctor.Record_builder (struct
-        type ('read, 'write) t = ('read, 'write) For_profunctor.t Value.t
+      type ('read, 'write) t = ('read, 'write) For_profunctor.t Value.t
 
-        let both a b = Value.map2 a b ~f:For_profunctor.both
-        let map a ~f = Value.map a ~f:(For_profunctor.map ~f)
-        let contra_map a ~f = Value.map a ~f:(For_profunctor.contra_map ~f)
-      end)
+      let both a b = Value.map2 a b ~f:For_profunctor.both
+      let map a ~f = Value.map a ~f:(For_profunctor.map ~f)
+      let contra_map a ~f = Value.map a ~f:(For_profunctor.contra_map ~f)
+    end)
 
     let field t fieldslib_field =
       let for_profunctor =

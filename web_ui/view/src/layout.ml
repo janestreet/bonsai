@@ -102,18 +102,18 @@ let to_css_gen_vertical_direction : Flex.Vertical_dir.t -> _ = function
 ;;
 
 let box
-      ~(default_direction : 'direction option)
-      ~(direction_to_css_gen_direction :
-          'direction -> [ `Column | `Column_reverse | `Default | `Row | `Row_reverse ])
-      ?(attrs = [])
-      ?row_gap
-      ?column_gap
-      ?main_axis_alignment
-      ?cross_axis_alignment
-      ?direction
-      ?wrap
-      ?align_content
-      children
+  ~(default_direction : 'direction option)
+  ~(direction_to_css_gen_direction :
+      'direction -> [ `Column | `Column_reverse | `Default | `Row | `Row_reverse ])
+  ?(attrs = [])
+  ?row_gap
+  ?column_gap
+  ?main_axis_alignment
+  ?cross_axis_alignment
+  ?direction
+  ?wrap
+  ?align_content
+  children
   =
   let direction =
     match default_direction, direction with

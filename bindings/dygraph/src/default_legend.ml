@@ -4,11 +4,11 @@ open Import
 module Model = struct
   module Series = struct
     type t =
-      { label          : string
-      ; value          : Raw_html.t option
-      ; dash           : Raw_html.t option
-      ; color          : string option
-      ; is_visible     : bool
+      { label : string
+      ; value : Raw_html.t option
+      ; dash : Raw_html.t option
+      ; color : string option
+      ; is_visible : bool
       ; is_highlighted : bool
       }
     [@@deriving equal, fields ~getters, sexp]
@@ -18,12 +18,12 @@ module Model = struct
     let view { label; value; dash; color; is_visible; is_highlighted } ~on_toggle =
       let dash =
         match dash with
-        | None      -> Vdom.Node.none
+        | None -> Vdom.Node.none
         | Some html -> Raw_html.view ~tag:"span" html
       in
       let value =
         match value with
-        | None      -> Vdom.Node.none
+        | None -> Vdom.Node.none
         | Some html -> Raw_html.view ~tag:"span" html
       in
       let create_style l = List.filter_opt l |> Css_gen.concat |> Vdom.Attr.style in
@@ -61,23 +61,23 @@ module Model = struct
   end
 
   type t =
-    { x_label     : string
-    ; x_value     : Raw_html.t option
-    ; series      : Series.t list
+    { x_label : string
+    ; x_value : Raw_html.t option
+    ; series : Series.t list
     ; past_series : Series.t Map.M(String).t
     }
   [@@deriving equal, sexp]
 
   let view
-        { x_label; x_value; series; past_series = _ }
-        ~on_toggle
-        ~select_all
-        ~select_none
+    { x_label; x_value; series; past_series = _ }
+    ~on_toggle
+    ~select_all
+    ~select_none
     =
     let x =
       let value =
         match x_value with
-        | None      -> Vdom.Node.none
+        | None -> Vdom.Node.none
         | Some html -> Raw_html.view ~tag:"span" html
       in
       Vdom.Node.label [ Vdom.Node.textf "%s: " x_label; value ]
@@ -109,7 +109,7 @@ module Model = struct
       select_all_or_none
       :: x
       :: List.map series ~f:(fun series ->
-        Series.view series ~on_toggle:(fun () -> on_toggle series.label))
+           Series.view series ~on_toggle:(fun () -> on_toggle series.label))
     in
     (* Mostly copied from vdom_input_widgets *)
     Vdom.Node.div
@@ -126,7 +126,7 @@ end
 
 module Action = struct
   type t =
-    | From_graph        of Legend_data.t
+    | From_graph of Legend_data.t
     | Toggle_visibility of string
     | Select_none
     | Select_all
@@ -134,9 +134,9 @@ module Action = struct
 end
 
 let apply_action
-      (_ : _ Bonsai.Apply_action_context.t)
-      (model : Model.t)
-      (action : Action.t)
+  (_ : _ Bonsai.Apply_action_context.t)
+  (model : Model.t)
+  (action : Action.t)
   =
   let map_series ~f = { model with series = List.map model.series ~f } in
   match action with
@@ -146,16 +146,16 @@ let apply_action
         match
           List.find legend_data.series ~f:(fun s -> String.equal series.label s.label)
         with
-        | None             -> series
+        | None -> series
         | Some legend_data ->
           let { Legend_data.Series.dashHTML
               ; isHighlighted
               ; color
               ; yHTML
-              ; label     = _
+              ; label = _
               ; labelHTML = _
               ; isVisible = _
-              ; y         = _
+              ; y = _
               }
             =
             legend_data
@@ -165,20 +165,20 @@ let apply_action
             Option.first_some color series.color
           in
           { series with
-            dash           = Some dashHTML
+            dash = Some dashHTML
           ; color
-          ; value          = yHTML
+          ; value = yHTML
           ; is_highlighted = Option.value ~default:false isHighlighted
           })
     in
     let x_value =
       Option.map legend_data.xHTML ~f:(function
-        | `number f      -> Float.to_string f |> Raw_html.of_string
+        | `number f -> Float.to_string f |> Raw_html.of_string
         | `html raw_html -> raw_html)
     in
     { model with x_value; series }
   | Select_none -> map_series ~f:(fun series -> { series with is_visible = false })
-  | Select_all  -> map_series ~f:(fun series -> { series with is_visible = true  })
+  | Select_all -> map_series ~f:(fun series -> { series with is_visible = true })
   | Toggle_visibility label ->
     map_series ~f:(fun series ->
       if String.(series.label = label)
@@ -188,11 +188,11 @@ let apply_action
 
 let series_from_info { Per_series_info.label; visible_by_default } =
   { Model.Series.label
-  ; is_visible     = visible_by_default
+  ; is_visible = visible_by_default
   ; is_highlighted = false
-  ; value          = None
-  ; dash           = None
-  ; color          = None
+  ; value = None
+  ; dash = None
+  ; color = None
   }
 ;;
 
@@ -200,20 +200,20 @@ let create ~x_label ~per_series_info
   : (Model.t * Vdom.Node.t * (Action.t -> unit Vdom.Effect.t)) Bonsai.Computation.t
   =
   let create_model =
-    let%map.Bonsai x_label         = x_label
-    and            per_series_info = per_series_info in
+    let%map.Bonsai x_label = x_label
+    and per_series_info = per_series_info in
     function
     | None ->
       { Model.x_label
-      ; x_value     = None
-      ; series      = List.map per_series_info ~f:series_from_info
+      ; x_value = None
+      ; series = List.map per_series_info ~f:series_from_info
       ; past_series = String.Map.empty
       }
     | Some (model : Model.t) ->
-      let existing_y_labels = List.map model.series    ~f:Model.Series.label    in
-      let model_y_labels    = List.map per_series_info ~f:Per_series_info.label in
-      if [%equal: string     ] model.x_label  x_label
-      && [%equal: string list] model_y_labels existing_y_labels
+      let existing_y_labels = List.map model.series ~f:Model.Series.label in
+      let model_y_labels = List.map per_series_info ~f:Per_series_info.label in
+      if [%equal: string] model.x_label x_label
+         && [%equal: string list] model_y_labels existing_y_labels
       then { model with x_label }
       else (
         let past_series =
@@ -230,7 +230,7 @@ let create ~x_label ~per_series_info
           List.map per_series_info ~f:(fun per_series_info ->
             let { Per_series_info.label; visible_by_default = _ } = per_series_info in
             match Map.find past_series label with
-            | None        -> series_from_info per_series_info
+            | None -> series_from_info per_series_info
             | Some series -> series)
         in
         { model with x_label; series; past_series })

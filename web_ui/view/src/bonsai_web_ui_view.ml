@@ -26,37 +26,37 @@ let intent_colors ((module T) : Theme.t) (intent : Intent.t) =
 ;;
 
 let button
-      ((module T) : Theme.t)
-      ?(attrs = [])
-      ?(disabled = false)
-      ?intent
-      ?tooltip
-      ~on_click
-      text
+  ((module T) : Theme.t)
+  ?(attrs = [])
+  ?(disabled = false)
+  ?intent
+  ?tooltip
+  ~on_click
+  text
   =
   T.singleton#button ~attrs ~disabled ~intent ~tooltip ~on_click [ Vdom.Node.text text ]
 ;;
 
 let button'
-      ((module T) : Theme.t)
-      ?(attrs = [])
-      ?(disabled = false)
-      ?intent
-      ?tooltip
-      ~on_click
-      content
+  ((module T) : Theme.t)
+  ?(attrs = [])
+  ?(disabled = false)
+  ?intent
+  ?tooltip
+  ~on_click
+  content
   =
   T.singleton#button ~attrs ~disabled ~intent ~tooltip ~on_click content
 ;;
 
 let tabs
-      ((module T) : Theme.t)
-      ?(attrs = [])
-      ?(per_tab_attrs = fun _ ~is_active:_ -> [])
-      ~equal
-      ~on_change
-      ~active
-      tabs
+  ((module T) : Theme.t)
+  ?(attrs = [])
+  ?(per_tab_attrs = fun _ ~is_active:_ -> [])
+  ~equal
+  ~on_change
+  ~active
+  tabs
   =
   T.singleton#tabs ~attrs ~per_tab_attrs ~on_change ~equal ~active tabs
 ;;
@@ -66,14 +66,14 @@ module type Enum = sig
 end
 
 let tabs_enum
-      (type a)
-      ((module T) : Theme.t)
-      ?(attrs = [])
-      ?(per_tab_attrs = fun _ ~is_active:_ -> [])
-      ?tab_to_vdom
-      (module A : Enum with type t = a)
-      ~on_change
-      ~active
+  (type a)
+  ((module T) : Theme.t)
+  ?(attrs = [])
+  ?(per_tab_attrs = fun _ ~is_active:_ -> [])
+  ?tab_to_vdom
+  (module A : Enum with type t = a)
+  ~on_change
+  ~active
   =
   let tab_to_vdom =
     Option.value tab_to_vdom ~default:(fun tab ->
@@ -102,12 +102,12 @@ let themed_textf theme ?attrs ?intent ?style ?size format =
 module Tooltip_direction = Tooltip.Direction
 
 let tooltip'
-      ((module T) : Theme.t)
-      ?(container_attrs = [])
-      ?(tooltip_attrs = [])
-      ?(direction = Tooltip.Direction.Top)
-      ~tooltip
-      tipped
+  ((module T) : Theme.t)
+  ?(container_attrs = [])
+  ?(tooltip_attrs = [])
+  ?(direction = Tooltip.Direction.Top)
+  ~tooltip
+  tipped
   =
   T.singleton#tooltip ~container_attrs ~tooltip_attrs ~direction ~tipped ~tooltip
 ;;
@@ -119,15 +119,15 @@ let tooltip theme ?container_attrs ?tooltip_attrs ?direction ~tooltip tipped =
 ;;
 
 let card'
-      ((module T) : Theme.t)
-      ?(container_attrs = [])
-      ?(title_attrs = [])
-      ?(content_attrs = [])
-      ?intent
-      ?(title = [])
-      ?(title_kind = Card_title_kind.Prominent)
-      ?(on_click = Effect.Ignore)
-      content
+  ((module T) : Theme.t)
+  ?(container_attrs = [])
+  ?(title_attrs = [])
+  ?(content_attrs = [])
+  ?intent
+  ?(title = [])
+  ?(title_kind = Card_title_kind.Prominent)
+  ?(on_click = Effect.Ignore)
+  content
   =
   T.singleton#card
     ~container_attrs
@@ -141,15 +141,15 @@ let card'
 ;;
 
 let card
-      theme
-      ?container_attrs
-      ?title_attrs
-      ?content_attrs
-      ?intent
-      ?title
-      ?title_kind
-      ?on_click
-      content
+  theme
+  ?container_attrs
+  ?title_attrs
+  ?content_attrs
+  ?intent
+  ?title
+  ?title_kind
+  ?on_click
+  content
   =
   card'
     theme

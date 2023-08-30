@@ -2,10 +2,10 @@ open! Core
 open! Import
 
 let baseline
-      ~here
-      ~(info_from : _ Computation.info)
-      ~(info_into : _ Computation.info)
-      ~via
+  ~here
+  ~(info_from : _ Computation.info)
+  ~(info_into : _ Computation.info)
+  ~via
   =
   let reset ~inject_dynamic ~inject_static ~schedule_event (model_from, model_into) =
     let model_from =
@@ -22,64 +22,64 @@ let baseline
   in
   let apply_static ~inject_dynamic ~inject_static ~schedule_event (model_from, model_into)
     = function
-      | First action ->
-        let inject_static action = inject_static (First action) in
-        let inject_dynamic action = inject_dynamic (First action) in
-        let model_from =
-          info_from.apply_static
-            ~inject_dynamic
-            ~inject_static
-            ~schedule_event
-            model_from
-            action
-        in
-        model_from, model_into
-      | Second action ->
-        let inject_static action = inject_static (Second action) in
-        let inject_dynamic action = inject_dynamic (Second action) in
-        let model_into =
-          info_into.apply_static
-            ~inject_dynamic
-            ~inject_static
-            ~schedule_event
-            model_into
-            action
-        in
-        model_from, model_into
+    | First action ->
+      let inject_static action = inject_static (First action) in
+      let inject_dynamic action = inject_dynamic (First action) in
+      let model_from =
+        info_from.apply_static
+          ~inject_dynamic
+          ~inject_static
+          ~schedule_event
+          model_from
+          action
+      in
+      model_from, model_into
+    | Second action ->
+      let inject_static action = inject_static (Second action) in
+      let inject_dynamic action = inject_dynamic (Second action) in
+      let model_into =
+        info_into.apply_static
+          ~inject_dynamic
+          ~inject_static
+          ~schedule_event
+          model_into
+          action
+      in
+      model_from, model_into
   in
   let apply_dynamic
-        ~inject_dynamic
-        ~inject_static
-        ~schedule_event
-        input
-        (model_from, model_into)
+    ~inject_dynamic
+    ~inject_static
+    ~schedule_event
+    input
+    (model_from, model_into)
     = function
-      | First action ->
-        let inject_static action = inject_static (First action) in
-        let inject_dynamic action = inject_dynamic (First action) in
-        let model_from =
-          info_from.apply_dynamic
-            ~inject_dynamic
-            ~inject_static
-            ~schedule_event
-            (Option.map input ~f:fst)
-            model_from
-            action
-        in
-        model_from, model_into
-      | Second action ->
-        let inject_static action = inject_static (Second action) in
-        let inject_dynamic action = inject_dynamic (Second action) in
-        let model_into =
-          info_into.apply_dynamic
-            ~inject_dynamic
-            ~inject_static
-            ~schedule_event
-            (Option.map input ~f:snd)
-            model_into
-            action
-        in
-        model_from, model_into
+    | First action ->
+      let inject_static action = inject_static (First action) in
+      let inject_dynamic action = inject_dynamic (First action) in
+      let model_from =
+        info_from.apply_dynamic
+          ~inject_dynamic
+          ~inject_static
+          ~schedule_event
+          (Option.map input ~f:fst)
+          model_from
+          action
+      in
+      model_from, model_into
+    | Second action ->
+      let inject_static action = inject_static (Second action) in
+      let inject_dynamic action = inject_dynamic (Second action) in
+      let model_into =
+        info_into.apply_dynamic
+          ~inject_dynamic
+          ~inject_static
+          ~schedule_event
+          (Option.map input ~f:snd)
+          model_into
+          action
+      in
+      model_from, model_into
   in
   let run ~environment ~path ~clock ~model ~inject_dynamic ~inject_static =
     let from =
@@ -128,10 +128,10 @@ let baseline
 ;;
 
 let from_stateless
-      ~here
-      ~(info_from : _ Computation.info)
-      ~(info_into : _ Computation.info)
-      ~via
+  ~here
+  ~(info_from : _ Computation.info)
+  ~(info_into : _ Computation.info)
+  ~via
   =
   let run ~environment ~path ~clock ~model ~inject_dynamic ~inject_static =
     let from =
@@ -174,10 +174,10 @@ let from_stateless
 ;;
 
 let into_stateless
-      ~here
-      ~(info_from : _ Computation.info)
-      ~(info_into : _ Computation.info)
-      ~via
+  ~here
+  ~(info_from : _ Computation.info)
+  ~(info_into : _ Computation.info)
+  ~via
   =
   let run ~environment ~path ~clock ~model ~inject_dynamic ~inject_static =
     let from =
@@ -220,10 +220,10 @@ let into_stateless
 ;;
 
 let no_static_actions
-      ~here
-      ~(info_from : _ Computation.info)
-      ~(info_into : _ Computation.info)
-      ~via
+  ~here
+  ~(info_from : _ Computation.info)
+  ~(info_into : _ Computation.info)
+  ~via
   =
   let reset ~inject_dynamic:_ ~inject_static ~schedule_event (model_from, model_into) =
     let model_from =
@@ -245,33 +245,33 @@ let no_static_actions
     model_from, model_into
   in
   let apply_static
-        ~inject_dynamic:_
-        ~inject_static
-        ~schedule_event
-        (model_from, model_into)
+    ~inject_dynamic:_
+    ~inject_static
+    ~schedule_event
+    (model_from, model_into)
     = function
-      | First action ->
-        let inject_static action = inject_static (First action) in
-        let model_from =
-          info_from.apply_static
-            ~inject_dynamic:Nothing.unreachable_code
-            ~inject_static
-            ~schedule_event
-            model_from
-            action
-        in
-        model_from, model_into
-      | Second action ->
-        let inject_static action = inject_static (Second action) in
-        let model_into =
-          info_into.apply_static
-            ~inject_dynamic:Nothing.unreachable_code
-            ~inject_static
-            ~schedule_event
-            model_into
-            action
-        in
-        model_from, model_into
+    | First action ->
+      let inject_static action = inject_static (First action) in
+      let model_from =
+        info_from.apply_static
+          ~inject_dynamic:Nothing.unreachable_code
+          ~inject_static
+          ~schedule_event
+          model_from
+          action
+      in
+      model_from, model_into
+    | Second action ->
+      let inject_static action = inject_static (Second action) in
+      let model_into =
+        info_into.apply_static
+          ~inject_dynamic:Nothing.unreachable_code
+          ~inject_static
+          ~schedule_event
+          model_into
+          action
+      in
+      model_from, model_into
   in
   let apply_dynamic ~inject_dynamic:_ ~inject_static:_ ~schedule_event:_ _ _ =
     Nothing.unreachable_code
@@ -330,10 +330,10 @@ let no_static_actions
 ;;
 
 let no_dynamic_actions
-      ~here
-      ~(info_from : _ Computation.info)
-      ~(info_into : _ Computation.info)
-      ~via
+  ~here
+  ~(info_from : _ Computation.info)
+  ~(info_into : _ Computation.info)
+  ~via
   =
   let reset ~inject_dynamic ~inject_static:_ ~schedule_event (model_from, model_into) =
     let model_from =
@@ -358,36 +358,36 @@ let no_dynamic_actions
     Nothing.unreachable_code
   in
   let apply_dynamic
-        ~inject_dynamic
-        ~inject_static:_
-        ~schedule_event
-        input
-        (model_from, model_into)
+    ~inject_dynamic
+    ~inject_static:_
+    ~schedule_event
+    input
+    (model_from, model_into)
     = function
-      | First action ->
-        let inject_dynamic action = inject_dynamic (First action) in
-        let model_from =
-          info_from.apply_dynamic
-            ~inject_dynamic
-            ~inject_static:Nothing.unreachable_code
-            ~schedule_event
-            (Option.map input ~f:fst)
-            model_from
-            action
-        in
-        model_from, model_into
-      | Second action ->
-        let inject_dynamic action = inject_dynamic (Second action) in
-        let model_into =
-          info_into.apply_dynamic
-            ~inject_dynamic
-            ~inject_static:Nothing.unreachable_code
-            ~schedule_event
-            (Option.map input ~f:snd)
-            model_into
-            action
-        in
-        model_from, model_into
+    | First action ->
+      let inject_dynamic action = inject_dynamic (First action) in
+      let model_from =
+        info_from.apply_dynamic
+          ~inject_dynamic
+          ~inject_static:Nothing.unreachable_code
+          ~schedule_event
+          (Option.map input ~f:fst)
+          model_from
+          action
+      in
+      model_from, model_into
+    | Second action ->
+      let inject_dynamic action = inject_dynamic (Second action) in
+      let model_into =
+        info_into.apply_dynamic
+          ~inject_dynamic
+          ~inject_static:Nothing.unreachable_code
+          ~schedule_event
+          (Option.map input ~f:snd)
+          model_into
+          action
+      in
+      model_from, model_into
   in
   let run ~environment ~path ~clock ~model ~inject_dynamic ~inject_static:_ =
     let from =

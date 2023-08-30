@@ -88,10 +88,10 @@ let multiple_counters (input : unit String.Map.t Value.t) =
     (counters
      |> Map.to_alist
      |> List.map ~f:(fun (key, vdom) ->
-       let open Vdom.Node in
-       let name = td [ Vdom.Node.text key ] in
-       let counter = td [ vdom ] in
-       Vdom.Node.tr [ name; counter ]))
+          let open Vdom.Node in
+          let name = td [ Vdom.Node.text key ] in
+          let counter = td [ vdom ] in
+          Vdom.Node.tr [ name; counter ]))
 ;;
 
 (* $MDX part-end *)
@@ -129,9 +129,9 @@ let people =
     ~sexp_of_action:[%sexp_of: Action.t]
     ~default_model:Model.default
     ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) model action ->
-      match action with
-      | Add name -> Map.set model ~key:name ~data:()
-      | Remove name -> Map.remove model name)
+    match action with
+    | Add name -> Map.set model ~key:name ~data:()
+    | Remove name -> Map.remove model name)
 ;;
 
 let add_new_person_form ~inject_add_person =
@@ -142,9 +142,9 @@ let add_new_person_form ~inject_add_person =
   form
   |> Form.label "name"
   |> Form.validate ~f:(fun name ->
-    if String.for_all name ~f:Char.is_whitespace
-    then Error (Error.of_string "name must not be empty")
-    else Ok ())
+       if String.for_all name ~f:Char.is_whitespace
+       then Error (Error.of_string "name must not be empty")
+       else Ok ())
   |> Form.view_as_vdom ~on_submit:(Form.Submit.create ~f:on_submit ())
 ;;
 

@@ -21,7 +21,7 @@ module PerformanceObserver : sig
    * You should have received a copy of the GNU Lesser General Public License
    * along with this program; if not, write to the Free Software
    * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
-  *)
+   *)
 
   (** PerformanceObserver API
 
@@ -95,7 +95,7 @@ end = struct
   let performanceObserver
     : ((performanceObserverEntryList Js.t -> performanceObserver Js.t -> unit) Js.callback
        -> performanceObserver Js.t)
-        Js.constr
+    Js.constr
     =
     performanceObserver
   ;;
@@ -163,18 +163,18 @@ end = struct
     in
     let result = { worker; acknowledged = false; buffer = [] } in
     worker##.onmessage
-    := Dom.handler (fun (message : Js.js_string Js.t Worker.messageEvent Js.t) ->
-      result.acknowledged <- true;
-      on_message result (Js.to_string message##.data);
-      Js._false);
+      := Dom.handler (fun (message : Js.js_string Js.t Worker.messageEvent Js.t) ->
+           result.acknowledged <- true;
+           on_message result (Js.to_string message##.data);
+           Js._false);
     result
   ;;
 
   let set_error_handler t ~f =
     t.worker##.onerror
-    := Dom.handler (fun error_message ->
-      f error_message;
-      Js._false)
+      := Dom.handler (fun error_message ->
+           f error_message;
+           Js._false)
   ;;
 
   let send_message t message = t.buffer <- message :: t.buffer
@@ -201,16 +201,16 @@ let iter_entries performance_observer_entry_list ~f =
   performance_observer_entry_list##getEntries
   |> Js.to_array
   |> Array.iter ~f:(fun entry ->
-    let label =
-      let label = entry##.name |> Js.to_string in
-      match Instrumentation.extract_node_path_from_entry_label label with
-      | None -> `Other label
-      | Some node_id -> `Bonsai node_id
-    in
-    let entry_type = entry##.entryType |> Js.to_bytestring in
-    let start_time = entry##.startTime in
-    let duration = entry##.duration in
-    f { Entry.label; entry_type; start_time; duration })
+       let label =
+         let label = entry##.name |> Js.to_string in
+         match Instrumentation.extract_node_path_from_entry_label label with
+         | None -> `Other label
+         | Some node_id -> `Bonsai node_id
+       in
+       let entry_type = entry##.entryType |> Js.to_bytestring in
+       let start_time = entry##.startTime in
+       let duration = entry##.duration in
+       f { Entry.label; entry_type; start_time; duration })
 ;;
 
 let uuid_to_url ~host ~port uuid = [%string "https://%{host}:%{port#Int}/%{uuid#Uuid}"]
@@ -296,8 +296,8 @@ let instrument ~host ~port ~worker_name component =
     Worker.create
       ~url:[%string "https://%{host}:%{port#Int}/%{worker_name}"]
       ~on_message:(fun worker _ ->
-        if not !got_first_message then got_first_message := true;
-        on_first_message worker)
+      if not !got_first_message then got_first_message := true;
+      on_first_message worker)
   in
   let component =
     Bonsai.Private.Graph_info.iter_graph_updates component ~on_update:(fun gi ->

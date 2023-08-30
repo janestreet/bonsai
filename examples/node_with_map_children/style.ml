@@ -3,8 +3,8 @@ open! Bonsai_web
 
 include
   [%css
-    stylesheet
-      {|
+  stylesheet
+    {|
   html,
   body,
   .app {

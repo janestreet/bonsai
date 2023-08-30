@@ -41,9 +41,9 @@ module Make (Name : Types.Name) = struct
   end
 
   module Style =
-    [%css
-      stylesheet
-        {|
+  [%css
+  stylesheet
+    {|
 .map {
   position:relative;
   backface-visibility: hidden;
@@ -277,13 +277,13 @@ module Make (Name : Types.Name) = struct
   end
 
   let rec value_to_html
-            ~direction
-            ~here:_
-            ~connections_state
-            ~id_to_vdom
-            ~point_to
-            ~trackers
-            (me : Value.t)
+    ~direction
+    ~here:_
+    ~connections_state
+    ~id_to_vdom
+    ~point_to
+    ~trackers
+    (me : Value.t)
     =
     let open Connections_state in
     let id = me.value_id in
@@ -355,32 +355,32 @@ module Make (Name : Types.Name) = struct
           children
           ~init:([], connections_state)
           ~f:(fun (children, connections_state) child ->
-            match child.value_kind with
-            | Named name ->
-              children, Connections_state.add_consumer connections_state ~id ~dest:name
-            | _ -> child :: children, connections_state)
+          match child.value_kind with
+          | Named name ->
+            children, Connections_state.add_consumer connections_state ~id ~dest:name
+          | _ -> child :: children, connections_state)
       in
       let children, connections_state =
         children
         |> List.map ~f:(fun v ->
-          value_to_html
-            ~direction
-            ~connections_state
-            ~id_to_vdom
-            ~trackers
-            ~here:v.value_here
-            ~point_to:me
-            v)
+             value_to_html
+               ~direction
+               ~connections_state
+               ~id_to_vdom
+               ~trackers
+               ~here:v.value_here
+               ~point_to:me
+               v)
         |> List.reduce_balanced ~f:(fun (a_nodes, state_a) (b_nodes, state_b) ->
-          let abs, rest = List.zip_with_remainder a_nodes b_nodes in
-          let abs : Node.t list list = List.map abs ~f:(fun (a, b) -> a @ b) in
-          let nodes =
-            match rest with
-            | None -> abs
-            | Some (First a) -> abs @ a
-            | Some (Second b) -> abs @ b
-          in
-          nodes, Connections_state.merge state_a state_b)
+             let abs, rest = List.zip_with_remainder a_nodes b_nodes in
+             let abs : Node.t list list = List.map abs ~f:(fun (a, b) -> a @ b) in
+             let nodes =
+               match rest with
+               | None -> abs
+               | Some (First a) -> abs @ a
+               | Some (Second b) -> abs @ b
+             in
+             nodes, Connections_state.merge state_a state_b)
         |> Option.value ~default:([], connections_state)
       in
       let nodes =
@@ -406,13 +406,13 @@ module Make (Name : Types.Name) = struct
   ;;
 
   let value_to_html
-        ~direction
-        ~here
-        ~point_to
-        ~id_to_vdom
-        ~trackers
-        ~connections_state
-        value
+    ~direction
+    ~here
+    ~point_to
+    ~id_to_vdom
+    ~trackers
+    ~connections_state
+    value
     =
     let vbox, hbox = vbox_hbox direction in
     let children, connections_state =
@@ -435,13 +435,13 @@ module Make (Name : Types.Name) = struct
   ;;
 
   let rec computation_to_html
-            ~direction
-            ~here
-            ~(curr_id : Name.Count.t)
-            ~id_to_vdom
-            ~point_to
-            ~connections_state
-            ~trackers
+    ~direction
+    ~here
+    ~(curr_id : Name.Count.t)
+    ~id_to_vdom
+    ~point_to
+    ~connections_state
+    ~trackers
     =
     let vbox, hbox = vbox_hbox direction in
     function
@@ -473,21 +473,21 @@ module Make (Name : Types.Name) = struct
               row
               ~init:curr_id
               ~f:(fun curr_id { Types.Binding.as_; bound } ->
-                let here =
-                  match bound.here with
-                  | Some x -> Some x
-                  | None -> here
-                in
-                Tuple2.swap
-                @@ computation_to_html
-                     ~direction
-                     ~connections_state
-                     ~curr_id
-                     ~id_to_vdom
-                     ~trackers
-                     ~here
-                     ~point_to:as_
-                     bound)
+              let here =
+                match bound.here with
+                | Some x -> Some x
+                | None -> here
+              in
+              Tuple2.swap
+              @@ computation_to_html
+                   ~direction
+                   ~connections_state
+                   ~curr_id
+                   ~id_to_vdom
+                   ~trackers
+                   ~here
+                   ~point_to:as_
+                   bound)
           in
           ( curr_id
           , ( vbox (List.map column_and_states ~f:Tuple2.get1)
@@ -539,27 +539,27 @@ module Make (Name : Types.Name) = struct
   ;;
 
   let computation_to_html
-        c
-        ~direction
-        ~(curr_id : Name.Count.t)
-        ~id_to_vdom
-        ~trackers
-        ~here
+    c
+    ~direction
+    ~(curr_id : Name.Count.t)
+    ~id_to_vdom
+    ~trackers
+    ~here
     =
     let out, curr_id = Name.next curr_id in
     computation_to_html c ~direction ~curr_id ~id_to_vdom ~point_to:out ~here ~trackers
   ;;
 
   let to_vdom
-        ~(curr_id : Name.Count.t Bonsai.Value.t)
-        ~(direction : [ `Left_to_right | `Top_to_bottom ])
-        ~(node_to_vdom : Name.t Bonsai.Value.t -> Vdom.Node.t Bonsai.Computation.t)
-        ~(edge_to_svg :
-            edge:Edge.t Bonsai.Value.t
-          -> from:Position.t Bonsai.Value.t
-          -> to_:Position.t Bonsai.Value.t
-          -> Vdom.Node.t Bonsai.Computation.t)
-        (computation : Computation.t Bonsai_web.Value.t)
+    ~(curr_id : Name.Count.t Bonsai.Value.t)
+    ~(direction : [ `Left_to_right | `Top_to_bottom ])
+    ~(node_to_vdom : Name.t Bonsai.Value.t -> Vdom.Node.t Bonsai.Computation.t)
+    ~(edge_to_svg :
+        edge:Edge.t Bonsai.Value.t
+        -> from:Position.t Bonsai.Value.t
+        -> to_:Position.t Bonsai.Value.t
+        -> Vdom.Node.t Bonsai.Computation.t)
+    (computation : Computation.t Bonsai_web.Value.t)
     : (Vdom.Node.t * Name.Count.t) Bonsai_web.Computation.t
     =
     let open Bonsai.Let_syntax in
@@ -783,16 +783,16 @@ module Make (Name : Types.Name) = struct
   ;;
 
   let create
-        ~(curr_id : Name.Count.t Bonsai.Value.t)
-        ~(direction : [ `Left_to_right | `Top_to_bottom ])
-        ~(node_to_vdom :
-            Name.t Bonsai.Value.t -> 'a Value.t -> Vdom.Node.t Bonsai.Computation.t)
-        ~(edge_to_svg :
-            edge:Edge.t Bonsai.Value.t
-          -> from:Position.t Bonsai.Value.t
-          -> to_:Position.t Bonsai.Value.t
-          -> Vdom.Node.t Bonsai.Computation.t)
-        (dag : 'a t Bonsai_web.Value.t)
+    ~(curr_id : Name.Count.t Bonsai.Value.t)
+    ~(direction : [ `Left_to_right | `Top_to_bottom ])
+    ~(node_to_vdom :
+        Name.t Bonsai.Value.t -> 'a Value.t -> Vdom.Node.t Bonsai.Computation.t)
+    ~(edge_to_svg :
+        edge:Edge.t Bonsai.Value.t
+        -> from:Position.t Bonsai.Value.t
+        -> to_:Position.t Bonsai.Value.t
+        -> Vdom.Node.t Bonsai.Computation.t)
+    (dag : 'a t Bonsai_web.Value.t)
     =
     let open Bonsai.Let_syntax in
     let%sub bindgen = to_bindgen dag in

@@ -26,19 +26,19 @@ let cutoff m ~equal =
 ;;
 
 let mapi_count
-      (type k cmp)
-      m
-      ~comparator:((module M) : (k, cmp) Module_types.comparator)
-      ~f
+  (type k cmp)
+  m
+  ~comparator:((module M) : (k, cmp) Module_types.comparator)
+  ~f
   =
   Incr.compute m ~f:(Incr_map.mapi_count ~comparator:(module M) ~f)
 ;;
 
 let map_count
-      (type k cmp)
-      m
-      ~comparator:((module M) : (k, cmp) Module_types.comparator)
-      ~f
+  (type k cmp)
+  m
+  ~comparator:((module M) : (k, cmp) Module_types.comparator)
+  ~f
   =
   Incr.compute m ~f:(Incr_map.map_count ~comparator:(module M) ~f)
 ;;
@@ -70,27 +70,27 @@ let max_value (type k cmp) m ~comparator:((module M) : (k, cmp) Module_types.com
 ;;
 
 let mapi_bounds
-      (type k cmp)
-      m
-      ~comparator:((module M) : (k, cmp) Module_types.comparator)
-      ~f
+  (type k cmp)
+  m
+  ~comparator:((module M) : (k, cmp) Module_types.comparator)
+  ~f
   =
   Incr.compute m ~f:(Incr_map.mapi_bounds ~comparator:(module M) ~f)
 ;;
 
 let map_bounds
-      (type k cmp)
-      m
-      ~comparator:((module M) : (k, cmp) Module_types.comparator)
-      ~f
+  (type k cmp)
+  m
+  ~comparator:((module M) : (k, cmp) Module_types.comparator)
+  ~f
   =
   Incr.compute m ~f:(Incr_map.map_bounds ~comparator:(module M) ~f)
 ;;
 
 let value_bounds
-      (type k cmp)
-      m
-      ~comparator:((module M) : (k, cmp) Module_types.comparator)
+  (type k cmp)
+  m
+  ~comparator:((module M) : (k, cmp) Module_types.comparator)
   =
   Incr.compute m ~f:(Incr_map.value_bounds ~comparator:(module M))
 ;;
@@ -144,19 +144,19 @@ let rekey (type k cmp) m ~comparator:((module M) : (k, cmp) Module_types.compara
 ;;
 
 let index_byi
-      (type k cmp)
-      m
-      ~comparator:((module M) : (k, cmp) Module_types.comparator)
-      ~index
+  (type k cmp)
+  m
+  ~comparator:((module M) : (k, cmp) Module_types.comparator)
+  ~index
   =
   Incr.compute m ~f:(Incr_map.index_byi ~comparator:(module M) ~index)
 ;;
 
 let index_by
-      (type k cmp)
-      m
-      ~comparator:((module M) : (k, cmp) Module_types.comparator)
-      ~index
+  (type k cmp)
+  m
+  ~comparator:((module M) : (k, cmp) Module_types.comparator)
+  ~index
   =
   Incr.compute m ~f:(Incr_map.index_by ~comparator:(module M) ~index)
 ;;
@@ -174,19 +174,19 @@ let collapse (type k cmp) m ~comparator:((module M) : (k, cmp) Module_types.comp
 ;;
 
 let collapse_by
-      (type k cmp)
-      m
-      ~merge_keys
-      ~comparator:((module M) : (k, cmp) Module_types.comparator)
+  (type k cmp)
+  m
+  ~merge_keys
+  ~comparator:((module M) : (k, cmp) Module_types.comparator)
   =
   Incr.compute m ~f:(Incr_map.collapse_by ~comparator:(module M) ~merge_keys)
 ;;
 
 let expand
-      (type k k2 cmp cmp2)
-      m
-      ~outer_comparator:((module M_outer) : (k, cmp) Module_types.comparator)
-      ~inner_comparator:((module M_inner) : (k2, cmp2) Module_types.comparator)
+  (type k k2 cmp cmp2)
+  m
+  ~outer_comparator:((module M_outer) : (k, cmp) Module_types.comparator)
+  ~inner_comparator:((module M_inner) : (k2, cmp2) Module_types.comparator)
   =
   Incr.compute
     m

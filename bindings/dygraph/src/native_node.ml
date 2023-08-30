@@ -1,6 +1,6 @@
 open! Core
-open  Import
+open Import
 
 include Js_obj.Make (struct
-    type t = Dom_html.element
-  end)
+  type t = Dom_html.element
+end)

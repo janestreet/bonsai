@@ -13,15 +13,15 @@ there are no changes to the previous API.|}
 
   include
     [%demo
-      module Notifications = Bonsai_web_ui_notifications
+    module Notifications = Bonsai_web_ui_notifications
 
-      let component =
-        let%sub notifications = Notifications.Basic.create () in
-        let%sub vdom = Notifications.Basic.render notifications in
-        let%arr vdom = vdom
-        and notifications = notifications in
-        vdom, notifications
-      ;;]
+    let component =
+      let%sub notifications = Notifications.Basic.create () in
+      let%sub vdom = Notifications.Basic.render notifications in
+      let%arr vdom = vdom
+      and notifications = notifications in
+      vdom, notifications
+    ;;]
 
   let view =
     let%sub theme = View.Theme.current in

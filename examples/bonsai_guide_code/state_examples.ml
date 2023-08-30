@@ -93,9 +93,9 @@ let counter_state_machine : Vdom.Node.t Computation.t =
       ~sexp_of_action:[%sexp_of: Action.t]
       ~default_model:0
       ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) model action ->
-        match action with
-        | Increment -> model + 1
-        | Decrement -> model - 1)
+      match action with
+      | Increment -> model + 1
+      | Decrement -> model - 1)
   in
   let%arr state = state
   and inject = inject in

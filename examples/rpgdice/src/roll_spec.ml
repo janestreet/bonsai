@@ -37,7 +37,7 @@ let of_dice_and_const dice const =
   add
     ((if const <> 0 then [ Const const ] else [])
      @ List.filter_map dice ~f:(fun (count, die) ->
-       if count > 0 then Some (Prim { count; die }) else None))
+         if count > 0 then Some (Prim { count; die }) else None))
 ;;
 
 let rec to_string_hum t =

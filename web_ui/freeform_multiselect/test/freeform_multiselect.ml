@@ -1,7 +1,7 @@
 open! Core
 open! Bonsai_web_test
 open! Bonsai_web
-open  Bonsai.Let_syntax
+open Bonsai.Let_syntax
 
 let shared_computation =
   Bonsai_web_ui_freeform_multiselect.Freeform_multiselect.create
@@ -71,8 +71,8 @@ let%expect_test "Deselect an element" =
   Handle.recompute_view handle;
   input_value handle "this is yet another thing";
   Handle.store_view handle;
-  Handle.click_on   handle ~get_vdom:Fn.id ~selector:"[data-value='this is a thing']";
-  Handle.show_diff  handle;
+  Handle.click_on handle ~get_vdom:Fn.id ~selector:"[data-value='this is a thing']";
+  Handle.show_diff handle;
   (* Expected change: this is a thing should disappear from pills *)
   [%expect
     {|
@@ -95,7 +95,7 @@ let%expect_test "set the elements" =
     Handle.create
       (module struct
         type incoming = String.Set.t
-        type t        = Vdom.Node.t * (String.Set.t -> unit Ui_effect.t)
+        type t = Vdom.Node.t * (String.Set.t -> unit Ui_effect.t)
 
         let view (vdom, _) =
           let module V = (val Result_spec.vdom Fn.id) in

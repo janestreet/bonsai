@@ -51,9 +51,9 @@ let component name =
       ~sexp_of_action:[%sexp_of: Action.t]
       ~default_model:Int.Map.empty
       ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) model action ->
-        match action with
-        | Regenerate -> generate_random ()
-        | Remove i -> Map.remove model i)
+      match action with
+      | Regenerate -> generate_random ()
+      | Remove i -> Map.remove model i)
   in
   let%sub () =
     Bonsai.Edge.lifecycle

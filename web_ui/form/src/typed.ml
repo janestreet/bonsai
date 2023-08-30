@@ -61,9 +61,9 @@ module Record = struct
     let view =
       M.Typed_field.Packed.all
       |> List.map ~f:(fun { f = T field } ->
-        { Form_view.field_name = get_label (M.Typed_field.Packed.pack field)
-        ; field_view = Form.view (The_forms.find forms_per_field field)
-        })
+           { Form_view.field_name = get_label (M.Typed_field.Packed.pack field)
+           ; field_view = Form.view (The_forms.find forms_per_field field)
+           })
       |> Form_view.record
     in
     let value =
@@ -76,7 +76,7 @@ module Record = struct
     let set r =
       M.Typed_field.Packed.all
       |> List.map ~f:(fun { f = T field } ->
-        Form.set (The_forms.find forms_per_field field) (M.Typed_field.get field r))
+           Form.set (The_forms.find forms_per_field field) (M.Typed_field.get field r))
       |> Vdom.Effect.Many
     in
     Form.Expert.create ~view ~value ~set
@@ -98,10 +98,10 @@ module Variant = struct
   end
 
   let make
-        (type a)
-        ?(picker = `Dropdown)
-        ?picker_attr
-        (module M : S with type Typed_variant.derived_on = a)
+    (type a)
+    ?(picker = `Dropdown)
+    ?picker_attr
+    (module M : S with type Typed_variant.derived_on = a)
     =
     let to_string =
       match M.label_for_variant with
@@ -261,8 +261,7 @@ module Variant = struct
       let%bind inner =
         match%bind.Effect get_inner_form with
         | Active inner -> Effect.return inner
-        | Inactive ->
-          Effect.never
+        | Inactive -> Effect.never
       in
       Form.set inner value
     in
@@ -270,11 +269,11 @@ module Variant = struct
   ;;
 
   let make_optional
-        (type a)
-        ?picker
-        ?picker_attr
-        ?(empty_label = "(none)")
-        (module M : S with type Typed_variant.derived_on = a)
+    (type a)
+    ?picker
+    ?picker_attr
+    ?(empty_label = "(none)")
+    (module M : S with type Typed_variant.derived_on = a)
     : a option Form.t Computation.t
     =
     let module Transformed = struct
@@ -312,8 +311,8 @@ module Variant = struct
 
       let form_for_variant : type a. a Typed_variant.t -> a Form.t Computation.t
         = function
-          | None -> Bonsai.const (Form.return ())
-          | Some subvariant -> M.form_for_variant subvariant
+        | None -> Bonsai.const (Form.return ())
+        | Some subvariant -> M.form_for_variant subvariant
       ;;
 
       let initial_choice =

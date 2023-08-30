@@ -8,7 +8,7 @@ type ('input, 'result, 'parsed) t =
   default:'parsed
   -> ( 'input
      , ('result Or_error.t Product.With_view.t, 'parsed) Product.t )
-       Bonsai.Arrow_deprecated.t
+     Bonsai.Arrow_deprecated.t
 
 let form_element (type t) (module M : Bonsai.Model with type t = t) here ~(default : t) =
   Bonsai.Arrow_deprecated.state_machine

@@ -12,8 +12,8 @@ module Elem = struct
           -> t
 
     let compare
-          (T { key = key1; id = id1; compare = compare1 })
-          (T { key = key2; id = id2; compare = _ })
+      (T { key = key1; id = id1; compare = compare1 })
+      (T { key = key2; id = id2; compare = _ })
       =
       match Type_equal.Id.same_witness id1 id2 with
       | Some T -> compare1 key1 key2
@@ -111,8 +111,8 @@ let append t ele =
 ;;
 
 include Comparable.Make_plain (struct
-    type nonrec t = t [@@deriving compare, sexp_of]
-  end)
+  type nonrec t = t [@@deriving compare, sexp_of]
+end)
 
 let rec to_unique_identifier_string t =
   match t.string_repr with

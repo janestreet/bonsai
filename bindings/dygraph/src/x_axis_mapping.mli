@@ -1,4 +1,4 @@
-open  Core
+open Core
 open! Import
 
 (** This module is a helper function designed to make it easy (easier) to make the spacing
@@ -32,9 +32,9 @@ open! Import
 *)
 
 type t =
-  { time_to_x_value      : Time_ns.t -> Time_ns.t
-  ; x_value_to_time      : Time_ns.t -> Time_ns.t
-  ; value_formatter      : float     -> Options.Opts.t -> string
+  { time_to_x_value : Time_ns.t -> Time_ns.t
+  ; x_value_to_time : Time_ns.t -> Time_ns.t
+  ; value_formatter : float -> Options.Opts.t -> string
   ; axis_label_formatter :
       Number_or_js_date.t -> Granularity.t -> Options.Opts.t -> string
   }

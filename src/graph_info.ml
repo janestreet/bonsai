@@ -192,11 +192,11 @@ let empty =
 ;;
 
 let value_map
-      (type a)
-      ({ recurse; var_from_parent; parent_path; current_path; _ } :
-         _ Transform.For_value.context)
-      state
-      (value : a Value.t)
+  (type a)
+  ({ recurse; var_from_parent; parent_path; current_path; _ } :
+    _ Transform.For_value.context)
+  state
+  (value : a Value.t)
   =
   let environment, add_tree_relationship, add_dag_relationship = state in
   let node_info = Node_info.of_value value in
@@ -221,11 +221,11 @@ let value_map
 ;;
 
 let computation_map
-      (type result)
-      ({ recurse; var_from_parent; parent_path; current_path } :
-         _ Transform.For_computation.context)
-      state
-      (computation : result Computation.t)
+  (type result)
+  ({ recurse; var_from_parent; parent_path; current_path } :
+    _ Transform.For_computation.context)
+  state
+  (computation : result Computation.t)
   : result Computation.t
   =
   let environment, add_tree_relationship, add_dag_relationship = state in
@@ -262,10 +262,10 @@ let iter_graph_updates (t : _ Computation.t) ~on_update =
     let (lazy from), (lazy to_) = from, to_ in
     let gm = !graph_info in
     graph_info
-    := { gm with
-         info = Map.add_exn gm.info ~key:from ~data:from_info
-       ; tree = Map.add_exn gm.tree ~key:from ~data:to_
-       };
+      := { gm with
+           info = Map.add_exn gm.info ~key:from ~data:from_info
+         ; tree = Map.add_exn gm.tree ~key:from ~data:to_
+         };
     on_update !graph_info
   in
   let environment = Type_equal.Id.Uid.Table.create () in

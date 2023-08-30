@@ -14,7 +14,7 @@ module Record : sig
     val label_for_field
       : [ `Inferred
         | `Computed of 'a Typed_field.t -> string
-        (** The value passed to [`Dynamic] is used in many [let%arr]s within [make]. Thus,
+          (** The value passed to [`Dynamic] is used in many [let%arr]s within [make]. Thus,
             it's possible to accidentally duplicate work, if the provided value is built
             using [let%map] instead of [let%arr]. *)
         | `Dynamic of (Typed_field.Packed.t -> string) Value.t
@@ -41,7 +41,7 @@ module Variant : sig
     val label_for_variant
       : [ `Inferred
         | `Computed of 'a Typed_variant.t -> string
-        (** The value passed to [`Dynamic] is used in many [let%arr]s within [make]. Thus,
+          (** The value passed to [`Dynamic] is used in many [let%arr]s within [make]. Thus,
             it's possible to accidentally duplicate work, if the provided value is built
             using [let%map] instead of [let%arr]. *)
         | `Dynamic of (Typed_variant.Packed.t -> string) Value.t

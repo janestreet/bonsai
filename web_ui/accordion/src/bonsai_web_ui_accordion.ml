@@ -11,13 +11,13 @@ type t =
   }
 
 let component
-      ?(extra_container_attrs = Value.return [])
-      ?(extra_title_attrs = Value.return [])
-      ?(extra_content_attrs = Value.return [])
-      ~starts_open
-      ~title
-      ~content
-      ()
+  ?(extra_container_attrs = Value.return [])
+  ?(extra_title_attrs = Value.return [])
+  ?(extra_content_attrs = Value.return [])
+  ~starts_open
+  ~title
+  ~content
+  ()
   =
   let%sub { state = is_open; set_state = set_is_open; toggle } =
     Bonsai.toggle' ~default_model:starts_open

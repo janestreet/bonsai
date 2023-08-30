@@ -5,9 +5,9 @@ module Reorderable_list = Bonsai_web_ui_reorderable_list
 module Form = Bonsai_web_ui_form
 
 module S =
-  [%css
-    stylesheet
-      {|
+[%css
+stylesheet
+  {|
   .item {
     background-color: green;
     color: white;

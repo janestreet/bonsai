@@ -34,14 +34,14 @@ let tab_state (type t) ?equal (module M : Bonsai.Model with type t = t) ~initial
 ;;
 
 let tab_ui
-      (type t)
-      ?decorate
-      ?additional_button_attributes
-      (module M : Bonsai.Model with type t = t)
-      ~all_tabs
-      ~equal
-      state
-      ~f
+  (type t)
+  ?decorate
+  ?additional_button_attributes
+  (module M : Bonsai.Model with type t = t)
+  ~all_tabs
+  ~equal
+  state
+  ~f
   =
   let default_additional_button_attributes () =
     Value.return (fun ~is_selected:_ _ -> Vdom.Attr.empty)

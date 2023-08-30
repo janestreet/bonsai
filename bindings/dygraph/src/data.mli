@@ -20,10 +20,10 @@ val create_option : (float * float option array) array -> t
     Remember to include the following script when using the Timezone libaray:
     <script type="text/javascript" src="https://timezone-web/timezone-web/all-tz-v1.js"></script>
 *)
-val create_date    : (Date.t    * float array) array -> zone:Timezone.t -> t
+val create_date : (Date.t * float array) array -> zone:Timezone.t -> t
 
 (** [create_time_ns] is for when your x-values are times. *)
-val create_time_ns : (Time_ns.t * float array) array                    -> t
+val create_time_ns : (Time_ns.t * float array) array -> t
 
 (** [create_time_ns_option] is for when your x-values are times and your y-values are options. *)
 val create_time_ns_option : (Time_ns.t * float option array) array -> t
@@ -40,5 +40,5 @@ val create_time_ns_option : (Time_ns.t * float option array) array -> t
     [Ts_server_protocol_kernel.Time_series_data.transpose].
 *)
 
-val create_from_independent_series      : (float     * float) array array -> t
+val create_from_independent_series : (float * float) array array -> t
 val create_from_independent_time_series : (Time_ns.t * float) array array -> t

@@ -31,12 +31,12 @@ module T = struct
     let combine left right =
       { set =
           (fun element ->
-             left.set element;
-             right.set element)
+            left.set element;
+            right.set element)
       ; reset =
           (fun element ->
-             left.reset element;
-             right.reset element)
+            left.reset element;
+            right.reset element)
       }
     ;;
   end

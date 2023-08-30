@@ -174,7 +174,6 @@ val optional'
   -> none:'a
   -> 'b option t
 
-
 (** [fallback_to] modifies the given form so that [Ok default] is used as the form's
     value when it is in an [Error] state. *)
 val fallback_to : 'a t -> value:'a -> 'a t
@@ -260,7 +259,6 @@ module Dynamic : sig
     -> store_set:('a -> unit Effect.t) Value.t
     -> 'a t Value.t
     -> unit Computation.t
-
 
   (** Unlike [validate] which requires the validation function to be available
       locally (and synchronous), [validate_via_effect] runs an effectful computation.

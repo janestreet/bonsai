@@ -226,9 +226,9 @@ module Arr : Ext = struct
   ;;
 
   let maybe_add_cutoff_to_value_binding
-        ~(loc : location)
-        ~(modul : longident loc option)
-        (value_binding : value_binding)
+    ~(loc : location)
+    ~(modul : longident loc option)
+    (value_binding : value_binding)
     =
     let loc = { loc with loc_ghost = true } in
     match ignores_at_least_1_subpattern value_binding.pvb_pat with
@@ -238,8 +238,8 @@ module Arr : Ext = struct
 
   let wrap_expansion
     :  loc:location -> modul:longident loc option -> value_binding list -> expression
-      -> expand:(loc:location -> value_binding list -> expression -> expression)
-      -> expression
+    -> expand:(loc:location -> value_binding list -> expression -> expression)
+    -> expression
     =
     fun ~loc ~modul value_bindings expression ~expand ->
     let value_bindings =

@@ -4,12 +4,11 @@ module Validated = Validated
 open! Core
 open! Import
 
-
 type ('input, 'result, 'parsed) t =
   default:'parsed
   -> ( 'input
      , ('result Or_error.t Product.With_view.t, 'parsed) Product.t )
-       Bonsai.Arrow_deprecated.t
+     Bonsai.Arrow_deprecated.t
 
 val text_input : default:string -> (_, string Product.Same.t) Bonsai.Arrow_deprecated.t
 

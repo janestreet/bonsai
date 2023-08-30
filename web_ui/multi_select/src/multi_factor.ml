@@ -1,8 +1,8 @@
 open! Core
 open! Import
-open  Multi_factor_intf
+open Multi_factor_intf
 
-module type S   = S
+module type S = S
 module type Key = Key
 
 module Make (Item : Single_factor.Item) (Key : Key) = struct
@@ -12,7 +12,7 @@ module Make (Item : Single_factor.Item) (Key : Key) = struct
     module Action = struct
       type t =
         | Cycle_focused_subwidget of [ `Next | `Prev ]
-        | Set_focused_subwidget   of Key.t
+        | Set_focused_subwidget of Key.t
       [@@deriving sexp_of]
     end
 
@@ -30,37 +30,37 @@ module Make (Item : Single_factor.Item) (Key : Key) = struct
       match (action : Action.t) with
       | Cycle_focused_subwidget `Next -> Focus_ring.next model
       | Cycle_focused_subwidget `Prev -> Focus_ring.prev model
-      | Set_focused_subwidget key     ->
+      | Set_focused_subwidget key ->
         Focus_ring.set model ~f:(fun key' -> [%compare.equal: Key.t] key key')
         |> Option.value ~default:model
     ;;
 
     let compute ~inject () model = Focus_ring.current_focus model, inject
-    let name                     = Source_code_position.to_string [%here]
+    let name = Source_code_position.to_string [%here]
   end
 
   module Action = struct
     type t =
-      | Cycle_focused_subwidget  of [ `Next | `Prev ]
-      | Set_focused_subwidget    of Key.t
-      | Subwidget_action         of Key.t * Single_factor.Action.t
+      | Cycle_focused_subwidget of [ `Next | `Prev ]
+      | Set_focused_subwidget of Key.t
+      | Subwidget_action of Key.t * Single_factor.Action.t
       | Select_on_all_subwidgets of [ `All | `None ]
     [@@deriving sexp_of]
   end
 
   type per_subwidget =
     { default_selection_status : Selection_status.t
-    ; all_items                : Item.Set.t
+    ; all_items : Item.Set.t
     }
   [@@deriving fields ~getters]
 
   module Result = struct
     type t =
-      { view             : Vdom.Node.t
+      { view : Vdom.Node.t
       ; view_for_testing : string Lazy.t
-      ; key_handler      : Vdom_keyboard.Keyboard_event_handler.t
-      ; inject           : Action.t -> unit Vdom.Effect.t
-      ; selection        : Item.Set.t Key.Map.t
+      ; key_handler : Vdom_keyboard.Keyboard_event_handler.t
+      ; inject : Action.t -> unit Vdom.Effect.t
+      ; selection : Item.Set.t Key.Map.t
       }
     [@@deriving fields ~getters]
 
@@ -127,8 +127,8 @@ module Make (Item : Single_factor.Item) (Key : Key) = struct
         let handler =
           let open Keyboard_event_handler.Handler in
           match cond with
-          | None      -> with_prevent_default f
-          | Some cond -> only_handle_if cond  f ~prevent_default:()
+          | None -> with_prevent_default f
+          | Some cond -> only_handle_if cond f ~prevent_default:()
         in
         { Keyboard_event_handler.Command.keys; description; group = None; handler }
       in
@@ -167,7 +167,7 @@ module Make (Item : Single_factor.Item) (Key : Key) = struct
         (List.map (Map.data subwidgets) ~f:(fun subwidget ->
            subwidget.inject
              (match what with
-              | `All  -> Select_all
+              | `All -> Select_all
               | `None -> Select_none)))
   ;;
 
@@ -204,8 +204,8 @@ module Make (Item : Single_factor.Item) (Key : Key) = struct
       Option.iter
         (Dom_html.getElementById_coerce id Dom_html.CoerceTo.input)
         ~f:(fun elt ->
-          elt##focus;
-          elt##select)
+        elt##focus;
+        elt##select)
   ;;
 
   let focus_elt =
@@ -237,9 +237,9 @@ module Make (Item : Single_factor.Item) (Key : Key) = struct
     let%sub single_factors =
       all_keys
       |> Set.to_map ~f:(fun key ->
-        match%sub subwidgets >>| Fn.flip Map.find key with
-        | Some input -> Computation.map (single_factor key input) ~f:Option.some
-        | None       -> Bonsai.const None)
+           match%sub subwidgets >>| Fn.flip Map.find key with
+           | Some input -> Computation.map (single_factor key input) ~f:Option.some
+           | None -> Bonsai.const None)
       |> Computation.all_map
       |> Computation.map ~f:(Map.filter_map ~f:Fn.id)
     in
@@ -265,16 +265,16 @@ module Make (Item : Single_factor.Item) (Key : Key) = struct
         ~callback
     in
     let%arr subwidgets = single_factors
-    and focus                    = focus
+    and focus = focus
     and inject_ring_focus_action = inject_focus_action
-    and id_prefix                = id_prefix in
+    and id_prefix = id_prefix in
     let inject = inject ~subwidgets ~inject_ring_focus_action in
     let selection =
       Map.map subwidgets ~f:(fun result -> result.Single_factor.Result.selected_items)
     in
-    let view             = view ~inject        ~subwidgets ~focus ~id_prefix in
-    let view_for_testing = view_for_testing    ~subwidgets ~focus            in
-    let key_handler      = key_handler ~inject ~subwidgets ~focus            in
+    let view = view ~inject ~subwidgets ~focus ~id_prefix in
+    let view_for_testing = view_for_testing ~subwidgets ~focus in
+    let key_handler = key_handler ~inject ~subwidgets ~focus in
     { Result.selection; view; view_for_testing; key_handler; inject }
   ;;
 end

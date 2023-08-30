@@ -22,11 +22,11 @@ let test_view (type a) ?customizations (module M : S with type t = a) (t : a) =
 ;;
 
 let sexp_form_handle
-      (type a)
-      ?optimize
-      ?get_vdom
-      ?customizations
-      (module M : S with type t = a)
+  (type a)
+  ?optimize
+  ?get_vdom
+  ?customizations
+  (module M : S with type t = a)
   =
   let form = Auto_generated.form (module M) ?customizations () in
   Handle.create ?optimize (form_result_spec ?get_vdom M.sexp_of_t) form
@@ -483,12 +483,12 @@ let%expect_test "custom view for time" =
         String.equal key Sexplib0.Sexp_grammar.type_name_tag
         && Sexp.equal value ([%sexp_of: string] "Core.Time_ns.Alternate_sexp.t"))
       (fun sexp ->
-         let%arr sexp = sexp in
-         let time = [%of_sexp: Time_ns.Alternate_sexp.t] sexp in
-         List.map
-           ~f:Vdom.Node.text
-           (Time_ns.to_string_abs_parts ~zone:Time_float.Zone.utc time)
-         |> Vdom.Node.pre)
+        let%arr sexp = sexp in
+        let time = [%of_sexp: Time_ns.Alternate_sexp.t] sexp in
+        List.map
+          ~f:Vdom.Node.text
+          (Time_ns.to_string_abs_parts ~zone:Time_float.Zone.utc time)
+        |> Vdom.Node.pre)
   in
   test_view
     ~customizations:[ customize_t ]
@@ -1676,33 +1676,33 @@ let%expect_test "customizing a tuple within a list" =
         String.equal key Sexplib0.Sexp_grammar.type_name_tag
         && Sexp.equal value ([%sexp_of: string] "my_pair"))
       (fun (with_tag : Sexp_grammar.grammar Sexp_grammar.with_tag Value.t) ~recurse ->
-         let%sub grammar =
-           let%arr with_tag = with_tag in
-           with_tag.grammar
-         in
-         match%sub (grammar : Sexplib0.Sexp_grammar.grammar Value.t) with
-         | List (Cons (first, Cons (second, Empty))) ->
-           let%sub first = recurse first in
-           let%sub second = recurse second in
-           let%arr first = first
-           and second = second in
-           let view =
-             Form.View.tuple
-               [ Form.view (Form.label "Key" first); Form.view (Form.label "Data" second) ]
-           in
-           let value =
-             match Or_error.both (Form.value first) (Form.value second) with
-             | Ok (first, second) -> Ok (Sexp.List [ first; second ])
-             | Error _ as err -> err
-           in
-           let set sexp =
-             match sexp with
-             | Sexp.List [ first_val; second_val ] ->
-               Effect.Many [ Form.set first first_val; Form.set second second_val ]
-             | _ -> Effect.Ignore
-           in
-           Form.Expert.create ~value ~view ~set
-         | _ -> recurse grammar)
+        let%sub grammar =
+          let%arr with_tag = with_tag in
+          with_tag.grammar
+        in
+        match%sub (grammar : Sexplib0.Sexp_grammar.grammar Value.t) with
+        | List (Cons (first, Cons (second, Empty))) ->
+          let%sub first = recurse first in
+          let%sub second = recurse second in
+          let%arr first = first
+          and second = second in
+          let view =
+            Form.View.tuple
+              [ Form.view (Form.label "Key" first); Form.view (Form.label "Data" second) ]
+          in
+          let value =
+            match Or_error.both (Form.value first) (Form.value second) with
+            | Ok (first, second) -> Ok (Sexp.List [ first; second ])
+            | Error _ as err -> err
+          in
+          let set sexp =
+            match sexp with
+            | Sexp.List [ first_val; second_val ] ->
+              Effect.Many [ Form.set first first_val; Form.set second second_val ]
+            | _ -> Effect.Ignore
+          in
+          Form.Expert.create ~value ~view ~set
+        | _ -> recurse grammar)
   in
   let handle =
     sexp_form_handle

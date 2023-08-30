@@ -34,9 +34,9 @@ is_open: %{is_open#Bool}
 
   let incoming (_, { Popover.Result.open_; close; wrap = _; toggle; is_open = _ })
     = function
-      | Open_close.Open -> open_
-      | Close -> close
-      | Toggle -> toggle
+    | Open_close.Open -> open_
+    | Close -> close
+    | Toggle -> toggle
   ;;
 end
 
@@ -252,7 +252,7 @@ let%expect_test "Opening from base and closing from dialog" =
         ()
     in
     let%arr ({ Popover.Result.wrap; open_; close = _; toggle = _; is_open = _ } as
-             popover)
+            popover)
       =
       popover
     in
@@ -322,18 +322,18 @@ let%expect_test "Opening from returned effect and closing by clicking outside." 
         ~hook_name:"global-contextmenu-listener"
         ~hook_id:Vdom.Attr.Global_listeners.For_testing.contextmenu_type_id
     ; (fun handle ->
-         let fake_event =
-           object%js
-             val key = Js_of_ocaml.Js.string "Escape"
-           end
-         in
-         Handle.trigger_hook
-           handle
-           ~get_vdom
-           ~selector:[%string "[data-test=%{id}]"]
-           ~name:"global-keydown-listener"
-           Vdom.Attr.Global_listeners.For_testing.keydown_type_id
-           (Js_of_ocaml.Js.Unsafe.coerce fake_event))
+        let fake_event =
+          object%js
+            val key = Js_of_ocaml.Js.string "Escape"
+          end
+        in
+        Handle.trigger_hook
+          handle
+          ~get_vdom
+          ~selector:[%string "[data-test=%{id}]"]
+          ~name:"global-keydown-listener"
+          Vdom.Attr.Global_listeners.For_testing.keydown_type_id
+          (Js_of_ocaml.Js.Unsafe.coerce fake_event))
     ]
   in
   List.iter hook_triggers ~f:(fun trigger_hook ->
@@ -342,7 +342,7 @@ let%expect_test "Opening from returned effect and closing by clicking outside." 
         Popover.component
           ~popover_extra_attr:(Value.return (Vdom.Attr.create "data-test" id))
           ~close_when_clicked_outside:true
-          (* NOTE: [close_when_clicked_outside] is set to true. *)
+            (* NOTE: [close_when_clicked_outside] is set to true. *)
           ~direction:(Value.return Popover.Direction.Right)
           ~alignment:(Value.return Popover.Alignment.Center)
           ~popover:(fun ~close:_ -> Bonsai.const (View.text "Popover content!"))
@@ -610,11 +610,11 @@ let%test_module "interactions with [with_model_resetter]" =
       ;;
 
       let incoming
-            (_, { Popover.Result.open_; close; wrap = _; toggle = _; is_open = _ }, reset)
+        (_, { Popover.Result.open_; close; wrap = _; toggle = _; is_open = _ }, reset)
         = function
-          | Open -> open_
-          | Close -> close
-          | Reset -> reset
+        | Open -> open_
+        | Close -> close
+        | Reset -> reset
       ;;
     end
 

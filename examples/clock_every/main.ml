@@ -4,9 +4,9 @@ open Bonsai.Let_syntax
 module Form = Bonsai_web_ui_form
 
 module Css =
-  [%css
-    stylesheet
-      {|
+[%css
+stylesheet
+  {|
 html, body {
   font-family: 'Open Sans', sans-serif;
 }
@@ -338,12 +338,12 @@ let timeline ~now ~(tracks : Bar.t Fdeque.t Track_id.Map.t Value.t) =
 ;;
 
 let clock
-      ~trigger_on_activate
-      ~when_to_start_next_effect
-      ~title
-      ~description
-      ~wait_time
-      ~delta_time:now
+  ~trigger_on_activate
+  ~when_to_start_next_effect
+  ~title
+  ~description
+  ~wait_time
+  ~delta_time:now
   =
   let%sub next_bar_id = Bar_id.component in
   let%sub { tracks; last_trigger_time; _ }, update_tracks =

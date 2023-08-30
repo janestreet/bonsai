@@ -10,7 +10,7 @@ let components =
   let%arr selected, control, (_ : String.Set.t -> unit Ui_effect.t) = control in
   let have_you_selected_something =
     match Set.to_list selected with
-    | []       -> Vdom.Node.none
+    | [] -> Vdom.Node.none
     | selected ->
       Vdom.Node.p
         [ Vdom.Node.text ("You've selected: " ^ String.concat ~sep:", " selected) ]

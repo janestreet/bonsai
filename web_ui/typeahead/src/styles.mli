@@ -13,10 +13,10 @@ val full_width : Css_gen.t
 
 (** [typeahead] is used for applying styles to input typeahead elements which should be styled
     in a manner consistent with Jane_web_style but aren't. *)
-val typeahead  : Css_gen.t
+val typeahead : Css_gen.t
 
 (** [pill] and [pill_container] are used to style the pills used to display choices made by the user
     in the multiselect. *)
-val pill       : Css_gen.t
+val pill : Css_gen.t
 
 val pill_container : Css_gen.t

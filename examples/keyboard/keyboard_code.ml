@@ -1,7 +1,6 @@
 open! Core
 include Js_of_ocaml.Dom_html.Keyboard_code
 
-
 type nonrec t = t =
   | Unidentified
   | KeyA

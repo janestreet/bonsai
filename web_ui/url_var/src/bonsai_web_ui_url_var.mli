@@ -16,7 +16,6 @@ module Components : sig
     -> unit
     -> t
 
-
   (** Creates a URI with the the path, query, and fragment added to the URI. *)
   val to_path_and_query : t -> Uri.t
 

@@ -99,9 +99,9 @@ module Handle : sig
     -> ('result, 'incoming) t
 
   val show_model : _ t -> unit
-  [@@alert
-    rampantly_nondeterministic
-      "This function exposes Bonsai internals that may change without warning"]
+    [@@alert
+      rampantly_nondeterministic
+        "This function exposes Bonsai internals that may change without warning"]
 
   val result_incr : ('r, 'i) t -> 'r Incr.t
   val lifecycle_incr : _ t -> Incr.Packed.t

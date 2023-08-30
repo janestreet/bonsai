@@ -1,6 +1,6 @@
 open! Core
-open  Import
-open  Gen_js_api
+open Import
+open Gen_js_api
 
 (** Dygraphs returns "raw html" as strings in some callbacks (see [Legend_data] and
     [legendFormatter]).  We mint this type so that the types make it more clear which

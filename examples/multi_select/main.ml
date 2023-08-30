@@ -16,7 +16,7 @@ module Attribute = struct
   include Comparable.Make (T)
 
   let name_singular = "attribute"
-  let name_plural   = "attributes"
+  let name_plural = "attributes"
 end
 
 module Widget = Bonsai_web_ui_multi_select.Multi_factor.Make (String) (Attribute)
@@ -24,14 +24,14 @@ module Widget = Bonsai_web_ui_multi_select.Multi_factor.Make (String) (Attribute
 let subwidgets =
   Attribute.all
   |> List.map ~f:(fun attr ->
-    let all_items =
-      String.Set.of_list
-        (match attr with
-         | Name       -> [ "Henry VIII"; "Bill Gates"; "Alan Turing"; "Ada Lovelace" ]
-         | Department -> [ "Tech"; "The Tudor Court" ]
-         | Office     -> [ "LDN"; "NYC"; "HKG" ])
-    in
-    attr, { Widget.default_selection_status = Selected; all_items })
+       let all_items =
+         String.Set.of_list
+           (match attr with
+            | Name -> [ "Henry VIII"; "Bill Gates"; "Alan Turing"; "Ada Lovelace" ]
+            | Department -> [ "Tech"; "The Tudor Court" ]
+            | Office -> [ "LDN"; "NYC"; "HKG" ])
+       in
+       attr, { Widget.default_selection_status = Selected; all_items })
   |> Attribute.Map.of_alist_exn
   |> Value.return
 ;;

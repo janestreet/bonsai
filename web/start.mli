@@ -113,9 +113,8 @@ module Arrow_deprecated : sig
     -> bind_to_element_with_id:string
     -> ( ('input, 'outgoing) App_input.t
        , ('extra, 'incoming) App_result.t )
-         Bonsai.Arrow_deprecated.t
+       Bonsai.Arrow_deprecated.t
     -> ('input, 'extra, 'incoming, 'outgoing) Handle.t
-
 end
 
 module Proc : sig
@@ -174,9 +173,9 @@ module Proc : sig
 
     type ('result, 'extra, 'incoming) t =
       (module S
-        with type t = 'result
-         and type extra = 'extra
-         and type incoming = 'incoming)
+         with type t = 'result
+          and type extra = 'extra
+          and type incoming = 'incoming)
 
     (** This module can be [include]d in an implementation of [Result_spec.S] where the
         result doesn't contain any [extra] output. *)

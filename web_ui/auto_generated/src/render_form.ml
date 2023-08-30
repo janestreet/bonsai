@@ -7,9 +7,9 @@ module Form_view = Form.View
 
 module Tooltip = struct
   module Style =
-    [%css
-      stylesheet
-        {|
+  [%css
+  stylesheet
+    {|
         .container {
           position: relative;
           display: inline-block;
@@ -45,16 +45,16 @@ module Tooltip = struct
 end
 
 module Style =
-  [%css
-    stylesheet
-      ~rewrite:
-        [ "--font-family", "--font-family"
-        ; "--font-size", "--font-size"
-        ; "--accent-h", "--accent-h"
-        ; "--accent-s", "--accent-s"
-        ; "--accent-l", "--accent-l"
-        ]
-      {|
+[%css
+stylesheet
+  ~rewrite:
+    [ "--font-family", "--font-family"
+    ; "--font-size", "--font-size"
+    ; "--accent-h", "--accent-h"
+    ; "--accent-s", "--accent-s"
+    ; "--accent-l", "--accent-l"
+    ]
+  {|
       .form {
         --font-size: 12px;
         --font-family: monospace;
@@ -264,9 +264,9 @@ let with_auto_generated_forms ~theme =
             else rest
 
           method! form_raw
-                  ~eval_context
-                  ~view_context
-                  ({ unique_key; raw_view } : Form_view.raw) =
+            ~eval_context
+            ~view_context
+            ({ unique_key; raw_view } : Form_view.raw) =
             let view_context =
               { view_context with
                 label =
@@ -305,9 +305,9 @@ let with_auto_generated_forms ~theme =
             else rest
 
           method! form_variant
-                  ~eval_context
-                  ~view_context
-                  ({ clause_selector; selected_clause } : Form_view.variant) =
+            ~eval_context
+            ~view_context
+            ({ clause_selector; selected_clause } : Form_view.variant) =
             let eval_context = Form_context.incr_depth eval_context in
             let rest =
               match selected_clause with
@@ -321,9 +321,9 @@ let with_auto_generated_forms ~theme =
             ]
 
           method! form_option
-                  ~eval_context
-                  ~view_context
-                  ({ toggle; status } : Form_view.option_view) =
+            ~eval_context
+            ~view_context
+            ({ toggle; status } : Form_view.option_view) =
             let eval_context = Form_context.incr_depth eval_context in
             let rest =
               match status with
@@ -335,10 +335,10 @@ let with_auto_generated_forms ~theme =
             [ Node.tr [ label; Node.td [ toggle ] ]; nested_table eval_context rest ]
 
           method! form_list
-                  ~eval_context
-                  ~view_context
-                  ({ list_items; append_item; legacy_button_position = _ } :
-                     Form_view.list_view) =
+            ~eval_context
+            ~view_context
+            ({ list_items; append_item; legacy_button_position = _ } :
+              Form_view.list_view) =
             let header_is_inhabited = header_is_inhabited view_context in
             let eval_context =
               if header_is_inhabited

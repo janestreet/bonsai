@@ -2,9 +2,9 @@ open! Core
 open Import
 
 module Style =
-  [%css
-    stylesheet
-      {|
+[%css
+stylesheet
+  {|
         .clear_fieldset_styles {
           border: 0;
           margin: 0;

@@ -62,7 +62,6 @@ val project_target
     dragged value to the input ['source_id]. *)
 val source : ('source_id, 'target_id) t -> id:'source_id -> Vdom.Attr.t
 
-
 (** While this attribute does nothing while the app is running, it facilitates
     testing by allowing tests to directly change the state of the universe. *)
 val sentinel : ('source_id, 'target_id) t -> name:string -> Vdom.Attr.t

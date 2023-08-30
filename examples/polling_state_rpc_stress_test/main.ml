@@ -35,13 +35,13 @@ let component =
       ~sexp_of_action:[%sexp_of: [ `Add | `Remove of int ]]
       ~default_model:(0, Int.Map.empty)
       ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) (last_index, map) action ->
-        match action with
-        | `Add ->
-          let map =
-            if Map.length map > 100 then Map.remove map (fst (Map.min_elt_exn map)) else map
-          in
-          last_index + 1, Map.set map ~key:last_index ~data:()
-        | `Remove i -> last_index, Map.remove map i)
+      match action with
+      | `Add ->
+        let map =
+          if Map.length map > 100 then Map.remove map (fst (Map.min_elt_exn map)) else map
+        in
+        last_index + 1, Map.set map ~key:last_index ~data:()
+      | `Remove i -> last_index, Map.remove map i)
   in
   let%sub items =
     Bonsai.assoc
@@ -86,11 +86,11 @@ let implementation =
   let t = ref { T.data = Int.Map.empty } in
   let implementation _ query =
     t
-    := { T.data =
-           Map.update !t.data (query % 100) ~f:(function
-             | Some count -> count + 1
-             | None -> 0)
-       };
+      := { T.data =
+             Map.update !t.data (query % 100) ~f:(function
+               | Some count -> count + 1
+               | None -> 0)
+         };
     Deferred.return { T.data = Map.map !t.data ~f:Fn.id }
   in
   Polling_state_rpc.implement

@@ -411,8 +411,8 @@ let%expect_test "removing an item should shift the rank of everything else" =
       ~sentinel_name:"dnd"
       ~default_item_height:1
       (fun ~index ~source:_ _ ->
-         let%arr index = index in
-         index, Vdom.Node.None)
+        let%arr index = index in
+        index, Vdom.Node.None)
   in
   let handle =
     Handle.create

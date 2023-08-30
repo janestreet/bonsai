@@ -10,7 +10,7 @@ let csp =
   Csp_monoid.reduce
     [ Csp_monoid.default_for_clientside
     ; Csp_monoid.frame_ancestor "https://localhost:*"
-    (* allow to be iframed in localhost addresses for local dev *)
+      (* allow to be iframed in localhost addresses for local dev *)
     ; Csp_monoid.frame_ancestor "https://bonsai:*"
       (* allow to be iframed in https://bonsai/ *)
     ]

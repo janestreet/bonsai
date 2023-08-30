@@ -83,8 +83,8 @@ module Accumulated_measurement = struct
   [@@deriving sexp]
 
   let compare
-        { kind; total_duration; _ }
-        { kind = kind'; total_duration = total_duration'; _ }
+    { kind; total_duration; _ }
+    { kind = kind'; total_duration = total_duration'; _ }
     =
     match kind, kind' with
     | Named _, Named _ -> Float.descending total_duration total_duration'
@@ -135,12 +135,12 @@ let create_snapshot_table data ~incremental_time =
     ; Column.create
         "Total time (ms)"
         (fun { Accumulated_measurement.total_duration; _ } ->
-           Float.to_string total_duration)
+        Float.to_string total_duration)
     ; Column.create
         "Percent of incremental time"
         (fun { Accumulated_measurement.total_duration; _ } ->
-           Percent.Always_percentage.to_string
-             (Percent.of_percentage (total_duration /. incremental_time *. 100.)))
+        Percent.Always_percentage.to_string
+          (Percent.of_percentage (total_duration /. incremental_time *. 100.)))
     ]
   in
   to_string_noattr columns data ~limit_width_to:Int.max_value ~bars:`Unicode
@@ -177,8 +177,8 @@ let print_statistics data =
 ;;
 
 let accumulate_measurements
-      ~(source_locations : Graph_info.Node_info.t Bonsai.Private.Node_path.Map.t)
-      measurements
+  ~(source_locations : Graph_info.Node_info.t Bonsai.Private.Node_path.Map.t)
+  measurements
   =
   let with_ids, without_ids =
     List.map measurements ~f:(fun measurement ->
@@ -199,14 +199,14 @@ let accumulate_measurements
     |> List.fold
          ~init:(Int.Map.empty, Measurement.Kind.Map.empty)
          ~f:(fun (with_ids, without_ids) measurement ->
-           let accumulate_measurements = function
-             | None -> Accumulated_measurement.of_measurement measurement
-             | Some accumulated -> Accumulated_measurement.add accumulated ~measurement
-           in
-           match measurement.id with
-           | None ->
-             with_ids, Map.update without_ids measurement.kind ~f:accumulate_measurements
-           | Some id -> Map.update with_ids id ~f:accumulate_measurements, without_ids)
+         let accumulate_measurements = function
+           | None -> Accumulated_measurement.of_measurement measurement
+           | Some accumulated -> Accumulated_measurement.add accumulated ~measurement
+         in
+         match measurement.id with
+         | None ->
+           with_ids, Map.update without_ids measurement.kind ~f:accumulate_measurements
+         | Some id -> Map.update with_ids id ~f:accumulate_measurements, without_ids)
   in
   Map.fold without_ids ~init:with_ids ~f:(fun ~key:_ ~data:measurement acc ->
     let id =
@@ -258,7 +258,7 @@ let profile (T { clock; component; get_inject; interaction; name } : Config.t) =
             let label = Js.to_string entry##.name in
             let duration = entry##.duration in
             performance_entries
-            := Measurement.create ~label ~duration :: !performance_entries))
+              := Measurement.create ~label ~duration :: !performance_entries))
     else
       failwith
         "PerformanceObserver could not be found. Please reach out to webdev-public on \
@@ -275,10 +275,10 @@ let profile (T { clock; component; get_inject; interaction; name } : Config.t) =
       ~wrap_driver_creation:
         { f =
             (fun create_driver ->
-               Measurement.mark_before Startup;
-               let driver = create_driver () in
-               Measurement.mark_after_and_measure Startup;
-               driver)
+              Measurement.mark_before Startup;
+              let driver = create_driver () in
+              Measurement.mark_after_and_measure Startup;
+              driver)
         }
       ~clock
       ~component

@@ -34,7 +34,7 @@ let component =
       ~sexp_of_action:[%sexp_of: Unit.t]
       ~default_model:0
       ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) index () ->
-        (index + 1) mod generation_count)
+      (index + 1) mod generation_count)
   in
   let%arr form = form
   and view = view

@@ -6,8 +6,8 @@ module Form = Bonsai_web_ui_form
 module Style = struct
   include
     [%css
-      stylesheet
-        {|
+    stylesheet
+      {|
       .main {
         padding: 24px;
         display: flex;

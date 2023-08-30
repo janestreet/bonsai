@@ -44,11 +44,11 @@ module Scroll_tracker = struct
         let vertical = target##.scrollHeight > target##.clientHeight in
         let horizontal = target##.scrollWidth > target##.clientWidth in
         state.scrollable
-        <- (match vertical, horizontal with
-          | true, true -> Both
-          | true, false -> Vertical
-          | false, true -> Horizontal
-          | false, false -> Neither);
+          <- (match vertical, horizontal with
+              | true, true -> Both
+              | true, false -> Vertical
+              | false, true -> Horizontal
+              | false, false -> Neither);
         state.callback ~scrollable:state.scrollable
       in
       ()

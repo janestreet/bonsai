@@ -22,12 +22,12 @@ let diff_paths a b =
 ;;
 
 let expect_output_and_identity_roundtrip
-      ?(expect_diff = fun () -> ())
-      ~path
-      ~query
-      ~sexp_of_t
-      ~expect
-      (projection : (Components.t, 'a Parse_result.t) Projection.t)
+  ?(expect_diff = fun () -> ())
+  ~path
+  ~query
+  ~sexp_of_t
+  ~expect
+  (projection : (Components.t, 'a Parse_result.t) Projection.t)
   =
   let result = projection.parse_exn { query; path } in
   print_s (sexp_of_t result.result);
@@ -149,13 +149,13 @@ module All_primitives_query = struct
 end
 
 let assert_is_equal_and_eval
-      ~(old_eval :
-          ?encoding_behavior:Percent_encoding_behavior.t
-        -> 'a
-        -> ('b, 'c Parse_result.t) Projection.t)
-      ~equal_from
-      ~equal
-      parser
+  ~(old_eval :
+      ?encoding_behavior:Percent_encoding_behavior.t
+      -> 'a
+      -> ('b, 'c Parse_result.t) Projection.t)
+  ~equal_from
+  ~equal
+  parser
   =
   let incorrect_projection =
     old_eval ~encoding_behavior:Percent_encoding_behavior.Legacy_incorrect parser
@@ -252,8 +252,8 @@ let%expect_test "all primitives parser" =
     ~query
     ~sexp_of_t:Query.sexp_of_t
     ~expect:(fun () ->
-      [%expect
-        {|
+    [%expect
+      {|
    ((int_field 10) (float_field 1.25) (string_field hi!) (bool_field true)
     (stringable_field Bonsai) (sexpable_field ((x 1) (y 2)))
     (binable_field ((a 1) (b 2) (c 3)))
@@ -461,7 +461,7 @@ let%expect_test "from_query_many can parse empty list options from missing query
     ~query:String.Map.empty
     ~sexp_of_t:Url.sexp_of_t
     ~expect:(fun () -> (* Some []*)
-      [%expect {|
+                       [%expect {|
    ((strings (()))) |}])
 ;;
 
@@ -641,7 +641,7 @@ let%expect_test "Value parser project" =
     ~query
     ~sexp_of_t:Query.sexp_of_t
     ~expect:(fun () ->
-      [%expect {|
+    [%expect {|
         ((game_id 10) (players (foo bar)) (watchers (baz bam))) |}]);
   show_structure parser;
   [%expect
@@ -1156,7 +1156,7 @@ let%test_module "quickcheck" =
             ; int_list_field : int list
             ; float_list_field :
                 (float list
-                 [@quickcheck.generator Generator.list Generator.float_without_nan])
+                [@quickcheck.generator Generator.list Generator.float_without_nan])
             ; sexpable : Point.t
             ; stringable : Player_id.t
             ; nested : Point.t
@@ -1208,8 +1208,8 @@ let%test_module "quickcheck" =
             bool_generator
             remaining_generator
             ~f:(fun int_ bool_ remaining ->
-              [ "main"; "path_int"; Int.to_string int_; Bool.to_string bool_; "remaining" ]
-              @ List.map remaining ~f:Int.to_string)
+            [ "main"; "path_int"; Int.to_string int_; Bool.to_string bool_; "remaining" ]
+            @ List.map remaining ~f:Int.to_string)
         ;;
 
         module Path_order = Path_order (Typed_field)
@@ -1269,32 +1269,32 @@ let%test_module "quickcheck" =
         let equal_values_for_field
           : type a. a Typed_field.t -> (string list -> string list -> bool) option
           = function
-            | Int_field -> Some string_list_equal
-            | Time_ns_field -> Some string_list_equal
-            | Int_list_field -> Some string_list_equal
-            | Float_list_field -> Some string_list_equal
-            | Sexpable -> Some string_list_equal
-            | Stringable -> Some string_list_equal
-            | Nested -> None
-            | List_projection -> Some string_list_equal
-            | Int_list_with_fallback ->
-              (* This equality function is weird, but it makes
+          | Int_field -> Some string_list_equal
+          | Time_ns_field -> Some string_list_equal
+          | Int_list_field -> Some string_list_equal
+          | Float_list_field -> Some string_list_equal
+          | Sexpable -> Some string_list_equal
+          | Stringable -> Some string_list_equal
+          | Nested -> None
+          | List_projection -> Some string_list_equal
+          | Int_list_with_fallback ->
+            (* This equality function is weird, but it makes
 
                  ["1"; "not an int"; "3"; "4"] equal to ["1"; "100"; "3"; "4"]
 
                  which is useful to make check that the fallback did its work!
               *)
-              Some
-                (List.equal (fun a b ->
-                   match is_int_string a with
-                   | true ->
-                     (* This fixes strings that happen to be ints with leading 0's (e.g. "05") *)
-                     String.equal (Int.of_string a |> Int.to_string) b
-                   | false -> String.equal (Int.to_string fallback_value) b))
-            | At_least_one_int -> Some string_list_equal
-            | Path_int -> None
-            | Path_bool_without_name -> None
-            | Remaining_path -> None
+            Some
+              (List.equal (fun a b ->
+                 match is_int_string a with
+                 | true ->
+                   (* This fixes strings that happen to be ints with leading 0's (e.g. "05") *)
+                   String.equal (Int.of_string a |> Int.to_string) b
+                 | false -> String.equal (Int.to_string fallback_value) b))
+          | At_least_one_int -> Some string_list_equal
+          | Path_int -> None
+          | Path_bool_without_name -> None
+          | Remaining_path -> None
         ;;
       end
 
@@ -1327,14 +1327,14 @@ let%test_module "quickcheck" =
             Query.Anon_main.Typed_field.Packed.all
             ~init:(Generator.return String.Map.empty)
             ~f:(fun acc { f = T f } ->
-              match Query.Anon_main.generator_for_field f with
-              | None -> acc
-              | Some generator ->
-                Generator.map2 acc generator ~f:(fun acc field_generator ->
-                  Map.set
-                    acc
-                    ~key:(Query.Anon_main.Typed_field.name f)
-                    ~data:field_generator))
+            match Query.Anon_main.generator_for_field f with
+            | None -> acc
+            | Some generator ->
+              Generator.map2 acc generator ~f:(fun acc field_generator ->
+                Map.set
+                  acc
+                  ~key:(Query.Anon_main.Typed_field.name f)
+                  ~data:field_generator))
         in
         let x_generator = Generator.int >>| fun x -> [ Int.to_string x ] in
         let y_generator = Generator.int >>| fun x -> [ Int.to_string x ] in
@@ -1375,11 +1375,11 @@ let%test_module "quickcheck" =
           Query.Anon_main.Typed_field.Packed.all
           ~init:String.Map.empty
           ~f:(fun acc { f = T f } ->
-            let key = Query.Anon_main.Typed_field.name f in
-            let equal = Query.Anon_main.equal_values_for_field f in
-            match equal with
-            | None -> acc
-            | Some equal -> Map.set acc ~key ~data:equal)
+          let key = Query.Anon_main.Typed_field.name f in
+          let equal = Query.Anon_main.equal_values_for_field f in
+          match equal with
+          | None -> acc
+          | Some equal -> Map.set acc ~key ~data:equal)
       in
       Map.for_alli
         (unparsed : _ String.Map.t)
@@ -1405,16 +1405,16 @@ let%test_module "quickcheck" =
 
     let%quick_test "attempt to parse generated queries" =
       fun ((query, path) :
-             (string list String.Map.t * string list
-              [@generator generator] [@shrinker Shrinker.atomic])) ->
-        let parser = Parser.Variant.make ~namespace:[] (module Query) in
-        let projection = Parser.eval ~equal:[%equal: Query.t] parser in
-        let result = projection.parse_exn { query; path } in
-        let { Components.query = unparsed_query; path = unparsed_path } =
-          projection.unparse result
-        in
-        assert (maps_equal query unparsed_query);
-        assert (List.equal String.equal unparsed_path path)
+            (string list String.Map.t * string list
+            [@generator generator] [@shrinker Shrinker.atomic])) ->
+      let parser = Parser.Variant.make ~namespace:[] (module Query) in
+      let projection = Parser.eval ~equal:[%equal: Query.t] parser in
+      let result = projection.parse_exn { query; path } in
+      let { Components.query = unparsed_query; path = unparsed_path } =
+        projection.unparse result
+      in
+      assert (maps_equal query unparsed_query);
+      assert (List.equal String.equal unparsed_path path)
     ;;
   end)
 ;;
@@ -2845,39 +2845,39 @@ let%expect_test "/library, /library/nyc, library/nyc/book, library/nyc/book/dune
     ~query:String.Map.empty
     ~sexp_of_t:Url.sexp_of_t
     ~expect:(fun () ->
-      [%expect {| (Library_page (library_name nyc) (library_contents Content_search)) |}]);
+    [%expect {| (Library_page (library_name nyc) (library_contents Content_search)) |}]);
   expect_output_and_identity_roundtrip
     projection
     ~path:[ "library"; "nyc"; "book" ]
     ~query:String.Map.empty
     ~sexp_of_t:Url.sexp_of_t
     ~expect:(fun () ->
-      [%expect
-        {| (Library_page (library_name nyc) (library_contents (Book Book_search))) |}]);
+    [%expect
+      {| (Library_page (library_name nyc) (library_contents (Book Book_search))) |}]);
   expect_output_and_identity_roundtrip
     projection
     ~path:[ "library"; "nyc"; "book"; "dune" ]
     ~query:String.Map.empty
     ~sexp_of_t:Url.sexp_of_t
     ~expect:(fun () ->
-      [%expect
-        {| (Library_page (library_name nyc) (library_contents (Book (Book_view dune)))) |}]);
+    [%expect
+      {| (Library_page (library_name nyc) (library_contents (Book (Book_view dune)))) |}]);
   expect_output_and_identity_roundtrip
     projection
     ~path:[ "library"; "nyc"; "movie" ]
     ~query:String.Map.empty
     ~sexp_of_t:Url.sexp_of_t
     ~expect:(fun () ->
-      [%expect
-        {| (Library_page (library_name nyc) (library_contents (Movie Movie_search))) |}]);
+    [%expect
+      {| (Library_page (library_name nyc) (library_contents (Movie Movie_search))) |}]);
   expect_output_and_identity_roundtrip
     projection
     ~path:[ "library"; "nyc"; "movie"; "dune" ]
     ~query:String.Map.empty
     ~sexp_of_t:Url.sexp_of_t
     ~expect:(fun () ->
-      [%expect
-        {|
+    [%expect
+      {|
       (Library_page (library_name nyc)
        (library_contents (Movie (Movie_view dune)))) |}])
 ;;

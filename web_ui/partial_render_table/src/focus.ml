@@ -59,7 +59,7 @@ module Row_machine = struct
       collated
       |> Collated.to_map_list
       |> Map.iter ~f:(fun (key, _) ->
-        if f ~key ~index:!i then return { Triple.key; index = !i } else Int.incr i))
+           if f ~key ~index:!i then return { Triple.key; index = !i } else Int.incr i))
   ;;
 
   let find_by_key collated ~key:needle ~key_equal =
@@ -90,13 +90,13 @@ module Row_machine = struct
   end
 
   let component
-        (type key data cmp presence)
-        (key : (key, cmp) Bonsai.comparator)
-        ~(compute_presence : key option Value.t -> presence Computation.t)
-        ~(on_change : (key option -> unit Effect.t) Value.t)
-        ~(collated : (key, data) Incr_map_collate.Collated.t Value.t)
-        ~(range : (int * int) Value.t)
-        ~(scroll_to_index : (int -> unit Effect.t) Value.t)
+    (type key data cmp presence)
+    (key : (key, cmp) Bonsai.comparator)
+    ~(compute_presence : key option Value.t -> presence Computation.t)
+    ~(on_change : (key option -> unit Effect.t) Value.t)
+    ~(collated : (key, data) Incr_map_collate.Collated.t Value.t)
+    ~(range : (int * int) Value.t)
+    ~(scroll_to_index : (int -> unit Effect.t) Value.t)
     : ((key, presence) By_row.t, key) t Computation.t
     =
     let module Key = struct
@@ -356,9 +356,9 @@ let get_focused (type r presence k)
 ;;
 
 let get_on_row_click
-      (type r presence k)
-      (kind : (r, presence, k) Kind.t)
-      (value : r Value.t)
+  (type r presence k)
+  (kind : (r, presence, k) Kind.t)
+  (value : r Value.t)
   : (k -> unit Effect.t) Value.t
   =
   match kind with

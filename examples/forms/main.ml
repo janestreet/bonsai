@@ -2,9 +2,9 @@ open! Core
 open! Bonsai_web
 
 module Style =
-  [%css
-    stylesheet
-      {|
+[%css
+stylesheet
+  {|
 .container {
   display: flex;
   flex-flow: row nowrap;

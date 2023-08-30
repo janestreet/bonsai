@@ -139,21 +139,21 @@ let default_score_choice item_to_string ~input_text item =
 ;;
 
 let create
-      (type item)
-      (module Item : Item with type t = item)
-      ?(max_query_results = 10)
-      ?(additional_query_results_on_click = 10)
-      ?(width = Css_gen.Length.percent100)
-      ?placeholder:(placeholder_ = "")
-      ?(initial_query = "")
-      ?(wrap_search_bar = Fn.id)
-      ?(autocomplete_item = default_autocomplete_item Item.to_string)
-      ?(filter_choice = default_filter_choice Item.to_string)
-      ?(score_choice = default_score_choice Item.to_string)
-      ?(of_string = Fn.const None)
-      ?(extra_textbox_attr = Vdom.Attr.empty)
-      ()
-      input
+  (type item)
+  (module Item : Item with type t = item)
+  ?(max_query_results = 10)
+  ?(additional_query_results_on_click = 10)
+  ?(width = Css_gen.Length.percent100)
+  ?placeholder:(placeholder_ = "")
+  ?(initial_query = "")
+  ?(wrap_search_bar = Fn.id)
+  ?(autocomplete_item = default_autocomplete_item Item.to_string)
+  ?(filter_choice = default_filter_choice Item.to_string)
+  ?(score_choice = default_score_choice Item.to_string)
+  ?(of_string = Fn.const None)
+  ?(extra_textbox_attr = Vdom.Attr.empty)
+  ()
+  input
   =
   let%sub model, inject =
     let module M = struct
@@ -175,40 +175,40 @@ let create
           (t : item Model.t)
           (action : Action.t)
           ->
-            match input with
-            | Active input ->
-              (match (action : Action.t) with
-               | Set_text_input query ->
-                 Model.set_text_input
-                   ~all_choices:(Input.choices input)
-                   t
-                   query
-                   ~score_choice
-                   ~filter_choice
-               | Bump_focused_autocomplete_result direction ->
-                 Model.bump_focused_autocomplete_result t direction
-               | Clear_focused_autocomplete_result -> Model.clear_focused_autocomplete_result t
-               | Set_focused_autocomplete_result i -> Model.set_focused_autocomplete_result t i
-               | Close_autocomplete_box -> Model.close_autocomplete_box t
-               | Clear_input -> Model.clear_input t ~max_query_results
-               | Set_num_query_results_to_show i -> Model.set_num_query_results_to_show t i
-               | On_focus ->
-                 Model.set_text_input
-                   ~all_choices:(Input.choices input)
-                   t
-                   (Model.query t)
-                   ~score_choice
-                   ~filter_choice
-               | On_blur -> Model.hide_autocomplete t)
-            | Inactive ->
-              eprint_s
-                [%message
-                  [%here]
-                    "An action sent to a [state_machine1] has been dropped because its input \
-                     was not present. This happens when the [state_machine1] is inactive when \
-                     it receives a message."
-                    (action : Action.t)];
-              t)
+      match input with
+      | Active input ->
+        (match (action : Action.t) with
+         | Set_text_input query ->
+           Model.set_text_input
+             ~all_choices:(Input.choices input)
+             t
+             query
+             ~score_choice
+             ~filter_choice
+         | Bump_focused_autocomplete_result direction ->
+           Model.bump_focused_autocomplete_result t direction
+         | Clear_focused_autocomplete_result -> Model.clear_focused_autocomplete_result t
+         | Set_focused_autocomplete_result i -> Model.set_focused_autocomplete_result t i
+         | Close_autocomplete_box -> Model.close_autocomplete_box t
+         | Clear_input -> Model.clear_input t ~max_query_results
+         | Set_num_query_results_to_show i -> Model.set_num_query_results_to_show t i
+         | On_focus ->
+           Model.set_text_input
+             ~all_choices:(Input.choices input)
+             t
+             (Model.query t)
+             ~score_choice
+             ~filter_choice
+         | On_blur -> Model.hide_autocomplete t)
+      | Inactive ->
+        eprint_s
+          [%message
+            [%here]
+              "An action sent to a [state_machine1] has been dropped because its input \
+               was not present. This happens when the [state_machine1] is inactive when \
+               it receives a message."
+              (action : Action.t)];
+        t)
   in
   let%sub on_select_item =
     let%arr inject = inject
@@ -236,12 +236,12 @@ let create
         [ Vdom.Attr.(
             on_click (fun _ -> on_select_item item)
             @ on_mouseover (fun _ ->
-              inject (Action.Set_focused_autocomplete_result index))
+                inject (Action.Set_focused_autocomplete_result index))
             @ focused_attr
             (* Stop the mousedown event, as we handle on_click above, and
                the blur from mousedown would interact poorly with on_blur for the input *)
             @ on_mousedown (fun _ ->
-              Effect.Many [ Effect.Stop_propagation; Effect.Prevent_default ]))
+                Effect.Many [ Effect.Stop_propagation; Effect.Prevent_default ]))
         ]
       [ autocomplete_item item ]
   in
@@ -275,7 +275,7 @@ let create
                              + additional_query_results_on_click))))
                   (* Stop the mousedown event, as we handle on_click above. *)
                   @ on_mousedown (fun _ ->
-                    Effect.Many [ Effect.Stop_propagation; Effect.Prevent_default ])
+                      Effect.Many [ Effect.Stop_propagation; Effect.Prevent_default ])
                   @ class_ "no-cursor"
                   @ style
                       Css_gen.(
@@ -356,7 +356,7 @@ let create
   and inject = inject in
   let autocomplete_items =
     if Model.autocomplete_box_visible model
-    && not (List.is_empty (Model.current_choices model))
+       && not (List.is_empty (Model.current_choices model))
     then render_autocomplete
     else []
   in
@@ -380,10 +380,10 @@ let create
                    @ on_input (fun _ -> set_text)
                    @ on_focus
                        (fun (_ : Js_of_ocaml.Dom_html.focusEvent Js_of_ocaml.Js.t) ->
-                          inject Action.On_focus)
+                       inject Action.On_focus)
                    @ on_blur
                        (fun (_ : Js_of_ocaml.Dom_html.focusEvent Js_of_ocaml.Js.t) ->
-                          inject Action.On_blur)
+                       inject Action.On_blur)
                    @ extra_textbox_attr)
                ]
              ()

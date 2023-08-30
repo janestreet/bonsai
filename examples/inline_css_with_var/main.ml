@@ -2,9 +2,9 @@ open! Core
 open! Bonsai_web
 
 module Style =
-  [%css
-    stylesheet
-      {|
+[%css
+stylesheet
+  {|
   .box {
     width:  100px;
     height: 100px;
@@ -13,7 +13,7 @@ module Style =
     border: 3px solid black;
   }
 |}
-      ~rewrite:[ "--my-color", "--my-color"; "--radius", "--radius" ]]
+  ~rewrite:[ "--my-color", "--my-color"; "--radius", "--radius" ]]
 
 let component =
   let red_box =

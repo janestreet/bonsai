@@ -3,15 +3,15 @@ open Import
 module Style = Cards_style
 
 let make
-      constants
-      ~container_attrs
-      ~title_attrs
-      ~content_attrs
-      ~intent
-      ~on_click
-      ~title
-      ~title_kind
-      ~content
+  constants
+  ~container_attrs
+  ~title_attrs
+  ~content_attrs
+  ~intent
+  ~on_click
+  ~title
+  ~title_kind
+  ~content
   =
   let title_fg, title_bg, title_border =
     let { Fg_bg.foreground; background }, title_border =

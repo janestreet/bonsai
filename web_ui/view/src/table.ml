@@ -173,11 +173,11 @@ module Col = struct
 end
 
 let render
-      (((module T) : Theme.t) as theme)
-      ?(table_attrs = [])
-      ?(row_attrs = fun _ -> [])
-      cols
-      xs
+  (((module T) : Theme.t) as theme)
+  ?(table_attrs = [])
+  ?(row_attrs = fun _ -> [])
+  cols
+  xs
   =
   let mega_group = Col.group' Vdom.Node.none cols in
   let depth = Col.depth mega_group in
@@ -185,12 +185,12 @@ let render
   let for_each_level level =
     Col.headers_at_level ~level mega_group
     |> List.filter_map ~f:(function
-      (* empty groups have a colspan of 0, don't include them *)
-      | _, _, 0 -> None
-      | node, attrs, colspan ->
-        let node = Option.value node ~default:Vdom.Node.none in
-        let cell_attr = [ Vdom.Attr.colspan colspan; Vdom.Attr.many attrs ] in
-        Some (Raw.header_cell ~attrs:cell_attr [ node ]))
+         (* empty groups have a colspan of 0, don't include them *)
+         | _, _, 0 -> None
+         | node, attrs, colspan ->
+           let node = Option.value node ~default:Vdom.Node.none in
+           let cell_attr = [ Vdom.Attr.colspan colspan; Vdom.Attr.many attrs ] in
+           Some (Raw.header_cell ~attrs:cell_attr [ node ]))
     |> Raw.header_row
   in
   let header_rows = List.map (List.range ~stride:(-1) (depth - 1) 0) ~f:for_each_level in
@@ -199,9 +199,9 @@ let render
     let extra_row_attrs = row_attrs row in
     renderers
     |> List.map ~f:(fun f ->
-      match f theme row with
-      | None -> Raw.data_cell ~attrs:[ body_cell_empty ] []
-      | Some (cell, extra_cell_attrs) -> Raw.data_cell ~attrs:extra_cell_attrs [ cell ])
+         match f theme row with
+         | None -> Raw.data_cell ~attrs:[ body_cell_empty ] []
+         | Some (cell, extra_cell_attrs) -> Raw.data_cell ~attrs:extra_cell_attrs [ cell ])
     |> Raw.data_row ~attrs:extra_row_attrs
   in
   let data_rows = List.map xs ~f:for_each_row in
@@ -211,9 +211,9 @@ let render
 (* Default styling *)
 
 module Default_table_styling =
-  [%css
-    stylesheet
-      {|
+[%css
+stylesheet
+  {|
 .table {
   background-color: var(--bg);
   color: var(--fg);

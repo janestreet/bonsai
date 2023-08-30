@@ -58,9 +58,9 @@ let app =
     Bonsai.Map.filter_mapi
       rpc_results
       ~f:(fun ~key:_ ~data:({ last_ok_response; _ }, username) ->
-        match last_ok_response with
-        | Some (_, Some mouse_position) -> Some (mouse_position, username)
-        | None | Some (_, None) -> None)
+      match last_ok_response with
+      | Some (_, Some mouse_position) -> Some (mouse_position, username)
+      | None | Some (_, None) -> None)
   in
   let%sub cursor_blocks =
     Bonsai.assoc

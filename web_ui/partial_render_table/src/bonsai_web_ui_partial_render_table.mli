@@ -56,16 +56,16 @@ module Basic : sig
 
       val column
         :  ?sort:('key * 'data -> 'key * 'data -> int) Value.t
-        (** If this column is sortable, you can provide the sorting function here *)
+             (** If this column is sortable, you can provide the sorting function here *)
         -> ?sort_reversed:('key * 'data -> 'key * 'data -> int) Value.t
-        (** If the column has a specialized "reverse order", you can provide it here. *)
+             (** If the column has a specialized "reverse order", you can provide it here. *)
         -> ?initial_width:Css_gen.Length.t
         -> ?visible:bool Value.t
-        (** [visible] can be set to [false] to hide the whole column. *)
+             (** [visible] can be set to [false] to hide the whole column. *)
         -> header:(Sort_state.t -> Vdom.Node.t) Value.t
-        (** [header] determines the contents of the column header *)
+             (** [header] determines the contents of the column header *)
         -> cell:(key:'key Value.t -> data:'data Value.t -> Vdom.Node.t Computation.t)
-        (** [cell] is the function determines the contents of every cell in this column. *)
+             (** [cell] is the function determines the contents of every cell in this column. *)
         -> unit
         -> ('key, 'data) t
 
@@ -96,15 +96,15 @@ module Basic : sig
 
       val column
         :  ?sort:('key * 'data -> 'key * 'data -> int)
-        (** If this column is sortable, you can provide the sorting function here *)
+             (** If this column is sortable, you can provide the sorting function here *)
         -> ?sort_reversed:('key * 'data -> 'key * 'data -> int)
-        (** If the column has a specialized "reverse order", you can provide it here. *)
+             (** If the column has a specialized "reverse order", you can provide it here. *)
         -> ?initial_width:Css_gen.Length.t
         -> ?visible:bool (** [visible] can be set to [false] to hide the whole column. *)
         -> header:(Sort_state.t -> Vdom.Node.t)
-        (** [header] determines the contents of the column header *)
+             (** [header] determines the contents of the column header *)
         -> cell:(key:'key -> data:'data -> Vdom.Node.t)
-        (** [cell] is the function determines the contents of every cell in this column. *)
+             (** [cell] is the function determines the contents of every cell in this column. *)
         -> unit
         -> ('key, 'data) t
 
@@ -126,10 +126,10 @@ module Basic : sig
   (** This is the main UI component for the table content. *)
   val component
     :  ?filter:(key:'key -> data:'data -> bool) Value.t
-    (** An optional function may be provided, which filters the rows in the table. *)
+         (** An optional function may be provided, which filters the rows in the table. *)
     -> ?override_sort:
          ('key compare -> ('key * 'data) compare -> ('key * 'data) compare) Value.t
-    (** override_sort is an optional function that transforms the tables current sort,
+         (** override_sort is an optional function that transforms the tables current sort,
         taking into account the default-sort and any user-provided sorts that they've
         added by clicking on column headers.
 
@@ -137,12 +137,12 @@ module Basic : sig
         which the overrider can use as a fall-back for when the the ('key * 'data)
         comparison function returns 0. *)
     -> ?default_sort:('key * 'data) compare Value.t
-    (** An optional function may be provided to sort the table. *)
+         (** An optional function may be provided to sort the table. *)
     -> ?preload_rows:int
     -> ('key, 'cmp) Bonsai.comparator
     -> focus:('focus, 'presence, 'key) Focus.t
     -> row_height:[ `Px of int ] Value.t
-    (** [row_height] is the height of every row in the table. If the row height
+         (** [row_height] is the height of every row in the table. If the row height
         is specified to be 0px or less, we instead use 1px. *)
     -> columns:('key, 'data) Columns.t
     -> ('key, 'data, 'cmp) Map.t Value.t (** The input data for the table *)
@@ -156,7 +156,6 @@ module Expert : sig
       table data is too large to pass to the client directly, or when you'd like to update
       your table via RPC. *)
 
-
   open Incr_map_collate
 
   module Focus : sig
@@ -166,7 +165,7 @@ module Expert : sig
       | None : (unit, unit, 'k) t
       | By_row :
           { on_change : ('k option -> unit Effect.t) Value.t
-          (** Row-selection is not required to be inside the viewport, so the selected row
+              (** Row-selection is not required to be inside the viewport, so the selected row
               can be offscreen such that it isn't given to the table component. [compute_presence]
               forces the user to consider if a row is considered 'focused' or not. *)
           ; compute_presence : 'k option Value.t -> 'p Computation.t
@@ -230,40 +229,40 @@ module Expert : sig
   val collate
     :  ?operation_order:[ `Filter_first | `Sort_first ]
     -> filter_equal:('filter -> 'filter -> bool)
-    (** [filter_equal] is used to decide when the filters have actually changed, requiring
+         (** [filter_equal] is used to decide when the filters have actually changed, requiring
         a recomputation of the collation. *)
     -> order_equal:('order -> 'order -> bool)
-    (** [order_equal] is used to decide when the sorting params have actually changed,
+         (** [order_equal] is used to decide when the sorting params have actually changed,
         requiring a recomputation of the collation. *)
     -> filter_to_predicate:('filter -> (key:'k -> data:'v -> bool) option)
-    (** [filter_to_predicate] takes the current set of filters ['filter] and optionally
+         (** [filter_to_predicate] takes the current set of filters ['filter] and optionally
         returns a function that can apply those filters to each row. When
         [filter_to_predicate] returns [None], no filtering is done. *)
     -> order_to_compare:('order -> ('k, 'v, 'cmp) Compare.t)
-    (** [order_to_compare] takes the current set of sort params ['order] and uses the
+         (** [order_to_compare] takes the current set of sort params ['order] and uses the
         [Compare] specification to decide how to apply them. Return [Unchanged] to perform
         no sorting. *)
     -> ('k, 'v, 'cmp) Map.t Value.t
-    (** A [Map.t] containing the source for all the table data, pre-collation. *)
+       (** A [Map.t] containing the source for all the table data, pre-collation. *)
     -> ('k, 'filter, 'order) Collate.t Value.t
-    (** A [Collate.t] is a specification for how to perform collation: it's where the
+       (** A [Collate.t] is a specification for how to perform collation: it's where the
         ['filter], ['order], and rank range are defined. *)
     -> ('k, 'v) Collated.t Computation.t
 
   val component
     :  ?preload_rows:int
-    (** [preload_rows] is the number of rows that are maintained before and after the
+         (** [preload_rows] is the number of rows that are maintained before and after the
         viewport range. This number can have a significant effect on performance: too
         small and scrolling might be choppy; too large and you start to lose some of the
         benefits of partial rendering. *)
     -> ('key, 'cmp) Bonsai.comparator
     -> focus:('focus, 'presence, 'key) Focus.t
     -> row_height:[ `Px of int ] Value.t
-    (** [row_height] is the height of every row in the table. If the row height
+         (** [row_height] is the height of every row in the table. If the row height
         is specified to be 0px or less, we instead use 1px. *)
     -> columns:('key, 'row) Columns.t
     -> ('key, 'row) Collated.t Value.t
-    (** The collated value is the proper input to the component.
+       (** The collated value is the proper input to the component.
         You can use [Expert.collate] to get a Collated.t value, or do
         the collation manually on the server by using the Incr_map_collate
         library manually. *)

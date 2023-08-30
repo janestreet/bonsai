@@ -17,9 +17,9 @@ type ('k, 'cmp) comparator =
   (module S with type t = 'k and type comparator_witness = 'cmp)
 
 module Style =
-  [%css
-    stylesheet
-      {|
+[%css
+stylesheet
+  {|
 .key_column {
   white-space: pre;
 }
@@ -50,11 +50,11 @@ module Column = struct
 end
 
 let table_form
-      (type k cmp)
-      ?key_column_initial_width
-      (key : (k, cmp) comparator)
-      form_of_t
-      ~columns
+  (type k cmp)
+  ?key_column_initial_width
+  (key : (k, cmp) comparator)
+  form_of_t
+  ~columns
   =
   let module Key = (val key) in
   let module M_map = struct
@@ -171,7 +171,7 @@ let table_form
     forms
     |> Map.to_alist
     |> List.map ~f:(fun (k, form) ->
-      form |> Form.value |> Or_error.map ~f:(fun v -> k, v))
+         form |> Form.value |> Or_error.map ~f:(fun v -> k, v))
     |> Or_error.combine_errors
     |> Or_error.map ~f:(Map.of_alist_exn (module Key))
   in
@@ -180,8 +180,7 @@ let table_form
     let%bind.Effect forms =
       match%bind.Effect get_forms with
       | Active forms -> Effect.return forms
-      | Inactive ->
-        Effect.never
+      | Inactive -> Effect.never
     in
     Effect.Many
       (List.map2_exn (Map.data forms) (Map.data new_data) ~f:(fun form data ->

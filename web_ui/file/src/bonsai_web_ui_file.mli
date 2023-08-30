@@ -88,7 +88,7 @@ module Read_on_change : sig
   module Status : sig
     type t =
       | Starting
-      (** The file read has been kicked off but no progress has been received yet *)
+          (** The file read has been kicked off but no progress has been received yet *)
       | In_progress of Progress.t
       | Complete of Bigstring.t Or_error.t
     [@@deriving sexp_of]

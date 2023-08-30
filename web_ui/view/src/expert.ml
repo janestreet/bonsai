@@ -23,9 +23,9 @@ let override_theme ((module M) : Theme.t) ~(f : t -> t) : Theme.t =
 ;;
 
 module Style =
-  [%css
-    stylesheet
-      {|
+[%css
+stylesheet
+  {|
 @layer bonsai_web_ui_view.app {
   :root:has(.app) {
     font-family: sans-serif;
@@ -131,41 +131,41 @@ let default_theme =
 
           method tabs
             : type a.  attrs:Vdom.Attr.t list
-              -> per_tab_attrs:(a -> is_active:bool -> Vdom.Attr.t list)
-              -> on_change:(from:a -> to_:a -> unit Effect.t)
-              -> equal:(a -> a -> bool)
-              -> active:a
-              -> (a * Vdom.Node.t) list
-              -> Vdom.Node.t =
+                      -> per_tab_attrs:(a -> is_active:bool -> Vdom.Attr.t list)
+                      -> on_change:(from:a -> to_:a -> unit Effect.t)
+                      -> equal:(a -> a -> bool)
+                      -> active:a
+                      -> (a * Vdom.Node.t) list
+                      -> Vdom.Node.t =
             fun ~attrs ~per_tab_attrs ~on_change ~equal ~active tabs ->
-            let color = self#constants.primary.foreground in
-            let all_attr =
-              Vdom.Attr.style (Css_gen.create ~field:"cursor" ~value:"pointer")
-            in
-            let active_attr =
-              Vdom.Attr.style
-                (Css_gen.border_bottom ~width:(`Px 3) ~color ~style:`Solid ())
-            in
-            let inactive_attr i =
-              Vdom.Attr.many
-                [ Vdom.Attr.style
-                    (Css_gen.concat
-                       [ Css_gen.border_bottom ~width:(`Px 1) ~color ~style:`Solid ()
-                       ; Css_gen.opacity 0.6
-                       ])
-                ; Vdom.Attr.on_click (fun _ -> on_change ~from:active ~to_:i)
-                ]
-            in
-            List.map tabs ~f:(fun (i, tab) ->
-              let is_active = equal active i in
-              Vdom.Node.div
-                ~attrs:
-                  [ (if is_active then active_attr else inactive_attr i)
-                  ; all_attr
-                  ; Vdom.Attr.many (per_tab_attrs i ~is_active)
+              let color = self#constants.primary.foreground in
+              let all_attr =
+                Vdom.Attr.style (Css_gen.create ~field:"cursor" ~value:"pointer")
+              in
+              let active_attr =
+                Vdom.Attr.style
+                  (Css_gen.border_bottom ~width:(`Px 3) ~color ~style:`Solid ())
+              in
+              let inactive_attr i =
+                Vdom.Attr.many
+                  [ Vdom.Attr.style
+                      (Css_gen.concat
+                         [ Css_gen.border_bottom ~width:(`Px 1) ~color ~style:`Solid ()
+                         ; Css_gen.opacity 0.6
+                         ])
+                  ; Vdom.Attr.on_click (fun _ -> on_change ~from:active ~to_:i)
                   ]
-                [ tab ])
-            |> Layout.hbox ~attrs ~gap:(`Em_float 0.5)
+              in
+              List.map tabs ~f:(fun (i, tab) ->
+                let is_active = equal active i in
+                Vdom.Node.div
+                  ~attrs:
+                    [ (if is_active then active_attr else inactive_attr i)
+                    ; all_attr
+                    ; Vdom.Attr.many (per_tab_attrs i ~is_active)
+                    ]
+                  [ tab ])
+              |> Layout.hbox ~attrs ~gap:(`Em_float 0.5)
 
           method devbar ~attrs ~count ~intent text =
             let intent = Option.value intent ~default:Constants.Intent.Error in
@@ -292,14 +292,14 @@ let default_theme =
 
           (* cards *)
           method card
-                   ~container_attrs
-                   ~title_attrs
-                   ~content_attrs
-                   ~intent
-                   ~on_click
-                   ~title
-                   ~title_kind
-                   ~content =
+            ~container_attrs
+            ~title_attrs
+            ~content_attrs
+            ~intent
+            ~on_click
+            ~title
+            ~title_kind
+            ~content =
             let open Constants in
             let module Style = Card_style in
             let constants = self#constants in

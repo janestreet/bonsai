@@ -21,9 +21,9 @@ module Colors = struct
 end
 
 module Css =
-  [%css
-    stylesheet
-      {|
+[%css
+stylesheet
+  {|
     .container {
       position: relative;
     }

@@ -192,4 +192,3 @@ let%expect_test {| One_at_a_time.effect releases lock after effect throws except
   Handle.show handle;
   [%expect {| Busy |}]
 ;;
-

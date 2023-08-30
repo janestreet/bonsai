@@ -5,20 +5,20 @@ open Bonsai.Let_syntax
 module Collate_map_with_score = Bonsai_web_ui_query_box.Collate_map_with_score
 
 let reference_implementation
-      ~preprocess
-      ~score
-      ~query_is_as_strict:_
-      ~to_result
-      input
-      query
+  ~preprocess
+  ~score
+  ~query_is_as_strict:_
+  ~to_result
+  input
+  query
   =
   let%arr input = input
   and query = query in
   Map.to_alist input
   |> List.map ~f:(fun (key, data) ->
-    let preprocessed = preprocess ~key ~data in
-    let score = score query preprocessed in
-    (score, key), to_result preprocessed ~key ~data)
+       let preprocessed = preprocess ~key ~data in
+       let score = score query preprocessed in
+       (score, key), to_result preprocessed ~key ~data)
   |> List.filter ~f:(fun ((score, _), _) -> score <> 0)
   |> List.sort
        ~compare:(Comparable.lift [%compare: int] ~f:(fun ((score, _), _) -> score))

@@ -1,3 +1,3 @@
 open! Core
-open  Import
+open Import
 include Js_obj.S with type t = Dom_html.element Js.t

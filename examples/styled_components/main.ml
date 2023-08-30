@@ -159,9 +159,9 @@ module Stylesheet_interpolation = struct
     let f ~color ~width ~height =
       [%demo
         let module Style =
-          [%css
-            stylesheet
-              {|
+        [%css
+        stylesheet
+          {|
               .square {
                  background-color: %{color#Css_gen.Color};
                  width: %{width#Css_gen.Length};

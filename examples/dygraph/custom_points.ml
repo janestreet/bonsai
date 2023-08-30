@@ -12,11 +12,11 @@ let data : Dygraph.Data.t =
 ;;
 
 let draw_square
-      ~(context : Dom_html.canvasRenderingContext2D Js.t)
-      ~stroke_or_fill
-      ~cx
-      ~cy
-      ~side_length
+  ~(context : Dom_html.canvasRenderingContext2D Js.t)
+  ~stroke_or_fill
+  ~cx
+  ~cy
+  ~side_length
   =
   let top_left_x_coord = cx -. (side_length /. 2.) in
   let top_left_y_coord = cy -. (side_length /. 2.) in
@@ -39,14 +39,14 @@ let options =
       ~drawHighlightPointCallback:
         (fun
           ~graph:_ ~seriesName:_ ~context ~cx ~cy ~color:_ ~pointSize:_ ~idx ->
-          let radius = side_lengths.(idx) /. 2. in
-          draw_circle ~context ~cx ~cy ~radius;
-          context##fill)
+        let radius = side_lengths.(idx) /. 2. in
+        draw_circle ~context ~cx ~cy ~radius;
+        context##fill)
       ~drawPointCallback:
         (fun
           ~graph:_ ~seriesName:_ ~context ~cx ~cy ~color:_ ~pointSize:_ ~idx ->
-          let radius = side_lengths.(idx) /. 2. in
-          draw_circle ~context ~cx ~cy ~radius)
+        let radius = side_lengths.(idx) /. 2. in
+        draw_circle ~context ~cx ~cy ~radius)
       ()
   in
   let square_series_options =
@@ -54,13 +54,13 @@ let options =
       ~drawHighlightPointCallback:
         (fun
           ~graph:_ ~seriesName:_ ~context ~cx ~cy ~color:_ ~pointSize:_ ~idx ->
-          let side_length = side_lengths.(idx) in
-          draw_square ~context ~stroke_or_fill:`Fill ~cx ~cy ~side_length)
+        let side_length = side_lengths.(idx) in
+        draw_square ~context ~stroke_or_fill:`Fill ~cx ~cy ~side_length)
       ~drawPointCallback:
         (fun
           ~graph:_ ~seriesName:_ ~context ~cx ~cy ~color:_ ~pointSize:_ ~idx ->
-          let side_length = side_lengths.(idx) in
-          draw_square ~context ~stroke_or_fill:`Stroke ~cx ~cy ~side_length)
+        let side_length = side_lengths.(idx) in
+        draw_square ~context ~stroke_or_fill:`Stroke ~cx ~cy ~side_length)
       ()
   in
   let series =

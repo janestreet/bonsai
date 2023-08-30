@@ -6,9 +6,9 @@ module Form = Bonsai_web_ui_form
 module Query_box = Bonsai_web_ui_query_box
 
 module Css =
-  [%css
-    stylesheet
-      {|
+[%css
+stylesheet
+  {|
   .list_container {
     background: white;
     border: solid 1px black;
@@ -77,7 +77,7 @@ let component =
       ~sexp_of_action:[%sexp_of: String.t]
       ~default_model:[]
       ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) items item ->
-        item :: items)
+      item :: items)
   in
   let%sub form =
     Form.Typed.Record.make
@@ -139,10 +139,10 @@ let component =
         let%bind.Effect item =
           Effect.of_sync_fun
             (fun () ->
-               Quickcheck.Generator.generate
-                 Action.quickcheck_generator
-                 ~size:6
-                 ~random:(Splittable_random.State.create Random.State.default))
+              Quickcheck.Generator.generate
+                Action.quickcheck_generator
+                ~size:6
+                ~random:(Splittable_random.State.create Random.State.default))
             ()
         in
         inject item

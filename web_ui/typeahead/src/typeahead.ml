@@ -34,7 +34,7 @@ module Search = struct
         then (
           match state with
           (* Nothing -> partial -> partial-match*)
-          | Nothing_found   -> Continue (Partial_match value)
+          | Nothing_found -> Continue (Partial_match value)
           (* Two partial matches means that we continue, but will only succeed if
              finding an exact-match *)
           | Partial_match _ -> Continue Only_exact_matches_allowed
@@ -45,8 +45,8 @@ module Search = struct
         let haystack_result =
           match state with
           | Only_exact_matches_allowed -> None
-          | Nothing_found              -> None
-          | Partial_match value        -> Some value
+          | Nothing_found -> None
+          | Partial_match value -> Some value
         in
         let unknown_option_result = handle_unknown_option needle in
         (* Use either one of the potential results. If both methods yielded potential
@@ -56,24 +56,24 @@ module Search = struct
 end
 
 type 'a t =
-  { selected      : 'a
-  ; set_selected  : 'a -> unit Ui_effect.t
+  { selected : 'a
+  ; set_selected : 'a -> unit Ui_effect.t
   ; current_input : string
-  ; view          : Vdom.Node.t
+  ; view : Vdom.Node.t
   }
 
 let input
-      ?(placeholder = "")
-      ?(value       = "")
-      ~set_focused
-      ~extra_attrs
-      ~to_string
-      ~id
-      ~handle_unknown_option
-      ~all_options
-      ~on_change
-      ~on_input
-      ()
+  ?(placeholder = "")
+  ?(value = "")
+  ~set_focused
+  ~extra_attrs
+  ~to_string
+  ~id
+  ~handle_unknown_option
+  ~all_options
+  ~on_change
+  ~on_input
+  ()
   =
   Vdom.Node.lazy_
     (lazy
@@ -81,18 +81,18 @@ let input
          ~attrs:
            [ Vdom.Attr.many_without_merge
                (extra_attrs
-                @ [ Vdom.Attr.type_           "text"
-                  ; Vdom.Attr.create          "list" id
-                  ; Vdom.Attr.placeholder     placeholder
-                  (* Both Attr.value and Attr.string_property value must be set. The former only affects
+                @ [ Vdom.Attr.type_ "text"
+                  ; Vdom.Attr.create "list" id
+                  ; Vdom.Attr.placeholder placeholder
+                    (* Both Attr.value and Attr.string_property value must be set. The former only affects
                      initial control state while the latter affects the control state whilst the form is
                      being used. *)
-                  ; Vdom.Attr.value           value
-                  ; Vdom.Attr.on_focus        (fun _ -> set_focused true)
-                  ; Vdom.Attr.on_blur         (fun _ -> set_focused false)
+                  ; Vdom.Attr.value value
+                  ; Vdom.Attr.on_focus (fun _ -> set_focused true)
+                  ; Vdom.Attr.on_blur (fun _ -> set_focused false)
                   ; Vdom.Attr.string_property "value" value
-                  ; Vdom.Attr.on_input        (fun _ -> on_input)
-                  ; Vdom.Attr.on_change       (fun _ input ->
+                  ; Vdom.Attr.on_input (fun _ -> on_input)
+                  ; Vdom.Attr.on_change (fun _ input ->
                       let maybe_t =
                         Search.find
                           ~to_string
@@ -134,17 +134,17 @@ let show_datalist ~focused ~show_datalist_in_test =
 ;;
 
 let create_internal
-      (type t)
-      ?(extra_attrs = Value.return [])
-      ?placeholder
-      ?on_select_change
-      ?to_string
-      ?to_option_description
-      ?(handle_unknown_option = Value.return (Fn.const None))
-      (module M : Bonsai.Model with type t = t)
-      ~equal
-      ~all_options
-      ~show_datalist_in_test
+  (type t)
+  ?(extra_attrs = Value.return [])
+  ?placeholder
+  ?on_select_change
+  ?to_string
+  ?to_option_description
+  ?(handle_unknown_option = Value.return (Fn.const None))
+  (module M : Bonsai.Model with type t = t)
+  ~equal
+  ~all_options
+  ~show_datalist_in_test
   =
   let open! Bonsai.Let_syntax in
   let to_string =
@@ -170,17 +170,17 @@ let create_internal
   let%sub id = Bonsai.path_id in
   let%sub input =
     let%arr set_focused = set_focused
-    and set_selected          = set_selected
-    and extra_attrs           = extra_attrs
-    and id                    = id
+    and set_selected = set_selected
+    and extra_attrs = extra_attrs
+    and id = id
     and handle_unknown_option = handle_unknown_option
-    and all_options           = all_options
-    and on_select_change      = on_select_change
-    and current_input         = current_input
-    and set_current_input     = set_current_input
-    and to_string             = to_string in
-    let on_input  input = set_current_input input                               in
-    let on_change t _   = Ui_effect.Many [ set_selected t; on_select_change t ] in
+    and all_options = all_options
+    and on_select_change = on_select_change
+    and current_input = current_input
+    and set_current_input = set_current_input
+    and to_string = to_string in
+    let on_input input = set_current_input input in
+    let on_change t _ = Ui_effect.Many [ set_selected t; on_select_change t ] in
     input
       ?placeholder
       ~set_focused
@@ -201,10 +201,10 @@ let create_internal
     in
     match%sub show_datalist with
     | false -> Bonsai.const (Vdom.Node.text "")
-    | true  ->
+    | true ->
       let%arr to_option_description = to_option_description
-      and id          = id
-      and to_string   = to_string
+      and id = id
+      and to_string = to_string
       and all_options = all_options in
       datalist ~to_option_description ~to_string ~id ~all_options ()
   in
@@ -216,7 +216,7 @@ let create_internal
   let%sub set_selected =
     let%arr set_selected = set_selected
     and set_current_input = set_current_input
-    and to_string         = to_string in
+    and to_string = to_string in
     fun selected ->
       Effect.lazy_
         (lazy
@@ -225,39 +225,39 @@ let create_internal
   in
   let%arr selected = selected
   and current_input = current_input
-  and view          = view
-  and set_selected  = set_selected in
+  and view = view
+  and set_selected = set_selected in
   { selected; current_input; view; set_selected }
 ;;
 
 let input
-      ?(placeholder = "")
-      ~current_input
-      ~inject_current_input
-      ~extra_attrs
-      ~to_string
-      ~split
-      ~id
-      ~handle_unknown_option
-      ~all_options
-      ~selected_options
-      ~inject_selected_options
-      ~on_set_change
-      ~set_focused
-      ()
+  ?(placeholder = "")
+  ~current_input
+  ~inject_current_input
+  ~extra_attrs
+  ~to_string
+  ~split
+  ~id
+  ~handle_unknown_option
+  ~all_options
+  ~selected_options
+  ~inject_selected_options
+  ~on_set_change
+  ~set_focused
+  ()
   =
   let open! Bonsai.Let_syntax in
   let%arr current_input = current_input
-  and inject_current_input    = inject_current_input
-  and handle_unknown_option   = handle_unknown_option
-  and all_options             = all_options
-  and selected_options        = selected_options
+  and inject_current_input = inject_current_input
+  and handle_unknown_option = handle_unknown_option
+  and all_options = all_options
+  and selected_options = selected_options
   and inject_selected_options = inject_selected_options
-  and extra_attrs             = extra_attrs
-  and id                      = id
-  and on_set_change           = on_set_change
-  and to_string               = to_string
-  and set_focused             = set_focused in
+  and extra_attrs = extra_attrs
+  and id = id
+  and on_set_change = on_set_change
+  and to_string = to_string
+  and set_focused = set_focused in
   let on_input input = inject_current_input input in
   let on_change maybe_t user_input =
     match maybe_t with
@@ -274,7 +274,7 @@ let input
       Ui_effect.Many
         [ inject_selected_options selected_options
         ; (match new_selected_options with
-           | []     -> inject_current_input user_input
+           | [] -> inject_current_input user_input
            | _ :: _ -> inject_current_input "")
         ]
     | Some t ->
@@ -300,19 +300,19 @@ let input
 ;;
 
 let create_multi_internal
-      (type comparator_witness t)
-      ?(extra_attrs = Value.return [])
-      ?placeholder
-      ?(on_set_change = Value.return (const Ui_effect.Ignore))
-      ?to_string
-      ?to_option_description
-      ?(handle_unknown_option = Value.return (Fn.const None))
-      ?(split = List.return)
-      (module M : Bonsai.Comparator
-        with type comparator_witness = comparator_witness
-         and type t = t)
-      ~all_options
-      ~show_datalist_in_test
+  (type comparator_witness t)
+  ?(extra_attrs = Value.return [])
+  ?placeholder
+  ?(on_set_change = Value.return (const Ui_effect.Ignore))
+  ?to_string
+  ?to_option_description
+  ?(handle_unknown_option = Value.return (Fn.const None))
+  ?(split = List.return)
+  (module M : Bonsai.Comparator
+    with type comparator_witness = comparator_witness
+     and type t = t)
+  ~all_options
+  ~show_datalist_in_test
   =
   let open Bonsai.Let_syntax in
   let module M = struct
@@ -380,11 +380,11 @@ let create_multi_internal
     in
     match%sub show_datalist with
     | false -> Bonsai.const (Vdom.Node.datalist [])
-    | true  ->
+    | true ->
       let%arr all_options = all_options
       and selected_options = selected_options
-      and id               = id
-      and to_string        = to_string
+      and id = id
+      and to_string = to_string
       and to_option_description = to_option_description in
       datalist
         ~id
@@ -398,19 +398,19 @@ let create_multi_internal
         ()
   in
   let%arr selected_options = selected_options
-  and datalist                = datalist
+  and datalist = datalist
   and inject_selected_options = inject_selected_options
-  and current_input           = current_input
-  and input                   = input
-  and pills                   = pills in
-  { selected     = selected_options
+  and current_input = current_input
+  and input = input
+  and pills = pills in
+  { selected = selected_options
   ; set_selected = inject_selected_options
   ; current_input
-  ; view         = Vdom.Node.div [ input; datalist; pills ]
+  ; view = Vdom.Node.div [ input; datalist; pills ]
   }
 ;;
 
-let create       = create_internal       ~show_datalist_in_test:true
+let create = create_internal ~show_datalist_in_test:true
 let create_multi = create_multi_internal ~show_datalist_in_test:true
 
 module Private = struct

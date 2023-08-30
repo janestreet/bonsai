@@ -16,13 +16,13 @@ module type Record_builder = sig
        , 'a
        , ('b, 'c) Record_builder_lib.Hlist.cons
        , 'record )
-         Bare.Make_creator_types.handle_one_field
+       Bare.Make_creator_types.handle_one_field
 
   val build_for_record
     :  ( 'record
        , ('a, 'b) Record_builder_lib.Hlist.cons
        , 'record )
-         Bare.Make_creator_types.handle_all_fields
+       Bare.Make_creator_types.handle_all_fields
     -> 'record profunctor_term
 end
 

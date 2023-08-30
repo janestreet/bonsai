@@ -5,9 +5,9 @@ module Drag_and_drop = Bonsai_web_ui_drag_and_drop
 module Node = Vdom.Node
 
 module Style =
-  [%css
-    stylesheet
-      {|
+[%css
+stylesheet
+  {|
   .centered {
     text-align: center;
   }
@@ -197,8 +197,8 @@ let board ?extra_dnd name =
       ~apply_action:
         (fun
           (_ : _ Bonsai.Apply_action_context.t) model (Move { item_id; new_column }) ->
-          let change_col (contents, _) ~new_column = contents, new_column in
-          Map.change model item_id ~f:(Option.map ~f:(change_col ~new_column)))
+        let change_col (contents, _) ~new_column = contents, new_column in
+        Map.change model item_id ~f:(Option.map ~f:(change_col ~new_column)))
   in
   let%sub dnd =
     Drag_and_drop.create

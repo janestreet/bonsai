@@ -1,7 +1,7 @@
 include
   [%css
-    stylesheet
-      {|
+  stylesheet
+    {|
   .column_header {
     white-space: pre;
     cursor: pointer;

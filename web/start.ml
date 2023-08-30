@@ -99,12 +99,12 @@ module Arrow_deprecated = struct
     let create = Fields.create
 
     let of_result_spec
-          (type result extra incoming)
-          (module Result : Result_spec
-            with type t = result
-             and type extra = extra
-             and type incoming = incoming)
-          (r : Result.t)
+      (type result extra incoming)
+      (module Result : Result_spec
+        with type t = result
+         and type extra = extra
+         and type incoming = incoming)
+      (r : Result.t)
       =
       { view = Result.view r
       ; extra = Result.extra r
@@ -140,10 +140,10 @@ module Arrow_deprecated = struct
         }
 
   let start_bonsai_debugger
-        (is_debugging_var : debugging_state Incr.Var.t)
-        (host : Js.js_string Js.t Js.Optdef.t)
-        (port : int Js.Optdef.t)
-        (worker_name : Js.js_string Js.t Js.Optdef.t)
+    (is_debugging_var : debugging_state Incr.Var.t)
+    (host : Js.js_string Js.t Js.Optdef.t)
+    (port : int Js.Optdef.t)
+    (worker_name : Js.js_string Js.t Js.Optdef.t)
     =
     match Incr.Var.value is_debugging_var with
     | Debugging _ -> print_endline "Already debugging."
@@ -159,32 +159,32 @@ module Arrow_deprecated = struct
   ;;
 
   let start_generic_poly
-        (type input action_input input_and_inject model dynamic_action static_action result
-                extra incoming outgoing)
-        ~(get_app_result : result -> (extra, incoming) App_result.t)
-        ~(get_app_input :
-            input:input
-          -> inject_outgoing:(outgoing -> unit Vdom.Effect.t)
-          -> input_and_inject)
-        ~(initial_input : input)
-        ~bind_to_element_with_id
-        ~(computation : result Bonsai.Private.Computation.t)
-        ~fresh
-        ({ model
-         ; input = _
-         ; dynamic_action
-         ; static_action
-         ; apply_static
-         ; apply_dynamic
-         ; run
-         ; reset = _
-         } as info :
-           ( model
-           , dynamic_action
-           , static_action
-           , action_input
-           , result )
-             Bonsai.Private.Computation.info)
+    (type input action_input input_and_inject model dynamic_action static_action result
+    extra incoming outgoing)
+    ~(get_app_result : result -> (extra, incoming) App_result.t)
+    ~(get_app_input :
+        input:input
+        -> inject_outgoing:(outgoing -> unit Vdom.Effect.t)
+        -> input_and_inject)
+    ~(initial_input : input)
+    ~bind_to_element_with_id
+    ~(computation : result Bonsai.Private.Computation.t)
+    ~fresh
+    ({ model
+     ; input = _
+     ; dynamic_action
+     ; static_action
+     ; apply_static
+     ; apply_dynamic
+     ; run
+     ; reset = _
+     } as info :
+      ( model
+      , dynamic_action
+      , static_action
+      , action_input
+      , result )
+      Bonsai.Private.Computation.info)
     : (input, extra, incoming, outgoing) Handle.t
     =
     let outgoing_pipe, pipe_write = Pipe.create () in
@@ -246,16 +246,16 @@ module Arrow_deprecated = struct
       ;;
 
       let create
-            model
-            ~old_model:_
-            ~inject
-            (run :
-               ( model
-               , dynamic_action
-               , static_action
-               , action_input
-               , result )
-                 Bonsai.Private.Computation.eval_fun)
+        model
+        ~old_model:_
+        ~inject
+        (run :
+          ( model
+          , dynamic_action
+          , static_action
+          , action_input
+          , result )
+          Bonsai.Private.Computation.eval_fun)
         =
         let open Incr.Let_syntax in
         let environment =
@@ -373,11 +373,11 @@ module Arrow_deprecated = struct
   ;;
 
   let start_generic
-        ~optimize
-        ~get_app_result
-        ~initial_input
-        ~bind_to_element_with_id
-        ~component
+    ~optimize
+    ~get_app_result
+    ~initial_input
+    ~bind_to_element_with_id
+    ~component
     =
     let fresh = Type_equal.Id.create ~name:"" sexp_of_opaque in
     let var =
@@ -400,10 +400,10 @@ module Arrow_deprecated = struct
 
   (* I can't use currying here because of the value restriction. *)
   let start_standalone
-        ?(optimize = true)
-        ~initial_input
-        ~bind_to_element_with_id
-        component
+    ?(optimize = true)
+    ~initial_input
+    ~bind_to_element_with_id
+    component
     =
     start_generic
       ~optimize
@@ -476,18 +476,18 @@ module Proc = struct
   ;;
 
   let start_and_get_handle
-        result_spec
-        ?(optimize = true)
-        ?(custom_connector = default_custom_connector)
-        ~bind_to_element_with_id
-        computation
+    result_spec
+    ?(optimize = true)
+    ?(custom_connector = default_custom_connector)
+    ~bind_to_element_with_id
+    computation
     =
     let computation =
       Rpc_effect.Private.with_connector
         (function
-          | Self -> Rpc_effect.Private.self_connector ()
-          | Url url -> Rpc_effect.Private.url_connector url
-          | Custom custom -> custom_connector custom)
+         | Self -> Rpc_effect.Private.self_connector ()
+         | Url url -> Rpc_effect.Private.url_connector url
+         | Custom custom -> custom_connector custom)
         computation
     in
     let bonsai =

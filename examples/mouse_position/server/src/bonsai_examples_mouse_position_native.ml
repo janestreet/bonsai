@@ -30,7 +30,7 @@ let main ~http_settings ~js_file =
       Csp_monoid.reduce
         [ Csp_monoid.default_for_clientside
         ; Csp_monoid.frame_ancestor "https://localhost:*"
-        (* allow to be iframed in localhost addresses like for local dev *)
+          (* allow to be iframed in localhost addresses like for local dev *)
         ; Csp_monoid.frame_ancestor "https://bonsai:*"
           (* allow to be iframed in https://bonsai/ *)
         ]

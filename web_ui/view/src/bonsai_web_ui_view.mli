@@ -287,7 +287,6 @@ module Tooltip_direction : sig
     | Right
     | Bottom
     | Left
-
 end
 
 (** Tooltips can be used to provide more information to a user when they
@@ -349,7 +348,7 @@ module Card_title_kind : sig
   type t =
     | Prominent (** Rendered in an easier to see bar. Use to make your title stand out. *)
     | Discreet
-    (** Title is rendered alongside the top of the border of the card in a more discrete way. Use to give structure to your content. *)
+        (** Title is rendered alongside the top of the border of the card in a more discrete way. Use to give structure to your content. *)
 end
 
 (** A "card" is a way of highlighting important messages, and to also bring some

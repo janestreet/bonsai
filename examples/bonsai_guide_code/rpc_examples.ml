@@ -98,10 +98,10 @@ let current_time_implementation =
     ~on_client_and_server_out_of_sync:print_s
     current_time_rpc
     (fun _connection_state zone ->
-       Deferred.return
-         (Time_ns.to_string_trimmed ~zone:(Timezone.of_string zone) (Time_ns.now ())))
+    Deferred.return
+      (Time_ns.to_string_trimmed ~zone:(Timezone.of_string zone) (Time_ns.now ())))
   |> Rpc.Implementation.lift ~f:(fun connection_state ->
-    connection_state, connection_state)
+       connection_state, connection_state)
 ;;
 
 (* $MDX part-end *)

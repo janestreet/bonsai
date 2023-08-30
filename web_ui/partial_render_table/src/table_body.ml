@@ -35,18 +35,18 @@ let set_or_wrap ~classes ~style =
 let float_to_px_string px = Virtual_dom.Dom_float.to_string_fixed 8 px ^ "px"
 
 let component
-      (type key data cmp)
-      ~(comparator : (key, cmp) Bonsai.comparator)
-      ~row_height
-      ~(leaves : Header_tree.leaf list Value.t)
-      ~(headers : Header_tree.t Value.t)
-      ~(assoc :
-          (key * data) Map_list.t Value.t -> (key * Vdom.Node.t list) Map_list.t Computation.t)
-      ~column_widths
-      ~(visually_focused : key option Value.t)
-      ~on_row_click
-      (collated : (key, data) Collated.t Value.t)
-      (input : (key * data) Map_list.t Value.t)
+  (type key data cmp)
+  ~(comparator : (key, cmp) Bonsai.comparator)
+  ~row_height
+  ~(leaves : Header_tree.leaf list Value.t)
+  ~(headers : Header_tree.t Value.t)
+  ~(assoc :
+      (key * data) Map_list.t Value.t -> (key * Vdom.Node.t list) Map_list.t Computation.t)
+  ~column_widths
+  ~(visually_focused : key option Value.t)
+  ~on_row_click
+  (collated : (key, data) Collated.t Value.t)
+  (input : (key * data) Map_list.t Value.t)
   : (Vdom.Node.t * For_testing.t Lazy.t) Computation.t
   =
   (* Css_gen is really slow, so we need to re-use the results of all these

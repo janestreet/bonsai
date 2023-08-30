@@ -1,10 +1,9 @@
 open! Core
 open! Import
-open  Gen_js_api
-
+open Gen_js_api
 
 type t =
-  [ `html   of Raw_html.t
+  [ `html of Raw_html.t
   | `number of float
   ]
 [@@deriving compare, equal, sexp]

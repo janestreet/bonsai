@@ -116,7 +116,7 @@ module For_computation = struct
   type 'from_parent user_mapper =
     { f :
         'result.
-          'from_parent context
+        'from_parent context
         -> 'from_parent
         -> 'result Computation.t
         -> 'result Computation.t
@@ -241,7 +241,7 @@ let map ~computation_mapper ~value_mapper ~init computation =
   (computation_mapper : _ user_mapper).f
     { recurse =
         (fun parent c ->
-           descend ~f:computation_mapper ~for_value:value_mapper ~append_to parent c)
+          descend ~f:computation_mapper ~for_value:value_mapper ~append_to parent c)
     ; var_from_parent = None
     ; parent_path = lazy (Node_path.finalize parent_path)
     ; current_path = lazy (Node_path.finalize current_path)

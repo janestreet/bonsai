@@ -88,37 +88,37 @@ module Table = struct
   let view =
     let%map.Computation theme = View.Theme.current in
     let module T =
-      [%demo
-        [@@@ocamlformat "disable"]
+    [%demo
+    [@@@ocamlformat "disable"]
 
-        type t = { sym : string ; bid : float ; ask : float } [@@deriving fields ~getters]
+    type t = { sym : string ; bid : float ; ask : float } [@@deriving fields ~getters]
 
-        [@@@ocamlformat "enable"]
+    [@@@ocamlformat "enable"]
 
-        let columns =
-          let render_text _ string = View.text string in
-          let render_float _ = Vdom.Node.textf "%.3f" in
-          [ View.Table.Col.make "sym" ~get:sym ~render:render_text
-          ; View.Table.Col.make "bid" ~get:bid ~render:render_float
-          ; View.Table.Col.make "ask" ~get:ask ~render:render_float
-          ]
-        ;;
+    let columns =
+      let render_text _ string = View.text string in
+      let render_float _ = Vdom.Node.textf "%.3f" in
+      [ View.Table.Col.make "sym" ~get:sym ~render:render_text
+      ; View.Table.Col.make "bid" ~get:bid ~render:render_float
+      ; View.Table.Col.make "ask" ~get:ask ~render:render_float
+      ]
+    ;;
 
-        let data =
-          [ { sym = "aapl"; bid = 1.0; ask = 2.3 }
-          ; { sym = "msft"; bid = 8.2; ask = 9.8 }
-          ; { sym = "tsla"; bid = 3.3; ask = 7.2 }
-          ]
-        ;;
+    let data =
+      [ { sym = "aapl"; bid = 1.0; ask = 2.3 }
+      ; { sym = "msft"; bid = 8.2; ask = 9.8 }
+      ; { sym = "tsla"; bid = 3.3; ask = 7.2 }
+      ]
+    ;;
 
-        let my_table = View.Table.render theme columns data]
+    let my_table = View.Table.render theme columns data]
     in
     let code =
       (* Get rid of the lines that disable ocamlformat *)
       T.ppx_demo_string
       |> Core.String.split_lines
       |> List.filter ~f:(fun s ->
-        not (Core.String.is_substring s ~substring:"ocamlformat"))
+           not (Core.String.is_substring s ~substring:"ocamlformat"))
       |> String.concat ~sep:"\n"
       |> String.strip
       |> String.substr_replace_first ~pattern:"\n\n" ~with_:"\n"
@@ -149,17 +149,17 @@ module Table_with_group = struct
 
       include
         [%demo
-          let columns =
-            let render_text _ string = View.text string in
-            let render_float _ = Vdom.Node.textf "%.3f" in
-            [ View.Table.Col.make "sym" ~get:sym ~render:render_text
-            ; View.Table.Col.group
-                "prices"
-                [ View.Table.Col.make "bid" ~get:bid ~render:render_float
-                ; View.Table.Col.make "ask" ~get:ask ~render:render_float
-                ]
-            ]
-          ;;]
+        let columns =
+          let render_text _ string = View.text string in
+          let render_float _ = Vdom.Node.textf "%.3f" in
+          [ View.Table.Col.make "sym" ~get:sym ~render:render_text
+          ; View.Table.Col.group
+              "prices"
+              [ View.Table.Col.make "bid" ~get:bid ~render:render_float
+              ; View.Table.Col.make "ask" ~get:ask ~render:render_float
+              ]
+          ]
+        ;;]
 
       let data =
         [ { sym = "aapl"; bid = 1.0; ask = 2.3 }
@@ -199,19 +199,19 @@ module Table_with_empty_cells = struct
 
       include
         [%demo
-          let columns =
-            let render_text _ string = View.text string in
-            [ View.Table.Col.make "symbol" ~get:sym ~render:render_text
-            ; View.Table.Col.make_opt "trader" ~get:trader ~render:render_text
-            ]
-          ;;
+        let columns =
+          let render_text _ string = View.text string in
+          [ View.Table.Col.make "symbol" ~get:sym ~render:render_text
+          ; View.Table.Col.make_opt "trader" ~get:trader ~render:render_text
+          ]
+        ;;
 
-          let data =
-            [ { sym = "aapl"; trader = None }
-            ; { sym = "msft"; trader = None }
-            ; { sym = "tsla"; trader = Some "emusk" }
-            ]
-          ;;]
+        let data =
+          [ { sym = "aapl"; trader = None }
+          ; { sym = "msft"; trader = None }
+          ; { sym = "tsla"; trader = Some "emusk" }
+          ]
+        ;;]
 
       let my_table = View.Table.render theme columns data
     end
@@ -272,8 +272,8 @@ end
 let rickroll =
   Effect.of_sync_fun
     (fun () ->
-       let url = Js_of_ocaml.Js.string "https://www.youtube.com/watch?v=dQw4w9WgXcQ" in
-       Js_of_ocaml.Dom_html.window##.location##assign url)
+      let url = Js_of_ocaml.Js.string "https://www.youtube.com/watch?v=dQw4w9WgXcQ" in
+      Js_of_ocaml.Dom_html.window##.location##assign url)
     ()
 ;;
 
@@ -401,8 +401,8 @@ module Basic_vbox = struct
   let filter_attrs =
     Some
       (fun k _ ->
-         (not (String.is_substring k ~substring:"width"))
-         && not (String.is_substring k ~substring:"height"))
+        (not (String.is_substring k ~substring:"width"))
+        && not (String.is_substring k ~substring:"height"))
   ;;
 end
 
@@ -455,9 +455,9 @@ module Interactive_vbox = struct
   ;;
 
   module Style =
-    [%css
-      stylesheet
-        {|
+  [%css
+  stylesheet
+    {|
     .controls {
       border-radius: 3px;
       padding: 1em;
@@ -551,12 +551,12 @@ module Interactive_vbox = struct
   let filter_attrs =
     Some
       (fun k v ->
-         (not (String.equal k "id"))
-         && (not (String.is_substring k ~substring:"padding"))
-         && (not (String.is_substring k ~substring:"border"))
-         && (not (String.is_substring v ~substring:"target"))
-         && (not (String.is_substring k ~substring:"width"))
-         && not (String.is_substring k ~substring:"height"))
+        (not (String.equal k "id"))
+        && (not (String.is_substring k ~substring:"padding"))
+        && (not (String.is_substring k ~substring:"border"))
+        && (not (String.is_substring v ~substring:"target"))
+        && (not (String.is_substring k ~substring:"width"))
+        && not (String.is_substring k ~substring:"height"))
   ;;
 end
 
@@ -593,19 +593,19 @@ module Enumerable_tabs = struct
   let view =
     let%map.Computation theme = View.Theme.current in
     let module T =
-      [%demo
-        module Pages = struct
-          type t =
-            | Home
-            | About
-            | User_preferences
-          [@@deriving enumerate, equal, sexp_of]
-        end
+    [%demo
+    module Pages = struct
+      type t =
+        | Home
+        | About
+        | User_preferences
+      [@@deriving enumerate, equal, sexp_of]
+    end
 
-        let tabs =
-          let on_change ~from:_ ~to_:_ = Effect.Ignore in
-          View.tabs_enum theme (module Pages) ~active:Home ~on_change
-        ;;]
+    let tabs =
+      let on_change ~from:_ ~to_:_ = Effect.Ignore in
+      View.tabs_enum theme (module Pages) ~active:Home ~on_change
+    ;;]
     in
     T.tabs, T.ppx_demo_string
   ;;

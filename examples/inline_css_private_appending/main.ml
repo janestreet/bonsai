@@ -11,7 +11,7 @@ let component =
       ~sexp_of_action:[%sexp_of: Unit.t]
       ~default_model:0
       ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) old_model () ->
-        old_model + 10)
+      old_model + 10)
   in
   let%sub append_effect =
     let%arr height = height in

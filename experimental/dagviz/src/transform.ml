@@ -18,9 +18,9 @@ module Make (Name : Types.Name) = struct
     { v with value_kind = kind }
 
   and replace_c
-        ({ kind; free_variables; here } as c : Computation.t)
-        ~(from : Name.t)
-        ~(to_ : Name.t)
+    ({ kind; free_variables; here } as c : Computation.t)
+    ~(from : Name.t)
+    ~(to_ : Name.t)
     : Computation.t
     =
     if not (Set.mem free_variables from)
@@ -46,8 +46,8 @@ module Make (Name : Types.Name) = struct
   ;;
 
   let compare_bindings_for_sorting
-        { Binding.as_ = as1; bound = { free_variables = f1; _ } }
-        { Binding.as_ = as2; bound = { free_variables = f2; _ } }
+    { Binding.as_ = as1; bound = { free_variables = f1; _ } }
+    { Binding.as_ = as2; bound = { free_variables = f2; _ } }
     =
     match Name.Set.compare f1 f2 with
     | 0 -> Name.compare as1 as2
@@ -60,7 +60,7 @@ module Make (Name : Types.Name) = struct
       | [] -> acc
       | group :: rest ->
         if List.exists group ~f:(fun member ->
-          Set.mem member.bound.free_variables item.as_)
+             Set.mem member.bound.free_variables item.as_)
         then acc
         else find_indexes rest item (idx + 1) (idx :: acc)
     in
@@ -83,74 +83,74 @@ module Make (Name : Types.Name) = struct
     |> List.fold
          ~init:([], [], Name.Set.empty, curr_id)
          ~f:(fun (rows, down_row, missing_one_level_down, curr_id) row ->
-           let provided_here = Name.Set.of_list (List.map row ~f:(fun { as_; _ } -> as_)) in
-           let gaps = Set.diff missing_one_level_down provided_here in
-           let missing_here =
-             Set.union
-               gaps
-               (List.fold
-                  row
-                  ~init:Name.Set.empty
-                  ~f:(fun acc { Binding.bound = { free_variables; _ }; _ } ->
-                    Set.union acc free_variables))
-           in
-           let rewrite, curr_id =
-             Set.fold gaps ~init:(Name.Map.empty, curr_id) ~f:(fun (acc, curr_id) gap ->
-               let name, curr_id = Name.next curr_id in
-               Map.set acc ~key:gap ~data:name, curr_id)
-           in
-           let down_row =
-             List.map down_row ~f:(fun binding ->
-               let bound =
-                 Map.fold rewrite ~init:binding.Binding.bound ~f:(fun ~key ~data acc ->
-                   replace_c acc ~from:key ~to_:data)
-               in
-               { binding with bound })
-           in
-           let curr_id, redirections =
-             let rewritten = Map.to_alist rewrite in
-             List.fold_map rewritten ~init:curr_id ~f:(fun curr_id (from, to_) ->
-               let intermediate, curr_id = Name.next curr_id in
-               let bound_id, curr_id = Name.next curr_id in
-               let last_body_id, curr_id = Name.next curr_id in
-               let inner =
-                 { Binding.bound =
-                     { kind =
-                         Kind.Value
-                           { value_kind = Value.Redirect { name = from }
-                           ; value_here = None
-                           ; value_id = bound_id
-                           }
-                     ; free_variables = Name.Set.singleton from
-                     ; here = None
+         let provided_here = Name.Set.of_list (List.map row ~f:(fun { as_; _ } -> as_)) in
+         let gaps = Set.diff missing_one_level_down provided_here in
+         let missing_here =
+           Set.union
+             gaps
+             (List.fold
+                row
+                ~init:Name.Set.empty
+                ~f:(fun acc { Binding.bound = { free_variables; _ }; _ } ->
+                Set.union acc free_variables))
+         in
+         let rewrite, curr_id =
+           Set.fold gaps ~init:(Name.Map.empty, curr_id) ~f:(fun (acc, curr_id) gap ->
+             let name, curr_id = Name.next curr_id in
+             Map.set acc ~key:gap ~data:name, curr_id)
+         in
+         let down_row =
+           List.map down_row ~f:(fun binding ->
+             let bound =
+               Map.fold rewrite ~init:binding.Binding.bound ~f:(fun ~key ~data acc ->
+                 replace_c acc ~from:key ~to_:data)
+             in
+             { binding with bound })
+         in
+         let curr_id, redirections =
+           let rewritten = Map.to_alist rewrite in
+           List.fold_map rewritten ~init:curr_id ~f:(fun curr_id (from, to_) ->
+             let intermediate, curr_id = Name.next curr_id in
+             let bound_id, curr_id = Name.next curr_id in
+             let last_body_id, curr_id = Name.next curr_id in
+             let inner =
+               { Binding.bound =
+                   { kind =
+                       Kind.Value
+                         { value_kind = Value.Redirect { name = from }
+                         ; value_here = None
+                         ; value_id = bound_id
+                         }
+                   ; free_variables = Name.Set.singleton from
+                   ; here = None
+                   }
+               ; as_ = intermediate
+               }
+             in
+             let last_body =
+               { Types.Computation.kind =
+                   Kind.Value
+                     { value_kind = Value.Redirect { name = intermediate }
+                     ; value_here = None
+                     ; value_id = last_body_id
                      }
-                 ; as_ = intermediate
-                 }
-               in
-               let last_body =
-                 { Types.Computation.kind =
-                     Kind.Value
-                       { value_kind = Value.Redirect { name = intermediate }
-                       ; value_here = None
-                       ; value_id = last_body_id
-                       }
-                 ; free_variables = Name.Set.singleton intermediate
-                 ; here = None
-                 }
-               in
-               ( curr_id
-               , { Binding.bound =
-                     { kind = Kind.Bindings { bindings = [ inner ]; last_body }
-                     ; free_variables = Name.Set.singleton from
-                     ; here = None
-                     }
-                 ; as_ = to_
-                 } ))
-           in
-           let this_row_including_redirections =
-             redirections @ row |> List.sort ~compare:compare_bindings_for_sorting
-           in
-           down_row :: rows, this_row_including_redirections, missing_here, curr_id)
+               ; free_variables = Name.Set.singleton intermediate
+               ; here = None
+               }
+             in
+             ( curr_id
+             , { Binding.bound =
+                   { kind = Kind.Bindings { bindings = [ inner ]; last_body }
+                   ; free_variables = Name.Set.singleton from
+                   ; here = None
+                   }
+               ; as_ = to_
+               } ))
+         in
+         let this_row_including_redirections =
+           redirections @ row |> List.sort ~compare:compare_bindings_for_sorting
+         in
+         down_row :: rows, this_row_including_redirections, missing_here, curr_id)
     |> fun (rows, last_row, _, curr_id) -> last_row :: rows, curr_id
   ;;
 
@@ -164,8 +164,8 @@ module Make (Name : Types.Name) = struct
             n.Binding.bound.free_variables
             |> Set.to_list
             |> List.filter_map ~f:(fun free ->
-              List.findi prev ~f:(fun _ { Binding.as_; _ } -> Name.equal as_ free)
-              |> Option.map ~f:(fun (i, _) -> Float.of_int i))
+                 List.findi prev ~f:(fun _ { Binding.as_; _ } -> Name.equal as_ free)
+                 |> Option.map ~f:(fun (i, _) -> Float.of_int i))
           in
           let pos =
             match List.length positions with

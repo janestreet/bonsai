@@ -261,7 +261,7 @@ end
     current state, as well as an inject function that updates the state. *)
 val state
   :  ?reset:('model -> 'model)
-  (** to learn more about [reset], read the docs on [with_model_resetter] *)
+       (** to learn more about [reset], read the docs on [with_model_resetter] *)
   -> ?sexp_of_model:('model -> Sexp.t)
   -> ?equal:('model -> 'model -> bool)
   -> 'model
@@ -311,7 +311,7 @@ end
     (It is very common for [inject] and [schedule_event] to be unused) *)
 val state_machine0
   :  ?reset:('action Apply_action_context.t -> 'model -> 'model)
-  (** to learn more about [reset], read the docs on [with_model_resetter] *)
+       (** to learn more about [reset], read the docs on [with_model_resetter] *)
   -> ?sexp_of_model:('model -> Sexp.t)
   -> ?sexp_of_action:('action -> Sexp.t)
   -> ?equal:('model -> 'model -> bool)
@@ -327,7 +327,7 @@ val state_machine0
 val state_machine1
   :  ?sexp_of_action:('action -> Sexp.t)
   -> ?reset:('action Apply_action_context.t -> 'model -> 'model)
-  (** to learn more about [reset], read the docs on [with_model_resetter] *)
+       (** to learn more about [reset], read the docs on [with_model_resetter] *)
   -> ?sexp_of_model:('model -> Sexp.t)
   -> ?equal:('model -> 'model -> bool)
   -> default_model:'model
@@ -343,11 +343,11 @@ val state_machine1
 (** Identical to [actor1] but it takes 0 inputs instead of 1. *)
 val actor0
   :  ?reset:
-    (inject:('action -> 'return Effect.t)
-     -> schedule_event:(unit Effect.t -> unit)
-     -> 'model
-     -> 'model)
-  (** to learn more about [reset], read the docs on [with_model_resetter] *)
+       (inject:('action -> 'return Effect.t)
+        -> schedule_event:(unit Effect.t -> unit)
+        -> 'model
+        -> 'model)
+       (** to learn more about [reset], read the docs on [with_model_resetter] *)
   -> ?sexp_of_model:('model -> Sexp.t)
   -> ?sexp_of_action:('action -> Sexp.t)
   -> ?equal:('model -> 'model -> bool)
@@ -372,7 +372,7 @@ val actor1
         -> schedule_event:(unit Effect.t -> unit)
         -> 'model
         -> 'model)
-  (** to learn more about [reset], read the docs on [with_model_resetter] *)
+       (** to learn more about [reset], read the docs on [with_model_resetter] *)
   -> ?sexp_of_model:('model -> Sexp.t)
   -> ?equal:('model -> 'model -> bool)
   -> default_model:'model
@@ -448,7 +448,7 @@ val freeze
         ...
     ]} *)
 val lazy_ : 'a Computation.t Lazy.t -> 'a Computation.t
-[@@deprecated "[since 2023-07] Use Bonsai.fix "]
+  [@@deprecated "[since 2023-07] Use Bonsai.fix "]
 
 (** A fixed-point combinator for bonsai components.  This is used to build recursive
     components like so:
@@ -560,7 +560,6 @@ val assoc_list
   -> get_key:('a -> 'key)
   -> f:('key Value.t -> 'a Value.t -> 'b Computation.t)
   -> [ `Duplicate_key of 'key | `Ok of 'b list ] Computation.t
-
 
 (** [enum] is used for matching on a value and providing different behaviors on different
     values.  The type of the value must be enumerable (there must be a finite number of
@@ -822,11 +821,11 @@ module Effect_throttling : sig
   module Poll_result : sig
     type 'a t =
       | Aborted
-      (** [Aborted] indicates that the effect was aborted before it even
+          (** [Aborted] indicates that the effect was aborted before it even
           started. If an effect starts, then it should complete with some kind
           of result - [Effect] does not support cancellation in general. *)
       | Finished of 'a
-      (** [Finished x] indicates that an effect successfully completed with value x. *)
+          (** [Finished x] indicates that an effect successfully completed with value x. *)
     [@@deriving sexp, equal]
 
     (** Collapses values of type ['a Or_error.t t] a plain Or_error.t, where
@@ -840,7 +839,8 @@ module Effect_throttling : sig
     val collapse_fun_to_or_error
       :  ?sexp_of_input:('a -> Sexp.t)
       -> ('a -> 'b Or_error.t t Effect.t)
-      -> ('a -> 'b Or_error.t Effect.t)
+      -> 'a
+      -> 'b Or_error.t Effect.t
   end
 
   (** Transforms an input effect into a new effect that enforces that invariant
@@ -1057,8 +1057,6 @@ end
 module Map : sig
   val mapi : [ `Use_assoc ]
   val map : [ `Use_assoc ]
-
-
   val of_set : ('k, 'cmp) Set.t Value.t -> ('k, unit, 'cmp) Map.t Computation.t
 
   val filter_mapi
@@ -1221,12 +1219,12 @@ module Map : sig
 
   val unordered_fold_nested_maps
     :  ?update:
-      (outer_key:'outer_key
-       -> inner_key:'inner_key
-       -> old_data:'v
-       -> new_data:'v
-       -> 'acc
-       -> 'acc)
+         (outer_key:'outer_key
+          -> inner_key:'inner_key
+          -> old_data:'v
+          -> new_data:'v
+          -> 'acc
+          -> 'acc)
     -> ('outer_key, ('inner_key, 'v, 'inner_cmp) Map.t, 'outer_cmp) Map.t Value.t
     -> init:'acc
     -> add:(outer_key:'outer_key -> inner_key:'inner_key -> data:'v -> 'acc -> 'acc)
@@ -1244,8 +1242,8 @@ module Map : sig
     -> ( 'outer_key * 'inner_key
        , 'v
        , ('outer_cmp, 'inner_cmp) Tuple2.comparator_witness )
-         Map.t
-         Computation.t
+       Map.t
+       Computation.t
 
   val collapse_by
     :  ('outer_key, ('inner_key, 'v, 'inner_cmp) Map.t, 'outer_cmp) Map.t Value.t
@@ -1290,7 +1288,7 @@ end
 module Arrow_deprecated : sig
   include
     Legacy_api_intf.S
-    with type ('input, 'result) t = 'input Value.t -> 'result Computation.t
+      with type ('input, 'result) t = 'input Value.t -> 'result Computation.t
 end
 
 module Stable : sig

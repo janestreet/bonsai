@@ -85,7 +85,6 @@ val state_machine1_dynamic_model
   -> 'input Value.t
   -> ('model * ('action -> unit Effect.t)) Computation.t
 
-
 (** The analog of [Bonsai.state], but with a dynamic model. Read the docs for
     [state_machine0_dynamic_model] *)
 val state_dynamic_model

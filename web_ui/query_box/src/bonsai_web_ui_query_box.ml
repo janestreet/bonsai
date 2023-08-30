@@ -67,20 +67,20 @@ type 'k t =
 [@@deriving fields ~getters]
 
 let create
-      (type k cmp)
-      (module Key : Bonsai.Comparator with type t = k and type comparator_witness = cmp)
-      ?(initial_query = "")
-      ?(max_visible_items = Value.return 10)
-      ?(suggestion_list_kind = Value.return Suggestion_list_kind.Transient_overlay)
-      ?(expand_direction = Value.return Expand_direction.Down)
-      ?(selected_item_attr = Value.return Attr.empty)
-      ?(extra_list_container_attr = Value.return Attr.empty)
-      ?(extra_input_attr = Value.return Attr.empty)
-      ?(extra_attr = Value.return Attr.empty)
-      ?(on_blur = Value.return (Effect.return ()))
-      ~f
-      ~on_select
-      ()
+  (type k cmp)
+  (module Key : Bonsai.Comparator with type t = k and type comparator_witness = cmp)
+  ?(initial_query = "")
+  ?(max_visible_items = Value.return 10)
+  ?(suggestion_list_kind = Value.return Suggestion_list_kind.Transient_overlay)
+  ?(expand_direction = Value.return Expand_direction.Down)
+  ?(selected_item_attr = Value.return Attr.empty)
+  ?(extra_list_container_attr = Value.return Attr.empty)
+  ?(extra_input_attr = Value.return Attr.empty)
+  ?(extra_attr = Value.return Attr.empty)
+  ?(on_blur = Value.return (Effect.return ()))
+  ~f
+  ~on_select
+  ()
   =
   let%sub suggestion_list_is_initialized, initialize_suggestion_list =
     Bonsai.state false
@@ -109,98 +109,98 @@ let create
           model
           action
           ->
-            let suggestion_list_state =
-              (* We normalize which item is selected in case the list has changed
+        let suggestion_list_state =
+          (* We normalize which item is selected in case the list has changed
                  since the last action. Normalization just means setting the
                  selected key to the closest thing that actually exists. *)
-              match model.suggestion_list_state with
-              | Selected key ->
-                select_key
-                  ~first_try:(Map.closest_key items `Less_or_equal_to key)
-                  ~then_try:(lazy (Map.closest_key items `Greater_or_equal_to key))
-                  ~else_use:First_item
-              | First_item -> First_item
-              | Closed -> Closed
+          match model.suggestion_list_state with
+          | Selected key ->
+            select_key
+              ~first_try:(Map.closest_key items `Less_or_equal_to key)
+              ~then_try:(lazy (Map.closest_key items `Greater_or_equal_to key))
+              ~else_use:First_item
+          | First_item -> First_item
+          | Closed -> Closed
+        in
+        let next_suggestion_list_state () =
+          match suggestion_list_state with
+          | Selected key ->
+            select_key
+              ~first_try:(Map.closest_key items `Greater_than key)
+              ~then_try:(lazy (Map.min_elt items))
+              ~else_use:(Selected key)
+          | First_item ->
+            (match Map.min_elt items with
+             | None -> First_item
+             | Some (first_key, _) ->
+               (match Map.closest_key items `Greater_than first_key with
+                | None -> Selected first_key
+                | Some (second_key, _) -> Selected second_key))
+          | Closed -> First_item
+        in
+        let prev_suggestion_list_state () =
+          match model.suggestion_list_state with
+          | Selected key ->
+            select_key
+              ~first_try:(Map.closest_key items `Less_than key)
+              ~then_try:(lazy (Map.max_elt items))
+              ~else_use:(Selected key)
+          | First_item | Closed ->
+            (match Map.max_elt items with
+             | None -> First_item
+             | Some (last_key, _) -> Selected last_key)
+        in
+        match action with
+        | Action.Set_query query ->
+          let suggestion_list_state =
+            match suggestion_list_state with
+            | Selected key -> Model.Selected key
+            | First_item | Closed -> First_item
+          in
+          let offset = model.offset in
+          { Model.query; suggestion_list_state; offset }
+        | Open_suggestions -> { model with suggestion_list_state = First_item }
+        | Close_suggestions -> { model with suggestion_list_state = Closed }
+        | Move_next ->
+          let suggestion_list_state = next_suggestion_list_state () in
+          let offset =
+            let comparison =
+              Model.compare_suggestion_list_state
+                (Map.comparator items).compare
+                model.suggestion_list_state
+                suggestion_list_state
             in
-            let next_suggestion_list_state () =
-              match suggestion_list_state with
-              | Selected key ->
-                select_key
-                  ~first_try:(Map.closest_key items `Greater_than key)
-                  ~then_try:(lazy (Map.min_elt items))
-                  ~else_use:(Selected key)
-              | First_item ->
-                (match Map.min_elt items with
-                 | None -> First_item
-                 | Some (first_key, _) ->
-                   (match Map.closest_key items `Greater_than first_key with
-                    | None -> Selected first_key
-                    | Some (second_key, _) -> Selected second_key))
-              | Closed -> First_item
+            if comparison = 0
+            then model.offset
+            else if comparison < 0
+            then min (max_visible_items - 1) (model.offset + 1)
+            else 0
+          in
+          { model with suggestion_list_state; offset }
+        | Move_prev ->
+          let suggestion_list_state = prev_suggestion_list_state () in
+          let offset =
+            let comparison =
+              Model.compare_suggestion_list_state
+                (Map.comparator items).compare
+                model.suggestion_list_state
+                suggestion_list_state
             in
-            let prev_suggestion_list_state () =
-              match model.suggestion_list_state with
-              | Selected key ->
-                select_key
-                  ~first_try:(Map.closest_key items `Less_than key)
-                  ~then_try:(lazy (Map.max_elt items))
-                  ~else_use:(Selected key)
-              | First_item | Closed ->
-                (match Map.max_elt items with
-                 | None -> First_item
-                 | Some (last_key, _) -> Selected last_key)
-            in
-            match action with
-            | Action.Set_query query ->
-              let suggestion_list_state =
-                match suggestion_list_state with
-                | Selected key -> Model.Selected key
-                | First_item | Closed -> First_item
-              in
-              let offset = model.offset in
-              { Model.query; suggestion_list_state; offset }
-            | Open_suggestions -> { model with suggestion_list_state = First_item }
-            | Close_suggestions -> { model with suggestion_list_state = Closed }
-            | Move_next ->
-              let suggestion_list_state = next_suggestion_list_state () in
-              let offset =
-                let comparison =
-                  Model.compare_suggestion_list_state
-                    (Map.comparator items).compare
-                    model.suggestion_list_state
-                    suggestion_list_state
-                in
-                if comparison = 0
-                then model.offset
-                else if comparison < 0
-                then min (max_visible_items - 1) (model.offset + 1)
-                else 0
-              in
-              { model with suggestion_list_state; offset }
-            | Move_prev ->
-              let suggestion_list_state = prev_suggestion_list_state () in
-              let offset =
-                let comparison =
-                  Model.compare_suggestion_list_state
-                    (Map.comparator items).compare
-                    model.suggestion_list_state
-                    suggestion_list_state
-                in
-                if comparison = 0
-                then model.offset
-                else if comparison < 0
-                then max_visible_items - 1
-                else max 0 (model.offset - 1)
-              in
-              { model with suggestion_list_state; offset }
-            | Move_to { key; offset } ->
-              if Map.mem items key
-              then { model with suggestion_list_state = Selected key; offset }
-              else model
-            | Move_next_with_fixed_offset ->
-              { model with suggestion_list_state = next_suggestion_list_state () }
-            | Move_prev_with_fixed_offset ->
-              { model with suggestion_list_state = prev_suggestion_list_state () })
+            if comparison = 0
+            then model.offset
+            else if comparison < 0
+            then max_visible_items - 1
+            else max 0 (model.offset - 1)
+          in
+          { model with suggestion_list_state; offset }
+        | Move_to { key; offset } ->
+          if Map.mem items key
+          then { model with suggestion_list_state = Selected key; offset }
+          else model
+        | Move_next_with_fixed_offset ->
+          { model with suggestion_list_state = next_suggestion_list_state () }
+        | Move_prev_with_fixed_offset ->
+          { model with suggestion_list_state = prev_suggestion_list_state () })
       ~f:(fun model inject ->
         let%sub { Model.query; _ } = return model in
         let%sub items =
@@ -304,8 +304,7 @@ let create
           let%bind.Effect items =
             match%bind.Effect get_items with
             | Active items -> Effect.return items
-            | Inactive ->
-              Effect.never
+            | Inactive -> Effect.never
           in
           let%bind.Effect offset = Effect.of_sync_fun (Map.rank items) key in
           let offset = Option.value offset ~default:0 in
@@ -523,14 +522,14 @@ module Collate_map_with_score = struct
   end
 
   let collate
-        (type k cmp)
-        (module Cmp : Comparator.S with type t = k and type comparator_witness = cmp)
-        ~preprocess
-        ~score
-        ~query_is_as_strict
-        ~to_result
-        input
-        query
+    (type k cmp)
+    (module Cmp : Comparator.S with type t = k and type comparator_witness = cmp)
+    ~preprocess
+    ~score
+    ~query_is_as_strict
+    ~to_result
+    input
+    query
     =
     let empty_result = Map.empty (module Scored_key.M (Cmp)) in
     Bonsai.Incr.compute (Value.both input query) ~f:(fun input_and_query ->
@@ -567,30 +566,30 @@ module Collate_map_with_score = struct
         array
         ~init:empty_result
         ~f:(fun index acc (key, data, preprocessed) ->
-          let score =
-            (* If the item was already filtered out by a previous query, we can
+        let score =
+          (* If the item was already filtered out by a previous query, we can
                keep filtering it out. If instead it was filtered out by a query
                that have since discarded (or, possibly, it was never filtered
                out), then we need to re-evaluate the score. *)
-            if filtered_out_at_index.(index) < num_queries
-            then 0
-            else (
-              let score = score query preprocessed in
-              filtered_out_at_index.(index)
-              <- (if score = 0 then num_queries else Int.max_value);
-              score)
-          in
-          if score = 0
-          then acc
+          if filtered_out_at_index.(index) < num_queries
+          then 0
           else (
-            (* The first component of the key compares equivalently to the pair
+            let score = score query preprocessed in
+            filtered_out_at_index.(index)
+              <- (if score = 0 then num_queries else Int.max_value);
+            score)
+        in
+        if score = 0
+        then acc
+        else (
+          (* The first component of the key compares equivalently to the pair
                (score, index), but faster, since it is only an integer. Note
                that the map comparator doesn't need to inspect the key itself,
                since [index] already captures that ordering. Thus, this whole
                computation remains fast even if the input map comparator is
                extremely slow. *)
-            let new_key = score, key in
-            Map.add_exn acc ~key:new_key ~data:(to_result preprocessed ~key ~data))))
+          let new_key = score, key in
+          Map.add_exn acc ~key:new_key ~data:(to_result preprocessed ~key ~data))))
   ;;
 end
 
@@ -602,20 +601,20 @@ module Filter_strategy = struct
 end
 
 let stringable
-      (type k cmp)
-      (module Key : Bonsai.Comparator with type t = k and type comparator_witness = cmp)
-      ?initial_query
-      ?max_visible_items
-      ?suggestion_list_kind
-      ?expand_direction
-      ?selected_item_attr
-      ?extra_list_container_attr
-      ?extra_input_attr
-      ?extra_attr
-      ?(to_view = fun _ string -> Vdom.Node.text string)
-      ~filter_strategy
-      ~on_select
-      input
+  (type k cmp)
+  (module Key : Bonsai.Comparator with type t = k and type comparator_witness = cmp)
+  ?initial_query
+  ?max_visible_items
+  ?suggestion_list_kind
+  ?expand_direction
+  ?selected_item_attr
+  ?extra_list_container_attr
+  ?extra_input_attr
+  ?extra_attr
+  ?(to_view = fun _ string -> Vdom.Node.text string)
+  ~filter_strategy
+  ~on_select
+  input
   =
   (* [filter_strategy] is not a [Value.t]; it would be easy to make it one by
      using [match%sub] here, but then the model would not be shared between the

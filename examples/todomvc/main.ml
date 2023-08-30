@@ -156,8 +156,8 @@ let header_component ~inject =
 ;;
 
 let todo_item_component
-      (todo : Model.todo Value.t)
-      ~(inject : (Action.t -> unit Effect.t) Value.t)
+  (todo : Model.todo Value.t)
+  ~(inject : (Action.t -> unit Effect.t) Value.t)
   =
   let%sub editing, set_editing =
     Bonsai.state false ~sexp_of_model:[%sexp_of: Bool.t] ~equal:[%equal: Bool.t]
@@ -261,7 +261,7 @@ let todo_list (model : Model.t Value.t) ~inject =
       Attr.many
         [ Dom_helpers.filtered_attrs [ Style.checked, is_checked ]
         ; Vdom.Attr.bool_property "checked" is_checked
-        (* weirdly, todomvc expects this checkbox to have both a class and an id named toggle-all. *)
+          (* weirdly, todomvc expects this checkbox to have both a class and an id named toggle-all. *)
         ; Vdom.Attr.id "toggle-all"
         ; Style.toggle_all
         ; Attr.type_ "checkbox"
@@ -281,8 +281,8 @@ let todo_list (model : Model.t Value.t) ~inject =
 let pluralize count word = if count > 1 then word ^ "s" else word
 
 let footer_component
-      (state : Model.t Value.t)
-      ~(inject : (Action.t -> unit Effect.t) Value.t)
+  (state : Model.t Value.t)
+  ~(inject : (Action.t -> unit Effect.t) Value.t)
   =
   let%arr inject = inject
   and active, completed =

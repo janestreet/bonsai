@@ -1,7 +1,7 @@
 open! Core
 open! Bonsai_web_test
 open! Bonsai_web
-open  Bonsai.Let_syntax
+open Bonsai.Let_syntax
 module Typeahead = Bonsai_web_ui_typeahead.Typeahead
 
 let shared_computation =
@@ -86,7 +86,7 @@ let%expect_test "Focusing and un-focusing the input shows and hides the datalist
              oninput> </input>
       <datalist> </datalist>
     </div> |}];
-  Handle.focus     handle ~get_vdom:Fn.id ~selector:"input";
+  Handle.focus handle ~get_vdom:Fn.id ~selector:"input";
   Handle.show_diff handle;
   [%expect
     {|
@@ -107,7 +107,7 @@ let%expect_test "Focusing and un-focusing the input shows and hides the datalist
     +|    <option value="Option C"> Option C </option>
     +|  </datalist>
       </div> |}];
-  Handle.blur      handle ~get_vdom:Fn.id ~selector:"input";
+  Handle.blur handle ~get_vdom:Fn.id ~selector:"input";
   Handle.show_diff handle;
   [%expect
     {|
@@ -170,8 +170,8 @@ let%expect_test "Deselect an element" =
   Handle.recompute_view handle;
   input_value handle Data.Option_C;
   Handle.store_view handle;
-  Handle.click_on   handle ~get_vdom:Fn.id ~selector:"[data-value=Option B]";
-  Handle.show_diff  handle;
+  Handle.click_on handle ~get_vdom:Fn.id ~selector:"[data-value=Option B]";
+  Handle.show_diff handle;
   (* Expected change: Option B should disappear from the pill div and reappear in the
      datalist. *)
   [%expect
@@ -202,7 +202,7 @@ let%expect_test "set the elements" =
     Handle.create
       (module struct
         type incoming = Data.Set.t
-        type t        = Vdom.Node.t * (Data.Set.t -> unit Ui_effect.t)
+        type t = Vdom.Node.t * (Data.Set.t -> unit Ui_effect.t)
 
         let view (vdom, _) =
           let module V = (val Result_spec.vdom Fn.id) in
@@ -215,7 +215,7 @@ let%expect_test "set the elements" =
   in
   Handle.store_view handle;
   Handle.do_actions handle [ Data.Set.of_list [ Data.Option_C ] ];
-  Handle.show_diff  handle;
+  Handle.show_diff handle;
   [%expect
     {|
   <div>
@@ -253,10 +253,10 @@ let%expect_test "Select two elements using partial inputs" =
   Handle.show handle;
   [%expect {| () |}];
   Handle.input_text handle ~get_vdom:Tuple2.get1 ~selector:"input" ~text:"b";
-  Handle.show       handle;
+  Handle.show handle;
   [%expect {| (Option_B) |}];
   Handle.input_text handle ~get_vdom:Tuple2.get1 ~selector:"input" ~text:"C";
-  Handle.show       handle;
+  Handle.show handle;
   [%expect {| (Option_B Option_C) |}]
 ;;
 

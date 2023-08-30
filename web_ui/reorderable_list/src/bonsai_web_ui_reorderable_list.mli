@@ -10,7 +10,6 @@ end
 type ('k, 'cmp) comparator =
   (module Comparator with type t = 'k and type comparator_witness = 'cmp)
 
-
 (** A vertical list component which moves items into their proper place during
     drag and drop. Items use absolute positioning for explicit layout; that is,
     the nth item is [n * item_height] pixels from the top of the container.
@@ -18,32 +17,31 @@ type ('k, 'cmp) comparator =
 val list
   :  ('source, 'cmp) comparator
   -> dnd:('source, int) Bonsai_web_ui_drag_and_drop.t Bonsai.Value.t
-  (** The drag-and-drop universe the list should operate in; other items in the
+       (** The drag-and-drop universe the list should operate in; other items in the
       universe may be dragged into the list *)
   -> ?enable_debug_overlay:bool
-  (** Display a transparent overlay on targets to make it clear where an item
+       (** Display a transparent overlay on targets to make it clear where an item
       may be dropped. *)
   -> ?extra_item_attrs:Vdom.Attr.t Bonsai.Value.t
-  (** Extra attributes to put on the wrapper div for each item in the list. For
+       (** Extra attributes to put on the wrapper div for each item in the list. For
       example, you might want to make each item animate into and out of
       position. *)
   -> ?left:Css_gen.Length.t
-  (** The space between the left edge of an item and the list container *)
+       (** The space between the left edge of an item and the list container *)
   -> ?right:Css_gen.Length.t
-  (** The space between the right edge of an item and the list container *)
+       (** The space between the right edge of an item and the list container *)
   -> ?empty_list_placeholder:(item_is_hovered:bool Value.t -> Vdom.Node.t Computation.t)
-  (** What to display when there are no items in the list. [item_is_hovered] is
+       (** What to display when there are no items in the list. [item_is_hovered] is
       provided in case you wish to change the placeholder based on whether an
       item is being hovered above the empty list.  *)
   -> ?default_item_height:int
-  (** The items and drop targets are spaced evenly every item_height. In order
+       (** The items and drop targets are spaced evenly every item_height. In order
       to look natural, each item should have height [item_height]. *)
   -> ('source, Vdom.Node.t * int, 'cmp) Map.t Value.t
-  (** The items that should be displayed in the list. Each item should have its
+     (** The items that should be displayed in the list. Each item should have its
       view and its current rank. Updating the rank of an item must be done via
       the [on_drop] callback of the drag-and-drop universe. *)
   -> Vdom.Node.t Bonsai.Computation.t
-
 
 (** Similar to [list], but creates the drag-and-drop universe and handles the
     [on_drop] event, making it fully self-contained. *)
@@ -118,12 +116,12 @@ module Multi : sig
           -> 'key Value.t
           -> ('data * Vdom.Node.t) Computation.t)
     -> lists:('which, 'which_cmp) Set.t Value.t
-    (** The set of lists that items can be placed in. *)
+         (** The set of lists that items can be placed in. *)
     -> default_list:'which Value.t
-    (** Initially, all items are placed in [default_list]. *)
+         (** Initially, all items are placed in [default_list]. *)
     -> ('key, 'cmp) Set.t Value.t
     -> (('which, ('key * 'data) list * Vdom.Node.t, 'which_cmp) Map.t * Vdom.Node.t)
-         Computation.t
+       Computation.t
 
   module Action : sig
     type ('key, 'which, 'which_cmp) item =
@@ -153,7 +151,7 @@ module Multi : sig
         -> 'key Value.t
         -> ('data * Vdom.Node.t) Computation.t)
     -> (('which, ('key * 'data) list * Vdom.Node.t, 'which_cmp) Map.t
-        * Vdom.Node.t
-        * (('key, 'which, 'which_cmp) Action.t -> unit Effect.t))
-         Computation.t
+       * Vdom.Node.t
+       * (('key, 'which, 'which_cmp) Action.t -> unit Effect.t))
+       Computation.t
 end

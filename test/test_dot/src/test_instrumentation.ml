@@ -87,8 +87,8 @@ let instrument_computation component =
     Graph_info.iter_graph_updates
       (Bonsai.Private.reveal_computation component)
       ~on_update:(fun gm ->
-        graph_info := gm;
-        if !print_graph_info_on_update then print_graph_info !graph_info)
+      graph_info := gm;
+      if !print_graph_info_on_update then print_graph_info !graph_info)
     |> instrument_computation ~start_timer ~stop_timer
     |> Bonsai.Private.conceal_computation
   in
@@ -994,14 +994,14 @@ let command =
            ; "name_used_twice", T name_used_twice
            ]
            |> Deferred.List.iter ~how:`Sequential ~f:(fun (name, T computation) ->
-             print_endline [%string "Processing %{name}"];
-             write_computation_to_dot [%string "%{name}.dot"] (computation ());
-             Sys_unix.command_exn [%string "dot -Tsvg %{name}.dot -o %{name}.svg"];
-             let%bind () = Sys.remove [%string "%{name}.dot"] in
-             Writer.write
-               writer
-               [%string "# %{name}\n\n![](%{name}.svg \"Graph for %{name}\")\n\n"];
-             Writer.flushed writer)
+                print_endline [%string "Processing %{name}"];
+                write_computation_to_dot [%string "%{name}.dot"] (computation ());
+                Sys_unix.command_exn [%string "dot -Tsvg %{name}.dot -o %{name}.svg"];
+                let%bind () = Sys.remove [%string "%{name}.dot"] in
+                Writer.write
+                  writer
+                  [%string "# %{name}\n\n![](%{name}.svg \"Graph for %{name}\")\n\n"];
+                Writer.flushed writer)
          in
          let%bind () =
            (* We have to special-case a bunch of code in order to force the

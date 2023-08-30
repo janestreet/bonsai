@@ -74,19 +74,19 @@ module Rpc_implementations = struct
           Protocol.Active_users.rpc
           ~on_client_and_server_out_of_sync
           (fun _connection_state _query ->
-             return { Active_users.active_users = !active_users_ref })
+          return { Active_users.active_users = !active_users_ref })
         |> Rpc.Implementation.lift
              ~f:(fun ({ Connection_state.connection; _ } as user_state) ->
-               user_state, connection)
+             user_state, connection)
       ;;
 
       let set_mouse_position =
         Rpc.Rpc.implement'
           Protocol.Set_mouse_position.rpc
           (fun { Connection_state.user; session; connection = _ } mouse_position ->
-             last_move_time := Map.set !last_move_time ~key:session ~data:(Time_ns.now ());
-             active_users_ref := Map.set !active_users_ref ~key:session ~data:user;
-             mouse_positions := Map.set !mouse_positions ~key:session ~data:mouse_position)
+          last_move_time := Map.set !last_move_time ~key:session ~data:(Time_ns.now ());
+          active_users_ref := Map.set !active_users_ref ~key:session ~data:user;
+          mouse_positions := Map.set !mouse_positions ~key:session ~data:mouse_position)
       ;;
 
       let get_mouse_position =
@@ -101,9 +101,9 @@ module Rpc_implementations = struct
             Time_ns.sub (Time_ns.now ()) (Time_ns.Span.of_sec 20.0)
           in
           last_move_time
-          := Map.filter !last_move_time ~f:(fun t -> Time_ns.( > ) t twenty_seconds_ago);
+            := Map.filter !last_move_time ~f:(fun t -> Time_ns.( > ) t twenty_seconds_ago);
           active_users_ref
-          := Map.filter_keys !active_users_ref ~f:(Map.mem !last_move_time);
+            := Map.filter_keys !active_users_ref ~f:(Map.mem !last_move_time);
           mouse_positions := Map.filter_keys !mouse_positions ~f:(Map.mem !last_move_time));
         [ active_users; set_mouse_position; get_mouse_position ]
       ;;

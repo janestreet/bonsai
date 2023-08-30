@@ -46,8 +46,8 @@ let%test_unit "all the values are alpha" =
     String.quickcheck_generator
     ~sexp_of:[%sexp_of: string]
     ~f:(fun string ->
-      let path = Path.append Path.empty (Path.Elem.Assoc (keyed string)) in
-      assert_path_unique_id_is_alpha path)
+    let path = Path.append Path.empty (Path.Elem.Assoc (keyed string)) in
+    assert_path_unique_id_is_alpha path)
 ;;
 
 let%test_unit "larger groupings of paths behave" =
@@ -74,8 +74,8 @@ let%test_unit "larger groupings of paths behave" =
     [%quickcheck.generator: P.t list]
     ~sexp_of:[%sexp_of: P.t list]
     ~f:(fun path ->
-      let path =
-        path |> List.map ~f:P.to_path_element |> List.fold ~init:Path.empty ~f:Path.append
-      in
-      assert_path_unique_id_is_alpha path)
+    let path =
+      path |> List.map ~f:P.to_path_element |> List.fold ~init:Path.empty ~f:Path.append
+    in
+    assert_path_unique_id_is_alpha path)
 ;;

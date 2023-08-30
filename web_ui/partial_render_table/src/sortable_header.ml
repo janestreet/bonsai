@@ -19,9 +19,9 @@ let assoc_findi ~f list =
 ;;
 
 let component
-      (type col_id)
-      ?(initial_order = Value.return Order.default)
-      (module Col_id : Col_id with type t = col_id)
+  (type col_id)
+  ?(initial_order = Value.return Order.default)
+  (module Col_id : Col_id with type t = col_id)
   =
   let module Action = struct
     type t = Col_id.t Order.Action.t [@@deriving sexp_of]

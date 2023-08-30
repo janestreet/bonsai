@@ -36,7 +36,7 @@ module Scroll_into_view = struct
   let element_to_scrollable element
     : < scrollIntoViewIfNeeded : bool Js.t -> unit Js.meth
       ; scrollIntoView : Js.Unsafe.any -> unit Js.meth >
-        Js.t
+    Js.t
     =
     Js.Unsafe.coerce element
   ;;

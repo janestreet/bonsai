@@ -4,11 +4,11 @@ open Bonsai_web
 module Result : sig
   type t =
     { wrap : Vdom.Node.t -> Vdom.Node.t
-    (** [wrap] is a function that you can call to attach the popover to an element. *)
+        (** [wrap] is a function that you can call to attach the popover to an element. *)
     ; open_ : unit Effect.t (** effect that when scheduled, will open the popover. *)
     ; close : unit Effect.t (** effect that when scheduled, will close the popover. *)
     ; toggle : unit Effect.t
-    (** effect that when scheduled, will close or open the popover depending on the current state.*)
+        (** effect that when scheduled, will close or open the popover depending on the current state.*)
     ; is_open : bool
     }
 end

@@ -34,14 +34,12 @@ let component =
       let%bind.Effect forward =
         match%bind.Effect get_forward with
         | Active forward -> Effect.return forward
-        | Inactive ->
-          Effect.never
+        | Inactive -> Effect.never
       in
       let%bind.Effect interpolator =
         match%bind.Effect get_interpolator with
         | Active interpolator -> Effect.return interpolator
-        | Inactive ->
-          Effect.never
+        | Inactive -> Effect.never
       in
       let%bind.Effect () = set_forward (not forward) in
       let target = if forward then 100.0 else 0.0 in

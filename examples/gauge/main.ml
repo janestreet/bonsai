@@ -5,9 +5,9 @@ module Gauge = Bonsai_web_ui_gauge
 open Vdom
 
 module Styles =
-  [%css
-    stylesheet
-      {|
+[%css
+stylesheet
+  {|
 html {
   font-family: "Open Sans", "Noto Color Emoji", sans-serif;
 }
@@ -75,7 +75,7 @@ let ticker =
       ~sexp_of_action:[%sexp_of: Unit.t]
       ~default_model:0
       ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) model () ->
-        (model + 1) % 101)
+      (model + 1) % 101)
   in
   let%sub color_index, increment =
     Bonsai.state_machine0
@@ -85,7 +85,7 @@ let ticker =
       ~sexp_of_action:[%sexp_of: Unit.t]
       ~default_model:0
       ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) prev () ->
-        prev + (1 % Array.length colors))
+      prev + (1 % Array.length colors))
   in
   let%sub () =
     let%sub effect =

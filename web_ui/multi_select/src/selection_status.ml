@@ -6,6 +6,6 @@ type t =
 [@@deriving compare, equal, sexp]
 
 let toggle = function
-  | Selected   -> Unselected
+  | Selected -> Unselected
   | Unselected -> Selected
 ;;

@@ -14,19 +14,19 @@ let roller_state =
     ~sexp_of_action:[%sexp_of: Unit.t]
     ~default_model:None
     ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) roll_spec model () ->
-      match roll_spec with
-      | Active roll_spec ->
-        (match roll_spec with
-         | Ok spec -> Some (spec, Rpgdice.Roll_spec.roll spec)
-         | Error _ -> None)
-      | Inactive ->
-        eprint_s
-          [%message
-            [%here]
-              "An action sent to a [state_machine1] has been dropped because its input was \
-               not present. This happens when the [state_machine1] is inactive when it \
-               receives a message."];
-        model)
+    match roll_spec with
+    | Active roll_spec ->
+      (match roll_spec with
+       | Ok spec -> Some (spec, Rpgdice.Roll_spec.roll spec)
+       | Error _ -> None)
+    | Inactive ->
+      eprint_s
+        [%message
+          [%here]
+            "An action sent to a [state_machine1] has been dropped because its input was \
+             not present. This happens when the [state_machine1] is inactive when it \
+             receives a message."];
+      model)
 ;;
 
 let component roll_spec =

@@ -4,9 +4,9 @@ open! Bonsai_web
 open Bonsai.Let_syntax
 
 module Style =
-  [%css
-    stylesheet
-      {|
+[%css
+stylesheet
+  {|
    .compose {
      display: flex;
      flex-direction:row;

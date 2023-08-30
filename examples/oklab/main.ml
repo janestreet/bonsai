@@ -4,9 +4,9 @@ open Bonsai.Let_syntax
 module Knobs = Knobs
 
 module Style =
-  [%css
-    stylesheet
-      {|
+[%css
+stylesheet
+  {|
   :root, body, .container {
     margin: 0;
     padding: 0;

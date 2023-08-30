@@ -129,9 +129,9 @@ let form_of_v : v Form.t Computation.t =
       (* provide a form computation for constructor in the variant *)
       let form_for_variant : type a. a Typed_variant.t -> a Form.t Computation.t
         = function
-          | A -> Bonsai.const (Form.return ())
-          | B -> Form.Elements.Textbox.int ()
-          | C -> Form.Elements.Textbox.string ()
+        | A -> Bonsai.const (Form.return ())
+        | B -> Form.Elements.Textbox.int ()
+        | C -> Form.Elements.Textbox.string ()
       ;;
     end)
 ;;

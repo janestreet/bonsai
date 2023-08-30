@@ -13,11 +13,11 @@ let get_vdom form =
 let get_vdom_verbose ?on_submit ?editable f = Form.view_as_vdom ?on_submit ?editable f
 
 let form_result_spec
-      (type a)
-      ?filter_printed_attributes
-      ?censor_paths
-      ?(get_vdom = get_vdom)
-      sexp_of_a
+  (type a)
+  ?filter_printed_attributes
+  ?censor_paths
+  ?(get_vdom = get_vdom)
+  sexp_of_a
   : (a Form.t, a) Result_spec.t
   =
   (module struct
@@ -3134,8 +3134,8 @@ let%expect_test "form of nested record of int and float (typed fields)" =
 
             let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t
               = function
-                | Age -> Form.Elements.Textbox.int ()
-                | Height -> Form.Elements.Textbox.float ()
+              | Age -> Form.Elements.Textbox.int ()
+              | Height -> Form.Elements.Textbox.float ()
             ;;
           end)
       ;;
@@ -3156,8 +3156,8 @@ let%expect_test "form of nested record of int and float (typed fields)" =
 
           let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t
             = function
-              | Unit -> Bonsai.const (Form.return ())
-              | Nested -> Nested.form
+            | Unit -> Bonsai.const (Form.return ())
+            | Nested -> Nested.form
           ;;
         end)
     ;;
@@ -3266,8 +3266,8 @@ let%expect_test "typed records labelling overrides defaults" =
 
             let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t
               = function
-                | Age -> Form.Elements.Textbox.int ()
-                | Height -> Form.Elements.Textbox.float ()
+              | Age -> Form.Elements.Textbox.int ()
+              | Height -> Form.Elements.Textbox.float ()
             ;;
           end)
       ;;
@@ -3293,8 +3293,8 @@ let%expect_test "typed records labelling overrides defaults" =
 
           let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t
             = function
-              | Unit -> Bonsai.const (Form.return ())
-              | Nested -> Nested.form
+            | Unit -> Bonsai.const (Form.return ())
+            | Nested -> Nested.form
           ;;
         end)
     ;;
@@ -3416,7 +3416,7 @@ let%expect_test "typed records: dynamic labelling" =
 
           let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t
             = function
-              | Int -> Form.Elements.Number.int ~step:1 ~default:0 ()
+            | Int -> Form.Elements.Number.int ~step:1 ~default:0 ()
           ;;
         end)
     ;;
@@ -3488,11 +3488,11 @@ let%expect_test "typed variants recursive" =
 
           let form_for_variant : type a. a Typed_variant.t -> a Form.t Computation.t
             = function
-              | Nil -> Bonsai.const (Form.return ())
-              | Cons ->
-                let%map.Computation int = Form.Elements.Textbox.int ()
-                and me = (Bonsai.lazy_ [@alert "-deprecated"]) (lazy (form ())) in
-                Form.both int me
+            | Nil -> Bonsai.const (Form.return ())
+            | Cons ->
+              let%map.Computation int = Form.Elements.Textbox.int ()
+              and me = (Bonsai.lazy_ [@alert "-deprecated"]) (lazy (form ())) in
+              Form.both int me
           ;;
         end)
     ;;
@@ -3604,9 +3604,9 @@ let%expect_test "typed variants" =
 
           let form_for_variant : type a. a Typed_variant.t -> a Form.t Computation.t
             = function
-              | Unit -> Bonsai.const (Form.return ())
-              | Integer -> Form.Elements.Textbox.int ()
-              | Text -> Form.Elements.Textbox.string ()
+            | Unit -> Bonsai.const (Form.return ())
+            | Integer -> Form.Elements.Textbox.int ()
+            | Text -> Form.Elements.Textbox.string ()
           ;;
         end)
     ;;
@@ -3747,7 +3747,7 @@ let%expect_test "typed variants: dynamic labelling" =
 
           let form_for_variant : type a. a Typed_variant.t -> a Form.t Computation.t
             = function
-              | Integer -> Form.Elements.Number.int ~default:0 ~step:1 ()
+            | Integer -> Form.Elements.Number.int ~default:0 ~step:1 ()
           ;;
         end)
     ;;
@@ -3829,9 +3829,9 @@ let%expect_test "typed optional variants" =
 
           let form_for_variant : type a. a Typed_variant.t -> a Form.t Computation.t
             = function
-              | Unit -> Bonsai.const (Form.return ())
-              | Integer -> Form.Elements.Textbox.int ()
-              | Text -> Form.Elements.Textbox.string ()
+            | Unit -> Bonsai.const (Form.return ())
+            | Integer -> Form.Elements.Textbox.int ()
+            | Text -> Form.Elements.Textbox.string ()
           ;;
         end)
     ;;
@@ -3999,9 +3999,9 @@ let%expect_test "typed variants with custom labels" =
 
           let form_for_variant : type a. a Typed_variant.t -> a Form.t Computation.t
             = function
-              | Unit -> Bonsai.const (Form.return ())
-              | Integer -> Form.Elements.Textbox.int ()
-              | Text -> Form.Elements.Textbox.string ()
+            | Unit -> Bonsai.const (Form.return ())
+            | Integer -> Form.Elements.Textbox.int ()
+            | Text -> Form.Elements.Textbox.string ()
           ;;
         end)
     ;;
@@ -4046,9 +4046,9 @@ let%expect_test "typed variants: attr is applied to dropdown" =
 
           let form_for_variant : type a. a Typed_variant.t -> a Form.t Computation.t
             = function
-              | Unit -> Bonsai.const (Form.return ())
-              | Integer -> Form.Elements.Textbox.int ()
-              | Text -> Form.Elements.Textbox.string ()
+            | Unit -> Bonsai.const (Form.return ())
+            | Integer -> Form.Elements.Textbox.int ()
+            | Text -> Form.Elements.Textbox.string ()
           ;;
         end)
     ;;
@@ -4093,9 +4093,9 @@ let%expect_test "typed variants: radio vertical" =
 
           let form_for_variant : type a. a Typed_variant.t -> a Form.t Computation.t
             = function
-              | Unit -> Bonsai.const (Form.return ())
-              | Integer -> Form.Elements.Textbox.int ()
-              | Text -> Form.Elements.Textbox.string ()
+            | Unit -> Bonsai.const (Form.return ())
+            | Integer -> Form.Elements.Textbox.int ()
+            | Text -> Form.Elements.Textbox.string ()
           ;;
         end)
     ;;
@@ -4167,9 +4167,9 @@ let%expect_test "typed variants: radio horizontal" =
 
           let form_for_variant : type a. a Typed_variant.t -> a Form.t Computation.t
             = function
-              | Unit -> Bonsai.const (Form.return ())
-              | Integer -> Form.Elements.Textbox.int ()
-              | Text -> Form.Elements.Textbox.string ()
+            | Unit -> Bonsai.const (Form.return ())
+            | Integer -> Form.Elements.Textbox.int ()
+            | Text -> Form.Elements.Textbox.string ()
           ;;
         end)
     ;;
@@ -4278,8 +4278,8 @@ let%expect_test "typed variants: dropdown with example default" =
 
           let form_for_variant : type a. a Typed_variant.t -> a Form.t Computation.t
             = function
-              | String -> Form.Elements.Textbox.string ()
-              | Other_thing -> Bonsai.const (Form.return ())
+            | String -> Form.Elements.Textbox.string ()
+            | Other_thing -> Bonsai.const (Form.return ())
           ;;
         end)
     ;;
@@ -4321,8 +4321,8 @@ let%expect_test "optional typed-variant-form: dropdown with example default" =
 
           let form_for_variant : type a. a Typed_variant.t -> a Form.t Computation.t
             = function
-              | String -> Form.Elements.Textbox.string ()
-              | Other_thing -> Bonsai.const (Form.return ())
+            | String -> Form.Elements.Textbox.string ()
+            | Other_thing -> Bonsai.const (Form.return ())
           ;;
         end)
     ;;
@@ -5265,8 +5265,8 @@ let%expect_test "Bonsai_form.Typed sets groups/labels correctly on nested record
 
             let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t
               = function
-                | B_1 -> checkbox
-                | B_2 -> checkbox
+              | B_1 -> checkbox
+              | B_2 -> checkbox
             ;;
           end)
       ;;
@@ -5287,8 +5287,8 @@ let%expect_test "Bonsai_form.Typed sets groups/labels correctly on nested record
 
           let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t
             = function
-              | A_1 -> checkbox
-              | A_2 -> B.form ()
+            | A_1 -> checkbox
+            | A_2 -> B.form ()
           ;;
         end)
     ;;
@@ -6200,9 +6200,9 @@ let%test_module "Typed fields monomorphization" =
 
             let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t
               = function
-                | A -> Form.Elements.Textbox.int ()
-                | B -> Form.Elements.Textbox.string ()
-                | C -> Form.Elements.Textbox.float ()
+              | A -> Form.Elements.Textbox.int ()
+              | B -> Form.Elements.Textbox.string ()
+              | C -> Form.Elements.Textbox.float ()
             ;;
           end)
       ;;
@@ -6303,9 +6303,9 @@ let%test_module "Typed fields monomorphization" =
 
             let form_for_variant : type a. a Typed_variant.t -> a Form.t Computation.t
               = function
-                | A -> Form.Elements.Textbox.int ()
-                | B -> Form.Elements.Textbox.string ()
-                | C -> Form.Elements.Textbox.float ()
+              | A -> Form.Elements.Textbox.int ()
+              | B -> Form.Elements.Textbox.string ()
+              | C -> Form.Elements.Textbox.float ()
             ;;
           end)
       ;;

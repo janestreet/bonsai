@@ -34,11 +34,11 @@ let switch ~here ~match_ ~branches ~with_ =
 ;;
 
 let reset_to_default
-      ~default_model
-      ~inject_dynamic:_
-      ~inject_static:_
-      ~schedule_event:_
-      _prev_model
+  ~default_model
+  ~inject_dynamic:_
+  ~inject_static:_
+  ~schedule_event:_
+  _prev_model
   =
   default_model
 ;;
@@ -59,13 +59,13 @@ module Edge = struct
 end
 
 let state_machine1_safe
-      ?(sexp_of_action = sexp_of_opaque)
-      ~sexp_of_model
-      ?reset
-      ~equal
-      ~default_model
-      ~apply_action
-      input
+  ?(sexp_of_action = sexp_of_opaque)
+  ~sexp_of_model
+  ?reset
+  ~equal
+  ~default_model
+  ~apply_action
+  input
   =
   let name = Source_code_position.to_string [%here] in
   let reset =
@@ -73,8 +73,8 @@ let state_machine1_safe
       reset
       ~default_model
       ~f:(fun ~ignore_absurd reset ~inject_dynamic ~inject_static ~schedule_event ->
-        ignore_absurd inject_static;
-        reset (Apply_action_context.create ~inject:inject_dynamic ~schedule_event))
+      ignore_absurd inject_static;
+      reset (Apply_action_context.create ~inject:inject_dynamic ~schedule_event))
   in
   let apply_action ~inject_dynamic ~inject_static:_ ~schedule_event =
     apply_action (Apply_action_context.create ~inject:inject_dynamic ~schedule_event)
@@ -102,13 +102,13 @@ module Computation_status = struct
 end
 
 let state_machine1
-      ?sexp_of_action
-      ?reset
-      ?sexp_of_model
-      ?equal
-      ~default_model
-      ~apply_action
-      input
+  ?sexp_of_action
+  ?reset
+  ?sexp_of_model
+  ?equal
+  ~default_model
+  ~apply_action
+  input
   =
   let apply_action context input model action =
     let input = Computation_status.of_option input in
@@ -125,13 +125,13 @@ let state_machine1
 ;;
 
 let state_machine0
-      ?reset
-      ?sexp_of_model
-      ?(sexp_of_action = sexp_of_opaque)
-      ?equal
-      ~default_model
-      ~apply_action
-      ()
+  ?reset
+  ?sexp_of_model
+  ?(sexp_of_action = sexp_of_opaque)
+  ?equal
+  ~default_model
+  ~apply_action
+  ()
   =
   let name = Source_code_position.to_string [%here] in
   let apply_action ~inject_dynamic:_ ~inject_static ~schedule_event =
@@ -142,8 +142,8 @@ let state_machine0
       reset
       ~default_model
       ~f:(fun ~ignore_absurd reset ~inject_dynamic ~inject_static ~schedule_event ->
-        ignore_absurd inject_dynamic;
-        reset (Apply_action_context.create ~inject:inject_static ~schedule_event))
+      ignore_absurd inject_dynamic;
+      reset (Apply_action_context.create ~inject:inject_static ~schedule_event))
   in
   Leaf0
     { model =
@@ -163,15 +163,15 @@ module Proc_incr = struct
   let compute_with_clock t ~f = Computation.Leaf_incr { input = t; compute = f }
 
   let of_module
-        (type input model result)
-        (module M : Component_s_incr
-          with type Input.t = input
-           and type Model.t = model
-           and type Result.t = result)
-        ?sexp_of_model
-        ~equal
-        ~(default_model : model)
-        (input : input Value.t)
+    (type input model result)
+    (module M : Component_s_incr
+      with type Input.t = input
+       and type Model.t = model
+       and type Result.t = result)
+    ?sexp_of_model
+    ~equal
+    ~(default_model : model)
+    (input : input Value.t)
     : result Computation.t
     =
     sub
@@ -204,10 +204,10 @@ module Proc_incr = struct
 end
 
 let assoc
-      (type k v cmp)
-      (comparator : (k, cmp) comparator)
-      (map : (k, v, cmp) Map.t Value.t)
-      ~f
+  (type k v cmp)
+  (comparator : (k, cmp) comparator)
+  (map : (k, v, cmp) Map.t Value.t)
+  ~f
   =
   let module C = (val comparator) in
   let key_id : k Type_equal.Id.t = Type_equal.Id.create ~name:"key id" C.sexp_of_t in
@@ -224,12 +224,12 @@ let assoc
 ;;
 
 let assoc_on
-      (type model_k io_k model_cmp io_cmp v)
-      (io_comparator : (io_k, io_cmp) comparator)
-      (model_comparator : (model_k, model_cmp) comparator)
-      (map : (io_k, v, io_cmp) Map.t Value.t)
-      ~get_model_key
-      ~f
+  (type model_k io_k model_cmp io_cmp v)
+  (io_comparator : (io_k, io_cmp) comparator)
+  (model_comparator : (model_k, model_cmp) comparator)
+  (map : (io_k, v, io_cmp) Map.t Value.t)
+  ~get_model_key
+  ~f
   =
   let module Io_comparator = (val io_comparator) in
   let module Model_comparator = (val model_comparator) in
@@ -268,14 +268,14 @@ let assoc_on
 let lazy_ t = Lazy t
 
 let wrap
-      (type model action)
-      ?reset
-      ?sexp_of_model
-      ?equal
-      ~default_model
-      ~apply_action
-      ~f
-      ()
+  (type model action)
+  ?reset
+  ?sexp_of_model
+  ?equal
+  ~default_model
+  ~apply_action
+  ~f
+  ()
   =
   let model_id : model Type_equal.Id.t =
     Type_equal.Id.create ~name:"model id" [%sexp_of: opaque]
@@ -285,8 +285,8 @@ let wrap
       reset
       ~default_model
       ~f:(fun ~ignore_absurd reset ~inject_dynamic ~inject_static ~schedule_event ->
-        ignore_absurd inject_static;
-        reset (Apply_action_context.create ~inject:inject_dynamic ~schedule_event))
+      ignore_absurd inject_static;
+      reset (Apply_action_context.create ~inject:inject_dynamic ~schedule_event))
   in
   let action_id =
     Meta.Action.of_module ~sexp_of_action:sexp_of_opaque ~name:"action id"

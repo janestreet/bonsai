@@ -175,59 +175,59 @@ module Make (Name : Name) = struct
 
       method value_kind : Value.value_without_position -> 'acc -> 'acc =
         fun value_kind acc ->
-        match value_kind with
-        | Fake -> acc
-        | Redirect { name } -> self#name name acc
-        | Named name -> self#name name acc
-        | Singleton -> acc
-        | Mapn values ->
-          List.fold ~init:acc ~f:(fun acc value -> self#value value acc) values
+          match value_kind with
+          | Fake -> acc
+          | Redirect { name } -> self#name name acc
+          | Named name -> self#name name acc
+          | Singleton -> acc
+          | Mapn values ->
+            List.fold ~init:acc ~f:(fun acc value -> self#value value acc) values
 
       method value : Value.t -> 'acc -> 'acc =
         fun value acc ->
-        match value with
-        | { value_kind; value_here; value_id } ->
-          self#value_kind value_kind acc
-          |> fun acc ->
-          Option.value_map
-            value_here
-            ~f:(fun value_here -> self#position value_here acc)
-            ~default:acc
-          |> self#name value_id
+          match value with
+          | { value_kind; value_here; value_id } ->
+            self#value_kind value_kind acc
+            |> fun acc ->
+            Option.value_map
+              value_here
+              ~f:(fun value_here -> self#position value_here acc)
+              ~default:acc
+            |> self#name value_id
 
       method binding : Binding.t -> 'acc -> 'acc =
         fun binding acc ->
-        let { bound : computation; as_ : Name.t } = binding in
-        self#computation bound acc |> self#name as_
+          let { bound : computation; as_ : Name.t } = binding in
+          self#computation bound acc |> self#name as_
 
       method string : string -> 'acc -> 'acc = fun _ acc -> acc
 
       method kind : Kind.t -> 'acc -> 'acc =
         fun kind acc ->
-        match kind with
-        | Bindings { bindings; last_body } ->
-          List.fold ~init:acc bindings ~f:(Fn.flip self#binding)
-          |> self#computation last_body
-        | Value value -> self#value value acc
-        | Wrapping { name; introduces; bodies } ->
-          self#string name acc
-          |> fun acc ->
-          List.fold introduces ~init:acc ~f:(Fn.flip self#name)
-          |> fun acc -> List.fold bodies ~init:acc ~f:(Fn.flip self#computation)
+          match kind with
+          | Bindings { bindings; last_body } ->
+            List.fold ~init:acc bindings ~f:(Fn.flip self#binding)
+            |> self#computation last_body
+          | Value value -> self#value value acc
+          | Wrapping { name; introduces; bodies } ->
+            self#string name acc
+            |> fun acc ->
+            List.fold introduces ~init:acc ~f:(Fn.flip self#name)
+            |> fun acc -> List.fold bodies ~init:acc ~f:(Fn.flip self#computation)
 
       method computation : Computation.t -> 'acc -> 'acc =
         fun computation acc ->
-        let { kind : Kind.t
-            ; free_variables : Name.Set.t
-            ; here : Source_code_position.Stable.V1.t option
-            }
-          =
-          computation
-        in
-        self#kind kind acc
-        |> fun acc ->
-        Set.fold free_variables ~init:acc ~f:(Fn.flip self#name)
-        |> fun acc ->
-        Option.value_map here ~f:(fun here -> self#position here acc) ~default:acc
+          let { kind : Kind.t
+              ; free_variables : Name.Set.t
+              ; here : Source_code_position.Stable.V1.t option
+              }
+            =
+            computation
+          in
+          self#kind kind acc
+          |> fun acc ->
+          Set.fold free_variables ~init:acc ~f:(Fn.flip self#name)
+          |> fun acc ->
+          Option.value_map here ~f:(fun here -> self#position here acc) ~default:acc
     end
 end

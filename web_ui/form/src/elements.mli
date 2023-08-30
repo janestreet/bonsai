@@ -476,7 +476,6 @@ module File_select : sig
       NOTE: these widgets are not safe for use in Tangle as internally they require a
       model which cannot be [of_sexp]'d. *)
 
-
   val single_opt
     :  ?extra_attrs:Vdom.Attr.t list Value.t
     -> ?accept:[ `Extension of string | `Mimetype of string ] list
@@ -525,7 +524,6 @@ module Rank : sig
     -> ?default_item_height:int
     -> (source:Vdom.Attr.t Value.t -> 'a Value.t -> Vdom.Node.t Computation.t)
     -> 'a list Form.t Computation.t
-
 end
 
 module Query_box : sig
@@ -565,7 +563,7 @@ module Query_box : sig
     -> ?extra_list_container_attr:Vdom.Attr.t Value.t
     -> ?handle_unknown_option:(string -> 'a option) Value.t
     -> (module Bonsai.Comparator with type t = 'a and type comparator_witness = 'cmp)
-    (* If there are duplicate items in [all_options] (according to the comparator),
+       (* If there are duplicate items in [all_options] (according to the comparator),
        the last of the duplicates will be the only one that show up in the list
        of suggestions. *)
     -> all_options:'a list Value.t
@@ -579,7 +577,7 @@ module Query_box : sig
     -> ?extra_list_container_attr:Vdom.Attr.t Value.t
     -> ?handle_unknown_option:(string -> 'a option) Value.t
     -> (module Bonsai.Comparator with type t = 'a and type comparator_witness = 'cmp)
-    (* If there are duplicate items in [all_options] (according to the comparator),
+       (* If there are duplicate items in [all_options] (according to the comparator),
        the last of the duplicates will be the only one that show up in the list
        of suggestions. *)
     -> all_options:'a list Value.t

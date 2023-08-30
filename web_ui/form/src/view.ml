@@ -9,8 +9,8 @@ let sexp_to_pretty_string sexp_of_t t =
   |> Sexp.to_string_mach
   |> String.lowercase
   |> String.map ~f:(function
-    | '(' | ')' | '-' | '_' -> ' '
-    | o -> o)
+       | '(' | ')' | '-' | '_' -> ' '
+       | o -> o)
 ;;
 
 let to_vdom_plain ?(theme = View.Expert.default_theme) ?editable view =

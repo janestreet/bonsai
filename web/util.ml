@@ -1,7 +1,6 @@
 open! Core
 open! Js_of_ocaml
 
-
 let am_running_how
   : [ `Node_test | `Node_benchmark | `Node | `Browser_benchmark | `Browser ]
   =
@@ -29,10 +28,10 @@ let am_within_disabled_fieldset (event : #Dom_html.event Js.t) =
     in
     Js.to_array event##composedPath
     |> Array.exists ~f:(fun element ->
-      let tag_name = Js.Optdef.to_option element##.tagName in
-      let disabled = Js.Optdef.to_option element##.disabled in
-      match Option.both tag_name disabled with
-      | None -> false
-      | Some (tag_name, disabled) ->
-        String.equal (Js.to_string tag_name) "FIELDSET" && Js.to_bool disabled)
+         let tag_name = Js.Optdef.to_option element##.tagName in
+         let disabled = Js.Optdef.to_option element##.disabled in
+         match Option.both tag_name disabled with
+         | None -> false
+         | Some (tag_name, disabled) ->
+           String.equal (Js.to_string tag_name) "FIELDSET" && Js.to_bool disabled)
 ;;

@@ -10,9 +10,9 @@ module Direction = struct
 end
 
 module Style =
-  [%css
-    stylesheet
-      {|
+[%css
+stylesheet
+  {|
   .tooltip_container {
     --dist: 0.3em;
 
@@ -87,12 +87,12 @@ module Style =
 |}]
 
 let make
-      (constants : Constants.t)
-      ~container_attrs
-      ~tooltip_attrs
-      ~direction
-      ~tipped
-      ~tooltip
+  (constants : Constants.t)
+  ~container_attrs
+  ~tooltip_attrs
+  ~direction
+  ~tipped
+  ~tooltip
   =
   let dir_class =
     match (direction : Direction.t) with

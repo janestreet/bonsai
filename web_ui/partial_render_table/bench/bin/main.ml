@@ -45,10 +45,10 @@ module Dynamic_cells = struct
   module Column = Expert.Columns.Dynamic_cells
 
   let column_helper
-        (type a)
-        (module M : S with type t = a)
-        ?visible
-        (field : (_, a) Field.t)
+    (type a)
+    (module M : S with type t = a)
+    ?visible
+    (field : (_, a) Field.t)
     =
     Column.column
       ?visible
@@ -87,10 +87,10 @@ module Dynamic_columns = struct
   module Column = Expert.Columns.Dynamic_columns
 
   let column_helper
-        (type a)
-        (module M : S with type t = a)
-        ?visible
-        (field : (_, a) Field.t)
+    (type a)
+    (module M : S with type t = a)
+    ?visible
+    (field : (_, a) Field.t)
     =
     Column.column
       ?visible
@@ -251,10 +251,10 @@ let set_map ~config ~size ~num_sets ~batch_size ~window_size =
           List.init batch_size ~f:(fun i ->
             let index = (set_num * batch_size) + i in
             current_map
-            := Map.set
-                 !current_map
-                 ~key:(index mod window_size)
-                 ~data:(Row.of_int (index + size));
+              := Map.set
+                   !current_map
+                   ~key:(index mod window_size)
+                   ~data:(Row.of_int (index + size));
             Input.set_map input !current_map)
           |> Interaction.many)
         |> Interaction.many_with_stabilizations

@@ -590,8 +590,8 @@ let%expect_test "Static exception node on missing index of [Let_syntax.switch]."
       ~match_:(Value.return 1)
       ~branches:1
       ~with_:(function
-        | 0 -> Bonsai.const "hi"
-        | _ -> assert false)
+      | 0 -> Bonsai.const "hi"
+      | _ -> assert false)
   in
   print_computation c;
   [%expect

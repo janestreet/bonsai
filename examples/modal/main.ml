@@ -1,7 +1,7 @@
 open! Core
 open! Bonsai_web
 open! Bonsai.Let_syntax
-module Modal        = Bonsai_web_ui_modal
+module Modal = Bonsai_web_ui_modal
 module Native_modal = Draft_modal
 
 (* original modal *)
@@ -42,8 +42,8 @@ let original_app =
   in
   let%arr state = state
   and set_state = set_state
-  and modal_1   = modal_1
-  and modal_2   = modal_2 in
+  and modal_1 = modal_1
+  and modal_2 = modal_2 in
   Vdom.Node.div
     [ Vdom.Node.button
         ~attrs:[ Vdom.Attr.on_click (fun _ -> modal_1.show ()) ]
@@ -55,7 +55,7 @@ let original_app =
           [ Vdom.Attr.on_click (fun _ ->
               let%bind.Ui_effect () = set_state (state + 1) in
               modal_2.show state)
-          ; Vdom.Attr.style    (Css_gen.margin_top (`Px 10))
+          ; Vdom.Attr.style (Css_gen.margin_top (`Px 10))
           ]
         [ Vdom.Node.text "Click me multiple times!" ]
     ; modal_2.view
@@ -78,7 +78,7 @@ let dialog_contents ?title ?close_button:close_button_on_cancel contents =
   let title_markup = Option.value_map title ~default:Vdom.Node.none ~f:dialog_title in
   let close_button_markup =
     match close_button_on_cancel with
-    | None          -> Vdom.Node.none
+    | None -> Vdom.Node.none
     | Some on_click ->
       Vdom.Node.div
         ~attrs:
@@ -130,7 +130,7 @@ let stacking_example =
   in
   let%arr show_outer = show_outer
   and toggle_outer = toggle_outer
-  and show_inner   = show_inner
+  and show_inner = show_inner
   and toggle_inner = toggle_inner in
   let inner_modal =
     let contents = dialog_contents (Vdom.Node.text "inner modal") in
@@ -244,9 +244,9 @@ let native_app =
   let%sub add_lots_of_content_markup = add_lots_of_content_markup in
   let%sub stacking_example = stacking_example in
   let%arr simple_modal = simple_modal
-  and side_sheet_modal  = side_sheet_modal
+  and side_sheet_modal = side_sheet_modal
   and transparent_modal = transparent_modal
-  and stacking_example  = stacking_example
+  and stacking_example = stacking_example
   and add_lots_of_content_markup = add_lots_of_content_markup in
   Vdom.Node.div
     (List.map

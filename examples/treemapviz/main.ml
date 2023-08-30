@@ -18,8 +18,8 @@ module Tree = struct
     ; color :
         ((* NOTE: [color] color corresponds to the percent move. Roughly 3.0 means green -3
             means red and everything in between is a gradient.*)
-          float
-          [@quickcheck.generator percent_range_generator])
+         float
+        [@quickcheck.generator percent_range_generator])
     ; children : t list
     }
   [@@deriving quickcheck]
@@ -99,9 +99,9 @@ let stress_elements =
 ;;
 
 module Style =
-  [%css
-    stylesheet
-      {|
+[%css
+stylesheet
+  {|
 * {
   box-sizing: border-box;
 }

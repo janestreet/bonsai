@@ -88,11 +88,11 @@ module Hook = struct
       List.iter changes ~f:(fun (input, dimensions) ->
         Input.to_alist input
         |> List.iter ~f:(fun (T (group_key, keys)) ->
-          List.iter keys ~f:(fun key ->
-            dimension_groups
-            := Event_groups.change !dimension_groups group_key ~f:(fun items ->
-              let items = Option.value ~default:[] items in
-              Some (Action.Set (key, dimensions) :: items)))));
+             List.iter keys ~f:(fun key ->
+               dimension_groups
+                 := Event_groups.change !dimension_groups group_key ~f:(fun items ->
+                      let items = Option.value ~default:[] items in
+                      Some (Action.Set (key, dimensions) :: items)))));
       let events =
         let f ~key:_ = function
           | `Both (tracker, dimension_group) -> Some (tracker dimension_group)

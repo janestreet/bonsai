@@ -30,7 +30,7 @@ let component =
                  Vdom.Node.div
                    ~attrs:
                      [ [%css
-                       {| --color: tomato;
+                         {| --color: tomato;
                           background-color: var(--color);
                           width: 2rem;
                           height: 2rem; |}]
@@ -44,7 +44,7 @@ let component =
                  Vdom.Node.div
                    ~attrs:
                      [ [%css
-                       {| --color: tomato;
+                         {| --color: tomato;
                           background-color: var(--color);
                           width: 2rem;
                           height: 2rem; |}]
@@ -62,7 +62,7 @@ let component =
                    [ Vdom.Node.div
                        ~attrs:
                          [ [%css
-                           {| --color: tomato;
+                             {| --color: tomato;
                           background-color: var(--color);
                           width: 2rem;
                           height: 2rem; |}]
@@ -75,9 +75,9 @@ let component =
                [%demo
                  let color = `Name "tomato" in
                  let module Style =
-                   [%css
-                     stylesheet
-                       {|
+                 [%css
+                 stylesheet
+                   {|
                     .square {
                        background-color: %{color#Css_gen.Color};
                        width: 2rem;
@@ -92,9 +92,9 @@ let component =
                [%demo
                  let color = `Name "tomato" in
                  let module Style =
-                   [%css
-                     stylesheet
-                       {|
+                 [%css
+                 stylesheet
+                   {|
                     #square {
                        background-color: %{color#Css_gen.Color};
                        width: 2rem;
@@ -109,9 +109,9 @@ let component =
                [%demo
                  let color = `Name "tomato" in
                  let module Style =
-                   [%css
-                     stylesheet
-                       {|
+                 [%css
+                 stylesheet
+                   {|
                     .foo * {
                        background-color: %{color#Css_gen.Color};
                        width: 2rem;
@@ -120,7 +120,7 @@ let component =
                        --beep: 1;
                      }
                        |}
-                       ~dont_hash:[ "foo" ]]
+                   ~dont_hash:[ "foo" ]]
                  in
                  Vdom.Node.div
                    ~attrs:[ Vdom.Attr.class_ "foo" ]

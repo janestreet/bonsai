@@ -77,8 +77,7 @@ let light_mode_constants =
       ; header_body_border = header_header_border
       ; body_body_border = extreme_primary_border
       }
-  ; is_dark =
-      false
+  ; is_dark = false
   ; form =
       { error_message = { foreground = `Name "black"; background = `Name "pink" }
       ; error_toggle_text = `Hex "#f54646"
@@ -125,11 +124,11 @@ let v1 ~constants ~codemirror_theme ~is_dark ~name ~version_name ~set_min_height
 ;;
 
 let theme
-      ?(contrast = Contrast.Standard)
-      ?(style = Style.Dark)
-      ?set_min_height_to_100vh
-      ~version
-      ()
+  ?(contrast = Contrast.Standard)
+  ?(style = Style.Dark)
+  ?set_min_height_to_100vh
+  ~version
+  ()
   =
   let is_dark, constants, name =
     match style with

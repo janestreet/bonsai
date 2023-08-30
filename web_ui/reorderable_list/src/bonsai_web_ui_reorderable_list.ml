@@ -79,16 +79,16 @@ type ('k, 'cmp) comparator =
    a special "extra target" to the list to enable appending new items to the
    bottom. *)
 let list
-      (type src cmp)
-      (key : (src, cmp) comparator)
-      ~(dnd : (src, int) Bonsai_web_ui_drag_and_drop.t Bonsai.Value.t)
-      ?(enable_debug_overlay = false)
-      ?(extra_item_attrs = Bonsai.Value.return Attr.empty)
-      ?(left = `Px 0)
-      ?(right = `Px 0)
-      ?(empty_list_placeholder = fun ~item_is_hovered:_ -> Bonsai.const Node.None)
-      ?(default_item_height = 50)
-      input
+  (type src cmp)
+  (key : (src, cmp) comparator)
+  ~(dnd : (src, int) Bonsai_web_ui_drag_and_drop.t Bonsai.Value.t)
+  ?(enable_debug_overlay = false)
+  ?(extra_item_attrs = Bonsai.Value.return Attr.empty)
+  ?(left = `Px 0)
+  ?(right = `Px 0)
+  ?(empty_list_placeholder = fun ~item_is_hovered:_ -> Bonsai.const Node.None)
+  ?(default_item_height = 50)
+  input
   =
   let module Key = (val key) in
   let%sub sizes, size_attr =
@@ -423,16 +423,16 @@ module Action = struct
 end
 
 let with_inject
-      (type src cmp)
-      (key : (src, cmp) comparator)
-      ?(sentinel_name = "dnd")
-      ?enable_debug_overlay
-      ?extra_item_attrs
-      ?left
-      ?right
-      ?empty_list_placeholder
-      ?default_item_height
-      render
+  (type src cmp)
+  (key : (src, cmp) comparator)
+  ?(sentinel_name = "dnd")
+  ?enable_debug_overlay
+  ?extra_item_attrs
+  ?left
+  ?right
+  ?empty_list_placeholder
+  ?default_item_height
+  render
   =
   let module Key = struct
     include (val key)
@@ -511,12 +511,12 @@ let with_inject
         Bonsai.Incr.compute
           (Value.both key rendered_ranked_input)
           ~f:(fun key_and_input ->
-            let%pattern_bind.Ui_incr key, rendered_ranked_input = key_and_input in
-            let lookup =
-              Ui_incr.Map.Lookup.create rendered_ranked_input ~comparator:Key.comparator
-            in
-            let%bind.Ui_incr key = key in
-            Ui_incr.Map.Lookup.find lookup key)
+          let%pattern_bind.Ui_incr key, rendered_ranked_input = key_and_input in
+          let lookup =
+            Ui_incr.Map.Lookup.create rendered_ranked_input ~comparator:Key.comparator
+          in
+          let%bind.Ui_incr key = key in
+          Ui_incr.Map.Lookup.find lookup key)
       in
       match%sub result with
       | Some ((_, view), _) -> return view
@@ -532,19 +532,19 @@ let with_inject
     let%arr rendered_ranked_input = rendered_ranked_input in
     Map.to_alist rendered_ranked_input
     |> List.sort ~compare:(fun a b ->
-      Comparable.lift Int.compare ~f:(fun (_, (_, rank)) -> rank) a b)
+         Comparable.lift Int.compare ~f:(fun (_, (_, rank)) -> rank) a b)
     |> List.map ~f:(fun (key, ((extra, _), _)) -> key, extra)
   in
   return (Value.map3 ranking view inject ~f:Tuple3.create)
 ;;
 
 let sync_with_set
-      (type a cmp)
-      (module Key : Comparator with type t = a and type comparator_witness = cmp)
-      (input : (a, cmp) Set.t Value.t)
-      ~inject
-      ~add
-      ~remove
+  (type a cmp)
+  (module Key : Comparator with type t = a and type comparator_witness = cmp)
+  (input : (a, cmp) Set.t Value.t)
+  ~inject
+  ~add
+  ~remove
   =
   let%sub callback =
     let%arr inject = inject
@@ -569,17 +569,17 @@ let sync_with_set
 ;;
 
 let simple
-      (type src cmp)
-      (key : (src, cmp) comparator)
-      ?sentinel_name
-      ?enable_debug_overlay
-      ?extra_item_attrs
-      ?left
-      ?right
-      ?empty_list_placeholder
-      ?default_item_height
-      ~render
-      (input : (src, cmp) Set.t Value.t)
+  (type src cmp)
+  (key : (src, cmp) comparator)
+  ?sentinel_name
+  ?enable_debug_overlay
+  ?extra_item_attrs
+  ?left
+  ?right
+  ?empty_list_placeholder
+  ?default_item_height
+  ~render
+  (input : (src, cmp) Set.t Value.t)
   =
   let%sub value, view, inject =
     with_inject
@@ -654,23 +654,23 @@ module Multi = struct
   end
 
   let with_inject
-        (type src cmp which which_cmp)
-        (key : (src, cmp) comparator)
-        (which : (which, which_cmp) comparator)
-        ?(sentinel_name = "dnd")
-        ?enable_debug_overlay
-        ?extra_item_attrs
-        ?left
-        ?right
-        ?empty_list_placeholder
-        ?default_item_height
-        ~(lists : (which, which_cmp) Set.t Value.t)
-        (render :
-           index:int Value.t
-         -> source:Vdom.Attr.t Value.t
-         -> which Value.t
-         -> src Value.t
-         -> (_ * Vdom.Node.t) Computation.t)
+    (type src cmp which which_cmp)
+    (key : (src, cmp) comparator)
+    (which : (which, which_cmp) comparator)
+    ?(sentinel_name = "dnd")
+    ?enable_debug_overlay
+    ?extra_item_attrs
+    ?left
+    ?right
+    ?empty_list_placeholder
+    ?default_item_height
+    ~(lists : (which, which_cmp) Set.t Value.t)
+    (render :
+      index:int Value.t
+      -> source:Vdom.Attr.t Value.t
+      -> which Value.t
+      -> src Value.t
+      -> (_ * Vdom.Node.t) Computation.t)
     =
     let module Key = struct
       include (val key)
@@ -705,7 +705,7 @@ module Multi = struct
         ~equal:[%equal: Model.t]
         ~default_model:Model.empty
         ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) model actions ->
-          List.fold actions ~init:model ~f:apply_action)
+        List.fold actions ~init:model ~f:apply_action)
     in
     let%sub dnd =
       Bonsai_web_ui_drag_and_drop.create
@@ -751,14 +751,14 @@ module Multi = struct
             Bonsai.Incr.compute
               (Value.both which rendered_ranked_input)
               ~f:(fun which_and_map ->
-                let%pattern_bind.Incr which, map = which_and_map in
-                (* NOTE: This [bind] only runs once (The key (which) from [assoc_set] does
+              let%pattern_bind.Incr which, map = which_and_map in
+              (* NOTE: This [bind] only runs once (The key (which) from [assoc_set] does
                    not change). *)
-                let%bind.Incr current_which = which in
-                Incr_map.filter_map map ~f:(fun (data, (which, index)) ->
-                  match Which.equal which current_which with
-                  | false -> None
-                  | true -> Some (data, index)))
+              let%bind.Incr current_which = which in
+              Incr_map.filter_map map ~f:(fun (data, (which, index)) ->
+                match Which.equal which current_which with
+                | false -> None
+                | true -> Some (data, index)))
           in
           let%sub input =
             Bonsai.assoc
@@ -795,7 +795,7 @@ module Multi = struct
             let%arr rendered_ranked_input = rendered_ranked_input in
             Map.to_alist rendered_ranked_input
             |> List.sort ~compare:(fun a b ->
-              Comparable.lift Int.compare ~f:(fun (_, (_, rank)) -> rank) a b)
+                 Comparable.lift Int.compare ~f:(fun (_, (_, rank)) -> rank) a b)
             |> List.map ~f:(fun (key, ((extra, _), _)) -> key, extra)
           in
           return (Value.map3 value view rendered_ranked_input ~f:Tuple3.create))
@@ -834,25 +834,25 @@ module Multi = struct
   ;;
 
   let simple
-        (type src cmp which which_cmp)
-        (key : (src, cmp) comparator)
-        (which : (which, which_cmp) comparator)
-        ?sentinel_name
-        ?enable_debug_overlay
-        ?extra_item_attrs
-        ?left
-        ?right
-        ?empty_list_placeholder
-        ?default_item_height
-        ~(render :
-            index:int Value.t
-          -> source:Vdom.Attr.t Value.t
-          -> which Value.t
-          -> src Value.t
-          -> (_ * Vdom.Node.t) Computation.t)
-        ~(lists : (which, which_cmp) Set.t Value.t)
-        ~default_list
-        (input : (src, cmp) Set.t Value.t)
+    (type src cmp which which_cmp)
+    (key : (src, cmp) comparator)
+    (which : (which, which_cmp) comparator)
+    ?sentinel_name
+    ?enable_debug_overlay
+    ?extra_item_attrs
+    ?left
+    ?right
+    ?empty_list_placeholder
+    ?default_item_height
+    ~(render :
+        index:int Value.t
+        -> source:Vdom.Attr.t Value.t
+        -> which Value.t
+        -> src Value.t
+        -> (_ * Vdom.Node.t) Computation.t)
+    ~(lists : (which, which_cmp) Set.t Value.t)
+    ~default_list
+    (input : (src, cmp) Set.t Value.t)
     =
     let%sub value, view, inject =
       with_inject

@@ -1,6 +1,6 @@
 open! Core
 open! Import
-open  Bonsai_web
+open Bonsai_web
 
 module type Item = sig
   type t [@@deriving equal, sexp_of]
@@ -22,15 +22,15 @@ module type S = sig
 
   module View_config : sig
     type t =
-      { header               : Vdom.Node.t
-      (** The header will be displayed above the rest of the node. *)
+      { header : Vdom.Node.t
+          (** The header will be displayed above the rest of the node. *)
       ; autofocus_search_box : bool
-      (** If true, appends the autofocus attribute. This can cause the browser to
+          (** If true, appends the autofocus attribute. This can cause the browser to
           automatically focus the search box when the page loads. (That probably isn't
           useful if there is more than one of these components on a given page.) *)
-      ; search_box_id        : string option (** The HTML ID to give the search box input *)
-      ; extra_row_attrs      : (is_focused:bool -> Vdom.Attr.t) option
-      (** This attribute will be added to the selected row *)
+      ; search_box_id : string option (** The HTML ID to give the search box input *)
+      ; extra_row_attrs : (is_focused:bool -> Vdom.Attr.t) option
+          (** This attribute will be added to the selected row *)
       }
 
     val create
@@ -44,17 +44,17 @@ module type S = sig
 
   module Action : sig
     type t =
-      | Update_search_string       of string
-      | Set_item_selected          of
-          { item   : Item.t
+      | Update_search_string of string
+      | Set_item_selected of
+          { item : Item.t
           ; status : Selection_status.t
           }
       | Set_all_selection_statuses of Selection_status.t Item.Map.t
-      (** [Set_all_selection_statuses] sets the status for every item in the map, and any
+          (** [Set_all_selection_statuses] sets the status for every item in the map, and any
           item not in the map gets [input.default_selection_status]. *)
       | Toggle_focused_item_selected
-      | Set_focus                  of Item.t option
-      | Move_focus                 of [ `Next | `Prev ]
+      | Set_focus of Item.t option
+      | Move_focus of [ `Next | `Prev ]
       | Select_all
       | Select_none
     [@@deriving sexp_of]
@@ -62,11 +62,11 @@ module type S = sig
 
   module Result : sig
     type t =
-      { view             : Vdom.Node.t
+      { view : Vdom.Node.t
       ; view_for_testing : string Lazy.t
-      ; key_handler      : Vdom_keyboard.Keyboard_event_handler.t
-      ; inject           : Action.t -> unit Vdom.Effect.t
-      ; selected_items   : Item.Set.t
+      ; key_handler : Vdom_keyboard.Keyboard_event_handler.t
+      ; inject : Action.t -> unit Vdom.Effect.t
+      ; selected_items : Item.Set.t
       }
   end
 
@@ -84,7 +84,7 @@ module type S = sig
   val bonsai
     :  ?initial_model_settings:Initial_model_settings.t
     -> ?default_selection_status:Selection_status.t Value.t
-    (** [default_selection_status] controls whether items that have not been
+         (** [default_selection_status] controls whether items that have not been
         explicitly toggled by the user should be considered selected or not.
         For example, setting this to [Selected] has the effect of causing all
         items to show initially selected. *)
@@ -95,7 +95,7 @@ end
 
 module type Single_factor = sig
   module type Item = Item
-  module type S    = S
+  module type S = S
 
   module Make (Item : Item) : S with module Item := Item
 end

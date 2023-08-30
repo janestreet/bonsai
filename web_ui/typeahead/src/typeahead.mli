@@ -9,10 +9,10 @@ open! Bonsai_web
     [current_input] gives access to the current contents of the form's [<input>] element
 *)
 type 'a t =
-  { selected      : 'a
-  ; set_selected  : 'a -> unit Ui_effect.t
+  { selected : 'a
+  ; set_selected : 'a -> unit Ui_effect.t
   ; current_input : string
-  ; view          : Vdom.Node.t
+  ; view : Vdom.Node.t
   }
 
 (** [create] returns a typeahead using native browser controls.

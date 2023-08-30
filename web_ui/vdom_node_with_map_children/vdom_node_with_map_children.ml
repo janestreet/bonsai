@@ -210,9 +210,9 @@ module Widget (K : Comparator.S) = struct
           input.Input.children
           ~init
           ~f:(fun acc -> function
-            | key, `Left _vdom -> Acc.remove acc ~key
-            | key, `Right vdom -> Acc.add acc ~key ~vdom
-            | key, `Unequal (_old_vdom, current_vdom) -> Acc.change acc ~key ~current_vdom)
+          | key, `Left _vdom -> Acc.remove acc ~key
+          | key, `Right vdom -> Acc.add acc ~key ~vdom
+          | key, `Unequal (_old_vdom, current_vdom) -> Acc.change acc ~key ~current_vdom)
       in
       Acc.finalize acc, element)
   ;;
@@ -220,10 +220,10 @@ module Widget (K : Comparator.S) = struct
   let to_vdom_for_testing =
     `Custom
       (fun { Input.children; attr; tag } ->
-         Vdom.Node.create
-           tag
-           ?attrs:(Option.map attr ~f:(fun attr -> [ attr ]))
-           (Map.data children))
+        Vdom.Node.create
+          tag
+          ?attrs:(Option.map attr ~f:(fun attr -> [ attr ]))
+          (Map.data children))
   ;;
 
   module Input = struct

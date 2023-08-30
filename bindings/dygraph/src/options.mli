@@ -1,6 +1,6 @@
 open! Core
 open! Import
-open  Gen_js_api
+open Gen_js_api
 
 (** Options Reference: http://dygraphs.com/options.html
 
@@ -18,7 +18,7 @@ module Line_pattern : sig
       isn't present in the global namespace when run in node-js, so [@@js.global
       "Dygraph.DASHED_LINE"] will crash the program. *)
   val dashed : t
-  [@@js.custom let dashed = [| 7; 2 |]]
+    [@@js.custom let dashed = [| 7; 2 |]]
 
   val t_of_js : Ojs.t -> t
   val t_to_js : t -> Ojs.t
@@ -31,7 +31,7 @@ module Legend : sig
      | `never
      | `onmouseover
      ]
-     [@js.enum])
+    [@js.enum])
 
   val t_to_js : t -> Ojs.t
 end
@@ -44,7 +44,7 @@ module Series_options : sig
 
   val create
     :  ?axis:Which_y_axis.t
-    (** axis http://dygraphs.com/options.html#axis
+         (** axis http://dygraphs.com/options.html#axis
 
         Set to either 'y1' or 'y2' to assign a series to a y-axis (primary or
         secondary). Must be set per-series.
@@ -53,7 +53,7 @@ module Series_options : sig
         Default: (none)
     *)
     -> ?color:Color.t
-    (** color http://dygraphs.com/options.html#color
+         (** color http://dygraphs.com/options.html#color
 
         A per-series color definition. Used in conjunction with, and overrides, the colors
         option.
@@ -62,7 +62,7 @@ module Series_options : sig
         Default: (see description)
     *)
     -> ?drawPoints:bool
-    (** drawPoints http://dygraphs.com/options.html#drawPoints
+         (** drawPoints http://dygraphs.com/options.html#drawPoints
 
         Draw a small dot at each point, in addition to a line going through the
         point. This makes the individual data points easier to see, but can increase
@@ -78,12 +78,11 @@ module Series_options : sig
           -> context:Canvas_rendering_context_2D.t
           -> cx:float
           -> cy:float
-          -> color:
-               Ojs.t
+          -> color:Ojs.t
           -> pointSize:int
           -> idx:int
           -> unit)
-    (** drawHighlightPointCallback: https://dygraphs.com/options.html#drawHighlightPointCallback
+         (** drawHighlightPointCallback: https://dygraphs.com/options.html#drawHighlightPointCallback
 
         Draw a custom item when a point is highlighted. Default is a small dot matching the
         series color. This method should constrain drawing to within pointSize pixels from
@@ -110,7 +109,7 @@ module Series_options : sig
           -> pointSize:int
           -> idx:int
           -> unit)
-    (** drawPointCallback: https://dygraphs.com/options.html#drawPointCallback
+         (** drawPointCallback: https://dygraphs.com/options.html#drawPointCallback
 
         Draw a custom item when drawPoints is enabled. Default is a small dot matching the
         series color. This method should constrain drawing to within pointSize pixels from
@@ -128,7 +127,7 @@ module Series_options : sig
         Default: null
     *)
     -> ?plotter:Plotter.t
-    (** plotter (undocumented)
+         (** plotter (undocumented)
 
         The Dygraph documentation merely says:
 
@@ -138,7 +137,7 @@ module Series_options : sig
         series-specific plotter must be a single value.
     *)
     -> ?plotterFinishedCallback:(context:Canvas_rendering_context_2D.t -> unit)
-    (** (Jane Street extension)
+         (** (Jane Street extension)
 
         [plotterFinishedCallback] is called every time a plotter finishes rendering this
         series.
@@ -153,7 +152,7 @@ module Series_options : sig
         but the callback will still fire after the plotter runs.
     *)
     -> ?showInRangeSelector:bool
-    (** showInRangeSelector http://dygraphs.com/options.html#showInRangeSelector
+         (** showInRangeSelector http://dygraphs.com/options.html#showInRangeSelector
 
         Mark this series for inclusion in the range selector. The mini plot curve
         will be an average of all such series. If this is not specified for any
@@ -166,7 +165,7 @@ module Series_options : sig
         Default: null
     *)
     -> ?stepPlot:bool
-    (** stepPlot https://dygraphs.com/options.html#stepPlot
+         (** stepPlot https://dygraphs.com/options.html#stepPlot
 
         When set, display the graph as a step plot instead of a line plot. This option may
         either be set for the whole graph or for single series.
@@ -175,7 +174,7 @@ module Series_options : sig
         Default: false
     *)
     -> ?strokePattern:Line_pattern.t
-    (** strokePattern http://dygraphs.com/options.html#strokePattern
+         (** strokePattern http://dygraphs.com/options.html#strokePattern
 
         A custom pattern array where the even index is a draw and odd is a space in
         pixels. If null then it draws a solid line. The array should have a even
@@ -186,7 +185,7 @@ module Series_options : sig
         Default: null
     *)
     -> ?strokeWidth:float
-    (** strokeWidth http://dygraphs.com/options.html#strokeWidth
+         (** strokeWidth http://dygraphs.com/options.html#strokeWidth
 
         The width of the lines connecting data points. This can be
         used to increase the contrast or some graphs.
@@ -196,7 +195,7 @@ module Series_options : sig
     *)
     -> unit
     -> t
-  [@@js.builder]
+    [@@js.builder]
 end
 
 module Series : sig
@@ -206,10 +205,10 @@ module Series : sig
   val t_to_js : t -> Ojs.t
 
   val create : (string * Series_options.t) list -> t
-  [@@js.custom
-    let create data =
-      data |> List.Assoc.map ~f:Series_options.t_to_js |> Array.of_list |> Ojs.obj
-    ;;]
+    [@@js.custom
+      let create data =
+        data |> List.Assoc.map ~f:Series_options.t_to_js |> Array.of_list |> Ojs.obj
+      ;;]
 end
 
 module Opts : sig
@@ -231,7 +230,7 @@ module Axis_options : sig
 
   val create
     :  ?axisLabelFormatter:(Number_or_js_date.t -> Granularity.t -> Opts.t -> string)
-    (** axisLabelFormatter http://dygraphs.com/options.html#axisLabelFormatter
+         (** axisLabelFormatter http://dygraphs.com/options.html#axisLabelFormatter
 
         Function to call to format the tick values that appear along an axis. This is
         usually set on a per-axis basis.
@@ -255,7 +254,7 @@ module Axis_options : sig
         Other Examples: value-axis-formatters x-axis-formatter
     *)
     -> ?valueFormatter:(float -> Opts.t -> string)
-    (** valueFormatter http://dygraphs.com/options.html#valueFormatter
+         (** valueFormatter http://dygraphs.com/options.html#valueFormatter
 
         Function to provide a custom display format for the values displayed on
         mouseover. This does not affect the values that appear on tick marks next to the
@@ -288,7 +287,7 @@ module Axis_options : sig
         Other Examples: hairlines labelsKMB multi-scale value-axis-formatters
     *)
     -> ?axisLabelWidth:int
-    (** axisLabelWidth http://dygraphs.com/options.html#axisLabelWidth
+         (** axisLabelWidth http://dygraphs.com/options.html#axisLabelWidth
 
         Width (in pixels) of the containing divs for x- and y-axis labels. For the
         y-axis, this also controls the width of the y-axis. Note that for the x-axis,
@@ -299,7 +298,7 @@ module Axis_options : sig
         Default: 50 (y-axis), 60 (x-axis)
     *)
     -> ?axisLineColor:Color.t
-    (** axisLineColor http://dygraphs.com/options.html#axisLineColor
+         (** axisLineColor http://dygraphs.com/options.html#axisLineColor
 
         Color of the x- and y-axis lines. Accepts any value which the HTML canvas
         strokeStyle attribute understands, e.g. 'black' or 'rgb(0, 100, 255)'.
@@ -308,7 +307,7 @@ module Axis_options : sig
         Default: black
     *)
     -> ?axisLineWidth:float
-    (** axisLineWidth http://dygraphs.com/options.html#axisLineWidth
+         (** axisLineWidth http://dygraphs.com/options.html#axisLineWidth
 
         Thickness (in pixels) of the x- and y-axis lines.
 
@@ -316,7 +315,7 @@ module Axis_options : sig
         Default: 0.3
     *)
     -> ?axisTickSize:float
-    (** axisTickSize http://dygraphs.com/options.html#axisTickSize
+         (** axisTickSize http://dygraphs.com/options.html#axisTickSize
 
         The size of the line to display next to each tick mark on x- or y-axes.
 
@@ -324,7 +323,7 @@ module Axis_options : sig
         Default: 3.0
     *)
     -> ?drawAxis:bool
-    (** drawAxis http://dygraphs.com/options.html#drawAxis
+         (** drawAxis http://dygraphs.com/options.html#drawAxis
 
         Whether to draw the specified axis. This may be set on a per-axis basis to
         define the visibility of each axis separately. Setting this to false also
@@ -335,7 +334,7 @@ module Axis_options : sig
         Default: true for x and y, false for y2
     *)
     -> ?includeZero:bool
-    (** includeZero http://dygraphs.com/options.html#includeZero
+         (** includeZero http://dygraphs.com/options.html#includeZero
 
         Usually, dygraphs will use the range of the data plus some padding to set the
         range of the y-axis. If this option is set, the y-axis will always include zero,
@@ -346,7 +345,7 @@ module Axis_options : sig
         Default: false
     *)
     -> ?independentTicks:bool
-    (** independentTicks http://dygraphs.com/options.html#independentTicks
+         (** independentTicks http://dygraphs.com/options.html#independentTicks
 
         Only valid for y and y2, has no effect on x: This option defines whether the y
         axes should align their ticks or if they should be independent. Possible
@@ -360,7 +359,7 @@ module Axis_options : sig
         Default: true for y, false for y2
     *)
     -> ?logscale:bool
-    (** logscale http://dygraphs.com/options.html#logscale
+         (** logscale http://dygraphs.com/options.html#logscale
 
         When set for the y-axis or x-axis, the graph shows that axis in log scale. Any
         values less than or equal to zero are not displayed. Showing log scale with
@@ -372,7 +371,7 @@ module Axis_options : sig
         Default: false
     *)
     -> ?pixelsPerLabel:int
-    (** pixelsPerLabel http://dygraphs.com/options.html#pixelsPerLabel
+         (** pixelsPerLabel http://dygraphs.com/options.html#pixelsPerLabel
 
         Number of pixels to require between each x- and y-label. Larger values will yield
         a sparser axis with fewer ticks. This is set on a per-axis basis.
@@ -380,7 +379,7 @@ module Axis_options : sig
         Type: integer
         Default: 70 (x-axis) or 30 (y-axes) *)
     -> ?valueRange:Range.Spec.t
-    (** valueRange http://dygraphs.com/options.html#valueRange
+         (** valueRange http://dygraphs.com/options.html#valueRange
 
         Explicitly set the vertical range of the graph to [low, high]. This may be set on
         a per-axis basis to define each y-axis separately. If either limit is unspecified,
@@ -391,7 +390,7 @@ module Axis_options : sig
         Default: Full range of the input is shown
     *)
     -> ?drawGrid:bool
-    (** drawGrid http://dygraphs.com/options.html#drawGrid
+         (** drawGrid http://dygraphs.com/options.html#drawGrid
 
         Whether to display gridlines in the chart. This may be set on a per-axis
         basis to define the visibility of each axis' grid separately.
@@ -400,7 +399,7 @@ module Axis_options : sig
         Default: true for x and y, false for y2
     *)
     -> ?gridLineColor:Color.t
-    (** gridLineColor http://dygraphs.com/options.html#gridLineColor
+         (** gridLineColor http://dygraphs.com/options.html#gridLineColor
 
         The color of the gridlines. This may be set on a per-axis basis to define
         each axis' grid separately.
@@ -409,7 +408,7 @@ module Axis_options : sig
         Default: rgb(128,128,128)
     *)
     -> ?gridLinePattern:Line_pattern.t
-    (** gridLinePattern http://dygraphs.com/options.html#gridLinePattern
+         (** gridLinePattern http://dygraphs.com/options.html#gridLinePattern
 
         A custom pattern array where the even index is a draw and odd is a space in
         pixels. If null then it draws a solid line. The array should have a even
@@ -420,7 +419,7 @@ module Axis_options : sig
         Default: null
     *)
     -> ?gridLineWidth:float
-    (** gridLineWidth http://dygraphs.com/options.html#gridLineWidth
+         (** gridLineWidth http://dygraphs.com/options.html#gridLineWidth
 
         Thickness (in pixels) of the gridlines drawn under the chart. The
         vertical/horizontal gridlines can be turned off entirely by using the
@@ -431,7 +430,7 @@ module Axis_options : sig
         Default: 0.3
     *)
     -> ?pixelsPerLabel:int
-    (** pixelsPerLabel http://dygraphs.com/options.html#pixelsPerLabel
+         (** pixelsPerLabel http://dygraphs.com/options.html#pixelsPerLabel
 
         Number of pixels to require between each x- and y-label. Larger values will
         yield a sparser axis with fewer ticks. This is set on a per-axis basis.
@@ -441,7 +440,7 @@ module Axis_options : sig
     *)
     -> unit
     -> t
-  [@@js.builder]
+    [@@js.builder]
 end
 
 module Axes : sig
@@ -450,8 +449,8 @@ module Axes : sig
   val t_of_js : Ojs.t -> t
   val t_to_js : t -> Ojs.t
 
-  val create  : ?x:Axis_options.t -> ?y:Axis_options.t -> ?y2:Axis_options.t -> unit -> t
-  [@@js.builder]
+  val create : ?x:Axis_options.t -> ?y:Axis_options.t -> ?y2:Axis_options.t -> unit -> t
+    [@@js.builder]
 end
 
 module Highlight_series_options : sig
@@ -462,14 +461,14 @@ module Highlight_series_options : sig
 
   val create
     :  ?highlightCircleSize:int
-    (** highlightCircleSize http://dygraphs.com/options.html#highlightCircleSize
+         (** highlightCircleSize http://dygraphs.com/options.html#highlightCircleSize
         The size in pixels of the dot drawn over highlighted points.
 
         Type: integer
         Default: 3
     *)
     -> ?strokeWidth:float
-    (** strokeWidth http://dygraphs.com/options.html#strokeWidth
+         (** strokeWidth http://dygraphs.com/options.html#strokeWidth
 
         The width of the lines connecting data points. This can be used to increase the
         contrast or some graphs.
@@ -478,7 +477,7 @@ module Highlight_series_options : sig
         Default: 1.0
     *)
     -> ?strokeBorderWidth:float
-    (** strokeBorderWidth http://dygraphs.com/options.html#strokeBorderWidth
+         (** strokeBorderWidth http://dygraphs.com/options.html#strokeBorderWidth
 
         Draw a border around graph lines to make crossing lines more easily
         distinguishable. Useful for graphs with many lines.
@@ -488,7 +487,7 @@ module Highlight_series_options : sig
     *)
     -> unit
     -> t
-  [@@js.builder]
+    [@@js.builder]
 end
 
 type t
@@ -1466,19 +1465,19 @@ val create
 
 val legendFormatter : t -> (Legend_data.t -> string) option [@@js.get]
 
-val zoomCallback    : t -> (xmin:float -> xmax:float -> yRanges:Range.t array -> unit) option
-[@@js.get]
+val zoomCallback : t -> (xmin:float -> xmax:float -> yRanges:Range.t array -> unit) option
+  [@@js.get]
 
 val height : t -> int option [@@js.get]
-val width  : t -> int option [@@js.get]
+val width : t -> int option [@@js.get]
 
 (** This is the lodash.js deep-merge implementation *)
 val merge_internal : t -> prefer:t -> t
-[@@js.global "_.merge"]
+  [@@js.global "_.merge"]
 
 (* [merge_internal] actually mutably changes the first [t] (and returns it) *)
 
 (** merge two [t]s, preferring options in [prefer] *)
 val merge : t -> prefer:t -> t
-[@@js.custom
-  let merge t ~prefer = create () |> merge_internal ~prefer:t |> merge_internal ~prefer]
+  [@@js.custom
+    let merge t ~prefer = create () |> merge_internal ~prefer:t |> merge_internal ~prefer]

@@ -49,6 +49,6 @@ let random () : t =
 let many_random n =
   List.init n ~f:(fun _ -> random ())
   |> List.fold ~init:String.Map.empty ~f:(fun acc data ->
-    let { symbol = key; _ } = data in
-    Map.set acc ~key ~data)
+       let { symbol = key; _ } = data in
+       Map.set acc ~key ~data)
 ;;

@@ -29,13 +29,13 @@ module Customization = struct
   let create_for_view ~apply_to_tag on_match = { apply_to_tag; on_match }
 
   let transform_form'
-        (type a)
-        (module M : Sexpable with type t = a)
-        ~apply_to_tag
-        (on_match :
-           Sexp_grammar.grammar Sexp_grammar.with_tag Value.t
-         -> recurse:(Sexp_grammar.grammar Value.t -> Sexp.t Form.t Computation.t)
-         -> a Form.t Computation.t)
+    (type a)
+    (module M : Sexpable with type t = a)
+    ~apply_to_tag
+    (on_match :
+      Sexp_grammar.grammar Sexp_grammar.with_tag Value.t
+      -> recurse:(Sexp_grammar.grammar Value.t -> Sexp.t Form.t Computation.t)
+      -> a Form.t Computation.t)
     =
     let transform grammar ~recurse =
       let%map.Computation on_match = on_match grammar ~recurse in
@@ -45,20 +45,20 @@ module Customization = struct
   ;;
 
   let transform_form
-        ~apply_to_tag
-        (on_match :
-           Sexp_grammar.grammar Sexp_grammar.with_tag Value.t
-         -> recurse:(Sexp_grammar.grammar Value.t -> Sexp.t Form.t Computation.t)
-         -> Sexp.t Form.t Computation.t)
+    ~apply_to_tag
+    (on_match :
+      Sexp_grammar.grammar Sexp_grammar.with_tag Value.t
+      -> recurse:(Sexp_grammar.grammar Value.t -> Sexp.t Form.t Computation.t)
+      -> Sexp.t Form.t Computation.t)
     =
     transform_form' (module Sexp) ~apply_to_tag on_match
   ;;
 
   let constant_form
-        (type a)
-        (module M : Sexpable with type t = a)
-        ~apply_to_tag
-        (on_match : a Form.t Computation.t)
+    (type a)
+    (module M : Sexpable with type t = a)
+    ~apply_to_tag
+    (on_match : a Form.t Computation.t)
     =
     transform_form' (module M) ~apply_to_tag (fun _ ~recurse:_ -> on_match)
   ;;
@@ -78,8 +78,8 @@ module Customization = struct
   module Defaults = struct
     module Form = struct
       let transform_key_data_pair
-            (with_tag : Sexp_grammar.grammar Sexp_grammar.with_tag Value.t)
-            ~recurse
+        (with_tag : Sexp_grammar.grammar Sexp_grammar.with_tag Value.t)
+        ~recurse
         =
         let%sub grammar =
           let%arr with_tag = with_tag in
@@ -138,8 +138,8 @@ module Customization = struct
       ;;
 
       let transform_multiple_button_name
-            (with_tag : Sexp_grammar.grammar Sexp_grammar.with_tag Value.t)
-            ~(recurse : Sexp_grammar.grammar Value.t -> Sexp.t Form.t Computation.t)
+        (with_tag : Sexp_grammar.grammar Sexp_grammar.with_tag Value.t)
+        ~(recurse : Sexp_grammar.grammar Value.t -> Sexp.t Form.t Computation.t)
         =
         let%sub { grammar; value; key = _ } = return with_tag in
         let%sub form = recurse grammar in
@@ -213,9 +213,9 @@ module Customization = struct
 end
 
 module Style =
-  [%css
-    stylesheet
-      {|
+[%css
+stylesheet
+  {|
   .with_whitespace {
     white-space: pre-wrap;
   }
@@ -283,12 +283,12 @@ let view grammar ~customizations =
     | Option g ->
       let view = view_grammar g in
       (function%sub
-        | List [] | Atom "None" | Atom "none" -> Bonsai.const (N.pre [ N.text "None" ])
-        | List [ a ] | List [ Atom ("Some" | "some"); a ] -> view a
-        | other ->
-          let%arr other = other in
-          error_box
-            [%string "Expected a sexp representing an option, but got: %{other#Sexp}"])
+       | List [] | Atom "None" | Atom "none" -> Bonsai.const (N.pre [ N.text "None" ])
+       | List [ a ] | List [ Atom ("Some" | "some"); a ] -> view a
+       | other ->
+         let%arr other = other in
+         error_box
+           [%string "Expected a sexp representing an option, but got: %{other#Sexp}"])
     | List l ->
       let view_list = view_list_grammar l in
       let list_kind =
@@ -329,8 +329,8 @@ let view grammar ~customizations =
           | List [ Atom name; value ] -> Some (name, Sexp.List [ value ])
           | _ -> None)
         |> String.Map.of_alist_reduce ~f:(fun _first second ->
-          (* there should never be duplicate fields, but if there are, take the last one *)
-          second)
+             (* there should never be duplicate fields, but if there are, take the last one *)
+             second)
     in
     let%sub map =
       Bonsai.assoc
@@ -408,8 +408,8 @@ let view grammar ~customizations =
     in
     original_fields @ Map.data extra_fields
   and view_clauses
-        (case_sensitivity : Sexp_grammar.case_sensitivity)
-        (clauses : Sexp_grammar.clause Sexp_grammar.with_tag_list list)
+    (case_sensitivity : Sexp_grammar.case_sensitivity)
+    (clauses : Sexp_grammar.clause Sexp_grammar.with_tag_list list)
     =
     (* Note that since comparator witnesses have different types, we can't just use this
        case to pick which version of [of_alist_exn] to use. *)
@@ -423,7 +423,7 @@ let view grammar ~customizations =
       clauses
       |> List.map ~f:Grammar_helper.Tags.strip_tags
       |> List.map ~f:(fun { name; clause_kind } ->
-        normalize_name name, view_clause clause_kind)
+           normalize_name name, view_clause clause_kind)
       |> String.Map.of_alist_exn
     in
     fun sexp ->
@@ -484,66 +484,66 @@ let view grammar ~customizations =
   and view_list_grammar
     : Sexp_grammar.list_grammar -> Sexp.t Value.t -> Vdom.Node.t list Computation.t
     = function
-      | Empty -> fun _ -> Bonsai.const []
-      | Cons (g, rest) as cons ->
-        (function%sub
-          | List (a :: xs) ->
-            let xs = Value.map xs ~f:(fun xs -> Sexp.List xs) in
-            let%map.Computation a = view_grammar g a
-            and xs = view_list_grammar rest xs in
-            a :: xs
-          | List [] ->
-            (Bonsai.lazy_ [@alert "-deprecated"])
-              (lazy
-                (let cons = [%sexp (cons : Sexp_grammar.list_grammar)] in
-                 [%string
-                   "Encountered empty list sexp when attempting to process the grammar:  \
-                    %{cons#Sexp}"]
-                 |> error_box
-                 |> List.return
-                 |> Bonsai.const))
-          | sexp ->
-            let%arr sexp = sexp in
-            [%string
-              "Encountered malformed sexp when attempting to view list grammar. Expected \
-               non-empty list, but got %{sexp#Sexp}."]
-            |> error_box
-            |> List.return)
-      | Many g as many ->
-        (function%sub
-          | List xs ->
-            let xs = xs >>| List.mapi ~f:(fun i x -> i, x) >>| Int.Map.of_alist_exn in
-            let%map.Computation xs =
-              Bonsai.assoc (module Int) xs ~f:(fun _ data -> view_grammar g data)
-            in
-            Map.data xs
-          | Atom atom ->
-            let many = [%sexp (many : Sexp_grammar.list_grammar)] in
-            let%arr atom = atom in
-            [%string
-              "Encountered an atom, '%{atom}', while processing a list grammar: %{many#Sexp}"]
-            |> error_box
-            |> List.return)
-      | Fields f -> view_fields f
+    | Empty -> fun _ -> Bonsai.const []
+    | Cons (g, rest) as cons ->
+      (function%sub
+       | List (a :: xs) ->
+         let xs = Value.map xs ~f:(fun xs -> Sexp.List xs) in
+         let%map.Computation a = view_grammar g a
+         and xs = view_list_grammar rest xs in
+         a :: xs
+       | List [] ->
+         (Bonsai.lazy_ [@alert "-deprecated"])
+           (lazy
+             (let cons = [%sexp (cons : Sexp_grammar.list_grammar)] in
+              [%string
+                "Encountered empty list sexp when attempting to process the grammar:  \
+                 %{cons#Sexp}"]
+              |> error_box
+              |> List.return
+              |> Bonsai.const))
+       | sexp ->
+         let%arr sexp = sexp in
+         [%string
+           "Encountered malformed sexp when attempting to view list grammar. Expected \
+            non-empty list, but got %{sexp#Sexp}."]
+         |> error_box
+         |> List.return)
+    | Many g as many ->
+      (function%sub
+       | List xs ->
+         let xs = xs >>| List.mapi ~f:(fun i x -> i, x) >>| Int.Map.of_alist_exn in
+         let%map.Computation xs =
+           Bonsai.assoc (module Int) xs ~f:(fun _ data -> view_grammar g data)
+         in
+         Map.data xs
+       | Atom atom ->
+         let many = [%sexp (many : Sexp_grammar.list_grammar)] in
+         let%arr atom = atom in
+         [%string
+           "Encountered an atom, '%{atom}', while processing a list grammar: %{many#Sexp}"]
+         |> error_box
+         |> List.return)
+    | Fields f -> view_fields f
   in
   view_grammar grammar
 ;;
 
 let view
-      (type a)
-      (module M : S with type t = a)
-      ?(customizations = [])
-      (value : a Value.t)
-      `This_view_may_change_without_notice
+  (type a)
+  (module M : S with type t = a)
+  ?(customizations = [])
+  (value : a Value.t)
+  `This_view_may_change_without_notice
   =
   let%sub sexp = Bonsai.pure M.sexp_of_t value in
   view M.t_sexp_grammar.untyped sexp ~customizations
 ;;
 
 let project_to_sexp
-      (type a)
-      (module M : Sexpable with type t = a)
-      (form : a Form.t Computation.t)
+  (type a)
+  (module M : Sexpable with type t = a)
+  (form : a Form.t Computation.t)
   =
   let%map.Computation form = form in
   Form.project form ~parse_exn:M.sexp_of_t ~unparse:M.t_of_sexp
@@ -556,10 +556,10 @@ let maybe_set_tooltip doc view =
 ;;
 
 let form
-      ?textbox_for_string
-      (grammar : Sexp_grammar.grammar Value.t)
-      ~on_set_error
-      ~customizations
+  ?textbox_for_string
+  (grammar : Sexp_grammar.grammar Value.t)
+  ~on_set_error
+  ~customizations
   =
   let rec grammar_form (grammar : Sexp_grammar.grammar Value.t)
     : Sexp.t Form.t Computation.t
@@ -748,14 +748,14 @@ let form
                   clauses_as_map
                   ~init:[]
                   ~f:(fun ~key:name ~data:(_clause, doc) acc ->
-                    match doc with
-                    | None -> acc
-                    | Some doc ->
-                      View.vbox
-                        [ Vdom.Node.span ~attrs:[ Style.bold_text ] [ Vdom.Node.text name ]
-                        ; Vdom.Node.text doc
-                        ]
-                      :: acc)
+                  match doc with
+                  | None -> acc
+                  | Some doc ->
+                    View.vbox
+                      [ Vdom.Node.span ~attrs:[ Style.bold_text ] [ Vdom.Node.text name ]
+                      ; Vdom.Node.text doc
+                      ]
+                    :: acc)
                 |> List.rev
               in
               match info with
@@ -777,8 +777,8 @@ let form
             and view = view in
             ( Opt.to_option outer
             , (function
-                | None -> set_outer Explicitly_none
-                | Some outer -> set_outer (Set outer))
+               | None -> set_outer Explicitly_none
+               | Some outer -> set_outer (Set outer))
             , view )
           in
           let%sub clauses_forms =
@@ -1184,10 +1184,10 @@ let form
 ;;
 
 let form'
-      ?(on_set_error = Effect.print_s)
-      ?(customizations = Customization.Defaults.Form.all)
-      ?textbox_for_string
-      sexp_grammar
+  ?(on_set_error = Effect.print_s)
+  ?(customizations = Customization.Defaults.Form.all)
+  ?textbox_for_string
+  sexp_grammar
   =
   let%sub sexp_grammar =
     Bonsai.pure Sexp_grammar.Unroll_recursion.of_grammar_exn sexp_grammar
@@ -1209,12 +1209,12 @@ let form'
 ;;
 
 let form
-      (type a)
-      (module M : S with type t = a)
-      ?on_set_error
-      ?customizations
-      ?textbox_for_string
-      ()
+  (type a)
+  (module M : S with type t = a)
+  ?on_set_error
+  ?customizations
+  ?textbox_for_string
+  ()
   : a Form.t Computation.t
   =
   let%map.Computation form =
@@ -1234,8 +1234,8 @@ let view_as_vdom ?on_submit ?editable form =
       ~f:
         (fun
           { Form.Submit.f; handle_enter; button_text; button_attr; button_location } ->
-          let on_submit = Form.value form |> Result.ok |> Option.map ~f in
-          { Form.View.on_submit; handle_enter; button_text; button_attr; button_location })
+      let on_submit = Form.value form |> Result.ok |> Option.map ~f in
+      { Form.View.on_submit; handle_enter; button_text; button_attr; button_location })
   in
   Render_form.to_vdom ?on_submit ?editable (Form.view form)
 ;;

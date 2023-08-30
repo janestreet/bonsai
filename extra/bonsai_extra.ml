@@ -18,11 +18,11 @@ let with_inject_fixed_point f =
 ;;
 
 let with_self_effect
-      (type a)
-      ?sexp_of_model
-      ?equal
-      ~(f : a Bonsai.Computation_status.t Effect.t Value.t -> a Computation.t)
-      ()
+  (type a)
+  ?sexp_of_model
+  ?equal
+  ~(f : a Bonsai.Computation_status.t Effect.t Value.t -> a Computation.t)
+  ()
   : a Computation.t
   =
   Bonsai.wrap
@@ -50,13 +50,13 @@ let with_self_effect
 ;;
 
 let state_machine1_dynamic_model
-      (type a)
-      (module A : Bonsai.Action with type t = a)
-      ?sexp_of_model
-      ?equal
-      ~model
-      ~apply_action
-      input
+  (type a)
+  (module A : Bonsai.Action with type t = a)
+  ?sexp_of_model
+  ?equal
+  ~model
+  ~apply_action
+  input
   =
   let model_creator =
     match model with
@@ -196,26 +196,26 @@ let pipe (type a) (module A : Bonsai.Model with type t = a) =
       ~sexp_of_action:[%sexp_of: Action.t]
       ~default_model:Model.default
       ~apply_action:(fun context model -> function
-        | Add_action a ->
-          (match Fdeque.dequeue_front model.queued_receivers with
-           | None ->
-             let queued_actions = Fdeque.enqueue_back model.queued_actions a in
-             { model with queued_actions }
-           | Some (hd, queued_receivers) ->
-             Bonsai.Apply_action_context.schedule_event
-               context
-               (Effect.Private.Callback.respond_to hd a);
-             { model with queued_receivers })
-        | Add_receiver r ->
-          (match Fdeque.dequeue_front model.queued_actions with
-           | None ->
-             let queued_receivers = Fdeque.enqueue_back model.queued_receivers r in
-             { model with queued_receivers }
-           | Some (hd, queued_actions) ->
-             Bonsai.Apply_action_context.schedule_event
-               context
-               (Effect.Private.Callback.respond_to r hd);
-             { model with queued_actions }))
+      | Add_action a ->
+        (match Fdeque.dequeue_front model.queued_receivers with
+         | None ->
+           let queued_actions = Fdeque.enqueue_back model.queued_actions a in
+           { model with queued_actions }
+         | Some (hd, queued_receivers) ->
+           Bonsai.Apply_action_context.schedule_event
+             context
+             (Effect.Private.Callback.respond_to hd a);
+           { model with queued_receivers })
+      | Add_receiver r ->
+        (match Fdeque.dequeue_front model.queued_actions with
+         | None ->
+           let queued_receivers = Fdeque.enqueue_back model.queued_receivers r in
+           { model with queued_receivers }
+         | Some (hd, queued_actions) ->
+           Bonsai.Apply_action_context.schedule_event
+             context
+             (Effect.Private.Callback.respond_to r hd);
+           { model with queued_actions }))
   in
   let%arr inject = inject in
   let request =
@@ -243,14 +243,14 @@ module Id_gen (T : Int_intf.S) () = struct
 end
 
 let mirror'
-      (type m)
-      ?sexp_of_model
-      ~equal
-      ~(store_set : (m -> unit Effect.t) Value.t)
-      ~(store_value : m option Value.t)
-      ~(interactive_set : (m -> unit Effect.t) Value.t)
-      ~(interactive_value : m option Value.t)
-      ()
+  (type m)
+  ?sexp_of_model
+  ~equal
+  ~(store_set : (m -> unit Effect.t) Value.t)
+  ~(store_value : m option Value.t)
+  ~(interactive_set : (m -> unit Effect.t) Value.t)
+  ~(interactive_value : m option Value.t)
+  ()
   =
   let module M = struct
     type t = m
@@ -341,13 +341,13 @@ let mirror'
 ;;
 
 let mirror
-      ?sexp_of_model
-      ~equal
-      ~store_set
-      ~store_value
-      ~interactive_set
-      ~interactive_value
-      ()
+  ?sexp_of_model
+  ~equal
+  ~store_set
+  ~store_value
+  ~interactive_set
+  ~interactive_value
+  ()
   =
   let store_value = store_value >>| Option.some in
   let interactive_value = interactive_value >>| Option.some in
@@ -485,15 +485,15 @@ module One_at_a_time = struct
         ~sexp_of_action:[%sexp_of: Lock_action.t]
         ~default_model:Idle
         ~recv:(fun ~schedule_event:_ model action ->
-          match action with
-          | Acquire ->
-            let response =
-              match model with
-              | Busy -> false
-              | Idle -> true
-            in
-            Busy, response
-          | Release -> Idle, true)
+        match action with
+        | Acquire ->
+          let response =
+            match model with
+            | Busy -> false
+            | Idle -> true
+          in
+          Busy, response
+        | Release -> Idle, true)
     in
     let%sub effect =
       let%arr inject_status = inject_status

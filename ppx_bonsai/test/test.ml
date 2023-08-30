@@ -154,8 +154,8 @@ module Arrow_example = struct
     match%sub X.return_v (Some "hello") with
     | (Some ("heyo" : string) : string option) -> return (X.return_v 0.)
     | ((Some (((case_1_lhs : string X.v) as _x3 : string X.v) : string X.v) as _x :
-          string option X.v) as _x2 :
-         string option X.v) ->
+         string option X.v) as _x2 :
+        string option X.v) ->
       let%arr lhs_a = case_1_lhs
       and lhs_b = X.return_v 2.
       and lhs_c = X.return_v 3. in

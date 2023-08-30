@@ -100,8 +100,8 @@ module Value_parser = struct
       let input = eval input in
       { parse_exn =
           (fun x ->
-             try input.parse_exn x with
-             | _ -> fallback)
+            try input.parse_exn x with
+            | _ -> fallback)
       ; unparse = input.unparse
       }
     | Name { name = _; input } -> eval input
@@ -269,8 +269,8 @@ module Components = struct
       |> Uri.query
       |> String.Map.of_alist_multi
       |> Map.filter_map ~f:(function
-        | [ value ] -> Some value
-        | _ -> None)
+           | [ value ] -> Some value
+           | _ -> None)
     in
     { path; query }
   ;;
@@ -462,7 +462,7 @@ module Parser = struct
         -> [ `Prefix of [ `Ignore | `Match of string ] list
            | `Remaining_path of [ `Ignore | `Match of string ] list
            ]
-             option
+           option
       =
       fun t ->
       let rec next_declared_path_pattern
@@ -470,8 +470,8 @@ module Parser = struct
           prefix:[ `Ignore | `Match of string ] list
           -> a T.t
           -> ([ `Ignore | `Match of string ] list
-              * [ `Continue | `Stop_prefix | `Stop_remaining_path ])
-               option
+             * [ `Continue | `Stop_prefix | `Stop_remaining_path ])
+             option
         =
         fun ~prefix t ->
         match t with
@@ -548,8 +548,8 @@ module Parser = struct
               { prefix =
                   (Tuple2.get1 (pattern_for_variant f)).pattern
                   |> List.filter_map ~f:(function
-                    | `Match x -> Some x
-                    | _ -> None)
+                       | `Match x -> Some x
+                       | _ -> None)
               ; t = out
               }
         ;;
@@ -587,10 +587,10 @@ module Parser = struct
     end
 
     let make
-          (type a)
-          ?namespace
-          (module M : S with type Typed_variant.derived_on = a)
-          ~key
+      (type a)
+      ?namespace
+      (module M : S with type Typed_variant.derived_on = a)
+      ~key
       =
       let module Parser_map = Typed_field_map.Make (M.Typed_variant) (T) in
       let parsers_by_variant = Parser_map.create { f = M.parser_for_variant } in
@@ -680,7 +680,7 @@ module Parser = struct
     | Query_based_variant { variant_module; _ } ->
       let module M =
         (val variant_module
-          : Query_based_variant.S with type Typed_variant.derived_on = a)
+            : Query_based_variant.S with type Typed_variant.derived_on = a)
       in
       List.exists M.Typed_variant.Packed.all ~f:(fun { f = T v } ->
         needs_to_appear_on_path_order (M.parser_for_variant v))
@@ -724,19 +724,19 @@ module Parser = struct
     ;;
 
     let namespace_for_record_field
-          ~current_namespace
-          ~override_namespace
-          ~parent_namespace
+      ~current_namespace
+      ~override_namespace
+      ~parent_namespace
       =
       current_namespace @ Option.value override_namespace ~default:parent_namespace
     ;;
 
     let eval_from_query_required
-          (type a)
-          ~override_key
-          ~(value_parser : a Value_parser.t)
-          ~current_namespace
-          ~inferred_name_from_parent
+      (type a)
+      ~override_key
+      ~(value_parser : a Value_parser.t)
+      ~current_namespace
+      ~inferred_name_from_parent
       =
       let value_projection = Value_parser.eval value_parser in
       let parse_exn (components : Components.t) =
@@ -745,18 +745,18 @@ module Parser = struct
           ~inferred_name_from_parent
           ~current_namespace
           ~f:(fun key_name ->
-            let value_to_parse, remaining =
-              if_field_is_present_in_query
-                ~query:components.query
-                ~key_name
-                ~f:(fun values ->
-                  raise_if_empty values;
-                  let remaining_query = Map.remove components.query key_name in
-                  let remaining = { components with query = remaining_query } in
-                  List.hd_exn values, remaining)
-            in
-            let result = value_projection.parse_exn value_to_parse in
-            { Parse_result.result; remaining })
+          let value_to_parse, remaining =
+            if_field_is_present_in_query
+              ~query:components.query
+              ~key_name
+              ~f:(fun values ->
+              raise_if_empty values;
+              let remaining_query = Map.remove components.query key_name in
+              let remaining = { components with query = remaining_query } in
+              List.hd_exn values, remaining)
+          in
+          let result = value_projection.parse_exn value_to_parse in
+          { Parse_result.result; remaining })
       in
       let unparse (result : a Parse_result.t) =
         read_query_key
@@ -764,21 +764,21 @@ module Parser = struct
           ~inferred_name_from_parent
           ~current_namespace
           ~f:(fun key_name ->
-            let query =
-              let unparse_result = value_projection.unparse result.result in
-              Map.set result.remaining.query ~key:key_name ~data:[ unparse_result ]
-            in
-            { result.remaining with query })
+          let query =
+            let unparse_result = value_projection.unparse result.result in
+            Map.set result.remaining.query ~key:key_name ~data:[ unparse_result ]
+          in
+          { result.remaining with query })
       in
       { Projection.parse_exn; unparse }
     ;;
 
     let eval_from_query_optional
-          (type a)
-          ~override_key
-          ~(value_parser : a Value_parser.t)
-          ~current_namespace
-          ~inferred_name_from_parent
+      (type a)
+      ~override_key
+      ~(value_parser : a Value_parser.t)
+      ~current_namespace
+      ~inferred_name_from_parent
       =
       let value_projection = Value_parser.eval value_parser in
       let parse_exn (components : Components.t) =
@@ -787,22 +787,22 @@ module Parser = struct
           ~inferred_name_from_parent
           ~current_namespace
           ~f:(fun key_name ->
-            let result, remaining =
-              match Map.find components.query key_name with
-              | None -> None, components
-              | Some values ->
-                raise_if_empty values;
-                let result =
-                  let value_to_parse = List.hd_exn values in
-                  Some (value_projection.parse_exn value_to_parse)
-                in
-                let remaining =
-                  let query = Map.remove components.query key_name in
-                  { components with query }
-                in
-                result, remaining
-            in
-            { Parse_result.result; remaining })
+          let result, remaining =
+            match Map.find components.query key_name with
+            | None -> None, components
+            | Some values ->
+              raise_if_empty values;
+              let result =
+                let value_to_parse = List.hd_exn values in
+                Some (value_projection.parse_exn value_to_parse)
+              in
+              let remaining =
+                let query = Map.remove components.query key_name in
+                { components with query }
+              in
+              result, remaining
+          in
+          { Parse_result.result; remaining })
       in
       let unparse { Parse_result.result; remaining = { path = _; query } as remaining } =
         read_query_key
@@ -810,25 +810,25 @@ module Parser = struct
           ~inferred_name_from_parent
           ~current_namespace
           ~f:(fun key_name ->
-            let query =
-              match result with
-              | None -> query
-              | Some value ->
-                Map.set query ~key:key_name ~data:[ value_projection.unparse value ]
-            in
-            { remaining with query })
+          let query =
+            match result with
+            | None -> query
+            | Some value ->
+              Map.set query ~key:key_name ~data:[ value_projection.unparse value ]
+          in
+          { remaining with query })
       in
       { Projection.parse_exn; unparse }
     ;;
 
     let eval_from_query_optional_with_default
-          (type a)
-          ~override_key
-          ~(value_parser : a Value_parser.t)
-          ~equal
-          ~default
-          ~current_namespace
-          ~inferred_name_from_parent
+      (type a)
+      ~override_key
+      ~(value_parser : a Value_parser.t)
+      ~equal
+      ~default
+      ~current_namespace
+      ~inferred_name_from_parent
       =
       let value_projection = Value_parser.eval value_parser in
       let parse_exn (components : Components.t) =
@@ -837,22 +837,22 @@ module Parser = struct
           ~inferred_name_from_parent
           ~current_namespace
           ~f:(fun key_name ->
-            let result, remaining =
-              match Map.find components.query key_name with
-              | None -> default, components
-              | Some values ->
-                raise_if_empty values;
-                let result =
-                  let value_to_parse = List.hd_exn values in
-                  value_projection.parse_exn value_to_parse
-                in
-                let remaining =
-                  let query = Map.remove components.query key_name in
-                  { components with query }
-                in
-                result, remaining
-            in
-            { Parse_result.result; remaining })
+          let result, remaining =
+            match Map.find components.query key_name with
+            | None -> default, components
+            | Some values ->
+              raise_if_empty values;
+              let result =
+                let value_to_parse = List.hd_exn values in
+                value_projection.parse_exn value_to_parse
+              in
+              let remaining =
+                let query = Map.remove components.query key_name in
+                { components with query }
+              in
+              result, remaining
+          in
+          { Parse_result.result; remaining })
       in
       let unparse { Parse_result.result; remaining = { path = _; query } as remaining } =
         read_query_key
@@ -860,27 +860,27 @@ module Parser = struct
           ~inferred_name_from_parent
           ~current_namespace
           ~f:(fun key_name ->
-            let query =
-              (* If the value that needs to be unparsed happens to be "equal" (as defined
+          let query =
+            (* If the value that needs to be unparsed happens to be "equal" (as defined
                  by the user) to the default value, then then value is not included in the
                  prefix. *)
-              match equal result default with
-              | true -> query
-              | false ->
-                let unparse_result = value_projection.unparse result in
-                Map.set query ~key:key_name ~data:[ unparse_result ]
-            in
-            { remaining with query })
+            match equal result default with
+            | true -> query
+            | false ->
+              let unparse_result = value_projection.unparse result in
+              Map.set query ~key:key_name ~data:[ unparse_result ]
+          in
+          { remaining with query })
       in
       { Projection.parse_exn; unparse }
     ;;
 
     let eval_from_query_many
-          (type a)
-          ~override_key
-          ~(value_parser : a Value_parser.t)
-          ~current_namespace
-          ~inferred_name_from_parent
+      (type a)
+      ~override_key
+      ~(value_parser : a Value_parser.t)
+      ~current_namespace
+      ~inferred_name_from_parent
       =
       let value_projection = Value_parser.eval value_parser in
       let parse_exn (components : Components.t) =
@@ -889,15 +889,15 @@ module Parser = struct
           ~inferred_name_from_parent
           ~current_namespace
           ~f:(fun key_name ->
-            let result, remaining_query =
-              match Map.find components.query key_name with
-              | None -> [], components.query
-              | Some values ->
-                ( List.map values ~f:value_projection.parse_exn
-                , Map.remove components.query key_name )
-            in
-            let remaining = { components with query = remaining_query } in
-            { Parse_result.result; remaining })
+          let result, remaining_query =
+            match Map.find components.query key_name with
+            | None -> [], components.query
+            | Some values ->
+              ( List.map values ~f:value_projection.parse_exn
+              , Map.remove components.query key_name )
+          in
+          let remaining = { components with query = remaining_query } in
+          { Parse_result.result; remaining })
       in
       let unparse { Parse_result.result; remaining } =
         read_query_key
@@ -905,16 +905,16 @@ module Parser = struct
           ~inferred_name_from_parent
           ~current_namespace
           ~f:(fun key_name ->
-            let query =
-              match result with
-              | [] -> remaining.query
-              | _ :: _ ->
-                Map.set
-                  remaining.query
-                  ~key:key_name
-                  ~data:(List.map result ~f:value_projection.unparse)
-            in
-            { remaining with query })
+          let query =
+            match result with
+            | [] -> remaining.query
+            | _ :: _ ->
+              Map.set
+                remaining.query
+                ~key:key_name
+                ~data:(List.map result ~f:value_projection.unparse)
+          in
+          { remaining with query })
       in
       { Projection.parse_exn; unparse }
     ;;
@@ -954,9 +954,9 @@ module Parser = struct
     ;;
 
     let eval_project
-          (type a b)
-          ~(input : (Components.t, a Parse_result.t) Projection.t)
-          ~(projection : (a, b) Projection.t)
+      (type a b)
+      ~(input : (Components.t, a Parse_result.t) Projection.t)
+      ~(projection : (a, b) Projection.t)
       =
       let parse_exn (components : Components.t) =
         let intermediate_result = input.parse_exn components in
@@ -979,9 +979,9 @@ module Parser = struct
     ;;
 
     let eval_with_prefix
-          (type a)
-          (t : (Components.t, a Parse_result.t) Projection.t)
-          ~prefix
+      (type a)
+      (t : (Components.t, a Parse_result.t) Projection.t)
+      ~prefix
       =
       let parse_exn (components : Components.t) =
         let remaining_path = remaining_after_prefix ~prefix ~path:components.path in
@@ -1003,9 +1003,9 @@ module Parser = struct
     ;;
 
     let eval_with_remaining_path
-          (type a)
-          (t : (Components.t, a Parse_result.t) Projection.t)
-          ~needed_path
+      (type a)
+      (t : (Components.t, a Parse_result.t) Projection.t)
+      ~needed_path
       =
       let parse_exn (components : Components.t) =
         match List.equal String.equal needed_path components.path with
@@ -1027,8 +1027,8 @@ module Parser = struct
     ;;
 
     let raise_if_path_order_has_duplicates
-          (type a)
-          (module M : Record.Cached_s with type Typed_field.derived_on = a)
+      (type a)
+      (module M : Record.Cached_s with type Typed_field.derived_on = a)
       : unit
       =
       try
@@ -1041,8 +1041,8 @@ module Parser = struct
     ;;
 
     let raise_if_path_field_does_not_have_order
-          (type a)
-          (module M : Record.Cached_s with type Typed_field.derived_on = a)
+      (type a)
+      (module M : Record.Cached_s with type Typed_field.derived_on = a)
       : unit
       =
       let module Packed_typed_field = struct
@@ -1077,34 +1077,34 @@ module Parser = struct
         -> (Components.t, a Parse_result.t) Projection.t
       =
       fun (module M : Record.Cached_s with type Typed_field.derived_on = a)
-        ~(override_namespace : string list option)
-        ~more_path_parsing_allowed
-        ~current_namespace
-        ~parent_namespace ->
-        (* Caching evaluated projections. *)
-        let module Projection_map =
-          Typed_field_map.Make_for_records
-            (M.Typed_field)
-            (struct
-              type 'a t = (Components.t, 'a Parse_result.t) Projection.t
-            end)
-        in
-        let eval_field f =
-          let inferred_field_name = M.Typed_field.name f in
-          eval
-            ~more_path_parsing_allowed
-            ~current_namespace:
-              (namespace_for_record_field
-                 ~current_namespace
-                 ~override_namespace
-                 ~parent_namespace)
-            ~inferred_name_from_parent:(Some inferred_field_name)
-            ~parent_namespace:[ inferred_field_name ]
-            (M.parser_for_field f)
-        in
-        let projections_by_field = Projection_map.create { f = eval_field } in
-        let projection_for_field f = Projection_map.find projections_by_field f in
-        (* Unfortunately, the parsed record can't be created in one go with [create] since
+          ~(override_namespace : string list option)
+          ~more_path_parsing_allowed
+          ~current_namespace
+          ~parent_namespace ->
+      (* Caching evaluated projections. *)
+      let module Projection_map =
+        Typed_field_map.Make_for_records
+          (M.Typed_field)
+          (struct
+            type 'a t = (Components.t, 'a Parse_result.t) Projection.t
+          end)
+      in
+      let eval_field f =
+        let inferred_field_name = M.Typed_field.name f in
+        eval
+          ~more_path_parsing_allowed
+          ~current_namespace:
+            (namespace_for_record_field
+               ~current_namespace
+               ~override_namespace
+               ~parent_namespace)
+          ~inferred_name_from_parent:(Some inferred_field_name)
+          ~parent_namespace:[ inferred_field_name ]
+          (M.parser_for_field f)
+      in
+      let projections_by_field = Projection_map.create { f = eval_field } in
+      let projection_for_field f = Projection_map.find projections_by_field f in
+      (* Unfortunately, the parsed record can't be created in one go with [create] since
            path parsing cares about the order that the path fields are found in
            [path_order]. A [Typed_field_map] with an [Option] data is used to set the
            parsed values in the desired order.
@@ -1126,79 +1126,79 @@ module Parser = struct
            (folding over the remaining components).
            3. Unparsed result is in remaining functions.
         *)
-        let module Result_map = Typed_field_map.Make (M.Typed_field) (Option) in
-        (* [parse_order] has the path order fields at the beginning and all of the
+      let module Result_map = Typed_field_map.Make (M.Typed_field) (Option) in
+      (* [parse_order] has the path order fields at the beginning and all of the
            remaining fields at the end to satisfy order dependent steps trivially. *)
-        let parse_order =
-          let module Packed_field = struct
-            module T = struct
-              include M.Typed_field.Packed
-            end
-
-            include T
-            include Comparable.Make (T)
+      let parse_order =
+        let module Packed_field = struct
+          module T = struct
+            include M.Typed_field.Packed
           end
-          in
-          let path_order_set = Packed_field.Set.of_list M.path_order in
-          let fields_not_in_path =
-            List.filter M.Typed_field.Packed.all ~f:(fun f ->
-              not (Set.mem path_order_set f))
-          in
-          M.path_order @ fields_not_in_path
+
+          include T
+          include Comparable.Make (T)
+        end
         in
-        let parse_exn (components : Components.t) =
-          raise_if_path_order_has_duplicates (module M);
-          raise_if_path_field_does_not_have_order (module M);
-          let empty_results =
-            { Parse_result.result = Result_map.create { f = (fun _ -> None) }
-            ; remaining = components
+        let path_order_set = Packed_field.Set.of_list M.path_order in
+        let fields_not_in_path =
+          List.filter M.Typed_field.Packed.all ~f:(fun f ->
+            not (Set.mem path_order_set f))
+        in
+        M.path_order @ fields_not_in_path
+      in
+      let parse_exn (components : Components.t) =
+        raise_if_path_order_has_duplicates (module M);
+        raise_if_path_field_does_not_have_order (module M);
+        let empty_results =
+          { Parse_result.result = Result_map.create { f = (fun _ -> None) }
+          ; remaining = components
+          }
+        in
+        let results =
+          List.fold parse_order ~init:empty_results ~f:(fun results { f = T f } ->
+            let projection = projection_for_field f in
+            let { Parse_result.result; remaining } =
+              try projection.parse_exn results.remaining with
+              | Missing_key x -> raise (Missing_key x)
+              | e ->
+                let error_message = Exn.sexp_of_t e in
+                let field_name = M.Typed_field.name f in
+                let unparseable_components = results.remaining in
+                raise_s
+                  [%message
+                    "Error while parsing record field:"
+                      (error_message : Sexp.t)
+                      (field_name : string)
+                      (unparseable_components : Components.t)]
+            in
+            let result = Result_map.set results.result ~key:f ~data:(Some result) in
+            { Parse_result.result; remaining })
+        in
+        let result =
+          M.Typed_field.create
+            { f =
+                (fun f ->
+                  Option.value_or_thunk
+                    (Result_map.find results.result f)
+                    ~default:(fun () ->
+                    raise_s
+                      [%message
+                        "Internal Bug: Result for a record field was never parsed"
+                          ({ f = T f } : M.Typed_field.Packed.t)]))
             }
-          in
-          let results =
-            List.fold parse_order ~init:empty_results ~f:(fun results { f = T f } ->
-              let projection = projection_for_field f in
-              let { Parse_result.result; remaining } =
-                try projection.parse_exn results.remaining with
-                | Missing_key x -> raise (Missing_key x)
-                | e ->
-                  let error_message = Exn.sexp_of_t e in
-                  let field_name = M.Typed_field.name f in
-                  let unparseable_components = results.remaining in
-                  raise_s
-                    [%message
-                      "Error while parsing record field:"
-                        (error_message : Sexp.t)
-                        (field_name : string)
-                        (unparseable_components : Components.t)]
-              in
-              let result = Result_map.set results.result ~key:f ~data:(Some result) in
-              { Parse_result.result; remaining })
-          in
-          let result =
-            M.Typed_field.create
-              { f =
-                  (fun f ->
-                     Option.value_or_thunk
-                       (Result_map.find results.result f)
-                       ~default:(fun () ->
-                         raise_s
-                           [%message
-                             "Internal Bug: Result for a record field was never parsed"
-                               ({ f = T f } : M.Typed_field.Packed.t)]))
-              }
-          in
-          { Parse_result.result; remaining = results.remaining }
         in
-        let unparse (result : a Parse_result.t) =
-          List.fold
-            (List.rev parse_order)
-            ~init:result.remaining
-            ~f:(fun components { f = T f } ->
-              let projection = projection_for_field f in
-              let result = M.Typed_field.get f result.result in
-              projection.unparse { Parse_result.result; remaining = components })
-        in
-        { Projection.parse_exn; unparse }
+        { Parse_result.result; remaining = results.remaining }
+      in
+      let unparse (result : a Parse_result.t) =
+        List.fold
+          (List.rev parse_order)
+          ~init:result.remaining
+          ~f:(fun components { f = T f } ->
+          let projection = projection_for_field f in
+          let result = M.Typed_field.get f result.result in
+          projection.unparse { Parse_result.result; remaining = components })
+      in
+      { Projection.parse_exn; unparse }
 
     and eval_variant
       : type a.
@@ -1210,94 +1210,94 @@ module Parser = struct
         -> (Components.t, a Parse_result.t) Projection.t
       =
       fun (module M : Variant.Cached_s with type Typed_variant.derived_on = a)
-        ~(override_namespace : string list option)
-        ~more_path_parsing_allowed
-        ~current_namespace
-        ~parent_namespace ->
-        (* Caching evaluated projections *)
-        let module Projection_map =
-          Typed_field_map.Make
-            (M.Typed_variant)
-            (struct
-              type 'a t = (Components.t, 'a Parse_result.t) Projection.t
-            end)
-        in
-        let eval_constructor v =
-          let inferred_constructor_name = M.Typed_variant.name v in
-          eval
-            ~more_path_parsing_allowed
-            ~current_namespace:
-              (namespace_for_record_field
-                 ~current_namespace
-                 ~override_namespace
-                 ~parent_namespace)
-            ~inferred_name_from_parent:(Some inferred_constructor_name)
-            ~parent_namespace:[ inferred_constructor_name ]
-            (M.parser_for_variant v)
-        in
-        let projections_by_variant = Projection_map.create { f = eval_constructor } in
-        let projection_for_variant v = Projection_map.find projections_by_variant v in
-        (* Caching which pattern is expected for each variant. *)
-        let rec path_matches_pattern ~(pattern : Path_pattern.t) ~path =
-          match pattern.pattern, path with
-          | [], _ ->
-            (match pattern.needed_match with
-             | `All -> List.is_empty path
-             | `Prefix -> true)
-          | `Ignore :: pattern_tl, _ :: path_tl ->
-            path_matches_pattern
-              ~pattern:{ pattern with pattern = pattern_tl }
-              ~path:path_tl
-          | `Match pattern_hd :: pattern_tl, path_hd :: path_tl ->
-            String.equal pattern_hd path_hd
-            && path_matches_pattern
-                 ~pattern:{ pattern with pattern = pattern_tl }
-                 ~path:path_tl
-          | _ -> false
-        in
-        (* For variants, the parse order is "most-specific to least-specific". This is
+          ~(override_namespace : string list option)
+          ~more_path_parsing_allowed
+          ~current_namespace
+          ~parent_namespace ->
+      (* Caching evaluated projections *)
+      let module Projection_map =
+        Typed_field_map.Make
+          (M.Typed_variant)
+          (struct
+            type 'a t = (Components.t, 'a Parse_result.t) Projection.t
+          end)
+      in
+      let eval_constructor v =
+        let inferred_constructor_name = M.Typed_variant.name v in
+        eval
+          ~more_path_parsing_allowed
+          ~current_namespace:
+            (namespace_for_record_field
+               ~current_namespace
+               ~override_namespace
+               ~parent_namespace)
+          ~inferred_name_from_parent:(Some inferred_constructor_name)
+          ~parent_namespace:[ inferred_constructor_name ]
+          (M.parser_for_variant v)
+      in
+      let projections_by_variant = Projection_map.create { f = eval_constructor } in
+      let projection_for_variant v = Projection_map.find projections_by_variant v in
+      (* Caching which pattern is expected for each variant. *)
+      let rec path_matches_pattern ~(pattern : Path_pattern.t) ~path =
+        match pattern.pattern, path with
+        | [], _ ->
+          (match pattern.needed_match with
+           | `All -> List.is_empty path
+           | `Prefix -> true)
+        | `Ignore :: pattern_tl, _ :: path_tl ->
+          path_matches_pattern
+            ~pattern:{ pattern with pattern = pattern_tl }
+            ~path:path_tl
+        | `Match pattern_hd :: pattern_tl, path_hd :: path_tl ->
+          String.equal pattern_hd path_hd
+          && path_matches_pattern
+               ~pattern:{ pattern with pattern = pattern_tl }
+               ~path:path_tl
+        | _ -> false
+      in
+      (* For variants, the parse order is "most-specific to least-specific". This is
            defined as:
            1. Which variant's path pattern has more elements
            2. (If tied) total matches come before partial matches *)
-        let parse_order =
-          List.sort M.Typed_variant.Packed.all ~compare:(fun { f = T va } { f = T vb } ->
-            Path_pattern.compare_specificity
-              (M.pattern_for_variant va)
-              (M.pattern_for_variant vb))
+      let parse_order =
+        List.sort M.Typed_variant.Packed.all ~compare:(fun { f = T va } { f = T vb } ->
+          Path_pattern.compare_specificity
+            (M.pattern_for_variant va)
+            (M.pattern_for_variant vb))
+      in
+      let parse_exn (components : Components.t) =
+        let result =
+          List.find_map parse_order ~f:(fun { f = T v } ->
+            if path_matches_pattern
+                 ~pattern:(M.pattern_for_variant v)
+                 ~path:components.path
+            then (
+              let projection = projection_for_variant v in
+              let parse_result = projection.parse_exn components in
+              let variant = M.Typed_variant.create v parse_result.result in
+              Some { Parse_result.result = variant; remaining = parse_result.remaining })
+            else None)
         in
-        let parse_exn (components : Components.t) =
-          let result =
-            List.find_map parse_order ~f:(fun { f = T v } ->
-              if path_matches_pattern
-                   ~pattern:(M.pattern_for_variant v)
-                   ~path:components.path
-              then (
-                let projection = projection_for_variant v in
-                let parse_result = projection.parse_exn components in
-                let variant = M.Typed_variant.create v parse_result.result in
-                Some { Parse_result.result = variant; remaining = parse_result.remaining })
-              else None)
+        Option.value_or_thunk result ~default:(fun () ->
+          let available_patterns =
+            List.map M.Typed_variant.Packed.all ~f:(fun { f = T v } ->
+              M.Typed_variant.name v, M.pattern_for_variant v)
           in
-          Option.value_or_thunk result ~default:(fun () ->
-            let available_patterns =
-              List.map M.Typed_variant.Packed.all ~f:(fun { f = T v } ->
-                M.Typed_variant.name v, M.pattern_for_variant v)
-            in
-            raise_s
-              [%message
-                "Error while parsing! No matching variant contructor found for current \
-                 path!"
-                  (components : Components.t)
-                  (available_patterns : (string * Path_pattern.t) list)])
-        in
-        let unparse (result : a Parse_result.t) =
-          let { f = T v } = M.Typed_variant.which result.result in
-          let inner_result = M.Typed_variant.get v result.result |> Option.value_exn in
-          let projection = projection_for_variant v in
-          projection.unparse
-            { Parse_result.result = inner_result; remaining = result.remaining }
-        in
-        { Projection.parse_exn; unparse }
+          raise_s
+            [%message
+              "Error while parsing! No matching variant contructor found for current \
+               path!"
+                (components : Components.t)
+                (available_patterns : (string * Path_pattern.t) list)])
+      in
+      let unparse (result : a Parse_result.t) =
+        let { f = T v } = M.Typed_variant.which result.result in
+        let inner_result = M.Typed_variant.get v result.result |> Option.value_exn in
+        let projection = projection_for_variant v in
+        projection.unparse
+          { Parse_result.result = inner_result; remaining = result.remaining }
+      in
+      { Projection.parse_exn; unparse }
 
     and eval_query_based_variant
       : type a.
@@ -1310,99 +1310,99 @@ module Parser = struct
         -> (Components.t, a Parse_result.t) Projection.t
       =
       fun (module M)
-        ~override_namespace
-        ~more_path_parsing_allowed
-        ~current_namespace
-        ~parent_namespace
-        ~key ->
-        (* Caching evaluated projections *)
-        let module Projection_map =
-          Typed_field_map.Make
-            (M.Typed_variant)
-            (struct
-              type 'a t = (Components.t, 'a Parse_result.t) Projection.t
-            end)
-        in
-        let eval_constructor v =
-          let inferred_constructor_name = M.Typed_variant.name v in
-          eval
-            ~more_path_parsing_allowed
-            ~current_namespace:
-              (namespace_for_record_field
-                 ~current_namespace
-                 ~override_namespace
-                 ~parent_namespace)
-            ~inferred_name_from_parent:(Some inferred_constructor_name)
-            ~parent_namespace:[ inferred_constructor_name ]
-            (M.parser_for_variant v)
-        in
-        let projections_by_variant = Projection_map.create { f = eval_constructor } in
-        let projection_for_variant v = Projection_map.find projections_by_variant v in
-        let variant_by_identifier =
-          (* Fails at eval_time if two different variants expect the same value. *)
-          List.fold M.Typed_variant.Packed.all ~init:String.Map.empty ~f:(fun acc variant ->
-            let key =
-              let { f = T v } = variant in
-              M.identifier_for_variant v
-            in
-            match Map.add acc ~key ~data:variant with
-            | `Duplicate -> raise_s [%message "found duplicate identifier!" key]
-            | `Ok acc -> acc)
-        in
-        let parse_exn (components : Components.t) =
-          match Map.find components.query key with
-          | None | Some [] ->
-            raise_s
-              [%message
-                [%string
-                  {|Error while parsing url! Expected key "%{key}=<page>" inside of the url's query.|}]]
-          | Some (_ :: _ :: _) ->
-            raise_s
-              [%message
-                [%string
-                  {|Error while parsing! Got multiple "%{key}" query parameters, but expected just one.|}]]
-          | Some [ single_identifier ] ->
-            (match Map.find variant_by_identifier single_identifier with
-             | None ->
-               let expected_one_of =
-                 List.map M.Typed_variant.Packed.all ~f:(fun { f = T v } ->
-                   M.Typed_variant.name v, M.identifier_for_variant v)
-               in
-               raise_s
-                 [%message
-                   [%string
-                     {|Error while parsing! Got unexpected value "%{single_identifier}" for "%{key}" query parameter.|}]
-                     (expected_one_of : (string * string) list)]
-             | Some { f = T v } ->
-               let components =
-                 { components with query = Map.remove components.query key }
-               in
-               let projection = projection_for_variant v in
-               let parse_result = projection.parse_exn components in
-               let variant = M.Typed_variant.create v parse_result.result in
-               { Parse_result.result = variant; remaining = parse_result.remaining })
-        in
-        let unparse (result : a Parse_result.t) =
-          let { f = T v } = M.Typed_variant.which result.result in
-          let inner_result = M.Typed_variant.get v result.result |> Option.value_exn in
-          let projection = projection_for_variant v in
-          let query =
-            match
-              Map.add result.remaining.query ~key ~data:[ M.identifier_for_variant v ]
-            with
-            | `Ok query -> query
-            | `Duplicate ->
-              raise_s
-                [%message
-                  "query key was added multiple times while unparsing a URL. This likely \
-                   indicates an illegal URL structure, which will be caught if you run \
-                   [check_ok_and_print_urls_or_errors]. If that function doesn't complain, \
-                   this is a bug."]
+          ~override_namespace
+          ~more_path_parsing_allowed
+          ~current_namespace
+          ~parent_namespace
+          ~key ->
+      (* Caching evaluated projections *)
+      let module Projection_map =
+        Typed_field_map.Make
+          (M.Typed_variant)
+          (struct
+            type 'a t = (Components.t, 'a Parse_result.t) Projection.t
+          end)
+      in
+      let eval_constructor v =
+        let inferred_constructor_name = M.Typed_variant.name v in
+        eval
+          ~more_path_parsing_allowed
+          ~current_namespace:
+            (namespace_for_record_field
+               ~current_namespace
+               ~override_namespace
+               ~parent_namespace)
+          ~inferred_name_from_parent:(Some inferred_constructor_name)
+          ~parent_namespace:[ inferred_constructor_name ]
+          (M.parser_for_variant v)
+      in
+      let projections_by_variant = Projection_map.create { f = eval_constructor } in
+      let projection_for_variant v = Projection_map.find projections_by_variant v in
+      let variant_by_identifier =
+        (* Fails at eval_time if two different variants expect the same value. *)
+        List.fold M.Typed_variant.Packed.all ~init:String.Map.empty ~f:(fun acc variant ->
+          let key =
+            let { f = T v } = variant in
+            M.identifier_for_variant v
           in
-          let remaining = { result.remaining with query } in
-          projection.unparse { Parse_result.result = inner_result; remaining }
+          match Map.add acc ~key ~data:variant with
+          | `Duplicate -> raise_s [%message "found duplicate identifier!" key]
+          | `Ok acc -> acc)
+      in
+      let parse_exn (components : Components.t) =
+        match Map.find components.query key with
+        | None | Some [] ->
+          raise_s
+            [%message
+              [%string
+                {|Error while parsing url! Expected key "%{key}=<page>" inside of the url's query.|}]]
+        | Some (_ :: _ :: _) ->
+          raise_s
+            [%message
+              [%string
+                {|Error while parsing! Got multiple "%{key}" query parameters, but expected just one.|}]]
+        | Some [ single_identifier ] ->
+          (match Map.find variant_by_identifier single_identifier with
+           | None ->
+             let expected_one_of =
+               List.map M.Typed_variant.Packed.all ~f:(fun { f = T v } ->
+                 M.Typed_variant.name v, M.identifier_for_variant v)
+             in
+             raise_s
+               [%message
+                 [%string
+                   {|Error while parsing! Got unexpected value "%{single_identifier}" for "%{key}" query parameter.|}]
+                   (expected_one_of : (string * string) list)]
+           | Some { f = T v } ->
+             let components =
+               { components with query = Map.remove components.query key }
+             in
+             let projection = projection_for_variant v in
+             let parse_result = projection.parse_exn components in
+             let variant = M.Typed_variant.create v parse_result.result in
+             { Parse_result.result = variant; remaining = parse_result.remaining })
+      in
+      let unparse (result : a Parse_result.t) =
+        let { f = T v } = M.Typed_variant.which result.result in
+        let inner_result = M.Typed_variant.get v result.result |> Option.value_exn in
+        let projection = projection_for_variant v in
+        let query =
+          match
+            Map.add result.remaining.query ~key ~data:[ M.identifier_for_variant v ]
+          with
+          | `Ok query -> query
+          | `Duplicate ->
+            raise_s
+              [%message
+                "query key was added multiple times while unparsing a URL. This likely \
+                 indicates an illegal URL structure, which will be caught if you run \
+                 [check_ok_and_print_urls_or_errors]. If that function doesn't complain, \
+                 this is a bug."]
         in
-        { Projection.parse_exn; unparse }
+        let remaining = { result.remaining with query } in
+        projection.unparse { Parse_result.result = inner_result; remaining }
+      in
+      { Projection.parse_exn; unparse }
 
     and eval_optional_query_fields
       : type a.
@@ -1435,106 +1435,106 @@ module Parser = struct
         -> (Components.t, a Parse_result.t) Projection.t
       =
       fun t
-        ~more_path_parsing_allowed
-        ~current_namespace
-        ~inferred_name_from_parent
-        ~parent_namespace ->
-        match t with
-        | Unit ->
-          { Projection.parse_exn =
-              (fun components -> { Parse_result.result = (); remaining = components })
-          ; unparse = (fun result -> result.remaining)
-          }
-        | Project { input; projection } ->
-          let input =
-            eval
-              ~more_path_parsing_allowed
-              ~current_namespace
-              ~inferred_name_from_parent
-              ~parent_namespace
-              input
-          in
-          eval_project ~input ~projection
-        | From_query_required { override_key; value_parser } ->
-          eval_from_query_required
-            ~override_key
-            ~value_parser
-            ~current_namespace
-            ~inferred_name_from_parent
-        | From_query_optional { override_key; value_parser } ->
-          eval_from_query_optional
-            ~override_key
-            ~value_parser
-            ~current_namespace
-            ~inferred_name_from_parent
-        | From_query_optional_with_default { override_key; equal; value_parser; default } ->
-          eval_from_query_optional_with_default
-            ~override_key
-            ~value_parser
-            ~equal
-            ~default
-            ~current_namespace
-            ~inferred_name_from_parent
-        | From_query_many { override_key; value_parser } ->
-          eval_from_query_many
-            ~override_key
-            ~value_parser
-            ~current_namespace
-            ~inferred_name_from_parent
-        | From_path value_parser -> eval_from_path ~value_parser
-        | From_remaining_path value_parser -> eval_from_remaining_path ~value_parser
-        | With_prefix { prefix; t } ->
-          let t =
-            eval
-              ~more_path_parsing_allowed
-              ~current_namespace
-              ~inferred_name_from_parent
-              ~parent_namespace
-              t
-          in
-          eval_with_prefix t ~prefix
-        | With_remaining_path { needed_path; t } ->
-          let t =
-            eval
-              ~more_path_parsing_allowed:false
-              ~current_namespace
-              ~inferred_name_from_parent
-              ~parent_namespace
-              t
-          in
-          eval_with_remaining_path t ~needed_path
-        | Record { record_module; override_namespace } ->
-          eval_record
-            record_module
-            ~override_namespace
+          ~more_path_parsing_allowed
+          ~current_namespace
+          ~inferred_name_from_parent
+          ~parent_namespace ->
+      match t with
+      | Unit ->
+        { Projection.parse_exn =
+            (fun components -> { Parse_result.result = (); remaining = components })
+        ; unparse = (fun result -> result.remaining)
+        }
+      | Project { input; projection } ->
+        let input =
+          eval
             ~more_path_parsing_allowed
             ~current_namespace
+            ~inferred_name_from_parent
             ~parent_namespace
-        | Variant { variant_module; override_namespace } ->
-          eval_variant
-            variant_module
-            ~override_namespace
+            input
+        in
+        eval_project ~input ~projection
+      | From_query_required { override_key; value_parser } ->
+        eval_from_query_required
+          ~override_key
+          ~value_parser
+          ~current_namespace
+          ~inferred_name_from_parent
+      | From_query_optional { override_key; value_parser } ->
+        eval_from_query_optional
+          ~override_key
+          ~value_parser
+          ~current_namespace
+          ~inferred_name_from_parent
+      | From_query_optional_with_default { override_key; equal; value_parser; default } ->
+        eval_from_query_optional_with_default
+          ~override_key
+          ~value_parser
+          ~equal
+          ~default
+          ~current_namespace
+          ~inferred_name_from_parent
+      | From_query_many { override_key; value_parser } ->
+        eval_from_query_many
+          ~override_key
+          ~value_parser
+          ~current_namespace
+          ~inferred_name_from_parent
+      | From_path value_parser -> eval_from_path ~value_parser
+      | From_remaining_path value_parser -> eval_from_remaining_path ~value_parser
+      | With_prefix { prefix; t } ->
+        let t =
+          eval
             ~more_path_parsing_allowed
             ~current_namespace
+            ~inferred_name_from_parent
             ~parent_namespace
-        | Query_based_variant { variant_module; override_namespace; key } ->
-          eval_query_based_variant
-            variant_module
-            ~override_namespace
+            t
+        in
+        eval_with_prefix t ~prefix
+      | With_remaining_path { needed_path; t } ->
+        let t =
+          eval
+            ~more_path_parsing_allowed:false
+            ~current_namespace
+            ~inferred_name_from_parent
+            ~parent_namespace
+            t
+        in
+        eval_with_remaining_path t ~needed_path
+      | Record { record_module; override_namespace } ->
+        eval_record
+          record_module
+          ~override_namespace
+          ~more_path_parsing_allowed
+          ~current_namespace
+          ~parent_namespace
+      | Variant { variant_module; override_namespace } ->
+        eval_variant
+          variant_module
+          ~override_namespace
+          ~more_path_parsing_allowed
+          ~current_namespace
+          ~parent_namespace
+      | Query_based_variant { variant_module; override_namespace; key } ->
+        eval_query_based_variant
+          variant_module
+          ~override_namespace
+          ~more_path_parsing_allowed
+          ~current_namespace
+          ~parent_namespace
+          ~key
+      | Optional_query_fields { t } ->
+        let t =
+          eval
+            t
             ~more_path_parsing_allowed
             ~current_namespace
+            ~inferred_name_from_parent
             ~parent_namespace
-            ~key
-        | Optional_query_fields { t } ->
-          let t =
-            eval
-              t
-              ~more_path_parsing_allowed
-              ~current_namespace
-              ~inferred_name_from_parent
-              ~parent_namespace
-          in
-          eval_optional_query_fields t
+        in
+        eval_optional_query_fields t
     ;;
   end
 
@@ -1617,10 +1617,10 @@ module Parser = struct
             M.Typed_field.Packed.all
             ~init:String.Map.empty
             ~f:(fun acc { f = T f } ->
-              Map.set
-                acc
-                ~key:(M.Typed_field.name f)
-                ~data:(of_parser (M.parser_for_field f)))
+            Map.set
+              acc
+              ~key:(M.Typed_field.name f)
+              ~data:(of_parser (M.parser_for_field f)))
         in
         let path_order =
           List.map M.path_order ~f:(fun { f = T f } -> M.Typed_field.name f)
@@ -1635,40 +1635,40 @@ module Parser = struct
             M.Typed_variant.Packed.all
             ~init:String.Map.empty
             ~f:(fun acc { f = T v } ->
-              Map.set
-                acc
-                ~key:(M.Typed_variant.name v)
-                ~data:(of_parser (M.parser_for_variant v)))
+            Map.set
+              acc
+              ~key:(M.Typed_variant.name v)
+              ~data:(of_parser (M.parser_for_variant v)))
         in
         let patterns =
           List.fold
             M.Typed_variant.Packed.all
             ~init:String.Map.empty
             ~f:(fun acc { f = T v } ->
-              Map.set acc ~key:(M.Typed_variant.name v) ~data:(M.pattern_for_variant v))
+            Map.set acc ~key:(M.Typed_variant.name v) ~data:(M.pattern_for_variant v))
         in
         Variant { override_namespace; constructor_declarations; patterns }
       | Query_based_variant { variant_module; override_namespace; key } ->
         let module M =
           (val variant_module
-            : Query_based_variant.S with type Typed_variant.derived_on = a)
+              : Query_based_variant.S with type Typed_variant.derived_on = a)
         in
         let constructor_declarations =
           List.fold
             M.Typed_variant.Packed.all
             ~init:String.Map.empty
             ~f:(fun acc { f = T v } ->
-              Map.set
-                acc
-                ~key:(M.Typed_variant.name v)
-                ~data:(of_parser (M.parser_for_variant v)))
+            Map.set
+              acc
+              ~key:(M.Typed_variant.name v)
+              ~data:(of_parser (M.parser_for_variant v)))
         in
         let identifiers =
           List.fold
             M.Typed_variant.Packed.all
             ~init:String.Map.empty
             ~f:(fun acc { f = T v } ->
-              Map.set acc ~key:(M.Typed_variant.name v) ~data:(M.identifier_for_variant v))
+            Map.set acc ~key:(M.Typed_variant.name v) ~data:(M.identifier_for_variant v))
         in
         Query_based_variant
           { override_namespace; constructor_declarations; identifiers; key }
@@ -1806,11 +1806,11 @@ module Parser = struct
   let all_url_shapes (type a) (t : a T.t) : Url_shape.t list =
     let skeleton = Skeleton.of_parser t in
     let rec all_url_shapes
-              (t : Skeleton.t)
-              ~(current_shape : Url_shape.t)
-              ~current_namespace
-              ~parent_namespace
-              ~inferred_name_from_parent
+      (t : Skeleton.t)
+      ~(current_shape : Url_shape.t)
+      ~current_namespace
+      ~parent_namespace
+      ~inferred_name_from_parent
       =
       let wrap_if_multiple s =
         if Skeleton.is_multiple t then [%string "<multiple%{s}>"] else s
@@ -1907,12 +1907,12 @@ module Parser = struct
         List.concat_map
           (Map.to_alist constructor_declarations)
           ~f:(fun (constructor_name, declaration) ->
-            all_url_shapes
-              declaration
-              ~current_shape
-              ~current_namespace:namespace
-              ~parent_namespace:[ constructor_name ]
-              ~inferred_name_from_parent:(Some constructor_name))
+          all_url_shapes
+            declaration
+            ~current_shape
+            ~current_namespace:namespace
+            ~parent_namespace:[ constructor_name ]
+            ~inferred_name_from_parent:(Some constructor_name))
       | Query_based_variant
           { constructor_declarations; override_namespace; identifiers; key } ->
         let namespace =
@@ -1924,23 +1924,23 @@ module Parser = struct
         List.concat_map
           (Map.to_alist constructor_declarations)
           ~f:(fun (constructor_name, declaration) ->
-            let current_shape =
-              { current_shape with
-                query =
-                  { Query_tag.key
-                  ; value =
-                      Map.find identifiers constructor_name
-                      |> Option.value ~default:"<string>"
-                  }
-                  :: current_shape.query
-              }
-            in
-            all_url_shapes
-              declaration
-              ~current_shape
-              ~current_namespace:namespace
-              ~parent_namespace:[ constructor_name ]
-              ~inferred_name_from_parent:(Some constructor_name))
+          let current_shape =
+            { current_shape with
+              query =
+                { Query_tag.key
+                ; value =
+                    Map.find identifiers constructor_name
+                    |> Option.value ~default:"<string>"
+                }
+                :: current_shape.query
+            }
+          in
+          all_url_shapes
+            declaration
+            ~current_shape
+            ~current_namespace:namespace
+            ~parent_namespace:[ constructor_name ]
+            ~inferred_name_from_parent:(Some constructor_name))
       | Optional_query_fields { t; _ } ->
         current_shape
         :: all_url_shapes
@@ -2032,7 +2032,7 @@ module Parser = struct
     | Query_based_variant { variant_module; _ } ->
       let module M =
         (val variant_module
-          : Query_based_variant.S with type Typed_variant.derived_on = a)
+            : Query_based_variant.S with type Typed_variant.derived_on = a)
       in
       List.iter M.Typed_variant.Packed.all ~f:(fun { f = T v } ->
         check_that_path_orders_are_ok (M.parser_for_variant v))
@@ -2089,7 +2089,7 @@ module Parser = struct
     | Query_based_variant { variant_module; _ } ->
       let module M =
         (val variant_module
-          : Query_based_variant.S with type Typed_variant.derived_on = a)
+            : Query_based_variant.S with type Typed_variant.derived_on = a)
       in
       List.iter M.Typed_variant.Packed.all ~f:(fun { f = T v } ->
         check_that_with_remaining_path_has_no_path_parsers_after_it
@@ -2131,7 +2131,7 @@ module Parser = struct
     | Query_based_variant { variant_module; _ } ->
       let module M =
         (val variant_module
-          : Query_based_variant.S with type Typed_variant.derived_on = a)
+            : Query_based_variant.S with type Typed_variant.derived_on = a)
       in
       let all_identifiers =
         List.map M.Typed_variant.Packed.all ~f:(fun { f = T v } ->
@@ -2256,24 +2256,24 @@ module Versioned_parser = struct
       -> (Components.t, a Parse_result.t) Projection.t
     =
     fun ?encoding_behavior -> function
-      | Non_typed_parser projection -> eval_non_typed_parser projection
-      | First_typed_parser parser -> Parser.eval ?encoding_behavior parser
-      | New_parser { current_parser; map; previous_parser } ->
-        let current_projection = Parser.eval ?encoding_behavior current_parser in
-        let previous_projection = eval ?encoding_behavior previous_parser in
-        let parse_exn (components : Components.t) =
-          try current_projection.parse_exn components with
-          | error ->
-            print_s
-              [%message
-                "URL unrecognized, maybe this is an old URL? Attempting to parse with a \
-                 previous URL parser. Here's the error of the current parser:"
-                  (error : Exn.t)];
-            let result = previous_projection.parse_exn components in
-            { Parse_result.result = map result.result; remaining = result.remaining }
-        in
-        let unparse result = current_projection.unparse result in
-        { Projection.parse_exn; unparse }
+    | Non_typed_parser projection -> eval_non_typed_parser projection
+    | First_typed_parser parser -> Parser.eval ?encoding_behavior parser
+    | New_parser { current_parser; map; previous_parser } ->
+      let current_projection = Parser.eval ?encoding_behavior current_parser in
+      let previous_projection = eval ?encoding_behavior previous_parser in
+      let parse_exn (components : Components.t) =
+        try current_projection.parse_exn components with
+        | error ->
+          print_s
+            [%message
+              "URL unrecognized, maybe this is an old URL? Attempting to parse with a \
+               previous URL parser. Here's the error of the current parser:"
+                (error : Exn.t)];
+          let result = previous_projection.parse_exn components in
+          { Parse_result.result = map result.result; remaining = result.remaining }
+      in
+      let unparse result = current_projection.unparse result in
+      { Projection.parse_exn; unparse }
   ;;
 
   let eval_for_uri ?encoding_behavior (t : 'a t) : (Uri.t, 'a Parse_result.t) Projection.t
@@ -2301,10 +2301,10 @@ module Versioned_parser = struct
 
   let rec to_parser_list : type a. a t -> [ `Typed of packed_parser | `Non_typed ] list
     = function
-      | Non_typed_parser _ -> [ `Non_typed ]
-      | First_typed_parser parser -> [ `Typed (T parser) ]
-      | New_parser { current_parser; map = _; previous_parser } ->
-        `Typed (T current_parser) :: to_parser_list previous_parser
+    | Non_typed_parser _ -> [ `Non_typed ]
+    | First_typed_parser parser -> [ `Typed (T parser) ]
+    | New_parser { current_parser; map = _; previous_parser } ->
+      `Typed (T current_parser) :: to_parser_list previous_parser
   ;;
 
   let check_ok_and_print_urls_or_errors (t : 'a t) =

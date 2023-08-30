@@ -3,20 +3,20 @@ open! Import
 open Incr.Let_syntax
 
 let unusable_static_apply_action
-      ~inject_dynamic:_
-      ~inject_static:_
-      ~schedule_event:_
-      _model
+  ~inject_dynamic:_
+  ~inject_static:_
+  ~schedule_event:_
+  _model
   =
   Nothing.unreachable_code
 ;;
 
 let unusable_dynamic_apply_action
-      ~inject_dynamic:_
-      ~inject_static:_
-      ~schedule_event:_
-      _input
-      _model
+  ~inject_dynamic:_
+  ~inject_static:_
+  ~schedule_event:_
+  _input
+  _model
   =
   Nothing.unreachable_code
 ;;
@@ -183,15 +183,15 @@ let rec gather : type result. result Computation.t -> result Computation.packed_
       }
   | Assoc { map; key_comparator; key_id; cmp_id; data_id; by } ->
     let (T
-           { model = model_info
-           ; input = input_info
-           ; dynamic_action
-           ; static_action
-           ; apply_static
-           ; apply_dynamic
-           ; run
-           ; reset
-           })
+          { model = model_info
+          ; input = input_info
+          ; dynamic_action
+          ; static_action
+          ; apply_static
+          ; apply_dynamic
+          ; run
+          ; reset
+          })
       =
       gather by
     in
@@ -264,12 +264,12 @@ let rec gather : type result. result Computation.t -> result Computation.packed_
       else Map.set model ~key:id ~data
     in
     let apply_dynamic
-          ~inject_dynamic
-          ~inject_static
-          ~schedule_event
-          input
-          model
-          (id, action)
+      ~inject_dynamic
+      ~inject_static
+      ~schedule_event
+      input
+      model
+      (id, action)
       =
       let input = Option.bind input ~f:(fun input -> Map.find input id) in
       let inject_dynamic a = inject_dynamic (id, a) in
@@ -323,15 +323,15 @@ let rec gather : type result. result Computation.t -> result Computation.packed_
     let module Io_comparator = (val io_comparator) in
     let model_key_comparator = Model_comparator.comparator in
     let (T
-           { model = model_info
-           ; input = input_info
-           ; dynamic_action
-           ; static_action
-           ; apply_static
-           ; apply_dynamic
-           ; run
-           ; reset
-           })
+          { model = model_info
+          ; input = input_info
+          ; dynamic_action
+          ; static_action
+          ; apply_static
+          ; apply_dynamic
+          ; run
+          ; reset
+          })
       =
       gather by
     in
@@ -399,11 +399,11 @@ let rec gather : type result. result Computation.t -> result Computation.packed_
         ~lifecycle:(Some lifecycle)
     in
     let apply_static
-          ~inject_dynamic
-          ~inject_static
-          ~schedule_event
-          model
-          (input_id, model_id, action)
+      ~inject_dynamic
+      ~inject_static
+      ~schedule_event
+      model
+      (input_id, model_id, action)
       =
       let inject_dynamic a = inject_dynamic (input_id, model_id, a) in
       let inject_static a = inject_static (input_id, model_id, a) in
@@ -420,12 +420,12 @@ let rec gather : type result. result Computation.t -> result Computation.packed_
       else Map.set model ~key:model_id ~data:(input_id, new_model)
     in
     let apply_dynamic
-          ~inject_dynamic
-          ~inject_static
-          ~schedule_event
-          input
-          model
-          (input_id, model_id, action)
+      ~inject_dynamic
+      ~inject_static
+      ~schedule_event
+      input
+      model
+      (input_id, model_id, action)
       =
       let input = Option.bind input ~f:(fun input -> Map.find input input_id) in
       let inject_dynamic a = inject_dynamic (input_id, model_id, a) in
@@ -505,15 +505,15 @@ let rec gather : type result. result Computation.t -> result Computation.packed_
            nodes, which can cause [assert false] to trigger. *)
         let path = Path.append path (Path.Elem.Switch index) in
         let (T
-               { model = model_info
-               ; input = input_info
-               ; dynamic_action = dynamic_action_info
-               ; static_action = static_action_info
-               ; apply_static = _
-               ; apply_dynamic = _
-               ; reset = _
-               ; run
-               })
+              { model = model_info
+              ; input = input_info
+              ; dynamic_action = dynamic_action_info
+              ; static_action = static_action_info
+              ; apply_static = _
+              ; apply_dynamic = _
+              ; reset = _
+              ; run
+              })
           =
           Map.find_exn gathered index
         in
@@ -551,11 +551,11 @@ let rec gather : type result. result Computation.t -> result Computation.packed_
       Snapshot.create ~result ~input ~lifecycle:(Some lifecycle)
     in
     let apply_static
-          ~inject_dynamic
-          ~inject_static
-          ~schedule_event
-          model
-          (action : int Meta.Action.Hidden.t)
+      ~inject_dynamic
+      ~inject_static
+      ~schedule_event
+      model
+      (action : int Meta.Action.Hidden.t)
       =
       let (T { action; type_id = action_type_id; key = index }) = action in
       let (T { model = chosen_model; info = chosen_model_info; _ }) =
@@ -566,15 +566,15 @@ let rec gather : type result. result Computation.t -> result Computation.packed_
           (Meta.Action.Hidden.T { action; type_id = action_type_id; key = index })
       in
       let (T
-             { model = tm
-             ; input = _
-             ; static_action = am
-             ; dynamic_action = dm
-             ; apply_static
-             ; apply_dynamic = _
-             ; run = _
-             ; reset = _
-             })
+            { model = tm
+            ; input = _
+            ; static_action = am
+            ; dynamic_action = dm
+            ; apply_static
+            ; apply_dynamic = _
+            ; run = _
+            ; reset = _
+            })
         =
         Map.find_exn gathered index
       in
@@ -590,23 +590,23 @@ let rec gather : type result. result Computation.t -> result Computation.packed_
       Meta.Multi_model.set model ~key:index ~data:new_model
     in
     let apply_dynamic
-          ~inject_dynamic
-          ~inject_static
-          ~schedule_event
-          input
-          model
-          (Meta.Action.Hidden.T { action; type_id = action_type_id; key = index })
+      ~inject_dynamic
+      ~inject_static
+      ~schedule_event
+      input
+      model
+      (Meta.Action.Hidden.T { action; type_id = action_type_id; key = index })
       =
       let (T
-             { model = tm
-             ; input = im
-             ; static_action = am
-             ; dynamic_action = dm
-             ; apply_static = _
-             ; apply_dynamic
-             ; run = _
-             ; reset = _
-             })
+            { model = tm
+            ; input = im
+            ; static_action = am
+            ; dynamic_action = dm
+            ; apply_static = _
+            ; apply_dynamic
+            ; run = _
+            ; reset = _
+            })
         =
         Map.find_exn gathered index
       in
@@ -628,7 +628,7 @@ let rec gather : type result. result Computation.t -> result Computation.packed_
           match input with
           | Some
               (Meta.Input.Hidden.T
-                 { input = chosen_input; type_id = chosen_input_info; key = index' }) ->
+                { input = chosen_input; type_id = chosen_input_info; key = index' }) ->
             (match index = index', Meta.Input.same_witness chosen_input_info im with
              | true, Some T ->
                apply_dynamic
@@ -671,15 +671,15 @@ let rec gather : type result. result Computation.t -> result Computation.packed_
       let f ~key:index ~data:(model : Meta.Model.Hidden.t) =
         let (T { model = chosen_model; info = chosen_model_info; _ }) = model in
         let (T
-               { model = tm
-               ; input = _
-               ; static_action = am
-               ; dynamic_action = dm
-               ; reset
-               ; apply_static = _
-               ; apply_dynamic = _
-               ; run = _
-               })
+              { model = tm
+              ; input = _
+              ; static_action = am
+              ; dynamic_action = dm
+              ; reset
+              ; apply_static = _
+              ; apply_dynamic = _
+              ; run = _
+              })
           =
           Map.find_exn gathered index
         in
@@ -723,13 +723,13 @@ let rec gather : type result. result Computation.t -> result Computation.packed_
     let gathered = Lazy.map lazy_computation ~f:gather in
     let run ~environment ~path ~clock ~model ~inject_dynamic ~inject_static =
       let (T
-             { model = model_info
-             ; input = input_info
-             ; dynamic_action = dynamic_action_info
-             ; static_action = static_action_info
-             ; run
-             ; _
-             })
+            { model = model_info
+            ; input = input_info
+            ; dynamic_action = dynamic_action_info
+            ; static_action = static_action_info
+            ; run
+            ; _
+            })
         =
         force gathered
       in
@@ -768,12 +768,12 @@ let rec gather : type result. result Computation.t -> result Computation.packed_
     let apply_static ~inject_dynamic ~inject_static ~schedule_event model action =
       (* forcing the lazy is fine because actions are finite in length *)
       let (T
-             { model = model_info
-             ; dynamic_action = dynamic_action_info
-             ; static_action = static_action_info
-             ; apply_static
-             ; _
-             })
+            { model = model_info
+            ; dynamic_action = dynamic_action_info
+            ; static_action = static_action_info
+            ; apply_static
+            ; _
+            })
         =
         force gathered
       in
@@ -805,13 +805,13 @@ let rec gather : type result. result Computation.t -> result Computation.packed_
     let apply_dynamic ~inject_dynamic ~inject_static ~schedule_event input model action =
       (* forcing the lazy is fine because actions are finite in length *)
       let (T
-             { model = model_info
-             ; input = input_info
-             ; dynamic_action = dynamic_action_info
-             ; static_action = static_action_info
-             ; apply_dynamic
-             ; _
-             })
+            { model = model_info
+            ; input = input_info
+            ; dynamic_action = dynamic_action_info
+            ; static_action = static_action_info
+            ; apply_dynamic
+            ; _
+            })
         =
         force gathered
       in
@@ -859,12 +859,12 @@ let rec gather : type result. result Computation.t -> result Computation.packed_
     in
     let reset' ~inject_dynamic ~inject_static ~schedule_event model =
       let (T
-             { model = model_info
-             ; dynamic_action = dynamic_action_info
-             ; static_action = static_action_info
-             ; reset
-             ; _
-             })
+            { model = model_info
+            ; dynamic_action = dynamic_action_info
+            ; static_action = static_action_info
+            ; reset
+            ; _
+            })
         =
         force gathered
       in
@@ -913,15 +913,15 @@ let rec gather : type result. result Computation.t -> result Computation.packed_
       ; reset = reset_me
       } ->
     let (T
-           { model = inner_model
-           ; input = inner_input
-           ; dynamic_action = inner_dynamic_action
-           ; static_action = inner_static_action
-           ; apply_static
-           ; apply_dynamic
-           ; run
-           ; reset
-           })
+          { model = inner_model
+          ; input = inner_input
+          ; dynamic_action = inner_dynamic_action
+          ; static_action = inner_static_action
+          ; apply_static
+          ; apply_dynamic
+          ; run
+          ; reset
+          })
       =
       gather inner
     in
@@ -961,12 +961,12 @@ let rec gather : type result. result Computation.t -> result Computation.packed_
       m1, apply_static ~inject_dynamic ~inject_static ~schedule_event m2 action
     in
     let apply_dynamic
-          ~inject_dynamic
-          ~inject_static
-          ~schedule_event
-          input
-          (outer_model, inner_model)
-          action
+      ~inject_dynamic
+      ~inject_static
+      ~schedule_event
+      input
+      (outer_model, inner_model)
+      action
       =
       let dynamic_inject_outer a = inject_dynamic (Either.First a) in
       let dynamic_inject_inner a = inject_dynamic (Either.Second a) in
@@ -1021,15 +1021,15 @@ let rec gather : type result. result Computation.t -> result Computation.packed_
       }
   | With_model_resetter { inner; reset_id } ->
     let (T
-           ({ model
-            ; input
-            ; dynamic_action
-            ; static_action
-            ; apply_static
-            ; apply_dynamic
-            ; run
-            ; reset
-            } as gathered_inner))
+          ({ model
+           ; input
+           ; dynamic_action
+           ; static_action
+           ; apply_static
+           ; apply_dynamic
+           ; run
+           ; reset
+           } as gathered_inner))
       =
       gather inner
     in

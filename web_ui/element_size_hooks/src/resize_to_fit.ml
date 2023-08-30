@@ -30,7 +30,7 @@ module T = struct
   module State = struct
     type t =
       { mutable observer : ResizeObserver.resizeObserver Js.t option
-      (* [my_dims] and [parent_dims] are in their local dimensionality and are
+          (* [my_dims] and [parent_dims] are in their local dimensionality and are
          calculated prior to the transformation taking effect. *)
       ; mutable my_dims : Dims.t
       ; mutable parent_dims : Dims.t
@@ -70,9 +70,9 @@ module T = struct
     in
     let lte_zero f = Float.(f <= 0.0) in
     if lte_zero state.my_dims.width
-    || lte_zero state.my_dims.height
-    || lte_zero state.parent_dims.width
-    || lte_zero state.parent_dims.height
+       || lte_zero state.my_dims.height
+       || lte_zero state.parent_dims.width
+       || lte_zero state.parent_dims.height
     then set_scale 1.0
     else (
       let width_rat = state.parent_dims.width /. state.my_dims.width in
@@ -135,7 +135,7 @@ module T = struct
     Js.Opt.case
       state.me##.parentNode
       (fun () ->
-         eprint_s [%message "BUG" [%here] "parent should always be set in [on_mount]"])
+        eprint_s [%message "BUG" [%here] "parent should always be set in [on_mount]"])
       (fun parent -> state.observer <- Some (observe ~parent ~state))
   ;;
 

@@ -48,7 +48,7 @@ let default_axis_label_formatter x gran opts =
   | `number x ->
     let number = Js.number_of_float x in
     dygraphs_number_axis_label_formatter () number gran opts |> Js.to_string
-  | `date d   -> dygraphs_date_axis_label_formatter () d gran opts |> Js.to_string
+  | `date d -> dygraphs_date_axis_label_formatter () d gran opts |> Js.to_string
 ;;
 
 (* due to the floatness of the piecewise_linear math, timestamps come can out weird.  I
@@ -56,10 +56,10 @@ let default_axis_label_formatter x gran opts =
    anyways b/c of dates in javascript), so this rounding feels relatively
    uncontroversial and makes the output look a lot better. *)
 let round_time_nearest_ms time ~zone =
-  let date, ofday = Time_ns.to_date_ofday time ~zone                    in
-  let span        = Time_ns.Ofday.to_span_since_start_of_day ofday      in
-  let ms          = Time_ns.Span.to_ms span |> Float.iround_nearest_exn in
-  let ofday       = Time_ns.Span.of_int_ms ms |> Time_ns.Ofday.of_span_since_start_of_day_exn in
+  let date, ofday = Time_ns.to_date_ofday time ~zone in
+  let span = Time_ns.Ofday.to_span_since_start_of_day ofday in
+  let ms = Time_ns.Span.to_ms span |> Float.iround_nearest_exn in
+  let ofday = Time_ns.Span.of_int_ms ms |> Time_ns.Ofday.of_span_since_start_of_day_exn in
   Time_ns.of_date_ofday ~zone date ofday
 ;;
 
@@ -69,9 +69,9 @@ let default_value_formatter ~zone ms_since_epoch =
 ;;
 
 type t =
-  { time_to_x_value      : Time_ns.t -> Time_ns.t
-  ; x_value_to_time      : Time_ns.t -> Time_ns.t
-  ; value_formatter      : float     -> Options.Opts.t -> string
+  { time_to_x_value : Time_ns.t -> Time_ns.t
+  ; x_value_to_time : Time_ns.t -> Time_ns.t
+  ; value_formatter : float -> Options.Opts.t -> string
   ; axis_label_formatter :
       Number_or_js_date.t -> Granularity.t -> Options.Opts.t -> string
   }
@@ -84,8 +84,8 @@ module Time_mapping = struct
 
     let to_float t = Span.to_ns (to_span_since_epoch t)
     let of_float f = of_span_since_epoch (Span.of_ns f)
-    let t_of_sexp  = Alternate_sexp.t_of_sexp
-    let sexp_of_t  = Alternate_sexp.sexp_of_t
+    let t_of_sexp = Alternate_sexp.t_of_sexp
+    let sexp_of_t = Alternate_sexp.sexp_of_t
   end
 
   (* Our mapping between real time and graph time will be a piecewise_linear invertible
@@ -93,9 +93,9 @@ module Time_mapping = struct
   include Piecewise_linear_kernel.Make_invertible (Time_ns) (Time_ns)
 
   let create ~start_time ~end_time ~zone ~ofday_knots ~date_to_weight : t Or_error.t =
-    let start_date = Time_ns.to_date start_time ~zone                 in
-    let end_date   = Time_ns.to_date end_time ~zone                   in
-    let dates      = Date.dates_between ~min:start_date ~max:end_date in
+    let start_date = Time_ns.to_date start_time ~zone in
+    let end_date = Time_ns.to_date end_time ~zone in
+    let dates = Date.dates_between ~min:start_date ~max:end_date in
     let time date hr min =
       Time_ns.of_date_ofday ~zone date (Time_ns.Ofday.create ~hr ~min ())
     in
@@ -125,7 +125,7 @@ module Time_mapping = struct
         time, x_value_time)
     in
     match create knots_in_time with
-    | Ok t        -> Ok t
+    | Ok t -> Ok t
     | Error error ->
       Or_error.error_s
         [%message
@@ -136,13 +136,13 @@ module Time_mapping = struct
 end
 
 let only_display_market_hours
-      ?(mkt_start_ofday = Time_ns.Ofday.create ~hr:9 ~min:30 ())
-      ?(mkt_end_ofday   = Time_ns.Ofday.create ~hr:16        ())
-      ~start_time
-      ~end_time
-      ~view_zone
-      ?(mkt_zone = view_zone)
-      ()
+  ?(mkt_start_ofday = Time_ns.Ofday.create ~hr:9 ~min:30 ())
+  ?(mkt_end_ofday = Time_ns.Ofday.create ~hr:16 ())
+  ~start_time
+  ~end_time
+  ~view_zone
+  ?(mkt_zone = view_zone)
+  ()
   =
   let ofday_knots =
     (* Why do we have a [latest_allowable_mkt_end_of_day]?  It's because of the fact that
@@ -176,17 +176,17 @@ let only_display_market_hours
   let%map.Or_error x_axis_mapping =
     Time_mapping.create ~start_time ~end_time ~zone:mkt_zone ~ofday_knots ~date_to_weight
   in
-  let time_to_x_value time    = Time_mapping.get         x_axis_mapping time    in
+  let time_to_x_value time = Time_mapping.get x_axis_mapping time in
   let x_value_to_time x_value = Time_mapping.get_inverse x_axis_mapping x_value in
   let value_formatter ms_since_epoch _opts =
     let x_value = Time_ns.of_span_since_epoch (Time_ns.Span.of_ms ms_since_epoch) in
-    let time    = x_value_to_time x_value                                         in
+    let time = x_value_to_time x_value in
     Time_ns.to_string_trimmed (round_time_nearest_ms time ~zone:view_zone) ~zone:view_zone
   in
   let date_axis_label_formatter x_value granularity opts =
-    let time           = x_value_to_time x_value                               in
+    let time = x_value_to_time x_value in
     let ms_since_epoch = Time_ns.Span.to_ms (Time_ns.to_span_since_epoch time) in
-    let js_date        = new%js Js.date_fromTimeValue ms_since_epoch           in
+    let js_date = new%js Js.date_fromTimeValue ms_since_epoch in
     dygraphs_date_axis_label_formatter () js_date granularity opts |> Js.to_string
   in
   let axis_label_formatter x gran opts =
@@ -197,18 +197,18 @@ let only_display_market_hours
       dygraphs_number_axis_label_formatter () (Js.number_of_float x) gran opts
       |> Js.to_string
     | `date d ->
-      let ms_since_epoch : float = d##getTime                        in
-      let span                   = Time_ns.Span.of_ms ms_since_epoch in
-      let x_value                = Time_ns.of_span_since_epoch span  in
+      let ms_since_epoch : float = d##getTime in
+      let span = Time_ns.Span.of_ms ms_since_epoch in
+      let x_value = Time_ns.of_span_since_epoch span in
       date_axis_label_formatter x_value gran opts
   in
   { time_to_x_value; x_value_to_time; value_formatter; axis_label_formatter }
 ;;
 
 let default ~zone =
-  { time_to_x_value      = Fn.id
-  ; x_value_to_time      = Fn.id
-  ; value_formatter      = (fun x _opts -> default_value_formatter x ~zone)
+  { time_to_x_value = Fn.id
+  ; x_value_to_time = Fn.id
+  ; value_formatter = (fun x _opts -> default_value_formatter x ~zone)
   ; axis_label_formatter = default_axis_label_formatter
   }
 ;;

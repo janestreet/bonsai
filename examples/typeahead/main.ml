@@ -60,8 +60,8 @@ let components =
              favourite_pokemon
              ~default:Pokemon.all
              ~f:(fun favourite_pokemon ->
-               List.filter Pokemon.all ~f:(fun pokemon ->
-                 not (Pokemon.equal favourite_pokemon pokemon)))
+             List.filter Pokemon.all ~f:(fun pokemon ->
+               not (Pokemon.equal favourite_pokemon pokemon)))
            |> inject_all_options)
       ~to_string:(Bonsai.Value.return Pokemon.to_string)
       ~placeholder:"Select a pokemon"
@@ -116,10 +116,10 @@ let components =
     typeahead_multi_with_custom_input ~all_options:(Value.return Pokemon.all)
   in
   let%arr typeahead_single_vdom = typeahead_single_vdom
-  and typeahead_multi_vdom                    = typeahead_multi_vdom
+  and typeahead_multi_vdom = typeahead_multi_vdom
   and typeahead_single_with_custom_input_vdom = typeahead_single_with_custom_input_vdom
   and typeahead_multi_with_empty_options_vdom = typeahead_multi_with_empty_options_vdom
-  and typeahead_multi_with_custom_input_vdom  = typeahead_multi_with_custom_input_vdom in
+  and typeahead_multi_with_custom_input_vdom = typeahead_multi_with_custom_input_vdom in
   Vdom.Node.create
     "main"
     [ Vdom.Node.section

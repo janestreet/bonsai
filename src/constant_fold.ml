@@ -76,12 +76,12 @@ include struct
   ;;
 
   let simplify_assoc_if_simpl
-        (type k v cmp)
-        ~(key_comparator : (k, cmp) comparator)
-        ~(key_id : k Type_equal.Id.t)
-        ~(data_id : v Type_equal.Id.t)
-        (map : (k, v, cmp) Map.t Value.t)
-        by
+    (type k v cmp)
+    ~(key_comparator : (k, cmp) comparator)
+    ~(key_id : k Type_equal.Id.t)
+    ~(data_id : v Type_equal.Id.t)
+    (map : (k, v, cmp) Map.t Value.t)
+    by
     =
     let module C = (val key_comparator) in
     let%map.Option by =
@@ -231,7 +231,7 @@ module Constant_fold (Recurse : Fix_transform.Recurse with module Types := Types
           | None -> Assoc { assoc_t with map = map_v; by }))
     | Assoc_on
         ({ map; io_comparator = key_comparator; io_key_id = key_id; data_id; by; _ } as
-         assoc_on_t) ->
+        assoc_on_t) ->
       let (), (), map =
         Recurse.on_value { constants_in_scope; evaluated } () `Directly_on map
       in

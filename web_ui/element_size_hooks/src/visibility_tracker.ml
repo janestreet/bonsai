@@ -30,12 +30,12 @@ module T = struct
     let sexp_of_t = sexp_of_opaque
 
     let combine
-          { client_rect_changed = client_rect_changed_left
-          ; visible_rect_changed = visible_rect_changed_left
-          }
-          { client_rect_changed = client_rect_changed_right
-          ; visible_rect_changed = visible_rect_changed_right
-          }
+      { client_rect_changed = client_rect_changed_left
+      ; visible_rect_changed = visible_rect_changed_left
+      }
+      { client_rect_changed = client_rect_changed_right
+      ; visible_rect_changed = visible_rect_changed_right
+      }
       =
       let client_rect_changed bbox =
         Vdom.Effect.sequence_as_sibling
@@ -82,17 +82,17 @@ module T = struct
     and observer =
       lazy
         (new%js IntersectionObserver.intersectionObserver
-          (Js.wrap_callback
-             (fun entries (observer : IntersectionObserver.intersectionObserver Js.t) ->
-                for i = 0 to entries##.length - 1 do
-                  let entry = Js.array_get entries i in
-                  Js.Optdef.iter entry process
-                done;
-                (* unobserve and immediately re-observe in order to trigger a
+           (Js.wrap_callback
+              (fun entries (observer : IntersectionObserver.intersectionObserver Js.t) ->
+              for i = 0 to entries##.length - 1 do
+                let entry = Js.array_get entries i in
+                Js.Optdef.iter entry process
+              done;
+              (* unobserve and immediately re-observe in order to trigger a
                    recomputation of the intersection rect. *)
-                observer##unobserve (element :> #Dom.node Js.t);
-                observer##observe (element :> #Dom.node Js.t)))
-          (IntersectionObserver.empty_intersection_observer_options ()))
+              observer##unobserve (element :> #Dom.node Js.t);
+              observer##observe (element :> #Dom.node Js.t)))
+           (IntersectionObserver.empty_intersection_observer_options ()))
     and process entry =
       let client_rect = Bbox.of_client_rect entry##.boundingClientRect in
       let intersection_rect =
@@ -109,7 +109,7 @@ module T = struct
       in
       let state = Lazy.force state in
       if state.dirty
-      || not ([%equal: Bbox.t option] intersection_rect state.prev.visible_section)
+         || not ([%equal: Bbox.t option] intersection_rect state.prev.visible_section)
       then (
         intersection_rect
         |> state.callback.visible_rect_changed
@@ -141,9 +141,9 @@ end
 module Hook = Vdom.Attr.Hooks.Make (T)
 
 let detect
-      ?(client_rect_changed = fun _ -> Effect.Ignore)
-      ?(visible_rect_changed = fun _ -> Effect.Ignore)
-      ()
+  ?(client_rect_changed = fun _ -> Effect.Ignore)
+  ?(visible_rect_changed = fun _ -> Effect.Ignore)
+  ()
   =
   Vdom.Attr.create_hook
     "bounds-change"

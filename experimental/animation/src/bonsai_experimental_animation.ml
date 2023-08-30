@@ -50,8 +50,8 @@ module Interpolator = struct
     | Ease_out_quad -> fun t -> t * (2.0 - t)
     | Ease_in_out_quad ->
       (function
-        | t when t < 0.5 -> 2.0 * t * t
-        | t -> -1.0 + ((4.0 - (2.0 * t)) * t))
+       | t when t < 0.5 -> 2.0 * t * t
+       | t -> -1.0 + ((4.0 - (2.0 * t)) * t))
     | Ease_in_cubic -> fun t -> t * t * t
     | Ease_out_cubic ->
       fun t ->
@@ -59,8 +59,8 @@ module Interpolator = struct
         (-t * t * t) + 1.0
     | Ease_in_out_cubic ->
       (function
-        | t when t < 0.5 -> 4.0 * t * t * t
-        | t -> ((t - 1.0) * ((2.0 * t) - 2.0) * ((2.0 * t) - 2.0)) + 1.0)
+       | t when t < 0.5 -> 4.0 * t * t * t
+       | t -> ((t - 1.0) * ((2.0 * t) - 2.0) * ((2.0 * t) - 2.0)) + 1.0)
     | Ease_in_quart -> fun t -> t * t * t * t
     | Ease_out_quart ->
       fun t ->
@@ -68,10 +68,10 @@ module Interpolator = struct
         1.0 - (t * t * t * t)
     | Ease_in_out_quart ->
       (function
-        | t when t < 0.5 -> 8.0 * t * t * t * t
-        | t ->
-          let t = t - 1.0 in
-          1.0 - (8.0 * t * t * t * t))
+       | t when t < 0.5 -> 8.0 * t * t * t * t
+       | t ->
+         let t = t - 1.0 in
+         1.0 - (8.0 * t * t * t * t))
     | Ease_in_quint -> fun t -> t * t * t * t * t
     | Ease_out_quint ->
       fun t ->
@@ -79,33 +79,33 @@ module Interpolator = struct
         1.0 + (t * t * t * t * t)
     | Ease_in_out_quint ->
       (function
-        | t when t < 0.5 -> 16.0 * t * t * t * t * t
-        | t ->
-          let t = t - 1.0 in
-          1.0 + (16.0 * t * t * t * t * t))
+       | t when t < 0.5 -> 16.0 * t * t * t * t * t
+       | t ->
+         let t = t - 1.0 in
+         1.0 + (16.0 * t * t * t * t * t))
     | Ease_in_sin -> fun t -> 1.0 - cos (t * pi / 2.0)
     | Ease_out_sin -> fun t -> sin (t * pi / 2.0)
     | Ease_in_out_sin -> fun t -> -(cos (pi * t) - 1.0) / 2.0
     | Ease_in_exp ->
       (function
-        | 0.0 -> 0.0
-        | t -> 2.0 ** ((10.0 * t) - 10.0))
+       | 0.0 -> 0.0
+       | t -> 2.0 ** ((10.0 * t) - 10.0))
     | Ease_out_exp ->
       (function
-        | 1.0 -> 1.0
-        | t -> 1.0 - (2.0 ** (-10.0 * t)))
+       | 1.0 -> 1.0
+       | t -> 1.0 - (2.0 ** (-10.0 * t)))
     | Ease_in_out_exp ->
       (function
-        | 0.0 -> 0.0
-        | 1.0 -> 1.0
-        | t when t < 0.5 -> (2.0 ** ((20.0 * t) - 10.0)) / 2.0
-        | t -> 2.0 - ((2.0 ** ((-20.0 * t) + 10.0)) / 2.0))
+       | 0.0 -> 0.0
+       | 1.0 -> 1.0
+       | t when t < 0.5 -> (2.0 ** ((20.0 * t) - 10.0)) / 2.0
+       | t -> 2.0 - ((2.0 ** ((-20.0 * t) + 10.0)) / 2.0))
     | Ease_in_circ -> fun t -> 1.0 - sqrt (1.0 - (t ** 2.0))
     | Ease_out_circ -> fun t -> sqrt (1.0 - ((t - 1.0) ** 2.0))
     | Ease_in_out_circ ->
       (function
-        | t when t < 0.5 -> (1.0 - sqrt (1.0 - ((2.0 * t) ** 2.0))) / 2.0
-        | t -> (sqrt (1.0 - (((-2.0 * t) + 2.0) ** 2.0)) + 1.0) / 2.0)
+       | t when t < 0.5 -> (1.0 - sqrt (1.0 - ((2.0 * t) ** 2.0))) / 2.0
+       | t -> (sqrt (1.0 - (((-2.0 * t) + 2.0) ** 2.0)) + 1.0) / 2.0)
     | Ease_in_back ->
       let c1 = 1.70158 in
       let c3 = c1 + 1.0 in
@@ -118,10 +118,10 @@ module Interpolator = struct
       let c1 = 1.70158 in
       let c2 = c1 * 1.525 in
       (function
-        | t when t < 0.5 -> ((2.0 * t) ** 2.0) * (((c2 + 1.0) * 2.0 * t) - c2) / 2.0
-        | t ->
-          (((((2.0 * t) - 2.0) ** 2.0) * (((c2 + 1.0) * ((t * 2.0) - 2.0)) + c2)) + 2.0)
-          / 2.0)
+       | t when t < 0.5 -> ((2.0 * t) ** 2.0) * (((c2 + 1.0) * 2.0 * t) - c2) / 2.0
+       | t ->
+         (((((2.0 * t) - 2.0) ** 2.0) * (((c2 + 1.0) * ((t * 2.0) - 2.0)) + c2)) + 2.0)
+         / 2.0)
   ;;
 end
 
@@ -247,8 +247,7 @@ let make
       let%bind.Effect value =
         match%bind.Effect get_value with
         | Active value -> Effect.return value
-        | Inactive ->
-          Effect.never
+        | Inactive -> Effect.never
       in
       let target_time =
         match time with

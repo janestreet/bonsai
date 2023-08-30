@@ -16,8 +16,8 @@ let add_counter_component =
       ~sexp_of_action:[%sexp_of: Unit.t]
       ~default_model:Int.Map.empty
       ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) model () ->
-        let key = Map.length model in
-        Map.add_exn model ~key ~data:())
+      let key = Map.length model in
+      Map.add_exn model ~key ~data:())
   in
   let%arr state, inject = add_counter_state in
   let view =
@@ -48,8 +48,8 @@ let single_counter =
       ~sexp_of_action:[%sexp_of: Action.t]
       ~default_model:0
       ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) model -> function
-        | Action.Increment -> model + 1
-        | Action.Decrement -> model - 1)
+      | Action.Increment -> model + 1
+      | Action.Decrement -> model - 1)
   in
   let%arr state, inject = counter_state in
   let button label action =

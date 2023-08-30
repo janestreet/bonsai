@@ -6,9 +6,9 @@ module Codemirror_form = Bonsai_web_ui_codemirror_form
 module E = Form.Elements
 
 module Query_box_css =
-  [%css
-    stylesheet
-      {|
+[%css
+stylesheet
+  {|
   .list {
     background: white;
     border: solid 1px black;
@@ -294,9 +294,9 @@ let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t = functio
       E.Rank.list
         (module String)
         (fun ~source item ->
-           let%arr item = item
-           and source = source in
-           Vdom.Node.div ~attrs:[ source ] [ Vdom.Node.text item ])
+          let%arr item = item
+          and source = source in
+          Vdom.Node.div ~attrs:[ source ] [ Vdom.Node.text item ])
     in
     Form.Dynamic.with_default (Value.return [ "aaaaaa"; "bbbbbb"; "cccccc" ]) rank
   | Query_box ->

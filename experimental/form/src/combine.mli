@@ -20,11 +20,11 @@ end
 
 include
   Applicative.S3
-  with type ('result, 'input, 'parsed) t :=
-    ('input, ('result, 'parsed) Product.t) Bonsai.Arrow_deprecated.t
+    with type ('result, 'input, 'parsed) t :=
+      ('input, ('result, 'parsed) Product.t) Bonsai.Arrow_deprecated.t
 
 include
   Applicative.Let_syntax3
-  with type ('result, 'input, 'parsed) t :=
-    ('input, ('result, 'parsed) Product.t) Bonsai.Arrow_deprecated.t
-  with module Open_on_rhs_intf := Open_on_rhs_intf
+    with type ('result, 'input, 'parsed) t :=
+      ('input, ('result, 'parsed) Product.t) Bonsai.Arrow_deprecated.t
+    with module Open_on_rhs_intf := Open_on_rhs_intf

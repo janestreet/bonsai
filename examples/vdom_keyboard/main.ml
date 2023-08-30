@@ -4,9 +4,9 @@ open Bonsai.Let_syntax
 open Vdom_keyboard
 
 module Css =
-  [%css
-    stylesheet
-      {|
+[%css
+stylesheet
+  {|
   .block {
     position: absolute;
     width: 200px;
@@ -87,7 +87,7 @@ let component =
           ~keys:[ key KeyL; key ArrowRight ]
           ~cond:is_not_text_input
           (fun _ev -> add_x 5)
-      (* Big movement *)
+        (* Big movement *)
       ; command
           ~description:"Move block left by 20 pixels"
           ~keys:[ key ~shift:() KeyH; key ~shift:() ArrowLeft ]
@@ -108,7 +108,7 @@ let component =
           ~keys:[ key ~shift:() KeyL; key ~shift:() ArrowRight ]
           ~cond:is_not_text_input
           (fun _ev -> add_x 20)
-      (* Open and close help text *)
+        (* Open and close help text *)
       ; command
           ~description:"Show keyboard shortcut help"
           ~keys:[ key ~shift:() Slash ]

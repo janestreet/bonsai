@@ -12,7 +12,6 @@ module type Up = sig
   val combine : t -> t -> t
   val empty : t
 
-
   (** [Computation.lazy] is an obstacle to optimization in many cases.  To force
       optimization authors to think about [lazy], we have a special empty value.
 
@@ -94,6 +93,6 @@ module type S = sig
   module type Recurse = Recurse
 
   module Make
-      (Types : Types) (_ : functor (_ : Recurse with module Types := Types) ->
-        Transform with module Types := Types) : Transform with module Types := Types
+    (Types : Types) (_ : functor (_ : Recurse with module Types := Types) ->
+      Transform with module Types := Types) : Transform with module Types := Types
 end

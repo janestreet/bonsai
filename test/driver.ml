@@ -8,11 +8,11 @@ type ('i, 'r) t =
   }
 
 let create
-      (type i r)
-      ?(optimize = true)
-      ~clock
-      ~(initial_input : i)
-      (component : (i, r) Bonsai.Arrow_deprecated.t)
+  (type i r)
+  ?(optimize = true)
+  ~clock
+  ~(initial_input : i)
+  (component : (i, r) Bonsai.Arrow_deprecated.t)
   : (i, r) t
   =
   let input_var, computation =

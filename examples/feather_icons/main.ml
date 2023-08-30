@@ -23,9 +23,9 @@ h3 {
 ;;
 
 module Left_section =
-  [%css
-    stylesheet
-      {|
+[%css
+stylesheet
+  {|
 .class_ {
   display: flex;
   flex: 1 1 auto;
@@ -69,7 +69,6 @@ module App = [%css stylesheet {|
   padding: 48px;
 }
 |}]
-
 
 let app =
   let%sub main = main in

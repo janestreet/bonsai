@@ -7,13 +7,13 @@ open Shared
 module Table = Bonsai_web_ui_partial_render_table
 
 let table_to_string
-      ~include_stats
-      ?(include_num_column = true)
-      ?(selected_header = ">")
-      ?num_filtered_rows
-      (res : _ Table.Focus_by_row.t option)
-      (for_testing : Table.For_testing.t)
-      ()
+  ~include_stats
+  ?(include_num_column = true)
+  ?(selected_header = ">")
+  ?num_filtered_rows
+  (res : _ Table.Focus_by_row.t option)
+  (for_testing : Table.For_testing.t)
+  ()
   =
   let open Ascii_table_kernel in
   let module Node_h = Virtual_dom_test_helpers.Node_helpers in
@@ -77,9 +77,9 @@ let table_to_string
   | None -> result
   | Some res ->
     ([%message
-      ""
-        ~focused:(res.focused : int option)
-        ~num_filtered_rows:(num_filtered_rows : int option)]
+       ""
+         ~focused:(res.focused : int option)
+         ~num_filtered_rows:(num_filtered_rows : int option)]
      |> Sexp.to_string_hum
      |> fun s -> s ^ "\n")
     ^ result
@@ -89,13 +89,13 @@ module Test = struct
   include Shared.Test
 
   let create_with_var
-        (type a)
-        ?(stabilize_height = true)
-        ?(visible_range = 0, 100)
-        ?(map = Bonsai.Var.create small_map)
-        ?(should_set_bounds = true)
-        ~stats
-        component
+    (type a)
+    ?(stabilize_height = true)
+    ?(visible_range = 0, 100)
+    ?(map = Bonsai.Var.create small_map)
+    ?(should_set_bounds = true)
+    ~stats
+    component
     =
     let min_vis, max_vis = visible_range in
     let filter_var = Bonsai.Var.create (fun ~key:_ ~data:_ -> true) in
@@ -145,12 +145,12 @@ module Test = struct
   ;;
 
   let create
-        ?stabilize_height
-        ?visible_range
-        ?(map = small_map)
-        ?should_set_bounds
-        ~stats
-        component
+    ?stabilize_height
+    ?visible_range
+    ?(map = small_map)
+    ?should_set_bounds
+    ~stats
+    component
     =
     create_with_var
       ?stabilize_height
@@ -1730,7 +1730,7 @@ let%expect_test "moving focus down should work even when the index changes" =
   let map =
     [ 1; 2; 3; 4 ]
     |> List.map ~f:(fun i ->
-      i, { a = "hi"; b = Float.of_int (i / 2); c = "c"; d = Some 100; e = "e" })
+         i, { a = "hi"; b = Float.of_int (i / 2); c = "c"; d = Some 100; e = "e" })
     |> Int.Map.of_alist_exn
     |> Bonsai.Var.create
   in
@@ -1804,7 +1804,7 @@ let%expect_test "moving focus down should work even when the index changes and f
   let map =
     [ 1; 2; 3; 4 ]
     |> List.map ~f:(fun i ->
-      i, { a = "hi"; b = Float.of_int (i / 2); c = "c"; d = Some 100; e = "e" })
+         i, { a = "hi"; b = Float.of_int (i / 2); c = "c"; d = Some 100; e = "e" })
     |> Int.Map.of_alist_exn
     |> Bonsai.Var.create
   in
@@ -1889,7 +1889,7 @@ let%expect_test "moving focus up should work even when the index changes" =
   let map =
     [ 1; 2; 3; 4 ]
     |> List.map ~f:(fun i ->
-      i, { a = "hi"; b = Float.of_int (i / 2); c = "c"; d = Some 100; e = "e" })
+         i, { a = "hi"; b = Float.of_int (i / 2); c = "c"; d = Some 100; e = "e" })
     |> Int.Map.of_alist_exn
     |> Bonsai.Var.create
   in
@@ -1970,7 +1970,7 @@ let%expect_test "moving focus up should work even when the index changes and foc
   let map =
     [ 1; 2; 3; 4 ]
     |> List.map ~f:(fun i ->
-      i, { a = "hi"; b = Float.of_int (i / 2); c = "c"; d = Some 100; e = "e" })
+         i, { a = "hi"; b = Float.of_int (i / 2); c = "c"; d = Some 100; e = "e" })
     |> Int.Map.of_alist_exn
     |> Bonsai.Var.create
   in
@@ -2060,7 +2060,6 @@ skipping scroll because target already in view
     └───┴──────┴─────┴────┴──────────┴─────┘ |}]
 ;;
 
-
 let%expect_test "Pseudo-BUG: setting rank_range does not change the which rows the \
                  for_testing output will display"
   =
@@ -2072,7 +2071,7 @@ let%expect_test "Pseudo-BUG: setting rank_range does not change the which rows t
   let map =
     [ 1; 2; 3; 4; 5; 6; 7 ]
     |> List.map ~f:(fun i ->
-      i, { a = "hi"; b = Float.of_int i; c = "c"; d = Some 100; e = "e" })
+         i, { a = "hi"; b = Float.of_int i; c = "c"; d = Some 100; e = "e" })
     |> Int.Map.of_alist_exn
     |> Value.return
   in
@@ -2101,11 +2100,11 @@ let%expect_test "Pseudo-BUG: setting rank_range does not change the which rows t
            { on_change = Test.focus_changed
            ; compute_presence =
                (fun focus ->
-                  let%arr map = map
-                  and focus = focus in
-                  match focus with
-                  | None -> None
-                  | Some focus -> if Map.mem map focus then Some focus else None)
+                 let%arr map = map
+                 and focus = focus in
+                 match focus with
+                 | None -> None
+                 | Some focus -> if Map.mem map focus then Some focus else None)
            })
       ~row_height:(Value.return (`Px 20))
       ~columns:
@@ -2404,7 +2403,7 @@ let%expect_test "show that scrolling out of a custom table will execute the pres
     | None -> None
     | Some focus ->
       if Map.exists (Incr_map_collate.Collated.to_map_list collation) ~f:(fun (k, _v) ->
-        focus = k)
+           focus = k)
       then Some focus
       else None
   in

@@ -2,7 +2,7 @@ open! Core
 open! Import
 
 type t =
-  { label              : string
+  { label : string
   ; visible_by_default : bool
   }
 [@@deriving fields ~getters]

@@ -51,14 +51,14 @@ module Expert = struct
   ;;
 
   let implementation
-        (type key presence data cmp)
-        ~preload_rows
-        (key : (key, cmp) Bonsai.comparator)
-        ~(focus : (_, presence, key) Focus.Kind.t)
-        ~row_height
-        ~headers
-        ~assoc
-        (collated : (key, data) Collated.t Value.t)
+    (type key presence data cmp)
+    ~preload_rows
+    (key : (key, cmp) Bonsai.comparator)
+    ~(focus : (_, presence, key) Focus.Kind.t)
+    ~row_height
+    ~headers
+    ~assoc
+    (collated : (key, data) Collated.t Value.t)
     =
     let%sub row_height =
       let%arr (`Px row_height) = row_height in
@@ -102,18 +102,18 @@ module Expert = struct
         ~apply_action:
           (fun
             (_ : _ Bonsai.Apply_action_context.t) model (idx, `Px_float width) ->
-            (* While checking for float equality is usually not a good idea,
+        (* While checking for float equality is usually not a good idea,
                this is meant to handle the specific case when a column has
                "display:none", in which case the width will be exactly 0.0, so
                there is no concern about float rounding errors. *)
-            Map.update model idx ~f:(fun prev ->
-              if Float.equal width 0.0
-              then (
-                match prev with
-                | None -> Hidden { prev_width_px = None }
-                | Some (Visible { width_px }) -> Hidden { prev_width_px = Some width_px }
-                | Some (Hidden _ as prev) -> prev)
-              else Visible { width_px = width }))
+        Map.update model idx ~f:(fun prev ->
+          if Float.equal width 0.0
+          then (
+            match prev with
+            | None -> Hidden { prev_width_px = None }
+            | Some (Visible { width_px }) -> Hidden { prev_width_px = Some width_px }
+            | Some (Hidden _ as prev) -> prev)
+          else Visible { width_px = width }))
     in
     let%sub column_widths =
       return (Value.cutoff ~equal:[%equal: Column_widths_model.t] column_widths)
@@ -357,7 +357,7 @@ module Expert = struct
       and path = path in
       let body =
         Vdom.Node.div
-          (* If the number is large enough, it will use scientific notation for unknown reasons.
+        (* If the number is large enough, it will use scientific notation for unknown reasons.
              However, the number is accurate, and scientific notation is in spec.
              https://developer.mozilla.org/en-US/docs/Web/CSS/number *)
           ~attrs:
@@ -403,13 +403,13 @@ module Expert = struct
   ;;
 
   let component
-        (type key focus presence data cmp)
-        ?(preload_rows = default_preload)
-        (key : (key, cmp) Bonsai.comparator)
-        ~(focus : (focus, presence, key) Focus.Kind.t)
-        ~row_height
-        ~(columns : (key, data) Column_intf.t)
-        (collated : (key, data) Collated.t Value.t)
+    (type key focus presence data cmp)
+    ?(preload_rows = default_preload)
+    (key : (key, cmp) Bonsai.comparator)
+    ~(focus : (focus, presence, key) Focus.Kind.t)
+    ~row_height
+    ~(columns : (key, data) Column_intf.t)
+    (collated : (key, data) Collated.t Value.t)
     =
     let (T { value; vtable }) = columns in
     let module T = (val vtable) in
@@ -419,14 +419,14 @@ module Expert = struct
   ;;
 
   let collate
-        (type k v cmp filter order)
-        ?operation_order
-        ~filter_equal
-        ~order_equal
-        ~(filter_to_predicate : filter -> _)
-        ~(order_to_compare : order -> _)
-        (data : (k, v, cmp) Map.t Value.t)
-        (collate : (k, filter, order) Collate.t Value.t)
+    (type k v cmp filter order)
+    ?operation_order
+    ~filter_equal
+    ~order_equal
+    ~(filter_to_predicate : filter -> _)
+    ~(order_to_compare : order -> _)
+    (data : (k, v, cmp) Map.t Value.t)
+    (collate : (k, filter, order) Collate.t Value.t)
     =
     let data_and_collate = Value.both data collate in
     Bonsai.Incr.compute data_and_collate ~f:(fun data_and_collate ->
@@ -494,107 +494,107 @@ module Basic = struct
       -> focus Result.t Computation.t
     =
     fun ?filter
-      ?override_sort
-      ?default_sort
-      ?(preload_rows = default_preload)
-      comparator
-      ~focus
-      ~row_height
-      ~columns
-      map ->
-      let module Cmp = (val comparator) in
-      let focus : (focus, presence, key) Expert.Focus.Kind.t =
-        match focus with
-        | None -> None
-        | By_row { on_change } ->
-          let compute_presence focus =
-            let%arr focus = focus
-            and map = map in
-            match focus with
-            | None -> None
-            | Some focus -> if Map.mem map focus then Some focus else None
-          in
-          By_row { on_change; compute_presence }
-      in
-      let filter = Value.of_opt filter in
-      let%sub rank_range, set_rank_range =
-        Bonsai.state
-          (Collate.Which_range.To 0)
-          ~sexp_of_model:[%sexp_of: Rank_range.t]
-          ~equal:[%equal: Rank_range.t]
-      in
-      let%sub sortable_header = Sortable_header.component (module Int) in
-      let (Y { value; vtable }) = columns in
-      let module Column = (val vtable) in
-      let assoc = Column.instantiate_cells value comparator in
-      let default_sort =
-        match default_sort with
-        | None -> Value.return None
-        | Some v -> v >>| Option.some
-      in
-      let%sub sorters, headers = Column.headers_and_sorters value sortable_header in
-      let%sub collate =
-        let%sub override_sort =
-          match override_sort with
-          | None -> Bonsai.const None
-          | Some override -> return (override >>| Option.some)
+        ?override_sort
+        ?default_sort
+        ?(preload_rows = default_preload)
+        comparator
+        ~focus
+        ~row_height
+        ~columns
+        map ->
+    let module Cmp = (val comparator) in
+    let focus : (focus, presence, key) Expert.Focus.Kind.t =
+      match focus with
+      | None -> None
+      | By_row { on_change } ->
+        let compute_presence focus =
+          let%arr focus = focus
+          and map = map in
+          match focus with
+          | None -> None
+          | Some focus -> if Map.mem map focus then Some focus else None
         in
-        let%sub order =
-          let%arr sorters = sorters
-          and default_sort = default_sort
-          and sortable_header = sortable_header
-          and override_sort = override_sort in
-          let override_sort =
-            Option.map override_sort ~f:(fun override_sort ->
-              override_sort Cmp.comparator.compare)
-          in
-          Order.to_compare
-            (Sortable_header.order sortable_header)
-            ?override_sort
-            ~sorters
-            ~default_sort
+        By_row { on_change; compute_presence }
+    in
+    let filter = Value.of_opt filter in
+    let%sub rank_range, set_rank_range =
+      Bonsai.state
+        (Collate.Which_range.To 0)
+        ~sexp_of_model:[%sexp_of: Rank_range.t]
+        ~equal:[%equal: Rank_range.t]
+    in
+    let%sub sortable_header = Sortable_header.component (module Int) in
+    let (Y { value; vtable }) = columns in
+    let module Column = (val vtable) in
+    let assoc = Column.instantiate_cells value comparator in
+    let default_sort =
+      match default_sort with
+      | None -> Value.return None
+      | Some v -> v >>| Option.some
+    in
+    let%sub sorters, headers = Column.headers_and_sorters value sortable_header in
+    let%sub collate =
+      let%sub override_sort =
+        match override_sort with
+        | None -> Bonsai.const None
+        | Some override -> return (override >>| Option.some)
+      in
+      let%sub order =
+        let%arr sorters = sorters
+        and default_sort = default_sort
+        and sortable_header = sortable_header
+        and override_sort = override_sort in
+        let override_sort =
+          Option.map override_sort ~f:(fun override_sort ->
+            override_sort Cmp.comparator.compare)
         in
-        let%arr filter = filter
-        and order = order
-        and rank_range = rank_range in
-        let key_range = Collate.Which_range.All_rows in
-        { Collate.filter; order; key_range; rank_range }
+        Order.to_compare
+          (Sortable_header.order sortable_header)
+          ?override_sort
+          ~sorters
+          ~default_sort
       in
-      let%sub collated =
-        Expert.collate
-          ~filter_equal:phys_equal
-          ~filter_to_predicate:Fn.id
-          ~order_equal:phys_equal
-          ~order_to_compare:Fn.id
-          map
-          collate
-      in
-      let%sub num_filtered_rows =
-        let%arr collated = collated in
-        Collated.num_filtered_rows collated
-      in
-      let%sub ({ range = viewed_range; _ } as result) =
-        Expert.implementation
-          ~preload_rows
-          comparator
-          ~focus
-          ~row_height
-          ~headers
-          ~assoc
-          collated
-      in
-      let%sub () =
-        Bonsai.Edge.on_change
-          ~sexp_of_model:[%sexp_of: int * int]
-          ~equal:[%equal: int * int]
-          viewed_range
-          ~callback:
-            (let%map set_rank_range = set_rank_range in
-             fun (low, high) -> set_rank_range (Collate.Which_range.Between (low, high)))
-      in
-      let%arr { view; for_testing; range = _; focus } = result
-      and num_filtered_rows = num_filtered_rows
-      and sortable_header = sortable_header in
-      { Result.view; for_testing; focus; num_filtered_rows; sortable_header }
+      let%arr filter = filter
+      and order = order
+      and rank_range = rank_range in
+      let key_range = Collate.Which_range.All_rows in
+      { Collate.filter; order; key_range; rank_range }
+    in
+    let%sub collated =
+      Expert.collate
+        ~filter_equal:phys_equal
+        ~filter_to_predicate:Fn.id
+        ~order_equal:phys_equal
+        ~order_to_compare:Fn.id
+        map
+        collate
+    in
+    let%sub num_filtered_rows =
+      let%arr collated = collated in
+      Collated.num_filtered_rows collated
+    in
+    let%sub ({ range = viewed_range; _ } as result) =
+      Expert.implementation
+        ~preload_rows
+        comparator
+        ~focus
+        ~row_height
+        ~headers
+        ~assoc
+        collated
+    in
+    let%sub () =
+      Bonsai.Edge.on_change
+        ~sexp_of_model:[%sexp_of: int * int]
+        ~equal:[%equal: int * int]
+        viewed_range
+        ~callback:
+          (let%map set_rank_range = set_rank_range in
+           fun (low, high) -> set_rank_range (Collate.Which_range.Between (low, high)))
+    in
+    let%arr { view; for_testing; range = _; focus } = result
+    and num_filtered_rows = num_filtered_rows
+    and sortable_header = sortable_header in
+    { Result.view; for_testing; focus; num_filtered_rows; sortable_header }
   ;;
 end

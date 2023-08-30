@@ -8,9 +8,9 @@ open! Core
 type 'a t [@@deriving compare, equal, sexp]
 
 val of_nonempty_list_exn : 'a list -> 'a t
-val next                 : 'a t -> 'a t
-val prev                 : 'a t -> 'a t
-val current_focus        : 'a t -> 'a
+val next : 'a t -> 'a t
+val prev : 'a t -> 'a t
+val current_focus : 'a t -> 'a
 
 (** O(n). Find the first element matching [f] in the list, and make that the focus. *)
-val set                  : 'a t -> f:('a -> bool) -> 'a t option
+val set : 'a t -> f:('a -> bool) -> 'a t option

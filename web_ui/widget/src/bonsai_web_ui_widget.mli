@@ -26,10 +26,10 @@ end
 type ('input, 'state) t = private
   { view : Vdom.Node.t (** The view of the widget *)
   ; modify : ('input -> 'state -> unit) -> unit Effect.t
-  (** A callback for modifying the widget.  The most recent inputs and the current state
+      (** A callback for modifying the widget.  The most recent inputs and the current state
       of the widgets are provided. *)
   ; read : 'a. ('input -> 'state -> 'a) -> 'a list Effect.t
-  (** [read] lets you look at the most recent input and current state of any instances
+      (** [read] lets you look at the most recent input and current state of any instances
       of the widget. *)
   }
 

@@ -16,7 +16,7 @@ let basic_table rows =
   let tbody =
     rows
     |> List.map ~f:(fun { id; name; age } ->
-      tr [ td [ textf "%d" id ]; td [ text name ]; td [ textf "%d" age ] ])
+         tr [ td [ textf "%d" id ]; td [ text name ]; td [ textf "%d" age ] ])
     |> tbody
   in
   table [ thead; tbody ]
@@ -78,13 +78,13 @@ let basic_table_attr rows =
   let tbody =
     rows
     |> List.mapi ~f:(fun i { id; name; age } ->
-      let tr_style = if Int.( % ) i 2 = 0 then tr_even else tr_odd in
-      tr
-        ~attrs:[ Vdom.Attr.style tr_style ]
-        [ td ~attrs:[ Vdom.Attr.style td_styles ] [ textf "%d" id ]
-        ; td ~attrs:[ Vdom.Attr.style td_styles ] [ text name ]
-        ; td ~attrs:[ Vdom.Attr.style td_styles ] [ textf "%d" age ]
-        ])
+         let tr_style = if Int.( % ) i 2 = 0 then tr_even else tr_odd in
+         tr
+           ~attrs:[ Vdom.Attr.style tr_style ]
+           [ td ~attrs:[ Vdom.Attr.style td_styles ] [ textf "%d" id ]
+           ; td ~attrs:[ Vdom.Attr.style td_styles ] [ text name ]
+           ; td ~attrs:[ Vdom.Attr.style td_styles ] [ textf "%d" age ]
+           ])
     |> tbody
   in
   table ~attrs:[ Vdom.Attr.style table_styles ] [ thead; tbody ]
@@ -106,9 +106,9 @@ let () =
 
 (* $MDX part-begin=inline_css *)
 module Style =
-  [%css
-    stylesheet
-      {|
+[%css
+stylesheet
+  {|
 table.politicians {
   border-collapse: collapse;
   border: 1px solid brown;
@@ -143,7 +143,7 @@ let table_with_ppx_css rows =
   let tbody =
     rows
     |> List.map ~f:(fun { id; name; age } ->
-      tr [ td [ textf "%d" id ]; td [ text name ]; td [ textf "%d" age ] ])
+         tr [ td [ textf "%d" id ]; td [ text name ]; td [ textf "%d" age ] ])
     |> tbody
   in
   table ~attrs:[ Style.politicians ] [ thead; tbody ]
@@ -168,7 +168,7 @@ let themeable_table ?(theme = Style.default) rows =
   let tbody =
     rows
     |> List.map ~f:(fun { id; name; age } ->
-      tr [ td [ textf "%d" id ]; td [ text name ]; td [ textf "%d" age ] ])
+         tr [ td [ textf "%d" id ]; td [ text name ]; td [ textf "%d" age ] ])
     |> tbody
   in
   table ~attrs:[ Style.politicians ] [ thead; tbody ]
@@ -176,9 +176,9 @@ let themeable_table ?(theme = Style.default) rows =
 
 (* $MDX part-begin=my_theme *)
 module My_theme =
-  [%css
-    stylesheet
-      {|
+[%css
+stylesheet
+  {|
 table.politicians {
   border-collapse: collapse;
   border: 1px solid black;
@@ -217,9 +217,9 @@ let () = Util.run (Bonsai.const (Vdom.Node.div [ table ])) ~id:"themeable-table"
 module _ = struct
   (* $MDX part-begin=tomato-square-ppx-css *)
   module Style =
-    [%css
-      stylesheet
-        {|
+  [%css
+  stylesheet
+    {|
 .square {
   background-color: tomato;
   height: 100px;
@@ -237,9 +237,9 @@ end
 
 module _ = struct
   module Style =
-    [%css
-      stylesheet
-        {|
+  [%css
+  stylesheet
+    {|
 :root {
   --red: #ff5a5a;
   --green: #5aff5a;

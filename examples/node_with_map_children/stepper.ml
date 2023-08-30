@@ -53,9 +53,9 @@ end
 let generate_diffs ~before ~after =
   Map.symmetric_diff before after ~data_equal:[%equal: float]
   |> Sequence.map ~f:(function
-    | key, `Left v -> Modification.Remove (key, v)
-    | key, `Right v -> Add (key, v)
-    | key, `Unequal (l, r) -> Change (key, l, r))
+       | key, `Left v -> Modification.Remove (key, v)
+       | key, `Right v -> Add (key, v)
+       | key, `Unequal (l, r) -> Change (key, l, r))
   |> Sequence.to_list
   |> List.permute ~random_state:Random.State.default
   |> List.group ~break:(fun _ _ -> Random.bool ())
@@ -76,30 +76,30 @@ let component ~(before_state : Color_list.t Value.t) ~(after_state : Color_list.
       input
       ~default_model:{ cur = Int.Map.empty; diffs = []; pointer = 0 }
       ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) input model action ->
-        match input with
-        | Active { Input.before; after } ->
-          (match action with
-           | Set_state model -> model
-           | Restart ->
-             let diffs = generate_diffs ~before ~after in
-             { cur = before; diffs; pointer = 0 }
-           | Step ->
-             let packet =
-               match List.nth model.diffs model.pointer with
-               | Some packet -> packet
-               | None -> []
-             in
-             let cur = List.fold packet ~init:model.cur ~f:Modification.apply in
-             { model with cur; pointer = model.pointer + 1 })
-        | Inactive ->
-          eprint_s
-            [%message
-              [%here]
-                "An action sent to a [state_machine1] has been dropped because its input \
-                 was not present. This happens when the [state_machine1] is inactive when \
-                 it receives a message."
-                (action : Action.t)];
-          model)
+      match input with
+      | Active { Input.before; after } ->
+        (match action with
+         | Set_state model -> model
+         | Restart ->
+           let diffs = generate_diffs ~before ~after in
+           { cur = before; diffs; pointer = 0 }
+         | Step ->
+           let packet =
+             match List.nth model.diffs model.pointer with
+             | Some packet -> packet
+             | None -> []
+           in
+           let cur = List.fold packet ~init:model.cur ~f:Modification.apply in
+           { model with cur; pointer = model.pointer + 1 })
+      | Inactive ->
+        eprint_s
+          [%message
+            [%here]
+              "An action sent to a [state_machine1] has been dropped because its input \
+               was not present. This happens when the [state_machine1] is inactive when \
+               it receives a message."
+              (action : Action.t)];
+        model)
   in
   let%sub () =
     Bonsai.Edge.on_change

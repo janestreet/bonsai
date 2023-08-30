@@ -5,13 +5,13 @@ module Result_spec = struct
   include Bonsai_test.Result_spec
 
   let vdom
-        (type result)
-        ?filter_printed_attributes
-        ?(censor_paths = true)
-        ?(censor_hash = true)
-        ?path_censoring_message
-        ?hash_censoring_message
-        get_vdom
+    (type result)
+    ?filter_printed_attributes
+    ?(censor_paths = true)
+    ?(censor_hash = true)
+    ?path_censoring_message
+    ?hash_censoring_message
+    get_vdom
     =
     (module struct
       type t = result
@@ -39,12 +39,12 @@ module Handle = struct
   include Bonsai_test.Handle
 
   let create
-        result_spec
-        ?rpc_implementations
-        ?(connectors = fun _ -> Bonsai_web.Rpc_effect.Connector.test_fallback)
-        ?start_time
-        ?optimize
-        computation
+    result_spec
+    ?rpc_implementations
+    ?(connectors = fun _ -> Bonsai_web.Rpc_effect.Connector.test_fallback)
+    ?start_time
+    ?optimize
+    computation
     =
     let connectors =
       match rpc_implementations with
@@ -71,9 +71,9 @@ module Handle = struct
   ;;
 
   let flush_async_and_bonsai
-        ?(max_iterations = 100)
-        ?(silence_between_frames = false)
-        handle
+    ?(max_iterations = 100)
+    ?(silence_between_frames = false)
+    handle
     =
     let open Async_kernel in
     let rec loop i =
@@ -102,13 +102,13 @@ module Handle = struct
   ;;
 
   let click_on
-        ?extra_event_fields
-        ?shift_key_down
-        ?alt_key_down
-        ?ctrl_key_down
-        handle
-        ~get_vdom
-        ~selector
+    ?extra_event_fields
+    ?shift_key_down
+    ?alt_key_down
+    ?ctrl_key_down
+    handle
+    ~get_vdom
+    ~selector
     =
     let element = get_element handle ~get_vdom ~selector in
     Node_helpers.User_actions.click_on
@@ -120,14 +120,14 @@ module Handle = struct
   ;;
 
   let set_checkbox
-        ?extra_event_fields
-        ?shift_key_down
-        ?alt_key_down
-        ?ctrl_key_down
-        handle
-        ~get_vdom
-        ~selector
-        ~checked
+    ?extra_event_fields
+    ?shift_key_down
+    ?alt_key_down
+    ?ctrl_key_down
+    handle
+    ~get_vdom
+    ~selector
+    ~checked
     =
     let element = get_element handle ~get_vdom ~selector in
     Node_helpers.User_actions.set_checkbox
@@ -185,14 +185,14 @@ module Handle = struct
   ;;
 
   let keydown
-        ?extra_event_fields
-        ?shift_key_down
-        ?alt_key_down
-        ?ctrl_key_down
-        handle
-        ~get_vdom
-        ~selector
-        ~key
+    ?extra_event_fields
+    ?shift_key_down
+    ?alt_key_down
+    ?ctrl_key_down
+    handle
+    ~get_vdom
+    ~selector
+    ~key
     =
     let element = get_element handle ~get_vdom ~selector in
     Node_helpers.User_actions.keydown

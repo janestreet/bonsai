@@ -68,7 +68,7 @@ module Components : sig
   type t =
     { path : string list (** "foo/bar" -> ["foo"; "bar"] *)
     ; query : string list String.Map.t
-    (** "?foo=1&bar=2" -> String.Map.of_alist_exn ["foo", ["1"]; "bar", ["2"]] *)
+        (** "?foo=1&bar=2" -> String.Map.of_alist_exn ["foo", ["1"]; "bar", ["2"]] *)
     }
   [@@deriving sexp, equal]
 

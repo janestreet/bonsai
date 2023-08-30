@@ -161,12 +161,12 @@ val index_by
 
 val unordered_fold_nested_maps
   :  ?update:
-    (outer_key:'outer_key
-     -> inner_key:'inner_key
-     -> old_data:'v
-     -> new_data:'v
-     -> 'acc
-     -> 'acc)
+       (outer_key:'outer_key
+        -> inner_key:'inner_key
+        -> old_data:'v
+        -> new_data:'v
+        -> 'acc
+        -> 'acc)
   -> ('outer_key, ('inner_key, 'v, 'inner_cmp) Map.t, 'outer_cmp) Map.t Value.t
   -> init:'acc
   -> add:(outer_key:'outer_key -> inner_key:'inner_key -> data:'v -> 'acc -> 'acc)
@@ -184,8 +184,8 @@ val collapse
   -> ( 'outer_key * 'inner_key
      , 'v
      , ('outer_cmp, 'inner_cmp) Tuple2.comparator_witness )
-       Map.t
-       Computation.t
+     Map.t
+     Computation.t
 
 val collapse_by
   :  ('outer_key, ('inner_key, 'v, 'inner_cmp) Map.t, 'outer_cmp) Map.t Value.t

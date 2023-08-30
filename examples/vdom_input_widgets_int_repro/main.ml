@@ -3,12 +3,12 @@ open! Bonsai_web
 open Bonsai.Let_syntax
 
 let component
-      (type a)
-      (module M : Bonsai.Model with type t = a)
-      ~equal
-      ~name
-      ~some_constant_value
-      ~node_creator
+  (type a)
+  (module M : Bonsai.Model with type t = a)
+  ~equal
+  ~name
+  ~some_constant_value
+  ~node_creator
   =
   let%sub textbox_state = Bonsai.state_opt () ~sexp_of_model:[%sexp_of: M.t] ~equal in
   let%arr state, set_state = textbox_state in

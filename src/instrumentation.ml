@@ -26,10 +26,10 @@ let extract_node_path_from_entry_label label =
 
 let instrument_computation (t : _ Computation.t) ~start_timer ~stop_timer =
   let computation_map
-        (type result)
-        (context : unit Transform.For_computation.context)
-        ()
-        (computation : result Computation.t)
+    (type result)
+    (context : unit Transform.For_computation.context)
+    ()
+    (computation : result Computation.t)
     : result Computation.t
     =
     let node_info = Graph_info.Node_info.of_computation computation in
@@ -43,13 +43,13 @@ let instrument_computation (t : _ Computation.t) ~start_timer ~stop_timer =
     in
     let by_label = entry_label [%string "%{node_info.node_type}-by"] in
     let time_apply_action
-          ~apply_action
-          ~inject_dynamic
-          ~inject_static
-          ~schedule_event
-          input
-          model
-          action
+      ~apply_action
+      ~inject_dynamic
+      ~inject_static
+      ~schedule_event
+      input
+      model
+      action
       =
       start_timer apply_action_label;
       let model =
@@ -59,12 +59,12 @@ let instrument_computation (t : _ Computation.t) ~start_timer ~stop_timer =
       model
     in
     let time_static_apply_action
-          ~apply_action
-          ~inject_dynamic
-          ~inject_static
-          ~schedule_event
-          model
-          action
+      ~apply_action
+      ~inject_dynamic
+      ~inject_static
+      ~schedule_event
+      model
+      action
       =
       start_timer apply_action_label;
       let model =
@@ -100,10 +100,10 @@ let instrument_computation (t : _ Computation.t) ~start_timer ~stop_timer =
     | computation -> computation
   in
   let value_map
-        (type a)
-        (context : unit Transform.For_value.context)
-        ()
-        ({ here; value; id } as wrapped_value : a Value.t)
+    (type a)
+    (context : unit Transform.For_value.context)
+    ()
+    ({ here; value; id } as wrapped_value : a Value.t)
     =
     let (lazy current_path) = context.current_path in
     let node_info = Graph_info.Node_info.of_value wrapped_value in

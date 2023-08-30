@@ -34,8 +34,8 @@ type ('m, 'dynamic_action, 'static_action, 'action_input, 'r) unpacked =
 type 'r t = T : (_, _, _, _, 'r) unpacked -> 'r t
 
 let assert_type_equalities
-      (T a : _ Bonsai.Private.Computation.packed_info)
-      (T b : _ Bonsai.Private.Computation.packed_info)
+  (T a : _ Bonsai.Private.Computation.packed_info)
+  (T b : _ Bonsai.Private.Computation.packed_info)
   =
   let T =
     Bonsai.Private.Meta.Model.Type_id.same_witness_exn a.model.type_id b.model.type_id
@@ -60,16 +60,16 @@ let create (type r) ?(optimize = true) ~clock (computation : r Bonsai.Computatio
     |> Bonsai.Private.gather
   in
   let (T
-         ({ model =
-              { default = default_model; sexp_of = sexp_of_model; equal = _; type_id = _ }
-          ; input = _
-          ; apply_static
-          ; apply_dynamic
-          ; dynamic_action = _
-          ; static_action = _
-          ; run = _
-          ; reset = _
-          } as computation_info))
+        ({ model =
+             { default = default_model; sexp_of = sexp_of_model; equal = _; type_id = _ }
+         ; input = _
+         ; apply_static
+         ; apply_dynamic
+         ; dynamic_action = _
+         ; static_action = _
+         ; run = _
+         ; reset = _
+         } as computation_info))
     =
     optimized_info
   in
@@ -82,11 +82,11 @@ let create (type r) ?(optimize = true) ~clock (computation : r Bonsai.Computatio
      into the environment is by defining a function like this. See
      https://github.com/ocaml/ocaml/issues/7074. *)
   let create_polymorphic
-        (type dynamic_action static_action action_input)
-        (computation_info :
-           (_, dynamic_action, static_action, action_input, r) Bonsai.Private.Computation.info)
-        apply_static
-        apply_dynamic
+    (type dynamic_action static_action action_input)
+    (computation_info :
+      (_, dynamic_action, static_action, action_input, r) Bonsai.Private.Computation.info)
+    apply_static
+    apply_dynamic
     : r t
     =
     let queue = Queue.create () in
@@ -144,15 +144,15 @@ let create (type r) ?(optimize = true) ~clock (computation : r Bonsai.Computatio
 let schedule_event _ = Ui_effect.Expert.handle
 
 let flush
-      (T
-         { model_var
-         ; static_apply_action
-         ; dynamic_apply_action
-         ; action_input
-         ; queue
-         ; clock
-         ; _
-         })
+  (T
+    { model_var
+    ; static_apply_action
+    ; dynamic_apply_action
+    ; action_input
+    ; queue
+    ; clock
+    ; _
+    })
   =
   Bonsai.Time_source.Private.flush clock;
   let update_model ~action ~apply_action =

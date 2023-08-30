@@ -11,15 +11,15 @@ let input ~placeholder:placeholder_ ~value:value_ ~extra_attr ~id:id_ ~on_input:
     ~attrs:
       [ Vdom.Attr.(
           extra_attr
-          @ type_       "text"
-          @ create      "list" id_
+          @ type_ "text"
+          @ create "list" id_
           @ placeholder placeholder_
           (* Both Attr.value and Attr.string_property value must be set. The former only affects
              initial control state while the latter affects the control state whilst the form is
              being used. *)
-          @ value       value_
-          @ value_prop  value_
-          @ on_change   (fun _ input -> on_input_ input))
+          @ value value_
+          @ value_prop value_
+          @ on_change (fun _ input -> on_input_ input))
       ]
     ()
 ;;
@@ -38,9 +38,9 @@ let pills ~selected_options ~on_set_change ~inject_selected_options =
             @ create "data-value" option
             @ on_click remove_option
             @ on_keyup (fun ev ->
-              match Js_of_ocaml.Dom_html.Keyboard_code.of_event ev with
-              | Space | Enter | NumpadEnter | Backspace | Delete -> remove_option ev
-              | _ -> Effect.Ignore))
+                match Js_of_ocaml.Dom_html.Keyboard_code.of_event ev with
+                | Space | Enter | NumpadEnter | Backspace | Delete -> remove_option ev
+                | _ -> Effect.Ignore))
         ]
       [ Vdom.Node.text (option ^ " ×") ]
   in
@@ -81,11 +81,11 @@ let input ~placeholder ~extra_attr ~split ~id ~selected_options ~on_set_change =
 ;;
 
 let create
-      ?(extra_attr = Value.return Vdom.Attr.empty)
-      ?(placeholder = "")
-      ?(on_set_change = Value.return (const Effect.Ignore))
-      ?(split = List.return)
-      ()
+  ?(extra_attr = Value.return Vdom.Attr.empty)
+  ?(placeholder = "")
+  ?(on_set_change = Value.return (const Effect.Ignore))
+  ?(split = List.return)
+  ()
   =
   let%sub selected_options =
     Bonsai.state
@@ -98,7 +98,7 @@ let create
     input ~placeholder ~extra_attr ~id ~on_set_change ~split ~selected_options
   in
   let%arr selected_options, inject_selected_options = selected_options
-  and input         = input
+  and input = input
   and on_set_change = on_set_change in
   let pills = pills ~selected_options ~on_set_change ~inject_selected_options in
   selected_options, Vdom.Node.div [ input; pills ], inject_selected_options

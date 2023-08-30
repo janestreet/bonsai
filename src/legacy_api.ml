@@ -21,13 +21,13 @@ let map_input a ~f i = a (Proc.Value.map i ~f)
 let of_module = Proc.of_module1
 
 let state_machine
-      ~sexp_of_action
-      ?sexp_of_model
-      ~equal
-      _here
-      ~default_model
-      ~apply_action
-      input
+  ~sexp_of_action
+  ?sexp_of_model
+  ~equal
+  _here
+  ~default_model
+  ~apply_action
+  input
   =
   Proc.state_machine1
     ~sexp_of_action
@@ -148,12 +148,12 @@ module With_incr = struct
   let of_incr i _ = Proc.read (Proc.Private.conceal_value (Value.of_incr i))
 
   let of_module
-        (type i m a r)
-        ?sexp_of_model
-        (component : (i, m, a, r) component_s_incr)
-        ~equal
-        ~default_model
-        input
+    (type i m a r)
+    ?sexp_of_model
+    (component : (i, m, a, r) component_s_incr)
+    ~equal
+    ~default_model
+    input
     : r Proc.Computation.t
     =
     let input = Proc.Private.reveal_value input in

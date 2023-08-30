@@ -12,22 +12,22 @@ open! Import
 module Model : sig
   module Series : sig
     type t =
-      { label          : string
-      ; value          : Raw_html.t option
-      ; dash           : Raw_html.t option
-      ; color          : string option
-      ; is_visible     : bool
+      { label : string
+      ; value : Raw_html.t option
+      ; dash : Raw_html.t option
+      ; color : string option
+      ; is_visible : bool
       ; is_highlighted : bool
       }
     [@@deriving equal, fields ~getters, sexp]
   end
 
   type t =
-    { x_label     : string
-    ; x_value     : Raw_html.t option
-    ; series      : Series.t list
+    { x_label : string
+    ; x_value : Raw_html.t option
+    ; series : Series.t list
     ; past_series : Series.t Map.M(String).t
-    (** [past_series] remembers all the series (by series label) that we've ever seen.
+        (** [past_series] remembers all the series (by series label) that we've ever seen.
         This means that if someone makes a change to a particular series (e.g. toggles
         visibility), moves to a graph without that series, and then moves back to the
         original graph, the information will not be lost.
@@ -41,7 +41,7 @@ end
 
 module Action : sig
   type t =
-    | From_graph        of Legend_data.t
+    | From_graph of Legend_data.t
     | Toggle_visibility of string
     | Select_none
     | Select_all

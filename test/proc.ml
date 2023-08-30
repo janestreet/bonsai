@@ -70,11 +70,11 @@ module Handle = struct
     (unit, 'result * string * ('incoming -> unit Effect.t)) Driver.t
 
   let create
-        (type result incoming)
-        ?(start_time = Time_ns.epoch)
-        ~optimize
-        (result_spec : (result, incoming) Result_spec.t)
-        computation
+    (type result incoming)
+    ?(start_time = Time_ns.epoch)
+    ~optimize
+    (result_spec : (result, incoming) Result_spec.t)
+    computation
     =
     let (module R) = result_spec in
     let component (_ : unit Value.t) =
@@ -117,20 +117,20 @@ module Handle = struct
     fun t ->
     let node_paths = ref Bonsai.Private.Node_path.Set.empty in
     let computation_map
-          (type result)
-          (context : _ Bonsai.Private.Transform.For_computation.context)
-          state
-          (computation : result Bonsai.Private.Computation.t)
+      (type result)
+      (context : _ Bonsai.Private.Transform.For_computation.context)
+      state
+      (computation : result Bonsai.Private.Computation.t)
       =
       node_paths := Set.add !node_paths (Lazy.force context.current_path);
       let out = context.recurse state computation in
       out
     in
     let value_map
-          (type a)
-          (context : _ Bonsai.Private.Transform.For_value.context)
-          state
-          (wrapped_value : a Bonsai.Private.Value.t)
+      (type a)
+      (context : _ Bonsai.Private.Transform.For_value.context)
+      state
+      (wrapped_value : a Bonsai.Private.Value.t)
       =
       node_paths := Set.add !node_paths (Lazy.force context.current_path);
       context.recurse state wrapped_value
@@ -162,11 +162,11 @@ module Handle = struct
   ;;
 
   let create
-        (type result incoming)
-        ?start_time
-        ?(optimize = true)
-        (result_spec : (result, incoming) Result_spec.t)
-        computation
+    (type result incoming)
+    ?start_time
+    ?(optimize = true)
+    (result_spec : (result, incoming) Result_spec.t)
+    computation
     =
     (* [assert_node_paths_identical_between_transform_and_skeleton_nodepaths] is a useful 
        function to verify that the skeleton code correctly generates node_path identifiers.
@@ -224,9 +224,9 @@ module Handle = struct
   ;;
 
   let show_diff
-        ?(location_style = Patdiff_kernel.Format.Location_style.None)
-        ?(diff_context = 16)
-        handle
+    ?(location_style = Patdiff_kernel.Format.Location_style.None)
+    ?(diff_context = 16)
+    handle
     =
     generic_show
       handle

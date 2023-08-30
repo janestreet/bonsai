@@ -3,8 +3,8 @@ open! Import
 include Fix_transform_intf
 
 module Make
-    (Types : Types) (F : functor (_ : Recurse with module Types := Types) ->
-      Transform with module Types := Types) : Transform with module Types := Types = struct
+  (Types : Types) (F : functor (_ : Recurse with module Types := Types) ->
+    Transform with module Types := Types) : Transform with module Types := Types = struct
   module rec Recurse : (Recurse with module Types := Types) = struct
     let combine_up, empty, empty_for_lazy = Types.Up.(combine, empty, empty_for_lazy)
 
@@ -52,8 +52,8 @@ module Make
             arms
             |> Map.to_alist
             |> List.fold_map ~init:(acc, up1) ~f:(fun (acc, up) (k, v) ->
-              let acc, up', v = User.transform_c down acc v in
-              (acc, combine_up up up'), (k, v))
+                 let acc, up', v = User.transform_c down acc v in
+                 (acc, combine_up up up'), (k, v))
           in
           let arms = Map.of_alist_exn (module Int) arms in
           acc, upn, Switch { match_; arms; here }

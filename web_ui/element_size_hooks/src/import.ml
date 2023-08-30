@@ -1,7 +1,6 @@
 open! Core
 open Js_of_ocaml
 
-
 let cancel_animation_frame id = Dom_html.window##cancelAnimationFrame id
 
 let request_animation_frame f =

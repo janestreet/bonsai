@@ -26,9 +26,9 @@ module Proc_incr : sig
 
   val of_module
     :  (module Component_s_incr
-         with type Input.t = 'input
-          and type Model.t = 'model
-          and type Result.t = 'result)
+          with type Input.t = 'input
+           and type Model.t = 'model
+           and type Result.t = 'result)
     -> ?sexp_of_model:('model -> Sexp.t)
     -> equal:('model -> 'model -> bool)
     -> default_model:'model

@@ -1,7 +1,6 @@
 open! Core
 open! Import
 
-
 module Node_info : sig
   type t =
     { node_type : string

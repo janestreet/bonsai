@@ -6,11 +6,11 @@ include Helpers_intf
 let sexp_to_string = Expect_test_helpers_core.sexp_to_string
 
 let make_generic
-      (type input action result s)
-      ~(driver : (input, s) Driver.t)
-      ~(string_of_result : result -> string)
-      ~(get_result : s -> result)
-      ~(schedule_action : s -> action -> unit)
+  (type input action result s)
+  ~(driver : (input, s) Driver.t)
+  ~(string_of_result : result -> string)
+  ~(get_result : s -> result)
+  ~(schedule_action : s -> action -> unit)
   : (module S with type input = input and type action = action)
   =
   (module struct
@@ -57,7 +57,7 @@ let make_string_with_inject ~driver =
     ~string_of_result:Fn.id
     ~get_result:fst
     ~schedule_action:(fun (_, inject) action ->
-      Driver.schedule_event driver (inject action))
+    Driver.schedule_event driver (inject action))
 ;;
 
 let make_with_inject ~driver ~sexp_of_result =
@@ -66,5 +66,5 @@ let make_with_inject ~driver ~sexp_of_result =
     ~string_of_result:(sexp_of_result >> sexp_to_string)
     ~get_result:fst
     ~schedule_action:(fun (_, inject) action ->
-      Driver.schedule_event driver (inject action))
+    Driver.schedule_event driver (inject action))
 ;;

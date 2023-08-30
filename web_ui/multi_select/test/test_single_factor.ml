@@ -4,18 +4,17 @@ module S = Bonsai_web_ui_multi_select.Make (String)
 open Bonsai.Let_syntax
 open Bonsai_web_test
 
-
 let all_items = String.Set.of_list [ "foo"; "bar"; "baz" ]
 
 let bonsai
-      ?(which_display = `Simple)
-      ?search_string
-      ?(default_selection_status =
-        Bonsai.Value.return Bonsai_web_ui_multi_select.Selection_status.Selected)
-      ?selection_status
-      ?focused_item
-      ~view_config
-      all_items
+  ?(which_display = `Simple)
+  ?search_string
+  ?(default_selection_status =
+    Bonsai.Value.return Bonsai_web_ui_multi_select.Selection_status.Selected)
+  ?selection_status
+  ?focused_item
+  ~view_config
+  all_items
   =
   let%sub result =
     S.bonsai
@@ -35,7 +34,7 @@ let bonsai
     ^
     match which_display with
     | `Simple -> Lazy.force result.view_for_testing
-    | `Html   ->
+    | `Html ->
       Virtual_dom_test_helpers.Node_helpers.(
         unsafe_convert_exn result.view |> to_string_html)
   in
@@ -51,21 +50,21 @@ let default_view_config =
 ;;
 
 let handle
-      ?which_display
-      ?search_string
-      ?selection_status
-      ?focused_item
-      ?default_selection_status
-      ?(view_config = default_view_config)
-      ?(all_items = Bonsai.Value.return all_items)
-      ()
+  ?which_display
+  ?search_string
+  ?selection_status
+  ?focused_item
+  ?default_selection_status
+  ?(view_config = default_view_config)
+  ?(all_items = Bonsai.Value.return all_items)
+  ()
   =
   Bonsai_web_test.Handle.create
     (module struct
-      type t        = string * (S.Action.t -> unit Vdom.Effect.t)
+      type t = string * (S.Action.t -> unit Vdom.Effect.t)
       type incoming = S.Action.t
 
-      let view     (s, _     ) = s
+      let view (s, _) = s
       let incoming (_, inject) = inject
     end)
     (bonsai
@@ -81,7 +80,7 @@ let handle
 let%expect_test "focus" =
   let handle = handle () in
   Handle.do_actions handle [ Select_all ];
-  Handle.show       handle;
+  Handle.show handle;
   [%expect
     {|
     Selected items: (bar baz foo)
@@ -90,7 +89,7 @@ let%expect_test "focus" =
        * baz
        * foo |}];
   Handle.do_actions handle [ Move_focus `Next ];
-  Handle.show       handle;
+  Handle.show handle;
   [%expect
     {|
     Selected items: (bar baz foo)
@@ -99,7 +98,7 @@ let%expect_test "focus" =
        * baz
        * foo |}];
   Handle.do_actions handle [ Move_focus `Next ];
-  Handle.show       handle;
+  Handle.show handle;
   [%expect
     {|
     Selected items: (bar baz foo)
@@ -108,7 +107,7 @@ let%expect_test "focus" =
     -> * baz
        * foo |}];
   Handle.do_actions handle [ Move_focus `Prev ];
-  Handle.show       handle;
+  Handle.show handle;
   [%expect
     {|
     Selected items: (bar baz foo)
@@ -117,7 +116,7 @@ let%expect_test "focus" =
        * baz
        * foo |}];
   Handle.do_actions handle [ Move_focus `Prev ];
-  Handle.show       handle;
+  Handle.show handle;
   (* Note that we don't wrap around. *)
   [%expect
     {|
@@ -127,7 +126,7 @@ let%expect_test "focus" =
        * baz
        * foo |}];
   Handle.do_actions handle [ Set_focus (Some "foo") ];
-  Handle.show       handle;
+  Handle.show handle;
   [%expect
     {|
     Selected items: (bar baz foo)
@@ -136,7 +135,7 @@ let%expect_test "focus" =
        * baz
     -> * foo |}];
   Handle.do_actions handle [ Move_focus `Next ];
-  Handle.show       handle;
+  Handle.show handle;
   (* Note that we don't wrap around. *)
   [%expect
     {|
@@ -146,7 +145,7 @@ let%expect_test "focus" =
        * baz
     -> * foo |}];
   Handle.do_actions handle [ Set_focus None ];
-  Handle.show       handle;
+  Handle.show handle;
   [%expect
     {|
     Selected items: (bar baz foo)
@@ -159,7 +158,7 @@ let%expect_test "focus" =
 let%expect_test "selections" =
   let handle = handle () in
   Handle.do_actions handle [ Set_item_selected { item = "bar"; status = Unselected } ];
-  Handle.show       handle;
+  Handle.show handle;
   [%expect
     {|
     Selected items: (baz foo)
@@ -168,7 +167,7 @@ let%expect_test "selections" =
        * baz
        * foo |}];
   Handle.do_actions handle [ Set_item_selected { item = "bar"; status = Selected } ];
-  Handle.show       handle;
+  Handle.show handle;
   [%expect
     {|
     Selected items: (bar baz foo)
@@ -177,7 +176,7 @@ let%expect_test "selections" =
        * baz
        * foo |}];
   Handle.do_actions handle [ Move_focus `Prev ];
-  Handle.show       handle;
+  Handle.show handle;
   [%expect
     {|
     Selected items: (bar baz foo)
@@ -186,7 +185,7 @@ let%expect_test "selections" =
        * baz
     -> * foo |}];
   Handle.do_actions handle [ Toggle_focused_item_selected ];
-  Handle.show       handle;
+  Handle.show handle;
   [%expect
     {|
     Selected items: (bar baz)
@@ -195,7 +194,7 @@ let%expect_test "selections" =
        * baz
     ->   foo |}];
   Handle.do_actions handle [ Select_all ];
-  Handle.show       handle;
+  Handle.show handle;
   [%expect
     {|
     Selected items: (bar baz foo)
@@ -204,7 +203,7 @@ let%expect_test "selections" =
        * baz
     -> * foo |}];
   Handle.do_actions handle [ Select_none ];
-  Handle.show       handle;
+  Handle.show handle;
   [%expect
     {|
     Selected items: ()
@@ -301,28 +300,28 @@ let%expect_test "search string vdom" =
 let%expect_test "searching" =
   let handle = handle () in
   Handle.do_actions handle [ Select_none; Update_search_string "ba" ];
-  Handle.show       handle;
+  Handle.show handle;
   [%expect {|
     Selected items: ()
     Search string: 'ba'
          bar
          baz |}];
   Handle.do_actions handle [ Move_focus `Next ];
-  Handle.show       handle;
+  Handle.show handle;
   [%expect {|
     Selected items: ()
     Search string: 'ba'
     ->   bar
          baz |}];
   Handle.do_actions handle [ Move_focus `Next ];
-  Handle.show       handle;
+  Handle.show handle;
   [%expect {|
     Selected items: ()
     Search string: 'ba'
          bar
     ->   baz |}];
   Handle.do_actions handle [ Select_all ];
-  Handle.show       handle;
+  Handle.show handle;
   [%expect
     {|
     Selected items: (bar baz)
@@ -330,7 +329,7 @@ let%expect_test "searching" =
        * bar
     -> * baz |}];
   Handle.do_actions handle [ Update_search_string "" ];
-  Handle.show       handle;
+  Handle.show handle;
   (* Note that "foo" is not selected as it was not in the search results when Select_all
      was run *)
   [%expect
@@ -341,7 +340,7 @@ let%expect_test "searching" =
     -> * baz
          foo |}];
   Handle.do_actions handle [ Select_all ];
-  Handle.show       handle;
+  Handle.show handle;
   [%expect
     {|
     Selected items: (bar baz foo)
@@ -350,7 +349,7 @@ let%expect_test "searching" =
     -> * baz
        * foo |}];
   Handle.do_actions handle [ Update_search_string "ba" ];
-  Handle.show       handle;
+  Handle.show handle;
   [%expect
     {|
     Selected items: (bar baz foo)
@@ -358,7 +357,7 @@ let%expect_test "searching" =
        * bar
     -> * baz |}];
   Handle.do_actions handle [ Select_none ];
-  Handle.show       handle;
+  Handle.show handle;
   [%expect
     {|
     Selected items: (foo)
@@ -366,7 +365,7 @@ let%expect_test "searching" =
          bar
     ->   baz |}];
   Handle.do_actions handle [ Update_search_string "" ];
-  Handle.show       handle;
+  Handle.show handle;
   (* Note that foo is not deselected as it was not in the search results when Select_none
      was run. *)
   [%expect
@@ -379,9 +378,9 @@ let%expect_test "searching" =
 ;;
 
 let%expect_test "changing items" =
-  let all_items_var = Bonsai.Var.create all_items    in
-  let all_items     = Bonsai.Var.value all_items_var in
-  let handle        = handle ~all_items ()           in
+  let all_items_var = Bonsai.Var.create all_items in
+  let all_items = Bonsai.Var.value all_items_var in
+  let handle = handle ~all_items () in
   Bonsai.Var.update all_items_var ~f:(fun all_items -> Set.add all_items "quux");
   Handle.show handle;
   [%expect
@@ -393,7 +392,7 @@ let%expect_test "changing items" =
        * foo
        * quux |}];
   Handle.do_actions handle [ Update_search_string "" ];
-  Handle.show       handle;
+  Handle.show handle;
   [%expect
     {|
     Selected items: (bar baz foo quux)
@@ -405,13 +404,13 @@ let%expect_test "changing items" =
 ;;
 
 let%expect_test "default_selection_status = Unselected" =
-  let all_items_var = Bonsai.Var.create all_items     in
-  let all_items     = Bonsai.Var.value  all_items_var in
+  let all_items_var = Bonsai.Var.create all_items in
+  let all_items = Bonsai.Var.value all_items_var in
   let default_selection_status_var =
     Bonsai.Var.create Bonsai_web_ui_multi_select.Selection_status.Unselected
   in
-  let default_selection_status = Bonsai.Var.value default_selection_status_var  in
-  let handle                   = handle ~default_selection_status ~all_items () in
+  let default_selection_status = Bonsai.Var.value default_selection_status_var in
+  let handle = handle ~default_selection_status ~all_items () in
   Handle.show handle;
   [%expect
     {|
@@ -421,7 +420,7 @@ let%expect_test "default_selection_status = Unselected" =
          baz
          foo |}];
   Handle.do_actions handle [ Select_all ];
-  Handle.show       handle;
+  Handle.show handle;
   [%expect
     {|
     Selected items: (bar baz foo)
@@ -462,12 +461,12 @@ let%expect_test "specifying arguments to S.Model.create" =
 ;;
 
 let%expect_test "html" =
-  let all_items_var = Bonsai.Var.create all_items     in
-  let all_items     = Bonsai.Var.value  all_items_var in
+  let all_items_var = Bonsai.Var.create all_items in
+  let all_items = Bonsai.Var.value all_items_var in
   let default_selection_status_var =
     Bonsai.Var.create Bonsai_web_ui_multi_select.Selection_status.Selected
   in
-  let default_selection_status = Bonsai.Var.value default_selection_status_var     in
+  let default_selection_status = Bonsai.Var.value default_selection_status_var in
   let handle = handle ~default_selection_status ~all_items ~which_display:`Html () in
   Handle.show handle;
   [%expect
@@ -498,7 +497,7 @@ let%expect_test "html" =
       </div>
     </div> |}];
   Handle.do_actions handle [ Move_focus `Next; Select_none ];
-  Handle.show       handle;
+  Handle.show handle;
   [%expect
     {|
     Selected items: ()
@@ -527,7 +526,7 @@ let%expect_test "html" =
       </div>
     </div> |}];
   Handle.do_actions handle [ Select_all ];
-  Handle.show       handle;
+  Handle.show handle;
   [%expect
     {|
     Selected items: (bar baz foo)
@@ -592,8 +591,8 @@ let%expect_test "html" =
 ;;
 
 let%expect_test "html-custom-selected-attr" =
-  let all_items_var = Bonsai.Var.create all_items     in
-  let all_items     = Bonsai.Var.value  all_items_var in
+  let all_items_var = Bonsai.Var.create all_items in
+  let all_items = Bonsai.Var.value all_items_var in
   let default_selection_status_var =
     Bonsai.Var.create Bonsai_web_ui_multi_select.Selection_status.Selected
   in
@@ -614,7 +613,7 @@ let%expect_test "html-custom-selected-attr" =
   in
   Handle.store_view handle;
   Handle.do_actions handle [ Move_focus `Next ];
-  Handle.show_diff  handle;
+  Handle.show_diff handle;
   [%expect
     {|
       Selected items: (bar baz foo)

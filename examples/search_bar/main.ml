@@ -2,7 +2,6 @@ open! Core
 open Bonsai_web
 open Bonsai.Let_syntax
 
-
 module User_info = struct
   type t =
     { name : string

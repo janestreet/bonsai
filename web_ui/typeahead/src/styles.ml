@@ -1,6 +1,6 @@
 open! Core
 open! Bonsai_web
-open  Css_gen
+open Css_gen
 
 let full_width = width Length.percent100
 

@@ -125,7 +125,7 @@ let%expect_test "enum with action handling `Warn" =
     [%expect "counter 2"];
     H.do_actions
       [ Outer Increment
-      (* The inner action is ignored.  You can see this because it prints "counter 2"
+        (* The inner action is ignored.  You can see this because it prints "counter 2"
          when it gets focus again. *)
       ; Inner Increment
       ];
@@ -144,10 +144,10 @@ let%expect_test "constant component" =
     ~component:(Bonsai.Arrow_deprecated.const "some constant value")
     ~initial_input:()
     ~f:(fun driver ->
-      [%expect {| |}];
-      let (module H) = Helpers.make_string ~driver in
-      H.show ();
-      [%expect {| some constant value |}])
+    [%expect {| |}];
+    let (module H) = Helpers.make_string ~driver in
+    H.show ();
+    [%expect {| some constant value |}])
 ;;
 
 let%expect_test "module component" =
@@ -183,8 +183,8 @@ let%expect_test "state-machine counter-component" =
         dummy_source_code_position
         ~default_model:0
         ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) () model -> function
-          | Increment -> model + 1
-          | Decrement -> model - 1)
+        | Increment -> model + 1
+        | Decrement -> model - 1)
     in
     Int.to_string model, inject
   in
@@ -416,7 +416,7 @@ let%expect_test "input" =
     let apply_action (_ : _ Bonsai.Apply_action_context.t) _words model
       : Action.t -> Model.t
       = function
-        | Increment -> model + 1
+      | Increment -> model + 1
     ;;
 
     let compute ~inject words m =
@@ -547,10 +547,10 @@ module _ = struct
   open Bonsai.Arrow_deprecated.Let_syntax
 
   let dummy
-        (type t)
-        (module M : Bonsai.Arrow_deprecated.Model with type t = t)
-        ~default
-        ~equal
+    (type t)
+    (module M : Bonsai.Arrow_deprecated.Model with type t = t)
+    ~default
+    ~equal
     =
     Bonsai.Arrow_deprecated.state_machine
       ~sexp_of_model:[%sexp_of: M.t]

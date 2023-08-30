@@ -168,11 +168,11 @@ let _on_change' : _ on_change_function_signature = Bonsai.Edge.on_change'
 
 (* $MDX part-begin=on_change_prime *)
 let on_change'
-      (type a)
-      (module M : Bonsai.Model with type t = a)
-      ~equal
-      (current_value : a Value.t)
-      ~(callback : (a option -> a -> unit Effect.t) Value.t)
+  (type a)
+  (module M : Bonsai.Model with type t = a)
+  ~equal
+  (current_value : a Value.t)
+  ~(callback : (a option -> a -> unit Effect.t) Value.t)
   =
   let%sub previous_value, set_previous_value =
     Bonsai.state_opt () ~sexp_of_model:[%sexp_of: M.t] ~equal

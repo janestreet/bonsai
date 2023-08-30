@@ -17,7 +17,7 @@ module T = struct
 
   let scale_dpi
     :  Dom_html.canvasElement Js.t -> Dom_html.canvasRenderingContext2D Js.t -> float
-      -> float -> unit
+    -> float -> unit
     =
     let f = Js.Unsafe.get Js.Unsafe.global (Js.string "scale_canvas") in
     fun canvas ctx w h ->

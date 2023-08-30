@@ -52,8 +52,8 @@ module Two_left_click_popovers = struct
               ~close_when_clicked_outside:true
               ~allow_event_propagation_when_clicked_outside:
                 (Value.return (function
-                   | `Left_click | `Escape -> false
-                   | `Right_click -> true))
+                  | `Left_click | `Escape -> false
+                  | `Right_click -> true))
               ~direction:(Value.return Bonsai_web_ui_popover.Direction.Right)
               ~alignment:(Value.return Bonsai_web_ui_popover.Alignment.Center)
               ~popover:popover_content

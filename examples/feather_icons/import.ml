@@ -4,9 +4,9 @@ include Bonsai.Let_syntax
 module Form = Bonsai_web_ui_form
 
 module Card_like =
-  [%css
-    stylesheet
-      {|
+[%css
+stylesheet
+  {|
 .class_ {
   border-radius: 8px;
   background-color: white;

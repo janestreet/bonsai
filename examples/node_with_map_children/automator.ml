@@ -26,8 +26,7 @@ let driver ~reset_all ~step ~is_done ~set_has_error =
        let%bind.Effect is_done =
          match%bind.Effect get_is_done with
          | Active is_done -> Effect.return is_done
-         | Inactive ->
-           Effect.never
+         | Inactive -> Effect.never
        in
        if is_done then reset_all else Effect.Ignore))
 ;;

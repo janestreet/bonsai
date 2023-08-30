@@ -2,10 +2,10 @@ open! Core
 open! Import
 
 let value_map
-      (type a)
-      (context : _ Transform.For_value.context)
-      ()
-      ({ value; here; id } : a Value.t)
+  (type a)
+  (context : _ Transform.For_value.context)
+  ()
+  ({ value; here; id } : a Value.t)
   =
   let value =
     match value with
@@ -167,10 +167,10 @@ let value_map
 ;;
 
 let computation_map
-      (type result)
-      (context : _ Transform.For_computation.context)
-      ()
-      (computation : result Computation.t)
+  (type result)
+  (context : _ Transform.For_computation.context)
+  ()
+  (computation : result Computation.t)
   : result Computation.t
   =
   context.recurse () computation

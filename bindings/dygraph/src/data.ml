@@ -5,8 +5,8 @@ open Gen_js_api
 
 type t = Ojs.t
 
-let t_to_js x    = x
-let create  data = Ojs.array_to_js (Ojs.array_to_js Ojs.float_to_js) data
+let t_to_js x = x
+let create data = Ojs.array_to_js (Ojs.array_to_js Ojs.float_to_js) data
 
 let create' data ~x_to_js ~y_to_js =
   let row_to_js (x, data) =
@@ -55,11 +55,11 @@ let create_from_independent_series' ~min ~equal series =
     let next_x () =
       Array.fold2_exn ~init:None current_idxes series ~f:(fun earliest_x idx series ->
         match safe_get series ~idx with
-        | None        -> earliest_x
+        | None -> earliest_x
         | Some (x, _) ->
           Some
             (match earliest_x with
-             | None            -> x
+             | None -> x
              | Some earliest_x -> min x earliest_x))
     in
     (* This loop will make an array (in chronological order) of:
@@ -69,13 +69,13 @@ let create_from_independent_series' ~min ~equal series =
     *)
     let rec loop ~data_acc =
       match next_x () with
-      | None        -> Array.of_list_rev data_acc
+      | None -> Array.of_list_rev data_acc
       | Some next_x ->
         let next_row =
           Array.mapi series ~f:(fun i series ->
             let idx = current_idxes.(i) in
             match safe_get series ~idx with
-            | None            -> None
+            | None -> None
             | Some (x, value) ->
               if equal x next_x
               then (
@@ -104,15 +104,15 @@ let create_from_independent_time_series series =
 ;;
 
 let%expect_test "test [create_from_independent_time_series]" =
-  let t1  = Time_ns.epoch                   in
-  let t2  = Time_ns.add t1 Time_ns.Span.day in
-  let t3  = Time_ns.add t2 Time_ns.Span.day in
-  let t4  = Time_ns.add t3 Time_ns.Span.day in
-  let ts1 = [| t1, 1.; t3, 3. |]            in
-  let ts2 = [| t2, 2.; t3, 3.; t4, 4. |]    in
+  let t1 = Time_ns.epoch in
+  let t2 = Time_ns.add t1 Time_ns.Span.day in
+  let t3 = Time_ns.add t2 Time_ns.Span.day in
+  let t4 = Time_ns.add t3 Time_ns.Span.day in
+  let ts1 = [| t1, 1.; t3, 3. |] in
+  let ts2 = [| t2, 2.; t3, 3.; t4, 4. |] in
   create_from_independent_time_series' [| ts1; ts2 |]
   |> Array.iter ~f:(fun row ->
-    [%sexp_of: Time_ns.Alternate_sexp.t * float option array] row |> print_s);
+       [%sexp_of: Time_ns.Alternate_sexp.t * float option array] row |> print_s);
   [%expect
     {|
     ("1970-01-01 00:00:00Z" ((1) ()))

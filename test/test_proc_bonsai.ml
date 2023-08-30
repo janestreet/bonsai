@@ -478,11 +478,11 @@ let%expect_test "assoc_on" =
           ~apply_action:
             (fun
               (_ : _ Bonsai.Apply_action_context.t) input model new_model ->
-              match input with
-              | Active () -> new_model
-              | Inactive ->
-                print_endline "inactive";
-                model)
+            match input with
+            | Active () -> new_model
+            | Inactive ->
+              print_endline "inactive";
+              model)
           (opaque_const_value ()))
   in
   let handle =
@@ -1145,11 +1145,11 @@ let%expect_test "dynamic action sent to non-existent assoc element" =
           ~apply_action:
             (fun
               (_ : _ Bonsai.Apply_action_context.t) input model new_model ->
-              match input with
-              | Active () -> new_model
-              | Inactive ->
-                print_endline "inactive";
-                model)
+            match input with
+            | Active () -> new_model
+            | Inactive ->
+              print_endline "inactive";
+              model)
           (opaque_const_value ()))
   in
   let handle =
@@ -1279,19 +1279,19 @@ let%test_module "inactive delivery" =
 
     let%expect_test "state_machine1 inactive-delivery" =
       (fun _ ->
-         Bonsai.state_machine1
-           ~sexp_of_model:[%sexp_of: Int.t]
-           ~equal:[%equal: Int.t]
-           ~sexp_of_action:[%sexp_of: Int.t]
-           ~default_model:0
-           ~apply_action:
-             (fun
-               (_ : _ Bonsai.Apply_action_context.t) input _model new_model ->
-               (match input with
-                | Inactive -> print_endline "static action"
-                | Active () -> print_endline "dynamic action");
-               new_model)
-           (Value.return ()))
+        Bonsai.state_machine1
+          ~sexp_of_model:[%sexp_of: Int.t]
+          ~equal:[%equal: Int.t]
+          ~sexp_of_action:[%sexp_of: Int.t]
+          ~default_model:0
+          ~apply_action:
+            (fun
+              (_ : _ Bonsai.Apply_action_context.t) input _model new_model ->
+            (match input with
+             | Inactive -> print_endline "static action"
+             | Active () -> print_endline "dynamic action");
+            new_model)
+          (Value.return ()))
       |> test_delivery_to_inactive_component;
       [%expect
         {|
@@ -1309,19 +1309,19 @@ let%test_module "inactive delivery" =
 
     let%expect_test "race inactive-delivery (but an active input)" =
       (fun input ->
-         Bonsai.state_machine1
-           ~sexp_of_model:[%sexp_of: Int.t]
-           ~equal:[%equal: Int.t]
-           ~sexp_of_action:[%sexp_of: Int.t]
-           ~default_model:0
-           ~apply_action:
-             (fun
-               (_ : _ Bonsai.Apply_action_context.t) input _model new_model ->
-               (match input with
-                | Inactive -> print_endline "static action"
-                | Active () -> print_endline "dynamic action");
-               new_model)
-           input)
+        Bonsai.state_machine1
+          ~sexp_of_model:[%sexp_of: Int.t]
+          ~equal:[%equal: Int.t]
+          ~sexp_of_action:[%sexp_of: Int.t]
+          ~default_model:0
+          ~apply_action:
+            (fun
+              (_ : _ Bonsai.Apply_action_context.t) input _model new_model ->
+            (match input with
+             | Inactive -> print_endline "static action"
+             | Active () -> print_endline "dynamic action");
+            new_model)
+          input)
       |> test_delivery_to_inactive_component;
       [%expect
         {|
@@ -1339,20 +1339,20 @@ let%test_module "inactive delivery" =
 
     let%expect_test "dynamic action inactive-delivery" =
       (fun _ ->
-         Bonsai.state_machine1
-           ~sexp_of_model:[%sexp_of: Int.t]
-           ~equal:[%equal: Int.t]
-           ~sexp_of_action:[%sexp_of: Int.t]
-           ~default_model:0
-           ~apply_action:
-             (fun
-               (_ : _ Bonsai.Apply_action_context.t) input model new_model ->
-               match input with
-               | Active () -> new_model
-               | Inactive ->
-                 print_endline "inactive";
-                 model)
-           (opaque_const_value ()))
+        Bonsai.state_machine1
+          ~sexp_of_model:[%sexp_of: Int.t]
+          ~equal:[%equal: Int.t]
+          ~sexp_of_action:[%sexp_of: Int.t]
+          ~default_model:0
+          ~apply_action:
+            (fun
+              (_ : _ Bonsai.Apply_action_context.t) input model new_model ->
+            match input with
+            | Active () -> new_model
+            | Inactive ->
+              print_endline "inactive";
+              model)
+          (opaque_const_value ()))
       |> test_delivery_to_inactive_component;
       [%expect
         {|
@@ -1369,19 +1369,19 @@ let%test_module "inactive delivery" =
 
     let%expect_test "actor1 inactive-delivery" =
       (fun _ ->
-         Bonsai.actor1
-           ~sexp_of_model:[%sexp_of: Int.t]
-           ~equal:[%equal: Int.t]
-           ~sexp_of_action:[%sexp_of: Int.t]
-           ~default_model:0
-           ~recv:(fun ~schedule_event:_ input model new_model ->
-             match input with
-             | Active () -> new_model, ()
-             | Inactive ->
-               print_endline
-                 "action sent to actor1 has been received while the input was inactive.";
-               model, ())
-           (opaque_const_value ()))
+        Bonsai.actor1
+          ~sexp_of_model:[%sexp_of: Int.t]
+          ~equal:[%equal: Int.t]
+          ~sexp_of_action:[%sexp_of: Int.t]
+          ~default_model:0
+          ~recv:(fun ~schedule_event:_ input model new_model ->
+            match input with
+            | Active () -> new_model, ()
+            | Inactive ->
+              print_endline
+                "action sent to actor1 has been received while the input was inactive.";
+              model, ())
+          (opaque_const_value ()))
       |> test_delivery_to_inactive_component;
       [%expect
         {|
@@ -1419,13 +1419,13 @@ let%test_module "inactive delivery" =
 
     let%expect_test "actor0 inactive-delivery" =
       (fun _ ->
-         Bonsai.actor0
-           ()
-           ~sexp_of_model:[%sexp_of: Int.t]
-           ~equal:[%equal: Int.t]
-           ~sexp_of_action:[%sexp_of: Int.t]
-           ~default_model:0
-           ~recv:(fun ~schedule_event:_ _model new_model -> new_model, ()))
+        Bonsai.actor0
+          ()
+          ~sexp_of_model:[%sexp_of: Int.t]
+          ~equal:[%equal: Int.t]
+          ~sexp_of_action:[%sexp_of: Int.t]
+          ~default_model:0
+          ~recv:(fun ~schedule_event:_ _model new_model -> new_model, ()))
       |> test_delivery_to_inactive_component;
       [%expect
         {|
@@ -1462,19 +1462,19 @@ let%test_module "inactive delivery" =
 
     let%expect_test "actor1 with constant input downgrades to actor0" =
       (fun _ ->
-         Bonsai.actor1
-           ~sexp_of_model:[%sexp_of: Int.t]
-           ~equal:[%equal: Int.t]
-           ~sexp_of_action:[%sexp_of: Int.t]
-           ~default_model:0
-           ~recv:(fun ~schedule_event:_ input model new_model ->
-             match input with
-             | Active () -> new_model, ()
-             | Inactive ->
-               print_endline
-                 "action sent to actor1 has been received while the input was inactive.";
-               model, ())
-           (Value.return ()))
+        Bonsai.actor1
+          ~sexp_of_model:[%sexp_of: Int.t]
+          ~equal:[%equal: Int.t]
+          ~sexp_of_action:[%sexp_of: Int.t]
+          ~default_model:0
+          ~recv:(fun ~schedule_event:_ input model new_model ->
+            match input with
+            | Active () -> new_model, ()
+            | Inactive ->
+              print_endline
+                "action sent to actor1 has been received while the input was inactive.";
+              model, ())
+          (Value.return ()))
       |> test_delivery_to_inactive_component;
       [%expect
         {|
@@ -1526,10 +1526,10 @@ let%test_module "inactive delivery" =
 
     let%expect_test "static inside of a lazy" =
       (fun _ ->
-         opaque_computation
-           ((Bonsai.lazy_ [@alert "-deprecated"])
-              (lazy
-                (Bonsai.state 0 ~sexp_of_model:[%sexp_of: Int.t] ~equal:[%equal: Int.t]))))
+        opaque_computation
+          ((Bonsai.lazy_ [@alert "-deprecated"])
+             (lazy
+               (Bonsai.state 0 ~sexp_of_model:[%sexp_of: Int.t] ~equal:[%equal: Int.t]))))
       |> test_delivery_to_inactive_component;
       [%expect
         {|
@@ -1551,8 +1551,8 @@ let%test_module "inactive delivery" =
 
     let%expect_test "static inside of a lazy (optimized away)" =
       (fun _ ->
-         (Bonsai.lazy_ [@alert "-deprecated"])
-           (lazy (Bonsai.state 0 ~sexp_of_model:[%sexp_of: Int.t] ~equal:[%equal: Int.t])))
+        (Bonsai.lazy_ [@alert "-deprecated"])
+          (lazy (Bonsai.state 0 ~sexp_of_model:[%sexp_of: Int.t] ~equal:[%equal: Int.t])))
       |> test_delivery_to_inactive_component;
       [%expect
         {|
@@ -1568,12 +1568,12 @@ let%test_module "inactive delivery" =
 
     let%expect_test "static inside of a fix" =
       (fun _ ->
-         opaque_computation
-           (Bonsai.fix (opaque_const_value true) ~f:(fun ~recurse v ->
-              match%sub v with
-              | true -> recurse (opaque_const_value false)
-              | false ->
-                Bonsai.state 0 ~sexp_of_model:[%sexp_of: Int.t] ~equal:[%equal: Int.t])))
+        opaque_computation
+          (Bonsai.fix (opaque_const_value true) ~f:(fun ~recurse v ->
+             match%sub v with
+             | true -> recurse (opaque_const_value false)
+             | false ->
+               Bonsai.state 0 ~sexp_of_model:[%sexp_of: Int.t] ~equal:[%equal: Int.t])))
       |> test_delivery_to_inactive_component;
       [%expect
         {|
@@ -1603,11 +1603,11 @@ let%test_module "inactive delivery" =
 
     let%expect_test "static inside of a fix (optimized away)" =
       (fun _ ->
-         Bonsai.fix (Value.return true) ~f:(fun ~recurse v ->
-           match%sub v with
-           | true -> recurse (Value.return false)
-           | false ->
-             Bonsai.state 0 ~sexp_of_model:[%sexp_of: Int.t] ~equal:[%equal: Int.t]))
+        Bonsai.fix (Value.return true) ~f:(fun ~recurse v ->
+          match%sub v with
+          | true -> recurse (Value.return false)
+          | false ->
+            Bonsai.state 0 ~sexp_of_model:[%sexp_of: Int.t] ~equal:[%equal: Int.t]))
       |> test_delivery_to_inactive_component;
       [%expect
         {|
@@ -1623,14 +1623,14 @@ let%test_module "inactive delivery" =
 
     let%expect_test "static inside of a wrap" =
       (fun _ ->
-         Bonsai.wrap
-           ()
-           ~sexp_of_model:[%sexp_of: Unit.t]
-           ~equal:[%equal: Unit.t]
-           ~default_model:()
-           ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) _ () () -> ())
-           ~f:(fun _model _inject ->
-             Bonsai.state 0 ~sexp_of_model:[%sexp_of: Int.t] ~equal:[%equal: Int.t]))
+        Bonsai.wrap
+          ()
+          ~sexp_of_model:[%sexp_of: Unit.t]
+          ~equal:[%equal: Unit.t]
+          ~default_model:()
+          ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) _ () () -> ())
+          ~f:(fun _model _inject ->
+            Bonsai.state 0 ~sexp_of_model:[%sexp_of: Int.t] ~equal:[%equal: Int.t]))
       |> test_delivery_to_inactive_component;
       [%expect
         {|
@@ -1649,8 +1649,8 @@ let%test_module "inactive delivery" =
 
     let%expect_test "static inside of a match%sub" =
       (fun _ ->
-         match%sub opaque_const_value () with
-         | () -> Bonsai.state 0 ~sexp_of_model:[%sexp_of: Int.t] ~equal:[%equal: Int.t])
+        match%sub opaque_const_value () with
+        | () -> Bonsai.state 0 ~sexp_of_model:[%sexp_of: Int.t] ~equal:[%equal: Int.t])
       |> test_delivery_to_inactive_component;
       [%expect
         {|
@@ -1673,11 +1673,11 @@ let%test_module "inactive delivery" =
 
     let%expect_test "static inside of a with_model_resetter" =
       (fun _ ->
-         let%sub r, _reset =
-           Bonsai.with_model_resetter
-             (Bonsai.state 0 ~sexp_of_model:[%sexp_of: Int.t] ~equal:[%equal: Int.t])
-         in
-         return r)
+        let%sub r, _reset =
+          Bonsai.with_model_resetter
+            (Bonsai.state 0 ~sexp_of_model:[%sexp_of: Int.t] ~equal:[%equal: Int.t])
+        in
+        return r)
       |> test_delivery_to_inactive_component;
       [%expect
         {|
@@ -1877,7 +1877,7 @@ let%test_module "inactive delivery" =
               ~apply_action:
                 (fun
                   (_ : _ Bonsai.Apply_action_context.t) model is_increment ->
-                  if is_increment then model + 1 else 999)
+                if is_increment then model + 1 else 999)
               ~reset:(fun context model ->
                 Bonsai.Apply_action_context.schedule_event
                   context
@@ -1912,11 +1912,11 @@ let%test_module "inactive delivery" =
               ~apply_action:
                 (fun
                   (_ : _ Bonsai.Apply_action_context.t) input model is_increment ->
-                  match input with
-                  | Active () -> if is_increment then model + 1 else 999
-                  | Inactive ->
-                    print_endline "inactive";
-                    model)
+                match input with
+                | Active () -> if is_increment then model + 1 else 999
+                | Inactive ->
+                  print_endline "inactive";
+                  model)
               ~reset:(fun context model ->
                 Bonsai.Apply_action_context.schedule_event
                   context
@@ -2068,8 +2068,8 @@ let%test_module "inactive delivery" =
                     ~sexp_of_model:[%sexp_of: Int.t]
                     ~equal:[%equal: Int.t]
                     ~reset:(fun _ ->
-                      print_endline "resetting";
-                      999))
+                    print_endline "resetting";
+                    999))
             in
             let%arr map = map in
             let res = Map.to_alist map |> List.map ~f:(fun (k, (v, _)) -> k, v) in
@@ -2146,7 +2146,7 @@ let%test_module "inactive delivery" =
               ~apply_action:
                 (fun
                   (_ : _ Bonsai.Apply_action_context.t) _ model is_increment ->
-                  if is_increment then model + 1 else 999)
+                if is_increment then model + 1 else 999)
               ~reset:(fun context model ->
                 Bonsai.Apply_action_context.schedule_event
                   context
@@ -2188,7 +2188,7 @@ let%test_module "inactive delivery" =
                   ~apply_action:
                     (fun
                       (_ : _ Bonsai.Apply_action_context.t) model is_increment ->
-                      if is_increment then model + 1 else 999)
+                    if is_increment then model + 1 else 999)
                   ~reset:(fun context model ->
                     Bonsai.Apply_action_context.schedule_event
                       context
@@ -2225,8 +2225,8 @@ let%test_module "inactive delivery" =
                     ~sexp_of_model:[%sexp_of: Int.t]
                     ~equal:[%equal: Int.t]
                     ~reset:(fun _ ->
-                      print_endline "resetting";
-                      999))
+                    print_endline "resetting";
+                    999))
             in
             let%arr map = map in
             let res = Map.to_alist map |> List.map ~f:(fun (k, (v, _)) -> k, v) in
@@ -2274,11 +2274,11 @@ let%test_module "inactive delivery" =
               ~apply_action:
                 (fun
                   (_ : _ Bonsai.Apply_action_context.t) input model new_model ->
-                  match input with
-                  | Active () -> new_model
-                  | Inactive ->
-                    print_endline "inactive";
-                    model)
+                match input with
+                | Active () -> new_model
+                | Inactive ->
+                  print_endline "inactive";
+                  model)
               (opaque_const_value ()))
       in
       let handle =
@@ -2452,15 +2452,15 @@ let%expect_test "let syntax is collapsed upon eval" =
     let open Bonsai.Private in
     let computation = reveal_computation computation in
     let (T
-           { model
-           ; input = _
-           ; apply_static = _
-           ; apply_dynamic = _
-           ; static_action
-           ; dynamic_action
-           ; run
-           ; reset = _
-           })
+          { model
+          ; input = _
+          ; apply_static = _
+          ; apply_dynamic = _
+          ; static_action
+          ; dynamic_action
+          ; run
+          ; reset = _
+          })
       =
       computation |> pre_process |> gather
     in
@@ -2947,11 +2947,11 @@ let%test_module "Clock.every" =
     ;;
 
     let create_clock_handle
-          ~start
-          ~svar
-          ~when_to_start_next_effect
-          ~trigger_on_activate
-          ~span
+      ~start
+      ~svar
+      ~when_to_start_next_effect
+      ~trigger_on_activate
+      ~span
       =
       let action =
         Value.return
@@ -3599,77 +3599,77 @@ let%test_module "Clock.every" =
             ; `Every_multiple_of_period_non_blocking
             ]
             ~f:(fun when_to_start_next_effect ->
-              let component =
-                let%sub state, set_state =
-                  Bonsai.state
-                    true
-                    ~sexp_of_model:[%sexp_of: Bool.t]
-                    ~equal:[%equal: Bool.t]
+            let component =
+              let%sub state, set_state =
+                Bonsai.state
+                  true
+                  ~sexp_of_model:[%sexp_of: Bool.t]
+                  ~equal:[%equal: Bool.t]
+              in
+              match%sub state with
+              | true ->
+                let%sub () =
+                  Bonsai.Clock.every
+                    ~when_to_start_next_effect
+                    ~trigger_on_activate:false
+                    (Time_ns.Span.of_sec 3.0)
+                    (let%map set_state = set_state in
+                     let%bind.Effect () =
+                       (Effect.of_sync_fun (fun () ->
+                          print_endline "[tick tock] - (state := false)"))
+                         ()
+                     in
+                     let%bind.Effect () = set_state false in
+                     print_sanitized_dropped_action_if_needed ())
                 in
-                match%sub state with
-                | true ->
-                  let%sub () =
-                    Bonsai.Clock.every
-                      ~when_to_start_next_effect
-                      ~trigger_on_activate:false
-                      (Time_ns.Span.of_sec 3.0)
-                      (let%map set_state = set_state in
-                       let%bind.Effect () =
-                         (Effect.of_sync_fun (fun () ->
-                            print_endline "[tick tock] - (state := false)"))
-                           ()
-                       in
-                       let%bind.Effect () = set_state false in
-                       print_sanitized_dropped_action_if_needed ())
-                  in
-                  Bonsai.const true
-                | false ->
-                  let%sub () =
-                    Bonsai.Edge.after_display
-                      (let%map set_state = set_state in
-                       let%bind.Effect () =
-                         (Effect.of_sync_fun (fun () -> print_endline "(state := true)")) ()
-                       in
-                       let%bind.Effect () = set_state true in
-                       print_sanitized_dropped_action_if_needed ())
-                  in
-                  Bonsai.const false
-              in
-              let start = Time_ns.of_span_since_epoch (Time_ns.Span.of_min 1.0) in
-              let handle =
-                Handle.create (Result_spec.sexp (module Bool)) ~start_time:start component
-              in
-              let move_forward_and_show = move_forward_and_show ~handle in
-              Handle.show handle;
-              [%expect {| true |}];
-              move_forward_and_show 3.0;
-              [%expect
-                {|
+                Bonsai.const true
+              | false ->
+                let%sub () =
+                  Bonsai.Edge.after_display
+                    (let%map set_state = set_state in
+                     let%bind.Effect () =
+                       (Effect.of_sync_fun (fun () -> print_endline "(state := true)")) ()
+                     in
+                     let%bind.Effect () = set_state true in
+                     print_sanitized_dropped_action_if_needed ())
+                in
+                Bonsai.const false
+            in
+            let start = Time_ns.of_span_since_epoch (Time_ns.Span.of_min 1.0) in
+            let handle =
+              Handle.create (Result_spec.sexp (module Bool)) ~start_time:start component
+            in
+            let move_forward_and_show = move_forward_and_show ~handle in
+            Handle.show handle;
+            [%expect {| true |}];
+            move_forward_and_show 3.0;
+            [%expect
+              {|
          [Whoops! An action was dropped!]
          after paint: 00:01:03.000000000Z |}];
-              Handle.show handle;
-              [%expect {| true |}];
-              move_forward_and_show 3.0;
-              [%expect
-                {|
+            Handle.show handle;
+            [%expect {| true |}];
+            move_forward_and_show 3.0;
+            [%expect
+              {|
          [Whoops! An action was dropped!]
          after paint: 00:01:06.000000000Z |}];
-              Handle.show handle;
-              [%expect {| true |}];
-              move_forward_and_show 3.0;
-              [%expect
-                {|
+            Handle.show handle;
+            [%expect {| true |}];
+            move_forward_and_show 3.0;
+            [%expect
+              {|
          [Whoops! An action was dropped!]
          after paint: 00:01:09.000000000Z |}];
-              Handle.show handle;
-              [%expect {| true |}];
-              move_forward_and_show 3.0;
-              [%expect
-                {|
+            Handle.show handle;
+            [%expect {| true |}];
+            move_forward_and_show 3.0;
+            [%expect
+              {|
          [Whoops! An action was dropped!]
          after paint: 00:01:12.000000000Z |}];
-              Handle.show handle;
-              [%expect {| true |}])
+            Handle.show handle;
+            [%expect {| true |}])
         ;;
       end)
     ;;
@@ -3684,53 +3684,53 @@ let%test_module "Clock.every" =
             ; `Every_multiple_of_period_non_blocking
             ]
             ~f:(fun when_to_start_next_effect ->
-              let svar = ref (Effect.For_testing.Svar.create ()) in
-              let handle =
-                create_clock_handle
-                  ~trigger_on_activate:false
-                  ~start:0.0
-                  ~svar
-                  ~when_to_start_next_effect
-                  ~span:0.01
-              in
-              let move_forward_and_show = move_forward_and_show ~handle in
-              Handle.show handle;
-              [%expect {| () |}];
-              move_forward_and_show
-                ~after_show:(fun () -> advance_and_clear_svar ~handle ~svar 0.)
-                0.01;
-              [%expect
-                {|
+            let svar = ref (Effect.For_testing.Svar.create ()) in
+            let handle =
+              create_clock_handle
+                ~trigger_on_activate:false
+                ~start:0.0
+                ~svar
+                ~when_to_start_next_effect
+                ~span:0.01
+            in
+            let move_forward_and_show = move_forward_and_show ~handle in
+            Handle.show handle;
+            [%expect {| () |}];
+            move_forward_and_show
+              ~after_show:(fun () -> advance_and_clear_svar ~handle ~svar 0.)
+              0.01;
+            [%expect
+              {|
          before: 00:00:00.000000000Z
          after:  00:00:00.010000000Z
          [tick] - effect started
          [tock] - effect ended
          after paint: 00:00:00.010000000Z |}];
-              move_forward_and_show
-                ~after_show:(fun () -> advance_and_clear_svar ~handle ~svar 0.)
-                0.01;
-              [%expect
-                {|
+            move_forward_and_show
+              ~after_show:(fun () -> advance_and_clear_svar ~handle ~svar 0.)
+              0.01;
+            [%expect
+              {|
          before: 00:00:00.010000000Z
          after:  00:00:00.020000000Z
          [tick] - effect started
          [tock] - effect ended
          after paint: 00:00:00.020000000Z |}];
-              move_forward_and_show
-                ~after_show:(fun () -> advance_and_clear_svar ~handle ~svar 0.)
-                0.01;
-              [%expect
-                {|
+            move_forward_and_show
+              ~after_show:(fun () -> advance_and_clear_svar ~handle ~svar 0.)
+              0.01;
+            [%expect
+              {|
          before: 00:00:00.020000000Z
          after:  00:00:00.030000000Z
          [tick] - effect started
          [tock] - effect ended
          after paint: 00:00:00.030000000Z |}];
-              move_forward_and_show
-                ~after_show:(fun () -> advance_and_clear_svar ~handle ~svar 0.)
-                0.01;
-              [%expect
-                {|
+            move_forward_and_show
+              ~after_show:(fun () -> advance_and_clear_svar ~handle ~svar 0.)
+              0.01;
+            [%expect
+              {|
          before: 00:00:00.030000000Z
          after:  00:00:00.040000000Z
          [tick] - effect started
@@ -3746,70 +3746,70 @@ let%test_module "Clock.every" =
             ; `Every_multiple_of_period_non_blocking
             ]
             ~f:(fun when_to_start_next_effect ->
-              let svar = ref (Effect.For_testing.Svar.create ()) in
-              let handle =
-                create_clock_handle
-                  ~trigger_on_activate:false
-                  ~start:0.0
-                  ~svar
-                  ~when_to_start_next_effect
-                  ~span:0.01
-              in
-              let move_forward_and_show ?(after_show = Fn.const ()) ~handle span =
-                printf "before: ";
-                print_time handle;
-                Handle.advance_clock_by handle (Time_ns.Span.of_sec span);
-                printf "after:  ";
-                print_time handle;
-                Handle.show handle;
-                (* Advancing the clock by one second (many time the clock's time span) before recomputing.  *)
-                Handle.advance_clock_by handle (Time_ns.Span.of_sec 1.0);
-                Handle.recompute_view handle;
-                after_show ();
-                printf "after paint: ";
-                print_time handle
-              in
-              let move_forward_and_show = move_forward_and_show ~handle in
+            let svar = ref (Effect.For_testing.Svar.create ()) in
+            let handle =
+              create_clock_handle
+                ~trigger_on_activate:false
+                ~start:0.0
+                ~svar
+                ~when_to_start_next_effect
+                ~span:0.01
+            in
+            let move_forward_and_show ?(after_show = Fn.const ()) ~handle span =
+              printf "before: ";
+              print_time handle;
+              Handle.advance_clock_by handle (Time_ns.Span.of_sec span);
+              printf "after:  ";
+              print_time handle;
               Handle.show handle;
-              [%expect {| () |}];
-              move_forward_and_show
-                ~after_show:(fun () -> advance_and_clear_svar ~handle ~svar 0.)
-                0.01;
-              [%expect
-                {|
+              (* Advancing the clock by one second (many time the clock's time span) before recomputing.  *)
+              Handle.advance_clock_by handle (Time_ns.Span.of_sec 1.0);
+              Handle.recompute_view handle;
+              after_show ();
+              printf "after paint: ";
+              print_time handle
+            in
+            let move_forward_and_show = move_forward_and_show ~handle in
+            Handle.show handle;
+            [%expect {| () |}];
+            move_forward_and_show
+              ~after_show:(fun () -> advance_and_clear_svar ~handle ~svar 0.)
+              0.01;
+            [%expect
+              {|
          before: 00:00:00.000000000Z
          after:  00:00:00.010000000Z
          ()
          [tick] - effect started
          [tock] - effect ended
          after paint: 00:00:01.010000000Z |}];
-              move_forward_and_show
-                ~after_show:(fun () -> advance_and_clear_svar ~handle ~svar 0.)
-                0.01;
-              [%expect
-                {|
+            move_forward_and_show
+              ~after_show:(fun () -> advance_and_clear_svar ~handle ~svar 0.)
+              0.01;
+            [%expect
+              {|
          before: 00:00:01.010000000Z
          after:  00:00:01.020000000Z
          ()
          [tick] - effect started
          [tock] - effect ended
          after paint: 00:00:02.020000000Z |}];
-              move_forward_and_show
-                ~after_show:(fun () -> advance_and_clear_svar ~handle ~svar 0.)
-                0.01;
-              [%expect
-                {|
+            move_forward_and_show
+              ~after_show:(fun () -> advance_and_clear_svar ~handle ~svar 0.)
+              0.01;
+            [%expect
+              {|
          before: 00:00:02.020000000Z
          after:  00:00:02.030000000Z
          ()
          [tick] - effect started
          [tock] - effect ended
          after paint: 00:00:03.030000000Z |}];
-              move_forward_and_show
-                ~after_show:(fun () -> advance_and_clear_svar ~handle ~svar 0.)
-                0.01;
-              [%expect
-                {|
+            move_forward_and_show
+              ~after_show:(fun () -> advance_and_clear_svar ~handle ~svar 0.)
+              0.01;
+            [%expect
+              {|
          before: 00:00:03.030000000Z
          after:  00:00:03.040000000Z
          ()
@@ -5038,22 +5038,22 @@ let%expect_test "with_self_effect" =
       ~sexp_of_model:[%sexp_of: Result_spec.t]
       ~equal:[%equal: Result_spec.t]
       ~f:(fun input ->
-        let%sub state =
-          Bonsai.state 0 ~sexp_of_model:[%sexp_of: Int.t] ~equal:[%equal: Int.t]
-        in
-        let%arr number, set_number = state
-        and input = input in
-        let effect action =
-          match action with
-          | Result_spec.Print ->
-            (match%bind.Effect input with
-             | Active (computed, (_ : Result_spec.action -> unit Effect.t)) ->
-               Effect.print_s [%message "Active" (computed : string)]
-             | Inactive -> Effect.print_s [%message "Inactive"])
-          | Set i -> set_number i
-        in
-        let computed = sprintf "the value: [%d]" number in
-        computed, effect)
+      let%sub state =
+        Bonsai.state 0 ~sexp_of_model:[%sexp_of: Int.t] ~equal:[%equal: Int.t]
+      in
+      let%arr number, set_number = state
+      and input = input in
+      let effect action =
+        match action with
+        | Result_spec.Print ->
+          (match%bind.Effect input with
+           | Active (computed, (_ : Result_spec.action -> unit Effect.t)) ->
+             Effect.print_s [%message "Active" (computed : string)]
+           | Inactive -> Effect.print_s [%message "Inactive"])
+        | Set i -> set_number i
+      in
+      let computed = sprintf "the value: [%d]" number in
+      computed, effect)
   in
   let handle = Handle.create (module Result_spec) component in
   Handle.show handle;
@@ -5084,9 +5084,9 @@ let%expect_test "state_machine_dynamic_model" =
       (module String)
       ~model:
         (`Computed
-           (Bonsai.Value.return (function
-              | None -> "not set "
-              | Some s -> sprintf "set %s" s)))
+          (Bonsai.Value.return (function
+            | None -> "not set "
+            | Some s -> sprintf "set %s" s)))
       ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) _model action -> action)
   in
   let handle =
@@ -5582,14 +5582,14 @@ let%test_module "mirror" =
       let interactive = Bonsai.Var.create interactive in
       let store_set =
         (fun value ->
-           printf "store set to \"%s\"" value;
-           Bonsai.Var.set store value)
+          printf "store set to \"%s\"" value;
+          Bonsai.Var.set store value)
         |> Ui_effect.of_sync_fun
       in
       let interactive_set =
         (fun value ->
-           printf "interactive set to \"%s\"" value;
-           Bonsai.Var.set interactive value)
+          printf "interactive set to \"%s\"" value;
+          Bonsai.Var.set interactive value)
         |> Ui_effect.of_sync_fun
       in
       let component =
@@ -5677,14 +5677,14 @@ let%test_module "mirror'" =
       let interactive = Bonsai.Var.create interactive in
       let store_set =
         (fun value ->
-           printf "store set to \"%s\"" value;
-           Bonsai.Var.set store (Some value))
+          printf "store set to \"%s\"" value;
+          Bonsai.Var.set store (Some value))
         |> Ui_effect.of_sync_fun
       in
       let interactive_set =
         (fun value ->
-           printf "interactive set to \"%s\"" value;
-           Bonsai.Var.set interactive (Some value))
+          printf "interactive set to \"%s\"" value;
+          Bonsai.Var.set interactive (Some value))
         |> Ui_effect.of_sync_fun
       in
       let component =
@@ -6262,13 +6262,13 @@ let%expect_test "State machine actions that are scheduled while running the acti
       ~sexp_of_action:[%sexp_of: Int.t]
       ~default_model:()
       ~apply_action:(fun context () n ->
-        print_s [%message (n : int)];
-        if n <= 0
-        then ()
-        else
-          Bonsai.Apply_action_context.schedule_event
-            context
-            (Bonsai.Apply_action_context.inject context (n - 1)))
+      print_s [%message (n : int)];
+      if n <= 0
+      then ()
+      else
+        Bonsai.Apply_action_context.schedule_event
+          context
+          (Bonsai.Apply_action_context.inject context (n - 1)))
   in
   let handle =
     Handle.create

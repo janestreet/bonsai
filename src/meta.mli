@@ -1,4 +1,3 @@
-
 (** [Meta.Model] and [Meta.Action] contain the necessary functions associated with the
     hidden model and action types of Bonsai components.  These are stored in
     [Computation.info]. *)

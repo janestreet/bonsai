@@ -1,6 +1,6 @@
 open! Core
 open! Bonsai_web
-open  Bonsai.Let_syntax
+open Bonsai.Let_syntax
 module Gallery = Bonsai_web_ui_gallery
 
 module User_defined_notification = struct
@@ -13,43 +13,43 @@ module User_defined_notification = struct
 
   include
     [%demo
-      module Notification = struct
-        type t =
-          | Success of string
-          | Error   of string
-        [@@deriving sexp, equal]
+    module Notification = struct
+      type t =
+        | Success of string
+        | Error of string
+      [@@deriving sexp, equal]
 
-        let render ~close t =
-          let%sub theme = View.Theme.current in
-          let%arr close = close
-          and t     = t
-          and theme = theme in
-          match t with
-          | Success message ->
-            View.card theme ~intent:Success ~on_click:close ~title:"Success" message
-          | Error error ->
-            View.card theme ~intent:Error ~on_click:close ~title:"Error" error
-        ;;
-      end
+      let render ~close t =
+        let%sub theme = View.Theme.current in
+        let%arr close = close
+        and t = t
+        and theme = theme in
+        match t with
+        | Success message ->
+          View.card theme ~intent:Success ~on_click:close ~title:"Success" message
+        | Error error ->
+          View.card theme ~intent:Error ~on_click:close ~title:"Error" error
+      ;;
+    end
 
-      module Notifications = Bonsai_web_ui_notifications
+    module Notifications = Bonsai_web_ui_notifications
 
-      let component =
-        let%sub notifications =
-          Notifications.component (module Notification) ~equal:[%equal: Notification.t]
-        in
-        let%sub vdom = Notifications.render notifications ~f:Notification.render in
-        let%arr vdom = vdom
-        and notifications = notifications in
-        vdom, Notifications.send_notification notifications
-      ;;]
+    let component =
+      let%sub notifications =
+        Notifications.component (module Notification) ~equal:[%equal: Notification.t]
+      in
+      let%sub vdom = Notifications.render notifications ~f:Notification.render in
+      let%arr vdom = vdom
+      and notifications = notifications in
+      vdom, Notifications.send_notification notifications
+    ;;]
 
   let view =
     let%sub theme = View.Theme.current in
     let%sub component, send_notification = component in
     let%arr component = component
     and send_notification = send_notification
-    and theme             = theme in
+    and theme = theme in
     let vdom =
       View.hbox
         ~gap:(`Em 1)
@@ -69,7 +69,7 @@ module User_defined_notification = struct
     vdom, ppx_demo_string
   ;;
 
-  let selector     = None
+  let selector = None
   let filter_attrs = None
 end
 

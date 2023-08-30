@@ -178,24 +178,24 @@ module For_testing = struct
       let result =
         Ui_effect.For_testing.of_svar_fun
           (fun () ->
-             Test_data.read
-               test_data
-               { on_progress =
-                   (fun progress -> on_progress progress |> Ui_effect.Expert.handle)
-               ; on_finished =
-                   (fun result ->
-                      Svar.fill_if_empty
-                        result_var
-                        (Result.map_error result ~f:(fun e -> Read_error.Error e)))
-               };
-             result_var)
+            Test_data.read
+              test_data
+              { on_progress =
+                  (fun progress -> on_progress progress |> Ui_effect.Expert.handle)
+              ; on_finished =
+                  (fun result ->
+                    Svar.fill_if_empty
+                      result_var
+                      (Result.map_error result ~f:(fun e -> Read_error.Error e)))
+              };
+            result_var)
           ()
       in
       let abort =
         Ui_effect.of_sync_fun
           (fun () ->
-             Test_data.abort_read test_data;
-             Svar.fill_if_empty result_var (Error Aborted))
+            Test_data.abort_read test_data;
+            Svar.fill_if_empty result_var (Error Aborted))
           ()
       in
       { File_read.result; abort }

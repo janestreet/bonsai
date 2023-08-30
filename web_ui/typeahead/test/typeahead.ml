@@ -1,7 +1,7 @@
 open! Core
 open! Bonsai_web
 open! Bonsai_web_test
-open  Bonsai.Let_syntax
+open Bonsai.Let_syntax
 module Typeahead = Bonsai_web_ui_typeahead.Typeahead
 
 let shared_computation ?(to_string = Value.return Data.to_string) () =
@@ -82,7 +82,7 @@ let%expect_test "Focusing and un-focusing the input shows and hides the datalist
              oninput> </input>
 
     </div> |}];
-  Handle.focus     handle ~get_vdom:Fn.id ~selector:"input";
+  Handle.focus handle ~get_vdom:Fn.id ~selector:"input";
   Handle.show_diff handle;
   [%expect
     {|
@@ -102,7 +102,7 @@ let%expect_test "Focusing and un-focusing the input shows and hides the datalist
     +|    <option value="Option C"> Option C </option>
     +|  </datalist>
       </div> |}];
-  Handle.blur      handle ~get_vdom:Fn.id ~selector:"input";
+  Handle.blur handle ~get_vdom:Fn.id ~selector:"input";
   Handle.show_diff handle;
   [%expect
     {|
@@ -165,7 +165,7 @@ let%expect_test "use setter" =
     Handle.create
       (module struct
         type incoming = Data.t option
-        type t        = Vdom.Node.t * (Data.t option -> unit Ui_effect.t)
+        type t = Vdom.Node.t * (Data.t option -> unit Ui_effect.t)
 
         let view (vdom, _) =
           let module V = (val Result_spec.vdom Fn.id) in
@@ -179,7 +179,7 @@ let%expect_test "use setter" =
   Handle.show handle;
   let _before = [%expect.output] in
   Handle.do_actions handle [ Some Data.Option_A ];
-  Handle.show_diff  handle;
+  Handle.show_diff handle;
   [%expect
     {|
       <div>
@@ -201,7 +201,7 @@ let%expect_test "use setter" =
         </datalist>
       </div> |}];
   Handle.do_actions handle [ None ];
-  Handle.show_diff  handle;
+  Handle.show_diff handle;
   [%expect
     {|
       <div>
@@ -239,17 +239,17 @@ let%expect_test "Select element using partial input" =
   [%expect {| () |}];
   (* "O" is not unique, nothing happens *)
   Handle.input_text handle ~get_vdom:Tuple2.get1 ~selector:"input" ~text:"O";
-  Handle.show       handle;
+  Handle.show handle;
   [%expect {| () |}];
   (* 'C' is unique, use it! *)
   Handle.input_text handle ~get_vdom:Tuple2.get1 ~selector:"input" ~text:"C";
-  Handle.show       handle;
+  Handle.show handle;
   [%expect {| (Option_C) |}]
 ;;
 
 let%expect_test "dynamic [to_string]." =
-  let to_string_var = Bonsai.Var.create Data.to_string                                 in
-  let to_string = Bonsai.Var.value to_string_var                                       in
+  let to_string_var = Bonsai.Var.create Data.to_string in
+  let to_string = Bonsai.Var.value to_string_var in
   let handle = Handle.create (Result_spec.vdom Fn.id) (view_computation ~to_string ()) in
   Handle.store_view handle;
   Bonsai.Var.set to_string_var (fun data -> Data.to_string data ^ "!");

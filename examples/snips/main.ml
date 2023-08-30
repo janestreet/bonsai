@@ -7,9 +7,9 @@ open! Snips.Infix
 
 module Shared_code = struct
   module Style =
-    [%css
-      stylesheet
-        {|
+  [%css
+  stylesheet
+    {|
     .container {
       width: 400px;
       height: 200px;
@@ -158,8 +158,8 @@ module Markup = struct
         s
         |> String.lowercase
         |> String.map ~f:(function
-          | ('a' .. 'z' | '0' .. '1') as alphanum -> alphanum
-          | _ -> '_')
+             | ('a' .. 'z' | '0' .. '1') as alphanum -> alphanum
+             | _ -> '_')
       in
       let link = Vdom.Node.a ~attrs:[ Vdom.Attr.href ("#" ^ id) ] [ Vdom.Node.text s ] in
       Bonsai.const (Vdom.Node.h2 ~attrs:[ Vdom.Attr.id id ] [ link ])
@@ -181,24 +181,24 @@ module Markup = struct
     | Ds a ->
       a
       |> List.map ~f:(fun (ocaml_label, c) ->
-        let%sub demo, code = c in
-        let%sub code = remove_layout_comments code in
-        let%sub r =
-          Gallery.make_demo' ~hide_html:true ~ocaml_label:None ~demo ~code ()
-        in
-        let%arr r = r in
-        ocaml_label, r)
+           let%sub demo, code = c in
+           let%sub code = remove_layout_comments code in
+           let%sub r =
+             Gallery.make_demo' ~hide_html:true ~ocaml_label:None ~demo ~code ()
+           in
+           let%arr r = r in
+           ocaml_label, r)
       |> Computation.all
       |> Computation.map ~f:(fun demos ->
-        demos
-        |> List.concat_map ~f:(fun (label, { code; demo }) ->
-          let pre =
-            match label with
-            | None -> []
-            | Some label -> [ Vdom.Node.text label; Vdom.Node.div [] ]
-          in
-          pre @ [ code; demo ])
-        |> Vdom.Node.div ~attrs:[ Shared_code.Style.x2_grid ])
+           demos
+           |> List.concat_map ~f:(fun (label, { code; demo }) ->
+                let pre =
+                  match label with
+                  | None -> []
+                  | Some label -> [ Vdom.Node.text label; Vdom.Node.div [] ]
+                in
+                pre @ [ code; demo ])
+           |> Vdom.Node.div ~attrs:[ Shared_code.Style.x2_grid ])
   ;;
 end
 
@@ -439,7 +439,7 @@ module Splits = struct
           Snips.top (red "header")
           |+| Snips.split_h
                 [ Snips.body (blue lorem_ipsum)
-                (* remove-this-line  (for line breaking purposes) *)
+                  (* remove-this-line  (for line breaking purposes) *)
                 ; Snips.body (green lorem_ipsum)
                 ]
         in
@@ -546,12 +546,12 @@ let component =
       (Value.return
          (Effect.of_sync_fun
             (fun () ->
-               let open Js_of_ocaml in
-               match Js.to_string Dom_html.window##.location##.hash with
-               | "" -> ()
-               | other ->
-                 Dom_html.window##.location##.hash := Js.string "";
-                 Dom_html.window##.location##.hash := Js.string other)
+              let open Js_of_ocaml in
+              match Js.to_string Dom_html.window##.location##.hash with
+              | "" -> ()
+              | other ->
+                Dom_html.window##.location##.hash := Js.string "";
+                Dom_html.window##.location##.hash := Js.string other)
             ()))
   in
   View.Theme.set_for_app

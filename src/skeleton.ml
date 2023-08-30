@@ -9,10 +9,7 @@ module Id = struct
   include Int
 
   let of_type_id id =
-    id
-    |> Type_equal.Id.uid
-    |> Type_equal.Id.Uid.sexp_of_t
-    |> Int.t_of_sexp
+    id |> Type_equal.Id.uid |> Type_equal.Id.Uid.sexp_of_t |> Int.t_of_sexp
   ;;
 
   let of_model_type_id id = id |> Meta.Model.Type_id.to_type_id |> of_type_id

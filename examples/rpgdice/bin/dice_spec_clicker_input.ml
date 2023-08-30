@@ -18,7 +18,7 @@ module Model = struct
     let dice =
       Map.to_alist dice
       |> List.map ~f:(fun (num_faces, count) ->
-        count, Rpgdice.Roll_spec.Die.of_int num_faces)
+           count, Rpgdice.Roll_spec.Die.of_int num_faces)
     in
     Rpgdice.Roll_spec.of_dice_and_const dice const
   ;;
@@ -42,16 +42,16 @@ let component =
       ~sexp_of_action:[%sexp_of: Action.t]
       ~default_model:Model.init
       ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) model -> function
-        | Decrement_const -> { model with const = model.const - 1 }
-        | Increment_const -> { model with const = model.const + 1 }
-        | Increment { num_faces } ->
-          { model with
-            dice =
-              Map.update model.dice num_faces ~f:(function
-                | None -> failwith "map keys shouldn't have changed"
-                | Some v -> v + 1)
-          }
-        | Clear -> { const = 0; dice = Map.map model.dice ~f:(Fn.const 0) })
+      | Decrement_const -> { model with const = model.const - 1 }
+      | Increment_const -> { model with const = model.const + 1 }
+      | Increment { num_faces } ->
+        { model with
+          dice =
+            Map.update model.dice num_faces ~f:(function
+              | None -> failwith "map keys shouldn't have changed"
+              | Some v -> v + 1)
+        }
+      | Clear -> { const = 0; dice = Map.map model.dice ~f:(Fn.const 0) })
   in
   let%arr model, inject = dice_state in
   let button = Vdom_input_widgets.Button.simple in

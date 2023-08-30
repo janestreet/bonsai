@@ -25,9 +25,9 @@ type 'a t =
 type packed = T : 'a t -> packed
 
 module Css =
-  [%css
-    stylesheet
-      {|
+[%css
+stylesheet
+  {|
 .paper {
   box-shadow: 0 0 8px rgba(0,0,0,0.2);
   padding: 12px;
@@ -138,11 +138,11 @@ let uri_form ~default =
 
 (* This form is the one that reads/writes the parsed sexp. *)
 let typed_url_form
-      (type a)
-      ~default
-      ~parser
-      (module M : Sexpable with type t = a)
-      ~fallback
+  (type a)
+  ~default
+  ~parser
+  (module M : Sexpable with type t = a)
+  ~fallback
   =
   let%sub form =
     let%sub form =
@@ -319,25 +319,25 @@ let component (type a) (t : a t) =
 ;;
 
 module Homepage_and_settings_demo =
-  [%demo
-    module Homepage_and_settings = struct
-      type t =
-        | Homepage
-        | Settings of int
-      [@@deriving typed_variants, sexp, equal]
+[%demo
+module Homepage_and_settings = struct
+  type t =
+    | Homepage
+    | Settings of int
+  [@@deriving typed_variants, sexp, equal]
 
-      let parser_for_variant : type a. a Typed_variant.t -> a Parser.t = function
-        | Homepage -> Parser.end_of_path Parser.unit
-        | Settings -> Parser.from_query_required ~key:"volume" Value_parser.int
-      ;;
-    end
+  let parser_for_variant : type a. a Typed_variant.t -> a Parser.t = function
+    | Homepage -> Parser.end_of_path Parser.unit
+    | Settings -> Parser.from_query_required ~key:"volume" Value_parser.int
+  ;;
+end
 
-    let parser = Parser.Variant.make (module Homepage_and_settings)
+let parser = Parser.Variant.make (module Homepage_and_settings)
 
-    let%expect_test _ =
-      Parser.check_ok_and_print_urls_or_errors parser;
-      [%expect
-        {|
+let%expect_test _ =
+  Parser.check_ok_and_print_urls_or_errors parser;
+  [%expect
+    {|
         URL parser looks good!
         ┌────────────────────────┐
         │ All urls               │
@@ -345,7 +345,7 @@ module Homepage_and_settings_demo =
         │ /                      │
         │ /settings?volume=<int> │
         └────────────────────────┘ |}]
-    ;;]
+;;]
 
 module Homepage_and_settings = Homepage_and_settings_demo.Homepage_and_settings
 
@@ -364,25 +364,25 @@ let home_and_settings : Homepage_and_settings.t t =
 ;;
 
 module Foo_bar_example =
-  [%demo
-    module My_url = struct
-      type t =
-        | Foo
-        | Bar
-      [@@deriving typed_variants, sexp, equal]
+[%demo
+module My_url = struct
+  type t =
+    | Foo
+    | Bar
+  [@@deriving typed_variants, sexp, equal]
 
-      let parser_for_variant : type a. a Typed_variant.t -> a Parser.t = function
-        | Foo -> Parser.unit
-        | Bar -> Parser.unit
-      ;;
-    end
+  let parser_for_variant : type a. a Typed_variant.t -> a Parser.t = function
+    | Foo -> Parser.unit
+    | Bar -> Parser.unit
+  ;;
+end
 
-    let parser = Parser.Variant.make (module My_url)
+let parser = Parser.Variant.make (module My_url)
 
-    let%expect_test _ =
-      Parser.check_ok_and_print_urls_or_errors parser;
-      [%expect
-        {|
+let%expect_test _ =
+  Parser.check_ok_and_print_urls_or_errors parser;
+  [%expect
+    {|
         URL parser looks good!
         ┌──────────┐
         │ All urls │
@@ -390,7 +390,7 @@ module Foo_bar_example =
         │ /bar     │
         │ /foo     │
         └──────────┘ |}]
-    ;;]
+;;]
 
 let foo_bar_example =
   { starting_components = Url_var.Components.create ~path:"foo" ~query:String.Map.empty ()
@@ -408,81 +408,81 @@ let foo_bar_example =
 ;;
 
 module Partial_match_example =
-  [%demo
-    module Book = struct
-      type t =
-        | Book_search
-        | Book_view of string
-      [@@deriving typed_variants, sexp, equal]
+[%demo
+module Book = struct
+  type t =
+    | Book_search
+    | Book_view of string
+  [@@deriving typed_variants, sexp, equal]
 
-      let parser_for_variant : type a. a Typed_variant.t -> a Parser.t = function
-        | Book_search -> Parser.end_of_path Parser.unit
-        | Book_view -> Parser.with_prefix [] (Parser.from_path Value_parser.string)
-      ;;
-    end
+  let parser_for_variant : type a. a Typed_variant.t -> a Parser.t = function
+    | Book_search -> Parser.end_of_path Parser.unit
+    | Book_view -> Parser.with_prefix [] (Parser.from_path Value_parser.string)
+  ;;
+end
 
-    module Movie = struct
-      type t =
-        | Movie_search
-        | Movie_view of string
-      [@@deriving typed_variants, sexp, equal]
+module Movie = struct
+  type t =
+    | Movie_search
+    | Movie_view of string
+  [@@deriving typed_variants, sexp, equal]
 
-      let parser_for_variant : type a. a Typed_variant.t -> a Parser.t = function
-        | Movie_search -> Parser.end_of_path Parser.unit
-        | Movie_view -> Parser.with_prefix [] (Parser.from_path Value_parser.string)
-      ;;
-    end
+  let parser_for_variant : type a. a Typed_variant.t -> a Parser.t = function
+    | Movie_search -> Parser.end_of_path Parser.unit
+    | Movie_view -> Parser.with_prefix [] (Parser.from_path Value_parser.string)
+  ;;
+end
 
-    module Library = struct
-      type t =
-        | Content_search
-        | Book of Book.t
-        | Movie of Movie.t
-      [@@deriving typed_variants, sexp, equal]
+module Library = struct
+  type t =
+    | Content_search
+    | Book of Book.t
+    | Movie of Movie.t
+  [@@deriving typed_variants, sexp, equal]
 
-      let parser_for_variant : type a. a Typed_variant.t -> a Parser.t = function
-        | Content_search -> Parser.end_of_path Parser.unit
-        | Book -> Parser.with_prefix [ "book" ] (Parser.Variant.make (module Book))
-        | Movie -> Parser.with_prefix [ "movie" ] (Parser.Variant.make (module Movie))
-      ;;
-    end
+  let parser_for_variant : type a. a Typed_variant.t -> a Parser.t = function
+    | Content_search -> Parser.end_of_path Parser.unit
+    | Book -> Parser.with_prefix [ "book" ] (Parser.Variant.make (module Book))
+    | Movie -> Parser.with_prefix [ "movie" ] (Parser.Variant.make (module Movie))
+  ;;
+end
 
-    module My_url = struct
-      type t =
-        | Library_search
-        | Library_page of
-            { library_name : string
-            ; library_contents : Library.t
-            } [@typed_fields]
-      [@@deriving typed_variants, sexp, equal]
+module My_url = struct
+  type t =
+    | Library_search
+    | Library_page of
+        { library_name : string
+        ; library_contents : Library.t
+        } [@typed_fields]
+  [@@deriving typed_variants, sexp, equal]
 
-      module Anon_library_page = struct
-        module Typed_field =
-          Typed_variant.Typed_variant_anonymous_records.Typed_field_of_library_page
+  module Anon_library_page = struct
+    module Typed_field =
+      Typed_variant.Typed_variant_anonymous_records.Typed_field_of_library_page
 
-        let parser_for_field : type a. a Typed_field.t -> a Parser.t = function
-          | Library_name -> Parser.from_path Value_parser.string
-          | Library_contents -> Parser.Variant.make (module Library)
-        ;;
+    let parser_for_field : type a. a Typed_field.t -> a Parser.t = function
+      | Library_name -> Parser.from_path Value_parser.string
+      | Library_contents -> Parser.Variant.make (module Library)
+    ;;
 
-        module Path_order = Path_order (Typed_field)
+    module Path_order = Path_order (Typed_field)
 
-        let path_order = Path_order.T [ Library_name; Library_contents ]
-      end
+    let path_order = Path_order.T [ Library_name; Library_contents ]
+  end
 
-      let parser_for_variant : type a. a Typed_variant.t -> a Parser.t = function
-        | Library_search -> Parser.with_remaining_path [ "library" ] Parser.unit
-        | Library_page ->
-          Parser.with_prefix [ "library" ] (Parser.Record.make (module Anon_library_page))
-      ;;
-    end
+  let parser_for_variant : type a. a Typed_variant.t -> a Parser.t = function
+    | Library_search -> Parser.with_remaining_path [ "library" ] Parser.unit
+    | Library_page ->
+      Parser.with_prefix [ "library" ] (Parser.Record.make (module Anon_library_page))
+  ;;
+end
 
-    let parser = Parser.Variant.make (module My_url)
+let parser = Parser.Variant.make (module My_url)
 
-    let%expect_test _ =
-      Parser.check_ok_and_print_urls_or_errors parser;
-      [%expect
-        {|
+let%expect_test _ =
+  Parser.check_ok_and_print_urls_or_errors parser;
+  [%expect
+    {|
         URL parser looks good!
         ┌──────────────────────────────────┐
         │ All urls                         │
@@ -494,7 +494,7 @@ module Partial_match_example =
         │ /library/<string>/movie          │
         │ /library/<string>/movie/<string> │
         └──────────────────────────────────┘ |}]
-    ;;]
+;;]
 
 let folder_example : Partial_match_example.My_url.t t =
   { starting_components =
@@ -530,24 +530,24 @@ let folder_example : Partial_match_example.My_url.t t =
 ;;
 
 module Reading_from_query =
-  [%demo
-    module My_url = struct
-      type t = int [@@deriving sexp, equal]
+[%demo
+module My_url = struct
+  type t = int [@@deriving sexp, equal]
 
-      let parser = Parser.from_query_required ~key:"video" Value_parser.int
+  let parser = Parser.from_query_required ~key:"video" Value_parser.int
 
-      let%expect_test _ =
-        Parser.check_ok_and_print_urls_or_errors parser;
-        [%expect
-          {|
+  let%expect_test _ =
+    Parser.check_ok_and_print_urls_or_errors parser;
+    [%expect
+      {|
           URL parser looks good!
           ┌───────────────┐
           │ All urls      │
           ├───────────────┤
           │ /?video=<int> │
           └───────────────┘ |}]
-      ;;
-    end]
+  ;;
+end]
 
 let reading_from_query =
   { starting_components =
@@ -564,24 +564,24 @@ let reading_from_query =
 ;;
 
 module Reading_from_path =
-  [%demo
-    module My_url = struct
-      type t = int [@@deriving sexp, equal]
+[%demo
+module My_url = struct
+  type t = int [@@deriving sexp, equal]
 
-      let parser = Parser.from_path Value_parser.int
+  let parser = Parser.from_path Value_parser.int
 
-      let%expect_test _ =
-        Parser.check_ok_and_print_urls_or_errors parser;
-        [%expect
-          {|
+  let%expect_test _ =
+    Parser.check_ok_and_print_urls_or_errors parser;
+    [%expect
+      {|
           URL parser looks good!
           ┌──────────┐
           │ All urls │
           ├──────────┤
           │ /<int>   │
           └──────────┘ |}]
-      ;;
-    end]
+  ;;
+end]
 
 let reading_from_path =
   { starting_components = Url_var.Components.create ~path:"123" ()
@@ -596,25 +596,25 @@ let reading_from_path =
 ;;
 
 module Search =
-  [%demo
-    module My_url = struct
-      type t =
-        | Homepage
-        | Search of string
-      [@@deriving typed_variants, sexp, equal]
+[%demo
+module My_url = struct
+  type t =
+    | Homepage
+    | Search of string
+  [@@deriving typed_variants, sexp, equal]
 
-      let parser_for_variant : type a. a Typed_variant.t -> a Parser.t = function
-        | Search -> Parser.from_query_required ~key:"q" Value_parser.string
-        | Homepage -> Parser.unit
-      ;;
-    end
+  let parser_for_variant : type a. a Typed_variant.t -> a Parser.t = function
+    | Search -> Parser.from_query_required ~key:"q" Value_parser.string
+    | Homepage -> Parser.unit
+  ;;
+end
 
-    let parser = Parser.Variant.make (module My_url)
+let parser = Parser.Variant.make (module My_url)
 
-    let%expect_test _ =
-      Parser.check_ok_and_print_urls_or_errors parser;
-      [%expect
-        {|
+let%expect_test _ =
+  Parser.check_ok_and_print_urls_or_errors parser;
+  [%expect
+    {|
         URL parser looks good!
         ┌────────────────────┐
         │ All urls           │
@@ -622,7 +622,7 @@ module Search =
         │ /homepage          │
         │ /search?q=<string> │
         └────────────────────┘ |}]
-    ;;]
+;;]
 
 let search_example =
   { starting_components =
@@ -641,25 +641,25 @@ let search_example =
 ;;
 
 module Error_message_example =
-  [%demo
-    module My_url = struct
-      type t =
-        | Foo
-        | Bar
-      [@@deriving typed_variants, sexp, equal]
+[%demo
+module My_url = struct
+  type t =
+    | Foo
+    | Bar
+  [@@deriving typed_variants, sexp, equal]
 
-      let parser_for_variant : type a. a Typed_variant.t -> a Parser.t = function
-        | Foo -> Parser.with_prefix [ "foo" ] Parser.unit
-        | Bar -> Parser.with_prefix [ "foo" ] Parser.unit
-      ;;
-    end
+  let parser_for_variant : type a. a Typed_variant.t -> a Parser.t = function
+    | Foo -> Parser.with_prefix [ "foo" ] Parser.unit
+    | Bar -> Parser.with_prefix [ "foo" ] Parser.unit
+  ;;
+end
 
-    let parser = Parser.Variant.make (module My_url)
+let parser = Parser.Variant.make (module My_url)
 
-    let%expect_test _ =
-      Parser.check_ok_and_print_urls_or_errors parser;
-      [%expect
-        {|
+let%expect_test _ =
+  Parser.check_ok_and_print_urls_or_errors parser;
+  [%expect
+    {|
         Error with parser.
         ┌─────────────────────────────────────────────────────────┬──────────────────────────────────────────────────────────────────────────────────────────┐
         │ Check name                                              │ Error message                                                                            │
@@ -670,7 +670,7 @@ module Error_message_example =
         │                                                         │ ting renames with [with_prefix] or [with_remaining_path]."                               │
         │                                                         │  (duplicate_urls (/foo)))                                                                │
         └─────────────────────────────────────────────────────────┴──────────────────────────────────────────────────────────────────────────────────────────┘ |}]
-    ;;]
+;;]
 
 let error_example_component =
   let out =
@@ -695,37 +695,37 @@ let error_example_component =
 ;;
 
 module Simple_record_example =
-  [%demo
-    module My_url = struct
-      type t =
-        { foo : int
-        ; bar : string
-        }
-      [@@deriving typed_fields, sexp, equal]
+[%demo
+module My_url = struct
+  type t =
+    { foo : int
+    ; bar : string
+    }
+  [@@deriving typed_fields, sexp, equal]
 
-      let parser_for_field : type a. a Typed_field.t -> a Parser.t = function
-        | Foo -> Parser.from_query_required Value_parser.int
-        | Bar -> Parser.from_path Value_parser.string
-      ;;
+  let parser_for_field : type a. a Typed_field.t -> a Parser.t = function
+    | Foo -> Parser.from_query_required Value_parser.int
+    | Bar -> Parser.from_path Value_parser.string
+  ;;
 
-      module Path_order = Path_order (Typed_field)
+  module Path_order = Path_order (Typed_field)
 
-      let path_order = Path_order.T [ Bar ]
-    end
+  let path_order = Path_order.T [ Bar ]
+end
 
-    let parser = Parser.Record.make (module My_url)
+let parser = Parser.Record.make (module My_url)
 
-    let%expect_test _ =
-      Parser.check_ok_and_print_urls_or_errors parser;
-      [%expect
-        {|
+let%expect_test _ =
+  Parser.check_ok_and_print_urls_or_errors parser;
+  [%expect
+    {|
         URL parser looks good!
         ┌─────────────────────┐
         │ All urls            │
         ├─────────────────────┤
         │ /<string>?foo=<int> │
         └─────────────────────┘ |}]
-    ;;]
+;;]
 
 let simple_record_example =
   { starting_components =
@@ -744,42 +744,42 @@ let simple_record_example =
 ;;
 
 module Anonymous_record_example =
-  [%demo
-    module My_youtube_clone = struct
-      type t =
-        | Homepage
-        | Video of
-            { video_id : string
-            ; channel : string
-            } [@typed_fields]
-      [@@deriving typed_variants, sexp, equal]
+[%demo
+module My_youtube_clone = struct
+  type t =
+    | Homepage
+    | Video of
+        { video_id : string
+        ; channel : string
+        } [@typed_fields]
+  [@@deriving typed_variants, sexp, equal]
 
-      module Anon_video_record = struct
-        module Typed_field =
-          Typed_variant.Typed_variant_anonymous_records.Typed_field_of_video
+  module Anon_video_record = struct
+    module Typed_field =
+      Typed_variant.Typed_variant_anonymous_records.Typed_field_of_video
 
-        let parser_for_field : type a. a Typed_field.t -> a Parser.t = function
-          | Video_id -> Parser.from_query_required Value_parser.string
-          | Channel -> Parser.from_query_required Value_parser.string
-        ;;
+    let parser_for_field : type a. a Typed_field.t -> a Parser.t = function
+      | Video_id -> Parser.from_query_required Value_parser.string
+      | Channel -> Parser.from_query_required Value_parser.string
+    ;;
 
-        module Path_order = Path_order (Typed_field)
+    module Path_order = Path_order (Typed_field)
 
-        let path_order = Path_order.T []
-      end
+    let path_order = Path_order.T []
+  end
 
-      let parser_for_variant : type a. a Typed_variant.t -> a Parser.t = function
-        | Homepage -> Parser.end_of_path Parser.unit
-        | Video -> Parser.Record.make ~namespace:[] (module Anon_video_record)
-      ;;
-    end
+  let parser_for_variant : type a. a Typed_variant.t -> a Parser.t = function
+    | Homepage -> Parser.end_of_path Parser.unit
+    | Video -> Parser.Record.make ~namespace:[] (module Anon_video_record)
+  ;;
+end
 
-    let parser = Parser.Variant.make (module My_youtube_clone)
+let parser = Parser.Variant.make (module My_youtube_clone)
 
-    let%expect_test _ =
-      Parser.check_ok_and_print_urls_or_errors parser;
-      [%expect
-        {|
+let%expect_test _ =
+  Parser.check_ok_and_print_urls_or_errors parser;
+  [%expect
+    {|
         URL parser looks good!
         ┌───────────────────────────────────────────┐
         │ All urls                                  │
@@ -787,7 +787,7 @@ module Anonymous_record_example =
         │ /                                         │
         │ /video?channel=<string>&video_id=<string> │
         └───────────────────────────────────────────┘ |}]
-    ;;]
+;;]
 
 let anonymous_record_example =
   { starting_components =
@@ -818,33 +818,33 @@ let anonymous_record_example =
 ;;
 
 module Tuple_example =
-  [%demo
-    module My_tuple_url = struct
-      type t = int * string [@@deriving typed_fields, sexp, equal]
+[%demo
+module My_tuple_url = struct
+  type t = int * string [@@deriving typed_fields, sexp, equal]
 
-      let parser_for_field : type a. a Typed_field.t -> a Parser.t = function
-        | T_1 -> Parser.from_query_required Value_parser.int
-        | T_2 -> Parser.from_query_required Value_parser.string
-      ;;
+  let parser_for_field : type a. a Typed_field.t -> a Parser.t = function
+    | T_1 -> Parser.from_query_required Value_parser.int
+    | T_2 -> Parser.from_query_required Value_parser.string
+  ;;
 
-      module Path_order = Path_order (Typed_field)
+  module Path_order = Path_order (Typed_field)
 
-      let path_order = Path_order.T []
-    end
+  let path_order = Path_order.T []
+end
 
-    let parser = Parser.Record.make (module My_tuple_url)
+let parser = Parser.Record.make (module My_tuple_url)
 
-    let%expect_test _ =
-      Parser.check_ok_and_print_urls_or_errors parser;
-      [%expect
-        {|
+let%expect_test _ =
+  Parser.check_ok_and_print_urls_or_errors parser;
+  [%expect
+    {|
         URL parser looks good!
         ┌──────────────────────────┐
         │ All urls                 │
         ├──────────────────────────┤
         │ /?t_1=<int>&t_2=<string> │
         └──────────────────────────┘ |}]
-    ;;]
+;;]
 
 let tuple_example =
   { starting_components =
@@ -862,27 +862,27 @@ let tuple_example =
 ;;
 
 module Catchall_url =
-  [%demo
-    module Catchall_url = struct
-      type t =
-        | Foo of int
-        | Bar
-        | Catchall of string
-      [@@deriving typed_variants, sexp, equal]
+[%demo
+module Catchall_url = struct
+  type t =
+    | Foo of int
+    | Bar
+    | Catchall of string
+  [@@deriving typed_variants, sexp, equal]
 
-      let parser_for_variant : type a. a Typed_variant.t -> a Parser.t = function
-        | Foo -> Parser.from_path Value_parser.int
-        | Bar -> Parser.unit
-        | Catchall -> Parser.with_prefix [] (Parser.from_path Value_parser.string)
-      ;;
-    end
+  let parser_for_variant : type a. a Typed_variant.t -> a Parser.t = function
+    | Foo -> Parser.from_path Value_parser.int
+    | Bar -> Parser.unit
+    | Catchall -> Parser.with_prefix [] (Parser.from_path Value_parser.string)
+  ;;
+end
 
-    let parser = Parser.Variant.make (module Catchall_url)
+let parser = Parser.Variant.make (module Catchall_url)
 
-    let%expect_test _ =
-      Parser.check_ok_and_print_urls_or_errors parser;
-      [%expect
-        {|
+let%expect_test _ =
+  Parser.check_ok_and_print_urls_or_errors parser;
+  [%expect
+    {|
         URL parser looks good!
         ┌────────────┐
         │ All urls   │
@@ -891,7 +891,7 @@ module Catchall_url =
         │ /bar       │
         │ /foo/<int> │
         └────────────┘ |}]
-    ;;]
+;;]
 
 let catchall_example =
   { starting_components = Url_var.Components.create ~path:"i-am-a-catchall" ()
