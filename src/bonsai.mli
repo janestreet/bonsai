@@ -839,8 +839,7 @@ module Effect_throttling : sig
     val collapse_fun_to_or_error
       :  ?sexp_of_input:('a -> Sexp.t)
       -> ('a -> 'b Or_error.t t Effect.t)
-      -> 'a
-      -> 'b Or_error.t Effect.t
+      -> ('a -> 'b Or_error.t Effect.t)
   end
 
   (** Transforms an input effect into a new effect that enforces that invariant
