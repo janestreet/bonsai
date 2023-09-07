@@ -1,7 +1,7 @@
 open! Core
 open! Import
 
-type ('model, 'action, 'input, 'result) t =
+type ('model, 'input, 'result) t =
   { input : 'input Input.t
   ; lifecycle : Lifecycle.Collection.t Incr.t option
   ; result : 'result Incr.t

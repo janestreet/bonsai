@@ -23,17 +23,6 @@ module Model = struct
         ; b : 'b id
         }
         -> ('a * 'b) id
-    | Tuple3 :
-        { a : 'a id
-        ; b : 'b id
-        ; c : 'c id
-        }
-        -> ('a * 'b * 'c) id
-    | Either :
-        { a : 'a id
-        ; b : 'b id
-        }
-        -> ('a, 'b) Either.t id
     | Map :
         { k : 'k Type_equal.Id.t
         ; cmp : 'cmp Type_equal.Id.t
@@ -70,8 +59,6 @@ module Model = struct
       fun sexp_of_a -> function
       | Leaf { type_id } -> [%sexp (type_id : a Type_equal.Id.t)]
       | Tuple { a; b } -> [%sexp (a : opaque t), (b : opaque t)]
-      | Tuple3 { a; b; c } -> [%sexp (a : opaque t), (b : opaque t), (c : opaque t)]
-      | Either { a; b; _ } -> [%sexp Either, (a : opaque t), (b : opaque t)]
       | Map { by; _ } -> [%sexp (by : opaque t)]
       | Map_on { by; _ } -> [%sexp (by : opaque t)]
       | Multi_model { multi_model } ->
@@ -87,15 +74,6 @@ module Model = struct
         let sexp_of_a = to_sexp a_t in
         let sexp_of_b = to_sexp b_t in
         [%sexp_of: a * b]
-      | Tuple3 { a = a_t; b = b_t; c = c_t } ->
-        let sexp_of_a = to_sexp a_t in
-        let sexp_of_b = to_sexp b_t in
-        let sexp_of_c = to_sexp c_t in
-        [%sexp_of: a * b * c]
-      | Either { a = a_t; b = b_t } ->
-        let sexp_of_a = to_sexp a_t in
-        let sexp_of_b = to_sexp b_t in
-        [%sexp_of: (a, b) Either.t]
       | Map { k; by; _ } ->
         let result : type k by. k Type_equal.Id.t -> by id -> (k, by, _) Map.t -> Sexp.t =
           fun k by ->
@@ -141,15 +119,6 @@ module Model = struct
         let%bind.Option T = same_witness a.a b.a in
         let%bind.Option T = same_witness a.b b.b in
         Some (Type_equal.T : (a, b) Type_equal.t)
-      | Tuple3 a, Tuple3 b ->
-        let%bind.Option T = same_witness a.a b.a in
-        let%bind.Option T = same_witness a.b b.b in
-        let%bind.Option T = same_witness a.c b.c in
-        Some (Type_equal.T : (a, b) Type_equal.t)
-      | Either a, Either b ->
-        let%bind.Option T = same_witness a.a b.a in
-        let%bind.Option T = same_witness a.b b.b in
-        Some (Type_equal.T : (a, b) Type_equal.t)
       | Map a, Map b ->
         let%bind.Option T = type_equal_id_same_witness a.k b.k in
         let%bind.Option T = type_equal_id_same_witness a.cmp b.cmp in
@@ -172,45 +141,23 @@ module Model = struct
             | _ -> return None);
           Some Type_equal.T)
       | Leaf _, Tuple _
-      | Leaf _, Tuple3 _
-      | Leaf _, Either _
       | Leaf _, Map _
       | Leaf _, Map_on _
       | Leaf _, Multi_model _
       | Tuple _, Leaf _
-      | Tuple _, Tuple3 _
-      | Tuple _, Either _
       | Tuple _, Map _
       | Tuple _, Map_on _
       | Tuple _, Multi_model _
-      | Tuple3 _, Leaf _
-      | Tuple3 _, Tuple _
-      | Tuple3 _, Either _
-      | Tuple3 _, Map _
-      | Tuple3 _, Map_on _
-      | Tuple3 _, Multi_model _
-      | Either _, Leaf _
-      | Either _, Tuple _
-      | Either _, Tuple3 _
-      | Either _, Map _
-      | Either _, Map_on _
-      | Either _, Multi_model _
       | Map _, Leaf _
       | Map _, Tuple _
-      | Map _, Tuple3 _
-      | Map _, Either _
       | Map _, Map_on _
       | Map _, Multi_model _
       | Map_on _, Leaf _
       | Map_on _, Tuple _
-      | Map_on _, Tuple3 _
-      | Map_on _, Either _
       | Map_on _, Map _
       | Map_on _, Multi_model _
       | Multi_model _, Leaf _
       | Multi_model _, Tuple _
-      | Multi_model _, Tuple3 _
-      | Multi_model _, Either _
       | Multi_model _, Map _
       | Multi_model _, Map_on _ -> None
     ;;
@@ -316,52 +263,6 @@ module Model = struct
       }
     ;;
   end
-end
-
-module Action = struct
-  module Type_id = Model.Type_id
-
-  type 'a t = 'a Type_id.t
-
-  module Hidden = struct
-    type 'a action = 'a t
-
-    type 'key t =
-      | T :
-          { action : 'a
-          ; type_id : 'a action
-          ; key : 'key
-          }
-          -> 'key t
-
-    let sexp_of_t sexp_of_key (T { type_id; key; action }) =
-      let sexp_of_action = Type_id.to_sexp type_id in
-      let sexp_of_type_id = Type_id.sexp_of_t sexp_of_opaque in
-      [%message "enum action with key" (action : action) (type_id : type_id) (key : key)]
-    ;;
-
-    let action_id sexp_of_key =
-      Model.Leaf
-        { type_id = Type_equal.Id.create ~name:"enum action with key" [%sexp_of: key t] }
-    ;;
-
-    let unit = action_id [%sexp_of: unit]
-    let int = action_id [%sexp_of: int]
-  end
-
-  let nothing = Type_id.nothing
-  let both a b = Model.Either { a; b }
-  let map k action = Model.Tuple { a = Leaf { type_id = k }; b = action }
-
-  let map_for_assoc_on io_k model_k action =
-    Model.Tuple3
-      { a = Leaf { type_id = io_k }; b = Leaf { type_id = model_k }; c = action }
-  ;;
-
-  let of_module ~sexp_of_action ~name =
-    Model.Leaf
-      { type_id = Type_equal.Id.create ~name:(sprintf "%s-action" name) sexp_of_action }
-  ;;
 end
 
 module Multi_model = struct

@@ -256,6 +256,7 @@ end
 module Date_time : sig
   module Span_unit : sig
     type t =
+      | Milliseconds
       | Seconds
       | Minutes
       | Hours
@@ -282,6 +283,7 @@ module Date_time : sig
     :  ?extra_unit_attrs:Vdom.Attr.t list Value.t
     -> ?extra_amount_attrs:Vdom.Attr.t list Value.t
     -> ?default_unit:Span_unit.t
+    -> ?default:Time_ns.Span.t
     -> unit
     -> Time_ns.Span.t Form.t Computation.t
 
@@ -289,6 +291,7 @@ module Date_time : sig
     :  ?extra_unit_attrs:Vdom.Attr.t list Value.t
     -> ?extra_amount_attrs:Vdom.Attr.t list Value.t
     -> ?default_unit:Span_unit.t
+    -> ?default:Time_ns.Span.t option
     -> unit
     -> Time_ns.Span.t option Form.t Computation.t
 

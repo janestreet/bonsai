@@ -599,6 +599,38 @@ let form
     | Variant { case_sensitivity = _; clauses } -> clauses_form clauses |> error_hint
     | Union [] ->
       Bonsai.const (Form.return_error (Error.create_s [%message "no grammars in union"]))
+    (* This is a special form of union that's pretty easy to construct and used widely
+       in [Css_gen], which are often inputs into Bonsai components. Special casing this
+       case to have better support for those, but the general case below should still
+       probably be thought about. *)
+    | Union
+        [ Variant { case_sensitivity = sens_a; clauses = clauses_a }
+        ; Variant { case_sensitivity = sens_b; clauses = clauses_b }
+        ] ->
+      let open Sexp_grammar in
+      let%sub merged_variant =
+        let%arr sens_a = sens_a
+        and sens_b = sens_b
+        and clauses_a = clauses_a
+        and clauses_b = clauses_b in
+        let strictest_case_sensitivity =
+          match sens_a, sens_b with
+          | Case_sensitive, _ | _, Case_sensitive -> Case_sensitive
+          | Case_sensitive_except_first_character, _
+          | _, Case_sensitive_except_first_character ->
+            Case_sensitive_except_first_character
+          | Case_insensitive, Case_insensitive -> Case_insensitive
+        in
+        Variant
+          { case_sensitivity = strictest_case_sensitivity
+          ; clauses =
+              List.merge
+                clauses_a
+                clauses_b
+                ~compare:(compare_with_tag_list compare_clause)
+          }
+      in
+      grammar_form merged_variant
     | Any _ | Union _ -> E.Textarea.sexpable (module Sexp)
     | Tyvar _ | Tycon _ | Recursive _ ->
       Bonsai.const

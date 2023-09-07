@@ -33,21 +33,16 @@ let graph_stats c =
 
 let description c =
   let module Meta = Bonsai.Private.Meta in
-  let (T { model; dynamic_action; static_action; input; _ }) =
+  let module Action = Bonsai.Private.Action in
+  let (T { model; action; input; _ }) =
     Bonsai.Private.reveal_computation c |> Bonsai.Private.gather
   in
   let model = Meta.Model.Type_id.sexp_of_t [%sexp_of: opaque] model.type_id in
-  let static_action = Meta.Action.Type_id.sexp_of_t [%sexp_of: opaque] static_action in
-  let dynamic_action = Meta.Action.Type_id.sexp_of_t [%sexp_of: opaque] dynamic_action in
+  let action = Action.Type_id.sexp_of_t action in
   let input = Meta.Input.sexp_of_t [%sexp_of: opaque] input in
   censor_sexp
     [%sexp
-      { shapes =
-          { model : Sexp.t
-          ; static_action : Sexp.t
-          ; dynamic_action : Sexp.t
-          ; input : Sexp.t
-          }
+      { shapes = { model : Sexp.t; action : Sexp.t; input : Sexp.t }
       ; incr_graph = (graph_stats c : Sexp.t)
       }]
 ;;
@@ -89,11 +84,7 @@ let%expect_test "constant computation" =
   [%expect
     {|
         ("with and without optimizations"
-          (shapes (
-            (model          unit)
-            (static_action  Nothing.t)
-            (dynamic_action Nothing.t)
-            (input          unit)))
+          (shapes ((model unit) (action (Leaf Nothing.t)) (input unit)))
           (incr_graph (
             (nodes 3)
             (edges 0)))) |}]
@@ -104,11 +95,7 @@ let%expect_test "stateful computation" =
   [%expect
     {|
         ("with and without optimizations"
-          (shapes (
-            (model          proc_min.ml-model)
-            (static_action  proc_min.ml-action)
-            (dynamic_action Nothing.t)
-            (input          unit)))
+          (shapes ((model proc_min.ml-model) (action (Leaf proc_min.ml)) (input unit)))
           (incr_graph (
             (nodes 4)
             (edges 1)))) |}]
@@ -125,8 +112,10 @@ let%test_module "sub" =
         ("with and without optimizations"
           (shapes (
             (model (proc_min.ml-model proc_min.ml-model))
-            (static_action (Either proc_min.ml-action proc_min.ml-action))
-            (dynamic_action Nothing.t)
+            (action (
+              Sub
+              (Leaf proc_min.ml)
+              (Leaf proc_min.ml)))
             (input (unit unit))))
           (incr_graph (
             (nodes 5)
@@ -140,11 +129,7 @@ let%test_module "sub" =
       [%expect
         {|
         ("with and without optimizations"
-          (shapes (
-            (model          proc_min.ml-model)
-            (static_action  proc_min.ml-action)
-            (dynamic_action Nothing.t)
-            (input          unit)))
+          (shapes ((model proc_min.ml-model) (action (Leaf proc_min.ml)) (input unit)))
           (incr_graph (
             (nodes 4)
             (edges 1)))) |}]
@@ -157,11 +142,7 @@ let%test_module "sub" =
       [%expect
         {|
         ("with and without optimizations"
-          (shapes (
-            (model          proc_min.ml-model)
-            (static_action  proc_min.ml-action)
-            (dynamic_action Nothing.t)
-            (input          unit)))
+          (shapes ((model proc_min.ml-model) (action (Leaf proc_min.ml)) (input unit)))
           (incr_graph (
             (nodes 3)
             (edges 0)))) |}]
@@ -174,11 +155,7 @@ let%test_module "sub" =
       [%expect
         {|
         ("with and without optimizations"
-          (shapes (
-            (model          unit)
-            (static_action  Nothing.t)
-            (dynamic_action Nothing.t)
-            (input          unit)))
+          (shapes ((model unit) (action (Leaf Nothing.t)) (input unit)))
           (incr_graph (
             (nodes 3)
             (edges 0)))) |}]
@@ -193,21 +170,13 @@ let%test_module "model_resetter" =
       [%expect
         {|
         ("without optimizations"
-          (shapes (
-            (model          unit)
-            (static_action  Nothing.t)
-            (dynamic_action Nothing.t)
-            (input          unit)))
+          (shapes ((model unit) (action (Leaf Nothing.t)) (input unit)))
           (incr_graph (
             (nodes 3)
             (edges 0))))
 
         ("with optimizations"
-          (shapes (
-            (model          unit)
-            (static_action  Nothing.t)
-            (dynamic_action Nothing.t)
-            (input          unit)))
+          (shapes ((model unit) (action (Leaf Nothing.t)) (input unit)))
           (incr_graph (
             (nodes 4)
             (edges 1)))) |}]
@@ -220,9 +189,8 @@ let%test_module "model_resetter" =
         ("with and without optimizations"
           (shapes (
             (model proc_min.ml-model)
-            (static_action (Either unit proc_min.ml-action))
-            (dynamic_action Nothing.t)
-            (input          unit)))
+            (action (Model_reset (Leaf proc_min.ml)))
+            (input unit)))
           (incr_graph (
             (nodes 6)
             (edges 3)))) |}]
@@ -247,8 +215,7 @@ let%test_module "wrap" =
         ("with and without optimizations"
           (shapes (
             (model ("outer model for wrap-model" unit))
-            (static_action Nothing.t)
-            (dynamic_action (Either "action id-action" Nothing.t))
+            (action (Wrap (Leaf Nothing.t) "action id"))
             (input (unit input))))
           (incr_graph (
             (nodes 3)
@@ -262,8 +229,7 @@ let%test_module "wrap" =
         ("with and without optimizations"
           (shapes (
             (model ("outer model for wrap-model" proc_min.ml-model))
-            (static_action proc_min.ml-action)
-            (dynamic_action (Either "action id-action" Nothing.t))
+            (action (Wrap (Leaf proc_min.ml) "action id"))
             (input (unit input))))
           (incr_graph (
             (nodes 5)
@@ -284,20 +250,13 @@ let%test_module "assoc" =
         {|
         ("without optimizations"
           (shapes (
-            (model unit)
-            (static_action  ("key id" Nothing.t))
-            (dynamic_action ("key id" Nothing.t))
-            (input unit)))
+            (model unit) (action (Assoc "key id" (Leaf Nothing.t))) (input unit)))
           (incr_graph (
             (nodes 22)
             (edges 31))))
 
         ("with optimizations"
-          (shapes (
-            (model          unit)
-            (static_action  Nothing.t)
-            (dynamic_action Nothing.t)
-            (input          unit)))
+          (shapes ((model unit) (action (Leaf Nothing.t)) (input unit)))
           (incr_graph (
             (nodes 4)
             (edges 1)))) |}]
@@ -314,8 +273,7 @@ let%test_module "assoc" =
         ("with and without optimizations"
           (shapes (
             (model proc_min.ml-model)
-            (static_action  ("key id" proc_min.ml-action))
-            (dynamic_action ("key id" Nothing.t))
+            (action (Assoc "key id" (Leaf proc_min.ml)))
             (input unit)))
           (incr_graph (
             (nodes 22)
@@ -333,8 +291,7 @@ let%test_module "assoc" =
         ("with and without optimizations"
           (shapes (
             (model proc_min.ml-model)
-            (static_action  ("key id" Nothing.t))
-            (dynamic_action ("key id" proc_min.ml-action))
+            (action (Assoc "key id" (Leaf proc_min.ml)))
             (input input)))
           (incr_graph (
             (nodes 22)
@@ -358,19 +315,14 @@ let%test_module "assoc_on" =
         ("without optimizations"
           (shapes (
             (model unit)
-            (static_action  ("io key id" "model key id" Nothing.t))
-            (dynamic_action ("io key id" "model key id" Nothing.t))
+            (action (Assoc "io key id" "model key id" (Leaf Nothing.t)))
             (input unit)))
           (incr_graph (
             (nodes 20)
             (edges 29))))
 
         ("with optimizations"
-          (shapes (
-            (model          unit)
-            (static_action  Nothing.t)
-            (dynamic_action Nothing.t)
-            (input          unit)))
+          (shapes ((model unit) (action (Leaf Nothing.t)) (input unit)))
           (incr_graph (
             (nodes 4)
             (edges 1)))) |}]
@@ -389,8 +341,7 @@ let%test_module "assoc_on" =
         ("with and without optimizations"
           (shapes (
             (model proc_min.ml-model)
-            (static_action ("io key id" "model key id" proc_min.ml-action))
-            (dynamic_action ("io key id" "model key id" Nothing.t))
+            (action (Assoc "io key id" "model key id" (Leaf proc_min.ml)))
             (input unit)))
           (incr_graph (
             (nodes 20)
@@ -410,8 +361,7 @@ let%test_module "assoc_on" =
         ("with and without optimizations"
           (shapes (
             (model proc_min.ml-model)
-            (static_action ("io key id" "model key id" Nothing.t))
-            (dynamic_action ("io key id" "model key id" proc_min.ml-action))
+            (action (Assoc "io key id" "model key id" (Leaf proc_min.ml)))
             (input input)))
           (incr_graph (
             (nodes 20)
@@ -434,9 +384,8 @@ let%test_module "switch" =
             (model (
               (0 unit)
               (1 unit)))
-            (static_action  "enum action with key")
-            (dynamic_action "enum action with key")
-            (input          "enum input")))
+            (action Switch)
+            (input  "enum input")))
           (incr_graph (
             (nodes 12)
             (edges 16)))) |}]
@@ -454,9 +403,8 @@ let%test_module "switch" =
             (model (
               (0 proc_min.ml-model)
               (1 proc_min.ml-model)))
-            (static_action  "enum action with key")
-            (dynamic_action "enum action with key")
-            (input          "enum input")))
+            (action Switch)
+            (input  "enum input")))
           (incr_graph (
             (nodes 14)
             (edges 19)))) |}]
@@ -474,9 +422,8 @@ let%test_module "switch" =
             (model (
               (0 proc_min.ml-model)
               (1 proc_min.ml-model)))
-            (static_action  "enum action with key")
-            (dynamic_action "enum action with key")
-            (input          "enum input")))
+            (action Switch)
+            (input  "enum input")))
           (incr_graph (
             (nodes 14)
             (edges 18)))) |}]
@@ -494,9 +441,8 @@ let%test_module "switch" =
             (model (
               (0 proc_min.ml-model)
               (1 proc_min.ml-model)))
-            (static_action  "enum action with key")
-            (dynamic_action "enum action with key")
-            (input          "enum input")))
+            (action Switch)
+            (input  "enum input")))
           (incr_graph (
             (nodes 14)
             (edges 18)))) |}]
@@ -518,19 +464,14 @@ let%test_module "optimizable switch" =
             (model (
               (0 unit)
               (1 unit)))
-            (static_action  "enum action with key")
-            (dynamic_action "enum action with key")
-            (input          "enum input")))
+            (action Switch)
+            (input  "enum input")))
           (incr_graph (
             (nodes 12)
             (edges 16))))
 
         ("with optimizations"
-          (shapes (
-            (model          unit)
-            (static_action  Nothing.t)
-            (dynamic_action Nothing.t)
-            (input          unit)))
+          (shapes ((model unit) (action (Leaf Nothing.t)) (input unit)))
           (incr_graph (
             (nodes 3)
             (edges 0)))) |}]
@@ -548,19 +489,14 @@ let%test_module "optimizable switch" =
             (model (
               (0 proc_min.ml-model)
               (1 proc_min.ml-model)))
-            (static_action  "enum action with key")
-            (dynamic_action "enum action with key")
-            (input          "enum input")))
+            (action Switch)
+            (input  "enum input")))
           (incr_graph (
             (nodes 14)
             (edges 19))))
 
         ("with optimizations"
-          (shapes (
-            (model          proc_min.ml-model)
-            (static_action  proc_min.ml-action)
-            (dynamic_action Nothing.t)
-            (input          unit)))
+          (shapes ((model proc_min.ml-model) (action (Leaf proc_min.ml)) (input unit)))
           (incr_graph (
             (nodes 4)
             (edges 1)))) |}]
@@ -578,19 +514,15 @@ let%test_module "optimizable switch" =
             (model (
               (0 proc_min.ml-model)
               (1 proc_min.ml-model)))
-            (static_action  "enum action with key")
-            (dynamic_action "enum action with key")
-            (input          "enum input")))
+            (action Switch)
+            (input  "enum input")))
           (incr_graph (
             (nodes 14)
             (edges 18))))
 
         ("with optimizations"
           (shapes (
-            (model          proc_min.ml-model)
-            (static_action  Nothing.t)
-            (dynamic_action proc_min.ml-action)
-            (input          input)))
+            (model proc_min.ml-model) (action (Leaf proc_min.ml)) (input input)))
           (incr_graph (
             (nodes 4)
             (edges 1)))) |}]
@@ -608,19 +540,15 @@ let%test_module "optimizable switch" =
             (model (
               (0 proc_min.ml-model)
               (1 proc_min.ml-model)))
-            (static_action  "enum action with key")
-            (dynamic_action "enum action with key")
-            (input          "enum input")))
+            (action Switch)
+            (input  "enum input")))
           (incr_graph (
             (nodes 14)
             (edges 18))))
 
         ("with optimizations"
           (shapes (
-            (model          proc_min.ml-model)
-            (static_action  Nothing.t)
-            (dynamic_action proc_min.ml-action)
-            (input          input)))
+            (model proc_min.ml-model) (action (Leaf proc_min.ml)) (input input)))
           (incr_graph (
             (nodes 4)
             (edges 1)))) |}]
@@ -638,19 +566,14 @@ let%test_module "optimizable switch" =
             (model (
               (0 proc_min.ml-model)
               (1 proc_min.ml-model)))
-            (static_action  "enum action with key")
-            (dynamic_action "enum action with key")
-            (input          "enum input")))
+            (action Switch)
+            (input  "enum input")))
           (incr_graph (
             (nodes 14)
             (edges 19))))
 
         ("with optimizations"
-          (shapes (
-            (model          proc_min.ml-model)
-            (static_action  proc_min.ml-action)
-            (dynamic_action Nothing.t)
-            (input          unit)))
+          (shapes ((model proc_min.ml-model) (action (Leaf proc_min.ml)) (input unit)))
           (incr_graph (
             (nodes 4)
             (edges 1)))) |}]
@@ -669,8 +592,10 @@ let%test_module "action grid" =
         ("with and without optimizations"
           (shapes (
             (model (proc_min.ml-model proc_min.ml-model))
-            (static_action Nothing.t)
-            (dynamic_action (Either proc_min.ml-action proc_min.ml-action))
+            (action (
+              Sub
+              (Leaf proc_min.ml)
+              (Leaf proc_min.ml)))
             (input (input input))))
           (incr_graph (
             (nodes 6)
@@ -686,8 +611,10 @@ let%test_module "action grid" =
         ("with and without optimizations"
           (shapes (
             (model (proc_min.ml-model proc_min.ml-model))
-            (static_action (Either proc_min.ml-action proc_min.ml-action))
-            (dynamic_action Nothing.t)
+            (action (
+              Sub
+              (Leaf proc_min.ml)
+              (Leaf proc_min.ml)))
             (input (unit unit))))
           (incr_graph (
             (nodes 5)
@@ -703,8 +630,10 @@ let%test_module "action grid" =
         ("with and without optimizations"
           (shapes (
             (model (proc_min.ml-model proc_min.ml-model))
-            (static_action (Either Nothing.t proc_min.ml-action))
-            (dynamic_action (Either proc_min.ml-action Nothing.t))
+            (action (
+              Sub
+              (Leaf proc_min.ml)
+              (Leaf proc_min.ml)))
             (input (input unit))))
           (incr_graph (
             (nodes 6)
@@ -720,8 +649,10 @@ let%test_module "action grid" =
         ("with and without optimizations"
           (shapes (
             (model (proc_min.ml-model proc_min.ml-model))
-            (static_action (Either proc_min.ml-action Nothing.t))
-            (dynamic_action (Either Nothing.t proc_min.ml-action))
+            (action (
+              Sub
+              (Leaf proc_min.ml)
+              (Leaf proc_min.ml)))
             (input (unit input))))
           (incr_graph (
             (nodes 6)
@@ -735,11 +666,7 @@ let%expect_test "Incr.compute" =
   [%expect
     {|
         ("with and without optimizations"
-          (shapes (
-            (model          unit)
-            (static_action  Nothing.t)
-            (dynamic_action Nothing.t)
-            (input          unit)))
+          (shapes ((model unit) (action (Leaf Nothing.t)) (input unit)))
           (incr_graph (
             (nodes 3)
             (edges 0)))) |}]

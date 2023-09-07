@@ -56,4 +56,6 @@ include struct
   let clock h = reroute clock h
   let invalidate_observers h = reroute invalidate_observers h
   let reset_model_to_default h = reroute reset_model_to_default h
+  let print_actions h = reroute print_actions h
+  let print_stabilizations h = reroute print_stabilizations h
 end

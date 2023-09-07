@@ -308,15 +308,7 @@ module Constant_fold (Recurse : Fix_transform.Recurse with module Types := Types
         match contents_if_value_is_constant input with
         | None -> Leaf1 { input; input_id; model; dynamic_action; apply_action; reset }
         | Some input ->
-          let apply_action ~inject_dynamic ~inject_static =
-            apply_action
-              ~inject_static:inject_dynamic
-              ~inject_dynamic:inject_static
-              (Some input)
-          in
-          let reset ~inject_dynamic ~inject_static =
-            reset ~inject_static:inject_dynamic ~inject_dynamic:inject_static
-          in
+          let apply_action ~inject = apply_action ~inject (Some input) in
           Leaf0 { model; static_action = dynamic_action; apply_action; reset })
     | Lazy t ->
       (match evaluated with

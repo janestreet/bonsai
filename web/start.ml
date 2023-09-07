@@ -2,6 +2,7 @@ open! Core
 open! Async_kernel
 open! Import
 open Js_of_ocaml
+module Bonsai_action = Bonsai.Private.Action
 
 module type Result_spec = sig
   type t
@@ -159,8 +160,7 @@ module Arrow_deprecated = struct
   ;;
 
   let start_generic_poly
-    (type input action_input input_and_inject model dynamic_action static_action result
-    extra incoming outgoing)
+    (type input action_input input_and_inject model action result extra incoming outgoing)
     ~(get_app_result : result -> (extra, incoming) App_result.t)
     ~(get_app_input :
         input:input
@@ -170,21 +170,8 @@ module Arrow_deprecated = struct
     ~bind_to_element_with_id
     ~(computation : result Bonsai.Private.Computation.t)
     ~fresh
-    ({ model
-     ; input = _
-     ; dynamic_action
-     ; static_action
-     ; apply_static
-     ; apply_dynamic
-     ; run
-     ; reset = _
-     } as info :
-      ( model
-      , dynamic_action
-      , static_action
-      , action_input
-      , result )
-      Bonsai.Private.Computation.info)
+    ({ model; input = _; action; apply_action; run; reset = _ } as info :
+      (model, action, action_input, result) Bonsai.Private.Computation.info)
     : (input, extra, incoming, outgoing) Handle.t
     =
     let outgoing_pipe, pipe_write = Pipe.create () in
@@ -219,25 +206,12 @@ module Arrow_deprecated = struct
       end
 
       module Action = struct
-        let sexp_of_dynamic_action =
-          Bonsai.Private.Meta.Action.Type_id.to_sexp dynamic_action
-        ;;
+        type t = action Bonsai_action.t
 
-        let sexp_of_static_action =
-          Bonsai.Private.Meta.Action.Type_id.to_sexp static_action
-        ;;
-
-        type t =
-          | Dynamic of dynamic_action
-          | Static of static_action
-        [@@deriving sexp_of]
+        let sexp_of_t = Bonsai_action.Type_id.to_sexp action
       end
 
-      let action_requires_stabilization = function
-        | Action.Dynamic _ -> true
-        | Static _ -> false
-      ;;
-
+      let action_requires_stabilization action = Bonsai_action.is_dynamic action
       let on_startup ~schedule_action:_ _ = return ()
 
       let advance_clock_to to_ =
@@ -249,28 +223,19 @@ module Arrow_deprecated = struct
         model
         ~old_model:_
         ~inject
-        (run :
-          ( model
-          , dynamic_action
-          , static_action
-          , action_input
-          , result )
-          Bonsai.Private.Computation.eval_fun)
+        (run : (model, action, action_input, result) Bonsai.Private.Computation.eval_fun)
         =
         let open Incr.Let_syntax in
         let environment =
           Bonsai.Private.Environment.(empty |> add_exn ~key:fresh ~data:input)
         in
-        let inject_dynamic a = inject (Action.Dynamic a) in
-        let inject_static a = inject (Action.Static a) in
         let snapshot =
           run
             ~environment
             ~path:Bonsai.Private.Path.empty
             ~clock:bonsai_clock
             ~model
-            ~inject_dynamic
-            ~inject_static
+            ~inject
         in
         let%map view =
           let%map { App_result.view; extra; inject_incoming } =
@@ -286,17 +251,7 @@ module Arrow_deprecated = struct
             |> Bonsai.Private.Input.to_incremental
           in
           fun () ~schedule_event model action ->
-            match action with
-            | Action.Dynamic action ->
-              apply_dynamic
-                ~inject_dynamic
-                ~inject_static
-                ~schedule_event
-                (Some input)
-                model
-                action
-            | Action.Static action ->
-              apply_static ~inject_dynamic ~inject_static ~schedule_event model action
+            apply_action ~inject ~schedule_event (Some input) model action
         and on_display =
           let%map lifecycle = Bonsai.Private.Snapshot.lifecycle_or_empty snapshot in
           fun () ~schedule_event ->
@@ -317,11 +272,10 @@ module Arrow_deprecated = struct
           match
             Bonsai.Private.Meta.(
               ( Model.Type_id.same_witness info.model.type_id info'.model.type_id
-              , Action.Type_id.same_witness info.dynamic_action info'.dynamic_action
-              , Action.Type_id.same_witness info.static_action info'.static_action
+              , Bonsai_action.Type_id.same_witness info.action info'.action
               , Input.same_witness info.input info'.input ))
           with
-          | Some T, Some T, Some T, Some T -> create model ~old_model ~inject info'.run
+          | Some T, Some T, Some T -> create model ~old_model ~inject info'.run
           | _ ->
             print_endline
               "Not starting debugger. An error occurred while attempting to instrument \

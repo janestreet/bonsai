@@ -27,6 +27,7 @@ module Private = struct
   module Lifecycle = Lifecycle
   module Value = Value
   module Path = Path
+  module Action = Action
   module Node_path = Node_path
   module Graph_info = Graph_info
   module Instrumentation = Instrumentation

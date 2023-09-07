@@ -735,24 +735,28 @@ end
 module Date_time = struct
   module Span_unit = struct
     type t =
+      | Milliseconds
       | Seconds
       | Minutes
       | Hours
     [@@deriving equal, sexp, compare, enumerate]
 
     let to_string = function
+      | Milliseconds -> "ms"
       | Seconds -> "s"
       | Minutes -> "m"
       | Hours -> "h"
     ;;
 
     let of_float = function
+      | Milliseconds -> Time_ns.Span.of_ms
       | Seconds -> Time_ns.Span.of_sec
       | Minutes -> Time_ns.Span.of_min
       | Hours -> Time_ns.Span.of_hr
     ;;
 
     let to_float = function
+      | Milliseconds -> Time_ns.Span.to_ms
       | Seconds -> Time_ns.Span.to_sec
       | Minutes -> Time_ns.Span.to_min
       | Hours -> Time_ns.Span.to_hr
@@ -808,6 +812,7 @@ module Date_time = struct
     ?(extra_unit_attrs = Value.return [])
     ?(extra_amount_attrs = Value.return [])
     ?(default_unit = Span_unit.Seconds)
+    ?(default = None)
     ()
     =
     let%sub unit, set_unit =
@@ -839,7 +844,14 @@ module Date_time = struct
         ~all:Span_unit.all
     in
     let%sub amount, set_amount =
-      Bonsai.state_opt () ~sexp_of_model:[%sexp_of: Float.t] ~equal:[%equal: Float.t]
+      let default_amount =
+        let%map.Option default = default in
+        Span_unit.to_float default_unit default
+      in
+      Bonsai.state
+        default_amount
+        ~sexp_of_model:[%sexp_of: Float.t option]
+        ~equal:[%equal: Float.t option]
     in
     let%sub amount_view =
       let%arr amount = amount
@@ -887,9 +899,9 @@ module Date_time = struct
     Form.Expert.create ~value:(Ok value) ~view ~set
   ;;
 
-  let time_span ?extra_unit_attrs ?extra_amount_attrs ?default_unit () =
+  let time_span ?extra_unit_attrs ?extra_amount_attrs ?default_unit ?default () =
     let%map.Computation form =
-      time_span_opt ?extra_unit_attrs ?extra_amount_attrs ?default_unit ()
+      time_span_opt ?extra_unit_attrs ?extra_amount_attrs ?default_unit ~default ()
     in
     optional_to_required form
   ;;

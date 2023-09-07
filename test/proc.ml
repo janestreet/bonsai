@@ -248,5 +248,7 @@ module Handle = struct
 
   let action_input_incr = Driver.action_input_incr
   let lifecycle_incr = Driver.lifecycle_incr
+  let print_actions = Driver.print_actions
+  let print_stabilizations = Driver.print_stabilizations
   let has_after_display_events = Driver.has_after_display_events
 end

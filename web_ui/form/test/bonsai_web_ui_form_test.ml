@@ -1126,9 +1126,10 @@ let%expect_test "typing into a time span textbox" =
     <div>
       <input type="number" step="1" placeholder="" spellcheck="false" value:normalized="" oninput> </input>
       <select class="widget-dropdown" onchange>
-        <option value="0" #selected="true"> s </option>
-        <option value="1" #selected="false"> m </option>
-        <option value="2" #selected="false"> h </option>
+        <option value="0" #selected="false"> ms </option>
+        <option value="1" #selected="true"> s </option>
+        <option value="2" #selected="false"> m </option>
+        <option value="3" #selected="false"> h </option>
       </select>
     </div> |}];
   Handle.input_text handle ~selector:"input" ~get_vdom ~text:"24";
@@ -1141,24 +1142,26 @@ let%expect_test "typing into a time span textbox" =
     <div>
       <input type="number" step="1" placeholder="" spellcheck="false" value:normalized=24 oninput> </input>
       <select class="widget-dropdown" onchange>
-        <option value="0" #selected="true"> s </option>
-        <option value="1" #selected="false"> m </option>
-        <option value="2" #selected="false"> h </option>
+        <option value="0" #selected="false"> ms </option>
+        <option value="1" #selected="true"> s </option>
+        <option value="2" #selected="false"> m </option>
+        <option value="3" #selected="false"> h </option>
       </select>
     </div> |}];
   Handle.change handle ~selector:"select" ~get_vdom ~value:"2";
   Handle.show handle;
   [%expect
     {|
-    (Ok 1d)
+    (Ok 24m)
 
     ==============
     <div>
       <input type="number" step="1" placeholder="" spellcheck="false" value:normalized=24 oninput> </input>
       <select class="widget-dropdown" onchange>
-        <option value="0" #selected="false"> s </option>
-        <option value="1" #selected="false"> m </option>
-        <option value="2" #selected="true"> h </option>
+        <option value="0" #selected="false"> ms </option>
+        <option value="1" #selected="false"> s </option>
+        <option value="2" #selected="true"> m </option>
+        <option value="3" #selected="false"> h </option>
       </select>
     </div> |}]
 ;;
@@ -1175,9 +1178,10 @@ let%expect_test "setting into a time span textbox" =
     <div>
       <input type="number" step="1" placeholder="" spellcheck="false" value:normalized="" oninput> </input>
       <select class="widget-dropdown" onchange>
-        <option value="0" #selected="true"> s </option>
-        <option value="1" #selected="false"> m </option>
-        <option value="2" #selected="false"> h </option>
+        <option value="0" #selected="false"> ms </option>
+        <option value="1" #selected="true"> s </option>
+        <option value="2" #selected="false"> m </option>
+        <option value="3" #selected="false"> h </option>
       </select>
     </div> |}];
   Handle.do_actions handle [ Time_ns.Span.of_sec 24. ];
@@ -1190,9 +1194,10 @@ let%expect_test "setting into a time span textbox" =
     <div>
       <input type="number" step="1" placeholder="" spellcheck="false" value:normalized=24 oninput> </input>
       <select class="widget-dropdown" onchange>
-        <option value="0" #selected="true"> s </option>
-        <option value="1" #selected="false"> m </option>
-        <option value="2" #selected="false"> h </option>
+        <option value="0" #selected="false"> ms </option>
+        <option value="1" #selected="true"> s </option>
+        <option value="2" #selected="false"> m </option>
+        <option value="3" #selected="false"> h </option>
       </select>
     </div> |}];
   Handle.do_actions handle [ Time_ns.Span.of_hr 24. ];
@@ -1205,9 +1210,10 @@ let%expect_test "setting into a time span textbox" =
     <div>
       <input type="number" step="1" placeholder="" spellcheck="false" value:normalized=24 oninput> </input>
       <select class="widget-dropdown" onchange>
-        <option value="0" #selected="false"> s </option>
-        <option value="1" #selected="false"> m </option>
-        <option value="2" #selected="true"> h </option>
+        <option value="0" #selected="false"> ms </option>
+        <option value="1" #selected="false"> s </option>
+        <option value="2" #selected="false"> m </option>
+        <option value="3" #selected="true"> h </option>
       </select>
     </div> |}]
 ;;
@@ -6835,4 +6841,34 @@ let%test_module "Querybox as typeahead" =
           </table> |}]
     ;;
   end)
+;;
+
+(* This test demonstrates an inefficiency in the [Form.Elements.Multiple.list] combinator,
+   where we need to stabilize more than once per nesting level. *)
+let%expect_test "nested list form actions" =
+  let component =
+    Form.Elements.Multiple.list
+      (Form.Elements.Multiple.list
+         (Form.Elements.Multiple.list (Form.Elements.Textbox.string ())))
+  in
+  let handle =
+    Handle.create (form_result_spec [%sexp_of: string list list list]) component
+  in
+  Handle.print_stabilizations handle;
+  Handle.do_actions
+    handle
+    [ [ [ [ "first"; "second" ]; [ "third"; "fourth" ] ]
+      ; [ [ "fifth"; "sixth" ]; [ "seventh"; "eighth" ] ]
+      ]
+    ];
+  Handle.recompute_view handle;
+  [%expect
+    {|
+    stabilized
+    stabilized
+    stabilized
+    stabilized
+    stabilized
+    stabilized
+    stabilized |}]
 ;;

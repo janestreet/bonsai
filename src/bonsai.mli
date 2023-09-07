@@ -1010,6 +1010,7 @@ module Private : sig
   module Snapshot = Snapshot
   module Lifecycle = Lifecycle
   module Path = Path
+  module Action = Action
   module Node_path = Node_path
   module Graph_info = Graph_info
   module Instrumentation = Instrumentation
@@ -1048,15 +1049,20 @@ module Expert : sig
     -> ('io_key, 'result, 'io_cmp) Map.t Computation.t
 end
 
-(** Analog to [Incr_map] functions in Bonsai. In general, you should prefer to use
-    [Bonsai.assoc] where possible. For functions that are particularly easy to implement
-    in terms of [assoc], the function is stubbed with a [ `Use_assoc ] value instead. We
-    also skip wrapping the prime versions of [Incr_map] functions, since they more easily
-    allow [Incr.bind], which we want to make sure is used only when absolutely necessary.
-*)
+(** Analog to [Incr_map] functions in Bonsai. If you want access to the keys and values
+    in [Value.t] form, or want to produce a Computation as a result, then you should use 
+    [Bonsai.assoc] *)
 module Map : sig
-  val mapi : [ `Use_assoc ]
-  val map : [ `Use_assoc ]
+  val mapi
+    :  ('k, 'v1, 'cmp) Map.t Value.t
+    -> f:(key:'k -> data:'v1 -> 'v2)
+    -> ('k, 'v2, 'cmp) Map.t Computation.t
+
+  val map
+    :  ('k, 'v1, 'cmp) Map.t Value.t
+    -> f:('v1 -> 'v2)
+    -> ('k, 'v2, 'cmp) Map.t Computation.t
+
   val of_set : ('k, 'cmp) Set.t Value.t -> ('k, unit, 'cmp) Map.t Computation.t
 
   val filter_mapi

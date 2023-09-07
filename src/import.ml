@@ -4,7 +4,13 @@ include Annotate_incr
 module Effect = Ui_effect
 module Time_source = Ui_time_source
 
-let reset_unit_model ~inject_dynamic:_ ~inject_static:_ ~schedule_event:_ () = ()
+let unreachable_action : Nothing.t Action.leaf Action.t -> 'a = function
+  | Leaf_dynamic _ -> .
+  | Leaf_static _ -> .
+;;
+
+let unusable_apply_action ~inject:_ ~schedule_event:_ _input _model = unreachable_action
+let reset_unit_model ~inject:_ ~schedule_event:_ () = ()
 
 (* incremental nodes are pretty big; allocate these just once *)
 let unit_model = Incr.return ()

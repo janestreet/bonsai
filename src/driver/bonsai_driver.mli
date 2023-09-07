@@ -59,6 +59,12 @@ module Expert : sig
   (** Resets the model of the component back to its initial model.  Used only for
       benchmarking *)
   val reset_model_to_default : _ t -> unit
+
+  (** Starts printing the paths of actions that are applied during tests *)
+  val print_actions : _ t -> unit
+
+  (** Start printing when stabilizations occur during action application in tests *)
+  val print_stabilizations : _ t -> unit
 end
 
 module For_testing : sig

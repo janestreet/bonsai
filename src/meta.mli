@@ -69,40 +69,6 @@ module Model : sig
     -> 'a t
 end
 
-module Action : sig
-  module Type_id : Type_id
-
-  type 'a t = 'a Type_id.t
-
-  module Hidden : sig
-    type 'a action
-
-    type 'key t =
-      | T :
-          { action : 'a
-          ; type_id : 'a action
-          ; key : 'key
-          }
-          -> 'key t
-
-    val unit : unit t action
-    val int : int t action
-  end
-  with type 'a action := 'a t
-
-  val nothing : Nothing.t t
-  val both : 'a t -> 'b t -> ('a, 'b) Either.t t
-  val map : 'k Type_equal.Id.t -> 'a t -> ('k * 'a) t
-
-  val map_for_assoc_on
-    :  'io_key Type_equal.Id.t
-    -> 'model_key Type_equal.Id.t
-    -> 'a t
-    -> ('io_key * 'model_key * 'a) t
-
-  val of_module : sexp_of_action:('a -> Sexp.t) -> name:string -> 'a t
-end
-
 module Multi_model : sig
   type t
 

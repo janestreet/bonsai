@@ -3,16 +3,16 @@
 open! Core
 open! Import
 
-type ('model, 'action, 'input, 'result) t
+type ('model, 'input, 'result) t
 
 (** The input in a snapshot contains any incrementally computed data required
     by the computation's apply-action function. *)
-val input : (_, _, 'input, _) t -> 'input Input.t
+val input : (_, 'input, _) t -> 'input Input.t
 
 (** The result of a component is the primary value computed by the component in
     question. At the top level of a UI, this is generally a representation of the view,
     but it's often useful to compute other kinds of results in inner components. *)
-val result : (_, _, _, 'result) t -> 'result Incr.t
+val result : (_, _, 'result) t -> 'result Incr.t
 
 (** The lifecycle component of a snapshot contains an optional map of all the activation,
     deactivation, and after_display callbacks. *)
@@ -26,6 +26,6 @@ val create
   :  input:'input Input.t
   -> lifecycle:Lifecycle.Collection.t Incr.t option
   -> result:'result Incr.t
-  -> ('model, 'action, 'input, 'result) t
+  -> ('model, 'input, 'result) t
 
 val attribute_positions : Source_code_position.t option -> _ t -> unit

@@ -107,4 +107,6 @@ module Handle : sig
   val lifecycle_incr : _ t -> Incr.Packed.t
   val action_input_incr : _ t -> Incr.Packed.t
   val has_after_display_events : ('result, 'incoming) t -> bool
+  val print_actions : _ t -> unit
+  val print_stabilizations : _ t -> unit
 end

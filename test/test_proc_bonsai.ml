@@ -4,6 +4,12 @@ open Bonsai.For_open
 open Bonsai.Let_syntax
 module Query_response_tracker = Bonsai.Effect.For_testing.Query_response_tracker
 open Proc
+module Action = Bonsai.Private.Action
+
+let unreachable_action : Nothing.t Action.leaf Action.t -> 'b = function
+  | Action.Leaf_dynamic _ -> .
+  | Leaf_static _ -> .
+;;
 
 let sexp_of_packed_computation : type a. a Bonsai.Private.Computation.t -> Sexp.t =
   fun t ->
@@ -2451,36 +2457,18 @@ let%expect_test "let syntax is collapsed upon eval" =
   let packed =
     let open Bonsai.Private in
     let computation = reveal_computation computation in
-    let (T
-          { model
-          ; input = _
-          ; apply_static = _
-          ; apply_dynamic = _
-          ; static_action
-          ; dynamic_action
-          ; run
-          ; reset = _
-          })
-      =
+    let (T { model; input = _; apply_action = _; action; run; reset = _ }) =
       computation |> pre_process |> gather
     in
     let T =
-      Bonsai.Private.Meta.Action.Type_id.same_witness_exn
-        Meta.Action.nothing
-        static_action
-    in
-    let T =
-      Bonsai.Private.Meta.Action.Type_id.same_witness_exn
-        Meta.Action.nothing
-        dynamic_action
+      Bonsai.Private.Action.Type_id.same_witness_exn Action.Type_id.nothing action
     in
     let snapshot =
       run
         ~environment:Environment.empty
         ~path:Path.empty
         ~clock:(Bonsai.Time_source.create ~start:(Time_ns.now ()))
-        ~inject_dynamic:Nothing.unreachable_code
-        ~inject_static:Nothing.unreachable_code
+        ~inject:unreachable_action
         ~model:(Ui_incr.return model.default)
     in
     Snapshot.result snapshot |> Ui_incr.pack
@@ -6389,4 +6377,315 @@ let%expect_test "most_recent_some" =
   Bonsai.Var.set active true;
   Handle.show handle;
   [%expect {| (6) |}]
+;;
+
+let%expect_test _ =
+  let component = Bonsai.with_model_resetter (Bonsai.const 10) in
+  let handle =
+    Handle.create
+      (module struct
+        type t = int * unit Effect.t
+        type incoming = unit
+
+        let view (x, _) = Int.to_string x
+        let incoming (_, x) () = x
+      end)
+      component
+  in
+  Handle.show handle;
+  [%expect {| 10 |}];
+  Handle.do_actions handle [ () ]
+;;
+
+let%test_module "Action delivery paths" =
+  (module struct
+    let%expect_test "Sub/Leaf1/Leaf0" =
+      let component =
+        let dummy_sm0 =
+          Bonsai.state_machine0
+            ~apply_action:(fun _context () () -> ())
+            ~default_model:()
+            ()
+        in
+        let dummy_sm1 =
+          Bonsai.state_machine1
+            (opaque_const_value ())
+            ~apply_action:(fun _context _input () () -> ())
+            ~default_model:()
+        in
+        let%sub _, inject1 = dummy_sm0 in
+        let%sub _, inject2 = dummy_sm1 in
+        let%sub _, inject3 = dummy_sm0 in
+        let%sub _, inject4 = dummy_sm1 in
+        let%arr inject1 = inject1
+        and inject2 = inject2
+        and inject3 = inject3
+        and inject4 = inject4 in
+        inject1 (), inject2 (), inject3 (), inject4 ()
+      in
+      let module Action = struct
+        type t =
+          | One
+          | Two
+          | Three
+          | Four
+        [@@deriving sexp_of]
+      end
+      in
+      let handle =
+        Handle.create
+          (module struct
+            type t = unit Effect.t * unit Effect.t * unit Effect.t * unit Effect.t
+            type incoming = Action.t
+
+            let view _ = ""
+
+            let incoming (i1, i2, i3, i4) = function
+              | Action.One -> i1
+              | Two -> i2
+              | Three -> i3
+              | Four -> i4
+            ;;
+          end)
+          component
+      in
+      Handle.print_actions handle;
+      Handle.do_actions handle [ One ];
+      Handle.show handle;
+      [%expect {| ("Processed action" (action (Sub_from (Leaf_static <opaque>)))) |}];
+      Handle.do_actions handle [ Two ];
+      Handle.show handle;
+      [%expect
+        {| ("Processed action" (action (Sub_into (Sub_from (Leaf_dynamic <opaque>))))) |}];
+      Handle.do_actions handle [ Three ];
+      Handle.show handle;
+      [%expect
+        {|
+        ("Processed action"
+         (action (Sub_into (Sub_into (Sub_from (Leaf_static <opaque>)))))) |}];
+      Handle.do_actions handle [ Four ];
+      Handle.show handle;
+      [%expect
+        {|
+        ("Processed action"
+         (action (Sub_into (Sub_into (Sub_into (Leaf_dynamic <opaque>)))))) |}]
+    ;;
+
+    let%expect_test "Wrap/Model_resetter" =
+      let component =
+        Bonsai.wrap
+          ~default_model:()
+          ~apply_action:(fun _context _ () () -> ())
+          ~f:(fun (_ : unit Value.t) inject_outer ->
+            let%sub (_, inject), inject_reset =
+              Bonsai.with_model_resetter
+                (Bonsai.state_machine1
+                   ~default_model:()
+                   ~apply_action:(fun _context _input () () -> ())
+                   (opaque_const_value ()))
+            in
+            let%arr inject_outer = inject_outer
+            and inject_reset = inject_reset
+            and inject = inject in
+            inject_outer (), inject_reset, inject ())
+          ()
+      in
+      let module Action = struct
+        type t =
+          | Wrap_outer
+          | Model_reset
+          | Inject_dynamic
+        [@@deriving sexp_of]
+      end
+      in
+      let handle =
+        Handle.create
+          (module struct
+            type t = unit Effect.t * unit Effect.t * unit Effect.t
+            type incoming = Action.t
+
+            let view _ = ""
+
+            let incoming (wrap_outer, model_reset, inject) = function
+              | Action.Wrap_outer -> wrap_outer
+              | Model_reset -> model_reset
+              | Inject_dynamic -> inject
+            ;;
+          end)
+          component
+      in
+      Handle.print_actions handle;
+      Handle.do_actions handle [ Wrap_outer ];
+      Handle.show handle;
+      [%expect {| ("Processed action" (action (Wrap_outer <opaque>))) |}];
+      Handle.do_actions handle [ Model_reset ];
+      Handle.show handle;
+      [%expect {|
+        ("Processed action" (action (Wrap_inner Model_reset_outer))) |}];
+      Handle.do_actions handle [ Inject_dynamic ];
+      Handle.show handle;
+      [%expect
+        {|
+        ("Processed action"
+         (action (Wrap_inner (Model_reset_inner (Leaf_dynamic <opaque>))))) |}]
+    ;;
+
+    (* Note: Lazy doesn't have a branch point, so its use doesn't affect the action path,
+       but this test does demonstrate that action paths work as intended with lazy
+       components. *)
+    let%expect_test "Switch/Lazy" =
+      let lazy_branch_var = Bonsai.Var.create false in
+      let lazy_branch = Bonsai.Var.value lazy_branch_var in
+      let component =
+        match%sub lazy_branch with
+        | false ->
+          let%sub _, inject =
+            Bonsai.state_machine0
+              ~default_model:()
+              ~apply_action:(fun _context () () -> ())
+              ()
+          in
+          let%arr inject = inject in
+          inject ()
+        | true ->
+          (Bonsai.lazy_ [@alert "-deprecated"])
+            (lazy
+              (let%sub _, inject =
+                 Bonsai.state_machine0
+                   ~default_model:()
+                   ~apply_action:(fun _context () () -> ())
+                   ()
+               in
+               let%arr inject = inject in
+               inject ()))
+      in
+      let module Action = struct
+        type t = Inject [@@deriving sexp_of]
+      end
+      in
+      let handle =
+        Handle.create
+          (module struct
+            type t = unit Effect.t
+            type incoming = Action.t
+
+            let view _ = ""
+
+            let incoming inject = function
+              | Action.Inject -> inject
+            ;;
+          end)
+          component
+      in
+      Handle.print_actions handle;
+      (* In this case, we should go through the first switch branch and not hit the lazy
+         case *)
+      Handle.do_actions handle [ Inject ];
+      Handle.show handle;
+      [%expect {| ("Processed action" (action (Switch 0 (Leaf_static <opaque>)))) |}];
+      Bonsai.Var.set lazy_branch_var true;
+      Handle.recompute_view_until_stable handle;
+      (* And alternatively, in this case, we should go through the second branch and hit
+         the lazy case *)
+      Handle.do_actions handle [ Inject ];
+      Handle.show handle;
+      [%expect
+        {|
+          ("Processed action" (action (Switch 1 (Lazy (Leaf_static <opaque>))))) |}]
+    ;;
+
+    let%expect_test "Assoc" =
+      let input = Bonsai.Var.create (Int.Map.of_alist_exn [ 1, (); 2, () ]) in
+      let component =
+        Bonsai.assoc
+          (module Int)
+          (Bonsai.Var.value input)
+          ~f:(fun _ _ ->
+            let%sub _, inject =
+              Bonsai.state_machine0
+                ~default_model:()
+                ~apply_action:(fun _context () () -> ())
+                ()
+            in
+            let%arr inject = inject in
+            inject ())
+      in
+      let module Action = struct
+        type t = Entry of int [@@deriving sexp_of]
+      end
+      in
+      let handle =
+        Handle.create
+          (module struct
+            type t = unit Effect.t Int.Map.t
+            type incoming = Action.t
+
+            let view _ = ""
+            let incoming m (Action.Entry i) = Map.find_exn m i
+          end)
+          component
+      in
+      Handle.print_actions handle;
+      Handle.do_actions handle [ Entry 1 ];
+      Handle.show handle;
+      [%expect {| ("Processed action" (action (Assoc 1 (Leaf_static <opaque>)))) |}];
+      Handle.do_actions handle [ Entry 2 ];
+      Handle.show handle;
+      [%expect {| ("Processed action" (action (Assoc 2 (Leaf_static <opaque>)))) |}]
+    ;;
+
+    let%expect_test "Assoc_on" =
+      let input = Bonsai.Var.create (Int.Map.of_alist_exn [ 1, (); 2, () ]) in
+      let component =
+        Bonsai.Expert.assoc_on
+          (module Int)
+          (module Unit)
+          ~get_model_key:(fun _ _ -> ())
+          ~f:(fun _ _ -> Bonsai.state 0)
+          (Bonsai.Var.value input)
+      in
+      let module Action = struct
+        type t =
+          | Entry of
+              { key : int
+              ; set_to : int
+              }
+        [@@deriving sexp_of]
+      end
+      in
+      let handle =
+        Handle.create
+          (module struct
+            type t = (int * (int -> unit Effect.t)) Int.Map.t
+            type incoming = Action.t
+
+            let view m =
+              Map.to_alist m
+              |> List.map ~f:(fun (i, (state, _inject)) -> i, state)
+              |> [%sexp_of: (int * int) list]
+              |> Sexp.to_string_hum
+            ;;
+
+            let incoming m (Action.Entry { key; set_to }) =
+              let _state, inject = Map.find_exn m key in
+              inject set_to
+            ;;
+          end)
+          component
+      in
+      Handle.print_actions handle;
+      Handle.do_actions handle [ Entry { key = 1; set_to = 1 } ];
+      Handle.show handle;
+      [%expect
+        {|
+        ("Processed action" (action (Assoc_on 1 () (Leaf_static <opaque>))))
+        ((1 1) (2 1)) |}];
+      Handle.do_actions handle [ Entry { key = 2; set_to = 2 } ];
+      Handle.show handle;
+      [%expect
+        {|
+        ("Processed action" (action (Assoc_on 2 () (Leaf_static <opaque>))))
+        ((1 2) (2 2)) |}]
+    ;;
+  end)
 ;;

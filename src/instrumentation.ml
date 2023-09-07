@@ -42,34 +42,15 @@ let instrument_computation (t : _ Computation.t) ~start_timer ~stop_timer =
       entry_label [%string "%{node_info.node_type}-apply_action"]
     in
     let by_label = entry_label [%string "%{node_info.node_type}-by"] in
-    let time_apply_action
-      ~apply_action
-      ~inject_dynamic
-      ~inject_static
-      ~schedule_event
-      input
-      model
-      action
-      =
+    let time_apply_action ~apply_action ~inject ~schedule_event input model action =
       start_timer apply_action_label;
-      let model =
-        apply_action ~inject_dynamic ~inject_static ~schedule_event input model action
-      in
+      let model = apply_action ~inject ~schedule_event input model action in
       stop_timer apply_action_label;
       model
     in
-    let time_static_apply_action
-      ~apply_action
-      ~inject_dynamic
-      ~inject_static
-      ~schedule_event
-      model
-      action
-      =
+    let time_static_apply_action ~apply_action ~inject ~schedule_event model action =
       start_timer apply_action_label;
-      let model =
-        apply_action ~inject_dynamic ~inject_static ~schedule_event model action
-      in
+      let model = apply_action ~inject ~schedule_event model action in
       stop_timer apply_action_label;
       model
     in

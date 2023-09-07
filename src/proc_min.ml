@@ -33,22 +33,6 @@ let switch ~here ~match_ ~branches ~with_ =
   Switch { match_; arms; here }
 ;;
 
-let reset_to_default
-  ~default_model
-  ~inject_dynamic:_
-  ~inject_static:_
-  ~schedule_event:_
-  _prev_model
-  =
-  default_model
-;;
-
-let build_resetter reset ~default_model ~f =
-  let ignore_absurd : (Nothing.t -> 'a) -> unit = ignore in
-  Option.value_map reset ~default:(reset_to_default ~default_model) ~f:(fun a ->
-    f ~ignore_absurd a)
-;;
-
 module Dynamic_scope = struct
   let fetch ~id ~default ~for_some = Fetch { id; default; for_some }
   let store ~id ~value ~inner = Store { id; value; inner }
@@ -69,20 +53,19 @@ let state_machine1_safe
   =
   let name = Source_code_position.to_string [%here] in
   let reset =
-    build_resetter
-      reset
-      ~default_model
-      ~f:(fun ~ignore_absurd reset ~inject_dynamic ~inject_static ~schedule_event ->
-      ignore_absurd inject_static;
-      reset (Apply_action_context.create ~inject:inject_dynamic ~schedule_event))
+    match reset with
+    | None -> fun ~inject:_ ~schedule_event:_ _ -> default_model
+    | Some reset ->
+      fun ~inject ~schedule_event ->
+        reset (Apply_action_context.create ~inject ~schedule_event)
   in
-  let apply_action ~inject_dynamic ~inject_static:_ ~schedule_event =
-    apply_action (Apply_action_context.create ~inject:inject_dynamic ~schedule_event)
+  let apply_action ~inject ~schedule_event =
+    apply_action (Apply_action_context.create ~inject ~schedule_event)
   in
   Leaf1
     { model = Meta.Model.of_module ~sexp_of_model ~equal ~name ~default:default_model
     ; input_id = Meta.Input.create ()
-    ; dynamic_action = Meta.Action.of_module ~sexp_of_action ~name
+    ; dynamic_action = Type_equal.Id.create ~name sexp_of_action
     ; apply_action
     ; reset
     ; input
@@ -134,16 +117,15 @@ let state_machine0
   ()
   =
   let name = Source_code_position.to_string [%here] in
-  let apply_action ~inject_dynamic:_ ~inject_static ~schedule_event =
-    apply_action (Apply_action_context.create ~inject:inject_static ~schedule_event)
+  let apply_action ~inject ~schedule_event =
+    apply_action (Apply_action_context.create ~inject ~schedule_event)
   in
   let reset =
-    build_resetter
-      reset
-      ~default_model
-      ~f:(fun ~ignore_absurd reset ~inject_dynamic ~inject_static ~schedule_event ->
-      ignore_absurd inject_dynamic;
-      reset (Apply_action_context.create ~inject:inject_static ~schedule_event))
+    match reset with
+    | None -> fun ~inject:_ ~schedule_event:_ _ -> default_model
+    | Some reset ->
+      fun ~inject ~schedule_event ->
+        reset (Apply_action_context.create ~inject ~schedule_event)
   in
   Leaf0
     { model =
@@ -152,7 +134,7 @@ let state_machine0
           ~equal
           ~name
           ~default:default_model
-    ; static_action = Meta.Action.of_module ~sexp_of_action ~name
+    ; static_action = Type_equal.Id.create ~name sexp_of_action
     ; apply_action
     ; reset
     }
@@ -281,25 +263,24 @@ let wrap
     Type_equal.Id.create ~name:"model id" [%sexp_of: opaque]
   in
   let reset =
-    build_resetter
-      reset
-      ~default_model
-      ~f:(fun ~ignore_absurd reset ~inject_dynamic ~inject_static ~schedule_event ->
-      ignore_absurd inject_static;
-      reset (Apply_action_context.create ~inject:inject_dynamic ~schedule_event))
+    match reset with
+    | None -> fun ~inject:_ ~schedule_event:_ _ -> default_model
+    | Some reset ->
+      fun ~inject ~schedule_event ->
+        reset (Apply_action_context.create ~inject ~schedule_event)
   in
-  let action_id =
-    Meta.Action.of_module ~sexp_of_action:sexp_of_opaque ~name:"action id"
+  let action_id : action Type_equal.Id.t =
+    Type_equal.Id.create ~name:"action id" [%sexp_of: opaque]
   in
   let result_id = Meta.Input.create () in
   let inject_id : (action -> unit Effect.t) Type_equal.Id.t =
     Type_equal.Id.create ~name:"inject id" [%sexp_of: opaque]
   in
-  let apply_action ~inject_dynamic ~inject_static:_ ~schedule_event result model action =
+  let apply_action ~inject ~schedule_event result model action =
     match result with
     | Some result ->
       apply_action
-        (Apply_action_context.create ~inject:inject_dynamic ~schedule_event)
+        (Apply_action_context.create ~inject ~schedule_event)
         result
         model
         action
@@ -341,5 +322,3 @@ let with_model_resetter f =
 ;;
 
 let path = Path
-
-include Computation

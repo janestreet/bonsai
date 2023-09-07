@@ -511,6 +511,41 @@ let%expect_test "nothing form" =
     <div> </div> |}]
 ;;
 
+let%expect_test "Union like Css_gen form" =
+  let module T = struct
+    type global =
+      [ `Inherit
+      | `Initial
+      ]
+    [@@deriving sexp, sexp_grammar]
+
+    type t =
+      [ `Var of string
+      | global
+      ]
+    [@@deriving sexp, sexp_grammar]
+  end
+  in
+  let handle = sexp_form_handle (module T) in
+  Handle.show handle;
+  [%expect
+    {|
+    (Error "a value is required")
+
+    ==============
+    <select id="bonsai_path_replaced_in_test"
+            class="widget-dropdown"
+            onchange
+            style={
+              width: 100.00%;
+            }>
+      <option value="0" #selected="true">  </option>
+      <option value="1" #selected="false"> inherit </option>
+      <option value="2" #selected="false"> initial </option>
+      <option value="3" #selected="false"> var </option>
+    </select> |}]
+;;
+
 let%expect_test "setting option form" =
   let module T = struct
     type t = int option [@@deriving sexp, sexp_grammar]
@@ -2799,4 +2834,148 @@ let%expect_test "model state is not shared between variants even when they have 
              value:normalized=2
              oninput> </input>
     </div> |}]
+;;
+
+let%test_module "Stabilization tests" =
+  (module struct
+    let%expect_test "A simple record doesn't stabilize" =
+      let module T = struct
+        type t =
+          { a : int
+          ; b : string
+          ; c : bool
+          }
+        [@@deriving sexp, sexp_grammar]
+      end
+      in
+      let handle = sexp_form_handle (module T) in
+      Handle.print_stabilizations handle;
+      Handle.do_actions handle [ { T.a = 10; b = "hello world"; c = true } ];
+      Handle.recompute_view_until_stable handle;
+      [%expect]
+    ;;
+
+    let%expect_test "A list stabilizes once" =
+      let module T = struct
+        type t = int list [@@deriving sexp, sexp_grammar]
+      end
+      in
+      let handle = sexp_form_handle (module T) in
+      Handle.print_stabilizations handle;
+      Handle.do_actions handle [ [ 1; 2; 3; 4 ] ];
+      Handle.recompute_view_until_stable handle;
+      [%expect {| stabilized |}]
+    ;;
+
+    let%expect_test "A variant stabilizes once" =
+      let module T = struct
+        type t =
+          | A of int
+          | B of bool
+        [@@deriving sexp, sexp_grammar]
+      end
+      in
+      let handle = sexp_form_handle (module T) in
+      Handle.print_stabilizations handle;
+      Handle.do_actions handle [ B false ];
+      Handle.recompute_view_until_stable handle;
+      [%expect {|
+        stabilized |}]
+    ;;
+
+    let%expect_test "Nested lists and variants stabilize linearly with the depth of the \
+                     type (depth 2)"
+      =
+      let module T = struct
+        type s =
+          | A of int
+          | B of bool
+
+        and t = s list [@@deriving sexp, sexp_grammar]
+      end
+      in
+      let handle = sexp_form_handle (module T) in
+      Handle.print_stabilizations handle;
+      Handle.do_actions handle [ [ A 1; B false; B true; A 4 ] ];
+      Handle.recompute_view_until_stable handle;
+      [%expect
+        {|
+        stabilized
+        stabilized
+        stabilized
+        stabilized
+        stabilized |}]
+    ;;
+
+    let%expect_test "Nested lists and variants stabilize linearly with the depth of the \
+                     type (depth 3)"
+      =
+      let module T = struct
+        type r =
+          | A of int
+          | B of bool
+
+        and s = r list
+
+        and t =
+          | C of s
+          | D of float
+        [@@deriving sexp, sexp_grammar]
+      end
+      in
+      let handle = sexp_form_handle (module T) in
+      Handle.print_stabilizations handle;
+      Handle.do_actions handle [ C [ A 1; B false; B true; A 4 ] ];
+      Handle.recompute_view_until_stable handle;
+      [%expect
+        {|
+        stabilized
+        stabilized
+        stabilized
+        stabilized
+        stabilized
+        stabilized |}]
+    ;;
+
+    let%expect_test "Nested lists and variants stabilize linearly with the depth of the \
+                     type (depth 4)"
+      =
+      let module T = struct
+        type q =
+          | A of int
+          | B of bool
+
+        and r = q list
+
+        and s =
+          | C of r
+          | D of float
+
+        and t = s list [@@deriving sexp, sexp_grammar]
+      end
+      in
+      let handle = sexp_form_handle (module T) in
+      Handle.print_stabilizations handle;
+      Handle.do_actions
+        handle
+        [ [ C [ A 1; B false; B true; A 4 ]; D 1.; C [ B true; B false; A 1; A 10 ] ] ];
+      Handle.recompute_view_until_stable handle;
+      [%expect
+        {|
+        stabilized
+        stabilized
+        stabilized
+        stabilized
+        stabilized
+        stabilized
+        stabilized
+        stabilized
+        stabilized
+        stabilized
+        stabilized
+        stabilized
+        stabilized
+        stabilized |}]
+    ;;
+  end)
 ;;

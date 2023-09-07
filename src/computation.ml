@@ -1,68 +1,74 @@
 open! Core
 open! Import
 
-type ('input, 'dynamic_action, 'static_action, 'model) dynamic_apply_action =
-  inject_dynamic:('dynamic_action -> unit Effect.t)
-  -> inject_static:('static_action -> unit Effect.t)
+type ('input, 'action, 'model) apply_action =
+  inject:('action Action.t -> unit Effect.t)
   -> schedule_event:(unit Effect.t -> unit)
   -> 'input option
   -> 'model
-  -> 'dynamic_action
+  -> 'action Action.t
   -> 'model
 
-type ('dynamic_action, 'static_action, 'model) static_apply_action =
-  inject_dynamic:('dynamic_action -> unit Effect.t)
-  -> inject_static:('static_action -> unit Effect.t)
-  -> schedule_event:(unit Effect.t -> unit)
-  -> 'model
-  -> 'static_action
-  -> 'model
-
-type ('model, 'dynamic_action, 'static_action, 'input, 'result) eval_fun =
+type ('model, 'action, 'input, 'result) eval_fun =
   environment:Environment.t
   -> path:Path.t
   -> clock:Time_source.t
   -> model:'model Incr.t
-  -> inject_dynamic:('dynamic_action -> unit Effect.t)
-  -> inject_static:('static_action -> unit Effect.t)
-  -> ('model, 'dynamic_action, 'input, 'result) Snapshot.t
+  -> inject:('action Action.t -> unit Effect.t)
+  -> ('model, 'input, 'result) Snapshot.t
 
-type ('dynamic_action, 'static_action, 'model) reset =
-  inject_dynamic:('dynamic_action -> unit Effect.t)
-  -> inject_static:('static_action -> unit Effect.t)
+type ('action, 'model) reset =
+  inject:('action Action.t -> unit Effect.t)
   -> schedule_event:(unit Effect.t -> unit)
   -> 'model
   -> 'model
 
-type ('model, 'dynamic_action, 'static_action, 'input, 'result) info =
+type ('model, 'action, 'input, 'result) info =
   { model : 'model Meta.Model.t
   ; input : 'input Meta.Input.t
-  ; dynamic_action : 'dynamic_action Meta.Action.t
-  ; static_action : 'static_action Meta.Action.t
-  ; apply_static : ('dynamic_action, 'static_action, 'model) static_apply_action
-  ; apply_dynamic : ('input, 'dynamic_action, 'static_action, 'model) dynamic_apply_action
-  ; run : ('model, 'dynamic_action, 'static_action, 'input, 'result) eval_fun
-  ; reset : ('dynamic_action, 'static_action, 'model) reset
+  ; action : 'action Action.id
+  ; apply_action : ('input, 'action, 'model) apply_action
+  ; run : ('model, 'action, 'input, 'result) eval_fun
+  ; reset : ('action, 'model) reset
   }
 
-type 'result packed_info = T : (_, _, _, _, 'result) info -> 'result packed_info
+type 'result packed_info = T : (_, _, _, 'result) info -> 'result packed_info
 
 type 'result t =
   | Return : 'result Value.t -> 'result t
   | Leaf1 :
       { model : 'model Meta.Model.t
       ; input_id : 'input Meta.Input.t
-      ; dynamic_action : 'dynamic_action Meta.Action.t
-      ; apply_action : ('input, 'dynamic_action, Nothing.t, 'model) dynamic_apply_action
-      ; reset : ('dynamic_action, Nothing.t, 'model) reset
+      ; dynamic_action : 'dynamic_action Type_equal.Id.t
+      ; apply_action :
+          inject:('dynamic_action -> unit Effect.t)
+          -> schedule_event:(unit Effect.t -> unit)
+          -> 'input option
+          -> 'model
+          -> 'dynamic_action
+          -> 'model
+      ; reset :
+          inject:('dynamic_action -> unit Effect.t)
+          -> schedule_event:(unit Effect.t -> unit)
+          -> 'model
+          -> 'model
       ; input : 'input Value.t
       }
       -> ('model * ('dynamic_action -> unit Effect.t)) t
   | Leaf0 :
       { model : 'model Meta.Model.t
-      ; static_action : 'static_action Meta.Action.t
-      ; apply_action : (Nothing.t, 'static_action, 'model) static_apply_action
-      ; reset : (Nothing.t, 'static_action, 'model) reset
+      ; static_action : 'static_action Type_equal.Id.t
+      ; apply_action :
+          inject:('static_action -> unit Effect.t)
+          -> schedule_event:(unit Effect.t -> unit)
+          -> 'model
+          -> 'static_action
+          -> 'model
+      ; reset :
+          inject:('static_action -> unit Effect.t)
+          -> schedule_event:(unit Effect.t -> unit)
+          -> 'model
+          -> 'model
       }
       -> ('model * ('static_action -> unit Effect.t)) t
   | Leaf_incr :
@@ -125,14 +131,23 @@ type 'result t =
   | Lazy : 'result t lazy_t -> 'result t
   | Wrap :
       { wrapper_model : 'outer_model Meta.Model.t
-      ; action_id : 'outer_dynamic_action Meta.Action.t
       ; result_id : 'result Meta.Input.t
-      ; inject_id : ('outer_dynamic_action -> unit Effect.t) Type_equal.Id.t
+      ; action_id : 'outer_action Type_equal.Id.t
+      ; inject_id : ('outer_action -> unit Effect.t) Type_equal.Id.t
       ; model_id : 'outer_model Type_equal.Id.t
       ; inner : 'result t
       ; dynamic_apply_action :
-          ('result, 'outer_dynamic_action, Nothing.t, 'outer_model) dynamic_apply_action
-      ; reset : ('outer_dynamic_action, Nothing.t, 'outer_model) reset
+          inject:('outer_action -> unit Effect.t)
+          -> schedule_event:(unit Effect.t -> unit)
+          -> 'result option
+          -> 'outer_model
+          -> 'outer_action
+          -> 'outer_model
+      ; reset :
+          inject:('outer_action -> unit Effect.t)
+          -> schedule_event:(unit Effect.t -> unit)
+          -> 'outer_model
+          -> 'outer_model
       }
       -> 'result t
   | With_model_resetter :

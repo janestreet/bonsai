@@ -1,8 +1,16 @@
 open! Core
 open! Import
 
-val mapi : [ `Use_assoc ]
-val map : [ `Use_assoc ]
+val mapi
+  :  ('k, 'v1, 'cmp) Map.t Value.t
+  -> f:(key:'k -> data:'v1 -> 'v2)
+  -> ('k, 'v2, 'cmp) Map.t Computation.t
+
+val map
+  :  ('k, 'v1, 'cmp) Map.t Value.t
+  -> f:('v1 -> 'v2)
+  -> ('k, 'v2, 'cmp) Map.t Computation.t
+
 val of_set : ('k, 'cmp) Set.t Value.t -> ('k, unit, 'cmp) Map.t Computation.t
 
 val filter_mapi

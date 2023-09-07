@@ -29,3 +29,5 @@ val action_input_incr : _ t -> Incr.Packed.t
 val clock : (_, _) t -> Bonsai.Time_source.t
 val invalidate_observers : _ t -> unit
 val reset_model_to_default : _ t -> unit
+val print_actions : _ t -> unit
+val print_stabilizations : _ t -> unit

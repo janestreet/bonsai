@@ -2,10 +2,8 @@ open! Core
 open! Import
 module Incr = Incr0
 
-(* [`Use_assoc] indicates that a function is not recommended in Bonsai because
-   its behavior can be implemented by using [Bonsai.assoc] *)
-let mapi = `Use_assoc
-let map = `Use_assoc
+let map m ~f = Incr.compute m ~f:(Incr_map.map ~f)
+let mapi m ~f = Incr.compute m ~f:(Incr_map.mapi ~f)
 let of_set = Incr.compute ~f:Incr_map.of_set
 let filter_mapi m ~f = Incr.compute m ~f:(Incr_map.filter_mapi ~f)
 let filter_map m ~f = Incr.compute m ~f:(Incr_map.filter_map ~f)

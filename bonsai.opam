@@ -20,6 +20,7 @@ depends: [
   "async_rpc_websocket"
   "babel"
   "base"
+  "bin_prot"
   "core"
   "core_bench"
   "core_kernel"
