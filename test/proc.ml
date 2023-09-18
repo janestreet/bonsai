@@ -250,5 +250,6 @@ module Handle = struct
   let lifecycle_incr = Driver.lifecycle_incr
   let print_actions = Driver.print_actions
   let print_stabilizations = Driver.print_stabilizations
+  let print_stabilization_tracker_stats = Driver.print_stabilization_tracker_stats
   let has_after_display_events = Driver.has_after_display_events
 end

@@ -6,6 +6,7 @@ type 'a t = 'a Incr.Var.t
 let create x = Incr.Var.create x
 
 let set t v =
+  Stabilization_tracker.mark_incremental_dirty ();
   if Incr.am_stabilizing ()
   then failwith "Bonsai.Var mutated during the computation of a Bonsai value";
   Incr.Var.set t v

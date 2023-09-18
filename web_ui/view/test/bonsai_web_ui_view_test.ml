@@ -1762,7 +1762,7 @@ let%expect_test "card" =
     ## basic
     ```html
     <div class="container_hash_replaced_in_test"
-         custom-css-vars=((--intent-fg_hash_replaced_in_test black)(--intent-bg_hash_replaced_in_test white)(--extreme-fg_hash_replaced_in_test black))
+         custom-css-vars=((--intent-fg_hash_replaced_in_test black)(--intent-bg_hash_replaced_in_test white)(--extreme-fg_hash_replaced_in_test black)(--extreme-bg_hash_replaced_in_test white))
          onclick
          style={
            display: flex;
@@ -1783,7 +1783,7 @@ let%expect_test "card" =
     ## basic_no_title
     ```html
     <div class="container_hash_replaced_in_test"
-         custom-css-vars=((--intent-fg_hash_replaced_in_test black)(--intent-bg_hash_replaced_in_test white)(--extreme-fg_hash_replaced_in_test black))
+         custom-css-vars=((--intent-fg_hash_replaced_in_test black)(--intent-bg_hash_replaced_in_test white)(--extreme-fg_hash_replaced_in_test black)(--extreme-bg_hash_replaced_in_test white))
          onclick
          style={
            display: flex;
@@ -1800,7 +1800,7 @@ let%expect_test "card" =
     ## with_intent
     ```html
     <div class="container_hash_replaced_in_test"
-         custom-css-vars=((--intent-fg_hash_replaced_in_test #348203)(--intent-bg_hash_replaced_in_test #ecffe0)(--extreme-fg_hash_replaced_in_test black))
+         custom-css-vars=((--intent-fg_hash_replaced_in_test #348203)(--intent-bg_hash_replaced_in_test #ecffe0)(--extreme-fg_hash_replaced_in_test black)(--extreme-bg_hash_replaced_in_test white))
          onclick
          style={
            display: flex;
@@ -1821,7 +1821,7 @@ let%expect_test "card" =
     ## with_field_set
     ```html
     <div class="container_hash_replaced_in_test"
-         custom-css-vars=((--intent-fg_hash_replaced_in_test black)(--intent-bg_hash_replaced_in_test white)(--extreme-fg_hash_replaced_in_test black))
+         custom-css-vars=((--intent-fg_hash_replaced_in_test black)(--intent-bg_hash_replaced_in_test white)(--extreme-fg_hash_replaced_in_test black)(--extreme-bg_hash_replaced_in_test white))
          onclick
          style={
            display: flex;

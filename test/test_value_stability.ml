@@ -144,7 +144,7 @@ let%test_module "Bonsai_extra.is_stable" =
       val is_stable
         :  equal:('a -> 'a -> bool)
         -> 'a Value.t
-        -> time_to_stable:Time_ns.Span.t
+        -> time_to_stable:Time_ns.Span.t Value.t
         -> bool Computation.t
 
       val show_handle : ('a, 'b) Handle.t -> unit
@@ -152,73 +152,24 @@ let%test_module "Bonsai_extra.is_stable" =
     struct
       let show = M.show_handle
 
-      let%expect_test _ =
-        let v' = Bonsai.Var.create 1 in
-        let v = Bonsai.Var.value v' in
-        let c =
-          let%sub is_stable =
-            M.is_stable ~equal:Int.equal v ~time_to_stable:(Time_ns.Span.of_sec 1.0)
-          in
-          return (Value.both v is_stable)
-        in
-        let handle =
-          Handle.create
-            (Result_spec.sexp
-               (module struct
-                 type t = int * bool [@@deriving sexp]
-               end))
-            c
-        in
-        show handle;
-        [%expect {| (1 false) |}];
-        advance_by_sec handle 1.0;
-        show handle;
-        [%expect {| (1 true) |}];
-        Bonsai.Var.set v' 2;
-        show handle;
-        [%expect {| (2 false) |}];
-        advance_by_sec handle 0.5;
-        show handle;
-        [%expect {| (2 false) |}];
-        Bonsai.Var.set v' 3;
-        show handle;
-        [%expect {| (3 false) |}];
-        advance_by_sec handle 0.5;
-        show handle;
-        [%expect {| (3 false) |}];
-        advance_by_sec handle 0.5;
-        show handle;
-        [%expect {| (3 true) |}];
-        Bonsai.Var.set v' 4;
-        show handle;
-        [%expect {| (4 false) |}];
-        advance_by_sec handle 1.0;
-        Bonsai.Var.set v' 5;
-        show handle;
-        [%expect {| (5 false) |}];
-        advance_by_sec handle 1.0;
-        show handle;
-        [%expect {| (5 true) |}];
-        advance_by_sec handle 0.5;
-        Bonsai.Var.set v' 4;
-        show handle;
-        [%expect {| (4 false) |}];
-        advance_by_sec handle 0.5;
-        Bonsai.Var.set v' 5;
-        show handle;
-        [%expect {| (5 false) |}]
-      ;;
+      type controls =
+        { v' : int Bonsai.Var.t
+        ; on' : bool Bonsai.Var.t
+        ; span : Time_ns.Span.t Bonsai.Var.t
+        }
 
-      let%expect_test _ =
+      let gen_handle ~initial_span_secs =
+        let span = Bonsai.Var.create (Time_ns.Span.of_sec initial_span_secs) in
         let v' = Bonsai.Var.create 1 in
         let on' = Bonsai.Var.create true in
+        let controls = { span; v'; on' } in
         let v = Bonsai.Var.value v' in
         let on = Bonsai.Var.value on' in
         let c =
           match%sub on with
           | true ->
             let%sub x =
-              M.is_stable ~equal:Int.equal v ~time_to_stable:(Time_ns.Span.of_sec 1.0)
+              M.is_stable ~equal:Int.equal v ~time_to_stable:(Bonsai.Var.value span)
             in
             let%arr x = x
             and v = v in
@@ -233,69 +184,161 @@ let%test_module "Bonsai_extra.is_stable" =
                end))
             c
         in
+        handle, controls
+      ;;
+
+      let%expect_test {|advancing time and value interactions|} =
+        let handle, controls = gen_handle ~initial_span_secs:1.0 in
         show handle;
         [%expect {| ((false 1)) |}];
         advance_by_sec handle 1.0;
         show handle;
         [%expect {| ((true 1)) |}];
-        Bonsai.Var.set on' false;
+        Bonsai.Var.set controls.v' 2;
         show handle;
-        [%expect {| () |}];
-        Bonsai.Var.set on' true;
+        [%expect {| ((false 2)) |}];
+        advance_by_sec handle 0.5;
         show handle;
-        [%expect {| ((false 1)) |}]
+        [%expect {| ((false 2)) |}];
+        Bonsai.Var.set controls.v' 3;
+        show handle;
+        [%expect {| ((false 3)) |}];
+        advance_by_sec handle 0.5;
+        show handle;
+        [%expect {| ((false 3)) |}];
+        advance_by_sec handle 0.5;
+        show handle;
+        [%expect {| ((true 3)) |}];
+        Bonsai.Var.set controls.v' 4;
+        show handle;
+        [%expect {| ((false 4)) |}];
+        advance_by_sec handle 1.0;
+        Bonsai.Var.set controls.v' 5;
+        show handle;
+        [%expect {| ((false 5)) |}];
+        advance_by_sec handle 1.0;
+        show handle;
+        [%expect {| ((true 5)) |}];
+        advance_by_sec handle 0.5;
+        Bonsai.Var.set controls.v' 4;
+        show handle;
+        [%expect {| ((false 4)) |}];
+        advance_by_sec handle 0.5;
+        Bonsai.Var.set controls.v' 5;
+        show handle;
+        [%expect {| ((false 5)) |}]
       ;;
 
-      let%expect_test {|zero values for the timespan should be permitted (but issue a warning) and always return false |}
+      let%expect_test {|advancing time, value interactions, and enabling/disabling the computation|}
         =
-        let v' = Bonsai.Var.create 1 in
-        let on' = Bonsai.Var.create true in
-        let v = Bonsai.Var.value v' in
-        let on = Bonsai.Var.value on' in
-        let c =
-          match%sub on with
-          | true ->
-            let%sub x =
-              M.is_stable ~equal:Int.equal v ~time_to_stable:(Time_ns.Span.of_sec 0.0)
-            in
-            let%arr x = x
-            and v = v in
-            Some (x, v)
-          | false -> Bonsai.const None
-        in
-        let handle =
-          Handle.create
-            (Result_spec.sexp
-               (module struct
-                 type t = (bool * int) option [@@deriving sexp]
-               end))
-            c
-        in
-        [%expect {| "Bonsai_extra.is_stable: [time_to_stable] should be positive" |}];
+        let handle, controls = gen_handle ~initial_span_secs:1.0 in
         show handle;
         [%expect {| ((false 1)) |}];
         advance_by_sec handle 1.0;
         show handle;
-        [%expect {| ((false 1)) |}];
-        Bonsai.Var.set on' false;
+        [%expect {| ((true 1)) |}];
+        Bonsai.Var.set controls.on' false;
         show handle;
         [%expect {| () |}];
-        Bonsai.Var.set on' true;
+        Bonsai.Var.set controls.on' true;
         show handle;
         [%expect {| ((false 1)) |}]
       ;;
 
+      (* The order of lifecycle effect prints and handler show prints
+         depends on if the view is recomputed. This standardizes things. *)
+      let print_sorted_expect_test_output expect_output =
+        expect_output
+        |> String.split_lines
+        |> List.sort ~compare:String.compare
+        |> String.concat_lines
+        |> print_endline
+      ;;
+
+      let%expect_test {|zero values for the timespan should be permitted (but issue a warning) and always return false |}
+        =
+        let handle, controls = gen_handle ~initial_span_secs:0.0 in
+        show handle;
+        print_sorted_expect_test_output [%expect.output];
+        [%expect {|
+          ((true 1)) |}];
+        advance_by_sec handle 1.0;
+        show handle;
+        [%expect {| ((true 1)) |}];
+        Bonsai.Var.set controls.on' false;
+        show handle;
+        [%expect {| () |}];
+        Bonsai.Var.set controls.on' true;
+        show handle;
+        print_sorted_expect_test_output [%expect.output];
+        [%expect {|
+          ((true 1)) |}]
+      ;;
+
       let%expect_test {|negative values for the timespan should be permitted (but issue a warning) and always return false |}
         =
-        let v' = Bonsai.Var.create 1 in
-        let v = Bonsai.Var.value v' in
-        let c =
-          M.is_stable ~equal:Int.equal v ~time_to_stable:(Time_ns.Span.of_sec (-1.0))
-        in
-        [%expect {| "Bonsai_extra.is_stable: [time_to_stable] should be positive" |}];
-        let handle = Handle.create (Result_spec.sexp (module Bool)) c in
+        let handle, _ = gen_handle ~initial_span_secs:(-1.0) in
         show handle;
-        [%expect {| false |}]
+        print_sorted_expect_test_output [%expect.output];
+        [%expect
+          {|
+          "Bonsai_extra.is_stable: [time_to_stable] should not be negative"
+          ((true 1)) |}]
+      ;;
+
+      let%expect_test {|changing span |} =
+        let handle, controls = gen_handle ~initial_span_secs:1.0 in
+        show handle;
+        [%expect {| ((false 1)) |}];
+        advance_by_sec handle 2.;
+        show handle;
+        [%expect {| ((true 1)) |}];
+        Bonsai.Var.set controls.v' 4;
+        Bonsai.Var.set controls.span (Time_ns.Span.of_sec 5.);
+        show handle;
+        [%expect {| ((false 4)) |}];
+        advance_by_sec handle 2.;
+        show handle;
+        [%expect {| ((false 4)) |}];
+        advance_by_sec handle 4.;
+        show handle;
+        [%expect {| ((true 4)) |}];
+        Bonsai.Var.set controls.v' 6;
+        Bonsai.Var.set controls.span (Time_ns.Span.of_sec 0.);
+        show handle;
+        print_sorted_expect_test_output [%expect.output];
+        [%expect {|
+          ((true 6)) |}];
+        Bonsai.Var.set controls.v' 999;
+        Bonsai.Var.set controls.span (Time_ns.Span.of_sec (-1.));
+        show handle;
+        print_sorted_expect_test_output [%expect.output];
+        [%expect
+          {|
+          "Bonsai_extra.is_stable: [time_to_stable] should not be negative"
+          ((true 999)) |}];
+        Bonsai.Var.set controls.v' 17;
+        Bonsai.Var.set controls.span (Time_ns.Span.of_sec 1.);
+        show handle;
+        [%expect {| ((false 17)) |}];
+        advance_by_sec handle 2.;
+        show handle;
+        [%expect {| ((true 17)) |}]
+      ;;
+
+      let%expect_test {| keeping the value the same and changing the span |} =
+        let handle, controls = gen_handle ~initial_span_secs:1.0 in
+        show handle;
+        [%expect {| ((false 1)) |}];
+        advance_by_sec handle 1.;
+        show handle;
+        [%expect {| ((true 1)) |}];
+        Bonsai.Var.set controls.span (Time_ns.Span.of_sec 1.5);
+        show handle;
+        [%expect {| ((false 1)) |}];
+        Bonsai.Var.set controls.span (Time_ns.Span.of_sec 0.5);
+        show handle;
+        [%expect {| ((true 1)) |}]
       ;;
     end
 
@@ -505,15 +548,18 @@ let%test_module "Bonsai_extra.value_stability" =
       in
       let open T in
       let%sub { stability; time_to_next_stable }, inject =
-        Bonsai.state_machine0
-          ()
+        Bonsai.state_machine1
+          time_to_stable
           ~sexp_of_model:[%sexp_of: Model.t]
           ~equal:[%equal: Model.t]
           ~sexp_of_action:[%sexp_of: Action.t]
           ~default_model:Model.default
-          ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) model action ->
-          match action, model with
-          | Deactivate, { stability; _ } ->
+          ~apply_action:
+            (fun
+              (_ : _ Bonsai.Apply_action_context.t) time_to_stable model action ->
+          match action, model, time_to_stable with
+          | _, _, Inactive -> model
+          | Deactivate, { stability; _ }, _ ->
             let stability =
               match stability with
               | Inactive _ -> stability
@@ -521,19 +567,21 @@ let%test_module "Bonsai_extra.value_stability" =
               | Stable stable -> Inactive { previously_stable = Some stable }
             in
             (* Deactivating this component will automatically cause the value to be
-                 considered unstable.  This is because we have no way to tell what is
-                 happening to the value when this component is inactive, and I consider
-                 it safer to assume instability than to assume stability. *)
+                   considered unstable.  This is because we have no way to tell what is
+                   happening to the value when this component is inactive, and I consider
+                   it safer to assume instability than to assume stability. *)
             { stability; time_to_next_stable = None }
-          | Bounce (new_value, now), { stability; _ } ->
+          | Bounce (new_value, now), { stability; _ }, Active time_to_stable ->
             (* Bouncing will cause the value to become unstable, and set the
-                 time-to-next-stable to the provided value. *)
+                   time-to-next-stable to the provided value. *)
             let stability = Model.set_value new_value stability in
             let time_to_next_stable = Some (Time_ns.add now time_to_stable) in
             { stability; time_to_next_stable }
-          | Set_stable (stable, now), { stability; time_to_next_stable } ->
+          | ( Set_stable (stable, now)
+            , { stability; time_to_next_stable }
+            , Active time_to_stable ) ->
             (* Sets the value which is considered to be stable and resets
-                 the time until next stability. *)
+                   the time until next stability. *)
             (match stability with
              | Inactive { previously_stable } ->
                { stability = Unstable { previously_stable; unstable_value = stable }
@@ -634,7 +682,7 @@ let%test_module "Bonsai_extra.value_stability" =
         :  ?sexp_of_model:('a -> Sexp.t)
         -> equal:('a -> 'a -> bool)
         -> 'a Value.t
-        -> time_to_stable:Time_ns.Span.t
+        -> time_to_stable:Time_ns.Span.t Value.t
         -> 'a Bonsai_extra.Stability.t Computation.t
 
       val show_handle : ('a, 'b) Handle.t -> unit
@@ -650,7 +698,7 @@ let%test_module "Bonsai_extra.value_stability" =
             ~sexp_of_model:[%sexp_of: Int.t]
             ~equal:[%equal: Int.t]
             v
-            ~time_to_stable:(Time_ns.Span.of_sec 1.0)
+            ~time_to_stable:(Value.return (Time_ns.Span.of_sec 1.0))
         in
         let handle =
           Handle.create
@@ -713,7 +761,7 @@ let%test_module "Bonsai_extra.value_stability" =
                 ~sexp_of_model:[%sexp_of: Int.t]
                 ~equal:[%equal: Int.t]
                 v
-                ~time_to_stable:(Time_ns.Span.of_sec 1.0)
+                ~time_to_stable:(Value.return (Time_ns.Span.of_sec 1.0))
             in
             let%arr x = x in
             Some x

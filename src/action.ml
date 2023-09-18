@@ -65,12 +65,16 @@ and 'a t =
   | Assoc :
       { key : 'key
       ; action : 'a t
+      ; id : 'key Type_equal.Id.t
+      ; compare : 'key -> 'key -> int
       }
       -> ('key, 'a) assoc t
   | Assoc_on :
       { io_key : 'io_key
       ; model_key : 'model_key
       ; action : 'a t
+      ; io_id : 'io_key Type_equal.Id.t
+      ; io_compare : 'io_key -> 'io_key -> int
       }
       -> ('io_key, 'model_key, 'a) assoc_on t
 
@@ -234,12 +238,12 @@ let rec to_sexp : type a. a id -> a t -> Sexp.t = function
       let to_sexp = to_sexp type_id in
       [%sexp Lazy, (to_sexp action : Sexp.t)]
   | Assoc_id { key = key_id; action = action_id } ->
-    fun (Assoc { key; action }) ->
+    fun (Assoc { key; action; id = _; compare = _ }) ->
       let sexp_of_key = Type_equal.Id.to_sexp key_id in
       let sexp_of_action = to_sexp action_id in
       [%sexp Assoc, (key : key), (action : action)]
   | Assoc_on_id { io_key = io_key_id; model_key = model_key_id; action = action_id } ->
-    fun (Assoc_on { io_key; model_key; action }) ->
+    fun (Assoc_on { io_key; model_key; action; io_id = _; io_compare = _ }) ->
       let sexp_of_io_key = Type_equal.Id.to_sexp io_key_id in
       let sexp_of_model_key = Type_equal.Id.to_sexp model_key_id in
       let sexp_of_action = to_sexp action_id in
@@ -273,20 +277,8 @@ let model_reset_inner action = Model_reset_inner action
 let model_reset_outer = Model_reset_outer
 let switch ~branch ~type_id action = Switch { branch; action; type_id }
 let lazy_ ~type_id action = Lazy { action; type_id }
-let assoc ~key action = Assoc { key; action }
-let assoc_on ~io_key ~model_key action = Assoc_on { io_key; model_key; action }
+let assoc ~key ~id ~compare action = Assoc { key; action; id; compare }
 
-let rec is_dynamic : type c. c t -> bool = function
-  | Leaf_dynamic _ -> true
-  | Wrap_outer _ -> true
-  | Model_reset_outer -> false
-  | Leaf_static _ -> false
-  | Sub_from action -> is_dynamic action
-  | Sub_into action -> is_dynamic action
-  | Wrap_inner action -> is_dynamic action
-  | Model_reset_inner action -> is_dynamic action
-  | Switch { action; type_id = _; branch = _ } -> is_dynamic action
-  | Lazy { action; type_id = _ } -> is_dynamic action
-  | Assoc { action; key = _ } -> is_dynamic action
-  | Assoc_on { action; io_key = _; model_key = _ } -> is_dynamic action
+let assoc_on ~io_key ~io_id ~io_compare ~model_key action =
+  Assoc_on { io_key; model_key; action; io_id; io_compare }
 ;;

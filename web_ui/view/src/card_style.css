@@ -7,6 +7,8 @@
   .content_common {
     padding-left: 0.25em;
     padding-right: 0.25em;
+    background: var(--extreme-bg);
+    color: var(--extreme-fg);
   }
 
   :not(.card_legend).title-text {

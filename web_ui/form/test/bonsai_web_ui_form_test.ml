@@ -6843,7 +6843,7 @@ let%test_module "Querybox as typeahead" =
   end)
 ;;
 
-(* This test demonstrates an inefficiency in the [Form.Elements.Multiple.list] combinator,
+(* This test demonstrates efficiency in the [Form.Elements.Multiple.list] combinator,
    where we need to stabilize more than once per nesting level. *)
 let%expect_test "nested list form actions" =
   let component =
@@ -6864,11 +6864,33 @@ let%expect_test "nested list form actions" =
   Handle.recompute_view handle;
   [%expect
     {|
+    skipped stabilization
+    skipped stabilization
     stabilized
+    skipped stabilization
+    skipped stabilization
+    skipped stabilization
+    skipped stabilization
     stabilized
+    skipped stabilization
+    skipped stabilization
+    skipped stabilization
+    skipped stabilization
+    skipped stabilization
+    skipped stabilization
+    skipped stabilization
+    skipped stabilization
+    skipped stabilization
     stabilized
-    stabilized
-    stabilized
-    stabilized
-    stabilized |}]
+    skipped stabilization
+    skipped stabilization
+    skipped stabilization
+    skipped stabilization
+    skipped stabilization
+    skipped stabilization
+    skipped stabilization
+    skipped stabilization
+    skipped stabilization
+    skipped stabilization
+    skipped stabilization |}]
 ;;

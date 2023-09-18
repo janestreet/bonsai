@@ -2838,6 +2838,13 @@ let%expect_test "model state is not shared between variants even when they have 
 
 let%test_module "Stabilization tests" =
   (module struct
+    let filter_don't_stabilize output =
+      String.split_lines output
+      |> List.filter ~f:(fun line -> String.equal line "stabilized")
+      |> String.concat ~sep:"\n"
+      |> print_endline
+    ;;
+
     let%expect_test "A simple record doesn't stabilize" =
       let module T = struct
         type t =
@@ -2852,7 +2859,8 @@ let%test_module "Stabilization tests" =
       Handle.print_stabilizations handle;
       Handle.do_actions handle [ { T.a = 10; b = "hello world"; c = true } ];
       Handle.recompute_view_until_stable handle;
-      [%expect]
+      filter_don't_stabilize [%expect.output];
+      [%expect {| |}]
     ;;
 
     let%expect_test "A list stabilizes once" =
@@ -2864,7 +2872,9 @@ let%test_module "Stabilization tests" =
       Handle.print_stabilizations handle;
       Handle.do_actions handle [ [ 1; 2; 3; 4 ] ];
       Handle.recompute_view_until_stable handle;
-      [%expect {| stabilized |}]
+      filter_don't_stabilize [%expect.output];
+      [%expect {|
+        stabilized |}]
     ;;
 
     let%expect_test "A variant stabilizes once" =
@@ -2879,6 +2889,7 @@ let%test_module "Stabilization tests" =
       Handle.print_stabilizations handle;
       Handle.do_actions handle [ B false ];
       Handle.recompute_view_until_stable handle;
+      filter_don't_stabilize [%expect.output];
       [%expect {|
         stabilized |}]
     ;;
@@ -2898,11 +2909,8 @@ let%test_module "Stabilization tests" =
       Handle.print_stabilizations handle;
       Handle.do_actions handle [ [ A 1; B false; B true; A 4 ] ];
       Handle.recompute_view_until_stable handle;
-      [%expect
-        {|
-        stabilized
-        stabilized
-        stabilized
+      filter_don't_stabilize [%expect.output];
+      [%expect {|
         stabilized
         stabilized |}]
     ;;
@@ -2927,11 +2935,8 @@ let%test_module "Stabilization tests" =
       Handle.print_stabilizations handle;
       Handle.do_actions handle [ C [ A 1; B false; B true; A 4 ] ];
       Handle.recompute_view_until_stable handle;
-      [%expect
-        {|
-        stabilized
-        stabilized
-        stabilized
+      filter_don't_stabilize [%expect.output];
+      [%expect {|
         stabilized
         stabilized
         stabilized |}]
@@ -2960,20 +2965,74 @@ let%test_module "Stabilization tests" =
         handle
         [ [ C [ A 1; B false; B true; A 4 ]; D 1.; C [ B true; B false; A 1; A 10 ] ] ];
       Handle.recompute_view_until_stable handle;
+      filter_don't_stabilize [%expect.output];
+      [%expect
+        {|
+        stabilized
+        stabilized
+        stabilized
+        stabilized |}]
+    ;;
+
+    let%expect_test "maps!" =
+      let module S = struct
+        module T = struct
+          type t =
+            | None
+            | Some of t
+          [@@deriving compare, sexp, sexp_grammar]
+        end
+
+        include T
+        include Comparable.Make (T)
+      end
+      in
+      let module T = struct
+        type s = S.t Map.M(S).t list
+        and t = s list [@@deriving sexp, sexp_grammar]
+      end
+      in
+      let handle = sexp_form_handle (module T) in
+      Handle.print_stabilizations handle;
+      let m =
+        S.Map.of_alist_exn
+          S.[ None, None; Some None, Some None; Some (Some None), Some (Some None) ]
+      in
+      Handle.do_actions handle [ [ [ m; m ]; [ m; m ] ] ];
+      Handle.recompute_view_until_stable handle;
+      filter_don't_stabilize [%expect.output];
       [%expect
         {|
         stabilized
         stabilized
         stabilized
         stabilized
-        stabilized
-        stabilized
-        stabilized
-        stabilized
-        stabilized
-        stabilized
-        stabilized
-        stabilized
+        stabilized |}]
+    ;;
+
+    let%expect_test "records with defaults!" =
+      let module T = struct
+        type s =
+          | My of int
+          | Your of string
+          | Our of bool
+
+        and r =
+          { b : s [@sexp.default My 10]
+          ; a : bool [@sexp.default false]
+          ; c : int [@sexp.default 0]
+          ; aa : int [@sexp.default 3]
+          }
+
+        and t = r [@@deriving sexp, sexp_grammar]
+      end
+      in
+      let handle = sexp_form_handle (module T) in
+      Handle.print_stabilizations handle;
+      Handle.do_actions handle [ { c = 1; aa = 4; b = Your "hi"; a = true } ];
+      Handle.recompute_view_until_stable handle;
+      filter_don't_stabilize [%expect.output];
+      [%expect {|
         stabilized
         stabilized |}]
     ;;

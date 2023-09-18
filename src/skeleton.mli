@@ -6,12 +6,7 @@ module Bonsai_value = Value
     that are easier to traverse, and two-way serializable. *)
 
 module Id : sig
-  type t [@@deriving hash, sexp, compare]
-
-  val to_int : t -> int
-  val of_type_id : _ Type_equal.Id.t -> int
-  val of_model_type_id : _ Meta.Model.Type_id.t -> int
-  val of_int : int -> t
+  type t [@@deriving compare, hash, sexp_of]
 end
 
 (** Represents a ['a Value.t] *)
@@ -33,7 +28,7 @@ module Value : sig
         ; added_by_let_syntax : bool
         }
     | Mapn of { inputs : t list }
-  [@@deriving sexp]
+  [@@deriving sexp_of]
 
   val of_value : 'a Value.t -> t
 
@@ -84,10 +79,10 @@ module Computation : sig
         }
     | Assoc_on of
         { map : Value.t
-        ; io_key_id : int
-        ; model_key_id : int
-        ; model_cmp_id : int
-        ; data_id : int
+        ; io_key_id : Id.t
+        ; model_key_id : Id.t
+        ; model_cmp_id : Id.t
+        ; data_id : Id.t
         ; by : t
         }
     | Assoc_simpl of { map : Value.t }
@@ -108,7 +103,7 @@ module Computation : sig
     | Path
     | Lifecycle of { value : Value.t }
     | Identity of { t : t }
-  [@@deriving sexp]
+  [@@deriving sexp_of]
 
   val of_computation : 'result Computation.t -> t
 
@@ -150,7 +145,7 @@ module Traverse : sig
     method bool : bool -> 'acc -> 'acc
     method computation : Computation.t -> 'acc -> 'acc
     method computation_kind : Computation.kind -> 'acc -> 'acc
-    method id : int -> 'acc -> 'acc
+    method id : Id.t -> 'acc -> 'acc
     method lazy_ : ('a -> 'acc -> 'acc) -> 'a lazy_t -> 'acc -> 'acc
     method list : ('a -> 'acc -> 'acc) -> 'a list -> 'acc -> 'acc
     method node_path : Node_path.t -> 'acc -> 'acc
@@ -167,7 +162,7 @@ module Traverse : sig
     method bool : bool -> bool
     method computation : Computation.t -> Computation.t
     method computation_kind : Computation.kind -> Computation.kind
-    method id : int -> int
+    method id : Id.t -> Id.t
     method lazy_ : ('a -> 'a) -> 'a lazy_t -> 'a lazy_t
     method list : ('a -> 'a) -> 'a list -> 'a list
     method node_path : Node_path.t -> Node_path.t

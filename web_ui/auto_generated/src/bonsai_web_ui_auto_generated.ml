@@ -114,7 +114,8 @@ module Customization = struct
             in
             let set = function
               | Sexp.List [ first_val; second_val ] ->
-                Effect.Many [ Form.set first first_val; Form.set second second_val ]
+                (* The order of these sets is important and enables optimization! *)
+                Effect.Many [ Form.set second second_val; Form.set first first_val ]
               | _ -> Effect.Ignore
             in
             Form.Expert.create ~view ~value ~set
@@ -691,12 +692,17 @@ let form
                  Error err)
           in
           let%sub set =
+            let%sub bonk = Bonsai_extra.bonk in
             let%arr set_outer = set_outer
-            and inject_outer = inject_outer in
+            and inject_outer = inject_outer
+            and outer = outer
+            and bonk = bonk in
             function
             | Sexp.List [] | Atom "None" | Atom "none" -> set_outer false
             | List [ a ] | List [ Atom ("Some" | "some"); a ] ->
-              Effect.Many [ set_outer true; inject_outer a ]
+              (match outer with
+               | true -> bonk (inject_outer a)
+               | false -> Effect.Many [ set_outer true; bonk (inject_outer a) ])
             | _ as sexp ->
               on_set_error [%message "expected option sexp, but got" (sexp : Sexp.t)]
           in
@@ -862,9 +868,12 @@ let form
                 ~selected_clause:(Some { clause_name; clause_view = Form.view inner })
           in
           let%sub set =
+            let%sub bonk = Bonsai_extra.bonk in
             let%arr clauses_and_docs = clauses_and_docs
             and set_outer = set_outer
-            and inject_outer = inject_outer in
+            and inject_outer = inject_outer
+            and bonk = bonk
+            and outer = outer in
             function
             | Sexp.List (Sexp.Atom clause_name :: args) ->
               (match
@@ -872,8 +881,14 @@ let form
                    String.equal clause.name clause_name)
                with
                | Some (clause, _docs) ->
-                 Effect.Many
-                   [ set_outer (Some clause.name); inject_outer (Sexp.List args) ]
+                 (match outer with
+                  | Some name when String.equal name clause.name ->
+                    bonk (inject_outer (Sexp.List args))
+                  | Some _ | None ->
+                    Effect.Many
+                      [ set_outer (Some clause.name)
+                      ; bonk (inject_outer (Sexp.List args))
+                      ])
                | None ->
                  on_set_error
                    [%message
@@ -980,7 +995,8 @@ let form
           and grammar = grammar in
           function
           | Sexp.List (g :: rest) ->
-            Effect.Many [ Form.set g_form g; rest_set (Sexp.List rest) ]
+            (* The order of these sets is important and enables optimization! *)
+            Effect.Many [ rest_set (Sexp.List rest); Form.set g_form g ]
           | sexp ->
             on_set_error
               [%message
@@ -1054,9 +1070,11 @@ let form
                 (Form.return_error (Error.of_string "unreachable auto-gen code"))
             | true -> list_grammar_form args
           in
+          let%sub bonk = Bonsai_extra.bonk in
           let%arr override = override
           and set_override = set_override
           and toggle = toggle
+          and bonk = bonk
           and inject_outer = inject_outer
           and inner = inner in
           let view =
@@ -1074,7 +1092,7 @@ let form
           in
           let set = function
             | None -> set_override false
-            | Some s -> Effect.Many [ set_override true; inject_outer s ]
+            | Some s -> Effect.Many [ set_override true; bonk (inject_outer s) ]
           in
           Form.Expert.create ~view ~value ~set, inner)
     in
@@ -1165,6 +1183,8 @@ let form
             Some (on_set_error [%message "required field is not present" (key : string)])
           | `Both (args, (form, `Required _, `Doc _)) -> Some (Form.set form (Some args)))
         |> Map.data
+        (* This reversal of order is important and enables optimization! *)
+        |> List.rev
         |> Effect.Many
     in
     let%sub value =

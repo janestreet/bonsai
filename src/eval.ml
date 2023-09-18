@@ -174,7 +174,10 @@ let rec gather : type result. result Computation.t -> result Computation.packed_
       ; run
       }
   | Assoc { map; key_comparator; key_id; cmp_id; data_id; by } ->
-    let wrap_assoc ~key inject = Action.assoc ~key >>> inject in
+    let module Cmp = (val key_comparator) in
+    let wrap_assoc ~key inject =
+      Action.assoc ~id:key_id ~compare:Cmp.comparator.compare ~key >>> inject
+    in
     let (T { model = model_info; input = input_info; action; apply_action; run; reset }) =
       gather by
     in
@@ -186,7 +189,6 @@ let rec gather : type result. result Computation.t -> result Computation.packed_
           | `Right _ -> None
           | `Both input_and_models -> Some input_and_models)
       in
-      let module Cmp = (val key_comparator) in
       let create_keyed =
         unstage (Path.Elem.keyed ~compare:Cmp.comparator.compare key_id)
       in
@@ -231,7 +233,13 @@ let rec gather : type result. result Computation.t -> result Computation.packed_
         ~input:(Input.dynamic input_map)
         ~lifecycle:(Some lifecycle)
     in
-    let apply_action ~inject ~schedule_event input model (Action.Assoc { key; action }) =
+    let apply_action
+      ~inject
+      ~schedule_event
+      input
+      model
+      (Action.Assoc { key; action; id = _; compare = _ })
+      =
       let input = Option.bind input ~f:(fun input -> Map.find input key) in
       let specific_model =
         Map.find model key |> Option.value ~default:model_info.default
@@ -273,11 +281,16 @@ let rec gather : type result. result Computation.t -> result Computation.packed_
       ; by
       ; get_model_key
       } ->
-    let wrap_assoc_on ~io_key ~model_key inject =
-      Action.assoc_on ~io_key ~model_key >>> inject
-    in
     let module Model_comparator = (val model_comparator) in
     let module Io_comparator = (val io_comparator) in
+    let wrap_assoc_on ~io_key ~model_key inject =
+      Action.assoc_on
+        ~io_key
+        ~model_key
+        ~io_id:io_key_id
+        ~io_compare:Io_comparator.comparator.compare
+      >>> inject
+    in
     let model_key_comparator = Model_comparator.comparator in
     let (T { model = model_info; input = input_info; action; apply_action; run; reset }) =
       gather by
@@ -353,7 +366,7 @@ let rec gather : type result. result Computation.t -> result Computation.packed_
       ~schedule_event
       input
       model
-      (Action.Assoc_on { io_key; model_key; action })
+      (Action.Assoc_on { io_key; model_key; action; io_id = _; io_compare = _ })
       =
       let input = Option.bind input ~f:(fun input -> Map.find input io_key) in
       let specific_model =

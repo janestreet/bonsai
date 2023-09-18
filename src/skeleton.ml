@@ -5,14 +5,28 @@ let finalize node_path_builder = lazy (node_path_builder |> Node_path.finalize)
 
 module Bonsai_value = Value
 
-module Id = struct
-  include Int
+module Id : sig
+  type t [@@deriving compare, hash, sexp_of]
 
-  let of_type_id id =
-    id |> Type_equal.Id.uid |> Type_equal.Id.Uid.sexp_of_t |> Int.t_of_sexp
+  val to_string : t -> string
+  val of_type_id : _ Type_equal.Id.t -> t
+  val of_model_type_id : _ Meta.Model.Type_id.t -> t
+  val of_int_for_testing : int -> t
+end = struct
+  type t =
+    | Type of Type_equal.Id.Uid.t
+    | Test of int
+  [@@deriving compare, hash, sexp_of]
+
+  let to_string t =
+    match t with
+    | Type uid -> Type_equal.Id.Uid.sexp_of_t uid |> Sexp.to_string
+    | Test int -> Int.to_string int
   ;;
 
+  let of_type_id id = Type (Type_equal.Id.uid id)
   let of_model_type_id id = id |> Meta.Model.Type_id.to_type_id |> of_type_id
+  let of_int_for_testing int = Test int
 end
 
 module Value = struct
@@ -33,7 +47,7 @@ module Value = struct
         ; added_by_let_syntax : bool
         }
     | Mapn of { inputs : t list }
-  [@@deriving sexp]
+  [@@deriving sexp_of]
 
   module Minimal = struct
     type nonrec complete = t
@@ -48,7 +62,7 @@ module Value = struct
           ; added_by_let_syntax : bool
           }
       | Mapn of { inputs : t list }
-    [@@deriving sexp]
+    [@@deriving sexp_of]
 
     let rec of_complete (complete : complete) =
       match complete.kind with
@@ -156,28 +170,28 @@ module Computation0 = struct
     | Model_cutoff of { t : t }
     | Sub of
         { from : t
-        ; via : int
+        ; via : Id.t
         ; into : t
         }
     | Store of
-        { id : int
+        { id : Id.t
         ; value : Value.t
         ; inner : t
         }
-    | Fetch of { id : int }
+    | Fetch of { id : Id.t }
     | Assoc of
         { map : Value.t
-        ; key_id : int
-        ; cmp_id : int
-        ; data_id : int
+        ; key_id : Id.t
+        ; cmp_id : Id.t
+        ; data_id : Id.t
         ; by : t
         }
     | Assoc_on of
         { map : Value.t
-        ; io_key_id : int
-        ; model_key_id : int
-        ; model_cmp_id : int
-        ; data_id : int
+        ; io_key_id : Id.t
+        ; model_key_id : Id.t
+        ; model_cmp_id : Id.t
+        ; data_id : Id.t
         ; by : t
         }
     | Assoc_simpl of { map : Value.t }
@@ -187,18 +201,18 @@ module Computation0 = struct
         }
     | Lazy of { t : t option }
     | Wrap of
-        { model_id : int
-        ; inject_id : int
+        { model_id : Id.t
+        ; inject_id : Id.t
         ; inner : t
         }
     | With_model_resetter of
-        { reset_id : int
+        { reset_id : Id.t
         ; inner : t
         }
     | Path
     | Lifecycle of { value : Value.t }
     | Identity of { t : t }
-  [@@deriving sexp]
+  [@@deriving sexp_of]
 
   let of_computation : 'result Computation.t -> t =
     fun computation ->
@@ -396,7 +410,7 @@ module Computation0 = struct
       | Path
       | Lifecycle of { value : Value.Minimal.t }
       | Identity of { t : t }
-    [@@deriving sexp]
+    [@@deriving sexp_of]
 
     let rec of_complete (complete : complete) =
       match complete.kind with
@@ -629,20 +643,15 @@ module Computation = struct
   include Computation0
 
   let sanitize_for_testing (t : t) =
-    let min_uid =
-      let find_minimum_ids =
-        object
-          inherit [int] Traverse.fold as super
-          method! id id min_uid = super#id id (min min_uid id)
-        end
-      in
-      find_minimum_ids#computation t Int.max_value
+    let table = Hashtbl.create (module Id) in
+    let replace id =
+      Hashtbl.find_or_add table id ~default:(fun () ->
+        Id.of_int_for_testing (Hashtbl.length table))
     in
-    let min_uid = if min_uid = Int.max_value then 0 else min_uid in
     let replace_old_uids_with_sanitized_ones =
       object
         inherit Traverse.map as super
-        method! id id = super#id (id - min_uid)
+        method! id id = super#id (replace id)
       end
     in
     replace_old_uids_with_sanitized_ones#computation t

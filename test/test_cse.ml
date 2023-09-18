@@ -64,20 +64,20 @@ let%expect_test "double-use spanning match%sub with value previously computed" =
     {|
     (Sub
       (from (Return (value (Mapn (inputs (Incr))))))
-      (via 10)
+      (via (Test 2))
       (into (
         Sub
         (from (
           Sub
           (from (Return (value Incr)))
-          (via 12)
+          (via (Test 4))
           (into (
             Switch
-            (match_ (Mapn (inputs ((Named (uid 12))))))
+            (match_ (Mapn (inputs ((Named (uid (Test 4)))))))
             (arms (
               (Return (value (Mapn (inputs (Incr)))))
               (Return (value (Mapn (inputs (Incr)))))))))))
-        (via 15)
+        (via (Test 6))
         (into (
           Return (
             value (
@@ -85,8 +85,8 @@ let%expect_test "double-use spanning match%sub with value previously computed" =
                 inputs ((
                   Mapn (
                     inputs (
-                      (Named (uid 10))
-                      (Named (uid 15))))))))))))))
+                      (Named (uid (Test 2)))
+                      (Named (uid (Test 6)))))))))))))))
     computing!
     computing! |}]
 ;;
@@ -108,18 +108,18 @@ let%expect_test "double-use with first use inside scope" =
       (from (
         Sub
         (from (Return (value Incr)))
-        (via 27)
+        (via (Test 1))
         (into (
           Switch
-          (match_ (Mapn (inputs ((Named (uid 27))))))
+          (match_ (Mapn (inputs ((Named (uid (Test 1)))))))
           (arms (
             (Return (value (Mapn (inputs (Incr)))))
             (Return (value (Mapn (inputs (Incr)))))))))))
-      (via 30)
+      (via (Test 5))
       (into (
         Sub
         (from (Return (value (Mapn (inputs (Incr))))))
-        (via 31)
+        (via (Test 6))
         (into (
           Return (
             value (
@@ -127,8 +127,8 @@ let%expect_test "double-use with first use inside scope" =
                 inputs ((
                   Mapn (
                     inputs (
-                      (Named (uid 30))
-                      (Named (uid 31))))))))))))))
+                      (Named (uid (Test 5)))
+                      (Named (uid (Test 6)))))))))))))))
     computing!
     computing! |}]
 ;;
@@ -145,11 +145,11 @@ let%expect_test "double-use inside of some subs" =
     {|
     (Sub
       (from (Return (value (Mapn (inputs (Incr))))))
-      (via 42)
+      (via (Test 2))
       (into (
         Sub
         (from (Return (value (Mapn (inputs (Incr))))))
-        (via 43)
+        (via (Test 3))
         (into (
           Return (
             value (
@@ -157,8 +157,8 @@ let%expect_test "double-use inside of some subs" =
                 inputs ((
                   Mapn (
                     inputs (
-                      (Named (uid 42))
-                      (Named (uid 43))))))))))))))
+                      (Named (uid (Test 2)))
+                      (Named (uid (Test 3)))))))))))))))
     computing!
     computing! |}]
 ;;
@@ -182,26 +182,27 @@ let%expect_test "double-use inside of some nested subs" =
       (from (
         Sub
         (from (Return (value Incr)))
-        (via 53)
+        (via (Test 1))
         (into (
           Return (
             value (
               Mapn (
-                inputs ((Mapn (inputs ((Named (uid 53)) (Mapn (inputs (Incr))))))))))))))
-      (via 56)
+                inputs ((
+                  Mapn (inputs ((Named (uid (Test 1))) (Mapn (inputs (Incr))))))))))))))
+      (via (Test 6))
       (into (
         Sub
         (from (
           Sub
           (from (Return (value Incr)))
-          (via 53)
+          (via (Test 1))
           (into (
             Return (
               value (
                 Mapn (
                   inputs ((
-                    Mapn (inputs ((Named (uid 53)) (Mapn (inputs (Incr))))))))))))))
-        (via 57)
+                    Mapn (inputs ((Named (uid (Test 1))) (Mapn (inputs (Incr))))))))))))))
+        (via (Test 7))
         (into (
           Return (
             value (
@@ -209,8 +210,8 @@ let%expect_test "double-use inside of some nested subs" =
                 inputs ((
                   Mapn (
                     inputs (
-                      (Named (uid 56))
-                      (Named (uid 57))))))))))))))
+                      (Named (uid (Test 6)))
+                      (Named (uid (Test 7)))))))))))))))
     computing!
     computing! |}]
 ;;
@@ -232,15 +233,16 @@ let%expect_test "double-use inside supercomponent" =
     {|
     (Sub
       (from (Return (value Incr)))
-      (via 67)
+      (via (Test 1))
       (into (
         Sub
         (from (
           Return (
             value (
               Mapn (
-                inputs ((Mapn (inputs ((Named (uid 67)) (Mapn (inputs (Incr))))))))))))
-        (via 70)
+                inputs ((
+                  Mapn (inputs ((Named (uid (Test 1))) (Mapn (inputs (Incr))))))))))))
+        (via (Test 6))
         (into (
           Sub
           (from (
@@ -248,8 +250,8 @@ let%expect_test "double-use inside supercomponent" =
               value (
                 Mapn (
                   inputs ((
-                    Mapn (inputs ((Named (uid 67)) (Mapn (inputs (Incr))))))))))))
-          (via 71)
+                    Mapn (inputs ((Named (uid (Test 1))) (Mapn (inputs (Incr))))))))))))
+          (via (Test 7))
           (into (
             Return (
               value (
@@ -257,8 +259,8 @@ let%expect_test "double-use inside supercomponent" =
                   inputs ((
                     Mapn (
                       inputs (
-                        (Named (uid 70))
-                        (Named (uid 71))))))))))))))))
+                        (Named (uid (Test 6)))
+                        (Named (uid (Test 7)))))))))))))))))
     computing!
     computing!
     more computing

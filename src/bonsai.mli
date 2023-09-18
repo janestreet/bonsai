@@ -454,8 +454,8 @@ val lazy_ : 'a Computation.t Lazy.t -> 'a Computation.t
     components like so:
 
     {[
-      let my_recursive_component ~some_input = 
-        Bonsai.fix some_input ~f:(fun ~recurse some_input -> 
+      let my_recursive_component ~some_input =
+        Bonsai.fix some_input ~f:(fun ~recurse some_input ->
           (* call [recurse] to instantiate a nested instance of the component *)
         )
     ]}
@@ -1011,6 +1011,7 @@ module Private : sig
   module Lifecycle = Lifecycle
   module Path = Path
   module Action = Action
+  module Stabilization_tracker = Stabilization_tracker
   module Node_path = Node_path
   module Graph_info = Graph_info
   module Instrumentation = Instrumentation

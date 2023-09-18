@@ -1308,9 +1308,11 @@ module Multiple = struct
           |> Bonsai.Apply_action_context.schedule_event context)
         ~f:(fun (_ : unit Value.t) inject_outer ->
           let%sub extendy = Extendy.component t in
+          let%sub bonk = Bonsai_extra.bonk in
           let%arr { Extendy.contents; append; set_length; remove } = extendy
           and add_element_text = add_element_text
-          and inject_outer = inject_outer in
+          and inject_outer = inject_outer
+          and bonk = bonk in
           let view =
             contents
             |> Map.to_alist
@@ -1330,7 +1332,11 @@ module Multiple = struct
           let set (list : a list) =
             Effect.lazy_
               (lazy
-                (Vdom.Effect.Many [ set_length (List.length list); inject_outer list ]))
+                (match Map.length contents = List.length list with
+                 | false ->
+                   Vdom.Effect.Many
+                     [ set_length (List.length list); bonk (inject_outer list) ]
+                 | true -> inject_outer list))
           in
           Form.Expert.create ~value ~view ~set, contents)
     in

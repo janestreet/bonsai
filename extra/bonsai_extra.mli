@@ -165,7 +165,7 @@ val with_last_modified_time
 val is_stable
   :  equal:('a -> 'a -> bool)
   -> 'a Value.t
-  -> time_to_stable:Time_ns.Span.t
+  -> time_to_stable:Time_ns.Span.t Value.t
   -> bool Computation.t
 
 module Stability : sig
@@ -190,7 +190,7 @@ val value_stability
   :  ?sexp_of_model:('a -> Sexp.t)
   -> equal:('a -> 'a -> bool)
   -> 'a Value.t
-  -> time_to_stable:Time_ns.Span.t
+  -> time_to_stable:Time_ns.Span.t Value.t
   -> 'a Stability.t Computation.t
 
 module One_at_a_time : sig
@@ -221,3 +221,10 @@ module One_at_a_time : sig
     :  ('query -> 'response Effect.t) Value.t
     -> (('query -> 'response Response.t Effect.t) * Status.t) Computation.t
 end
+
+(** [bonk] returns a Computation containing a function which takes an effect and
+    transforms it into the same effect, but it will be enqueued onto the Bonsai action
+    queue instead of running immediately. This can be useful in niche situations where
+    you have a batch of effects that would otherwise interleave and have bad performance
+    behavior. *)
+val bonk : (unit Effect.t -> unit Effect.t) Computation.t

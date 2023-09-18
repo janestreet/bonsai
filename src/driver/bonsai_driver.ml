@@ -1,5 +1,6 @@
 open! Core
 module Incr = Ui_incr
+module Stabilization_tracker = Bonsai.Private.Stabilization_tracker
 module Action = Bonsai.Private.Action
 
 type ('m, 'action, 'action_input, 'r) unpacked =
@@ -24,7 +25,7 @@ type ('m, 'action, 'action_input, 'r) unpacked =
   ; queue : 'action Action.t Queue.t
   ; mutable last_lifecycle : Bonsai.Private.Lifecycle.Collection.t
   ; mutable print_actions : bool
-  ; mutable print_stabilizations : bool
+  ; stabilization_tracker : 'action Stabilization_tracker.t
   }
 
 type 'r t = T : (_, _, _, 'r) unpacked -> 'r t
@@ -122,7 +123,7 @@ let create (type r) ?(optimize = true) ~clock (computation : r Bonsai.Computatio
       ; queue
       ; last_lifecycle = Bonsai.Private.Lifecycle.Collection.empty
       ; print_actions = false
-      ; print_stabilizations = false
+      ; stabilization_tracker = Stabilization_tracker.empty ()
       }
   in
   create_polymorphic computation_info apply_action
@@ -131,42 +132,55 @@ let create (type r) ?(optimize = true) ~clock (computation : r Bonsai.Computatio
 let schedule_event _ = Ui_effect.Expert.handle
 
 let flush
-  (T ({ model_var; apply_action; action_input; queue; clock; sexp_of_action; _ } as t))
+  (T
+    ({ model_var
+     ; apply_action
+     ; action_input
+     ; queue
+     ; clock
+     ; stabilization_tracker
+     ; sexp_of_action
+     ; _
+     } as t))
   =
   Bonsai.Time_source.Private.flush clock;
-  let update_model ~action ~input =
-    (* The only difference between [Var.latest_value] and [Var.value] is that
-       if [Var.set] is called _while stabilizing_, then calling [Var.value]
-       will return the value that was set when stabilization started, whereas
-       [latest_value] will give you the value that was just [set].  Now,
-       setting a model in the middle of a stabilizaiton should never happen,
-       but I think it's important to be explicit about which behavior we use,
-       so I chose the one that would be least surprising if a stabilization
-       does happen to occur. *)
-    Incr.Var.set
-      model_var
-      (apply_action
-         ~schedule_event:Ui_effect.Expert.handle
-         input
-         (Incr.Var.latest_value model_var)
-         action)
+  let process_event action model =
+    if Stabilization_tracker.requires_stabilization stabilization_tracker action
+    then (
+      Incr.Var.set model_var model;
+      Incr.stabilize ();
+      Stabilization_tracker.mark_stabilization stabilization_tracker);
+    let new_model =
+      let action_input = Incr.Observer.value_exn action_input in
+      apply_action
+        ~schedule_event:Ui_effect.Expert.handle
+        (Some action_input)
+        model
+        action
+    in
+    Stabilization_tracker.insert stabilization_tracker action;
+    if t.print_actions then print_s [%message "Processed action" (action : action)];
+    new_model
   in
-  let process_event action =
-    (match Action.is_dynamic action with
-     | false -> ()
-     | true ->
-       (* We need to stabilize before every dynamic action so that the [input] for the
-          apply-actions are up to date. *)
-       if t.print_stabilizations then print_endline "stabilized";
-       Incr.stabilize ());
-    let action_input = Incr.Observer.value_exn action_input in
-    update_model ~action ~input:(Some action_input);
-    if t.print_actions then print_s [%message "Processed action" (action : action)]
+  let rec apply_actions model =
+    match Queue.dequeue queue with
+    | None ->
+      Incr.Var.set model_var model;
+      Incr.stabilize ();
+      Stabilization_tracker.mark_stabilization stabilization_tracker
+    | Some action ->
+      let new_model = process_event action model in
+      apply_actions new_model
   in
-  while not (Queue.is_empty queue) do
-    process_event (Queue.dequeue_exn queue)
-  done;
-  Incr.stabilize ()
+  (* The only difference between [Var.latest_value] and [Var.value] is that
+     if [Var.set] is called _while stabilizing_, then calling [Var.value]
+     will return the value that was set when stabilization started, whereas
+     [latest_value] will give you the value that was just [set].  Now,
+     setting a model in the middle of a stabilization should never happen,
+     but I think it's important to be explicit about which behavior we use,
+     so I chose the one that would be least surprising if a stabilization
+     does happen to occur. *)
+  apply_actions (Incr.Var.latest_value model_var)
 ;;
 
 let result (T { result; _ }) = Incr.Observer.value_exn result
@@ -206,7 +220,14 @@ module Expert = struct
   ;;
 
   let print_actions (T t) = t.print_actions <- true
-  let print_stabilizations (T t) = t.print_stabilizations <- true
+
+  let print_stabilizations (T t) =
+    Stabilization_tracker.For_testing.start_debugging t.stabilization_tracker
+  ;;
+
+  let print_stabilization_tracker_stats (T t) =
+    Stabilization_tracker.For_testing.display_stats t.stabilization_tracker
+  ;;
 end
 
 module For_testing = struct

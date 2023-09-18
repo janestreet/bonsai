@@ -483,7 +483,10 @@ module Dynamic = struct
         (match debounce_ui with
          | None -> Bonsai.const true
          | Some time_to_stable ->
-           Bonsai_extra.is_stable ~equal:equal_input value ~time_to_stable)
+           Bonsai_extra.is_stable
+             ~equal:equal_input
+             value
+             ~time_to_stable:(Value.return time_to_stable))
     in
     let%arr t = t
     and validation = validation

@@ -3,6 +3,7 @@ open! Async_kernel
 open! Import
 open Js_of_ocaml
 module Bonsai_action = Bonsai.Private.Action
+module Tracker = Bonsai.Private.Stabilization_tracker
 
 module type Result_spec = sig
   type t
@@ -194,6 +195,7 @@ module Arrow_deprecated = struct
     let is_debugging_var = Incr.Var.create Not_debugging in
     let debugger_shutdown = ref None in
     let bonsai_clock = Bonsai.Time_source.create ~start:(Time_ns.now ()) in
+    let tracker = Tracker.empty () in
     let module Incr_dom_app = struct
       module Model = struct
         type t = model
@@ -211,7 +213,12 @@ module Arrow_deprecated = struct
         let sexp_of_t = Bonsai_action.Type_id.to_sexp action
       end
 
-      let action_requires_stabilization action = Bonsai_action.is_dynamic action
+      let action_requires_stabilization (action : Action.t) =
+        Tracker.requires_stabilization tracker action
+      ;;
+
+      let on_action_application (action : Action.t) = Tracker.insert tracker action
+      let on_stabilize () = Tracker.mark_stabilization tracker
       let on_startup ~schedule_action:_ _ = return ()
 
       let advance_clock_to to_ =

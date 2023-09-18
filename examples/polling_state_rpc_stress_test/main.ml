@@ -14,7 +14,7 @@ open Bonsai.Let_syntax
 type Rpc_effect.Where_to_connect.Custom.t += Connection
 
 module T = struct
-  type t = { data : int Int.Map.t } [@@deriving sexp, diff, bin_io, equal]
+  type t = { data : int Int.Map.t [@ldiff.map] } [@@deriving sexp, ldiff, bin_io, equal]
 end
 
 let rpc =
@@ -23,7 +23,7 @@ let rpc =
     ~version:0
     ~query_equal:[%equal: int]
     ~bin_query:[%bin_type_class: int]
-    (module T)
+    (module Ldiffable_polling_state_rpc_response.Polling_state_rpc_response.Make (T))
 ;;
 
 let component =

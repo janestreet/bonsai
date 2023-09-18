@@ -2,8 +2,6 @@ open! Core
 open! Import
 
 module Elem : sig
-  module Keyed : T
-
   val keyed : compare:('a -> 'a -> int) -> 'a Type_equal.Id.t -> ('a -> Keyed.t) Staged.t
 
   (** We only have path nodes for places in the computation graph that could

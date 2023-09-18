@@ -1,3 +1,5 @@
+module _ = Test_local
+
 module Arrow_example = struct
   module X : sig
     type 'a c

@@ -65,6 +65,9 @@ module Expert : sig
 
   (** Start printing when stabilizations occur during action application in tests *)
   val print_stabilizations : _ t -> unit
+
+  (** Print the stats associated with the stabilization tracker *)
+  val print_stabilization_tracker_stats : _ t -> unit
 end
 
 module For_testing : sig

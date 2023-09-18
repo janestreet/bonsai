@@ -371,14 +371,26 @@ let with_last_modified_time ~equal input =
 ;;
 
 let is_stable ~equal input ~time_to_stable =
-  match Time_ns.Span.sign time_to_stable with
-  | Zero | Neg ->
-    eprint_s [%message "Bonsai_extra.is_stable: [time_to_stable] should be positive"];
-    Bonsai.const false
+  let%sub sign =
+    let%arr time_to_stable = time_to_stable in
+    Time_ns.Span.sign time_to_stable
+  in
+  match%sub sign with
+  | Neg ->
+    let on_activate =
+      Value.return
+        (Effect.of_thunk (fun () ->
+           eprint_s
+             [%message "Bonsai_extra.is_stable: [time_to_stable] should not be negative"]))
+    in
+    let%sub () = Bonsai.Edge.lifecycle ~on_activate () in
+    Bonsai.const true
+  | Zero -> Bonsai.const true
   | Pos ->
     let%sub _, last_modified_time = with_last_modified_time ~equal input in
     let%sub next_stable_time =
-      let%arr last_modified_time = last_modified_time in
+      let%arr last_modified_time = last_modified_time
+      and time_to_stable = time_to_stable in
       Time_ns.add last_modified_time time_to_stable
     in
     let%sub at_next_stable_time = Bonsai.Clock.at next_stable_time in
@@ -510,3 +522,14 @@ module One_at_a_time = struct
     return (Value.both effect status)
   ;;
 end
+
+let bonk =
+  let%sub (), bonk =
+    Bonsai.state_machine0
+      ~default_model:()
+      ~apply_action:(fun context () effect ->
+        Bonsai.Apply_action_context.schedule_event context effect)
+      ()
+  in
+  return bonk
+;;

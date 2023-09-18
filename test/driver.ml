@@ -58,4 +58,5 @@ include struct
   let reset_model_to_default h = reroute reset_model_to_default h
   let print_actions h = reroute print_actions h
   let print_stabilizations h = reroute print_stabilizations h
+  let print_stabilization_tracker_stats h = reroute print_stabilization_tracker_stats h
 end

@@ -31,3 +31,4 @@ val invalidate_observers : _ t -> unit
 val reset_model_to_default : _ t -> unit
 val print_actions : _ t -> unit
 val print_stabilizations : _ t -> unit
+val print_stabilization_tracker_stats : _ t -> unit

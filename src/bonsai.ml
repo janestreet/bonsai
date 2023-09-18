@@ -28,6 +28,7 @@ module Private = struct
   module Value = Value
   module Path = Path
   module Action = Action
+  module Stabilization_tracker = Stabilization_tracker
   module Node_path = Node_path
   module Graph_info = Graph_info
   module Instrumentation = Instrumentation

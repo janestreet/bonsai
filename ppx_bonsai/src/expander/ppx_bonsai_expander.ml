@@ -8,6 +8,7 @@ module Sub : Ext = struct
   let name = "sub"
   let with_location = true
   let wrap_expansion = wrap_expansion_identity
+  let prevent_tail_call = true
 
   let disallow_expression _ = function
     (* It is worse to use let%sub...and instead of multiple let%sub in a row,
@@ -18,9 +19,20 @@ module Sub : Ext = struct
     | _ -> Ok ()
   ;;
 
+  let already_has_nontail expr =
+    List.exists expr.pexp_attributes ~f:(fun attribute ->
+      String.equal attribute.attr_name.txt "nontail")
+  ;;
+
   let sub_return ~loc ~modul ~lhs ~rhs ~body =
     let returned_rhs = qualified_return ~loc ~modul rhs in
+    let body =
+      match already_has_nontail body with
+      | false -> nontail ~loc body
+      | true -> body
+    in
     bind_apply
+      ~prevent_tail_call
       ~op_name:name
       ~loc
       ~modul
@@ -50,7 +62,15 @@ module Sub : Ext = struct
            let projection_case = case ~lhs ~guard:None ~rhs:(eunit ~loc) in
            let fn = pexp_function ~loc [ projection_case ] in
            let rhs =
-             bind_apply ~op_name:Map.name ~loc ~modul ~with_location:true ~arg:rhs ~fn ()
+             bind_apply
+               ~op_name:Map.name
+               ~loc
+               ~modul
+               ~with_location:true
+               ~arg:rhs
+               ~fn
+               ()
+               ~prevent_tail_call
            in
            sub_return ~loc ~modul ~lhs:(ppat_any ~loc) ~rhs ~body
          | _ ->
@@ -76,7 +96,15 @@ module Sub : Ext = struct
       let fn =
         maybe_destruct ~destruct ~loc ~modul ~locality ~lhs:case.pc_lhs ~body:case.pc_rhs
       in
-      bind_apply ~op_name:name ~loc ~modul ~with_location ~arg:returned_expr ~fn ()
+      bind_apply
+        ~op_name:name
+        ~loc
+        ~modul
+        ~with_location
+        ~arg:returned_expr
+        ~fn
+        ~prevent_tail_call
+        ()
     | _ :: _ :: _ as cases ->
       let var_name = gen_symbol ~prefix:"__pattern_syntax" () in
       let var_expression = evar ~loc var_name in
@@ -89,6 +117,7 @@ end
 module Arr : Ext = struct
   let name = "arr"
   let with_location = true
+  let prevent_tail_call = false
 
   let location_ghoster =
     object
@@ -213,6 +242,7 @@ module Arr : Ext = struct
     in
     let expr =
       bind_apply
+        ~prevent_tail_call
         ~fn_label:"equal"
         ~op_name:"cutoff"
         ~loc
@@ -261,6 +291,7 @@ module Arr : Ext = struct
      | `local ->
        Location.raise_errorf ~loc "ppx_bonsai supports neither [bindl] nor [mapl]");
     bind_apply
+      ~prevent_tail_call
       ~loc
       ~modul
       ~with_location

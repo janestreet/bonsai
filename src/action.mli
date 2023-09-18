@@ -35,12 +35,16 @@ type 'a t = private
   | Assoc :
       { key : 'key
       ; action : 'a t
+      ; id : 'key Type_equal.Id.t
+      ; compare : 'key -> 'key -> int
       }
       -> ('key, 'a) assoc t
   | Assoc_on :
       { io_key : 'io_key
       ; model_key : 'model_key
       ; action : 'a t
+      ; io_id : 'io_key Type_equal.Id.t
+      ; io_compare : 'io_key -> 'io_key -> int
       }
       -> ('io_key, 'model_key, 'a) assoc_on t
 
@@ -79,12 +83,18 @@ val model_reset_inner : 'a t -> 'a model_resetter t
 val model_reset_outer : _ model_resetter t
 val switch : branch:int -> type_id:'a id -> 'a t -> switch t
 val lazy_ : type_id:'a id -> 'a t -> lazy_ t
-val assoc : key:'key -> 'a t -> ('key, 'a) assoc t
+
+val assoc
+  :  key:'key
+  -> id:'key Type_equal.Id.t
+  -> compare:('key -> 'key -> int)
+  -> 'a t
+  -> ('key, 'a) assoc t
 
 val assoc_on
   :  io_key:'io_key
+  -> io_id:'io_key Type_equal.Id.t
+  -> io_compare:('io_key -> 'io_key -> int)
   -> model_key:'model_key
   -> 'a t
   -> ('io_key, 'model_key, 'a) assoc_on t
-
-val is_dynamic : _ t -> bool

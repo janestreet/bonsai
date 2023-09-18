@@ -109,4 +109,5 @@ module Handle : sig
   val has_after_display_events : ('result, 'incoming) t -> bool
   val print_actions : _ t -> unit
   val print_stabilizations : _ t -> unit
+  val print_stabilization_tracker_stats : _ t -> unit
 end

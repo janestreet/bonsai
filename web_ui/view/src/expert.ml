@@ -321,7 +321,10 @@ let default_theme =
               let extreme_fg =
                 constants.extreme.foreground |> Css_gen.Color.to_string_css
               in
-              Card_style.Variables.set ~extreme_fg ~intent_bg ~intent_fg ()
+              let extreme_bg =
+                constants.extreme.background |> Css_gen.Color.to_string_css
+              in
+              Card_style.Variables.set_all ~extreme_bg ~extreme_fg ~intent_bg ~intent_fg
             in
             let title =
               match title with
