@@ -1,9 +1,9 @@
 open! Core
 open! Import
+open Bonsai_test
 open Bonsai.For_open
 open Bonsai.Let_syntax
 module Query_response_tracker = Bonsai.Effect.For_testing.Query_response_tracker
-open Proc
 module Action = Bonsai.Private.Action
 
 let unreachable_action : Nothing.t Action.leaf Action.t -> 'b = function

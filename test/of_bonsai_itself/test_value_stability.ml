@@ -1,8 +1,8 @@
 open! Core
 open! Import
+open Bonsai_test
 open Bonsai.For_open
 open Bonsai.Let_syntax
-open Proc
 
 (* A big focus of the tests in this file is about making sure that there are no
    "in-transit" frames - frames during which the result has some intermediate

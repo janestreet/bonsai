@@ -1,6 +1,6 @@
 open! Core
 open! Import
-open Proc
+open Bonsai_test
 open Bonsai.For_open
 module One_at_a_time = Bonsai_extra.One_at_a_time
 

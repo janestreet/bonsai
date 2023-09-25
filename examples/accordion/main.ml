@@ -80,6 +80,5 @@ let component =
 
 let () =
   Async_js.init ();
-  Auto_reload.refresh_on_build ();
   Bonsai_web.Start.start component
 ;;

@@ -1,6 +1,23 @@
 open! Core
 module Incr = Ui_incr
-module Color = Tailwind_colors
+
+module Color = struct
+  (* From  [bonsai.tailwind_colors]. *)
+  let red50 = `Hex "#FEF2F2"
+  let red100 = `Hex "#FEE2E2"
+  let red200 = `Hex "#FECACA"
+  let red300 = `Hex "#FCA5A5"
+  let amber100 = `Hex "#FEF3C7"
+  let amber200 = `Hex "#FDE68A"
+  let blue100 = `Hex "#DBEAFE"
+  let blue200 = `Hex "#BFDBFE"
+  let blue300 = `Hex "#93C5FD"
+  let emerald100 = `Hex "#D1FAE5"
+  let emerald200 = `Hex "#A7F3D0"
+  let pink100 = `Hex "#FCE7F3"
+  let pink200 = `Hex "#FBCFE8"
+  let pink300 = `Hex "#F9A8D4"
+end
 
 let enabled = ref false
 let enable () = enabled := true

@@ -83,12 +83,11 @@ module Dynamic_cells = struct
     let rec visible_leaves
       : type k v cmp.
         (k * v) Map_list.t Value.t
-        -> empty:(k * Vdom.Node.t list) Map_list.t
         -> (k, cmp) Bonsai.comparator
         -> (k, v) t
         -> (k * Vdom.Node.t) Map_list.t Computation.t list
       =
-      fun map ~empty comparator -> function
+      fun map comparator -> function
       | Leaf { cell; visible; _ } ->
         [ (if%sub visible
            then
@@ -108,12 +107,12 @@ module Dynamic_cells = struct
              Bonsai.Incr.compute map ~f))
         ]
       | Group { children; _ } | Org_group children ->
-        List.bind children ~f:(visible_leaves map ~empty comparator)
+        List.bind children ~f:(visible_leaves map comparator)
     ;;
 
     let instantiate_cells (type k) t comparator (map : (k * _) Map_list.t Value.t) =
       let empty = Map.empty (module Map_list.Key) in
-      visible_leaves map ~empty comparator t
+      visible_leaves map comparator t
       |> Computation.fold_right ~init:(Value.return empty) ~f:(fun a acc ->
            Bonsai.Incr.compute (Value.both a acc) ~f:(fun a_and_acc ->
              let%pattern_bind.Ui_incr a, acc = a_and_acc in

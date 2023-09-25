@@ -1,7 +1,7 @@
 open! Core
 open! Import
 module Bonsai_lib = Bonsai
-open Proc
+open Bonsai_test
 
 module Choice = struct
   type t =

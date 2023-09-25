@@ -58,7 +58,6 @@ let main =
 
 let () =
   Async_js.init ();
-  Auto_reload.refresh_on_build ();
   main
   |> View.Theme.set_for_app (Value.return (Kado.theme ~version:Bleeding ()))
   |> Bonsai_web.Start.start

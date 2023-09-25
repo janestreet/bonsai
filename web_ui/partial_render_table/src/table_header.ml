@@ -20,14 +20,13 @@ module Acc = struct
   let empty = { level_map = Int.Map.empty; leaf_index = 0 }
 
   let visit_leaf { level_map; leaf_index } ~level ~node =
-    let idx = leaf_index in
-    let leaf_index = leaf_index + 1 in
-    let level_map = Map.add_multi (level_map : _ Int.Map.t) ~key:level ~data:(node idx) in
-    { leaf_index; level_map }
+    let data = node leaf_index in
+    let level_map = Map.add_multi level_map ~key:level ~data in
+    { leaf_index = leaf_index + 1; level_map }
   ;;
 
   let visit_non_leaf { level_map; leaf_index } ~level ~node =
-    let level_map = Map.add_multi (level_map : _ Int.Map.t) ~key:level ~data:node in
+    let level_map = Map.add_multi level_map ~key:level ~data:node in
     { leaf_index; level_map }
   ;;
 

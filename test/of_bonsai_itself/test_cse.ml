@@ -1,7 +1,7 @@
 open! Core
 open! Import
 open Bonsai.Let_syntax
-open Proc
+open Bonsai_test
 
 let dummy_value =
   Bonsai.Value.map (opaque_const_value ()) ~f:(fun () -> print_endline "computing!")

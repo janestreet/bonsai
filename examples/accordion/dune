@@ -1,4 +1,4 @@
 (executables (names main)
- (libraries auto_reload bonsai_web bonsai_web_ui_accordion
+ (libraries async_js bonsai_web bonsai_web_ui_accordion
   bonsai_web_ui_gallery)
  (preprocess (pps ppx_jane js_of_ocaml-ppx ppx_bonsai ppx_css ppx_demo)))

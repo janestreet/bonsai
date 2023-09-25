@@ -1,7 +1,7 @@
 open! Core
 open! Import
+open Bonsai_test
 open Bonsai.For_open
-open Proc
 open Bonsai.Let_syntax
 module Path = Bonsai.Private.Path
 

@@ -1,5 +1,5 @@
 (executables (names main)
- (libraries bonsai_web auto_reload ppx_css.inline_css kado
+ (libraries async_js bonsai_web ppx_css.inline_css kado
   bonsai_experimental_snips)
  (preprocess (pps ppx_jane ppx_bonsai)))
 

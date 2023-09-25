@@ -1,23 +1,5 @@
 (library (name bonsai_web_test) (public_name bonsai.web_test)
- (libraries bonsai_web bonsai_extra async_js.async_test core diffable
-  async_kernel.eager_deferred expect_test_helpers_core
-  patdiff.expect_test_patdiff bonsai_test incr_map
-  virtual_dom.vdom_test_helpers bonsai_web_ui_drag_and_drop async_rpc_kernel
-  async_js bonsai_web_ui_element_size_hooks)
+ (libraries bonsai_web core async_kernel.eager_deferred bonsai_test
+  virtual_dom.vdom_test_helpers bonsai_web_ui_drag_and_drop
+  bonsai_web_ui_element_size_hooks)
  (preprocess (pps ppx_jane ppx_pattern_bind ppx_bonsai)))
-
-(rule (targets test_legacy_bonsai.ml) (deps ../test/test_legacy_bonsai.ml)
- (action (bash "cp %{deps} %{targets}")))
-
-(rule (targets test_legacy_bonsai.mli) (deps ../test/test_legacy_bonsai.mli)
- (action (bash "cp %{deps} %{targets}")))
-
-(rule (targets test_proc_bonsai.ml) (deps ../test/test_proc_bonsai.ml)
- (action (bash "cp %{deps} %{targets}")))
-
-(rule (targets test_proc_bonsai.mli) (deps ../test/test_proc_bonsai.mli)
- (action (bash "cp %{deps} %{targets}")))
-
-(alias (name DEFAULT)
- (deps test_legacy_bonsai.ml test_legacy_bonsai.mli test_proc_bonsai.ml
-  test_proc_bonsai.mli))

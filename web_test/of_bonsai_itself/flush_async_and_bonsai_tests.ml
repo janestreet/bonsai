@@ -1,7 +1,7 @@
 open! Core
 open! Async_kernel
 open Bonsai_web
-open Proc
+open Bonsai_web_test
 open Async_rpc_kernel
 open Async_js_test
 open Expect_test_helpers_core

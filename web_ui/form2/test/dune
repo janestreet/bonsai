@@ -1,0 +1,4 @@
+(library (name bonsai_web_ui_form2_test)
+ (public_name bonsai.web_ui_form2_test)
+ (libraries bonsai_web_ui_form2_experimental bonsai_web bonsai_web_test core)
+ (preprocess (pps ppx_jane ppx_typed_fields ppx_bonsai)))

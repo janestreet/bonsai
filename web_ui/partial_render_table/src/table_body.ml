@@ -21,18 +21,71 @@ module For_testing = struct
     }
 end
 
-(* This function takes a vdom node and if it's an element, it adds extra attrs, classes, key,
-   and style info to it, but if it's not an element, it wraps that node in a div that has those
-   attributes, styles, key, and style.  This can be useful if you get a vdom node from the
-   user of this API, and want to avoid excessive node wrapping. *)
-let set_or_wrap ~classes ~style =
-  let open Vdom.Node in
-  function
-  | Element e -> Element (Element.add_style (Element.add_classes e classes) style)
-  | other -> div ~attrs:[ Vdom.Attr.style style; Vdom.Attr.classes classes ] [ other ]
+let rows
+  (type key cmp)
+  ~(comparator : (key, cmp) Bonsai.comparator)
+  ~row_height
+  ~(leaves : Header_tree.leaf list Value.t)
+  ~column_widths
+  ~(visually_focused : key option Value.t)
+  ~on_row_click
+  (cells : (key * Vdom.Node.t list) Map_list.Key.Map.t Value.t)
+  =
+  let%sub col_widths =
+    let%arr col_widths = column_widths
+    and leaves = leaves in
+    List.mapi leaves ~f:(fun i _ ->
+      match Map.find col_widths i with
+      | Some (Column_size.Visible { width_px = w }) -> `Visible w
+      | Some (Hidden { prev_width_px = Some w }) -> `Hidden w
+      | None | Some (Hidden { prev_width_px = None }) -> `Hidden 0.0)
+  in
+  let%sub row_width =
+    let%arr col_widths = col_widths in
+    List.fold col_widths ~init:0.0 ~f:(fun acc -> function
+      | `Visible w -> acc +. w
+      | `Hidden _ -> acc)
+  in
+  let%sub cols_visible =
+    let%arr leaves = leaves in
+    List.map leaves ~f:(fun leaf -> leaf.visible)
+  in
+  let%sub col_styles =
+    let%arr (`Px row_height) = row_height
+    and cols_visible = cols_visible
+    and col_widths = col_widths in
+    Theme.Cell.Col_styles.create ~row_height ~col_widths ~cols_visible
+  in
+  let%sub row_styles =
+    let%arr (`Px row_height) = row_height
+    and row_width = row_width in
+    Theme.Row.Styles.create ~row_height ~row_width
+  in
+  Bonsai.assoc
+    (module Map_list.Key)
+    cells
+    ~f:(fun _ key_and_cells ->
+      let%sub is_selected =
+        let%arr visually_focused = visually_focused
+        and key, _ = key_and_cells in
+        let module Cmp = (val comparator) in
+        match visually_focused with
+        | None -> false
+        | Some k -> Cmp.comparator.compare k key = 0
+      in
+      let%arr key, cell_contents = key_and_cells
+      and is_selected = is_selected
+      and row_styles = row_styles
+      and col_styles = col_styles
+      and on_row_click = on_row_click in
+      let on_row_click = on_row_click key in
+      Theme.Row.view
+        ~col_styles
+        ~cell_contents
+        ~styles:row_styles
+        ~is_selected
+        ~on_row_click)
 ;;
-
-let float_to_px_string px = Virtual_dom.Dom_float.to_string_fixed 8 px ^ "px"
 
 let component
   (type key data cmp)
@@ -49,117 +102,28 @@ let component
   (input : (key * data) Map_list.t Value.t)
   : (Vdom.Node.t * For_testing.t Lazy.t) Computation.t
   =
-  (* Css_gen is really slow, so we need to re-use the results of all these
-     functions whenever possible.  The difference between non-cached and
-     cached css is the difference between 200ms stabilizations and 0.2ms
-     stabiliations while scrolling.
-
-     The reason that Css_gen is so slow is because apparently "sprintf" is
-     _really_ slow. *)
-  let%sub css_all_cells =
-    let open Css_gen in
-    let%arr row_height = row_height in
-    let h = (row_height :> Length.t) in
-    height h @> min_height h @> max_height h
-  in
-  let module Cmp = (val comparator) in
-  let%sub leaves_info =
-    let%arr leaves = leaves in
-    let%map.List { Header_tree.visible; leaf_header; _ } = leaves in
-    visible, leaf_header
+  let%sub padding_top_and_bottom =
+    let%arr collated = collated
+    and (`Px row_height) = row_height in
+    let padding_top = Collated.num_before_range collated * row_height in
+    let padding_bottom = Collated.num_after_range collated * row_height in
+    padding_top, padding_bottom
   in
   let%sub cells = assoc input in
   let%sub rows =
-    let%sub row_css =
-      let%arr column_widths = column_widths
-      and leaves = leaves
-      and row_height = row_height in
-      let total_width =
-        List.foldi leaves ~init:0.0 ~f:(fun i sum _ ->
-          let column_width =
-            match Map.find column_widths i with
-            | Some (Column_size.Visible { width_px }) -> width_px
-            | None | Some (Hidden _) -> 0.0
-          in
-          sum +. column_width)
-      in
-      let open Css_gen in
-      height (row_height :> Length.t)
-      @> create ~field:"width" ~value:(float_to_px_string total_width)
-      @> flex_container ()
-    in
-    let%sub calculate_css =
-      let%arr column_widths = column_widths in
-      let calculate_css i =
-        let column_width =
-          match Map.find column_widths i with
-          | Some (Visible { width_px = w })
-          (* use the previous width even when hidden so that the layout engine has less
-             work to do when becoming visible *)
-          | Some (Hidden { prev_width_px = Some w }) -> w
-          | None | Some (Hidden { prev_width_px = None }) -> 0.0
-        in
-        let css_for_column =
-          let open Css_gen in
-          let w = float_to_px_string column_width in
-          create ~field:"width" ~value:w
-          @> create ~field:"min-width" ~value:w
-          @> create ~field:"max-width" ~value:w
-        in
-        css_for_column
-      in
-      calculate_css
-    in
-    let%sub css_for_columns =
-      let%arr leaves_info = leaves_info
-      and calculate_css = calculate_css in
-      List.mapi leaves_info ~f:(fun i (is_visible, _) ->
-        let css = calculate_css i in
-        if is_visible then css else Css_gen.(css @> display `None))
-    in
-    (* This assoc is needed to zip the cells together with the css for those
-       specific columns, as well as adding the 'selected' class. *)
-    Bonsai.assoc
-      (module Map_list.Key)
+    rows
+      ~comparator
+      ~row_height
+      ~leaves
+      ~column_widths
+      ~visually_focused
+      ~on_row_click
       cells
-      ~f:(fun _ key_and_cells ->
-        let classes_for_each_cell = [ "prt-table-cell"; Style.For_referencing.cell ] in
-        let%sub row_selected =
-          let%sub key, _ = return key_and_cells in
-          let%arr visually_focused = visually_focused
-          and key = key in
-          match visually_focused with
-          | None -> false
-          | Some k -> Cmp.comparator.compare k key = 0
-        in
-        let%arr row_selected = row_selected
-        and key, cells = key_and_cells
-        and css_for_columns = css_for_columns
-        and on_row_click = on_row_click
-        and row_css = row_css
-        and css_all_cells = css_all_cells in
-        let classes = [ "prt-table-row" ] in
-        let for_each_cell (css_for_column, content) =
-          let css = Css_gen.( @> ) css_all_cells css_for_column in
-          set_or_wrap content ~classes:classes_for_each_cell ~style:css
-        in
-        let classes =
-          if row_selected then "prt-table-row-selected" :: classes else classes
-        in
-        Vdom.Node.div
-          ~attrs:
-            [ Vdom.Attr.classes classes
-            ; Vdom.Attr.style row_css
-            ; Vdom.Attr.on_click (fun _ -> on_row_click key)
-            ]
-          (List.map (List.zip_exn css_for_columns cells) ~f:for_each_cell))
   in
-  let%sub padding_top_and_bottom =
-    let%arr collated = collated
-    and (`Px row_height_px) = row_height in
-    let padding_top = Collated.num_before_range collated * row_height_px in
-    let padding_bottom = Collated.num_after_range collated * row_height_px in
-    padding_top, padding_bottom
+  let%sub view =
+    let%arr rows = rows
+    and padding_top, padding_bottom = padding_top_and_bottom in
+    Theme.Body.view ~padding_top ~padding_bottom ~rows
   in
   let%sub for_testing =
     let%arr cells = cells
@@ -172,6 +136,7 @@ let component
        ; cells =
            List.map (Map.to_alist cells) ~f:(fun (id, (key, view)) ->
              let selected =
+               let module Cmp = (val comparator) in
                match visually_focused with
                | None -> false
                | Some k -> Cmp.comparator.compare k key = 0
@@ -182,21 +147,6 @@ let component
        ; num_filtered = Collated.num_filtered_rows collated
        ; num_unfiltered = Collated.num_unfiltered_rows collated
        })
-  in
-  let%sub view =
-    let%arr rows = rows
-    and padding_top, padding_bottom = padding_top_and_bottom in
-    Vdom.Node.lazy_
-      (lazy
-        (Vdom.Node.div
-           ~attrs:
-             [ Vdom.Attr.style
-                 (Css_gen.concat
-                    [ Css_gen.padding_top (`Px padding_top)
-                    ; Css_gen.padding_bottom (`Px padding_bottom)
-                    ])
-             ]
-           [ Vdom_node_with_map_children.make ~tag:"div" rows ]))
   in
   let%arr view = view
   and for_testing = for_testing in

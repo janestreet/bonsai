@@ -35,7 +35,4 @@ let app =
   View.Theme.set_for_app theme app
 ;;
 
-let () =
-  let () = Auto_reload.refresh_on_build () in
-  Bonsai_web.Start.start app
-;;
+let () = Bonsai_web.Start.start app

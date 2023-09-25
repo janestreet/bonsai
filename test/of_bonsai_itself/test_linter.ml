@@ -32,8 +32,9 @@ let%expect_test "map2_unfolded_constant_warnings" =
     a + b
   in
   test_lint c;
-  [%expect {|
-    lib/bonsai/test/test_linter.ml:2:4: unfolded constant |}]
+  [%expect
+    {|
+    lib/bonsai/test/of_bonsai_itself/test_linter.ml:2:4: unfolded constant |}]
 ;;
 
 let%expect_test "map2_optimized_gets_no_warnings" =
@@ -60,7 +61,7 @@ let%expect_test "map2_two_unfolded_constants_warnings" =
     a + b
   in
   test_lint doubled;
-  [%expect {| lib/bonsai/test/test_linter.ml:7:4: unfolded constant |}]
+  [%expect {| lib/bonsai/test/of_bonsai_itself/test_linter.ml:7:4: unfolded constant |}]
 ;;
 
 let%expect_test "cutoff_unfolded_constants_warnings" =
@@ -130,6 +131,6 @@ let%expect_test "map2_with_unfolded_constants_and_sm1_with_const_input_both_warn
   test_lint c;
   [%expect
     {|
-    lib/bonsai/test/test_linter.ml:2:4: state_machine1 can be optimized to a state_machine0
-    lib/bonsai/test/test_linter.ml:11:4: unfolded constant |}]
+    lib/bonsai/test/of_bonsai_itself/test_linter.ml:2:4: state_machine1 can be optimized to a state_machine0
+    lib/bonsai/test/of_bonsai_itself/test_linter.ml:11:4: unfolded constant |}]
 ;;

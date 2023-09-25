@@ -13,17 +13,23 @@ let dummy_source_code_position =
 
 let run_test ~(component : _ Bonsai.Arrow_deprecated.t) ~initial_input ~f =
   let clock = Bonsai.Time_source.create ~start:(Time_ns.now ()) in
-  let driver component = Driver.create component ~initial_input ~clock in
+  let driver component =
+    Bonsai_test.Arrow.Driver.create component ~initial_input ~clock
+  in
   f (driver component)
 ;;
 
 module Helpers = struct
-  include Helpers
+  include Bonsai_test.Arrow.Helpers
 
-  let make ~driver = Helpers.make ~driver
-  let make_string ~driver = Helpers.make_string ~driver
-  let make_string_with_inject ~driver = Helpers.make_string_with_inject ~driver
-  let make_with_inject ~driver = Helpers.make_with_inject ~driver
+  let make ~driver = Bonsai_test.Arrow.Helpers.make ~driver
+  let make_string ~driver = Bonsai_test.Arrow.Helpers.make_string ~driver
+
+  let make_string_with_inject ~driver =
+    Bonsai_test.Arrow.Helpers.make_string_with_inject ~driver
+  ;;
+
+  let make_with_inject ~driver = Bonsai_test.Arrow.Helpers.make_with_inject ~driver
 end
 
 module Counter_component = struct
@@ -536,7 +542,7 @@ let%expect_test "Incremental.of_incr" =
       H.show ();
       [%expect {| hello |}];
       Incr.Var.set var "world";
-      Driver.flush driver;
+      Bonsai_test.Arrow.Driver.flush driver;
       H.show ();
       [%expect {| world |}];
       (* reset for next test *)
@@ -564,7 +570,7 @@ module _ = struct
 
   let%expect_test "normal operation" =
     let driver =
-      Driver.create
+      Bonsai_test.Arrow.Driver.create
         ~initial_input:()
         ~clock:(Bonsai.Time_source.create ~start:(Time_ns.now ()))
         (dummy (module Int) ~equal:[%equal: Int.t] ~default:5)

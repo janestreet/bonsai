@@ -1,7 +1,7 @@
 open! Core
 open Bonsai.Let_syntax
 open Virtual_dom
-open Proc
+open Bonsai_web_test
 
 (* This test basically just exists because it's really hard to dispatch
    events deep into a tree without an intermediate representation.  Turns

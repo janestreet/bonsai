@@ -336,7 +336,7 @@ To demonstrate, we'll build an *awful* Bonsai component: a linear chain
 of `on_changes`:
 
 ```{=html}
-<!-- $MDX file=../../test/test_proc_bonsai.ml,part=chain-computation -->
+<!-- $MDX file=../../test/of_bonsai_itself/test_proc_bonsai.ml,part=chain-computation -->
 ```
 ``` ocaml
 let chain_computation =
@@ -380,7 +380,7 @@ frames to settle. And indeed, in a unit test, that's exactly what we'll
 see:
 
 ```{=html}
-<!-- $MDX file=../../test/test_proc_bonsai.ml,part=chained-on-change -->
+<!-- $MDX file=../../test/of_bonsai_itself/test_proc_bonsai.ml,part=chained-on-change -->
 ```
 ``` ocaml
 let%expect_test "chained on_change" =
@@ -403,7 +403,7 @@ But `Bonsai_web_test.Handle` has a function that makes this a bit nicer:
 skips all the intermediate frames:
 
 ```{=html}
-<!-- $MDX file=../../test/test_proc_bonsai.ml,part=chained-on-change-recompute -->
+<!-- $MDX file=../../test/of_bonsai_itself/test_proc_bonsai.ml,part=chained-on-change-recompute -->
 ```
 ``` ocaml
 let%expect_test "chained on_change with recompute_view_until_stable" =

@@ -1,6 +1,6 @@
 open! Core
 open! Import
-open Proc
+open Bonsai_test
 open Bonsai.For_open
 
 let create_handle component =

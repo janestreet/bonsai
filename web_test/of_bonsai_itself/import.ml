@@ -8,6 +8,7 @@ module Effect = struct
 
   let no_op = Vdom.Effect.Ignore
   let sequence xs = Vdom.Effect.Many xs
+  let external_ = External_event.inject
 end
 
 module Driver = Bonsai_test.Arrow.Driver

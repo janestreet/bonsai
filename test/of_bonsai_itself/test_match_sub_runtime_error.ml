@@ -1,7 +1,7 @@
 open! Core
 open! Import
 open Bonsai.Let_syntax
-open Proc
+open Bonsai_test
 
 let%expect_test "match%sub defers exceptions until runtime" =
   let var = Bonsai.Var.create true in
