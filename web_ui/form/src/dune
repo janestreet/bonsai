@@ -3,12 +3,9 @@
   -experimental_forms_library)
  (preprocess
   (pps js_of_ocaml-ppx ppx_jane ppx_bonsai ppx_css ppx_typed_fields))
- (libraries bonsai bonsai_web bonsai_web_ui_common_components
-  bonsai_web_ui_extendy bonsai_web_ui_form_underlying bonsai_web_ui_form_view
-  bonsai_web_ui_form2_experimental bonsai_web_ui_file bonsai_extra
-  bonsai_web_ui_file_from_web_file bonsai_web_ui_freeform_multiselect
+ (libraries bonsai bonsai_web bonsai_web_ui_form_underlying
+  bonsai_web_ui_form_view bonsai_web_ui_form2_experimental bonsai_web_ui_file
   bonsai_web_ui_multi_select bonsai_web_ui_query_box
-  bonsai_web_ui_reorderable_list bonsai_web_ui_typeahead core
-  fuzzy_match.match profunctor ppx_typed_fields.typed_field_map
-  ppx_typed_fields.typed_fields_lib ppx_typed_fields.typed_variants_lib
-  virtual_dom.input_widgets))
+  bonsai_web_ui_reorderable_list core profunctor
+  ppx_typed_fields.typed_field_map ppx_typed_fields.typed_fields_lib
+  ppx_typed_fields.typed_variants_lib virtual_dom.input_widgets))

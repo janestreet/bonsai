@@ -533,3 +533,21 @@ let bonk =
   in
   return bonk
 ;;
+
+let chain_incr_effects input =
+  let%sub (), inject =
+    Bonsai.state_machine1
+      input
+      ~default_model:()
+      ~apply_action:(fun ctx input _model effect_fns ->
+      match input, effect_fns with
+      | Bonsai.Computation_status.Inactive, _ | _, [] -> ()
+      | Active input, effect_fn :: dependents ->
+        let effect =
+          let%bind.Ui_effect () = effect_fn input in
+          Bonsai.Apply_action_context.inject ctx dependents
+        in
+        Bonsai.Apply_action_context.schedule_event ctx effect)
+  in
+  return inject
+;;

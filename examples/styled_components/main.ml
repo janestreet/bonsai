@@ -148,6 +148,32 @@ module Typed_interpolation = struct
   let filter_attrs = Some (fun k _ -> not (String.is_prefix k ~prefix:"style"))
 end
 
+module Nested_css = struct
+  let name = {|Nested CSS|}
+  let description = {|You can use css's relatively new nesting feature with this too.|}
+
+  let view =
+    Bonsai.const
+      [%demo
+        Vdom.Node.div
+          ~attrs:
+            [ {%css|
+               background-color: tomato;
+               height: 2rem;
+               width: 2rem;
+
+               &:hover {
+                 background-color: white;
+               }
+             |}
+            ]
+          []]
+  ;;
+
+  let selector = None
+  let filter_attrs = Some (fun k _ -> not (String.is_prefix k ~prefix:"style"))
+end
+
 module Stylesheet_interpolation = struct
   let name = "Stylesheet interpolation"
 
@@ -215,6 +241,7 @@ let component =
          , [ Gallery.make_demo (module Basic)
            ; Gallery.make_demo (module Interpolation)
            ; Gallery.make_demo (module Typed_interpolation)
+           ; Gallery.make_demo (module Nested_css)
            ; Gallery.make_demo (module Stylesheet_interpolation)
            ] )
        ])

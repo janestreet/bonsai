@@ -4,6 +4,22 @@ open! Bonsai.Let_syntax
 module Collated = Incr_map_collate.Collated
 
 module By_row = struct
+  module Action = struct
+    type 'key t =
+      | Unfocus
+      | Up
+      | Down
+      | Page_up
+      | Page_down
+      | Select of 'key
+      | Select_index of int
+      | Switch_from_index_to_key of
+          { key : 'key
+          ; index : int
+          }
+    [@@deriving sexp_of]
+  end
+
   type ('k, 'presence) t =
     { focused : 'presence
     ; unfocus : unit Effect.t
@@ -17,6 +33,38 @@ module By_row = struct
   [@@deriving fields ~getters]
 
   type 'k optional = ('k, 'k option) t
+
+  (* The effects computed from [inject] are constant, and only computed once.
+     [presence], however, changes extremely frequently, since it is the focused row.
+     Constructing this value in stages means that downstream consumers that only look at
+     e.g. "focus_up", won't have cutoff issues caused by [inject Up] being called every
+     time that the model changes. *)
+  module Without_presence : sig
+    type 'k unfinalized
+
+    val create : ('k Action.t -> unit Effect.t) -> 'k unfinalized
+    val finalize : 'k unfinalized -> 'presence -> ('k, 'presence) t
+  end = struct
+    type 'k unfinalized = ('k, Nothing.t option) t
+
+    let create inject =
+      { focused = None
+      ; unfocus = inject Action.Unfocus
+      ; focus_up = inject Up
+      ; focus_down = inject Down
+      ; page_up = inject Page_up
+      ; page_down = inject Page_down
+      ; focus = (fun k -> inject (Select k))
+      ; focus_index = (fun k -> inject (Select_index k))
+      }
+    ;;
+
+    let finalize without_focus focused = { without_focus with focused }
+  end
+
+  module Expert = struct
+    let keyless t = { t with focused = None; focus = (fun _ -> Effect.Ignore) }
+  end
 end
 
 module Kind = struct
@@ -73,22 +121,6 @@ module Row_machine = struct
         Int.equal index needle))
   ;;
 
-  module Action = struct
-    type 'key t =
-      | Unfocus
-      | Up
-      | Down
-      | Page_up
-      | Page_down
-      | Select of 'key
-      | Select_index of int
-      | Switch_from_index_to_key of
-          { key : 'key
-          ; index : int
-          }
-    [@@deriving sexp_of]
-  end
-
   let component
     (type key data cmp presence)
     (key : (key, cmp) Bonsai.comparator)
@@ -106,9 +138,9 @@ module Row_machine = struct
     end
     in
     let module Action = struct
-      include Action
+      include By_row.Action
 
-      type t = Key.t Action.t [@@deriving sexp_of]
+      type t = Key.t By_row.Action.t [@@deriving sexp_of]
     end
     in
     let module Model = struct
@@ -271,23 +303,6 @@ module Row_machine = struct
         input
     in
     let%sub current = return (Value.cutoff ~equal:[%equal: Model.t] current) in
-    let%sub everything_injectable =
-      (* By depending on only [inject] (which is a constant), we can build the vast majority
-         of this record, leaving only the "focused" field left unset, which we quickly fix.
-         Doing it this way will mean that downstream consumers that only look at e.g. the "focus_up"
-         field, won't have cutoff issues caused by [inject Up] being called every time that
-         the model changes. *)
-      let%arr inject = inject in
-      { By_row.focused = None
-      ; unfocus = inject Unfocus
-      ; focus_up = inject Up
-      ; focus_down = inject Down
-      ; page_up = inject Page_up
-      ; page_down = inject Page_down
-      ; focus = (fun k -> inject (Select k))
-      ; focus_index = (fun k -> inject (Select_index k))
-      }
-    in
     let%sub visually_focused =
       let%arr current = current
       and collated = collated in
@@ -317,11 +332,15 @@ module Row_machine = struct
                 | None -> Effect.Ignore)
              | Visible (At_key _) | No_focused_row | Shadow _ -> Effect.Ignore)
     in
+    let%sub without_focus =
+      let%arr inject = inject in
+      By_row.Without_presence.create inject
+    in
     let%sub presence = compute_presence visually_focused in
     let%arr presence = presence
     and visually_focused = visually_focused
-    and everything_injectable = everything_injectable in
-    let focus = { everything_injectable with By_row.focused = presence } in
+    and without_focus = without_focus in
+    let focus = By_row.Without_presence.finalize without_focus presence in
     { focus; visually_focused }
   ;;
 end
@@ -364,6 +383,6 @@ let get_on_row_click
   match kind with
   | None -> Value.return (fun _ -> Effect.Ignore)
   | By_row _ ->
-    let%map { focus; _ } = value in
-    focus
+    let%map control = value in
+    By_row.focus control
 ;;

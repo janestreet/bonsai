@@ -70,12 +70,11 @@ let%expect_test "setting a constant form does nothing" =
   in
   let handle = Handle.create (form_result_spec [%sexp_of: string]) component in
   Handle.show handle;
-  [%expect
-    {|
+  [%expect {|
     (Ok test)
 
     ==============
-    <div id="bonsai_path_replaced_in_test"> test </div> |}];
+    test |}];
   Handle.do_actions handle [ "not test" ];
   Handle.show_diff handle
 ;;
@@ -1124,7 +1123,13 @@ let%expect_test "typing into a time span textbox" =
 
     ==============
     <div>
-      <input type="number" step="1" placeholder="" spellcheck="false" value:normalized="" oninput> </input>
+      <input type="number"
+             step="1"
+             placeholder=""
+             spellcheck="false"
+             id="bonsai_path_replaced_in_test"
+             value:normalized=""
+             oninput> </input>
       <select class="widget-dropdown" onchange>
         <option value="0" #selected="false"> ms </option>
         <option value="1" #selected="true"> s </option>
@@ -1140,7 +1145,13 @@ let%expect_test "typing into a time span textbox" =
 
     ==============
     <div>
-      <input type="number" step="1" placeholder="" spellcheck="false" value:normalized=24 oninput> </input>
+      <input type="number"
+             step="1"
+             placeholder=""
+             spellcheck="false"
+             id="bonsai_path_replaced_in_test"
+             value:normalized=24
+             oninput> </input>
       <select class="widget-dropdown" onchange>
         <option value="0" #selected="false"> ms </option>
         <option value="1" #selected="true"> s </option>
@@ -1156,7 +1167,13 @@ let%expect_test "typing into a time span textbox" =
 
     ==============
     <div>
-      <input type="number" step="1" placeholder="" spellcheck="false" value:normalized=24 oninput> </input>
+      <input type="number"
+             step="1"
+             placeholder=""
+             spellcheck="false"
+             id="bonsai_path_replaced_in_test"
+             value:normalized=24
+             oninput> </input>
       <select class="widget-dropdown" onchange>
         <option value="0" #selected="false"> ms </option>
         <option value="1" #selected="false"> s </option>
@@ -1176,7 +1193,13 @@ let%expect_test "setting into a time span textbox" =
 
     ==============
     <div>
-      <input type="number" step="1" placeholder="" spellcheck="false" value:normalized="" oninput> </input>
+      <input type="number"
+             step="1"
+             placeholder=""
+             spellcheck="false"
+             id="bonsai_path_replaced_in_test"
+             value:normalized=""
+             oninput> </input>
       <select class="widget-dropdown" onchange>
         <option value="0" #selected="false"> ms </option>
         <option value="1" #selected="true"> s </option>
@@ -1192,7 +1215,13 @@ let%expect_test "setting into a time span textbox" =
 
     ==============
     <div>
-      <input type="number" step="1" placeholder="" spellcheck="false" value:normalized=24 oninput> </input>
+      <input type="number"
+             step="1"
+             placeholder=""
+             spellcheck="false"
+             id="bonsai_path_replaced_in_test"
+             value:normalized=24
+             oninput> </input>
       <select class="widget-dropdown" onchange>
         <option value="0" #selected="false"> ms </option>
         <option value="1" #selected="true"> s </option>
@@ -1208,7 +1237,13 @@ let%expect_test "setting into a time span textbox" =
 
     ==============
     <div>
-      <input type="number" step="1" placeholder="" spellcheck="false" value:normalized=24 oninput> </input>
+      <input type="number"
+             step="1"
+             placeholder=""
+             spellcheck="false"
+             id="bonsai_path_replaced_in_test"
+             value:normalized=24
+             oninput> </input>
       <select class="widget-dropdown" onchange>
         <option value="0" #selected="false"> ms </option>
         <option value="1" #selected="false"> s </option>
@@ -2051,9 +2086,9 @@ let%expect_test "typing into an int number element (no default)" =
            step="1"
            placeholder=""
            spellcheck="false"
-           id="bonsai_path_replaced_in_test"
            min="-1"
            max="10"
+           id="bonsai_path_replaced_in_test"
            value:normalized=""
            oninput> </input> |}];
   Handle.input_text handle ~get_vdom ~selector:"input" ~text:"10";
@@ -2068,9 +2103,9 @@ let%expect_test "typing into an int number element (no default)" =
              step="1"
              placeholder=""
              spellcheck="false"
-             id="bonsai_path_replaced_in_test"
              min="-1"
              max="10"
+             id="bonsai_path_replaced_in_test"
     -|       value:normalized=""
     +|       value:normalized=10
              oninput> </input> |}];
@@ -2086,9 +2121,9 @@ let%expect_test "typing into an int number element (no default)" =
              step="1"
              placeholder=""
              spellcheck="false"
-             id="bonsai_path_replaced_in_test"
              min="-1"
              max="10"
+             id="bonsai_path_replaced_in_test"
     -|       value:normalized=10
     +|       value:normalized=""
              oninput> </input> |}]
@@ -2107,9 +2142,9 @@ let%expect_test "typing into an int number element" =
            step="1"
            placeholder=""
            spellcheck="false"
-           id="bonsai_path_replaced_in_test"
            min="-1"
            max="10"
+           id="bonsai_path_replaced_in_test"
            value:normalized=0
            oninput> </input> |}];
   Handle.input_text handle ~get_vdom ~selector:"input" ~text:"10";
@@ -2124,9 +2159,9 @@ let%expect_test "typing into an int number element" =
              step="1"
              placeholder=""
              spellcheck="false"
-             id="bonsai_path_replaced_in_test"
              min="-1"
              max="10"
+             id="bonsai_path_replaced_in_test"
     -|       value:normalized=0
     +|       value:normalized=10
              oninput> </input> |}];
@@ -2142,9 +2177,9 @@ let%expect_test "typing into an int number element" =
              step="1"
              placeholder=""
              spellcheck="false"
-             id="bonsai_path_replaced_in_test"
              min="-1"
              max="10"
+             id="bonsai_path_replaced_in_test"
     -|       value:normalized=10
     +|       value:normalized=-1
              oninput> </input> |}];
@@ -2160,9 +2195,9 @@ let%expect_test "typing into an int number element" =
              step="1"
              placeholder=""
              spellcheck="false"
-             id="bonsai_path_replaced_in_test"
              min="-1"
              max="10"
+             id="bonsai_path_replaced_in_test"
     -|       value:normalized=-1
     +|       value:normalized=11
              oninput> </input> |}];
@@ -2178,9 +2213,9 @@ let%expect_test "typing into an int number element" =
              step="1"
              placeholder=""
              spellcheck="false"
-             id="bonsai_path_replaced_in_test"
              min="-1"
              max="10"
+             id="bonsai_path_replaced_in_test"
     -|       value:normalized=11
     +|       value:normalized=-2
              oninput> </input> |}]
@@ -2199,9 +2234,9 @@ let%expect_test "setting into an int number element (no default)" =
            step="1"
            placeholder=""
            spellcheck="false"
-           id="bonsai_path_replaced_in_test"
            min="-1"
            max="10"
+           id="bonsai_path_replaced_in_test"
            value:normalized=""
            oninput> </input> |}];
   Handle.do_actions handle [ 10 ];
@@ -2216,9 +2251,9 @@ let%expect_test "setting into an int number element (no default)" =
              step="1"
              placeholder=""
              spellcheck="false"
-             id="bonsai_path_replaced_in_test"
              min="-1"
              max="10"
+             id="bonsai_path_replaced_in_test"
     -|       value:normalized=""
     +|       value:normalized=10
              oninput> </input> |}]
@@ -2237,9 +2272,9 @@ let%expect_test "setting into an int number element" =
            step="1"
            placeholder=""
            spellcheck="false"
-           id="bonsai_path_replaced_in_test"
            min="-1"
            max="10"
+           id="bonsai_path_replaced_in_test"
            value:normalized=0
            oninput> </input> |}];
   Handle.do_actions handle [ 10 ];
@@ -2254,9 +2289,9 @@ let%expect_test "setting into an int number element" =
              step="1"
              placeholder=""
              spellcheck="false"
-             id="bonsai_path_replaced_in_test"
              min="-1"
              max="10"
+             id="bonsai_path_replaced_in_test"
     -|       value:normalized=0
     +|       value:normalized=10
              oninput> </input> |}];
@@ -2272,9 +2307,9 @@ let%expect_test "setting into an int number element" =
              step="1"
              placeholder=""
              spellcheck="false"
-             id="bonsai_path_replaced_in_test"
              min="-1"
              max="10"
+             id="bonsai_path_replaced_in_test"
     -|       value:normalized=10
     +|       value:normalized=-1
              oninput> </input> |}];
@@ -2290,9 +2325,9 @@ let%expect_test "setting into an int number element" =
              step="1"
              placeholder=""
              spellcheck="false"
-             id="bonsai_path_replaced_in_test"
              min="-1"
              max="10"
+             id="bonsai_path_replaced_in_test"
     -|       value:normalized=-1
     +|       value:normalized=11
              oninput> </input> |}];
@@ -2308,9 +2343,9 @@ let%expect_test "setting into an int number element" =
              step="1"
              placeholder=""
              spellcheck="false"
-             id="bonsai_path_replaced_in_test"
              min="-1"
              max="10"
+             id="bonsai_path_replaced_in_test"
     -|       value:normalized=11
     +|       value:normalized=-2
              oninput> </input> |}]
@@ -2331,9 +2366,9 @@ let%expect_test "typing into a float number element" =
            step="1"
            placeholder=""
            spellcheck="false"
-           id="bonsai_path_replaced_in_test"
            min="-1"
            max="10.1"
+           id="bonsai_path_replaced_in_test"
            value:normalized=0
            oninput> </input> |}];
   Handle.input_text handle ~get_vdom ~selector:"input" ~text:"10.1";
@@ -2348,9 +2383,9 @@ let%expect_test "typing into a float number element" =
              step="1"
              placeholder=""
              spellcheck="false"
-             id="bonsai_path_replaced_in_test"
              min="-1"
              max="10.1"
+             id="bonsai_path_replaced_in_test"
     -|       value:normalized=0
     +|       value:normalized=10.1
              oninput> </input> |}];
@@ -2366,9 +2401,9 @@ let%expect_test "typing into a float number element" =
              step="1"
              placeholder=""
              spellcheck="false"
-             id="bonsai_path_replaced_in_test"
              min="-1"
              max="10.1"
+             id="bonsai_path_replaced_in_test"
     -|       value:normalized=10.1
     +|       value:normalized=-1
              oninput> </input> |}];
@@ -2384,9 +2419,9 @@ let%expect_test "typing into a float number element" =
              step="1"
              placeholder=""
              spellcheck="false"
-             id="bonsai_path_replaced_in_test"
              min="-1"
              max="10.1"
+             id="bonsai_path_replaced_in_test"
     -|       value:normalized=-1
     +|       value:normalized=10.2
              oninput> </input> |}];
@@ -2402,9 +2437,9 @@ let%expect_test "typing into a float number element" =
              step="1"
              placeholder=""
              spellcheck="false"
-             id="bonsai_path_replaced_in_test"
              min="-1"
              max="10.1"
+             id="bonsai_path_replaced_in_test"
     -|       value:normalized=10.2
     +|       value:normalized=-1.1
              oninput> </input> |}]
@@ -2425,9 +2460,9 @@ let%expect_test "setting into an int number element" =
            step="1"
            placeholder=""
            spellcheck="false"
-           id="bonsai_path_replaced_in_test"
            min="-1"
            max="10.1"
+           id="bonsai_path_replaced_in_test"
            value:normalized=0
            oninput> </input> |}];
   Handle.do_actions handle [ 10.1 ];
@@ -2442,9 +2477,9 @@ let%expect_test "setting into an int number element" =
              step="1"
              placeholder=""
              spellcheck="false"
-             id="bonsai_path_replaced_in_test"
              min="-1"
              max="10.1"
+             id="bonsai_path_replaced_in_test"
     -|       value:normalized=0
     +|       value:normalized=10.1
              oninput> </input> |}];
@@ -2460,9 +2495,9 @@ let%expect_test "setting into an int number element" =
              step="1"
              placeholder=""
              spellcheck="false"
-             id="bonsai_path_replaced_in_test"
              min="-1"
              max="10.1"
+             id="bonsai_path_replaced_in_test"
     -|       value:normalized=10.1
     +|       value:normalized=-1
              oninput> </input> |}];
@@ -2478,9 +2513,9 @@ let%expect_test "setting into an int number element" =
              step="1"
              placeholder=""
              spellcheck="false"
-             id="bonsai_path_replaced_in_test"
              min="-1"
              max="10.1"
+             id="bonsai_path_replaced_in_test"
     -|       value:normalized=-1
     +|       value:normalized=10.2
              oninput> </input> |}];
@@ -2496,9 +2531,9 @@ let%expect_test "setting into an int number element" =
              step="1"
              placeholder=""
              spellcheck="false"
-             id="bonsai_path_replaced_in_test"
              min="-1"
              max="10.1"
+             id="bonsai_path_replaced_in_test"
     -|       value:normalized=10.2
     +|       value:normalized=-1.1
              oninput> </input> |}]

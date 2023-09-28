@@ -6485,3 +6485,49 @@ let%expect_test "most_recent_some" =
   Handle.show handle;
   [%expect {| (6) |}]
 ;;
+
+(* We use a single Bonsai.state for simplicity here, but real applications of this would
+   usually use several "state" elements that all feed into a "centralizing" computation. *)
+let%expect_test "Bonsai_extra.chain_incr_effects" =
+  let create_handle component =
+    Handle.create
+      (Result_spec.sexp
+         (module struct
+           type t = int [@@deriving sexp]
+         end))
+      component
+  in
+  let effect_many =
+    let%sub state, set_state = Bonsai.state 0 in
+    let%sub on_activate =
+      let%arr state = state
+      and set_state = set_state in
+      Effect.Many [ set_state (state + 1); set_state (state + 1); set_state (state + 1) ]
+    in
+    let%sub () = Bonsai.Edge.lifecycle ~on_activate () in
+    Bonsai.read state
+  in
+  let effect_chained =
+    let%sub state, set_state = Bonsai.state 0 in
+    let%sub scheduler = Bonsai_extra.chain_incr_effects state in
+    let%sub on_activate =
+      let%arr scheduler = scheduler
+      and set_state = set_state in
+      scheduler
+        [ (fun s -> set_state (s + 1))
+        ; (fun s -> set_state (s + 1))
+        ; (fun s -> set_state (s + 1))
+        ]
+    in
+    let%sub () = Bonsai.Edge.lifecycle ~on_activate () in
+    Bonsai.read state
+  in
+  let handle_many = create_handle effect_many in
+  Handle.recompute_view_until_stable handle_many;
+  Handle.show handle_many;
+  [%expect {| 1 |}];
+  let handle_chained = create_handle effect_chained in
+  Handle.recompute_view_until_stable handle_chained;
+  Handle.show handle_chained;
+  [%expect {| 3 |}]
+;;

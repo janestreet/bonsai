@@ -88,8 +88,8 @@ let component =
         (let%map focus1 = focus1
          and focus2 = focus2 in
          function
-         | Table_id.First_table -> focus2.unfocus
-         | Second_table -> focus1.unfocus)
+         | Table_id.First_table -> Table.Focus.By_row.unfocus focus2
+         | Second_table -> Table.Focus.By_row.unfocus focus1)
   in
   let%sub which_form = Form.Elements.Dropdown.enumerable (module Which) in
   let%sub which =
@@ -124,12 +124,13 @@ let component =
             | Second_table -> focus2
           in
           let binding =
+            let module Focus_control = Table.Focus.By_row in
             match Js_of_ocaml.Dom_html.Keyboard_code.of_event kbc with
-            | ArrowDown | KeyJ -> Some focus.focus_down
-            | ArrowUp | KeyK -> Some focus.focus_up
-            | PageDown -> Some focus.page_down
-            | PageUp -> Some focus.page_up
-            | Escape -> Some focus.unfocus
+            | ArrowDown | KeyJ -> Some (Focus_control.focus_down focus)
+            | ArrowUp | KeyK -> Some (Focus_control.focus_up focus)
+            | PageDown -> Some (Focus_control.page_down focus)
+            | PageUp -> Some (Focus_control.page_up focus)
+            | Escape -> Some (Focus_control.unfocus focus)
             | _ -> None
           in
           match binding with

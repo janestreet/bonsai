@@ -228,3 +228,21 @@ end
     you have a batch of effects that would otherwise interleave and have bad performance
     behavior. *)
 val bonk : (unit Effect.t -> unit Effect.t) Computation.t
+
+(** [chain_incr_effects input effects] allows you to sequentially schedule effects
+    that depend on a common ['a Value.t], while ensuring that no effect will receive
+    a stale input. This function short-circuits if the input becomes inactive while
+    actions are still being applied.
+
+    This is particularly useful for modeling a set of interacting state machines.
+    The outputs of each computation can be collected into a single [Value.t],
+    which is then provided to each state machine through an injected action.
+    This util allows model recomputations made in the `i`th state machine to be
+    immediately visible to the [apply_action] logic of the `i+1`th state machine.
+
+    In contrast, just resolving a value with [let%arr] and scheduling multiple dependent
+    effects with `[Effect.Many]` will provide all state machines
+    with the state of the world before *any* of them recalculated state. *)
+val chain_incr_effects
+  :  'a Value.t
+  -> (('a -> unit Ui_effect.t) list -> unit Ui_effect.t) Computation.t

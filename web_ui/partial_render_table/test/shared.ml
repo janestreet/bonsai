@@ -243,15 +243,16 @@ module Test = struct
       }
 
     let get_inject' t f =
-      let focus : _ Table.Focus.By_row.t = f t in
+      let focus = f t in
+      let module Focus_control = Table.Focus.By_row in
       function
-      | Action.Unfocus -> focus.unfocus
-      | Focus_down -> focus.focus_down
-      | Focus_up -> focus.focus_up
-      | Page_up -> focus.page_up
-      | Page_down -> focus.page_down
-      | Focus k -> focus.focus k
-      | Focus_index index -> focus.focus_index index
+      | Action.Unfocus -> Focus_control.unfocus focus
+      | Focus_down -> Focus_control.focus_down focus
+      | Focus_up -> Focus_control.focus_up focus
+      | Page_up -> Focus_control.page_up focus
+      | Page_down -> Focus_control.page_down focus
+      | Focus k -> (Focus_control.focus focus) k
+      | Focus_index index -> (Focus_control.focus_index focus) index
     ;;
 
     let get_inject t = get_inject' t Table.Result.focus

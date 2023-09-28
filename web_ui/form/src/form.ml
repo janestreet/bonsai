@@ -128,7 +128,7 @@ module Record_builder = struct
 
   (* This function "overrides" the [field] function inside of Record_builder
      by adding a label *)
-  let field t fieldslib_field =
+  let field' t ~label_of_field fieldslib_field =
     let value = attach_fieldname_to_error t fieldslib_field in
     let with_label =
       For_profunctor.Return
@@ -138,6 +138,8 @@ module Record_builder = struct
     in
     field with_label fieldslib_field
   ;;
+
+  let field = field' ~label_of_field
 
   let build_for_record a =
     let value, set, fields = For_profunctor.finalize_view (build_for_record a) in
@@ -193,19 +195,21 @@ module Dynamic = struct
       let contra_map a ~f = Value.map a ~f:(For_profunctor.contra_map ~f)
     end)
 
-    let field t fieldslib_field =
+    let field' t ~label_of_field fieldslib_field =
       let for_profunctor =
         let%map t = t in
         let t =
           { t with value = Record_builder.attach_fieldname_to_error t fieldslib_field }
         in
         For_profunctor.Return
-          { name = Record_builder.label_of_field fieldslib_field
+          { name = label_of_field fieldslib_field
           ; form = For_profunctor.unbalanced_of_t t
           }
       in
       field for_profunctor fieldslib_field
     ;;
+
+    let field = field' ~label_of_field:Record_builder.label_of_field
 
     let build_for_record creator =
       let%arr t = build_for_record creator in

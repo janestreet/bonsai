@@ -18,6 +18,16 @@ module type Record_builder = sig
        , 'record )
        Bare.Make_creator_types.handle_one_field
 
+  val field'
+    :  'field profunctor_term
+    -> label_of_field:(('record, 'field) Base.Field.t -> string)
+    -> ('record, 'field) Base.Field.t
+    -> ( 'field
+       , 'a
+       , ('b, 'c) Record_builder_lib.Hlist.cons
+       , 'record )
+       Bare.Make_creator_types.handle_one_field
+
   val build_for_record
     :  ( 'record
        , ('a, 'b) Record_builder_lib.Hlist.cons
@@ -39,6 +49,13 @@ module type Dynamic_record_builder = sig
 
   val field
     :  'a profunctor_term Value.t
+    -> ([ `Read | `Set_and_create ], 'b, 'a) Base.Field.t_with_perm
+    -> ('a * 'c, 'd * 'e, 'b) Bare.Make_creator_types.accum
+    -> ('d * 'e -> 'a) * ('c, 'd * 'e, 'b) Bare.Make_creator_types.accum
+
+  val field'
+    :  'a profunctor_term Value.t
+    -> label_of_field:(('b, 'a) Base.Field.t -> string)
     -> ([ `Read | `Set_and_create ], 'b, 'a) Base.Field.t_with_perm
     -> ('a * 'c, 'd * 'e, 'b) Bare.Make_creator_types.accum
     -> ('d * 'e -> 'a) * ('c, 'd * 'e, 'b) Bare.Make_creator_types.accum

@@ -166,14 +166,15 @@ let component ?filter (data : Row.t String.Map.t Value.t) =
     ~attrs:
       [ Vdom.Attr.on_keydown (fun kbc ->
           let binding =
+            let module Focus_control = Table.Focus.By_row in
             match Js_of_ocaml.Dom_html.Keyboard_code.of_event kbc with
-            | ArrowDown | KeyJ -> Some focus.focus_down
-            | ArrowUp | KeyK -> Some focus.focus_up
-            | PageDown -> Some focus.page_down
-            | PageUp -> Some focus.page_up
-            | Escape -> Some focus.unfocus
-            | Home -> Some (focus.focus_index 0)
-            | End -> Some (focus.focus_index num_filtered_rows)
+            | ArrowDown | KeyJ -> Some (Focus_control.focus_down focus)
+            | ArrowUp | KeyK -> Some (Focus_control.focus_up focus)
+            | PageDown -> Some (Focus_control.page_down focus)
+            | PageUp -> Some (Focus_control.page_up focus)
+            | Escape -> Some (Focus_control.unfocus focus)
+            | Home -> Some ((Focus_control.focus_index focus) 0)
+            | End -> Some ((Focus_control.focus_index focus) num_filtered_rows)
             | _ -> None
           in
           match binding with

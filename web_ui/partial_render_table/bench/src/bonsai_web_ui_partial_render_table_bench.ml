@@ -102,13 +102,14 @@ let component_for_bench
 let create_bench ?preload_rows comparator ~initial_vars ~columns ~interaction ~test_name =
   let interaction = interaction initial_vars in
   let component = component_for_bench comparator ?preload_rows ~columns initial_vars in
+  let module Focus_control = Table.Focus.By_row in
   let get_inject { Table.Result.focus; _ } = function
-    | Action.Unfocus -> focus.Table.Focus.By_row.unfocus
-    | Focus_up -> focus.focus_up
-    | Focus_down -> focus.focus_down
-    | Page_up -> focus.page_up
-    | Page_down -> focus.page_down
-    | Focus key -> focus.focus key
+    | Action.Unfocus -> Focus_control.unfocus focus
+    | Focus_up -> Focus_control.focus_up focus
+    | Focus_down -> Focus_control.focus_down focus
+    | Page_up -> Focus_control.page_up focus
+    | Page_down -> Focus_control.page_down focus
+    | Focus key -> (Focus_control.focus focus) key
   in
   Bonsai_bench.create ~name:test_name ~component ~get_inject interaction
 ;;

@@ -3,21 +3,30 @@ open! Bonsai_web
 module Collated := Incr_map_collate.Collated
 
 module By_row : sig
-  type ('k, 'presence) t =
-    { focused : 'presence
-    ; unfocus : unit Effect.t
-    ; focus_up : unit Effect.t
-    ; focus_down : unit Effect.t
-    ; page_up : unit Effect.t
-    ; page_down : unit Effect.t
-    ; focus : 'k -> unit Effect.t
-    ; focus_index : int -> unit Effect.t
-        (** [focus_index n] sets the focus to the nth row from the top of the
-        entire table. The first row is 0, the second is 1, and so on. *)
-    }
-  [@@deriving fields ~getters]
+  type ('k, 'presence) t
+
+  val focused : ('k, 'presence) t -> 'presence
+  val focus_up : ('k, 'presence) t -> unit Effect.t
+  val focus_down : ('k, 'presence) t -> unit Effect.t
+  val page_up : ('k, 'presence) t -> unit Effect.t
+  val page_down : ('k, 'presence) t -> unit Effect.t
+  val unfocus : ('k, 'presence) t -> unit Effect.t
+
+  (** [focus k] sets the focus to the row keyed by k. *)
+  val focus : ('k, 'presence) t -> 'k -> unit Effect.t
+
+  (** [focus_index n] sets the focus to the nth row from the top of the
+      entire table. The first row is 0, the second is 1, and so on. *)
+  val focus_index : ('k, 'presence) t -> int -> unit Effect.t
 
   type 'k optional = ('k, 'k option) t
+
+  module Expert : sig
+    (** [keyless] disables selecting a row by key, or returning the keyed row.
+        It can be useful for unifying controls for several tables with different keys.
+        It is cursed. *)
+    val keyless : 'a optional -> Nothing.t optional
+  end
 end
 
 module Kind : sig

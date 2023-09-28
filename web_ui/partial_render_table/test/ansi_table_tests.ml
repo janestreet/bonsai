@@ -78,7 +78,7 @@ let table_to_string
   | Some res ->
     ([%message
        ""
-         ~focused:(res.focused : int option)
+         ~focused:(Table.Focus_by_row.focused res : int option)
          ~num_filtered_rows:(num_filtered_rows : int option)]
      |> Sexp.to_string_hum
      |> fun s -> s ^ "\n")
@@ -2132,7 +2132,7 @@ let%expect_test "Pseudo-BUG: setting rank_range does not change the which rows t
         ;;
 
         let incoming { Table_expert.Result.focus; _ } Action.Focus_down =
-          focus.Table_expert.Focus.By_row.focus_down
+          Table.Focus_by_row.focus_down focus
         ;;
       end)
       component

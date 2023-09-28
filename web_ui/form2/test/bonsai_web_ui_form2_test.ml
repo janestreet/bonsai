@@ -2583,7 +2583,7 @@ let%expect_test _ =
   Handle.show handle;
   [%expect
     {|
-    (Error "value not specified")
+    (Error ("in field x" "value not specified"))
 
     ==============
     <div>

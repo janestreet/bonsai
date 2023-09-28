@@ -45,7 +45,13 @@ module Record = struct
     let module The_results = Typed_field_map.Make (M.Typed_field) (Or_error) in
     let module To_forms = The_form_values.As_applicative.To_other_map (App) (The_forms) in
     let form_values_per_field =
-      let f field = M.form_for_field field in
+      let f field =
+        let%sub subform = M.form_for_field field in
+        let%arr subform = subform in
+        Form.map_error
+          subform
+          ~f:(Error.tag ~tag:("in field " ^ M.Typed_field.name field))
+      in
       The_form_values.create { f }
     in
     let%sub forms_per_field = To_forms.run form_values_per_field in
