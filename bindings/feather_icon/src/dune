@@ -85,4 +85,4 @@
   paths/share-2.svg paths/zoom-in.svg paths/command.svg paths/life-buoy.svg
   paths/share.svg paths/zoom-out.svg paths/compass.svg paths/link-2.svg
   paths/shield-off.svg paths/copy.svg paths/linkedin.svg paths/shield.svg)
- (action (bash "%{deps} -output paths")) (mode fallback))
+ (action (bash "%{deps} -output paths")))
