@@ -238,6 +238,7 @@ module Typeahead : sig
     -> ?placeholder:string
     -> ?to_string:('a -> string) Value.t
     -> ?to_option_description:('a -> string) Value.t
+    -> ?handle_unknown_option:(string -> 'a option) Value.t
     -> ?split:(string -> string list)
     -> ('a, 'cmp) Bonsai.comparator
     -> all_options:'a list Value.t
@@ -248,6 +249,7 @@ module Typeahead : sig
     -> ?placeholder:string
     -> ?to_string:('a -> string) Value.t
     -> ?to_option_description:('a -> string) Value.t
+    -> ?handle_unknown_option:(string -> 'a option) Value.t
     -> ?split:(string -> string list)
     -> ('a, _) Bonsai.comparator
     -> all_options:'a list Value.t
@@ -453,23 +455,30 @@ module Multiple : sig
     -> equal:('a -> 'a -> bool)
     -> ('a list, Vdom.Node.t) Form.t Computation.t
 
-  type 'view t =
-    { items : ('view * unit Effect.t) list
+  type ('a, 'view) item =
+    { form : ('a, 'view) Form.t
+    ; remove : unit Effect.t
+    }
+
+  type ('a, 'view) t =
+    { items : ('a, 'view) item list
     ; add_element : unit Effect.t
     }
 
-  val list : ('a, 'view) Form.t Computation.t -> ('a list, 'view t) Form.t Computation.t
+  val list
+    :  ('a, 'view) Form.t Computation.t
+    -> ('a list, ('a, 'view) t) Form.t Computation.t
 
   val set
     :  ('a, 'cmp) Bonsai.comparator
     -> ('a, 'view) Form.t Computation.t
-    -> (('a, 'cmp) Set.t, 'view t) Form.t Computation.t
+    -> (('a, 'cmp) Set.t, ('a, 'view) t) Form.t Computation.t
 
   val map
     :  ('k, 'cmp) Bonsai.comparator
     -> key:('k, 'key_view) Form.t Computation.t
     -> data:('v, 'data_view) Form.t Computation.t
-    -> (('k, 'v, 'cmp) Map.t, ('key_view * 'data_view) t) Form.t Computation.t
+    -> (('k, 'v, 'cmp) Map.t, ('k * 'v, 'key_view * 'data_view) t) Form.t Computation.t
 end
 
 module File_select : sig

@@ -1,7 +1,7 @@
 open! Core
 open Bonsai_web
 
-type ('a, 'view) t = ('a, 'view) Bonsai_web_ui_form_underlying.t =
+type ('a, 'view) t =
   { value : 'a Or_error.t
   ; view : 'view
   ; set : 'a -> unit Vdom.Effect.t

@@ -8,14 +8,13 @@ module type Name = sig
     val succ : t -> t
   end
 
-  type t
+  type t [@@deriving sexp_of]
 
   val to_string : t -> string
   val create : unit -> t
   val next : Count.t -> t * Count.t
 
-  include Comparable.S_binable with type t := t
-  include Sexpable.S with type t := t
+  include Comparable.S_plain with type t := t
 end
 
 module Default_id : Name
@@ -40,7 +39,7 @@ module Make (Name : Name) : sig
       { bound : Computation.t
       ; as_ : Name.t
       }
-    [@@deriving sexp, compare]
+    [@@deriving sexp_of, compare]
   end
 
   and Value : sig
@@ -50,14 +49,14 @@ module Make (Name : Name) : sig
       | Named of Name.t
       | Singleton
       | Mapn of Value.t list
-    [@@deriving sexp, compare]
+    [@@deriving sexp_of, compare]
 
     type t =
       { value_kind : value_without_position
       ; value_here : Source_code_position.Stable.V1.t option
       ; value_id : Name.t
       }
-    [@@deriving sexp, compare]
+    [@@deriving sexp_of, compare]
   end
 
   and Computation : sig
@@ -66,7 +65,7 @@ module Make (Name : Name) : sig
       ; free_variables : Name.Set.t
       ; here : Source_code_position.Stable.V1.t option
       }
-    [@@deriving sexp, compare]
+    [@@deriving sexp_of, compare]
   end
 
   class ['acc] fold : object

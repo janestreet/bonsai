@@ -237,6 +237,7 @@ module Typeahead : sig
     -> ?placeholder:string
     -> ?to_string:('a -> string) Value.t
     -> ?to_option_description:('a -> string) Value.t
+    -> ?handle_unknown_option:(string -> 'a option) Value.t
     -> ?split:(string -> string list)
     -> ('a, 'cmp) Bonsai.comparator
     -> all_options:'a list Value.t
@@ -247,6 +248,7 @@ module Typeahead : sig
     -> ?placeholder:string
     -> ?to_string:('a -> string) Value.t
     -> ?to_option_description:('a -> string) Value.t
+    -> ?handle_unknown_option:(string -> 'a option) Value.t
     -> ?split:(string -> string list)
     -> ('a, _) Bonsai.comparator
     -> all_options:'a list Value.t

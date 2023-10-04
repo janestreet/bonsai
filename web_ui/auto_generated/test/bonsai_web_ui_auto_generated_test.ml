@@ -1222,6 +1222,34 @@ let%expect_test "setting variant forms" =
     </div> |}]
 ;;
 
+let%expect_test "variants with only atom clauses and no doc comments get optimized, but \
+                 look identical"
+  =
+  let module T = struct
+    type t =
+      | Foo
+      | Bar
+    [@@deriving sexp, sexp_grammar]
+  end
+  in
+  let handle = sexp_form_handle (module T) in
+  Handle.show handle;
+  [%expect
+    {|
+    (Ok Foo)
+
+    ==============
+    <select id="bonsai_path_replaced_in_test"
+            class="widget-dropdown"
+            onchange
+            style={
+              width: 100.00%;
+            }>
+      <option value="0" #selected="true"> Foo </option>
+      <option value="1" #selected="false"> Bar </option>
+    </select> |}]
+;;
+
 let%expect_test "interacting with variant forms" =
   let module T = struct
     type t =

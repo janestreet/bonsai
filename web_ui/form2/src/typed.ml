@@ -11,15 +11,21 @@ module Record = struct
 
     val form_for_field : 'a Typed_field.t -> ('a, field_view) Form.t Computation.t
 
-    type value_and_view_of_field_fn =
-      { f : 'a. 'a Typed_field.t -> 'a Or_error.t * field_view }
+    type form_of_field_fn =
+      { f : 'a. 'a Typed_field.t -> ('a, field_view) Form.t Value.t }
 
-    val finalize_view : value_and_view_of_field_fn -> resulting_view
+    val finalize_view : form_of_field_fn -> resulting_view Computation.t
   end
 
-  let make
+  module type S' = sig
+    include S
+
+    val augment_error : 'a Typed_field.t -> Error.t -> Error.t
+  end
+
+  let make_shared
     (type a field_view resulting_view)
-    (module M : S
+    (module M : S'
       with type Typed_field.derived_on = a
        and type resulting_view = resulting_view
        and type field_view = field_view)
@@ -48,22 +54,18 @@ module Record = struct
       let f field =
         let%sub subform = M.form_for_field field in
         let%arr subform = subform in
-        Form.map_error
-          subform
-          ~f:(Error.tag ~tag:("in field " ^ M.Typed_field.name field))
+        Form.map_error subform ~f:(M.augment_error field)
       in
       The_form_values.create { f }
     in
     let%sub forms_per_field = To_forms.run form_values_per_field in
-    let%arr forms_per_field = forms_per_field in
-    let view =
-      let lookup : type a. a M.Typed_field.t -> a Or_error.t * M.field_view =
-        fun field ->
-        let form = The_forms.find forms_per_field field in
-        Form.value form, Form.view form
-      in
-      M.finalize_view { f = lookup }
+    let lookup field =
+      let%map forms_per_field = forms_per_field in
+      The_forms.find forms_per_field field
     in
+    let%sub view = M.finalize_view { f = lookup } in
+    let%arr forms_per_field = forms_per_field
+    and view = view in
     let value =
       let f field = Form.value (The_forms.find forms_per_field field) in
       The_results.As_applicative.transpose
@@ -78,6 +80,39 @@ module Record = struct
       |> Vdom.Effect.Many
     in
     { Form.view; value; set }
+  ;;
+
+  let make
+    (type a field_view resulting_view)
+    (module M : S
+      with type Typed_field.derived_on = a
+       and type resulting_view = resulting_view
+       and type field_view = field_view)
+    =
+    make_shared
+      (module struct
+        include M
+
+        let augment_error field error =
+          Error.tag error ~tag:("in field " ^ M.Typed_field.name field)
+        ;;
+      end)
+  ;;
+
+  let make_without_tagging_errors
+    (type a field_view resulting_view)
+    (module M : S
+      with type Typed_field.derived_on = a
+       and type resulting_view = resulting_view
+       and type field_view = field_view)
+    =
+    make_shared
+      (module struct
+        include M
+
+        (* Don't augment the error *)
+        let augment_error _ error = error
+      end)
   ;;
 end
 
@@ -96,7 +131,7 @@ module Variant = struct
 
     val finalize_view
       :  picker_view
-      -> ('a Typed_variant.t * 'a Or_error.t * variant_view) Or_error.t
+      -> ('a Typed_variant.t * ('a, variant_view) Form.t) Or_error.t
       -> resulting_view
   end
 
@@ -139,9 +174,7 @@ module Variant = struct
         in
         let%arr (T { variant = picker_value; form = inner }) = inner
         and picker_view = picker_view in
-        let view =
-          M.finalize_view picker_view (Ok (picker_value, inner.value, inner.view))
-        in
+        let view = M.finalize_view picker_view (Ok (picker_value, inner)) in
         let projected =
           let parse_exn content = M.Typed_variant.create picker_value content in
           let unparse kind =

@@ -8,14 +8,13 @@ module type Name = sig
     val succ : t -> t
   end
 
-  type t
+  type t [@@deriving sexp_of]
 
   val to_string : t -> string
   val create : unit -> t
   val next : Count.t -> t * Count.t
 
-  include Comparable.S_binable with type t := t
-  include Sexpable.S with type t := t
+  include Comparable.S_plain with type t := t
 end
 
 module Default_id = struct
@@ -88,7 +87,7 @@ module Make (Name : Name) = struct
     ; free_variables : Name.Set.t
     ; here : Source_code_position.Stable.V1.t option
     }
-  [@@deriving sexp, compare]
+  [@@deriving sexp_of, compare]
 
   module rec Kind : sig
     type t = kind =
@@ -111,13 +110,13 @@ module Make (Name : Name) = struct
       { bound : computation
       ; as_ : Name.t
       }
-    [@@deriving sexp, compare]
+    [@@deriving sexp_of, compare]
   end = struct
     type t = binding =
       { bound : computation
       ; as_ : Name.t
       }
-    [@@deriving sexp, compare]
+    [@@deriving sexp_of, compare]
   end
 
   and Value : sig
@@ -127,14 +126,14 @@ module Make (Name : Name) = struct
       | Named of Name.t
       | Singleton
       | Mapn of value list
-    [@@deriving sexp, compare]
+    [@@deriving sexp_of, compare]
 
     and t = value =
       { value_kind : value_without_position
       ; value_here : Source_code_position.t option
       ; value_id : Name.t
       }
-    [@@deriving sexp, compare]
+    [@@deriving sexp_of, compare]
   end = struct
     type nonrec value_without_position = value_without_position =
       | Fake
@@ -142,14 +141,14 @@ module Make (Name : Name) = struct
       | Named of Name.t
       | Singleton
       | Mapn of value list
-    [@@deriving sexp, compare]
+    [@@deriving sexp_of, compare]
 
     and t = value =
       { value_kind : value_without_position
       ; value_here : Source_code_position.Stable.V1.t option
       ; value_id : Name.t
       }
-    [@@deriving sexp, compare]
+    [@@deriving sexp_of, compare]
   end
 
   and Computation : sig
@@ -158,14 +157,14 @@ module Make (Name : Name) = struct
       ; free_variables : Name.Set.t
       ; here : Source_code_position.t option
       }
-    [@@deriving sexp, compare]
+    [@@deriving sexp_of, compare]
   end = struct
     type nonrec t = computation =
       { kind : kind
       ; free_variables : Name.Set.t
       ; here : Source_code_position.Stable.V1.t option
       }
-    [@@deriving sexp, compare]
+    [@@deriving sexp_of, compare]
   end
 
   class ['acc] fold =

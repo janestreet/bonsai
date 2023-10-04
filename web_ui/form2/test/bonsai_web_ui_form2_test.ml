@@ -2,7 +2,22 @@ open! Core
 open! Bonsai_web
 open! Bonsai_web_test
 open! Bonsai.Let_syntax
-module Form = Bonsai_web_ui_form2_experimental
+module Form = Bonsai_web_ui_form2
+
+let viewless_form_result_spec (type a) sexp_of_a : ((a, unit) Form.t, a) Result_spec.t =
+  (module struct
+    type t = (a, unit) Form.t
+    type incoming = a
+
+    let view form =
+      Form.value form
+      |> [%sexp_of: a Or_error.t]
+      |> Expect_test_helpers_base.sexp_to_string
+    ;;
+
+    let incoming = Form.set
+  end)
+;;
 
 let form_result_spec (type a) ?filter_printed_attributes ?censor_paths sexp_of_a
   : ((a, Vdom.Node.t) Form.t, a) Result_spec.t
@@ -25,6 +40,50 @@ let form_result_spec (type a) ?filter_printed_attributes ?censor_paths sexp_of_a
     ;;
 
     let incoming = Form.set
+  end)
+;;
+
+let list_form_result_spec (type a) ?filter_printed_attributes ?censor_paths sexp_of_a
+  : ( (a list, (a, Vdom.Node.t) Form.Elements.Multiple.t) Form.t
+  , [ `Set of a list | `Remove of int | `Append ] ) Result_spec.t
+  =
+  (module struct
+    type t = (a list, (a, Vdom.Node.t) Form.Elements.Multiple.t) Form.t
+
+    type incoming =
+      [ `Set of a list
+      | `Remove of int
+      | `Append
+      ]
+
+    let view form =
+      let module V = (val Result_spec.vdom ?filter_printed_attributes ?censor_paths Fn.id)
+      in
+      let { Form.Elements.Multiple.items; add_element = _ } = Form.view form in
+      let vdom =
+        List.map items ~f:(fun { form; remove = _ } -> V.view (Form.view form))
+        |> String.concat ~sep:"\n--------------\n"
+      in
+      let value =
+        Form.value form
+        |> [%sexp_of: a list Or_error.t]
+        |> Expect_test_helpers_base.sexp_to_string
+      in
+      sprintf "%s\n==============\n%s\n" value vdom
+    ;;
+
+    let incoming ({ value = _; view; set } : _ Form.t) = function
+      | `Set list -> set list
+      | `Remove i ->
+        let ({ items; add_element = _ } : _ Form.Elements.Multiple.t) = view in
+        let ({ form = _; remove } : _ Form.Elements.Multiple.item) =
+          List.nth_exn items i
+        in
+        remove
+      | `Append ->
+        let ({ items = _; add_element } : _ Form.Elements.Multiple.t) = view in
+        add_element
+    ;;
   end)
 ;;
 
@@ -2524,10 +2583,10 @@ let%expect_test "extending a projection with an error" =
   Handle.show handle;
   [%expect
     {|
-    (Error (Failure "Int.of_string: \"\""))
+(Error (Failure "Int.of_string: \"\""))
 
-    ==============
-    <pre> ("An error! Hide the textbox" (error (Failure "Int.of_string: \"\""))) </pre> |}];
+==============
+<pre> ("An error! Hide the textbox" (error (Failure "Int.of_string: \"\""))) </pre> |}];
   Handle.do_actions handle [ 1 ];
   Handle.show handle;
   [%expect
@@ -2573,10 +2632,22 @@ let%expect_test _ =
           | Y -> Form.Elements.Textbox.string ()
         ;;
 
-        type value_and_view_of_field_fn =
-          { f : 'a. 'a Typed_field.t -> 'a Or_error.t * field_view }
+        type form_of_field_fn =
+          { f : 'a. 'a Typed_field.t -> ('a, field_view) Form.t Value.t }
 
-        let finalize_view { f } = Vdom.Node.div [ snd (f X); snd (f Y) ]
+        let finalize_view { f } =
+          let%sub view_x =
+            let%arr x = f X in
+            Form.view x
+          in
+          let%sub view_y =
+            let%arr y = f Y in
+            Form.view y
+          in
+          let%arr view_x = view_x
+          and view_y = view_y in
+          Vdom.Node.div [ view_x; view_y ]
+        ;;
       end)
   in
   let handle = Handle.create (form_result_spec [%sexp_of: Foo.t]) form in
@@ -2603,4 +2674,1491 @@ let%expect_test _ =
       <input type="number" step="1" placeholder="" spellcheck="false" value:normalized=1 oninput> </input>
       <input type="text" placeholder="" spellcheck="false" value:normalized=hello oninput> </input>
     </div> |}]
+;;
+
+let%expect_test "slider input" =
+  let component = Form.Elements.Range.int ~min:0 ~max:100 ~default:0 ~step:1 () in
+  let handle =
+    Handle.create
+      (form_result_spec [%sexp_of: int] ~filter_printed_attributes:(fun ~key ~data:_ ->
+         submit_test_attrs key))
+      component
+  in
+  Handle.show handle;
+  [%expect {|
+    (Ok 0)
+
+    ==============
+    <input value:normalized=0> </input> |}];
+  Handle.input_text handle ~get_vdom:Form.view ~selector:"input" ~text:"20";
+  Handle.recompute_view handle;
+  Handle.show handle;
+  [%expect {|
+    (Ok 20)
+
+    ==============
+    <input value:normalized=20> </input> |}]
+;;
+
+let%expect_test "query box" =
+  let var = Bonsai.Var.create (String.Map.of_alist_exn [ "abc", "abc"; "def", "def" ]) in
+  let value = Bonsai.Var.value var in
+  let component =
+    Form.Elements.Query_box.create
+      (module String)
+      ~selection_to_string:(Value.return Fn.id)
+      ~f:(fun query ->
+        let%arr query = query
+        and value = value in
+        Map.filter_map value ~f:(fun data ->
+          if String.is_prefix ~prefix:query data then Some (Vdom.Node.text data) else None))
+      ()
+  in
+  let handle =
+    Handle.create
+      (form_result_spec [%sexp_of: string] ~filter_printed_attributes:(fun ~key ~data:_ ->
+         match key with
+         | "style.color" -> true
+         | _ -> false))
+      component
+  in
+  Handle.show handle;
+  [%expect
+    {|
+    (Error "a value is required")
+
+    ==============
+    <div>
+      <input> </input>
+      <div>
+        <div> </div>
+      </div>
+    </div> |}];
+  Handle.input_text handle ~get_vdom:Form.view ~selector:"input" ~text:"a";
+  Handle.recompute_view handle;
+  Handle.keydown handle ~get_vdom:Form.view ~selector:"input" ~key:Enter;
+  Handle.show_diff handle;
+  [%expect
+    {|
+    ("default prevented" (key Enter))
+
+    -|(Error "a value is required")
+    +|(Ok abc)
+
+      ==============
+      <div>
+        <input> </input>
+        <div>
+          <div> </div>
+        </div>
+      </div> |}];
+  Bonsai.Var.update var ~f:(fun map -> Map.remove (map : _ String.Map.t) "abc");
+  Handle.show_diff handle;
+  [%expect {| |}]
+;;
+
+let%test_module "Typed" =
+  (module struct
+    let%test_module "Record" =
+      (module struct
+        let%expect_test "basic record" =
+          let module T = struct
+            type t =
+              { a : int
+              ; b : string
+              ; c : bool
+              }
+            [@@deriving typed_fields, sexp]
+          end
+          in
+          let component =
+            Form.Typed.Record.make
+              (module struct
+                module Typed_field = T.Typed_field
+
+                type field_view = Vdom.Node.t
+                type resulting_view = Vdom.Node.t
+
+                let form_for_field
+                  : type a. a Typed_field.t -> (a, field_view) Form.t Computation.t
+                  = function
+                  | A -> Form.Elements.Number.int ~step:1 ()
+                  | B -> Form.Elements.Textbox.string ()
+                  | C -> Form.Elements.Checkbox.bool ~default:false ()
+                ;;
+
+                type form_of_field_fn =
+                  { f : 'a. 'a Typed_field.t -> ('a, field_view) Form.t Value.t }
+
+                let finalize_view { f } =
+                  let%arr a = f A
+                  and b = f B
+                  and c = f C in
+                  let label_and_attr label form =
+                    Vdom.Node.label
+                      [ Vdom.Node.text label
+                      ; Vdom.Node.span
+                          ~attrs:[ Vdom.Attr.create "test" label ]
+                          [ Form.view form ]
+                      ]
+                  in
+                  Vdom.Node.div
+                    [ label_and_attr "a" a; label_and_attr "b" b; label_and_attr "c" c ]
+                ;;
+              end)
+          in
+          let handle = Handle.create (form_result_spec [%sexp_of: T.t]) component in
+          Handle.show handle;
+          [%expect
+            {|
+            (Error ("in field a" "value not specified"))
+
+            ==============
+            <div>
+              <label>
+                a
+                <span test="a">
+                  <input type="number" step="1" placeholder="" spellcheck="false" value:normalized="" oninput> </input>
+                </span>
+              </label>
+              <label>
+                b
+                <span test="b">
+                  <input type="text" placeholder="" spellcheck="false" value:normalized="" oninput> </input>
+                </span>
+              </label>
+              <label>
+                c
+                <span test="c">
+                  <input type="checkbox" #checked="false" onclick style={ margin-left: 0px; }> </input>
+                </span>
+              </label>
+            </div> |}];
+          Handle.input_text
+            handle
+            ~get_vdom:Form.view
+            ~selector:"[test=a] input"
+            ~text:"3";
+          Handle.input_text
+            handle
+            ~get_vdom:Form.view
+            ~selector:"[test=b] input"
+            ~text:"text";
+          Handle.set_checkbox
+            handle
+            ~get_vdom:Form.view
+            ~selector:"[test=c] input"
+            ~checked:true;
+          Handle.show handle;
+          [%expect
+            {|
+            (Ok (
+              (a 3)
+              (b text)
+              (c true)))
+
+            ==============
+            <div>
+              <label>
+                a
+                <span test="a">
+                  <input type="number" step="1" placeholder="" spellcheck="false" value:normalized=3 oninput> </input>
+                </span>
+              </label>
+              <label>
+                b
+                <span test="b">
+                  <input type="text" placeholder="" spellcheck="false" value:normalized=text oninput> </input>
+                </span>
+              </label>
+              <label>
+                c
+                <span test="c">
+                  <input type="checkbox" #checked="true" onclick style={ margin-left: 0px; }> </input>
+                </span>
+              </label>
+            </div> |}];
+          Handle.do_actions handle [ { a = 10; b = "hi there"; c = false } ];
+          Handle.show handle;
+          [%expect
+            {|
+            (Ok (
+              (a 10)
+              (b "hi there")
+              (c false)))
+
+            ==============
+            <div>
+              <label>
+                a
+                <span test="a">
+                  <input type="number" step="1" placeholder="" spellcheck="false" value:normalized=10 oninput> </input>
+                </span>
+              </label>
+              <label>
+                b
+                <span test="b">
+                  <input type="text" placeholder="" spellcheck="false" value:normalized="hi there" oninput> </input>
+                </span>
+              </label>
+              <label>
+                c
+                <span test="c">
+                  <input type="checkbox" #checked="false" onclick style={ margin-left: 0px; }> </input>
+                </span>
+              </label>
+            </div> |}]
+        ;;
+
+        let%expect_test "monomorphize record" =
+          let module T = struct
+            type 'a t = { a : 'a } [@@deriving typed_fields, sexp]
+          end
+          in
+          let component =
+            Form.Typed.Record.make
+              (module struct
+                module Typed_field = Typed_fields_lib.S_of_S1 (T.Typed_field) (Int)
+
+                type field_view = Vdom.Node.t
+                type resulting_view = Vdom.Node.t
+
+                let form_for_field
+                  : type a. a Typed_field.t -> (a, field_view) Form.t Computation.t
+                  = function
+                  | A -> Form.Elements.Textbox.int ()
+                ;;
+
+                type form_of_field_fn =
+                  { f : 'a. 'a Typed_field.t -> ('a, field_view) Form.t Value.t }
+
+                let finalize_view { f } =
+                  let%arr a = f A in
+                  Form.view a
+                ;;
+              end)
+          in
+          let handle = Handle.create (form_result_spec [%sexp_of: int T.t]) component in
+          Handle.show handle;
+          [%expect
+            {|
+            (Error ("in field a" "Expected an integer"))
+
+            ==============
+            <input type="text" placeholder="" spellcheck="false" value:normalized="" oninput> </input> |}];
+          Handle.do_actions handle [ { a = 10 } ];
+          Handle.show handle;
+          [%expect
+            {|
+            (Ok ((a 10)))
+
+            ==============
+            <input type="text" placeholder="" spellcheck="false" value:normalized=10 oninput> </input> |}]
+        ;;
+
+        let%expect_test "calling [form_of_field_fn] multiple times gives the same value \
+                         back"
+          =
+          let module T = struct
+            type t =
+              { a : int
+              ; b : string
+              }
+            [@@deriving typed_fields, sexp]
+          end
+          in
+          let component =
+            Form.Typed.Record.make
+              (module struct
+                module Typed_field = T.Typed_field
+
+                type field_view = Vdom.Node.t
+                type resulting_view = Vdom.Node.t
+
+                let form_for_field
+                  : type a. a Typed_field.t -> (a, field_view) Form.t Computation.t
+                  = function
+                  | A -> Form.Elements.Number.int ~step:1 ()
+                  | B -> Form.Elements.Textbox.string ()
+                ;;
+
+                type form_of_field_fn =
+                  { f : 'a. 'a Typed_field.t -> ('a, field_view) Form.t Value.t }
+
+                let finalize_view { f } =
+                  let%arr a1 = f A
+                  and a2 = f A
+                  and b = f B in
+                  let label_and_attr label form =
+                    Vdom.Node.label
+                      [ Vdom.Node.text label
+                      ; Vdom.Node.span
+                          ~attrs:[ Vdom.Attr.create "test" label ]
+                          [ Form.view form ]
+                      ]
+                  in
+                  Vdom.Node.div
+                    [ label_and_attr "a1" a1
+                    ; label_and_attr "a2" a2
+                    ; label_and_attr "b" b
+                    ]
+                ;;
+              end)
+          in
+          let handle = Handle.create (form_result_spec [%sexp_of: T.t]) component in
+          Handle.show handle;
+          [%expect
+            {|
+            (Error ("in field a" "value not specified"))
+
+            ==============
+            <div>
+              <label>
+                a1
+                <span test="a1">
+                  <input type="number" step="1" placeholder="" spellcheck="false" value:normalized="" oninput> </input>
+                </span>
+              </label>
+              <label>
+                a2
+                <span test="a2">
+                  <input type="number" step="1" placeholder="" spellcheck="false" value:normalized="" oninput> </input>
+                </span>
+              </label>
+              <label>
+                b
+                <span test="b">
+                  <input type="text" placeholder="" spellcheck="false" value:normalized="" oninput> </input>
+                </span>
+              </label>
+            </div> |}];
+          (* Typing into either "a" textbox influences both; as does setting the form *)
+          Handle.input_text
+            handle
+            ~get_vdom:Form.view
+            ~selector:"[test=a1] input"
+            ~text:"1234";
+          Handle.show handle;
+          [%expect
+            {|
+            (Ok (
+              (a 1234)
+              (b "")))
+
+            ==============
+            <div>
+              <label>
+                a1
+                <span test="a1">
+                  <input type="number"
+                         step="1"
+                         placeholder=""
+                         spellcheck="false"
+                         value:normalized=1234
+                         oninput> </input>
+                </span>
+              </label>
+              <label>
+                a2
+                <span test="a2">
+                  <input type="number"
+                         step="1"
+                         placeholder=""
+                         spellcheck="false"
+                         value:normalized=1234
+                         oninput> </input>
+                </span>
+              </label>
+              <label>
+                b
+                <span test="b">
+                  <input type="text" placeholder="" spellcheck="false" value:normalized="" oninput> </input>
+                </span>
+              </label>
+            </div> |}];
+          Handle.input_text
+            handle
+            ~get_vdom:Form.view
+            ~selector:"[test=a2] input"
+            ~text:"4321";
+          Handle.show handle;
+          [%expect
+            {|
+            (Ok (
+              (a 4321)
+              (b "")))
+
+            ==============
+            <div>
+              <label>
+                a1
+                <span test="a1">
+                  <input type="number"
+                         step="1"
+                         placeholder=""
+                         spellcheck="false"
+                         value:normalized=4321
+                         oninput> </input>
+                </span>
+              </label>
+              <label>
+                a2
+                <span test="a2">
+                  <input type="number"
+                         step="1"
+                         placeholder=""
+                         spellcheck="false"
+                         value:normalized=4321
+                         oninput> </input>
+                </span>
+              </label>
+              <label>
+                b
+                <span test="b">
+                  <input type="text" placeholder="" spellcheck="false" value:normalized="" oninput> </input>
+                </span>
+              </label>
+            </div> |}];
+          Handle.do_actions handle [ { a = 1423; b = "foo" } ];
+          Handle.show handle;
+          [%expect
+            {|
+            (Ok (
+              (a 1423)
+              (b foo)))
+
+            ==============
+            <div>
+              <label>
+                a1
+                <span test="a1">
+                  <input type="number"
+                         step="1"
+                         placeholder=""
+                         spellcheck="false"
+                         value:normalized=1423
+                         oninput> </input>
+                </span>
+              </label>
+              <label>
+                a2
+                <span test="a2">
+                  <input type="number"
+                         step="1"
+                         placeholder=""
+                         spellcheck="false"
+                         value:normalized=1423
+                         oninput> </input>
+                </span>
+              </label>
+              <label>
+                b
+                <span test="b">
+                  <input type="text" placeholder="" spellcheck="false" value:normalized=foo oninput> </input>
+                </span>
+              </label>
+            </div> |}]
+        ;;
+      end)
+    ;;
+
+    let%test_module "Variant" =
+      (module struct
+        let%expect_test "basic variant - defaults to first option" =
+          let module T = struct
+            type t =
+              | Foo of int
+              | Bar of string
+            [@@deriving typed_variants, sexp]
+          end
+          in
+          let component =
+            Form.Typed.Variant.make
+              (module struct
+                module Typed_variant = T.Typed_variant
+
+                type picker_view = Vdom.Node.t
+                type variant_view = Vdom.Node.t
+                type resulting_view = Vdom.Node.t
+
+                let form_for_picker =
+                  Form.Elements.Dropdown.enumerable
+                    (module struct
+                      type t = Typed_variant.Packed.t
+                      [@@deriving enumerate, equal, sexp, compare]
+                    end)
+                ;;
+
+                let form_for_variant
+                  : type a. a Typed_variant.t -> (a, variant_view) Form.t Computation.t
+                  = function
+                  | Foo -> Form.Elements.Textbox.int ()
+                  | Bar -> Form.Elements.Textbox.string ()
+                ;;
+
+                let finalize_view picker_view selected =
+                  let inner_view =
+                    match selected with
+                    | Error _ -> Vdom.Node.text ""
+                    | Ok (_, inner) -> Form.view inner
+                  in
+                  Vdom.Node.div [ picker_view; inner_view ]
+                ;;
+              end)
+          in
+          let handle = Handle.create (form_result_spec [%sexp_of: T.t]) component in
+          Handle.show handle;
+          [%expect
+            {|
+            (Error "Expected an integer")
+
+            ==============
+            <div>
+              <select class="widget-dropdown" onchange style={ width: 100.00%; }>
+                <option value="0" #selected="true"> foo </option>
+                <option value="1" #selected="false"> bar </option>
+              </select>
+              <input type="text" placeholder="" spellcheck="false" value:normalized="" oninput> </input>
+            </div> |}];
+          Handle.input_text handle ~get_vdom:Form.view ~selector:"input" ~text:"1234";
+          Handle.show handle;
+          [%expect
+            {|
+            (Ok (Foo 1234))
+
+            ==============
+            <div>
+              <select class="widget-dropdown" onchange style={ width: 100.00%; }>
+                <option value="0" #selected="true"> foo </option>
+                <option value="1" #selected="false"> bar </option>
+              </select>
+              <input type="text" placeholder="" spellcheck="false" value:normalized=1234 oninput> </input>
+            </div> |}];
+          Handle.change handle ~get_vdom:Form.view ~selector:"select" ~value:"1";
+          Handle.recompute_view_until_stable handle;
+          Handle.input_text handle ~get_vdom:Form.view ~selector:"input" ~text:"hi!";
+          Handle.show handle;
+          [%expect
+            {|
+            (Ok (Bar hi!))
+
+            ==============
+            <div>
+              <select class="widget-dropdown" onchange style={ width: 100.00%; }>
+                <option value="0" #selected="false"> foo </option>
+                <option value="1" #selected="true"> bar </option>
+              </select>
+              <input type="text" placeholder="" spellcheck="false" value:normalized=hi! oninput> </input>
+            </div> |}]
+        ;;
+
+        let%expect_test "basic variant - can also default to no starting option selected" =
+          let module T = struct
+            type t =
+              | Foo of int
+              | Bar of string
+            [@@deriving typed_variants, sexp]
+          end
+          in
+          let component =
+            Form.Typed.Variant.make
+              (module struct
+                module Typed_variant = T.Typed_variant
+
+                type picker_view = Vdom.Node.t
+                type variant_view = Vdom.Node.t
+                type resulting_view = Vdom.Node.t
+
+                let form_for_picker =
+                  let%sub picker =
+                    Form.Elements.Dropdown.enumerable_opt
+                      (module struct
+                        type t = Typed_variant.Packed.t
+                        [@@deriving enumerate, equal, sexp, compare]
+                      end)
+                  in
+                  let%arr picker = picker in
+                  let value =
+                    match Form.value picker with
+                    | Error err -> Error err
+                    | Ok None -> Or_error.error_s [%message "a value is required"]
+                    | Ok (Some value) -> Ok value
+                  in
+                  let set x = Form.set picker (Some x) in
+                  let view = Form.view picker in
+                  { Form.value; view; set }
+                ;;
+
+                let form_for_variant
+                  : type a. a Typed_variant.t -> (a, variant_view) Form.t Computation.t
+                  = function
+                  | Foo -> Form.Elements.Textbox.int ()
+                  | Bar -> Form.Elements.Textbox.string ()
+                ;;
+
+                let finalize_view picker_view selected =
+                  let inner_view =
+                    match selected with
+                    | Error _ -> Vdom.Node.text ""
+                    | Ok (_, inner) -> Form.view inner
+                  in
+                  Vdom.Node.div [ picker_view; inner_view ]
+                ;;
+              end)
+          in
+          let handle = Handle.create (form_result_spec [%sexp_of: T.t]) component in
+          Handle.show handle;
+          [%expect
+            {|
+            (Error "a value is required")
+
+            ==============
+            <div>
+              <select class="widget-dropdown" onchange style={ width: 100.00%; }>
+                <option value="0" #selected="true">  </option>
+                <option value="1" #selected="false"> foo </option>
+                <option value="2" #selected="false"> bar </option>
+              </select>
+
+            </div> |}];
+          Handle.change handle ~get_vdom:Form.view ~selector:"select" ~value:"1";
+          Handle.recompute_view_until_stable handle;
+          Handle.input_text handle ~get_vdom:Form.view ~selector:"input" ~text:"1234";
+          Handle.show handle;
+          [%expect
+            {|
+            (Ok (Foo 1234))
+
+            ==============
+            <div>
+              <select class="widget-dropdown" onchange style={ width: 100.00%; }>
+                <option value="0" #selected="false">  </option>
+                <option value="1" #selected="true"> foo </option>
+                <option value="2" #selected="false"> bar </option>
+              </select>
+              <input type="text" placeholder="" spellcheck="false" value:normalized=1234 oninput> </input>
+            </div> |}];
+          Handle.change handle ~get_vdom:Form.view ~selector:"select" ~value:"2";
+          Handle.recompute_view_until_stable handle;
+          Handle.input_text handle ~get_vdom:Form.view ~selector:"input" ~text:"hi!";
+          Handle.show handle;
+          [%expect
+            {|
+            (Ok (Bar hi!))
+
+            ==============
+            <div>
+              <select class="widget-dropdown" onchange style={ width: 100.00%; }>
+                <option value="0" #selected="false">  </option>
+                <option value="1" #selected="false"> foo </option>
+                <option value="2" #selected="true"> bar </option>
+              </select>
+              <input type="text" placeholder="" spellcheck="false" value:normalized=hi! oninput> </input>
+            </div> |}]
+        ;;
+
+        let%expect_test "monomorphize variant" =
+          let module T = struct
+            type 'a t = Foo of 'a [@@deriving typed_variants, sexp]
+          end
+          in
+          let component =
+            Form.Typed.Variant.make
+              (module struct
+                module Typed_variant = Typed_variants_lib.S_of_S1 (T.Typed_variant) (Int)
+
+                type picker_view = unit
+                type variant_view = Vdom.Node.t
+                type resulting_view = Vdom.Node.t
+
+                let form_for_picker =
+                  Bonsai.const (Form.return ({ f = T Foo } : Typed_variant.Packed.t))
+                ;;
+
+                let form_for_variant
+                  : type a. a Typed_variant.t -> (a, variant_view) Form.t Computation.t
+                  = function
+                  | Foo -> Form.Elements.Textbox.int ()
+                ;;
+
+                let finalize_view () foo_view =
+                  match foo_view with
+                  | Error _ -> raise_s [%message "impossible error"]
+                  | Ok (_, inner) -> Form.view inner
+                ;;
+              end)
+          in
+          let handle = Handle.create (form_result_spec [%sexp_of: int T.t]) component in
+          Handle.show handle;
+          [%expect
+            {|
+            (Error "Expected an integer")
+
+            ==============
+            <input type="text" placeholder="" spellcheck="false" value:normalized="" oninput> </input> |}];
+          Handle.do_actions handle [ Foo 5 ];
+          Handle.show handle;
+          [%expect
+            {|
+            "Form.return was set, but setting is ignored."
+            (Ok (Foo 5))
+
+            ==============
+            <input type="text" placeholder="" spellcheck="false" value:normalized=5 oninput> </input> |}]
+        ;;
+      end)
+    ;;
+  end)
+;;
+
+let%expect_test "difference between with_default and with_default_always" =
+  let default = Bonsai.Var.create 10 in
+  let should_show_form = Bonsai.Var.create true in
+  let create_handle ~name with_default =
+    let component =
+      match%sub Bonsai.Var.value should_show_form with
+      | true ->
+        let%sub form = Form.Elements.Textbox.int () in
+        with_default (Bonsai.Var.value default) form
+      | false ->
+        Bonsai.const (Form.map_view (Form.return 0) ~f:(fun () -> Vdom.Node.none))
+    in
+    Handle.create
+      (Result_spec.string
+         (module struct
+           type t = (int, Vdom.Node.t) Form.t
+
+           let to_string t =
+             let sexp = [%sexp_of: int Or_error.t] (Form.value t) in
+             [%string "%{name}: %{sexp#Sexp}"]
+           ;;
+         end))
+      component
+  in
+  let with_default_handle =
+    create_handle ~name:"with_default" Form.Dynamic.with_default
+  in
+  let with_default_always_handle =
+    create_handle ~name:"with_default_always" Form.Dynamic.with_default_always
+  in
+  let show_both () =
+    Handle.show with_default_handle;
+    Handle.show with_default_always_handle
+  in
+  show_both ();
+  [%expect
+    {|
+    with_default: (Error"Expected an integer")
+    with_default_always: (Error"Expected an integer") |}];
+  show_both ();
+  [%expect {|
+    with_default: (Ok 10)
+    with_default_always: (Ok 10) |}];
+  Bonsai.Var.set should_show_form false;
+  show_both ();
+  [%expect {|
+    with_default: (Ok 0)
+    with_default_always: (Ok 0) |}];
+  Bonsai.Var.set default 15;
+  Bonsai.Var.set should_show_form true;
+  show_both ();
+  [%expect {|
+    with_default: (Ok 10)
+    with_default_always: (Ok 10) |}];
+  show_both ();
+  [%expect {|
+    with_default: (Ok 10)
+    with_default_always: (Ok 15) |}];
+  Bonsai.Var.set default 20;
+  show_both ();
+  [%expect {|
+    with_default: (Ok 10)
+    with_default_always: (Ok 15) |}];
+  (* Observe that neither version updates form to match the new default value
+     of 20, since they both only update the default on activate or model reset. *)
+  show_both ();
+  [%expect {|
+    with_default: (Ok 10)
+    with_default_always: (Ok 15) |}]
+;;
+
+let%expect_test "[Form.with_default] sets the form value after a model reset" =
+  let default = Bonsai.Var.create 0 in
+  let component =
+    Bonsai.with_model_resetter
+      (let%sub form = Form.Elements.Textbox.int () in
+       Form.Dynamic.with_default (Bonsai.Var.value default) form)
+  in
+  let handle =
+    Handle.create
+      (module struct
+        type t = (int, Vdom.Node.t) Form.t * unit Effect.t
+        type incoming = unit
+
+        let incoming (_, effect) () = effect
+
+        let view (form, _) =
+          Sexp.to_string_hum ([%sexp_of: int Or_error.t] (Form.value form))
+        ;;
+      end)
+      component
+  in
+  Handle.show handle;
+  [%expect {| (Error "Expected an integer") |}];
+  Handle.show handle;
+  [%expect {| (Ok 0) |}];
+  Handle.do_actions handle [ () ];
+  Handle.show handle;
+  [%expect {| (Error "Expected an integer") |}];
+  Handle.show handle;
+  [%expect {| (Ok 0) |}]
+;;
+
+let%expect_test "[Form.with_default_always] sets the form value after a model reset" =
+  let default = Bonsai.Var.create 0 in
+  let component =
+    Bonsai.with_model_resetter
+      (let%sub form = Form.Elements.Textbox.int () in
+       Form.Dynamic.with_default_always (Bonsai.Var.value default) form)
+  in
+  let handle =
+    Handle.create
+      (module struct
+        type t = (int, Vdom.Node.t) Form.t * unit Effect.t
+        type incoming = unit
+
+        let incoming (_, effect) () = effect
+
+        let view (form, _) =
+          Sexp.to_string_hum ([%sexp_of: int Or_error.t] (Form.value form))
+        ;;
+      end)
+      component
+  in
+  Handle.show handle;
+  [%expect {| (Error "Expected an integer") |}];
+  Handle.show handle;
+  [%expect {| (Ok 0) |}];
+  Handle.do_actions handle [ () ];
+  Handle.show handle;
+  [%expect {| (Error "Expected an integer") |}];
+  Handle.show handle;
+  [%expect {| (Ok 0) |}]
+;;
+
+let%expect_test "[Form.with_default_always] only sets the form once on first activation" =
+  let default = Bonsai.Var.create 0 in
+  let component =
+    let%sub form = Form.Elements.Textbox.int () in
+    let%sub form_with_printing =
+      let%arr form = form in
+      { Form.view = Form.view form
+      ; value = Form.value form
+      ; set =
+          (fun i ->
+            let%bind.Effect () = Effect.print_s [%message "Form.set called"] in
+            Form.set form i)
+      }
+    in
+    Form.Dynamic.with_default_always (Bonsai.Var.value default) form_with_printing
+  in
+  let handle =
+    Handle.create
+      (module struct
+        type t = (int, Vdom.Node.t) Form.t
+        type incoming = Nothing.t
+
+        let incoming _ = Nothing.unreachable_code
+        let view form = Sexp.to_string_hum ([%sexp_of: int Or_error.t] (Form.value form))
+      end)
+      component
+  in
+  Handle.show handle;
+  [%expect {|
+    (Error "Expected an integer")
+    "Form.set called" |}];
+  Handle.show handle;
+  [%expect {|
+    (Ok 0) |}]
+;;
+
+let%expect_test {| [Form.with_default] interacts fine with [Handle.recompute_view_until_stable] |}
+  =
+  let default = Bonsai.Var.create 0 in
+  let component =
+    let%sub form = Form.Elements.Textbox.int () in
+    Form.Dynamic.with_default (Bonsai.Var.value default) form
+  in
+  let handle =
+    Handle.create
+      (module struct
+        type t = (int, Vdom.Node.t) Form.t
+        type incoming = Nothing.t
+
+        let incoming _ = Nothing.unreachable_code
+        let view form = Sexp.to_string_hum ([%sexp_of: int Or_error.t] (Form.value form))
+      end)
+      component
+  in
+  Handle.recompute_view_until_stable handle;
+  Handle.show handle;
+  [%expect {| (Ok 0) |}]
+;;
+
+let%expect_test "[Form.return] is not settable" =
+  let component = Form.return 5 |> Bonsai.const in
+  let handle = Handle.create (viewless_form_result_spec [%sexp_of: int]) component in
+  Handle.show handle;
+  [%expect {|
+    (Ok 5) |}];
+  Handle.do_actions handle [ 10 ];
+  Handle.show handle;
+  [%expect {|
+    "Form.return was set, but setting is ignored."
+    (Ok 5) |}]
+;;
+
+let%expect_test "return_settable" =
+  let component =
+    Form.return_settable ~sexp_of_model:[%sexp_of: Int.t] 5 ~equal:[%equal: Int.t]
+  in
+  let handle = Handle.create (viewless_form_result_spec [%sexp_of: int]) component in
+  Handle.show handle;
+  [%expect {|
+    (Ok 5) |}];
+  Handle.do_actions handle [ 10 ];
+  Handle.show handle;
+  [%expect {|
+    (Ok 10) |}]
+;;
+
+let%expect_test "Checkbox.set layout options" =
+  let print_handle layout =
+    let component =
+      Form.Elements.Checkbox.set
+        (module String)
+        ~layout
+        (Value.return [ "first"; "second" ])
+    in
+    let handle = Handle.create (form_result_spec [%sexp_of: String.Set.t]) component in
+    Handle.show handle
+  in
+  print_handle `Vertical;
+  let print_diff = Expect_test_patdiff.diff_printer (Some [%expect.output]) in
+  [%expect
+    {|
+    (Ok ())
+
+    ==============
+    <ul class="checkbox-container widget-checklist" style={ list-style: none; margin-left: 0px; }>
+      <li style={ display: block; }>
+        <label>
+          <input type="checkbox" #checked="false" onclick> </input>
+          first
+        </label>
+      </li>
+      <li style={ display: block; }>
+        <label>
+          <input type="checkbox" #checked="false" onclick> </input>
+          second
+        </label>
+      </li>
+    </ul> |}];
+  print_handle `Horizontal;
+  unstage print_diff [%expect.output];
+  [%expect
+    {|
+    -1,18 +1,18
+      (Ok ())
+
+      ==============
+      <ul class="checkbox-container widget-checklist" style={ list-style: none; margin-left: 0px; }>
+    -|  <li style={ display: block; }>
+    +|  <li style={ display: inline-block; }>
+          <label>
+            <input type="checkbox" #checked="false" onclick> </input>
+            first
+          </label>
+        </li>
+    -|  <li style={ display: block; }>
+    +|  <li style={ display: inline-block; }>
+          <label>
+            <input type="checkbox" #checked="false" onclick> </input>
+            second
+          </label>
+        </li>
+      </ul> |}]
+;;
+
+let%expect_test "labelling a range form" =
+  let label text = Some (Vdom.Node.text text) in
+  let no_label = None in
+  let all_options =
+    [ no_label, no_label, "No labels"
+    ; no_label, label "right", "Right label only"
+    ; label "left", no_label, "Left label only"
+    ; label "left", label "right", "Both sides labelled"
+    ]
+  in
+  List.iter all_options ~f:(fun (left_label, right_label, description) ->
+    print_endline description;
+    print_endline "###############";
+    let range = Form.Elements.Range.int ?left_label ?right_label ~default:0 ~step:1 () in
+    let handle = Handle.create (form_result_spec [%sexp_of: int]) range in
+    Handle.show handle);
+  [%expect
+    {|
+    No labels
+    ###############
+    (Ok 0)
+
+    ==============
+    <input type="range" step="1" placeholder="" spellcheck="false" value:normalized=0 oninput> </input>
+
+    Right label only
+    ###############
+    (Ok 0)
+
+    ==============
+    <span style={ display: flex; flex-direction: row; flex-wrap: nowrap; }>
+      <input type="range" step="1" placeholder="" spellcheck="false" value:normalized=0 oninput> </input>
+      right
+    </span>
+
+    Left label only
+    ###############
+    (Ok 0)
+
+    ==============
+    <span style={ display: flex; flex-direction: row; flex-wrap: nowrap; }>
+      left
+      <input type="range" step="1" placeholder="" spellcheck="false" value:normalized=0 oninput> </input>
+    </span>
+
+    Both sides labelled
+    ###############
+    (Ok 0)
+
+    ==============
+    <span style={ display: flex; flex-direction: row; flex-wrap: nowrap; }>
+      left
+      <input type="range" step="1" placeholder="" spellcheck="false" value:normalized=0 oninput> </input>
+      right
+    </span> |}]
+;;
+
+let%test_module "Querybox as typeahead" =
+  (module struct
+    module Data = struct
+      module T = struct
+        type t =
+          | Option_A
+          | Option_B
+          | Option_C
+        [@@deriving variants, enumerate, sexp, equal, compare]
+      end
+
+      include T
+
+      let to_string = function
+        | Option_A -> "Option A"
+        | Option_B -> "Option B"
+        | Option_C -> "Option C"
+      ;;
+
+      include Comparable.Make (T)
+    end
+
+    let shared_computation ?(to_string = Value.return Data.to_string) () =
+      Form.Elements.Query_box.single_opt
+        (module Data)
+        ~all_options:(Value.return Data.all)
+        ~to_string
+    ;;
+
+    let view_computation ?to_string () =
+      let%sub form = shared_computation ?to_string () in
+      let%arr form = form in
+      Form.view form
+    ;;
+
+    let view_and_inject_computation =
+      let%sub form = shared_computation () in
+      let%arr form = form in
+      Form.view form, Form.set form
+    ;;
+
+    let%expect_test "Initial typeahead state" =
+      let handle = Handle.create (Result_spec.vdom Fn.id) (view_computation ()) in
+      Handle.show handle;
+      [%expect
+        {|
+  <div>
+    <input id="bonsai_path_replaced_in_test"
+           type="text"
+           class="input_hash_replaced_in_test"
+           #value=""
+           onblur
+           onfocus
+           oninput
+           onkeydown> </input>
+    <div data-test="query-box-item-container"
+         id="bonsai_path_replaced_in_test"
+         tabindex="-1"
+         onblur
+         onwheel
+         style={
+           position: relative;
+         }>
+      <div> </div>
+    </div>
+  </div>
+  |}]
+    ;;
+
+    let%expect_test "Change typeahead contents" =
+      let handle = Handle.create (Result_spec.vdom Fn.id) (view_computation ()) in
+      Handle.store_view handle;
+      Handle.input_text
+        handle
+        ~get_vdom:Fn.id
+        ~selector:"input"
+        ~text:(Data.to_string Data.Option_C);
+      Handle.show_diff handle;
+      [%expect
+        {|
+  <div>
+    <input id="bonsai_path_replaced_in_test"
+           type="text"
+           class="input_hash_replaced_in_test"
+-|         #value=""
++|         #value="Option C"
+           onblur
+           onfocus
+           oninput
+           onkeydown> </input>
+    <div data-test="query-box-item-container"
+         id="bonsai_path_replaced_in_test"
+         tabindex="-1"
+         onblur
+         onwheel
+         style={
+           position: relative;
+         }>
+-|    <div> </div>
++|    <div class="list_container_hash_replaced_in_test" style={ position: absolute; }>
++|      <div class="selected_item_hash_replaced_in_test" onclick onmouseenter>
++|        <span> Option C </span>
++|      </div>
++|    </div>
+    </div>
+  </div> |}]
+    ;;
+
+    let%expect_test "use setter" =
+      let handle =
+        Handle.create
+          (module struct
+            type incoming = Data.t option
+            type t = Vdom.Node.t * (Data.t option -> unit Ui_effect.t)
+
+            let view (vdom, _) =
+              let module V = (val Result_spec.vdom Fn.id) in
+              V.view vdom
+            ;;
+
+            let incoming (_, inject) = inject
+          end)
+          view_and_inject_computation
+      in
+      Handle.store_view handle;
+      Handle.do_actions handle [ Some Data.Option_A ];
+      Handle.show_diff handle;
+      [%expect
+        {|
+      <div>
+        <input id="bonsai_path_replaced_in_test"
+               type="text"
+    +|         placeholder="Option A"
+               class="input_hash_replaced_in_test"
+               #value=""
+               onblur
+               onfocus
+               oninput
+               onkeydown> </input>
+        <div data-test="query-box-item-container"
+             id="bonsai_path_replaced_in_test"
+             tabindex="-1"
+             onblur
+             onwheel
+             style={
+               position: relative;
+             }>
+          <div> </div>
+        </div> |}];
+      Handle.do_actions handle [ None ];
+      Handle.show_diff handle;
+      [%expect
+        {|
+      <div>
+        <input id="bonsai_path_replaced_in_test"
+               type="text"
+    -|         placeholder="Option A"
+               class="input_hash_replaced_in_test"
+               #value=""
+               onblur
+               onfocus
+               oninput
+               onkeydown> </input>
+        <div data-test="query-box-item-container"
+             id="bonsai_path_replaced_in_test"
+             tabindex="-1"
+             onblur
+             onwheel
+             style={
+               position: relative;
+             }>
+          <div> </div>
+        </div> |}]
+    ;;
+
+    let%expect_test "Select element using partial input" =
+      let handle = Handle.create (Result_spec.vdom Fn.id) (view_computation ()) in
+      Handle.show handle;
+      [%expect
+        {|
+        <div>
+          <input id="bonsai_path_replaced_in_test"
+                 type="text"
+                 class="input_hash_replaced_in_test"
+                 #value=""
+                 onblur
+                 onfocus
+                 oninput
+                 onkeydown> </input>
+          <div data-test="query-box-item-container"
+               id="bonsai_path_replaced_in_test"
+               tabindex="-1"
+               onblur
+               onwheel
+               style={
+                 position: relative;
+               }>
+            <div> </div>
+          </div>
+        </div> |}];
+      (* "O" is not unique, all options are matched. *)
+      Handle.input_text handle ~get_vdom:Fn.id ~selector:"input" ~text:"O";
+      Handle.show_diff handle;
+      [%expect
+        {|
+          <div>
+            <input id="bonsai_path_replaced_in_test"
+                   type="text"
+                   class="input_hash_replaced_in_test"
+        -|         #value=""
+        +|         #value="O"
+                   onblur
+                   onfocus
+                   oninput
+                   onkeydown> </input>
+            <div data-test="query-box-item-container"
+                 id="bonsai_path_replaced_in_test"
+                 tabindex="-1"
+                 onblur
+                 onwheel
+                 style={
+                   position: relative;
+                 }>
+        -|    <div> </div>
+        +|    <div class="list_container_hash_replaced_in_test" style={ position: absolute; }>
+        +|      <div class="selected_item_hash_replaced_in_test" onclick onmouseenter>
+        +|        <span> Option A </span>
+        +|      </div>
+        +|      <div onclick onmouseenter>
+        +|        <span> Option B </span>
+        +|      </div>
+        +|      <div onclick onmouseenter>
+        +|        <span> Option C </span>
+        +|      </div>
+        +|    </div>
+            </div>
+          </div> |}];
+      Handle.input_text handle ~get_vdom:Fn.id ~selector:"input" ~text:"C";
+      Handle.show_diff handle;
+      [%expect
+        {|
+          <div>
+            <input id="bonsai_path_replaced_in_test"
+                   type="text"
+                   class="input_hash_replaced_in_test"
+        -|         #value="O"
+        +|         #value="C"
+                   onblur
+                   onfocus
+                   oninput
+                   onkeydown> </input>
+            <div data-test="query-box-item-container"
+                 id="bonsai_path_replaced_in_test"
+                 tabindex="-1"
+                 onblur
+                 onwheel
+                 style={
+                   position: relative;
+                 }>
+              <div class="list_container_hash_replaced_in_test" style={ position: absolute; }>
+                <div class="selected_item_hash_replaced_in_test" onclick onmouseenter>
+        -|        <span> Option A </span>
+        -|      </div>
+        -|      <div onclick onmouseenter>
+        -|        <span> Option B </span>
+        -|      </div>
+        -|      <div onclick onmouseenter>
+                  <span> Option C </span>
+                </div>
+              </div>
+            </div>
+          </div> |}]
+    ;;
+
+    let%expect_test "dynamic [to_string]." =
+      let to_string_var = Bonsai.Var.create Data.to_string in
+      let to_string = Bonsai.Var.value to_string_var in
+      let handle =
+        Handle.create (Result_spec.vdom Fn.id) (view_computation ~to_string ())
+      in
+      Handle.input_text handle ~get_vdom:Fn.id ~selector:"input" ~text:"";
+      Handle.store_view handle;
+      Bonsai.Var.set to_string_var (fun data -> Data.to_string data ^ "!");
+      Handle.show_diff handle;
+      [%expect
+        {|
+                   class="input_hash_replaced_in_test"
+                   #value=""
+                   onblur
+                   onfocus
+                   oninput
+                   onkeydown> </input>
+            <div data-test="query-box-item-container"
+                 id="bonsai_path_replaced_in_test"
+                 tabindex="-1"
+                 onblur
+                 onwheel
+                 style={
+                   position: relative;
+                 }>
+              <div class="list_container_hash_replaced_in_test" style={ position: absolute; }>
+                <div class="selected_item_hash_replaced_in_test" onclick onmouseenter>
+        -|        <span> Option A </span>
+        +|        <span> Option A! </span>
+                </div>
+                <div onclick onmouseenter>
+        -|        <span> Option B </span>
+        +|        <span> Option B! </span>
+                </div>
+                <div onclick onmouseenter>
+        -|        <span> Option C </span>
+        +|        <span> Option C! </span>
+                </div>
+              </div>
+            </div>
+          </div> |}]
+    ;;
+
+    let%expect_test "Handle unknown option" =
+      let computation =
+        let%sub form =
+          Form.Elements.Query_box.single_opt
+            (module Data)
+            ~all_options:(Value.return Data.all)
+            ~handle_unknown_option:
+              (Value.return (fun _ ->
+                 print_endline "in handle_uknown_option";
+                 Some Data.Option_A))
+        in
+        let%arr form = form in
+        Form.view form
+      in
+      let handle = Handle.create (Result_spec.vdom Fn.id) computation in
+      Handle.store_view handle;
+      [%expect {| |}];
+      Handle.input_text handle ~get_vdom:Fn.id ~selector:"input" ~text:"unknown option";
+      Handle.show_diff handle;
+      [%expect
+        {|
+        in handle_uknown_option
+
+          <div>
+            <input id="bonsai_path_replaced_in_test"
+                   type="text"
+                   class="input_hash_replaced_in_test"
+        -|         #value=""
+        +|         #value="unknown option"
+                   onblur
+                   onfocus
+                   oninput
+                   onkeydown> </input>
+            <div data-test="query-box-item-container"
+                 id="bonsai_path_replaced_in_test"
+                 tabindex="-1"
+                 onblur
+                 onwheel
+                 style={
+                   position: relative;
+                 }>
+        -|    <div> </div>
+        +|    <div class="list_container_hash_replaced_in_test" style={ position: absolute; }>
+        +|      <div class="selected_item_hash_replaced_in_test" onclick onmouseenter>
+        +|        <span> Option_A </span>
+        +|      </div>
+        +|    </div>
+            </div>
+          </div> |}]
+    ;;
+  end)
+;;
+
+let%expect_test "adding to/setting/removing from a Form.Elements.Multiple.list" =
+  let component = Form.Elements.Multiple.list (Form.Elements.Textbox.string ()) in
+  let handle = Handle.create (list_form_result_spec [%sexp_of: string]) component in
+  Handle.show handle;
+  [%expect {|
+        (Ok ())
+
+        ============== |}];
+  Handle.do_actions handle [ `Append; `Append; `Append ];
+  Handle.show handle;
+  [%expect
+    {|
+        (Ok ("" "" ""))
+
+        ==============
+        <input type="text" placeholder="" spellcheck="false" value:normalized="" oninput> </input>
+        --------------
+        <input type="text" placeholder="" spellcheck="false" value:normalized="" oninput> </input>
+        --------------
+        <input type="text" placeholder="" spellcheck="false" value:normalized="" oninput> </input> |}];
+  Handle.do_actions handle [ `Set [ "foo"; "bar"; "baz" ] ];
+  Handle.show handle;
+  [%expect
+    {|
+    (Ok (foo bar baz))
+
+    ==============
+    <input type="text" placeholder="" spellcheck="false" value:normalized=foo oninput> </input>
+    --------------
+    <input type="text" placeholder="" spellcheck="false" value:normalized=bar oninput> </input>
+    --------------
+    <input type="text" placeholder="" spellcheck="false" value:normalized=baz oninput> </input> |}];
+  (* [`Remove 1] should get rid of the entry with "bar" in it. *)
+  Handle.do_actions handle [ `Remove 1 ];
+  Handle.show handle;
+  [%expect
+    {|
+    (Ok (foo baz))
+
+    ==============
+    <input type="text" placeholder="" spellcheck="false" value:normalized=foo oninput> </input>
+    --------------
+    <input type="text" placeholder="" spellcheck="false" value:normalized=baz oninput> </input> |}]
 ;;

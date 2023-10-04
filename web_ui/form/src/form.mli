@@ -3,7 +3,7 @@ module View = View
 module Form_view := View
 open Bonsai_web
 
-type 'a t = ('a, Form_view.t) Bonsai_web_ui_form_underlying.t
+type 'a t = ('a, Form_view.t) Bonsai_web_ui_form2.t
 
 (** [return] produces a bonsai form that will always produce the same value. [set] and
     [normalize] will do nothing to the form provided by this. [sexp_of_t] can be provided

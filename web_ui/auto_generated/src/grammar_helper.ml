@@ -22,4 +22,6 @@ module Tags = struct
     | Sexp.Atom str -> str
     | List _ -> Sexp.to_string_hum sexp
   ;;
+
+  let is_empty = Map.is_empty
 end

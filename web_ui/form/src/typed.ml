@@ -2,6 +2,8 @@ open! Core
 module Form_view = View
 open! Bonsai_web
 open! Bonsai.Let_syntax
+module Form2 = Bonsai_web_ui_form2
+open Form2.Typed
 
 module Record = struct
   module type S = sig
@@ -21,65 +23,50 @@ module Record = struct
   ;;
 
   let make (type a) (module M : S with type Typed_field.derived_on = a) =
-    let module Form_value = struct
-      type 'a t = 'a Form.t Computation.t
-    end
-    in
-    let module App = struct
-      include Computation
+    (* We will do the error tagging ourselves in this function. *)
+    Record.make_without_tagging_errors
+      (module struct
+        include M
 
-      type 'a s = 'a Form.t
+        type field_view = Form_view.t
+        type resulting_view = Form_view.t
 
-      let translate = Fn.id
-    end
-    in
-    let module The_form_values = Typed_field_map.Make (M.Typed_field) (Form_value) in
-    let module The_forms = Typed_field_map.Make (M.Typed_field) (Form) in
-    let module The_results = Typed_field_map.Make (M.Typed_field) (Or_error) in
-    let module To_forms = The_form_values.As_applicative.To_other_map (App) (The_forms) in
-    let get_label =
-      match M.label_for_field with
-      | `Inferred ->
-        Value.return (fun { M.Typed_field.Packed.f = T t } -> M.Typed_field.name t)
-      | `Computed f -> Value.return (fun { M.Typed_field.Packed.f = T t } -> f t)
-      | `Dynamic f -> f
-    in
-    let form_values_per_field =
-      let f field =
-        let%sub subform = M.form_for_field field in
-        let%sub subform = Form.Dynamic.error_hint subform in
-        let%arr subform = subform
-        and get_label = get_label in
-        let label = get_label { f = T field } in
-        subform |> Form.Private.suggest_label label |> attach_fieldname_to_error label
-      in
-      The_form_values.create { f }
-    in
-    let%sub forms_per_field = To_forms.run form_values_per_field in
-    let%arr forms_per_field = forms_per_field
-    and get_label = get_label in
-    let view =
-      M.Typed_field.Packed.all
-      |> List.map ~f:(fun { f = T field } ->
-           { Form_view.field_name = get_label (M.Typed_field.Packed.pack field)
-           ; field_view = Form.view (The_forms.find forms_per_field field)
-           })
-      |> Form_view.record
-    in
-    let value =
-      let f field = Form.value (The_forms.find forms_per_field field) in
-      The_results.As_applicative.transpose
-        (module Or_error)
-        ~create:(fun { f } -> M.Typed_field.create { f })
-        (The_results.create { f })
-    in
-    let set r =
-      M.Typed_field.Packed.all
-      |> List.map ~f:(fun { f = T field } ->
-           Form.set (The_forms.find forms_per_field field) (M.Typed_field.get field r))
-      |> Vdom.Effect.Many
-    in
-    Form.Expert.create ~view ~value ~set
+        let get_label =
+          match M.label_for_field with
+          | `Inferred ->
+            Value.return (fun { M.Typed_field.Packed.f = T t } -> M.Typed_field.name t)
+          | `Computed f -> Value.return (fun { M.Typed_field.Packed.f = T t } -> f t)
+          | `Dynamic f -> f
+        ;;
+
+        let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t =
+          fun field ->
+          let%sub form = M.form_for_field field in
+          let%sub form = Form.Dynamic.error_hint form in
+          let%arr form = form
+          and get_label = get_label in
+          let label = get_label { M.Typed_field.Packed.f = T field } in
+          Form.Private.suggest_label label form |> attach_fieldname_to_error label
+        ;;
+
+        type form_of_field_fn =
+          { f : 'a. 'a Typed_field.t -> ('a, field_view) Form2.t Value.t }
+
+        let finalize_view { f } =
+          let all_fields =
+            M.Typed_field.Packed.all
+            |> List.map ~f:(fun ({ f = T field } as packed) ->
+                 let%map field = f field in
+                 packed, Form.view field)
+            |> Value.all
+          in
+          let%arr all_fields = all_fields
+          and get_label = get_label in
+          List.map all_fields ~f:(fun (packed, view) ->
+            { Form_view.field_name = get_label packed; field_view = view })
+          |> Form_view.record
+        ;;
+      end)
   ;;
 end
 
@@ -97,49 +84,44 @@ module Variant = struct
     val initial_choice : [ `First_constructor | `Empty | `This of Typed_variant.Packed.t ]
   end
 
-  let make
+  module type Opts = sig
+    type t [@@deriving sexp, equal, enumerate, compare]
+  end
+
+  let form_for_picker
     (type a)
-    ?(picker = `Dropdown)
-    ?picker_attr
-    (module M : S with type Typed_variant.derived_on = a)
+    (module M : Opts with type t = a)
+    ~to_string
+    ~picker_kind
+    ~picker_attr
+    ~initial_choice
     =
-    let to_string =
-      match M.label_for_variant with
-      | `Inferred ->
-        Value.return (fun t ->
-          Form_view.sexp_to_pretty_string M.Typed_variant.Packed.sexp_of_t t)
-      | `Computed variant_to_string ->
-        Value.return (fun ({ f = T field } : M.Typed_variant.Packed.t) ->
-          variant_to_string field)
-      | `Dynamic variant_to_string -> variant_to_string
-    in
     let module M_opt = struct
-      type t = M.Typed_variant.Packed.t option
-      [@@deriving sexp, equal, enumerate, compare]
+      type t = M.t option [@@deriving sexp, equal, enumerate, compare]
 
       let all_some = List.filter all ~f:Option.is_some
       let first_some = List.hd_exn all_some
     end
     in
+    let default_model =
+      match initial_choice with
+      | `Empty -> None
+      | `First_constructor -> M_opt.first_some
+      | `This example -> Some example
+    in
+    let%sub picker_value, set_picker_value = Bonsai.state default_model in
     let%sub extra_attrs =
       match picker_attr with
       | None -> Bonsai.const []
       | Some attr -> Bonsai.pure List.return attr
     in
-    let%sub picker_value, set_picker_value, picker_view =
-      match picker with
+    let%sub picker_value, set_picker_value, view =
+      match picker_kind with
       | `Dropdown ->
-        let default_model, all =
-          match M.initial_choice with
-          | `Empty -> None, M_opt.all
-          | `First_constructor -> M_opt.first_some, M_opt.all_some
-          | `This example -> Some example, M_opt.all_some
-        in
-        let%sub picker_value, set_picker_value =
-          Bonsai.state
-            default_model
-            ~sexp_of_model:[%sexp_of: M_opt.t]
-            ~equal:[%equal: M_opt.t]
+        let all =
+          match initial_choice with
+          | `Empty -> M_opt.all
+          | `First_constructor | `This _ -> M_opt.all_some
         in
         let%sub path = Bonsai.path_id in
         let%arr picker_value = picker_value
@@ -170,18 +152,6 @@ module Variant = struct
         in
         picker_value, set_picker_value, view
       | `Radio layout ->
-        let default_model =
-          match M.initial_choice with
-          | `Empty -> None
-          | `First_constructor -> M_opt.first_some
-          | `This example -> Some example
-        in
-        let%sub picker_value, set_picker_value =
-          Bonsai.state
-            default_model
-            ~sexp_of_model:[%sexp_of: M_opt.t]
-            ~equal:[%equal: M_opt.t]
-        in
         let%sub path = Bonsai.path_id in
         let%arr picker_value = picker_value
         and set_picker_value = set_picker_value
@@ -200,72 +170,74 @@ module Variant = struct
           node_fun
             ~extra_attrs:(Vdom.Attr.id path :: extra_attrs)
             (module struct
-              include M.Typed_variant.Packed
+              include M
 
               let to_string = to_string
             end)
             ~on_click:(fun opt -> set_picker_value (Some opt))
             ~selected:picker_value
             ~name:path
-            M.Typed_variant.Packed.all
+            M.all
         in
         picker_value, set_picker_value, view
     in
-    let%sub inner =
-      Bonsai.enum
-        (module M_opt)
-        ~match_:picker_value
-        ~with_:(function
-          | None ->
-            Bonsai.const (Form.return_error (Error.of_string "a value is required"))
-          | Some { f = T p } ->
-            let%map.Computation form_for_constructor = M.form_for_variant p in
-            let parse_exn content = M.Typed_variant.create p content in
-            let unparse kind =
-              match M.Typed_variant.get p kind with
-              | None ->
-                let expected = M.Typed_variant.Packed.pack p in
-                let found = M.Typed_variant.which kind in
-                raise_s
-                  [%message
-                    "BUG"
-                      [%here]
-                      (expected : M.Typed_variant.Packed.t)
-                      (found : M.Typed_variant.Packed.t)]
-              | Some v -> v
-            in
-            Form.project form_for_constructor ~parse_exn ~unparse)
-    in
-    let%sub get_inner_form = Bonsai.yoink inner in
-    let%arr inner = inner
-    and picker_value = picker_value
-    and picker_view = picker_view
+    let%arr picker_value = picker_value
     and set_picker_value = set_picker_value
-    and get_inner_form = get_inner_form in
-    let view =
+    and view = view in
+    let value =
       match picker_value with
-      | None -> Form_view.variant ~clause_selector:picker_view ~selected_clause:None
-      | Some { f = T p } ->
-        let clause_name = M.Typed_variant.name p in
-        Form_view.variant
-          ~clause_selector:picker_view
-          ~selected_clause:(Some { Form_view.clause_name; clause_view = Form.view inner })
+      | Some value -> Ok value
+      | None -> Error (Error.of_string "a value is required")
     in
-    let value = Form.value inner in
-    let set value =
-      let constructor = M.Typed_variant.which value in
-      let open Ui_effect.Let_syntax in
-      (* sequence this so that the result of evaluating the picker is visible
-         when setting the innermost form *)
-      let%bind () = set_picker_value (Some constructor) in
-      let%bind inner =
-        match%bind.Effect get_inner_form with
-        | Active inner -> Effect.return inner
-        | Inactive -> Effect.never
-      in
-      Form.set inner value
-    in
-    Form.Expert.create ~view ~value ~set
+    let set value = set_picker_value (Some value) in
+    ({ value; set; view } : (M.t, Vdom.Node.t) Form2.t)
+  ;;
+
+  let make
+    (type a)
+    ?(picker = `Dropdown)
+    ?picker_attr
+    (module M : S with type Typed_variant.derived_on = a)
+    =
+    Variant.make
+      (module struct
+        include M
+
+        type picker_view = Vdom.Node.t
+        type variant_view = Form_view.t
+        type resulting_view = Form_view.t
+
+        let form_for_picker =
+          let to_string =
+            match M.label_for_variant with
+            | `Inferred ->
+              Value.return (fun t ->
+                Form_view.sexp_to_pretty_string M.Typed_variant.Packed.sexp_of_t t)
+            | `Computed variant_to_string ->
+              Value.return (fun ({ f = T field } : M.Typed_variant.Packed.t) ->
+                variant_to_string field)
+            | `Dynamic variant_to_string -> variant_to_string
+          in
+          form_for_picker
+            (module M.Typed_variant.Packed)
+            ~to_string
+            ~picker_kind:picker
+            ~picker_attr
+            ~initial_choice:M.initial_choice
+        ;;
+
+        let finalize_view picker_view selected =
+          match selected with
+          | Error _ ->
+            Form_view.variant ~clause_selector:picker_view ~selected_clause:None
+          | Ok (field, form) ->
+            let clause_name = M.Typed_variant.name field in
+            Form_view.variant
+              ~clause_selector:picker_view
+              ~selected_clause:
+                (Some { Form_view.clause_name; clause_view = Form.view form })
+        ;;
+      end)
   ;;
 
   let make_optional

@@ -157,8 +157,8 @@ let%expect_test "if%sub is supported" =
                               ~f:(function | true -> 0 | false -> 1))
                   [@ocaml.warning "-26-27"]) ~branches:2
                   ~with_:(function
-                          | 0 -> BODY_1
-                          | 1 -> BODY_2
+                          | ((0)[@merlin.hide ]) -> BODY_1
+                          | ((1)[@merlin.hide ]) -> BODY_2
                           | _ -> assert false))
               [@nontail ])))
     [@nontail ]) |}]
@@ -311,7 +311,7 @@ let%expect_test "destructuring match%sub" =
                                  | Choice_3 -> 2))[@ocaml.warning "-26-27"])
                  ~branches:3
                  ~with_:(function
-                         | 0 ->
+                         | ((0)[@merlin.hide ]) ->
                              ((Let_syntax.sub
                                  ~here:{
                                          Ppx_here_lib.pos_fname = "_none_";
@@ -365,8 +365,8 @@ let%expect_test "destructuring match%sub" =
                                                  [@nontail ])))
                                        [@nontail ])))
                              [@nontail ])
-                         | 1 -> CHOICE_2_BODY
-                         | 2 -> CHOICE_3_BODY
+                         | ((1)[@merlin.hide ]) -> CHOICE_2_BODY
+                         | ((2)[@merlin.hide ]) -> CHOICE_3_BODY
                          | _ -> assert false))
              [@nontail ])))
    [@nontail ])
@@ -451,7 +451,7 @@ let%expect_test "module-qualified match%sub" =
                              ~f:(function | Choice_1 x -> 0 | Choice_2 x -> 1))
                  [@ocaml.warning "-26-27"]) ~branches:2
                  ~with_:(function
-                         | 0 ->
+                         | ((0)[@merlin.hide ]) ->
                              ((Module.Let_syntax.Let_syntax.sub
                                  ~here:{
                                          Ppx_here_lib.pos_fname = "_none_";
@@ -475,7 +475,7 @@ let%expect_test "module-qualified match%sub" =
                                         [@ocaml.warning "-11"]))[@merlin.hide ]))
                                  ~f:(fun x -> ((CHOICE_1_BODY)[@nontail ])))
                              [@nontail ])
-                         | 1 ->
+                         | ((1)[@merlin.hide ]) ->
                              ((Module.Let_syntax.Let_syntax.sub
                                  ~here:{
                                          Ppx_here_lib.pos_fname = "_none_";
@@ -579,7 +579,7 @@ let%expect_test "function%sub" =
                                 ~f:(function | Some a -> 0 | None -> 1))
                     [@ocaml.warning "-26-27"]) ~branches:2
                     ~with_:(function
-                            | 0 ->
+                            | ((0)[@merlin.hide ]) ->
                                 ((Let_syntax.sub
                                     ~here:{
                                             Ppx_here_lib.pos_fname = "_none_";
@@ -604,7 +604,7 @@ let%expect_test "function%sub" =
                                        [@merlin.hide ]))
                                     ~f:(fun a -> ((EXPR_SOME)[@nontail ])))
                                 [@nontail ])
-                            | 1 -> EXPR_NONE
+                            | ((1)[@merlin.hide ]) -> EXPR_NONE
                             | _ -> assert false))
                 [@nontail ])))
       [@nontail ]) |}]

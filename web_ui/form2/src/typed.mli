@@ -15,15 +15,26 @@ module Record : sig
         component which produces values of that type. *)
     val form_for_field : 'a Typed_field.t -> ('a, field_view) Form.t Computation.t
 
-    type value_and_view_of_field_fn =
-      { f : 'a. 'a Typed_field.t -> 'a Or_error.t * field_view }
+    type form_of_field_fn =
+      { f : 'a. 'a Typed_field.t -> ('a, field_view) Form.t Value.t }
 
     (** Once each of the forms for your record have been created, you need to combine
         them into a final view of your choosing. *)
-    val finalize_view : value_and_view_of_field_fn -> resulting_view
+    val finalize_view : form_of_field_fn -> resulting_view Computation.t
   end
 
   val make
+    :  (module S
+          with type Typed_field.derived_on = 'a
+           and type resulting_view = 'view
+           and type field_view = _)
+    -> ('a, 'view) Form.t Computation.t
+
+  (** Like [make], but don't tag fields' errors with their name. This can be useful when
+      you present a label that doesn't match the field's name. If you still want to tag
+      errors on your fields, you can do so by manually calling [Form.map_error] in your
+      [form_for_field] function. *)
+  val make_without_tagging_errors
     :  (module S
           with type Typed_field.derived_on = 'a
            and type resulting_view = 'view
@@ -46,7 +57,7 @@ module Variant : sig
 
     val finalize_view
       :  picker_view
-      -> ('a Typed_variant.t * 'a Or_error.t * variant_view) Or_error.t
+      -> ('a Typed_variant.t * ('a, variant_view) Form.t) Or_error.t
       -> resulting_view
   end
 

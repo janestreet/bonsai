@@ -186,11 +186,11 @@ module Make (Name : Types.Name) = struct
         { from : Name.t
         ; to_ : Name.t
         }
-      [@@deriving sexp, compare]
+      [@@deriving sexp_of, compare]
     end
 
     include T
-    include Comparable.Make (T)
+    include Comparable.Make_plain (T)
 
     let all_roots (al_graph : Name.Set.t Name.Map.t) =
       let all = Core.Map.key_set al_graph in
@@ -224,7 +224,7 @@ module Make (Name : Types.Name) = struct
       { id_to_source : Name.Set.t Name.Map.t
       ; dest_to_id : Name.Set.t Name.Map.t
       }
-    [@@deriving sexp]
+    [@@deriving sexp_of]
 
     let empty = { id_to_source = Name.Map.empty; dest_to_id = Name.Map.empty }
 
@@ -688,7 +688,7 @@ module Make (Name : Types.Name) = struct
     { nodes : 'a Name.Map.t
     ; edges : Edge.Set.t
     }
-  [@@deriving sexp, equal, compare]
+  [@@deriving sexp_of, equal, compare]
 
   open Bonsai_web
   open Bonsai.Let_syntax
@@ -699,7 +699,7 @@ module Make (Name : Types.Name) = struct
         { these : t list
         ; into : Name.t
         }
-      [@@deriving sexp]
+      [@@deriving sexp_of]
     end
 
     module Graph = struct
@@ -707,7 +707,7 @@ module Make (Name : Types.Name) = struct
         { nodes : Node.t list
         ; edges : Edge.t list
         }
-      [@@deriving sexp]
+      [@@deriving sexp_of]
     end
   end
 

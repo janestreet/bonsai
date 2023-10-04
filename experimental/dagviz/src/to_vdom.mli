@@ -13,16 +13,16 @@ module Make (Name : Types.Name) : sig
       { from : Name.t
       ; to_ : Name.t
       }
-    [@@deriving sexp, equal, compare]
+    [@@deriving sexp_of, equal, compare]
 
-    include Comparable.S with type t := t
+    include Comparable.S_plain with type t := t
   end
 
   type 'a t =
     { nodes : 'a Name.Map.t
     ; edges : Edge.Set.t
     }
-  [@@deriving sexp, equal, compare]
+  [@@deriving sexp_of, equal, compare]
 
   (* Creates a DAG visualization. Since new ids could be minted/created while
      introducing redirect nodes, in order to avoid side-effects a state-monad-like pattern

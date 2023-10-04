@@ -1,10 +1,10 @@
 open! Core
 open (Bonsai_web : module type of Bonsai_web with module View := Bonsai_web.View)
 open Bonsai.Let_syntax
-open Bonsai_web_ui_form_underlying
+open Bonsai_web_ui_form2
 
 module T = struct
-  type nonrec 'a t = ('a, View.t) t
+  type nonrec 'a t = ('a, View.t) Bonsai_web_ui_form2.t
 
   let value t = t.value
   let view t = t.view
@@ -151,7 +151,7 @@ module Expert = struct
   let create = create
 end
 
-include Bonsai_web_ui_form2_experimental
+include Bonsai_web_ui_form2
 
 module Dynamic = struct
   include Dynamic

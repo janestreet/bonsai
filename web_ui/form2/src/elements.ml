@@ -660,6 +660,7 @@ module Typeahead = struct
     ?placeholder
     ?to_string
     ?to_option_description
+    ?handle_unknown_option
     ?split
     m
     ~all_options
@@ -669,6 +670,7 @@ module Typeahead = struct
         ?placeholder
         ?to_string
         ?to_option_description
+        ?handle_unknown_option
         ?split
         m
         ~extra_attrs
@@ -686,6 +688,7 @@ module Typeahead = struct
     ?placeholder
     ?to_string
     ?to_option_description
+    ?handle_unknown_option
     ?split
     (module M : Bonsai.Comparator with type t = a and type comparator_witness = cmp)
     ~all_options
@@ -696,6 +699,7 @@ module Typeahead = struct
         ?placeholder
         ?to_string
         ?to_option_description
+        ?handle_unknown_option
         ?split
         (module M)
         ~all_options
@@ -1236,13 +1240,18 @@ module Multiple = struct
     form_expert_create ~value:(Ok selected_options) ~view ~set:inject_selected_options
   ;;
 
-  type 'view t =
-    { items : ('view * unit Effect.t) list
+  type ('a, 'view) item =
+    { form : ('a, 'view) Form.t
+    ; remove : unit Effect.t
+    }
+
+  type ('a, 'view) t =
+    { items : ('a, 'view) item list
     ; add_element : unit Effect.t
     }
 
   let list (type a view) (t : (a, view) Form.t Computation.t)
-    : (a list, view t) Form.t Computation.t
+    : (a list, (a, view) t) Form.t Computation.t
     =
     let%sub form, _ =
       Bonsai.wrap
@@ -1266,9 +1275,8 @@ module Multiple = struct
               contents
               |> Map.to_alist
               |> List.map ~f:(fun (key, form) ->
-                   let view = Form.view form in
                    let remove = remove key in
-                   view, remove)
+                   { form; remove })
             in
             let add_element = append in
             { items; add_element }
@@ -1294,7 +1302,7 @@ module Multiple = struct
     (type a cmp view)
     (module M : Bonsai.Comparator with type t = a and type comparator_witness = cmp)
     (form : (a, view) Form.t Computation.t)
-    : ((a, cmp) Set.t, view t) Form.t Computation.t
+    : ((a, cmp) Set.t, (a, view) t) Form.t Computation.t
     =
     let%map.Computation form = list form in
     Form.project form ~parse_exn:(Set.of_list (module M)) ~unparse:Set.to_list
@@ -2071,7 +2079,7 @@ module Optional = struct
 
           let finalize_view picker_view inner =
             match inner with
-            | Ok (_, _, inner_view) -> picker_view, inner_view
+            | Ok (_, inner) -> picker_view, Form.view inner
             | Error _ -> picker_view, None
           ;;
         end)

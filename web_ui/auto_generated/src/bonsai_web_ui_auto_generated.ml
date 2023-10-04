@@ -713,221 +713,259 @@ let form
           Form.Expert.create ~view ~value ~set, inner)
     in
     return form
+  and constant_clauses_form
+    (clauses : Sexp_grammar.clause Sexp_grammar.with_tag_list list Value.t)
+    =
+    let%sub clauses =
+      let%arr clauses = clauses in
+      List.map clauses ~f:(fun clause -> (Grammar_helper.Tags.strip_tags clause).name)
+    in
+    let%sub form =
+      Form.Elements.Dropdown.list
+        (module String)
+        ~to_string:Fn.id
+        ~equal:String.equal
+        clauses
+    in
+    let%arr form = form in
+    Form.project
+      form
+      ~parse_exn:(fun name -> Sexp.Atom name)
+      ~unparse:(function
+        | Sexp.Atom name -> name
+        | List _ ->
+          raise_s
+            [%message "BUG: invalid non-atom constructor set into constant clause form"])
   and clauses_form (clauses : Sexp_grammar.clause Sexp_grammar.with_tag_list list Value.t)
     =
-    let%sub form, _ =
-      Bonsai.wrap
-        ()
-        ~sexp_of_model:[%sexp_of: Unit.t]
-        ~equal:[%equal: Unit.t]
-        ~default_model:()
-        ~apply_action:(fun context (_, inner) () sexp ->
-          Bonsai.Apply_action_context.schedule_event context (Form.set inner sexp))
-        ~f:(fun (_ : unit Value.t) inject_outer ->
-          let%sub clauses_and_docs =
-            let%arr clauses = clauses in
-            List.map clauses ~f:(fun clause ->
-              let clause, tags = Grammar_helper.Tags.collect_and_strip_tags clause in
-              clause, Grammar_helper.Tags.find_doc_tag tags)
-          in
-          let%sub clauses_names, clauses_as_map =
-            let%arr clauses_and_docs = clauses_and_docs in
-            let as_map =
-              String.Map.of_alist_exn
-                (List.map clauses_and_docs ~f:(fun ((clause, _doc) as clause_and_tag) ->
-                   clause.name, clause_and_tag))
-            in
-            let just_the_names =
-              List.map clauses_and_docs ~f:(fun (clause, _doc) -> clause.name)
-            in
-            just_the_names, as_map
-          in
-          let%sub outer, set_outer, outer_view =
-            let open E.Dropdown.Private in
-            let module Opt = struct
-              type t = string Opt.t [@@deriving sexp, equal]
-
-              let to_option = Opt.to_option
-            end
-            in
-            let%sub outer, set_outer =
-              Bonsai.state
-                Uninitialized
-                ~sexp_of_model:[%sexp_of: Opt.t]
-                ~equal:[%equal: Opt.t]
-            in
-            let%sub path = Bonsai.path_id in
-            let%sub view =
-              let%sub dropdown =
-                let%arr path = path
-                and outer = outer
-                and set_outer = set_outer
-                and clause_names = clauses_names in
-                make_input
-                  ~to_string:(Form.View.sexp_to_pretty_string [%sexp_of: string])
-                  (module String)
-                  ~equal:[%equal: String.t]
-                  ~id:(Vdom.Attr.id path)
-                  ~include_empty:true
-                  ~default_value:None
-                  ~state:outer
-                  ~set_state:set_outer
-                  ~all:clause_names
-                  ~extra_attrs:
-                    [ Vdom.Attr.style (Css_gen.width (`Percent (Percent.of_mult 1.))) ]
-                  ~extra_option_attrs:(Fn.const [])
-              in
-              let%sub theme = View.Theme.current in
-              let%arr clauses_as_map = clauses_as_map
-              and theme = theme
-              and dropdown = dropdown in
-              let info =
-                Map.fold
-                  clauses_as_map
-                  ~init:[]
-                  ~f:(fun ~key:name ~data:(_clause, doc) acc ->
-                  match doc with
-                  | None -> acc
-                  | Some doc ->
-                    View.vbox
-                      [ Vdom.Node.span ~attrs:[ Style.bold_text ] [ Vdom.Node.text name ]
-                      ; Vdom.Node.text doc
-                      ]
-                    :: acc)
-                |> List.rev
-              in
-              match info with
-              | [] -> dropdown
-              | info ->
-                View.hbox
-                  [ dropdown
-                  ; View.tooltip'
-                      theme
-                      ~direction:Right
-                      ~tooltip_attrs:[ Style.scrollable_tooltip ]
-                      ~container_attrs:[ Style.inline_padding ]
-                      ~tooltip:(View.vbox ~gap:(`Rem 0.15) info)
-                      (Vdom.Node.text "?")
-                  ]
-            in
-            let%arr outer = outer
-            and set_outer = set_outer
-            and view = view in
-            ( Opt.to_option outer
-            , (function
-               | None -> set_outer Explicitly_none
-               | Some outer -> set_outer (Set outer))
-            , view )
-          in
-          let%sub clauses_forms =
-            Bonsai.assoc
-              (module String)
-              clauses_as_map
-              ~f:(fun name clause ->
-                let%sub { Sexp_grammar.clause_kind; _ }, _doc = return clause in
-                let%sub is_active =
-                  let%arr outer = outer
-                  and name = name in
-                  match outer with
-                  | None -> false
-                  | Some clause_name when String.equal clause_name name -> true
-                  | Some _ -> false
-                in
-                if%sub is_active
-                then (
-                  match%sub clause_kind with
-                  | Atom_clause -> Bonsai.const (Form.return (Sexp.List []))
-                  | List_clause { args : Sexp_grammar.list_grammar } ->
-                    list_grammar_form args)
-                else Bonsai.const (Form.return (Sexp.List [])))
-          in
-          let%sub inner =
-            let%arr outer = outer
-            and clauses_forms = clauses_forms in
-            match outer with
-            | None -> Form.return (Sexp.List [])
-            | Some selected_name ->
-              (match Map.find clauses_forms selected_name with
-               | Some form -> form
-               | None ->
-                 {| BUG: auto-generated forms could not find a form with the selected variant name |}
-                 |> Error.of_string
-                 |> Form.return_error)
-          in
-          let%sub view =
-            match%sub outer with
-            | None ->
-              let%arr outer_view = outer_view in
-              Form.View.variant ~clause_selector:outer_view ~selected_clause:None
-            | Some clause_name ->
-              let%arr clause_name = clause_name
-              and outer_view = outer_view
-              and inner = inner in
-              Form.View.variant
-                ~clause_selector:outer_view
-                ~selected_clause:(Some { clause_name; clause_view = Form.view inner })
-          in
-          let%sub set =
-            let%sub bonk = Bonsai_extra.bonk in
-            let%arr clauses_and_docs = clauses_and_docs
-            and set_outer = set_outer
-            and inject_outer = inject_outer
-            and bonk = bonk
-            and outer = outer in
-            function
-            | Sexp.List (Sexp.Atom clause_name :: args) ->
-              (match
-                 List.find clauses_and_docs ~f:(fun (clause, _docs) ->
-                   String.equal clause.name clause_name)
-               with
-               | Some (clause, _docs) ->
-                 (match outer with
-                  | Some name when String.equal name clause.name ->
-                    bonk (inject_outer (Sexp.List args))
-                  | Some _ | None ->
-                    Effect.Many
-                      [ set_outer (Some clause.name)
-                      ; bonk (inject_outer (Sexp.List args))
-                      ])
-               | None ->
-                 on_set_error
-                   [%message
-                     "unknown clause_name while setting a clause form"
-                       (clause_name : string)])
-            | Sexp.Atom clause_name ->
-              (match
-                 List.find clauses_and_docs ~f:(fun (clause, _docs) ->
-                   String.equal clause.name clause_name)
-               with
-               | Some (clause, _docs) -> set_outer (Some clause.name)
-               | None ->
-                 on_set_error
-                   [%message
-                     "unknown clause_name while setting a clause form"
-                       (clause_name : string)])
-            | sexp ->
-              on_set_error
-                [%message "unexpected format while setting a clause form" (sexp : Sexp.t)]
-          in
-          let%sub value =
-            let%arr outer = outer
-            and inner = inner in
-            match outer, Form.value inner with
-            | Some clause_name, Ok (Sexp.List []) -> Ok (Sexp.Atom clause_name)
-            | Some clause_name, Ok (Sexp.List args) ->
-              Ok (Sexp.List (Sexp.Atom clause_name :: args))
-            | Some _, Ok sexp ->
-              Or_error.error_s [%message "invalid sexp encountered" (sexp : Sexp.t)]
-            | None, _ -> Or_error.error_s [%message "a value is required"]
-            | _, (Error _ as err) -> err
-          in
-          let%arr view = view
-          and value = value
-          and set = set
-          and inner = inner in
-          Form.Expert.create ~view ~value ~set, inner)
+    let%sub is_constant_clauses =
+      let open Grammar_helper in
+      let%arr clauses = clauses in
+      List.for_all clauses ~f:(fun clause ->
+        let clause, tags = Tags.collect_and_strip_tags clause in
+        match Tags.is_empty tags, clause.clause_kind with
+        | true, Atom_clause -> true
+        | false, Atom_clause | false, List_clause _ | true, List_clause _ -> false)
     in
-    return form
+    match%sub is_constant_clauses with
+    | true -> constant_clauses_form clauses
+    | false ->
+      let%sub form, _ =
+        Bonsai.wrap
+          ()
+          ~sexp_of_model:[%sexp_of: Unit.t]
+          ~equal:[%equal: Unit.t]
+          ~default_model:()
+          ~apply_action:(fun context (_, inner) () sexp ->
+            Bonsai.Apply_action_context.schedule_event context (Form.set inner sexp))
+          ~f:(fun (_ : unit Value.t) inject_outer ->
+            let%sub clauses_and_docs =
+              let%arr clauses = clauses in
+              List.map clauses ~f:(fun clause ->
+                let clause, tags = Grammar_helper.Tags.collect_and_strip_tags clause in
+                clause, Grammar_helper.Tags.find_doc_tag tags)
+            in
+            let%sub clauses_names, clauses_as_map =
+              let%arr clauses_and_docs = clauses_and_docs in
+              let as_map =
+                String.Map.of_alist_exn
+                  (List.map clauses_and_docs ~f:(fun ((clause, _doc) as clause_and_tag) ->
+                     clause.name, clause_and_tag))
+              in
+              let just_the_names =
+                List.map clauses_and_docs ~f:(fun (clause, _doc) -> clause.name)
+              in
+              just_the_names, as_map
+            in
+            let%sub outer, set_outer, outer_view =
+              let open E.Dropdown.Private in
+              let module Opt = struct
+                type t = string Opt.t [@@deriving sexp, equal]
+
+                let to_option = Opt.to_option
+              end
+              in
+              let%sub outer, set_outer =
+                Bonsai.state
+                  Uninitialized
+                  ~sexp_of_model:[%sexp_of: Opt.t]
+                  ~equal:[%equal: Opt.t]
+              in
+              let%sub path = Bonsai.path_id in
+              let%sub view =
+                let%sub dropdown =
+                  let%arr path = path
+                  and outer = outer
+                  and set_outer = set_outer
+                  and clause_names = clauses_names in
+                  make_input
+                    ~to_string:(Form.View.sexp_to_pretty_string [%sexp_of: string])
+                    (module String)
+                    ~equal:[%equal: String.t]
+                    ~id:(Vdom.Attr.id path)
+                    ~include_empty:true
+                    ~default_value:None
+                    ~state:outer
+                    ~set_state:set_outer
+                    ~all:clause_names
+                    ~extra_attrs:
+                      [ Vdom.Attr.style (Css_gen.width (`Percent (Percent.of_mult 1.))) ]
+                    ~extra_option_attrs:(Fn.const [])
+                in
+                let%sub theme = View.Theme.current in
+                let%arr clauses_as_map = clauses_as_map
+                and theme = theme
+                and dropdown = dropdown in
+                let info =
+                  Map.fold
+                    clauses_as_map
+                    ~init:[]
+                    ~f:(fun ~key:name ~data:(_clause, doc) acc ->
+                    match doc with
+                    | None -> acc
+                    | Some doc ->
+                      View.vbox
+                        [ Vdom.Node.span
+                            ~attrs:[ Style.bold_text ]
+                            [ Vdom.Node.text name ]
+                        ; Vdom.Node.text doc
+                        ]
+                      :: acc)
+                  |> List.rev
+                in
+                match info with
+                | [] -> dropdown
+                | info ->
+                  View.hbox
+                    [ dropdown
+                    ; View.tooltip'
+                        theme
+                        ~direction:Right
+                        ~tooltip_attrs:[ Style.scrollable_tooltip ]
+                        ~container_attrs:[ Style.inline_padding ]
+                        ~tooltip:(View.vbox ~gap:(`Rem 0.15) info)
+                        (Vdom.Node.text "?")
+                    ]
+              in
+              let%arr outer = outer
+              and set_outer = set_outer
+              and view = view in
+              ( Opt.to_option outer
+              , (function
+                 | None -> set_outer Explicitly_none
+                 | Some outer -> set_outer (Set outer))
+              , view )
+            in
+            let%sub clauses_forms =
+              Bonsai.assoc
+                (module String)
+                clauses_as_map
+                ~f:(fun name clause ->
+                  let%sub { Sexp_grammar.clause_kind; _ }, _doc = return clause in
+                  let%sub is_active =
+                    let%arr outer = outer
+                    and name = name in
+                    match outer with
+                    | None -> false
+                    | Some clause_name when String.equal clause_name name -> true
+                    | Some _ -> false
+                  in
+                  if%sub is_active
+                  then (
+                    match%sub clause_kind with
+                    | Atom_clause -> Bonsai.const (Form.return (Sexp.List []))
+                    | List_clause { args : Sexp_grammar.list_grammar } ->
+                      list_grammar_form args)
+                  else Bonsai.const (Form.return (Sexp.List [])))
+            in
+            let%sub inner =
+              let%arr outer = outer
+              and clauses_forms = clauses_forms in
+              match outer with
+              | None -> Form.return (Sexp.List [])
+              | Some selected_name ->
+                (match Map.find clauses_forms selected_name with
+                 | Some form -> form
+                 | None ->
+                   {| BUG: auto-generated forms could not find a form with the selected variant name |}
+                   |> Error.of_string
+                   |> Form.return_error)
+            in
+            let%sub view =
+              match%sub outer with
+              | None ->
+                let%arr outer_view = outer_view in
+                Form.View.variant ~clause_selector:outer_view ~selected_clause:None
+              | Some clause_name ->
+                let%arr clause_name = clause_name
+                and outer_view = outer_view
+                and inner = inner in
+                Form.View.variant
+                  ~clause_selector:outer_view
+                  ~selected_clause:(Some { clause_name; clause_view = Form.view inner })
+            in
+            let%sub set =
+              let%sub bonk = Bonsai_extra.bonk in
+              let%arr clauses_and_docs = clauses_and_docs
+              and set_outer = set_outer
+              and inject_outer = inject_outer
+              and bonk = bonk
+              and outer = outer in
+              function
+              | Sexp.List (Sexp.Atom clause_name :: args) ->
+                (match
+                   List.find clauses_and_docs ~f:(fun (clause, _docs) ->
+                     String.equal clause.name clause_name)
+                 with
+                 | Some (clause, _docs) ->
+                   (match outer with
+                    | Some name when String.equal name clause.name ->
+                      bonk (inject_outer (Sexp.List args))
+                    | Some _ | None ->
+                      Effect.Many
+                        [ set_outer (Some clause.name)
+                        ; bonk (inject_outer (Sexp.List args))
+                        ])
+                 | None ->
+                   on_set_error
+                     [%message
+                       "unknown clause_name while setting a clause form"
+                         (clause_name : string)])
+              | Sexp.Atom clause_name ->
+                (match
+                   List.find clauses_and_docs ~f:(fun (clause, _docs) ->
+                     String.equal clause.name clause_name)
+                 with
+                 | Some (clause, _docs) -> set_outer (Some clause.name)
+                 | None ->
+                   on_set_error
+                     [%message
+                       "unknown clause_name while setting a clause form"
+                         (clause_name : string)])
+              | sexp ->
+                on_set_error
+                  [%message
+                    "unexpected format while setting a clause form" (sexp : Sexp.t)]
+            in
+            let%sub value =
+              let%arr outer = outer
+              and inner = inner in
+              match outer, Form.value inner with
+              | Some clause_name, Ok (Sexp.List []) -> Ok (Sexp.Atom clause_name)
+              | Some clause_name, Ok (Sexp.List args) ->
+                Ok (Sexp.List (Sexp.Atom clause_name :: args))
+              | Some _, Ok sexp ->
+                Or_error.error_s [%message "invalid sexp encountered" (sexp : Sexp.t)]
+              | None, _ -> Or_error.error_s [%message "a value is required"]
+              | _, (Error _ as err) -> err
+            in
+            let%arr view = view
+            and value = value
+            and set = set
+            and inner = inner in
+            Form.Expert.create ~view ~value ~set, inner)
+      in
+      return form
   and list_grammar_form (grammar : Sexp_grammar.list_grammar Value.t) =
     (Bonsai.lazy_ [@alert "-deprecated"]) (lazy (list_grammar_form_impl grammar))
   and list_grammar_form_impl (grammar : Sexp_grammar.list_grammar Value.t) =

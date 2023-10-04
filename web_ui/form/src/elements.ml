@@ -9,8 +9,8 @@ let path =
   path_id, Vdom.Attr.id path_id
 ;;
 
-open Bonsai_web_ui_form2_experimental
-open Bonsai_web_ui_form2_experimental.Elements
+open Bonsai_web_ui_form2
+open Bonsai_web_ui_form2.Elements
 
 module type Model = Model
 module type Stringable_model = Stringable_model
@@ -316,6 +316,7 @@ module Typeahead = struct
     ?placeholder
     ?to_string
     ?to_option_description
+    ?handle_unknown_option
     ?split
     m
     ~all_options
@@ -327,6 +328,7 @@ module Typeahead = struct
           ?placeholder
           ?to_string
           ?to_option_description
+          ?handle_unknown_option
           ?split
           m
           ~all_options)
@@ -338,6 +340,7 @@ module Typeahead = struct
     ?placeholder
     ?to_string
     ?to_option_description
+    ?handle_unknown_option
     ?split
     m
     ~all_options
@@ -349,6 +352,7 @@ module Typeahead = struct
           ?placeholder
           ?to_string
           ?to_option_description
+          ?handle_unknown_option
           ?split
           m
           ~all_options)
@@ -501,9 +505,9 @@ module Multiple = struct
     let%arr form = form
     and add_element_text = add_element_text in
     map_view form ~f:(fun { items; add_element = append } ->
-      List.map items ~f:(fun (item, remove) ->
+      List.map items ~f:(fun { form = { view; value = _; set = _ }; remove } ->
         View.list_item
-          ~view:(view_item item)
+          ~view:(view_item view)
           ~remove_item:(Remove_info { remove; element_label = element_group_label }))
       |> View.list
            ~append_item:(Append_info { append; text = add_element_text })

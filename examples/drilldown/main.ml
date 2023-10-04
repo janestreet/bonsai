@@ -9,8 +9,8 @@ module Style = [%css stylesheet {|
 }
 |}]
 
-let example : Tree.t =
-  let open Tree in
+let example : Tree.String.t =
+  let open Tree.String in
   let a = { name = "a"; children = Leaf 3 } in
   let b =
     { name = "b"
@@ -39,7 +39,7 @@ let example : Tree.t =
 
 let tree_layout : Vdom.Node.t =
   let open Bonsai_web_ui_tree_layout in
-  let rec loop (tree : Tree.t) =
+  let rec loop (tree : Tree.String.t) =
     let name = Vdom.Node.text tree.name in
     match tree.children with
     | Leaf _ -> leaf name
@@ -72,7 +72,7 @@ let app : Vdom.Node.t Bonsai.Computation.t =
       [ N.text
           "Below, you can see (a sexp of) the tree-like data structure that we're \
            visualizing in the drilldown."
-      ; [%sexp_of: Tree.t] example |> N.sexp_for_debugging
+      ; [%sexp_of: Tree.String.t] example |> N.sexp_for_debugging
       ]
   in
   let tree_layout =
