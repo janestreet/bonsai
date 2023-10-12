@@ -6,7 +6,7 @@ open! Incr_map_collate
 
 module For_testing = struct
   type cell =
-    { id : Map_list.Key.t
+    { id : Opaque_map.Key.t
     ; selected : bool
     ; view : Vdom.Node.t list
     }
@@ -29,7 +29,7 @@ let rows
   ~column_widths
   ~(visually_focused : key option Value.t)
   ~on_row_click
-  (cells : (key * Vdom.Node.t list) Map_list.Key.Map.t Value.t)
+  (cells : (key * Vdom.Node.t list) Opaque_map.Key.Map.t Value.t)
   =
   let%sub col_widths =
     let%arr col_widths = column_widths
@@ -62,7 +62,7 @@ let rows
     Theme.Row.Styles.create ~row_height ~row_width
   in
   Bonsai.assoc
-    (module Map_list.Key)
+    (module Opaque_map.Key)
     cells
     ~f:(fun _ key_and_cells ->
       let%sub is_selected =
@@ -94,12 +94,13 @@ let component
   ~(leaves : Header_tree.leaf list Value.t)
   ~(headers : Header_tree.t Value.t)
   ~(assoc :
-      (key * data) Map_list.t Value.t -> (key * Vdom.Node.t list) Map_list.t Computation.t)
+      (key * data) Opaque_map.t Value.t
+      -> (key * Vdom.Node.t list) Opaque_map.t Computation.t)
   ~column_widths
   ~(visually_focused : key option Value.t)
   ~on_row_click
   (collated : (key, data) Collated.t Value.t)
-  (input : (key * data) Map_list.t Value.t)
+  (input : (key * data) Opaque_map.t Value.t)
   : (Vdom.Node.t * For_testing.t Lazy.t) Computation.t
   =
   let%sub padding_top_and_bottom =

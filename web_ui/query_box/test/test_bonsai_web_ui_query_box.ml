@@ -8,7 +8,13 @@ let get_vdom = Bonsai_web_ui_query_box.view
 let fruits = [ "apple"; "orange"; "kiwi"; "dragon fruit" ]
 let items = List.mapi fruits ~f:Tuple2.create |> Int.Map.of_alist_exn
 
-let create ?expand_direction ?on_blur ?(items = items) () =
+let create
+  ?expand_direction
+  ?on_blur
+  ?(items = items)
+  ?(modify_input_on_select = fun _ _ -> "")
+  ()
+  =
   let component =
     Bonsai_web_ui_query_box.create
       (module Int)
@@ -20,6 +26,7 @@ let create ?expand_direction ?on_blur ?(items = items) () =
       ~selected_item_attr:(Value.return (Attr.class_ "selected-item"))
       ?on_blur
       ~on_select:(Value.return (fun item -> Effect.print_s [%message (item : int)]))
+      ~modify_input_on_select:(Value.return modify_input_on_select)
       ()
   in
   Handle.create
@@ -1157,4 +1164,74 @@ let%test_module "optimization: the query box only loads its data when interacted
           </div> |}]
     ;;
   end)
+;;
+
+let%expect_test "[modify_input_on_select] field works" =
+  let handle =
+    let component =
+      Bonsai_web_ui_query_box.create
+        (module Int)
+        ~expand_direction:(Value.return Bonsai_web_ui_query_box.Expand_direction.Down)
+        ~max_visible_items:(Value.return 3)
+        ~f:(fun query ->
+          let%arr query = query in
+          Map.filter items ~f:(String.is_prefix ~prefix:query) |> Map.map ~f:Node.text)
+        ~selected_item_attr:(Value.return (Attr.class_ "selected-item"))
+        ~on_select:(Value.return (fun item -> Effect.print_s [%message (item : int)]))
+        ~modify_input_on_select:(Value.return (fun _ _ -> "oran"))
+        ()
+    in
+    Handle.create
+      (Result_spec.vdom
+         ~filter_printed_attributes:(fun ~key ~data:_ ->
+           match key with
+           | "class" | "data-test" | "value" -> true
+           | _ -> false)
+         get_vdom)
+      component
+  in
+  focus handle;
+  input_text handle "apple";
+  Handle.show handle;
+  [%expect
+    {|
+    <div>
+      <input #value="apple"> </input>
+      <div data-test="query-box-item-container">
+        <div>
+          <div class="selected-item"> apple </div>
+        </div>
+      </div>
+    </div> |}];
+  (* Clicking on "apple" selects it and sets the value of the input to "oran" *)
+  Handle.click_on handle ~get_vdom ~selector:".selected-item";
+  Handle.show_diff handle;
+  [%expect
+    {|
+    (item 0)
+
+      <div>
+    -|  <input #value="apple"> </input>
+    +|  <input #value="oran"> </input>
+        <div data-test="query-box-item-container">
+    -|    <div>
+    -|      <div class="selected-item"> apple </div>
+    -|    </div>
+    +|    <div> </div>
+        </div>
+      </div> |}];
+  (* Then, focusing the input shows completion suggestions that match "oran" *)
+  focus handle;
+  Handle.show_diff handle;
+  [%expect
+    {|
+      <div>
+        <input #value="oran"> </input>
+        <div data-test="query-box-item-container">
+    -|    <div> </div>
+    +|    <div>
+    +|      <div class="selected-item"> orange </div>
+    +|    </div>
+        </div>
+      </div> |}]
 ;;

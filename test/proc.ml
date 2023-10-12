@@ -202,12 +202,14 @@ module Handle = struct
   ;;
 
   let recompute_view_until_stable ?(max_computes = 100) handle =
-    with_return (fun { return } ->
-      for _ = 1 to max_computes do
-        recompute_view handle;
-        if not (Driver.has_after_display_events handle) then return ()
-      done;
-      failwithf "view not stable after %d recomputations" max_computes ())
+    recompute_view handle;
+    let computes = ref 1 in
+    while Driver.has_after_display_events handle do
+      recompute_view handle;
+      computes := !computes + 1;
+      if !computes >= max_computes
+      then failwithf "view not stable after %d recomputations" max_computes ()
+    done
   ;;
 
   let generic_show handle ~before ~f =

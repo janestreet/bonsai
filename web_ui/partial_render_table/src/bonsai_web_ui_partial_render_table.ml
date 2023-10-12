@@ -65,7 +65,7 @@ module Expert = struct
       `Px (Int.max 1 row_height)
     in
     let focus_kind = focus in
-    let%sub input_map = Bonsai.pure Collated.to_map_list collated in
+    let%sub input_map = Bonsai.pure Collated.to_opaque_map collated in
     let%sub path = Bonsai.path_id in
     let%sub leaves = Bonsai.pure Header_tree.leaves headers in
     let%sub header_client_rect, set_header_client_rect = Bonsai.state_opt () in

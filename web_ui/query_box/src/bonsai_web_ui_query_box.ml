@@ -78,6 +78,7 @@ let create
   ?(extra_input_attr = Value.return Attr.empty)
   ?(extra_attr = Value.return Attr.empty)
   ?(on_blur = Value.return (Effect.return ()))
+  ?(modify_input_on_select = Value.return (fun _selected_key _query -> ""))
   ~f
   ~on_select
   ()
@@ -293,7 +294,9 @@ let create
         and selected_key = selected_key
         and selected_item_attr = selected_item_attr
         and inject = inject
-        and on_select = on_select in
+        and on_select = on_select
+        and query = query
+        and modify_input_on_select = modify_input_on_select in
         let selected_attr =
           match selected_key with
           | Some selected_key when Key.comparator.compare key selected_key = 0 ->
@@ -316,7 +319,10 @@ let create
             ; Attr.on_mouseenter (fun _ -> move_to_effect)
             ; Attr.on_click (fun _ ->
                 Effect.Many
-                  [ on_select key; inject (Set_query ""); inject Close_suggestions ])
+                  [ on_select key
+                  ; inject (Set_query (modify_input_on_select key query))
+                  ; inject Close_suggestions
+                  ])
             ]
         in
         Node.div ~attrs:[ attr ] [ item ])
@@ -330,7 +336,9 @@ let create
     and on_select = on_select
     and expand_direction = expand_direction
     and suggestion_list_state = suggestion_list_state
-    and blur_input = blur_input in
+    and blur_input = blur_input
+    and query = query
+    and modify_input_on_select = modify_input_on_select in
     let open Vdom in
     let open Js_of_ocaml in
     fun ev ->
@@ -361,7 +369,7 @@ let create
          | Some key ->
            Effect.Many
              [ on_select key
-             ; inject (Set_query "")
+             ; inject (Set_query (modify_input_on_select key query))
              ; inject Close_suggestions
              ; Effect.Prevent_default
              ]
@@ -612,6 +620,7 @@ let stringable
   ?extra_input_attr
   ?extra_attr
   ?(to_view = fun _ string -> Vdom.Node.text string)
+  ?(modify_input_on_select = Value.return `Reset)
   ~filter_strategy
   ~on_select
   input
@@ -624,8 +633,18 @@ let stringable
      [Fuzzy_match] case to pay the cost of the extra data in the key. Since we
      don't expect this parameter to be changed at runtime, it is probably not
      worth the cost to make the parameter dynamic. *)
+  let modify_input_on_select ~get_key =
+    let%arr modify_input_on_select = modify_input_on_select
+    and input = input in
+    match modify_input_on_select with
+    | `Reset -> fun _ _ -> ""
+    | `Don't_change -> fun _ query -> query
+    | `Autocomplete ->
+      fun key query -> Map.find input (get_key key) |> Option.value ~default:query
+  in
   match filter_strategy with
   | Filter_strategy.Fuzzy_match ->
+    let%sub modify_input_on_select = modify_input_on_select ~get_key:Fn.id in
     create
       (module Key)
       ?initial_query
@@ -636,6 +655,7 @@ let stringable
       ?extra_list_container_attr
       ?extra_input_attr
       ?extra_attr
+      ~modify_input_on_select
       ~on_select
       ~f:(fun query ->
         Bonsai.Incr.compute (Value.both query input) ~f:(fun incr ->
@@ -653,6 +673,7 @@ let stringable
       fun (_, key) -> on_select key
     in
     let%sub result =
+      let%sub modify_input_on_select = modify_input_on_select ~get_key:snd in
       create
         (module Collate_map_with_score.Scored_key.M (Key))
         ?initial_query
@@ -663,6 +684,7 @@ let stringable
         ?extra_list_container_attr
         ?extra_input_attr
         ?extra_attr
+        ~modify_input_on_select
         ~on_select
         ~f:(fun query ->
           let%sub query =

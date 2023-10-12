@@ -76,6 +76,10 @@ val create
        (** If provided [on_blur] will be called whenever a blur triggered outside of the
       query box (including both input and item list) occurs. *)
   -> ?on_blur:unit Ui_effect.t Value.t
+       (** The value defaults to [fun selected_key query -> ""], which resets the
+      input box whenever the user selects an option. The text inside of the input box will
+      become the result of this function. *)
+  -> ?modify_input_on_select:('k -> string -> string) Value.t
        (** [f] generates the set of completion options by returning
       a map from a user-provided key ['k] to the view for that element
       in the dropdown list.  The currently entered filter from the textbox
@@ -117,6 +121,10 @@ val stringable
   -> ?extra_input_attr:Vdom.Attr.t Value.t
   -> ?extra_attr:Vdom.Attr.t Value.t
   -> ?to_view:('k -> string -> Vdom.Node.t)
+       (** The value defaults to [`Reset], which resets the input box whenever the user
+      selects an option. [`Don't_change] leaves the input unchanged and [`Autocomplete]
+      sets the input to the selected string. *)
+  -> ?modify_input_on_select:[ `Reset | `Don't_change | `Autocomplete ] Value.t
   -> filter_strategy:Filter_strategy.t
   -> on_select:('k -> unit Effect.t) Value.t
   -> ('k, string, 'cmp) Map.t Value.t

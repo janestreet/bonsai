@@ -1,6 +1,6 @@
 open! Core
 open! Bonsai_web
-open! Bonsai_web_test
+open! Bonsai_web_test.Experimental
 open! Bonsai.Let_syntax
 module Form = Bonsai_web_ui_form2
 
@@ -15,6 +15,7 @@ let viewless_form_result_spec (type a) sexp_of_a : ((a, unit) Form.t, a) Result_
       |> Expect_test_helpers_base.sexp_to_string
     ;;
 
+    let to_vdom _ = Vdom.Node.none
     let incoming = Form.set
   end)
 ;;
@@ -27,8 +28,7 @@ let form_result_spec (type a) ?filter_printed_attributes ?censor_paths sexp_of_a
     type incoming = a
 
     let view form =
-      let module V = (val Result_spec.vdom ?filter_printed_attributes ?censor_paths Fn.id)
-      in
+      let module V = (val Result_spec.vdom ?filter_printed_attributes ?censor_paths ()) in
       let vdom = Form.view form in
       let vdom = V.view vdom in
       let value =
@@ -39,6 +39,7 @@ let form_result_spec (type a) ?filter_printed_attributes ?censor_paths sexp_of_a
       sprintf "%s\n==============\n%s\n" value vdom
     ;;
 
+    let to_vdom = Form.view
     let incoming = Form.set
   end)
 ;;
@@ -56,9 +57,13 @@ let list_form_result_spec (type a) ?filter_printed_attributes ?censor_paths sexp
       | `Append
       ]
 
+    let to_vdom form =
+      let { Form.Elements.Multiple.items; add_element = _ } = Form.view form in
+      Vdom.Node.div (List.map items ~f:(fun { form; remove = _ } -> Form.view form))
+    ;;
+
     let view form =
-      let module V = (val Result_spec.vdom ?filter_printed_attributes ?censor_paths Fn.id)
-      in
+      let module V = (val Result_spec.vdom ?filter_printed_attributes ?censor_paths ()) in
       let { Form.Elements.Multiple.items; add_element = _ } = Form.view form in
       let vdom =
         List.map items ~f:(fun { form; remove = _ } -> V.view (Form.view form))
@@ -114,7 +119,7 @@ let%expect_test "typing into a string textbox" =
 
     ==============
     <input type="text" placeholder="" spellcheck="false" value:normalized="" oninput> </input> |}];
-  Handle.input_text handle ~get_vdom:Form.view ~selector:"input" ~text:"hello world";
+  Handle.input_text handle ~selector:"input" ~text:"hello world";
   Handle.show_diff handle;
   [%expect
     {|
@@ -136,7 +141,7 @@ let%expect_test "typing into a string password textbox" =
 
     ==============
     <input type="password" placeholder="" spellcheck="false" value:normalized="" oninput> </input> |}];
-  Handle.input_text handle ~get_vdom:Form.view ~selector:"input" ~text:"hello world";
+  Handle.input_text handle ~selector:"input" ~text:"hello world";
   Handle.show_diff handle;
   [%expect
     {|
@@ -168,7 +173,7 @@ let%expect_test "dropdown starting empty" =
       <option value="1" #selected="false"> hello </option>
       <option value="2" #selected="false"> world </option>
     </select> |}];
-  Handle.change handle ~get_vdom:Form.view ~selector:"select" ~value:"1";
+  Handle.change handle ~selector:"select" ~value:"1";
   Handle.show_diff handle;
   [%expect
     {|
@@ -204,7 +209,7 @@ let%expect_test "dropdown with default value" =
       <option value="0" #selected="false"> hello </option>
       <option value="1" #selected="true"> world </option>
     </select> |}];
-  Handle.change handle ~get_vdom:Form.view ~selector:"select" ~value:"0";
+  Handle.change handle ~selector:"select" ~value:"0";
   Handle.show_diff handle;
   [%expect
     {|
@@ -240,7 +245,7 @@ let%expect_test "dropdown_opt with default value" =
       <option value="1" #selected="false"> hello </option>
       <option value="2" #selected="true"> world </option>
     </select> |}];
-  Handle.change handle ~get_vdom:Form.view ~selector:"select" ~value:"0";
+  Handle.change handle ~selector:"select" ~value:"0";
   Handle.show_diff handle;
   [%expect
     {|
@@ -275,7 +280,7 @@ let%expect_test "dropdown" =
       <option value="0" #selected="true"> hello </option>
       <option value="1" #selected="false"> world </option>
     </select> |}];
-  Handle.change handle ~get_vdom:Form.view ~selector:"select" ~value:"1";
+  Handle.change handle ~selector:"select" ~value:"1";
   Handle.show_diff handle;
   [%expect
     {|
@@ -342,7 +347,7 @@ let%expect_test "typing into a int textbox" =
 
     ==============
     <input type="text" placeholder="" spellcheck="false" value:normalized="" oninput> </input> |}];
-  Handle.input_text handle ~get_vdom:Form.view ~selector:"input" ~text:"123";
+  Handle.input_text handle ~selector:"input" ~text:"123";
   Handle.show_diff handle;
   [%expect
     {|
@@ -352,7 +357,7 @@ let%expect_test "typing into a int textbox" =
       ==============
     -|<input type="text" placeholder="" spellcheck="false" value:normalized="" oninput> </input>
     +|<input type="text" placeholder="" spellcheck="false" value:normalized=123 oninput> </input> |}];
-  Handle.input_text handle ~get_vdom:Form.view ~selector:"input" ~text:"hello world";
+  Handle.input_text handle ~selector:"input" ~text:"hello world";
   Handle.show_diff handle;
   [%expect
     {|
@@ -406,12 +411,8 @@ let%expect_test "typing into a paired string textbox * int textbox " =
       <input type="text" placeholder="" spellcheck="false" value:normalized="" oninput> </input>
       <input type="text" placeholder="" spellcheck="false" value:normalized="" oninput> </input>
     </div> |}];
-  Handle.input_text
-    handle
-    ~get_vdom:Form.view
-    ~selector:"input:nth-child(1)"
-    ~text:"hello world";
-  Handle.input_text handle ~get_vdom:Form.view ~selector:"input:nth-child(2)" ~text:"123";
+  Handle.input_text handle ~selector:"input:nth-child(1)" ~text:"hello world";
+  Handle.input_text handle ~selector:"input:nth-child(2)" ~text:"123";
   Handle.show_diff handle;
   [%expect
     {|
@@ -489,16 +490,8 @@ let%test_module "Form.all" =
       <input type="text" placeholder="" spellcheck="false" value:normalized="" oninput> </input>
       <input type="text" placeholder="" spellcheck="false" value:normalized="" oninput> </input>
     </div> |}];
-      Handle.input_text
-        handle
-        ~get_vdom:Form.view
-        ~selector:"input:nth-child(1)"
-        ~text:"hello world";
-      Handle.input_text
-        handle
-        ~get_vdom:Form.view
-        ~selector:"input:nth-child(2)"
-        ~text:"quack";
+      Handle.input_text handle ~selector:"input:nth-child(1)" ~text:"hello world";
+      Handle.input_text handle ~selector:"input:nth-child(2)" ~text:"quack";
       Handle.show_diff handle;
       [%expect
         {|
@@ -627,16 +620,8 @@ let%test_module "Form.all_map" =
       <input type="text" placeholder="" spellcheck="false" value:normalized="" oninput> </input>
       <input type="text" placeholder="" spellcheck="false" value:normalized="" oninput> </input>
     </div> |}];
-      Handle.input_text
-        handle
-        ~get_vdom:Form.view
-        ~selector:"input:nth-child(1)"
-        ~text:"hello world";
-      Handle.input_text
-        handle
-        ~get_vdom:Form.view
-        ~selector:"input:nth-child(2)"
-        ~text:"quack";
+      Handle.input_text handle ~selector:"input:nth-child(1)" ~text:"hello world";
+      Handle.input_text handle ~selector:"input:nth-child(2)" ~text:"quack";
       Handle.show_diff handle;
       [%expect
         {|
@@ -772,7 +757,7 @@ let%expect_test "typing into a time span textbox" =
         <option value="3" #selected="false"> h </option>
       </select>
     </div> |}];
-  Handle.input_text handle ~selector:"input" ~get_vdom:Form.view ~text:"24";
+  Handle.input_text handle ~selector:"input" ~text:"24";
   Handle.show handle;
   [%expect
     {|
@@ -788,7 +773,7 @@ let%expect_test "typing into a time span textbox" =
         <option value="3" #selected="false"> h </option>
       </select>
     </div> |}];
-  Handle.change handle ~selector:"select" ~get_vdom:Form.view ~value:"2";
+  Handle.change handle ~selector:"select" ~value:"2";
   Handle.show handle;
   [%expect
     {|
@@ -886,11 +871,7 @@ let%expect_test "typing into a time range textbox, with strict inequality requir
              value:normalized=""
              oninput> </input>
     </div> |}];
-  Handle.input_text
-    handle
-    ~get_vdom:Form.view
-    ~text:"11:11 AM"
-    ~selector:"input:nth-child(1)";
+  Handle.input_text handle ~text:"11:11 AM" ~selector:"input:nth-child(1)";
   Handle.show handle;
   [%expect
     {|
@@ -912,11 +893,7 @@ let%expect_test "typing into a time range textbox, with strict inequality requir
              value:normalized=""
              oninput> </input>
     </div> |}];
-  Handle.input_text
-    handle
-    ~get_vdom:Form.view
-    ~text:"10:00 AM"
-    ~selector:"input:nth-child(2)";
+  Handle.input_text handle ~text:"10:00 AM" ~selector:"input:nth-child(2)";
   Handle.show handle;
   [%expect
     {|
@@ -938,11 +915,7 @@ let%expect_test "typing into a time range textbox, with strict inequality requir
              value:normalized=10:00:00.000
              oninput> </input>
     </div> |}];
-  Handle.input_text
-    handle
-    ~get_vdom:Form.view
-    ~text:"11:11 AM"
-    ~selector:"input:nth-child(2)";
+  Handle.input_text handle ~text:"11:11 AM" ~selector:"input:nth-child(2)";
   Handle.show handle;
   [%expect
     {|
@@ -964,11 +937,7 @@ let%expect_test "typing into a time range textbox, with strict inequality requir
              value:normalized=11:11:00.000
              oninput> </input>
     </div> |}];
-  Handle.input_text
-    handle
-    ~get_vdom:Form.view
-    ~text:"11:12 AM"
-    ~selector:"input:nth-child(2)";
+  Handle.input_text handle ~text:"11:12 AM" ~selector:"input:nth-child(2)";
   Handle.show handle;
   [%expect
     {|
@@ -1020,16 +989,8 @@ let%expect_test "typing into a time range textbox, with equality allowed" =
              value:normalized=""
              oninput> </input>
     </div> |}];
-  Handle.input_text
-    handle
-    ~get_vdom:Form.view
-    ~text:"11:11 AM"
-    ~selector:"input:nth-child(1)";
-  Handle.input_text
-    handle
-    ~get_vdom:Form.view
-    ~text:"10:00 AM"
-    ~selector:"input:nth-child(2)";
+  Handle.input_text handle ~text:"11:11 AM" ~selector:"input:nth-child(1)";
+  Handle.input_text handle ~text:"10:00 AM" ~selector:"input:nth-child(2)";
   Handle.show handle;
   [%expect
     {|
@@ -1051,11 +1012,7 @@ let%expect_test "typing into a time range textbox, with equality allowed" =
              value:normalized=10:00:00.000
              oninput> </input>
     </div> |}];
-  Handle.input_text
-    handle
-    ~get_vdom:Form.view
-    ~text:"11:11 AM"
-    ~selector:"input:nth-child(2)";
+  Handle.input_text handle ~text:"11:11 AM" ~selector:"input:nth-child(2)";
   Handle.show handle;
   [%expect
     {|
@@ -1321,7 +1278,7 @@ let%expect_test "typing into an int number element (no default)" =
            max="10"
            value:normalized=""
            oninput> </input> |}];
-  Handle.input_text handle ~get_vdom:Form.view ~selector:"input" ~text:"10";
+  Handle.input_text handle ~selector:"input" ~text:"10";
   Handle.show_diff handle;
   [%expect
     {|
@@ -1338,7 +1295,7 @@ let%expect_test "typing into an int number element (no default)" =
     -|       value:normalized=""
     +|       value:normalized=10
              oninput> </input> |}];
-  Handle.input_text handle ~get_vdom:Form.view ~selector:"input" ~text:"";
+  Handle.input_text handle ~selector:"input" ~text:"";
   Handle.show_diff handle;
   [%expect
     {|
@@ -1374,7 +1331,7 @@ let%expect_test "typing into an int number element" =
            max="10"
            value:normalized=0
            oninput> </input> |}];
-  Handle.input_text handle ~get_vdom:Form.view ~selector:"input" ~text:"10";
+  Handle.input_text handle ~selector:"input" ~text:"10";
   Handle.show_diff handle;
   [%expect
     {|
@@ -1391,7 +1348,7 @@ let%expect_test "typing into an int number element" =
     -|       value:normalized=0
     +|       value:normalized=10
              oninput> </input> |}];
-  Handle.input_text handle ~get_vdom:Form.view ~selector:"input" ~text:"-1";
+  Handle.input_text handle ~selector:"input" ~text:"-1";
   Handle.show_diff handle;
   [%expect
     {|
@@ -1408,7 +1365,7 @@ let%expect_test "typing into an int number element" =
     -|       value:normalized=10
     +|       value:normalized=-1
              oninput> </input> |}];
-  Handle.input_text handle ~get_vdom:Form.view ~selector:"input" ~text:"11";
+  Handle.input_text handle ~selector:"input" ~text:"11";
   Handle.show_diff handle;
   [%expect
     {|
@@ -1425,7 +1382,7 @@ let%expect_test "typing into an int number element" =
     -|       value:normalized=-1
     +|       value:normalized=11
              oninput> </input> |}];
-  Handle.input_text handle ~get_vdom:Form.view ~selector:"input" ~text:"-2";
+  Handle.input_text handle ~selector:"input" ~text:"-2";
   Handle.show_diff handle;
   [%expect
     {|
@@ -1586,7 +1543,7 @@ let%expect_test "typing into a float number element" =
            max="10.1"
            value:normalized=0
            oninput> </input> |}];
-  Handle.input_text handle ~get_vdom:Form.view ~selector:"input" ~text:"10.1";
+  Handle.input_text handle ~selector:"input" ~text:"10.1";
   Handle.show_diff handle;
   [%expect
     {|
@@ -1603,7 +1560,7 @@ let%expect_test "typing into a float number element" =
     -|       value:normalized=0
     +|       value:normalized=10.1
              oninput> </input> |}];
-  Handle.input_text handle ~get_vdom:Form.view ~selector:"input" ~text:"-1";
+  Handle.input_text handle ~selector:"input" ~text:"-1";
   Handle.show_diff handle;
   [%expect
     {|
@@ -1620,7 +1577,7 @@ let%expect_test "typing into a float number element" =
     -|       value:normalized=10.1
     +|       value:normalized=-1
              oninput> </input> |}];
-  Handle.input_text handle ~get_vdom:Form.view ~selector:"input" ~text:"10.2";
+  Handle.input_text handle ~selector:"input" ~text:"10.2";
   Handle.show_diff handle;
   [%expect
     {|
@@ -1637,7 +1594,7 @@ let%expect_test "typing into a float number element" =
     -|       value:normalized=-1
     +|       value:normalized=10.2
              oninput> </input> |}];
-  Handle.input_text handle ~get_vdom:Form.view ~selector:"input" ~text:"-1.1";
+  Handle.input_text handle ~selector:"input" ~text:"-1.1";
   Handle.show_diff handle;
   [%expect
     {|
@@ -1797,7 +1754,7 @@ let%expect_test "clicking on radio buttons" =
         </label>
       </li>
     </ul> |}];
-  Handle.click_on handle ~get_vdom:Form.view ~selector:"label:nth-child(1) input";
+  Handle.click_on handle ~selector:"label:nth-child(1) input";
   Handle.show_diff handle;
   [%expect
     {|
@@ -1833,7 +1790,7 @@ let%expect_test "clicking on radio buttons" =
         </li>
         <li style={ display: block; }>
           <label> |}];
-  Handle.click_on handle ~get_vdom:Form.view ~selector:"li:nth-child(2) input";
+  Handle.click_on handle ~selector:"li:nth-child(2) input";
   Handle.show_diff handle;
   [%expect
     {|
@@ -2085,9 +2042,9 @@ let%expect_test "clicking a set checklist" =
         </label>
       </li>
     </ul> |}];
-  Handle.click_on handle ~get_vdom:Form.view ~selector:"li:nth-child(1) input";
+  Handle.click_on handle ~selector:"li:nth-child(1) input";
   Handle.recompute_view handle;
-  Handle.click_on handle ~get_vdom:Form.view ~selector:"li:nth-child(2) input";
+  Handle.click_on handle ~selector:"li:nth-child(2) input";
   Handle.show_diff handle;
   [%expect
     {|
@@ -2117,7 +2074,7 @@ let%expect_test "clicking a set checklist" =
           </label>
         </li>
       </ul> |}];
-  Handle.click_on handle ~get_vdom:Form.view ~selector:"li:nth-child(1) input";
+  Handle.click_on handle ~selector:"li:nth-child(1) input";
   Handle.show_diff handle;
   [%expect
     {|
@@ -2344,7 +2301,7 @@ let%expect_test "on_change handler should fire when input is changed" =
     <input type="text" placeholder="" spellcheck="false" value:normalized="" oninput> </input>
 
     ("the input changed to" (new_value "")) |}];
-  Handle.input_text handle ~get_vdom:Form.view ~selector:"input" ~text:"hello world";
+  Handle.input_text handle ~selector:"input" ~text:"hello world";
   Handle.show_diff handle;
   [%expect
     {|
@@ -2384,7 +2341,7 @@ let%expect_test "form validated with an effect" =
          false))
       component
   in
-  Handle.input_text handle ~get_vdom:Form.view ~selector:"input" ~text:"2";
+  Handle.input_text handle ~selector:"input" ~text:"2";
   Handle.recompute_view_until_stable handle;
   Handle.show handle;
   [%expect {|
@@ -2403,9 +2360,9 @@ let%expect_test "form validated with an effect" =
 
     ==============
     <input> </input> |}];
-  Handle.input_text handle ~get_vdom:Form.view ~selector:"input" ~text:"5";
+  Handle.input_text handle ~selector:"input" ~text:"5";
   Handle.recompute_view_until_stable handle;
-  Handle.input_text handle ~get_vdom:Form.view ~selector:"input" ~text:"-3";
+  Handle.input_text handle ~selector:"input" ~text:"-3";
   Handle.recompute_view_until_stable handle;
   print_queued ();
   [%expect {| (-3 5) |}];
@@ -2458,7 +2415,7 @@ let%expect_test "form validated with an effect with one_at_at_time" =
          false))
       component
   in
-  Handle.input_text handle ~get_vdom:Form.view ~selector:"input" ~text:"2";
+  Handle.input_text handle ~selector:"input" ~text:"2";
   Handle.recompute_view_until_stable handle;
   Handle.show handle;
   [%expect {|
@@ -2477,11 +2434,11 @@ let%expect_test "form validated with an effect with one_at_at_time" =
 
     ==============
     <input> </input> |}];
-  Handle.input_text handle ~get_vdom:Form.view ~selector:"input" ~text:"5";
+  Handle.input_text handle ~selector:"input" ~text:"5";
   Handle.recompute_view_until_stable handle;
-  Handle.input_text handle ~get_vdom:Form.view ~selector:"input" ~text:"20";
+  Handle.input_text handle ~selector:"input" ~text:"20";
   Handle.recompute_view_until_stable handle;
-  Handle.input_text handle ~get_vdom:Form.view ~selector:"input" ~text:"-3";
+  Handle.input_text handle ~selector:"input" ~text:"-3";
   Handle.recompute_view_until_stable handle;
   print_queued ();
   [%expect {| (5) |}];
@@ -2536,7 +2493,7 @@ let%expect_test "form validated with an effect and debounced" =
          false))
       component
   in
-  Handle.input_text handle ~get_vdom:Form.view ~selector:"input" ~text:"2";
+  Handle.input_text handle ~selector:"input" ~text:"2";
   Handle.recompute_view_until_stable handle;
   Handle.show handle;
   [%expect {|
@@ -2595,7 +2552,7 @@ let%expect_test "extending a projection with an error" =
 
     ==============
     <input type="text" placeholder="" spellcheck="false" value:normalized=1 oninput> </input> |}];
-  Handle.input_text handle ~get_vdom:Form.view ~selector:"input" ~text:"not an int";
+  Handle.input_text handle ~selector:"input" ~text:"not an int";
   Handle.show handle;
   [%expect
     {|
@@ -2690,7 +2647,7 @@ let%expect_test "slider input" =
 
     ==============
     <input value:normalized=0> </input> |}];
-  Handle.input_text handle ~get_vdom:Form.view ~selector:"input" ~text:"20";
+  Handle.input_text handle ~selector:"input" ~text:"20";
   Handle.recompute_view handle;
   Handle.show handle;
   [%expect {|
@@ -2734,9 +2691,9 @@ let%expect_test "query box" =
         <div> </div>
       </div>
     </div> |}];
-  Handle.input_text handle ~get_vdom:Form.view ~selector:"input" ~text:"a";
+  Handle.input_text handle ~selector:"input" ~text:"a";
   Handle.recompute_view handle;
-  Handle.keydown handle ~get_vdom:Form.view ~selector:"input" ~key:Enter;
+  Handle.keydown handle ~selector:"input" ~key:Enter;
   Handle.show_diff handle;
   [%expect
     {|
@@ -2834,21 +2791,9 @@ let%test_module "Typed" =
                 </span>
               </label>
             </div> |}];
-          Handle.input_text
-            handle
-            ~get_vdom:Form.view
-            ~selector:"[test=a] input"
-            ~text:"3";
-          Handle.input_text
-            handle
-            ~get_vdom:Form.view
-            ~selector:"[test=b] input"
-            ~text:"text";
-          Handle.set_checkbox
-            handle
-            ~get_vdom:Form.view
-            ~selector:"[test=c] input"
-            ~checked:true;
+          Handle.input_text handle ~selector:"[test=a] input" ~text:"3";
+          Handle.input_text handle ~selector:"[test=b] input" ~text:"text";
+          Handle.set_checkbox handle ~selector:"[test=c] input" ~checked:true;
           Handle.show handle;
           [%expect
             {|
@@ -3033,11 +2978,7 @@ let%test_module "Typed" =
               </label>
             </div> |}];
           (* Typing into either "a" textbox influences both; as does setting the form *)
-          Handle.input_text
-            handle
-            ~get_vdom:Form.view
-            ~selector:"[test=a1] input"
-            ~text:"1234";
+          Handle.input_text handle ~selector:"[test=a1] input" ~text:"1234";
           Handle.show handle;
           [%expect
             {|
@@ -3076,11 +3017,7 @@ let%test_module "Typed" =
                 </span>
               </label>
             </div> |}];
-          Handle.input_text
-            handle
-            ~get_vdom:Form.view
-            ~selector:"[test=a2] input"
-            ~text:"4321";
+          Handle.input_text handle ~selector:"[test=a2] input" ~text:"4321";
           Handle.show handle;
           [%expect
             {|
@@ -3220,7 +3157,7 @@ let%test_module "Typed" =
               </select>
               <input type="text" placeholder="" spellcheck="false" value:normalized="" oninput> </input>
             </div> |}];
-          Handle.input_text handle ~get_vdom:Form.view ~selector:"input" ~text:"1234";
+          Handle.input_text handle ~selector:"input" ~text:"1234";
           Handle.show handle;
           [%expect
             {|
@@ -3234,9 +3171,9 @@ let%test_module "Typed" =
               </select>
               <input type="text" placeholder="" spellcheck="false" value:normalized=1234 oninput> </input>
             </div> |}];
-          Handle.change handle ~get_vdom:Form.view ~selector:"select" ~value:"1";
+          Handle.change handle ~selector:"select" ~value:"1";
           Handle.recompute_view_until_stable handle;
-          Handle.input_text handle ~get_vdom:Form.view ~selector:"input" ~text:"hi!";
+          Handle.input_text handle ~selector:"input" ~text:"hi!";
           Handle.show handle;
           [%expect
             {|
@@ -3321,9 +3258,9 @@ let%test_module "Typed" =
               </select>
 
             </div> |}];
-          Handle.change handle ~get_vdom:Form.view ~selector:"select" ~value:"1";
+          Handle.change handle ~selector:"select" ~value:"1";
           Handle.recompute_view_until_stable handle;
-          Handle.input_text handle ~get_vdom:Form.view ~selector:"input" ~text:"1234";
+          Handle.input_text handle ~selector:"input" ~text:"1234";
           Handle.show handle;
           [%expect
             {|
@@ -3338,9 +3275,9 @@ let%test_module "Typed" =
               </select>
               <input type="text" placeholder="" spellcheck="false" value:normalized=1234 oninput> </input>
             </div> |}];
-          Handle.change handle ~get_vdom:Form.view ~selector:"select" ~value:"2";
+          Handle.change handle ~selector:"select" ~value:"2";
           Handle.recompute_view_until_stable handle;
-          Handle.input_text handle ~get_vdom:Form.view ~selector:"input" ~text:"hi!";
+          Handle.input_text handle ~selector:"input" ~text:"hi!";
           Handle.show handle;
           [%expect
             {|
@@ -3500,6 +3437,8 @@ let%expect_test "[Form.with_default] sets the form value after a model reset" =
         let view (form, _) =
           Sexp.to_string_hum ([%sexp_of: int Or_error.t] (Form.value form))
         ;;
+
+        let to_vdom (form, _) = Form.view form
       end)
       component
   in
@@ -3532,6 +3471,8 @@ let%expect_test "[Form.with_default_always] sets the form value after a model re
         let view (form, _) =
           Sexp.to_string_hum ([%sexp_of: int Or_error.t] (Form.value form))
         ;;
+
+        let to_vdom (form, _) = Form.view form
       end)
       component
   in
@@ -3570,6 +3511,7 @@ let%expect_test "[Form.with_default_always] only sets the form once on first act
 
         let incoming _ = Nothing.unreachable_code
         let view form = Sexp.to_string_hum ([%sexp_of: int Or_error.t] (Form.value form))
+        let to_vdom = Form.view
       end)
       component
   in
@@ -3597,6 +3539,7 @@ let%expect_test {| [Form.with_default] interacts fine with [Handle.recompute_vie
 
         let incoming _ = Nothing.unreachable_code
         let view form = Sexp.to_string_hum ([%sexp_of: int Or_error.t] (Form.value form))
+        let to_vdom = Form.view
       end)
       component
   in
@@ -3789,7 +3732,7 @@ let%test_module "Querybox as typeahead" =
     ;;
 
     let%expect_test "Initial typeahead state" =
-      let handle = Handle.create (Result_spec.vdom Fn.id) (view_computation ()) in
+      let handle = Handle.create (Result_spec.vdom ()) (view_computation ()) in
       Handle.show handle;
       [%expect
         {|
@@ -3817,13 +3760,9 @@ let%test_module "Querybox as typeahead" =
     ;;
 
     let%expect_test "Change typeahead contents" =
-      let handle = Handle.create (Result_spec.vdom Fn.id) (view_computation ()) in
+      let handle = Handle.create (Result_spec.vdom ()) (view_computation ()) in
       Handle.store_view handle;
-      Handle.input_text
-        handle
-        ~get_vdom:Fn.id
-        ~selector:"input"
-        ~text:(Data.to_string Data.Option_C);
+      Handle.input_text handle ~selector:"input" ~text:(Data.to_string Data.Option_C);
       Handle.show_diff handle;
       [%expect
         {|
@@ -3863,10 +3802,11 @@ let%test_module "Querybox as typeahead" =
             type t = Vdom.Node.t * (Data.t option -> unit Ui_effect.t)
 
             let view (vdom, _) =
-              let module V = (val Result_spec.vdom Fn.id) in
+              let module V = (val Result_spec.vdom ()) in
               V.view vdom
             ;;
 
+            let to_vdom (vdom, _) = vdom
             let incoming (_, inject) = inject
           end)
           view_and_inject_computation
@@ -3923,7 +3863,7 @@ let%test_module "Querybox as typeahead" =
     ;;
 
     let%expect_test "Select element using partial input" =
-      let handle = Handle.create (Result_spec.vdom Fn.id) (view_computation ()) in
+      let handle = Handle.create (Result_spec.vdom ()) (view_computation ()) in
       Handle.show handle;
       [%expect
         {|
@@ -3948,7 +3888,7 @@ let%test_module "Querybox as typeahead" =
           </div>
         </div> |}];
       (* "O" is not unique, all options are matched. *)
-      Handle.input_text handle ~get_vdom:Fn.id ~selector:"input" ~text:"O";
+      Handle.input_text handle ~selector:"input" ~text:"O";
       Handle.show_diff handle;
       [%expect
         {|
@@ -3984,7 +3924,7 @@ let%test_module "Querybox as typeahead" =
         +|    </div>
             </div>
           </div> |}];
-      Handle.input_text handle ~get_vdom:Fn.id ~selector:"input" ~text:"C";
+      Handle.input_text handle ~selector:"input" ~text:"C";
       Handle.show_diff handle;
       [%expect
         {|
@@ -4024,10 +3964,8 @@ let%test_module "Querybox as typeahead" =
     let%expect_test "dynamic [to_string]." =
       let to_string_var = Bonsai.Var.create Data.to_string in
       let to_string = Bonsai.Var.value to_string_var in
-      let handle =
-        Handle.create (Result_spec.vdom Fn.id) (view_computation ~to_string ())
-      in
-      Handle.input_text handle ~get_vdom:Fn.id ~selector:"input" ~text:"";
+      let handle = Handle.create (Result_spec.vdom ()) (view_computation ~to_string ()) in
+      Handle.input_text handle ~selector:"input" ~text:"";
       Handle.store_view handle;
       Bonsai.Var.set to_string_var (fun data -> Data.to_string data ^ "!");
       Handle.show_diff handle;
@@ -4079,10 +4017,10 @@ let%test_module "Querybox as typeahead" =
         let%arr form = form in
         Form.view form
       in
-      let handle = Handle.create (Result_spec.vdom Fn.id) computation in
+      let handle = Handle.create (Result_spec.vdom ()) computation in
       Handle.store_view handle;
       [%expect {| |}];
-      Handle.input_text handle ~get_vdom:Fn.id ~selector:"input" ~text:"unknown option";
+      Handle.input_text handle ~selector:"input" ~text:"unknown option";
       Handle.show_diff handle;
       [%expect
         {|

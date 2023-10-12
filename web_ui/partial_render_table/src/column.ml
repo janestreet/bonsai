@@ -1,7 +1,6 @@
 open! Core
 open! Bonsai_web
 open! Bonsai.Let_syntax
-open Incr_map_collate
 open Bonsai_web_ui_partial_render_table_protocol
 module Sort_kind = Column_intf.Sort_kind
 
@@ -82,17 +81,17 @@ module Dynamic_cells = struct
 
     let rec visible_leaves
       : type k v cmp.
-        (k * v) Map_list.t Value.t
+        (k * v) Opaque_map.t Value.t
         -> (k, cmp) Bonsai.comparator
         -> (k, v) t
-        -> (k * Vdom.Node.t) Map_list.t Computation.t list
+        -> (k * Vdom.Node.t) Opaque_map.t Computation.t list
       =
       fun map comparator -> function
       | Leaf { cell; visible; _ } ->
         [ (if%sub visible
            then
              Bonsai.Expert.assoc_on
-               (module Map_list.Key)
+               (module Opaque_map.Key)
                comparator
                map
                ~get_model_key:(fun _ (k, _) -> k)
@@ -110,8 +109,8 @@ module Dynamic_cells = struct
         List.bind children ~f:(visible_leaves map comparator)
     ;;
 
-    let instantiate_cells (type k) t comparator (map : (k * _) Map_list.t Value.t) =
-      let empty = Map.empty (module Map_list.Key) in
+    let instantiate_cells (type k) t comparator (map : (k * _) Opaque_map.t Value.t) =
+      let empty = Map.empty (module Opaque_map.Key) in
       visible_leaves map comparator t
       |> Computation.fold_right ~init:(Value.return empty) ~f:(fun a acc ->
            Bonsai.Incr.compute (Value.both a acc) ~f:(fun a_and_acc ->

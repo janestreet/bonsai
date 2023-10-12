@@ -41,7 +41,7 @@ let table_to_string
     in
     let num_column =
       Column.create "#" (fun { Table.For_testing.Table_body.id; _ } ->
-        Map_list.Key.to_string id)
+        Opaque_map.Key.to_string id)
     in
     let ascii_column_of_leaf i headers =
       let header =
@@ -2402,7 +2402,7 @@ let%expect_test "show that scrolling out of a custom table will execute the pres
     match focus with
     | None -> None
     | Some focus ->
-      if Map.exists (Incr_map_collate.Collated.to_map_list collation) ~f:(fun (k, _v) ->
+      if Map.exists (Incr_map_collate.Collated.to_opaque_map collation) ~f:(fun (k, _v) ->
            focus = k)
       then Some focus
       else None

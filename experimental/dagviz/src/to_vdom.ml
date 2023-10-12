@@ -73,7 +73,6 @@ module Make (Name : Types.Name) = struct
 }
 
 .testcase {
-  background: white;
   border-radius: 0.25em;
   align-items: center;
   contain: paint;

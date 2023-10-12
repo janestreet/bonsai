@@ -105,7 +105,7 @@ module Row_machine = struct
     with_return_option (fun { return } ->
       let i = ref (Collated.num_before_range collated) in
       collated
-      |> Collated.to_map_list
+      |> Collated.to_opaque_map
       |> Map.iter ~f:(fun (key, _) ->
            if f ~key ~index:!i then return { Triple.key; index = !i } else Int.incr i))
   ;;

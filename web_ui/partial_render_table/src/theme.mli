@@ -1,6 +1,5 @@
 open! Core
 open! Bonsai_web
-open Incr_map_collate
 
 module Cell : sig
   module Col_styles : sig
@@ -42,6 +41,6 @@ module Body : sig
   val view
     :  padding_top:int
     -> padding_bottom:int
-    -> rows:Vdom.Node.t Map_list.Key.Map.t
+    -> rows:Vdom.Node.t Opaque_map.Key.Map.t
     -> Vdom.Node.t
 end

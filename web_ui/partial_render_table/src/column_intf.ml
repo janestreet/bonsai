@@ -1,6 +1,5 @@
 open! Core
 open! Bonsai_web
-open Incr_map_collate
 module Sort_kind = Bonsai_web_ui_partial_render_table_protocol.Sort_kind
 
 module type Header_helpers = sig
@@ -20,8 +19,8 @@ module type S = sig
   val instantiate_cells
     :  t
     -> (key, 'cmp) Bonsai.comparator
-    -> (key * data) Map_list.t Value.t
-    -> (key * Vdom.Node.t list) Map_list.t Computation.t
+    -> (key * data) Opaque_map.t Value.t
+    -> (key * Vdom.Node.t list) Opaque_map.t Computation.t
 end
 
 module type S_with_sorter = sig
@@ -37,8 +36,8 @@ module type S_with_sorter = sig
   val instantiate_cells
     :  t
     -> (key, 'cmp) Bonsai.comparator
-    -> (key * data) Map_list.t Value.t
-    -> (key * Vdom.Node.t list) Map_list.t Computation.t
+    -> (key * data) Opaque_map.t Value.t
+    -> (key * Vdom.Node.t list) Opaque_map.t Computation.t
 end
 
 type ('key, 'data) t =

@@ -1,6 +1,28 @@
 open! Core
 open Bonsai_web
 
+module Style =
+[%css
+stylesheet
+  {|
+.svg-preview {
+ width: 200px;
+ height: 200px;
+ border-style:solid;
+}
+
+.container {
+  display:flex;
+  flex-direction:column;
+  align-items: center;
+}
+
+.section-header {
+  color: #999999;
+  font-style: italic;
+}
+|}]
+
 let widget uri : Vdom.Node.t =
   (* [init] is called whenever [uri] changes, updating the favicon. The DOM element
      produced by the widget is unused. *)
@@ -101,10 +123,7 @@ let component =
   in
   let uri = Favicon_svg.to_embedded_url favicon in
   let image =
-    Node.create
-      "img"
-      ~attrs:[ Attr.src (Uri.to_string uri); Attr.class_ "svg-preview" ]
-      []
+    Node.create "img" ~attrs:[ Attr.src (Uri.to_string uri); Style.svg_preview ] []
   in
   let code_section =
     match text with
@@ -133,7 +152,7 @@ let component =
         ]
       in
       let attrs = List.filter_opt attrs |> String.concat in
-      [ Node.div ~attrs:[ Attr.class_ "section-header" ] [ Node.text "Code:" ]
+      [ Node.div ~attrs:[ Style.section_header ] [ Node.text "Code:" ]
       ; Node.pre
           [ [%string {|
   Favicon_svg.of_unicode
@@ -145,7 +164,7 @@ let component =
   in
   let spacer x = Node.div ~attrs:[ Attr.style (Css_gen.height (`Px x)) ] [] in
   Node.div
-    ~attrs:[ Attr.class_ "container" ]
+    ~attrs:[ Style.container ]
     ([ widget uri
      ; Node.h3
          [ Node.text "What would you like "
@@ -155,11 +174,11 @@ let component =
      ; spacer 10
      ; text_box
      ; spacer 20
-     ; Node.div ~attrs:[ Attr.class_ "section-header" ] [ Node.text "Preview:" ]
+     ; Node.div ~attrs:[ Style.section_header ] [ Node.text "Preview:" ]
      ; spacer 10
      ; image
      ; spacer 20
-     ; Node.div ~attrs:[ Attr.class_ "section-header" ] [ Node.text "Fine tuning:" ]
+     ; Node.div ~attrs:[ Style.section_header ] [ Node.text "Fine tuning:" ]
      ; spacer 5
      ; Node.div [ Node.text "Size: "; size_slider ]
      ; Node.div [ Node.text "Pos x: "; x_slider ]
