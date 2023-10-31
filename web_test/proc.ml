@@ -355,6 +355,27 @@ module Experimental = struct
   let perform_update vdom =
     let open Js_of_ocaml in
     let document = Dom_html.document in
+    let vdom =
+      Vdom.Node.div
+        ~attrs:
+          [ [%css
+              {|
+    display: block;
+    &:not(:last-child)::after {
+      content: "test frame";
+      font-size: 0.5em;
+      color: #7A7A7A;
+      display: block;
+      width: 100%;
+      border-bottom: 1px solid #7A7A7A;
+      margin-top: 0.5em;
+      margin-bottom: 0.5em;
+      text-align: end;
+    }
+    |}]
+          ]
+        [ vdom ]
+    in
     let html_dom = Vdom.Node.to_dom vdom in
     Dom.appendChild document##.body html_dom
   ;;

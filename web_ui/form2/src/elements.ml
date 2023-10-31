@@ -85,7 +85,6 @@ let string_underlying
     let%map extra_attrs = extra_attrs in
     fun ~state ~set_state ->
       f
-        ~merge_behavior:Legacy_dont_merge
         ?placeholder
         ~extra_attrs
         ~value:(Some state)
@@ -166,7 +165,6 @@ module Textarea = struct
       let%map extra_attrs = extra_attrs in
       fun ~state ~set_state ->
         Vdom_input_widgets.Entry.text_area
-          ~merge_behavior:Legacy_dont_merge
           ?placeholder
           ~extra_attrs
           ~value:state
@@ -210,7 +208,7 @@ module Checkbox = struct
   let make_input ~extra_attrs ~state ~set_state =
     Vdom.Node.input
       ~attrs:
-        [ Vdom.Attr.many_without_merge
+        [ Vdom.Attr.many
             ([ Vdom.Attr.style (Css_gen.margin_left (`Px 0))
              ; Vdom.Attr.type_ "checkbox"
              ; Vdom.Attr.on_click (fun evt ->
@@ -254,7 +252,8 @@ module Checkbox = struct
   let set
     (type a cmp)
     ?(style = Value.return Selectable_style.Native)
-    ?(extra_attrs = Value.return [])
+    ?(extra_container_attrs = Value.return [])
+    ?(extra_checkbox_attrs = Value.return (fun ~checked:_ -> []))
     ?to_string
     ?(layout = `Vertical)
     (module M : Bonsai.Comparator with type t = a and type comparator_witness = cmp)
@@ -274,12 +273,13 @@ module Checkbox = struct
     let view =
       let%map values = values
       and style = style
-      and extra_attrs = extra_attrs in
+      and extra_container_attrs = extra_container_attrs
+      and extra_checkbox_attrs = extra_checkbox_attrs in
       fun ~state ~set_state ->
         Vdom_input_widgets.Checklist.of_values
-          ~merge_behavior:Legacy_dont_merge
           ~layout
-          ~extra_attrs
+          ~extra_container_attrs
+          ~extra_checkbox_attrs
           (module M)
           values
           ~style
@@ -429,7 +429,6 @@ module Dropdown = struct
           | Set v -> Some v
         in
         Vdom_input_widgets.Dropdown.of_values_opt
-          ~merge_behavior:Legacy_dont_merge
           ~selected
           ~on_change:(function
             | None -> set_state Explicitly_none
@@ -439,7 +438,6 @@ module Dropdown = struct
           options
       | false, Some default ->
         Vdom_input_widgets.Dropdown.of_values
-          ~merge_behavior:Legacy_dont_merge
           ~selected:(Opt.value state ~default)
           ~on_change:(fun a -> set_state (Set a))
           ~extra_attrs
@@ -743,12 +741,7 @@ module Date_time = struct
     let view =
       let%map extra_attrs = extra_attrs in
       fun ~state ~set_state ->
-        Vdom_input_widgets.Entry.date
-          ~merge_behavior:Legacy_dont_merge
-          ~extra_attrs
-          ~value:state
-          ~on_input:set_state
-          ()
+        Vdom_input_widgets.Entry.date ~extra_attrs ~value:state ~on_input:set_state ()
     in
     Basic_stateful.make
       (Bonsai.state_opt () ~sexp_of_model:[%sexp_of: Date.t] ~equal:[%equal: Date.t])
@@ -764,12 +757,7 @@ module Date_time = struct
     let%sub view =
       let%arr extra_attrs = extra_attrs in
       fun ~state ~set_state ->
-        Vdom_input_widgets.Entry.time
-          ~merge_behavior:Legacy_dont_merge
-          ~extra_attrs
-          ~value:state
-          ~on_input:set_state
-          ()
+        Vdom_input_widgets.Entry.time ~extra_attrs ~value:state ~on_input:set_state ()
     in
     Basic_stateful.make
       (Bonsai.state_opt
@@ -833,7 +821,6 @@ module Date_time = struct
       and set_amount = set_amount
       and extra_amount_attrs = extra_amount_attrs in
       Vdom_input_widgets.Entry.number
-        ~merge_behavior:Legacy_dont_merge
         (module Vdom_input_widgets.Decimal)
         ~extra_attrs:extra_amount_attrs
         ~value:amount
@@ -884,7 +871,6 @@ module Date_time = struct
       let%map extra_attrs = extra_attrs in
       fun ~state ~set_state ->
         Vdom_input_widgets.Entry.datetime_local
-          ~merge_behavior:Legacy_dont_merge
           ~extra_attrs
           ~value:state
           ~on_input:set_state
@@ -1025,8 +1011,7 @@ module Date_time = struct
         (module Date)
         ~equal:[%equal: Date.t]
         (module Date)
-        (fun ~extra_attrs ->
-          Vdom_input_widgets.Entry.date ~merge_behavior:Legacy_dont_merge ~extra_attrs ())
+        (fun ~extra_attrs -> Vdom_input_widgets.Entry.date ~extra_attrs ())
     ;;
 
     let date ?extra_attr ?allow_equal () =
@@ -1042,8 +1027,7 @@ module Date_time = struct
         (module Time_ns.Ofday)
         ~equal:[%equal: Time_ns.Ofday.t]
         (module Time_ns.Ofday)
-        (fun ~extra_attrs ->
-          Vdom_input_widgets.Entry.time ~merge_behavior:Legacy_dont_merge ~extra_attrs ())
+        (fun ~extra_attrs -> Vdom_input_widgets.Entry.time ~extra_attrs ())
     ;;
 
     let time ?extra_attr ?allow_equal () =
@@ -1059,11 +1043,7 @@ module Date_time = struct
         (module Time_ns.Alternate_sexp)
         ~equal:[%equal: Time_ns.Alternate_sexp.t]
         (module Time_ns.Alternate_sexp)
-        (fun ~extra_attrs ->
-          Vdom_input_widgets.Entry.datetime_local
-            ~merge_behavior:Legacy_dont_merge
-            ~extra_attrs
-            ())
+        (fun ~extra_attrs -> Vdom_input_widgets.Entry.datetime_local ~extra_attrs ())
     ;;
 
     let datetime_local ?extra_attr ?allow_equal () =
@@ -1128,9 +1108,7 @@ module Multiselect = struct
         (Vdom_keyboard.Keyboard_event_handler.handle_or_ignore_event key_handler)
     in
     let view =
-      Vdom.Node.div
-        ~attrs:[ Vdom.Attr.many_without_merge (on_keydown :: extra_attrs) ]
-        [ view ]
+      Vdom.Node.div ~attrs:[ Vdom.Attr.many (on_keydown :: extra_attrs) ] [ view ]
     in
     form_expert_create ~value:(Ok selected_items) ~view ~set:set_state
   ;;
@@ -1387,7 +1365,6 @@ let number_input
           ~on_input:(function
             | Some s -> set_state (Some s)
             | None -> set_state S.default)
-          ~merge_behavior:Legacy_dont_merge
       in
       match input_type with
       | Number -> input
@@ -1508,7 +1485,8 @@ module Radio_buttons = struct
   let list
     (type t)
     ?(style = Value.return Selectable_style.Native)
-    ?(extra_attrs = Value.return [])
+    ?(extra_container_attrs = Value.return [])
+    ?(extra_button_attrs = Value.return (fun ~checked:_ -> []))
     ?init
     ?to_string
     (module E : Model with type t = t)
@@ -1532,22 +1510,19 @@ module Radio_buttons = struct
     let view =
       let%map all = all
       and style = style
-      and extra_attrs = extra_attrs
+      and extra_container_attrs = extra_container_attrs
+      and extra_button_attrs = extra_button_attrs
       and path = path in
       fun ~state ~set_state ->
         let node_fun =
           match layout with
-          | `Vertical ->
-            Vdom_input_widgets.Radio_buttons.of_values
-              ~merge_behavior:Legacy_dont_merge
-              ~style
-          | `Horizontal ->
-            Vdom_input_widgets.Radio_buttons.of_values_horizontal
-              ~merge_behavior:Legacy_dont_merge
-              ~style
+          | `Vertical -> Vdom_input_widgets.Radio_buttons.of_values
+          | `Horizontal -> Vdom_input_widgets.Radio_buttons.of_values_horizontal
         in
         node_fun
-          ~extra_attrs
+          ~extra_container_attrs
+          ~extra_button_attrs
+          ~style
           (module E)
           ~on_click:(fun value -> set_state (Some value))
           ~selected:state
@@ -1569,7 +1544,8 @@ module Radio_buttons = struct
   let enumerable
     (type t)
     ?style
-    ?extra_attrs
+    ?extra_container_attrs
+    ?extra_button_attrs
     ?init
     ?to_string
     (module E : Bonsai.Enum with type t = t)
@@ -1577,7 +1553,8 @@ module Radio_buttons = struct
     =
     list
       ?style
-      ?extra_attrs
+      ?extra_container_attrs
+      ?extra_button_attrs
       ?init
       ?to_string
       (module E)
@@ -1593,7 +1570,6 @@ module Color_picker = struct
       let%map extra_attr = extra_attr in
       fun ~state ~set_state ->
         Vdom_input_widgets.Entry.color_picker
-          ~merge_behavior:Legacy_dont_merge
           ~extra_attr
           ~value:state
           ~on_input:set_state
@@ -1620,7 +1596,6 @@ module File_select = struct
       let%map extra_attrs = extra_attrs in
       fun ~state:_ ~set_state ->
         Vdom_input_widgets.File_select.single
-          ~merge_behavior:Legacy_dont_merge
           ?accept
           ~extra_attrs
           ~on_input:(fun file ->
@@ -1641,7 +1616,6 @@ module File_select = struct
       let%map extra_attrs = extra_attrs in
       fun ~state:_ ~set_state ->
         Vdom_input_widgets.File_select.list
-          ~merge_behavior:Legacy_dont_merge
           ?accept
           ~extra_attrs
           ~on_input:(fun files ->
@@ -2022,69 +1996,6 @@ module Query_box = struct
         ~all_options
     in
     optional_to_required form
-  ;;
-end
-
-module Optional = struct
-  let dropdown
-    (type a view)
-    ?(some_label = "Some")
-    ?(none_label = "None")
-    (form : (a, view) Form.t Computation.t)
-    : (a option, Vdom.Node.t * view option) Form.t Computation.t
-    =
-    let module M = struct
-      type t =
-        | None
-        | Some of a
-      [@@deriving typed_variants]
-
-      let to_option : t -> a option = function
-        | None -> None
-        | Some a -> Some a
-      ;;
-
-      let of_option : a option -> t = function
-        | None -> None
-        | Some a -> Some a
-      ;;
-    end
-    in
-    let%map.Computation form =
-      Typed.Variant.make
-        (module struct
-          module Typed_variant = M.Typed_variant
-
-          type picker_view = Vdom.Node.t
-          type variant_view = view option
-          type resulting_view = Vdom.Node.t * view option
-
-          let form_for_variant
-            : type a. a Typed_variant.t -> (a, view option) Form.t Computation.t
-            = function
-            | None -> Bonsai.const (Form.return () |> Form.map_view ~f:(fun () -> None))
-            | Some ->
-              let%sub form = form in
-              let%arr form = form in
-              Form.map_view ~f:Option.some form
-          ;;
-
-          let form_for_picker =
-            Dropdown.enumerable
-              (module M.Typed_variant.Packed)
-              ~to_string:(function
-                | { M.Typed_variant.Packed.f = T None } -> none_label
-                | { M.Typed_variant.Packed.f = T Some } -> some_label)
-          ;;
-
-          let finalize_view picker_view inner =
-            match inner with
-            | Ok (_, inner) -> picker_view, Form.view inner
-            | Error _ -> picker_view, None
-          ;;
-        end)
-    in
-    Form.project form ~parse_exn:M.to_option ~unparse:M.of_option
   ;;
 end
 

@@ -61,6 +61,7 @@ let generic_button_box ~constants ~input_attr ~container_attr ~label ~on_change 
       ~border:
         (Css_gen.Color.to_string_css constants.View.Constants.extreme_primary_border)
       ~touch:(Css_gen.Color.to_string_css (`Hex "#1BA1F2"))
+      ~touch_highlight:(Css_gen.Color.to_string_css (`Hex "#1BA1F222"))
       ()
   in
   let input_attr =

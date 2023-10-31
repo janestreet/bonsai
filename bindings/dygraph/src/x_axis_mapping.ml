@@ -76,135 +76,6 @@ type t =
       Number_or_js_date.t -> Granularity.t -> Options.Opts.t -> string
   }
 
-module Time_mapping = struct
-  module Time_ns = struct
-    (* Make Time_ns satisfy Floatable.S and Sexpable.S, which are required in order to use
-       it with Piecewise_linear. *)
-    include Time_ns
-
-    let to_float t = Span.to_ns (to_span_since_epoch t)
-    let of_float f = of_span_since_epoch (Span.of_ns f)
-    let t_of_sexp = Alternate_sexp.t_of_sexp
-    let sexp_of_t = Alternate_sexp.sexp_of_t
-  end
-
-  (* Our mapping between real time and graph time will be a piecewise_linear invertible
-     function *)
-  include Piecewise_linear_kernel.Make_invertible (Time_ns) (Time_ns)
-
-  let create ~start_time ~end_time ~zone ~ofday_knots ~date_to_weight : t Or_error.t =
-    let start_date = Time_ns.to_date start_time ~zone in
-    let end_date = Time_ns.to_date end_time ~zone in
-    let dates = Date.dates_between ~min:start_date ~max:end_date in
-    let time date hr min =
-      Time_ns.of_date_ofday ~zone date (Time_ns.Ofday.create ~hr ~min ())
-    in
-    let start_time = time start_date 0 0 in
-    (* These knots represent a mapping from "real time" to "x position", where we are
-       representing "x positions" as a float starting at 0. *)
-    let knots =
-      List.fold_map ~init:0. dates ~f:(fun acc date ->
-        let weight = date_to_weight date in
-        let knots =
-          List.map ofday_knots ~f:(fun (ofday, pct) ->
-            Time_ns.of_date_ofday ~zone date ofday, acc +. (weight *. pct))
-        in
-        let acc = acc +. weight in
-        acc, knots)
-      |> snd
-      |> List.concat
-    in
-    (* Why do we map the float knots back to time knots?  We want to give dygraphs a
-       dataset that has times as the x-values.  Dygraphs has internal logic which does
-       different things if your data is a time series vs. if it's a float series.  We
-       want the logic to know that it's a time series, even though the particular times
-       we're giving it aren't our "real" times. *)
-    let knots_in_time =
-      List.map knots ~f:(fun (time, x_value) ->
-        let x_value_time = Time_ns.add start_time (Time_ns.Span.of_day x_value) in
-        time, x_value_time)
-    in
-    match create knots_in_time with
-    | Ok t -> Ok t
-    | Error error ->
-      Or_error.error_s
-        [%message
-          "Failed to create a piecewise linear mapping between x axis time and real time"
-            (error : Error.t)
-            (knots_in_time : (Time_ns.t * Time_ns.t) list)]
-  ;;
-end
-
-let only_display_market_hours
-  ?(mkt_start_ofday = Time_ns.Ofday.create ~hr:9 ~min:30 ())
-  ?(mkt_end_ofday = Time_ns.Ofday.create ~hr:16 ())
-  ~start_time
-  ~end_time
-  ~view_zone
-  ?(mkt_zone = view_zone)
-  ()
-  =
-  let ofday_knots =
-    (* Why do we have a [latest_allowable_mkt_end_of_day]?  It's because of the fact that
-       2 large ints can map to the same float value.
-
-       Time_ns is stored as an int.  [Time_ns.Ofday.approximate_end_of_day] is 1 ns away
-       from the start of the next day.  This is all fine.
-
-       The problem comes when we map our Time_ns.ts to float (because Piecewise_linear
-       works with floats).  We do this by converting the time to the number of nanos since
-       epoch.  These are large ints.  Then we convert that to a float.  This results in 2
-       time knots that map to the same float.  Piecewise_linear then complains with the
-       error "knot keys are not strictly increasing".
-    *)
-    let mkt_end_ofday =
-      let latest_allowable_mkt_end_of_day =
-        Time_ns.Ofday.(sub_exn approximate_end_of_day Time_ns.Span.millisecond)
-      in
-      Time_ns.Ofday.min latest_allowable_mkt_end_of_day mkt_end_ofday
-    in
-    (* These knots represent how the time within a day should be spaced out on the x-axis.
-       We give the time between 00:00 and 09:30 only 0.01 of the x-axis space, the time
-       between 09:30 and 16:00 0.98 of the space, and the time between 16:00 and 24:00
-       another 0.01. *)
-    [ Time_ns.Ofday.start_of_day, 0.; mkt_start_ofday, 0.01; mkt_end_ofday, 0.99 ]
-  in
-  let date_to_weight date =
-    (* We only give 1/100th the x-axis space to weekends as we do to weekdays *)
-    if Date.is_weekend date then 0.01 else 1.
-  in
-  let%map.Or_error x_axis_mapping =
-    Time_mapping.create ~start_time ~end_time ~zone:mkt_zone ~ofday_knots ~date_to_weight
-  in
-  let time_to_x_value time = Time_mapping.get x_axis_mapping time in
-  let x_value_to_time x_value = Time_mapping.get_inverse x_axis_mapping x_value in
-  let value_formatter ms_since_epoch _opts =
-    let x_value = Time_ns.of_span_since_epoch (Time_ns.Span.of_ms ms_since_epoch) in
-    let time = x_value_to_time x_value in
-    Time_ns.to_string_trimmed (round_time_nearest_ms time ~zone:view_zone) ~zone:view_zone
-  in
-  let date_axis_label_formatter x_value granularity opts =
-    let time = x_value_to_time x_value in
-    let ms_since_epoch = Time_ns.Span.to_ms (Time_ns.to_span_since_epoch time) in
-    let js_date = new%js Js.date_fromTimeValue ms_since_epoch in
-    dygraphs_date_axis_label_formatter () js_date granularity opts |> Js.to_string
-  in
-  let axis_label_formatter x gran opts =
-    match x with
-    | `number x ->
-      (* This would be surprising, given we're dealing with time series here, but there
-         is a "right" thing to do, so just do it. *)
-      dygraphs_number_axis_label_formatter () (Js.number_of_float x) gran opts
-      |> Js.to_string
-    | `date d ->
-      let ms_since_epoch : float = d##getTime in
-      let span = Time_ns.Span.of_ms ms_since_epoch in
-      let x_value = Time_ns.of_span_since_epoch span in
-      date_axis_label_formatter x_value gran opts
-  in
-  { time_to_x_value; x_value_to_time; value_formatter; axis_label_formatter }
-;;
-
 let default ~zone =
   { time_to_x_value = Fn.id
   ; x_value_to_time = Fn.id
@@ -212,3 +83,9 @@ let default ~zone =
   ; axis_label_formatter = default_axis_label_formatter
   }
 ;;
+
+module For_dygraph_libraries = struct
+  let round_time_nearest_ms = round_time_nearest_ms
+  let dygraphs_date_axis_label_formatter = dygraphs_date_axis_label_formatter
+  let dygraphs_number_axis_label_formatter = dygraphs_number_axis_label_formatter
+end

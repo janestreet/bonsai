@@ -12,18 +12,10 @@ module type Stringable_model = sig
   include Stringable with type t := t
 end
 
-(** For checkboxes and radio buttons, you can choose between
-    having their visual display be the default native rendering,
-    or if you want them to look like actual buttons, then the
-    input element is hidden, and [extra_attrs] will be passed to
-    each <label> per element. *)
-module Selectable_style : sig
-  type t =
-    | Native
-    | Button_like of { extra_attrs : checked:bool -> Vdom.Attr.t list }
-
-  val barebones_button_like : t
-end
+(** For checkboxes and radio buttons, you can choose between having their visual display
+    be the default native rendering, or if you want them to look like actual buttons, then
+    the input element is hidden, which gives you much better control over the styling. *)
+module Selectable_style = Bonsai_web_ui_form2.Elements.Selectable_style
 
 module Non_interactive : sig
   (** This form always contains the specified value. Setting the form has no
@@ -118,7 +110,8 @@ module Checkbox : sig
 
   val set
     :  ?style:Selectable_style.t Value.t
-    -> ?extra_attrs:Vdom.Attr.t list Value.t
+    -> ?extra_container_attrs:Vdom.Attr.t list Value.t
+    -> ?extra_checkbox_attrs:(checked:bool -> Vdom.Attr.t list) Value.t
     -> ?to_string:('a -> string)
     -> ?layout:[ `Vertical | `Horizontal ]
     -> ('a, 'cmp) Bonsai.comparator
@@ -411,7 +404,8 @@ end
 module Radio_buttons : sig
   val list
     :  ?style:Selectable_style.t Value.t
-    -> ?extra_attrs:Vdom.Attr.t list Value.t
+    -> ?extra_container_attrs:Vdom.Attr.t list Value.t
+    -> ?extra_button_attrs:(checked:bool -> Vdom.Attr.t list) Value.t
     -> ?init:'a
     -> ?to_string:('a -> string)
     -> (module Model with type t = 'a)
@@ -422,7 +416,8 @@ module Radio_buttons : sig
 
   val enumerable
     :  ?style:Selectable_style.t Value.t
-    -> ?extra_attrs:Vdom.Attr.t list Value.t
+    -> ?extra_container_attrs:Vdom.Attr.t list Value.t
+    -> ?extra_button_attrs:(checked:bool -> Vdom.Attr.t list) Value.t
     -> ?init:'a
     -> ?to_string:('a -> string)
     -> (module Bonsai.Enum with type t = 'a)

@@ -4,5 +4,4 @@
  (js_of_ocaml
   (javascript_files ../dist/dygraph.min.js ../dist/lodash_merge.js))
  (libraries base bonsai_extra bonsai_web bonsai_web_ui_widget core
-  virtual_dom.css_gen gen_js_api js_of_ocaml timezone piecewise_linear_kernel
-  ppx_css.inline_css))
+  virtual_dom.css_gen gen_js_api js_of_ocaml timezone ppx_css.inline_css))

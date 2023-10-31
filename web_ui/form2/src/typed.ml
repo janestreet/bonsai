@@ -2,6 +2,16 @@ open! Core
 open! Bonsai_web
 open! Bonsai.Let_syntax
 
+let sexp_to_pretty_string sexp_of_t t =
+  t
+  |> sexp_of_t
+  |> Sexp.to_string_mach
+  |> String.lowercase
+  |> String.map ~f:(function
+       | '(' | ')' | '-' | '_' -> ' '
+       | o -> o)
+;;
+
 module Record = struct
   module type S = sig
     module Typed_field : Typed_fields_lib.S
@@ -21,6 +31,18 @@ module Record = struct
     include S
 
     val augment_error : 'a Typed_field.t -> Error.t -> Error.t
+  end
+
+  module type S_for_table = sig
+    module Typed_field : Typed_fields_lib.S
+
+    val label_for_field
+      : [ `Inferred
+        | `Computed of 'a Typed_field.t -> string
+        | `Dynamic of (Typed_field.Packed.t -> string) Value.t
+        ]
+
+    val form_for_field : 'a Typed_field.t -> ('a, Vdom.Node.t) Form.t Computation.t
   end
 
   let make_shared
@@ -113,6 +135,100 @@ module Record = struct
         (* Don't augment the error *)
         let augment_error _ error = error
       end)
+  ;;
+
+  let make_table (type a) (module M : S_for_table with type Typed_field.derived_on = a) =
+    let module View_value_by_field =
+      Typed_field_map.Make
+        (M.Typed_field)
+        (struct
+          type 'a t = Vdom.Node.t Value.t
+        end)
+    in
+    let module View_by_field =
+      Typed_field_map.Make
+        (M.Typed_field)
+        (struct
+          type 'a t = Vdom.Node.t
+        end)
+    in
+    let module App = struct
+      include Value
+
+      type 'a s = Vdom.Node.t
+
+      let translate = Fn.id
+    end
+    in
+    let module To_views =
+      View_value_by_field.As_applicative.To_other_map (App) (View_by_field)
+    in
+    let record =
+      make_without_tagging_errors
+        (module struct
+          include M
+
+          type field_view = Vdom.Node.t
+          type resulting_view = View_by_field.t
+
+          type form_of_field_fn =
+            { f : 'a. 'a Typed_field.t -> ('a, field_view) Form.t Value.t }
+
+          let finalize_view { f } =
+            let f : type a. a Typed_field.t -> Vdom.Node.t Value.t =
+              fun field ->
+              let%map form = f field in
+              Form.view form
+            in
+            return (To_views.run (View_value_by_field.create { f }))
+          ;;
+        end)
+    in
+    let%sub many_records = Elements.Multiple.list record in
+    let%sub render_table =
+      let%sub to_string =
+        return
+          (match M.label_for_field with
+           | `Inferred ->
+             Value.return (fun t ->
+               sexp_to_pretty_string M.Typed_field.Packed.sexp_of_t t)
+           | `Computed field_to_string ->
+             Value.return (fun ({ f = T field } : M.Typed_field.Packed.t) ->
+               field_to_string field)
+           | `Dynamic field_to_string -> field_to_string)
+      in
+      let%sub cols =
+        let%arr to_string = to_string in
+        let remove_column =
+          View.Table.Col.make
+            "Remove"
+            ~get:(fun (_map, remove) -> remove)
+            ~render:(fun theme remove ->
+              View.hbox
+                ~main_axis_alignment:Center
+                [ View.button theme "X" ~on_click:remove ])
+        in
+        (M.Typed_field.Packed.all
+         |> List.map ~f:(fun ({ f = T field } as packed) ->
+              View.Table.Col.make
+                (to_string packed)
+                ~get:(fun (map, _remove) -> View_by_field.find map field)
+                ~render:(fun _theme vdom -> vdom)))
+        @ [ remove_column ]
+      in
+      let%sub theme = View.Theme.current in
+      let%arr cols = cols
+      and theme = theme in
+      fun ({ items; add_element } : (a, View_by_field.t) Elements.Multiple.t) ->
+        let items = List.map items ~f:(fun { form; remove } -> Form.view form, remove) in
+        View.vbox
+          [ View.Table.render theme cols items
+          ; View.button theme "+" ~on_click:add_element
+          ]
+    in
+    let%arr many_records = many_records
+    and render_table = render_table in
+    Form.map_view many_records ~f:render_table
   ;;
 end
 

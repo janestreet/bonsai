@@ -385,6 +385,21 @@ val actor1
   -> 'input Value.t
   -> ('model * ('action -> 'return Effect.t)) Computation.t
 
+(** Given a [state_machine]-type function, [narrow] can narrow down the provided value and
+    injection function to a subset of a larger type. For example, you could use [narrow]
+    a state containing a record to the value and injection function for a single field. *)
+val narrow
+  :  ('a * ('input_action -> unit Effect.t)) Value.t
+  -> get:('a -> 'b)
+  -> set:('a -> 'output_action -> 'input_action)
+  -> ('b * ('output_action -> unit Effect.t)) Computation.t
+
+(** Like [narrow], but [get] and [set] are implemented in terms of the given field. *)
+val narrow_via_field
+  :  ('a * ('a -> unit Effect.t)) Value.t
+  -> ('a, 'b) Field.t
+  -> ('b * ('b -> unit Effect.t)) Computation.t
+
 (** Given a first-class module that has no input (unit input type), and the default
     value of the state machine, [of_module0] will create a [Computation] that produces
     values of that module's [Result.t] type. *)

@@ -127,6 +127,26 @@ let component =
                    [ Vdom.Node.div []
                    ; Vdom.Node.div ~attrs:[ Style.Variables.set ~beep:"1" () ] []
                    ]]
+           ; create
+               ~title:"Nested css via spaces."
+               ~expect:{|This is a regression test against & being treated the same as +|}
+               [%demo
+                 Vdom.Node.div
+                   ~attrs:
+                     [ {%css|& * {
+                         background-color: tomato;
+                         border: 1px solid black;
+                         width: 2rem;
+                         min-height: 2rem;
+                       }|}
+                     ]
+                   [ Vdom.Node.div []
+                   ; Vdom.Node.div
+                       [ Vdom.Node.div []
+                       ; Vdom.Node.div
+                           [ Vdom.Node.div []; Vdom.Node.div []; Vdom.Node.div [] ]
+                       ]
+                   ]]
            ] )
        ])
 ;;

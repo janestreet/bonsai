@@ -2873,19 +2873,19 @@ let%expect_test "clicking a set checklist" =
           margin-left: 0px;
         }>
       <li style={ display: block; }>
-        <label id="bonsai_path_replaced_in_test">
+        <label>
           <input type="checkbox" #checked="false" onclick> </input>
           first
         </label>
       </li>
       <li style={ display: block; }>
-        <label id="bonsai_path_replaced_in_test">
+        <label>
           <input type="checkbox" #checked="false" onclick> </input>
           second
         </label>
       </li>
       <li style={ display: block; }>
-        <label id="bonsai_path_replaced_in_test">
+        <label>
           <input type="checkbox" #checked="false" onclick> </input>
           third
         </label>
@@ -2908,21 +2908,21 @@ let%expect_test "clicking a set checklist" =
             margin-left: 0px;
           }>
         <li style={ display: block; }>
-          <label id="bonsai_path_replaced_in_test">
+          <label>
     -|      <input type="checkbox" #checked="false" onclick> </input>
     +|      <input type="checkbox" #checked="true" onclick> </input>
             first
           </label>
         </li>
         <li style={ display: block; }>
-          <label id="bonsai_path_replaced_in_test">
+          <label>
     -|      <input type="checkbox" #checked="false" onclick> </input>
     +|      <input type="checkbox" #checked="true" onclick> </input>
             second
           </label>
         </li>
         <li style={ display: block; }>
-          <label id="bonsai_path_replaced_in_test">
+          <label>
             <input type="checkbox" #checked="false" onclick> </input>
             third
           </label>
@@ -2943,20 +2943,20 @@ let%expect_test "clicking a set checklist" =
             margin-left: 0px;
           }>
         <li style={ display: block; }>
-          <label id="bonsai_path_replaced_in_test">
+          <label>
     -|      <input type="checkbox" #checked="true" onclick> </input>
     +|      <input type="checkbox" #checked="false" onclick> </input>
             first
           </label>
         </li>
         <li style={ display: block; }>
-          <label id="bonsai_path_replaced_in_test">
+          <label>
             <input type="checkbox" #checked="true" onclick> </input>
             second
           </label>
         </li>
         <li style={ display: block; }>
-          <label id="bonsai_path_replaced_in_test">
+          <label>
             <input type="checkbox" #checked="false" onclick> </input>
             third
           </label>
@@ -2985,19 +2985,19 @@ let%expect_test "setting into a set checklist" =
           margin-left: 0px;
         }>
       <li style={ display: block; }>
-        <label id="bonsai_path_replaced_in_test">
+        <label>
           <input type="checkbox" #checked="false" onclick> </input>
           first
         </label>
       </li>
       <li style={ display: block; }>
-        <label id="bonsai_path_replaced_in_test">
+        <label>
           <input type="checkbox" #checked="false" onclick> </input>
           second
         </label>
       </li>
       <li style={ display: block; }>
-        <label id="bonsai_path_replaced_in_test">
+        <label>
           <input type="checkbox" #checked="false" onclick> </input>
           third
         </label>
@@ -3018,21 +3018,21 @@ let%expect_test "setting into a set checklist" =
             margin-left: 0px;
           }>
         <li style={ display: block; }>
-          <label id="bonsai_path_replaced_in_test">
+          <label>
     -|      <input type="checkbox" #checked="false" onclick> </input>
     +|      <input type="checkbox" #checked="true" onclick> </input>
             first
           </label>
         </li>
         <li style={ display: block; }>
-          <label id="bonsai_path_replaced_in_test">
+          <label>
     -|      <input type="checkbox" #checked="false" onclick> </input>
     +|      <input type="checkbox" #checked="true" onclick> </input>
             second
           </label>
         </li>
         <li style={ display: block; }>
-          <label id="bonsai_path_replaced_in_test">
+          <label>
             <input type="checkbox" #checked="false" onclick> </input>
             third
           </label>
@@ -3053,20 +3053,20 @@ let%expect_test "setting into a set checklist" =
             margin-left: 0px;
           }>
         <li style={ display: block; }>
-          <label id="bonsai_path_replaced_in_test">
+          <label>
     -|      <input type="checkbox" #checked="true" onclick> </input>
     +|      <input type="checkbox" #checked="false" onclick> </input>
             first
           </label>
         </li>
         <li style={ display: block; }>
-          <label id="bonsai_path_replaced_in_test">
+          <label>
             <input type="checkbox" #checked="true" onclick> </input>
             second
           </label>
         </li>
         <li style={ display: block; }>
-          <label id="bonsai_path_replaced_in_test">
+          <label>
             <input type="checkbox" #checked="false" onclick> </input>
             third
           </label>
@@ -6040,13 +6040,13 @@ let%expect_test "Checkbox.set layout options" =
           margin-left: 0px;
         }>
       <li style={ display: block; }>
-        <label id="bonsai_path_replaced_in_test">
+        <label>
           <input type="checkbox" #checked="false" onclick> </input>
           first
         </label>
       </li>
       <li style={ display: block; }>
-        <label id="bonsai_path_replaced_in_test">
+        <label>
           <input type="checkbox" #checked="false" onclick> </input>
           second
         </label>
@@ -6068,14 +6068,14 @@ let%expect_test "Checkbox.set layout options" =
           }>
     -|  <li style={ display: block; }>
     +|  <li style={ display: inline-block; }>
-          <label id="bonsai_path_replaced_in_test">
+          <label>
             <input type="checkbox" #checked="false" onclick> </input>
             first
           </label>
         </li>
     -|  <li style={ display: block; }>
     +|  <li style={ display: inline-block; }>
-          <label id="bonsai_path_replaced_in_test">
+          <label>
             <input type="checkbox" #checked="false" onclick> </input>
             second
           </label>
@@ -6928,4 +6928,135 @@ let%expect_test "nested list form actions" =
     skipped stabilization
     skipped stabilization
     skipped stabilization |}]
+;;
+
+(* The main difference between the Form2 version and this one is the addition of the error
+   hints. So, we only test the error messages in this library *)
+let%expect_test "Form.Typed.Record.make_table adds appropriate error messages" =
+  let module T = struct
+    type t =
+      { a : int
+      ; b : string
+      }
+    [@@deriving typed_fields, sexp]
+  end
+  in
+  let component =
+    Form.Typed.Record.make_table
+      (module struct
+        module Typed_field = T.Typed_field
+
+        let label_for_field : type a. a Typed_field.t -> string = function
+          | A -> "Alpha"
+          | B -> "Bravo"
+        ;;
+
+        let label_for_field = `Computed label_for_field
+
+        let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t = function
+          | A -> Form.Elements.Textbox.int ()
+          | B -> Form.Elements.Textbox.string ()
+        ;;
+      end)
+  in
+  let handle = Handle.create (form_result_spec [%sexp_of: T.t list]) component in
+  (* Click the + button to add a field that fails to validate *)
+  Handle.click_on handle ~get_vdom ~selector:"button";
+  Handle.show handle;
+  (* Note the existence of the error checkbox below *)
+  [%expect
+    {|
+    (Error ("in field Alpha" "Expected an integer"))
+
+    ==============
+    <div style={ display: flex; flex-direction: column; }>
+      <table class="table_hash_replaced_in_test"
+             custom-css-vars=((--row-odd-fg_hash_replaced_in_test black)(--row-odd-bg_hash_replaced_in_test white)(--row-even-fg_hash_replaced_in_test black)(--row-even-bg_hash_replaced_in_test #e6e6e6)(--header-header-border_hash_replaced_in_test grey)(--header-fg_hash_replaced_in_test white)(--header-body-border_hash_replaced_in_test grey)(--header-bg_hash_replaced_in_test black)(--fg_hash_replaced_in_test black)(--body-body-border_hash_replaced_in_test grey)(--bg_hash_replaced_in_test white))>
+        <thead class="header_hash_replaced_in_test">
+          <tr class="header_row_hash_replaced_in_test">
+            <th colspan="1" class="header_cell_hash_replaced_in_test"> Alpha </th>
+            <th colspan="1" class="header_cell_hash_replaced_in_test"> Bravo </th>
+            <th colspan="1" class="header_cell_hash_replaced_in_test"> Remove </th>
+          </tr>
+        </thead>
+        <tbody class="body_hash_replaced_in_test">
+          <tr class="body_row_hash_replaced_in_test">
+            <td class="body_cell_hash_replaced_in_test">
+              <table>
+                <tbody>
+                  <tr @key=bonsai_path_replaced_in_test>
+                    <td style={
+                          padding-left: 0em;
+                          padding-right: 1em;
+                          text-align: left;
+                          font-weight: bold;
+                          user-select: none;
+                        }>  </td>
+                    <td>
+                      <input type="text"
+                             placeholder=""
+                             spellcheck="false"
+                             id="bonsai_path_replaced_in_test"
+                             value:normalized=""
+                             oninput> </input>
+                    </td>
+                    <td>
+                      <div style={ display: flex; flex-direction: row; flex-wrap: nowrap; }>
+                        <div class="container_hash_replaced_in_test">
+                          <label class="label_hash_replaced_in_test" style={ color: #f54646; }>
+                            <input type="checkbox"
+                                   tabindex="-1"
+                                   class="checkbox_hash_replaced_in_test"> </input>
+                            <span class="span_hash_replaced_in_test"> ⚠ </span>
+                            <div class="right_hash_replaced_in_test text_hash_replaced_in_test"
+                                 style={
+                                   border: 1px solid red;
+                                   color: black;
+                                   background-color: pink;
+                                 }>
+                              <div>
+                                <div> Expected an integer </div>
+                              </div>
+                            </div>
+                          </label>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </td>
+            <td class="body_cell_hash_replaced_in_test">
+              <table>
+                <tbody>
+                  <tr @key=bonsai_path_replaced_in_test>
+                    <td style={
+                          padding-left: 0em;
+                          padding-right: 1em;
+                          text-align: left;
+                          font-weight: bold;
+                          user-select: none;
+                        }>  </td>
+                    <td>
+                      <input type="text"
+                             placeholder=""
+                             spellcheck="false"
+                             id="bonsai_path_replaced_in_test"
+                             value:normalized=""
+                             oninput> </input>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </td>
+            <td class="body_cell_hash_replaced_in_test">
+              <div style={ display: flex; justify-content: center; }>
+                <button onclick> X </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <button onclick> + </button>
+    </div> |}]
 ;;

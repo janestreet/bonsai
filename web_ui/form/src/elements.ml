@@ -173,10 +173,26 @@ module Checkbox = struct
       extra_attrs
   ;;
 
-  let set ?style ?extra_attrs ?to_string ?layout comparator values =
+  let set
+    ?style
+    ?extra_container_attrs
+    ?extra_checkbox_attrs
+    ?to_string
+    ?layout
+    comparator
+    values
+    =
     Conversion.with_extra_attrs
-      (fun ~extra_attrs -> set ?style ~extra_attrs ?to_string ?layout comparator values)
-      extra_attrs
+      (fun ~extra_attrs ->
+        set
+          ?style
+          ~extra_container_attrs:extra_attrs
+          ?extra_checkbox_attrs
+          ?to_string
+          ?layout
+          comparator
+          values)
+      extra_container_attrs
   ;;
 
   module Private = struct
@@ -589,16 +605,52 @@ end
 module Radio_buttons = struct
   open Radio_buttons
 
-  let list ?style ?extra_attrs ?init ?to_string m ~equal ~layout all =
+  let list
+    ?style
+    ?extra_container_attrs
+    ?extra_button_attrs
+    ?init
+    ?to_string
+    m
+    ~equal
+    ~layout
+    all
+    =
     Conversion.with_extra_attrs
-      (fun ~extra_attrs -> list ?style ~extra_attrs ?init ?to_string m ~equal ~layout all)
-      extra_attrs
+      (fun ~extra_attrs ->
+        list
+          ?style
+          ~extra_container_attrs:extra_attrs
+          ?extra_button_attrs
+          ?init
+          ?to_string
+          m
+          ~equal
+          ~layout
+          all)
+      extra_container_attrs
   ;;
 
-  let enumerable ?style ?extra_attrs ?init ?to_string m ~layout =
+  let enumerable
+    ?style
+    ?extra_container_attrs
+    ?extra_button_attrs
+    ?init
+    ?to_string
+    m
+    ~layout
+    =
     Conversion.with_extra_attrs
-      (fun ~extra_attrs -> enumerable ?style ~extra_attrs ?init ?to_string m ~layout)
-      extra_attrs
+      (fun ~extra_attrs ->
+        enumerable
+          ?style
+          ~extra_container_attrs:extra_attrs
+          ?extra_button_attrs
+          ?init
+          ?to_string
+          m
+          ~layout)
+      extra_container_attrs
   ;;
 end
 

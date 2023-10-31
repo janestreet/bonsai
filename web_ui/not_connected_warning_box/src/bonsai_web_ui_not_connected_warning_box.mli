@@ -18,3 +18,9 @@ val component
   -> create_message:(Time_ns.Span.t -> string)
   -> bool Bonsai.Value.t
   -> Vdom.Node.t Bonsai.Computation.t
+
+(** like [component], but allows for creating a more flexible vdom structure. *)
+val custom
+  :  create_message:(Time_ns.Span.t -> Vdom.Node.t) Bonsai.Value.t
+  -> bool Bonsai.Value.t
+  -> Vdom.Node.t Bonsai.Computation.t

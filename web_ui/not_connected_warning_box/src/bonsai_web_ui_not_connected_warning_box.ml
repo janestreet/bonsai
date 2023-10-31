@@ -24,7 +24,7 @@ let message_for_async_durable time_span =
     (Time_ns.Span.to_string_hum ~decimals:0 time_span)
 ;;
 
-let component ?(styles = Vdom.Attr.empty) ~create_message is_connected =
+let custom ~create_message is_connected =
   if%sub is_connected
   then Bonsai.const (Vdom.Node.div ~attrs:[ Style.connected ] [])
   else (
@@ -41,13 +41,22 @@ let component ?(styles = Vdom.Attr.empty) ~create_message is_connected =
         ()
     in
     let%arr now = now
-    and activation_time = activation_time in
+    and activation_time = activation_time
+    and create_message = create_message in
     let duration_of_visibility =
       Time_ns.diff now (Option.value ~default:now activation_time)
     in
-    Vdom.Node.div
-      ~attrs:[ styles ]
-      [ Vdom.Node.div ~attrs:[ Style.warning ] [ Vdom.Node.text "Warning!" ]
-      ; Vdom.Node.div [ Vdom.Node.text (create_message duration_of_visibility) ]
-      ])
+    create_message duration_of_visibility)
+;;
+
+let component ?(styles = Vdom.Attr.empty) ~create_message is_connected =
+  custom
+    is_connected
+    ~create_message:
+      (Bonsai.Value.return (fun duration_of_visibility ->
+         Vdom.Node.div
+           ~attrs:[ styles ]
+           [ Vdom.Node.div ~attrs:[ Style.warning ] [ Vdom.Node.text "Warning!" ]
+           ; Vdom.Node.div [ Vdom.Node.text (create_message duration_of_visibility) ]
+           ]))
 ;;

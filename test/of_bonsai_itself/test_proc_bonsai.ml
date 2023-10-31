@@ -693,6 +693,65 @@ let%expect_test "chain + both" =
   [%expect {| 9 |}]
 ;;
 
+let%test_module "narrow" =
+  (module struct
+    type t =
+      { a : int
+      ; b : string
+      }
+    [@@deriving fields ~fields, sexp]
+
+    let%expect_test "narrow" =
+      let test_projection narrow =
+        let component =
+          let%sub state = Bonsai.state { a = 1; b = "hello" } in
+          let%sub narrowed = narrow state in
+          let%arr state = state
+          and narrowed = narrowed in
+          state, narrowed
+        in
+        let handle =
+          Handle.create
+            (module struct
+              type incoming =
+                [ `Set_narrow of int
+                | `Set of t
+                ]
+
+              type nonrec t = (t * (t -> unit Effect.t)) * (int * (int -> unit Effect.t))
+
+              let view ((t, _), (int, _)) =
+                Sexp.to_string_hum [%message "" (t : t) (int : int)]
+              ;;
+
+              let incoming ((_, set), (_, set_narrow)) = function
+                | `Set_narrow a -> set_narrow a
+                | `Set t -> set t
+              ;;
+            end)
+            component
+        in
+        Handle.show handle;
+        [%expect {| ((t ((a 1) (b hello))) (int 1)) |}];
+        Handle.do_actions handle [ `Set_narrow 3 ];
+        Handle.show handle;
+        [%expect {| ((t ((a 3) (b hello))) (int 3)) |}];
+        Handle.do_actions handle [ `Set { a = 5; b = "goodbye" } ];
+        Handle.show handle;
+        [%expect {| ((t ((a 5) (b goodbye))) (int 5)) |}];
+        (* When setting the narrow value, we still get the updated wide value. *)
+        Handle.do_actions handle [ `Set { a = 1; b = "hi, again" }; `Set_narrow 4 ];
+        Handle.show handle;
+        [%expect {| ((t ((a 4) (b "hi, again"))) (int 4)) |}]
+      in
+      test_projection
+        (Bonsai.narrow ~get:(fun { a; b = _ } -> a) ~set:(fun t a -> { t with a }));
+      test_projection (fun state_and_set ->
+        Bonsai.narrow_via_field state_and_set Fields.a)
+    ;;
+  end)
+;;
+
 let%expect_test "wrap" =
   let component =
     Bonsai.wrap

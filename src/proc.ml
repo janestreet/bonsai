@@ -353,6 +353,30 @@ let yoink a =
   result ()
 ;;
 
+let narrow state_and_inject ~get ~set =
+  let%sub state, inject = return state_and_inject in
+  let%sub inject =
+    let%sub get_state = yoink state in
+    let%arr get_state = get_state
+    and inject = inject in
+    fun a ->
+      match%bind.Effect get_state with
+      | Inactive -> Effect.Ignore
+      | Active state -> inject (set state a)
+  in
+  let%sub state =
+    let%arr state = state in
+    get state
+  in
+  let%arr state = state
+  and inject = inject in
+  state, inject
+;;
+
+let narrow_via_field state_and_inject field =
+  narrow state_and_inject ~get:(Field.get field) ~set:(Field.fset field)
+;;
+
 module Edge = struct
   include Edge
 

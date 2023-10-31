@@ -31,7 +31,7 @@ module Dyn = struct
     | Integer of int
     | Floating of float
     | Text of string
-    | Person of Person.t
+    | People of Person.t list
   [@@deriving sexp_of, typed_variants]
 
   let to_string : type a. a Typed_variant.t -> string = function
@@ -39,7 +39,7 @@ module Dyn = struct
     | Integer -> "Int"
     | Floating -> "Float"
     | Text -> "String"
-    | Person -> "Person"
+    | People -> "People"
   ;;
 
   let label_for_variant = `Computed to_string
@@ -50,7 +50,7 @@ module Dyn = struct
     | Integer -> E.Textbox.int ()
     | Floating -> E.Textbox.float ()
     | Text -> E.Textbox.string ()
-    | Person -> person_form
+    | People -> Form.Typed.Record.make_table (module Person)
   ;;
 end
 

@@ -76,7 +76,7 @@ let app =
         ; axis_label_formatter
         }
       =
-      Dygraph.X_axis_mapping.only_display_market_hours
+      Dygraph_jane.X_axis_mapping.only_display_market_hours
         ()
         ~start_time
         ~end_time

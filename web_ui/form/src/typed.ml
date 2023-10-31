@@ -68,6 +68,40 @@ module Record = struct
         ;;
       end)
   ;;
+
+  let make_table (type a) (module M : S with type Typed_field.derived_on = a) =
+    let%sub table =
+      Record.make_table
+        (module struct
+          include M
+
+          let get_label =
+            match M.label_for_field with
+            | `Inferred ->
+              Value.return (fun { M.Typed_field.Packed.f = T t } -> M.Typed_field.name t)
+            | `Computed f -> Value.return (fun { M.Typed_field.Packed.f = T t } -> f t)
+            | `Dynamic f -> f
+          ;;
+
+          let form_for_field field =
+            let%sub form =
+              let%sub form = M.form_for_field field in
+              let%sub form = Form.Dynamic.error_hint form in
+              let%arr form = form
+              and get_label = get_label in
+              let label = get_label { M.Typed_field.Packed.f = T field } in
+              attach_fieldname_to_error label form
+            in
+            let%arr form = form in
+            Form2.map_view form ~f:Form.View.to_vdom
+          ;;
+        end)
+    in
+    let%sub path = Bonsai.path_id in
+    let%arr table = table
+    and path = path in
+    Form2.map_view table ~f:(Form.View.of_vdom ~unique_key:path)
+  ;;
 end
 
 module Variant = struct
@@ -160,15 +194,12 @@ module Variant = struct
         and to_string = to_string in
         let node_fun =
           match layout with
-          | `Vertical ->
-            Vdom_input_widgets.Radio_buttons.of_values ~merge_behavior:Legacy_dont_merge
-          | `Horizontal ->
-            Vdom_input_widgets.Radio_buttons.of_values_horizontal
-              ~merge_behavior:Legacy_dont_merge
+          | `Vertical -> Vdom_input_widgets.Radio_buttons.of_values
+          | `Horizontal -> Vdom_input_widgets.Radio_buttons.of_values_horizontal
         in
         let view =
           node_fun
-            ~extra_attrs:(Vdom.Attr.id path :: extra_attrs)
+            ~extra_container_attrs:(Vdom.Attr.id path :: extra_attrs)
             (module struct
               include M
 

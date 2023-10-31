@@ -55,7 +55,7 @@
   }
 
   .button-box-container:has(input:checked) {
-    background: #152632
+    background: var(--touch_highlight)
   }
 
   .button-box-container > input:checked {

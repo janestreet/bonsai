@@ -40,6 +40,27 @@ module Record : sig
            and type resulting_view = 'view
            and type field_view = _)
     -> ('a, 'view) Form.t Computation.t
+
+  module type S_for_table = sig
+    module Typed_field : Typed_fields_lib.S
+
+    (** The label to use for each column of the table. *)
+    val label_for_field
+      : [ `Inferred
+        | `Computed of 'a Typed_field.t -> string
+        | `Dynamic of (Typed_field.Packed.t -> string) Value.t
+        ]
+
+    (** For each of the fields in your record, you need to provide a form
+        component which produces values of that type. *)
+    val form_for_field : 'a Typed_field.t -> ('a, Vdom.Node.t) Form.t Computation.t
+  end
+
+  (** Creates a table whose columns are the fields of the record, and whose rows
+      correspond to list items. *)
+  val make_table
+    :  (module S_for_table with type Typed_field.derived_on = 'a)
+    -> ('a list, Vdom.Node.t) Form.t Computation.t
 end
 
 module Variant : sig

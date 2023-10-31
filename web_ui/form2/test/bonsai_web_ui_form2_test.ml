@@ -4100,3 +4100,211 @@ let%expect_test "adding to/setting/removing from a Form.Elements.Multiple.list" 
     --------------
     <input type="text" placeholder="" spellcheck="false" value:normalized=baz oninput> </input> |}]
 ;;
+
+let%test_module "Form.Typed.Record.make_table" =
+  (module struct
+    module T = struct
+      type t =
+        { a : int
+        ; b : string
+        }
+      [@@deriving typed_fields, sexp]
+    end
+
+    let component =
+      Form.Typed.Record.make_table
+        (module struct
+          module Typed_field = T.Typed_field
+
+          let label_for_field : type a. a Typed_field.t -> string = function
+            | A -> "Alpha"
+            | B -> "Bravo"
+          ;;
+
+          let label_for_field = `Computed label_for_field
+
+          let form_for_field
+            : type a. a Typed_field.t -> (a, Vdom.Node.t) Form.t Computation.t
+            = function
+            | A -> Form.Elements.Textbox.int ()
+            | B -> Form.Elements.Textbox.string ()
+          ;;
+        end)
+    ;;
+
+    let%expect_test "interacting with the table" =
+      let handle =
+        Handle.create
+          (form_result_spec
+             ~filter_printed_attributes:(fun ~key:_ ~data:_ -> false)
+             [%sexp_of: T.t list])
+          component
+      in
+      Handle.show handle;
+      [%expect
+        {|
+        (Ok ())
+
+        ==============
+        <div>
+          <table>
+            <thead>
+              <tr>
+                <th> Alpha </th>
+                <th> Bravo </th>
+                <th> Remove </th>
+              </tr>
+            </thead>
+            <tbody> </tbody>
+          </table>
+          <button> + </button>
+        </div> |}];
+      Handle.click_on handle ~selector:"button";
+      Handle.show handle;
+      [%expect
+        {|
+        (Error "Expected an integer")
+
+        ==============
+        <div>
+          <table>
+            <thead>
+              <tr>
+                <th> Alpha </th>
+                <th> Bravo </th>
+                <th> Remove </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <input> </input>
+                </td>
+                <td>
+                  <input> </input>
+                </td>
+                <td>
+                  <div>
+                    <button> X </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <button> + </button>
+        </div> |}];
+      Handle.input_text handle ~selector:"td:nth-child(1) > input" ~text:"123";
+      Handle.input_text handle ~selector:"td:nth-child(2) > input" ~text:"abc";
+      Handle.show handle;
+      [%expect
+        {|
+        (Ok ((
+          (a 123)
+          (b abc))))
+
+        ==============
+        <div>
+          <table>
+            <thead>
+              <tr>
+                <th> Alpha </th>
+                <th> Bravo </th>
+                <th> Remove </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <input> </input>
+                </td>
+                <td>
+                  <input> </input>
+                </td>
+                <td>
+                  <div>
+                    <button> X </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <button> + </button>
+        </div> |}]
+    ;;
+
+    let%expect_test "setting into the table" =
+      let handle =
+        Handle.create
+          (form_result_spec
+             ~filter_printed_attributes:(fun ~key:_ ~data:_ -> false)
+             [%sexp_of: T.t list])
+          component
+      in
+      Handle.do_actions
+        handle
+        [ [ { T.a = 1; b = "a" }; { a = 2; b = "b" }; { a = 3; b = "c" } ] ];
+      Handle.show handle;
+      [%expect
+        {|
+        (Ok (
+          ((a 1) (b a))
+          ((a 2) (b b))
+          ((a 3) (b c))))
+
+        ==============
+        <div>
+          <table>
+            <thead>
+              <tr>
+                <th> Alpha </th>
+                <th> Bravo </th>
+                <th> Remove </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <input> </input>
+                </td>
+                <td>
+                  <input> </input>
+                </td>
+                <td>
+                  <div>
+                    <button> X </button>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <input> </input>
+                </td>
+                <td>
+                  <input> </input>
+                </td>
+                <td>
+                  <div>
+                    <button> X </button>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <input> </input>
+                </td>
+                <td>
+                  <input> </input>
+                </td>
+                <td>
+                  <div>
+                    <button> X </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <button> + </button>
+        </div> |}]
+    ;;
+  end)
+;;

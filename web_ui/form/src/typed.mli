@@ -26,6 +26,12 @@ module Record : sig
   end
 
   val make : (module S with type Typed_field.derived_on = 'a) -> 'a Form.t Computation.t
+
+  (** Creates a table whose columns are the fields of the record, and whose rows
+      correspond to list items. *)
+  val make_table
+    :  (module S with type Typed_field.derived_on = 'a)
+    -> 'a list Form.t Computation.t
 end
 
 module Variant : sig

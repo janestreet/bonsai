@@ -25,6 +25,23 @@ stylesheet
 
   |}]
 
+let barebones_button_like ~checked =
+  if checked
+  then
+    [ Vdom.Attr.style
+        Css_gen.(
+          border ~width:(`Px 1) ~color:(`Hex "#D0D0D0") ~style:`Solid ()
+          @> background_color (`Hex "#404040")
+          @> color (`Hex "#F7F7F7"))
+    ]
+  else
+    [ Vdom.Attr.style
+        Css_gen.(
+          border ~width:(`Px 1) ~color:(`Hex "#D0D0D0") ~style:`Solid ()
+          @> background_color (`Hex "#EFEFEF"))
+    ]
+;;
+
 module A_B_or_C = struct
   module T = struct
     type t =
@@ -133,6 +150,29 @@ module Nested_record = struct
   let form = Form.Typed.Record.make (module Outer)
 end
 
+module Record_for_list = struct
+  module T = struct
+    type t =
+      { my_int : int
+      ; my_string : string
+      ; my_bool : bool
+      }
+    [@@deriving typed_fields, sexp]
+
+    let label_for_field = `Inferred
+
+    let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t = function
+      | My_int -> E.Textbox.int ()
+      | My_string -> E.Textbox.string ()
+      | My_bool -> E.Checkbox.bool ~default:false ()
+    ;;
+  end
+
+  include T
+
+  let form = Form.Typed.Record.make_table (module T)
+end
+
 module Int_blang = struct
   module T = struct
     type t = int Blang.t [@@deriving sexp, sexp_grammar]
@@ -181,6 +221,7 @@ type t =
   ; rank : string list
   ; query_box : string
   ; nested_record : Nested_record.Outer.t
+  ; record_list_as_table : Record_for_list.t list
   ; int_blang : Int_blang.t
   ; password : string
   }
@@ -225,7 +266,8 @@ let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t = functio
     E.Radio_buttons.list
       (module String)
       ~equal:[%equal: String.t]
-      ~style:(Value.return E.Selectable_style.barebones_button_like)
+      ~style:(Value.return E.Selectable_style.Button_like)
+      ~extra_button_attrs:(Value.return barebones_button_like)
       ~layout:`Horizontal
       (Value.return [ "first"; "second"; "third" ])
   | Time_span -> E.Date_time.time_span ()
@@ -244,7 +286,8 @@ let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t = functio
   | Checklist_buttons ->
     E.Checkbox.set
       (module String)
-      ~style:(Value.return E.Selectable_style.barebones_button_like)
+      ~style:(Value.return E.Selectable_style.Button_like)
+      ~extra_checkbox_attrs:(Value.return barebones_button_like)
       (Value.return [ "abc"; "def" ])
   | Bool_from_dropdown -> E.Dropdown.enumerable (module Bool) ~to_string:Bool.to_string
   | Typeahead ->
@@ -315,6 +358,7 @@ let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t = functio
           if String.is_prefix ~prefix:query data then Some (Vdom.Node.text data) else None))
       ()
   | Nested_record -> Nested_record.form
+  | Record_list_as_table -> Record_for_list.form
   | Color_picker -> E.Color_picker.hex ()
   | Int_blang -> Int_blang.form
   | Password -> E.Password.string ()

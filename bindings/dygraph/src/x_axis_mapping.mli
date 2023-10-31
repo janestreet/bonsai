@@ -39,21 +39,22 @@ type t =
       Number_or_js_date.t -> Granularity.t -> Options.Opts.t -> string
   }
 
-(** [only_market_hours] will squash the overnight and weekend time periods into very small
-    values on the graph's x-axis.
-
-    The mkt_start_ofday and mkt_end_ofday are defined in the mkt_zone - in the view zone,
-    the market hours might span midnight in the view zone, but we define that it won't
-    cross midnight in the mkt_zone.
-*)
-val only_display_market_hours
-  :  ?mkt_start_ofday:Time_ns.Ofday.t
-  -> ?mkt_end_ofday:Time_ns.Ofday.t
-  -> start_time:Time_ns.t
-  -> end_time:Time_ns.t
-  -> view_zone:Time_float.Zone.t
-  -> ?mkt_zone:Time_float.Zone.t
-  -> unit
-  -> t Or_error.t
-
 val default : zone:Time_float.Zone.t -> t
+
+module For_dygraph_libraries : sig
+  val round_time_nearest_ms : Time_ns.t -> zone:Core_private.Time_zone.t -> Time_ns.t
+
+  val dygraphs_date_axis_label_formatter
+    :  unit
+    -> Js.date Js.t
+    -> Granularity.t
+    -> Options.Opts.t
+    -> Js.js_string Js.t
+
+  val dygraphs_number_axis_label_formatter
+    :  unit
+    -> Js.number Js.t
+    -> Granularity.t
+    -> Options.Opts.t
+    -> Js.js_string Js.t
+end
