@@ -5,7 +5,7 @@ open Incr_map_collate
 open Bonsai_web_ui_partial_render_table_protocol
 module Bbox = Bonsai_web_ui_element_size_hooks.Visibility_tracker.Bbox
 module Order = Order
-module Sortable_header = Sortable_header
+module Sortable = Sortable
 module Focus_by_row = Focus.By_row
 module Scroll = Bonsai_web_ui_scroll_utilities
 
@@ -66,7 +66,15 @@ module Expert = struct
     in
     let focus_kind = focus in
     let%sub input_map = Bonsai.pure Collated.to_opaque_map collated in
-    let%sub path = Bonsai.path_id in
+    let%sub private_body_classname =
+      let%sub path = Bonsai.path_id in
+      let%arr path = path in
+      "partial-render-table-body-" ^ path
+    in
+    let%sub table_body_selector =
+      let%arr private_body_classname = private_body_classname in
+      "." ^ private_body_classname
+    in
     let%sub leaves = Bonsai.pure Header_tree.leaves headers in
     let%sub header_client_rect, set_header_client_rect = Bonsai.state_opt () in
     let%sub header_client_rect =
@@ -168,7 +176,7 @@ module Expert = struct
       let%arr header_height_px = header_height_px
       and range_without_preload = range_without_preload
       and midpoint_of_container = midpoint_of_container
-      and path = path
+      and table_body_selector = table_body_selector
       and (`Px row_height_px) = row_height in
       fun index ->
         let range_start, range_end =
@@ -201,7 +209,6 @@ module Expert = struct
           then to_bottom
           else None
         in
-        let selector = ".partial-render-table-" ^ path ^ " > div" in
         match y_px with
         | Some y_px ->
           let%bind.Effect () =
@@ -211,7 +218,7 @@ module Expert = struct
           Scroll.to_position_inside_element
             ~x_px:midpoint_of_container
             ~y_px
-            ~selector
+            ~selector:table_body_selector
             `Minimal
           |> Effect.ignore_m
         | None ->
@@ -221,7 +228,7 @@ module Expert = struct
       let%arr range_without_preload = range_without_preload
       and header_height_px = header_height_px
       and midpoint_of_container = midpoint_of_container
-      and path = path
+      and table_body_selector = table_body_selector
       and table_body_visible_rect = table_body_visible_rect in
       fun (`Px old_row_height_px) (`Px new_row_height_px) ->
         match range_without_preload (`Px old_row_height_px), table_body_visible_rect with
@@ -247,7 +254,6 @@ module Expert = struct
              visible row remains in the same position in the viewport. *)
           let old_y_px = old_row_height_px *. Float.of_int range_start in
           let new_y_px = new_row_height_px *. Float.of_int range_start in
-          let selector = ".partial-render-table-" ^ path ^ " > div" in
           let y_px =
             match Float.(new_y_px < old_y_px) with
             | true -> new_y_px -. header_height_px
@@ -264,7 +270,7 @@ module Expert = struct
           Scroll.to_position_inside_element
             ~x_px:midpoint_of_container
             ~y_px
-            ~selector
+            ~selector:table_body_selector
             `Minimal
           |> Effect.ignore_m
     in
@@ -316,7 +322,7 @@ module Expert = struct
         ~scroll_to_index
     in
     let on_row_click = Focus.get_on_row_click focus_kind focus in
-    let%sub rows, body_for_testing =
+    let%sub body, body_for_testing =
       Table_body.component
         ~comparator:key
         ~row_height
@@ -351,32 +357,11 @@ module Expert = struct
         row_count * row_height_px
       in
       let%arr head = head
-      and rows = rows
+      and body = body
+      and private_body_classname = private_body_classname
       and vis_change_attr = vis_change_attr
-      and total_height = total_height
-      and path = path in
-      let body =
-        Vdom.Node.div
-        (* If the number is large enough, it will use scientific notation for unknown reasons.
-             However, the number is accurate, and scientific notation is in spec.
-             https://developer.mozilla.org/en-US/docs/Web/CSS/number *)
-          ~attrs:
-            [ Vdom.Attr.(
-                many
-                  [ Style.partial_render_table_body
-                  ; Vdom.Attr.style Css_gen.(height (`Px total_height))
-                  ; vis_change_attr
-                  ])
-            ]
-          [ rows ]
-      in
-      Vdom.Node.div
-        ~attrs:
-          [ Vdom.Attr.(
-              Style.partial_render_table_container
-              @ Vdom.Attr.class_ ("partial-render-table-" ^ path))
-          ]
-        [ head; body ]
+      and total_height = total_height in
+      Theme.Table.view ~private_body_classname ~vis_change_attr ~total_height head body
     in
     let%sub range =
       let%arr low, high = range_without_preload
@@ -461,7 +446,7 @@ module Basic = struct
       ; for_testing : For_testing.t Lazy.t
       ; focus : 'focus
       ; num_filtered_rows : int
-      ; sortable_header : int Sortable_header.t
+      ; sortable_state : int Sortable.t
       }
     [@@deriving fields ~getters]
   end
@@ -523,7 +508,7 @@ module Basic = struct
         ~sexp_of_model:[%sexp_of: Rank_range.t]
         ~equal:[%equal: Rank_range.t]
     in
-    let%sub sortable_header = Sortable_header.component (module Int) in
+    let%sub sortable_state = Sortable.state (module Int) in
     let (Y { value; vtable }) = columns in
     let module Column = (val vtable) in
     let assoc = Column.instantiate_cells value comparator in
@@ -532,7 +517,7 @@ module Basic = struct
       | None -> Value.return None
       | Some v -> v >>| Option.some
     in
-    let%sub sorters, headers = Column.headers_and_sorters value sortable_header in
+    let%sub sorters, headers = Column.headers_and_sorters value sortable_state in
     let%sub collate =
       let%sub override_sort =
         match override_sort with
@@ -542,14 +527,14 @@ module Basic = struct
       let%sub order =
         let%arr sorters = sorters
         and default_sort = default_sort
-        and sortable_header = sortable_header
+        and sortable_state = sortable_state
         and override_sort = override_sort in
         let override_sort =
           Option.map override_sort ~f:(fun override_sort ->
             override_sort Cmp.comparator.compare)
         in
         Order.to_compare
-          (Sortable_header.order sortable_header)
+          (Sortable.order sortable_state)
           ?override_sort
           ~sorters
           ~default_sort
@@ -594,7 +579,7 @@ module Basic = struct
     in
     let%arr { view; for_testing; range = _; focus } = result
     and num_filtered_rows = num_filtered_rows
-    and sortable_header = sortable_header in
-    { Result.view; for_testing; focus; num_filtered_rows; sortable_header }
+    and sortable_state = sortable_state in
+    { Result.view; for_testing; focus; num_filtered_rows; sortable_state }
   ;;
 end

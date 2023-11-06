@@ -26,7 +26,7 @@ module Dynamic_cells : sig
   val expand : label:Vdom.Node.t Value.t -> ('key, 'data) t -> ('key, 'data) t
   val lift : ('key, 'data) t list -> ('key, 'data) Column_intf.t
 
-  module Header_helpers : Column_intf.Header_helpers
+  module Sortable = Sortable
 end
 
 module Dynamic_columns : sig
@@ -44,7 +44,7 @@ module Dynamic_columns : sig
   val expand : label:Vdom.Node.t -> ('key, 'data) t -> ('key, 'data) t
   val lift : ('key, 'data) t list Value.t -> ('key, 'data) Column_intf.t
 
-  module Header_helpers : Column_intf.Header_helpers
+  module Sortable = Sortable
 end
 
 module Dynamic_cells_with_sorter : sig
@@ -64,7 +64,7 @@ module Dynamic_cells_with_sorter : sig
   val expand : label:Vdom.Node.t Value.t -> ('key, 'data) t -> ('key, 'data) t
   val lift : ('key, 'data) t list -> ('key, 'data) Column_intf.with_sorter
 
-  module Header_helpers : Column_intf.Header_helpers
+  module Sortable = Sortable
 end
 
 module Dynamic_columns_with_sorter : sig
@@ -84,5 +84,5 @@ module Dynamic_columns_with_sorter : sig
   val expand : label:Vdom.Node.t -> ('key, 'data) t -> ('key, 'data) t
   val lift : ('key, 'data) t list Value.t -> ('key, 'data) Column_intf.with_sorter
 
-  module Header_helpers : Column_intf.Header_helpers
+  module Sortable = Sortable
 end

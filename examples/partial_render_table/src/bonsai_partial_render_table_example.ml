@@ -50,7 +50,7 @@ let column_helper
            M.compare (Field.get field a) (Field.get field b)))
   in
   let render_header text =
-    Value.return (Column.Header_helpers.default (Vdom.Node.text text))
+    Value.return (Column.Sortable.Header.with_icon (Vdom.Node.text text))
   in
   Column.column
     ?visible
@@ -75,7 +75,7 @@ let special_compare_option how compare_inner a b =
 
 let columns ~should_show_position =
   let render_header text =
-    Value.return (Column.Header_helpers.default (Vdom.Node.text text))
+    Value.return (Column.Sortable.Header.with_icon (Vdom.Node.text text))
   in
   [ column_helper (module String) Row.Fields.symbol
   ; column_helper (module Float) Row.Fields.edge
@@ -155,7 +155,7 @@ let component ?filter (data : Row.t String.Map.t Value.t) =
   in
   let%arr { Table.Result.view = table
           ; for_testing = _
-          ; sortable_header = _
+          ; sortable_state = _
           ; num_filtered_rows
           ; focus
           }

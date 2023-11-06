@@ -6590,3 +6590,29 @@ let%expect_test "Bonsai_extra.chain_incr_effects" =
   Handle.show handle_chained;
   [%expect {| 3 |}]
 ;;
+
+let%expect_test "match%sub implicit tuples" =
+  let create_handle component =
+    Handle.create
+      (Result_spec.sexp
+         (module struct
+           type t = int * string * bool [@@deriving sexp]
+         end))
+      component
+  in
+  let component =
+    let%sub a, _ = Bonsai.state 1 in
+    let%sub b, _ = Bonsai.state "capybara" in
+    let%sub c, _ = Bonsai.state false in
+    match%sub a, b, c with
+    | a, b, false ->
+      let%arr a = a
+      and b = b
+      and c = c in
+      a, b, c
+    | tuple -> return tuple
+  in
+  let handle = create_handle component in
+  Handle.show handle;
+  [%expect {| (1 capybara false) |}]
+;;

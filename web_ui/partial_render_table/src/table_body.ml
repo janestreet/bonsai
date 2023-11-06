@@ -73,18 +73,20 @@ let rows
         | None -> false
         | Some k -> Cmp.comparator.compare k key = 0
       in
-      let%arr key, cell_contents = key_and_cells
+      let%sub cells =
+        let%arr _, cell_contents = key_and_cells
+        and col_styles = col_styles in
+        List.mapi cell_contents ~f:(fun i content ->
+          let col_styles = col_styles i in
+          Theme.Cell.view ~col_styles content)
+      in
+      let%arr key, _ = key_and_cells
+      and cells = cells
       and is_selected = is_selected
       and row_styles = row_styles
-      and col_styles = col_styles
       and on_row_click = on_row_click in
       let on_row_click = on_row_click key in
-      Theme.Row.view
-        ~col_styles
-        ~cell_contents
-        ~styles:row_styles
-        ~is_selected
-        ~on_row_click)
+      Theme.Row.view ~styles:row_styles ~is_selected ~on_row_click cells)
 ;;
 
 let component
@@ -101,7 +103,7 @@ let component
   ~on_row_click
   (collated : (key, data) Collated.t Value.t)
   (input : (key * data) Opaque_map.t Value.t)
-  : (Vdom.Node.t * For_testing.t Lazy.t) Computation.t
+  : (Theme.Body.t * For_testing.t Lazy.t) Computation.t
   =
   let%sub padding_top_and_bottom =
     let%arr collated = collated

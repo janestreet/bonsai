@@ -286,6 +286,25 @@ module Parse_result = struct
   let create a = { result = a; remaining = Components.empty }
 end
 
+module type Uri_parser_intf = sig
+  type 'a t
+
+  val check_ok_and_print_urls_or_errors : 'a t -> unit
+
+  val eval
+    :  ?encoding_behavior:Percent_encoding_behavior.t
+    -> 'a t
+    -> (Components.t, 'a Parse_result.t) Projection.t
+
+  val eval_for_uri
+    :  ?encoding_behavior:Percent_encoding_behavior.t
+    -> 'a t
+    -> (Uri.t, 'a Parse_result.t) Projection.t
+
+  val all_urls : 'a t -> string list
+  val to_string : 'a t -> ('a -> string) Staged.t
+end
+
 module Parser = struct
   module rec T : sig
     type 'a t =
@@ -2219,6 +2238,15 @@ module Parser = struct
            columns
            errors
            ~bars:`Unicode)
+  ;;
+
+  let to_string (t : 'a t) : ('a -> string) Staged.t =
+    let projection = eval_for_uri ~encoding_behavior:Correct t in
+    let to_string a =
+      let parsed = projection.unparse (Parse_result.create a) in
+      "/" ^ Uri.to_string parsed
+    in
+    Staged.stage to_string
   ;;
 end
 

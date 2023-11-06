@@ -286,7 +286,7 @@ let%expect_test "stabilization of view range" =
   Handle.show test.handle;
   [%expect
     {|
-<div class="partial-render-table- partial_render_table_container">
+<div class="partial_render_table_container">
   <table class="partial_render_table_header prt-table-header" bounds-change=<opaque>>
     <tbody>
       <tr>
@@ -321,7 +321,7 @@ let%expect_test "stabilization of view range" =
       </tr>
     </tbody>
   </table>
-  <div class="partial_render_table_body" bounds-change=<opaque>>
+  <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
     <div>
       <div>
         <div class="prt-table-row" onclick>
@@ -399,7 +399,7 @@ let%expect_test "resize-column" =
   [%expect
     {|
 === DIFF HUNK ===
-  <div class="partial-render-table- partial_render_table_container">
+  <div class="partial_render_table_container">
     <table class="partial_render_table_header prt-table-header" bounds-change=<opaque>>
       <tbody>
         <tr>
@@ -427,16 +427,16 @@ let%expect_test "resize-column" =
               <div>
                 <span> a </span>
 === DIFF HUNK ===
-                     column-gap: 6px;
-                   }>
-                <span> d </span>
-              </div>
             </div>
           </td>
         </tr>
       </tbody>
     </table>
-    <div class="partial_render_table_body" bounds-change=<opaque> style={ height: 3px; }>
+    <div class="partial-render-table-body- partial_render_table_body"
+         bounds-change=<opaque>
+         style={
+           height: 3px;
+         }>
       <div style={ padding-top: 0px; padding-bottom: 0px; }>
         <div>
           <div class="prt-table-row"
@@ -588,7 +588,7 @@ let%expect_test "big table" =
   Handle.show test.handle;
   [%expect
     {|
-<div class="partial-render-table- partial_render_table_container">
+<div class="partial_render_table_container">
   <table class="partial_render_table_header prt-table-header" bounds-change=<opaque>>
     <tbody>
       <tr>
@@ -623,7 +623,7 @@ let%expect_test "big table" =
       </tr>
     </tbody>
   </table>
-  <div class="partial_render_table_body" bounds-change=<opaque>>
+  <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
     <div>
       <div>
         <div class="prt-table-row" onclick>
@@ -667,7 +667,7 @@ let%expect_test "big table" =
         </tr>
       </tbody>
     </table>
-    <div class="partial_render_table_body" bounds-change=<opaque>>
+    <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
       <div>
         <div>
           <div class="prt-table-row" onclick>
@@ -777,7 +777,7 @@ let%expect_test "typing into a column, leaving that column, and then coming back
         </tr>
       </tbody>
     </table>
-    <div class="partial_render_table_body" bounds-change=<opaque>>
+    <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
       <div>
         <div>
           <div class="prt-table-row" onclick>
@@ -812,7 +812,7 @@ let%expect_test "typing into a column, leaving that column, and then coming back
   Handle.show test.handle;
   [%expect
     {|
-<div class="partial-render-table- partial_render_table_container">
+<div class="partial_render_table_container">
   <table class="partial_render_table_header prt-table-header" bounds-change=<opaque>>
     <tbody>
       <tr>
@@ -847,7 +847,7 @@ let%expect_test "typing into a column, leaving that column, and then coming back
       </tr>
     </tbody>
   </table>
-  <div class="partial_render_table_body" bounds-change=<opaque>>
+  <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
     <div>
       <div>
         <div class="prt-table-row" onclick>
@@ -979,7 +979,7 @@ let%expect_test "sorting legacy renderer" =
   Handle.show test.handle;
   [%expect
     {|
-<div class="partial-render-table- partial_render_table_container">
+<div class="partial_render_table_container">
   <table class="partial_render_table_header prt-table-header" bounds-change=<opaque>>
     <tbody>
       <tr>
@@ -1004,7 +1004,7 @@ let%expect_test "sorting legacy renderer" =
       </tr>
     </tbody>
   </table>
-  <div class="partial_render_table_body" bounds-change=<opaque>>
+  <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
     <div>
       <div>
         <div class="prt-table-row" onclick>
@@ -1044,7 +1044,7 @@ let%expect_test "sorting legacy renderer" =
   [%expect
     {|
     === DIFF HUNK ===
-      <div class="partial-render-table- partial_render_table_container">
+      <div class="partial_render_table_container">
         <table class="partial_render_table_header prt-table-header" bounds-change=<opaque>>
           <tbody>
             <tr>
@@ -1075,7 +1075,7 @@ let%expect_test "sorting legacy renderer" =
   [%expect
     {|
 === DIFF HUNK ===
-  <div class="partial-render-table- partial_render_table_container">
+  <div class="partial_render_table_container">
     <table class="partial_render_table_header prt-table-header" bounds-change=<opaque>>
       <tbody>
         <tr>
@@ -1102,7 +1102,7 @@ let%expect_test "sorting legacy renderer" =
         </tr>
       </tbody>
     </table>
-    <div class="partial_render_table_body" bounds-change=<opaque>>
+    <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
       <div>
         <div>
 -|        <div class="prt-table-row" onclick>
@@ -1150,7 +1150,7 @@ let%expect_test "sorting legacy renderer" =
   [%expect
     {|
     === DIFF HUNK ===
-      <div class="partial-render-table- partial_render_table_container">
+      <div class="partial_render_table_container">
         <table class="partial_render_table_header prt-table-header" bounds-change=<opaque>>
           <tbody>
             <tr>
@@ -1176,7 +1176,7 @@ let%expect_test "sorting legacy renderer" =
             </tr>
           </tbody>
         </table>
-        <div class="partial_render_table_body" bounds-change=<opaque>>
+        <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
           <div>
             <div>
     +|        <div class="prt-table-row" onclick>
@@ -1248,7 +1248,7 @@ let%expect_test "sorting legacy renderer" =
             </tr>
           </tbody>
         </table>
-        <div class="partial_render_table_body" bounds-change=<opaque>>
+        <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
           <div>
             <div>
               <div class="prt-table-row" onclick>
@@ -1288,7 +1288,7 @@ let%expect_test "sorting legacy renderer" =
             </tr>
           </tbody>
         </table>
-        <div class="partial_render_table_body" bounds-change=<opaque>>
+        <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
           <div>
             <div>
     +|        <div class="prt-table-row" onclick>
@@ -1339,7 +1339,7 @@ let%expect_test "sorting default renderer" =
   Handle.show test.handle;
   [%expect
     {|
-<div class="partial-render-table- partial_render_table_container">
+<div class="partial_render_table_container">
   <table class="partial_render_table_header prt-table-header" bounds-change=<opaque>>
     <tbody>
       <tr>
@@ -1374,7 +1374,7 @@ let%expect_test "sorting default renderer" =
       </tr>
     </tbody>
   </table>
-  <div class="partial_render_table_body" bounds-change=<opaque>>
+  <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
     <div>
       <div>
         <div class="prt-table-row" onclick>
@@ -1414,7 +1414,7 @@ let%expect_test "sorting default renderer" =
   [%expect
     {|
     === DIFF HUNK ===
-      <div class="partial-render-table- partial_render_table_container">
+      <div class="partial_render_table_container">
         <table class="partial_render_table_header prt-table-header" bounds-change=<opaque>>
           <tbody>
             <tr>
@@ -1446,7 +1446,7 @@ let%expect_test "sorting default renderer" =
   [%expect
     {|
 === DIFF HUNK ===
-  <div class="partial-render-table- partial_render_table_container">
+  <div class="partial_render_table_container">
     <table class="partial_render_table_header prt-table-header" bounds-change=<opaque>>
       <tbody>
         <tr>
@@ -1483,7 +1483,7 @@ let%expect_test "sorting default renderer" =
         </tr>
       </tbody>
     </table>
-    <div class="partial_render_table_body" bounds-change=<opaque>>
+    <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
       <div>
         <div>
 -|        <div class="prt-table-row" onclick>
@@ -1536,7 +1536,7 @@ let%expect_test "sorting default renderer" =
   [%expect
     {|
     === DIFF HUNK ===
-      <div class="partial-render-table- partial_render_table_container">
+      <div class="partial_render_table_container">
         <table class="partial_render_table_header prt-table-header" bounds-change=<opaque>>
           <tbody>
             <tr>
@@ -1574,7 +1574,7 @@ let%expect_test "sorting default renderer" =
             </tr>
           </tbody>
         </table>
-        <div class="partial_render_table_body" bounds-change=<opaque>>
+        <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
           <div>
             <div> |}];
   (* Third column is already reverse sorted, so clicking it again removes all sorts. *)
@@ -1583,7 +1583,7 @@ let%expect_test "sorting default renderer" =
   [%expect
     {|
     === DIFF HUNK ===
-      <div class="partial-render-table- partial_render_table_container">
+      <div class="partial_render_table_container">
         <table class="partial_render_table_header prt-table-header" bounds-change=<opaque>>
           <tbody>
             <tr>
@@ -1620,7 +1620,7 @@ let%expect_test "sorting default renderer" =
             </tr>
           </tbody>
         </table>
-        <div class="partial_render_table_body" bounds-change=<opaque>>
+        <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
           <div>
             <div>
     +|        <div class="prt-table-row" onclick>
@@ -1669,7 +1669,7 @@ let%expect_test "removed columns still count toward the total table width" =
   let module Table = Bonsai_web_ui_partial_render_table in
   let module Column = Table.Basic.Columns.Dynamic_columns in
   let map = Value.return (Int.Map.of_alist_exn [ 1, 1; 2, 2 ]) in
-  let render_header str = Column.Header_helpers.default (Vdom.Node.text str) in
+  let render_header str = Column.Sortable.Header.with_icon (Vdom.Node.text str) in
   let column_a =
     Column.column
       ~header:(render_header "a")
@@ -1888,7 +1888,7 @@ let%expect_test "removed columns still count toward the total table width" =
   let map = Value.return (Int.Map.of_alist_exn (List.init 100 ~f:(fun i -> i, i))) in
   let column_a =
     Columns.column
-      ~header:(Columns.Header_helpers.default (Vdom.Node.text "a"))
+      ~header:(Columns.Sortable.Header.with_icon (Vdom.Node.text "a"))
       ~cell:(fun ~key:_ ~data -> Vdom.Node.text (Int.to_string data))
       ()
   in

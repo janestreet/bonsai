@@ -1131,3 +1131,128 @@ let%expect_test "current match%arr behavior" =
      ~f:(function | A (a, _) -> MY_BODY | B -> MY_BODY | _ -> MY_BODY)
    |}]
 ;;
+
+let%test_module "match%sub with tuple payload" =
+  (module struct
+    let test expr =
+      Ppx_let_expander.expand
+        Ppx_bonsai_expander.sub
+        Ppx_let_expander.Extension_kind.default
+        ~modul:None
+        ~locality
+        expr
+      |> print_expr
+    ;;
+
+    let%expect_test "basic/normal case" =
+      test
+        [%expr
+          match EXPR1, EXPR2 with
+          | A, B -> BODY
+          | B -> BODY];
+      [%expect
+        {|
+        ((Let_syntax.sub
+            ~here:{
+                    Ppx_here_lib.pos_fname = "_none_";
+                    pos_lnum = 1;
+                    pos_cnum = (-1);
+                    pos_bol = 0
+                  }
+            (Let_syntax.return
+               (let __let_syntax__102_ = ((EXPR1)
+                  [@ppxlib.enter_value __ppx_bonsai_tuple__100_])[@@ppxlib.do_not_enter_value
+                                                                   ]
+                and __let_syntax__103_ = ((EXPR2)
+                  [@ppxlib.enter_value __ppx_bonsai_tuple__101_])[@@ppxlib.do_not_enter_value
+                                                                   ] in
+                Let_syntax.map
+                  (Let_syntax.both __let_syntax__102_ __let_syntax__103_)
+                  ~f:(fun (__ppx_bonsai_tuple__100_, __ppx_bonsai_tuple__101_) ->
+                        (__ppx_bonsai_tuple__100_, __ppx_bonsai_tuple__101_))))
+            ~f:(fun __pattern_syntax__105_ ->
+                  ((Let_syntax.switch
+                      ~here:{
+                              Ppx_here_lib.pos_fname = "_none_";
+                              pos_lnum = 1;
+                              pos_cnum = (-1);
+                              pos_bol = 0
+                            }
+                      ~match_:((Let_syntax.map __pattern_syntax__105_
+                                  ~f:(function | (A, B) -> 0 | B -> 1))
+                      [@ocaml.warning "-26-27"]) ~branches:2
+                      ~with_:(function
+                              | ((0)[@merlin.hide ]) -> BODY
+                              | ((1)[@merlin.hide ]) -> BODY
+                              | _ -> assert false))
+                  [@nontail ])))
+        [@nontail ]) |}]
+    ;;
+
+    let%expect_test "many tuples" =
+      test
+        [%expr
+          match EXPR1, EXPR2, EXPR3, EXPR4, EXPR5 with
+          | A, B, C, D, E -> BODY];
+      [%expect
+        {|
+        ((Let_syntax.sub
+            ~here:{
+                    Ppx_here_lib.pos_fname = "_none_";
+                    pos_lnum = 1;
+                    pos_cnum = (-1);
+                    pos_bol = 0
+                  }
+            (Let_syntax.return
+               (let __let_syntax__111_ = ((EXPR1)
+                  [@ppxlib.enter_value __ppx_bonsai_tuple__106_])[@@ppxlib.do_not_enter_value
+                                                                   ]
+                and __let_syntax__112_ = ((EXPR2)
+                  [@ppxlib.enter_value __ppx_bonsai_tuple__107_])[@@ppxlib.do_not_enter_value
+                                                                   ]
+                and __let_syntax__113_ = ((EXPR3)
+                  [@ppxlib.enter_value __ppx_bonsai_tuple__108_])[@@ppxlib.do_not_enter_value
+                                                                   ]
+                and __let_syntax__114_ = ((EXPR4)
+                  [@ppxlib.enter_value __ppx_bonsai_tuple__109_])[@@ppxlib.do_not_enter_value
+                                                                   ]
+                and __let_syntax__115_ = ((EXPR5)
+                  [@ppxlib.enter_value __ppx_bonsai_tuple__110_])[@@ppxlib.do_not_enter_value
+                                                                   ] in
+                Let_syntax.map
+                  (Let_syntax.both __let_syntax__111_
+                     (Let_syntax.both __let_syntax__112_
+                        (Let_syntax.both __let_syntax__113_
+                           (Let_syntax.both __let_syntax__114_ __let_syntax__115_))))
+                  ~f:(fun
+                        (__ppx_bonsai_tuple__106_,
+                         (__ppx_bonsai_tuple__107_,
+                          (__ppx_bonsai_tuple__108_,
+                           (__ppx_bonsai_tuple__109_, __ppx_bonsai_tuple__110_))))
+                        ->
+                        (__ppx_bonsai_tuple__106_, __ppx_bonsai_tuple__107_,
+                          __ppx_bonsai_tuple__108_, __ppx_bonsai_tuple__109_,
+                          __ppx_bonsai_tuple__110_))))
+            ~f:(fun __pattern_syntax__117_ ->
+                  ((Let_syntax.sub
+                      ~here:{
+                              Ppx_here_lib.pos_fname = "_none_";
+                              pos_lnum = 1;
+                              pos_cnum = (-1);
+                              pos_bol = 0
+                            }
+                      (Let_syntax.return
+                         ((Let_syntax.map
+                             ~here:{
+                                     Ppx_here_lib.pos_fname = "_none_";
+                                     pos_lnum = 1;
+                                     pos_cnum = (-1);
+                                     pos_bol = 0
+                                   } __pattern_syntax__117_
+                             ~f:(function | (A, B, C, D, E) -> ()))[@nontail ]))
+                      ~f:(fun _ -> ((BODY)[@nontail ])))
+                  [@nontail ])))
+        [@nontail ]) |}]
+    ;;
+  end)
+;;

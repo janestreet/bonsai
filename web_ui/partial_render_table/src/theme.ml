@@ -16,6 +16,100 @@ let set_or_wrap ~classes ~style =
 let int_to_px_string px = Int.to_string px ^ "px"
 let float_to_px_string px = Virtual_dom.Dom_float.to_string_fixed 8 px ^ "px"
 
+module Header_label = struct
+  let wrap_clickable ~sortable ~handle_click contents =
+    let attrs = if sortable then [ Style.column_header; handle_click ] else [] in
+    Vdom.Node.div ~attrs [ contents ]
+  ;;
+
+  let wrap_with_icon
+    (label : Vdom.Node.t)
+    (sort_state : Bonsai_web_ui_partial_render_table_protocol.Sort_state.t)
+    =
+    match sort_state with
+    | Not_sortable -> Vdom.Node.div [ Vdom.Node.span [ label ] ]
+    | _ ->
+      let get_arrow = function
+        | `Asc -> "▲"
+        | `Desc -> "▼"
+      in
+      let sort_indicator =
+        let%map.Option indicator =
+          match sort_state with
+          | Not_sortable | Not_sorted -> None
+          | Single_sort dir -> Some (get_arrow dir)
+          | Multi_sort { dir; index } -> Some [%string "%{get_arrow dir} %{index#Int}"]
+        in
+        Vdom.Node.span
+          ~attrs:[ Vdom.Attr.class_ "prt-sort-indicator" ]
+          [ Vdom.Node.text indicator ]
+      in
+      Vdom.Node.div
+        ~attrs:
+          [ Vdom.Attr.style
+              (Css_gen.flex_container ~column_gap:(`Px 6) ~align_items:`Baseline ())
+          ]
+        [ Vdom.Node.span [ label ]
+        ; sort_indicator |> Option.value ~default:Vdom.Node.none
+        ]
+  ;;
+end
+
+module Header = struct
+  let attr_colspan i =
+    match i with
+    | 0 -> Vdom.Attr.style (Css_gen.display `None)
+    | 1 -> Vdom.Attr.empty
+    | i -> Vdom.Attr.create_float "colspan" (Int.to_float i)
+  ;;
+
+  module Header_cell = struct
+    type t = Vdom.Node.t
+
+    let leaf_view ~column_width ~set_column_width ~visible ~label () =
+      Vdom.Node.td
+        ~attrs:
+          [ Bonsai_web_ui_element_size_hooks.Size_tracker.on_change
+              (fun ~width ~height:_ -> set_column_width (`Px_float width))
+          ; Vdom.Attr.colspan 1
+          ; Style.header_label
+          ; Style.leaf_header
+          ; Vdom.Attr.style
+              Css_gen.(width column_width @> if visible then empty else display `None)
+          ]
+        [ label ]
+    ;;
+
+    let spacer_view ~colspan () = Vdom.Node.td ~attrs:[ attr_colspan colspan ] []
+
+    let group_view ~colspan ~label () =
+      Vdom.Node.td ~attrs:[ attr_colspan colspan; Style.header_label ] [ label ]
+    ;;
+  end
+
+  module Header_row = struct
+    type t = Vdom.Node.t
+
+    let view contents = Vdom.Node.tr contents
+  end
+
+  type t = Vdom.Node.t
+
+  (* Fun fact: the header is the only part of partial_render_table that is displayed
+     as an actual HTML table! *)
+  let view ~set_header_client_rect header_rows =
+    Vdom.Node.table
+      ~attrs:
+        [ Bonsai_web_ui_element_size_hooks.Visibility_tracker.detect
+            ()
+            ~client_rect_changed:set_header_client_rect
+        ; Style.partial_render_table_header
+        ; Vdom.Attr.class_ "prt-table-header"
+        ]
+      [ Vdom.Node.tbody header_rows ]
+  ;;
+end
+
 module Cell = struct
   module Col_styles = struct
     type t = Css_gen.t
@@ -52,16 +146,15 @@ module Cell = struct
     ;;
   end
 
-  type t =
-    { col_styles : Col_styles.t
-    ; content : Vdom.Node.t
-    }
+  type t = Vdom.Node.t
 
   let cell_classes = [ "prt-table-cell"; Style.For_referencing.cell ]
 
-  let view { col_styles; content } =
+  let view ~col_styles content =
     set_or_wrap content ~classes:cell_classes ~style:col_styles
   ;;
+
+  let empty_content = Vdom.Node.div []
 end
 
 module Row = struct
@@ -78,27 +171,27 @@ module Row = struct
     ;;
   end
 
+  type t = Vdom.Node.t
+
   let row_classes ~is_selected =
     let classes = [ "prt-table-row" ] in
     if is_selected then "prt-table-row-selected" :: classes else classes
   ;;
 
-  let view ~styles ~is_selected ~on_row_click ~col_styles ~cell_contents =
-    let cell_params =
-      List.mapi cell_contents ~f:(fun i content ->
-        { Cell.col_styles = col_styles i; content })
-    in
+  let view ~styles ~is_selected ~on_row_click cells =
     Vdom.Node.div
       ~attrs:
         [ Vdom.Attr.classes (row_classes ~is_selected)
         ; Vdom.Attr.style styles
         ; Vdom.Attr.on_click (fun _ -> on_row_click)
         ]
-      (List.map cell_params ~f:Cell.view)
+      cells
   ;;
 end
 
 module Body = struct
+  type t = Vdom.Node.t
+
   let view_impl ~padding_top ~padding_bottom ~rows =
     let style =
       Vdom.Attr.style
@@ -112,5 +205,27 @@ module Body = struct
 
   let view ~padding_top ~padding_bottom ~rows =
     Vdom.Node.lazy_ (lazy (view_impl ~padding_top ~padding_bottom ~rows))
+  ;;
+end
+
+module Table = struct
+  let view ~private_body_classname ~vis_change_attr ~total_height head body =
+    let body_container =
+      Vdom.Node.div
+      (* If the number is large enough, it will use scientific notation for unknown reasons.
+           However, the number is accurate, and scientific notation is in spec.
+           https://developer.mozilla.org/en-US/docs/Web/CSS/number *)
+        ~attrs:
+          [ Vdom.Attr.(
+              many
+                [ Style.partial_render_table_body
+                ; class_ private_body_classname
+                ; Vdom.Attr.style Css_gen.(height (`Px total_height))
+                ; vis_change_attr
+                ])
+          ]
+        [ body ]
+    in
+    Vdom.Node.div ~attrs:[ Style.partial_render_table_container ] [ head; body_container ]
   ;;
 end

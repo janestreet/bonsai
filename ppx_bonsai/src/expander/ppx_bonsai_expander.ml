@@ -89,7 +89,46 @@ module Sub : Ext = struct
       ]
   ;;
 
-  let expand_match ~loc ~modul ~locality expr = function
+  (* Maps tuples of [('a Value.t * 'b Value.t ...)] to [('a * 'b ...) Value.t]  *)
+  let match_tuple_mapper ~loc ~modul ~locality ~(expressions : expression list) =
+    let open (val Ast_builder.make loc) in
+    let temp_variable_to_expression =
+      List.map expressions ~f:(fun expression ->
+        let temp_name = gen_symbol ~prefix:"__ppx_bonsai_tuple" () in
+        temp_name, expression)
+    in
+    let value_t_that_tuples_everything =
+      let value_bindings =
+        List.map temp_variable_to_expression ~f:(fun (temp_variable_name, expression) ->
+          value_binding ~pat:(ppat_var (Located.mk temp_variable_name)) ~expr:expression)
+      in
+      let tuple_creation =
+        pexp_tuple
+          (List.map temp_variable_to_expression ~f:(fun (temp_variable_name, _) ->
+             pexp_ident (Located.mk (Lident temp_variable_name))))
+      in
+      pexp_let Nonrecursive value_bindings tuple_creation
+    in
+    Ppx_let_expander.expand
+      Ppx_let_expander.map
+      Extension_kind.default
+      ~modul
+      ~locality
+      value_t_that_tuples_everything
+  ;;
+
+  let expand_match ~loc ~modul ~locality expr =
+    let expr =
+      match expr.pexp_desc with
+      | Pexp_tuple expressions ->
+        match_tuple_mapper
+          ~modul
+          ~loc:{ expr.pexp_loc with loc_ghost = true }
+          ~expressions
+          ~locality
+      | _ -> expr
+    in
+    function
     | [] -> assert false
     | [ (case : case) ] ->
       let returned_expr = qualified_return ~loc ~modul expr in

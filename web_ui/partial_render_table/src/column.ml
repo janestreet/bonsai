@@ -4,50 +4,6 @@ open! Bonsai.Let_syntax
 open Bonsai_web_ui_partial_render_table_protocol
 module Sort_kind = Column_intf.Sort_kind
 
-module Header_helpers = struct
-  open Vdom
-
-  let legacy (label : Node.t) (sort_spec : Sort_state.t) =
-    let get_icon = function
-      | `None -> Icons.neutral
-      | `Asc -> Icons.ascending
-      | `Desc -> Icons.descending
-    in
-    let render ~dir = Node.span [ Node.text (get_icon dir); label ] in
-    match sort_spec with
-    | Not_sortable -> label
-    | Not_sorted -> render ~dir:`None
-    | Single_sort dir | Multi_sort { dir; _ } -> render ~dir
-  ;;
-
-  let default (label : Node.t) (sort_state : Sort_state.t) =
-    match sort_state with
-    | Not_sortable -> Node.div [ Node.span [ label ] ]
-    | _ ->
-      let get_arrow = function
-        | `Asc -> "▲"
-        | `Desc -> "▼"
-      in
-      let sort_indicator =
-        let%map.Option indicator =
-          match sort_state with
-          | Not_sortable | Not_sorted -> None
-          | Single_sort dir -> Some (get_arrow dir)
-          | Multi_sort { dir; index } -> Some [%string "%{get_arrow dir} %{index#Int}"]
-        in
-        Node.span ~attrs:[ Attr.class_ "prt-sort-indicator" ] [ Node.text indicator ]
-      in
-      Node.div
-        ~attrs:
-          [ Attr.style
-              (Css_gen.flex_container ~column_gap:(`Px 6) ~align_items:`Baseline ())
-          ]
-        [ Node.span [ label ]; sort_indicator |> Option.value ~default:Node.none ]
-  ;;
-end
-
-let empty_div = Vdom.Node.div []
-
 module Dynamic_cells = struct
   module T = struct
     type ('key, 'data) t =
@@ -102,7 +58,7 @@ module Dynamic_cells = struct
                  and r = r in
                  key, r)
            else (
-             let f = Ui_incr.Map.map ~f:(fun (k, _) -> k, empty_div) in
+             let f = Ui_incr.Map.map ~f:(fun (k, _) -> k, Theme.Cell.empty_content) in
              Bonsai.Incr.compute map ~f))
         ]
       | Group { children; _ } | Org_group children ->
@@ -147,7 +103,7 @@ module Dynamic_cells = struct
       Column_intf.T { value; vtable = (module X) }
   ;;
 
-  module Header_helpers = Header_helpers
+  module Sortable = Sortable
 end
 
 module Dynamic_columns = struct
@@ -179,7 +135,7 @@ module Dynamic_columns = struct
     let rec visible_leaves structure ~key ~data =
       match structure with
       | Leaf { cell; visible; _ } ->
-        if visible then [ cell ~key ~data ] else [ empty_div ]
+        if visible then [ cell ~key ~data ] else [ Theme.Cell.empty_content ]
       | Org_group children | Group { children; group_header = _ } ->
         List.concat_map children ~f:(visible_leaves ~key ~data)
     ;;
@@ -223,7 +179,7 @@ module Dynamic_columns = struct
       Column_intf.T { value; vtable = (module X) }
   ;;
 
-  module Header_helpers = Header_helpers
+  module Sortable = Sortable
 end
 
 module With_sorter (Tree : T2) (Dynamic_or_static : T1) = struct
@@ -287,17 +243,17 @@ module Dynamic_cells_with_sorter = struct
   let expand ~label child = group ~label [ child ]
 
   module W = struct
-    let headers_and_sorters t sortable_header =
+    let headers_and_sorters t sortable_state =
       let sorters, tree =
         T.partition t ~f:(fun i col sort render_header ->
           let leaf_header =
             let%map render_header = render_header
-            and sortable_header = sortable_header
+            and sortable_state = sortable_state
             and sort = sort in
-            Sortable_header.render
+            Sortable.Header.Expert.default_click_handler
               ~sortable:(Option.is_some sort)
               ~column_id:i
-              sortable_header
+              sortable_state
               render_header
           in
           col leaf_header)
@@ -348,7 +304,7 @@ module Dynamic_cells_with_sorter = struct
       Column_intf.Y { value; vtable = (module X) }
   ;;
 
-  module Header_helpers = Header_helpers
+  module Sortable = Sortable
 end
 
 module Dynamic_columns_with_sorter = struct
@@ -376,15 +332,19 @@ module Dynamic_columns_with_sorter = struct
   let expand ~label child = group ~label [ child ]
 
   module W = struct
-    let headers_and_sorters t sortable_header =
+    let headers_and_sorters t sortable_state =
       let%sub sorters, tree =
         let%arr t = t
-        and sortable_header = sortable_header in
+        and sortable_state = sortable_state in
         let sorters, tree =
           T.partition t ~f:(fun i col sort render_header ->
             let sortable = Option.is_some sort in
             let header_node =
-              Sortable_header.render ~sortable ~column_id:i sortable_header render_header
+              Sortable.Header.Expert.default_click_handler
+                ~sortable
+                ~column_id:i
+                sortable_state
+                render_header
             in
             col header_node)
         in
@@ -436,5 +396,5 @@ module Dynamic_columns_with_sorter = struct
       Column_intf.Y { value; vtable = (module X) }
   ;;
 
-  module Header_helpers = Header_helpers
+  module Sortable = Sortable
 end

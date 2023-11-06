@@ -2,7 +2,6 @@ open! Core
 open! Bonsai_web
 open Bonsai_web_ui_partial_render_table_protocol
 module Order = Order
-module Sortable_header = Sortable_header
 
 module For_testing : sig
   module Table_body = Table_body.For_testing
@@ -29,7 +28,7 @@ module Basic : sig
       ; for_testing : For_testing.t Lazy.t
       ; focus : 'focus
       ; num_filtered_rows : int
-      ; sortable_header : int Sortable_header.t
+      ; sortable_state : int Sortable.t
       }
     [@@deriving fields ~getters]
   end
@@ -79,9 +78,9 @@ module Basic : sig
       (** [lift] pulls a list of columns out into a column specification for use in the primary APIs  *)
       val lift : ('key, 'data) t list -> ('key, 'data) columns
 
-      (** [Header_helpers] provides helper functions for constructing table headers with
-          sort indicators *)
-      module Header_helpers = Column.Dynamic_cells_with_sorter.Header_helpers
+      (** [Sortable] provides types, state, and ui helper functions to sort your table
+          data by one or more columns. *)
+      module Sortable = Column.Dynamic_cells_with_sorter.Sortable
     end
 
     module Dynamic_columns : sig
@@ -115,9 +114,9 @@ module Basic : sig
       (** [lift] pulls a list of columns out into a column specification for use in the primary APIs  *)
       val lift : ('key, 'data) t list Value.t -> ('key, 'data) columns
 
-      (** [Header_helpers] provides helper functions for constructing table headers with
-          sort indicators *)
-      module Header_helpers = Column.Dynamic_columns_with_sorter.Header_helpers
+      (** [Sortable] provides types, state, and ui helper functions to sort your table
+          data by one or more columns. *)
+      module Sortable = Column.Dynamic_columns_with_sorter.Sortable
     end
   end
 
@@ -201,9 +200,9 @@ module Expert : sig
       val group : label:Vdom.Node.t Value.t -> ('key, 'data) t list -> ('key, 'data) t
       val lift : ('key, 'data) t list -> ('key, 'data) columns
 
-      (** [Header_helpers] provides helper functions for constructing table headers with
-          sort indicators *)
-      module Header_helpers = Column.Dynamic_cells.Header_helpers
+      (** [Sortable] provides types, state, and ui helper functions to sort your table
+          data by one or more columns. *)
+      module Sortable = Column.Dynamic_cells.Sortable
     end
 
     module Dynamic_columns : sig
@@ -220,9 +219,9 @@ module Expert : sig
       val group : label:Vdom.Node.t -> ('key, 'data) t list -> ('key, 'data) t
       val lift : ('key, 'data) t list Value.t -> ('key, 'data) columns
 
-      (** [Header_helpers] provides helper functions for constructing table headers with
-          sort indicators *)
-      module Header_helpers = Column.Dynamic_columns.Header_helpers
+      (** [Sortable] provides types, state, and ui helper functions to sort your table
+          data by one or more columns. *)
+      module Sortable = Column.Dynamic_columns.Sortable
     end
   end
 

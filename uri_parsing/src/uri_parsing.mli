@@ -97,7 +97,7 @@ module Percent_encoding_behavior : sig
       backwards compatibility.
 
       The first implementation of bonsai_web_ui_url/uri_parsing originally
-      mishandled pct encoding (e.g. sometimes " " got translated to %20, but 
+      mishandled pct encoding (e.g. sometimes " " got translated to %20, but
       when translated back, it sometimes translated back to "%20" instead of
       to " ")
 
@@ -105,7 +105,7 @@ module Percent_encoding_behavior : sig
       be a breaking change in the following contrived situation:
 
       1. Your app handled the pct_encoding bug, but defensively doing pct encoding/decoding.
-      2. Correcting the behavior on [uri_parsing] still results in your parsing being 
+      2. Correcting the behavior on [uri_parsing] still results in your parsing being
       able to parse/unparse url's, but the change in behavior is that now things are
       percent encoded twice, but your app should still be able to decode it correctly as
       it'd also be decoded twice.
@@ -116,7 +116,7 @@ module Percent_encoding_behavior : sig
 
       New links are not affected by this; only old links are.
 
-      We expect this situation to be rare, but (in a contrived scenario) an app's links 
+      We expect this situation to be rare, but (in a contrived scenario) an app's links
       could generate links that look pct_encoded all the time, and if your users sent a lot
       of links _all_ of the old links would stop working.
 
@@ -128,15 +128,15 @@ module Percent_encoding_behavior : sig
     | Correct
 end
 
-module Parser : sig
-  (** ['a t] represents a parser that can parse a URL into 'a and unparse 'a into a URL. *)
+module type Uri_parser_intf = sig
   type 'a t
 
-  (** Make an expect test with this function! It will make your life easier!
+  (** You should have an expect test with this just below your routes definition,
+      so that you can see what your URL scheme looks like, and/or any errors.
 
       Runs static checks, and shows all of the url shapes that the parser can parse. It
       lets you know if a URL shape sneakily changes or if there is any ambiguity in
-      your parser. It tries its best to suggest possible fixes too. *)
+      your parser. It tries its best to suggest possible fixes too.*)
   val check_ok_and_print_urls_or_errors : 'a t -> unit
 
   (** "Evaluates" a ['a t] into a projection that parses to/from [Components.t] to
@@ -151,6 +151,18 @@ module Parser : sig
     :  ?encoding_behavior:Percent_encoding_behavior.t
     -> 'a t
     -> (Uri.t, 'a Parse_result.t) Projection.t
+
+  (** Returns a list of the shapes of all the URLs given that the parser can parse. *)
+  val all_urls : 'a t -> string list
+
+  (** Creates a URL that you can attach to an [a] tag as an href to reference another URL
+      from your site. The function is staged because it "evaluates" the parser which _could_
+      be an expensive operation. *)
+  val to_string : 'a t -> ('a -> string) Staged.t
+end
+
+module Parser : sig
+  include Uri_parser_intf
 
   (** Returns a list of the shapes of all the URLs given that the parser can parse. *)
   val all_urls : 'a t -> string list
@@ -510,10 +522,7 @@ module Parser : sig
 end
 
 module Versioned_parser : sig
-  type 'a t
-
-  (** Like [Parser.check_ok_and_print_urls_or_errors] but for [Versioned_parser]. *)
-  val check_ok_and_print_urls_or_errors : 'a t -> unit
+  include Uri_parser_intf
 
   (** Are you migrating your site to use [Url_var]'s [Typed] API and you don't want to
       break your existing links? Use [of_non_typed_parser] instead of [first_parser]. *)
@@ -526,24 +535,4 @@ module Versioned_parser : sig
       parser can't recognize a URL. If [previous] success and parses into [result], then
       [f result] will be returned. Analogous to [cons] in a list. *)
   val new_parser : 'new_ Parser.t -> previous:'prev t -> f:('prev -> 'new_) -> 'new_ t
-
-  (** Like [Parser.eval] but for a ['a Versioned_parser.t]. *)
-  val eval
-    :  ?encoding_behavior:Percent_encoding_behavior.t
-    -> 'a t
-    -> (Components.t, 'a Parse_result.t) Projection.t
-
-  (** Like [Parser.eval_for_uri] but for ['a Versioned_parser.t] *)
-  val eval_for_uri
-    :  ?encoding_behavior:Percent_encoding_behavior.t
-    -> 'a t
-    -> (Uri.t, 'a Parse_result.t) Projection.t
-
-  (** Like [Parser.all_urls], but for ['a Versioned_parser.t]. *)
-  val all_urls : 'a t -> string list
-
-  (** Creates a URL that you can attach to an [a] tag as an href to reference another URL
-      from your site. The function is staged because it "evaluates" the parser which _could_
-      be an expensive operation. *)
-  val to_string : 'a t -> ('a -> string) Staged.t
 end

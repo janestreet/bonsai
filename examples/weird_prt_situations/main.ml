@@ -7,7 +7,7 @@ module Table = Bonsai_web_ui_partial_render_table.Basic
 module Column = Table.Columns.Dynamic_cells
 module Form = Bonsai_web_ui_form
 
-let header text = Column.Header_helpers.default (Vdom.Node.text text) |> Value.return
+let header text = Column.Sortable.Header.with_icon (Vdom.Node.text text) |> Value.return
 
 let columns =
   [ Column.column

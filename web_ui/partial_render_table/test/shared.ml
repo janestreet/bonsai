@@ -42,8 +42,8 @@ let columns ?(use_legacy_header = false) ~is_column_b_visible () =
   let module Columns = Table.Columns.Dynamic_cells in
   let render_header str =
     if use_legacy_header
-    then Value.return (Columns.Header_helpers.legacy (Vdom.Node.text str))
-    else Value.return (Columns.Header_helpers.default (Vdom.Node.text str))
+    then Value.return (Columns.Sortable.Header.Legacy.wrap_with_icon (Vdom.Node.text str))
+    else Value.return (Columns.Sortable.Header.with_icon (Vdom.Node.text str))
   in
   [ Columns.column
       ~header:(render_header "key")
@@ -104,7 +104,7 @@ let columns ?(use_legacy_header = false) ~is_column_b_visible () =
 
 let columns_dynamic ~is_column_b_visible =
   let module Columns = Table.Columns.Dynamic_columns in
-  let render_header text = Columns.Header_helpers.default (Vdom.Node.text text) in
+  let render_header text = Columns.Sortable.Header.with_icon (Vdom.Node.text text) in
   [ Columns.column
       ~header:(render_header "key")
       ~sort:(fun a b -> Comparable.lift [%compare: int] ~f:(fun (key, _) -> key) a b)
@@ -128,7 +128,7 @@ let columns_dynamic ~is_column_b_visible =
 
 let columns_dynamic_with_groups ~is_column_b_visible =
   let module Columns = Table.Columns.Dynamic_columns in
-  let render_header str = Columns.Header_helpers.default (Vdom.Node.text str) in
+  let render_header str = Columns.Sortable.Header.with_icon (Vdom.Node.text str) in
   let cols =
     [ Columns.column
         ~header:(render_header "key")
