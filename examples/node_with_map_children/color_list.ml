@@ -18,7 +18,7 @@ let max_size = 50
 let total_space = max_size * 3 / 2
 
 let rec generate_random () =
-  let random = Splittable_random.State.create Random.State.default in
+  let random = Splittable_random.create Random.State.default in
   let quickcheck_generator_color =
     let%map.Quickcheck.Generator i = Int.gen_uniform_incl 0 100 in
     Float.of_int i /. 100.0

@@ -34,4 +34,4 @@ val component
   -> on_row_click:('key -> unit Effect.t) Value.t
   -> ('key, 'data) Collated.t Value.t
   -> ('key * 'data) Opaque_map.t Value.t
-  -> (Theme.Body.t * For_testing.t Lazy.t) Computation.t
+  -> (Table_view.Body.t * For_testing.t Lazy.t) Computation.t

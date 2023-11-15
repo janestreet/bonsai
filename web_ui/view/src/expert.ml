@@ -376,6 +376,67 @@ let default_theme =
               create_card
                 ~f:(fun ~attrs x -> Vdom.Node.fieldset ~attrs x)
                 ~extra_container_attr:Style.fieldset_container
+
+          method textbox ?attrs ?placeholder ~disabled ~value ~set_value () =
+            Vdom_input_widgets.Entry.text
+              ?extra_attrs:attrs
+              ?placeholder
+              ~disabled
+              ~value:(Some value)
+              ~on_input:(fun s -> set_value (Option.value ~default:"" s))
+              ()
+
+          method password ?attrs ?placeholder ~disabled ~value ~set_value () =
+            Vdom_input_widgets.Entry.password
+              ?extra_attrs:attrs
+              ?placeholder
+              ~disabled
+              ~value:(Some value)
+              ~on_input:(fun s -> set_value (Option.value ~default:"" s))
+              ()
+
+          method textarea ?attrs ?placeholder ~disabled ~value ~set_value () =
+            Vdom_input_widgets.Entry.text_area
+              ?extra_attrs:attrs
+              ?placeholder
+              ~disabled
+              ~value
+              ~on_input:set_value
+              ()
+
+          method number
+            ?(attrs = [])
+            ?placeholder
+            ?min
+            ?max
+            ~disabled
+            ~step
+            ~value
+            ~set_value
+            () =
+            let min = Option.value_map min ~default:Vdom.Attr.empty ~f:Vdom.Attr.min in
+            let max = Option.value_map max ~default:Vdom.Attr.empty ~f:Vdom.Attr.max in
+            Vdom_input_widgets.Entry.number
+              ~extra_attrs:(attrs @ [ min; max ])
+              ?placeholder
+              ~disabled
+              ~value
+              ~on_input:set_value
+              ~step
+              (module Vdom_input_widgets.Decimal)
+
+          method range ?(attrs = []) ?min ?max ~disabled ~step ~value ~set_value () =
+            let min = Option.value_map min ~default:Vdom.Attr.empty ~f:Vdom.Attr.min in
+            let max = Option.value_map max ~default:Vdom.Attr.empty ~f:Vdom.Attr.max in
+            Vdom_input_widgets.Entry.range
+              ~extra_attrs:(attrs @ [ min; max ])
+              ~disabled
+              ~value:(Some value)
+              ~on_input:(function
+                | None -> Effect.print_s [%message "BUG: no value"]
+                | Some value -> set_value value)
+              ~step
+              (module Vdom_input_widgets.Decimal)
         end
     end)
 ;;

@@ -1370,7 +1370,7 @@ let%expect_test "typing into an int number element" =
   [%expect
     {|
     -|(Ok -1)
-    +|(Error ((value 11) "higher than allowed threshold" (S.max (10))))
+    +|(Error ((value 11) "higher than allowed threshold" (max 10)))
 
       ==============
       <input type="number"
@@ -1386,8 +1386,8 @@ let%expect_test "typing into an int number element" =
   Handle.show_diff handle;
   [%expect
     {|
-    -|(Error ((value 11) "higher than allowed threshold" (S.max (10))))
-    +|(Error ((value -2) "lower than allowed threshold" (S.min (-1))))
+    -|(Error ((value 11) "higher than allowed threshold" (max 10)))
+    +|(Error ((value -2) "lower than allowed threshold" (min -1)))
 
       ==============
       <input type="number"
@@ -1493,7 +1493,7 @@ let%expect_test "setting into an int number element" =
   [%expect
     {|
     -|(Ok -1)
-    +|(Error ((value 11) "higher than allowed threshold" (S.max (10))))
+    +|(Error ((value 11) "higher than allowed threshold" (max 10)))
 
       ==============
       <input type="number"
@@ -1509,8 +1509,8 @@ let%expect_test "setting into an int number element" =
   Handle.show_diff handle;
   [%expect
     {|
-    -|(Error ((value 11) "higher than allowed threshold" (S.max (10))))
-    +|(Error ((value -2) "lower than allowed threshold" (S.min (-1))))
+    -|(Error ((value 11) "higher than allowed threshold" (max 10)))
+    +|(Error ((value -2) "lower than allowed threshold" (min -1)))
 
       ==============
       <input type="number"
@@ -1582,7 +1582,7 @@ let%expect_test "typing into a float number element" =
   [%expect
     {|
     -|(Ok -1)
-    +|(Error ((value 10.2) "higher than allowed threshold" (S.max (10.1))))
+    +|(Error ((value 10.2) "higher than allowed threshold" (max 10.1)))
 
       ==============
       <input type="number"
@@ -1598,8 +1598,8 @@ let%expect_test "typing into a float number element" =
   Handle.show_diff handle;
   [%expect
     {|
-    -|(Error ((value 10.2) "higher than allowed threshold" (S.max (10.1))))
-    +|(Error ((value -1.1) "lower than allowed threshold" (S.min (-1))))
+    -|(Error ((value 10.2) "higher than allowed threshold" (max 10.1)))
+    +|(Error ((value -1.1) "lower than allowed threshold" (min -1)))
 
       ==============
       <input type="number"
@@ -1671,7 +1671,7 @@ let%expect_test "setting into an int number element" =
   [%expect
     {|
     -|(Ok -1)
-    +|(Error ((value 10.2) "higher than allowed threshold" (S.max (10.1))))
+    +|(Error ((value 10.2) "higher than allowed threshold" (max 10.1)))
 
       ==============
       <input type="number"
@@ -1687,8 +1687,8 @@ let%expect_test "setting into an int number element" =
   Handle.show_diff handle;
   [%expect
     {|
-    -|(Error ((value 10.2) "higher than allowed threshold" (S.max (10.1))))
-    +|(Error ((value -1.1) "lower than allowed threshold" (S.min (-1))))
+    -|(Error ((value 10.2) "higher than allowed threshold" (max 10.1)))
+    +|(Error ((value -1.1) "lower than allowed threshold" (min -1)))
 
       ==============
       <input type="number"
@@ -3656,7 +3656,14 @@ let%expect_test "labelling a range form" =
     (Ok 0)
 
     ==============
-    <input type="range" step="1" placeholder="" spellcheck="false" value:normalized=0 oninput> </input>
+    <input type="range"
+           step="1"
+           placeholder=""
+           spellcheck="false"
+           min="0"
+           max="100"
+           value:normalized=0
+           oninput> </input>
 
     Right label only
     ###############
@@ -3664,7 +3671,14 @@ let%expect_test "labelling a range form" =
 
     ==============
     <span style={ display: flex; flex-direction: row; flex-wrap: nowrap; }>
-      <input type="range" step="1" placeholder="" spellcheck="false" value:normalized=0 oninput> </input>
+      <input type="range"
+             step="1"
+             placeholder=""
+             spellcheck="false"
+             min="0"
+             max="100"
+             value:normalized=0
+             oninput> </input>
       right
     </span>
 
@@ -3675,7 +3689,14 @@ let%expect_test "labelling a range form" =
     ==============
     <span style={ display: flex; flex-direction: row; flex-wrap: nowrap; }>
       left
-      <input type="range" step="1" placeholder="" spellcheck="false" value:normalized=0 oninput> </input>
+      <input type="range"
+             step="1"
+             placeholder=""
+             spellcheck="false"
+             min="0"
+             max="100"
+             value:normalized=0
+             oninput> </input>
     </span>
 
     Both sides labelled
@@ -3685,7 +3706,14 @@ let%expect_test "labelling a range form" =
     ==============
     <span style={ display: flex; flex-direction: row; flex-wrap: nowrap; }>
       left
-      <input type="range" step="1" placeholder="" spellcheck="false" value:normalized=0 oninput> </input>
+      <input type="range"
+             step="1"
+             placeholder=""
+             spellcheck="false"
+             min="0"
+             max="100"
+             value:normalized=0
+             oninput> </input>
       right
     </span> |}]
 ;;
@@ -4099,6 +4127,102 @@ let%expect_test "adding to/setting/removing from a Form.Elements.Multiple.list" 
     <input type="text" placeholder="" spellcheck="false" value:normalized=foo oninput> </input>
     --------------
     <input type="text" placeholder="" spellcheck="false" value:normalized=baz oninput> </input> |}]
+;;
+
+let%expect_test "a textbox customized with themes" =
+  let component =
+    View.Expert.override_theme_for_computation
+      ~f:(fun (module M) ->
+        (module struct
+          class c =
+            object
+              inherit M.c
+
+              method! textbox ?(attrs = []) ?placeholder ~disabled:_ ~value ~set_value ()
+                  =
+                (* This is a silly implementation, for testing purposes *)
+                let placeholder =
+                  match placeholder with
+                  | None -> Vdom.Attr.empty
+                  | Some placeholder ->
+                    Vdom.Attr.placeholder
+                      [%string "Even better placeholder: %{placeholder}"]
+                in
+                View.vbox
+                  [ Vdom.Node.span ~attrs [ Vdom.Node.text "Attrs here!" ]
+                  ; Vdom.Node.input
+                      ~attrs:
+                        [ placeholder
+                        ; Vdom.Attr.on_input (fun _ s ->
+                            Effect.print_s [%message "ignoring input:" ~_:(s : string)])
+                        ]
+                      ()
+                  ; Vdom.Node.input
+                      ~attrs:
+                        [ Vdom.Attr.on_input (fun _ s -> set_value s)
+                        ; Vdom.Attr.value_prop value
+                        ]
+                      ()
+                  ]
+            end
+        end))
+      (Form.Elements.Textbox.string
+         ~extra_attrs:(Value.return [ Vdom.Attr.class_ "very-important" ])
+         ~placeholder:"placeholder"
+         ())
+  in
+  let handle = Handle.create (form_result_spec [%sexp_of: string]) component in
+  Handle.show handle;
+  [%expect
+    {|
+    (Ok "")
+
+    ==============
+    <div style={ display: flex; flex-direction: column; }>
+      <span class="very-important"> Attrs here! </span>
+      <input placeholder="Even better placeholder: placeholder" oninput> </input>
+      <input #value="" oninput> </input>
+    </div> |}];
+  (* In our silly implementation, typing into the first input box does nothing! *)
+  Handle.input_text handle ~text:"cool text" ~selector:"input:nth-child(2)";
+  Handle.show handle;
+  [%expect
+    {|
+    ("ignoring input:" "cool text")
+    (Ok "")
+
+    ==============
+    <div style={ display: flex; flex-direction: column; }>
+      <span class="very-important"> Attrs here! </span>
+      <input placeholder="Even better placeholder: placeholder" oninput> </input>
+      <input #value="" oninput> </input>
+    </div> |}];
+  (* But, typing into the second input is hooked up to the state *)
+  Handle.input_text handle ~text:"really cool text" ~selector:"input:nth-child(3)";
+  Handle.show handle;
+  [%expect
+    {|
+    (Ok "really cool text")
+
+    ==============
+    <div style={ display: flex; flex-direction: column; }>
+      <span class="very-important"> Attrs here! </span>
+      <input placeholder="Even better placeholder: placeholder" oninput> </input>
+      <input #value="really cool text" oninput> </input>
+    </div> |}];
+  (* And, setting behaves as you'd expect *)
+  Handle.do_actions handle [ "the coolest text" ];
+  Handle.show handle;
+  [%expect
+    {|
+    (Ok "the coolest text")
+
+    ==============
+    <div style={ display: flex; flex-direction: column; }>
+      <span class="very-important"> Attrs here! </span>
+      <input placeholder="Even better placeholder: placeholder" oninput> </input>
+      <input #value="the coolest text" oninput> </input>
+    </div> |}]
 ;;
 
 let%test_module "Form.Typed.Record.make_table" =

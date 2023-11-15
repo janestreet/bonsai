@@ -54,12 +54,12 @@ let rows
     let%arr (`Px row_height) = row_height
     and cols_visible = cols_visible
     and col_widths = col_widths in
-    Theme.Cell.Col_styles.create ~row_height ~col_widths ~cols_visible
+    Table_view.Cell.Col_styles.create ~row_height ~col_widths ~cols_visible
   in
   let%sub row_styles =
     let%arr (`Px row_height) = row_height
     and row_width = row_width in
-    Theme.Row.Styles.create ~row_height ~row_width
+    Table_view.Row.Styles.create ~row_height ~row_width
   in
   Bonsai.assoc
     (module Opaque_map.Key)
@@ -78,7 +78,7 @@ let rows
         and col_styles = col_styles in
         List.mapi cell_contents ~f:(fun i content ->
           let col_styles = col_styles i in
-          Theme.Cell.view ~col_styles content)
+          Table_view.Cell.view ~col_styles content)
       in
       let%arr key, _ = key_and_cells
       and cells = cells
@@ -86,7 +86,7 @@ let rows
       and row_styles = row_styles
       and on_row_click = on_row_click in
       let on_row_click = on_row_click key in
-      Theme.Row.view ~styles:row_styles ~is_selected ~on_row_click cells)
+      Table_view.Row.view ~styles:row_styles ~is_selected ~on_row_click cells)
 ;;
 
 let component
@@ -103,7 +103,7 @@ let component
   ~on_row_click
   (collated : (key, data) Collated.t Value.t)
   (input : (key * data) Opaque_map.t Value.t)
-  : (Theme.Body.t * For_testing.t Lazy.t) Computation.t
+  : (Table_view.Body.t * For_testing.t Lazy.t) Computation.t
   =
   let%sub padding_top_and_bottom =
     let%arr collated = collated
@@ -126,7 +126,7 @@ let component
   let%sub view =
     let%arr rows = rows
     and padding_top, padding_bottom = padding_top_and_bottom in
-    Theme.Body.view ~padding_top ~padding_bottom ~rows
+    Table_view.Body.view ~padding_top ~padding_bottom ~rows
   in
   let%sub for_testing =
     let%arr cells = cells

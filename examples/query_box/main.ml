@@ -142,7 +142,7 @@ let component =
               Quickcheck.Generator.generate
                 Action.quickcheck_generator
                 ~size:6
-                ~random:(Splittable_random.State.create Random.State.default))
+                ~random:(Splittable_random.create Random.State.default))
             ()
         in
         inject item

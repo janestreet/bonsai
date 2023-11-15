@@ -361,7 +361,12 @@ module Expert = struct
       and private_body_classname = private_body_classname
       and vis_change_attr = vis_change_attr
       and total_height = total_height in
-      Theme.Table.view ~private_body_classname ~vis_change_attr ~total_height head body
+      Table_view.Table.view
+        ~private_body_classname
+        ~vis_change_attr
+        ~total_height
+        head
+        body
     in
     let%sub range =
       let%arr low, high = range_without_preload

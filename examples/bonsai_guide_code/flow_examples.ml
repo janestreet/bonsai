@@ -172,7 +172,7 @@ let people_table people ~inject_remove_person =
 
 let kudo_tracker =
   let%sub people, inject_action = people in
-  let%sub form =
+  let%sub add_new_person_form =
     let%sub inject_add_person =
       let%arr inject_action = inject_action in
       fun name -> inject_action (Add name)
@@ -187,7 +187,7 @@ let kudo_tracker =
     people_table people ~inject_remove_person
   in
   let%arr people_table = people_table
-  and form = form in
+  and add_new_person_form = add_new_person_form in
   let open Vdom.Node in
   div
     [ h2 [ text "kudos tracker" ]
@@ -196,7 +196,7 @@ let kudo_tracker =
         ; tbody (Map.data people_table)
         ]
     ; h2 [ text "Add Person" ]
-    ; form
+    ; add_new_person_form
     ]
 ;;
 

@@ -2086,9 +2086,9 @@ let%expect_test "typing into an int number element (no default)" =
            step="1"
            placeholder=""
            spellcheck="false"
+           id="bonsai_path_replaced_in_test"
            min="-1"
            max="10"
-           id="bonsai_path_replaced_in_test"
            value:normalized=""
            oninput> </input> |}];
   Handle.input_text handle ~get_vdom ~selector:"input" ~text:"10";
@@ -2103,9 +2103,9 @@ let%expect_test "typing into an int number element (no default)" =
              step="1"
              placeholder=""
              spellcheck="false"
+             id="bonsai_path_replaced_in_test"
              min="-1"
              max="10"
-             id="bonsai_path_replaced_in_test"
     -|       value:normalized=""
     +|       value:normalized=10
              oninput> </input> |}];
@@ -2121,9 +2121,9 @@ let%expect_test "typing into an int number element (no default)" =
              step="1"
              placeholder=""
              spellcheck="false"
+             id="bonsai_path_replaced_in_test"
              min="-1"
              max="10"
-             id="bonsai_path_replaced_in_test"
     -|       value:normalized=10
     +|       value:normalized=""
              oninput> </input> |}]
@@ -2142,9 +2142,9 @@ let%expect_test "typing into an int number element" =
            step="1"
            placeholder=""
            spellcheck="false"
+           id="bonsai_path_replaced_in_test"
            min="-1"
            max="10"
-           id="bonsai_path_replaced_in_test"
            value:normalized=0
            oninput> </input> |}];
   Handle.input_text handle ~get_vdom ~selector:"input" ~text:"10";
@@ -2159,9 +2159,9 @@ let%expect_test "typing into an int number element" =
              step="1"
              placeholder=""
              spellcheck="false"
+             id="bonsai_path_replaced_in_test"
              min="-1"
              max="10"
-             id="bonsai_path_replaced_in_test"
     -|       value:normalized=0
     +|       value:normalized=10
              oninput> </input> |}];
@@ -2177,9 +2177,9 @@ let%expect_test "typing into an int number element" =
              step="1"
              placeholder=""
              spellcheck="false"
+             id="bonsai_path_replaced_in_test"
              min="-1"
              max="10"
-             id="bonsai_path_replaced_in_test"
     -|       value:normalized=10
     +|       value:normalized=-1
              oninput> </input> |}];
@@ -2188,16 +2188,16 @@ let%expect_test "typing into an int number element" =
   [%expect
     {|
     -|(Ok -1)
-    +|(Error ((value 11) "higher than allowed threshold" (S.max (10))))
+    +|(Error ((value 11) "higher than allowed threshold" (max 10)))
 
       ==============
       <input type="number"
              step="1"
              placeholder=""
              spellcheck="false"
+             id="bonsai_path_replaced_in_test"
              min="-1"
              max="10"
-             id="bonsai_path_replaced_in_test"
     -|       value:normalized=-1
     +|       value:normalized=11
              oninput> </input> |}];
@@ -2205,17 +2205,17 @@ let%expect_test "typing into an int number element" =
   Handle.show_diff handle;
   [%expect
     {|
-    -|(Error ((value 11) "higher than allowed threshold" (S.max (10))))
-    +|(Error ((value -2) "lower than allowed threshold" (S.min (-1))))
+    -|(Error ((value 11) "higher than allowed threshold" (max 10)))
+    +|(Error ((value -2) "lower than allowed threshold" (min -1)))
 
       ==============
       <input type="number"
              step="1"
              placeholder=""
              spellcheck="false"
+             id="bonsai_path_replaced_in_test"
              min="-1"
              max="10"
-             id="bonsai_path_replaced_in_test"
     -|       value:normalized=11
     +|       value:normalized=-2
              oninput> </input> |}]
@@ -2234,9 +2234,9 @@ let%expect_test "setting into an int number element (no default)" =
            step="1"
            placeholder=""
            spellcheck="false"
+           id="bonsai_path_replaced_in_test"
            min="-1"
            max="10"
-           id="bonsai_path_replaced_in_test"
            value:normalized=""
            oninput> </input> |}];
   Handle.do_actions handle [ 10 ];
@@ -2251,9 +2251,9 @@ let%expect_test "setting into an int number element (no default)" =
              step="1"
              placeholder=""
              spellcheck="false"
+             id="bonsai_path_replaced_in_test"
              min="-1"
              max="10"
-             id="bonsai_path_replaced_in_test"
     -|       value:normalized=""
     +|       value:normalized=10
              oninput> </input> |}]
@@ -2272,9 +2272,9 @@ let%expect_test "setting into an int number element" =
            step="1"
            placeholder=""
            spellcheck="false"
+           id="bonsai_path_replaced_in_test"
            min="-1"
            max="10"
-           id="bonsai_path_replaced_in_test"
            value:normalized=0
            oninput> </input> |}];
   Handle.do_actions handle [ 10 ];
@@ -2289,9 +2289,9 @@ let%expect_test "setting into an int number element" =
              step="1"
              placeholder=""
              spellcheck="false"
+             id="bonsai_path_replaced_in_test"
              min="-1"
              max="10"
-             id="bonsai_path_replaced_in_test"
     -|       value:normalized=0
     +|       value:normalized=10
              oninput> </input> |}];
@@ -2307,9 +2307,9 @@ let%expect_test "setting into an int number element" =
              step="1"
              placeholder=""
              spellcheck="false"
+             id="bonsai_path_replaced_in_test"
              min="-1"
              max="10"
-             id="bonsai_path_replaced_in_test"
     -|       value:normalized=10
     +|       value:normalized=-1
              oninput> </input> |}];
@@ -2318,16 +2318,16 @@ let%expect_test "setting into an int number element" =
   [%expect
     {|
     -|(Ok -1)
-    +|(Error ((value 11) "higher than allowed threshold" (S.max (10))))
+    +|(Error ((value 11) "higher than allowed threshold" (max 10)))
 
       ==============
       <input type="number"
              step="1"
              placeholder=""
              spellcheck="false"
+             id="bonsai_path_replaced_in_test"
              min="-1"
              max="10"
-             id="bonsai_path_replaced_in_test"
     -|       value:normalized=-1
     +|       value:normalized=11
              oninput> </input> |}];
@@ -2335,17 +2335,17 @@ let%expect_test "setting into an int number element" =
   Handle.show_diff handle;
   [%expect
     {|
-    -|(Error ((value 11) "higher than allowed threshold" (S.max (10))))
-    +|(Error ((value -2) "lower than allowed threshold" (S.min (-1))))
+    -|(Error ((value 11) "higher than allowed threshold" (max 10)))
+    +|(Error ((value -2) "lower than allowed threshold" (min -1)))
 
       ==============
       <input type="number"
              step="1"
              placeholder=""
              spellcheck="false"
+             id="bonsai_path_replaced_in_test"
              min="-1"
              max="10"
-             id="bonsai_path_replaced_in_test"
     -|       value:normalized=11
     +|       value:normalized=-2
              oninput> </input> |}]
@@ -2366,9 +2366,9 @@ let%expect_test "typing into a float number element" =
            step="1"
            placeholder=""
            spellcheck="false"
+           id="bonsai_path_replaced_in_test"
            min="-1"
            max="10.1"
-           id="bonsai_path_replaced_in_test"
            value:normalized=0
            oninput> </input> |}];
   Handle.input_text handle ~get_vdom ~selector:"input" ~text:"10.1";
@@ -2383,9 +2383,9 @@ let%expect_test "typing into a float number element" =
              step="1"
              placeholder=""
              spellcheck="false"
+             id="bonsai_path_replaced_in_test"
              min="-1"
              max="10.1"
-             id="bonsai_path_replaced_in_test"
     -|       value:normalized=0
     +|       value:normalized=10.1
              oninput> </input> |}];
@@ -2401,9 +2401,9 @@ let%expect_test "typing into a float number element" =
              step="1"
              placeholder=""
              spellcheck="false"
+             id="bonsai_path_replaced_in_test"
              min="-1"
              max="10.1"
-             id="bonsai_path_replaced_in_test"
     -|       value:normalized=10.1
     +|       value:normalized=-1
              oninput> </input> |}];
@@ -2412,16 +2412,16 @@ let%expect_test "typing into a float number element" =
   [%expect
     {|
     -|(Ok -1)
-    +|(Error ((value 10.2) "higher than allowed threshold" (S.max (10.1))))
+    +|(Error ((value 10.2) "higher than allowed threshold" (max 10.1)))
 
       ==============
       <input type="number"
              step="1"
              placeholder=""
              spellcheck="false"
+             id="bonsai_path_replaced_in_test"
              min="-1"
              max="10.1"
-             id="bonsai_path_replaced_in_test"
     -|       value:normalized=-1
     +|       value:normalized=10.2
              oninput> </input> |}];
@@ -2429,17 +2429,17 @@ let%expect_test "typing into a float number element" =
   Handle.show_diff handle;
   [%expect
     {|
-    -|(Error ((value 10.2) "higher than allowed threshold" (S.max (10.1))))
-    +|(Error ((value -1.1) "lower than allowed threshold" (S.min (-1))))
+    -|(Error ((value 10.2) "higher than allowed threshold" (max 10.1)))
+    +|(Error ((value -1.1) "lower than allowed threshold" (min -1)))
 
       ==============
       <input type="number"
              step="1"
              placeholder=""
              spellcheck="false"
+             id="bonsai_path_replaced_in_test"
              min="-1"
              max="10.1"
-             id="bonsai_path_replaced_in_test"
     -|       value:normalized=10.2
     +|       value:normalized=-1.1
              oninput> </input> |}]
@@ -2460,9 +2460,9 @@ let%expect_test "setting into an int number element" =
            step="1"
            placeholder=""
            spellcheck="false"
+           id="bonsai_path_replaced_in_test"
            min="-1"
            max="10.1"
-           id="bonsai_path_replaced_in_test"
            value:normalized=0
            oninput> </input> |}];
   Handle.do_actions handle [ 10.1 ];
@@ -2477,9 +2477,9 @@ let%expect_test "setting into an int number element" =
              step="1"
              placeholder=""
              spellcheck="false"
+             id="bonsai_path_replaced_in_test"
              min="-1"
              max="10.1"
-             id="bonsai_path_replaced_in_test"
     -|       value:normalized=0
     +|       value:normalized=10.1
              oninput> </input> |}];
@@ -2495,9 +2495,9 @@ let%expect_test "setting into an int number element" =
              step="1"
              placeholder=""
              spellcheck="false"
+             id="bonsai_path_replaced_in_test"
              min="-1"
              max="10.1"
-             id="bonsai_path_replaced_in_test"
     -|       value:normalized=10.1
     +|       value:normalized=-1
              oninput> </input> |}];
@@ -2506,16 +2506,16 @@ let%expect_test "setting into an int number element" =
   [%expect
     {|
     -|(Ok -1)
-    +|(Error ((value 10.2) "higher than allowed threshold" (S.max (10.1))))
+    +|(Error ((value 10.2) "higher than allowed threshold" (max 10.1)))
 
       ==============
       <input type="number"
              step="1"
              placeholder=""
              spellcheck="false"
+             id="bonsai_path_replaced_in_test"
              min="-1"
              max="10.1"
-             id="bonsai_path_replaced_in_test"
     -|       value:normalized=-1
     +|       value:normalized=10.2
              oninput> </input> |}];
@@ -2523,17 +2523,17 @@ let%expect_test "setting into an int number element" =
   Handle.show_diff handle;
   [%expect
     {|
-    -|(Error ((value 10.2) "higher than allowed threshold" (S.max (10.1))))
-    +|(Error ((value -1.1) "lower than allowed threshold" (S.min (-1))))
+    -|(Error ((value 10.2) "higher than allowed threshold" (max 10.1)))
+    +|(Error ((value -1.1) "lower than allowed threshold" (min -1)))
 
       ==============
       <input type="number"
              step="1"
              placeholder=""
              spellcheck="false"
+             id="bonsai_path_replaced_in_test"
              min="-1"
              max="10.1"
-             id="bonsai_path_replaced_in_test"
     -|       value:normalized=10.2
     +|       value:normalized=-1.1
              oninput> </input> |}]
@@ -6168,6 +6168,8 @@ let%expect_test "labelling a range form" =
            placeholder=""
            spellcheck="false"
            id="bonsai_path_replaced_in_test"
+           min="0"
+           max="100"
            value:normalized=0
            oninput> </input>
 
@@ -6182,6 +6184,8 @@ let%expect_test "labelling a range form" =
              placeholder=""
              spellcheck="false"
              id="bonsai_path_replaced_in_test"
+             min="0"
+             max="100"
              value:normalized=0
              oninput> </input>
       right
@@ -6199,6 +6203,8 @@ let%expect_test "labelling a range form" =
              placeholder=""
              spellcheck="false"
              id="bonsai_path_replaced_in_test"
+             min="0"
+             max="100"
              value:normalized=0
              oninput> </input>
     </span>
@@ -6215,6 +6221,8 @@ let%expect_test "labelling a range form" =
              placeholder=""
              spellcheck="false"
              id="bonsai_path_replaced_in_test"
+             min="0"
+             max="100"
              value:normalized=0
              oninput> </input>
       right

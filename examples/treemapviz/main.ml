@@ -6,7 +6,7 @@ let percent_range_generator = Base_quickcheck.Generator.float_inclusive (-2.8) 2
 
 let generate_range ~from ~to_ =
   let generator = Base_quickcheck.Generator.float_inclusive from to_ in
-  let random = Splittable_random.State.create Random.State.default in
+  let random = Splittable_random.create Random.State.default in
   Quickcheck.Generator.generate generator ~size:1 ~random
 ;;
 
@@ -93,7 +93,7 @@ let life_elements =
 ;;
 
 let stress_elements =
-  let random = Splittable_random.State.create Random.State.default in
+  let random = Splittable_random.create Random.State.default in
   Nonempty_list.init 100 ~f:(fun _ ->
     Quickcheck.Generator.generate Tree.quickcheck_generator ~size:100 ~random)
 ;;

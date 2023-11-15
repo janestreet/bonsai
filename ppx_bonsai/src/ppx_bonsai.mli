@@ -1,1 +1,1 @@
-(*_ mli is deliberately left empty *)
+module Test_extension = Test_extension

@@ -173,6 +173,39 @@ let theme_dyn_var =
 
 let current_theme = Bonsai.Dynamic_scope.lookup theme_dyn_var
 
+module Form_inputs = struct
+  let textbox ((module T) : Theme.t) ?attrs ?placeholder ~disabled ~value ~set_value () =
+    T.singleton#textbox ?attrs ?placeholder ~disabled ~value ~set_value ()
+  ;;
+
+  let password ((module T) : Theme.t) ?attrs ?placeholder ~disabled ~value ~set_value () =
+    T.singleton#password ?attrs ?placeholder ~disabled ~value ~set_value ()
+  ;;
+
+  let textarea ((module T) : Theme.t) ?attrs ?placeholder ~disabled ~value ~set_value () =
+    T.singleton#textarea ?attrs ?placeholder ~disabled ~value ~set_value ()
+  ;;
+
+  let number
+    ((module T) : Theme.t)
+    ?attrs
+    ?placeholder
+    ?min
+    ?max
+    ~disabled
+    ~step
+    ~value
+    ~set_value
+    ()
+    =
+    T.singleton#number ?attrs ?placeholder ?min ?max ~disabled ~step ~value ~set_value ()
+  ;;
+
+  let range ((module T) : Theme.t) ?attrs ?min ?max ~disabled ~step ~value ~set_value () =
+    T.singleton#range ?attrs ?min ?max ~disabled ~step ~value ~set_value ()
+  ;;
+end
+
 module For_components = struct
   module Codemirror = struct
     let theme ((module T) : Theme.t) = T.singleton#codemirror_theme

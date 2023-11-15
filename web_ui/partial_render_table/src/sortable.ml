@@ -76,13 +76,13 @@ module Header = struct
             else Multi_sort { dir; index = index + 1 })
       in
       let header_node = f sort_state in
-      Theme.Header_label.wrap_clickable ~sortable ~handle_click header_node
+      Table_view.Header_label.wrap_clickable ~sortable ~handle_click header_node
     ;;
   end
 
-  let with_icon = Theme.Header_label.wrap_with_icon
+  let with_icon = Table_view.Header_label.wrap_with_icon
 
-  (* Not in `theme.ml`, because we don't add theming to legacy implementations. *)
+  (* Not in `Table_view.ml`, because we don't add theming to legacy implementations. *)
   module Legacy = struct
     module Icons = struct
       (** White Diamond symbol (U+25C7) *)

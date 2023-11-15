@@ -6,7 +6,7 @@ open! Bonsai.Let_syntax
 
 module Acc = struct
   type t =
-    { level_map : Theme.Header.Header_cell.t list Int.Map.t
+    { level_map : Table_view.Header.Header_cell.t list Int.Map.t
     ; leaf_index : int
     }
 
@@ -26,7 +26,7 @@ module Acc = struct
   let finalize { level_map; leaf_index = _ } =
     level_map
     |> Map.data
-    |> List.map ~f:(fun seq -> Theme.Header.Header_row.view (List.rev seq))
+    |> List.map ~f:(fun seq -> Table_view.Header.Header_row.view (List.rev seq))
   ;;
 end
 
@@ -42,7 +42,7 @@ let rec render_header header ~level ~acc ~column_widths ~set_column_width =
         | Some (Hidden { prev_width_px = Some width }) -> `Px_float width
         | None | Some (Hidden { prev_width_px = None }) -> initial_width
       in
-      Theme.Header.Header_cell.leaf_view
+      Table_view.Header.Header_cell.leaf_view
         ~column_width
         ~set_column_width:(set_column_width ~index)
         ~visible
@@ -52,13 +52,13 @@ let rec render_header header ~level ~acc ~column_widths ~set_column_width =
     Acc.visit_leaf acc ~level ~node
   | Spacer inside ->
     let node =
-      Theme.Header.Header_cell.spacer_view ~colspan:(Header_tree.colspan header) ()
+      Table_view.Header.Header_cell.spacer_view ~colspan:(Header_tree.colspan header) ()
     in
     let acc = Acc.visit_non_leaf acc ~level ~node in
     recurse inside ~acc
   | Group { children; group_header } ->
     let node =
-      Theme.Header.Header_cell.group_view
+      Table_view.Header.Header_cell.group_view
         ~colspan:(Header_tree.colspan header)
         ~label:group_header
         ()
@@ -86,5 +86,5 @@ let component
   and headers = headers
   and column_widths = column_widths in
   let header_rows = render_header headers ~set_column_width ~column_widths in
-  Theme.Header.view ~set_header_client_rect header_rows
+  Table_view.Header.view ~set_header_client_rect header_rows
 ;;

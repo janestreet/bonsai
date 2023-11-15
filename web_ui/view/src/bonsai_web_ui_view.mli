@@ -453,6 +453,67 @@ module Table : sig
     -> Vdom.Node.t
 end
 
+(** Hooks for building controlled form inputs. You may want to consider
+    [Bonsai_web_ui_form] instead of using these directly, as it provides combinators for
+    building large forms. These methods underlie [Bonsai_web_ui_form]'s analagous
+    elements. *)
+module Form_inputs : sig
+  val textbox
+    :  Theme.t
+    -> ?attrs:Vdom.Attr.t list
+    -> ?placeholder:string
+    -> disabled:bool
+    -> value:string
+    -> set_value:(string -> unit Effect.t)
+    -> unit
+    -> Vdom.Node.t
+
+  val password
+    :  Theme.t
+    -> ?attrs:Vdom.Attr.t list
+    -> ?placeholder:string
+    -> disabled:bool
+    -> value:string
+    -> set_value:(string -> unit Effect.t)
+    -> unit
+    -> Vdom.Node.t
+
+  val textarea
+    :  Theme.t
+    -> ?attrs:Vdom.Attr.t list
+    -> ?placeholder:string
+    -> disabled:bool
+    -> value:string
+    -> set_value:(string -> unit Effect.t)
+    -> unit
+    -> Vdom.Node.t
+
+  val number
+    :  Theme.t
+    -> ?attrs:Vdom.Attr.t list
+    -> ?placeholder:string
+    -> ?min:float
+    -> ?max:float
+    -> disabled:bool
+    -> step:float
+    -> value:float option
+    -> set_value:(float option -> unit Effect.t)
+    -> unit
+    -> Vdom.Node.t
+
+  val range
+    :  Theme.t
+    -> ?attrs:Vdom.Attr.t list
+    -> ?min:float
+    -> ?max:float
+    -> disabled:bool
+    -> step:float
+    -> value:float
+    -> set_value:(float -> unit Effect.t)
+    -> unit
+    -> Vdom.Node.t
+end
+
 module For_components : sig
   module Codemirror : sig
     val theme : Theme.t -> For_codemirror.Theme.t option

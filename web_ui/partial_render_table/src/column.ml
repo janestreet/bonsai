@@ -58,7 +58,9 @@ module Dynamic_cells = struct
                  and r = r in
                  key, r)
            else (
-             let f = Ui_incr.Map.map ~f:(fun (k, _) -> k, Theme.Cell.empty_content) in
+             let f =
+               Ui_incr.Map.map ~f:(fun (k, _) -> k, Table_view.Cell.empty_content)
+             in
              Bonsai.Incr.compute map ~f))
         ]
       | Group { children; _ } | Org_group children ->
@@ -135,7 +137,7 @@ module Dynamic_columns = struct
     let rec visible_leaves structure ~key ~data =
       match structure with
       | Leaf { cell; visible; _ } ->
-        if visible then [ cell ~key ~data ] else [ Theme.Cell.empty_content ]
+        if visible then [ cell ~key ~data ] else [ Table_view.Cell.empty_content ]
       | Org_group children | Group { children; group_header = _ } ->
         List.concat_map children ~f:(visible_leaves ~key ~data)
     ;;

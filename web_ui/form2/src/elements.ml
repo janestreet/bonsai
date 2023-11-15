@@ -47,6 +47,17 @@ module Basic_stateful = struct
     let view = view ~state ~set_state in
     form_expert_create ~value:(Ok state) ~view ~set:set_state
   ;;
+
+  let make_themed state ~view =
+    let%sub state_and_set_state = state in
+    let%sub theme = View.Theme.current in
+    let%arr view = view
+    and theme = theme
+    and state_and_set_state = state_and_set_state in
+    let state, set_state = state_and_set_state in
+    let view = view ~state ~set_state ~theme in
+    form_expert_create ~value:(Ok state) ~view ~set:set_state
+  ;;
 end
 
 let optional_to_required =
@@ -68,39 +79,38 @@ end
 
 let string_underlying
   ~(f :
-      ?extra_attrs:Vdom.Attr.t list
-      -> ?call_on_input_when:Vdom_input_widgets.Entry.Call_on_input_when.t
-      -> ?disabled:bool
+      View.Theme.t
+      -> ?attrs:Vdom.Attr.t list
       -> ?placeholder:string
-      -> ?merge_behavior:Vdom_input_widgets.Merge_behavior.t
-      -> value:string option
-      -> on_input:(string option -> unit Ui_effect.t)
+      -> disabled:bool
+      -> value:string
+      -> set_value:(string -> unit Ui_effect.t)
       -> unit
       -> Vdom.Node.t)
   ?(extra_attrs = Value.return [])
   ?placeholder
   ()
   =
-  let view =
-    let%map extra_attrs = extra_attrs in
-    fun ~state ~set_state ->
+  let%sub view =
+    let%arr extra_attrs = extra_attrs in
+    fun ~state ~set_state ~theme ->
       f
+        theme
         ?placeholder
-        ~extra_attrs
-        ~value:(Some state)
-        ~on_input:(function
-          | Some s -> set_state s
-          | None -> set_state "")
+        ~disabled:false
+        ~attrs:extra_attrs
+        ~value:state
+        ~set_value:set_state
         ()
   in
-  Basic_stateful.make
+  Basic_stateful.make_themed
     (Bonsai.state "" ~sexp_of_model:[%sexp_of: String.t] ~equal:[%equal: String.t])
     ~view
 ;;
 
 module Textbox = struct
   let string ?extra_attrs ?placeholder () =
-    string_underlying ~f:Vdom_input_widgets.Entry.text ?extra_attrs ?placeholder ()
+    string_underlying ~f:View.Form_inputs.textbox ?extra_attrs ?placeholder ()
   ;;
 
   let int ?extra_attrs ?placeholder here =
@@ -145,7 +155,7 @@ end
 
 module Password = struct
   let string ?extra_attrs ?placeholder () =
-    string_underlying ~f:Vdom_input_widgets.Entry.password ?extra_attrs ?placeholder ()
+    string_underlying ~f:View.Form_inputs.password ?extra_attrs ?placeholder ()
   ;;
 
   let stringable
@@ -161,17 +171,19 @@ end
 
 module Textarea = struct
   let string ?(extra_attrs = Value.return []) ?placeholder () =
-    let view =
-      let%map extra_attrs = extra_attrs in
-      fun ~state ~set_state ->
-        Vdom_input_widgets.Entry.text_area
+    let%sub view =
+      let%arr extra_attrs = extra_attrs in
+      fun ~state ~set_state ~theme ->
+        View.Form_inputs.textarea
+          theme
           ?placeholder
-          ~extra_attrs
+          ~disabled:false
+          ~attrs:extra_attrs
           ~value:state
-          ~on_input:set_state
+          ~set_value:set_state
           ()
     in
-    Basic_stateful.make
+    Basic_stateful.make_themed
       (Bonsai.state "" ~sexp_of_model:[%sexp_of: String.t] ~equal:[%equal: String.t])
       ~view
   ;;
@@ -1302,182 +1314,134 @@ module Multiple = struct
   ;;
 end
 
-module Number_input_type = struct
-  type t =
-    | Number
-    | Range of
-        { left_label : Vdom.Node.t option
-        ; right_label : Vdom.Node.t option
-        }
-end
-
-module type Number_input_specification = sig
-  type t [@@deriving sexp_of]
-
-  include Model with type t := t
-  include Stringable.S with type t := t
-
-  val min : t option
-  val max : t option
-  val step : t
-  val default : t option
-  val compare : t -> t -> int
-  val to_float : t -> float
-end
-
-let number_input
-  (type a)
-  ?(extra_attrs = Value.return [])
-  input_type
-  (module S : Number_input_specification with type t = a)
-  ~equal
-  =
-  let module S = struct
-    include S
-
-    let equal = equal
-  end
-  in
-  let compare_opt a b =
-    match b with
-    | Some b -> S.compare a b
-    | None -> 0
-  in
-  let ( < ) a b = compare_opt a b < 0 in
-  let ( > ) a b = compare_opt a b > 0 in
-  let view =
-    let min = Option.map S.min ~f:(Fn.compose Vdom.Attr.min S.to_float) in
-    let max = Option.map S.max ~f:(Fn.compose Vdom.Attr.max S.to_float) in
-    let%map extra_attrs = extra_attrs in
-    fun ~state ~set_state ->
-      let input =
-        let input_widget =
-          match input_type with
-          | Number_input_type.Number -> Vdom_input_widgets.Entry.number
-          | Range _ -> Vdom_input_widgets.Entry.range
-        in
-        input_widget
-          (module S)
-          ~extra_attrs:
-            (List.concat [ List.filter_map [ min; max ] ~f:Fn.id; extra_attrs ])
-          ~value:state
-          ~step:(S.to_float S.step)
-          ~on_input:(function
-            | Some s -> set_state (Some s)
-            | None -> set_state S.default)
-      in
-      match input_type with
-      | Number -> input
-      | Range { left_label; right_label } ->
-        (match List.filter_opt [ left_label; Some input; right_label ] with
-         | [ x ] -> x
-         | elements ->
-           Vdom.Node.span ~attrs:[ Vdom.Attr.style (Css_gen.flex_container ()) ] elements)
-  in
-  let%sub number_input =
-    Basic_stateful.make
-      (Bonsai.state_opt
-         ()
-         ~sexp_of_model:[%sexp_of: S.t]
-         ?default_model:S.default
-         ~equal:S.equal)
-      ~view
-  in
-  let%arr number_input = number_input in
-  Form.project' number_input ~unparse:Option.return ~parse:(fun value ->
-    match value with
-    | None -> Or_error.error_s [%message "value not specified"]
-    | Some value ->
-      if value < S.min
+let validate_range (type a) ?min ?max value =
+  let ( < ) = Float.( < ) in
+  let ( > ) = Float.( > ) in
+  let too_small =
+    match min with
+    | None -> Ok ()
+    | Some min ->
+      if value < min
       then
         Or_error.error_s
-          [%message (value : S.t) "lower than allowed threshold" (S.min : S.t option)]
-      else if value > S.max
+          [%message (value : float) "lower than allowed threshold" (min : float)]
+      else Ok ()
+  in
+  let too_large =
+    match max with
+    | None -> Ok ()
+    | Some max ->
+      if value > max
       then
         Or_error.error_s
-          [%message (value : S.t) "higher than allowed threshold" (S.max : S.t option)]
-      else Ok value)
+          [%message (value : float) "higher than allowed threshold" (max : float)]
+      else Ok ()
+  in
+  Or_error.all_unit [ too_small; too_large ]
 ;;
 
 module Number = struct
-  let int ?extra_attrs ?min:min_ ?max:max_ ?default ~step () =
-    let module Specification = struct
-      include Int
-
-      let min = min_
-      let max = max_
-      let step = step
-      let default = default
-    end
+  let float ?(extra_attrs = Value.return []) ?min ?max ?default ~step () =
+    let%sub optional_unvalidated =
+      let%sub view =
+        let%arr extra_attrs = extra_attrs in
+        fun ~state ~set_state ~theme ->
+          View.Form_inputs.number
+            theme
+            ~attrs:extra_attrs
+            ?min
+            ?max
+            ~disabled:false
+            ~step
+            ~value:state
+            ~set_value:set_state
+            ()
+      in
+      Basic_stateful.make_themed (Bonsai.state_opt ?default_model:default ()) ~view
     in
-    number_input
-      ?extra_attrs
-      Number
-      (module Specification)
-      ~equal:[%equal: Specification.t]
+    let%sub unvalidated =
+      let%arr optional_unvalidated = optional_unvalidated in
+      Form.project'
+        optional_unvalidated
+        ~parse:(function
+          | Some value -> Ok value
+          | None -> Or_error.error_s [%message "value not specified"])
+        ~unparse:Option.return
+    in
+    let%arr unvalidated = unvalidated in
+    Form.validate unvalidated ~f:(validate_range ?min ?max)
   ;;
 
-  let float ?extra_attrs ?min:min_ ?max:max_ ?default ~step () =
-    let module Specification = struct
-      include Float
-
-      (* We can't just use the default Stringable interface provided by Float, so we
-         overwrite it with a custom one. For more information, see
-         [Vdom_input_widgets.Entry.number]. *)
-      include Vdom_input_widgets.Decimal
-
-      let min = min_
-      let max = max_
-      let default = default
-      let step = step
-    end
+  let int ?extra_attrs ?min ?max ?default ~step () =
+    let int x = Option.map x ~f:Int.to_float in
+    let%sub float =
+      float
+        ?extra_attrs
+        ?min:(int min)
+        ?max:(int max)
+        ?default:(int default)
+        ~step:(Int.to_float step)
+        ()
     in
-    number_input
-      ?extra_attrs
-      Number
-      (module Specification)
-      ~equal:[%equal: Specification.t]
+    let%arr float = float in
+    Form.project float ~parse_exn:Int.of_float ~unparse:Int.to_float
   ;;
 end
 
 module Range = struct
-  let int ?extra_attrs ?min:min_ ?max:max_ ?left_label ?right_label ?default ~step () =
-    let module Specification = struct
-      include Int
-
-      let min = min_
-      let max = max_
-      let step = step
-      let default = default
-    end
+  (* The default values of [min]/[max]/[default] match the browser spec. *)
+  let float
+    ?(extra_attrs = Value.return [])
+    ?(min = 0.)
+    ?(max = 100.)
+    ?left_label
+    ?right_label
+    ?(default = (min +. max) /. 2.)
+    ~step
+    ()
+    =
+    let%sub unvalidated =
+      let%sub view =
+        let%arr extra_attrs = extra_attrs in
+        fun ~state ~set_state ~theme ->
+          let input =
+            View.Form_inputs.range
+              theme
+              ~attrs:extra_attrs
+              ~min
+              ~max
+              ~disabled:false
+              ~step
+              ~value:state
+              ~set_value:set_state
+              ()
+          in
+          match List.filter_opt [ left_label; Some input; right_label ] with
+          | [ x ] -> x
+          | elements ->
+            Vdom.Node.span ~attrs:[ Vdom.Attr.style (Css_gen.flex_container ()) ] elements
+      in
+      Basic_stateful.make_themed (Bonsai.state default) ~view
     in
-    number_input
-      ?extra_attrs
-      (Range { left_label; right_label })
-      (module Specification)
-      ~equal:[%equal: Specification.t]
+    let%arr unvalidated = unvalidated in
+    Form.validate unvalidated ~f:(validate_range ~min ~max)
   ;;
 
-  let float ?extra_attrs ?min:min_ ?max:max_ ?left_label ?right_label ?default ~step () =
-    let module Specification = struct
-      include Float
-
-      (* We can't just use the default Stringable interface provided by Float, so we
-         overwrite it with a custom one. For more information, see
-         [Vdom_input_widgets.Entry.number]. *)
-      include Vdom_input_widgets.Decimal
-
-      let min = min_
-      let max = max_
-      let default = default
-      let step = step
-    end
+  let int ?extra_attrs ?min ?max ?left_label ?right_label ?default ~step () =
+    let int x = Option.map x ~f:Int.to_float in
+    let%sub float =
+      float
+        ?extra_attrs
+        ?min:(int min)
+        ?max:(int max)
+        ?left_label
+        ?right_label
+        ?default:(int default)
+        ~step:(Int.to_float step)
+        ()
     in
-    number_input
-      ?extra_attrs
-      (Range { left_label; right_label })
-      (module Specification)
-      ~equal:[%equal: Specification.t]
+    let%arr float = float in
+    Form.project float ~parse_exn:Int.of_float ~unparse:Int.to_float
   ;;
 end
 
@@ -1781,48 +1745,48 @@ module Query_box = struct
   [%css
   stylesheet
     {|
-  .list_container {
-    background: white;
-    border: solid 2px black;
-    min-width: 150px;
-    outline: none;
-    border-bottom-right-radius: 3px;
-    border-bottom-left-radius: 3px;
-    user-select: none;
-  }
+   .list_container {
+     background: white;
+     border: solid 2px black;
+     min-width: 150px;
+     outline: none;
+     border-bottom-right-radius: 3px;
+     border-bottom-left-radius: 3px;
+     user-select: none;
+   }
 
-  .selected_item {
-    background-color: rgb(222, 222, 222);
-  }
+   .selected_item {
+     background-color: rgb(222, 222, 222);
+   }
 
-  .item {
-    padding: 5px;
-  }
+   .item {
+     padding: 5px;
+   }
 
-  .description {
-    color: #555555;
-  }
+   .description {
+     color: #555555;
+   }
 
-  .input::placeholder {
-    color: black;
-  }
+   .input::placeholder {
+     color: black;
+   }
 
-  .input:focus::placeholder {
-    color: #555555;
-  }
+   .input:focus::placeholder {
+     color: #555555;
+   }
 
-  .input:not(:focus):not(:placeholder-shown) {
-    color: red;
-  }
+   .input:not(:focus):not(:placeholder-shown) {
+     color: red;
+   }
 
-  .selected_item .description {
-    color: black;
-  }
+   .selected_item .description {
+     color: black;
+   }
 
-  .matched-part {
-    font-weight: bold;
-  }
-  |}]
+   .matched-part {
+     font-weight: bold;
+   }
+   |}]
 
   let optional_computation = function
     | None -> Bonsai.const None

@@ -1,6 +1,6 @@
 (library (name bonsai_web_ui_view) (public_name bonsai.web_ui_view)
- (libraries core virtual_dom bonsai bonsai_web_ui_form_view
-  bonsai_web_ui_toggle)
+ (libraries bonsai bonsai_web_ui_form_view bonsai_web_ui_toggle core
+  virtual_dom.input_widgets virtual_dom)
  (preprocess (pps ppx_jane ppx_bonsai ppx_css))
  (flags :standard -alert -private_bonsai_view_library))
 

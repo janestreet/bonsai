@@ -19,10 +19,6 @@ stylesheet
   .selected_item {
     background: yellow;
   }
-
-
-
-
   |}]
 
 let barebones_button_like ~checked =
@@ -105,7 +101,8 @@ module My_variant = struct
   let form_for_variant : type a. a Typed_variant.t -> a Form.t Computation.t = function
     | A -> Bonsai.const (Form.return ())
     | B -> E.Textbox.string ()
-    | C -> Computation.map2 ~f:Form.both (E.Textbox.int ()) (E.Textbox.float ())
+    | C ->
+      Computation.map2 ~f:Form.both (E.Number.int ~step:1 ()) (E.Number.float ~step:1. ())
   ;;
 end
 

@@ -410,8 +410,7 @@ let to_vdom self ?on_submit ~eval_context view =
       | None -> Vdom.Effect.Many always_use
       | Some event -> Vdom.Effect.Many (event :: always_use)
     in
-    Vdom.Node.create
-      "form"
+    Vdom.Node.form
       ~attrs:[ Vdom.Attr.on_submit (fun _ -> event) ]
       [ inner_table
       ; (if Option.is_none button_text then hidden_submit_input else Vdom.Node.none)

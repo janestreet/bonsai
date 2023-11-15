@@ -16,7 +16,7 @@ module Basic = struct
       [%demo
         Vdom.Node.div
           ~attrs:
-            [ {%css| 
+            [ {%css|
                background-color: tomato;
                width: 2rem;
                height: 2rem; |}
@@ -189,16 +189,16 @@ module Stylesheet_interpolation = struct
         stylesheet
           {|
               .square {
-                 background-color: %{color#Css_gen.Color};
-                 width: %{width#Css_gen.Length};
-                 height: %{height#Css_gen.Length}; 
-                 transition: 1s;
+                background-color: %{color#Css_gen.Color};
+                width: %{width#Css_gen.Length};
+                height: %{height#Css_gen.Length};
+                transition: 1s;
               }
 
               .square:hover {
-                 transform: rotate(180deg);
+                transform: rotate(180deg);
               }
-          |}]
+            |}]
         in
         Vdom.Node.div ~attrs:[ Style.square ] []]
     in

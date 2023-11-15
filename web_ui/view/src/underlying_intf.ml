@@ -147,6 +147,57 @@ module C = struct
       -> title_kind:Constants.Card_title_kind.t
       -> content:Vdom.Node.t list
       -> Vdom.Node.t
+
+    (* input elements *)
+    method textbox :
+      ?attrs:Vdom.Attr.t list
+      -> ?placeholder:string
+      -> disabled:bool
+      -> value:string
+      -> set_value:(string -> unit Effect.t)
+      -> unit
+      -> Vdom.Node.t
+
+    method password :
+      ?attrs:Vdom.Attr.t list
+      -> ?placeholder:string
+      -> disabled:bool
+      -> value:string
+      -> set_value:(string -> unit Effect.t)
+      -> unit
+      -> Vdom.Node.t
+
+    method textarea :
+      ?attrs:Vdom.Attr.t list
+      -> ?placeholder:string
+      -> disabled:bool
+      -> value:string
+      -> set_value:(string -> unit Effect.t)
+      -> unit
+      -> Vdom.Node.t
+
+    method number :
+      ?attrs:Vdom.Attr.t list
+      -> ?placeholder:string
+      -> ?min:float
+      -> ?max:float
+      -> disabled:bool
+      -> step:float
+      -> value:float option
+      -> set_value:(float option -> unit Effect.t)
+      -> unit
+      -> Vdom.Node.t
+
+    method range :
+      ?attrs:Vdom.Attr.t list
+      -> ?min:float
+      -> ?max:float
+      -> disabled:bool
+      -> step:float
+      -> value:float
+      -> set_value:(float -> unit Effect.t)
+      -> unit
+      -> Vdom.Node.t
   end
 end
 

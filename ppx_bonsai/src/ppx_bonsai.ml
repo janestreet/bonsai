@@ -1,6 +1,7 @@
 open Ppxlib
 open Ppx_let_expander
 open Ppx_bonsai_expander
+module Test_extension = Test_extension
 
 let locality = `global
 
@@ -22,3 +23,5 @@ let () =
       ; ext arr Extension_kind.default_open
       ]
 ;;
+
+let () = Test_extension.register ()

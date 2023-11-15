@@ -1,3 +1,3 @@
 (library (name ppx_bonsai) (public_name bonsai.ppx_bonsai)
- (libraries ppx_let.expander ppx_bonsai_expander) (kind ppx_deriver)
- (preprocess no_preprocessing))
+ (libraries ppx_let.expander ppx_bonsai_expander)
+ (preprocess (pps ppxlib.metaquot)) (kind ppx_deriver))

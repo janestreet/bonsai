@@ -26,6 +26,10 @@ module Non_interactive : sig
     -> ('a, Vdom.Node.t) Form.t Computation.t
 end
 
+(** Methods in [Textbox], [Password], [Textarea], [Number], and [Range] use the theme's
+    implementation of the respective methods. To customize the appearance of these
+    elements within your app, you can override those methods in the theme. *)
+
 module Textbox : sig
   val string
     :  ?extra_attrs:Vdom.Attr.t list Value.t
