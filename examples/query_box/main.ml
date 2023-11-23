@@ -91,7 +91,12 @@ let component =
             Form.Elements.Dropdown.enumerable (module Query_box.Suggestion_list_kind)
           | Expand_direction ->
             Form.Elements.Dropdown.enumerable (module Query_box.Expand_direction)
-          | Max_visible_items -> Form.Elements.Number.int ~default:10 ~step:1 ()
+          | Max_visible_items ->
+            Form.Elements.Number.int
+              ~default:10
+              ~step:1
+              ~allow_updates_when_focused:`Never
+              ()
           | Input_source -> Form.Elements.Dropdown.enumerable (module Input_source)
           | Filter_strategy ->
             Form.Elements.Dropdown.enumerable (module Query_box.Filter_strategy)

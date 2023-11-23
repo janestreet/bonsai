@@ -55,6 +55,7 @@ module C = struct
 
     method app_attr : Vdom.Attr.t
     method codemirror_theme : For_codemirror.Theme.t option
+    method prt_styling : For_prt.t
 
     (* tables *)
     method table : Vdom.Attr.t
@@ -152,6 +153,8 @@ module C = struct
     method textbox :
       ?attrs:Vdom.Attr.t list
       -> ?placeholder:string
+      -> ?key:string
+      -> allow_updates_when_focused:[ `Always | `Never ]
       -> disabled:bool
       -> value:string
       -> set_value:(string -> unit Effect.t)
@@ -161,6 +164,8 @@ module C = struct
     method password :
       ?attrs:Vdom.Attr.t list
       -> ?placeholder:string
+      -> ?key:string
+      -> allow_updates_when_focused:[ `Always | `Never ]
       -> disabled:bool
       -> value:string
       -> set_value:(string -> unit Effect.t)
@@ -170,6 +175,8 @@ module C = struct
     method textarea :
       ?attrs:Vdom.Attr.t list
       -> ?placeholder:string
+      -> ?key:string
+      -> allow_updates_when_focused:[ `Always | `Never ]
       -> disabled:bool
       -> value:string
       -> set_value:(string -> unit Effect.t)
@@ -181,6 +188,8 @@ module C = struct
       -> ?placeholder:string
       -> ?min:float
       -> ?max:float
+      -> ?key:string
+      -> allow_updates_when_focused:[ `Always | `Never ]
       -> disabled:bool
       -> step:float
       -> value:float option
@@ -192,6 +201,8 @@ module C = struct
       ?attrs:Vdom.Attr.t list
       -> ?min:float
       -> ?max:float
+      -> ?key:string
+      -> allow_updates_when_focused:[ `Always | `Never ]
       -> disabled:bool
       -> step:float
       -> value:float

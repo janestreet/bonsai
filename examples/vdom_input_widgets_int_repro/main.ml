@@ -38,6 +38,7 @@ let component =
         Vdom_input_widgets.Entry.number
           ~merge_behavior:Legacy_dont_merge
           (module Int)
+          ~allow_updates_when_focused:`Never
           ~value
           ~on_input
           ~step:1.)
@@ -53,6 +54,7 @@ let component =
           ~merge_behavior:Legacy_dont_merge
           ~value
           ~on_input
+          ~allow_updates_when_focused:`Never
           ())
   in
   let%arr number_input = number_input

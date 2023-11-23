@@ -22,8 +22,8 @@ let form_of_t =
 
       let form_for_field (type a) (field : a Typed_field.t) : a Form.t Computation.t =
         match field with
-        | Name -> Form.Elements.Textbox.string ()
-        | Age -> Form.Elements.Textbox.int ()
+        | Name -> Form.Elements.Textbox.string ~allow_updates_when_focused:`Never ()
+        | Age -> Form.Elements.Textbox.int ~allow_updates_when_focused:`Never ()
         | Likes_cats -> Form.Elements.Checkbox.bool ~default:true ()
       ;;
     end)

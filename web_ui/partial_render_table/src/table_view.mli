@@ -1,6 +1,19 @@
 open! Core
 open! Bonsai_web
 
+module Theming : sig
+  type t =
+    [ `Legacy_don't_use_theme
+    | `Themed
+    ]
+end
+
+module Themed : sig
+  type t
+
+  val create : View.Theme.t -> Theming.t -> t
+end
+
 module Header_label : sig
   val wrap_clickable
     :  sortable:bool
@@ -9,7 +22,8 @@ module Header_label : sig
     -> Vdom.Node.t
 
   val wrap_with_icon
-    :  Vdom.Node.t
+    :  ?sort_indicator_attrs:Vdom.Attr.t list
+    -> Vdom.Node.t
     -> Bonsai_web_ui_partial_render_table_protocol.Sort_state.t
     -> Vdom.Node.t
 end
@@ -19,27 +33,29 @@ module Header : sig
     type t
 
     val leaf_view
-      :  column_width:Css_gen.Length.t
+      :  Themed.t
+      -> column_width:Css_gen.Length.t
       -> set_column_width:([> `Px_float of float ] -> unit Ui_effect.t)
       -> visible:bool
       -> label:Vdom.Node.t
       -> unit
       -> t
 
-    val spacer_view : colspan:int -> unit -> t
-    val group_view : colspan:int -> label:Vdom.Node.t -> unit -> t
+    val spacer_view : Themed.t -> colspan:int -> unit -> t
+    val group_view : Themed.t -> colspan:int -> label:Vdom.Node.t -> unit -> t
   end
 
   module Header_row : sig
     type t
 
-    val view : Header_cell.t list -> t
+    val view : Themed.t -> Header_cell.t list -> t
   end
 
   type t
 
   val view
-    :  set_header_client_rect:
+    :  Themed.t
+    -> set_header_client_rect:
          (Bonsai_web_ui_element_size_hooks.Visibility_tracker.Bbox.t -> unit Ui_effect.t)
     -> Header_row.t list
     -> t
@@ -50,7 +66,8 @@ module Cell : sig
     type t
 
     val create
-      :  row_height:int
+      :  themed_attrs:Themed.t
+      -> row_height:int
       -> col_widths:[< `Hidden of float | `Visible of float ] list
       -> cols_visible:bool list
       -> int
@@ -60,7 +77,6 @@ module Cell : sig
   type t
 
   val view : col_styles:Col_styles.t -> Vdom.Node.t -> t
-  val empty_content : Vdom.Node.t
 end
 
 module Row : sig
@@ -73,8 +89,9 @@ module Row : sig
   type t
 
   val view
-    :  styles:Styles.t
-    -> is_selected:bool
+    :  Themed.t
+    -> styles:Styles.t
+    -> is_focused:bool
     -> on_row_click:unit Ui_effect.t
     -> Cell.t list
     -> t
@@ -83,12 +100,18 @@ end
 module Body : sig
   type t
 
-  val view : padding_top:int -> padding_bottom:int -> rows:Row.t Opaque_map.Key.Map.t -> t
+  val view
+    :  Themed.t
+    -> padding_top:int
+    -> padding_bottom:int
+    -> rows:Row.t Opaque_map.Key.Map.t
+    -> t
 end
 
 module Table : sig
   val view
-    :  private_body_classname:string
+    :  Themed.t
+    -> private_body_classname:string
     -> vis_change_attr:Vdom.Attr.t
     -> total_height:int
     -> Header.t

@@ -78,7 +78,7 @@ let () =
 (* $MDX part-begin=protocol-2 *)
 module Current_time = struct
   include String
-  include Diffable.Atomic.Make (String)
+  include Legacy_diffable.Atomic.Make (String)
 end
 
 let current_time_rpc =
@@ -122,7 +122,12 @@ module Css = [%css stylesheet {|
 
 let zone_form =
   let module Form = Bonsai_web_ui_form in
-  let%sub form = Form.Elements.Textbox.string ~placeholder:"timezone" () in
+  let%sub form =
+    Form.Elements.Textbox.string
+      ~placeholder:"timezone"
+      ~allow_updates_when_focused:`Always
+      ()
+  in
   let%sub form = Form.Dynamic.with_default (Value.return "America/New_York") form in
   let%arr form = form in
   let value = Form.value_or_default ~default:"America/New_York" form in

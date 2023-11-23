@@ -32,10 +32,6 @@ module Sort_kind = struct
   let reversible' ~reverse = { forward = Comparable.reverse reverse; reverse }
 end
 
-module type Col_id = sig
-  type t [@@deriving equal, sexp, bin_io]
-end
-
 module Dir = struct
   include Stable.Dir.V1
 end
@@ -62,13 +58,7 @@ module Order = struct
     [@@deriving sexp_of]
   end
 
-  let apply_action
-    (type col_id)
-    t
-    (module Col_id : Col_id with type t = col_id)
-    (action : col_id Action.t)
-    =
-    let equal = Col_id.equal in
+  let apply_action t ~equal (action : 'col_id Action.t) =
     let cycle_sort_direction id =
       match List.Assoc.find ~equal t id with
       | None -> [ id, `Asc ]

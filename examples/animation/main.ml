@@ -8,7 +8,9 @@ let component =
   let%sub interpolator_form =
     Form.Elements.Dropdown.enumerable (module Animation.Interpolator) ~init:`First_item
   in
-  let%sub text_picker = Form.Elements.Textbox.string () in
+  let%sub text_picker =
+    Form.Elements.Textbox.string ~allow_updates_when_focused:`Never ()
+  in
   let%sub text_picker =
     text_picker |> Form.Dynamic.with_default (Bonsai.Value.return "Hello Animation!")
   in

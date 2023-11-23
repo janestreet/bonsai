@@ -31,6 +31,7 @@ let size_slider =
     ~max:100
     ~default:default.size
     ~step:8
+    ~allow_updates_when_focused:`Never
     ()
 ;;
 
@@ -41,6 +42,7 @@ let stroke_width_slider =
     ~max:3.
     ~default:default.stroke_width
     ~step:0.25
+    ~allow_updates_when_focused:`Never
     ()
 ;;
 

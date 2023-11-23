@@ -558,7 +558,8 @@ let%expect_test "setting option form" =
     (Ok ())
 
     ==============
-    <input type="checkbox"
+    <input @key=bonsai_path_replaced_in_test
+           type="checkbox"
            id="bonsai_path_replaced_in_test"
            #checked="false"
            onclick
@@ -573,7 +574,8 @@ let%expect_test "setting option form" =
 
     ==============
     <div>
-      <input type="checkbox"
+      <input @key=bonsai_path_replaced_in_test
+             type="checkbox"
              id="bonsai_path_replaced_in_test"
              #checked="true"
              onclick
@@ -595,7 +597,8 @@ let%expect_test "setting option form" =
     (Ok ())
 
     ==============
-    <input type="checkbox"
+    <input @key=bonsai_path_replaced_in_test
+           type="checkbox"
            id="bonsai_path_replaced_in_test"
            #checked="false"
            onclick
@@ -616,7 +619,8 @@ let%expect_test "interacting with option form" =
     (Ok ())
 
     ==============
-    <input type="checkbox"
+    <input @key=bonsai_path_replaced_in_test
+           type="checkbox"
            id="bonsai_path_replaced_in_test"
            #checked="false"
            onclick
@@ -631,7 +635,8 @@ let%expect_test "interacting with option form" =
 
     ==============
     <div>
-      <input type="checkbox"
+      <input @key=bonsai_path_replaced_in_test
+             type="checkbox"
              id="bonsai_path_replaced_in_test"
              #checked="true"
              onclick
@@ -654,7 +659,8 @@ let%expect_test "interacting with option form" =
 
     ==============
     <div>
-      <input type="checkbox"
+      <input @key=bonsai_path_replaced_in_test
+             type="checkbox"
              id="bonsai_path_replaced_in_test"
              #checked="true"
              onclick
@@ -1239,7 +1245,8 @@ let%expect_test "variants with only atom clauses and no doc comments get optimiz
     (Ok Foo)
 
     ==============
-    <select id="bonsai_path_replaced_in_test"
+    <select @key=bonsai_path_replaced_in_test
+            id="bonsai_path_replaced_in_test"
             class="widget-dropdown"
             onchange
             style={
@@ -1652,7 +1659,7 @@ let%expect_test "setting custom time form" =
       ~apply_to_tag:(fun ~key ~value ->
         String.equal key Sexplib0.Sexp_grammar.type_name_tag
         && Sexp.equal value ([%sexp_of: string] "Core.Time_ns.Alternate_sexp.t"))
-      (Form.Elements.Date_time.datetime_local ())
+      (Form.Elements.Date_time.datetime_local ~allow_updates_when_focused:`Never ())
   in
   let handle =
     sexp_form_handle ~customizations:[ customize_time ] (module Time_ns.Alternate_sexp)
@@ -1691,7 +1698,7 @@ let%expect_test "interacting with custom time form" =
       ~apply_to_tag:(fun ~key ~value ->
         String.equal key Sexplib0.Sexp_grammar.type_name_tag
         && Sexp.equal value ([%sexp_of: string] "Core.Time_ns.Alternate_sexp.t"))
-      (Form.Elements.Date_time.datetime_local ())
+      (Form.Elements.Date_time.datetime_local ~allow_updates_when_focused:`Never ())
   in
   let handle =
     sexp_form_handle ~customizations:[ customize_time ] (module Time_ns.Alternate_sexp)
@@ -2188,7 +2195,6 @@ let%expect_test "regression test: optional groups have keys attached" =
                     <div class="container_hash_replaced_in_test label_hash_replaced_in_test">
                       <label for="bonsai_path_replaced_in_test" style={ display: block; }> one </label>
 
-                             margin-left: 0px;
                            }> </input>
                   </td>
                 </tr>
@@ -2202,7 +2208,8 @@ let%expect_test "regression test: optional groups have keys attached" =
                     <div class="container_hash_replaced_in_test label_hash_replaced_in_test"> three </div>
                   </td>
                   <td>
-                    <input type="checkbox"
+                    <input @key=bonsai_path_replaced_in_test
+                           type="checkbox"
                            id="bonsai_path_replaced_in_test"
     -|                     #checked="false"
     +|                     #checked="true"
@@ -2267,7 +2274,7 @@ let%expect_test "regression test: optional groups have keys attached" =
                   <td>
                     <div class="container_hash_replaced_in_test label_hash_replaced_in_test">
                       <label for="bonsai_path_replaced_in_test" style={ display: block; }> one </label>
-                    </div>
+
                   </td>
                   <td>
                     <textarea placeholder=""
@@ -2281,7 +2288,8 @@ let%expect_test "regression test: optional groups have keys attached" =
                     <div class="container_hash_replaced_in_test label_hash_replaced_in_test"> two </div>
                   </td>
                   <td>
-                    <input type="checkbox"
+                    <input @key=bonsai_path_replaced_in_test
+                           type="checkbox"
                            id="bonsai_path_replaced_in_test"
     -|                     #checked="false"
     +|                     #checked="true"
@@ -2314,15 +2322,15 @@ let%expect_test "regression test: optional groups have keys attached" =
                     <div class="container_hash_replaced_in_test label_hash_replaced_in_test"> three </div>
                   </td>
                   <td>
-                    <input type="checkbox"
+                    <input @key=bonsai_path_replaced_in_test
+                           type="checkbox"
                            id="bonsai_path_replaced_in_test"
                            #checked="true"
                            onclick
                            style={
                              margin-left: 0px;
                            }> </input>
-                  </td>
-                </tr> |}]
+                  </td> |}]
 ;;
 
 let%expect_test "dynamic sexp_grammar form is rendered" =
@@ -2352,7 +2360,8 @@ let%expect_test "dynamic sexp_grammar form is rendered" =
     (Ok false)
 
     ==============
-    <input type="checkbox"
+    <input @key=bonsai_path_replaced_in_test
+           type="checkbox"
            id="bonsai_path_replaced_in_test"
            #checked="false"
            onclick
@@ -2402,7 +2411,8 @@ let%expect_test "interactions with dynamic sexp_grammar form" =
     (Ok false)
 
     ==============
-    <input type="checkbox"
+    <input @key=bonsai_path_replaced_in_test
+           type="checkbox"
            id="bonsai_path_replaced_in_test"
            #checked="false"
            onclick
@@ -2416,7 +2426,8 @@ let%expect_test "interactions with dynamic sexp_grammar form" =
     (Ok true)
 
     ==============
-    <input type="checkbox"
+    <input @key=bonsai_path_replaced_in_test
+           type="checkbox"
            id="bonsai_path_replaced_in_test"
            #checked="true"
            onclick
@@ -2482,7 +2493,8 @@ let%expect_test "setting into a dynamic grammar form works, but should be done w
     (Ok false)
 
     ==============
-    <input type="checkbox"
+    <input @key=bonsai_path_replaced_in_test
+           type="checkbox"
            id="bonsai_path_replaced_in_test"
            #checked="false"
            onclick
@@ -2496,7 +2508,8 @@ let%expect_test "setting into a dynamic grammar form works, but should be done w
     (Ok true)
 
     ==============
-    <input type="checkbox"
+    <input @key=bonsai_path_replaced_in_test
+           type="checkbox"
            id="bonsai_path_replaced_in_test"
            #checked="true"
            onclick
@@ -2526,7 +2539,7 @@ let%expect_test "customizations are applied dynamically" =
     Auto_generated.Customization.constant_form
       (module String)
       ~apply_to_tag:(fun ~key ~value:_ -> String.equal key "key")
-      (Form.Elements.Textarea.string ())
+      (Form.Elements.Textarea.string ~allow_updates_when_focused:`Never ())
   in
   let form = Auto_generated.form' ~customizations:[ customization ] grammar_value in
   let handle = Handle.create (form_result_spec Fn.id) form in

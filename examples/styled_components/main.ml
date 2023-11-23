@@ -43,7 +43,7 @@ module Parameters = struct
   let tomato_color = `Hex "#ff6347"
 
   let default_int_field =
-    let%sub form = Form.Elements.Textbox.int () in
+    let%sub form = Form.Elements.Textbox.int ~allow_updates_when_focused:`Never () in
     Form.Dynamic.with_default (Value.return 2) form
   ;;
 

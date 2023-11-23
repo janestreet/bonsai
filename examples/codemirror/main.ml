@@ -37,6 +37,7 @@ module Fruit_sexp_grammar_auto_complete = struct
 
   let codemirror_editor =
     Codemirror.with_sexp_grammar_autocompletion
+      ~include_non_exhaustive_hint:false
       ~extra_extension:
         (State.Extension.of_list
            [ Basic_setup.basic_setup; Codemirror_rainbow_parentheses.extension () ])

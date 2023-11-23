@@ -237,11 +237,12 @@ let create ~x_label ~per_series_info
   in
   let%sub state =
     Bonsai_extra.state_machine0_dynamic_model
+      ~sexp_of_action:[%sexp_of: Action.t]
       ~sexp_of_model:[%sexp_of: Model.t]
       ~equal:[%equal: Model.t]
-      (module Action)
       ~model:(`Computed create_model)
       ~apply_action
+      ()
   in
   return
   @@

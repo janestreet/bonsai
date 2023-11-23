@@ -166,7 +166,7 @@ module for the response type that satisfies the `Diffable.S` module type
 ``` ocaml
 module Current_time = struct
   include String
-  include Diffable.Atomic.Make (String)
+  include Legacy_diffable.Atomic.Make (String)
 end
 
 let current_time_rpc =

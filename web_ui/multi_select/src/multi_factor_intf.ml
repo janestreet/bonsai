@@ -65,6 +65,7 @@ module type S = sig
     :  ?initial_model_settings:Single_factor.Initial_model_settings.t Key.Map.t
     -> all_keys:Key.Set.t
     -> id_prefix:string Value.t
+    -> allow_updates_when_focused:[ `Always | `Never ]
     -> per_subwidget Key.Map.t Value.t
     -> Result.t Computation.t
 end

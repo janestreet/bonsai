@@ -2,15 +2,132 @@ open! Core
 open! Bonsai_web
 open! Bonsai.Let_syntax
 
+module Theming = struct
+  type t =
+    [ `Legacy_don't_use_theme
+    | `Themed
+    ]
+end
+
+module Themed = struct
+  type t =
+    { header_cell : Vdom.Attr.t
+    ; header_row : Vdom.Attr.t
+    ; header : Vdom.Attr.t
+    ; cell : Vdom.Attr.t
+    ; row : Vdom.Attr.t
+    ; row_focused : Vdom.Attr.t
+    ; body : Vdom.Attr.t
+    ; table : Vdom.Attr.t
+    }
+
+  module Legacy_style =
+  [%css
+  stylesheet {|
+  .header_cell {
+    text-align: center;
+    font-weight: bold;
+  }|}]
+
+  module Prt_view = Bonsai_web_ui_view.For_components.Prt
+
+  let create theme = function
+    | `Legacy_don't_use_theme ->
+      { header_cell = Legacy_style.header_cell
+      ; header_row = Vdom.Attr.empty
+      ; header = Vdom.Attr.class_ "prt-table-header"
+      ; cell = Vdom.Attr.class_ "prt-table-cell"
+      ; row = Vdom.Attr.class_ "prt-table-row"
+      ; row_focused = Vdom.Attr.class_ "prt-table-row-selected"
+      ; body = Vdom.Attr.empty
+      ; table = Vdom.Attr.empty
+      }
+    | `Themed ->
+      let styling = Prt_view.styling theme in
+      { header_cell = styling.header_cell
+      ; header_row = styling.header_row
+      ; header = styling.header
+      ; cell = styling.cell
+      ; row = styling.row
+      ; row_focused = styling.row_focused
+      ; body = styling.body
+      ; table = styling.table
+      }
+  ;;
+end
+
+(* These styles make the table functional and interactive;
+   they are applied regardless of theme. *)
+module Functional_style =
+[%css
+stylesheet
+  {|
+
+/* The default value for the [overflow-anchor] CSS property is [auto], which
+   permits the browser to scroll the page in order to minimize content shifts.
+   This interacts poorly with the PRT because our virtual-dom diff-and-patch
+   algorithm often removes and re-inserts elements. To fix this, we disable
+   overflow-anchor for all elements that contain a partial render table. */
+:has(.partial_render_table_container) {
+  overflow-anchor: none;
+}
+
+.partial_render_table_container {
+  width: max-content;
+  position: relative;
+}
+
+.partial_render_table_container * {
+  box-sizing: border-box;
+}
+
+.partial_render_table_body {
+  position: relative;
+}
+
+.sortable_header_cell {
+  white-space: pre;
+  cursor: pointer;
+}
+
+.header_label {
+  user-select: none;
+}
+
+.leaf_header {
+  resize: horizontal;
+  overflow: hidden;
+  box-sizing: border-box;
+  padding-right:10px; /* Space for the resizer */
+}
+
+.partial_render_table_header {
+  position: sticky;
+  top: 0px;
+  z-index: 99;
+  border-collapse: collapse;
+}
+
+.row {
+  contain: strict;
+}
+
+.cell {
+  overflow:hidden;
+  display:inline-block;
+  contain: strict;
+}
+|}]
+
 (* This function takes a vdom node and if it's an element, it adds extra attrs, classes, key,
    and style info to it, but if it's not an element, it wraps that node in a div that has those
-   attributes, styles, key, and style.  This can be useful if you get a vdom node from the
+   attributes.  This can be useful if you get a vdom node from the
    user of this API, and want to avoid excessive node wrapping. *)
-let set_or_wrap ~classes ~style =
+let set_or_wrap ~attrs =
   let open Vdom.Node in
   function
-  | Element e -> Element (Element.add_style (Element.add_classes e classes) style)
-  | other -> div ~attrs:[ Vdom.Attr.style style; Vdom.Attr.classes classes ] [ other ]
+  | Element e -> Element (Element.map_attrs e ~f:(fun a -> Vdom.Attr.(a @ many attrs)))
+  | other -> div ~attrs [ other ]
 ;;
 
 let int_to_px_string px = Int.to_string px ^ "px"
@@ -18,11 +135,16 @@ let float_to_px_string px = Virtual_dom.Dom_float.to_string_fixed 8 px ^ "px"
 
 module Header_label = struct
   let wrap_clickable ~sortable ~handle_click contents =
-    let attrs = if sortable then [ Style.column_header; handle_click ] else [] in
+    let attrs =
+      if sortable then [ Functional_style.sortable_header_cell; handle_click ] else []
+    in
     Vdom.Node.div ~attrs [ contents ]
   ;;
 
+  (* As an externally exposed component with no prior style overrides,
+     we don't allow opting out of theming to keep user code simpler. *)
   let wrap_with_icon
+    ?(sort_indicator_attrs = [])
     (label : Vdom.Node.t)
     (sort_state : Bonsai_web_ui_partial_render_table_protocol.Sort_state.t)
     =
@@ -40,9 +162,7 @@ module Header_label = struct
           | Single_sort dir -> Some (get_arrow dir)
           | Multi_sort { dir; index } -> Some [%string "%{get_arrow dir} %{index#Int}"]
         in
-        Vdom.Node.span
-          ~attrs:[ Vdom.Attr.class_ "prt-sort-indicator" ]
-          [ Vdom.Node.text indicator ]
+        Vdom.Node.span ~attrs:sort_indicator_attrs [ Vdom.Node.text indicator ]
       in
       Vdom.Node.div
         ~attrs:
@@ -66,45 +186,63 @@ module Header = struct
   module Header_cell = struct
     type t = Vdom.Node.t
 
-    let leaf_view ~column_width ~set_column_width ~visible ~label () =
+    let leaf_view
+      (themed_attrs : Themed.t)
+      ~column_width
+      ~set_column_width
+      ~visible
+      ~label
+      ()
+      =
       Vdom.Node.td
         ~attrs:
-          [ Bonsai_web_ui_element_size_hooks.Size_tracker.on_change
+          [ themed_attrs.header_cell
+          ; Bonsai_web_ui_element_size_hooks.Size_tracker.on_change
               (fun ~width ~height:_ -> set_column_width (`Px_float width))
           ; Vdom.Attr.colspan 1
-          ; Style.header_label
-          ; Style.leaf_header
+          ; Functional_style.header_label
+          ; Functional_style.leaf_header
           ; Vdom.Attr.style
               Css_gen.(width column_width @> if visible then empty else display `None)
           ]
         [ label ]
     ;;
 
-    let spacer_view ~colspan () = Vdom.Node.td ~attrs:[ attr_colspan colspan ] []
+    let spacer_view (themed_attrs : Themed.t) ~colspan () =
+      Vdom.Node.td ~attrs:[ themed_attrs.header_cell; attr_colspan colspan ] []
+    ;;
 
-    let group_view ~colspan ~label () =
-      Vdom.Node.td ~attrs:[ attr_colspan colspan; Style.header_label ] [ label ]
+    let group_view (themed_attrs : Themed.t) ~colspan ~label () =
+      Vdom.Node.td
+        ~attrs:
+          [ themed_attrs.header_cell
+          ; attr_colspan colspan
+          ; Functional_style.header_label
+          ]
+        [ label ]
     ;;
   end
 
   module Header_row = struct
     type t = Vdom.Node.t
 
-    let view contents = Vdom.Node.tr contents
+    let view (themed_attrs : Themed.t) contents =
+      Vdom.Node.tr ~attrs:[ themed_attrs.header_row ] contents
+    ;;
   end
 
   type t = Vdom.Node.t
 
   (* Fun fact: the header is the only part of partial_render_table that is displayed
      as an actual HTML table! *)
-  let view ~set_header_client_rect header_rows =
+  let view (themed_attrs : Themed.t) ~set_header_client_rect header_rows =
     Vdom.Node.table
       ~attrs:
-        [ Bonsai_web_ui_element_size_hooks.Visibility_tracker.detect
+        [ themed_attrs.header
+        ; Bonsai_web_ui_element_size_hooks.Visibility_tracker.detect
             ()
             ~client_rect_changed:set_header_client_rect
-        ; Style.partial_render_table_header
-        ; Vdom.Attr.class_ "prt-table-header"
+        ; Functional_style.partial_render_table_header
         ]
       [ Vdom.Node.tbody header_rows ]
   ;;
@@ -112,7 +250,7 @@ end
 
 module Cell = struct
   module Col_styles = struct
-    type t = Css_gen.t
+    type t = Vdom.Attr.t list
 
     (* Css_gen is really slow, so we need to re-use the results of all these functions
        whenever possible.  The difference between non-cached and cached css is the
@@ -120,7 +258,7 @@ module Cell = struct
 
        The reason that Css_gen is so slow is because apparently "sprintf" is _really_
        slow. *)
-    let create ~row_height ~col_widths ~cols_visible =
+    let create ~(themed_attrs : Themed.t) ~row_height ~col_widths ~cols_visible =
       let styles_arr =
         List.map2_exn col_widths cols_visible ~f:(fun width is_visible ->
           (* We use the previous width even when hidden, so that the rendering engine has
@@ -133,13 +271,14 @@ module Cell = struct
           let h = int_to_px_string row_height in
           let w = float_to_px_string width in
           let open Css_gen in
-          create ~field:"height" ~value:h
-          @> create ~field:"min-height" ~value:h
-          @> create ~field:"max-height" ~value:h
-          @> create ~field:"width" ~value:w
-          @> create ~field:"min-width" ~value:w
-          @> create ~field:"max-width" ~value:w
-          @> if is_visible then Css_gen.empty else display `None)
+          (create ~field:"height" ~value:h
+           @> create ~field:"min-height" ~value:h
+           @> create ~field:"max-height" ~value:h
+           @> create ~field:"width" ~value:w
+           @> create ~field:"min-width" ~value:w
+           @> create ~field:"max-width" ~value:w
+           @> if is_visible then Css_gen.empty else display `None)
+          |> fun x -> [ themed_attrs.cell; Vdom.Attr.style x ])
         |> Array.of_list
       in
       fun i -> Array.get styles_arr i
@@ -148,13 +287,9 @@ module Cell = struct
 
   type t = Vdom.Node.t
 
-  let cell_classes = [ "prt-table-cell"; Style.For_referencing.cell ]
-
   let view ~col_styles content =
-    set_or_wrap content ~classes:cell_classes ~style:col_styles
+    set_or_wrap content ~attrs:(col_styles @ [ Functional_style.cell ])
   ;;
-
-  let empty_content = Vdom.Node.div []
 end
 
 module Row = struct
@@ -173,17 +308,15 @@ module Row = struct
 
   type t = Vdom.Node.t
 
-  let row_classes ~is_selected =
-    let classes = [ "prt-table-row" ] in
-    if is_selected then "prt-table-row-selected" :: classes else classes
-  ;;
-
-  let view ~styles ~is_selected ~on_row_click cells =
+  let view (themed_attrs : Themed.t) ~styles ~is_focused ~on_row_click cells =
+    let focused_attr = if is_focused then themed_attrs.row_focused else Vdom.Attr.empty in
     Vdom.Node.div
       ~attrs:
-        [ Vdom.Attr.classes (row_classes ~is_selected)
+        [ themed_attrs.row
         ; Vdom.Attr.style styles
+        ; focused_attr
         ; Vdom.Attr.on_click (fun _ -> on_row_click)
+        ; Functional_style.row
         ]
       cells
   ;;
@@ -192,7 +325,7 @@ end
 module Body = struct
   type t = Vdom.Node.t
 
-  let view_impl ~padding_top ~padding_bottom ~rows =
+  let view_impl (themed_attrs : Themed.t) ~padding_top ~padding_bottom ~rows =
     let style =
       Vdom.Attr.style
         (Css_gen.concat
@@ -200,16 +333,25 @@ module Body = struct
            ; Css_gen.padding_bottom (`Px padding_bottom)
            ])
     in
-    Vdom.Node.div ~attrs:[ style ] [ Vdom_node_with_map_children.make ~tag:"div" rows ]
+    Vdom.Node.div
+      ~attrs:[ themed_attrs.body; style ]
+      [ Vdom_node_with_map_children.make ~tag:"div" rows ]
   ;;
 
-  let view ~padding_top ~padding_bottom ~rows =
-    Vdom.Node.lazy_ (lazy (view_impl ~padding_top ~padding_bottom ~rows))
+  let view themed_attrs ~padding_top ~padding_bottom ~rows =
+    Vdom.Node.lazy_ (lazy (view_impl themed_attrs ~padding_top ~padding_bottom ~rows))
   ;;
 end
 
 module Table = struct
-  let view ~private_body_classname ~vis_change_attr ~total_height head body =
+  let view
+    (themed_attrs : Themed.t)
+    ~private_body_classname
+    ~vis_change_attr
+    ~total_height
+    head
+    body
+    =
     let body_container =
       Vdom.Node.div
       (* If the number is large enough, it will use scientific notation for unknown reasons.
@@ -218,7 +360,7 @@ module Table = struct
         ~attrs:
           [ Vdom.Attr.(
               many
-                [ Style.partial_render_table_body
+                [ Functional_style.partial_render_table_body
                 ; class_ private_body_classname
                 ; Vdom.Attr.style Css_gen.(height (`Px total_height))
                 ; vis_change_attr
@@ -226,6 +368,8 @@ module Table = struct
           ]
         [ body ]
     in
-    Vdom.Node.div ~attrs:[ Style.partial_render_table_container ] [ head; body_container ]
+    Vdom.Node.div
+      ~attrs:[ themed_attrs.table; Functional_style.partial_render_table_container ]
+      [ head; body_container ]
   ;;
 end

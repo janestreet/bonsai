@@ -13,21 +13,21 @@ and t_to_js : 'a. ('a -> Ojs.t) -> 'a t -> Ojs.t =
   fun (type __a) (__a_to_js : __a -> Ojs.t) (x1 : Ojs.t) -> x1
 ;;
 
-let (create : unit -> 'a t) =
+let create : unit -> 'a t =
   fun () -> t_of_js Obj.magic (Ojs.new_obj (Ojs.get_prop_ascii Ojs.global "WeakSet") [||])
 ;;
 
-let (add : 'a t -> 'a -> unit) =
+let add : 'a t -> 'a -> unit =
   fun (x5 : 'a t) (x4 : 'a) ->
   ignore (Ojs.call (t_to_js Obj.magic x5) "add" [| Obj.magic x4 |])
 ;;
 
-let (has : 'a t -> 'a -> bool) =
+let has : 'a t -> 'a -> bool =
   fun (x8 : 'a t) (x7 : 'a) ->
   Ojs.bool_of_js (Ojs.call (t_to_js Obj.magic x8) "has" [| Obj.magic x7 |])
 ;;
 
-let (delete : 'a t -> 'a -> unit) =
+let delete : 'a t -> 'a -> unit =
   fun (x11 : 'a t) (x10 : 'a) ->
   ignore (Ojs.call (t_to_js Obj.magic x11) "delete" [| Obj.magic x10 |])
 ;;

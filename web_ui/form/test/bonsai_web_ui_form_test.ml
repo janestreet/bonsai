@@ -80,7 +80,7 @@ let%expect_test "setting a constant form does nothing" =
 ;;
 
 let%expect_test "typing into a string textbox" =
-  let component = Form.Elements.Textbox.string () in
+  let component = Form.Elements.Textbox.string ~allow_updates_when_focused:`Never () in
   let handle = Handle.create (form_result_spec [%sexp_of: string]) component in
   Handle.show handle;
   [%expect
@@ -88,7 +88,8 @@ let%expect_test "typing into a string textbox" =
     (Ok "")
 
     ==============
-    <input type="text"
+    <input @key=bonsai_path_replaced_in_test
+           type="text"
            placeholder=""
            spellcheck="false"
            id="bonsai_path_replaced_in_test"
@@ -102,7 +103,8 @@ let%expect_test "typing into a string textbox" =
     +|(Ok "hello world")
 
       ==============
-      <input type="text"
+      <input @key=bonsai_path_replaced_in_test
+             type="text"
              placeholder=""
              spellcheck="false"
              id="bonsai_path_replaced_in_test"
@@ -112,7 +114,7 @@ let%expect_test "typing into a string textbox" =
 ;;
 
 let%expect_test "typing into a string password textbox" =
-  let component = Form.Elements.Password.string () in
+  let component = Form.Elements.Password.string ~allow_updates_when_focused:`Never () in
   let handle = Handle.create (form_result_spec [%sexp_of: string]) component in
   Handle.show handle;
   [%expect
@@ -120,7 +122,8 @@ let%expect_test "typing into a string password textbox" =
     (Ok "")
 
     ==============
-    <input type="password"
+    <input @key=bonsai_path_replaced_in_test
+           type="password"
            placeholder=""
            spellcheck="false"
            id="bonsai_path_replaced_in_test"
@@ -134,7 +137,8 @@ let%expect_test "typing into a string password textbox" =
     +|(Ok "hello world")
 
       ==============
-      <input type="password"
+      <input @key=bonsai_path_replaced_in_test
+             type="password"
              placeholder=""
              spellcheck="false"
              id="bonsai_path_replaced_in_test"
@@ -158,7 +162,8 @@ let%expect_test "dropdown starting empty" =
     (Error "a value is required")
 
     ==============
-    <select id="bonsai_path_replaced_in_test"
+    <select @key=bonsai_path_replaced_in_test
+            id="bonsai_path_replaced_in_test"
             class="widget-dropdown"
             onchange
             style={
@@ -176,7 +181,8 @@ let%expect_test "dropdown starting empty" =
     +|(Ok hello)
 
       ==============
-      <select id="bonsai_path_replaced_in_test"
+      <select @key=bonsai_path_replaced_in_test
+              id="bonsai_path_replaced_in_test"
               class="widget-dropdown"
               onchange
               style={
@@ -205,7 +211,8 @@ let%expect_test "dropdown with default value" =
     (Ok world)
 
     ==============
-    <select id="bonsai_path_replaced_in_test"
+    <select @key=bonsai_path_replaced_in_test
+            id="bonsai_path_replaced_in_test"
             class="widget-dropdown"
             onchange
             style={
@@ -222,7 +229,8 @@ let%expect_test "dropdown with default value" =
     +|(Ok hello)
 
       ==============
-      <select id="bonsai_path_replaced_in_test"
+      <select @key=bonsai_path_replaced_in_test
+              id="bonsai_path_replaced_in_test"
               class="widget-dropdown"
               onchange
               style={
@@ -250,7 +258,8 @@ let%expect_test "dropdown_opt with default value" =
     (Ok (world))
 
     ==============
-    <select id="bonsai_path_replaced_in_test"
+    <select @key=bonsai_path_replaced_in_test
+            id="bonsai_path_replaced_in_test"
             class="widget-dropdown"
             onchange
             style={
@@ -268,7 +277,8 @@ let%expect_test "dropdown_opt with default value" =
     +|(Ok ())
 
       ==============
-      <select id="bonsai_path_replaced_in_test"
+      <select @key=bonsai_path_replaced_in_test
+              id="bonsai_path_replaced_in_test"
               class="widget-dropdown"
               onchange
               style={
@@ -296,7 +306,8 @@ let%expect_test "dropdown" =
     (Ok hello)
 
     ==============
-    <select id="bonsai_path_replaced_in_test"
+    <select @key=bonsai_path_replaced_in_test
+            id="bonsai_path_replaced_in_test"
             class="widget-dropdown"
             onchange
             style={
@@ -313,7 +324,8 @@ let%expect_test "dropdown" =
     +|(Ok world)
 
       ==============
-      <select id="bonsai_path_replaced_in_test"
+      <select @key=bonsai_path_replaced_in_test
+              id="bonsai_path_replaced_in_test"
               class="widget-dropdown"
               onchange
               style={
@@ -340,7 +352,8 @@ let%expect_test "dropdown but without any elements to pick from " =
     (Error "a value is required")
 
     ==============
-    <select id="bonsai_path_replaced_in_test"
+    <select @key=bonsai_path_replaced_in_test
+            id="bonsai_path_replaced_in_test"
             class="widget-dropdown"
             onchange
             style={
@@ -352,7 +365,9 @@ let%expect_test "dropdown but without any elements to pick from " =
 
 let%expect_test "collapsible group" =
   let component =
-    let%sub textbox = Form.Elements.Textbox.string () in
+    let%sub textbox =
+      Form.Elements.Textbox.string ~allow_updates_when_focused:`Never ()
+    in
     Form.Dynamic.collapsible_group (Value.return "group-name") textbox
   in
   let get_vdom = get_vdom_verbose in
@@ -381,7 +396,8 @@ let%expect_test "collapsible group" =
                 user-select: none;
               }>  </td>
           <td>
-            <input type="text"
+            <input @key=bonsai_path_replaced_in_test
+                   type="text"
                    placeholder=""
                    spellcheck="false"
                    id="bonsai_path_replaced_in_test"
@@ -417,7 +433,8 @@ let%expect_test "collapsible group" =
     -|            user-select: none;
     -|          }>  </td>
     -|      <td>
-    -|        <input type="text"
+    -|        <input @key=bonsai_path_replaced_in_test
+    -|               type="text"
     -|               placeholder=""
     -|               spellcheck="false"
     -|               id="bonsai_path_replaced_in_test"
@@ -430,7 +447,7 @@ let%expect_test "collapsible group" =
 ;;
 
 let%expect_test "setting into a string textbox" =
-  let component = Form.Elements.Textbox.string () in
+  let component = Form.Elements.Textbox.string ~allow_updates_when_focused:`Never () in
   let handle = Handle.create (form_result_spec [%sexp_of: string]) component in
   Handle.show handle;
   [%expect
@@ -438,7 +455,8 @@ let%expect_test "setting into a string textbox" =
     (Ok "")
 
     ==============
-    <input type="text"
+    <input @key=bonsai_path_replaced_in_test
+           type="text"
            placeholder=""
            spellcheck="false"
            id="bonsai_path_replaced_in_test"
@@ -452,7 +470,8 @@ let%expect_test "setting into a string textbox" =
     +|(Ok "hello world")
 
       ==============
-      <input type="text"
+      <input @key=bonsai_path_replaced_in_test
+             type="text"
              placeholder=""
              spellcheck="false"
              id="bonsai_path_replaced_in_test"
@@ -462,7 +481,7 @@ let%expect_test "setting into a string textbox" =
 ;;
 
 let%expect_test "typing into a int textbox" =
-  let component = Form.Elements.Textbox.int () in
+  let component = Form.Elements.Textbox.int ~allow_updates_when_focused:`Never () in
   let handle = Handle.create (form_result_spec [%sexp_of: int]) component in
   Handle.show handle;
   [%expect
@@ -470,7 +489,8 @@ let%expect_test "typing into a int textbox" =
     (Error "Expected an integer")
 
     ==============
-    <input type="text"
+    <input @key=bonsai_path_replaced_in_test
+           type="text"
            placeholder=""
            spellcheck="false"
            id="bonsai_path_replaced_in_test"
@@ -484,7 +504,8 @@ let%expect_test "typing into a int textbox" =
     +|(Ok 123)
 
       ==============
-      <input type="text"
+      <input @key=bonsai_path_replaced_in_test
+             type="text"
              placeholder=""
              spellcheck="false"
              id="bonsai_path_replaced_in_test"
@@ -499,7 +520,8 @@ let%expect_test "typing into a int textbox" =
     +|(Error "Expected an integer")
 
       ==============
-      <input type="text"
+      <input @key=bonsai_path_replaced_in_test
+             type="text"
              placeholder=""
              spellcheck="false"
              id="bonsai_path_replaced_in_test"
@@ -509,7 +531,7 @@ let%expect_test "typing into a int textbox" =
 ;;
 
 let%expect_test "setting into a int textbox" =
-  let component = Form.Elements.Textbox.int () in
+  let component = Form.Elements.Textbox.int ~allow_updates_when_focused:`Never () in
   let handle = Handle.create (form_result_spec [%sexp_of: int]) component in
   Handle.show handle;
   [%expect
@@ -517,7 +539,8 @@ let%expect_test "setting into a int textbox" =
     (Error "Expected an integer")
 
     ==============
-    <input type="text"
+    <input @key=bonsai_path_replaced_in_test
+           type="text"
            placeholder=""
            spellcheck="false"
            id="bonsai_path_replaced_in_test"
@@ -531,7 +554,8 @@ let%expect_test "setting into a int textbox" =
     +|(Ok 123)
 
       ==============
-      <input type="text"
+      <input @key=bonsai_path_replaced_in_test
+             type="text"
              placeholder=""
              spellcheck="false"
              id="bonsai_path_replaced_in_test"
@@ -542,8 +566,10 @@ let%expect_test "setting into a int textbox" =
 
 let%expect_test "typing into a paired string textbox * int textbox " =
   let component =
-    let%sub string_form = Form.Elements.Textbox.string () in
-    let%sub int_form = Form.Elements.Textbox.int () in
+    let%sub string_form =
+      Form.Elements.Textbox.string ~allow_updates_when_focused:`Never ()
+    in
+    let%sub int_form = Form.Elements.Textbox.int ~allow_updates_when_focused:`Never () in
     let%arr string_form = string_form
     and int_form = int_form in
     Form.both string_form int_form
@@ -556,13 +582,15 @@ let%expect_test "typing into a paired string textbox * int textbox " =
 
     ==============
     <div>
-      <input type="text"
+      <input @key=bonsai_path_replaced_in_test
+             type="text"
              placeholder=""
              spellcheck="false"
              id="bonsai_path_replaced_in_test"
              value:normalized=""
              oninput> </input>
-      <input type="text"
+      <input @key=bonsai_path_replaced_in_test
+             type="text"
              placeholder=""
              spellcheck="false"
              id="bonsai_path_replaced_in_test"
@@ -579,14 +607,16 @@ let%expect_test "typing into a paired string textbox * int textbox " =
 
       ==============
       <div>
-        <input type="text"
+        <input @key=bonsai_path_replaced_in_test
+               type="text"
                placeholder=""
                spellcheck="false"
                id="bonsai_path_replaced_in_test"
     -|         value:normalized=""
     +|         value:normalized="hello world"
                oninput> </input>
-        <input type="text"
+        <input @key=bonsai_path_replaced_in_test
+               type="text"
                placeholder=""
                spellcheck="false"
                id="bonsai_path_replaced_in_test"
@@ -598,8 +628,10 @@ let%expect_test "typing into a paired string textbox * int textbox " =
 
 let%expect_test "setting into a paired string textbox * int textbox " =
   let component =
-    let%sub string_form = Form.Elements.Textbox.string () in
-    let%sub int_form = Form.Elements.Textbox.int () in
+    let%sub string_form =
+      Form.Elements.Textbox.string ~allow_updates_when_focused:`Never ()
+    in
+    let%sub int_form = Form.Elements.Textbox.int ~allow_updates_when_focused:`Never () in
     let%arr string_form = string_form
     and int_form = int_form in
     Form.both string_form int_form
@@ -612,13 +644,15 @@ let%expect_test "setting into a paired string textbox * int textbox " =
 
     ==============
     <div>
-      <input type="text"
+      <input @key=bonsai_path_replaced_in_test
+             type="text"
              placeholder=""
              spellcheck="false"
              id="bonsai_path_replaced_in_test"
              value:normalized=""
              oninput> </input>
-      <input type="text"
+      <input @key=bonsai_path_replaced_in_test
+             type="text"
              placeholder=""
              spellcheck="false"
              id="bonsai_path_replaced_in_test"
@@ -634,14 +668,16 @@ let%expect_test "setting into a paired string textbox * int textbox " =
 
       ==============
       <div>
-        <input type="text"
+        <input @key=bonsai_path_replaced_in_test
+               type="text"
                placeholder=""
                spellcheck="false"
                id="bonsai_path_replaced_in_test"
     -|         value:normalized=""
     +|         value:normalized="hello world"
                oninput> </input>
-        <input type="text"
+        <input @key=bonsai_path_replaced_in_test
+               type="text"
                placeholder=""
                spellcheck="false"
                id="bonsai_path_replaced_in_test"
@@ -656,7 +692,9 @@ let%test_module "Form.all" =
     let make_handle () =
       let component =
         let%sub string_forms =
-          List.init 3 ~f:(fun _ -> Form.Elements.Textbox.string ()) |> Computation.all
+          List.init 3 ~f:(fun _ ->
+            Form.Elements.Textbox.string ~allow_updates_when_focused:`Never ())
+          |> Computation.all
         in
         let%arr string_forms = string_forms in
         Form.all string_forms
@@ -673,19 +711,22 @@ let%test_module "Form.all" =
 
     ==============
     <div>
-      <input type="text"
+      <input @key=bonsai_path_replaced_in_test
+             type="text"
              placeholder=""
              spellcheck="false"
              id="bonsai_path_replaced_in_test"
              value:normalized=""
              oninput> </input>
-      <input type="text"
+      <input @key=bonsai_path_replaced_in_test
+             type="text"
              placeholder=""
              spellcheck="false"
              id="bonsai_path_replaced_in_test"
              value:normalized=""
              oninput> </input>
-      <input type="text"
+      <input @key=bonsai_path_replaced_in_test
+             type="text"
              placeholder=""
              spellcheck="false"
              id="bonsai_path_replaced_in_test"
@@ -706,21 +747,24 @@ let%test_module "Form.all" =
 
       ==============
       <div>
-        <input type="text"
+        <input @key=bonsai_path_replaced_in_test
+               type="text"
                placeholder=""
                spellcheck="false"
                id="bonsai_path_replaced_in_test"
     -|         value:normalized=""
     +|         value:normalized="hello world"
                oninput> </input>
-        <input type="text"
+        <input @key=bonsai_path_replaced_in_test
+               type="text"
                placeholder=""
                spellcheck="false"
                id="bonsai_path_replaced_in_test"
     -|         value:normalized=""
     +|         value:normalized=quack
                oninput> </input>
-        <input type="text"
+        <input @key=bonsai_path_replaced_in_test
+               type="text"
                placeholder=""
                spellcheck="false"
                id="bonsai_path_replaced_in_test"
@@ -738,19 +782,22 @@ let%test_module "Form.all" =
 
     ==============
     <div>
-      <input type="text"
+      <input @key=bonsai_path_replaced_in_test
+             type="text"
              placeholder=""
              spellcheck="false"
              id="bonsai_path_replaced_in_test"
              value:normalized=""
              oninput> </input>
-      <input type="text"
+      <input @key=bonsai_path_replaced_in_test
+             type="text"
              placeholder=""
              spellcheck="false"
              id="bonsai_path_replaced_in_test"
              value:normalized=""
              oninput> </input>
-      <input type="text"
+      <input @key=bonsai_path_replaced_in_test
+             type="text"
              placeholder=""
              spellcheck="false"
              id="bonsai_path_replaced_in_test"
@@ -766,21 +813,24 @@ let%test_module "Form.all" =
 
       ==============
       <div>
-        <input type="text"
+        <input @key=bonsai_path_replaced_in_test
+               type="text"
                placeholder=""
                spellcheck="false"
                id="bonsai_path_replaced_in_test"
     -|         value:normalized=""
     +|         value:normalized="hello world"
                oninput> </input>
-        <input type="text"
+        <input @key=bonsai_path_replaced_in_test
+               type="text"
                placeholder=""
                spellcheck="false"
                id="bonsai_path_replaced_in_test"
     -|         value:normalized=""
     +|         value:normalized=quack
                oninput> </input>
-        <input type="text"
+        <input @key=bonsai_path_replaced_in_test
+               type="text"
                placeholder=""
                spellcheck="false"
                id="bonsai_path_replaced_in_test"
@@ -805,21 +855,24 @@ let%test_module "Form.all" =
 
       ==============
       <div>
-        <input type="text"
+        <input @key=bonsai_path_replaced_in_test
+               type="text"
                placeholder=""
                spellcheck="false"
                id="bonsai_path_replaced_in_test"
     -|         value:normalized=""
     +|         value:normalized="hello world"
                oninput> </input>
-        <input type="text"
+        <input @key=bonsai_path_replaced_in_test
+               type="text"
                placeholder=""
                spellcheck="false"
                id="bonsai_path_replaced_in_test"
     -|         value:normalized=""
     +|         value:normalized=quack
                oninput> </input>
-        <input type="text"
+        <input @key=bonsai_path_replaced_in_test
+               type="text"
                placeholder=""
                spellcheck="false"
                id="bonsai_path_replaced_in_test"
@@ -844,21 +897,24 @@ let%test_module "Form.all" =
 
       ==============
       <div>
-        <input type="text"
+        <input @key=bonsai_path_replaced_in_test
+               type="text"
                placeholder=""
                spellcheck="false"
                id="bonsai_path_replaced_in_test"
     -|         value:normalized=""
     +|         value:normalized="hello world"
                oninput> </input>
-        <input type="text"
+        <input @key=bonsai_path_replaced_in_test
+               type="text"
                placeholder=""
                spellcheck="false"
                id="bonsai_path_replaced_in_test"
     -|         value:normalized=""
     +|         value:normalized=quack
                oninput> </input>
-        <input type="text"
+        <input @key=bonsai_path_replaced_in_test
+               type="text"
                placeholder=""
                spellcheck="false"
                id="bonsai_path_replaced_in_test"
@@ -874,7 +930,8 @@ let%test_module "Form.all_map" =
     let make_handle () =
       let component =
         let%sub string_forms =
-          List.init 3 ~f:(fun i -> i, Form.Elements.Textbox.string ())
+          List.init 3 ~f:(fun i ->
+            i, Form.Elements.Textbox.string ~allow_updates_when_focused:`Never ())
           |> Int.Map.of_alist_exn
           |> Computation.all_map
         in
@@ -896,19 +953,22 @@ let%test_module "Form.all_map" =
 
     ==============
     <div>
-      <input type="text"
+      <input @key=bonsai_path_replaced_in_test
+             type="text"
              placeholder=""
              spellcheck="false"
              id="bonsai_path_replaced_in_test"
              value:normalized=""
              oninput> </input>
-      <input type="text"
+      <input @key=bonsai_path_replaced_in_test
+             type="text"
              placeholder=""
              spellcheck="false"
              id="bonsai_path_replaced_in_test"
              value:normalized=""
              oninput> </input>
-      <input type="text"
+      <input @key=bonsai_path_replaced_in_test
+             type="text"
              placeholder=""
              spellcheck="false"
              id="bonsai_path_replaced_in_test"
@@ -933,21 +993,24 @@ let%test_module "Form.all_map" =
 
       ==============
       <div>
-        <input type="text"
+        <input @key=bonsai_path_replaced_in_test
+               type="text"
                placeholder=""
                spellcheck="false"
                id="bonsai_path_replaced_in_test"
     -|         value:normalized=""
     +|         value:normalized="hello world"
                oninput> </input>
-        <input type="text"
+        <input @key=bonsai_path_replaced_in_test
+               type="text"
                placeholder=""
                spellcheck="false"
                id="bonsai_path_replaced_in_test"
     -|         value:normalized=""
     +|         value:normalized=quack
                oninput> </input>
-        <input type="text"
+        <input @key=bonsai_path_replaced_in_test
+               type="text"
                placeholder=""
                spellcheck="false"
                id="bonsai_path_replaced_in_test"
@@ -968,19 +1031,22 @@ let%test_module "Form.all_map" =
 
     ==============
     <div>
-      <input type="text"
+      <input @key=bonsai_path_replaced_in_test
+             type="text"
              placeholder=""
              spellcheck="false"
              id="bonsai_path_replaced_in_test"
              value:normalized=""
              oninput> </input>
-      <input type="text"
+      <input @key=bonsai_path_replaced_in_test
+             type="text"
              placeholder=""
              spellcheck="false"
              id="bonsai_path_replaced_in_test"
              value:normalized=""
              oninput> </input>
-      <input type="text"
+      <input @key=bonsai_path_replaced_in_test
+             type="text"
              placeholder=""
              spellcheck="false"
              id="bonsai_path_replaced_in_test"
@@ -1002,21 +1068,24 @@ let%test_module "Form.all_map" =
 
       ==============
       <div>
-        <input type="text"
+        <input @key=bonsai_path_replaced_in_test
+               type="text"
                placeholder=""
                spellcheck="false"
                id="bonsai_path_replaced_in_test"
     -|         value:normalized=""
     +|         value:normalized="hello world"
                oninput> </input>
-        <input type="text"
+        <input @key=bonsai_path_replaced_in_test
+               type="text"
                placeholder=""
                spellcheck="false"
                id="bonsai_path_replaced_in_test"
     -|         value:normalized=""
     +|         value:normalized=quack
                oninput> </input>
-        <input type="text"
+        <input @key=bonsai_path_replaced_in_test
+               type="text"
                placeholder=""
                spellcheck="false"
                id="bonsai_path_replaced_in_test"
@@ -1046,21 +1115,24 @@ let%test_module "Form.all_map" =
 
       ==============
       <div>
-        <input type="text"
+        <input @key=bonsai_path_replaced_in_test
+               type="text"
                placeholder=""
                spellcheck="false"
                id="bonsai_path_replaced_in_test"
     -|         value:normalized=""
     +|         value:normalized="hello world"
                oninput> </input>
-        <input type="text"
+        <input @key=bonsai_path_replaced_in_test
+               type="text"
                placeholder=""
                spellcheck="false"
                id="bonsai_path_replaced_in_test"
     -|         value:normalized=""
     +|         value:normalized=quack
                oninput> </input>
-        <input type="text"
+        <input @key=bonsai_path_replaced_in_test
+               type="text"
                placeholder=""
                spellcheck="false"
                id="bonsai_path_replaced_in_test"
@@ -1088,21 +1160,24 @@ let%test_module "Form.all_map" =
 
       ==============
       <div>
-        <input type="text"
+        <input @key=bonsai_path_replaced_in_test
+               type="text"
                placeholder=""
                spellcheck="false"
                id="bonsai_path_replaced_in_test"
     -|         value:normalized=""
     +|         value:normalized="hello world"
                oninput> </input>
-        <input type="text"
+        <input @key=bonsai_path_replaced_in_test
+               type="text"
                placeholder=""
                spellcheck="false"
                id="bonsai_path_replaced_in_test"
     -|         value:normalized=""
     +|         value:normalized=quack
                oninput> </input>
-        <input type="text"
+        <input @key=bonsai_path_replaced_in_test
+               type="text"
                placeholder=""
                spellcheck="false"
                id="bonsai_path_replaced_in_test"
@@ -1114,7 +1189,9 @@ let%test_module "Form.all_map" =
 ;;
 
 let%expect_test "typing into a time span textbox" =
-  let component = Form.Elements.Date_time.time_span () in
+  let component =
+    Form.Elements.Date_time.time_span ~allow_updates_when_focused:`Never ()
+  in
   let handle = Handle.create (form_result_spec [%sexp_of: Time_ns.Span.t]) component in
   Handle.show handle;
   [%expect
@@ -1184,7 +1261,9 @@ let%expect_test "typing into a time span textbox" =
 ;;
 
 let%expect_test "setting into a time span textbox" =
-  let component = Form.Elements.Date_time.time_span () in
+  let component =
+    Form.Elements.Date_time.time_span ~allow_updates_when_focused:`Never ()
+  in
   let handle = Handle.create (form_result_spec [%sexp_of: Time_ns.Span.t]) component in
   Handle.show handle;
   [%expect
@@ -1254,7 +1333,9 @@ let%expect_test "setting into a time span textbox" =
 ;;
 
 let%expect_test "typing into a time range textbox, with strict inequality required" =
-  let component = Form.Elements.Date_time.Range.time () in
+  let component =
+    Form.Elements.Date_time.Range.time ~allow_updates_when_focused:`Never ()
+  in
   let handle =
     Handle.create
       (form_result_spec [%sexp_of: Time_ns.Ofday.t * Time_ns.Ofday.t])
@@ -1372,7 +1453,12 @@ let%expect_test "typing into a time range textbox, with strict inequality requir
 ;;
 
 let%expect_test "typing into a time range textbox, with equality allowed" =
-  let component = Form.Elements.Date_time.Range.time ~allow_equal:true () in
+  let component =
+    Form.Elements.Date_time.Range.time
+      ~allow_equal:true
+      ~allow_updates_when_focused:`Never
+      ()
+  in
   let handle =
     Handle.create
       (form_result_spec [%sexp_of: Time_ns.Ofday.t * Time_ns.Ofday.t])
@@ -1447,7 +1533,9 @@ let%expect_test "typing into a time range textbox, with equality allowed" =
 ;;
 
 let%expect_test "setting into a date range, with strict inequality required" =
-  let component = Form.Elements.Date_time.Range.time () in
+  let component =
+    Form.Elements.Date_time.Range.time ~allow_updates_when_focused:`Never ()
+  in
   let handle =
     Handle.create
       (form_result_spec [%sexp_of: Time_ns.Ofday.t * Time_ns.Ofday.t])
@@ -1548,7 +1636,12 @@ let%expect_test "setting into a date range, with strict inequality required" =
 ;;
 
 let%expect_test "setting into a date range, with equality allowed" =
-  let component = Form.Elements.Date_time.Range.time ~allow_equal:true () in
+  let component =
+    Form.Elements.Date_time.Range.time
+      ~allow_equal:true
+      ~allow_updates_when_focused:`Never
+      ()
+  in
   let handle =
     Handle.create
       (form_result_spec [%sexp_of: Time_ns.Ofday.t * Time_ns.Ofday.t])
@@ -1649,7 +1742,7 @@ let%expect_test "adding more things to a string list (indented button)" =
   let component =
     Form.Elements.Multiple.list
       ~button_placement:`Indented
-      (Form.Elements.Textbox.string ())
+      (Form.Elements.Textbox.string ~allow_updates_when_focused:`Never ())
   in
   let handle =
     Handle.create
@@ -1705,7 +1798,8 @@ let%expect_test "adding more things to a string list (indented button)" =
     +|            user-select: none;
     +|          }>  </td>
     +|      <td>
-    +|        <input type="text"
+    +|        <input @key=bonsai_path_replaced_in_test
+    +|               type="text"
     +|               placeholder=""
     +|               spellcheck="false"
     +|               id="bonsai_path_replaced_in_test"
@@ -1746,7 +1840,7 @@ let%expect_test "adding more things to a string list (indented button)" =
                           color: blue;
                           background: none;
                         }> [ remove ] </button>
-              </div>
+
             </td>
           </tr>
           <tr @key=bonsai_path_replaced_in_test>
@@ -1758,7 +1852,8 @@ let%expect_test "adding more things to a string list (indented button)" =
                   user-select: none;
                 }>  </td>
             <td>
-              <input type="text"
+              <input @key=bonsai_path_replaced_in_test
+                     type="text"
                      placeholder=""
                      spellcheck="false"
                      id="bonsai_path_replaced_in_test"
@@ -1780,7 +1875,7 @@ let%expect_test "adding more things to a string list" =
   let component =
     Form.Elements.Multiple.list
       ~button_placement:`Inline
-      (Form.Elements.Textbox.string ())
+      (Form.Elements.Textbox.string ~allow_updates_when_focused:`Never ())
   in
   let handle = Handle.create (form_result_spec [%sexp_of: string list]) component in
   Handle.show handle;
@@ -1799,7 +1894,8 @@ let%expect_test "adding more things to a string list" =
 
       ==============
     +|<div>
-    +|  <input type="text"
+    +|  <input @key=bonsai_path_replaced_in_test
+    +|         type="text"
     +|         placeholder=""
     +|         spellcheck="false"
     +|         id="bonsai_path_replaced_in_test"
@@ -1816,7 +1912,8 @@ let%expect_test "adding more things to a string list" =
 
       ==============
       <div>
-        <input type="text"
+        <input @key=bonsai_path_replaced_in_test
+               type="text"
                placeholder=""
                spellcheck="false"
                id="bonsai_path_replaced_in_test"
@@ -1829,7 +1926,9 @@ let%expect_test "adding more things to a string list" =
 
 let%expect_test "using the same component twice" =
   let component =
-    let%sub textbox = Form.Elements.Textbox.string () in
+    let%sub textbox =
+      Form.Elements.Textbox.string ~allow_updates_when_focused:`Never ()
+    in
     return @@ Bonsai.Value.map2 ~f:Form.both textbox textbox
   in
   let handle =
@@ -1860,7 +1959,8 @@ let%expect_test "using the same component twice" =
                 user-select: none;
               }>  </td>
           <td>
-            <input type="text"
+            <input @key=bonsai_path_x_x_y_y_x_x_x_x
+                   type="text"
                    placeholder=""
                    spellcheck="false"
                    id="bonsai_path_x_x_x_x_x"
@@ -1877,7 +1977,8 @@ let%expect_test "using the same component twice" =
                 user-select: none;
               }>  </td>
           <td>
-            <input type="text"
+            <input @key=bonsai_path_x_x_y_y_x_x_x_x
+                   type="text"
                    placeholder=""
                    spellcheck="false"
                    id="bonsai_path_x_x_x_x_x"
@@ -1893,7 +1994,7 @@ let%expect_test "setting things to a string list" =
   let component =
     Form.Elements.Multiple.list
       ~button_placement:`Inline
-      (Form.Elements.Textbox.string ())
+      (Form.Elements.Textbox.string ~allow_updates_when_focused:`Never ())
   in
   let handle = Handle.create (form_result_spec [%sexp_of: string list]) component in
   Handle.show handle;
@@ -1912,19 +2013,22 @@ let%expect_test "setting things to a string list" =
 
       ==============
     +|<div>
-    +|  <input type="text"
+    +|  <input @key=bonsai_path_replaced_in_test
+    +|         type="text"
     +|         placeholder=""
     +|         spellcheck="false"
     +|         id="bonsai_path_replaced_in_test"
     +|         value:normalized=hello
     +|         oninput> </input>
-    +|  <input type="text"
+    +|  <input @key=bonsai_path_replaced_in_test
+    +|         type="text"
     +|         placeholder=""
     +|         spellcheck="false"
     +|         id="bonsai_path_replaced_in_test"
     +|         value:normalized=there
     +|         oninput> </input>
-    +|  <input type="text"
+    +|  <input @key=bonsai_path_replaced_in_test
+    +|         type="text"
     +|         placeholder=""
     +|         spellcheck="false"
     +|         id="bonsai_path_replaced_in_test"
@@ -1938,7 +2042,7 @@ let%expect_test "setting things to a string list (verbose)" =
   let component =
     Form.Elements.Multiple.list
       ~button_placement:`Inline
-      (Form.Elements.Textbox.string ())
+      (Form.Elements.Textbox.string ~allow_updates_when_focused:`Never ())
   in
   let handle =
     Handle.create (verbose_form_result_spec [%sexp_of: string list]) component
@@ -1992,7 +2096,8 @@ let%expect_test "setting things to a string list (verbose)" =
     +|            user-select: none;
     +|          }>  </td>
     +|      <td>
-    +|        <input type="text"
+    +|        <input @key=bonsai_path_replaced_in_test
+    +|               type="text"
     +|               placeholder=""
     +|               spellcheck="false"
     +|               id="bonsai_path_replaced_in_test"
@@ -2024,7 +2129,8 @@ let%expect_test "setting things to a string list (verbose)" =
     +|            user-select: none;
     +|          }>  </td>
     +|      <td>
-    +|        <input type="text"
+    +|        <input @key=bonsai_path_replaced_in_test
+    +|               type="text"
     +|               placeholder=""
     +|               spellcheck="false"
     +|               id="bonsai_path_replaced_in_test"
@@ -2056,7 +2162,8 @@ let%expect_test "setting things to a string list (verbose)" =
     +|            user-select: none;
     +|          }>  </td>
     +|      <td>
-    +|        <input type="text"
+    +|        <input @key=bonsai_path_replaced_in_test
+    +|               type="text"
     +|               placeholder=""
     +|               spellcheck="false"
     +|               id="bonsai_path_replaced_in_test"
@@ -2073,8 +2180,158 @@ let%expect_test "setting things to a string list (verbose)" =
       </table> |}]
 ;;
 
+let%expect_test "nonempty list" =
+  let component =
+    Form.Elements.Multiple.nonempty_list
+      (Form.Elements.Textbox.string ~allow_updates_when_focused:`Never ())
+  in
+  let get_vdom = get_vdom_verbose in
+  let handle =
+    Handle.create
+      (form_result_spec
+         ~get_vdom
+         ~filter_printed_attributes:(fun ~key:_ ~data:_ -> false)
+         [%sexp_of: string Nonempty_list.t])
+      component
+  in
+  Handle.show handle;
+  [%expect
+    {|
+    (Ok (""))
+
+    ==============
+    <table>
+      <tbody>
+        <tr>
+          <td> </td>
+        </tr>
+        <tr>
+          <td>  </td>
+          <td>
+            <input> </input>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <button> Add new element </button>
+          </td>
+        </tr>
+      </tbody>
+    </table> |}];
+  Handle.click_on handle ~get_vdom ~selector:"button";
+  Handle.show_diff handle;
+  [%expect
+    {|
+    -|(Ok (""))
+    +|(Ok ("" ""))
+
+      ==============
+      <table>
+        <tbody>
+          <tr>
+            <td> </td>
+          </tr>
+    +|    <tr>
+    +|      <td>  </td>
+    +|      <td>
+    +|        <input> </input>
+    +|      </td>
+    +|    </tr>
+    +|    <tr>
+    +|      <td>
+    +|        <div>
+    +|          1 -
+    +|          <button> [ remove ] </button>
+    +|        </div>
+    +|      </td>
+    +|    </tr>
+          <tr>
+            <td>  </td>
+            <td>
+              <input> </input>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <button> Add new element </button>
+            </td>
+          </tr>
+        </tbody>
+      </table> |}];
+  Handle.input_text handle ~get_vdom ~selector:"tr:nth-child(2) input" ~text:"hi!";
+  Handle.input_text handle ~get_vdom ~selector:"tr:nth-child(4) input" ~text:"bye!";
+  Handle.show_diff handle;
+  [%expect
+    {|
+    -|(Ok ("" ""))
+    +|(Ok (hi! bye!))
+
+      ==============
+      <table>
+        <tbody>
+          <tr>
+            <td> </td>
+          </tr>
+          <tr>
+            <td>  </td>
+            <td>
+              <input> </input>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <div> |}];
+  Handle.click_on handle ~get_vdom ~selector:"button";
+  Handle.show_diff handle;
+  [%expect
+    {|
+    -|(Ok (hi! bye!))
+    +|(Ok (hi!))
+
+      ==============
+      <table>
+        <tbody>
+          <tr>
+            <td> </td>
+          </tr>
+    -|    <tr>
+    -|      <td>  </td>
+    -|      <td>
+    -|        <input> </input>
+    -|      </td>
+    -|    </tr>
+    -|    <tr>
+    -|      <td>
+    -|        <div>
+    -|          1 -
+    -|          <button> [ remove ] </button>
+    -|        </div>
+    -|      </td>
+    -|    </tr>
+          <tr>
+            <td>  </td>
+            <td>
+              <input> </input>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <button> Add new element </button>
+            </td>
+          </tr>
+        </tbody>
+      </table> |}]
+;;
+
 let%expect_test "typing into an int number element (no default)" =
-  let component = Form.Elements.Number.int ~step:1 ~min:(-1) ~max:10 () in
+  let component =
+    Form.Elements.Number.int
+      ~step:1
+      ~min:(-1)
+      ~max:10
+      ~allow_updates_when_focused:`Never
+      ()
+  in
   let handle = Handle.create (form_result_spec [%sexp_of: int]) component in
   Handle.show handle;
   [%expect
@@ -2130,7 +2387,15 @@ let%expect_test "typing into an int number element (no default)" =
 ;;
 
 let%expect_test "typing into an int number element" =
-  let component = Form.Elements.Number.int ~default:0 ~step:1 ~min:(-1) ~max:10 () in
+  let component =
+    Form.Elements.Number.int
+      ~default:0
+      ~step:1
+      ~min:(-1)
+      ~max:10
+      ~allow_updates_when_focused:`Never
+      ()
+  in
   let handle = Handle.create (form_result_spec [%sexp_of: int]) component in
   Handle.show handle;
   [%expect
@@ -2222,7 +2487,14 @@ let%expect_test "typing into an int number element" =
 ;;
 
 let%expect_test "setting into an int number element (no default)" =
-  let component = Form.Elements.Number.int ~step:1 ~min:(-1) ~max:10 () in
+  let component =
+    Form.Elements.Number.int
+      ~step:1
+      ~min:(-1)
+      ~max:10
+      ~allow_updates_when_focused:`Never
+      ()
+  in
   let handle = Handle.create (form_result_spec [%sexp_of: int]) component in
   Handle.show handle;
   [%expect
@@ -2260,7 +2532,15 @@ let%expect_test "setting into an int number element (no default)" =
 ;;
 
 let%expect_test "setting into an int number element" =
-  let component = Form.Elements.Number.int ~default:0 ~step:1 ~min:(-1) ~max:10 () in
+  let component =
+    Form.Elements.Number.int
+      ~default:0
+      ~step:1
+      ~min:(-1)
+      ~max:10
+      ~allow_updates_when_focused:`Never
+      ()
+  in
   let handle = Handle.create (form_result_spec [%sexp_of: int]) component in
   Handle.show handle;
   [%expect
@@ -2353,7 +2633,13 @@ let%expect_test "setting into an int number element" =
 
 let%expect_test "typing into a float number element" =
   let component =
-    Form.Elements.Number.float ~default:0. ~step:1. ~min:(-1.) ~max:10.1 ()
+    Form.Elements.Number.float
+      ~default:0.
+      ~step:1.
+      ~min:(-1.)
+      ~max:10.1
+      ~allow_updates_when_focused:`Never
+      ()
   in
   let handle = Handle.create (form_result_spec [%sexp_of: float]) component in
   Handle.show handle;
@@ -2447,7 +2733,13 @@ let%expect_test "typing into a float number element" =
 
 let%expect_test "setting into an int number element" =
   let component =
-    Form.Elements.Number.float ~default:0. ~step:1. ~min:(-1.) ~max:10.1 ()
+    Form.Elements.Number.float
+      ~default:0.
+      ~step:1.
+      ~min:(-1.)
+      ~max:10.1
+      ~allow_updates_when_focused:`Never
+      ()
   in
   let handle = Handle.create (form_result_spec [%sexp_of: float]) component in
   Handle.show handle;
@@ -3084,8 +3376,10 @@ let%expect_test "form of nested record of int and float" =
       [@@deriving fields ~iterators:make_creator, sexp]
 
       let form =
-        let%sub age = Form.Elements.Textbox.int () in
-        let%sub height = Form.Elements.Textbox.float () in
+        let%sub age = Form.Elements.Textbox.int ~allow_updates_when_focused:`Never () in
+        let%sub height =
+          Form.Elements.Textbox.float ~allow_updates_when_focused:`Never ()
+        in
         Form.Dynamic.Record_builder.(
           build_for_record (Fields.make_creator ~age:(field age) ~height:(field height)))
       ;;
@@ -3116,13 +3410,15 @@ let%expect_test "form of nested record of int and float" =
 
     ==============
     <div>
-      <input type="text"
+      <input @key=bonsai_path_replaced_in_test
+             type="text"
              placeholder=""
              spellcheck="false"
              id="bonsai_path_replaced_in_test"
              value:normalized=""
              oninput> </input>
-      <input type="text"
+      <input @key=bonsai_path_replaced_in_test
+             type="text"
              placeholder=""
              spellcheck="false"
              id="bonsai_path_replaced_in_test"
@@ -3142,13 +3438,15 @@ let%expect_test "form of nested record of int and float" =
 
     ==============
     <div>
-      <input type="text"
+      <input @key=bonsai_path_replaced_in_test
+             type="text"
              placeholder=""
              spellcheck="false"
              id="bonsai_path_replaced_in_test"
              value:normalized=123
              oninput> </input>
-      <input type="text"
+      <input @key=bonsai_path_replaced_in_test
+             type="text"
              placeholder=""
              spellcheck="false"
              id="bonsai_path_replaced_in_test"
@@ -3175,8 +3473,9 @@ let%expect_test "form of nested record of int and float (typed fields)" =
 
             let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t
               = function
-              | Age -> Form.Elements.Textbox.int ()
-              | Height -> Form.Elements.Textbox.float ()
+              | Age -> Form.Elements.Textbox.int ~allow_updates_when_focused:`Never ()
+              | Height ->
+                Form.Elements.Textbox.float ~allow_updates_when_focused:`Never ()
             ;;
           end)
       ;;
@@ -3215,13 +3514,15 @@ let%expect_test "form of nested record of int and float (typed fields)" =
 
     ==============
     <div>
-      <input type="text"
+      <input @key=bonsai_path_replaced_in_test
+             type="text"
              placeholder=""
              spellcheck="false"
              id="bonsai_path_replaced_in_test"
              value:normalized=""
              oninput> </input>
-      <input type="text"
+      <input @key=bonsai_path_replaced_in_test
+             type="text"
              placeholder=""
              spellcheck="false"
              id="bonsai_path_replaced_in_test"
@@ -3241,13 +3542,15 @@ let%expect_test "form of nested record of int and float (typed fields)" =
 
     ==============
     <div>
-      <input type="text"
+      <input @key=bonsai_path_replaced_in_test
+             type="text"
              placeholder=""
              spellcheck="false"
              id="bonsai_path_replaced_in_test"
              value:normalized=123
              oninput> </input>
-      <input type="text"
+      <input @key=bonsai_path_replaced_in_test
+             type="text"
              placeholder=""
              spellcheck="false"
              id="bonsai_path_replaced_in_test"
@@ -3272,14 +3575,16 @@ let%expect_test "form of nested record of int and float (typed fields)" =
 
       ==============
       <div>
-        <input type="text"
+        <input @key=bonsai_path_replaced_in_test
+               type="text"
                placeholder=""
                spellcheck="false"
                id="bonsai_path_replaced_in_test"
     -|         value:normalized=123
     +|         value:normalized=20
                oninput> </input>
-        <input type="text"
+        <input @key=bonsai_path_replaced_in_test
+               type="text"
                placeholder=""
                spellcheck="false"
                id="bonsai_path_replaced_in_test"
@@ -3307,8 +3612,9 @@ let%expect_test "typed records labelling overrides defaults" =
 
             let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t
               = function
-              | Age -> Form.Elements.Textbox.int ()
-              | Height -> Form.Elements.Textbox.float ()
+              | Age -> Form.Elements.Textbox.int ~allow_updates_when_focused:`Never ()
+              | Height ->
+                Form.Elements.Textbox.float ~allow_updates_when_focused:`Never ()
             ;;
           end)
       ;;
@@ -3457,7 +3763,12 @@ let%expect_test "typed records: dynamic labelling" =
 
           let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t
             = function
-            | Int -> Form.Elements.Number.int ~step:1 ~default:0 ()
+            | Int ->
+              Form.Elements.Number.int
+                ~step:1
+                ~default:0
+                ~allow_updates_when_focused:`Never
+                ()
           ;;
         end)
     ;;
@@ -3531,7 +3842,8 @@ let%expect_test "typed variants recursive" =
             = function
             | Nil -> Bonsai.const (Form.return ())
             | Cons ->
-              let%map.Computation int = Form.Elements.Textbox.int ()
+              let%map.Computation int =
+                Form.Elements.Textbox.int ~allow_updates_when_focused:`Never ()
               and me = (Bonsai.lazy_ [@alert "-deprecated"]) (lazy (form ())) in
               Form.both int me
           ;;
@@ -3574,7 +3886,8 @@ let%expect_test "typed variants recursive" =
         <option value="0" #selected="false"> nil </option>
         <option value="1" #selected="true"> cons </option>
       </select>
-      <input type="text"
+      <input @key=bonsai_path_replaced_in_test
+             type="text"
              placeholder=""
              spellcheck="false"
              id="bonsai_path_replaced_in_test"
@@ -3608,7 +3921,8 @@ let%expect_test "typed variants recursive" =
           <option value="0" #selected="false"> nil </option>
           <option value="1" #selected="true"> cons </option>
         </select>
-        <input type="text"
+        <input @key=bonsai_path_replaced_in_test
+               type="text"
                placeholder=""
                spellcheck="false"
                id="bonsai_path_replaced_in_test"
@@ -3646,8 +3960,8 @@ let%expect_test "typed variants" =
           let form_for_variant : type a. a Typed_variant.t -> a Form.t Computation.t
             = function
             | Unit -> Bonsai.const (Form.return ())
-            | Integer -> Form.Elements.Textbox.int ()
-            | Text -> Form.Elements.Textbox.string ()
+            | Integer -> Form.Elements.Textbox.int ~allow_updates_when_focused:`Never ()
+            | Text -> Form.Elements.Textbox.string ~allow_updates_when_focused:`Never ()
           ;;
         end)
     ;;
@@ -3688,7 +4002,8 @@ let%expect_test "typed variants" =
         <option value="1" #selected="true"> integer </option>
         <option value="2" #selected="false"> text </option>
       </select>
-      <input type="text"
+      <input @key=bonsai_path_replaced_in_test
+             type="text"
              placeholder=""
              spellcheck="false"
              id="bonsai_path_replaced_in_test"
@@ -3714,7 +4029,8 @@ let%expect_test "typed variants" =
           <option value="1" #selected="true"> integer </option>
           <option value="2" #selected="false"> text </option>
         </select>
-        <input type="text"
+        <input @key=bonsai_path_replaced_in_test
+               type="text"
                placeholder=""
                spellcheck="false"
                id="bonsai_path_replaced_in_test"
@@ -3758,7 +4074,8 @@ let%expect_test "typed variants" =
         <option value="1" #selected="false"> integer </option>
         <option value="2" #selected="true"> text </option>
       </select>
-      <input type="text"
+      <input @key=bonsai_path_replaced_in_test
+             type="text"
              placeholder=""
              spellcheck="false"
              id="bonsai_path_replaced_in_test"
@@ -3788,7 +4105,12 @@ let%expect_test "typed variants: dynamic labelling" =
 
           let form_for_variant : type a. a Typed_variant.t -> a Form.t Computation.t
             = function
-            | Integer -> Form.Elements.Number.int ~default:0 ~step:1 ()
+            | Integer ->
+              Form.Elements.Number.int
+                ~default:0
+                ~step:1
+                ~allow_updates_when_focused:`Never
+                ()
           ;;
         end)
     ;;
@@ -3871,8 +4193,8 @@ let%expect_test "typed optional variants" =
           let form_for_variant : type a. a Typed_variant.t -> a Form.t Computation.t
             = function
             | Unit -> Bonsai.const (Form.return ())
-            | Integer -> Form.Elements.Textbox.int ()
-            | Text -> Form.Elements.Textbox.string ()
+            | Integer -> Form.Elements.Textbox.int ~allow_updates_when_focused:`Never ()
+            | Text -> Form.Elements.Textbox.string ~allow_updates_when_focused:`Never ()
           ;;
         end)
     ;;
@@ -3915,7 +4237,8 @@ let%expect_test "typed optional variants" =
         <option value="2" #selected="true"> integer </option>
         <option value="3" #selected="false"> text </option>
       </select>
-      <input type="text"
+      <input @key=bonsai_path_replaced_in_test
+             type="text"
              placeholder=""
              spellcheck="false"
              id="bonsai_path_replaced_in_test"
@@ -3942,7 +4265,8 @@ let%expect_test "typed optional variants" =
           <option value="2" #selected="true"> integer </option>
           <option value="3" #selected="false"> text </option>
         </select>
-        <input type="text"
+        <input @key=bonsai_path_replaced_in_test
+               type="text"
                placeholder=""
                spellcheck="false"
                id="bonsai_path_replaced_in_test"
@@ -3988,7 +4312,8 @@ let%expect_test "typed optional variants" =
         <option value="2" #selected="false"> integer </option>
         <option value="3" #selected="true"> text </option>
       </select>
-      <input type="text"
+      <input @key=bonsai_path_replaced_in_test
+             type="text"
              placeholder=""
              spellcheck="false"
              id="bonsai_path_replaced_in_test"
@@ -4041,8 +4366,8 @@ let%expect_test "typed variants with custom labels" =
           let form_for_variant : type a. a Typed_variant.t -> a Form.t Computation.t
             = function
             | Unit -> Bonsai.const (Form.return ())
-            | Integer -> Form.Elements.Textbox.int ()
-            | Text -> Form.Elements.Textbox.string ()
+            | Integer -> Form.Elements.Textbox.int ~allow_updates_when_focused:`Never ()
+            | Text -> Form.Elements.Textbox.string ~allow_updates_when_focused:`Never ()
           ;;
         end)
     ;;
@@ -4088,8 +4413,8 @@ let%expect_test "typed variants: attr is applied to dropdown" =
           let form_for_variant : type a. a Typed_variant.t -> a Form.t Computation.t
             = function
             | Unit -> Bonsai.const (Form.return ())
-            | Integer -> Form.Elements.Textbox.int ()
-            | Text -> Form.Elements.Textbox.string ()
+            | Integer -> Form.Elements.Textbox.int ~allow_updates_when_focused:`Never ()
+            | Text -> Form.Elements.Textbox.string ~allow_updates_when_focused:`Never ()
           ;;
         end)
     ;;
@@ -4135,8 +4460,8 @@ let%expect_test "typed variants: radio vertical" =
           let form_for_variant : type a. a Typed_variant.t -> a Form.t Computation.t
             = function
             | Unit -> Bonsai.const (Form.return ())
-            | Integer -> Form.Elements.Textbox.int ()
-            | Text -> Form.Elements.Textbox.string ()
+            | Integer -> Form.Elements.Textbox.int ~allow_updates_when_focused:`Never ()
+            | Text -> Form.Elements.Textbox.string ~allow_updates_when_focused:`Never ()
           ;;
         end)
     ;;
@@ -4209,8 +4534,8 @@ let%expect_test "typed variants: radio horizontal" =
           let form_for_variant : type a. a Typed_variant.t -> a Form.t Computation.t
             = function
             | Unit -> Bonsai.const (Form.return ())
-            | Integer -> Form.Elements.Textbox.int ()
-            | Text -> Form.Elements.Textbox.string ()
+            | Integer -> Form.Elements.Textbox.int ~allow_updates_when_focused:`Never ()
+            | Text -> Form.Elements.Textbox.string ~allow_updates_when_focused:`Never ()
           ;;
         end)
     ;;
@@ -4277,7 +4602,8 @@ let%expect_test "typed variants: dropdown with initially empty picker" =
           let initial_choice = `Empty
 
           let form_for_variant : type a. a Typed_variant.t -> a Form.t Computation.t =
-            fun String -> Form.Elements.Textbox.string ()
+            fun String ->
+            Form.Elements.Textbox.string ~allow_updates_when_focused:`Never ()
           ;;
         end)
     ;;
@@ -4319,7 +4645,7 @@ let%expect_test "typed variants: dropdown with example default" =
 
           let form_for_variant : type a. a Typed_variant.t -> a Form.t Computation.t
             = function
-            | String -> Form.Elements.Textbox.string ()
+            | String -> Form.Elements.Textbox.string ~allow_updates_when_focused:`Never ()
             | Other_thing -> Bonsai.const (Form.return ())
           ;;
         end)
@@ -4362,7 +4688,7 @@ let%expect_test "optional typed-variant-form: dropdown with example default" =
 
           let form_for_variant : type a. a Typed_variant.t -> a Form.t Computation.t
             = function
-            | String -> Form.Elements.Textbox.string ()
+            | String -> Form.Elements.Textbox.string ~allow_updates_when_focused:`Never ()
             | Other_thing -> Bonsai.const (Form.return ())
           ;;
         end)
@@ -4466,7 +4792,7 @@ let%expect_test "file picker list" =
 
 let%expect_test "on_change handler should fire when input is changed" =
   let component =
-    let%sub input = Form.Elements.Textbox.string () in
+    let%sub input = Form.Elements.Textbox.string ~allow_updates_when_focused:`Never () in
     let%sub () =
       Form.Dynamic.on_change
         ~sexp_of_model:[%sexp_of: String.t]
@@ -4486,7 +4812,8 @@ let%expect_test "on_change handler should fire when input is changed" =
     (Ok "")
 
     ==============
-    <input type="text"
+    <input @key=bonsai_path_replaced_in_test
+           type="text"
            placeholder=""
            spellcheck="false"
            id="bonsai_path_replaced_in_test"
@@ -4502,7 +4829,8 @@ let%expect_test "on_change handler should fire when input is changed" =
     +|(Ok "hello world")
 
       ==============
-      <input type="text"
+      <input @key=bonsai_path_replaced_in_test
+             type="text"
              placeholder=""
              spellcheck="false"
              id="bonsai_path_replaced_in_test"
@@ -4518,7 +4846,7 @@ let submit_test_attrs = function
 ;;
 
 let%expect_test "form with both submit button and form on-submit" =
-  let component = Form.Elements.Textbox.string () in
+  let component = Form.Elements.Textbox.string ~allow_updates_when_focused:`Never () in
   let get_vdom =
     get_vdom_verbose
       ~on_submit:(Form.Submit.create () ~f:(fun s -> Ui_effect.print_s (Sexp.Atom s)))
@@ -4566,7 +4894,7 @@ let%expect_test "form with both submit button and form on-submit" =
 ;;
 
 let%expect_test "form with on-submit with custom attrs" =
-  let component = Form.Elements.Textbox.string () in
+  let component = Form.Elements.Textbox.string ~allow_updates_when_focused:`Never () in
   let get_vdom =
     get_vdom_verbose
       ~on_submit:
@@ -4608,7 +4936,7 @@ let%expect_test "form with on-submit with custom attrs" =
 ;;
 
 let%expect_test "form with on-submit with custom attrs and invalid form" =
-  let component = Form.Elements.Textbox.int () in
+  let component = Form.Elements.Textbox.int ~allow_updates_when_focused:`Never () in
   let get_vdom =
     get_vdom_verbose
       ~on_submit:
@@ -4650,7 +4978,7 @@ let%expect_test "form with on-submit with custom attrs and invalid form" =
 ;;
 
 let%expect_test "both button and on-submit are disabled when the form doesn't validate" =
-  let component = Form.Elements.Textbox.int () in
+  let component = Form.Elements.Textbox.int ~allow_updates_when_focused:`Never () in
   let get_vdom =
     get_vdom_verbose
       ~on_submit:
@@ -4729,7 +5057,7 @@ let%expect_test "both button and on-submit are disabled when the form doesn't va
 ;;
 
 let%expect_test "form with just button" =
-  let component = Form.Elements.Textbox.string () in
+  let component = Form.Elements.Textbox.string ~allow_updates_when_focused:`Never () in
   let get_vdom =
     get_vdom_verbose
       ~on_submit:
@@ -4773,7 +5101,7 @@ let%expect_test "form with just button" =
 ;;
 
 let%expect_test "form with just enter" =
-  let component = Form.Elements.Textbox.string () in
+  let component = Form.Elements.Textbox.string ~allow_updates_when_focused:`Never () in
   let get_vdom =
     get_vdom_verbose
       ~on_submit:
@@ -4821,7 +5149,7 @@ let%expect_test "form projected witha an effect" =
     tracker |> Effect.For_testing.of_query_response_tracker |> Bonsai.Value.return
   in
   let component =
-    let%sub textbox = Form.Elements.Textbox.int () in
+    let%sub textbox = Form.Elements.Textbox.int ~allow_updates_when_focused:`Never () in
     Form.Dynamic.project_via_effect
       ~sexp_of_input:[%sexp_of: int]
       ~sexp_of_result:[%sexp_of: string]
@@ -4899,7 +5227,7 @@ let%expect_test "form validated with an effect" =
     tracker |> Effect.For_testing.of_query_response_tracker |> Bonsai.Value.return
   in
   let component =
-    let%sub textbox = Form.Elements.Textbox.int () in
+    let%sub textbox = Form.Elements.Textbox.int ~allow_updates_when_focused:`Never () in
     Form.Dynamic.validate_via_effect
       ~sexp_of_model:[%sexp_of: Int.t]
       textbox
@@ -4974,7 +5302,7 @@ let%expect_test "form validated with an effect with one_at_at_time" =
     tracker |> Effect.For_testing.of_query_response_tracker |> Bonsai.Value.return
   in
   let component =
-    let%sub textbox = Form.Elements.Textbox.int () in
+    let%sub textbox = Form.Elements.Textbox.int ~allow_updates_when_focused:`Never () in
     Form.Dynamic.validate_via_effect
       ~sexp_of_model:[%sexp_of: Int.t]
       textbox
@@ -5054,7 +5382,7 @@ let%expect_test "form validated with an effect and debounced" =
     tracker |> Effect.For_testing.of_query_response_tracker |> Bonsai.Value.return
   in
   let component =
-    let%sub textbox = Form.Elements.Textbox.int () in
+    let%sub textbox = Form.Elements.Textbox.int ~allow_updates_when_focused:`Never () in
     Form.Dynamic.validate_via_effect
       ~debounce_ui:(Time_ns.Span.of_sec 1.0)
       ~sexp_of_model:[%sexp_of: Int.t]
@@ -5102,7 +5430,15 @@ let%expect_test "form validated with an effect and debounced" =
 ;;
 
 let%expect_test "slider input" =
-  let component = Form.Elements.Range.int ~min:0 ~max:100 ~default:0 ~step:1 () in
+  let component =
+    Form.Elements.Range.int
+      ~min:0
+      ~max:100
+      ~default:0
+      ~step:1
+      ~allow_updates_when_focused:`Never
+      ()
+  in
   let get_vdom =
     get_vdom_verbose
       ~on_submit:
@@ -5232,7 +5568,9 @@ let%expect_test "query box" =
 
 let%expect_test "add tooltip to form" =
   let component =
-    let%map.Computation x = Form.Elements.Textbox.string () in
+    let%map.Computation x =
+      Form.Elements.Textbox.string ~allow_updates_when_focused:`Never ()
+    in
     Form.tooltip "tooltip" x
   in
   let handle =
@@ -5257,7 +5595,8 @@ let%expect_test "add tooltip to form" =
                 user-select: none;
               }>  </td>
           <td>
-            <input type="text"
+            <input @key=bonsai_path_replaced_in_test
+                   type="text"
                    placeholder=""
                    spellcheck="false"
                    id="bonsai_path_replaced_in_test"
@@ -5393,7 +5732,7 @@ let%expect_test "Bonsai_form.Typed sets groups/labels correctly on nested record
 ;;
 
 let%expect_test "view_as_vdom editable:`Currently_yes" =
-  let component = Form.Elements.Textbox.string () in
+  let component = Form.Elements.Textbox.string ~allow_updates_when_focused:`Never () in
   let get_vdom = get_vdom_verbose ~editable:`Currently_yes in
   let handle = Handle.create (form_result_spec ~get_vdom [%sexp_of: string]) component in
   Handle.show handle;
@@ -5414,7 +5753,8 @@ let%expect_test "view_as_vdom editable:`Currently_yes" =
                   user-select: none;
                 }>  </td>
             <td>
-              <input type="text"
+              <input @key=bonsai_path_replaced_in_test
+                     type="text"
                      placeholder=""
                      spellcheck="false"
                      id="bonsai_path_replaced_in_test"
@@ -5431,7 +5771,7 @@ let%expect_test "view_as_vdom editable:`Currently_no" =
   (* We can't programatically test when inputs aren't editable, because they can still be
      set using javascript events like onclick, so just validate that there is a disabled
      fieldset wrapping the textbox *)
-  let component = Form.Elements.Textbox.string () in
+  let component = Form.Elements.Textbox.string ~allow_updates_when_focused:`Never () in
   let get_vdom = get_vdom_verbose ~editable:`Currently_no in
   let handle = Handle.create (form_result_spec ~get_vdom [%sexp_of: string]) component in
   Handle.show handle;
@@ -5452,7 +5792,8 @@ let%expect_test "view_as_vdom editable:`Currently_no" =
                   user-select: none;
                 }>  </td>
             <td>
-              <input type="text"
+              <input @key=bonsai_path_replaced_in_test
+                     type="text"
                      placeholder=""
                      spellcheck="false"
                      id="bonsai_path_replaced_in_test"
@@ -5466,7 +5807,7 @@ let%expect_test "view_as_vdom editable:`Currently_no" =
 ;;
 
 let%expect_test "view_as_vdom not editable, with on_submit" =
-  let component = Form.Elements.Textbox.string () in
+  let component = Form.Elements.Textbox.string ~allow_updates_when_focused:`Never () in
   let on_submit = Form.Submit.create ~f:(fun _ -> Effect.Ignore) () in
   let get_vdom = get_vdom_verbose ~on_submit ~editable:`Currently_no in
   let handle = Handle.create (form_result_spec ~get_vdom [%sexp_of: string]) component in
@@ -5489,7 +5830,8 @@ let%expect_test "view_as_vdom not editable, with on_submit" =
                     user-select: none;
                   }>  </td>
               <td>
-                <input type="text"
+                <input @key=bonsai_path_replaced_in_test
+                       type="text"
                        placeholder=""
                        spellcheck="false"
                        id="bonsai_path_replaced_in_test"
@@ -5513,7 +5855,9 @@ let%expect_test "Adding error hints to the top level of various views" =
   let print_view_with_error ~compute_view =
     let component =
       let%sub form =
-        let%map.Computation form = Form.Elements.Textbox.int () in
+        let%map.Computation form =
+          Form.Elements.Textbox.int ~allow_updates_when_focused:`Never ()
+        in
         Form.Expert.create
           ~value:(Form.value form)
           ~set:(Form.set form)
@@ -5724,7 +6068,7 @@ let%expect_test "difference between with_default and with_default_always" =
     let component =
       match%sub Bonsai.Var.value should_show_form with
       | true ->
-        let%sub form = Form.Elements.Textbox.int () in
+        let%sub form = Form.Elements.Textbox.int ~allow_updates_when_focused:`Never () in
         with_default (Bonsai.Var.value default) form
       | false -> Bonsai.const (Form.return 0)
     in
@@ -5791,7 +6135,7 @@ let%expect_test "[Form.with_default] sets the form value after a model reset" =
   let default = Bonsai.Var.create 0 in
   let component =
     Bonsai.with_model_resetter
-      (let%sub form = Form.Elements.Textbox.int () in
+      (let%sub form = Form.Elements.Textbox.int ~allow_updates_when_focused:`Never () in
        Form.Dynamic.with_default (Bonsai.Var.value default) form)
   in
   let handle =
@@ -5823,7 +6167,7 @@ let%expect_test "[Form.with_default_always] sets the form value after a model re
   let default = Bonsai.Var.create 0 in
   let component =
     Bonsai.with_model_resetter
-      (let%sub form = Form.Elements.Textbox.int () in
+      (let%sub form = Form.Elements.Textbox.int ~allow_updates_when_focused:`Never () in
        Form.Dynamic.with_default_always (Bonsai.Var.value default) form)
   in
   let handle =
@@ -5854,7 +6198,7 @@ let%expect_test "[Form.with_default_always] sets the form value after a model re
 let%expect_test "[Form.with_default_always] only sets the form once on first activation" =
   let default = Bonsai.Var.create 0 in
   let component =
-    let%sub form = Form.Elements.Textbox.int () in
+    let%sub form = Form.Elements.Textbox.int ~allow_updates_when_focused:`Never () in
     let%sub form_with_printing =
       let%arr form = form in
       Form.Expert.create ~view:(Form.view form) ~value:(Form.value form) ~set:(fun i ->
@@ -5887,7 +6231,7 @@ let%expect_test {| [Form.with_default] interacts fine with [Handle.recompute_vie
   =
   let default = Bonsai.Var.create 0 in
   let component =
-    let%sub form = Form.Elements.Textbox.int () in
+    let%sub form = Form.Elements.Textbox.int ~allow_updates_when_focused:`Never () in
     Form.Dynamic.with_default (Bonsai.Var.value default) form
   in
   let handle =
@@ -6100,7 +6444,8 @@ let%expect_test "typed variant forms with radio buttons can be initialized to th
           let initial_choice = `First_constructor
 
           let form_for_variant : type a. a Typed_variant.t -> a Form.t Computation.t =
-            fun String -> Form.Elements.Textbox.string ()
+            fun String ->
+            Form.Elements.Textbox.string ~allow_updates_when_focused:`Never ()
           ;;
         end)
     ;;
@@ -6131,7 +6476,8 @@ let%expect_test "typed variant forms with radio buttons can be initialized to th
           </label>
         </li>
       </ul>
-      <input type="text"
+      <input @key=bonsai_path_replaced_in_test
+             type="text"
              placeholder=""
              spellcheck="false"
              id="bonsai_path_replaced_in_test"
@@ -6153,7 +6499,15 @@ let%expect_test "labelling a range form" =
   List.iter all_options ~f:(fun (left_label, right_label, description) ->
     print_endline description;
     print_endline "###############";
-    let range = Form.Elements.Range.int ?left_label ?right_label ~default:0 ~step:1 () in
+    let range =
+      Form.Elements.Range.int
+        ?left_label
+        ?right_label
+        ~default:0
+        ~step:1
+        ~allow_updates_when_focused:`Never
+        ()
+    in
     let handle = Handle.create (form_result_spec [%sexp_of: int]) range in
     Handle.show handle);
   [%expect
@@ -6249,9 +6603,9 @@ let%test_module "Typed fields monomorphization" =
 
             let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t
               = function
-              | A -> Form.Elements.Textbox.int ()
-              | B -> Form.Elements.Textbox.string ()
-              | C -> Form.Elements.Textbox.float ()
+              | A -> Form.Elements.Textbox.int ~allow_updates_when_focused:`Never ()
+              | B -> Form.Elements.Textbox.string ~allow_updates_when_focused:`Never ()
+              | C -> Form.Elements.Textbox.float ~allow_updates_when_focused:`Never ()
             ;;
           end)
       ;;
@@ -6352,9 +6706,9 @@ let%test_module "Typed fields monomorphization" =
 
             let form_for_variant : type a. a Typed_variant.t -> a Form.t Computation.t
               = function
-              | A -> Form.Elements.Textbox.int ()
-              | B -> Form.Elements.Textbox.string ()
-              | C -> Form.Elements.Textbox.float ()
+              | A -> Form.Elements.Textbox.int ~allow_updates_when_focused:`Never ()
+              | B -> Form.Elements.Textbox.string ~allow_updates_when_focused:`Never ()
+              | C -> Form.Elements.Textbox.float ~allow_updates_when_focused:`Never ()
             ;;
           end)
       ;;
@@ -6892,7 +7246,8 @@ let%expect_test "nested list form actions" =
   let component =
     Form.Elements.Multiple.list
       (Form.Elements.Multiple.list
-         (Form.Elements.Multiple.list (Form.Elements.Textbox.string ())))
+         (Form.Elements.Multiple.list
+            (Form.Elements.Textbox.string ~allow_updates_when_focused:`Never ())))
   in
   let handle =
     Handle.create (form_result_spec [%sexp_of: string list list list]) component
@@ -6962,8 +7317,8 @@ let%expect_test "Form.Typed.Record.make_table adds appropriate error messages" =
         let label_for_field = `Computed label_for_field
 
         let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t = function
-          | A -> Form.Elements.Textbox.int ()
-          | B -> Form.Elements.Textbox.string ()
+          | A -> Form.Elements.Textbox.int ~allow_updates_when_focused:`Never ()
+          | B -> Form.Elements.Textbox.string ~allow_updates_when_focused:`Never ()
         ;;
       end)
   in
@@ -7001,7 +7356,8 @@ let%expect_test "Form.Typed.Record.make_table adds appropriate error messages" =
                           user-select: none;
                         }>  </td>
                     <td>
-                      <input type="text"
+                      <input @key=bonsai_path_replaced_in_test
+                             type="text"
                              placeholder=""
                              spellcheck="false"
                              id="bonsai_path_replaced_in_test"
@@ -7046,7 +7402,8 @@ let%expect_test "Form.Typed.Record.make_table adds appropriate error messages" =
                           user-select: none;
                         }>  </td>
                     <td>
-                      <input type="text"
+                      <input @key=bonsai_path_replaced_in_test
+                             type="text"
                              placeholder=""
                              spellcheck="false"
                              id="bonsai_path_replaced_in_test"
@@ -7067,4 +7424,282 @@ let%expect_test "Form.Typed.Record.make_table adds appropriate error messages" =
       </table>
       <button onclick> + </button>
     </div> |}]
+;;
+
+let%expect_test "Typed variant set form" =
+  let module M = struct
+    module Foo = struct
+      type t =
+        | A
+        | B
+      [@@deriving sexp_of, compare, enumerate]
+    end
+
+    module Bar = struct
+      type t =
+        | C
+        | D
+        | E
+      [@@deriving sexp_of, compare, enumerate]
+    end
+
+    module T = struct
+      type t =
+        | Foo of Foo.t
+        | Bar of Bar.t
+      [@@deriving sexp_of, compare, typed_variants]
+    end
+
+    include T
+
+    let label_for_variant = `Inferred
+    let sexp_of_variant_argument = `Use_sexp_of_variant
+
+    let form_for_variant
+      : type a cmp.
+        a Typed_variant.t
+        -> (a, cmp) Bonsai.comparator
+        -> (a, cmp) Set.t Form.t Computation.t
+      =
+      fun variant comparator ->
+      match variant with
+      | Foo ->
+        Form.Elements.Checkbox.set
+          comparator
+          ~extra_container_attrs:(Value.return [ Vdom.Attr.class_ "foo" ])
+          (Value.return Foo.all)
+      | Bar ->
+        Form.Elements.Checkbox.set
+          comparator
+          ~extra_container_attrs:(Value.return [ Vdom.Attr.class_ "bar" ])
+          (Value.return Bar.all)
+    ;;
+
+    include Comparable.Make_plain (T)
+  end
+  in
+  let component = Form.Typed.Variant.make_set (module M) in
+  let result_spec = form_result_spec [%sexp_of: M.Set.t] in
+  let handle = Handle.create result_spec component in
+  Handle.show handle;
+  [%expect
+    {|
+    (Ok ())
+
+    ==============
+    <div>
+      <ul id="bonsai_path_replaced_in_test"
+          class="checkbox-container foo widget-checklist"
+          style={
+            list-style: none;
+            margin-left: 0px;
+          }>
+        <li style={ display: block; }>
+          <label>
+            <input type="checkbox" #checked="false" onclick> </input>
+             foo a
+          </label>
+        </li>
+        <li style={ display: block; }>
+          <label>
+            <input type="checkbox" #checked="false" onclick> </input>
+             foo b
+          </label>
+        </li>
+      </ul>
+      <ul id="bonsai_path_replaced_in_test"
+          class="bar checkbox-container widget-checklist"
+          style={
+            list-style: none;
+            margin-left: 0px;
+          }>
+        <li style={ display: block; }>
+          <label>
+            <input type="checkbox" #checked="false" onclick> </input>
+             bar c
+          </label>
+        </li>
+        <li style={ display: block; }>
+          <label>
+            <input type="checkbox" #checked="false" onclick> </input>
+             bar d
+          </label>
+        </li>
+        <li style={ display: block; }>
+          <label>
+            <input type="checkbox" #checked="false" onclick> </input>
+             bar e
+          </label>
+        </li>
+      </ul>
+    </div> |}];
+  Handle.do_actions handle M.[ Set.of_list [ Foo A; Bar C; Bar E ] ];
+  Handle.show_diff handle;
+  [%expect
+    {|
+    -|(Ok ())
+    +|(Ok (
+    +|  (Foo A)
+    +|  (Bar C)
+    +|  (Bar E)))
+
+      ==============
+      <div>
+        <ul id="bonsai_path_replaced_in_test"
+            class="checkbox-container foo widget-checklist"
+            style={
+              list-style: none;
+              margin-left: 0px;
+            }>
+          <li style={ display: block; }>
+            <label>
+    -|        <input type="checkbox" #checked="false" onclick> </input>
+    +|        <input type="checkbox" #checked="true" onclick> </input>
+               foo a
+            </label>
+          </li>
+          <li style={ display: block; }>
+            <label>
+              <input type="checkbox" #checked="false" onclick> </input>
+               foo b
+            </label>
+          </li>
+        </ul>
+        <ul id="bonsai_path_replaced_in_test"
+            class="bar checkbox-container widget-checklist"
+            style={
+              list-style: none;
+              margin-left: 0px;
+            }>
+          <li style={ display: block; }>
+            <label>
+    -|        <input type="checkbox" #checked="false" onclick> </input>
+    +|        <input type="checkbox" #checked="true" onclick> </input>
+               bar c
+            </label>
+          </li>
+          <li style={ display: block; }>
+            <label>
+              <input type="checkbox" #checked="false" onclick> </input>
+               bar d
+            </label>
+          </li>
+          <li style={ display: block; }>
+            <label>
+    -|        <input type="checkbox" #checked="false" onclick> </input>
+    +|        <input type="checkbox" #checked="true" onclick> </input>
+               bar e
+            </label>
+          </li>
+        </ul>
+      </div> |}];
+  Handle.set_checkbox
+    handle
+    ~get_vdom:Form.view_as_vdom
+    ~selector:".foo li:nth-child(2) input"
+    ~checked:true;
+  Handle.show_diff handle;
+  [%expect
+    {|
+      (Ok (
+        (Foo A)
+    +|  (Foo B)
+        (Bar C)
+        (Bar E)))
+
+      ==============
+      <div>
+        <ul id="bonsai_path_replaced_in_test"
+            class="checkbox-container foo widget-checklist"
+            style={
+              list-style: none;
+              margin-left: 0px;
+            }>
+          <li style={ display: block; }>
+            <label>
+              <input type="checkbox" #checked="true" onclick> </input>
+               foo a
+            </label>
+          </li>
+          <li style={ display: block; }>
+            <label>
+    -|        <input type="checkbox" #checked="false" onclick> </input>
+    +|        <input type="checkbox" #checked="true" onclick> </input>
+               foo b
+            </label>
+          </li>
+        </ul>
+        <ul id="bonsai_path_replaced_in_test"
+            class="bar checkbox-container widget-checklist"
+            style={
+              list-style: none;
+              margin-left: 0px;
+            }>
+          <li style={ display: block; }>
+            <label>
+              <input type="checkbox" #checked="true" onclick> </input>
+               bar c
+            </label>
+          </li> |}];
+  Handle.set_checkbox
+    handle
+    ~get_vdom:Form.view_as_vdom
+    ~selector:".bar li:nth-child(1) input"
+    ~checked:false;
+  Handle.show_diff handle;
+  [%expect
+    {|
+      (Ok (
+        (Foo A)
+        (Foo B)
+    -|  (Bar C)
+        (Bar E)))
+
+      ==============
+      <div>
+        <ul id="bonsai_path_replaced_in_test"
+            class="checkbox-container foo widget-checklist"
+            style={
+              list-style: none;
+              margin-left: 0px;
+            }>
+          <li style={ display: block; }>
+            <label>
+              <input type="checkbox" #checked="true" onclick> </input>
+               foo a
+            </label>
+          </li>
+          <li style={ display: block; }>
+            <label>
+              <input type="checkbox" #checked="true" onclick> </input>
+               foo b
+            </label>
+          </li>
+        </ul>
+        <ul id="bonsai_path_replaced_in_test"
+            class="bar checkbox-container widget-checklist"
+            style={
+              list-style: none;
+              margin-left: 0px;
+            }>
+          <li style={ display: block; }>
+            <label>
+    -|        <input type="checkbox" #checked="true" onclick> </input>
+    +|        <input type="checkbox" #checked="false" onclick> </input>
+               bar c
+            </label>
+          </li>
+          <li style={ display: block; }>
+            <label>
+              <input type="checkbox" #checked="false" onclick> </input>
+               bar d
+            </label>
+          </li>
+          <li style={ display: block; }>
+            <label>
+              <input type="checkbox" #checked="true" onclick> </input>
+               bar e
+            </label>
+          </li>
+        </ul> |}]
 ;;

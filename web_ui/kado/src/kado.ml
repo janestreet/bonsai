@@ -25,11 +25,12 @@ let dark_mode_constants =
   let table_even = c ~bg:(`Hex "#21242a") ~fg:primary.foreground in
   let extreme_primary_border = `Hex "#313943" in
   let header = c ~bg:(`Hex "#0b0e11") ~fg:primary.foreground in
+  let info = c ~fg:(`Name "black") ~bg:(`Hex "#1BA1F2") in
   { primary
   ; extreme
   ; extreme_primary_border
   ; intent =
-      { info = c ~fg:(`Name "black") ~bg:(`Hex "#1BA1F2")
+      { info
       ; success = c ~fg:(`Name "black") ~bg:(`Hex "#57c961")
       ; warning = c ~fg:(`Name "black") ~bg:(`Hex "#ffbe01")
       ; error = c ~fg:(`Name "white") ~bg:(`Hex "#f2581b")
@@ -37,10 +38,12 @@ let dark_mode_constants =
   ; table =
       { body_row_even = table_even
       ; body_row_odd = primary
+      ; body_row_focused = c ~fg:primary.foreground ~bg:(`Hex "#4b3038")
       ; header_row = header
       ; header_header_border = extreme_primary_border
       ; header_body_border = extreme_primary_border
       ; body_body_border = extreme_primary_border
+      ; body_row_focused_border = `Hex "#774856"
       }
   ; form =
       { error_message = { foreground = `Name "black"; background = `Name "pink" }
@@ -72,10 +75,12 @@ let light_mode_constants =
   ; table =
       { body_row_even = table_even
       ; body_row_odd = primary
+      ; body_row_focused = c ~fg:primary.foreground ~bg:(`Hex "#7D648A")
       ; header_row = header
       ; header_header_border
       ; header_body_border = header_header_border
       ; body_body_border = extreme_primary_border
+      ; body_row_focused_border = extreme_primary_border
       }
   ; is_dark = false
   ; form =

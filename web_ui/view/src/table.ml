@@ -229,7 +229,8 @@ stylesheet
 
 .header_cell {
   border: 1px solid var(--header-header-border, blue);
-  font-weight: 300;
+  font-weight: bold;
+  text-align: center;
   font-size: 0.9em;
   padding: 0.3em 0.5em;
 }

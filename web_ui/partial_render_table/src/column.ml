@@ -1,8 +1,15 @@
 open! Core
 open! Bonsai_web
 open! Bonsai.Let_syntax
-open Bonsai_web_ui_partial_render_table_protocol
 module Sort_kind = Column_intf.Sort_kind
+module Sort_state = Bonsai_web_ui_partial_render_table_protocol.Sort_state
+
+module Indexed_col_id = struct
+  type t = int [@@deriving equal]
+
+  let to_int = Fn.id
+  let of_int = Fn.id
+end
 
 module Dynamic_cells = struct
   module T = struct
@@ -58,9 +65,7 @@ module Dynamic_cells = struct
                  and r = r in
                  key, r)
            else (
-             let f =
-               Ui_incr.Map.map ~f:(fun (k, _) -> k, Table_view.Cell.empty_content)
-             in
+             let f = Ui_incr.Map.map ~f:(fun (k, _) -> k, Vdom.Node.none) in
              Bonsai.Incr.compute map ~f))
         ]
       | Group { children; _ } | Org_group children ->
@@ -108,6 +113,117 @@ module Dynamic_cells = struct
   module Sortable = Sortable
 end
 
+module Dynamic_experimental = struct
+  module T = struct
+    type ('key, 'data, 'column_id, 'column_id_cmp) t =
+      { col_id : ('column_id, 'column_id_cmp) Bonsai.comparator
+      ; columns : 'column_id list Value.t
+      ; render_header : 'column_id Value.t -> Vdom.Node.t Computation.t
+      ; render_cell :
+          'column_id Value.t -> 'key Value.t -> 'data Value.t -> Vdom.Node.t Computation.t
+      }
+
+    let headers
+      : type key data column_id column_id_cmp.
+        (key, data, column_id, column_id_cmp) t -> Header_tree.t Computation.t
+      =
+      fun { col_id; columns; render_header; render_cell = _ } ->
+      let module Col_id = (val col_id) in
+      let%sub rendered =
+        Bonsai.assoc_list
+          (module Col_id)
+          columns
+          ~get_key:Fn.id
+          ~f:(fun _ col ->
+            let%sub header = render_header col in
+            let%arr header = header in
+            Header_tree.leaf ~header ~visible:true ~initial_width:(`Px 50))
+      in
+      match%sub rendered with
+      | `Duplicate_key _ ->
+        raise_s
+          [%message
+            "BUG" [%here] "should be impossible because columns were already deduplicated"]
+      | `Ok headers ->
+        let%arr headers = headers in
+        Header_tree.org_group headers
+    ;;
+
+    let instantiate_cells
+      : type key data column_id column_id_cmp.
+        (key, data, column_id, column_id_cmp) t
+        -> (key, _) Bonsai.comparator
+        -> (key * data) Opaque_map.t Value.t
+        -> (key * Vdom.Node.t list) Opaque_map.t Computation.t
+      =
+      fun { col_id; columns; render_header = _; render_cell } key_cmp rows ->
+      let module Col_id = (val col_id) in
+      Bonsai.Expert.assoc_on
+        (module Opaque_map.Key)
+        key_cmp
+        rows
+        ~get_model_key:(fun _ (k, _) -> k)
+        ~f:(fun _key_key data ->
+          let%sub key, data = return data in
+          let%sub rendered =
+            Bonsai.assoc_list
+              (module Col_id)
+              columns
+              ~get_key:Fn.id
+              ~f:(fun _ col -> render_cell col key data)
+          in
+          match%sub rendered with
+          | `Duplicate_key _ ->
+            raise_s
+              [%message
+                "BUG"
+                  [%here]
+                  "should be impossible because columns were already deduplicated"]
+          | `Ok cells ->
+            let%arr cells = cells
+            and key = key in
+            key, cells)
+    ;;
+  end
+
+  let build
+    : type key data column column_cmp.
+      (column, column_cmp) Bonsai.comparator
+      -> columns:column list Value.t
+      -> render_header:(column Value.t -> Vdom.Node.t Computation.t)
+      -> render_cell:
+           (column Value.t -> key Value.t -> data Value.t -> Vdom.Node.t Computation.t)
+      -> (key, data) Column_intf.t
+    =
+    let module X = struct
+      type t = (key, data, column, column_cmp) T.t
+      type nonrec key = key
+      type nonrec data = data
+
+      let headers = T.headers
+      let instantiate_cells = T.instantiate_cells
+    end
+    in
+    fun col_id ~columns ~render_header ~render_cell ->
+      let module Col_id = (val col_id) in
+      let columns =
+        let%map columns = columns in
+        (* deduplicate *)
+        let seen = ref (Set.empty (module Col_id)) in
+        List.filter columns ~f:(fun column ->
+          if Set.mem !seen column
+          then false
+          else (
+            seen := Set.add !seen column;
+            true))
+      in
+      let value = { T.col_id; columns; render_header; render_cell } in
+      Column_intf.T { value; vtable = (module X) }
+  ;;
+
+  module Sortable = Sortable
+end
+
 module Dynamic_columns = struct
   module T = struct
     type ('key, 'data) t =
@@ -137,7 +253,7 @@ module Dynamic_columns = struct
     let rec visible_leaves structure ~key ~data =
       match structure with
       | Leaf { cell; visible; _ } ->
-        if visible then [ cell ~key ~data ] else [ Table_view.Cell.empty_content ]
+        if visible then [ cell ~key ~data ] else [ Vdom.Node.none ]
       | Org_group children | Group { children; group_header = _ } ->
         List.concat_map children ~f:(visible_leaves ~key ~data)
     ;;
@@ -273,7 +389,7 @@ module Dynamic_cells_with_sorter = struct
       return (Value.both sorters headers)
     ;;
 
-    let instantiate_cells t =
+    let instantiate_cells t cmp map =
       let _sorters, tree =
         T.partition t ~f:(fun _i col sort render_header ->
           let header_node =
@@ -286,15 +402,20 @@ module Dynamic_cells_with_sorter = struct
           in
           col header_node)
       in
-      Dynamic_cells.T.instantiate_cells tree
+      Dynamic_cells.T.instantiate_cells tree cmp map
     ;;
   end
 
-  let lift : type key data. (key, data) T.t list -> (key, data) Column_intf.with_sorter =
+  let lift
+    : type key data.
+      (key, data) T.t list -> (key, data, Indexed_col_id.t) Column_intf.with_sorter
+    =
     let module X = struct
       type t = (key, data) T.t
       type nonrec key = key
       type nonrec data = data
+      type column_id = int
+      type column_id_cmp = Int.comparator_witness
 
       include W
     end
@@ -303,7 +424,7 @@ module Dynamic_cells_with_sorter = struct
       let value =
         T.Group { children = columns; build = (fun c -> Dynamic_cells.T.Org_group c) }
       in
-      Column_intf.Y { value; vtable = (module X) }
+      Column_intf.Y { value; vtable = (module X); col_id = (module Int) }
   ;;
 
   module Sortable = Sortable
@@ -363,7 +484,7 @@ module Dynamic_columns_with_sorter = struct
       return (Value.both sorters headers)
     ;;
 
-    let instantiate_cells t =
+    let instantiate_cells t cmp map =
       let tree =
         let%map t = t in
         let _sorters, tree =
@@ -375,17 +496,21 @@ module Dynamic_columns_with_sorter = struct
         in
         tree
       in
-      Dynamic_columns.T.instantiate_cells tree
+      Dynamic_columns.T.instantiate_cells tree cmp map
     ;;
   end
 
   let lift
-    : type key data. (key, data) T.t list Value.t -> (key, data) Column_intf.with_sorter
+    : type key data.
+      (key, data) T.t list Value.t
+      -> (key, data, Indexed_col_id.t) Column_intf.with_sorter
     =
     let module X = struct
       type t = (key, data) T.t Value.t
       type nonrec key = key
       type nonrec data = data
+      type column_id = int
+      type column_id_cmp = Int.comparator_witness
 
       include W
     end
@@ -395,7 +520,155 @@ module Dynamic_columns_with_sorter = struct
         let%map columns = columns in
         T.Group { children = columns; build = (fun c -> Dynamic_columns.T.Org_group c) }
       in
-      Column_intf.Y { value; vtable = (module X) }
+      Column_intf.Y { value; vtable = (module X); col_id = (module Int) }
+  ;;
+
+  module Sortable = Sortable
+end
+
+module Dynamic_experimental_with_sorter = struct
+  module T = struct
+    type ('key, 'data, 'column_id, 'column_id_cmp) t =
+      { col_id : ('column_id, 'column_id_cmp) Bonsai.comparator
+      ; columns : ('column_id list * ('column_id, 'column_id_cmp) Set.t) Value.t
+      ; render_header : 'column_id Value.t -> (Sort_state.t -> Vdom.Node.t) Computation.t
+      ; render_cell :
+          'column_id Value.t -> 'key Value.t -> 'data Value.t -> Vdom.Node.t Computation.t
+      ; sorts :
+          ('column_id Value.t -> ('key, 'data) Sort_kind.t option Computation.t) option
+      }
+
+    let headers_and_sorters
+      : type key data column_id column_id_cmp.
+        (key, data, column_id, column_id_cmp) t
+        -> column_id Sortable.t Value.t
+        -> ((column_id, (key, data) Sort_kind.t, column_id_cmp) Map.t * Header_tree.t)
+           Computation.t
+      =
+      fun { col_id; columns; render_header; sorts; render_cell = _ } sortable_header ->
+      let module Col_id = (val col_id) in
+      let%sub columns, columns_as_a_set = return columns in
+      let%sub sorts =
+        match sorts with
+        | None -> Bonsai.const (Map.empty (module Col_id))
+        | Some sorts ->
+          let%sub sorts =
+            Bonsai.assoc_set
+              (module Col_id)
+              columns_as_a_set
+              ~f:(fun column -> sorts column)
+          in
+          Bonsai.Map.filter_map sorts ~f:Fn.id
+      in
+      let%sub headers =
+        Bonsai.assoc_list
+          (module Col_id)
+          columns
+          ~get_key:Fn.id
+          ~f:(fun _ col ->
+            let%sub render_header = render_header col in
+            let%arr render_header = render_header
+            and sortable_header = sortable_header
+            and sorts = sorts
+            and col = col in
+            let sortable = Map.mem sorts col in
+            let header =
+              Sortable.Header.Expert.default_click_handler
+                ~sortable
+                ~column_id:col
+                sortable_header
+                render_header
+            in
+            Header_tree.leaf ~header ~visible:true ~initial_width:(`Px 50))
+      in
+      let%sub headers =
+        match%sub headers with
+        | `Duplicate_key _ ->
+          (* impossible because we already deduped *)
+          assert false
+        | `Ok headers ->
+          let%arr headers = headers in
+          Header_tree.org_group headers
+      in
+      let%arr headers = headers
+      and sorts = sorts in
+      sorts, headers
+    ;;
+
+    let instantiate_cells
+      : type key data column_id column_id_cmp.
+        (key, data, column_id, column_id_cmp) t
+        -> (key, _) Bonsai.comparator
+        -> (key * data) Opaque_map.t Value.t
+        -> (key * Vdom.Node.t list) Opaque_map.t Computation.t
+      =
+      fun { col_id; columns; render_cell; render_header = _; sorts = _ } key_cmp rows ->
+      let module Col_id = (val col_id) in
+      let%sub columns, _ = return columns in
+      Bonsai.Expert.assoc_on
+        (module Opaque_map.Key)
+        key_cmp
+        rows
+        ~get_model_key:(fun _ (k, _) -> k)
+        ~f:(fun _key_key data ->
+          let%sub key, data = return data in
+          let%sub rendered =
+            Bonsai.assoc_list
+              (module Col_id)
+              columns
+              ~get_key:Fn.id
+              ~f:(fun _ col -> render_cell col key data)
+          in
+          match%sub rendered with
+          | `Duplicate_key _ ->
+            (* impossible because we already deduped *)
+            assert false
+          | `Ok cells ->
+            let%arr cells = cells
+            and key = key in
+            key, cells)
+    ;;
+  end
+
+  let build
+    : type key data column_id column_id_cmp.
+      ?sorts:(column_id Value.t -> (key, data) Sort_kind.t option Computation.t)
+      -> (column_id, column_id_cmp) Bonsai.comparator
+      -> columns:column_id list Value.t
+      -> render_header:(column_id Value.t -> (Sort_state.t -> Vdom.Node.t) Computation.t)
+      -> render_cell:
+           (column_id Value.t -> key Value.t -> data Value.t -> Vdom.Node.t Computation.t)
+      -> (key, data, column_id) Column_intf.with_sorter
+    =
+    let module X = struct
+      type t = (key, data, column_id, column_id_cmp) T.t
+      type nonrec key = key
+      type nonrec data = data
+      type nonrec column_id = column_id
+      type nonrec column_id_cmp = column_id_cmp
+
+      let headers_and_sorters = T.headers_and_sorters
+      let instantiate_cells = T.instantiate_cells
+    end
+    in
+    fun ?sorts col_id ~columns ~render_header ~render_cell ->
+      let module Col_id = (val col_id) in
+      let columns =
+        let%map columns = columns in
+        (* deduplicate *)
+        let seen = ref (Set.empty (module Col_id)) in
+        let as_list =
+          List.filter columns ~f:(fun column ->
+            if Set.mem !seen column
+            then false
+            else (
+              seen := Set.add !seen column;
+              true))
+        in
+        as_list, !seen
+      in
+      let value = { T.col_id; columns; render_header; render_cell; sorts } in
+      Column_intf.Y { value; vtable = (module X); col_id = (module Col_id) }
   ;;
 
   module Sortable = Sortable

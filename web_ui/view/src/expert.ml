@@ -59,12 +59,17 @@ let default_theme =
             let table_row_even =
               { Constants.Fg_bg.foreground = `Name "black"; background = `Name "#e6e6e6" }
             in
+            let info =
+              { Constants.Fg_bg.background = `Hex "#e0f7ff"
+              ; foreground = `Name "#0a90bf"
+              }
+            in
             let extreme_primary_border = `Name "grey" in
             { Constants.primary
             ; extreme = primary
             ; extreme_primary_border
             ; intent =
-                { info = { background = `Hex "#e0f7ff"; foreground = `Name "#0a90bf" }
+                { info
                 ; success = { background = `Hex "#ecffe0"; foreground = `Name "#348203" }
                 ; warning = { background = `Hex "#ffeb3b"; foreground = `Name "#6b6001" }
                 ; error = { background = `Name "#ff2522"; foreground = `Name "#630100" }
@@ -72,10 +77,13 @@ let default_theme =
             ; table =
                 { body_row_even = table_row_even
                 ; body_row_odd = primary
+                ; body_row_focused =
+                    { foreground = primary.foreground; background = info.background }
                 ; header_row = header
                 ; header_header_border = extreme_primary_border
                 ; header_body_border = extreme_primary_border
                 ; body_body_border = extreme_primary_border
+                ; body_row_focused_border = info.foreground
                 }
             ; form =
                 { error_message =
@@ -254,6 +262,7 @@ let default_theme =
               [ Vdom.Node.text text ]
 
           method codemirror_theme : For_codemirror.Theme.t option = None
+          method prt_styling = For_prt.default self#constants
 
           (* tables *)
           method table = Table.table_attr self#constants
@@ -377,28 +386,58 @@ let default_theme =
                 ~f:(fun ~attrs x -> Vdom.Node.fieldset ~attrs x)
                 ~extra_container_attr:Style.fieldset_container
 
-          method textbox ?attrs ?placeholder ~disabled ~value ~set_value () =
+          method textbox
+            ?attrs
+            ?placeholder
+            ?key
+            ~allow_updates_when_focused
+            ~disabled
+            ~value
+            ~set_value
+            () =
             Vdom_input_widgets.Entry.text
+              ~allow_updates_when_focused
               ?extra_attrs:attrs
               ?placeholder
+              ?key
               ~disabled
               ~value:(Some value)
               ~on_input:(fun s -> set_value (Option.value ~default:"" s))
               ()
 
-          method password ?attrs ?placeholder ~disabled ~value ~set_value () =
+          method password
+            ?attrs
+            ?placeholder
+            ?key
+            ~allow_updates_when_focused
+            ~disabled
+            ~value
+            ~set_value
+            () =
             Vdom_input_widgets.Entry.password
               ?extra_attrs:attrs
               ?placeholder
+              ?key
+              ~allow_updates_when_focused
               ~disabled
               ~value:(Some value)
               ~on_input:(fun s -> set_value (Option.value ~default:"" s))
               ()
 
-          method textarea ?attrs ?placeholder ~disabled ~value ~set_value () =
+          method textarea
+            ?attrs
+            ?placeholder
+            ?key
+            ~allow_updates_when_focused
+            ~disabled
+            ~value
+            ~set_value
+            () =
             Vdom_input_widgets.Entry.text_area
+              ~allow_updates_when_focused
               ?extra_attrs:attrs
               ?placeholder
+              ?key
               ~disabled
               ~value
               ~on_input:set_value
@@ -409,6 +448,8 @@ let default_theme =
             ?placeholder
             ?min
             ?max
+            ?key
+            ~allow_updates_when_focused
             ~disabled
             ~step
             ~value
@@ -417,19 +458,33 @@ let default_theme =
             let min = Option.value_map min ~default:Vdom.Attr.empty ~f:Vdom.Attr.min in
             let max = Option.value_map max ~default:Vdom.Attr.empty ~f:Vdom.Attr.max in
             Vdom_input_widgets.Entry.number
+              ~allow_updates_when_focused
               ~extra_attrs:(attrs @ [ min; max ])
               ?placeholder
+              ?key
               ~disabled
               ~value
               ~on_input:set_value
               ~step
               (module Vdom_input_widgets.Decimal)
 
-          method range ?(attrs = []) ?min ?max ~disabled ~step ~value ~set_value () =
+          method range
+            ?(attrs = [])
+            ?min
+            ?max
+            ?key
+            ~allow_updates_when_focused
+            ~disabled
+            ~step
+            ~value
+            ~set_value
+            () =
             let min = Option.value_map min ~default:Vdom.Attr.empty ~f:Vdom.Attr.min in
             let max = Option.value_map max ~default:Vdom.Attr.empty ~f:Vdom.Attr.max in
             Vdom_input_widgets.Entry.range
+              ?key
               ~extra_attrs:(attrs @ [ min; max ])
+              ~allow_updates_when_focused
               ~disabled
               ~value:(Some value)
               ~on_input:(function

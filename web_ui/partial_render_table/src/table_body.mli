@@ -7,7 +7,7 @@ open! Incr_map_collate
 module For_testing : sig
   type cell =
     { id : Opaque_map.Key.t
-    ; selected : bool
+    ; focused : bool
     ; view : Vdom.Node.t list
     }
 
@@ -22,7 +22,8 @@ module For_testing : sig
 end
 
 val component
-  :  comparator:('key, 'cmp) Bonsai.comparator
+  :  themed_attrs:Table_view.Themed.t Value.t
+  -> comparator:('key, 'cmp) Bonsai.comparator
   -> row_height:[< `Px of int ] Value.t
   -> leaves:Header_tree.leaf list Value.t
   -> headers:Header_tree.t Value.t

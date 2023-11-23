@@ -259,6 +259,7 @@ module Test = struct
     let get_inject_expert t = get_inject' t Table_expert.Result.focus
 
     let default
+      ~theming
       ?(preload_rows = 0)
       ?(is_column_b_visible = Value.return true)
       ?override_sort
@@ -273,6 +274,7 @@ module Test = struct
       { component =
           Table.component
             (module Int)
+            ~theming
             ~focus:(By_row { on_change = focus_changed })
             ~filter
             ?override_sort
@@ -290,6 +292,7 @@ module Test = struct
     ;;
 
     let default'
+      ~theming
       ?(with_groups = false)
       ?(preload_rows = 0)
       ?(is_column_b_visible = true)
@@ -305,6 +308,7 @@ module Test = struct
       { component =
           Table.component
             (module Int)
+            ~theming
             ~focus:(By_row { on_change = focus_changed })
             ~filter
             ~row_height:(Value.return (`Px 1))
@@ -319,7 +323,7 @@ module Test = struct
       }
     ;;
 
-    let expert_for_testing_compute_presence ~collate ~presence () input _filter =
+    let expert_for_testing_compute_presence ~theming ~collate ~presence () input _filter =
       let component =
         let%sub collation =
           Table_expert.collate
@@ -342,6 +346,7 @@ module Test = struct
         in
         Table_expert.component
           (module Int)
+          ~theming
           ~focus:
             (By_row
                { on_change = Value.return (Fn.const Effect.Ignore)

@@ -42,7 +42,12 @@ let make_handle
   =
   let bonsai =
     let%sub result =
-      S.bonsai ?initial_model_settings ~id_prefix ~all_keys per_subwidget
+      S.bonsai
+        ?initial_model_settings
+        ~id_prefix
+        ~all_keys
+        per_subwidget
+        ~allow_updates_when_focused:`Never
     in
     result
     |> Bonsai.Value.map ~f:(fun result ->

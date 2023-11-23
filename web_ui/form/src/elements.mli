@@ -31,30 +31,35 @@ module Textbox : sig
   val string
     :  ?extra_attrs:Vdom.Attr.t list Value.t
     -> ?placeholder:string
+    -> allow_updates_when_focused:[ `Always | `Never ]
     -> unit
     -> string Form.t Computation.t
 
   val int
     :  ?extra_attrs:Vdom.Attr.t list Value.t
     -> ?placeholder:string
+    -> allow_updates_when_focused:[ `Always | `Never ]
     -> unit
     -> int Form.t Computation.t
 
   val float
     :  ?extra_attrs:Vdom.Attr.t list Value.t
     -> ?placeholder:string
+    -> allow_updates_when_focused:[ `Always | `Never ]
     -> unit
     -> float Form.t Computation.t
 
   val sexpable
     :  ?extra_attrs:Vdom.Attr.t list Value.t
     -> ?placeholder:string
+    -> allow_updates_when_focused:[ `Always | `Never ]
     -> (module Sexpable with type t = 'a)
     -> 'a Form.t Computation.t
 
   val stringable
     :  ?extra_attrs:Vdom.Attr.t list Value.t
     -> ?placeholder:string
+    -> allow_updates_when_focused:[ `Always | `Never ]
     -> (module Stringable with type t = 'a)
     -> 'a Form.t Computation.t
 end
@@ -63,12 +68,14 @@ module Password : sig
   val string
     :  ?extra_attrs:Vdom.Attr.t list Value.t
     -> ?placeholder:string
+    -> allow_updates_when_focused:[ `Always | `Never ]
     -> unit
     -> string Form.t Computation.t
 
   val stringable
     :  ?extra_attrs:Vdom.Attr.t list Value.t
     -> ?placeholder:string
+    -> allow_updates_when_focused:[ `Always | `Never ]
     -> (module Stringable with type t = 'a)
     -> 'a Form.t Computation.t
 end
@@ -77,30 +84,35 @@ module Textarea : sig
   val string
     :  ?extra_attrs:Vdom.Attr.t list Value.t
     -> ?placeholder:string
+    -> allow_updates_when_focused:[ `Always | `Never ]
     -> unit
     -> string Form.t Computation.t
 
   val int
     :  ?extra_attrs:Vdom.Attr.t list Value.t
     -> ?placeholder:string
+    -> allow_updates_when_focused:[ `Always | `Never ]
     -> unit
     -> int Form.t Computation.t
 
   val float
     :  ?extra_attrs:Vdom.Attr.t list Value.t
     -> ?placeholder:string
+    -> allow_updates_when_focused:[ `Always | `Never ]
     -> unit
     -> float Form.t Computation.t
 
   val sexpable
     :  ?extra_attrs:Vdom.Attr.t list Value.t
     -> ?placeholder:string
+    -> allow_updates_when_focused:[ `Always | `Never ]
     -> (module Sexpable with type t = 'a)
     -> 'a Form.t Computation.t
 
   val stringable
     :  ?extra_attrs:Vdom.Attr.t list Value.t
     -> ?placeholder:string
+    -> allow_updates_when_focused:[ `Always | `Never ]
     -> (module Stringable with type t = 'a)
     -> 'a Form.t Computation.t
 end
@@ -128,6 +140,8 @@ module Checkbox : sig
       -> extra_attrs:Vdom.Attr.t list
       -> state:bool
       -> set_state:(bool -> unit Ui_effect.t)
+      -> ?key:string
+      -> unit
       -> Vdom.Node.t
   end
 end
@@ -261,20 +275,27 @@ module Date_time : sig
       | Hours
   end
 
-  val date : ?extra_attrs:Vdom.Attr.t list Value.t -> unit -> Date.t Form.t Computation.t
+  val date
+    :  ?extra_attrs:Vdom.Attr.t list Value.t
+    -> allow_updates_when_focused:[ `Always | `Never ]
+    -> unit
+    -> Date.t Form.t Computation.t
 
   val date_opt
     :  ?extra_attrs:Vdom.Attr.t list Value.t
+    -> allow_updates_when_focused:[ `Always | `Never ]
     -> unit
     -> Date.t option Form.t Computation.t
 
   val time
     :  ?extra_attrs:Vdom.Attr.t list Value.t
+    -> allow_updates_when_focused:[ `Always | `Never ]
     -> unit
     -> Time_ns.Ofday.t Form.t Computation.t
 
   val time_opt
     :  ?extra_attrs:Vdom.Attr.t list Value.t
+    -> allow_updates_when_focused:[ `Always | `Never ]
     -> unit
     -> Time_ns.Ofday.t option Form.t Computation.t
 
@@ -283,6 +304,7 @@ module Date_time : sig
     -> ?extra_amount_attrs:Vdom.Attr.t list Value.t
     -> ?default_unit:Span_unit.t
     -> ?default:Time_ns.Span.t
+    -> allow_updates_when_focused:[ `Always | `Never ]
     -> unit
     -> Time_ns.Span.t Form.t Computation.t
 
@@ -291,16 +313,19 @@ module Date_time : sig
     -> ?extra_amount_attrs:Vdom.Attr.t list Value.t
     -> ?default_unit:Span_unit.t
     -> ?default:Time_ns.Span.t option
+    -> allow_updates_when_focused:[ `Always | `Never ]
     -> unit
     -> Time_ns.Span.t option Form.t Computation.t
 
   val datetime_local
     :  ?extra_attrs:Vdom.Attr.t list Value.t
+    -> allow_updates_when_focused:[ `Always | `Never ]
     -> unit
     -> Time_ns.t Form.t Computation.t
 
   val datetime_local_opt
     :  ?extra_attrs:Vdom.Attr.t list Value.t
+    -> allow_updates_when_focused:[ `Always | `Never ]
     -> unit
     -> Time_ns.t option Form.t Computation.t
 
@@ -308,36 +333,42 @@ module Date_time : sig
     val date
       :  ?extra_attr:Vdom.Attr.t Value.t
       -> ?allow_equal:bool
+      -> allow_updates_when_focused:[ `Always | `Never ]
       -> unit
       -> (Date.t * Date.t) Form.t Computation.t
 
     val date_opt
       :  ?extra_attr:Vdom.Attr.t Value.t
       -> ?allow_equal:bool
+      -> allow_updates_when_focused:[ `Always | `Never ]
       -> unit
       -> (Date.t option * Date.t option) Form.t Computation.t
 
     val time
       :  ?extra_attr:Vdom.Attr.t Value.t
       -> ?allow_equal:bool
+      -> allow_updates_when_focused:[ `Always | `Never ]
       -> unit
       -> (Time_ns.Ofday.t * Time_ns.Ofday.t) Form.t Computation.t
 
     val time_opt
       :  ?extra_attr:Vdom.Attr.t Value.t
       -> ?allow_equal:bool
+      -> allow_updates_when_focused:[ `Always | `Never ]
       -> unit
       -> (Time_ns.Ofday.t option * Time_ns.Ofday.t option) Form.t Computation.t
 
     val datetime_local
       :  ?extra_attr:Vdom.Attr.t Value.t
       -> ?allow_equal:bool
+      -> allow_updates_when_focused:[ `Always | `Never ]
       -> unit
       -> (Time_ns.t * Time_ns.t) Form.t Computation.t
 
     val datetime_local_opt
       :  ?extra_attr:Vdom.Attr.t Value.t
       -> ?allow_equal:bool
+      -> allow_updates_when_focused:[ `Always | `Never ]
       -> unit
       -> (Time_ns.t option * Time_ns.t option) Form.t Computation.t
   end
@@ -348,6 +379,7 @@ module Multiselect : sig
     :  ?extra_attrs:Vdom.Attr.t list Value.t
     -> ?to_string:('a -> string)
     -> ?default_selection_status:Bonsai_web_ui_multi_select.Selection_status.t Value.t
+    -> allow_updates_when_focused:[ `Always | `Never ]
     -> ('a, 'cmp) Bonsai.comparator
     -> 'a list Value.t
     -> ('a, 'cmp) Set.t Form.t Computation.t
@@ -356,6 +388,7 @@ module Multiselect : sig
     :  ?extra_attrs:Vdom.Attr.t list Value.t
     -> ?to_string:('a -> string)
     -> ?default_selection_status:Bonsai_web_ui_multi_select.Selection_status.t Value.t
+    -> allow_updates_when_focused:[ `Always | `Never ]
     -> ('a, _) Bonsai.comparator
     -> 'a list Value.t
     -> 'a list Form.t Computation.t
@@ -368,6 +401,7 @@ module Number : sig
     -> ?max:int
     -> ?default:int
     -> step:int
+    -> allow_updates_when_focused:[ `Always | `Never ]
     -> unit
     -> int Form.t Computation.t
 
@@ -377,6 +411,7 @@ module Number : sig
     -> ?max:float
     -> ?default:float
     -> step:float
+    -> allow_updates_when_focused:[ `Always | `Never ]
     -> unit
     -> float Form.t Computation.t
 end
@@ -390,6 +425,7 @@ module Range : sig
     -> ?right_label:Vdom.Node.t
     -> ?default:int
     -> step:int
+    -> allow_updates_when_focused:[ `Always | `Never ]
     -> unit
     -> int Form.t Computation.t
 
@@ -401,6 +437,7 @@ module Range : sig
     -> ?right_label:Vdom.Node.t
     -> ?default:float
     -> step:float
+    -> allow_updates_when_focused:[ `Always | `Never ]
     -> unit
     -> float Form.t Computation.t
 end
@@ -455,6 +492,13 @@ module Multiple : sig
     -> ?button_placement:[ `Indented | `Inline ]
     -> 'a Form.t Computation.t
     -> 'a list Form.t Computation.t
+
+  val nonempty_list
+    :  ?element_group_label:(delete_button:Vdom.Node.t -> int -> Vdom.Node.t)
+    -> ?add_element_text:string Value.t
+    -> ?button_placement:[ `Indented | `Inline ]
+    -> 'a Form.t Computation.t
+    -> 'a Nonempty_list.t Form.t Computation.t
 
   val set
     :  ?element_group_label:(delete_button:Vdom.Node.t -> int -> Vdom.Node.t)

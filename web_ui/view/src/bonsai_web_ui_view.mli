@@ -462,6 +462,8 @@ module Form_inputs : sig
     :  Theme.t
     -> ?attrs:Vdom.Attr.t list
     -> ?placeholder:string
+    -> ?key:string
+    -> allow_updates_when_focused:[ `Always | `Never ]
     -> disabled:bool
     -> value:string
     -> set_value:(string -> unit Effect.t)
@@ -472,6 +474,8 @@ module Form_inputs : sig
     :  Theme.t
     -> ?attrs:Vdom.Attr.t list
     -> ?placeholder:string
+    -> ?key:string
+    -> allow_updates_when_focused:[ `Always | `Never ]
     -> disabled:bool
     -> value:string
     -> set_value:(string -> unit Effect.t)
@@ -482,6 +486,8 @@ module Form_inputs : sig
     :  Theme.t
     -> ?attrs:Vdom.Attr.t list
     -> ?placeholder:string
+    -> ?key:string
+    -> allow_updates_when_focused:[ `Always | `Never ]
     -> disabled:bool
     -> value:string
     -> set_value:(string -> unit Effect.t)
@@ -494,6 +500,8 @@ module Form_inputs : sig
     -> ?placeholder:string
     -> ?min:float
     -> ?max:float
+    -> ?key:string
+    -> allow_updates_when_focused:[ `Always | `Never ]
     -> disabled:bool
     -> step:float
     -> value:float option
@@ -506,6 +514,8 @@ module Form_inputs : sig
     -> ?attrs:Vdom.Attr.t list
     -> ?min:float
     -> ?max:float
+    -> ?key:string
+    -> allow_updates_when_focused:[ `Always | `Never ]
     -> disabled:bool
     -> step:float
     -> value:float
@@ -547,6 +557,10 @@ module For_components : sig
       -> ?editable:Form_view.editable
       -> Form_view.append_item
       -> Vdom.Node.t
+  end
+
+  module Prt : sig
+    val styling : Theme.t -> For_prt.t
   end
 end
 

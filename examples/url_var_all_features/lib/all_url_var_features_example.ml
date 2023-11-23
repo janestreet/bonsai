@@ -24,8 +24,8 @@ module Location = struct
   let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t =
     let open Form.Elements.Textbox in
     function
-    | X -> int ()
-    | Y -> int ()
+    | X -> int ~allow_updates_when_focused:`Never ()
+    | Y -> int ~allow_updates_when_focused:`Never ()
   ;;
 
   let form_of_t : t Form.t Computation.t =
@@ -79,19 +79,20 @@ module Record = struct
           let open Form.Elements.Textbox in
           let open Form.Elements in
           function
-          | An_int -> int ()
-          | Many_floats -> Multiple.list (float ())
+          | An_int -> int ~allow_updates_when_focused:`Never ()
+          | Many_floats -> Multiple.list (float ~allow_updates_when_focused:`Never ())
           | Optional_string ->
-            let%sub form = string () in
+            let%sub form = string ~allow_updates_when_focused:`Never () in
             let%arr form = form in
             Form.optional form ~is_some:(fun x -> not (String.equal x "")) ~none:""
           | Many_locations ->
             let location_form = Location.form_of_t in
             Multiple.list location_form
           | Nested -> Location.form_of_t
-          | Username_on_path -> string ()
-          | Comment_id_on_path -> int ()
-          | Remaining_words_on_path -> Multiple.list (string ())
+          | Username_on_path -> string ~allow_updates_when_focused:`Never ()
+          | Comment_id_on_path -> int ~allow_updates_when_focused:`Never ()
+          | Remaining_words_on_path ->
+            Multiple.list (string ~allow_updates_when_focused:`Never ())
         ;;
 
         let label_for_field = `Inferred
@@ -155,9 +156,9 @@ module Query_variant = struct
 
         let form_for_variant : type a. a Typed_variant.t -> a Form.t Computation.t
           = function
-          | A -> Form.Elements.Textbox.int ()
-          | B -> Form.Elements.Textbox.float ()
-          | C -> Form.Elements.Textbox.string ()
+          | A -> Form.Elements.Textbox.int ~allow_updates_when_focused:`Never ()
+          | B -> Form.Elements.Textbox.float ~allow_updates_when_focused:`Never ()
+          | C -> Form.Elements.Textbox.string ~allow_updates_when_focused:`Never ()
         ;;
 
         let label_for_variant = `Inferred
@@ -194,7 +195,9 @@ module T = struct
           = function
           | Homepage -> Bonsai.const (Form.return ())
           | Some_string_option ->
-            let%sub text = Form.Elements.Textbox.string () in
+            let%sub text =
+              Form.Elements.Textbox.string ~allow_updates_when_focused:`Never ()
+            in
             let%arr text = text in
             Form.optional
               text

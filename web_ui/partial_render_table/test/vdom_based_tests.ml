@@ -93,6 +93,7 @@ let print_assocs component =
 let%expect_test "simplified_assocs" =
   let { Test.Component.component; _ } =
     Test.Component.default
+      ~theming:`Themed
       ()
       (Bonsai.Value.return Int.Map.empty)
       (Bonsai.Value.return (fun ~key:_ ~data:_ -> true))
@@ -107,6 +108,7 @@ let%expect_test "simplified_assocs" =
 let%expect_test "simplified_assocs on the dynamic columns" =
   let { Test.Component.component; _ } =
     Test.Component.default'
+      ~theming:`Themed
       ()
       (Bonsai.Value.return Int.Map.empty)
       (Bonsai.Value.return (fun ~key:_ ~data:_ -> true))
@@ -120,7 +122,9 @@ let%expect_test "column visibility" =
   let is_column_b_visible_var = Bonsai.Var.create true in
   let is_column_b_visible = Bonsai.Var.value is_column_b_visible_var in
   let test =
-    Test.create ~should_print_styles:true (Test.Component.default ~is_column_b_visible ())
+    Test.create
+      ~should_print_styles:true
+      (Test.Component.default ~theming:`Themed ~is_column_b_visible ())
   in
   Handle.recompute_view_until_stable test.handle;
   Handle.store_view test.handle;
@@ -130,31 +134,25 @@ let%expect_test "column visibility" =
   [%expect
     {|
 === DIFF HUNK ===
-                     flex-direction: row;
-                     flex-wrap: nowrap;
-                     align-items: baseline;
-                     column-gap: 6px;
-                   }>
-                <span> key </span>
-              </div>
-            </div>
-          </td>
-          <td colspan="1" class="header_label leaf_header" size_tracker=<fun> style={ width: 50px; }>
+              class="header_cell header_label leaf_header"
+              size_tracker=<fun>
+              style={
+                width: 50px;
+              }>
             <div>
               <div>
                 <span> a </span>
               </div>
             </div>
           </td>
--|        <td colspan="1" class="header_label leaf_header" size_tracker=<fun> style={ width: 50px; }>
-+|        <td colspan="1"
-+|            class="header_label leaf_header"
-+|            size_tracker=<fun>
-+|            style={
-+|              width: 50px;
+          <td colspan="1"
+              class="header_cell header_label leaf_header"
+              size_tracker=<fun>
+              style={
+                width: 50px;
 +|              display: none;
-+|            }>
-            <div class="column_header" onclick>
+              }>
+            <div class="sortable_header_cell" onclick>
               <div style={
                      display: flex;
                      flex-direction: row;
@@ -166,10 +164,9 @@ let%expect_test "column visibility" =
               </div>
             </div>
           </td>
-          <td colspan="1" class="header_label leaf_header" size_tracker=<fun> style={ width: 50px; }>
-            <div class="column_header" onclick>
-              <div style={
-                     display: flex;
+          <td colspan="1"
+              class="header_cell header_label leaf_header"
+              size_tracker=<fun>
 === DIFF HUNK ===
                    max-height: 1px;
                    width: 0.00000000px;
@@ -179,7 +176,7 @@ let%expect_test "column visibility" =
               <input oninput> </input>
               hello
             </div>
-            <div class="cell prt-table-cell"
+            <div class="body_cell cell"
                  style={
                    height: 1px;
                    min-height: 1px;
@@ -190,7 +187,7 @@ let%expect_test "column visibility" =
 -|               }> 1.000000 </div>
 +|                 display: none;
 +|               }> </div>
-            <div class="cell prt-table-cell"
+            <div class="body_cell cell"
                  style={
                    height: 1px;
                    min-height: 1px;
@@ -200,7 +197,7 @@ let%expect_test "column visibility" =
                    max-width: 0.00000000px;
                  }> 1 </div>
           </div>
-          <div class="prt-table-row"
+          <div class="body_row row"
                onclick
                style={
                  height: 1px;
@@ -215,7 +212,7 @@ let%expect_test "column visibility" =
               <input oninput> </input>
               there
             </div>
-            <div class="cell prt-table-cell"
+            <div class="body_cell cell"
                  style={
                    height: 1px;
                    min-height: 1px;
@@ -226,7 +223,7 @@ let%expect_test "column visibility" =
 -|               }> 2.000000 </div>
 +|                 display: none;
 +|               }> </div>
-            <div class="cell prt-table-cell"
+            <div class="body_cell cell"
                  style={
                    height: 1px;
                    min-height: 1px;
@@ -236,7 +233,7 @@ let%expect_test "column visibility" =
                    max-width: 0.00000000px;
                  }> 2 </div>
           </div>
-          <div class="prt-table-row"
+          <div class="body_row row"
                onclick
                style={
                  height: 1px;
@@ -251,7 +248,7 @@ let%expect_test "column visibility" =
               <input oninput> </input>
               world
             </div>
-            <div class="cell prt-table-cell"
+            <div class="body_cell cell"
                  style={
                    height: 1px;
                    min-height: 1px;
@@ -262,7 +259,7 @@ let%expect_test "column visibility" =
 -|               }> 2.000000 </div>
 +|                 display: none;
 +|               }> </div>
-            <div class="cell prt-table-cell"
+            <div class="body_cell cell"
                  style={
                    height: 1px;
                    min-height: 1px;
@@ -280,39 +277,43 @@ let%expect_test "column visibility" =
 
 let%expect_test "stabilization of view range" =
   let test =
-    Test.create (Test.Component.default ()) ~visible_range:(0, 2) ~should_set_bounds:false
+    Test.create
+      (Test.Component.default ~theming:`Themed ())
+      ~visible_range:(0, 2)
+      ~should_set_bounds:false
   in
   Handle.recompute_view_until_stable test.handle;
   Handle.show test.handle;
   [%expect
     {|
-<div class="partial_render_table_container">
-  <table class="partial_render_table_header prt-table-header" bounds-change=<opaque>>
+<div class="partial_render_table_container table"
+     custom-css-vars=((--row-odd-fg black)(--row-odd-bg white)(--row-focused-fg black)(--row-focused-border #0a90bf)(--row-focused-bg #e0f7ff)(--row-even-fg black)(--row-even-bg #e6e6e6)(--header-header-border grey)(--header-fg white)(--header-body-border grey)(--header-bg black)(--fg black)(--body-body-border grey)(--bg white))>
+  <table class="header partial_render_table_header" bounds-change=<opaque>>
     <tbody>
-      <tr>
-        <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
-          <div class="column_header" onclick>
+      <tr class="header_row">
+        <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+          <div class="sortable_header_cell" onclick>
             <div>
               <span> key </span>
             </div>
           </div>
         </td>
-        <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
+        <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
           <div>
             <div>
               <span> a </span>
             </div>
           </div>
         </td>
-        <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
-          <div class="column_header" onclick>
+        <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+          <div class="sortable_header_cell" onclick>
             <div>
               <span> b </span>
             </div>
           </div>
         </td>
-        <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
-          <div class="column_header" onclick>
+        <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+          <div class="sortable_header_cell" onclick>
             <div>
               <span> d </span>
             </div>
@@ -322,25 +323,25 @@ let%expect_test "stabilization of view range" =
     </tbody>
   </table>
   <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
-    <div>
+    <div class="body">
       <div>
-        <div class="prt-table-row" onclick>
-          <div class="cell prt-table-cell"> 0 </div>
-          <div class="cell prt-table-cell">
+        <div class="body_row row" onclick>
+          <div class="body_cell cell"> 0 </div>
+          <div class="body_cell cell">
             <input oninput> </input>
             hello
           </div>
-          <div class="cell prt-table-cell"> 1.000000 </div>
-          <div class="cell prt-table-cell"> 1 </div>
+          <div class="body_cell cell"> 1.000000 </div>
+          <div class="body_cell cell"> 1 </div>
         </div>
-        <div class="prt-table-row" onclick>
-          <div class="cell prt-table-cell"> 1 </div>
-          <div class="cell prt-table-cell">
+        <div class="body_row row" onclick>
+          <div class="body_cell cell"> 1 </div>
+          <div class="body_cell cell">
             <input oninput> </input>
             there
           </div>
-          <div class="cell prt-table-cell"> 2.000000 </div>
-          <div class="cell prt-table-cell"> 2 </div>
+          <div class="body_cell cell"> 2.000000 </div>
+          <div class="body_cell cell"> 2 </div>
         </div>
       </div>
     </div>
@@ -358,30 +359,30 @@ let%expect_test "stabilization of view range" =
   [%expect
     {|
     === DIFF HUNK ===
-                <div class="cell prt-table-cell">
+                <div class="body_cell cell">
                   <input oninput> </input>
                   hello
                 </div>
-                <div class="cell prt-table-cell"> 1.000000 </div>
-                <div class="cell prt-table-cell"> 1 </div>
+                <div class="body_cell cell"> 1.000000 </div>
+                <div class="body_cell cell"> 1 </div>
               </div>
-              <div class="prt-table-row" onclick>
-                <div class="cell prt-table-cell"> 1 </div>
-                <div class="cell prt-table-cell">
+              <div class="body_row row" onclick>
+                <div class="body_cell cell"> 1 </div>
+                <div class="body_cell cell">
                   <input oninput> </input>
                   there
                 </div>
-                <div class="cell prt-table-cell"> 2.000000 </div>
-                <div class="cell prt-table-cell"> 2 </div>
+                <div class="body_cell cell"> 2.000000 </div>
+                <div class="body_cell cell"> 2 </div>
               </div>
-    +|        <div class="prt-table-row" onclick>
-    +|          <div class="cell prt-table-cell"> 4 </div>
-    +|          <div class="cell prt-table-cell">
+    +|        <div class="body_row row" onclick>
+    +|          <div class="body_cell cell"> 4 </div>
+    +|          <div class="body_cell cell">
     +|            <input oninput> </input>
     +|            world
     +|          </div>
-    +|          <div class="cell prt-table-cell"> 2.000000 </div>
-    +|          <div class="cell prt-table-cell"> --- </div>
+    +|          <div class="body_cell cell"> 2.000000 </div>
+    +|          <div class="body_cell cell"> --- </div>
     +|        </div>
             </div>
           </div>
@@ -390,7 +391,9 @@ let%expect_test "stabilization of view range" =
 ;;
 
 let%expect_test "resize-column" =
-  let test = Test.create ~should_print_styles:true (Test.Component.default ()) in
+  let test =
+    Test.create ~should_print_styles:true (Test.Component.default ~theming:`Themed ())
+  in
   Handle.recompute_view_until_stable test.handle;
   Handle.store_view test.handle;
   Test.resize_column test ~idx:0 ~width:10.0;
@@ -399,18 +402,19 @@ let%expect_test "resize-column" =
   [%expect
     {|
 === DIFF HUNK ===
-  <div class="partial_render_table_container">
-    <table class="partial_render_table_header prt-table-header" bounds-change=<opaque>>
+  <div class="partial_render_table_container table"
+       custom-css-vars=((--row-odd-fg black)(--row-odd-bg white)(--row-focused-fg black)(--row-focused-border #0a90bf)(--row-focused-bg #e0f7ff)(--row-even-fg black)(--row-even-bg #e6e6e6)(--header-header-border grey)(--header-fg white)(--header-body-border grey)(--header-bg black)(--fg black)(--body-body-border grey)(--bg white))>
+    <table class="header partial_render_table_header" bounds-change=<opaque>>
       <tbody>
-        <tr>
--|        <td colspan="1" class="header_label leaf_header" size_tracker=<fun> style={ width: 50px; }>
-+|        <td colspan="1"
-+|            class="header_label leaf_header"
-+|            size_tracker=<fun>
-+|            style={
+        <tr class="header_row">
+          <td colspan="1"
+              class="header_cell header_label leaf_header"
+              size_tracker=<fun>
+              style={
+-|              width: 50px;
 +|              width: 10.00px;
-+|            }>
-            <div class="column_header" onclick>
+              }>
+            <div class="sortable_header_cell" onclick>
               <div style={
                      display: flex;
                      flex-direction: row;
@@ -422,10 +426,9 @@ let%expect_test "resize-column" =
               </div>
             </div>
           </td>
-          <td colspan="1" class="header_label leaf_header" size_tracker=<fun> style={ width: 50px; }>
-            <div>
-              <div>
-                <span> a </span>
+          <td colspan="1"
+              class="header_cell header_label leaf_header"
+              size_tracker=<fun>
 === DIFF HUNK ===
             </div>
           </td>
@@ -437,9 +440,9 @@ let%expect_test "resize-column" =
          style={
            height: 3px;
          }>
-      <div style={ padding-top: 0px; padding-bottom: 0px; }>
+      <div class="body" style={ padding-top: 0px; padding-bottom: 0px; }>
         <div>
-          <div class="prt-table-row"
+          <div class="body_row row"
                onclick
                style={
                  height: 1px;
@@ -449,7 +452,7 @@ let%expect_test "resize-column" =
                  flex-direction: row;
                  flex-wrap: nowrap;
                }>
-            <div class="cell prt-table-cell"
+            <div class="body_cell cell"
                  style={
                    height: 1px;
                    min-height: 1px;
@@ -461,7 +464,7 @@ let%expect_test "resize-column" =
 -|                 max-width: 0.00000000px;
 +|                 max-width: 10.00000000px;
                  }> 0 </div>
-            <div class="cell prt-table-cell"
+            <div class="body_cell cell"
                  style={
                    height: 1px;
                    min-height: 1px;
@@ -473,13 +476,13 @@ let%expect_test "resize-column" =
               <input oninput> </input>
               hello
             </div>
-            <div class="cell prt-table-cell"
+            <div class="body_cell cell"
                  style={
                    height: 1px;
 === DIFF HUNK ===
                    max-width: 0.00000000px;
                  }> 1.000000 </div>
-            <div class="cell prt-table-cell"
+            <div class="body_cell cell"
                  style={
                    height: 1px;
                    min-height: 1px;
@@ -489,7 +492,7 @@ let%expect_test "resize-column" =
                    max-width: 0.00000000px;
                  }> 1 </div>
           </div>
-          <div class="prt-table-row"
+          <div class="body_row row"
                onclick
                style={
                  height: 1px;
@@ -499,7 +502,7 @@ let%expect_test "resize-column" =
                  flex-direction: row;
                  flex-wrap: nowrap;
                }>
-            <div class="cell prt-table-cell"
+            <div class="body_cell cell"
                  style={
                    height: 1px;
                    min-height: 1px;
@@ -511,7 +514,7 @@ let%expect_test "resize-column" =
 -|                 max-width: 0.00000000px;
 +|                 max-width: 10.00000000px;
                  }> 1 </div>
-            <div class="cell prt-table-cell"
+            <div class="body_cell cell"
                  style={
                    height: 1px;
                    min-height: 1px;
@@ -523,13 +526,13 @@ let%expect_test "resize-column" =
               <input oninput> </input>
               there
             </div>
-            <div class="cell prt-table-cell"
+            <div class="body_cell cell"
                  style={
                    height: 1px;
 === DIFF HUNK ===
                    max-width: 0.00000000px;
                  }> 2.000000 </div>
-            <div class="cell prt-table-cell"
+            <div class="body_cell cell"
                  style={
                    height: 1px;
                    min-height: 1px;
@@ -539,7 +542,7 @@ let%expect_test "resize-column" =
                    max-width: 0.00000000px;
                  }> 2 </div>
           </div>
-          <div class="prt-table-row"
+          <div class="body_row row"
                onclick
                style={
                  height: 1px;
@@ -549,7 +552,7 @@ let%expect_test "resize-column" =
                  flex-direction: row;
                  flex-wrap: nowrap;
                }>
-            <div class="cell prt-table-cell"
+            <div class="body_cell cell"
                  style={
                    height: 1px;
                    min-height: 1px;
@@ -561,7 +564,7 @@ let%expect_test "resize-column" =
 -|                 max-width: 0.00000000px;
 +|                 max-width: 10.00000000px;
                  }> 4 </div>
-            <div class="cell prt-table-cell"
+            <div class="body_cell cell"
                  style={
                    height: 1px;
                    min-height: 1px;
@@ -573,7 +576,7 @@ let%expect_test "resize-column" =
               <input oninput> </input>
               world
             </div>
-            <div class="cell prt-table-cell"
+            <div class="body_cell cell"
                  style={
                    height: 1px; |}]
 ;;
@@ -582,39 +585,43 @@ let%expect_test "big table" =
   (* The PRT always renders [low-25, high+25], so 50,50 will render a big chunk
      centered at 50 *)
   let test =
-    Test.create ~map:big_map ~visible_range:(50, 50) (Test.Component.default ())
+    Test.create
+      ~map:big_map
+      ~visible_range:(50, 50)
+      (Test.Component.default ~theming:`Themed ())
   in
   Handle.recompute_view_until_stable test.handle;
   Handle.show test.handle;
   [%expect
     {|
-<div class="partial_render_table_container">
-  <table class="partial_render_table_header prt-table-header" bounds-change=<opaque>>
+<div class="partial_render_table_container table"
+     custom-css-vars=((--row-odd-fg black)(--row-odd-bg white)(--row-focused-fg black)(--row-focused-border #0a90bf)(--row-focused-bg #e0f7ff)(--row-even-fg black)(--row-even-bg #e6e6e6)(--header-header-border grey)(--header-fg white)(--header-body-border grey)(--header-bg black)(--fg black)(--body-body-border grey)(--bg white))>
+  <table class="header partial_render_table_header" bounds-change=<opaque>>
     <tbody>
-      <tr>
-        <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
-          <div class="column_header" onclick>
+      <tr class="header_row">
+        <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+          <div class="sortable_header_cell" onclick>
             <div>
               <span> key </span>
             </div>
           </div>
         </td>
-        <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
+        <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
           <div>
             <div>
               <span> a </span>
             </div>
           </div>
         </td>
-        <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
-          <div class="column_header" onclick>
+        <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+          <div class="sortable_header_cell" onclick>
             <div>
               <span> b </span>
             </div>
           </div>
         </td>
-        <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
-          <div class="column_header" onclick>
+        <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+          <div class="sortable_header_cell" onclick>
             <div>
               <span> d </span>
             </div>
@@ -624,25 +631,25 @@ let%expect_test "big table" =
     </tbody>
   </table>
   <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
-    <div>
+    <div class="body">
       <div>
-        <div class="prt-table-row" onclick>
-          <div class="cell prt-table-cell"> 51 </div>
-          <div class="cell prt-table-cell">
+        <div class="body_row row" onclick>
+          <div class="body_cell cell"> 51 </div>
+          <div class="body_cell cell">
             <input oninput> </input>
             hi
           </div>
-          <div class="cell prt-table-cell"> 25.000000 </div>
-          <div class="cell prt-table-cell"> 100 </div>
+          <div class="body_cell cell"> 25.000000 </div>
+          <div class="body_cell cell"> 100 </div>
         </div>
-        <div class="prt-table-row" onclick>
-          <div class="cell prt-table-cell"> 52 </div>
-          <div class="cell prt-table-cell">
+        <div class="body_row row" onclick>
+          <div class="body_cell cell"> 52 </div>
+          <div class="body_cell cell">
             <input oninput> </input>
             hi
           </div>
-          <div class="cell prt-table-cell"> 26.000000 </div>
-          <div class="cell prt-table-cell"> 100 </div>
+          <div class="body_cell cell"> 26.000000 </div>
+          <div class="body_cell cell"> 100 </div>
         </div>
       </div>
     </div>
@@ -657,8 +664,8 @@ let%expect_test "big table" =
 === DIFF HUNK ===
             </div>
           </td>
-          <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
-            <div class="column_header" onclick>
+          <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+            <div class="sortable_header_cell" onclick>
               <div>
                 <span> d </span>
               </div>
@@ -668,83 +675,83 @@ let%expect_test "big table" =
       </tbody>
     </table>
     <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
-      <div>
+      <div class="body">
         <div>
-          <div class="prt-table-row" onclick>
--|          <div class="cell prt-table-cell"> 51 </div>
-+|          <div class="cell prt-table-cell"> 55 </div>
-            <div class="cell prt-table-cell">
+          <div class="body_row row" onclick>
+-|          <div class="body_cell cell"> 51 </div>
++|          <div class="body_cell cell"> 55 </div>
+            <div class="body_cell cell">
               <input oninput> </input>
               hi
             </div>
--|          <div class="cell prt-table-cell"> 25.000000 </div>
-+|          <div class="cell prt-table-cell"> 27.000000 </div>
-            <div class="cell prt-table-cell"> 100 </div>
+-|          <div class="body_cell cell"> 25.000000 </div>
++|          <div class="body_cell cell"> 27.000000 </div>
+            <div class="body_cell cell"> 100 </div>
           </div>
-          <div class="prt-table-row" onclick>
--|          <div class="cell prt-table-cell"> 52 </div>
-+|          <div class="cell prt-table-cell"> 56 </div>
-            <div class="cell prt-table-cell">
+          <div class="body_row row" onclick>
+-|          <div class="body_cell cell"> 52 </div>
++|          <div class="body_cell cell"> 56 </div>
+            <div class="body_cell cell">
               <input oninput> </input>
               hi
             </div>
--|          <div class="cell prt-table-cell"> 26.000000 </div>
-+|          <div class="cell prt-table-cell"> 28.000000 </div>
-+|          <div class="cell prt-table-cell"> 100 </div>
+-|          <div class="body_cell cell"> 26.000000 </div>
++|          <div class="body_cell cell"> 28.000000 </div>
++|          <div class="body_cell cell"> 100 </div>
 +|        </div>
-+|        <div class="prt-table-row" onclick>
-+|          <div class="cell prt-table-cell"> 57 </div>
-+|          <div class="cell prt-table-cell">
++|        <div class="body_row row" onclick>
++|          <div class="body_cell cell"> 57 </div>
++|          <div class="body_cell cell">
 +|            <input oninput> </input>
 +|            hi
 +|          </div>
-+|          <div class="cell prt-table-cell"> 28.000000 </div>
-+|          <div class="cell prt-table-cell"> 100 </div>
++|          <div class="body_cell cell"> 28.000000 </div>
++|          <div class="body_cell cell"> 100 </div>
 +|        </div>
-+|        <div class="prt-table-row" onclick>
-+|          <div class="cell prt-table-cell"> 58 </div>
-+|          <div class="cell prt-table-cell">
++|        <div class="body_row row" onclick>
++|          <div class="body_cell cell"> 58 </div>
++|          <div class="body_cell cell">
 +|            <input oninput> </input>
 +|            hi
 +|          </div>
-+|          <div class="cell prt-table-cell"> 29.000000 </div>
-+|          <div class="cell prt-table-cell"> 100 </div>
++|          <div class="body_cell cell"> 29.000000 </div>
++|          <div class="body_cell cell"> 100 </div>
 +|        </div>
-+|        <div class="prt-table-row" onclick>
-+|          <div class="cell prt-table-cell"> 59 </div>
-+|          <div class="cell prt-table-cell">
++|        <div class="body_row row" onclick>
++|          <div class="body_cell cell"> 59 </div>
++|          <div class="body_cell cell">
 +|            <input oninput> </input>
 +|            hi
 +|          </div>
-+|          <div class="cell prt-table-cell"> 29.000000 </div>
-+|          <div class="cell prt-table-cell"> 100 </div>
++|          <div class="body_cell cell"> 29.000000 </div>
++|          <div class="body_cell cell"> 100 </div>
 +|        </div>
-+|        <div class="prt-table-row" onclick>
-+|          <div class="cell prt-table-cell"> 60 </div>
-+|          <div class="cell prt-table-cell">
++|        <div class="body_row row" onclick>
++|          <div class="body_cell cell"> 60 </div>
++|          <div class="body_cell cell">
 +|            <input oninput> </input>
 +|            hi
 +|          </div>
-+|          <div class="cell prt-table-cell"> 30.000000 </div>
-+|          <div class="cell prt-table-cell"> 100 </div>
++|          <div class="body_cell cell"> 30.000000 </div>
++|          <div class="body_cell cell"> 100 </div>
 +|        </div>
-+|        <div class="prt-table-row" onclick>
-+|          <div class="cell prt-table-cell"> 61 </div>
-+|          <div class="cell prt-table-cell">
++|        <div class="body_row row" onclick>
++|          <div class="body_cell cell"> 61 </div>
++|          <div class="body_cell cell">
 +|            <input oninput> </input>
 +|            hi
 +|          </div>
-+|          <div class="cell prt-table-cell"> 30.000000 </div>
-+|          <div class="cell prt-table-cell"> 100 </div>
++|          <div class="body_cell cell"> 30.000000 </div>
++|          <div class="body_cell cell"> 100 </div>
 +|        </div>
-+|        <div class="prt-table-row" onclick>
-+|          <div class="cell prt-table-cell"> 62 </div>
-+|          <div class="cell prt-table-cell">
++|        <div class="body_row row" onclick>
++|          <div class="body_cell cell"> 62 </div>
++|          <div class="body_cell cell">
 +|            <input oninput> </input>
 +|            hi
 +|          </div>
-+|          <div class="cell prt-table-cell"> 31.000000 </div>
-            <div class="cell prt-table-cell"> 100 </div>
++|          <div class="body_cell cell"> 31.000000 </div>
+            <div class="body_cell cell"> 100 </div>
           </div>
         </div>
       </div>
@@ -754,54 +761,57 @@ let%expect_test "big table" =
 
 let%expect_test "typing into a column, leaving that column, and then coming back. " =
   let test =
-    Test.create ~map:big_map ~visible_range:(50, 50) (Test.Component.default ())
+    Test.create
+      ~map:big_map
+      ~visible_range:(50, 50)
+      (Test.Component.default ~theming:`Themed ())
   in
   Handle.recompute_view_until_stable test.handle;
   Handle.store_view test.handle;
   Handle.input_text
     test.handle
     ~get_vdom:Table.Result.view
-    ~selector:".prt-table-cell:nth-child(2) input"
+    ~selector:"input"
     ~text:"hello world";
   Handle.recompute_view_until_stable test.handle;
   Handle.show_diff ~location_style:Separator test.handle;
   [%expect
     {|
-=== DIFF HUNK ===
-            <div class="column_header" onclick>
-              <div>
-                <span> d </span>
+    === DIFF HUNK ===
+                <div class="sortable_header_cell" onclick>
+                  <div>
+                    <span> d </span>
+                  </div>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
+          <div class="body">
+            <div>
+              <div class="body_row row" onclick>
+                <div class="body_cell cell"> 51 </div>
+                <div class="body_cell cell">
+                  <input oninput> </input>
+    -|            hi
+    +|            hi hello world
+                </div>
+                <div class="body_cell cell"> 25.000000 </div>
+                <div class="body_cell cell"> 100 </div>
+              </div>
+              <div class="body_row row" onclick>
+                <div class="body_cell cell"> 52 </div>
+                <div class="body_cell cell">
+                  <input oninput> </input>
+                  hi
+                </div>
+                <div class="body_cell cell"> 26.000000 </div>
+                <div class="body_cell cell"> 100 </div>
               </div>
             </div>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-    <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
-      <div>
-        <div>
-          <div class="prt-table-row" onclick>
-            <div class="cell prt-table-cell"> 51 </div>
-            <div class="cell prt-table-cell">
-              <input oninput> </input>
--|            hi
-+|            hi hello world
-            </div>
-            <div class="cell prt-table-cell"> 25.000000 </div>
-            <div class="cell prt-table-cell"> 100 </div>
           </div>
-          <div class="prt-table-row" onclick>
-            <div class="cell prt-table-cell"> 52 </div>
-            <div class="cell prt-table-cell">
-              <input oninput> </input>
-              hi
-            </div>
-            <div class="cell prt-table-cell"> 26.000000 </div>
-            <div class="cell prt-table-cell"> 100 </div>
-          </div>
-        </div>
-      </div>
-    </div> |}];
+        </div> |}];
   (* move out of bounds (really 99-25 through 100) *)
   Test.set_bounds test ~low:99 ~high:99;
   Handle.recompute_view_until_stable test.handle;
@@ -812,66 +822,67 @@ let%expect_test "typing into a column, leaving that column, and then coming back
   Handle.show test.handle;
   [%expect
     {|
-<div class="partial_render_table_container">
-  <table class="partial_render_table_header prt-table-header" bounds-change=<opaque>>
-    <tbody>
-      <tr>
-        <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
-          <div class="column_header" onclick>
-            <div>
-              <span> key </span>
-            </div>
-          </div>
-        </td>
-        <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
+    <div class="partial_render_table_container table"
+         custom-css-vars=((--row-odd-fg black)(--row-odd-bg white)(--row-focused-fg black)(--row-focused-border #0a90bf)(--row-focused-bg #e0f7ff)(--row-even-fg black)(--row-even-bg #e6e6e6)(--header-header-border grey)(--header-fg white)(--header-body-border grey)(--header-bg black)(--fg black)(--body-body-border grey)(--bg white))>
+      <table class="header partial_render_table_header" bounds-change=<opaque>>
+        <tbody>
+          <tr class="header_row">
+            <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+              <div class="sortable_header_cell" onclick>
+                <div>
+                  <span> key </span>
+                </div>
+              </div>
+            </td>
+            <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+              <div>
+                <div>
+                  <span> a </span>
+                </div>
+              </div>
+            </td>
+            <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+              <div class="sortable_header_cell" onclick>
+                <div>
+                  <span> b </span>
+                </div>
+              </div>
+            </td>
+            <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+              <div class="sortable_header_cell" onclick>
+                <div>
+                  <span> d </span>
+                </div>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
+        <div class="body">
           <div>
-            <div>
-              <span> a </span>
+            <div class="body_row row" onclick>
+              <div class="body_cell cell"> 51 </div>
+              <div class="body_cell cell">
+                <input oninput> </input>
+                hi hello world
+              </div>
+              <div class="body_cell cell"> 25.000000 </div>
+              <div class="body_cell cell"> 100 </div>
+            </div>
+            <div class="body_row row" onclick>
+              <div class="body_cell cell"> 52 </div>
+              <div class="body_cell cell">
+                <input oninput> </input>
+                hi
+              </div>
+              <div class="body_cell cell"> 26.000000 </div>
+              <div class="body_cell cell"> 100 </div>
             </div>
           </div>
-        </td>
-        <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
-          <div class="column_header" onclick>
-            <div>
-              <span> b </span>
-            </div>
-          </div>
-        </td>
-        <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
-          <div class="column_header" onclick>
-            <div>
-              <span> d </span>
-            </div>
-          </div>
-        </td>
-      </tr>
-    </tbody>
-  </table>
-  <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
-    <div>
-      <div>
-        <div class="prt-table-row" onclick>
-          <div class="cell prt-table-cell"> 51 </div>
-          <div class="cell prt-table-cell">
-            <input oninput> </input>
-            hi hello world
-          </div>
-          <div class="cell prt-table-cell"> 25.000000 </div>
-          <div class="cell prt-table-cell"> 100 </div>
-        </div>
-        <div class="prt-table-row" onclick>
-          <div class="cell prt-table-cell"> 52 </div>
-          <div class="cell prt-table-cell">
-            <input oninput> </input>
-            hi
-          </div>
-          <div class="cell prt-table-cell"> 26.000000 </div>
-          <div class="cell prt-table-cell"> 100 </div>
         </div>
       </div>
-    </div>
-  </div>
-</div> |}]
+    </div> |}]
 ;;
 
 let%expect_test "table body is not recomputed more often than necessary" =
@@ -880,7 +891,7 @@ let%expect_test "table body is not recomputed more often than necessary" =
      it causes the size_tracker hook on every column to fire. If you have a large table
      with lots of columns and lots of rows, it can be expensive to recompute the table
      body n times, once for each column. *)
-  let test = Test.create (Test.Component.default ()) in
+  let test = Test.create (Test.Component.default ~theming:`Themed ()) in
   Test.print_message_on_result_recomputation test;
   Test.resize_column test ~idx:0 ~width:1.;
   Handle.recompute_view test.handle;
@@ -932,6 +943,7 @@ let%expect_test "table body is not recomputed more often than necessary" =
         in
         Table_expert.component
           (module Int)
+          ~theming:`Themed
           ~focus:
             (By_row
                { on_change = Value.return (Fn.const Effect.Ignore)
@@ -974,30 +986,33 @@ let%expect_test "test is browser" =
 ;;
 
 let%expect_test "sorting legacy renderer" =
-  let test = Test.create (Test.Component.default ~use_legacy_header:true ()) in
+  let test =
+    Test.create (Test.Component.default ~theming:`Themed ~use_legacy_header:true ())
+  in
   Handle.recompute_view_until_stable test.handle;
   Handle.show test.handle;
   [%expect
     {|
-<div class="partial_render_table_container">
-  <table class="partial_render_table_header prt-table-header" bounds-change=<opaque>>
+<div class="partial_render_table_container table"
+     custom-css-vars=((--row-odd-fg black)(--row-odd-bg white)(--row-focused-fg black)(--row-focused-border #0a90bf)(--row-focused-bg #e0f7ff)(--row-even-fg black)(--row-even-bg #e6e6e6)(--header-header-border grey)(--header-fg white)(--header-body-border grey)(--header-bg black)(--fg black)(--body-body-border grey)(--bg white))>
+  <table class="header partial_render_table_header" bounds-change=<opaque>>
     <tbody>
-      <tr>
-        <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
-          <div class="column_header" onclick>
+      <tr class="header_row">
+        <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+          <div class="sortable_header_cell" onclick>
             <span> ◇  key </span>
           </div>
         </td>
-        <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
+        <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
           <div> a </div>
         </td>
-        <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
-          <div class="column_header" onclick>
+        <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+          <div class="sortable_header_cell" onclick>
             <span> ◇  b </span>
           </div>
         </td>
-        <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
-          <div class="column_header" onclick>
+        <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+          <div class="sortable_header_cell" onclick>
             <span> ◇  d </span>
           </div>
         </td>
@@ -1005,34 +1020,34 @@ let%expect_test "sorting legacy renderer" =
     </tbody>
   </table>
   <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
-    <div>
+    <div class="body">
       <div>
-        <div class="prt-table-row" onclick>
-          <div class="cell prt-table-cell"> 0 </div>
-          <div class="cell prt-table-cell">
+        <div class="body_row row" onclick>
+          <div class="body_cell cell"> 0 </div>
+          <div class="body_cell cell">
             <input oninput> </input>
             hello
           </div>
-          <div class="cell prt-table-cell"> 1.000000 </div>
-          <div class="cell prt-table-cell"> 1 </div>
+          <div class="body_cell cell"> 1.000000 </div>
+          <div class="body_cell cell"> 1 </div>
         </div>
-        <div class="prt-table-row" onclick>
-          <div class="cell prt-table-cell"> 1 </div>
-          <div class="cell prt-table-cell">
+        <div class="body_row row" onclick>
+          <div class="body_cell cell"> 1 </div>
+          <div class="body_cell cell">
             <input oninput> </input>
             there
           </div>
-          <div class="cell prt-table-cell"> 2.000000 </div>
-          <div class="cell prt-table-cell"> 2 </div>
+          <div class="body_cell cell"> 2.000000 </div>
+          <div class="body_cell cell"> 2 </div>
         </div>
-        <div class="prt-table-row" onclick>
-          <div class="cell prt-table-cell"> 4 </div>
-          <div class="cell prt-table-cell">
+        <div class="body_row row" onclick>
+          <div class="body_cell cell"> 4 </div>
+          <div class="body_cell cell">
             <input oninput> </input>
             world
           </div>
-          <div class="cell prt-table-cell"> 2.000000 </div>
-          <div class="cell prt-table-cell"> --- </div>
+          <div class="body_cell cell"> 2.000000 </div>
+          <div class="body_cell cell"> --- </div>
         </div>
       </div>
     </div>
@@ -1044,26 +1059,27 @@ let%expect_test "sorting legacy renderer" =
   [%expect
     {|
     === DIFF HUNK ===
-      <div class="partial_render_table_container">
-        <table class="partial_render_table_header prt-table-header" bounds-change=<opaque>>
+      <div class="partial_render_table_container table"
+           custom-css-vars=((--row-odd-fg black)(--row-odd-bg white)(--row-focused-fg black)(--row-focused-border #0a90bf)(--row-focused-bg #e0f7ff)(--row-even-fg black)(--row-even-bg #e6e6e6)(--header-header-border grey)(--header-fg white)(--header-body-border grey)(--header-bg black)(--fg black)(--body-body-border grey)(--bg white))>
+        <table class="header partial_render_table_header" bounds-change=<opaque>>
           <tbody>
-            <tr>
-              <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
-                <div class="column_header" onclick>
+            <tr class="header_row">
+              <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+                <div class="sortable_header_cell" onclick>
     -|            <span> ◇  key </span>
     +|            <span> ⬘  key </span>
                 </div>
               </td>
-              <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
+              <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
                 <div> a </div>
               </td>
-              <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
-                <div class="column_header" onclick>
+              <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+                <div class="sortable_header_cell" onclick>
                   <span> ◇  b </span>
                 </div>
               </td>
-              <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
-                <div class="column_header" onclick>
+              <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+                <div class="sortable_header_cell" onclick>
                   <span> ◇  d </span>
                 </div>
               </td>
@@ -1075,27 +1091,28 @@ let%expect_test "sorting legacy renderer" =
   [%expect
     {|
 === DIFF HUNK ===
-  <div class="partial_render_table_container">
-    <table class="partial_render_table_header prt-table-header" bounds-change=<opaque>>
+  <div class="partial_render_table_container table"
+       custom-css-vars=((--row-odd-fg black)(--row-odd-bg white)(--row-focused-fg black)(--row-focused-border #0a90bf)(--row-focused-bg #e0f7ff)(--row-even-fg black)(--row-even-bg #e6e6e6)(--header-header-border grey)(--header-fg white)(--header-body-border grey)(--header-bg black)(--fg black)(--body-body-border grey)(--bg white))>
+    <table class="header partial_render_table_header" bounds-change=<opaque>>
       <tbody>
-        <tr>
-          <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
-            <div class="column_header" onclick>
+        <tr class="header_row">
+          <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+            <div class="sortable_header_cell" onclick>
 -|            <span> ⬘  key </span>
 +|            <span> ◇  key </span>
             </div>
           </td>
-          <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
+          <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
             <div> a </div>
           </td>
-          <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
-            <div class="column_header" onclick>
+          <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+            <div class="sortable_header_cell" onclick>
 -|            <span> ◇  b </span>
 +|            <span> ⬙  b </span>
             </div>
           </td>
-          <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
-            <div class="column_header" onclick>
+          <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+            <div class="sortable_header_cell" onclick>
               <span> ◇  d </span>
             </div>
           </td>
@@ -1103,43 +1120,43 @@ let%expect_test "sorting legacy renderer" =
       </tbody>
     </table>
     <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
-      <div>
+      <div class="body">
         <div>
--|        <div class="prt-table-row" onclick>
--|          <div class="cell prt-table-cell"> 0 </div>
--|          <div class="cell prt-table-cell">
+-|        <div class="body_row row" onclick>
+-|          <div class="body_cell cell"> 0 </div>
+-|          <div class="body_cell cell">
 -|            <input oninput> </input>
 -|            hello
 -|          </div>
--|          <div class="cell prt-table-cell"> 1.000000 </div>
--|          <div class="cell prt-table-cell"> 1 </div>
+-|          <div class="body_cell cell"> 1.000000 </div>
+-|          <div class="body_cell cell"> 1 </div>
 -|        </div>
-          <div class="prt-table-row" onclick>
-            <div class="cell prt-table-cell"> 1 </div>
-            <div class="cell prt-table-cell">
+          <div class="body_row row" onclick>
+            <div class="body_cell cell"> 1 </div>
+            <div class="body_cell cell">
               <input oninput> </input>
               there
             </div>
-            <div class="cell prt-table-cell"> 2.000000 </div>
-            <div class="cell prt-table-cell"> 2 </div>
+            <div class="body_cell cell"> 2.000000 </div>
+            <div class="body_cell cell"> 2 </div>
           </div>
-          <div class="prt-table-row" onclick>
-            <div class="cell prt-table-cell"> 4 </div>
-            <div class="cell prt-table-cell">
+          <div class="body_row row" onclick>
+            <div class="body_cell cell"> 4 </div>
+            <div class="body_cell cell">
               <input oninput> </input>
               world
             </div>
-            <div class="cell prt-table-cell"> 2.000000 </div>
-            <div class="cell prt-table-cell"> --- </div>
+            <div class="body_cell cell"> 2.000000 </div>
+            <div class="body_cell cell"> --- </div>
           </div>
-+|        <div class="prt-table-row" onclick>
-+|          <div class="cell prt-table-cell"> 0 </div>
-+|          <div class="cell prt-table-cell">
++|        <div class="body_row row" onclick>
++|          <div class="body_cell cell"> 0 </div>
++|          <div class="body_cell cell">
 +|            <input oninput> </input>
 +|            hello
 +|          </div>
-+|          <div class="cell prt-table-cell"> 1.000000 </div>
-+|          <div class="cell prt-table-cell"> 1 </div>
++|          <div class="body_cell cell"> 1.000000 </div>
++|          <div class="body_cell cell"> 1 </div>
 +|        </div>
         </div>
       </div>
@@ -1150,26 +1167,27 @@ let%expect_test "sorting legacy renderer" =
   [%expect
     {|
     === DIFF HUNK ===
-      <div class="partial_render_table_container">
-        <table class="partial_render_table_header prt-table-header" bounds-change=<opaque>>
+      <div class="partial_render_table_container table"
+           custom-css-vars=((--row-odd-fg black)(--row-odd-bg white)(--row-focused-fg black)(--row-focused-border #0a90bf)(--row-focused-bg #e0f7ff)(--row-even-fg black)(--row-even-bg #e6e6e6)(--header-header-border grey)(--header-fg white)(--header-body-border grey)(--header-bg black)(--fg black)(--body-body-border grey)(--bg white))>
+        <table class="header partial_render_table_header" bounds-change=<opaque>>
           <tbody>
-            <tr>
-              <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
-                <div class="column_header" onclick>
+            <tr class="header_row">
+              <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+                <div class="sortable_header_cell" onclick>
                   <span> ◇  key </span>
                 </div>
               </td>
-              <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
+              <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
                 <div> a </div>
               </td>
-              <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
-                <div class="column_header" onclick>
+              <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+                <div class="sortable_header_cell" onclick>
     -|            <span> ⬙  b </span>
     +|            <span> ◇  b </span>
                 </div>
               </td>
-              <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
-                <div class="column_header" onclick>
+              <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+                <div class="sortable_header_cell" onclick>
                   <span> ◇  d </span>
                 </div>
               </td>
@@ -1177,43 +1195,43 @@ let%expect_test "sorting legacy renderer" =
           </tbody>
         </table>
         <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
-          <div>
+          <div class="body">
             <div>
-    +|        <div class="prt-table-row" onclick>
-    +|          <div class="cell prt-table-cell"> 0 </div>
-    +|          <div class="cell prt-table-cell">
+    +|        <div class="body_row row" onclick>
+    +|          <div class="body_cell cell"> 0 </div>
+    +|          <div class="body_cell cell">
     +|            <input oninput> </input>
     +|            hello
     +|          </div>
-    +|          <div class="cell prt-table-cell"> 1.000000 </div>
-    +|          <div class="cell prt-table-cell"> 1 </div>
+    +|          <div class="body_cell cell"> 1.000000 </div>
+    +|          <div class="body_cell cell"> 1 </div>
     +|        </div>
-              <div class="prt-table-row" onclick>
-                <div class="cell prt-table-cell"> 1 </div>
-                <div class="cell prt-table-cell">
+              <div class="body_row row" onclick>
+                <div class="body_cell cell"> 1 </div>
+                <div class="body_cell cell">
                   <input oninput> </input>
                   there
                 </div>
-                <div class="cell prt-table-cell"> 2.000000 </div>
-                <div class="cell prt-table-cell"> 2 </div>
+                <div class="body_cell cell"> 2.000000 </div>
+                <div class="body_cell cell"> 2 </div>
               </div>
-              <div class="prt-table-row" onclick>
-                <div class="cell prt-table-cell"> 4 </div>
-                <div class="cell prt-table-cell">
+              <div class="body_row row" onclick>
+                <div class="body_cell cell"> 4 </div>
+                <div class="body_cell cell">
                   <input oninput> </input>
                   world
                 </div>
-                <div class="cell prt-table-cell"> 2.000000 </div>
-                <div class="cell prt-table-cell"> --- </div>
+                <div class="body_cell cell"> 2.000000 </div>
+                <div class="body_cell cell"> --- </div>
               </div>
-    -|        <div class="prt-table-row" onclick>
-    -|          <div class="cell prt-table-cell"> 0 </div>
-    -|          <div class="cell prt-table-cell">
+    -|        <div class="body_row row" onclick>
+    -|          <div class="body_cell cell"> 0 </div>
+    -|          <div class="body_cell cell">
     -|            <input oninput> </input>
     -|            hello
     -|          </div>
-    -|          <div class="cell prt-table-cell"> 1.000000 </div>
-    -|          <div class="cell prt-table-cell"> 1 </div>
+    -|          <div class="body_cell cell"> 1.000000 </div>
+    -|          <div class="body_cell cell"> 1 </div>
     -|        </div>
             </div>
           </div>
@@ -1225,22 +1243,22 @@ let%expect_test "sorting legacy renderer" =
   Handle.show_diff test.handle;
   [%expect
     {|
-            <tr>
-              <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
-                <div class="column_header" onclick>
+            <tr class="header_row">
+              <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+                <div class="sortable_header_cell" onclick>
                   <span> ◇  key </span>
                 </div>
               </td>
-              <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
+              <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
                 <div> a </div>
               </td>
-              <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
-                <div class="column_header" onclick>
+              <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+                <div class="sortable_header_cell" onclick>
                   <span> ◇  b </span>
                 </div>
               </td>
-              <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
-                <div class="column_header" onclick>
+              <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+                <div class="sortable_header_cell" onclick>
     -|            <span> ◇  d </span>
     +|            <span> ⬘  d </span>
                 </div>
@@ -1249,38 +1267,38 @@ let%expect_test "sorting legacy renderer" =
           </tbody>
         </table>
         <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
-          <div>
+          <div class="body">
             <div>
-              <div class="prt-table-row" onclick>
-                <div class="cell prt-table-cell"> 0 </div>
-                <div class="cell prt-table-cell">
+              <div class="body_row row" onclick>
+                <div class="body_cell cell"> 0 </div>
+                <div class="body_cell cell">
                   <input oninput> </input>
                   hello
                 </div>
-                <div class="cell prt-table-cell"> 1.000000 </div>
-                <div class="cell prt-table-cell"> 1 </div>
+                <div class="body_cell cell"> 1.000000 </div>
+                <div class="body_cell cell"> 1 </div>
       |}];
   (* but in reverse, notice that [None]s stay on the bottom *)
   Handle.click_on test.handle ~selector:"td:nth-child(4) > div" ~get_vdom:test.get_vdom;
   Handle.show_diff test.handle;
   [%expect
     {|
-            <tr>
-              <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
-                <div class="column_header" onclick>
+            <tr class="header_row">
+              <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+                <div class="sortable_header_cell" onclick>
                   <span> ◇  key </span>
                 </div>
               </td>
-              <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
+              <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
                 <div> a </div>
               </td>
-              <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
-                <div class="column_header" onclick>
+              <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+                <div class="sortable_header_cell" onclick>
                   <span> ◇  b </span>
                 </div>
               </td>
-              <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
-                <div class="column_header" onclick>
+              <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+                <div class="sortable_header_cell" onclick>
     -|            <span> ⬘  d </span>
     +|            <span> ⬙  d </span>
                 </div>
@@ -1289,43 +1307,43 @@ let%expect_test "sorting legacy renderer" =
           </tbody>
         </table>
         <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
-          <div>
+          <div class="body">
             <div>
-    +|        <div class="prt-table-row" onclick>
-    +|          <div class="cell prt-table-cell"> 1 </div>
-    +|          <div class="cell prt-table-cell">
+    +|        <div class="body_row row" onclick>
+    +|          <div class="body_cell cell"> 1 </div>
+    +|          <div class="body_cell cell">
     +|            <input oninput> </input>
     +|            there
     +|          </div>
-    +|          <div class="cell prt-table-cell"> 2.000000 </div>
-    +|          <div class="cell prt-table-cell"> 2 </div>
+    +|          <div class="body_cell cell"> 2.000000 </div>
+    +|          <div class="body_cell cell"> 2 </div>
     +|        </div>
-              <div class="prt-table-row" onclick>
-                <div class="cell prt-table-cell"> 0 </div>
-                <div class="cell prt-table-cell">
+              <div class="body_row row" onclick>
+                <div class="body_cell cell"> 0 </div>
+                <div class="body_cell cell">
                   <input oninput> </input>
                   hello
                 </div>
-                <div class="cell prt-table-cell"> 1.000000 </div>
-                <div class="cell prt-table-cell"> 1 </div>
+                <div class="body_cell cell"> 1.000000 </div>
+                <div class="body_cell cell"> 1 </div>
               </div>
-    -|        <div class="prt-table-row" onclick>
-    -|          <div class="cell prt-table-cell"> 1 </div>
-    -|          <div class="cell prt-table-cell">
+    -|        <div class="body_row row" onclick>
+    -|          <div class="body_cell cell"> 1 </div>
+    -|          <div class="body_cell cell">
     -|            <input oninput> </input>
     -|            there
     -|          </div>
-    -|          <div class="cell prt-table-cell"> 2.000000 </div>
-    -|          <div class="cell prt-table-cell"> 2 </div>
+    -|          <div class="body_cell cell"> 2.000000 </div>
+    -|          <div class="body_cell cell"> 2 </div>
     -|        </div>
-              <div class="prt-table-row" onclick>
-                <div class="cell prt-table-cell"> 4 </div>
-                <div class="cell prt-table-cell">
+              <div class="body_row row" onclick>
+                <div class="body_cell cell"> 4 </div>
+                <div class="body_cell cell">
                   <input oninput> </input>
                   world
                 </div>
-                <div class="cell prt-table-cell"> 2.000000 </div>
-                <div class="cell prt-table-cell"> --- </div>
+                <div class="body_cell cell"> 2.000000 </div>
+                <div class="body_cell cell"> --- </div>
               </div>
             </div>
           </div>
@@ -1334,38 +1352,39 @@ let%expect_test "sorting legacy renderer" =
 ;;
 
 let%expect_test "sorting default renderer" =
-  let test = Test.create (Test.Component.default ()) in
+  let test = Test.create (Test.Component.default ~theming:`Themed ()) in
   Handle.recompute_view_until_stable test.handle;
   Handle.show test.handle;
   [%expect
     {|
-<div class="partial_render_table_container">
-  <table class="partial_render_table_header prt-table-header" bounds-change=<opaque>>
+<div class="partial_render_table_container table"
+     custom-css-vars=((--row-odd-fg black)(--row-odd-bg white)(--row-focused-fg black)(--row-focused-border #0a90bf)(--row-focused-bg #e0f7ff)(--row-even-fg black)(--row-even-bg #e6e6e6)(--header-header-border grey)(--header-fg white)(--header-body-border grey)(--header-bg black)(--fg black)(--body-body-border grey)(--bg white))>
+  <table class="header partial_render_table_header" bounds-change=<opaque>>
     <tbody>
-      <tr>
-        <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
-          <div class="column_header" onclick>
+      <tr class="header_row">
+        <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+          <div class="sortable_header_cell" onclick>
             <div>
               <span> key </span>
             </div>
           </div>
         </td>
-        <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
+        <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
           <div>
             <div>
               <span> a </span>
             </div>
           </div>
         </td>
-        <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
-          <div class="column_header" onclick>
+        <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+          <div class="sortable_header_cell" onclick>
             <div>
               <span> b </span>
             </div>
           </div>
         </td>
-        <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
-          <div class="column_header" onclick>
+        <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+          <div class="sortable_header_cell" onclick>
             <div>
               <span> d </span>
             </div>
@@ -1375,34 +1394,34 @@ let%expect_test "sorting default renderer" =
     </tbody>
   </table>
   <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
-    <div>
+    <div class="body">
       <div>
-        <div class="prt-table-row" onclick>
-          <div class="cell prt-table-cell"> 0 </div>
-          <div class="cell prt-table-cell">
+        <div class="body_row row" onclick>
+          <div class="body_cell cell"> 0 </div>
+          <div class="body_cell cell">
             <input oninput> </input>
             hello
           </div>
-          <div class="cell prt-table-cell"> 1.000000 </div>
-          <div class="cell prt-table-cell"> 1 </div>
+          <div class="body_cell cell"> 1.000000 </div>
+          <div class="body_cell cell"> 1 </div>
         </div>
-        <div class="prt-table-row" onclick>
-          <div class="cell prt-table-cell"> 1 </div>
-          <div class="cell prt-table-cell">
+        <div class="body_row row" onclick>
+          <div class="body_cell cell"> 1 </div>
+          <div class="body_cell cell">
             <input oninput> </input>
             there
           </div>
-          <div class="cell prt-table-cell"> 2.000000 </div>
-          <div class="cell prt-table-cell"> 2 </div>
+          <div class="body_cell cell"> 2.000000 </div>
+          <div class="body_cell cell"> 2 </div>
         </div>
-        <div class="prt-table-row" onclick>
-          <div class="cell prt-table-cell"> 4 </div>
-          <div class="cell prt-table-cell">
+        <div class="body_row row" onclick>
+          <div class="body_cell cell"> 4 </div>
+          <div class="body_cell cell">
             <input oninput> </input>
             world
           </div>
-          <div class="cell prt-table-cell"> 2.000000 </div>
-          <div class="cell prt-table-cell"> --- </div>
+          <div class="body_cell cell"> 2.000000 </div>
+          <div class="body_cell cell"> --- </div>
         </div>
       </div>
     </div>
@@ -1414,27 +1433,28 @@ let%expect_test "sorting default renderer" =
   [%expect
     {|
     === DIFF HUNK ===
-      <div class="partial_render_table_container">
-        <table class="partial_render_table_header prt-table-header" bounds-change=<opaque>>
+      <div class="partial_render_table_container table"
+           custom-css-vars=((--row-odd-fg black)(--row-odd-bg white)(--row-focused-fg black)(--row-focused-border #0a90bf)(--row-focused-bg #e0f7ff)(--row-even-fg black)(--row-even-bg #e6e6e6)(--header-header-border grey)(--header-fg white)(--header-body-border grey)(--header-bg black)(--fg black)(--body-body-border grey)(--bg white))>
+        <table class="header partial_render_table_header" bounds-change=<opaque>>
           <tbody>
-            <tr>
-              <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
-                <div class="column_header" onclick>
+            <tr class="header_row">
+              <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+                <div class="sortable_header_cell" onclick>
                   <div>
                     <span> key </span>
-    +|              <span class="prt-sort-indicator"> ▲ </span>
+    +|              <span> ▲ </span>
                   </div>
                 </div>
               </td>
-              <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
+              <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
                 <div>
                   <div>
                     <span> a </span>
                   </div>
                 </div>
               </td>
-              <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
-                <div class="column_header" onclick>
+              <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+                <div class="sortable_header_cell" onclick>
                   <div>
                     <span> b </span>
                   </div>
@@ -1446,35 +1466,36 @@ let%expect_test "sorting default renderer" =
   [%expect
     {|
 === DIFF HUNK ===
-  <div class="partial_render_table_container">
-    <table class="partial_render_table_header prt-table-header" bounds-change=<opaque>>
+  <div class="partial_render_table_container table"
+       custom-css-vars=((--row-odd-fg black)(--row-odd-bg white)(--row-focused-fg black)(--row-focused-border #0a90bf)(--row-focused-bg #e0f7ff)(--row-even-fg black)(--row-even-bg #e6e6e6)(--header-header-border grey)(--header-fg white)(--header-body-border grey)(--header-bg black)(--fg black)(--body-body-border grey)(--bg white))>
+    <table class="header partial_render_table_header" bounds-change=<opaque>>
       <tbody>
-        <tr>
-          <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
-            <div class="column_header" onclick>
+        <tr class="header_row">
+          <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+            <div class="sortable_header_cell" onclick>
               <div>
                 <span> key </span>
--|              <span class="prt-sort-indicator"> ▲ </span>
+-|              <span> ▲ </span>
               </div>
             </div>
           </td>
-          <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
+          <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
             <div>
               <div>
                 <span> a </span>
               </div>
             </div>
           </td>
-          <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
-            <div class="column_header" onclick>
+          <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+            <div class="sortable_header_cell" onclick>
               <div>
                 <span> b </span>
-+|              <span class="prt-sort-indicator"> ▼ </span>
++|              <span> ▼ </span>
               </div>
             </div>
           </td>
-          <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
-            <div class="column_header" onclick>
+          <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+            <div class="sortable_header_cell" onclick>
               <div>
                 <span> d </span>
               </div>
@@ -1484,43 +1505,43 @@ let%expect_test "sorting default renderer" =
       </tbody>
     </table>
     <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
-      <div>
+      <div class="body">
         <div>
--|        <div class="prt-table-row" onclick>
--|          <div class="cell prt-table-cell"> 0 </div>
--|          <div class="cell prt-table-cell">
+-|        <div class="body_row row" onclick>
+-|          <div class="body_cell cell"> 0 </div>
+-|          <div class="body_cell cell">
 -|            <input oninput> </input>
 -|            hello
 -|          </div>
--|          <div class="cell prt-table-cell"> 1.000000 </div>
--|          <div class="cell prt-table-cell"> 1 </div>
+-|          <div class="body_cell cell"> 1.000000 </div>
+-|          <div class="body_cell cell"> 1 </div>
 -|        </div>
-          <div class="prt-table-row" onclick>
-            <div class="cell prt-table-cell"> 1 </div>
-            <div class="cell prt-table-cell">
+          <div class="body_row row" onclick>
+            <div class="body_cell cell"> 1 </div>
+            <div class="body_cell cell">
               <input oninput> </input>
               there
             </div>
-            <div class="cell prt-table-cell"> 2.000000 </div>
-            <div class="cell prt-table-cell"> 2 </div>
+            <div class="body_cell cell"> 2.000000 </div>
+            <div class="body_cell cell"> 2 </div>
           </div>
-          <div class="prt-table-row" onclick>
-            <div class="cell prt-table-cell"> 4 </div>
-            <div class="cell prt-table-cell">
+          <div class="body_row row" onclick>
+            <div class="body_cell cell"> 4 </div>
+            <div class="body_cell cell">
               <input oninput> </input>
               world
             </div>
-            <div class="cell prt-table-cell"> 2.000000 </div>
-            <div class="cell prt-table-cell"> --- </div>
+            <div class="body_cell cell"> 2.000000 </div>
+            <div class="body_cell cell"> --- </div>
           </div>
-+|        <div class="prt-table-row" onclick>
-+|          <div class="cell prt-table-cell"> 0 </div>
-+|          <div class="cell prt-table-cell">
++|        <div class="body_row row" onclick>
++|          <div class="body_cell cell"> 0 </div>
++|          <div class="body_cell cell">
 +|            <input oninput> </input>
 +|            hello
 +|          </div>
-+|          <div class="cell prt-table-cell"> 1.000000 </div>
-+|          <div class="cell prt-table-cell"> 1 </div>
++|          <div class="body_cell cell"> 1.000000 </div>
++|          <div class="body_cell cell"> 1 </div>
 +|        </div>
         </div>
       </div>
@@ -1536,36 +1557,37 @@ let%expect_test "sorting default renderer" =
   [%expect
     {|
     === DIFF HUNK ===
-      <div class="partial_render_table_container">
-        <table class="partial_render_table_header prt-table-header" bounds-change=<opaque>>
+      <div class="partial_render_table_container table"
+           custom-css-vars=((--row-odd-fg black)(--row-odd-bg white)(--row-focused-fg black)(--row-focused-border #0a90bf)(--row-focused-bg #e0f7ff)(--row-even-fg black)(--row-even-bg #e6e6e6)(--header-header-border grey)(--header-fg white)(--header-body-border grey)(--header-bg black)(--fg black)(--body-body-border grey)(--bg white))>
+        <table class="header partial_render_table_header" bounds-change=<opaque>>
           <tbody>
-            <tr>
-              <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
-                <div class="column_header" onclick>
+            <tr class="header_row">
+              <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+                <div class="sortable_header_cell" onclick>
                   <div>
                     <span> key </span>
-    +|              <span class="prt-sort-indicator"> ▲ 2 </span>
+    +|              <span> ▲ 2 </span>
                   </div>
                 </div>
               </td>
-              <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
+              <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
                 <div>
                   <div>
                     <span> a </span>
                   </div>
                 </div>
               </td>
-              <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
-                <div class="column_header" onclick>
+              <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+                <div class="sortable_header_cell" onclick>
                   <div>
                     <span> b </span>
-    -|              <span class="prt-sort-indicator"> ▼ </span>
-    +|              <span class="prt-sort-indicator"> ▼ 1 </span>
+    -|              <span> ▼ </span>
+    +|              <span> ▼ 1 </span>
                   </div>
                 </div>
               </td>
-              <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
-                <div class="column_header" onclick>
+              <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+                <div class="sortable_header_cell" onclick>
                   <div>
                     <span> d </span>
                   </div>
@@ -1575,7 +1597,7 @@ let%expect_test "sorting default renderer" =
           </tbody>
         </table>
         <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
-          <div>
+          <div class="body">
             <div> |}];
   (* Third column is already reverse sorted, so clicking it again removes all sorts. *)
   Handle.click_on test.handle ~selector:"td:nth-child(3) > div" ~get_vdom:test.get_vdom;
@@ -1583,35 +1605,36 @@ let%expect_test "sorting default renderer" =
   [%expect
     {|
     === DIFF HUNK ===
-      <div class="partial_render_table_container">
-        <table class="partial_render_table_header prt-table-header" bounds-change=<opaque>>
+      <div class="partial_render_table_container table"
+           custom-css-vars=((--row-odd-fg black)(--row-odd-bg white)(--row-focused-fg black)(--row-focused-border #0a90bf)(--row-focused-bg #e0f7ff)(--row-even-fg black)(--row-even-bg #e6e6e6)(--header-header-border grey)(--header-fg white)(--header-body-border grey)(--header-bg black)(--fg black)(--body-body-border grey)(--bg white))>
+        <table class="header partial_render_table_header" bounds-change=<opaque>>
           <tbody>
-            <tr>
-              <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
-                <div class="column_header" onclick>
+            <tr class="header_row">
+              <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+                <div class="sortable_header_cell" onclick>
                   <div>
                     <span> key </span>
-    -|              <span class="prt-sort-indicator"> ▲ 2 </span>
+    -|              <span> ▲ 2 </span>
                   </div>
                 </div>
               </td>
-              <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
+              <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
                 <div>
                   <div>
                     <span> a </span>
                   </div>
                 </div>
               </td>
-              <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
-                <div class="column_header" onclick>
+              <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+                <div class="sortable_header_cell" onclick>
                   <div>
                     <span> b </span>
-    -|              <span class="prt-sort-indicator"> ▼ 1 </span>
+    -|              <span> ▼ 1 </span>
                   </div>
                 </div>
               </td>
-              <td colspan="1" class="header_label leaf_header" size_tracker=<fun>>
-                <div class="column_header" onclick>
+              <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+                <div class="sortable_header_cell" onclick>
                   <div>
                     <span> d </span>
                   </div>
@@ -1621,43 +1644,43 @@ let%expect_test "sorting default renderer" =
           </tbody>
         </table>
         <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
-          <div>
+          <div class="body">
             <div>
-    +|        <div class="prt-table-row" onclick>
-    +|          <div class="cell prt-table-cell"> 0 </div>
-    +|          <div class="cell prt-table-cell">
+    +|        <div class="body_row row" onclick>
+    +|          <div class="body_cell cell"> 0 </div>
+    +|          <div class="body_cell cell">
     +|            <input oninput> </input>
     +|            hello
     +|          </div>
-    +|          <div class="cell prt-table-cell"> 1.000000 </div>
-    +|          <div class="cell prt-table-cell"> 1 </div>
+    +|          <div class="body_cell cell"> 1.000000 </div>
+    +|          <div class="body_cell cell"> 1 </div>
     +|        </div>
-              <div class="prt-table-row" onclick>
-                <div class="cell prt-table-cell"> 1 </div>
-                <div class="cell prt-table-cell">
+              <div class="body_row row" onclick>
+                <div class="body_cell cell"> 1 </div>
+                <div class="body_cell cell">
                   <input oninput> </input>
                   there
                 </div>
-                <div class="cell prt-table-cell"> 2.000000 </div>
-                <div class="cell prt-table-cell"> 2 </div>
+                <div class="body_cell cell"> 2.000000 </div>
+                <div class="body_cell cell"> 2 </div>
               </div>
-              <div class="prt-table-row" onclick>
-                <div class="cell prt-table-cell"> 4 </div>
-                <div class="cell prt-table-cell">
+              <div class="body_row row" onclick>
+                <div class="body_cell cell"> 4 </div>
+                <div class="body_cell cell">
                   <input oninput> </input>
                   world
                 </div>
-                <div class="cell prt-table-cell"> 2.000000 </div>
-                <div class="cell prt-table-cell"> --- </div>
+                <div class="body_cell cell"> 2.000000 </div>
+                <div class="body_cell cell"> --- </div>
               </div>
-    -|        <div class="prt-table-row" onclick>
-    -|          <div class="cell prt-table-cell"> 0 </div>
-    -|          <div class="cell prt-table-cell">
+    -|        <div class="body_row row" onclick>
+    -|          <div class="body_cell cell"> 0 </div>
+    -|          <div class="body_cell cell">
     -|            <input oninput> </input>
     -|            hello
     -|          </div>
-    -|          <div class="cell prt-table-cell"> 1.000000 </div>
-    -|          <div class="cell prt-table-cell"> 1 </div>
+    -|          <div class="body_cell cell"> 1.000000 </div>
+    -|          <div class="body_cell cell"> 1 </div>
     -|        </div>
             </div>
           </div>
@@ -1692,6 +1715,7 @@ let%expect_test "removed columns still count toward the total table width" =
   let component =
     Table.Basic.component
       (module Int)
+      ~theming:`Themed
       ~focus:None
       ~row_height:(Value.return (`Px 20))
       ~columns:(Column.lift (Bonsai.Var.value columns_var))
@@ -1895,6 +1919,7 @@ let%expect_test "removed columns still count toward the total table width" =
   let component =
     Table.Basic.component
       (module Int)
+      ~theming:`Themed
       ~focus:None
       ~row_height:(Value.return (`Px 1))
       ~preload_rows:1

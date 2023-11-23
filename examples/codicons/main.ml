@@ -156,7 +156,12 @@ end
 
 module Search = struct
   let component () =
-    let%sub input = Form.Elements.Textbox.string ~placeholder:"Filter icons" () in
+    let%sub input =
+      Form.Elements.Textbox.string
+        ~placeholder:"Filter icons"
+        ~allow_updates_when_focused:`Never
+        ()
+    in
     let%arr input = input in
     let search =
       Form.value input

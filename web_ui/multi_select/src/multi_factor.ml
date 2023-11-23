@@ -213,7 +213,13 @@ module Make (Item : Single_factor.Item) (Key : Key) = struct
     fun ~id -> f id
   ;;
 
-  let bonsai ?(initial_model_settings = Key.Map.empty) ~all_keys ~id_prefix subwidgets =
+  let bonsai
+    ?(initial_model_settings = Key.Map.empty)
+    ~all_keys
+    ~id_prefix
+    ~allow_updates_when_focused
+    subwidgets
+    =
     let open Bonsai.Let_syntax in
     let single_factor key input =
       let default_selection_status = input >>| default_selection_status in
@@ -226,6 +232,7 @@ module Make (Item : Single_factor.Item) (Key : Key) = struct
         Single_factor.View_config.create
           ~id:(search_box_id key ~id_prefix)
           ~header:(Vdom.Node.text (Key.to_string key))
+          ~allow_updates_when_focused
           ()
       in
       Single_factor.bonsai

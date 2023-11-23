@@ -65,18 +65,19 @@ val value_with_override
     from underneath the state machine as the default_model value changes.  If
     this is undesirable, you may want to [freeze] the default_model first. *)
 val state_machine0_dynamic_model
-  :  ?sexp_of_model:('model -> Sexp.t)
+  :  ?sexp_of_action:('action -> Sexp.t)
+  -> ?sexp_of_model:('model -> Sexp.t)
   -> ?equal:('model -> 'model -> bool)
-  -> (module Bonsai.Action with type t = 'action)
   -> model:[< `Computed of ('model option -> 'model) Value.t | `Given of 'model Value.t ]
   -> apply_action:('action Bonsai.Apply_action_context.t -> 'model -> 'action -> 'model)
+  -> unit
   -> ('model * ('action -> unit Effect.t)) Computation.t
 
 (** Read the docs for [state_machine0_dynamic_model]. This one has
     an extra ['input] value that can be taken into account when the
     [apply_action] is invoked. *)
 val state_machine1_dynamic_model
-  :  (module Bonsai.Action with type t = 'action)
+  :  ?sexp_of_action:('action -> Sexp.t)
   -> ?sexp_of_model:('model -> Sexp.t)
   -> ?equal:('model -> 'model -> bool)
   -> model:[< `Computed of ('model option -> 'model) Value.t | `Given of 'model Value.t ]

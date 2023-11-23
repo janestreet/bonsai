@@ -31,6 +31,9 @@ module type S = sig
       ; search_box_id : string option (** The HTML ID to give the search box input *)
       ; extra_row_attrs : (is_focused:bool -> Vdom.Attr.t) option
           (** This attribute will be added to the selected row *)
+      ; allow_updates_when_focused : [ `Always | `Never ]
+          (** Determines whether or not the state should update the value of input
+          elements, even if the input element is actively in focus *)
       }
 
     val create
@@ -38,6 +41,7 @@ module type S = sig
       -> ?autofocus_search_box:bool
       -> ?id:string
       -> header:Vdom.Node.t
+      -> allow_updates_when_focused:[ `Always | `Never ]
       -> unit
       -> t
   end

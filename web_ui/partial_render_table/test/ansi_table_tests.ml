@@ -35,9 +35,9 @@ let table_to_string
          ~string_with_attr:(fun _attr str -> str)
   in
   let contents =
-    let selected =
-      Column.create selected_header (fun { Table.For_testing.Table_body.selected; _ } ->
-        if selected then "*" else "")
+    let focused =
+      Column.create selected_header (fun { Table.For_testing.Table_body.focused; _ } ->
+        if focused then "*" else "")
     in
     let num_column =
       Column.create "#" (fun { Table.For_testing.Table_body.id; _ } ->
@@ -56,9 +56,9 @@ let table_to_string
     let columns =
       match include_num_column with
       | false ->
-        selected :: (for_testing.body.column_names |> List.mapi ~f:ascii_column_of_leaf)
+        focused :: (for_testing.body.column_names |> List.mapi ~f:ascii_column_of_leaf)
       | true ->
-        selected
+        focused
         :: num_column
         :: (for_testing.body.column_names |> List.mapi ~f:ascii_column_of_leaf)
     in
@@ -163,7 +163,7 @@ module Test = struct
 end
 
 let%expect_test "basic table" =
-  let test = Test.create ~stats:true (Test.Component.default ()) in
+  let test = Test.create ~stats:true (Test.Component.default ~theming:`Themed ()) in
   Handle.show test.handle;
   [%expect
     {|
@@ -190,6 +190,7 @@ let%expect_test "basic table with default sort" =
     Test.create
       ~stats:true
       (Test.Component.default
+         ~theming:`Themed
          ~default_sort:
            (Value.return (fun (_key, { a = a1; _ }) (_key, { a = a2; _ }) ->
               -String.compare a1 a2))
@@ -223,6 +224,7 @@ let%expect_test "basic table with overriden default sort" =
     Test.create
       ~stats:true
       (Test.Component.default
+         ~theming:`Themed
          ~override_sort
          ~default_sort:
            (Value.return (fun (_key, { a = a1; _ }) (_key, { a = a2; _ }) ->
@@ -277,6 +279,7 @@ let%expect_test "basic table with overriden column sort" =
     Test.create
       ~stats:true
       (Test.Component.default
+         ~theming:`Themed
          ~override_sort
          ~default_sort:
            (Value.return (fun (_key, { a = a1; _ }) (_key, { a = a2; _ }) ->
@@ -333,7 +336,9 @@ let%expect_test "REGRESSION: basic table with overriden column sort but no defau
       Comparable.lexicographic [ c; Comparable.lift by_key ~f:Tuple2.get1 ])
   in
   let override_sort = Bonsai.Var.value override_sort_var in
-  let test = Test.create ~stats:false (Test.Component.default ~override_sort ()) in
+  let test =
+    Test.create ~stats:false (Test.Component.default ~theming:`Themed ~override_sort ())
+  in
   Handle.show test.handle;
   [%expect
     {|
@@ -375,7 +380,7 @@ let%expect_test "big table" =
       ~stats:true
       ~map:big_map
       ~visible_range:(0, 10)
-      (Test.Component.default ())
+      (Test.Component.default ~theming:`Themed ())
   in
   Handle.show test.handle;
   [%expect
@@ -413,7 +418,7 @@ let%expect_test "table with some preload" =
       ~map:big_map
       ~visible_range:(5, 10)
       ~stats:true
-      (Test.Component.default ~preload_rows:2 ())
+      (Test.Component.default ~theming:`Themed ~preload_rows:2 ())
   in
   Handle.show test.handle;
   [%expect
@@ -451,7 +456,7 @@ let%expect_test "big table filtered" =
       ~stats:true
       ~map:big_map
       ~visible_range:(0, 10)
-      (Test.Component.default ())
+      (Test.Component.default ~theming:`Themed ())
   in
   Bonsai.Var.set test.filter_var (fun ~key ~data:_ -> key mod 2 = 0);
   Handle.show test.handle;
@@ -490,7 +495,7 @@ let%expect_test "table with col groups" =
       ~stats:true
       ~map:groups_map
       ~visible_range:(0, 10)
-      (Test.Component.default' ~with_groups:true ())
+      (Test.Component.default' ~theming:`Themed ~with_groups:true ())
   in
   Bonsai.Var.set test.filter_var (fun ~key ~data:_ -> key mod 2 = 0);
   Handle.show test.handle;
@@ -516,7 +521,7 @@ let%expect_test "table with col groups" =
 ;;
 
 let%expect_test "focus down" =
-  let test = Test.create ~stats:false (Test.Component.default ()) in
+  let test = Test.create ~stats:false (Test.Component.default ~theming:`Themed ()) in
   Handle.show test.handle;
   [%expect
     {|
@@ -559,7 +564,7 @@ let%expect_test "focus down" =
 ;;
 
 let%expect_test "focus up" =
-  let test = Test.create ~stats:false (Test.Component.default ()) in
+  let test = Test.create ~stats:false (Test.Component.default ~theming:`Themed ()) in
   Handle.show test.handle;
   [%expect
     {|
@@ -602,7 +607,7 @@ let%expect_test "focus up" =
 ;;
 
 let%expect_test "unfocus" =
-  let test = Test.create ~stats:false (Test.Component.default ()) in
+  let test = Test.create ~stats:false (Test.Component.default ~theming:`Themed ()) in
   Handle.do_actions test.handle [ Focus_up ];
   Handle.show test.handle;
   [%expect
@@ -633,7 +638,7 @@ let%expect_test "unfocus" =
 ;;
 
 let%expect_test "remove focused moves down if possible" =
-  let test = Test.create ~stats:false (Test.Component.default ()) in
+  let test = Test.create ~stats:false (Test.Component.default ~theming:`Themed ()) in
   Handle.do_actions test.handle [ Focus_down; Focus_down ];
   Handle.show test.handle;
   [%expect
@@ -664,7 +669,7 @@ let%expect_test "remove focused moves down if possible" =
 ;;
 
 let%expect_test "focus shadow (down)" =
-  let test = Test.create ~stats:false (Test.Component.default ()) in
+  let test = Test.create ~stats:false (Test.Component.default ~theming:`Themed ()) in
   Handle.do_actions test.handle [ Focus_down ];
   Handle.show test.handle;
   [%expect
@@ -723,7 +728,7 @@ let%expect_test "focus shadow (down)" =
 ;;
 
 let%expect_test "focus shadow (up)" =
-  let test = Test.create ~stats:false (Test.Component.default ()) in
+  let test = Test.create ~stats:false (Test.Component.default ~theming:`Themed ()) in
   Handle.do_actions test.handle [ Focus_up ];
   Handle.show test.handle;
   [%expect
@@ -782,7 +787,7 @@ let%expect_test "focus shadow (up)" =
 ;;
 
 let%expect_test "remove focused causes unfocus (down)" =
-  let test = Test.create ~stats:false (Test.Component.default ()) in
+  let test = Test.create ~stats:false (Test.Component.default ~theming:`Themed ()) in
   Handle.do_actions test.handle [ Focus_down; Focus_down ];
   Handle.show test.handle;
   [%expect
@@ -827,7 +832,7 @@ let%expect_test "remove focused causes unfocus (down)" =
 ;;
 
 let%expect_test "remove focused causes unfocus (up)" =
-  let test = Test.create ~stats:false (Test.Component.default ()) in
+  let test = Test.create ~stats:false (Test.Component.default ~theming:`Themed ()) in
   Handle.do_actions test.handle [ Focus_down; Focus_down ];
   Handle.show test.handle;
   [%expect
@@ -877,7 +882,7 @@ let%expect_test "select index" =
       ~map:big_map
       ~visible_range:(0, 5)
       ~stats:false
-      (Test.Component.default ~preload_rows:2 ())
+      (Test.Component.default ~theming:`Themed ~preload_rows:2 ())
   in
   Handle.show test.handle;
   [%expect
@@ -1083,7 +1088,7 @@ let%expect_test "page up" =
       ~map:big_map
       ~visible_range:(5, 10)
       ~stats:false
-      (Test.Component.default ~preload_rows:2 ())
+      (Test.Component.default ~theming:`Themed ~preload_rows:2 ())
   in
   Handle.show test.handle;
   [%expect
@@ -1136,7 +1141,7 @@ let%expect_test "page down and page up" =
       ~map:big_map
       ~visible_range:(5, 10)
       ~stats:false
-      (Test.Component.default ~preload_rows:2 ())
+      (Test.Component.default ~theming:`Themed ~preload_rows:2 ())
   in
   Handle.show test.handle;
   [%expect
@@ -1435,7 +1440,7 @@ let%expect_test "page up stops at the top of the table (when it is in view)" =
       ~map:big_map
       ~visible_range:(0, 5)
       ~stats:false
-      (Test.Component.default ~preload_rows:2 ())
+      (Test.Component.default ~theming:`Themed ~preload_rows:2 ())
   in
   Handle.show test.handle;
   [%expect
@@ -1503,7 +1508,7 @@ let%expect_test "page up stops at the top of the table (when it is out of view)"
       ~map:big_map
       ~visible_range:(10, 15)
       ~stats:false
-      (Test.Component.default ~preload_rows:2 ())
+      (Test.Component.default ~theming:`Themed ~preload_rows:2 ())
   in
   Handle.show test.handle;
   [%expect
@@ -1580,7 +1585,7 @@ let%expect_test "page down stops at the bottom of the table (when it is in view)
       ~map:big_map
       ~visible_range:(95, 110)
       ~stats:false
-      (Test.Component.default ~preload_rows:2 ())
+      (Test.Component.default ~theming:`Themed ~preload_rows:2 ())
   in
   Handle.show test.handle;
   [%expect
@@ -1642,7 +1647,7 @@ let%expect_test "page down stops at the bottom of the table (when it is out of v
       ~map:big_map
       ~visible_range:(85, 90)
       ~stats:false
-      (Test.Component.default ~preload_rows:2 ())
+      (Test.Component.default ~theming:`Themed ~preload_rows:2 ())
   in
   Handle.show test.handle;
   [%expect
@@ -1719,7 +1724,7 @@ let%expect_test "actions on empty table" =
       ~map:(Map.empty (module Int))
       ~visible_range:(5, 10)
       ~stats:false
-      (Test.Component.default ~preload_rows:2 ())
+      (Test.Component.default ~theming:`Themed ~preload_rows:2 ())
   in
   (* just make sure nothing weird happens *)
   Handle.do_actions test.handle [ Page_down; Page_up; Focus_down; Focus_up; Unfocus ];
@@ -1739,7 +1744,7 @@ let%expect_test "moving focus down should work even when the index changes" =
       ~map
       ~visible_range:(0, 5)
       ~stats:false
-      (Test.Component.default ~preload_rows:2 ())
+      (Test.Component.default ~theming:`Themed ~preload_rows:2 ())
   in
   Handle.show test.handle;
   [%expect
@@ -1813,7 +1818,7 @@ let%expect_test "moving focus down should work even when the index changes and f
       ~map
       ~visible_range:(0, 5)
       ~stats:false
-      (Test.Component.default ~preload_rows:2 ())
+      (Test.Component.default ~theming:`Themed ~preload_rows:2 ())
   in
   Handle.show test.handle;
   [%expect
@@ -1898,7 +1903,7 @@ let%expect_test "moving focus up should work even when the index changes" =
       ~map
       ~visible_range:(0, 5)
       ~stats:false
-      (Test.Component.default ~preload_rows:2 ())
+      (Test.Component.default ~theming:`Themed ~preload_rows:2 ())
   in
   Handle.show test.handle;
   [%expect
@@ -1979,7 +1984,7 @@ let%expect_test "moving focus up should work even when the index changes and foc
       ~map
       ~visible_range:(0, 5)
       ~stats:false
-      (Test.Component.default ~preload_rows:2 ())
+      (Test.Component.default ~theming:`Themed ~preload_rows:2 ())
   in
   Handle.show test.handle;
   [%expect
@@ -2095,6 +2100,7 @@ let%expect_test "Pseudo-BUG: setting rank_range does not change the which rows t
     in
     Table_expert.component
       (module Int)
+      ~theming:`Themed
       ~focus:
         (Table_expert.Focus.By_row
            { on_change = Test.focus_changed
@@ -2228,7 +2234,11 @@ let%expect_test "focus down when presence says that all responses are None" =
   let test =
     Test.create
       ~stats:false
-      (Test.Component.expert_for_testing_compute_presence ~collate ~presence ())
+      (Test.Component.expert_for_testing_compute_presence
+         ~theming:`Themed
+         ~collate
+         ~presence
+         ())
   in
   Handle.show test.handle;
   [%expect
@@ -2277,7 +2287,7 @@ let%expect_test "show that scrolling out of a basic table will keep the focus" =
       ~stats:true
       ~map:big_map
       ~should_set_bounds:false
-      (Test.Component.default ())
+      (Test.Component.default ~theming:`Themed ())
   in
   Test.set_bounds test ~low:0 ~high:10;
   Handle.show test.handle;
@@ -2416,7 +2426,11 @@ let%expect_test "show that scrolling out of a custom table will execute the pres
     Test.create
       ~map:big_map
       ~stats:false
-      (Test.Component.expert_for_testing_compute_presence ~collate ~presence ())
+      (Test.Component.expert_for_testing_compute_presence
+         ~theming:`Themed
+         ~collate
+         ~presence
+         ())
   in
   Bonsai.Var.set rank (Between (0, 10));
   Handle.show test.handle;
@@ -2510,7 +2524,7 @@ let%expect_test "what happens if the table body goes entirely off screen" =
       ~stats:false
       ~map:big_map
       ~visible_range:(5, 10)
-      (Test.Component.default ())
+      (Test.Component.default ~theming:`Themed ())
   in
   Handle.show test.handle;
   [%expect
@@ -2554,7 +2568,10 @@ let%expect_test "dynamic row height" =
       ~stats:false
       ~map:big_map
       ~visible_range:(5, 10)
-      (Test.Component.default ~row_height:(Bonsai.Var.value row_height_var) ())
+      (Test.Component.default
+         ~theming:`Themed
+         ~row_height:(Bonsai.Var.value row_height_var)
+         ())
   in
   Handle.show test.handle;
   [%expect
@@ -2722,6 +2739,7 @@ let%test_module "dynamic columns with visibility" =
         let%sub { view; _ } =
           Table_expert.component
             (module Int)
+            ~theming:`Themed
             ~focus:Table_expert.Focus.None
             ~row_height:(Value.return (`Px 20))
             ~columns:

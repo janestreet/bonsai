@@ -1,7 +1,8 @@
 open! Core
 open! Bonsai_web
-open Bonsai_web_ui_partial_render_table_protocol
-module Order = Order
+module Order = Bonsai_web_ui_partial_render_table_protocol.Order
+module Sort_state := Bonsai_web_ui_partial_render_table_protocol.Sort_state
+module Sort_kind := Bonsai_web_ui_partial_render_table_protocol.Sort_kind
 
 module For_testing : sig
   module Table_body = Table_body.For_testing
@@ -23,12 +24,12 @@ module Basic : sig
   end
 
   module Result : sig
-    type 'focus t =
+    type ('focus, 'column_id) t =
       { view : Vdom.Node.t
       ; for_testing : For_testing.t Lazy.t
       ; focus : 'focus
       ; num_filtered_rows : int
-      ; sortable_state : int Sortable.t
+      ; sortable_state : 'column_id Sortable.t
       }
     [@@deriving fields ~getters]
   end
@@ -39,8 +40,34 @@ module Basic : sig
         mix-and-match column kinds.  Read the doc comments for each of the
         submodules to learn more.  *)
 
-    type ('key, 'data) t
-    type ('key, 'data) columns := ('key, 'data) t
+    type ('key, 'data, 'column_id) t
+    type ('key, 'data, 'column_id) columns := ('key, 'data, 'column_id) t
+
+    module Indexed_col_id : sig
+      type t [@@deriving equal]
+
+      val of_int : int -> t
+      val to_int : t -> int
+    end
+
+    module Dynamic_experimental : sig
+      val build
+        :  ?sorts:('column_id Value.t -> ('key, 'data) Sort_kind.t option Computation.t)
+        -> ('column_id, _) Bonsai.comparator
+        -> columns:'column_id list Value.t
+        -> render_header:
+             ('column_id Value.t -> (Sort_state.t -> Vdom.Node.t) Computation.t)
+        -> render_cell:
+             ('column_id Value.t
+              -> 'key Value.t
+              -> 'data Value.t
+              -> Vdom.Node.t Computation.t)
+        -> ('key, 'data, 'column_id) columns
+
+      (** [Sortable] provides types, state, and ui helper functions to sort your table
+          data by one or more columns. *)
+      module Sortable = Column.Dynamic_experimental.Sortable
+    end
 
     module Dynamic_cells : sig
       (** Dynamic_cells is a column-specification format with the following
@@ -62,7 +89,7 @@ module Basic : sig
         -> ?visible:bool Value.t
              (** [visible] can be set to [false] to hide the whole column. *)
         -> header:(Sort_state.t -> Vdom.Node.t) Value.t
-             (** [header] determines the contents of the column header *)
+             (** [header] determines the contents of the column header. *)
         -> cell:(key:'key Value.t -> data:'data Value.t -> Vdom.Node.t Computation.t)
              (** [cell] is the function determines the contents of every cell in this column. *)
         -> unit
@@ -76,7 +103,7 @@ module Basic : sig
       val expand : label:Vdom.Node.t Value.t -> ('key, 'data) t -> ('key, 'data) t
 
       (** [lift] pulls a list of columns out into a column specification for use in the primary APIs  *)
-      val lift : ('key, 'data) t list -> ('key, 'data) columns
+      val lift : ('key, 'data) t list -> ('key, 'data, Indexed_col_id.t) columns
 
       (** [Sortable] provides types, state, and ui helper functions to sort your table
           data by one or more columns. *)
@@ -101,7 +128,7 @@ module Basic : sig
         -> ?initial_width:Css_gen.Length.t
         -> ?visible:bool (** [visible] can be set to [false] to hide the whole column. *)
         -> header:(Sort_state.t -> Vdom.Node.t)
-             (** [header] determines the contents of the column header *)
+             (** [header] determines the contents of the column header. *)
         -> cell:(key:'key -> data:'data -> Vdom.Node.t)
              (** [cell] is the function determines the contents of every cell in this column. *)
         -> unit
@@ -112,7 +139,7 @@ module Basic : sig
       val group : label:Vdom.Node.t -> ('key, 'data) t list -> ('key, 'data) t
 
       (** [lift] pulls a list of columns out into a column specification for use in the primary APIs  *)
-      val lift : ('key, 'data) t list Value.t -> ('key, 'data) columns
+      val lift : ('key, 'data) t list Value.t -> ('key, 'data, Indexed_col_id.t) columns
 
       (** [Sortable] provides types, state, and ui helper functions to sort your table
           data by one or more columns. *)
@@ -124,7 +151,8 @@ module Basic : sig
 
   (** This is the main UI component for the table content. *)
   val component
-    :  ?filter:(key:'key -> data:'data -> bool) Value.t
+    :  theming:Table_view.Theming.t
+    -> ?filter:(key:'key -> data:'data -> bool) Value.t
          (** An optional function may be provided, which filters the rows in the table. *)
     -> ?override_sort:
          ('key compare -> ('key * 'data) compare -> ('key * 'data) compare) Value.t
@@ -143,9 +171,9 @@ module Basic : sig
     -> row_height:[ `Px of int ] Value.t
          (** [row_height] is the height of every row in the table. If the row height
         is specified to be 0px or less, we instead use 1px. *)
-    -> columns:('key, 'data) Columns.t
+    -> columns:('key, 'data, 'column_id) Columns.t
     -> ('key, 'data, 'cmp) Map.t Value.t (** The input data for the table *)
-    -> 'focus Result.t Computation.t
+    -> ('focus, 'column_id) Result.t Computation.t
 end
 
 module Expert : sig
@@ -185,6 +213,23 @@ module Expert : sig
   module Columns : sig
     type ('key, 'data) t
     type ('key, 'data) columns := ('key, 'data) t
+
+    module Dynamic_experimental : sig
+      val build
+        :  ('column_id, 'a) Bonsai.comparator
+        -> columns:'column_id list Value.t
+        -> render_header:('column_id Value.t -> Vdom.Node.t Computation.t)
+        -> render_cell:
+             ('column_id Value.t
+              -> 'key Value.t
+              -> 'data Value.t
+              -> Vdom.Node.t Computation.t)
+        -> ('key, 'data) columns
+
+      (** [Sortable] provides types, state, and ui helper functions to sort your table
+          data by one or more columns. *)
+      module Sortable = Column.Dynamic_experimental.Sortable
+    end
 
     module Dynamic_cells : sig
       type ('key, 'data) t
@@ -249,7 +294,8 @@ module Expert : sig
     -> ('k, 'v) Collated.t Computation.t
 
   val component
-    :  ?preload_rows:int
+    :  theming:Table_view.Theming.t
+    -> ?preload_rows:int
          (** [preload_rows] is the number of rows that are maintained before and after the
         viewport range. This number can have a significant effect on performance: too
         small and scrolling might be choppy; too large and you start to lose some of the

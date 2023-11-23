@@ -121,7 +121,10 @@ button:hover {
 let uri_form ~default =
   let%sub form =
     let%sub form =
-      Form.Elements.Textbox.string ~extra_attrs:(Value.return [ Css.uri_input ]) ()
+      Form.Elements.Textbox.string
+        ~allow_updates_when_focused:`Never
+        ~extra_attrs:(Value.return [ Css.uri_input ])
+        ()
     in
     let%arr form = form in
     let uri_form =
@@ -147,6 +150,7 @@ let typed_url_form
   let%sub form =
     let%sub form =
       Form.Elements.Textbox.sexpable
+        ~allow_updates_when_focused:`Never
         ~extra_attrs:(Value.return [ Css.sexp_input ])
         (module M)
     in

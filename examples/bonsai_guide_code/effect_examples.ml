@@ -32,7 +32,9 @@ module Request_state = struct
 end
 
 let uppercase_rpc_sender =
-  let%sub textbox = Forms.Elements.Textbox.string () in
+  let%sub textbox =
+    Forms.Elements.Textbox.string ~allow_updates_when_focused:`Always ()
+  in
   let%sub result_state =
     Bonsai.state
       Empty
@@ -61,7 +63,9 @@ let () = Util.run uppercase_rpc_sender ~id:"uppercase_rpc_sender"
 
 (* $MDX part-begin=uppercase_rpc_sender_bind *)
 let uppercase_rpc_sender_bind =
-  let%sub textbox = Forms.Elements.Textbox.string () in
+  let%sub textbox =
+    Forms.Elements.Textbox.string ~allow_updates_when_focused:`Always ()
+  in
   let%sub result_state =
     Bonsai.state
       Empty

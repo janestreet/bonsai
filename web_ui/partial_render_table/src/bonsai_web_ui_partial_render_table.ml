@@ -38,6 +38,7 @@ module Expert = struct
 
     module Dynamic_cells = Column.Dynamic_cells
     module Dynamic_columns = Column.Dynamic_columns
+    module Dynamic_experimental = Column.Dynamic_experimental
   end
 
   module Row_height_model = struct
@@ -52,6 +53,7 @@ module Expert = struct
 
   let implementation
     (type key presence data cmp)
+    ~theming
     ~preload_rows
     (key : (key, cmp) Bonsai.comparator)
     ~(focus : (_, presence, key) Focus.Kind.t)
@@ -60,6 +62,11 @@ module Expert = struct
     ~assoc
     (collated : (key, data) Collated.t Value.t)
     =
+    let%sub theme = View.Theme.current in
+    let%sub themed_attrs =
+      let%arr theme = theme in
+      Table_view.Themed.create theme theming
+    in
     let%sub row_height =
       let%arr (`Px row_height) = row_height in
       `Px (Int.max 1 row_height)
@@ -324,6 +331,7 @@ module Expert = struct
     let on_row_click = Focus.get_on_row_click focus_kind focus in
     let%sub body, body_for_testing =
       Table_body.component
+        ~themed_attrs
         ~comparator:key
         ~row_height
         ~leaves
@@ -338,6 +346,7 @@ module Expert = struct
     let%sub head =
       Table_header.component
         headers
+        ~themed_attrs
         ~column_widths
         ~set_column_width
         ~set_header_client_rect
@@ -360,8 +369,10 @@ module Expert = struct
       and body = body
       and private_body_classname = private_body_classname
       and vis_change_attr = vis_change_attr
-      and total_height = total_height in
+      and total_height = total_height
+      and themed_attrs = themed_attrs in
       Table_view.Table.view
+        themed_attrs
         ~private_body_classname
         ~vis_change_attr
         ~total_height
@@ -394,6 +405,7 @@ module Expert = struct
 
   let component
     (type key focus presence data cmp)
+    ~theming
     ?(preload_rows = default_preload)
     (key : (key, cmp) Bonsai.comparator)
     ~(focus : (focus, presence, key) Focus.Kind.t)
@@ -405,7 +417,7 @@ module Expert = struct
     let module T = (val vtable) in
     let%sub headers = T.headers value in
     let assoc = T.instantiate_cells value key in
-    implementation ~preload_rows key ~focus ~row_height ~headers ~assoc collated
+    implementation ~preload_rows ~theming key ~focus ~row_height ~headers ~assoc collated
   ;;
 
   let collate
@@ -446,21 +458,23 @@ module Basic = struct
   end
 
   module Result = struct
-    type 'focus t =
+    type ('focus, 'column_id) t =
       { view : Vdom.Node.t
       ; for_testing : For_testing.t Lazy.t
       ; focus : 'focus
       ; num_filtered_rows : int
-      ; sortable_state : int Sortable.t
+      ; sortable_state : 'column_id Sortable.t
       }
     [@@deriving fields ~getters]
   end
 
   module Columns = struct
-    type ('key, 'data) t = ('key, 'data) Column_intf.with_sorter
+    type ('key, 'data, 'column_id) t = ('key, 'data, 'column_id) Column_intf.with_sorter
 
+    module Indexed_col_id = Column.Indexed_col_id
     module Dynamic_cells = Column.Dynamic_cells_with_sorter
     module Dynamic_columns = Column.Dynamic_columns_with_sorter
+    module Dynamic_experimental = Column.Dynamic_experimental_with_sorter
   end
 
   module Rank_range = struct
@@ -470,8 +484,9 @@ module Basic = struct
   type 'a compare = 'a -> 'a -> int
 
   let component
-    : type key presence focus data cmp.
-      ?filter:(key:key -> data:data -> bool) Value.t
+    : type key presence focus data cmp column_id.
+      theming:Table_view.Theming.t
+      -> ?filter:(key:key -> data:data -> bool) Value.t
       -> ?override_sort:
            (key compare -> (key * data) compare -> (key * data) compare) Value.t
       -> ?default_sort:(key * data) compare Value.t
@@ -479,11 +494,12 @@ module Basic = struct
       -> (key, cmp) Bonsai.comparator
       -> focus:(focus, presence, key) Focus.t
       -> row_height:[ `Px of int ] Value.t
-      -> columns:(key, data) Column_intf.with_sorter
+      -> columns:(key, data, column_id) Column_intf.with_sorter
       -> (key, data, cmp) Map.t Value.t
-      -> focus Result.t Computation.t
+      -> (focus, column_id) Result.t Computation.t
     =
-    fun ?filter
+    fun ~theming
+        ?filter
         ?override_sort
         ?default_sort
         ?(preload_rows = default_preload)
@@ -513,8 +529,11 @@ module Basic = struct
         ~sexp_of_model:[%sexp_of: Rank_range.t]
         ~equal:[%equal: Rank_range.t]
     in
-    let%sub sortable_state = Sortable.state (module Int) in
-    let (Y { value; vtable }) = columns in
+    let (Y { value; vtable; col_id }) = columns in
+    let module Col_id = (val col_id) in
+    let%sub sortable_state =
+      Sortable.state ~equal:(Comparable.equal Col_id.comparator.compare) ()
+    in
     let module Column = (val vtable) in
     let assoc = Column.instantiate_cells value comparator in
     let default_sort =
@@ -566,6 +585,7 @@ module Basic = struct
     let%sub ({ range = viewed_range; _ } as result) =
       Expert.implementation
         ~preload_rows
+        ~theming
         comparator
         ~focus
         ~row_height

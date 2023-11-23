@@ -41,6 +41,7 @@ let item ~index:_ ~source _which _data =
           ~extra_attrs:[ S.text_input ]
           ~value:text
           ~on_input:set_text
+          ~allow_updates_when_focused:`Never
           ()
       ]
   in
@@ -66,7 +67,9 @@ let component =
       (let%map extend_input = extend_input in
        extend_input ())
   in
-  let%sub num_lists = Form.Elements.Number.int ~default:1 ~step:1 () in
+  let%sub num_lists =
+    Form.Elements.Number.int ~default:1 ~step:1 ~allow_updates_when_focused:`Never ()
+  in
   let%sub whiches =
     let%arr num_lists = num_lists in
     let length = Int.max 0 (Form.value_or_default num_lists ~default:1) in

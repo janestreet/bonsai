@@ -35,6 +35,7 @@ let component =
       ~extra_attrs:
         (Value.return [ Vdom.Attr.many [ Card_like.class_; Search_bar.class_ ] ])
       ~placeholder:"Search icons"
+      ~allow_updates_when_focused:`Never
       ()
   in
   let%arr search_bar = search_bar in

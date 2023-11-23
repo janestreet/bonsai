@@ -20,11 +20,14 @@ module type S_with_sorter = sig
   type t
   type key
   type data
+  type column_id
+  type column_id_cmp
 
   val headers_and_sorters
     :  t
-    -> int Sortable.t Value.t
-    -> ((key, data) Sort_kind.t Int.Map.t * Header_tree.t) Computation.t
+    -> column_id Sortable.t Value.t
+    -> ((column_id, (key, data) Sort_kind.t, column_id_cmp) Map.t * Header_tree.t)
+       Computation.t
 
   val instantiate_cells
     :  t
@@ -40,10 +43,16 @@ type ('key, 'data) t =
       }
       -> ('key, 'data) t
 
-type ('key, 'data) with_sorter =
+type ('key, 'data, 'column_id) with_sorter =
   | Y :
       { value : 'a
       ; vtable :
-          (module S_with_sorter with type t = 'a and type key = 'key and type data = 'data)
+          (module S_with_sorter
+             with type t = 'a
+              and type key = 'key
+              and type data = 'data
+              and type column_id = 'column_id
+              and type column_id_cmp = 'column_id_cmp)
+      ; col_id : ('column_id, 'column_id_cmp) Bonsai.comparator
       }
-      -> ('key, 'data) with_sorter
+      -> ('key, 'data, 'column_id) with_sorter

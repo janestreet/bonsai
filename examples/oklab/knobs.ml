@@ -50,7 +50,14 @@ module For_gradient = struct
         let label_for_field = `Inferred
 
         let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t = function
-          | Steps -> Form.Elements.Range.int ~min:1 ~max:200 ~default:50 ~step:1 ()
+          | Steps ->
+            Form.Elements.Range.int
+              ~min:1
+              ~max:200
+              ~default:50
+              ~step:1
+              ~allow_updates_when_focused:`Never
+              ()
         ;;
       end)
   ;;
@@ -77,9 +84,21 @@ module For_overlay = struct
 
         let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t = function
           | Left_alpha ->
-            Form.Elements.Range.float ~min:0.0 ~max:1.0 ~default:0.5 ~step:0.01 ()
+            Form.Elements.Range.float
+              ~min:0.0
+              ~max:1.0
+              ~default:0.5
+              ~step:0.01
+              ~allow_updates_when_focused:`Never
+              ()
           | Right_alpha ->
-            Form.Elements.Range.float ~min:0.0 ~max:1.0 ~default:0.5 ~step:0.01 ()
+            Form.Elements.Range.float
+              ~min:0.0
+              ~max:1.0
+              ~default:0.5
+              ~step:0.01
+              ~allow_updates_when_focused:`Never
+              ()
         ;;
       end)
   ;;

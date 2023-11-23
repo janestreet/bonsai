@@ -83,33 +83,36 @@ end
 module Textbox = struct
   open Textbox
 
-  let string ?extra_attrs ?placeholder () =
+  let string ?extra_attrs ?placeholder ~allow_updates_when_focused () =
     Conversion.with_extra_attrs
-      (fun ~extra_attrs -> string ~extra_attrs ?placeholder ())
+      (fun ~extra_attrs ->
+        string ~extra_attrs ?placeholder ~allow_updates_when_focused ())
       extra_attrs
   ;;
 
-  let int ?extra_attrs ?placeholder () =
+  let int ?extra_attrs ?placeholder ~allow_updates_when_focused () =
     Conversion.with_extra_attrs
-      (fun ~extra_attrs -> int ~extra_attrs ?placeholder ())
+      (fun ~extra_attrs -> int ~extra_attrs ?placeholder ~allow_updates_when_focused ())
       extra_attrs
   ;;
 
-  let float ?extra_attrs ?placeholder () =
+  let float ?extra_attrs ?placeholder ~allow_updates_when_focused () =
     Conversion.with_extra_attrs
-      (fun ~extra_attrs -> float ~extra_attrs ?placeholder ())
+      (fun ~extra_attrs -> float ~extra_attrs ?placeholder ~allow_updates_when_focused ())
       extra_attrs
   ;;
 
-  let sexpable ?extra_attrs ?placeholder model =
+  let sexpable ?extra_attrs ?placeholder ~allow_updates_when_focused model =
     Conversion.with_extra_attrs
-      (fun ~extra_attrs -> sexpable ~extra_attrs ?placeholder model)
+      (fun ~extra_attrs ->
+        sexpable ~extra_attrs ?placeholder ~allow_updates_when_focused model)
       extra_attrs
   ;;
 
-  let stringable ?extra_attrs ?placeholder model =
+  let stringable ?extra_attrs ?placeholder ~allow_updates_when_focused model =
     Conversion.with_extra_attrs
-      (fun ~extra_attrs -> stringable ~extra_attrs ?placeholder model)
+      (fun ~extra_attrs ->
+        stringable ~extra_attrs ?placeholder ~allow_updates_when_focused model)
       extra_attrs
   ;;
 end
@@ -117,15 +120,17 @@ end
 module Password = struct
   open Password
 
-  let string ?extra_attrs ?placeholder () =
+  let string ?extra_attrs ?placeholder ~allow_updates_when_focused () =
     Conversion.with_extra_attrs
-      (fun ~extra_attrs -> string ~extra_attrs ?placeholder ())
+      (fun ~extra_attrs ->
+        string ~extra_attrs ?placeholder ~allow_updates_when_focused ())
       extra_attrs
   ;;
 
-  let stringable ?extra_attrs ?placeholder model =
+  let stringable ?extra_attrs ?placeholder ~allow_updates_when_focused model =
     Conversion.with_extra_attrs
-      (fun ~extra_attrs -> stringable ~extra_attrs ?placeholder model)
+      (fun ~extra_attrs ->
+        stringable ~extra_attrs ?placeholder ~allow_updates_when_focused model)
       extra_attrs
   ;;
 end
@@ -133,33 +138,36 @@ end
 module Textarea = struct
   open Textarea
 
-  let string ?extra_attrs ?placeholder () =
+  let string ?extra_attrs ?placeholder ~allow_updates_when_focused () =
     Conversion.with_extra_attrs
-      (fun ~extra_attrs -> string ~extra_attrs ?placeholder ())
+      (fun ~extra_attrs ->
+        string ~extra_attrs ?placeholder ~allow_updates_when_focused ())
       extra_attrs
   ;;
 
-  let int ?extra_attrs ?placeholder () =
+  let int ?extra_attrs ?placeholder ~allow_updates_when_focused () =
     Conversion.with_extra_attrs
-      (fun ~extra_attrs -> int ~extra_attrs ?placeholder ())
+      (fun ~extra_attrs -> int ~extra_attrs ?placeholder ~allow_updates_when_focused ())
       extra_attrs
   ;;
 
-  let float ?extra_attrs ?placeholder () =
+  let float ?extra_attrs ?placeholder ~allow_updates_when_focused () =
     Conversion.with_extra_attrs
-      (fun ~extra_attrs -> float ~extra_attrs ?placeholder ())
+      (fun ~extra_attrs -> float ~extra_attrs ?placeholder ~allow_updates_when_focused ())
       extra_attrs
   ;;
 
-  let sexpable ?extra_attrs ?placeholder model =
+  let sexpable ?extra_attrs ?placeholder ~allow_updates_when_focused model =
     Conversion.with_extra_attrs
-      (fun ~extra_attrs -> sexpable ~extra_attrs ?placeholder model)
+      (fun ~extra_attrs ->
+        sexpable ~extra_attrs ?placeholder ~allow_updates_when_focused model)
       extra_attrs
   ;;
 
-  let stringable ?extra_attrs ?placeholder model =
+  let stringable ?extra_attrs ?placeholder ~allow_updates_when_focused model =
     Conversion.with_extra_attrs
-      (fun ~extra_attrs -> stringable ~extra_attrs ?placeholder model)
+      (fun ~extra_attrs ->
+        stringable ~extra_attrs ?placeholder ~allow_updates_when_focused model)
       extra_attrs
   ;;
 end
@@ -380,23 +388,38 @@ module Date_time = struct
   open Date_time
   module Span_unit = Span_unit
 
-  let date_opt ?extra_attrs () =
-    Conversion.with_extra_attrs (fun ~extra_attrs -> date_opt ~extra_attrs ()) extra_attrs
+  let date_opt ?extra_attrs ~allow_updates_when_focused () =
+    Conversion.with_extra_attrs
+      (fun ~extra_attrs -> date_opt ~extra_attrs ~allow_updates_when_focused ())
+      extra_attrs
   ;;
 
-  let date ?extra_attrs () =
-    Conversion.with_extra_attrs (fun ~extra_attrs -> date ~extra_attrs ()) extra_attrs
+  let date ?extra_attrs ~allow_updates_when_focused () =
+    Conversion.with_extra_attrs
+      (fun ~extra_attrs -> date ~extra_attrs ~allow_updates_when_focused ())
+      extra_attrs
   ;;
 
-  let time_opt ?extra_attrs () =
-    Conversion.with_extra_attrs (fun ~extra_attrs -> time_opt ~extra_attrs ()) extra_attrs
+  let time_opt ?extra_attrs ~allow_updates_when_focused () =
+    Conversion.with_extra_attrs
+      (fun ~extra_attrs -> time_opt ~extra_attrs ~allow_updates_when_focused ())
+      extra_attrs
   ;;
 
-  let time ?extra_attrs () =
-    Conversion.with_extra_attrs (fun ~extra_attrs -> time ~extra_attrs ()) extra_attrs
+  let time ?extra_attrs ~allow_updates_when_focused () =
+    Conversion.with_extra_attrs
+      (fun ~extra_attrs -> time ~extra_attrs ~allow_updates_when_focused ())
+      extra_attrs
   ;;
 
-  let time_span_opt ?extra_unit_attrs ?extra_amount_attrs ?default_unit ?default () =
+  let time_span_opt
+    ?extra_unit_attrs
+    ?extra_amount_attrs
+    ?default_unit
+    ?default
+    ~allow_updates_when_focused
+    ()
+    =
     Conversion.with_extra_attrs
       (fun ~extra_attrs:extra_amount_attrs ->
         Date_time.time_span_opt
@@ -404,11 +427,19 @@ module Date_time = struct
           ~extra_amount_attrs
           ?default_unit
           ?default
+          ~allow_updates_when_focused
           ())
       extra_amount_attrs
   ;;
 
-  let time_span ?extra_unit_attrs ?extra_amount_attrs ?default_unit ?default () =
+  let time_span
+    ?extra_unit_attrs
+    ?extra_amount_attrs
+    ?default_unit
+    ?default
+    ~allow_updates_when_focused
+    ()
+    =
     Conversion.with_extra_attrs
       (fun ~extra_attrs:extra_amount_attrs ->
         Date_time.time_span
@@ -416,19 +447,20 @@ module Date_time = struct
           ~extra_amount_attrs
           ?default_unit
           ?default
+          ~allow_updates_when_focused
           ())
       extra_amount_attrs
   ;;
 
-  let datetime_local_opt ?extra_attrs () =
+  let datetime_local_opt ?extra_attrs ~allow_updates_when_focused () =
     Conversion.with_extra_attrs
-      (fun ~extra_attrs -> datetime_local_opt ~extra_attrs ())
+      (fun ~extra_attrs -> datetime_local_opt ~extra_attrs ~allow_updates_when_focused ())
       extra_attrs
   ;;
 
-  let datetime_local ?extra_attrs () =
+  let datetime_local ?extra_attrs ~allow_updates_when_focused () =
     Conversion.with_extra_attrs
-      (fun ~extra_attrs -> datetime_local ~extra_attrs ())
+      (fun ~extra_attrs -> datetime_local ~extra_attrs ~allow_updates_when_focused ())
       extra_attrs
   ;;
 
@@ -437,28 +469,34 @@ module Date_time = struct
 
     (* We don't attach ids on date range functions because they're not meaningful: it's
        not clear what the cursor should focus when the label is clicked. *)
-    let date_opt ?extra_attr ?allow_equal () =
-      Conversion.don't_attach_id (date_opt ?extra_attr ?allow_equal ())
+    let date_opt ?extra_attr ?allow_equal ~allow_updates_when_focused () =
+      Conversion.don't_attach_id
+        (date_opt ?extra_attr ?allow_equal ~allow_updates_when_focused ())
     ;;
 
-    let date ?extra_attr ?allow_equal () =
-      Conversion.don't_attach_id (date ?extra_attr ?allow_equal ())
+    let date ?extra_attr ?allow_equal ~allow_updates_when_focused () =
+      Conversion.don't_attach_id
+        (date ?extra_attr ?allow_equal ~allow_updates_when_focused ())
     ;;
 
-    let time_opt ?extra_attr ?allow_equal () =
-      Conversion.don't_attach_id (time_opt ?extra_attr ?allow_equal ())
+    let time_opt ?extra_attr ?allow_equal ~allow_updates_when_focused () =
+      Conversion.don't_attach_id
+        (time_opt ?extra_attr ?allow_equal ~allow_updates_when_focused ())
     ;;
 
-    let time ?extra_attr ?allow_equal () =
-      Conversion.don't_attach_id (time ?extra_attr ?allow_equal ())
+    let time ?extra_attr ?allow_equal ~allow_updates_when_focused () =
+      Conversion.don't_attach_id
+        (time ?extra_attr ?allow_equal ~allow_updates_when_focused ())
     ;;
 
-    let datetime_local_opt ?extra_attr ?allow_equal () =
-      Conversion.don't_attach_id (datetime_local_opt ?extra_attr ?allow_equal ())
+    let datetime_local_opt ?extra_attr ?allow_equal ~allow_updates_when_focused () =
+      Conversion.don't_attach_id
+        (datetime_local_opt ?extra_attr ?allow_equal ~allow_updates_when_focused ())
     ;;
 
-    let datetime_local ?extra_attr ?allow_equal () =
-      Conversion.don't_attach_id (datetime_local ?extra_attr ?allow_equal ())
+    let datetime_local ?extra_attr ?allow_equal ~allow_updates_when_focused () =
+      Conversion.don't_attach_id
+        (datetime_local ?extra_attr ?allow_equal ~allow_updates_when_focused ())
     ;;
   end
 end
@@ -466,17 +504,43 @@ end
 module Multiselect = struct
   open Multiselect
 
-  let set ?extra_attrs ?to_string ?default_selection_status m input_list =
+  let set
+    ?extra_attrs
+    ?to_string
+    ?default_selection_status
+    ~allow_updates_when_focused
+    m
+    input_list
+    =
     Conversion.with_extra_attrs
       (fun ~extra_attrs ->
-        set ~extra_attrs ?to_string ?default_selection_status m input_list)
+        set
+          ~extra_attrs
+          ?to_string
+          ?default_selection_status
+          ~allow_updates_when_focused
+          m
+          input_list)
       extra_attrs
   ;;
 
-  let list ?extra_attrs ?to_string ?default_selection_status m input_list =
+  let list
+    ?extra_attrs
+    ?to_string
+    ?default_selection_status
+    ~allow_updates_when_focused
+    m
+    input_list
+    =
     Conversion.with_extra_attrs
       (fun ~extra_attrs ->
-        list ~extra_attrs ?to_string ?default_selection_status m input_list)
+        list
+          ~extra_attrs
+          ?to_string
+          ?default_selection_status
+          ~allow_updates_when_focused
+          m
+          input_list)
       extra_attrs
   ;;
 end
@@ -504,6 +568,13 @@ module Multiple = struct
       extra_input_attr
   ;;
 
+  let extract_add_element_text = function
+    | Some value ->
+      let%arr value = value in
+      Some value
+    | None -> Bonsai.const None
+  ;;
+
   let map_list_view
     ?element_group_label
     ?add_element_text
@@ -511,13 +582,7 @@ module Multiple = struct
     form
     ~view_item
     =
-    let%sub add_element_text =
-      match add_element_text with
-      | Some value ->
-        let%arr value = value in
-        Some value
-      | None -> Bonsai.const None
-    in
+    let%sub add_element_text = extract_add_element_text add_element_text in
     let%arr form = form
     and add_element_text = add_element_text in
     map_view form ~f:(fun { items; add_element = append } ->
@@ -530,6 +595,40 @@ module Multiple = struct
            ~legacy_button_position:button_placement)
   ;;
 
+  let map_nonempty_list_view
+    ?element_group_label
+    ?add_element_text
+    ?(button_placement = `Indented)
+    form
+    ~view_item
+    =
+    let%sub add_element_text = extract_add_element_text add_element_text in
+    let%arr form = form
+    and add_element_text = add_element_text in
+    map_view form ~f:(fun { hd = { view = hd_view; _ }; tl; add_element = append } ->
+      (* [Remove_view Vdom.Node.none] works but leads to a not quite correct
+         result in the end, since the empty delete button becomes an empty <tr> that
+         takes up 2 pixels of height. It's not that big of a deal though, since people
+         should move to Form2 anyways eventually. *)
+      let hd_view =
+        View.list_item ~view:(view_item hd_view) ~remove_item:(Remove_view Vdom.Node.none)
+      in
+      let tl_views =
+        List.map tl ~f:(fun { form = { view; _ }; remove } ->
+          let element_label =
+            let%map.Option element_group_label = element_group_label in
+            fun ~delete_button i -> element_group_label ~delete_button (i + Int.one)
+          in
+          View.list_item
+            ~view:(view_item view)
+            ~remove_item:(Remove_info { remove; element_label }))
+      in
+      View.list
+        (hd_view :: tl_views)
+        ~append_item:(Append_info { append; text = add_element_text })
+        ~legacy_button_position:button_placement)
+  ;;
+
   let list
     (type a)
     ?element_group_label
@@ -540,6 +639,23 @@ module Multiple = struct
     =
     let%sub form = list t in
     map_list_view
+      ?element_group_label
+      ?add_element_text
+      ?button_placement
+      form
+      ~view_item:Fn.id
+  ;;
+
+  let nonempty_list
+    (type a)
+    ?element_group_label
+    ?add_element_text
+    ?button_placement
+    (t : a Form.t Computation.t)
+    : a Nonempty_list.t Form.t Computation.t
+    =
+    let%sub form = nonempty_list t in
+    map_nonempty_list_view
       ?element_group_label
       ?add_element_text
       ?button_placement
@@ -571,15 +687,17 @@ end
 module Number = struct
   open Number
 
-  let int ?extra_attrs ?min ?max ?default ~step () =
+  let int ?extra_attrs ?min ?max ?default ~step ~allow_updates_when_focused () =
     Conversion.with_extra_attrs
-      (fun ~extra_attrs -> int ~extra_attrs ?min ?max ?default ~step ())
+      (fun ~extra_attrs ->
+        int ~extra_attrs ?min ?max ?default ~step ~allow_updates_when_focused ())
       extra_attrs
   ;;
 
-  let float ?extra_attrs ?min ?max ?default ~step () =
+  let float ?extra_attrs ?min ?max ?default ~step ~allow_updates_when_focused () =
     Conversion.with_extra_attrs
-      (fun ~extra_attrs -> float ~extra_attrs ?min ?max ?default ~step ())
+      (fun ~extra_attrs ->
+        float ~extra_attrs ?min ?max ?default ~step ~allow_updates_when_focused ())
       extra_attrs
   ;;
 end
@@ -587,17 +705,55 @@ end
 module Range = struct
   open Range
 
-  let int ?extra_attrs ?min ?max ?left_label ?right_label ?default ~step () =
+  let int
+    ?extra_attrs
+    ?min
+    ?max
+    ?left_label
+    ?right_label
+    ?default
+    ~step
+    ~allow_updates_when_focused
+    ()
+    =
     Conversion.with_extra_attrs
       (fun ~extra_attrs ->
-        int ~extra_attrs ?min ?max ?left_label ?right_label ?default ~step ())
+        int
+          ~extra_attrs
+          ?min
+          ?max
+          ?left_label
+          ?right_label
+          ?default
+          ~step
+          ~allow_updates_when_focused
+          ())
       extra_attrs
   ;;
 
-  let float ?extra_attrs ?min ?max ?left_label ?right_label ?default ~step () =
+  let float
+    ?extra_attrs
+    ?min
+    ?max
+    ?left_label
+    ?right_label
+    ?default
+    ~step
+    ~allow_updates_when_focused
+    ()
+    =
     Conversion.with_extra_attrs
       (fun ~extra_attrs ->
-        float ~extra_attrs ?min ?max ?left_label ?right_label ?default ~step ())
+        float
+          ~extra_attrs
+          ?min
+          ?max
+          ?left_label
+          ?right_label
+          ?default
+          ~step
+          ~allow_updates_when_focused
+          ())
       extra_attrs
   ;;
 end

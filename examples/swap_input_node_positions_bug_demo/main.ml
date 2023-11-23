@@ -11,6 +11,7 @@ let text_input =
   Vdom_input_widgets.Entry.text
     ~merge_behavior:Legacy_dont_merge
     ~value:text_contents
+    ~allow_updates_when_focused:`Never
     ~on_input:set_text_contents
     ()
 ;;
@@ -24,6 +25,7 @@ let date_input =
   Vdom_input_widgets.Entry.date
     ~merge_behavior:Legacy_dont_merge
     ~value:date_contents
+    ~allow_updates_when_focused:`Never
     ~on_input:set_date_contents
     ()
 ;;

@@ -90,7 +90,15 @@ module Random_time_span = struct
         module Typed_field = Typed_field
 
         let time_span_form ~max ~default =
-          let%sub form = Form.Elements.Range.float ~min:0.0 ~max ~step:0.1 ~default () in
+          let%sub form =
+            Form.Elements.Range.float
+              ~min:0.0
+              ~max
+              ~step:0.1
+              ~default
+              ~allow_updates_when_focused:`Never
+              ()
+          in
           let%arr form = form in
           Form.project form ~parse_exn:Time_ns.Span.of_sec ~unparse:Time_ns.Span.to_sec
         ;;
@@ -100,6 +108,7 @@ module Random_time_span = struct
           | Extra_duration -> time_span_form ~max:2.0 ~default:default_extra_duration
           | Chance_of_getting_extra_duration ->
             Form.Elements.Range.float
+              ~allow_updates_when_focused:`Never
               ~min:0.0
               ~max:1.0
               ~step:0.1

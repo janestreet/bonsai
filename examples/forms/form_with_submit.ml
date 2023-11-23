@@ -13,8 +13,8 @@ module T = struct
   let label_for_field = `Inferred
 
   let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t = function
-    | A -> E.Multiple.list (E.Textbox.int ())
-    | B -> E.Textbox.string ()
+    | A -> E.Multiple.list (E.Textbox.int ~allow_updates_when_focused:`Never ())
+    | B -> E.Textbox.string ~allow_updates_when_focused:`Never ()
   ;;
 end
 

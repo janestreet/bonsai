@@ -79,7 +79,7 @@ module Streamable_plain_rpc = struct
     end
 
     include T
-    include Diffable.Make_streamable_rpc (T) (T.Update.Diff)
+    include Legacy_diffable.Make_streamable_rpc (T) (T.Update.Diff)
   end
 
   include Streamable.Plain_rpc.Make (struct

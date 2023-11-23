@@ -5,7 +5,8 @@ open! Js_of_ocaml
 open! Incr_map_collate
 
 val component
-  :  Header_tree.t Value.t
+  :  themed_attrs:Table_view.Themed.t Value.t
+  -> Header_tree.t Value.t
   -> column_widths:Column_size.t Int.Map.t Value.t
   -> set_column_width:(index:int -> [ `Px_float of float ] -> unit Vdom.Effect.t) Value.t
   -> set_header_client_rect:

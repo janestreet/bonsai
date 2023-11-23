@@ -118,6 +118,25 @@ module Variant = struct
     val initial_choice : [ `First_constructor | `Empty | `This of Typed_variant.Packed.t ]
   end
 
+  module type S_set = sig
+    include Comparator.S
+    module Typed_variant : Typed_variants_lib.S with type derived_on = t
+
+    val label_for_variant
+      : [ `Inferred
+        | `Computed of 'a Typed_variant.t -> string
+        | `Dynamic of (Typed_variant.Packed.t -> string) Value.t
+        ]
+
+    val sexp_of_variant_argument
+      : [ `Use_sexp_of_variant | `Custom of 'a Typed_variant.t -> 'a -> Sexp.t ]
+
+    val form_for_variant
+      :  'a Typed_variant.t
+      -> ('a, 'cmp) Bonsai.comparator
+      -> ('a, 'cmp) Set.t Form.t Computation.t
+  end
+
   module type Opts = sig
     type t [@@deriving sexp, equal, enumerate, compare]
   end
@@ -334,5 +353,68 @@ module Variant = struct
            (Form.project
               ~parse_exn:Transformed.some_val
               ~unparse:(Option.value_map ~f:Transformed.some ~default:Transformed.none))
+  ;;
+
+  let attach_variant_name_to_error name t =
+    Form.map_error t ~f:(Error.tag ~tag:(sprintf "in variant " ^ name))
+  ;;
+
+  let make_set
+    (type a cmp)
+    (module M : S_set with type t = a and type comparator_witness = cmp)
+    : (a, cmp) Set.t Form.t Computation.t
+    =
+    Variant.make_set_without_tagging_errors
+      (module struct
+        include M
+
+        type variant_view = Form_view.t
+        type resulting_view = Form_view.t
+
+        let get_label =
+          match M.label_for_variant with
+          | `Inferred ->
+            Value.return (fun t ->
+              Form_view.sexp_to_pretty_string M.Typed_variant.Packed.sexp_of_t t)
+          | `Computed f -> Value.return (fun { M.Typed_variant.Packed.f = T t } -> f t)
+          | `Dynamic f -> f
+        ;;
+
+        let form_for_variant
+          : type a cmp.
+            a Typed_variant.t
+            -> (a, cmp) Bonsai.comparator
+            -> (a, cmp) Set.t Form.t Computation.t
+          =
+          fun variant comparator ->
+          let%sub form = M.form_for_variant variant comparator in
+          let%sub form = Form.Dynamic.error_hint form in
+          let%arr form = form
+          and get_label = get_label in
+          let label = get_label { M.Typed_variant.Packed.f = T variant } in
+          Form.Private.suggest_label label form |> attach_variant_name_to_error label
+        ;;
+
+        type form_of_variant_fn =
+          { f :
+              'a.
+              'a Typed_variant.t -> ('a, variant_view) Variant.Packed_set_form.t Value.t
+          }
+
+        let finalize_view { f } =
+          let all_variants =
+            M.Typed_variant.Packed.all
+            |> List.map ~f:(fun ({ f = T variant } as packed) ->
+                 let%map (Variant.Packed_set_form.T { form; _ }) = f variant in
+                 packed, Form.view form)
+            |> Value.all
+          in
+          let%arr all_variants = all_variants
+          and get_label = get_label in
+          List.map all_variants ~f:(fun (packed, view) ->
+            { Form_view.field_name = get_label packed; field_view = view })
+          |> Form_view.record
+        ;;
+      end)
   ;;
 end

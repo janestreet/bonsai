@@ -104,6 +104,7 @@ let component =
       ~merge_behavior:Legacy_dont_merge
       ~value:text
       ~on_input:inject_text
+      ~allow_updates_when_focused:`Never
       ()
   in
   let size_slider = slider ~min:1. ~max:200. ~value:size ~inject:inject_size in

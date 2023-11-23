@@ -6,7 +6,7 @@ module Form = Bonsai_web_ui_form
 
 (* $MDX part-begin=form_textbox_value *)
 let textbox_value =
-  let%sub textbox = Form.Elements.Textbox.string () in
+  let%sub textbox = Form.Elements.Textbox.string ~allow_updates_when_focused:`Always () in
   let%arr textbox = textbox >>| Form.label "my textbox" in
   let value = Form.value textbox in
   Vdom.Node.div
@@ -29,7 +29,7 @@ let alert =
 (* $MDX part-begin=view_with_submission *)
 
 let textbox_on_submit =
-  let%sub textbox = Form.Elements.Textbox.string () in
+  let%sub textbox = Form.Elements.Textbox.string ~allow_updates_when_focused:`Always () in
   let%arr textbox = textbox in
   textbox
   |> Form.label "text to alert"
@@ -42,7 +42,7 @@ let () = Util.run textbox_on_submit ~id:"form_textbox_on_submit"
 
 (* $MDX part-begin=form_set *)
 let form_set =
-  let%sub textbox = Form.Elements.Textbox.string () in
+  let%sub textbox = Form.Elements.Textbox.string ~allow_updates_when_focused:`Always () in
   let%arr textbox = textbox >>| Form.label "my textbox" in
   Vdom.Node.div
     [ Form.view_as_vdom textbox
@@ -58,8 +58,12 @@ let () = Util.run form_set ~id:"form_set"
 
 (* $MDX part-begin=form_two_textboxes *)
 let two_textboxes =
-  let%sub textbox_a = Form.Elements.Textbox.string () in
-  let%sub textbox_b = Form.Elements.Textbox.string () in
+  let%sub textbox_a =
+    Form.Elements.Textbox.string ~allow_updates_when_focused:`Always ()
+  in
+  let%sub textbox_b =
+    Form.Elements.Textbox.string ~allow_updates_when_focused:`Always ()
+  in
   let both_textboxes =
     Value.map2
       ~f:Form.both
@@ -100,8 +104,14 @@ let form_of_t : t Form.t Computation.t =
 
       (* provide a form computation for each field in the record *)
       let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t = function
-        | Some_string -> Form.Elements.Textbox.string ()
-        | An_int -> Form.Elements.Number.int ~default:0 ~step:1 ()
+        | Some_string ->
+          Form.Elements.Textbox.string ~allow_updates_when_focused:`Always ()
+        | An_int ->
+          Form.Elements.Number.int
+            ~default:0
+            ~step:1
+            ~allow_updates_when_focused:`Always
+            ()
         | On_or_off -> Form.Elements.Checkbox.bool ~default:false ()
       ;;
     end)
@@ -130,8 +140,8 @@ let form_of_v : v Form.t Computation.t =
       let form_for_variant : type a. a Typed_variant.t -> a Form.t Computation.t
         = function
         | A -> Bonsai.const (Form.return ())
-        | B -> Form.Elements.Textbox.int ()
-        | C -> Form.Elements.Textbox.string ()
+        | B -> Form.Elements.Textbox.int ~allow_updates_when_focused:`Always ()
+        | C -> Form.Elements.Textbox.string ~allow_updates_when_focused:`Always ()
       ;;
     end)
 ;;
@@ -165,7 +175,7 @@ let () = Util.run view_for_form ~id:"record_form_view"
 
 (* $MDX part-begin=int_textbox *)
 let int_textbox : int Form.t Computation.t =
-  let%sub form = Form.Elements.Textbox.string () in
+  let%sub form = Form.Elements.Textbox.string ~allow_updates_when_focused:`Always () in
   let%arr form = form in
   Form.project form ~parse_exn:Int.of_string ~unparse:Int.to_string
 ;;

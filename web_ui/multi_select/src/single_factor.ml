@@ -58,10 +58,23 @@ module Make (Item : Item) = struct
         ; autofocus_search_box : bool
         ; search_box_id : string option
         ; extra_row_attrs : (is_focused:bool -> Vdom.Attr.t) option
+        ; allow_updates_when_focused : [ `Always | `Never ]
         }
 
-      let create ?extra_row_attrs ?(autofocus_search_box = false) ?id ~header () =
-        { header; autofocus_search_box; search_box_id = id; extra_row_attrs }
+      let create
+        ?extra_row_attrs
+        ?(autofocus_search_box = false)
+        ?id
+        ~header
+        ~allow_updates_when_focused
+        ()
+        =
+        { header
+        ; autofocus_search_box
+        ; search_box_id = id
+        ; extra_row_attrs
+        ; allow_updates_when_focused
+        }
       ;;
     end
 
@@ -343,7 +356,7 @@ module Make (Item : Item) = struct
       Node.div ~attrs:[ Attr.class_ "multi-select-checkboxes" ] checkboxes
     ;;
 
-    let view (input : Input.t) model ~selected_items ~inject =
+    let view (input : Input.t) model ~selected_items ~allow_updates_when_focused ~inject =
       let open Vdom in
       let select_all_and_none_view = select_all_and_none_view ~inject in
       let search_box =
@@ -352,6 +365,7 @@ module Make (Item : Item) = struct
           ~inject
           ~autofocus:input.view_config.autofocus_search_box
           ~id:input.view_config.search_box_id
+          ~allow_updates_when_focused
       in
       let extra_row_attrs =
         Option.value input.view_config.extra_row_attrs ~default:(fun ~is_focused:_ ->
@@ -401,8 +415,9 @@ module Make (Item : Item) = struct
 
     let compute ~inject input model =
       let selected_items = selected_items input model in
+      let allow_updates_when_focused = input.view_config.allow_updates_when_focused in
       { Result.view_for_testing = lazy (view_for_testing input model)
-      ; view = view input model ~selected_items ~inject
+      ; view = view input model ~selected_items ~allow_updates_when_focused ~inject
       ; key_handler = key_handler ~inject
       ; selected_items
       ; inject

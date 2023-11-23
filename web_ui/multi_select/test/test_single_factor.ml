@@ -46,6 +46,7 @@ let default_view_config =
     (S.View_config.create
        ~header:(Vdom.Node.text "header")
        ~autofocus_search_box:false
+       ~allow_updates_when_focused:`Never
        ())
 ;;
 
@@ -605,6 +606,7 @@ let%expect_test "html-custom-selected-attr" =
            then Vdom.Attr.class_ "another-focused-class"
            else Vdom.Attr.class_ "another-unfocused-class")
          ~header:(Vdom.Node.text "header")
+         ~allow_updates_when_focused:`Never
          ~autofocus_search_box:false
          ())
   in

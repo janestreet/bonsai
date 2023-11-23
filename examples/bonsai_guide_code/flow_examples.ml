@@ -135,7 +135,7 @@ let people =
 ;;
 
 let add_new_person_form ~inject_add_person =
-  let%sub form = Form.Elements.Textbox.string () in
+  let%sub form = Form.Elements.Textbox.string ~allow_updates_when_focused:`Always () in
   let%arr form = form
   and inject_add_person = inject_add_person in
   let on_submit name = Vdom.Effect.Many [ Form.set form ""; inject_add_person name ] in

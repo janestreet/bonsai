@@ -98,14 +98,14 @@ module Advanced_list = struct
         let label_for_field = `Inferred
 
         let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t = function
-          | Duration_hrs -> E.Textbox.int ()
-          | Price -> E.Textbox.float ()
+          | Duration_hrs -> E.Textbox.int ~allow_updates_when_focused:`Never ()
+          | Price -> E.Textbox.float ~allow_updates_when_focused:`Never ()
         ;;
       end)
   ;;
 
   let form_per_symbol =
-    let%sub symbol_form = E.Textbox.string () in
+    let%sub symbol_form = E.Textbox.string ~allow_updates_when_focused:`Never () in
     Form.Typed.Record.make
       (module struct
         module Typed_field = Per_symbol.Typed_field

@@ -6,7 +6,7 @@ open Bonsai_web_ui_partial_render_table_protocol
 type 'col_id t =
   { order : 'col_id Order.t
   ; inject : 'col_id Order.Action.t -> unit Effect.t
-  ; col_id : (module Col_id with type t = 'col_id)
+  ; col_id_equal : 'col_id -> 'col_id -> bool
   }
 
 let order t = t.order
@@ -15,30 +15,21 @@ let inject t = t.inject
 let state
   (type col_id)
   ?(initial_order = Value.return Order.default)
-  (module Col_id : Col_id with type t = col_id)
+  ~equal:col_id_equal
+  ()
   =
-  let module Action = struct
-    type t = Col_id.t Order.Action.t [@@deriving sexp_of]
-  end
-  in
-  let module State = struct
-    type t = Col_id.t Order.t [@@deriving sexp, equal]
-
-    let apply_action model action = Order.apply_action model (module Col_id) action
-  end
-  in
+  let equal = Order.equal col_id_equal in
   let%sub order, inject =
     Bonsai_extra.state_machine0_dynamic_model
-      ~sexp_of_model:[%sexp_of: State.t]
-      ~equal:[%equal: State.t]
-      (module Action)
+      ~equal
       ~model:(`Given initial_order)
-      ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) -> State.apply_action)
+      ~apply_action:(fun _ -> Order.apply_action ~equal:col_id_equal)
+      ()
   in
-  let%sub order = return (Value.cutoff ~equal:[%equal: State.t] order) in
-  let state = Value.both order inject in
-  let%arr order, inject = state in
-  { order; inject; col_id = (module Col_id) }
+  let%sub order = return (Value.cutoff ~equal order) in
+  let%arr order = order
+  and inject = inject in
+  { order; inject; col_id_equal }
 ;;
 
 module Header = struct
@@ -51,12 +42,11 @@ module Header = struct
   module Expert = struct
     let default_click_handler
       (type col_id)
-      { order; inject; col_id }
+      { order; inject; col_id_equal }
       ~column_id
       ~sortable
       f
       =
-      let module Col_id = (val col_id : Col_id with type t = col_id) in
       let handle_click =
         Vdom.Attr.on_click (fun mouse_event ->
           if Js_of_ocaml.Js.to_bool mouse_event##.shiftKey
@@ -67,7 +57,7 @@ module Header = struct
         if not sortable
         then Not_sortable
         else (
-          let col_state = assoc_findi ~f:(Col_id.equal column_id) order in
+          let col_state = assoc_findi ~f:(col_id_equal column_id) order in
           match col_state with
           | None -> Not_sorted
           | Some (index, dir) ->

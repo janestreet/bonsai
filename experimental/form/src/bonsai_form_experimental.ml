@@ -33,6 +33,7 @@ let text_input ~default =
     Vdom_input_widgets.Entry.text
       ~merge_behavior:Legacy_dont_merge
       ~value:(Some value)
+      ~allow_updates_when_focused:`Never
       ~on_input:(function
         | Some s -> inject s
         | None -> inject "")
@@ -49,6 +50,7 @@ let textarea_input ~default =
     Vdom_input_widgets.Entry.text_area
       ~merge_behavior:Legacy_dont_merge
       ~value
+      ~allow_updates_when_focused:`Never
       ~on_input:inject
       ()
   in
@@ -83,6 +85,7 @@ let date_picker_with_bad_user_experience ~default =
     Vdom_input_widgets.Entry.date
       ~merge_behavior:Legacy_dont_merge
       ~value:(Some value)
+      ~allow_updates_when_focused:`Never
       ~on_input:(inject_or_ignore inject)
       ()
   in
@@ -103,6 +106,7 @@ let date_picker ~default =
     Vdom_input_widgets.Entry.date
       ~merge_behavior:Legacy_dont_merge
       ~value
+      ~allow_updates_when_focused:`Never
       ~on_input:inject
       ()
   in

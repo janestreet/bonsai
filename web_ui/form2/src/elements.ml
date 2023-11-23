@@ -82,21 +82,28 @@ let string_underlying
       View.Theme.t
       -> ?attrs:Vdom.Attr.t list
       -> ?placeholder:string
+      -> ?key:string
+      -> allow_updates_when_focused:[ `Always | `Never ]
       -> disabled:bool
       -> value:string
       -> set_value:(string -> unit Ui_effect.t)
       -> unit
       -> Vdom.Node.t)
+  ~allow_updates_when_focused
   ?(extra_attrs = Value.return [])
   ?placeholder
   ()
   =
   let%sub view =
-    let%arr extra_attrs = extra_attrs in
+    let%sub path = Bonsai.path_id in
+    let%arr extra_attrs = extra_attrs
+    and path = path in
     fun ~state ~set_state ~theme ->
       f
         theme
         ?placeholder
+        ~key:path
+        ~allow_updates_when_focused
         ~disabled:false
         ~attrs:extra_attrs
         ~value:state
@@ -109,36 +116,53 @@ let string_underlying
 ;;
 
 module Textbox = struct
-  let string ?extra_attrs ?placeholder () =
-    string_underlying ~f:View.Form_inputs.textbox ?extra_attrs ?placeholder ()
+  let string ?extra_attrs ?placeholder ~allow_updates_when_focused () =
+    string_underlying
+      ~f:View.Form_inputs.textbox
+      ?extra_attrs
+      ?placeholder
+      ~allow_updates_when_focused
+      ()
   ;;
 
-  let int ?extra_attrs ?placeholder here =
+  let int ?extra_attrs ?placeholder ~allow_updates_when_focused here =
     let parse input =
       match Int.of_string input with
       | exception _ -> Or_error.error_string "Expected an integer"
       | x -> Or_error.return x
     in
     let unparse = Int.to_string_hum in
-    let%map.Computation form = string ?extra_attrs ?placeholder here in
+    let%map.Computation form =
+      string ?extra_attrs ?placeholder ~allow_updates_when_focused here
+    in
     Form.project' form ~parse ~unparse
   ;;
 
-  let float ?extra_attrs ?placeholder () =
+  let float ?extra_attrs ?placeholder ~allow_updates_when_focused () =
     let parse input =
       match Float.of_string input with
       | exception _ -> Or_error.error_string "Expected a floating point number"
       | x -> Or_error.return x
     in
     let unparse = Float.to_string_hum in
-    let%map.Computation form = string ?extra_attrs ?placeholder () in
+    let%map.Computation form =
+      string ?extra_attrs ?placeholder ~allow_updates_when_focused ()
+    in
     Form.project' form ~parse ~unparse
   ;;
 
-  let sexpable (type t) ?extra_attrs ?placeholder (module M : Sexpable with type t = t) =
+  let sexpable
+    (type t)
+    ?extra_attrs
+    ?placeholder
+    ~allow_updates_when_focused
+    (module M : Sexpable with type t = t)
+    =
     let parse_exn s = s |> Sexp.of_string |> M.t_of_sexp in
     let unparse t = t |> M.sexp_of_t |> Sexp.to_string_hum in
-    let%map.Computation form = string ?extra_attrs ?placeholder () in
+    let%map.Computation form =
+      string ?extra_attrs ?placeholder ~allow_updates_when_focused ()
+    in
     Form.project form ~parse_exn ~unparse
   ;;
 
@@ -146,37 +170,49 @@ module Textbox = struct
     (type t)
     ?extra_attrs
     ?placeholder
+    ~allow_updates_when_focused
     (module M : Stringable with type t = t)
     =
-    let%map.Computation form = string ?extra_attrs ?placeholder () in
+    let%map.Computation form =
+      string ?extra_attrs ?placeholder ~allow_updates_when_focused ()
+    in
     Form.project form ~parse_exn:M.of_string ~unparse:M.to_string
   ;;
 end
 
 module Password = struct
-  let string ?extra_attrs ?placeholder () =
-    string_underlying ~f:View.Form_inputs.password ?extra_attrs ?placeholder ()
+  let string ?extra_attrs ?placeholder ~allow_updates_when_focused () =
+    string_underlying
+      ~f:View.Form_inputs.password
+      ?extra_attrs
+      ?placeholder
+      ~allow_updates_when_focused
+      ()
   ;;
 
   let stringable
     (type t)
     ?extra_attrs
     ?placeholder
+    ~allow_updates_when_focused
     (module M : Stringable with type t = t)
     =
-    let%map.Computation form = string ?extra_attrs ?placeholder () in
+    let%map.Computation form =
+      string ?extra_attrs ?placeholder ~allow_updates_when_focused ()
+    in
     Form.project form ~parse_exn:M.of_string ~unparse:M.to_string
   ;;
 end
 
 module Textarea = struct
-  let string ?(extra_attrs = Value.return []) ?placeholder () =
+  let string ?(extra_attrs = Value.return []) ?placeholder ~allow_updates_when_focused () =
     let%sub view =
       let%arr extra_attrs = extra_attrs in
       fun ~state ~set_state ~theme ->
         View.Form_inputs.textarea
           theme
           ?placeholder
+          ~allow_updates_when_focused
           ~disabled:false
           ~attrs:extra_attrs
           ~value:state
@@ -188,20 +224,32 @@ module Textarea = struct
       ~view
   ;;
 
-  let int ?extra_attrs ?placeholder () =
-    let%map.Computation form = string ?extra_attrs ?placeholder () in
+  let int ?extra_attrs ?placeholder ~allow_updates_when_focused () =
+    let%map.Computation form =
+      string ?extra_attrs ?placeholder ~allow_updates_when_focused ()
+    in
     Form.project form ~parse_exn:Int.of_string ~unparse:Int.to_string_hum
   ;;
 
-  let float ?extra_attrs ?placeholder () =
-    let%map.Computation form = string ?extra_attrs ?placeholder () in
+  let float ?extra_attrs ?placeholder ~allow_updates_when_focused () =
+    let%map.Computation form =
+      string ?extra_attrs ?placeholder ~allow_updates_when_focused ()
+    in
     Form.project form ~parse_exn:Float.of_string ~unparse:Float.to_string_hum
   ;;
 
-  let sexpable (type t) ?extra_attrs ?placeholder (module M : Sexpable with type t = t) =
+  let sexpable
+    (type t)
+    ?extra_attrs
+    ?placeholder
+    ~allow_updates_when_focused
+    (module M : Sexpable with type t = t)
+    =
     let parse_exn s = s |> Sexp.of_string |> M.t_of_sexp in
     let unparse t = t |> M.sexp_of_t |> Sexp.to_string_hum in
-    let%map.Computation form = string ?extra_attrs ?placeholder () in
+    let%map.Computation form =
+      string ?extra_attrs ?placeholder ~allow_updates_when_focused ()
+    in
     Form.project form ~parse_exn ~unparse
   ;;
 
@@ -209,16 +257,20 @@ module Textarea = struct
     (type t)
     ?extra_attrs
     ?placeholder
+    ~allow_updates_when_focused
     (module M : Stringable with type t = t)
     =
-    let%map.Computation form = string ?extra_attrs ?placeholder () in
+    let%map.Computation form =
+      string ?extra_attrs ?placeholder ~allow_updates_when_focused ()
+    in
     Form.project form ~parse_exn:M.of_string ~unparse:M.to_string
   ;;
 end
 
 module Checkbox = struct
-  let make_input ~extra_attrs ~state ~set_state =
+  let make_input ?key ~extra_attrs ~state ~set_state () =
     Vdom.Node.input
+      ?key
       ~attrs:
         [ Vdom.Attr.many
             ([ Vdom.Attr.style (Css_gen.margin_left (`Px 0))
@@ -247,9 +299,11 @@ module Checkbox = struct
   ;;
 
   let checkbox ?(extra_attrs = Value.return []) default_model =
-    let view =
-      let%map extra_attrs = extra_attrs in
-      fun ~state ~set_state -> make_input ~extra_attrs ~state ~set_state
+    let%sub view =
+      let%sub path = Bonsai.path_id in
+      let%arr extra_attrs = extra_attrs
+      and path = path in
+      fun ~state ~set_state -> make_input ~key:path ~extra_attrs ~state ~set_state ()
     in
     Basic_stateful.make
       (Bonsai.state
@@ -371,14 +425,18 @@ module Toggle = struct
 |}]
 
   let bool ?(extra_attr = Value.return Vdom.Attr.empty) ~default () =
-    let view =
-      let%map extra_attr = extra_attr in
+    let%sub view =
+      let%sub path = Bonsai.path_id in
+      let%arr extra_attr = extra_attr
+      and path = path in
       fun ~state ~set_state ->
         let checkbox =
           Checkbox.make_input
+            ~key:path
             ~extra_attrs:[ Vdom.Attr.many [ Style.invisible; extra_attr ] ]
             ~state
             ~set_state
+            ()
         in
         let slider = Vdom.Node.span ~attrs:[ Style.slider ] [] in
         Vdom.Node.label ~attrs:[ Style.toggle ] [ checkbox; slider ]
@@ -411,6 +469,7 @@ module Dropdown = struct
   let make_input
     (type a)
     ?to_string
+    ?key
     (module E : Model with type t = a)
     ~equal
     ~include_empty
@@ -441,6 +500,7 @@ module Dropdown = struct
           | Set v -> Some v
         in
         Vdom_input_widgets.Dropdown.of_values_opt
+          ?key
           ~selected
           ~on_change:(function
             | None -> set_state Explicitly_none
@@ -450,6 +510,7 @@ module Dropdown = struct
           options
       | false, Some default ->
         Vdom_input_widgets.Dropdown.of_values
+          ?key
           ~selected:(Opt.value state ~default)
           ~on_change:(fun a -> set_state (Set a))
           ~extra_attrs
@@ -493,12 +554,14 @@ module Dropdown = struct
         ~sexp_of_model:[%sexp_of: E_opt.t]
         ~equal:[%equal: E_opt.t]
     in
+    let%sub path = Bonsai.path_id in
     let%arr state = state
     and set_state = set_state
     and all = all
     and extra_attrs = extra_attrs
     and extra_option_attrs = extra_option_attrs
-    and default_value = default_value in
+    and default_value = default_value
+    and path = path in
     let view =
       make_input
         ?to_string
@@ -512,6 +575,7 @@ module Dropdown = struct
           (Vdom.Attr.style (Css_gen.width (`Percent (Percent.of_mult 1.))) :: extra_attrs)
         ~extra_option_attrs
         ~all
+        ~key:path
     in
     let value =
       match state, default_value with
@@ -749,27 +813,37 @@ module Date_time = struct
     ;;
   end
 
-  let date_opt ?(extra_attrs = Value.return []) () =
+  let date_opt ?(extra_attrs = Value.return []) ~allow_updates_when_focused () =
     let view =
       let%map extra_attrs = extra_attrs in
       fun ~state ~set_state ->
-        Vdom_input_widgets.Entry.date ~extra_attrs ~value:state ~on_input:set_state ()
+        Vdom_input_widgets.Entry.date
+          ~allow_updates_when_focused
+          ~extra_attrs
+          ~value:state
+          ~on_input:set_state
+          ()
     in
     Basic_stateful.make
       (Bonsai.state_opt () ~sexp_of_model:[%sexp_of: Date.t] ~equal:[%equal: Date.t])
       ~view
   ;;
 
-  let date ?extra_attrs () =
-    let%map.Computation form = date_opt ?extra_attrs () in
+  let date ?extra_attrs ~allow_updates_when_focused () =
+    let%map.Computation form = date_opt ?extra_attrs ~allow_updates_when_focused () in
     optional_to_required form
   ;;
 
-  let time_opt ?(extra_attrs = Value.return []) () =
+  let time_opt ?(extra_attrs = Value.return []) ~allow_updates_when_focused () =
     let%sub view =
       let%arr extra_attrs = extra_attrs in
       fun ~state ~set_state ->
-        Vdom_input_widgets.Entry.time ~extra_attrs ~value:state ~on_input:set_state ()
+        Vdom_input_widgets.Entry.time
+          ~allow_updates_when_focused
+          ~extra_attrs
+          ~value:state
+          ~on_input:set_state
+          ()
     in
     Basic_stateful.make
       (Bonsai.state_opt
@@ -779,8 +853,8 @@ module Date_time = struct
       ~view
   ;;
 
-  let time ?extra_attrs () =
-    let%map.Computation form = time_opt ?extra_attrs () in
+  let time ?extra_attrs ~allow_updates_when_focused () =
+    let%map.Computation form = time_opt ?extra_attrs ~allow_updates_when_focused () in
     optional_to_required form
   ;;
 
@@ -789,6 +863,7 @@ module Date_time = struct
     ?(extra_amount_attrs = Value.return [])
     ?(default_unit = Span_unit.Seconds)
     ?(default = None)
+    ~allow_updates_when_focused
     ()
     =
     let%sub unit, set_unit =
@@ -838,6 +913,7 @@ module Date_time = struct
         ~value:amount
         ~step:1.0
         ~on_input:set_amount
+        ~allow_updates_when_focused
     in
     let%sub value =
       let%arr amount = amount
@@ -871,14 +947,27 @@ module Date_time = struct
     form_expert_create ~value:(Ok value) ~view ~set
   ;;
 
-  let time_span ?extra_unit_attrs ?extra_amount_attrs ?default_unit ?default () =
+  let time_span
+    ?extra_unit_attrs
+    ?extra_amount_attrs
+    ?default_unit
+    ?default
+    ~allow_updates_when_focused
+    ()
+    =
     let%map.Computation form =
-      time_span_opt ?extra_unit_attrs ?extra_amount_attrs ?default_unit ~default ()
+      time_span_opt
+        ?extra_unit_attrs
+        ?extra_amount_attrs
+        ?default_unit
+        ~default
+        ~allow_updates_when_focused
+        ()
     in
     optional_to_required form
   ;;
 
-  let datetime_local_opt ?(extra_attrs = Value.return []) () =
+  let datetime_local_opt ?(extra_attrs = Value.return []) ~allow_updates_when_focused () =
     let view =
       let%map extra_attrs = extra_attrs in
       fun ~state ~set_state ->
@@ -886,6 +975,7 @@ module Date_time = struct
           ~extra_attrs
           ~value:state
           ~on_input:set_state
+          ~allow_updates_when_focused
           ()
     in
     let module Time_ns = struct
@@ -902,8 +992,10 @@ module Date_time = struct
       ~view
   ;;
 
-  let datetime_local ?extra_attrs () =
-    let%map.Computation form = datetime_local_opt ?extra_attrs () in
+  let datetime_local ?extra_attrs ~allow_updates_when_focused () =
+    let%map.Computation form =
+      datetime_local_opt ?extra_attrs ~allow_updates_when_focused ()
+    in
     optional_to_required form
   ;;
 
@@ -1015,7 +1107,7 @@ module Date_time = struct
         ~unparse:(fun (lower, upper) -> Some lower, Some upper)
     ;;
 
-    let date_opt ?extra_attr ?allow_equal () =
+    let date_opt ?extra_attr ?allow_equal ~allow_updates_when_focused () =
       make_opt_range
         ~kind_name:"date"
         ?extra_attr
@@ -1023,15 +1115,18 @@ module Date_time = struct
         (module Date)
         ~equal:[%equal: Date.t]
         (module Date)
-        (fun ~extra_attrs -> Vdom_input_widgets.Entry.date ~extra_attrs ())
+        (fun ~extra_attrs ->
+          Vdom_input_widgets.Entry.date ~allow_updates_when_focused ~extra_attrs ())
     ;;
 
-    let date ?extra_attr ?allow_equal () =
-      let%map.Computation form = date_opt ?extra_attr ?allow_equal () in
+    let date ?extra_attr ?allow_equal ~allow_updates_when_focused () =
+      let%map.Computation form =
+        date_opt ?extra_attr ?allow_equal ~allow_updates_when_focused ()
+      in
       of_opt_range form
     ;;
 
-    let time_opt ?extra_attr ?allow_equal () =
+    let time_opt ?extra_attr ?allow_equal ~allow_updates_when_focused () =
       make_opt_range
         ~kind_name:"time"
         ?extra_attr
@@ -1039,15 +1134,18 @@ module Date_time = struct
         (module Time_ns.Ofday)
         ~equal:[%equal: Time_ns.Ofday.t]
         (module Time_ns.Ofday)
-        (fun ~extra_attrs -> Vdom_input_widgets.Entry.time ~extra_attrs ())
+        (fun ~extra_attrs ->
+          Vdom_input_widgets.Entry.time ~allow_updates_when_focused ~extra_attrs ())
     ;;
 
-    let time ?extra_attr ?allow_equal () =
-      let%map.Computation form = time_opt ?extra_attr ?allow_equal () in
+    let time ?extra_attr ?allow_equal ~allow_updates_when_focused () =
+      let%map.Computation form =
+        time_opt ?extra_attr ?allow_equal ~allow_updates_when_focused ()
+      in
       of_opt_range form
     ;;
 
-    let datetime_local_opt ?extra_attr ?allow_equal () =
+    let datetime_local_opt ?extra_attr ?allow_equal ~allow_updates_when_focused () =
       make_opt_range
         ~kind_name:"time"
         ?extra_attr
@@ -1055,11 +1153,17 @@ module Date_time = struct
         (module Time_ns.Alternate_sexp)
         ~equal:[%equal: Time_ns.Alternate_sexp.t]
         (module Time_ns.Alternate_sexp)
-        (fun ~extra_attrs -> Vdom_input_widgets.Entry.datetime_local ~extra_attrs ())
+        (fun ~extra_attrs ->
+          Vdom_input_widgets.Entry.datetime_local
+            ~allow_updates_when_focused
+            ~extra_attrs
+            ())
     ;;
 
-    let datetime_local ?extra_attr ?allow_equal () =
-      let%map.Computation form = datetime_local_opt ?extra_attr ?allow_equal () in
+    let datetime_local ?extra_attr ?allow_equal ~allow_updates_when_focused () =
+      let%map.Computation form =
+        datetime_local_opt ?extra_attr ?allow_equal ~allow_updates_when_focused ()
+      in
       of_opt_range form
     ;;
   end
@@ -1071,6 +1175,7 @@ module Multiselect = struct
     ?(extra_attrs = Value.return [])
     ?to_string
     ?default_selection_status
+    ~allow_updates_when_focused
     (module M : Bonsai.Comparator with type t = a and type comparator_witness = cmp)
     input_list
     =
@@ -1100,6 +1205,7 @@ module Multiselect = struct
       ; extra_row_attrs = Some extra_row_attrs
       ; autofocus_search_box = false
       ; search_box_id = Some path
+      ; allow_updates_when_focused
       }
     in
     let%sub single_factor_result =
@@ -1130,11 +1236,18 @@ module Multiselect = struct
     ?extra_attrs
     ?to_string
     ?default_selection_status
+    ~allow_updates_when_focused
     (module M : Bonsai.Comparator with type t = a and type comparator_witness = cmp)
     input_list
     =
     let%map.Computation form =
-      set ?extra_attrs ?to_string ?default_selection_status (module M) input_list
+      set
+        ?extra_attrs
+        ?to_string
+        ?default_selection_status
+        ~allow_updates_when_focused
+        (module M)
+        input_list
     in
     Form.project form ~parse_exn:Set.to_list ~unparse:(Set.of_list (module M))
   ;;
@@ -1213,17 +1326,14 @@ module Multiple = struct
     in
     let invalid_attr = if invalid then Style.invalid_text_box else Vdom.Attr.empty in
     let input =
-      Vdom.Node.input
-        ~attrs:
-          [ Vdom.Attr.(
-              extra_input_attr
-              @ invalid_attr
-              @ placeholder placeholder_
-              @ value_prop state
-              @ on_input (fun _ input ->
-                  Effect.Many [ inject_invalid false; set_state input ])
-              @ on_keydown handle_keydown)
-          ]
+      Vdom_input_widgets.Entry.text
+        ~allow_updates_when_focused:`Always
+        ~placeholder:placeholder_
+        ~extra_attrs:
+          [ Vdom.Attr.(extra_input_attr @ invalid_attr @ on_keydown handle_keydown) ]
+        ~on_input:(fun input ->
+          Effect.Many [ inject_invalid false; set_state (Option.value ~default:"" input) ])
+        ~value:(Some state)
         ()
     in
     let view = Vdom.Node.div [ input; pills ] in
@@ -1237,6 +1347,12 @@ module Multiple = struct
 
   type ('a, 'view) t =
     { items : ('a, 'view) item list
+    ; add_element : unit Effect.t
+    }
+
+  type ('a, 'view) nonempty_t =
+    { hd : ('a, 'view) Form.t
+    ; tl : ('a, 'view) item list
     ; add_element : unit Effect.t
     }
 
@@ -1286,6 +1402,21 @@ module Multiple = struct
           form_expert_create ~value ~view ~set, contents)
     in
     return form
+  ;;
+
+  let nonempty_list (type a view) (t : (a, view) Form.t Computation.t)
+    : (a Nonempty_list.t, (a, view) nonempty_t) Form.t Computation.t
+    =
+    let%sub hd = t in
+    let%sub tl = list t in
+    let%arr hd = hd
+    and tl = tl in
+    Form.both hd tl
+    |> Form.project
+         ~parse_exn:(fun (hd, tl) -> Nonempty_list.create hd tl)
+         ~unparse:(fun (hd :: tl) -> hd, tl)
+    |> Form.map_view ~f:(fun (_, { items; add_element }) ->
+         { hd; tl = items; add_element })
   ;;
 
   let set
@@ -1341,7 +1472,15 @@ let validate_range (type a) ?min ?max value =
 ;;
 
 module Number = struct
-  let float ?(extra_attrs = Value.return []) ?min ?max ?default ~step () =
+  let float
+    ?(extra_attrs = Value.return [])
+    ?min
+    ?max
+    ?default
+    ~step
+    ~allow_updates_when_focused
+    ()
+    =
     let%sub optional_unvalidated =
       let%sub view =
         let%arr extra_attrs = extra_attrs in
@@ -1353,6 +1492,7 @@ module Number = struct
             ?max
             ~disabled:false
             ~step
+            ~allow_updates_when_focused
             ~value:state
             ~set_value:set_state
             ()
@@ -1372,7 +1512,7 @@ module Number = struct
     Form.validate unvalidated ~f:(validate_range ?min ?max)
   ;;
 
-  let int ?extra_attrs ?min ?max ?default ~step () =
+  let int ?extra_attrs ?min ?max ?default ~step ~allow_updates_when_focused () =
     let int x = Option.map x ~f:Int.to_float in
     let%sub float =
       float
@@ -1381,6 +1521,7 @@ module Number = struct
         ?max:(int max)
         ?default:(int default)
         ~step:(Int.to_float step)
+        ~allow_updates_when_focused
         ()
     in
     let%arr float = float in
@@ -1398,6 +1539,7 @@ module Range = struct
     ?right_label
     ?(default = (min +. max) /. 2.)
     ~step
+    ~allow_updates_when_focused
     ()
     =
     let%sub unvalidated =
@@ -1411,6 +1553,7 @@ module Range = struct
               ~min
               ~max
               ~disabled:false
+              ~allow_updates_when_focused
               ~step
               ~value:state
               ~set_value:set_state
@@ -1427,7 +1570,17 @@ module Range = struct
     Form.validate unvalidated ~f:(validate_range ~min ~max)
   ;;
 
-  let int ?extra_attrs ?min ?max ?left_label ?right_label ?default ~step () =
+  let int
+    ?extra_attrs
+    ?min
+    ?max
+    ?left_label
+    ?right_label
+    ?default
+    ~step
+    ~allow_updates_when_focused
+    ()
+    =
     let int x = Option.map x ~f:Int.to_float in
     let%sub float =
       float
@@ -1437,6 +1590,7 @@ module Range = struct
         ?left_label
         ?right_label
         ?default:(int default)
+        ~allow_updates_when_focused
         ~step:(Int.to_float step)
         ()
     in
@@ -1805,6 +1959,7 @@ module Query_box = struct
 
   let underlying_query_box_component
     (type a cmp)
+    ?(extra_input_attr = Value.return Vdom.Attr.empty)
     (module M : Bonsai.Comparator with type t = a and type comparator_witness = cmp)
     ~extra_attr
     ~(to_string : (a -> string) Value.t)
@@ -1814,10 +1969,14 @@ module Query_box = struct
     ~handle_unknown_option
     ~to_option_description
     =
+    let%sub extra_input_attr =
+      let%arr extra_input_attr = extra_input_attr in
+      Vdom.Attr.many [ Query_box_styles.input; extra_input_attr ]
+    in
     create_opt
       (module M)
       ~extra_attr
-      ~extra_input_attr:(Value.return Query_box_styles.input)
+      ~extra_input_attr
       ~selected_item_attr
       ~extra_list_container_attr
       ~selection_to_string:to_string
@@ -1885,6 +2044,7 @@ module Query_box = struct
   let single_opt
     (type a cmp)
     ?extra_attrs
+    ?extra_input_attr
     ?to_string
     ?to_option_description
     ?selected_item_attr
@@ -1928,6 +2088,7 @@ module Query_box = struct
         ~f:(fun acc a -> Map.set acc ~key:a ~data:())
     in
     underlying_query_box_component
+      ?extra_input_attr
       (module M)
       ~extra_attr
       ~to_string
@@ -1940,6 +2101,7 @@ module Query_box = struct
 
   let single
     ?extra_attrs
+    ?extra_input_attr
     ?to_string
     ?to_option_description
     ?selected_item_attr
@@ -1951,6 +2113,7 @@ module Query_box = struct
     let%map.Computation form =
       single_opt
         ?extra_attrs
+        ?extra_input_attr
         ?to_string
         ?to_option_description
         ?selected_item_attr

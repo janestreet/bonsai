@@ -4,135 +4,29 @@ open! Bonsai.Let_syntax
 open! Bonsai_bench
 open! Bonsai_web_ui_partial_render_table
 open! Bonsai_web_ui_partial_render_table_bench
+open! Bonsai_web_ui_partial_render_table_test.Shared_with_bench
 open! Incr_map_collate
 
-module Row = struct
-  module T = struct
-    type t =
-      { symbol : string
-      ; edge : float
-      ; max_edge : float
-      ; bsize : int
-      ; bid : float
-      ; ask : float
-      ; asize : int
-      }
-    [@@deriving compare, fields ~fields, sexp]
-  end
-
-  include T
-  include Comparator.Make (T)
-
-  let of_int i =
-    { symbol = [%string "JANE%{i#Int}"]
-    ; edge = Float.of_int i
-    ; max_edge = Float.of_int i
-    ; bsize = i
-    ; bid = Float.of_int i
-    ; ask = Float.of_int i
-    ; asize = i
-    }
-  ;;
-end
-
-module Dynamic_cells = struct
-  module type S = sig
-    type t [@@deriving compare]
-
-    val to_string : t -> string
-  end
-
-  module Column = Expert.Columns.Dynamic_cells
-
-  let column_helper
-    (type a)
-    (module M : S with type t = a)
-    ?visible
-    (field : (_, a) Field.t)
-    =
-    Column.column
-      ?visible
-      ~header:(Value.return (Vdom.Node.text (Fieldslib.Field.name field)))
-      ~cell:(fun ~key:_ ~data ->
-        (* This [state] is just here to de-optimize the dynamic-cells column. *)
-        let%sub state, _ =
-          Bonsai.state () ~sexp_of_model:[%sexp_of: Unit.t] ~equal:[%equal: Unit.t]
-        in
-        let%arr data = data
-        and () = state in
-        Vdom.Node.text (M.to_string (Field.get field data)))
-      ()
-  ;;
-
-  let all =
-    [ column_helper (module String) Row.Fields.symbol
-    ; column_helper (module Float) Row.Fields.edge
-    ; column_helper (module Float) Row.Fields.max_edge
-    ; column_helper (module Int) Row.Fields.bsize
-    ; column_helper (module Float) Row.Fields.bid
-    ; column_helper (module Float) Row.Fields.ask
-    ; column_helper (module Int) Row.Fields.asize
-    ]
-    |> Column.lift
-  ;;
-end
-
-module Dynamic_columns = struct
-  module type S = sig
-    type t [@@deriving compare]
-
-    val to_string : t -> string
-  end
-
-  module Column = Expert.Columns.Dynamic_columns
-
-  let column_helper
-    (type a)
-    (module M : S with type t = a)
-    ?visible
-    (field : (_, a) Field.t)
-    =
-    Column.column
-      ?visible
-      ~header:(Vdom.Node.text (Fieldslib.Field.name field))
-      ~cell:(fun ~key:_ ~data -> Vdom.Node.text (M.to_string (Field.get field data)))
-      ()
-  ;;
-
-  let all =
-    [ column_helper (module String) Row.Fields.symbol
-    ; column_helper (module Float) Row.Fields.edge
-    ; column_helper (module Float) Row.Fields.max_edge
-    ; column_helper (module Int) Row.Fields.bsize
-    ; column_helper (module Float) Row.Fields.bid
-    ; column_helper (module Float) Row.Fields.ask
-    ; column_helper (module Int) Row.Fields.asize
-    ]
-    |> Value.return
-    |> Column.lift
-  ;;
-end
-
 module Config = struct
-  type t =
+  type 'col_id t =
     { name : string
-    ; columns : (int, Row.t) Expert.Columns.t
+    ; columns : ('col_id, Row.t) Expert.Columns.t
     }
 
   let dynamic_cells = { name = "Dynamic_cells"; columns = Dynamic_cells.all }
   let dynamic_columns = { name = "Dynamic_columns"; columns = Dynamic_columns.all }
+
+  let dynamic_experimental =
+    { name = "Dynamic_experimental"; columns = Dynamic_experimental.all }
+  ;;
 
   let create { name; columns } ~test_name =
     create_bench ~columns ~test_name:[%string "%{name}: %{test_name}"]
   ;;
 end
 
-let init_rows n =
-  List.init n ~f:(fun x -> x, Row.of_int x) |> Map.of_alist_exn (module Int)
-;;
-
 let focus_and_unfocus ~config ~size ~in_range =
-  let starting_map = init_rows size in
+  let starting_map = Row.init_rows size in
   let not_ = if in_range then "" else "not " in
   Config.create
     config
@@ -150,7 +44,7 @@ let focus_and_unfocus ~config ~size ~in_range =
 ;;
 
 let focus_up_and_down ~config ~size =
-  let starting_map = init_rows size in
+  let starting_map = Row.init_rows size in
   Config.create
     config
     (module Int)
@@ -162,7 +56,7 @@ let focus_up_and_down ~config ~size =
 ;;
 
 let page_up_and_down ~config ~size =
-  let starting_map = init_rows size in
+  let starting_map = Row.init_rows size in
   Config.create
     config
     (module Int)
@@ -174,7 +68,7 @@ let page_up_and_down ~config ~size =
 ;;
 
 let scroll ~config ~size ~start ~stop ~window_size =
-  let starting_map = init_rows size in
+  let starting_map = Row.init_rows size in
   Config.create
     config
     (module Int)
@@ -191,7 +85,7 @@ let scroll ~config ~size ~start ~stop ~window_size =
 ;;
 
 let apply_filters ~config ~size ~window_size =
-  let starting_map = init_rows size in
+  let starting_map = Row.init_rows size in
   Config.create
     config
     (module Int)
@@ -212,7 +106,7 @@ let apply_filters ~config ~size ~window_size =
 ;;
 
 let invert_ordering ~config ~size =
-  let starting_map = init_rows size in
+  let starting_map = Row.init_rows size in
   Config.create
     config
     (module Int)
@@ -235,7 +129,7 @@ let invert_ordering ~config ~size =
    happening every [batch_size] changes. [window_size] specifies the size of the window,
    and the sets wrap around it. *)
 let set_map ~config ~size ~num_sets ~batch_size ~window_size =
-  let starting_map = init_rows size in
+  let starting_map = Row.init_rows size in
   let current_map = ref starting_map in
   Config.create
     config
@@ -321,5 +215,7 @@ let () =
   let quota = Core_bench_js.Quota.Span (Time_float.Span.of_sec 1.0) in
   Bonsai_bench.benchmark
     ~run_config:(Core_bench_js.Run_config.create () ~quota)
-    (benchmarks_for Config.dynamic_columns @ benchmarks_for Config.dynamic_cells)
+    (benchmarks_for Config.dynamic_columns
+     @ benchmarks_for Config.dynamic_cells
+     @ benchmarks_for Config.dynamic_experimental)
 ;;

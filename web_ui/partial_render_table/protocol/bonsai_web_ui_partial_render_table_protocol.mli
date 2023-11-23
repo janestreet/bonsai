@@ -1,9 +1,5 @@
 open! Core
 
-module type Col_id = sig
-  type t [@@deriving equal, sexp, bin_io]
-end
-
 module Sort_kind : sig
   type ('key, 'data) sort := 'key * 'data -> 'key * 'data -> int
 
@@ -57,7 +53,7 @@ module Order : sig
   *)
   val apply_action
     :  'col_id t
-    -> (module Col_id with type t = 'col_id)
+    -> equal:('col_id -> 'col_id -> bool)
     -> 'col_id Action.t
     -> 'col_id t
 

@@ -7,7 +7,7 @@ open! Incr_map_collate
 module For_testing = struct
   type cell =
     { id : Opaque_map.Key.t
-    ; selected : bool
+    ; focused : bool
     ; view : Vdom.Node.t list
     }
 
@@ -23,6 +23,7 @@ end
 
 let rows
   (type key cmp)
+  ~themed_attrs
   ~(comparator : (key, cmp) Bonsai.comparator)
   ~row_height
   ~(leaves : Header_tree.leaf list Value.t)
@@ -53,8 +54,9 @@ let rows
   let%sub col_styles =
     let%arr (`Px row_height) = row_height
     and cols_visible = cols_visible
-    and col_widths = col_widths in
-    Table_view.Cell.Col_styles.create ~row_height ~col_widths ~cols_visible
+    and col_widths = col_widths
+    and themed_attrs = themed_attrs in
+    Table_view.Cell.Col_styles.create ~themed_attrs ~row_height ~col_widths ~cols_visible
   in
   let%sub row_styles =
     let%arr (`Px row_height) = row_height
@@ -65,7 +67,7 @@ let rows
     (module Opaque_map.Key)
     cells
     ~f:(fun _ key_and_cells ->
-      let%sub is_selected =
+      let%sub is_focused =
         let%arr visually_focused = visually_focused
         and key, _ = key_and_cells in
         let module Cmp = (val comparator) in
@@ -80,17 +82,19 @@ let rows
           let col_styles = col_styles i in
           Table_view.Cell.view ~col_styles content)
       in
-      let%arr key, _ = key_and_cells
+      let%arr themed_attrs = themed_attrs
+      and key, _ = key_and_cells
       and cells = cells
-      and is_selected = is_selected
+      and is_focused = is_focused
       and row_styles = row_styles
       and on_row_click = on_row_click in
       let on_row_click = on_row_click key in
-      Table_view.Row.view ~styles:row_styles ~is_selected ~on_row_click cells)
+      Table_view.Row.view themed_attrs ~styles:row_styles ~is_focused ~on_row_click cells)
 ;;
 
 let component
   (type key data cmp)
+  ~themed_attrs
   ~(comparator : (key, cmp) Bonsai.comparator)
   ~row_height
   ~(leaves : Header_tree.leaf list Value.t)
@@ -115,6 +119,7 @@ let component
   let%sub cells = assoc input in
   let%sub rows =
     rows
+      ~themed_attrs
       ~comparator
       ~row_height
       ~leaves
@@ -125,8 +130,9 @@ let component
   in
   let%sub view =
     let%arr rows = rows
-    and padding_top, padding_bottom = padding_top_and_bottom in
-    Table_view.Body.view ~padding_top ~padding_bottom ~rows
+    and padding_top, padding_bottom = padding_top_and_bottom
+    and themed_attrs = themed_attrs in
+    Table_view.Body.view themed_attrs ~padding_top ~padding_bottom ~rows
   in
   let%sub for_testing =
     let%arr cells = cells
@@ -138,13 +144,13 @@ let component
        { For_testing.column_names
        ; cells =
            List.map (Map.to_alist cells) ~f:(fun (id, (key, view)) ->
-             let selected =
+             let focused =
                let module Cmp = (val comparator) in
                match visually_focused with
                | None -> false
                | Some k -> Cmp.comparator.compare k key = 0
              in
-             { For_testing.id; selected; view })
+             { For_testing.id; focused; view })
        ; rows_before = Collated.num_before_range collated
        ; rows_after = Collated.num_after_range collated
        ; num_filtered = Collated.num_filtered_rows collated

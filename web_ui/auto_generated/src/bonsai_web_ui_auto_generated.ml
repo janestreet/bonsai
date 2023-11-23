@@ -180,7 +180,7 @@ module Customization = struct
           ~apply_to_tag:(fun ~key ~value ->
             String.equal key Sexplib0.Sexp_grammar.type_name_tag
             && Sexp.equal value ([%sexp_of: string] "Core.Time_ns.Alternate_sexp.t"))
-          (Form.Elements.Date_time.datetime_local ())
+          (Form.Elements.Date_time.datetime_local ~allow_updates_when_focused:`Always ())
       ;;
 
       let nice_time_of_day =
@@ -189,7 +189,7 @@ module Customization = struct
           ~apply_to_tag:(fun ~key ~value ->
             String.equal key Sexplib0.Sexp_grammar.type_name_tag
             && Sexp.equal value ([%sexp_of: string] "Core.Time_ns.Ofday.t"))
-          (Form.Elements.Date_time.time ())
+          (Form.Elements.Date_time.time ~allow_updates_when_focused:`Always ())
       ;;
 
       let nice_date =
@@ -198,7 +198,7 @@ module Customization = struct
           ~apply_to_tag:(fun ~key ~value ->
             String.equal key Sexplib0.Sexp_grammar.type_name_tag
             && Sexp.equal value ([%sexp_of: string] "Core.Date.t"))
-          (Form.Elements.Date_time.date ())
+          (Form.Elements.Date_time.date ~allow_updates_when_focused:`Always ())
       ;;
 
       let all =
@@ -574,15 +574,23 @@ let form
       E.Checkbox.bool ~default:false () |> project_to_sexp (module Bool) |> error_hint
     | String ->
       (match textbox_for_string with
-       | None -> E.Textarea.string () |> project_to_sexp (module String)
-       | Some () -> E.Textbox.string () |> project_to_sexp (module String))
+       | None ->
+         E.Textarea.string ~allow_updates_when_focused:`Always ()
+         |> project_to_sexp (module String)
+       | Some () ->
+         E.Textbox.string ~allow_updates_when_focused:`Always ()
+         |> project_to_sexp (module String))
       |> error_hint
     | Integer ->
-      E.Number.int ~default:0 ~step:1 () |> project_to_sexp (module Int) |> error_hint
+      E.Number.int ~default:0 ~step:1 ~allow_updates_when_focused:`Always ()
+      |> project_to_sexp (module Int)
+      |> error_hint
     | Char ->
-      E.Textbox.stringable (module Char) |> project_to_sexp (module Char) |> error_hint
+      E.Textbox.stringable ~allow_updates_when_focused:`Always (module Char)
+      |> project_to_sexp (module Char)
+      |> error_hint
     | Float ->
-      E.Number.float ~default:0. ~step:1. ()
+      E.Number.float ~default:0. ~step:1. ~allow_updates_when_focused:`Always ()
       |> project_to_sexp (module Float)
       |> error_hint
     | Option g -> option_form g
@@ -632,7 +640,8 @@ let form
           }
       in
       grammar_form merged_variant
-    | Any _ | Union _ -> E.Textarea.sexpable (module Sexp)
+    | Any _ | Union _ ->
+      E.Textarea.sexpable ~allow_updates_when_focused:`Always (module Sexp)
     | Tyvar _ | Tycon _ | Recursive _ ->
       Bonsai.const
         (Form.return_error
@@ -656,10 +665,12 @@ let form
             and set_outer = set_outer
             and path = path in
             E.Checkbox.Private.make_input
+              ~key:path
               ~id:(Vdom.Attr.id path)
               ~extra_attrs:[]
               ~state:outer
               ~set_state:set_outer
+              ()
           in
           let%sub inner =
             match%sub outer with

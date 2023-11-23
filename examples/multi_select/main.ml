@@ -40,7 +40,11 @@ let id_prefix = Value.return "multi-select-widget-example"
 
 let bonsai =
   let%sub widget_result =
-    Widget.bonsai ~all_keys:(Attribute.Set.of_list Attribute.all) ~id_prefix subwidgets
+    Widget.bonsai
+      ~allow_updates_when_focused:`Never
+      ~all_keys:(Attribute.Set.of_list Attribute.all)
+      ~id_prefix
+      subwidgets
   in
   let%arr widget_result = widget_result in
   let open Virtual_dom.Vdom in

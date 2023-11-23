@@ -10,7 +10,7 @@ type t = Ojs.t
 let rec t_of_js : Ojs.t -> t = fun (x2 : Ojs.t) -> x2
 and t_to_js : t -> Ojs.t = fun (x1 : Ojs.t) -> x1
 
-let (create : Native_node.t -> Data.t -> Options.t -> t) =
+let create : Native_node.t -> Data.t -> Options.t -> t =
   fun (x3 : Native_node.t) (x4 : Data.t) (x5 : Options.t) ->
   t_of_js
     (Ojs.new_obj
@@ -18,37 +18,37 @@ let (create : Native_node.t -> Data.t -> Options.t -> t) =
        [| Native_node.t_to_js x3; Data.t_to_js x4; Options.t_to_js x5 |])
 ;;
 
-let (destroy : t -> unit) = fun (x6 : t) -> ignore (Ojs.call (t_to_js x6) "destroy" [||])
-let (resize : t -> unit) = fun (x7 : t) -> ignore (Ojs.call (t_to_js x7) "resize" [||])
+let destroy : t -> unit = fun (x6 : t) -> ignore (Ojs.call (t_to_js x6) "destroy" [||])
+let resize : t -> unit = fun (x7 : t) -> ignore (Ojs.call (t_to_js x7) "resize" [||])
 
-let (resize_explicit : t -> width:int -> height:int -> unit) =
+let resize_explicit : t -> width:int -> height:int -> unit =
   fun (x10 : t) ~width:(x8 : int) ~height:(x9 : int) ->
   ignore (Ojs.call (t_to_js x10) "resize" [| Ojs.int_to_js x8; Ojs.int_to_js x9 |])
 ;;
 
-let (updateOptions : t -> Update_options.t -> unit) =
+let updateOptions : t -> Update_options.t -> unit =
   fun (x12 : t) (x11 : Update_options.t) ->
   ignore (Ojs.call (t_to_js x12) "updateOptions" [| Update_options.t_to_js x11 |])
 ;;
 
-let (getArea : t -> Area.t) =
+let getArea : t -> Area.t =
   fun (x13 : t) -> Area.t_of_js (Ojs.call (t_to_js x13) "getArea" [||])
 ;;
 
-let (isZoomed : t -> bool) =
+let isZoomed : t -> bool =
   fun (x14 : t) -> Ojs.bool_of_js (Ojs.call (t_to_js x14) "isZoomed" [||])
 ;;
 
-let (resetZoom : t -> unit) =
+let resetZoom : t -> unit =
   fun (x15 : t) -> ignore (Ojs.call (t_to_js x15) "resetZoom" [||])
 ;;
 
-let (primary_context : t -> Canvas_rendering_context_2D.t) =
+let primary_context : t -> Canvas_rendering_context_2D.t =
   fun (x16 : t) ->
   Canvas_rendering_context_2D.t_of_js (Ojs.get_prop_ascii (t_to_js x16) "hidden_ctx_")
 ;;
 
-let (overlay_context : t -> Canvas_rendering_context_2D.t) =
+let overlay_context : t -> Canvas_rendering_context_2D.t =
   fun (x17 : t) ->
   Canvas_rendering_context_2D.t_of_js (Ojs.get_prop_ascii (t_to_js x17) "canvas_ctx_")
 ;;

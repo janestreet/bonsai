@@ -120,34 +120,12 @@ let columns ~should_show_position =
   |> Column.lift
 ;;
 
-let component ?filter (data : Row.t String.Map.t Value.t) =
-  let module Params = struct
-    type t =
-      { show_position : bool
-      ; row_height : [ `Px of int ]
-      }
-    [@@deriving typed_fields]
-
-    let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t = function
-      | Show_position -> Form.Elements.Toggle.bool ~default:true ()
-      | Row_height ->
-        let%sub form = Form.Elements.Range.int ~min:0 ~max:100 ~step:1 () ~default:30 in
-        let%arr form = form in
-        Form.project form ~parse_exn:(fun x -> `Px x) ~unparse:(fun (`Px x) -> x)
-    ;;
-
-    let label_for_field = `Inferred
-  end
-  in
-  let%sub form = Form.Typed.Record.make (module Params) in
-  let%sub { row_height; show_position = should_show_position } =
-    let%arr form = form in
-    Form.value_or_default form ~default:{ show_position = true; row_height = `Px 30 }
-  in
+let table_and_focus_attr ?filter ~row_height ~theming ~should_show_position data =
   let%sub table =
     Table.component
       (module String)
       ?filter
+      ~theming
       ~focus:(By_row { on_change = Value.return (Fn.const Effect.Ignore) })
       ~row_height
       ~columns:(columns ~should_show_position)
@@ -161,25 +139,74 @@ let component ?filter (data : Row.t String.Map.t Value.t) =
           }
     =
     table
-  and form = form in
-  Vdom.Node.div
-    ~attrs:
-      [ Vdom.Attr.on_keydown (fun kbc ->
-          let binding =
-            let module Focus_control = Table.Focus.By_row in
-            match Js_of_ocaml.Dom_html.Keyboard_code.of_event kbc with
-            | ArrowDown | KeyJ -> Some (Focus_control.focus_down focus)
-            | ArrowUp | KeyK -> Some (Focus_control.focus_up focus)
-            | PageDown -> Some (Focus_control.page_down focus)
-            | PageUp -> Some (Focus_control.page_up focus)
-            | Escape -> Some (Focus_control.unfocus focus)
-            | Home -> Some ((Focus_control.focus_index focus) 0)
-            | End -> Some ((Focus_control.focus_index focus) num_filtered_rows)
-            | _ -> None
-          in
-          match binding with
-          | Some b -> Effect.Many [ Effect.Prevent_default; b ]
-          | None -> Effect.Ignore)
-      ]
-    [ Vdom.Node.div ~attrs:[ Style.form_container ] [ Form.view_as_vdom form ]; table ]
+  in
+  let focus_attr =
+    Vdom.Attr.on_keydown (fun kbc ->
+      let binding =
+        let module Focus_control = Table.Focus.By_row in
+        match Js_of_ocaml.Dom_html.Keyboard_code.of_event kbc with
+        | ArrowDown | KeyJ -> Some (Focus_control.focus_down focus)
+        | ArrowUp | KeyK -> Some (Focus_control.focus_up focus)
+        | PageDown -> Some (Focus_control.page_down focus)
+        | PageUp -> Some (Focus_control.page_up focus)
+        | Escape -> Some (Focus_control.unfocus focus)
+        | Home -> Some ((Focus_control.focus_index focus) 0)
+        | End -> Some ((Focus_control.focus_index focus) num_filtered_rows)
+        | _ -> None
+      in
+      match binding with
+      | Some b -> Effect.Many [ Effect.Prevent_default; b ]
+      | None -> Effect.Ignore)
+  in
+  table, focus_attr
 ;;
+
+module Layout_form = struct
+  module Params = struct
+    type t =
+      { themed : bool
+      ; show_position : bool
+      ; row_height : [ `Px of int ]
+      ; num_rows : int
+      }
+    [@@deriving typed_fields]
+
+    let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t = function
+      | Themed -> Form.Elements.Toggle.bool ~default:true ()
+      | Show_position -> Form.Elements.Toggle.bool ~default:true ()
+      | Row_height ->
+        let%sub form =
+          Form.Elements.Range.int
+            ~min:0
+            ~max:100
+            ~step:1
+            ~allow_updates_when_focused:`Never
+            ()
+            ~default:30
+        in
+        let%arr form = form in
+        Form.project form ~parse_exn:(fun x -> `Px x) ~unparse:(fun (`Px x) -> x)
+      | Num_rows ->
+        Form.Elements.Number.int
+          ~allow_updates_when_focused:`Never
+          ~default:100_000
+          ~step:1
+          ()
+    ;;
+
+    let label_for_field = `Inferred
+  end
+
+  let component =
+    let%sub form = Form.Typed.Record.make (module Params) in
+    let%arr form = form in
+    let values =
+      Form.value_or_default
+        form
+        ~default:
+          { themed = true; show_position = true; row_height = `Px 30; num_rows = 100_000 }
+    in
+    let view = Vdom.Node.div ~attrs:[ Style.form_container ] [ Form.view_as_vdom form ] in
+    view, values
+  ;;
+end

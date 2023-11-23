@@ -174,16 +174,70 @@ let theme_dyn_var =
 let current_theme = Bonsai.Dynamic_scope.lookup theme_dyn_var
 
 module Form_inputs = struct
-  let textbox ((module T) : Theme.t) ?attrs ?placeholder ~disabled ~value ~set_value () =
-    T.singleton#textbox ?attrs ?placeholder ~disabled ~value ~set_value ()
+  let textbox
+    ((module T) : Theme.t)
+    ?attrs
+    ?placeholder
+    ?key
+    ~allow_updates_when_focused
+    ~disabled
+    ~value
+    ~set_value
+    ()
+    =
+    T.singleton#textbox
+      ?attrs
+      ?placeholder
+      ?key
+      ~allow_updates_when_focused
+      ~disabled
+      ~value
+      ~set_value
+      ()
   ;;
 
-  let password ((module T) : Theme.t) ?attrs ?placeholder ~disabled ~value ~set_value () =
-    T.singleton#password ?attrs ?placeholder ~disabled ~value ~set_value ()
+  let password
+    ((module T) : Theme.t)
+    ?attrs
+    ?placeholder
+    ?key
+    ~allow_updates_when_focused
+    ~disabled
+    ~value
+    ~set_value
+    ()
+    =
+    T.singleton#password
+      ?attrs
+      ?placeholder
+      ?key
+      ~allow_updates_when_focused
+      ~disabled
+      ~value
+      ~set_value
+      ()
   ;;
 
-  let textarea ((module T) : Theme.t) ?attrs ?placeholder ~disabled ~value ~set_value () =
-    T.singleton#textarea ?attrs ?placeholder ~disabled ~value ~set_value ()
+  let textarea
+    ((module T) : Theme.t)
+    ?attrs
+    ?placeholder
+    ?key
+    ~allow_updates_when_focused
+    ~disabled
+    ~value
+    ~set_value
+    ()
+    =
+    T.singleton#textarea
+      ?attrs
+      ?placeholder
+      ?key
+      ~allow_updates_when_focused
+      ~disabled
+      ~value
+      ~set_value
+      ()
   ;;
 
   let number
@@ -192,17 +246,52 @@ module Form_inputs = struct
     ?placeholder
     ?min
     ?max
+    ?key
+    ~allow_updates_when_focused
     ~disabled
     ~step
     ~value
     ~set_value
     ()
     =
-    T.singleton#number ?attrs ?placeholder ?min ?max ~disabled ~step ~value ~set_value ()
+    T.singleton#number
+      ?attrs
+      ?placeholder
+      ?min
+      ?max
+      ?key
+      ~allow_updates_when_focused
+      ~disabled
+      ~step
+      ~value
+      ~set_value
+      ()
   ;;
 
-  let range ((module T) : Theme.t) ?attrs ?min ?max ~disabled ~step ~value ~set_value () =
-    T.singleton#range ?attrs ?min ?max ~disabled ~step ~value ~set_value ()
+  let range
+    ((module T) : Theme.t)
+    ?attrs
+    ?min
+    ?max
+    ?key
+    ~allow_updates_when_focused
+    ~disabled
+    ~step
+    ~value
+    ~set_value
+    ()
+    =
+    T.singleton#range
+      ?attrs
+      ?min
+      ?max
+      ?key
+      ~allow_updates_when_focused
+      ~disabled
+      ~step
+      ~value
+      ~set_value
+      ()
   ;;
 end
 
@@ -229,6 +318,10 @@ module For_components = struct
     let remove_item ((module T) : Theme.t) ?(editable = `Yes_always) =
       T.singleton#form_remove_item ~eval_context:(Form_context.default ~editable)
     ;;
+  end
+
+  module Prt = struct
+    let styling ((module T) : Theme.t) = T.singleton#prt_styling
   end
 end
 

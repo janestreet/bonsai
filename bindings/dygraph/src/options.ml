@@ -48,38 +48,32 @@ module Series_options = struct
   let rec t_of_js : Ojs.t -> t = fun (x9 : Ojs.t) -> x9
   and t_to_js : t -> Ojs.t = fun (x8 : Ojs.t) -> x8
 
-  let (create :
-        ?axis:Which_y_axis.t
-        -> ?color:Color.t
-        -> ?drawPoints:bool
-        -> ?drawHighlightPointCallback:
-             (graph:Ojs.t
-              -> seriesName:string option
-              -> context:Canvas_rendering_context_2D.t
-              -> cx:float
-              -> cy:float
-              -> color:Ojs.t
-              -> pointSize:int
-              -> idx:int
-              -> unit)
-        -> ?drawPointCallback:
-             (graph:Ojs.t
-              -> seriesName:string option
-              -> context:Canvas_rendering_context_2D.t
-              -> cx:float
-              -> cy:float
-              -> color:Ojs.t
-              -> pointSize:int
-              -> idx:int
-              -> unit)
-        -> ?plotter:Plotter.t
-        -> ?plotterFinishedCallback:(context:Canvas_rendering_context_2D.t -> unit)
-        -> ?showInRangeSelector:bool
-        -> ?stepPlot:bool
-        -> ?strokePattern:Line_pattern.t
-        -> ?strokeWidth:float
-        -> unit
-        -> t)
+  let create
+    :  ?axis:Which_y_axis.t -> ?color:Color.t -> ?drawPoints:bool
+    -> ?drawHighlightPointCallback:
+         (graph:Ojs.t
+          -> seriesName:string option
+          -> context:Canvas_rendering_context_2D.t
+          -> cx:float
+          -> cy:float
+          -> color:Ojs.t
+          -> pointSize:int
+          -> idx:int
+          -> unit)
+    -> ?drawPointCallback:
+         (graph:Ojs.t
+          -> seriesName:string option
+          -> context:Canvas_rendering_context_2D.t
+          -> cx:float
+          -> cy:float
+          -> color:Ojs.t
+          -> pointSize:int
+          -> idx:int
+          -> unit)
+    -> ?plotter:Plotter.t
+    -> ?plotterFinishedCallback:(context:Canvas_rendering_context_2D.t -> unit)
+    -> ?showInRangeSelector:bool -> ?stepPlot:bool -> ?strokePattern:Line_pattern.t
+    -> ?strokeWidth:float -> unit -> t
     =
     fun ?axis:(x10 : Which_y_axis.t option)
         ?color:(x11 : Color.t option)
@@ -231,26 +225,14 @@ module Axis_options = struct
   let rec t_of_js : Ojs.t -> t = fun (x57 : Ojs.t) -> x57
   and t_to_js : t -> Ojs.t = fun (x56 : Ojs.t) -> x56
 
-  let (create :
-        ?axisLabelFormatter:(Number_or_js_date.t -> Granularity.t -> Opts.t -> string)
-        -> ?valueFormatter:(float -> Opts.t -> string)
-        -> ?axisLabelWidth:int
-        -> ?axisLineColor:Color.t
-        -> ?axisLineWidth:float
-        -> ?axisTickSize:float
-        -> ?drawAxis:bool
-        -> ?includeZero:bool
-        -> ?independentTicks:bool
-        -> ?logscale:bool
-        -> ?pixelsPerLabel:int
-        -> ?valueRange:Range.Spec.t
-        -> ?drawGrid:bool
-        -> ?gridLineColor:Color.t
-        -> ?gridLinePattern:Line_pattern.t
-        -> ?gridLineWidth:float
-        -> ?pixelsPerLabel:int
-        -> unit
-        -> t)
+  let create
+    :  ?axisLabelFormatter:(Number_or_js_date.t -> Granularity.t -> Opts.t -> string)
+    -> ?valueFormatter:(float -> Opts.t -> string) -> ?axisLabelWidth:int
+    -> ?axisLineColor:Color.t -> ?axisLineWidth:float -> ?axisTickSize:float
+    -> ?drawAxis:bool -> ?includeZero:bool -> ?independentTicks:bool -> ?logscale:bool
+    -> ?pixelsPerLabel:int -> ?valueRange:Range.Spec.t -> ?drawGrid:bool
+    -> ?gridLineColor:Color.t -> ?gridLinePattern:Line_pattern.t -> ?gridLineWidth:float
+    -> ?pixelsPerLabel:int -> unit -> t
     =
     fun ?axisLabelFormatter:
           (x58 : (Number_or_js_date.t -> Granularity.t -> Opts.t -> string) option)
@@ -347,8 +329,7 @@ module Axes = struct
   let rec t_of_js : Ojs.t -> t = fun (x99 : Ojs.t) -> x99
   and t_to_js : t -> Ojs.t = fun (x98 : Ojs.t) -> x98
 
-  let (create : ?x:Axis_options.t -> ?y:Axis_options.t -> ?y2:Axis_options.t -> unit -> t)
-    =
+  let create : ?x:Axis_options.t -> ?y:Axis_options.t -> ?y2:Axis_options.t -> unit -> t =
     fun ?x:(x100 : Axis_options.t option)
         ?y:(x101 : Axis_options.t option)
         ?y2:(x102 : Axis_options.t option)
@@ -373,12 +354,9 @@ module Highlight_series_options = struct
   let rec t_of_js : Ojs.t -> t = fun (x108 : Ojs.t) -> x108
   and t_to_js : t -> Ojs.t = fun (x107 : Ojs.t) -> x107
 
-  let (create :
-        ?highlightCircleSize:int
-        -> ?strokeWidth:float
-        -> ?strokeBorderWidth:float
-        -> unit
-        -> t)
+  let create
+    :  ?highlightCircleSize:int -> ?strokeWidth:float -> ?strokeBorderWidth:float -> unit
+    -> t
     =
     fun ?highlightCircleSize:(x109 : int option)
         ?strokeWidth:(x110 : float option)
@@ -403,113 +381,53 @@ type t = Ojs.t
 let rec t_of_js : Ojs.t -> t = fun (x117 : Ojs.t) -> x117
 and t_to_js : t -> Ojs.t = fun (x116 : Ojs.t) -> x116
 
-let (create :
-      ?axisLabelFontSize:int
-      -> ?axisLabelWidth:int
-      -> ?axisLineColor:Color.t
-      -> ?axisLineWidth:float
-      -> ?axisTickSize:float
-      -> ?dateWindow:Range.t
-      -> ?drawAxesAtZero:bool
-      -> ?drawAxis:bool
-      -> ?includeZero:bool
-      -> ?logscale:bool
-      -> ?panEdgeFraction:float
-      -> ?valueRange:Range.Spec.t
-      -> ?xAxisHeight:int
-      -> ?xRangePad:float
-      -> ?yRangePad:float
-      -> ?customBars:bool
-      -> ?errorBars:bool
-      -> ?fractions:bool
-      -> ?title:string
-      -> ?titleHeight:int
-      -> ?xLabelHeight:int
-      -> ?xlabel:string
-      -> ?y2label:string
-      -> ?yLabelWidth:int
-      -> ?ylabel:string
-      -> ?axes:Axes.t
-      -> ?connectSeparatedPoints:bool
-      -> ?drawGapEdgePoints:bool
-      -> ?drawPoints:bool
-      -> ?fillGraph:bool
-      -> ?pointSize:int
-      -> ?stackedGraph:bool
-      -> ?stackedGraphNaNFill:string
-      -> ?stepPlot:bool
-      -> ?strokeBorderColor:Color.t
-      -> ?strokeBorderWidth:float
-      -> ?strokePattern:Line_pattern.t
-      -> ?strokeWidth:float
-      -> ?visibility:bool list
-      -> ?colorSaturation:float
-      -> ?colorValue:float
-      -> ?colors:Color.t array
-      -> ?fillAlpha:float
-      -> ?rollPeriod:int
-      -> ?sigma:float
-      -> ?wilsonInterval:bool
-      -> ?drawGrid:bool
-      -> ?gridLineColor:Color.t
-      -> ?gridLinePattern:Line_pattern.t
-      -> ?gridLineWidth:float
-      -> ?animatedZooms:bool
-      -> ?hideOverlayOnMouseOut:bool
-      -> ?highlightCircleSize:int
-      -> ?highlightSeriesBackgroundAlpha:float
-      -> ?highlightSeriesBackgroundColor:Color.t
-      -> ?highlightSeriesOpts:Highlight_series_options.t
-      -> ?showLabelsOnHighlight:bool
-      -> ?showRoller:bool
-      -> ?hideOverlayOnMouseOut:bool
-      -> ?labels:string list
-      -> ?labelsDiv_string:string
-      -> ?labelsDiv_el:Native_node.t
-      -> ?labelsSeparateLines:bool
-      -> ?labelsShowZeroValues:bool
-      -> ?legend:Legend.t
-      -> ?legendFormatter:(Legend_data.t -> string)
-      -> ?showLabelsOnHighlight:bool
-      -> ?height:int
-      -> ?clickCallback:(evt:Ojs.t -> x:float -> points:Point.t array -> unit)
-      -> ?highlightCallback:
-           (evt:Ojs.t
-            -> x:float
-            -> points:Point.t array
-            -> row:int
-            -> seriesName:string option
-            -> unit)
-      -> ?unhighlightCallback:(evt:Ojs.t -> unit)
-      -> ?pointClickCallback:(evt:Ojs.t -> point:Point.t -> unit)
-      -> ?underlayCallback:
-           (context:Canvas_rendering_context_2D.t -> area:Area.t -> dygraph:Ojs.t -> unit)
-      -> ?drawCallback:(graph:Ojs.t -> isInitial:bool -> unit)
-      -> ?zoomCallback:(xmin:float -> xmax:float -> yRanges:Range.t array -> unit)
-      -> ?pixelRatio:float
-      -> ?plotter:Plotter.t list
-      -> ?rightGap:int
-      -> ?width:int
-      -> ?rangeSelectorAlpha:float
-      -> ?rangeSelectorBackgroundLineWidth:float
-      -> ?rangeSelectorBackgroundStrokeColor:Color.t
-      -> ?rangeSelectorForegroundLineWidth:float
-      -> ?rangeSelectorForegroundStrokeColor:Color.t
-      -> ?rangeSelectorHeight:int
-      -> ?rangeSelectorPlotFillColor:Color.t
-      -> ?rangeSelectorPlotFillGradientColor:Color.t
-      -> ?rangeSelectorPlotLineWidth:float
-      -> ?rangeSelectorPlotStrokeColor:Color.t
-      -> ?showRangeSelector:bool
-      -> ?series:Series.t
-      -> ?digitsAfterDecimal:int
-      -> ?labelsKMB:bool
-      -> ?labelsKMG2:bool
-      -> ?labelsUTC:bool
-      -> ?maxNumberWidth:int
-      -> ?sigFigs:int
-      -> unit
-      -> t)
+let create
+  :  ?axisLabelFontSize:int -> ?axisLabelWidth:int -> ?axisLineColor:Color.t
+  -> ?axisLineWidth:float -> ?axisTickSize:float -> ?dateWindow:Range.t
+  -> ?drawAxesAtZero:bool -> ?drawAxis:bool -> ?includeZero:bool -> ?logscale:bool
+  -> ?panEdgeFraction:float -> ?valueRange:Range.Spec.t -> ?xAxisHeight:int
+  -> ?xRangePad:float -> ?yRangePad:float -> ?customBars:bool -> ?errorBars:bool
+  -> ?fractions:bool -> ?title:string -> ?titleHeight:int -> ?xLabelHeight:int
+  -> ?xlabel:string -> ?y2label:string -> ?yLabelWidth:int -> ?ylabel:string
+  -> ?axes:Axes.t -> ?connectSeparatedPoints:bool -> ?drawGapEdgePoints:bool
+  -> ?drawPoints:bool -> ?fillGraph:bool -> ?pointSize:int -> ?stackedGraph:bool
+  -> ?stackedGraphNaNFill:string -> ?stepPlot:bool -> ?strokeBorderColor:Color.t
+  -> ?strokeBorderWidth:float -> ?strokePattern:Line_pattern.t -> ?strokeWidth:float
+  -> ?visibility:bool list -> ?colorSaturation:float -> ?colorValue:float
+  -> ?colors:Color.t array -> ?fillAlpha:float -> ?rollPeriod:int -> ?sigma:float
+  -> ?wilsonInterval:bool -> ?drawGrid:bool -> ?gridLineColor:Color.t
+  -> ?gridLinePattern:Line_pattern.t -> ?gridLineWidth:float -> ?animatedZooms:bool
+  -> ?hideOverlayOnMouseOut:bool -> ?highlightCircleSize:int
+  -> ?highlightSeriesBackgroundAlpha:float -> ?highlightSeriesBackgroundColor:Color.t
+  -> ?highlightSeriesOpts:Highlight_series_options.t -> ?showLabelsOnHighlight:bool
+  -> ?showRoller:bool -> ?hideOverlayOnMouseOut:bool -> ?labels:string list
+  -> ?labelsDiv_string:string -> ?labelsDiv_el:Native_node.t -> ?labelsSeparateLines:bool
+  -> ?labelsShowZeroValues:bool -> ?legend:Legend.t
+  -> ?legendFormatter:(Legend_data.t -> string) -> ?showLabelsOnHighlight:bool
+  -> ?height:int -> ?clickCallback:(evt:Ojs.t -> x:float -> points:Point.t array -> unit)
+  -> ?highlightCallback:
+       (evt:Ojs.t
+        -> x:float
+        -> points:Point.t array
+        -> row:int
+        -> seriesName:string option
+        -> unit)
+  -> ?unhighlightCallback:(evt:Ojs.t -> unit)
+  -> ?pointClickCallback:(evt:Ojs.t -> point:Point.t -> unit)
+  -> ?underlayCallback:
+       (context:Canvas_rendering_context_2D.t -> area:Area.t -> dygraph:Ojs.t -> unit)
+  -> ?drawCallback:(graph:Ojs.t -> isInitial:bool -> unit)
+  -> ?zoomCallback:(xmin:float -> xmax:float -> yRanges:Range.t array -> unit)
+  -> ?pixelRatio:float -> ?plotter:Plotter.t list -> ?rightGap:int -> ?width:int
+  -> ?rangeSelectorAlpha:float -> ?rangeSelectorBackgroundLineWidth:float
+  -> ?rangeSelectorBackgroundStrokeColor:Color.t
+  -> ?rangeSelectorForegroundLineWidth:float
+  -> ?rangeSelectorForegroundStrokeColor:Color.t -> ?rangeSelectorHeight:int
+  -> ?rangeSelectorPlotFillColor:Color.t -> ?rangeSelectorPlotFillGradientColor:Color.t
+  -> ?rangeSelectorPlotLineWidth:float -> ?rangeSelectorPlotStrokeColor:Color.t
+  -> ?showRangeSelector:bool -> ?series:Series.t -> ?digitsAfterDecimal:int
+  -> ?labelsKMB:bool -> ?labelsKMG2:bool -> ?labelsUTC:bool -> ?maxNumberWidth:int
+  -> ?sigFigs:int -> unit -> t
   =
   fun ?axisLabelFontSize:(x118 : int option)
       ?axisLabelWidth:(x119 : int option)
@@ -990,7 +908,7 @@ let (create :
   t_of_js x215
 ;;
 
-let (legendFormatter : t -> (Legend_data.t -> string) option) =
+let legendFormatter : t -> (Legend_data.t -> string) option =
   fun (x341 : t) ->
   Ojs.option_of_js
     (fun (x342 : Ojs.t) (x343 : Legend_data.t) ->
@@ -998,8 +916,7 @@ let (legendFormatter : t -> (Legend_data.t -> string) option) =
     (Ojs.get_prop_ascii (t_to_js x341) "legendFormatter")
 ;;
 
-let (zoomCallback :
-      t -> (xmin:float -> xmax:float -> yRanges:Range.t array -> unit) option)
+let zoomCallback : t -> (xmin:float -> xmax:float -> yRanges:Range.t array -> unit) option
   =
   fun (x344 : t) ->
   Ojs.option_of_js
@@ -1017,17 +934,17 @@ let (zoomCallback :
     (Ojs.get_prop_ascii (t_to_js x344) "zoomCallback")
 ;;
 
-let (height : t -> int option) =
+let height : t -> int option =
   fun (x350 : t) ->
   Ojs.option_of_js Ojs.int_of_js (Ojs.get_prop_ascii (t_to_js x350) "height")
 ;;
 
-let (width : t -> int option) =
+let width : t -> int option =
   fun (x352 : t) ->
   Ojs.option_of_js Ojs.int_of_js (Ojs.get_prop_ascii (t_to_js x352) "width")
 ;;
 
-let (merge_internal : t -> prefer:t -> t) =
+let merge_internal : t -> prefer:t -> t =
   fun (x354 : t) ~prefer:(x355 : t) ->
   t_of_js
     (Ojs.call

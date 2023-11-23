@@ -9,7 +9,8 @@ type 'col_id t
 
 val state
   :  ?initial_order:'col_id Order.t Value.t
-  -> (module Col_id with type t = 'col_id)
+  -> equal:('col_id -> 'col_id -> bool)
+  -> unit
   -> 'col_id t Computation.t
 
 val order : 'col_id t -> 'col_id Order.t
@@ -21,7 +22,11 @@ module Header : sig
 
   (** Wraps the input label in an HTML element, which also contains an icon that reflects
       the current sort state. *)
-  val with_icon : Vdom.Node.t -> Sort_state.t -> Vdom.Node.t
+  val with_icon
+    :  ?sort_indicator_attrs:Vdom.Attr.t list
+    -> Vdom.Node.t
+    -> Sort_state.t
+    -> Vdom.Node.t
 
   module Expert : sig
     (** If using [Partial_render_table.Basic], this is done for you. Adds a mouse on-click

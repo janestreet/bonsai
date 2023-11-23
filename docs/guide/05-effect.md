@@ -117,7 +117,9 @@ module Request_state = struct
 end
 
 let uppercase_rpc_sender =
-  let%sub textbox = Forms.Elements.Textbox.string () in
+  let%sub textbox =
+    Forms.Elements.Textbox.string ~allow_updates_when_focused:`Always ()
+  in
   let%sub result_state =
     Bonsai.state
       Empty

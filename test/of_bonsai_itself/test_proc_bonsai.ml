@@ -5233,15 +5233,16 @@ let%expect_test "with_self_effect" =
 let%expect_test "state_machine_dynamic_model" =
   let component =
     Bonsai_extra.state_machine0_dynamic_model
+      ~sexp_of_action:[%sexp_of: String.t]
       ~sexp_of_model:[%sexp_of: String.t]
       ~equal:[%equal: String.t]
-      (module String)
       ~model:
         (`Computed
           (Bonsai.Value.return (function
             | None -> "not set "
             | Some s -> sprintf "set %s" s)))
       ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) _model action -> action)
+      ()
   in
   let handle =
     Handle.create

@@ -300,8 +300,8 @@ let component =
       ~attrs:
         [ Style.stress_button
         ; Vdom.Attr.on_click (fun _ -> toggle_stress)
-        ; Vdom.Attr.create "role" "button"
-        ; Vdom.Attr.create "tabindex" "0"
+        ; Vdom.Attr.role "button"
+        ; Vdom.Attr.tabindex 0
         ]
       [ Feather_icon.svg Chevrons_right ~size:(`Rem 1.5) ~stroke:(`Hex "#FACC15")
       ; View.text text

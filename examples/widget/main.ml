@@ -66,8 +66,12 @@ module T = struct
 end
 
 let canvas_thing =
-  let%sub scope_form = Form.Elements.Number.int ~default:1 ~step:1 () in
-  let%sub how_many = Form.Elements.Number.int ~default:1 ~step:1 () in
+  let%sub scope_form =
+    Form.Elements.Number.int ~default:1 ~step:1 ~allow_updates_when_focused:`Never ()
+  in
+  let%sub how_many =
+    Form.Elements.Number.int ~default:1 ~step:1 ~allow_updates_when_focused:`Never ()
+  in
   let%sub color_picker = Form.Elements.Color_picker.hex () in
   let%sub color =
     Bonsai.pure (Form.value_or_default ~default:(`Hex "#000")) color_picker

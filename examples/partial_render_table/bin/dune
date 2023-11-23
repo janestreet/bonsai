@@ -1,3 +1,4 @@
 (executables (names main)
- (libraries bonsai_web bonsai_partial_render_table_example)
- (preprocess (pps ppx_jane)))
+ (libraries bonsai_web bonsai_web_ui_gallery
+  bonsai_partial_render_table_example)
+ (preprocess (pps ppx_bonsai)))

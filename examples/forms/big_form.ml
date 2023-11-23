@@ -100,9 +100,12 @@ module My_variant = struct
 
   let form_for_variant : type a. a Typed_variant.t -> a Form.t Computation.t = function
     | A -> Bonsai.const (Form.return ())
-    | B -> E.Textbox.string ()
+    | B -> E.Textbox.string ~allow_updates_when_focused:`Never ()
     | C ->
-      Computation.map2 ~f:Form.both (E.Number.int ~step:1 ()) (E.Number.float ~step:1. ())
+      Computation.map2
+        ~f:Form.both
+        (E.Number.int ~step:1 ~allow_updates_when_focused:`Never ())
+        (E.Number.float ~step:1. ~allow_updates_when_focused:`Never ())
   ;;
 end
 
@@ -159,8 +162,8 @@ module Record_for_list = struct
     let label_for_field = `Inferred
 
     let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t = function
-      | My_int -> E.Textbox.int ()
-      | My_string -> E.Textbox.string ()
+      | My_int -> E.Textbox.int ~allow_updates_when_focused:`Never ()
+      | My_string -> E.Textbox.string ~allow_updates_when_focused:`Never ()
       | My_bool -> E.Checkbox.bool ~default:false ()
     ;;
   end
@@ -239,6 +242,7 @@ let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t = functio
   | Optional_variant -> my_variant_optional_form
   | Int_from_range ->
     E.Range.int
+      ~allow_updates_when_focused:`Never
       ~min:0
       ~max:100
       ~default:0
@@ -246,7 +250,7 @@ let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t = functio
       ~right_label:(Vdom.Node.text "Banana 🍌")
       ~step:1
       ()
-  | String_from_text -> E.Textbox.string ()
+  | String_from_text -> E.Textbox.string ~allow_updates_when_focused:`Never ()
   | String_from_vert_radio ->
     E.Radio_buttons.list
       (module String)
@@ -267,17 +271,19 @@ let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t = functio
       ~extra_button_attrs:(Value.return barebones_button_like)
       ~layout:`Horizontal
       (Value.return [ "first"; "second"; "third" ])
-  | Time_span -> E.Date_time.time_span ()
-  | Date -> E.Date_time.date ()
-  | Date_range -> E.Date_time.Range.date ()
-  | Time_ns_of_day -> E.Date_time.time ()
-  | Time_ns_of_day_range -> E.Date_time.Range.time ()
-  | Date_time -> E.Date_time.datetime_local ()
-  | Date_time_range -> E.Date_time.Range.datetime_local ()
+  | Time_span -> E.Date_time.time_span ~allow_updates_when_focused:`Never ()
+  | Date -> E.Date_time.date ~allow_updates_when_focused:`Never ()
+  | Date_range -> E.Date_time.Range.date ~allow_updates_when_focused:`Never ()
+  | Time_ns_of_day -> E.Date_time.time ~allow_updates_when_focused:`Never ()
+  | Time_ns_of_day_range -> E.Date_time.Range.time ~allow_updates_when_focused:`Never ()
+  | Date_time -> E.Date_time.datetime_local ~allow_updates_when_focused:`Never ()
+  | Date_time_range ->
+    E.Date_time.Range.datetime_local ~allow_updates_when_focused:`Never ()
   | Date_from_string ->
-    E.Textbox.string ()
+    E.Textbox.string ~allow_updates_when_focused:`Never ()
     >>|| Form.project ~parse_exn:Date.of_string ~unparse:Date.to_string
-  | Sexp_from_string -> E.Textbox.sexpable (module Sexp)
+  | Sexp_from_string ->
+    E.Textbox.sexpable ~allow_updates_when_focused:`Never (module Sexp)
   | Bool_from_toggle -> E.Toggle.bool ~default:false ()
   | Bool_from_checkbox -> E.Checkbox.bool ~default:false ()
   | Checklist_buttons ->
@@ -309,15 +315,22 @@ let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t = functio
   | A_b_or_c -> E.Dropdown.enumerable (module A_B_or_C)
   | Many ->
     let%sub multi_select =
-      E.Multiselect.list (module A_B_or_C) (Value.return A_B_or_C.all)
+      E.Multiselect.list
+        ~allow_updates_when_focused:`Never
+        (module A_B_or_C)
+        (Value.return A_B_or_C.all)
     in
     Form.Dynamic.collapsible_group (Value.return "collapsible group") multi_select
   | Many2 ->
     let%sub multi_select =
-      E.Multiselect.list (module A_B_or_C) (Value.return A_B_or_C.all)
+      E.Multiselect.list
+        ~allow_updates_when_focused:`Never
+        (module A_B_or_C)
+        (Value.return A_B_or_C.all)
     in
     let%sub multi_select2 =
       E.Multiselect.list
+        ~allow_updates_when_focused:`Never
         (module A_B_or_C)
         (multi_select >>| Form.value_or_default ~default:[])
     in
@@ -358,7 +371,7 @@ let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t = functio
   | Record_list_as_table -> Record_for_list.form
   | Color_picker -> E.Color_picker.hex ()
   | Int_blang -> Int_blang.form
-  | Password -> E.Password.string ()
+  | Password -> E.Password.string ~allow_updates_when_focused:`Never ()
 ;;
 
 let form =

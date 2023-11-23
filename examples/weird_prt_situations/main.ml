@@ -66,6 +66,7 @@ let component =
   let%sub { view = table1; focus = focus1; _ } =
     Table.component
       (module Int)
+      ~theming:`Themed
       ~focus:(By_row { on_change = on_change First_table })
       ~row_height:(Value.return (`Px 30))
       ~columns
@@ -74,6 +75,7 @@ let component =
   let%sub { view = table2; focus = focus2; _ } =
     Table.component
       (module Int)
+      ~theming:`Themed
       ~focus:(By_row { on_change = on_change Second_table })
       ~row_height:(Value.return (`Px 30))
       ~columns

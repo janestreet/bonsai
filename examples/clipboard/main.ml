@@ -5,7 +5,7 @@ open Bonsai.Let_syntax
 module Form = Bonsai_web_ui_form
 
 let component =
-  let%sub form = Form.Elements.Textbox.string () in
+  let%sub form = Form.Elements.Textbox.string ~allow_updates_when_focused:`Never () in
   let%sub copy_button =
     let%arr form = form in
     Vdom.Node.button

@@ -51,7 +51,7 @@ let with_self_effect
 
 let state_machine1_dynamic_model
   (type a)
-  (module A : Bonsai.Action with type t = a)
+  ?sexp_of_action
   ?sexp_of_model
   ?equal
   ~model
@@ -72,19 +72,20 @@ let state_machine1_dynamic_model
       let model = model_creator model in
       Some (apply_action context input model action)
     | Inactive ->
+      let sexp_of_action = Option.value sexp_of_action ~default:sexp_of_opaque in
       eprint_s
         [%message
           [%here]
             "An action sent to a [state_machine1_dynamic_model] has been dropped because \
              its input was not present. This happens when the \
              [state_machine1_dynamic_model] is inactive when it receives a message."
-            (action : A.t)];
+            ~action:(sexp_of_action action : Sexp.t)];
       model
   in
   let%sub model_and_inject =
     Bonsai.state_machine1
       ?sexp_of_model:(Option.map ~f:Option.sexp_of_t sexp_of_model)
-      ~sexp_of_action:[%sexp_of: A.t]
+      ?sexp_of_action
       ?equal:(Option.map ~f:Option.equal equal)
       ~default_model:None
       ~apply_action
@@ -95,10 +96,17 @@ let state_machine1_dynamic_model
   model_creator model, inject
 ;;
 
-let state_machine0_dynamic_model ?sexp_of_model ?equal action_mod ~model ~apply_action =
+let state_machine0_dynamic_model
+  ?sexp_of_action
+  ?sexp_of_model
+  ?equal
+  ~model
+  ~apply_action
+  ()
+  =
   let apply_action context () model action = apply_action context model action in
   state_machine1_dynamic_model
-    action_mod
+    ?sexp_of_action
     ?sexp_of_model
     ?equal
     ~model
@@ -107,16 +115,16 @@ let state_machine0_dynamic_model ?sexp_of_model ?equal action_mod ~model ~apply_
 ;;
 
 let state_dynamic_model (type m) ?sexp_of_model ?equal ~model () =
-  let module M = struct
-    type t = m
-
-    let sexp_of_t = Option.value ~default:sexp_of_opaque sexp_of_model
-  end
-  in
   let apply_action (_ : _ Bonsai.Apply_action_context.t) _old_model new_model =
     new_model
   in
-  state_machine0_dynamic_model (module M) ?sexp_of_model ?equal ~model ~apply_action
+  state_machine0_dynamic_model
+    ?sexp_of_action:sexp_of_model
+    ?sexp_of_model
+    ?equal
+    ~model
+    ~apply_action
+    ()
 ;;
 
 let exactly_once effect =
