@@ -15,7 +15,7 @@ For the rest of this doc, this module alias will be in effect:
 <!-- $MDX skip -->
 ```
 ``` ocaml
-module Form = Bonsai_web_ui_form
+module Form = Bonsai_web_ui_form.With_automatic_view
 ```
 
 # Form.t

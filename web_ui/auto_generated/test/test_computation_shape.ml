@@ -5,16 +5,9 @@ open! Bonsai_web_test
 module Private = Bonsai.Private
 module Auto_generated = Bonsai_web_ui_auto_generated
 
-let pre_process computation =
-  computation
-  |> Private.reveal_computation
-  |> Private.pre_process
-  |> Private.conceal_computation
-;;
-
 let count_computation_nodes name c =
   let skeleton =
-    Private.Skeleton.Computation.of_computation (Private.reveal_computation c)
+    Private.Skeleton.Computation.of_computation (Private.top_level_handle c)
   in
   let o =
     object
@@ -32,21 +25,24 @@ module type S = sig
 end
 
 let test_form (type a) (module M : S with type t = a) (ts : a list) =
-  let run c =
-    let handle = Handle.create ~optimize:false (form_result_spec M.sexp_of_t) c in
+  let run ~optimize c =
+    let handle = Handle.create ~optimize (form_result_spec M.sexp_of_t) c in
     List.iter ts ~f:(fun t ->
       Handle.do_actions handle [ t ];
       Handle.recompute_view handle)
   in
+  let computation = Auto_generated.form (module M) () in
   let no_opt_count =
-    let computation = Auto_generated.form (module M) () in
-    run computation;
-    count_computation_nodes "no optimization" computation
+    let raw_computation = Private.top_level_handle computation in
+    run (fun graph -> Private.perform graph raw_computation) ~optimize:false;
+    count_computation_nodes "no optimization" (fun graph ->
+      Private.perform graph raw_computation)
   in
   let with_opt_count =
-    let computation = Auto_generated.form (module M) () |> pre_process in
-    run computation;
-    count_computation_nodes "with optimization" computation
+    let raw_computation = Private.top_level_handle computation |> Private.pre_process in
+    run (fun graph -> Private.perform graph raw_computation) ~optimize:true;
+    count_computation_nodes "with optimization" (fun graph ->
+      Private.perform graph raw_computation)
   in
   print_endline
     (sprintf
@@ -59,9 +55,9 @@ let%expect_test "int" =
   test_form (module Int) [ 5 ];
   [%expect
     {|
-    no optimization: 455 nodes
+    no optimization: 443 nodes
     with optimization: 31 nodes
-    reduced to 6.8%
+    reduced to 7.0%
   |}]
 ;;
 
@@ -84,9 +80,9 @@ let%expect_test "option>variant>record form" =
   test_form (module T) [ None; Some A; Some (B { a = 5; b = "hello" }) ];
   [%expect
     {|
-    no optimization: 3791 nodes
-    with optimization: 233 nodes
-    reduced to 6.1%
+    no optimization: 3657 nodes
+    with optimization: 225 nodes
+    reduced to 6.2%
     |}]
 ;;
 
@@ -101,8 +97,8 @@ let%expect_test "variant form" =
   test_form (module T) [ A; B 5 ];
   [%expect
     {|
-    no optimization: 1609 nodes
-    with optimization: 113 nodes
+    no optimization: 1553 nodes
+    with optimization: 109 nodes
     reduced to 7.0% |}]
 ;;
 
@@ -118,9 +114,9 @@ let%expect_test "record form" =
   test_form (module T) [ { a = 5; b = "hello" } ];
   [%expect
     {|
-    no optimization: 1739 nodes
+    no optimization: 1673 nodes
     with optimization: 105 nodes
-    reduced to 6.0% |}]
+    reduced to 6.3% |}]
 ;;
 
 let%expect_test "option form" =
@@ -131,7 +127,7 @@ let%expect_test "option form" =
   test_form (module T) [ None; Some 5 ];
   [%expect
     {|
-    no optimization: 1353 nodes
-    with optimization: 77 nodes
-    reduced to 5.7% |}]
+    no optimization: 1317 nodes
+    with optimization: 73 nodes
+    reduced to 5.5% |}]
 ;;

@@ -6,8 +6,7 @@ val table_to_string
   :  include_stats:bool
   -> ?include_num_column:bool
   -> ?selected_header:string
-  -> ?num_filtered_rows:int
-  -> ('a, int option) Table.Focus_by_row.t option
+  -> ?additional_summary:string
   -> Table.For_testing.t
   -> unit
   -> string

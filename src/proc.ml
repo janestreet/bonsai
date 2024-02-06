@@ -12,6 +12,7 @@ module Let_syntax = struct
     let return = return
     let map ?here t ~f = { (Value.map t ~f) with here }
     let both = Value.both
+    let map2 = Value.map2
     let arr ?here t ~f = read (map ?here t ~f)
     let cutoff t ~equal = Value.cutoff ~added_by_let_syntax:true t ~equal
 
@@ -200,7 +201,8 @@ let actor1
     -> ?equal:(model -> model -> bool)
     -> default_model:model
     -> recv:
-         (schedule_event:(unit Ui_effect.t -> unit)
+         (inject:(action -> return Effect.t)
+          -> schedule_event:(unit Effect.t -> unit)
           -> input Computation_status.t
           -> model
           -> action
@@ -219,13 +221,14 @@ let actor1
     let sexp_of_t cb = sexp_of_action (Effect.Private.Callback.request cb)
   end
   in
+  let make_inject ~inject ~schedule_event action =
+    Effect.Private.make ~request:action ~evaluator:(fun action ->
+      schedule_event (inject action))
+  in
   let reset =
     Option.map reset ~f:(fun f context model ->
       let%tydi { inject; schedule_event } = Apply_action_context.Private.reveal context in
-      let inject action =
-        Effect.Private.make ~request:action ~evaluator:(fun action ->
-          schedule_event (inject action))
-      in
+      let inject = make_inject ~inject ~schedule_event in
       f ~inject ~schedule_event model)
   in
   let%sub model, inject =
@@ -236,20 +239,19 @@ let actor1
       ?equal
       ~default_model
       ~apply_action:(fun context input model callback ->
-        let%tydi { inject = _; schedule_event } =
+        let%tydi { inject; schedule_event } =
           Apply_action_context.Private.reveal context
         in
+        let inject = make_inject ~inject ~schedule_event in
         let action = Effect.Private.Callback.request callback in
-        let new_model, response = recv ~schedule_event input model action in
+        let new_model, response = recv ~inject ~schedule_event input model action in
         schedule_event (Effect.Private.Callback.respond_to callback response);
         new_model)
       input
   in
   let%sub inject =
     let%arr inject = inject in
-    fun action ->
-      Effect.Private.make ~request:action ~evaluator:(fun action ->
-        Effect.Expert.handle (inject action))
+    make_inject ~inject ~schedule_event:Effect.Expert.handle
   in
   let%arr model = model
   and inject = inject in
@@ -257,7 +259,9 @@ let actor1
 ;;
 
 let actor0 ?reset ?sexp_of_model ?sexp_of_action ?equal ~default_model ~recv () =
-  let recv ~schedule_event (_ : unit Computation_status.t) = recv ~schedule_event in
+  let recv ~inject ~schedule_event (_ : unit Computation_status.t) =
+    recv ~inject ~schedule_event
+  in
   actor1
     ?sexp_of_action
     ?sexp_of_model
@@ -345,36 +349,12 @@ let yoink a =
       ~sexp_of_model:[%sexp_of: Unit.t]
       ~sexp_of_action:[%sexp_of: Unit.t]
       ~equal:[%equal: Unit.t]
-      ~recv:(fun ~schedule_event:_ a () () -> (), a)
+      ~recv:(fun ~inject:_ ~schedule_event:_ a () () -> (), a)
       ~default_model:()
       a
   in
   let%arr result = result in
   result ()
-;;
-
-let narrow state_and_inject ~get ~set =
-  let%sub state, inject = return state_and_inject in
-  let%sub inject =
-    let%sub get_state = yoink state in
-    let%arr get_state = get_state
-    and inject = inject in
-    fun a ->
-      match%bind.Effect get_state with
-      | Inactive -> Effect.Ignore
-      | Active state -> inject (set state a)
-  in
-  let%sub state =
-    let%arr state = state in
-    get state
-  in
-  let%arr state = state
-  and inject = inject in
-  state, inject
-;;
-
-let narrow_via_field state_and_inject field =
-  narrow state_and_inject ~get:(Field.get field) ~set:(Field.fset field)
 ;;
 
 module Edge = struct
@@ -473,7 +453,7 @@ module Edge = struct
           ~sexp_of_action:[%sexp_of: Unit.t]
           ~equal:[%equal: Int.t]
           ~default_model:0
-          ~recv:(fun ~schedule_event:_ i () -> i + 1, i)
+          ~recv:(fun ~inject:_ ~schedule_event:_ i () -> i + 1, i)
           ()
       in
       let module State = struct
@@ -749,6 +729,12 @@ module Incr = struct
   include Incr0
 end
 
+module Map0 = Map0.Make (struct
+  module Value = Value
+  module Computation = Computation
+  module Incr = Incr
+end)
+
 let freeze ?sexp_of_model ?equal value =
   let%sub state, set_state = state_opt ?sexp_of_model ?equal () in
   match%sub state with
@@ -808,7 +794,7 @@ let previous_value
 
 let assoc_set m v ~f =
   let%sub as_map = Map0.of_set v in
-  assoc m as_map ~f:(fun k _ -> f k)
+  assoc m as_map ~f:(fun k _ -> f k) [@nontail]
 ;;
 
 let assoc_list (type key cmp) (m : (key, cmp) comparator) list ~get_key ~f =
@@ -823,7 +809,7 @@ let assoc_list (type key cmp) (m : (key, cmp) comparator) list ~get_key ~f =
   in
   match%sub input_map with
   | `Ok input_map ->
-    let%sub output_map = assoc m input_map ~f in
+    let%sub output_map = assoc m input_map ~f:(fun k v -> f k v) [@nontail] in
     let%arr alist = alist
     and output_map = output_map in
     `Ok
@@ -1320,11 +1306,9 @@ module Value = struct
   let cutoff t ~equal = cutoff ~added_by_let_syntax:false t ~equal
 end
 
-module Private = struct
-  let conceal_value = Fn.id
-  let reveal_value = Fn.id
-  let conceal_computation = Fn.id
-  let reveal_computation = Fn.id
+module Expert = struct
+  let thunk = thunk
+  let assoc_on = assoc_on
 end
 
 module Map = Map0

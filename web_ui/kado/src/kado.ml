@@ -39,6 +39,7 @@ let dark_mode_constants =
       { body_row_even = table_even
       ; body_row_odd = primary
       ; body_row_focused = c ~fg:primary.foreground ~bg:(`Hex "#4b3038")
+      ; body_cell_focused = c ~fg:primary.foreground ~bg:(`Hex "#4b3038")
       ; header_row = header
       ; header_header_border = extreme_primary_border
       ; header_body_border = extreme_primary_border
@@ -76,6 +77,7 @@ let light_mode_constants =
       { body_row_even = table_even
       ; body_row_odd = primary
       ; body_row_focused = c ~fg:primary.foreground ~bg:(`Hex "#7D648A")
+      ; body_cell_focused = c ~fg:primary.foreground ~bg:(`Hex "#7D648A")
       ; header_row = header
       ; header_header_border
       ; header_body_border = header_header_border
@@ -113,10 +115,11 @@ let v1 ~constants ~codemirror_theme ~is_dark ~name ~version_name ~set_min_height
           method! constants = constants
 
           method! app_attr =
-            app_attr
-              ~is_dark
-              ~color:self#constants.primary.background
-              ~set_min_height_to_100vh
+            lazy
+              (app_attr
+                 ~is_dark
+                 ~color:self#constants.primary.background
+                 ~set_min_height_to_100vh)
 
           method! devbar = Devbar.make self#constants ~is_dark
           method! tabs = Tabs.make

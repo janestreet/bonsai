@@ -6,6 +6,7 @@ type t =
   ; header_row : Vdom.Attr.t
   ; header : Vdom.Attr.t
   ; cell : Vdom.Attr.t
+  ; cell_focused : Vdom.Attr.t
   ; row : Vdom.Attr.t
   ; row_focused : Vdom.Attr.t
   ; body : Vdom.Attr.t

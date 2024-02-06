@@ -111,3 +111,5 @@ module Handle : sig
   val print_stabilizations : _ t -> unit
   val print_stabilization_tracker_stats : _ t -> unit
 end
+
+module Expect_test_config : Expect_test_config_types.S with module IO = Monad.Ident

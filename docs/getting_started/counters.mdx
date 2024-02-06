@@ -242,7 +242,7 @@ monadic `bind`, but with this signature:
 # Bonsai.Let_syntax.Let_syntax.sub
 - : ?here:Lexing.position ->
     'a Bonsai.Computation.t ->
-    f:('a Bonsai.Value.t -> 'b Bonsai.Computation.t) ->
+    f:('a Bonsai.Cont.t -> 'b Bonsai.Computation.t) ->
     'b Bonsai.Computation.t
 = <fun>
 ```
@@ -254,10 +254,10 @@ is:
 ```ocaml
 # Bonsai.assoc
 - : ('key, 'cmp) Bonsai.comparator ->
-    ('key, 'data, 'cmp) Core.Map.t Bonsai.Value.t ->
-    f:('key Bonsai.Value.t ->
-       'data Bonsai.Value.t -> 'result Bonsai.Computation.t) ->
-    ('key, 'result, 'cmp) Core.Map.t Bonsai.Computation.t
+    ('key, 'data, 'cmp) Base.Map.t Bonsai.Cont.t ->
+    f:('key Bonsai.Cont.t ->
+       'data Bonsai.Cont.t -> 'result Bonsai.Computation.t) ->
+    ('key, 'result, 'cmp) Base.Map.t Bonsai.Computation.t
 = <fun>
 ```
 

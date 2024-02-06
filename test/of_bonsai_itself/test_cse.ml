@@ -16,7 +16,7 @@ let use_two_unit_values a b =
 let sexp_of_computation c =
   let module Private = Bonsai.Private in
   c
-  |> Private.reveal_computation
+  |> Private.top_level_handle
   |> Private.Skeleton.Computation.of_computation
   |> Private.Skeleton.Computation.sanitize_for_testing
   |> Private.Skeleton.Computation.minimal_sexp_of_t
@@ -45,6 +45,36 @@ let%expect_test "double-use of a Value.t" =
               inputs (
                 (Mapn (inputs (Incr)))
                 (Mapn (inputs (Incr)))))))))))
+    computing!
+    computing! |}]
+;;
+
+let%expect_test "double-use of a Value.t (inside a computation)" =
+  let component graph =
+    (let%sub () = Bonsai.const () in
+     let dummy_value =
+       Bonsai.Value.map (opaque_const_value ()) ~f:(fun () -> print_endline "computing!")
+     in
+     let%arr () = dummy_value
+     and () = dummy_value in
+     ())
+      graph
+  in
+  evaluate component;
+  [%expect
+    {|
+    (Sub
+      (from (Return (value (Mapn (inputs ((Constant (id (Test 0)))))))))
+      (via (Test 2))
+      (into (
+        Return (
+          value (
+            Mapn (
+              inputs ((
+                Mapn (
+                  inputs (
+                    (Mapn (inputs (Incr)))
+                    (Mapn (inputs (Incr)))))))))))))
     computing!
     computing! |}]
 ;;
@@ -195,14 +225,14 @@ let%expect_test "double-use inside of some nested subs" =
         (from (
           Sub
           (from (Return (value Incr)))
-          (via (Test 1))
+          (via (Test 7))
           (into (
             Return (
               value (
                 Mapn (
                   inputs ((
-                    Mapn (inputs ((Named (uid (Test 1))) (Mapn (inputs (Incr))))))))))))))
-        (via (Test 7))
+                    Mapn (inputs ((Named (uid (Test 7))) (Mapn (inputs (Incr))))))))))))))
+        (via (Test 10))
         (into (
           Return (
             value (
@@ -211,7 +241,7 @@ let%expect_test "double-use inside of some nested subs" =
                   Mapn (
                     inputs (
                       (Named (uid (Test 6)))
-                      (Named (uid (Test 7)))))))))))))))
+                      (Named (uid (Test 10)))))))))))))))
     computing!
     computing! |}]
 ;;
@@ -251,7 +281,7 @@ let%expect_test "double-use inside supercomponent" =
                 Mapn (
                   inputs ((
                     Mapn (inputs ((Named (uid (Test 1))) (Mapn (inputs (Incr))))))))))))
-          (via (Test 7))
+          (via (Test 8))
           (into (
             Return (
               value (
@@ -260,7 +290,7 @@ let%expect_test "double-use inside supercomponent" =
                     Mapn (
                       inputs (
                         (Named (uid (Test 6)))
-                        (Named (uid (Test 7)))))))))))))))))
+                        (Named (uid (Test 8)))))))))))))))))
     computing!
     computing!
     more computing

@@ -3,7 +3,7 @@ open! Bonsai_web
 open Bonsai.Let_syntax
 open Codemirror
 open Virtual_dom
-module Form = Bonsai_web_ui_form
+module Form = Bonsai_web_ui_form.With_automatic_view
 module Codemirror = Bonsai_web_ui_codemirror
 
 (* Make the codemirror editor take up most of the view *)

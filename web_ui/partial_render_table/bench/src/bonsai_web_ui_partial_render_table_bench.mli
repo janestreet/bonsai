@@ -7,20 +7,22 @@ open! Bonsai_bench
 (** An [Action.t] represents the possible actions that can be performed on a partial render
     table. *)
 module Action : sig
-  type 'a t =
+  type ('key, 'column_id) t =
     | Unfocus
     | Focus_up
     | Focus_down
+    | Focus_left
+    | Focus_right
     | Page_up
     | Page_down
-    | Focus of 'a
+    | Focus of ('key * 'column_id)
   [@@deriving sexp, equal]
 end
 
 (** An [Input.t] packages up all of the inputs to the partial render table and provides
     facilities for modifying individual components. *)
 module Input : sig
-  type ('key, 'data, 'cmp) t
+  type ('key, 'column_id, 'data, 'cmp) t
 
   (** [create] produces a [t], with defaults for most components of the input. *)
   val create
@@ -30,13 +32,15 @@ module Input : sig
          ('key, 'data, 'cmp) Incr_map_collate.Compare.t
     -> ?rank_range:(* default: Which_range.To 100 *) int Collate.Which_range.t
     -> ?key_range:(* default: Which_range.All_rows *) 'key Collate.Which_range.t
-    -> ?on_change:((* default: Fn.const Effect.Ignore *) 'key option -> unit Effect.t)
+    -> ?on_change:
+         ((* default: Fn.const Effect.Ignore *) ('key * 'column_id) option
+          -> unit Effect.t)
     -> ('key, 'data, 'cmp) Map.t
-    -> ('key, 'data, 'cmp) t
+    -> ('key, 'column_id, 'data, 'cmp) t
 
   (** [apply_filter] produces an interaction to change the current filter. *)
   val apply_filter
-    :  ('key, 'data, 'cmp) t
+    :  ('key, _, 'data, 'cmp) t
     -> (key:'key -> data:'data -> bool)
     -> 'action Bonsai_bench.Interaction.t
 
@@ -46,13 +50,13 @@ module Input : sig
   (** [set_map] produces an interaction to change the map whose data is being rendered in
       the table. *)
   val set_map
-    :  ('key, 'data, 'cmp) t
+    :  ('key, _, 'data, 'cmp) t
     -> ('key, 'data, 'cmp) Map.t
     -> 'action Bonsai_bench.Interaction.t
 
   (** [set_order] produces an interaction to change the current ordering. *)
   val set_order
-    :  ('key, 'data, 'cmp) t
+    :  ('key, _, 'data, 'cmp) t
     -> ('key, 'data, 'cmp) Incr_map_collate.Compare.t
     -> 'action Bonsai_bench.Interaction.t
 
@@ -64,8 +68,8 @@ module Input : sig
 
   (** [set_on_change] produces an interaction to change the current [on_change] function. *)
   val set_on_change
-    :  ('key, _, _) t
-    -> ('key option -> unit Effect.t)
+    :  ('key, 'column_id, _, _) t
+    -> (('key * 'column_id) option -> unit Effect.t)
     -> 'action Bonsai_bench.Interaction.t
 
   (** [scroll] generates an interaction with abs(start-stop) [change_input]s, which set the
@@ -85,8 +89,10 @@ end
 val create_bench
   :  ?preload_rows:int
   -> ('key, 'cmp) Bonsai.comparator
-  -> initial_vars:('key, 'data, 'cmp) Input.t
-  -> columns:('key, 'data) Expert.Columns.t
-  -> interaction:(('key, 'data, 'cmp) Input.t -> 'key Action.t Bonsai_bench.Interaction.t)
+  -> initial_vars:('key, 'column_id, 'data, 'cmp) Input.t
+  -> columns:('key, 'data, 'column_id) Expert.Columns.t
+  -> interaction:
+       (('key, 'column_id, 'data, 'cmp) Input.t
+        -> ('key, 'column_id) Action.t Bonsai_bench.Interaction.t)
   -> test_name:string
   -> Bonsai_bench.t

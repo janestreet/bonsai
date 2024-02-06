@@ -137,10 +137,9 @@ let%expect_test "enum with action handling `Warn" =
       ];
     [%expect
       {|
-               (lib/bonsai/src/proc.ml:102:14
-                "An action sent to an [of_module1] has been dropped because its input was not present. This happens when the [of_module1] is inactive when it receives a message."
-                (action Increment))
-               pure 3|}];
+      ("An action sent to an [of_module1] has been dropped because its input was not present. This happens when the [of_module1] is inactive when it receives a message."
+       (action Increment))
+      pure 3 |}];
     H.do_actions [ Outer Increment ];
     [%expect "counter 2"])
 ;;
@@ -468,12 +467,12 @@ let%expect_test "compose, pure" =
   let component_b = Bonsai.Arrow_deprecated.pure ~f:(fun input -> input + 2) in
   let component = component_a >>> component_b in
   run_test ~component ~initial_input:0 ~f:(fun driver ->
-    [%expect {| |}];
+    [%expect {||}];
     let (module H) = Helpers.make ~driver ~sexp_of_result:[%sexp_of: int] in
     H.show ();
-    [%expect "2"];
+    [%expect {| 2 |}];
     H.set_input 11;
-    [%expect "3"])
+    [%expect {| 3 |}])
 ;;
 
 let%expect_test "pure_incr" =
@@ -485,12 +484,12 @@ let%expect_test "pure_incr" =
   in
   let component = component_a >>> component_b in
   run_test ~component ~initial_input:0 ~f:(fun driver ->
-    [%expect {| |}];
+    [%expect {||}];
     let (module H) = Helpers.make ~driver ~sexp_of_result:[%sexp_of: int] in
     H.show ();
-    [%expect "2"];
+    [%expect {| 2 |}];
     H.set_input 11;
-    [%expect "3"])
+    [%expect {| 3 |}])
 ;;
 
 let%expect_test "input projection" =
@@ -499,12 +498,12 @@ let%expect_test "input projection" =
     String.length @>> Bonsai.Arrow_deprecated.pure ~f:(fun input -> input + 1)
   in
   run_test ~component ~initial_input:"hi" ~f:(fun driver ->
-    [%expect {| |}];
+    [%expect {||}];
     let (module H) = Helpers.make ~driver ~sexp_of_result:[%sexp_of: int] in
     H.show ();
-    [%expect "3"];
+    [%expect {| 3 |}];
     H.set_input "hello";
-    [%expect "6"])
+    [%expect {| 6 |}])
 ;;
 
 let%expect_test "assoc on input" =

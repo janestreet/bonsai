@@ -1,4 +1,6 @@
-(library (name bonsai_web_ui_scroll_utilities)
+(library
+ (name bonsai_web_ui_scroll_utilities)
  (public_name bonsai.web_ui_scroll_utilities)
  (libraries bonsai bonsai_web js_of_ocaml core)
- (preprocess (pps ppx_jane js_of_ocaml-ppx)))
+ (preprocess
+  (pps ppx_jane js_of_ocaml-ppx)))

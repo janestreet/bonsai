@@ -121,7 +121,7 @@ module Css = [%css stylesheet {|
 |}]
 
 let zone_form =
-  let module Form = Bonsai_web_ui_form in
+  let module Form = Bonsai_web_ui_form.With_automatic_view in
   let%sub form =
     Form.Elements.Textbox.string
       ~placeholder:"timezone"

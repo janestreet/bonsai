@@ -2,7 +2,7 @@ open! Core
 open! Async_kernel
 open! Bonsai_web
 open Bonsai.Let_syntax
-module Form = Bonsai_web_ui_form
+module Form = Bonsai_web_ui_form.With_automatic_view
 
 (* $MDX part-begin=form_textbox_value *)
 let textbox_value =

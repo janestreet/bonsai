@@ -2,7 +2,7 @@ open! Core
 open! Bonsai_web
 open Js_of_ocaml
 open Bonsai.Let_syntax
-module Form = Bonsai_web_ui_form
+module Form = Bonsai_web_ui_form.With_automatic_view
 
 let component =
   let%sub form = Form.Elements.Textbox.string ~allow_updates_when_focused:`Never () in

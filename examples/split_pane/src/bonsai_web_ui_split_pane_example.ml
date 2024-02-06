@@ -3,7 +3,7 @@ open! Bonsai_web
 open! Bonsai.Let_syntax
 open! Vdom
 module Parameters = Bonsai_web_ui_split_pane.For_testing.Parameters
-module Form = Bonsai_web_ui_form
+module Form = Bonsai_web_ui_form.With_automatic_view
 
 module Styles =
 [%css
@@ -82,7 +82,9 @@ let create_demo ~parameters =
 let create_parameters_form =
   let%sub form = Bonsai_web_ui_auto_generated.form (module Parameters) () in
   let%sub form =
-    Bonsai_web_ui_form.Dynamic.with_default (Value.return Parameters.default) form
+    Bonsai_web_ui_form.With_automatic_view.Dynamic.with_default
+      (Value.return Parameters.default)
+      form
   in
   let%sub last_ok =
     Bonsai.most_recent_value_satisfying
@@ -97,7 +99,7 @@ let create_parameters_form =
   and form = form in
   let form_vdom = Bonsai_web_ui_auto_generated.view_as_vdom form in
   let error =
-    match Bonsai_web_ui_form.value form with
+    match Bonsai_web_ui_form.With_automatic_view.value form with
     | Ok _ -> Node.none
     | Error e -> Node.sexp_for_debugging [%sexp (e : Error.t)]
   in

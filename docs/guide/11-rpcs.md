@@ -328,7 +328,7 @@ let%expect_test "Clicking the button should double the number" =
       <button onclick> Double the number </button>
     </div> |}];
   let%bind () = Async_kernel_scheduler.yield_until_no_jobs_remain () in
-  [%expect {| "RPC not handled because no connector has been provided." |}];
+  [%expect {| (Failure "BUG: no bonsai-rpc handler installed") |}];
   return ()
 ;;
 ```

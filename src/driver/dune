@@ -1,2 +1,6 @@
-(library (name bonsai_driver) (public_name bonsai.driver)
- (libraries bonsai core incr_map) (preprocess (pps ppx_jane)))
+(library
+ (name bonsai_driver)
+ (public_name bonsai.driver)
+ (libraries bonsai core incr_map)
+ (preprocess
+  (pps ppx_jane)))

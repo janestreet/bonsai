@@ -66,9 +66,16 @@ module T = struct
 
   let on_mount _ state element = state.observer <- Some (observe ~state element)
 
-  let update ~old_input:_ ~new_input state _ =
-    state.callback <- wrap_with_handle ~f:new_input;
-    state.callback ~width:state.last_width ~height:state.last_height
+  let update ~old_input ~new_input state _ =
+    if phys_equal old_input new_input
+    then ()
+    else (
+      state.callback <- wrap_with_handle ~f:new_input;
+      (* if the "size change" callback function changes, we should send it what we
+         currently think the size is, otherwise if the element never changes size, 
+         the function would never get called, so whatever is ttracking the size would 
+         always remain clueless... *)
+      state.callback ~width:state.last_width ~height:state.last_height)
   ;;
 
   let destroy _ state _ =

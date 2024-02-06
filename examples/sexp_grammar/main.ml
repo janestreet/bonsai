@@ -2,7 +2,7 @@ open! Core
 open! Bonsai_web
 open! Bonsai.Let_syntax
 module Auto_generated = Bonsai_web_ui_auto_generated
-module Form = Bonsai_web_ui_form
+module Form = Bonsai_web_ui_form.With_automatic_view
 
 let generation_count = 100
 

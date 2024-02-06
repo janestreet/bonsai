@@ -243,10 +243,10 @@ let profile (T { clock; component; get_inject; interaction; name } : Config.t) =
   in
   let component =
     Graph_info.iter_graph_updates
-      (Bonsai.Private.reveal_computation component)
+      (Bonsai.Private.top_level_handle component)
       ~on_update:(fun gi -> graph_info := gi)
-    |> Bonsai.Private.conceal_computation
   in
+  let component graph = Bonsai.Private.perform graph component in
   let performance_entries = ref [] in
   let performance_observer =
     if PerformanceObserver.is_supported ()

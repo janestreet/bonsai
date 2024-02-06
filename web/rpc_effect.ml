@@ -17,6 +17,8 @@ module Rvar : sig
   (** A "Refreshable" var. *)
   type 'a t
 
+  val const : 'a -> 'a t
+
   (** Makes a new container that asynchronously computes its contents on demand. *)
   val create : (unit -> 'a Deferred.Or_error.t) -> 'a t
 
@@ -33,59 +35,122 @@ module Rvar : sig
       If [invalidate] is called in the middle of computing the result, the
       computation starts over. *)
   val contents : 'a t -> 'a Deferred.Or_error.t
+
+  val derived : 'a t -> ('a -> 'b Deferred.Or_error.t) -> 'b t
+  val destroy : _ t -> unit
 end = struct
   type 'a state =
     | Invalid
     | Pending
     | Value of 'a
 
-  type 'a t =
+  type 'a common =
     { mutable state : 'a state
     ; f : unit -> 'a Deferred.Or_error.t
     ; finished : ('a Or_error.t, read_write) Bvar.t
+    ; invalidated : (unit -> unit, read_write) Bus.t
     }
 
-  let create f = { state = Invalid; f; finished = Bvar.create () }
-  let invalidate t = t.state <- Invalid
+  type 'a t =
+    | Standard of 'a common
+    | Derived of
+        { common : 'a common
+        ; on_destroy : unit -> unit
+        }
+    | Const of 'a
+
+  let create_common f =
+    let invalidated =
+      Bus.create_exn
+        [%here]
+        Arity1
+        ~on_subscription_after_first_write:Allow
+        ~on_callback_raise:Error.raise
+    in
+    { state = Invalid; f; finished = Bvar.create (); invalidated }
+  ;;
+
+  let const v = Const v
+  let create f = Standard (create_common f)
 
   let return_result t result =
     Deferred.return
-      (match result with
-       | Ok value ->
-         t.state <- Value value;
-         Bvar.broadcast t.finished (Ok value);
-         Ok value
-       | Error e ->
-         t.state <- Invalid;
-         Bvar.broadcast t.finished (Error e);
-         Error e)
+      (match t with
+       | Const _ -> result
+       | Standard t | Derived { common = t; _ } ->
+         (match result with
+          | Ok value ->
+            t.state <- Value value;
+            Bvar.broadcast t.finished (Ok value);
+            Ok value
+          | Error e ->
+            t.state <- Invalid;
+            Bvar.broadcast t.finished (Error e);
+            Error e))
   ;;
 
-  let rec contents t =
-    match t.state with
-    | Invalid ->
-      t.state <- Pending;
-      (match%bind Monitor.try_with_join_or_error t.f with
-       | Ok value ->
-         (match t.state with
-          | Invalid ->
-            (* If [t] has been invalidated in the middle of computing its
-               result, try again. This recursive call shouldn't cause an infinite
-               loop because [t.f] is passed when the [t] is created, which
-               means it cannot possibly unconditionally call [invalidate]
-               on itself. Undoubtedly there is a way around this that will cause
-               an infinite loop, but in that case the infinite loop is not
-               surprising. *)
-            contents t
-          | Pending -> return_result t (Ok value)
-          | Value value ->
-            eprint_s
-              [%message
-                "BUG: Skipped computing Rvar result because it has already been computed."];
-            return_result t (Ok value))
-       | Error e -> return_result t (Error e))
-    | Pending -> Bvar.wait t.finished
-    | Value value -> Deferred.Or_error.return value
+  let rec contents = function
+    | Const v -> Deferred.Or_error.return v
+    | (Standard t | Derived { common = t; _ }) as self ->
+      (match t.state with
+       | Invalid ->
+         t.state <- Pending;
+         (match%bind Monitor.try_with_join_or_error t.f with
+          | Ok value ->
+            (match t.state with
+             | Invalid ->
+               (* If [t] has been invalidated in the middle of computing its
+                  result, try again. This recursive call shouldn't cause an infinite
+                  loop because [t.f] is passed when the [t] is created, which
+                  means it cannot possibly unconditionally call [invalidate]
+                  on itself. Undoubtedly there is a way around this that will cause
+                  an infinite loop, but in that case the infinite loop is not
+                  surprising. *)
+               contents self
+             | Pending -> return_result self (Ok value)
+             | Value value ->
+               eprint_s
+                 [%message
+                   "BUG: Skipped computing Rvar result because it has already been \
+                    computed."];
+               return_result self (Ok value))
+          | Error e -> return_result self (Error e))
+       | Pending -> Bvar.wait t.finished
+       | Value value -> Deferred.Or_error.return value)
+  ;;
+
+  let invalidate = function
+    | Const _ -> ()
+    | Standard t | Derived { common = t; _ } ->
+      t.state <- Invalid;
+      Bus.write t.invalidated ()
+  ;;
+
+  let derived inner f =
+    match inner with
+    | Const v -> create (fun () -> f v)
+    | Standard { invalidated = inner_invalidated; _ }
+    | Derived { common = { invalidated = inner_invalidated; _ }; _ } ->
+      let f () = Deferred.Or_error.bind (contents inner) ~f in
+      let rec me =
+        lazy
+          (let subscriber = Lazy.force subscriber in
+           let on_destroy () = Bus.unsubscribe inner_invalidated subscriber in
+           Derived { common = create_common f; on_destroy })
+      and subscriber =
+        lazy
+          (Bus.subscribe_exn inner_invalidated [%here] ~f:(fun () ->
+             invalidate (Lazy.force me)))
+      in
+      Lazy.force me
+  ;;
+
+  let destroy = function
+    | Const _ -> ()
+    | Standard _ as t -> invalidate t
+    | Derived { on_destroy; _ } as t ->
+      invalidate t;
+      on_destroy ()
   ;;
 end
 
@@ -111,6 +176,13 @@ module Connector = struct
         }
         -> t
     | Test_fallback : t
+
+  let menu_rvar = function
+    | Async_durable { menu : Versioned_rpc.Menu.t Rvar.t; _ } -> Some menu
+    | Persistent_connection { menu : Versioned_rpc.Menu.t Rvar.t; _ } -> Some menu
+    | Connection { menu : Versioned_rpc.Menu.t Rvar.t; _ } -> Some menu
+    | Test_fallback -> None
+  ;;
 
   let persistent_connection
     (type conn)
@@ -709,15 +781,19 @@ module Our_rpc = struct
 end
 
 module Polling_state_rpc = struct
-  let dispatcher ?(on_forget_client_error = fun _ -> Effect.Ignore) rpc ~where_to_connect =
+  let dispatcher'
+    ?(on_forget_client_error = fun _ -> Effect.Ignore)
+    create_client_rvar
+    ~destroy_after_forget
+    ~where_to_connect
+    =
     let open Bonsai.Let_syntax in
     let%sub connector = Bonsai.Dynamic_scope.lookup connector_var in
-    let%sub client =
-      Bonsai.Expert.thunk (fun () -> Polling_state_rpc.Client.create rpc)
-    in
+    let%sub client_rvar = create_client_rvar ~connector in
     let%sub forget_client_on_server =
-      let perform_dispatch (connector, client) =
+      let perform_dispatch (connector, client_rvar) =
         Connector.with_connection connector ~where_to_connect ~callback:(fun connection ->
+          let%bind.Eager_deferred.Or_error client = Rvar.contents client_rvar in
           match%map.Deferred
             Polling_state_rpc.Client.forget_on_server client connection
           with
@@ -730,35 +806,75 @@ module Polling_state_rpc = struct
           | Error error -> Error error)
       in
       let%arr connector = connector
-      and client = client in
-      match%bind.Effect Effect.of_deferred_fun perform_dispatch (connector, client) with
-      | Ok () -> Effect.Ignore
-      | Error error -> on_forget_client_error error
+      and client_rvar = client_rvar in
+      let%bind.Effect () =
+        match%bind.Effect
+          Effect.of_deferred_fun perform_dispatch (connector, client_rvar)
+        with
+        | Ok () -> Effect.Ignore
+        | Error error -> on_forget_client_error error
+      in
+      if destroy_after_forget
+      then Effect.of_thunk (fun () -> Rvar.destroy client_rvar)
+      else Effect.Ignore
     in
     let%sub () = Bonsai.Edge.lifecycle ~on_deactivate:forget_client_on_server () in
     let perform_query (connector, client) query =
       Connector.with_connection connector ~where_to_connect ~callback:(fun connection ->
+        let%bind.Eager_deferred.Or_error client = Rvar.contents client in
         Polling_state_rpc.Client.dispatch client connection query)
     in
     let%arr connector = connector
-    and client = client in
-    Effect.of_deferred_fun (perform_query (connector, client))
+    and client_rvar = client_rvar in
+    Effect.of_deferred_fun (perform_query (connector, client_rvar))
   ;;
 
-  let poll
+  let babel_dispatcher ?on_forget_client_error caller ~where_to_connect =
+    let create_client_rvar ~connector =
+      let%arr.Bonsai connector = connector in
+      match Connector.menu_rvar (connector where_to_connect) with
+      | None -> raise_s [%message [%here]]
+      | Some menu_rvar ->
+        Rvar.derived menu_rvar (fun _ ->
+          Connector.with_connection_with_menu
+            connector
+            ~where_to_connect
+            ~callback:(fun connection_with_menu ->
+            Versioned_polling_state_rpc.Client.negotiate_client
+              caller
+              connection_with_menu
+            |> Deferred.return))
+    in
+    dispatcher'
+      ?on_forget_client_error
+      ~destroy_after_forget:true
+      ~where_to_connect
+      create_client_rvar
+  ;;
+
+  let dispatcher ?on_forget_client_error rpc ~where_to_connect =
+    let create_client_rvar ~connector:_ =
+      Bonsai.Expert.thunk (fun () -> Rvar.const (Polling_state_rpc.Client.create rpc))
+    in
+    dispatcher'
+      ?on_forget_client_error
+      ~destroy_after_forget:false
+      ~where_to_connect
+      create_client_rvar
+  ;;
+
+  let generic_poll
     ?sexp_of_query
     ?sexp_of_response
     ~equal_query
     ?equal_response
     ?clear_when_deactivated
     ?on_response_received
-    rpc
-    ~where_to_connect
     ~every
     query
+    ~dispatcher
     =
     let open Bonsai.Let_syntax in
-    let%sub dispatcher = dispatcher rpc ~where_to_connect in
     let%sub dispatcher =
       let%arr dispatcher = dispatcher in
       fun query ->
@@ -776,6 +892,58 @@ module Polling_state_rpc = struct
       ~every
       ~poll_behavior:Always
       query
+  ;;
+
+  let poll
+    ?sexp_of_query
+    ?sexp_of_response
+    ~equal_query
+    ?equal_response
+    ?clear_when_deactivated
+    ?on_response_received
+    rpc
+    ~where_to_connect
+    ~every
+    query
+    =
+    let open Bonsai.Let_syntax in
+    let%sub dispatcher = dispatcher rpc ~where_to_connect in
+    generic_poll
+      ?sexp_of_query
+      ?sexp_of_response
+      ~equal_query
+      ?equal_response
+      ?clear_when_deactivated
+      ?on_response_received
+      ~every
+      query
+      ~dispatcher
+  ;;
+
+  let babel_poll
+    ?sexp_of_query
+    ?sexp_of_response
+    ~equal_query
+    ?equal_response
+    ?clear_when_deactivated
+    ?on_response_received
+    rpc
+    ~where_to_connect
+    ~every
+    query
+    =
+    let open Bonsai.Let_syntax in
+    let%sub dispatcher = babel_dispatcher rpc ~where_to_connect in
+    generic_poll
+      ?sexp_of_query
+      ?sexp_of_response
+      ~equal_query
+      ?equal_response
+      ?clear_when_deactivated
+      ?on_response_received
+      ~every
+      query
+      ~dispatcher
   ;;
 
   let shared_poller

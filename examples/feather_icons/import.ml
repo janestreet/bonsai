@@ -1,7 +1,7 @@
 open! Core
 include Bonsai_web
 include Bonsai.Let_syntax
-module Form = Bonsai_web_ui_form
+module Form = Bonsai_web_ui_form.With_automatic_view
 
 module Card_like =
 [%css

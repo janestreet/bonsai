@@ -2,7 +2,7 @@ open! Core
 open! Bonsai_web
 open! Vdom
 open Bonsai.Let_syntax
-module Form = Bonsai_web_ui_form
+module Form = Bonsai_web_ui_form.With_automatic_view
 module Query_box = Bonsai_web_ui_query_box
 
 module Css =

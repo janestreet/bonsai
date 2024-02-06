@@ -3,7 +3,7 @@ open! Bonsai_web
 open Bonsai.Let_syntax
 module N = Vdom.Node
 module A = Vdom.Attr
-module Form = Bonsai_web_ui_form
+module Form = Bonsai_web_ui_form.With_automatic_view
 module E = Form.Elements
 
 module type S = sig

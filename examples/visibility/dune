@@ -1,2 +1,6 @@
-(executables (names main) (libraries bonsai_web bonsai_web_ui_visibility)
- (preprocess (pps ppx_jane ppx_css ppx_bonsai)))
+(executables
+ (modes byte exe)
+ (names main)
+ (libraries bonsai_web bonsai_web_ui_visibility)
+ (preprocess
+  (pps ppx_jane ppx_css ppx_bonsai)))

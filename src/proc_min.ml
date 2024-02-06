@@ -21,14 +21,13 @@ let sub (type via) ?here (from : via Computation.t) ~f =
 
 let switch ~here ~match_ ~branches ~with_ =
   let arms =
-    Int.Map.of_increasing_sequence
-      (Sequence.map (Sequence.range 0 branches) ~f:(fun key ->
-         let computation =
-           try with_ key with
-           | exn -> read (Value.return_exn exn)
-         in
-         key, computation))
-    |> Or_error.ok_exn
+    List.init branches ~f:(fun key ->
+      let computation =
+        try with_ key with
+        | exn -> read (Value.return_exn exn)
+      in
+      key, computation)
+    |> Int.Map.of_alist_exn
   in
   Switch { match_; arms; here }
 ;;

@@ -28,3 +28,15 @@ end
 include Bonsai.For_open
 include Util
 module Effect = Bonsai_web_effect
+
+module Cont = struct
+  module Start = Start
+  module Bonsai = Bonsai.Cont
+  module Incr = Incr
+  module Vdom = Vdom
+  module View = Bonsai_web_ui_view
+  module To_incr_dom = To_incr_dom
+  module Persistent_var = Persistent_var
+  module Rpc_effect = Rpc_effect
+  module Effect = Bonsai_web_effect
+end

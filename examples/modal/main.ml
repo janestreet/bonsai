@@ -134,7 +134,7 @@ let stacking_example =
   and toggle_inner = toggle_inner in
   let inner_modal =
     let contents = dialog_contents (Vdom.Node.text "inner modal") in
-    Native_modal.view ~on_cancel:(fun _ -> toggle_inner) contents
+    Native_modal.view ~on_close:toggle_inner contents
   in
   let outer_modal =
     let contents =
@@ -144,7 +144,7 @@ let stacking_example =
            ; (if not show_inner then Vdom.Node.none else inner_modal)
            ])
     in
-    Native_modal.view ~on_cancel:(fun _ -> toggle_outer) contents
+    Native_modal.view ~on_close:toggle_outer contents
   in
   [ (if not show_outer then Vdom.Node.none else outer_modal)
   ; Vdom.Node.div [ toggle_button "Show stacking modal" toggle_outer ]
@@ -157,10 +157,7 @@ let native_app =
      of creating several different similar variations. *)
   (* Creates the button to show/hide the modal and has state management. creator should
      be fun on_cancel -> modal *)
-  let create_modal_example creator button_text ?desc _ =
-    let%sub show, toggle = Bonsai.toggle ~default_model:false in
-    let%arr show = show
-    and toggle = toggle in
+  let create_modal_example' ?desc creator button_text ~show ~toggle () =
     let toggle_button text toggler =
       Vdom.Node.button
         ~attrs:[ Vdom.Attr.on_click (fun _ -> toggler) ]
@@ -183,6 +180,12 @@ let native_app =
     ; Vdom.Node.div [ toggle_button button_text toggle; extra_desc_markup ]
     ]
   in
+  let create_modal_example ?desc creator button_text () =
+    let%sub show, toggle = Bonsai.toggle ~default_model:false in
+    let%arr show = show
+    and toggle = toggle in
+    create_modal_example' ?desc creator button_text ~show ~toggle ()
+  in
   let%sub simple_modal =
     (* I have many examples so I factored out the logic that adds a button and manages show/hide
        with bonsai state, but you can just write that directly.
@@ -195,7 +198,7 @@ let native_app =
           (Vdom.Node.div
              [ Vdom.Node.text "I'm a simple modal dialog (or dialog modal.)" ])
       in
-      Native_modal.view ~on_cancel:(fun _ -> toggle) contents
+      Native_modal.view ~on_close:toggle contents
     in
     create_modal_example creator "Simple modal" ()
   in
@@ -207,9 +210,46 @@ let native_app =
           ~close_button:toggle
           (Vdom.Node.div [ Vdom.Node.text "I'm a side sheet modal." ])
       in
-      Native_modal.view ~layout:`Right_side_sheet ~on_cancel:(fun _ -> toggle) contents
+      Native_modal.view ~layout:`Right_side_sheet ~on_close:toggle contents
     in
     create_modal_example creator "Side sheet" ()
+  in
+  let%sub confirm_modal =
+    let%sub contents, confirm_prompt =
+      let%sub value, set_value = Bonsai.state None in
+      let%arr value = value
+      and set_value = set_value in
+      let module N = Vdom.Node in
+      ( N.div
+          ~attrs:[ {%css| padding: 4px; |} ]
+          [ Vdom_input_widgets.Entry.text
+              ~value
+              ~on_input:set_value
+              ~allow_updates_when_focused:`Always
+              ()
+          ]
+      , Option.map value ~f:(fun _ -> "Are you sure you want to close?") )
+    in
+    let%sub show, toggle = Bonsai.toggle ~default_model:false in
+    let%arr contents = contents
+    and confirm_prompt = confirm_prompt
+    and show = show
+    and toggle = toggle in
+    let creator ~toggle =
+      Native_modal.view
+        ?on_cancel:
+          (Option.map confirm_prompt ~f:(fun prompt ->
+             Draft_modal.confirm_on_cancel ~prompt))
+        ~cancel_on_overlay_click:true
+        ~on_close:toggle
+        contents
+    in
+    create_modal_example'
+      creator
+      "Show confirmation prompt on unsaved changes"
+      ~show
+      ~toggle
+      ()
   in
   let%sub transparent_modal =
     let creator ~toggle =
@@ -222,7 +262,7 @@ let native_app =
         ~transparent_overlay:true
         ~animated:false
         ~disable_body_scroll:false
-        ~on_cancel:(fun _ -> toggle)
+        ~on_close:toggle
         contents
     in
     create_modal_example creator "Transparent backdrop, no animation" ()
@@ -245,6 +285,7 @@ let native_app =
   let%sub stacking_example = stacking_example in
   let%arr simple_modal = simple_modal
   and side_sheet_modal = side_sheet_modal
+  and confirm_modal = confirm_modal
   and transparent_modal = transparent_modal
   and stacking_example = stacking_example
   and add_lots_of_content_markup = add_lots_of_content_markup in
@@ -256,6 +297,7 @@ let native_app =
           [ [ intro_text ]
           ; simple_modal
           ; side_sheet_modal
+          ; confirm_modal
           ; transparent_modal
           ; stacking_example
           ; add_lots_of_content_markup

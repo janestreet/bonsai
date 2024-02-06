@@ -88,17 +88,17 @@ val state_machine0
 
 val assoc
   :  ('k, 'cmp) comparator
-  -> ('k, 'v, 'cmp) Map_intf.Map.t Value.t
+  -> ('k, 'v, 'cmp) Map.t Value.t
   -> f:('k Value.t -> 'v Value.t -> 'result Computation.t)
-  -> ('k, 'result, 'cmp) Map_intf.Map.t Computation.t
+  -> ('k, 'result, 'cmp) Map.t Computation.t
 
 val assoc_on
   :  ('io_k, 'io_cmp) comparator
   -> ('model_k, 'model_cmp) comparator
-  -> ('io_k, 'v, 'io_cmp) Map_intf.Map.t Value.t
+  -> ('io_k, 'v, 'io_cmp) Map.t Value.t
   -> get_model_key:('io_k -> 'v -> 'model_k)
   -> f:('io_k Value.t -> 'v Value.t -> 'a Computation.t)
-  -> ('io_k, 'a, 'io_cmp) Map_intf.Map.t Computation.t
+  -> ('io_k, 'a, 'io_cmp) Map.t Computation.t
 
 val lazy_ : 'a Computation.t lazy_t -> 'a Computation.t
 

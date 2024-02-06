@@ -1,5 +1,8 @@
-(executables (names main)
+(executables
+ (modes byte exe)
+ (names main)
  (libraries async_js polling_state_rpc async_kernel
-  bonsai_examples_mouse_position_lib bonsai_web core
-  bonsai_examples_mouse_position_common)
- (preprocess (pps ppx_jane)))
+   bonsai_examples_mouse_position_lib bonsai_web core
+   bonsai_examples_mouse_position_common)
+ (preprocess
+  (pps ppx_jane)))

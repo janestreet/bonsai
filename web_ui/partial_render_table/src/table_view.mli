@@ -66,17 +66,25 @@ module Cell : sig
     type t
 
     val create
-      :  themed_attrs:Themed.t
+      :  (module Bonsai.Comparator
+            with type t = 'column_id
+             and type comparator_witness = 'cmp)
+      -> themed_attrs:Themed.t
       -> row_height:int
-      -> col_widths:[< `Hidden of float | `Visible of float ] list
-      -> cols_visible:bool list
-      -> int
-      -> t
+      -> col_widths:('column_id, [< `Hidden of float | `Visible of float ], 'cmp) Map.t
+      -> leaves:'column_id Header_tree.leaf list
+      -> ('column_id -> t) Staged.t
   end
 
   type t
 
-  val view : col_styles:Col_styles.t -> Vdom.Node.t -> t
+  val view
+    :  Themed.t
+    -> is_focused:bool
+    -> col_styles:Col_styles.t
+    -> on_cell_click:unit Effect.t
+    -> Vdom.Node.t
+    -> t
 end
 
 module Row : sig
@@ -88,13 +96,7 @@ module Row : sig
 
   type t
 
-  val view
-    :  Themed.t
-    -> styles:Styles.t
-    -> is_focused:bool
-    -> on_row_click:unit Ui_effect.t
-    -> Cell.t list
-    -> t
+  val view : Themed.t -> styles:Styles.t -> is_focused:bool -> Cell.t list -> t
 end
 
 module Body : sig

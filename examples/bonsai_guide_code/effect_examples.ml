@@ -2,7 +2,7 @@ open! Core
 open! Async_kernel
 open! Bonsai_web
 open! Bonsai.Let_syntax
-module Forms = Bonsai_web_ui_form
+module Forms = Bonsai_web_ui_form.With_automatic_view
 
 let uppercase s =
   let open Async_kernel in

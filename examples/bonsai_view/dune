@@ -1,3 +1,6 @@
-(executables (names main)
+(executables
+ (modes byte exe)
+ (names main)
  (libraries async_js bonsai_web bonsai_web_ui_form bonsai_web_ui_gallery)
- (preprocess (pps ppx_jane js_of_ocaml-ppx ppx_bonsai ppx_css ppx_demo)))
+ (preprocess
+  (pps ppx_jane js_of_ocaml-ppx ppx_bonsai ppx_css ppx_demo)))

@@ -8,13 +8,13 @@ module Test = struct
   include Shared.Test
 
   let create
-    (type a)
+    (type a column_id)
     ?(visible_range = 0, 100)
     ?(map = small_map)
     ?(should_print_styles = false)
     ?(should_set_bounds = true)
     component
-    : a t
+    : (a, column_id) t
     =
     let min_vis, max_vis = visible_range in
     let input_var = Bonsai.Var.create map in
@@ -22,9 +22,10 @@ module Test = struct
     let { Component.component
         ; get_vdom
         ; get_testing = _
-        ; get_focus
+        ; get_focus = _
         ; get_inject
         ; get_num_filtered_rows
+        ; summarize_focus = _
         }
       =
       component (Bonsai.Var.value input_var) (Bonsai.Var.value filter_var)
@@ -45,15 +46,13 @@ module Test = struct
                  should_print_styles || not (String.is_prefix ~prefix:"style." key))
           ;;
 
-          type incoming = Action.t
+          type incoming = column_id Action.t
 
           let incoming = get_inject
         end)
         component
     in
-    let t =
-      { handle; get_vdom; get_focus; input_var; filter_var; get_num_filtered_rows }
-    in
+    let t = { handle; get_vdom; input_var; filter_var; get_num_filtered_rows } in
     if should_set_bounds then set_bounds t ~low:min_vis ~high:max_vis;
     t
   ;;
@@ -117,7 +116,6 @@ let%expect_test "column visibility" =
               class="header_cell header_label leaf_header"
               size_tracker=<fun>
 === DIFF HUNK ===
-                   max-height: 1px;
                    width: 0.00000000px;
                    min-width: 0.00000000px;
                    max-width: 0.00000000px;
@@ -126,6 +124,7 @@ let%expect_test "column visibility" =
               hello
             </div>
             <div class="cell prt-table-cell"
+                 onclick
                  style={
                    height: 1px;
                    min-height: 1px;
@@ -137,6 +136,7 @@ let%expect_test "column visibility" =
 +|                 display: none;
 +|               }> </div>
             <div class="cell prt-table-cell"
+                 onclick
                  style={
                    height: 1px;
                    min-height: 1px;
@@ -147,13 +147,11 @@ let%expect_test "column visibility" =
                  }> 1 </div>
           </div>
           <div class="prt-table-row row"
-               onclick
                style={
                  height: 1px;
                  width: 0.00000000px;
                  display: flex;
 === DIFF HUNK ===
-                   max-height: 1px;
                    width: 0.00000000px;
                    min-width: 0.00000000px;
                    max-width: 0.00000000px;
@@ -162,6 +160,7 @@ let%expect_test "column visibility" =
               there
             </div>
             <div class="cell prt-table-cell"
+                 onclick
                  style={
                    height: 1px;
                    min-height: 1px;
@@ -173,6 +172,7 @@ let%expect_test "column visibility" =
 +|                 display: none;
 +|               }> </div>
             <div class="cell prt-table-cell"
+                 onclick
                  style={
                    height: 1px;
                    min-height: 1px;
@@ -183,13 +183,11 @@ let%expect_test "column visibility" =
                  }> 2 </div>
           </div>
           <div class="prt-table-row row"
-               onclick
                style={
                  height: 1px;
                  width: 0.00000000px;
                  display: flex;
 === DIFF HUNK ===
-                   max-height: 1px;
                    width: 0.00000000px;
                    min-width: 0.00000000px;
                    max-width: 0.00000000px;
@@ -198,6 +196,7 @@ let%expect_test "column visibility" =
               world
             </div>
             <div class="cell prt-table-cell"
+                 onclick
                  style={
                    height: 1px;
                    min-height: 1px;
@@ -209,6 +208,7 @@ let%expect_test "column visibility" =
 +|                 display: none;
 +|               }> </div>
             <div class="cell prt-table-cell"
+                 onclick
                  style={
                    height: 1px;
                    min-height: 1px;
@@ -273,23 +273,23 @@ let%expect_test "stabilization of view range" =
   <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
     <div>
       <div>
-        <div class="prt-table-row row" onclick>
-          <div class="cell prt-table-cell"> 0 </div>
-          <div class="cell prt-table-cell">
+        <div class="prt-table-row row">
+          <div class="cell prt-table-cell" onclick> 0 </div>
+          <div class="cell prt-table-cell" onclick>
             <input oninput> </input>
             hello
           </div>
-          <div class="cell prt-table-cell"> 1.000000 </div>
-          <div class="cell prt-table-cell"> 1 </div>
+          <div class="cell prt-table-cell" onclick> 1.000000 </div>
+          <div class="cell prt-table-cell" onclick> 1 </div>
         </div>
-        <div class="prt-table-row row" onclick>
-          <div class="cell prt-table-cell"> 1 </div>
-          <div class="cell prt-table-cell">
+        <div class="prt-table-row row">
+          <div class="cell prt-table-cell" onclick> 1 </div>
+          <div class="cell prt-table-cell" onclick>
             <input oninput> </input>
             there
           </div>
-          <div class="cell prt-table-cell"> 2.000000 </div>
-          <div class="cell prt-table-cell"> 2 </div>
+          <div class="cell prt-table-cell" onclick> 2.000000 </div>
+          <div class="cell prt-table-cell" onclick> 2 </div>
         </div>
       </div>
     </div>
@@ -307,30 +307,30 @@ let%expect_test "stabilization of view range" =
   [%expect
     {|
     === DIFF HUNK ===
-                <div class="cell prt-table-cell">
+                <div class="cell prt-table-cell" onclick>
                   <input oninput> </input>
                   hello
                 </div>
-                <div class="cell prt-table-cell"> 1.000000 </div>
-                <div class="cell prt-table-cell"> 1 </div>
+                <div class="cell prt-table-cell" onclick> 1.000000 </div>
+                <div class="cell prt-table-cell" onclick> 1 </div>
               </div>
-              <div class="prt-table-row row" onclick>
-                <div class="cell prt-table-cell"> 1 </div>
-                <div class="cell prt-table-cell">
+              <div class="prt-table-row row">
+                <div class="cell prt-table-cell" onclick> 1 </div>
+                <div class="cell prt-table-cell" onclick>
                   <input oninput> </input>
                   there
                 </div>
-                <div class="cell prt-table-cell"> 2.000000 </div>
-                <div class="cell prt-table-cell"> 2 </div>
+                <div class="cell prt-table-cell" onclick> 2.000000 </div>
+                <div class="cell prt-table-cell" onclick> 2 </div>
               </div>
-    +|        <div class="prt-table-row row" onclick>
-    +|          <div class="cell prt-table-cell"> 4 </div>
-    +|          <div class="cell prt-table-cell">
+    +|        <div class="prt-table-row row">
+    +|          <div class="cell prt-table-cell" onclick> 4 </div>
+    +|          <div class="cell prt-table-cell" onclick>
     +|            <input oninput> </input>
     +|            world
     +|          </div>
-    +|          <div class="cell prt-table-cell"> 2.000000 </div>
-    +|          <div class="cell prt-table-cell"> --- </div>
+    +|          <div class="cell prt-table-cell" onclick> 2.000000 </div>
+    +|          <div class="cell prt-table-cell" onclick> --- </div>
     +|        </div>
             </div>
           </div>
@@ -379,6 +379,7 @@ let%expect_test "resize-column" =
               class="header_cell header_label leaf_header"
               size_tracker=<fun>
 === DIFF HUNK ===
+              </div>
             </div>
           </td>
         </tr>
@@ -392,7 +393,6 @@ let%expect_test "resize-column" =
       <div style={ padding-top: 0px; padding-bottom: 0px; }>
         <div>
           <div class="prt-table-row row"
-               onclick
                style={
                  height: 1px;
 -|               width: 0.00000000px;
@@ -402,6 +402,7 @@ let%expect_test "resize-column" =
                  flex-wrap: nowrap;
                }>
             <div class="cell prt-table-cell"
+                 onclick
                  style={
                    height: 1px;
                    min-height: 1px;
@@ -414,6 +415,7 @@ let%expect_test "resize-column" =
 +|                 max-width: 10.00000000px;
                  }> 0 </div>
             <div class="cell prt-table-cell"
+                 onclick
                  style={
                    height: 1px;
                    min-height: 1px;
@@ -426,12 +428,12 @@ let%expect_test "resize-column" =
               hello
             </div>
             <div class="cell prt-table-cell"
-                 style={
-                   height: 1px;
+                 onclick
 === DIFF HUNK ===
                    max-width: 0.00000000px;
                  }> 1.000000 </div>
             <div class="cell prt-table-cell"
+                 onclick
                  style={
                    height: 1px;
                    min-height: 1px;
@@ -442,7 +444,6 @@ let%expect_test "resize-column" =
                  }> 1 </div>
           </div>
           <div class="prt-table-row row"
-               onclick
                style={
                  height: 1px;
 -|               width: 0.00000000px;
@@ -452,6 +453,7 @@ let%expect_test "resize-column" =
                  flex-wrap: nowrap;
                }>
             <div class="cell prt-table-cell"
+                 onclick
                  style={
                    height: 1px;
                    min-height: 1px;
@@ -464,6 +466,7 @@ let%expect_test "resize-column" =
 +|                 max-width: 10.00000000px;
                  }> 1 </div>
             <div class="cell prt-table-cell"
+                 onclick
                  style={
                    height: 1px;
                    min-height: 1px;
@@ -476,12 +479,12 @@ let%expect_test "resize-column" =
               there
             </div>
             <div class="cell prt-table-cell"
-                 style={
-                   height: 1px;
+                 onclick
 === DIFF HUNK ===
                    max-width: 0.00000000px;
                  }> 2.000000 </div>
             <div class="cell prt-table-cell"
+                 onclick
                  style={
                    height: 1px;
                    min-height: 1px;
@@ -492,7 +495,6 @@ let%expect_test "resize-column" =
                  }> 2 </div>
           </div>
           <div class="prt-table-row row"
-               onclick
                style={
                  height: 1px;
 -|               width: 0.00000000px;
@@ -502,6 +504,7 @@ let%expect_test "resize-column" =
                  flex-wrap: nowrap;
                }>
             <div class="cell prt-table-cell"
+                 onclick
                  style={
                    height: 1px;
                    min-height: 1px;
@@ -514,6 +517,7 @@ let%expect_test "resize-column" =
 +|                 max-width: 10.00000000px;
                  }> 4 </div>
             <div class="cell prt-table-cell"
+                 onclick
                  style={
                    height: 1px;
                    min-height: 1px;
@@ -526,8 +530,7 @@ let%expect_test "resize-column" =
               world
             </div>
             <div class="cell prt-table-cell"
-                 style={
-                   height: 1px; |}]
+                 onclick |}]
 ;;
 
 let%expect_test "big table" =
@@ -581,23 +584,23 @@ let%expect_test "big table" =
   <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
     <div>
       <div>
-        <div class="prt-table-row row" onclick>
-          <div class="cell prt-table-cell"> 51 </div>
-          <div class="cell prt-table-cell">
+        <div class="prt-table-row row">
+          <div class="cell prt-table-cell" onclick> 51 </div>
+          <div class="cell prt-table-cell" onclick>
             <input oninput> </input>
             hi
           </div>
-          <div class="cell prt-table-cell"> 25.000000 </div>
-          <div class="cell prt-table-cell"> 100 </div>
+          <div class="cell prt-table-cell" onclick> 25.000000 </div>
+          <div class="cell prt-table-cell" onclick> 100 </div>
         </div>
-        <div class="prt-table-row row" onclick>
-          <div class="cell prt-table-cell"> 52 </div>
-          <div class="cell prt-table-cell">
+        <div class="prt-table-row row">
+          <div class="cell prt-table-cell" onclick> 52 </div>
+          <div class="cell prt-table-cell" onclick>
             <input oninput> </input>
             hi
           </div>
-          <div class="cell prt-table-cell"> 26.000000 </div>
-          <div class="cell prt-table-cell"> 100 </div>
+          <div class="cell prt-table-cell" onclick> 26.000000 </div>
+          <div class="cell prt-table-cell" onclick> 100 </div>
         </div>
       </div>
     </div>
@@ -625,81 +628,81 @@ let%expect_test "big table" =
     <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
       <div>
         <div>
-          <div class="prt-table-row row" onclick>
--|          <div class="cell prt-table-cell"> 51 </div>
-+|          <div class="cell prt-table-cell"> 55 </div>
-            <div class="cell prt-table-cell">
+          <div class="prt-table-row row">
+-|          <div class="cell prt-table-cell" onclick> 51 </div>
++|          <div class="cell prt-table-cell" onclick> 55 </div>
+            <div class="cell prt-table-cell" onclick>
               <input oninput> </input>
               hi
             </div>
--|          <div class="cell prt-table-cell"> 25.000000 </div>
-+|          <div class="cell prt-table-cell"> 27.000000 </div>
-            <div class="cell prt-table-cell"> 100 </div>
+-|          <div class="cell prt-table-cell" onclick> 25.000000 </div>
++|          <div class="cell prt-table-cell" onclick> 27.000000 </div>
+            <div class="cell prt-table-cell" onclick> 100 </div>
           </div>
-          <div class="prt-table-row row" onclick>
--|          <div class="cell prt-table-cell"> 52 </div>
-+|          <div class="cell prt-table-cell"> 56 </div>
-            <div class="cell prt-table-cell">
+          <div class="prt-table-row row">
+-|          <div class="cell prt-table-cell" onclick> 52 </div>
++|          <div class="cell prt-table-cell" onclick> 56 </div>
+            <div class="cell prt-table-cell" onclick>
               <input oninput> </input>
               hi
             </div>
--|          <div class="cell prt-table-cell"> 26.000000 </div>
-+|          <div class="cell prt-table-cell"> 28.000000 </div>
-+|          <div class="cell prt-table-cell"> 100 </div>
+-|          <div class="cell prt-table-cell" onclick> 26.000000 </div>
++|          <div class="cell prt-table-cell" onclick> 28.000000 </div>
++|          <div class="cell prt-table-cell" onclick> 100 </div>
 +|        </div>
-+|        <div class="prt-table-row row" onclick>
-+|          <div class="cell prt-table-cell"> 57 </div>
-+|          <div class="cell prt-table-cell">
++|        <div class="prt-table-row row">
++|          <div class="cell prt-table-cell" onclick> 57 </div>
++|          <div class="cell prt-table-cell" onclick>
 +|            <input oninput> </input>
 +|            hi
 +|          </div>
-+|          <div class="cell prt-table-cell"> 28.000000 </div>
-+|          <div class="cell prt-table-cell"> 100 </div>
++|          <div class="cell prt-table-cell" onclick> 28.000000 </div>
++|          <div class="cell prt-table-cell" onclick> 100 </div>
 +|        </div>
-+|        <div class="prt-table-row row" onclick>
-+|          <div class="cell prt-table-cell"> 58 </div>
-+|          <div class="cell prt-table-cell">
++|        <div class="prt-table-row row">
++|          <div class="cell prt-table-cell" onclick> 58 </div>
++|          <div class="cell prt-table-cell" onclick>
 +|            <input oninput> </input>
 +|            hi
 +|          </div>
-+|          <div class="cell prt-table-cell"> 29.000000 </div>
-+|          <div class="cell prt-table-cell"> 100 </div>
++|          <div class="cell prt-table-cell" onclick> 29.000000 </div>
++|          <div class="cell prt-table-cell" onclick> 100 </div>
 +|        </div>
-+|        <div class="prt-table-row row" onclick>
-+|          <div class="cell prt-table-cell"> 59 </div>
-+|          <div class="cell prt-table-cell">
++|        <div class="prt-table-row row">
++|          <div class="cell prt-table-cell" onclick> 59 </div>
++|          <div class="cell prt-table-cell" onclick>
 +|            <input oninput> </input>
 +|            hi
 +|          </div>
-+|          <div class="cell prt-table-cell"> 29.000000 </div>
-+|          <div class="cell prt-table-cell"> 100 </div>
++|          <div class="cell prt-table-cell" onclick> 29.000000 </div>
++|          <div class="cell prt-table-cell" onclick> 100 </div>
 +|        </div>
-+|        <div class="prt-table-row row" onclick>
-+|          <div class="cell prt-table-cell"> 60 </div>
-+|          <div class="cell prt-table-cell">
++|        <div class="prt-table-row row">
++|          <div class="cell prt-table-cell" onclick> 60 </div>
++|          <div class="cell prt-table-cell" onclick>
 +|            <input oninput> </input>
 +|            hi
 +|          </div>
-+|          <div class="cell prt-table-cell"> 30.000000 </div>
-+|          <div class="cell prt-table-cell"> 100 </div>
++|          <div class="cell prt-table-cell" onclick> 30.000000 </div>
++|          <div class="cell prt-table-cell" onclick> 100 </div>
 +|        </div>
-+|        <div class="prt-table-row row" onclick>
-+|          <div class="cell prt-table-cell"> 61 </div>
-+|          <div class="cell prt-table-cell">
++|        <div class="prt-table-row row">
++|          <div class="cell prt-table-cell" onclick> 61 </div>
++|          <div class="cell prt-table-cell" onclick>
 +|            <input oninput> </input>
 +|            hi
 +|          </div>
-+|          <div class="cell prt-table-cell"> 30.000000 </div>
-+|          <div class="cell prt-table-cell"> 100 </div>
++|          <div class="cell prt-table-cell" onclick> 30.000000 </div>
++|          <div class="cell prt-table-cell" onclick> 100 </div>
 +|        </div>
-+|        <div class="prt-table-row row" onclick>
-+|          <div class="cell prt-table-cell"> 62 </div>
-+|          <div class="cell prt-table-cell">
++|        <div class="prt-table-row row">
++|          <div class="cell prt-table-cell" onclick> 62 </div>
++|          <div class="cell prt-table-cell" onclick>
 +|            <input oninput> </input>
 +|            hi
 +|          </div>
-+|          <div class="cell prt-table-cell"> 31.000000 </div>
-            <div class="cell prt-table-cell"> 100 </div>
++|          <div class="cell prt-table-cell" onclick> 31.000000 </div>
+            <div class="cell prt-table-cell" onclick> 100 </div>
           </div>
         </div>
       </div>
@@ -738,24 +741,24 @@ let%expect_test "typing into a column, leaving that column, and then coming back
     <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
       <div>
         <div>
-          <div class="prt-table-row row" onclick>
-            <div class="cell prt-table-cell"> 51 </div>
-            <div class="cell prt-table-cell">
+          <div class="prt-table-row row">
+            <div class="cell prt-table-cell" onclick> 51 </div>
+            <div class="cell prt-table-cell" onclick>
               <input oninput> </input>
 -|            hi
 +|            hi hello world
             </div>
-            <div class="cell prt-table-cell"> 25.000000 </div>
-            <div class="cell prt-table-cell"> 100 </div>
+            <div class="cell prt-table-cell" onclick> 25.000000 </div>
+            <div class="cell prt-table-cell" onclick> 100 </div>
           </div>
-          <div class="prt-table-row row" onclick>
-            <div class="cell prt-table-cell"> 52 </div>
-            <div class="cell prt-table-cell">
+          <div class="prt-table-row row">
+            <div class="cell prt-table-cell" onclick> 52 </div>
+            <div class="cell prt-table-cell" onclick>
               <input oninput> </input>
               hi
             </div>
-            <div class="cell prt-table-cell"> 26.000000 </div>
-            <div class="cell prt-table-cell"> 100 </div>
+            <div class="cell prt-table-cell" onclick> 26.000000 </div>
+            <div class="cell prt-table-cell" onclick> 100 </div>
           </div>
         </div>
       </div>
@@ -808,23 +811,23 @@ let%expect_test "typing into a column, leaving that column, and then coming back
   <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
     <div>
       <div>
-        <div class="prt-table-row row" onclick>
-          <div class="cell prt-table-cell"> 51 </div>
-          <div class="cell prt-table-cell">
+        <div class="prt-table-row row">
+          <div class="cell prt-table-cell" onclick> 51 </div>
+          <div class="cell prt-table-cell" onclick>
             <input oninput> </input>
             hi hello world
           </div>
-          <div class="cell prt-table-cell"> 25.000000 </div>
-          <div class="cell prt-table-cell"> 100 </div>
+          <div class="cell prt-table-cell" onclick> 25.000000 </div>
+          <div class="cell prt-table-cell" onclick> 100 </div>
         </div>
-        <div class="prt-table-row row" onclick>
-          <div class="cell prt-table-cell"> 52 </div>
-          <div class="cell prt-table-cell">
+        <div class="prt-table-row row">
+          <div class="cell prt-table-cell" onclick> 52 </div>
+          <div class="cell prt-table-cell" onclick>
             <input oninput> </input>
             hi
           </div>
-          <div class="cell prt-table-cell"> 26.000000 </div>
-          <div class="cell prt-table-cell"> 100 </div>
+          <div class="cell prt-table-cell" onclick> 26.000000 </div>
+          <div class="cell prt-table-cell" onclick> 100 </div>
         </div>
       </div>
     </div>
@@ -906,6 +909,7 @@ let%expect_test "table body is not recomputed more often than necessary" =
       ; get_inject = Shared.Test.Component.get_inject_expert
       ; get_focus = Table_expert.Result.focus
       ; get_num_filtered_rows = (fun _ -> None)
+      ; summarize_focus = (fun ?num_filtered_rows:_ _ -> "")
       })
   in
   Test.print_message_on_result_recomputation test;
@@ -969,32 +973,32 @@ let%expect_test "sorting legacy renderer" =
   <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
     <div>
       <div>
-        <div class="prt-table-row row" onclick>
-          <div class="cell prt-table-cell"> 0 </div>
-          <div class="cell prt-table-cell">
+        <div class="prt-table-row row">
+          <div class="cell prt-table-cell" onclick> 0 </div>
+          <div class="cell prt-table-cell" onclick>
             <input oninput> </input>
             hello
           </div>
-          <div class="cell prt-table-cell"> 1.000000 </div>
-          <div class="cell prt-table-cell"> 1 </div>
+          <div class="cell prt-table-cell" onclick> 1.000000 </div>
+          <div class="cell prt-table-cell" onclick> 1 </div>
         </div>
-        <div class="prt-table-row row" onclick>
-          <div class="cell prt-table-cell"> 1 </div>
-          <div class="cell prt-table-cell">
+        <div class="prt-table-row row">
+          <div class="cell prt-table-cell" onclick> 1 </div>
+          <div class="cell prt-table-cell" onclick>
             <input oninput> </input>
             there
           </div>
-          <div class="cell prt-table-cell"> 2.000000 </div>
-          <div class="cell prt-table-cell"> 2 </div>
+          <div class="cell prt-table-cell" onclick> 2.000000 </div>
+          <div class="cell prt-table-cell" onclick> 2 </div>
         </div>
-        <div class="prt-table-row row" onclick>
-          <div class="cell prt-table-cell"> 4 </div>
-          <div class="cell prt-table-cell">
+        <div class="prt-table-row row">
+          <div class="cell prt-table-cell" onclick> 4 </div>
+          <div class="cell prt-table-cell" onclick>
             <input oninput> </input>
             world
           </div>
-          <div class="cell prt-table-cell"> 2.000000 </div>
-          <div class="cell prt-table-cell"> --- </div>
+          <div class="cell prt-table-cell" onclick> 2.000000 </div>
+          <div class="cell prt-table-cell" onclick> --- </div>
         </div>
       </div>
     </div>
@@ -1067,41 +1071,41 @@ let%expect_test "sorting legacy renderer" =
     <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
       <div>
         <div>
--|        <div class="prt-table-row row" onclick>
--|          <div class="cell prt-table-cell"> 0 </div>
--|          <div class="cell prt-table-cell">
+-|        <div class="prt-table-row row">
+-|          <div class="cell prt-table-cell" onclick> 0 </div>
+-|          <div class="cell prt-table-cell" onclick>
 -|            <input oninput> </input>
 -|            hello
 -|          </div>
--|          <div class="cell prt-table-cell"> 1.000000 </div>
--|          <div class="cell prt-table-cell"> 1 </div>
+-|          <div class="cell prt-table-cell" onclick> 1.000000 </div>
+-|          <div class="cell prt-table-cell" onclick> 1 </div>
 -|        </div>
-          <div class="prt-table-row row" onclick>
-            <div class="cell prt-table-cell"> 1 </div>
-            <div class="cell prt-table-cell">
+          <div class="prt-table-row row">
+            <div class="cell prt-table-cell" onclick> 1 </div>
+            <div class="cell prt-table-cell" onclick>
               <input oninput> </input>
               there
             </div>
-            <div class="cell prt-table-cell"> 2.000000 </div>
-            <div class="cell prt-table-cell"> 2 </div>
+            <div class="cell prt-table-cell" onclick> 2.000000 </div>
+            <div class="cell prt-table-cell" onclick> 2 </div>
           </div>
-          <div class="prt-table-row row" onclick>
-            <div class="cell prt-table-cell"> 4 </div>
-            <div class="cell prt-table-cell">
+          <div class="prt-table-row row">
+            <div class="cell prt-table-cell" onclick> 4 </div>
+            <div class="cell prt-table-cell" onclick>
               <input oninput> </input>
               world
             </div>
-            <div class="cell prt-table-cell"> 2.000000 </div>
-            <div class="cell prt-table-cell"> --- </div>
+            <div class="cell prt-table-cell" onclick> 2.000000 </div>
+            <div class="cell prt-table-cell" onclick> --- </div>
           </div>
-+|        <div class="prt-table-row row" onclick>
-+|          <div class="cell prt-table-cell"> 0 </div>
-+|          <div class="cell prt-table-cell">
++|        <div class="prt-table-row row">
++|          <div class="cell prt-table-cell" onclick> 0 </div>
++|          <div class="cell prt-table-cell" onclick>
 +|            <input oninput> </input>
 +|            hello
 +|          </div>
-+|          <div class="cell prt-table-cell"> 1.000000 </div>
-+|          <div class="cell prt-table-cell"> 1 </div>
++|          <div class="cell prt-table-cell" onclick> 1.000000 </div>
++|          <div class="cell prt-table-cell" onclick> 1 </div>
 +|        </div>
         </div>
       </div>
@@ -1141,41 +1145,41 @@ let%expect_test "sorting legacy renderer" =
         <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
           <div>
             <div>
-    +|        <div class="prt-table-row row" onclick>
-    +|          <div class="cell prt-table-cell"> 0 </div>
-    +|          <div class="cell prt-table-cell">
+    +|        <div class="prt-table-row row">
+    +|          <div class="cell prt-table-cell" onclick> 0 </div>
+    +|          <div class="cell prt-table-cell" onclick>
     +|            <input oninput> </input>
     +|            hello
     +|          </div>
-    +|          <div class="cell prt-table-cell"> 1.000000 </div>
-    +|          <div class="cell prt-table-cell"> 1 </div>
+    +|          <div class="cell prt-table-cell" onclick> 1.000000 </div>
+    +|          <div class="cell prt-table-cell" onclick> 1 </div>
     +|        </div>
-              <div class="prt-table-row row" onclick>
-                <div class="cell prt-table-cell"> 1 </div>
-                <div class="cell prt-table-cell">
+              <div class="prt-table-row row">
+                <div class="cell prt-table-cell" onclick> 1 </div>
+                <div class="cell prt-table-cell" onclick>
                   <input oninput> </input>
                   there
                 </div>
-                <div class="cell prt-table-cell"> 2.000000 </div>
-                <div class="cell prt-table-cell"> 2 </div>
+                <div class="cell prt-table-cell" onclick> 2.000000 </div>
+                <div class="cell prt-table-cell" onclick> 2 </div>
               </div>
-              <div class="prt-table-row row" onclick>
-                <div class="cell prt-table-cell"> 4 </div>
-                <div class="cell prt-table-cell">
+              <div class="prt-table-row row">
+                <div class="cell prt-table-cell" onclick> 4 </div>
+                <div class="cell prt-table-cell" onclick>
                   <input oninput> </input>
                   world
                 </div>
-                <div class="cell prt-table-cell"> 2.000000 </div>
-                <div class="cell prt-table-cell"> --- </div>
+                <div class="cell prt-table-cell" onclick> 2.000000 </div>
+                <div class="cell prt-table-cell" onclick> --- </div>
               </div>
-    -|        <div class="prt-table-row row" onclick>
-    -|          <div class="cell prt-table-cell"> 0 </div>
-    -|          <div class="cell prt-table-cell">
+    -|        <div class="prt-table-row row">
+    -|          <div class="cell prt-table-cell" onclick> 0 </div>
+    -|          <div class="cell prt-table-cell" onclick>
     -|            <input oninput> </input>
     -|            hello
     -|          </div>
-    -|          <div class="cell prt-table-cell"> 1.000000 </div>
-    -|          <div class="cell prt-table-cell"> 1 </div>
+    -|          <div class="cell prt-table-cell" onclick> 1.000000 </div>
+    -|          <div class="cell prt-table-cell" onclick> 1 </div>
     -|        </div>
             </div>
           </div>
@@ -1213,14 +1217,14 @@ let%expect_test "sorting legacy renderer" =
         <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
           <div>
             <div>
-              <div class="prt-table-row row" onclick>
-                <div class="cell prt-table-cell"> 0 </div>
-                <div class="cell prt-table-cell">
+              <div class="prt-table-row row">
+                <div class="cell prt-table-cell" onclick> 0 </div>
+                <div class="cell prt-table-cell" onclick>
                   <input oninput> </input>
                   hello
                 </div>
-                <div class="cell prt-table-cell"> 1.000000 </div>
-                <div class="cell prt-table-cell"> 1 </div>
+                <div class="cell prt-table-cell" onclick> 1.000000 </div>
+                <div class="cell prt-table-cell" onclick> 1 </div>
       |}];
   (* but in reverse, notice that [None]s stay on the bottom *)
   Handle.click_on test.handle ~selector:"td:nth-child(4) > div" ~get_vdom:test.get_vdom;
@@ -1253,41 +1257,41 @@ let%expect_test "sorting legacy renderer" =
         <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
           <div>
             <div>
-    +|        <div class="prt-table-row row" onclick>
-    +|          <div class="cell prt-table-cell"> 1 </div>
-    +|          <div class="cell prt-table-cell">
+    +|        <div class="prt-table-row row">
+    +|          <div class="cell prt-table-cell" onclick> 1 </div>
+    +|          <div class="cell prt-table-cell" onclick>
     +|            <input oninput> </input>
     +|            there
     +|          </div>
-    +|          <div class="cell prt-table-cell"> 2.000000 </div>
-    +|          <div class="cell prt-table-cell"> 2 </div>
+    +|          <div class="cell prt-table-cell" onclick> 2.000000 </div>
+    +|          <div class="cell prt-table-cell" onclick> 2 </div>
     +|        </div>
-              <div class="prt-table-row row" onclick>
-                <div class="cell prt-table-cell"> 0 </div>
-                <div class="cell prt-table-cell">
+              <div class="prt-table-row row">
+                <div class="cell prt-table-cell" onclick> 0 </div>
+                <div class="cell prt-table-cell" onclick>
                   <input oninput> </input>
                   hello
                 </div>
-                <div class="cell prt-table-cell"> 1.000000 </div>
-                <div class="cell prt-table-cell"> 1 </div>
+                <div class="cell prt-table-cell" onclick> 1.000000 </div>
+                <div class="cell prt-table-cell" onclick> 1 </div>
               </div>
-    -|        <div class="prt-table-row row" onclick>
-    -|          <div class="cell prt-table-cell"> 1 </div>
-    -|          <div class="cell prt-table-cell">
+    -|        <div class="prt-table-row row">
+    -|          <div class="cell prt-table-cell" onclick> 1 </div>
+    -|          <div class="cell prt-table-cell" onclick>
     -|            <input oninput> </input>
     -|            there
     -|          </div>
-    -|          <div class="cell prt-table-cell"> 2.000000 </div>
-    -|          <div class="cell prt-table-cell"> 2 </div>
+    -|          <div class="cell prt-table-cell" onclick> 2.000000 </div>
+    -|          <div class="cell prt-table-cell" onclick> 2 </div>
     -|        </div>
-              <div class="prt-table-row row" onclick>
-                <div class="cell prt-table-cell"> 4 </div>
-                <div class="cell prt-table-cell">
+              <div class="prt-table-row row">
+                <div class="cell prt-table-cell" onclick> 4 </div>
+                <div class="cell prt-table-cell" onclick>
                   <input oninput> </input>
                   world
                 </div>
-                <div class="cell prt-table-cell"> 2.000000 </div>
-                <div class="cell prt-table-cell"> --- </div>
+                <div class="cell prt-table-cell" onclick> 2.000000 </div>
+                <div class="cell prt-table-cell" onclick> --- </div>
               </div>
             </div>
           </div>
@@ -1339,32 +1343,32 @@ let%expect_test "sorting default renderer" =
   <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
     <div>
       <div>
-        <div class="prt-table-row row" onclick>
-          <div class="cell prt-table-cell"> 0 </div>
-          <div class="cell prt-table-cell">
+        <div class="prt-table-row row">
+          <div class="cell prt-table-cell" onclick> 0 </div>
+          <div class="cell prt-table-cell" onclick>
             <input oninput> </input>
             hello
           </div>
-          <div class="cell prt-table-cell"> 1.000000 </div>
-          <div class="cell prt-table-cell"> 1 </div>
+          <div class="cell prt-table-cell" onclick> 1.000000 </div>
+          <div class="cell prt-table-cell" onclick> 1 </div>
         </div>
-        <div class="prt-table-row row" onclick>
-          <div class="cell prt-table-cell"> 1 </div>
-          <div class="cell prt-table-cell">
+        <div class="prt-table-row row">
+          <div class="cell prt-table-cell" onclick> 1 </div>
+          <div class="cell prt-table-cell" onclick>
             <input oninput> </input>
             there
           </div>
-          <div class="cell prt-table-cell"> 2.000000 </div>
-          <div class="cell prt-table-cell"> 2 </div>
+          <div class="cell prt-table-cell" onclick> 2.000000 </div>
+          <div class="cell prt-table-cell" onclick> 2 </div>
         </div>
-        <div class="prt-table-row row" onclick>
-          <div class="cell prt-table-cell"> 4 </div>
-          <div class="cell prt-table-cell">
+        <div class="prt-table-row row">
+          <div class="cell prt-table-cell" onclick> 4 </div>
+          <div class="cell prt-table-cell" onclick>
             <input oninput> </input>
             world
           </div>
-          <div class="cell prt-table-cell"> 2.000000 </div>
-          <div class="cell prt-table-cell"> --- </div>
+          <div class="cell prt-table-cell" onclick> 2.000000 </div>
+          <div class="cell prt-table-cell" onclick> --- </div>
         </div>
       </div>
     </div>
@@ -1448,41 +1452,41 @@ let%expect_test "sorting default renderer" =
     <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
       <div>
         <div>
--|        <div class="prt-table-row row" onclick>
--|          <div class="cell prt-table-cell"> 0 </div>
--|          <div class="cell prt-table-cell">
+-|        <div class="prt-table-row row">
+-|          <div class="cell prt-table-cell" onclick> 0 </div>
+-|          <div class="cell prt-table-cell" onclick>
 -|            <input oninput> </input>
 -|            hello
 -|          </div>
--|          <div class="cell prt-table-cell"> 1.000000 </div>
--|          <div class="cell prt-table-cell"> 1 </div>
+-|          <div class="cell prt-table-cell" onclick> 1.000000 </div>
+-|          <div class="cell prt-table-cell" onclick> 1 </div>
 -|        </div>
-          <div class="prt-table-row row" onclick>
-            <div class="cell prt-table-cell"> 1 </div>
-            <div class="cell prt-table-cell">
+          <div class="prt-table-row row">
+            <div class="cell prt-table-cell" onclick> 1 </div>
+            <div class="cell prt-table-cell" onclick>
               <input oninput> </input>
               there
             </div>
-            <div class="cell prt-table-cell"> 2.000000 </div>
-            <div class="cell prt-table-cell"> 2 </div>
+            <div class="cell prt-table-cell" onclick> 2.000000 </div>
+            <div class="cell prt-table-cell" onclick> 2 </div>
           </div>
-          <div class="prt-table-row row" onclick>
-            <div class="cell prt-table-cell"> 4 </div>
-            <div class="cell prt-table-cell">
+          <div class="prt-table-row row">
+            <div class="cell prt-table-cell" onclick> 4 </div>
+            <div class="cell prt-table-cell" onclick>
               <input oninput> </input>
               world
             </div>
-            <div class="cell prt-table-cell"> 2.000000 </div>
-            <div class="cell prt-table-cell"> --- </div>
+            <div class="cell prt-table-cell" onclick> 2.000000 </div>
+            <div class="cell prt-table-cell" onclick> --- </div>
           </div>
-+|        <div class="prt-table-row row" onclick>
-+|          <div class="cell prt-table-cell"> 0 </div>
-+|          <div class="cell prt-table-cell">
++|        <div class="prt-table-row row">
++|          <div class="cell prt-table-cell" onclick> 0 </div>
++|          <div class="cell prt-table-cell" onclick>
 +|            <input oninput> </input>
 +|            hello
 +|          </div>
-+|          <div class="cell prt-table-cell"> 1.000000 </div>
-+|          <div class="cell prt-table-cell"> 1 </div>
++|          <div class="cell prt-table-cell" onclick> 1.000000 </div>
++|          <div class="cell prt-table-cell" onclick> 1 </div>
 +|        </div>
         </div>
       </div>
@@ -1585,41 +1589,41 @@ let%expect_test "sorting default renderer" =
         <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
           <div>
             <div>
-    +|        <div class="prt-table-row row" onclick>
-    +|          <div class="cell prt-table-cell"> 0 </div>
-    +|          <div class="cell prt-table-cell">
+    +|        <div class="prt-table-row row">
+    +|          <div class="cell prt-table-cell" onclick> 0 </div>
+    +|          <div class="cell prt-table-cell" onclick>
     +|            <input oninput> </input>
     +|            hello
     +|          </div>
-    +|          <div class="cell prt-table-cell"> 1.000000 </div>
-    +|          <div class="cell prt-table-cell"> 1 </div>
+    +|          <div class="cell prt-table-cell" onclick> 1.000000 </div>
+    +|          <div class="cell prt-table-cell" onclick> 1 </div>
     +|        </div>
-              <div class="prt-table-row row" onclick>
-                <div class="cell prt-table-cell"> 1 </div>
-                <div class="cell prt-table-cell">
+              <div class="prt-table-row row">
+                <div class="cell prt-table-cell" onclick> 1 </div>
+                <div class="cell prt-table-cell" onclick>
                   <input oninput> </input>
                   there
                 </div>
-                <div class="cell prt-table-cell"> 2.000000 </div>
-                <div class="cell prt-table-cell"> 2 </div>
+                <div class="cell prt-table-cell" onclick> 2.000000 </div>
+                <div class="cell prt-table-cell" onclick> 2 </div>
               </div>
-              <div class="prt-table-row row" onclick>
-                <div class="cell prt-table-cell"> 4 </div>
-                <div class="cell prt-table-cell">
+              <div class="prt-table-row row">
+                <div class="cell prt-table-cell" onclick> 4 </div>
+                <div class="cell prt-table-cell" onclick>
                   <input oninput> </input>
                   world
                 </div>
-                <div class="cell prt-table-cell"> 2.000000 </div>
-                <div class="cell prt-table-cell"> --- </div>
+                <div class="cell prt-table-cell" onclick> 2.000000 </div>
+                <div class="cell prt-table-cell" onclick> --- </div>
               </div>
-    -|        <div class="prt-table-row row" onclick>
-    -|          <div class="cell prt-table-cell"> 0 </div>
-    -|          <div class="cell prt-table-cell">
+    -|        <div class="prt-table-row row">
+    -|          <div class="cell prt-table-cell" onclick> 0 </div>
+    -|          <div class="cell prt-table-cell" onclick>
     -|            <input oninput> </input>
     -|            hello
     -|          </div>
-    -|          <div class="cell prt-table-cell"> 1.000000 </div>
-    -|          <div class="cell prt-table-cell"> 1 </div>
+    -|          <div class="cell prt-table-cell" onclick> 1.000000 </div>
+    -|          <div class="cell prt-table-cell" onclick> 1 </div>
     -|        </div>
             </div>
           </div>

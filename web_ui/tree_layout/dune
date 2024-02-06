@@ -1,3 +1,6 @@
-(library (name bonsai_web_ui_tree_layout)
- (public_name bonsai.web_ui_tree_layout) (libraries bonsai_web core)
- (preprocess (pps ppx_jane ppx_css ppx_pattern_bind)))
+(library
+ (name bonsai_web_ui_tree_layout)
+ (public_name bonsai.web_ui_tree_layout)
+ (libraries bonsai_web core)
+ (preprocess
+  (pps ppx_jane ppx_css ppx_pattern_bind)))

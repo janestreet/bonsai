@@ -243,7 +243,7 @@ module Id_gen (T : Int_intf.S) () = struct
         ~equal:[%equal: T.t]
         ~sexp_of_action:[%sexp_of: Unit.t]
         ~default_model:T.zero
-        ~recv:(fun ~schedule_event:_ i () -> T.( + ) i T.one, i)
+        ~recv:(fun ~inject:_ ~schedule_event:_ i () -> T.( + ) i T.one, i)
         ()
     in
     fetch ()
@@ -504,7 +504,7 @@ module One_at_a_time = struct
         ~equal:[%equal: Status.t]
         ~sexp_of_action:[%sexp_of: Lock_action.t]
         ~default_model:Idle
-        ~recv:(fun ~schedule_event:_ model action ->
+        ~recv:(fun ~inject:_ ~schedule_event:_ model action ->
         match action with
         | Acquire ->
           let response =

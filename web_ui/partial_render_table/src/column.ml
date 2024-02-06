@@ -4,8 +4,8 @@ open! Bonsai.Let_syntax
 module Sort_kind = Column_intf.Sort_kind
 module Sort_state = Bonsai_web_ui_partial_render_table_protocol.Sort_state
 
-module Indexed_col_id = struct
-  type t = int [@@deriving equal]
+module Indexed_column_id = struct
+  type t = int [@@deriving sexp, equal]
 
   let to_int = Fn.id
   let of_int = Fn.id
@@ -26,63 +26,106 @@ module Dynamic_cells = struct
           }
       | Org_group of ('key, 'data) t list
 
-    let rec headers = function
-      | Leaf { leaf_header; visible; initial_width; cell = _ } ->
-        let%map header = leaf_header
-        and visible = visible in
-        Header_tree.leaf ~header ~visible ~initial_width
-      | Group { children; group_header } ->
-        let%map header = group_header
-        and children = Value.all (List.map children ~f:headers) in
-        Header_tree.group ~header children
-      | Org_group children ->
-        let%map children = List.map children ~f:headers |> Value.all in
-        Header_tree.org_group children
+    let headers t =
+      let rec loop ~next_id = function
+        | Leaf { leaf_header; visible; initial_width; cell = _ } ->
+          let tree =
+            let%map header = leaf_header
+            and visible = visible in
+            Header_tree.leaf
+              ~header
+              ~visible
+              ~initial_width
+              ~column_id:(Indexed_column_id.of_int next_id)
+          in
+          tree, next_id + 1
+        | Group { children; group_header } ->
+          let next_id, children =
+            List.fold_map ~init:next_id children ~f:(fun next_id child ->
+              let child, next_id = loop ~next_id child in
+              next_id, child)
+          in
+          let tree =
+            let%map header = group_header
+            and children = Value.all children in
+            Header_tree.group ~header children
+          in
+          tree, next_id
+        | Org_group children ->
+          let next_id, children =
+            List.fold_map ~init:next_id children ~f:(fun next_id child ->
+              let child, next_id = loop ~next_id child in
+              next_id, child)
+          in
+          let tree =
+            let%map children = Value.all children in
+            Header_tree.org_group children
+          in
+          tree, next_id
+      in
+      let tree, _ = loop ~next_id:0 t in
+      tree
     ;;
 
     let headers t = return (headers t)
 
-    let rec visible_leaves
-      : type k v cmp.
-        (k * v) Opaque_map.t Value.t
-        -> (k, cmp) Bonsai.comparator
-        -> (k, v) t
-        -> (k * Vdom.Node.t) Opaque_map.t Computation.t list
-      =
-      fun map comparator -> function
-      | Leaf { cell; visible; _ } ->
-        [ (if%sub visible
-           then
-             Bonsai.Expert.assoc_on
-               (module Opaque_map.Key)
-               comparator
-               map
-               ~get_model_key:(fun _ (k, _) -> k)
-               ~f:(fun _ data ->
-                 let%sub key, data = return data in
-                 let%sub r = cell ~key ~data in
-                 let%arr key = key
-                 and r = r in
-                 key, r)
-           else (
-             let f = Ui_incr.Map.map ~f:(fun (k, _) -> k, Vdom.Node.none) in
-             Bonsai.Incr.compute map ~f))
-        ]
-      | Group { children; _ } | Org_group children ->
-        List.bind children ~f:(visible_leaves map comparator)
+    let visible_leaves map comparator t =
+      let rec loop
+        : type k v cmp.
+          next_id:int
+          -> (k * v) Opaque_map.t Value.t
+          -> (k, cmp) Bonsai.comparator
+          -> (k, v) t
+          -> ((k * Vdom.Node.t) Opaque_map.t Computation.t * Indexed_column_id.t) list
+             * int
+        =
+        fun ~next_id map comparator -> function
+        | Leaf { cell; visible; _ } ->
+          let leaf =
+            if%sub visible
+            then
+              Bonsai.Expert.assoc_on
+                (module Opaque_map.Key)
+                comparator
+                map
+                ~get_model_key:(fun _ (k, _) -> k)
+                ~f:(fun _ data ->
+                  let%sub key, data = return data in
+                  let%sub r = cell ~key ~data in
+                  let%arr key = key
+                  and r = r in
+                  key, r)
+            else (
+              let f = Ui_incr.Map.map ~f:(fun (k, _) -> k, Vdom.Node.none) in
+              Bonsai.Incr.compute map ~f)
+          in
+          [ leaf, Indexed_column_id.of_int next_id ], next_id + 1
+        | Group { children; _ } | Org_group children ->
+          let next_id, leaves =
+            List.fold_map children ~init:next_id ~f:(fun next_id child ->
+              let leaves, next_id = loop ~next_id map comparator child in
+              next_id, leaves)
+          in
+          let leaves = List.concat leaves in
+          leaves, next_id
+      in
+      let leaves, _ = loop ~next_id:0 map comparator t in
+      leaves
     ;;
 
     let instantiate_cells (type k) t comparator (map : (k * _) Opaque_map.t Value.t) =
       let empty = Map.empty (module Opaque_map.Key) in
       visible_leaves map comparator t
-      |> Computation.fold_right ~init:(Value.return empty) ~f:(fun a acc ->
+      |> List.fold_right ~init:(Bonsai.const empty) ~f:(fun (leaf_comp, column_id) acc ->
+           let%sub a = leaf_comp in
+           let%sub acc = acc in
            Bonsai.Incr.compute (Value.both a acc) ~f:(fun a_and_acc ->
              let%pattern_bind.Ui_incr a, acc = a_and_acc in
              Ui_incr.Map.merge a acc ~f:(fun ~key:_ change ->
                match change with
-               | `Left (i, l) -> Some (i, [ l ])
+               | `Left (i, l) -> Some (i, [ column_id, l ])
                | `Right (i, r) -> Some (i, r)
-               | `Both ((i, l), (_, r)) -> Some (i, l :: r))))
+               | `Both ((i, l), (_, r)) -> Some (i, (column_id, l) :: r))))
     ;;
   end
 
@@ -95,11 +138,15 @@ module Dynamic_cells = struct
   let group ~label children = T.Group { group_header = label; children }
   let expand ~label child = group ~label [ child ]
 
-  let lift : type key data. (key, data) T.t list -> (key, data) Column_intf.t =
+  let lift
+    : type key data.
+      (key, data) T.t list -> (key, data, Indexed_column_id.t) Column_intf.t
+    =
     let module X = struct
       type t = (key, data) T.t
       type nonrec key = key
       type nonrec data = data
+      type column_id = Indexed_column_id.t
 
       let headers = T.headers
       let instantiate_cells = T.instantiate_cells
@@ -107,7 +154,7 @@ module Dynamic_cells = struct
     in
     fun columns ->
       let value = T.Org_group columns in
-      Column_intf.T { value; vtable = (module X) }
+      Column_intf.T { value; vtable = (module X); column_id = (module Int) }
   ;;
 
   module Sortable = Sortable
@@ -116,7 +163,7 @@ end
 module Dynamic_experimental = struct
   module T = struct
     type ('key, 'data, 'column_id, 'column_id_cmp) t =
-      { col_id : ('column_id, 'column_id_cmp) Bonsai.comparator
+      { column_id : ('column_id, 'column_id_cmp) Bonsai.comparator
       ; columns : 'column_id list Value.t
       ; render_header : 'column_id Value.t -> Vdom.Node.t Computation.t
       ; render_cell :
@@ -125,19 +172,20 @@ module Dynamic_experimental = struct
 
     let headers
       : type key data column_id column_id_cmp.
-        (key, data, column_id, column_id_cmp) t -> Header_tree.t Computation.t
+        (key, data, column_id, column_id_cmp) t -> column_id Header_tree.t Computation.t
       =
-      fun { col_id; columns; render_header; render_cell = _ } ->
-      let module Col_id = (val col_id) in
+      fun { column_id; columns; render_header; render_cell = _ } ->
+      let module Col_id = (val column_id) in
       let%sub rendered =
         Bonsai.assoc_list
           (module Col_id)
           columns
           ~get_key:Fn.id
-          ~f:(fun _ col ->
-            let%sub header = render_header col in
-            let%arr header = header in
-            Header_tree.leaf ~header ~visible:true ~initial_width:(`Px 50))
+          ~f:(fun _ column_id ->
+            let%sub header = render_header column_id in
+            let%arr header = header
+            and column_id = column_id in
+            Header_tree.leaf ~header ~visible:true ~initial_width:(`Px 50) ~column_id)
       in
       match%sub rendered with
       | `Duplicate_key _ ->
@@ -154,23 +202,27 @@ module Dynamic_experimental = struct
         (key, data, column_id, column_id_cmp) t
         -> (key, _) Bonsai.comparator
         -> (key * data) Opaque_map.t Value.t
-        -> (key * Vdom.Node.t list) Opaque_map.t Computation.t
+        -> (key * (column_id * Vdom.Node.t) list) Opaque_map.t Computation.t
       =
-      fun { col_id; columns; render_header = _; render_cell } key_cmp rows ->
-      let module Col_id = (val col_id) in
+      fun { column_id; columns; render_header = _; render_cell } key_cmp rows ->
+      let module Col_id = (val column_id) in
       Bonsai.Expert.assoc_on
         (module Opaque_map.Key)
         key_cmp
         rows
         ~get_model_key:(fun _ (k, _) -> k)
-        ~f:(fun _key_key data ->
+        ~f:(fun _key data ->
           let%sub key, data = return data in
           let%sub rendered =
             Bonsai.assoc_list
               (module Col_id)
               columns
               ~get_key:Fn.id
-              ~f:(fun _ col -> render_cell col key data)
+              ~f:(fun _ col ->
+                let%sub cell = render_cell col key data in
+                let%arr col = col
+                and cell = cell in
+                col, cell)
           in
           match%sub rendered with
           | `Duplicate_key _ ->
@@ -193,19 +245,20 @@ module Dynamic_experimental = struct
       -> render_header:(column Value.t -> Vdom.Node.t Computation.t)
       -> render_cell:
            (column Value.t -> key Value.t -> data Value.t -> Vdom.Node.t Computation.t)
-      -> (key, data) Column_intf.t
+      -> (key, data, column) Column_intf.t
     =
     let module X = struct
       type t = (key, data, column, column_cmp) T.t
       type nonrec key = key
       type nonrec data = data
+      type column_id = column
 
       let headers = T.headers
       let instantiate_cells = T.instantiate_cells
     end
     in
-    fun col_id ~columns ~render_header ~render_cell ->
-      let module Col_id = (val col_id) in
+    fun column_id ~columns ~render_header ~render_cell ->
+      let module Col_id = (val column_id) in
       let columns =
         let%map columns = columns in
         (* deduplicate *)
@@ -217,8 +270,8 @@ module Dynamic_experimental = struct
             seen := Set.add !seen column;
             true))
       in
-      let value = { T.col_id; columns; render_header; render_cell } in
-      Column_intf.T { value; vtable = (module X) }
+      let value = { T.column_id; columns; render_header; render_cell } in
+      Column_intf.T { value; vtable = (module X); column_id }
   ;;
 
   module Sortable = Sortable
@@ -239,23 +292,41 @@ module Dynamic_columns = struct
           }
       | Org_group of ('key, 'data) t list
 
-    let rec translate = function
-      | Leaf { leaf_header = header; initial_width; visible; cell = _ } ->
-        Header_tree.leaf ~header ~visible ~initial_width
-      | Group { children; group_header = header } ->
-        let children = List.map children ~f:translate in
-        Header_tree.group ~header children
-      | Org_group children -> Header_tree.org_group (List.map children ~f:translate)
+    let translate t =
+      let rec map_children ~next_id children =
+        List.fold_map children ~init:next_id ~f:(fun next_id child ->
+          let tree, next_id = loop ~next_id child in
+          next_id, tree)
+      and loop ~next_id = function
+        | Leaf { leaf_header = header; initial_width; visible; cell = _ } ->
+          ( Header_tree.leaf
+              ~header
+              ~visible
+              ~initial_width
+              ~column_id:(Indexed_column_id.of_int next_id)
+          , next_id + 1 )
+        | Group { children; group_header = header } ->
+          let next_id, tree = map_children ~next_id children in
+          Header_tree.group ~header tree, next_id
+        | Org_group children ->
+          let next_id, tree = map_children ~next_id children in
+          Header_tree.org_group tree, next_id
+      in
+      let tree, _ = loop ~next_id:0 t in
+      tree
     ;;
 
     let headers t = Bonsai.pure translate t
 
-    let rec visible_leaves structure ~key ~data =
+    let rec visible_leaves idx structure ~key ~data =
       match structure with
       | Leaf { cell; visible; _ } ->
-        if visible then [ cell ~key ~data ] else [ Vdom.Node.none ]
+        if visible
+        then [ Indexed_column_id.of_int idx, cell ~key ~data ]
+        else [ Indexed_column_id.of_int idx, Vdom.Node.none ]
       | Org_group children | Group { children; group_header = _ } ->
-        List.concat_map children ~f:(visible_leaves ~key ~data)
+        List.concat_mapi children ~f:(fun i child ->
+          visible_leaves (idx + i) child ~key ~data)
     ;;
 
     let instantiate_cells t _comparator map =
@@ -265,7 +336,7 @@ module Dynamic_columns = struct
            Incr_map.mapi' which closes over visible_leaves as an incremental, but even
            in that scenario, if the set of visible_leaves changes, we're recomputing the
            whole world anyway, so it doesn't buy us anything vs this bind. *)
-        let%bind.Ui_incr visible_leaves = Ui_incr.map t ~f:visible_leaves in
+        let%bind.Ui_incr visible_leaves = Ui_incr.map t ~f:(visible_leaves 0) in
         Ui_incr.Map.map map ~f:(fun (key, data) -> key, visible_leaves ~key ~data))
     ;;
   end
@@ -279,11 +350,15 @@ module Dynamic_columns = struct
   let group ~label children = T.Group { group_header = label; children }
   let expand ~label child = group ~label [ child ]
 
-  let lift : type key data. (key, data) T.t list Value.t -> (key, data) Column_intf.t =
+  let lift
+    : type key data.
+      (key, data) T.t list Value.t -> (key, data, Indexed_column_id.t) Column_intf.t
+    =
     let module X = struct
       type t = (key, data) T.t Value.t
       type nonrec key = key
       type nonrec data = data
+      type column_id = Indexed_column_id.t
 
       let headers = T.headers
       let instantiate_cells = T.instantiate_cells
@@ -294,7 +369,7 @@ module Dynamic_columns = struct
         let%map columns = columns in
         T.Org_group columns
       in
-      Column_intf.T { value; vtable = (module X) }
+      Column_intf.T { value; vtable = (module X); column_id = (module Int) }
   ;;
 
   module Sortable = Sortable
@@ -408,7 +483,7 @@ module Dynamic_cells_with_sorter = struct
 
   let lift
     : type key data.
-      (key, data) T.t list -> (key, data, Indexed_col_id.t) Column_intf.with_sorter
+      (key, data) T.t list -> (key, data, Indexed_column_id.t) Column_intf.with_sorter
     =
     let module X = struct
       type t = (key, data) T.t
@@ -424,7 +499,7 @@ module Dynamic_cells_with_sorter = struct
       let value =
         T.Group { children = columns; build = (fun c -> Dynamic_cells.T.Org_group c) }
       in
-      Column_intf.Y { value; vtable = (module X); col_id = (module Int) }
+      Column_intf.Y { value; vtable = (module X); column_id = (module Int) }
   ;;
 
   module Sortable = Sortable
@@ -503,7 +578,7 @@ module Dynamic_columns_with_sorter = struct
   let lift
     : type key data.
       (key, data) T.t list Value.t
-      -> (key, data, Indexed_col_id.t) Column_intf.with_sorter
+      -> (key, data, Indexed_column_id.t) Column_intf.with_sorter
     =
     let module X = struct
       type t = (key, data) T.t Value.t
@@ -520,7 +595,7 @@ module Dynamic_columns_with_sorter = struct
         let%map columns = columns in
         T.Group { children = columns; build = (fun c -> Dynamic_columns.T.Org_group c) }
       in
-      Column_intf.Y { value; vtable = (module X); col_id = (module Int) }
+      Column_intf.Y { value; vtable = (module X); column_id = (module Int) }
   ;;
 
   module Sortable = Sortable
@@ -529,7 +604,7 @@ end
 module Dynamic_experimental_with_sorter = struct
   module T = struct
     type ('key, 'data, 'column_id, 'column_id_cmp) t =
-      { col_id : ('column_id, 'column_id_cmp) Bonsai.comparator
+      { column_id : ('column_id, 'column_id_cmp) Bonsai.comparator
       ; columns : ('column_id list * ('column_id, 'column_id_cmp) Set.t) Value.t
       ; render_header : 'column_id Value.t -> (Sort_state.t -> Vdom.Node.t) Computation.t
       ; render_cell :
@@ -542,11 +617,12 @@ module Dynamic_experimental_with_sorter = struct
       : type key data column_id column_id_cmp.
         (key, data, column_id, column_id_cmp) t
         -> column_id Sortable.t Value.t
-        -> ((column_id, (key, data) Sort_kind.t, column_id_cmp) Map.t * Header_tree.t)
+        -> ((column_id, (key, data) Sort_kind.t, column_id_cmp) Map.t
+           * column_id Header_tree.t)
            Computation.t
       =
-      fun { col_id; columns; render_header; sorts; render_cell = _ } sortable_header ->
-      let module Col_id = (val col_id) in
+      fun { column_id; columns; render_header; sorts; render_cell = _ } sortable_header ->
+      let module Col_id = (val column_id) in
       let%sub columns, columns_as_a_set = return columns in
       let%sub sorts =
         match sorts with
@@ -579,7 +655,7 @@ module Dynamic_experimental_with_sorter = struct
                 sortable_header
                 render_header
             in
-            Header_tree.leaf ~header ~visible:true ~initial_width:(`Px 50))
+            Header_tree.leaf ~column_id:col ~header ~visible:true ~initial_width:(`Px 50))
       in
       let%sub headers =
         match%sub headers with
@@ -600,10 +676,10 @@ module Dynamic_experimental_with_sorter = struct
         (key, data, column_id, column_id_cmp) t
         -> (key, _) Bonsai.comparator
         -> (key * data) Opaque_map.t Value.t
-        -> (key * Vdom.Node.t list) Opaque_map.t Computation.t
+        -> (key * (column_id * Vdom.Node.t) list) Opaque_map.t Computation.t
       =
-      fun { col_id; columns; render_cell; render_header = _; sorts = _ } key_cmp rows ->
-      let module Col_id = (val col_id) in
+      fun { column_id; columns; render_cell; render_header = _; sorts = _ } key_cmp rows ->
+      let module Col_id = (val column_id) in
       let%sub columns, _ = return columns in
       Bonsai.Expert.assoc_on
         (module Opaque_map.Key)
@@ -617,7 +693,11 @@ module Dynamic_experimental_with_sorter = struct
               (module Col_id)
               columns
               ~get_key:Fn.id
-              ~f:(fun _ col -> render_cell col key data)
+              ~f:(fun _ col ->
+                let%sub cell = render_cell col key data in
+                let%arr col = col
+                and cell = cell in
+                col, cell)
           in
           match%sub rendered with
           | `Duplicate_key _ ->
@@ -651,8 +731,8 @@ module Dynamic_experimental_with_sorter = struct
       let instantiate_cells = T.instantiate_cells
     end
     in
-    fun ?sorts col_id ~columns ~render_header ~render_cell ->
-      let module Col_id = (val col_id) in
+    fun ?sorts column_id ~columns ~render_header ~render_cell ->
+      let module Col_id = (val column_id) in
       let columns =
         let%map columns = columns in
         (* deduplicate *)
@@ -667,8 +747,8 @@ module Dynamic_experimental_with_sorter = struct
         in
         as_list, !seen
       in
-      let value = { T.col_id; columns; render_header; render_cell; sorts } in
-      Column_intf.Y { value; vtable = (module X); col_id = (module Col_id) }
+      let value = { T.column_id; columns; render_header; render_cell; sorts } in
+      Column_intf.Y { value; vtable = (module X); column_id = (module Col_id) }
   ;;
 
   module Sortable = Sortable

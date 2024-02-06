@@ -2,7 +2,7 @@ open! Core
 open! Bonsai_web
 open Bonsai.Let_syntax
 module Reorderable_list = Bonsai_web_ui_reorderable_list
-module Form = Bonsai_web_ui_form
+module Form = Bonsai_web_ui_form.With_automatic_view
 
 module S =
 [%css

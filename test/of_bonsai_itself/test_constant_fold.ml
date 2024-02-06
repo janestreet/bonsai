@@ -4,27 +4,26 @@ open Bonsai.For_open
 open Bonsai.Let_syntax
 module Private = Bonsai.Private
 
-let constant_fold computation =
-  computation
-  |> Private.reveal_computation
+let constant_fold computation graph =
+  Private.handle graph ~f:computation
   |> Private.Constant_fold.constant_fold
-  |> Private.conceal_computation
+  |> Private.perform graph
 ;;
 
 let sexp_of_computation c =
   c
-  |> Private.reveal_computation
   |> Private.Skeleton.Computation.of_computation
   |> Private.Skeleton.Computation.sanitize_for_testing
   |> Private.Skeleton.Computation.minimal_sexp_of_t
 ;;
 
-let print_computation c = print_s (sexp_of_computation c)
+let print_computation c = print_s (sexp_of_computation (Private.top_level_handle c))
 
 let constant_fold_and_assert_no_op computation =
-  let after_computation = constant_fold computation in
-  let before_sexp = sexp_of_computation computation in
-  let after_sexp = sexp_of_computation after_computation in
+  let lowered = Private.top_level_handle computation in
+  let optimized = Private.Constant_fold.constant_fold lowered in
+  let before_sexp = sexp_of_computation lowered in
+  let after_sexp = sexp_of_computation optimized in
   match Sexp.equal before_sexp after_sexp with
   | true -> print_s before_sexp
   | false ->
@@ -35,9 +34,10 @@ let constant_fold_and_assert_no_op computation =
 ;;
 
 let constant_fold_and_diff computation =
-  let after_computation = constant_fold computation in
-  let before_sexp = sexp_of_computation computation in
-  let after_sexp = sexp_of_computation after_computation in
+  let lowered = Private.top_level_handle computation in
+  let optimized = Private.Constant_fold.constant_fold lowered in
+  let before_sexp = sexp_of_computation lowered in
+  let after_sexp = sexp_of_computation optimized in
   Expect_test_patdiff.print_patdiff_s before_sexp after_sexp
 ;;
 
@@ -209,13 +209,9 @@ let%expect_test "lazies inside of a switch with static input are forced" =
   print_computation c;
   [%expect
     {|
-      (Sub
-        (from (Return (value (Constant (id (Test 0))))))
-        (via (Test 1))
-        (into (
-          Switch
-          (match_ (Mapn (inputs ((Named (uid (Test 1)))))))
-          (arms ((Lazy (t ())) (Return (value Exception))))))) |}];
+      (Switch
+        (match_ (Mapn (inputs ((Constant (id (Test 0)))))))
+        (arms ((Lazy (t ())) (Return (value Exception))))) |}];
   print_computation (constant_fold c);
   [%expect {| (Return (value (Constant (id (Test 0))))) |}]
 ;;
@@ -291,8 +287,7 @@ let%expect_test "map2_of_map2_of_constants_gets_folded" =
                         (Constant (id (Test 0)))
                         (Constant (id (Test 1))))))))))))))))) |}];
   print_computation (constant_fold doubled);
-  [%expect {|
-    (Return (value (Constant (id (Test 0))))) |}]
+  [%expect {| (Return (value (Constant (id (Test 0))))) |}]
 ;;
 
 let%expect_test "cutoff" =
@@ -300,8 +295,8 @@ let%expect_test "cutoff" =
   print_computation cutoff;
   [%expect
     {|
-      (Return (
-        value (Cutoff (t (Constant (id (Test 0)))) (added_by_let_syntax false)))) |}];
+    (Return (
+      value (Cutoff (t (Constant (id (Test 0)))) (added_by_let_syntax false)))) |}];
   print_computation (constant_fold cutoff);
   [%expect {| (Return (value (Constant (id (Test 0))))) |}]
 ;;
@@ -323,8 +318,7 @@ let%expect_test "errors_propagate_but_are_not_thrown" =
           inputs ((
             Mapn (inputs ((Mapn (inputs ((Constant (id (Test 0)))))) Incr)))))))) |}];
   print_computation (constant_fold c);
-  [%expect {|
-    (Return (value Exception)) |}]
+  [%expect {| (Return (value Exception)) |}]
 ;;
 
 let%expect_test "cutoff gets folded away" =
@@ -514,8 +508,7 @@ let%expect_test "constant map + simplifiable assoc function => constant map" =
                     (Named (uid (Test 1)))
                     (Named (uid (Test 3))))))))))))) |}];
   print_computation (constant_fold c);
-  [%expect {|
-    (Return (value (Constant (id (Test 0))))) |}]
+  [%expect {| (Return (value (Constant (id (Test 0))))) |}]
 ;;
 
 let%expect_test "a constant input with no external dependencies is folded into a constant"
@@ -559,15 +552,11 @@ let%expect_test "a switch with constant input is optimized away" =
   print_computation c;
   [%expect
     {|
-    (Sub
-      (from (Return (value (Constant (id (Test 0))))))
-      (via (Test 1))
-      (into (
-        Switch
-        (match_ (Mapn (inputs ((Named (uid (Test 1)))))))
-        (arms (
-          (Return (value (Constant (id (Test 3)))))
-          (Return (value (Constant (id (Test 4)))))))))) |}];
+    (Switch
+      (match_ (Mapn (inputs ((Constant (id (Test 0)))))))
+      (arms (
+        (Return (value (Constant (id (Test 2)))))
+        (Return (value (Constant (id (Test 3)))))))) |}];
   print_computation (constant_fold c);
   [%expect {| (Return (value (Constant (id (Test 0))))) |}]
 ;;
@@ -581,14 +570,11 @@ let%expect_test "an assert-false is caught (and then optimized away)" =
   print_computation c;
   [%expect
     {|
-    (Sub
-      (from (Return (value (Constant (id (Test 0))))))
-      (via (Test 1))
-      (into (
-        Switch
-        (match_ (Mapn (inputs ((Named (uid (Test 1)))))))
-        (arms (
-          (Return (value (Constant (id (Test 3))))) (Return (value Exception))))))) |}];
+    (Switch
+      (match_ (Mapn (inputs ((Constant (id (Test 0)))))))
+      (arms ((Return (value (Constant (id (Test 2))))) (Return (value Exception))))) |}];
+  print_computation (constant_fold c);
+  [%expect {| (Return (value (Constant (id (Test 0))))) |}];
   print_computation (constant_fold c);
   [%expect {| (Return (value (Constant (id (Test 0))))) |}]
 ;;

@@ -26,17 +26,17 @@ let%expect_test "roll" =
   [%expect
     {|
     ((dice (
+       ((num_faces 6) (result 4))
        ((num_faces 6) (result 1))
-       ((num_faces 6) (result 1))
-       ((num_faces 4) (result 1))))
+       ((num_faces 4) (result 2))))
      (const 0)) |}];
   test "d20 + 3d6";
   [%expect
     {|
     ((dice (
-       ((num_faces 20) (result 11))
+       ((num_faces 20) (result 7))
        ((num_faces 6)  (result 1))
-       ((num_faces 6)  (result 4))
-       ((num_faces 6)  (result 4))))
+       ((num_faces 6)  (result 6))
+       ((num_faces 6)  (result 6))))
      (const 0)) |}]
 ;;

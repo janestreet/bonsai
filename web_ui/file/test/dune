@@ -1,3 +1,5 @@
-(library (name test_bonsai_web_ui_file)
+(library
+ (name test_bonsai_web_ui_file)
  (libraries bonsai_web_ui_file bonsai_test)
- (preprocess (pps ppx_bonsai ppx_jane)))
+ (preprocess
+  (pps ppx_bonsai ppx_jane)))

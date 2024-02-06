@@ -1,4 +1,6 @@
-(library (name bonsai_web_ui_file_from_web_file)
+(library
+ (name bonsai_web_ui_file_from_web_file)
  (public_name bonsai.web_ui_file_from_web_file)
  (libraries bonsai_web bonsai_web_ui_file)
- (preprocess (pps ppx_jane js_of_ocaml-ppx)))
+ (preprocess
+  (pps ppx_jane js_of_ocaml-ppx)))

@@ -1088,14 +1088,14 @@ let%expect_test "devbar" =
 ;;
 
 let%expect_test "app" =
-  let basic theme = Vdom.Node.div ~attrs:[ View.App.top_attr theme ] [] in
+  let basic theme = Vdom.Node.div ~attrs:[ force (View.App.top_attr theme) ] [] in
   themed_component [ "basic", basic ];
   [%expect
     {|
     # default theme
     ## basic
     ```html
-    <div class="app_hash_replaced_in_test"> </div>
+    <div inline-css-dynamic="\n@layer bonsai_web_ui_view.app {\n  :root {\n    font-family: sans-serif;\n  }\n\n  :root *,\n  :root *::before,\n  :root *::after {\n    box-sizing: border-box;\n  }\n}\n"> </div>
     ```
 
     # kado v1

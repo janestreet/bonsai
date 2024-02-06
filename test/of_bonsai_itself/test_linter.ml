@@ -10,18 +10,17 @@ let test_location_reference_point = ref [%here]
 let test_start here = test_location_reference_point := here
 
 let test_lint computation =
-  let computation = Private.reveal_computation computation in
+  let computation = Private.top_level_handle computation in
   List.iter (Private.Linter.list_warnings computation) ~f:(fun warning ->
     print_endline
       (Private.Linter.Warning.to_string
          (Private.Linter.Warning.relative_to !test_location_reference_point warning)))
 ;;
 
-let constant_fold computation =
-  computation
-  |> Private.reveal_computation
+let constant_fold computation graph =
+  Private.handle graph ~f:computation
   |> Private.Constant_fold.constant_fold
-  |> Private.conceal_computation
+  |> Private.perform graph
 ;;
 
 let%expect_test "map2_unfolded_constant_warnings" =
@@ -32,9 +31,7 @@ let%expect_test "map2_unfolded_constant_warnings" =
     a + b
   in
   test_lint c;
-  [%expect
-    {|
-    lib/bonsai/test/of_bonsai_itself/test_linter.ml:2:4: unfolded constant |}]
+  [%expect {| lib/bonsai/test/of_bonsai_itself/test_linter.ml:2:4: unfolded constant |}]
 ;;
 
 let%expect_test "map2_optimized_gets_no_warnings" =
@@ -131,6 +128,6 @@ let%expect_test "map2_with_unfolded_constants_and_sm1_with_const_input_both_warn
   test_lint c;
   [%expect
     {|
-    lib/bonsai/test/of_bonsai_itself/test_linter.ml:2:4: state_machine1 can be optimized to a state_machine0
+    _none_:0:0: state_machine1 can be optimized to a state_machine0
     lib/bonsai/test/of_bonsai_itself/test_linter.ml:11:4: unfolded constant |}]
 ;;

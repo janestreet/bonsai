@@ -3,7 +3,7 @@ open! Bonsai_web
 open Bonsai.Let_syntax
 module Url_var = Bonsai_web_ui_url_var
 open Url_var.Typed
-module Form = Bonsai_web_ui_form
+module Form = Bonsai_web_ui_form.With_automatic_view
 module Path_order = Url_var.Typed.Parser.Record.Path_order
 
 module Location = struct

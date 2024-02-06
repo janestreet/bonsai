@@ -2,7 +2,7 @@ open! Core
 open! Bonsai_web
 open Bonsai.Let_syntax
 module Table = Bonsai_web_ui_partial_render_table.Basic
-module Form = Bonsai_web_ui_form
+module Form = Bonsai_web_ui_form.With_automatic_view
 module Row = Row
 
 module Time_ns_option = struct
@@ -68,6 +68,7 @@ let component ?filter (data : Row.t String.Map.t Value.t) =
           ; sortable_state = _
           ; num_filtered_rows
           ; focus
+          ; set_column_width = _
           }
     =
     table

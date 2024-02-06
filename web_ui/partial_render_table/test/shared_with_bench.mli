@@ -1,6 +1,7 @@
 open! Core
 open! Bonsai_web
 open! Bonsai.Let_syntax
+module Table := Bonsai_web_ui_partial_render_table
 
 module Row : sig
   type t =
@@ -20,7 +21,10 @@ module Row : sig
 end
 
 module type S = sig
-  val all : (int, Row.t) Bonsai_web_ui_partial_render_table.Expert.Columns.t
+  type column_id
+
+  val first_column : column_id
+  val all : (int, Row.t, column_id) Table.Expert.Columns.t
 end
 
 module Dynamic_cells : S

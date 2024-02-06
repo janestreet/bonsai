@@ -11,16 +11,28 @@ module For_testing : sig
 end
 
 module Focus_by_row = Focus.By_row
+module Focus_by_cell = Focus.By_cell
+
+module Indexed_column_id : sig
+  type t [@@deriving equal, sexp]
+
+  val of_int : int -> t
+  val to_int : t -> int
+end
 
 module Basic : sig
   module Focus : sig
     module By_row = Focus.By_row
+    module By_cell = Focus.By_cell
 
-    type ('a, 'p, 'k) t =
-      | None : (unit, unit, 'k) t
+    type ('a, 'p, 'k, 'c) t =
+      | None : (unit, unit, 'k, 'c) t
       | By_row :
           { on_change : ('k option -> unit Effect.t) Value.t }
-          -> ('k Focus_by_row.optional, 'k option, 'k) t
+          -> ('k Focus_by_row.optional, 'k option, 'k, 'c) t
+      | By_cell :
+          { on_change : (('k * 'c) option -> unit Effect.t) Value.t }
+          -> (('k, 'c) By_cell.optional, ('k * 'c) option, 'k, 'c) t
   end
 
   module Result : sig
@@ -30,6 +42,9 @@ module Basic : sig
       ; focus : 'focus
       ; num_filtered_rows : int
       ; sortable_state : 'column_id Sortable.t
+      ; set_column_width : column_id:'column_id -> [ `Px_float of float ] -> unit Effect.t
+          (** [set_column_width] cannot set the width of the column smaller than the minimum
+          width of the header. *)
       }
     [@@deriving fields ~getters]
   end
@@ -39,16 +54,10 @@ module Basic : sig
         and they each have their own tradeoffs and capibilities.  You can not
         mix-and-match column kinds.  Read the doc comments for each of the
         submodules to learn more.  *)
+    module Indexed_column_id = Indexed_column_id
 
     type ('key, 'data, 'column_id) t
     type ('key, 'data, 'column_id) columns := ('key, 'data, 'column_id) t
-
-    module Indexed_col_id : sig
-      type t [@@deriving equal]
-
-      val of_int : int -> t
-      val to_int : t -> int
-    end
 
     module Dynamic_experimental : sig
       val build
@@ -103,7 +112,7 @@ module Basic : sig
       val expand : label:Vdom.Node.t Value.t -> ('key, 'data) t -> ('key, 'data) t
 
       (** [lift] pulls a list of columns out into a column specification for use in the primary APIs  *)
-      val lift : ('key, 'data) t list -> ('key, 'data, Indexed_col_id.t) columns
+      val lift : ('key, 'data) t list -> ('key, 'data, Indexed_column_id.t) columns
 
       (** [Sortable] provides types, state, and ui helper functions to sort your table
           data by one or more columns. *)
@@ -139,7 +148,9 @@ module Basic : sig
       val group : label:Vdom.Node.t -> ('key, 'data) t list -> ('key, 'data) t
 
       (** [lift] pulls a list of columns out into a column specification for use in the primary APIs  *)
-      val lift : ('key, 'data) t list Value.t -> ('key, 'data, Indexed_col_id.t) columns
+      val lift
+        :  ('key, 'data) t list Value.t
+        -> ('key, 'data, Indexed_column_id.t) columns
 
       (** [Sortable] provides types, state, and ui helper functions to sort your table
           data by one or more columns. *)
@@ -167,7 +178,7 @@ module Basic : sig
          (** An optional function may be provided to sort the table. *)
     -> ?preload_rows:int
     -> ('key, 'cmp) Bonsai.comparator
-    -> focus:('focus, 'presence, 'key) Focus.t
+    -> focus:('focus, 'presence, 'key, 'column_id) Focus.t
     -> row_height:[ `Px of int ] Value.t
          (** [row_height] is the height of every row in the table. If the row height
         is specified to be 0px or less, we instead use 1px. *)
@@ -187,9 +198,10 @@ module Expert : sig
 
   module Focus : sig
     module By_row = Focus.By_row
+    module By_cell = Focus.By_cell
 
-    type ('a, 'p, 'k) t = ('a, 'p, 'k) Focus.Kind.t =
-      | None : (unit, unit, 'k) t
+    type ('a, 'p, 'k, 'c) t = ('a, 'p, 'k, 'c) Focus.Kind.t =
+      | None : (unit, unit, 'k, 'c) t
       | By_row :
           { on_change : ('k option -> unit Effect.t) Value.t
               (** Row-selection is not required to be inside the viewport, so the selected row
@@ -197,22 +209,32 @@ module Expert : sig
               forces the user to consider if a row is considered 'focused' or not. *)
           ; compute_presence : 'k option Value.t -> 'p Computation.t
           }
-          -> (('k, 'p) Focus_by_row.t, 'p, 'k) t
+          -> (('k, 'p) Focus_by_row.t, 'p, 'k, 'c) t
+      | By_cell :
+          { on_change : (('k * 'c) option -> unit Effect.t) Value.t
+          ; compute_presence : ('k * 'c) option Value.t -> 'presence Computation.t
+          }
+          -> (('k, 'c, 'presence) By_cell.t, 'presence, 'k, 'c) t
   end
 
   module Result : sig
-    type 'focus t =
+    type ('focus, 'column_id) t =
       { view : Vdom.Node.t
       ; range : int * int
       ; for_testing : For_testing.t Lazy.t
       ; focus : 'focus
+      ; set_column_width : column_id:'column_id -> [ `Px_float of float ] -> unit Effect.t
+          (** [set_column_width] cannot set the width of the column smaller than the minimum
+          width of the header. *)
       }
     [@@deriving fields ~getters]
   end
 
   module Columns : sig
-    type ('key, 'data) t
-    type ('key, 'data) columns := ('key, 'data) t
+    module Indexed_column_id = Indexed_column_id
+
+    type ('key, 'data, 'column_id) t
+    type ('key, 'data, 'column_id) columns := ('key, 'data, 'column_id) t
 
     module Dynamic_experimental : sig
       val build
@@ -224,7 +246,7 @@ module Expert : sig
               -> 'key Value.t
               -> 'data Value.t
               -> Vdom.Node.t Computation.t)
-        -> ('key, 'data) columns
+        -> ('key, 'data, 'column_id) columns
 
       (** [Sortable] provides types, state, and ui helper functions to sort your table
           data by one or more columns. *)
@@ -243,7 +265,7 @@ module Expert : sig
         -> ('key, 'data) t
 
       val group : label:Vdom.Node.t Value.t -> ('key, 'data) t list -> ('key, 'data) t
-      val lift : ('key, 'data) t list -> ('key, 'data) columns
+      val lift : ('key, 'data) t list -> ('key, 'data, Indexed_column_id.t) columns
 
       (** [Sortable] provides types, state, and ui helper functions to sort your table
           data by one or more columns. *)
@@ -262,7 +284,10 @@ module Expert : sig
         -> ('key, 'data) t
 
       val group : label:Vdom.Node.t -> ('key, 'data) t list -> ('key, 'data) t
-      val lift : ('key, 'data) t list Value.t -> ('key, 'data) columns
+
+      val lift
+        :  ('key, 'data) t list Value.t
+        -> ('key, 'data, Indexed_column_id.t) columns
 
       (** [Sortable] provides types, state, and ui helper functions to sort your table
           data by one or more columns. *)
@@ -301,15 +326,15 @@ module Expert : sig
         small and scrolling might be choppy; too large and you start to lose some of the
         benefits of partial rendering. *)
     -> ('key, 'cmp) Bonsai.comparator
-    -> focus:('focus, 'presence, 'key) Focus.t
+    -> focus:('focus, 'presence, 'key, 'column_id) Focus.t
     -> row_height:[ `Px of int ] Value.t
          (** [row_height] is the height of every row in the table. If the row height
         is specified to be 0px or less, we instead use 1px. *)
-    -> columns:('key, 'row) Columns.t
+    -> columns:('key, 'row, 'column_id) Columns.t
     -> ('key, 'row) Collated.t Value.t
        (** The collated value is the proper input to the component.
         You can use [Expert.collate] to get a Collated.t value, or do
         the collation manually on the server by using the Incr_map_collate
         library manually. *)
-    -> 'focus Result.t Computation.t
+    -> ('focus, 'column_id) Result.t Computation.t
 end

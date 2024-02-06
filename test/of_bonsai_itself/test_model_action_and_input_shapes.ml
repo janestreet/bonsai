@@ -16,8 +16,8 @@ let rec censor_sexp : Sexp.t -> Sexp.t = function
 let graph_stats c =
   let driver =
     Bonsai_driver.create
-      c
-      (* we explicitly optimize the computation ourselves inside of [print], so don't do anything here. *)
+      (fun graph -> Bonsai.Private.perform graph c)
+        (* we explicitly optimize the computation ourselves inside of [print], so don't do anything here. *)
       ~optimize:false
       ~clock:(Ui_time_source.create ~start:Time_ns.epoch)
   in
@@ -34,8 +34,8 @@ let graph_stats c =
 let description c =
   let module Meta = Bonsai.Private.Meta in
   let module Action = Bonsai.Private.Action in
-  let (T { model; action; input; _ }) =
-    Bonsai.Private.reveal_computation c |> Bonsai.Private.gather
+  let (Bonsai.Private.Computation.T { model; action; input; _ }) =
+    Bonsai.Private.gather c
   in
   let model = Meta.Model.Type_id.sexp_of_t [%sexp_of: opaque] model.type_id in
   let action = Action.Type_id.sexp_of_t action in
@@ -53,12 +53,9 @@ let prepend_sexp s : Sexp.t -> Sexp.t = function
 ;;
 
 let print c =
-  let pre_optimization = description c
+  let pre_optimization = description (Bonsai.Private.top_level_handle c)
   and post_optimization =
-    Bonsai.Private.reveal_computation c
-    |> Bonsai.Private.pre_process
-    |> Bonsai.Private.conceal_computation
-    |> description
+    Bonsai.Private.top_level_handle c |> Bonsai.Private.pre_process |> description
   in
   if Sexp.equal pre_optimization post_optimization
   then pre_optimization |> prepend_sexp "with and without optimizations" |> print_s

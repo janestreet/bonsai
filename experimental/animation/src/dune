@@ -1,2 +1,5 @@
-(library (name bonsai_experimental_animation) (libraries core bonsai)
- (preprocess (pps ppx_bonsai ppx_jane)))
+(library
+ (name bonsai_experimental_animation)
+ (libraries core bonsai)
+ (preprocess
+  (pps ppx_bonsai ppx_jane)))

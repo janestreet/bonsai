@@ -1,6 +1,9 @@
-(executables (names main)
- (libraries bonsai_web async_js bonsai_web_ui_form bonsai_web_ui_extendy
-  legacy_diffable timezone)
+(executables
+ (modes byte exe)
+ (names main)
+ (libraries bonsai_web async_js bonsai_web_ui_extendy bonsai_web_ui_form
+   legacy_diffable timezone)
  (preprocess
   (pps js_of_ocaml-ppx ppx_typed_fields ppx_bonsai ppx_css ppx_jane))
- (js_of_ocaml (javascript_files ./resize_iframe.js)))
+ (js_of_ocaml
+  (javascript_files ./resize_iframe.js)))

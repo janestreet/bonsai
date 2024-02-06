@@ -1,7 +1,7 @@
 open! Core
 open! Bonsai_web
 open! Bonsai.Let_syntax
-module Form = Bonsai_web_ui_form
+module Form = Bonsai_web_ui_form.With_automatic_view
 module Gallery = Bonsai_web_ui_gallery
 
 let vbox c = View.vbox ~cross_axis_alignment:Start ~gap:(`Px 5) c

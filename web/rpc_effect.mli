@@ -88,8 +88,8 @@ module Rpc : sig
     -> where_to_connect:Where_to_connect.t
     -> ('query -> 'response Or_error.t Effect.t) Computation.t
 
-  (** A computation that periodically dispatches on an RPC and
-      keeps track of the most recent response.
+  (** A computation that periodically dispatches on an RPC and keeps track of the most
+      recent response. Only one request will be in-flight at any point in time.
 
       [clear_when_deactivated] determines whether the most recent response should be
       discarded when the component is deactivated. Default is true. *)
@@ -187,6 +187,12 @@ module Polling_state_rpc : sig
     -> where_to_connect:Where_to_connect.t
     -> ('query -> 'response Or_error.t Effect.t) Computation.t
 
+  val babel_dispatcher
+    :  ?on_forget_client_error:(Error.t -> unit Effect.t)
+    -> ('query, 'response) Versioned_polling_state_rpc.Client.caller
+    -> where_to_connect:Where_to_connect.t
+    -> ('query -> 'response Or_error.t Effect.t) Computation.t
+
   (** A computation that periodically dispatches on a polling_state_rpc and
       keeps track of the most recent response. To explicitly re-send the RPC,
       schedule the [refresh] field of the result. It also keeps track of the current
@@ -199,6 +205,19 @@ module Polling_state_rpc : sig
     -> ?clear_when_deactivated:bool
     -> ?on_response_received:('query -> 'response Or_error.t -> unit Effect.t) Value.t
     -> ('query, 'response) Polling_state_rpc.t
+    -> where_to_connect:Where_to_connect.t
+    -> every:Time_ns.Span.t
+    -> 'query Value.t
+    -> ('query, 'response) Poll_result.t Computation.t
+
+  val babel_poll
+    :  ?sexp_of_query:('query -> Sexp.t)
+    -> ?sexp_of_response:('response -> Sexp.t)
+    -> equal_query:('query -> 'query -> bool)
+    -> ?equal_response:('response -> 'response -> bool)
+    -> ?clear_when_deactivated:bool
+    -> ?on_response_received:('query -> 'response Or_error.t -> unit Effect.t) Value.t
+    -> ('query, 'response) Versioned_polling_state_rpc.Client.caller
     -> where_to_connect:Where_to_connect.t
     -> every:Time_ns.Span.t
     -> 'query Value.t

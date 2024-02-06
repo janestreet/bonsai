@@ -1,8 +1,16 @@
-(executables (names graph_generator)
+(executables
+ (modes byte exe)
+ (names graph_generator)
  (libraries bonsai_examples_mouse_position_lib bonsai)
- (preprocess (pps ppx_jane ppx_pattern_bind)))
+ (preprocess
+  (pps ppx_jane ppx_pattern_bind)))
 
-(rule (targets graph.svg) (deps graph_generator.bc.js)
- (action (bash "%{NODE} %{deps} | dot -T svg -ograph.svg")))
+(rule
+ (targets graph.svg)
+ (deps graph_generator.bc.js)
+ (action
+  (bash "%{NODE} %{deps} | dot -T svg -ograph.svg")))
 
-(alias (name DEFAULT) (deps graph.svg))
+(alias
+ (name DEFAULT)
+ (deps graph.svg))

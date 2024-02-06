@@ -1,3 +1,13 @@
+- `Bonsai_web_ui_form` and `Bonsai_web_ui_form2` were merged into `Bonsai_web_ui_form` under
+submodules `With_automatic_view` and `With_manual_view`, respectively.
+
+- Added `always_update_when_focused` to text inputs to make the current behavior (text value can't be updated if the input is focused) optional.
+
+- Remove the first-class Action module from
+  * `Bonsai_extra.state_machine0_dynamic_model` and
+  * `Bonsai_extra.state_machine1_dynamic_model`
+  in favor of an optional `sexp_of_action: 'action -> Sexp.t` parameter.
+
 ## Release v0.16.0
 
 - Formatting improvements:

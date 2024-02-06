@@ -1,2 +1,6 @@
-(library (name bonsai_protocol) (libraries core bonsai core_kernel.uuid)
- (public_name bonsai.protocol) (preprocess (pps ppx_jane)))
+(library
+ (name bonsai_protocol)
+ (libraries core bonsai core_kernel.uuid)
+ (public_name bonsai.protocol)
+ (preprocess
+  (pps ppx_jane)))

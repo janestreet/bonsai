@@ -3455,7 +3455,7 @@ let%test_module "query-based variant" =
       [%expect {| ?page=a&a=beep%20boop |}];
       let parsed = projection.parse_exn original in
       print_s [%sexp (parsed : Well_behaved_url.t Parse_result.t)];
-      [%expect {| ((result (A "beep boop")) (remaining ((path ("")) (query ())))) |}];
+      [%expect {| ((result (A "beep boop")) (remaining ((path ()) (query ())))) |}];
       let unparsed = projection.unparse parsed in
       print_endline (Uri.to_string unparsed);
       [%expect {| ?a=beep%20boop&page=a |}]
@@ -3467,7 +3467,7 @@ let%test_module "query-based variant" =
       [%expect {| ?page=bee |}];
       let parsed = projection.parse_exn original in
       print_s [%sexp (parsed : Well_behaved_url.t Parse_result.t)];
-      [%expect {| ((result B) (remaining ((path ("")) (query ())))) |}];
+      [%expect {| ((result B) (remaining ((path ()) (query ())))) |}];
       let unparsed = projection.unparse parsed in
       print_endline (Uri.to_string unparsed);
       [%expect {| ?page=bee |}]
@@ -3681,7 +3681,7 @@ let%expect_test "query parsing encode decode" =
   [%expect {| ?q=beep%20boop |}];
   let parsed = projection.parse_exn original in
   print_s [%sexp (parsed : string Parse_result.t)];
-  [%expect {| ((result "beep boop") (remaining ((path ("")) (query ())))) |}];
+  [%expect {| ((result "beep boop") (remaining ((path ()) (query ())))) |}];
   let unparsed = projection.unparse parsed in
   print_endline (Uri.to_string unparsed);
   [%expect {| ?q=beep%20boop |}]
@@ -3746,7 +3746,7 @@ let%expect_test "double query parsing encode decode" =
   [%expect {| ?q=beep%2520boop |}];
   let parsed = projection.parse_exn original in
   print_s [%sexp (parsed : string Parse_result.t)];
-  [%expect {| ((result beep%20boop) (remaining ((path ("")) (query ())))) |}];
+  [%expect {| ((result beep%20boop) (remaining ((path ()) (query ())))) |}];
   let unparsed = projection.unparse parsed in
   print_endline (Uri.to_string unparsed);
   [%expect {| ?q=beep%2520boop |}]

@@ -1,5 +1,7 @@
-(library (name bonsai)
+(library
+ (name bonsai)
  (libraries core core_kernel.reversed_list virtual_dom.ui_effect
-  incr_dom.ui_incr incr_dom.ui_time_source)
- (preprocess (pps ppx_jane ppx_pattern_bind ppx_bonsai ppxlib.traverse))
+   incr_dom.ui_incr incr_dom.ui_time_source)
+ (preprocess
+  (pps ppx_jane ppx_pattern_bind ppx_bonsai ppxlib.traverse))
  (public_name bonsai))

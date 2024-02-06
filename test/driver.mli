@@ -7,7 +7,7 @@ val create
   :  ?optimize:bool
   -> clock:Bonsai.Time_source.t
   -> initial_input:'i
-  -> ('i, 'r) Bonsai.Arrow_deprecated.t
+  -> ('i Bonsai.Value.t -> Bonsai.Cont.graph -> 'r Bonsai.Cont.t)
   -> ('i, 'r) t
 
 val set_input : ('i, _) t -> 'i -> unit
@@ -17,8 +17,8 @@ val flush : _ t -> unit
 
 val schedule_event : _ t -> unit Ui_effect.t -> unit
 val result : (_, 'r) t -> 'r
-val last_view : _ t -> string
-val store_view : _ t -> string -> unit
+val last_view : _ t -> string Lazy.t
+val store_view : _ t -> string Lazy.t -> unit
 val trigger_lifecycles : _ t -> unit
 val has_after_display_events : _ t -> bool
 val sexp_of_model : _ t -> Sexp.t

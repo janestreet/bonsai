@@ -242,9 +242,16 @@ module Components = struct
     String.concat ~sep:"/" (List.map ~f:(Uri.pct_encode ~component:`Path) path)
   ;;
 
+  let split_if_nonempty = function
+    (* NOTE: We need to special case this situation as we would
+       prefer for String.split to return `[]` instead of `[""]` *)
+    | "" -> []
+    | p -> String.split ~on:'/' p
+  ;;
+
   let decode_path path =
     String.chop_prefix_if_exists ~prefix:"/" path
-    |> String.split ~on:'/'
+    |> split_if_nonempty
     |> List.map ~f:Uri.pct_decode
   ;;
 
@@ -261,7 +268,7 @@ module Components = struct
     let path =
       match encoding_behavior with
       | Percent_encoding_behavior.Legacy_incorrect ->
-        Uri.path uri |> String.chop_prefix_if_exists ~prefix:"/" |> String.split ~on:'/'
+        Uri.path uri |> String.chop_prefix_if_exists ~prefix:"/" |> split_if_nonempty
       | Correct -> decode_path (Uri.path uri)
     in
     let query =
@@ -742,6 +749,11 @@ module Parser = struct
       then raise_s [%message "Expected a value in query field, but nothing was present"]
     ;;
 
+    let raise_if_empty_path values =
+      if List.is_empty values
+      then raise_s [%message "Expected a value in path, but nothing was present"]
+    ;;
+
     let namespace_for_record_field
       ~current_namespace
       ~override_namespace
@@ -943,7 +955,7 @@ module Parser = struct
       let parse_exn (components : Components.t) =
         let result, remaining_path =
           let path = components.path in
-          raise_if_empty path;
+          raise_if_empty_path path;
           value_projection.parse_exn (List.hd_exn path), List.tl_exn path
         in
         let remaining = { components with path = remaining_path } in

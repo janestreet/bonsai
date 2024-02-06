@@ -1,3 +1,5 @@
-(library (name bonsai_web_rpgdice_test)
+(library
+ (name bonsai_web_rpgdice_test)
  (libraries bonsai_web_rpgdice_example core expect_test_helpers_core)
- (preprocess (pps ppx_jane)))
+ (preprocess
+  (pps ppx_jane)))

@@ -37,7 +37,7 @@ module Vdom_tests (Columns : Shared_with_bench.S) = struct
     let handle =
       Handle.create
         (module struct
-          type t = unit Prt.Result.t
+          type t = (unit, Columns.column_id) Prt.Result.t
 
           let view { Prt.Result.view; _ } =
             Virtual_dom_test_helpers.Node_helpers.unsafe_convert_exn view
@@ -52,7 +52,7 @@ module Vdom_tests (Columns : Shared_with_bench.S) = struct
     [%expect
       {|
       <div class="partial_render_table_container_hash_replaced_in_test table_hash_replaced_in_test"
-           custom-css-vars=((--row-odd-fg_hash_replaced_in_test black)(--row-odd-bg_hash_replaced_in_test white)(--row-focused-fg_hash_replaced_in_test black)(--row-focused-border_hash_replaced_in_test #0a90bf)(--row-focused-bg_hash_replaced_in_test #e0f7ff)(--row-even-fg_hash_replaced_in_test black)(--row-even-bg_hash_replaced_in_test #e6e6e6)(--header-header-border_hash_replaced_in_test grey)(--header-fg_hash_replaced_in_test white)(--header-body-border_hash_replaced_in_test grey)(--header-bg_hash_replaced_in_test black)(--fg_hash_replaced_in_test black)(--body-body-border_hash_replaced_in_test grey)(--bg_hash_replaced_in_test white))>
+           custom-css-vars=((--row-odd-fg_hash_replaced_in_test black)(--row-odd-bg_hash_replaced_in_test white)(--row-focused-fg_hash_replaced_in_test black)(--row-focused-border_hash_replaced_in_test #0a90bf)(--row-focused-bg_hash_replaced_in_test #e0f7ff)(--row-even-fg_hash_replaced_in_test black)(--row-even-bg_hash_replaced_in_test #e6e6e6)(--header-header-border_hash_replaced_in_test grey)(--header-fg_hash_replaced_in_test white)(--header-body-border_hash_replaced_in_test grey)(--header-bg_hash_replaced_in_test black)(--fg_hash_replaced_in_test black)(--cell-focused-fg_hash_replaced_in_test black)(--cell-focused-bg_hash_replaced_in_test #e0f7ff)(--body-body-border_hash_replaced_in_test grey)(--bg_hash_replaced_in_test white))>
         <table class="header_hash_replaced_in_test partial_render_table_header_hash_replaced_in_test"
                bounds-change=<opaque>>
           <tbody>
@@ -110,7 +110,6 @@ module Vdom_tests (Columns : Shared_with_bench.S) = struct
           <div class="body_hash_replaced_in_test" style={ padding-top: 0px; padding-bottom: 0px; }>
             <div>
               <div class="body_row_hash_replaced_in_test row_hash_replaced_in_test"
-                   onclick
                    style={
                      height: 1px;
                      width: 0.00000000px;
@@ -119,6 +118,7 @@ module Vdom_tests (Columns : Shared_with_bench.S) = struct
                      flex-wrap: nowrap;
                    }>
                 <div class="body_cell_hash_replaced_in_test cell_hash_replaced_in_test"
+                     onclick
                      style={
                        height: 1px;
                        min-height: 1px;
@@ -128,6 +128,7 @@ module Vdom_tests (Columns : Shared_with_bench.S) = struct
                        max-width: 0.00000000px;
                      }> JANE0 </div>
                 <div class="body_cell_hash_replaced_in_test cell_hash_replaced_in_test"
+                     onclick
                      style={
                        height: 1px;
                        min-height: 1px;
@@ -137,6 +138,7 @@ module Vdom_tests (Columns : Shared_with_bench.S) = struct
                        max-width: 0.00000000px;
                      }> 0. </div>
                 <div class="body_cell_hash_replaced_in_test cell_hash_replaced_in_test"
+                     onclick
                      style={
                        height: 1px;
                        min-height: 1px;
@@ -146,6 +148,7 @@ module Vdom_tests (Columns : Shared_with_bench.S) = struct
                        max-width: 0.00000000px;
                      }> 0. </div>
                 <div class="body_cell_hash_replaced_in_test cell_hash_replaced_in_test"
+                     onclick
                      style={
                        height: 1px;
                        min-height: 1px;
@@ -155,6 +158,7 @@ module Vdom_tests (Columns : Shared_with_bench.S) = struct
                        max-width: 0.00000000px;
                      }> 0 </div>
                 <div class="body_cell_hash_replaced_in_test cell_hash_replaced_in_test"
+                     onclick
                      style={
                        height: 1px;
                        min-height: 1px;
@@ -164,6 +168,7 @@ module Vdom_tests (Columns : Shared_with_bench.S) = struct
                        max-width: 0.00000000px;
                      }> 0. </div>
                 <div class="body_cell_hash_replaced_in_test cell_hash_replaced_in_test"
+                     onclick
                      style={
                        height: 1px;
                        min-height: 1px;
@@ -173,6 +178,7 @@ module Vdom_tests (Columns : Shared_with_bench.S) = struct
                        max-width: 0.00000000px;
                      }> 0. </div>
                 <div class="body_cell_hash_replaced_in_test cell_hash_replaced_in_test"
+                     onclick
                      style={
                        height: 1px;
                        min-height: 1px;
@@ -183,7 +189,6 @@ module Vdom_tests (Columns : Shared_with_bench.S) = struct
                      }> 0 </div>
               </div>
               <div class="body_row_hash_replaced_in_test row_hash_replaced_in_test"
-                   onclick
                    style={
                      height: 1px;
                      width: 0.00000000px;
@@ -192,6 +197,7 @@ module Vdom_tests (Columns : Shared_with_bench.S) = struct
                      flex-wrap: nowrap;
                    }>
                 <div class="body_cell_hash_replaced_in_test cell_hash_replaced_in_test"
+                     onclick
                      style={
                        height: 1px;
                        min-height: 1px;
@@ -201,6 +207,7 @@ module Vdom_tests (Columns : Shared_with_bench.S) = struct
                        max-width: 0.00000000px;
                      }> JANE1 </div>
                 <div class="body_cell_hash_replaced_in_test cell_hash_replaced_in_test"
+                     onclick
                      style={
                        height: 1px;
                        min-height: 1px;
@@ -210,6 +217,7 @@ module Vdom_tests (Columns : Shared_with_bench.S) = struct
                        max-width: 0.00000000px;
                      }> 1. </div>
                 <div class="body_cell_hash_replaced_in_test cell_hash_replaced_in_test"
+                     onclick
                      style={
                        height: 1px;
                        min-height: 1px;
@@ -219,6 +227,7 @@ module Vdom_tests (Columns : Shared_with_bench.S) = struct
                        max-width: 0.00000000px;
                      }> 1. </div>
                 <div class="body_cell_hash_replaced_in_test cell_hash_replaced_in_test"
+                     onclick
                      style={
                        height: 1px;
                        min-height: 1px;
@@ -228,6 +237,7 @@ module Vdom_tests (Columns : Shared_with_bench.S) = struct
                        max-width: 0.00000000px;
                      }> 1 </div>
                 <div class="body_cell_hash_replaced_in_test cell_hash_replaced_in_test"
+                     onclick
                      style={
                        height: 1px;
                        min-height: 1px;
@@ -237,6 +247,7 @@ module Vdom_tests (Columns : Shared_with_bench.S) = struct
                        max-width: 0.00000000px;
                      }> 1. </div>
                 <div class="body_cell_hash_replaced_in_test cell_hash_replaced_in_test"
+                     onclick
                      style={
                        height: 1px;
                        min-height: 1px;
@@ -246,6 +257,7 @@ module Vdom_tests (Columns : Shared_with_bench.S) = struct
                        max-width: 0.00000000px;
                      }> 1. </div>
                 <div class="body_cell_hash_replaced_in_test cell_hash_replaced_in_test"
+                     onclick
                      style={
                        height: 1px;
                        min-height: 1px;
@@ -256,7 +268,6 @@ module Vdom_tests (Columns : Shared_with_bench.S) = struct
                      }> 1 </div>
               </div>
               <div class="body_row_hash_replaced_in_test row_hash_replaced_in_test"
-                   onclick
                    style={
                      height: 1px;
                      width: 0.00000000px;
@@ -265,6 +276,7 @@ module Vdom_tests (Columns : Shared_with_bench.S) = struct
                      flex-wrap: nowrap;
                    }>
                 <div class="body_cell_hash_replaced_in_test cell_hash_replaced_in_test"
+                     onclick
                      style={
                        height: 1px;
                        min-height: 1px;
@@ -274,6 +286,7 @@ module Vdom_tests (Columns : Shared_with_bench.S) = struct
                        max-width: 0.00000000px;
                      }> JANE2 </div>
                 <div class="body_cell_hash_replaced_in_test cell_hash_replaced_in_test"
+                     onclick
                      style={
                        height: 1px;
                        min-height: 1px;
@@ -283,6 +296,7 @@ module Vdom_tests (Columns : Shared_with_bench.S) = struct
                        max-width: 0.00000000px;
                      }> 2. </div>
                 <div class="body_cell_hash_replaced_in_test cell_hash_replaced_in_test"
+                     onclick
                      style={
                        height: 1px;
                        min-height: 1px;
@@ -292,6 +306,7 @@ module Vdom_tests (Columns : Shared_with_bench.S) = struct
                        max-width: 0.00000000px;
                      }> 2. </div>
                 <div class="body_cell_hash_replaced_in_test cell_hash_replaced_in_test"
+                     onclick
                      style={
                        height: 1px;
                        min-height: 1px;
@@ -301,6 +316,7 @@ module Vdom_tests (Columns : Shared_with_bench.S) = struct
                        max-width: 0.00000000px;
                      }> 2 </div>
                 <div class="body_cell_hash_replaced_in_test cell_hash_replaced_in_test"
+                     onclick
                      style={
                        height: 1px;
                        min-height: 1px;
@@ -310,6 +326,7 @@ module Vdom_tests (Columns : Shared_with_bench.S) = struct
                        max-width: 0.00000000px;
                      }> 2. </div>
                 <div class="body_cell_hash_replaced_in_test cell_hash_replaced_in_test"
+                     onclick
                      style={
                        height: 1px;
                        min-height: 1px;
@@ -319,6 +336,7 @@ module Vdom_tests (Columns : Shared_with_bench.S) = struct
                        max-width: 0.00000000px;
                      }> 2. </div>
                 <div class="body_cell_hash_replaced_in_test cell_hash_replaced_in_test"
+                     onclick
                      style={
                        height: 1px;
                        min-height: 1px;
@@ -329,7 +347,6 @@ module Vdom_tests (Columns : Shared_with_bench.S) = struct
                      }> 2 </div>
               </div>
               <div class="body_row_hash_replaced_in_test row_hash_replaced_in_test"
-                   onclick
                    style={
                      height: 1px;
                      width: 0.00000000px;
@@ -338,6 +355,7 @@ module Vdom_tests (Columns : Shared_with_bench.S) = struct
                      flex-wrap: nowrap;
                    }>
                 <div class="body_cell_hash_replaced_in_test cell_hash_replaced_in_test"
+                     onclick
                      style={
                        height: 1px;
                        min-height: 1px;
@@ -347,6 +365,7 @@ module Vdom_tests (Columns : Shared_with_bench.S) = struct
                        max-width: 0.00000000px;
                      }> JANE3 </div>
                 <div class="body_cell_hash_replaced_in_test cell_hash_replaced_in_test"
+                     onclick
                      style={
                        height: 1px;
                        min-height: 1px;
@@ -356,6 +375,7 @@ module Vdom_tests (Columns : Shared_with_bench.S) = struct
                        max-width: 0.00000000px;
                      }> 3. </div>
                 <div class="body_cell_hash_replaced_in_test cell_hash_replaced_in_test"
+                     onclick
                      style={
                        height: 1px;
                        min-height: 1px;
@@ -365,6 +385,7 @@ module Vdom_tests (Columns : Shared_with_bench.S) = struct
                        max-width: 0.00000000px;
                      }> 3. </div>
                 <div class="body_cell_hash_replaced_in_test cell_hash_replaced_in_test"
+                     onclick
                      style={
                        height: 1px;
                        min-height: 1px;
@@ -374,6 +395,7 @@ module Vdom_tests (Columns : Shared_with_bench.S) = struct
                        max-width: 0.00000000px;
                      }> 3 </div>
                 <div class="body_cell_hash_replaced_in_test cell_hash_replaced_in_test"
+                     onclick
                      style={
                        height: 1px;
                        min-height: 1px;
@@ -383,6 +405,7 @@ module Vdom_tests (Columns : Shared_with_bench.S) = struct
                        max-width: 0.00000000px;
                      }> 3. </div>
                 <div class="body_cell_hash_replaced_in_test cell_hash_replaced_in_test"
+                     onclick
                      style={
                        height: 1px;
                        min-height: 1px;
@@ -392,6 +415,7 @@ module Vdom_tests (Columns : Shared_with_bench.S) = struct
                        max-width: 0.00000000px;
                      }> 3. </div>
                 <div class="body_cell_hash_replaced_in_test cell_hash_replaced_in_test"
+                     onclick
                      style={
                        height: 1px;
                        min-height: 1px;
@@ -402,7 +426,6 @@ module Vdom_tests (Columns : Shared_with_bench.S) = struct
                      }> 3 </div>
               </div>
               <div class="body_row_hash_replaced_in_test row_hash_replaced_in_test"
-                   onclick
                    style={
                      height: 1px;
                      width: 0.00000000px;
@@ -411,6 +434,7 @@ module Vdom_tests (Columns : Shared_with_bench.S) = struct
                      flex-wrap: nowrap;
                    }>
                 <div class="body_cell_hash_replaced_in_test cell_hash_replaced_in_test"
+                     onclick
                      style={
                        height: 1px;
                        min-height: 1px;
@@ -420,6 +444,7 @@ module Vdom_tests (Columns : Shared_with_bench.S) = struct
                        max-width: 0.00000000px;
                      }> JANE4 </div>
                 <div class="body_cell_hash_replaced_in_test cell_hash_replaced_in_test"
+                     onclick
                      style={
                        height: 1px;
                        min-height: 1px;
@@ -429,6 +454,7 @@ module Vdom_tests (Columns : Shared_with_bench.S) = struct
                        max-width: 0.00000000px;
                      }> 4. </div>
                 <div class="body_cell_hash_replaced_in_test cell_hash_replaced_in_test"
+                     onclick
                      style={
                        height: 1px;
                        min-height: 1px;
@@ -438,6 +464,7 @@ module Vdom_tests (Columns : Shared_with_bench.S) = struct
                        max-width: 0.00000000px;
                      }> 4. </div>
                 <div class="body_cell_hash_replaced_in_test cell_hash_replaced_in_test"
+                     onclick
                      style={
                        height: 1px;
                        min-height: 1px;
@@ -447,6 +474,7 @@ module Vdom_tests (Columns : Shared_with_bench.S) = struct
                        max-width: 0.00000000px;
                      }> 4 </div>
                 <div class="body_cell_hash_replaced_in_test cell_hash_replaced_in_test"
+                     onclick
                      style={
                        height: 1px;
                        min-height: 1px;
@@ -456,6 +484,7 @@ module Vdom_tests (Columns : Shared_with_bench.S) = struct
                        max-width: 0.00000000px;
                      }> 4. </div>
                 <div class="body_cell_hash_replaced_in_test cell_hash_replaced_in_test"
+                     onclick
                      style={
                        height: 1px;
                        min-height: 1px;
@@ -465,6 +494,7 @@ module Vdom_tests (Columns : Shared_with_bench.S) = struct
                        max-width: 0.00000000px;
                      }> 4. </div>
                 <div class="body_cell_hash_replaced_in_test cell_hash_replaced_in_test"
+                     onclick
                      style={
                        height: 1px;
                        min-height: 1px;

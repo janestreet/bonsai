@@ -35,7 +35,10 @@ module Row = struct
 end
 
 module type S = sig
-  val all : (int, Row.t) Expert.Columns.t
+  type column_id
+
+  val first_column : column_id
+  val all : (int, Row.t, column_id) Expert.Columns.t
 end
 
 module Dynamic_cells : S = struct
@@ -46,6 +49,10 @@ module Dynamic_cells : S = struct
   end
 
   module Column = Expert.Columns.Dynamic_cells
+
+  type column_id = Indexed_column_id.t
+
+  let first_column = Indexed_column_id.of_int 0
 
   let column_helper
     (type a)
@@ -89,6 +96,10 @@ module Dynamic_columns : S = struct
 
   module Column = Expert.Columns.Dynamic_columns
 
+  type column_id = Indexed_column_id.t
+
+  let first_column = Indexed_column_id.of_int 0
+
   let column_helper
     (type a)
     (module M : S with type t = a)
@@ -124,6 +135,10 @@ module Dynamic_experimental : S = struct
     include Comparator.Make (Row.Typed_field.Packed)
   end
 
+  type column_id = Col_id.t
+
+  let first_column = Row.Typed_field.Packed.all |> List.hd_exn
+
   let render_header col =
     let%arr { Row.Typed_field.Packed.f = T field } = col in
     Vdom.Node.text (Row.Typed_field.name field)
@@ -148,7 +163,7 @@ module Dynamic_experimental : S = struct
     | Asize -> int value
   ;;
 
-  let all =
+  let (all : (int, Row.t, column_id) Expert.Columns.t) =
     Column.build
       (module Col_id)
       ~render_header

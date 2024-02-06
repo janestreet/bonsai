@@ -3,18 +3,11 @@ open! Import
 
 type ('i, 'r) t =
   { input_var : 'i Incr.Var.t
-  ; mutable last_view : string
+  ; mutable last_view : string Lazy.t
   ; handle : 'r Bonsai_driver.t
   }
 
-let create
-  (type i r)
-  ?(optimize = true)
-  ~clock
-  ~(initial_input : i)
-  (component : (i, r) Bonsai.Arrow_deprecated.t)
-  : (i, r) t
-  =
+let create ?optimize ~clock ~initial_input component =
   let input_var, computation =
     let input_var = Incr.Var.create initial_input in
     let computation =
@@ -26,8 +19,8 @@ let create
     in
     input_var, computation
   in
-  let handle = Bonsai_driver.create ~optimize ~clock computation in
-  { input_var; last_view = ""; handle }
+  let handle = Bonsai_driver.create ?optimize ~clock computation in
+  { input_var; last_view = lazy ""; handle }
 ;;
 
 let set_input { input_var; _ } input = Incr.Var.set input_var input

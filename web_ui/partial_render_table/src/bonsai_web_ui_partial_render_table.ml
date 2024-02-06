@@ -7,7 +7,9 @@ module Bbox = Bonsai_web_ui_element_size_hooks.Visibility_tracker.Bbox
 module Order = Order
 module Sortable = Sortable
 module Focus_by_row = Focus.By_row
+module Focus_by_cell = Focus.By_cell
 module Scroll = Bonsai_web_ui_scroll_utilities
+module Indexed_column_id = Column.Indexed_column_id
 
 module For_testing = struct
   module Table_body = Table_body.For_testing
@@ -24,17 +26,20 @@ module Expert = struct
   end
 
   module Result = struct
-    type 'focus t =
+    type ('focus, 'column_id) t =
       { view : Vdom.Node.t
       ; range : int * int
       ; for_testing : For_testing.t Lazy.t
       ; focus : 'focus
+      ; set_column_width : column_id:'column_id -> [ `Px_float of float ] -> unit Effect.t
       }
     [@@deriving fields ~getters]
   end
 
   module Columns = struct
-    type ('key, 'data) t = ('key, 'data) Column_intf.t
+    module Indexed_column_id = Indexed_column_id
+
+    type ('key, 'data, 'column) t = ('key, 'data, 'column) Column_intf.t
 
     module Dynamic_cells = Column.Dynamic_cells
     module Dynamic_columns = Column.Dynamic_columns
@@ -52,11 +57,12 @@ module Expert = struct
   ;;
 
   let implementation
-    (type key presence data cmp)
+    (type key presence data cmp column column_cmp key presence data cmp)
     ~theming
     ~preload_rows
-    (key : (key, cmp) Bonsai.comparator)
-    ~(focus : (_, presence, key) Focus.Kind.t)
+    (key_comparator : (key, cmp) Bonsai.comparator)
+    (column_id_comparator : (column, column_cmp) Bonsai.comparator)
+    ~(focus : (_, presence, key, column) Focus.Kind.t)
     ~row_height
     ~headers
     ~assoc
@@ -82,7 +88,6 @@ module Expert = struct
       let%arr private_body_classname = private_body_classname in
       "." ^ private_body_classname
     in
-    let%sub leaves = Bonsai.pure Header_tree.leaves headers in
     let%sub header_client_rect, set_header_client_rect = Bonsai.state_opt () in
     let%sub header_client_rect =
       return (Value.cutoff ~equal:[%equal: Bbox.t option] header_client_rect)
@@ -103,8 +108,9 @@ module Expert = struct
     let%sub table_body_client_rect =
       return (Value.cutoff ~equal:[%equal: Bbox.t option] table_body_client_rect)
     in
+    let module Column_cmp = (val column_id_comparator) in
     let module Column_widths_model = struct
-      type t = Column_size.t Int.Map.t [@@deriving sexp, equal]
+      type t = Column_size.t Map.M(Column_cmp).t [@@deriving sexp_of, equal]
     end
     in
     let%sub column_widths, set_column_width =
@@ -112,30 +118,29 @@ module Expert = struct
         ()
         ~sexp_of_model:[%sexp_of: Column_widths_model.t]
         ~equal:[%equal: Column_widths_model.t]
-        ~sexp_of_action:[%sexp_of: int * [ `Px_float of float ]]
-        ~default_model:Int.Map.empty
+        ~default_model:(Map.empty (module Column_cmp))
         ~apply_action:
           (fun
-            (_ : _ Bonsai.Apply_action_context.t) model (idx, `Px_float width) ->
-        (* While checking for float equality is usually not a good idea,
+            (_ : _ Bonsai.Apply_action_context.t) model (column_id, `Px_float width) ->
+          (* While checking for float equality is usually not a good idea,
                this is meant to handle the specific case when a column has
                "display:none", in which case the width will be exactly 0.0, so
                there is no concern about float rounding errors. *)
-        Map.update model idx ~f:(fun prev ->
-          if Float.equal width 0.0
-          then (
-            match prev with
-            | None -> Hidden { prev_width_px = None }
-            | Some (Visible { width_px }) -> Hidden { prev_width_px = Some width_px }
-            | Some (Hidden _ as prev) -> prev)
-          else Visible { width_px = width }))
+          Map.update model column_id ~f:(fun prev ->
+            if Float.equal width 0.0
+            then (
+              match prev with
+              | None -> Hidden { prev_width_px = None }
+              | Some (Visible { width_px }) -> Hidden { prev_width_px = Some width_px }
+              | Some (Hidden _ as prev) -> prev)
+            else Visible { width_px = width }))
     in
     let%sub column_widths =
       return (Value.cutoff ~equal:[%equal: Column_widths_model.t] column_widths)
     in
     let%sub set_column_width =
       let%arr set_column_width = set_column_width in
-      fun ~index width -> set_column_width (index, width)
+      fun ~column_id width -> set_column_width (column_id, width)
     in
     let row_count = collated >>| Collated.num_filtered_rows in
     let%sub header_height_px =
@@ -176,13 +181,13 @@ module Expert = struct
     let%sub midpoint_of_container =
       let%arr table_body_visible_rect = table_body_visible_rect in
       match table_body_visible_rect with
-      | None -> 0.0
-      | Some rect -> (rect.max_x +. rect.min_x) /. 2.0
+      | None -> 0.0, 0.0
+      | Some rect -> (rect.max_x +. rect.min_x) /. 2.0, (rect.max_y -. rect.min_y) /. 2.0
     in
     let%sub scroll_to_index =
       let%arr header_height_px = header_height_px
       and range_without_preload = range_without_preload
-      and midpoint_of_container = midpoint_of_container
+      and midpoint_of_container_x, _ = midpoint_of_container
       and table_body_selector = table_body_selector
       and (`Px row_height_px) = row_height in
       fun index ->
@@ -223,7 +228,7 @@ module Expert = struct
               [%string "scrolling to index %{index#Int} at %{y_px#Float}0px"])
           in
           Scroll.to_position_inside_element
-            ~x_px:midpoint_of_container
+            ~x_px:midpoint_of_container_x
             ~y_px
             ~selector:table_body_selector
             `Minimal
@@ -231,10 +236,69 @@ module Expert = struct
         | None ->
           print_in_tests (fun () -> "skipping scroll because target already in view")
     in
+    let%sub leaves = Bonsai.pure Header_tree.leaves headers in
+    let%sub scroll_to_column =
+      let width (column : Column_size.t) =
+        match column with
+        | Visible { width_px } -> width_px
+        | Hidden { prev_width_px = _ } -> 0.0
+      in
+      let%sub get_offset_and_width =
+        let%arr column_widths = column_widths
+        and leaves = leaves in
+        fun column_id ->
+          List.fold_until
+            ~init:0.0
+            leaves
+            ~finish:(fun _ -> None)
+            ~f:(fun offset leaf ->
+              let column_width =
+                Option.map (Map.find column_widths leaf.column_id) ~f:width
+                |> Option.value ~default:0.0
+              in
+              match
+                Comparable.equal Column_cmp.comparator.compare leaf.column_id column_id
+              with
+              | true -> Stop (Some (offset, column_width))
+              | false -> Continue (offset +. column_width))
+      in
+      let%arr get_offset_and_width = get_offset_and_width
+      and table_body_visible_rect = table_body_visible_rect
+      and table_body_selector = table_body_selector
+      and _, midpoint_of_container_y = midpoint_of_container in
+      fun column_id ->
+        match table_body_visible_rect with
+        | None -> Effect.Ignore
+        | Some rect ->
+          let offset_and_width = get_offset_and_width column_id in
+          (match offset_and_width with
+           | None -> Effect.Ignore
+           | Some (offset, width) ->
+             let scroll_me offset =
+               Scroll.to_position_inside_element
+                 ~x_px:offset
+                 ~y_px:midpoint_of_container_y
+                 ~selector:table_body_selector
+                 `Minimal
+               |> Effect.ignore_m
+             in
+             let%bind.Effect () =
+               print_in_tests (fun () ->
+                 let column_id =
+                   [%sexp (column_id : Column_cmp.t)] |> Sexp.to_string_hum
+                 in
+                 [%string "scrolling column with id %{column_id} into view, if necessary"])
+             in
+             if Float.( < ) offset rect.min_x
+             then scroll_me offset
+             else if Float.( > ) (offset +. width) rect.max_x
+             then scroll_me (offset +. width)
+             else Effect.Ignore)
+    in
     let%sub keep_top_row_in_position =
       let%arr range_without_preload = range_without_preload
       and header_height_px = header_height_px
-      and midpoint_of_container = midpoint_of_container
+      and midpoint_of_container_x, _ = midpoint_of_container
       and table_body_selector = table_body_selector
       and table_body_visible_rect = table_body_visible_rect in
       fun (`Px old_row_height_px) (`Px new_row_height_px) ->
@@ -275,7 +339,7 @@ module Expert = struct
               [%string "scrolling position %{y_px#Float}px into view"])
           in
           Scroll.to_position_inside_element
-            ~x_px:midpoint_of_container
+            ~x_px:midpoint_of_container_x
             ~y_px
             ~selector:table_body_selector
             `Minimal
@@ -323,23 +387,27 @@ module Expert = struct
     let%sub { focus; visually_focused } =
       Focus.component
         focus_kind
-        key
+        key_comparator
+        column_id_comparator
+        ~leaves
         ~collated
         ~range:range_without_preload
         ~scroll_to_index
+        ~scroll_to_column
     in
-    let on_row_click = Focus.get_on_row_click focus_kind focus in
+    let on_cell_click = Focus.get_on_cell_click focus_kind focus in
     let%sub body, body_for_testing =
       Table_body.component
         ~themed_attrs
-        ~comparator:key
+        ~key_comparator
+        ~column_id_comparator
         ~row_height
-        ~leaves
         ~headers
+        ~leaves
         ~assoc
         ~column_widths
         ~visually_focused
-        ~on_row_click
+        ~on_cell_click
         collated
         input_map
     in
@@ -395,29 +463,39 @@ module Expert = struct
     let%arr view = view
     and range = range
     and body_for_testing = body_for_testing
-    and focus = focus in
+    and focus = focus
+    and set_column_width = set_column_width in
     let for_testing =
       let%map.Lazy body = body_for_testing in
       { For_testing.body }
     in
-    { Result.view; range; for_testing; focus }
+    { Result.view; range; for_testing; focus; set_column_width }
   ;;
 
   let component
-    (type key focus presence data cmp)
+    (type key focus presence data cmp column_id column_id_cmp)
     ~theming
     ?(preload_rows = default_preload)
-    (key : (key, cmp) Bonsai.comparator)
-    ~(focus : (focus, presence, key) Focus.Kind.t)
+    (key_comparator : (key, cmp) Bonsai.comparator)
+    ~(focus : (focus, presence, key, column_id) Focus.Kind.t)
     ~row_height
-    ~(columns : (key, data) Column_intf.t)
+    ~(columns : (key, data, column_id) Column_intf.t)
     (collated : (key, data) Collated.t Value.t)
     =
-    let (T { value; vtable }) = columns in
+    let (T { value; vtable; column_id }) = columns in
     let module T = (val vtable) in
     let%sub headers = T.headers value in
-    let assoc = T.instantiate_cells value key in
-    implementation ~preload_rows ~theming key ~focus ~row_height ~headers ~assoc collated
+    let assoc cells = T.instantiate_cells value key_comparator cells in
+    implementation
+      ~preload_rows
+      ~theming
+      key_comparator
+      column_id
+      ~focus
+      ~row_height
+      ~headers
+      ~assoc
+      collated
   ;;
 
   let collate
@@ -450,11 +528,14 @@ module Basic = struct
   module Focus = struct
     include Focus
 
-    type ('a, 'p, 'k) t =
-      | None : (unit, unit, 'k) t
+    type ('a, 'p, 'k, 'c) t =
+      | None : (unit, unit, 'k, 'c) t
       | By_row :
           { on_change : ('k option -> unit Effect.t) Value.t }
-          -> ('k By_row.optional, 'k option, 'k) t
+          -> ('k Focus_by_row.optional, 'k option, 'k, 'c) t
+      | By_cell :
+          { on_change : (('k * 'c) option -> unit Effect.t) Value.t }
+          -> (('k, 'c) By_cell.optional, ('k * 'c) option, 'k, 'c) t
   end
 
   module Result = struct
@@ -464,14 +545,16 @@ module Basic = struct
       ; focus : 'focus
       ; num_filtered_rows : int
       ; sortable_state : 'column_id Sortable.t
+      ; set_column_width : column_id:'column_id -> [ `Px_float of float ] -> unit Effect.t
       }
     [@@deriving fields ~getters]
   end
 
   module Columns = struct
+    module Indexed_column_id = Indexed_column_id
+
     type ('key, 'data, 'column_id) t = ('key, 'data, 'column_id) Column_intf.with_sorter
 
-    module Indexed_col_id = Column.Indexed_col_id
     module Dynamic_cells = Column.Dynamic_cells_with_sorter
     module Dynamic_columns = Column.Dynamic_columns_with_sorter
     module Dynamic_experimental = Column.Dynamic_experimental_with_sorter
@@ -492,7 +575,7 @@ module Basic = struct
       -> ?default_sort:(key * data) compare Value.t
       -> ?preload_rows:int
       -> (key, cmp) Bonsai.comparator
-      -> focus:(focus, presence, key) Focus.t
+      -> focus:(focus, presence, key, column_id) Focus.t
       -> row_height:[ `Px of int ] Value.t
       -> columns:(key, data, column_id) Column_intf.with_sorter
       -> (key, data, cmp) Map.t Value.t
@@ -503,13 +586,13 @@ module Basic = struct
         ?override_sort
         ?default_sort
         ?(preload_rows = default_preload)
-        comparator
+        key_comparator
         ~focus
         ~row_height
         ~columns
         map ->
-    let module Cmp = (val comparator) in
-    let focus : (focus, presence, key) Expert.Focus.Kind.t =
+    let module Key_cmp = (val key_comparator) in
+    let focus : (focus, presence, key, column_id) Expert.Focus.Kind.t =
       match focus with
       | None -> None
       | By_row { on_change } ->
@@ -521,21 +604,31 @@ module Basic = struct
           | Some focus -> if Map.mem map focus then Some focus else None
         in
         By_row { on_change; compute_presence }
+      | By_cell { on_change } ->
+        let compute_presence focus =
+          let%arr focus = focus
+          and map = map in
+          match focus with
+          | None -> None
+          | Some ((focused_key, _) as focus) ->
+            if Map.mem map focused_key then Some focus else None
+        in
+        By_cell { on_change; compute_presence }
     in
-    let filter = Value.of_opt filter in
+    let filter = Value.transpose_opt filter in
     let%sub rank_range, set_rank_range =
       Bonsai.state
         (Collate.Which_range.To 0)
         ~sexp_of_model:[%sexp_of: Rank_range.t]
         ~equal:[%equal: Rank_range.t]
     in
-    let (Y { value; vtable; col_id }) = columns in
-    let module Col_id = (val col_id) in
+    let (Y { value; vtable; column_id }) = columns in
+    let module Col_id = (val column_id) in
     let%sub sortable_state =
       Sortable.state ~equal:(Comparable.equal Col_id.comparator.compare) ()
     in
     let module Column = (val vtable) in
-    let assoc = Column.instantiate_cells value comparator in
+    let assoc cells = Column.instantiate_cells value key_comparator cells in
     let default_sort =
       match default_sort with
       | None -> Value.return None
@@ -555,7 +648,7 @@ module Basic = struct
         and override_sort = override_sort in
         let override_sort =
           Option.map override_sort ~f:(fun override_sort ->
-            override_sort Cmp.comparator.compare)
+            override_sort Key_cmp.comparator.compare)
         in
         Order.to_compare
           (Sortable.order sortable_state)
@@ -586,7 +679,8 @@ module Basic = struct
       Expert.implementation
         ~preload_rows
         ~theming
-        comparator
+        key_comparator
+        column_id
         ~focus
         ~row_height
         ~headers
@@ -602,9 +696,15 @@ module Basic = struct
           (let%map set_rank_range = set_rank_range in
            fun (low, high) -> set_rank_range (Collate.Which_range.Between (low, high)))
     in
-    let%arr { view; for_testing; range = _; focus } = result
+    let%arr { view; for_testing; range = _; focus; set_column_width } = result
     and num_filtered_rows = num_filtered_rows
     and sortable_state = sortable_state in
-    { Result.view; for_testing; focus; num_filtered_rows; sortable_state }
+    { Result.view
+    ; for_testing
+    ; focus
+    ; num_filtered_rows
+    ; sortable_state
+    ; set_column_width
+    }
   ;;
 end

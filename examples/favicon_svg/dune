@@ -1,5 +1,7 @@
-(executables (names main)
+(executables
+ (modes byte exe)
+ (names main)
  (libraries async_kernel async_js bonsai_web core favicon_svg
-  virtual_dom.input_widgets)
+   virtual_dom.input_widgets)
  (preprocess
   (pps ppx_bonsai ppx_jane js_of_ocaml-ppx ppx_css ppx_pattern_bind)))

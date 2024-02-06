@@ -482,3 +482,5 @@ module Experimental : sig
     end
   end
 end
+
+module Expect_test_config : Expect_test_config_types.S with module IO = Monad.Ident

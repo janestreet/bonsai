@@ -15,6 +15,7 @@ module Themed = struct
     ; header_row : Vdom.Attr.t
     ; header : Vdom.Attr.t
     ; cell : Vdom.Attr.t
+    ; cell_focused : Vdom.Attr.t
     ; row : Vdom.Attr.t
     ; row_focused : Vdom.Attr.t
     ; body : Vdom.Attr.t
@@ -37,6 +38,7 @@ module Themed = struct
       ; header_row = Vdom.Attr.empty
       ; header = Vdom.Attr.class_ "prt-table-header"
       ; cell = Vdom.Attr.class_ "prt-table-cell"
+      ; cell_focused = Vdom.Attr.class_ "prt-table-cell-selected"
       ; row = Vdom.Attr.class_ "prt-table-row"
       ; row_focused = Vdom.Attr.class_ "prt-table-row-selected"
       ; body = Vdom.Attr.empty
@@ -48,6 +50,7 @@ module Themed = struct
       ; header_row = styling.header_row
       ; header = styling.header
       ; cell = styling.cell
+      ; cell_focused = styling.cell_focused
       ; row = styling.row
       ; row_focused = styling.row_focused
       ; body = styling.body
@@ -258,37 +261,73 @@ module Cell = struct
 
        The reason that Css_gen is so slow is because apparently "sprintf" is _really_
        slow. *)
-    let create ~(themed_attrs : Themed.t) ~row_height ~col_widths ~cols_visible =
-      let styles_arr =
-        List.map2_exn col_widths cols_visible ~f:(fun width is_visible ->
-          (* We use the previous width even when hidden, so that the rendering engine has
-             less work to do if re-adding a column. Columns that are not currently visible
-             are hidden via `display: None`. *)
-          let width =
-            match width with
-            | `Visible w | `Hidden w -> w
-          in
-          let h = int_to_px_string row_height in
-          let w = float_to_px_string width in
-          let open Css_gen in
-          (create ~field:"height" ~value:h
-           @> create ~field:"min-height" ~value:h
-           @> create ~field:"max-height" ~value:h
-           @> create ~field:"width" ~value:w
-           @> create ~field:"min-width" ~value:w
-           @> create ~field:"max-width" ~value:w
-           @> if is_visible then Css_gen.empty else display `None)
-          |> fun x -> [ themed_attrs.cell; Vdom.Attr.style x ])
-        |> Array.of_list
+    let create
+      (type column_id cmp)
+      (module Col_cmp : Bonsai.Comparator
+        with type t = column_id
+         and type comparator_witness = cmp)
+      ~(themed_attrs : Themed.t)
+      ~row_height
+      ~(col_widths : (column_id, [< `Hidden of float | `Visible of float ], cmp) Map.t)
+      ~(leaves : column_id Header_tree.leaf list)
+      =
+      let height_styles =
+        let h = int_to_px_string row_height in
+        Css_gen.(
+          create ~field:"height" ~value:h
+          @> create ~field:"min-height" ~value:h
+          @> create ~field:"max-height" ~value:h)
       in
-      fun i -> Array.get styles_arr i
+      let styles_by_column =
+        List.map
+          leaves
+          ~f:
+            (fun
+              { visible = is_visible; column_id; leaf_header = _; initial_width = _ } ->
+          let width_styles =
+            (* We use the previous width even when hidden, so that the rendering engine has
+                   less work to do if re-adding a column. Columns that are not currently visible
+                   are hidden via `display: None`. *)
+            let width =
+              match Map.find col_widths column_id with
+              | None -> 0.0
+              | Some (`Hidden width) | Some (`Visible width) -> width
+            in
+            let w = float_to_px_string width in
+            Css_gen.(
+              create ~field:"width" ~value:w
+              @> create ~field:"min-width" ~value:w
+              @> create ~field:"max-width" ~value:w)
+          in
+          let visible_styles =
+            match is_visible with
+            | false -> Css_gen.display `None
+            | true -> Css_gen.empty
+          in
+          ( column_id
+          , [ Vdom.Attr.style Css_gen.(height_styles @> width_styles @> visible_styles)
+            ; themed_attrs.cell
+            ] ))
+        |> Map.of_alist_exn (module Col_cmp)
+      in
+      Staged.stage (fun column -> Map.find_exn styles_by_column column)
     ;;
   end
 
   type t = Vdom.Node.t
 
-  let view ~col_styles content =
-    set_or_wrap content ~attrs:(col_styles @ [ Functional_style.cell ])
+  let view (themed_attrs : Themed.t) ~is_focused ~col_styles ~on_cell_click content =
+    let focused_attr =
+      if is_focused then themed_attrs.cell_focused else Vdom.Attr.empty
+    in
+    set_or_wrap
+      content
+      ~attrs:
+        (col_styles
+         @ [ Vdom.Attr.on_click (fun _ -> on_cell_click)
+           ; focused_attr
+           ; Functional_style.cell
+           ])
   ;;
 end
 
@@ -308,17 +347,18 @@ module Row = struct
 
   type t = Vdom.Node.t
 
-  let view (themed_attrs : Themed.t) ~styles ~is_focused ~on_row_click cells =
+  let view (themed_attrs : Themed.t) ~styles ~is_focused cells =
     let focused_attr = if is_focused then themed_attrs.row_focused else Vdom.Attr.empty in
-    Vdom.Node.div
-      ~attrs:
-        [ themed_attrs.row
-        ; Vdom.Attr.style styles
-        ; focused_attr
-        ; Vdom.Attr.on_click (fun _ -> on_row_click)
-        ; Functional_style.row
-        ]
-      cells
+    Vdom.Node.lazy_
+      (lazy
+        (Vdom.Node.div
+           ~attrs:
+             [ themed_attrs.row
+             ; Vdom.Attr.style styles
+             ; focused_attr
+             ; Functional_style.row
+             ]
+           cells))
   ;;
 end
 

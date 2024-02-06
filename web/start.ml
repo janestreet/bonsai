@@ -346,7 +346,7 @@ module Arrow_deprecated = struct
     in
     let computation =
       component var
-      |> Bonsai.Private.reveal_computation
+      |> Bonsai.Private.top_level_handle
       |> if optimize then Bonsai.Private.pre_process else Fn.id
     in
     let (T info) = Bonsai.Private.gather computation in

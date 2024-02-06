@@ -236,6 +236,7 @@ module _ = struct
 end
 
 module _ = struct
+  (* $MDX part-begin=css-variables-css *)
   module Style =
   [%css
   stylesheet
@@ -262,6 +263,7 @@ module _ = struct
   background-color: var(--blue);
 }
 |}]
+  (* $MDX part-end *)
 
   type theme =
     | Light

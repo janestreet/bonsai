@@ -565,7 +565,7 @@ module For_components : sig
 end
 
 module App : sig
-  val top_attr : Theme.t -> Vdom.Attr.t
+  val top_attr : Theme.t -> Vdom.Attr.t Lazy.t
 end
 
 module Expert : sig

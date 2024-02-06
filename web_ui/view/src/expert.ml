@@ -22,22 +22,23 @@ let override_theme ((module M) : Theme.t) ~(f : t -> t) : Theme.t =
   end)
 ;;
 
-module Style =
-[%css
-stylesheet
-  {|
+let app_attr =
+  lazy
+    (Inline_css.Private.Dynamic.attr
+       {|
 @layer bonsai_web_ui_view.app {
-  :root:has(.app) {
+  :root {
     font-family: sans-serif;
   }
 
-  :root:has(.app) *,
-  :root:has(.app) *::before,
-  :root:has(.app) *::after {
+  :root *,
+  :root *::before,
+  :root *::after {
     box-sizing: border-box;
   }
 }
-|}]
+|})
+;;
 
 let default_theme =
   make_theme
@@ -45,7 +46,7 @@ let default_theme =
       class c =
         object (self : #Underlying_intf.C.t)
           method theme_name = "default theme"
-          method app_attr = Style.app
+          method app_attr = app_attr
 
           method constants =
             let primary =
@@ -78,6 +79,8 @@ let default_theme =
                 { body_row_even = table_row_even
                 ; body_row_odd = primary
                 ; body_row_focused =
+                    { foreground = primary.foreground; background = info.background }
+                ; body_cell_focused =
                     { foreground = primary.foreground; background = info.background }
                 ; header_row = header
                 ; header_header_border = extreme_primary_border

@@ -10,8 +10,7 @@ let table_to_string
   ~include_stats
   ?(include_num_column = true)
   ?(selected_header = ">")
-  ?num_filtered_rows
-  (res : _ Table.Focus_by_row.t option)
+  ?(additional_summary = "")
   (for_testing : Table.For_testing.t)
   ()
   =
@@ -35,9 +34,11 @@ let table_to_string
          ~string_with_attr:(fun _attr str -> str)
   in
   let contents =
-    let focused =
-      Column.create selected_header (fun { Table.For_testing.Table_body.focused; _ } ->
-        if focused then "*" else "")
+    let row_focused =
+      Column.create
+        selected_header
+        (fun { Table.For_testing.Table_body.row_focused; _ } ->
+        if row_focused then "*" else "")
     in
     let num_column =
       Column.create "#" (fun { Table.For_testing.Table_body.id; _ } ->
@@ -50,21 +51,24 @@ let table_to_string
           (List.map headers ~f:(fun header ->
              Node_h.unsafe_convert_exn header |> Node_h.inner_text))
       in
-      Column.create header (fun { Table.For_testing.Table_body.view; _ } ->
-        List.nth_exn view i |> Node_h.unsafe_convert_exn |> Node_h.inner_text)
+      Column.create header (fun { Table.For_testing.Table_body.cells; _ } ->
+        List.nth_exn cells i
+        |> fun { Table.For_testing.Table_body.view; cell_focused; _ } ->
+        let text = view |> Node_h.unsafe_convert_exn |> Node_h.inner_text in
+        if cell_focused then [%string "> %{text} <"] else text)
     in
     let columns =
       match include_num_column with
       | false ->
-        focused :: (for_testing.body.column_names |> List.mapi ~f:ascii_column_of_leaf)
+        row_focused :: (for_testing.body.column_names |> List.mapi ~f:ascii_column_of_leaf)
       | true ->
-        focused
+        row_focused
         :: num_column
         :: (for_testing.body.column_names |> List.mapi ~f:ascii_column_of_leaf)
     in
     Ascii_table_kernel.draw
       columns
-      for_testing.body.cells
+      for_testing.body.rows
       ~limit_width_to:3000
       ~prefer_split_on_spaces:false
     |> Option.value_exn
@@ -73,23 +77,14 @@ let table_to_string
          ~string_with_attr:(fun _attr str -> str)
   in
   let result = if include_stats then stats ^ contents else contents in
-  match res with
-  | None -> result
-  | Some res ->
-    ([%message
-       ""
-         ~focused:(Table.Focus_by_row.focused res : int option)
-         ~num_filtered_rows:(num_filtered_rows : int option)]
-     |> Sexp.to_string_hum
-     |> fun s -> s ^ "\n")
-    ^ result
+  additional_summary ^ result
 ;;
 
 module Test = struct
   include Shared.Test
 
   let create_with_var
-    (type a)
+    (type a column_id)
     ?(stabilize_height = true)
     ?(visible_range = 0, 100)
     ?(map = Bonsai.Var.create small_map)
@@ -105,6 +100,7 @@ module Test = struct
         ; get_testing
         ; get_inject
         ; get_num_filtered_rows
+        ; summarize_focus
         }
       =
       component (Bonsai.Var.value map) (Bonsai.Var.value filter_var)
@@ -117,23 +113,21 @@ module Test = struct
           let out a = Lazy.force (get_testing a)
 
           let view a =
+            let num_filtered_rows = get_num_filtered_rows a in
             table_to_string
-              (Some (get_focus a))
+              ~additional_summary:(summarize_focus ?num_filtered_rows (get_focus a))
               (out a)
-              ?num_filtered_rows:(get_num_filtered_rows a)
               ~include_stats:stats
               ()
           ;;
 
-          type incoming = Action.t
+          type incoming = column_id Action.t
 
           let incoming = get_inject
         end)
         component
     in
-    let t =
-      { handle; get_vdom; get_focus; input_var = map; filter_var; get_num_filtered_rows }
-    in
+    let t = { handle; get_vdom; input_var = map; filter_var; get_num_filtered_rows } in
     if should_set_bounds then set_bounds t ~low:min_vis ~high:max_vis;
     (* Because the component uses edge-triggering to propagate rank-range, we need to
        run the view-computers twice. *)
@@ -164,6 +158,31 @@ end
 
 let%expect_test "basic table" =
   let test = Test.create ~stats:true (Test.Component.default ~theming:`Themed ()) in
+  Handle.show test.handle;
+  [%expect
+    {|
+((focused ()) (num_filtered_rows (3)))
+┌────────────────┬───────┐
+│ metric         │ value │
+├────────────────┼───────┤
+│ rows-before    │ 0     │
+│ rows-after     │ 0     │
+│ num-filtered   │ 3     │
+│ num-unfiltered │ 3     │
+└────────────────┴───────┘
+┌───┬─────┬─────┬───────┬──────────┬─────┐
+│ > │ #   │ key │ a     │ b        │ d   │
+├───┼─────┼─────┼───────┼──────────┼─────┤
+│   │ 0   │ 0   │ hello │ 1.000000 │ 1   │
+│   │ 100 │ 1   │ there │ 2.000000 │ 2   │
+│   │ 200 │ 4   │ world │ 2.000000 │ --- │
+└───┴─────┴─────┴───────┴──────────┴─────┘ |}]
+;;
+
+let%expect_test "basic table with cell focus" =
+  let test =
+    Test.create ~stats:true (Test.Component.default_cell_focus ~theming:`Themed ())
+  in
   Handle.show test.handle;
   [%expect
     {|
@@ -374,6 +393,113 @@ let%expect_test "REGRESSION: basic table with overriden column sort but no defau
   ()
 ;;
 
+let%expect_test "BUG: In basic tables with dynamic columns, the sorted column can change \
+                 if the order of columns changes"
+  =
+  let module Record = struct
+    module T = struct
+      type t =
+        { a : int
+        ; b : int
+        }
+      [@@deriving compare, equal, sexp]
+    end
+
+    include T
+    include Comparator.Make (T)
+  end
+  in
+  let map =
+    [ 0; 1; 2 ]
+    |> List.map ~f:(fun i -> i, { Record.a = i; b = (i + 1) % 3 })
+    |> Int.Map.of_alist_exn
+    |> Value.return
+  in
+  let a_before_b = Bonsai.Var.create false in
+  let columns =
+    let int_column name get_data =
+      Table.Basic.Columns.Dynamic_columns.column
+        ~header:(fun _ -> Vdom.Node.text name)
+        ~sort:(fun (_, a) (_, b) -> Int.ascending (get_data a) (get_data b))
+        ~cell:(fun ~key:_ ~data -> Vdom.Node.text (Int.to_string (get_data data)))
+        ()
+    in
+    let column_a = int_column "a" (fun (data : Record.t) -> data.a) in
+    let column_b = int_column "b" (fun (data : Record.t) -> data.b) in
+    let ordered =
+      let%map a_before_b = Bonsai.Var.value a_before_b in
+      if a_before_b then [ column_a; column_b ] else [ column_b; column_a ]
+    in
+    Table.Basic.Columns.Dynamic_columns.lift ordered
+  in
+  let component =
+    Table.Basic.component
+      ~theming:`Themed
+      ~focus:None
+      ~row_height:(Value.return (`Px 20))
+      ~columns
+      (module Int)
+      map
+  in
+  let module Indexed_column_id = Table.Basic.Columns.Indexed_column_id in
+  let handle =
+    Handle.create
+      (module struct
+        type t = (unit, Indexed_column_id.t) Table.Basic.Result.t
+        type incoming = unit
+
+        let view { Table.Basic.Result.for_testing; _ } =
+          table_to_string (Lazy.force for_testing) ~include_stats:false ()
+        ;;
+
+        let incoming { Table.Basic.Result.sortable_state; _ } () =
+          Table.Basic.Columns.Dynamic_columns.Sortable.inject
+            sortable_state
+            (* Sort ascending on the first column *)
+            (Set_sort (Indexed_column_id.of_int 0))
+        ;;
+      end)
+      component
+  in
+  Handle.recompute_view_until_stable handle;
+  Handle.show handle;
+  [%expect
+    {|
+    ┌───┬─────┬───┬───┐
+    │ > │ #   │ b │ a │
+    ├───┼─────┼───┼───┤
+    │   │ 0   │ 1 │ 0 │
+    │   │ 100 │ 2 │ 1 │
+    │   │ 200 │ 0 │ 2 │
+    └───┴─────┴───┴───┘ |}];
+  Handle.do_actions handle [ () ];
+  Handle.recompute_view_until_stable handle;
+  Handle.show handle;
+  [%expect
+    {|
+    ┌───┬─────┬───┬───┐
+    │ > │ #   │ b │ a │
+    ├───┼─────┼───┼───┤
+    │   │ 0   │ 0 │ 2 │
+    │   │ 100 │ 1 │ 0 │
+    │   │ 200 │ 2 │ 1 │
+    └───┴─────┴───┴───┘ |}];
+  Bonsai.Var.set a_before_b true;
+  Handle.recompute_view_until_stable handle;
+  Handle.show handle;
+  (* Notice that the order of the columns switched, but so has the sort order: column a
+     is now sorted ascending, and column b is no longer. This is a bug. *)
+  [%expect
+    {|
+    ┌───┬─────┬───┬───┐
+    │ > │ #   │ a │ b │
+    ├───┼─────┼───┼───┤
+    │   │ 0   │ 0 │ 1 │
+    │   │ 100 │ 1 │ 2 │
+    │   │ 200 │ 2 │ 0 │
+    └───┴─────┴───┴───┘ |}]
+;;
+
 let%expect_test "big table" =
   let test =
     Test.create
@@ -520,7 +646,7 @@ let%expect_test "table with col groups" =
     └───┴─────┴─────┴────────┴──────────┴─────────┴─────────┴─────────┘ |}]
 ;;
 
-let%expect_test "focus down" =
+let%expect_test "focus down in row-focus table" =
   let test = Test.create ~stats:false (Test.Component.default ~theming:`Themed ()) in
   Handle.show test.handle;
   [%expect
@@ -563,7 +689,54 @@ let%expect_test "focus down" =
     └───┴─────┴─────┴───────┴──────────┴─────┘ |}]
 ;;
 
-let%expect_test "focus up" =
+let%expect_test "focus down in cell-focus table" =
+  let test =
+    Test.create ~stats:false (Test.Component.default_cell_focus ~theming:`Themed ())
+  in
+  Handle.show test.handle;
+  [%expect
+    {|
+    ((focused ()) (num_filtered_rows (3)))
+    ┌───┬─────┬─────┬───────┬──────────┬─────┐
+    │ > │ #   │ key │ a     │ b        │ d   │
+    ├───┼─────┼─────┼───────┼──────────┼─────┤
+    │   │ 0   │ 0   │ hello │ 1.000000 │ 1   │
+    │   │ 100 │ 1   │ there │ 2.000000 │ 2   │
+    │   │ 200 │ 4   │ world │ 2.000000 │ --- │
+    └───┴─────┴─────┴───────┴──────────┴─────┘ |}];
+  Handle.do_actions test.handle [ Focus_down ];
+  Handle.show test.handle;
+  [%expect
+    {|
+    scrolling to index 0 at 0.0px
+    scrolling column with id 0 into view, if necessary
+    (focus_changed_to ((0 0)))
+    ((focused ((0 0))) (num_filtered_rows (3)))
+    ┌───┬─────┬───────┬───────┬──────────┬─────┐
+    │ > │ #   │ key   │ a     │ b        │ d   │
+    ├───┼─────┼───────┼───────┼──────────┼─────┤
+    │   │ 0   │ > 0 < │ hello │ 1.000000 │ 1   │
+    │   │ 100 │ 1     │ there │ 2.000000 │ 2   │
+    │   │ 200 │ 4     │ world │ 2.000000 │ --- │
+    └───┴─────┴───────┴───────┴──────────┴─────┘ |}];
+  Handle.do_actions test.handle [ Focus_down ];
+  Handle.show test.handle;
+  [%expect
+    {|
+    skipping scroll because target already in view
+    scrolling column with id 0 into view, if necessary
+    (focus_changed_to ((1 0)))
+    ((focused ((1 0))) (num_filtered_rows (3)))
+    ┌───┬─────┬───────┬───────┬──────────┬─────┐
+    │ > │ #   │ key   │ a     │ b        │ d   │
+    ├───┼─────┼───────┼───────┼──────────┼─────┤
+    │   │ 0   │ 0     │ hello │ 1.000000 │ 1   │
+    │   │ 100 │ > 1 < │ there │ 2.000000 │ 2   │
+    │   │ 200 │ 4     │ world │ 2.000000 │ --- │
+    └───┴─────┴───────┴───────┴──────────┴─────┘ |}]
+;;
+
+let%expect_test "focus up in row-focus table" =
   let test = Test.create ~stats:false (Test.Component.default ~theming:`Themed ()) in
   Handle.show test.handle;
   [%expect
@@ -604,6 +777,53 @@ let%expect_test "focus up" =
     │ * │ 100 │ 1   │ there │ 2.000000 │ 2   │
     │   │ 200 │ 4   │ world │ 2.000000 │ --- │
     └───┴─────┴─────┴───────┴──────────┴─────┘ |}]
+;;
+
+let%expect_test "focus up in cell-focus table" =
+  let test =
+    Test.create ~stats:false (Test.Component.default_cell_focus ~theming:`Themed ())
+  in
+  Handle.show test.handle;
+  [%expect
+    {|
+    ((focused ()) (num_filtered_rows (3)))
+    ┌───┬─────┬─────┬───────┬──────────┬─────┐
+    │ > │ #   │ key │ a     │ b        │ d   │
+    ├───┼─────┼─────┼───────┼──────────┼─────┤
+    │   │ 0   │ 0   │ hello │ 1.000000 │ 1   │
+    │   │ 100 │ 1   │ there │ 2.000000 │ 2   │
+    │   │ 200 │ 4   │ world │ 2.000000 │ --- │
+    └───┴─────┴─────┴───────┴──────────┴─────┘ |}];
+  Handle.do_actions test.handle [ Focus_up ];
+  Handle.show test.handle;
+  [%expect
+    {|
+    scrolling to index 101 at 102.0px
+    scrolling column with id 0 into view, if necessary
+    (focus_changed_to ((4 0)))
+    ((focused ((4 0))) (num_filtered_rows (3)))
+    ┌───┬─────┬───────┬───────┬──────────┬─────┐
+    │ > │ #   │ key   │ a     │ b        │ d   │
+    ├───┼─────┼───────┼───────┼──────────┼─────┤
+    │   │ 0   │ 0     │ hello │ 1.000000 │ 1   │
+    │   │ 100 │ 1     │ there │ 2.000000 │ 2   │
+    │   │ 200 │ > 4 < │ world │ 2.000000 │ --- │
+    └───┴─────┴───────┴───────┴──────────┴─────┘ |}];
+  Handle.do_actions test.handle [ Focus_up ];
+  Handle.show test.handle;
+  [%expect
+    {|
+    skipping scroll because target already in view
+    scrolling column with id 0 into view, if necessary
+    (focus_changed_to ((1 0)))
+    ((focused ((1 0))) (num_filtered_rows (3)))
+    ┌───┬─────┬───────┬───────┬──────────┬─────┐
+    │ > │ #   │ key   │ a     │ b        │ d   │
+    ├───┼─────┼───────┼───────┼──────────┼─────┤
+    │   │ 0   │ 0     │ hello │ 1.000000 │ 1   │
+    │   │ 100 │ > 1 < │ there │ 2.000000 │ 2   │
+    │   │ 200 │ 4     │ world │ 2.000000 │ --- │
+    └───┴─────┴───────┴───────┴──────────┴─────┘ |}]
 ;;
 
 let%expect_test "unfocus" =
@@ -784,6 +1004,133 @@ let%expect_test "focus shadow (up)" =
     │   │ 100 │ 1   │ there │ 2.000000 │ 2   │
     │   │ 200 │ 4   │ world │ 2.000000 │ --- │
     └───┴─────┴─────┴───────┴──────────┴─────┘ |}]
+;;
+
+let%expect_test "focus shadow (right)" =
+  let test =
+    Test.create ~stats:false (Test.Component.default_cell_focus ~theming:`Themed ())
+  in
+  Handle.do_actions test.handle [ Focus_right ];
+  Handle.show test.handle;
+  [%expect
+    {|
+    scrolling to index 0 at 0.0px
+    scrolling column with id 0 into view, if necessary
+    (focus_changed_to ((0 0)))
+    ((focused ((0 0))) (num_filtered_rows (3)))
+    ┌───┬─────┬───────┬───────┬──────────┬─────┐
+    │ > │ #   │ key   │ a     │ b        │ d   │
+    ├───┼─────┼───────┼───────┼──────────┼─────┤
+    │   │ 0   │ > 0 < │ hello │ 1.000000 │ 1   │
+    │   │ 100 │ 1     │ there │ 2.000000 │ 2   │
+    │   │ 200 │ 4     │ world │ 2.000000 │ --- │
+    └───┴─────┴───────┴───────┴──────────┴─────┘ |}];
+  Handle.do_actions test.handle [ Focus_right ];
+  Handle.show test.handle;
+  [%expect
+    {|
+    scrolling to index 0 at 0.0px
+    scrolling column with id 1 into view, if necessary
+    (focus_changed_to ((0 1)))
+    ((focused ((0 1))) (num_filtered_rows (3)))
+    ┌───┬─────┬─────┬───────────┬──────────┬─────┐
+    │ > │ #   │ key │ a         │ b        │ d   │
+    ├───┼─────┼─────┼───────────┼──────────┼─────┤
+    │   │ 0   │ 0   │ > hello < │ 1.000000 │ 1   │
+    │   │ 100 │ 1   │ there     │ 2.000000 │ 2   │
+    │   │ 200 │ 4   │ world     │ 2.000000 │ --- │
+    └───┴─────┴─────┴───────────┴──────────┴─────┘ |}];
+  Handle.do_actions test.handle [ Unfocus ];
+  Handle.show test.handle;
+  [%expect
+    {|
+    (focus_changed_to ())
+    ((focused ()) (num_filtered_rows (3)))
+    ┌───┬─────┬─────┬───────┬──────────┬─────┐
+    │ > │ #   │ key │ a     │ b        │ d   │
+    ├───┼─────┼─────┼───────┼──────────┼─────┤
+    │   │ 0   │ 0   │ hello │ 1.000000 │ 1   │
+    │   │ 100 │ 1   │ there │ 2.000000 │ 2   │
+    │   │ 200 │ 4   │ world │ 2.000000 │ --- │
+    └───┴─────┴─────┴───────┴──────────┴─────┘ |}];
+  Handle.do_actions test.handle [ Focus_right ];
+  Handle.show test.handle;
+  [%expect
+    {|
+    scrolling to index 0 at 0.0px
+    scrolling column with id 2 into view, if necessary
+    (focus_changed_to ((0 2)))
+    ((focused ((0 2))) (num_filtered_rows (3)))
+    ┌───┬─────┬─────┬───────┬──────────────┬─────┐
+    │ > │ #   │ key │ a     │ b            │ d   │
+    ├───┼─────┼─────┼───────┼──────────────┼─────┤
+    │   │ 0   │ 0   │ hello │ > 1.000000 < │ 1   │
+    │   │ 100 │ 1   │ there │ 2.000000     │ 2   │
+    │   │ 200 │ 4   │ world │ 2.000000     │ --- │
+    └───┴─────┴─────┴───────┴──────────────┴─────┘ |}]
+;;
+
+let%expect_test "focus shadow (left)" =
+  let test =
+    Test.create ~stats:false (Test.Component.default_cell_focus ~theming:`Themed ())
+  in
+  Handle.do_actions test.handle [ Focus_cell (0, 2) ];
+  Handle.show test.handle;
+  [%expect
+    {|
+    scrolling to index 0 at 0.0px
+    (focus_changed_to ((0 2)))
+    ((focused ((0 2))) (num_filtered_rows (3)))
+    ┌───┬─────┬─────┬───────┬──────────────┬─────┐
+    │ > │ #   │ key │ a     │ b            │ d   │
+    ├───┼─────┼─────┼───────┼──────────────┼─────┤
+    │   │ 0   │ 0   │ hello │ > 1.000000 < │ 1   │
+    │   │ 100 │ 1   │ there │ 2.000000     │ 2   │
+    │   │ 200 │ 4   │ world │ 2.000000     │ --- │
+    └───┴─────┴─────┴───────┴──────────────┴─────┘ |}];
+  Handle.do_actions test.handle [ Focus_left ];
+  Handle.show test.handle;
+  [%expect
+    {|
+    scrolling to index 0 at 0.0px
+    scrolling column with id 1 into view, if necessary
+    (focus_changed_to ((0 1)))
+    ((focused ((0 1))) (num_filtered_rows (3)))
+    ┌───┬─────┬─────┬───────────┬──────────┬─────┐
+    │ > │ #   │ key │ a         │ b        │ d   │
+    ├───┼─────┼─────┼───────────┼──────────┼─────┤
+    │   │ 0   │ 0   │ > hello < │ 1.000000 │ 1   │
+    │   │ 100 │ 1   │ there     │ 2.000000 │ 2   │
+    │   │ 200 │ 4   │ world     │ 2.000000 │ --- │
+    └───┴─────┴─────┴───────────┴──────────┴─────┘ |}];
+  Handle.do_actions test.handle [ Unfocus ];
+  Handle.show test.handle;
+  [%expect
+    {|
+    (focus_changed_to ())
+    ((focused ()) (num_filtered_rows (3)))
+    ┌───┬─────┬─────┬───────┬──────────┬─────┐
+    │ > │ #   │ key │ a     │ b        │ d   │
+    ├───┼─────┼─────┼───────┼──────────┼─────┤
+    │   │ 0   │ 0   │ hello │ 1.000000 │ 1   │
+    │   │ 100 │ 1   │ there │ 2.000000 │ 2   │
+    │   │ 200 │ 4   │ world │ 2.000000 │ --- │
+    └───┴─────┴─────┴───────┴──────────┴─────┘ |}];
+  Handle.do_actions test.handle [ Focus_left ];
+  Handle.show test.handle;
+  [%expect
+    {|
+    scrolling to index 0 at 0.0px
+    scrolling column with id 0 into view, if necessary
+    (focus_changed_to ((0 0)))
+    ((focused ((0 0))) (num_filtered_rows (3)))
+    ┌───┬─────┬───────┬───────┬──────────┬─────┐
+    │ > │ #   │ key   │ a     │ b        │ d   │
+    ├───┼─────┼───────┼───────┼──────────┼─────┤
+    │   │ 0   │ > 0 < │ hello │ 1.000000 │ 1   │
+    │   │ 100 │ 1     │ there │ 2.000000 │ 2   │
+    │   │ 200 │ 4     │ world │ 2.000000 │ --- │
+    └───┴─────┴───────┴───────┴──────────┴─────┘ |}]
 ;;
 
 let%expect_test "remove focused causes unfocus (down)" =
@@ -2130,11 +2477,26 @@ let%expect_test "Pseudo-BUG: setting rank_range does not change the which rows t
   let handle =
     Handle.create
       (module struct
-        type t = int Table_expert.Focus.By_row.optional Table_expert.Result.t
+        type t =
+          ( int Table_expert.Focus.By_row.optional
+          , Indexed_column_id.t )
+          Table_expert.Result.t
+
         type incoming = Action.t
 
         let view { Table_expert.Result.for_testing; focus; _ } =
-          table_to_string (Some focus) (Lazy.force for_testing) ~include_stats:false ()
+          let for_testing = Lazy.force for_testing in
+          let focused_row = Table_expert.Focus.By_row.focused focus in
+          let focus_summary =
+            [%message "" ~focused:(focused_row : int option)]
+            |> Sexp.to_string_hum
+            |> fun s -> [%string "%{s}\n"]
+          in
+          table_to_string
+            ~additional_summary:focus_summary
+            for_testing
+            ~include_stats:false
+            ()
         ;;
 
         let incoming { Table_expert.Result.focus; _ } Action.Focus_down =
@@ -2146,7 +2508,7 @@ let%expect_test "Pseudo-BUG: setting rank_range does not change the which rows t
   Handle.show handle;
   [%expect
     {|
-    ((focused ()) (num_filtered_rows ()))
+    (focused ())
     ┌───┬─────┬────┬────┐
     │ > │ #   │ a  │ b  │
     ├───┼─────┼────┼────┤
@@ -2162,7 +2524,7 @@ let%expect_test "Pseudo-BUG: setting rank_range does not change the which rows t
     {|
     scrolling to index 0 at 0.0px
     (focus_changed_to (1))
-    ((focused (1)) (num_filtered_rows ()))
+    (focused (1))
     ┌───┬─────┬────┬────┐
     │ > │ #   │ a  │ b  │
     ├───┼─────┼────┼────┤
@@ -2175,7 +2537,7 @@ let%expect_test "Pseudo-BUG: setting rank_range does not change the which rows t
   Handle.show handle;
   [%expect
     {|
-    ((focused (1)) (num_filtered_rows ()))
+    (focused (1))
     ┌───┬─────┬────┬────┐
     │ > │ #   │ a  │ b  │
     ├───┼─────┼────┼────┤
@@ -2191,7 +2553,7 @@ let%expect_test "Pseudo-BUG: setting rank_range does not change the which rows t
     {|
     scrolling to index 1 at 40.0px
     (focus_changed_to ())
-    ((focused ()) (num_filtered_rows ()))
+    (focused ())
     ┌───┬─────┬────┬────┐
     │ > │ #   │ a  │ b  │
     ├───┼─────┼────┼────┤
@@ -2211,7 +2573,7 @@ let%expect_test "Pseudo-BUG: setting rank_range does not change the which rows t
     (focus_changed_to (4))
     scrolling to index 4 at 100.0px
     (focus_changed_to (5))
-    ((focused (5)) (num_filtered_rows ()))
+    (focused (5))
     ┌───┬─────┬────┬────┐
     │ > │ #   │ a  │ b  │
     ├───┼─────┼────┼────┤
@@ -2763,14 +3125,16 @@ let%test_module "dynamic columns with visibility" =
     let%expect_test "REGRESSION: starting a column as invisible shouldn't crash" =
       let component, _set_visibility = setup ~visibility_starts_out_as:false in
       let (_ : _ Handle.t) = Handle.create (Result_spec.vdom Fn.id) component in
-      ()
+      ();
+      [%expect {| |}]
     ;;
 
     let%expect_test "REGRESSION: toggling a column to be invisible shouldn't crash" =
       let component, set_visibility = setup ~visibility_starts_out_as:true in
       let handle = Handle.create (Result_spec.vdom Fn.id) component in
       set_visibility false;
-      Handle.recompute_view handle
+      Handle.recompute_view handle;
+      [%expect {| |}]
     ;;
   end)
 ;;

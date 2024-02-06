@@ -373,14 +373,14 @@ module Theme = struct
     let%sub app_vdom = set_for_computation theme app in
     let%arr app_vdom = app_vdom
     and theme = theme in
-    with_attr [ App.top_attr theme ] app_vdom
+    with_attr [ force (App.top_attr theme) ] app_vdom
   ;;
 
   let set_for_app' theme app =
     let%sub result_and_vdom = set_for_computation theme app in
     let%arr result, app_vdom = result_and_vdom
     and theme = theme in
-    result, with_attr [ App.top_attr theme ] app_vdom
+    result, with_attr [ force (App.top_attr theme) ] app_vdom
   ;;
 
   let override_constants_for_computation ~f inside =

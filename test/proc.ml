@@ -2,6 +2,18 @@ open! Core
 open Bonsai.For_open
 open! Import
 
+module Expect_test_config = struct
+  module IO = Monad.Ident
+
+  let run f =
+    f ();
+    Bonsai_test_handle_garbage_collector.garbage_collect ()
+  ;;
+
+  let sanitize = Fn.id
+  let upon_unreleasable_issue = `CR
+end
+
 module Result_spec = struct
   module type S = sig
     type t
@@ -67,7 +79,7 @@ end
 
 module Handle = struct
   type ('result, 'incoming) t =
-    (unit, 'result * string * ('incoming -> unit Effect.t)) Driver.t
+    (unit, 'result * string Lazy.t * ('incoming -> unit Effect.t)) Driver.t
 
   let create
     (type result incoming)
@@ -82,10 +94,13 @@ module Handle = struct
       let%sub result = computation in
       return
         (let%map result = result in
-         result, R.view result, R.incoming result)
+         result, lazy (R.view result), R.incoming result)
     in
     let clock = Bonsai.Time_source.create ~start:start_time in
-    Driver.create ~optimize ~initial_input:() ~clock component
+    let handle = Driver.create ~optimize ~initial_input:() ~clock component in
+    Bonsai_test_handle_garbage_collector.register_cleanup (fun () ->
+      Driver.invalidate_observers handle);
+    handle
   ;;
 
   let node_paths_from_skeleton
@@ -176,7 +191,7 @@ module Handle = struct
     if false
     then
       assert_node_paths_identical_between_transform_and_skeleton_nodepaths
-        (Bonsai.Private.reveal_computation computation);
+        (Bonsai.Private.top_level_handle computation);
     create ?start_time ~optimize result_spec computation
   ;;
 
@@ -222,7 +237,8 @@ module Handle = struct
   ;;
 
   let show handle =
-    generic_show handle ~before:(Fn.const ()) ~f:(fun () view -> print_endline view)
+    generic_show handle ~before:(Fn.const ()) ~f:(fun () view ->
+      print_endline (Lazy.force view))
   ;;
 
   let show_diff
@@ -230,10 +246,12 @@ module Handle = struct
     ?(diff_context = 16)
     handle
     =
-    generic_show
-      handle
-      ~before:Driver.last_view
-      ~f:(Expect_test_patdiff.print_patdiff ~location_style ~context:diff_context)
+    generic_show handle ~before:Driver.last_view ~f:(fun a b ->
+      Expect_test_patdiff.print_patdiff
+        ~location_style
+        ~context:diff_context
+        (Lazy.force a)
+        (Lazy.force b))
   ;;
 
   let store_view handle = generic_show handle ~before:(Fn.const ()) ~f:(fun () _ -> ())

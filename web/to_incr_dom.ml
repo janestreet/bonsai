@@ -96,7 +96,7 @@ let convert_with_extra ?(optimize = false) component =
   let maybe_optimize = if optimize then Bonsai.Private.pre_process else Fn.id in
   let (T { model; input = _; action; apply_action; run; reset = _ }) =
     component var
-    |> Bonsai.Private.reveal_computation
+    |> Bonsai.Private.top_level_handle
     |> maybe_optimize
     |> Bonsai.Private.gather
   in

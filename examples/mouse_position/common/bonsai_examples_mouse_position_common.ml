@@ -13,8 +13,8 @@ end
 module Session = Unique_id.Int ()
 
 module Active_users = struct
-  type t = { active_users : (Username.t[@atomic]) Session.Map.t [@ldiff.map] }
-  [@@deriving ldiff, bin_io, equal, sexp]
+  type t = { active_users : (Username.t[@atomic]) Session.Map.t [@diff.map] }
+  [@@deriving diff, bin_io, equal, sexp]
 end
 
 module Protocol = struct
@@ -25,7 +25,7 @@ module Protocol = struct
         ~version:0
         ~query_equal:[%equal: unit]
         ~bin_query:[%bin_type_class: unit]
-        (module Ldiffable_polling_state_rpc_response.Polling_state_rpc_response.Make
+        (module Diffable_polling_state_rpc_response.Polling_state_rpc_response.Make
                   (Active_users))
     ;;
   end

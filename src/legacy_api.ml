@@ -1,5 +1,6 @@
 open! Core
 open! Import
+module Proc = Proc_layer2
 
 module type S = Module_types.Component_s
 
@@ -145,7 +146,9 @@ include struct
 end
 
 module With_incr = struct
-  let of_incr i _ = Proc.read (Proc.Private.conceal_value (Value.of_incr i))
+  let of_incr i _ = Proc.read (Cont.Conv.conceal_value (Value.of_incr i))
+
+  open Proc.Let_syntax
 
   let of_module
     (type i m a r)
@@ -156,9 +159,36 @@ module With_incr = struct
     input
     : r Proc.Computation.t
     =
-    let input = Proc.Private.reveal_value input in
     let (module M) = component in
-    Proc_min.Proc_incr.of_module (module M) ?sexp_of_model ~equal ~default_model input
+    let%sub state =
+      Proc.state_machine1
+        ~sexp_of_action:M.Action.sexp_of_t
+        ?sexp_of_model
+        ~equal
+        ~default_model
+        ~apply_action:(fun ctx input model action ->
+          match input with
+          | Active input ->
+            M.apply_action
+              input
+              ~inject:(Proc.Apply_action_context.inject ctx)
+              ~schedule_event:(Proc.Apply_action_context.schedule_event ctx)
+              model
+              action
+          | Inactive ->
+            eprint_s
+              [%message
+                [%here]
+                  "An action sent to an [of_module] has been dropped because its input \
+                   was not present. This happens when the [of_module] is inactive when \
+                   it receives a message."
+                  (action : M.Action.t)];
+            model)
+        input
+    in
+    Proc.Incr.compute (Cont.both input state) ~f:(fun input_and_state ->
+      let%pattern_bind.Ui_incr input, (model, inject) = input_and_state in
+      M.compute input model ~inject)
   ;;
 
   let pure ~f = Proc.Incr.compute ~f

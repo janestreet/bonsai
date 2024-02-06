@@ -6,6 +6,7 @@ type t =
   ; header_row : Vdom.Attr.t
   ; header : Vdom.Attr.t
   ; cell : Vdom.Attr.t
+  ; cell_focused : Vdom.Attr.t
   ; row : Vdom.Attr.t
   ; row_focused : Vdom.Attr.t
   ; body : Vdom.Attr.t
@@ -65,6 +66,11 @@ stylesheet
   color: var(--row-focused-fg);
 }
 
+.body_cell.body_cell_focused {
+  background: var(--cell-focused-bg);
+  color: var(--cell-focused-fg);
+}
+
 /* Borders. Probably due to a browser bug, if we use full borders
   AND contain:paint (subset of strict) in PRT, we'll get weird, glitchy double borders.
   Instead, cells/rows (except for the last cell/row) only paint their top/left borders.
@@ -122,6 +128,10 @@ let table_attr (constants : Constants.t) =
       ~row_even_fg:(Css_gen.Color.to_string_css constants.table.body_row_even.foreground)
       ~row_odd_bg:(Css_gen.Color.to_string_css constants.table.body_row_odd.background)
       ~row_odd_fg:(Css_gen.Color.to_string_css constants.table.body_row_odd.foreground)
+      ~cell_focused_bg:
+        (Css_gen.Color.to_string_css constants.table.body_cell_focused.background)
+      ~cell_focused_fg:
+        (Css_gen.Color.to_string_css constants.table.body_cell_focused.foreground)
       ~row_focused_bg:
         (Css_gen.Color.to_string_css constants.table.body_row_focused.background)
       ~row_focused_fg:
@@ -142,6 +152,7 @@ let default constants =
   ; header_row = Default_table_styling.header_row
   ; header = Default_table_styling.header
   ; cell = Default_table_styling.body_cell
+  ; cell_focused = Default_table_styling.body_cell_focused
   ; row = Default_table_styling.body_row
   ; row_focused = Default_table_styling.body_row_focused
   ; body = Default_table_styling.body

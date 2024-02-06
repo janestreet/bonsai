@@ -1,3 +1,6 @@
-(executables (names main)
+(executables
+ (modes byte exe)
+ (names main)
  (libraries bonsai bonsai_web bonsai_web_ui_gauge tailwind_colors)
- (preprocess (pps ppx_jane ppx_css ppx_bonsai)))
+ (preprocess
+  (pps ppx_jane ppx_css ppx_bonsai)))

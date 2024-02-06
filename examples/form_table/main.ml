@@ -2,7 +2,7 @@ open! Core
 open! Bonsai_web
 open Bonsai.Let_syntax
 module Username = Username_kernel.Username
-module Form = Bonsai_web_ui_form
+module Form = Bonsai_web_ui_form.With_automatic_view
 module Table_form = Bonsai_experimental_table_form
 
 (* All of the fields in this record are going to be editable in the form. *)

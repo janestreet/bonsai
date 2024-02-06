@@ -1,20 +1,21 @@
 open! Core
 open! Bonsai_web
 
-type t =
-  | Leaf of leaf
-  | Group of group
-  | Organizational_group of t list
-  | Spacer of t
+type 'column_id t =
+  | Leaf of 'column_id leaf
+  | Group of 'column_id group
+  | Organizational_group of 'column_id t list
+  | Spacer of 'column_id t
 
-and leaf =
+and 'column_id leaf =
   { leaf_header : (Vdom.Node.t[@sexp.opaque])
   ; initial_width : Css_gen.Length.t
   ; visible : bool
+  ; column_id : 'column_id
   }
 
-and group =
-  { children : t list
+and 'column_id group =
+  { children : 'column_id t list
   ; group_header : (Vdom.Node.t[@sexp.opaque])
   }
 [@@deriving sexp]
@@ -61,8 +62,8 @@ let column_names t =
   List.rev !results
 ;;
 
-let leaf ~header:leaf_header ~initial_width ~visible =
-  Leaf { leaf_header; initial_width; visible }
+let leaf ~header:leaf_header ~initial_width ~visible ~column_id =
+  Leaf { leaf_header; initial_width; visible; column_id }
 ;;
 
 let spacer t = Spacer t

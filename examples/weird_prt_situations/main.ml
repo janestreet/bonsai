@@ -5,7 +5,7 @@ open! Bonsai_web
 open Bonsai.Let_syntax
 module Table = Bonsai_web_ui_partial_render_table.Basic
 module Column = Table.Columns.Dynamic_cells
-module Form = Bonsai_web_ui_form
+module Form = Bonsai_web_ui_form.With_automatic_view
 
 let header text = Column.Sortable.Header.with_icon (Vdom.Node.text text) |> Value.return
 

@@ -8,26 +8,53 @@ open! Bonsai_web_ui_partial_render_table_test.Shared_with_bench
 open! Incr_map_collate
 
 module Config = struct
-  type 'col_id t =
+  type ('data, 'column_id) t =
     { name : string
-    ; columns : ('col_id, Row.t) Expert.Columns.t
+    ; columns : (int, 'data, 'column_id) Expert.Columns.t
+    ; first_column : 'column_id
     }
 
-  let dynamic_cells = { name = "Dynamic_cells"; columns = Dynamic_cells.all }
-  let dynamic_columns = { name = "Dynamic_columns"; columns = Dynamic_columns.all }
-
-  let dynamic_experimental =
-    { name = "Dynamic_experimental"; columns = Dynamic_experimental.all }
+  let dynamic_cells =
+    { name = "Dynamic_cells"
+    ; columns = Dynamic_cells.all
+    ; first_column = Dynamic_cells.first_column
+    }
   ;;
 
-  let create { name; columns } ~test_name =
-    create_bench ~columns ~test_name:[%string "%{name}: %{test_name}"]
+  let dynamic_columns =
+    { name = "Dynamic_columns"
+    ; columns = Dynamic_columns.all
+    ; first_column = Dynamic_columns.first_column
+    }
+  ;;
+
+  let dynamic_experimental =
+    { name = "Dynamic_experimental"
+    ; columns = Dynamic_experimental.all
+    ; first_column = Dynamic_experimental.first_column
+    }
+  ;;
+
+  let create
+    { name; columns; first_column = _ }
+    key_cmp
+    ~test_name
+    ~initial_vars
+    ~interaction
+    =
+    create_bench
+      key_cmp
+      ~columns
+      ~test_name:[%string "%{name}: %{test_name}"]
+      ~initial_vars
+      ~interaction
   ;;
 end
 
-let focus_and_unfocus ~config ~size ~in_range =
+let focus_and_unfocus ~(config : _ Config.t) ~size ~in_range =
   let starting_map = Row.init_rows size in
   let not_ = if in_range then "" else "not " in
+  let column = config.first_column in
   Config.create
     config
     (module Int)
@@ -36,7 +63,7 @@ let focus_and_unfocus ~config ~size ~in_range =
       [%string "Focus by key (key %{not_}present) and unfocus in %{size#Int} element map"]
     ~interaction:(fun _ ->
       let index = if in_range then 1 else size + 1 in
-      [ Interaction.inject (Action.Focus index)
+      [ Interaction.inject (Action.Focus (index, column))
       ; Interaction.inject Action.Unfocus
       ; Interaction.reset_model
       ]
@@ -52,6 +79,21 @@ let focus_up_and_down ~config ~size =
     ~test_name:[%string "Focus up and down in %{size#Int} element map"]
     ~interaction:(fun _ ->
       [ Interaction.inject Action.Focus_down; Interaction.inject Action.Focus_up ]
+      |> Interaction.many_with_stabilizations)
+;;
+
+(* It doesn't make a lot of sense to have a really large number of columns for left/right
+   focus benchmarks, so we just do it within the same size table as everything else which
+   seems more realistic. *)
+let focus_left_and_right ~config ~num_rows =
+  let starting_map = Row.init_rows num_rows in
+  Config.create
+    config
+    (module Int)
+    ~initial_vars:(Input.create starting_map)
+    ~test_name:[%string "Focus left and right in a map with %{num_rows#Int} rows"]
+    ~interaction:(fun _ ->
+      [ Interaction.inject Action.Focus_left; Interaction.inject Action.Focus_right ]
       |> Interaction.many_with_stabilizations)
 ;;
 
@@ -173,6 +215,11 @@ let benchmarks_for config =
   ; focus_up_and_down ~config ~size:101
   ; focus_up_and_down ~config ~size:1000
   ; focus_up_and_down ~config ~size:10000
+  ; focus_left_and_right ~config ~num_rows:10
+  ; focus_left_and_right ~config ~num_rows:100
+  ; focus_left_and_right ~config ~num_rows:101
+  ; focus_left_and_right ~config ~num_rows:1000
+  ; focus_left_and_right ~config ~num_rows:10000
   ; page_up_and_down ~config ~size:10
   ; focus_up_and_down ~config ~size:10
   ; focus_up_and_down ~config ~size:100

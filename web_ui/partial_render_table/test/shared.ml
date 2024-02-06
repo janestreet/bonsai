@@ -2,19 +2,27 @@ open! Core
 open! Bonsai_web
 open! Bonsai_web_test
 open Bonsai.Let_syntax
+module Indexed_column_id = Bonsai_web_ui_partial_render_table.Indexed_column_id
 module Table = Bonsai_web_ui_partial_render_table.Basic
 module Table_expert = Bonsai_web_ui_partial_render_table.Expert
 module Sort_state = Bonsai_web_ui_partial_render_table_protocol.Sort_state
 
 module Action = struct
-  type t =
+  type 'column_id t =
     | Unfocus
     | Focus_down
     | Focus_up
+    | Focus_left
+    | Focus_right
     | Page_up
     | Page_down
-    | Focus of int
+    | Focus_row of int
+    | Focus_cell of int * int
     | Focus_index of int
+    | Set_column_width of
+        { column_id : 'column_id
+        ; width : float
+        }
 end
 
 type t =
@@ -218,11 +226,10 @@ let groups_map =
 module Test = struct
   type outer = t
 
-  type 'a t =
-    { handle : ('a, Action.t) Bonsai_web_test.Handle.t
+  type ('a, 'column_id) t =
+    { handle : ('a, 'column_id Action.t) Bonsai_web_test.Handle.t
     ; get_vdom : 'a -> Vdom.Node.t
     ; get_num_filtered_rows : 'a -> int option
-    ; get_focus : 'a -> int Table.Focus.By_row.optional
     ; input_var : outer Int.Map.t Bonsai.Var.t
     ; filter_var : (key:int -> data:outer -> bool) Bonsai.Var.t
     }
@@ -232,18 +239,24 @@ module Test = struct
       Effect.print_s [%message (focus_changed_to : int option)])
   ;;
 
+  let focus_changed' =
+    Value.return (fun focus_changed_to ->
+      Effect.print_s [%message (focus_changed_to : (int * Indexed_column_id.t) option)])
+  ;;
+
   module Component = struct
-    type 'a t =
+    type ('a, 'focus, 'column_id) t =
       { component : 'a Computation.t
       ; get_vdom : 'a -> Vdom.Node.t
-      ; get_inject : 'a -> Action.t -> unit Ui_effect.t
+      ; get_inject : 'a -> 'column_id Action.t -> unit Ui_effect.t
       ; get_testing : 'a -> Bonsai_web_ui_partial_render_table.For_testing.t Lazy.t
-      ; get_focus : 'a -> int Table.Focus.By_row.optional
+      ; get_focus : 'a -> 'focus
+      ; summarize_focus : ?num_filtered_rows:int -> 'focus -> string
       ; get_num_filtered_rows : 'a -> int option
       }
 
-    let get_inject' t f =
-      let focus = f t in
+    let get_inject' t ~get_focus ~get_set_column_width =
+      let focus = get_focus t in
       let module Focus_control = Table.Focus.By_row in
       function
       | Action.Unfocus -> Focus_control.unfocus focus
@@ -251,12 +264,72 @@ module Test = struct
       | Focus_up -> Focus_control.focus_up focus
       | Page_up -> Focus_control.page_up focus
       | Page_down -> Focus_control.page_down focus
-      | Focus k -> (Focus_control.focus focus) k
+      | Focus_row k -> (Focus_control.focus focus) k
       | Focus_index index -> (Focus_control.focus_index focus) index
+      | Focus_cell _ | Focus_left | Focus_right -> Effect.print_s [%message "Unsupported"]
+      | Set_column_width { column_id; width } ->
+        (get_set_column_width t) ~column_id (`Px_float width)
     ;;
 
-    let get_inject t = get_inject' t Table.Result.focus
-    let get_inject_expert t = get_inject' t Table_expert.Result.focus
+    let get_inject t =
+      get_inject'
+        t
+        ~get_focus:Table.Result.focus
+        ~get_set_column_width:Table.Result.set_column_width
+    ;;
+
+    let get_inject_expert t =
+      get_inject'
+        t
+        ~get_focus:Table_expert.Result.focus
+        ~get_set_column_width:Table_expert.Result.set_column_width
+    ;;
+
+    let get_inject_cell_focus' t ~get_focus ~get_set_column_width =
+      let focus = get_focus t in
+      let module Focus_control = Table.Focus.By_cell in
+      function
+      | Action.Unfocus -> Focus_control.unfocus focus
+      | Focus_down -> Focus_control.focus_down focus
+      | Focus_up -> Focus_control.focus_up focus
+      | Page_up -> Focus_control.page_up focus
+      | Page_down -> Focus_control.page_down focus
+      | Focus_cell (k, c) -> Focus_control.focus focus k (Indexed_column_id.of_int c)
+      | Focus_left -> Focus_control.focus_left focus
+      | Focus_right -> Focus_control.focus_right focus
+      | Focus_index _ | Focus_row _ -> Effect.print_s [%message "Unsupported"]
+      | Set_column_width { column_id; width } ->
+        (get_set_column_width t) ~column_id (`Px_float width)
+    ;;
+
+    let get_inject_cell_focus t =
+      get_inject_cell_focus'
+        t
+        ~get_focus:Table.Result.focus
+        ~get_set_column_width:Table.Result.set_column_width
+    ;;
+
+    let summarize_focus ?num_filtered_rows (focus : int Table.Focus.By_row.optional) =
+      [%message
+        ""
+          ~focused:(Table.Focus.By_row.focused focus : int option)
+          ~num_filtered_rows:(num_filtered_rows : int option)]
+      |> Sexp.to_string_hum
+      |> fun s -> s ^ "\n"
+    ;;
+
+    let summarize_focus'
+      ?num_filtered_rows
+      (focus : (int, Indexed_column_id.t) Table.Focus.By_cell.optional)
+      =
+      [%message
+        ""
+          ~focused:
+            (Table.Focus.By_cell.focused focus : (int * Indexed_column_id.t) option)
+          ~num_filtered_rows:(num_filtered_rows : int option)]
+      |> Sexp.to_string_hum
+      |> fun s -> s ^ "\n"
+    ;;
 
     let default
       ~theming
@@ -288,6 +361,41 @@ module Test = struct
       ; get_testing = Table.Result.for_testing
       ; get_focus = Table.Result.focus
       ; get_num_filtered_rows = (fun a -> Some (Table.Result.num_filtered_rows a))
+      ; summarize_focus
+      }
+    ;;
+
+    let default_cell_focus
+      ~theming
+      ?(preload_rows = 0)
+      ?(is_column_b_visible = Value.return true)
+      ?override_sort
+      ?default_sort
+      ?(use_legacy_header = false)
+      ?(row_height = Value.return (`Px 1))
+      ()
+      input
+      filter
+      =
+      let module Column = Table.Columns.Dynamic_cells in
+      { component =
+          Table.component
+            (module Int)
+            ~theming
+            ~focus:(By_cell { on_change = focus_changed' })
+            ~filter
+            ?override_sort
+            ?default_sort
+            ~row_height
+            ~preload_rows
+            ~columns:(columns ~use_legacy_header ~is_column_b_visible () |> Column.lift)
+            input
+      ; get_vdom = Table.Result.view
+      ; get_inject = get_inject_cell_focus
+      ; get_testing = Table.Result.for_testing
+      ; get_focus = Table.Result.focus
+      ; get_num_filtered_rows = (fun a -> Some (Table.Result.num_filtered_rows a))
+      ; summarize_focus = summarize_focus'
       }
     ;;
 
@@ -320,6 +428,7 @@ module Test = struct
       ; get_focus = Table.Result.focus
       ; get_inject
       ; get_num_filtered_rows = (fun a -> Some (Table.Result.num_filtered_rows a))
+      ; summarize_focus
       }
     ;;
 
@@ -362,6 +471,7 @@ module Test = struct
       ; get_focus = Table_expert.Result.focus
       ; get_inject = get_inject_expert
       ; get_num_filtered_rows = (fun _ -> None)
+      ; summarize_focus
       }
     ;;
   end

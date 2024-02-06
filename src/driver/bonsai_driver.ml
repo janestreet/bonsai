@@ -41,13 +41,16 @@ let assert_type_equalities
   ()
 ;;
 
-let create (type r) ?(optimize = true) ~clock (computation : r Bonsai.Computation.t) : r t
+let create_direct
+  (type r)
+  ?(optimize = true)
+  ~clock
+  (computation : r Bonsai.Private.Computation.t)
+  : r t
   =
-  let unoptimized_info =
-    Bonsai.Private.gather (Bonsai.Private.reveal_computation computation)
-  in
+  let unoptimized_info = Bonsai.Private.gather computation in
   let optimized_info =
-    Bonsai.Private.reveal_computation computation
+    computation
     |> (if optimize then Bonsai.Private.pre_process else Fn.id)
     |> Bonsai.Private.gather
   in
@@ -127,6 +130,10 @@ let create (type r) ?(optimize = true) ~clock (computation : r Bonsai.Computatio
       }
   in
   create_polymorphic computation_info apply_action
+;;
+
+let create (type r) ?(optimize = true) ~clock (computation : r Bonsai.Computation.t) =
+  create_direct ~optimize ~clock (Bonsai.Private.top_level_handle computation)
 ;;
 
 let schedule_event _ = Ui_effect.Expert.handle

@@ -1,3 +1,6 @@
-(library (name bonsai_web_ui_partial_render_table_protocol)
+(library
+ (name bonsai_web_ui_partial_render_table_protocol)
  (public_name bonsai.web_ui_partial_render_table_protocol)
- (libraries core incr_map.collate) (preprocess (pps ppx_jane)))
+ (libraries core incr_map.collate)
+ (preprocess
+  (pps ppx_jane)))

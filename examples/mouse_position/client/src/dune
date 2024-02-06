@@ -1,9 +1,13 @@
-(library (name bonsai_examples_mouse_position_lib)
+(library
+ (name bonsai_examples_mouse_position_lib)
  (libraries async_kernel bonsai_web core
-  bonsai_examples_mouse_position_common bonsai_web_ui_view tailwind_colors
-  ppx_css.inline_css)
- (preprocess (pps js_of_ocaml-ppx ppx_jane ppx_bonsai)))
+   bonsai_examples_mouse_position_common bonsai_web_ui_view tailwind_colors
+   ppx_css.inline_css)
+ (preprocess
+  (pps js_of_ocaml-ppx ppx_jane ppx_bonsai)))
 
-(rule (targets style.ml style.mli style__generated.ml style__generated.mli)
+(rule
+ (targets style.ml style.mli style__generated.ml style__generated.mli)
  (deps style.css)
- (action (bash "%{bin:css_inliner} %{deps} \"((rewrite ()))\"")))
+ (action
+  (bash "%{bin:css_inliner} %{deps} \"((rewrite ()))\"")))

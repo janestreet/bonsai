@@ -53,7 +53,7 @@ module C = struct
       -> tooltip:Vdom.Node.t
       -> Vdom.Node.t
 
-    method app_attr : Vdom.Attr.t
+    method app_attr : Vdom.Attr.t Lazy.t
     method codemirror_theme : For_codemirror.Theme.t option
     method prt_styling : For_prt.t
 

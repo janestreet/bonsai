@@ -1,3 +1,5 @@
-(library (name bonsai_web_ui_view_test)
+(library
+ (name bonsai_web_ui_view_test)
  (libraries bonsai_web bonsai_web_test kado core expect_test_helpers_core)
- (preprocess (pps ppx_jane ppx_bonsai)))
+ (preprocess
+  (pps ppx_jane ppx_bonsai)))

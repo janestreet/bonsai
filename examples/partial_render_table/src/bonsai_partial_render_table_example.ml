@@ -2,7 +2,8 @@ open! Core
 open! Bonsai_web
 open Bonsai.Let_syntax
 module Table = Bonsai_web_ui_partial_render_table.Basic
-module Form = Bonsai_web_ui_form
+module Indexed_column_id = Bonsai_web_ui_partial_render_table.Indexed_column_id
+module Form = Bonsai_web_ui_form.With_automatic_view
 module Row = Row
 
 module Time_ns_option = struct
@@ -120,13 +121,28 @@ let columns ~should_show_position =
   |> Column.lift
 ;;
 
-let table_and_focus_attr ?filter ~row_height ~theming ~should_show_position data =
+type t =
+  { table : Vdom.Node.t
+  ; focus_attr : Vdom.Attr.t
+  ; set_column_width :
+      column_id:Indexed_column_id.t -> [ `Px_float of float ] -> unit Ui_effect.t
+  }
+
+let generic_table_and_focus_attr
+  ?filter
+  ~row_height
+  ~theming
+  ~should_show_position
+  ~focus
+  ~attr_of_focus
+  data
+  =
   let%sub table =
     Table.component
       (module String)
       ?filter
       ~theming
-      ~focus:(By_row { on_change = Value.return (Fn.const Effect.Ignore) })
+      ~focus
       ~row_height
       ~columns:(columns ~should_show_position)
       data
@@ -136,29 +152,79 @@ let table_and_focus_attr ?filter ~row_height ~theming ~should_show_position data
           ; sortable_state = _
           ; num_filtered_rows
           ; focus
+          ; set_column_width
           }
     =
     table
   in
-  let focus_attr =
-    Vdom.Attr.on_keydown (fun kbc ->
-      let binding =
-        let module Focus_control = Table.Focus.By_row in
-        match Js_of_ocaml.Dom_html.Keyboard_code.of_event kbc with
-        | ArrowDown | KeyJ -> Some (Focus_control.focus_down focus)
-        | ArrowUp | KeyK -> Some (Focus_control.focus_up focus)
-        | PageDown -> Some (Focus_control.page_down focus)
-        | PageUp -> Some (Focus_control.page_up focus)
-        | Escape -> Some (Focus_control.unfocus focus)
-        | Home -> Some ((Focus_control.focus_index focus) 0)
-        | End -> Some ((Focus_control.focus_index focus) num_filtered_rows)
-        | _ -> None
-      in
-      match binding with
-      | Some b -> Effect.Many [ Effect.Prevent_default; b ]
-      | None -> Effect.Ignore)
-  in
-  table, focus_attr
+  let focus_attr = attr_of_focus focus ~num_filtered_rows in
+  { table; focus_attr; set_column_width }
+;;
+
+let component ?filter ~focus_kind ~row_height ~theming ~should_show_position data =
+  match focus_kind with
+  | `Row ->
+    let module Focus_control = Table.Focus.By_row in
+    generic_table_and_focus_attr
+      ?filter
+      ~row_height
+      ~theming
+      ~should_show_position
+      ~focus:(By_row { on_change = Value.return (Fn.const Effect.Ignore) })
+      ~attr_of_focus:(fun (focus : _ Table.Focus.By_row.t) ~num_filtered_rows ->
+        Vdom.Attr.on_keydown (fun kbc ->
+          let binding =
+            match Js_of_ocaml.Dom_html.Keyboard_code.of_event kbc with
+            | ArrowDown | KeyJ -> Some (Focus_control.focus_down focus)
+            | ArrowUp | KeyK -> Some (Focus_control.focus_up focus)
+            | PageDown -> Some (Focus_control.page_down focus)
+            | PageUp -> Some (Focus_control.page_up focus)
+            | Escape -> Some (Focus_control.unfocus focus)
+            | Home -> Some ((Focus_control.focus_index focus) 0)
+            | End -> Some ((Focus_control.focus_index focus) num_filtered_rows)
+            | _ -> None
+          in
+          match binding with
+          | Some b -> Effect.Many [ Effect.Prevent_default; b ]
+          | None -> Effect.Ignore))
+      data
+  | `Cell ->
+    let module Focus_control = Table.Focus.By_cell in
+    generic_table_and_focus_attr
+      ?filter
+      ~row_height
+      ~theming
+      ~should_show_position
+      ~focus:(By_cell { on_change = Value.return (Fn.const Effect.Ignore) })
+      ~attr_of_focus:(fun focus ~num_filtered_rows ->
+        let current_or_first_column =
+          match Focus_control.focused focus with
+          | None -> Indexed_column_id.of_int 0
+          | Some (_, c) -> c
+        in
+        Vdom.Attr.on_keydown (fun kbc ->
+          let binding =
+            let module Focus_control = Table.Focus.By_cell in
+            match Js_of_ocaml.Dom_html.Keyboard_code.of_event kbc with
+            | ArrowDown | KeyJ -> Some (Focus_control.focus_down focus)
+            | ArrowUp | KeyK -> Some (Focus_control.focus_up focus)
+            | ArrowRight | KeyL -> Some (Focus_control.focus_right focus)
+            | ArrowLeft | KeyH -> Some (Focus_control.focus_left focus)
+            | PageDown -> Some (Focus_control.page_down focus)
+            | PageUp -> Some (Focus_control.page_up focus)
+            | Escape -> Some (Focus_control.unfocus focus)
+            | Home -> Some ((Focus_control.focus_index focus) 0 current_or_first_column)
+            | End ->
+              Some
+                ((Focus_control.focus_index focus)
+                   num_filtered_rows
+                   current_or_first_column)
+            | _ -> None
+          in
+          match binding with
+          | Some b -> Effect.Many [ Effect.Prevent_default; b ]
+          | None -> Effect.Ignore))
+      data
 ;;
 
 module Layout_form = struct
@@ -166,6 +232,7 @@ module Layout_form = struct
     type t =
       { themed : bool
       ; show_position : bool
+      ; cell_based_highlighting : bool
       ; row_height : [ `Px of int ]
       ; num_rows : int
       }
@@ -174,6 +241,7 @@ module Layout_form = struct
     let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t = function
       | Themed -> Form.Elements.Toggle.bool ~default:true ()
       | Show_position -> Form.Elements.Toggle.bool ~default:true ()
+      | Cell_based_highlighting -> Form.Elements.Toggle.bool ~default:false ()
       | Row_height ->
         let%sub form =
           Form.Elements.Range.int
@@ -189,7 +257,7 @@ module Layout_form = struct
       | Num_rows ->
         Form.Elements.Number.int
           ~allow_updates_when_focused:`Never
-          ~default:100_000
+          ~default:10_000
           ~step:1
           ()
     ;;
@@ -204,9 +272,46 @@ module Layout_form = struct
       Form.value_or_default
         form
         ~default:
-          { themed = true; show_position = true; row_height = `Px 30; num_rows = 100_000 }
+          { themed = true
+          ; show_position = true
+          ; row_height = `Px 30
+          ; num_rows = 10_000
+          ; cell_based_highlighting = false
+          }
     in
     let view = Vdom.Node.div ~attrs:[ Style.form_container ] [ Form.view_as_vdom form ] in
     view, values
+  ;;
+end
+
+module Column_width_form = struct
+  let component ~set_column_width =
+    let open Bonsai.Let_syntax in
+    let%sub form =
+      Form.Elements.Textbox.int
+        ~placeholder:"Symbol column width"
+        ~allow_updates_when_focused:`Always
+        ()
+    in
+    let%sub button =
+      let%sub theme = View.Theme.current in
+      let%arr form = form
+      and theme = theme
+      and set_column_width = set_column_width in
+      let value = Form.value form in
+      let disabled = Or_error.is_error value in
+      let on_click =
+        match value with
+        | Error _ -> Effect.Ignore
+        | Ok value ->
+          set_column_width
+            ~column_id:(Indexed_column_id.of_int 0)
+            (`Px_float (Int.to_float value))
+      in
+      View.button ~disabled theme ~on_click "Set width"
+    in
+    let%arr form = form
+    and button = button in
+    View.hbox [ Form.view_as_vdom form; button ]
   ;;
 end

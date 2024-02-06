@@ -1,4 +1,6 @@
-(library (name bonsai_web_ui_auto_generated_test)
- (preprocess (pps ppx_bonsai ppx_jane))
- (libraries bonsai_web_ui_auto_generated bonsai_web_ui_form bonsai_web
-  bonsai_web_test core virtual_dom))
+(library
+ (name bonsai_web_ui_auto_generated_test)
+ (preprocess
+  (pps ppx_bonsai ppx_jane))
+ (libraries bonsai_web_ui_auto_generated bonsai_web bonsai_web_test
+   bonsai_web_ui_form core virtual_dom))

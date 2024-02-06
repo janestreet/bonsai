@@ -5,25 +5,21 @@ open! Incr_map_collate
 open! Bonsai.Let_syntax
 
 module Acc = struct
-  type t =
-    { level_map : Table_view.Header.Header_cell.t list Int.Map.t
-    ; leaf_index : int
-    }
+  type t = { level_map : Table_view.Header.Header_cell.t list Int.Map.t }
 
-  let empty = { level_map = Int.Map.empty; leaf_index = 0 }
+  let empty = { level_map = Int.Map.empty }
 
-  let visit_leaf { level_map; leaf_index } ~level ~node =
-    let data = node leaf_index in
-    let level_map = Map.add_multi level_map ~key:level ~data in
-    { leaf_index = leaf_index + 1; level_map }
-  ;;
-
-  let visit_non_leaf { level_map; leaf_index } ~level ~node =
+  let visit_leaf { level_map } ~level ~node =
     let level_map = Map.add_multi level_map ~key:level ~data:node in
-    { leaf_index; level_map }
+    { level_map }
   ;;
 
-  let finalize ~themed_attrs { level_map; leaf_index = _ } =
+  let visit_non_leaf { level_map } ~level ~node =
+    let level_map = Map.add_multi level_map ~key:level ~data:node in
+    { level_map }
+  ;;
+
+  let finalize ~themed_attrs { level_map } =
     level_map
     |> Map.data
     |> List.map ~f:(fun seq ->
@@ -39,10 +35,10 @@ let rec render_header header ~themed_attrs ~level ~acc ~column_widths ~set_colum
     render_header ~themed_attrs ~level ~column_widths ~set_column_width
   in
   match header with
-  | Header_tree.Leaf { visible; leaf_header; initial_width } ->
-    let node index =
+  | Header_tree.Leaf { visible; leaf_header; initial_width; column_id } ->
+    let node =
       let column_width =
-        match Map.find column_widths index with
+        match Map.find column_widths column_id with
         | Some (Column_size.Visible { width_px = width })
         | Some (Hidden { prev_width_px = Some width }) -> `Px_float width
         | None | Some (Hidden { prev_width_px = None }) -> initial_width
@@ -50,7 +46,7 @@ let rec render_header header ~themed_attrs ~level ~acc ~column_widths ~set_colum
       Table_view.Header.Header_cell.leaf_view
         themed_attrs
         ~column_width
-        ~set_column_width:(set_column_width ~index)
+        ~set_column_width:(set_column_width ~column_id)
         ~visible
         ~label:leaf_header
         ()
@@ -86,10 +82,12 @@ let render_header ~themed_attrs headers ~column_widths ~set_column_width =
 ;;
 
 let component
+  (type column_id column_id_cmp)
   ~themed_attrs
-  (headers : Header_tree.t Value.t)
-  ~column_widths
-  ~set_column_width
+  (headers : column_id Header_tree.t Value.t)
+  ~(column_widths : (column_id, Column_size.t, column_id_cmp) Map.t Value.t)
+  ~(set_column_width :
+      (column_id:column_id -> [< `Px_float of float ] -> unit Effect.t) Value.t)
   ~set_header_client_rect
   =
   let%arr set_column_width = set_column_width

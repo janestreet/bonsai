@@ -1,4 +1,6 @@
-(library (name bonsai_extra)
+(library
+ (name bonsai_extra)
  (libraries bonsai virtual_dom.ui_effect incr_dom.ui_incr)
  (public_name bonsai.extra)
- (preprocess (pps ppx_bonsai ppx_jane ppx_pattern_bind)))
+ (preprocess
+  (pps ppx_bonsai ppx_jane ppx_pattern_bind)))

@@ -1,4 +1,7 @@
-(executables (names main)
+(executables
+ (modes byte exe)
+ (names main)
  (libraries bonsai_web bonsai_web_ui_gallery
-  bonsai_partial_render_table_example)
- (preprocess (pps ppx_bonsai)))
+   bonsai_partial_render_table_example)
+ (preprocess
+  (pps ppx_bonsai)))

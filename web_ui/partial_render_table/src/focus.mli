@@ -2,6 +2,28 @@ open! Core
 open! Bonsai_web
 module Collated := Incr_map_collate.Collated
 
+module By_cell : sig
+  type ('k, 'col_id, 'presence) t
+
+  val focused : ('k, 'col_id, 'presence) t -> 'presence
+  val focus_up : ('k, 'col_id, 'presence) t -> unit Effect.t
+  val focus_down : ('k, 'col_id, 'presence) t -> unit Effect.t
+  val focus_left : ('k, 'col_id, 'presence) t -> unit Effect.t
+  val focus_right : ('k, 'col_id, 'presence) t -> unit Effect.t
+  val page_up : ('k, 'col_id, 'presence) t -> unit Effect.t
+  val page_down : ('k, 'col_id, 'presence) t -> unit Effect.t
+  val unfocus : ('k, 'col_id, 'presence) t -> unit Effect.t
+
+  (** [focus k] sets the focus to the `col_id cell in the row keyed by k. *)
+  val focus : ('k, 'col_id, 'presence) t -> 'k -> 'col_id -> unit Effect.t
+
+  (** [focus_index n] sets the focus to the `col_id cell in the nth row from the top of the
+      entire table. The first row is 0, the second is 1, and so on. *)
+  val focus_index : ('k, 'col_id, 'presence) t -> int -> 'col_id -> unit Effect.t
+
+  type ('k, 'col_id) optional = ('k, 'col_id, ('k * 'col_id) option) t
+end
+
 module By_row : sig
   type ('k, 'presence) t
 
@@ -30,31 +52,42 @@ module By_row : sig
 end
 
 module Kind : sig
-  type ('a, 'presence, 'k) t =
-    | None : (unit, unit, 'k) t
+  type ('a, 'presence, 'k, 'col_id) t =
+    | None : (unit, unit, 'k, 'col_id) t
     | By_row :
         { on_change : ('k option -> unit Effect.t) Value.t
         ; compute_presence : 'k option Value.t -> 'presence Computation.t
         }
-        -> (('k, 'presence) By_row.t, 'presence, 'k) t
+        -> (('k, 'presence) By_row.t, 'presence, 'k, 'col_id) t
+    | By_cell :
+        { on_change : (('k * 'col_id) option -> unit Effect.t) Value.t
+        ; compute_presence : ('k * 'col_id) option Value.t -> 'presence Computation.t
+        }
+        -> (('k, 'col_id, 'presence) By_cell.t, 'presence, 'k, 'col_id) t
 end
 
-type ('kind, 'key) t =
+type ('key, 'col_id, 'kind) focused =
+  | Nothing_focused : ('key, 'col_id, _) focused
+  | Cell_focused : ('key * 'col_id) -> ('key, 'col_id, _ By_cell.t) focused
+  | Row_focused : 'key -> ('key, 'col_id, _ By_row.t) focused
+
+type ('kind, 'key, 'col_id) t =
   { focus : 'kind
-  ; visually_focused : 'key option
+  ; visually_focused : ('key, 'col_id, 'kind) focused
   }
 
 val component
-  :  ('kind, 'presence, 'key) Kind.t
+  :  ('kind, 'presence, 'key, 'col_id) Kind.t
   -> ('key, 'cmp) Bonsai.comparator
+  -> ('col_id, _) Bonsai.comparator
   -> collated:('key, 'data) Collated.t Value.t
+  -> leaves:'col_id Header_tree.leaf list Value.t
   -> range:(int * int) Value.t
   -> scroll_to_index:(int -> unit Effect.t) Value.t
-  -> ('kind, 'key) t Computation.t
+  -> scroll_to_column:('col_id -> unit Effect.t) Value.t
+  -> ('kind, 'key, 'col_id) t Computation.t
 
-val get_focused : ('r, 'presence, _) Kind.t -> 'r Value.t -> 'presence Value.t
-
-val get_on_row_click
-  :  ('r, _, 'key) Kind.t
+val get_on_cell_click
+  :  ('r, _, 'key, 'column) Kind.t
   -> 'r Value.t
-  -> ('key -> unit Effect.t) Value.t
+  -> ('key -> 'column -> unit Effect.t) Value.t

@@ -160,7 +160,8 @@ And here's a test that shows that by caching `x` we now only print
     let tripled = map x ~f:(fun i -> i * 3) in
     let y = add doubled tripled in
     printf "y = %d\n" (eval y);
-    [%expect {|
+    [%expect
+      {|
       got here
       y = 15 |}]
   ;;
@@ -261,7 +262,8 @@ does that work?  To see, let's add `sub` to our language:
         add doubled tripled)
     in
     printf "y = %d\n" (eval y);
-    [%expect {|
+    [%expect
+      {|
       got here
       y = 15 |}]
   ;;
@@ -387,7 +389,8 @@ Here it is in action:
         add doubled tripled)
     in
     printf "y = %d\n" (eval y);
-    [%expect {|
+    [%expect
+      {|
       got here
       y = 15 |}]
   ;;

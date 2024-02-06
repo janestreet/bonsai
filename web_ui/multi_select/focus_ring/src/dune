@@ -1,2 +1,6 @@
-(library (name focus_ring) (public_name bonsai.focus_ring) (libraries core)
- (preprocess (pps ppx_jane)))
+(library
+ (name focus_ring)
+ (public_name bonsai.focus_ring)
+ (libraries core)
+ (preprocess
+  (pps ppx_jane)))

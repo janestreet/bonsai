@@ -1,6 +1,8 @@
-(library (name bonsai_web_test) (public_name bonsai.web_test)
+(library
+ (name bonsai_web_test)
+ (public_name bonsai.web_test)
  (libraries bonsai_web core async_kernel.eager_deferred bonsai_test
-  patdiff.expect_test_patdiff virtual_dom.vdom_test_helpers
-  bonsai_web_ui_drag_and_drop bonsai_web_ui_element_size_hooks)
+   patdiff.expect_test_patdiff virtual_dom.vdom_test_helpers
+   bonsai_web_ui_drag_and_drop bonsai_web_ui_element_size_hooks)
  (preprocess
   (pps ppx_jane js_of_ocaml-ppx ppx_css ppx_pattern_bind ppx_bonsai)))

@@ -8,13 +8,13 @@ module Test = struct
   include Shared.Test
 
   let create
-    (type a)
+    (type a column_id)
     ?(visible_range = 0, 100)
     ?(map = small_map)
     ?(should_print_styles = false)
     ?(should_set_bounds = true)
     component
-    : a t
+    : (a, column_id) t
     =
     let min_vis, max_vis = visible_range in
     let input_var = Bonsai.Var.create map in
@@ -22,9 +22,10 @@ module Test = struct
     let { Component.component
         ; get_vdom
         ; get_testing = _
-        ; get_focus
+        ; get_focus = _
         ; get_inject
         ; get_num_filtered_rows
+        ; summarize_focus = _
         }
       =
       component (Bonsai.Var.value input_var) (Bonsai.Var.value filter_var)
@@ -45,15 +46,13 @@ module Test = struct
                  should_print_styles || not (String.is_prefix ~prefix:"style." key))
           ;;
 
-          type incoming = Action.t
+          type incoming = column_id Action.t
 
           let incoming = get_inject
         end)
         component
     in
-    let t =
-      { handle; get_vdom; get_focus; input_var; filter_var; get_num_filtered_rows }
-    in
+    let t = { handle; get_vdom; input_var; filter_var; get_num_filtered_rows } in
     if should_set_bounds then set_bounds t ~low:min_vis ~high:max_vis;
     t
   ;;
@@ -80,7 +79,7 @@ let print_assocs component =
   in
   let structure =
     component
-    |> Bonsai.Private.reveal_computation
+    |> Bonsai.Private.top_level_handle
     |> Bonsai.Private.pre_process
     |> sexp_of_computation
   in
@@ -99,10 +98,10 @@ let%expect_test "simplified_assocs" =
       (Bonsai.Value.return (fun ~key:_ ~data:_ -> true))
   in
   print_assocs component;
-  (* there's only one assoc because all the columns are inside of an assoc
+  (* there's only one stateful assoc because all the columns are inside of an assoc
      per-row instead of it being the other way around as you might have
      expected. *)
-  [%expect {| ((assoc_count 1) (assoc_simple_count 3) (assoc_on_count 1)) |}]
+  [%expect {| ((assoc_count 1) (assoc_simple_count 4) (assoc_on_count 1)) |}]
 ;;
 
 let%expect_test "simplified_assocs on the dynamic columns" =
@@ -115,7 +114,7 @@ let%expect_test "simplified_assocs on the dynamic columns" =
   in
   print_assocs component;
   (* No assocs here because it just uses the Incr_map function directly *)
-  [%expect {| ((assoc_count 1) (assoc_simple_count 0) (assoc_on_count 0)) |}]
+  [%expect {| ((assoc_count 1) (assoc_simple_count 1) (assoc_on_count 0)) |}]
 ;;
 
 let%expect_test "column visibility" =
@@ -133,146 +132,147 @@ let%expect_test "column visibility" =
   Handle.show_diff ~location_style:Separator test.handle;
   [%expect
     {|
-=== DIFF HUNK ===
-              class="header_cell header_label leaf_header"
-              size_tracker=<fun>
-              style={
-                width: 50px;
-              }>
-            <div>
-              <div>
-                <span> a </span>
+    === DIFF HUNK ===
+                  class="header_cell header_label leaf_header"
+                  size_tracker=<fun>
+                  style={
+                    width: 50px;
+                  }>
+                <div>
+                  <div>
+                    <span> a </span>
+                  </div>
+                </div>
+              </td>
+              <td colspan="1"
+                  class="header_cell header_label leaf_header"
+                  size_tracker=<fun>
+                  style={
+                    width: 50px;
+    +|              display: none;
+                  }>
+                <div class="sortable_header_cell" onclick>
+                  <div style={
+                         display: flex;
+                         flex-direction: row;
+                         flex-wrap: nowrap;
+                         align-items: baseline;
+                         column-gap: 6px;
+                       }>
+                    <span> b </span>
+                  </div>
+                </div>
+              </td>
+              <td colspan="1"
+                  class="header_cell header_label leaf_header"
+                  size_tracker=<fun>
+    === DIFF HUNK ===
+                       width: 0.00000000px;
+                       min-width: 0.00000000px;
+                       max-width: 0.00000000px;
+                     }>
+                  <input oninput> </input>
+                  hello
+                </div>
+                <div class="body_cell cell"
+                     onclick
+                     style={
+                       height: 1px;
+                       min-height: 1px;
+                       max-height: 1px;
+                       width: 0.00000000px;
+                       min-width: 0.00000000px;
+                       max-width: 0.00000000px;
+    -|               }> 1.000000 </div>
+    +|                 display: none;
+    +|               }> </div>
+                <div class="body_cell cell"
+                     onclick
+                     style={
+                       height: 1px;
+                       min-height: 1px;
+                       max-height: 1px;
+                       width: 0.00000000px;
+                       min-width: 0.00000000px;
+                       max-width: 0.00000000px;
+                     }> 1 </div>
               </div>
-            </div>
-          </td>
-          <td colspan="1"
-              class="header_cell header_label leaf_header"
-              size_tracker=<fun>
-              style={
-                width: 50px;
-+|              display: none;
-              }>
-            <div class="sortable_header_cell" onclick>
-              <div style={
+              <div class="body_row row"
+                   style={
+                     height: 1px;
+                     width: 0.00000000px;
                      display: flex;
-                     flex-direction: row;
-                     flex-wrap: nowrap;
-                     align-items: baseline;
-                     column-gap: 6px;
-                   }>
-                <span> b </span>
+    === DIFF HUNK ===
+                       width: 0.00000000px;
+                       min-width: 0.00000000px;
+                       max-width: 0.00000000px;
+                     }>
+                  <input oninput> </input>
+                  there
+                </div>
+                <div class="body_cell cell"
+                     onclick
+                     style={
+                       height: 1px;
+                       min-height: 1px;
+                       max-height: 1px;
+                       width: 0.00000000px;
+                       min-width: 0.00000000px;
+                       max-width: 0.00000000px;
+    -|               }> 2.000000 </div>
+    +|                 display: none;
+    +|               }> </div>
+                <div class="body_cell cell"
+                     onclick
+                     style={
+                       height: 1px;
+                       min-height: 1px;
+                       max-height: 1px;
+                       width: 0.00000000px;
+                       min-width: 0.00000000px;
+                       max-width: 0.00000000px;
+                     }> 2 </div>
+              </div>
+              <div class="body_row row"
+                   style={
+                     height: 1px;
+                     width: 0.00000000px;
+                     display: flex;
+    === DIFF HUNK ===
+                       width: 0.00000000px;
+                       min-width: 0.00000000px;
+                       max-width: 0.00000000px;
+                     }>
+                  <input oninput> </input>
+                  world
+                </div>
+                <div class="body_cell cell"
+                     onclick
+                     style={
+                       height: 1px;
+                       min-height: 1px;
+                       max-height: 1px;
+                       width: 0.00000000px;
+                       min-width: 0.00000000px;
+                       max-width: 0.00000000px;
+    -|               }> 2.000000 </div>
+    +|                 display: none;
+    +|               }> </div>
+                <div class="body_cell cell"
+                     onclick
+                     style={
+                       height: 1px;
+                       min-height: 1px;
+                       max-height: 1px;
+                       width: 0.00000000px;
+                       min-width: 0.00000000px;
+                       max-width: 0.00000000px;
+                     }> --- </div>
               </div>
             </div>
-          </td>
-          <td colspan="1"
-              class="header_cell header_label leaf_header"
-              size_tracker=<fun>
-=== DIFF HUNK ===
-                   max-height: 1px;
-                   width: 0.00000000px;
-                   min-width: 0.00000000px;
-                   max-width: 0.00000000px;
-                 }>
-              <input oninput> </input>
-              hello
-            </div>
-            <div class="body_cell cell"
-                 style={
-                   height: 1px;
-                   min-height: 1px;
-                   max-height: 1px;
-                   width: 0.00000000px;
-                   min-width: 0.00000000px;
-                   max-width: 0.00000000px;
--|               }> 1.000000 </div>
-+|                 display: none;
-+|               }> </div>
-            <div class="body_cell cell"
-                 style={
-                   height: 1px;
-                   min-height: 1px;
-                   max-height: 1px;
-                   width: 0.00000000px;
-                   min-width: 0.00000000px;
-                   max-width: 0.00000000px;
-                 }> 1 </div>
-          </div>
-          <div class="body_row row"
-               onclick
-               style={
-                 height: 1px;
-                 width: 0.00000000px;
-                 display: flex;
-=== DIFF HUNK ===
-                   max-height: 1px;
-                   width: 0.00000000px;
-                   min-width: 0.00000000px;
-                   max-width: 0.00000000px;
-                 }>
-              <input oninput> </input>
-              there
-            </div>
-            <div class="body_cell cell"
-                 style={
-                   height: 1px;
-                   min-height: 1px;
-                   max-height: 1px;
-                   width: 0.00000000px;
-                   min-width: 0.00000000px;
-                   max-width: 0.00000000px;
--|               }> 2.000000 </div>
-+|                 display: none;
-+|               }> </div>
-            <div class="body_cell cell"
-                 style={
-                   height: 1px;
-                   min-height: 1px;
-                   max-height: 1px;
-                   width: 0.00000000px;
-                   min-width: 0.00000000px;
-                   max-width: 0.00000000px;
-                 }> 2 </div>
-          </div>
-          <div class="body_row row"
-               onclick
-               style={
-                 height: 1px;
-                 width: 0.00000000px;
-                 display: flex;
-=== DIFF HUNK ===
-                   max-height: 1px;
-                   width: 0.00000000px;
-                   min-width: 0.00000000px;
-                   max-width: 0.00000000px;
-                 }>
-              <input oninput> </input>
-              world
-            </div>
-            <div class="body_cell cell"
-                 style={
-                   height: 1px;
-                   min-height: 1px;
-                   max-height: 1px;
-                   width: 0.00000000px;
-                   min-width: 0.00000000px;
-                   max-width: 0.00000000px;
--|               }> 2.000000 </div>
-+|                 display: none;
-+|               }> </div>
-            <div class="body_cell cell"
-                 style={
-                   height: 1px;
-                   min-height: 1px;
-                   max-height: 1px;
-                   width: 0.00000000px;
-                   min-width: 0.00000000px;
-                   max-width: 0.00000000px;
-                 }> --- </div>
           </div>
         </div>
-      </div>
-    </div>
-  </div> |}]
+      </div> |}]
 ;;
 
 let%expect_test "stabilization of view range" =
@@ -286,544 +286,8 @@ let%expect_test "stabilization of view range" =
   Handle.show test.handle;
   [%expect
     {|
-<div class="partial_render_table_container table"
-     custom-css-vars=((--row-odd-fg black)(--row-odd-bg white)(--row-focused-fg black)(--row-focused-border #0a90bf)(--row-focused-bg #e0f7ff)(--row-even-fg black)(--row-even-bg #e6e6e6)(--header-header-border grey)(--header-fg white)(--header-body-border grey)(--header-bg black)(--fg black)(--body-body-border grey)(--bg white))>
-  <table class="header partial_render_table_header" bounds-change=<opaque>>
-    <tbody>
-      <tr class="header_row">
-        <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
-          <div class="sortable_header_cell" onclick>
-            <div>
-              <span> key </span>
-            </div>
-          </div>
-        </td>
-        <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
-          <div>
-            <div>
-              <span> a </span>
-            </div>
-          </div>
-        </td>
-        <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
-          <div class="sortable_header_cell" onclick>
-            <div>
-              <span> b </span>
-            </div>
-          </div>
-        </td>
-        <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
-          <div class="sortable_header_cell" onclick>
-            <div>
-              <span> d </span>
-            </div>
-          </div>
-        </td>
-      </tr>
-    </tbody>
-  </table>
-  <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
-    <div class="body">
-      <div>
-        <div class="body_row row" onclick>
-          <div class="body_cell cell"> 0 </div>
-          <div class="body_cell cell">
-            <input oninput> </input>
-            hello
-          </div>
-          <div class="body_cell cell"> 1.000000 </div>
-          <div class="body_cell cell"> 1 </div>
-        </div>
-        <div class="body_row row" onclick>
-          <div class="body_cell cell"> 1 </div>
-          <div class="body_cell cell">
-            <input oninput> </input>
-            there
-          </div>
-          <div class="body_cell cell"> 2.000000 </div>
-          <div class="body_cell cell"> 2 </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div> |}];
-  (* Change the visibility to show the rest of the nodes *)
-  Handle.show_diff ~location_style:Separator test.handle;
-  [%expect {||}];
-  Handle.recompute_view_until_stable test.handle;
-  Handle.show_diff ~location_style:Separator test.handle;
-  [%expect {||}];
-  Test.set_bounds test ~low:0 ~high:100;
-  Handle.recompute_view_until_stable test.handle;
-  Handle.show_diff ~location_style:Separator test.handle;
-  [%expect
-    {|
-    === DIFF HUNK ===
-                <div class="body_cell cell">
-                  <input oninput> </input>
-                  hello
-                </div>
-                <div class="body_cell cell"> 1.000000 </div>
-                <div class="body_cell cell"> 1 </div>
-              </div>
-              <div class="body_row row" onclick>
-                <div class="body_cell cell"> 1 </div>
-                <div class="body_cell cell">
-                  <input oninput> </input>
-                  there
-                </div>
-                <div class="body_cell cell"> 2.000000 </div>
-                <div class="body_cell cell"> 2 </div>
-              </div>
-    +|        <div class="body_row row" onclick>
-    +|          <div class="body_cell cell"> 4 </div>
-    +|          <div class="body_cell cell">
-    +|            <input oninput> </input>
-    +|            world
-    +|          </div>
-    +|          <div class="body_cell cell"> 2.000000 </div>
-    +|          <div class="body_cell cell"> --- </div>
-    +|        </div>
-            </div>
-          </div>
-        </div>
-      </div> |}]
-;;
-
-let%expect_test "resize-column" =
-  let test =
-    Test.create ~should_print_styles:true (Test.Component.default ~theming:`Themed ())
-  in
-  Handle.recompute_view_until_stable test.handle;
-  Handle.store_view test.handle;
-  Test.resize_column test ~idx:0 ~width:10.0;
-  Handle.recompute_view_until_stable test.handle;
-  Handle.show_diff ~location_style:Separator test.handle;
-  [%expect
-    {|
-=== DIFF HUNK ===
-  <div class="partial_render_table_container table"
-       custom-css-vars=((--row-odd-fg black)(--row-odd-bg white)(--row-focused-fg black)(--row-focused-border #0a90bf)(--row-focused-bg #e0f7ff)(--row-even-fg black)(--row-even-bg #e6e6e6)(--header-header-border grey)(--header-fg white)(--header-body-border grey)(--header-bg black)(--fg black)(--body-body-border grey)(--bg white))>
-    <table class="header partial_render_table_header" bounds-change=<opaque>>
-      <tbody>
-        <tr class="header_row">
-          <td colspan="1"
-              class="header_cell header_label leaf_header"
-              size_tracker=<fun>
-              style={
--|              width: 50px;
-+|              width: 10.00px;
-              }>
-            <div class="sortable_header_cell" onclick>
-              <div style={
-                     display: flex;
-                     flex-direction: row;
-                     flex-wrap: nowrap;
-                     align-items: baseline;
-                     column-gap: 6px;
-                   }>
-                <span> key </span>
-              </div>
-            </div>
-          </td>
-          <td colspan="1"
-              class="header_cell header_label leaf_header"
-              size_tracker=<fun>
-=== DIFF HUNK ===
-            </div>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-    <div class="partial-render-table-body- partial_render_table_body"
-         bounds-change=<opaque>
-         style={
-           height: 3px;
-         }>
-      <div class="body" style={ padding-top: 0px; padding-bottom: 0px; }>
-        <div>
-          <div class="body_row row"
-               onclick
-               style={
-                 height: 1px;
--|               width: 0.00000000px;
-+|               width: 10.00000000px;
-                 display: flex;
-                 flex-direction: row;
-                 flex-wrap: nowrap;
-               }>
-            <div class="body_cell cell"
-                 style={
-                   height: 1px;
-                   min-height: 1px;
-                   max-height: 1px;
--|                 width: 0.00000000px;
-+|                 width: 10.00000000px;
--|                 min-width: 0.00000000px;
-+|                 min-width: 10.00000000px;
--|                 max-width: 0.00000000px;
-+|                 max-width: 10.00000000px;
-                 }> 0 </div>
-            <div class="body_cell cell"
-                 style={
-                   height: 1px;
-                   min-height: 1px;
-                   max-height: 1px;
-                   width: 0.00000000px;
-                   min-width: 0.00000000px;
-                   max-width: 0.00000000px;
-                 }>
-              <input oninput> </input>
-              hello
-            </div>
-            <div class="body_cell cell"
-                 style={
-                   height: 1px;
-=== DIFF HUNK ===
-                   max-width: 0.00000000px;
-                 }> 1.000000 </div>
-            <div class="body_cell cell"
-                 style={
-                   height: 1px;
-                   min-height: 1px;
-                   max-height: 1px;
-                   width: 0.00000000px;
-                   min-width: 0.00000000px;
-                   max-width: 0.00000000px;
-                 }> 1 </div>
-          </div>
-          <div class="body_row row"
-               onclick
-               style={
-                 height: 1px;
--|               width: 0.00000000px;
-+|               width: 10.00000000px;
-                 display: flex;
-                 flex-direction: row;
-                 flex-wrap: nowrap;
-               }>
-            <div class="body_cell cell"
-                 style={
-                   height: 1px;
-                   min-height: 1px;
-                   max-height: 1px;
--|                 width: 0.00000000px;
-+|                 width: 10.00000000px;
--|                 min-width: 0.00000000px;
-+|                 min-width: 10.00000000px;
--|                 max-width: 0.00000000px;
-+|                 max-width: 10.00000000px;
-                 }> 1 </div>
-            <div class="body_cell cell"
-                 style={
-                   height: 1px;
-                   min-height: 1px;
-                   max-height: 1px;
-                   width: 0.00000000px;
-                   min-width: 0.00000000px;
-                   max-width: 0.00000000px;
-                 }>
-              <input oninput> </input>
-              there
-            </div>
-            <div class="body_cell cell"
-                 style={
-                   height: 1px;
-=== DIFF HUNK ===
-                   max-width: 0.00000000px;
-                 }> 2.000000 </div>
-            <div class="body_cell cell"
-                 style={
-                   height: 1px;
-                   min-height: 1px;
-                   max-height: 1px;
-                   width: 0.00000000px;
-                   min-width: 0.00000000px;
-                   max-width: 0.00000000px;
-                 }> 2 </div>
-          </div>
-          <div class="body_row row"
-               onclick
-               style={
-                 height: 1px;
--|               width: 0.00000000px;
-+|               width: 10.00000000px;
-                 display: flex;
-                 flex-direction: row;
-                 flex-wrap: nowrap;
-               }>
-            <div class="body_cell cell"
-                 style={
-                   height: 1px;
-                   min-height: 1px;
-                   max-height: 1px;
--|                 width: 0.00000000px;
-+|                 width: 10.00000000px;
--|                 min-width: 0.00000000px;
-+|                 min-width: 10.00000000px;
--|                 max-width: 0.00000000px;
-+|                 max-width: 10.00000000px;
-                 }> 4 </div>
-            <div class="body_cell cell"
-                 style={
-                   height: 1px;
-                   min-height: 1px;
-                   max-height: 1px;
-                   width: 0.00000000px;
-                   min-width: 0.00000000px;
-                   max-width: 0.00000000px;
-                 }>
-              <input oninput> </input>
-              world
-            </div>
-            <div class="body_cell cell"
-                 style={
-                   height: 1px; |}]
-;;
-
-let%expect_test "big table" =
-  (* The PRT always renders [low-25, high+25], so 50,50 will render a big chunk
-     centered at 50 *)
-  let test =
-    Test.create
-      ~map:big_map
-      ~visible_range:(50, 50)
-      (Test.Component.default ~theming:`Themed ())
-  in
-  Handle.recompute_view_until_stable test.handle;
-  Handle.show test.handle;
-  [%expect
-    {|
-<div class="partial_render_table_container table"
-     custom-css-vars=((--row-odd-fg black)(--row-odd-bg white)(--row-focused-fg black)(--row-focused-border #0a90bf)(--row-focused-bg #e0f7ff)(--row-even-fg black)(--row-even-bg #e6e6e6)(--header-header-border grey)(--header-fg white)(--header-body-border grey)(--header-bg black)(--fg black)(--body-body-border grey)(--bg white))>
-  <table class="header partial_render_table_header" bounds-change=<opaque>>
-    <tbody>
-      <tr class="header_row">
-        <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
-          <div class="sortable_header_cell" onclick>
-            <div>
-              <span> key </span>
-            </div>
-          </div>
-        </td>
-        <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
-          <div>
-            <div>
-              <span> a </span>
-            </div>
-          </div>
-        </td>
-        <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
-          <div class="sortable_header_cell" onclick>
-            <div>
-              <span> b </span>
-            </div>
-          </div>
-        </td>
-        <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
-          <div class="sortable_header_cell" onclick>
-            <div>
-              <span> d </span>
-            </div>
-          </div>
-        </td>
-      </tr>
-    </tbody>
-  </table>
-  <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
-    <div class="body">
-      <div>
-        <div class="body_row row" onclick>
-          <div class="body_cell cell"> 51 </div>
-          <div class="body_cell cell">
-            <input oninput> </input>
-            hi
-          </div>
-          <div class="body_cell cell"> 25.000000 </div>
-          <div class="body_cell cell"> 100 </div>
-        </div>
-        <div class="body_row row" onclick>
-          <div class="body_cell cell"> 52 </div>
-          <div class="body_cell cell">
-            <input oninput> </input>
-            hi
-          </div>
-          <div class="body_cell cell"> 26.000000 </div>
-          <div class="body_cell cell"> 100 </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div> |}];
-  (* extending the range upwards should only add to the end *)
-  Test.set_bounds test ~low:55 ~high:60;
-  Handle.recompute_view_until_stable test.handle;
-  Handle.show_diff ~location_style:Separator test.handle;
-  [%expect
-    {|
-=== DIFF HUNK ===
-            </div>
-          </td>
-          <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
-            <div class="sortable_header_cell" onclick>
-              <div>
-                <span> d </span>
-              </div>
-            </div>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-    <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
-      <div class="body">
-        <div>
-          <div class="body_row row" onclick>
--|          <div class="body_cell cell"> 51 </div>
-+|          <div class="body_cell cell"> 55 </div>
-            <div class="body_cell cell">
-              <input oninput> </input>
-              hi
-            </div>
--|          <div class="body_cell cell"> 25.000000 </div>
-+|          <div class="body_cell cell"> 27.000000 </div>
-            <div class="body_cell cell"> 100 </div>
-          </div>
-          <div class="body_row row" onclick>
--|          <div class="body_cell cell"> 52 </div>
-+|          <div class="body_cell cell"> 56 </div>
-            <div class="body_cell cell">
-              <input oninput> </input>
-              hi
-            </div>
--|          <div class="body_cell cell"> 26.000000 </div>
-+|          <div class="body_cell cell"> 28.000000 </div>
-+|          <div class="body_cell cell"> 100 </div>
-+|        </div>
-+|        <div class="body_row row" onclick>
-+|          <div class="body_cell cell"> 57 </div>
-+|          <div class="body_cell cell">
-+|            <input oninput> </input>
-+|            hi
-+|          </div>
-+|          <div class="body_cell cell"> 28.000000 </div>
-+|          <div class="body_cell cell"> 100 </div>
-+|        </div>
-+|        <div class="body_row row" onclick>
-+|          <div class="body_cell cell"> 58 </div>
-+|          <div class="body_cell cell">
-+|            <input oninput> </input>
-+|            hi
-+|          </div>
-+|          <div class="body_cell cell"> 29.000000 </div>
-+|          <div class="body_cell cell"> 100 </div>
-+|        </div>
-+|        <div class="body_row row" onclick>
-+|          <div class="body_cell cell"> 59 </div>
-+|          <div class="body_cell cell">
-+|            <input oninput> </input>
-+|            hi
-+|          </div>
-+|          <div class="body_cell cell"> 29.000000 </div>
-+|          <div class="body_cell cell"> 100 </div>
-+|        </div>
-+|        <div class="body_row row" onclick>
-+|          <div class="body_cell cell"> 60 </div>
-+|          <div class="body_cell cell">
-+|            <input oninput> </input>
-+|            hi
-+|          </div>
-+|          <div class="body_cell cell"> 30.000000 </div>
-+|          <div class="body_cell cell"> 100 </div>
-+|        </div>
-+|        <div class="body_row row" onclick>
-+|          <div class="body_cell cell"> 61 </div>
-+|          <div class="body_cell cell">
-+|            <input oninput> </input>
-+|            hi
-+|          </div>
-+|          <div class="body_cell cell"> 30.000000 </div>
-+|          <div class="body_cell cell"> 100 </div>
-+|        </div>
-+|        <div class="body_row row" onclick>
-+|          <div class="body_cell cell"> 62 </div>
-+|          <div class="body_cell cell">
-+|            <input oninput> </input>
-+|            hi
-+|          </div>
-+|          <div class="body_cell cell"> 31.000000 </div>
-            <div class="body_cell cell"> 100 </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div> |}]
-;;
-
-let%expect_test "typing into a column, leaving that column, and then coming back. " =
-  let test =
-    Test.create
-      ~map:big_map
-      ~visible_range:(50, 50)
-      (Test.Component.default ~theming:`Themed ())
-  in
-  Handle.recompute_view_until_stable test.handle;
-  Handle.store_view test.handle;
-  Handle.input_text
-    test.handle
-    ~get_vdom:Table.Result.view
-    ~selector:"input"
-    ~text:"hello world";
-  Handle.recompute_view_until_stable test.handle;
-  Handle.show_diff ~location_style:Separator test.handle;
-  [%expect
-    {|
-    === DIFF HUNK ===
-                <div class="sortable_header_cell" onclick>
-                  <div>
-                    <span> d </span>
-                  </div>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-        <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
-          <div class="body">
-            <div>
-              <div class="body_row row" onclick>
-                <div class="body_cell cell"> 51 </div>
-                <div class="body_cell cell">
-                  <input oninput> </input>
-    -|            hi
-    +|            hi hello world
-                </div>
-                <div class="body_cell cell"> 25.000000 </div>
-                <div class="body_cell cell"> 100 </div>
-              </div>
-              <div class="body_row row" onclick>
-                <div class="body_cell cell"> 52 </div>
-                <div class="body_cell cell">
-                  <input oninput> </input>
-                  hi
-                </div>
-                <div class="body_cell cell"> 26.000000 </div>
-                <div class="body_cell cell"> 100 </div>
-              </div>
-            </div>
-          </div>
-        </div> |}];
-  (* move out of bounds (really 99-25 through 100) *)
-  Test.set_bounds test ~low:99 ~high:99;
-  Handle.recompute_view_until_stable test.handle;
-  Handle.store_view test.handle;
-  (* move back into bounds *)
-  Test.set_bounds test ~low:50 ~high:50;
-  Handle.recompute_view_until_stable test.handle;
-  Handle.show test.handle;
-  [%expect
-    {|
     <div class="partial_render_table_container table"
-         custom-css-vars=((--row-odd-fg black)(--row-odd-bg white)(--row-focused-fg black)(--row-focused-border #0a90bf)(--row-focused-bg #e0f7ff)(--row-even-fg black)(--row-even-bg #e6e6e6)(--header-header-border grey)(--header-fg white)(--header-body-border grey)(--header-bg black)(--fg black)(--body-body-border grey)(--bg white))>
+         custom-css-vars=((--row-odd-fg black)(--row-odd-bg white)(--row-focused-fg black)(--row-focused-border #0a90bf)(--row-focused-bg #e0f7ff)(--row-even-fg black)(--row-even-bg #e6e6e6)(--header-header-border grey)(--header-fg white)(--header-body-border grey)(--header-bg black)(--fg black)(--cell-focused-fg black)(--cell-focused-bg #e0f7ff)(--body-body-border grey)(--bg white))>
       <table class="header partial_render_table_header" bounds-change=<opaque>>
         <tbody>
           <tr class="header_row">
@@ -861,23 +325,571 @@ let%expect_test "typing into a column, leaving that column, and then coming back
       <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
         <div class="body">
           <div>
-            <div class="body_row row" onclick>
-              <div class="body_cell cell"> 51 </div>
-              <div class="body_cell cell">
+            <div class="body_row row">
+              <div class="body_cell cell" onclick> 0 </div>
+              <div class="body_cell cell" onclick>
                 <input oninput> </input>
-                hi hello world
+                hello
               </div>
-              <div class="body_cell cell"> 25.000000 </div>
-              <div class="body_cell cell"> 100 </div>
+              <div class="body_cell cell" onclick> 1.000000 </div>
+              <div class="body_cell cell" onclick> 1 </div>
             </div>
-            <div class="body_row row" onclick>
-              <div class="body_cell cell"> 52 </div>
-              <div class="body_cell cell">
+            <div class="body_row row">
+              <div class="body_cell cell" onclick> 1 </div>
+              <div class="body_cell cell" onclick>
+                <input oninput> </input>
+                there
+              </div>
+              <div class="body_cell cell" onclick> 2.000000 </div>
+              <div class="body_cell cell" onclick> 2 </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div> |}];
+  (* Change the visibility to show the rest of the nodes *)
+  Handle.show_diff ~location_style:Separator test.handle;
+  [%expect {| |}];
+  Handle.recompute_view_until_stable test.handle;
+  Handle.show_diff ~location_style:Separator test.handle;
+  [%expect {| |}];
+  Test.set_bounds test ~low:0 ~high:100;
+  Handle.recompute_view_until_stable test.handle;
+  Handle.show_diff ~location_style:Separator test.handle;
+  [%expect
+    {|
+    === DIFF HUNK ===
+                <div class="body_cell cell" onclick>
+                  <input oninput> </input>
+                  hello
+                </div>
+                <div class="body_cell cell" onclick> 1.000000 </div>
+                <div class="body_cell cell" onclick> 1 </div>
+              </div>
+              <div class="body_row row">
+                <div class="body_cell cell" onclick> 1 </div>
+                <div class="body_cell cell" onclick>
+                  <input oninput> </input>
+                  there
+                </div>
+                <div class="body_cell cell" onclick> 2.000000 </div>
+                <div class="body_cell cell" onclick> 2 </div>
+              </div>
+    +|        <div class="body_row row">
+    +|          <div class="body_cell cell" onclick> 4 </div>
+    +|          <div class="body_cell cell" onclick>
+    +|            <input oninput> </input>
+    +|            world
+    +|          </div>
+    +|          <div class="body_cell cell" onclick> 2.000000 </div>
+    +|          <div class="body_cell cell" onclick> --- </div>
+    +|        </div>
+            </div>
+          </div>
+        </div>
+      </div> |}]
+;;
+
+let%expect_test "resize-column" =
+  let resize_via_size_changed_hook (test : _ Test.t) ~idx ~width =
+    Test.resize_column test ~idx ~width
+  in
+  let resize_via_result_function (test : (_, Indexed_column_id.t) Test.t) ~idx ~width =
+    Handle.do_actions
+      test.handle
+      [ Set_column_width { column_id = Indexed_column_id.of_int idx; width } ]
+  in
+  List.iter [ resize_via_size_changed_hook; resize_via_result_function ] ~f:(fun resize ->
+    let test =
+      Test.create ~should_print_styles:true (Test.Component.default ~theming:`Themed ())
+    in
+    Handle.recompute_view_until_stable test.handle;
+    Handle.store_view test.handle;
+    resize test ~idx:0 ~width:10.0;
+    Handle.recompute_view_until_stable test.handle;
+    Handle.show_diff ~location_style:Separator test.handle;
+    [%expect
+      {|
+    === DIFF HUNK ===
+      <div class="partial_render_table_container table"
+           custom-css-vars=((--row-odd-fg black)(--row-odd-bg white)(--row-focused-fg black)(--row-focused-border #0a90bf)(--row-focused-bg #e0f7ff)(--row-even-fg black)(--row-even-bg #e6e6e6)(--header-header-border grey)(--header-fg white)(--header-body-border grey)(--header-bg black)(--fg black)(--cell-focused-fg black)(--cell-focused-bg #e0f7ff)(--body-body-border grey)(--bg white))>
+        <table class="header partial_render_table_header" bounds-change=<opaque>>
+          <tbody>
+            <tr class="header_row">
+              <td colspan="1"
+                  class="header_cell header_label leaf_header"
+                  size_tracker=<fun>
+                  style={
+    -|              width: 50px;
+    +|              width: 10.00px;
+                  }>
+                <div class="sortable_header_cell" onclick>
+                  <div style={
+                         display: flex;
+                         flex-direction: row;
+                         flex-wrap: nowrap;
+                         align-items: baseline;
+                         column-gap: 6px;
+                       }>
+                    <span> key </span>
+                  </div>
+                </div>
+              </td>
+              <td colspan="1"
+                  class="header_cell header_label leaf_header"
+                  size_tracker=<fun>
+    === DIFF HUNK ===
+                  </div>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="partial-render-table-body- partial_render_table_body"
+             bounds-change=<opaque>
+             style={
+               height: 3px;
+             }>
+          <div class="body" style={ padding-top: 0px; padding-bottom: 0px; }>
+            <div>
+              <div class="body_row row"
+                   style={
+                     height: 1px;
+    -|               width: 0.00000000px;
+    +|               width: 10.00000000px;
+                     display: flex;
+                     flex-direction: row;
+                     flex-wrap: nowrap;
+                   }>
+                <div class="body_cell cell"
+                     onclick
+                     style={
+                       height: 1px;
+                       min-height: 1px;
+                       max-height: 1px;
+    -|                 width: 0.00000000px;
+    +|                 width: 10.00000000px;
+    -|                 min-width: 0.00000000px;
+    +|                 min-width: 10.00000000px;
+    -|                 max-width: 0.00000000px;
+    +|                 max-width: 10.00000000px;
+                     }> 0 </div>
+                <div class="body_cell cell"
+                     onclick
+                     style={
+                       height: 1px;
+                       min-height: 1px;
+                       max-height: 1px;
+                       width: 0.00000000px;
+                       min-width: 0.00000000px;
+                       max-width: 0.00000000px;
+                     }>
+                  <input oninput> </input>
+                  hello
+                </div>
+                <div class="body_cell cell"
+                     onclick
+    === DIFF HUNK ===
+                       max-width: 0.00000000px;
+                     }> 1.000000 </div>
+                <div class="body_cell cell"
+                     onclick
+                     style={
+                       height: 1px;
+                       min-height: 1px;
+                       max-height: 1px;
+                       width: 0.00000000px;
+                       min-width: 0.00000000px;
+                       max-width: 0.00000000px;
+                     }> 1 </div>
+              </div>
+              <div class="body_row row"
+                   style={
+                     height: 1px;
+    -|               width: 0.00000000px;
+    +|               width: 10.00000000px;
+                     display: flex;
+                     flex-direction: row;
+                     flex-wrap: nowrap;
+                   }>
+                <div class="body_cell cell"
+                     onclick
+                     style={
+                       height: 1px;
+                       min-height: 1px;
+                       max-height: 1px;
+    -|                 width: 0.00000000px;
+    +|                 width: 10.00000000px;
+    -|                 min-width: 0.00000000px;
+    +|                 min-width: 10.00000000px;
+    -|                 max-width: 0.00000000px;
+    +|                 max-width: 10.00000000px;
+                     }> 1 </div>
+                <div class="body_cell cell"
+                     onclick
+                     style={
+                       height: 1px;
+                       min-height: 1px;
+                       max-height: 1px;
+                       width: 0.00000000px;
+                       min-width: 0.00000000px;
+                       max-width: 0.00000000px;
+                     }>
+                  <input oninput> </input>
+                  there
+                </div>
+                <div class="body_cell cell"
+                     onclick
+    === DIFF HUNK ===
+                       max-width: 0.00000000px;
+                     }> 2.000000 </div>
+                <div class="body_cell cell"
+                     onclick
+                     style={
+                       height: 1px;
+                       min-height: 1px;
+                       max-height: 1px;
+                       width: 0.00000000px;
+                       min-width: 0.00000000px;
+                       max-width: 0.00000000px;
+                     }> 2 </div>
+              </div>
+              <div class="body_row row"
+                   style={
+                     height: 1px;
+    -|               width: 0.00000000px;
+    +|               width: 10.00000000px;
+                     display: flex;
+                     flex-direction: row;
+                     flex-wrap: nowrap;
+                   }>
+                <div class="body_cell cell"
+                     onclick
+                     style={
+                       height: 1px;
+                       min-height: 1px;
+                       max-height: 1px;
+    -|                 width: 0.00000000px;
+    +|                 width: 10.00000000px;
+    -|                 min-width: 0.00000000px;
+    +|                 min-width: 10.00000000px;
+    -|                 max-width: 0.00000000px;
+    +|                 max-width: 10.00000000px;
+                     }> 4 </div>
+                <div class="body_cell cell"
+                     onclick
+                     style={
+                       height: 1px;
+                       min-height: 1px;
+                       max-height: 1px;
+                       width: 0.00000000px;
+                       min-width: 0.00000000px;
+                       max-width: 0.00000000px;
+                     }>
+                  <input oninput> </input>
+                  world
+                </div>
+                <div class="body_cell cell"
+                     onclick |}])
+;;
+
+let%expect_test "big table" =
+  (* The PRT always renders [low-25, high+25], so 50,50 will render a big chunk
+     centered at 50 *)
+  let test =
+    Test.create
+      ~map:big_map
+      ~visible_range:(50, 50)
+      (Test.Component.default ~theming:`Themed ())
+  in
+  Handle.recompute_view_until_stable test.handle;
+  Handle.show test.handle;
+  [%expect
+    {|
+    <div class="partial_render_table_container table"
+         custom-css-vars=((--row-odd-fg black)(--row-odd-bg white)(--row-focused-fg black)(--row-focused-border #0a90bf)(--row-focused-bg #e0f7ff)(--row-even-fg black)(--row-even-bg #e6e6e6)(--header-header-border grey)(--header-fg white)(--header-body-border grey)(--header-bg black)(--fg black)(--cell-focused-fg black)(--cell-focused-bg #e0f7ff)(--body-body-border grey)(--bg white))>
+      <table class="header partial_render_table_header" bounds-change=<opaque>>
+        <tbody>
+          <tr class="header_row">
+            <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+              <div class="sortable_header_cell" onclick>
+                <div>
+                  <span> key </span>
+                </div>
+              </div>
+            </td>
+            <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+              <div>
+                <div>
+                  <span> a </span>
+                </div>
+              </div>
+            </td>
+            <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+              <div class="sortable_header_cell" onclick>
+                <div>
+                  <span> b </span>
+                </div>
+              </div>
+            </td>
+            <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+              <div class="sortable_header_cell" onclick>
+                <div>
+                  <span> d </span>
+                </div>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
+        <div class="body">
+          <div>
+            <div class="body_row row">
+              <div class="body_cell cell" onclick> 51 </div>
+              <div class="body_cell cell" onclick>
                 <input oninput> </input>
                 hi
               </div>
-              <div class="body_cell cell"> 26.000000 </div>
-              <div class="body_cell cell"> 100 </div>
+              <div class="body_cell cell" onclick> 25.000000 </div>
+              <div class="body_cell cell" onclick> 100 </div>
+            </div>
+            <div class="body_row row">
+              <div class="body_cell cell" onclick> 52 </div>
+              <div class="body_cell cell" onclick>
+                <input oninput> </input>
+                hi
+              </div>
+              <div class="body_cell cell" onclick> 26.000000 </div>
+              <div class="body_cell cell" onclick> 100 </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div> |}];
+  (* extending the range upwards should only add to the end *)
+  Test.set_bounds test ~low:55 ~high:60;
+  Handle.recompute_view_until_stable test.handle;
+  Handle.show_diff ~location_style:Separator test.handle;
+  [%expect
+    {|
+    === DIFF HUNK ===
+                </div>
+              </td>
+              <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+                <div class="sortable_header_cell" onclick>
+                  <div>
+                    <span> d </span>
+                  </div>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
+          <div class="body">
+            <div>
+              <div class="body_row row">
+    -|          <div class="body_cell cell" onclick> 51 </div>
+    +|          <div class="body_cell cell" onclick> 55 </div>
+                <div class="body_cell cell" onclick>
+                  <input oninput> </input>
+                  hi
+                </div>
+    -|          <div class="body_cell cell" onclick> 25.000000 </div>
+    +|          <div class="body_cell cell" onclick> 27.000000 </div>
+                <div class="body_cell cell" onclick> 100 </div>
+              </div>
+              <div class="body_row row">
+    -|          <div class="body_cell cell" onclick> 52 </div>
+    +|          <div class="body_cell cell" onclick> 56 </div>
+                <div class="body_cell cell" onclick>
+                  <input oninput> </input>
+                  hi
+                </div>
+    -|          <div class="body_cell cell" onclick> 26.000000 </div>
+    +|          <div class="body_cell cell" onclick> 28.000000 </div>
+    +|          <div class="body_cell cell" onclick> 100 </div>
+    +|        </div>
+    +|        <div class="body_row row">
+    +|          <div class="body_cell cell" onclick> 57 </div>
+    +|          <div class="body_cell cell" onclick>
+    +|            <input oninput> </input>
+    +|            hi
+    +|          </div>
+    +|          <div class="body_cell cell" onclick> 28.000000 </div>
+    +|          <div class="body_cell cell" onclick> 100 </div>
+    +|        </div>
+    +|        <div class="body_row row">
+    +|          <div class="body_cell cell" onclick> 58 </div>
+    +|          <div class="body_cell cell" onclick>
+    +|            <input oninput> </input>
+    +|            hi
+    +|          </div>
+    +|          <div class="body_cell cell" onclick> 29.000000 </div>
+    +|          <div class="body_cell cell" onclick> 100 </div>
+    +|        </div>
+    +|        <div class="body_row row">
+    +|          <div class="body_cell cell" onclick> 59 </div>
+    +|          <div class="body_cell cell" onclick>
+    +|            <input oninput> </input>
+    +|            hi
+    +|          </div>
+    +|          <div class="body_cell cell" onclick> 29.000000 </div>
+    +|          <div class="body_cell cell" onclick> 100 </div>
+    +|        </div>
+    +|        <div class="body_row row">
+    +|          <div class="body_cell cell" onclick> 60 </div>
+    +|          <div class="body_cell cell" onclick>
+    +|            <input oninput> </input>
+    +|            hi
+    +|          </div>
+    +|          <div class="body_cell cell" onclick> 30.000000 </div>
+    +|          <div class="body_cell cell" onclick> 100 </div>
+    +|        </div>
+    +|        <div class="body_row row">
+    +|          <div class="body_cell cell" onclick> 61 </div>
+    +|          <div class="body_cell cell" onclick>
+    +|            <input oninput> </input>
+    +|            hi
+    +|          </div>
+    +|          <div class="body_cell cell" onclick> 30.000000 </div>
+    +|          <div class="body_cell cell" onclick> 100 </div>
+    +|        </div>
+    +|        <div class="body_row row">
+    +|          <div class="body_cell cell" onclick> 62 </div>
+    +|          <div class="body_cell cell" onclick>
+    +|            <input oninput> </input>
+    +|            hi
+    +|          </div>
+    +|          <div class="body_cell cell" onclick> 31.000000 </div>
+                <div class="body_cell cell" onclick> 100 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div> |}]
+;;
+
+let%expect_test "typing into a column, leaving that column, and then coming back. " =
+  let test =
+    Test.create
+      ~map:big_map
+      ~visible_range:(50, 50)
+      (Test.Component.default ~theming:`Themed ())
+  in
+  Handle.recompute_view_until_stable test.handle;
+  Handle.store_view test.handle;
+  Handle.input_text
+    test.handle
+    ~get_vdom:Table.Result.view
+    ~selector:"input"
+    ~text:"hello world";
+  Handle.recompute_view_until_stable test.handle;
+  Handle.show_diff ~location_style:Separator test.handle;
+  [%expect
+    {|
+    === DIFF HUNK ===
+                <div class="sortable_header_cell" onclick>
+                  <div>
+                    <span> d </span>
+                  </div>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
+          <div class="body">
+            <div>
+              <div class="body_row row">
+                <div class="body_cell cell" onclick> 51 </div>
+                <div class="body_cell cell" onclick>
+                  <input oninput> </input>
+    -|            hi
+    +|            hi hello world
+                </div>
+                <div class="body_cell cell" onclick> 25.000000 </div>
+                <div class="body_cell cell" onclick> 100 </div>
+              </div>
+              <div class="body_row row">
+                <div class="body_cell cell" onclick> 52 </div>
+                <div class="body_cell cell" onclick>
+                  <input oninput> </input>
+                  hi
+                </div>
+                <div class="body_cell cell" onclick> 26.000000 </div>
+                <div class="body_cell cell" onclick> 100 </div>
+              </div>
+            </div>
+          </div>
+        </div> |}];
+  (* move out of bounds (really 99-25 through 100) *)
+  Test.set_bounds test ~low:99 ~high:99;
+  Handle.recompute_view_until_stable test.handle;
+  Handle.store_view test.handle;
+  (* move back into bounds *)
+  Test.set_bounds test ~low:50 ~high:50;
+  Handle.recompute_view_until_stable test.handle;
+  Handle.show test.handle;
+  [%expect
+    {|
+    <div class="partial_render_table_container table"
+         custom-css-vars=((--row-odd-fg black)(--row-odd-bg white)(--row-focused-fg black)(--row-focused-border #0a90bf)(--row-focused-bg #e0f7ff)(--row-even-fg black)(--row-even-bg #e6e6e6)(--header-header-border grey)(--header-fg white)(--header-body-border grey)(--header-bg black)(--fg black)(--cell-focused-fg black)(--cell-focused-bg #e0f7ff)(--body-body-border grey)(--bg white))>
+      <table class="header partial_render_table_header" bounds-change=<opaque>>
+        <tbody>
+          <tr class="header_row">
+            <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+              <div class="sortable_header_cell" onclick>
+                <div>
+                  <span> key </span>
+                </div>
+              </div>
+            </td>
+            <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+              <div>
+                <div>
+                  <span> a </span>
+                </div>
+              </div>
+            </td>
+            <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+              <div class="sortable_header_cell" onclick>
+                <div>
+                  <span> b </span>
+                </div>
+              </div>
+            </td>
+            <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+              <div class="sortable_header_cell" onclick>
+                <div>
+                  <span> d </span>
+                </div>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
+        <div class="body">
+          <div>
+            <div class="body_row row">
+              <div class="body_cell cell" onclick> 51 </div>
+              <div class="body_cell cell" onclick>
+                <input oninput> </input>
+                hi hello world
+              </div>
+              <div class="body_cell cell" onclick> 25.000000 </div>
+              <div class="body_cell cell" onclick> 100 </div>
+            </div>
+            <div class="body_row row">
+              <div class="body_cell cell" onclick> 52 </div>
+              <div class="body_cell cell" onclick>
+                <input oninput> </input>
+                hi
+              </div>
+              <div class="body_cell cell" onclick> 26.000000 </div>
+              <div class="body_cell cell" onclick> 100 </div>
             </div>
           </div>
         </div>
@@ -910,7 +922,7 @@ let%expect_test "table body is not recomputed more often than necessary" =
   (* Re-setting the bounds to the same value should not cause a re-fire *)
   Test.set_bounds test ~low:0 ~high:300;
   Handle.recompute_view test.handle;
-  [%expect {||}]
+  [%expect {| |}]
 ;;
 
 let%expect_test "table body is not recomputed more often than necessary" =
@@ -959,6 +971,7 @@ let%expect_test "table body is not recomputed more often than necessary" =
       ; get_inject = Shared.Test.Component.get_inject_expert
       ; get_focus = Table_expert.Result.focus
       ; get_num_filtered_rows = (fun _ -> None)
+      ; summarize_focus = (fun ?num_filtered_rows:_ _ -> "")
       })
   in
   Test.print_message_on_result_recomputation test;
@@ -971,12 +984,12 @@ let%expect_test "table body is not recomputed more often than necessary" =
     Changed |}];
   (* Sanity check: re-stabilizing after doing no actions does not cause recomputation *)
   Handle.recompute_view test.handle;
-  [%expect {||}];
+  [%expect {| |}];
   (* Changing the bounds should not cause a re-fire because we are doing our own collation
      and don't rely on result.bounds. *)
   Test.set_bounds test ~low:100 ~high:300;
   Handle.recompute_view test.handle;
-  [%expect {||}]
+  [%expect {| |}]
 ;;
 
 let%expect_test "test is browser" =
@@ -993,66 +1006,66 @@ let%expect_test "sorting legacy renderer" =
   Handle.show test.handle;
   [%expect
     {|
-<div class="partial_render_table_container table"
-     custom-css-vars=((--row-odd-fg black)(--row-odd-bg white)(--row-focused-fg black)(--row-focused-border #0a90bf)(--row-focused-bg #e0f7ff)(--row-even-fg black)(--row-even-bg #e6e6e6)(--header-header-border grey)(--header-fg white)(--header-body-border grey)(--header-bg black)(--fg black)(--body-body-border grey)(--bg white))>
-  <table class="header partial_render_table_header" bounds-change=<opaque>>
-    <tbody>
-      <tr class="header_row">
-        <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
-          <div class="sortable_header_cell" onclick>
-            <span> ◇  key </span>
+    <div class="partial_render_table_container table"
+         custom-css-vars=((--row-odd-fg black)(--row-odd-bg white)(--row-focused-fg black)(--row-focused-border #0a90bf)(--row-focused-bg #e0f7ff)(--row-even-fg black)(--row-even-bg #e6e6e6)(--header-header-border grey)(--header-fg white)(--header-body-border grey)(--header-bg black)(--fg black)(--cell-focused-fg black)(--cell-focused-bg #e0f7ff)(--body-body-border grey)(--bg white))>
+      <table class="header partial_render_table_header" bounds-change=<opaque>>
+        <tbody>
+          <tr class="header_row">
+            <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+              <div class="sortable_header_cell" onclick>
+                <span> ◇  key </span>
+              </div>
+            </td>
+            <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+              <div> a </div>
+            </td>
+            <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+              <div class="sortable_header_cell" onclick>
+                <span> ◇  b </span>
+              </div>
+            </td>
+            <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+              <div class="sortable_header_cell" onclick>
+                <span> ◇  d </span>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
+        <div class="body">
+          <div>
+            <div class="body_row row">
+              <div class="body_cell cell" onclick> 0 </div>
+              <div class="body_cell cell" onclick>
+                <input oninput> </input>
+                hello
+              </div>
+              <div class="body_cell cell" onclick> 1.000000 </div>
+              <div class="body_cell cell" onclick> 1 </div>
+            </div>
+            <div class="body_row row">
+              <div class="body_cell cell" onclick> 1 </div>
+              <div class="body_cell cell" onclick>
+                <input oninput> </input>
+                there
+              </div>
+              <div class="body_cell cell" onclick> 2.000000 </div>
+              <div class="body_cell cell" onclick> 2 </div>
+            </div>
+            <div class="body_row row">
+              <div class="body_cell cell" onclick> 4 </div>
+              <div class="body_cell cell" onclick>
+                <input oninput> </input>
+                world
+              </div>
+              <div class="body_cell cell" onclick> 2.000000 </div>
+              <div class="body_cell cell" onclick> --- </div>
+            </div>
           </div>
-        </td>
-        <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
-          <div> a </div>
-        </td>
-        <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
-          <div class="sortable_header_cell" onclick>
-            <span> ◇  b </span>
-          </div>
-        </td>
-        <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
-          <div class="sortable_header_cell" onclick>
-            <span> ◇  d </span>
-          </div>
-        </td>
-      </tr>
-    </tbody>
-  </table>
-  <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
-    <div class="body">
-      <div>
-        <div class="body_row row" onclick>
-          <div class="body_cell cell"> 0 </div>
-          <div class="body_cell cell">
-            <input oninput> </input>
-            hello
-          </div>
-          <div class="body_cell cell"> 1.000000 </div>
-          <div class="body_cell cell"> 1 </div>
-        </div>
-        <div class="body_row row" onclick>
-          <div class="body_cell cell"> 1 </div>
-          <div class="body_cell cell">
-            <input oninput> </input>
-            there
-          </div>
-          <div class="body_cell cell"> 2.000000 </div>
-          <div class="body_cell cell"> 2 </div>
-        </div>
-        <div class="body_row row" onclick>
-          <div class="body_cell cell"> 4 </div>
-          <div class="body_cell cell">
-            <input oninput> </input>
-            world
-          </div>
-          <div class="body_cell cell"> 2.000000 </div>
-          <div class="body_cell cell"> --- </div>
         </div>
       </div>
-    </div>
-  </div>
-</div> |}];
+    </div> |}];
   (* this one is the key, clicking on it does nothing (it's already sorted by the key) *)
   Handle.click_on test.handle ~selector:"td:nth-child(1) > div" ~get_vdom:test.get_vdom;
   Handle.show_diff ~location_style:Separator test.handle;
@@ -1060,7 +1073,7 @@ let%expect_test "sorting legacy renderer" =
     {|
     === DIFF HUNK ===
       <div class="partial_render_table_container table"
-           custom-css-vars=((--row-odd-fg black)(--row-odd-bg white)(--row-focused-fg black)(--row-focused-border #0a90bf)(--row-focused-bg #e0f7ff)(--row-even-fg black)(--row-even-bg #e6e6e6)(--header-header-border grey)(--header-fg white)(--header-body-border grey)(--header-bg black)(--fg black)(--body-body-border grey)(--bg white))>
+           custom-css-vars=((--row-odd-fg black)(--row-odd-bg white)(--row-focused-fg black)(--row-focused-border #0a90bf)(--row-focused-bg #e0f7ff)(--row-even-fg black)(--row-even-bg #e6e6e6)(--header-header-border grey)(--header-fg white)(--header-body-border grey)(--header-bg black)(--fg black)(--cell-focused-fg black)(--cell-focused-bg #e0f7ff)(--body-body-border grey)(--bg white))>
         <table class="header partial_render_table_header" bounds-change=<opaque>>
           <tbody>
             <tr class="header_row">
@@ -1090,85 +1103,85 @@ let%expect_test "sorting legacy renderer" =
   Handle.show_diff ~location_style:Separator test.handle;
   [%expect
     {|
-=== DIFF HUNK ===
-  <div class="partial_render_table_container table"
-       custom-css-vars=((--row-odd-fg black)(--row-odd-bg white)(--row-focused-fg black)(--row-focused-border #0a90bf)(--row-focused-bg #e0f7ff)(--row-even-fg black)(--row-even-bg #e6e6e6)(--header-header-border grey)(--header-fg white)(--header-body-border grey)(--header-bg black)(--fg black)(--body-body-border grey)(--bg white))>
-    <table class="header partial_render_table_header" bounds-change=<opaque>>
-      <tbody>
-        <tr class="header_row">
-          <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
-            <div class="sortable_header_cell" onclick>
--|            <span> ⬘  key </span>
-+|            <span> ◇  key </span>
+    === DIFF HUNK ===
+      <div class="partial_render_table_container table"
+           custom-css-vars=((--row-odd-fg black)(--row-odd-bg white)(--row-focused-fg black)(--row-focused-border #0a90bf)(--row-focused-bg #e0f7ff)(--row-even-fg black)(--row-even-bg #e6e6e6)(--header-header-border grey)(--header-fg white)(--header-body-border grey)(--header-bg black)(--fg black)(--cell-focused-fg black)(--cell-focused-bg #e0f7ff)(--body-body-border grey)(--bg white))>
+        <table class="header partial_render_table_header" bounds-change=<opaque>>
+          <tbody>
+            <tr class="header_row">
+              <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+                <div class="sortable_header_cell" onclick>
+    -|            <span> ⬘  key </span>
+    +|            <span> ◇  key </span>
+                </div>
+              </td>
+              <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+                <div> a </div>
+              </td>
+              <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+                <div class="sortable_header_cell" onclick>
+    -|            <span> ◇  b </span>
+    +|            <span> ⬙  b </span>
+                </div>
+              </td>
+              <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+                <div class="sortable_header_cell" onclick>
+                  <span> ◇  d </span>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
+          <div class="body">
+            <div>
+    -|        <div class="body_row row">
+    -|          <div class="body_cell cell" onclick> 0 </div>
+    -|          <div class="body_cell cell" onclick>
+    -|            <input oninput> </input>
+    -|            hello
+    -|          </div>
+    -|          <div class="body_cell cell" onclick> 1.000000 </div>
+    -|          <div class="body_cell cell" onclick> 1 </div>
+    -|        </div>
+              <div class="body_row row">
+                <div class="body_cell cell" onclick> 1 </div>
+                <div class="body_cell cell" onclick>
+                  <input oninput> </input>
+                  there
+                </div>
+                <div class="body_cell cell" onclick> 2.000000 </div>
+                <div class="body_cell cell" onclick> 2 </div>
+              </div>
+              <div class="body_row row">
+                <div class="body_cell cell" onclick> 4 </div>
+                <div class="body_cell cell" onclick>
+                  <input oninput> </input>
+                  world
+                </div>
+                <div class="body_cell cell" onclick> 2.000000 </div>
+                <div class="body_cell cell" onclick> --- </div>
+              </div>
+    +|        <div class="body_row row">
+    +|          <div class="body_cell cell" onclick> 0 </div>
+    +|          <div class="body_cell cell" onclick>
+    +|            <input oninput> </input>
+    +|            hello
+    +|          </div>
+    +|          <div class="body_cell cell" onclick> 1.000000 </div>
+    +|          <div class="body_cell cell" onclick> 1 </div>
+    +|        </div>
             </div>
-          </td>
-          <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
-            <div> a </div>
-          </td>
-          <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
-            <div class="sortable_header_cell" onclick>
--|            <span> ◇  b </span>
-+|            <span> ⬙  b </span>
-            </div>
-          </td>
-          <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
-            <div class="sortable_header_cell" onclick>
-              <span> ◇  d </span>
-            </div>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-    <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
-      <div class="body">
-        <div>
--|        <div class="body_row row" onclick>
--|          <div class="body_cell cell"> 0 </div>
--|          <div class="body_cell cell">
--|            <input oninput> </input>
--|            hello
--|          </div>
--|          <div class="body_cell cell"> 1.000000 </div>
--|          <div class="body_cell cell"> 1 </div>
--|        </div>
-          <div class="body_row row" onclick>
-            <div class="body_cell cell"> 1 </div>
-            <div class="body_cell cell">
-              <input oninput> </input>
-              there
-            </div>
-            <div class="body_cell cell"> 2.000000 </div>
-            <div class="body_cell cell"> 2 </div>
           </div>
-          <div class="body_row row" onclick>
-            <div class="body_cell cell"> 4 </div>
-            <div class="body_cell cell">
-              <input oninput> </input>
-              world
-            </div>
-            <div class="body_cell cell"> 2.000000 </div>
-            <div class="body_cell cell"> --- </div>
-          </div>
-+|        <div class="body_row row" onclick>
-+|          <div class="body_cell cell"> 0 </div>
-+|          <div class="body_cell cell">
-+|            <input oninput> </input>
-+|            hello
-+|          </div>
-+|          <div class="body_cell cell"> 1.000000 </div>
-+|          <div class="body_cell cell"> 1 </div>
-+|        </div>
         </div>
-      </div>
-    </div>
-  </div> |}];
+      </div> |}];
   Handle.click_on test.handle ~selector:"td:nth-child(3) > div" ~get_vdom:test.get_vdom;
   Handle.show_diff ~location_style:Separator test.handle;
   [%expect
     {|
     === DIFF HUNK ===
       <div class="partial_render_table_container table"
-           custom-css-vars=((--row-odd-fg black)(--row-odd-bg white)(--row-focused-fg black)(--row-focused-border #0a90bf)(--row-focused-bg #e0f7ff)(--row-even-fg black)(--row-even-bg #e6e6e6)(--header-header-border grey)(--header-fg white)(--header-body-border grey)(--header-bg black)(--fg black)(--body-body-border grey)(--bg white))>
+           custom-css-vars=((--row-odd-fg black)(--row-odd-bg white)(--row-focused-fg black)(--row-focused-border #0a90bf)(--row-focused-bg #e0f7ff)(--row-even-fg black)(--row-even-bg #e6e6e6)(--header-header-border grey)(--header-fg white)(--header-body-border grey)(--header-bg black)(--fg black)(--cell-focused-fg black)(--cell-focused-bg #e0f7ff)(--body-body-border grey)(--bg white))>
         <table class="header partial_render_table_header" bounds-change=<opaque>>
           <tbody>
             <tr class="header_row">
@@ -1197,41 +1210,41 @@ let%expect_test "sorting legacy renderer" =
         <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
           <div class="body">
             <div>
-    +|        <div class="body_row row" onclick>
-    +|          <div class="body_cell cell"> 0 </div>
-    +|          <div class="body_cell cell">
+    +|        <div class="body_row row">
+    +|          <div class="body_cell cell" onclick> 0 </div>
+    +|          <div class="body_cell cell" onclick>
     +|            <input oninput> </input>
     +|            hello
     +|          </div>
-    +|          <div class="body_cell cell"> 1.000000 </div>
-    +|          <div class="body_cell cell"> 1 </div>
+    +|          <div class="body_cell cell" onclick> 1.000000 </div>
+    +|          <div class="body_cell cell" onclick> 1 </div>
     +|        </div>
-              <div class="body_row row" onclick>
-                <div class="body_cell cell"> 1 </div>
-                <div class="body_cell cell">
+              <div class="body_row row">
+                <div class="body_cell cell" onclick> 1 </div>
+                <div class="body_cell cell" onclick>
                   <input oninput> </input>
                   there
                 </div>
-                <div class="body_cell cell"> 2.000000 </div>
-                <div class="body_cell cell"> 2 </div>
+                <div class="body_cell cell" onclick> 2.000000 </div>
+                <div class="body_cell cell" onclick> 2 </div>
               </div>
-              <div class="body_row row" onclick>
-                <div class="body_cell cell"> 4 </div>
-                <div class="body_cell cell">
+              <div class="body_row row">
+                <div class="body_cell cell" onclick> 4 </div>
+                <div class="body_cell cell" onclick>
                   <input oninput> </input>
                   world
                 </div>
-                <div class="body_cell cell"> 2.000000 </div>
-                <div class="body_cell cell"> --- </div>
+                <div class="body_cell cell" onclick> 2.000000 </div>
+                <div class="body_cell cell" onclick> --- </div>
               </div>
-    -|        <div class="body_row row" onclick>
-    -|          <div class="body_cell cell"> 0 </div>
-    -|          <div class="body_cell cell">
+    -|        <div class="body_row row">
+    -|          <div class="body_cell cell" onclick> 0 </div>
+    -|          <div class="body_cell cell" onclick>
     -|            <input oninput> </input>
     -|            hello
     -|          </div>
-    -|          <div class="body_cell cell"> 1.000000 </div>
-    -|          <div class="body_cell cell"> 1 </div>
+    -|          <div class="body_cell cell" onclick> 1.000000 </div>
+    -|          <div class="body_cell cell" onclick> 1 </div>
     -|        </div>
             </div>
           </div>
@@ -1269,15 +1282,14 @@ let%expect_test "sorting legacy renderer" =
         <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
           <div class="body">
             <div>
-              <div class="body_row row" onclick>
-                <div class="body_cell cell"> 0 </div>
-                <div class="body_cell cell">
+              <div class="body_row row">
+                <div class="body_cell cell" onclick> 0 </div>
+                <div class="body_cell cell" onclick>
                   <input oninput> </input>
                   hello
                 </div>
-                <div class="body_cell cell"> 1.000000 </div>
-                <div class="body_cell cell"> 1 </div>
-      |}];
+                <div class="body_cell cell" onclick> 1.000000 </div>
+                <div class="body_cell cell" onclick> 1 </div> |}];
   (* but in reverse, notice that [None]s stay on the bottom *)
   Handle.click_on test.handle ~selector:"td:nth-child(4) > div" ~get_vdom:test.get_vdom;
   Handle.show_diff test.handle;
@@ -1309,41 +1321,41 @@ let%expect_test "sorting legacy renderer" =
         <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
           <div class="body">
             <div>
-    +|        <div class="body_row row" onclick>
-    +|          <div class="body_cell cell"> 1 </div>
-    +|          <div class="body_cell cell">
+    +|        <div class="body_row row">
+    +|          <div class="body_cell cell" onclick> 1 </div>
+    +|          <div class="body_cell cell" onclick>
     +|            <input oninput> </input>
     +|            there
     +|          </div>
-    +|          <div class="body_cell cell"> 2.000000 </div>
-    +|          <div class="body_cell cell"> 2 </div>
+    +|          <div class="body_cell cell" onclick> 2.000000 </div>
+    +|          <div class="body_cell cell" onclick> 2 </div>
     +|        </div>
-              <div class="body_row row" onclick>
-                <div class="body_cell cell"> 0 </div>
-                <div class="body_cell cell">
+              <div class="body_row row">
+                <div class="body_cell cell" onclick> 0 </div>
+                <div class="body_cell cell" onclick>
                   <input oninput> </input>
                   hello
                 </div>
-                <div class="body_cell cell"> 1.000000 </div>
-                <div class="body_cell cell"> 1 </div>
+                <div class="body_cell cell" onclick> 1.000000 </div>
+                <div class="body_cell cell" onclick> 1 </div>
               </div>
-    -|        <div class="body_row row" onclick>
-    -|          <div class="body_cell cell"> 1 </div>
-    -|          <div class="body_cell cell">
+    -|        <div class="body_row row">
+    -|          <div class="body_cell cell" onclick> 1 </div>
+    -|          <div class="body_cell cell" onclick>
     -|            <input oninput> </input>
     -|            there
     -|          </div>
-    -|          <div class="body_cell cell"> 2.000000 </div>
-    -|          <div class="body_cell cell"> 2 </div>
+    -|          <div class="body_cell cell" onclick> 2.000000 </div>
+    -|          <div class="body_cell cell" onclick> 2 </div>
     -|        </div>
-              <div class="body_row row" onclick>
-                <div class="body_cell cell"> 4 </div>
-                <div class="body_cell cell">
+              <div class="body_row row">
+                <div class="body_cell cell" onclick> 4 </div>
+                <div class="body_cell cell" onclick>
                   <input oninput> </input>
                   world
                 </div>
-                <div class="body_cell cell"> 2.000000 </div>
-                <div class="body_cell cell"> --- </div>
+                <div class="body_cell cell" onclick> 2.000000 </div>
+                <div class="body_cell cell" onclick> --- </div>
               </div>
             </div>
           </div>
@@ -1357,76 +1369,76 @@ let%expect_test "sorting default renderer" =
   Handle.show test.handle;
   [%expect
     {|
-<div class="partial_render_table_container table"
-     custom-css-vars=((--row-odd-fg black)(--row-odd-bg white)(--row-focused-fg black)(--row-focused-border #0a90bf)(--row-focused-bg #e0f7ff)(--row-even-fg black)(--row-even-bg #e6e6e6)(--header-header-border grey)(--header-fg white)(--header-body-border grey)(--header-bg black)(--fg black)(--body-body-border grey)(--bg white))>
-  <table class="header partial_render_table_header" bounds-change=<opaque>>
-    <tbody>
-      <tr class="header_row">
-        <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
-          <div class="sortable_header_cell" onclick>
-            <div>
-              <span> key </span>
-            </div>
-          </div>
-        </td>
-        <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+    <div class="partial_render_table_container table"
+         custom-css-vars=((--row-odd-fg black)(--row-odd-bg white)(--row-focused-fg black)(--row-focused-border #0a90bf)(--row-focused-bg #e0f7ff)(--row-even-fg black)(--row-even-bg #e6e6e6)(--header-header-border grey)(--header-fg white)(--header-body-border grey)(--header-bg black)(--fg black)(--cell-focused-fg black)(--cell-focused-bg #e0f7ff)(--body-body-border grey)(--bg white))>
+      <table class="header partial_render_table_header" bounds-change=<opaque>>
+        <tbody>
+          <tr class="header_row">
+            <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+              <div class="sortable_header_cell" onclick>
+                <div>
+                  <span> key </span>
+                </div>
+              </div>
+            </td>
+            <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+              <div>
+                <div>
+                  <span> a </span>
+                </div>
+              </div>
+            </td>
+            <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+              <div class="sortable_header_cell" onclick>
+                <div>
+                  <span> b </span>
+                </div>
+              </div>
+            </td>
+            <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+              <div class="sortable_header_cell" onclick>
+                <div>
+                  <span> d </span>
+                </div>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
+        <div class="body">
           <div>
-            <div>
-              <span> a </span>
+            <div class="body_row row">
+              <div class="body_cell cell" onclick> 0 </div>
+              <div class="body_cell cell" onclick>
+                <input oninput> </input>
+                hello
+              </div>
+              <div class="body_cell cell" onclick> 1.000000 </div>
+              <div class="body_cell cell" onclick> 1 </div>
+            </div>
+            <div class="body_row row">
+              <div class="body_cell cell" onclick> 1 </div>
+              <div class="body_cell cell" onclick>
+                <input oninput> </input>
+                there
+              </div>
+              <div class="body_cell cell" onclick> 2.000000 </div>
+              <div class="body_cell cell" onclick> 2 </div>
+            </div>
+            <div class="body_row row">
+              <div class="body_cell cell" onclick> 4 </div>
+              <div class="body_cell cell" onclick>
+                <input oninput> </input>
+                world
+              </div>
+              <div class="body_cell cell" onclick> 2.000000 </div>
+              <div class="body_cell cell" onclick> --- </div>
             </div>
           </div>
-        </td>
-        <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
-          <div class="sortable_header_cell" onclick>
-            <div>
-              <span> b </span>
-            </div>
-          </div>
-        </td>
-        <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
-          <div class="sortable_header_cell" onclick>
-            <div>
-              <span> d </span>
-            </div>
-          </div>
-        </td>
-      </tr>
-    </tbody>
-  </table>
-  <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
-    <div class="body">
-      <div>
-        <div class="body_row row" onclick>
-          <div class="body_cell cell"> 0 </div>
-          <div class="body_cell cell">
-            <input oninput> </input>
-            hello
-          </div>
-          <div class="body_cell cell"> 1.000000 </div>
-          <div class="body_cell cell"> 1 </div>
-        </div>
-        <div class="body_row row" onclick>
-          <div class="body_cell cell"> 1 </div>
-          <div class="body_cell cell">
-            <input oninput> </input>
-            there
-          </div>
-          <div class="body_cell cell"> 2.000000 </div>
-          <div class="body_cell cell"> 2 </div>
-        </div>
-        <div class="body_row row" onclick>
-          <div class="body_cell cell"> 4 </div>
-          <div class="body_cell cell">
-            <input oninput> </input>
-            world
-          </div>
-          <div class="body_cell cell"> 2.000000 </div>
-          <div class="body_cell cell"> --- </div>
         </div>
       </div>
-    </div>
-  </div>
-</div> |}];
+    </div> |}];
   (* this one is the key, clicking on it does nothing (it's already sorted by the key) *)
   Handle.click_on test.handle ~selector:"td:nth-child(1) > div" ~get_vdom:test.get_vdom;
   Handle.show_diff ~location_style:Separator test.handle;
@@ -1434,7 +1446,7 @@ let%expect_test "sorting default renderer" =
     {|
     === DIFF HUNK ===
       <div class="partial_render_table_container table"
-           custom-css-vars=((--row-odd-fg black)(--row-odd-bg white)(--row-focused-fg black)(--row-focused-border #0a90bf)(--row-focused-bg #e0f7ff)(--row-even-fg black)(--row-even-bg #e6e6e6)(--header-header-border grey)(--header-fg white)(--header-body-border grey)(--header-bg black)(--fg black)(--body-body-border grey)(--bg white))>
+           custom-css-vars=((--row-odd-fg black)(--row-odd-bg white)(--row-focused-fg black)(--row-focused-border #0a90bf)(--row-focused-bg #e0f7ff)(--row-even-fg black)(--row-even-bg #e6e6e6)(--header-header-border grey)(--header-fg white)(--header-body-border grey)(--header-bg black)(--fg black)(--cell-focused-fg black)(--cell-focused-bg #e0f7ff)(--body-body-border grey)(--bg white))>
         <table class="header partial_render_table_header" bounds-change=<opaque>>
           <tbody>
             <tr class="header_row">
@@ -1465,88 +1477,88 @@ let%expect_test "sorting default renderer" =
   Handle.show_diff ~location_style:Separator test.handle;
   [%expect
     {|
-=== DIFF HUNK ===
-  <div class="partial_render_table_container table"
-       custom-css-vars=((--row-odd-fg black)(--row-odd-bg white)(--row-focused-fg black)(--row-focused-border #0a90bf)(--row-focused-bg #e0f7ff)(--row-even-fg black)(--row-even-bg #e6e6e6)(--header-header-border grey)(--header-fg white)(--header-body-border grey)(--header-bg black)(--fg black)(--body-body-border grey)(--bg white))>
-    <table class="header partial_render_table_header" bounds-change=<opaque>>
-      <tbody>
-        <tr class="header_row">
-          <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
-            <div class="sortable_header_cell" onclick>
-              <div>
-                <span> key </span>
--|              <span> ▲ </span>
-              </div>
-            </div>
-          </td>
-          <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+    === DIFF HUNK ===
+      <div class="partial_render_table_container table"
+           custom-css-vars=((--row-odd-fg black)(--row-odd-bg white)(--row-focused-fg black)(--row-focused-border #0a90bf)(--row-focused-bg #e0f7ff)(--row-even-fg black)(--row-even-bg #e6e6e6)(--header-header-border grey)(--header-fg white)(--header-body-border grey)(--header-bg black)(--fg black)(--cell-focused-fg black)(--cell-focused-bg #e0f7ff)(--body-body-border grey)(--bg white))>
+        <table class="header partial_render_table_header" bounds-change=<opaque>>
+          <tbody>
+            <tr class="header_row">
+              <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+                <div class="sortable_header_cell" onclick>
+                  <div>
+                    <span> key </span>
+    -|              <span> ▲ </span>
+                  </div>
+                </div>
+              </td>
+              <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+                <div>
+                  <div>
+                    <span> a </span>
+                  </div>
+                </div>
+              </td>
+              <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+                <div class="sortable_header_cell" onclick>
+                  <div>
+                    <span> b </span>
+    +|              <span> ▼ </span>
+                  </div>
+                </div>
+              </td>
+              <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+                <div class="sortable_header_cell" onclick>
+                  <div>
+                    <span> d </span>
+                  </div>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
+          <div class="body">
             <div>
-              <div>
-                <span> a </span>
+    -|        <div class="body_row row">
+    -|          <div class="body_cell cell" onclick> 0 </div>
+    -|          <div class="body_cell cell" onclick>
+    -|            <input oninput> </input>
+    -|            hello
+    -|          </div>
+    -|          <div class="body_cell cell" onclick> 1.000000 </div>
+    -|          <div class="body_cell cell" onclick> 1 </div>
+    -|        </div>
+              <div class="body_row row">
+                <div class="body_cell cell" onclick> 1 </div>
+                <div class="body_cell cell" onclick>
+                  <input oninput> </input>
+                  there
+                </div>
+                <div class="body_cell cell" onclick> 2.000000 </div>
+                <div class="body_cell cell" onclick> 2 </div>
               </div>
-            </div>
-          </td>
-          <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
-            <div class="sortable_header_cell" onclick>
-              <div>
-                <span> b </span>
-+|              <span> ▼ </span>
+              <div class="body_row row">
+                <div class="body_cell cell" onclick> 4 </div>
+                <div class="body_cell cell" onclick>
+                  <input oninput> </input>
+                  world
+                </div>
+                <div class="body_cell cell" onclick> 2.000000 </div>
+                <div class="body_cell cell" onclick> --- </div>
               </div>
+    +|        <div class="body_row row">
+    +|          <div class="body_cell cell" onclick> 0 </div>
+    +|          <div class="body_cell cell" onclick>
+    +|            <input oninput> </input>
+    +|            hello
+    +|          </div>
+    +|          <div class="body_cell cell" onclick> 1.000000 </div>
+    +|          <div class="body_cell cell" onclick> 1 </div>
+    +|        </div>
             </div>
-          </td>
-          <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
-            <div class="sortable_header_cell" onclick>
-              <div>
-                <span> d </span>
-              </div>
-            </div>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-    <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
-      <div class="body">
-        <div>
--|        <div class="body_row row" onclick>
--|          <div class="body_cell cell"> 0 </div>
--|          <div class="body_cell cell">
--|            <input oninput> </input>
--|            hello
--|          </div>
--|          <div class="body_cell cell"> 1.000000 </div>
--|          <div class="body_cell cell"> 1 </div>
--|        </div>
-          <div class="body_row row" onclick>
-            <div class="body_cell cell"> 1 </div>
-            <div class="body_cell cell">
-              <input oninput> </input>
-              there
-            </div>
-            <div class="body_cell cell"> 2.000000 </div>
-            <div class="body_cell cell"> 2 </div>
           </div>
-          <div class="body_row row" onclick>
-            <div class="body_cell cell"> 4 </div>
-            <div class="body_cell cell">
-              <input oninput> </input>
-              world
-            </div>
-            <div class="body_cell cell"> 2.000000 </div>
-            <div class="body_cell cell"> --- </div>
-          </div>
-+|        <div class="body_row row" onclick>
-+|          <div class="body_cell cell"> 0 </div>
-+|          <div class="body_cell cell">
-+|            <input oninput> </input>
-+|            hello
-+|          </div>
-+|          <div class="body_cell cell"> 1.000000 </div>
-+|          <div class="body_cell cell"> 1 </div>
-+|        </div>
         </div>
-      </div>
-    </div>
-  </div> |}];
+      </div> |}];
   (* Click on second column, creating a multi-sort  *)
   Handle.click_on
     ~shift_key_down:true
@@ -1558,7 +1570,7 @@ let%expect_test "sorting default renderer" =
     {|
     === DIFF HUNK ===
       <div class="partial_render_table_container table"
-           custom-css-vars=((--row-odd-fg black)(--row-odd-bg white)(--row-focused-fg black)(--row-focused-border #0a90bf)(--row-focused-bg #e0f7ff)(--row-even-fg black)(--row-even-bg #e6e6e6)(--header-header-border grey)(--header-fg white)(--header-body-border grey)(--header-bg black)(--fg black)(--body-body-border grey)(--bg white))>
+           custom-css-vars=((--row-odd-fg black)(--row-odd-bg white)(--row-focused-fg black)(--row-focused-border #0a90bf)(--row-focused-bg #e0f7ff)(--row-even-fg black)(--row-even-bg #e6e6e6)(--header-header-border grey)(--header-fg white)(--header-body-border grey)(--header-bg black)(--fg black)(--cell-focused-fg black)(--cell-focused-bg #e0f7ff)(--body-body-border grey)(--bg white))>
         <table class="header partial_render_table_header" bounds-change=<opaque>>
           <tbody>
             <tr class="header_row">
@@ -1606,7 +1618,7 @@ let%expect_test "sorting default renderer" =
     {|
     === DIFF HUNK ===
       <div class="partial_render_table_container table"
-           custom-css-vars=((--row-odd-fg black)(--row-odd-bg white)(--row-focused-fg black)(--row-focused-border #0a90bf)(--row-focused-bg #e0f7ff)(--row-even-fg black)(--row-even-bg #e6e6e6)(--header-header-border grey)(--header-fg white)(--header-body-border grey)(--header-bg black)(--fg black)(--body-body-border grey)(--bg white))>
+           custom-css-vars=((--row-odd-fg black)(--row-odd-bg white)(--row-focused-fg black)(--row-focused-border #0a90bf)(--row-focused-bg #e0f7ff)(--row-even-fg black)(--row-even-bg #e6e6e6)(--header-header-border grey)(--header-fg white)(--header-body-border grey)(--header-bg black)(--fg black)(--cell-focused-fg black)(--cell-focused-bg #e0f7ff)(--body-body-border grey)(--bg white))>
         <table class="header partial_render_table_header" bounds-change=<opaque>>
           <tbody>
             <tr class="header_row">
@@ -1646,41 +1658,41 @@ let%expect_test "sorting default renderer" =
         <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
           <div class="body">
             <div>
-    +|        <div class="body_row row" onclick>
-    +|          <div class="body_cell cell"> 0 </div>
-    +|          <div class="body_cell cell">
+    +|        <div class="body_row row">
+    +|          <div class="body_cell cell" onclick> 0 </div>
+    +|          <div class="body_cell cell" onclick>
     +|            <input oninput> </input>
     +|            hello
     +|          </div>
-    +|          <div class="body_cell cell"> 1.000000 </div>
-    +|          <div class="body_cell cell"> 1 </div>
+    +|          <div class="body_cell cell" onclick> 1.000000 </div>
+    +|          <div class="body_cell cell" onclick> 1 </div>
     +|        </div>
-              <div class="body_row row" onclick>
-                <div class="body_cell cell"> 1 </div>
-                <div class="body_cell cell">
+              <div class="body_row row">
+                <div class="body_cell cell" onclick> 1 </div>
+                <div class="body_cell cell" onclick>
                   <input oninput> </input>
                   there
                 </div>
-                <div class="body_cell cell"> 2.000000 </div>
-                <div class="body_cell cell"> 2 </div>
+                <div class="body_cell cell" onclick> 2.000000 </div>
+                <div class="body_cell cell" onclick> 2 </div>
               </div>
-              <div class="body_row row" onclick>
-                <div class="body_cell cell"> 4 </div>
-                <div class="body_cell cell">
+              <div class="body_row row">
+                <div class="body_cell cell" onclick> 4 </div>
+                <div class="body_cell cell" onclick>
                   <input oninput> </input>
                   world
                 </div>
-                <div class="body_cell cell"> 2.000000 </div>
-                <div class="body_cell cell"> --- </div>
+                <div class="body_cell cell" onclick> 2.000000 </div>
+                <div class="body_cell cell" onclick> --- </div>
               </div>
-    -|        <div class="body_row row" onclick>
-    -|          <div class="body_cell cell"> 0 </div>
-    -|          <div class="body_cell cell">
+    -|        <div class="body_row row">
+    -|          <div class="body_cell cell" onclick> 0 </div>
+    -|          <div class="body_cell cell" onclick>
     -|            <input oninput> </input>
     -|            hello
     -|          </div>
-    -|          <div class="body_cell cell"> 1.000000 </div>
-    -|          <div class="body_cell cell"> 1 </div>
+    -|          <div class="body_cell cell" onclick> 1.000000 </div>
+    -|          <div class="body_cell cell" onclick> 1 </div>
     -|        </div>
             </div>
           </div>

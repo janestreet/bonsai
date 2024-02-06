@@ -1,4 +1,6 @@
-(library (name bonsai_web_ui_drag_and_drop)
+(library
+ (name bonsai_web_ui_drag_and_drop)
  (libraries core bonsai bonsai_web virtual_dom)
- (preprocess (pps ppx_css js_of_ocaml-ppx ppx_jane ppx_bonsai))
+ (preprocess
+  (pps ppx_css js_of_ocaml-ppx ppx_jane ppx_bonsai))
  (public_name bonsai.web_ui_drag_and_drop))

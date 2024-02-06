@@ -1,4 +1,8 @@
-(executables (names main)
+(executables
+ (modes byte exe)
+ (names main)
  (libraries bonsai_web bonsai_web_ui_form bonsai_web_ui_widget)
- (js_of_ocaml (javascript_files runtime.js))
- (preprocess (pps ppx_jane ppx_bonsai js_of_ocaml-ppx)))
+ (js_of_ocaml
+  (javascript_files runtime.js))
+ (preprocess
+  (pps ppx_jane ppx_bonsai js_of_ocaml-ppx)))

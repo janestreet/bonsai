@@ -64,6 +64,12 @@ open Async_kernel
 open Async_js_test
 (* $MDX part-end *)
 
+let%expect_test "Allowing the async effect of the previous test to run." =
+  let%bind () = Async_kernel_scheduler.yield_until_no_jobs_remain () in
+  [%expect {| (Failure "BUG: no bonsai-rpc handler installed") |}];
+  return ()
+;;
+
 (* $MDX part-begin=attempt-2 *)
 let%expect_test "Clicking the button should double the number" =
   let handle = Handle.create (Result_spec.vdom Fn.id) app in
@@ -83,7 +89,7 @@ let%expect_test "Clicking the button should double the number" =
       <button onclick> Double the number </button>
     </div> |}];
   let%bind () = Async_kernel_scheduler.yield_until_no_jobs_remain () in
-  [%expect {| "RPC not handled because no connector has been provided." |}];
+  [%expect {| (Failure "BUG: no bonsai-rpc handler installed") |}];
   return ()
 ;;
 

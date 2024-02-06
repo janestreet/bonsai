@@ -137,7 +137,9 @@ module Proc : sig
 
     (** If the application provides some "extra data" that is computed alongside the view
         of the application, (see [Result_spec.S.extra]), then you can subscribe to those
-        changes using the bus returned by [extra] *)
+        values using the bus returned by [extra] 
+
+        A value is placed into the Bus on every frame regardless of if it changed or not. *)
     val extra : ('extra, _) t -> ('extra -> unit) Bus.Read_only.t
 
     (** Like [extra], but only fetches the last ['extra] produced by the computation.  If

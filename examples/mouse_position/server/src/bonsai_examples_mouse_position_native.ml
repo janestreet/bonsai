@@ -14,11 +14,15 @@ let main ~http_settings ~js_file =
   let%bind server =
     let open Cohttp_static_handler in
     let javascript =
-      Asset.local Asset.Kind.javascript (Asset.What_to_serve.file ~path:js_file)
+      Asset.local
+        Asset.Kind.javascript
+        (Asset.What_to_serve.file ~path:js_file ~relative_to:`Cwd)
     in
     let sourcemap_file = String.chop_suffix_exn js_file ~suffix:".js" ^ ".map" in
     let sourcemap =
-      Asset.local Asset.Kind.sourcemap (Asset.What_to_serve.file ~path:sourcemap_file)
+      Asset.local
+        Asset.Kind.sourcemap
+        (Asset.What_to_serve.file ~path:sourcemap_file ~relative_to:`Cwd)
     in
     let http_handler _principle =
       Single_page_handler.create_handler

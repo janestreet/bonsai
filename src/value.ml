@@ -210,7 +210,10 @@ let eval env t =
 
 let return a = { value = Constant a; here = None; id = value_id "return" }
 let return_exn exn = { value = Exception exn; here = None; id = value_id "return exn" }
-let of_opt opt = Option.value_map opt ~default:(return None) ~f:(map ~f:Option.some)
+
+let transpose_opt opt =
+  Option.value_map opt ~default:(return None) ~f:(map ~f:Option.some)
+;;
 
 include Applicative.Make_using_map2 (struct
   type nonrec 'a t = 'a t

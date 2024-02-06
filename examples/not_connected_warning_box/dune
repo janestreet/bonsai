@@ -1,3 +1,6 @@
-(executables (names main)
+(executables
+ (modes byte exe)
+ (names main)
  (libraries bonsai_web bonsai_web_ui_not_connected_warning_box)
- (preprocess (pps ppx_bonsai ppx_jane)))
+ (preprocess
+  (pps ppx_bonsai ppx_jane)))

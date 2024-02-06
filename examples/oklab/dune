@@ -1,3 +1,6 @@
-(executables (names main)
- (libraries bonsai_web oklab bonsai_web_ui_form kado)
- (preprocess (pps ppx_jane ppx_css ppx_typed_fields ppx_bonsai)))
+(executables
+ (modes byte exe)
+ (names main)
+ (libraries bonsai_web bonsai_web_ui_form oklab kado)
+ (preprocess
+  (pps ppx_jane ppx_css ppx_typed_fields ppx_bonsai)))

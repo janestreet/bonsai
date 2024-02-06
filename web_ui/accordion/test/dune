@@ -1,3 +1,5 @@
-(library (name bonsai_web_ui_accordion_test)
+(library
+ (name bonsai_web_ui_accordion_test)
  (libraries bonsai_web_ui_accordion bonsai_web bonsai_web_test core)
- (preprocess (pps ppx_jane ppx_bonsai js_of_ocaml-ppx)))
+ (preprocess
+  (pps ppx_jane ppx_bonsai js_of_ocaml-ppx)))

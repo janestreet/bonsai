@@ -1,3 +1,6 @@
-(executables (names main)
- (libraries bonsai_web feather_icon bonsai_web_ui_form fuzzy_match.match)
- (preprocess (pps ppx_jane ppx_bonsai ppx_css)))
+(executables
+ (modes byte exe)
+ (names main)
+ (libraries bonsai_web bonsai_web_ui_form feather_icon fuzzy_match.match)
+ (preprocess
+  (pps ppx_jane ppx_bonsai ppx_css)))

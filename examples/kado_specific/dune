@@ -1,4 +1,7 @@
-(executables (names main)
+(executables
+ (modes byte exe)
+ (names main)
  (libraries bonsai_extra bonsai_web kado bonsai_web_ui_auto_generated
-  bonsai_web_ui_form)
- (preprocess (pps ppx_jane ppx_bonsai)))
+   bonsai_web_ui_form)
+ (preprocess
+  (pps ppx_jane ppx_bonsai)))

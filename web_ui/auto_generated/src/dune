@@ -1,5 +1,7 @@
-(library (name bonsai_web_ui_auto_generated)
+(library
+ (name bonsai_web_ui_auto_generated)
  (public_name bonsai.web_ui_auto_generated)
- (preprocess (pps ppx_bonsai ppx_css ppx_jane))
+ (preprocess
+  (pps ppx_bonsai ppx_css ppx_jane))
  (libraries bonsai bonsai_extra bonsai_web bonsai_web_ui_form core
-  ordinal_abbreviation sexplib0 sexp_grammar virtual_dom.input_widgets))
+   ordinal_abbreviation sexplib0 sexp_grammar virtual_dom.input_widgets))

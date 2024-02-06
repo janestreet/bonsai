@@ -1,3 +1,6 @@
-(executables (names main)
- (libraries async_js bonsai_web bonsai_web_ui_gallery bonsai_web_ui_form)
- (preprocess (pps ppx_jane ppx_bonsai ppx_css ppx_demo ppx_typed_fields)))
+(executables
+ (modes byte exe)
+ (names main)
+ (libraries async_js bonsai_web bonsai_web_ui_form bonsai_web_ui_gallery)
+ (preprocess
+  (pps ppx_jane ppx_bonsai ppx_css ppx_demo ppx_typed_fields)))

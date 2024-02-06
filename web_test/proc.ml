@@ -35,9 +35,15 @@ module Result_spec = struct
   ;;
 end
 
-let add_rpc_implementations_to_connectors ~rpc_implementations ~connectors =
-  match rpc_implementations with
-  | Some rpc_implementations ->
+let add_rpc_implementations_to_computation ~rpc_implementations ~connectors computation =
+  match rpc_implementations, connectors with
+  | None, None -> computation
+  | _ ->
+    let rpc_implementations = Option.value rpc_implementations ~default:[] in
+    let connectors =
+      Option.value connectors ~default:(fun _ ->
+        Bonsai_web.Rpc_effect.Connector.test_fallback)
+    in
     let test_fallback_connector =
       let open Async_rpc_kernel in
       Rpc_effect.Connector.for_test
@@ -46,12 +52,13 @@ let add_rpc_implementations_to_connectors ~rpc_implementations ~connectors =
            ~implementations:(Versioned_rpc.Menu.add rpc_implementations))
         ~connection_state:Fn.id
     in
-    fun where_to_connect ->
+    let connectors where_to_connect =
       let connector = connectors where_to_connect in
       if Bonsai_web.Rpc_effect.Private.is_test_fallback connector
       then test_fallback_connector
       else connector
-  | None -> connectors
+    in
+    Bonsai_web.Rpc_effect.Private.with_connector connectors computation
 ;;
 
 module Handle = struct
@@ -60,18 +67,14 @@ module Handle = struct
   let create
     result_spec
     ?rpc_implementations
-    ?(connectors = fun _ -> Bonsai_web.Rpc_effect.Connector.test_fallback)
+    ?connectors
     ?start_time
     ?optimize
     computation
     =
-    let connectors =
-      add_rpc_implementations_to_connectors ~rpc_implementations ~connectors
-    in
-    let computation =
-      Bonsai_web.Rpc_effect.Private.with_connector connectors computation
-    in
-    Bonsai_test.Handle.create result_spec ?start_time ?optimize computation
+    computation
+    |> add_rpc_implementations_to_computation ~rpc_implementations ~connectors
+    |> Bonsai_test.Handle.create result_spec ?start_time ?optimize
   ;;
 
   let flush_async_and_bonsai
@@ -382,29 +385,31 @@ module Experimental = struct
 
   module Handle = struct
     type ('result, 'incoming) t =
-      (unit, 'result * Vdom.Node.t * string * ('incoming -> unit Effect.t)) Driver.t
+      ( unit
+      , 'result * Vdom.Node.t * string Lazy.t * ('incoming -> unit Effect.t) )
+      Driver.t
 
     let create
       (type result incoming)
       (result_spec : (result, incoming) Result_spec.t)
       ?rpc_implementations
-      ?(connectors = fun _ -> Bonsai_web.Rpc_effect.Connector.test_fallback)
+      ?connectors
       ?(start_time = Time_ns.epoch)
       ?(optimize = true)
       computation
       =
-      let connectors =
-        add_rpc_implementations_to_connectors ~rpc_implementations ~connectors
-      in
       let computation =
-        Bonsai_web.Rpc_effect.Private.with_connector connectors computation
+        add_rpc_implementations_to_computation
+          ~rpc_implementations
+          ~connectors
+          computation
       in
       let (module R) = result_spec in
       let component (_ : unit Value.t) =
         let open Bonsai.Let_syntax in
         let%sub result = computation in
         let%arr result = result in
-        result, R.to_vdom result, R.view result, R.incoming result
+        result, R.to_vdom result, lazy (R.view result), R.incoming result
       in
       let clock = Bonsai.Time_source.create ~start:start_time in
       Driver.create ~optimize ~initial_input:() ~clock component
@@ -467,7 +472,8 @@ module Experimental = struct
     ;;
 
     let show handle =
-      generic_show handle ~before:(Fn.const ()) ~f:(fun () view -> print_endline view)
+      generic_show handle ~before:(Fn.const ()) ~f:(fun () view ->
+        print_endline (Lazy.force view))
     ;;
 
     let show_diff
@@ -475,10 +481,12 @@ module Experimental = struct
       ?(diff_context = 16)
       handle
       =
-      generic_show
-        handle
-        ~before:Driver.last_view
-        ~f:(Expect_test_patdiff.print_patdiff ~location_style ~context:diff_context)
+      generic_show handle ~before:Driver.last_view ~f:(fun a b ->
+        Expect_test_patdiff.print_patdiff
+          ~location_style
+          ~context:diff_context
+          (Lazy.force a)
+          (Lazy.force b))
     ;;
 
     let store_view handle = generic_show handle ~before:(Fn.const ()) ~f:(fun () _ -> ())
@@ -680,3 +688,5 @@ module Experimental = struct
     end
   end
 end
+
+module Expect_test_config = Bonsai_test.Expect_test_config

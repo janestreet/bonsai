@@ -40,21 +40,23 @@ depends: [
   "ppx_pattern_bind"
   "ppx_typed_fields"
   "profunctor"
+  "record_builder"
   "sexp_grammar"
   "sexplib0"
   "streamable"
   "textutils"
+  "versioned_polling_state_rpc"
   "virtual_dom"
-  "base64"                   {>= "3.4.0"}
-  "cohttp-async"             {>= "2.5.7" & < "3.0.0" | >= "5.1.1" & < "6.0.0"}
-  "dune"                     {>= "2.0.0"}
-  "gen_js_api"               {>= "1.0.8"}
-  "js_of_ocaml"              {>= "5.1.1"}
-  "js_of_ocaml-ppx"          {>= "5.1.1"}
+  "base64"                      {>= "3.4.0"}
+  "cohttp-async"                {>= "2.5.7" & < "3.0.0" | >= "5.1.1" & < "6.0.0"}
+  "dune"                        {>= "2.0.0"}
+  "gen_js_api"                  {>= "1.0.8"}
+  "js_of_ocaml"                 {>= "5.1.1"}
+  "js_of_ocaml-ppx"             {>= "5.1.1"}
   "ocaml-embed-file"
-  "ppxlib"                   {>= "0.28.0"}
-  "re"                       {>= "1.8.0"}
-  "uri"                      {>= "3.0.0"}
+  "ppxlib"                      {>= "0.28.0"}
+  "re"                          {>= "1.8.0"}
+  "uri"                         {>= "3.0.0"}
 ]
 available: arch != "arm32" & arch != "x86_32"
 synopsis: "A library for building dynamic webapps, using Js_of_ocaml"
