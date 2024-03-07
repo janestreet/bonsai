@@ -59,7 +59,7 @@ let enum (type k) (module E : Enum with type t = k) ~match_ ~with_ =
   let match_ = match_ >>| Map.find_exn reverse_index in
   let branches = Array.length forward_index in
   let with_ i = with_ (Array.get forward_index i) in
-  Let_syntax.switch ~here:[%here] ~match_ ~branches ~with_
+  Let_syntax.switch ~here:[%here] ~match_ ~branches ~with_ [@nontail]
 ;;
 
 let scope_model

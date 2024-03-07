@@ -646,6 +646,76 @@ let%expect_test "table with col groups" =
     └───┴─────┴─────┴────────┴──────────┴─────────┴─────────┴─────────┘ |}]
 ;;
 
+let%expect_test "locking focus prevents moving focus" =
+  let test =
+    Test.create ~stats:false (Test.Component.default_cell_focus ~theming:`Themed ())
+  in
+  Handle.show test.handle;
+  [%expect
+    {|
+    ((focused ()) (num_filtered_rows (3)))
+    ┌───┬─────┬─────┬───────┬──────────┬─────┐
+    │ > │ #   │ key │ a     │ b        │ d   │
+    ├───┼─────┼─────┼───────┼──────────┼─────┤
+    │   │ 0   │ 0   │ hello │ 1.000000 │ 1   │
+    │   │ 100 │ 1   │ there │ 2.000000 │ 2   │
+    │   │ 200 │ 4   │ world │ 2.000000 │ --- │
+    └───┴─────┴─────┴───────┴──────────┴─────┘ |}];
+  Handle.do_actions test.handle [ Focus_down ];
+  Handle.show test.handle;
+  [%expect
+    {|
+    scrolling to index 0 at 0.0px
+    scrolling column with id 0 into view, if necessary
+    (focus_changed_to ((0 0)))
+    ((focused ((0 0))) (num_filtered_rows (3)))
+    ┌───┬─────┬───────┬───────┬──────────┬─────┐
+    │ > │ #   │ key   │ a     │ b        │ d   │
+    ├───┼─────┼───────┼───────┼──────────┼─────┤
+    │   │ 0   │ > 0 < │ hello │ 1.000000 │ 1   │
+    │   │ 100 │ 1     │ there │ 2.000000 │ 2   │
+    │   │ 200 │ 4     │ world │ 2.000000 │ --- │
+    └───┴─────┴───────┴───────┴──────────┴─────┘ |}];
+  Handle.do_actions test.handle [ Lock_focus ];
+  Handle.show_diff test.handle;
+  [%expect {| |}];
+  (* No interactions cause diffs while focus is locked *)
+  Handle.do_actions test.handle [ Focus_down ];
+  Handle.show_diff test.handle;
+  [%expect {| |}];
+  Handle.do_actions test.handle [ Focus_up ];
+  Handle.show_diff test.handle;
+  [%expect {| |}];
+  Handle.do_actions test.handle [ Focus_left ];
+  Handle.show_diff test.handle;
+  [%expect {| |}];
+  Handle.do_actions test.handle [ Focus_right ];
+  [%expect];
+  Handle.do_actions test.handle [ Unlock_focus ];
+  Handle.show_diff test.handle;
+  [%expect {| |}];
+  (* Now that the table is unlocked, we can move the focus again *)
+  Handle.do_actions test.handle [ Focus_down ];
+  Handle.show_diff test.handle;
+  [%expect
+    {|
+    skipping scroll because target already in view
+    scrolling column with id 0 into view, if necessary
+    (focus_changed_to ((1 0)))
+
+    -|((focused ((0 0))) (num_filtered_rows (3)))
+    +|((focused ((1 0))) (num_filtered_rows (3)))
+      ┌───┬─────┬───────┬───────┬──────────┬─────┐
+      │ > │ #   │ key   │ a     │ b        │ d   │
+      ├───┼─────┼───────┼───────┼──────────┼─────┤
+    -|│   │ 0   │ > 0 < │ hello │ 1.000000 │ 1   │
+    +|│   │ 0   │ 0     │ hello │ 1.000000 │ 1   │
+    -|│   │ 100 │ 1     │ there │ 2.000000 │ 2   │
+    +|│   │ 100 │ > 1 < │ there │ 2.000000 │ 2   │
+      │   │ 200 │ 4     │ world │ 2.000000 │ --- │
+      └───┴─────┴───────┴───────┴──────────┴─────┘ |}]
+;;
+
 let%expect_test "focus down in row-focus table" =
   let test = Test.create ~stats:false (Test.Component.default ~theming:`Themed ()) in
   Handle.show test.handle;

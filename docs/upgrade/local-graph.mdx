@@ -17,7 +17,8 @@ The process is fairly mechanical and straightforward:
 3. Rename any `'a Computation.t` to `local_ Bonsai.graph -> 'a Bonsai.t`
 4. For the most part, `let%sub` is no longer needed. Instead, instantiate Bonsai
    components by passing `graph` to them.
-5. `let%arrs` can be replaced with `let%map`.
+5. `let%arr`s don't need to be modified at all. They work like fancy `let%map`s. See below
+   for more discussion on this topic.
 6. Components can now return tuples / records of `Bonsai.t`s! If you were previously
    returning `('a * 'b) Bonsai.t`, consider returning `(a Bonsai.t * 'b Bonsai.t)` instead.
    This is because we no longer need `let%sub`, so there's no longer anything enforcing
@@ -27,6 +28,21 @@ Any Bonsai component that uses Bonsai primitives, either directly or transitivel
 need a `local_ graph` parameter. This is fine and expected.
 
 If anything breaks or you're unsure of something, please reach out!
+
+## let%map vs let%arr
+
+You might have noticed that we have removed all of the `let%sub`s but still have `let%arr`s.
+Previously `let%map`s were always considered harmful, and in the `local_ graph` that's no
+longer the case! `let%map` and `let%arr` have the same type and can be used interchangebly
+in the simple case of `let%map_or_arr foo = foo in`. This is incredibly nice for newcomers
+who are familiar with `let%map` from the various common monads which support it. That said,
+`let%arr` still has some fancy support for incremental computation built in!
+
+`let%arr` has performance benefits over `let%map` when you are pattern matching:
+`let%arr { a; _ } = r` will only trigger incremental updates when `a` changes, while
+`let%map` will trigger when any field in `r` changes. As a guideline: if anything on the
+left side of your `let%arr`s is a pattern with ignored parts (e.g. `let%arr a, _ = ...`;
+`let%arr {a; _} = ...`), keep them as `let%arr`s for now.
 
 ## Patterns
 
@@ -58,3 +74,42 @@ a while.
 Many combinators for dealing with `Bonsai.Value.t` and `Bonsai.Computation` are no longer
 needed, and are not included in the new API. If you think we've forgotten something useful,
 please reach out!
+
+### Known Issues
+
+#### Top-level `match%sub`
+
+Top-level `match%sub`'s raise an exception on app startup. For example:
+
+__Raises__:
+
+```ocaml skip
+let component =
+  match%sub ... with
+  | ... -> ...
+```
+
+__OK__:
+
+```ocaml skip
+let component (local_ graph) =
+  match%sub ... with
+  | ... -> ...
+```
+
+__OK__:
+(if only called from inside a Bonsai context)
+
+```ocaml skip
+let component () =
+  match%map ... with
+  | ... -> ...
+```
+
+__OK__:
+
+```ocaml skip
+let component =
+  match%map ... with
+  | ... -> ...
+```

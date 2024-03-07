@@ -21,7 +21,7 @@ val of_form2 : ('a, Vdom.Node.t) Form_manual.t Value.t -> 'a t Computation.t
     [normalize] will do nothing to the form provided by this. [sexp_of_t] can be provided
     to provide better warning messages when actions are ignored by setting into the form.
 *)
-val return : ?sexp_of_t:('a -> Sexp.t) -> 'a -> 'a t
+val return : ?sexp_of_t:('a -> Sexp.t) -> ?equal:('a -> 'a -> bool) -> 'a -> 'a t
 
 (** [return_settable] is identical to [return], but [set] and [normalize] will update
     the value of the form. *)

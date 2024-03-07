@@ -15,7 +15,7 @@ type ('model, 'action, 'input, 'result) eval_fun =
   -> clock:Time_source.t
   -> model:'model Incr.t
   -> inject:('action Action.t -> unit Effect.t)
-  -> ('model, 'input, 'result) Snapshot.t
+  -> ('model, 'input, 'result) Snapshot.t Trampoline.t
 
 type ('action, 'model) reset =
   inject:('action Action.t -> unit Effect.t)
@@ -30,6 +30,7 @@ type ('model, 'action, 'input, 'result) info =
   ; apply_action : ('input, 'action, 'model) apply_action
   ; run : ('model, 'action, 'input, 'result) eval_fun
   ; reset : ('action, 'model) reset
+  ; can_contain_path : bool
   }
 
 type 'result packed_info = T : (_, _, _, 'result) info -> 'result packed_info
@@ -120,6 +121,7 @@ type 'result t =
   | Assoc_simpl :
       { map : ('k, 'v, 'cmp) Map.t Value.t
       ; by : Path.t -> 'k -> 'v -> 'result
+      ; can_contain_path : bool
       }
       -> ('k, 'result, 'cmp) Map.t t
   | Switch :

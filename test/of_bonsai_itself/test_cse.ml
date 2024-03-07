@@ -315,8 +315,8 @@ let%expect_test "double-use with first use inside scope" =
     Handle.create ~optimize:false (Result_spec.string (module String)) component
   in
   [%expect {|
-    computing bonsai_path_x_y_x_x_x
-    computing bonsai_path_x_x_x_x |}];
+    computing bonsai_path_y
+    computing bonsai_path_x |}];
   Handle.show handle;
-  [%expect {| bonsai_path_x_x_x_x bonsai_path_x_y_x_x_x |}]
+  [%expect {| bonsai_path_x bonsai_path_y |}]
 ;;

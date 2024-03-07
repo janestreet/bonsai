@@ -27,6 +27,8 @@ module Private = struct
   module Skeleton = Skeleton
   module Transform = Transform
   module Linter = Linter
+  module Trampoline = Trampoline
+  module Annotate_incr = Annotate_incr
 
   let path = Proc_layer2.path
   let gather = Eval.gather

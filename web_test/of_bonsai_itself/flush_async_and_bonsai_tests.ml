@@ -6,7 +6,14 @@ open Async_rpc_kernel
 open Async_js_test
 open Expect_test_helpers_core
 
-let rpc_a = Rpc.Rpc.create ~name:"a" ~version:0 ~bin_query:bin_unit ~bin_response:bin_unit
+let rpc_a =
+  Rpc.Rpc.create
+    ~name:"a"
+    ~version:0
+    ~bin_query:bin_unit
+    ~bin_response:bin_unit
+    ~include_in_error_count:Only_on_exn
+;;
 
 let computation iterations =
   let open Bonsai.Let_syntax in

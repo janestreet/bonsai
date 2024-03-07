@@ -9,6 +9,9 @@ type t =
       column_id:Bonsai_web_ui_partial_render_table.Indexed_column_id.t
       -> [ `Px_float of float ]
       -> unit Ui_effect.t
+  ; lock_focus : unit Ui_effect.t
+  ; unlock_focus : unit Ui_effect.t
+  ; focus_is_locked : bool
   }
 
 val component

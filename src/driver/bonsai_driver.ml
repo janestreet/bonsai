@@ -62,6 +62,7 @@ let create_direct
          ; action = _
          ; run = _
          ; reset = _
+         ; can_contain_path = _
          } as computation_info))
     =
     optimized_info
@@ -99,6 +100,7 @@ let create_direct
         ~clock
         ~model:(Incr.Var.watch model_var)
         ~inject
+      |> Bonsai.Private.Trampoline.run
     in
     let result_incr = Bonsai.Private.Snapshot.result snapshot in
     let action_input_incr =

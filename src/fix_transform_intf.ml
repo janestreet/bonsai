@@ -60,7 +60,7 @@ module type Recurse = sig
     -> Types.Acc.t
     -> [ `Directly_on | `Skipping_over ]
     -> 'a Computation.t
-    -> Types.Acc.t * Types.Up.t * 'a Computation.t
+    -> (Types.Acc.t * Types.Up.t * 'a Computation.t) Trampoline.t
 
   (** Like [on_computation], but for values instead. *)
   val on_value
@@ -78,7 +78,7 @@ module type Transform = sig
     :  Types.Down.t
     -> Types.Acc.t
     -> 'a Computation.t
-    -> Types.Acc.t * Types.Up.t * 'a Computation.t
+    -> (Types.Acc.t * Types.Up.t * 'a Computation.t) Trampoline.t
 
   val transform_v
     :  Types.Down.t

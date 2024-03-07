@@ -1,6 +1,10 @@
 open! Core
 open! Import
 
+module type Enum = Module_types.Enum
+module type Comparator = Module_types.Comparator
+
+type ('k, 'cmp) comparator = ('k, 'cmp) Module_types.comparator
 type 'a t
 type graph
 
@@ -11,6 +15,8 @@ val return : 'a -> 'a t
 val map : 'a t -> f:('a -> 'b) -> 'b t
 val map2 : 'a t -> 'b t -> f:('a -> 'b -> 'c) -> 'c t
 val both : 'a t -> 'b t -> ('a * 'b) t
+val cutoff : 'a t -> equal:('a -> 'a -> bool) -> 'a t
+val all_map : ('k, graph -> 'v t, 'cmp) Map.t -> graph -> ('k, 'v, 'cmp) Map.t t
 
 (** Useful for optional args that take [Bonsai.t]s.
     Note: the inverse operation is not possible. *)
@@ -186,6 +192,13 @@ val wrap
   -> f:('model t -> ('action -> unit Effect.t) t -> graph -> 'result t)
   -> graph
   -> 'result t
+
+val enum
+  :  (module Enum with type t = 'k)
+  -> match_:'k t
+  -> with_:('k -> graph -> 'a t)
+  -> graph
+  -> 'a t
 
 val with_model_resetter : f:(graph -> 'a t) -> graph -> 'a t * unit Effect.t t
 val with_model_resetter' : f:(reset:unit Effect.t t -> graph -> 'a t) -> graph -> 'a t
@@ -445,6 +458,8 @@ module Conv : sig
   val isolated : graph -> f:(unit -> 'a Value.t) -> 'a Computation.t
 end
 
+module Effect = Ui_effect
+
 module Let_syntax : sig
   val ( >>| ) : 'a t -> ('a -> 'b) -> 'b t
   val return : 'a -> 'a t
@@ -491,6 +506,36 @@ module Expert : sig
 
   val delay : f:(graph -> 'a t) -> graph -> 'a t
     [@@deprecated "[since 2023-07] Use Bonsai.fix "]
+
+  module Var : sig
+    type 'a bonsai := 'a t
+
+    (** A [Var.t] represents a ref to some global state, which can be used as an input to
+        an incremental Bonsai computation.
+
+        The most common use case of [Var.t]s is in tests, so that test inputs can be set
+        outside of a Bonsai context. *)
+    type 'a t
+
+    (** Creates a new [Var.t] with an initial value. *)
+    val create : 'a -> 'a t
+
+    (** Provides incremental, read-only access to [t] by producing a {!Bonsai.t}. *)
+    val value : 'a t -> 'a bonsai
+
+    (** Updates the value inside of [t].  [f] is given the previous value of [t] so that you
+        can reuse parts of the value if applicable. *)
+    val update : 'a t -> f:('a -> 'a) -> unit
+
+    (** Sets the value inside of [t]. *)
+    val set : 'a t -> 'a -> unit
+
+    (** Gets the value inside of [t]. *)
+    val get : 'a t -> 'a
+
+    (** Retrieves the underlying ['a t] Ui_incr.t var. *)
+    val incr_var : 'a t -> 'a Ui_incr.Var.t
+  end
 end
 
 (** Just in subfeature to reimplement proc on top of cont *)

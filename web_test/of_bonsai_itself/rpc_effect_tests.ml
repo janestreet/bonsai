@@ -6,8 +6,25 @@ open Async_rpc_kernel
 open Async_js_test
 
 let () = Async_js.init ()
-let rpc_a = Rpc.Rpc.create ~name:"a" ~version:0 ~bin_query:bin_int ~bin_response:bin_int
-let rpc_b = Rpc.Rpc.create ~name:"b" ~version:0 ~bin_query:bin_int ~bin_response:bin_int
+
+let rpc_a =
+  Rpc.Rpc.create
+    ~name:"a"
+    ~version:0
+    ~bin_query:bin_int
+    ~bin_response:bin_int
+    ~include_in_error_count:Only_on_exn
+;;
+
+let rpc_b =
+  Rpc.Rpc.create
+    ~name:"b"
+    ~version:0
+    ~bin_query:bin_int
+    ~bin_response:bin_int
+    ~include_in_error_count:Only_on_exn
+;;
+
 let babel_rpc_a = Babel.Caller.Rpc.singleton rpc_a
 let babel_rpc_b = Babel.Caller.Rpc.add babel_rpc_a ~rpc:rpc_b
 
@@ -1749,7 +1766,12 @@ let%test_module "Polling_state_rpc.poll" =
 let%test_module "Rpc.poll" =
   (module struct
     let rpc =
-      Rpc.Rpc.create ~name:"rpc" ~version:0 ~bin_query:bin_int ~bin_response:bin_int
+      Rpc.Rpc.create
+        ~name:"rpc"
+        ~version:0
+        ~bin_query:bin_int
+        ~bin_response:bin_int
+        ~include_in_error_count:Only_on_exn
     ;;
 
     let incrementing_rpc_implementation ?block_on () =
@@ -2265,7 +2287,12 @@ let%test_module "Rpc.poll" =
 let%test_module "Rpc.poll_until_ok" =
   (module struct
     let rpc =
-      Rpc.Rpc.create ~name:"rpc" ~version:0 ~bin_query:bin_int ~bin_response:bin_int
+      Rpc.Rpc.create
+        ~name:"rpc"
+        ~version:0
+        ~bin_query:bin_int
+        ~bin_response:bin_int
+        ~include_in_error_count:Only_on_exn
     ;;
 
     let returns_ok_after ~iterations =

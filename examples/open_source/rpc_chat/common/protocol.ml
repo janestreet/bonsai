@@ -20,6 +20,7 @@ module Messages_request = struct
       ~version:0
       ~bin_query:[%bin_type_class: Room.t]
       ~bin_response:[%bin_type_class: Message.t List.t]
+      ~include_in_error_count:Only_on_exn
   ;;
 end
 
@@ -30,6 +31,7 @@ module Send_message = struct
       ~version:0
       ~bin_query:[%bin_type_class: Message.t]
       ~bin_response:[%bin_type_class: unit Or_error.t]
+      ~include_in_error_count:Or_error
   ;;
 end
 
@@ -40,6 +42,7 @@ module Create_room = struct
       ~version:0
       ~bin_query:[%bin_type_class: Room.t]
       ~bin_response:[%bin_type_class: unit Or_error.t]
+      ~include_in_error_count:Or_error
   ;;
 end
 
@@ -50,5 +53,6 @@ module List_rooms = struct
       ~version:0
       ~bin_query:[%bin_type_class: unit]
       ~bin_response:[%bin_type_class: Room.t List.t]
+      ~include_in_error_count:Only_on_exn
   ;;
 end

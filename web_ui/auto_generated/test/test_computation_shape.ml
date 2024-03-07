@@ -80,9 +80,9 @@ let%expect_test "option>variant>record form" =
   test_form (module T) [ None; Some A; Some (B { a = 5; b = "hello" }) ];
   [%expect
     {|
-    no optimization: 3657 nodes
+    no optimization: 3697 nodes
     with optimization: 225 nodes
-    reduced to 6.2%
+    reduced to 6.1%
     |}]
 ;;
 
@@ -97,9 +97,9 @@ let%expect_test "variant form" =
   test_form (module T) [ A; B 5 ];
   [%expect
     {|
-    no optimization: 1553 nodes
+    no optimization: 1569 nodes
     with optimization: 109 nodes
-    reduced to 7.0% |}]
+    reduced to 6.9% |}]
 ;;
 
 let%expect_test "record form" =
@@ -114,9 +114,9 @@ let%expect_test "record form" =
   test_form (module T) [ { a = 5; b = "hello" } ];
   [%expect
     {|
-    no optimization: 1673 nodes
+    no optimization: 1697 nodes
     with optimization: 105 nodes
-    reduced to 6.3% |}]
+    reduced to 6.2% |}]
 ;;
 
 let%expect_test "option form" =

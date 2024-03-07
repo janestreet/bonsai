@@ -22,6 +22,7 @@ let create_generic run ~fresh ~input ~model ~inject ~apply_action =
       ~clock:Incr_dom.Start_app.Private.time_source
       ~model
       ~inject
+    |> Bonsai.Private.Trampoline.run
   in
   let%map view, extra = Bonsai.Private.Snapshot.result snapshot
   and input = Bonsai.Private.Input.to_incremental (Bonsai.Private.Snapshot.input snapshot)
@@ -94,7 +95,8 @@ let convert_with_extra ?(optimize = false) component =
   let fresh = Type_equal.Id.create ~name:"" sexp_of_opaque in
   let var = Bonsai.Private.(Value.named App_input fresh |> conceal_value) in
   let maybe_optimize = if optimize then Bonsai.Private.pre_process else Fn.id in
-  let (T { model; input = _; action; apply_action; run; reset = _ }) =
+  let (T { model; input = _; action; apply_action; run; reset = _; can_contain_path = _ })
+    =
     component var
     |> Bonsai.Private.top_level_handle
     |> maybe_optimize

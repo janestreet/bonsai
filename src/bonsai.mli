@@ -23,6 +23,9 @@ include
      and module Private_value := Private_value
      and type 'a Value.t = 'a Cont.t
      and type 'a Computation.t = Cont.graph -> 'a Cont.t
+     and type 'a Computation_status.t = 'a Cont.Computation_status.t
+     and type 'a Dynamic_scope.t = 'a Cont.Dynamic_scope.t
+     and type 'a Effect_throttling.Poll_result.t = 'a Cont.Effect_throttling.Poll_result.t
 
 module Private : sig
   val reveal_value : 'a Value.t -> 'a Private_value.t
@@ -56,6 +59,8 @@ module Private : sig
   module Skeleton = Skeleton
   module Transform = Transform
   module Linter = Linter
+  module Trampoline = Trampoline
+  module Annotate_incr = Annotate_incr
 
   val gather : 'result Computation.t -> 'result Computation.packed_info
   val pre_process : 'result Computation.t -> 'result Computation.t

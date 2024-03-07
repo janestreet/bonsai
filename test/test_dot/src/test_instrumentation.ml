@@ -13,6 +13,15 @@ module Graph_info = Bonsai.Private.Graph_info
     {v (opaque-const) --feeds into-> leaf1 --named-as-> _0 v}
 *)
 
+module Expect_test_config = struct
+  include Expect_test_config
+
+  (* NOTE: Printing line numbers is brittle, so this solely
+     censor line numbers - we still keep + record filename locations
+     and things like that. *)
+  let sanitize = Expect_test_helpers_core.hide_positions_in_string
+end
+
 let start_timer label = print_endline [%string "start-%{label}"]
 let stop_timer label = print_endline [%string "stop-%{label}"]
 
@@ -692,25 +701,25 @@ let%expect_test "enum" =
        1-1_1 incr -> 1_2 map
        1_1 return -> _1 sub
        1_2 map -> 1_1 return
-       2-1_1 named -> 2_1 switch @ lib/bonsai/src/cont.ml:826:81
-       2-2_1 return -> 2_1 switch @ lib/bonsai/src/cont.ml:826:81
+       2-1_1 named -> 2_1 switch @ lib/bonsai/src/cont.ml:LINE:COL
+       2-2_1 return -> 2_1 switch @ lib/bonsai/src/cont.ml:LINE:COL
        2-2_2 incr -> 2-2_1 return
        2-3-1_1 incr -> 2-3_2 map @ 6:8
-       2-3_1 return -> 2_1 switch @ lib/bonsai/src/cont.ml:826:81
+       2-3_1 return -> 2_1 switch @ lib/bonsai/src/cont.ml:LINE:COL
        2-3_2 map @ 6:8 -> 2-3_1 return
-       2_1 switch @ lib/bonsai/src/cont.ml:826:81 -> _1 sub
+       2_1 switch @ lib/bonsai/src/cont.ml:LINE:COL -> _1 sub
        _1 sub -> _0
      dag:
        1-1_1 incr -> 1_2 map
        1_1 return -> 2-1_1 named, _1 sub
        1_2 map -> 1_1 return
-       2-1_1 named -> 2_1 switch @ lib/bonsai/src/cont.ml:826:81
-       2-2_1 return -> 2_1 switch @ lib/bonsai/src/cont.ml:826:81
+       2-1_1 named -> 2_1 switch @ lib/bonsai/src/cont.ml:LINE:COL
+       2-2_1 return -> 2_1 switch @ lib/bonsai/src/cont.ml:LINE:COL
        2-2_2 incr -> 2-2_1 return
        2-3-1_1 incr -> 2-3_2 map @ 6:8
-       2-3_1 return -> 2_1 switch @ lib/bonsai/src/cont.ml:826:81
+       2-3_1 return -> 2_1 switch @ lib/bonsai/src/cont.ml:LINE:COL
        2-3_2 map @ 6:8 -> 2-3_1 return
-       2_1 switch @ lib/bonsai/src/cont.ml:826:81 -> _1 sub
+       2_1 switch @ lib/bonsai/src/cont.ml:LINE:COL -> _1 sub
        _1 sub -> _0
      |}];
   let handle = Handle.create (Result_spec.sexp (module Bool)) c in
@@ -769,21 +778,21 @@ let%expect_test "lazy" =
        1-1_1 incr -> 1_2 map
        1_1 return -> _1 sub
        1_2 map -> 1_1 return
-       2-1_1 named -> 2_1 switch @ lib/bonsai/src/cont.ml:826:81
-       2-2_1 lazy -> 2_1 switch @ lib/bonsai/src/cont.ml:826:81
-       2-3_1 return -> 2_1 switch @ lib/bonsai/src/cont.ml:826:81
+       2-1_1 named -> 2_1 switch @ lib/bonsai/src/cont.ml:LINE:COL
+       2-2_1 lazy -> 2_1 switch @ lib/bonsai/src/cont.ml:LINE:COL
+       2-3_1 return -> 2_1 switch @ lib/bonsai/src/cont.ml:LINE:COL
        2-3_2 constant -> 2-3_1 return
-       2_1 switch @ lib/bonsai/src/cont.ml:826:81 -> _1 sub
+       2_1 switch @ lib/bonsai/src/cont.ml:LINE:COL -> _1 sub
        _1 sub -> _0
      dag:
        1-1_1 incr -> 1_2 map
        1_1 return -> 2-1_1 named, _1 sub
        1_2 map -> 1_1 return
-       2-1_1 named -> 2_1 switch @ lib/bonsai/src/cont.ml:826:81
-       2-2_1 lazy -> 2_1 switch @ lib/bonsai/src/cont.ml:826:81
-       2-3_1 return -> 2_1 switch @ lib/bonsai/src/cont.ml:826:81
+       2-1_1 named -> 2_1 switch @ lib/bonsai/src/cont.ml:LINE:COL
+       2-2_1 lazy -> 2_1 switch @ lib/bonsai/src/cont.ml:LINE:COL
+       2-3_1 return -> 2_1 switch @ lib/bonsai/src/cont.ml:LINE:COL
        2-3_2 constant -> 2-3_1 return
-       2_1 switch @ lib/bonsai/src/cont.ml:826:81 -> _1 sub
+       2_1 switch @ lib/bonsai/src/cont.ml:LINE:COL -> _1 sub
        _1 sub -> _0
      |}];
   let handle = Handle.create (Result_spec.sexp (module Int)) c in
@@ -802,91 +811,91 @@ let%expect_test "lazy" =
       1-1_1 incr -> 1_2 map
       1_1 return -> _1 sub
       1_2 map -> 1_1 return
-      2-1_1 named -> 2_1 switch @ lib/bonsai/src/cont.ml:826:81
-      2-2_1 lazy -> 2_1 switch @ lib/bonsai/src/cont.ml:826:81
+      2-1_1 named -> 2_1 switch @ lib/bonsai/src/cont.ml:LINE:COL
+      2-2_1 lazy -> 2_1 switch @ lib/bonsai/src/cont.ml:LINE:COL
       2-2_2 return -> 2-2_1 lazy
-      2-3_1 return -> 2_1 switch @ lib/bonsai/src/cont.ml:826:81
+      2-3_1 return -> 2_1 switch @ lib/bonsai/src/cont.ml:LINE:COL
       2-3_2 constant -> 2-3_1 return
-      2_1 switch @ lib/bonsai/src/cont.ml:826:81 -> _1 sub
+      2_1 switch @ lib/bonsai/src/cont.ml:LINE:COL -> _1 sub
       _1 sub -> _0
     dag:
       1-1_1 incr -> 1_2 map
       1_1 return -> 2-1_1 named, _1 sub
       1_2 map -> 1_1 return
-      2-1_1 named -> 2_1 switch @ lib/bonsai/src/cont.ml:826:81
-      2-2_1 lazy -> 2_1 switch @ lib/bonsai/src/cont.ml:826:81
-      2-3_1 return -> 2_1 switch @ lib/bonsai/src/cont.ml:826:81
+      2-1_1 named -> 2_1 switch @ lib/bonsai/src/cont.ml:LINE:COL
+      2-2_1 lazy -> 2_1 switch @ lib/bonsai/src/cont.ml:LINE:COL
+      2-3_1 return -> 2_1 switch @ lib/bonsai/src/cont.ml:LINE:COL
       2-3_2 constant -> 2-3_1 return
-      2_1 switch @ lib/bonsai/src/cont.ml:826:81 -> _1 sub
+      2_1 switch @ lib/bonsai/src/cont.ml:LINE:COL -> _1 sub
       _1 sub -> _0
     tree:
       1-1_1 incr -> 1_2 map
       1_1 return -> _1 sub
       1_2 map -> 1_1 return
-      2-1_1 named -> 2_1 switch @ lib/bonsai/src/cont.ml:826:81
-      2-2_1 lazy -> 2_1 switch @ lib/bonsai/src/cont.ml:826:81
+      2-1_1 named -> 2_1 switch @ lib/bonsai/src/cont.ml:LINE:COL
+      2-2_1 lazy -> 2_1 switch @ lib/bonsai/src/cont.ml:LINE:COL
       2-2_2 return -> 2-2_1 lazy
-      2-3_1 return -> 2_1 switch @ lib/bonsai/src/cont.ml:826:81
+      2-3_1 return -> 2_1 switch @ lib/bonsai/src/cont.ml:LINE:COL
       2-3_2 constant -> 2-3_1 return
-      2_1 switch @ lib/bonsai/src/cont.ml:826:81 -> _1 sub
+      2_1 switch @ lib/bonsai/src/cont.ml:LINE:COL -> _1 sub
       _1 sub -> _0
     dag:
       1-1_1 incr -> 1_2 map
       1_1 return -> 2-1_1 named, _1 sub
       1_2 map -> 1_1 return
-      2-1_1 named -> 2_1 switch @ lib/bonsai/src/cont.ml:826:81
-      2-2_1 lazy -> 2_1 switch @ lib/bonsai/src/cont.ml:826:81
+      2-1_1 named -> 2_1 switch @ lib/bonsai/src/cont.ml:LINE:COL
+      2-2_1 lazy -> 2_1 switch @ lib/bonsai/src/cont.ml:LINE:COL
       2-2_2 return -> 2-2_1 lazy
-      2-3_1 return -> 2_1 switch @ lib/bonsai/src/cont.ml:826:81
+      2-3_1 return -> 2_1 switch @ lib/bonsai/src/cont.ml:LINE:COL
       2-3_2 constant -> 2-3_1 return
-      2_1 switch @ lib/bonsai/src/cont.ml:826:81 -> _1 sub
+      2_1 switch @ lib/bonsai/src/cont.ml:LINE:COL -> _1 sub
       _1 sub -> _0
     tree:
       1-1_1 incr -> 1_2 map
       1_1 return -> _1 sub
       1_2 map -> 1_1 return
-      2-1_1 named -> 2_1 switch @ lib/bonsai/src/cont.ml:826:81
-      2-2_1 lazy -> 2_1 switch @ lib/bonsai/src/cont.ml:826:81
+      2-1_1 named -> 2_1 switch @ lib/bonsai/src/cont.ml:LINE:COL
+      2-2_1 lazy -> 2_1 switch @ lib/bonsai/src/cont.ml:LINE:COL
       2-2_2 return -> 2-2_1 lazy
       2-2_3 constant -> 2-2_2 return
-      2-3_1 return -> 2_1 switch @ lib/bonsai/src/cont.ml:826:81
+      2-3_1 return -> 2_1 switch @ lib/bonsai/src/cont.ml:LINE:COL
       2-3_2 constant -> 2-3_1 return
-      2_1 switch @ lib/bonsai/src/cont.ml:826:81 -> _1 sub
+      2_1 switch @ lib/bonsai/src/cont.ml:LINE:COL -> _1 sub
       _1 sub -> _0
     dag:
       1-1_1 incr -> 1_2 map
       1_1 return -> 2-1_1 named, _1 sub
       1_2 map -> 1_1 return
-      2-1_1 named -> 2_1 switch @ lib/bonsai/src/cont.ml:826:81
-      2-2_1 lazy -> 2_1 switch @ lib/bonsai/src/cont.ml:826:81
+      2-1_1 named -> 2_1 switch @ lib/bonsai/src/cont.ml:LINE:COL
+      2-2_1 lazy -> 2_1 switch @ lib/bonsai/src/cont.ml:LINE:COL
       2-2_2 return -> 2-2_1 lazy
-      2-3_1 return -> 2_1 switch @ lib/bonsai/src/cont.ml:826:81
+      2-3_1 return -> 2_1 switch @ lib/bonsai/src/cont.ml:LINE:COL
       2-3_2 constant -> 2-3_1 return
-      2_1 switch @ lib/bonsai/src/cont.ml:826:81 -> _1 sub
+      2_1 switch @ lib/bonsai/src/cont.ml:LINE:COL -> _1 sub
       _1 sub -> _0
     tree:
       1-1_1 incr -> 1_2 map
       1_1 return -> _1 sub
       1_2 map -> 1_1 return
-      2-1_1 named -> 2_1 switch @ lib/bonsai/src/cont.ml:826:81
-      2-2_1 lazy -> 2_1 switch @ lib/bonsai/src/cont.ml:826:81
+      2-1_1 named -> 2_1 switch @ lib/bonsai/src/cont.ml:LINE:COL
+      2-2_1 lazy -> 2_1 switch @ lib/bonsai/src/cont.ml:LINE:COL
       2-2_2 return -> 2-2_1 lazy
       2-2_3 constant -> 2-2_2 return
-      2-3_1 return -> 2_1 switch @ lib/bonsai/src/cont.ml:826:81
+      2-3_1 return -> 2_1 switch @ lib/bonsai/src/cont.ml:LINE:COL
       2-3_2 constant -> 2-3_1 return
-      2_1 switch @ lib/bonsai/src/cont.ml:826:81 -> _1 sub
+      2_1 switch @ lib/bonsai/src/cont.ml:LINE:COL -> _1 sub
       _1 sub -> _0
     dag:
       1-1_1 incr -> 1_2 map
       1_1 return -> 2-1_1 named, _1 sub
       1_2 map -> 1_1 return
-      2-1_1 named -> 2_1 switch @ lib/bonsai/src/cont.ml:826:81
-      2-2_1 lazy -> 2_1 switch @ lib/bonsai/src/cont.ml:826:81
+      2-1_1 named -> 2_1 switch @ lib/bonsai/src/cont.ml:LINE:COL
+      2-2_1 lazy -> 2_1 switch @ lib/bonsai/src/cont.ml:LINE:COL
       2-2_2 return -> 2-2_1 lazy
       2-2_3 constant -> 2-2_2 return
-      2-3_1 return -> 2_1 switch @ lib/bonsai/src/cont.ml:826:81
+      2-3_1 return -> 2_1 switch @ lib/bonsai/src/cont.ml:LINE:COL
       2-3_2 constant -> 2-3_1 return
-      2_1 switch @ lib/bonsai/src/cont.ml:826:81 -> _1 sub
+      2_1 switch @ lib/bonsai/src/cont.ml:LINE:COL -> _1 sub
       _1 sub -> _0
     0 |}]
 ;;

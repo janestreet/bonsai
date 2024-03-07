@@ -177,6 +177,11 @@ module Basic : sig
     -> ?default_sort:('key * 'data) compare Value.t
          (** An optional function may be provided to sort the table. *)
     -> ?preload_rows:int
+    -> ?extra_row_attrs:('key -> Vdom.Attr.t list) Value.t
+         (** [extra_row_attrs] will be added to the themed/functional attrs attached by the PRT
+        on each row. In general, theming of the PRT should be done by passing
+        [~theming:`Themed] and customizing the PRT-related attributes in the theme.
+        However, this parameter can be used to attach attributes for testing. *)
     -> ('key, 'cmp) Bonsai.comparator
     -> focus:('focus, 'presence, 'key, 'column_id) Focus.t
     -> row_height:[ `Px of int ] Value.t
@@ -325,6 +330,11 @@ module Expert : sig
         viewport range. This number can have a significant effect on performance: too
         small and scrolling might be choppy; too large and you start to lose some of the
         benefits of partial rendering. *)
+    -> ?extra_row_attrs:('key -> Vdom.Attr.t list) Value.t
+         (** [extra_row_attrs] will be added to the themed/functional attrs attached by the PRT
+        on each row. In general, theming of the PRT should be done by passing
+        [~theming:`Themed] and customizing the PRT-related attributes in the theme.
+        However, this parameter can be used to attach attributes for testing. *)
     -> ('key, 'cmp) Bonsai.comparator
     -> focus:('focus, 'presence, 'key, 'column_id) Focus.t
     -> row_height:[ `Px of int ] Value.t

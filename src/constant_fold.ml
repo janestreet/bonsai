@@ -41,7 +41,8 @@ include struct
 
   let computation_exception_folder name ~f =
     try f () with
-    | exn -> Computation.Return (wrap_value ~here:None name (Exception exn))
+    | exn ->
+      Trampoline.return (Computation.Return (wrap_value ~here:None name (Exception exn)))
   ;;
 
   let lazy_contents_if_value_is_constant : type a. a Value.t -> a Lazy.t option =
@@ -84,14 +85,19 @@ include struct
     by
     =
     let module C = (val key_comparator) in
-    let%map.Option by =
+    let%map.Option by, can_contain_path =
       Simplify.computation_to_function
         by
         ~key_compare:C.comparator.compare
         ~key_id
         ~data_id
     in
-    Computation.Assoc_simpl { map; by }
+    let can_contain_path =
+      match can_contain_path with
+      | `Can_contain_path -> true
+      | `Cannot_contain_path -> false
+    in
+    Computation.Assoc_simpl { map; by; can_contain_path }
   ;;
 end
 
@@ -193,8 +199,10 @@ module Constant_fold (Recurse : Fix_transform.Recurse with module Types := Types
         f t1 t2 t3 t4 t5 t6 t7)
   ;;
 
+  open Trampoline.Let_syntax
+
   let transform_c (type a) { constants_in_scope; evaluated } (t : a Computation.t)
-    : a Computation.t
+    : a Computation.t Trampoline.t
     =
     match t with
     | Assoc ({ map; key_id; data_id; by; key_comparator; _ } as assoc_t) ->
@@ -202,24 +210,28 @@ module Constant_fold (Recurse : Fix_transform.Recurse with module Types := Types
         Recurse.on_value { constants_in_scope; evaluated } () `Directly_on map
       in
       (match map_v.value with
-       | Exception exn -> Proc.read (Value.return_exn exn)
+       | Exception exn -> return (Proc.read (Value.return_exn exn))
        | Constant map ->
-         Map.mapi map ~f:(fun ~key ~data ->
-           (* In this case, the map is constant, so we have access to the key/data pair
-              directly. We use the [Sub]s below with the correct [key_id]/[data_id] so
-              that [by] will refer to these constants and then we can recursively rely on
-              the constant-folding optimizations to clean up these [Sub]s for us. *)
-           let data_binding =
+         let folded =
+           Map.mapi map ~f:(fun ~key ~data ->
+             (* In this case, the map is constant, so we have access to the key/data pair
+                directly. We use the [Sub]s below with the correct [key_id]/[data_id] so
+                that [by] will refer to these constants and then we can recursively rely on
+                the constant-folding optimizations to clean up these [Sub]s for us. *)
+             let data_binding =
+               Computation.Sub
+                 { here = None; from = Proc.const data; via = data_id; into = by }
+             in
              Computation.Sub
-               { here = None; from = Proc.const data; via = data_id; into = by }
-           in
-           Computation.Sub
-             { here = None; from = Proc.const key; via = key_id; into = data_binding })
-         |> Proc.Computation.all_map
-         |> Recurse.on_computation { constants_in_scope; evaluated } () `Directly_on
-         |> fun ((), (), r) -> r
+               { here = None; from = Proc.const key; via = key_id; into = data_binding })
+           |> Proc.Computation.all_map
+         in
+         let%bind (), (), r =
+           Recurse.on_computation { constants_in_scope; evaluated } () `Directly_on folded
+         in
+         return r
        | _ ->
-         let (), (), by =
+         let%bind (), (), by =
            Recurse.on_computation
              { constants_in_scope; evaluated = Maybe }
              ()
@@ -227,15 +239,15 @@ module Constant_fold (Recurse : Fix_transform.Recurse with module Types := Types
              by
          in
          (match simplify_assoc_if_simpl ~key_comparator ~key_id ~data_id map_v by with
-          | Some kind -> kind
-          | None -> Assoc { assoc_t with map = map_v; by }))
+          | Some kind -> return kind
+          | None -> return (Computation.Assoc { assoc_t with map = map_v; by })))
     | Assoc_on
         ({ map; io_comparator = key_comparator; io_key_id = key_id; data_id; by; _ } as
         assoc_on_t) ->
       let (), (), map =
         Recurse.on_value { constants_in_scope; evaluated } () `Directly_on map
       in
-      let (), (), by =
+      let%bind (), (), by =
         Recurse.on_computation
           { constants_in_scope; evaluated = Maybe }
           ()
@@ -243,43 +255,45 @@ module Constant_fold (Recurse : Fix_transform.Recurse with module Types := Types
           by
       in
       (match simplify_assoc_if_simpl ~key_comparator ~key_id ~data_id map by with
-       | Some kind -> kind
-       | None -> Assoc_on { assoc_on_t with map; by })
+       | Some kind -> return kind
+       | None -> return (Computation.Assoc_on { assoc_on_t with map; by }))
     | Switch { match_; arms; here } ->
       let (), (), match_ =
         Recurse.on_value { constants_in_scope; evaluated } () `Directly_on match_
       in
       (match match_.value with
-       | Exception exn -> Proc.read (Value.return_exn exn)
+       | Exception exn -> return (Proc.read (Value.return_exn exn))
        | Constant i ->
          (match Map.find arms i with
           | Some c ->
-            let (), (), r =
+            let%bind (), (), r =
               Recurse.on_computation { constants_in_scope; evaluated } () `Directly_on c
             in
-            r
+            return r
           | None ->
             [%sexp
               "switch with value", ((i : int), "does not have a corresponding computation")]
             |> Error.create_s
             |> Error.to_exn
             |> Value.return_exn
-            |> Proc.read)
+            |> Proc.read
+            |> return)
        | _ ->
-         let arms =
+         let%bind arms =
            Map.map arms ~f:(fun c ->
-             let (), (), r =
+             let%bind (), (), r =
                Recurse.on_computation
                  { constants_in_scope; evaluated = Maybe }
                  ()
                  `Directly_on
                  c
              in
-             r)
+             return r)
+           |> Trampoline.all_map
          in
-         Switch { match_; arms; here })
+         return (Computation.Switch { match_; arms; here }))
     | Sub { from; via; into; here } ->
-      let (), (), from =
+      let%bind (), (), from =
         Recurse.on_computation { constants_in_scope; evaluated } () `Directly_on from
       in
       (match from with
@@ -287,40 +301,45 @@ module Constant_fold (Recurse : Fix_transform.Recurse with module Types := Types
          let new_constants_in_scope =
            Constants_in_scope.add_exn ~key:via ~data:with_id constants_in_scope
          in
-         let (), (), c =
+         let%bind (), (), c =
            Recurse.on_computation
              { constants_in_scope = new_constants_in_scope; evaluated }
              ()
              `Directly_on
              into
          in
-         c
+         return c
        | _ ->
-         let (), (), into =
+         let%bind (), (), into =
            Recurse.on_computation { constants_in_scope; evaluated } () `Directly_on into
          in
-         Sub { from; via; into; here })
+         return (Computation.Sub { from; via; into; here }))
     | Leaf1 { input; input_id; model; dynamic_action; apply_action; reset } ->
       let (), (), input =
         Recurse.on_value { constants_in_scope; evaluated } () `Directly_on input
       in
       computation_exception_folder "leaf1" ~f:(fun () ->
         match contents_if_value_is_constant input with
-        | None -> Leaf1 { input; input_id; model; dynamic_action; apply_action; reset }
+        | None ->
+          return
+            (Computation.Leaf1
+               { input; input_id; model; dynamic_action; apply_action; reset })
         | Some input ->
           let apply_action ~inject = apply_action ~inject (Some input) in
-          Leaf0 { model; static_action = dynamic_action; apply_action; reset })
+          return
+            (Computation.Leaf0
+               { model; static_action = dynamic_action; apply_action; reset }))
     | Lazy t ->
       (match evaluated with
        | Unconditionally ->
-         let (), (), c =
+         let%bind (), (), c =
            Recurse.on_computation
              { constants_in_scope; evaluated = Unconditionally }
              ()
              `Directly_on
              (Lazy.force t)
          in
-         c
+         return c
        | Maybe ->
          Lazy.map t ~f:(fun t ->
            (* Because this recursion is inside of a Lazy.map, it'll only proceed
@@ -335,15 +354,17 @@ module Constant_fold (Recurse : Fix_transform.Recurse with module Types := Types
               interesting interacctions between deferred optimizations, we could mint a
               type for deferred optimizations which we can introspect.
            *)
-           let (), (), t =
-             Recurse.on_computation
-               { constants_in_scope; evaluated = Unconditionally }
-               ()
-               `Directly_on
-               t
-           in
-           t)
-         |> Computation.Lazy)
+           Trampoline.run
+             (let%bind (), (), t =
+                Recurse.on_computation
+                  { constants_in_scope; evaluated = Unconditionally }
+                  ()
+                  `Directly_on
+                  t
+              in
+              return t))
+         |> Computation.Lazy
+         |> return)
     | Return _
     | Leaf0 _
     | Leaf_incr _
@@ -354,24 +375,29 @@ module Constant_fold (Recurse : Fix_transform.Recurse with module Types := Types
     | Path
     | Assoc_simpl _
     | Lifecycle _ ->
-      let (), (), c =
+      let%bind (), (), c =
         Recurse.on_computation { constants_in_scope; evaluated } () `Skipping_over t
       in
-      c
+      return c
   ;;
 
   let transform_v constants_in_scope () v = (), (), transform_v constants_in_scope v
-  let transform_c constants_in_scope () c = (), (), transform_c constants_in_scope c
+
+  let transform_c constants_in_scope () c =
+    let%bind r = transform_c constants_in_scope c in
+    return ((), (), r)
+  ;;
 end
 
 open Fix_transform.Make (Types) (Constant_fold)
 
 let constant_fold c =
   let (), (), r =
-    transform_c
-      { constants_in_scope = Constants_in_scope.empty; evaluated = Unconditionally }
-      ()
-      c
+    Trampoline.run
+      (transform_c
+         { constants_in_scope = Constants_in_scope.empty; evaluated = Unconditionally }
+         ()
+         c)
   in
   r
 ;;

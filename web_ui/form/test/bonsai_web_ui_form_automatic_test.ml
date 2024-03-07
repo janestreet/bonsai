@@ -1950,7 +1950,7 @@ let%expect_test "using the same component twice" =
     ==============
     <table>
       <tbody>
-        <tr @key=bonsai_path_x_x_x_x_x>
+        <tr @key=bonsai_path_x>
           <td style={
                 padding-left: 0em;
                 padding-right: 1em;
@@ -1959,16 +1959,16 @@ let%expect_test "using the same component twice" =
                 user-select: none;
               }>  </td>
           <td>
-            <input @key=bonsai_path_x_x_y_y_x_x_x_x
+            <input @key=bonsai_path_y
                    type="text"
                    placeholder=""
                    spellcheck="false"
-                   id="bonsai_path_x_x_x_x_x"
+                   id="bonsai_path_x"
                    value:normalized=b
                    oninput> </input>
           </td>
         </tr>
-        <tr @key=bonsai_path_x_x_x_x_x>
+        <tr @key=bonsai_path_x>
           <td style={
                 padding-left: 0em;
                 padding-right: 1em;
@@ -1977,11 +1977,11 @@ let%expect_test "using the same component twice" =
                 user-select: none;
               }>  </td>
           <td>
-            <input @key=bonsai_path_x_x_y_y_x_x_x_x
+            <input @key=bonsai_path_y
                    type="text"
                    placeholder=""
                    spellcheck="false"
-                   id="bonsai_path_x_x_x_x_x"
+                   id="bonsai_path_x"
                    value:normalized=b
                    oninput> </input>
           </td>
@@ -3563,8 +3563,6 @@ let%expect_test "form of nested record of int and float (typed fields)" =
   Handle.show_diff handle;
   [%expect
     {|
-    "Form.return was set, but setting is ignored."
-
       (Ok (
         (unit ())
         (nested (
@@ -4042,7 +4040,6 @@ let%expect_test "typed variants" =
   Handle.show handle;
   [%expect
     {|
-    "Form.return was set, but setting is ignored."
     (Ok Unit)
 
     ==============
@@ -4278,7 +4275,6 @@ let%expect_test "typed optional variants" =
   Handle.show handle;
   [%expect
     {|
-    "Form.return was set, but setting is ignored."
     (Ok (Unit))
 
     ==============
@@ -4324,7 +4320,6 @@ let%expect_test "typed optional variants" =
   Handle.show handle;
   [%expect
     {|
-    "Form.return was set, but setting is ignored."
     (Ok ())
 
     ==============
@@ -6285,7 +6280,7 @@ let%expect_test "[Form.return] is not settable, but can log the attempted set if
   Handle.show handle;
   [%expect
     {|
-    ("Form.return was set, but setting is ignored." (set_value 10))
+    ("Form.return was set, but setting is ignored." (set_value 5))
     (Ok 5)
 
     ==============
@@ -6328,8 +6323,8 @@ let%expect_test "Partially settable form via [Form.return] and [Form.return_sett
   Handle.show handle;
   [%expect
     {|
-    ("Form.return was set, but setting is ignored." (set_value 10))
-    ("Form.return was set, but setting is ignored." (set_value 30))
+    ("Form.return was set, but setting is ignored." (set_value 1))
+    ("Form.return was set, but setting is ignored." (set_value 3))
     (Ok (
       (form_return          1)
       (form_return_settable 20)

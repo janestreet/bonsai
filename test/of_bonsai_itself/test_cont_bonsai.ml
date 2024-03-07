@@ -1,6 +1,7 @@
 open! Core
 open! Import
 open! Bonsai_test
+module Proc_bonsai = Bonsai
 
 module Bonsai = struct
   include Bonsai.Cont
@@ -382,10 +383,10 @@ let%expect_test "path" =
   Handle.show handle;
   (* The first of these "Subst_from" is actually a component that is
      added by the testing helpers. *)
-  [%expect {| (Subst_from Subst_from) |}]
+  [%expect {| () |}]
 ;;
 
-let%expect_test "path inside enum" =
+let%expect_test "path inside enum with single branch doesn't need disambiguation" =
   let component graph =
     let r =
       Bonsai.Let_syntax.Let_syntax.switch
@@ -405,7 +406,30 @@ let%expect_test "path inside enum" =
       component
   in
   Handle.show handle;
-  [%expect {| (Subst_from (Switch 0)) |}]
+  [%expect {| () |}]
+;;
+
+let%expect_test "path inside enum with multiple branches needs disambiguation" =
+  let component graph =
+    let r =
+      Bonsai.Let_syntax.Let_syntax.switch
+        ~here:[%here]
+        ~match_:(opaque_const_value 0)
+        ~with_:(fun _ -> Bonsai.path graph)
+        ~branches:2
+    in
+    r
+  in
+  let handle =
+    Handle.create
+      (Result_spec.sexp
+         (module struct
+           type t = Bonsai.Private.Path.t [@@deriving sexp_of]
+         end))
+      component
+  in
+  Handle.show handle;
+  [%expect {| ((Switch 0)) |}]
 ;;
 
 let%expect_test "assoc and enum path " =
@@ -443,10 +467,8 @@ let%expect_test "assoc and enum path " =
       component
   in
   Handle.show handle;
-  [%expect
-    {|
-    ((-1 (Subst_from (Assoc -1) Subst_into Subst_into (Switch 0)))
-     (1 (Subst_from (Assoc 1) Subst_into Subst_into (Switch 1)))) |}]
+  [%expect {|
+    ((-1 ((Assoc -1) (Switch 0))) (1 ((Assoc 1) (Switch 1)))) |}]
 ;;
 
 let%expect_test "constant folded assoc path" =
@@ -479,14 +501,8 @@ let%expect_test "constant folded assoc path" =
       component
   in
   Handle.show handle;
-  [%expect
-    {|
-    ((-1
-      (Subst_from Subst_from Subst_from Subst_from Subst_into Subst_into
-       Subst_into Subst_from))
-     (1
-      (Subst_from Subst_from Subst_into Subst_from Subst_from Subst_into
-       Subst_into Subst_into Subst_from))) |}]
+  [%expect {|
+    ((-1 (Subst_from)) (1 (Subst_into))) |}]
 ;;
 
 let%expect_test "constant folded assoc lifecycles are unchanged" =
@@ -638,12 +654,8 @@ let%expect_test "simple-assoc works with paths" =
   Handle.show handle;
   [%expect
     {|
-    ((hello
-      ((Subst_from (Assoc hello) Subst_from)
-       (Subst_from (Assoc hello) Subst_into Subst_from)))
-     (world
-      ((Subst_from (Assoc world) Subst_from)
-       (Subst_from (Assoc world) Subst_into Subst_from)))) |}];
+    ((hello (((Assoc hello) Subst_from) ((Assoc hello) Subst_into)))
+     (world (((Assoc world) Subst_from) ((Assoc world) Subst_into)))) |}];
   component |> sexp_of_computation ~optimize:true |> print_s;
   [%expect {| (Assoc_simpl (map Incr)) |}]
 ;;
@@ -2575,7 +2587,16 @@ let%expect_test "let syntax is collapsed upon eval" =
   let packed =
     let open Bonsai.Private in
     let computation = top_level_handle computation in
-    let (T { model; input = _; action; run; apply_action = _; reset = _ }) =
+    let (T
+          { model
+          ; input = _
+          ; action
+          ; run
+          ; apply_action = _
+          ; reset = _
+          ; can_contain_path = _
+          })
+      =
       computation |> pre_process |> gather
     in
     let T =
@@ -2591,6 +2612,7 @@ let%expect_test "let syntax is collapsed upon eval" =
         ~inject:(function
           | Leaf_static _ -> .)
         ~model:(Ui_incr.return model.default)
+      |> Bonsai.Private.Trampoline.run
     in
     Snapshot.result snapshot |> Ui_incr.pack
   in
@@ -6937,5 +6959,79 @@ let%expect_test "use of match%sub outside of graph context" =
       | false -> Bonsai.return 10
     in
     ());
-  [%expect {| (Failure "match%sub called outside of the context of a graph") |}]
+  print_endline (Expect_test_helpers_core.hide_positions_in_string [%expect.output]);
+  [%expect
+    {|
+    ("match%sub called outside of the context of a graph"
+     (here lib/bonsai/test/of_bonsai_itself/test_cont_bonsai.ml:LINE:COL)) |}]
+;;
+
+let%test_module "path regression test" =
+  (module struct
+    let%expect_test "Proc" =
+      let module Bonsai = Proc_bonsai in
+      let open Bonsai.Let_syntax in
+      let nested_component =
+        let%sub (_ : _) = Bonsai.state 0 in
+        let%sub (_ : _) = Bonsai.state 0 in
+        let%sub (_ : _) = Bonsai.state 0 in
+        let%sub (_ : _) = Bonsai.state 0 in
+        Bonsai.path_id
+      in
+      let component =
+        let%sub a_path = nested_component in
+        let%sub b_path = nested_component in
+        let%sub c_path = nested_component in
+        let%sub d_path = nested_component in
+        let%sub e_path = nested_component in
+        let%arr a_path = a_path
+        and b_path = b_path
+        and c_path = c_path
+        and d_path = d_path
+        and e_path = e_path in
+        String.concat ~sep:"\n" [ a_path; b_path; c_path; d_path; e_path ]
+      in
+      let handle = Handle.create (Result_spec.string (module String)) component in
+      Handle.show handle;
+      [%expect
+        {|
+        bonsai_path_x
+        bonsai_path_y_x
+        bonsai_path_y_y_x
+        bonsai_path_y_y_y_x
+        bonsai_path_y_y_y_y |}]
+    ;;
+
+    let%expect_test "Cont" =
+      let nested_component graph =
+        let (_ : _) = Bonsai.state 0 graph in
+        let (_ : _) = Bonsai.state 0 graph in
+        let (_ : _) = Bonsai.state 0 graph in
+        let (_ : _) = Bonsai.state 0 graph in
+        Bonsai.path_id graph
+      in
+      let component graph =
+        let a_path = nested_component graph in
+        let b_path = nested_component graph in
+        let c_path = nested_component graph in
+        let d_path = nested_component graph in
+        let e_path = nested_component graph in
+        let%arr a_path = a_path
+        and b_path = b_path
+        and c_path = c_path
+        and d_path = d_path
+        and e_path = e_path in
+        String.concat ~sep:"\n" [ a_path; b_path; c_path; d_path; e_path ]
+      in
+      let handle = Handle.create (Result_spec.string (module String)) component in
+      Handle.show handle;
+      [%expect
+        {|
+        bonsai_path_x
+        bonsai_path_y_x
+        bonsai_path_y_y_x
+        bonsai_path_y_y_y_x
+        bonsai_path_y_y_y_y |}]
+    ;;
+  end)
 ;;

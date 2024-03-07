@@ -4,6 +4,7 @@ open Bonsai.Let_syntax
 module N = Vdom.Node
 module A = Vdom.Attr
 module Form = Bonsai_web_ui_form.With_automatic_view
+module Form2 = Bonsai_web_ui_form.With_manual_view
 module E = Form.Elements
 
 module type S = sig
@@ -180,7 +181,7 @@ module Customization = struct
           ~apply_to_tag:(fun ~key ~value ->
             String.equal key Sexplib0.Sexp_grammar.type_name_tag
             && Sexp.equal value ([%sexp_of: string] "Core.Time_ns.Alternate_sexp.t"))
-          (Form.Elements.Date_time.datetime_local ~allow_updates_when_focused:`Always ())
+          (Form.Elements.Date_time.datetime_local ~allow_updates_when_focused:`Never ())
       ;;
 
       let nice_time_of_day =
@@ -189,7 +190,7 @@ module Customization = struct
           ~apply_to_tag:(fun ~key ~value ->
             String.equal key Sexplib0.Sexp_grammar.type_name_tag
             && Sexp.equal value ([%sexp_of: string] "Core.Time_ns.Ofday.t"))
-          (Form.Elements.Date_time.time ~allow_updates_when_focused:`Always ())
+          (Form.Elements.Date_time.time ~allow_updates_when_focused:`Never ())
       ;;
 
       let nice_date =
@@ -198,7 +199,7 @@ module Customization = struct
           ~apply_to_tag:(fun ~key ~value ->
             String.equal key Sexplib0.Sexp_grammar.type_name_tag
             && Sexp.equal value ([%sexp_of: string] "Core.Date.t"))
-          (Form.Elements.Date_time.date ~allow_updates_when_focused:`Always ())
+          (Form.Elements.Date_time.date ~allow_updates_when_focused:`Never ())
       ;;
 
       let all =
@@ -217,51 +218,51 @@ module Style =
 [%css
 stylesheet
   {|
-  .with_whitespace {
-    white-space: pre-wrap;
-  }
+   .with_whitespace {
+   white-space: pre-wrap;
+   }
 
-  .record_field_name {
-    font-weight: bold;
-  }
+   .record_field_name {
+   font-weight: bold;
+   }
 
-  .error {
-    font-weight: bold;
-    border: solid 2px red
-  }
+   .error {
+   font-weight: bold;
+   border: solid 2px red
+   }
 
-  .override_showing {
-    color: black;
-  }
+   .override_showing {
+   color: black;
+   }
 
-  .override_hidden {
-    color: gray;
-  }
+   .override_hidden {
+   color: gray;
+   }
 
-  .override_text {
-    text-align: center;
-    font-weight: bold;
-    cursor: pointer;
-  }
+   .override_text {
+   text-align: center;
+   font-weight: bold;
+   cursor: pointer;
+   }
 
-  pre {
-    margin: 0;
-  }
+   pre {
+   margin: 0;
+   }
 
-  .inline_padding {
-    padding-inline: 5px;
-  }
+   .inline_padding {
+   padding-inline: 5px;
+   }
 
-  .bold_text {
-    font-weight: 700;
-  }
+   .bold_text {
+   font-weight: 700;
+   }
 
-  .scrollable_tooltip {
-    overflow-y: auto;
-    /* arbitrary value from eyeballing */
-    max-height: 14rem;
-  }
-  |}]
+   .scrollable_tooltip {
+   overflow-y: auto;
+   /* arbitrary value from eyeballing */
+   max-height: 14rem;
+   }
+   |}]
 
 let error_box message = N.pre ~attrs:[ Style.error ] [ N.text message ]
 
@@ -561,6 +562,7 @@ let form
   (grammar : Sexp_grammar.grammar Value.t)
   ~on_set_error
   ~customizations
+  ~allow_duplication_of_list_items
   =
   let rec grammar_form (grammar : Sexp_grammar.grammar Value.t)
     : Sexp.t Form.t Computation.t
@@ -575,22 +577,22 @@ let form
     | String ->
       (match textbox_for_string with
        | None ->
-         E.Textarea.string ~allow_updates_when_focused:`Always ()
+         E.Textarea.string ~allow_updates_when_focused:`Never ()
          |> project_to_sexp (module String)
        | Some () ->
-         E.Textbox.string ~allow_updates_when_focused:`Always ()
+         E.Textbox.string ~allow_updates_when_focused:`Never ()
          |> project_to_sexp (module String))
       |> error_hint
     | Integer ->
-      E.Number.int ~default:0 ~step:1 ~allow_updates_when_focused:`Always ()
+      E.Number.int ~default:0 ~step:1 ~allow_updates_when_focused:`Never ()
       |> project_to_sexp (module Int)
       |> error_hint
     | Char ->
-      E.Textbox.stringable ~allow_updates_when_focused:`Always (module Char)
+      E.Textbox.stringable ~allow_updates_when_focused:`Never (module Char)
       |> project_to_sexp (module Char)
       |> error_hint
     | Float ->
-      E.Number.float ~default:0. ~step:1. ~allow_updates_when_focused:`Always ()
+      E.Number.float ~default:0. ~step:1. ~allow_updates_when_focused:`Never ()
       |> project_to_sexp (module Float)
       |> error_hint
     | Option g -> option_form g
@@ -600,7 +602,7 @@ let form
         (lazy
           (let%sub g = Bonsai.pure force g in
            grammar_form_impl g))
-    | Tagged with_tag -> with_tag_form with_tag |> error_hint
+    | Tagged with_tag -> with_tag_form with_tag
     | Variant { case_sensitivity = _; clauses = [] } ->
       (* There's no value that a form can produce for a variant type with no clauses. So,
          we just produce a form that errors. *)
@@ -641,7 +643,7 @@ let form
       in
       grammar_form merged_variant
     | Any _ | Union _ ->
-      E.Textarea.sexpable ~allow_updates_when_focused:`Always (module Sexp)
+      E.Textarea.sexpable ~allow_updates_when_focused:`Never (module Sexp)
     | Tyvar _ | Tycon _ | Recursive _ ->
       Bonsai.const
         (Form.return_error
@@ -979,6 +981,93 @@ let form
       return form
   and list_grammar_form (grammar : Sexp_grammar.list_grammar Value.t) =
     (Bonsai.lazy_ [@alert "-deprecated"]) (lazy (list_grammar_form_impl grammar))
+  and list_form_with_duplication (grammar : Sexp_grammar.grammar Value.t) =
+    let%sub list_form =
+      let form = grammar_form grammar in
+      Form2.Elements.Multiple.list form
+    in
+    let%sub duplicate =
+      let%arr list_form = list_form in
+      fun idx ->
+        match Form2.value list_form with
+        | Error _ -> Effect.Ignore
+        | Ok value ->
+          Form2.set
+            list_form
+            (List.concat_mapi value ~f:(fun i value ->
+               if i = idx then [ value; value ] else [ value ]))
+    in
+    let%sub view =
+      let render_button ~theme ~enabled ~on_click text =
+        let color =
+          match enabled with
+          | true -> Css_gen.color (`Name "blue")
+          | false -> Css_gen.color (`Name "gray")
+        in
+        View.button
+          theme
+          ~attrs:[ Vdom.Attr.type_ "button"; Vdom.Attr.style color ]
+          ~disabled:(not enabled)
+          ~on_click
+          text
+      in
+      let%sub theme = View.Theme.current in
+      let%arr list_form = list_form
+      and duplicate = duplicate
+      and theme = theme in
+      let ({ items; add_element } : _ Form2.Elements.Multiple.t) = Form2.view list_form in
+      let items =
+        List.mapi items ~f:(fun i { form; remove } ->
+          let remove_view =
+            View.hbox
+              ~gap:(`Em_float 0.5)
+              [ View.textf "%d - " i
+              ; render_button ~theme ~enabled:true ~on_click:remove "[ remove ]"
+              ; render_button
+                  ~theme
+                  ~enabled:(Or_error.is_ok (Form2.value list_form))
+                  ~on_click:(duplicate i)
+                  "[ duplicate ]"
+              ]
+          in
+          Form.View.list_item
+            ~view:(Form.view form)
+            ~remove_item:(Remove_view remove_view))
+      in
+      Form.View.list
+        ~append_item:(Append_info { append = add_element; text = None })
+        ~legacy_button_position:`Indented
+        items
+    in
+    let%sub value =
+      let%arr list_form = list_form in
+      let%map.Or_error value = Form2.value list_form in
+      Sexp.List value
+    in
+    let%sub set =
+      let%arr list_form = list_form in
+      function
+      | Sexp.List l -> Form2.set list_form l
+      | Sexp.Atom _ as atom ->
+        on_set_error [%message "attempted to set atom into list grammar" (atom : Sexp.t)]
+    in
+    let%arr value = value
+    and set = set
+    and view = view in
+    value, set, [ view ]
+  and list_form_without_duplication (grammar : Sexp_grammar.grammar Value.t) =
+    let%map.Computation list_form = grammar_form grammar |> E.Multiple.list in
+    let view = Form.view list_form in
+    let value =
+      let%map.Or_error value = Form.value list_form in
+      Sexp.List value
+    in
+    let set = function
+      | Sexp.List l -> Form.set list_form l
+      | Sexp.Atom _ as atom ->
+        on_set_error [%message "attempted to set atom into list grammar" (atom : Sexp.t)]
+    in
+    value, set, [ view ]
   and list_grammar_form_impl (grammar : Sexp_grammar.list_grammar Value.t) =
     (* Tuples don't have labels, so we annotate their arguments with ordinals. The
        special-case check for a singleton list is because we don't want to add an ordinal
@@ -995,19 +1084,9 @@ let form
       match%sub grammar with
       | Empty -> Bonsai.const (Ok (Sexp.List []), (fun _ -> Effect.Ignore), [])
       | Many grammar ->
-        let%map.Computation list_form = grammar_form grammar |> E.Multiple.list in
-        let view = Form.view list_form in
-        let value =
-          let%map.Or_error value = Form.value list_form in
-          Sexp.List value
-        in
-        let set = function
-          | Sexp.List l -> Form.set list_form l
-          | Sexp.Atom _ as atom ->
-            on_set_error
-              [%message "attempted to set atom into list grammar" (atom : Sexp.t)]
-        in
-        value, set, [ view ]
+        (match allow_duplication_of_list_items with
+         | false -> list_form_without_duplication grammar
+         | true -> list_form_with_duplication grammar)
       | Fields fields -> fields_grammar_form fields
       | Cons (g, rest) ->
         let%sub g_form = grammar_form g in
@@ -1276,7 +1355,7 @@ let form
             let%arr with_tag = with_tag in
             with_tag.grammar
           in
-          grammar_form grammar
+          grammar_form grammar |> error_hint
         | Some index ->
           let customization = List.nth_exn customizations index in
           Customization.apply customization with_tag ~recurse:grammar_form)
@@ -1288,12 +1367,20 @@ let form'
   ?(on_set_error = Effect.print_s)
   ?(customizations = Customization.Defaults.Form.all)
   ?textbox_for_string
+  ?(allow_duplication_of_list_items = true)
   sexp_grammar
   =
   let%sub sexp_grammar =
     Bonsai.pure Sexp_grammar.Unroll_recursion.of_grammar_exn sexp_grammar
   in
-  let%sub form = form ?textbox_for_string sexp_grammar ~on_set_error ~customizations in
+  let%sub form =
+    form
+      ?textbox_for_string
+      sexp_grammar
+      ~on_set_error
+      ~customizations
+      ~allow_duplication_of_list_items
+  in
   let%arr form = form
   and sexp_grammar = sexp_grammar in
   let validate_sexp = Sexp_grammar.validate_sexp_untyped sexp_grammar in
@@ -1315,6 +1402,7 @@ let form
   ?on_set_error
   ?customizations
   ?textbox_for_string
+  ?allow_duplication_of_list_items
   ()
   : a Form.t Computation.t
   =
@@ -1323,6 +1411,7 @@ let form
       ?on_set_error
       ?customizations
       ?textbox_for_string
+      ?allow_duplication_of_list_items
       (Value.return M.t_sexp_grammar.untyped)
   in
   Form.project form ~parse_exn:M.t_of_sexp ~unparse:M.sexp_of_t

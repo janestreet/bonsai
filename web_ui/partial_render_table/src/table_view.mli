@@ -96,7 +96,13 @@ module Row : sig
 
   type t
 
-  val view : Themed.t -> styles:Styles.t -> is_focused:bool -> Cell.t list -> t
+  val view
+    :  Themed.t
+    -> styles:Styles.t
+    -> is_focused:bool
+    -> extra_attrs:Vdom.Attr.t list
+    -> Cell.t list
+    -> t
 end
 
 module Body : sig

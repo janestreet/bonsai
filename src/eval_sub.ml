@@ -42,18 +42,19 @@ let baseline
       in
       model_from, model_into
   in
+  let both_use_path = info_from.can_contain_path && info_into.can_contain_path in
   let run ~environment ~path ~clock ~model ~inject =
-    let from =
+    let%bind.Trampoline from =
       let model = Incr.map model ~f:Tuple2.get1 in
-      let path = Path.append path Path.Elem.Subst_from in
+      let path = if both_use_path then Path.append path Path.Elem.Subst_from else path in
       info_from.run ~environment ~path ~clock ~model ~inject:(wrap_sub_from inject)
     in
     Snapshot.attribute_positions here from;
     let from_result = Snapshot.result from in
     let environment = Environment.add_exn environment ~key:via ~data:from_result in
-    let into =
+    let%bind.Trampoline into =
       let model = Incr.map model ~f:Tuple2.get2 in
-      let path = Path.append path Path.Elem.Subst_into in
+      let path = if both_use_path then Path.append path Path.Elem.Subst_into else path in
       info_into.run ~environment ~path ~clock ~model ~inject:(wrap_sub_into inject)
     in
     let result = Snapshot.result into in
@@ -64,7 +65,7 @@ let baseline
         ~f:Lifecycle.Collection.merge
     in
     let input = Input.merge (Snapshot.input from) (Snapshot.input into) in
-    Snapshot.create ~result ~input ~lifecycle
+    Trampoline.return (Snapshot.create ~result ~input ~lifecycle)
   in
   let model = Meta.Model.both info_from.model info_into.model in
   let input = Meta.Input.both info_from.input info_into.input in
@@ -75,6 +76,7 @@ let baseline
     ; apply_action
     ; run
     ; reset
+    ; can_contain_path = info_from.can_contain_path || info_into.can_contain_path
     }
 ;;
 
@@ -84,16 +86,17 @@ let from_stateless
   ~(info_into : _ Computation.info)
   ~via
   =
+  let both_use_path = info_from.can_contain_path && info_into.can_contain_path in
   let run ~environment ~path ~clock ~model ~inject =
-    let from =
-      let path = Path.append path Path.Elem.Subst_from in
+    let%bind.Trampoline from =
+      let path = if both_use_path then Path.append path Path.Elem.Subst_from else path in
       info_from.run ~environment ~path ~clock ~model:unit_model ~inject:unreachable_action
     in
     Snapshot.attribute_positions here from;
     let from_result = Snapshot.result from in
     let environment = Environment.add_exn environment ~key:via ~data:from_result in
-    let into =
-      let path = Path.append path Path.Elem.Subst_into in
+    let%bind.Trampoline into =
+      let path = if both_use_path then Path.append path Path.Elem.Subst_into else path in
       info_into.run ~environment ~path ~clock ~model ~inject
     in
     let result = Snapshot.result into in
@@ -104,7 +107,7 @@ let from_stateless
         ~f:Lifecycle.Collection.merge
     in
     let input = Snapshot.input into in
-    Snapshot.create ~result ~input ~lifecycle
+    Trampoline.return (Snapshot.create ~result ~input ~lifecycle)
   in
   Computation.T
     { run
@@ -113,6 +116,7 @@ let from_stateless
     ; action = info_into.action
     ; apply_action = info_into.apply_action
     ; reset = info_into.reset
+    ; can_contain_path = info_from.can_contain_path || info_into.can_contain_path
     }
 ;;
 
@@ -122,16 +126,17 @@ let into_stateless
   ~(info_into : _ Computation.info)
   ~via
   =
+  let both_use_path = info_from.can_contain_path && info_into.can_contain_path in
   let run ~environment ~path ~clock ~model ~inject =
-    let from =
-      let path = Path.append path Path.Elem.Subst_from in
+    let%bind.Trampoline from =
+      let path = if both_use_path then Path.append path Path.Elem.Subst_from else path in
       info_from.run ~environment ~path ~clock ~model ~inject
     in
     Snapshot.attribute_positions here from;
     let from_result = Snapshot.result from in
     let environment = Environment.add_exn environment ~key:via ~data:from_result in
-    let into =
-      let path = Path.append path Path.Elem.Subst_into in
+    let%bind.Trampoline into =
+      let path = if both_use_path then Path.append path Path.Elem.Subst_into else path in
       info_into.run ~environment ~path ~clock ~model:unit_model ~inject:unreachable_action
     in
     let result = Snapshot.result into in
@@ -142,7 +147,7 @@ let into_stateless
         ~f:Lifecycle.Collection.merge
     in
     let input = Snapshot.input from in
-    Snapshot.create ~result ~input ~lifecycle
+    Trampoline.return (Snapshot.create ~result ~input ~lifecycle)
   in
   Computation.T
     { run
@@ -151,5 +156,6 @@ let into_stateless
     ; action = info_from.action
     ; apply_action = info_from.apply_action
     ; reset = info_from.reset
+    ; can_contain_path = info_from.can_contain_path || info_into.can_contain_path
     }
 ;;

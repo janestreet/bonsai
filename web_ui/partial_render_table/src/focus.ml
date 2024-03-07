@@ -6,6 +6,8 @@ module Collated = Incr_map_collate.Collated
 module By_cell = struct
   module Action = struct
     type ('key, 'column_id) t =
+      | Lock
+      | Unlock
       | Unfocus
       | Up
       | Down
@@ -24,7 +26,10 @@ module By_cell = struct
 
   type ('k, 'column_id, 'presence) t =
     { focused : 'presence
+    ; focus_is_locked : bool
     ; unfocus : unit Effect.t
+    ; lock_focus : unit Effect.t
+    ; unlock_focus : unit Effect.t
     ; focus_up : unit Effect.t
     ; focus_down : unit Effect.t
     ; focus_left : unit Effect.t
@@ -38,7 +43,7 @@ module By_cell = struct
 
   type ('k, 'column_id) optional = ('k, 'column_id, ('k * 'column_id) option) t
 
-  module Without_presence : sig
+  module Statically_computed : sig
     (* The effects computed from [inject] are constant, and only computed once.
        [presence], however, changes extremely frequently, since it is the focused row.
        Constructing this value in stages means that downstream consumers that only look at
@@ -52,14 +57,18 @@ module By_cell = struct
 
     val finalize
       :  ('k, 'column_id) unfinalized
-      -> 'presence
+      -> presence:'presence
+      -> focus_is_locked:bool
       -> ('k, 'column_id, 'presence) t
   end = struct
     type ('k, 'column_id) unfinalized = ('k, 'column_id, Nothing.t option) t
 
     let create inject =
       { focused = None
+      ; focus_is_locked = false
       ; unfocus = inject Action.Unfocus
+      ; lock_focus = inject Lock
+      ; unlock_focus = inject Unlock
       ; focus_up = inject Up
       ; focus_down = inject Down
       ; focus_left = inject Left
@@ -71,7 +80,9 @@ module By_cell = struct
       }
     ;;
 
-    let finalize without_focus focused = { without_focus with focused }
+    let finalize without_focus ~presence ~focus_is_locked =
+      { without_focus with focused = presence; focus_is_locked }
+    ;;
   end
 end
 
@@ -80,7 +91,10 @@ module By_row = struct
   type 'k optional = ('k, 'k option) t
 
   let focused = By_cell.focused
+  let focus_is_locked = By_cell.focus_is_locked
   let unfocus = By_cell.unfocus
+  let lock_focus = By_cell.lock_focus
+  let unlock_focus = By_cell.unlock_focus
   let focus_up = By_cell.focus_up
   let focus_down = By_cell.focus_down
   let page_up = By_cell.page_up
@@ -207,13 +221,20 @@ module Cell_machine = struct
           Shadow is useful for computing "next cell down" if the user previously
           unfocused, or if the element that was previously selected has been
           removed. *)
-      type t =
+
+      type current_focus =
         | No_focused_cell
         | Shadow of (Key.t, Column_id.t) Currently_selected_cell.t
         | Visible of (Key.t, Column_id.t) Currently_selected_cell.t
       [@@deriving sexp_of, equal]
 
-      let empty = No_focused_cell
+      type t =
+        { locked : bool
+        ; current_focus : current_focus
+        }
+      [@@deriving sexp_of, equal]
+
+      let empty = { locked = false; current_focus = No_focused_cell }
     end
     in
     let module Input = struct
@@ -247,7 +268,7 @@ module Cell_machine = struct
           ; scroll_to_column = _
           } ->
         (* There are no columns, therefore no cells, so there is nothing to focus. *)
-        Model.No_focused_cell
+        { model with current_focus = No_focused_cell }
       | Inactive ->
         (* We want to preserve focus state even if the table is inactive *)
         model
@@ -259,157 +280,176 @@ module Cell_machine = struct
           ; scroll_to_index
           ; scroll_to_column
           } ->
-        let scroll_to_index index =
-          Bonsai.Apply_action_context.schedule_event context (scroll_to_index index)
-        in
-        let scroll_to_column column =
-          Bonsai.Apply_action_context.schedule_event context (scroll_to_column column)
-        in
-        let update_focus ~f =
-          let original_index_and_column =
-            match model with
-            | No_focused_cell -> None
-            | Shadow { row; column } | Visible { row; column } ->
-              (match row with
-               | At_index index -> Some (index, column)
-               | At_key { key; index = old_index } ->
-                 (match find_by_key collated ~key ~key_equal:Key.equal with
-                  | Some { Triple.index; key = _ } -> Some (index, column)
-                  | None -> Some (old_index, column)))
-          in
-          let new_index, new_column = f original_index_and_column in
-          scroll_to_index new_index;
-          scroll_to_column new_column;
-          let new_index =
-            Int.max
-              0
-              (Int.min
-                 new_index
-                 (Collated.num_before_range collated
-                  + Collated.num_after_range collated
-                  + Collated.length collated
-                  - 1))
-          in
-          let row =
-            match find_by_index collated ~index:new_index with
-            | Some triple -> Currently_selected_row.At_key triple
-            | None -> At_index new_index
-          in
-          { Currently_selected_cell.row; column = new_column }
-        in
-        let new_focus =
-          match (action : Action.t) with
-          | Switch_from_index_to_key { key; index } ->
-            (* Before switching from index to key, we need to make sure that
-               the focus is still at the that index. If it isn't, then we
-               ignore the request to switch from index to key, since it is out
-               of date. *)
-            (match model with
-             | No_focused_cell -> None
-             | Visible { row = At_index model_index; column }
-             | Shadow { row = At_index model_index; column } ->
-               if model_index = index
-               then Some { Currently_selected_cell.row = At_key { key; index }; column }
-               else Some { row = At_index model_index; column }
-             | Visible ({ row = At_key _; column = _ } as current)
-             | Shadow ({ row = At_key _; column = _ } as current) -> Some current)
-          | Select (key, column) ->
-            (match find_by_key ~key ~key_equal:Key.equal collated with
-             | Some ({ index; key = _ } as triple) ->
-               scroll_to_index index;
-               Some { row = At_key triple; column }
-             | None -> None)
-          | Unfocus -> None
-          | Select_index (new_index, new_column) ->
-            Some (update_focus ~f:(fun _original_index -> new_index, new_column))
-          | Down ->
-            Some
-              (update_focus ~f:(function
-                | Some (original_index, column) -> original_index + 1, column
-                | None -> range_start, first_column))
-          | Up ->
-            Some
-              (update_focus ~f:(function
-                | Some (original_index, column) -> original_index - 1, column
-                | None -> range_end, first_column))
-          | Left ->
-            Some
-              (update_focus ~f:(function
-                | Some (original_index, original_column) ->
-                  let column_index =
-                    List.findi columns ~f:(fun _ column ->
-                      Column_id.equal column original_column)
-                  in
-                  (match column_index with
-                   | Some (i, _) ->
-                     (* List.nth_exn will throw if and only if the length of the list is 0,
-                         which the pattern match above guards against already.*)
-                     original_index, List.nth_exn columns (Int.max (i - 1) 0)
-                   | None -> original_index, first_column)
-                | None -> range_start, first_column))
-          | Right ->
-            Some
-              (update_focus ~f:(function
-                | Some (original_index, original_column) ->
-                  let column_index =
-                    List.findi columns ~f:(fun _ column ->
-                      Column_id.equal column original_column)
-                  in
-                  (match column_index with
-                   | Some (i, _) ->
-                     (* List.nth_exn will throw if and only if the length of the list is 0,
-                         which the pattern match above guards against already.*)
-                     ( original_index
-                     , List.nth_exn columns (Int.min (i + 1) (List.length columns - 1)) )
-                   | None -> original_index, first_column)
-                | None -> range_start, first_column))
-          | Page_down ->
-            Some
-              (update_focus ~f:(function
-                | Some (original_index, original_column) ->
-                  let new_index =
-                    if original_index < range_end
-                    then range_end
-                    else original_index + (range_end - range_start)
-                  in
-                  new_index, original_column
-                | None -> range_end, first_column))
-          | Page_up ->
-            Some
-              (update_focus ~f:(function
-                | Some (original_index, original_column) ->
-                  let new_index =
-                    if original_index > range_start
-                    then range_start
-                    else original_index - (range_end - range_start)
-                  in
-                  new_index, original_column
-                | None -> range_start, first_column))
-        in
-        let new_model =
-          match action with
-          | Unfocus ->
-            (match model with
-             | No_focused_cell -> Model.No_focused_cell
-             | Visible triple | Shadow triple -> Shadow triple)
-          | _ ->
-            (match new_focus with
-             | Some triple -> Visible triple
-             | None -> No_focused_cell)
-        in
-        let prev_key =
-          match model with
-          | No_focused_cell | Shadow _ | Visible { row = At_index _; column = _ } -> None
-          | Visible { row = At_key { key; _ }; column } -> Some (key, column)
-        in
-        let next_key =
-          match new_model with
-          | No_focused_cell | Shadow _ | Visible { row = At_index _; column = _ } -> None
-          | Visible { row = At_key { key; _ }; column } -> Some (key, column)
-        in
-        if not ([%equal: (Key.t * Column_id.t) option] prev_key next_key)
-        then Bonsai.Apply_action_context.schedule_event context (on_change next_key);
-        new_model
+        (match model, (action : Action.t) with
+         | { locked = true; current_focus = _ }, Unlock -> { model with locked = false }
+         | { locked = true; current_focus = _ }, _ -> model
+         | { locked = false; current_focus }, _ ->
+           let scroll_to_index index =
+             Bonsai.Apply_action_context.schedule_event context (scroll_to_index index)
+           in
+           let scroll_to_column column =
+             Bonsai.Apply_action_context.schedule_event context (scroll_to_column column)
+           in
+           let update_focus ~f =
+             let original_index_and_column =
+               match (current_focus : Model.current_focus) with
+               | No_focused_cell -> None
+               | Shadow { row; column } | Visible { row; column } ->
+                 (match row with
+                  | At_index index -> Some (index, column)
+                  | At_key { key; index = old_index } ->
+                    (match find_by_key collated ~key ~key_equal:Key.equal with
+                     | Some { Triple.index; key = _ } -> Some (index, column)
+                     | None -> Some (old_index, column)))
+             in
+             let new_index, new_column = f original_index_and_column in
+             scroll_to_index new_index;
+             scroll_to_column new_column;
+             let new_index =
+               Int.max
+                 0
+                 (Int.min
+                    new_index
+                    (Collated.num_before_range collated
+                     + Collated.num_after_range collated
+                     + Collated.length collated
+                     - 1))
+             in
+             let row =
+               match find_by_index collated ~index:new_index with
+               | Some triple -> Currently_selected_row.At_key triple
+               | None -> At_index new_index
+             in
+             { Currently_selected_cell.row; column = new_column }
+           in
+           let new_locked =
+             match (action : Action.t) with
+             | Lock -> true
+             | Unlock -> false
+             | Switch_from_index_to_key _
+             | Select _
+             | Unfocus
+             | Select_index _
+             | Down
+             | Up
+             | Left
+             | Right
+             | Page_down
+             | Page_up -> model.locked
+             (* Technically we already know [model.locked] is false in this branch, but
+                this code feels closer to the semantics we're going for *)
+           in
+           let new_focus =
+             match (action : Action.t) with
+             | Lock | Unlock -> current_focus
+             | Switch_from_index_to_key { key; index } ->
+               (* Before switching from index to key, we need to make sure that
+                  the focus is still at the that index. If it isn't, then we
+                  ignore the request to switch from index to key, since it is out
+                  of date. *)
+               (match current_focus with
+                | No_focused_cell -> No_focused_cell
+                | Visible { row = At_index model_index; column }
+                | Shadow { row = At_index model_index; column } ->
+                  if model_index = index
+                  then
+                    Visible
+                      { Currently_selected_cell.row = At_key { key; index }; column }
+                  else Visible { row = At_index model_index; column }
+                | Visible ({ row = At_key _; column = _ } as current)
+                | Shadow ({ row = At_key _; column = _ } as current) -> Visible current)
+             | Select (key, column) ->
+               (match find_by_key ~key ~key_equal:Key.equal collated with
+                | Some ({ index; key = _ } as triple) ->
+                  scroll_to_index index;
+                  Visible { row = At_key triple; column }
+                | None -> No_focused_cell)
+             | Unfocus ->
+               (match current_focus with
+                | No_focused_cell -> No_focused_cell
+                | Visible triple | Shadow triple -> Shadow triple)
+             | Select_index (new_index, new_column) ->
+               Visible (update_focus ~f:(fun _original_index -> new_index, new_column))
+             | Down ->
+               Visible
+                 (update_focus ~f:(function
+                   | Some (original_index, column) -> original_index + 1, column
+                   | None -> range_start, first_column))
+             | Up ->
+               Visible
+                 (update_focus ~f:(function
+                   | Some (original_index, column) -> original_index - 1, column
+                   | None -> range_end, first_column))
+             | Left ->
+               Visible
+                 (update_focus ~f:(function
+                   | Some (original_index, original_column) ->
+                     let column_index =
+                       List.findi columns ~f:(fun _ column ->
+                         Column_id.equal column original_column)
+                     in
+                     (match column_index with
+                      | Some (i, _) ->
+                        (* List.nth_exn will throw if and only if the length of the list is 0,
+                            which the pattern match above guards against already.*)
+                        original_index, List.nth_exn columns (Int.max (i - 1) 0)
+                      | None -> original_index, first_column)
+                   | None -> range_start, first_column))
+             | Right ->
+               Visible
+                 (update_focus ~f:(function
+                   | Some (original_index, original_column) ->
+                     let column_index =
+                       List.findi columns ~f:(fun _ column ->
+                         Column_id.equal column original_column)
+                     in
+                     (match column_index with
+                      | Some (i, _) ->
+                        (* List.nth_exn will throw if and only if the length of the list is 0,
+                            which the pattern match above guards against already.*)
+                        ( original_index
+                        , List.nth_exn columns (Int.min (i + 1) (List.length columns - 1))
+                        )
+                      | None -> original_index, first_column)
+                   | None -> range_start, first_column))
+             | Page_down ->
+               Visible
+                 (update_focus ~f:(function
+                   | Some (original_index, original_column) ->
+                     let new_index =
+                       if original_index < range_end
+                       then range_end
+                       else original_index + (range_end - range_start)
+                     in
+                     new_index, original_column
+                   | None -> range_end, first_column))
+             | Page_up ->
+               Visible
+                 (update_focus ~f:(function
+                   | Some (original_index, original_column) ->
+                     let new_index =
+                       if original_index > range_start
+                       then range_start
+                       else original_index - (range_end - range_start)
+                     in
+                     new_index, original_column
+                   | None -> range_start, first_column))
+           in
+           let prev_key =
+             match current_focus with
+             | No_focused_cell | Shadow _ | Visible { row = At_index _; column = _ } ->
+               None
+             | Visible { row = At_key { key; _ }; column } -> Some (key, column)
+           in
+           let next_key =
+             match new_focus with
+             | No_focused_cell | Shadow _ | Visible { row = At_index _; column = _ } ->
+               None
+             | Visible { row = At_key { key; _ }; column } -> Some (key, column)
+           in
+           if not ([%equal: (Key.t * Column_id.t) option] prev_key next_key)
+           then Bonsai.Apply_action_context.schedule_event context (on_change next_key);
+           { locked = new_locked; current_focus = new_focus })
     in
     let%sub current, inject =
       Bonsai.state_machine1
@@ -421,25 +461,30 @@ module Cell_machine = struct
         input
     in
     let%sub current = return (Value.cutoff ~equal:[%equal: Model.t] current) in
-    let%sub everything_injectable =
+    let%sub statically_computed =
       (* By depending on only [inject] (which is a constant), we can build the vast majority
          of this record, leaving only the "focused" field left unset, which we quickly fix.
          Doing it this way will mean that downstream consumers that only look at e.g. the "focus_up"
          field, won't have cutoff issues caused by [inject Up] being called every time that
          the model changes. *)
       let%arr inject = inject in
-      By_cell.Without_presence.create inject
+      By_cell.Statically_computed.create inject
+    in
+    let%sub focus_is_locked =
+      let%arr { locked; _ } = current in
+      locked
     in
     let%sub visually_focused =
       let%arr current = current
       and collated = collated in
       match current with
-      | Visible { row = At_key { key; _ }; column } -> Some (key, column)
-      | Visible { row = At_index index; column } ->
+      | { current_focus = Visible { row = At_key { key; _ }; column }; locked = _ } ->
+        Some (key, column)
+      | { current_focus = Visible { row = At_index index; column }; locked = _ } ->
         (match find_by_index collated ~index with
          | Some { key; _ } -> Some (key, column)
          | None -> None)
-      | No_focused_cell | Shadow _ -> None
+      | { current_focus = No_focused_cell | Shadow _; locked = _ } -> None
     in
     let%sub () =
       Bonsai.Edge.on_change
@@ -448,12 +493,12 @@ module Cell_machine = struct
         (Value.both current visually_focused)
         ~callback:
           (let%map inject = inject in
-           fun (current, visually_focused) ->
+           fun ({ Model.current_focus; locked = _ }, visually_focused) ->
              (* If we ever notice that the state machine is focused at an index
                 for which there is an existing row, we can request that the state
                 machine switch over to being focused on the key at that index. *)
-             match current with
-             | Model.Visible { row = At_index index; column = _ } ->
+             match current_focus with
+             | Visible { row = At_index index; column = _ } ->
                (match visually_focused with
                 | Some (key, _) -> inject (Switch_from_index_to_key { key; index })
                 | None -> Effect.Ignore)
@@ -468,8 +513,11 @@ module Cell_machine = struct
     in
     let%arr presence = presence
     and visually_focused = visually_focused
-    and everything_injectable = everything_injectable in
-    let focus = By_cell.Without_presence.finalize everything_injectable presence in
+    and statically_computed = statically_computed
+    and focus_is_locked = focus_is_locked in
+    let focus =
+      By_cell.Statically_computed.finalize statically_computed ~presence ~focus_is_locked
+    in
     { focus; visually_focused }
   ;;
 end

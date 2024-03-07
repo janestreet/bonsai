@@ -9,7 +9,7 @@ type ('a, 'view) t =
 
 (** [return] produces a bonsai form that will always produce the same value.
     [set] and [normalize] will do nothing to the form provided by this. *)
-val return : ?sexp_of_t:('a -> Sexp.t) -> 'a -> ('a, unit) t
+val return : ?sexp_of_t:('a -> Sexp.t) -> ?equal:('a -> 'a -> bool) -> 'a -> ('a, unit) t
 
 (** [return_settable] is identical to [return], but [set] and [normalize] will update
     the value of the form. *)

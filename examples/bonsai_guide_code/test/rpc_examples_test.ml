@@ -9,6 +9,7 @@ let double_rpc =
     ~version:0
     ~bin_query:[%bin_type_class: int]
     ~bin_response:[%bin_type_class: int]
+    ~include_in_error_count:Only_on_exn
 ;;
 
 let double_implementation =

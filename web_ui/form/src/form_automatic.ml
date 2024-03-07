@@ -240,7 +240,9 @@ let of_form2 form2 =
   map_view form2 ~f:(fun old_view -> View.of_vdom old_view ~unique_key:path)
 ;;
 
-let return ?sexp_of_t value = map_view (return ?sexp_of_t value) ~f:(fun () -> View.empty)
+let return ?sexp_of_t ?equal value =
+  map_view (return ?sexp_of_t ?equal value) ~f:(fun () -> View.empty)
+;;
 
 let return_settable ?sexp_of_model ~equal value =
   let%sub form = return_settable ?sexp_of_model ~equal value in

@@ -96,12 +96,16 @@ val view
     If [textbox_for_string] is supplied, string inputs will be textboxes rather than
     textareas (meaning the form can be submitted with Enter when those fields are active,
     but users will not be able to input multiline strings).
-*)
+
+    [allow_duplication_of_list_items] defaults to [true] and controls whether a
+    "duplicate" button is shown next to all list as a shortcut to duplicate that item in
+    the list. *)
 val form
   :  (module S with type t = 'a)
   -> ?on_set_error:(Sexp.t -> unit Effect.t)
   -> ?customizations:form_transformer Customization.t list
   -> ?textbox_for_string:unit
+  -> ?allow_duplication_of_list_items:bool
   -> unit
   -> 'a Form.t Computation.t
 
@@ -112,6 +116,7 @@ val form'
   :  ?on_set_error:(Sexp.t -> unit Effect.t)
   -> ?customizations:form_transformer Customization.t list
   -> ?textbox_for_string:unit
+  -> ?allow_duplication_of_list_items:bool
   -> Sexp_grammar.grammar Value.t
   -> Sexp.t Form.t Computation.t
 

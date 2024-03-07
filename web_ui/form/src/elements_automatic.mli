@@ -31,35 +31,35 @@ end
 module Textbox : sig
   val string
     :  ?extra_attrs:Vdom.Attr.t list Value.t
-    -> ?placeholder:string
+    -> ?placeholder:string Value.t
     -> allow_updates_when_focused:[ `Always | `Never ]
     -> unit
     -> string Form.t Computation.t
 
   val int
     :  ?extra_attrs:Vdom.Attr.t list Value.t
-    -> ?placeholder:string
+    -> ?placeholder:string Value.t
     -> allow_updates_when_focused:[ `Always | `Never ]
     -> unit
     -> int Form.t Computation.t
 
   val float
     :  ?extra_attrs:Vdom.Attr.t list Value.t
-    -> ?placeholder:string
+    -> ?placeholder:string Value.t
     -> allow_updates_when_focused:[ `Always | `Never ]
     -> unit
     -> float Form.t Computation.t
 
   val sexpable
     :  ?extra_attrs:Vdom.Attr.t list Value.t
-    -> ?placeholder:string
+    -> ?placeholder:string Value.t
     -> allow_updates_when_focused:[ `Always | `Never ]
     -> (module Sexpable with type t = 'a)
     -> 'a Form.t Computation.t
 
   val stringable
     :  ?extra_attrs:Vdom.Attr.t list Value.t
-    -> ?placeholder:string
+    -> ?placeholder:string Value.t
     -> allow_updates_when_focused:[ `Always | `Never ]
     -> (module Stringable with type t = 'a)
     -> 'a Form.t Computation.t
@@ -68,14 +68,14 @@ end
 module Password : sig
   val string
     :  ?extra_attrs:Vdom.Attr.t list Value.t
-    -> ?placeholder:string
+    -> ?placeholder:string Value.t
     -> allow_updates_when_focused:[ `Always | `Never ]
     -> unit
     -> string Form.t Computation.t
 
   val stringable
     :  ?extra_attrs:Vdom.Attr.t list Value.t
-    -> ?placeholder:string
+    -> ?placeholder:string Value.t
     -> allow_updates_when_focused:[ `Always | `Never ]
     -> (module Stringable with type t = 'a)
     -> 'a Form.t Computation.t
@@ -84,35 +84,35 @@ end
 module Textarea : sig
   val string
     :  ?extra_attrs:Vdom.Attr.t list Value.t
-    -> ?placeholder:string
+    -> ?placeholder:string Value.t
     -> allow_updates_when_focused:[ `Always | `Never ]
     -> unit
     -> string Form.t Computation.t
 
   val int
     :  ?extra_attrs:Vdom.Attr.t list Value.t
-    -> ?placeholder:string
+    -> ?placeholder:string Value.t
     -> allow_updates_when_focused:[ `Always | `Never ]
     -> unit
     -> int Form.t Computation.t
 
   val float
     :  ?extra_attrs:Vdom.Attr.t list Value.t
-    -> ?placeholder:string
+    -> ?placeholder:string Value.t
     -> allow_updates_when_focused:[ `Always | `Never ]
     -> unit
     -> float Form.t Computation.t
 
   val sexpable
     :  ?extra_attrs:Vdom.Attr.t list Value.t
-    -> ?placeholder:string
+    -> ?placeholder:string Value.t
     -> allow_updates_when_focused:[ `Always | `Never ]
     -> (module Sexpable with type t = 'a)
     -> 'a Form.t Computation.t
 
   val stringable
     :  ?extra_attrs:Vdom.Attr.t list Value.t
-    -> ?placeholder:string
+    -> ?placeholder:string Value.t
     -> allow_updates_when_focused:[ `Always | `Never ]
     -> (module Stringable with type t = 'a)
     -> 'a Form.t Computation.t
@@ -482,7 +482,7 @@ module Multiple : sig
     :  ?extra_input_attr:Vdom.Attr.t Value.t
     -> ?extra_pill_container_attr:Vdom.Attr.t Value.t
     -> ?extra_pill_attr:Vdom.Attr.t Value.t
-    -> ?placeholder:string
+    -> ?placeholder:string Value.t
     -> (module Stringable_model with type t = 'a)
     -> equal:('a -> 'a -> bool)
     -> 'a list Form.t Computation.t

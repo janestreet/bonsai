@@ -21,13 +21,18 @@ let view t = t.view
 let map_view t ~f = { t with view = f t.view }
 let is_valid t = Or_error.is_ok t.value
 
-let return ?sexp_of_t value =
-  let set value =
-    match sexp_of_t with
-    | Some sexp_of_t ->
-      Effect.print_s
-        [%message "Form.return was set, but setting is ignored." ~set_value:(value : t)]
-    | None -> Effect.print_s [%message "Form.return was set, but setting is ignored."]
+let return ?sexp_of_t ?(equal = phys_equal) value =
+  let set new_value =
+    (* Only log a message if someone tried to set a non-equal value. This prevents
+       superfluous messages when e.g. someone sets a unit into a unit form. *)
+    if phys_equal value new_value || equal value new_value
+    then Effect.Ignore
+    else (
+      match sexp_of_t with
+      | Some sexp_of_t ->
+        Effect.print_s
+          [%message "Form.return was set, but setting is ignored." ~set_value:(value : t)]
+      | None -> Effect.print_s [%message "Form.return was set, but setting is ignored."])
   in
   { value = Ok value; view = (); set }
 ;;

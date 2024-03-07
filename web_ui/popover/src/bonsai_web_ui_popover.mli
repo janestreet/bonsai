@@ -51,7 +51,7 @@ val component
        ([ `Left_click | `Right_click | `Escape ] -> bool) Value.t
   -> ?on_close:unit Effect.t Value.t
   -> ?keep_popover_inside_window:bool Value.t
-  -> close_when_clicked_outside:bool
+  -> close_when_clicked_outside:bool Value.t
   -> direction:Direction.t Value.t
   -> alignment:Alignment.t Value.t
   -> popover:(close:unit Effect.t Value.t -> Vdom.Node.t Computation.t)

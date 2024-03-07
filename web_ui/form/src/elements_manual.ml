@@ -98,7 +98,8 @@ let string_underlying
   let%sub view =
     let%sub path = Bonsai.path_id in
     let%arr extra_attrs = extra_attrs
-    and path = path in
+    and path = path
+    and placeholder = Value.transpose_opt placeholder in
     fun ~state ~set_state ~theme ->
       f
         theme
@@ -208,7 +209,8 @@ end
 module Textarea = struct
   let string ?(extra_attrs = Value.return []) ?placeholder ~allow_updates_when_focused () =
     let%sub view =
-      let%arr extra_attrs = extra_attrs in
+      let%arr extra_attrs = extra_attrs
+      and placeholder = Value.transpose_opt placeholder in
       fun ~state ~set_state ~theme ->
         View.Form_inputs.textarea
           theme
@@ -1272,7 +1274,7 @@ module Multiple = struct
     ?(extra_input_attr = Value.return Vdom.Attr.empty)
     ?(extra_pill_container_attr = Value.return Vdom.Attr.empty)
     ?(extra_pill_attr = Value.return Vdom.Attr.empty)
-    ?(placeholder = "")
+    ?(placeholder = Value.return "")
     (module M : Stringable_model with type t = a)
     ~equal
     =
@@ -1310,8 +1312,8 @@ module Multiple = struct
     and state = state
     and set_state = set_state
     and pills = pills
-    and extra_input_attr = extra_input_attr in
-    let placeholder_ = placeholder in
+    and extra_input_attr = extra_input_attr
+    and placeholder_ = placeholder in
     let handle_keydown event =
       match Js_of_ocaml.Dom_html.Keyboard_code.of_event event with
       | Enter ->

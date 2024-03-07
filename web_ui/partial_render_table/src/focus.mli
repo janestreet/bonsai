@@ -6,6 +6,9 @@ module By_cell : sig
   type ('k, 'col_id, 'presence) t
 
   val focused : ('k, 'col_id, 'presence) t -> 'presence
+  val focus_is_locked : ('k, 'col_id, 'presence) t -> bool
+  val lock_focus : ('k, 'col_id, 'presence) t -> unit Effect.t
+  val unlock_focus : ('k, 'col_id, 'presence) t -> unit Effect.t
   val focus_up : ('k, 'col_id, 'presence) t -> unit Effect.t
   val focus_down : ('k, 'col_id, 'presence) t -> unit Effect.t
   val focus_left : ('k, 'col_id, 'presence) t -> unit Effect.t
@@ -28,6 +31,9 @@ module By_row : sig
   type ('k, 'presence) t
 
   val focused : ('k, 'presence) t -> 'presence
+  val focus_is_locked : ('k, 'presence) t -> bool
+  val lock_focus : ('k, 'presence) t -> unit Effect.t
+  val unlock_focus : ('k, 'presence) t -> unit Effect.t
   val focus_up : ('k, 'presence) t -> unit Effect.t
   val focus_down : ('k, 'presence) t -> unit Effect.t
   val page_up : ('k, 'presence) t -> unit Effect.t

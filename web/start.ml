@@ -171,7 +171,8 @@ module Arrow_deprecated = struct
     ~bind_to_element_with_id
     ~(computation : result Bonsai.Private.Computation.t)
     ~fresh
-    ({ model; input = _; action; apply_action; run; reset = _ } as info :
+    ({ model; input = _; action; apply_action; run; reset = _; can_contain_path = _ } as
+     info :
       (model, action, action_input, result) Bonsai.Private.Computation.info)
     : (input, extra, incoming, outgoing) Handle.t
     =
@@ -243,6 +244,7 @@ module Arrow_deprecated = struct
             ~clock:bonsai_clock
             ~model
             ~inject
+          |> Bonsai.Private.Trampoline.run
         in
         let%map view =
           let%map { App_result.view; extra; inject_incoming } =

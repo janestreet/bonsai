@@ -158,7 +158,7 @@ module Search = struct
   let component () =
     let%sub input =
       Form.Elements.Textbox.string
-        ~placeholder:"Filter icons"
+        ~placeholder:(Value.return "Filter icons")
         ~allow_updates_when_focused:`Never
         ()
     in

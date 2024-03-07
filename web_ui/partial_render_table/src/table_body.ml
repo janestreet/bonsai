@@ -36,6 +36,7 @@ let rows
   ~(column_widths : (column_id, Column_size.t, column_id_cmp) Map.t Value.t)
   ~(visually_focused : (key, column_id, kind) Focus.focused Value.t)
   ~(on_cell_click : (key -> column_id -> unit Effect.t) Value.t)
+  ~extra_row_attrs
   (cells : (key * (column_id * Vdom.Node.t) list) Opaque_map.t Value.t)
   =
   let module Key_cmp = (val key_comparator) in
@@ -121,10 +122,18 @@ let rows
             cell)
       in
       let%arr themed_attrs = themed_attrs
+      and key = key
       and cells = cells
       and is_row_focused = is_row_focused
-      and row_styles = row_styles in
-      Table_view.Row.view themed_attrs ~styles:row_styles ~is_focused:is_row_focused cells)
+      and row_styles = row_styles
+      and extra_row_attrs = extra_row_attrs in
+      let extra_attrs = extra_row_attrs key in
+      Table_view.Row.view
+        themed_attrs
+        ~extra_attrs
+        ~styles:row_styles
+        ~is_focused:is_row_focused
+        cells)
 ;;
 
 let component
@@ -141,6 +150,7 @@ let component
   ~column_widths
   ~(visually_focused : (key, col, kind) Focus.focused Value.t)
   ~on_cell_click
+  ~extra_row_attrs
   (collated : (key, data) Collated.t Value.t)
   (input : (key * data) Opaque_map.t Value.t)
   : (Table_view.Body.t * For_testing.t Lazy.t) Computation.t
@@ -163,6 +173,7 @@ let component
       ~column_widths
       ~visually_focused
       ~on_cell_click
+      ~extra_row_attrs
       cells
   in
   let%sub view =

@@ -402,9 +402,9 @@ let%expect_test "path" =
   in
   let handle = Handle.create (Result_spec.sexp (module Sexp)) component in
   Handle.show handle;
-  (* The first of these "Subst_from" is actually a component that is
-     added by the testing helpers. *)
-  [%expect {| (Subst_from Subst_into Subst_into Subst_from) |}]
+  (* The path is an empty list because there is only one instance of path in our app,
+     and therefore there's nothing to disambiguate between. *)
+  [%expect {| () |}]
 ;;
 
 let%expect_test "assoc and enum path" =
@@ -424,10 +424,8 @@ let%expect_test "assoc and enum path" =
       component
   in
   Handle.show handle;
-  [%expect
-    {|
-    ((-1 (Subst_from (Assoc -1) Subst_into (Switch 0)))
-     (1 (Subst_from (Assoc 1) Subst_into (Switch 1)))) |}]
+  [%expect {|
+    ((-1 ((Assoc -1) (Switch 0))) (1 ((Assoc 1) (Switch 1)))) |}]
 ;;
 
 let%expect_test "constant folded assoc path" =
@@ -461,14 +459,8 @@ let%expect_test "constant folded assoc path" =
       component
   in
   Handle.show handle;
-  [%expect
-    {|
-    ((-1
-      (Subst_from Subst_from Subst_from Subst_from Subst_into Subst_into
-       Subst_from))
-     (1
-      (Subst_from Subst_from Subst_into Subst_from Subst_from Subst_into
-       Subst_into Subst_from))) |}]
+  [%expect {|
+    ((-1 (Subst_from)) (1 (Subst_into))) |}]
 ;;
 
 let%expect_test "constant folded assoc lifecycles are unchanged" =
@@ -621,12 +613,8 @@ let%expect_test "simple-assoc works with paths" =
   Handle.show handle;
   [%expect
     {|
-    ((hello
-      ((Subst_from (Assoc hello) Subst_from)
-       (Subst_from (Assoc hello) Subst_into Subst_from)))
-     (world
-      ((Subst_from (Assoc world) Subst_from)
-       (Subst_from (Assoc world) Subst_into Subst_from)))) |}];
+    ((hello (((Assoc hello) Subst_from) ((Assoc hello) Subst_into)))
+     (world (((Assoc world) Subst_from) ((Assoc world) Subst_into)))) |}];
   component
   |> Bonsai.Private.top_level_handle
   |> Bonsai.Private.pre_process
@@ -2538,7 +2526,16 @@ let%expect_test "let syntax is collapsed upon eval" =
   let packed =
     let open Bonsai.Private in
     let computation = top_level_handle computation in
-    let (T { model; input = _; apply_action = _; action; run; reset = _ }) =
+    let (T
+          { model
+          ; input = _
+          ; apply_action = _
+          ; action
+          ; run
+          ; reset = _
+          ; can_contain_path = _
+          })
+      =
       computation |> pre_process |> gather
     in
     let T =
@@ -2551,6 +2548,7 @@ let%expect_test "let syntax is collapsed upon eval" =
         ~clock:(Bonsai.Time_source.create ~start:(Time_ns.now ()))
         ~inject:unreachable_action
         ~model:(Ui_incr.return model.default)
+      |> Bonsai.Private.Trampoline.run
     in
     Snapshot.result snapshot |> Ui_incr.pack
   in

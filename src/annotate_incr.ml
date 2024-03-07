@@ -117,11 +117,111 @@ let annotate_packed =
     Incr.Packed.append_user_info_graphviz incr ~label ~attrs)
 ;;
 
+module Counts = struct
+  type t =
+    { mutable input : int
+    ; mutable value : int
+    ; mutable result : int
+    ; mutable lifecycle : int
+    ; mutable empty_lifecycle : int
+    ; mutable model : int
+    ; mutable model_and_input : int
+    ; mutable assoc_key : int
+    ; mutable assoc_input : int
+    ; mutable assoc_results : int
+    ; mutable assoc_lifecycles : int
+    ; mutable assoc_inputs : int
+    ; mutable path : int
+    ; mutable lifecycle_apply_action_pair : int
+    }
+  [@@deriving sexp_of]
+
+  let global =
+    { input = 0
+    ; value = 0
+    ; result = 0
+    ; lifecycle = 0
+    ; empty_lifecycle = 0
+    ; model = 0
+    ; model_and_input = 0
+    ; assoc_key = 0
+    ; assoc_input = 0
+    ; assoc_results = 0
+    ; assoc_lifecycles = 0
+    ; assoc_inputs = 0
+    ; path = 0
+    ; lifecycle_apply_action_pair = 0
+    }
+  ;;
+
+  let current () =
+    { input = global.input
+    ; value = global.value
+    ; result = global.result
+    ; lifecycle = global.lifecycle
+    ; empty_lifecycle = global.empty_lifecycle
+    ; model = global.model
+    ; model_and_input = global.model_and_input
+    ; assoc_key = global.assoc_key
+    ; assoc_input = global.assoc_input
+    ; assoc_results = global.assoc_results
+    ; assoc_lifecycles = global.assoc_lifecycles
+    ; assoc_inputs = global.assoc_inputs
+    ; path = global.path
+    ; lifecycle_apply_action_pair = global.lifecycle_apply_action_pair
+    }
+  ;;
+
+  let diff ~before ~after =
+    { input = after.input - before.input
+    ; value = after.value - before.value
+    ; result = after.result - before.result
+    ; lifecycle = after.lifecycle - before.lifecycle
+    ; empty_lifecycle = after.empty_lifecycle - before.empty_lifecycle
+    ; model = after.model - before.model
+    ; model_and_input = after.model_and_input - before.model_and_input
+    ; assoc_key = after.assoc_key - before.assoc_key
+    ; assoc_input = after.assoc_input - before.assoc_input
+    ; assoc_results = after.assoc_results - before.assoc_results
+    ; assoc_lifecycles = after.assoc_lifecycles - before.assoc_lifecycles
+    ; assoc_inputs = after.assoc_inputs - before.assoc_inputs
+    ; path = after.path - before.path
+    ; lifecycle_apply_action_pair =
+        after.lifecycle_apply_action_pair - before.lifecycle_apply_action_pair
+    }
+  ;;
+
+  let incr : Kind.t -> unit = function
+    | Input -> global.input <- global.input + 1
+    | Value -> global.value <- global.value + 1
+    | Result -> global.result <- global.result + 1
+    | Lifecycle -> global.lifecycle <- global.lifecycle + 1
+    | Empty_lifecycle -> global.empty_lifecycle <- global.empty_lifecycle + 1
+    | Model -> global.model <- global.model + 1
+    | Model_and_input -> global.model_and_input <- global.model_and_input + 1
+    | Assoc_key -> global.assoc_key <- global.assoc_key + 1
+    | Assoc_input -> global.assoc_input <- global.assoc_input + 1
+    | Assoc_results -> global.assoc_results <- global.assoc_results + 1
+    | Assoc_lifecycles -> global.assoc_lifecycles <- global.assoc_lifecycles + 1
+    | Assoc_inputs -> global.assoc_inputs <- global.assoc_inputs + 1
+    | Path -> global.path <- global.path + 1
+    | Lifecycle_apply_action_pair ->
+      global.lifecycle_apply_action_pair <- global.lifecycle_apply_action_pair + 1
+  ;;
+end
+
 (* The "is enabled" check are performed here in order to avoid
    going through the memoization or allocation of a Packed.t even
    when disabled. *)
-let annotate_packed kind incr = if !enabled then annotate_packed kind incr
-let annotate kind incr = if !enabled then annotate_packed kind (Incr.pack incr)
+let annotate_packed kind incr =
+  Counts.incr kind;
+  if !enabled then annotate_packed kind incr
+;;
+
+let annotate kind incr =
+  Counts.incr kind;
+  if !enabled then annotate_packed kind (Incr.pack incr)
+;;
 
 let attribute_packed pos_opt t =
   match !enabled, pos_opt with

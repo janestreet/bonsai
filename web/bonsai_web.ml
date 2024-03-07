@@ -39,4 +39,5 @@ module Cont = struct
   module Persistent_var = Persistent_var
   module Rpc_effect = Rpc_effect
   module Effect = Bonsai_web_effect
+  include Util
 end

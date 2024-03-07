@@ -26,9 +26,12 @@ let sexp_form_handle
   ?optimize
   ?get_vdom
   ?customizations
+  ?allow_duplication_of_list_items
   (module M : S with type t = a)
   =
-  let form = Auto_generated.form (module M) ?customizations () in
+  let form =
+    Auto_generated.form (module M) ?customizations ?allow_duplication_of_list_items ()
+  in
   Handle.create ?optimize (form_result_spec ?get_vdom M.sexp_of_t) form
 ;;
 
@@ -1730,6 +1733,279 @@ let%expect_test "interacting with custom time form" =
            oninput> </input> |}]
 ;;
 
+let%expect_test "duplicating list elements" =
+  let module M = struct
+    type t = int list [@@deriving sexp, sexp_grammar]
+  end
+  in
+  let handle = sexp_form_handle ~get_vdom:get_vdom_detailed (module M) in
+  Handle.do_actions handle [ [ 1; 2 ] ];
+  Handle.show handle;
+  [%expect
+    {|
+    (Ok (1 2))
+
+    ==============
+    <table>
+      <tbody>
+        <tr>
+          <td colspan="2" style={ padding-left: 0em; font-weight: bold; }>
+            <div style={ display: flex; column-gap: 0.50em; }>
+              <span> 0 -  </span>
+              <button type="button" onclick style={ color: blue; }> [ remove ] </button>
+              <button type="button" onclick style={ color: blue; }> [ duplicate ] </button>
+            </div>
+          </td>
+        </tr>
+        <tr @key=bonsai_path_replaced_in_test>
+          <td style={
+                padding-left: 1em;
+                padding-right: 1em;
+                text-align: left;
+                font-weight: bold;
+                user-select: none;
+              }>  </td>
+          <td>
+            <input type="number"
+                   step="1"
+                   placeholder=""
+                   spellcheck="false"
+                   id="bonsai_path_replaced_in_test"
+                   value:normalized=1
+                   oninput> </input>
+          </td>
+        </tr>
+        <tr>
+          <td colspan="2" style={ padding-left: 0em; font-weight: bold; }>
+            <div style={ display: flex; column-gap: 0.50em; }>
+              <span> 1 -  </span>
+              <button type="button" onclick style={ color: blue; }> [ remove ] </button>
+              <button type="button" onclick style={ color: blue; }> [ duplicate ] </button>
+            </div>
+          </td>
+        </tr>
+        <tr @key=bonsai_path_replaced_in_test>
+          <td style={
+                padding-left: 1em;
+                padding-right: 1em;
+                text-align: left;
+                font-weight: bold;
+                user-select: none;
+              }>  </td>
+          <td>
+            <input type="number"
+                   step="1"
+                   placeholder=""
+                   spellcheck="false"
+                   id="bonsai_path_replaced_in_test"
+                   value:normalized=2
+                   oninput> </input>
+          </td>
+        </tr>
+        <tr>
+          <td colspan="2" style={ padding-left: 1em; font-weight: bold; }>
+            <button type="button" onclick> Add new element </button>
+          </td>
+        </tr>
+      </tbody>
+    </table> |}];
+  Handle.click_on handle ~selector:"button:nth-child(3)" ~get_vdom:get_vdom_detailed;
+  (* Note that the duplicate element is added beside the one that was duplicated. *)
+  Handle.show handle;
+  [%expect
+    {|
+    (Ok (1 1 2))
+
+    ==============
+    <table>
+      <tbody>
+        <tr>
+          <td colspan="2" style={ padding-left: 0em; font-weight: bold; }>
+            <div style={ display: flex; column-gap: 0.50em; }>
+              <span> 0 -  </span>
+              <button type="button" onclick style={ color: blue; }> [ remove ] </button>
+              <button type="button" onclick style={ color: blue; }> [ duplicate ] </button>
+            </div>
+          </td>
+        </tr>
+        <tr @key=bonsai_path_replaced_in_test>
+          <td style={
+                padding-left: 1em;
+                padding-right: 1em;
+                text-align: left;
+                font-weight: bold;
+                user-select: none;
+              }>  </td>
+          <td>
+            <input type="number"
+                   step="1"
+                   placeholder=""
+                   spellcheck="false"
+                   id="bonsai_path_replaced_in_test"
+                   value:normalized=1
+                   oninput> </input>
+          </td>
+        </tr>
+        <tr>
+          <td colspan="2" style={ padding-left: 0em; font-weight: bold; }>
+            <div style={ display: flex; column-gap: 0.50em; }>
+              <span> 1 -  </span>
+              <button type="button" onclick style={ color: blue; }> [ remove ] </button>
+              <button type="button" onclick style={ color: blue; }> [ duplicate ] </button>
+            </div>
+          </td>
+        </tr>
+        <tr @key=bonsai_path_replaced_in_test>
+          <td style={
+                padding-left: 1em;
+                padding-right: 1em;
+                text-align: left;
+                font-weight: bold;
+                user-select: none;
+              }>  </td>
+          <td>
+            <input type="number"
+                   step="1"
+                   placeholder=""
+                   spellcheck="false"
+                   id="bonsai_path_replaced_in_test"
+                   value:normalized=1
+                   oninput> </input>
+          </td>
+        </tr>
+        <tr>
+          <td colspan="2" style={ padding-left: 0em; font-weight: bold; }>
+            <div style={ display: flex; column-gap: 0.50em; }>
+              <span> 2 -  </span>
+              <button type="button" onclick style={ color: blue; }> [ remove ] </button>
+              <button type="button" onclick style={ color: blue; }> [ duplicate ] </button>
+            </div>
+          </td>
+        </tr>
+        <tr @key=bonsai_path_replaced_in_test>
+          <td style={
+                padding-left: 1em;
+                padding-right: 1em;
+                text-align: left;
+                font-weight: bold;
+                user-select: none;
+              }>  </td>
+          <td>
+            <input type="number"
+                   step="1"
+                   placeholder=""
+                   spellcheck="false"
+                   id="bonsai_path_replaced_in_test"
+                   value:normalized=2
+                   oninput> </input>
+          </td>
+        </tr>
+        <tr>
+          <td colspan="2" style={ padding-left: 1em; font-weight: bold; }>
+            <button type="button" onclick> Add new element </button>
+          </td>
+        </tr>
+      </tbody>
+    </table> |}]
+;;
+
+(* In case people find it too noisy to display a duplicate button on every single list
+   element, or it causes slowness, they can opt-out with a flag. *)
+let%expect_test "opting out of duplication in lists" =
+  let module M = struct
+    type t = int list [@@deriving sexp, sexp_grammar]
+  end
+  in
+  let handle =
+    sexp_form_handle
+      ~allow_duplication_of_list_items:false
+      ~get_vdom:get_vdom_detailed
+      (module M)
+  in
+  Handle.do_actions handle [ [ 1; 2 ] ];
+  Handle.show handle;
+  [%expect
+    {|
+    (Ok (1 2))
+
+    ==============
+    <table>
+      <tbody>
+        <tr>
+          <td colspan="2" style={ padding-left: 0em; font-weight: bold; }>
+            <div>
+              0 -
+              <button type="button"
+                      onclick
+                      style={
+                        border: none;
+                        cursor: pointer;
+                        color: blue;
+                        background: none;
+                      }> [ remove ] </button>
+            </div>
+          </td>
+        </tr>
+        <tr @key=bonsai_path_replaced_in_test>
+          <td style={
+                padding-left: 1em;
+                padding-right: 1em;
+                text-align: left;
+                font-weight: bold;
+                user-select: none;
+              }>  </td>
+          <td>
+            <input type="number"
+                   step="1"
+                   placeholder=""
+                   spellcheck="false"
+                   id="bonsai_path_replaced_in_test"
+                   value:normalized=1
+                   oninput> </input>
+          </td>
+        </tr>
+        <tr>
+          <td colspan="2" style={ padding-left: 0em; font-weight: bold; }>
+            <div>
+              1 -
+              <button type="button"
+                      onclick
+                      style={
+                        border: none;
+                        cursor: pointer;
+                        color: blue;
+                        background: none;
+                      }> [ remove ] </button>
+            </div>
+          </td>
+        </tr>
+        <tr @key=bonsai_path_replaced_in_test>
+          <td style={
+                padding-left: 1em;
+                padding-right: 1em;
+                text-align: left;
+                font-weight: bold;
+                user-select: none;
+              }>  </td>
+          <td>
+            <input type="number"
+                   step="1"
+                   placeholder=""
+                   spellcheck="false"
+                   id="bonsai_path_replaced_in_test"
+                   value:normalized=2
+                   oninput> </input>
+          </td>
+        </tr>
+        <tr>
+          <td colspan="2" style={ padding-left: 1em; font-weight: bold; }>
+            <button type="button" onclick> Add new element </button>
+          </td>
+        </tr>
+      </tbody>
+    </table> |}]
+;;
+
 let%expect_test "customizing a tuple within a list" =
   let module M = struct
     module Pair = struct
@@ -1791,16 +2067,10 @@ let%expect_test "customizing a tuple within a list" =
       <tbody>
         <tr>
           <td colspan="2" style={ padding-left: 0em; font-weight: bold; }>
-            <div>
-              0 -
-              <button type="button"
-                      onclick
-                      style={
-                        border: none;
-                        cursor: pointer;
-                        color: blue;
-                        background: none;
-                      }> [ remove ] </button>
+            <div style={ display: flex; column-gap: 0.50em; }>
+              <span> 0 -  </span>
+              <button type="button" onclick style={ color: blue; }> [ remove ] </button>
+              <button type="button" onclick style={ color: blue; }> [ duplicate ] </button>
             </div>
           </td>
         </tr>
@@ -2618,16 +2888,10 @@ let%expect_test "customizing a list to have better button text" =
       <tbody>
         <tr>
           <td colspan="2" style={ padding-left: 0em; font-weight: bold; }>
-            <div>
-              0 -
-              <button type="button"
-                      onclick
-                      style={
-                        border: none;
-                        cursor: pointer;
-                        color: blue;
-                        background: none;
-                      }> [ remove ] </button>
+            <div style={ display: flex; column-gap: 0.50em; }>
+              <span> 0 -  </span>
+              <button type="button" onclick style={ color: blue; }> [ remove ] </button>
+              <button type="button" onclick style={ color: blue; }> [ duplicate ] </button>
             </div>
           </td>
         </tr>
@@ -2702,16 +2966,10 @@ let%expect_test "customizing a list in a record to have better button text" =
         </tr>
         <tr>
           <td colspan="2" style={ padding-left: 1em; font-weight: bold; }>
-            <div>
-              0 -
-              <button type="button"
-                      onclick
-                      style={
-                        border: none;
-                        cursor: pointer;
-                        color: blue;
-                        background: none;
-                      }> [ remove ] </button>
+            <div style={ display: flex; column-gap: 0.50em; }>
+              <span> 0 -  </span>
+              <button type="button" onclick style={ color: blue; }> [ remove ] </button>
+              <button type="button" onclick style={ color: blue; }> [ duplicate ] </button>
             </div>
           </td>
         </tr>

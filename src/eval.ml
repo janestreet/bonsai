@@ -19,22 +19,26 @@ let unzip3_mapi' map ~f =
 
 let do_nothing_lifecycle = Incr.return Lifecycle.Collection.empty
 
-let rec gather : type result. result Computation.t -> result Computation.packed_info =
+let rec gather
+  : type result. result Computation.t -> result Computation.packed_info Trampoline.t
+  =
   let open Computation in
   function
   | Return value ->
     let run ~environment ~path:_ ~clock:_ ~model:_ ~inject:_ =
       let result = Value.eval environment value in
-      Snapshot.create ~result ~input:Input.static ~lifecycle:None
+      Trampoline.return (Snapshot.create ~result ~input:Input.static ~lifecycle:None)
     in
-    T
-      { model = Meta.Model.unit
-      ; input = Meta.Input.unit
-      ; action = Action.Type_id.nothing
-      ; apply_action = unusable_apply_action
-      ; reset = reset_unit_model
-      ; run
-      }
+    Trampoline.return
+      (T
+         { model = Meta.Model.unit
+         ; input = Meta.Input.unit
+         ; action = Action.Type_id.nothing
+         ; apply_action = unusable_apply_action
+         ; reset = reset_unit_model
+         ; run
+         ; can_contain_path = false
+         })
   | Leaf1 { model; input_id; dynamic_action; apply_action; input; reset } ->
     let wrap_leaf inject = Action.dynamic_leaf >>> inject in
     let run ~environment ~path:_ ~clock:_ ~model ~inject =
@@ -46,7 +50,8 @@ let rec gather : type result. result Computation.t -> result Computation.packed_
         let%mapn model = model in
         model, inject_dynamic
       in
-      Snapshot.create ~result ~input:(Input.dynamic input) ~lifecycle:None
+      Trampoline.return
+        (Snapshot.create ~result ~input:(Input.dynamic input) ~lifecycle:None)
     in
     let apply_action ~inject ~schedule_event input model = function
       | Action.Leaf_static _ ->
@@ -59,14 +64,16 @@ let rec gather : type result. result Computation.t -> result Computation.packed_
     let reset ~inject ~schedule_event model =
       reset ~inject:(wrap_leaf inject) ~schedule_event model
     in
-    T
-      { model
-      ; input = input_id
-      ; action = Action.Type_id.leaf dynamic_action
-      ; apply_action
-      ; reset
-      ; run
-      }
+    Trampoline.return
+      (T
+         { model
+         ; input = input_id
+         ; action = Action.Type_id.leaf dynamic_action
+         ; apply_action
+         ; reset
+         ; run
+         ; can_contain_path = false
+         })
   | Leaf0 { model; static_action; apply_action; reset } ->
     let wrap_leaf inject = Action.static_leaf >>> inject in
     let run ~environment:_ ~path:_ ~clock:_ ~model ~inject =
@@ -77,7 +84,7 @@ let rec gather : type result. result Computation.t -> result Computation.packed_
         let%map model = model in
         model, inject_static
       in
-      Snapshot.create ~result ~input:Input.static ~lifecycle:None
+      Trampoline.return (Snapshot.create ~result ~input:Input.static ~lifecycle:None)
     in
     let apply_action ~inject ~schedule_event _input model = function
       | Action.Leaf_dynamic _ ->
@@ -90,31 +97,35 @@ let rec gather : type result. result Computation.t -> result Computation.packed_
     let reset ~inject ~schedule_event model =
       reset ~inject:(wrap_leaf inject) ~schedule_event model
     in
-    T
-      { model
-      ; input = Meta.Input.unit
-      ; action = Action.Type_id.leaf static_action
-      ; apply_action
-      ; reset
-      ; run
-      }
+    Trampoline.return
+      (T
+         { model
+         ; input = Meta.Input.unit
+         ; action = Action.Type_id.leaf static_action
+         ; apply_action
+         ; reset
+         ; run
+         ; can_contain_path = false
+         })
   | Leaf_incr { input; compute } ->
     let run ~environment ~path:_ ~clock ~model:_ ~inject:_ =
       let input = Value.eval environment input in
       let result = compute clock input in
-      Snapshot.create ~result ~input:Input.static ~lifecycle:None
+      Trampoline.return (Snapshot.create ~result ~input:Input.static ~lifecycle:None)
     in
-    T
-      { model = Meta.Model.unit
-      ; input = Meta.Input.unit
-      ; action = Action.Type_id.nothing
-      ; apply_action = unusable_apply_action
-      ; reset = reset_unit_model
-      ; run
-      }
+    Trampoline.return
+      (T
+         { model = Meta.Model.unit
+         ; input = Meta.Input.unit
+         ; action = Action.Type_id.nothing
+         ; apply_action = unusable_apply_action
+         ; reset = reset_unit_model
+         ; run
+         ; can_contain_path = false
+         })
   | Sub { from; via; into; here } ->
-    let (T info_from) = gather from in
-    let (T info_into) = gather into in
+    let%bind.Trampoline (T info_from) = gather from in
+    let%bind.Trampoline (T info_into) = gather into in
     let is_unit x = Meta.Model.Type_id.same_witness Meta.Model.unit.type_id x in
     let from_model = is_unit info_from.model.type_id in
     let from_action =
@@ -126,36 +137,39 @@ let rec gather : type result. result Computation.t -> result Computation.packed_
       let%bind b = from_action in
       Some (a, b)
     in
-    (match can_run_from_stateless with
-     | Some (T, T) -> Eval_sub.from_stateless ~here ~info_from ~info_into ~via
-     | None ->
-       let into_model = is_unit info_into.model.type_id in
-       let into_action =
-         Action.Type_id.same_witness info_into.action Action.Type_id.nothing
-       in
-       let can_run_into_stateless =
-         let%bind a = into_model in
-         let%bind b = into_action in
-         Some (a, b)
-       in
-       (match can_run_into_stateless with
-        | Some (T, T) -> Eval_sub.into_stateless ~here ~info_from ~info_into ~via
-        | None -> Eval_sub.baseline ~here ~info_from ~info_into ~via))
+    Trampoline.return
+      (match can_run_from_stateless with
+       | Some (T, T) -> Eval_sub.from_stateless ~here ~info_from ~info_into ~via
+       | None ->
+         let into_model = is_unit info_into.model.type_id in
+         let into_action =
+           Action.Type_id.same_witness info_into.action Action.Type_id.nothing
+         in
+         let can_run_into_stateless =
+           let%bind a = into_model in
+           let%bind b = into_action in
+           Some (a, b)
+         in
+         (match can_run_into_stateless with
+          | Some (T, T) -> Eval_sub.into_stateless ~here ~info_from ~info_into ~via
+          | None -> Eval_sub.baseline ~here ~info_from ~info_into ~via))
   | Store { id; value; inner } ->
-    let (T gathered) = gather inner in
+    let%bind.Trampoline (T gathered) = gather inner in
     let run ~environment ~path ~clock ~model ~inject =
       let value = Value.eval environment value in
       let environment = Environment.add_overwriting environment ~key:id ~data:value in
       gathered.run ~environment ~path ~clock ~model ~inject
     in
-    T
-      { run
-      ; input = gathered.input
-      ; model = gathered.model
-      ; action = gathered.action
-      ; apply_action = gathered.apply_action
-      ; reset = gathered.reset
-      }
+    Trampoline.return
+      (T
+         { run
+         ; input = gathered.input
+         ; model = gathered.model
+         ; action = gathered.action
+         ; apply_action = gathered.apply_action
+         ; reset = gathered.reset
+         ; can_contain_path = gathered.can_contain_path
+         })
   | Fetch { id; default; for_some } ->
     let run ~environment ~path:_ ~clock:_ ~model:_ ~inject:_ =
       let result =
@@ -163,22 +177,33 @@ let rec gather : type result. result Computation.t -> result Computation.packed_
         | None -> Incr.return default
         | Some x -> Incr.map x ~f:(fun a -> for_some a)
       in
-      Snapshot.create ~result ~lifecycle:None ~input:Input.static
+      Trampoline.return (Snapshot.create ~result ~lifecycle:None ~input:Input.static)
     in
-    T
-      { model = Meta.Model.unit
-      ; input = Meta.Input.unit
-      ; action = Action.Type_id.nothing
-      ; apply_action = unusable_apply_action
-      ; reset = reset_unit_model
-      ; run
-      }
+    Trampoline.return
+      (T
+         { model = Meta.Model.unit
+         ; input = Meta.Input.unit
+         ; action = Action.Type_id.nothing
+         ; apply_action = unusable_apply_action
+         ; reset = reset_unit_model
+         ; run
+         ; can_contain_path = false
+         })
   | Assoc { map; key_comparator; key_id; cmp_id; data_id; by } ->
     let module Cmp = (val key_comparator) in
     let wrap_assoc ~key inject =
       Action.assoc ~id:key_id ~compare:Cmp.comparator.compare ~key >>> inject
     in
-    let (T { model = model_info; input = input_info; action; apply_action; run; reset }) =
+    let%bind.Trampoline (T
+                          { model = model_info
+                          ; input = input_info
+                          ; action
+                          ; apply_action
+                          ; run
+                          ; reset
+                          ; can_contain_path
+                          })
+      =
       gather by
     in
     let run ~environment ~path ~clock ~model ~inject =
@@ -195,7 +220,11 @@ let rec gather : type result. result Computation.t -> result Computation.packed_
       let results_map, input_map, lifecycle_map =
         unzip3_mapi' input_and_models_map ~f:(fun ~key ~data:input_and_model ->
           annotate Model_and_input input_and_model;
-          let path = Path.append path Path.Elem.(Assoc (create_keyed key)) in
+          let path =
+            if can_contain_path
+            then Path.append path Path.Elem.(Assoc (create_keyed key))
+            else path
+          in
           let%pattern_bind value, model = input_and_model in
           let key_incr = Incr.const key in
           annotate Assoc_key key_incr;
@@ -209,6 +238,7 @@ let rec gather : type result. result Computation.t -> result Computation.packed_
           in
           let snapshot =
             run ~environment ~path ~clock ~inject:(wrap_assoc ~key inject) ~model
+            |> Trampoline.run
           in
           ( Snapshot.result snapshot
           , Input.to_incremental (Snapshot.input snapshot)
@@ -228,10 +258,11 @@ let rec gather : type result. result Computation.t -> result Computation.packed_
           ~remove:(fun ~outer_key:_ ~inner_key:key ~data:_ acc -> Map.remove acc key)
       in
       annotate Assoc_lifecycles lifecycle;
-      Snapshot.create
-        ~result:results_map
-        ~input:(Input.dynamic input_map)
-        ~lifecycle:(Some lifecycle)
+      Trampoline.return
+        (Snapshot.create
+           ~result:results_map
+           ~input:(Input.dynamic input_map)
+           ~lifecycle:(Some lifecycle))
     in
     let apply_action
       ~inject
@@ -261,14 +292,16 @@ let rec gather : type result. result Computation.t -> result Computation.packed_
         let new_model = reset ~inject:(wrap_assoc ~key inject) ~schedule_event data in
         if model_info.equal new_model model_info.default then None else Some new_model)
     in
-    T
-      { model = Meta.Model.map key_comparator key_id cmp_id model_info
-      ; input = Meta.Input.map key_id cmp_id input_info
-      ; action = Action.Type_id.assoc ~key:key_id ~action
-      ; apply_action
-      ; reset
-      ; run
-      }
+    Trampoline.return
+      (T
+         { model = Meta.Model.map key_comparator key_id cmp_id model_info
+         ; input = Meta.Input.map key_id cmp_id input_info
+         ; action = Action.Type_id.assoc ~key:key_id ~action
+         ; apply_action
+         ; reset
+         ; run
+         ; can_contain_path
+         })
   | Assoc_on
       { map
       ; io_comparator
@@ -292,7 +325,16 @@ let rec gather : type result. result Computation.t -> result Computation.packed_
       >>> inject
     in
     let model_key_comparator = Model_comparator.comparator in
-    let (T { model = model_info; input = input_info; action; apply_action; run; reset }) =
+    let%bind.Trampoline (T
+                          { model = model_info
+                          ; input = input_info
+                          ; action
+                          ; apply_action
+                          ; run
+                          ; reset
+                          ; can_contain_path
+                          })
+      =
       gather by
     in
     let run ~environment ~path ~clock ~model ~inject =
@@ -304,7 +346,11 @@ let rec gather : type result. result Computation.t -> result Computation.packed_
       let results_map, input_map, lifecycle_map =
         unzip3_mapi' map_input ~f:(fun ~key:io_key ~data:value ->
           let%pattern_bind results_map, input_map, lifecycle_map =
-            let path = Path.append path Path.Elem.(Assoc (create_keyed io_key)) in
+            let path =
+              if can_contain_path
+              then Path.append path Path.Elem.(Assoc (create_keyed io_key))
+              else path
+            in
             let key_incr = Incr.const io_key in
             annotate Assoc_key key_incr;
             annotate Assoc_input value;
@@ -335,6 +381,7 @@ let rec gather : type result. result Computation.t -> result Computation.packed_
                 ~clock
                 ~inject:(wrap_assoc_on ~io_key ~model_key inject)
                 ~model
+              |> Trampoline.run
             in
             let%mapn result = Snapshot.result snapshot
             and input = Input.to_incremental (Snapshot.input snapshot)
@@ -356,10 +403,11 @@ let rec gather : type result. result Computation.t -> result Computation.packed_
           ~remove:(fun ~outer_key:_ ~inner_key:key ~data:_ acc -> Map.remove acc key)
       in
       annotate Assoc_lifecycles lifecycle;
-      Snapshot.create
-        ~result:results_map
-        ~input:(Input.dynamic input_map)
-        ~lifecycle:(Some lifecycle)
+      Trampoline.return
+        (Snapshot.create
+           ~result:results_map
+           ~input:(Input.dynamic input_map)
+           ~lifecycle:(Some lifecycle))
     in
     let apply_action
       ~inject
@@ -395,38 +443,49 @@ let rec gather : type result. result Computation.t -> result Computation.packed_
         then None
         else Some (io_key, new_model))
     in
-    T
-      { model =
-          Meta.Model.map_on
-            model_comparator
-            io_comparator
-            model_key_id
-            io_key_id
-            model_cmp_id
-            model_info
-      ; input = Meta.Input.map io_key_id io_cmp_id input_info
-      ; action = Action.Type_id.assoc_on ~io_key:io_key_id ~model_key:model_key_id ~action
-      ; apply_action
-      ; reset
-      ; run
-      }
-  | Assoc_simpl { map; by } ->
+    Trampoline.return
+      (T
+         { model =
+             Meta.Model.map_on
+               model_comparator
+               io_comparator
+               model_key_id
+               io_key_id
+               model_cmp_id
+               model_info
+         ; input = Meta.Input.map io_key_id io_cmp_id input_info
+         ; action =
+             Action.Type_id.assoc_on ~io_key:io_key_id ~model_key:model_key_id ~action
+         ; apply_action
+         ; reset
+         ; run
+         ; can_contain_path
+         })
+  | Assoc_simpl { map; by; can_contain_path } ->
     let run ~environment ~path ~clock:_ ~model:_ ~inject:_ =
       let map_input = Value.eval environment map in
       let result = Incr_map.mapi map_input ~f:(fun ~key ~data -> by path key data) in
-      Snapshot.create ~result ~input:Input.static ~lifecycle:None
+      Trampoline.return (Snapshot.create ~result ~input:Input.static ~lifecycle:None)
     in
-    T
-      { model = Meta.Model.unit
-      ; input = Meta.Input.unit
-      ; action = Action.Type_id.nothing
-      ; apply_action = unusable_apply_action
-      ; reset = reset_unit_model
-      ; run
-      }
+    Trampoline.return
+      (T
+         { model = Meta.Model.unit
+         ; input = Meta.Input.unit
+         ; action = Action.Type_id.nothing
+         ; apply_action = unusable_apply_action
+         ; reset = reset_unit_model
+         ; run
+         ; can_contain_path
+         })
   | Switch { match_; arms; here = _ } ->
     let wrap_switch ~branch ~type_id inject = Action.switch ~branch ~type_id >>> inject in
-    let gathered = Map.map arms ~f:gather in
+    let%bind.Trampoline gathered = Trampoline.all_map (Map.map arms ~f:gather) in
+    let can_contain_path, needs_disambiguation =
+      let num_contain_path =
+        Map.count gathered ~f:(fun (T { can_contain_path; _ }) -> can_contain_path)
+      in
+      num_contain_path > 0, num_contain_path > 1
+    in
     let run ~environment ~path ~clock ~model ~inject =
       let index = Value.eval environment match_ in
       let%pattern_bind result, input, lifecycle =
@@ -437,13 +496,16 @@ let rec gather : type result. result Computation.t -> result Computation.packed_
            doesn't exist, and old incremental nodes might still be active, and
            with things like [match%sub] or [Bonsai.match_either] can witness old
            nodes, which can cause [assert false] to trigger. *)
-        let path = Path.append path (Path.Elem.Switch index) in
+        let path =
+          if needs_disambiguation then Path.append path (Path.Elem.Switch index) else path
+        in
         let (T
               { model = model_info
               ; input = input_info
               ; action = action_info
               ; apply_action = _
               ; reset = _
+              ; can_contain_path = _
               ; run
               })
           =
@@ -466,6 +528,7 @@ let rec gather : type result. result Computation.t -> result Computation.packed_
             ~path
             ~clock
             ~inject:(wrap_switch ~type_id:action_info ~branch:index inject)
+          |> Trampoline.run
         in
         let input =
           let%mapn input = Input.to_incremental (Snapshot.input snapshot) in
@@ -477,7 +540,7 @@ let rec gather : type result. result Computation.t -> result Computation.packed_
         result, input, lifecycle
       in
       let input = Input.dynamic input in
-      Snapshot.create ~result ~input ~lifecycle:(Some lifecycle)
+      Trampoline.return (Snapshot.create ~result ~input ~lifecycle:(Some lifecycle))
     in
     let apply_action
       ~inject
@@ -486,7 +549,16 @@ let rec gather : type result. result Computation.t -> result Computation.packed_
       model
       (Action.Switch { action; type_id = action_type_id; branch = index })
       =
-      let (T { model = tm; input = im; action = am; apply_action; run = _; reset = _ }) =
+      let (T
+            { model = tm
+            ; input = im
+            ; action = am
+            ; apply_action
+            ; run = _
+            ; reset = _
+            ; can_contain_path = _
+            })
+        =
         Map.find_exn gathered index
       in
       let (T { model = chosen_model; info = chosen_model_info; _ }) =
@@ -540,7 +612,16 @@ let rec gather : type result. result Computation.t -> result Computation.packed_
     let reset ~inject ~schedule_event model =
       let f ~key:index ~data:(model : Meta.Model.Hidden.t) =
         let (T { model = chosen_model; info = chosen_model_info; _ }) = model in
-        let (T { model = tm; input = _; action = am; reset; apply_action = _; run = _ }) =
+        let (T
+              { model = tm
+              ; input = _
+              ; action = am
+              ; reset
+              ; apply_action = _
+              ; run = _
+              ; can_contain_path = _
+              })
+          =
           Map.find_exn gathered index
         in
         let T =
@@ -563,18 +644,20 @@ let rec gather : type result. result Computation.t -> result Computation.packed_
       in
       Meta.Multi_model.model_info (Meta.Multi_model.of_models models)
     in
-    T
-      { model
-      ; input = Meta.Input.Hidden.int
-      ; action = Action.Type_id.switch
-      ; apply_action
-      ; reset
-      ; run
-      }
+    Trampoline.return
+      (T
+         { model
+         ; input = Meta.Input.Hidden.int
+         ; action = Action.Type_id.switch
+         ; apply_action
+         ; reset
+         ; run
+         ; can_contain_path
+         })
   | Lazy lazy_computation ->
     let wrap_lazy ~type_id inject = Action.lazy_ ~type_id >>> inject in
     let model = Meta.Model.Hidden.lazy_ in
-    let gathered = Lazy.map lazy_computation ~f:gather in
+    let gathered = lazy_computation |> Lazy.map ~f:(fun c -> Trampoline.run (gather c)) in
     let run ~environment ~path ~clock ~model ~inject =
       let (T
             { model = model_info
@@ -583,6 +666,7 @@ let rec gather : type result. result Computation.t -> result Computation.packed_
             ; run
             ; apply_action = _
             ; reset = _
+            ; can_contain_path = _
             })
         =
         force gathered
@@ -599,7 +683,7 @@ let rec gather : type result. result Computation.t -> result Computation.packed_
         in
         Type_equal.conv witness model
       in
-      let snapshot =
+      let%bind.Trampoline snapshot =
         run
           ~environment
           ~path
@@ -611,10 +695,11 @@ let rec gather : type result. result Computation.t -> result Computation.packed_
         Input.map (Snapshot.input snapshot) ~f:(fun input ->
           Meta.Input.Hidden.T { input; type_id = input_info; key = () })
       in
-      Snapshot.create
-        ~input
-        ~result:(Snapshot.result snapshot)
-        ~lifecycle:(Snapshot.lifecycle snapshot)
+      Trampoline.return
+        (Snapshot.create
+           ~input
+           ~result:(Snapshot.result snapshot)
+           ~lifecycle:(Snapshot.lifecycle snapshot))
     in
     let apply_action
       ~inject
@@ -631,6 +716,7 @@ let rec gather : type result. result Computation.t -> result Computation.packed_
             ; apply_action
             ; run = _
             ; reset = _
+            ; can_contain_path = _
             })
         =
         force gathered
@@ -672,6 +758,7 @@ let rec gather : type result. result Computation.t -> result Computation.packed_
             ; apply_action = _
             ; run = _
             ; input = _
+            ; can_contain_path = _
             })
         =
         force gathered
@@ -694,14 +781,16 @@ let rec gather : type result. result Computation.t -> result Computation.packed_
       | None -> None
       | Some model -> Some (reset' ~inject ~schedule_event model)
     in
-    T
-      { model
-      ; input = Meta.Input.Hidden.unit
-      ; action = Action.Type_id.lazy_
-      ; apply_action
-      ; run
-      ; reset
-      }
+    Trampoline.return
+      (T
+         { model
+         ; input = Meta.Input.Hidden.unit
+         ; action = Action.Type_id.lazy_
+         ; apply_action
+         ; run
+         ; reset
+         ; can_contain_path = true
+         })
   | Wrap
       { wrapper_model
       ; action_id
@@ -712,14 +801,15 @@ let rec gather : type result. result Computation.t -> result Computation.packed_
       ; dynamic_apply_action
       ; reset = reset_me
       } ->
-    let (T
-          { model = inner_model
-          ; input = inner_input
-          ; action = inner_action
-          ; apply_action
-          ; run
-          ; reset
-          })
+    let%bind.Trampoline (T
+                          { model = inner_model
+                          ; input = inner_input
+                          ; action = inner_action
+                          ; apply_action
+                          ; run
+                          ; reset
+                          ; can_contain_path
+                          })
       =
       gather inner
     in
@@ -727,7 +817,7 @@ let rec gather : type result. result Computation.t -> result Computation.packed_
     let wrap_outer inject = Action.wrap_outer >>> inject in
     let run ~environment ~path ~clock ~model ~inject =
       let%pattern_bind outer_model, inner_model = model in
-      let inner_snapshot =
+      let%bind.Trampoline inner_snapshot =
         let environment =
           environment
           |> Environment.add_exn ~key:model_id ~data:outer_model
@@ -741,10 +831,11 @@ let rec gather : type result. result Computation.t -> result Computation.packed_
           (Snapshot.input inner_snapshot)
           (Input.dynamic (Snapshot.result inner_snapshot))
       in
-      Snapshot.create
-        ~result:inner_result
-        ~input
-        ~lifecycle:(Snapshot.lifecycle inner_snapshot)
+      Trampoline.return
+        (Snapshot.create
+           ~result:inner_result
+           ~input
+           ~lifecycle:(Snapshot.lifecycle inner_snapshot))
     in
     let model = Meta.Model.both wrapper_model inner_model in
     let apply_action ~inject ~schedule_event input (outer_model, inner_model) action =
@@ -777,16 +868,27 @@ let rec gather : type result. result Computation.t -> result Computation.packed_
       let inner_model = reset ~inject:(wrap_inner inject) ~schedule_event inner_model in
       outer_model, inner_model
     in
-    T
-      { model
-      ; input = Meta.Input.both inner_input result_id
-      ; action = Action.Type_id.wrap ~inner:inner_action ~outer:action_id
-      ; apply_action
-      ; run
-      ; reset
-      }
+    Trampoline.return
+      (T
+         { model
+         ; input = Meta.Input.both inner_input result_id
+         ; action = Action.Type_id.wrap ~inner:inner_action ~outer:action_id
+         ; apply_action
+         ; run
+         ; reset
+         ; can_contain_path
+         })
   | With_model_resetter { inner; reset_id } ->
-    let (T ({ model; input; action; apply_action; run; reset } as gathered_inner)) =
+    let%bind.Trampoline (T
+                          ({ model
+                           ; input
+                           ; action
+                           ; apply_action
+                           ; run
+                           ; reset
+                           ; can_contain_path
+                           } as gathered_inner))
+      =
       gather inner
     in
     let inner_stateless =
@@ -803,7 +905,7 @@ let rec gather : type result. result Computation.t -> result Computation.packed_
          let environment = Environment.add_exn ~key:reset_id ~data:ignore_effect env in
          run ~environment ~path ~clock ~model:unit_model ~inject:unreachable_action
        in
-       T { gathered_inner with run }
+       Trampoline.return (T { gathered_inner with run })
      | None ->
        let wrap_inner inject = Action.model_reset_inner >>> inject in
        let run ~environment ~path ~clock ~model ~inject =
@@ -813,14 +915,15 @@ let rec gather : type result. result Computation.t -> result Computation.packed_
                 ~key:reset_id
                 ~data:(Incr.return (inject Action.model_reset_outer))
          in
-         let snapshot =
+         let%bind.Trampoline snapshot =
            run ~environment ~path ~model ~clock ~inject:(wrap_inner inject)
          in
          let result = Snapshot.result snapshot in
-         Snapshot.create
-           ~result
-           ~input:(Snapshot.input snapshot)
-           ~lifecycle:(Snapshot.lifecycle snapshot)
+         Trampoline.return
+           (Snapshot.create
+              ~result
+              ~input:(Snapshot.input snapshot)
+              ~lifecycle:(Snapshot.lifecycle snapshot))
        in
        let apply_action ~inject ~schedule_event i m = function
          | Action.Model_reset_outer -> reset ~inject:(wrap_inner inject) ~schedule_event m
@@ -830,28 +933,32 @@ let rec gather : type result. result Computation.t -> result Computation.packed_
        let reset ~inject ~schedule_event m =
          reset ~inject:(wrap_inner inject) ~schedule_event m
        in
-       T
-         { model
-         ; input
-         ; action = Action.Type_id.model_reset action
-         ; apply_action
-         ; run
-         ; reset
-         })
+       Trampoline.return
+         (T
+            { model
+            ; input
+            ; action = Action.Type_id.model_reset action
+            ; apply_action
+            ; run
+            ; reset
+            ; can_contain_path
+            }))
   | Path ->
     let run ~environment:_ ~path ~clock:_ ~model:_ ~inject:_ =
       let result = Incr.return path in
       annotate Path result;
-      Snapshot.create ~result ~input:Input.static ~lifecycle:None
+      Trampoline.return (Snapshot.create ~result ~input:Input.static ~lifecycle:None)
     in
-    T
-      { model = Meta.Model.unit
-      ; input = Meta.Input.unit
-      ; action = Action.Type_id.nothing
-      ; apply_action = unusable_apply_action
-      ; reset = reset_unit_model
-      ; run
-      }
+    Trampoline.return
+      (T
+         { model = Meta.Model.unit
+         ; input = Meta.Input.unit
+         ; action = Action.Type_id.nothing
+         ; apply_action = unusable_apply_action
+         ; reset = reset_unit_model
+         ; run
+         ; can_contain_path = true
+         })
   | Lifecycle lifecycle ->
     let run ~environment ~path ~clock:_ ~model:_ ~inject:_ =
       let lifecycle =
@@ -861,17 +968,22 @@ let rec gather : type result. result Computation.t -> result Computation.packed_
           Path.Map.singleton path lifecycle
         | None -> do_nothing_lifecycle
       in
-      Snapshot.create
-        ~result:(Incr.return ())
-        ~input:Input.static
-        ~lifecycle:(Some lifecycle)
+      Trampoline.return
+        (Snapshot.create
+           ~result:(Incr.return ())
+           ~input:Input.static
+           ~lifecycle:(Some lifecycle))
     in
-    T
-      { model = Meta.Model.unit
-      ; input = Meta.Input.unit
-      ; action = Action.Type_id.nothing
-      ; apply_action = unusable_apply_action
-      ; reset = reset_unit_model
-      ; run
-      }
+    Trampoline.return
+      (T
+         { model = Meta.Model.unit
+         ; input = Meta.Input.unit
+         ; action = Action.Type_id.nothing
+         ; apply_action = unusable_apply_action
+         ; reset = reset_unit_model
+         ; run
+         ; can_contain_path = true
+         })
 ;;
+
+let gather c = Trampoline.run (gather c)

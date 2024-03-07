@@ -12,12 +12,10 @@ open! Import
    to be exactly `local_ Cont.graph -> 'a Cont.t` and its `Value.t` can be defined to be
    exactly `'a Cont.t`. *)
 
+(* These aren't pulled from `Cont` because they are no longer recommended,
+   and therefore not included in the new API. *)
 module type Model = Module_types.Model
 module type Action = Module_types.Action
-module type Enum = Module_types.Enum
-module type Comparator = Module_types.Comparator
-
-type ('k, 'cmp) comparator = ('k, 'cmp) Module_types.comparator
 
 module Apply_action_context = Proc.Apply_action_context
 
@@ -297,7 +295,8 @@ include (
   Cont :
     module type of Cont
       with module Let_syntax := Cont.Let_syntax
-      with module Apply_action_context := Apply_action_context)
+      with module Apply_action_context := Apply_action_context
+      with module Effect := Effect)
 
 include Cont.For_proc2
 open Cont.Let_syntax

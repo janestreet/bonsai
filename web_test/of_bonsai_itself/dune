@@ -1,9 +1,10 @@
 (library
  (name bonsai_web_test_of_bonsai_itself)
  (public_name bonsai.web_test_of_bonsai_itself)
- (libraries bonsai_web bonsai_web_test bonsai_extra async_js.async_test core
-   legacy_diffable expect_test_helpers_core patdiff.expect_test_patdiff
-   bonsai_test incr_map bonsai_web_ui_drag_and_drop async_rpc_kernel async_js)
+ (libraries bonsai_web bonsai_web_test bonsai_extra
+   bonsai_test_of_bonsai_itself async_js.async_test core legacy_diffable
+   expect_test_helpers_core patdiff.expect_test_patdiff bonsai_test incr_map
+   bonsai_web_ui_drag_and_drop async_rpc_kernel async_js re)
  (preprocess
   (pps ppx_jane ppx_pattern_bind ppx_bonsai)))
 

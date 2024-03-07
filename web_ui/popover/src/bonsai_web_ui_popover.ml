@@ -121,7 +121,7 @@ let component
     | false -> Bonsai.const Vdom.Node.none
     | true ->
       let%sub outside_click_listener_attr =
-        match close_when_clicked_outside with
+        match%sub close_when_clicked_outside with
         | false -> Bonsai.const Vdom.Attr.empty
         | true ->
           let%arr close = close

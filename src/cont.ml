@@ -1,7 +1,13 @@
 open! Core
 open! Import
+module Effect = Ui_effect
 module Time_source = Time_source
 module Apply_action_context = Apply_action_context
+
+module type Enum = Module_types.Enum
+module type Comparator = Module_types.Comparator
+
+type ('k, 'cmp) comparator = ('k, 'cmp) Module_types.comparator
 
 module Cont_primitives : sig
   (** Bonsai's [Cont] implementation is based on continuation-passing style.
@@ -288,6 +294,11 @@ let map7 a b c d e g h ~f =
 ;;
 
 let both a b = map2 a b ~f:Tuple2.create
+let cutoff v ~equal = Value.cutoff v ~equal ~added_by_let_syntax:false
+
+let all_map v graph =
+  perform graph (Proc.Computation.all_map (Core.Map.map v ~f:(fun f -> handle ~f graph)))
+;;
 
 let transpose_opt opt =
   Option.value_map opt ~default:(return None) ~f:(map ~f:Option.some)
@@ -496,6 +507,8 @@ module Expert = struct
   ;;
 
   let delay = delay
+
+  module Var = Var
 end
 
 let freeze ?sexp_of_model ?equal v graph =
@@ -545,6 +558,13 @@ let wrap__for_proc2 ?reset ?sexp_of_model ?equal ~default_model ~apply_action ~f
 
 let wrap ?reset ?sexp_of_model ?equal ~default_model ~apply_action ~f graph =
   wrap__for_proc2 ?reset ?sexp_of_model ?equal ~default_model ~apply_action ~f () graph
+;;
+
+let enum m ~match_ ~with_ graph =
+  let with_ : 'k -> 'd Computation.t =
+    fun k -> handle ~f:(fun graph -> with_ k graph) graph [@nontail]
+  in
+  perform graph (Proc.enum m ~match_ ~with_)
 ;;
 
 let with_model_resetter__for_proc2 ~f graph =
@@ -808,7 +828,10 @@ module Let_syntax = struct
       with_global_graph
         ~f:(fun graph -> switch ~here ~match_ ~branches ~with_ graph)
         ~no_graph:(fun () ->
-          failwith "match%sub called outside of the context of a graph") [@nontail]
+          raise_s
+            [%message
+              "match%sub called outside of the context of a graph"
+                (here : Source_code_position.t)]) [@nontail]
     ;;
 
     let sub ?here:_ a ~f = f a

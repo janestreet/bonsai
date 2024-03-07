@@ -126,6 +126,9 @@ type t =
   ; focus_attr : Vdom.Attr.t
   ; set_column_width :
       column_id:Indexed_column_id.t -> [ `Px_float of float ] -> unit Ui_effect.t
+  ; lock_focus : unit Ui_effect.t
+  ; unlock_focus : unit Ui_effect.t
+  ; focus_is_locked : bool
   }
 
 let generic_table_and_focus_attr
@@ -134,6 +137,9 @@ let generic_table_and_focus_attr
   ~theming
   ~should_show_position
   ~focus
+  ~get_focus_is_locked
+  ~get_lock_focus
+  ~get_unlock_focus
   ~attr_of_focus
   data
   =
@@ -158,7 +164,13 @@ let generic_table_and_focus_attr
     table
   in
   let focus_attr = attr_of_focus focus ~num_filtered_rows in
-  { table; focus_attr; set_column_width }
+  { table
+  ; focus_attr
+  ; set_column_width
+  ; lock_focus = get_lock_focus focus
+  ; unlock_focus = get_unlock_focus focus
+  ; focus_is_locked = get_focus_is_locked focus
+  }
 ;;
 
 let component ?filter ~focus_kind ~row_height ~theming ~should_show_position data =
@@ -171,6 +183,9 @@ let component ?filter ~focus_kind ~row_height ~theming ~should_show_position dat
       ~theming
       ~should_show_position
       ~focus:(By_row { on_change = Value.return (Fn.const Effect.Ignore) })
+      ~get_lock_focus:Focus_control.lock_focus
+      ~get_unlock_focus:Focus_control.unlock_focus
+      ~get_focus_is_locked:Focus_control.focus_is_locked
       ~attr_of_focus:(fun (focus : _ Table.Focus.By_row.t) ~num_filtered_rows ->
         Vdom.Attr.on_keydown (fun kbc ->
           let binding =
@@ -196,6 +211,9 @@ let component ?filter ~focus_kind ~row_height ~theming ~should_show_position dat
       ~theming
       ~should_show_position
       ~focus:(By_cell { on_change = Value.return (Fn.const Effect.Ignore) })
+      ~get_lock_focus:Focus_control.lock_focus
+      ~get_unlock_focus:Focus_control.unlock_focus
+      ~get_focus_is_locked:Focus_control.focus_is_locked
       ~attr_of_focus:(fun focus ~num_filtered_rows ->
         let current_or_first_column =
           match Focus_control.focused focus with
@@ -289,7 +307,7 @@ module Column_width_form = struct
     let open Bonsai.Let_syntax in
     let%sub form =
       Form.Elements.Textbox.int
-        ~placeholder:"Symbol column width"
+        ~placeholder:(Value.return "Symbol column width")
         ~allow_updates_when_focused:`Always
         ()
     in

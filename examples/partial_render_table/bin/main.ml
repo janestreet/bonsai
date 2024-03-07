@@ -13,7 +13,14 @@ let component ~theme_picker =
     let%arr num_rows = num_rows in
     PRT_example.Row.many_random num_rows
   in
-  let%sub { table; focus_attr; set_column_width } =
+  let%sub { table
+          ; focus_attr
+          ; set_column_width
+          ; lock_focus
+          ; unlock_focus
+          ; focus_is_locked
+          }
+    =
     match%sub cell_based_highlighting with
     | false ->
       let base =
@@ -38,6 +45,20 @@ let component ~theme_picker =
        | false -> base ~theming:`Legacy_don't_use_theme
        | true -> base ~theming:`Themed)
   in
+  let%sub toggle_focus_lock_button =
+    let%sub on_click =
+      let%arr focus_is_locked = focus_is_locked
+      and lock_focus = lock_focus
+      and unlock_focus = unlock_focus in
+      if focus_is_locked then unlock_focus else lock_focus
+    in
+    let%sub theme = View.Theme.current in
+    let%arr on_click = on_click
+    and focus_is_locked = focus_is_locked
+    and theme = theme in
+    let text = if focus_is_locked then "Unlock focus" else "Lock focus" in
+    View.button theme ~on_click text
+  in
   let%sub form_view =
     let%sub width_form = PRT_example.Column_width_form.component ~set_column_width in
     let%arr form_view = form_view
@@ -47,8 +68,11 @@ let component ~theme_picker =
   let%arr form_view = form_view
   and table = table
   and focus_attr = focus_attr
-  and theme_picker = theme_picker in
-  Vdom.Node.div ~attrs:[ focus_attr ] [ theme_picker; form_view; table ]
+  and theme_picker = theme_picker
+  and toggle_focus_lock_button = toggle_focus_lock_button in
+  Vdom.Node.div
+    ~attrs:[ focus_attr ]
+    [ theme_picker; form_view; toggle_focus_lock_button; table ]
 ;;
 
 let component_with_theme =

@@ -1,12 +1,7 @@
 open! Core
 open! Import
 
-let value_map
-  (type a)
-  (context : _ Transform.For_value.context)
-  ()
-  ({ value; here; id } : a Value.t)
-  =
+let value_map (type a) ({ value; here; id } : a Value.t) =
   let value =
     match value with
     | Map
@@ -163,23 +158,28 @@ let value_map
       Map3 { f = (fun t1 t2 t3 -> t1, (t2, t3)); t1; t2; t3 }
     | v -> v
   in
-  context.recurse () { Value.here; value; id }
+  { Value.value; here; id }
 ;;
 
-let computation_map
-  (type result)
-  (context : _ Transform.For_computation.context)
-  ()
-  (computation : result Computation.t)
-  : result Computation.t
-  =
-  context.recurse () computation
-;;
+module Types = struct
+  module Down = Unit
+  module Acc = Unit
+  module Up = Fix_transform.Unit
+end
 
-let flatten_values (t : _ Computation.t) =
-  Transform.map
-    ~init:()
-    ~computation_mapper:{ f = computation_map }
-    ~value_mapper:{ f = value_map }
-    t
+module Flatten_values (Recurse : Fix_transform.Recurse with module Types := Types) =
+struct
+  let transform_v () () v =
+    let out = value_map v in
+    Recurse.on_value () () `Skipping_over out
+  ;;
+
+  let transform_c () () c = Recurse.on_computation () () `Skipping_over c
+end
+
+open Fix_transform.Make (Types) (Flatten_values)
+
+let flatten_values c =
+  let (), (), r = Trampoline.run (transform_c () () c) in
+  r
 ;;

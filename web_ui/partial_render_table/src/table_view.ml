@@ -347,17 +347,18 @@ module Row = struct
 
   type t = Vdom.Node.t
 
-  let view (themed_attrs : Themed.t) ~styles ~is_focused cells =
+  let view (themed_attrs : Themed.t) ~styles ~is_focused ~extra_attrs cells =
     let focused_attr = if is_focused then themed_attrs.row_focused else Vdom.Attr.empty in
     Vdom.Node.lazy_
       (lazy
         (Vdom.Node.div
            ~attrs:
-             [ themed_attrs.row
-             ; Vdom.Attr.style styles
-             ; focused_attr
-             ; Functional_style.row
-             ]
+             ([ themed_attrs.row
+              ; Vdom.Attr.style styles
+              ; focused_attr
+              ; Functional_style.row
+              ]
+              @ extra_attrs)
            cells))
   ;;
 end

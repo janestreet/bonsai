@@ -151,6 +151,44 @@ let nonempty_list_form_result_spec
   end)
 ;;
 
+let%expect_test "placeholders" =
+  let placeholder_var = Bonsai.Var.create "placeholder1" in
+  let component =
+    Form.Elements.Textbox.string
+      ~placeholder:(Bonsai.Var.value placeholder_var)
+      ~allow_updates_when_focused:`Never
+      ()
+  in
+  let handle = Handle.create (form_result_spec [%sexp_of: string]) component in
+  Handle.show handle;
+  [%expect
+    {|
+    (Ok "")
+
+    ==============
+    <input @key=bonsai_path_replaced_in_test
+           type="text"
+           placeholder="placeholder1"
+           spellcheck="false"
+           value:normalized=""
+           oninput> </input>
+      |}];
+  Bonsai.Var.set placeholder_var "placeholder2";
+  Handle.show handle;
+  [%expect
+    {|
+    (Ok "")
+
+    ==============
+    <input @key=bonsai_path_replaced_in_test
+           type="text"
+           placeholder="placeholder2"
+           spellcheck="false"
+           value:normalized=""
+           oninput> </input>
+      |}]
+;;
+
 let%expect_test "setting a constant form does nothing" =
   let component =
     Form.Elements.Non_interactive.constant
@@ -1662,18 +1700,8 @@ let%expect_test "using the same component twice" =
 
     ==============
     <div>
-      <input @key=bonsai_path_x_x_x_x_x
-             type="text"
-             placeholder=""
-             spellcheck="false"
-             value:normalized=b
-             oninput> </input>
-      <input @key=bonsai_path_x_x_x_x_x
-             type="text"
-             placeholder=""
-             spellcheck="false"
-             value:normalized=b
-             oninput> </input>
+      <input @key=bonsai_path type="text" placeholder="" spellcheck="false" value:normalized=b oninput> </input>
+      <input @key=bonsai_path type="text" placeholder="" spellcheck="false" value:normalized=b oninput> </input>
     </div> |}]
 ;;
 
@@ -4855,7 +4883,7 @@ let%expect_test "a textbox customized with themes" =
         end))
       (Form.Elements.Textbox.string
          ~extra_attrs:(Value.return [ Vdom.Attr.class_ "very-important" ])
-         ~placeholder:"placeholder"
+         ~placeholder:(Value.return "placeholder")
          ~allow_updates_when_focused:`Never
          ())
   in

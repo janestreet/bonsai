@@ -21,7 +21,7 @@ module Popover = struct
         in
         let%sub popover =
           Bonsai_web_ui_popover.component
-            ~close_when_clicked_outside:true
+            ~close_when_clicked_outside:(Value.return true)
             ~direction:(Value.return Bonsai_web_ui_popover.Direction.Right)
             ~alignment:(Value.return Bonsai_web_ui_popover.Alignment.Center)
             ~popover:popover_content
@@ -51,7 +51,7 @@ module Context_menu_popover = struct
         let%sub theme = View.Theme.current in
         let%sub popover =
           Bonsai_web_ui_popover.component
-            ~close_when_clicked_outside:true
+            ~close_when_clicked_outside:(Value.return true)
             ~direction:(Value.return Bonsai_web_ui_popover.Direction.Right)
             ~alignment:(Value.return Bonsai_web_ui_popover.Alignment.Center)
             ~popover:(fun ~close:_ ->

@@ -17,7 +17,7 @@ module Toggle_popover = struct
         let popover_content ~close:_ = Bonsai.const (View.text "Popover contents") in
         let%sub popover =
           Bonsai_web_ui_popover.component
-            ~close_when_clicked_outside:true
+            ~close_when_clicked_outside:(Value.return true)
             ~direction:(Value.return Bonsai_web_ui_popover.Direction.Right)
             ~alignment:(Value.return Bonsai_web_ui_popover.Alignment.Center)
             ~popover:popover_content
@@ -49,7 +49,7 @@ module Two_left_click_popovers = struct
         let popover =
           let%sub popover =
             Bonsai_web_ui_popover.component
-              ~close_when_clicked_outside:true
+              ~close_when_clicked_outside:(Value.return true)
               ~allow_event_propagation_when_clicked_outside:
                 (Value.return (function
                   | `Left_click | `Escape -> false

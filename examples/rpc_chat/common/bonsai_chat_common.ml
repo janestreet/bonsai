@@ -38,6 +38,7 @@ module Protocol = struct
         ~version:0
         ~bin_query:[%bin_type_class: Room.t]
         ~bin_response:[%bin_type_class: Message.t List.t]
+        ~include_in_error_count:Only_on_exn
     ;;
   end
 
@@ -48,6 +49,7 @@ module Protocol = struct
         ~version:0
         ~bin_query:[%bin_type_class: Message.t]
         ~bin_response:[%bin_type_class: unit Or_error.t]
+        ~include_in_error_count:Or_error
     ;;
   end
 
@@ -58,6 +60,7 @@ module Protocol = struct
         ~version:0
         ~bin_query:[%bin_type_class: Room.t]
         ~bin_response:[%bin_type_class: unit Or_error.t]
+        ~include_in_error_count:Or_error
     ;;
   end
 
@@ -68,6 +71,7 @@ module Protocol = struct
         ~version:0
         ~bin_query:[%bin_type_class: unit]
         ~bin_response:[%bin_type_class: Room.t List.t]
+        ~include_in_error_count:Only_on_exn
     ;;
   end
 end

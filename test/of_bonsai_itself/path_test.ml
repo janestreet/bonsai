@@ -15,7 +15,7 @@ let%expect_test "path" =
   Handle.show handle;
   (* The first of these "Subst_from" is actually a component that is
      added by the testing helpers. *)
-  [%expect {| bonsai_path_x_y_y_x |}]
+  [%expect {| bonsai_path |}]
 ;;
 
 let%expect_test "path constant folding" =
@@ -28,7 +28,7 @@ let%expect_test "path constant folding" =
   Handle.show handle;
   (* The first of these "Subst_from" is actually a component that is
      added by the testing helpers. *)
-  [%expect {| bonsai_path_x_x |}]
+  [%expect {| bonsai_path |}]
 ;;
 
 let assert_path_unique_id_is_alpha path =

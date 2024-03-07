@@ -39,6 +39,7 @@ val component
   -> column_widths:('column_id, Column_size.t, 'column_id_cmp) Map.t Value.t
   -> visually_focused:('key, 'column_id, 'kind) Focus.focused Value.t
   -> on_cell_click:('key -> 'column_id -> unit Effect.t) Value.t
+  -> extra_row_attrs:('key -> Vdom.Attr.t list) Value.t
   -> ('key, 'data) Collated.t Value.t
   -> ('key * 'data) Opaque_map.t Value.t
   -> (Table_view.Body.t * For_testing.t Lazy.t) Computation.t

@@ -2038,3 +2038,119 @@ let%expect_test "removed columns still count toward the total table width" =
       </div>
     </div> |}]
 ;;
+
+let%expect_test "locking columns also disallows focus change due to clicks" =
+  let test =
+    Test.create
+      (Test.Component.default ~theming:`Themed ())
+      ~visible_range:(0, 2)
+      ~should_set_bounds:false
+  in
+  Handle.store_view test.handle;
+  Handle.click_on test.handle ~get_vdom:test.get_vdom ~selector:"div div div div div div";
+  Handle.show_diff test.handle;
+  [%expect
+    {|
+    scrolling to index 0 at 0.0px
+    (focus_changed_to (0))
+
+                  </div>
+                </div>
+              </td>
+              <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+                <div class="sortable_header_cell" onclick>
+                  <div>
+                    <span> d </span>
+                  </div>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
+          <div class="body">
+            <div>
+    -|        <div class="body_row row">
+    +|        <div class="body_row_focused body_row row">
+                <div class="body_cell cell" onclick> 0 </div>
+                <div class="body_cell cell" onclick>
+                  <input oninput> </input>
+                  hello
+                </div>
+                <div class="body_cell cell" onclick> 1.000000 </div>
+                <div class="body_cell cell" onclick> 1 </div>
+              </div>
+    +|        <div class="body_row row">
+    +|          <div class="body_cell cell" onclick> 1 </div>
+    +|          <div class="body_cell cell" onclick>
+    +|            <input oninput> </input>
+    +|            there
+    +|          </div>
+    +|          <div class="body_cell cell" onclick> 2.000000 </div>
+    +|          <div class="body_cell cell" onclick> 2 </div>
+    +|        </div>
+            </div>
+          </div>
+        </div>
+      </div> |}];
+  Handle.do_actions test.handle [ Lock_focus ];
+  (* Clicking does nothing while the focus is locked *)
+  Handle.click_on
+    test.handle
+    ~get_vdom:test.get_vdom
+    ~selector:"div div div div div:nth-child(2) div";
+  Handle.show_diff test.handle;
+  [%expect];
+  Handle.do_actions test.handle [ Unlock_focus ];
+  (* Clicking moves the focus again after it's unlocked *)
+  Handle.click_on
+    test.handle
+    ~get_vdom:test.get_vdom
+    ~selector:"div div div div div:nth-child(2) div";
+  Handle.show_diff test.handle;
+  [%expect
+    {|
+    scrolling to index 1 at 2.0px
+    (focus_changed_to (1))
+
+                  </div>
+                </div>
+              </td>
+              <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+                <div class="sortable_header_cell" onclick>
+                  <div>
+                    <span> d </span>
+                  </div>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
+          <div class="body">
+            <div>
+    -|        <div class="body_row_focused body_row row">
+    +|        <div class="body_row row">
+                <div class="body_cell cell" onclick> 0 </div>
+                <div class="body_cell cell" onclick>
+                  <input oninput> </input>
+                  hello
+                </div>
+                <div class="body_cell cell" onclick> 1.000000 </div>
+                <div class="body_cell cell" onclick> 1 </div>
+              </div>
+    -|        <div class="body_row row">
+    +|        <div class="body_row_focused body_row row">
+                <div class="body_cell cell" onclick> 1 </div>
+                <div class="body_cell cell" onclick>
+                  <input oninput> </input>
+                  there
+                </div>
+                <div class="body_cell cell" onclick> 2.000000 </div>
+                <div class="body_cell cell" onclick> 2 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div> |}]
+;;

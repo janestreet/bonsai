@@ -10,6 +10,8 @@ module Sort_state = Bonsai_web_ui_partial_render_table_protocol.Sort_state
 module Action = struct
   type 'column_id t =
     | Unfocus
+    | Lock_focus
+    | Unlock_focus
     | Focus_down
     | Focus_up
     | Focus_left
@@ -260,6 +262,8 @@ module Test = struct
       let module Focus_control = Table.Focus.By_row in
       function
       | Action.Unfocus -> Focus_control.unfocus focus
+      | Lock_focus -> Focus_control.lock_focus focus
+      | Unlock_focus -> Focus_control.unlock_focus focus
       | Focus_down -> Focus_control.focus_down focus
       | Focus_up -> Focus_control.focus_up focus
       | Page_up -> Focus_control.page_up focus
@@ -290,6 +294,8 @@ module Test = struct
       let module Focus_control = Table.Focus.By_cell in
       function
       | Action.Unfocus -> Focus_control.unfocus focus
+      | Lock_focus -> Focus_control.lock_focus focus
+      | Unlock_focus -> Focus_control.unlock_focus focus
       | Focus_down -> Focus_control.focus_down focus
       | Focus_up -> Focus_control.focus_up focus
       | Page_up -> Focus_control.page_up focus

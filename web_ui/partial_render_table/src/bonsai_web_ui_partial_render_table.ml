@@ -58,6 +58,7 @@ module Expert = struct
 
   let implementation
     (type key presence data cmp column column_cmp key presence data cmp)
+    ?extra_row_attrs
     ~theming
     ~preload_rows
     (key_comparator : (key, cmp) Bonsai.comparator)
@@ -68,6 +69,11 @@ module Expert = struct
     ~assoc
     (collated : (key, data) Collated.t Value.t)
     =
+    let%sub extra_row_attrs =
+      match extra_row_attrs with
+      | None -> Bonsai.const (fun _ -> [])
+      | Some extra_row_attrs -> return extra_row_attrs
+    in
     let%sub theme = View.Theme.current in
     let%sub themed_attrs =
       let%arr theme = theme in
@@ -408,6 +414,7 @@ module Expert = struct
         ~column_widths
         ~visually_focused
         ~on_cell_click
+        ~extra_row_attrs
         collated
         input_map
     in
@@ -476,6 +483,7 @@ module Expert = struct
     (type key focus presence data cmp column_id column_id_cmp)
     ~theming
     ?(preload_rows = default_preload)
+    ?extra_row_attrs
     (key_comparator : (key, cmp) Bonsai.comparator)
     ~(focus : (focus, presence, key, column_id) Focus.Kind.t)
     ~row_height
@@ -487,6 +495,7 @@ module Expert = struct
     let%sub headers = T.headers value in
     let assoc cells = T.instantiate_cells value key_comparator cells in
     implementation
+      ?extra_row_attrs
       ~preload_rows
       ~theming
       key_comparator
@@ -574,6 +583,7 @@ module Basic = struct
            (key compare -> (key * data) compare -> (key * data) compare) Value.t
       -> ?default_sort:(key * data) compare Value.t
       -> ?preload_rows:int
+      -> ?extra_row_attrs:(key -> Vdom.Attr.t list) Value.t
       -> (key, cmp) Bonsai.comparator
       -> focus:(focus, presence, key, column_id) Focus.t
       -> row_height:[ `Px of int ] Value.t
@@ -586,6 +596,7 @@ module Basic = struct
         ?override_sort
         ?default_sort
         ?(preload_rows = default_preload)
+        ?extra_row_attrs
         key_comparator
         ~focus
         ~row_height
@@ -677,6 +688,7 @@ module Basic = struct
     in
     let%sub ({ range = viewed_range; _ } as result) =
       Expert.implementation
+        ?extra_row_attrs
         ~preload_rows
         ~theming
         key_comparator

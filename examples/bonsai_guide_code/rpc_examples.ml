@@ -11,6 +11,7 @@ let double_rpc =
     ~version:0
     ~bin_query:[%bin_type_class: int]
     ~bin_response:[%bin_type_class: int]
+    ~include_in_error_count:Only_on_exn
 ;;
 
 (* $MDX part-end *)
@@ -124,7 +125,7 @@ let zone_form =
   let module Form = Bonsai_web_ui_form.With_automatic_view in
   let%sub form =
     Form.Elements.Textbox.string
-      ~placeholder:"timezone"
+      ~placeholder:(Value.return "timezone")
       ~allow_updates_when_focused:`Always
       ()
   in

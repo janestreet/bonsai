@@ -44,7 +44,7 @@ let%expect_test "External open and closing" =
   let popover =
     let%sub ({ Popover.Result.wrap; _ } as popover) =
       Popover.component
-        ~close_when_clicked_outside:false
+        ~close_when_clicked_outside:(Value.return false)
         ~direction:(Value.return Popover.Direction.Right)
         ~alignment:(Value.return Popover.Alignment.Center)
         ~popover:(fun ~close:_ -> Bonsai.const (View.text "Popover content!"))
@@ -116,7 +116,7 @@ let%expect_test "Popover changing directions" =
   let popover =
     let%sub ({ Popover.Result.wrap; _ } as popover) =
       Popover.component
-        ~close_when_clicked_outside:false
+        ~close_when_clicked_outside:(Value.return false)
         ~direction:(Bonsai.Var.value direction_var)
         ~alignment:(Value.return Popover.Alignment.Center)
         ~popover:(fun ~close:_ -> Bonsai.const (View.text "Popover content!"))
@@ -180,7 +180,7 @@ let%expect_test "Opening and closing from within popover base" =
   let popover =
     let%sub popover =
       Popover.component
-        ~close_when_clicked_outside:false
+        ~close_when_clicked_outside:(Value.return false)
         ~direction:(Bonsai.Var.value direction_var)
         ~alignment:(Value.return Popover.Alignment.Center)
         ~popover:(fun ~close:_ -> Bonsai.const (View.text "Popover content!"))
@@ -241,7 +241,7 @@ let%expect_test "Opening from base and closing from dialog" =
   let popover =
     let%sub popover =
       Popover.component
-        ~close_when_clicked_outside:false
+        ~close_when_clicked_outside:(Value.return false)
         ~direction:(Bonsai.Var.value direction_var)
         ~alignment:(Value.return Popover.Alignment.Center)
         ~popover:(fun ~close ->
@@ -341,7 +341,7 @@ let%expect_test "Opening from returned effect and closing by clicking outside." 
       let%sub popover =
         Popover.component
           ~popover_extra_attr:(Value.return (Vdom.Attr.create "data-test" id))
-          ~close_when_clicked_outside:true
+          ~close_when_clicked_outside:(Value.return true)
             (* NOTE: [close_when_clicked_outside] is set to true. *)
           ~direction:(Value.return Popover.Direction.Right)
           ~alignment:(Value.return Popover.Alignment.Center)
@@ -393,13 +393,13 @@ let%expect_test "Nested popover" =
   let popover =
     let%sub popover =
       Popover.component
-        ~close_when_clicked_outside:true
+        ~close_when_clicked_outside:(Value.return true)
         ~direction:(Value.return Popover.Direction.Right)
         ~alignment:(Value.return Popover.Alignment.Center)
         ~popover:(fun ~close:close_popover1 ->
           let%sub { Popover.Result.wrap; open_; close = _; toggle = _; is_open = _ } =
             Popover.component
-              ~close_when_clicked_outside:true
+              ~close_when_clicked_outside:(Value.return true)
               ~direction:(Value.return Popover.Direction.Right)
               ~alignment:(Value.return Popover.Alignment.Center)
               ~popover:(fun ~close ->
@@ -623,7 +623,7 @@ let%test_module "interactions with [with_model_resetter]" =
         Bonsai.with_model_resetter
           (let%sub popover =
              Popover.component
-               ~close_when_clicked_outside:true
+               ~close_when_clicked_outside:(Value.return true)
                ~direction:(Value.return Popover.Direction.Right)
                ~alignment:(Value.return Popover.Alignment.Center)
                ~popover:(fun ~close:_ ->
@@ -792,7 +792,7 @@ let%expect_test "popover with an extra base attr" =
   let popover =
     let%sub ({ Popover.Result.wrap; _ } as popover) =
       Popover.component
-        ~close_when_clicked_outside:false
+        ~close_when_clicked_outside:(Value.return false)
         ~base_extra_attr:
           (Value.return (Vdom.Attr.create "data-test" "I am attached as a base attr."))
         ~direction:(Value.return Popover.Direction.Right)
