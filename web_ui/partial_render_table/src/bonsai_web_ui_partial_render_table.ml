@@ -481,7 +481,7 @@ module Expert = struct
 
   let component
     (type key focus presence data cmp column_id column_id_cmp)
-    ~theming
+    ?(theming = `Themed)
     ?(preload_rows = default_preload)
     ?extra_row_attrs
     (key_comparator : (key, cmp) Bonsai.comparator)
@@ -577,11 +577,13 @@ module Basic = struct
 
   let component
     : type key presence focus data cmp column_id.
-      theming:Table_view.Theming.t
+      ?theming:Table_view.Theming.t
       -> ?filter:(key:key -> data:data -> bool) Value.t
       -> ?override_sort:
            (key compare -> (key * data) compare -> (key * data) compare) Value.t
       -> ?default_sort:(key * data) compare Value.t
+      -> ?multisort_columns_when:
+           [ `Shift_click | `Ctrl_click | `Shift_or_ctrl_click ] Value.t
       -> ?preload_rows:int
       -> ?extra_row_attrs:(key -> Vdom.Attr.t list) Value.t
       -> (key, cmp) Bonsai.comparator
@@ -591,10 +593,11 @@ module Basic = struct
       -> (key, data, cmp) Map.t Value.t
       -> (focus, column_id) Result.t Computation.t
     =
-    fun ~theming
+    fun ?(theming = `Themed)
         ?filter
         ?override_sort
         ?default_sort
+        ?multisort_columns_when
         ?(preload_rows = default_preload)
         ?extra_row_attrs
         key_comparator
@@ -645,7 +648,12 @@ module Basic = struct
       | None -> Value.return None
       | Some v -> v >>| Option.some
     in
-    let%sub sorters, headers = Column.headers_and_sorters value sortable_state in
+    let multisort_columns_when =
+      Option.value multisort_columns_when ~default:(Value.return `Shift_click)
+    in
+    let%sub sorters, headers =
+      Column.headers_and_sorters ~multisort_columns_when value sortable_state
+    in
     let%sub collate =
       let%sub override_sort =
         match override_sort with

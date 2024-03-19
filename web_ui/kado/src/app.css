@@ -1,39 +1,15 @@
 @layer kado.app {
-  :root:has(.app) {
-    /* https://rsms.me/inter/lab/?feat-cv09=1&feat-ss02=1&feat-tnum=1&feat-zero=1
-       tabular numbers : enabled via "tnum"
-       slashed zero    : enabled via "zero"
-       disambiguation  : enabled via "ss02"
-       flat-top-three  : enabled via "cv09" */
-    font-family: 'Inter', sans-serif;
-    /* font-feature-settings: "tnum", "zero", "ss02", "cv09"; */
-    accent-color: #1ba1f2;
-  }
-
   .app.set-min-height-to-100vh {
     min-height: 100vh;
   }
 
-  :root:has(.app.dark),
   .app.dark {
     color-scheme:dark;
     background: var(--bg, #1a1d21);
   }
   
-  :root:has(.app.light),
   .app.light {
     color-scheme:light;
     background: var(--bg, #e5e2de);
-  }
-
-  :root:has(.app) *::selection {
-    background: #1ba1f2;
-    color: white;
-  }
-
-  :root:has(.app) *,
-  :root:has(.app) *::before,
-  :root:has(.app) *::after {
-    box-sizing: border-box;
   }
 }

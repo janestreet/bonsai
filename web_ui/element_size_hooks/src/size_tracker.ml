@@ -65,6 +65,7 @@ module T = struct
   ;;
 
   let on_mount _ state element = state.observer <- Some (observe ~state element)
+  let on_mount = `Schedule_animation_frame on_mount
 
   let update ~old_input ~new_input state _ =
     if phys_equal old_input new_input

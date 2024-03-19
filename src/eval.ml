@@ -20,14 +20,15 @@ let unzip3_mapi' map ~f =
 let do_nothing_lifecycle = Incr.return Lifecycle.Collection.empty
 
 let rec gather
-  : type result. result Computation.t -> result Computation.packed_info Trampoline.t
+  : type result.
+    result Computation.t -> (result, unit) Computation.packed_info Trampoline.t
   =
   let open Computation in
   function
   | Return value ->
     let run ~environment ~path:_ ~clock:_ ~model:_ ~inject:_ =
       let result = Value.eval environment value in
-      Trampoline.return (Snapshot.create ~result ~input:Input.static ~lifecycle:None)
+      Trampoline.return (Snapshot.create ~result ~input:Input.static ~lifecycle:None, ())
     in
     Trampoline.return
       (T
@@ -51,7 +52,7 @@ let rec gather
         model, inject_dynamic
       in
       Trampoline.return
-        (Snapshot.create ~result ~input:(Input.dynamic input) ~lifecycle:None)
+        (Snapshot.create ~result ~input:(Input.dynamic input) ~lifecycle:None, ())
     in
     let apply_action ~inject ~schedule_event input model = function
       | Action.Leaf_static _ ->
@@ -84,7 +85,7 @@ let rec gather
         let%map model = model in
         model, inject_static
       in
-      Trampoline.return (Snapshot.create ~result ~input:Input.static ~lifecycle:None)
+      Trampoline.return (Snapshot.create ~result ~input:Input.static ~lifecycle:None, ())
     in
     let apply_action ~inject ~schedule_event _input model = function
       | Action.Leaf_dynamic _ ->
@@ -111,7 +112,7 @@ let rec gather
     let run ~environment ~path:_ ~clock ~model:_ ~inject:_ =
       let input = Value.eval environment input in
       let result = compute clock input in
-      Trampoline.return (Snapshot.create ~result ~input:Input.static ~lifecycle:None)
+      Trampoline.return (Snapshot.create ~result ~input:Input.static ~lifecycle:None, ())
     in
     Trampoline.return
       (T
@@ -123,36 +124,12 @@ let rec gather
          ; run
          ; can_contain_path = false
          })
+  | Sub { into = Sub { into = Sub _; _ }; _ } as t ->
+    Eval_sub.chain t ~gather:{ f = gather }
   | Sub { from; via; into; here } ->
     let%bind.Trampoline (T info_from) = gather from in
     let%bind.Trampoline (T info_into) = gather into in
-    let is_unit x = Meta.Model.Type_id.same_witness Meta.Model.unit.type_id x in
-    let from_model = is_unit info_from.model.type_id in
-    let from_action =
-      Action.Type_id.same_witness info_from.action Action.Type_id.nothing
-    in
-    let open Option.Let_syntax in
-    let can_run_from_stateless =
-      let%bind a = from_model in
-      let%bind b = from_action in
-      Some (a, b)
-    in
-    Trampoline.return
-      (match can_run_from_stateless with
-       | Some (T, T) -> Eval_sub.from_stateless ~here ~info_from ~info_into ~via
-       | None ->
-         let into_model = is_unit info_into.model.type_id in
-         let into_action =
-           Action.Type_id.same_witness info_into.action Action.Type_id.nothing
-         in
-         let can_run_into_stateless =
-           let%bind a = into_model in
-           let%bind b = into_action in
-           Some (a, b)
-         in
-         (match can_run_into_stateless with
-          | Some (T, T) -> Eval_sub.into_stateless ~here ~info_from ~info_into ~via
-          | None -> Eval_sub.baseline ~here ~info_from ~info_into ~via))
+    Trampoline.return (Eval_sub.gather ~here ~info_from ~info_into ~via)
   | Store { id; value; inner } ->
     let%bind.Trampoline (T gathered) = gather inner in
     let run ~environment ~path ~clock ~model ~inject =
@@ -177,7 +154,7 @@ let rec gather
         | None -> Incr.return default
         | Some x -> Incr.map x ~f:(fun a -> for_some a)
       in
-      Trampoline.return (Snapshot.create ~result ~lifecycle:None ~input:Input.static)
+      Trampoline.return (Snapshot.create ~result ~lifecycle:None ~input:Input.static, ())
     in
     Trampoline.return
       (T
@@ -236,7 +213,7 @@ let rec gather
             |> Environment.add_exn ~key:key_id ~data:key_incr
             |> Environment.add_exn ~key:data_id ~data:value
           in
-          let snapshot =
+          let snapshot, () =
             run ~environment ~path ~clock ~inject:(wrap_assoc ~key inject) ~model
             |> Trampoline.run
           in
@@ -259,10 +236,11 @@ let rec gather
       in
       annotate Assoc_lifecycles lifecycle;
       Trampoline.return
-        (Snapshot.create
-           ~result:results_map
-           ~input:(Input.dynamic input_map)
-           ~lifecycle:(Some lifecycle))
+        ( Snapshot.create
+            ~result:results_map
+            ~input:(Input.dynamic input_map)
+            ~lifecycle:(Some lifecycle)
+        , () )
     in
     let apply_action
       ~inject
@@ -374,7 +352,7 @@ let rec gather
               | None -> model_info.default
               | Some (_prev_io_key, model) -> model
             in
-            let snapshot =
+            let snapshot, () =
               run
                 ~environment
                 ~path
@@ -404,10 +382,11 @@ let rec gather
       in
       annotate Assoc_lifecycles lifecycle;
       Trampoline.return
-        (Snapshot.create
-           ~result:results_map
-           ~input:(Input.dynamic input_map)
-           ~lifecycle:(Some lifecycle))
+        ( Snapshot.create
+            ~result:results_map
+            ~input:(Input.dynamic input_map)
+            ~lifecycle:(Some lifecycle)
+        , () )
     in
     let apply_action
       ~inject
@@ -465,7 +444,7 @@ let rec gather
     let run ~environment ~path ~clock:_ ~model:_ ~inject:_ =
       let map_input = Value.eval environment map in
       let result = Incr_map.mapi map_input ~f:(fun ~key ~data -> by path key data) in
-      Trampoline.return (Snapshot.create ~result ~input:Input.static ~lifecycle:None)
+      Trampoline.return (Snapshot.create ~result ~input:Input.static ~lifecycle:None, ())
     in
     Trampoline.return
       (T
@@ -521,7 +500,7 @@ let rec gather
             in
             Type_equal.conv equal model)
         in
-        let snapshot =
+        let snapshot, () =
           run
             ~environment
             ~model:chosen_model
@@ -540,7 +519,7 @@ let rec gather
         result, input, lifecycle
       in
       let input = Input.dynamic input in
-      Trampoline.return (Snapshot.create ~result ~input ~lifecycle:(Some lifecycle))
+      Trampoline.return (Snapshot.create ~result ~input ~lifecycle:(Some lifecycle), ())
     in
     let apply_action
       ~inject
@@ -683,7 +662,7 @@ let rec gather
         in
         Type_equal.conv witness model
       in
-      let%bind.Trampoline snapshot =
+      let%bind.Trampoline snapshot, () =
         run
           ~environment
           ~path
@@ -696,10 +675,11 @@ let rec gather
           Meta.Input.Hidden.T { input; type_id = input_info; key = () })
       in
       Trampoline.return
-        (Snapshot.create
-           ~input
-           ~result:(Snapshot.result snapshot)
-           ~lifecycle:(Snapshot.lifecycle snapshot))
+        ( Snapshot.create
+            ~input
+            ~result:(Snapshot.result snapshot)
+            ~lifecycle:(Snapshot.lifecycle snapshot)
+        , () )
     in
     let apply_action
       ~inject
@@ -817,7 +797,7 @@ let rec gather
     let wrap_outer inject = Action.wrap_outer >>> inject in
     let run ~environment ~path ~clock ~model ~inject =
       let%pattern_bind outer_model, inner_model = model in
-      let%bind.Trampoline inner_snapshot =
+      let%bind.Trampoline inner_snapshot, () =
         let environment =
           environment
           |> Environment.add_exn ~key:model_id ~data:outer_model
@@ -832,10 +812,11 @@ let rec gather
           (Input.dynamic (Snapshot.result inner_snapshot))
       in
       Trampoline.return
-        (Snapshot.create
-           ~result:inner_result
-           ~input
-           ~lifecycle:(Snapshot.lifecycle inner_snapshot))
+        ( Snapshot.create
+            ~result:inner_result
+            ~input
+            ~lifecycle:(Snapshot.lifecycle inner_snapshot)
+        , () )
     in
     let model = Meta.Model.both wrapper_model inner_model in
     let apply_action ~inject ~schedule_event input (outer_model, inner_model) action =
@@ -915,15 +896,16 @@ let rec gather
                 ~key:reset_id
                 ~data:(Incr.return (inject Action.model_reset_outer))
          in
-         let%bind.Trampoline snapshot =
+         let%bind.Trampoline snapshot, () =
            run ~environment ~path ~model ~clock ~inject:(wrap_inner inject)
          in
          let result = Snapshot.result snapshot in
          Trampoline.return
-           (Snapshot.create
-              ~result
-              ~input:(Snapshot.input snapshot)
-              ~lifecycle:(Snapshot.lifecycle snapshot))
+           ( Snapshot.create
+               ~result
+               ~input:(Snapshot.input snapshot)
+               ~lifecycle:(Snapshot.lifecycle snapshot)
+           , () )
        in
        let apply_action ~inject ~schedule_event i m = function
          | Action.Model_reset_outer -> reset ~inject:(wrap_inner inject) ~schedule_event m
@@ -947,7 +929,7 @@ let rec gather
     let run ~environment:_ ~path ~clock:_ ~model:_ ~inject:_ =
       let result = Incr.return path in
       annotate Path result;
-      Trampoline.return (Snapshot.create ~result ~input:Input.static ~lifecycle:None)
+      Trampoline.return (Snapshot.create ~result ~input:Input.static ~lifecycle:None, ())
     in
     Trampoline.return
       (T
@@ -969,10 +951,11 @@ let rec gather
         | None -> do_nothing_lifecycle
       in
       Trampoline.return
-        (Snapshot.create
-           ~result:(Incr.return ())
-           ~input:Input.static
-           ~lifecycle:(Some lifecycle))
+        ( Snapshot.create
+            ~result:(Incr.return ())
+            ~input:Input.static
+            ~lifecycle:(Some lifecycle)
+        , () )
     in
     Trampoline.return
       (T

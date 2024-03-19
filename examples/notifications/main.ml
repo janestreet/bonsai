@@ -2,6 +2,7 @@ open! Core
 open! Bonsai_web
 open Bonsai.Let_syntax
 module Gallery = Bonsai_web_ui_gallery
+module Notifications = Bonsai_web_ui_notifications
 
 module User_defined_notification = struct
   let name = "User defined notifications"
@@ -32,8 +33,6 @@ module User_defined_notification = struct
       ;;
     end
 
-    module Notifications = Bonsai_web_ui_notifications
-
     let component =
       let%sub notifications =
         Notifications.component (module Notification) ~equal:[%equal: Notification.t]
@@ -41,28 +40,50 @@ module User_defined_notification = struct
       let%sub vdom = Notifications.render notifications ~f:Notification.render in
       let%arr vdom = vdom
       and notifications = notifications in
-      vdom, Notifications.send_notification notifications
+      vdom, notifications
     ;;]
 
   let view =
     let%sub theme = View.Theme.current in
-    let%sub component, send_notification = component in
+    let%sub component, notifications = component in
     let%arr component = component
-    and send_notification = send_notification
+    and notifications = notifications
     and theme = theme in
     let vdom =
       View.hbox
         ~gap:(`Em 1)
         [ View.button
             theme
-            ~on_click:(Effect.ignore_m (send_notification (Success "Yay!")))
+            ~on_click:
+              (Effect.ignore_m
+                 (Notifications.send_notification notifications (Success "Yay!")))
             ~intent:Success
             "Send success notification"
         ; View.button
             theme
-            ~on_click:(Effect.ignore_m (send_notification (Error "Whoops!")))
+            ~on_click:
+              (Effect.ignore_m
+                 (Notifications.send_notification notifications (Error "Whoops!")))
             ~intent:Error
             "Send error notification"
+        ; View.button
+            theme
+            ~on_click:
+              (Effect.ignore_m (Notifications.close_all_notifications notifications))
+            ~intent:Info
+            "Close all notiifications"
+        ; View.button
+            theme
+            ~on_click:
+              (Effect.ignore_m (Notifications.close_oldest_notification notifications))
+            ~intent:Info
+            "Close oldest notiification"
+        ; View.button
+            theme
+            ~on_click:
+              (Effect.ignore_m (Notifications.close_newest_notification notifications))
+            ~intent:Info
+            "Close newest notiification"
         ; component
         ]
     in

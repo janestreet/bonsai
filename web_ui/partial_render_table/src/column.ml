@@ -436,14 +436,16 @@ module Dynamic_cells_with_sorter = struct
   let expand ~label child = group ~label [ child ]
 
   module W = struct
-    let headers_and_sorters t sortable_state =
+    let headers_and_sorters ~multisort_columns_when t sortable_state =
       let sorters, tree =
         T.partition t ~f:(fun i col sort render_header ->
           let leaf_header =
             let%map render_header = render_header
             and sortable_state = sortable_state
-            and sort = sort in
+            and sort = sort
+            and multisort_columns_when = multisort_columns_when in
             Sortable.Header.Expert.default_click_handler
+              ~multisort_columns_when
               ~sortable:(Option.is_some sort)
               ~column_id:i
               sortable_state
@@ -530,15 +532,17 @@ module Dynamic_columns_with_sorter = struct
   let expand ~label child = group ~label [ child ]
 
   module W = struct
-    let headers_and_sorters t sortable_state =
+    let headers_and_sorters ~multisort_columns_when t sortable_state =
       let%sub sorters, tree =
         let%arr t = t
-        and sortable_state = sortable_state in
+        and sortable_state = sortable_state
+        and multisort_columns_when = multisort_columns_when in
         let sorters, tree =
           T.partition t ~f:(fun i col sort render_header ->
             let sortable = Option.is_some sort in
             let header_node =
               Sortable.Header.Expert.default_click_handler
+                ~multisort_columns_when
                 ~sortable
                 ~column_id:i
                 sortable_state
@@ -615,13 +619,17 @@ module Dynamic_experimental_with_sorter = struct
 
     let headers_and_sorters
       : type key data column_id column_id_cmp.
-        (key, data, column_id, column_id_cmp) t
+        multisort_columns_when:
+          [ `Shift_click | `Ctrl_click | `Shift_or_ctrl_click ] Value.t
+        -> (key, data, column_id, column_id_cmp) t
         -> column_id Sortable.t Value.t
         -> ((column_id, (key, data) Sort_kind.t, column_id_cmp) Map.t
            * column_id Header_tree.t)
            Computation.t
       =
-      fun { column_id; columns; render_header; sorts; render_cell = _ } sortable_header ->
+      fun ~multisort_columns_when
+          { column_id; columns; render_header; sorts; render_cell = _ }
+          sortable_header ->
       let module Col_id = (val column_id) in
       let%sub columns, columns_as_a_set = return columns in
       let%sub sorts =
@@ -646,10 +654,12 @@ module Dynamic_experimental_with_sorter = struct
             let%arr render_header = render_header
             and sortable_header = sortable_header
             and sorts = sorts
-            and col = col in
+            and col = col
+            and multisort_columns_when = multisort_columns_when in
             let sortable = Map.mem sorts col in
             let header =
               Sortable.Header.Expert.default_click_handler
+                ~multisort_columns_when
                 ~sortable
                 ~column_id:col
                 sortable_header

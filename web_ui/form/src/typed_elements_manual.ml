@@ -9,6 +9,7 @@ module Optional = struct
     (type a view)
     ?(some_label = "Some")
     ?(none_label = "None")
+    ?extra_attrs
     (form : (a, view) Form.t Computation.t)
     : (a option, Vdom.Node.t * view option) Form.t Computation.t
     =
@@ -50,6 +51,7 @@ module Optional = struct
 
           let form_for_picker =
             Elements.Dropdown.enumerable
+              ?extra_attrs
               (module M.Typed_variant.Packed)
               ~to_string:(function
                 | { M.Typed_variant.Packed.f = T None } -> none_label

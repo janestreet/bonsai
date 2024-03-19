@@ -40,12 +40,12 @@ let%expect_test "of_deferred_fun" =
   schedule_and_print_response (callback 1);
   schedule_and_print_response (callback 2);
   schedule_and_print_response (callback 3);
-  [%expect {||}];
+  [%expect {| |}];
   print_s [%sexp (Hashtbl.keys state : int list)];
   [%expect {| (1 3 2) |}];
   Ivar.fill_exn (Hashtbl.find_and_remove state 1 |> Option.value_exn) 42;
   (* Nothing yet, because the scheduler has not run a cycle *)
-  [%expect {||}];
+  [%expect {| |}];
   (* Tell async_kernel to run a cycle manually to see that the effect is responded to *)
   Async_kernel_scheduler.Private.run_cycles_until_no_jobs_remain ();
   [%expect {| ("this is userdata" (r 42)) |}];
@@ -53,7 +53,8 @@ let%expect_test "of_deferred_fun" =
   Async_kernel_scheduler.Private.run_cycles_until_no_jobs_remain ();
   [%expect {|
     ("this is userdata" (r 20))
-    ("this is userdata" (r 30)) |}]
+    ("this is userdata" (r 30))
+    |}]
 ;;
 
 let%expect_test "svar" =
@@ -65,7 +66,7 @@ let%expect_test "svar" =
       svar)
   in
   schedule_and_print_response (callback 1);
-  [%expect {||}];
+  [%expect {| |}];
   let query, response = Option.value_exn !in_flight_query_and_response in
   Effect.For_testing.Svar.fill_if_empty response (query + 1);
   [%expect {| ("this is userdata" (r 2)) |}]
@@ -77,7 +78,7 @@ let%expect_test "Query_response_tracker" =
   schedule_and_print_response (callback 1);
   schedule_and_print_response (callback 2);
   schedule_and_print_response (callback 3);
-  [%expect {||}];
+  [%expect {| |}];
   Effect.For_testing.Query_response_tracker.maybe_respond qrt ~f:(fun i ->
     if i % 2 = 0 then Respond (10 * i) else No_response_yet);
   [%expect {| ("this is userdata" (r 20)) |}];
@@ -89,7 +90,8 @@ let%expect_test "Query_response_tracker" =
     Respond (20 * i));
   [%expect {|
     ("this is userdata" (r 60))
-    ("this is userdata" (r 20)) |}];
+    ("this is userdata" (r 20))
+    |}];
   printf
     !"%{sexp: int list}"
     (Effect.For_testing.Query_response_tracker.queries_pending_response qrt);

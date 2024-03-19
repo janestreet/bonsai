@@ -17,11 +17,7 @@ type form_transformer =
     place of the default auto-generated logic.
 
     Customizations based on individual fields within a record are not yet supported, only
-    tags applied to entire types will match.
-
-    WARNING: Customization of auto-generated UIs/Forms is currently under development.
-    Please do not take a dependency on customization logic if you are not ok with the API
-    changing under your feet. *)
+    tags applied to entire types will match. *)
 module Customization : sig
   type 'a t
 
@@ -30,13 +26,6 @@ module Customization : sig
       val all : form_transformer t list
     end
   end
-
-  (** [create_for_view] allows you to specify a custom rendering function for a sexp value
-      whose grammar includes the provided tag name. *)
-  val create_for_view
-    :  apply_to_tag:(key:string -> value:Sexp.t -> bool)
-    -> (Sexp.t Value.t -> Vdom.Node.t Computation.t)
-    -> (Sexp.t Value.t -> Vdom.Node.t Computation.t) t
 
   (** [constant] allows you to specify a form for the ['a] that you're providing
       custom logic for. This form will be projected to [Sexp.t], so that it can be used in
@@ -60,23 +49,6 @@ module Customization : sig
         -> 'a Form.t Computation.t)
     -> form_transformer t
 end
-
-(** WARNING: This function produces output which is auto-generated and is subject to
-    large layout changes without notice while the API is being developed. You should not
-    rely on this function if your users will be sad when the output changes.
-
-    [view] produces a [Vdom.Node.t] representing a given ['a Value.t], based on the
-    sexp grammar for ['a].
-
-    [customizations] is a list of customizations to use while generating the view (see
-    above). Customizations are tried in the provided order, using the result of the first
-    matching customization. *)
-val view
-  :  (module S with type t = 'a)
-  -> ?customizations:(Sexp.t Value.t -> Vdom.Node.t Computation.t) Customization.t list
-  -> 'a Value.t
-  -> [ `This_view_may_change_without_notice ]
-  -> Vdom.Node.t Computation.t
 
 (** [form] takes a type ['a] and its sexp grammar and produces a ['a Form.t].
 

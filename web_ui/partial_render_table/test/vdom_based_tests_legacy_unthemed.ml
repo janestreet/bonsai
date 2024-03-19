@@ -81,147 +81,148 @@ let%expect_test "column visibility" =
   Handle.show_diff ~location_style:Separator test.handle;
   [%expect
     {|
-=== DIFF HUNK ===
-              class="header_cell header_label leaf_header"
-              size_tracker=<fun>
-              style={
-                width: 50px;
-              }>
-            <div>
-              <div>
-                <span> a </span>
+    === DIFF HUNK ===
+                  class="header_cell header_label leaf_header"
+                  size_tracker=<fun>
+                  style={
+                    width: 50px;
+                  }>
+                <div>
+                  <div>
+                    <span> a </span>
+                  </div>
+                </div>
+              </td>
+              <td colspan="1"
+                  class="header_cell header_label leaf_header"
+                  size_tracker=<fun>
+                  style={
+                    width: 50px;
+    +|              display: none;
+                  }>
+                <div class="sortable_header_cell" onclick>
+                  <div style={
+                         display: flex;
+                         flex-direction: row;
+                         flex-wrap: nowrap;
+                         align-items: baseline;
+                         column-gap: 6px;
+                       }>
+                    <span> b </span>
+                  </div>
+                </div>
+              </td>
+              <td colspan="1"
+                  class="header_cell header_label leaf_header"
+                  size_tracker=<fun>
+    === DIFF HUNK ===
+                       width: 0.00000000px;
+                       min-width: 0.00000000px;
+                       max-width: 0.00000000px;
+                     }>
+                  <input oninput> </input>
+                  hello
+                </div>
+                <div class="cell prt-table-cell"
+                     onclick
+                     style={
+                       height: 1px;
+                       min-height: 1px;
+                       max-height: 1px;
+                       width: 0.00000000px;
+                       min-width: 0.00000000px;
+                       max-width: 0.00000000px;
+    -|               }> 1.000000 </div>
+    +|                 display: none;
+    +|               }> </div>
+                <div class="cell prt-table-cell"
+                     onclick
+                     style={
+                       height: 1px;
+                       min-height: 1px;
+                       max-height: 1px;
+                       width: 0.00000000px;
+                       min-width: 0.00000000px;
+                       max-width: 0.00000000px;
+                     }> 1 </div>
               </div>
-            </div>
-          </td>
-          <td colspan="1"
-              class="header_cell header_label leaf_header"
-              size_tracker=<fun>
-              style={
-                width: 50px;
-+|              display: none;
-              }>
-            <div class="sortable_header_cell" onclick>
-              <div style={
+              <div class="prt-table-row row"
+                   style={
+                     height: 1px;
+                     width: 0.00000000px;
                      display: flex;
-                     flex-direction: row;
-                     flex-wrap: nowrap;
-                     align-items: baseline;
-                     column-gap: 6px;
-                   }>
-                <span> b </span>
+    === DIFF HUNK ===
+                       width: 0.00000000px;
+                       min-width: 0.00000000px;
+                       max-width: 0.00000000px;
+                     }>
+                  <input oninput> </input>
+                  there
+                </div>
+                <div class="cell prt-table-cell"
+                     onclick
+                     style={
+                       height: 1px;
+                       min-height: 1px;
+                       max-height: 1px;
+                       width: 0.00000000px;
+                       min-width: 0.00000000px;
+                       max-width: 0.00000000px;
+    -|               }> 2.000000 </div>
+    +|                 display: none;
+    +|               }> </div>
+                <div class="cell prt-table-cell"
+                     onclick
+                     style={
+                       height: 1px;
+                       min-height: 1px;
+                       max-height: 1px;
+                       width: 0.00000000px;
+                       min-width: 0.00000000px;
+                       max-width: 0.00000000px;
+                     }> 2 </div>
+              </div>
+              <div class="prt-table-row row"
+                   style={
+                     height: 1px;
+                     width: 0.00000000px;
+                     display: flex;
+    === DIFF HUNK ===
+                       width: 0.00000000px;
+                       min-width: 0.00000000px;
+                       max-width: 0.00000000px;
+                     }>
+                  <input oninput> </input>
+                  world
+                </div>
+                <div class="cell prt-table-cell"
+                     onclick
+                     style={
+                       height: 1px;
+                       min-height: 1px;
+                       max-height: 1px;
+                       width: 0.00000000px;
+                       min-width: 0.00000000px;
+                       max-width: 0.00000000px;
+    -|               }> 2.000000 </div>
+    +|                 display: none;
+    +|               }> </div>
+                <div class="cell prt-table-cell"
+                     onclick
+                     style={
+                       height: 1px;
+                       min-height: 1px;
+                       max-height: 1px;
+                       width: 0.00000000px;
+                       min-width: 0.00000000px;
+                       max-width: 0.00000000px;
+                     }> --- </div>
               </div>
             </div>
-          </td>
-          <td colspan="1"
-              class="header_cell header_label leaf_header"
-              size_tracker=<fun>
-=== DIFF HUNK ===
-                   width: 0.00000000px;
-                   min-width: 0.00000000px;
-                   max-width: 0.00000000px;
-                 }>
-              <input oninput> </input>
-              hello
-            </div>
-            <div class="cell prt-table-cell"
-                 onclick
-                 style={
-                   height: 1px;
-                   min-height: 1px;
-                   max-height: 1px;
-                   width: 0.00000000px;
-                   min-width: 0.00000000px;
-                   max-width: 0.00000000px;
--|               }> 1.000000 </div>
-+|                 display: none;
-+|               }> </div>
-            <div class="cell prt-table-cell"
-                 onclick
-                 style={
-                   height: 1px;
-                   min-height: 1px;
-                   max-height: 1px;
-                   width: 0.00000000px;
-                   min-width: 0.00000000px;
-                   max-width: 0.00000000px;
-                 }> 1 </div>
-          </div>
-          <div class="prt-table-row row"
-               style={
-                 height: 1px;
-                 width: 0.00000000px;
-                 display: flex;
-=== DIFF HUNK ===
-                   width: 0.00000000px;
-                   min-width: 0.00000000px;
-                   max-width: 0.00000000px;
-                 }>
-              <input oninput> </input>
-              there
-            </div>
-            <div class="cell prt-table-cell"
-                 onclick
-                 style={
-                   height: 1px;
-                   min-height: 1px;
-                   max-height: 1px;
-                   width: 0.00000000px;
-                   min-width: 0.00000000px;
-                   max-width: 0.00000000px;
--|               }> 2.000000 </div>
-+|                 display: none;
-+|               }> </div>
-            <div class="cell prt-table-cell"
-                 onclick
-                 style={
-                   height: 1px;
-                   min-height: 1px;
-                   max-height: 1px;
-                   width: 0.00000000px;
-                   min-width: 0.00000000px;
-                   max-width: 0.00000000px;
-                 }> 2 </div>
-          </div>
-          <div class="prt-table-row row"
-               style={
-                 height: 1px;
-                 width: 0.00000000px;
-                 display: flex;
-=== DIFF HUNK ===
-                   width: 0.00000000px;
-                   min-width: 0.00000000px;
-                   max-width: 0.00000000px;
-                 }>
-              <input oninput> </input>
-              world
-            </div>
-            <div class="cell prt-table-cell"
-                 onclick
-                 style={
-                   height: 1px;
-                   min-height: 1px;
-                   max-height: 1px;
-                   width: 0.00000000px;
-                   min-width: 0.00000000px;
-                   max-width: 0.00000000px;
--|               }> 2.000000 </div>
-+|                 display: none;
-+|               }> </div>
-            <div class="cell prt-table-cell"
-                 onclick
-                 style={
-                   height: 1px;
-                   min-height: 1px;
-                   max-height: 1px;
-                   width: 0.00000000px;
-                   min-width: 0.00000000px;
-                   max-width: 0.00000000px;
-                 }> --- </div>
           </div>
         </div>
       </div>
-    </div>
-  </div> |}]
+    |}]
 ;;
 
 let%expect_test "stabilization of view range" =
@@ -235,72 +236,73 @@ let%expect_test "stabilization of view range" =
   Handle.show test.handle;
   [%expect
     {|
-<div class="partial_render_table_container">
-  <table class="partial_render_table_header prt-table-header" bounds-change=<opaque>>
-    <tbody>
-      <tr>
-        <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
-          <div class="sortable_header_cell" onclick>
-            <div>
-              <span> key </span>
-            </div>
-          </div>
-        </td>
-        <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+    <div class="partial_render_table_container">
+      <table class="partial_render_table_header prt-table-header" bounds-change=<opaque>>
+        <tbody>
+          <tr>
+            <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+              <div class="sortable_header_cell" onclick>
+                <div>
+                  <span> key </span>
+                </div>
+              </div>
+            </td>
+            <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+              <div>
+                <div>
+                  <span> a </span>
+                </div>
+              </div>
+            </td>
+            <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+              <div class="sortable_header_cell" onclick>
+                <div>
+                  <span> b </span>
+                </div>
+              </div>
+            </td>
+            <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+              <div class="sortable_header_cell" onclick>
+                <div>
+                  <span> d </span>
+                </div>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
+        <div>
           <div>
-            <div>
-              <span> a </span>
+            <div class="prt-table-row row">
+              <div class="cell prt-table-cell" onclick> 0 </div>
+              <div class="cell prt-table-cell" onclick>
+                <input oninput> </input>
+                hello
+              </div>
+              <div class="cell prt-table-cell" onclick> 1.000000 </div>
+              <div class="cell prt-table-cell" onclick> 1 </div>
+            </div>
+            <div class="prt-table-row row">
+              <div class="cell prt-table-cell" onclick> 1 </div>
+              <div class="cell prt-table-cell" onclick>
+                <input oninput> </input>
+                there
+              </div>
+              <div class="cell prt-table-cell" onclick> 2.000000 </div>
+              <div class="cell prt-table-cell" onclick> 2 </div>
             </div>
           </div>
-        </td>
-        <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
-          <div class="sortable_header_cell" onclick>
-            <div>
-              <span> b </span>
-            </div>
-          </div>
-        </td>
-        <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
-          <div class="sortable_header_cell" onclick>
-            <div>
-              <span> d </span>
-            </div>
-          </div>
-        </td>
-      </tr>
-    </tbody>
-  </table>
-  <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
-    <div>
-      <div>
-        <div class="prt-table-row row">
-          <div class="cell prt-table-cell" onclick> 0 </div>
-          <div class="cell prt-table-cell" onclick>
-            <input oninput> </input>
-            hello
-          </div>
-          <div class="cell prt-table-cell" onclick> 1.000000 </div>
-          <div class="cell prt-table-cell" onclick> 1 </div>
-        </div>
-        <div class="prt-table-row row">
-          <div class="cell prt-table-cell" onclick> 1 </div>
-          <div class="cell prt-table-cell" onclick>
-            <input oninput> </input>
-            there
-          </div>
-          <div class="cell prt-table-cell" onclick> 2.000000 </div>
-          <div class="cell prt-table-cell" onclick> 2 </div>
         </div>
       </div>
     </div>
-  </div>
-</div> |}];
+    |}];
   (* Change the visibility to show the rest of the nodes *)
   Handle.show_diff ~location_style:Separator test.handle;
-  [%expect {||}];
+  [%expect {| |}];
   Handle.recompute_view_until_stable test.handle;
   Handle.show_diff ~location_style:Separator test.handle;
-  [%expect {||}];
+  [%expect {| |}];
   Test.set_bounds test ~low:0 ~high:100;
   Handle.recompute_view_until_stable test.handle;
   Handle.show_diff ~location_style:Separator test.handle;
@@ -335,7 +337,8 @@ let%expect_test "stabilization of view range" =
             </div>
           </div>
         </div>
-      </div> |}]
+      </div>
+    |}]
 ;;
 
 let%expect_test "resize-column" =
@@ -351,186 +354,187 @@ let%expect_test "resize-column" =
   Handle.show_diff ~location_style:Separator test.handle;
   [%expect
     {|
-=== DIFF HUNK ===
-  <div class="partial_render_table_container">
-    <table class="partial_render_table_header prt-table-header" bounds-change=<opaque>>
-      <tbody>
-        <tr>
-          <td colspan="1"
-              class="header_cell header_label leaf_header"
-              size_tracker=<fun>
-              style={
--|              width: 50px;
-+|              width: 10.00px;
-              }>
-            <div class="sortable_header_cell" onclick>
-              <div style={
+    === DIFF HUNK ===
+      <div class="partial_render_table_container">
+        <table class="partial_render_table_header prt-table-header" bounds-change=<opaque>>
+          <tbody>
+            <tr>
+              <td colspan="1"
+                  class="header_cell header_label leaf_header"
+                  size_tracker=<fun>
+                  style={
+    -|              width: 50px;
+    +|              width: 10.00px;
+                  }>
+                <div class="sortable_header_cell" onclick>
+                  <div style={
+                         display: flex;
+                         flex-direction: row;
+                         flex-wrap: nowrap;
+                         align-items: baseline;
+                         column-gap: 6px;
+                       }>
+                    <span> key </span>
+                  </div>
+                </div>
+              </td>
+              <td colspan="1"
+                  class="header_cell header_label leaf_header"
+                  size_tracker=<fun>
+    === DIFF HUNK ===
+                  </div>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="partial-render-table-body- partial_render_table_body"
+             bounds-change=<opaque>
+             style={
+               height: 3px;
+             }>
+          <div style={ padding-top: 0px; padding-bottom: 0px; }>
+            <div>
+              <div class="prt-table-row row"
+                   style={
+                     height: 1px;
+    -|               width: 0.00000000px;
+    +|               width: 10.00000000px;
                      display: flex;
                      flex-direction: row;
                      flex-wrap: nowrap;
-                     align-items: baseline;
-                     column-gap: 6px;
                    }>
-                <span> key </span>
+                <div class="cell prt-table-cell"
+                     onclick
+                     style={
+                       height: 1px;
+                       min-height: 1px;
+                       max-height: 1px;
+    -|                 width: 0.00000000px;
+    +|                 width: 10.00000000px;
+    -|                 min-width: 0.00000000px;
+    +|                 min-width: 10.00000000px;
+    -|                 max-width: 0.00000000px;
+    +|                 max-width: 10.00000000px;
+                     }> 0 </div>
+                <div class="cell prt-table-cell"
+                     onclick
+                     style={
+                       height: 1px;
+                       min-height: 1px;
+                       max-height: 1px;
+                       width: 0.00000000px;
+                       min-width: 0.00000000px;
+                       max-width: 0.00000000px;
+                     }>
+                  <input oninput> </input>
+                  hello
+                </div>
+                <div class="cell prt-table-cell"
+                     onclick
+    === DIFF HUNK ===
+                       max-width: 0.00000000px;
+                     }> 1.000000 </div>
+                <div class="cell prt-table-cell"
+                     onclick
+                     style={
+                       height: 1px;
+                       min-height: 1px;
+                       max-height: 1px;
+                       width: 0.00000000px;
+                       min-width: 0.00000000px;
+                       max-width: 0.00000000px;
+                     }> 1 </div>
               </div>
-            </div>
-          </td>
-          <td colspan="1"
-              class="header_cell header_label leaf_header"
-              size_tracker=<fun>
-=== DIFF HUNK ===
+              <div class="prt-table-row row"
+                   style={
+                     height: 1px;
+    -|               width: 0.00000000px;
+    +|               width: 10.00000000px;
+                     display: flex;
+                     flex-direction: row;
+                     flex-wrap: nowrap;
+                   }>
+                <div class="cell prt-table-cell"
+                     onclick
+                     style={
+                       height: 1px;
+                       min-height: 1px;
+                       max-height: 1px;
+    -|                 width: 0.00000000px;
+    +|                 width: 10.00000000px;
+    -|                 min-width: 0.00000000px;
+    +|                 min-width: 10.00000000px;
+    -|                 max-width: 0.00000000px;
+    +|                 max-width: 10.00000000px;
+                     }> 1 </div>
+                <div class="cell prt-table-cell"
+                     onclick
+                     style={
+                       height: 1px;
+                       min-height: 1px;
+                       max-height: 1px;
+                       width: 0.00000000px;
+                       min-width: 0.00000000px;
+                       max-width: 0.00000000px;
+                     }>
+                  <input oninput> </input>
+                  there
+                </div>
+                <div class="cell prt-table-cell"
+                     onclick
+    === DIFF HUNK ===
+                       max-width: 0.00000000px;
+                     }> 2.000000 </div>
+                <div class="cell prt-table-cell"
+                     onclick
+                     style={
+                       height: 1px;
+                       min-height: 1px;
+                       max-height: 1px;
+                       width: 0.00000000px;
+                       min-width: 0.00000000px;
+                       max-width: 0.00000000px;
+                     }> 2 </div>
               </div>
-            </div>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-    <div class="partial-render-table-body- partial_render_table_body"
-         bounds-change=<opaque>
-         style={
-           height: 3px;
-         }>
-      <div style={ padding-top: 0px; padding-bottom: 0px; }>
-        <div>
-          <div class="prt-table-row row"
-               style={
-                 height: 1px;
--|               width: 0.00000000px;
-+|               width: 10.00000000px;
-                 display: flex;
-                 flex-direction: row;
-                 flex-wrap: nowrap;
-               }>
-            <div class="cell prt-table-cell"
-                 onclick
-                 style={
-                   height: 1px;
-                   min-height: 1px;
-                   max-height: 1px;
--|                 width: 0.00000000px;
-+|                 width: 10.00000000px;
--|                 min-width: 0.00000000px;
-+|                 min-width: 10.00000000px;
--|                 max-width: 0.00000000px;
-+|                 max-width: 10.00000000px;
-                 }> 0 </div>
-            <div class="cell prt-table-cell"
-                 onclick
-                 style={
-                   height: 1px;
-                   min-height: 1px;
-                   max-height: 1px;
-                   width: 0.00000000px;
-                   min-width: 0.00000000px;
-                   max-width: 0.00000000px;
-                 }>
-              <input oninput> </input>
-              hello
-            </div>
-            <div class="cell prt-table-cell"
-                 onclick
-=== DIFF HUNK ===
-                   max-width: 0.00000000px;
-                 }> 1.000000 </div>
-            <div class="cell prt-table-cell"
-                 onclick
-                 style={
-                   height: 1px;
-                   min-height: 1px;
-                   max-height: 1px;
-                   width: 0.00000000px;
-                   min-width: 0.00000000px;
-                   max-width: 0.00000000px;
-                 }> 1 </div>
-          </div>
-          <div class="prt-table-row row"
-               style={
-                 height: 1px;
--|               width: 0.00000000px;
-+|               width: 10.00000000px;
-                 display: flex;
-                 flex-direction: row;
-                 flex-wrap: nowrap;
-               }>
-            <div class="cell prt-table-cell"
-                 onclick
-                 style={
-                   height: 1px;
-                   min-height: 1px;
-                   max-height: 1px;
--|                 width: 0.00000000px;
-+|                 width: 10.00000000px;
--|                 min-width: 0.00000000px;
-+|                 min-width: 10.00000000px;
--|                 max-width: 0.00000000px;
-+|                 max-width: 10.00000000px;
-                 }> 1 </div>
-            <div class="cell prt-table-cell"
-                 onclick
-                 style={
-                   height: 1px;
-                   min-height: 1px;
-                   max-height: 1px;
-                   width: 0.00000000px;
-                   min-width: 0.00000000px;
-                   max-width: 0.00000000px;
-                 }>
-              <input oninput> </input>
-              there
-            </div>
-            <div class="cell prt-table-cell"
-                 onclick
-=== DIFF HUNK ===
-                   max-width: 0.00000000px;
-                 }> 2.000000 </div>
-            <div class="cell prt-table-cell"
-                 onclick
-                 style={
-                   height: 1px;
-                   min-height: 1px;
-                   max-height: 1px;
-                   width: 0.00000000px;
-                   min-width: 0.00000000px;
-                   max-width: 0.00000000px;
-                 }> 2 </div>
-          </div>
-          <div class="prt-table-row row"
-               style={
-                 height: 1px;
--|               width: 0.00000000px;
-+|               width: 10.00000000px;
-                 display: flex;
-                 flex-direction: row;
-                 flex-wrap: nowrap;
-               }>
-            <div class="cell prt-table-cell"
-                 onclick
-                 style={
-                   height: 1px;
-                   min-height: 1px;
-                   max-height: 1px;
--|                 width: 0.00000000px;
-+|                 width: 10.00000000px;
--|                 min-width: 0.00000000px;
-+|                 min-width: 10.00000000px;
--|                 max-width: 0.00000000px;
-+|                 max-width: 10.00000000px;
-                 }> 4 </div>
-            <div class="cell prt-table-cell"
-                 onclick
-                 style={
-                   height: 1px;
-                   min-height: 1px;
-                   max-height: 1px;
-                   width: 0.00000000px;
-                   min-width: 0.00000000px;
-                   max-width: 0.00000000px;
-                 }>
-              <input oninput> </input>
-              world
-            </div>
-            <div class="cell prt-table-cell"
-                 onclick |}]
+              <div class="prt-table-row row"
+                   style={
+                     height: 1px;
+    -|               width: 0.00000000px;
+    +|               width: 10.00000000px;
+                     display: flex;
+                     flex-direction: row;
+                     flex-wrap: nowrap;
+                   }>
+                <div class="cell prt-table-cell"
+                     onclick
+                     style={
+                       height: 1px;
+                       min-height: 1px;
+                       max-height: 1px;
+    -|                 width: 0.00000000px;
+    +|                 width: 10.00000000px;
+    -|                 min-width: 0.00000000px;
+    +|                 min-width: 10.00000000px;
+    -|                 max-width: 0.00000000px;
+    +|                 max-width: 10.00000000px;
+                     }> 4 </div>
+                <div class="cell prt-table-cell"
+                     onclick
+                     style={
+                       height: 1px;
+                       min-height: 1px;
+                       max-height: 1px;
+                       width: 0.00000000px;
+                       min-width: 0.00000000px;
+                       max-width: 0.00000000px;
+                     }>
+                  <input oninput> </input>
+                  world
+                </div>
+                <div class="cell prt-table-cell"
+                     onclick
+    |}]
 ;;
 
 let%expect_test "big table" =
@@ -546,168 +550,170 @@ let%expect_test "big table" =
   Handle.show test.handle;
   [%expect
     {|
-<div class="partial_render_table_container">
-  <table class="partial_render_table_header prt-table-header" bounds-change=<opaque>>
-    <tbody>
-      <tr>
-        <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
-          <div class="sortable_header_cell" onclick>
-            <div>
-              <span> key </span>
-            </div>
-          </div>
-        </td>
-        <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+    <div class="partial_render_table_container">
+      <table class="partial_render_table_header prt-table-header" bounds-change=<opaque>>
+        <tbody>
+          <tr>
+            <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+              <div class="sortable_header_cell" onclick>
+                <div>
+                  <span> key </span>
+                </div>
+              </div>
+            </td>
+            <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+              <div>
+                <div>
+                  <span> a </span>
+                </div>
+              </div>
+            </td>
+            <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+              <div class="sortable_header_cell" onclick>
+                <div>
+                  <span> b </span>
+                </div>
+              </div>
+            </td>
+            <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+              <div class="sortable_header_cell" onclick>
+                <div>
+                  <span> d </span>
+                </div>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
+        <div>
           <div>
-            <div>
-              <span> a </span>
+            <div class="prt-table-row row">
+              <div class="cell prt-table-cell" onclick> 51 </div>
+              <div class="cell prt-table-cell" onclick>
+                <input oninput> </input>
+                hi
+              </div>
+              <div class="cell prt-table-cell" onclick> 25.000000 </div>
+              <div class="cell prt-table-cell" onclick> 100 </div>
+            </div>
+            <div class="prt-table-row row">
+              <div class="cell prt-table-cell" onclick> 52 </div>
+              <div class="cell prt-table-cell" onclick>
+                <input oninput> </input>
+                hi
+              </div>
+              <div class="cell prt-table-cell" onclick> 26.000000 </div>
+              <div class="cell prt-table-cell" onclick> 100 </div>
             </div>
           </div>
-        </td>
-        <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
-          <div class="sortable_header_cell" onclick>
-            <div>
-              <span> b </span>
-            </div>
-          </div>
-        </td>
-        <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
-          <div class="sortable_header_cell" onclick>
-            <div>
-              <span> d </span>
-            </div>
-          </div>
-        </td>
-      </tr>
-    </tbody>
-  </table>
-  <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
-    <div>
-      <div>
-        <div class="prt-table-row row">
-          <div class="cell prt-table-cell" onclick> 51 </div>
-          <div class="cell prt-table-cell" onclick>
-            <input oninput> </input>
-            hi
-          </div>
-          <div class="cell prt-table-cell" onclick> 25.000000 </div>
-          <div class="cell prt-table-cell" onclick> 100 </div>
-        </div>
-        <div class="prt-table-row row">
-          <div class="cell prt-table-cell" onclick> 52 </div>
-          <div class="cell prt-table-cell" onclick>
-            <input oninput> </input>
-            hi
-          </div>
-          <div class="cell prt-table-cell" onclick> 26.000000 </div>
-          <div class="cell prt-table-cell" onclick> 100 </div>
         </div>
       </div>
     </div>
-  </div>
-</div> |}];
+    |}];
   (* extending the range upwards should only add to the end *)
   Test.set_bounds test ~low:55 ~high:60;
   Handle.recompute_view_until_stable test.handle;
   Handle.show_diff ~location_style:Separator test.handle;
   [%expect
     {|
-=== DIFF HUNK ===
-            </div>
-          </td>
-          <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
-            <div class="sortable_header_cell" onclick>
-              <div>
-                <span> d </span>
+    === DIFF HUNK ===
+                </div>
+              </td>
+              <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+                <div class="sortable_header_cell" onclick>
+                  <div>
+                    <span> d </span>
+                  </div>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
+          <div>
+            <div>
+              <div class="prt-table-row row">
+    -|          <div class="cell prt-table-cell" onclick> 51 </div>
+    +|          <div class="cell prt-table-cell" onclick> 55 </div>
+                <div class="cell prt-table-cell" onclick>
+                  <input oninput> </input>
+                  hi
+                </div>
+    -|          <div class="cell prt-table-cell" onclick> 25.000000 </div>
+    +|          <div class="cell prt-table-cell" onclick> 27.000000 </div>
+                <div class="cell prt-table-cell" onclick> 100 </div>
+              </div>
+              <div class="prt-table-row row">
+    -|          <div class="cell prt-table-cell" onclick> 52 </div>
+    +|          <div class="cell prt-table-cell" onclick> 56 </div>
+                <div class="cell prt-table-cell" onclick>
+                  <input oninput> </input>
+                  hi
+                </div>
+    -|          <div class="cell prt-table-cell" onclick> 26.000000 </div>
+    +|          <div class="cell prt-table-cell" onclick> 28.000000 </div>
+    +|          <div class="cell prt-table-cell" onclick> 100 </div>
+    +|        </div>
+    +|        <div class="prt-table-row row">
+    +|          <div class="cell prt-table-cell" onclick> 57 </div>
+    +|          <div class="cell prt-table-cell" onclick>
+    +|            <input oninput> </input>
+    +|            hi
+    +|          </div>
+    +|          <div class="cell prt-table-cell" onclick> 28.000000 </div>
+    +|          <div class="cell prt-table-cell" onclick> 100 </div>
+    +|        </div>
+    +|        <div class="prt-table-row row">
+    +|          <div class="cell prt-table-cell" onclick> 58 </div>
+    +|          <div class="cell prt-table-cell" onclick>
+    +|            <input oninput> </input>
+    +|            hi
+    +|          </div>
+    +|          <div class="cell prt-table-cell" onclick> 29.000000 </div>
+    +|          <div class="cell prt-table-cell" onclick> 100 </div>
+    +|        </div>
+    +|        <div class="prt-table-row row">
+    +|          <div class="cell prt-table-cell" onclick> 59 </div>
+    +|          <div class="cell prt-table-cell" onclick>
+    +|            <input oninput> </input>
+    +|            hi
+    +|          </div>
+    +|          <div class="cell prt-table-cell" onclick> 29.000000 </div>
+    +|          <div class="cell prt-table-cell" onclick> 100 </div>
+    +|        </div>
+    +|        <div class="prt-table-row row">
+    +|          <div class="cell prt-table-cell" onclick> 60 </div>
+    +|          <div class="cell prt-table-cell" onclick>
+    +|            <input oninput> </input>
+    +|            hi
+    +|          </div>
+    +|          <div class="cell prt-table-cell" onclick> 30.000000 </div>
+    +|          <div class="cell prt-table-cell" onclick> 100 </div>
+    +|        </div>
+    +|        <div class="prt-table-row row">
+    +|          <div class="cell prt-table-cell" onclick> 61 </div>
+    +|          <div class="cell prt-table-cell" onclick>
+    +|            <input oninput> </input>
+    +|            hi
+    +|          </div>
+    +|          <div class="cell prt-table-cell" onclick> 30.000000 </div>
+    +|          <div class="cell prt-table-cell" onclick> 100 </div>
+    +|        </div>
+    +|        <div class="prt-table-row row">
+    +|          <div class="cell prt-table-cell" onclick> 62 </div>
+    +|          <div class="cell prt-table-cell" onclick>
+    +|            <input oninput> </input>
+    +|            hi
+    +|          </div>
+    +|          <div class="cell prt-table-cell" onclick> 31.000000 </div>
+                <div class="cell prt-table-cell" onclick> 100 </div>
               </div>
             </div>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-    <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
-      <div>
-        <div>
-          <div class="prt-table-row row">
--|          <div class="cell prt-table-cell" onclick> 51 </div>
-+|          <div class="cell prt-table-cell" onclick> 55 </div>
-            <div class="cell prt-table-cell" onclick>
-              <input oninput> </input>
-              hi
-            </div>
--|          <div class="cell prt-table-cell" onclick> 25.000000 </div>
-+|          <div class="cell prt-table-cell" onclick> 27.000000 </div>
-            <div class="cell prt-table-cell" onclick> 100 </div>
-          </div>
-          <div class="prt-table-row row">
--|          <div class="cell prt-table-cell" onclick> 52 </div>
-+|          <div class="cell prt-table-cell" onclick> 56 </div>
-            <div class="cell prt-table-cell" onclick>
-              <input oninput> </input>
-              hi
-            </div>
--|          <div class="cell prt-table-cell" onclick> 26.000000 </div>
-+|          <div class="cell prt-table-cell" onclick> 28.000000 </div>
-+|          <div class="cell prt-table-cell" onclick> 100 </div>
-+|        </div>
-+|        <div class="prt-table-row row">
-+|          <div class="cell prt-table-cell" onclick> 57 </div>
-+|          <div class="cell prt-table-cell" onclick>
-+|            <input oninput> </input>
-+|            hi
-+|          </div>
-+|          <div class="cell prt-table-cell" onclick> 28.000000 </div>
-+|          <div class="cell prt-table-cell" onclick> 100 </div>
-+|        </div>
-+|        <div class="prt-table-row row">
-+|          <div class="cell prt-table-cell" onclick> 58 </div>
-+|          <div class="cell prt-table-cell" onclick>
-+|            <input oninput> </input>
-+|            hi
-+|          </div>
-+|          <div class="cell prt-table-cell" onclick> 29.000000 </div>
-+|          <div class="cell prt-table-cell" onclick> 100 </div>
-+|        </div>
-+|        <div class="prt-table-row row">
-+|          <div class="cell prt-table-cell" onclick> 59 </div>
-+|          <div class="cell prt-table-cell" onclick>
-+|            <input oninput> </input>
-+|            hi
-+|          </div>
-+|          <div class="cell prt-table-cell" onclick> 29.000000 </div>
-+|          <div class="cell prt-table-cell" onclick> 100 </div>
-+|        </div>
-+|        <div class="prt-table-row row">
-+|          <div class="cell prt-table-cell" onclick> 60 </div>
-+|          <div class="cell prt-table-cell" onclick>
-+|            <input oninput> </input>
-+|            hi
-+|          </div>
-+|          <div class="cell prt-table-cell" onclick> 30.000000 </div>
-+|          <div class="cell prt-table-cell" onclick> 100 </div>
-+|        </div>
-+|        <div class="prt-table-row row">
-+|          <div class="cell prt-table-cell" onclick> 61 </div>
-+|          <div class="cell prt-table-cell" onclick>
-+|            <input oninput> </input>
-+|            hi
-+|          </div>
-+|          <div class="cell prt-table-cell" onclick> 30.000000 </div>
-+|          <div class="cell prt-table-cell" onclick> 100 </div>
-+|        </div>
-+|        <div class="prt-table-row row">
-+|          <div class="cell prt-table-cell" onclick> 62 </div>
-+|          <div class="cell prt-table-cell" onclick>
-+|            <input oninput> </input>
-+|            hi
-+|          </div>
-+|          <div class="cell prt-table-cell" onclick> 31.000000 </div>
-            <div class="cell prt-table-cell" onclick> 100 </div>
           </div>
         </div>
       </div>
-    </div>
-  </div> |}]
+    |}]
 ;;
 
 let%expect_test "typing into a column, leaving that column, and then coming back. " =
@@ -728,41 +734,42 @@ let%expect_test "typing into a column, leaving that column, and then coming back
   Handle.show_diff ~location_style:Separator test.handle;
   [%expect
     {|
-=== DIFF HUNK ===
-            <div class="sortable_header_cell" onclick>
-              <div>
-                <span> d </span>
+    === DIFF HUNK ===
+                <div class="sortable_header_cell" onclick>
+                  <div>
+                    <span> d </span>
+                  </div>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
+          <div>
+            <div>
+              <div class="prt-table-row row">
+                <div class="cell prt-table-cell" onclick> 51 </div>
+                <div class="cell prt-table-cell" onclick>
+                  <input oninput> </input>
+    -|            hi
+    +|            hi hello world
+                </div>
+                <div class="cell prt-table-cell" onclick> 25.000000 </div>
+                <div class="cell prt-table-cell" onclick> 100 </div>
+              </div>
+              <div class="prt-table-row row">
+                <div class="cell prt-table-cell" onclick> 52 </div>
+                <div class="cell prt-table-cell" onclick>
+                  <input oninput> </input>
+                  hi
+                </div>
+                <div class="cell prt-table-cell" onclick> 26.000000 </div>
+                <div class="cell prt-table-cell" onclick> 100 </div>
               </div>
             </div>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-    <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
-      <div>
-        <div>
-          <div class="prt-table-row row">
-            <div class="cell prt-table-cell" onclick> 51 </div>
-            <div class="cell prt-table-cell" onclick>
-              <input oninput> </input>
--|            hi
-+|            hi hello world
-            </div>
-            <div class="cell prt-table-cell" onclick> 25.000000 </div>
-            <div class="cell prt-table-cell" onclick> 100 </div>
-          </div>
-          <div class="prt-table-row row">
-            <div class="cell prt-table-cell" onclick> 52 </div>
-            <div class="cell prt-table-cell" onclick>
-              <input oninput> </input>
-              hi
-            </div>
-            <div class="cell prt-table-cell" onclick> 26.000000 </div>
-            <div class="cell prt-table-cell" onclick> 100 </div>
           </div>
         </div>
-      </div>
-    </div> |}];
+    |}];
   (* move out of bounds (really 99-25 through 100) *)
   Test.set_bounds test ~low:99 ~high:99;
   Handle.recompute_view_until_stable test.handle;
@@ -773,66 +780,67 @@ let%expect_test "typing into a column, leaving that column, and then coming back
   Handle.show test.handle;
   [%expect
     {|
-<div class="partial_render_table_container">
-  <table class="partial_render_table_header prt-table-header" bounds-change=<opaque>>
-    <tbody>
-      <tr>
-        <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
-          <div class="sortable_header_cell" onclick>
-            <div>
-              <span> key </span>
-            </div>
-          </div>
-        </td>
-        <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+    <div class="partial_render_table_container">
+      <table class="partial_render_table_header prt-table-header" bounds-change=<opaque>>
+        <tbody>
+          <tr>
+            <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+              <div class="sortable_header_cell" onclick>
+                <div>
+                  <span> key </span>
+                </div>
+              </div>
+            </td>
+            <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+              <div>
+                <div>
+                  <span> a </span>
+                </div>
+              </div>
+            </td>
+            <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+              <div class="sortable_header_cell" onclick>
+                <div>
+                  <span> b </span>
+                </div>
+              </div>
+            </td>
+            <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+              <div class="sortable_header_cell" onclick>
+                <div>
+                  <span> d </span>
+                </div>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
+        <div>
           <div>
-            <div>
-              <span> a </span>
+            <div class="prt-table-row row">
+              <div class="cell prt-table-cell" onclick> 51 </div>
+              <div class="cell prt-table-cell" onclick>
+                <input oninput> </input>
+                hi hello world
+              </div>
+              <div class="cell prt-table-cell" onclick> 25.000000 </div>
+              <div class="cell prt-table-cell" onclick> 100 </div>
+            </div>
+            <div class="prt-table-row row">
+              <div class="cell prt-table-cell" onclick> 52 </div>
+              <div class="cell prt-table-cell" onclick>
+                <input oninput> </input>
+                hi
+              </div>
+              <div class="cell prt-table-cell" onclick> 26.000000 </div>
+              <div class="cell prt-table-cell" onclick> 100 </div>
             </div>
           </div>
-        </td>
-        <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
-          <div class="sortable_header_cell" onclick>
-            <div>
-              <span> b </span>
-            </div>
-          </div>
-        </td>
-        <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
-          <div class="sortable_header_cell" onclick>
-            <div>
-              <span> d </span>
-            </div>
-          </div>
-        </td>
-      </tr>
-    </tbody>
-  </table>
-  <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
-    <div>
-      <div>
-        <div class="prt-table-row row">
-          <div class="cell prt-table-cell" onclick> 51 </div>
-          <div class="cell prt-table-cell" onclick>
-            <input oninput> </input>
-            hi hello world
-          </div>
-          <div class="cell prt-table-cell" onclick> 25.000000 </div>
-          <div class="cell prt-table-cell" onclick> 100 </div>
-        </div>
-        <div class="prt-table-row row">
-          <div class="cell prt-table-cell" onclick> 52 </div>
-          <div class="cell prt-table-cell" onclick>
-            <input oninput> </input>
-            hi
-          </div>
-          <div class="cell prt-table-cell" onclick> 26.000000 </div>
-          <div class="cell prt-table-cell" onclick> 100 </div>
         </div>
       </div>
     </div>
-  </div>
-</div> |}]
+    |}]
 ;;
 
 let%expect_test "table body is not recomputed more often than necessary" =
@@ -849,7 +857,8 @@ let%expect_test "table body is not recomputed more often than necessary" =
   Handle.recompute_view test.handle;
   [%expect {|
     Initialized
-    Changed |}];
+    Changed
+    |}];
   (* Sanity check: re-stabilizing after doing no actions does not cause recomputation *)
   Handle.recompute_view test.handle;
   [%expect {| |}];
@@ -860,7 +869,7 @@ let%expect_test "table body is not recomputed more often than necessary" =
   (* Re-setting the bounds to the same value should not cause a re-fire *)
   Test.set_bounds test ~low:0 ~high:300;
   Handle.recompute_view test.handle;
-  [%expect {||}]
+  [%expect {| |}]
 ;;
 
 let%expect_test "table body is not recomputed more often than necessary" =
@@ -919,15 +928,16 @@ let%expect_test "table body is not recomputed more often than necessary" =
   Handle.recompute_view test.handle;
   [%expect {|
     Initialized
-    Changed |}];
+    Changed
+    |}];
   (* Sanity check: re-stabilizing after doing no actions does not cause recomputation *)
   Handle.recompute_view test.handle;
-  [%expect {||}];
+  [%expect {| |}];
   (* Changing the bounds should not cause a re-fire because we are doing our own collation
      and don't rely on result.bounds. *)
   Test.set_bounds test ~low:100 ~high:300;
   Handle.recompute_view test.handle;
-  [%expect {||}]
+  [%expect {| |}]
 ;;
 
 let%expect_test "test is browser" =
@@ -945,65 +955,66 @@ let%expect_test "sorting legacy renderer" =
   Handle.show test.handle;
   [%expect
     {|
-<div class="partial_render_table_container">
-  <table class="partial_render_table_header prt-table-header" bounds-change=<opaque>>
-    <tbody>
-      <tr>
-        <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
-          <div class="sortable_header_cell" onclick>
-            <span> ◇  key </span>
+    <div class="partial_render_table_container">
+      <table class="partial_render_table_header prt-table-header" bounds-change=<opaque>>
+        <tbody>
+          <tr>
+            <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+              <div class="sortable_header_cell" onclick>
+                <span> ◇  key </span>
+              </div>
+            </td>
+            <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+              <div> a </div>
+            </td>
+            <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+              <div class="sortable_header_cell" onclick>
+                <span> ◇  b </span>
+              </div>
+            </td>
+            <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+              <div class="sortable_header_cell" onclick>
+                <span> ◇  d </span>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
+        <div>
+          <div>
+            <div class="prt-table-row row">
+              <div class="cell prt-table-cell" onclick> 0 </div>
+              <div class="cell prt-table-cell" onclick>
+                <input oninput> </input>
+                hello
+              </div>
+              <div class="cell prt-table-cell" onclick> 1.000000 </div>
+              <div class="cell prt-table-cell" onclick> 1 </div>
+            </div>
+            <div class="prt-table-row row">
+              <div class="cell prt-table-cell" onclick> 1 </div>
+              <div class="cell prt-table-cell" onclick>
+                <input oninput> </input>
+                there
+              </div>
+              <div class="cell prt-table-cell" onclick> 2.000000 </div>
+              <div class="cell prt-table-cell" onclick> 2 </div>
+            </div>
+            <div class="prt-table-row row">
+              <div class="cell prt-table-cell" onclick> 4 </div>
+              <div class="cell prt-table-cell" onclick>
+                <input oninput> </input>
+                world
+              </div>
+              <div class="cell prt-table-cell" onclick> 2.000000 </div>
+              <div class="cell prt-table-cell" onclick> --- </div>
+            </div>
           </div>
-        </td>
-        <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
-          <div> a </div>
-        </td>
-        <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
-          <div class="sortable_header_cell" onclick>
-            <span> ◇  b </span>
-          </div>
-        </td>
-        <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
-          <div class="sortable_header_cell" onclick>
-            <span> ◇  d </span>
-          </div>
-        </td>
-      </tr>
-    </tbody>
-  </table>
-  <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
-    <div>
-      <div>
-        <div class="prt-table-row row">
-          <div class="cell prt-table-cell" onclick> 0 </div>
-          <div class="cell prt-table-cell" onclick>
-            <input oninput> </input>
-            hello
-          </div>
-          <div class="cell prt-table-cell" onclick> 1.000000 </div>
-          <div class="cell prt-table-cell" onclick> 1 </div>
-        </div>
-        <div class="prt-table-row row">
-          <div class="cell prt-table-cell" onclick> 1 </div>
-          <div class="cell prt-table-cell" onclick>
-            <input oninput> </input>
-            there
-          </div>
-          <div class="cell prt-table-cell" onclick> 2.000000 </div>
-          <div class="cell prt-table-cell" onclick> 2 </div>
-        </div>
-        <div class="prt-table-row row">
-          <div class="cell prt-table-cell" onclick> 4 </div>
-          <div class="cell prt-table-cell" onclick>
-            <input oninput> </input>
-            world
-          </div>
-          <div class="cell prt-table-cell" onclick> 2.000000 </div>
-          <div class="cell prt-table-cell" onclick> --- </div>
         </div>
       </div>
     </div>
-  </div>
-</div> |}];
+    |}];
   (* this one is the key, clicking on it does nothing (it's already sorted by the key) *)
   Handle.click_on test.handle ~selector:"td:nth-child(1) > div" ~get_vdom:test.get_vdom;
   Handle.show_diff ~location_style:Separator test.handle;
@@ -1033,84 +1044,86 @@ let%expect_test "sorting legacy renderer" =
                   <span> ◇  d </span>
                 </div>
               </td>
-            </tr> |}];
+            </tr>
+    |}];
   (* this one actually does stuff, click on it twice for a reverse sort *)
   Handle.click_on test.handle ~selector:"td:nth-child(3) > div" ~get_vdom:test.get_vdom;
   Handle.click_on test.handle ~selector:"td:nth-child(3) > div" ~get_vdom:test.get_vdom;
   Handle.show_diff ~location_style:Separator test.handle;
   [%expect
     {|
-=== DIFF HUNK ===
-  <div class="partial_render_table_container">
-    <table class="partial_render_table_header prt-table-header" bounds-change=<opaque>>
-      <tbody>
-        <tr>
-          <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
-            <div class="sortable_header_cell" onclick>
--|            <span> ⬘  key </span>
-+|            <span> ◇  key </span>
+    === DIFF HUNK ===
+      <div class="partial_render_table_container">
+        <table class="partial_render_table_header prt-table-header" bounds-change=<opaque>>
+          <tbody>
+            <tr>
+              <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+                <div class="sortable_header_cell" onclick>
+    -|            <span> ⬘  key </span>
+    +|            <span> ◇  key </span>
+                </div>
+              </td>
+              <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+                <div> a </div>
+              </td>
+              <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+                <div class="sortable_header_cell" onclick>
+    -|            <span> ◇  b </span>
+    +|            <span> ⬙  b </span>
+                </div>
+              </td>
+              <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+                <div class="sortable_header_cell" onclick>
+                  <span> ◇  d </span>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
+          <div>
+            <div>
+    -|        <div class="prt-table-row row">
+    -|          <div class="cell prt-table-cell" onclick> 0 </div>
+    -|          <div class="cell prt-table-cell" onclick>
+    -|            <input oninput> </input>
+    -|            hello
+    -|          </div>
+    -|          <div class="cell prt-table-cell" onclick> 1.000000 </div>
+    -|          <div class="cell prt-table-cell" onclick> 1 </div>
+    -|        </div>
+              <div class="prt-table-row row">
+                <div class="cell prt-table-cell" onclick> 1 </div>
+                <div class="cell prt-table-cell" onclick>
+                  <input oninput> </input>
+                  there
+                </div>
+                <div class="cell prt-table-cell" onclick> 2.000000 </div>
+                <div class="cell prt-table-cell" onclick> 2 </div>
+              </div>
+              <div class="prt-table-row row">
+                <div class="cell prt-table-cell" onclick> 4 </div>
+                <div class="cell prt-table-cell" onclick>
+                  <input oninput> </input>
+                  world
+                </div>
+                <div class="cell prt-table-cell" onclick> 2.000000 </div>
+                <div class="cell prt-table-cell" onclick> --- </div>
+              </div>
+    +|        <div class="prt-table-row row">
+    +|          <div class="cell prt-table-cell" onclick> 0 </div>
+    +|          <div class="cell prt-table-cell" onclick>
+    +|            <input oninput> </input>
+    +|            hello
+    +|          </div>
+    +|          <div class="cell prt-table-cell" onclick> 1.000000 </div>
+    +|          <div class="cell prt-table-cell" onclick> 1 </div>
+    +|        </div>
             </div>
-          </td>
-          <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
-            <div> a </div>
-          </td>
-          <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
-            <div class="sortable_header_cell" onclick>
--|            <span> ◇  b </span>
-+|            <span> ⬙  b </span>
-            </div>
-          </td>
-          <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
-            <div class="sortable_header_cell" onclick>
-              <span> ◇  d </span>
-            </div>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-    <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
-      <div>
-        <div>
--|        <div class="prt-table-row row">
--|          <div class="cell prt-table-cell" onclick> 0 </div>
--|          <div class="cell prt-table-cell" onclick>
--|            <input oninput> </input>
--|            hello
--|          </div>
--|          <div class="cell prt-table-cell" onclick> 1.000000 </div>
--|          <div class="cell prt-table-cell" onclick> 1 </div>
--|        </div>
-          <div class="prt-table-row row">
-            <div class="cell prt-table-cell" onclick> 1 </div>
-            <div class="cell prt-table-cell" onclick>
-              <input oninput> </input>
-              there
-            </div>
-            <div class="cell prt-table-cell" onclick> 2.000000 </div>
-            <div class="cell prt-table-cell" onclick> 2 </div>
           </div>
-          <div class="prt-table-row row">
-            <div class="cell prt-table-cell" onclick> 4 </div>
-            <div class="cell prt-table-cell" onclick>
-              <input oninput> </input>
-              world
-            </div>
-            <div class="cell prt-table-cell" onclick> 2.000000 </div>
-            <div class="cell prt-table-cell" onclick> --- </div>
-          </div>
-+|        <div class="prt-table-row row">
-+|          <div class="cell prt-table-cell" onclick> 0 </div>
-+|          <div class="cell prt-table-cell" onclick>
-+|            <input oninput> </input>
-+|            hello
-+|          </div>
-+|          <div class="cell prt-table-cell" onclick> 1.000000 </div>
-+|          <div class="cell prt-table-cell" onclick> 1 </div>
-+|        </div>
         </div>
       </div>
-    </div>
-  </div> |}];
+    |}];
   Handle.click_on test.handle ~selector:"td:nth-child(3) > div" ~get_vdom:test.get_vdom;
   Handle.show_diff ~location_style:Separator test.handle;
   [%expect
@@ -1184,7 +1197,8 @@ let%expect_test "sorting legacy renderer" =
             </div>
           </div>
         </div>
-      </div> |}];
+      </div>
+    |}];
   (* specialized reverse sort *)
   (* for these items, nothing changes for the primary sort*)
   Handle.click_on test.handle ~selector:"td:nth-child(4) > div" ~get_vdom:test.get_vdom;
@@ -1225,7 +1239,7 @@ let%expect_test "sorting legacy renderer" =
                 </div>
                 <div class="cell prt-table-cell" onclick> 1.000000 </div>
                 <div class="cell prt-table-cell" onclick> 1 </div>
-      |}];
+    |}];
   (* but in reverse, notice that [None]s stay on the bottom *)
   Handle.click_on test.handle ~selector:"td:nth-child(4) > div" ~get_vdom:test.get_vdom;
   Handle.show_diff test.handle;
@@ -1296,7 +1310,8 @@ let%expect_test "sorting legacy renderer" =
             </div>
           </div>
         </div>
-      </div> |}]
+      </div>
+    |}]
 ;;
 
 let%expect_test "sorting default renderer" =
@@ -1305,75 +1320,76 @@ let%expect_test "sorting default renderer" =
   Handle.show test.handle;
   [%expect
     {|
-<div class="partial_render_table_container">
-  <table class="partial_render_table_header prt-table-header" bounds-change=<opaque>>
-    <tbody>
-      <tr>
-        <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
-          <div class="sortable_header_cell" onclick>
-            <div>
-              <span> key </span>
-            </div>
-          </div>
-        </td>
-        <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+    <div class="partial_render_table_container">
+      <table class="partial_render_table_header prt-table-header" bounds-change=<opaque>>
+        <tbody>
+          <tr>
+            <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+              <div class="sortable_header_cell" onclick>
+                <div>
+                  <span> key </span>
+                </div>
+              </div>
+            </td>
+            <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+              <div>
+                <div>
+                  <span> a </span>
+                </div>
+              </div>
+            </td>
+            <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+              <div class="sortable_header_cell" onclick>
+                <div>
+                  <span> b </span>
+                </div>
+              </div>
+            </td>
+            <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+              <div class="sortable_header_cell" onclick>
+                <div>
+                  <span> d </span>
+                </div>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
+        <div>
           <div>
-            <div>
-              <span> a </span>
+            <div class="prt-table-row row">
+              <div class="cell prt-table-cell" onclick> 0 </div>
+              <div class="cell prt-table-cell" onclick>
+                <input oninput> </input>
+                hello
+              </div>
+              <div class="cell prt-table-cell" onclick> 1.000000 </div>
+              <div class="cell prt-table-cell" onclick> 1 </div>
+            </div>
+            <div class="prt-table-row row">
+              <div class="cell prt-table-cell" onclick> 1 </div>
+              <div class="cell prt-table-cell" onclick>
+                <input oninput> </input>
+                there
+              </div>
+              <div class="cell prt-table-cell" onclick> 2.000000 </div>
+              <div class="cell prt-table-cell" onclick> 2 </div>
+            </div>
+            <div class="prt-table-row row">
+              <div class="cell prt-table-cell" onclick> 4 </div>
+              <div class="cell prt-table-cell" onclick>
+                <input oninput> </input>
+                world
+              </div>
+              <div class="cell prt-table-cell" onclick> 2.000000 </div>
+              <div class="cell prt-table-cell" onclick> --- </div>
             </div>
           </div>
-        </td>
-        <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
-          <div class="sortable_header_cell" onclick>
-            <div>
-              <span> b </span>
-            </div>
-          </div>
-        </td>
-        <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
-          <div class="sortable_header_cell" onclick>
-            <div>
-              <span> d </span>
-            </div>
-          </div>
-        </td>
-      </tr>
-    </tbody>
-  </table>
-  <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
-    <div>
-      <div>
-        <div class="prt-table-row row">
-          <div class="cell prt-table-cell" onclick> 0 </div>
-          <div class="cell prt-table-cell" onclick>
-            <input oninput> </input>
-            hello
-          </div>
-          <div class="cell prt-table-cell" onclick> 1.000000 </div>
-          <div class="cell prt-table-cell" onclick> 1 </div>
-        </div>
-        <div class="prt-table-row row">
-          <div class="cell prt-table-cell" onclick> 1 </div>
-          <div class="cell prt-table-cell" onclick>
-            <input oninput> </input>
-            there
-          </div>
-          <div class="cell prt-table-cell" onclick> 2.000000 </div>
-          <div class="cell prt-table-cell" onclick> 2 </div>
-        </div>
-        <div class="prt-table-row row">
-          <div class="cell prt-table-cell" onclick> 4 </div>
-          <div class="cell prt-table-cell" onclick>
-            <input oninput> </input>
-            world
-          </div>
-          <div class="cell prt-table-cell" onclick> 2.000000 </div>
-          <div class="cell prt-table-cell" onclick> --- </div>
         </div>
       </div>
     </div>
-  </div>
-</div> |}];
+    |}];
   (* this one is the key, clicking on it does nothing (it's already sorted by the key) *)
   Handle.click_on test.handle ~selector:"td:nth-child(1) > div" ~get_vdom:test.get_vdom;
   Handle.show_diff ~location_style:Separator test.handle;
@@ -1404,94 +1420,96 @@ let%expect_test "sorting default renderer" =
                   <div>
                     <span> b </span>
                   </div>
-                </div> |}];
+                </div>
+    |}];
   (* this one actually does stuff, click on it twice for a reverse sort *)
   Handle.click_on test.handle ~selector:"td:nth-child(3) > div" ~get_vdom:test.get_vdom;
   Handle.click_on test.handle ~selector:"td:nth-child(3) > div" ~get_vdom:test.get_vdom;
   Handle.show_diff ~location_style:Separator test.handle;
   [%expect
     {|
-=== DIFF HUNK ===
-  <div class="partial_render_table_container">
-    <table class="partial_render_table_header prt-table-header" bounds-change=<opaque>>
-      <tbody>
-        <tr>
-          <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
-            <div class="sortable_header_cell" onclick>
-              <div>
-                <span> key </span>
--|              <span> ▲ </span>
-              </div>
-            </div>
-          </td>
-          <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+    === DIFF HUNK ===
+      <div class="partial_render_table_container">
+        <table class="partial_render_table_header prt-table-header" bounds-change=<opaque>>
+          <tbody>
+            <tr>
+              <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+                <div class="sortable_header_cell" onclick>
+                  <div>
+                    <span> key </span>
+    -|              <span> ▲ </span>
+                  </div>
+                </div>
+              </td>
+              <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+                <div>
+                  <div>
+                    <span> a </span>
+                  </div>
+                </div>
+              </td>
+              <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+                <div class="sortable_header_cell" onclick>
+                  <div>
+                    <span> b </span>
+    +|              <span> ▼ </span>
+                  </div>
+                </div>
+              </td>
+              <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
+                <div class="sortable_header_cell" onclick>
+                  <div>
+                    <span> d </span>
+                  </div>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
+          <div>
             <div>
-              <div>
-                <span> a </span>
+    -|        <div class="prt-table-row row">
+    -|          <div class="cell prt-table-cell" onclick> 0 </div>
+    -|          <div class="cell prt-table-cell" onclick>
+    -|            <input oninput> </input>
+    -|            hello
+    -|          </div>
+    -|          <div class="cell prt-table-cell" onclick> 1.000000 </div>
+    -|          <div class="cell prt-table-cell" onclick> 1 </div>
+    -|        </div>
+              <div class="prt-table-row row">
+                <div class="cell prt-table-cell" onclick> 1 </div>
+                <div class="cell prt-table-cell" onclick>
+                  <input oninput> </input>
+                  there
+                </div>
+                <div class="cell prt-table-cell" onclick> 2.000000 </div>
+                <div class="cell prt-table-cell" onclick> 2 </div>
               </div>
-            </div>
-          </td>
-          <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
-            <div class="sortable_header_cell" onclick>
-              <div>
-                <span> b </span>
-+|              <span> ▼ </span>
+              <div class="prt-table-row row">
+                <div class="cell prt-table-cell" onclick> 4 </div>
+                <div class="cell prt-table-cell" onclick>
+                  <input oninput> </input>
+                  world
+                </div>
+                <div class="cell prt-table-cell" onclick> 2.000000 </div>
+                <div class="cell prt-table-cell" onclick> --- </div>
               </div>
+    +|        <div class="prt-table-row row">
+    +|          <div class="cell prt-table-cell" onclick> 0 </div>
+    +|          <div class="cell prt-table-cell" onclick>
+    +|            <input oninput> </input>
+    +|            hello
+    +|          </div>
+    +|          <div class="cell prt-table-cell" onclick> 1.000000 </div>
+    +|          <div class="cell prt-table-cell" onclick> 1 </div>
+    +|        </div>
             </div>
-          </td>
-          <td colspan="1" class="header_cell header_label leaf_header" size_tracker=<fun>>
-            <div class="sortable_header_cell" onclick>
-              <div>
-                <span> d </span>
-              </div>
-            </div>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-    <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
-      <div>
-        <div>
--|        <div class="prt-table-row row">
--|          <div class="cell prt-table-cell" onclick> 0 </div>
--|          <div class="cell prt-table-cell" onclick>
--|            <input oninput> </input>
--|            hello
--|          </div>
--|          <div class="cell prt-table-cell" onclick> 1.000000 </div>
--|          <div class="cell prt-table-cell" onclick> 1 </div>
--|        </div>
-          <div class="prt-table-row row">
-            <div class="cell prt-table-cell" onclick> 1 </div>
-            <div class="cell prt-table-cell" onclick>
-              <input oninput> </input>
-              there
-            </div>
-            <div class="cell prt-table-cell" onclick> 2.000000 </div>
-            <div class="cell prt-table-cell" onclick> 2 </div>
           </div>
-          <div class="prt-table-row row">
-            <div class="cell prt-table-cell" onclick> 4 </div>
-            <div class="cell prt-table-cell" onclick>
-              <input oninput> </input>
-              world
-            </div>
-            <div class="cell prt-table-cell" onclick> 2.000000 </div>
-            <div class="cell prt-table-cell" onclick> --- </div>
-          </div>
-+|        <div class="prt-table-row row">
-+|          <div class="cell prt-table-cell" onclick> 0 </div>
-+|          <div class="cell prt-table-cell" onclick>
-+|            <input oninput> </input>
-+|            hello
-+|          </div>
-+|          <div class="cell prt-table-cell" onclick> 1.000000 </div>
-+|          <div class="cell prt-table-cell" onclick> 1 </div>
-+|        </div>
         </div>
       </div>
-    </div>
-  </div> |}];
+    |}];
   (* Click on second column, creating a multi-sort  *)
   Handle.click_on
     ~shift_key_down:true
@@ -1542,7 +1560,8 @@ let%expect_test "sorting default renderer" =
         </table>
         <div class="partial-render-table-body- partial_render_table_body" bounds-change=<opaque>>
           <div>
-            <div> |}];
+            <div>
+    |}];
   (* Third column is already reverse sorted, so clicking it again removes all sorts. *)
   Handle.click_on test.handle ~selector:"td:nth-child(3) > div" ~get_vdom:test.get_vdom;
   Handle.show_diff ~location_style:Separator test.handle;
@@ -1628,7 +1647,8 @@ let%expect_test "sorting default renderer" =
             </div>
           </div>
         </div>
-      </div> |}]
+      </div>
+    |}]
 ;;
 
 let%expect_test "removed columns still count toward the total table width" =
@@ -1714,7 +1734,8 @@ let%expect_test "removed columns still count toward the total table width" =
           </div>
         </div>
       </div>
-    </div> |}];
+    </div>
+    |}];
   resize_column ~idx:0 ~width:10.;
   resize_column ~idx:1 ~width:20.;
   Handle.show handle;
@@ -1755,7 +1776,8 @@ let%expect_test "removed columns still count toward the total table width" =
           </div>
         </div>
       </div>
-    </div> |}];
+    </div>
+    |}];
   Bonsai.Var.set columns_var [ column_a; column_b; column_c ];
   Handle.recompute_view handle;
   resize_column ~idx:2 ~width:30.;
@@ -1806,7 +1828,8 @@ let%expect_test "removed columns still count toward the total table width" =
           </div>
         </div>
       </div>
-    </div> |}];
+    </div>
+    |}];
   Bonsai.Var.set columns_var [ column_b; column_c ];
   Handle.show handle;
   [%expect
@@ -1846,7 +1869,8 @@ let%expect_test "removed columns still count toward the total table width" =
           </div>
         </div>
       </div>
-    </div> |}]
+    </div>
+    |}]
 ;;
 
 let%expect_test "removed columns still count toward the total table width" =
@@ -1930,7 +1954,8 @@ let%expect_test "removed columns still count toward the total table width" =
           </div>
         </div>
       </div>
-    </div> |}];
+    </div>
+    |}];
   Test.clear_bounds_for_handle handle ~get_vdom;
   Handle.show_diff ~location_style:Separator handle;
   [%expect {| |}];
@@ -1967,5 +1992,6 @@ let%expect_test "removed columns still count toward the total table width" =
           </div>
         </div>
       </div>
-    </div> |}]
+    </div>
+    |}]
 ;;

@@ -35,8 +35,8 @@ let%test_module "Comparing path id lengths to demonstrate potential cause of slo
          slower after having been migrated to the CONT API. *)
       [%expect
         {|
-        (bonsai_path_x bonsai_path_y_x bonsai_path_y_y_x bonsai_path_y_y_y_x
-         bonsai_path_y_y_y_y_x bonsai_path_y_y_y_y_y)
+        (bonsai_path_x_x bonsai_path_x_y bonsai_path_y_x_x bonsai_path_y_x_y
+         bonsai_path_y_y_x bonsai_path_y_y_y)
         |}];
       let (_ : _) = [%expect.output] in
       [%expect {| |}];
@@ -44,7 +44,7 @@ let%test_module "Comparing path id lengths to demonstrate potential cause of slo
         Handle.create lengths_result_spec (For_cont.basic ~height:5 ~width:7)
       in
       Handle.show handle;
-      [%expect {| (13 15 17 19 21 21) |}]
+      [%expect {| (15 15 17 17 17 17) |}]
     ;;
   end)
 ;;
@@ -64,7 +64,7 @@ let%test_module "Comparing path id lengths bigger example" =
         Handle.create lengths_result_spec (For_cont.basic ~height:10 ~width:7)
       in
       Handle.show handle;
-      [%expect {| (13 15 17 19 21 23 25 27 29 31 31) |}]
+      [%expect {| (17 17 19 19 17 19 19 17 17 19 19) |}]
     ;;
   end)
 ;;

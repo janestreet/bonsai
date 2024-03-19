@@ -35,22 +35,30 @@ let getArea : t -> Area.t =
   fun (x13 : t) -> Area.t_of_js (Ojs.call (t_to_js x13) "getArea" [||])
 ;;
 
-let isZoomed : t -> bool =
-  fun (x14 : t) -> Ojs.bool_of_js (Ojs.call (t_to_js x14) "isZoomed" [||])
+let isZoomed : t -> [ `x | `y ] -> bool =
+  fun (x15 : t) (x14 : [ `x | `y ]) ->
+  Ojs.bool_of_js
+    (Ojs.call
+       (t_to_js x15)
+       "isZoomed"
+       [| (match x14 with
+           | `x -> Ojs.string_to_js "x"
+           | `y -> Ojs.string_to_js "y")
+       |])
 ;;
 
 let resetZoom : t -> unit =
-  fun (x15 : t) -> ignore (Ojs.call (t_to_js x15) "resetZoom" [||])
+  fun (x16 : t) -> ignore (Ojs.call (t_to_js x16) "resetZoom" [||])
 ;;
 
 let primary_context : t -> Canvas_rendering_context_2D.t =
-  fun (x16 : t) ->
-  Canvas_rendering_context_2D.t_of_js (Ojs.get_prop_ascii (t_to_js x16) "hidden_ctx_")
+  fun (x17 : t) ->
+  Canvas_rendering_context_2D.t_of_js (Ojs.get_prop_ascii (t_to_js x17) "hidden_ctx_")
 ;;
 
 let overlay_context : t -> Canvas_rendering_context_2D.t =
-  fun (x17 : t) ->
-  Canvas_rendering_context_2D.t_of_js (Ojs.get_prop_ascii (t_to_js x17) "canvas_ctx_")
+  fun (x18 : t) ->
+  Canvas_rendering_context_2D.t_of_js (Ojs.get_prop_ascii (t_to_js x18) "canvas_ctx_")
 ;;
 
 let toDomCoords ?(axis = `y1) ~(x : float) ~(y : float) (t : t) =

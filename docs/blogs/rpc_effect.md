@@ -1,47 +1,55 @@
-# Ergonomic and testable RPC dispatching in web clients
+Historically, Bonsai and Async haven't gotten along too well. Because
+Bonsai only works with pure programs and immutable values, the
+side-effectful and mutable nature of Async operations meant that the
+best architecture for web apps involved splitting the program into "pure
+bonsai" and "impure async" worlds. These two worlds were then connected
+by using specific APIs, like `Effect.of_deferred_fun` (which turns an
+Deferred-returning function into an Effect-returning function) and
+`Bonsai.Var.t` (which is used to track live data and inject it into
+Bonsai)
 
-Historically, Bonsai and Async haven't gotten along too well. Because Bonsai
-only works with pure programs and immutable values, the side-effectful and
-mutable nature of Async operations meant that the best architecture for web apps
-involved splitting the program into "pure bonsai" and "impure async" worlds. These
-two worlds were then connected by using specific APIs, like `Effect.of_deferred_fun`
-(which turns an Deferred-returning function into an Effect-returning function) and
-`Bonsai.Var.t` (which is used to track live data and inject it into Bonsai)
+The split was certainly annoying, but it did come with a side-benefit:
+pure Bonsai components are really easy to test because mocking out
+communication with the outside world is really easy.
 
-The split was certainly annoying, but it did come with a side-benefit: pure Bonsai
-components are really easy to test because mocking out communication with the outside
-world is really easy.
+This year the team has been busy making Bonsai powerful enough to
+robustly deal with mutable values and impure functions, culminating in
+`Bonsai_web.Rpc_effect`, a module exposing first-class Bonsai components
+for performing RPCs, tracking their responses, and monitoring the status
+of your connections.
 
-This year the team has been busy making Bonsai powerful enough to robustly deal with
-mutable values and impure functions, culminating in `Bonsai_web.Rpc_effect`, a module
-exposing first-class Bonsai components for performing RPCs, tracking their responses,
-and monitoring the status of your connections.
-
-Highlights of the [module's mli](https://cs/jane/lib/bonsai/web/rpc_effect.mli?rev=c8ebb2571ed3587002aede37188e324ab6b3406f)
+Highlights of the [module's
+mli](https://ocaml.org/p/bonsai/v0.16.0/doc/Bonsai_web/Rpc_effect/index.html)
 include:
 
+```{=html}
 <!-- These item titles are intentionally weird and barely related to the content
 because any title I could think of that was closer to the content would have
 made things more repetitive. -->
-- **Boilerplate-free:** Connection information is passed implicitly through the
-  Bonsai computation graph, which means you don't need to thread rpc-sending
-  effect parameters (or a `Connection.t`) through your whole app.
-- **Powerful combinators:** `Polling_state_rpc.poll` turns a polling state-RPC
-   into a Bonsai component which automatically fetches new data when an input
-   `'query Value.t` changes (and on a timer so that the server can forward updates).
-- **No compromises for testability:** Testing components that use this module
-  is as easy as providing implementations for any of the RPCs invoked during
-  each test. If your server's RPC implementations are in a `js_of_ocaml`-compatible
-  library, you could even use those for tests.
-- **Helpful utilities:** `Status.state` is a computation for tracking whether the
-  UI is connected to its server. If it has been disconnected, it also tracks
-  how long ago it was last connected.
+```
+-   **Boilerplate-free:** Connection information is passed implicitly
+    through the Bonsai computation graph, which means you don't need to
+    thread rpc-sending effect parameters (or a `Connection.t`) through
+    your whole app.
+-   **Powerful combinators:** `Polling_state_rpc.poll` turns a polling
+    state-RPC into a Bonsai component which automatically fetches new
+    data when an input `'query Value.t` changes (and on a timer so that
+    the server can forward updates).
+-   **No compromises for testability:** Testing components that use this
+    module is as easy as providing implementations for any of the RPCs
+    invoked during each test. If your server's RPC implementations are
+    in a `js_of_ocaml`-compatible library, you could even use those for
+    tests.
+-   **Helpful utilities:** `Status.state` is a computation for tracking
+    whether the UI is connected to its server. If it has been
+    disconnected, it also tracks how long ago it was last connected.
 
 # Migrating an existing app
 
-Suppose you have a Bonsai app whose main computation has the following type:
+Suppose you have a Bonsai app whose main computation has the following
+type:
 
-```ocaml
+``` ocaml
 val app
   :  counters:int Map.M(String).t Value.t
   -> send_increment_rpc:(int -> unit Or_error.t Effect.t)
@@ -49,16 +57,16 @@ val app
   -> Vdom.Node.t Computation.t
 ```
 
-To migrate this signature to use the `Rpc_effect` module, follow these steps.
-The diffs below include just the essense of the migration; merely making these
-changes will yield type errors that should be straightforward enough to
-address.
+To migrate this signature to use the `Rpc_effect` module, follow these
+steps. The diffs below include just the essense of the migration; merely
+making these changes will yield type errors that should be
+straightforward enough to address.
 
 ## Step 1 - Move all RPC dispatches into the main Bonsai computation.
 
 The goal in this step is to remove all the parameters to `app`.
 
-```diff
+``` diff
  let app
 -    ~counters
      ~send_increment_rpc
@@ -79,7 +87,7 @@ The new `counters` variable has a different type than the old one, since
 `Rpc_effect.Polling_state_rpc.poll` has extra cases for handling when no
 response has yes been received or when the last response was an error.
 
-```diff
+``` diff
  let app
 -    ~send_increment_rpc
 -    ~send_decrement_rpc
@@ -94,15 +102,16 @@ response has yes been received or when the last response was an error.
 
 ## Step 2 - Delete the old connection logic.
 
-The `Rpc_effect` module creates its own connection for sending RPCs to `Self`.
-Thus, we should get rid of the old logic that connects and sends RPC
-connections. While most of the diff below consists of removing code made unused
-by previous changes, we include it all to demonstrate how much untestable code
-we get to remove. In addition, we also now get an opportunity to replace the
-`eprint_s` call below with a better error handling mechanism, such as giving
-the user a notification that they aren't connected to the server.
+The `Rpc_effect` module creates its own connection for sending RPCs to
+`Self`. Thus, we should get rid of the old logic that connects and sends
+RPC connections. While most of the diff below consists of removing code
+made unused by previous changes, we include it all to demonstrate how
+much untestable code we get to remove. In addition, we also now get an
+opportunity to replace the `eprint_s` call below with a better error
+handling mechanism, such as giving the user a notification that they
+aren't connected to the server.
 
-```diff
+``` diff
 -let counters conn =
 -  let client = Polling_state_rpc.Client.create Protocol.Counter_state.t in
 -  let%map.Deferred.Or_error first_response =
@@ -167,22 +176,22 @@ the user a notification that they aren't connected to the server.
 
 ## Step 3 - Provide RPC implementations for tests
 
-Since `Rpc_effect` causes tests to use `Async` machinery, we have to include
-this line near the top of each test file.
+Since `Rpc_effect` causes tests to use `Async` machinery, we have to
+include this line near the top of each test file.
 
-```ocaml
+``` ocaml
 open! Async_js_test
 ```
 
 The main changes to test code include:
 
-- Pass RPC implementations to `Handle.create` instead of passing effect
-  implementations to the app computation.
-- Use `yield_until_no_jobs_remain` to flush the async scheduler so that
-  side-effects happen at the time you expect.
-- Use `return ()` at the end of your test, since the test uses async.
+-   Pass RPC implementations to `Handle.create` instead of passing
+    effect implementations to the app computation.
+-   Use `yield_until_no_jobs_remain` to flush the async scheduler so
+    that side-effects happen at the time you expect.
+-   Use `return ()` at the end of your test, since the test uses async.
 
-```diff
+``` diff
  let%expect_test "Click on the buttons" =
    let handle =
      Handle.create
@@ -219,28 +228,30 @@ The main changes to test code include:
 # Unconventional apps
 
 The assumption built into the steps above is that your app uses a single
-`Persistent_connection` to the host server through which all RPCs are sent. We
-have also assumed that there is no special connection logic.
+`Persistent_connection` to the host server through which all RPCs are
+sent. We have also assumed that there is no special connection logic.
 
-For apps that don't fit this pattern, the usage of `Rpc_effect` is mostly the
-same, except that you have to specify the connection yourself, rather than
-relying on the one created by `Rpc_effect` itself.
+For apps that don't fit this pattern, the usage of `Rpc_effect` is
+mostly the same, except that you have to specify the connection
+yourself, rather than relying on the one created by `Rpc_effect` itself.
 
 ## Step 1 - Extend the `Where_to_connect.Custom` variant.
 
-This variant case is the constructor used by the code that dispatches the RPC
-and also the code that provides the connection (as you'll see later).
+This variant case is the constructor used by the code that dispatches
+the RPC and also the code that provides the connection (as you'll see
+later).
 
-```ocaml
+``` ocaml
 type Rpc_effect.Where_to_connect.Custom.t += Conn
 ```
 
 ## Step 2 - Use the new variant case whenever dispatching an RPC
 
 In the previous example, we used `Self` for all the `~where_to_connect`
-parameters, but since we're providing our own connection, we use `Custom Conn`.
+parameters, but since we're providing our own connection, we use
+`Custom Conn`.
 
-```diff
+``` diff
      let%sub send_decrement_rpc =
 -      Rpc_effect.Rpc.dispatcher Protocol.Decrement_request.t ~where_to_connect:Self
 +      Rpc_effect.Rpc.dispatcher Protocol.Decrement_request.t ~where_to_connect:(Custom Conn)
@@ -253,13 +264,14 @@ parameters, but since we're providing our own connection, we use `Custom Conn`.
 
 ## Step 3 - Provide your connection using a `Connector.t`
 
-The `Connector` module abstracts over different ways of obtaining connections,
-including `async_durable` and `persistent_connection`.
+The `Connector` module abstracts over different ways of obtaining
+connections, including `async_durable` and `persistent_connection`.
 
 In the app's startup code, provide a connector constructed with either
-`Rpc_effect.Connector.async_durable` or `Rpc_effect.Connector.persistent_connection`.
+`Rpc_effect.Connector.async_durable` or
+`Rpc_effect.Connector.persistent_connection`.
 
-```ocaml
+``` ocaml
 let run () =
   let conn =
     Rpc_connection.create

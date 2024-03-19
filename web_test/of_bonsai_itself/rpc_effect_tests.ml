@@ -143,7 +143,8 @@ let%expect_test "test fallback" =
     {|
     (Error
      ((rpc_error (Unimplemented_rpc a (Version 0)))
-      (connection_description <created-directly>) (rpc_name a) (rpc_version 0))) |}];
+      (connection_description <created-directly>) (rpc_name a) (rpc_version 0)))
+    |}];
   Deferred.unit
 ;;
 
@@ -170,9 +171,10 @@ let%expect_test "not provided RPC" =
   let%bind.Deferred () = async_do_actions handle [ 0 ] in
   [%expect
     {|
-   (Error
-    ((rpc_error (Unimplemented_rpc a (Version 0)))
-     (connection_description <created-directly>) (rpc_name a) (rpc_version 0))) |}];
+    (Error
+     ((rpc_error (Unimplemented_rpc a (Version 0)))
+      (connection_description <created-directly>) (rpc_name a) (rpc_version 0)))
+    |}];
   Deferred.unit
 ;;
 
@@ -265,11 +267,13 @@ let%expect_test "polling_state_rpc" =
   let%bind () = async_do_actions handle [ 1 ] in
   [%expect {|
     ("For first request" (query 1))
-    (Ok 1) |}];
+    (Ok 1)
+    |}];
   let%bind () = async_do_actions handle [ 1 ] in
   [%expect {|
     ("Computing diff" (from 1) (to_ 2))
-    (Ok 2) |}];
+    (Ok 2)
+    |}];
   Deferred.unit
 ;;
 
@@ -310,12 +314,12 @@ let%expect_test "inactive delivery of a response will be ignored when \
   [%expect
     {|
     (((last_ok_response ()) (last_error ()) (inflight_query ())
-      (refresh <opaque>))) |}];
+      (refresh <opaque>)))
+    |}];
   Bonsai.Var.set is_active false;
   Handle.show handle;
   let%bind () = Async_kernel_scheduler.yield_until_no_jobs_remain () in
-  [%expect {|
-    () |}];
+  [%expect {| () |}];
   Handle.show handle;
   let%bind () = Async_kernel_scheduler.yield_until_no_jobs_remain () in
   [%expect {| () |}];
@@ -325,7 +329,8 @@ let%expect_test "inactive delivery of a response will be ignored when \
   [%expect
     {|
     (((last_ok_response ()) (last_error ()) (inflight_query ())
-      (refresh <opaque>))) |}];
+      (refresh <opaque>)))
+    |}];
   Deferred.unit
 ;;
 
@@ -363,14 +368,16 @@ let%expect_test "BUG: completing an RPC at the same time as a disconnect" =
   [%expect
     {|
     (((last_ok_response ()) (last_error ()) (inflight_query ())
-      (refresh <opaque>))) |}];
+      (refresh <opaque>)))
+    |}];
   Bonsai.Var.set is_active false;
   Bvar.broadcast block ();
   Handle.show handle;
   let%bind () = Async_kernel_scheduler.yield_until_no_jobs_remain () in
   [%expect {|
     ()
-    ("For first request" (query 0)) |}];
+    ("For first request" (query 0))
+    |}];
   Bonsai.Var.set is_active true;
   Handle.show handle;
   let%bind () = Async_kernel_scheduler.yield_until_no_jobs_remain () in
@@ -387,7 +394,8 @@ let%expect_test "BUG: completing an RPC at the same time as a disconnect" =
                ("Ivar.fill_exn called on full ivar" (t (Full _))))))))
           (connection_description <created-directly>)
           (rpc_name polling_state_rpc_a) (rpc_version 0)))))
-      (inflight_query ()) (refresh <opaque>))) |}];
+      (inflight_query ()) (refresh <opaque>)))
+    |}];
   Deferred.unit
 ;;
 
@@ -431,24 +439,27 @@ let%expect_test "multiple polling_state_rpc" =
   let%bind () = async_do_actions handle [ 1 ] in
   [%expect {|
     ("For first request" (query 1))
-    (Ok 1) |}];
+    (Ok 1)
+    |}];
   let%bind () = async_do_actions handle [ 2 ] in
   [%expect {|
     ("For first request" (query 2))
-    (Ok 4) |}];
+    (Ok 4)
+    |}];
   let%bind () = async_do_actions handle [ 10 ] in
   [%expect {|
     ("For first request" (query 10))
-    (Ok 30) |}];
+    (Ok 30)
+    |}];
   let%bind () = async_do_actions handle [ 10 ] in
   [%expect {|
     ("Computing diff" (from 30) (to_ 40))
-    (Ok 40) |}];
+    (Ok 40)
+    |}];
   Bonsai.Var.update map_var ~f:(fun map -> Map.remove map 10);
   Handle.recompute_view handle;
   let%bind () = async_do_actions handle [ 10 ] in
-  [%expect {|
-    ("Query does not exist in map" (query 10)) |}];
+  [%expect {| ("Query does not exist in map" (query 10)) |}];
   Bonsai.Var.update map_var ~f:(fun map -> Map.set map ~key:10 ~data:());
   Handle.recompute_view handle;
   (* Having been de-activated, this map entry does not trigger a diff
@@ -457,7 +468,8 @@ let%expect_test "multiple polling_state_rpc" =
   let%bind () = async_do_actions handle [ 10 ] in
   [%expect {|
     ("For first request" (query 10))
-    (Ok 50) |}];
+    (Ok 50)
+    |}];
   Deferred.unit
 ;;
 
@@ -590,7 +602,8 @@ let%expect_test "disconnect and re-connect with polling_state_rpc" =
   let%bind () = async_do_actions handle [ 1 ] in
   [%expect {|
     ("For first request" (query 1))
-    (Ok 1) |}];
+    (Ok 1)
+    |}];
   let%bind () =
     let connection = Option.value_exn (Conn.current_connection connection) in
     let%bind () = Rpc.Connection.close connection in
@@ -600,7 +613,8 @@ let%expect_test "disconnect and re-connect with polling_state_rpc" =
   let%bind () = async_do_actions handle [ 2 ] in
   [%expect {|
     ("For first request" (query 2))
-    (Ok 4) |}];
+    (Ok 4)
+    |}];
   return ()
 ;;
 
@@ -769,12 +783,14 @@ let%test_module "versioned polling state rpc" =
         {|
         creating rpc connection
         (rpc ((name foo) (version 2)))
-        (Ok 16) |}];
+        (Ok 16)
+        |}];
       let%bind.Deferred () = async_do_actions handle [ Query 9 ] in
       Handle.show handle;
       [%expect {|
         (rpc ((name foo) (version 2)))
-        (Ok 18) |}];
+        (Ok 18)
+        |}];
       return ()
     ;;
 
@@ -790,12 +806,14 @@ let%test_module "versioned polling state rpc" =
         {|
         creating rpc connection
         (rpc ((name foo) (version 1)))
-        (Ok 16) |}];
+        (Ok 16)
+        |}];
       let%bind.Deferred () = async_do_actions handle [ Query 9 ] in
       Handle.show handle;
       [%expect {|
         (rpc ((name foo) (version 1)))
-        (Ok 18) |}];
+        (Ok 18)
+        |}];
       return ()
     ;;
 
@@ -814,12 +832,14 @@ let%test_module "versioned polling state rpc" =
         {|
         creating rpc connection
         (rpc ((name foo) (version 1)))
-        (Ok 16) |}];
+        (Ok 16)
+        |}];
       let%bind.Deferred () = async_do_actions handle [ Query 9 ] in
       Handle.show handle;
       [%expect {|
         (rpc ((name foo) (version 1)))
-        (Ok 18) |}];
+        (Ok 18)
+        |}];
       return ()
     ;;
 
@@ -840,9 +860,10 @@ let%test_module "versioned polling state rpc" =
         Handle.show handle;
         [%expect
           {|
-        creating rpc connection
-        (rpc ((name foo) (version 2)))
-        (Ok 16) |}];
+          creating rpc connection
+          (rpc ((name foo) (version 2)))
+          (Ok 16)
+          |}];
         (* simulate the server going down, and then coming back up on a previous
            version that doesn't have the V2 RPC. *)
         break_connection ();
@@ -851,9 +872,10 @@ let%test_module "versioned polling state rpc" =
         Handle.show handle;
         [%expect
           {|
-        creating rpc connection
-        (rpc ((name foo) (version 1)))
-        (Ok 14) |}];
+          creating rpc connection
+          (rpc ((name foo) (version 1)))
+          (Ok 14)
+          |}];
         (* simulate the server going down, and then coming back up on a
            that _does_ have the V2 RPC. *)
         break_connection ();
@@ -865,9 +887,10 @@ let%test_module "versioned polling state rpc" =
         Handle.show handle;
         [%expect
           {|
-        creating rpc connection
-        (rpc ((name foo) (version 2)))
-        (Ok 12) |}];
+          creating rpc connection
+          (rpc ((name foo) (version 2)))
+          (Ok 12)
+          |}];
         return ())
     ;;
 
@@ -884,9 +907,10 @@ let%test_module "versioned polling state rpc" =
       Handle.show handle;
       [%expect
         {|
-       creating rpc connection
-       (rpc ((name foo) (version 2)))
-       (Ok 16) |}];
+        creating rpc connection
+        (rpc ((name foo) (version 2)))
+        (Ok 16)
+        |}];
       Bonsai.Var.set activated false;
       Handle.show handle;
       let%bind () = Handle.flush_async_and_bonsai handle in
@@ -898,8 +922,9 @@ let%test_module "versioned polling state rpc" =
       Handle.show handle;
       let%bind () = async_do_actions handle [ Query 42 ] in
       [%expect {|
-       (rpc ((name foo) (version 2)))
-       (Ok 84) |}];
+        (rpc ((name foo) (version 2)))
+        (Ok 84)
+        |}];
       Deferred.unit
     ;;
 
@@ -916,15 +941,17 @@ let%test_module "versioned polling state rpc" =
       Handle.show handle;
       [%expect
         {|
-       creating rpc connection
-       (rpc ((name foo) (version 2)))
-       (Ok 16) |}];
+        creating rpc connection
+        (rpc ((name foo) (version 2)))
+        (Ok 16)
+        |}];
       Bonsai.Var.set activated false;
       let%bind () = async_do_actions handle [ Query 7 ] in
       Handle.show handle;
       [%expect {|
         (rpc ((name foo) (version 2)))
-        (Ok 14) |}];
+        (Ok 14)
+        |}];
       break_connection ();
       set_implementations [ T { rpc = V1.rpc; latest_result_of_int = Int.to_string } ];
       Bonsai.Var.set activated true;
@@ -932,9 +959,10 @@ let%test_module "versioned polling state rpc" =
       let%bind () = async_do_actions handle [ Query 42 ] in
       [%expect
         {|
-       creating rpc connection
-       (rpc ((name foo) (version 1)))
-       (Ok 84) |}];
+        creating rpc connection
+        (rpc ((name foo) (version 1)))
+        (Ok 84)
+        |}];
       Deferred.unit
     ;;
   end)
@@ -961,17 +989,18 @@ let%test_module "Rvar tests" =
       in
       [%expect
         {|
-       (iteration (!i 1))
-       (iteration (!i 2))
-       (iteration (!i 3))
-       (iteration (!i 4))
-       (iteration (!i 5))
-       (iteration (!i 6))
-       (iteration (!i 7))
-       (iteration (!i 8))
-       (iteration (!i 9))
-       (iteration (!i 10))
-       ("final result" (x 10)) |}];
+        (iteration (!i 1))
+        (iteration (!i 2))
+        (iteration (!i 3))
+        (iteration (!i 4))
+        (iteration (!i 5))
+        (iteration (!i 6))
+        (iteration (!i 7))
+        (iteration (!i 8))
+        (iteration (!i 9))
+        (iteration (!i 10))
+        ("final result" (x 10))
+        |}];
       return ()
     ;;
   end)
@@ -1032,18 +1061,17 @@ let%test_module "Status.state" =
       [%expect {| ((state Connecting) (connecting_since ("1970-01-01 00:00:00Z"))) |}];
       let%bind () = Async_kernel_scheduler.yield_until_no_jobs_remain () in
       Handle.show handle;
-      [%expect {|
-        ((state Connected) (connecting_since ())) |}];
+      [%expect {| ((state Connected) (connecting_since ())) |}];
       let%bind () = kill_connection connection in
       Handle.show handle;
       [%expect
         {|
-       ((state (Disconnected Rpc.Connection.close))
-        (connecting_since ("1970-01-01 00:00:00Z"))) |}];
+        ((state (Disconnected Rpc.Connection.close))
+         (connecting_since ("1970-01-01 00:00:00Z")))
+        |}];
       let%bind () = next_connection connection in
       Handle.show handle;
-      [%expect {|
-        ((state Connected) (connecting_since ())) |}];
+      [%expect {| ((state Connected) (connecting_since ())) |}];
       return ()
     ;;
 
@@ -1064,20 +1092,19 @@ let%test_module "Status.state" =
       let%bind () = Async_kernel_scheduler.yield_until_no_jobs_remain () in
       Handle.advance_clock_by handle (Time_ns.Span.of_sec 1.0);
       Handle.show handle;
-      [%expect {|
-        ((state Connected) (connecting_since ())) |}];
+      [%expect {| ((state Connected) (connecting_since ())) |}];
       let%bind () = kill_connection connection in
       Handle.advance_clock_by handle (Time_ns.Span.of_sec 1.0);
       Handle.show handle;
       [%expect
         {|
-       ((state (Disconnected Rpc.Connection.close))
-        (connecting_since ("1970-01-01 00:00:03Z"))) |}];
+        ((state (Disconnected Rpc.Connection.close))
+         (connecting_since ("1970-01-01 00:00:03Z")))
+        |}];
       let%bind () = next_connection connection in
       Handle.advance_clock_by handle (Time_ns.Span.of_sec 1.0);
       Handle.show handle;
-      [%expect {|
-        ((state Connected) (connecting_since ())) |}];
+      [%expect {| ((state Connected) (connecting_since ())) |}];
       return ()
     ;;
 
@@ -1105,8 +1132,7 @@ let%test_module "Status.state" =
       [%expect {| (((state Connecting) (connecting_since ("1970-01-01 00:00:00Z")))) |}];
       let%bind () = Async_kernel_scheduler.yield_until_no_jobs_remain () in
       Handle.show handle;
-      [%expect {|
-        (((state Connected) (connecting_since ()))) |}];
+      [%expect {| (((state Connected) (connecting_since ()))) |}];
       Bonsai.Var.set is_active false;
       Handle.show handle;
       [%expect {| () |}];
@@ -1117,15 +1143,15 @@ let%test_module "Status.state" =
       Handle.show handle;
       [%expect
         {|
-       (((state (Disconnected Rpc.Connection.close))
-         (connecting_since ("1970-01-01 00:00:00Z")))) |}];
+        (((state (Disconnected Rpc.Connection.close))
+          (connecting_since ("1970-01-01 00:00:00Z"))))
+        |}];
       let%bind () = Async_kernel_scheduler.yield_until_no_jobs_remain () in
       Handle.show handle;
       [%expect {| (((state Connecting) (connecting_since ("1970-01-01 00:00:00Z")))) |}];
       let%bind () = next_connection connection in
       Handle.show handle;
-      [%expect {|
-        (((state Connected) (connecting_since ()))) |}];
+      [%expect {| (((state Connected) (connecting_since ()))) |}];
       return ()
     ;;
 
@@ -1156,8 +1182,9 @@ let%test_module "Status.state" =
       let%bind () = Async_kernel_scheduler.yield_until_no_jobs_remain () in
       Handle.show handle;
       [%expect {|
-       ()
-       () |}];
+        ()
+        ()
+        |}];
       Bonsai.Var.set is_active true;
       Handle.show handle;
       [%expect {| (((state Connected) (connecting_since ()))) |}];
@@ -1176,8 +1203,9 @@ let%test_module "Status.state" =
       Handle.show handle;
       [%expect
         {|
- ((state (Failed_to_connect (Failure "BUG: no bonsai-rpc handler installed")))
-  (connecting_since ("1970-01-01 00:00:00Z"))) |}];
+        ((state (Failed_to_connect (Failure "BUG: no bonsai-rpc handler installed")))
+         (connecting_since ("1970-01-01 00:00:00Z")))
+        |}];
       return ()
     ;;
   end)
@@ -1226,42 +1254,48 @@ let%test_module "Polling_state_rpc.poll" =
       (* Initially, there is no response, but initial request got sent. *)
       [%expect
         {|
-       ((last_ok_response ()) (last_error ()) (inflight_query ())
-        (refresh <opaque>))
-       ("For first request" (query 1)) |}];
+        ((last_ok_response ()) (last_error ()) (inflight_query ())
+         (refresh <opaque>))
+        ("For first request" (query 1))
+        |}];
       let%bind () = async_show handle in
       (* Because the clock triggers on activate, the next frame both receives the
          first request's response and also sets off the first polling request. *)
       [%expect
         {|
-       ((last_ok_response ((1 1))) (last_error ()) (inflight_query ())
-        (refresh <opaque>)) |}];
+        ((last_ok_response ((1 1))) (last_error ()) (inflight_query ())
+         (refresh <opaque>))
+        |}];
       let%bind () = async_show handle in
       (* The result stays steady this frame, and no new requests are sent off. *)
       [%expect
         {|
-       ((last_ok_response ((1 1))) (last_error ()) (inflight_query ())
-        (refresh <opaque>)) |}];
+        ((last_ok_response ((1 1))) (last_error ()) (inflight_query ())
+         (refresh <opaque>))
+        |}];
       Handle.advance_clock_by handle (Time_ns.Span.of_sec 1.0);
       let%bind () = async_show handle in
       (* After waiting a second, apparently the clock loop needs another frame
          to realize that its time is up. *)
       [%expect
         {|
-       ((last_ok_response ((1 1))) (last_error ()) (inflight_query ())
-        (refresh <opaque>)) |}];
+        ((last_ok_response ((1 1))) (last_error ()) (inflight_query ())
+         (refresh <opaque>))
+        |}];
       let%bind () = async_show handle in
       (* But it eventually causes the next polling request to be sent. *)
       [%expect
         {|
-       ((last_ok_response ((1 1))) (last_error ()) (inflight_query (1))
-        (refresh <opaque>))
-       ("Computing diff" (from 1) (to_ 2)) |}];
+        ((last_ok_response ((1 1))) (last_error ()) (inflight_query (1))
+         (refresh <opaque>))
+        ("Computing diff" (from 1) (to_ 2))
+        |}];
       let%bind () = async_show handle in
       [%expect
         {|
-       ((last_ok_response ((1 2))) (last_error ()) (inflight_query ())
-        (refresh <opaque>)) |}];
+        ((last_ok_response ((1 2))) (last_error ()) (inflight_query ())
+         (refresh <opaque>))
+        |}];
       Bonsai.Var.set input_var 2;
       let%bind () = async_show handle in
       (* We also trigger poll requests on query changes. Observe that the
@@ -1269,15 +1303,17 @@ let%test_module "Polling_state_rpc.poll" =
          in this case is different from the current query. *)
       [%expect
         {|
-       ((last_ok_response ((1 2))) (last_error ()) (inflight_query ())
-        (refresh <opaque>))
-       ("For first request" (query 2))
-       ("Computing diff" (from 2) (to_ 6)) |}];
+        ((last_ok_response ((1 2))) (last_error ()) (inflight_query ())
+         (refresh <opaque>))
+        ("For first request" (query 2))
+        ("Computing diff" (from 2) (to_ 6))
+        |}];
       let%bind () = async_show handle in
       [%expect
         {|
-       ((last_ok_response ((2 6))) (last_error ()) (inflight_query ())
-        (refresh <opaque>)) |}];
+        ((last_ok_response ((2 6))) (last_error ()) (inflight_query ())
+         (refresh <opaque>))
+        |}];
       Deferred.unit
     ;;
 
@@ -1311,21 +1347,22 @@ let%test_module "Polling_state_rpc.poll" =
       let%bind () = async_show handle in
       (* On page load; sends rpc request.*)
       [%expect
-        {|
-       ((last_ok_response())(last_error())(inflight_query())(refresh <opaque>)) |}];
+        {| ((last_ok_response())(last_error())(inflight_query())(refresh <opaque>)) |}];
       Bvar.broadcast bvar ();
       let%bind () = async_show_diff handle in
       [%expect
         {|
-       -|((last_ok_response())(last_error())(inflight_query())(refresh <opaque>))
-       +|((last_ok_response())(last_error())(inflight_query(1))(refresh <opaque>))
-       ("For first request" (query 1)) |}];
+        -|((last_ok_response())(last_error())(inflight_query())(refresh <opaque>))
+        +|((last_ok_response())(last_error())(inflight_query(1))(refresh <opaque>))
+        ("For first request" (query 1))
+        |}];
       let%bind () = async_show_diff handle in
       (* First response is received. *)
       [%expect
         {|
-       -|((last_ok_response())(last_error())(inflight_query(1))(refresh <opaque>))
-       +|((last_ok_response((1 1)))(last_error())(inflight_query())(refresh <opaque>)) |}];
+        -|((last_ok_response())(last_error())(inflight_query(1))(refresh <opaque>))
+        +|((last_ok_response((1 1)))(last_error())(inflight_query())(refresh <opaque>))
+        |}];
       Bvar.broadcast bvar ();
       let%bind () = async_show_diff handle in
       Bvar.broadcast bvar ();
@@ -1338,15 +1375,17 @@ let%test_module "Polling_state_rpc.poll" =
       let%bind () = async_show_diff handle in
       [%expect
         {|
-       -|((last_ok_response((1 1)))(last_error())(inflight_query())(refresh <opaque>))
-       +|((last_ok_response((1 1)))(last_error())(inflight_query(1))(refresh <opaque>))
-       ("Computing diff" (from 1) (to_ 2)) |}];
+        -|((last_ok_response((1 1)))(last_error())(inflight_query())(refresh <opaque>))
+        +|((last_ok_response((1 1)))(last_error())(inflight_query(1))(refresh <opaque>))
+        ("Computing diff" (from 1) (to_ 2))
+        |}];
       Bvar.broadcast bvar ();
       let%bind () = async_show_diff handle in
       [%expect
         {|
-       -|((last_ok_response((1 1)))(last_error())(inflight_query(1))(refresh <opaque>))
-       +|((last_ok_response((1 2)))(last_error())(inflight_query())(refresh <opaque>)) |}];
+        -|((last_ok_response((1 1)))(last_error())(inflight_query(1))(refresh <opaque>))
+        +|((last_ok_response((1 2)))(last_error())(inflight_query())(refresh <opaque>))
+        |}];
       let%bind () = async_show_diff handle in
       [%expect {| |}];
       (* Doing two actions in a row does not dispatch RPC twice. *)
@@ -1354,15 +1393,17 @@ let%test_module "Polling_state_rpc.poll" =
       let%bind () = async_show_diff handle in
       [%expect
         {|
-       -|((last_ok_response((1 2)))(last_error())(inflight_query())(refresh <opaque>))
-       +|((last_ok_response((1 2)))(last_error())(inflight_query(1))(refresh <opaque>))
-       ("Computing diff" (from 2) (to_ 3)) |}];
+        -|((last_ok_response((1 2)))(last_error())(inflight_query())(refresh <opaque>))
+        +|((last_ok_response((1 2)))(last_error())(inflight_query(1))(refresh <opaque>))
+        ("Computing diff" (from 2) (to_ 3))
+        |}];
       let%bind () = async_show_diff handle in
       Bvar.broadcast bvar ();
       [%expect
         {|
-       -|((last_ok_response((1 2)))(last_error())(inflight_query(1))(refresh <opaque>))
-       +|((last_ok_response((1 3)))(last_error())(inflight_query())(refresh <opaque>)) |}];
+        -|((last_ok_response((1 2)))(last_error())(inflight_query(1))(refresh <opaque>))
+        +|((last_ok_response((1 3)))(last_error())(inflight_query())(refresh <opaque>))
+        |}];
       let%bind () = async_show_diff handle in
       [%expect {| |}];
       return ()
@@ -1395,22 +1436,25 @@ let%test_module "Polling_state_rpc.poll" =
       let%bind () = async_show handle in
       [%expect
         {|
-       ((last_ok_response ()) (last_error ()) (inflight_query ())
-        (refresh <opaque>))
-       ("For first request" (query 1)) |}];
+        ((last_ok_response ()) (last_error ()) (inflight_query ())
+         (refresh <opaque>))
+        ("For first request" (query 1))
+        |}];
       Bonsai.Var.set input_var 2;
       let%bind () = async_show handle in
       [%expect
         {|
-       ((last_ok_response ((1 1))) (last_error ()) (inflight_query ())
-        (refresh <opaque>))
-       ("For first request" (query 2))
-       ("Computing diff" (from 1) (to_ 4)) |}];
+        ((last_ok_response ((1 1))) (last_error ()) (inflight_query ())
+         (refresh <opaque>))
+        ("For first request" (query 2))
+        ("Computing diff" (from 1) (to_ 4))
+        |}];
       let%bind () = async_show handle in
       [%expect
         {|
-       ((last_ok_response ((2 4))) (last_error ()) (inflight_query ())
-        (refresh <opaque>)) |}];
+        ((last_ok_response ((2 4))) (last_error ()) (inflight_query ())
+         (refresh <opaque>))
+        |}];
       Deferred.unit
     ;;
 
@@ -1469,78 +1513,84 @@ let%test_module "Polling_state_rpc.poll" =
       let%bind () = async_show handle in
       [%expect
         {|
-       ((last_ok_response ()) (last_error ()) (inflight_query ())
-        (refresh <opaque>))
-       (on_response_received (query 1)
-        (response
-         (Error
-          ((rpc_error
-            (Uncaught_exn
-             ((location "server-side rpc computation")
-              (exn (monitor.ml.Error ("Error response" (query 1)))))))
-           (connection_description <created-directly>)
-           (rpc_name polling_state_rpc_a) (rpc_version 0))))) |}];
-      let%bind () = async_show handle in
-      [%expect
-        {|
-       ((last_ok_response ())
-        (last_error
-         ((1
+        ((last_ok_response ()) (last_error ()) (inflight_query ())
+         (refresh <opaque>))
+        (on_response_received (query 1)
+         (response
+          (Error
            ((rpc_error
              (Uncaught_exn
               ((location "server-side rpc computation")
                (exn (monitor.ml.Error ("Error response" (query 1)))))))
             (connection_description <created-directly>)
             (rpc_name polling_state_rpc_a) (rpc_version 0)))))
-        (inflight_query ()) (refresh <opaque>)) |}];
+        |}];
+      let%bind () = async_show handle in
+      [%expect
+        {|
+        ((last_ok_response ())
+         (last_error
+          ((1
+            ((rpc_error
+              (Uncaught_exn
+               ((location "server-side rpc computation")
+                (exn (monitor.ml.Error ("Error response" (query 1)))))))
+             (connection_description <created-directly>)
+             (rpc_name polling_state_rpc_a) (rpc_version 0)))))
+         (inflight_query ()) (refresh <opaque>))
+        |}];
       Bonsai.Var.set input_var 2;
       let%bind () = async_show handle in
       [%expect
         {|
-       ((last_ok_response ())
-        (last_error
-         ((1
-           ((rpc_error
-             (Uncaught_exn
-              ((location "server-side rpc computation")
-               (exn (monitor.ml.Error ("Error response" (query 1)))))))
-            (connection_description <created-directly>)
-            (rpc_name polling_state_rpc_a) (rpc_version 0)))))
-        (inflight_query ()) (refresh <opaque>))
-       (on_response_received (query 2) (response (Ok 0))) |}];
+        ((last_ok_response ())
+         (last_error
+          ((1
+            ((rpc_error
+              (Uncaught_exn
+               ((location "server-side rpc computation")
+                (exn (monitor.ml.Error ("Error response" (query 1)))))))
+             (connection_description <created-directly>)
+             (rpc_name polling_state_rpc_a) (rpc_version 0)))))
+         (inflight_query ()) (refresh <opaque>))
+        (on_response_received (query 2) (response (Ok 0)))
+        |}];
       let%bind () = async_show handle in
       [%expect
         {|
-       ((last_ok_response ((2 0))) (last_error ()) (inflight_query ())
-        (refresh <opaque>)) |}];
+        ((last_ok_response ((2 0))) (last_error ()) (inflight_query ())
+         (refresh <opaque>))
+        |}];
       Bonsai.Var.set input_var 3;
       let%bind () = async_show handle in
       [%expect
         {|
-       ((last_ok_response ((2 0))) (last_error ()) (inflight_query ())
-        (refresh <opaque>))
-       (on_response_received (query 3)
-        (response
-         (Error
-          ((rpc_error
-            (Uncaught_exn
-             ((location "server-side rpc computation")
-              (exn (monitor.ml.Error ("Error response" (query 3)))))))
-           (connection_description <created-directly>)
-           (rpc_name polling_state_rpc_a) (rpc_version 0))))) |}];
-      let%bind () = async_show handle in
-      [%expect
-        {|
-       ((last_ok_response ((2 0)))
-        (last_error
-         ((3
+        ((last_ok_response ((2 0))) (last_error ()) (inflight_query ())
+         (refresh <opaque>))
+        (on_response_received (query 3)
+         (response
+          (Error
            ((rpc_error
              (Uncaught_exn
               ((location "server-side rpc computation")
                (exn (monitor.ml.Error ("Error response" (query 3)))))))
             (connection_description <created-directly>)
             (rpc_name polling_state_rpc_a) (rpc_version 0)))))
-        (inflight_query ()) (refresh <opaque>)) |}];
+        |}];
+      let%bind () = async_show handle in
+      [%expect
+        {|
+        ((last_ok_response ((2 0)))
+         (last_error
+          ((3
+            ((rpc_error
+              (Uncaught_exn
+               ((location "server-side rpc computation")
+                (exn (monitor.ml.Error ("Error response" (query 3)))))))
+             (connection_description <created-directly>)
+             (rpc_name polling_state_rpc_a) (rpc_version 0)))))
+         (inflight_query ()) (refresh <opaque>))
+        |}];
       Deferred.unit
     ;;
 
@@ -1574,94 +1624,101 @@ let%test_module "Polling_state_rpc.poll" =
       let%bind () = async_show handle in
       [%expect
         {|
-       ((1
-         ((last_ok_response ()) (last_error ()) (inflight_query ())
-          (refresh <opaque>)))
-        (2
-         ((last_ok_response ()) (last_error ()) (inflight_query ())
-          (refresh <opaque>)))
-        (10
-         ((last_ok_response ()) (last_error ()) (inflight_query ())
-          (refresh <opaque>))))
-       ("For first request" (query 2))
-       ("For first request" (query 1))
-       ("For first request" (query 10)) |}];
+        ((1
+          ((last_ok_response ()) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (2
+          ((last_ok_response ()) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (10
+          ((last_ok_response ()) (last_error ()) (inflight_query ())
+           (refresh <opaque>))))
+        ("For first request" (query 2))
+        ("For first request" (query 1))
+        ("For first request" (query 10))
+        |}];
       let%bind () = async_show handle in
       (* NOTE: The order of the response is [2 -> 1 -> 10] hence the response of [1] and
          [2] are the same because  [2 * 1] = [1 * 2].*)
       [%expect
         {|
-       ((1
-         ((last_ok_response ((1 2))) (last_error ()) (inflight_query ())
-          (refresh <opaque>)))
-        (2
-         ((last_ok_response ((2 2))) (last_error ()) (inflight_query ())
-          (refresh <opaque>)))
-        (10
-         ((last_ok_response ((10 30))) (last_error ()) (inflight_query ())
-          (refresh <opaque>)))) |}];
+        ((1
+          ((last_ok_response ((1 2))) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (2
+          ((last_ok_response ((2 2))) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (10
+          ((last_ok_response ((10 30))) (last_error ()) (inflight_query ())
+           (refresh <opaque>))))
+        |}];
       let%bind () = async_show handle in
       [%expect
         {|
-       ((1
-         ((last_ok_response ((1 2))) (last_error ()) (inflight_query ())
-          (refresh <opaque>)))
-        (2
-         ((last_ok_response ((2 2))) (last_error ()) (inflight_query ())
-          (refresh <opaque>)))
-        (10
-         ((last_ok_response ((10 30))) (last_error ()) (inflight_query ())
-          (refresh <opaque>)))) |}];
+        ((1
+          ((last_ok_response ((1 2))) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (2
+          ((last_ok_response ((2 2))) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (10
+          ((last_ok_response ((10 30))) (last_error ()) (inflight_query ())
+           (refresh <opaque>))))
+        |}];
       Bonsai.Var.update map_var ~f:(fun map -> Map.remove map 10);
       let%bind () = async_show handle in
       [%expect
         {|
-       ((1
-         ((last_ok_response ((1 2))) (last_error ()) (inflight_query ())
-          (refresh <opaque>)))
-        (2
-         ((last_ok_response ((2 2))) (last_error ()) (inflight_query ())
-          (refresh <opaque>)))) |}];
+        ((1
+          ((last_ok_response ((1 2))) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (2
+          ((last_ok_response ((2 2))) (last_error ()) (inflight_query ())
+           (refresh <opaque>))))
+        |}];
       Bonsai.Var.update map_var ~f:(fun map -> Map.set map ~key:10 ~data:());
       let%bind () = async_show handle in
       (* since we clear the map entry when it gets de-activated, it does not
          remember its last response, and thus must poll for it again. *)
       [%expect
         {|
-       ((1
-         ((last_ok_response ((1 2))) (last_error ()) (inflight_query ())
-          (refresh <opaque>)))
-        (2
-         ((last_ok_response ((2 2))) (last_error ()) (inflight_query ())
-          (refresh <opaque>)))
-        (10
-         ((last_ok_response ()) (last_error ()) (inflight_query ())
-          (refresh <opaque>))))
-       ("For first request" (query 10)) |}];
+        ((1
+          ((last_ok_response ((1 2))) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (2
+          ((last_ok_response ((2 2))) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (10
+          ((last_ok_response ()) (last_error ()) (inflight_query ())
+           (refresh <opaque>))))
+        ("For first request" (query 10))
+        |}];
       let%bind () = async_show handle in
       [%expect
         {|
-       ((1
-         ((last_ok_response ((1 2))) (last_error ()) (inflight_query ())
-          (refresh <opaque>)))
-        (2
-         ((last_ok_response ((2 2))) (last_error ()) (inflight_query ())
-          (refresh <opaque>)))
-        (10
-         ((last_ok_response ((10 40))) (last_error ()) (inflight_query ())
-          (refresh <opaque>)))) |}];
+        ((1
+          ((last_ok_response ((1 2))) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (2
+          ((last_ok_response ((2 2))) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (10
+          ((last_ok_response ((10 40))) (last_error ()) (inflight_query ())
+           (refresh <opaque>))))
+        |}];
       let%bind () = async_show handle in
       [%expect
         {|
-       ((1
-         ((last_ok_response ((1 2))) (last_error ()) (inflight_query ())
-          (refresh <opaque>)))
-        (2
-         ((last_ok_response ((2 2))) (last_error ()) (inflight_query ())
-          (refresh <opaque>)))
-        (10
-         ((last_ok_response ((10 40))) (last_error ()) (inflight_query ())
-          (refresh <opaque>)))) |}];
+        ((1
+          ((last_ok_response ((1 2))) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (2
+          ((last_ok_response ((2 2))) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (10
+          ((last_ok_response ((10 40))) (last_error ()) (inflight_query ())
+           (refresh <opaque>))))
+        |}];
       Deferred.unit
     ;;
 
@@ -1696,68 +1753,73 @@ let%test_module "Polling_state_rpc.poll" =
       let%bind () = async_show handle in
       [%expect
         {|
-       ((1
-         ((last_ok_response ()) (last_error ()) (inflight_query ())
-          (refresh <opaque>)))
-        (2
-         ((last_ok_response ()) (last_error ()) (inflight_query ())
-          (refresh <opaque>)))
-        (10
-         ((last_ok_response ()) (last_error ()) (inflight_query ())
-          (refresh <opaque>))))
-       ("For first request" (query 2))
-       ("For first request" (query 1))
-       ("For first request" (query 10)) |}];
+        ((1
+          ((last_ok_response ()) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (2
+          ((last_ok_response ()) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (10
+          ((last_ok_response ()) (last_error ()) (inflight_query ())
+           (refresh <opaque>))))
+        ("For first request" (query 2))
+        ("For first request" (query 1))
+        ("For first request" (query 10))
+        |}];
       let%bind () = async_show handle in
       [%expect
         {|
-       ((1
-         ((last_ok_response ((1 2))) (last_error ()) (inflight_query ())
-          (refresh <opaque>)))
-        (2
-         ((last_ok_response ((2 2))) (last_error ()) (inflight_query ())
-          (refresh <opaque>)))
-        (10
-         ((last_ok_response ((10 30))) (last_error ()) (inflight_query ())
-          (refresh <opaque>)))) |}];
+        ((1
+          ((last_ok_response ((1 2))) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (2
+          ((last_ok_response ((2 2))) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (10
+          ((last_ok_response ((10 30))) (last_error ()) (inflight_query ())
+           (refresh <opaque>))))
+        |}];
       let%bind () = async_show handle in
       [%expect
         {|
-       ((1
-         ((last_ok_response ((1 2))) (last_error ()) (inflight_query ())
-          (refresh <opaque>)))
-        (2
-         ((last_ok_response ((2 2))) (last_error ()) (inflight_query ())
-          (refresh <opaque>)))
-        (10
-         ((last_ok_response ((10 30))) (last_error ()) (inflight_query ())
-          (refresh <opaque>)))) |}];
+        ((1
+          ((last_ok_response ((1 2))) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (2
+          ((last_ok_response ((2 2))) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (10
+          ((last_ok_response ((10 30))) (last_error ()) (inflight_query ())
+           (refresh <opaque>))))
+        |}];
       Bonsai.Var.update map_var ~f:(fun map -> Map.remove map 10);
       let%bind () = async_show handle in
       [%expect
         {|
-       ((1
-         ((last_ok_response ((1 2))) (last_error ()) (inflight_query ())
-          (refresh <opaque>)))
-        (2
-         ((last_ok_response ((2 2))) (last_error ()) (inflight_query ())
-          (refresh <opaque>)))) |}];
+        ((1
+          ((last_ok_response ((1 2))) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (2
+          ((last_ok_response ((2 2))) (last_error ()) (inflight_query ())
+           (refresh <opaque>))))
+        |}];
       Bonsai.Var.update map_var ~f:(fun map -> Map.set map ~key:10 ~data:());
       let%bind () = async_show handle in
       (* since we do not clear the map entry when it gets de-activated, it does
          remember its last response, and thus does not need to poll for it again. *)
       [%expect
         {|
-       ((1
-         ((last_ok_response ((1 2))) (last_error ()) (inflight_query ())
-          (refresh <opaque>)))
-        (2
-         ((last_ok_response ((2 2))) (last_error ()) (inflight_query ())
-          (refresh <opaque>)))
-        (10
-         ((last_ok_response ((10 30))) (last_error ()) (inflight_query ())
-          (refresh <opaque>))))
-       ("For first request" (query 10)) |}];
+        ((1
+          ((last_ok_response ((1 2))) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (2
+          ((last_ok_response ((2 2))) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (10
+          ((last_ok_response ((10 30))) (last_error ()) (inflight_query ())
+           (refresh <opaque>))))
+        ("For first request" (query 10))
+        |}];
       Deferred.unit
     ;;
   end)
@@ -1811,55 +1873,65 @@ let%test_module "Rpc.poll" =
       let%bind () = async_show handle in
       [%expect
         {|
-       ((last_ok_response ()) (last_error ()) (inflight_query ())
-        (refresh <opaque>)) |}];
+        ((last_ok_response ()) (last_error ()) (inflight_query ())
+         (refresh <opaque>))
+        |}];
       let%bind () = async_show handle in
       [%expect
         {|
-       ((last_ok_response ()) (last_error ()) (inflight_query (1))
-        (refresh <opaque>)) |}];
+        ((last_ok_response ()) (last_error ()) (inflight_query (1))
+         (refresh <opaque>))
+        |}];
       let%bind () = async_show handle in
       [%expect
         {|
-       ((last_ok_response ((1 1))) (last_error ()) (inflight_query ())
-        (refresh <opaque>)) |}];
+        ((last_ok_response ((1 1))) (last_error ()) (inflight_query ())
+         (refresh <opaque>))
+        |}];
       let%bind () = async_show handle in
       [%expect
         {|
-       ((last_ok_response ((1 1))) (last_error ()) (inflight_query ())
-        (refresh <opaque>)) |}];
+        ((last_ok_response ((1 1))) (last_error ()) (inflight_query ())
+         (refresh <opaque>))
+        |}];
       Handle.advance_clock_by handle (Time_ns.Span.of_sec 1.0);
       let%bind () = async_show handle in
       [%expect
         {|
-       ((last_ok_response ((1 1))) (last_error ()) (inflight_query ())
-        (refresh <opaque>)) |}];
+        ((last_ok_response ((1 1))) (last_error ()) (inflight_query ())
+         (refresh <opaque>))
+        |}];
       let%bind () = async_show handle in
       [%expect
         {|
-       ((last_ok_response ((1 1))) (last_error ()) (inflight_query (1))
-        (refresh <opaque>)) |}];
+        ((last_ok_response ((1 1))) (last_error ()) (inflight_query (1))
+         (refresh <opaque>))
+        |}];
       let%bind () = async_show handle in
       [%expect
         {|
-       ((last_ok_response ((1 2))) (last_error ()) (inflight_query ())
-        (refresh <opaque>)) |}];
+        ((last_ok_response ((1 2))) (last_error ()) (inflight_query ())
+         (refresh <opaque>))
+        |}];
       Bonsai.Var.set input_var 2;
       let%bind () = async_show handle in
       [%expect
         {|
-       ((last_ok_response ((1 2))) (last_error ()) (inflight_query ())
-        (refresh <opaque>)) |}];
+        ((last_ok_response ((1 2))) (last_error ()) (inflight_query ())
+         (refresh <opaque>))
+        |}];
       let%bind () = async_show handle in
       [%expect
         {|
-       ((last_ok_response ((1 2))) (last_error ()) (inflight_query (2))
-        (refresh <opaque>)) |}];
+        ((last_ok_response ((1 2))) (last_error ()) (inflight_query (2))
+         (refresh <opaque>))
+        |}];
       let%bind () = async_show handle in
       [%expect
         {|
-       ((last_ok_response ((2 6))) (last_error ()) (inflight_query ())
-        (refresh <opaque>)) |}];
+        ((last_ok_response ((2 6))) (last_error ()) (inflight_query ())
+         (refresh <opaque>))
+        |}];
       Deferred.unit
     ;;
 
@@ -1895,19 +1967,20 @@ let%test_module "Rpc.poll" =
       in
       let%bind () = async_show handle in
       [%expect
-        {|
-       ((last_ok_response())(last_error())(inflight_query())(refresh <opaque>)) |}];
+        {| ((last_ok_response())(last_error())(inflight_query())(refresh <opaque>)) |}];
       let%bind () = async_show_diff handle in
       [%expect
         {|
-       -|((last_ok_response())(last_error())(inflight_query())(refresh <opaque>))
-       +|((last_ok_response())(last_error())(inflight_query(1))(refresh <opaque>)) |}];
+        -|((last_ok_response())(last_error())(inflight_query())(refresh <opaque>))
+        +|((last_ok_response())(last_error())(inflight_query(1))(refresh <opaque>))
+        |}];
       let%bind () = broadcast () in
       let%bind () = async_show_diff handle in
       [%expect
         {|
-       -|((last_ok_response())(last_error())(inflight_query(1))(refresh <opaque>))
-       +|((last_ok_response((1 1)))(last_error())(inflight_query())(refresh <opaque>)) |}];
+        -|((last_ok_response())(last_error())(inflight_query(1))(refresh <opaque>))
+        +|((last_ok_response((1 1)))(last_error())(inflight_query())(refresh <opaque>))
+        |}];
       let%bind () = broadcast () in
       let%bind () = async_show_diff handle in
       let%bind () = broadcast () in
@@ -1916,34 +1989,39 @@ let%test_module "Rpc.poll" =
       let%bind () = async_show_diff handle in
       [%expect
         {|
-       -|((last_ok_response((1 1)))(last_error())(inflight_query())(refresh <opaque>))
-       +|((last_ok_response((1 1)))(last_error())(inflight_query(1))(refresh <opaque>)) |}];
+        -|((last_ok_response((1 1)))(last_error())(inflight_query())(refresh <opaque>))
+        +|((last_ok_response((1 1)))(last_error())(inflight_query(1))(refresh <opaque>))
+        |}];
       let%bind () = broadcast () in
       let%bind () = async_show_diff handle in
       [%expect
         {|
-       -|((last_ok_response((1 1)))(last_error())(inflight_query(1))(refresh <opaque>))
-       +|((last_ok_response((1 2)))(last_error())(inflight_query())(refresh <opaque>)) |}];
+        -|((last_ok_response((1 1)))(last_error())(inflight_query(1))(refresh <opaque>))
+        +|((last_ok_response((1 2)))(last_error())(inflight_query())(refresh <opaque>))
+        |}];
       (* Doing two actions causes them to be dispatched in sequence, rather
          than twice in a row. *)
       Handle.do_actions handle [ (); (); () ];
       let%bind () = async_show_diff handle in
       [%expect
         {|
-       -|((last_ok_response((1 2)))(last_error())(inflight_query())(refresh <opaque>))
-       +|((last_ok_response((1 2)))(last_error())(inflight_query(1))(refresh <opaque>)) |}];
+        -|((last_ok_response((1 2)))(last_error())(inflight_query())(refresh <opaque>))
+        +|((last_ok_response((1 2)))(last_error())(inflight_query(1))(refresh <opaque>))
+        |}];
       let%bind () = broadcast () in
       let%bind () = async_show_diff handle in
       [%expect
         {|
-       -|((last_ok_response((1 2)))(last_error())(inflight_query(1))(refresh <opaque>))
-       +|((last_ok_response((1 3)))(last_error())(inflight_query(1))(refresh <opaque>)) |}];
+        -|((last_ok_response((1 2)))(last_error())(inflight_query(1))(refresh <opaque>))
+        +|((last_ok_response((1 3)))(last_error())(inflight_query(1))(refresh <opaque>))
+        |}];
       let%bind () = broadcast () in
       let%bind () = async_show_diff handle in
       [%expect
         {|
-       -|((last_ok_response((1 3)))(last_error())(inflight_query(1))(refresh <opaque>))
-       +|((last_ok_response((1 4)))(last_error())(inflight_query())(refresh <opaque>)) |}];
+        -|((last_ok_response((1 3)))(last_error())(inflight_query(1))(refresh <opaque>))
+        +|((last_ok_response((1 4)))(last_error())(inflight_query())(refresh <opaque>))
+        |}];
       return ()
     ;;
 
@@ -1995,83 +2073,90 @@ let%test_module "Rpc.poll" =
       let%bind () = async_show handle in
       [%expect
         {|
-       ((last_ok_response ()) (last_error ()) (inflight_query ())
-        (refresh <opaque>)) |}];
+        ((last_ok_response ()) (last_error ()) (inflight_query ())
+         (refresh <opaque>))
+        |}];
       let%bind () = async_show handle in
       [%expect
         {|
-       ((last_ok_response ()) (last_error ()) (inflight_query (1))
-        (refresh <opaque>))
-       (on_response_received (query 1)
-        (response
-         (Error
-          ((rpc_error
-            (Uncaught_exn
-             ((location "server-side rpc computation")
-              (exn (monitor.ml.Error ("Error response" (query 1)))))))
-           (connection_description <created-directly>) (rpc_name rpc)
-           (rpc_version 0))))) |}];
+        ((last_ok_response ()) (last_error ()) (inflight_query (1))
+         (refresh <opaque>))
+        (on_response_received (query 1)
+         (response
+          (Error
+           ((rpc_error
+             (Uncaught_exn
+              ((location "server-side rpc computation")
+               (exn (monitor.ml.Error ("Error response" (query 1)))))))
+            (connection_description <created-directly>) (rpc_name rpc)
+            (rpc_version 0)))))
+        |}];
       Bonsai.Var.set input_var 2;
       let%bind () = async_show handle in
       [%expect
         {|
-       ((last_ok_response ())
-        (last_error
-         ((1
-           ((rpc_error
-             (Uncaught_exn
-              ((location "server-side rpc computation")
-               (exn (monitor.ml.Error ("Error response" (query 1)))))))
-            (connection_description <created-directly>) (rpc_name rpc)
-            (rpc_version 0)))))
-        (inflight_query ()) (refresh <opaque>)) |}];
+        ((last_ok_response ())
+         (last_error
+          ((1
+            ((rpc_error
+              (Uncaught_exn
+               ((location "server-side rpc computation")
+                (exn (monitor.ml.Error ("Error response" (query 1)))))))
+             (connection_description <created-directly>) (rpc_name rpc)
+             (rpc_version 0)))))
+         (inflight_query ()) (refresh <opaque>))
+        |}];
       let%bind () = async_show handle in
       [%expect
         {|
-       ((last_ok_response ())
-        (last_error
-         ((1
-           ((rpc_error
-             (Uncaught_exn
-              ((location "server-side rpc computation")
-               (exn (monitor.ml.Error ("Error response" (query 1)))))))
-            (connection_description <created-directly>) (rpc_name rpc)
-            (rpc_version 0)))))
-        (inflight_query (2)) (refresh <opaque>))
-       (on_response_received (query 2) (response (Ok 4))) |}];
+        ((last_ok_response ())
+         (last_error
+          ((1
+            ((rpc_error
+              (Uncaught_exn
+               ((location "server-side rpc computation")
+                (exn (monitor.ml.Error ("Error response" (query 1)))))))
+             (connection_description <created-directly>) (rpc_name rpc)
+             (rpc_version 0)))))
+         (inflight_query (2)) (refresh <opaque>))
+        (on_response_received (query 2) (response (Ok 4)))
+        |}];
       Bonsai.Var.set input_var 3;
       let%bind () = async_show handle in
       [%expect
         {|
-       ((last_ok_response ((2 4))) (last_error ()) (inflight_query ())
-        (refresh <opaque>)) |}];
+        ((last_ok_response ((2 4))) (last_error ()) (inflight_query ())
+         (refresh <opaque>))
+        |}];
       let%bind () = async_show handle in
       [%expect
         {|
-       ((last_ok_response ((2 4))) (last_error ()) (inflight_query (3))
-        (refresh <opaque>))
-       (on_response_received (query 3)
-        (response
-         (Error
-          ((rpc_error
-            (Uncaught_exn
-             ((location "server-side rpc computation")
-              (exn (monitor.ml.Error ("Error response" (query 3)))))))
-           (connection_description <created-directly>) (rpc_name rpc)
-           (rpc_version 0))))) |}];
-      let%bind () = async_show handle in
-      [%expect
-        {|
-       ((last_ok_response ((2 4)))
-        (last_error
-         ((3
+        ((last_ok_response ((2 4))) (last_error ()) (inflight_query (3))
+         (refresh <opaque>))
+        (on_response_received (query 3)
+         (response
+          (Error
            ((rpc_error
              (Uncaught_exn
               ((location "server-side rpc computation")
                (exn (monitor.ml.Error ("Error response" (query 3)))))))
             (connection_description <created-directly>) (rpc_name rpc)
             (rpc_version 0)))))
-        (inflight_query ()) (refresh <opaque>)) |}];
+        |}];
+      let%bind () = async_show handle in
+      [%expect
+        {|
+        ((last_ok_response ((2 4)))
+         (last_error
+          ((3
+            ((rpc_error
+              (Uncaught_exn
+               ((location "server-side rpc computation")
+                (exn (monitor.ml.Error ("Error response" (query 3)))))))
+             (connection_description <created-directly>) (rpc_name rpc)
+             (rpc_version 0)))))
+         (inflight_query ()) (refresh <opaque>))
+        |}];
       Deferred.unit
     ;;
 
@@ -2105,88 +2190,95 @@ let%test_module "Rpc.poll" =
       let%bind () = async_show handle in
       [%expect
         {|
-       ((1
-         ((last_ok_response ()) (last_error ()) (inflight_query ())
-          (refresh <opaque>)))
-        (2
-         ((last_ok_response ()) (last_error ()) (inflight_query ())
-          (refresh <opaque>)))
-        (10
-         ((last_ok_response ()) (last_error ()) (inflight_query ())
-          (refresh <opaque>)))) |}];
+        ((1
+          ((last_ok_response ()) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (2
+          ((last_ok_response ()) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (10
+          ((last_ok_response ()) (last_error ()) (inflight_query ())
+           (refresh <opaque>))))
+        |}];
       let%bind () = async_show handle in
       [%expect
         {|
-       ((1
-         ((last_ok_response ()) (last_error ()) (inflight_query (1))
-          (refresh <opaque>)))
-        (2
-         ((last_ok_response ()) (last_error ()) (inflight_query (2))
-          (refresh <opaque>)))
-        (10
-         ((last_ok_response ()) (last_error ()) (inflight_query (10))
-          (refresh <opaque>)))) |}];
+        ((1
+          ((last_ok_response ()) (last_error ()) (inflight_query (1))
+           (refresh <opaque>)))
+         (2
+          ((last_ok_response ()) (last_error ()) (inflight_query (2))
+           (refresh <opaque>)))
+         (10
+          ((last_ok_response ()) (last_error ()) (inflight_query (10))
+           (refresh <opaque>))))
+        |}];
       let%bind () = async_show handle in
       [%expect
         {|
-       ((1
-         ((last_ok_response ((1 1))) (last_error ()) (inflight_query ())
-          (refresh <opaque>)))
-        (2
-         ((last_ok_response ((2 4))) (last_error ()) (inflight_query ())
-          (refresh <opaque>)))
-        (10
-         ((last_ok_response ((10 30))) (last_error ()) (inflight_query ())
-          (refresh <opaque>)))) |}];
+        ((1
+          ((last_ok_response ((1 1))) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (2
+          ((last_ok_response ((2 4))) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (10
+          ((last_ok_response ((10 30))) (last_error ()) (inflight_query ())
+           (refresh <opaque>))))
+        |}];
       Bonsai.Var.update map_var ~f:(fun map -> Map.remove map 10);
       let%bind () = async_show handle in
       [%expect
         {|
-       ((1
-         ((last_ok_response ((1 1))) (last_error ()) (inflight_query ())
-          (refresh <opaque>)))
-        (2
-         ((last_ok_response ((2 4))) (last_error ()) (inflight_query ())
-          (refresh <opaque>)))) |}];
+        ((1
+          ((last_ok_response ((1 1))) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (2
+          ((last_ok_response ((2 4))) (last_error ()) (inflight_query ())
+           (refresh <opaque>))))
+        |}];
       Bonsai.Var.update map_var ~f:(fun map -> Map.set map ~key:10 ~data:());
       let%bind () = async_show handle in
       (* since we clear the map entry when it gets de-activated, it does not
          remember its last response, and thus must poll for it again. *)
       [%expect
         {|
-       ((1
-         ((last_ok_response ((1 1))) (last_error ()) (inflight_query ())
-          (refresh <opaque>)))
-        (2
-         ((last_ok_response ((2 4))) (last_error ()) (inflight_query ())
-          (refresh <opaque>)))
-        (10
-         ((last_ok_response ()) (last_error ()) (inflight_query ())
-          (refresh <opaque>)))) |}];
+        ((1
+          ((last_ok_response ((1 1))) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (2
+          ((last_ok_response ((2 4))) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (10
+          ((last_ok_response ()) (last_error ()) (inflight_query ())
+           (refresh <opaque>))))
+        |}];
       let%bind () = async_show handle in
       [%expect
         {|
-       ((1
-         ((last_ok_response ((1 1))) (last_error ()) (inflight_query ())
-          (refresh <opaque>)))
-        (2
-         ((last_ok_response ((2 4))) (last_error ()) (inflight_query ())
-          (refresh <opaque>)))
-        (10
-         ((last_ok_response ()) (last_error ()) (inflight_query (10))
-          (refresh <opaque>)))) |}];
+        ((1
+          ((last_ok_response ((1 1))) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (2
+          ((last_ok_response ((2 4))) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (10
+          ((last_ok_response ()) (last_error ()) (inflight_query (10))
+           (refresh <opaque>))))
+        |}];
       let%bind () = async_show handle in
       [%expect
         {|
-       ((1
-         ((last_ok_response ((1 1))) (last_error ()) (inflight_query ())
-          (refresh <opaque>)))
-        (2
-         ((last_ok_response ((2 4))) (last_error ()) (inflight_query ())
-          (refresh <opaque>)))
-        (10
-         ((last_ok_response ((10 40))) (last_error ()) (inflight_query ())
-          (refresh <opaque>)))) |}];
+        ((1
+          ((last_ok_response ((1 1))) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (2
+          ((last_ok_response ((2 4))) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (10
+          ((last_ok_response ((10 40))) (last_error ()) (inflight_query ())
+           (refresh <opaque>))))
+        |}];
       Deferred.unit
     ;;
 
@@ -2221,64 +2313,69 @@ let%test_module "Rpc.poll" =
       let%bind () = async_show handle in
       [%expect
         {|
-       ((1
-         ((last_ok_response ()) (last_error ()) (inflight_query ())
-          (refresh <opaque>)))
-        (2
-         ((last_ok_response ()) (last_error ()) (inflight_query ())
-          (refresh <opaque>)))
-        (10
-         ((last_ok_response ()) (last_error ()) (inflight_query ())
-          (refresh <opaque>)))) |}];
+        ((1
+          ((last_ok_response ()) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (2
+          ((last_ok_response ()) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (10
+          ((last_ok_response ()) (last_error ()) (inflight_query ())
+           (refresh <opaque>))))
+        |}];
       let%bind () = async_show handle in
       [%expect
         {|
-       ((1
-         ((last_ok_response ()) (last_error ()) (inflight_query (1))
-          (refresh <opaque>)))
-        (2
-         ((last_ok_response ()) (last_error ()) (inflight_query (2))
-          (refresh <opaque>)))
-        (10
-         ((last_ok_response ()) (last_error ()) (inflight_query (10))
-          (refresh <opaque>)))) |}];
+        ((1
+          ((last_ok_response ()) (last_error ()) (inflight_query (1))
+           (refresh <opaque>)))
+         (2
+          ((last_ok_response ()) (last_error ()) (inflight_query (2))
+           (refresh <opaque>)))
+         (10
+          ((last_ok_response ()) (last_error ()) (inflight_query (10))
+           (refresh <opaque>))))
+        |}];
       let%bind () = async_show handle in
       [%expect
         {|
-       ((1
-         ((last_ok_response ((1 1))) (last_error ()) (inflight_query ())
-          (refresh <opaque>)))
-        (2
-         ((last_ok_response ((2 4))) (last_error ()) (inflight_query ())
-          (refresh <opaque>)))
-        (10
-         ((last_ok_response ((10 30))) (last_error ()) (inflight_query ())
-          (refresh <opaque>)))) |}];
+        ((1
+          ((last_ok_response ((1 1))) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (2
+          ((last_ok_response ((2 4))) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (10
+          ((last_ok_response ((10 30))) (last_error ()) (inflight_query ())
+           (refresh <opaque>))))
+        |}];
       Bonsai.Var.update map_var ~f:(fun map -> Map.remove map 10);
       let%bind () = async_show handle in
       [%expect
         {|
-       ((1
-         ((last_ok_response ((1 1))) (last_error ()) (inflight_query ())
-          (refresh <opaque>)))
-        (2
-         ((last_ok_response ((2 4))) (last_error ()) (inflight_query ())
-          (refresh <opaque>)))) |}];
+        ((1
+          ((last_ok_response ((1 1))) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (2
+          ((last_ok_response ((2 4))) (last_error ()) (inflight_query ())
+           (refresh <opaque>))))
+        |}];
       Bonsai.Var.update map_var ~f:(fun map -> Map.set map ~key:10 ~data:());
       let%bind () = async_show handle in
       (* since we do not clear the map entry when it gets de-activated, it does
          remember its last response, and thus does not need to poll for it again. *)
       [%expect
         {|
-       ((1
-         ((last_ok_response ((1 1))) (last_error ()) (inflight_query ())
-          (refresh <opaque>)))
-        (2
-         ((last_ok_response ((2 4))) (last_error ()) (inflight_query ())
-          (refresh <opaque>)))
-        (10
-         ((last_ok_response ((10 30))) (last_error ()) (inflight_query ())
-          (refresh <opaque>)))) |}];
+        ((1
+          ((last_ok_response ((1 1))) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (2
+          ((last_ok_response ((2 4))) (last_error ()) (inflight_query ())
+           (refresh <opaque>)))
+         (10
+          ((last_ok_response ((10 30))) (last_error ()) (inflight_query ())
+           (refresh <opaque>))))
+        |}];
       Deferred.unit
     ;;
   end)
@@ -2357,42 +2454,31 @@ let%test_module "Rpc.poll_until_ok" =
           computation
       in
       let%bind () = async_show handle in
-      [%expect {|
-       ((last_ok_response ()) (last_error ()) (inflight_query ())) |}];
+      [%expect {| ((last_ok_response ()) (last_error ()) (inflight_query ())) |}];
       let%bind () = async_recompute_view handle in
-      [%expect {|
-       received rpc! |}];
+      [%expect {| received rpc! |}];
       let%bind () = async_show handle in
-      [%expect
-        {|
-       ((last_ok_response ((1 1))) (last_error ()) (inflight_query ())) |}];
+      [%expect {| ((last_ok_response ((1 1))) (last_error ()) (inflight_query ())) |}];
       let%bind () = async_show handle in
-      [%expect
-        {|
-       ((last_ok_response ((1 1))) (last_error ()) (inflight_query ())) |}];
+      [%expect {| ((last_ok_response ((1 1))) (last_error ()) (inflight_query ())) |}];
       (* Despite clock advancing, an rpc is not sent. *)
       Handle.advance_clock_by handle (Time_ns.Span.of_sec 1.0);
       let%bind () = async_recompute_view handle in
       let%bind () = async_recompute_view handle in
       let%bind () = async_show handle in
-      [%expect
-        {|
-       ((last_ok_response ((1 1))) (last_error ()) (inflight_query ())) |}];
+      [%expect {| ((last_ok_response ((1 1))) (last_error ()) (inflight_query ())) |}];
       (* Even after stopping, if the query changes, the rpc is sent again. *)
       Bonsai.Var.set input_var 2;
       let%bind () = async_show handle in
-      [%expect
-        {|
-       ((last_ok_response ((1 1))) (last_error ()) (inflight_query ())) |}];
+      [%expect {| ((last_ok_response ((1 1))) (last_error ()) (inflight_query ())) |}];
       let%bind () = async_show handle in
       [%expect
         {|
-       ((last_ok_response ((1 1))) (last_error ()) (inflight_query (2)))
-       received rpc! |}];
+        ((last_ok_response ((1 1))) (last_error ()) (inflight_query (2)))
+        received rpc!
+        |}];
       let%bind () = async_show handle in
-      [%expect
-        {|
-       ((last_ok_response ((2 4))) (last_error ()) (inflight_query ())) |}];
+      [%expect {| ((last_ok_response ((2 4))) (last_error ()) (inflight_query ())) |}];
       Deferred.unit
     ;;
 
@@ -2420,53 +2506,50 @@ let%test_module "Rpc.poll_until_ok" =
       let%bind () = async_show handle in
       [%expect {| ((last_ok_response ()) (last_error ()) (inflight_query ())) |}];
       let%bind () = async_recompute_view handle in
-      [%expect {|
-       received rpc! |}];
+      [%expect {| received rpc! |}];
       let%bind () = async_show handle in
       (* First error. *)
       [%expect
         {|
-       ((last_ok_response ())
-        (last_error
-         ((1
-           ((rpc_error
-             (Uncaught_exn
-              ((location "server-side rpc computation")
-               (exn (monitor.ml.Error (Failure "too early!"))))))
-            (connection_description <created-directly>) (rpc_name rpc)
-            (rpc_version 0)))))
-        (inflight_query ())) |}];
+        ((last_ok_response ())
+         (last_error
+          ((1
+            ((rpc_error
+              (Uncaught_exn
+               ((location "server-side rpc computation")
+                (exn (monitor.ml.Error (Failure "too early!"))))))
+             (connection_description <created-directly>) (rpc_name rpc)
+             (rpc_version 0)))))
+         (inflight_query ()))
+        |}];
       (* Advancing clock to send another rpc.*)
       Handle.advance_clock_by handle (Time_ns.Span.of_sec 1.0);
       let%bind () = async_recompute_view handle in
       (* Retried rpc sent.*)
       let%bind () = async_recompute_view handle in
-      [%expect {|
-       received rpc! |}];
+      [%expect {| received rpc! |}];
       let%bind () = async_show handle in
       [%expect
         {|
-       ((last_ok_response ())
-        (last_error
-         ((1
-           ((rpc_error
-             (Uncaught_exn
-              ((location "server-side rpc computation")
-               (exn (monitor.ml.Error (Failure "too early!"))))))
-            (connection_description <created-directly>) (rpc_name rpc)
-            (rpc_version 0)))))
-        (inflight_query ())) |}];
+        ((last_ok_response ())
+         (last_error
+          ((1
+            ((rpc_error
+              (Uncaught_exn
+               ((location "server-side rpc computation")
+                (exn (monitor.ml.Error (Failure "too early!"))))))
+             (connection_description <created-directly>) (rpc_name rpc)
+             (rpc_version 0)))))
+         (inflight_query ()))
+        |}];
       Handle.advance_clock_by handle (Time_ns.Span.of_sec 1.0);
       let%bind () = async_recompute_view handle in
       (* Retried rpc sent.*)
       let%bind () = async_recompute_view handle in
-      [%expect {|
-       received rpc! |}];
+      [%expect {| received rpc! |}];
       (* Third rpc returns ok. *)
       let%bind () = async_show handle in
-      [%expect
-        {|
-       ((last_ok_response ((1 3))) (last_error ()) (inflight_query ())) |}];
+      [%expect {| ((last_ok_response ((1 3))) (last_error ()) (inflight_query ())) |}];
       Handle.advance_clock_by handle (Time_ns.Span.of_sec 1.0);
       (* No more rpc's are sent. *)
       let%bind () = async_recompute_view handle in
@@ -2503,9 +2586,7 @@ let%test_module "Rpc.poll_until_ok" =
       let%bind () = async_recompute_view handle in
       [%expect {| received rpc! |}];
       let%bind () = async_show handle in
-      [%expect
-        {|
-       ((last_ok_response ((1 1))) (last_error ()) (inflight_query ())) |}];
+      [%expect {| ((last_ok_response ((1 1))) (last_error ()) (inflight_query ())) |}];
       Handle.advance_clock_by handle (Time_ns.Span.of_sec 1.0);
       let%bind () = async_recompute_view handle in
       let%bind () = async_recompute_view handle in
@@ -2580,8 +2661,9 @@ let%test_module "multi-poller" =
       [%expect {| () |}];
       Handle.show handle;
       [%expect {|
-       ((5 hello))
-       (start 5) |}];
+        ((5 hello))
+        (start 5)
+        |}];
       Handle.show handle;
       [%expect {| ((5 hello)) |}];
       return ()
@@ -2621,8 +2703,9 @@ let%test_module "multi-poller" =
       [%expect {| ((a ()) (b ())) |}];
       Handle.show handle;
       [%expect {|
-       ((a ((5 hello))) (b ((5 hello))))
-       (start 5) |}];
+        ((a ((5 hello))) (b ((5 hello))))
+        (start 5)
+        |}];
       Handle.show handle;
       [%expect {| ((a ((5 hello))) (b ((5 hello)))) |}];
       return ()
@@ -2663,9 +2746,10 @@ let%test_module "multi-poller" =
       Handle.show handle;
       [%expect
         {|
-       ((a ((5 hello))) (b ((10 hello))))
-       (start 5)
-       (start 10) |}];
+        ((a ((5 hello))) (b ((10 hello))))
+        (start 5)
+        (start 10)
+        |}];
       Handle.show handle;
       [%expect {| ((a ((5 hello))) (b ((10 hello)))) |}];
       return ()
@@ -2704,8 +2788,9 @@ let%test_module "multi-poller" =
       [%expect {| () |}];
       Handle.show handle;
       [%expect {|
-       ((5 hello))
-       (start 5) |}];
+        ((5 hello))
+        (start 5)
+        |}];
       Handle.show handle;
       [%expect {| ((5 hello)) |}];
       Bonsai.Var.set bool_var false;
@@ -2713,8 +2798,9 @@ let%test_module "multi-poller" =
       [%expect {| ((5 INACTIVE)) |}];
       Handle.show handle;
       [%expect {|
-       ((5 INACTIVE))
-       (stop 5) |}];
+        ((5 INACTIVE))
+        (stop 5)
+        |}];
       return ()
     ;;
 
@@ -2762,8 +2848,9 @@ let%test_module "multi-poller" =
       [%expect {| ((a ()) (b ())) |}];
       Handle.show handle;
       [%expect {|
-       ((a ((5 hello))) (b ((5 hello))))
-       (start 5) |}];
+        ((a ((5 hello))) (b ((5 hello))))
+        (start 5)
+        |}];
       Handle.show handle;
       [%expect {| ((a ((5 hello))) (b ((5 hello)))) |}];
       Bonsai.Var.set bool_var false;
@@ -2817,18 +2904,21 @@ let%test_module "multi-poller" =
       Handle.show handle;
       [%expect
         {|
-       ((a ((5 hello))) (b ((10 hello))))
-       (start 5)
-       (start 10) |}];
+        ((a ((5 hello))) (b ((10 hello))))
+        (start 5)
+        (start 10)
+        |}];
       Handle.show handle;
       [%expect {| ((a ((5 hello))) (b ((10 hello)))) |}];
       Bonsai.Var.set bool_var false;
       Handle.show handle;
       [%expect {| ((a ((5 hello))) (b ((10 INACTIVE)))) |}];
       Handle.show handle;
-      [%expect {|
-       ((a ((5 hello))) (b ((10 INACTIVE))))
-       (stop 10) |}];
+      [%expect
+        {|
+        ((a ((5 hello))) (b ((10 INACTIVE))))
+        (stop 10)
+        |}];
       return ()
     ;;
   end)
@@ -2843,5 +2933,20 @@ let%expect_test "There should be 0 nodes being observed. (This test should ideal
   let number_of_observed_nodes = Incremental.State.num_active_observers Ui_incr.State.t in
   print_s [%message (number_of_observed_nodes : int)];
   [%expect {| (number_of_observed_nodes 0) |}];
+  return ()
+;;
+
+let%expect_test "Check that no introspection recording occurs unless started..." =
+  let module Intro = Rpc_effect.For_introspection.For_testing in
+  let introspection_enabled = Intro.get_introspection_supported () in
+  let is_recording = Intro.get_is_recording () in
+  print_s [%message (introspection_enabled : bool) (is_recording : bool)];
+  (* This is OK. Introspection being enabled only means that the feature/ability
+     to start recording is available. (e.g. if the devtool panel is opened in wikipedia the
+     abscence of the variable is used to show a nicer error message.) *)
+  [%expect {| ((introspection_enabled true) (is_recording false)) |}];
+  let popped_events = Intro.pop_events () |> Js_of_ocaml.Js.to_string in
+  print_endline popped_events;
+  [%expect {| () |}];
   return ()
 ;;

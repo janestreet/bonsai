@@ -73,6 +73,7 @@ include Vdom.Attr.Hooks.Make (struct
   ;;
 
   let on_mount () state element = reposition_until_stopped state ~element
+  let on_mount = `Schedule_animation_frame on_mount
   let update ~old_input:() ~new_input:() _state _element = ()
 
   let destroy () (state : State.t) element =

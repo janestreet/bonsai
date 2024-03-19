@@ -26,13 +26,14 @@ let%test_module "Homepage and param if both use `with_prefix`" =
       Versioned_parser.check_ok_and_print_urls_or_errors versioned_parser;
       [%expect
         {|
-            Error with parser.
-            ┌─────────────────────────────────────────────────────────┬───────────────────────────────────────────────────────────────┐
-            │ Check name                                              │ Error message                                                 │
-            ├─────────────────────────────────────────────────────────┼───────────────────────────────────────────────────────────────┤
-            │ Ambiguous choices for picking variant constructor check │ ("Duplicate patterns found!"                                  │
-            │                                                         │  (duplicate_patterns (((pattern ()) (needed_match Prefix))))) │
-            └─────────────────────────────────────────────────────────┴───────────────────────────────────────────────────────────────┘ |}]
+        Error with parser.
+        ┌─────────────────────────────────────────────────────────┬───────────────────────────────────────────────────────────────┐
+        │ Check name                                              │ Error message                                                 │
+        ├─────────────────────────────────────────────────────────┼───────────────────────────────────────────────────────────────┤
+        │ Ambiguous choices for picking variant constructor check │ ("Duplicate patterns found!"                                  │
+        │                                                         │  (duplicate_patterns (((pattern ()) (needed_match Prefix))))) │
+        └─────────────────────────────────────────────────────────┴───────────────────────────────────────────────────────────────┘
+        |}]
     ;;
   end)
 ;;
@@ -64,7 +65,8 @@ let%test_module "Homepage and param" =
         ├───────────┤
         │ /         │
         │ /<string> │
-        └───────────┘ |}]
+        └───────────┘
+        |}]
     ;;
 
     let projection = Versioned_parser.eval_for_uri versioned_parser
@@ -106,7 +108,8 @@ let%test_module "Homepage and param" =
       [%expect {|
         -1,1 +1,1
         -|(Param "")
-        +|Homepage |}]
+        +|Homepage
+        |}]
     ;;
   end)
 ;;
@@ -133,7 +136,8 @@ let%test_module "Only Homepage" =
         │ All urls │
         ├──────────┤
         │ /        │
-        └──────────┘ |}]
+        └──────────┘
+        |}]
     ;;
 
     let projection = Versioned_parser.eval_for_uri versioned_parser
@@ -184,7 +188,8 @@ let%test_module "Only Param" =
         │ All urls  │
         ├───────────┤
         │ /<string> │
-        └───────────┘ |}]
+        └───────────┘
+        |}]
     ;;
 
     let projection = Versioned_parser.eval_for_uri versioned_parser
@@ -193,8 +198,7 @@ let%test_module "Only Param" =
       let uri = Uri.empty in
       Expect_test_helpers_base.require_does_raise [%here] (fun () ->
         projection.parse_exn uri);
-      [%expect {|
-          "Expected a value in path, but nothing was present" |}]
+      [%expect {| "Expected a value in path, but nothing was present" |}]
     ;;
 
     let%expect_test "BUG: Param roundtrip" =
@@ -204,8 +208,7 @@ let%test_module "Only Param" =
       [%expect {| (unparsed "") |}];
       Expect_test_helpers_base.require_does_raise [%here] (fun () ->
         projection.parse_exn unparsed);
-      [%expect {|
-          "Expected a value in path, but nothing was present" |}]
+      [%expect {| "Expected a value in path, but nothing was present" |}]
     ;;
   end)
 ;;
@@ -237,7 +240,8 @@ let%test_module "Prefixed Home and param if both use `with_prefix`" =
         ├─────────────────────────────────────────────────────────┼─────────────────────────────────────────────────────────────────────────────┤
         │ Ambiguous choices for picking variant constructor check │ ("Duplicate patterns found!"                                                │
         │                                                         │  (duplicate_patterns (((pattern ((Match prefix))) (needed_match Prefix))))) │
-        └─────────────────────────────────────────────────────────┴─────────────────────────────────────────────────────────────────────────────┘ |}]
+        └─────────────────────────────────────────────────────────┴─────────────────────────────────────────────────────────────────────────────┘
+        |}]
     ;;
   end)
 ;;
@@ -265,13 +269,14 @@ let%test_module "Prefixed home and param" =
       Versioned_parser.check_ok_and_print_urls_or_errors versioned_parser;
       [%expect
         {|
-      URL parser looks good!
-      ┌──────────────────┐
-      │ All urls         │
-      ├──────────────────┤
-      │ /prefix          │
-      │ /prefix/<string> │
-      └──────────────────┘ |}]
+        URL parser looks good!
+        ┌──────────────────┐
+        │ All urls         │
+        ├──────────────────┤
+        │ /prefix          │
+        │ /prefix/<string> │
+        └──────────────────┘
+        |}]
     ;;
 
     let projection = Versioned_parser.eval_for_uri versioned_parser
@@ -292,12 +297,10 @@ let%test_module "Prefixed home and param" =
       let uri = Uri.of_string "prefix/" in
       let { Parse_result.result = parsed; _ } = projection.parse_exn uri in
       print_s [%message (parsed : Url.t)];
-      [%expect {|
-      (parsed (Param "")) |}];
+      [%expect {| (parsed (Param "")) |}];
       let unparsed = projection.unparse (Parse_result.create parsed) in
       print_s [%message (unparsed : Uri_jane.t)];
-      [%expect {|
-      (unparsed prefix/) |}];
+      [%expect {| (unparsed prefix/) |}];
       [%test_eq: Uri_jane.t] uri unparsed;
       [%expect {| |}]
     ;;
@@ -326,7 +329,8 @@ let%test_module "Prefixed Only Homepage" =
         │ All urls │
         ├──────────┤
         │ /prefix  │
-        └──────────┘ |}]
+        └──────────┘
+        |}]
     ;;
 
     let projection = Versioned_parser.eval_for_uri versioned_parser
@@ -345,7 +349,8 @@ let%test_module "Prefixed Only Homepage" =
       [%expect {|
         -1,1 +1,1
         -|prefix/
-        +|prefix |}]
+        +|prefix
+        |}]
     ;;
 
     let%expect_test "roundtrip" =
@@ -383,7 +388,8 @@ let%test_module "Prefixed Only Param" =
         │ All urls         │
         ├──────────────────┤
         │ /prefix/<string> │
-        └──────────────────┘ |}]
+        └──────────────────┘
+        |}]
     ;;
 
     let projection = Versioned_parser.eval_for_uri versioned_parser
@@ -404,8 +410,7 @@ let%test_module "Prefixed Only Param" =
       let uri = Uri.of_string "prefix" in
       Expect_test_helpers_base.require_does_raise [%here] (fun () ->
         projection.parse_exn uri);
-      [%expect {|
-          "Expected a value in path, but nothing was present" |}]
+      [%expect {| "Expected a value in path, but nothing was present" |}]
     ;;
   end)
 ;;

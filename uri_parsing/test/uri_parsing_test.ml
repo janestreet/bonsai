@@ -245,7 +245,8 @@ let%expect_test "all primitives parser" =
      ((binable_field (AQAAAAAAAABAATM)) (bool_field (true)) (float_field (1.25))
       (int_field (10)) (sexpable_field ("((x 1) (y 2))"))
       (sexpable_via_base64_field (KChhIDEpKGIgMikoYyAzKSk)) (string_field (hi!))
-      (stringable_field (Bonsai)))) |}];
+      (stringable_field (Bonsai))))
+    |}];
   expect_output_and_identity_roundtrip
     projection
     ~path:[]
@@ -254,35 +255,37 @@ let%expect_test "all primitives parser" =
     ~expect:(fun () ->
     [%expect
       {|
-   ((int_field 10) (float_field 1.25) (string_field hi!) (bool_field true)
-    (stringable_field Bonsai) (sexpable_field ((x 1) (y 2)))
-    (binable_field ((a 1) (b 2) (c 3)))
-    (sexpable_via_base64_field ((a 1) (b 2) (c 3)))) |}]);
+        ((int_field 10) (float_field 1.25) (string_field hi!) (bool_field true)
+         (stringable_field Bonsai) (sexpable_field ((x 1) (y 2)))
+         (binable_field ((a 1) (b 2) (c 3)))
+         (sexpable_via_base64_field ((a 1) (b 2) (c 3))))
+        |}]);
   show_structure parser;
   [%expect
     {|
-     URL parser looks good!
-     ┌──────────────────────────────────────────────────────────────────────────────────────────┐
-     │ All urls                                                                                 │
-     ├──────────────────────────────────────────────────────────────────────────────────────────┤
-     │ /?binable_field=<base64<binable>>&bool_field=<bool>&float_field=<float>&int_field=<int>& │
-     │ sexpable_field=<sexpable>&sexpable_via_base64_field=<base64<sexpable>>&string_field=<str │
-     │ ing>&stringable_field=<string>                                                           │
-     └──────────────────────────────────────────────────────────────────────────────────────────┘
+    URL parser looks good!
+    ┌──────────────────────────────────────────────────────────────────────────────────────────┐
+    │ All urls                                                                                 │
+    ├──────────────────────────────────────────────────────────────────────────────────────────┤
+    │ /?binable_field=<base64<binable>>&bool_field=<bool>&float_field=<float>&int_field=<int>& │
+    │ sexpable_field=<sexpable>&sexpable_via_base64_field=<base64<sexpable>>&string_field=<str │
+    │ ing>&stringable_field=<string>                                                           │
+    └──────────────────────────────────────────────────────────────────────────────────────────┘
 
-     (Record
-      (label_declarations
-       ((binable_field
-         (From_query_required (value_parser (Base64_encoded Binable_via_base64))))
-        (bool_field (From_query_required (value_parser Bool)))
-        (float_field (From_query_required (value_parser Float)))
-        (int_field (From_query_required (value_parser Int)))
-        (sexpable_field (From_query_required (value_parser Sexpable)))
-        (sexpable_via_base64_field
-         (From_query_required (value_parser (Base64_encoded Sexpable))))
-        (string_field (From_query_required (value_parser String)))
-        (stringable_field (From_query_required (value_parser Stringable)))))
-      (path_order ())) |}]
+    (Record
+     (label_declarations
+      ((binable_field
+        (From_query_required (value_parser (Base64_encoded Binable_via_base64))))
+       (bool_field (From_query_required (value_parser Bool)))
+       (float_field (From_query_required (value_parser Float)))
+       (int_field (From_query_required (value_parser Int)))
+       (sexpable_field (From_query_required (value_parser Sexpable)))
+       (sexpable_via_base64_field
+        (From_query_required (value_parser (Base64_encoded Sexpable))))
+       (string_field (From_query_required (value_parser String)))
+       (stringable_field (From_query_required (value_parser Stringable)))))
+     (path_order ()))
+    |}]
 ;;
 
 let%expect_test "nested query parser" =
@@ -314,9 +317,7 @@ let%expect_test "nested query parser" =
       (String.Map.of_alist_exn
          [ "child.foo", [ "10" ]; "something_else", [ "2" ]; "child.bar", [ "5.5" ] ])
     ~sexp_of_t:Query.sexp_of_t
-    ~expect:(fun () ->
-      [%expect {|
-      ((child ((foo 10) (bar 5.5))) (something_else 2)) |}]);
+    ~expect:(fun () -> [%expect {| ((child ((foo 10) (bar 5.5))) (something_else 2)) |}]);
   show_structure parser;
   [%expect
     {|
@@ -336,7 +337,8 @@ let%expect_test "nested query parser" =
            (foo (From_query_required (value_parser Int)))))
          (path_order ())))
        (something_else (From_query_required (value_parser Int)))))
-     (path_order ())) |}]
+     (path_order ()))
+    |}]
 ;;
 
 let%expect_test "missing field exn" =
@@ -347,8 +349,7 @@ let%expect_test "missing field exn" =
   Expect_test_helpers_core.require_does_raise [%here] (fun () ->
     projection.parse_exn { query; path = [] });
   (* Error message shows the name of the missing field. *)
-  [%expect {|
-    ("Uri_parsing.Parser.Missing_key(\"bar\")") |}]
+  [%expect {| ("Uri_parsing.Parser.Missing_key(\"bar\")") |}]
 ;;
 
 let%expect_test "field fails to parse" =
@@ -359,10 +360,11 @@ let%expect_test "field fails to parse" =
     projection.parse_exn { query; path = [] });
   [%expect
     {|
-   ("Error while parsing record field:"
-     (error_message (Invalid_argument "Float.of_string not a float"))
-     (field_name bar)
-     (unparseable_components ((path ()) (query ((bar ("not a float"))))))) |}]
+    ("Error while parsing record field:"
+      (error_message (Invalid_argument "Float.of_string not a float"))
+      (field_name bar)
+      (unparseable_components ((path ()) (query ((bar ("not a float")))))))
+    |}]
 ;;
 
 let%expect_test "many parser" =
@@ -375,8 +377,7 @@ let%expect_test "many parser" =
       (String.Map.of_alist_exn
          [ "ints", [ "1"; "2"; "3" ]; "floats", [ "3.1"; "1.2"; "2.3" ] ])
     ~sexp_of_t:Many_query.sexp_of_t
-    ~expect:(fun () -> [%expect {|
-      ((ints (1 2 3)) (floats (3.1 1.2 2.3))) |}]);
+    ~expect:(fun () -> [%expect {| ((ints (1 2 3)) (floats (3.1 1.2 2.3))) |}]);
   show_structure parser;
   [%expect
     {|
@@ -391,7 +392,8 @@ let%expect_test "many parser" =
      (label_declarations
       ((floats (From_query_many (value_parser Float)))
        (ints (From_query_many (value_parser Int)))))
-     (path_order ())) |}]
+     (path_order ()))
+    |}]
 ;;
 
 let%expect_test "from_query_many can parse empty lists from missing query fields" =
@@ -416,7 +418,8 @@ let%expect_test "from_query_many can parse empty lists from missing query fields
     │ All urls                     │
     ├──────────────────────────────┤
     │ /?strings=<multiple<string>> │
-    └──────────────────────────────┘ |}];
+    └──────────────────────────────┘
+    |}];
   let projection = Parser.eval ~equal:[%equal: Url.t] parser in
   expect_output_and_identity_roundtrip
     ~expect_diff:(fun () -> [%expect {| |}])
@@ -424,8 +427,7 @@ let%expect_test "from_query_many can parse empty lists from missing query fields
     ~path:[]
     ~query:String.Map.empty
     ~sexp_of_t:Url.sexp_of_t
-    ~expect:(fun () -> [%expect {|
-   ((strings ())) |}])
+    ~expect:(fun () -> [%expect {| ((strings ())) |}])
 ;;
 
 let%expect_test "from_query_many can parse empty list options from missing query fields" =
@@ -452,7 +454,8 @@ let%expect_test "from_query_many can parse empty list options from missing query
     ├──────────────────────────────┤
     │ /                            │
     │ /?strings=<multiple<string>> │
-    └──────────────────────────────┘ |}];
+    └──────────────────────────────┘
+    |}];
   let projection = Parser.eval ~equal:[%equal: Url.t] parser in
   expect_output_and_identity_roundtrip
     ~expect_diff:(fun () -> [%expect {| |}])
@@ -461,8 +464,7 @@ let%expect_test "from_query_many can parse empty list options from missing query
     ~query:String.Map.empty
     ~sexp_of_t:Url.sexp_of_t
     ~expect:(fun () -> (* Some []*)
-                       [%expect {|
-   ((strings (()))) |}])
+                       [%expect {| ((strings (()))) |}])
 ;;
 
 let%expect_test "many parser - single value fails => entire parse fails" =
@@ -479,14 +481,15 @@ let%expect_test "many parser - single value fails => entire parse fails" =
     projection.parse_exn { query; path = [] });
   [%expect
     {|
-   ("Error while parsing record field:"
-     (error_message (Failure "Int.of_string: \"3.1\""))
-     (field_name ints)
-     (unparseable_components (
-       (path ())
-       (query (
-         (floats (3.1 1.2 2.3))
-         (ints   (1   2   3.1))))))) |}]
+    ("Error while parsing record field:"
+      (error_message (Failure "Int.of_string: \"3.1\""))
+      (field_name ints)
+      (unparseable_components (
+        (path ())
+        (query (
+          (floats (3.1 1.2 2.3))
+          (ints   (1   2   3.1)))))))
+    |}]
 ;;
 
 let%expect_test "many parser - works on empty list" =
@@ -498,13 +501,13 @@ let%expect_test "many parser - works on empty list" =
     ~path:[]
     ~query
     ~sexp_of_t:Many_query.sexp_of_t
-    ~expect:(fun () -> [%expect {|
-      ((ints ()) (floats (3.1 1.2 2.3))) |}]);
+    ~expect:(fun () -> [%expect {| ((ints ()) (floats (3.1 1.2 2.3))) |}]);
   [%expect
     {|
     -1,1 +1,1
     -|((floats (3.1 1.2 2.3)) (ints ()))
-    +|((floats (3.1 1.2 2.3))) |}];
+    +|((floats (3.1 1.2 2.3)))
+    |}];
   show_structure parser;
   [%expect
     {|
@@ -519,7 +522,8 @@ let%expect_test "many parser - works on empty list" =
      (label_declarations
       ((floats (From_query_many (value_parser Float)))
        (ints (From_query_many (value_parser Int)))))
-     (path_order ())) |}]
+     (path_order ()))
+    |}]
 ;;
 
 module Many1_query = struct
@@ -550,12 +554,13 @@ let%expect_test "many1 parser - fails on empty list" =
     projection.parse_exn { query; path = [] });
   [%expect
     {|
-   ("Error while parsing record field:"
-     (error_message
-      "Error! [from_query_many_at_least_1] expected at least one element in the list.")
-     (field_name ints)
-     (unparseable_components (
-       (path ()) (query ((floats (3.1 1.2 2.3)) (ints ())))))) |}]
+    ("Error while parsing record field:"
+      (error_message
+       "Error! [from_query_many_at_least_1] expected at least one element in the list.")
+      (field_name ints)
+      (unparseable_components (
+        (path ()) (query ((floats (3.1 1.2 2.3)) (ints ()))))))
+    |}]
 ;;
 
 let%expect_test "many1 parser - works on non-empty list" =
@@ -571,8 +576,7 @@ let%expect_test "many1 parser - works on non-empty list" =
     ~path:[]
     ~query
     ~sexp_of_t:Many1_query.sexp_of_t
-    ~expect:(fun () -> [%expect {|
-      ((ints (1 2 3)) (floats (3.1 1.2 2.3))) |}]);
+    ~expect:(fun () -> [%expect {| ((ints (1 2 3)) (floats (3.1 1.2 2.3))) |}]);
   show_structure parser;
   [%expect
     {|
@@ -587,7 +591,8 @@ let%expect_test "many1 parser - works on non-empty list" =
      (label_declarations
       ((floats (From_query_many (value_parser Float)))
        (ints (Project (From_query_many (value_parser Int))))))
-     (path_order ())) |}]
+     (path_order ()))
+    |}]
 ;;
 
 let%expect_test "Value parser project" =
@@ -641,8 +646,7 @@ let%expect_test "Value parser project" =
     ~query
     ~sexp_of_t:Query.sexp_of_t
     ~expect:(fun () ->
-    [%expect {|
-        ((game_id 10) (players (foo bar)) (watchers (baz bam))) |}]);
+    [%expect {| ((game_id 10) (players (foo bar)) (watchers (baz bam))) |}]);
   show_structure parser;
   [%expect
     {|
@@ -658,7 +662,8 @@ let%expect_test "Value parser project" =
       ((game_id (From_query_required (value_parser (Project Int))))
        (players (From_query_many (value_parser (Project String))))
        (watchers (Project (From_query_many (value_parser String))))))
-     (path_order ())) |}]
+     (path_order ()))
+    |}]
 ;;
 
 let%expect_test "project parse_exn fails" =
@@ -693,10 +698,11 @@ let%expect_test "project parse_exn fails" =
     projection.parse_exn { query; path = [] });
   [%expect
     {|
-   ("Error while parsing record field:"
-     (error_message "Can't parse!")
-     (field_name    game_id)
-     (unparseable_components ((path ()) (query ((game_id (10))))))) |}]
+    ("Error while parsing record field:"
+      (error_message "Can't parse!")
+      (field_name    game_id)
+      (unparseable_components ((path ()) (query ((game_id (10)))))))
+    |}]
 ;;
 
 let%expect_test "Field parser project" =
@@ -741,8 +747,7 @@ let%expect_test "Field parser project" =
     ~path:[]
     ~query
     ~sexp_of_t:Query.sexp_of_t
-    ~expect:(fun () -> [%expect {|
-      ((foo 10) (bar (12)) (baz 42)) |}]);
+    ~expect:(fun () -> [%expect {| ((foo 10) (bar (12)) (baz 42)) |}]);
   (* Diff between old query and new query (default field is included) *)
   [%expect {| |}];
   show_structure parser;
@@ -760,7 +765,8 @@ let%expect_test "Field parser project" =
       ((bar (Project (From_query_optional (value_parser Int))))
        (baz (Project (From_query_optional_with_default (value_parser Int))))
        (foo (Project (From_query_required (value_parser Int))))))
-     (path_order ())) |}]
+     (path_order ()))
+    |}]
 ;;
 
 module Default_when_missing_query = struct
@@ -792,8 +798,7 @@ let%expect_test "default missing field" =
     ~path:[]
     ~query
     ~sexp_of_t:Default_when_missing_query.sexp_of_t
-    ~expect:(fun () -> [%expect {|
-      ((foo 42) (bar 123)) |}]);
+    ~expect:(fun () -> [%expect {| ((foo 42) (bar 123)) |}]);
   show_structure parser;
   [%expect
     {|
@@ -808,7 +813,8 @@ let%expect_test "default missing field" =
      (label_declarations
       ((bar (From_query_optional_with_default (value_parser Int)))
        (foo (From_query_optional_with_default (value_parser Int)))))
-     (path_order ())) |}]
+     (path_order ()))
+    |}]
 ;;
 
 let%expect_test "default missing field fails if underlying parser fails." =
@@ -823,7 +829,8 @@ let%expect_test "default missing field fails if underlying parser fails." =
     ("Error while parsing record field:"
       (error_message (Failure "Int.of_string: \"not an int!\""))
       (field_name foo)
-      (unparseable_components ((path ()) (query ((foo ("not an int!"))))))) |}]
+      (unparseable_components ((path ()) (query ((foo ("not an int!")))))))
+    |}]
 ;;
 
 let%expect_test "field is present, but has no values" =
@@ -838,7 +845,8 @@ let%expect_test "field is present, but has no values" =
     ("Error while parsing record field:"
       (error_message "Expected a value in query field, but nothing was present")
       (field_name foo)
-      (unparseable_components ((path ()) (query ((foo ())))))) |}]
+      (unparseable_components ((path ()) (query ((foo ()))))))
+    |}]
 ;;
 
 module Fallback_query = struct
@@ -906,7 +914,8 @@ let%expect_test "fallback proper behavior" =
   [%expect
     {|
     ((foo 1) (bar 123) (qux (1 321 3)) (game_id 42) (game_ids (1 2 3 100 5 6))
-     (game_ids2 (42 42 42 42 42 42))) |}];
+     (game_ids2 (42 42 42 42 42 42)))
+    |}];
   let { Components.query = unparsed; _ } = projection.unparse result in
   diff_queries query unparsed;
   [%expect
@@ -922,7 +931,8 @@ let%expect_test "fallback proper behavior" =
     -| (game_ids2 (1 2 3 hi 5 6))
     +| (game_ids2 (42 42 42 42 42 42))
     -| (qux (1 hi! 3)))
-    +| (qux (1 321 3))) |}];
+    +| (qux (1 321 3)))
+    |}];
   show_structure parser;
   [%expect
     {|
@@ -943,7 +953,8 @@ let%expect_test "fallback proper behavior" =
        (game_ids (From_query_many (value_parser (Project (Fallback Int)))))
        (game_ids2 (From_query_many (value_parser (Fallback (Project Int)))))
        (qux (From_query_many (value_parser (Fallback Int))))))
-     (path_order ())) |}]
+     (path_order ()))
+    |}]
 ;;
 
 let%expect_test "Fallback does not fix missing fields." =
@@ -957,8 +968,7 @@ let%expect_test "Fallback does not fix missing fields." =
   in
   Expect_test_helpers_core.require_does_raise [%here] (fun () ->
     projection.parse_exn { query; path = [] });
-  [%expect {|
-    ("Uri_parsing.Parser.Missing_key(\"bar\")") |}]
+  [%expect {| ("Uri_parsing.Parser.Missing_key(\"bar\")") |}]
 ;;
 
 let%expect_test "Both fallback and default may have different values" =
@@ -986,18 +996,17 @@ let%expect_test "Both fallback and default may have different values" =
   let missing_query = String.Map.empty in
   let result = projection.parse_exn { query = failing_query; path = [] } in
   print_s (Query.sexp_of_t result.result);
-  [%expect {|
-    ((foo 200)) |}];
+  [%expect {| ((foo 200)) |}];
   let { Components.query = unparsed; _ } = projection.unparse result in
   diff_queries failing_query unparsed;
   [%expect {|
     -1,1 +1,1
     -|((foo ("not an int")))
-    +|((foo (200))) |}];
+    +|((foo (200)))
+    |}];
   let result = projection.parse_exn { query = missing_query; path = [] } in
   print_s (Query.sexp_of_t result.result);
-  [%expect {|
-    ((foo 100)) |}];
+  [%expect {| ((foo 100)) |}];
   let { Components.query = unparsed; _ } = projection.unparse result in
   diff_queries missing_query unparsed;
   [%expect {| |}];
@@ -1014,7 +1023,8 @@ let%expect_test "Both fallback and default may have different values" =
     (Record
      (label_declarations
       ((foo (From_query_optional_with_default (value_parser (Fallback Int))))))
-     (path_order ())) |}]
+     (path_order ()))
+    |}]
 ;;
 
 let%expect_test "optional field" =
@@ -1076,8 +1086,7 @@ let%expect_test "optional field" =
   in
   let result = projection.parse_exn { query; path = [] } in
   print_s (Query.sexp_of_t result.result);
-  [%expect {|
-    ((foo ()) (bar ()) (baz ()) (qux ((1 2 3))) (bam ((1 2 3)))) |}];
+  [%expect {| ((foo ()) (bar ()) (baz ()) (qux ((1 2 3))) (bam ((1 2 3)))) |}];
   let { Components.query = unparsed; _ } = projection.unparse result in
   diff_queries query unparsed;
   [%expect
@@ -1085,7 +1094,8 @@ let%expect_test "optional field" =
     -1,1 +1,2
     -|((bam (1 2 3)) (baz ()) (qux (1 2 3)))
     +|((bam (1 2 3))
-    +| (qux (1 2 3))) |}];
+    +| (qux (1 2 3)))
+    |}];
   show_structure parser;
   [%expect
     {|
@@ -1104,7 +1114,8 @@ let%expect_test "optional field" =
        (baz (Project (From_query_many (value_parser Int))))
        (foo (From_query_optional (value_parser Int)))
        (qux (Project (From_query_many (value_parser (Project Int)))))))
-     (path_order ())) |}]
+     (path_order ()))
+    |}]
 ;;
 
 let%test_module "quickcheck" =
@@ -1449,7 +1460,8 @@ let%expect_test "path order has duplicate values" =
     │ Check name             │ Error message                        │
     ├────────────────────────┼──────────────────────────────────────┤
     │ Sane path orders check │ "Path order cannot have duplicates!" │
-    └────────────────────────┴──────────────────────────────────────┘ |}]
+    └────────────────────────┴──────────────────────────────────────┘
+    |}]
 ;;
 
 let%expect_test "path field does not have a path order" =
@@ -1484,7 +1496,8 @@ let%expect_test "path field does not have a path order" =
     ├────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────┤
     │ Sane path orders check │ ("Each path parser must be present in path order. The following fields were missing:" │
     │                        │  (missing_fields (Foo Bar)))                                                          │
-    └────────────────────────┴───────────────────────────────────────────────────────────────────────────────────────┘ |}]
+    └────────────────────────┴───────────────────────────────────────────────────────────────────────────────────────┘
+    |}]
 ;;
 
 module Path_query = struct
@@ -1517,7 +1530,7 @@ let%expect_test "url path queries" =
   [%expect {| ((foo hello) (bar 1234)) |}];
   let { Components.query = _; path = unparsed_path } = projection.unparse result in
   diff_paths path unparsed_path;
-  [%expect {||}];
+  [%expect {| |}];
   show_structure parser;
   [%expect
     {|
@@ -1532,7 +1545,8 @@ let%expect_test "url path queries" =
      (label_declarations
       ((bar (With_prefix (prefix (bar)) (t (From_path Int))))
        (foo (With_prefix (prefix (foo)) (t (From_path String))))))
-     (path_order (bar foo))) |}]
+     (path_order (bar foo)))
+    |}]
 ;;
 
 let%expect_test "Path with url that does not match" =
@@ -1555,7 +1569,8 @@ let%expect_test "Path with url that does not match" =
       (field_name foo)
       (unparseable_components (
         (path  ())
-        (query ())))) |}]
+        (query ()))))
+    |}]
 ;;
 
 let%expect_test "slash escaping (legacy test)" =
@@ -1586,7 +1601,8 @@ let%expect_test "slash escaping (legacy test)" =
      (label_declarations
       ((bar (With_prefix (prefix (bar)) (t (From_path Int))))
        (foo (With_prefix (prefix (foo)) (t (From_path String))))))
-     (path_order (bar foo))) |}]
+     (path_order (bar foo)))
+    |}]
 ;;
 
 let%expect_test "slash escaping (correct)" =
@@ -1613,7 +1629,8 @@ let%expect_test "slash escaping (correct)" =
      (label_declarations
       ((bar (With_prefix (prefix (bar)) (t (From_path Int))))
        (foo (With_prefix (prefix (foo)) (t (From_path String))))))
-     (path_order (bar foo))) |}]
+     (path_order (bar foo)))
+    |}]
 ;;
 
 let%expect_test "path with different length prefixes" =
@@ -1648,7 +1665,7 @@ let%expect_test "path with different length prefixes" =
   [%expect {| ((foo hi) (bar 100) (baz true)) |}];
   let { Components.query = _; path = unparsed_path } = projection.unparse result in
   diff_paths path unparsed_path;
-  [%expect {||}];
+  [%expect {| |}];
   show_structure parser;
   [%expect
     {|
@@ -1664,7 +1681,8 @@ let%expect_test "path with different length prefixes" =
       ((bar (With_prefix (prefix (bar)) (t (From_path Int))))
        (baz (From_path Bool))
        (foo (With_prefix (prefix (foo goes_here)) (t (From_path String))))))
-     (path_order (baz bar foo))) |}]
+     (path_order (baz bar foo)))
+    |}]
 ;;
 
 let%expect_test "url path queries" =
@@ -1677,7 +1695,7 @@ let%expect_test "url path queries" =
   [%expect {| ((foo hello) (bar 1234)) |}];
   let { Components.query = _; path = unparsed_path } = projection.unparse result in
   diff_paths path unparsed_path;
-  [%expect {||}];
+  [%expect {| |}];
   show_structure parser;
   [%expect
     {|
@@ -1692,7 +1710,8 @@ let%expect_test "url path queries" =
      (label_declarations
       ((bar (With_prefix (prefix (bar)) (t (From_path Int))))
        (foo (With_prefix (prefix (foo)) (t (From_path String))))))
-     (path_order (bar foo))) |}]
+     (path_order (bar foo)))
+    |}]
 ;;
 
 let%expect_test "position matters" =
@@ -1726,7 +1745,7 @@ let%expect_test "position matters" =
   [%expect {| ((username comment_id) (comment_id 1234)) |}];
   let { Components.query = _; path = unparsed_path } = projection.unparse result in
   diff_paths path unparsed_path;
-  [%expect {||}];
+  [%expect {| |}];
   show_structure parser;
   [%expect
     {|
@@ -1741,7 +1760,8 @@ let%expect_test "position matters" =
      (label_declarations
       ((comment_id (With_prefix (prefix (comment_id)) (t (From_path Int))))
        (username (With_prefix (prefix (username)) (t (From_path String))))))
-     (path_order (username comment_id))) |}]
+     (path_order (username comment_id)))
+    |}]
 ;;
 
 let%expect_test "path with value parser project" =
@@ -1779,7 +1799,7 @@ let%expect_test "path with value parser project" =
   [%expect {| ((foo hello) (bar 42)) |}];
   let { Components.query = _; path = unparsed_path } = projection.unparse result in
   diff_paths path unparsed_path;
-  [%expect {||}];
+  [%expect {| |}];
   show_structure parser;
   [%expect
     {|
@@ -1794,7 +1814,8 @@ let%expect_test "path with value parser project" =
      (label_declarations
       ((bar (With_prefix (prefix (bar)) (t (From_path (Project Int)))))
        (foo (With_prefix (prefix (foo)) (t (From_path String))))))
-     (path_order (bar foo))) |}]
+     (path_order (bar foo)))
+    |}]
 ;;
 
 let%expect_test "path with field parser project" =
@@ -1834,7 +1855,7 @@ let%expect_test "path with field parser project" =
   [%expect {| ((foo hello) (bar 42)) |}];
   let { Components.query = _; path = unparsed_path } = projection.unparse result in
   diff_paths path unparsed_path;
-  [%expect {||}];
+  [%expect {| |}];
   show_structure parser;
   [%expect
     {|
@@ -1849,7 +1870,8 @@ let%expect_test "path with field parser project" =
      (label_declarations
       ((bar (With_prefix (prefix (bar)) (t (Project (From_path Int)))))
        (foo (With_prefix (prefix (foo)) (t (From_path String))))))
-     (path_order (bar foo))) |}]
+     (path_order (bar foo)))
+    |}]
 ;;
 
 let%expect_test "path and remaining path working together" =
@@ -1882,7 +1904,7 @@ let%expect_test "path and remaining path working together" =
   [%expect {| ((foo 42) (bar (1 2 3 4))) |}];
   let { Components.query = _; path = unparsed_path } = projection.unparse result in
   diff_paths path unparsed_path;
-  [%expect {||}];
+  [%expect {| |}];
   show_structure parser;
   [%expect
     {|
@@ -1897,7 +1919,8 @@ let%expect_test "path and remaining path working together" =
      (label_declarations
       ((bar (With_prefix (prefix (remaining)) (t (From_remaining_path Int))))
        (foo (With_prefix (prefix (foo)) (t (From_path Int))))))
-     (path_order (foo bar))) |}]
+     (path_order (foo bar)))
+    |}]
 ;;
 
 let%expect_test "variants test" =
@@ -1920,15 +1943,13 @@ let%expect_test "variants test" =
     ~path:[ "foo" ]
     ~query:String.Map.empty
     ~sexp_of_t:Query.sexp_of_t
-    ~expect:(fun () -> [%expect {|
-      Foo |}]);
+    ~expect:(fun () -> [%expect {| Foo |}]);
   expect_output_and_identity_roundtrip
     projection
     ~path:[ "bar" ]
     ~query:String.Map.empty
     ~sexp_of_t:Query.sexp_of_t
-    ~expect:(fun () -> [%expect {|
-      Bar |}]);
+    ~expect:(fun () -> [%expect {| Bar |}]);
   show_structure parser;
   [%expect
     {|
@@ -1947,7 +1968,8 @@ let%expect_test "variants test" =
      (patterns
       ((bar ((pattern ((Match bar))) (needed_match Prefix)))
        (foo ((pattern ((Match foo))) (needed_match Prefix)))))
-     (override_namespace ())) |}]
+     (override_namespace ()))
+    |}]
 ;;
 
 let%expect_test "variants with renaming" =
@@ -2009,22 +2031,20 @@ let%expect_test "variants with renaming" =
      (patterns
       ((homepage ((pattern ()) (needed_match All)))
        (settings ((pattern ((Match settings))) (needed_match Prefix)))))
-     (override_namespace (()))) |}];
+     (override_namespace (())))
+    |}];
   expect_output_and_identity_roundtrip
     projection
     ~path:[]
     ~query:String.Map.empty
     ~sexp_of_t:Query.sexp_of_t
-    ~expect:(fun () -> [%expect {|
-      Homepage |}]);
+    ~expect:(fun () -> [%expect {| Homepage |}]);
   expect_output_and_identity_roundtrip
     projection
     ~path:[ "settings" ]
     ~query:(String.Map.of_alist_exn [ "volume", [ "1.2" ]; "something_else", [ "123" ] ])
     ~sexp_of_t:Query.sexp_of_t
-    ~expect:(fun () ->
-      [%expect {|
-      (Settings ((volume 1.2) (something_else 123))) |}]);
+    ~expect:(fun () -> [%expect {| (Settings ((volume 1.2) (something_else 123))) |}]);
   show_structure parser;
   [%expect
     {|
@@ -2050,7 +2070,8 @@ let%expect_test "variants with renaming" =
      (patterns
       ((homepage ((pattern ()) (needed_match All)))
        (settings ((pattern ((Match settings))) (needed_match Prefix)))))
-     (override_namespace (()))) |}]
+     (override_namespace (())))
+    |}]
 ;;
 
 let%expect_test "/user/comments, /user/posts, and /feed" =
@@ -2108,29 +2129,27 @@ let%expect_test "/user/comments, /user/posts, and /feed" =
      (patterns
       ((feed ((pattern ((Match feed))) (needed_match Prefix)))
        (user ((pattern ((Match user))) (needed_match Prefix)))))
-     (override_namespace ())) |}];
+     (override_namespace ()))
+    |}];
   let projection = Parser.eval ~equal:[%equal: Url.t] parser in
   expect_output_and_identity_roundtrip
     projection
     ~path:[ "user"; "comments" ]
     ~query:String.Map.empty
     ~sexp_of_t:Url.sexp_of_t
-    ~expect:(fun () -> [%expect {|
-      (User Comments) |}]);
+    ~expect:(fun () -> [%expect {| (User Comments) |}]);
   expect_output_and_identity_roundtrip
     projection
     ~path:[ "user"; "posts" ]
     ~query:String.Map.empty
     ~sexp_of_t:Url.sexp_of_t
-    ~expect:(fun () -> [%expect {|
-      (User Posts) |}]);
+    ~expect:(fun () -> [%expect {| (User Posts) |}]);
   expect_output_and_identity_roundtrip
     projection
     ~path:[ "feed" ]
     ~query:String.Map.empty
     ~sexp_of_t:Url.sexp_of_t
-    ~expect:(fun () -> [%expect {|
-      Feed |}])
+    ~expect:(fun () -> [%expect {| Feed |}])
 ;;
 
 let%expect_test "/user/:user_id/comment/:comment_id" =
@@ -2180,15 +2199,15 @@ let%expect_test "/user/:user_id/comment/:comment_id" =
           ((comment ((pattern ((Match comment))) (needed_match Prefix)))))
          (override_namespace ())))
        (user_id (With_prefix (prefix (user)) (t (From_path Int))))))
-     (path_order (user_id nested))) |}];
+     (path_order (user_id nested)))
+    |}];
   let projection = Parser.eval ~equal:[%equal: Url.t] parser in
   expect_output_and_identity_roundtrip
     projection
     ~path:[ "user"; "123"; "comment"; "321" ]
     ~query:String.Map.empty
     ~sexp_of_t:Url.sexp_of_t
-    ~expect:(fun () -> [%expect {|
-      ((user_id 123) (nested (Comment 321))) |}])
+    ~expect:(fun () -> [%expect {| ((user_id 123) (nested (Comment 321))) |}])
 ;;
 
 let%expect_test "/user/:user_id/comment/:comment_id without nesting" =
@@ -2224,15 +2243,15 @@ let%expect_test "/user/:user_id/comment/:comment_id without nesting" =
      (label_declarations
       ((comment_id (With_prefix (prefix (comment)) (t (From_path Int))))
        (user_id (With_prefix (prefix (user)) (t (From_path Int))))))
-     (path_order (user_id comment_id))) |}];
+     (path_order (user_id comment_id)))
+    |}];
   let projection = Parser.eval ~equal:[%equal: Url.t] parser in
   expect_output_and_identity_roundtrip
     projection
     ~path:[ "user"; "123"; "comment"; "321" ]
     ~query:String.Map.empty
     ~sexp_of_t:Url.sexp_of_t
-    ~expect:(fun () -> [%expect {|
-      ((user_id 123) (comment_id 321)) |}])
+    ~expect:(fun () -> [%expect {| ((user_id 123) (comment_id 321)) |}])
 ;;
 
 let%expect_test "/user/:user_id/comment/:comment_id?foo=123&bar=200 , \
@@ -2410,7 +2429,8 @@ let%expect_test "/user/:user_id/comment/:comment_id?foo=123&bar=200 , \
      (patterns
       ((homepage ((pattern ()) (needed_match All)))
        (user ((pattern ((Match user))) (needed_match Prefix)))))
-     (override_namespace ())) |}];
+     (override_namespace ()))
+    |}];
   expect_output_and_identity_roundtrip
     projection
     ~path:[ "user"; "123"; "comment"; "432" ]
@@ -2419,8 +2439,9 @@ let%expect_test "/user/:user_id/comment/:comment_id?foo=123&bar=200 , \
     ~expect:(fun () ->
       [%expect
         {|
-      (User (user_id 123)
-       (user (Comment (comment_id 432) (comment ((foo 12) (bar 32)))))) |}]);
+        (User (user_id 123)
+         (user (Comment (comment_id 432) (comment ((foo 12) (bar 32))))))
+        |}]);
   expect_output_and_identity_roundtrip
     projection
     ~path:[ "user"; "201"; "post"; "445" ]
@@ -2428,16 +2449,14 @@ let%expect_test "/user/:user_id/comment/:comment_id?foo=123&bar=200 , \
     ~sexp_of_t:Url.sexp_of_t
     ~expect:(fun () ->
       [%expect
-        {|
-      (User (user_id 201) (user (Post (post_id 445) (post ((bam 12) (baz 32)))))) |}]);
+        {| (User (user_id 201) (user (Post (post_id 445) (post ((bam 12) (baz 32)))))) |}]);
   expect_output_and_identity_roundtrip
     projection
     ~path:[]
     ~query:String.Map.empty
     ~sexp_of_t:Url.sexp_of_t
-    ~expect:(fun () -> [%expect {|
-      Homepage |}]);
-  [%expect {||}]
+    ~expect:(fun () -> [%expect {| Homepage |}]);
+  [%expect {| |}]
 ;;
 
 let%expect_test "variant directly on query" =
@@ -2456,8 +2475,7 @@ let%expect_test "variant directly on query" =
     ~path:[ "foo" ]
     ~query:(String.Map.of_alist_exn [ "q", [ "123" ] ])
     ~sexp_of_t:Query.sexp_of_t
-    ~expect:(fun () -> [%expect {|
-      (Foo 123) |}]);
+    ~expect:(fun () -> [%expect {| (Foo 123) |}]);
   show_structure parser;
   [%expect
     {|
@@ -2474,7 +2492,8 @@ let%expect_test "variant directly on query" =
         (With_prefix (prefix (foo))
          (t (From_query_required (override_key q) (value_parser Int)))))))
      (patterns ((foo ((pattern ((Match foo))) (needed_match Prefix)))))
-     (override_namespace (()))) |}]
+     (override_namespace (())))
+    |}]
 ;;
 
 let%expect_test "fully-qualified variant(record) field" =
@@ -2580,7 +2599,8 @@ let%expect_test "fully-qualified variant(record) field" =
      (patterns
       ((a ((pattern ((Match a))) (needed_match Prefix)))
        (b ((pattern ((Match b))) (needed_match Prefix)))))
-     (override_namespace ((topmost)))) |}];
+     (override_namespace ((topmost))))
+    |}];
   expect_output_and_identity_roundtrip
     projection
     ~path:[ "a" ]
@@ -2593,8 +2613,7 @@ let%expect_test "fully-qualified variant(record) field" =
          ])
     ~sexp_of_t:Url.sexp_of_t
     ~expect:(fun () ->
-      [%expect {|
-        (A ((foo ((qux 12) (baz 13))) (bar ((qux 14) (baz 15))))) |}]);
+      [%expect {| (A ((foo ((qux 12) (baz 13))) (bar ((qux 14) (baz 15))))) |}]);
   expect_output_and_identity_roundtrip
     projection
     ~path:[ "b" ]
@@ -2607,8 +2626,7 @@ let%expect_test "fully-qualified variant(record) field" =
          ])
     ~sexp_of_t:Url.sexp_of_t
     ~expect:(fun () ->
-      [%expect {|
-        (B ((foo ((qux 12) (baz 13))) (bar ((qux 14) (baz 15))))) |}])
+      [%expect {| (B ((foo ((qux 12) (baz 13))) (bar ((qux 14) (baz 15))))) |}])
 ;;
 
 let%expect_test "conflicting keys result in error" =
@@ -2633,15 +2651,16 @@ let%expect_test "conflicting keys result in error" =
   Parser.check_ok_and_print_urls_or_errors parser;
   [%expect
     {|
-   Error with parser.
-   ┌──────────────────────┬──────────────────────────────────────────────────────────────────────────────────────────┐
-   │ Check name           │ Error message                                                                            │
-   ├──────────────────────┼──────────────────────────────────────────────────────────────────────────────────────────┤
-   │ Duplicate keys check │ ("Duplicate query keys found! This probably occurred due at least one [~key] being renam │
-   │                      │ ed to the same string in a [from_query_*] parser. Another possibility is that a renamed  │
-   │                      │ key conflicted with an inferred parser."                                                 │
-   │                      │  (duplicate_query_keys_by_url ((/?foo=<int>&foo=<int> (foo)))))                          │
-   └──────────────────────┴──────────────────────────────────────────────────────────────────────────────────────────┘ |}]
+    Error with parser.
+    ┌──────────────────────┬──────────────────────────────────────────────────────────────────────────────────────────┐
+    │ Check name           │ Error message                                                                            │
+    ├──────────────────────┼──────────────────────────────────────────────────────────────────────────────────────────┤
+    │ Duplicate keys check │ ("Duplicate query keys found! This probably occurred due at least one [~key] being renam │
+    │                      │ ed to the same string in a [from_query_*] parser. Another possibility is that a renamed  │
+    │                      │ key conflicted with an inferred parser."                                                 │
+    │                      │  (duplicate_query_keys_by_url ((/?foo=<int>&foo=<int> (foo)))))                          │
+    └──────────────────────┴──────────────────────────────────────────────────────────────────────────────────────────┘
+    |}]
 ;;
 
 let%expect_test "conflicting paths" =
@@ -2673,14 +2692,15 @@ let%expect_test "conflicting paths" =
   Parser.check_ok_and_print_urls_or_errors parser;
   [%expect
     {|
-   Error with parser.
-   ┌──────────────────────┬──────────────────────────────────────────────────────────────────────────────────────────┐
-   │ Check name           │ Error message                                                                            │
-   ├──────────────────────┼──────────────────────────────────────────────────────────────────────────────────────────┤
-   │ Duplicate urls check │ ("Ambiguous, duplicate urls expressed in parser! This was probably caused due to conflic │
-   │                      │ ting renames with [with_prefix] or [with_remaining_path]."                               │
-   │                      │  (duplicate_urls (/a/b/c)))                                                              │
-   └──────────────────────┴──────────────────────────────────────────────────────────────────────────────────────────┘ |}]
+    Error with parser.
+    ┌──────────────────────┬──────────────────────────────────────────────────────────────────────────────────────────┐
+    │ Check name           │ Error message                                                                            │
+    ├──────────────────────┼──────────────────────────────────────────────────────────────────────────────────────────┤
+    │ Duplicate urls check │ ("Ambiguous, duplicate urls expressed in parser! This was probably caused due to conflic │
+    │                      │ ting renames with [with_prefix] or [with_remaining_path]."                               │
+    │                      │  (duplicate_urls (/a/b/c)))                                                              │
+    └──────────────────────┴──────────────────────────────────────────────────────────────────────────────────────────┘
+    |}]
 ;;
 
 let%expect_test "Non-record, non-variant" =
@@ -2707,14 +2727,14 @@ let%expect_test "Non-record, non-variant" =
     │ /?foo=<int> │
     └─────────────┘
 
-    (Project (From_query_required (override_key foo) (value_parser Int))) |}];
+    (Project (From_query_required (override_key foo) (value_parser Int)))
+    |}];
   expect_output_and_identity_roundtrip
     projection
     ~path:[]
     ~query:(String.Map.of_alist_exn [ "foo", [ "123" ] ])
     ~sexp_of_t:Url.sexp_of_t
-    ~expect:(fun () -> [%expect {|
-      123 |}])
+    ~expect:(fun () -> [%expect {| 123 |}])
 ;;
 
 let%expect_test "insufficient information fails can be detected before parsing occurs" =
@@ -2733,16 +2753,17 @@ let%expect_test "insufficient information fails can be detected before parsing o
   Parser.check_ok_and_print_urls_or_errors parser;
   [%expect
     {|
-      Error with parser.
-      ┌──────────────────────────────────────────┬──────────────────────────────────────────────────────────────────────────────────────────┐
-      │ Check name                               │ Error message                                                                            │
-      ├──────────────────────────────────────────┼──────────────────────────────────────────────────────────────────────────────────────────┤
-      │ Enough information needed to parse check │ "Could not infer query key! In most cases, the keys of the key of a query field can be i │
-      │                                          │ nferred from the labels of the record it's in or the constructor of the variant it's in. │
-      │                                          │  However, the [from_query_*] parser's key name could not be inferred. You can fix this i │
-      │                                          │ n two ways. 1. Wrap your type around a record/variant OR 2. explicitly assign a key thro │
-      │                                          │ ugh the optional [?key] parameter."                                                      │
-      └──────────────────────────────────────────┴──────────────────────────────────────────────────────────────────────────────────────────┘ |}]
+    Error with parser.
+    ┌──────────────────────────────────────────┬──────────────────────────────────────────────────────────────────────────────────────────┐
+    │ Check name                               │ Error message                                                                            │
+    ├──────────────────────────────────────────┼──────────────────────────────────────────────────────────────────────────────────────────┤
+    │ Enough information needed to parse check │ "Could not infer query key! In most cases, the keys of the key of a query field can be i │
+    │                                          │ nferred from the labels of the record it's in or the constructor of the variant it's in. │
+    │                                          │  However, the [from_query_*] parser's key name could not be inferred. You can fix this i │
+    │                                          │ n two ways. 1. Wrap your type around a record/variant OR 2. explicitly assign a key thro │
+    │                                          │ ugh the optional [?key] parameter."                                                      │
+    └──────────────────────────────────────────┴──────────────────────────────────────────────────────────────────────────────────────────┘
+    |}]
 ;;
 
 let%expect_test "/library, /library/nyc, library/nyc/book, library/nyc/book/dune, \
@@ -2830,15 +2851,15 @@ let%expect_test "/library, /library/nyc, library/nyc/book, library/nyc/book/dune
     │ /library/<string>/book/<string>  │
     │ /library/<string>/movie          │
     │ /library/<string>/movie/<string> │
-    └──────────────────────────────────┘ |}];
+    └──────────────────────────────────┘
+    |}];
   let projection = Parser.eval ~equal:[%equal: Url.t] parser in
   expect_output_and_identity_roundtrip
     projection
     ~path:[ "library" ]
     ~query:String.Map.empty
     ~sexp_of_t:Url.sexp_of_t
-    ~expect:(fun () -> [%expect {|
-      Library_search |}]);
+    ~expect:(fun () -> [%expect {| Library_search |}]);
   expect_output_and_identity_roundtrip
     projection
     ~path:[ "library"; "nyc" ]
@@ -2878,8 +2899,9 @@ let%expect_test "/library, /library/nyc, library/nyc/book, library/nyc/book/dune
     ~expect:(fun () ->
     [%expect
       {|
-      (Library_page (library_name nyc)
-       (library_contents (Movie (Movie_view dune)))) |}])
+        (Library_page (library_name nyc)
+         (library_contents (Movie (Movie_view dune))))
+        |}])
 ;;
 
 let%expect_test "[with_remaining_path] blocks parsers after it." =
@@ -2921,7 +2943,8 @@ let%expect_test "[with_remaining_path] blocks parsers after it." =
     ├───────────────────────────────────────────────────┼──────────────────────────────────────────────────────────────────────────────────────────┤
     │ Remaining path does not block other parsers check │ "Error! There cannot be path parsers inside of a [with_remaining_path] combinator! The r │
     │                                                   │ eason for this is that there won't be any values after that parser!"                     │
-    └───────────────────────────────────────────────────┴──────────────────────────────────────────────────────────────────────────────────────────┘ |}];
+    └───────────────────────────────────────────────────┴──────────────────────────────────────────────────────────────────────────────────────────┘
+    |}];
   let parser = Parser.Variant.make (module Url2) in
   Parser.check_ok_and_print_urls_or_errors parser;
   [%expect
@@ -2932,7 +2955,8 @@ let%expect_test "[with_remaining_path] blocks parsers after it." =
     ├───────────────────────────────────────────────────┼──────────────────────────────────────────────────────────────────────────────────────────┤
     │ Remaining path does not block other parsers check │ "Error! There cannot be path parsers inside of a [with_remaining_path] combinator! The r │
     │                                                   │ eason for this is that there won't be any values after that parser!"                     │
-    └───────────────────────────────────────────────────┴──────────────────────────────────────────────────────────────────────────────────────────┘ |}]
+    └───────────────────────────────────────────────────┴──────────────────────────────────────────────────────────────────────────────────────────┘
+    |}]
 ;;
 
 let%expect_test "Backwards compatibility" =
@@ -2973,7 +2997,8 @@ let%expect_test "Backwards compatibility" =
     │ All urls │
     ├──────────┤
     │ /a       │
-    └──────────┘ |}];
+    └──────────┘
+    |}];
   let parser2 = Parser.Variant.make (module Url2) in
   Parser.check_ok_and_print_urls_or_errors parser2;
   [%expect
@@ -2984,7 +3009,8 @@ let%expect_test "Backwards compatibility" =
     ├──────────┤
     │ /a       │
     │ /b       │
-    └──────────┘ |}];
+    └──────────┘
+    |}];
   let parser3 = Parser.Variant.make (module Url3) in
   Parser.check_ok_and_print_urls_or_errors parser3;
   [%expect
@@ -2994,7 +3020,8 @@ let%expect_test "Backwards compatibility" =
     │ All urls │
     ├──────────┤
     │ /c       │
-    └──────────┘ |}]
+    └──────────┘
+    |}]
 ;;
 
 let%expect_test "ambiguous look ahead" =
@@ -3023,7 +3050,8 @@ let%expect_test "ambiguous look ahead" =
     │ Duplicate urls check                                    │ ("Ambiguous, duplicate urls expressed in parser! This was probably caused due to conflic │
     │                                                         │ ting renames with [with_prefix] or [with_remaining_path]."                               │
     │                                                         │  (duplicate_urls (/<string>)))                                                           │
-    └─────────────────────────────────────────────────────────┴──────────────────────────────────────────────────────────────────────────────────────────┘ |}]
+    └─────────────────────────────────────────────────────────┴──────────────────────────────────────────────────────────────────────────────────────────┘
+    |}]
 ;;
 
 let%expect_test "Weird lookahead urls" =
@@ -3102,7 +3130,8 @@ let%expect_test "Weird lookahead urls" =
      (patterns
       ((bar ((pattern (Ignore (Match d))) (needed_match Prefix)))
        (foo ((pattern (Ignore (Match b))) (needed_match Prefix)))))
-     (override_namespace ())) |}];
+     (override_namespace ()))
+    |}];
   let projection = Parser.eval ~equal:[%equal: Url.t] parser in
   expect_output_and_identity_roundtrip
     projection
@@ -3151,7 +3180,8 @@ let%expect_test "optional" =
     ├──────────────────────┤
     │ /                    │
     │ /a/b?a=<int>&b=<int> │
-    └──────────────────────┘ |}];
+    └──────────────────────┘
+    |}];
   let projection = Parser.eval ~equal:[%equal: Url.t] Url.parser in
   expect_output_and_identity_roundtrip
     ~expect_diff:(fun () -> [%expect {| |}])
@@ -3159,10 +3189,9 @@ let%expect_test "optional" =
     ~path:[ "a"; "b" ]
     ~query:(String.Map.of_alist_exn [ "a", [ "1" ]; "b", [ "2" ] ])
     ~sexp_of_t:Url.sexp_of_t
-    ~expect:(fun () -> [%expect {|
-   (((a 1) (b 2))) |}]);
+    ~expect:(fun () -> [%expect {| (((a 1) (b 2))) |}]);
   expect_output_and_identity_roundtrip
-    ~expect_diff:(fun () -> [%expect {||}])
+    ~expect_diff:(fun () -> [%expect {| |}])
     projection
     ~path:[ "a"; "b" ]
     ~query:(String.Map.of_alist_exn [ "a", [ "1" ] ])
@@ -3205,7 +3234,8 @@ let%expect_test "optional continues after failure" =
     │ /a/b/a/b/<int>?second.a=<int>&second.b=<int>&third.a=<int>&third.b=<int>                 │
     │ /a/b/a/b/a/b/<int>?first.a=<int>&first.b=<int>&second.a=<int>&second.b=<int>&third.a=<in │
     │ t>&third.b=<int>                                                                         │
-    └──────────────────────────────────────────────────────────────────────────────────────────┘ |}];
+    └──────────────────────────────────────────────────────────────────────────────────────────┘
+    |}];
   let projection = Parser.eval ~equal:[%equal: Url.t] parser in
   expect_output_and_identity_roundtrip
     ~expect_diff:(fun () -> [%expect {| |}])
@@ -3224,8 +3254,9 @@ let%expect_test "optional continues after failure" =
     ~expect:(fun () ->
       [%expect
         {|
-   ((first (((a 0) (b 0)))) (second (((a 0) (b 0)))) (third ((a 0) (b 0)))
-    (last 123)) |}]);
+        ((first (((a 0) (b 0)))) (second (((a 0) (b 0)))) (third ((a 0) (b 0)))
+         (last 123))
+        |}]);
   Expect_test_helpers_core.require_does_raise [%here] (fun () ->
     projection.parse_exn
       { query =
@@ -3243,7 +3274,8 @@ let%expect_test "optional continues after failure" =
     ("Error while parsing record field:"
       (error_message (Failure "Int.of_string: \"a\""))
       (field_name last)
-      (unparseable_components ((path (a b 123)) (query ((second.a (0))))))) |}];
+      (unparseable_components ((path (a b 123)) (query ((second.a (0)))))))
+    |}];
   expect_output_and_identity_roundtrip
     ~expect_diff:(fun () -> [%expect {| |}])
     projection
@@ -3259,8 +3291,7 @@ let%expect_test "optional continues after failure" =
     ~sexp_of_t:Url.sexp_of_t
     ~expect:(fun () ->
       [%expect
-        {|
-   ((first (((a 0) (b 0)))) (second ()) (third ((a 0) (b 0))) (last 123)) |}])
+        {| ((first (((a 0) (b 0)))) (second ()) (third ((a 0) (b 0))) (last 123)) |}])
 ;;
 
 let%expect_test "uri projection" =
@@ -3292,7 +3323,8 @@ let%expect_test "uri projection" =
     │ All urls               │
     ├────────────────────────┤
     │ /<int>?b=<int>&c=<int> │
-    └────────────────────────┘ |}];
+    └────────────────────────┘
+    |}];
   let projection = Parser.eval_for_uri ~equal:[%equal: Url.t] parser in
   let result = projection.parse_exn (Uri.of_string "/23?b=1&c=2") in
   print_s [%message (result.result : Url.t)];
@@ -3324,7 +3356,8 @@ let%expect_test "[name]" =
     │ All urls                     │
     ├──────────────────────────────┤
     │ /?q=<project<fallback<int>>> │
-    └──────────────────────────────┘ |}];
+    └──────────────────────────────┘
+    |}];
   let module Named_url = struct
     type t = int [@@deriving equal]
 
@@ -3348,15 +3381,15 @@ let%expect_test "[name]" =
     │ All urls      │
     ├───────────────┤
     │ /?q=<my_type> │
-    └───────────────┘ |}];
+    └───────────────┘
+    |}];
   let projection = Parser.eval ~equal:[%equal: Named_url.t] Named_url.parser in
   expect_output_and_identity_roundtrip
     projection
     ~path:[]
     ~query:(String.Map.of_alist_exn [ "q", [ "123" ] ])
     ~sexp_of_t:Int.sexp_of_t
-    ~expect:(fun () -> [%expect {|
-   123 |}])
+    ~expect:(fun () -> [%expect {| 123 |}])
 ;;
 
 let%expect_test "[regression] exponential url shapes" =
@@ -3400,7 +3433,8 @@ let%expect_test "[regression] exponential url shapes" =
     ├──────────────────────────────────────────────────────────────────────────────────────────┤
     │ /?a=<optional<string>>&b=<optional<string>>&c=<optional<string>>&d=<optional<string>>&e= │
     │ <optional<string>>                                                                       │
-    └──────────────────────────────────────────────────────────────────────────────────────────┘ |}]
+    └──────────────────────────────────────────────────────────────────────────────────────────┘
+    |}]
 ;;
 
 let%test_module "query-based variant" =
@@ -3446,7 +3480,8 @@ let%test_module "query-based variant" =
         │ /?a=<string>&page=a │
         │ /?page=bee          │
         │ /?page=c            │
-        └─────────────────────┘ |}]
+        └─────────────────────┘
+        |}]
     ;;
 
     let%expect_test "parse unparse (a)" =
@@ -3485,7 +3520,8 @@ let%test_module "query-based variant" =
          (expected_one_of (
            (a a)
            (b bee)
-           (c c)))) |}]
+           (c c))))
+        |}]
     ;;
 
     let%expect_test "parse no key found" =
@@ -3495,8 +3531,7 @@ let%test_module "query-based variant" =
       Expect_test_helpers_base.require_does_raise [%here] (fun () ->
         projection.parse_exn original);
       [%expect
-        {|
-        "Error while parsing url! Expected key \"page=<page>\" inside of the url's query." |}]
+        {| "Error while parsing url! Expected key \"page=<page>\" inside of the url's query." |}]
     ;;
 
     let%expect_test "duplicate query identifiers" =
@@ -3528,7 +3563,8 @@ let%test_module "query-based variant" =
         │ Duplicate urls check                                    │ ("Ambiguous, duplicate urls expressed in parser! This was probably caused due to conflic │
         │                                                         │ ting renames with [with_prefix] or [with_remaining_path]."                               │
         │                                                         │  (duplicate_urls (/?page=a)))                                                            │
-        └─────────────────────────────────────────────────────────┴──────────────────────────────────────────────────────────────────────────────────────────┘ |}]
+        └─────────────────────────────────────────────────────────┴──────────────────────────────────────────────────────────────────────────────────────────┘
+        |}]
     ;;
 
     let%expect_test "collision with other query parameter" =
@@ -3559,7 +3595,8 @@ let%test_module "query-based variant" =
         │                      │ ed to the same string in a [from_query_*] parser. Another possibility is that a renamed  │
         │                      │ key conflicted with an inferred parser."                                                 │
         │                      │  (duplicate_query_keys_by_url ((/?page=<int>&page=a (page)))))                           │
-        └──────────────────────┴──────────────────────────────────────────────────────────────────────────────────────────┘ |}]
+        └──────────────────────┴──────────────────────────────────────────────────────────────────────────────────────────┘
+        |}]
     ;;
 
     let%expect_test "namespaces respected" =
@@ -3621,7 +3658,8 @@ let%test_module "query-based variant" =
         │ /?c.beep.boop.a=<int>&c.beep.boop.b=<int>&child-page=b&parent-page=c │
         │ /?child-page=a&d.a.a=<int>&d.a.b=<int>&parent-page=d                 │
         │ /?child-page=b&d.beep.boop.a=<int>&d.beep.boop.b=<int>&parent-page=d │
-        └──────────────────────────────────────────────────────────────────────┘ |}]
+        └──────────────────────────────────────────────────────────────────────┘
+        |}]
     ;;
   end)
 ;;
@@ -3637,7 +3675,8 @@ let%expect_test "path parsing encode decode" =
     │ All urls  │
     ├───────────┤
     │ /<string> │
-    └───────────┘ |}];
+    └───────────┘
+    |}];
   let projection =
     Versioned_parser.original_eval_for_uri ~encoding_behavior:Correct versioned_parser
   in
@@ -3672,7 +3711,8 @@ let%expect_test "query parsing encode decode" =
     │ All urls     │
     ├──────────────┤
     │ /?q=<string> │
-    └──────────────┘ |}];
+    └──────────────┘
+    |}];
   let projection =
     Versioned_parser.original_eval_for_uri ~encoding_behavior:Correct versioned_parser
   in
@@ -3698,7 +3738,8 @@ let%expect_test "double path parsing encode decode" =
     │ All urls  │
     ├───────────┤
     │ /<string> │
-    └───────────┘ |}];
+    └───────────┘
+    |}];
   let projection =
     Versioned_parser.original_eval_for_uri ~encoding_behavior:Correct versioned_parser
   in
@@ -3719,7 +3760,8 @@ let%expect_test "double path parsing encode decode" =
   [%expect
     {|
     (incorrect_parsed
-     ((result beep%2520boop) (remaining ((path ()) (query ()))))) |}];
+     ((result beep%2520boop) (remaining ((path ()) (query ())))))
+    |}];
   let unparsed = projection.unparse parsed in
   print_endline (Uri.to_string unparsed);
   [%expect {| beep%2520boop |}]
@@ -3736,7 +3778,8 @@ let%expect_test "double query parsing encode decode" =
     │ All urls     │
     ├──────────────┤
     │ /?q=<string> │
-    └──────────────┘ |}];
+    └──────────────┘
+    |}];
   let projection =
     Versioned_parser.original_eval_for_uri ~encoding_behavior:Correct versioned_parser
   in
@@ -3793,5 +3836,6 @@ let%expect_test "Catchall parser" =
     │ /<string>  │
     │ /bar       │
     │ /foo/<int> │
-    └────────────┘ |}]
+    └────────────┘
+    |}]
 ;;

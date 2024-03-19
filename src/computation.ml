@@ -9,13 +9,13 @@ type ('input, 'action, 'model) apply_action =
   -> 'action Action.t
   -> 'model
 
-type ('model, 'action, 'input, 'result) eval_fun =
+type ('model, 'action, 'input, 'result, 'extra) eval_fun =
   environment:Environment.t
   -> path:Path.t
   -> clock:Time_source.t
   -> model:'model Incr.t
   -> inject:('action Action.t -> unit Effect.t)
-  -> ('model, 'input, 'result) Snapshot.t Trampoline.t
+  -> (('model, 'input, 'result) Snapshot.t * 'extra) Trampoline.t
 
 type ('action, 'model) reset =
   inject:('action Action.t -> unit Effect.t)
@@ -23,17 +23,18 @@ type ('action, 'model) reset =
   -> 'model
   -> 'model
 
-type ('model, 'action, 'input, 'result) info =
+type ('model, 'action, 'input, 'result, 'extra) info =
   { model : 'model Meta.Model.t
   ; input : 'input Meta.Input.t
   ; action : 'action Action.id
   ; apply_action : ('input, 'action, 'model) apply_action
-  ; run : ('model, 'action, 'input, 'result) eval_fun
+  ; run : ('model, 'action, 'input, 'result, 'extra) eval_fun
   ; reset : ('action, 'model) reset
   ; can_contain_path : bool
   }
 
-type 'result packed_info = T : (_, _, _, 'result) info -> 'result packed_info
+type ('result, 'extra) packed_info =
+  | T : (_, _, _, 'result, 'extra) info -> ('result, 'extra) packed_info
 
 type 'result t =
   | Return : 'result Value.t -> 'result t

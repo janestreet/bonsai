@@ -1,23 +1,22 @@
 open! Core
 open! Import
 
-val baseline
+val gather
   :  here:Source_code_position.t option
-  -> info_from:(_, _, _, 'from_result) Computation.info
-  -> info_into:(_, _, _, 'into_result) Computation.info
+  -> info_from:(_, _, _, 'from_result, unit) Computation.info
+  -> info_into:(_, _, _, 'into_result, unit) Computation.info
   -> via:'from_result Type_equal.Id.t
-  -> 'into_result Computation.packed_info
+  -> ('into_result, unit) Computation.packed_info
 
-val from_stateless
-  :  here:Source_code_position.t option
-  -> info_from:(unit, Nothing.t Action.leaf, _, 'from_result) Computation.info
-  -> info_into:(_, _, _, 'into_result) Computation.info
-  -> via:'from_result Type_equal.Id.t
-  -> 'into_result Computation.packed_info
+(** [eval.ml]'s [gather] function depends on [eval_sub.ml], so we can't 
+    call [Eval.gather] from here, so it needs to be pased in while packed 
+    up in this polymorphic type. *)
+type generic_gather =
+  { f : 'a. 'a Computation.t -> ('a, unit) Computation.packed_info Trampoline.t }
 
-val into_stateless
-  :  here:Source_code_position.t option
-  -> info_from:(_, _, _, 'from_result) Computation.info
-  -> info_into:(unit, Nothing.t Action.leaf, _, 'into_result) Computation.info
-  -> via:'from_result Type_equal.Id.t
-  -> 'into_result Computation.packed_info
+(** [chain] is an optimized gather implementation for Sub nodes that contains more Sub
+    nodes down the 'into' side. *)
+val chain
+  :  'a Computation.t
+  -> gather:generic_gather
+  -> ('a, unit) Computation.packed_info Trampoline.t

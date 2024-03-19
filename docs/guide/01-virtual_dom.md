@@ -122,7 +122,7 @@ let css_gen : Vdom.Node.t =
 ```{=html}
 </iframe>
 ```
-[The 8th chapter "css"](./08-css.md) goes into much more depth on the
+[The 8th chapter "css"](./08-css.mdx) goes into much more depth on the
 styling attributes.
 
 Finally, there are "event handler" attributes which register functions
@@ -188,7 +188,7 @@ That leaves us with two more question:
 2.  Why would I want to use the Bonsai event queue anyway?
 
 Both of which will be answered in [Bonsai Guide Part 3:
-State](./03-state.md).
+State](./03-state.mdx).
 
 ```{=html}
 <aside>
@@ -234,4 +234,4 @@ functions are quite fundamental, but Bonsai handles the calls to these
 functions, so application developers are solely concerned with producing
 new vdom trees.
 
-Let's continue to [Bonsai Guide Part 2: Dynamism](./02-dynamism.md).
+Let's continue to [Bonsai Guide Part 2: Dynamism](./02-dynamism.mdx).

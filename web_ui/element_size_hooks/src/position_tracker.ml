@@ -118,6 +118,7 @@ module Hook = struct
         Vdom.Effect.Expert.handle_non_dom_event_exn (tracker [ Observe (key, element) ]))
     ;;
 
+    let on_mount = `Schedule_animation_frame on_mount
     let update ~old_input:_ ~new_input:_ () _ = ()
 
     let destroy old_input _ _ =

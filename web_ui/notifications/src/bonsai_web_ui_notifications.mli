@@ -37,6 +37,15 @@ val send_notification : ?close_after:Time_ns.Span.t -> 'a t -> 'a -> 'a Id.t Eff
     It closes a specific notification determined by an id. *)
 val close_notification : 'a t -> 'a Id.t -> unit Effect.t
 
+(** [close_all_notifications] closes all currently open notifications *)
+val close_all_notifications : 'a t -> unit Effect.t
+
+(** [close_oldest_notification] closes the oldest currently open notification *)
+val close_oldest_notification : 'a t -> unit Effect.t
+
+(** [close_newest_notification] closes the newest currently open notification *)
+val close_newest_notification : 'a t -> unit Effect.t
+
 (** [modify_notification] updates the content of a previously sent notification
     identified by its [Id.t].  When modified, the timeout for the notification is also
     reset. *)

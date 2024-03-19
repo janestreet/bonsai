@@ -5,7 +5,13 @@ module PRT_example = Bonsai_partial_render_table_example
 
 let component ~theme_picker =
   let%sub ( form_view
-          , { themed; show_position; row_height; num_rows; cell_based_highlighting } )
+          , { themed
+            ; show_position
+            ; row_height
+            ; num_rows
+            ; cell_based_highlighting
+            ; multisort_columns_when
+            } )
     =
     PRT_example.Layout_form.component
   in
@@ -25,6 +31,7 @@ let component ~theme_picker =
     | false ->
       let base =
         PRT_example.component
+          ~multisort_columns_when
           ~focus_kind:`Row
           ~should_show_position:show_position
           ~row_height
@@ -36,6 +43,7 @@ let component ~theme_picker =
     | true ->
       let base =
         PRT_example.component
+          ~multisort_columns_when
           ~focus_kind:`Cell
           ~should_show_position:show_position
           ~row_height

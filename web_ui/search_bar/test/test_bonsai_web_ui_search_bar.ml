@@ -73,7 +73,8 @@ let%expect_test "basics" =
                  }> </input>
         </div>
       </div>
-    </div> |}];
+    </div>
+    |}];
   Bonsai_web_test.Handle.input_text t.handle ~get_vdom:Fn.id ~selector:"input" ~text:"";
   Bonsai_web_test.Handle.show_diff t.handle;
   [%expect
@@ -105,7 +106,8 @@ let%expect_test "basics" =
     +|      </ul>
     +|    </div>
         </div>
-      </div> |}];
+      </div>
+    |}];
   Bonsai_web_test.Handle.input_text t.handle ~get_vdom:Fn.id ~selector:"input" ~text:"1";
   Bonsai_web_test.Handle.show_diff t.handle;
   [%expect
@@ -139,7 +141,8 @@ let%expect_test "basics" =
             </ul>
           </div>
         </div>
-      </div> |}];
+      </div>
+    |}];
   Bonsai_web_test.Handle.click_on t.handle ~get_vdom:Fn.id ~selector:"ul li:first-child";
   [%expect {| 1 chosen |}];
   Bonsai_web_test.Handle.show_diff t.handle;
@@ -171,7 +174,8 @@ let%expect_test "basics" =
     -|      </ul>
     -|    </div>
         </div>
-      </div> |}]
+      </div>
+    |}]
 ;;
 
 let%expect_test "focus / blur" =
@@ -208,7 +212,8 @@ let%expect_test "focus / blur" =
     +|      </ul>
     +|    </div>
         </div>
-      </div> |}];
+      </div>
+    |}];
   Bonsai_web_test.Handle.input_text t.handle ~get_vdom:Fn.id ~selector:"input" ~text:"1";
   Bonsai_web_test.Handle.blur t.handle ~get_vdom:Fn.id ~selector:"input";
   Bonsai_web_test.Handle.show_diff t.handle;
@@ -243,7 +248,8 @@ let%expect_test "focus / blur" =
     -|      </ul>
     -|    </div>
         </div>
-      </div> |}];
+      </div>
+    |}];
   Bonsai_web_test.Handle.focus t.handle ~get_vdom:Fn.id ~selector:"input";
   Bonsai_web_test.Handle.show_diff t.handle;
   (* Note that the search contents are maintained *)
@@ -273,7 +279,8 @@ let%expect_test "focus / blur" =
     +|      </ul>
     +|    </div>
         </div>
-      </div> |}]
+      </div>
+    |}]
 ;;
 
 let%expect_test "update choices" =
@@ -310,7 +317,8 @@ let%expect_test "update choices" =
     +|      </ul>
     +|    </div>
         </div>
-      </div> |}];
+      </div>
+    |}];
   Bonsai.Var.set t.choices_var (1010 :: initial_choices);
   Bonsai_web_test.Handle.show_diff t.handle;
   (* No updates while the search box is focused *)
@@ -345,7 +353,8 @@ let%expect_test "update choices" =
             </ul>
           </div>
         </div>
-      </div> |}]
+      </div>
+    |}]
 ;;
 
 let%expect_test "initial_query" =
@@ -371,7 +380,8 @@ let%expect_test "initial_query" =
                  }> </input>
         </div>
       </div>
-    </div> |}];
+    </div>
+    |}];
   Bonsai_web_test.Handle.focus t.handle ~get_vdom:Fn.id ~selector:"input.my-test-class";
   Bonsai_web_test.Handle.show_diff t.handle;
   [%expect
@@ -400,7 +410,8 @@ let%expect_test "initial_query" =
     +|      </ul>
     +|    </div>
         </div>
-      </div> |}]
+      </div>
+    |}]
 ;;
 
 let%expect_test "autocomplete_item" =
@@ -473,7 +484,8 @@ let%expect_test "autocomplete_item" =
           </ul>
         </div>
       </div>
-    </div> |}]
+    </div>
+    |}]
 ;;
 
 let%expect_test "filter_choice" =
@@ -515,7 +527,8 @@ let%expect_test "filter_choice" =
     +|      </ul>
     +|    </div>
         </div>
-      </div> |}];
+      </div>
+    |}];
   Bonsai_web_test.Handle.input_text t.handle ~get_vdom:Fn.id ~selector:"input" ~text:"66";
   Bonsai_web_test.Handle.show_diff t.handle;
   [%expect
@@ -549,7 +562,8 @@ let%expect_test "filter_choice" =
             </ul>
           </div>
         </div>
-      </div> |}];
+      </div>
+    |}];
   Bonsai_web_test.Handle.input_text t.handle ~get_vdom:Fn.id ~selector:"input" ~text:"foo";
   Bonsai_web_test.Handle.show_diff t.handle;
   [%expect
@@ -581,7 +595,8 @@ let%expect_test "filter_choice" =
     -|      </ul>
     -|    </div>
         </div>
-      </div> |}]
+      </div>
+    |}]
 ;;
 
 let%expect_test "score_choice" =
@@ -622,7 +637,8 @@ let%expect_test "score_choice" =
     +|      </ul>
     +|    </div>
         </div>
-      </div> |}]
+      </div>
+    |}]
 ;;
 
 let%expect_test "of_string" =
@@ -660,7 +676,8 @@ let%expect_test "of_string" =
     +|      </ul>
     +|    </div>
         </div>
-      </div> |}];
+      </div>
+    |}];
   Bonsai_web_test.Handle.input_text t.handle ~get_vdom:Fn.id ~selector:"input" ~text:"40";
   Bonsai_web_test.Handle.show_diff t.handle;
   [%expect
@@ -688,7 +705,8 @@ let%expect_test "of_string" =
               <li onclick onmousedown onmouseover> 40 </li>
             </ul>
           </div>
-        </div> |}]
+        </div>
+    |}]
 ;;
 
 let%expect_test "max_query_results" =
@@ -730,7 +748,8 @@ let%expect_test "max_query_results" =
     +|      </ul>
     +|    </div>
         </div>
-      </div> |}]
+      </div>
+    |}]
 ;;
 
 let%expect_test "show additional query results" =
@@ -756,7 +775,8 @@ let%expect_test "show additional query results" =
                  }> </input>
         </div>
       </div>
-    </div> |}];
+    </div>
+    |}];
   Bonsai_web_test.Handle.input_text t.handle ~get_vdom:Fn.id ~selector:"input" ~text:"";
   Bonsai_web_test.Handle.show_diff t.handle;
   [%expect
@@ -792,7 +812,8 @@ let%expect_test "show additional query results" =
     +|      </ul>
     +|    </div>
         </div>
-      </div> |}];
+      </div>
+    |}];
   Bonsai_web_test.Handle.click_on
     t.handle
     ~get_vdom:Fn.id
@@ -829,7 +850,8 @@ let%expect_test "show additional query results" =
             </ul>
           </div>
         </div>
-      </div> |}];
+      </div>
+    |}];
   List.init 5 ~f:(fun _ ->
     Bonsai_web_test.Handle.keydown
       t.handle
@@ -874,7 +896,8 @@ let%expect_test "show additional query results" =
             </ul>
           </div>
         </div>
-      </div> |}];
+      </div>
+    |}];
   Bonsai_web_test.Handle.keydown t.handle ~get_vdom:Fn.id ~selector:"input" ~key:ArrowDown;
   Bonsai_web_test.Handle.show_diff t.handle;
   [%expect
@@ -914,7 +937,8 @@ let%expect_test "show additional query results" =
             </ul>
           </div>
         </div>
-      </div> |}];
+      </div>
+    |}];
   Bonsai_web_test.Handle.click_on
     t.handle
     ~get_vdom:Fn.id
@@ -949,7 +973,8 @@ let%expect_test "show additional query results" =
             </ul>
           </div>
         </div>
-      </div> |}];
+      </div>
+    |}];
   (* Selecting an item resets the number of query results to show. *)
   Bonsai_web_test.Handle.click_on
     t.handle
@@ -987,7 +1012,8 @@ let%expect_test "show additional query results" =
     -|      </ul>
     -|    </div>
         </div>
-      </div> |}];
+      </div>
+    |}];
   Bonsai_web_test.Handle.focus t.handle ~get_vdom:Fn.id ~selector:"input";
   Bonsai_web_test.Handle.show_diff t.handle;
   [%expect
@@ -1023,5 +1049,6 @@ let%expect_test "show additional query results" =
     +|      </ul>
     +|    </div>
         </div>
-      </div> |}]
+      </div>
+    |}]
 ;;

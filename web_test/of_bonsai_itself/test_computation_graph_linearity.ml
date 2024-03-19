@@ -140,7 +140,8 @@ let%test_module "Comparing graph structure." =
                  (into
                   (Return
                    (value
-                    (Mapn (inputs ((Named (uid (Test 40))) (Named (uid (Test 18)))))))))))))))))) |}]
+                    (Mapn (inputs ((Named (uid (Test 40))) (Named (uid (Test 18))))))))))))))))))
+        |}]
     ;;
 
     let%expect_test "Cont Syntax" =
@@ -402,7 +403,8 @@ let%test_module "With Assocs." =
                            (value
                             (Mapn
                              (inputs
-                              ((Named (uid (Test 49))) (Named (uid (Test 46)))))))))))))))))))))))))) |}]
+                              ((Named (uid (Test 49))) (Named (uid (Test 46))))))))))))))))))))))))))
+        |}]
     ;;
 
     let%expect_test "Cont Syntax" =
@@ -706,7 +708,8 @@ let%test_module "With match%sub." =
                               (inputs
                                ((Named (uid (Test 50))) (Named (uid (Test 47)))))))))))))))))))
                 (via (Test 52))
-                (into (Return (value (Mapn (inputs ((Named (uid (Test 52))))))))))))))))) |}]
+                (into (Return (value (Mapn (inputs ((Named (uid (Test 52)))))))))))))))))
+        |}]
     ;;
 
     let%expect_test "Cont Syntax" =

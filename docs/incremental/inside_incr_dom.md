@@ -1,20 +1,18 @@
-# Bonsai inside of `Incr_dom`
-
 One of the main goals of Bonsai has always been good interoperability
-with `Incr_dom`.  Because of the design decisions detailed in
-[A History of Bonsai](../blogs/history.md), embedding a Bonsai component inside
-of an `Incr_dom` app is trivial!  (Going the other way -- embedding part
-of an `Incr_dom` program inside a Bonsai component -- is not yet possible).
+with `Incr_dom`. Because of the design decisions detailed in [A History
+of Bonsai](../blogs/history.md), embedding a Bonsai component inside of
+an `Incr_dom` app is trivial! (Going the other way -- embedding part of
+an `Incr_dom` program inside a Bonsai component -- is not yet possible).
 
-The module that facilitates this translation is `Bonsai_web.To_incr_dom`, which
-contains two functions (`convert` and `convert_with_extra`) and a module type
-`S`.
+The module that facilitates this translation is
+`Bonsai_web.To_incr_dom`, which contains two functions (`convert` and
+`convert_with_extra`) and a module type `S`.
 
-Looking at the type signature for `convert`, we see that it's a function that takes a
-Bonsai component as input and produces a first-class module of this `S` module-type
-as output:
+Looking at the type signature for `convert`, we see that it's a function
+that takes a Bonsai component as input and produces a first-class module
+of this `S` module-type as output:
 
-```ocaml
+``` ocaml
 val convert
   :  ('input Value.t -> Vdom.Node.t Computation.t)
   -> (module S
@@ -24,7 +22,7 @@ val convert
 
 So let's take a look at `S`:
 
-```ocaml
+``` ocaml
 module type S = sig
   module Input : T
   module Model : T
@@ -43,13 +41,13 @@ module type S = sig
 end
 ```
 
-If you've read the [History](../blogs/history.md) page, you'll recognize the `create`
-function as what I defined as "the closest thing that `Incr_dom` has to
-components."
+If you've read the [History](../blogs/history.md) page, you'll recognize
+the `create` function as what I defined as "the closest thing that
+`Incr_dom` has to components."
 
 It is common to use the `convert` function like so:
 
-```ocaml
+``` ocaml
 module My_bonsai_component : sig
   (* This is typically a standalone mli file *)
   include Bonsai_web.To_incr_dom.S

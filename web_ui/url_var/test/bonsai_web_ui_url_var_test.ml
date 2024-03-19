@@ -29,7 +29,8 @@ let%expect_test "Catch all when there is a fallback that fails" =
     │ /catch_all    │
     │ /fallback     │
     │ /normal/<int> │
-    └───────────────┘ |}];
+    └───────────────┘
+    |}];
   let projection =
     Url_var.Typed.make_projection
       ~on_fallback_raises:Url.Catch_all
@@ -65,8 +66,7 @@ let%expect_test "first non-typed projection test" =
     ~path:[ "something!" ]
     ~query:String.Map.empty
     ~sexp_of_t:Old_url.sexp_of_t
-    ~expect:(fun () -> [%expect {|
-   (Foo something!) |}])
+    ~expect:(fun () -> [%expect {| (Foo something!) |}])
 ;;
 
 module First_url = struct
@@ -128,7 +128,8 @@ let%expect_test "non-typed -> typed -> typed" =
     ├───────────────────┤
     │ /bar/<int>        │
     │ /new_foo/<string> │
-    └───────────────────┘ |}];
+    └───────────────────┘
+    |}];
   let second_parser =
     Versioned_parser.new_parser
       second_parser
@@ -146,7 +147,8 @@ let%expect_test "non-typed -> typed -> typed" =
     │ /baz/<float>            │
     │ /new_bar/<int>          │
     │ /ultra_new_foo/<string> │
-    └─────────────────────────┘ |}];
+    └─────────────────────────┘
+    |}];
   let third_parser =
     Versioned_parser.new_parser
       third_parser
@@ -158,10 +160,12 @@ let%expect_test "non-typed -> typed -> typed" =
   let projection = Versioned_parser.eval ~encoding_behavior:Correct third_parser in
   Uri_parsing_test.expect_output_and_identity_roundtrip
     ~expect_diff:(fun () ->
-      [%expect {|
-    -1,1 +1,1
-    -|(something!)
-    +|(ultra_new_foo something!) |}])
+      [%expect
+        {|
+        -1,1 +1,1
+        -|(something!)
+        +|(ultra_new_foo something!)
+        |}])
     projection
     ~path:[ "something!" ]
     ~query:String.Map.empty
@@ -169,28 +173,31 @@ let%expect_test "non-typed -> typed -> typed" =
     ~expect:(fun () ->
       [%expect
         {|
-   ("URL unrecognized, maybe this is an old URL? Attempting to parse with a previous URL parser. Here's the error of the current parser:"
-    (error
-     ("Error while parsing! No matching variant contructor found for current path!"
-      (components ((path (something!)) (query ())))
-      (available_patterns
-       ((ultra_new_foo
-         ((pattern ((Match ultra_new_foo))) (needed_match Prefix)))
-        (new_bar ((pattern ((Match new_bar))) (needed_match Prefix)))
-        (baz ((pattern ((Match baz))) (needed_match Prefix))))))))
-   ("URL unrecognized, maybe this is an old URL? Attempting to parse with a previous URL parser. Here's the error of the current parser:"
-    (error
-     ("Error while parsing! No matching variant contructor found for current path!"
-      (components ((path (something!)) (query ())))
-      (available_patterns
-       ((new_foo ((pattern ((Match new_foo))) (needed_match Prefix)))
-        (bar ((pattern ((Match bar))) (needed_match Prefix))))))))
-   (Ultra_new_foo something!) |}]);
+        ("URL unrecognized, maybe this is an old URL? Attempting to parse with a previous URL parser. Here's the error of the current parser:"
+         (error
+          ("Error while parsing! No matching variant contructor found for current path!"
+           (components ((path (something!)) (query ())))
+           (available_patterns
+            ((ultra_new_foo
+              ((pattern ((Match ultra_new_foo))) (needed_match Prefix)))
+             (new_bar ((pattern ((Match new_bar))) (needed_match Prefix)))
+             (baz ((pattern ((Match baz))) (needed_match Prefix))))))))
+        ("URL unrecognized, maybe this is an old URL? Attempting to parse with a previous URL parser. Here's the error of the current parser:"
+         (error
+          ("Error while parsing! No matching variant contructor found for current path!"
+           (components ((path (something!)) (query ())))
+           (available_patterns
+            ((new_foo ((pattern ((Match new_foo))) (needed_match Prefix)))
+             (bar ((pattern ((Match bar))) (needed_match Prefix))))))))
+        (Ultra_new_foo something!)
+        |}]);
   Uri_parsing_test.expect_output_and_identity_roundtrip
-    ~expect_diff:(fun () -> [%expect {|
-    -1,1 +1,1
-    -|(bar 7)
-    +|(new_bar 7) |}])
+    ~expect_diff:(fun () ->
+      [%expect {|
+        -1,1 +1,1
+        -|(bar 7)
+        +|(new_bar 7)
+        |}])
     projection
     ~path:[ "bar"; "7" ]
     ~query:String.Map.empty
@@ -198,27 +205,29 @@ let%expect_test "non-typed -> typed -> typed" =
     ~expect:(fun () ->
       [%expect
         {|
-   ("URL unrecognized, maybe this is an old URL? Attempting to parse with a previous URL parser. Here's the error of the current parser:"
-    (error
-     ("Error while parsing! No matching variant contructor found for current path!"
-      (components ((path (bar 7)) (query ())))
-      (available_patterns
-       ((ultra_new_foo
-         ((pattern ((Match ultra_new_foo))) (needed_match Prefix)))
-        (new_bar ((pattern ((Match new_bar))) (needed_match Prefix)))
-        (baz ((pattern ((Match baz))) (needed_match Prefix))))))))
-   (New_bar 7)|}]);
+        ("URL unrecognized, maybe this is an old URL? Attempting to parse with a previous URL parser. Here's the error of the current parser:"
+         (error
+          ("Error while parsing! No matching variant contructor found for current path!"
+           (components ((path (bar 7)) (query ())))
+           (available_patterns
+            ((ultra_new_foo
+              ((pattern ((Match ultra_new_foo))) (needed_match Prefix)))
+             (new_bar ((pattern ((Match new_bar))) (needed_match Prefix)))
+             (baz ((pattern ((Match baz))) (needed_match Prefix))))))))
+        (New_bar 7)
+        |}]);
   Uri_parsing_test.expect_output_and_identity_roundtrip
-    ~expect_diff:(fun () -> [%expect {|
-    -1,1 +1,1
-    -|(baz 1.0)
-    +|(baz 1.) |}])
+    ~expect_diff:(fun () ->
+      [%expect {|
+        -1,1 +1,1
+        -|(baz 1.0)
+        +|(baz 1.)
+        |}])
     projection
     ~path:[ "baz"; "1.0" ]
     ~query:String.Map.empty
     ~sexp_of_t:Third_url.sexp_of_t
-    ~expect:(fun () -> [%expect {|
-   (Baz 1) |}])
+    ~expect:(fun () -> [%expect {| (Baz 1) |}])
 ;;
 
 let%expect_test "typed -> typed -> typed" =
@@ -272,7 +281,8 @@ let%expect_test "typed -> typed -> typed" =
     │ All urls      │
     ├───────────────┤
     │ /foo/<string> │
-    └───────────────┘ |}];
+    └───────────────┘
+    |}];
   let projection = Versioned_parser.eval ~encoding_behavior:Correct third_parser in
   Expect_test_helpers_core.require_does_raise [%here] (fun () ->
     projection.parse_exn { query = String.Map.empty; path = [ "unknown" ] });
@@ -296,14 +306,16 @@ let%expect_test "typed -> typed -> typed" =
          (bar ((pattern ((Match bar))) (needed_match Prefix))))))))
     ("Error while parsing! No matching variant contructor found for current path!"
      (components ((path (unknown)) (query ())))
-     (available_patterns ((foo ((pattern ((Match foo))) (needed_match Prefix)))))) |}];
+     (available_patterns ((foo ((pattern ((Match foo))) (needed_match Prefix))))))
+    |}];
   Uri_parsing_test.expect_output_and_identity_roundtrip
     ~expect_diff:(fun () ->
       [%expect
         {|
-    -1,1 +1,1
-    -|(foo something!)
-    +|(ultra_new_foo something!) |}])
+        -1,1 +1,1
+        -|(foo something!)
+        +|(ultra_new_foo something!)
+        |}])
     projection
     ~path:[ "foo"; "something!" ]
     ~query:String.Map.empty
@@ -311,28 +323,31 @@ let%expect_test "typed -> typed -> typed" =
     ~expect:(fun () ->
       [%expect
         {|
-   ("URL unrecognized, maybe this is an old URL? Attempting to parse with a previous URL parser. Here's the error of the current parser:"
-    (error
-     ("Error while parsing! No matching variant contructor found for current path!"
-      (components ((path (foo something!)) (query ())))
-      (available_patterns
-       ((ultra_new_foo
-         ((pattern ((Match ultra_new_foo))) (needed_match Prefix)))
-        (new_bar ((pattern ((Match new_bar))) (needed_match Prefix)))
-        (baz ((pattern ((Match baz))) (needed_match Prefix))))))))
-   ("URL unrecognized, maybe this is an old URL? Attempting to parse with a previous URL parser. Here's the error of the current parser:"
-    (error
-     ("Error while parsing! No matching variant contructor found for current path!"
-      (components ((path (foo something!)) (query ())))
-      (available_patterns
-       ((new_foo ((pattern ((Match new_foo))) (needed_match Prefix)))
-        (bar ((pattern ((Match bar))) (needed_match Prefix))))))))
-   (Ultra_new_foo something!) |}]);
+        ("URL unrecognized, maybe this is an old URL? Attempting to parse with a previous URL parser. Here's the error of the current parser:"
+         (error
+          ("Error while parsing! No matching variant contructor found for current path!"
+           (components ((path (foo something!)) (query ())))
+           (available_patterns
+            ((ultra_new_foo
+              ((pattern ((Match ultra_new_foo))) (needed_match Prefix)))
+             (new_bar ((pattern ((Match new_bar))) (needed_match Prefix)))
+             (baz ((pattern ((Match baz))) (needed_match Prefix))))))))
+        ("URL unrecognized, maybe this is an old URL? Attempting to parse with a previous URL parser. Here's the error of the current parser:"
+         (error
+          ("Error while parsing! No matching variant contructor found for current path!"
+           (components ((path (foo something!)) (query ())))
+           (available_patterns
+            ((new_foo ((pattern ((Match new_foo))) (needed_match Prefix)))
+             (bar ((pattern ((Match bar))) (needed_match Prefix))))))))
+        (Ultra_new_foo something!)
+        |}]);
   Uri_parsing_test.expect_output_and_identity_roundtrip
-    ~expect_diff:(fun () -> [%expect {|
-    -1,1 +1,1
-    -|(bar 7)
-    +|(new_bar 7) |}])
+    ~expect_diff:(fun () ->
+      [%expect {|
+        -1,1 +1,1
+        -|(bar 7)
+        +|(new_bar 7)
+        |}])
     projection
     ~path:[ "bar"; "7" ]
     ~query:String.Map.empty
@@ -340,24 +355,24 @@ let%expect_test "typed -> typed -> typed" =
     ~expect:(fun () ->
       [%expect
         {|
-   ("URL unrecognized, maybe this is an old URL? Attempting to parse with a previous URL parser. Here's the error of the current parser:"
-    (error
-     ("Error while parsing! No matching variant contructor found for current path!"
-      (components ((path (bar 7)) (query ())))
-      (available_patterns
-       ((ultra_new_foo
-         ((pattern ((Match ultra_new_foo))) (needed_match Prefix)))
-        (new_bar ((pattern ((Match new_bar))) (needed_match Prefix)))
-        (baz ((pattern ((Match baz))) (needed_match Prefix))))))))
-   (New_bar 7)|}]);
+        ("URL unrecognized, maybe this is an old URL? Attempting to parse with a previous URL parser. Here's the error of the current parser:"
+         (error
+          ("Error while parsing! No matching variant contructor found for current path!"
+           (components ((path (bar 7)) (query ())))
+           (available_patterns
+            ((ultra_new_foo
+              ((pattern ((Match ultra_new_foo))) (needed_match Prefix)))
+             (new_bar ((pattern ((Match new_bar))) (needed_match Prefix)))
+             (baz ((pattern ((Match baz))) (needed_match Prefix))))))))
+        (New_bar 7)
+        |}]);
   Uri_parsing_test.expect_output_and_identity_roundtrip
     ~expect_diff:(fun () -> [%expect {| |}])
     projection
     ~path:[ "baz"; "1." ]
     ~query:String.Map.empty
     ~sexp_of_t:Third_url.sexp_of_t
-    ~expect:(fun () -> [%expect {|
-   (Baz 1) |}])
+    ~expect:(fun () -> [%expect {| (Baz 1) |}])
 ;;
 
 let%expect_test "versioned parser all urls" =
@@ -382,7 +397,8 @@ let%expect_test "versioned parser all urls" =
     {|
     (all_urls
      (/bar/<int> /baz/<float> /foo/<string> /new_bar/<int> /new_foo/<string>
-      /ultra_new_foo/<string>)) |}]
+      /ultra_new_foo/<string>))
+    |}]
 ;;
 
 let%expect_test "to_url_string" =
@@ -444,5 +460,6 @@ let%expect_test "self-documenting error for typed api." =
     environment because it relies on the browser's history API. One way to fix this
     is by having your app receive the url value as a parameter, and passing some
     mock implementation in tests instead of the real implementation provided by this
-    library. |}]
+    library.
+    |}]
 ;;

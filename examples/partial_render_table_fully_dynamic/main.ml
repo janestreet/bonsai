@@ -32,7 +32,6 @@ let component ?filter (data : Row.t String.Map.t Value.t) =
     Table.component
       (module String)
       ?filter
-      ~theming:`Themed
       ~focus:(By_row { on_change = Value.return (Fn.const Effect.Ignore) })
       ~row_height:(Value.return (`Px 30))
       ~columns:

@@ -338,11 +338,12 @@ module Test = struct
     ;;
 
     let default
-      ~theming
+      ?theming
       ?(preload_rows = 0)
       ?(is_column_b_visible = Value.return true)
       ?override_sort
       ?default_sort
+      ?multisort_columns_when
       ?(use_legacy_header = false)
       ?(row_height = Value.return (`Px 1))
       ()
@@ -353,11 +354,12 @@ module Test = struct
       { component =
           Table.component
             (module Int)
-            ~theming
+            ?theming
             ~focus:(By_row { on_change = focus_changed })
             ~filter
             ?override_sort
             ?default_sort
+            ?multisort_columns_when
             ~row_height
             ~preload_rows
             ~columns:(columns ~use_legacy_header ~is_column_b_visible () |> Column.lift)
@@ -372,7 +374,7 @@ module Test = struct
     ;;
 
     let default_cell_focus
-      ~theming
+      ?theming
       ?(preload_rows = 0)
       ?(is_column_b_visible = Value.return true)
       ?override_sort
@@ -387,7 +389,7 @@ module Test = struct
       { component =
           Table.component
             (module Int)
-            ~theming
+            ?theming
             ~focus:(By_cell { on_change = focus_changed' })
             ~filter
             ?override_sort
@@ -406,7 +408,7 @@ module Test = struct
     ;;
 
     let default'
-      ~theming
+      ?(theming = `Themed)
       ?(with_groups = false)
       ?(preload_rows = 0)
       ?(is_column_b_visible = true)
@@ -438,7 +440,14 @@ module Test = struct
       }
     ;;
 
-    let expert_for_testing_compute_presence ~theming ~collate ~presence () input _filter =
+    let expert_for_testing_compute_presence
+      ?(theming = `Themed)
+      ~collate
+      ~presence
+      ()
+      input
+      _filter
+      =
       let component =
         let%sub collation =
           Table_expert.collate

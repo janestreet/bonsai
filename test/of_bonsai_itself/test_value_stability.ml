@@ -260,8 +260,7 @@ let%test_module "Bonsai_extra.is_stable" =
         let handle, controls = gen_handle ~initial_span_secs:0.0 in
         show handle;
         print_sorted_expect_test_output [%expect.output];
-        [%expect {|
-          ((true 1)) |}];
+        [%expect {| ((true 1)) |}];
         advance_by_sec handle 1.0;
         show handle;
         [%expect {| ((true 1)) |}];
@@ -271,8 +270,7 @@ let%test_module "Bonsai_extra.is_stable" =
         Bonsai.Var.set controls.on' true;
         show handle;
         print_sorted_expect_test_output [%expect.output];
-        [%expect {|
-          ((true 1)) |}]
+        [%expect {| ((true 1)) |}]
       ;;
 
       let%expect_test {|negative values for the timespan should be permitted (but issue a warning) and always return false |}
@@ -283,7 +281,8 @@ let%test_module "Bonsai_extra.is_stable" =
         [%expect
           {|
           "Bonsai_extra.is_stable: [time_to_stable] should not be negative"
-          ((true 1)) |}]
+          ((true 1))
+          |}]
       ;;
 
       let%expect_test {|changing span |} =
@@ -307,8 +306,7 @@ let%test_module "Bonsai_extra.is_stable" =
         Bonsai.Var.set controls.span (Time_ns.Span.of_sec 0.);
         show handle;
         print_sorted_expect_test_output [%expect.output];
-        [%expect {|
-          ((true 6)) |}];
+        [%expect {| ((true 6)) |}];
         Bonsai.Var.set controls.v' 999;
         Bonsai.Var.set controls.span (Time_ns.Span.of_sec (-1.));
         show handle;
@@ -316,7 +314,8 @@ let%test_module "Bonsai_extra.is_stable" =
         [%expect
           {|
           "Bonsai_extra.is_stable: [time_to_stable] should not be negative"
-          ((true 999)) |}];
+          ((true 999))
+          |}];
         Bonsai.Var.set controls.v' 17;
         Bonsai.Var.set controls.span (Time_ns.Span.of_sec 1.);
         show handle;

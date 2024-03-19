@@ -85,15 +85,14 @@ let%expect_test "static" =
   [%expect {| foo.txt |}];
   let handle = set_up_read t in
   Handle.show handle;
-  [%expect {|
-    ("Read result"(Finished(Ok"foo bar baz"))) |}];
+  [%expect {| ("Read result"(Finished(Ok"foo bar baz"))) |}];
   (* Closing does nothing for [create_static] *)
   For_testing.Test_data.close test_data;
   Handle.show_diff handle;
-  [%expect {||}];
+  [%expect {| |}];
   For_testing.Test_data.close_error test_data (Error.of_string "foo");
   Handle.show_diff handle;
-  [%expect {||}]
+  [%expect {| |}]
 ;;
 
 let%expect_test "stream" =
@@ -108,13 +107,15 @@ let%expect_test "stream" =
   [%expect
     {|
     (progress ((loaded 0) (total 14)))
-    ("Read result"(Reading <opaque>)) |}];
+    ("Read result"(Reading <opaque>))
+    |}];
   For_testing.Test_data.feed_exn test_data "foo";
   Handle.show handle;
   [%expect
     {|
     (progress ((loaded 3) (total 14)))
-    ("Read result"(Reading <opaque>)) |}];
+    ("Read result"(Reading <opaque>))
+    |}];
   For_testing.Test_data.feed_exn test_data "bar baz quux";
   (* Note that we are able to write more than [total_bytes]: there is no validation on
      that parameter. *)
@@ -122,18 +123,18 @@ let%expect_test "stream" =
   [%expect
     {|
     (progress ((loaded 15) (total 14)))
-    ("Read result"(Reading <opaque>)) |}];
+    ("Read result"(Reading <opaque>))
+    |}];
   For_testing.Test_data.close test_data;
   Handle.show handle;
-  [%expect {|
-    ("Read result"(Finished(Ok"foobar baz quux"))) |}];
+  [%expect {| ("Read result"(Finished(Ok"foobar baz quux"))) |}];
   (* Closing again does nothing *)
   For_testing.Test_data.close test_data;
   Handle.show_diff handle;
-  [%expect {||}];
+  [%expect {| |}];
   For_testing.Test_data.close_error test_data (Error.of_string "foo");
   Handle.show_diff handle;
-  [%expect {||}]
+  [%expect {| |}]
 ;;
 
 let%expect_test "stream + close_error" =
@@ -148,24 +149,25 @@ let%expect_test "stream + close_error" =
   [%expect
     {|
     (progress ((loaded 0) (total 14)))
-    ("Read result"(Reading <opaque>)) |}];
+    ("Read result"(Reading <opaque>))
+    |}];
   For_testing.Test_data.feed_exn test_data "foo";
   Handle.show handle;
   [%expect
     {|
     (progress ((loaded 3) (total 14)))
-    ("Read result"(Reading <opaque>)) |}];
+    ("Read result"(Reading <opaque>))
+    |}];
   For_testing.Test_data.close_error test_data (Error.of_string "foo");
   Handle.show handle;
-  [%expect {|
-    ("Read result"(Finished(Error(Error foo)))) |}];
+  [%expect {| ("Read result"(Finished(Error(Error foo)))) |}];
   (* Closing again does nothing *)
   For_testing.Test_data.close test_data;
   Handle.show_diff handle;
-  [%expect {||}];
+  [%expect {| |}];
   For_testing.Test_data.close_error test_data (Error.of_string "bar");
   Handle.show_diff handle;
-  [%expect {||}]
+  [%expect {| |}]
 ;;
 
 let%expect_test "abort" =
@@ -176,7 +178,8 @@ let%expect_test "abort" =
   [%expect
     {|
     (progress ((loaded 0) (total 11)))
-    ("Read result"(Reading <opaque>)) |}];
+    ("Read result"(Reading <opaque>))
+    |}];
   For_testing.Test_data.feed_exn data "hello";
   [%expect {| (progress ((loaded 5) (total 11))) |}];
   Handle.do_actions handle [ `Abort ];
@@ -259,7 +262,8 @@ module Test_read_on_change = struct
       {|
       ((foo1.txt (In_progress ((loaded 0) (total 11))))
        (foo2.txt (In_progress ((loaded 0) (total 11))))
-       (foo3.txt (In_progress ((loaded 0) (total 11))))) |}];
+       (foo3.txt (In_progress ((loaded 0) (total 11)))))
+      |}];
     Test_data.feed_exn data2 "hello";
     Test_data.feed_exn data3 "foo bar";
     show ();
@@ -267,13 +271,15 @@ module Test_read_on_change = struct
       {|
       ((foo1.txt (In_progress ((loaded 0) (total 11))))
        (foo2.txt (In_progress ((loaded 5) (total 11))))
-       (foo3.txt (In_progress ((loaded 7) (total 11))))) |}];
+       (foo3.txt (In_progress ((loaded 7) (total 11)))))
+      |}];
     Bonsai.Var.set ts_var (map [ file1; file2 ]);
     show ();
     [%expect
       {|
       ((foo1.txt (In_progress ((loaded 0) (total 11))))
-       (foo2.txt (In_progress ((loaded 5) (total 11))))) |}];
+       (foo2.txt (In_progress ((loaded 5) (total 11)))))
+      |}];
     print_s [%sexp (Test_data.read_status data3 : [ `Aborted | `Not_reading | `Reading ])];
     [%expect {| Aborted |}];
     (* Further writes to data3 should not affect us now *)
@@ -282,7 +288,8 @@ module Test_read_on_change = struct
     [%expect
       {|
       ((foo1.txt (In_progress ((loaded 0) (total 11))))
-       (foo2.txt (In_progress ((loaded 5) (total 11))))) |}];
+       (foo2.txt (In_progress ((loaded 5) (total 11)))))
+      |}];
     let data4 = Test_data.create_stream ~filename:"foo4.txt" ~total_bytes:13 in
     let file4 = For_testing.create data4 in
     Bonsai.Var.set ts_var (map [ file1; file2; file4 ]);
@@ -291,7 +298,8 @@ module Test_read_on_change = struct
       {|
       ((foo1.txt (In_progress ((loaded 0) (total 11))))
        (foo2.txt (In_progress ((loaded 5) (total 11))))
-       (foo4.txt (In_progress ((loaded 0) (total 13))))) |}];
+       (foo4.txt (In_progress ((loaded 0) (total 13)))))
+      |}];
     Test_data.feed_exn data4 "13 characters";
     Test_data.close data4;
     Test_data.close_error data2 (Error.of_string "some file error");
@@ -300,7 +308,8 @@ module Test_read_on_change = struct
       {|
       ((foo1.txt (In_progress ((loaded 0) (total 11))))
        (foo2.txt (Complete (Error "some file error")))
-       (foo4.txt (Complete (Ok "13 characters")))) |}];
+       (foo4.txt (Complete (Ok "13 characters"))))
+      |}];
     (* Verify that if a key in the map gets replaced with a new file, we abort the read of
        the old file. *)
     let data1_new =
@@ -313,7 +322,8 @@ module Test_read_on_change = struct
       {|
       ((foo1.txt (Complete (Ok "some static file")))
        (foo2.txt (Complete (Error "some file error")))
-       (foo4.txt (Complete (Ok "13 characters")))) |}];
+       (foo4.txt (Complete (Ok "13 characters"))))
+      |}];
     print_s [%sexp (Test_data.read_status data1 : [ `Aborted | `Not_reading | `Reading ])];
     [%expect {| Aborted |}];
     (* Further changes to [data1] should not have any effect on us now *)
@@ -324,6 +334,7 @@ module Test_read_on_change = struct
       {|
       ((foo1.txt (Complete (Ok "some static file")))
        (foo2.txt (Complete (Error "some file error")))
-       (foo4.txt (Complete (Ok "13 characters")))) |}]
+       (foo4.txt (Complete (Ok "13 characters"))))
+      |}]
   ;;
 end

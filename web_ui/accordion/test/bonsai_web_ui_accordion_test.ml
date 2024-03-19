@@ -66,7 +66,8 @@ let%expect_test "Clicking open and close" =
         </div>
       </div>
       <div class="content_common no_padding"> </div>
-    </div> |}];
+    </div>
+    |}];
   Handle.click_on handle ~selector:"div[data-test=title]" ~get_vdom;
   Handle.show handle;
   [%expect
@@ -83,7 +84,8 @@ let%expect_test "Clicking open and close" =
         </div>
       </div>
       <div class="content_common"> Content </div>
-    </div> |}];
+    </div>
+    |}];
   Handle.click_on handle ~selector:"div[data-test=title]" ~get_vdom;
   Handle.show handle;
   [%expect
@@ -100,7 +102,8 @@ let%expect_test "Clicking open and close" =
         </div>
       </div>
       <div class="content_common no_padding"> </div>
-    </div> |}]
+    </div>
+    |}]
 ;;
 
 let%expect_test "Opening and closing via effects" =
@@ -127,7 +130,8 @@ let%expect_test "Opening and closing via effects" =
         </div>
       </div>
       <div class="content_common no_padding"> </div>
-    </div> |}];
+    </div>
+    |}];
   Handle.do_actions handle [ Open ];
   Handle.show_diff handle;
   [%expect
@@ -148,11 +152,12 @@ let%expect_test "Opening and closing via effects" =
         </div>
     -|  <div class="content_common no_padding"> </div>
     +|  <div class="content_common"> Content </div>
-      </div> |}];
+      </div>
+    |}];
   (* opening again should do nothing *)
   Handle.do_actions handle [ Open ];
   Handle.show_diff handle;
-  [%expect {||}];
+  [%expect {| |}];
   Handle.do_actions handle [ Close ];
   Handle.show_diff handle;
   [%expect
@@ -173,11 +178,12 @@ let%expect_test "Opening and closing via effects" =
         </div>
     -|  <div class="content_common"> Content </div>
     +|  <div class="content_common no_padding"> </div>
-      </div> |}];
+      </div>
+    |}];
   (* closing again should do nothing *)
   Handle.do_actions handle [ Close ];
   Handle.show_diff handle;
-  [%expect {||}];
+  [%expect {| |}];
   Handle.do_actions handle [ Toggle ];
   Handle.show_diff handle;
   [%expect
@@ -198,7 +204,8 @@ let%expect_test "Opening and closing via effects" =
         </div>
     -|  <div class="content_common no_padding"> </div>
     +|  <div class="content_common"> Content </div>
-      </div> |}];
+      </div>
+    |}];
   Handle.do_actions handle [ Toggle ];
   Handle.show_diff handle;
   [%expect
@@ -219,5 +226,6 @@ let%expect_test "Opening and closing via effects" =
         </div>
     -|  <div class="content_common"> Content </div>
     +|  <div class="content_common no_padding"> </div>
-      </div> |}]
+      </div>
+    |}]
 ;;

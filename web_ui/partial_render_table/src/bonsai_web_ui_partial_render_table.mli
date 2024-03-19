@@ -162,7 +162,7 @@ module Basic : sig
 
   (** This is the main UI component for the table content. *)
   val component
-    :  theming:Table_view.Theming.t
+    :  ?theming:Table_view.Theming.t
     -> ?filter:(key:'key -> data:'data -> bool) Value.t
          (** An optional function may be provided, which filters the rows in the table. *)
     -> ?override_sort:
@@ -176,6 +176,11 @@ module Basic : sig
         comparison function returns 0. *)
     -> ?default_sort:('key * 'data) compare Value.t
          (** An optional function may be provided to sort the table. *)
+    -> ?multisort_columns_when:
+         [ `Shift_click | `Ctrl_click | `Shift_or_ctrl_click ] Value.t
+         (** When the combination in [multisort_columns_when] is used, new columns are added to
+        the sort order instead of replacing the existing sort. Defaults to
+        [`Shift_click]. *)
     -> ?preload_rows:int
     -> ?extra_row_attrs:('key -> Vdom.Attr.t list) Value.t
          (** [extra_row_attrs] will be added to the themed/functional attrs attached by the PRT
@@ -324,7 +329,7 @@ module Expert : sig
     -> ('k, 'v) Collated.t Computation.t
 
   val component
-    :  theming:Table_view.Theming.t
+    :  ?theming:Table_view.Theming.t
     -> ?preload_rows:int
          (** [preload_rows] is the number of rows that are maintained before and after the
         viewport range. This number can have a significant effect on performance: too

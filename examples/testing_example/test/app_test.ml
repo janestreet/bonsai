@@ -43,7 +43,8 @@ let%expect_test "shows hello to a user" =
   Handle.show_diff handle;
   [%expect {|
     -|<span> hello Bob </span>
-    +|<span> hello Alice </span> |}]
+    +|<span> hello Alice </span>
+    |}]
 ;;
 
 (* $MDX part-end *)
@@ -57,7 +58,8 @@ let%expect_test "shows hello to a specified user" =
     <div>
       <input oninput> </input>
       <span> hello  </span>
-    </div> |}];
+    </div>
+    |}];
   Handle.input_text handle ~get_vdom:Fn.id ~selector:"input" ~text:"Bob";
   Handle.show_diff handle;
   [%expect
@@ -66,7 +68,8 @@ let%expect_test "shows hello to a specified user" =
         <input oninput> </input>
     -|  <span> hello  </span>
     +|  <span> hello Bob </span>
-      </div> |}];
+      </div>
+    |}];
   Handle.input_text handle ~get_vdom:Fn.id ~selector:"input" ~text:"Alice";
   Handle.show_diff handle;
   [%expect
@@ -75,7 +78,8 @@ let%expect_test "shows hello to a specified user" =
         <input oninput> </input>
     -|  <span> hello Bob </span>
     +|  <span> hello Alice </span>
-      </div> |}]
+      </div>
+    |}]
 ;;
 
 (* $MDX part-end *)

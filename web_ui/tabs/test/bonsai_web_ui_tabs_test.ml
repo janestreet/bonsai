@@ -51,7 +51,8 @@ let%expect_test "how is it printed" =
         <button name="C" class="bonsai_ui_tab" onclick> C </button>
       </div>
       <div class="bonsai_ui_tab_body"> a </div>
-    </div> |}]
+    </div>
+    |}]
 ;;
 
 let%expect_test "you can click on a button to change the tab" =
@@ -75,7 +76,8 @@ let%expect_test "you can click on a button to change the tab" =
         </div>
     -|  <div class="bonsai_ui_tab_body"> a </div>
     +|  <div class="bonsai_ui_tab_body"> b </div>
-      </div> |}]
+      </div>
+    |}]
 ;;
 
 let%expect_test "you can customize the display of the tabs" =
@@ -99,7 +101,8 @@ let%expect_test "you can customize the display of the tabs" =
         <button name="C" class="bonsai_ui_tab" onclick> GIMME A C! </button>
       </div>
       <div class="bonsai_ui_tab_body"> a </div>
-    </div> |}]
+    </div>
+    |}]
 ;;
 
 let%expect_test "you can add more attributes to the buttons" =
@@ -126,7 +129,8 @@ let%expect_test "you can add more attributes to the buttons" =
         <button name="C" alt="click on c!" class="bonsai_ui_tab" onclick> C </button>
       </div>
       <div class="bonsai_ui_tab_body"> a </div>
-    </div> |}]
+    </div>
+    |}]
 ;;
 
 let%expect_test "you can switch the tab from inside the inner component" =
@@ -159,5 +163,6 @@ let%expect_test "you can switch the tab from inside the inner component" =
       <div class="bonsai_ui_tab_body">
         <button id="my-button" onclick> click to move to tab c! </button>
       </div>
-    </div> |}]
+    </div>
+    |}]
 ;;

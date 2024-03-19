@@ -50,10 +50,5 @@ module Collection = struct
       ]
   ;;
 
-  let merge a b =
-    Incr_map.merge a b ~f:(fun ~key -> function
-      | `Both _ -> Path.raise_duplicate key
-      | `Left a -> Some a
-      | `Right a -> Some a)
-  ;;
+  let merge a b = Incr_map.merge_disjoint a b
 end

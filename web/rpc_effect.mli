@@ -74,17 +74,23 @@ end
 module Rpc : sig
   (** An effect for sending a particular RPC to a particular place. *)
   val dispatcher
-    :  ('query, 'response) Rpc.Rpc.t
+    :  ?sexp_of_query:('query -> Sexp.t)
+    -> ?sexp_of_response:('response -> Sexp.t)
+    -> ('query, 'response) Rpc.Rpc.t
     -> where_to_connect:Where_to_connect.t
     -> ('query -> 'response Or_error.t Effect.t) Computation.t
 
   val babel_dispatcher
-    :  ('query -> 'response Or_error.t Deferred.t) Babel.Caller.t
+    :  ?sexp_of_query:('query -> Sexp.t)
+    -> ?sexp_of_response:('response -> Sexp.t)
+    -> ('query -> 'response Or_error.t Deferred.t) Babel.Caller.t
     -> where_to_connect:Where_to_connect.t
     -> ('query -> 'response Or_error.t Effect.t) Computation.t
 
   val streamable_dispatcher
-    :  ('query, 'response) Streamable.Plain_rpc.t
+    :  ?sexp_of_query:('query -> Sexp.t)
+    -> ?sexp_of_response:('response -> Sexp.t)
+    -> ('query, 'response) Streamable.Plain_rpc.t
     -> where_to_connect:Where_to_connect.t
     -> ('query -> 'response Or_error.t Effect.t) Computation.t
 
@@ -182,13 +188,17 @@ module Polling_state_rpc : sig
       to cleanup any cached data, so that there is no memory leak. If this
       cleanup fails, then [on_forget_client_error] is called with the error. *)
   val dispatcher
-    :  ?on_forget_client_error:(Error.t -> unit Effect.t)
+    :  ?sexp_of_query:('query -> Sexp.t)
+    -> ?sexp_of_response:('response -> Sexp.t)
+    -> ?on_forget_client_error:(Error.t -> unit Effect.t)
     -> ('query, 'response) Polling_state_rpc.t
     -> where_to_connect:Where_to_connect.t
     -> ('query -> 'response Or_error.t Effect.t) Computation.t
 
   val babel_dispatcher
-    :  ?on_forget_client_error:(Error.t -> unit Effect.t)
+    :  ?sexp_of_query:('query -> Sexp.t)
+    -> ?sexp_of_response:('response -> Sexp.t)
+    -> ?on_forget_client_error:(Error.t -> unit Effect.t)
     -> ('query, 'response) Versioned_polling_state_rpc.Client.caller
     -> where_to_connect:Where_to_connect.t
     -> ('query -> 'response Or_error.t Effect.t) Computation.t
@@ -333,3 +343,5 @@ module Private : sig
     end
   end
 end
+
+module For_introspection = For_introspection

@@ -70,7 +70,8 @@ let%test_module ("regression" [@tags "no-js"]) =
             ▼       │
           ┌──────┐  │
           │ mapn │ ─┘
-          └──────┘ |}]
+          └──────┘
+          |}]
       in
       let _this_is_weird =
         let c = component (Value.return 3) in
@@ -103,7 +104,8 @@ let%test_module ("regression" [@tags "no-js"]) =
             ▼
           ┌──────┐
           │ read │
-          └──────┘ |}]
+          └──────┘
+          |}]
       in
       ()
     ;;
@@ -142,7 +144,8 @@ let%expect_test ("map7 dot file" [@tags "no-js"]) =
                    ▼       │
                  ┌──────┐┌──────┐
                  │ read ││ incr │
-                 └──────┘└──────┘ |}]
+                 └──────┘└──────┘
+    |}]
 ;;
 
 let%expect_test ("map7 dot file constant folding" [@tags "no-js"]) =
@@ -168,7 +171,8 @@ let%expect_test ("map7 dot file constant folding" [@tags "no-js"]) =
       ▼
     ┌───────┐
     │ read  │
-    └───────┘ |}]
+    └───────┘
+    |}]
 ;;
 
 let%expect_test ("map-10 dot file" [@tags "no-js"]) =
@@ -221,7 +225,8 @@ let%expect_test ("map-10 dot file" [@tags "no-js"]) =
                    │            │
                  ┌──────┐     ┌──────┐
                  │ incr │     │ incr │
-                 └──────┘     └──────┘ |}]
+                 └──────┘     └──────┘
+    |}]
 ;;
 
 let%expect_test ("map-10 dot file constant folding optimization" [@tags "no-js"]) =
@@ -250,7 +255,8 @@ let%expect_test ("map-10 dot file constant folding optimization" [@tags "no-js"]
       ▼
     ┌───────┐
     │ read  │
-    └───────┘ |}]
+    └───────┘
+    |}]
 ;;
 
 let%expect_test ("subst dot constant folding" [@tags "no-js"]) =
@@ -316,7 +322,8 @@ let%expect_test ("subst dot constant folding" [@tags "no-js"]) =
     │    │                  │
     │  ┌─────────────────┐  │
     └─ │      subst      │ ─┘
-       └─────────────────┘ |}]
+       └─────────────────┘
+    |}]
 ;;
 
 let%expect_test ("subst dot" [@tags "no-js"]) =
@@ -382,7 +389,8 @@ let%expect_test ("subst dot" [@tags "no-js"]) =
     │    │                  │
     │  ┌─────────────────┐  │
     └─ │      subst      │ ─┘
-       └─────────────────┘ |}]
+       └─────────────────┘
+    |}]
 ;;
 
 let%expect_test "model_resetter doesn't have a dash in the label name" =
@@ -399,7 +407,8 @@ let%expect_test "model_resetter doesn't have a dash in the label name" =
     named_1 -> mapn_3;
     mapn_3 -> read_2;
     read_2 -> with_model_resetter_0;
-    } |}]
+    }
+    |}]
 ;;
 
 let%expect_test ("dynamic scope" [@tags "no-js"]) =
@@ -469,7 +478,8 @@ let%expect_test ("dynamic scope" [@tags "no-js"]) =
                     ▼
                   ┌─────────┐
                   │  read   │
-                  └─────────┘ |}]
+                  └─────────┘
+    |}]
 ;;
 
 let%expect_test ("dynamic scope (with reverter)" [@tags "no-js"]) =
@@ -536,7 +546,8 @@ let%expect_test ("dynamic scope (with reverter)" [@tags "no-js"]) =
                     │
                   ┌─────────┐
                   │  subst  │
-                  └─────────┘ |}]
+                  └─────────┘
+    |}]
 ;;
 
 let%expect_test ("arrow-syntax" [@tags "no-js"]) =
@@ -591,7 +602,8 @@ let%expect_test ("arrow-syntax" [@tags "no-js"]) =
       │        │
     ┌───────┐  │
     │ subst │ ─┘
-    └───────┘ |}]
+    └───────┘
+    |}]
 ;;
 
 let%expect_test ("both-constant-opt" [@tags "no-js"]) =
@@ -609,7 +621,8 @@ let%expect_test ("both-constant-opt" [@tags "no-js"]) =
       ▼
     ┌───────┐
     │ read  │
-    └───────┘ |}];
+    └───────┘
+    |}];
   print_graph
     (let%arr a = opaque_const_value 1
      and b = Bonsai.Value.return 1 in
@@ -636,7 +649,8 @@ let%expect_test ("both-constant-opt" [@tags "no-js"]) =
       ▼
     ┌──────┐
     │ read │
-    └──────┘ |}];
+    └──────┘
+    |}];
   print_graph
     (let%arr a = Bonsai.Value.return 1
      and b = opaque_const_value 1 in
@@ -663,5 +677,6 @@ let%expect_test ("both-constant-opt" [@tags "no-js"]) =
       ▼
     ┌──────┐
     │ read │
-    └──────┘ |}]
+    └──────┘
+    |}]
 ;;

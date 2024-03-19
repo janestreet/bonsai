@@ -62,7 +62,8 @@ let%expect_test "External open and closing" =
     -----------------
     <span class="right_hash_replaced_in_test tooltip_container_hash_replaced_in_test">
       <span> Popover base! </span>
-    </span> |}];
+    </span>
+    |}];
   Handle.do_actions handle [ Open ];
   Handle.show handle;
   [%expect
@@ -76,7 +77,8 @@ let%expect_test "External open and closing" =
            custom-css-vars=((--fg_hash_replaced_in_test black)(--border_hash_replaced_in_test grey)(--bg_hash_replaced_in_test white))>
         <span> Popover content! </span>
       </div>
-    </span> |}];
+    </span>
+    |}];
   Handle.do_actions handle [ Close ];
   Handle.show handle;
   [%expect
@@ -85,7 +87,8 @@ let%expect_test "External open and closing" =
     -----------------
     <span class="right_hash_replaced_in_test tooltip_container_hash_replaced_in_test">
       <span> Popover base! </span>
-    </span> |}];
+    </span>
+    |}];
   Handle.do_actions handle [ Toggle ];
   Handle.show handle;
   [%expect
@@ -99,7 +102,8 @@ let%expect_test "External open and closing" =
            custom-css-vars=((--fg_hash_replaced_in_test black)(--border_hash_replaced_in_test grey)(--bg_hash_replaced_in_test white))>
         <span> Popover content! </span>
       </div>
-    </span> |}];
+    </span>
+    |}];
   Handle.do_actions handle [ Toggle ];
   Handle.show handle;
   [%expect
@@ -108,7 +112,8 @@ let%expect_test "External open and closing" =
     -----------------
     <span class="right_hash_replaced_in_test tooltip_container_hash_replaced_in_test">
       <span> Popover base! </span>
-    </span> |}]
+    </span>
+    |}]
 ;;
 
 let%expect_test "Popover changing directions" =
@@ -134,7 +139,8 @@ let%expect_test "Popover changing directions" =
     -----------------
     <span class="right_hash_replaced_in_test tooltip_container_hash_replaced_in_test">
       <span> Popover entry! </span>
-    </span> |}];
+    </span>
+    |}];
   Handle.do_actions handle [ Open ];
   Handle.show handle;
   [%expect
@@ -148,25 +154,29 @@ let%expect_test "Popover changing directions" =
            custom-css-vars=((--fg_hash_replaced_in_test black)(--border_hash_replaced_in_test grey)(--bg_hash_replaced_in_test white))>
         <span> Popover content! </span>
       </div>
-    </span> |}];
+    </span>
+    |}];
   Bonsai.Var.set direction_var Left;
   Handle.show_diff ~diff_context:0 handle;
   [%expect
     {|
     -|<span class="right_hash_replaced_in_test tooltip_container_hash_replaced_in_test tooltip_open_hash_replaced_in_test">
-    +|<span class="left_hash_replaced_in_test tooltip_container_hash_replaced_in_test tooltip_open_hash_replaced_in_test"> |}];
+    +|<span class="left_hash_replaced_in_test tooltip_container_hash_replaced_in_test tooltip_open_hash_replaced_in_test">
+    |}];
   Bonsai.Var.set direction_var Up;
   Handle.show_diff ~diff_context:0 handle;
   [%expect
     {|
     -|<span class="left_hash_replaced_in_test tooltip_container_hash_replaced_in_test tooltip_open_hash_replaced_in_test">
-    +|<span class="tooltip_container_hash_replaced_in_test tooltip_open_hash_replaced_in_test top_hash_replaced_in_test"> |}];
+    +|<span class="tooltip_container_hash_replaced_in_test tooltip_open_hash_replaced_in_test top_hash_replaced_in_test">
+    |}];
   Bonsai.Var.set direction_var Down;
   Handle.show_diff ~diff_context:0 handle;
   [%expect
     {|
     -|<span class="tooltip_container_hash_replaced_in_test tooltip_open_hash_replaced_in_test top_hash_replaced_in_test">
-    +|<span class="bottom_hash_replaced_in_test tooltip_container_hash_replaced_in_test tooltip_open_hash_replaced_in_test"> |}]
+    +|<span class="bottom_hash_replaced_in_test tooltip_container_hash_replaced_in_test tooltip_open_hash_replaced_in_test">
+    |}]
 ;;
 
 let button ~on_click s =
@@ -204,7 +214,8 @@ let%expect_test "Opening and closing from within popover base" =
         <button id="open" onclick> open </button>
         <button id="close" onclick> close </button>
       </div>
-    </span> |}];
+    </span>
+    |}];
   Handle.click_on handle ~get_vdom ~selector:"#open";
   Handle.show handle;
   [%expect
@@ -221,7 +232,8 @@ let%expect_test "Opening and closing from within popover base" =
            custom-css-vars=((--fg_hash_replaced_in_test black)(--border_hash_replaced_in_test grey)(--bg_hash_replaced_in_test white))>
         <span> Popover content! </span>
       </div>
-    </span> |}];
+    </span>
+    |}];
   Handle.click_on handle ~get_vdom ~selector:"#close";
   Handle.show handle;
   [%expect
@@ -233,7 +245,8 @@ let%expect_test "Opening and closing from within popover base" =
         <button id="open" onclick> open </button>
         <button id="close" onclick> close </button>
       </div>
-    </span> |}]
+    </span>
+    |}]
 ;;
 
 let%expect_test "Opening from base and closing from dialog" =
@@ -270,7 +283,8 @@ let%expect_test "Opening from base and closing from dialog" =
     -----------------
     <span class="right_hash_replaced_in_test tooltip_container_hash_replaced_in_test">
       <button id="open" onclick> open </button>
-    </span> |}];
+    </span>
+    |}];
   Handle.click_on handle ~get_vdom ~selector:"#open";
   Handle.show handle;
   [%expect
@@ -284,7 +298,8 @@ let%expect_test "Opening from base and closing from dialog" =
            custom-css-vars=((--fg_hash_replaced_in_test black)(--border_hash_replaced_in_test grey)(--bg_hash_replaced_in_test white))>
         <button id="close" onclick> close </button>
       </div>
-    </span> |}];
+    </span>
+    |}];
   Handle.click_on handle ~get_vdom ~selector:"#close";
   Handle.show handle;
   [%expect
@@ -293,7 +308,8 @@ let%expect_test "Opening from base and closing from dialog" =
     -----------------
     <span class="right_hash_replaced_in_test tooltip_container_hash_replaced_in_test">
       <button id="open" onclick> open </button>
-    </span> |}]
+    </span>
+    |}]
 ;;
 
 let%expect_test "Opening from returned effect and closing by clicking outside." =
@@ -355,38 +371,41 @@ let%expect_test "Opening from returned effect and closing by clicking outside." 
     Handle.show handle;
     [%expect
       {|
-    is_open: false
-    -----------------
-    <span class="right_hash_replaced_in_test tooltip_container_hash_replaced_in_test">
-      <span> Popover base! </span>
-    </span> |}];
+      is_open: false
+      -----------------
+      <span class="right_hash_replaced_in_test tooltip_container_hash_replaced_in_test">
+        <span> Popover base! </span>
+      </span>
+      |}];
     Handle.do_actions handle [ Open ];
     Handle.show handle;
     [%expect
       {|
-    is_open: true
-    -----------------
-    <span class="right_hash_replaced_in_test tooltip_container_hash_replaced_in_test tooltip_open_hash_replaced_in_test">
-      <span> Popover base! </span>
-      <div id="bonsai_path_replaced_in_test"
-           data-test="test-popover"
-           class="default_tooltip_styles_hash_replaced_in_test tooltip_hash_replaced_in_test"
-           custom-css-vars=((--fg_hash_replaced_in_test black)(--border_hash_replaced_in_test grey)(--bg_hash_replaced_in_test white))
-           global-click-listener=<fun>
-           global-contextmenu-listener=<fun>
-           global-keydown-listener=<fun>>
-        <span> Popover content! </span>
-      </div>
-    </span> |}];
+      is_open: true
+      -----------------
+      <span class="right_hash_replaced_in_test tooltip_container_hash_replaced_in_test tooltip_open_hash_replaced_in_test">
+        <span> Popover base! </span>
+        <div id="bonsai_path_replaced_in_test"
+             data-test="test-popover"
+             class="default_tooltip_styles_hash_replaced_in_test tooltip_hash_replaced_in_test"
+             custom-css-vars=((--fg_hash_replaced_in_test black)(--border_hash_replaced_in_test grey)(--bg_hash_replaced_in_test white))
+             global-click-listener=<fun>
+             global-contextmenu-listener=<fun>
+             global-keydown-listener=<fun>>
+          <span> Popover content! </span>
+        </div>
+      </span>
+      |}];
     trigger_hook handle;
     Handle.show handle;
     [%expect
       {|
-    is_open: false
-    -----------------
-    <span class="right_hash_replaced_in_test tooltip_container_hash_replaced_in_test">
-      <span> Popover base! </span>
-    </span> |}])
+      is_open: false
+      -----------------
+      <span class="right_hash_replaced_in_test tooltip_container_hash_replaced_in_test">
+        <span> Popover base! </span>
+      </span>
+      |}])
 ;;
 
 let%expect_test "Nested popover" =
@@ -428,7 +447,8 @@ let%expect_test "Nested popover" =
     -----------------
     <span class="right_hash_replaced_in_test tooltip_container_hash_replaced_in_test">
       <button id="open-popover1" onclick> open-popover1 </button>
-    </span> |}];
+    </span>
+    |}];
   (* Opens first popover. *)
   Handle.click_on ~get_vdom ~selector:"#open-popover1" handle;
   Handle.show_diff handle;
@@ -454,7 +474,8 @@ let%expect_test "Nested popover" =
     +|      </div>
     +|    </span>
     +|  </div>
-      </span> |}];
+      </span>
+    |}];
   (* Opens second popover that's inside the first popover. *)
   Handle.click_on ~get_vdom ~selector:"#open-popover2" handle;
   Handle.show_diff handle;
@@ -486,7 +507,8 @@ let%expect_test "Nested popover" =
     +|      </div>
           </span>
         </div>
-      </span> |}];
+      </span>
+    |}];
   (* When the first popover is closed, the second popover is also closed. *)
   Handle.click_on ~get_vdom ~selector:"#close-popover1" handle;
   Handle.show_diff handle;
@@ -519,7 +541,8 @@ let%expect_test "Nested popover" =
     -|      </div>
     -|    </span>
     -|  </div>
-      </span> |}];
+      </span>
+    |}];
   (* When the first popover is re-opened, the second popover remains open like before. *)
   Handle.click_on ~get_vdom ~selector:"#open-popover1" handle;
   Handle.show_diff handle;
@@ -552,7 +575,8 @@ let%expect_test "Nested popover" =
     +|      </div>
     +|    </span>
     +|  </div>
-      </span> |}];
+      </span>
+    |}];
   Handle.click_on ~get_vdom ~selector:"#close-popover2" handle;
   (* Closing the second popover results in the first one staying open. *)
   Handle.show_diff handle;
@@ -584,7 +608,8 @@ let%expect_test "Nested popover" =
     -|      </div>
           </span>
         </div>
-      </span> |}]
+      </span>
+    |}]
 ;;
 
 let%test_module "interactions with [with_model_resetter]" =
@@ -654,12 +679,13 @@ let%test_module "interactions with [with_model_resetter]" =
       Handle.show handle;
       [%expect
         {|
-    <span class="right_hash_replaced_in_test tooltip_container_hash_replaced_in_test">
-      <div>
-        <span> Popover base! </span>
-        <button id="reset-base" onclick> reset-base </button>
-      </div>
-    </span> |}];
+        <span class="right_hash_replaced_in_test tooltip_container_hash_replaced_in_test">
+          <div>
+            <span> Popover base! </span>
+            <button id="reset-base" onclick> reset-base </button>
+          </div>
+        </span>
+        |}];
       Handle.do_actions handle [ Open ];
       Handle.show_diff handle;
       [%expect
@@ -681,7 +707,8 @@ let%test_module "interactions with [with_model_resetter]" =
         +|      <button id="reset-popover" onclick> reset-popover </button>
         +|    </div>
         +|  </div>
-          </span> |}];
+          </span>
+        |}];
       Handle.do_actions handle [ Reset ];
       Handle.show_diff handle;
       [%expect
@@ -703,7 +730,8 @@ let%test_module "interactions with [with_model_resetter]" =
         -|      <button id="reset-popover" onclick> reset-popover </button>
         -|    </div>
         -|  </div>
-          </span> |}]
+          </span>
+        |}]
     ;;
 
     let%expect_test "resetting popover" =
@@ -711,12 +739,13 @@ let%test_module "interactions with [with_model_resetter]" =
       Handle.show handle;
       [%expect
         {|
-    <span class="right_hash_replaced_in_test tooltip_container_hash_replaced_in_test">
-      <div>
-        <span> Popover base! </span>
-        <button id="reset-base" onclick> reset-base </button>
-      </div>
-    </span> |}];
+        <span class="right_hash_replaced_in_test tooltip_container_hash_replaced_in_test">
+          <div>
+            <span> Popover base! </span>
+            <button id="reset-base" onclick> reset-base </button>
+          </div>
+        </span>
+        |}];
       Handle.do_actions handle [ Open ];
       Handle.show_diff handle;
       [%expect
@@ -738,7 +767,8 @@ let%test_module "interactions with [with_model_resetter]" =
         +|      <button id="reset-popover" onclick> reset-popover </button>
         +|    </div>
         +|  </div>
-          </span> |}];
+          </span>
+        |}];
       Handle.click_on
         ~get_vdom:Popover_result_spec.get_vdom
         ~selector:"#reset-popover"
@@ -751,12 +781,13 @@ let%test_module "interactions with [with_model_resetter]" =
       Handle.show handle;
       [%expect
         {|
-    <span class="right_hash_replaced_in_test tooltip_container_hash_replaced_in_test">
-      <div>
-        <span> Popover base! </span>
-        <button id="reset-base" onclick> reset-base </button>
-      </div>
-    </span> |}];
+        <span class="right_hash_replaced_in_test tooltip_container_hash_replaced_in_test">
+          <div>
+            <span> Popover base! </span>
+            <button id="reset-base" onclick> reset-base </button>
+          </div>
+        </span>
+        |}];
       Handle.do_actions handle [ Open ];
       Handle.show_diff handle;
       [%expect
@@ -778,7 +809,8 @@ let%test_module "interactions with [with_model_resetter]" =
         +|      <button id="reset-popover" onclick> reset-popover </button>
         +|    </div>
         +|  </div>
-          </span> |}];
+          </span>
+        |}];
       Handle.click_on
         ~get_vdom:Popover_result_spec.get_vdom
         ~selector:"#reset-base"
@@ -813,5 +845,6 @@ let%expect_test "popover with an extra base attr" =
     <span data-test="I am attached as a base attr."
           class="right_hash_replaced_in_test tooltip_container_hash_replaced_in_test">
       <span> Popover base! </span>
-    </span> |}]
+    </span>
+    |}]
 ;;

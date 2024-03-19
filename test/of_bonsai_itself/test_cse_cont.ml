@@ -62,7 +62,8 @@ let%expect_test "double-use of a Value.t" =
                   (Named (uid (Test 2)))))))))
         (via (Test 4))
         (into (Return (value (Mapn (inputs ((Named (uid (Test 4))))))))))))
-    computing! |}]
+    computing!
+    |}]
 ;;
 
 let%expect_test "double-use spanning match%sub with value previously computed" =
@@ -105,7 +106,8 @@ let%expect_test "double-use spanning match%sub with value previously computed" =
                       (Named (uid (Test 6)))))))))
             (via (Test 8))
             (into (Return (value (Mapn (inputs ((Named (uid (Test 8))))))))))))))))
-    computing! |}]
+    computing!
+    |}]
 ;;
 
 let%expect_test "double-use with first use inside scope" =
@@ -149,7 +151,8 @@ let%expect_test "double-use with first use inside scope" =
                       (Named (uid (Test 2)))))))))
             (via (Test 8))
             (into (Return (value (Mapn (inputs ((Named (uid (Test 8))))))))))))))))
-    computing! |}]
+    computing!
+    |}]
 ;;
 
 let%expect_test "double-use inside of some subs" =
@@ -177,7 +180,8 @@ let%expect_test "double-use inside of some subs" =
                   (Named (uid (Test 2)))))))))
         (via (Test 4))
         (into (Return (value (Mapn (inputs ((Named (uid (Test 4))))))))))))
-    computing! |}]
+    computing!
+    |}]
 ;;
 
 let%expect_test "double-use inside of some nested subs" =
@@ -226,7 +230,8 @@ let%expect_test "double-use inside of some nested subs" =
                           (Named (uid (Test 12)))))))))
                 (via (Test 14))
                 (into (Return (value (Mapn (inputs ((Named (uid (Test 14))))))))))))))))))))
-    computing! |}]
+    computing!
+    |}]
 ;;
 
 let%expect_test "double-use inside supercomponent" =
@@ -277,7 +282,8 @@ let%expect_test "double-use inside supercomponent" =
                 (into (Return (value (Mapn (inputs ((Named (uid (Test 13))))))))))))))))))))
     computing!
     more computing
-    more computing |}]
+    more computing
+    |}]
 ;;
 
 let%expect_test "double-use with first use inside scope" =
@@ -299,7 +305,8 @@ let%expect_test "double-use with first use inside scope" =
   in
   [%expect {|
     computing bonsai_path_y
-    computing bonsai_path_x |}];
+    computing bonsai_path_x
+    |}];
   Handle.show handle;
   [%expect {| bonsai_path_x bonsai_path_y |}]
 ;;

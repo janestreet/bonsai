@@ -19,13 +19,6 @@ let component =
     Vdom.Node.pre [ Vdom.Node.text Embedded_files.type_intf_dot_ml ]
   in
   let%sub form = Type.form in
-  let%sub view =
-    match%sub form >>| Form.value with
-    | Ok value -> Type.view value
-    | Error error ->
-      let%arr error = error in
-      Vdom.Node.sexp_for_debugging [%message "error in form" (error : Error.t)]
-  in
   let%sub index, incr =
     Bonsai.state_machine0
       ()
@@ -37,7 +30,6 @@ let component =
       (index + 1) mod generation_count)
   in
   let%arr form = form
-  and view = view
   and index = index
   and incr = incr in
   let button =
@@ -54,8 +46,8 @@ let component =
     ; Vdom.Node.h3 [ Vdom.Node.text "Auto-generated form for type" ]
     ; button
     ; Auto_generated.view_as_vdom form
-    ; Vdom.Node.h3 [ Vdom.Node.text "Auto-generated view for value produced by form" ]
-    ; view
+    ; Vdom.Node.h3 [ Vdom.Node.text "Current value of form" ]
+    ; Vdom.Node.sexp_for_debugging [%sexp (Form.value form : Type.t Or_error.t)]
     ]
 ;;
 

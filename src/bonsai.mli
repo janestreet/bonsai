@@ -62,7 +62,7 @@ module Private : sig
   module Trampoline = Trampoline
   module Annotate_incr = Annotate_incr
 
-  val gather : 'result Computation.t -> 'result Computation.packed_info
+  val gather : 'result Computation.t -> ('result, unit) Computation.packed_info
   val pre_process : 'result Computation.t -> 'result Computation.t
 end
 

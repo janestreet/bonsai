@@ -57,7 +57,8 @@ let%expect_test "map2_gets_folded" =
             Mapn (
               inputs (
                 (Constant (id (Test 0)))
-                (Constant (id (Test 1))))))))))) |}];
+                (Constant (id (Test 1)))))))))))
+    |}];
   print_computation (constant_fold c);
   [%expect {| (Return (value (Constant (id (Test 0))))) |}]
 ;;
@@ -77,7 +78,8 @@ let%expect_test "Demonstrate: an unused opaque is not optimized away" =
         Sub
         (from (Return (value (Mapn (inputs ((Named (uid (Test 1)))))))))
         (via (Test 3))
-        (into (Return (value (Constant (id (Test 4))))))))) |}];
+        (into (Return (value (Constant (id (Test 4)))))))))
+    |}];
   print_computation (constant_fold c);
   [%expect
     {|
@@ -88,7 +90,8 @@ let%expect_test "Demonstrate: an unused opaque is not optimized away" =
         Sub
         (from (Return (value (Mapn (inputs ((Named (uid (Test 1)))))))))
         (via (Test 3))
-        (into (Return (value (Constant (id (Test 4))))))))) |}]
+        (into (Return (value (Constant (id (Test 4)))))))))
+    |}]
 ;;
 
 let%expect_test "opaque only used in a lazy not optimized away" =
@@ -120,7 +123,8 @@ let%expect_test "opaque only used in a lazy not optimized away" =
           Sub
           (from (Return (value (Mapn (inputs ((Named (uid (Test 6)))))))))
           (via (Test 8))
-          (into (Return (value (Constant (id (Test 9))))))))))) |}]
+          (into (Return (value (Constant (id (Test 9)))))))))))
+    |}]
 ;;
 
 let%expect_test "opaque only used in a lazy not optimized away (but the lazy might)" =
@@ -143,7 +147,8 @@ let%expect_test "opaque only used in a lazy not optimized away (but the lazy mig
           Sub
           (from (Return (value (Mapn (inputs ((Named (uid (Test 2)))))))))
           (via (Test 4))
-          (into (Return (value (Constant (id (Test 5))))))))))) |}];
+          (into (Return (value (Constant (id (Test 5)))))))))))
+    |}];
   constant_fold_and_diff c;
   [%expect
     {|
@@ -160,7 +165,8 @@ let%expect_test "opaque only used in a lazy not optimized away (but the lazy mig
             Sub
             (from (Return (value (Mapn (inputs ((Named (uid (Test 2)))))))))
             (via (Test 4))
-            (into (Return (value (Constant (id (Test 5))))))))))) |}]
+            (into (Return (value (Constant (id (Test 5)))))))))))
+    |}]
 ;;
 
 let%expect_test "immediately-forced lazies are transparent to constant folding" =
@@ -191,13 +197,14 @@ let%expect_test "lazies inside of a switch with dynamic input are preserved" =
   constant_fold_and_assert_no_op c;
   [%expect
     {|
-      (Sub
-        (from (Return (value Incr)))
-        (via (Test 1))
-        (into (
-          Switch
-          (match_ (Mapn (inputs ((Named (uid (Test 1)))))))
-          (arms ((Lazy (t ())) (Return (value Exception))))))) |}]
+    (Sub
+      (from (Return (value Incr)))
+      (via (Test 1))
+      (into (
+        Switch
+        (match_ (Mapn (inputs ((Named (uid (Test 1)))))))
+        (arms ((Lazy (t ())) (Return (value Exception)))))))
+    |}]
 ;;
 
 let%expect_test "lazies inside of a switch with static input are forced" =
@@ -209,9 +216,10 @@ let%expect_test "lazies inside of a switch with static input are forced" =
   print_computation c;
   [%expect
     {|
-      (Switch
-        (match_ (Mapn (inputs ((Constant (id (Test 0)))))))
-        (arms ((Lazy (t ())) (Return (value Exception))))) |}];
+    (Switch
+      (match_ (Mapn (inputs ((Constant (id (Test 0)))))))
+      (arms ((Lazy (t ())) (Return (value Exception)))))
+    |}];
   print_computation (constant_fold c);
   [%expect {| (Return (value (Constant (id (Test 0))))) |}]
 ;;
@@ -226,12 +234,13 @@ let%expect_test "lazies inside of an assoc with static input are forced" =
   print_computation c;
   [%expect
     {|
-      (Assoc
-        (map (Constant (id (Test 0))))
-        (key_id  (Test 1))
-        (cmp_id  (Test 2))
-        (data_id (Test 3))
-        (by (Lazy (t ())))) |}];
+    (Assoc
+      (map (Constant (id (Test 0))))
+      (key_id  (Test 1))
+      (cmp_id  (Test 2))
+      (data_id (Test 3))
+      (by (Lazy (t ()))))
+    |}];
   print_computation (constant_fold c);
   [%expect {| (Return (value (Constant (id (Test 0))))) |}]
 ;;
@@ -251,7 +260,8 @@ let%expect_test "lazies inside of an assoc with dynamic input are not forced" =
       (key_id  (Test 1))
       (cmp_id  (Test 2))
       (data_id (Test 3))
-      (by (Lazy (t ())))) |}]
+      (by (Lazy (t ()))))
+    |}]
 ;;
 
 let%expect_test "map2_of_map2_of_constants_gets_folded" =
@@ -285,7 +295,8 @@ let%expect_test "map2_of_map2_of_constants_gets_folded" =
                     Mapn (
                       inputs (
                         (Constant (id (Test 0)))
-                        (Constant (id (Test 1))))))))))))))))) |}];
+                        (Constant (id (Test 1)))))))))))))))))
+    |}];
   print_computation (constant_fold doubled);
   [%expect {| (Return (value (Constant (id (Test 0))))) |}]
 ;;
@@ -296,7 +307,8 @@ let%expect_test "cutoff" =
   [%expect
     {|
     (Return (
-      value (Cutoff (t (Constant (id (Test 0)))) (added_by_let_syntax false)))) |}];
+      value (Cutoff (t (Constant (id (Test 0)))) (added_by_let_syntax false))))
+    |}];
   print_computation (constant_fold cutoff);
   [%expect {| (Return (value (Constant (id (Test 0))))) |}]
 ;;
@@ -316,7 +328,8 @@ let%expect_test "errors_propagate_but_are_not_thrown" =
       value (
         Mapn (
           inputs ((
-            Mapn (inputs ((Mapn (inputs ((Constant (id (Test 0)))))) Incr)))))))) |}];
+            Mapn (inputs ((Mapn (inputs ((Constant (id (Test 0)))))) Incr))))))))
+    |}];
   print_computation (constant_fold c);
   [%expect {| (Return (value Exception)) |}]
 ;;
@@ -329,11 +342,12 @@ let%expect_test "cutoff gets folded away" =
   print_computation c;
   [%expect
     {|
-      (Return (
-        value (
-          Cutoff
-          (t (Cutoff (t (Constant (id (Test 0)))) (added_by_let_syntax false)))
-          (added_by_let_syntax false)))) |}];
+    (Return (
+      value (
+        Cutoff
+        (t (Cutoff (t (Constant (id (Test 0)))) (added_by_let_syntax false)))
+        (added_by_let_syntax false))))
+    |}];
   print_computation (constant_fold c);
   [%expect {| (Return (value (Constant (id (Test 0))))) |}]
 ;;
@@ -355,7 +369,8 @@ let%expect_test "nested cutoffs get merged" =
           Cutoff
           (t                   Incr)
           (added_by_let_syntax false)))
-        (added_by_let_syntax false)))) |}];
+        (added_by_let_syntax false))))
+    |}];
   print_computation (constant_fold c);
   [%expect
     {|
@@ -363,7 +378,8 @@ let%expect_test "nested cutoffs get merged" =
       value (
         Cutoff
         (t                   Incr)
-        (added_by_let_syntax false)))) |}]
+        (added_by_let_syntax false))))
+    |}]
 ;;
 
 let%expect_test "state_machine1 with constant input is converted to state_machine0" =
@@ -418,7 +434,8 @@ let%expect_test "a constant input to assoc gets distributed to a bunch of subs" 
                       (Mapn (
                         inputs (
                           (Named (uid (Test 5)))
-                          (Named (uid (Test 1)))))))))))))))))) |}];
+                          (Named (uid (Test 1))))))))))))))))))
+    |}];
   constant_fold_and_diff c;
   [%expect
     {|
@@ -477,7 +494,8 @@ let%expect_test "a constant input to assoc gets distributed to a bunch of subs" 
     -|                      (Named (uid (Test 1))))))))))))))))))
     +|                      (Named (uid (Test 10))))))))))))))))
     +|    (via (Test 13))
-    +|    (into (Return (value (Mapn (inputs ((Named (uid (Test 13)))))))))))) |}]
+    +|    (into (Return (value (Mapn (inputs ((Named (uid (Test 13))))))))))))
+    |}]
 ;;
 
 let%expect_test "constant map + simplifiable assoc function => constant map" =
@@ -506,7 +524,8 @@ let%expect_test "constant map + simplifiable assoc function => constant map" =
                 Mapn (
                   inputs (
                     (Named (uid (Test 1)))
-                    (Named (uid (Test 3))))))))))))) |}];
+                    (Named (uid (Test 3)))))))))))))
+    |}];
   print_computation (constant_fold c);
   [%expect {| (Return (value (Constant (id (Test 0))))) |}]
 ;;
@@ -538,7 +557,8 @@ let%expect_test "a constant input with no external dependencies is folded into a
                 Mapn (
                   inputs (
                     (Named (uid (Test 1)))
-                    (Named (uid (Test 3))))))))))))) |}];
+                    (Named (uid (Test 3)))))))))))))
+    |}];
   print_computation (constant_fold c);
   [%expect {| (Return (value (Constant (id (Test 0))))) |}]
 ;;
@@ -556,7 +576,8 @@ let%expect_test "a switch with constant input is optimized away" =
       (match_ (Mapn (inputs ((Constant (id (Test 0)))))))
       (arms (
         (Return (value (Constant (id (Test 2)))))
-        (Return (value (Constant (id (Test 3)))))))) |}];
+        (Return (value (Constant (id (Test 3))))))))
+    |}];
   print_computation (constant_fold c);
   [%expect {| (Return (value (Constant (id (Test 0))))) |}]
 ;;
@@ -572,7 +593,8 @@ let%expect_test "an assert-false is caught (and then optimized away)" =
     {|
     (Switch
       (match_ (Mapn (inputs ((Constant (id (Test 0)))))))
-      (arms ((Return (value (Constant (id (Test 2))))) (Return (value Exception))))) |}];
+      (arms ((Return (value (Constant (id (Test 2))))) (Return (value Exception)))))
+    |}];
   print_computation (constant_fold c);
   [%expect {| (Return (value (Constant (id (Test 0))))) |}];
   print_computation (constant_fold c);
@@ -594,7 +616,8 @@ let%expect_test "Static exception node on missing index of [Let_syntax.switch]."
     {|
     (Switch
       (match_ (Constant (id (Test 0))))
-      (arms ((Return (value (Constant (id (Test 1)))))))) |}];
+      (arms ((Return (value (Constant (id (Test 1))))))))
+    |}];
   print_computation (constant_fold c);
   [%expect {| (Return (value Exception)) |}]
 ;;

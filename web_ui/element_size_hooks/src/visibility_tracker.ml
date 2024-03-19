@@ -128,7 +128,7 @@ module T = struct
     state
   ;;
 
-  let on_mount _input _state _element = ()
+  let on_mount = `Do_nothing
 
   let update ~old_input:_ ~new_input:callback (state : State.t) _element =
     state.dirty <- true;

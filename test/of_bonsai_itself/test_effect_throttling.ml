@@ -143,7 +143,8 @@ let%expect_test {| Effect_throttling.poll deactivation |} =
      respectively, since we only allow one effect to be in the pending queue at a time *)
   [%expect {|
     ((query 0) (result Aborted))
-    ((query 1) (result Aborted)) |}];
+    ((query 1) (result Aborted))
+    |}];
   (* The actions [ 3; 4; 5 ] are associated with the [false] branch*)
   Handle.do_actions handle [ 3; 4; 5 ];
   Handle.recompute_view handle;
@@ -279,14 +280,16 @@ let%expect_test {| Effect_throttling.poll in an assoc |} =
     {|
     ((query 2) (result Aborted))
     ((query 1) (result Aborted))
-    ((query 3) (result Aborted)) |}];
+    ((query 3) (result Aborted))
+    |}];
   Handle.recompute_view handle;
   respond 1;
   [%expect
     {|
     ((query 3) (result (Finished 1)))
     ((query 2) (result (Finished 1)))
-    ((query 1) (result (Finished 1))) |}];
+    ((query 1) (result (Finished 1)))
+    |}];
   respond 2;
   Handle.recompute_view handle;
   respond 3;
@@ -294,7 +297,8 @@ let%expect_test {| Effect_throttling.poll in an assoc |} =
     {|
     ((query 1) (result (Finished 3)))
     ((query 2) (result (Finished 3)))
-    ((query 3) (result (Finished 3))) |}];
+    ((query 3) (result (Finished 3)))
+    |}];
   Handle.do_actions handle [ 1; 2; 3; 1; 2; 3 ];
   Bonsai.Var.update map_var ~f:(fun map -> Map.remove map 1);
   Handle.recompute_view handle;
@@ -303,7 +307,8 @@ let%expect_test {| Effect_throttling.poll in an assoc |} =
   [%expect
     {|
     ((query 3) (result (Finished 4)))
-    ((query 2) (result (Finished 4))) |}]
+    ((query 2) (result (Finished 4)))
+    |}]
 ;;
 
 let%expect_test "collapse functions" =
@@ -323,11 +328,13 @@ let%expect_test "collapse functions" =
     {|
     (Aborted => (Error "request was aborted"))
     ((Finished (Error "oh no!")) => (Error "oh no!"))
-    ((Finished (Ok ())) => (Ok ())) |}];
+    ((Finished (Ok ())) => (Ok ()))
+    |}];
   print ~tag_s:(lazy (Sexp.Atom "my tag")) Aborted;
   print ~tag_s:(lazy (Sexp.Atom "my tag")) (Finished (Error (Error.of_string "oh no!")));
   [%expect
     {|
     (Aborted => (Error ("my tag" "request was aborted")))
-    ((Finished (Error "oh no!")) => (Error ("my tag" "oh no!"))) |}]
+    ((Finished (Error "oh no!")) => (Error ("my tag" "oh no!")))
+    |}]
 ;;

@@ -22,5 +22,6 @@ let%expect_test "basic page appearance" =
           <tbody class="body_hash_replaced_in_test"> </tbody>
         </table>
       </div>
-    </div> |}]
+    </div>
+    |}]
 ;;

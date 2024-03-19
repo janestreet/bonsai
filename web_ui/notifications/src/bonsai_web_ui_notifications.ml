@@ -64,6 +64,9 @@ module Action = struct
         ; notification : 'a Notification.t
         }
     | Remove of Notification_id.t
+    | Remove_all
+    | Remove_oldest
+    | Remove_newest
   [@@deriving equal, sexp]
 end
 
@@ -96,7 +99,16 @@ let component (type a) (module M : Bonsai.Model with type t = a) ~equal =
       ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) notifications action ->
         match action with
         | Add { id; notification } -> Map.set notifications ~key:id ~data:notification
-        | Remove notification_id -> Map.remove notifications notification_id)
+        | Remove notification_id -> Map.remove notifications notification_id
+        | Remove_all -> Notification_id.Map.empty
+        | Remove_oldest ->
+          (match Map.keys notifications with
+           | oldest_id :: _ -> Map.remove notifications oldest_id
+           | [] -> notifications)
+        | Remove_newest ->
+          (match Map.keys notifications |> List.last with
+           | Some newest_id -> Map.remove notifications newest_id
+           | None -> notifications))
   in
   let%sub () =
     let%sub (_ : (Notification_id.t, unit, _) Map.t) =
@@ -213,6 +225,24 @@ let close_notification
   id
   =
   inject (Remove id)
+;;
+
+let close_all_notifications
+  { inject; notifications = _; send_notification = _; modify_notification = _ }
+  =
+  inject Remove_all
+;;
+
+let close_oldest_notification
+  { inject; notifications = _; send_notification = _; modify_notification = _ }
+  =
+  inject Remove_oldest
+;;
+
+let close_newest_notification
+  { inject; notifications = _; send_notification = _; modify_notification = _ }
+  =
+  inject Remove_newest
 ;;
 
 let modify_notification

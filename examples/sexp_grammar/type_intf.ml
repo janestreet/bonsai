@@ -40,5 +40,4 @@ end
 
 include T
 
-let view t = Auto_generated.view (module T) t `This_view_may_change_without_notice
 let form = Auto_generated.form (module T) ()

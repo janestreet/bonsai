@@ -25,7 +25,8 @@ module type S_with_sorter = sig
   type column_id_cmp
 
   val headers_and_sorters
-    :  t
+    :  multisort_columns_when:[ `Shift_click | `Ctrl_click | `Shift_or_ctrl_click ] Value.t
+    -> t
     -> column_id Sortable.t Value.t
     -> ((column_id, (key, data) Sort_kind.t, column_id_cmp) Map.t
        * column_id Header_tree.t)

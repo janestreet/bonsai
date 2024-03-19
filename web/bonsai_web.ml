@@ -28,6 +28,7 @@ end
 include Bonsai.For_open
 include Util
 module Effect = Bonsai_web_effect
+include Vdom.Html_syntax
 
 module Cont = struct
   module Start = Start
@@ -39,5 +40,6 @@ module Cont = struct
   module Persistent_var = Persistent_var
   module Rpc_effect = Rpc_effect
   module Effect = Bonsai_web_effect
+  include Vdom.Html_syntax
   include Util
 end

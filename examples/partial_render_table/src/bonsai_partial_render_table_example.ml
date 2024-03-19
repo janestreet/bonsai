@@ -135,6 +135,7 @@ let generic_table_and_focus_attr
   ?filter
   ~row_height
   ~theming
+  ~multisort_columns_when
   ~should_show_position
   ~focus
   ~get_focus_is_locked
@@ -148,6 +149,7 @@ let generic_table_and_focus_attr
       (module String)
       ?filter
       ~theming
+      ~multisort_columns_when
       ~focus
       ~row_height
       ~columns:(columns ~should_show_position)
@@ -173,7 +175,15 @@ let generic_table_and_focus_attr
   }
 ;;
 
-let component ?filter ~focus_kind ~row_height ~theming ~should_show_position data =
+let component
+  ?filter
+  ~focus_kind
+  ~row_height
+  ~theming
+  ~multisort_columns_when
+  ~should_show_position
+  data
+  =
   match focus_kind with
   | `Row ->
     let module Focus_control = Table.Focus.By_row in
@@ -181,6 +191,7 @@ let component ?filter ~focus_kind ~row_height ~theming ~should_show_position dat
       ?filter
       ~row_height
       ~theming
+      ~multisort_columns_when
       ~should_show_position
       ~focus:(By_row { on_change = Value.return (Fn.const Effect.Ignore) })
       ~get_lock_focus:Focus_control.lock_focus
@@ -209,6 +220,7 @@ let component ?filter ~focus_kind ~row_height ~theming ~should_show_position dat
       ?filter
       ~row_height
       ~theming
+      ~multisort_columns_when
       ~should_show_position
       ~focus:(By_cell { on_change = Value.return (Fn.const Effect.Ignore) })
       ~get_lock_focus:Focus_control.lock_focus
@@ -246,6 +258,15 @@ let component ?filter ~focus_kind ~row_height ~theming ~should_show_position dat
 ;;
 
 module Layout_form = struct
+  module Multisort_columns_when = struct
+    type t =
+      [ `Shift_click
+      | `Ctrl_click
+      | `Shift_or_ctrl_click
+      ]
+    [@@deriving sexp, equal, enumerate, compare]
+  end
+
   module Params = struct
     type t =
       { themed : bool
@@ -253,6 +274,7 @@ module Layout_form = struct
       ; cell_based_highlighting : bool
       ; row_height : [ `Px of int ]
       ; num_rows : int
+      ; multisort_columns_when : Multisort_columns_when.t
       }
     [@@deriving typed_fields]
 
@@ -278,6 +300,8 @@ module Layout_form = struct
           ~default:10_000
           ~step:1
           ()
+      | Multisort_columns_when ->
+        Form.Elements.Dropdown.enumerable (module Multisort_columns_when)
     ;;
 
     let label_for_field = `Inferred
@@ -295,6 +319,7 @@ module Layout_form = struct
           ; row_height = `Px 30
           ; num_rows = 10_000
           ; cell_based_highlighting = false
+          ; multisort_columns_when = `Shift_click
           }
     in
     let view = Vdom.Node.div ~attrs:[ Style.form_container ] [ Form.view_as_vdom form ] in

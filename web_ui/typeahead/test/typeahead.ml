@@ -33,23 +33,23 @@ let%expect_test "Initial typeahead state" =
   Handle.show handle;
   [%expect
     {|
-  <div>
-    <input type="text"
-           list="bonsai_path_replaced_in_test"
-           placeholder="Select a value"
-           value=""
-           #value=""
-           onblur
-           onchange
-           onfocus
-           oninput> </input>
-    <datalist id="bonsai_path_replaced_in_test">
-      <option value="Option A"> Option A </option>
-      <option value="Option B"> Option B </option>
-      <option value="Option C"> Option C </option>
-    </datalist>
-  </div>
-  |}]
+    <div>
+      <input type="text"
+             list="bonsai_path_replaced_in_test"
+             placeholder="Select a value"
+             value=""
+             #value=""
+             onblur
+             onchange
+             onfocus
+             oninput> </input>
+      <datalist id="bonsai_path_replaced_in_test">
+        <option value="Option A"> Option A </option>
+        <option value="Option B"> Option B </option>
+        <option value="Option C"> Option C </option>
+      </datalist>
+    </div>
+    |}]
 ;;
 
 let%expect_test "Focusing and un-focusing the input shows and hides the datalist when \
@@ -81,7 +81,8 @@ let%expect_test "Focusing and un-focusing the input shows and hides the datalist
              onfocus
              oninput> </input>
 
-    </div> |}];
+    </div>
+    |}];
   Handle.focus handle ~get_vdom:Fn.id ~selector:"input";
   Handle.show_diff handle;
   [%expect
@@ -101,7 +102,8 @@ let%expect_test "Focusing and un-focusing the input shows and hides the datalist
     +|    <option value="Option B"> Option B </option>
     +|    <option value="Option C"> Option C </option>
     +|  </datalist>
-      </div> |}];
+      </div>
+    |}];
   Handle.blur handle ~get_vdom:Fn.id ~selector:"input";
   Handle.show_diff handle;
   [%expect
@@ -121,7 +123,8 @@ let%expect_test "Focusing and un-focusing the input shows and hides the datalist
     -|    <option value="Option B"> Option B </option>
     -|    <option value="Option C"> Option C </option>
     -|  </datalist>
-      </div> |}]
+      </div>
+    |}]
 ;;
 
 let%expect_test "Change typeahead contents" =
@@ -139,25 +142,26 @@ let%expect_test "Change typeahead contents" =
   (* Expected change: input value should change. *)
   [%expect
     {|
-     -1,16 +1,16
-       <div>
-         <input type="text"
-                list="bonsai_path_replaced_in_test"
-                placeholder="Select a value"
-     -|         value=""
-     +|         value="Option C"
-     -|         #value=""
-     +|         #value="Option C"
-                onblur
-                onchange
-                onfocus
-                oninput> </input>
-         <datalist id="bonsai_path_replaced_in_test">
-           <option value="Option A"> Option A </option>
-           <option value="Option B"> Option B </option>
-           <option value="Option C"> Option C </option>
-         </datalist>
-       </div> |}]
+    -1,16 +1,16
+      <div>
+        <input type="text"
+               list="bonsai_path_replaced_in_test"
+               placeholder="Select a value"
+    -|         value=""
+    +|         value="Option C"
+    -|         #value=""
+    +|         #value="Option C"
+               onblur
+               onchange
+               onfocus
+               oninput> </input>
+        <datalist id="bonsai_path_replaced_in_test">
+          <option value="Option A"> Option A </option>
+          <option value="Option B"> Option B </option>
+          <option value="Option C"> Option C </option>
+        </datalist>
+      </div>
+    |}]
 ;;
 
 let%expect_test "use setter" =
@@ -199,7 +203,8 @@ let%expect_test "use setter" =
           <option value="Option B"> Option B </option>
           <option value="Option C"> Option C </option>
         </datalist>
-      </div> |}];
+      </div>
+    |}];
   Handle.do_actions handle [ None ];
   Handle.show_diff handle;
   [%expect
@@ -221,7 +226,8 @@ let%expect_test "use setter" =
           <option value="Option B"> Option B </option>
           <option value="Option C"> Option C </option>
         </datalist>
-      </div> |}]
+      </div>
+    |}]
 ;;
 
 let%expect_test "Select element using partial input" =
@@ -245,6 +251,118 @@ let%expect_test "Select element using partial input" =
   Handle.input_text handle ~get_vdom:Tuple2.get1 ~selector:"input" ~text:"C";
   Handle.show handle;
   [%expect {| (Option_C) |}]
+;;
+
+let%expect_test "empty string clears the selection" =
+  let component =
+    Typeahead.create
+      (module Data)
+      ~equal:[%equal: Data.t]
+      ~all_options:(Value.return [ Data.Option_A ])
+      ~placeholder:"Select a value"
+      ~to_string:(Value.return Data.to_string)
+  in
+  let handle =
+    Handle.create
+      (Result_spec.sexp
+         (module struct
+           type t = Data.t option Typeahead.t
+
+           let sexp_of_t { Typeahead.selected; _ } = [%sexp_of: Data.t option] selected
+         end))
+      component
+  in
+  let get_vdom { Typeahead.view; _ } = view in
+  Handle.input_text handle ~get_vdom ~selector:"input" ~text:"A";
+  Handle.show handle;
+  (* Selecting with A happens as you'd expect *)
+  [%expect {| (Option_A) |}];
+  (* Z does not match anything, so this should be empty *)
+  Handle.input_text handle ~get_vdom ~selector:"input" ~text:"Z";
+  Handle.show handle;
+  [%expect {| () |}];
+  (* Deleting the Z continues to select nothing. *)
+  Handle.input_text handle ~get_vdom ~selector:"input" ~text:"";
+  Handle.show handle;
+  [%expect {| () |}]
+;;
+
+(* This behaviour exists for two reasons:
+   1. It's the legacy behaviour and it would be a bit tricky to figure out whether any
+   apps rely on it.
+   2. It can be useful in niche scenarios when there is data being populated from the
+   server that may not match the set of options presented to the user.
+
+   Adding a flag to configure what to do when a value not in [all_options] is set seems
+   reasonable, and easy enough to do if someone ever asks for it. *)
+let%expect_test "setting a value that isn't present in [all_options] still sets the \
+                 typeahead to that value"
+  =
+  let handle =
+    Handle.create
+      (module struct
+        type incoming = Data.t
+        type t = Data.t option Typeahead.t
+
+        let view ({ view; selected; _ } : t) =
+          let module V = (val Result_spec.vdom Fn.id) in
+          [ [%sexp_of: Data.t option] selected |> Sexp.to_string_hum
+          ; "========="
+          ; V.view view
+          ]
+          |> String.concat ~sep:"\n"
+        ;;
+
+        let incoming ({ set_selected; _ } : t) data = set_selected (Some data)
+      end)
+      (Typeahead.create
+         (module Data)
+         ~equal:[%equal: Data.t]
+         ~all_options:(Value.return [ Data.Option_A ])
+         ~placeholder:"Select a value"
+         ~to_string:(Value.return Data.to_string))
+  in
+  Handle.show handle;
+  [%expect
+    {|
+    ()
+    =========
+    <div>
+      <input type="text"
+             list="bonsai_path_replaced_in_test"
+             placeholder="Select a value"
+             value=""
+             #value=""
+             onblur
+             onchange
+             onfocus
+             oninput> </input>
+      <datalist id="bonsai_path_replaced_in_test">
+        <option value="Option A"> Option A </option>
+      </datalist>
+    </div>
+    |}];
+  Handle.do_actions handle [ Data.Option_B ];
+  Handle.show handle;
+  [%expect
+    {|
+    (Option_B)
+    =========
+    <div>
+      <input type="text"
+             list="bonsai_path_replaced_in_test"
+             placeholder="Select a value"
+             value="Option B"
+             #value="Option B"
+             onblur
+             onchange
+             onfocus
+             oninput> </input>
+      <datalist id="bonsai_path_replaced_in_test">
+        <option value="Option A"> Option A </option>
+      </datalist>
+    </div>
+    |}]
 ;;
 
 let%expect_test "dynamic [to_string]." =
@@ -274,5 +392,6 @@ let%expect_test "dynamic [to_string]." =
     -|    <option value="Option C"> Option C </option>
     +|    <option value="Option C!"> Option C! </option>
         </datalist>
-      </div> |}]
+      </div>
+    |}]
 ;;

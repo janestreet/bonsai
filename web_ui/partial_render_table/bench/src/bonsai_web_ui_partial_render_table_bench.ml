@@ -93,7 +93,6 @@ let component_for_bench
       collate
   in
   Table.component
-    ~theming:`Themed
     ?preload_rows
     comparator
     ~focus:(Table.Focus.By_cell { on_change; compute_presence = return })

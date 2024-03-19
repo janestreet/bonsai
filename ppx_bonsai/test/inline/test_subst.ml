@@ -24,7 +24,8 @@ let%expect_test "single let%sub " =
                 pos_cnum = (-1);
                 pos_bol = 0
               } ((MY_EXPR)[@ppxlib.enter_value a]) ~f:(fun a -> MY_BODY))
-    [@nontail ]) |}]
+    [@nontail ])
+    |}]
 ;;
 
 let%expect_test "single pattern sub with modul" =
@@ -46,7 +47,8 @@ let%expect_test "single pattern sub with modul" =
                 pos_cnum = (-1);
                 pos_bol = 0
               } ((MY_EXPR)[@ppxlib.enter_value a]) ~f:(fun a -> MY_BODY))
-    [@nontail ]) |}]
+    [@nontail ])
+    |}]
 ;;
 
 let assert_fails_with_syntax_error ~f =
@@ -72,8 +74,7 @@ let%expect_test "double pattern let%sub" =
         let a = MY_EXPR_1
         and b = MY_EXPR_2 in
         MY_BODY]);
-  [%expect {|
-    let%sub should not be used with 'and'. |}]
+  [%expect {| let%sub should not be used with 'and'. |}]
 ;;
 
 let%expect_test "single pattern sub open" =
@@ -95,7 +96,8 @@ let%expect_test "single pattern sub open" =
                 pos_cnum = (-1);
                 pos_bol = 0
               } ((MY_EXPR_1)[@ppxlib.enter_value a]) ~f:(fun a -> MY_BODY))
-    [@nontail ]) |}]
+    [@nontail ])
+    |}]
 ;;
 
 let%expect_test "double pattern map open" =
@@ -109,8 +111,7 @@ let%expect_test "double pattern map open" =
         let a = MY_EXPR_1
         and b = MY_EXPR_2 in
         MY_BODY]);
-  [%expect {|
-    let%sub should not be used with 'and'. |}]
+  [%expect {| let%sub should not be used with 'and'. |}]
 ;;
 
 let%expect_test "while%sub is banned" =
@@ -124,8 +125,7 @@ let%expect_test "while%sub is banned" =
         while a = MY_EXPR_1 do
           MY_BODY
         done]);
-  [%expect {|
-    while%sub is not supported |}]
+  [%expect {| while%sub is not supported |}]
 ;;
 
 let%expect_test "if%sub is supported" =
@@ -161,7 +161,8 @@ let%expect_test "if%sub is supported" =
                           | ((1)[@merlin.hide ]) -> BODY_2
                           | _ -> assert false))
               [@nontail ])))
-    [@nontail ]) |}]
+    [@nontail ])
+    |}]
 ;;
 
 let%expect_test "very simple match%sub" =
@@ -176,14 +177,15 @@ let%expect_test "very simple match%sub" =
   |> print_expr;
   [%expect
     {|
-   ((Let_syntax.sub
-       ~here:{
-               Ppx_here_lib.pos_fname = "_none_";
-               pos_lnum = 1;
-               pos_cnum = (-1);
-               pos_bol = 0
-             } (Let_syntax.return MY_EXPR_1) ~f:(fun a -> BODY_1))
-   [@nontail ]) |}]
+    ((Let_syntax.sub
+        ~here:{
+                Ppx_here_lib.pos_fname = "_none_";
+                pos_lnum = 1;
+                pos_cnum = (-1);
+                pos_bol = 0
+              } (Let_syntax.return MY_EXPR_1) ~f:(fun a -> BODY_1))
+    [@nontail ])
+    |}]
 ;;
 
 let%expect_test "destructuring let%sub" =
@@ -198,81 +200,81 @@ let%expect_test "destructuring let%sub" =
   |> print_expr;
   [%expect
     {|
-   ((Let_syntax.sub
-       ~here:{
-               Ppx_here_lib.pos_fname = "_none_";
-               pos_lnum = 1;
-               pos_cnum = (-1);
-               pos_bol = 0
-             } MY_EXPR
-       ~f:(fun __pattern_syntax__006_ ->
-             ((Let_syntax.sub
-                 ~here:{
-                         Ppx_here_lib.pos_fname = "_none_";
-                         pos_lnum = 1;
-                         pos_cnum = (-1);
-                         pos_bol = 0
-                       }
-                 (Let_syntax.return
-                    ((Let_syntax.map
-                        ~here:{
-                                Ppx_here_lib.pos_fname = "_none_";
-                                pos_lnum = 1;
-                                pos_cnum = (-1);
-                                pos_bol = 0
-                              } __pattern_syntax__006_
-                        ~f:(function
-                            | (_, { b = _; c = __pattern_syntax__009_ }) ->
-                                __pattern_syntax__009_))[@merlin.hide ]))
-                 ~f:(fun c ->
-                       ((Let_syntax.sub
-                           ~here:{
-                                   Ppx_here_lib.pos_fname = "_none_";
-                                   pos_lnum = 1;
-                                   pos_cnum = (-1);
-                                   pos_bol = 0
-                                 }
-                           (Let_syntax.return
-                              ((Let_syntax.map
-                                  ~here:{
-                                          Ppx_here_lib.pos_fname = "_none_";
-                                          pos_lnum = 1;
-                                          pos_cnum = (-1);
-                                          pos_bol = 0
-                                        } __pattern_syntax__006_
-                                  ~f:(function
-                                      | (_,
-                                         { b = __pattern_syntax__008_; c = _ })
-                                          -> __pattern_syntax__008_))
-                              [@merlin.hide ]))
-                           ~f:(fun b ->
-                                 ((Let_syntax.sub
-                                     ~here:{
-                                             Ppx_here_lib.pos_fname = "_none_";
-                                             pos_lnum = 1;
-                                             pos_cnum = (-1);
-                                             pos_bol = 0
-                                           }
-                                     (Let_syntax.return
-                                        ((Let_syntax.map
-                                            ~here:{
-                                                    Ppx_here_lib.pos_fname =
-                                                      "_none_";
-                                                    pos_lnum = 1;
-                                                    pos_cnum = (-1);
-                                                    pos_bol = 0
-                                                  } __pattern_syntax__006_
-                                            ~f:(function
-                                                | (__pattern_syntax__007_,
-                                                   { b = _; c = _ }) ->
-                                                    __pattern_syntax__007_))
-                                        [@merlin.hide ]))
-                                     ~f:(fun a -> ((MY_BODY)[@nontail ])))
-                                 [@nontail ])))
-                       [@nontail ])))
-             [@nontail ])))
-   [@nontail ])
-   |}]
+    ((Let_syntax.sub
+        ~here:{
+                Ppx_here_lib.pos_fname = "_none_";
+                pos_lnum = 1;
+                pos_cnum = (-1);
+                pos_bol = 0
+              } MY_EXPR
+        ~f:(fun __pattern_syntax__006_ ->
+              ((Let_syntax.sub
+                  ~here:{
+                          Ppx_here_lib.pos_fname = "_none_";
+                          pos_lnum = 1;
+                          pos_cnum = (-1);
+                          pos_bol = 0
+                        }
+                  (Let_syntax.return
+                     ((Let_syntax.map
+                         ~here:{
+                                 Ppx_here_lib.pos_fname = "_none_";
+                                 pos_lnum = 1;
+                                 pos_cnum = (-1);
+                                 pos_bol = 0
+                               } __pattern_syntax__006_
+                         ~f:(function
+                             | (_, { b = _; c = __pattern_syntax__009_ }) ->
+                                 __pattern_syntax__009_))[@merlin.hide ]))
+                  ~f:(fun c ->
+                        ((Let_syntax.sub
+                            ~here:{
+                                    Ppx_here_lib.pos_fname = "_none_";
+                                    pos_lnum = 1;
+                                    pos_cnum = (-1);
+                                    pos_bol = 0
+                                  }
+                            (Let_syntax.return
+                               ((Let_syntax.map
+                                   ~here:{
+                                           Ppx_here_lib.pos_fname = "_none_";
+                                           pos_lnum = 1;
+                                           pos_cnum = (-1);
+                                           pos_bol = 0
+                                         } __pattern_syntax__006_
+                                   ~f:(function
+                                       | (_,
+                                          { b = __pattern_syntax__008_; c = _ })
+                                           -> __pattern_syntax__008_))
+                               [@merlin.hide ]))
+                            ~f:(fun b ->
+                                  ((Let_syntax.sub
+                                      ~here:{
+                                              Ppx_here_lib.pos_fname = "_none_";
+                                              pos_lnum = 1;
+                                              pos_cnum = (-1);
+                                              pos_bol = 0
+                                            }
+                                      (Let_syntax.return
+                                         ((Let_syntax.map
+                                             ~here:{
+                                                     Ppx_here_lib.pos_fname =
+                                                       "_none_";
+                                                     pos_lnum = 1;
+                                                     pos_cnum = (-1);
+                                                     pos_bol = 0
+                                                   } __pattern_syntax__006_
+                                             ~f:(function
+                                                 | (__pattern_syntax__007_,
+                                                    { b = _; c = _ }) ->
+                                                     __pattern_syntax__007_))
+                                         [@merlin.hide ]))
+                                      ~f:(fun a -> ((MY_BODY)[@nontail ])))
+                                  [@nontail ])))
+                        [@nontail ])))
+              [@nontail ])))
+    [@nontail ])
+    |}]
 ;;
 
 let%expect_test "destructuring match%sub" =
@@ -289,88 +291,88 @@ let%expect_test "destructuring match%sub" =
   |> print_expr;
   [%expect
     {|
-   ((Let_syntax.sub
-       ~here:{
-               Ppx_here_lib.pos_fname = "_none_";
-               pos_lnum = 1;
-               pos_cnum = (-1);
-               pos_bol = 0
-             } (Let_syntax.return MY_EXPR)
-       ~f:(fun __pattern_syntax__010_ ->
-             ((Let_syntax.switch
-                 ~here:{
-                         Ppx_here_lib.pos_fname = "_none_";
-                         pos_lnum = 1;
-                         pos_cnum = (-1);
-                         pos_bol = 0
-                       }
-                 ~match_:((Let_syntax.map __pattern_syntax__010_
-                             ~f:(function
-                                 | Choice_1 (a, b) -> 0
-                                 | Choice_2 _ -> 1
-                                 | Choice_3 -> 2))[@ocaml.warning "-26-27"])
-                 ~branches:3
-                 ~with_:(function
-                         | ((0)[@merlin.hide ]) ->
-                             ((Let_syntax.sub
-                                 ~here:{
-                                         Ppx_here_lib.pos_fname = "_none_";
-                                         pos_lnum = 1;
-                                         pos_cnum = (-1);
-                                         pos_bol = 0
-                                       }
-                                 (Let_syntax.return
-                                    ((Let_syntax.map
-                                        ~here:{
-                                                Ppx_here_lib.pos_fname =
-                                                  "_none_";
-                                                pos_lnum = 1;
-                                                pos_cnum = (-1);
-                                                pos_bol = 0
-                                              } __pattern_syntax__010_
-                                        ~f:((function
-                                             | Choice_1
-                                                 (_, __pattern_syntax__012_) ->
-                                                 __pattern_syntax__012_
-                                             | _ -> assert false)
-                                        [@ocaml.warning "-11"]))[@merlin.hide ]))
-                                 ~f:(fun b ->
-                                       ((Let_syntax.sub
-                                           ~here:{
-                                                   Ppx_here_lib.pos_fname =
-                                                     "_none_";
-                                                   pos_lnum = 1;
-                                                   pos_cnum = (-1);
-                                                   pos_bol = 0
-                                                 }
-                                           (Let_syntax.return
-                                              ((Let_syntax.map
-                                                  ~here:{
-                                                          Ppx_here_lib.pos_fname
-                                                            = "_none_";
-                                                          pos_lnum = 1;
-                                                          pos_cnum = (-1);
-                                                          pos_bol = 0
-                                                        } __pattern_syntax__010_
-                                                  ~f:((function
-                                                       | Choice_1
-                                                           (__pattern_syntax__011_,
-                                                            _)
-                                                           ->
-                                                           __pattern_syntax__011_
-                                                       | _ -> assert false)
-                                                  [@ocaml.warning "-11"]))
-                                              [@merlin.hide ]))
-                                           ~f:(fun a -> ((CHOICE_1_BODY)
-                                                 [@nontail ])))
-                                       [@nontail ])))
-                             [@nontail ])
-                         | ((1)[@merlin.hide ]) -> CHOICE_2_BODY
-                         | ((2)[@merlin.hide ]) -> CHOICE_3_BODY
-                         | _ -> assert false))
-             [@nontail ])))
-   [@nontail ])
-   |}]
+    ((Let_syntax.sub
+        ~here:{
+                Ppx_here_lib.pos_fname = "_none_";
+                pos_lnum = 1;
+                pos_cnum = (-1);
+                pos_bol = 0
+              } (Let_syntax.return MY_EXPR)
+        ~f:(fun __pattern_syntax__010_ ->
+              ((Let_syntax.switch
+                  ~here:{
+                          Ppx_here_lib.pos_fname = "_none_";
+                          pos_lnum = 1;
+                          pos_cnum = (-1);
+                          pos_bol = 0
+                        }
+                  ~match_:((Let_syntax.map __pattern_syntax__010_
+                              ~f:(function
+                                  | Choice_1 (a, b) -> 0
+                                  | Choice_2 _ -> 1
+                                  | Choice_3 -> 2))[@ocaml.warning "-26-27"])
+                  ~branches:3
+                  ~with_:(function
+                          | ((0)[@merlin.hide ]) ->
+                              ((Let_syntax.sub
+                                  ~here:{
+                                          Ppx_here_lib.pos_fname = "_none_";
+                                          pos_lnum = 1;
+                                          pos_cnum = (-1);
+                                          pos_bol = 0
+                                        }
+                                  (Let_syntax.return
+                                     ((Let_syntax.map
+                                         ~here:{
+                                                 Ppx_here_lib.pos_fname =
+                                                   "_none_";
+                                                 pos_lnum = 1;
+                                                 pos_cnum = (-1);
+                                                 pos_bol = 0
+                                               } __pattern_syntax__010_
+                                         ~f:((function
+                                              | Choice_1
+                                                  (_, __pattern_syntax__012_) ->
+                                                  __pattern_syntax__012_
+                                              | _ -> assert false)
+                                         [@ocaml.warning "-11"]))[@merlin.hide ]))
+                                  ~f:(fun b ->
+                                        ((Let_syntax.sub
+                                            ~here:{
+                                                    Ppx_here_lib.pos_fname =
+                                                      "_none_";
+                                                    pos_lnum = 1;
+                                                    pos_cnum = (-1);
+                                                    pos_bol = 0
+                                                  }
+                                            (Let_syntax.return
+                                               ((Let_syntax.map
+                                                   ~here:{
+                                                           Ppx_here_lib.pos_fname
+                                                             = "_none_";
+                                                           pos_lnum = 1;
+                                                           pos_cnum = (-1);
+                                                           pos_bol = 0
+                                                         } __pattern_syntax__010_
+                                                   ~f:((function
+                                                        | Choice_1
+                                                            (__pattern_syntax__011_,
+                                                             _)
+                                                            ->
+                                                            __pattern_syntax__011_
+                                                        | _ -> assert false)
+                                                   [@ocaml.warning "-11"]))
+                                               [@merlin.hide ]))
+                                            ~f:(fun a -> ((CHOICE_1_BODY)
+                                                  [@nontail ])))
+                                        [@nontail ])))
+                              [@nontail ])
+                          | ((1)[@merlin.hide ]) -> CHOICE_2_BODY
+                          | ((2)[@merlin.hide ]) -> CHOICE_3_BODY
+                          | _ -> assert false))
+              [@nontail ])))
+    [@nontail ])
+    |}]
 ;;
 
 let%expect_test "single-case match%sub doesn't call switch" =
@@ -414,7 +416,8 @@ let%expect_test "single-case match%sub doesn't call switch" =
                                  __pattern_syntax__014_))[@merlin.hide ]))
                   ~f:(fun x -> ((CHOICE_1_BODY)[@nontail ])))
               [@nontail ])))
-    [@nontail ]) |}]
+    [@nontail ])
+    |}]
 ;;
 
 let%expect_test "module-qualified match%sub" =
@@ -431,78 +434,78 @@ let%expect_test "module-qualified match%sub" =
   |> print_expr;
   [%expect
     {|
-   ((Module.Let_syntax.Let_syntax.sub
-       ~here:{
-               Ppx_here_lib.pos_fname = "_none_";
-               pos_lnum = 1;
-               pos_cnum = (-1);
-               pos_bol = 0
-             } (Module.Let_syntax.Let_syntax.return MY_EXPR)
-       ~f:(fun __pattern_syntax__015_ ->
-             ((Module.Let_syntax.Let_syntax.switch
-                 ~here:{
-                         Ppx_here_lib.pos_fname = "_none_";
-                         pos_lnum = 1;
-                         pos_cnum = (-1);
-                         pos_bol = 0
-                       }
-                 ~match_:((Module.Let_syntax.Let_syntax.map
-                             __pattern_syntax__015_
-                             ~f:(function | Choice_1 x -> 0 | Choice_2 x -> 1))
-                 [@ocaml.warning "-26-27"]) ~branches:2
-                 ~with_:(function
-                         | ((0)[@merlin.hide ]) ->
-                             ((Module.Let_syntax.Let_syntax.sub
-                                 ~here:{
-                                         Ppx_here_lib.pos_fname = "_none_";
-                                         pos_lnum = 1;
-                                         pos_cnum = (-1);
-                                         pos_bol = 0
-                                       }
-                                 (Module.Let_syntax.Let_syntax.return
-                                    ((Module.Let_syntax.Let_syntax.map
-                                        ~here:{
-                                                Ppx_here_lib.pos_fname =
-                                                  "_none_";
-                                                pos_lnum = 1;
-                                                pos_cnum = (-1);
-                                                pos_bol = 0
-                                              } __pattern_syntax__015_
-                                        ~f:((function
-                                             | Choice_1 __pattern_syntax__016_
-                                                 -> __pattern_syntax__016_
-                                             | _ -> assert false)
-                                        [@ocaml.warning "-11"]))[@merlin.hide ]))
-                                 ~f:(fun x -> ((CHOICE_1_BODY)[@nontail ])))
-                             [@nontail ])
-                         | ((1)[@merlin.hide ]) ->
-                             ((Module.Let_syntax.Let_syntax.sub
-                                 ~here:{
-                                         Ppx_here_lib.pos_fname = "_none_";
-                                         pos_lnum = 1;
-                                         pos_cnum = (-1);
-                                         pos_bol = 0
-                                       }
-                                 (Module.Let_syntax.Let_syntax.return
-                                    ((Module.Let_syntax.Let_syntax.map
-                                        ~here:{
-                                                Ppx_here_lib.pos_fname =
-                                                  "_none_";
-                                                pos_lnum = 1;
-                                                pos_cnum = (-1);
-                                                pos_bol = 0
-                                              } __pattern_syntax__015_
-                                        ~f:((function
-                                             | Choice_2 __pattern_syntax__017_
-                                                 -> __pattern_syntax__017_
-                                             | _ -> assert false)
-                                        [@ocaml.warning "-11"]))[@merlin.hide ]))
-                                 ~f:(fun x -> ((CHOICE_2_BODY)[@nontail ])))
-                             [@nontail ])
-                         | _ -> assert false))
-             [@nontail ])))
-   [@nontail ])
-   |}]
+    ((Module.Let_syntax.Let_syntax.sub
+        ~here:{
+                Ppx_here_lib.pos_fname = "_none_";
+                pos_lnum = 1;
+                pos_cnum = (-1);
+                pos_bol = 0
+              } (Module.Let_syntax.Let_syntax.return MY_EXPR)
+        ~f:(fun __pattern_syntax__015_ ->
+              ((Module.Let_syntax.Let_syntax.switch
+                  ~here:{
+                          Ppx_here_lib.pos_fname = "_none_";
+                          pos_lnum = 1;
+                          pos_cnum = (-1);
+                          pos_bol = 0
+                        }
+                  ~match_:((Module.Let_syntax.Let_syntax.map
+                              __pattern_syntax__015_
+                              ~f:(function | Choice_1 x -> 0 | Choice_2 x -> 1))
+                  [@ocaml.warning "-26-27"]) ~branches:2
+                  ~with_:(function
+                          | ((0)[@merlin.hide ]) ->
+                              ((Module.Let_syntax.Let_syntax.sub
+                                  ~here:{
+                                          Ppx_here_lib.pos_fname = "_none_";
+                                          pos_lnum = 1;
+                                          pos_cnum = (-1);
+                                          pos_bol = 0
+                                        }
+                                  (Module.Let_syntax.Let_syntax.return
+                                     ((Module.Let_syntax.Let_syntax.map
+                                         ~here:{
+                                                 Ppx_here_lib.pos_fname =
+                                                   "_none_";
+                                                 pos_lnum = 1;
+                                                 pos_cnum = (-1);
+                                                 pos_bol = 0
+                                               } __pattern_syntax__015_
+                                         ~f:((function
+                                              | Choice_1 __pattern_syntax__016_
+                                                  -> __pattern_syntax__016_
+                                              | _ -> assert false)
+                                         [@ocaml.warning "-11"]))[@merlin.hide ]))
+                                  ~f:(fun x -> ((CHOICE_1_BODY)[@nontail ])))
+                              [@nontail ])
+                          | ((1)[@merlin.hide ]) ->
+                              ((Module.Let_syntax.Let_syntax.sub
+                                  ~here:{
+                                          Ppx_here_lib.pos_fname = "_none_";
+                                          pos_lnum = 1;
+                                          pos_cnum = (-1);
+                                          pos_bol = 0
+                                        }
+                                  (Module.Let_syntax.Let_syntax.return
+                                     ((Module.Let_syntax.Let_syntax.map
+                                         ~here:{
+                                                 Ppx_here_lib.pos_fname =
+                                                   "_none_";
+                                                 pos_lnum = 1;
+                                                 pos_cnum = (-1);
+                                                 pos_bol = 0
+                                               } __pattern_syntax__015_
+                                         ~f:((function
+                                              | Choice_2 __pattern_syntax__017_
+                                                  -> __pattern_syntax__017_
+                                              | _ -> assert false)
+                                         [@ocaml.warning "-11"]))[@merlin.hide ]))
+                                  ~f:(fun x -> ((CHOICE_2_BODY)[@nontail ])))
+                              [@nontail ])
+                          | _ -> assert false))
+              [@nontail ])))
+    [@nontail ])
+    |}]
 ;;
 
 let%expect_test "type annotations are preserved" =
@@ -543,7 +546,8 @@ let%expect_test "type annotations are preserved" =
                          ~f:(function | (_ : int) -> ()))[@nontail ]))
                   ~f:(fun _ -> ((BODY)[@nontail ])))
               [@nontail ])))
-    [@nontail ]) |}]
+    [@nontail ])
+    |}]
 ;;
 
 let%expect_test "function%sub" =
@@ -607,7 +611,8 @@ let%expect_test "function%sub" =
                             | ((1)[@merlin.hide ]) -> EXPR_NONE
                             | _ -> assert false))
                 [@nontail ])))
-      [@nontail ]) |}]
+      [@nontail ])
+    |}]
 ;;
 
 let%expect_test "function%arr" =
@@ -631,7 +636,8 @@ let%expect_test "function%arr" =
                 pos_cnum = (-1);
                 pos_bol = 0
               } __let_syntax__022_
-        ~f:(function | Some a -> EXPR_SOME | None -> EXPR_NONE) |}]
+        ~f:(function | Some a -> EXPR_SOME | None -> EXPR_NONE)
+    |}]
 ;;
 
 let%expect_test "destructuring let%arr uses cutoff" =
@@ -646,26 +652,26 @@ let%expect_test "destructuring let%arr uses cutoff" =
   |> print_expr;
   [%expect
     {|
-   Let_syntax.arr
-     ~here:{
-             Ppx_here_lib.pos_fname = "_none_";
-             pos_lnum = 1;
-             pos_cnum = (-1);
-             pos_bol = 0
-           }
-     (Let_syntax.cutoff MY_EXPR
-        ~equal:(fun
-                  (__old_for_cutoff__028_,
-                   { b = __old_for_cutoff__026_; c = __old_for_cutoff__024_;_})
-                  (__new_for_cutoff__027_,
-                   { b = __new_for_cutoff__025_; c = __new_for_cutoff__023_;_})
-                  ->
-                  (phys_equal __old_for_cutoff__028_ __new_for_cutoff__027_) &&
-                    ((phys_equal __old_for_cutoff__026_ __new_for_cutoff__025_)
-                       &&
-                       (phys_equal __old_for_cutoff__024_ __new_for_cutoff__023_))))
-     ~f:(fun (a, { b; c;_}) -> MY_BODY)
-   |}]
+    Let_syntax.arr
+      ~here:{
+              Ppx_here_lib.pos_fname = "_none_";
+              pos_lnum = 1;
+              pos_cnum = (-1);
+              pos_bol = 0
+            }
+      (Let_syntax.cutoff MY_EXPR
+         ~equal:(fun
+                   (__old_for_cutoff__028_,
+                    { b = __old_for_cutoff__026_; c = __old_for_cutoff__024_;_})
+                   (__new_for_cutoff__027_,
+                    { b = __new_for_cutoff__025_; c = __new_for_cutoff__023_;_})
+                   ->
+                   (phys_equal __old_for_cutoff__028_ __new_for_cutoff__027_) &&
+                     ((phys_equal __old_for_cutoff__026_ __new_for_cutoff__025_)
+                        &&
+                        (phys_equal __old_for_cutoff__024_ __new_for_cutoff__023_))))
+      ~f:(fun (a, { b; c;_}) -> MY_BODY)
+    |}]
 ;;
 
 let%expect_test "destructuring let%arr uses cutoff (multiple arms)" =
@@ -681,50 +687,50 @@ let%expect_test "destructuring let%arr uses cutoff (multiple arms)" =
   |> print_expr;
   [%expect
     {|
-   let __let_syntax__030_ = MY_EXPR[@@ppxlib.do_not_enter_value ]
-   and __let_syntax__031_ = OTHER_EXPR[@@ppxlib.do_not_enter_value ] in
-   Let_syntax.arr
-     ~here:{
-             Ppx_here_lib.pos_fname = "_none_";
-             pos_lnum = 1;
-             pos_cnum = (-1);
-             pos_bol = 0
-           }
-     (Let_syntax.both
-        (Let_syntax.cutoff __let_syntax__030_
-           ~equal:(fun
-                     (__old_for_cutoff__037_,
-                      { b = __old_for_cutoff__035_;
-                        c = __old_for_cutoff__033_;_})
-                     (__new_for_cutoff__036_,
-                      { b = __new_for_cutoff__034_;
-                        c = __new_for_cutoff__032_;_})
-                     ->
-                     (phys_equal __old_for_cutoff__037_ __new_for_cutoff__036_)
-                       &&
-                       ((phys_equal __old_for_cutoff__035_
-                           __new_for_cutoff__034_)
-                          &&
-                          (phys_equal __old_for_cutoff__033_
-                             __new_for_cutoff__032_))))
-        (Let_syntax.cutoff __let_syntax__031_
-           ~equal:(fun
-                     (__old_for_cutoff__043_,
-                      { y = __old_for_cutoff__041_;
-                        z = __old_for_cutoff__039_;_})
-                     (__new_for_cutoff__042_,
-                      { y = __new_for_cutoff__040_;
-                        z = __new_for_cutoff__038_;_})
-                     ->
-                     (phys_equal __old_for_cutoff__043_ __new_for_cutoff__042_)
-                       &&
-                       ((phys_equal __old_for_cutoff__041_
-                           __new_for_cutoff__040_)
-                          &&
-                          (phys_equal __old_for_cutoff__039_
-                             __new_for_cutoff__038_)))))
-     ~f:(fun ((a, { b; c;_}), (x, { y; z;_})) -> MY_BODY)
-   |}]
+    let __let_syntax__030_ = MY_EXPR[@@ppxlib.do_not_enter_value ]
+    and __let_syntax__031_ = OTHER_EXPR[@@ppxlib.do_not_enter_value ] in
+    Let_syntax.arr
+      ~here:{
+              Ppx_here_lib.pos_fname = "_none_";
+              pos_lnum = 1;
+              pos_cnum = (-1);
+              pos_bol = 0
+            }
+      (Let_syntax.both
+         (Let_syntax.cutoff __let_syntax__030_
+            ~equal:(fun
+                      (__old_for_cutoff__037_,
+                       { b = __old_for_cutoff__035_;
+                         c = __old_for_cutoff__033_;_})
+                      (__new_for_cutoff__036_,
+                       { b = __new_for_cutoff__034_;
+                         c = __new_for_cutoff__032_;_})
+                      ->
+                      (phys_equal __old_for_cutoff__037_ __new_for_cutoff__036_)
+                        &&
+                        ((phys_equal __old_for_cutoff__035_
+                            __new_for_cutoff__034_)
+                           &&
+                           (phys_equal __old_for_cutoff__033_
+                              __new_for_cutoff__032_))))
+         (Let_syntax.cutoff __let_syntax__031_
+            ~equal:(fun
+                      (__old_for_cutoff__043_,
+                       { y = __old_for_cutoff__041_;
+                         z = __old_for_cutoff__039_;_})
+                      (__new_for_cutoff__042_,
+                       { y = __new_for_cutoff__040_;
+                         z = __new_for_cutoff__038_;_})
+                      ->
+                      (phys_equal __old_for_cutoff__043_ __new_for_cutoff__042_)
+                        &&
+                        ((phys_equal __old_for_cutoff__041_
+                            __new_for_cutoff__040_)
+                           &&
+                           (phys_equal __old_for_cutoff__039_
+                              __new_for_cutoff__038_)))))
+      ~f:(fun ((a, { b; c;_}), (x, { y; z;_})) -> MY_BODY)
+    |}]
 ;;
 
 let%expect_test "one arm of destructuring let%arr uses cutoff" =
@@ -740,35 +746,35 @@ let%expect_test "one arm of destructuring let%arr uses cutoff" =
   |> print_expr;
   [%expect
     {|
-   let __let_syntax__045_ = MY_EXPR[@@ppxlib.do_not_enter_value ]
-   and __let_syntax__046_ = ((OTHER_EXPR)[@ppxlib.enter_value y])[@@ppxlib.do_not_enter_value
-                                                                   ] in
-   Let_syntax.arr
-     ~here:{
-             Ppx_here_lib.pos_fname = "_none_";
-             pos_lnum = 1;
-             pos_cnum = (-1);
-             pos_bol = 0
-           }
-     (Let_syntax.both
-        (Let_syntax.cutoff __let_syntax__045_
-           ~equal:(fun
-                     (__old_for_cutoff__052_,
-                      { b = __old_for_cutoff__050_;
-                        c = __old_for_cutoff__048_;_})
-                     (__new_for_cutoff__051_,
-                      { b = __new_for_cutoff__049_;
-                        c = __new_for_cutoff__047_;_})
-                     ->
-                     (phys_equal __old_for_cutoff__052_ __new_for_cutoff__051_)
-                       &&
-                       ((phys_equal __old_for_cutoff__050_
-                           __new_for_cutoff__049_)
-                          &&
-                          (phys_equal __old_for_cutoff__048_
-                             __new_for_cutoff__047_)))) __let_syntax__046_)
-     ~f:(fun ((a, { b; c;_}), y) -> MY_BODY)
-   |}]
+    let __let_syntax__045_ = MY_EXPR[@@ppxlib.do_not_enter_value ]
+    and __let_syntax__046_ = ((OTHER_EXPR)[@ppxlib.enter_value y])[@@ppxlib.do_not_enter_value
+                                                                    ] in
+    Let_syntax.arr
+      ~here:{
+              Ppx_here_lib.pos_fname = "_none_";
+              pos_lnum = 1;
+              pos_cnum = (-1);
+              pos_bol = 0
+            }
+      (Let_syntax.both
+         (Let_syntax.cutoff __let_syntax__045_
+            ~equal:(fun
+                      (__old_for_cutoff__052_,
+                       { b = __old_for_cutoff__050_;
+                         c = __old_for_cutoff__048_;_})
+                      (__new_for_cutoff__051_,
+                       { b = __new_for_cutoff__049_;
+                         c = __new_for_cutoff__047_;_})
+                      ->
+                      (phys_equal __old_for_cutoff__052_ __new_for_cutoff__051_)
+                        &&
+                        ((phys_equal __old_for_cutoff__050_
+                            __new_for_cutoff__049_)
+                           &&
+                           (phys_equal __old_for_cutoff__048_
+                              __new_for_cutoff__047_)))) __let_syntax__046_)
+      ~f:(fun ((a, { b; c;_}), y) -> MY_BODY)
+    |}]
 ;;
 
 let%expect_test "Destructuring does not happen when there is no ignoring" =
@@ -783,14 +789,14 @@ let%expect_test "Destructuring does not happen when there is no ignoring" =
   |> print_expr;
   [%expect
     {|
-   Let_syntax.arr
-     ~here:{
-             Ppx_here_lib.pos_fname = "_none_";
-             pos_lnum = 1;
-             pos_cnum = (-1);
-             pos_bol = 0
-           } MY_EXPR ~f:(fun (a, { b; c; d }) -> MY_BODY)
-   |}]
+    Let_syntax.arr
+      ~here:{
+              Ppx_here_lib.pos_fname = "_none_";
+              pos_lnum = 1;
+              pos_cnum = (-1);
+              pos_bol = 0
+            } MY_EXPR ~f:(fun (a, { b; c; d }) -> MY_BODY)
+    |}]
 ;;
 
 let%expect_test "Destructuring does not happen when there is no ignoring (multiple arms)" =
@@ -806,17 +812,17 @@ let%expect_test "Destructuring does not happen when there is no ignoring (multip
   |> print_expr;
   [%expect
     {|
-   let __let_syntax__055_ = MY_EXPR[@@ppxlib.do_not_enter_value ]
-   and __let_syntax__056_ = OTHER_EXPR[@@ppxlib.do_not_enter_value ] in
-   Let_syntax.arr
-     ~here:{
-             Ppx_here_lib.pos_fname = "_none_";
-             pos_lnum = 1;
-             pos_cnum = (-1);
-             pos_bol = 0
-           } (Let_syntax.both __let_syntax__055_ __let_syntax__056_)
-     ~f:(fun ((a, { b; c; d }), (x, { y; z; w })) -> MY_BODY)
-   |}]
+    let __let_syntax__055_ = MY_EXPR[@@ppxlib.do_not_enter_value ]
+    and __let_syntax__056_ = OTHER_EXPR[@@ppxlib.do_not_enter_value ] in
+    Let_syntax.arr
+      ~here:{
+              Ppx_here_lib.pos_fname = "_none_";
+              pos_lnum = 1;
+              pos_cnum = (-1);
+              pos_bol = 0
+            } (Let_syntax.both __let_syntax__055_ __let_syntax__056_)
+      ~f:(fun ((a, { b; c; d }), (x, { y; z; w })) -> MY_BODY)
+    |}]
 ;;
 
 let%test_module "Destructuring vs. no destructuring criteria." =
@@ -840,13 +846,14 @@ let%test_module "Destructuring vs. no destructuring criteria." =
           BODY];
       [%expect
         {|
-    Let_syntax.arr
-      ~here:{
-              Ppx_here_lib.pos_fname = "_none_";
-              pos_lnum = 1;
-              pos_cnum = (-1);
-              pos_bol = 0
-            } ((NO_DESTRUCTION)[@ppxlib.enter_value a]) ~f:(fun a -> BODY) |}]
+        Let_syntax.arr
+          ~here:{
+                  Ppx_here_lib.pos_fname = "_none_";
+                  pos_lnum = 1;
+                  pos_cnum = (-1);
+                  pos_bol = 0
+                } ((NO_DESTRUCTION)[@ppxlib.enter_value a]) ~f:(fun a -> BODY)
+        |}]
     ;;
 
     let%expect_test "Single ppat_var does not get destructed (multiple arms)" =
@@ -859,18 +866,19 @@ let%test_module "Destructuring vs. no destructuring criteria." =
           BODY];
       [%expect
         {|
-    let __let_syntax__059_ = ((NO_DESTRUCTION)[@ppxlib.enter_value a])[@@ppxlib.do_not_enter_value
-                                                                        ]
-    and __let_syntax__060_ = ((ALSO_NO_DESTRUCTION)[@ppxlib.enter_value b])
-    [@@ppxlib.do_not_enter_value ] in
-    Let_syntax.arr
-      ~here:{
-              Ppx_here_lib.pos_fname = "_none_";
-              pos_lnum = 1;
-              pos_cnum = (-1);
-              pos_bol = 0
-            } (Let_syntax.both __let_syntax__059_ __let_syntax__060_)
-      ~f:(fun (a, b) -> BODY) |}]
+        let __let_syntax__059_ = ((NO_DESTRUCTION)[@ppxlib.enter_value a])[@@ppxlib.do_not_enter_value
+                                                                            ]
+        and __let_syntax__060_ = ((ALSO_NO_DESTRUCTION)[@ppxlib.enter_value b])
+        [@@ppxlib.do_not_enter_value ] in
+        Let_syntax.arr
+          ~here:{
+                  Ppx_here_lib.pos_fname = "_none_";
+                  pos_lnum = 1;
+                  pos_cnum = (-1);
+                  pos_bol = 0
+                } (Let_syntax.both __let_syntax__059_ __let_syntax__060_)
+          ~f:(fun (a, b) -> BODY)
+        |}]
     ;;
 
     let%expect_test "alias might result in no destruction (multiple arms)" =
@@ -883,18 +891,19 @@ let%test_module "Destructuring vs. no destructuring criteria." =
           BODY];
       [%expect
         {|
-    let __let_syntax__062_ = ((NO_DESTRUCTION)[@ppxlib.enter_value a])[@@ppxlib.do_not_enter_value
-                                                                        ]
-    and __let_syntax__063_ = ((ALSO_NO_DESTRUCTION)[@ppxlib.enter_value b])
-    [@@ppxlib.do_not_enter_value ] in
-    Let_syntax.arr
-      ~here:{
-              Ppx_here_lib.pos_fname = "_none_";
-              pos_lnum = 1;
-              pos_cnum = (-1);
-              pos_bol = 0
-            } (Let_syntax.both __let_syntax__062_ __let_syntax__063_)
-      ~f:(fun ((_ as a), (_ as b)) -> BODY) |}]
+        let __let_syntax__062_ = ((NO_DESTRUCTION)[@ppxlib.enter_value a])[@@ppxlib.do_not_enter_value
+                                                                            ]
+        and __let_syntax__063_ = ((ALSO_NO_DESTRUCTION)[@ppxlib.enter_value b])
+        [@@ppxlib.do_not_enter_value ] in
+        Let_syntax.arr
+          ~here:{
+                  Ppx_here_lib.pos_fname = "_none_";
+                  pos_lnum = 1;
+                  pos_cnum = (-1);
+                  pos_bol = 0
+                } (Let_syntax.both __let_syntax__062_ __let_syntax__063_)
+          ~f:(fun ((_ as a), (_ as b)) -> BODY)
+        |}]
     ;;
 
     let%expect_test "alias might result in destruction." =
@@ -907,18 +916,19 @@ let%test_module "Destructuring vs. no destructuring criteria." =
           BODY];
       [%expect
         {|
-    Let_syntax.arr
-      ~here:{
-              Ppx_here_lib.pos_fname = "_none_";
-              pos_lnum = 1;
-              pos_cnum = (-1);
-              pos_bol = 0
-            }
-      (Let_syntax.cutoff ((DESTRUCT)[@ppxlib.enter_value a])
-         ~equal:(fun ((_ as __old_for_cutoff__066_), _)
-                   ((_ as __new_for_cutoff__065_), _) ->
-                   phys_equal __old_for_cutoff__066_ __new_for_cutoff__065_))
-      ~f:(fun ((_ as a), _) -> BODY) |}]
+        Let_syntax.arr
+          ~here:{
+                  Ppx_here_lib.pos_fname = "_none_";
+                  pos_lnum = 1;
+                  pos_cnum = (-1);
+                  pos_bol = 0
+                }
+          (Let_syntax.cutoff ((DESTRUCT)[@ppxlib.enter_value a])
+             ~equal:(fun ((_ as __old_for_cutoff__066_), _)
+                       ((_ as __new_for_cutoff__065_), _) ->
+                       phys_equal __old_for_cutoff__066_ __new_for_cutoff__065_))
+          ~f:(fun ((_ as a), _) -> BODY)
+        |}]
     ;;
 
     let%expect_test "'arbitrary' deep ignoring of at least one pattern results in \
@@ -930,19 +940,20 @@ let%test_module "Destructuring vs. no destructuring criteria." =
           BODY];
       [%expect
         {|
-    Let_syntax.arr
-      ~here:{
-              Ppx_here_lib.pos_fname = "_none_";
-              pos_lnum = 1;
-              pos_cnum = (-1);
-              pos_bol = 0
-            }
-      (Let_syntax.cutoff DESTRUCT
-         ~equal:(fun (((__old_for_cutoff__071_, _) : t), __old_for_cutoff__069_)
-                   (((__new_for_cutoff__070_, _) : t), __new_for_cutoff__068_) ->
-                   (phys_equal __old_for_cutoff__071_ __new_for_cutoff__070_) &&
-                     (phys_equal __old_for_cutoff__069_ __new_for_cutoff__068_)))
-      ~f:(fun (((b, _) : t), c) -> BODY) |}]
+        Let_syntax.arr
+          ~here:{
+                  Ppx_here_lib.pos_fname = "_none_";
+                  pos_lnum = 1;
+                  pos_cnum = (-1);
+                  pos_bol = 0
+                }
+          (Let_syntax.cutoff DESTRUCT
+             ~equal:(fun (((__old_for_cutoff__071_, _) : t), __old_for_cutoff__069_)
+                       (((__new_for_cutoff__070_, _) : t), __new_for_cutoff__068_) ->
+                       (phys_equal __old_for_cutoff__071_ __new_for_cutoff__070_) &&
+                         (phys_equal __old_for_cutoff__069_ __new_for_cutoff__068_)))
+          ~f:(fun (((b, _) : t), c) -> BODY)
+        |}]
     ;;
 
     let%expect_test "'arbitrary' deep ignoring of at least one pattern results in \
@@ -955,33 +966,34 @@ let%test_module "Destructuring vs. no destructuring criteria." =
           BODY];
       [%expect
         {|
-    let __let_syntax__073_ = DESTRUCT[@@ppxlib.do_not_enter_value ]
-    and __let_syntax__074_ = ALSO_DESTRUCT[@@ppxlib.do_not_enter_value ] in
-    Let_syntax.arr
-      ~here:{
-              Ppx_here_lib.pos_fname = "_none_";
-              pos_lnum = 1;
-              pos_cnum = (-1);
-              pos_bol = 0
-            }
-      (Let_syntax.both
-         (Let_syntax.cutoff __let_syntax__073_
-            ~equal:(fun
-                      (((__old_for_cutoff__078_, _) : t), __old_for_cutoff__076_)
-                      (((__new_for_cutoff__077_, _) : t), __new_for_cutoff__075_)
-                      ->
-                      (phys_equal __old_for_cutoff__078_ __new_for_cutoff__077_)
-                        &&
-                        (phys_equal __old_for_cutoff__076_ __new_for_cutoff__075_)))
-         (Let_syntax.cutoff __let_syntax__074_
-            ~equal:(fun
-                      (((__old_for_cutoff__082_, _) : t), __old_for_cutoff__080_)
-                      (((__new_for_cutoff__081_, _) : t), __new_for_cutoff__079_)
-                      ->
-                      (phys_equal __old_for_cutoff__082_ __new_for_cutoff__081_)
-                        &&
-                        (phys_equal __old_for_cutoff__080_ __new_for_cutoff__079_))))
-      ~f:(fun ((((b, _) : t), c), (((d, _) : t), e)) -> BODY) |}]
+        let __let_syntax__073_ = DESTRUCT[@@ppxlib.do_not_enter_value ]
+        and __let_syntax__074_ = ALSO_DESTRUCT[@@ppxlib.do_not_enter_value ] in
+        Let_syntax.arr
+          ~here:{
+                  Ppx_here_lib.pos_fname = "_none_";
+                  pos_lnum = 1;
+                  pos_cnum = (-1);
+                  pos_bol = 0
+                }
+          (Let_syntax.both
+             (Let_syntax.cutoff __let_syntax__073_
+                ~equal:(fun
+                          (((__old_for_cutoff__078_, _) : t), __old_for_cutoff__076_)
+                          (((__new_for_cutoff__077_, _) : t), __new_for_cutoff__075_)
+                          ->
+                          (phys_equal __old_for_cutoff__078_ __new_for_cutoff__077_)
+                            &&
+                            (phys_equal __old_for_cutoff__076_ __new_for_cutoff__075_)))
+             (Let_syntax.cutoff __let_syntax__074_
+                ~equal:(fun
+                          (((__old_for_cutoff__082_, _) : t), __old_for_cutoff__080_)
+                          (((__new_for_cutoff__081_, _) : t), __new_for_cutoff__079_)
+                          ->
+                          (phys_equal __old_for_cutoff__082_ __new_for_cutoff__081_)
+                            &&
+                            (phys_equal __old_for_cutoff__080_ __new_for_cutoff__079_))))
+          ~f:(fun ((((b, _) : t), c), (((d, _) : t), e)) -> BODY)
+        |}]
     ;;
 
     let%expect_test "'closed' record results in no destruction" =
@@ -991,13 +1003,14 @@ let%test_module "Destructuring vs. no destructuring criteria." =
           BODY];
       [%expect
         {|
-    Let_syntax.arr
-      ~here:{
-              Ppx_here_lib.pos_fname = "_none_";
-              pos_lnum = 1;
-              pos_cnum = (-1);
-              pos_bol = 0
-            } NO_DESTRUCTION ~f:(fun { a; b } -> BODY) |}]
+        Let_syntax.arr
+          ~here:{
+                  Ppx_here_lib.pos_fname = "_none_";
+                  pos_lnum = 1;
+                  pos_cnum = (-1);
+                  pos_bol = 0
+                } NO_DESTRUCTION ~f:(fun { a; b } -> BODY)
+        |}]
     ;;
 
     let%expect_test "'closed' record results in no destruction (multiple arms)" =
@@ -1008,16 +1021,17 @@ let%test_module "Destructuring vs. no destructuring criteria." =
           BODY];
       [%expect
         {|
-    let __let_syntax__085_ = NO_DESTRUCTION[@@ppxlib.do_not_enter_value ]
-    and __let_syntax__086_ = ALSO_NO_DESTRUCTION[@@ppxlib.do_not_enter_value ] in
-    Let_syntax.arr
-      ~here:{
-              Ppx_here_lib.pos_fname = "_none_";
-              pos_lnum = 1;
-              pos_cnum = (-1);
-              pos_bol = 0
-            } (Let_syntax.both __let_syntax__085_ __let_syntax__086_)
-      ~f:(fun ({ a; b }, { c; d }) -> BODY) |}]
+        let __let_syntax__085_ = NO_DESTRUCTION[@@ppxlib.do_not_enter_value ]
+        and __let_syntax__086_ = ALSO_NO_DESTRUCTION[@@ppxlib.do_not_enter_value ] in
+        Let_syntax.arr
+          ~here:{
+                  Ppx_here_lib.pos_fname = "_none_";
+                  pos_lnum = 1;
+                  pos_cnum = (-1);
+                  pos_bol = 0
+                } (Let_syntax.both __let_syntax__085_ __let_syntax__086_)
+          ~f:(fun ({ a; b }, { c; d }) -> BODY)
+        |}]
     ;;
 
     let%expect_test "closed record, named unpacked module, results in no destruction." =
@@ -1027,13 +1041,14 @@ let%test_module "Destructuring vs. no destructuring criteria." =
           BODY];
       [%expect
         {|
-    Let_syntax.arr
-      ~here:{
-              Ppx_here_lib.pos_fname = "_none_";
-              pos_lnum = 1;
-              pos_cnum = (-1);
-              pos_bol = 0
-            } NO_DESTRUCTION ~f:(fun ({ a; b = (module X)  }, c) -> BODY) |}]
+        Let_syntax.arr
+          ~here:{
+                  Ppx_here_lib.pos_fname = "_none_";
+                  pos_lnum = 1;
+                  pos_cnum = (-1);
+                  pos_bol = 0
+                } NO_DESTRUCTION ~f:(fun ({ a; b = (module X)  }, c) -> BODY)
+        |}]
     ;;
 
     let%expect_test "Unnamed module results in destruction." =
@@ -1043,23 +1058,24 @@ let%test_module "Destructuring vs. no destructuring criteria." =
           BODY];
       [%expect
         {|
-    Let_syntax.arr
-      ~here:{
-              Ppx_here_lib.pos_fname = "_none_";
-              pos_lnum = 1;
-              pos_cnum = (-1);
-              pos_bol = 0
-            }
-      (Let_syntax.cutoff DESTRUCT
-         ~equal:(fun
-                   (({ a = __old_for_cutoff__092_; b = (module _)  } : t),
-                    __old_for_cutoff__090_)
-                   (({ a = __new_for_cutoff__091_; b = (module _)  } : t),
-                    __new_for_cutoff__089_)
-                   ->
-                   (phys_equal __old_for_cutoff__092_ __new_for_cutoff__091_) &&
-                     (phys_equal __old_for_cutoff__090_ __new_for_cutoff__089_)))
-      ~f:(fun (({ a; b = (module _)  } : t), c) -> BODY) |}]
+        Let_syntax.arr
+          ~here:{
+                  Ppx_here_lib.pos_fname = "_none_";
+                  pos_lnum = 1;
+                  pos_cnum = (-1);
+                  pos_bol = 0
+                }
+          (Let_syntax.cutoff DESTRUCT
+             ~equal:(fun
+                       (({ a = __old_for_cutoff__092_; b = (module _)  } : t),
+                        __old_for_cutoff__090_)
+                       (({ a = __new_for_cutoff__091_; b = (module _)  } : t),
+                        __new_for_cutoff__089_)
+                       ->
+                       (phys_equal __old_for_cutoff__092_ __new_for_cutoff__091_) &&
+                         (phys_equal __old_for_cutoff__090_ __new_for_cutoff__089_)))
+          ~f:(fun (({ a; b = (module _)  } : t), c) -> BODY)
+        |}]
     ;;
 
     let%expect_test "If everything is ignored, equality function is always true." =
@@ -1069,14 +1085,15 @@ let%test_module "Destructuring vs. no destructuring criteria." =
           BODY];
       [%expect
         {|
-    Let_syntax.arr
-      ~here:{
-              Ppx_here_lib.pos_fname = "_none_";
-              pos_lnum = 1;
-              pos_cnum = (-1);
-              pos_bol = 0
-            } (Let_syntax.cutoff ALWAYS_EQUAL ~equal:(fun _ _ -> true))
-      ~f:(fun (({ a = _; b = (module _)  } : t), _) -> BODY) |}]
+        Let_syntax.arr
+          ~here:{
+                  Ppx_here_lib.pos_fname = "_none_";
+                  pos_lnum = 1;
+                  pos_cnum = (-1);
+                  pos_bol = 0
+                } (Let_syntax.cutoff ALWAYS_EQUAL ~equal:(fun _ _ -> true))
+          ~f:(fun (({ a = _; b = (module _)  } : t), _) -> BODY)
+        |}]
     ;;
 
     let%expect_test "Duplicate variables in pattern" =
@@ -1102,7 +1119,8 @@ let%test_module "Destructuring vs. no destructuring criteria." =
                        { a = __new_for_cutoff__097_; b = __new_for_cutoff__097_;_} ->
                        (phys_equal __old_for_cutoff__098_ __new_for_cutoff__097_) &&
                          (phys_equal __old_for_cutoff__096_ __new_for_cutoff__095_)))
-          ~f:(fun { a; b = a;_} -> BODY) |}]
+          ~f:(fun { a; b = a;_} -> BODY)
+        |}]
     ;;
   end)
 ;;
@@ -1121,15 +1139,15 @@ let%expect_test "current match%arr behavior" =
   |> print_expr;
   [%expect
     {|
-   Let_syntax.arr
-     ~here:{
-             Ppx_here_lib.pos_fname = "_none_";
-             pos_lnum = 1;
-             pos_cnum = (-1);
-             pos_bol = 0
-           } EXPR
-     ~f:(function | A (a, _) -> MY_BODY | B -> MY_BODY | _ -> MY_BODY)
-   |}]
+    Let_syntax.arr
+      ~here:{
+              Ppx_here_lib.pos_fname = "_none_";
+              pos_lnum = 1;
+              pos_cnum = (-1);
+              pos_bol = 0
+            } EXPR
+      ~f:(function | A (a, _) -> MY_BODY | B -> MY_BODY | _ -> MY_BODY)
+    |}]
 ;;
 
 let%test_module "match%sub with tuple payload" =
@@ -1186,7 +1204,8 @@ let%test_module "match%sub with tuple payload" =
                               | ((1)[@merlin.hide ]) -> BODY
                               | _ -> assert false))
                   [@nontail ])))
-        [@nontail ]) |}]
+        [@nontail ])
+        |}]
     ;;
 
     let%expect_test "many tuples" =
@@ -1252,7 +1271,8 @@ let%test_module "match%sub with tuple payload" =
                              ~f:(function | (A, B, C, D, E) -> ()))[@nontail ]))
                       ~f:(fun _ -> ((BODY)[@nontail ])))
                   [@nontail ])))
-        [@nontail ]) |}]
+        [@nontail ])
+        |}]
     ;;
   end)
 ;;

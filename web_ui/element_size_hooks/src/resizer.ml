@@ -179,6 +179,7 @@ module T = struct
     Option.iter (get_parent element) ~f:Freeze.Expert.set_width
   ;;
 
+  let on_mount = `Schedule_animation_frame on_mount
   let update ~old_input:_ ~new_input (state : State.t) _element = state.side <- new_input
 
   let destroy _input state (element : Dom_html.element Js.t) =

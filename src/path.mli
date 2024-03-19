@@ -11,7 +11,7 @@ module Elem : sig
     | Subst_into
     | Assoc of Keyed.t
     | Switch of int
-  [@@deriving sexp_of, compare]
+  [@@deriving compare]
 end
 
 type t [@@deriving compare, sexp_of]
@@ -32,3 +32,7 @@ val append : t -> Elem.t -> t
 val to_unique_identifier_string : t -> string
 
 val raise_duplicate : t -> 'a
+
+module For_testing : sig
+  val slow_but_correct_compare_for_bisimulation : t -> t -> int
+end

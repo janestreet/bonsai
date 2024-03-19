@@ -1,6 +1,6 @@
 # 05 - Effect
 
-As we saw back in the [chapter about state](./03-state.md), values with
+As we saw back in the [chapter about state](./03-state.mdx), values with
 type `unit Vdom.Effect.t` are used to schedule updates to stateful
 components. However, the `Effect.t` type can also be used to perform
 arbitrary side-effectful actions that return values. Most commonly,

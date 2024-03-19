@@ -100,7 +100,72 @@ let%expect_test "button" =
               background-color: #14181c;
               color: #e2e3e4;
             }> button label </button>
-    ``` |}]
+    ```
+    |}]
+;;
+
+let%expect_test "badge" =
+  let basic theme = View.badge theme "badge" in
+  let dismissable theme = View.badge theme ~on_dismiss:Effect.Ignore "dismissible" in
+  let extra_attrs theme =
+    View.badge
+      theme
+      ~attrs:
+        [ Vdom.Attr.on_double_click (fun _ -> Effect.Ignore)
+        ; [%css {|font-size: 12px;|}]
+        ]
+      "with_attrs"
+  in
+  themed_component
+    [ "basic", basic; "dismissible", dismissable; "extra attrs", extra_attrs ];
+  [%expect
+    {|
+    # default theme
+    ## basic
+    ```html
+    <span class="ppx_css_anonymous_class_hash_replaced_in_test ppx_css_anonymous_class_hash_replaced_in_test ppx_css_anonymous_class_hash_replaced_in_test"
+          custom-css-vars=((--ppx_css_anonymous_var_1_hash_replaced_in_test white)(--ppx_css_anonymous_var_2_hash_replaced_in_test black)(--ppx_css_anonymous_var_3_hash_replaced_in_test grey))> badge </span>
+    ```
+
+    ## dismissible
+    ```html
+    <span class="ppx_css_anonymous_class_hash_replaced_in_test ppx_css_anonymous_class_hash_replaced_in_test ppx_css_anonymous_class_hash_replaced_in_test"
+          custom-css-vars=((--ppx_css_anonymous_var_1_hash_replaced_in_test white)(--ppx_css_anonymous_var_2_hash_replaced_in_test black)(--ppx_css_anonymous_var_3_hash_replaced_in_test grey))>
+      dismissible
+      <span class="ppx_css_anonymous_class_hash_replaced_in_test" onclick> </span>
+    </span>
+    ```
+
+    ## extra attrs
+    ```html
+    <span class="ppx_css_anonymous_class_hash_replaced_in_test ppx_css_anonymous_class_hash_replaced_in_test ppx_css_anonymous_class_hash_replaced_in_test ppx_css_anonymous_class_hash_replaced_in_test"
+          custom-css-vars=((--ppx_css_anonymous_var_1_hash_replaced_in_test white)(--ppx_css_anonymous_var_2_hash_replaced_in_test black)(--ppx_css_anonymous_var_3_hash_replaced_in_test grey))
+          ondblclick> with_attrs </span>
+    ```
+
+    # kado v1
+    ## basic
+    ```html
+    <span class="ppx_css_anonymous_class_hash_replaced_in_test ppx_css_anonymous_class_hash_replaced_in_test ppx_css_anonymous_class_hash_replaced_in_test"
+          custom-css-vars=((--ppx_css_anonymous_var_1_hash_replaced_in_test #14181c)(--ppx_css_anonymous_var_2_hash_replaced_in_test #e2e3e4)(--ppx_css_anonymous_var_3_hash_replaced_in_test #313943))> badge </span>
+    ```
+
+    ## dismissible
+    ```html
+    <span class="ppx_css_anonymous_class_hash_replaced_in_test ppx_css_anonymous_class_hash_replaced_in_test ppx_css_anonymous_class_hash_replaced_in_test"
+          custom-css-vars=((--ppx_css_anonymous_var_1_hash_replaced_in_test #14181c)(--ppx_css_anonymous_var_2_hash_replaced_in_test #e2e3e4)(--ppx_css_anonymous_var_3_hash_replaced_in_test #313943))>
+      dismissible
+      <span class="ppx_css_anonymous_class_hash_replaced_in_test" onclick> </span>
+    </span>
+    ```
+
+    ## extra attrs
+    ```html
+    <span class="ppx_css_anonymous_class_hash_replaced_in_test ppx_css_anonymous_class_hash_replaced_in_test ppx_css_anonymous_class_hash_replaced_in_test ppx_css_anonymous_class_hash_replaced_in_test"
+          custom-css-vars=((--ppx_css_anonymous_var_1_hash_replaced_in_test #14181c)(--ppx_css_anonymous_var_2_hash_replaced_in_test #e2e3e4)(--ppx_css_anonymous_var_3_hash_replaced_in_test #313943))
+          ondblclick> with_attrs </span>
+    ```
+    |}]
 ;;
 
 let%expect_test "text" =
@@ -141,7 +206,8 @@ let%expect_test "text" =
     ## basic with fomatting
     ```html
     <span> basic with magic gadt format </span>
-    ``` |}]
+    ```
+    |}]
 ;;
 
 let%expect_test "themed text" =
@@ -233,7 +299,8 @@ let%expect_test "themed text" =
     ## basic with format
     ```html
     <span> themed text with 42 format </span>
-    ``` |}]
+    ```
+    |}]
 ;;
 
 let%expect_test "button with tooltip" =
@@ -259,7 +326,8 @@ let%expect_test "button with tooltip" =
               background-color: #14181c;
               color: #e2e3e4;
             }> button label </button>
-    ``` |}]
+    ```
+    |}]
 ;;
 
 let%expect_test "button w/ intents" =
@@ -434,7 +502,8 @@ let%expect_test "button w/ intents" =
               background-color: #f2581b;
               color: white;
             }> button label </button>
-    ``` |}]
+    ```
+    |}]
 ;;
 
 let%expect_test "tooltip" =
@@ -485,7 +554,8 @@ let%expect_test "tooltip" =
         <div> </div>
       </div>
     </span>
-    ``` |}]
+    ```
+    |}]
 ;;
 
 let%expect_test "hbox_wrap" =
@@ -562,7 +632,8 @@ let%expect_test "hbox_wrap" =
       <div> a </div>
       <div> b </div>
     </div>
-    ``` |}]
+    ```
+    |}]
 ;;
 
 let%expect_test "vbox_wrap" =
@@ -645,7 +716,8 @@ let%expect_test "vbox_wrap" =
       <div> a </div>
       <div> b </div>
     </div>
-    ``` |}]
+    ```
+    |}]
 ;;
 
 let%expect_test "hbox" =
@@ -716,7 +788,8 @@ let%expect_test "hbox" =
       <div> a </div>
       <div> b </div>
     </div>
-    ``` |}]
+    ```
+    |}]
 ;;
 
 let%expect_test "vbox" =
@@ -787,7 +860,8 @@ let%expect_test "vbox" =
       <div> a </div>
       <div> b </div>
     </div>
-    ``` |}]
+    ```
+    |}]
 ;;
 
 let%expect_test "current theme" =
@@ -907,7 +981,8 @@ let%expect_test "text w/ intents" =
             font-weight: bold;
             color: #f2581b;
           }> hello world </span>
-    ``` |}]
+    ```
+    |}]
 ;;
 
 let%expect_test "tabs" =
@@ -988,7 +1063,8 @@ let%expect_test "tabs" =
       <div class="tab_button_hash_replaced_in_test" onclick> about </div>
       <div class="tab_button_hash_replaced_in_test" onclick> user preferences </div>
     </div>
-    ``` |}]
+    ```
+    |}]
 ;;
 
 let%expect_test "devbar" =
@@ -1084,7 +1160,8 @@ let%expect_test "devbar" =
         <span> dev </span>
       </div>
     </div>
-    ``` |}]
+    ```
+    |}]
 ;;
 
 let%expect_test "app" =
@@ -1101,9 +1178,10 @@ let%expect_test "app" =
     # kado v1
     ## basic
     ```html
-    <div class="app_hash_replaced_in_test dark_hash_replaced_in_test"
+    <div class="app_hash_replaced_in_test dark_hash_replaced_in_test kado-top-level-for-testing-dark kado-top-level-for-testing-kado"
          custom-css-vars=((--bg_hash_replaced_in_test #1a1d21))> </div>
-    ``` |}]
+    ```
+    |}]
 ;;
 
 let%expect_test "app wrapper" =
@@ -1118,25 +1196,29 @@ let%expect_test "app wrapper" =
   bonsai_component (component ~f:Fn.id);
   [%expect
     {|
-      <span class="app_hash_replaced_in_test dark_hash_replaced_in_test"
-            custom-css-vars=((--bg_hash_replaced_in_test #1a1d21))> kado v1 </span> |}];
+    <span class="app_hash_replaced_in_test dark_hash_replaced_in_test kado-top-level-for-testing-dark kado-top-level-for-testing-kado"
+          custom-css-vars=((--bg_hash_replaced_in_test #1a1d21))> kado v1 </span>
+    |}];
   bonsai_component (component ~f:(fun vdom -> Vdom.Node.div [ vdom ]));
   [%expect
     {|
-    <div class="app_hash_replaced_in_test dark_hash_replaced_in_test"
+    <div class="app_hash_replaced_in_test dark_hash_replaced_in_test kado-top-level-for-testing-dark kado-top-level-for-testing-kado"
          custom-css-vars=((--bg_hash_replaced_in_test #1a1d21))>
       <span> kado v1 </span>
-    </div> |}];
+    </div>
+    |}];
   bonsai_component (component ~f:(fun vdom -> Vdom.Node.lazy_ (lazy vdom)));
   [%expect
     {|
-      <span class="app_hash_replaced_in_test dark_hash_replaced_in_test"
-            custom-css-vars=((--bg_hash_replaced_in_test #1a1d21))> kado v1 </span> |}];
+    <span class="app_hash_replaced_in_test dark_hash_replaced_in_test kado-top-level-for-testing-dark kado-top-level-for-testing-kado"
+          custom-css-vars=((--bg_hash_replaced_in_test #1a1d21))> kado v1 </span>
+    |}];
   bonsai_component (component ~f:(fun _ -> Vdom.Node.none));
   [%expect
     {|
-      <div class="app_hash_replaced_in_test dark_hash_replaced_in_test"
-           custom-css-vars=((--bg_hash_replaced_in_test #1a1d21))> </div> |}];
+    <div class="app_hash_replaced_in_test dark_hash_replaced_in_test kado-top-level-for-testing-dark kado-top-level-for-testing-kado"
+         custom-css-vars=((--bg_hash_replaced_in_test #1a1d21))> </div>
+    |}];
   bonsai_component
     (component ~f:(fun _vdom ->
        Vdom.Node.inner_html
@@ -1146,10 +1228,11 @@ let%expect_test "app wrapper" =
          ~this_html_is_sanitized_and_is_totally_safe_trust_me:"content"));
   [%expect
     {|
-    <div class="app_hash_replaced_in_test dark_hash_replaced_in_test"
+    <div class="app_hash_replaced_in_test dark_hash_replaced_in_test kado-top-level-for-testing-dark kado-top-level-for-testing-kado"
          custom-css-vars=((--bg_hash_replaced_in_test #1a1d21))>
       <foo> content </foo>
-    </div> |}]
+    </div>
+    |}]
 ;;
 
 let%expect_test "colors" =
@@ -1234,7 +1317,8 @@ error:
     error:
       fg: white
       bg: #f2581b
-    ``` |}]
+    ```
+    |}]
 ;;
 
 let%expect_test "codemirror theme" =
@@ -1256,7 +1340,8 @@ let%expect_test "codemirror theme" =
     ## basic
     ```html
     <pre> (Nord) </pre>
-    ``` |}]
+    ```
+    |}]
 ;;
 
 let%test_module "tables" =
@@ -1307,123 +1392,124 @@ let%test_module "tables" =
       themed_component [ "basic", basic; "column groups", column_groups ];
       [%expect
         {|
-    # default theme
-    ## basic
-    ```html
-    <table class="table_hash_replaced_in_test"
-           custom-css-vars=((--row-odd-fg_hash_replaced_in_test black)(--row-odd-bg_hash_replaced_in_test white)(--row-even-fg_hash_replaced_in_test black)(--row-even-bg_hash_replaced_in_test #e6e6e6)(--header-header-border_hash_replaced_in_test grey)(--header-fg_hash_replaced_in_test white)(--header-body-border_hash_replaced_in_test grey)(--header-bg_hash_replaced_in_test black)(--fg_hash_replaced_in_test black)(--body-body-border_hash_replaced_in_test grey)(--bg_hash_replaced_in_test white))>
-      <thead class="header_hash_replaced_in_test">
-        <tr class="header_row_hash_replaced_in_test">
-          <th colspan="1" class="header_cell_hash_replaced_in_test"> symbol </th>
-          <th colspan="1" class="header_cell_hash_replaced_in_test"> price </th>
-          <th colspan="1" class="header_cell_hash_replaced_in_test"> trader </th>
-        </tr>
-      </thead>
-      <tbody class="body_hash_replaced_in_test">
-        <tr class="body_row_hash_replaced_in_test">
-          <td class="body_cell_hash_replaced_in_test">
-            <span> aapl </span>
-          </td>
-          <td class="body_cell_hash_replaced_in_test"> 1.000 </td>
-          <td class="body_cell_hash_replaced_in_test empty_hash_replaced_in_test"> </td>
-        </tr>
-        <tr class="body_row_hash_replaced_in_test">
-          <td class="body_cell_hash_replaced_in_test">
-            <span> msft </span>
-          </td>
-          <td class="body_cell_hash_replaced_in_test"> 8.200 </td>
-          <td class="body_cell_hash_replaced_in_test">
-            <span> ty </span>
-          </td>
-        </tr>
-        <tr class="body_row_hash_replaced_in_test">
-          <td class="body_cell_hash_replaced_in_test">
-            <span> tsla </span>
-          </td>
-          <td class="body_cell_hash_replaced_in_test"> 3.300 </td>
-          <td class="body_cell_hash_replaced_in_test empty_hash_replaced_in_test"> </td>
-        </tr>
-      </tbody>
-    </table>
-    ```
+        # default theme
+        ## basic
+        ```html
+        <table class="table_hash_replaced_in_test"
+               custom-css-vars=((--row-odd-fg_hash_replaced_in_test black)(--row-odd-bg_hash_replaced_in_test white)(--row-even-fg_hash_replaced_in_test black)(--row-even-bg_hash_replaced_in_test #e6e6e6)(--header-header-border_hash_replaced_in_test grey)(--header-fg_hash_replaced_in_test white)(--header-body-border_hash_replaced_in_test grey)(--header-bg_hash_replaced_in_test black)(--fg_hash_replaced_in_test black)(--body-body-border_hash_replaced_in_test grey)(--bg_hash_replaced_in_test white))>
+          <thead class="header_hash_replaced_in_test">
+            <tr class="header_row_hash_replaced_in_test">
+              <th colspan="1" class="header_cell_hash_replaced_in_test"> symbol </th>
+              <th colspan="1" class="header_cell_hash_replaced_in_test"> price </th>
+              <th colspan="1" class="header_cell_hash_replaced_in_test"> trader </th>
+            </tr>
+          </thead>
+          <tbody class="body_hash_replaced_in_test">
+            <tr class="body_row_hash_replaced_in_test">
+              <td class="body_cell_hash_replaced_in_test">
+                <span> aapl </span>
+              </td>
+              <td class="body_cell_hash_replaced_in_test"> 1.000 </td>
+              <td class="body_cell_hash_replaced_in_test empty_hash_replaced_in_test"> </td>
+            </tr>
+            <tr class="body_row_hash_replaced_in_test">
+              <td class="body_cell_hash_replaced_in_test">
+                <span> msft </span>
+              </td>
+              <td class="body_cell_hash_replaced_in_test"> 8.200 </td>
+              <td class="body_cell_hash_replaced_in_test">
+                <span> ty </span>
+              </td>
+            </tr>
+            <tr class="body_row_hash_replaced_in_test">
+              <td class="body_cell_hash_replaced_in_test">
+                <span> tsla </span>
+              </td>
+              <td class="body_cell_hash_replaced_in_test"> 3.300 </td>
+              <td class="body_cell_hash_replaced_in_test empty_hash_replaced_in_test"> </td>
+            </tr>
+          </tbody>
+        </table>
+        ```
 
-    ## column groups
-    ```html
-    <table class="table_hash_replaced_in_test"
-           custom-css-vars=((--row-odd-fg_hash_replaced_in_test black)(--row-odd-bg_hash_replaced_in_test white)(--row-even-fg_hash_replaced_in_test black)(--row-even-bg_hash_replaced_in_test #e6e6e6)(--header-header-border_hash_replaced_in_test grey)(--header-fg_hash_replaced_in_test white)(--header-body-border_hash_replaced_in_test grey)(--header-bg_hash_replaced_in_test black)(--fg_hash_replaced_in_test black)(--body-body-border_hash_replaced_in_test grey)(--bg_hash_replaced_in_test white))>
-      <thead class="header_hash_replaced_in_test">
-        <tr class="header_row_hash_replaced_in_test">
-          <th colspan="1" class="header_cell_hash_replaced_in_test"> </th>
-          <th colspan="2" class="header_cell_hash_replaced_in_test"> prices </th>
-        </tr>
-        <tr class="header_row_hash_replaced_in_test">
-          <th colspan="1" class="header_cell_hash_replaced_in_test"> sym </th>
-          <th colspan="1" class="header_cell_hash_replaced_in_test"> bid </th>
-          <th colspan="1" class="header_cell_hash_replaced_in_test"> ask </th>
-        </tr>
-      </thead>
-      <tbody class="body_hash_replaced_in_test"> </tbody>
-    </table>
-    ```
+        ## column groups
+        ```html
+        <table class="table_hash_replaced_in_test"
+               custom-css-vars=((--row-odd-fg_hash_replaced_in_test black)(--row-odd-bg_hash_replaced_in_test white)(--row-even-fg_hash_replaced_in_test black)(--row-even-bg_hash_replaced_in_test #e6e6e6)(--header-header-border_hash_replaced_in_test grey)(--header-fg_hash_replaced_in_test white)(--header-body-border_hash_replaced_in_test grey)(--header-bg_hash_replaced_in_test black)(--fg_hash_replaced_in_test black)(--body-body-border_hash_replaced_in_test grey)(--bg_hash_replaced_in_test white))>
+          <thead class="header_hash_replaced_in_test">
+            <tr class="header_row_hash_replaced_in_test">
+              <th colspan="1" class="header_cell_hash_replaced_in_test"> </th>
+              <th colspan="2" class="header_cell_hash_replaced_in_test"> prices </th>
+            </tr>
+            <tr class="header_row_hash_replaced_in_test">
+              <th colspan="1" class="header_cell_hash_replaced_in_test"> sym </th>
+              <th colspan="1" class="header_cell_hash_replaced_in_test"> bid </th>
+              <th colspan="1" class="header_cell_hash_replaced_in_test"> ask </th>
+            </tr>
+          </thead>
+          <tbody class="body_hash_replaced_in_test"> </tbody>
+        </table>
+        ```
 
-    # kado v1
-    ## basic
-    ```html
-    <table class="table_hash_replaced_in_test"
-           custom-css-vars=((--row-odd-fg_hash_replaced_in_test #d1d2d3)(--row-odd-bg_hash_replaced_in_test #1a1d21)(--row-even-fg_hash_replaced_in_test #d1d2d3)(--row-even-bg_hash_replaced_in_test #21242a)(--header-header-border_hash_replaced_in_test #313943)(--header-fg_hash_replaced_in_test #d1d2d3)(--header-body-border_hash_replaced_in_test #313943)(--header-bg_hash_replaced_in_test #0b0e11)(--fg_hash_replaced_in_test #d1d2d3)(--body-body-border_hash_replaced_in_test #313943)(--bg_hash_replaced_in_test #1a1d21))>
-      <thead class="header_hash_replaced_in_test">
-        <tr class="header_row_hash_replaced_in_test">
-          <th colspan="1" class="header_cell_hash_replaced_in_test"> symbol </th>
-          <th colspan="1" class="header_cell_hash_replaced_in_test"> price </th>
-          <th colspan="1" class="header_cell_hash_replaced_in_test"> trader </th>
-        </tr>
-      </thead>
-      <tbody class="body_hash_replaced_in_test">
-        <tr class="body_row_hash_replaced_in_test">
-          <td class="body_cell_hash_replaced_in_test">
-            <span> aapl </span>
-          </td>
-          <td class="body_cell_hash_replaced_in_test"> 1.000 </td>
-          <td class="body_cell_hash_replaced_in_test empty_hash_replaced_in_test"> </td>
-        </tr>
-        <tr class="body_row_hash_replaced_in_test">
-          <td class="body_cell_hash_replaced_in_test">
-            <span> msft </span>
-          </td>
-          <td class="body_cell_hash_replaced_in_test"> 8.200 </td>
-          <td class="body_cell_hash_replaced_in_test">
-            <span> ty </span>
-          </td>
-        </tr>
-        <tr class="body_row_hash_replaced_in_test">
-          <td class="body_cell_hash_replaced_in_test">
-            <span> tsla </span>
-          </td>
-          <td class="body_cell_hash_replaced_in_test"> 3.300 </td>
-          <td class="body_cell_hash_replaced_in_test empty_hash_replaced_in_test"> </td>
-        </tr>
-      </tbody>
-    </table>
-    ```
+        # kado v1
+        ## basic
+        ```html
+        <table class="table_hash_replaced_in_test"
+               custom-css-vars=((--row-odd-fg_hash_replaced_in_test #d1d2d3)(--row-odd-bg_hash_replaced_in_test #1a1d21)(--row-even-fg_hash_replaced_in_test #d1d2d3)(--row-even-bg_hash_replaced_in_test #21242a)(--header-header-border_hash_replaced_in_test #313943)(--header-fg_hash_replaced_in_test #d1d2d3)(--header-body-border_hash_replaced_in_test #313943)(--header-bg_hash_replaced_in_test #0b0e11)(--fg_hash_replaced_in_test #d1d2d3)(--body-body-border_hash_replaced_in_test #313943)(--bg_hash_replaced_in_test #1a1d21))>
+          <thead class="header_hash_replaced_in_test">
+            <tr class="header_row_hash_replaced_in_test">
+              <th colspan="1" class="header_cell_hash_replaced_in_test"> symbol </th>
+              <th colspan="1" class="header_cell_hash_replaced_in_test"> price </th>
+              <th colspan="1" class="header_cell_hash_replaced_in_test"> trader </th>
+            </tr>
+          </thead>
+          <tbody class="body_hash_replaced_in_test">
+            <tr class="body_row_hash_replaced_in_test">
+              <td class="body_cell_hash_replaced_in_test">
+                <span> aapl </span>
+              </td>
+              <td class="body_cell_hash_replaced_in_test"> 1.000 </td>
+              <td class="body_cell_hash_replaced_in_test empty_hash_replaced_in_test"> </td>
+            </tr>
+            <tr class="body_row_hash_replaced_in_test">
+              <td class="body_cell_hash_replaced_in_test">
+                <span> msft </span>
+              </td>
+              <td class="body_cell_hash_replaced_in_test"> 8.200 </td>
+              <td class="body_cell_hash_replaced_in_test">
+                <span> ty </span>
+              </td>
+            </tr>
+            <tr class="body_row_hash_replaced_in_test">
+              <td class="body_cell_hash_replaced_in_test">
+                <span> tsla </span>
+              </td>
+              <td class="body_cell_hash_replaced_in_test"> 3.300 </td>
+              <td class="body_cell_hash_replaced_in_test empty_hash_replaced_in_test"> </td>
+            </tr>
+          </tbody>
+        </table>
+        ```
 
-    ## column groups
-    ```html
-    <table class="table_hash_replaced_in_test"
-           custom-css-vars=((--row-odd-fg_hash_replaced_in_test #d1d2d3)(--row-odd-bg_hash_replaced_in_test #1a1d21)(--row-even-fg_hash_replaced_in_test #d1d2d3)(--row-even-bg_hash_replaced_in_test #21242a)(--header-header-border_hash_replaced_in_test #313943)(--header-fg_hash_replaced_in_test #d1d2d3)(--header-body-border_hash_replaced_in_test #313943)(--header-bg_hash_replaced_in_test #0b0e11)(--fg_hash_replaced_in_test #d1d2d3)(--body-body-border_hash_replaced_in_test #313943)(--bg_hash_replaced_in_test #1a1d21))>
-      <thead class="header_hash_replaced_in_test">
-        <tr class="header_row_hash_replaced_in_test">
-          <th colspan="1" class="header_cell_hash_replaced_in_test"> </th>
-          <th colspan="2" class="header_cell_hash_replaced_in_test"> prices </th>
-        </tr>
-        <tr class="header_row_hash_replaced_in_test">
-          <th colspan="1" class="header_cell_hash_replaced_in_test"> sym </th>
-          <th colspan="1" class="header_cell_hash_replaced_in_test"> bid </th>
-          <th colspan="1" class="header_cell_hash_replaced_in_test"> ask </th>
-        </tr>
-      </thead>
-      <tbody class="body_hash_replaced_in_test"> </tbody>
-    </table>
-    ``` |}]
+        ## column groups
+        ```html
+        <table class="table_hash_replaced_in_test"
+               custom-css-vars=((--row-odd-fg_hash_replaced_in_test #d1d2d3)(--row-odd-bg_hash_replaced_in_test #1a1d21)(--row-even-fg_hash_replaced_in_test #d1d2d3)(--row-even-bg_hash_replaced_in_test #21242a)(--header-header-border_hash_replaced_in_test #313943)(--header-fg_hash_replaced_in_test #d1d2d3)(--header-body-border_hash_replaced_in_test #313943)(--header-bg_hash_replaced_in_test #0b0e11)(--fg_hash_replaced_in_test #d1d2d3)(--body-body-border_hash_replaced_in_test #313943)(--bg_hash_replaced_in_test #1a1d21))>
+          <thead class="header_hash_replaced_in_test">
+            <tr class="header_row_hash_replaced_in_test">
+              <th colspan="1" class="header_cell_hash_replaced_in_test"> </th>
+              <th colspan="2" class="header_cell_hash_replaced_in_test"> prices </th>
+            </tr>
+            <tr class="header_row_hash_replaced_in_test">
+              <th colspan="1" class="header_cell_hash_replaced_in_test"> sym </th>
+              <th colspan="1" class="header_cell_hash_replaced_in_test"> bid </th>
+              <th colspan="1" class="header_cell_hash_replaced_in_test"> ask </th>
+            </tr>
+          </thead>
+          <tbody class="body_hash_replaced_in_test"> </tbody>
+        </table>
+        ```
+        |}]
     ;;
 
     let%expect_test "table" =
@@ -1517,7 +1603,8 @@ let%test_module "tables" =
             <tr class="body_row_hash_replaced_in_test"> </tr>
           </tbody>
         </table>
-        ``` |}]
+        ```
+        |}]
     ;;
 
     let%expect_test "lift" =
@@ -1641,7 +1728,8 @@ let%test_module "tables" =
             <tr class="body_row_hash_replaced_in_test"> </tr>
           </tbody>
         </table>
-        ``` |}]
+        ```
+        |}]
     ;;
 
     let%expect_test "table with extras" =
@@ -1727,7 +1815,8 @@ let%test_module "tables" =
             </tr>
           </tbody>
         </table>
-        ``` |}]
+        ```
+        |}]
     ;;
   end)
 ;;
@@ -1918,5 +2007,6 @@ let%expect_test "card" =
              flex-direction: column;
            }> Card from a fieldset </div>
     </div>
-    ``` |}]
+    ```
+    |}]
 ;;

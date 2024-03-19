@@ -77,7 +77,8 @@ let create_direct
      https://github.com/ocaml/ocaml/issues/7074. *)
   let create_polymorphic
     (type action action_input)
-    (computation_info : (_, action, action_input, r) Bonsai.Private.Computation.info)
+    (computation_info :
+      (_, action, action_input, r, unit) Bonsai.Private.Computation.info)
     apply_action
     : r t
     =
@@ -93,7 +94,7 @@ let create_direct
     in
     let inject = A.inject in
     let sexp_of_action = Action.Type_id.to_sexp computation_info.action in
-    let snapshot =
+    let snapshot, () =
       computation_info.run
         ~environment
         ~path:Bonsai.Private.Path.empty

@@ -2,7 +2,6 @@
  (modes byte exe)
  (names main)
  (libraries async_js polling_state_rpc async_kernel
-   bonsai_examples_mouse_position_lib bonsai_web core
-   bonsai_examples_mouse_position_common)
+   bonsai_examples_mouse_position_lib bonsai_web core)
  (preprocess
   (pps ppx_jane)))

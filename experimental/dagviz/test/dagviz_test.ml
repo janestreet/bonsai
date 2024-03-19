@@ -156,7 +156,7 @@ let%expect_test "Linked list graph" =
         <div> </div>
       </div>
     </div>
-     |}];
+    |}];
   set_positions ~handle ~ids:[ a; b; c; d ];
   Handle.show_diff handle;
   [%expect
@@ -183,7 +183,8 @@ let%expect_test "Linked list graph" =
               <div @key=generated_id_9
                    kind="mapn"
                    src-name="C"
-                   outside-id="generated_id_9" |}]
+                   outside-id="generated_id_9"
+    |}]
 ;;
 
 let%expect_test "Dominator reorganizing." =
@@ -241,7 +242,8 @@ let%expect_test "Dominator reorganizing." =
         </div>
         <div> </div>
       </div>
-    </div> |}];
+    </div>
+    |}];
   set_positions ~handle ~ids:[ a; b; c; d ];
   Handle.show_diff handle;
   [%expect
@@ -268,7 +270,8 @@ let%expect_test "Dominator reorganizing." =
                      src-name="B"
                      outside-id="generated_id_25"> B </div>
               </div>
-              <div @key=generated_id_24 |}];
+              <div @key=generated_id_24
+    |}];
   let edges = Set.add edges (e ==> a) |> Fn.flip Set.add (e ==> b) in
   let nodes = map_with_ids [ a; b; c; d; e ] in
   Bonsai.Var.set dag_var { edges; nodes };
@@ -328,7 +331,8 @@ let%expect_test "Dominator reorganizing." =
         </div>
         <div> </div>
       </div>
-    </div> |}];
+    </div>
+    |}];
   set_positions ~handle ~ids:[ a; b; c; d; e ];
   Handle.show_diff handle;
   [%expect
@@ -357,7 +361,8 @@ let%expect_test "Dominator reorganizing." =
                      class="dest-class-generated_id_40"> B </div>
                 <div @key=generated_id_44
                      kind="mapn"
-                     src-name="A" |}]
+                     src-name="A"
+    |}]
 ;;
 
 let%expect_test "Missing node in node map from edges is treated as a redirect" =
@@ -400,7 +405,8 @@ let%expect_test "Missing node in node map from edges is treated as a redirect" =
         </div>
         <div> </div>
       </div>
-    </div> |}];
+    </div>
+    |}];
   set_positions ~handle ~ids:[ a; b; c ];
   Handle.show_diff handle;
   [%expect
@@ -426,7 +432,8 @@ let%expect_test "Missing node in node map from edges is treated as a redirect" =
                 <div> </div>
               </div>
               <div class="hbox_hash_replaced_in_test">
-                <div @key=generated_id_49 |}]
+                <div @key=generated_id_49
+    |}]
 ;;
 
 let%expect_test "Tree-like DAG" =
@@ -505,7 +512,8 @@ let%expect_test "Tree-like DAG" =
         </div>
         <div> </div>
       </div>
-    </div> |}];
+    </div>
+    |}];
   (* This is not ideal, but having this here showcases current behavior.
 
      Despite there being 4 edges in
@@ -552,7 +560,8 @@ let%expect_test "Tree-like DAG" =
                      class="dest-class-generated_id_62"> D </div>
                 <div class="vbox_hash_replaced_in_test">
                   <div @key=gen_4
-                       data-kind="redirect" |}]
+                       data-kind="redirect"
+    |}]
 ;;
 
 let%expect_test "Cycle" =
@@ -572,8 +581,7 @@ let%expect_test "Cycle" =
   let dag = Bonsai.Var.value dag_var in
   let handle = create_handle ~dag ~curr_id in
   Handle.show handle;
-  [%expect {|
-    <pre> (error cycle!) </pre> |}]
+  [%expect {| <pre> (error cycle!) </pre> |}]
 ;;
 
 let%expect_test "redirect nodes" =
@@ -713,7 +721,8 @@ let%expect_test "redirect nodes" =
         </div>
         <div> </div>
       </div>
-    </div> |}];
+    </div>
+    |}];
   (* For reasons similar to the test case above, (not knowing the id's of generated
      redirect nodes to set their positions), this test case does not show all of the edges
      that would be created in a browser environment.  *)
@@ -746,7 +755,8 @@ let%expect_test "redirect nodes" =
                      src-name="B"
                      outside-id="generated_id_99"
                      my-id="generated_id_99"
-                     class="dest-class-generated_id_99"> B </div> |}]
+                     class="dest-class-generated_id_99"> B </div>
+    |}]
 ;;
 
 let%expect_test "Disjoint DAGs" =
@@ -816,7 +826,8 @@ let%expect_test "Disjoint DAGs" =
         </div>
         <div> </div>
       </div>
-    </div> |}];
+    </div>
+    |}];
   set_positions ~handle ~ids:[ a; b; c; d; e; f; g ];
   Handle.show_diff handle;
   [%expect
@@ -843,5 +854,6 @@ let%expect_test "Disjoint DAGs" =
                      src-name="C"
                      outside-id="generated_id_116"> C </div>
                 <div @key=generated_id_115
-                     data-kind="singleton" |}]
+                     data-kind="singleton"
+    |}]
 ;;

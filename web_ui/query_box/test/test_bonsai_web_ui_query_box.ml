@@ -61,7 +61,8 @@ let%expect_test "changing text does filtering" =
       <div data-test="query-box-item-container">
         <div> </div>
       </div>
-    </div> |}];
+    </div>
+    |}];
   focus handle;
   Handle.show handle;
   [%expect
@@ -75,7 +76,8 @@ let%expect_test "changing text does filtering" =
           <div> kiwi </div>
         </div>
       </div>
-    </div> |}];
+    </div>
+    |}];
   input_text handle "a";
   Handle.show handle;
   [%expect
@@ -87,7 +89,8 @@ let%expect_test "changing text does filtering" =
           <div class="selected-item"> apple </div>
         </div>
       </div>
-    </div> |}]
+    </div>
+    |}]
 ;;
 
 let%expect_test "keybindings and filtering behavior" =
@@ -107,7 +110,8 @@ let%expect_test "keybindings and filtering behavior" =
           <div> kiwi </div>
         </div>
       </div>
-    </div> |}];
+    </div>
+    |}];
   (* Escape should close the suggestion list *)
   keydown handle Escape;
   Handle.show handle;
@@ -118,7 +122,8 @@ let%expect_test "keybindings and filtering behavior" =
       <div data-test="query-box-item-container">
         <div> </div>
       </div>
-    </div> |}];
+    </div>
+    |}];
   (* Down should open the suggestion list *)
   keydown handle ArrowDown;
   Handle.show handle;
@@ -134,7 +139,8 @@ let%expect_test "keybindings and filtering behavior" =
           <div> kiwi </div>
         </div>
       </div>
-    </div> |}];
+    </div>
+    |}];
   (* Tab should cycle to the next next item. *)
   keydown handle Tab;
   Handle.show handle;
@@ -150,7 +156,8 @@ let%expect_test "keybindings and filtering behavior" =
           <div> kiwi </div>
         </div>
       </div>
-    </div> |}];
+    </div>
+    |}];
   (* Tab should cycle to the next next item. (again) *)
   keydown handle Tab;
   Handle.show handle;
@@ -166,7 +173,8 @@ let%expect_test "keybindings and filtering behavior" =
           <div class="selected-item"> kiwi </div>
         </div>
       </div>
-    </div> |}];
+    </div>
+    |}];
   (* Closing and reopening the suggestion list resets what item is selected. *)
   keydown handle Escape;
   Handle.recompute_view handle;
@@ -183,7 +191,8 @@ let%expect_test "keybindings and filtering behavior" =
           <div> kiwi </div>
         </div>
       </div>
-    </div> |}];
+    </div>
+    |}];
   (* Advancing to the next item. *)
   keydown handle Tab;
   Handle.show_diff handle;
@@ -202,7 +211,8 @@ let%expect_test "keybindings and filtering behavior" =
             <div> kiwi </div>
           </div>
         </div>
-      </div> |}];
+      </div>
+    |}];
   (* Filtering down to a selected item, and then removing the filter should
      have no effect on the selection, since it isn't based in the an integer
      index. *)
@@ -226,7 +236,8 @@ let%expect_test "keybindings and filtering behavior" =
           <div> kiwi </div>
         </div>
       </div>
-    </div> |}];
+    </div>
+    |}];
   input_text handle "";
   keydown handle Escape;
   Handle.show handle;
@@ -237,7 +248,8 @@ let%expect_test "keybindings and filtering behavior" =
       <div data-test="query-box-item-container">
         <div> </div>
       </div>
-    </div> |}];
+    </div>
+    |}];
   keydown handle ArrowUp;
   (* UpArrow should open the suggestion list, but with the selection set to the bottom. *)
   Handle.show handle;
@@ -253,7 +265,8 @@ let%expect_test "keybindings and filtering behavior" =
           <div class="selected-item"> dragon fruit </div>
         </div>
       </div>
-    </div> |}];
+    </div>
+    |}];
   keydown handle Escape;
   Handle.recompute_view handle;
   keydown handle Escape;
@@ -267,7 +280,8 @@ let%expect_test "keybindings and filtering behavior" =
       <div data-test="query-box-item-container">
         <div> </div>
       </div>
-    </div> |}]
+    </div>
+    |}]
 ;;
 
 let%expect_test "inputting text twice in the same frame shouldn't be a problem" =
@@ -282,7 +296,8 @@ let%expect_test "inputting text twice in the same frame shouldn't be a problem" 
       <div data-test="query-box-item-container">
         <div> </div>
       </div>
-    </div> |}];
+    </div>
+    |}];
   focus handle;
   Handle.recompute_view handle;
   keydown handle Tab;
@@ -302,7 +317,8 @@ let%expect_test "inputting text twice in the same frame shouldn't be a problem" 
           <div class="selected-item"> de </div>
         </div>
       </div>
-    </div> |}];
+    </div>
+    |}];
   input_text handle "a";
   input_text handle "ac";
   Handle.show handle;
@@ -315,7 +331,8 @@ let%expect_test "inputting text twice in the same frame shouldn't be a problem" 
           <div class="selected-item"> ac </div>
         </div>
       </div>
-    </div> |}]
+    </div>
+    |}]
 ;;
 
 let%expect_test "partial-rendering" =
@@ -379,7 +396,8 @@ let%expect_test "partial-rendering" =
           <div> banana </div>
         </div>
       </div>
-    </div> |}];
+    </div>
+    |}];
   input_text handle "w";
   Handle.show handle;
   [%expect
@@ -392,7 +410,8 @@ let%expect_test "partial-rendering" =
           <div> watermelon </div>
         </div>
       </div>
-    </div> |}];
+    </div>
+    |}];
   keydown handle Tab;
   Handle.show handle;
   [%expect
@@ -406,7 +425,8 @@ let%expect_test "partial-rendering" =
           <div class="selected-item"> watermelon </div>
         </div>
       </div>
-    </div> |}];
+    </div>
+    |}];
   input_text handle "";
   (* Even after unfiltering the list of fruits, "watermelon" remains selected,
      and the list is offset to ensure that it is visible. *)
@@ -423,7 +443,8 @@ let%expect_test "partial-rendering" =
           <div class="selected-item"> watermelon </div>
         </div>
       </div>
-    </div> |}];
+    </div>
+    |}];
   keydown handle ArrowDown;
   (* ArrowDown (or Tab) should wrap around to the top when it hits the bottom. *)
   Handle.show handle;
@@ -440,7 +461,8 @@ let%expect_test "partial-rendering" =
           <div> banana </div>
         </div>
       </div>
-    </div> |}];
+    </div>
+    |}];
   keydown handle ArrowUp;
   (* ArrowUp (or Shift-Tab) should wrap around to the bottom when it hits the top. *)
   Handle.show handle;
@@ -457,7 +479,8 @@ let%expect_test "partial-rendering" =
           <div class="selected-item"> watermelon </div>
         </div>
       </div>
-    </div> |}];
+    </div>
+    |}];
   (* Move focus up several times (using both Shift-Tab and Arrow keys). *)
   keydown handle ~shift_key_down:true Tab;
   keydown handle ArrowUp;
@@ -483,7 +506,8 @@ let%expect_test "partial-rendering" =
           <div> strawberry </div>
         </div>
       </div>
-    </div> |}]
+    </div>
+    |}]
 ;;
 
 let%expect_test "tabbing one item visible should exit First_item mode" =
@@ -499,7 +523,8 @@ let%expect_test "tabbing one item visible should exit First_item mode" =
           <div class="selected-item"> kiwi </div>
         </div>
       </div>
-    </div> |}];
+    </div>
+    |}];
   keydown handle Tab;
   input_text handle "";
   Handle.show handle;
@@ -515,7 +540,8 @@ let%expect_test "tabbing one item visible should exit First_item mode" =
           <div> dragon fruit </div>
         </div>
       </div>
-    </div> |}]
+    </div>
+    |}]
 ;;
 
 let%expect_test "shift-tabbing one item visible should exit First_item mode" =
@@ -531,7 +557,8 @@ let%expect_test "shift-tabbing one item visible should exit First_item mode" =
           <div class="selected-item"> kiwi </div>
         </div>
       </div>
-    </div> |}];
+    </div>
+    |}];
   keydown handle ~shift_key_down:true Tab;
   input_text handle "";
   Handle.show handle;
@@ -547,7 +574,8 @@ let%expect_test "shift-tabbing one item visible should exit First_item mode" =
           <div class="selected-item"> kiwi </div>
         </div>
       </div>
-    </div> |}]
+    </div>
+    |}]
 ;;
 
 let%expect_test "[expand_direction=Up] reverses list order and keybindings" =
@@ -565,7 +593,8 @@ let%expect_test "[expand_direction=Up] reverses list order and keybindings" =
         </div>
       </div>
       <input> </input>
-    </div> |}];
+    </div>
+    |}];
   keydown handle Tab;
   Handle.show handle;
   [%expect
@@ -580,7 +609,8 @@ let%expect_test "[expand_direction=Up] reverses list order and keybindings" =
         </div>
       </div>
       <input> </input>
-    </div> |}];
+    </div>
+    |}];
   keydown handle Tab;
   Handle.show handle;
   [%expect
@@ -595,7 +625,8 @@ let%expect_test "[expand_direction=Up] reverses list order and keybindings" =
         </div>
       </div>
       <input> </input>
-    </div> |}];
+    </div>
+    |}];
   keydown handle ArrowDown;
   Handle.show handle;
   [%expect
@@ -610,7 +641,8 @@ let%expect_test "[expand_direction=Up] reverses list order and keybindings" =
         </div>
       </div>
       <input> </input>
-    </div> |}];
+    </div>
+    |}];
   keydown handle ~shift_key_down:true Tab;
   Handle.show handle;
   [%expect
@@ -625,7 +657,8 @@ let%expect_test "[expand_direction=Up] reverses list order and keybindings" =
         </div>
       </div>
       <input> </input>
-    </div> |}];
+    </div>
+    |}];
   keydown handle ArrowUp;
   Handle.show handle;
   [%expect
@@ -640,7 +673,8 @@ let%expect_test "[expand_direction=Up] reverses list order and keybindings" =
         </div>
       </div>
       <input> </input>
-    </div> |}];
+    </div>
+    |}];
   keydown handle ArrowUp;
   Handle.show handle;
   [%expect
@@ -655,7 +689,8 @@ let%expect_test "[expand_direction=Up] reverses list order and keybindings" =
         </div>
       </div>
       <input> </input>
-    </div> |}]
+    </div>
+    |}]
 ;;
 
 let%expect_test "The element containing all the items should be focusable without \
@@ -680,34 +715,37 @@ let%expect_test "The element containing all the items should be focusable withou
         </div>
       </div>
       <input> </input>
-    </div> |}];
+    </div>
+    |}];
   (* Blurring the input to focus the list of items doesn't close the list of items. *)
   blur ~related_target:"[data-test=query-box-item-container]" handle "input";
   Handle.show handle;
   [%expect
     {|
-     <div>
-       <div data-test="query-box-item-container">
-         <div>
-           <div> kiwi </div>
-           <div> orange </div>
-           <div class="selected-item"> apple </div>
-         </div>
-       </div>
-       <input> </input>
-     </div> |}];
+    <div>
+      <div data-test="query-box-item-container">
+        <div>
+          <div> kiwi </div>
+          <div> orange </div>
+          <div class="selected-item"> apple </div>
+        </div>
+      </div>
+      <input> </input>
+    </div>
+    |}];
   (* However, blurring the input without focusing something else *will* close the list of items. *)
   blur handle "input";
   Handle.show handle;
   [%expect
     {|
-     "on_blur called"
-     <div>
-       <div data-test="query-box-item-container">
-         <div> </div>
-       </div>
-       <input> </input>
-     </div> |}];
+    "on_blur called"
+    <div>
+      <div data-test="query-box-item-container">
+        <div> </div>
+      </div>
+      <input> </input>
+    </div>
+    |}];
   focus handle;
   Handle.show handle;
   [%expect
@@ -721,7 +759,8 @@ let%expect_test "The element containing all the items should be focusable withou
         </div>
       </div>
       <input> </input>
-    </div> |}];
+    </div>
+    |}];
   (* Also, blurring the item container to focus the input will also not close the list of items. *)
   blur ~related_target:"input" handle "[data-test=query-box-item-container]";
   Handle.show handle;
@@ -736,7 +775,8 @@ let%expect_test "The element containing all the items should be focusable withou
         </div>
       </div>
       <input> </input>
-    </div> |}];
+    </div>
+    |}];
   (* But blurring the item container without focusing something else *will* close the list of items. *)
   blur handle "[data-test=query-box-item-container]";
   Handle.show handle;
@@ -748,7 +788,8 @@ let%expect_test "The element containing all the items should be focusable withou
         <div> </div>
       </div>
       <input> </input>
-    </div> |}]
+    </div>
+    |}]
 ;;
 
 let%expect_test "clicking on item invokes the callback and closes the list" =
@@ -766,7 +807,8 @@ let%expect_test "clicking on item invokes the callback and closes the list" =
           <div> kiwi </div>
         </div>
       </div>
-    </div> |}];
+    </div>
+    |}];
   Handle.click_on handle ~get_vdom ~selector:".selected-item";
   Handle.show handle;
   [%expect
@@ -777,7 +819,8 @@ let%expect_test "clicking on item invokes the callback and closes the list" =
       <div data-test="query-box-item-container">
         <div> </div>
       </div>
-    </div> |}]
+    </div>
+    |}]
 ;;
 
 let%expect_test "mouseenter on an item selects it, and mousewheel scrolls up and down" =
@@ -795,7 +838,8 @@ let%expect_test "mouseenter on an item selects it, and mousewheel scrolls up and
           <div> kiwi </div>
         </div>
       </div>
-    </div> |}];
+    </div>
+    |}];
   Handle.mouseenter
     handle
     ~get_vdom
@@ -812,7 +856,8 @@ let%expect_test "mouseenter on an item selects it, and mousewheel scrolls up and
           <div class="selected-item"> kiwi </div>
         </div>
       </div>
-    </div> |}]
+    </div>
+    |}]
 ;;
 
 let%expect_test "mousewheel on an item selects it" =
@@ -830,7 +875,8 @@ let%expect_test "mousewheel on an item selects it" =
           <div> kiwi </div>
         </div>
       </div>
-    </div> |}];
+    </div>
+    |}];
   Handle.mouseenter
     handle
     ~get_vdom
@@ -847,7 +893,8 @@ let%expect_test "mousewheel on an item selects it" =
           <div class="selected-item"> kiwi </div>
         </div>
       </div>
-    </div> |}];
+    </div>
+    |}];
   Handle.wheel
     handle
     ~get_vdom
@@ -865,7 +912,8 @@ let%expect_test "mousewheel on an item selects it" =
           <div> kiwi </div>
         </div>
       </div>
-    </div> |}]
+    </div>
+    |}]
 ;;
 
 let%expect_test {|key stays on the same item if the list of items changes (simple string map)|}
@@ -908,7 +956,8 @@ let%expect_test {|key stays on the same item if the list of items changes (simpl
           <div> e </div>
         </div>
       </div>
-    </div> |}];
+    </div>
+    |}];
   Bonsai.Var.update items ~f:(fun map -> Map.set map ~key:2 ~data:"b");
   Handle.show handle;
   [%expect
@@ -922,7 +971,8 @@ let%expect_test {|key stays on the same item if the list of items changes (simpl
           <div> e </div>
         </div>
       </div>
-    </div> |}];
+    </div>
+    |}];
   Bonsai.Var.update items ~f:(fun map -> Map.set map ~key:4 ~data:"d");
   Handle.show handle;
   [%expect
@@ -936,7 +986,8 @@ let%expect_test {|key stays on the same item if the list of items changes (simpl
           <div> d </div>
         </div>
       </div>
-    </div> |}]
+    </div>
+    |}]
 ;;
 
 let%expect_test {|key stays on the same item if the list of items changes (collation)|} =
@@ -983,7 +1034,8 @@ let%expect_test {|key stays on the same item if the list of items changes (colla
           <div> e </div>
         </div>
       </div>
-    </div> |}];
+    </div>
+    |}];
   Bonsai.Var.update items ~f:(fun map -> Map.set map ~key:2 ~data:"b");
   Handle.show handle;
   [%expect
@@ -997,7 +1049,8 @@ let%expect_test {|key stays on the same item if the list of items changes (colla
           <div> e </div>
         </div>
       </div>
-    </div> |}];
+    </div>
+    |}];
   Bonsai.Var.update items ~f:(fun map -> Map.set map ~key:4 ~data:"d");
   Handle.show handle;
   [%expect
@@ -1011,7 +1064,8 @@ let%expect_test {|key stays on the same item if the list of items changes (colla
           <div> d </div>
         </div>
       </div>
-    </div> |}]
+    </div>
+    |}]
 ;;
 
 let%test_module "optimization: the query box only loads its data when interacted with" =
@@ -1046,7 +1100,8 @@ let%test_module "optimization: the query box only loads its data when interacted
                }>
             <div> </div>
           </div>
-        </div> |}];
+        </div>
+        |}];
       focus handle;
       Handle.show_diff handle;
       [%expect
@@ -1070,7 +1125,8 @@ let%test_module "optimization: the query box only loads its data when interacted
         +|      <div onclick onmouseenter> kiwi </div>
         +|    </div>
             </div>
-          </div> |}]
+          </div>
+        |}]
     ;;
 
     let%expect_test "inputting text loads the data" =
@@ -1090,7 +1146,8 @@ let%test_module "optimization: the query box only loads its data when interacted
                }>
             <div> </div>
           </div>
-        </div> |}];
+        </div>
+        |}];
       input_text handle "some text";
       Handle.show_diff handle;
       [%expect
@@ -1116,7 +1173,8 @@ let%test_module "optimization: the query box only loads its data when interacted
                  }>
               <div> </div>
             </div>
-          </div> |}]
+          </div>
+        |}]
     ;;
 
     let%expect_test "clicking a key loads the data" =
@@ -1136,7 +1194,8 @@ let%test_module "optimization: the query box only loads its data when interacted
                }>
             <div> </div>
           </div>
-        </div> |}];
+        </div>
+        |}];
       keydown handle ArrowDown;
       Handle.show_diff handle;
       [%expect
@@ -1161,7 +1220,8 @@ let%test_module "optimization: the query box only loads its data when interacted
         +|      <div onclick onmouseenter> kiwi </div>
         +|    </div>
             </div>
-          </div> |}]
+          </div>
+        |}]
     ;;
   end)
 ;;
@@ -1202,7 +1262,8 @@ let%expect_test "[modify_input_on_select] field works" =
           <div class="selected-item"> apple </div>
         </div>
       </div>
-    </div> |}];
+    </div>
+    |}];
   (* Clicking on "apple" selects it and sets the value of the input to "oran" *)
   Handle.click_on handle ~get_vdom ~selector:".selected-item";
   Handle.show_diff handle;
@@ -1219,7 +1280,8 @@ let%expect_test "[modify_input_on_select] field works" =
     -|    </div>
     +|    <div> </div>
         </div>
-      </div> |}];
+      </div>
+    |}];
   (* Then, focusing the input shows completion suggestions that match "oran" *)
   focus handle;
   Handle.show_diff handle;
@@ -1233,5 +1295,6 @@ let%expect_test "[modify_input_on_select] field works" =
     +|      <div class="selected-item"> orange </div>
     +|    </div>
         </div>
-      </div> |}]
+      </div>
+    |}]
 ;;

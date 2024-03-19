@@ -77,7 +77,8 @@ let%expect_test "simple usage" =
       <div> </div>
     </div>
     adding window event listener
-    adding window event listener |}];
+    adding window event listener
+    |}];
   Handle.show handle;
   [%expect
     {|
@@ -110,7 +111,8 @@ let%expect_test "simple usage" =
         </div>
       </div>
       <div> </div>
-    </div> |}];
+    </div>
+    |}];
   dnd_action handle (Start_drag "0");
   dnd_action handle (Set_target (Some "(1 0)"));
   dnd_action handle Finish_drag;
@@ -147,7 +149,8 @@ let%expect_test "simple usage" =
         </div>
       </div>
       <div> </div>
-    </div> |}]
+    </div>
+    |}]
 ;;
 
 let%expect_test "stateful items" =
@@ -190,7 +193,8 @@ let%expect_test "stateful items" =
       <div> </div>
     </div>
     adding window event listener
-    adding window event listener |}];
+    adding window event listener
+    |}];
   Handle.show handle;
   [%expect
     {|
@@ -223,13 +227,15 @@ let%expect_test "stateful items" =
         </div>
       </div>
       <div> </div>
-    </div> |}];
+    </div>
+    |}];
   Handle.click_on handle ~get_vdom:Fn.id ~selector:"#1";
   Handle.show_diff ~diff_context:0 handle;
   [%expect
     {|
     -|          <button> 1: false </button>
-    +|          <button> 1: true </button> |}];
+    +|          <button> 1: true </button>
+    |}];
   dnd_action handle (Start_drag "1");
   dnd_action handle (Set_target (Some "(1 0)"));
   dnd_action handle Finish_drag;
@@ -268,5 +274,6 @@ let%expect_test "stateful items" =
         </div>
       </div>
       <div> </div>
-    </div> |}]
+    </div>
+    |}]
 ;;

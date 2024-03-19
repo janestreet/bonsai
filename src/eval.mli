@@ -1,4 +1,4 @@
 open! Core
 open! Import
 
-val gather : 'result Computation.t -> 'result Computation.packed_info
+val gather : 'result Computation.t -> ('result, unit) Computation.packed_info

@@ -67,7 +67,8 @@ let%expect_test "render some notifications and test that they close as expected"
     +|           }> An action occured! </div>
     +|    </div>
     +|  </div>
-    +|</div> |}];
+    +|</div>
+    |}];
   Handle.advance_clock_by handle (Time_ns.Span.create ~sec:20 ());
   Handle.recompute_view_until_stable handle;
   (* Notification should be closed as more than threshold of time has passed. *)
@@ -86,7 +87,8 @@ let%expect_test "render some notifications and test that they close as expected"
     -|    </div>
     -|  </div>
     -|</div>
-    +|<div class="notification_container_hash_replaced_in_test"> </div> |}];
+    +|<div class="notification_container_hash_replaced_in_test"> </div>
+    |}];
   Handle.do_actions
     handle
     [ Notification_spec.Add_notification
@@ -112,12 +114,13 @@ let%expect_test "render some notifications and test that they close as expected"
     +|      </div>
     +|    </div>
     +|  </div>
-    +|</div> |}];
+    +|</div>
+    |}];
   Handle.advance_clock_by handle (Time_ns.Span.create ~sec:20 ());
   Handle.recompute_view_until_stable handle;
   (* No diff expected - error notification should still be open. *)
   Handle.show_diff handle;
-  [%expect {||}];
+  [%expect {| |}];
   Handle.click_on handle ~get_vdom:Tuple2.get2 ~selector:"[data-notification-id=1]";
   Handle.show_diff handle;
   (* Notification should be closed as we clicked on it. *)
@@ -133,7 +136,8 @@ let%expect_test "render some notifications and test that they close as expected"
     -|    </div>
     -|  </div>
     -|</div>
-    +|<div class="notification_container_hash_replaced_in_test"> </div> |}];
+    +|<div class="notification_container_hash_replaced_in_test"> </div>
+    |}];
   Handle.do_actions
     handle
     [ Notification_spec.Add_notification { level = `Success; text = "Notification #1" } ];
@@ -167,7 +171,8 @@ let%expect_test "render some notifications and test that they close as expected"
     +|           }> Notification #2 </div>
     +|    </div>
     +|  </div>
-    +|</div> |}];
+    +|</div>
+    |}];
   Handle.click_on handle ~get_vdom:Tuple2.get2 ~selector:"[data-notification-id=2]";
   Handle.show_diff handle;
   (* Only "Notification #1" should be closed. *)
@@ -194,7 +199,8 @@ let%expect_test "render some notifications and test that they close as expected"
                  }> Notification #2 </div>
           </div>
         </div>
-      </div> |}]
+      </div>
+    |}]
 ;;
 
 let%test_module "generic notification test" =
@@ -265,7 +271,8 @@ let%test_module "generic notification test" =
         +|      <pre> (element (A 1)) </pre>
         +|    </div>
         +|  </div>
-        +|</div> |}];
+        +|</div>
+        |}];
       Handle.click_on
         handle
         ~get_vdom:Tuple2.get1
@@ -280,7 +287,8 @@ let%test_module "generic notification test" =
         -|    </div>
         -|  </div>
         -|</div>
-        +|<div class="notification_container_hash_replaced_in_test"> </div> |}]
+        +|<div class="notification_container_hash_replaced_in_test"> </div>
+        |}]
     ;;
 
     let bare_bones_notification_ui =
@@ -321,7 +329,8 @@ let%test_module "generic notification test" =
           <div @key=1 class="notification_hash_replaced_in_test">
             <pre> (element (A 2)) </pre>
           </div>
-        </div> |}];
+        </div>
+        |}];
       let id1, id2 = Option.value_exn !id_ref in
       Effect.Expert.handle_non_dom_event_exn
         (Notifications.close_notification notification_handle id1);
@@ -335,7 +344,8 @@ let%test_module "generic notification test" =
             <div @key=1 class="notification_hash_replaced_in_test">
               <pre> (element (A 2)) </pre>
             </div>
-          </div> |}];
+          </div>
+        |}];
       Effect.Expert.handle_non_dom_event_exn
         (Notifications.close_notification notification_handle id2);
       Handle.show_diff handle;
@@ -346,7 +356,147 @@ let%test_module "generic notification test" =
         -|    <pre> (element (A 2)) </pre>
         -|  </div>
         -|</div>
-        +|<div class="notification_container_hash_replaced_in_test"> </div> |}]
+        +|<div class="notification_container_hash_replaced_in_test"> </div>
+        |}]
+    ;;
+
+    let%expect_test "manually closing all notifications" =
+      let handle = Handle.create (module Result_spec) bare_bones_notification_ui in
+      let _, notification_handle = Handle.last_result handle in
+      Effect.Expert.handle_non_dom_event_exn
+        (Effect.all_unit
+           [ Notifications.send_notification notification_handle (A "1")
+             |> Effect.ignore_m
+           ; Notifications.send_notification notification_handle (A "2")
+             |> Effect.ignore_m
+           ]);
+      Handle.show handle;
+      [%expect
+        {|
+        <div class="notification_container_hash_replaced_in_test">
+          <div @key=0 class="notification_hash_replaced_in_test">
+            <pre> (element (A 1)) </pre>
+          </div>
+          <div @key=1 class="notification_hash_replaced_in_test">
+            <pre> (element (A 2)) </pre>
+          </div>
+        </div>
+        |}];
+      Effect.Expert.handle_non_dom_event_exn
+        (Notifications.close_all_notifications notification_handle);
+      Handle.show_diff handle;
+      [%expect
+        {|
+        -|<div class="notification_container_hash_replaced_in_test">
+        -|  <div @key=0 class="notification_hash_replaced_in_test">
+        -|    <pre> (element (A 1)) </pre>
+        -|  </div>
+        -|  <div @key=1 class="notification_hash_replaced_in_test">
+        -|    <pre> (element (A 2)) </pre>
+        -|  </div>
+        -|</div>
+        +|<div class="notification_container_hash_replaced_in_test"> </div>
+        |}]
+    ;;
+
+    let%expect_test "manually closing oldest notification" =
+      let handle = Handle.create (module Result_spec) bare_bones_notification_ui in
+      let _, notification_handle = Handle.last_result handle in
+      Effect.Expert.handle_non_dom_event_exn
+        (Effect.all_unit
+           [ Notifications.send_notification notification_handle (A "1")
+             |> Effect.ignore_m
+           ; Notifications.send_notification notification_handle (A "2")
+             |> Effect.ignore_m
+           ]);
+      Handle.show handle;
+      [%expect
+        {|
+        <div class="notification_container_hash_replaced_in_test">
+          <div @key=0 class="notification_hash_replaced_in_test">
+            <pre> (element (A 1)) </pre>
+          </div>
+          <div @key=1 class="notification_hash_replaced_in_test">
+            <pre> (element (A 2)) </pre>
+          </div>
+        </div>
+        |}];
+      Effect.Expert.handle_non_dom_event_exn
+        (Notifications.close_oldest_notification notification_handle);
+      Handle.show_diff handle;
+      [%expect
+        {|
+          <div class="notification_container_hash_replaced_in_test">
+        -|  <div @key=0 class="notification_hash_replaced_in_test">
+        -|    <pre> (element (A 1)) </pre>
+        -|  </div>
+            <div @key=1 class="notification_hash_replaced_in_test">
+              <pre> (element (A 2)) </pre>
+            </div>
+          </div>
+        |}];
+      Effect.Expert.handle_non_dom_event_exn
+        (Notifications.close_oldest_notification notification_handle);
+      Handle.show_diff handle;
+      [%expect
+        {|
+        -|<div class="notification_container_hash_replaced_in_test">
+        -|  <div @key=1 class="notification_hash_replaced_in_test">
+        -|    <pre> (element (A 2)) </pre>
+        -|  </div>
+        -|</div>
+        +|<div class="notification_container_hash_replaced_in_test"> </div>
+        |}]
+    ;;
+
+    let%expect_test "manually closing newest notification" =
+      let handle = Handle.create (module Result_spec) bare_bones_notification_ui in
+      let _, notification_handle = Handle.last_result handle in
+      Effect.Expert.handle_non_dom_event_exn
+        (Effect.all_unit
+           [ Notifications.send_notification notification_handle (A "1")
+             |> Effect.ignore_m
+           ; Notifications.send_notification notification_handle (A "2")
+             |> Effect.ignore_m
+           ]);
+      Handle.show handle;
+      [%expect
+        {|
+        <div class="notification_container_hash_replaced_in_test">
+          <div @key=0 class="notification_hash_replaced_in_test">
+            <pre> (element (A 1)) </pre>
+          </div>
+          <div @key=1 class="notification_hash_replaced_in_test">
+            <pre> (element (A 2)) </pre>
+          </div>
+        </div>
+        |}];
+      Effect.Expert.handle_non_dom_event_exn
+        (Notifications.close_newest_notification notification_handle);
+      Handle.show_diff handle;
+      [%expect
+        {|
+          <div class="notification_container_hash_replaced_in_test">
+            <div @key=0 class="notification_hash_replaced_in_test">
+              <pre> (element (A 1)) </pre>
+            </div>
+        -|  <div @key=1 class="notification_hash_replaced_in_test">
+        -|    <pre> (element (A 2)) </pre>
+        -|  </div>
+          </div>
+        |}];
+      Effect.Expert.handle_non_dom_event_exn
+        (Notifications.close_newest_notification notification_handle);
+      Handle.show_diff handle;
+      [%expect
+        {|
+        -|<div class="notification_container_hash_replaced_in_test">
+        -|  <div @key=0 class="notification_hash_replaced_in_test">
+        -|    <pre> (element (A 1)) </pre>
+        -|  </div>
+        -|</div>
+        +|<div class="notification_container_hash_replaced_in_test"> </div>
+        |}]
     ;;
 
     let%expect_test "manually modifying a notification" =
@@ -371,7 +521,8 @@ let%test_module "generic notification test" =
           <div @key=1 class="notification_hash_replaced_in_test">
             <pre> (element (A 2)) </pre>
           </div>
-        </div> |}];
+        </div>
+        |}];
       let id1, id2 = Option.value_exn !id_ref in
       Effect.Expert.handle_non_dom_event_exn
         (Notifications.modify_notification notification_handle id1 (A "3"));
@@ -386,7 +537,8 @@ let%test_module "generic notification test" =
             <div @key=1 class="notification_hash_replaced_in_test">
               <pre> (element (A 2)) </pre>
             </div>
-          </div> |}];
+          </div>
+        |}];
       Effect.Expert.handle_non_dom_event_exn
         (Notifications.modify_notification notification_handle id2 (A "10"));
       Handle.show_diff handle;
@@ -400,7 +552,8 @@ let%test_module "generic notification test" =
         -|    <pre> (element (A 2)) </pre>
         +|    <pre> (element (A 10)) </pre>
             </div>
-          </div> |}]
+          </div>
+        |}]
     ;;
 
     let%expect_test "opening and closing many notifications" =
@@ -464,7 +617,8 @@ let%test_module "generic notification test" =
         +|      <pre> (element (B 6)) </pre>
         +|    </div>
         +|  </div>
-        +|</div> |}];
+        +|</div>
+        |}];
       let click notifications =
         List.iter notifications ~f:(fun notification ->
           Handle.click_on
@@ -507,7 +661,8 @@ let%test_module "generic notification test" =
         -|      <pre> (element (B 6)) </pre>
         -|    </div>
         -|  </div>
-          </div> |}]
+          </div>
+        |}]
     ;;
 
     let%expect_test "notification closig due to time expiry at different times" =
@@ -549,12 +704,13 @@ let%test_module "generic notification test" =
         +|      <pre> (element (B 2)) </pre>
         +|    </div>
         +|  </div>
-        +|</div> |}];
+        +|</div>
+        |}];
       Handle.advance_clock_by handle (Time_ns.Span.of_sec 1.0);
       (* NOTE: Due to the implementation of the notifications API, there is a one frame
          delay for the actual removal to occur. *)
       Handle.show_diff handle;
-      [%expect {||}];
+      [%expect {| |}];
       Handle.show_diff handle;
       (* First notification disappears after 1 second as specified. *)
       [%expect
@@ -570,10 +726,11 @@ let%test_module "generic notification test" =
                 <pre> (element (B 2)) </pre>
               </div>
             </div>
-          </div> |}];
+          </div>
+        |}];
       Handle.advance_clock_by handle (Time_ns.Span.of_sec 1.0);
       Handle.show_diff handle;
-      [%expect {||}];
+      [%expect {| |}];
       (* Second notification disappears after two seconds. *)
       Handle.show_diff handle;
       [%expect
@@ -585,7 +742,8 @@ let%test_module "generic notification test" =
         -|    </div>
         -|  </div>
         -|</div>
-        +|<div class="notification_container_hash_replaced_in_test"> </div> |}]
+        +|<div class="notification_container_hash_replaced_in_test"> </div>
+        |}]
     ;;
   end)
 ;;

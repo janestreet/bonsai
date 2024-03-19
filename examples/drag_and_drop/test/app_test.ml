@@ -61,7 +61,8 @@ let%expect_test "drag between containers" =
       </div>
     </div>
     adding window event listener
-    adding window event listener |}];
+    adding window event listener
+    |}];
   run handle (Start_drag "0");
   run handle (Set_target (Some "finished"));
   run handle Finish_drag;
@@ -117,7 +118,8 @@ let%expect_test "drag between containers" =
                  onpointerdown> finished 3 </div>
           </div>
         </div>
-      </div> |}]
+      </div>
+    |}]
 ;;
 
 let%expect_test "drag to same container" =
@@ -125,7 +127,8 @@ let%expect_test "drag to same container" =
   Handle.store_view handle;
   [%expect {|
     adding window event listener
-    adding window event listener |}];
+    adding window event listener
+    |}];
   run handle (Start_drag "0");
   run handle (Set_target (Some "todo"));
   run handle Finish_drag;
@@ -139,7 +142,8 @@ let%expect_test "appearance of dragged item and preview item while drag is happe
   Handle.store_view handle;
   [%expect {|
     adding window event listener
-    adding window event listener |}];
+    adding window event listener
+    |}];
   run handle (Start_drag "0");
   Handle.show_diff handle;
   [%expect
@@ -194,7 +198,8 @@ let%expect_test "appearance of dragged item and preview item while drag is happe
     +|       }>
     +|    <div class="kanban_item_hash_replaced_in_test"> todo 1 </div>
     +|  </div>
-      </div> |}];
+      </div>
+    |}];
   run handle (Set_target (Some "todo"));
   Handle.show_diff handle;
   [%expect
@@ -224,7 +229,8 @@ let%expect_test "appearance of dragged item and preview item while drag is happe
                  class="kanban_item_hash_replaced_in_test no_select_hash_replaced_in_test"
                  onpointerdown> in progress 1 </div>
             <div @key=3
-                 class="kanban_item_hash_replaced_in_test no_select_hash_replaced_in_test" |}];
+                 class="kanban_item_hash_replaced_in_test no_select_hash_replaced_in_test"
+    |}];
   run handle (Set_target (Some "finished"));
   Handle.show_diff handle;
   [%expect
@@ -284,7 +290,8 @@ let%expect_test "appearance of dragged item and preview item while drag is happe
              style={
                width: 0px;
                height: 0px;
-               transform: translateY(0px) translateX(0px); |}];
+               transform: translateY(0px) translateX(0px);
+    |}];
   run handle Finish_drag;
   Handle.show_diff handle;
   [%expect
@@ -333,5 +340,6 @@ let%expect_test "appearance of dragged item and preview item while drag is happe
     -|       }>
     -|    <div class="kanban_item_hash_replaced_in_test"> todo 1 </div>
     -|  </div>
-      </div> |}]
+      </div>
+    |}]
 ;;

@@ -1,6 +1,6 @@
 # 04 - Forms
 
-Back in the [state chapter](./03-state.md), a textbox component was
+Back in the [state chapter](./03-state.mdx), a textbox component was
 built out of the low-level Bonsai primitives. Textboxes are an example
 of form elements, and they're very common in real-world applications.
 Because of this, Bonsai has an entire library dedicated to building and
@@ -351,4 +351,4 @@ You'll notice that non-integers are reported as an error. `Form.project`
 actually captures the exception thrown by `Int.of_string` and the
 `Form.value` returned by the `project`ed form is an `Error`.
 
-On to [Chapter 5: Effect](./05-effect.md)
+On to [Chapter 5: Effect](./05-effect.mdx)

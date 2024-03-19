@@ -29,15 +29,15 @@ let%expect_test "Initial multiselect state" =
   Handle.show handle;
   [%expect
     {|
-<div>
-  <input type="text"
-         list="bonsai_path_replaced_in_test"
-         placeholder="Select a value"
-         value=""
-         #value=""
-         onchange> </input>
-</div>
- |}]
+    <div>
+      <input type="text"
+             list="bonsai_path_replaced_in_test"
+             placeholder="Select a value"
+             value=""
+             #value=""
+             onchange> </input>
+    </div>
+    |}]
 ;;
 
 let%expect_test "Select two elements" =
@@ -51,18 +51,19 @@ let%expect_test "Select two elements" =
      in a div that is rendered below datalist. *)
   [%expect
     {|
-  <div>
-    <input type="text"
-           list="bonsai_path_replaced_in_test"
-           placeholder="Select a value"
-           value=""
-           #value=""
-           onchange> </input>
-+|  <div class="bonsai-web-ui-freeform-multiselect-pills">
-+|    <span tabindex="0" data-value="this is a thing" onclick onkeyup> this is a thing × </span>
-+|    <span tabindex="0" data-value="this is yet another thing" onclick onkeyup> this is yet another thing × </span>
-+|  </div>
-  </div> |}]
+      <div>
+        <input type="text"
+               list="bonsai_path_replaced_in_test"
+               placeholder="Select a value"
+               value=""
+               #value=""
+               onchange> </input>
+    +|  <div class="bonsai-web-ui-freeform-multiselect-pills">
+    +|    <span tabindex="0" data-value="this is a thing" onclick onkeyup> this is a thing × </span>
+    +|    <span tabindex="0" data-value="this is yet another thing" onclick onkeyup> this is yet another thing × </span>
+    +|  </div>
+      </div>
+    |}]
 ;;
 
 let%expect_test "Deselect an element" =
@@ -76,18 +77,19 @@ let%expect_test "Deselect an element" =
   (* Expected change: this is a thing should disappear from pills *)
   [%expect
     {|
-  <div>
-    <input type="text"
-           list="bonsai_path_replaced_in_test"
-           placeholder="Select a value"
-           value=""
-           #value=""
-           onchange> </input>
-    <div class="bonsai-web-ui-freeform-multiselect-pills">
--|    <span tabindex="0" data-value="this is a thing" onclick onkeyup> this is a thing × </span>
-      <span tabindex="0" data-value="this is yet another thing" onclick onkeyup> this is yet another thing × </span>
-    </div>
-  </div> |}]
+      <div>
+        <input type="text"
+               list="bonsai_path_replaced_in_test"
+               placeholder="Select a value"
+               value=""
+               #value=""
+               onchange> </input>
+        <div class="bonsai-web-ui-freeform-multiselect-pills">
+    -|    <span tabindex="0" data-value="this is a thing" onclick onkeyup> this is a thing × </span>
+          <span tabindex="0" data-value="this is yet another thing" onclick onkeyup> this is yet another thing × </span>
+        </div>
+      </div>
+    |}]
 ;;
 
 let%expect_test "set the elements" =
@@ -113,18 +115,19 @@ let%expect_test "set the elements" =
   Handle.show_diff handle;
   [%expect
     {|
-  <div>
-    <input type="text"
-           list="bonsai_path_replaced_in_test"
-           placeholder="Select a value"
-           value=""
-           #value=""
-           onchange> </input>
-+|  <div class="bonsai-web-ui-freeform-multiselect-pills">
-+|    <span tabindex="0" data-value="this is a thing" onclick onkeyup> this is a thing × </span>
-+|    <span tabindex="0" data-value="this is yet another thing" onclick onkeyup> this is yet another thing × </span>
-+|  </div>
-  </div> |}]
+      <div>
+        <input type="text"
+               list="bonsai_path_replaced_in_test"
+               placeholder="Select a value"
+               value=""
+               #value=""
+               onchange> </input>
+    +|  <div class="bonsai-web-ui-freeform-multiselect-pills">
+    +|    <span tabindex="0" data-value="this is a thing" onclick onkeyup> this is a thing × </span>
+    +|    <span tabindex="0" data-value="this is yet another thing" onclick onkeyup> this is yet another thing × </span>
+    +|  </div>
+      </div>
+    |}]
 ;;
 
 let%expect_test "input multiple elements" =
@@ -149,5 +152,6 @@ let%expect_test "input multiple elements" =
     +|    <span tabindex="0" data-value="this is a thing" onclick onkeyup> this is a thing × </span>
     +|    <span tabindex="0" data-value="this is yet another thing" onclick onkeyup> this is yet another thing × </span>
     +|  </div>
-      </div> |}]
+      </div>
+    |}]
 ;;

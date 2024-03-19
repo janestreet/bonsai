@@ -94,11 +94,19 @@ let input
                   ; Vdom.Attr.on_input (fun _ -> on_input)
                   ; Vdom.Attr.on_change (fun _ input ->
                       let maybe_t =
-                        Search.find
-                          ~to_string
-                          ~needle:input
-                          ~haystack:all_options
-                          ~handle_unknown_option
+                        match input with
+                        | "" ->
+                          (* Since [Search.find] is substring-based, if the input is the
+                             empty string, it'll match all of the options. In practice, this
+                             isn't what users expect: clearing the input ought to select
+                             nothing. *)
+                          None
+                        | nonempty_input ->
+                          Search.find
+                            ~to_string
+                            ~needle:nonempty_input
+                            ~haystack:all_options
+                            ~handle_unknown_option
                       in
                       on_change maybe_t input)
                   ])

@@ -32,20 +32,20 @@ stylesheet
 
   .tooltip_container>.tooltip {
       display:none;
+      position: absolute;
+
+      padding: 0.1em 0.3em;
+      max-width: max(300px, 100%);
+      width: max-content;
+
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      background: var(--bg);
+      color: var(--fg);
   }
 
   .tooltip_container:hover>.tooltip {
     display:block;
-    position: absolute;
-
-    padding: 0.1em 0.3em;
-    max-width: max(300px, 100%);
-    width: max-content;
-
-    border: 1px solid var(--border);
-    border-radius: 2px;
-    background: var(--bg);
-    color: var(--fg);
   }
 
   .tooltip_container.top,

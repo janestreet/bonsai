@@ -151,7 +151,6 @@ let table_form
       let columns = C.lift columns in
       Table.component
         (module Key)
-        ~theming:`Themed
         ~focus:None
         ~row_height:(Value.return (`Px 25))
         ~columns

@@ -81,56 +81,60 @@ let%expect_test "simple view" =
   Handle.show handle;
   [%expect
     {|
-  Selected items: ((Foo (foo1 foo2 foo3)) (Bar ()) (Baz (baz1 baz2)))
-  ┌───────────────────┬───────────────────┬───────────────────┐
-  │ * Foo             │   Bar             │   Baz             │
-  ├───────────────────┼───────────────────┼───────────────────┤
-  │ Search string: '' │ Search string: '' │ Search string: '' │
-  │    * foo1         │                   │    * baz1         │
-  │    * foo2         │                   │    * baz2         │
-  │    * foo3         │                   │                   │
-  └───────────────────┴───────────────────┴───────────────────┘ |}];
+    Selected items: ((Foo (foo1 foo2 foo3)) (Bar ()) (Baz (baz1 baz2)))
+    ┌───────────────────┬───────────────────┬───────────────────┐
+    │ * Foo             │   Bar             │   Baz             │
+    ├───────────────────┼───────────────────┼───────────────────┤
+    │ Search string: '' │ Search string: '' │ Search string: '' │
+    │    * foo1         │                   │    * baz1         │
+    │    * foo2         │                   │    * baz2         │
+    │    * foo3         │                   │                   │
+    └───────────────────┴───────────────────┴───────────────────┘
+    |}];
   Handle.do_actions
     handle
     [ Cycle_focused_subwidget `Next; Cycle_focused_subwidget `Next ];
   Handle.show handle;
   [%expect
     {|
-  Selected items: ((Foo (foo1 foo2 foo3)) (Bar ()) (Baz (baz1 baz2)))
-  ┌───────────────────┬───────────────────┬───────────────────┐
-  │   Foo             │   Bar             │ * Baz             │
-  ├───────────────────┼───────────────────┼───────────────────┤
-  │ Search string: '' │ Search string: '' │ Search string: '' │
-  │    * foo1         │                   │    * baz1         │
-  │    * foo2         │                   │    * baz2         │
-  │    * foo3         │                   │                   │
-  └───────────────────┴───────────────────┴───────────────────┘ |}];
+    Selected items: ((Foo (foo1 foo2 foo3)) (Bar ()) (Baz (baz1 baz2)))
+    ┌───────────────────┬───────────────────┬───────────────────┐
+    │   Foo             │   Bar             │ * Baz             │
+    ├───────────────────┼───────────────────┼───────────────────┤
+    │ Search string: '' │ Search string: '' │ Search string: '' │
+    │    * foo1         │                   │    * baz1         │
+    │    * foo2         │                   │    * baz2         │
+    │    * foo3         │                   │                   │
+    └───────────────────┴───────────────────┴───────────────────┘
+    |}];
   Handle.do_actions handle [ Cycle_focused_subwidget `Next ];
   Handle.show handle;
   [%expect
     {|
-  Selected items: ((Foo (foo1 foo2 foo3)) (Bar ()) (Baz (baz1 baz2)))
-  ┌───────────────────┬───────────────────┬───────────────────┐
-  │ * Foo             │   Bar             │   Baz             │
-  ├───────────────────┼───────────────────┼───────────────────┤
-  │ Search string: '' │ Search string: '' │ Search string: '' │
-  │    * foo1         │                   │    * baz1         │
-  │    * foo2         │                   │    * baz2         │
-  │    * foo3         │                   │                   │
-  └───────────────────┴───────────────────┴───────────────────┘ |}];
+    Selected items: ((Foo (foo1 foo2 foo3)) (Bar ()) (Baz (baz1 baz2)))
+    ┌───────────────────┬───────────────────┬───────────────────┐
+    │ * Foo             │   Bar             │   Baz             │
+    ├───────────────────┼───────────────────┼───────────────────┤
+    │ Search string: '' │ Search string: '' │ Search string: '' │
+    │    * foo1         │                   │    * baz1         │
+    │    * foo2         │                   │    * baz2         │
+    │    * foo3         │                   │                   │
+    └───────────────────┴───────────────────┴───────────────────┘
+    |}];
   Handle.do_actions handle [ Select_on_all_subwidgets `None ];
   Handle.show handle;
   [%expect
     {|
-  Selected items: ((Foo ()) (Bar ()) (Baz ()))
-  ┌───────────────────┬───────────────────┬───────────────────┐
-  │ * Foo             │   Bar             │   Baz             │
-  ├───────────────────┼───────────────────┼───────────────────┤
-  │ Search string: '' │ Search string: '' │ Search string: '' │
-  │      foo1         │                   │      baz1         │
-  │      foo2         │                   │      baz2         │
-  │      foo3         │                   │                   │
-  └───────────────────┴───────────────────┴───────────────────┘ |}]
+    Selected items: ((Foo ()) (Bar ()) (Baz ()))
+    ┌───────────────────┬───────────────────┬───────────────────┐
+    │ * Foo             │   Bar             │   Baz             │
+    ├───────────────────┼───────────────────┼───────────────────┤
+    │ Search string: '' │ Search string: '' │ Search string: '' │
+    │      foo1         │                   │      baz1         │
+    │      foo2         │                   │      baz2         │
+    │      foo3         │                   │                   │
+    └───────────────────┴───────────────────┴───────────────────┘
+    |}]
 ;;
 
 let%expect_test "initial model settings" =
@@ -151,14 +155,15 @@ let%expect_test "initial model settings" =
   Handle.show handle;
   [%expect
     {|
-  Selected items: ((Foo (foo1 foo2 foo3)) (Bar ()) (Baz (baz2)))
-  ┌────────────────────┬───────────────────┬───────────────────┐
-  │ * Foo              │   Bar             │   Baz             │
-  ├────────────────────┼───────────────────┼───────────────────┤
-  │ Search string: '2' │ Search string: '' │ Search string: '' │
-  │    * foo2          │                   │      baz1         │
-  │                    │                   │ -> * baz2         │
-  └────────────────────┴───────────────────┴───────────────────┘ |}]
+    Selected items: ((Foo (foo1 foo2 foo3)) (Bar ()) (Baz (baz2)))
+    ┌────────────────────┬───────────────────┬───────────────────┐
+    │ * Foo              │   Bar             │   Baz             │
+    ├────────────────────┼───────────────────┼───────────────────┤
+    │ Search string: '2' │ Search string: '' │ Search string: '' │
+    │    * foo2          │                   │      baz1         │
+    │                    │                   │ -> * baz2         │
+    └────────────────────┴───────────────────┴───────────────────┘
+    |}]
 ;;
 
 let%expect_test "html view" =
@@ -166,212 +171,214 @@ let%expect_test "html view" =
   Handle.show handle;
   [%expect
     {|
-  Selected items: ((Foo (foo1 foo2 foo3)) (Bar ()) (Baz (baz1 baz2)))
-  <div style={ display: flex; flex-direction: column; flex-wrap: nowrap; }>
-    <div style={ flex-shrink: 0; }>
-      Select on all foos:
-      <a href="about:blank" onclick> all </a>
-      ;
-      <a href="about:blank" onclick> none </a>
+    Selected items: ((Foo (foo1 foo2 foo3)) (Bar ()) (Baz (baz1 baz2)))
+    <div style={ display: flex; flex-direction: column; flex-wrap: nowrap; }>
+      <div style={ flex-shrink: 0; }>
+        Select on all foos:
+        <a href="about:blank" onclick> all </a>
+        ;
+        <a href="about:blank" onclick> none </a>
+      </div>
+      <div style={ display: flex; flex-direction: row; flex-wrap: nowrap; flex-shrink: 0; }>
+        <div id="test-foo-Foo"
+             class="multi-factor-focused-subwidget multi-factor-subwidget"
+             onclick
+             style={
+               flex-shrink: 0;
+             }>
+          <div class="multi-select-container">
+            <div class="multi-select-header"> Foo </div>
+            <input type="text"
+                   placeholder=""
+                   spellcheck="false"
+                   id="test-foo-search-box-Foo"
+                   value:normalized=""
+                   oninput> </input>
+            <div class="multi-select-select-all-none">
+              Select:
+              <a href="about:blank" class="multi-select-select-all" onclick> all </a>
+              ;
+              <a href="about:blank" class="multi-select-select-none" onclick> none </a>
+            </div>
+            <div class="multi-select-checkboxes">
+              <div class="multi-select-item" onclick>
+                <input type="checkbox" checked="" #checked="true" onchange> </input>
+                <label> foo1 </label>
+              </div>
+              <div class="multi-select-item" onclick>
+                <input type="checkbox" checked="" #checked="true" onchange> </input>
+                <label> foo2 </label>
+              </div>
+              <div class="multi-select-item" onclick>
+                <input type="checkbox" checked="" #checked="true" onchange> </input>
+                <label> foo3 </label>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="test-foo-Bar"
+             class="multi-factor-subwidget multi-factor-unfocused-subwidget"
+             onclick
+             style={
+               flex-shrink: 0;
+             }>
+          <div class="multi-select-container">
+            <div class="multi-select-header"> Bar </div>
+            <input type="text"
+                   placeholder=""
+                   spellcheck="false"
+                   id="test-foo-search-box-Bar"
+                   value:normalized=""
+                   oninput> </input>
+            <div class="multi-select-select-all-none">
+              Select:
+              <a href="about:blank" class="multi-select-select-all" onclick> all </a>
+              ;
+              <a href="about:blank" class="multi-select-select-none" onclick> none </a>
+            </div>
+            <div class="multi-select-checkboxes"> </div>
+          </div>
+        </div>
+        <div id="test-foo-Baz"
+             class="multi-factor-subwidget multi-factor-unfocused-subwidget"
+             onclick
+             style={
+               flex-shrink: 0;
+             }>
+          <div class="multi-select-container">
+            <div class="multi-select-header"> Baz </div>
+            <input type="text"
+                   placeholder=""
+                   spellcheck="false"
+                   id="test-foo-search-box-Baz"
+                   value:normalized=""
+                   oninput> </input>
+            <div class="multi-select-select-all-none">
+              Select:
+              <a href="about:blank" class="multi-select-select-all" onclick> all </a>
+              ;
+              <a href="about:blank" class="multi-select-select-none" onclick> none </a>
+            </div>
+            <div class="multi-select-checkboxes">
+              <div class="multi-select-item" onclick>
+                <input type="checkbox" checked="" #checked="true" onchange> </input>
+                <label> baz1 </label>
+              </div>
+              <div class="multi-select-item" onclick>
+                <input type="checkbox" checked="" #checked="true" onchange> </input>
+                <label> baz2 </label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
-    <div style={ display: flex; flex-direction: row; flex-wrap: nowrap; flex-shrink: 0; }>
-      <div id="test-foo-Foo"
-           class="multi-factor-focused-subwidget multi-factor-subwidget"
-           onclick
-           style={
-             flex-shrink: 0;
-           }>
-        <div class="multi-select-container">
-          <div class="multi-select-header"> Foo </div>
-          <input type="text"
-                 placeholder=""
-                 spellcheck="false"
-                 id="test-foo-search-box-Foo"
-                 value:normalized=""
-                 oninput> </input>
-          <div class="multi-select-select-all-none">
-            Select:
-            <a href="about:blank" class="multi-select-select-all" onclick> all </a>
-            ;
-            <a href="about:blank" class="multi-select-select-none" onclick> none </a>
-          </div>
-          <div class="multi-select-checkboxes">
-            <div class="multi-select-item" onclick>
-              <input type="checkbox" checked="" #checked="true" onchange> </input>
-              <label> foo1 </label>
-            </div>
-            <div class="multi-select-item" onclick>
-              <input type="checkbox" checked="" #checked="true" onchange> </input>
-              <label> foo2 </label>
-            </div>
-            <div class="multi-select-item" onclick>
-              <input type="checkbox" checked="" #checked="true" onchange> </input>
-              <label> foo3 </label>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div id="test-foo-Bar"
-           class="multi-factor-subwidget multi-factor-unfocused-subwidget"
-           onclick
-           style={
-             flex-shrink: 0;
-           }>
-        <div class="multi-select-container">
-          <div class="multi-select-header"> Bar </div>
-          <input type="text"
-                 placeholder=""
-                 spellcheck="false"
-                 id="test-foo-search-box-Bar"
-                 value:normalized=""
-                 oninput> </input>
-          <div class="multi-select-select-all-none">
-            Select:
-            <a href="about:blank" class="multi-select-select-all" onclick> all </a>
-            ;
-            <a href="about:blank" class="multi-select-select-none" onclick> none </a>
-          </div>
-          <div class="multi-select-checkboxes"> </div>
-        </div>
-      </div>
-      <div id="test-foo-Baz"
-           class="multi-factor-subwidget multi-factor-unfocused-subwidget"
-           onclick
-           style={
-             flex-shrink: 0;
-           }>
-        <div class="multi-select-container">
-          <div class="multi-select-header"> Baz </div>
-          <input type="text"
-                 placeholder=""
-                 spellcheck="false"
-                 id="test-foo-search-box-Baz"
-                 value:normalized=""
-                 oninput> </input>
-          <div class="multi-select-select-all-none">
-            Select:
-            <a href="about:blank" class="multi-select-select-all" onclick> all </a>
-            ;
-            <a href="about:blank" class="multi-select-select-none" onclick> none </a>
-          </div>
-          <div class="multi-select-checkboxes">
-            <div class="multi-select-item" onclick>
-              <input type="checkbox" checked="" #checked="true" onchange> </input>
-              <label> baz1 </label>
-            </div>
-            <div class="multi-select-item" onclick>
-              <input type="checkbox" checked="" #checked="true" onchange> </input>
-              <label> baz2 </label>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div> |}];
+    |}];
   Handle.do_actions handle [ Cycle_focused_subwidget `Next ];
   Handle.show handle;
   [%expect
     {|
-  Selected items: ((Foo (foo1 foo2 foo3)) (Bar ()) (Baz (baz1 baz2)))
-  <div style={ display: flex; flex-direction: column; flex-wrap: nowrap; }>
-    <div style={ flex-shrink: 0; }>
-      Select on all foos:
-      <a href="about:blank" onclick> all </a>
-      ;
-      <a href="about:blank" onclick> none </a>
+    Selected items: ((Foo (foo1 foo2 foo3)) (Bar ()) (Baz (baz1 baz2)))
+    <div style={ display: flex; flex-direction: column; flex-wrap: nowrap; }>
+      <div style={ flex-shrink: 0; }>
+        Select on all foos:
+        <a href="about:blank" onclick> all </a>
+        ;
+        <a href="about:blank" onclick> none </a>
+      </div>
+      <div style={ display: flex; flex-direction: row; flex-wrap: nowrap; flex-shrink: 0; }>
+        <div id="test-foo-Foo"
+             class="multi-factor-subwidget multi-factor-unfocused-subwidget"
+             onclick
+             style={
+               flex-shrink: 0;
+             }>
+          <div class="multi-select-container">
+            <div class="multi-select-header"> Foo </div>
+            <input type="text"
+                   placeholder=""
+                   spellcheck="false"
+                   id="test-foo-search-box-Foo"
+                   value:normalized=""
+                   oninput> </input>
+            <div class="multi-select-select-all-none">
+              Select:
+              <a href="about:blank" class="multi-select-select-all" onclick> all </a>
+              ;
+              <a href="about:blank" class="multi-select-select-none" onclick> none </a>
+            </div>
+            <div class="multi-select-checkboxes">
+              <div class="multi-select-item" onclick>
+                <input type="checkbox" checked="" #checked="true" onchange> </input>
+                <label> foo1 </label>
+              </div>
+              <div class="multi-select-item" onclick>
+                <input type="checkbox" checked="" #checked="true" onchange> </input>
+                <label> foo2 </label>
+              </div>
+              <div class="multi-select-item" onclick>
+                <input type="checkbox" checked="" #checked="true" onchange> </input>
+                <label> foo3 </label>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="test-foo-Bar"
+             class="multi-factor-focused-subwidget multi-factor-subwidget"
+             onclick
+             style={
+               flex-shrink: 0;
+             }>
+          <div class="multi-select-container">
+            <div class="multi-select-header"> Bar </div>
+            <input type="text"
+                   placeholder=""
+                   spellcheck="false"
+                   id="test-foo-search-box-Bar"
+                   value:normalized=""
+                   oninput> </input>
+            <div class="multi-select-select-all-none">
+              Select:
+              <a href="about:blank" class="multi-select-select-all" onclick> all </a>
+              ;
+              <a href="about:blank" class="multi-select-select-none" onclick> none </a>
+            </div>
+            <div class="multi-select-checkboxes"> </div>
+          </div>
+        </div>
+        <div id="test-foo-Baz"
+             class="multi-factor-subwidget multi-factor-unfocused-subwidget"
+             onclick
+             style={
+               flex-shrink: 0;
+             }>
+          <div class="multi-select-container">
+            <div class="multi-select-header"> Baz </div>
+            <input type="text"
+                   placeholder=""
+                   spellcheck="false"
+                   id="test-foo-search-box-Baz"
+                   value:normalized=""
+                   oninput> </input>
+            <div class="multi-select-select-all-none">
+              Select:
+              <a href="about:blank" class="multi-select-select-all" onclick> all </a>
+              ;
+              <a href="about:blank" class="multi-select-select-none" onclick> none </a>
+            </div>
+            <div class="multi-select-checkboxes">
+              <div class="multi-select-item" onclick>
+                <input type="checkbox" checked="" #checked="true" onchange> </input>
+                <label> baz1 </label>
+              </div>
+              <div class="multi-select-item" onclick>
+                <input type="checkbox" checked="" #checked="true" onchange> </input>
+                <label> baz2 </label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
-    <div style={ display: flex; flex-direction: row; flex-wrap: nowrap; flex-shrink: 0; }>
-      <div id="test-foo-Foo"
-           class="multi-factor-subwidget multi-factor-unfocused-subwidget"
-           onclick
-           style={
-             flex-shrink: 0;
-           }>
-        <div class="multi-select-container">
-          <div class="multi-select-header"> Foo </div>
-          <input type="text"
-                 placeholder=""
-                 spellcheck="false"
-                 id="test-foo-search-box-Foo"
-                 value:normalized=""
-                 oninput> </input>
-          <div class="multi-select-select-all-none">
-            Select:
-            <a href="about:blank" class="multi-select-select-all" onclick> all </a>
-            ;
-            <a href="about:blank" class="multi-select-select-none" onclick> none </a>
-          </div>
-          <div class="multi-select-checkboxes">
-            <div class="multi-select-item" onclick>
-              <input type="checkbox" checked="" #checked="true" onchange> </input>
-              <label> foo1 </label>
-            </div>
-            <div class="multi-select-item" onclick>
-              <input type="checkbox" checked="" #checked="true" onchange> </input>
-              <label> foo2 </label>
-            </div>
-            <div class="multi-select-item" onclick>
-              <input type="checkbox" checked="" #checked="true" onchange> </input>
-              <label> foo3 </label>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div id="test-foo-Bar"
-           class="multi-factor-focused-subwidget multi-factor-subwidget"
-           onclick
-           style={
-             flex-shrink: 0;
-           }>
-        <div class="multi-select-container">
-          <div class="multi-select-header"> Bar </div>
-          <input type="text"
-                 placeholder=""
-                 spellcheck="false"
-                 id="test-foo-search-box-Bar"
-                 value:normalized=""
-                 oninput> </input>
-          <div class="multi-select-select-all-none">
-            Select:
-            <a href="about:blank" class="multi-select-select-all" onclick> all </a>
-            ;
-            <a href="about:blank" class="multi-select-select-none" onclick> none </a>
-          </div>
-          <div class="multi-select-checkboxes"> </div>
-        </div>
-      </div>
-      <div id="test-foo-Baz"
-           class="multi-factor-subwidget multi-factor-unfocused-subwidget"
-           onclick
-           style={
-             flex-shrink: 0;
-           }>
-        <div class="multi-select-container">
-          <div class="multi-select-header"> Baz </div>
-          <input type="text"
-                 placeholder=""
-                 spellcheck="false"
-                 id="test-foo-search-box-Baz"
-                 value:normalized=""
-                 oninput> </input>
-          <div class="multi-select-select-all-none">
-            Select:
-            <a href="about:blank" class="multi-select-select-all" onclick> all </a>
-            ;
-            <a href="about:blank" class="multi-select-select-none" onclick> none </a>
-          </div>
-          <div class="multi-select-checkboxes">
-            <div class="multi-select-item" onclick>
-              <input type="checkbox" checked="" #checked="true" onchange> </input>
-              <label> baz1 </label>
-            </div>
-            <div class="multi-select-item" onclick>
-              <input type="checkbox" checked="" #checked="true" onchange> </input>
-              <label> baz2 </label>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div> |}]
+    |}]
 ;;

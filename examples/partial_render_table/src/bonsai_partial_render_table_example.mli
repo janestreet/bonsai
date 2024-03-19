@@ -19,6 +19,7 @@ val component
   -> focus_kind:[ `Row | `Cell ]
   -> row_height:[ `Px of int ] Value.t
   -> theming:[ `Legacy_don't_use_theme | `Themed ]
+  -> multisort_columns_when:[ `Shift_click | `Ctrl_click | `Shift_or_ctrl_click ] Value.t
   -> should_show_position:bool Value.t
   -> (string, Row.t, Base.String.comparator_witness) Base.Map.t Value.t
   -> t Computation.t
@@ -31,6 +32,7 @@ module Layout_form : sig
       ; cell_based_highlighting : bool
       ; row_height : [ `Px of int ]
       ; num_rows : int
+      ; multisort_columns_when : [ `Shift_click | `Ctrl_click | `Shift_or_ctrl_click ]
       }
   end
 

@@ -9,6 +9,14 @@ module Dimensions : sig
   [@@deriving sexp, equal]
 end
 
+module Action : sig
+  type 'a item =
+    | Set of 'a * Dimensions.t
+    | Remove of 'a
+
+  type 'a t = 'a item list
+end
+
 module Options : sig
   type 'a maybe_stale =
     | Fresh of 'a
@@ -35,6 +43,14 @@ val component
   :  ('key, 'cmp) Bonsai.comparator
   -> 'contained Options.t
   -> (('key, 'contained, 'cmp) Base.Map.t * ('key -> Vdom.Attr.t)) Computation.t
+
+(** [component'] is a more general version of [component] that doesn't build the map for
+    you. *)
+val component'
+  :  ?sexp_of_key:('key -> Sexp.t)
+  -> 'contained Options.t
+  -> ('key Action.t -> unit Effect.t) Value.t
+  -> ('key -> Vdom.Attr.t) Computation.t
 
 module For_testing : sig
   type t

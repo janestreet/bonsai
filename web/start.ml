@@ -162,6 +162,7 @@ module Arrow_deprecated = struct
 
   let start_generic_poly
     (type input action_input input_and_inject model action result extra incoming outgoing)
+    ~(simulate_body_focus_on_root_element : bool)
     ~(get_app_result : result -> (extra, incoming) App_result.t)
     ~(get_app_input :
         input:input
@@ -169,11 +170,11 @@ module Arrow_deprecated = struct
         -> input_and_inject)
     ~(initial_input : input)
     ~bind_to_element_with_id
-    ~(computation : result Bonsai.Private.Computation.t)
+    ~(computation_for_instrumentation : result Bonsai.Private.Computation.t)
     ~fresh
-    ({ model; input = _; action; apply_action; run; reset = _; can_contain_path = _ } as
-     info :
-      (model, action, action_input, result) Bonsai.Private.Computation.info)
+    ({ model; action; apply_action; input = _; run = _; reset = _; can_contain_path = _ }
+     as info :
+      (model, action, action_input, result, unit) Bonsai.Private.Computation.info)
     : (input, extra, incoming, outgoing) Handle.t
     =
     let outgoing_pipe, pipe_write = Pipe.create () in
@@ -231,13 +232,14 @@ module Arrow_deprecated = struct
         model
         ~old_model:_
         ~inject
-        (run : (model, action, action_input, result) Bonsai.Private.Computation.eval_fun)
+        (run :
+          (model, action, action_input, result, unit) Bonsai.Private.Computation.eval_fun)
         =
         let open Incr.Let_syntax in
         let environment =
           Bonsai.Private.Environment.(empty |> add_exn ~key:fresh ~data:input)
         in
-        let snapshot =
+        let snapshot, () =
           run
             ~environment
             ~path:Bonsai.Private.Path.empty
@@ -276,34 +278,36 @@ module Arrow_deprecated = struct
 
       let create model ~old_model ~inject =
         let open Incr.Let_syntax in
-        let safe_start computation =
-          let (T info') = Bonsai.Private.gather computation in
-          match
-            Bonsai.Private.Meta.(
-              ( Model.Type_id.same_witness info.model.type_id info'.model.type_id
-              , Bonsai_action.Type_id.same_witness info.action info'.action
-              , Input.same_witness info.input info'.input ))
-          with
-          | Some T, Some T, Some T -> create model ~old_model ~inject info'.run
-          | _ ->
-            print_endline
-              "Not starting debugger. An error occurred while attempting to instrument \
-               the computation; the resulting computation does not typecheck. Reusing \
-               previously gathered run information to execute";
-            create model ~old_model ~inject run
-        in
         match%bind Incr.Var.watch is_debugging_var with
         | Debugging { host; port; worker_name } ->
           let { Forward_performance_entries.instrumented_computation; shutdown } =
-            make_instrumented_computation ?host ?port ?worker_name computation
+            make_instrumented_computation
+              ?host
+              ?port
+              ?worker_name
+              computation_for_instrumentation
           in
           debugger_shutdown := Some shutdown;
-          safe_start instrumented_computation
-        | Not_debugging -> safe_start computation
+          let (T info') = Bonsai.Private.gather instrumented_computation in
+          (match
+             Bonsai.Private.Meta.(
+               ( Model.Type_id.same_witness info.model.type_id info'.model.type_id
+               , Bonsai_action.Type_id.same_witness info.action info'.action
+               , Input.same_witness info.input info'.input ))
+           with
+           | Some T, Some T, Some T -> create model ~old_model ~inject info'.run
+           | _ ->
+             print_endline
+               "Not starting debugger. An error occurred while attempting to instrument \
+                the computation; the resulting computation does not typecheck. Reusing \
+                previously gathered run information to execute";
+             create model ~old_model ~inject info.run)
+        | Not_debugging -> create model ~old_model ~inject info.run
       ;;
     end
     in
     Incr_dom.Start_app.Private.start_bonsai
+      ~simulate_body_focus_on_root_element
       ~bind_to_element_with_id
       ~initial_model:model.default
       ~stop:(Ivar.read handle.stop)
@@ -337,6 +341,7 @@ module Arrow_deprecated = struct
 
   let start_generic
     ~optimize
+    ~simulate_body_focus_on_root_element
     ~get_app_result
     ~initial_input
     ~bind_to_element_with_id
@@ -353,10 +358,11 @@ module Arrow_deprecated = struct
     in
     let (T info) = Bonsai.Private.gather computation in
     start_generic_poly
+      ~simulate_body_focus_on_root_element
       ~get_app_result
       ~initial_input
       ~bind_to_element_with_id
-      ~computation
+      ~computation_for_instrumentation:computation
       ~fresh
       info
   ;;
@@ -364,12 +370,14 @@ module Arrow_deprecated = struct
   (* I can't use currying here because of the value restriction. *)
   let start_standalone
     ?(optimize = true)
+    ?(simulate_body_focus_on_root_element = true)
     ~initial_input
     ~bind_to_element_with_id
     component
     =
     start_generic
       ~optimize
+      ~simulate_body_focus_on_root_element
       ~get_app_result:(fun view ->
         { App_result.view; extra = (); inject_incoming = Nothing.unreachable_code })
       ~get_app_input:(fun ~input ~inject_outgoing:_ -> input)
@@ -378,9 +386,16 @@ module Arrow_deprecated = struct
       ~component
   ;;
 
-  let start ?(optimize = true) ~initial_input ~bind_to_element_with_id component =
+  let start
+    ?(optimize = true)
+    ?(simulate_body_focus_on_root_element = true)
+    ~initial_input
+    ~bind_to_element_with_id
+    component
+    =
     start_generic
       ~optimize
+      ~simulate_body_focus_on_root_element
       ~get_app_result:Fn.id
       ~get_app_input:App_input.create
       ~initial_input
@@ -442,6 +457,7 @@ module Proc = struct
     result_spec
     ?(optimize = true)
     ?(custom_connector = default_custom_connector)
+    ?simulate_body_focus_on_root_element
     ~bind_to_element_with_id
     computation
     =
@@ -458,14 +474,25 @@ module Proc = struct
       |> Bonsai.Arrow_deprecated.map
            ~f:(Arrow_deprecated.App_result.of_result_spec result_spec)
     in
-    Arrow_deprecated.start ~optimize ~initial_input:() ~bind_to_element_with_id bonsai
+    Arrow_deprecated.start
+      ?simulate_body_focus_on_root_element
+      ~optimize
+      ~initial_input:()
+      ~bind_to_element_with_id
+      bonsai
   ;;
 
-  let start ?custom_connector ?(bind_to_element_with_id = "app") component =
+  let start
+    ?custom_connector
+    ?(bind_to_element_with_id = "app")
+    ?simulate_body_focus_on_root_element
+    component
+    =
     let (_ : _ Handle.t) =
       start_and_get_handle
         Result_spec.just_the_view
         ~bind_to_element_with_id
+        ?simulate_body_focus_on_root_element
         ?custom_connector
         component
     in

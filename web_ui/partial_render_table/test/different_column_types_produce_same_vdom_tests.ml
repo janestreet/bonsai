@@ -27,7 +27,6 @@ module Vdom_tests (Columns : Shared_with_bench.S) = struct
           collate
       in
       Prt.component
-        ~theming:`Themed
         ~focus:None
         (module Int)
         ~row_height:(Value.return (`Px 1))
@@ -507,7 +506,8 @@ module Vdom_tests (Columns : Shared_with_bench.S) = struct
             </div>
           </div>
         </div>
-      </div> |}]
+      </div>
+      |}]
   ;;
 end
 

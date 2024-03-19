@@ -23,5 +23,6 @@ let%expect_test "self-documenting error also occurs on legacy api." =
     environment because it relies on the browser's history API. One way to fix this
     is by having your app receive the url value as a parameter, and passing some
     mock implementation in tests instead of the real implementation provided by this
-    library. |}]
+    library.
+    |}]
 ;;

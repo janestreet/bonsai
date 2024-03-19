@@ -381,6 +381,55 @@ module Disabled_buttons_with_intent = struct
   let filter_attrs = None
 end
 
+module Badge = struct
+  let name = "Badge"
+
+  let description =
+    {| Badges are small bits of text with a background, often used for labels, counters,
+       or minor status indicators. |}
+  ;;
+
+  let view =
+    let%map.Computation theme = View.Theme.current in
+    [%demo
+      hbox
+        [ View.badge theme ?intent:None "0"
+        ; View.badge theme ~intent:Info "Informational Label"
+        ; View.badge theme ~intent:Success "5"
+        ; View.badge theme ~intent:Warning "Investigate"
+        ; View.badge theme ~intent:Error "System Meltdown"
+        ]]
+  ;;
+
+  let selector = None
+  let filter_attrs = None
+end
+
+module Dismissible_badge = struct
+  let name = "Dismissible Badge"
+
+  let description =
+    {| If an optional `on_dismiss : unit Effect.t` argument is provided, the badge will
+       have a dismiss button. This is useful for multiselect forms. |}
+  ;;
+
+  let view =
+    let%map.Computation theme = View.Theme.current in
+    [%demo
+      let on_dismiss = Effect.Ignore in
+      hbox
+        [ View.badge theme ~on_dismiss ?intent:None "0"
+        ; View.badge theme ~on_dismiss ~intent:Info "Informational Label"
+        ; View.badge theme ~on_dismiss ~intent:Success "5"
+        ; View.badge theme ~on_dismiss ~intent:Warning "Investigate"
+        ; View.badge theme ~on_dismiss ~intent:Error "System Meltdown"
+        ]]
+  ;;
+
+  let selector = None
+  let filter_attrs = None
+end
+
 module Basic_vbox = struct
   let name = "Basic vbox"
   let description = {| The vbox function builds a vertically stacking container.  |}
@@ -812,6 +861,11 @@ let component =
            ; Gallery.make_demo (module Disabled_button)
            ; Gallery.make_demo (module Buttons_with_intent)
            ; Gallery.make_demo (module Disabled_buttons_with_intent)
+           ] )
+       ; ( "Badges"
+         , {| |}
+         , [ Gallery.make_demo (module Badge)
+           ; Gallery.make_demo (module Dismissible_badge)
            ] )
        ; ( "Tables"
          , {| |}

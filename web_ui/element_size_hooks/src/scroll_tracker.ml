@@ -96,6 +96,8 @@ module Scroll_tracker = struct
     ()
   ;;
 
+  let on_mount = `Schedule_animation_frame on_mount
+
   let update ~old_input:_ ~new_input state _ =
     state.callback <- wrap_with_handle ~f:new_input;
     state.callback ~scrollable:state.scrollable

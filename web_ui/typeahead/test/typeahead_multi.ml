@@ -37,23 +37,23 @@ let%expect_test "Initial multi typeahead state" =
   Handle.show handle;
   [%expect
     {|
-<div>
-  <input type="text"
-         list="bonsai_path_replaced_in_test"
-         placeholder="Select a value"
-         value=""
-         #value=""
-         onblur
-         onchange
-         onfocus
-         oninput> </input>
-  <datalist id="bonsai_path_replaced_in_test">
-    <option value="Option A"> Option A </option>
-    <option value="Option B"> Option B </option>
-    <option value="Option C"> Option C </option>
-  </datalist>
-</div>
- |}]
+    <div>
+      <input type="text"
+             list="bonsai_path_replaced_in_test"
+             placeholder="Select a value"
+             value=""
+             #value=""
+             onblur
+             onchange
+             onfocus
+             oninput> </input>
+      <datalist id="bonsai_path_replaced_in_test">
+        <option value="Option A"> Option A </option>
+        <option value="Option B"> Option B </option>
+        <option value="Option C"> Option C </option>
+      </datalist>
+    </div>
+    |}]
 ;;
 
 let%expect_test "Focusing and un-focusing the input shows and hides the datalist when \
@@ -85,7 +85,8 @@ let%expect_test "Focusing and un-focusing the input shows and hides the datalist
              onfocus
              oninput> </input>
       <datalist> </datalist>
-    </div> |}];
+    </div>
+    |}];
   Handle.focus handle ~get_vdom:Fn.id ~selector:"input";
   Handle.show_diff handle;
   [%expect
@@ -106,7 +107,8 @@ let%expect_test "Focusing and un-focusing the input shows and hides the datalist
     +|    <option value="Option B"> Option B </option>
     +|    <option value="Option C"> Option C </option>
     +|  </datalist>
-      </div> |}];
+      </div>
+    |}];
   Handle.blur handle ~get_vdom:Fn.id ~selector:"input";
   Handle.show_diff handle;
   [%expect
@@ -127,7 +129,8 @@ let%expect_test "Focusing and un-focusing the input shows and hides the datalist
     -|    <option value="Option C"> Option C </option>
     -|  </datalist>
     +|  <datalist> </datalist>
-      </div> |}]
+      </div>
+    |}]
 ;;
 
 let%expect_test "Select two elements" =
@@ -141,27 +144,28 @@ let%expect_test "Select two elements" =
      in a div that is rendered below datalist. *)
   [%expect
     {|
-  <div>
-    <input type="text"
-           list="bonsai_path_replaced_in_test"
-           placeholder="Select a value"
-           value=""
-           #value=""
-           onblur
-           onchange
-           onfocus
-           oninput> </input>
-    <datalist id="bonsai_path_replaced_in_test">
-      <option value="Option A"> Option A </option>
--|    <option value="Option B"> Option B </option>
--|    <option value="Option C"> Option C </option>
--|  </datalist>
-+|  </datalist>
-+|  <div class="bonsai-web-ui-typeahead-pills">
-+|    <span tabindex="0" data-value="Option B" onclick onkeyup> Option B × </span>
-+|    <span tabindex="0" data-value="Option C" onclick onkeyup> Option C × </span>
-+|  </div>
-  </div> |}]
+      <div>
+        <input type="text"
+               list="bonsai_path_replaced_in_test"
+               placeholder="Select a value"
+               value=""
+               #value=""
+               onblur
+               onchange
+               onfocus
+               oninput> </input>
+        <datalist id="bonsai_path_replaced_in_test">
+          <option value="Option A"> Option A </option>
+    -|    <option value="Option B"> Option B </option>
+    -|    <option value="Option C"> Option C </option>
+    -|  </datalist>
+    +|  </datalist>
+    +|  <div class="bonsai-web-ui-typeahead-pills">
+    +|    <span tabindex="0" data-value="Option B" onclick onkeyup> Option B × </span>
+    +|    <span tabindex="0" data-value="Option C" onclick onkeyup> Option C × </span>
+    +|  </div>
+      </div>
+    |}]
 ;;
 
 let%expect_test "Deselect an element" =
@@ -176,25 +180,26 @@ let%expect_test "Deselect an element" =
      datalist. *)
   [%expect
     {|
-  <div>
-    <input type="text"
-           list="bonsai_path_replaced_in_test"
-           placeholder="Select a value"
-           value=""
-           #value=""
-           onblur
-           onchange
-           onfocus
-           oninput> </input>
-    <datalist id="bonsai_path_replaced_in_test">
-      <option value="Option A"> Option A </option>
-+|    <option value="Option B"> Option B </option>
-    </datalist>
-    <div class="bonsai-web-ui-typeahead-pills">
--|    <span tabindex="0" data-value="Option B" onclick onkeyup> Option B × </span>
-      <span tabindex="0" data-value="Option C" onclick onkeyup> Option C × </span>
-    </div>
-  </div> |}]
+      <div>
+        <input type="text"
+               list="bonsai_path_replaced_in_test"
+               placeholder="Select a value"
+               value=""
+               #value=""
+               onblur
+               onchange
+               onfocus
+               oninput> </input>
+        <datalist id="bonsai_path_replaced_in_test">
+          <option value="Option A"> Option A </option>
+    +|    <option value="Option B"> Option B </option>
+        </datalist>
+        <div class="bonsai-web-ui-typeahead-pills">
+    -|    <span tabindex="0" data-value="Option B" onclick onkeyup> Option B × </span>
+          <span tabindex="0" data-value="Option C" onclick onkeyup> Option C × </span>
+        </div>
+      </div>
+    |}]
 ;;
 
 let%expect_test "set the elements" =
@@ -218,25 +223,26 @@ let%expect_test "set the elements" =
   Handle.show_diff handle;
   [%expect
     {|
-  <div>
-    <input type="text"
-           list="bonsai_path_replaced_in_test"
-           placeholder="Select a value"
-           value=""
-           #value=""
-           onblur
-           onchange
-           onfocus
-           oninput> </input>
-    <datalist id="bonsai_path_replaced_in_test">
-      <option value="Option A"> Option A </option>
-      <option value="Option B"> Option B </option>
--|    <option value="Option C"> Option C </option>
-    </datalist>
-+|  <div class="bonsai-web-ui-typeahead-pills">
-+|    <span tabindex="0" data-value="Option C" onclick onkeyup> Option C × </span>
-+|  </div>
-  </div> |}]
+      <div>
+        <input type="text"
+               list="bonsai_path_replaced_in_test"
+               placeholder="Select a value"
+               value=""
+               #value=""
+               onblur
+               onchange
+               onfocus
+               oninput> </input>
+        <datalist id="bonsai_path_replaced_in_test">
+          <option value="Option A"> Option A </option>
+          <option value="Option B"> Option B </option>
+    -|    <option value="Option C"> Option C </option>
+        </datalist>
+    +|  <div class="bonsai-web-ui-typeahead-pills">
+    +|    <span tabindex="0" data-value="Option C" onclick onkeyup> Option C × </span>
+    +|  </div>
+      </div>
+    |}]
 ;;
 
 let%expect_test "Select two elements using partial inputs" =
@@ -290,5 +296,6 @@ let%expect_test "input multiple elements" =
     +|    <span tabindex="0" data-value="Option A" onclick onkeyup> Option A × </span>
     +|    <span tabindex="0" data-value="Option B" onclick onkeyup> Option B × </span>
     +|  </div>
-      </div> |}]
+      </div>
+    |}]
 ;;

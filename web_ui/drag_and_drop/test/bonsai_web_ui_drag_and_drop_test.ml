@@ -111,34 +111,36 @@ let%expect_test "remove the component with the dnd" =
     Handle.show handle;
     [%expect
       {|
-    <div>
-      <div data-dnd-name="1" dnd-test-hook=<fun>>
-        <div id="s1" class="no_select_hash_replaced_in_test" onpointerdown> </div>
-        <div id="s23" class="no_select_hash_replaced_in_test" onpointerdown> </div>
-        <div id="s4" class="no_select_hash_replaced_in_test" onpointerdown> </div>
+      <div>
+        <div data-dnd-name="1" dnd-test-hook=<fun>>
+          <div id="s1" class="no_select_hash_replaced_in_test" onpointerdown> </div>
+          <div id="s23" class="no_select_hash_replaced_in_test" onpointerdown> </div>
+          <div id="s4" class="no_select_hash_replaced_in_test" onpointerdown> </div>
+        </div>
+        <div data-dnd-name="2" dnd-test-hook=<fun>>
+          <div id="t1" data-drag-targetbonsai_path_replaced_in_test="1" onpointerup> </div>
+          <div id="t23"
+               data-drag-targetbonsai_path_replaced_in_test="2"
+               data-drag-targetbonsai_path_replaced_in_test="3"
+               onpointerup> </div>
+          <div id="t4" data-drag-targetbonsai_path_replaced_in_test="4" onpointerup> </div>
+        </div>
       </div>
-      <div data-dnd-name="2" dnd-test-hook=<fun>>
-        <div id="t1" data-drag-targetbonsai_path_replaced_in_test="1" onpointerup> </div>
-        <div id="t23"
-             data-drag-targetbonsai_path_replaced_in_test="2"
-             data-drag-targetbonsai_path_replaced_in_test="3"
-             onpointerup> </div>
-        <div id="t4" data-drag-targetbonsai_path_replaced_in_test="4" onpointerup> </div>
-      </div>
-    </div>
-    adding window event listener
-    adding window event listener
-    adding window event listener
-    adding window event listener |}];
+      adding window event listener
+      adding window event listener
+      adding window event listener
+      adding window event listener
+      |}];
     Bonsai.Var.set input_var false;
     Handle.show handle;
     [%expect
       {|
-    no
-    removing window event listener
-    removing window event listener
-    removing window event listener
-    removing window event listener |}])
+      no
+      removing window event listener
+      removing window event listener
+      removing window event listener
+      removing window event listener
+      |}])
 ;;
 
 let%expect_test "how is it printed" =
@@ -147,25 +149,26 @@ let%expect_test "how is it printed" =
     Handle.show handle;
     [%expect
       {|
-    <div>
-      <div data-dnd-name="1" dnd-test-hook=<fun>>
-        <div id="s1" class="no_select_hash_replaced_in_test" onpointerdown> </div>
-        <div id="s23" class="no_select_hash_replaced_in_test" onpointerdown> </div>
-        <div id="s4" class="no_select_hash_replaced_in_test" onpointerdown> </div>
+      <div>
+        <div data-dnd-name="1" dnd-test-hook=<fun>>
+          <div id="s1" class="no_select_hash_replaced_in_test" onpointerdown> </div>
+          <div id="s23" class="no_select_hash_replaced_in_test" onpointerdown> </div>
+          <div id="s4" class="no_select_hash_replaced_in_test" onpointerdown> </div>
+        </div>
+        <div data-dnd-name="2" dnd-test-hook=<fun>>
+          <div id="t1" data-drag-targetbonsai_path_replaced_in_test="1" onpointerup> </div>
+          <div id="t23"
+               data-drag-targetbonsai_path_replaced_in_test="2"
+               data-drag-targetbonsai_path_replaced_in_test="3"
+               onpointerup> </div>
+          <div id="t4" data-drag-targetbonsai_path_replaced_in_test="4" onpointerup> </div>
+        </div>
       </div>
-      <div data-dnd-name="2" dnd-test-hook=<fun>>
-        <div id="t1" data-drag-targetbonsai_path_replaced_in_test="1" onpointerup> </div>
-        <div id="t23"
-             data-drag-targetbonsai_path_replaced_in_test="2"
-             data-drag-targetbonsai_path_replaced_in_test="3"
-             onpointerup> </div>
-        <div id="t4" data-drag-targetbonsai_path_replaced_in_test="4" onpointerup> </div>
-      </div>
-    </div>
-    adding window event listener
-    adding window event listener
-    adding window event listener
-    adding window event listener |}])
+      adding window event listener
+      adding window event listener
+      adding window event listener
+      adding window event listener
+      |}])
 ;;
 
 let run = Handle.Drag_and_drop.run ~get_vdom:Fn.id
@@ -183,7 +186,8 @@ let%expect_test "normal drag" =
       adding window event listener
       adding window event listener
       adding window event listener
-      adding window event listener |}])
+      adding window event listener
+      |}])
 ;;
 
 let%expect_test "sources in both universes can go anywhere" =
@@ -199,7 +203,8 @@ let%expect_test "sources in both universes can go anywhere" =
       adding window event listener
       adding window event listener
       adding window event listener
-      adding window event listener |}];
+      adding window event listener
+      |}];
     run handle ~name:"2" (Start_drag "3");
     run handle ~name:"2" (Set_target (Some "3"));
     run handle ~name:"2" Finish_drag;
@@ -225,7 +230,8 @@ let%expect_test "targets in both universes can receive anything" =
       adding window event listener
       adding window event listener
       adding window event listener
-      adding window event listener |}];
+      adding window event listener
+      |}];
     run handle ~name:"1" (Start_drag "2");
     run handle ~name:"1" (Set_target (Some "2"));
     run handle ~name:"1" Finish_drag;

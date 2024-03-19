@@ -72,7 +72,8 @@ let%expect_test "how is it printed" =
       </div>
     </div>
     adding window event listener
-    adding window event listener |}]
+    adding window event listener
+    |}]
 ;;
 
 let dnd_action handle action =
@@ -84,7 +85,8 @@ let%expect_test "re-arrange" =
   Handle.store_view handle;
   [%expect {|
     adding window event listener
-    adding window event listener |}];
+    adding window event listener
+    |}];
   dnd_action handle (Start_drag "0");
   Handle.show_diff handle;
   [%expect
@@ -104,7 +106,8 @@ let%expect_test "re-arrange" =
     +|    <div data-drag-target="2" style={ transform: translateY(2px) translateX(0px); }> </div>
     +|  </div>
     +|  <div style={ transform: translateY(0px) translateX(0px); }> 0 </div>
-      </div> |}];
+      </div>
+    |}];
   dnd_action handle (Set_target (Some "2"));
   Handle.show_diff handle;
   [%expect {| |}];
@@ -125,7 +128,8 @@ let%expect_test "re-arrange" =
           <div data-drag-target="2" style={ transform: translateY(2px) translateX(0px); }> </div>
         </div>
         <div style={ transform: translateY(0px) translateX(0px); }> 0 </div>
-      </div> |}];
+      </div>
+    |}];
   dnd_action handle Finish_drag;
   Handle.show_diff handle;
   [%expect
@@ -146,7 +150,8 @@ let%expect_test "re-arrange" =
     +|    <div style={ transform: translateY(2px) translateX(0px); }> 2 </div>
         </div>
     -|  <div style={ transform: translateY(0px) translateX(0px); }> 0 </div>
-      </div> |}]
+      </div>
+    |}]
 ;;
 
 let%expect_test "drop onto empty list" =
@@ -154,7 +159,8 @@ let%expect_test "drop onto empty list" =
   Handle.store_view handle;
   [%expect {|
     adding window event listener
-    adding window event listener |}];
+    adding window event listener
+    |}];
   dnd_action handle (Start_drag "0");
   Handle.show_diff handle;
   [%expect
@@ -166,7 +172,8 @@ let%expect_test "drop onto empty list" =
     +|    <div data-drag-target="0" style={ transform: translateY(0px) translateX(0px); }> </div>
     +|  </div>
     +|  <div style={ transform: translateY(0px) translateX(0px); }> 0 </div>
-      </div> |}];
+      </div>
+    |}];
   dnd_action handle (Set_target (Some "10"));
   Handle.show_diff handle;
   [%expect {| |}];
@@ -185,7 +192,8 @@ let%expect_test "drop onto empty list" =
     -|  </div>
     -|  <div style={ transform: translateY(0px) translateX(0px); }> 0 </div>
     +|  <div> </div>
-      </div> |}]
+      </div>
+    |}]
 ;;
 
 let%expect_test "add item from outside the list" =
@@ -193,7 +201,8 @@ let%expect_test "add item from outside the list" =
   Handle.store_view handle;
   [%expect {|
     adding window event listener
-    adding window event listener |}];
+    adding window event listener
+    |}];
   dnd_action handle (Start_drag "10");
   Handle.show_diff handle;
   [%expect
@@ -210,26 +219,28 @@ let%expect_test "add item from outside the list" =
     +|    <div data-drag-target="2" style={ transform: translateY(2px) translateX(0px); }> </div>
         </div>
     +|  <div style={ transform: translateY(0px) translateX(0px); }> 10 </div>
-      </div> |}];
+      </div>
+    |}];
   dnd_action handle (Set_target (Some "1"));
   Handle.show_diff handle;
   [%expect
     {|
+      <div>
+        <div> 10 </div>
         <div>
-          <div> 10 </div>
-          <div>
-            <div style={ transform: translateY(0px) translateX(0px); }> 0 </div>
-      -|    <div style={ transform: translateY(1px) translateX(0px); }> 1 </div>
-      +|    <div style={ transform: translateY(2px) translateX(0px); }> 1 </div>
-      -|    <div style={ transform: translateY(2px) translateX(0px); }> 2 </div>
-      +|    <div style={ transform: translateY(3px) translateX(0px); }> 2 </div>
-            <div data-drag-target="3" style={ transform: translateY(3px) translateX(0px); }> </div>
-            <div data-drag-target="0" style={ transform: translateY(0px) translateX(0px); }> </div>
-            <div data-drag-target="1" style={ transform: translateY(1px) translateX(0px); }> </div>
-            <div data-drag-target="2" style={ transform: translateY(2px) translateX(0px); }> </div>
-          </div>
-          <div style={ transform: translateY(0px) translateX(0px); }> 10 </div>
-        </div> |}];
+          <div style={ transform: translateY(0px) translateX(0px); }> 0 </div>
+    -|    <div style={ transform: translateY(1px) translateX(0px); }> 1 </div>
+    +|    <div style={ transform: translateY(2px) translateX(0px); }> 1 </div>
+    -|    <div style={ transform: translateY(2px) translateX(0px); }> 2 </div>
+    +|    <div style={ transform: translateY(3px) translateX(0px); }> 2 </div>
+          <div data-drag-target="3" style={ transform: translateY(3px) translateX(0px); }> </div>
+          <div data-drag-target="0" style={ transform: translateY(0px) translateX(0px); }> </div>
+          <div data-drag-target="1" style={ transform: translateY(1px) translateX(0px); }> </div>
+          <div data-drag-target="2" style={ transform: translateY(2px) translateX(0px); }> </div>
+        </div>
+        <div style={ transform: translateY(0px) translateX(0px); }> 10 </div>
+      </div>
+    |}];
   dnd_action handle Finish_drag;
   Handle.show_diff handle;
   [%expect
@@ -250,7 +261,8 @@ let%expect_test "add item from outside the list" =
     +|    <div style={ transform: translateY(2px) translateX(0px); }> 2 </div>
         </div>
     -|  <div style={ transform: translateY(0px) translateX(0px); }> 10 </div>
-      </div> |}]
+      </div>
+    |}]
 ;;
 
 let%expect_test "re-arrange" =
@@ -258,7 +270,8 @@ let%expect_test "re-arrange" =
   Handle.store_view handle;
   [%expect {|
     adding window event listener
-    adding window event listener |}];
+    adding window event listener
+    |}];
   Handle.Bulk_size_tracker.change_sizes
     handle
     ~get_vdom:Fn.id
@@ -277,7 +290,8 @@ let%expect_test "re-arrange" =
     -|    <div style={ transform: translateY(2px) translateX(0px); }> 2 </div>
     +|    <div style={ transform: translateY(6px) translateX(0px); }> 2 </div>
         </div>
-      </div> |}]
+      </div>
+    |}]
 ;;
 
 let component input =
@@ -327,7 +341,8 @@ let%expect_test "re-arrange" =
           <div> 2 </div>
         </div>
       </div>
-    </div> |}];
+    </div>
+    |}];
   dnd_action handle (Start_drag "0");
   dnd_action handle (Set_target (Some "2"));
   dnd_action handle Finish_drag;
@@ -350,7 +365,8 @@ let%expect_test "re-arrange" =
             <div> 2 </div>
           </div>
         </div>
-      </div> |}]
+      </div>
+    |}]
 ;;
 
 let%expect_test "dynamically extend list" =
@@ -377,7 +393,8 @@ let%expect_test "dynamically extend list" =
           <div> 2 </div>
         </div>
       </div>
-    </div> |}];
+    </div>
+    |}];
   Bonsai.Var.update input_var ~f:(fun x -> Set.add x 20);
   Handle.recompute_view handle;
   Handle.show_diff handle;
@@ -398,7 +415,8 @@ let%expect_test "dynamically extend list" =
     +|      <div> 20 </div>
     +|    </div>
         </div>
-      </div> |}]
+      </div>
+    |}]
 ;;
 
 type result =
@@ -429,10 +447,12 @@ let%expect_test "removing an item should shift the rank of everything else" =
   in
   Handle.recompute_view handle;
   Handle.show handle;
-  [%expect {|
+  [%expect
+    {|
     adding window event listener
     adding window event listener
-    () |}];
+    ()
+    |}];
   (* The result sexp shows the mapping from the item's key to its rank in the
      output order. Note that removing the 0 item makes the rank of the 1 item
      change from 1 to 0, as it should.
@@ -441,10 +461,8 @@ let%expect_test "removing an item should shift the rank of everything else" =
      below it to shift upward in the ranking by one. *)
   Handle.do_actions handle [ [ Set 0; Set 1 ] ];
   Handle.show handle;
-  [%expect {|
-    ((0 0) (1 1)) |}];
+  [%expect {| ((0 0) (1 1)) |}];
   Handle.do_actions handle [ [ Remove 0 ] ];
   Handle.show handle;
-  [%expect {|
-    ((1 0)) |}]
+  [%expect {| ((1 0)) |}]
 ;;

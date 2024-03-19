@@ -80,22 +80,24 @@ let%expect_test "constant computation" =
   print constant_computation;
   [%expect
     {|
-        ("with and without optimizations"
-          (shapes ((model unit) (action (Leaf Nothing.t)) (input unit)))
-          (incr_graph (
-            (nodes 3)
-            (edges 0)))) |}]
+    ("with and without optimizations"
+      (shapes ((model unit) (action (Leaf Nothing.t)) (input unit)))
+      (incr_graph (
+        (nodes 3)
+        (edges 0))))
+    |}]
 ;;
 
 let%expect_test "stateful computation" =
   print stateful_static_computation;
   [%expect
     {|
-        ("with and without optimizations"
-          (shapes ((model proc_min.ml-model) (action (Leaf proc_min.ml)) (input unit)))
-          (incr_graph (
-            (nodes 4)
-            (edges 1)))) |}]
+    ("with and without optimizations"
+      (shapes ((model proc_min.ml-model) (action (Leaf proc_min.ml)) (input unit)))
+      (incr_graph (
+        (nodes 4)
+        (edges 1))))
+    |}]
 ;;
 
 let%test_module "sub" =
@@ -116,7 +118,8 @@ let%test_module "sub" =
             (input (unit unit))))
           (incr_graph (
             (nodes 5)
-            (edges 2)))) |}]
+            (edges 2))))
+        |}]
     ;;
 
     let%expect_test "one stateful computation on left" =
@@ -129,7 +132,8 @@ let%test_module "sub" =
           (shapes ((model proc_min.ml-model) (action (Leaf proc_min.ml)) (input unit)))
           (incr_graph (
             (nodes 4)
-            (edges 1)))) |}]
+            (edges 1))))
+        |}]
     ;;
 
     let%expect_test "one stateful computation on right" =
@@ -142,7 +146,8 @@ let%test_module "sub" =
           (shapes ((model proc_min.ml-model) (action (Leaf proc_min.ml)) (input unit)))
           (incr_graph (
             (nodes 3)
-            (edges 0)))) |}]
+            (edges 0))))
+        |}]
     ;;
 
     let%expect_test "no stateful computations" =
@@ -155,7 +160,8 @@ let%test_module "sub" =
           (shapes ((model unit) (action (Leaf Nothing.t)) (input unit)))
           (incr_graph (
             (nodes 3)
-            (edges 0)))) |}]
+            (edges 0))))
+        |}]
     ;;
   end)
 ;;
@@ -176,7 +182,8 @@ let%test_module "model_resetter" =
           (shapes ((model unit) (action (Leaf Nothing.t)) (input unit)))
           (incr_graph (
             (nodes 4)
-            (edges 1)))) |}]
+            (edges 1))))
+        |}]
     ;;
 
     let%expect_test "model_resetter around non-constant computation" =
@@ -190,7 +197,8 @@ let%test_module "model_resetter" =
             (input unit)))
           (incr_graph (
             (nodes 6)
-            (edges 3)))) |}]
+            (edges 3))))
+        |}]
     ;;
   end)
 ;;
@@ -216,7 +224,8 @@ let%test_module "wrap" =
             (input (unit input))))
           (incr_graph (
             (nodes 3)
-            (edges 1)))) |}]
+            (edges 1))))
+        |}]
     ;;
 
     let%expect_test "wrap around non-constant computation" =
@@ -230,7 +239,8 @@ let%test_module "wrap" =
             (input (unit input))))
           (incr_graph (
             (nodes 5)
-            (edges 3)))) |}]
+            (edges 3))))
+        |}]
     ;;
   end)
 ;;
@@ -249,14 +259,15 @@ let%test_module "assoc" =
           (shapes (
             (model unit) (action (Assoc "key id" (Leaf Nothing.t))) (input unit)))
           (incr_graph (
-            (nodes 22)
-            (edges 31))))
+            (nodes 24)
+            (edges 33))))
 
         ("with optimizations"
           (shapes ((model unit) (action (Leaf Nothing.t)) (input unit)))
           (incr_graph (
             (nodes 4)
-            (edges 1)))) |}]
+            (edges 1))))
+        |}]
     ;;
 
     let%expect_test "static state inside assoc" =
@@ -273,8 +284,9 @@ let%test_module "assoc" =
             (action (Assoc "key id" (Leaf proc_min.ml)))
             (input unit)))
           (incr_graph (
-            (nodes 22)
-            (edges 31)))) |}]
+            (nodes 24)
+            (edges 33))))
+        |}]
     ;;
 
     let%expect_test "dynamic_state inside assoc" =
@@ -291,8 +303,9 @@ let%test_module "assoc" =
             (action (Assoc "key id" (Leaf proc_min.ml)))
             (input input)))
           (incr_graph (
-            (nodes 22)
-            (edges 31)))) |}]
+            (nodes 24)
+            (edges 33))))
+        |}]
     ;;
   end)
 ;;
@@ -315,14 +328,15 @@ let%test_module "assoc_on" =
             (action (Assoc "io key id" "model key id" (Leaf Nothing.t)))
             (input unit)))
           (incr_graph (
-            (nodes 20)
-            (edges 29))))
+            (nodes 22)
+            (edges 31))))
 
         ("with optimizations"
           (shapes ((model unit) (action (Leaf Nothing.t)) (input unit)))
           (incr_graph (
             (nodes 4)
-            (edges 1)))) |}]
+            (edges 1))))
+        |}]
     ;;
 
     let%expect_test "state inside assoc_on" =
@@ -341,8 +355,9 @@ let%test_module "assoc_on" =
             (action (Assoc "io key id" "model key id" (Leaf proc_min.ml)))
             (input unit)))
           (incr_graph (
-            (nodes 20)
-            (edges 29)))) |}]
+            (nodes 22)
+            (edges 31))))
+        |}]
     ;;
 
     let%expect_test "dynamic_state inside assoc_on" =
@@ -361,8 +376,9 @@ let%test_module "assoc_on" =
             (action (Assoc "io key id" "model key id" (Leaf proc_min.ml)))
             (input input)))
           (incr_graph (
-            (nodes 20)
-            (edges 29)))) |}]
+            (nodes 22)
+            (edges 31))))
+        |}]
     ;;
   end)
 ;;
@@ -385,7 +401,8 @@ let%test_module "switch" =
             (input  "enum input")))
           (incr_graph (
             (nodes 12)
-            (edges 16)))) |}]
+            (edges 16))))
+        |}]
     ;;
 
     let%expect_test "static state inside switch" =
@@ -404,7 +421,8 @@ let%test_module "switch" =
             (input  "enum input")))
           (incr_graph (
             (nodes 14)
-            (edges 19)))) |}]
+            (edges 19))))
+        |}]
     ;;
 
     let%expect_test "dynamic state inside switch" =
@@ -423,7 +441,8 @@ let%test_module "switch" =
             (input  "enum input")))
           (incr_graph (
             (nodes 14)
-            (edges 18)))) |}]
+            (edges 18))))
+        |}]
     ;;
 
     let%expect_test "both static and dynamic state inside switch" =
@@ -442,7 +461,8 @@ let%test_module "switch" =
             (input  "enum input")))
           (incr_graph (
             (nodes 14)
-            (edges 18)))) |}]
+            (edges 18))))
+        |}]
     ;;
   end)
 ;;
@@ -471,7 +491,8 @@ let%test_module "optimizable switch" =
           (shapes ((model unit) (action (Leaf Nothing.t)) (input unit)))
           (incr_graph (
             (nodes 3)
-            (edges 0)))) |}]
+            (edges 0))))
+        |}]
     ;;
 
     let%expect_test "static state inside switch" =
@@ -496,7 +517,8 @@ let%test_module "optimizable switch" =
           (shapes ((model proc_min.ml-model) (action (Leaf proc_min.ml)) (input unit)))
           (incr_graph (
             (nodes 4)
-            (edges 1)))) |}]
+            (edges 1))))
+        |}]
     ;;
 
     let%expect_test "dynamic state inside switch" =
@@ -522,7 +544,8 @@ let%test_module "optimizable switch" =
             (model proc_min.ml-model) (action (Leaf proc_min.ml)) (input input)))
           (incr_graph (
             (nodes 4)
-            (edges 1)))) |}]
+            (edges 1))))
+        |}]
     ;;
 
     let%expect_test "both static and dynamic state inside switch" =
@@ -548,7 +571,8 @@ let%test_module "optimizable switch" =
             (model proc_min.ml-model) (action (Leaf proc_min.ml)) (input input)))
           (incr_graph (
             (nodes 4)
-            (edges 1)))) |}]
+            (edges 1))))
+        |}]
     ;;
 
     let%expect_test "both static and dynamic state inside switch (swapped order)" =
@@ -573,7 +597,8 @@ let%test_module "optimizable switch" =
           (shapes ((model proc_min.ml-model) (action (Leaf proc_min.ml)) (input unit)))
           (incr_graph (
             (nodes 4)
-            (edges 1)))) |}]
+            (edges 1))))
+        |}]
     ;;
   end)
 ;;
@@ -596,7 +621,8 @@ let%test_module "action grid" =
             (input (input input))))
           (incr_graph (
             (nodes 6)
-            (edges 4)))) |}]
+            (edges 4))))
+        |}]
     ;;
 
     let%expect_test "both static, no dynamic" =
@@ -615,7 +641,8 @@ let%test_module "action grid" =
             (input (unit unit))))
           (incr_graph (
             (nodes 5)
-            (edges 2)))) |}]
+            (edges 2))))
+        |}]
     ;;
 
     let%expect_test "one static, one dynamic" =
@@ -634,7 +661,8 @@ let%test_module "action grid" =
             (input (input unit))))
           (incr_graph (
             (nodes 6)
-            (edges 3)))) |}]
+            (edges 3))))
+        |}]
     ;;
 
     let%expect_test "other static, other dynamic" =
@@ -653,7 +681,8 @@ let%test_module "action grid" =
             (input (unit input))))
           (incr_graph (
             (nodes 6)
-            (edges 3)))) |}]
+            (edges 3))))
+        |}]
     ;;
   end)
 ;;
@@ -662,9 +691,10 @@ let%expect_test "Incr.compute" =
   print (Bonsai.Incr.compute (opaque_const_value ()) ~f:(fun unit_incr -> unit_incr));
   [%expect
     {|
-        ("with and without optimizations"
-          (shapes ((model unit) (action (Leaf Nothing.t)) (input unit)))
-          (incr_graph (
-            (nodes 3)
-            (edges 0)))) |}]
+    ("with and without optimizations"
+      (shapes ((model unit) (action (Leaf Nothing.t)) (input unit)))
+      (incr_graph (
+        (nodes 3)
+        (edges 0))))
+    |}]
 ;;

@@ -20,7 +20,8 @@ let%expect_test "make_with_children includes children in VDOM" =
   [%expect {|
     <a href="/foo" onclick>
       <span> go to foo </span>
-    </a> |}];
+    </a>
+    |}];
   return ()
 ;;
 
@@ -29,8 +30,7 @@ let%expect_test "make includes text in VDOM" =
     create_handle (make ~set_url:(fun _ -> Effect.Ignore) "/foo" "go to foo")
   in
   Handle.show handle;
-  [%expect {|
-    <a href="/foo" onclick> go to foo </a> |}];
+  [%expect {| <a href="/foo" onclick> go to foo </a> |}];
   return ()
 ;;
 
@@ -47,8 +47,7 @@ let%expect_test "custom attr" =
          "go to foo")
   in
   Handle.show handle;
-  [%expect {|
-    <a href="/foo" class="my-link" onclick> go to foo </a> |}];
+  [%expect {| <a href="/foo" class="my-link" onclick> go to foo </a> |}];
   return ()
 ;;
 

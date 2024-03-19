@@ -69,8 +69,8 @@ we've expanded the kinds of components you can write, since
 `Computation.t` encapsulates incremental state machines, which is how
 interactivity is added to an interface.
 
-Both these types are covered in detail in chapters [2](./02-dynamism.md)
-and [3](./03-state.md).
+Both these types are covered in detail in chapters
+[2](./02-dynamism.mdx) and [3](./03-state.mdx).
 
 # The Underlying Machinery
 

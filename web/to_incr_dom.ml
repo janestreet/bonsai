@@ -15,7 +15,7 @@ let create_generic run ~fresh ~input ~model ~inject ~apply_action =
   let environment =
     Bonsai.Private.Environment.(empty |> add_exn ~key:fresh ~data:input)
   in
-  let snapshot =
+  let snapshot, () =
     run
       ~environment
       ~path:Bonsai.Private.Path.empty
@@ -51,7 +51,8 @@ let convert_generic
       ( model
       , action
       , action_input
-      , Vdom.Node.t * extra )
+      , Vdom.Node.t * extra
+      , unit )
       Bonsai.Private.Computation.eval_fun)
   ~default_model
   ~(action_type_id : action Bonsai_action.id)

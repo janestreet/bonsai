@@ -139,6 +139,8 @@ module T = struct
       (fun parent -> state.observer <- Some (observe ~parent ~state))
   ;;
 
+  let on_mount = `Schedule_animation_frame on_mount
+
   let update ~old_input ~new_input state _element =
     if [%equal: Input.t] old_input new_input then ();
     state.behavior <- new_input;

@@ -34,10 +34,12 @@ depends: [
   "patdiff"
   "polling_state_rpc"
   "ppx_css"
+  "ppx_diff"
   "ppx_here"
   "ppx_jane"
   "ppx_let"
   "ppx_pattern_bind"
+  "ppx_quick_test"
   "ppx_typed_fields"
   "profunctor"
   "record_builder"
@@ -51,8 +53,8 @@ depends: [
   "cohttp-async"                {>= "2.5.7" & < "3.0.0" | >= "5.1.1" & < "6.0.0"}
   "dune"                        {>= "2.0.0"}
   "gen_js_api"                  {>= "1.0.8"}
-  "js_of_ocaml"                 {>= "5.1.1"}
-  "js_of_ocaml-ppx"             {>= "5.1.1"}
+  "js_of_ocaml"                 {>= "5.1.1" & < "5.7.0"}
+  "js_of_ocaml-ppx"             {>= "5.1.1" & < "5.7.0"}
   "ocaml-embed-file"
   "ppxlib"                      {>= "0.28.0"}
   "re"                          {>= "1.8.0"}

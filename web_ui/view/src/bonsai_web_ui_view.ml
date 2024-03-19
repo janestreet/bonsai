@@ -49,6 +49,14 @@ let button'
   T.singleton#button ~attrs ~disabled ~intent ~tooltip ~on_click content
 ;;
 
+let badge ((module T) : Theme.t) ?(attrs = []) ?intent ?on_dismiss text =
+  T.singleton#badge ~attrs ~intent ~on_dismiss [ Vdom.Node.text text ]
+;;
+
+let badge' ((module T) : Theme.t) ?(attrs = []) ?intent ?on_dismiss content =
+  T.singleton#badge ~attrs ~intent ~on_dismiss content
+;;
+
 let tabs
   ((module T) : Theme.t)
   ?(attrs = [])

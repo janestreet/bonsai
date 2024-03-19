@@ -8,7 +8,7 @@ it always operates on their current value.
 
 However, sometimes it can be helpful to witness a transition from one
 value to another. In Bonsai, we have the
-[`Bonsai.Edge`](https://ocaml.org/p/bonsai/v0.15.0/doc/Bonsai/Edge/index.html)
+[`Bonsai.Edge`](https://ocaml.org/p/bonsai/v0.16.0/doc/Bonsai/Edge/index.html)
 module, which has a collection of functions which can notice things like
 
 1.  the passage of time
@@ -127,7 +127,7 @@ computations, one instantiation per key-value pair from an incoming
 `_ Map.t Value.t`.
 
 I have a small library,
-[Bonsai_web_ui_extendy](https://ocaml.org/p/bonsai/v0.15.0/doc/Bonsai_web_ui_extendy/index.html),
+[Bonsai_web_ui_extendy](https://ocaml.org/p/bonsai/v0.16.0/doc/Bonsai_web_ui_extendy/index.html),
 which uses `assoc` to implement a component for easily creating and
 deleting instances of another component.
 
@@ -280,7 +280,7 @@ you can find the implementation
 ```{=html}
 </aside>
 ```
-Combining the counter-component from [Chapter 3](./03-state.md) and the
+Combining the counter-component from [Chapter 3](./03-state.mdx) and the
 logging component that I used above, we can write a component which
 contains both a counter and a log, where the log is updated when the
 value changes.

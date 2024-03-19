@@ -18,6 +18,13 @@ module C = struct
       -> Vdom.Node.t list
       -> Vdom.Node.t
 
+    method badge :
+      attrs:Vdom.Attr.t list
+      -> intent:Constants.Intent.t option
+      -> on_dismiss:unit Effect.t option
+      -> Vdom.Node.t list
+      -> Vdom.Node.t
+
     method tabs :
       attrs:Vdom.Attr.t list
       -> per_tab_attrs:('a -> is_active:bool -> Vdom.Attr.t list)

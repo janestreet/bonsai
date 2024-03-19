@@ -11,7 +11,7 @@ val resize : t -> unit [@@js.call]
 val resize_explicit : t -> width:int -> height:int -> unit [@@js.call "resize"]
 val updateOptions : t -> Update_options.t -> unit [@@js.call]
 val getArea : t -> Area.t [@@js.call]
-val isZoomed : t -> bool [@@js.call]
+val isZoomed : t -> ([ `x | `y ][@js.enum]) -> bool [@@js.call]
 val resetZoom : t -> unit [@@js.call]
 
 (** [primary_context] is the rendering context to which Dygraphs draws data points and

@@ -1,8 +1,7 @@
 (executables
  (modes byte exe)
  (names main)
- (libraries bonsai_experimental_table_form bonsai_web bonsai_web_ui_extendy
-   bonsai_web_ui_form bonsai_extra username_kernel
-   bonsai_web_ui_partial_render_table)
+ (libraries bonsai_experimental_table_form bonsai_web bonsai_web_ui_form
+   username_kernel)
  (preprocess
   (pps ppx_typed_fields ppx_jane ppx_bonsai ppx_css)))

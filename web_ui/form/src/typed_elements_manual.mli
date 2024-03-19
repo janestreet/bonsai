@@ -9,6 +9,7 @@ module Optional : sig
   val dropdown
     :  ?some_label:string (** default ["Some"] *)
     -> ?none_label:string (** default ["None"] *)
+    -> ?extra_attrs:Vdom.Attr.t list Value.t
     -> ('a, 'view) Form.t Computation.t
        (** shown when the [some_label] option is selected *)
     -> ('a option, Vdom.Node.t * 'view option) Form.t Computation.t

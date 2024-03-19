@@ -70,20 +70,20 @@ let%expect_test "Sub/Leaf1/Leaf0" =
   [%expect
     {|
     skipped stabilization
-    ("Processed action" (action (Sub_from (Leaf_static <opaque>))))
+    ("Processed action" (action (Sub_from (Sub_from (Leaf_static <opaque>)))))
     stabilized
-    ("Processed action" (action (Sub_into (Sub_from (Leaf_dynamic <opaque>)))))
+    ("Processed action" (action (Sub_from (Sub_into (Leaf_dynamic <opaque>)))))
     skipped stabilization
-    ("Processed action"
-     (action (Sub_into (Sub_into (Sub_from (Leaf_static <opaque>))))))
+    ("Processed action" (action (Sub_into (Sub_from (Leaf_static <opaque>)))))
     stabilized
-    ("Processed action"
-     (action (Sub_into (Sub_into (Sub_into (Leaf_dynamic <opaque>)))))) |}];
+    ("Processed action" (action (Sub_into (Sub_into (Leaf_dynamic <opaque>)))))
+    |}];
   Handle.print_stabilization_tracker_stats handle;
   [%expect
     {|
     ((stabilizations_before_actions 2) (stabilizations_caused_by_var_changes 0)
-     (stabilizations_skipped 2) (prunes_run 0) (branches_pruned 0)) |}]
+     (stabilizations_skipped 2) (prunes_run 0) (branches_pruned 0))
+    |}]
 ;;
 
 let%expect_test "Wrap/Model_resetter" =
@@ -131,14 +131,16 @@ let%expect_test "Wrap/Model_resetter" =
   [%expect
     {|
     skipped stabilization
-    ("Processed action" (action (Wrap_outer <opaque>))) |}];
+    ("Processed action" (action (Wrap_outer <opaque>)))
+    |}];
   (* model reset *)
   Handle.do_actions handle [ Model_reset ];
   Handle.show handle;
   [%expect
     {|
     skipped stabilization
-    ("Processed action" (action (Wrap_inner Model_reset_outer))) |}];
+    ("Processed action" (action (Wrap_inner Model_reset_outer)))
+    |}];
   (* inner dynamic *)
   Handle.do_actions handle [ Inject_dynamic ];
   Handle.show handle;
@@ -146,12 +148,14 @@ let%expect_test "Wrap/Model_resetter" =
     {|
     skipped stabilization
     ("Processed action"
-     (action (Wrap_inner (Model_reset_inner (Leaf_dynamic <opaque>))))) |}];
+     (action (Wrap_inner (Model_reset_inner (Leaf_dynamic <opaque>)))))
+    |}];
   Handle.print_stabilization_tracker_stats handle;
   [%expect
     {|
     ((stabilizations_before_actions 0) (stabilizations_caused_by_var_changes 0)
-     (stabilizations_skipped 3) (prunes_run 0) (branches_pruned 0)) |}];
+     (stabilizations_skipped 3) (prunes_run 0) (branches_pruned 0))
+    |}];
   (* inner then outer *)
   Handle.do_actions handle [ Inject_dynamic; Wrap_outer ];
   Handle.show handle;
@@ -161,7 +165,8 @@ let%expect_test "Wrap/Model_resetter" =
     ("Processed action"
      (action (Wrap_inner (Model_reset_inner (Leaf_dynamic <opaque>)))))
     stabilized
-    ("Processed action" (action (Wrap_outer <opaque>))) |}];
+    ("Processed action" (action (Wrap_outer <opaque>)))
+    |}];
   (* reset then outer *)
   Handle.do_actions handle [ Model_reset; Wrap_outer ];
   Handle.show handle;
@@ -170,7 +175,8 @@ let%expect_test "Wrap/Model_resetter" =
     skipped stabilization
     ("Processed action" (action (Wrap_inner Model_reset_outer)))
     stabilized
-    ("Processed action" (action (Wrap_outer <opaque>))) |}]
+    ("Processed action" (action (Wrap_outer <opaque>)))
+    |}]
 ;;
 
 let%expect_test "Switch/Lazy" =
@@ -209,7 +215,8 @@ let%expect_test "Switch/Lazy" =
   [%expect
     {|
     skipped stabilization
-    ("Processed action" (action (Switch 0 (Leaf_static <opaque>)))) |}];
+    ("Processed action" (action (Switch 0 (Leaf_static <opaque>))))
+    |}];
   Bonsai.Var.set lazy_branch_var true;
   Handle.recompute_view_until_stable handle;
   (* And alternatively, in this case, we should go through the second branch and hit
@@ -219,12 +226,14 @@ let%expect_test "Switch/Lazy" =
   [%expect
     {|
     skipped stabilization
-    ("Processed action" (action (Switch 1 (Lazy (Leaf_static <opaque>))))) |}];
+    ("Processed action" (action (Switch 1 (Lazy (Leaf_static <opaque>)))))
+    |}];
   Handle.print_stabilization_tracker_stats handle;
   [%expect
     {|
     ((stabilizations_before_actions 0) (stabilizations_caused_by_var_changes 0)
-     (stabilizations_skipped 2) (prunes_run 0) (branches_pruned 0)) |}]
+     (stabilizations_skipped 2) (prunes_run 0) (branches_pruned 0))
+    |}]
 ;;
 
 let%expect_test "Assoc" =
@@ -262,12 +271,14 @@ let%expect_test "Assoc" =
     skipped stabilization
     ("Processed action" (action (Assoc 1 (Leaf_static <opaque>))))
     skipped stabilization
-    ("Processed action" (action (Assoc 2 (Leaf_static <opaque>)))) |}];
+    ("Processed action" (action (Assoc 2 (Leaf_static <opaque>))))
+    |}];
   Handle.print_stabilization_tracker_stats handle;
   [%expect
     {|
     ((stabilizations_before_actions 0) (stabilizations_caused_by_var_changes 0)
-     (stabilizations_skipped 2) (prunes_run 0) (branches_pruned 0)) |}]
+     (stabilizations_skipped 2) (prunes_run 0) (branches_pruned 0))
+    |}]
 ;;
 
 let%expect_test "Assoc_on" =
@@ -314,14 +325,16 @@ let%expect_test "Assoc_on" =
   Handle.show handle;
   [%expect
     {|
-        ("Processed action" (action (Assoc_on 1 () (Leaf_static <opaque>))))
-        ((1 1) (2 1)) |}];
+    ("Processed action" (action (Assoc_on 1 () (Leaf_static <opaque>))))
+    ((1 1) (2 1))
+    |}];
   Handle.do_actions handle [ Entry { key = 2; set_to = 2 } ];
   Handle.show handle;
   [%expect
     {|
-        ("Processed action" (action (Assoc_on 2 () (Leaf_static <opaque>))))
-        ((1 2) (2 2)) |}]
+    ("Processed action" (action (Assoc_on 2 () (Leaf_static <opaque>))))
+    ((1 2) (2 2))
+    |}]
 ;;
 
 let%expect_test "Dynamic actions applied across frames don't need extra stabilizations \
@@ -360,7 +373,8 @@ let%expect_test "Dynamic actions applied across frames don't need extra stabiliz
   Handle.show handle;
   [%expect {|
     skipped stabilization
-    skipped stabilization |}];
+    skipped stabilization
+    |}];
   Handle.do_actions handle [ Second ];
   Handle.show handle;
   [%expect {| skipped stabilization |}];
@@ -373,8 +387,9 @@ let%expect_test "Dynamic actions applied across frames don't need extra stabiliz
   Handle.print_stabilization_tracker_stats handle;
   [%expect
     {|
-     ((stabilizations_before_actions 0) (stabilizations_caused_by_var_changes 0)
-      (stabilizations_skipped 4) (prunes_run 0) (branches_pruned 0)) |}]
+    ((stabilizations_before_actions 0) (stabilizations_caused_by_var_changes 0)
+     (stabilizations_skipped 4) (prunes_run 0) (branches_pruned 0))
+    |}]
 ;;
 
 let%expect_test "A static action that affects a dynamic action forces a restabilization" =
@@ -422,16 +437,18 @@ let%expect_test "A static action that affects a dynamic action forces a restabil
   Handle.show handle;
   [%expect
     {|
-     skipped stabilization
-     ("Processed action" (action (Sub_from (Leaf_static <opaque>))))
-     stabilized
-     ("Processed action" (action (Sub_into (Leaf_dynamic <opaque>))))
-     Model: 1 |}];
+    skipped stabilization
+    ("Processed action" (action (Sub_from (Leaf_static <opaque>))))
+    stabilized
+    ("Processed action" (action (Sub_into (Leaf_dynamic <opaque>))))
+    Model: 1
+    |}];
   Handle.print_stabilization_tracker_stats handle;
   [%expect
     {|
-     ((stabilizations_before_actions 1) (stabilizations_caused_by_var_changes 0)
-      (stabilizations_skipped 1) (prunes_run 0) (branches_pruned 0)) |}]
+    ((stabilizations_before_actions 1) (stabilizations_caused_by_var_changes 0)
+     (stabilizations_skipped 1) (prunes_run 0) (branches_pruned 0))
+    |}]
 ;;
 
 (* These tests verify interactions between mutable bits of incremental/bonsai, which can
@@ -459,13 +476,15 @@ let%expect_test "state_machine1 depending on a Bonsai var behaves properly" =
   Handle.do_actions handle [ () ];
   Handle.show handle;
   [%expect {|
-     stabilized
-     Model: 2 |}];
+    stabilized
+    Model: 2
+    |}];
   Handle.print_stabilization_tracker_stats handle;
   [%expect
     {|
-     ((stabilizations_before_actions 1) (stabilizations_caused_by_var_changes 1)
-      (stabilizations_skipped 0) (prunes_run 0) (branches_pruned 0)) |}]
+    ((stabilizations_before_actions 1) (stabilizations_caused_by_var_changes 1)
+     (stabilizations_skipped 0) (prunes_run 0) (branches_pruned 0))
+    |}]
 ;;
 
 let%expect_test "state doesn't require stabilizing when a var is set" =
@@ -489,13 +508,15 @@ let%expect_test "state doesn't require stabilizing when a var is set" =
   Handle.do_actions handle [ 5 ];
   Handle.show handle;
   [%expect {|
-     skipped stabilization
-     Model: 5 |}];
+    skipped stabilization
+    Model: 5
+    |}];
   Handle.print_stabilization_tracker_stats handle;
   [%expect
     {|
-     ((stabilizations_before_actions 0) (stabilizations_caused_by_var_changes 0)
-      (stabilizations_skipped 1) (prunes_run 0) (branches_pruned 0)) |}]
+    ((stabilizations_before_actions 0) (stabilizations_caused_by_var_changes 0)
+     (stabilizations_skipped 1) (prunes_run 0) (branches_pruned 0))
+    |}]
 ;;
 
 let%expect_test "state_machine1 depending on an Incr.compute with an Incr var behaves \
@@ -528,13 +549,15 @@ let%expect_test "state_machine1 depending on an Incr.compute with an Incr var be
   Handle.do_actions handle [ () ];
   Handle.show handle;
   [%expect {|
-     stabilized
-     Model: 2 |}];
+    stabilized
+    Model: 2
+    |}];
   Handle.print_stabilization_tracker_stats handle;
   [%expect
     {|
-     ((stabilizations_before_actions 1) (stabilizations_caused_by_var_changes 1)
-      (stabilizations_skipped 0) (prunes_run 0) (branches_pruned 0)) |}]
+    ((stabilizations_before_actions 1) (stabilizations_caused_by_var_changes 1)
+     (stabilizations_skipped 0) (prunes_run 0) (branches_pruned 0))
+    |}]
 ;;
 
 let%expect_test "state_machine1 that schedules an action which sets an upstream var \
@@ -580,31 +603,34 @@ let%expect_test "state_machine1 that schedules an action which sets an upstream 
   in
   Handle.print_stabilizations handle;
   Handle.show handle;
-  [%expect {|
-     Model: 0 |}];
+  [%expect {| Model: 0 |}];
   (* It handles when actions with side-effects are applied in the same frame *)
   Handle.do_actions handle [ `Set_input 1; `Copy_input ];
   Handle.show handle;
   [%expect {|
-     skipped stabilization
-     stabilized
-     Model: 1 |}];
+    skipped stabilization
+    stabilized
+    Model: 1
+    |}];
   (* It handles when actions are applied across multiple frames *)
   Handle.do_actions handle [ `Set_input 2 ];
   Handle.show handle;
   [%expect {|
-     skipped stabilization
-     Model: 1 |}];
+    skipped stabilization
+    Model: 1
+    |}];
   Handle.do_actions handle [ `Copy_input ];
   Handle.show handle;
   [%expect {|
-     skipped stabilization
-     Model: 2 |}];
+    skipped stabilization
+    Model: 2
+    |}];
   Handle.print_stabilization_tracker_stats handle;
   [%expect
     {|
-     ((stabilizations_before_actions 1) (stabilizations_caused_by_var_changes 1)
-      (stabilizations_skipped 3) (prunes_run 0) (branches_pruned 0)) |}]
+    ((stabilizations_before_actions 1) (stabilizations_caused_by_var_changes 1)
+     (stabilizations_skipped 3) (prunes_run 0) (branches_pruned 0))
+    |}]
 ;;
 
 (* This test demonstrates a case where we don't stabilize even though technically we
@@ -662,34 +688,39 @@ let%expect_test "state_machine1 depending on Incr.Expert.Node.t that breaks abst
   Handle.print_stabilizations handle;
   Handle.show handle;
   [%expect {|
-     Expert body fired
-     Model: 0 |}];
+    Expert body fired
+    Model: 0
+    |}];
   (* Actions with side-effects are applied in the same frame *)
   Handle.do_actions handle [ `Make_stale; `Copy_input ];
   Handle.show handle;
   [%expect
     {|
-     skipped stabilization
-     skipped stabilization
-     Expert body fired
-     Model: 0 |}];
+    skipped stabilization
+    skipped stabilization
+    Expert body fired
+    Model: 0
+    |}];
   (* Actions are applied across multiple frames *)
   Handle.do_actions handle [ `Make_stale ];
   Handle.show handle;
   [%expect {|
-     skipped stabilization
-     Expert body fired
-     Model: 0 |}];
+    skipped stabilization
+    Expert body fired
+    Model: 0
+    |}];
   Handle.do_actions handle [ `Copy_input ];
   Handle.show handle;
   [%expect {|
-     skipped stabilization
-     Model: 2 |}];
+    skipped stabilization
+    Model: 2
+    |}];
   Handle.print_stabilization_tracker_stats handle;
   [%expect
     {|
-     ((stabilizations_before_actions 0) (stabilizations_caused_by_var_changes 0)
-      (stabilizations_skipped 4) (prunes_run 0) (branches_pruned 0)) |}]
+    ((stabilizations_before_actions 0) (stabilizations_caused_by_var_changes 0)
+     (stabilizations_skipped 4) (prunes_run 0) (branches_pruned 0))
+    |}]
 ;;
 
 let%test_module "pruning" =
@@ -758,7 +789,8 @@ let%test_module "pruning" =
         After pruning + action delivery:
         ((stabilizations_before_actions 5403)
          (stabilizations_caused_by_var_changes 0) (stabilizations_skipped 5403)
-         (prunes_run 2) (branches_pruned 1)) |}]
+         (prunes_run 2) (branches_pruned 1))
+        |}]
     ;;
 
     let%expect_test "old assoc_on branches are pruned after not receiving actions for a \
@@ -778,7 +810,8 @@ let%test_module "pruning" =
         After pruning + action delivery:
         ((stabilizations_before_actions 5403)
          (stabilizations_caused_by_var_changes 0) (stabilizations_skipped 5403)
-         (prunes_run 2) (branches_pruned 1)) |}]
+         (prunes_run 2) (branches_pruned 1))
+        |}]
     ;;
 
     let%expect_test "old switch branches are pruned after not receiving actions for a \
@@ -827,7 +860,8 @@ let%test_module "pruning" =
         After pruning + action delivery:
         ((stabilizations_before_actions 5402)
          (stabilizations_caused_by_var_changes 0) (stabilizations_skipped 5402)
-         (prunes_run 2) (branches_pruned 1)) |}]
+         (prunes_run 2) (branches_pruned 1))
+        |}]
     ;;
   end)
 ;;
@@ -871,7 +905,8 @@ let%test_module "the optimization takes effect" =
         skipped stabilization
         ("Processed action" (action (Sub_from (Leaf_dynamic <opaque>))))
         stabilized
-        ("Processed action" (action (Sub_into (Leaf_dynamic <opaque>)))) |}];
+        ("Processed action" (action (Sub_into (Leaf_dynamic <opaque>))))
+        |}];
       (* Whereas in this case, we don't need a stabilization between actions *)
       Handle.do_actions handle [ `Downstream; `Upstream ];
       Handle.show handle;
@@ -880,7 +915,8 @@ let%test_module "the optimization takes effect" =
         skipped stabilization
         ("Processed action" (action (Sub_into (Leaf_dynamic <opaque>))))
         skipped stabilization
-        ("Processed action" (action (Sub_from (Leaf_dynamic <opaque>)))) |}];
+        ("Processed action" (action (Sub_from (Leaf_dynamic <opaque>))))
+        |}];
       (* If we schedule two downstream actions, we don't need a stabilization between them
       *)
       Handle.do_actions handle [ `Downstream; `Downstream ];
@@ -890,12 +926,14 @@ let%test_module "the optimization takes effect" =
         skipped stabilization
         ("Processed action" (action (Sub_into (Leaf_dynamic <opaque>))))
         skipped stabilization
-        ("Processed action" (action (Sub_into (Leaf_dynamic <opaque>)))) |}];
+        ("Processed action" (action (Sub_into (Leaf_dynamic <opaque>))))
+        |}];
       Handle.print_stabilization_tracker_stats handle;
       [%expect
         {|
         ((stabilizations_before_actions 1) (stabilizations_caused_by_var_changes 0)
-         (stabilizations_skipped 5) (prunes_run 0) (branches_pruned 0)) |}]
+         (stabilizations_skipped 5) (prunes_run 0) (branches_pruned 0))
+        |}]
     ;;
 
     let%expect_test "wrap that depends on a state_machine1" =
@@ -988,7 +1026,8 @@ let%test_module "the optimization takes effect" =
 
         (Applying: Wrap_outer Wrap_outer)
         skipped stabilization
-        stabilized |}];
+        stabilized
+        |}];
       Handle.do_actions handle [ `Wrap_inner; `Wrap_inner; `Wrap_inner ];
       (* Chaining many of these wrap inners does not require stabilization *)
       Handle.show handle;
@@ -996,14 +1035,17 @@ let%test_module "the optimization takes effect" =
         {|
         skipped stabilization
         skipped stabilization
-        skipped stabilization |}];
+        skipped stabilization
+        |}];
       Handle.do_actions handle [ `Wrap_outer; `Wrap_outer; `Wrap_outer ];
       (* Chaining many of these wrap outers together continues to require stabilization *)
       Handle.show handle;
-      [%expect {|
+      [%expect
+        {|
         skipped stabilization
         stabilized
-        stabilized |}]
+        stabilized
+        |}]
     ;;
   end)
 ;;
@@ -1165,8 +1207,7 @@ let%test_module "interesting action delivery cases" =
       [%expect {| ((1 2) (2 2)) |}];
       Handle.do_actions handle [ `Set 3; `Copy 2 ];
       Handle.show handle;
-      [%expect {|
-        ((1 3) (2 3)) |}]
+      [%expect {| ((1 3) (2 3)) |}]
     ;;
 
     (* This test case exercises the logic for a model reset outer action being followed by
@@ -1290,7 +1331,8 @@ let%test_module "interesting action delivery cases" =
         ("Processed action" (action (Wrap_outer <opaque>)))
         stabilized
         ("Processed action" (action (Wrap_outer <opaque>)))
-        5 |}]
+        5
+        |}]
     ;;
   end)
 ;;

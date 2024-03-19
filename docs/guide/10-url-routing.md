@@ -21,9 +21,8 @@ It might not be obvious at first, but URL integration is bidirectional:
 In Bonsai, the `'a Url_var.t` type is used to manage this
 synchronization; when given a parsing function (that parses a URL into
 values of your domain-specific `'a` type) and an "unparsing" function
-(which turns `'a` back into a URL), the url-var can be treated like a
-[`Var.t`](./02-dynamism.md) and it'll handle all the browser-specific
-url management for you!
+(which turns `'a` back into a URL). It'll handle all the
+browser-specific url management for you!
 
 In this guide, we'll start by building a url-var by implementing parse
 and unparse by hand, but the rest of this chapter will focus on the API
@@ -114,7 +113,8 @@ let%expect_test _ =
     ├────────────────────┤
     │ /homepage          │
     │ /search?q=<string> │
-    └────────────────────┘ |}]
+    └────────────────────┘
+    |}]
 ;;
 ```
 
@@ -264,7 +264,8 @@ you can use the `Parser.Record` module which needs you to derive
       │ All urls                       │
       ├────────────────────────────────┤
       │ /?language=<string>&q=<string> │
-      └────────────────────────────────┘ |}]
+      └────────────────────────────────┘
+      |}]
   ;;
 ```
 
@@ -339,7 +340,8 @@ It might be good to have \[language\] have its own type. We can use
       │ All urls                                │
       ├─────────────────────────────────────────┤
       │ /?language=<project<string>>&q=<string> │
-      └─────────────────────────────────────────┘ |}]
+      └─────────────────────────────────────────┘
+      |}]
   ;;
 ```
 
@@ -405,7 +407,8 @@ of `google.com/?language=en&q=capybara`. Instead of
       ├────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────┤
       │ Sane path orders check │ ("Each path parser must be present in path order. The following fields were missing:" │
       │                        │  (missing_fields (Language)))                                                         │
-      └────────────────────────┴───────────────────────────────────────────────────────────────────────────────────────┘ |}]
+      └────────────────────────┴───────────────────────────────────────────────────────────────────────────────────────┘
+      |}]
   ;;
 ```
 
@@ -466,7 +469,8 @@ statically. Here the problem can be fixed by adding `Language` to
       │ All urls                      │
       ├───────────────────────────────┤
       │ /<project<string>>?q=<string> │
-      └───────────────────────────────┘ |}]
+      └───────────────────────────────┘
+      |}]
   ;;
 ```
 
@@ -522,7 +526,8 @@ mentioning what happens when you nest records.
       │ All urls                                                │
       ├─────────────────────────────────────────────────────────┤
       │ /?a.bar=<int>&a.foo=<string>&b.bar=<int>&b.foo=<string> │
-      └─────────────────────────────────────────────────────────┘ |}]
+      └─────────────────────────────────────────────────────────┘
+      |}]
   ;;
 ```
 
@@ -560,14 +565,15 @@ you can use the `Parser.Variant` module which needs you to derive
     Parser.check_ok_and_print_urls_or_errors parser;
     [%expect
       {|
-    URL parser looks good!
-    ┌───────────┐
-    │ All urls  │
-    ├───────────┤
-    │ /homepage │
-    │ /maps     │
-    │ /search   │
-    └───────────┘ |}]
+      URL parser looks good!
+      ┌───────────┐
+      │ All urls  │
+      ├───────────┤
+      │ /homepage │
+      │ /maps     │
+      │ /search   │
+      └───────────┘
+      |}]
   ;;
 ```
 
@@ -607,14 +613,15 @@ of `google.com/homepage`.
     Parser.check_ok_and_print_urls_or_errors parser;
     [%expect
       {|
-    URL parser looks good!
-    ┌──────────┐
-    │ All urls │
-    ├──────────┤
-    │ /        │
-    │ /maps    │
-    │ /search  │
-    └──────────┘ |}]
+      URL parser looks good!
+      ┌──────────┐
+      │ All urls │
+      ├──────────┤
+      │ /        │
+      │ /maps    │
+      │ /search  │
+      └──────────┘
+      |}]
   ;;
 ```
 
@@ -662,14 +669,15 @@ same combinators that the previous `Parser.Record` example used.
     Parser.check_ok_and_print_urls_or_errors parser;
     [%expect
       {|
-    URL parser looks good!
-    ┌─────────────────────────┐
-    │ All urls                │
-    ├─────────────────────────┤
-    │ /                       │
-    │ /maps?location=<string> │
-    │ /search?query=<string>  │
-    └─────────────────────────┘ |}]
+      URL parser looks good!
+      ┌─────────────────────────┐
+      │ All urls                │
+      ├─────────────────────────┤
+      │ /                       │
+      │ /maps?location=<string> │
+      │ /search?query=<string>  │
+      └─────────────────────────┘
+      |}]
   ;;
 ```
 
@@ -715,7 +723,8 @@ let%expect_test _ =
     │ Duplicate urls check                                    │ ("Ambiguous, duplicate urls expressed in parser! This was probably caused due to conflic │
     │                                                         │ ting renames with [with_prefix] or [with_remaining_path]."                               │
     │                                                         │  (duplicate_urls (/x)))                                                                  │
-    └─────────────────────────────────────────────────────────┴──────────────────────────────────────────────────────────────────────────────────────────┘ |}]
+    └─────────────────────────────────────────────────────────┴──────────────────────────────────────────────────────────────────────────────────────────┘
+    |}]
 ;;
 ```
 
@@ -777,7 +786,8 @@ let%expect_test _ =
     │ All urls      │
     ├───────────────┤
     │ /foo/<string> │
-    └───────────────┘ |}]
+    └───────────────┘
+    |}]
 ;;
 ```
 

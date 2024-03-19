@@ -140,6 +140,67 @@ let default_theme =
             in
             Vdom.Node.button ~attrs content
 
+          method badge ~attrs ~intent ~on_dismiss content =
+            let colors =
+              let { Constants.Fg_bg.foreground; background } =
+                match intent with
+                | None -> self#constants.extreme
+                | Some intent -> Constants.Intent.lookup self#constants.intent intent
+              in
+              [%css
+                {|
+                  background-color: %{background#Css_gen.Color};
+                  color: %{foreground#Css_gen.Color};
+                |}]
+            in
+            let border =
+              match intent with
+              | Some _ -> Vdom.Attr.empty
+              | None ->
+                let color = self#constants.extreme_primary_border in
+                [%css {| border: 1px solid %{color#Css_gen.Color}; |}]
+            in
+            let attrs =
+              attrs
+              @ [ colors
+                ; border
+                  (* The large, constant border-radius is a hack to make the badge border
+                   round without turning it into an ellipse (which using 50% would do). *)
+                ; [%css
+                    {|
+              border-radius: 100px;
+
+              padding: 4px 8px;
+              line-height: normal;
+              display: inline-flex;
+              white-space: nowrap;
+              align-items: center;
+              |}]
+                ]
+            in
+            let dismiss_button =
+              match on_dismiss with
+              | None -> Vdom.Node.none
+              | Some on_dismiss ->
+                Vdom.Node.span
+                  ~attrs:
+                    [ Vdom.Attr.on_click (fun _ -> on_dismiss)
+                    ; [%css
+                        {|
+                      cursor: pointer;
+                      margin-left: 6px;
+                      line-height: 0;
+                      opacity: 60%;
+                      &::after {
+                        content: "X";
+                        font-size: 70%;
+                      }
+                     |}]
+                    ]
+                  []
+            in
+            Vdom.Node.span ~attrs (content @ [ dismiss_button ])
+
           method tabs
             : type a.  attrs:Vdom.Attr.t list
                       -> per_tab_attrs:(a -> is_active:bool -> Vdom.Attr.t list)

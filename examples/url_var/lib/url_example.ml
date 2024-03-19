@@ -348,7 +348,8 @@ let%expect_test _ =
         ├────────────────────────┤
         │ /                      │
         │ /settings?volume=<int> │
-        └────────────────────────┘ |}]
+        └────────────────────────┘
+        |}]
 ;;]
 
 module Homepage_and_settings = Homepage_and_settings_demo.Homepage_and_settings
@@ -393,7 +394,8 @@ let%expect_test _ =
         ├──────────┤
         │ /bar     │
         │ /foo     │
-        └──────────┘ |}]
+        └──────────┘
+        |}]
 ;;]
 
 let foo_bar_example =
@@ -497,7 +499,8 @@ let%expect_test _ =
         │ /library/<string>/book/<string>  │
         │ /library/<string>/movie          │
         │ /library/<string>/movie/<string> │
-        └──────────────────────────────────┘ |}]
+        └──────────────────────────────────┘
+        |}]
 ;;]
 
 let folder_example : Partial_match_example.My_url.t t =
@@ -549,7 +552,8 @@ module My_url = struct
           │ All urls      │
           ├───────────────┤
           │ /?video=<int> │
-          └───────────────┘ |}]
+          └───────────────┘
+          |}]
   ;;
 end]
 
@@ -583,7 +587,8 @@ module My_url = struct
           │ All urls │
           ├──────────┤
           │ /<int>   │
-          └──────────┘ |}]
+          └──────────┘
+          |}]
   ;;
 end]
 
@@ -625,7 +630,8 @@ let%expect_test _ =
         ├────────────────────┤
         │ /homepage          │
         │ /search?q=<string> │
-        └────────────────────┘ |}]
+        └────────────────────┘
+        |}]
 ;;]
 
 let search_example =
@@ -673,7 +679,8 @@ let%expect_test _ =
         │ Duplicate urls check                                    │ ("Ambiguous, duplicate urls expressed in parser! This was probably caused due to conflic │
         │                                                         │ ting renames with [with_prefix] or [with_remaining_path]."                               │
         │                                                         │  (duplicate_urls (/foo)))                                                                │
-        └─────────────────────────────────────────────────────────┴──────────────────────────────────────────────────────────────────────────────────────────┘ |}]
+        └─────────────────────────────────────────────────────────┴──────────────────────────────────────────────────────────────────────────────────────────┘
+        |}]
 ;;]
 
 let error_example_component =
@@ -728,7 +735,8 @@ let%expect_test _ =
         │ All urls            │
         ├─────────────────────┤
         │ /<string>?foo=<int> │
-        └─────────────────────┘ |}]
+        └─────────────────────┘
+        |}]
 ;;]
 
 let simple_record_example =
@@ -790,7 +798,8 @@ let%expect_test _ =
         ├───────────────────────────────────────────┤
         │ /                                         │
         │ /video?channel=<string>&video_id=<string> │
-        └───────────────────────────────────────────┘ |}]
+        └───────────────────────────────────────────┘
+        |}]
 ;;]
 
 let anonymous_record_example =
@@ -847,7 +856,8 @@ let%expect_test _ =
         │ All urls                 │
         ├──────────────────────────┤
         │ /?t_1=<int>&t_2=<string> │
-        └──────────────────────────┘ |}]
+        └──────────────────────────┘
+        |}]
 ;;]
 
 let tuple_example =
@@ -894,7 +904,8 @@ let%expect_test _ =
         │ /<string>  │
         │ /bar       │
         │ /foo/<int> │
-        └────────────┘ |}]
+        └────────────┘
+        |}]
 ;;]
 
 let catchall_example =
@@ -954,7 +965,8 @@ let%expect_test _ =
     ├────────────────────┤
     │ /homepage          │
     │ /search?q=<string> │
-    └────────────────────┘ |}]
+    └────────────────────┘
+    |}]
 ;;
 
 (* $MDX part-end *)
@@ -990,7 +1002,8 @@ let%expect_test _ =
     │ Duplicate urls check                                    │ ("Ambiguous, duplicate urls expressed in parser! This was probably caused due to conflic │
     │                                                         │ ting renames with [with_prefix] or [with_remaining_path]."                               │
     │                                                         │  (duplicate_urls (/x)))                                                                  │
-    └─────────────────────────────────────────────────────────┴──────────────────────────────────────────────────────────────────────────────────────────┘ |}]
+    └─────────────────────────────────────────────────────────┴──────────────────────────────────────────────────────────────────────────────────────────┘
+    |}]
 ;;
 
 (* $MDX part-end *)
@@ -1046,7 +1059,8 @@ let%expect_test _ =
     │ All urls      │
     ├───────────────┤
     │ /foo/<string> │
-    └───────────────┘ |}]
+    └───────────────┘
+    |}]
 ;;
 
 (* $MDX part-end *)
@@ -1121,7 +1135,8 @@ module _ = struct
       │ All urls                       │
       ├────────────────────────────────┤
       │ /?language=<string>&q=<string> │
-      └────────────────────────────────┘ |}]
+      └────────────────────────────────┘
+      |}]
   ;;
   (* $MDX part-end *)
 end
@@ -1170,7 +1185,8 @@ module _ = struct
       │ All urls                                │
       ├─────────────────────────────────────────┤
       │ /?language=<project<string>>&q=<string> │
-      └─────────────────────────────────────────┘ |}]
+      └─────────────────────────────────────────┘
+      |}]
   ;;
   (* $MDX part-end *)
 end
@@ -1220,7 +1236,8 @@ module _ = struct
       ├────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────┤
       │ Sane path orders check │ ("Each path parser must be present in path order. The following fields were missing:" │
       │                        │  (missing_fields (Language)))                                                         │
-      └────────────────────────┴───────────────────────────────────────────────────────────────────────────────────────┘ |}]
+      └────────────────────────┴───────────────────────────────────────────────────────────────────────────────────────┘
+      |}]
   ;;
   (* $MDX part-end *)
 end
@@ -1269,7 +1286,8 @@ module _ = struct
       │ All urls                      │
       ├───────────────────────────────┤
       │ /<project<string>>?q=<string> │
-      └───────────────────────────────┘ |}]
+      └───────────────────────────────┘
+      |}]
   ;;
   (* $MDX part-end *)
 end
@@ -1321,7 +1339,8 @@ module _ = struct
       │ All urls                                                │
       ├─────────────────────────────────────────────────────────┤
       │ /?a.bar=<int>&a.foo=<string>&b.bar=<int>&b.foo=<string> │
-      └─────────────────────────────────────────────────────────┘ |}]
+      └─────────────────────────────────────────────────────────┘
+      |}]
   ;;
   (* $MDX part-end *)
 end
@@ -1348,14 +1367,15 @@ module _ = struct
     Parser.check_ok_and_print_urls_or_errors parser;
     [%expect
       {|
-    URL parser looks good!
-    ┌───────────┐
-    │ All urls  │
-    ├───────────┤
-    │ /homepage │
-    │ /maps     │
-    │ /search   │
-    └───────────┘ |}]
+      URL parser looks good!
+      ┌───────────┐
+      │ All urls  │
+      ├───────────┤
+      │ /homepage │
+      │ /maps     │
+      │ /search   │
+      └───────────┘
+      |}]
   ;;
   (* $MDX part-end *)
 end
@@ -1382,14 +1402,15 @@ module _ = struct
     Parser.check_ok_and_print_urls_or_errors parser;
     [%expect
       {|
-    URL parser looks good!
-    ┌──────────┐
-    │ All urls │
-    ├──────────┤
-    │ /        │
-    │ /maps    │
-    │ /search  │
-    └──────────┘ |}]
+      URL parser looks good!
+      ┌──────────┐
+      │ All urls │
+      ├──────────┤
+      │ /        │
+      │ /maps    │
+      │ /search  │
+      └──────────┘
+      |}]
   ;;
   (* $MDX part-end *)
 end
@@ -1416,14 +1437,15 @@ module _ = struct
     Parser.check_ok_and_print_urls_or_errors parser;
     [%expect
       {|
-    URL parser looks good!
-    ┌─────────────────────────┐
-    │ All urls                │
-    ├─────────────────────────┤
-    │ /                       │
-    │ /maps?location=<string> │
-    │ /search?query=<string>  │
-    └─────────────────────────┘ |}]
+      URL parser looks good!
+      ┌─────────────────────────┐
+      │ All urls                │
+      ├─────────────────────────┤
+      │ /                       │
+      │ /maps?location=<string> │
+      │ /search?query=<string>  │
+      └─────────────────────────┘
+      |}]
   ;;
   (* $MDX part-end *)
 end

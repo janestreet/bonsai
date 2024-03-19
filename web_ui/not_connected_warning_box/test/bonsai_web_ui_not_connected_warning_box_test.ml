@@ -36,7 +36,8 @@ let%expect_test _ =
       <div>
         You've been disconnected from the server for 0ns. There is no need to refresh the page, since the web client will reconnect automatically when the server becomes available again.
       </div>
-    </div> |}];
+    </div>
+    |}];
   Handle.advance_clock_by handle (Time_ns.Span.of_sec 4.5);
   Handle.show handle;
   [%expect
@@ -46,7 +47,8 @@ let%expect_test _ =
       <div>
         You've been disconnected from the server for 5s. There is no need to refresh the page, since the web client will reconnect automatically when the server becomes available again.
       </div>
-    </div> |}];
+    </div>
+    |}];
   Bonsai.Var.set is_connected true;
   Handle.show handle;
   [%expect {| <div> </div> |}];
@@ -60,7 +62,8 @@ let%expect_test _ =
       <div>
         You've been disconnected from the server for 0ns. There is no need to refresh the page, since the web client will reconnect automatically when the server becomes available again.
       </div>
-    </div> |}]
+    </div>
+    |}]
 ;;
 
 let%expect_test _ =
@@ -74,18 +77,15 @@ let%expect_test _ =
   [%expect {| <div> </div> |}];
   Bonsai.Var.set is_connected false;
   Handle.show handle;
-  [%expect {|
-    <span> Wow! Very disconnected! For: 0ns </span> |}];
+  [%expect {| <span> Wow! Very disconnected! For: 0ns </span> |}];
   Handle.advance_clock_by handle (Time_ns.Span.of_sec 4.5);
   Handle.show handle;
-  [%expect {|
-    <span> Wow! Very disconnected! For: 4.5s </span> |}];
+  [%expect {| <span> Wow! Very disconnected! For: 4.5s </span> |}];
   Bonsai.Var.set is_connected true;
   Handle.show handle;
   [%expect {| <div> </div> |}];
   Bonsai.Var.set is_connected false;
   Handle.recompute_view handle;
   Handle.show handle;
-  [%expect {|
-    <span> Wow! Very disconnected! For: 0ns </span> |}]
+  [%expect {| <span> Wow! Very disconnected! For: 0ns </span> |}]
 ;;

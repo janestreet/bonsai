@@ -5,4 +5,4 @@
    patdiff.expect_test_patdiff core_kernel.composition_infix core
    expect_test_helpers_core incr_map re)
  (preprocess
-  (pps ppx_jane ppx_pattern_bind ppx_bonsai)))
+  (pps ppx_jane ppx_pattern_bind ppx_bonsai ppx_quick_test)))

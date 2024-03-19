@@ -80,7 +80,8 @@ let%expect_test "delete" =
   Handle.show handle;
   [%expect {|
     ((0 hello) (1 ""))
-    ((1 "")) |}]
+    ((1 ""))
+    |}]
 ;;
 
 let%expect_test "set length decreasing" =
@@ -91,5 +92,6 @@ let%expect_test "set length decreasing" =
   Handle.show handle;
   [%expect {|
     ((0 "") (1 "") (2 "") (3 ""))
-    ((0 "") (1 "") (4 "")) |}]
+    ((0 "") (1 "") (4 ""))
+    |}]
 ;;

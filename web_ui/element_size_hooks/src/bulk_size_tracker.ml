@@ -3,6 +3,7 @@ open! Import
 open! Bonsai_web
 open! Js_of_ocaml
 open Jsoo_weak_collections
+open Bonsai.Let_syntax
 
 module Dimensions = struct
   type t =
@@ -128,12 +129,13 @@ module Hook = struct
     ;;
 
     let observer = lazy (observer ())
-    let init _ _ = ()
 
-    let on_mount input () element =
+    let init input element =
       Weak_map.set weakmap (element :> Dom.node Js.t) input;
       (Lazy.force observer)##observe element
     ;;
+
+    let on_mount = `Do_nothing
 
     (* This update function is unsound if the injection function passed
        to the hook ever changes. For the time being, this is fine
@@ -167,13 +169,12 @@ module Options = struct
     | Ignore_stale : Dimensions.t t
 end
 
-let component
-  (type key cmp contained)
-  (key : (key, cmp) Bonsai.comparator)
+let component'
+  (type contained)
+  ?(sexp_of_key = sexp_of_opaque)
   (options : contained Options.t)
+  f
   =
-  let open Bonsai.Let_syntax in
-  let module Key = (val key) in
   let on_change ~group_key ~key =
     Vdom.Attr.many
       [ Vdom.Attr.create_hook
@@ -182,6 +183,46 @@ let component
       ; Vdom.Attr.style (Css_gen.box_sizing `Border_box)
       ]
   in
+  let%sub group_key =
+    Bonsai.Expert.thunk (fun () ->
+      Type_equal.Id.create ~name:"bulk_size_tracker_type_id" [%sexp_of: key])
+  in
+  let%sub () =
+    let%sub on_activate =
+      let%arr f = f
+      and group_key = group_key in
+      let inject =
+        match options with
+        | Ignore_stale ->
+          fun actions ->
+            (match
+               List.filter actions ~f:(function
+                 | Action.Remove _ -> false
+                 | _ -> true)
+             with
+             | [] -> Effect.Ignore
+             | actions -> f actions)
+        | _ -> f
+      in
+      Trackers.set ~inject ~group_key
+    in
+    Bonsai.Edge.lifecycle
+      ~on_activate
+      ~on_deactivate:
+        (let%map group_key = group_key in
+         Trackers.remove ~group_key)
+      ()
+  in
+  let%arr group_key = group_key in
+  fun key -> on_change ~group_key ~key
+;;
+
+let component
+  (type key cmp contained)
+  (key : (key, cmp) Bonsai.comparator)
+  (options : contained Options.t)
+  =
+  let module Key = (val key) in
   let module Model = struct
     let sexp_of_contained : contained -> Sexp.t =
       match options with
@@ -226,39 +267,10 @@ let component
               | Some (Stale v | Fresh v) -> Some (Stale v))))
   in
   let%sub sizes = return (Value.cutoff ~equal:[%equal: Model.t] sizes) in
-  let%sub group_key =
-    Bonsai.Expert.thunk (fun () ->
-      Type_equal.Id.create ~name:"bulk_size_tracker_type_id" [%sexp_of: Key.t])
-  in
-  let%sub () =
-    Bonsai.Edge.lifecycle
-      ~on_activate:
-        (let%map inject = inject
-         and group_key = group_key in
-         let inject =
-           match options with
-           | Ignore_stale ->
-             fun actions ->
-               (match
-                  List.filter actions ~f:(function
-                    | Action.Remove _ -> false
-                    | _ -> true)
-                with
-                | [] -> Effect.Ignore
-                | actions -> inject actions)
-           | _ -> inject
-         in
-         Trackers.set ~inject ~group_key)
-      ~on_deactivate:
-        (let%map group_key = group_key in
-         Trackers.remove ~group_key)
-      ()
-  in
-  let%sub attr =
-    let%arr group_key = group_key in
-    fun key -> on_change ~group_key ~key
-  in
-  return @@ Value.both sizes attr
+  let%sub attr = component' ~sexp_of_key:[%sexp_of: Key.t] options inject in
+  let%arr sizes = sizes
+  and attr = attr in
+  sizes, attr
 ;;
 
 module For_testing = struct

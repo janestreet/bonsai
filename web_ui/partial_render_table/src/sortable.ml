@@ -42,6 +42,7 @@ module Header = struct
   module Expert = struct
     let default_click_handler
       (type col_id)
+      ?(multisort_columns_when = `Shift_click)
       { order; inject; col_id_equal }
       ~column_id
       ~sortable
@@ -49,7 +50,15 @@ module Header = struct
       =
       let handle_click =
         Vdom.Attr.on_click (fun mouse_event ->
-          if Js_of_ocaml.Js.to_bool mouse_event##.shiftKey
+          let shift = Js_of_ocaml.Js.to_bool mouse_event##.shiftKey in
+          let ctrl = Js_of_ocaml.Js.to_bool mouse_event##.ctrlKey in
+          let should_multisort =
+            match multisort_columns_when with
+            | `Shift_click -> shift
+            | `Ctrl_click -> ctrl
+            | `Shift_or_ctrl_click -> shift || ctrl
+          in
+          if should_multisort
           then inject (Add_sort column_id)
           else inject (Set_sort column_id))
       in

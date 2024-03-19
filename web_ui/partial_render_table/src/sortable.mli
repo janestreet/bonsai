@@ -32,10 +32,13 @@ module Header : sig
     (** If using [Partial_render_table.Basic], this is done for you. Adds a mouse on-click
         handler on a [Vdom.Node] with a specified column index and an icon from {Icons}
         module to the left of the node. The mouse click event updates the ordering and
-        changes the icon. Just a mouse click sets sorting by a single column, Shift-mouse
-        click adds sorting by a column (so that multiple columns are used). *)
+        changes the icon.
+
+        If the [multisort_columns_when] key combo is used, new columns are added to the
+        sort order, instead of replacing it. Defaults to [`Shift_click]. *)
     val default_click_handler
-      :  'col_id t
+      :  ?multisort_columns_when:[ `Shift_click | `Ctrl_click | `Shift_or_ctrl_click ]
+      -> 'col_id t
       -> column_id:'col_id
       -> sortable:bool
       -> (Sort_state.t -> Vdom.Node.t)

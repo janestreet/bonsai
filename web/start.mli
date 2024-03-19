@@ -94,6 +94,7 @@ module Arrow_deprecated : sig
       be bound to the DOM element with id [bind_to_element_with_id]. *)
   val start_standalone
     :  ?optimize:bool
+    -> ?simulate_body_focus_on_root_element:bool
     -> initial_input:'input
     -> bind_to_element_with_id:string
     -> ('input, Vdom.Node.t) Bonsai.Arrow_deprecated.t
@@ -106,9 +107,17 @@ module Arrow_deprecated : sig
 
       - a [Vdom.Node.t], which will be bound to the DOM element with id
         [bind_to_element_with_id]; and
-      - an [inject] function that accepts external actions and returns [unit Vdom.Effect.t]s. *)
+      - an [inject] function that accepts external actions and returns [unit Vdom.Effect.t]s.
+
+      This function can take the following optional arguments:
+      - [?optimize] (defaults to true)
+      - [?simulate_body_focus_on_root_element] (defaults to true)
+        Makes it so that attaching event listeners to the root element behaves as
+        if they were attached to the page body element. Enabling this makes the
+        bonsai app behave differently from a traditional web page. *)
   val start
     :  ?optimize:bool
+    -> ?simulate_body_focus_on_root_element:bool
     -> initial_input:'input
     -> bind_to_element_with_id:string
     -> ( ('input, 'outgoing) App_input.t
@@ -137,7 +146,7 @@ module Proc : sig
 
     (** If the application provides some "extra data" that is computed alongside the view
         of the application, (see [Result_spec.S.extra]), then you can subscribe to those
-        values using the bus returned by [extra] 
+        values using the bus returned by [extra]
 
         A value is placed into the Bus on every frame regardless of if it changed or not. *)
     val extra : ('extra, _) t -> ('extra -> unit) Bus.Read_only.t
@@ -213,6 +222,7 @@ module Proc : sig
   val start
     :  ?custom_connector:(Rpc_effect.Where_to_connect.Custom.t -> Rpc_effect.Connector.t)
     -> ?bind_to_element_with_id:string
+    -> ?simulate_body_focus_on_root_element:bool
     -> Vdom.Node.t Bonsai.Computation.t
     -> unit
 
@@ -234,6 +244,7 @@ module Proc : sig
     :  ('result, 'extra, 'incoming) Result_spec.t
     -> ?optimize:bool
     -> ?custom_connector:(Rpc_effect.Where_to_connect.Custom.t -> Rpc_effect.Connector.t)
+    -> ?simulate_body_focus_on_root_element:bool
     -> bind_to_element_with_id:string
     -> 'result Bonsai.Computation.t
     -> ('extra, 'incoming) Handle.t

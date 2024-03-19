@@ -275,7 +275,8 @@ let%expect_test "Clicking the button should double the number" =
     <div>
       <div> The number is: 1 </div>
       <button onclick> Double the number </button>
-    </div> |}];
+    </div>
+    |}];
   Handle.click_on handle ~get_vdom:Fn.id ~selector:"button";
   Handle.show handle;
   [%expect
@@ -283,7 +284,8 @@ let%expect_test "Clicking the button should double the number" =
     <div>
       <div> The number is: 1 </div>
       <button onclick> Double the number </button>
-    </div> |}]
+    </div>
+    |}]
 ;;
 ```
 
@@ -319,7 +321,8 @@ let%expect_test "Clicking the button should double the number" =
     <div>
       <div> The number is: 1 </div>
       <button onclick> Double the number </button>
-    </div> |}];
+    </div>
+    |}];
   Handle.click_on handle ~get_vdom:Fn.id ~selector:"button";
   Handle.show handle;
   [%expect
@@ -327,7 +330,8 @@ let%expect_test "Clicking the button should double the number" =
     <div>
       <div> The number is: 1 </div>
       <button onclick> Double the number </button>
-    </div> |}];
+    </div>
+    |}];
   let%bind () = Async_kernel_scheduler.yield_until_no_jobs_remain () in
   [%expect {| (Failure "BUG: no bonsai-rpc handler installed") |}];
   return ()
@@ -358,7 +362,8 @@ let%expect_test "Clicking the button should double the number" =
     <div>
       <div> The number is: 1 </div>
       <button onclick> Double the number </button>
-    </div> |}];
+    </div>
+    |}];
   Handle.click_on handle ~get_vdom:Fn.id ~selector:"button";
   let%bind () = Async_kernel_scheduler.yield_until_no_jobs_remain () in
   Handle.show handle;
@@ -367,7 +372,8 @@ let%expect_test "Clicking the button should double the number" =
     <div>
       <div> The number is: 2 </div>
       <button onclick> Double the number </button>
-    </div> |}];
+    </div>
+    |}];
   return ()
 ;;
 ```

@@ -307,15 +307,14 @@ module type S = sig
   end
 
   (** A constructor for [Computation.t] that models a simple state machine.
-      The first-class module implementing [Model] describes the states in
-      the state machine, while the first-class module implementing [Action]
-      describes the transitions between states.
+      'model describes the states in the state machine, while 'action describes the
+      transitions between states.
 
       [default_model] is the initial state for the state machine, and [apply_action]
       implements the transition function that looks at the current state and the requested
       transition, and produces a new state.
 
-      (It is very common for [inject] and [schedule_event] to be unused) *)
+      (It is very common for ['action Apply_action_context.t] to be unused) *)
   val state_machine0
     :  ?reset:('action Apply_action_context.t -> 'model -> 'model)
          (** to learn more about [reset], read the docs on [with_model_resetter] *)

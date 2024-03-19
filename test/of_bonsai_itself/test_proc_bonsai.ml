@@ -190,7 +190,8 @@ let%expect_test "What happens when cutoff nodes are nested?" =
       value (
         Cutoff
         (t                   Incr)
-        (added_by_let_syntax false)))) |}];
+        (added_by_let_syntax false))))
+    |}];
   Handle.show handle;
   [%expect {| (0 0) |}];
   (* First element changes. *)
@@ -242,7 +243,8 @@ let%expect_test "What happens when cutoff nodes are nested (return and sub are u
       (via (Test 2))
       (into (
         Return (
-          value (Cutoff (t (Named (uid (Test 2)))) (added_by_let_syntax false)))))) |}];
+          value (Cutoff (t (Named (uid (Test 2)))) (added_by_let_syntax false))))))
+    |}];
   Handle.show handle;
   [%expect {| (0 0) |}];
   (* First element changes. *)
@@ -424,8 +426,7 @@ let%expect_test "assoc and enum path" =
       component
   in
   Handle.show handle;
-  [%expect {|
-    ((-1 ((Assoc -1) (Switch 0))) (1 ((Assoc 1) (Switch 1)))) |}]
+  [%expect {| ((-1 ((Assoc -1) (Switch 0))) (1 ((Assoc 1) (Switch 1)))) |}]
 ;;
 
 let%expect_test "constant folded assoc path" =
@@ -459,8 +460,7 @@ let%expect_test "constant folded assoc path" =
       component
   in
   Handle.show handle;
-  [%expect {|
-    ((-1 (Subst_from)) (1 (Subst_into))) |}]
+  [%expect {| ((-1 (Subst_from)) (1 (Subst_into))) |}]
 ;;
 
 let%expect_test "constant folded assoc lifecycles are unchanged" =
@@ -567,7 +567,8 @@ let%expect_test "assoc_on" =
   Handle.show handle;
   [%expect {|
     inactive
-    ((1 0)) |}];
+    ((1 0))
+    |}];
   Bonsai.Var.set var (Int.Map.of_alist_exn [ 1, (); 2, () ]);
   Handle.show handle;
   [%expect {| ((1 0) (2 3)) |}]
@@ -614,7 +615,8 @@ let%expect_test "simple-assoc works with paths" =
   [%expect
     {|
     ((hello (((Assoc hello) Subst_from) ((Assoc hello) Subst_into)))
-     (world (((Assoc world) Subst_from) ((Assoc world) Subst_into)))) |}];
+     (world (((Assoc world) Subst_from) ((Assoc world) Subst_into))))
+    |}];
   component
   |> Bonsai.Private.top_level_handle
   |> Bonsai.Private.pre_process
@@ -642,8 +644,7 @@ let test_assoc_simpl_on_cutoff ~added_by_let_syntax =
 
 let%expect_test "assoc simplification behavior on cutoffs" =
   test_assoc_simpl_on_cutoff ~added_by_let_syntax:true;
-  [%expect {|
-    (Assoc_simpl (map Incr)) |}];
+  [%expect {| (Assoc_simpl (map Incr)) |}];
   test_assoc_simpl_on_cutoff ~added_by_let_syntax:false;
   [%expect
     {|
@@ -654,7 +655,8 @@ let%expect_test "assoc simplification behavior on cutoffs" =
       (data_id (Test 3))
       (by (
         Return (
-          value (Cutoff (t (Named (uid (Test 3)))) (added_by_let_syntax false)))))) |}]
+          value (Cutoff (t (Named (uid (Test 3)))) (added_by_let_syntax false))))))
+    |}]
 ;;
 
 let%expect_test "assoc_list unique" =
@@ -949,7 +951,8 @@ let%expect_test "sub constant folding optimization" =
             Mapn (
               inputs (
                 (Constant (id (Test 0)))
-                (Constant (id (Test 1))))))))))) |}];
+                (Constant (id (Test 1)))))))))))
+    |}];
   print_s (sexp_of_packed_computation (Bonsai.Private.top_level_handle component));
   [%expect {| (Return (value (Constant (id (Test 0))))) |}]
 ;;
@@ -982,7 +985,8 @@ let%expect_test "let%map constant folding optimization" =
                 Mapn (
                   inputs (
                     (Named    (uid (Test 2)))
-                    (Constant (id  (Test 3))))))))))))) |}];
+                    (Constant (id  (Test 3)))))))))))))
+    |}];
   let component =
     component
     |> Bonsai.Private.top_level_handle
@@ -1002,8 +1006,7 @@ let%expect_test "assoc simplifies its inner computation, if possible" =
   in
   print_s
     Bonsai.Private.(sexp_of_packed_computation (pre_process (top_level_handle component)));
-  [%expect {|
-    (Assoc_simpl (map Incr)) |}]
+  [%expect {| (Assoc_simpl (map Incr)) |}]
 ;;
 
 let%expect_test "assoc with sub simplifies its inner computation, if possible" =
@@ -1018,8 +1021,7 @@ let%expect_test "assoc with sub simplifies its inner computation, if possible" =
   in
   print_s
     Bonsai.Private.(sexp_of_packed_computation (pre_process (top_level_handle component)));
-  [%expect {|
-    (Assoc_simpl (map Incr)) |}]
+  [%expect {| (Assoc_simpl (map Incr)) |}]
 ;;
 
 let%expect_test "assoc with sub simplifies its inner computation, if possible" =
@@ -1034,8 +1036,7 @@ let%expect_test "assoc with sub simplifies its inner computation, if possible" =
   in
   print_s
     Bonsai.Private.(sexp_of_packed_computation (pre_process (top_level_handle component)));
-  [%expect {|
-    (Assoc_simpl (map Incr)) |}]
+  [%expect {| (Assoc_simpl (map Incr)) |}]
 ;;
 
 let%expect_test "map > lazy" =
@@ -1074,7 +1075,7 @@ let%expect_test "map > lazy" =
       (Result_spec.sexp (module Sexp))
       (f ~t:t_value ~depth:(Bonsai.Value.return 0))
   in
-  [%expect {||}];
+  [%expect {| |}];
   Handle.show handle;
   [%expect {| (hi (depth 0) (children ())) |}];
   Bonsai.Var.set
@@ -1260,7 +1261,8 @@ let%expect_test "dynamic action sent to non-existent assoc element" =
   Handle.show handle;
   [%expect {|
     inactive
-    ((1 0)) |}];
+    ((1 0))
+    |}];
   Bonsai.Var.set var (Int.Map.of_alist_exn [ 1, (); 2, () ]);
   Handle.show handle;
   [%expect {| ((1 0) (2 3)) |}]
@@ -1377,7 +1379,8 @@ let%test_module "inactive delivery" =
         ((1 0))
         ((1 0) (2 4))
 
-        ==== Diff between assoc and assoc_on: ==== |}]
+        ==== Diff between assoc and assoc_on: ====
+        |}]
     ;;
 
     let%expect_test "race inactive-delivery (but an active input)" =
@@ -1407,7 +1410,8 @@ let%test_module "inactive delivery" =
         ((1 0))
         ((1 0) (2 4))
 
-        ==== Diff between assoc and assoc_on: ==== |}]
+        ==== Diff between assoc and assoc_on: ====
+        |}]
     ;;
 
     let%expect_test "dynamic action inactive-delivery" =
@@ -1437,7 +1441,8 @@ let%test_module "inactive delivery" =
         ((1 0))
         ((1 0) (2 3))
 
-        ==== Diff between assoc and assoc_on: ==== |}]
+        ==== Diff between assoc and assoc_on: ====
+        |}]
     ;;
 
     let%expect_test "actor1 inactive-delivery" =
@@ -1487,7 +1492,8 @@ let%test_module "inactive delivery" =
         ((1 0))
         ((1 0) (2 3))
 
-        ==== Diff between assoc and assoc_on: ==== |}]
+        ==== Diff between assoc and assoc_on: ====
+        |}]
     ;;
 
     let%expect_test "actor0 inactive-delivery" =
@@ -1530,7 +1536,8 @@ let%test_module "inactive delivery" =
         ((1 0))
         ((1 0) (2 4))
 
-        ==== Diff between assoc and assoc_on: ==== |}]
+        ==== Diff between assoc and assoc_on: ====
+        |}]
     ;;
 
     let%expect_test "actor1 with constant input downgrades to actor0" =
@@ -1579,7 +1586,8 @@ let%test_module "inactive delivery" =
         ((1 0))
         ((1 0) (2 4))
 
-        ==== Diff between assoc and assoc_on: ==== |}]
+        ==== Diff between assoc and assoc_on: ====
+        |}]
     ;;
 
     let%expect_test "static action inactive-delivery" =
@@ -1594,7 +1602,8 @@ let%test_module "inactive delivery" =
         ((1 0))
         ((1 0) (2 4))
 
-        ==== Diff between assoc and assoc_on: ==== |}]
+        ==== Diff between assoc and assoc_on: ====
+        |}]
     ;;
 
     let%expect_test "static inside of a lazy" =
@@ -1606,20 +1615,21 @@ let%test_module "inactive delivery" =
       |> test_delivery_to_inactive_component;
       [%expect
         {|
-          (Sub
-            (from (Return (value Incr)))
-            (via (Test 1))
-            (into (
-              Switch
-              (match_ (Mapn (inputs (Named (uid (Test 1))))))
-              (arms ((Lazy t) (Return (value Exception)))))))
-          ((1 0) (2 0))
-          ((1 0) (2 3))
-          ((1 0))
-          ((1 0))
-          ((1 0) (2 4))
+        (Sub
+          (from (Return (value Incr)))
+          (via (Test 1))
+          (into (
+            Switch
+            (match_ (Mapn (inputs (Named (uid (Test 1))))))
+            (arms ((Lazy t) (Return (value Exception)))))))
+        ((1 0) (2 0))
+        ((1 0) (2 3))
+        ((1 0))
+        ((1 0))
+        ((1 0) (2 4))
 
-          ==== Diff between assoc and assoc_on: ==== |}]
+        ==== Diff between assoc and assoc_on: ====
+        |}]
     ;;
 
     let%expect_test "static inside of a lazy (optimized away)" =
@@ -1636,7 +1646,8 @@ let%test_module "inactive delivery" =
         ((1 0))
         ((1 0) (2 4))
 
-        ==== Diff between assoc and assoc_on: ==== |}]
+        ==== Diff between assoc and assoc_on: ====
+        |}]
     ;;
 
     let%expect_test "static inside of a fix" =
@@ -1671,7 +1682,8 @@ let%test_module "inactive delivery" =
         ((1 0))
         ((1 0) (2 4))
 
-        ==== Diff between assoc and assoc_on: ==== |}]
+        ==== Diff between assoc and assoc_on: ====
+        |}]
     ;;
 
     let%expect_test "static inside of a fix (optimized away)" =
@@ -1691,7 +1703,8 @@ let%test_module "inactive delivery" =
         ((1 0))
         ((1 0) (2 4))
 
-        ==== Diff between assoc and assoc_on: ==== |}]
+        ==== Diff between assoc and assoc_on: ====
+        |}]
     ;;
 
     let%expect_test "static inside of a wrap" =
@@ -1717,7 +1730,8 @@ let%test_module "inactive delivery" =
         ((1 0))
         ((1 0) (2 4))
 
-        ==== Diff between assoc and assoc_on: ==== |}]
+        ==== Diff between assoc and assoc_on: ====
+        |}]
     ;;
 
     let%expect_test "static inside of a match%sub" =
@@ -1741,7 +1755,8 @@ let%test_module "inactive delivery" =
         ((1 0))
         ((1 0) (2 4))
 
-        ==== Diff between assoc and assoc_on: ==== |}]
+        ==== Diff between assoc and assoc_on: ====
+        |}]
     ;;
 
     let%expect_test "static inside of a with_model_resetter" =
@@ -1785,7 +1800,8 @@ let%test_module "inactive delivery" =
         ((1 0))
         ((1 0) (2 4))
 
-        ==== Diff between assoc and assoc_on: ==== |}]
+        ==== Diff between assoc and assoc_on: ====
+        |}]
     ;;
 
     let%expect_test "resetting while inactive" =
@@ -1825,7 +1841,8 @@ let%test_module "inactive delivery" =
         3
         -1
         -1
-        4 |}];
+        4
+        |}];
       Bonsai.Var.set which_branch false;
       Handle.show handle;
       [%expect {| -1 |}];
@@ -1874,7 +1891,8 @@ let%test_module "inactive delivery" =
         3
         -1
         -1
-        4 |}];
+        4
+        |}];
       Bonsai.Var.set which_branch false;
       Handle.show handle;
       [%expect {| -1 |}];
@@ -2166,7 +2184,8 @@ let%test_module "inactive delivery" =
             {|
             resetting
             resetting
-            ((0 999) (1 999)) |}]
+            ((0 999) (1 999))
+            |}]
         ;;
 
         let%expect_test "reset by bouncing back to an action (race)" =
@@ -2323,7 +2342,8 @@ let%test_module "inactive delivery" =
              there's three active components, there are only two models between them *)
           [%expect {|
             resetting
-            resetting |}];
+            resetting
+            |}];
           Handle.show handle;
           [%expect {| ((0 999) (1 999) (2 999)) |}]
         ;;
@@ -2381,7 +2401,8 @@ let%test_module "inactive delivery" =
           (model_key_id (Test 2))
           (model_cmp_id (Test 3))
           (data_id      (Test 4))
-          (by (Leaf1 (input Incr)))) |}];
+          (by (Leaf1 (input Incr))))
+        |}];
       Handle.show handle;
       let result = Handle.last_result handle in
       let set key to_what =
@@ -2413,7 +2434,8 @@ let%test_module "inactive delivery" =
         inactive
         ((1 3))
         ((1 5))
-        ((1 5) (2 5)) |}]
+        ((1 5) (2 5))
+        |}]
     ;;
   end)
 ;;
@@ -2505,7 +2527,8 @@ let%expect_test "multiple maps respect cutoff" =
   Handle.show handle;
   [%expect {|
     triggered
-    () |}];
+    ()
+    |}];
   Bonsai.Var.set var 2;
   (* Cutoff happens on the unit, so "triggered" isn't printed *)
   Handle.show handle;
@@ -2541,7 +2564,7 @@ let%expect_test "let syntax is collapsed upon eval" =
     let T =
       Bonsai.Private.Action.Type_id.same_witness_exn Action.Type_id.nothing action
     in
-    let snapshot =
+    let snapshot, () =
       run
         ~environment:Environment.empty
         ~path:Path.empty
@@ -2628,7 +2651,8 @@ let%expect_test "constant_folding on assoc containing a lifecycle" =
           Sub
           (from (Return (value (Mapn (inputs ((Named (uid (Test 5)))))))))
           (via (Test 7))
-          (into (Return (value (Named (uid (Test 3))))))))))) |}]
+          (into (Return (value (Named (uid (Test 3)))))))))))
+    |}]
 ;;
 
 let%expect_test "constant_folding on assoc containing a lifecycle that depends on a \
@@ -2656,39 +2680,40 @@ let%expect_test "constant_folding on assoc containing a lifecycle that depends o
   |> print_s;
   [%expect
     {|
-      (Sub
-        (from (Return (value Incr)))
-        (via (Test 1))
-        (into (
-          Assoc
-          (map Incr)
-          (key_id  (Test 3))
-          (cmp_id  (Test 4))
-          (data_id (Test 5))
-          (by (
+    (Sub
+      (from (Return (value Incr)))
+      (via (Test 1))
+      (into (
+        Assoc
+        (map Incr)
+        (key_id  (Test 3))
+        (cmp_id  (Test 4))
+        (data_id (Test 5))
+        (by (
+          Sub
+          (from (
             Sub
             (from (
-              Sub
-              (from (
-                Return (
-                  value (
-                    Mapn (
-                      inputs ((
-                        Mapn (
-                          inputs ((
-                            Mapn (inputs ((Mapn (inputs ((Named (uid (Test 1))))))))))))))))))
-              (via (Test 10))
-              (into (
-                Sub
-                (from (Return (value (Mapn (inputs ((Named (uid (Test 10)))))))))
-                (via (Test 12))
-                (into (Lifecycle (value (Named (uid (Test 12))))))))))
-            (via (Test 13))
+              Return (
+                value (
+                  Mapn (
+                    inputs ((
+                      Mapn (
+                        inputs ((
+                          Mapn (inputs ((Mapn (inputs ((Named (uid (Test 1))))))))))))))))))
+            (via (Test 10))
             (into (
               Sub
-              (from (Return (value (Mapn (inputs ((Named (uid (Test 13)))))))))
-              (via (Test 15))
-              (into (Return (value (Named (uid (Test 5))))))))))))) |}]
+              (from (Return (value (Mapn (inputs ((Named (uid (Test 10)))))))))
+              (via (Test 12))
+              (into (Lifecycle (value (Named (uid (Test 12))))))))))
+          (via (Test 13))
+          (into (
+            Sub
+            (from (Return (value (Mapn (inputs ((Named (uid (Test 13)))))))))
+            (via (Test 15))
+            (into (Return (value (Named (uid (Test 5)))))))))))))
+    |}]
 ;;
 
 let%expect_test "constant_folding on assoc containing a dynamic_scope" =
@@ -2731,7 +2756,8 @@ let%expect_test "constant_folding on assoc containing a dynamic_scope" =
                 Mapn (
                   inputs (
                     (Named (uid (Test 3)))
-                    (Named (uid (Test 6)))))))))))))) |}]
+                    (Named (uid (Test 6))))))))))))))
+    |}]
 ;;
 
 let%expect_test "on_display for updating a state (using on_change)" =
@@ -2760,7 +2786,8 @@ let%expect_test "on_display for updating a state (using on_change)" =
   Handle.show handle;
   [%expect {|
     rendering...
-    (change! (prev ()) (cur 1)) |}];
+    (change! (prev ()) (cur 1))
+    |}];
   Handle.show handle;
   [%expect {| rendering... |}];
   Handle.show handle;
@@ -2769,7 +2796,8 @@ let%expect_test "on_display for updating a state (using on_change)" =
   Handle.show handle;
   [%expect {|
     rendering...
-    (change! (prev (1)) (cur 2)) |}];
+    (change! (prev (1)) (cur 2))
+    |}];
   Handle.show handle;
   [%expect {| rendering... |}];
   Handle.show handle;
@@ -2813,7 +2841,8 @@ let%expect_test "actor" =
   [%expect {|
     1
     2
-    3 |}]
+    3
+    |}]
 ;;
 
 let%expect_test "actor sending events to itself" =
@@ -2857,7 +2886,8 @@ let%expect_test "actor sending events to itself" =
     (got 1)
     (result 2)
     (got 0)
-    (result 0) |}]
+    (result 0)
+    |}]
 ;;
 
 let%expect_test "lifecycle" =
@@ -2893,21 +2923,24 @@ let%expect_test "lifecycle" =
   Handle.show handle;
   [%expect {|
     ((action activate) (on a))
-    ((action after-display) (on a)) |}];
+    ((action after-display) (on a))
+    |}];
   Bonsai.Var.set var false;
   Handle.show handle;
   [%expect
     {|
     ((action deactivate) (on a))
     ((action activate) (on b))
-    ((action after-display) (on b)) |}];
+    ((action after-display) (on b))
+    |}];
   Bonsai.Var.set var true;
   Handle.show handle;
   [%expect
     {|
     ((action deactivate) (on b))
     ((action activate) (on a))
-    ((action after-display) (on a)) |}]
+    ((action after-display) (on a))
+    |}]
 ;;
 
 let%test_module "Clock.every" =
@@ -2947,15 +2980,15 @@ let%test_module "Clock.every" =
         Handle.recompute_view_until_stable handle;
         [%expect {| hi |}];
         move_forward_and_show ();
-        [%expect {||}];
+        [%expect {| |}];
         move_forward_and_show ();
-        [%expect {||}];
+        [%expect {| |}];
         move_forward_and_show ();
         [%expect {| hi |}];
         move_forward_and_show ();
-        [%expect {||}];
+        [%expect {| |}];
         move_forward_and_show ();
-        [%expect {||}];
+        [%expect {| |}];
         move_forward_and_show ();
         [%expect {| hi |}])
     ;;
@@ -2993,17 +3026,17 @@ let%test_module "Clock.every" =
           Handle.recompute_view_until_stable handle
         in
         Handle.recompute_view_until_stable handle;
-        [%expect {||}];
+        [%expect {| |}];
         move_forward_and_show ();
-        [%expect {||}];
+        [%expect {| |}];
         move_forward_and_show ();
-        [%expect {||}];
+        [%expect {| |}];
         move_forward_and_show ();
         [%expect {| hi |}];
         move_forward_and_show ();
-        [%expect {||}];
+        [%expect {| |}];
         move_forward_and_show ();
-        [%expect {||}];
+        [%expect {| |}];
         move_forward_and_show ();
         [%expect {| hi |}])
     ;;
@@ -3132,7 +3165,8 @@ let%test_module "Clock.every" =
         {|
         before: 00:00:07.000000000Z
         after:  00:00:08.000000000Z
-        after paint: 00:00:08.000000000Z |}];
+        after paint: 00:00:08.000000000Z
+        |}];
       move_forward_and_show
         ~after_show:(fun () -> advance_and_clear_svar ~handle ~svar 0.2)
         2.0;
@@ -3142,14 +3176,16 @@ let%test_module "Clock.every" =
         after:  00:00:10.000000000Z
         [tick] - effect started
         [tock] - effect ended
-        after paint: 00:00:10.200000000Z |}];
+        after paint: 00:00:10.200000000Z
+        |}];
       (* Does not trigger at 7s + 2 * 3s. *)
       move_forward_and_show 2.8;
       [%expect
         {|
         before: 00:00:10.200000000Z
         after:  00:00:13.000000000Z
-        after paint: 00:00:13.000000000Z |}];
+        after paint: 00:00:13.000000000Z
+        |}];
       (* Triggers at 7s (initial) + 3s (first tick) + 0.2s (time taken by first tick) + 3s
          (time after first click)*)
       move_forward_and_show
@@ -3161,7 +3197,8 @@ let%test_module "Clock.every" =
         after:  00:00:13.200000000Z
         [tick] - effect started
         [tock] - effect ended
-        after paint: 00:00:13.400000000Z |}];
+        after paint: 00:00:13.400000000Z
+        |}];
       (* Starting next trigger without immediately finishing/filling the svar. *)
       move_forward_and_show 3.0;
       [%expect
@@ -3169,20 +3206,23 @@ let%test_module "Clock.every" =
         before: 00:00:13.400000000Z
         after:  00:00:16.400000000Z
         [tick] - effect started
-        after paint: 00:00:16.400000000Z |}];
+        after paint: 00:00:16.400000000Z
+        |}];
       (* Clock does not trigger before the current action is completed. *)
       move_forward_and_show 3.0;
       [%expect
         {|
         before: 00:00:16.400000000Z
         after:  00:00:19.400000000Z
-        after paint: 00:00:19.400000000Z |}];
+        after paint: 00:00:19.400000000Z
+        |}];
       move_forward_and_show 3.0;
       [%expect
         {|
         before: 00:00:19.400000000Z
         after:  00:00:22.400000000Z
-        after paint: 00:00:22.400000000Z |}];
+        after paint: 00:00:22.400000000Z
+        |}];
       fill_and_reset_svar ~svar;
       [%expect {| [tock] - effect ended |}];
       move_forward_and_show 2.9;
@@ -3190,14 +3230,16 @@ let%test_module "Clock.every" =
         {|
         before: 00:00:22.400000000Z
         after:  00:00:25.300000000Z
-        after paint: 00:00:25.300000000Z |}];
+        after paint: 00:00:25.300000000Z
+        |}];
       move_forward_and_show 0.1;
       [%expect
         {|
         before: 00:00:25.300000000Z
         after:  00:00:25.400000000Z
         [tick] - effect started
-        after paint: 00:00:25.400000000Z |}]
+        after paint: 00:00:25.400000000Z
+        |}]
     ;;
 
     let%expect_test "`Wait_period_after_previous_effect_starts_blocking behavior" =
@@ -3218,7 +3260,8 @@ let%test_module "Clock.every" =
         {|
         before: 00:00:07.000000000Z
         after:  00:00:08.000000000Z
-        after paint: 00:00:08.000000000Z |}];
+        after paint: 00:00:08.000000000Z
+        |}];
       move_forward_and_show
         ~after_show:(fun () -> advance_and_clear_svar ~handle ~svar 0.2)
         2.0;
@@ -3228,7 +3271,8 @@ let%test_module "Clock.every" =
         after:  00:00:10.000000000Z
         [tick] - effect started
         [tock] - effect ended
-        after paint: 00:00:10.200000000Z |}];
+        after paint: 00:00:10.200000000Z
+        |}];
       (* Triggers at 7s + 6.0s unlike the
          `Wait_period_after_previous_effect_finishes_blocking version of this
          which would need to wait until 7s + 6.2s. *)
@@ -3241,7 +3285,8 @@ let%test_module "Clock.every" =
         after:  00:00:13.000000000Z
         [tick] - effect started
         [tock] - effect ended
-        after paint: 00:00:13.200000000Z |}];
+        after paint: 00:00:13.200000000Z
+        |}];
       (* The next trigger will take a long time, 10 seconds! There will be a couple of
          missed [ticks] and missed [tocks]. *)
       move_forward_and_show 3.0;
@@ -3250,32 +3295,37 @@ let%test_module "Clock.every" =
         before: 00:00:13.200000000Z
         after:  00:00:16.200000000Z
         [tick] - effect started
-        after paint: 00:00:16.200000000Z |}];
+        after paint: 00:00:16.200000000Z
+        |}];
       (* Clock does not tick in before the previous action is complete. *)
       move_forward_and_show 3.0;
       [%expect
         {|
         before: 00:00:16.200000000Z
         after:  00:00:19.200000000Z
-        after paint: 00:00:19.200000000Z |}];
+        after paint: 00:00:19.200000000Z
+        |}];
       move_forward_and_show 3.0;
       [%expect
         {|
         before: 00:00:19.200000000Z
         after:  00:00:22.200000000Z
-        after paint: 00:00:22.200000000Z |}];
+        after paint: 00:00:22.200000000Z
+        |}];
       move_forward_and_show 3.0;
       [%expect
         {|
         before: 00:00:22.200000000Z
         after:  00:00:25.200000000Z
-        after paint: 00:00:25.200000000Z |}];
+        after paint: 00:00:25.200000000Z
+        |}];
       move_forward_and_show 1.0;
       [%expect
         {|
         before: 00:00:25.200000000Z
         after:  00:00:26.200000000Z
-        after paint: 00:00:26.200000000Z |}];
+        after paint: 00:00:26.200000000Z
+        |}];
       fill_and_reset_svar ~svar;
       [%expect {| [tock] - effect ended |}];
       (* Time moves slightly forward which results in another trigger. (hence the
@@ -3289,7 +3339,8 @@ let%test_module "Clock.every" =
         after:  00:00:26.210000000Z
         [tick] - effect started
         [tock] - effect ended
-        after paint: 00:00:26.410000000Z |}];
+        after paint: 00:00:26.410000000Z
+        |}];
       (* Next expected trigger is at 7s + 19.21s + 3s, so going to 7s + 22.11s should not
          trigger. *)
       move_forward_and_show 2.7;
@@ -3297,7 +3348,8 @@ let%test_module "Clock.every" =
         {|
         before: 00:00:26.410000000Z
         after:  00:00:29.110000000Z
-        after paint: 00:00:29.110000000Z |}];
+        after paint: 00:00:29.110000000Z
+        |}];
       (* Trigger occurs at 7s + 22.21s as expected! 1*)
       move_forward_and_show
         ~after_show:(fun () -> advance_and_clear_svar ~handle ~svar 0.2)
@@ -3308,7 +3360,8 @@ let%test_module "Clock.every" =
         after:  00:00:29.210000000Z
         [tick] - effect started
         [tock] - effect ended
-        after paint: 00:00:29.410000000Z |}]
+        after paint: 00:00:29.410000000Z
+        |}]
     ;;
 
     let%test_module "Resilience against bugs from action time being equal to span time" =
@@ -3336,13 +3389,15 @@ let%test_module "Clock.every" =
             before: 00:00:07.000000000Z
             after:  00:00:10.000000000Z
             [tick] - effect started
-            after paint: 00:00:10.000000000Z |}];
+            after paint: 00:00:10.000000000Z
+            |}];
           move_forward_and_show 3.0;
           [%expect
             {|
             before: 00:00:10.000000000Z
             after:  00:00:13.000000000Z
-            after paint: 00:00:13.000000000Z |}];
+            after paint: 00:00:13.000000000Z
+            |}];
           fill_and_reset_svar ~svar;
           [%expect {| [tock] - effect ended |}];
           move_forward_and_show 0.000001;
@@ -3351,7 +3406,8 @@ let%test_module "Clock.every" =
             before: 00:00:13.000000000Z
             after:  00:00:13.000001000Z
             [tick] - effect started
-            after paint: 00:00:13.000001000Z |}]
+            after paint: 00:00:13.000001000Z
+            |}]
         ;;
 
         let%expect_test _ =
@@ -3374,13 +3430,15 @@ let%test_module "Clock.every" =
             before: 00:00:07.000000000Z
             after:  00:00:10.000000000Z
             [tick] - effect started
-            after paint: 00:00:10.000000000Z |}];
+            after paint: 00:00:10.000000000Z
+            |}];
           move_forward_and_show 3.0;
           [%expect
             {|
             before: 00:00:10.000000000Z
             after:  00:00:13.000000000Z
-            after paint: 00:00:13.000000000Z |}];
+            after paint: 00:00:13.000000000Z
+            |}];
           fill_and_reset_svar ~svar;
           [%expect {| [tock] - effect ended |}];
           move_forward_and_show 0.000001;
@@ -3388,14 +3446,16 @@ let%test_module "Clock.every" =
             {|
             before: 00:00:13.000000000Z
             after:  00:00:13.000001000Z
-            after paint: 00:00:13.000001000Z |}];
+            after paint: 00:00:13.000001000Z
+            |}];
           move_forward_and_show 3.0;
           [%expect
             {|
             before: 00:00:13.000001000Z
             after:  00:00:16.000001000Z
             [tick] - effect started
-            after paint: 00:00:16.000001000Z |}]
+            after paint: 00:00:16.000001000Z
+            |}]
         ;;
 
         let%expect_test _ =
@@ -3414,19 +3474,22 @@ let%test_module "Clock.every" =
           Handle.recompute_view handle;
           [%expect {|
             ()
-            [tick] - effect started |}];
+            [tick] - effect started
+            |}];
           move_forward_and_show 3.;
           [%expect
             {|
             before: 00:00:07.000000000Z
             after:  00:00:10.000000000Z
-            after paint: 00:00:10.000000000Z |}];
+            after paint: 00:00:10.000000000Z
+            |}];
           move_forward_and_show 3.0;
           [%expect
             {|
             before: 00:00:10.000000000Z
             after:  00:00:13.000000000Z
-            after paint: 00:00:13.000000000Z |}];
+            after paint: 00:00:13.000000000Z
+            |}];
           fill_and_reset_svar ~svar;
           [%expect {| [tock] - effect ended |}];
           Handle.recompute_view_until_stable handle
@@ -3452,13 +3515,15 @@ let%test_module "Clock.every" =
             before: 00:00:07.000000000Z
             after:  00:00:10.000000000Z
             [tick] - effect started
-            after paint: 00:00:10.000000000Z |}];
+            after paint: 00:00:10.000000000Z
+            |}];
           move_forward_and_show 3.0;
           [%expect
             {|
             before: 00:00:10.000000000Z
             after:  00:00:13.000000000Z
-            after paint: 00:00:13.000000000Z |}];
+            after paint: 00:00:13.000000000Z
+            |}];
           fill_and_reset_svar ~svar;
           [%expect {| [tock] - effect ended |}];
           move_forward_and_show 0.000000001;
@@ -3467,7 +3532,8 @@ let%test_module "Clock.every" =
             before: 00:00:13.000000000Z
             after:  00:00:13.000000001Z
             [tick] - effect started
-            after paint: 00:00:13.000000001Z |}]
+            after paint: 00:00:13.000000001Z
+            |}]
         ;;
       end)
     ;;
@@ -3490,7 +3556,8 @@ let%test_module "Clock.every" =
         {|
         before: 00:00:07.000000000Z
         after:  00:00:08.000000000Z
-        after paint: 00:00:08.000000000Z |}];
+        after paint: 00:00:08.000000000Z
+        |}];
       (* `Every_multiple_of_period_blocking clock triggers on every t where [(t % span) = (init_time % span)]
          Since initial time is 7s, the clock will trigger on every multiple of 3,
          but offset by 1, so on 10s, 13s, 15s independent of skips.
@@ -3504,13 +3571,15 @@ let%test_module "Clock.every" =
         after:  00:00:10.000000000Z
         [tick] - effect started
         [tock] - effect ended
-        after paint: 00:00:10.200000000Z |}];
+        after paint: 00:00:10.200000000Z
+        |}];
       move_forward_and_show 2.7;
       [%expect
         {|
         before: 00:00:10.200000000Z
         after:  00:00:12.900000000Z
-        after paint: 00:00:12.900000000Z |}];
+        after paint: 00:00:12.900000000Z
+        |}];
       move_forward_and_show
         ~after_show:(fun () -> advance_and_clear_svar ~handle ~svar 0.2)
         0.1;
@@ -3520,38 +3589,44 @@ let%test_module "Clock.every" =
         after:  00:00:13.000000000Z
         [tick] - effect started
         [tock] - effect ended
-        after paint: 00:00:13.200000000Z |}];
+        after paint: 00:00:13.200000000Z
+        |}];
       move_forward_and_show 2.8;
       [%expect
         {|
         before: 00:00:13.200000000Z
         after:  00:00:16.000000000Z
         [tick] - effect started
-        after paint: 00:00:16.000000000Z |}];
+        after paint: 00:00:16.000000000Z
+        |}];
       move_forward_and_show 3.0;
       [%expect
         {|
         before: 00:00:16.000000000Z
         after:  00:00:19.000000000Z
-        after paint: 00:00:19.000000000Z |}];
+        after paint: 00:00:19.000000000Z
+        |}];
       move_forward_and_show 3.0;
       [%expect
         {|
         before: 00:00:19.000000000Z
         after:  00:00:22.000000000Z
-        after paint: 00:00:22.000000000Z |}];
+        after paint: 00:00:22.000000000Z
+        |}];
       move_forward_and_show 3.0;
       [%expect
         {|
         before: 00:00:22.000000000Z
         after:  00:00:25.000000000Z
-        after paint: 00:00:25.000000000Z |}];
+        after paint: 00:00:25.000000000Z
+        |}];
       move_forward_and_show 1.0;
       [%expect
         {|
         before: 00:00:25.000000000Z
         after:  00:00:26.000000000Z
-        after paint: 00:00:26.000000000Z |}];
+        after paint: 00:00:26.000000000Z
+        |}];
       fill_and_reset_svar ~svar;
       [%expect {| [tock] - effect ended |}];
       move_forward_and_show 0.1;
@@ -3559,13 +3634,15 @@ let%test_module "Clock.every" =
         {|
         before: 00:00:26.000000000Z
         after:  00:00:26.100000000Z
-        after paint: 00:00:26.100000000Z |}];
+        after paint: 00:00:26.100000000Z
+        |}];
       move_forward_and_show 1.8;
       [%expect
         {|
         before: 00:00:26.100000000Z
         after:  00:00:27.900000000Z
-        after paint: 00:00:27.900000000Z |}];
+        after paint: 00:00:27.900000000Z
+        |}];
       move_forward_and_show
         ~after_show:(fun () -> advance_and_clear_svar ~handle ~svar 0.2)
         0.1;
@@ -3575,7 +3652,8 @@ let%test_module "Clock.every" =
         after:  00:00:28.000000000Z
         [tick] - effect started
         [tock] - effect ended
-        after paint: 00:00:28.200000000Z |}]
+        after paint: 00:00:28.200000000Z
+        |}]
     ;;
 
     let%expect_test "`Every_multiple_of_period_non_blocking clock skip behavior" =
@@ -3596,7 +3674,8 @@ let%test_module "Clock.every" =
         {|
         before: 00:00:07.000000000Z
         after:  00:00:08.000000000Z
-        after paint: 00:00:08.000000000Z |}];
+        after paint: 00:00:08.000000000Z
+        |}];
       (* `Every_multiple_of_period_blocking clock triggers on every t where [(t % span) = (init_time % span)]
          Since initial time is 7s, the clock will trigger on every multiple of 3,
          but offset by 1, so on 10s, 13s, 15s independent of skips.
@@ -3610,13 +3689,15 @@ let%test_module "Clock.every" =
         after:  00:00:10.000000000Z
         [tick] - effect started
         [tock] - effect ended
-        after paint: 00:00:10.200000000Z |}];
+        after paint: 00:00:10.200000000Z
+        |}];
       move_forward_and_show 2.7;
       [%expect
         {|
         before: 00:00:10.200000000Z
         after:  00:00:12.900000000Z
-        after paint: 00:00:12.900000000Z |}];
+        after paint: 00:00:12.900000000Z
+        |}];
       move_forward_and_show
         ~after_show:(fun () -> advance_and_clear_svar ~handle ~svar 0.2)
         0.1;
@@ -3626,60 +3707,69 @@ let%test_module "Clock.every" =
         after:  00:00:13.000000000Z
         [tick] - effect started
         [tock] - effect ended
-        after paint: 00:00:13.200000000Z |}];
+        after paint: 00:00:13.200000000Z
+        |}];
       move_forward_and_show 2.8;
       [%expect
         {|
         before: 00:00:13.200000000Z
         after:  00:00:16.000000000Z
         [tick] - effect started
-        after paint: 00:00:16.000000000Z |}];
+        after paint: 00:00:16.000000000Z
+        |}];
       move_forward_and_show 3.0;
       [%expect
         {|
         before: 00:00:16.000000000Z
         after:  00:00:19.000000000Z
         [tick] - effect started
-        after paint: 00:00:19.000000000Z |}];
+        after paint: 00:00:19.000000000Z
+        |}];
       move_forward_and_show 3.0;
       [%expect
         {|
         before: 00:00:19.000000000Z
         after:  00:00:22.000000000Z
         [tick] - effect started
-        after paint: 00:00:22.000000000Z |}];
+        after paint: 00:00:22.000000000Z
+        |}];
       move_forward_and_show 3.0;
       [%expect
         {|
         before: 00:00:22.000000000Z
         after:  00:00:25.000000000Z
         [tick] - effect started
-        after paint: 00:00:25.000000000Z |}];
+        after paint: 00:00:25.000000000Z
+        |}];
       move_forward_and_show 1.0;
       [%expect
         {|
         before: 00:00:25.000000000Z
         after:  00:00:26.000000000Z
-        after paint: 00:00:26.000000000Z |}];
+        after paint: 00:00:26.000000000Z
+        |}];
       fill_and_reset_svar ~svar;
       [%expect
         {|
         [tock] - effect ended
         [tock] - effect ended
         [tock] - effect ended
-        [tock] - effect ended |}];
+        [tock] - effect ended
+        |}];
       move_forward_and_show 0.1;
       [%expect
         {|
         before: 00:00:26.000000000Z
         after:  00:00:26.100000000Z
-        after paint: 00:00:26.100000000Z |}];
+        after paint: 00:00:26.100000000Z
+        |}];
       move_forward_and_show 1.8;
       [%expect
         {|
         before: 00:00:26.100000000Z
         after:  00:00:27.900000000Z
-        after paint: 00:00:27.900000000Z |}];
+        after paint: 00:00:27.900000000Z
+        |}];
       move_forward_and_show
         ~after_show:(fun () -> advance_and_clear_svar ~handle ~svar 0.2)
         0.1;
@@ -3689,7 +3779,8 @@ let%test_module "Clock.every" =
         after:  00:00:28.000000000Z
         [tick] - effect started
         [tock] - effect ended
-        after paint: 00:00:28.200000000Z |}]
+        after paint: 00:00:28.200000000Z
+        |}]
     ;;
 
     let%test_module "Resilience against inactive clocks" =
@@ -3756,28 +3847,32 @@ let%test_module "Clock.every" =
             [%expect
               {|
                 [Whoops! An action was dropped!]
-                after paint: 00:01:03.000000000Z |}];
+                after paint: 00:01:03.000000000Z
+                |}];
             Handle.show handle;
             [%expect {| true |}];
             move_forward_and_show 3.0;
             [%expect
               {|
                 [Whoops! An action was dropped!]
-                after paint: 00:01:06.000000000Z |}];
+                after paint: 00:01:06.000000000Z
+                |}];
             Handle.show handle;
             [%expect {| true |}];
             move_forward_and_show 3.0;
             [%expect
               {|
                 [Whoops! An action was dropped!]
-                after paint: 00:01:09.000000000Z |}];
+                after paint: 00:01:09.000000000Z
+                |}];
             Handle.show handle;
             [%expect {| true |}];
             move_forward_and_show 3.0;
             [%expect
               {|
                 [Whoops! An action was dropped!]
-                after paint: 00:01:12.000000000Z |}];
+                after paint: 00:01:12.000000000Z
+                |}];
             Handle.show handle;
             [%expect {| true |}])
         ;;
@@ -3815,7 +3910,8 @@ let%test_module "Clock.every" =
                 after:  00:00:00.010000000Z
                 [tick] - effect started
                 [tock] - effect ended
-                after paint: 00:00:00.010000000Z |}];
+                after paint: 00:00:00.010000000Z
+                |}];
             move_forward_and_show
               ~after_show:(fun () -> advance_and_clear_svar ~handle ~svar 0.)
               0.01;
@@ -3825,7 +3921,8 @@ let%test_module "Clock.every" =
                 after:  00:00:00.020000000Z
                 [tick] - effect started
                 [tock] - effect ended
-                after paint: 00:00:00.020000000Z |}];
+                after paint: 00:00:00.020000000Z
+                |}];
             move_forward_and_show
               ~after_show:(fun () -> advance_and_clear_svar ~handle ~svar 0.)
               0.01;
@@ -3835,7 +3932,8 @@ let%test_module "Clock.every" =
                 after:  00:00:00.030000000Z
                 [tick] - effect started
                 [tock] - effect ended
-                after paint: 00:00:00.030000000Z |}];
+                after paint: 00:00:00.030000000Z
+                |}];
             move_forward_and_show
               ~after_show:(fun () -> advance_and_clear_svar ~handle ~svar 0.)
               0.01;
@@ -3845,7 +3943,8 @@ let%test_module "Clock.every" =
                 after:  00:00:00.040000000Z
                 [tick] - effect started
                 [tock] - effect ended
-                after paint: 00:00:00.040000000Z |}])
+                after paint: 00:00:00.040000000Z
+                |}])
         ;;
 
         let%expect_test _ =
@@ -3892,7 +3991,8 @@ let%test_module "Clock.every" =
                 ()
                 [tick] - effect started
                 [tock] - effect ended
-                after paint: 00:00:01.010000000Z |}];
+                after paint: 00:00:01.010000000Z
+                |}];
             move_forward_and_show
               ~after_show:(fun () -> advance_and_clear_svar ~handle ~svar 0.)
               0.01;
@@ -3903,7 +4003,8 @@ let%test_module "Clock.every" =
                 ()
                 [tick] - effect started
                 [tock] - effect ended
-                after paint: 00:00:02.020000000Z |}];
+                after paint: 00:00:02.020000000Z
+                |}];
             move_forward_and_show
               ~after_show:(fun () -> advance_and_clear_svar ~handle ~svar 0.)
               0.01;
@@ -3914,7 +4015,8 @@ let%test_module "Clock.every" =
                 ()
                 [tick] - effect started
                 [tock] - effect ended
-                after paint: 00:00:03.030000000Z |}];
+                after paint: 00:00:03.030000000Z
+                |}];
             move_forward_and_show
               ~after_show:(fun () -> advance_and_clear_svar ~handle ~svar 0.)
               0.01;
@@ -3925,7 +4027,8 @@ let%test_module "Clock.every" =
                 ()
                 [tick] - effect started
                 [tock] - effect ended
-                after paint: 00:00:04.040000000Z |}])
+                after paint: 00:00:04.040000000Z
+                |}])
         ;;
 
         let%expect_test "`Wait_period_after_previous_effect_finishes_blocking skip \
@@ -3949,7 +4052,8 @@ let%test_module "Clock.every" =
             {|
             before: 00:00:07.000000000Z
             after:  00:00:07.005000000Z
-            after paint: 00:00:07.005000000Z |}];
+            after paint: 00:00:07.005000000Z
+            |}];
           move_forward_and_show
             ~after_show:(fun () -> advance_and_clear_svar ~handle ~svar 0.002)
             0.005;
@@ -3959,14 +4063,16 @@ let%test_module "Clock.every" =
             after:  00:00:07.010000000Z
             [tick] - effect started
             [tock] - effect ended
-            after paint: 00:00:07.012000000Z |}];
+            after paint: 00:00:07.012000000Z
+            |}];
           (* Does not trigger at 7s + 2 * 0.01. *)
           move_forward_and_show 0.008;
           [%expect
             {|
             before: 00:00:07.012000000Z
             after:  00:00:07.020000000Z
-            after paint: 00:00:07.020000000Z |}];
+            after paint: 00:00:07.020000000Z
+            |}];
           (* Triggers at 7s (initial) + 0.01s (first tick) + 0.002s (time taken by first tick) + 0.001s
              (time after first click)*)
           move_forward_and_show
@@ -3978,7 +4084,8 @@ let%test_module "Clock.every" =
             after:  00:00:07.022000000Z
             [tick] - effect started
             [tock] - effect ended
-            after paint: 00:00:07.024000000Z |}]
+            after paint: 00:00:07.024000000Z
+            |}]
         ;;
 
         let%expect_test "`Wait_period_after_previous_effect_starts_blocking skip behavior"
@@ -4001,7 +4108,8 @@ let%test_module "Clock.every" =
             {|
             before: 00:00:07.000000000Z
             after:  00:00:07.005000000Z
-            after paint: 00:00:07.005000000Z |}];
+            after paint: 00:00:07.005000000Z
+            |}];
           move_forward_and_show
             ~after_show:(fun () -> advance_and_clear_svar ~handle ~svar 0.002)
             0.005;
@@ -4011,7 +4119,8 @@ let%test_module "Clock.every" =
             after:  00:00:07.010000000Z
             [tick] - effect started
             [tock] - effect ended
-            after paint: 00:00:07.012000000Z |}];
+            after paint: 00:00:07.012000000Z
+            |}];
           (* Triggers at 7s + 2 * 0.01s unlike the "minimum" version of this which would need to wait
              until 7s + 2 * 0.01s + 0.002s. *)
           move_forward_and_show
@@ -4023,7 +4132,8 @@ let%test_module "Clock.every" =
             after:  00:00:07.020000000Z
             [tick] - effect started
             [tock] - effect ended
-            after paint: 00:00:07.022000000Z |}];
+            after paint: 00:00:07.022000000Z
+            |}];
           (* The next trigger will take a long time, 10 seconds! There will be a couple of
              missed [ticks] and missed [tocks]. *)
           move_forward_and_show
@@ -4035,7 +4145,8 @@ let%test_module "Clock.every" =
             after:  00:00:07.030000000Z
             [tick] - effect started
             [tock] - effect ended
-            after paint: 00:00:17.030000000Z |}];
+            after paint: 00:00:17.030000000Z
+            |}];
           (* Time moves slightly forward which results in another trigger. (hence the
              `Wait_period_after_previous_effect_starts_blocking behavior on skips. )*)
           move_forward_and_show
@@ -4047,13 +4158,15 @@ let%test_module "Clock.every" =
             after:  00:00:17.030010000Z
             [tick] - effect started
             [tock] - effect ended
-            after paint: 00:00:17.032010000Z |}];
+            after paint: 00:00:17.032010000Z
+            |}];
           move_forward_and_show 0.007;
           [%expect
             {|
             before: 00:00:17.032010000Z
             after:  00:00:17.039010000Z
-            after paint: 00:00:17.039010000Z |}];
+            after paint: 00:00:17.039010000Z
+            |}];
           move_forward_and_show
             ~after_show:(fun () -> advance_and_clear_svar ~handle ~svar 0.002)
             0.001;
@@ -4063,7 +4176,8 @@ let%test_module "Clock.every" =
             after:  00:00:17.040010000Z
             [tick] - effect started
             [tock] - effect ended
-            after paint: 00:00:17.042010000Z |}]
+            after paint: 00:00:17.042010000Z
+            |}]
         ;;
 
         let%expect_test "`Every_multiple_of_period_blocking behavior" =
@@ -4084,7 +4198,8 @@ let%test_module "Clock.every" =
             {|
             before: 00:00:07.000000000Z
             after:  00:00:07.005000000Z
-            after paint: 00:00:07.005000000Z |}];
+            after paint: 00:00:07.005000000Z
+            |}];
           (* Clock triggers on every t where [(t % span) = (init_time % span)]
              Since initial time is 7s, the clock will trigger on every multiple of 3,
              but offset by 1, so on 10s, 13s, 16s independent of skips.  *)
@@ -4097,13 +4212,15 @@ let%test_module "Clock.every" =
             after:  00:00:07.010000000Z
             [tick] - effect started
             [tock] - effect ended
-            after paint: 00:00:07.012000000Z |}];
+            after paint: 00:00:07.012000000Z
+            |}];
           move_forward_and_show 0.007;
           [%expect
             {|
             before: 00:00:07.012000000Z
             after:  00:00:07.019000000Z
-            after paint: 00:00:07.019000000Z |}];
+            after paint: 00:00:07.019000000Z
+            |}];
           move_forward_and_show
             ~after_show:(fun () -> advance_and_clear_svar ~handle ~svar 0.002)
             0.001;
@@ -4113,7 +4230,8 @@ let%test_module "Clock.every" =
             after:  00:00:07.020000000Z
             [tick] - effect started
             [tock] - effect ended
-            after paint: 00:00:07.022000000Z |}];
+            after paint: 00:00:07.022000000Z
+            |}];
           move_forward_and_show
             ~after_show:(fun () -> advance_and_clear_svar ~handle ~svar 10.0)
             0.008;
@@ -4123,19 +4241,22 @@ let%test_module "Clock.every" =
             after:  00:00:07.030000000Z
             [tick] - effect started
             [tock] - effect ended
-            after paint: 00:00:17.030000000Z |}];
+            after paint: 00:00:17.030000000Z
+            |}];
           move_forward_and_show 0.001;
           [%expect
             {|
             before: 00:00:17.030000000Z
             after:  00:00:17.031000000Z
-            after paint: 00:00:17.031000000Z |}];
+            after paint: 00:00:17.031000000Z
+            |}];
           move_forward_and_show 0.008;
           [%expect
             {|
             before: 00:00:17.031000000Z
             after:  00:00:17.039000000Z
-            after paint: 00:00:17.039000000Z |}];
+            after paint: 00:00:17.039000000Z
+            |}];
           move_forward_and_show
             ~after_show:(fun () -> advance_and_clear_svar ~handle ~svar 0.002)
             0.001;
@@ -4145,7 +4266,8 @@ let%test_module "Clock.every" =
             after:  00:00:17.040000000Z
             [tick] - effect started
             [tock] - effect ended
-            after paint: 00:00:17.042000000Z |}]
+            after paint: 00:00:17.042000000Z
+            |}]
         ;;
       end)
     ;;
@@ -4183,21 +4305,21 @@ let%test_module "Clock.every" =
       in
       let handle = Handle.create (Result_spec.sexp (module Unit)) component in
       Handle.recompute_view handle;
-      [%expect {||}];
+      [%expect {| |}];
       Handle.recompute_view handle;
-      [%expect {||}];
+      [%expect {| |}];
       Handle.advance_clock_by handle (Time_ns.Span.of_sec 10.0);
       Handle.recompute_view handle;
       [%expect {| did action |}];
       Handle.advance_clock_by handle (Time_ns.Span.of_sec 10.0);
       Handle.recompute_view handle;
-      [%expect {||}];
+      [%expect {| |}];
       Handle.advance_clock_by handle (Time_ns.Span.of_sec 10.0);
       Handle.recompute_view handle;
       [%expect {| did action |}];
       Handle.advance_clock_by handle (Time_ns.Span.of_sec 10.0);
       Handle.recompute_view handle;
-      [%expect {||}]
+      [%expect {| |}]
     ;;
   end)
 ;;
@@ -4243,27 +4365,34 @@ let%expect_test "wait_after_display" =
     view
     ("after display" (name a))
     ("after display" (name a))
-    ("after display" (name a)) |}];
+    ("after display" (name a))
+    |}];
   Handle.show handle;
   [%expect {| view |}];
   Handle.do_actions handle [ true; false ];
   Handle.show handle;
-  [%expect {|
+  [%expect
+    {|
     view
     ("after display" (name a))
-    ("after display" (name b)) |}];
+    ("after display" (name b))
+    |}];
   Handle.do_actions handle [ false; true ];
   Handle.show handle;
-  [%expect {|
+  [%expect
+    {|
     view
     ("after display" (name b))
-    ("after display" (name a)) |}];
+    ("after display" (name a))
+    |}];
   Handle.do_actions handle [ false; false ];
   Handle.show handle;
-  [%expect {|
+  [%expect
+    {|
     view
     ("after display" (name b))
-    ("after display" (name b)) |}];
+    ("after display" (name b))
+    |}];
   Handle.do_actions handle [ false; true; false; true; false; true; false; false; false ];
   Handle.show handle;
   [%expect
@@ -4277,7 +4406,8 @@ let%expect_test "wait_after_display" =
     ("after display" (name a))
     ("after display" (name b))
     ("after display" (name b))
-    ("after display" (name b)) |}]
+    ("after display" (name b))
+    |}]
 ;;
 
 let%expect_test "wait_after_display twice in a row" =
@@ -4305,7 +4435,8 @@ let%expect_test "wait_after_display twice in a row" =
   Handle.show handle;
   [%expect {|
     view
-    "after display" |}];
+    "after display"
+    |}];
   Handle.show handle;
   [%expect {| view |}]
 ;;
@@ -4365,22 +4496,26 @@ let%expect_test "sleep" =
   Handle.show handle;
   [%expect {|
     ("after sleep" (seconds 0))
-    view |}];
+    view
+    |}];
   Handle.advance_clock_by handle (Time_ns.Span.of_sec 1.0);
   Handle.show handle;
   [%expect {|
     ("after sleep" (seconds 1))
-    view |}];
+    view
+    |}];
   Handle.advance_clock_by handle (Time_ns.Span.of_sec 1.0);
   Handle.show handle;
   [%expect {|
     ("after sleep" (seconds 2))
-    view |}];
+    view
+    |}];
   Handle.advance_clock_by handle (Time_ns.Span.of_sec 1.0);
   Handle.show handle;
   [%expect {|
     ("after sleep" (seconds 3))
-    view |}];
+    view
+    |}];
   Handle.advance_clock_by handle (Time_ns.Span.of_sec 1.0);
   Handle.show handle;
   [%expect {| view |}];
@@ -4388,22 +4523,26 @@ let%expect_test "sleep" =
   Handle.show handle;
   [%expect {|
     ("after sleep" (seconds 0))
-    view |}];
+    view
+    |}];
   Handle.advance_clock_by handle (Time_ns.Span.of_sec 1.0);
   Handle.show handle;
   [%expect {|
     ("after sleep" (seconds 1))
-    view |}];
+    view
+    |}];
   Handle.advance_clock_by handle (Time_ns.Span.of_sec 1.0);
   Handle.show handle;
   [%expect {|
     ("after sleep" (seconds 2))
-    view |}];
+    view
+    |}];
   Handle.advance_clock_by handle (Time_ns.Span.of_sec 1.0);
   Handle.show handle;
   [%expect {|
     ("after sleep" (seconds 3))
-    view |}];
+    view
+    |}];
   Handle.advance_clock_by handle (Time_ns.Span.of_sec 1.0);
   Handle.show handle;
   [%expect {| view |}]
@@ -4434,7 +4573,8 @@ let%expect_test "sleep twice in a row" =
   Handle.show handle;
   [%expect {|
     slept
-    view |}]
+    view
+    |}]
 ;;
 
 let%expect_test "recompute_view_until_stable does not notice sleep effects" =
@@ -4474,7 +4614,8 @@ let%expect_test "recompute_view_until_stable does not notice sleep effects" =
   Handle.show handle;
   [%expect {|
     slept
-    view |}];
+    view
+    |}];
   Handle.show handle;
   [%expect {| view |}]
 ;;
@@ -4518,7 +4659,7 @@ let%expect_test "sleep works even when switching between inactive and active" =
   [%expect {| ("after sleep" (seconds 3)) |}];
   Handle.advance_clock_by handle (Time_ns.Span.of_sec 1.0);
   Handle.show handle;
-  [%expect {||}];
+  [%expect {| |}];
   Handle.do_actions handle [ 3.0 ];
   Handle.show handle;
   [%expect {| (inactive (seconds 3)) |}];
@@ -4530,7 +4671,8 @@ let%expect_test "sleep works even when switching between inactive and active" =
     (inactive (seconds 3))
     (inactive (seconds 2))
     (inactive (seconds 1))
-    (inactive (seconds 0)) |}];
+    (inactive (seconds 0))
+    |}];
   Handle.do_actions handle [ 3.0; 2.0; 1.0; 0.0 ];
   Handle.show handle;
   [%expect {| ("after sleep" (seconds 0)) |}];
@@ -4546,7 +4688,7 @@ let%expect_test "sleep works even when switching between inactive and active" =
   [%expect {| ("after sleep" (seconds 3)) |}];
   Handle.advance_clock_by handle (Time_ns.Span.of_sec 1.0);
   Handle.show handle;
-  [%expect {||}]
+  [%expect {| |}]
 ;;
 
 let edge_poll_shared ~get_expect_output =
@@ -4588,7 +4730,8 @@ let%expect_test "Edge.poll in order" =
   trigger_display ();
   [%expect {|
     ((pending ())
-     (output  ())) |}];
+     (output  ()))
+    |}];
   trigger_display ();
   [%expect {| ((pending (hello)) (output ())) |}];
   Bonsai.Var.set var "world";
@@ -4610,7 +4753,8 @@ let%expect_test "Edge.poll out of order" =
   trigger_display ();
   [%expect {|
     ((pending ())
-     (output  ())) |}];
+     (output  ()))
+    |}];
   trigger_display ();
   [%expect {| ((pending (hello)) (output ())) |}];
   Bonsai.Var.set var "world";
@@ -4624,7 +4768,8 @@ let%expect_test "Edge.poll out of order" =
   trigger_display ();
   [%expect {|
     ((pending (hello))
-     (output  (WORLD))) |}];
+     (output  (WORLD)))
+    |}];
   Query_response_tracker.maybe_respond effect_tracker ~f:(function
     | "hello" as s -> Respond (String.uppercase s)
     | _ -> No_response_yet);
@@ -4980,7 +5125,8 @@ let%expect_test "exactly once" =
   Handle.show handle;
   [%expect {|
     ()
-    hello! |}];
+    hello!
+    |}];
   Handle.show handle;
   [%expect {| () |}]
 ;;
@@ -5005,7 +5151,8 @@ let%expect_test "exactly once with value" =
   Handle.show handle;
   [%expect {|
     ()
-    hello! |}];
+    hello!
+    |}];
   Handle.show handle;
   [%expect {| (done) |}]
 ;;
@@ -5033,7 +5180,8 @@ let%expect_test "yoink" =
   Handle.show handle;
   [%expect {|
     (s 1)
-    () |}]
+    ()
+    |}]
 ;;
 
 let%expect_test "bonk" =
@@ -5098,7 +5246,8 @@ let%expect_test "bonk" =
     bonked
     double bonked
     double bonked
-    double bonked |}]
+    double bonked
+    |}]
 ;;
 
 let%expect_test "bonk sorts a list" =
@@ -5135,8 +5284,7 @@ let%expect_test "bonk sorts a list" =
   [%expect {| () |}];
   Handle.do_actions handle [ [ 6; 4; 1; 3; 2; 3; 5 ] ];
   Handle.show handle;
-  [%expect {|
-    (1 2 3 3 4 5 6) |}];
+  [%expect {| (1 2 3 3 4 5 6) |}];
   Handle.do_actions handle [ [ 7; 1; 8; 2; 3; 1; 2; 4 ] ];
   Handle.show handle;
   [%expect {| (1 1 2 2 3 4 7 8) |}]
@@ -5193,14 +5341,16 @@ let%expect_test "effect-lazy" =
     computing a...
     ()
     computing a...
-    () |}];
+    ()
+    |}];
   Bonsai.Var.set on false;
   Handle.show handle;
   [%expect {|
     ()
     (a world)
     computing b...
-    (b world) |}]
+    (b world)
+    |}]
 ;;
 
 let%expect_test "id_gen" =
@@ -5222,7 +5372,8 @@ let%expect_test "id_gen" =
     0
     1
     2
-    3 |}]
+    3
+    |}]
 ;;
 
 let%expect_test "with_self_effect" =
@@ -5266,11 +5417,12 @@ let%expect_test "with_self_effect" =
   Handle.show handle;
   [%expect {| the value: [0] |}];
   Handle.do_actions handle [ Print ];
-  [%expect {||}];
+  [%expect {| |}];
   Handle.show handle;
   [%expect {|
     (Active (computed "the value: [0]"))
-    the value: [0] |}];
+    the value: [0]
+    |}];
   Handle.do_actions handle [ Set 1 ];
   Handle.show handle;
   [%expect {| the value: [1] |}];
@@ -5280,7 +5432,8 @@ let%expect_test "with_self_effect" =
     {|
     (Active (computed "the value: [5]"))
     (Active (computed "the value: [6]"))
-    the value: [6] |}]
+    the value: [6]
+    |}]
 ;;
 
 let%expect_test "state_machine_dynamic_model" =
@@ -5385,7 +5538,7 @@ let%expect_test "portal 2" =
       component
   in
   Handle.show handle;
-  [%expect {||}];
+  [%expect {| |}];
   Handle.do_actions handle [ 1 ];
   Handle.recompute_view handle;
   [%expect {| ((state1 (Active 1)) (action 1)) |}];
@@ -5433,13 +5586,13 @@ let%expect_test "pipe" =
   [%expect {| (pop a hello) |}];
   Handle.do_actions handle [ `Push "world" ];
   Handle.recompute_view handle;
-  [%expect {||}];
+  [%expect {| |}];
   Handle.do_actions handle [ `Pop "b" ];
   Handle.recompute_view handle;
   [%expect {| (pop b world) |}];
   Handle.do_actions handle [ `Pop "c" ];
   Handle.recompute_view handle;
-  [%expect {||}];
+  [%expect {| |}];
   Handle.do_actions handle [ `Push "foo" ];
   Handle.recompute_view handle;
   [%expect {| (pop c foo) |}];
@@ -5450,7 +5603,8 @@ let%expect_test "pipe" =
   [%expect {|
     (pop a hello)
     (pop b world)
-    (pop c foo) |}]
+    (pop c foo)
+    |}]
 ;;
 
 let%expect_test "multi-thunk" =
@@ -5470,7 +5624,8 @@ let%expect_test "multi-thunk" =
   [%expect {|
     pulling id!
     pulling id!
-    "1 0" |}]
+    "1 0"
+    |}]
 ;;
 
 let%expect_test "evaluation of pure values under a match%sub" =
@@ -5501,7 +5656,8 @@ let%expect_test "evaluation of pure values under a match%sub" =
   [%expect {|
     ("doing work" (depending_on 0))
     -1
-    activating! |}];
+    activating!
+    |}];
   Bonsai.Var.set determines_use true;
   Handle.show handle;
   [%expect {| 0 |}];
@@ -5512,12 +5668,14 @@ let%expect_test "evaluation of pure values under a match%sub" =
   Handle.show handle;
   [%expect {|
     ("doing work" (depending_on 1))
-    -1 |}];
+    -1
+    |}];
   Bonsai.Var.set depending_on 2;
   Handle.show handle;
   [%expect {|
     ("doing work" (depending_on 2))
-    -1 |}]
+    -1
+    |}]
 ;;
 
 let%expect_test "evaluation of pure values under an assoc" =
@@ -5553,26 +5711,24 @@ let%expect_test "evaluation of pure values under an assoc" =
   in
   Handle.show handle;
   [%expect {|
-    ("doing work" (depending_on 0))
     ()
-    activating! |}];
+    activating!
+    |}];
   Bonsai.Var.set determines_use true;
   Handle.show handle;
   [%expect {|
-    ((1 0)) |}];
+    ("doing work" (depending_on 0))
+    ((1 0))
+    |}];
   Bonsai.Var.set determines_use false;
   Handle.show handle;
   [%expect {| () |}];
   Bonsai.Var.set depending_on 1;
   Handle.show handle;
-  [%expect {|
-    ("doing work" (depending_on 1))
-    () |}];
+  [%expect {| () |}];
   Bonsai.Var.set depending_on 2;
   Handle.show handle;
-  [%expect {|
-    ("doing work" (depending_on 2))
-    () |}]
+  [%expect {| () |}]
 ;;
 
 let%expect_test "evaluation of pure values as an input to an assoc (with a state in the \
@@ -5615,19 +5771,22 @@ let%expect_test "evaluation of pure values as an input to an assoc (with a state
   Handle.show handle;
   [%expect {|
     doing work
-    () |}];
+    ()
+    |}];
   Handle.show handle;
   [%expect {| () |}];
   Bonsai.Var.set depending_on 1;
   Handle.show handle;
   [%expect {|
     doing work
-    () |}];
+    ()
+    |}];
   Bonsai.Var.set depending_on 2;
   Handle.show handle;
   [%expect {|
     doing work
-    () |}]
+    ()
+    |}]
 ;;
 
 let%expect_test "evaluation of pure values as an input to an assoc (without a state in \
@@ -5731,7 +5890,8 @@ let%expect_test "thunk-storage" =
   Handle.show handle;
   [%expect {|
     pulling id!
-    0 |}];
+    0
+    |}];
   Bonsai.Var.set var false;
   Handle.show handle;
   [%expect {| "" |}];
@@ -5780,7 +5940,8 @@ let%expect_test "action dropped in match%sub" =
   Handle.show handle;
   [%expect {|
     inactive
-    () |}]
+    ()
+    |}]
 ;;
 
 let%test_module "mirror" =
@@ -5829,9 +5990,11 @@ let%test_module "mirror" =
     let%expect_test "starts unstable" =
       let handle, _store, _interactive = prepare_test ~store:"a" ~interactive:"b" in
       Handle.show handle;
-      [%expect {|
+      [%expect
+        {|
         store: a, interactive: b
-        interactive set to "a" |}];
+        interactive set to "a"
+        |}];
       Handle.show handle;
       [%expect {| store: a, interactive: a |}]
     ;;
@@ -5844,7 +6007,8 @@ let%test_module "mirror" =
       Handle.show handle;
       [%expect {|
         store: a, interactive: b
-        store set to "b" |}];
+        store set to "b"
+        |}];
       Handle.show handle;
       [%expect {| store: b, interactive: b |}]
     ;;
@@ -5855,9 +6019,11 @@ let%test_module "mirror" =
       [%expect {| store: a, interactive: a |}];
       Bonsai.Var.set store "b";
       Handle.show handle;
-      [%expect {|
+      [%expect
+        {|
         store: b, interactive: a
-        interactive set to "b" |}];
+        interactive set to "b"
+        |}];
       Handle.show handle;
       [%expect {| store: b, interactive: b |}]
     ;;
@@ -5871,7 +6037,8 @@ let%test_module "mirror" =
       Handle.show handle;
       [%expect {|
         store: b, interactive: c
-        store set to "c" |}];
+        store set to "c"
+        |}];
       Handle.show handle;
       [%expect {| store: c, interactive: c |}]
     ;;
@@ -5928,9 +6095,11 @@ let%test_module "mirror'" =
         prepare_test ~store:None ~interactive:(Some "hi")
       in
       Handle.show handle;
-      [%expect {|
+      [%expect
+        {|
         store: <none>, interactive: hi
-        store set to "hi" |}];
+        store set to "hi"
+        |}];
       Handle.show handle;
       [%expect {| store: hi, interactive: hi |}]
     ;;
@@ -5943,7 +6112,8 @@ let%test_module "mirror'" =
       [%expect
         {|
         store: hi, interactive: <none>
-        interactive set to "hi" |}];
+        interactive set to "hi"
+        |}];
       Handle.show handle;
       [%expect {| store: hi, interactive: hi |}]
     ;;
@@ -5964,7 +6134,8 @@ let%test_module "mirror'" =
       [%expect
         {|
         store: hi, interactive: hello
-        interactive set to "hi" |}];
+        interactive set to "hi"
+        |}];
       Handle.show handle;
       [%expect {| store: hi, interactive: hi |}]
     ;;
@@ -5978,7 +6149,8 @@ let%test_module "mirror'" =
       [%expect
         {|
         store: hi, interactive: <none>
-        interactive set to "hi" |}];
+        interactive set to "hi"
+        |}];
       Handle.show handle;
       [%expect {| store: hi, interactive: hi |}]
     ;;
@@ -5989,9 +6161,11 @@ let%test_module "mirror'" =
       [%expect {| store: <none>, interactive: <none> |}];
       Bonsai.Var.set interactive (Some "hi");
       Handle.show handle;
-      [%expect {|
+      [%expect
+        {|
         store: <none>, interactive: hi
-        store set to "hi" |}];
+        store set to "hi"
+        |}];
       Handle.show handle;
       [%expect {| store: hi, interactive: hi |}]
     ;;
@@ -6013,9 +6187,11 @@ let%test_module "mirror'" =
       Bonsai.Var.set interactive (Some "hi");
       Bonsai.Var.set store (Some "hello");
       Handle.show handle;
-      [%expect {|
+      [%expect
+        {|
         store: hello, interactive: hi
-        store set to "hi" |}];
+        store set to "hi"
+        |}];
       Handle.show handle;
       [%expect {| store: hi, interactive: hi |}]
     ;;
@@ -6029,9 +6205,11 @@ let%test_module "mirror'" =
       Bonsai.Var.set interactive (Some "abc");
       Bonsai.Var.set store (Some "def");
       Handle.show handle;
-      [%expect {|
+      [%expect
+        {|
         store: def, interactive: abc
-        store set to "abc" |}];
+        store set to "abc"
+        |}];
       Handle.show handle;
       [%expect {| store: abc, interactive: abc |}]
     ;;
@@ -6088,7 +6266,8 @@ let%test_module "mirror'" =
       [%expect
         {|
         store: abc, interactive: <none>
-        interactive set to "abc" |}];
+        interactive set to "abc"
+        |}];
       Handle.show handle;
       [%expect {| store: abc, interactive: abc |}]
     ;;
@@ -6105,9 +6284,11 @@ let%test_module "mirror'" =
       Bonsai.Var.set interactive (Some "abc");
       Bonsai.Var.set store None;
       Handle.show handle;
-      [%expect {|
+      [%expect
+        {|
         store: <none>, interactive: abc
-        store set to "abc" |}];
+        store set to "abc"
+        |}];
       Handle.show handle;
       [%expect {| store: abc, interactive: abc |}]
     ;;
@@ -6126,7 +6307,8 @@ let%expect_test "let%arr cutoff destruction" =
   Handle.show handle;
   [%expect {|
     performing work!
-    0 |}];
+    0
+    |}];
   Bonsai.Var.set var (0, 1);
   Handle.show handle;
   (* No work is performed! *)
@@ -6135,7 +6317,8 @@ let%expect_test "let%arr cutoff destruction" =
   Handle.show handle;
   [%expect {|
     performing work!
-    1 |}]
+    1
+    |}]
 ;;
 
 let%test_module "regression" =
@@ -6171,7 +6354,8 @@ let%test_module "regression" =
       Handle.show handle;
       [%expect {|
         Recomputing ; a = 2
-        5 |}];
+        5
+        |}];
       Bonsai.Var.update state_var ~f:(fun state -> { state with c = 4 });
       Handle.show handle;
       [%expect {| 5 |}]
@@ -6192,7 +6376,8 @@ let%test_module "regression" =
       Handle.show handle;
       [%expect {|
         Recomputing ; a = 2
-        5 |}];
+        5
+        |}];
       Bonsai.Var.update state_var ~f:(fun state -> { state with c = 4 });
       Handle.show handle;
       [%expect {| 5 |}]
@@ -6403,7 +6588,8 @@ let%expect_test "ordering behavior of skeleton traversal" =
     value - 2-2-2-2-2-1-2-2-2_1
     value - 2-2-2-2-2-1-2-2-2-1_1
     value - 2-2-2-2-2-1-2-2-2-1-1_1
-    value - 2-2-2-2-2-1-2-2-2-2_1 |}]
+    value - 2-2-2-2-2-1-2-2-2-2_1
+    |}]
 ;;
 
 let%expect_test "on_activate lifecycle events are run the second frame after the \
@@ -6441,7 +6627,7 @@ let%expect_test "on_activate lifecycle events are run the second frame after the
   (* The on_activate does not run in the first frame; rather, it is enqueued in the effect
      handler *)
   Handle.recompute_view handle;
-  [%expect {||}];
+  [%expect {| |}];
   (* Indeed, it does run the second frame *)
   Handle.recompute_view handle;
   [%expect {| on_activate |}];
@@ -6449,7 +6635,7 @@ let%expect_test "on_activate lifecycle events are run the second frame after the
   Bonsai.Var.set active_var false;
   (* Once again, it's enqueued on the first frame, not run *)
   Handle.recompute_view handle;
-  [%expect {||}];
+  [%expect {| |}];
   (* But now, if the active branch flips, the on_activate action is dropped! *)
   Bonsai.Var.set active_var true;
   Handle.recompute_view handle;
@@ -6488,7 +6674,7 @@ let%expect_test "State machine actions that are scheduled while running the acti
   in
   (* Schedules the action, but does not run it yet *)
   Handle.do_actions handle [ 10 ];
-  [%expect {||}];
+  [%expect {| |}];
   (* Runs the action, which schedules more actions that all get run in the same frame *)
   Handle.recompute_view handle;
   [%expect
@@ -6503,7 +6689,8 @@ let%expect_test "State machine actions that are scheduled while running the acti
     (n 3)
     (n 2)
     (n 1)
-    (n 0) |}]
+    (n 0)
+    |}]
 ;;
 
 let%expect_test "Bonsai.previous_value" =
@@ -6676,4 +6863,115 @@ let%expect_test "There are 0 nodes currently being observed. (This test should i
   let number_of_observed_nodes = Incremental.State.num_active_observers Ui_incr.State.t in
   print_s [%message (number_of_observed_nodes : int)];
   [%expect {| (number_of_observed_nodes 0) |}]
+;;
+
+let%test_module "computational shape" =
+  (module struct
+    (* This module tests internal details of Bonsai, and the results are sensitive to implementation changes. *)
+    [@@@alert "-rampantly_nondeterministic"]
+
+    let%expect_test "long chain of models" =
+      let component =
+        let%sub _ = Bonsai.state ~sexp_of_model:sexp_of_int 0 in
+        let%sub _ = Bonsai.state ~sexp_of_model:sexp_of_int 1 in
+        let%sub _ = Bonsai.state ~sexp_of_model:sexp_of_int 2 in
+        let%sub _ = Bonsai.state ~sexp_of_model:sexp_of_int 3 in
+        let%sub _ = Bonsai.state ~sexp_of_model:sexp_of_int 4 in
+        let%sub _ = Bonsai.state ~sexp_of_model:sexp_of_int 5 in
+        let%sub _ = Bonsai.state ~sexp_of_model:sexp_of_int 6 in
+        let%sub _ = Bonsai.state ~sexp_of_model:sexp_of_int 7 in
+        let%sub _ = Bonsai.state ~sexp_of_model:sexp_of_int 8 in
+        let%sub _ = Bonsai.state ~sexp_of_model:sexp_of_int 9 in
+        let%sub _ = Bonsai.state ~sexp_of_model:sexp_of_int 10 in
+        let%sub _ = Bonsai.state ~sexp_of_model:sexp_of_int 11 in
+        let%sub _ = Bonsai.state ~sexp_of_model:sexp_of_int 12 in
+        let%sub _ = Bonsai.state ~sexp_of_model:sexp_of_int 13 in
+        let%sub _ = Bonsai.state ~sexp_of_model:sexp_of_int 14 in
+        let%sub _ = Bonsai.state ~sexp_of_model:sexp_of_int 15 in
+        let%sub _ = Bonsai.state ~sexp_of_model:sexp_of_int 16 in
+        Bonsai.const ()
+      in
+      let handle = Handle.create (Result_spec.string (module Unit)) component in
+      Handle.show_model handle;
+      [%expect
+        {|
+        (((((0 1) 2) (3 4))
+          ((5 6)
+           (7 8)))
+         (((9  10) (11 12))
+          ((13 14) (15 16))))
+        |}]
+    ;;
+
+    let%expect_test "lots of paths" =
+      let component =
+        let%sub a = Bonsai.path_id in
+        let%sub b = Bonsai.path_id in
+        let%sub c = Bonsai.path_id in
+        let%sub d = Bonsai.path_id in
+        let%sub e = Bonsai.path_id in
+        let%sub f = Bonsai.path_id in
+        let%sub g = Bonsai.path_id in
+        let%sub h = Bonsai.path_id in
+        let%sub i = Bonsai.path_id in
+        let%sub j = Bonsai.path_id in
+        let%sub k = Bonsai.path_id in
+        let%sub l = Bonsai.path_id in
+        let%sub m = Bonsai.path_id in
+        let%sub n = Bonsai.path_id in
+        let%sub o = Bonsai.path_id in
+        let%sub p = Bonsai.path_id in
+        let%sub q = Bonsai.path_id in
+        let%arr a = a
+        and b = b
+        and c = c
+        and d = d
+        and e = e
+        and f = f
+        and g = g
+        and h = h
+        and i = i
+        and j = j
+        and k = k
+        and l = l
+        and m = m
+        and n = n
+        and o = o
+        and p = p
+        and q = q in
+        [ a; b; c; d; e; f; g; h; i; j; k; l; m; n; o; p; q ]
+      in
+      let handle =
+        Handle.create
+          (Result_spec.string
+             (module struct
+               type t = string list
+
+               let to_string = String.concat ~sep:"\n"
+             end))
+          component
+      in
+      Handle.show handle;
+      [%expect
+        {|
+        bonsai_path_x_x_x_x_x
+        bonsai_path_x_x_x_x_y
+        bonsai_path_x_x_x_y
+        bonsai_path_x_x_y_x
+        bonsai_path_x_x_y_y
+        bonsai_path_x_y_x_x
+        bonsai_path_x_y_x_y
+        bonsai_path_x_y_y_x
+        bonsai_path_x_y_y_y
+        bonsai_path_y_x_x_x
+        bonsai_path_y_x_x_y
+        bonsai_path_y_x_y_x
+        bonsai_path_y_x_y_y
+        bonsai_path_y_y_x_x
+        bonsai_path_y_y_x_y
+        bonsai_path_y_y_y_x
+        bonsai_path_y_y_y_y
+        |}]
+    ;;
+  end)
 ;;

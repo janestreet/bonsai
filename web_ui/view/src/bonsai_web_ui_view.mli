@@ -311,6 +311,28 @@ val tooltip'
   -> Vdom.Node.t
   -> Vdom.Node.t
 
+(** A badge is a small bit of text with a background, usually used as a label or to
+    provide context.
+
+    If [on_dismiss] is provided, the badge will have a dismiss button, which will run
+    the provided effect on click. *)
+val badge
+  :  Theme.t
+  -> ?attrs:Vdom.Attr.t list
+  -> ?intent:Intent.t
+  -> ?on_dismiss:unit Effect.t
+  -> string
+  -> Vdom.Node.t
+
+(** Like [badge], but contents can be any list of vdom nodes.  *)
+val badge'
+  :  Theme.t
+  -> ?attrs:Vdom.Attr.t list
+  -> ?intent:Intent.t
+  -> ?on_dismiss:unit Effect.t
+  -> Vdom.Node.t list
+  -> Vdom.Node.t
+
 (** Builds a horizontally-aligned grouping of tabs, keyed on an item representing
     the tab, with one of those items serving to indicate the currently active tab. *)
 val tabs

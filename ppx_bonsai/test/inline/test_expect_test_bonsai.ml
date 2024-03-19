@@ -34,7 +34,8 @@ let%test_module "expect_test.bonsai" =
               let handle =
                 Handle.create (Result_spec.vdom Fn.id)
                   Bonsai_testing_example_lib.hello_world in
-              Handle.show handle] |xxx}]
+              Handle.show handle]
+        |xxx}]
     ;;
 
     let single_expect_block =
@@ -59,7 +60,8 @@ let%test_module "expect_test.bonsai" =
               let handle =
                 Handle.create (Result_spec.vdom Fn.id)
                   Bonsai_testing_example_lib.hello_world in
-              Handle.show handle; [%expect {| <span> hello world </span> |}]] |xxx}]
+              Handle.show handle; [%expect {| <span> hello world </span> |}]]
+        |xxx}]
     ;;
 
     let multiple_expect_blocks =
@@ -69,28 +71,31 @@ let%test_module "expect_test.bonsai" =
           Handle.show handle;
           [%expect
             {|
-          <div>
-            <input oninput> </input>
-            <span> hello  </span>
-          </div> |}];
+            <div>
+              <input oninput> </input>
+              <span> hello  </span>
+            </div>
+            |}];
           Handle.input_text handle ~get_vdom:Fn.id ~selector:"input" ~text:"Bob";
           Handle.show_diff handle;
           [%expect
             {|
-            <div>
-              <input oninput> </input>
-          -|  <span> hello  </span>
-          +|  <span> hello Bob </span>
-            </div> |}];
+              <div>
+                <input oninput> </input>
+            -|  <span> hello  </span>
+            +|  <span> hello Bob </span>
+              </div>
+            |}];
           Handle.input_text handle ~get_vdom:Fn.id ~selector:"input" ~text:"Alice";
           Handle.show_diff handle;
           [%expect
             {|
-            <div>
-              <input oninput> </input>
-          -|  <span> hello Bob </span>
-          +|  <span> hello Alice </span>
-            </div> |}]
+              <div>
+                <input oninput> </input>
+            -|  <span> hello Bob </span>
+            +|  <span> hello Alice </span>
+              </div>
+            |}]
         ;;]
     ;;
 
@@ -104,28 +109,32 @@ let%test_module "expect_test.bonsai" =
             Handle.show handle;
             [%expect
               {|
-                  <div>
-                    <input oninput> </input>
-                    <span> hello  </span>
-                  </div> |}];
+                    <div>
+                      <input oninput> </input>
+                      <span> hello  </span>
+                    </div>
+                    |}];
             Handle.input_text handle ~get_vdom:Fn.id ~selector:"input" ~text:"Bob";
             Handle.show_diff handle;
             [%expect
               {|
-                    <div>
-                      <input oninput> </input>
-                  -|  <span> hello  </span>
-                  +|  <span> hello Bob </span>
-                    </div> |}];
+                      <div>
+                        <input oninput> </input>
+                    -|  <span> hello  </span>
+                    +|  <span> hello Bob </span>
+                      </div>
+                    |}];
             Handle.input_text handle ~get_vdom:Fn.id ~selector:"input" ~text:"Alice";
             Handle.show_diff handle;
             [%expect
               {|
-                    <div>
-                      <input oninput> </input>
-                  -|  <span> hello Bob </span>
-                  +|  <span> hello Alice </span>
-                    </div> |}]] |xxx}]
+                      <div>
+                        <input oninput> </input>
+                    -|  <span> hello Bob </span>
+                    +|  <span> hello Alice </span>
+                      </div>
+                    |}]]
+        |xxx}]
     ;;
   end)
 ;;

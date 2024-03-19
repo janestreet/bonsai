@@ -46,7 +46,7 @@ let%test_module "Demonstrating hypothetical crash after successful startup." =
       (* NOTE: This shows that an app can crash at runtime after having started
          successfully. *)
       Handle.show handle;
-      [%expect {| (13 15 17 19 21 23 25 27 29 31 31) |}]
+      [%expect {| (17 17 19 19 17 19 19 17 17 19 19) |}]
     ;;
   end)
 ;;

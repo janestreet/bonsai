@@ -45,6 +45,7 @@ module T = struct
 
   let init _input _element = ()
   let on_mount { Input.set; _ } () element = set element
+  let on_mount = `Schedule_animation_frame on_mount
   let update ~old_input:_ ~new_input:_ () _element = ()
   let destroy { Input.reset; _ } () element = reset element
 end

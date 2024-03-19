@@ -88,7 +88,8 @@ let%expect_test "focus" =
     Search string: ''
        * bar
        * baz
-       * foo |}];
+       * foo
+    |}];
   Handle.do_actions handle [ Move_focus `Next ];
   Handle.show handle;
   [%expect
@@ -97,7 +98,8 @@ let%expect_test "focus" =
     Search string: ''
     -> * bar
        * baz
-       * foo |}];
+       * foo
+    |}];
   Handle.do_actions handle [ Move_focus `Next ];
   Handle.show handle;
   [%expect
@@ -106,7 +108,8 @@ let%expect_test "focus" =
     Search string: ''
        * bar
     -> * baz
-       * foo |}];
+       * foo
+    |}];
   Handle.do_actions handle [ Move_focus `Prev ];
   Handle.show handle;
   [%expect
@@ -115,7 +118,8 @@ let%expect_test "focus" =
     Search string: ''
     -> * bar
        * baz
-       * foo |}];
+       * foo
+    |}];
   Handle.do_actions handle [ Move_focus `Prev ];
   Handle.show handle;
   (* Note that we don't wrap around. *)
@@ -125,7 +129,8 @@ let%expect_test "focus" =
     Search string: ''
     -> * bar
        * baz
-       * foo |}];
+       * foo
+    |}];
   Handle.do_actions handle [ Set_focus (Some "foo") ];
   Handle.show handle;
   [%expect
@@ -134,7 +139,8 @@ let%expect_test "focus" =
     Search string: ''
        * bar
        * baz
-    -> * foo |}];
+    -> * foo
+    |}];
   Handle.do_actions handle [ Move_focus `Next ];
   Handle.show handle;
   (* Note that we don't wrap around. *)
@@ -144,7 +150,8 @@ let%expect_test "focus" =
     Search string: ''
        * bar
        * baz
-    -> * foo |}];
+    -> * foo
+    |}];
   Handle.do_actions handle [ Set_focus None ];
   Handle.show handle;
   [%expect
@@ -153,7 +160,8 @@ let%expect_test "focus" =
     Search string: ''
        * bar
        * baz
-       * foo |}]
+       * foo
+    |}]
 ;;
 
 let%expect_test "selections" =
@@ -166,7 +174,8 @@ let%expect_test "selections" =
     Search string: ''
          bar
        * baz
-       * foo |}];
+       * foo
+    |}];
   Handle.do_actions handle [ Set_item_selected { item = "bar"; status = Selected } ];
   Handle.show handle;
   [%expect
@@ -175,7 +184,8 @@ let%expect_test "selections" =
     Search string: ''
        * bar
        * baz
-       * foo |}];
+       * foo
+    |}];
   Handle.do_actions handle [ Move_focus `Prev ];
   Handle.show handle;
   [%expect
@@ -184,7 +194,8 @@ let%expect_test "selections" =
     Search string: ''
        * bar
        * baz
-    -> * foo |}];
+    -> * foo
+    |}];
   Handle.do_actions handle [ Toggle_focused_item_selected ];
   Handle.show handle;
   [%expect
@@ -193,7 +204,8 @@ let%expect_test "selections" =
     Search string: ''
        * bar
        * baz
-    ->   foo |}];
+    ->   foo
+    |}];
   Handle.do_actions handle [ Select_all ];
   Handle.show handle;
   [%expect
@@ -202,7 +214,8 @@ let%expect_test "selections" =
     Search string: ''
        * bar
        * baz
-    -> * foo |}];
+    -> * foo
+    |}];
   Handle.do_actions handle [ Select_none ];
   Handle.show handle;
   [%expect
@@ -211,7 +224,8 @@ let%expect_test "selections" =
     Search string: ''
          bar
          baz
-    ->   foo |}];
+    ->   foo
+    |}];
   Handle.do_actions
     handle
     [ Set_all_selection_statuses
@@ -227,7 +241,8 @@ let%expect_test "selections" =
     Search string: ''
        * bar
          baz
-    -> * foo |}]
+    -> * foo
+    |}]
 ;;
 
 let%expect_test "search string vdom" =
@@ -262,7 +277,8 @@ let%expect_test "search string vdom" =
           <label> foo </label>
         </div>
       </div>
-    </div> |}];
+    </div>
+    |}];
   Handle.input_text
     handle
     ~get_vdom:(fun result -> result.S.Result.view)
@@ -295,32 +311,39 @@ let%expect_test "search string vdom" =
     -|      <label> foo </label>
     -|    </div>
         </div>
-      </div> |}]
+      </div>
+    |}]
 ;;
 
 let%expect_test "searching" =
   let handle = handle () in
   Handle.do_actions handle [ Select_none; Update_search_string "ba" ];
   Handle.show handle;
-  [%expect {|
+  [%expect
+    {|
     Selected items: ()
     Search string: 'ba'
          bar
-         baz |}];
+         baz
+    |}];
   Handle.do_actions handle [ Move_focus `Next ];
   Handle.show handle;
-  [%expect {|
+  [%expect
+    {|
     Selected items: ()
     Search string: 'ba'
     ->   bar
-         baz |}];
+         baz
+    |}];
   Handle.do_actions handle [ Move_focus `Next ];
   Handle.show handle;
-  [%expect {|
+  [%expect
+    {|
     Selected items: ()
     Search string: 'ba'
          bar
-    ->   baz |}];
+    ->   baz
+    |}];
   Handle.do_actions handle [ Select_all ];
   Handle.show handle;
   [%expect
@@ -328,7 +351,8 @@ let%expect_test "searching" =
     Selected items: (bar baz)
     Search string: 'ba'
        * bar
-    -> * baz |}];
+    -> * baz
+    |}];
   Handle.do_actions handle [ Update_search_string "" ];
   Handle.show handle;
   (* Note that "foo" is not selected as it was not in the search results when Select_all
@@ -339,7 +363,8 @@ let%expect_test "searching" =
     Search string: ''
        * bar
     -> * baz
-         foo |}];
+         foo
+    |}];
   Handle.do_actions handle [ Select_all ];
   Handle.show handle;
   [%expect
@@ -348,7 +373,8 @@ let%expect_test "searching" =
     Search string: ''
        * bar
     -> * baz
-       * foo |}];
+       * foo
+    |}];
   Handle.do_actions handle [ Update_search_string "ba" ];
   Handle.show handle;
   [%expect
@@ -356,7 +382,8 @@ let%expect_test "searching" =
     Selected items: (bar baz foo)
     Search string: 'ba'
        * bar
-    -> * baz |}];
+    -> * baz
+    |}];
   Handle.do_actions handle [ Select_none ];
   Handle.show handle;
   [%expect
@@ -364,7 +391,8 @@ let%expect_test "searching" =
     Selected items: (foo)
     Search string: 'ba'
          bar
-    ->   baz |}];
+    ->   baz
+    |}];
   Handle.do_actions handle [ Update_search_string "" ];
   Handle.show handle;
   (* Note that foo is not deselected as it was not in the search results when Select_none
@@ -375,7 +403,8 @@ let%expect_test "searching" =
     Search string: ''
          bar
     ->   baz
-       * foo |}]
+       * foo
+    |}]
 ;;
 
 let%expect_test "changing items" =
@@ -391,7 +420,8 @@ let%expect_test "changing items" =
        * bar
        * baz
        * foo
-       * quux |}];
+       * quux
+    |}];
   Handle.do_actions handle [ Update_search_string "" ];
   Handle.show handle;
   [%expect
@@ -401,7 +431,8 @@ let%expect_test "changing items" =
        * bar
        * baz
        * foo
-       * quux |}]
+       * quux
+    |}]
 ;;
 
 let%expect_test "default_selection_status = Unselected" =
@@ -419,7 +450,8 @@ let%expect_test "default_selection_status = Unselected" =
     Search string: ''
          bar
          baz
-         foo |}];
+         foo
+    |}];
   Handle.do_actions handle [ Select_all ];
   Handle.show handle;
   [%expect
@@ -428,7 +460,8 @@ let%expect_test "default_selection_status = Unselected" =
     Search string: ''
        * bar
        * baz
-       * foo |}];
+       * foo
+    |}];
   Bonsai.Var.update all_items_var ~f:(fun all_items -> Set.add all_items "quux");
   Handle.show handle;
   [%expect
@@ -438,7 +471,8 @@ let%expect_test "default_selection_status = Unselected" =
        * bar
        * baz
        * foo
-         quux |}]
+         quux
+    |}]
 ;;
 
 let%expect_test "specifying arguments to S.Model.create" =
@@ -458,7 +492,8 @@ let%expect_test "specifying arguments to S.Model.create" =
     Selected items: (baz foo)
     Search string: 'b'
          bar
-    -> * baz |}]
+    -> * baz
+    |}]
 ;;
 
 let%expect_test "html" =
@@ -496,7 +531,8 @@ let%expect_test "html" =
           <label> foo </label>
         </div>
       </div>
-    </div> |}];
+    </div>
+    |}];
   Handle.do_actions handle [ Move_focus `Next; Select_none ];
   Handle.show handle;
   [%expect
@@ -525,7 +561,8 @@ let%expect_test "html" =
           <label> foo </label>
         </div>
       </div>
-    </div> |}];
+    </div>
+    |}];
   Handle.do_actions handle [ Select_all ];
   Handle.show handle;
   [%expect
@@ -554,7 +591,8 @@ let%expect_test "html" =
           <label> foo </label>
         </div>
       </div>
-    </div> |}];
+    </div>
+    |}];
   Bonsai.Var.update all_items_var ~f:(fun all_items -> Set.add all_items "quux");
   Bonsai.Var.set default_selection_status_var Unselected;
   Handle.show handle;
@@ -588,7 +626,8 @@ let%expect_test "html" =
           <label> quux </label>
         </div>
       </div>
-    </div> |}]
+    </div>
+    |}]
 ;;
 
 let%expect_test "html-custom-selected-attr" =
@@ -643,5 +682,6 @@ let%expect_test "html-custom-selected-attr" =
             <label> foo </label>
           </div>
         </div>
-      </div> |}]
+      </div>
+    |}]
 ;;

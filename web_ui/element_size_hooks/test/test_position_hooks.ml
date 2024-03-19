@@ -44,7 +44,8 @@ let%expect_test "position hook" =
            style={
              box-sizing: border-box;
            }> </div>
-    </div> |}];
+    </div>
+    |}];
   Handle.Position_tracker.change_positions
     handle
     ~get_vdom:Fn.id
@@ -77,5 +78,6 @@ let%expect_test "position hook" =
            style={
              box-sizing: border-box;
            }> </div>
-    </div> |}]
+    </div>
+    |}]
 ;;

@@ -20,7 +20,7 @@ end
 let c ~fg ~bg = { Fg_bg.foreground = fg; background = bg }
 
 let dark_mode_constants =
-  let primary = c ~fg:(`Hex "#d1d2d3") ~bg:(`Hex "#1a1d21") in
+  let primary = c ~fg:(`Hex "#d1d2d3") ~bg:Top_level_styles.dark_bg in
   let extreme = c ~fg:(`Name "#e2e3e4") ~bg:(`Hex "#14181c") in
   let table_even = c ~bg:(`Hex "#21242a") ~fg:primary.foreground in
   let extreme_primary_border = `Hex "#313943" in
@@ -61,7 +61,7 @@ let dark_mode_constants =
 ;;
 
 let light_mode_constants =
-  let primary = c ~fg:(`Hex "#101c28") ~bg:(`Hex "#e5e2de") in
+  let primary = c ~fg:(`Hex "#101c28") ~bg:Top_level_styles.light_bg in
   let extreme = c ~fg:(`Name "#101c28") ~bg:(`Hex "#f0eeec") in
   let table_even = c ~bg:(`Hex "#d9d0c4") ~fg:(`Name "#070e16") in
   let extreme_primary_border = `Hex "#313943" in
@@ -99,8 +99,7 @@ let light_mode_constants =
 let app_attr ~color ~is_dark ~set_min_height_to_100vh =
   Vdom.Attr.many
     [ App.Variables.set () ~bg:(color |> Color.to_string_css)
-    ; App.app
-    ; (if is_dark then App.dark else App.light)
+    ; (if is_dark then Top_level_styles.dark else Top_level_styles.light)
     ; (if set_min_height_to_100vh then App.set_min_height_to_100vh else Vdom.Attr.empty)
     ]
 ;;

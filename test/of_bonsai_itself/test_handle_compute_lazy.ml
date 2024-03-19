@@ -28,12 +28,14 @@ let%expect_test "Handle.show forces the view" =
   Handle.show handle;
   [%expect {|
     computing the view!
-    0 |}];
+    0
+    |}];
   Bonsai.Var.set var 1;
   Handle.show handle;
   [%expect {|
     computing the view!
-    1 |}]
+    1
+    |}]
 ;;
 
 let%expect_test "Handle.recompute_view should _not_ force the view" =
@@ -46,5 +48,6 @@ let%expect_test "Handle.recompute_view should _not_ force the view" =
   Handle.show handle;
   [%expect {|
     computing the view!
-    1 |}]
+    1
+    |}]
 ;;

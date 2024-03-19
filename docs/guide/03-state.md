@@ -1,6 +1,6 @@
 # 03 - State
 
-[Chapter 2](./02-dynamism.md) briefly touched on the fact that
+[Chapter 2](./02-dynamism.mdx) briefly touched on the fact that
 computations capture internal state. This chapter takes a deeper look at
 the primitives Bonsai provides for introducing and interacting with
 local state.
@@ -102,12 +102,12 @@ component in weirder circumstances than these basic examples, like
 When the event does fire, the `set_state` function is called with the
 new string. `set_state` has type `string -> unit Effect.t`, which you
 may recognize from the last section in the
-[virtual-dom](./01-virtual_dom.md) chapter. This function is called with
-the new textbox contents, and the event which is returned schedules the
-state-setting in the Bonsai event queue.
+[virtual-dom](./01-virtual_dom.mdx) chapter. This function is called
+with the new textbox contents, and the event which is returned schedules
+the state-setting in the Bonsai event queue.
 
 This is the payoff for the unanswered questions in [the virtual-dom
-Chapter](./01-virtual_dom.md):
+Chapter](./01-virtual_dom.mdx):
 
 1.  *How do I get values of type `unit Effect.t` that aren't just
     `Ignore` and `Many`*: State-transition functions returned by
@@ -421,4 +421,4 @@ effectful code gets wrapped up and managed so that the interface
 provided by the component remains pure; in other words, we isolate state
 by shifting it toward the leaves of the program.
 
-On to [Chapter 4: Forms](./04-forms.md).
+On to [Chapter 4: Forms](./04-forms.mdx).

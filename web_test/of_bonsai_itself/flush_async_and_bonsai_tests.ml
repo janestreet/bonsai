@@ -46,24 +46,28 @@ let%expect_test _ =
   Handle.show handle;
   [%expect {|
     ()
-    (iteration (count 0)) |}];
+    (iteration (count 0))
+    |}];
   Handle.show handle;
   [%expect {| () |}];
   let%bind () = Async_kernel_scheduler.yield_until_no_jobs_remain () in
   Handle.show handle;
   [%expect {|
     ()
-    (iteration (count 1)) |}];
+    (iteration (count 1))
+    |}];
   let%bind () = Async_kernel_scheduler.yield_until_no_jobs_remain () in
   Handle.show handle;
   [%expect {|
     ()
-    (iteration (count 2)) |}];
+    (iteration (count 2))
+    |}];
   let%bind () = Async_kernel_scheduler.yield_until_no_jobs_remain () in
   Handle.show handle;
   [%expect {|
     ()
-    "finished loop" |}];
+    "finished loop"
+    |}];
   let handle =
     Handle.create ~rpc_implementations (Result_spec.string (module Unit)) (computation 3)
   in
@@ -76,7 +80,8 @@ let%expect_test _ =
     (iteration (count 2))
     ------ between bonsai frame ------
     "finished loop"
-    ------ between bonsai frame ------ |}];
+    ------ between bonsai frame ------
+    |}];
   return ()
 ;;
 
@@ -94,17 +99,18 @@ let%expect_test _ =
     print_s [%message (exn : exn)];
     [%expect
       {|
-    (iteration (count 0))
-    (iteration (count 1))
-    ------ between bonsai frame ------
-    (iteration (count 2))
-    ------ between bonsai frame ------
-    (iteration (count 3))
-    ------ between bonsai frame ------
-    (iteration (count 4))
-    ------ between bonsai frame ------
-    (iteration (count 5))
-    (exn (monitor.ml.Error "not stable after 5 iterations")) |}]
+      (iteration (count 0))
+      (iteration (count 1))
+      ------ between bonsai frame ------
+      (iteration (count 2))
+      ------ between bonsai frame ------
+      (iteration (count 3))
+      ------ between bonsai frame ------
+      (iteration (count 4))
+      ------ between bonsai frame ------
+      (iteration (count 5))
+      (exn (monitor.ml.Error "not stable after 5 iterations"))
+      |}]
 ;;
 
 let%expect_test _ =
@@ -121,11 +127,12 @@ let%expect_test _ =
     print_s [%message (exn : exn)];
     [%expect
       {|
-    (iteration (count 0))
-    (iteration (count 1))
-    (iteration (count 2))
-    (iteration (count 3))
-    (iteration (count 4))
-    (iteration (count 5))
-    (exn (monitor.ml.Error "not stable after 5 iterations")) |}]
+      (iteration (count 0))
+      (iteration (count 1))
+      (iteration (count 2))
+      (iteration (count 3))
+      (iteration (count 4))
+      (iteration (count 5))
+      (exn (monitor.ml.Error "not stable after 5 iterations"))
+      |}]
 ;;

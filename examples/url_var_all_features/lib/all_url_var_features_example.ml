@@ -239,7 +239,8 @@ let%expect_test _ =
     │ nested.y=<optional<int>>&record.optional_string=<optional<string>>                       │
     │ /variant/comments                                                                        │
     │ /variant/post                                                                            │
-    └──────────────────────────────────────────────────────────────────────────────────────────┘ |}]
+    └──────────────────────────────────────────────────────────────────────────────────────────┘
+    |}]
 ;;
 
 let fallback _exn _components = T.Unable_to_parse

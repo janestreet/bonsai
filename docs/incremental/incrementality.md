@@ -1,15 +1,14 @@
-# Incrementality
+If you're coming from `Incr_dom`, the Bonsai API might surprise you. The
+`Incr.t` type that is pervasive throughout `Incr_dom` programs is
+(almost) nowhere to be found! However, if you dig into the internals of
+Bonsai, you'll find that the same strategy that makes it possible to
+write incremental web apps using the `Incr_dom` framework is the
+backbone of Bonsai.
 
-If you're coming from `Incr_dom`, the Bonsai API might surprise you.  The
-`Incr.t` type that is pervasive throughout `Incr_dom` programs is (almost)
-nowhere to be found!  However, if you dig into the internals of Bonsai, you'll
-find that the same strategy that makes it possible to write incremental web
-apps using the `Incr_dom` framework is the backbone of Bonsai.
+Let's look at a concrete example: A Bonsai component that is built out
+of two other Bonsai components and joins their results.
 
-Let's look at a concrete example: A Bonsai component that is built out of two
-other Bonsai components and joins their results.
-
-```ocaml
+``` ocaml
 open Bonsai.Let_syntax
 
 let super_component input = 
@@ -18,9 +17,10 @@ let super_component input =
   Vdom.Node.div [] [ c1; c2 ]
 ```
 
-This Bonsai function approximately lowers to the following `Incr_dom` implementation:
+This Bonsai function approximately lowers to the following `Incr_dom`
+implementation:
 
-```ocaml
+``` ocaml
 module Model = struct 
   type t = 
     { c1_model : C1.Model.t
@@ -75,14 +75,16 @@ let super_component
 ;;
 ```
 
-All those incremental `let%map`s in the `Incr_dom` code make it so that one
-component's model changing doesn't force the other component to recompute.  The
-same exact logic exists in the Bonsai code as well, it's just performed in the 
-Bonsai library (specifically in the implementations of `Bonsai.Let_syntax.sub`
-and `Bonsai.Let_syntax.both`).
+All those incremental `let%map`s in the `Incr_dom` code make it so that
+one component's model changing doesn't force the other component to
+recompute. The same exact logic exists in the Bonsai code as well, it's
+just performed in the Bonsai library (specifically in the
+implementations of `Bonsai.Let_syntax.sub` and
+`Bonsai.Let_syntax.both`).
 
-Using Incremental nodes directly is possible in Bonsai, though it is not what
-we would consider "typical" use of the library.  The `Bonsai.Incr` module
-offers various functions that bridge the Bonsai world and the Incremental world
-These functions are recommended only if you know that you can write an
-incremental function that is faster than the equivalent non-incremental code.
+Using Incremental nodes directly is possible in Bonsai, though it is not
+what we would consider "typical" use of the library. The `Bonsai.Incr`
+module offers various functions that bridge the Bonsai world and the
+Incremental world These functions are recommended only if you know that
+you can write an incremental function that is faster than the equivalent
+non-incremental code.

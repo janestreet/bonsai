@@ -18,7 +18,12 @@ type 'a t =
 (** [create] returns a typeahead using native browser controls.
 
     [to_option_description] if provided will render the description provided below the
-    option. *)
+    option.
+
+    Note that [set_selected] does not enforce that the given value is present in
+    [all_options]. Setting a value not in [all_options] will successfully set the
+    typeahead to that value.
+*)
 val create
   :  ?extra_attrs:Vdom.Attr.t list Value.t
   -> ?placeholder:string

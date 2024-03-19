@@ -40,7 +40,8 @@ let%expect_test _ =
                 stroke-linecap="round"
                 stroke-dashoffset="84.82300164692441"> </circle>
       </svg>
-    </div> |}];
+    </div>
+    |}];
   Bonsai.Var.set percent (Percent.of_mult 0.5);
   Handle.show_diff handle;
   [%expect
@@ -69,7 +70,8 @@ let%expect_test _ =
     -|            stroke-dashoffset="84.82300164692441"> </circle>
     +|            stroke-dashoffset="42.411500823462205"> </circle>
         </svg>
-      </div> |}];
+      </div>
+    |}];
   Bonsai.Var.set percent Percent.one_hundred_percent;
   Handle.show_diff handle;
   [%expect
@@ -98,5 +100,6 @@ let%expect_test _ =
     -|            stroke-dashoffset="42.411500823462205"> </circle>
     +|            stroke-dashoffset="0"> </circle>
         </svg>
-      </div> |}]
+      </div>
+    |}]
 ;;

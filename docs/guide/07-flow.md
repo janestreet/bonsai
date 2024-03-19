@@ -15,7 +15,7 @@ fed as input to another component.
 
 To illustrate this, we'll build a textbox component whose placeholder
 text is specified dynamically. This textbox component is so similar to
-the one constructed in the [state chapter](./03-state.md) that the diff
+the one constructed in the [state chapter](./03-state.mdx) that the diff
 between that version and the new one is shown below for convenience.
 
 ```{=html}
@@ -221,7 +221,7 @@ that every key/value pair in the output map is its own component, each
 with it's own independent state!
 
 For this example, we'll re-use the "counter" component defined in the
-last section of the [state chapter](./03-state.md), but this time,
+last section of the [state chapter](./03-state.mdx), but this time,
 there'll be a bunch of them!
 
 ```{=html}
