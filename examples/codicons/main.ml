@@ -1,5 +1,5 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 open! Bonsai.Let_syntax
 module Form = Bonsai_web_ui_form.With_automatic_view
 
@@ -81,18 +81,20 @@ module Style = struct
 end
 
 module Temporary_toggle = struct
-  let state ~base ~temporary timeout =
-    let%sub state =
-      Bonsai.state
-        Time_ns.min_value_representable
-        ~sexp_of_model:[%sexp_of: Time_ns.Alternate_sexp.t]
-        ~equal:[%equal: Time_ns.Alternate_sexp.t]
+  let state ~base ~temporary timeout graph =
+    let state =
+      Tuple2.uncurry Bonsai.both
+      @@ Bonsai.state
+           Time_ns.min_value_representable
+           ~sexp_of_model:[%sexp_of: Time_ns.Alternate_sexp.t]
+           ~equal:[%equal: Time_ns.Alternate_sexp.t]
+           graph
     in
     let toggle_back_time =
-      Value.map state ~f:(fun (last_set_time, _) -> Time_ns.add last_set_time timeout)
+      Bonsai.map state ~f:(fun (last_set_time, _) -> Time_ns.add last_set_time timeout)
     in
-    let%sub toggle = Bonsai.Clock.at toggle_back_time in
-    let%sub get_now = Bonsai.Clock.get_current_time in
+    let toggle = Bonsai.Clock.at toggle_back_time graph in
+    let get_now = Bonsai.Clock.get_current_time graph in
     let%arr _, set_time = state
     and toggle = toggle
     and get_now = get_now in
@@ -110,9 +112,13 @@ module Temporary_toggle = struct
 end
 
 module Icon_grid = struct
-  let icon_card icon =
-    let%sub copied =
-      Temporary_toggle.state ~base:`Show_icon ~temporary:`Show_copied Time_ns.Span.second
+  let icon_card icon graph =
+    let copied =
+      Temporary_toggle.state
+        ~base:`Show_icon
+        ~temporary:`Show_copied
+        Time_ns.Span.second
+        graph
     in
     let%arr copied, set_copied = copied
     and icon = icon in
@@ -144,23 +150,24 @@ module Icon_grid = struct
           [ Codicons.svg Copy; Node.p [ Node.text [%string "Copied %{variant_name}!"] ] ])
   ;;
 
-  let component icons =
+  let component icons graph =
     let icons =
-      Value.map icons ~f:(String.Map.of_list_with_key_exn ~get_key:Codicons.name)
+      Bonsai.map icons ~f:(String.Map.of_list_with_key_exn ~get_key:Codicons.name)
     in
-    let%sub cards = Bonsai.assoc (module String) icons ~f:(fun _ -> icon_card) in
+    let cards = Bonsai.assoc (module String) icons ~f:(fun _ -> icon_card) graph in
     let%arr cards = cards in
     Vdom.Node.div ~attrs:[ Style.grid ] (Map.data cards)
   ;;
 end
 
 module Search = struct
-  let component () =
-    let%sub input =
+  let component () graph =
+    let input =
       Form.Elements.Textbox.string
-        ~placeholder:(Value.return "Filter icons")
+        ~placeholder:(Bonsai.return "Filter icons")
         ~allow_updates_when_focused:`Never
         ()
+        graph
     in
     let%arr input = input in
     let search =
@@ -188,10 +195,10 @@ module Search = struct
   ;;
 end
 
-let app =
-  let%sub search = Search.component () in
-  let%sub icons = Bonsai.pure fst search in
-  let%sub grid = Icon_grid.component icons in
+let app graph =
+  let search = Search.component () graph in
+  let icons = Bonsai.map ~f:fst search in
+  let grid = Icon_grid.component icons graph in
   let%arr grid = grid
   and _, search = search in
   Vdom.Node.div ~attrs:[ Style.main ] [ search; grid ]

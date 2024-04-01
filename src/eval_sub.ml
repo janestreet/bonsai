@@ -8,12 +8,30 @@ module Computation_info = struct
     :  ('r, unit) Computation.packed_info
     -> ('r, Environment.t option) Computation.packed_info
     =
-    fun (T { model; input; action; apply_action; reset; run; can_contain_path }) ->
+    fun (T
+          { model
+          ; input
+          ; action
+          ; apply_action
+          ; reset
+          ; run
+          ; may_contain_path
+          ; may_contain_lifecycle
+          }) ->
     let run ~environment ~path ~clock ~model ~inject =
       let%bind.Trampoline snapshot, () = run ~environment ~path ~clock ~model ~inject in
       Trampoline.return (snapshot, (None : Environment.t option))
     in
-    Computation.T { model; input; action; apply_action; reset; run; can_contain_path }
+    Computation.T
+      { model
+      ; input
+      ; action
+      ; apply_action
+      ; reset
+      ; run
+      ; may_contain_path
+      ; may_contain_lifecycle
+      }
   ;;
 
   (* Produces a "[unit]-extra" [Computation.packed_info] from an [eval_sub]-custom packed
@@ -24,20 +42,43 @@ module Computation_info = struct
     -> ('r, unit) Computation.packed_info
     =
     fun (Computation.T
-          { model; input; action; apply_action; reset; run; can_contain_path }) ->
+          { model
+          ; input
+          ; action
+          ; apply_action
+          ; reset
+          ; run
+          ; may_contain_path
+          ; may_contain_lifecycle
+          }) ->
     let run ~environment ~path ~clock ~model ~inject =
       let%bind.Trampoline snapshot, (_ : Environment.t option) =
         run ~environment ~path ~clock ~model ~inject
       in
       Trampoline.return (snapshot, ())
     in
-    Computation.T { model; input; action; apply_action; reset; run; can_contain_path }
+    Computation.T
+      { model
+      ; input
+      ; action
+      ; apply_action
+      ; reset
+      ; run
+      ; may_contain_path
+      ; may_contain_lifecycle
+      }
   ;;
 end
 
 let ( >>> ) f inject b = inject (f b)
 let wrap_sub_from inject = Action.sub_from >>> inject
 let wrap_sub_into inject = Action.sub_into >>> inject
+
+let both_use_path (a : May_contain.Path.t) (b : May_contain.Path.t) =
+  match a, b with
+  | Yes_or_maybe, Yes_or_maybe -> true
+  | _ -> false
+;;
 
 module Thread_env = struct
   (* values of this type are used to control if the environment of a sub is threaded 
@@ -108,8 +149,11 @@ let baseline
       in
       model_from, model_into
   in
-  let both_use_path = info_from.can_contain_path && info_into.can_contain_path in
+  let both_use_path =
+    both_use_path info_from.may_contain_path info_into.may_contain_path
+  in
   let run ~environment ~path ~clock ~model ~inject =
+    annotate Model model;
     let%bind.Trampoline from, maybe_env =
       let model = Incr.map model ~f:Tuple2.get1 in
       let path = if both_use_path then Path.append path Path.Elem.Subst_from else path in
@@ -145,7 +189,12 @@ let baseline
     ; apply_action
     ; run
     ; reset
-    ; can_contain_path = info_from.can_contain_path || info_into.can_contain_path
+    ; may_contain_path =
+        May_contain.Path.merge info_from.may_contain_path info_into.may_contain_path
+    ; may_contain_lifecycle =
+        May_contain.Lifecycle.merge
+          info_from.may_contain_lifecycle
+          info_into.may_contain_lifecycle
     }
 ;;
 
@@ -158,7 +207,9 @@ let from_stateless
   ~(thread_environment : thread_env Thread_env.t)
   : (_, thread_env) Computation.packed_info
   =
-  let both_use_path = info_from.can_contain_path && info_into.can_contain_path in
+  let both_use_path =
+    both_use_path info_from.may_contain_path info_into.may_contain_path
+  in
   let run ~environment ~path ~clock ~model ~inject =
     let%bind.Trampoline from, maybe_env =
       let path = if both_use_path then Path.append path Path.Elem.Subst_from else path in
@@ -191,7 +242,12 @@ let from_stateless
     ; action = info_into.action
     ; apply_action = info_into.apply_action
     ; reset = info_into.reset
-    ; can_contain_path = info_from.can_contain_path || info_into.can_contain_path
+    ; may_contain_path =
+        May_contain.Path.merge info_from.may_contain_path info_into.may_contain_path
+    ; may_contain_lifecycle =
+        May_contain.Lifecycle.merge
+          info_from.may_contain_lifecycle
+          info_into.may_contain_lifecycle
     }
 ;;
 
@@ -204,7 +260,9 @@ let into_stateless
   ~(thread_environment : thread_env Thread_env.t)
   : (_, thread_env) Computation.packed_info
   =
-  let both_use_path = info_from.can_contain_path && info_into.can_contain_path in
+  let both_use_path =
+    both_use_path info_from.may_contain_path info_into.may_contain_path
+  in
   let run ~environment ~path ~clock ~model ~inject =
     let%bind.Trampoline from, maybe_env =
       let path = if both_use_path then Path.append path Path.Elem.Subst_from else path in
@@ -237,7 +295,12 @@ let into_stateless
     ; action = info_from.action
     ; apply_action = info_from.apply_action
     ; reset = info_from.reset
-    ; can_contain_path = info_from.can_contain_path || info_into.can_contain_path
+    ; may_contain_path =
+        May_contain.Path.merge info_from.may_contain_path info_into.may_contain_path
+    ; may_contain_lifecycle =
+        May_contain.Lifecycle.merge
+          info_from.may_contain_lifecycle
+          info_into.may_contain_lifecycle
     }
 ;;
 

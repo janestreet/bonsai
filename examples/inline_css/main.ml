@@ -1,5 +1,5 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 
 module Boxes = struct
   module Style =
@@ -104,13 +104,13 @@ stylesheet
 |}]
 
 let () =
-  Bonsai_web.Start.start
-    (Bonsai.const
-       (Vdom.Node.div
-          [ Vdom.Node.h1 [ Vdom.Node.text "Boxes" ]
-          ; Boxes.component
-          ; Vdom.Node.h1 [ Vdom.Node.text "Themeable Component" ]
-          ; Themeable.component ()
-          ; Themeable.component ~style:(module My_theme) ()
-          ]))
+  Bonsai_web.Start.start (fun _graph ->
+    Bonsai.return
+      (Vdom.Node.div
+         [ Vdom.Node.h1 [ Vdom.Node.text "Boxes" ]
+         ; Boxes.component
+         ; Vdom.Node.h1 [ Vdom.Node.text "Themeable Component" ]
+         ; Themeable.component ()
+         ; Themeable.component ~style:(module My_theme) ()
+         ]))
 ;;

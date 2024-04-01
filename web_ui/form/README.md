@@ -1,3 +1,3 @@
 # Bonsai Form
 
-  See the Bonsai Guide [chapter on forms](../../docs/guide/04-forms.mdx).
+  See the Bonsai Guide [chapter on forms](../../docs/how_to/forms.mdx).

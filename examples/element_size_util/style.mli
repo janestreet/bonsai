@@ -1,5 +1,5 @@
 open! Core
-open Bonsai_web
+open Bonsai_web.Cont
 
 val primary : Vdom.Attr.t
 val resizable_using_css : Vdom.Attr.t

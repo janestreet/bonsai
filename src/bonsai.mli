@@ -64,6 +64,7 @@ module Private : sig
 
   val gather : 'result Computation.t -> ('result, unit) Computation.packed_info
   val pre_process : 'result Computation.t -> 'result Computation.t
+  val set_perform_on_exception : (exn -> unit) -> unit
 end
 
 module Arrow_deprecated : sig

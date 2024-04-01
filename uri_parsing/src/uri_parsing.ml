@@ -2069,8 +2069,8 @@ module Parser = struct
         check_that_path_orders_are_ok (M.parser_for_variant v))
   ;;
 
-  let check_more_path_parsing_allowed ~allowed =
-    if not allowed
+  let check_more_path_parsing_allowed ~has_seen_end_of_path =
+    if has_seen_end_of_path
     then
       raise_s
         [%message
@@ -2080,52 +2080,89 @@ module Parser = struct
   ;;
 
   let rec check_that_with_remaining_path_has_no_path_parsers_after_it
-    : type a. ?allowed:bool -> a T.t -> unit
+    : type a. has_seen_end_of_path:bool -> a T.t -> bool
     =
-    fun ?(allowed = true) t ->
-    match t with
-    | Unit -> ()
-    | Project { input; _ } ->
-      check_that_with_remaining_path_has_no_path_parsers_after_it ~allowed input
-    | Optional_query_fields { t; _ } ->
-      check_that_with_remaining_path_has_no_path_parsers_after_it ~allowed t
-    | From_query_required _ -> ()
-    | From_query_optional _ -> ()
-    | From_query_optional_with_default _ -> ()
-    | From_query_many _ -> ()
-    | From_path _ -> check_more_path_parsing_allowed ~allowed
-    | From_remaining_path _ -> check_more_path_parsing_allowed ~allowed
-    | With_prefix { t; prefix } ->
-      if not (List.is_empty prefix) then check_more_path_parsing_allowed ~allowed;
-      check_that_with_remaining_path_has_no_path_parsers_after_it ~allowed t
-    | With_remaining_path { t; needed_path } ->
-      if not (List.is_empty needed_path) then check_more_path_parsing_allowed ~allowed;
-      check_that_with_remaining_path_has_no_path_parsers_after_it ~allowed:false t
-    | Record { record_module; _ } ->
-      let module M =
-        (val record_module : Record.Cached_s with type Typed_field.derived_on = a)
-      in
-      List.iter M.Typed_field.Packed.all ~f:(fun { f = T f } ->
+    let ( || ) a b =
+      (* NOTE: This is silly, but avoids (||)'s short-circuiting. *)
+      a || b
+    in
+    fun ~has_seen_end_of_path t ->
+      match t with
+      | Unit -> has_seen_end_of_path
+      | Project { input; _ } ->
         check_that_with_remaining_path_has_no_path_parsers_after_it
-          ~allowed
-          (M.parser_for_field f))
-    | Variant { variant_module; _ } ->
-      let module M =
-        (val variant_module : Variant.Cached_s with type Typed_variant.derived_on = a)
-      in
-      List.iter M.Typed_variant.Packed.all ~f:(fun { f = T v } ->
+          ~has_seen_end_of_path
+          input
+      | Optional_query_fields { t; _ } ->
         check_that_with_remaining_path_has_no_path_parsers_after_it
-          ~allowed
-          (M.parser_for_variant v))
-    | Query_based_variant { variant_module; _ } ->
-      let module M =
-        (val variant_module
-            : Query_based_variant.S with type Typed_variant.derived_on = a)
-      in
-      List.iter M.Typed_variant.Packed.all ~f:(fun { f = T v } ->
+          ~has_seen_end_of_path
+          t
+      | From_query_required _ -> has_seen_end_of_path
+      | From_query_optional _ -> has_seen_end_of_path
+      | From_query_optional_with_default _ -> has_seen_end_of_path
+      | From_query_many _ -> has_seen_end_of_path
+      | From_path _ ->
+        check_more_path_parsing_allowed ~has_seen_end_of_path;
+        has_seen_end_of_path
+      | From_remaining_path _ ->
+        check_more_path_parsing_allowed ~has_seen_end_of_path;
+        true
+      | With_prefix { t; prefix } ->
+        if not (List.is_empty prefix)
+        then check_more_path_parsing_allowed ~has_seen_end_of_path;
         check_that_with_remaining_path_has_no_path_parsers_after_it
-          ~allowed
-          (M.parser_for_variant v))
+          ~has_seen_end_of_path
+          t
+      | With_remaining_path { t; needed_path } ->
+        if not (List.is_empty needed_path)
+        then check_more_path_parsing_allowed ~has_seen_end_of_path;
+        check_that_with_remaining_path_has_no_path_parsers_after_it
+          ~has_seen_end_of_path:true
+          t
+      | Record { record_module; _ } ->
+        let module M =
+          (val record_module : Record.Cached_s with type Typed_field.derived_on = a)
+        in
+        List.fold
+          ~init:has_seen_end_of_path
+          M.path_order
+          (* NOTE: This check assumes that the [check_path_orders_are_sane] check has run
+             beforehand. It is safe to not traverse parsers that do not have any paths
+             beforehand. *)
+          ~f:(fun has_seen_end_of_path { f = T f } ->
+          has_seen_end_of_path
+          || check_that_with_remaining_path_has_no_path_parsers_after_it
+               ~has_seen_end_of_path
+               (M.parser_for_field f))
+      | Variant { variant_module; _ } ->
+        let module M =
+          (val variant_module : Variant.Cached_s with type Typed_variant.derived_on = a)
+        in
+        List.fold
+          ~init:has_seen_end_of_path
+          M.Typed_variant.Packed.all
+          ~f:(fun out { f = T v } ->
+          (* NOTE: the difference between variant's and records is subtle but important.
+               records will have ALL of their parser's run, while variant's will only have
+               one of their parsers run.
+            *)
+          out
+          || check_that_with_remaining_path_has_no_path_parsers_after_it
+               ~has_seen_end_of_path
+               (M.parser_for_variant v))
+      | Query_based_variant { variant_module; _ } ->
+        let module M =
+          (val variant_module
+              : Query_based_variant.S with type Typed_variant.derived_on = a)
+        in
+        List.fold
+          ~init:has_seen_end_of_path
+          M.Typed_variant.Packed.all
+          ~f:(fun out { f = T v } ->
+          out
+          || check_that_with_remaining_path_has_no_path_parsers_after_it
+               ~has_seen_end_of_path
+               (M.parser_for_variant v))
   ;;
 
   let rec check_that_there_are_no_ambiguous_parsers_at_any_level : type a. a T.t -> unit =
@@ -2189,7 +2226,10 @@ module Parser = struct
       ; run_check ~name:"Sane path orders check" ~f:(fun () ->
           check_that_path_orders_are_ok t)
       ; run_check ~name:"Remaining path does not block other parsers check" ~f:(fun () ->
-          check_that_with_remaining_path_has_no_path_parsers_after_it t)
+          (ignore : bool -> unit)
+            (check_that_with_remaining_path_has_no_path_parsers_after_it
+               ~has_seen_end_of_path:false
+               t))
       ; run_check
           ~name:"Ambiguous choices for picking variant constructor check"
           ~f:(fun () -> check_that_there_are_no_ambiguous_parsers_at_any_level t)

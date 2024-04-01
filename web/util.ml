@@ -35,3 +35,36 @@ let am_within_disabled_fieldset (event : #Dom_html.event Js.t) =
          | Some (tag_name, disabled) ->
            String.equal (Js.to_string tag_name) "FIELDSET" && Js.to_bool disabled)
 ;;
+
+module For_bonsai_internal = struct
+  let set_stack_overflow_exception_check () =
+    let get_test_truncated_trace =
+      match am_running_how with
+      | `Browser | `Node -> Fn.id
+      | `Node_test | `Node_benchmark | `Browser_benchmark ->
+        fun stack_trace ->
+          let first_line =
+            Core.String.split_lines stack_trace |> List.hd |> Option.value ~default:""
+          in
+          sprintf
+            {|%s
+<truncated stack to preserve determinism between fast-build and fast-exe>|}
+            first_line
+    in
+    Bonsai.Private.set_perform_on_exception (fun exn ->
+      match exn with
+      | Stack_overflow ->
+        let stack_trace =
+          Js_of_ocaml.Js.Js_error.of_exn exn
+          |> Option.bind ~f:Js_of_ocaml.Js.Js_error.stack
+          |> Option.value_map
+               ~default:"<no stack trace found>"
+               ~f:get_test_truncated_trace
+        in
+        eprintf
+          {|Stack overflow inside of a bonsai computation is not supported! In a future release your app might crash.
+%s|}
+          stack_trace
+      | _ -> ())
+  ;;
+end

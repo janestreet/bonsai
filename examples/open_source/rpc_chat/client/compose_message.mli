@@ -1,6 +1,7 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 
 val component
-  :  send_message:(string -> unit Effect.t) Value.t
-  -> Vdom.Node.t Computation.t
+  :  send_message:(string -> unit Effect.t) Bonsai.t
+  -> Bonsai.graph
+  -> Vdom.Node.t Bonsai.t

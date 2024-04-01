@@ -1,5 +1,5 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 open! Bonsai.Let_syntax
 open! Bonsai_web_ui_drilldown
 
@@ -48,10 +48,11 @@ let tree_layout : Vdom.Node.t =
   loop example |> to_vdom
 ;;
 
-let app : Vdom.Node.t Bonsai.Computation.t =
+let app : Bonsai.graph -> Vdom.Node.t Bonsai.t =
+  fun graph ->
   let module N = Vdom.Node in
-  let%map.Computation drilldown_with_breadcrumbs =
-    Drilldown_with_breadcrumbs.component (Value.return example)
+  let%map drilldown_with_breadcrumbs =
+    Drilldown_with_breadcrumbs.component (Bonsai.return example) graph
   in
   let explanation1 =
     N.div

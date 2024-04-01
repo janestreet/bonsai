@@ -30,7 +30,8 @@ type ('model, 'action, 'input, 'result, 'extra) info =
   ; apply_action : ('input, 'action, 'model) apply_action
   ; run : ('model, 'action, 'input, 'result, 'extra) eval_fun
   ; reset : ('action, 'model) reset
-  ; can_contain_path : bool
+  ; may_contain_path : May_contain.Path.t
+  ; may_contain_lifecycle : May_contain.Lifecycle.t
   }
 
 type ('result, 'extra) packed_info =
@@ -122,7 +123,7 @@ type 'result t =
   | Assoc_simpl :
       { map : ('k, 'v, 'cmp) Map.t Value.t
       ; by : Path.t -> 'k -> 'v -> 'result
-      ; can_contain_path : bool
+      ; may_contain_path : May_contain.Path.t
       }
       -> ('k, 'result, 'cmp) Map.t t
   | Switch :

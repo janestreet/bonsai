@@ -1,11 +1,11 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 open! Bonsai.Let_syntax
 
 let on_change _ = Effect.Ignore
 
-let component =
-  let%map.Computation theme = View.Theme.current in
+let component graph =
+  let%map theme = View.Theme.current graph in
   [ Kado.Unstable.Input.textbox
       ~constants:(View.constants theme)
       ~input_attr:Vdom.Attr.empty

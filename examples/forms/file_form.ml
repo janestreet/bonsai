@@ -1,21 +1,21 @@
 open! Core
-open Bonsai_web
+open Bonsai_web.Cont
 open Bonsai.Let_syntax
 
-let form =
-  let%sub file_picker =
-    Bonsai_web_ui_form.With_automatic_view.Elements.File_select.single ()
+let form graph =
+  let file_picker =
+    Bonsai_web_ui_form.With_automatic_view.Elements.File_select.single () graph
   in
-  let%sub file_from_form =
+  let file_from_form =
     let%arr file_picker = file_picker in
     Bonsai_web_ui_form.With_automatic_view.value file_picker |> Or_error.ok
   in
-  let%sub result = Bonsai_web_ui_file.Read_on_change.create_single_opt file_from_form in
-  let%sub result =
+  let result = Bonsai_web_ui_file.Read_on_change.create_single_opt file_from_form graph in
+  let result =
     match%sub result with
-    | None -> Bonsai.const Vdom.Node.none
+    | None -> Bonsai.return Vdom.Node.none
     | Some (_, (Bonsai_web_ui_file.Read_on_change.Status.Starting | In_progress _)) ->
-      Bonsai.const (View.text "file still loading")
+      Bonsai.return (View.text "file still loading")
     | Some (filename, Complete (Error error)) ->
       let%arr error = error
       and filename = filename in

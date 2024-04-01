@@ -1,5 +1,5 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 open Bonsai.Let_syntax
 open Vdom_keyboard
 module Js = Js_of_ocaml.Js
@@ -100,16 +100,17 @@ let handle_event inject =
 
 module Style = [%css stylesheet {| .red { color: red } |}]
 
-let component =
-  let%sub model_and_inject =
-    Bonsai.state_machine0
-      ()
-      ~sexp_of_model:[%sexp_of: Model.t]
-      ~equal:[%equal: Model.t]
-      ~sexp_of_action:[%sexp_of: Action.t]
-      ~default_model:[]
-      ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) model action ->
-      List.append model [ action ])
+let component graph =
+  let model_and_inject =
+    Tuple2.uncurry Bonsai.both
+    @@ Bonsai.state_machine0
+         graph
+         ~sexp_of_model:[%sexp_of: Model.t]
+         ~equal:[%equal: Model.t]
+         ~sexp_of_action:[%sexp_of: Action.t]
+         ~default_model:[]
+         ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) model action ->
+         List.append model [ action ])
   in
   let%arr model, inject = model_and_inject in
   let last_event = List.last model in

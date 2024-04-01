@@ -51,9 +51,9 @@ module Make
         let acc, up1, map = User.transform_v down acc t.map in
         let%bind acc, up2, by = User.transform_c down acc t.by in
         return (acc, combine_up up1 up2, Computation.Assoc_on { t with map; by })
-      | Assoc_simpl { map; by; can_contain_path } ->
+      | Assoc_simpl { map; by; may_contain_path } ->
         let acc, up, map = User.transform_v down acc map in
-        return (acc, up, Computation.Assoc_simpl { map; by; can_contain_path })
+        return (acc, up, Computation.Assoc_simpl { map; by; may_contain_path })
       | Switch { match_; arms; here } ->
         let acc, up1, match_ = User.transform_v down acc match_ in
         let acc_and_upn_and_arms =

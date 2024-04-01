@@ -9,7 +9,7 @@ module Vdom_tests (Columns : Shared_with_bench.S) = struct
     let component =
       let columns = Columns.all in
       let rows = Value.return (Shared_with_bench.Row.init_rows 5) in
-      let%sub collate =
+      let%sub collate, _ =
         let collate =
           Value.return
             { Incr_map_collate.Collate.filter = ()

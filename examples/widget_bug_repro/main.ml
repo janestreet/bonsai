@@ -1,5 +1,5 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 open Bonsai.Let_syntax
 
 let widget =
@@ -47,7 +47,7 @@ let inner_html_b =
     ()
 ;;
 
-let component true_or_false ~toggle =
+let component true_or_false ~toggle _graph =
   let%arr true_or_false = true_or_false in
   let widget = widget true_or_false in
   let ids =
@@ -66,9 +66,9 @@ let component true_or_false ~toggle =
 ;;
 
 let () =
-  let var = Bonsai.Var.create true in
-  let toggle = Bonsai.Effect.of_sync_fun (Bonsai.Var.set var) in
+  let var = Bonsai.Expert.Var.create true in
+  let toggle = Bonsai.Effect.of_sync_fun (Bonsai.Expert.Var.set var) in
   let toggle a = toggle a in
-  let value = Bonsai.Var.value var in
+  let value = Bonsai.Expert.Var.value var in
   Bonsai_web.Start.start (component value ~toggle)
 ;;

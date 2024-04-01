@@ -1,5 +1,5 @@
 open! Core
-open Bonsai_web
+open Bonsai_web.Cont
 
 module Style =
 [%css
@@ -68,29 +68,43 @@ let slider ~min ~max ~value ~inject =
     ()
 ;;
 
-let component =
+let component graph =
   let open Bonsai.Let_syntax in
-  let%sub text =
-    Bonsai.state_opt
-      ()
-      ~sexp_of_model:[%sexp_of: String.t]
-      ~equal:[%equal: String.t]
-      ~default_model:"🤯"
+  let text =
+    Tuple2.uncurry Bonsai.both
+    @@ Bonsai.state_opt
+         graph
+         ~sexp_of_model:[%sexp_of: String.t]
+         ~equal:[%equal: String.t]
+         ~default_model:"🤯"
   in
-  let%sub size =
-    Bonsai.state 80 ~sexp_of_model:[%sexp_of: Int.t] ~equal:[%equal: Int.t]
+  let size =
+    Tuple2.uncurry Bonsai.both
+    @@ Bonsai.state 80 ~sexp_of_model:[%sexp_of: Int.t] ~equal:[%equal: Int.t] graph
   in
-  let%sub pos_x =
-    Bonsai.state 50 ~sexp_of_model:[%sexp_of: Int.t] ~equal:[%equal: Int.t]
+  let pos_x =
+    Tuple2.uncurry Bonsai.both
+    @@ Bonsai.state 50 ~sexp_of_model:[%sexp_of: Int.t] ~equal:[%equal: Int.t] graph
   in
-  let%sub pos_y =
-    Bonsai.state 50 ~sexp_of_model:[%sexp_of: Int.t] ~equal:[%equal: Int.t]
+  let pos_y =
+    Tuple2.uncurry Bonsai.both
+    @@ Bonsai.state 50 ~sexp_of_model:[%sexp_of: Int.t] ~equal:[%equal: Int.t] graph
   in
-  let%sub fg_color =
-    Bonsai.state "#000000" ~sexp_of_model:[%sexp_of: String.t] ~equal:[%equal: String.t]
+  let fg_color =
+    Tuple2.uncurry Bonsai.both
+    @@ Bonsai.state
+         "#000000"
+         ~sexp_of_model:[%sexp_of: String.t]
+         ~equal:[%equal: String.t]
+         graph
   in
-  let%sub bg_color =
-    Bonsai.state "#ffffff" ~sexp_of_model:[%sexp_of: String.t] ~equal:[%equal: String.t]
+  let bg_color =
+    Tuple2.uncurry Bonsai.both
+    @@ Bonsai.state
+         "#ffffff"
+         ~sexp_of_model:[%sexp_of: String.t]
+         ~equal:[%equal: String.t]
+         graph
   in
   let%arr text, inject_text = text
   and size, inject_size = size

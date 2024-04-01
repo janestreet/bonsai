@@ -1,16 +1,17 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 open Bonsai.Let_syntax
 
-let string_duplicator input_string =
-  let%sub duplication_count_state =
-    Bonsai.state_machine0
-      ()
-      ~sexp_of_model:[%sexp_of: Int.t]
-      ~equal:[%equal: Int.t]
-      ~sexp_of_action:[%sexp_of: Unit.t]
-      ~default_model:1
-      ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) model () -> model + 1)
+let string_duplicator input_string graph =
+  let duplication_count_state =
+    Tuple2.uncurry Bonsai.both
+    @@ Bonsai.state_machine0
+         graph
+         ~sexp_of_model:[%sexp_of: Int.t]
+         ~equal:[%equal: Int.t]
+         ~sexp_of_action:[%sexp_of: Unit.t]
+         ~default_model:1
+         ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) model () -> model + 1)
   in
   let%arr num_duplicated, inject_duplicate = duplication_count_state
   and input_string = input_string in
@@ -24,9 +25,14 @@ let string_duplicator input_string =
   Vdom.Node.div [ button; Vdom.Node.text repeated_string ]
 ;;
 
-let string_to_repeat =
-  let%sub state =
-    Bonsai.state "hello" ~sexp_of_model:[%sexp_of: String.t] ~equal:[%equal: String.t]
+let string_to_repeat graph =
+  let state =
+    Tuple2.uncurry Bonsai.both
+    @@ Bonsai.state
+         "hello"
+         ~sexp_of_model:[%sexp_of: String.t]
+         ~equal:[%equal: String.t]
+         graph
   in
   let%arr state, set_state = state in
   let view =
@@ -40,11 +46,13 @@ let string_to_repeat =
   state, view
 ;;
 
-let app =
+let app
   (* let%sub can decompose the [(string * Vdom.Node.t) Value.t] into both a
-     [string Value.t] and a [Vdom.Node.t Value.t]. *)
-  let%sub string, textbox_view = string_to_repeat in
-  let%sub duplicated = string_duplicator string in
+         [string Value.t] and a [Vdom.Node.t Value.t]. *)
+    graph
+  =
+  let%sub string, textbox_view = string_to_repeat graph in
+  let duplicated = string_duplicator string graph in
   let%arr textbox_view = textbox_view
   and duplicated = duplicated in
   Vdom.Node.div [ textbox_view; duplicated ]

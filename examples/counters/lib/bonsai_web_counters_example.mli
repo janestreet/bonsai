@@ -1,5 +1,5 @@
 open! Core
-open Bonsai_web
+open Bonsai_web.Cont
 
-val single_counter : Vdom.Node.t Computation.t
-val application : Vdom.Node.t Computation.t
+val single_counter : Bonsai.graph -> Vdom.Node.t Bonsai.t
+val application : Bonsai.graph -> Vdom.Node.t Bonsai.t

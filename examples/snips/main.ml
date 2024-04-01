@@ -1,5 +1,5 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 open! Bonsai.Let_syntax
 module Gallery = Bonsai_web_ui_gallery
 module Snips = Bonsai_experimental_snips
@@ -92,8 +92,8 @@ module Shared_code = struct
     ; container : Vdom.Node.t -> Vdom.Node.t
     }
 
-  let prepare =
-    let%sub theme = View.Theme.current in
+  let prepare graph =
+    let theme = View.Theme.current graph in
     let%arr theme = theme in
     let { View.Constants.intent = { info; error; warning; success }
         ; primary
@@ -142,10 +142,10 @@ module Markup = struct
   type t =
     | H of string
     | P of string
-    | D of (Vdom.Node.t * string) Computation.t
-    | Ds of (string option * (Vdom.Node.t * string) Computation.t) list
+    | D of (Bonsai.graph -> (Vdom.Node.t * string) Bonsai.t)
+    | Ds of (string option * (Bonsai.graph -> (Vdom.Node.t * string) Bonsai.t)) list
 
-  let remove_layout_comments code =
+  let remove_layout_comments code _graph =
     let%arr code = code in
     String.split_lines code
     |> List.filter ~f:(Fn.non (String.is_substring ~substring:"remove-this-line"))
@@ -162,43 +162,46 @@ module Markup = struct
              | _ -> '_')
       in
       let link = Vdom.Node.a ~attrs:[ Vdom.Attr.href ("#" ^ id) ] [ Vdom.Node.text s ] in
-      Bonsai.const (Vdom.Node.h2 ~attrs:[ Vdom.Attr.id id ] [ link ])
+      fun _graph -> Bonsai.return (Vdom.Node.h2 ~attrs:[ Vdom.Attr.id id ] [ link ])
     | P s ->
-      Bonsai.const
-        (Vdom.Node.inner_html
-           ()
-           ~attrs:[ Vdom.Attr.empty ]
-           ~tag:"p"
-           ~this_html_is_sanitized_and_is_totally_safe_trust_me:s)
+      fun _graph ->
+        Bonsai.return
+          (Vdom.Node.inner_html
+             ()
+             ~attrs:[ Vdom.Attr.empty ]
+             ~tag:"p"
+             ~this_html_is_sanitized_and_is_totally_safe_trust_me:s)
     | D c ->
-      let%sub demo, code = c in
-      let%sub code = remove_layout_comments code in
-      let%sub gallery =
-        Gallery.make_demo' ~hide_html:true ~ocaml_label:None ~demo ~code ()
-      in
-      let%arr { Gallery.demo; code } = gallery in
-      Vdom.Node.div ~attrs:[ Shared_code.Style.x2_grid ] [ code; demo ]
+      fun graph ->
+        let%sub demo, code = c graph in
+        let code = remove_layout_comments code graph in
+        let gallery =
+          Gallery.make_demo' ~hide_html:true ~ocaml_label:None ~demo ~code () graph
+        in
+        let%arr { Gallery.demo; code } = gallery in
+        Vdom.Node.div ~attrs:[ Shared_code.Style.x2_grid ] [ code; demo ]
     | Ds a ->
-      a
-      |> List.map ~f:(fun (ocaml_label, c) ->
-           let%sub demo, code = c in
-           let%sub code = remove_layout_comments code in
-           let%sub r =
-             Gallery.make_demo' ~hide_html:true ~ocaml_label:None ~demo ~code ()
-           in
-           let%arr r = r in
-           ocaml_label, r)
-      |> Computation.all
-      |> Computation.map ~f:(fun demos ->
-           demos
-           |> List.concat_map ~f:(fun (label, { code; demo }) ->
-                let pre =
-                  match label with
-                  | None -> []
-                  | Some label -> [ Vdom.Node.text label; Vdom.Node.div [] ]
-                in
-                pre @ [ code; demo ])
-           |> Vdom.Node.div ~attrs:[ Shared_code.Style.x2_grid ])
+      fun graph ->
+        a
+        |> List.map ~f:(fun (ocaml_label, c) ->
+             let%sub demo, code = c graph in
+             let code = remove_layout_comments code graph in
+             let r =
+               Gallery.make_demo' ~hide_html:true ~ocaml_label:None ~demo ~code () graph
+             in
+             let%arr r = r in
+             ocaml_label, r)
+        |> Bonsai.all
+        |> Bonsai.map ~f:(fun demos ->
+             demos
+             |> List.concat_map ~f:(fun (label, { code; demo }) ->
+                  let pre =
+                    match label with
+                    | None -> []
+                    | Some label -> [ Vdom.Node.text label; Vdom.Node.div [] ]
+                  in
+                  pre @ [ code; demo ])
+             |> Vdom.Node.div ~attrs:[ Shared_code.Style.x2_grid ])
   ;;
 end
 
@@ -232,8 +235,8 @@ let blue, green, orange = ... (* more of the same *)
 |}
   ;;
 
-  let view =
-    let%sub prepared = Shared_code.prepare in
+  let view graph =
+    let prepared = Shared_code.prepare graph in
     let%arr { container; normal; _ } = prepared in
     let vdom, demo =
       [%demo
@@ -255,8 +258,8 @@ let blue, green, orange = ... (* more of the same *)
 end
 
 module Your_first_snip = struct
-  let view =
-    let%sub prepared = Shared_code.prepare in
+  let view graph =
+    let prepared = Shared_code.prepare graph in
     let%arr { container; normal; red; _ } = prepared in
     let vdom, demo =
       [%demo
@@ -294,8 +297,8 @@ module Your_first_snip = struct
 end
 
 module Composed_snips = struct
-  let view =
-    let%sub prepared = Shared_code.prepare in
+  let view graph =
+    let prepared = Shared_code.prepare graph in
     let%arr { container; normal; red; blue; _ } = prepared in
     let vdom, demo =
       [%demo
@@ -323,8 +326,8 @@ module Composed_snips = struct
 end
 
 module Sideways_snips = struct
-  let view1 =
-    let%sub prepared = Shared_code.prepare in
+  let view1 graph =
+    let prepared = Shared_code.prepare graph in
     let%arr { container; normal; red; blue; green; _ } = prepared in
     let vdom, demo =
       [%demo
@@ -339,8 +342,8 @@ module Sideways_snips = struct
     container vdom, demo
   ;;
 
-  let alt_1 =
-    let%sub prepared = Shared_code.prepare in
+  let alt_1 graph =
+    let prepared = Shared_code.prepare graph in
     let%arr { container; normal; red; blue; green; _ } = prepared in
     let vdom, demo =
       [%demo
@@ -355,8 +358,8 @@ module Sideways_snips = struct
     container vdom, demo
   ;;
 
-  let alt_2 =
-    let%sub prepared = Shared_code.prepare in
+  let alt_2 graph =
+    let prepared = Shared_code.prepare graph in
     let%arr { container; normal; red; blue; green; _ } = prepared in
     let vdom, demo =
       [%demo
@@ -371,8 +374,8 @@ module Sideways_snips = struct
     container vdom, demo
   ;;
 
-  let alt_3 =
-    let%sub prepared = Shared_code.prepare in
+  let alt_3 graph =
+    let prepared = Shared_code.prepare graph in
     let%arr { container; normal; red; blue; green; _ } = prepared in
     let vdom, demo =
       [%demo
@@ -403,8 +406,8 @@ module Sideways_snips = struct
 end
 
 module All_the_sides = struct
-  let view =
-    let%sub prepared = Shared_code.prepare in
+  let view graph =
+    let prepared = Shared_code.prepare graph in
     let%arr { container; normal; red; blue; green; orange } = prepared in
     let vdom, demo =
       [%demo
@@ -430,8 +433,8 @@ module All_the_sides = struct
 end
 
 module Splits = struct
-  let view =
-    let%sub prepared = Shared_code.prepare in
+  let view graph =
+    let prepared = Shared_code.prepare graph in
     let%arr { container; red; blue; green; _ } = prepared in
     let vdom, demo =
       [%demo
@@ -448,8 +451,8 @@ module Splits = struct
     container vdom, demo
   ;;
 
-  let view2 =
-    let%sub prepared = Shared_code.prepare in
+  let view2 graph =
+    let prepared = Shared_code.prepare graph in
     let%arr { container; red; green; orange; blue; normal; _ } = prepared in
     let vdom, demo =
       [%demo
@@ -488,8 +491,8 @@ module Splits = struct
 end
 
 module Splits_on_splits = struct
-  let view =
-    let%sub prepared = Shared_code.prepare in
+  let view graph =
+    let prepared = Shared_code.prepare graph in
     let%arr { container; red; normal; orange; blue; _ } = prepared in
     let vdom, demo =
       [%demo
@@ -509,8 +512,8 @@ module Splits_on_splits = struct
     container vdom, demo
   ;;
 
-  let view2 =
-    let%sub prepared = Shared_code.prepare in
+  let view2 graph =
+    let prepared = Shared_code.prepare graph in
     let%arr { container; red; normal; orange; blue; _ } = prepared in
     let vdom, demo =
       [%demo
@@ -537,13 +540,13 @@ module Splits_on_splits = struct
   ;;
 end
 
-let component =
+let component graph =
   let%sub theme, theme_picker =
-    Gallery.Theme_picker.component ~default:Kado_light ~standalone:false ()
+    Gallery.Theme_picker.component ~default:Kado_light ~standalone:false () graph
   in
   let%sub () =
     Bonsai_extra.exactly_once
-      (Value.return
+      (Bonsai.return
          (Effect.of_sync_fun
             (fun () ->
               let open Js_of_ocaml in
@@ -553,48 +556,53 @@ let component =
                 Dom_html.window##.location##.hash := Js.string "";
                 Dom_html.window##.location##.hash := Js.string other)
             ()))
+      graph
   in
   View.Theme.set_for_app
     theme
-    (let%sub nodes =
-       [ intro
-       ; Basic.content
-       ; Your_first_snip.content
-       ; Composed_snips.content
-       ; Sideways_snips.content
-       ; All_the_sides.content
-       ; Splits.content
-       ; Splits_on_splits.content
-       ]
-       |> List.concat
-       |> List.map ~f:Markup.to_component
-       |> Bonsai.Computation.all
-     in
-     let%sub attr =
-       let%arr theme = theme in
-       let border =
-         View.extreme_primary_border_color theme |> Css_gen.Color.to_string_css
-       in
-       Shared_code.Style.Variables.set
-         ~header_border:border
-         ~code_border:border
-         ~header_bg:((View.extreme_colors theme).background |> Css_gen.Color.to_string_css)
-         ~code_bg:((View.extreme_colors theme).background |> Css_gen.Color.to_string_css)
-         ~code_fg:((View.extreme_colors theme).foreground |> Css_gen.Color.to_string_css)
-         ()
-     in
-     let%sub body =
-       Gallery.wrap_application ~theme_picker:(Value.return Vdom.Node.none) nodes
-     in
-     let%arr theme_picker = theme_picker
-     and attr = attr
-     and body = body in
-     let header =
-       Vdom.Node.div
-         ~attrs:[ Shared_code.Style.header ]
-         [ Vdom.Node.h1 [ Vdom.Node.text "snips" ]; theme_picker ]
-     in
-     Snips.top header |+| Snips.body body |> Snips.render ~container_attr:attr)
+    (fun graph ->
+      let nodes =
+        Bonsai.all
+          ([ intro
+           ; Basic.content
+           ; Your_first_snip.content
+           ; Composed_snips.content
+           ; Sideways_snips.content
+           ; All_the_sides.content
+           ; Splits.content
+           ; Splits_on_splits.content
+           ]
+           |> List.concat
+           |> List.map ~f:Markup.to_component
+           |> List.map ~f:(fun x -> x graph))
+      in
+      let attr =
+        let%arr theme = theme in
+        let border =
+          View.extreme_primary_border_color theme |> Css_gen.Color.to_string_css
+        in
+        Shared_code.Style.Variables.set
+          ~header_border:border
+          ~code_border:border
+          ~header_bg:
+            ((View.extreme_colors theme).background |> Css_gen.Color.to_string_css)
+          ~code_bg:((View.extreme_colors theme).background |> Css_gen.Color.to_string_css)
+          ~code_fg:((View.extreme_colors theme).foreground |> Css_gen.Color.to_string_css)
+          ()
+      in
+      let body =
+        Gallery.wrap_application ~theme_picker:(Bonsai.return Vdom.Node.none) nodes graph
+      in
+      let%arr theme_picker = theme_picker
+      and attr = attr
+      and body = body in
+      let header =
+        Vdom.Node.div
+          ~attrs:[ Shared_code.Style.header ]
+          [ Vdom.Node.h1 [ Vdom.Node.text "snips" ]; theme_picker ]
+      in
+      Snips.top header |+| Snips.body body |> Snips.render ~container_attr:attr)
+    graph
 ;;
 
 let () =

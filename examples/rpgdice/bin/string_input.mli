@@ -1,5 +1,5 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 
 module type Conv = sig
   type t
@@ -11,4 +11,5 @@ end
 val component
   :  (module Conv with type t = 't)
   -> default_model:string
-  -> ('t Or_error.t * Vdom.Node.t) Computation.t
+  -> Bonsai.graph
+  -> ('t Or_error.t * Vdom.Node.t) Bonsai.t

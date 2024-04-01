@@ -1,6 +1,6 @@
 open Core
 open Js_of_ocaml
-open Bonsai_web
+open Bonsai_web.Cont
 
 (** x, x^2, x^3 *)
 let data : Dygraph.Data.t =
@@ -39,17 +39,18 @@ let options =
     ~axes
 ;;
 
-let app =
+let app graph =
   let%sub.Bonsai { graph_view; _ } =
     Dygraph.With_bonsai.create
       ()
-      ~key:("graph" |> Value.return)
-      ~x_label:("x" |> Value.return)
+      ~key:("graph" |> Bonsai.return)
+      ~x_label:("x" |> Bonsai.return)
       ~per_series_info:
-        ([ "x^2"; "x^3" ] |> Dygraph.Per_series_info.create_all_visible |> Value.return)
-      ~options:(options |> Value.return)
-      ~data:(data |> Value.return)
+        ([ "x^2"; "x^3" ] |> Dygraph.Per_series_info.create_all_visible |> Bonsai.return)
+      ~options:(options |> Bonsai.return)
+      ~data:(data |> Bonsai.return)
       ~with_graph:(fun graph -> Js.Unsafe.set Dom_html.window "g" graph)
+      graph
   in
-  Bonsai.read graph_view
+  graph_view
 ;;

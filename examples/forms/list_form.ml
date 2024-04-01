@@ -1,5 +1,5 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 open Bonsai.Let_syntax
 module Form = Bonsai_web_ui_form.With_automatic_view
 module E = Form.Elements
@@ -68,8 +68,8 @@ module Simple_list = struct
     E.Multiple.stringable_list
       (module T)
       ~equal:[%equal: T.t]
-      ~extra_pill_container_attr:(Value.return S.container)
-      ~extra_pill_attr:(Value.return S.pill)
+      ~extra_pill_container_attr:(Bonsai.return S.container)
+      ~extra_pill_attr:(Bonsai.return S.pill)
   ;;
 end
 
@@ -97,25 +97,29 @@ module Advanced_list = struct
 
         let label_for_field = `Inferred
 
-        let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t = function
-          | Duration_hrs -> E.Textbox.int ~allow_updates_when_focused:`Never ()
-          | Price -> E.Textbox.float ~allow_updates_when_focused:`Never ()
+        let form_for_field : type a. a Typed_field.t -> Bonsai.graph -> a Form.t Bonsai.t =
+          fun typed_field graph ->
+          match typed_field with
+          | Duration_hrs -> E.Textbox.int ~allow_updates_when_focused:`Never () graph
+          | Price -> E.Textbox.float ~allow_updates_when_focused:`Never () graph
         ;;
       end)
   ;;
 
-  let form_per_symbol =
-    let%sub symbol_form = E.Textbox.string ~allow_updates_when_focused:`Never () in
+  let form_per_symbol graph =
+    let symbol_form = E.Textbox.string ~allow_updates_when_focused:`Never () graph in
     Form.Typed.Record.make
       (module struct
         module Typed_field = Per_symbol.Typed_field
 
         let label_for_field = `Inferred
 
-        let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t = function
-          | Symbol -> return symbol_form
+        let form_for_field : type a. a Typed_field.t -> Bonsai.graph -> a Form.t Bonsai.t =
+          fun typed_field graph ->
+          match typed_field with
+          | Symbol -> symbol_form
           | Configs ->
-            let%sub add_element_text =
+            let add_element_text =
               let%arr symbol_form = symbol_form in
               let symbol = Form.value_or_default ~default:"" symbol_form in
               sprintf "add config for %s" symbol
@@ -124,15 +128,17 @@ module Advanced_list = struct
               form_for_config
               ~button_placement:`Indented
               ~add_element_text
+              graph
         ;;
       end)
+      graph
   ;;
 
   let many_symbols =
     Form.Elements.Multiple.list
       form_per_symbol
       ~button_placement:`Indented
-      ~add_element_text:(Value.return "add new symbol")
+      ~add_element_text:(Bonsai.return "add new symbol")
   ;;
 
   let starting_value =
@@ -145,18 +151,18 @@ module Advanced_list = struct
     ]
   ;;
 
-  let component =
-    let%sub many_symbols = many_symbols in
-    let%sub many_symbols =
-      Form.Dynamic.with_default (Bonsai.Value.return starting_value) many_symbols
+  let component graph =
+    let many_symbols = many_symbols graph in
+    let many_symbols =
+      Form.Dynamic.with_default (Bonsai.return starting_value) many_symbols graph
     in
-    return many_symbols
+    many_symbols
   ;;
 end
 
-let component =
-  let%sub simple_list = Simple_list.component in
-  let%sub advanced_list = Advanced_list.component in
+let component graph =
+  let simple_list = Simple_list.component graph in
+  let advanced_list = Advanced_list.component graph in
   let%arr simple_list = simple_list
   and advanced_list = advanced_list in
   let simple_output =

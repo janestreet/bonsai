@@ -1,5 +1,5 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 open Bonsai.Let_syntax
 module Gallery = Bonsai_web_ui_gallery
 
@@ -15,17 +15,17 @@ there are no changes to the previous API.|}
     [%demo
     module Notifications = Bonsai_web_ui_notifications
 
-    let component =
-      let%sub notifications = Notifications.Basic.create () in
-      let%sub vdom = Notifications.Basic.render notifications in
+    let component graph =
+      let notifications = Notifications.Basic.create () graph in
+      let vdom = Notifications.Basic.render notifications graph in
       let%arr vdom = vdom
       and notifications = notifications in
       vdom, notifications
     ;;]
 
-  let view =
-    let%sub theme = View.Theme.current in
-    let%sub component, notifications = component in
+  let view graph =
+    let theme = View.Theme.current graph in
+    let%sub component, notifications = component graph in
     let%arr component = component
     and notifications = notifications
     and theme = theme in
@@ -57,8 +57,8 @@ there are no changes to the previous API.|}
   let filter_attrs = None
 end
 
-let component =
-  let%sub theme, theme_picker = Gallery.Theme_picker.component () in
+let component graph =
+  let%sub theme, theme_picker = Gallery.Theme_picker.component () graph in
   View.Theme.set_for_app
     theme
     (Gallery.make_sections
@@ -68,6 +68,7 @@ let component =
          are backwards compatible with the old API without showing the old API in the homepage.|}
          , [ Gallery.make_demo (module Basic_notification) ] )
        ])
+    graph
 ;;
 
 let () = Start.start ~bind_to_element_with_id:"app" component

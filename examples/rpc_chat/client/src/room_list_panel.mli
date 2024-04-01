@@ -1,9 +1,10 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 open Bonsai_chat_common
 
 val component
-  :  room_list:Room.t list Value.t
-  -> refresh_rooms:unit Effect.t Value.t
+  :  room_list:Room.t list Bonsai.t
+  -> refresh_rooms:unit Effect.t Bonsai.t
   -> change_room:(Room.t -> unit Effect.t)
-  -> Vdom.Node.t Computation.t
+  -> Bonsai.graph
+  -> Vdom.Node.t Bonsai.t

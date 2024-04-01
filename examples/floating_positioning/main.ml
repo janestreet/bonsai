@@ -13,8 +13,9 @@ module Config = struct
       }
     [@@deriving typed_fields]
 
-    let form_for_field : type a. a Typed_field.t -> Bonsai.graph -> a Form.t Bonsai.t
-      = function
+    let form_for_field : type a. a Typed_field.t -> Bonsai.graph -> a Form.t Bonsai.t =
+      fun typed_field graph ->
+      match typed_field with
       | X ->
         Form.Elements.Number.int
           ~default:50
@@ -22,6 +23,7 @@ module Config = struct
           ~min:0
           ~allow_updates_when_focused:`Always
           ()
+          graph
       | Y ->
         Form.Elements.Number.int
           ~default:100
@@ -29,6 +31,7 @@ module Config = struct
           ~min:0
           ~allow_updates_when_focused:`Always
           ()
+          graph
       | Width ->
         Form.Elements.Number.int
           ~default:10
@@ -36,6 +39,7 @@ module Config = struct
           ~min:0
           ~allow_updates_when_focused:`Always
           ()
+          graph
       | Height ->
         Form.Elements.Number.int
           ~default:10
@@ -43,6 +47,7 @@ module Config = struct
           ~min:0
           ~allow_updates_when_focused:`Always
           ()
+          graph
     ;;
 
     let label_for_field = `Inferred
@@ -56,11 +61,17 @@ module Config = struct
       | Virtual of Virtual.t
     [@@deriving typed_variants]
 
-    let form_for_variant : type a. a Typed_variant.t -> Bonsai.graph -> a Form.t Bonsai.t
-      = function
+    let form_for_variant : type a. a Typed_variant.t -> Bonsai.graph -> a Form.t Bonsai.t =
+      fun typed_field graph ->
+      match typed_field with
       | Dom ->
-        Form.Elements.Number.int ~default:0 ~step:1 ~allow_updates_when_focused:`Always ()
-      | Virtual -> virtual_form
+        Form.Elements.Number.int
+          ~default:0
+          ~step:1
+          ~allow_updates_when_focused:`Always
+          ()
+          graph
+      | Virtual -> virtual_form graph
     ;;
 
     let variant_to_string : type a. a Typed_variant.t -> string = function
@@ -81,20 +92,23 @@ module Config = struct
       }
     [@@deriving typed_fields]
 
-    let form_for_field : type a. a Typed_field.t -> Bonsai.graph -> a Form.t Bonsai.t
-      = function
+    let form_for_field : type a. a Typed_field.t -> Bonsai.graph -> a Form.t Bonsai.t =
+      fun typed_field graph ->
+      match typed_field with
       | Main_axis ->
         Form.Elements.Number.float
           ~default:0.
           ~step:1.
           ~allow_updates_when_focused:`Always
           ()
+          graph
       | Cross_axis ->
         Form.Elements.Number.float
           ~default:0.
           ~step:1.
           ~allow_updates_when_focused:`Always
           ()
+          graph
     ;;
 
     let label_for_field = `Inferred
@@ -118,17 +132,20 @@ module Config = struct
       }
     [@@deriving typed_fields]
 
-    let form_for_field : type a. a Typed_field.t -> Bonsai.graph -> a Form.t Bonsai.t
-      = function
+    let form_for_field : type a. a Typed_field.t -> Bonsai.graph -> a Form.t Bonsai.t =
+      fun typed_field graph ->
+      match typed_field with
       | Position ->
         Form.Elements.Dropdown.enumerable
           ~init:`First_item
           (module Floating_positioning_new.Position)
+          graph
       | Alignment ->
         Form.Elements.Dropdown.enumerable
           ~init:`First_item
           (module Floating_positioning_new.Alignment)
-      | Offset -> offset_form
+          graph
+      | Offset -> offset_form graph
     ;;
 
     let label_for_field = `Inferred
@@ -143,10 +160,11 @@ module Config = struct
       }
     [@@deriving typed_fields]
 
-    let form_for_field : type a. a Typed_field.t -> Bonsai.graph -> a Form.t Bonsai.t
-      = function
-      | Popovers -> popovers_form
-      | Anchor_type -> anchor_form
+    let form_for_field : type a. a Typed_field.t -> Bonsai.graph -> a Form.t Bonsai.t =
+      fun typed_field graph ->
+      match typed_field with
+      | Popovers -> popovers_form graph
+      | Anchor_type -> anchor_form graph
     ;;
 
     let label_for_field = `Inferred

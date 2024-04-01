@@ -1,29 +1,29 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 open Bonsai.Let_syntax
 module Table = Bonsai_web_ui_partial_render_table.Basic
 module Column = Table.Columns.Dynamic_cells
 module Form = Bonsai_web_ui_form.With_automatic_view
 
-let header text = Column.Sortable.Header.with_icon (Vdom.Node.text text) |> Value.return
+let header text = Column.Sortable.Header.with_icon (Vdom.Node.text text) |> Bonsai.return
 
 let columns =
-  [ Column.column
-      ~header:(header "i")
-      ~cell:(fun ~key ~data:_ ->
-        let%arr key = key in
-        Vdom.Node.text (Int.to_string key))
-      ()
-  ; Column.column
-      ~header:(header "i * 3")
-      ~cell:(fun ~key ~data:_ ->
-        let%arr key = key in
-        Vdom.Node.text (Int.to_string (key * 3)))
-      ()
-  ]
-  |> Column.lift
+  Column.lift
+    [ Column.column
+        ~header:(header "i")
+        ~cell:(fun ~key ~data:_ _graph ->
+          let%arr key = key in
+          Vdom.Node.text (Int.to_string key))
+        ()
+    ; Column.column
+        ~header:(header "i * 3")
+        ~cell:(fun ~key ~data:_ _graph ->
+          let%arr key = key in
+          Vdom.Node.text (Int.to_string (key * 3)))
+        ()
+    ]
 ;;
 
 module Css = [%css stylesheet {|
@@ -47,15 +47,14 @@ module Table_id = struct
   [@@deriving enumerate, sexp, equal, compare]
 end
 
-let component =
-  let%sub data =
-    Bonsai.const (Int.Map.of_alist_exn (List.init 100 ~f:(fun i -> i, ())))
-  in
-  let%sub focused_table, set_focused_table =
+let component graph =
+  let data = Bonsai.return (Int.Map.of_alist_exn (List.init 100 ~f:(fun i -> i, ()))) in
+  let focused_table, set_focused_table =
     Bonsai.state
       First_table
       ~sexp_of_model:[%sexp_of: Table_id.t]
       ~equal:[%equal: Table_id.t]
+      graph
   in
   let on_change which =
     let%map set_focused_table = set_focused_table in
@@ -67,19 +66,21 @@ let component =
     Table.component
       (module Int)
       ~focus:(By_row { on_change = on_change First_table })
-      ~row_height:(Value.return (`Px 30))
+      ~row_height:(Bonsai.return (`Px 30))
       ~columns
       data
+      graph
   in
   let%sub { view = table2; focus = focus2; _ } =
     Table.component
       (module Int)
       ~focus:(By_row { on_change = on_change Second_table })
-      ~row_height:(Value.return (`Px 30))
+      ~row_height:(Bonsai.return (`Px 30))
       ~columns
       data
+      graph
   in
-  let%sub () =
+  let () =
     Bonsai.Edge.on_change
       ~sexp_of_model:[%sexp_of: Table_id.t]
       ~equal:[%equal: Table_id.t]
@@ -90,13 +91,14 @@ let component =
          function
          | Table_id.First_table -> Table.Focus.By_row.unfocus focus2
          | Second_table -> Table.Focus.By_row.unfocus focus1)
+      graph
   in
-  let%sub which_form = Form.Elements.Dropdown.enumerable (module Which) in
-  let%sub which =
+  let which_form = Form.Elements.Dropdown.enumerable (module Which) graph in
+  let which =
     let%arr which_form = which_form in
     Form.value_or_default ~default:Which.Stacked_tables which_form
   in
-  let%sub tables =
+  let tables =
     match%sub which with
     | Stacked_tables ->
       let%arr table1 = table1

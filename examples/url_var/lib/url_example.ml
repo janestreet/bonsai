@@ -1,5 +1,5 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 open Bonsai.Let_syntax
 module Url_var = Bonsai_web_ui_url_var
 module Form = Bonsai_web_ui_form.With_automatic_view
@@ -118,13 +118,14 @@ button:hover {
 |}]
 
 (* This form is the one that reads/write the URI. *)
-let uri_form ~default =
-  let%sub form =
-    let%sub form =
+let uri_form ~default graph =
+  let form =
+    let form =
       Form.Elements.Textbox.string
         ~allow_updates_when_focused:`Never
-        ~extra_attrs:(Value.return [ Css.uri_input ])
+        ~extra_attrs:(Bonsai.return [ Css.uri_input ])
         ()
+        graph
     in
     let%arr form = form in
     let uri_form =
@@ -136,7 +137,7 @@ let uri_form ~default =
       ~parse_exn:Url_var.Components.of_uri
       ~unparse:Url_var.Components.to_path_and_query
   in
-  Form.Dynamic.with_default default form
+  Form.Dynamic.with_default default form graph
 ;;
 
 (* This form is the one that reads/writes the parsed sexp. *)
@@ -146,13 +147,15 @@ let typed_url_form
   ~parser
   (module M : Sexpable with type t = a)
   ~fallback
+  graph
   =
-  let%sub form =
-    let%sub form =
+  let form =
+    let form =
       Form.Elements.Textbox.sexpable
         ~allow_updates_when_focused:`Never
-        ~extra_attrs:(Value.return [ Css.sexp_input ])
+        ~extra_attrs:(Bonsai.return [ Css.sexp_input ])
         (module M)
+        graph
     in
     let%arr form = form in
     Form.project
@@ -175,10 +178,10 @@ let typed_url_form
         try (Projection.parse_exn parser typed_components).result with
         | _ -> fallback)
   in
-  Form.Dynamic.with_default default form
+  Form.Dynamic.with_default default form graph
 ;;
 
-let component (type a) (t : a t) =
+let component (type a) (t : a t) graph =
   let did_fallback_occur ~components_value =
     match components_value with
     | Error _ -> false
@@ -204,7 +207,7 @@ let component (type a) (t : a t) =
     in
     Url_var.Components.equal fallback_components components
   in
-  let%sub uri_form = uri_form ~default:(Value.return t.starting_components) in
+  let uri_form = uri_form ~default:(Bonsai.return t.starting_components) graph in
   let uri_form_value =
     let%map uri_form = uri_form in
     Form.value uri_form
@@ -223,12 +226,13 @@ let component (type a) (t : a t) =
       | Ok x -> Form.set uri_form x
       | Error _ -> Effect.return ()
   in
-  let%sub typed_url_form =
+  let typed_url_form =
     typed_url_form
-      ~default:(Value.return t.starting_components)
+      ~default:(Bonsai.return t.starting_components)
       ~parser:t.parser
       t.type_
       ~fallback:t.fallback
+      graph
   in
   let typed_url_form_value =
     let%map typed_url_form = typed_url_form in
@@ -254,6 +258,7 @@ let component (type a) (t : a t) =
       ~store_value:typed_url_form_value
       ~interactive_set:uri_form_set
       ~interactive_value:uri_form_value
+      graph
   in
   let%arr uri_form = uri_form
   and typed_url_form = typed_url_form
@@ -683,7 +688,7 @@ let%expect_test _ =
         |}]
 ;;]
 
-let error_example_component =
+let error_example_component _graph =
   let out =
     Vdom.Node.div
       ~attrs:[ Css.paper; Css.column ]
@@ -702,7 +707,7 @@ let error_example_component =
           ]
       ]
   in
-  Bonsai.const out
+  Bonsai.return out
 ;;
 
 module Simple_record_example =
@@ -920,10 +925,10 @@ let catchall_example =
   }
 ;;
 
-let examples =
+let examples graph =
   List.map [ T reading_from_query; T reading_from_path ] ~f:(fun (T example) ->
-    component example)
-  @ [ error_example_component ]
+    component example graph)
+  @ [ error_example_component graph ]
   @ List.map
       [ T foo_bar_example
       ; T simple_record_example
@@ -934,8 +939,8 @@ let examples =
       ; T folder_example
       ; T catchall_example
       ]
-      ~f:(fun (T example) -> component example)
-  |> Computation.all
+      ~f:(fun (T example) -> component example graph)
+  |> Bonsai.all
 ;;
 
 (* $MDX part-begin=search_example *)

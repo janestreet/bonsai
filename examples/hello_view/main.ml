@@ -1,9 +1,9 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 open Bonsai.Let_syntax
 
-let my_component =
-  let%sub theme = View.Theme.current in
+let my_component graph =
+  let theme = View.Theme.current graph in
   let%arr theme = theme in
   View.vbox
     ~cross_axis_alignment:Center
@@ -14,7 +14,7 @@ let my_component =
 ;;
 
 let app =
-  let theme = Value.return (Kado.theme ~version:Bleeding ()) in
+  let theme = Bonsai.return (Kado.theme ~version:Bleeding ()) in
   View.Theme.set_for_app theme my_component
 ;;
 

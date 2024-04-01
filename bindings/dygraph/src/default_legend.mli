@@ -13,6 +13,7 @@ module Model : sig
   module Series : sig
     type t =
       { label : string
+      ; override_label_for_visibility : string option
       ; value : Raw_html.t option
       ; dash : Raw_html.t option
       ; color : string option
@@ -20,17 +21,19 @@ module Model : sig
       ; is_highlighted : bool
       }
     [@@deriving equal, fields ~getters, sexp]
+
+    val label_for_visibility : t -> string
   end
 
   type t =
     { x_label : string
     ; x_value : Raw_html.t option
     ; series : Series.t list
-    ; past_series : Series.t Map.M(String).t
-        (** [past_series] remembers all the series (by series label) that we've ever seen.
-        This means that if someone makes a change to a particular series (e.g. toggles
-        visibility), moves to a graph without that series, and then moves back to the
-        original graph, the information will not be lost.
+    ; past_series_visibility : bool Map.M(String).t
+        (** [past_series_visibility] remembers all the series (by [label_for_visibility]) that
+        we've ever seen.  This means that if someone makes a change to a particular series
+        (e.g. toggles visibility), moves to a graph without that series, and then moves
+        back to the original graph, the information will not be lost.
 
         This may sound like a memory leak, and it kind of is, but the hope is that the
         total number of unique series labels that one sees over the lifetime of a graph is
@@ -42,7 +45,7 @@ end
 module Action : sig
   type t =
     | From_graph of Legend_data.t
-    | Toggle_visibility of string
+    | Toggle_visibility of { label_for_visibility : string }
     | Select_none
     | Select_all
   [@@deriving equal, sexp]

@@ -1,5 +1,5 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 module Lib = All_url_var_features_example
 
 let url_var =

@@ -9,109 +9,12 @@ module type Comparator = Module_types.Comparator
 
 type ('k, 'cmp) comparator = ('k, 'cmp) Module_types.comparator
 
+module For_bonsai_internal = struct
+  let perform_on_exception = ref ignore
+  let set_perform_on_exception perform = perform_on_exception := perform
+end
+
 module Cont_primitives : sig
-  (** Bonsai's [Cont] implementation is based on continuation-passing style.
-
-      Previously, in [Proc], calls to [sub] and [arr] directly added the corresponding
-      evaluation/lookup nodes to the computation graph, which was available through
-      the [Computation.t]'s underlying type representation.
-
-      As before, [Computation.t] is the static structure of the computation graph,
-      and [Bonsai.t = Value.t] is the incrementally-computed "runtime" value.
-      We now use that representation as an intermediate representation,
-      but end-users don't construct the computation graph directly.
-
-      Instead, we pass around a ['graph'] value. When components are combined or
-      composed, Bonsai's internals add the new computation into the computation
-      graph.
-
-      The primitive API (not exposed to end-users) tries to simulate algebraic effects.
-      - [perform] takes a [local_ graph -> Computation.t] component,
-        evaluates it, and adds it into the computation graph.
-        It returns a [Value.t] memoized alias to this new computation.
-      - [handle] places a [Value.t] in the context of a fresh computation graph.
-        It then wraps the result in a [Computation.t].
-        This is generally used to construct a portion of the computation graph
-        in isolation. The subgraph is then added to the main graph via [perform].
-
-      At the top level, [top_level_handle] is similar to [handle], but only takes [f].
-      In the context of a fresh graph, it runs [f graph] to obtain the total composed
-      [Value.t] for a Bonsai app. Then, it raises that to a [Computation.t],
-      and passes {i that i} through the [graph.f] that we've been assembling
-      all this time.
-
-      But what's going on under the surface? And what is [graph]?
-      And why can the new Bonsai API use [let%map]?
-
-      ---
-
-      If you look at computation.ml, you'll see that [Computation.t] is a nested variant
-      of nodes that store things. These include state, assoc/switch, store/fetch for
-      Dynamic_scope, and most commonly used, sub. This is the memoization-like
-      pattern that powers work-sharing for incrementality: we can store a reusable
-      value with a unique name (via Type_equal.id), which downstream incremental [Value.t]s
-      can reference (and reuse!) instead of repeating work. [Sub] has 3 fields:
-
-      - [from] is the computation being memoized
-      - [via] is the [Type_equal.id] identifier
-      - [into] is the downstream computation that uses the value of [from].
-
-      So if we want to depend on several [sub]ed computations, our graph will look as follows:
-
-      {v
-      Sub { from=comp1; via=<name1>; into =
-        Sub { from=comp2; via=<name2>; into =
-        ... into = thing_we_want_to_compute ...
-        }
-      }
-      v}
-
-      ---
-
-      The [graph] we pass around is a ref to a function that will eventually compute this
-      [Computation.t]. We can't construct it eagerly as we go, since that would require
-      making the fields of [Computation.t] mutable, so we need to do some functional
-      trickery.
-
-      [graph] starts as [Fn.id]. At each invocation of [perform],
-      we overwrite it to still return its input, but nested in a new layer of [Sub].
-      Let's look at how this works in practice:
-
-      {v
-      1.let my_component graph =
-      2.  let%sub model1, _inject = Bonsai.state 5 in
-      3.  let%sub model2, _inject = Bonsai.state 6 in
-      4.  model2
-
-      1. graph = { f = fun r -> r }
-      2. graph = { f = fun r -> Sub { from=state 5; via=<model1>; into=r } }
-      3. graph = { f = fun r -> Sub { from=state 5; via=<model1>; into=Sub { from=state 6; via=<model2>; into=r } } }
-      4. graph.f (<model2>) ==> Sub { from=state 5; via=<model1>; into=Sub { from=state 6; via=<model2>; into=<model2> } }
-      v}
-
-      Instead of [state 5/6], we'd actually have something more like [Leaf0 { ... }],
-      but that's not really relevant. We also do some optimizations if [sub]ing isn't
-      actually necessary.
-
-      Handle is much simpler: we run our [Value.t] construction function ([f]) on a fresh
-      [graph], which becomes constructed via calls to [perform] presumably inside [f].
-      Then, we call [graph.f] on that result, so that it is inside the nested [Sub]s,
-      giving it access to those memoized aliases. Finally, we wrap this in a [Computation.t],
-      which can be [perform]ed into other computations.
-
-      ---
-
-      But why can we now use [let%map.Bonsai] instead of [let%sub] and [let%arr] combos?
-      After all, we're not passing [graph] to [let%map]...
-
-      In short, we cheat and make [graph] global. We still require users to pass it
-      when possible, so that creating costly stateful nodes is an explicit operation.
-      However, we don't want people to use these "magic" [let%map] and [match%sub] calls
-      unless they are in the dynamic scope of a Bonsai top level.
-      We enforce this by maintaining a global boolean ref for whether we're in a top level,
-      and erroring on [perform] if we are not.
-  *)
-
   type graph
 
   (* Main primitives; see above for explanation. *)
@@ -134,7 +37,7 @@ end = struct
       (* Introduce the optimization [let%sub a = return foo in use a] => [use foo]
            This only makes sense if the Value.t being returned is either a constant or an
            already-bound named value, otherwise you risk losing value sharing. *)
-      { Value.value; id; here = None }
+      { Value.value; id; here }
     | computation_to_perform ->
       (* Mint a fresh type-id to hold the result of performing this graph modification  *)
       let via : a Type_equal.Id.t = Type_equal.Id.create ~name:"" [%sexp_of: opaque] in
@@ -148,9 +51,7 @@ end = struct
         | eventual_result ->
           (* old_f takes the eventual innermost result, and wraps it in 0+ layers of subs.
                We replace it with a new function that adds another layer to the inside. *)
-          old_f
-            (Sub
-               { from = computation_to_perform; via; into = eventual_result; here = None })
+          old_f (Sub { from = computation_to_perform; via; into = eventual_result; here })
       in
       (* write the new hole into the graph, and return a new value referencing the
            type-id that will be populated when [new_f] is invoked. *)
@@ -172,6 +73,7 @@ end = struct
       r
     with
     | exn ->
+      !For_bonsai_internal.perform_on_exception exn;
       graph.f <- backup_f;
       Proc.read (Value.return_exn exn)
   ;;
@@ -509,6 +411,7 @@ module Expert = struct
   let delay = delay
 
   module Var = Var
+  module For_bonsai_internal = For_bonsai_internal
 end
 
 let freeze ?sexp_of_model ?equal v graph =

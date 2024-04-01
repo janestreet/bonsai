@@ -1,95 +1,251 @@
-# 00 - Introduction
+# Bonsai Docs: Guide (Introduction)
 
-This guide will teach you how to build user interfaces in the browser
-using several libraries, primarily `Bonsai` and `Virtual_dom`. Together,
-these libraries allow you to build applications in a functional style
-instead of the imperative style encouraged by the browser's API.
+This guide will teach you how to build web UIs in OCaml. We'll learn how
+to:
 
-In this guide we aim to explain how to use Bonsai, and, to a lesser
-degree, how Bonsai works under the hood. We hope that the latter will
-equip you with the knowledge necessary to tune the performance of your
-applications.
+-   Write [HTML with `virtual_dom`](./01-virtual_dom.mdx), with
+    interactivity powered by side-effects [encapsulated as
+    `Effect.t`s](./02-effects.mdx)
+-   Structure our web UI as a graph of composable, [incremental
+    computations with `Bonsai.t`](./03-incrementality.mdx)
+-   Instantiate and use [state](./04-state.mdx)
+-   Conditionally evaluate Bonsai code, or create a dynamic number of
+    `Bonsai.t`s, with [`match%sub` and `assoc`](./05-control_flow.mdx)
 
-# Web Apps at 10,000 Feet
-
-The browser understands three languages: Javascript, HTML, CSS. Jane
-Street programmers only understand one language: OCaml. Thus, we've made
-it possible to write all three of the browser languages using OCaml.
-
--   `js_of_ocaml` is an OCaml-to-Javascript compiler.
--   `virtual_dom` is a library for building values that represent a
-    chunk of HTML.
--   `css_gen` is a library for writing CSS styles in a type safe manner.
-
-The CSS situation is a little more nuanced, since we actually recommend
-writing CSS directly using `ppx_css`.
-
-A user interface is a function from *data* to *view*. In types:
+These are the basic tools of writing OCaml web UIs. To learn how to
+[style with ppx_css](../how_to/css.mdx), [send RPCs to a
+server](../how_to/rpcs.mdx), [test your Bonsai
+code](../how_to/testing.mdx), and more, see the [Bonsai
+how-tos](../how_to/readme.md).
 
 ```{=html}
-<!-- $MDX skip -->
+<aside>
+```
+These docs do not attempt to teach
+[HTML](https://developer.mozilla.org/en-US/docs/Learn/HTML/Introduction_to_HTML)
+or [CSS](https://developer.mozilla.org/en-US/docs/Learn/CSS/First_steps)
+proficiency; there are plenty of resources on the internet that do it
+better than we could.
+```{=html}
+</aside>
+```
+This guide is not intended to replace
+[bonsai.mli](https://github.com/janestreet/bonsai/blob/master/src/bonsai.mli),
+which lists and documents everything that Bonsai provides.
+
+The rest of this intro previews building a simple web app in OCaml.
+We'll discuss each step in depth in the guide chapters.
+
+## OCaml Web Apps at 10,000 Feet
+
+Functional web UIs are functions from *data* to a *view*.
+
+The *data* can be client-side state, data embedded in the URL, data from
+the server, etc.
+
+The *view* is the part users see. In web UIs, the view is HTML (provided
+by `virtual_dom`), styled by CSS.
+
+For example, a web UI that tells a user how many unread emails they have
+might look like:
+
+```{=html}
+<!-- $MDX file=../../examples/bonsai_guide_code/intro_examples.mli,part=message_vdom -->
 ```
 ``` ocaml
-(* Virtual_dom.Vdom.Node.t represents your application's view *)
+val message_vdom : name:string -> new_emails:int -> Vdom.Node.t
+```
+
+```{=html}
+<!-- $MDX file=../../examples/bonsai_guide_code/intro_examples.ml,part=message_vdom -->
+```
+``` ocaml
+open! Core
 open Virtual_dom
 
-val ui : Your_input_type_here.t -> Vdom.Node.t
+let message_vdom ~name ~new_emails =
+  Vdom.Node.div
+    ~attrs:[ [%css {|font-size: 16px;|}] ]
+    [ Vdom.Node.textf "hello %s! you have %d new emails" name new_emails ]
+;;
 ```
 
-It's easy to write composable views with such functions, since all you
-need to return is a plain old OCaml value. A small amount of boilerplate
-can turn this function into a simple web app that continuously displays
-the result of the function.
+```{=html}
+<iframe data-external="1" src="https://bonsai:8535#message_vdom">
+```
+```{=html}
+</iframe>
+```
+User interactions, state updates, and RPC server calls are just *side
+effects* of an otherwise pure function. We wrap these side effects in an
+`Effect.t` type.
 
-Of course, this is a huge simplification; in a real app, you usually
-want:
+For example, we could add a button that "reads" an email to our UI:
 
--   *Interactivity*, so the user can click on, type into, and navigate
-    through things.
--   *Incrementality*, so that large amounts of highly dynamically data
-    can be displayed without the interface lagging.
+```{=html}
+<!-- $MDX file=../../examples/bonsai_guide_code/intro_examples.mli,part=read_email_button -->
+```
+``` ocaml
+val read_email_button : on_click:unit Effect.t -> Vdom.Node.t
+```
 
-Bonsai provides these features while still encouraging the composition
-and abstraction properties of regular OCaml code. Bonsai wants you to
-forget it is there. The signature of a Bonsai app looks a bit like this:
+```{=html}
+<!-- $MDX file=../../examples/bonsai_guide_code/intro_examples.ml,part=read_email_button -->
+```
+``` ocaml
+let read_email_button ~on_click =
+  Vdom.Node.button
+    ~attrs:[ Vdom.Attr.on_click (fun _ -> on_click) ]
+    [ Vdom.Node.text "Read an email!" ]
+;;
+```
+
+```{=html}
+<iframe data-external="1" src="https://bonsai:8535#read_email_button">
+```
+```{=html}
+</iframe>
+```
+A desirable property is incrementality: when something changes, we only
+recompute stuff that depends on it. We can do so by wrapping our inputs
+and outputs in the incremental `Bonsai.t` type:
+
+```{=html}
+<!-- $MDX file=../../examples/bonsai_guide_code/intro_examples.mli,part=emails_bonsai -->
+```
+``` ocaml
+val emails_bonsai
+  :  name:string Bonsai.t
+  -> new_emails:int Bonsai.t
+  -> read_email_effect:unit Effect.t Bonsai.t
+  -> Vdom.Node.t Bonsai.t
+```
+
+We can compose `Bonsai.t`s with the `let%arr` operator:
+
+```{=html}
+<!-- $MDX file=../../examples/bonsai_guide_code/intro_examples.ml,part=emails_bonsai -->
+```
+``` ocaml
+open! Bonsai_web.Cont
+open Bonsai.Let_syntax
+
+let emails_bonsai ~name ~new_emails ~read_email_effect =
+  let message =
+    let%arr name = name
+    and new_emails = new_emails in
+    message_vdom ~name ~new_emails
+  in
+  let%arr message = message
+  and read_email_effect = read_email_effect in
+  Vdom.Node.div [ message; read_email_button ~on_click:read_email_effect ]
+;;
+```
+
+```{=html}
+<iframe data-external="1" src="https://bonsai:8535#emails_bonsai">
+```
+```{=html}
+</iframe>
+```
+In the code above, `message` will not be recomputed if only
+`read_email_effect` changes.
+
+But incrementality doesn't matter if we only have constants. Interesting
+apps are stateful. We can use `Bonsai.state` to create a simple
+getter/setter state. To use `Bonsai.state` and other `Bonsai.*`
+primitives, we need a `local_ Bonsai.graph` "graph-builder", which
+Bonsai will pass into your top-level `app` function.
+
+In our email example, we can use `Bonsai.state` to keep track of how
+many unread emails the user has and modify that count whenever they
+"read" one:
+
+```{=html}
+<!-- $MDX file=../../examples/bonsai_guide_code/intro_examples.mli,part=emails_stateful -->
+```
+``` ocaml
+val emails_stateful : name:string Bonsai.t -> local_ Bonsai.graph -> Vdom.Node.t Bonsai.t
+```
+
+```{=html}
+<!-- $MDX file=../../examples/bonsai_guide_code/intro_examples.ml,part=emails_stateful -->
+```
+``` ocaml
+let emails_stateful ~name (local_ graph) =
+  let default_count = 999 in
+  let (count : int Bonsai.t), (set_count : (int -> unit Effect.t) Bonsai.t) =
+    Bonsai.state default_count graph
+  in
+  let read_email_effect =
+    let%arr count = count
+    and set_count = set_count in
+    set_count (count - 1)
+  in
+  emails_bonsai ~name ~new_emails:count ~read_email_effect
+;;
+```
+
+```{=html}
+<iframe data-external="1" src="https://bonsai:8535#emails_stateful">
+```
+```{=html}
+</iframe>
+```
+Note that the state "setter" is an incrementally computed function that
+produces a `unit Effect.t`. When this effect is scheduled via an event
+handler, the state will update.
+
+And since our ultimate goal is to produce a single
+incrementally-computed `Vdom.Node.t`, with state managed by Bonsai, a
+complete app looks like:
+
+```{=html}
+<!-- $MDX file=../../examples/bonsai_guide_code/intro_examples.mli,part=app -->
+```
+``` ocaml
+val app : local_ Bonsai.graph -> Vdom.Node.t Bonsai.t
+```
+
+```{=html}
+<!-- $MDX file=../../examples/bonsai_guide_code/intro_examples.ml,part=app -->
+```
+``` ocaml
+let app (local_ graph) = emails_stateful ~name:(Bonsai.return "User") graph
+```
+
+```{=html}
+<iframe data-external="1" src="https://bonsai:8535#app">
+```
+```{=html}
+</iframe>
+```
+We can run it with:
 
 ```{=html}
 <!-- $MDX skip -->
 ```
 ``` ocaml
-open Bonsai_web
-
-val ui : Your_input_type_here.t Value.t -> Vdom.Node.t Computation.t
+let () = Bonsai_web.Start.start app
 ```
 
-It's just like before, except the input is wrapped with `Value.t` and
-the output is wrapped with `Computation.t`. While there is slightly more
-friction, writing re-usable UI components is just as easy. In addition,
-we've expanded the kinds of components you can write, since
-`Computation.t` encapsulates incremental state machines, which is how
-interactivity is added to an interface.
+## Bonsai is Generic
 
-Both these types are covered in detail in chapters
-[2](./02-dynamism.mdx) and [3](./03-state.mdx).
+Bonsai isn't actually web-specific: it's a library for building,
+composing, and running pure, incremental, state-machines. It works
+particularly well for web UIs, but it could also power other UI
+backends, or even stateful, incremental computation on servers.
 
-# The Underlying Machinery
+That's why instead of `open! Bonsai`, you'll `open! Bonsai_web`:
+`Bonsai_web` contains a bunch of web-specific utils and helpers, in
+addition to the core functionality in `Bonsai`.
 
-The incrementality in Bonsai comes from the `Incremental` library. When
-a web page loads, Bonsai compiles the top-level
-`Vdom.Node.t Computation.t` into something akin to `Vdom.Node.t Incr.t`.
-Then the `Incr_dom` library handles running the main loop to keep the
-incremental graph stabilized (i.e. up-to-date).
+## The Underlying Machinery
 
-The `Vdom.Node.t` representing the current view gets put onto the screen
-via a diff-and-patch process. The `virtual_dom` library always keeps
-track of the previous `Vdom.Node.t` that it told the browser to display.
-Whenever we request a *new* `Vdom.Node.t` to be displayed on the screen,
-the library first compares it to the previous view to see what changed,
-and then it applies *just those changes* to what the browser is
-displaying.
-
-Details regarding Incremental, and the virtual-dom diff-and-patch
-strategy are abstracted away so you'll rarely need to think about them.
-However, a good cost model will help you to avoid or debug performance
-pitfalls. Throughout the rest of this guide, we will endeavor to provide
-such a cost model.
+Browsers can only really run
+[JavaScript](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
+and [WebAssembly](https://developer.mozilla.org/en-US/docs/WebAssembly).
+That's why we need
+[js_of_ocaml](https://ocsigen.org/js_of_ocaml/latest/manual/overview),
+which compiles OCaml bytecode to JavaScript, and provides bindings for
+browser APIs.

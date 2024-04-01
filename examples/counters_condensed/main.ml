@@ -1,5 +1,5 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 open Bonsai.Let_syntax
 open Vdom
 
@@ -22,15 +22,16 @@ let apply_action (_ : _ Bonsai.Apply_action_context.t) model = function
     Map.update model location ~f:(Option.value_map ~default:0 ~f:(( + ) diff))
 ;;
 
-let component =
-  let%sub state =
-    Bonsai.state_machine0
-      ()
-      ~sexp_of_model:[%sexp_of: Model.t]
-      ~equal:[%equal: Model.t]
-      ~sexp_of_action:[%sexp_of: Action.t]
-      ~default_model
-      ~apply_action
+let component graph =
+  let state =
+    Tuple2.uncurry Bonsai.both
+    @@ Bonsai.state_machine0
+         graph
+         ~sexp_of_model:[%sexp_of: Model.t]
+         ~equal:[%equal: Model.t]
+         ~sexp_of_action:[%sexp_of: Action.t]
+         ~default_model
+         ~apply_action
   in
   let%arr state, inject = state in
   let button text action =

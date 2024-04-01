@@ -172,8 +172,15 @@ module Arrow_deprecated = struct
     ~bind_to_element_with_id
     ~(computation_for_instrumentation : result Bonsai.Private.Computation.t)
     ~fresh
-    ({ model; action; apply_action; input = _; run = _; reset = _; can_contain_path = _ }
-     as info :
+    ({ model
+     ; action
+     ; apply_action
+     ; input = _
+     ; run = _
+     ; reset = _
+     ; may_contain_path = _
+     ; may_contain_lifecycle = _
+     } as info :
       (model, action, action_input, result, unit) Bonsai.Private.Computation.info)
     : (input, extra, incoming, outgoing) Handle.t
     =
@@ -347,6 +354,7 @@ module Arrow_deprecated = struct
     ~bind_to_element_with_id
     ~component
     =
+    Util.For_bonsai_internal.set_stack_overflow_exception_check ();
     let fresh = Type_equal.Id.create ~name:"" sexp_of_opaque in
     let var =
       Bonsai.Private.Value.named App_input fresh |> Bonsai.Private.conceal_value

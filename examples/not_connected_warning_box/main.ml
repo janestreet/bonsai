@@ -1,14 +1,14 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 open Bonsai.Let_syntax
 
-let component =
-  let%sub is_connected, set_is_connected =
-    Bonsai.state false ~sexp_of_model:[%sexp_of: Bool.t] ~equal:[%equal: Bool.t]
+let component graph =
+  let is_connected, set_is_connected =
+    Bonsai.state false ~sexp_of_model:[%sexp_of: Bool.t] ~equal:[%equal: Bool.t] graph
   in
-  let%sub not_connected_warning_box =
+  let not_connected_warning_box =
     Bonsai_web_ui_not_connected_warning_box.(
-      component ~create_message:message_for_async_durable is_connected)
+      component ~create_message:message_for_async_durable is_connected graph)
   in
   let%arr not_connected_warning_box = not_connected_warning_box
   and is_connected = is_connected

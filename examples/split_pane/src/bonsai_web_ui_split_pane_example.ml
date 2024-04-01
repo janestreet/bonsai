@@ -1,5 +1,5 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 open! Bonsai.Let_syntax
 open! Vdom
 module Parameters = Bonsai_web_ui_split_pane.For_testing.Parameters
@@ -59,18 +59,19 @@ module Parameters_or_error = struct
   type t = Parameters.t Or_error.t [@@deriving sexp, equal]
 end
 
-let create_demo ~parameters =
+let create_demo ~parameters graph =
   let first_panel =
-    Value.return (Vdom.Node.div ~attrs:[ Styles.first_panel ] [ Vdom.Node.text "1" ])
+    Bonsai.return (Vdom.Node.div ~attrs:[ Styles.first_panel ] [ Vdom.Node.text "1" ])
   in
   let second_panel =
-    Value.return (Vdom.Node.div ~attrs:[ Styles.second_panel ] [ Vdom.Node.text "2" ])
+    Bonsai.return (Vdom.Node.div ~attrs:[ Styles.second_panel ] [ Vdom.Node.text "2" ])
   in
-  let%sub pane =
+  let pane =
     Bonsai_web_ui_split_pane.For_testing.create_from_parameters
       parameters
       ~first_panel
       ~second_panel
+      graph
   in
   let%arr pane = pane in
   let view =
@@ -79,21 +80,23 @@ let create_demo ~parameters =
   view, Bonsai_web_ui_split_pane.inject_set_size pane
 ;;
 
-let create_parameters_form =
-  let%sub form = Bonsai_web_ui_auto_generated.form (module Parameters) () in
-  let%sub form =
+let create_parameters_form graph =
+  let form = Bonsai_web_ui_auto_generated.form (module Parameters) () graph in
+  let form =
     Bonsai_web_ui_form.With_automatic_view.Dynamic.with_default
-      (Value.return Parameters.default)
+      (Bonsai.return Parameters.default)
       form
+      graph
   in
-  let%sub last_ok =
+  let last_ok =
     Bonsai.most_recent_value_satisfying
       ~sexp_of_model:[%sexp_of: Parameters_or_error.t]
       ~equal:[%equal: Parameters_or_error.t]
       (form >>| Form.value)
       ~condition:(function
-      | Ok _ -> true
-      | Error _ -> false)
+        | Ok _ -> true
+        | Error _ -> false)
+      graph
   in
   let%arr last_ok = last_ok
   and form = form in
@@ -112,10 +115,10 @@ let create_parameters_form =
   parameters, view
 ;;
 
-let app =
-  let%sub parameters, parameters_form = create_parameters_form in
-  let%sub demo, inject_set_size = create_demo ~parameters in
-  let%sub inject_reset =
+let app graph =
+  let%sub parameters, parameters_form = create_parameters_form graph in
+  let%sub demo, inject_set_size = create_demo ~parameters graph in
+  let inject_reset =
     let%arr parameters = parameters
     and inject_set_size = inject_set_size in
     inject_set_size parameters.initial_size

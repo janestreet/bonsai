@@ -1,5 +1,5 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 open! Bonsai.Let_syntax
 module Gallery = Bonsai_web_ui_gallery
 module Form = Bonsai_web_ui_form.With_automatic_view
@@ -23,7 +23,7 @@ module Basic = struct
             ]
           []]
     in
-    Bonsai.const (vdom, demo)
+    fun _graph -> Bonsai.return (vdom, demo)
   ;;
 
   let selector = None
@@ -38,21 +38,21 @@ module Parameters = struct
     }
   [@@deriving typed_fields]
 
-  open Bonsai.Let_syntax
-
   let tomato_color = `Hex "#ff6347"
 
-  let default_int_field =
-    let%sub form = Form.Elements.Textbox.int ~allow_updates_when_focused:`Never () in
-    Form.Dynamic.with_default (Value.return 2) form
+  let default_int_field graph =
+    let form = Form.Elements.Textbox.int ~allow_updates_when_focused:`Never () graph in
+    Form.Dynamic.with_default (Bonsai.return 2) form graph
   ;;
 
-  let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t = function
+  let form_for_field : type a. a Typed_field.t -> Bonsai.graph -> a Form.t Bonsai.t =
+    fun typed_field graph ->
+    match typed_field with
     | Color ->
-      let%sub form = Form.Elements.Color_picker.hex () in
-      Form.Dynamic.with_default (Value.return tomato_color) form
-    | Width -> default_int_field
-    | Height -> default_int_field
+      let form = Form.Elements.Color_picker.hex () graph in
+      Form.Dynamic.with_default (Bonsai.return tomato_color) form graph
+    | Width -> default_int_field graph
+    | Height -> default_int_field graph
   ;;
 
   let label_for_field = `Inferred
@@ -65,7 +65,7 @@ module Interpolation = struct
     {|You can interpolate variables using the same syntax as [ppx_string].|}
   ;;
 
-  let view =
+  let view graph =
     let f ~color ~width ~height =
       [%demo
         Vdom.Node.div
@@ -77,8 +77,8 @@ module Interpolation = struct
             ]
           []]
     in
-    let%sub form = Form.Typed.Record.make (module Parameters) in
-    let%sub data =
+    let form = Form.Typed.Record.make (module Parameters) graph in
+    let data =
       let%arr form = form in
       Form.value_or_default
         form
@@ -109,7 +109,7 @@ module Typed_interpolation = struct
   interpolated variable. It will call that module's [to_string_css]. |}
   ;;
 
-  let view =
+  let view graph =
     let f ~color ~width ~height =
       [%demo
         Vdom.Node.div
@@ -121,8 +121,8 @@ module Typed_interpolation = struct
             ]
           []]
     in
-    let%sub form = Form.Typed.Record.make (module Parameters) in
-    let%sub data =
+    let form = Form.Typed.Record.make (module Parameters) graph in
+    let data =
       let%arr form = form in
       Form.value_or_default
         form
@@ -152,8 +152,8 @@ module Nested_css = struct
   let name = {|Nested CSS|}
   let description = {|You can use css's relatively new nesting feature with this too.|}
 
-  let view =
-    Bonsai.const
+  let view _graph =
+    Bonsai.return
       [%demo
         Vdom.Node.div
           ~attrs:
@@ -181,7 +181,7 @@ module Stylesheet_interpolation = struct
     {| The [ppx_string] syntax also works on [%css stylesheet], letting you target pseudoselectors+more. |}
   ;;
 
-  let view =
+  let view graph =
     let f ~color ~width ~height =
       [%demo
         let module Style =
@@ -202,8 +202,8 @@ module Stylesheet_interpolation = struct
         in
         Vdom.Node.div ~attrs:[ Style.square ] []]
     in
-    let%sub form = Form.Typed.Record.make (module Parameters) in
-    let%sub data =
+    let form = Form.Typed.Record.make (module Parameters) graph in
+    let data =
       let%arr form = form in
       Form.value_or_default
         form
@@ -229,8 +229,8 @@ module Stylesheet_interpolation = struct
   let filter_attrs = Some (fun k _ -> not (String.is_prefix k ~prefix:"style"))
 end
 
-let component =
-  let%sub theme, theme_picker = Gallery.Theme_picker.component ~default:Kado () in
+let component graph =
+  let%sub theme, theme_picker = Gallery.Theme_picker.component ~default:Kado () graph in
   View.Theme.set_for_app
     theme
     (Gallery.make_sections
@@ -245,6 +245,7 @@ let component =
            ; Gallery.make_demo (module Stylesheet_interpolation)
            ] )
        ])
+    graph
 ;;
 
 let () =

@@ -1,5 +1,5 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 open Bonsai.Let_syntax
 module Size_hooks = Bonsai_web_ui_element_size_hooks
 
@@ -23,8 +23,8 @@ module Size = struct
   [@@deriving sexp, equal]
 end
 
-let bulk_size_component =
-  let%sub state = Size_hooks.Bulk_size_tracker.component (module Int) Prune_stale in
+let bulk_size_component graph =
+  let state = Size_hooks.Bulk_size_tracker.component (module Int) Prune_stale graph in
   let%arr sizes, size_attr = state in
   let mk i =
     let key = sprintf "resizable-using-css-%d" i in
@@ -45,27 +45,30 @@ let bulk_size_component =
     ]
 ;;
 
-let position =
+let position graph =
   let%sub { positions; get_attr; update } =
-    Size_hooks.Position_tracker.component (module Int)
+    Size_hooks.Position_tracker.component (module Int) graph
   in
   let module Model = struct
     type t = Size_hooks.Position_tracker.Position.t Int.Map.t [@@deriving sexp, equal]
   end
   in
-  let%sub () =
+  let () =
     Bonsai.Edge.on_change
       ~sexp_of_model:[%sexp_of: Model.t]
       ~equal:[%equal: Model.t]
       positions
       ~callback:
-        (Fn.const ((Effect.of_sync_fun print_endline) "position changed!") |> Value.return)
+        (Fn.const ((Effect.of_sync_fun print_endline) "position changed!")
+         |> Bonsai.return)
+      graph
   in
-  let%sub () =
+  let () =
     Bonsai.Clock.every
       ~when_to_start_next_effect:`Every_multiple_of_period_blocking
       (Time_ns.Span.of_sec 2.0)
       update
+      graph
   in
   let%arr positions = positions
   and get_attr = get_attr in
@@ -88,9 +91,10 @@ let position =
     ]
 ;;
 
-let size_component =
-  let%sub state =
-    Bonsai.state_opt () ~sexp_of_model:[%sexp_of: Size.t] ~equal:[%equal: Size.t]
+let size_component graph =
+  let state =
+    Tuple2.uncurry Bonsai.both
+    @@ Bonsai.state_opt graph ~sexp_of_model:[%sexp_of: Size.t] ~equal:[%equal: Size.t]
   in
   let%arr size, inject_size = state in
   Vdom.Node.div
@@ -106,7 +110,7 @@ let size_component =
     ]
 ;;
 
-let fit =
+let fit _graph =
   let open Vdom in
   let make s behavior =
     Node.div
@@ -127,7 +131,7 @@ let fit =
           ]
       ]
   in
-  Bonsai.const
+  Bonsai.return
     (Node.div
        [ make "shrink to avoid overflow" Shrink_to_avoid_overflow
        ; make "grow to fill" Grow_to_fill
@@ -135,12 +139,12 @@ let fit =
        ])
 ;;
 
-let visibility_component =
+let visibility_component graph =
   let open Size_hooks.Visibility_tracker in
-  let%sub pos_x = Bonsai.state 0.0 in
-  let%sub pos_y = Bonsai.state 0.0 in
-  let%sub client_rect, set_client_rect = Bonsai.state_opt () in
-  let%sub visible_rect, set_visible_rect = Bonsai.state_opt () in
+  let pos_x = Tuple2.uncurry Bonsai.both @@ Bonsai.state 0.0 graph in
+  let pos_y = Tuple2.uncurry Bonsai.both @@ Bonsai.state 0.0 graph in
+  let client_rect, set_client_rect = Bonsai.state_opt graph in
+  let visible_rect, set_visible_rect = Bonsai.state_opt graph in
   let%arr pos_x, inject_pos_x = pos_x
   and pos_y, inject_pos_y = pos_y
   and client_rect = client_rect
@@ -199,8 +203,8 @@ let buttons current inject =
   Page.all |> List.map ~f:make_button_for_tab |> Vdom.Node.div
 ;;
 
-let resizer_component =
-  Bonsai.const
+let resizer_component _graph =
+  Bonsai.return
     (Vdom.Node.div
        [ Vdom.Node.h3 [ Vdom.Node.text "Resize me!" ]
        ; Vdom.Node.div
@@ -213,12 +217,13 @@ let resizer_component =
        ])
 ;;
 
-let scroll_tracker_component =
-  let%sub state =
-    Bonsai.state_opt
-      ()
-      ~sexp_of_model:[%sexp_of: Size_hooks.Scroll_tracker.Scrollable.t]
-      ~equal:[%equal: Size_hooks.Scroll_tracker.Scrollable.t]
+let scroll_tracker_component graph =
+  let state =
+    Tuple2.uncurry Bonsai.both
+    @@ Bonsai.state_opt
+         graph
+         ~sexp_of_model:[%sexp_of: Size_hooks.Scroll_tracker.Scrollable.t]
+         ~equal:[%equal: Size_hooks.Scroll_tracker.Scrollable.t]
   in
   let%arr scrollable, set_scrollable = state in
   let status =
@@ -244,19 +249,19 @@ let scroll_tracker_component =
     ]
 ;;
 
-let component =
-  let%sub page, inject_page =
-    Bonsai.state Bulk_size ~sexp_of_model:[%sexp_of: Page.t] ~equal:[%equal: Page.t]
+let component graph =
+  let page, inject_page =
+    Bonsai.state Bulk_size ~sexp_of_model:[%sexp_of: Page.t] ~equal:[%equal: Page.t] graph
   in
-  let%sub page_component =
+  let page_component =
     match%sub page with
-    | Bulk_size -> bulk_size_component
-    | Size -> size_component
-    | Visibility -> visibility_component
-    | Resizer -> resizer_component
-    | Fit -> fit
-    | Position -> position
-    | Scroll -> scroll_tracker_component
+    | Bulk_size -> bulk_size_component graph
+    | Size -> size_component graph
+    | Visibility -> visibility_component graph
+    | Resizer -> resizer_component graph
+    | Fit -> fit graph
+    | Position -> position graph
+    | Scroll -> scroll_tracker_component graph
   in
   let%arr page_component = page_component
   and page = page

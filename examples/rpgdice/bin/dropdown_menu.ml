@@ -1,5 +1,6 @@
 open! Core
-open! Bonsai_web
+module Bonsai_proc = Bonsai_web
+open! Bonsai_web.Cont
 include Dropdown_menu_intf
 
 module Make (Enum : Enum) = struct
@@ -32,7 +33,7 @@ module Make (Enum : Enum) = struct
   end
 
   let component =
-    Bonsai.of_module0
+    Bonsai_proc.Bonsai.of_module0
       (module T)
       ~sexp_of_model:[%sexp_of: T.Model.t]
       ~equal:[%equal: T.Model.t]

@@ -1,5 +1,5 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 open! Vdom
 open Bonsai.Let_syntax
 module Form = Bonsai_web_ui_form.With_automatic_view
@@ -68,10 +68,10 @@ let items =
   ]
 ;;
 
-let component =
-  let%sub selected_items, add_item =
+let component graph =
+  let selected_items, add_item =
     Bonsai.state_machine0
-      ()
+      graph
       ~sexp_of_model:[%sexp_of: string list]
       ~equal:[%equal: string list]
       ~sexp_of_action:[%sexp_of: String.t]
@@ -79,29 +79,35 @@ let component =
       ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) items item ->
       item :: items)
   in
-  let%sub form =
+  let form =
     Form.Typed.Record.make
       (module struct
         module Typed_field = Example_params.Typed_field
 
         let label_for_field = `Inferred
 
-        let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t = function
+        let form_for_field : type a. a Typed_field.t -> Bonsai.graph -> a Form.t Bonsai.t =
+          fun typed_field graph ->
+          match typed_field with
           | Suggestion_list_kind ->
-            Form.Elements.Dropdown.enumerable (module Query_box.Suggestion_list_kind)
+            Form.Elements.Dropdown.enumerable
+              (module Query_box.Suggestion_list_kind)
+              graph
           | Expand_direction ->
-            Form.Elements.Dropdown.enumerable (module Query_box.Expand_direction)
+            Form.Elements.Dropdown.enumerable (module Query_box.Expand_direction) graph
           | Max_visible_items ->
             Form.Elements.Number.int
               ~default:10
               ~step:1
               ~allow_updates_when_focused:`Never
               ()
-          | Input_source -> Form.Elements.Dropdown.enumerable (module Input_source)
+              graph
+          | Input_source -> Form.Elements.Dropdown.enumerable (module Input_source) graph
           | Filter_strategy ->
-            Form.Elements.Dropdown.enumerable (module Query_box.Filter_strategy)
+            Form.Elements.Dropdown.enumerable (module Query_box.Filter_strategy) graph
         ;;
       end)
+      graph
   in
   let%sub { suggestion_list_kind
           ; expand_direction
@@ -110,12 +116,12 @@ let component =
           ; filter_strategy
           }
     =
-    return (form >>| Form.value_or_default ~default:Example_params.default)
+    form >>| Form.value_or_default ~default:Example_params.default
   in
-  let%sub data =
+  let data =
     match%sub input_source with
     | Small_and_static_list_of_fruits ->
-      Bonsai.const (String.Map.of_alist_exn (List.map ~f:(fun x -> x, x) items))
+      Bonsai.return (String.Map.of_alist_exn (List.map ~f:(fun x -> x, x) items))
     | Large_and_rapidly_changing_filepaths ->
       let module Action = struct
         let quickcheck_generator_string =
@@ -130,16 +136,16 @@ let component =
         [@@deriving sexp_of, quickcheck]
       end
       in
-      let%sub map, inject =
+      let map, inject =
         Bonsai.state_machine0
           ~default_model:String.Map.empty
           ~apply_action:(fun _context model action ->
             match action with
             | Action.Add key -> Map.set model ~key ~data:key
             | Remove key -> Map.remove model key)
-          ()
+          graph
       in
-      let%sub add_random_item =
+      let add_random_item =
         let%arr inject = inject in
         let%bind.Effect item =
           Effect.of_sync_fun
@@ -152,15 +158,16 @@ let component =
         in
         inject item
       in
-      let%sub () =
+      let () =
         Bonsai.Clock.every
           ~when_to_start_next_effect:`Wait_period_after_previous_effect_starts_blocking
           (Time_ns.Span.of_sec 0.2)
           add_random_item
+          graph
       in
-      return map
+      map
   in
-  let%sub query_box =
+  let query_box =
     (* [filter_strategy] is not a dynamic parameter to [Query_box.stringable],
        so we have to add introduce dynamism ourselves with [match%sub]. *)
     match%sub filter_strategy with
@@ -170,24 +177,26 @@ let component =
         ~suggestion_list_kind
         ~expand_direction
         ~max_visible_items
-        ~selected_item_attr:(Value.return Css.selected_item)
-        ~extra_list_container_attr:(Value.return Css.list_container)
-        ~extra_input_attr:(Value.return (Attr.placeholder "Filter Fruits"))
+        ~selected_item_attr:(Bonsai.return Css.selected_item)
+        ~extra_list_container_attr:(Bonsai.return Css.list_container)
+        ~extra_input_attr:(Bonsai.return (Attr.placeholder "Filter Fruits"))
         ~filter_strategy:Fuzzy_search_and_score
         ~on_select:add_item
         data
+        graph
     | Fuzzy_search_and_score ->
       Query_box.stringable
         (module String)
         ~suggestion_list_kind
         ~expand_direction
         ~max_visible_items
-        ~selected_item_attr:(Value.return Css.selected_item)
-        ~extra_list_container_attr:(Value.return Css.list_container)
-        ~extra_input_attr:(Value.return (Attr.placeholder "Filter Fruits"))
+        ~selected_item_attr:(Bonsai.return Css.selected_item)
+        ~extra_list_container_attr:(Bonsai.return Css.list_container)
+        ~extra_input_attr:(Bonsai.return (Attr.placeholder "Filter Fruits"))
         ~filter_strategy:Fuzzy_match
         ~on_select:add_item
         data
+        graph
   in
   let%arr selected_items = selected_items
   and query_box = query_box

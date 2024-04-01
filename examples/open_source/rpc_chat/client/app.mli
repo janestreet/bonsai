@@ -1,12 +1,13 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 open Bonsai_chat_open_source_common
 
 val component
-  :  room_list:Room.t list Value.t
-  -> current_room:Room.t option Value.t
-  -> messages:Message.t list Value.t
+  :  room_list:Room.t list Bonsai.t
+  -> current_room:Room.t option Bonsai.t
+  -> messages:Message.t list Bonsai.t
   -> refresh_rooms:unit Effect.t
   -> change_room:(Room.t -> unit Effect.t)
   -> send_message:(room:Room.t -> contents:string -> unit Effect.t)
-  -> Vdom.Node.t Computation.t
+  -> Bonsai.graph
+  -> Vdom.Node.t Bonsai.t

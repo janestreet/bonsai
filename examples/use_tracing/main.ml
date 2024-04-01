@@ -1,9 +1,9 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 module _ = Tracing_zero
 
-let[@trace "hi"] component =
-  Bonsai.const
+let[@trace "hi"] component _graph =
+  Bonsai.return
     (Vdom.Node.text
        (sprintf
           "Time_stamp_counter.now: %Ld\n"

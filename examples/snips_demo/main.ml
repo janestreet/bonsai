@@ -1,11 +1,11 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 open Bonsai.Let_syntax
 module Snips = Bonsai_experimental_snips
 
-let main =
+let main graph =
   let open Snips.Infix in
-  let%sub theme = View.Theme.current in
+  let theme = View.Theme.current graph in
   let%arr theme = theme in
   let colors =
     let f = Css_gen.Color.to_string_css in
@@ -59,6 +59,6 @@ let main =
 let () =
   Async_js.init ();
   main
-  |> View.Theme.set_for_app (Value.return (Kado.theme ~version:Bleeding ()))
+  |> View.Theme.set_for_app (Bonsai.return (Kado.theme ~version:Bleeding ()))
   |> Bonsai_web.Start.start
 ;;

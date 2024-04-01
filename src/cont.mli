@@ -536,6 +536,10 @@ module Expert : sig
     (** Retrieves the underlying ['a t] Ui_incr.t var. *)
     val incr_var : 'a t -> 'a Ui_incr.Var.t
   end
+
+  module For_bonsai_internal : sig
+    val set_perform_on_exception : (exn -> unit) -> unit
+  end
 end
 
 (** Just in subfeature to reimplement proc on top of cont *)

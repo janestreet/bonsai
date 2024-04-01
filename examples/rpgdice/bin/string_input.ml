@@ -1,6 +1,6 @@
 open! Core
 open! Async_kernel
-open! Bonsai_web
+open! Bonsai_web.Cont
 open Bonsai.Let_syntax
 
 module type Conv = sig
@@ -10,12 +10,14 @@ module type Conv = sig
   val to_string_hum : t -> string
 end
 
-let component (type t) (module Conv : Conv with type t = t) ~default_model =
-  let%sub text_state =
-    Bonsai.state
-      default_model
-      ~sexp_of_model:[%sexp_of: String.t]
-      ~equal:[%equal: String.t]
+let component (type t) (module Conv : Conv with type t = t) ~default_model graph =
+  let text_state =
+    Tuple2.uncurry Bonsai.both
+    @@ Bonsai.state
+         default_model
+         ~sexp_of_model:[%sexp_of: String.t]
+         ~equal:[%equal: String.t]
+         graph
   in
   let%arr text, set_text = text_state in
   let conv = Or_error.try_with (fun () -> Conv.of_string text) in

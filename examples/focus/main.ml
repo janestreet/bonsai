@@ -1,11 +1,11 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 open! Bonsai.Let_syntax
 
-let component =
-  let%sub focus_on_activate_attr = Effect.Focus.on_activate () in
-  let%sub focus_on_effect = Effect.Focus.on_effect () in
-  let%sub theme = View.Theme.current in
+let component graph =
+  let focus_on_activate_attr = Effect.Focus.on_activate () graph in
+  let focus_on_effect = Effect.Focus.on_effect () graph in
+  let theme = View.Theme.current graph in
   let%arr focus_on_activate_attr = focus_on_activate_attr
   and { attr = focus_on_effect_attr; focus = effect_to_focus; blur = _ } = focus_on_effect
   and theme = theme in

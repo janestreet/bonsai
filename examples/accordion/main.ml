@@ -1,5 +1,5 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 open! Bonsai.Let_syntax
 module Gallery = Bonsai_web_ui_gallery
 
@@ -7,20 +7,21 @@ module Basic_accordion = struct
   let name = "Basic Accordion Usage"
   let description = "Toggle the accordion by clicking its title bar"
 
-  let view =
+  let view graph =
     let vdom, demo =
       [%demo
         let%sub { view; is_open = _; open_ = _; toggle = _; close = _ } =
           Bonsai_web_ui_accordion.component
             ~starts_open:true
             ~title:
-              (Value.return (Vdom.Node.text "I am an accordion, click me to toggle!"))
-            ~content:(Bonsai.const (Vdom.Node.text "I am the content!"))
+              (Bonsai.return (Vdom.Node.text "I am an accordion, click me to toggle!"))
+            ~content:(fun _graph -> Bonsai.return (Vdom.Node.text "I am the content!"))
             ()
+            graph
         in
-        return view]
+        view]
     in
-    Computation.map vdom ~f:(fun vdom -> vdom, demo)
+    Bonsai.map vdom ~f:(fun vdom -> vdom, demo)
   ;;
 
   let selector = None
@@ -34,18 +35,19 @@ module Accordion_with_controls = struct
     "You can also control the accordion programmatically. Try clicking the buttons below."
   ;;
 
-  let view =
+  let view graph =
     let computation, demo =
       let vbox = View.vbox ~gap:(`Em 1) in
       let hbox = View.hbox ~gap:(`Em_float 0.5) in
       [%demo
-        let%sub theme = View.Theme.current in
-        let%sub accordion =
+        let theme = View.Theme.current graph in
+        let accordion =
           Bonsai_web_ui_accordion.component
             ~starts_open:false
-            ~title:(Value.return (Vdom.Node.text "Important!"))
-            ~content:(Bonsai.const (Vdom.Node.text "Wow, very important"))
+            ~title:(Bonsai.return (Vdom.Node.text "Important!"))
+            ~content:(fun _graph -> Bonsai.return (Vdom.Node.text "Wow, very important"))
             ()
+            graph
         in
         let%arr { view; is_open; open_; toggle; close } = accordion
         and theme = theme in
@@ -56,15 +58,15 @@ module Accordion_with_controls = struct
         in
         vbox [ hbox [ open_button; toggle_button; close_button ]; view ]]
     in
-    Computation.map computation ~f:(fun vdom -> vdom, demo)
+    Bonsai.map computation ~f:(fun vdom -> vdom, demo)
   ;;
 
   let selector = None
   let filter_attrs = Some (fun k _ -> not (String.is_prefix k ~prefix:"style"))
 end
 
-let component =
-  let%sub theme, theme_picker = Gallery.Theme_picker.component () in
+let component graph =
+  let%sub theme, theme_picker = Gallery.Theme_picker.component () graph in
   View.Theme.set_for_app
     theme
     (Gallery.make_sections
@@ -76,6 +78,7 @@ let component =
            ; Gallery.make_demo (module Accordion_with_controls)
            ] )
        ])
+    graph
 ;;
 
 let () =

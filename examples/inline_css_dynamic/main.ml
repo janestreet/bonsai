@@ -1,18 +1,20 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 module Form = Bonsai_web_ui_form.With_automatic_view
 
 let tomato = `Hex "#FF6347"
 
-let component =
+let component graph =
   let open Bonsai.Let_syntax in
-  let%sub applied, toggle = Bonsai.toggle ~default_model:true in
-  let%sub color_form =
-    Form.Elements.Color_picker.hex ()
-    |> Bonsai.sub ~f:(Form.Dynamic.with_default (Value.return tomato))
+  let applied, toggle = Bonsai.toggle ~default_model:true graph in
+  let color_form =
+    Form.Dynamic.with_default
+      (Bonsai.return tomato)
+      (Form.Elements.Color_picker.hex () graph)
+      graph
   in
-  let%sub toggle_button =
-    let%sub theme = View.Theme.current in
+  let toggle_button =
+    let theme = View.Theme.current graph in
     let%arr toggle = toggle
     and applied = applied
     and theme = theme in
@@ -23,11 +25,11 @@ let component =
        | false -> "Apply"
        | true -> "Disable")
   in
-  let%sub attr =
+  let attr =
     match%sub applied with
-    | false -> Bonsai.const Vdom.Attr.empty
+    | false -> Bonsai.return Vdom.Attr.empty
     | true ->
-      let%sub color =
+      let color =
         let%arr color_form = color_form in
         Form.value_or_default color_form ~default:tomato
       in

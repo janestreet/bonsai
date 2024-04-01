@@ -1,9 +1,9 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 open Bonsai.Let_syntax
 module PRT_example = Bonsai_partial_render_table_example
 
-let component ~theme_picker =
+let component ~theme_picker graph =
   let%sub ( form_view
           , { themed
             ; show_position
@@ -13,9 +13,9 @@ let component ~theme_picker =
             ; multisort_columns_when
             } )
     =
-    PRT_example.Layout_form.component
+    PRT_example.Layout_form.component graph
   in
-  let%sub data =
+  let data =
     let%arr num_rows = num_rows in
     PRT_example.Row.many_random num_rows
   in
@@ -38,8 +38,8 @@ let component ~theme_picker =
           data
       in
       (match%sub themed with
-       | false -> base ~theming:`Legacy_don't_use_theme
-       | true -> base ~theming:`Themed)
+       | false -> base ~theming:`Legacy_don't_use_theme graph
+       | true -> base ~theming:`Themed graph)
     | true ->
       let base =
         PRT_example.component
@@ -50,25 +50,25 @@ let component ~theme_picker =
           data
       in
       (match%sub themed with
-       | false -> base ~theming:`Legacy_don't_use_theme
-       | true -> base ~theming:`Themed)
+       | false -> base ~theming:`Legacy_don't_use_theme graph
+       | true -> base ~theming:`Themed graph)
   in
-  let%sub toggle_focus_lock_button =
-    let%sub on_click =
+  let toggle_focus_lock_button =
+    let on_click =
       let%arr focus_is_locked = focus_is_locked
       and lock_focus = lock_focus
       and unlock_focus = unlock_focus in
       if focus_is_locked then unlock_focus else lock_focus
     in
-    let%sub theme = View.Theme.current in
+    let theme = View.Theme.current graph in
     let%arr on_click = on_click
     and focus_is_locked = focus_is_locked
     and theme = theme in
     let text = if focus_is_locked then "Unlock focus" else "Lock focus" in
     View.button theme ~on_click text
   in
-  let%sub form_view =
-    let%sub width_form = PRT_example.Column_width_form.component ~set_column_width in
+  let form_view =
+    let width_form = PRT_example.Column_width_form.component ~set_column_width graph in
     let%arr form_view = form_view
     and width_form = width_form in
     View.vbox [ form_view; width_form ]
@@ -83,9 +83,9 @@ let component ~theme_picker =
     [ theme_picker; form_view; toggle_focus_lock_button; table ]
 ;;
 
-let component_with_theme =
-  let%sub theme, theme_picker = Bonsai_web_ui_gallery.Theme_picker.component () in
-  View.Theme.set_for_app theme (component ~theme_picker)
+let component_with_theme graph =
+  let%sub theme, theme_picker = Bonsai_web_ui_gallery.Theme_picker.component () graph in
+  View.Theme.set_for_app theme (component ~theme_picker) graph
 ;;
 
 let () = Bonsai_web.Start.start component_with_theme

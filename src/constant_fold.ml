@@ -92,12 +92,12 @@ include struct
         ~key_id
         ~data_id
     in
-    let can_contain_path =
+    let may_contain_path =
       match can_contain_path with
-      | `Can_contain_path -> true
-      | `Cannot_contain_path -> false
+      | `Can_contain_path -> May_contain.Path.Yes_or_maybe
+      | `Cannot_contain_path -> No
     in
-    Computation.Assoc_simpl { map; by; can_contain_path }
+    Computation.Assoc_simpl { map; by; may_contain_path }
   ;;
 end
 

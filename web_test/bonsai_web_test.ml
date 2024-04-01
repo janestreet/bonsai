@@ -1,7 +1,3 @@
-module Arrow = struct
-  module Driver = Bonsai_test.Arrow.Driver
-  module Helpers = Helpers
-  module Helpers_intf = Helpers_intf
-end
-
 include Proc
+
+let () = Bonsai_web.For_bonsai_internal.set_stack_overflow_exception_check ()

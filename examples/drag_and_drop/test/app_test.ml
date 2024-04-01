@@ -1,6 +1,6 @@
 open! Core
 open! Bonsai_web_test
-open! Bonsai_web
+open! Bonsai_web.Cont
 module Handle = Bonsai_web_test.Handle
 module Result_spec = Bonsai_web_test.Result_spec
 module Example = Bonsai_drag_and_drop_example

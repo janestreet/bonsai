@@ -529,7 +529,12 @@ module Expert = struct
         ~order_to_compare
         data
         collate
-      |> Incr_map_collate.collated)
+      |> fun x ->
+      let key_rank =
+        let%map.Incremental key_rank = Incr_map_collate.key_rank x in
+        Effect.of_sync_fun key_rank
+      in
+      Incremental.both (Incr_map_collate.collated x) key_rank)
   ;;
 end
 
@@ -606,29 +611,6 @@ module Basic = struct
         ~columns
         map ->
     let module Key_cmp = (val key_comparator) in
-    let focus : (focus, presence, key, column_id) Expert.Focus.Kind.t =
-      match focus with
-      | None -> None
-      | By_row { on_change } ->
-        let compute_presence focus =
-          let%arr focus = focus
-          and map = map in
-          match focus with
-          | None -> None
-          | Some focus -> if Map.mem map focus then Some focus else None
-        in
-        By_row { on_change; compute_presence }
-      | By_cell { on_change } ->
-        let compute_presence focus =
-          let%arr focus = focus
-          and map = map in
-          match focus with
-          | None -> None
-          | Some ((focused_key, _) as focus) ->
-            if Map.mem map focused_key then Some focus else None
-        in
-        By_cell { on_change; compute_presence }
-    in
     let filter = Value.transpose_opt filter in
     let%sub rank_range, set_rank_range =
       Bonsai.state
@@ -681,7 +663,7 @@ module Basic = struct
       let key_range = Collate.Which_range.All_rows in
       { Collate.filter; order; key_range; rank_range }
     in
-    let%sub collated =
+    let%sub collated, key_rank =
       Expert.collate
         ~filter_equal:phys_equal
         ~filter_to_predicate:Fn.id
@@ -689,6 +671,29 @@ module Basic = struct
         ~order_to_compare:Fn.id
         map
         collate
+    in
+    let focus : (focus, presence, key, column_id) Expert.Focus.Kind.t =
+      match focus with
+      | None -> None
+      | By_row { on_change } ->
+        let compute_presence focus =
+          let%arr focus = focus
+          and map = map in
+          match focus with
+          | None -> None
+          | Some focus -> if Map.mem map focus then Some focus else None
+        in
+        By_row { on_change; compute_presence; key_rank }
+      | By_cell { on_change } ->
+        let compute_presence focus =
+          let%arr focus = focus
+          and map = map in
+          match focus with
+          | None -> None
+          | Some ((focused_key, _) as focus) ->
+            if Map.mem map focused_key then Some focus else None
+        in
+        By_cell { on_change; compute_presence; key_rank }
     in
     let%sub num_filtered_rows =
       let%arr collated = collated in

@@ -1,5 +1,5 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 open! Async_kernel
 open! Async_rpc_kernel
 open Bonsai.Let_syntax
@@ -14,7 +14,7 @@ open Bonsai.Let_syntax
 type Rpc_effect.Where_to_connect.Custom.t += Connection
 
 module T = struct
-  type t = { data : int Int.Map.t [@diff.map] } [@@deriving sexp, diff, bin_io, equal]
+  type t = { data : int Int.Map.t } [@@deriving sexp, diff, bin_io, equal]
 end
 
 let rpc =
@@ -26,29 +26,34 @@ let rpc =
     (module Diffable_polling_state_rpc_response.Polling_state_rpc_response.Make (T))
 ;;
 
-let component =
+let component graph =
   let%sub (_, items), inject =
-    Bonsai.state_machine0
-      ()
-      ~sexp_of_model:[%sexp_of: int * unit Int.Map.t]
-      ~equal:[%equal: int * unit Int.Map.t]
-      ~sexp_of_action:[%sexp_of: [ `Add | `Remove of int ]]
-      ~default_model:(0, Int.Map.empty)
-      ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) (last_index, map) action ->
-      match action with
-      | `Add ->
-        let map =
-          if Map.length map > 100 then Map.remove map (fst (Map.min_elt_exn map)) else map
-        in
-        last_index + 1, Map.set map ~key:last_index ~data:()
-      | `Remove i -> last_index, Map.remove map i)
+    Tuple2.uncurry Bonsai.both
+    @@ Bonsai.state_machine0
+         graph
+         ~sexp_of_model:[%sexp_of: int * unit Int.Map.t]
+         ~equal:[%equal: int * unit Int.Map.t]
+         ~sexp_of_action:[%sexp_of: [ `Add | `Remove of int ]]
+         ~default_model:(0, Int.Map.empty)
+         ~apply_action:
+           (fun
+             (_ : _ Bonsai.Apply_action_context.t) (last_index, map) action ->
+         match action with
+         | `Add ->
+           let map =
+             if Map.length map > 100
+             then Map.remove map (fst (Map.min_elt_exn map))
+             else map
+           in
+           last_index + 1, Map.set map ~key:last_index ~data:()
+         | `Remove i -> last_index, Map.remove map i)
   in
-  let%sub items =
+  let items =
     Bonsai.assoc
       (module Int)
       items
-      ~f:(fun key _data ->
-        let%sub response =
+      ~f:(fun key _data graph ->
+        let response =
           Rpc_effect.Polling_state_rpc.poll
             ~sexp_of_query:[%sexp_of: Int.t]
             ~sexp_of_response:[%sexp_of: T.t]
@@ -58,6 +63,7 @@ let component =
             ~where_to_connect:(Custom Connection)
             ~every:(Time_ns.Span.of_sec 1.0)
             key
+            graph
         in
         let%arr key = key
         and inject = inject
@@ -71,6 +77,7 @@ let component =
                   [%sexp (response : (int, T.t) Rpc_effect.Poll_result.t)]
               ]
           ])
+      graph
   in
   let%arr items = items
   and inject = inject in

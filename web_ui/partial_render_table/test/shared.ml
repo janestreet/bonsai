@@ -440,16 +440,17 @@ module Test = struct
       }
     ;;
 
-    let expert_for_testing_compute_presence
+    let expert_for_testing_compute_presence_and_key_rank
       ?(theming = `Themed)
       ~collate
       ~presence
+      ~key_rank
       ()
       input
       _filter
       =
       let component =
-        let%sub collation =
+        let%sub collation, actual_key_rank =
           Table_expert.collate
             ~filter_equal:[%compare.equal: unit]
             ~order_equal:[%compare.equal: unit]
@@ -468,6 +469,7 @@ module Test = struct
           ]
           |> Table_expert.Columns.Dynamic_cells.lift
         in
+        let%sub key_rank = key_rank ~actual_key_rank in
         Table_expert.component
           (module Int)
           ~theming
@@ -475,6 +477,7 @@ module Test = struct
             (By_row
                { on_change = Value.return (Fn.const Effect.Ignore)
                ; compute_presence = (fun focus -> presence ~focus ~collation)
+               ; key_rank
                })
           ~row_height:(Value.return (`Px 10))
           ~columns

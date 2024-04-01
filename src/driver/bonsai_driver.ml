@@ -62,7 +62,8 @@ let create_direct
          ; action = _
          ; run = _
          ; reset = _
-         ; can_contain_path = _
+         ; may_contain_lifecycle = _
+         ; may_contain_path = _
          } as computation_info))
     =
     optimized_info

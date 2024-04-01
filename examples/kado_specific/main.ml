@@ -1,5 +1,5 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 open! Bonsai.Let_syntax
 
 let card ~theme ~name ~content =
@@ -12,27 +12,27 @@ let card ~theme ~name ~content =
     content
 ;;
 
-let buttons =
-  let%map.Computation buttons = Button.component
-  and theme = View.Theme.current in
+let buttons graph =
+  let%map.Bonsai buttons = Button.component graph
+  and theme = View.Theme.current graph in
   card ~theme ~name:"buttons" ~content:buttons
 ;;
 
-let textbox =
-  let%map.Computation textbox = Textbox.component
-  and theme = View.Theme.current in
+let textbox graph =
+  let%map.Bonsai textbox = Textbox.component graph
+  and theme = View.Theme.current graph in
   card ~theme ~name:"input" ~content:textbox
 ;;
 
-let app =
-  let%map.Computation buttons = buttons
-  and textbox = textbox in
+let app graph =
+  let%map.Bonsai buttons = buttons graph
+  and textbox = textbox graph in
   View.hbox ~gap:(`Em 1) [ buttons; textbox ]
 ;;
 
-let app =
-  let theme = Value.return (Kado.theme ~version:Bleeding ()) in
-  View.Theme.set_for_app theme app
+let app graph =
+  let theme = Bonsai.return (Kado.theme ~version:Bleeding ()) in
+  View.Theme.set_for_app theme app graph
 ;;
 
 let () = Bonsai_web.Start.start app

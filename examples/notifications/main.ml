@@ -1,5 +1,5 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 open Bonsai.Let_syntax
 module Gallery = Bonsai_web_ui_gallery
 module Notifications = Bonsai_web_ui_notifications
@@ -20,8 +20,8 @@ module User_defined_notification = struct
         | Error of string
       [@@deriving sexp, equal]
 
-      let render ~close t =
-        let%sub theme = View.Theme.current in
+      let render ~close t graph =
+        let theme = View.Theme.current graph in
         let%arr close = close
         and t = t
         and theme = theme in
@@ -33,19 +33,22 @@ module User_defined_notification = struct
       ;;
     end
 
-    let component =
-      let%sub notifications =
-        Notifications.component (module Notification) ~equal:[%equal: Notification.t]
+    let component graph =
+      let notifications =
+        Notifications.component
+          (module Notification)
+          ~equal:[%equal: Notification.t]
+          graph
       in
-      let%sub vdom = Notifications.render notifications ~f:Notification.render in
+      let vdom = Notifications.render notifications ~f:Notification.render graph in
       let%arr vdom = vdom
       and notifications = notifications in
       vdom, notifications
     ;;]
 
-  let view =
-    let%sub theme = View.Theme.current in
-    let%sub component, notifications = component in
+  let view graph =
+    let theme = View.Theme.current graph in
+    let%sub component, notifications = component graph in
     let%arr component = component
     and notifications = notifications
     and theme = theme in
@@ -94,8 +97,8 @@ module User_defined_notification = struct
   let filter_attrs = None
 end
 
-let component =
-  let%sub theme, theme_picker = Gallery.Theme_picker.component () in
+let component graph =
+  let%sub theme, theme_picker = Gallery.Theme_picker.component () graph in
   View.Theme.set_for_app
     theme
     (Gallery.make_sections
@@ -108,6 +111,7 @@ let component =
         notifications appear in front of your content. |}
          , [ Gallery.make_demo (module User_defined_notification) ] )
        ])
+    graph
 ;;
 
 let () = Bonsai_web.Start.start component

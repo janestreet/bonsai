@@ -1,4 +1,4 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 
-val examples : Vdom.Node.t list Bonsai.Computation.t
+val examples : Bonsai.graph -> Vdom.Node.t list Bonsai.t

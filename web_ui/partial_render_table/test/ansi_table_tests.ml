@@ -2593,7 +2593,7 @@ let%expect_test "Pseudo-BUG: setting rank_range does not change the which rows t
     |> Value.return
   in
   let component =
-    let%sub collate =
+    let%sub collate, key_rank =
       let collate =
         let%map rank_range = Bonsai.Var.value rank_range in
         { Collate.filter = None
@@ -2622,6 +2622,7 @@ let%expect_test "Pseudo-BUG: setting rank_range does not change the which rows t
                  match focus with
                  | None -> None
                  | Some focus -> if Map.mem map focus then Some focus else None)
+           ; key_rank
            })
       ~row_height:(Value.return (`Px 20))
       ~columns:
@@ -2765,7 +2766,11 @@ let%expect_test "focus down when presence says that all responses are None" =
   let test =
     Test.create
       ~stats:false
-      (Test.Component.expert_for_testing_compute_presence ~collate ~presence ())
+      (Test.Component.expert_for_testing_compute_presence_and_key_rank
+         ~collate
+         ~presence
+         ~key_rank:(fun ~actual_key_rank -> Bonsai.read actual_key_rank)
+         ())
   in
   Handle.show test.handle;
   [%expect
@@ -2809,6 +2814,288 @@ let%expect_test "focus down when presence says that all responses are None" =
     │   │ 200 │ 4   │
     └───┴─────┴─────┘
     |}]
+;;
+
+let%test_module "focus by key `key_rank` fallback" =
+  (module struct
+    let test () =
+      let presence ~focus:_ ~collation:_ = Bonsai.const None in
+      let collate =
+        Value.return
+          { Incr_map_collate.Collate.filter = ()
+          ; order = ()
+          ; key_range = To 4
+          ; rank_range = All_rows
+          }
+      in
+      Test.create ~stats:true ~map:big_map ~should_set_bounds:false (fun input filter ->
+        let key_rank ~actual_key_rank:_ =
+          let%sub sleep = Bonsai.Clock.sleep in
+          let%arr sleep = sleep in
+          fun row_key ->
+            let%bind.Effect () = sleep (Time_ns.Span.of_ms 10.) in
+            Effect.return (Some ((row_key mod 2) + 2))
+        in
+        Test.Component.expert_for_testing_compute_presence_and_key_rank
+          ~collate
+          ~presence
+          ~key_rank
+          ()
+          input
+          filter)
+    ;;
+
+    let%expect_test "focus by key should fall back to provided `key_rank` if the key \
+                     isn't in the current `Collated.t` range"
+      =
+      let test = test () in
+      Handle.recompute_view_until_stable test.handle;
+      Handle.show test.handle;
+      [%expect
+        {|
+        ((focused ()) (num_filtered_rows ()))
+        ┌────────────────┬───────┐
+        │ metric         │ value │
+        ├────────────────┼───────┤
+        │ rows-before    │ 0     │
+        │ rows-after     │ 95    │
+        │ num-filtered   │ 99    │
+        │ num-unfiltered │ 99    │
+        └────────────────┴───────┘
+        ┌───┬─────┬─────┐
+        │ > │ #   │ key │
+        ├───┼─────┼─────┤
+        │   │ 0   │ 1   │
+        │   │ 100 │ 2   │
+        │   │ 200 │ 3   │
+        │   │ 300 │ 4   │
+        └───┴─────┴─────┘
+        |}];
+      Handle.do_actions test.handle [ Focus_row 150 ];
+      (* It doesn't focus immediately; we have to wait for the effect to complete.*)
+      Handle.show test.handle;
+      [%expect
+        {|
+        ((focused ()) (num_filtered_rows ()))
+        ┌────────────────┬───────┐
+        │ metric         │ value │
+        ├────────────────┼───────┤
+        │ rows-before    │ 0     │
+        │ rows-after     │ 95    │
+        │ num-filtered   │ 99    │
+        │ num-unfiltered │ 99    │
+        └────────────────┴───────┘
+        ┌───┬─────┬─────┐
+        │ > │ #   │ key │
+        ├───┼─────┼─────┤
+        │   │ 0   │ 1   │
+        │   │ 100 │ 2   │
+        │   │ 200 │ 3   │
+        │   │ 300 │ 4   │
+        └───┴─────┴─────┘
+        |}];
+      Handle.advance_clock_by test.handle (Time_ns.Span.of_int_ms 10);
+      Handle.show test.handle;
+      [%expect
+        {|
+        scrolling to index 2 at 30.0px
+        ((focused ()) (num_filtered_rows ()))
+        ┌────────────────┬───────┐
+        │ metric         │ value │
+        ├────────────────┼───────┤
+        │ rows-before    │ 0     │
+        │ rows-after     │ 95    │
+        │ num-filtered   │ 99    │
+        │ num-unfiltered │ 99    │
+        └────────────────┴───────┘
+        ┌───┬─────┬─────┐
+        │ > │ #   │ key │
+        ├───┼─────┼─────┤
+        │   │ 0   │ 1   │
+        │   │ 100 │ 2   │
+        │ * │ 200 │ 3   │
+        │   │ 300 │ 4   │
+        └───┴─────┴─────┘
+        |}]
+    ;;
+
+    let%expect_test "dispatching another focus action while `key_rank` is pending should \
+                     'cancel' it."
+      =
+      let test = test () in
+      Handle.show test.handle;
+      [%expect
+        {|
+        ((focused ()) (num_filtered_rows ()))
+        ┌────────────────┬───────┐
+        │ metric         │ value │
+        ├────────────────┼───────┤
+        │ rows-before    │ 0     │
+        │ rows-after     │ 95    │
+        │ num-filtered   │ 99    │
+        │ num-unfiltered │ 99    │
+        └────────────────┴───────┘
+        ┌───┬─────┬─────┐
+        │ > │ #   │ key │
+        ├───┼─────┼─────┤
+        │   │ 0   │ 1   │
+        │   │ 100 │ 2   │
+        │   │ 200 │ 3   │
+        │   │ 300 │ 4   │
+        └───┴─────┴─────┘
+        |}];
+      Handle.do_actions test.handle [ Focus_row 150 ];
+      Handle.show test.handle;
+      [%expect
+        {|
+        ((focused ()) (num_filtered_rows ()))
+        ┌────────────────┬───────┐
+        │ metric         │ value │
+        ├────────────────┼───────┤
+        │ rows-before    │ 0     │
+        │ rows-after     │ 95    │
+        │ num-filtered   │ 99    │
+        │ num-unfiltered │ 99    │
+        └────────────────┴───────┘
+        ┌───┬─────┬─────┐
+        │ > │ #   │ key │
+        ├───┼─────┼─────┤
+        │   │ 0   │ 1   │
+        │   │ 100 │ 2   │
+        │   │ 200 │ 3   │
+        │   │ 300 │ 4   │
+        └───┴─────┴─────┘
+        |}];
+      Handle.do_actions test.handle [ Focus_down ];
+      Handle.show test.handle;
+      [%expect
+        {|
+        scrolling to index 0 at 0.0px
+        ((focused ()) (num_filtered_rows ()))
+        ┌────────────────┬───────┐
+        │ metric         │ value │
+        ├────────────────┼───────┤
+        │ rows-before    │ 0     │
+        │ rows-after     │ 95    │
+        │ num-filtered   │ 99    │
+        │ num-unfiltered │ 99    │
+        └────────────────┴───────┘
+        ┌───┬─────┬─────┐
+        │ > │ #   │ key │
+        ├───┼─────┼─────┤
+        │ * │ 0   │ 1   │
+        │   │ 100 │ 2   │
+        │   │ 200 │ 3   │
+        │   │ 300 │ 4   │
+        └───┴─────┴─────┘
+        |}];
+      Handle.advance_clock_by test.handle (Time_ns.Span.of_int_ms 10);
+      Handle.recompute_view_until_stable test.handle;
+      (* Focus should not have changed, because the pending `key_rank` effect should have
+         been "cancelled". *)
+      Handle.show test.handle;
+      [%expect
+        {|
+        ((focused ()) (num_filtered_rows ()))
+        ┌────────────────┬───────┐
+        │ metric         │ value │
+        ├────────────────┼───────┤
+        │ rows-before    │ 0     │
+        │ rows-after     │ 95    │
+        │ num-filtered   │ 99    │
+        │ num-unfiltered │ 99    │
+        └────────────────┴───────┘
+        ┌───┬─────┬─────┐
+        │ > │ #   │ key │
+        ├───┼─────┼─────┤
+        │ * │ 0   │ 1   │
+        │   │ 100 │ 2   │
+        │   │ 200 │ 3   │
+        │   │ 300 │ 4   │
+        └───┴─────┴─────┘
+        |}]
+    ;;
+
+    let%expect_test "If 2 `key_rank` calls are being processed in parallel, the last one \
+                     scheduled should win"
+      =
+      let test = test () in
+      Handle.show test.handle;
+      [%expect
+        {|
+        ((focused ()) (num_filtered_rows ()))
+        ┌────────────────┬───────┐
+        │ metric         │ value │
+        ├────────────────┼───────┤
+        │ rows-before    │ 0     │
+        │ rows-after     │ 95    │
+        │ num-filtered   │ 99    │
+        │ num-unfiltered │ 99    │
+        └────────────────┴───────┘
+        ┌───┬─────┬─────┐
+        │ > │ #   │ key │
+        ├───┼─────┼─────┤
+        │   │ 0   │ 1   │
+        │   │ 100 │ 2   │
+        │   │ 200 │ 3   │
+        │   │ 300 │ 4   │
+        └───┴─────┴─────┘
+        |}];
+      Handle.do_actions test.handle [ Focus_row 150 ];
+      Handle.recompute_view_until_stable test.handle;
+      Handle.advance_clock_by test.handle (Time_ns.Span.of_int_ms 5);
+      Handle.do_actions test.handle [ Focus_row 151 ];
+      Handle.recompute_view_until_stable test.handle;
+      Handle.advance_clock_by test.handle (Time_ns.Span.of_int_ms 6);
+      (* At this point, the first call should have finished, but it's been "cancelled". *)
+      Handle.show test.handle;
+      [%expect
+        {|
+        ((focused ()) (num_filtered_rows ()))
+        ┌────────────────┬───────┐
+        │ metric         │ value │
+        ├────────────────┼───────┤
+        │ rows-before    │ 0     │
+        │ rows-after     │ 95    │
+        │ num-filtered   │ 99    │
+        │ num-unfiltered │ 99    │
+        └────────────────┴───────┘
+        ┌───┬─────┬─────┐
+        │ > │ #   │ key │
+        ├───┼─────┼─────┤
+        │   │ 0   │ 1   │
+        │   │ 100 │ 2   │
+        │   │ 200 │ 3   │
+        │   │ 300 │ 4   │
+        └───┴─────┴─────┘
+        |}];
+      Handle.advance_clock_by test.handle (Time_ns.Span.of_int_ms 5);
+      Handle.recompute_view_until_stable test.handle;
+      (* And now, everything should be completed. *)
+      Handle.show test.handle;
+      [%expect
+        {|
+        scrolling to index 3 at 40.0px
+        ((focused ()) (num_filtered_rows ()))
+        ┌────────────────┬───────┐
+        │ metric         │ value │
+        ├────────────────┼───────┤
+        │ rows-before    │ 0     │
+        │ rows-after     │ 95    │
+        │ num-filtered   │ 99    │
+        │ num-unfiltered │ 99    │
+        └────────────────┴───────┘
+        ┌───┬─────┬─────┐
+        │ > │ #   │ key │
+        ├───┼─────┼─────┤
+        │   │ 0   │ 1   │
+        │   │ 100 │ 2   │
+        │   │ 200 │ 3   │
+        │ * │ 300 │ 4   │
+        └───┴─────┴─────┘
+        |}]
+    ;;
+  end)
 ;;
 
 let%expect_test "show that scrolling out of a basic table will keep the focus" =
@@ -2960,7 +3247,11 @@ let%expect_test "show that scrolling out of a custom table will execute the pres
     Test.create
       ~map:big_map
       ~stats:false
-      (Test.Component.expert_for_testing_compute_presence ~collate ~presence ())
+      (Test.Component.expert_for_testing_compute_presence_and_key_rank
+         ~collate
+         ~presence
+         ~key_rank:(fun ~actual_key_rank -> Bonsai.read actual_key_rank)
+         ())
   in
   Bonsai.Var.set rank (Between (0, 10));
   Handle.show test.handle;
@@ -3262,7 +3553,7 @@ let%test_module "dynamic columns with visibility" =
         |> Value.return
       in
       let component =
-        let%sub collate =
+        let%sub collate, _ =
           let collate =
             { Collate.filter = None
             ; order = Compare.Unchanged

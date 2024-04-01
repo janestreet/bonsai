@@ -1,6 +1,6 @@
 open! Core
 open! Async_kernel
-open! Bonsai_web
+open! Bonsai_web.Cont
 open Bonsai.Let_syntax
 open Bonsai_chat_common
 
@@ -20,7 +20,7 @@ stylesheet
   }
 |}]
 
-let component ~room_list ~refresh_rooms ~change_room =
+let component ~room_list ~refresh_rooms ~change_room _graph =
   let%arr room_list = room_list
   and refresh_rooms = refresh_rooms in
   let room_header =

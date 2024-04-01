@@ -1,117 +1,159 @@
 open! Core
 open! Async_kernel
-open! Bonsai_web
+open! Bonsai_web.Cont
 open Bonsai.Let_syntax
 
-(* $MDX part-begin=textbox *)
-let textbox : (string * Vdom.Node.t) Computation.t =
-  let%sub state, set_state = Bonsai.state "" in
-  let%arr state = state
-  and set_state = set_state in
+(* $MDX part-begin=counter *)
+let counter graph : Vdom.Node.t Bonsai.t * int Bonsai.t =
+  let count, set_count = Bonsai.state 0 graph in
   let view =
-    Vdom.Node.input
-      ~attrs:
-        [ Vdom.Attr.value_prop state
-        ; Vdom.Attr.on_input (fun _ new_text -> set_state new_text)
-        ]
-      ()
+    let%arr count = count
+    and set_count = set_count in
+    (* view-construction logic *)
+    Vdom.Node.div
+      [ Vdom.Node.button
+          ~attrs:[ Vdom.Attr.on_click (fun _ -> set_count (count - 1)) ]
+          [ Vdom.Node.text "-1" ]
+      ; Vdom.Node.text [%string "Counter value: %{count#Int}"]
+      ; Vdom.Node.button
+          ~attrs:[ Vdom.Attr.on_click (fun _ -> set_count (count + 1)) ]
+          [ Vdom.Node.text "+1" ]
+      ]
   in
-  state, view
+  view, count
 ;;
 
 (* $MDX part-end *)
 
-let () = Util.run (textbox |> Computation.map ~f:snd) ~id:"textbox"
+let counter_ui graph =
+  let view, _ = counter graph in
+  view
+;;
 
-(* $MDX part-begin=two_textboxes *)
-let two_textboxes : Vdom.Node.t Computation.t =
-  let%sub textbox_a = textbox in
-  let%sub textbox_b = textbox in
-  let%arr contents_a, view_a = textbox_a
-  and contents_b, view_b = textbox_b in
-  let display = Vdom.Node.textf "a: %s, b: %s" contents_a contents_b in
-  Vdom.Node.div
-    ~attrs:[ Vdom.Attr.style (Css_gen.display `Inline_grid) ]
-    [ view_a; view_b; display ]
+let () = Util.run counter_ui ~id:"counter_ui"
+
+(* $MDX part-begin=two_counters_correct *)
+let two_counters graph =
+  let counter1, _count1 = counter graph in
+  let counter2, _count2 = counter graph in
+  let%arr counter1 = counter1
+  and counter2 = counter2 in
+  Vdom.Node.div [ counter1; counter2 ]
 ;;
 
 (* $MDX part-end *)
 
-let () = Util.run two_textboxes ~id:"two_textboxes"
+let () = Util.run two_counters ~id:"two_counters_correct"
 
-(* $MDX part-begin=two_textboxes_shared_state *)
-let two_textboxes_shared_state : Vdom.Node.t Computation.t =
-  let%sub textbox_a = textbox in
-  let textbox_b = textbox_a in
-  let%arr contents_a, view_a = textbox_a
-  and contents_b, view_b = textbox_b in
-  let display = Vdom.Node.textf "a: %s, b: %s" contents_a contents_b in
-  Vdom.Node.div
-    ~attrs:[ Vdom.Attr.style (Css_gen.display `Inline_grid) ]
-    [ view_a; view_b; display ]
+(* $MDX part-begin=two_counters_wrong_1 *)
+let two_counters_wrong_1 graph =
+  let counter, _count = counter graph in
+  let%arr counter1 = counter
+  and counter2 = counter in
+  Vdom.Node.div [ counter1; counter2 ]
 ;;
 
 (* $MDX part-end *)
 
-let () = Util.run two_textboxes_shared_state ~id:"two_textboxes_shared_state"
+let () = Util.run two_counters_wrong_1 ~id:"two_counters_wrong_1"
 
-(* $MDX part-begin=counter_state *)
-let state_based_counter : Vdom.Node.t Computation.t =
-  let%sub state, set_state = Bonsai.state 0 in
-  let%arr state = state
-  and set_state = set_state in
-  let decrement =
-    Vdom.Node.button
-      ~attrs:[ Vdom.Attr.on_click (fun _ -> set_state (state - 1)) ]
-      [ Vdom.Node.text "-1" ]
-  in
-  let increment =
-    Vdom.Node.button
-      ~attrs:[ Vdom.Attr.on_click (fun _ -> set_state (state + 1)) ]
-      [ Vdom.Node.text "+1" ]
-  in
-  Vdom.Node.div [ decrement; Vdom.Node.textf "%d" state; increment ]
+(* $MDX part-begin=two_counters_wrong_2 *)
+let two_counters_wrong_2 graph =
+  let counter, _count = counter graph in
+  let%arr counter = counter in
+  Vdom.Node.div [ counter; counter ]
 ;;
 
 (* $MDX part-end *)
 
-let () = Util.run state_based_counter ~id:"state_based_counter"
+let () = Util.run two_counters_wrong_2 ~id:"two_counters_wrong_2"
 
 (* $MDX part-begin=counter_state_machine *)
 
-module Action = struct
-  type t =
-    | Increment
-    | Decrement
-  [@@deriving sexp_of]
-end
-
-let counter_state_machine : Vdom.Node.t Computation.t =
-  let%sub state, inject =
+let counter_state_machine graph : Vdom.Node.t Bonsai.t * int Bonsai.t =
+  let count, inject =
     Bonsai.state_machine0
-      ()
-      ~sexp_of_action:[%sexp_of: Action.t]
       ~default_model:0
       ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) model action ->
-      match action with
-      | Increment -> model + 1
-      | Decrement -> model - 1)
+        match action with
+        | `Increment -> model + 1
+        | `Decrement -> model - 1)
+      graph
   in
-  let%arr state = state
-  and inject = inject in
-  let decrement =
-    Vdom.Node.button
-      ~attrs:[ Vdom.Attr.on_click (fun _ -> inject Decrement) ]
-      [ Vdom.Node.text "-1" ]
+  let view =
+    let%arr count = count
+    and inject = inject in
+    Vdom.Node.div
+      [ Vdom.Node.button
+          ~attrs:[ Vdom.Attr.on_click (fun _ -> inject `Decrement) ]
+          [ Vdom.Node.text "-1" ]
+      ; Vdom.Node.text [%string "Counter value: %{count#Int}"]
+      ; Vdom.Node.button
+          ~attrs:[ Vdom.Attr.on_click (fun _ -> inject `Increment) ]
+          [ Vdom.Node.text "+1" ]
+      ]
   in
-  let increment =
-    Vdom.Node.button
-      ~attrs:[ Vdom.Attr.on_click (fun _ -> inject Increment) ]
-      [ Vdom.Node.text "+1" ]
-  in
-  Vdom.Node.div [ decrement; Vdom.Node.textf "%d" state; increment ]
+  view, count
 ;;
 
 (* $MDX part-end *)
 
-let () = Util.run counter_state_machine ~id:"counter_state_machine"
+let () =
+  Util.run
+    (fun graph -> counter_state_machine graph |> Tuple2.get1)
+    ~id:"counter_state_machine"
+;;
+
+(* $MDX part-begin=counter_state_machine1 *)
+
+let counter_state_machine1 ~(step : int Bonsai.t) graph =
+  let count, inject =
+    Bonsai.state_machine1
+      ~default_model:0
+      ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) input model action ->
+        match input with
+        | Bonsai.Computation_status.Inactive ->
+          (* This state machine is inactive, so it can't access the current value of [input].
+             Just keep the original model *)
+          model
+        | Active step ->
+          (match action with
+           | `Increment -> model + step
+           | `Decrement -> model - step))
+      step
+      graph
+  in
+  let view =
+    let%arr step = step
+    and count = count
+    and inject = inject in
+    Vdom.Node.div
+      [ Vdom.Node.button
+          ~attrs:[ Vdom.Attr.on_click (fun _ -> inject `Decrement) ]
+          [ Vdom.Node.text [%string "-%{step#Int}"] ]
+      ; Vdom.Node.text [%string "Counter value: %{count#Int}"]
+      ; Vdom.Node.button
+          ~attrs:[ Vdom.Attr.on_click (fun _ -> inject `Increment) ]
+          [ Vdom.Node.text [%string "+%{step#Int}"] ]
+      ]
+  in
+  view, count
+;;
+
+(* $MDX part-end *)
+
+(* $MDX part-begin=counter_state_machine_chained *)
+let counter_state_machine_chained graph =
+  let counter1, count1 = counter_state_machine1 ~step:(Bonsai.return 1) graph in
+  let counter2, count2 = counter_state_machine1 ~step:count1 graph in
+  let counter3, _ = counter_state_machine1 ~step:count2 graph in
+  let%arr counter1 = counter1
+  and counter2 = counter2
+  and counter3 = counter3 in
+  Vdom.Node.div [ counter1; counter2; counter3 ]
+;;
+
+(* $MDX part-end *)
+
+let () = Util.run counter_state_machine_chained ~id:"counter_state_machine_chained"
+let counter = counter_state_machine1

@@ -128,7 +128,7 @@ let%expect_test "map2_with_unfolded_constants_and_sm1_with_const_input_both_warn
   test_lint c;
   [%expect
     {|
-    _none_:0:0: state_machine1 can be optimized to a state_machine0
+    lib/bonsai/test/of_bonsai_itself/test_linter.ml:2:4: state_machine1 can be optimized to a state_machine0
     lib/bonsai/test/of_bonsai_itself/test_linter.ml:11:4: unfolded constant
     |}]
 ;;

@@ -111,7 +111,7 @@ end
 
 let annotate_packed =
   Memo.general ~hashable:Kind.hashable (fun kind incr ->
-    let label = [ Kind.name kind ] in
+    let label = [ "kind"; Kind.name kind ] in
     let (`Hex color) = Kind.color kind in
     let attrs = String.Map.of_alist_exn [ "style", "filled"; "fillcolor", color ] in
     Incr.Packed.append_user_info_graphviz incr ~label ~attrs)

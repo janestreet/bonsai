@@ -1,12 +1,12 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 open Bonsai.Let_syntax
 
-let app =
-  let%sub hide_overnight = Hide_overnights.app in
-  let%sub simple = Simple.app in
-  let%sub stock_chart = Stock_chart.app in
-  let%sub custom_points = Custom_points.app in
+let app graph =
+  let hide_overnight = Hide_overnights.app graph in
+  let simple = Simple.app graph in
+  let stock_chart = Stock_chart.app graph in
+  let custom_points = Custom_points.app graph in
   let%arr hide_overnight = hide_overnight
   and simple = simple
   and stock_chart = stock_chart

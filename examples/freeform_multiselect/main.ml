@@ -1,11 +1,11 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 
-let components =
+let components graph =
   let open! Bonsai.Let_syntax in
   let open! Bonsai_web_ui_freeform_multiselect in
-  let%sub control =
-    Freeform_multiselect.create ~placeholder:"Enter something here.." ()
+  let control =
+    Freeform_multiselect.create ~placeholder:"Enter something here.." () graph
   in
   let%arr selected, control, (_ : String.Set.t -> unit Ui_effect.t) = control in
   let have_you_selected_something =

@@ -259,8 +259,8 @@ let%test_module "assoc" =
           (shapes (
             (model unit) (action (Assoc "key id" (Leaf Nothing.t))) (input unit)))
           (incr_graph (
-            (nodes 24)
-            (edges 33))))
+            (nodes 15)
+            (edges 18))))
 
         ("with optimizations"
           (shapes ((model unit) (action (Leaf Nothing.t)) (input unit)))
@@ -284,8 +284,8 @@ let%test_module "assoc" =
             (action (Assoc "key id" (Leaf proc_min.ml)))
             (input unit)))
           (incr_graph (
-            (nodes 24)
-            (edges 33))))
+            (nodes 15)
+            (edges 18))))
         |}]
     ;;
 
@@ -303,8 +303,8 @@ let%test_module "assoc" =
             (action (Assoc "key id" (Leaf proc_min.ml)))
             (input input)))
           (incr_graph (
-            (nodes 24)
-            (edges 33))))
+            (nodes 15)
+            (edges 18))))
         |}]
     ;;
   end)
@@ -328,8 +328,8 @@ let%test_module "assoc_on" =
             (action (Assoc "io key id" "model key id" (Leaf Nothing.t)))
             (input unit)))
           (incr_graph (
-            (nodes 22)
-            (edges 31))))
+            (nodes 13)
+            (edges 16))))
 
         ("with optimizations"
           (shapes ((model unit) (action (Leaf Nothing.t)) (input unit)))
@@ -355,29 +355,8 @@ let%test_module "assoc_on" =
             (action (Assoc "io key id" "model key id" (Leaf proc_min.ml)))
             (input unit)))
           (incr_graph (
-            (nodes 22)
-            (edges 31))))
-        |}]
-    ;;
-
-    let%expect_test "dynamic_state inside assoc_on" =
-      print
-        (Bonsai.Expert.assoc_on
-           (module Int)
-           (module Int)
-           (opaque_const_value Int.Map.empty)
-           ~get_model_key:(fun k _ -> k)
-           ~f:(fun _ _ -> stateful_dynamic_computation));
-      [%expect
-        {|
-        ("with and without optimizations"
-          (shapes (
-            (model proc_min.ml-model)
-            (action (Assoc "io key id" "model key id" (Leaf proc_min.ml)))
-            (input input)))
-          (incr_graph (
-            (nodes 22)
-            (edges 31))))
+            (nodes 13)
+            (edges 16))))
         |}]
     ;;
   end)
@@ -400,8 +379,8 @@ let%test_module "switch" =
             (action Switch)
             (input  "enum input")))
           (incr_graph (
-            (nodes 12)
-            (edges 16))))
+            (nodes 13)
+            (edges 15))))
         |}]
     ;;
 
@@ -420,8 +399,8 @@ let%test_module "switch" =
             (action Switch)
             (input  "enum input")))
           (incr_graph (
-            (nodes 14)
-            (edges 19))))
+            (nodes 15)
+            (edges 18))))
         |}]
     ;;
 
@@ -440,8 +419,8 @@ let%test_module "switch" =
             (action Switch)
             (input  "enum input")))
           (incr_graph (
-            (nodes 14)
-            (edges 18))))
+            (nodes 15)
+            (edges 17))))
         |}]
     ;;
 
@@ -460,8 +439,8 @@ let%test_module "switch" =
             (action Switch)
             (input  "enum input")))
           (incr_graph (
-            (nodes 14)
-            (edges 18))))
+            (nodes 15)
+            (edges 17))))
         |}]
     ;;
   end)
@@ -484,8 +463,8 @@ let%test_module "optimizable switch" =
             (action Switch)
             (input  "enum input")))
           (incr_graph (
-            (nodes 12)
-            (edges 16))))
+            (nodes 13)
+            (edges 15))))
 
         ("with optimizations"
           (shapes ((model unit) (action (Leaf Nothing.t)) (input unit)))
@@ -510,8 +489,8 @@ let%test_module "optimizable switch" =
             (action Switch)
             (input  "enum input")))
           (incr_graph (
-            (nodes 14)
-            (edges 19))))
+            (nodes 15)
+            (edges 18))))
 
         ("with optimizations"
           (shapes ((model proc_min.ml-model) (action (Leaf proc_min.ml)) (input unit)))
@@ -536,8 +515,8 @@ let%test_module "optimizable switch" =
             (action Switch)
             (input  "enum input")))
           (incr_graph (
-            (nodes 14)
-            (edges 18))))
+            (nodes 15)
+            (edges 17))))
 
         ("with optimizations"
           (shapes (
@@ -563,8 +542,8 @@ let%test_module "optimizable switch" =
             (action Switch)
             (input  "enum input")))
           (incr_graph (
-            (nodes 14)
-            (edges 18))))
+            (nodes 15)
+            (edges 17))))
 
         ("with optimizations"
           (shapes (
@@ -590,8 +569,8 @@ let%test_module "optimizable switch" =
             (action Switch)
             (input  "enum input")))
           (incr_graph (
-            (nodes 14)
-            (edges 19))))
+            (nodes 15)
+            (edges 18))))
 
         ("with optimizations"
           (shapes ((model proc_min.ml-model) (action (Leaf proc_min.ml)) (input unit)))

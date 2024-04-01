@@ -1,93 +1,44 @@
 open! Core
 open! Async_kernel
-open! Bonsai_web
+open! Bonsai_web.Cont
 open! Bonsai.Let_syntax
-module Forms = Bonsai_web_ui_form.With_automatic_view
 
-let uppercase s =
-  let open Async_kernel in
-  let%map () = after (Time_ns.Span.of_sec 0.5) in
-  String.uppercase s
-;;
+type mouse_event = Js_of_ocaml.Dom_html.mouseEvent Js_of_ocaml.Js.t
 
-(* $MDX part-begin=uppercase_e *)
-let uppercase_e : string -> string Effect.t = Bonsai_web.Effect.of_deferred_fun uppercase
-
-(* $MDX part-end *)
-
-(* $MDX part-begin=uppercase_rpc_sender *)
-
-module Request_state = struct
-  type t =
-    | Empty
-    | Pending
-    | Filled of string
-  [@@deriving sexp, equal]
-
-  let to_string = function
-    | Empty -> "<no request sent>"
-    | Pending -> "pending..."
-    | Filled s -> s
-  ;;
-end
-
-let uppercase_rpc_sender =
-  let%sub textbox =
-    Forms.Elements.Textbox.string ~allow_updates_when_focused:`Always ()
-  in
-  let%sub result_state =
-    Bonsai.state
-      Empty
-      ~sexp_of_model:[%sexp_of: Request_state.t]
-      ~equal:[%equal: Request_state.t]
-  in
-  let%arr textbox = textbox
-  and result_state, set_result = result_state in
-  let on_submit (contents : string) : unit Effect.t =
-    let%bind.Effect s = uppercase_e contents in
-    set_result (Filled s)
-  in
-  let form_view =
-    textbox
-    |> Forms.label "text to capitalize"
-    |> Forms.view_as_vdom ~on_submit:(Forms.Submit.create ~f:on_submit ())
-  in
+(* $MDX part-begin=clickies *)
+let clickies : Vdom.Node.t =
+  (* This won't run until scheduled...
+     But it will run every time it is scheduled! *)
+  let greet_effect = Effect.alert "hello there!" in
   Vdom.Node.div
-    ~attrs:[ Vdom.Attr.style (Css_gen.display `Inline_grid) ]
-    [ form_view; Vdom.Node.text (Request_state.to_string result_state) ]
+    [ Vdom.Node.button
+        ~attrs:[ Vdom.Attr.on_click (fun (_evt : mouse_event) -> greet_effect) ]
+        [ Vdom.Node.text "click me!" ]
+    ; Vdom.Node.button
+        ~attrs:[ Vdom.Attr.on_click (fun (_evt : mouse_event) -> greet_effect) ]
+        [ Vdom.Node.text "or me!" ]
+    ]
+;;
+
+(* $MDX part-end *)
+let () = Util.run_vdom clickies ~id:"clickies"
+
+(* $MDX part-begin=bind_chain *)
+let chain_some_effects
+  (a : int Effect.t)
+  (b : int -> bool Effect.t)
+  (c : unit Effect.t)
+  (d : unit Effect.t)
+  : unit Effect.t
+  =
+  let%bind.Effect a_return = a in
+  (* Sometimes we don't care about the effect's return value;
+     we just want to execute it. *)
+  let%bind.Effect (_ : bool) = b a_return in
+  let%bind.Effect () = c in
+  d
 ;;
 
 (* $MDX part-end *)
 
-let () = Util.run uppercase_rpc_sender ~id:"uppercase_rpc_sender"
-
-(* $MDX part-begin=uppercase_rpc_sender_bind *)
-let uppercase_rpc_sender_bind =
-  let%sub textbox =
-    Forms.Elements.Textbox.string ~allow_updates_when_focused:`Always ()
-  in
-  let%sub result_state =
-    Bonsai.state
-      Empty
-      ~sexp_of_model:[%sexp_of: Request_state.t]
-      ~equal:[%equal: Request_state.t]
-  in
-  let%arr textbox = textbox
-  and result_state, set_result = result_state in
-  let on_submit contents =
-    let%bind.Effect () = set_result Pending in
-    let%bind.Effect s = uppercase_e contents in
-    set_result (Filled s)
-  in
-  let form_view =
-    textbox
-    |> Forms.label "text to capitalize"
-    |> Forms.view_as_vdom ~on_submit:(Forms.Submit.create ~f:on_submit ())
-  in
-  Vdom.Node.div
-    ~attrs:[ Vdom.Attr.style (Css_gen.display `Inline_grid) ]
-    [ form_view; Vdom.Node.text (Request_state.to_string result_state) ]
-;;
-
-(* $MDX part-end *)
-let () = Util.run uppercase_rpc_sender_bind ~id:"uppercase_rpc_sender_bind"
+let () = ignore chain_some_effects

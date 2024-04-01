@@ -1,11 +1,11 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 open Bonsai.Let_syntax
 
-let component =
-  let%sub height, increase_height =
+let component graph =
+  let height, increase_height =
     Bonsai.state_machine0
-      ()
+      graph
       ~sexp_of_model:[%sexp_of: Int.t]
       ~equal:[%equal: Int.t]
       ~sexp_of_action:[%sexp_of: Unit.t]
@@ -13,7 +13,7 @@ let component =
       ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) old_model () ->
       old_model + 10)
   in
-  let%sub append_effect =
+  let append_effect =
     let%arr height = height in
     Effect.of_sync_fun
       Inline_css.Private.append
@@ -23,7 +23,7 @@ let component =
         }
       |}]
   in
-  let%sub effect =
+  let effect =
     let%arr increase_height = increase_height
     and append_effect = append_effect in
     let%bind.Effect () = append_effect in

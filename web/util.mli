@@ -26,3 +26,7 @@ val am_running_how
     [true], even if the component which performs this check is not.
 *)
 val am_within_disabled_fieldset : #Dom_html.event Js.t -> bool
+
+module For_bonsai_internal : sig
+  val set_stack_overflow_exception_check : unit -> unit
+end

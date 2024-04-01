@@ -1,5 +1,5 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 open Bonsai.Let_syntax
 module Form = Bonsai_web_ui_form.With_automatic_view
 
@@ -84,13 +84,13 @@ module Random_time_span = struct
   let default_extra_duration = 1.0
   let default_chance_of_getting_extra_duration = 0.5
 
-  let form =
+  let form graph =
     Form.Typed.Record.make
       (module struct
         module Typed_field = Typed_field
 
-        let time_span_form ~max ~default =
-          let%sub form =
+        let time_span_form ~max ~default graph =
+          let form =
             Form.Elements.Range.float
               ~min:0.0
               ~max
@@ -98,14 +98,18 @@ module Random_time_span = struct
               ~default
               ~allow_updates_when_focused:`Never
               ()
+              graph
           in
           let%arr form = form in
           Form.project form ~parse_exn:Time_ns.Span.of_sec ~unparse:Time_ns.Span.to_sec
         ;;
 
-        let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t = function
-          | Base_duration -> time_span_form ~max:1.0 ~default:default_base_duration
-          | Extra_duration -> time_span_form ~max:2.0 ~default:default_extra_duration
+        let form_for_field : type a. a Typed_field.t -> Bonsai.graph -> a Form.t Bonsai.t =
+          fun typed_field graph ->
+          match typed_field with
+          | Base_duration -> time_span_form ~max:1.0 ~default:default_base_duration graph
+          | Extra_duration ->
+            time_span_form ~max:2.0 ~default:default_extra_duration graph
           | Chance_of_getting_extra_duration ->
             Form.Elements.Range.float
               ~allow_updates_when_focused:`Never
@@ -114,10 +118,12 @@ module Random_time_span = struct
               ~step:0.1
               ~default:default_chance_of_getting_extra_duration
               ()
+              graph
         ;;
 
         let label_for_field = `Inferred
       end)
+      graph
   ;;
 
   let default =
@@ -255,7 +261,7 @@ let time_ns_to_string time =
 
 let time_span_to_pixels span = Int.to_float (Time_ns.Span.to_int_ms span) /. 25.0
 
-let timeline ~now ~(tracks : Bar.t Fdeque.t Track_id.Map.t Value.t) =
+let timeline ~now ~(tracks : Bar.t Fdeque.t Track_id.Map.t Bonsai.t) graph =
   let timeline_width = 200.0 in
   let timeline_height = 100.0 in
   let starting_line =
@@ -272,15 +278,15 @@ let timeline ~now ~(tracks : Bar.t Fdeque.t Track_id.Map.t Value.t) =
           ]
         [])
   in
-  let%sub number_of_tracks =
+  let number_of_tracks =
     let%arr tracks = tracks in
     Map.length (tracks : _ Track_id.Map.t)
   in
-  let%sub tracks =
+  let tracks =
     Bonsai.assoc
       (module Track_id)
       tracks
-      ~f:(fun track_id deque ->
+      ~f:(fun track_id deque _graph ->
         let%arr now = now
         and number_of_tracks = number_of_tracks
         and deque = deque
@@ -304,8 +310,9 @@ let timeline ~now ~(tracks : Bar.t Fdeque.t Track_id.Map.t Value.t) =
                 ; Attr.fill (`Name (bar_id_to_color id))
                 ]
               [])))
+      graph
   in
-  let%sub lines =
+  let lines =
     let%arr now = now in
     let times_where_lines_should_be_on =
       List.init 22 ~f:(fun i ->
@@ -353,33 +360,36 @@ let clock
   ~description
   ~wait_time
   ~delta_time:now
+  graph
   =
-  let%sub next_bar_id = Bar_id.component in
+  let next_bar_id = Bar_id.component graph in
   let%sub { tracks; last_trigger_time; _ }, update_tracks =
-    Bonsai.state_machine1
-      ~sexp_of_model:[%sexp_of: Tracks.t]
-      ~equal:[%equal: Tracks.t]
-      ~sexp_of_action:[%sexp_of: Tracks_action.t]
-      ~default_model:Tracks.empty
-      ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) now tracks action ->
-        match now with
-        | Active now ->
-          (match action with
-           | Add_bar bar_id -> Tracks.add_bar tracks ~now bar_id
-           | Finish_bar bar_id -> Tracks.finish_bar tracks ~now bar_id)
-        | Inactive ->
-          eprint_s
-            [%message
-              [%here]
-                "An action sent to a [state_machine1] has been dropped because its input \
-                 was not present. This happens when the [state_machine1] is inactive \
-                 when it receives a message."
-                (action : Tracks_action.t)];
-          tracks)
-      now
+    Tuple2.uncurry Bonsai.both
+    @@ Bonsai.state_machine1
+         ~sexp_of_model:[%sexp_of: Tracks.t]
+         ~equal:[%equal: Tracks.t]
+         ~sexp_of_action:[%sexp_of: Tracks_action.t]
+         ~default_model:Tracks.empty
+         ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) now tracks action ->
+           match now with
+           | Active now ->
+             (match action with
+              | Add_bar bar_id -> Tracks.add_bar tracks ~now bar_id
+              | Finish_bar bar_id -> Tracks.finish_bar tracks ~now bar_id)
+           | Inactive ->
+             eprint_s
+               [%message
+                 [%here]
+                   "An action sent to a [state_machine1] has been dropped because its \
+                    input was not present. This happens when the [state_machine1] is \
+                    inactive when it receives a message."
+                   (action : Tracks_action.t)];
+             tracks)
+         now
+         graph
   in
-  let%sub timeline = timeline ~now ~tracks in
-  let%sub clock_action =
+  let timeline = timeline ~now ~tracks graph in
+  let clock_action =
     let%arr wait_time = wait_time
     and update_tracks = update_tracks
     and next_bar_id = next_bar_id in
@@ -390,12 +400,13 @@ let clock
     let%bind () = Effect.of_deferred_fun Async_kernel.Clock_ns.after wait_time in
     update_tracks (Finish_bar bar_id)
   in
-  let%sub () =
+  let () =
     Bonsai.Clock.every
       ~trigger_on_activate
       ~when_to_start_next_effect
       (Time_ns.Span.of_sec 1.0)
       clock_action
+      graph
   in
   let%arr last_trigger_time = last_trigger_time
   and timeline = timeline in
@@ -409,7 +420,7 @@ let clock
     ]
 ;;
 
-let all_clocks ~trigger_on_activate ~wait_time ~delta_time =
+let all_clocks ~trigger_on_activate ~wait_time ~delta_time graph =
   List.map
     [ ( `Wait_period_after_previous_effect_finishes_blocking
       , "`Wait_period_after_previous_effect_finishes_blocking"
@@ -433,31 +444,33 @@ let all_clocks ~trigger_on_activate ~wait_time ~delta_time =
         ~title
         ~description
         ~wait_time
-        ~delta_time)
-  |> Computation.all
+        ~delta_time
+        graph)
+  |> Bonsai.all
 ;;
 
 let immediate_clocks ~wait_time = all_clocks ~trigger_on_activate:true ~wait_time
 
-let component =
-  let%sub time_span_form = Random_time_span.form in
-  let%sub wait_time =
+let component graph =
+  let time_span_form = Random_time_span.form graph in
+  let wait_time =
     let%arr time_span_form = time_span_form in
     Form.value_or_default time_span_form ~default:Random_time_span.default
   in
-  let%sub now = Bonsai.Clock.now in
-  let%sub initial_time =
+  let now = Bonsai.Clock.now graph in
+  let initial_time =
     Bonsai.freeze
       ~sexp_of_model:[%sexp_of: Time_ns.Alternate_sexp.t]
       now
       ~equal:[%equal: Time_ns.Alternate_sexp.t]
+      graph
   in
-  let%sub delta_time =
+  let delta_time =
     let%arr initial_time = initial_time
     and now = now in
     Time_ns.sub now (Time_ns.to_span_since_epoch initial_time)
   in
-  let%sub immediate_clocks = immediate_clocks ~wait_time ~delta_time in
+  let immediate_clocks = immediate_clocks ~wait_time ~delta_time graph in
   let%arr immediate_clocks = immediate_clocks
   and wait_time_form = time_span_form
   and wait_time = wait_time in

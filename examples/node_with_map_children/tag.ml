@@ -1,5 +1,5 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 open Bonsai.Let_syntax
 
 type t =
@@ -7,10 +7,10 @@ type t =
   ; reset : unit Effect.t
   }
 
-let component =
-  let%sub tag, inject =
+let component graph =
+  let tag, inject =
     Bonsai.state_machine0
-      ()
+      graph
       ~sexp_of_model:[%sexp_of: String.t]
       ~equal:[%equal: String.t]
       ~sexp_of_action:[%sexp_of: Unit.t]

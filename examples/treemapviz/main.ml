@@ -1,5 +1,5 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 open Bonsai.Let_syntax
 
 let percent_range_generator = Base_quickcheck.Generator.float_inclusive (-2.8) 2.8
@@ -222,30 +222,30 @@ module Dimensions = struct
   [@@deriving sexp, equal]
 end
 
-let create_treemap ~elements =
-  let%sub dimensions, set_dimensions =
+let create_treemap ~elements graph =
+  let dimensions, set_dimensions =
     Bonsai.state_opt
-      ()
+      graph
       ~sexp_of_model:[%sexp_of: Dimensions.t]
       ~equal:[%equal: Dimensions.t]
   in
-  let%sub tracker =
+  let tracker =
     let%arr set_dimensions = set_dimensions in
     Bonsai_web_ui_element_size_hooks.Size_tracker.on_change (fun ~width ~height ->
       set_dimensions (Some { Dimensions.height; width }))
   in
-  let%sub treemap =
+  let treemap =
     match%sub dimensions with
-    | None -> Bonsai.const Vdom.Node.none
+    | None -> Bonsai.return Vdom.Node.none
     | Some dimensions ->
-      let%sub dimensions =
+      let dimensions =
         let%arr dimensions = dimensions in
         { Dimensions.height = Float.round_nearest_half_to_even dimensions.height
         ; width = Float.round_up dimensions.width
         }
       in
-      let dimensions = Value.cutoff dimensions ~equal:[%equal: Dimensions.t] in
-      let%sub treemap =
+      let dimensions = Bonsai.cutoff dimensions ~equal:[%equal: Dimensions.t] in
+      let treemap =
         let%arr { width; height } = dimensions in
         Bonsai_experimental_treemapviz.create
           ~width
@@ -281,14 +281,14 @@ let create_treemap ~elements =
   Vdom.Node.div ~attrs:[ tracker ] [ treemap ]
 ;;
 
-let component =
-  let%sub stress_state, toggle_stress = Bonsai.toggle ~default_model:false in
-  let%sub content =
+let component graph =
+  let stress_state, toggle_stress = Bonsai.toggle ~default_model:false graph in
+  let content =
     match%sub stress_state with
-    | false -> create_treemap ~elements:life_elements
-    | true -> create_treemap ~elements:stress_elements
+    | false -> create_treemap ~elements:life_elements graph
+    | true -> create_treemap ~elements:stress_elements graph
   in
-  let%sub button =
+  let button =
     let%arr stress_state = stress_state
     and toggle_stress = toggle_stress in
     let text =

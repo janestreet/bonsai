@@ -1,4 +1,4 @@
-open Bonsai_web
+open Bonsai_web.Cont
 
-val app : Vdom.Node.t Computation.t
-val board : string -> Vdom.Node.t Computation.t
+val app : Bonsai.graph -> Vdom.Node.t Bonsai.t
+val board : string -> Bonsai.graph -> Vdom.Node.t Bonsai.t

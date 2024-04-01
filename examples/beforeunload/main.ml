@@ -1,8 +1,8 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 
-let component =
-  Bonsai.const
+let component _graph =
+  Bonsai.return
     (Vdom.Node.div
        ~attrs:
          [ Vdom.Attr.Global_listeners.beforeunload (fun _ -> Effect.return `Show_warning)

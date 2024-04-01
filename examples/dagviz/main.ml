@@ -1,5 +1,5 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 open Bonsai.Let_syntax
 module Position = Bonsai_web_ui_element_size_hooks.Position_tracker.Position
 
@@ -176,8 +176,10 @@ module Node_data = struct
     }
   [@@deriving sexp, compare, quickcheck, fields ~iterators:create]
 
-  let to_vdom (id : Id.t Value.t) (t : t Value.t) : Vdom.Node.t Computation.t =
-    let%sub collapsed, collapse = Bonsai.toggle ~default_model:true in
+  let to_vdom (id : Id.t Bonsai.t) (t : t Bonsai.t) : Bonsai.graph -> Vdom.Node.t Bonsai.t
+    =
+    fun graph ->
+    let collapsed, collapse = Bonsai.toggle ~default_model:true graph in
     let%arr collapsed = collapsed
     and id = id
     and t = t
@@ -347,9 +349,10 @@ let face_point : Position.t -> [ `Top | `Left | `Bottom | `Right ] -> Point.t =
 
 let edge_to_svg
   ~(direction : [ `Top_down | `Left_to_right ])
-  ~(edge : Edge.t Value.t)
-  ~(from : Position.t Value.t)
-  ~(to_ : Position.t Value.t)
+  ~(edge : Edge.t Bonsai.t)
+  ~(from : Position.t Bonsai.t)
+  ~(to_ : Position.t Bonsai.t)
+  _graph
   =
   let%arr edge = edge
   and from = from
@@ -424,9 +427,9 @@ let edge_to_svg
     ]
 ;;
 
-let component =
-  let curr_id = Value.return Id.Count.zero in
-  let%sub dag_data = return (Value.return { To_vdom.nodes; edges }) in
+let component graph =
+  let curr_id = Bonsai.return Id.Count.zero in
+  let dag_data = Bonsai.return { To_vdom.nodes; edges } in
   let%sub dag, _curr_id =
     To_vdom.create
       ~curr_id
@@ -434,10 +437,11 @@ let component =
       ~node_to_vdom:Node_data.to_vdom
       ~edge_to_svg:(edge_to_svg ~direction:`Top_down)
       dag_data
+      graph
   in
-  let%sub dag =
+  let dag =
     match%sub dag with
-    | Ok dag -> return dag
+    | Ok dag -> dag
     | Error error ->
       let%arr error = error in
       Vdom.Node.sexp_for_debugging [%message "" ~_:(error : Error.t)]

@@ -1,8 +1,8 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 
-let component =
-  Bonsai.const
+let component _graph =
+  Bonsai.return
     Vdom_file_download.(
       Button.create
         ~button_text:"click me!"

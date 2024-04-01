@@ -1,5 +1,5 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 
 module Pokemon = struct
   module T = struct
@@ -42,14 +42,16 @@ end
 (* thanks to the good folks in webdev-public, you can no longer fool this into letting you
    choose a pokemon as your favourite if its already your not favourite! *)
 
-let components =
+let components graph =
   let open! Bonsai.Let_syntax in
   let open! Bonsai_web_ui_typeahead in
-  let%sub all_options =
-    Bonsai.state
-      Pokemon.all
-      ~sexp_of_model:[%sexp_of: Pokemon.t list]
-      ~equal:[%equal: Pokemon.t list]
+  let all_options =
+    Tuple2.uncurry Bonsai.both
+    @@ Bonsai.state
+         Pokemon.all
+         ~sexp_of_model:[%sexp_of: Pokemon.t list]
+         ~equal:[%equal: Pokemon.t list]
+         graph
   in
   let typeahead_single ?handle_unknown_option () =
     Typeahead.create
@@ -63,20 +65,20 @@ let components =
              List.filter Pokemon.all ~f:(fun pokemon ->
                not (Pokemon.equal favourite_pokemon pokemon)))
            |> inject_all_options)
-      ~to_string:(Bonsai.Value.return Pokemon.to_string)
+      ~to_string:(Bonsai.return Pokemon.to_string)
       ~placeholder:"Select a pokemon"
       ?handle_unknown_option
-      ~all_options:(Value.return Pokemon.all)
+      ~all_options:(Bonsai.return Pokemon.all)
       (module Pokemon)
       ~equal:[%equal: Pokemon.t]
   in
   let%sub { selected = favourite_pokemon; view = typeahead_single_vdom; _ } =
-    typeahead_single ()
+    typeahead_single () graph
   in
   let%sub { view = typeahead_multi_vdom; _ } =
     Typeahead.create_multi
       (module Pokemon)
-      ~to_string:(Value.return Pokemon.to_string)
+      ~to_string:(Bonsai.return Pokemon.to_string)
       ~on_set_change:
         (let%map inject_all_options = all_options >>| snd
          and favourite_pokemon = favourite_pokemon in
@@ -90,30 +92,32 @@ let components =
            Set.diff all_pokemon not_good_pokemon |> Set.to_list |> inject_all_options)
       ~placeholder:"Select many pokemon"
       ~all_options:(all_options >>| fst)
+      graph
   in
   let%sub { view = typeahead_single_with_custom_input_vdom; _ } =
     typeahead_single
       ~handle_unknown_option:
-        (Value.return (fun input ->
+        (Bonsai.return (fun input ->
            Option.some_if (Int.equal 5 (String.length input)) (Pokemon.of_string input)))
       ()
+      graph
   in
   let typeahead_multi_with_custom_input ~all_options =
     Typeahead.create_multi
-      ~to_string:(Value.return Pokemon.to_string)
+      ~to_string:(Bonsai.return Pokemon.to_string)
       ~placeholder:"Select many pokemon"
       ~handle_unknown_option:
-        (Value.return (fun input ->
+        (Bonsai.return (fun input ->
            (* custom [handle_unknown_option] that does a check on unknown inputs *)
            Option.some_if (String.contains ~pos:0 input 'B') (Pokemon.of_string input)))
       ~all_options
       (module Pokemon)
   in
   let%sub { view = typeahead_multi_with_empty_options_vdom; _ } =
-    typeahead_multi_with_custom_input ~all_options:(Value.return [])
+    typeahead_multi_with_custom_input ~all_options:(Bonsai.return []) graph
   in
   let%sub { view = typeahead_multi_with_custom_input_vdom; _ } =
-    typeahead_multi_with_custom_input ~all_options:(Value.return Pokemon.all)
+    typeahead_multi_with_custom_input ~all_options:(Bonsai.return Pokemon.all) graph
   in
   let%arr typeahead_single_vdom = typeahead_single_vdom
   and typeahead_multi_vdom = typeahead_multi_vdom

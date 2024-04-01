@@ -1,5 +1,5 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 open Bonsai.Let_syntax
 module Table = Bonsai_web_ui_partial_render_table.Basic
 module Indexed_column_id = Bonsai_web_ui_partial_render_table.Indexed_column_id
@@ -47,17 +47,17 @@ let column_helper
     then None
     else
       Some
-        (Value.return (fun (_, a) (_, b) ->
+        (Bonsai.return (fun (_, a) (_, b) ->
            M.compare (Field.get field a) (Field.get field b)))
   in
   let render_header text =
-    Value.return (Column.Sortable.Header.with_icon (Vdom.Node.text text))
+    Bonsai.return (Column.Sortable.Header.with_icon (Vdom.Node.text text))
   in
   Column.column
     ?visible
     ~header:(render_header (Fieldslib.Field.name field))
     ?sort
-    ~cell:(fun ~key:_ ~data ->
+    ~cell:(fun ~key:_ ~data _graph ->
       let%arr data = data in
       Vdom.Node.text (M.to_string (Field.get field data)))
     ()
@@ -76,49 +76,49 @@ let special_compare_option how compare_inner a b =
 
 let columns ~should_show_position =
   let render_header text =
-    Value.return (Column.Sortable.Header.with_icon (Vdom.Node.text text))
+    Bonsai.return (Column.Sortable.Header.with_icon (Vdom.Node.text text))
   in
-  [ column_helper (module String) Row.Fields.symbol
-  ; column_helper (module Float) Row.Fields.edge
-  ; column_helper (module Float) Row.Fields.max_edge
-  ; column_helper (module Int) Row.Fields.bsize
-  ; column_helper (module Float) Row.Fields.bid
-  ; column_helper (module Float) Row.Fields.ask
-  ; column_helper (module Int) Row.Fields.asize
-  ; Column.group
-      ~label:(Value.return (Vdom.Node.text "some group"))
-      [ Column.group
-          ~label:(Value.return (Vdom.Node.text "small"))
-          [ column_helper
-              (module Int)
-              Row.Fields.position
-              ~disable_sort:true
-              ~visible:should_show_position
-          ]
-      ; Column.column
-          ~header:(render_header "last fill")
-          ~sort:
-            (Value.return (fun (_key1, a) (_key2, b) ->
-               special_compare_option
-                 `Ascending
-                 [%compare: Time_ns.t]
-                 a.Row.last_fill
-                 b.Row.last_fill))
-          ~sort_reversed:
-            (Value.return (fun (_key1, a) (_key2, b) ->
-               special_compare_option
-                 `Descending
-                 [%compare: Time_ns.t]
-                 a.Row.last_fill
-                 b.Row.last_fill))
-          ~cell:(fun ~key:_ ~data ->
-            let%arr data = data in
-            Vdom.Node.text (Time_ns_option.to_string data.Row.last_fill))
-          ()
-      ]
-  ; column_helper (module String) Row.Fields.trader
-  ]
-  |> Column.lift
+  Column.lift
+    [ column_helper (module String) Row.Fields.symbol
+    ; column_helper (module Float) Row.Fields.edge
+    ; column_helper (module Float) Row.Fields.max_edge
+    ; column_helper (module Int) Row.Fields.bsize
+    ; column_helper (module Float) Row.Fields.bid
+    ; column_helper (module Float) Row.Fields.ask
+    ; column_helper (module Int) Row.Fields.asize
+    ; Column.group
+        ~label:(Bonsai.return (Vdom.Node.text "some group"))
+        [ Column.group
+            ~label:(Bonsai.return (Vdom.Node.text "small"))
+            [ column_helper
+                (module Int)
+                Row.Fields.position
+                ~disable_sort:true
+                ~visible:should_show_position
+            ]
+        ; Column.column
+            ~header:(render_header "last fill")
+            ~sort:
+              (Bonsai.return (fun (_key1, a) (_key2, b) ->
+                 special_compare_option
+                   `Ascending
+                   [%compare: Time_ns.t]
+                   a.Row.last_fill
+                   b.Row.last_fill))
+            ~sort_reversed:
+              (Bonsai.return (fun (_key1, a) (_key2, b) ->
+                 special_compare_option
+                   `Descending
+                   [%compare: Time_ns.t]
+                   a.Row.last_fill
+                   b.Row.last_fill))
+            ~cell:(fun ~key:_ ~data _graph ->
+              let%arr data = data in
+              Vdom.Node.text (Time_ns_option.to_string data.Row.last_fill))
+            ()
+        ]
+    ; column_helper (module String) Row.Fields.trader
+    ]
 ;;
 
 type t =
@@ -143,8 +143,9 @@ let generic_table_and_focus_attr
   ~get_unlock_focus
   ~attr_of_focus
   data
+  graph
   =
-  let%sub table =
+  let table =
     Table.component
       (module String)
       ?filter
@@ -154,6 +155,7 @@ let generic_table_and_focus_attr
       ~row_height
       ~columns:(columns ~should_show_position)
       data
+      graph
   in
   let%arr { Table.Result.view = table
           ; for_testing = _
@@ -193,7 +195,7 @@ let component
       ~theming
       ~multisort_columns_when
       ~should_show_position
-      ~focus:(By_row { on_change = Value.return (Fn.const Effect.Ignore) })
+      ~focus:(By_row { on_change = Bonsai.return (Fn.const Effect.Ignore) })
       ~get_lock_focus:Focus_control.lock_focus
       ~get_unlock_focus:Focus_control.unlock_focus
       ~get_focus_is_locked:Focus_control.focus_is_locked
@@ -222,7 +224,7 @@ let component
       ~theming
       ~multisort_columns_when
       ~should_show_position
-      ~focus:(By_cell { on_change = Value.return (Fn.const Effect.Ignore) })
+      ~focus:(By_cell { on_change = Bonsai.return (Fn.const Effect.Ignore) })
       ~get_lock_focus:Focus_control.lock_focus
       ~get_unlock_focus:Focus_control.unlock_focus
       ~get_focus_is_locked:Focus_control.focus_is_locked
@@ -278,12 +280,14 @@ module Layout_form = struct
       }
     [@@deriving typed_fields]
 
-    let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t = function
-      | Themed -> Form.Elements.Toggle.bool ~default:true ()
-      | Show_position -> Form.Elements.Toggle.bool ~default:true ()
-      | Cell_based_highlighting -> Form.Elements.Toggle.bool ~default:false ()
+    let form_for_field : type a. a Typed_field.t -> Bonsai.graph -> a Form.t Bonsai.t =
+      fun typed_field graph ->
+      match typed_field with
+      | Themed -> Form.Elements.Toggle.bool ~default:true () graph
+      | Show_position -> Form.Elements.Toggle.bool ~default:true () graph
+      | Cell_based_highlighting -> Form.Elements.Toggle.bool ~default:false () graph
       | Row_height ->
-        let%sub form =
+        let form =
           Form.Elements.Range.int
             ~min:0
             ~max:100
@@ -291,6 +295,7 @@ module Layout_form = struct
             ~allow_updates_when_focused:`Never
             ()
             ~default:30
+            graph
         in
         let%arr form = form in
         Form.project form ~parse_exn:(fun x -> `Px x) ~unparse:(fun (`Px x) -> x)
@@ -300,15 +305,16 @@ module Layout_form = struct
           ~default:10_000
           ~step:1
           ()
+          graph
       | Multisort_columns_when ->
-        Form.Elements.Dropdown.enumerable (module Multisort_columns_when)
+        Form.Elements.Dropdown.enumerable (module Multisort_columns_when) graph
     ;;
 
     let label_for_field = `Inferred
   end
 
-  let component =
-    let%sub form = Form.Typed.Record.make (module Params) in
+  let component graph =
+    let form = Form.Typed.Record.make (module Params) graph in
     let%arr form = form in
     let values =
       Form.value_or_default
@@ -328,16 +334,17 @@ module Layout_form = struct
 end
 
 module Column_width_form = struct
-  let component ~set_column_width =
+  let component ~set_column_width graph =
     let open Bonsai.Let_syntax in
-    let%sub form =
+    let form =
       Form.Elements.Textbox.int
-        ~placeholder:(Value.return "Symbol column width")
+        ~placeholder:(Bonsai.return "Symbol column width")
         ~allow_updates_when_focused:`Always
         ()
+        graph
     in
-    let%sub button =
-      let%sub theme = View.Theme.current in
+    let button =
+      let theme = View.Theme.current graph in
       let%arr form = form
       and theme = theme
       and set_column_width = set_column_width in

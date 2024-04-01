@@ -1,5 +1,5 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 
 module Css =
 [%css
@@ -15,8 +15,8 @@ stylesheet
   }
   |}]
 
-let component =
-  Bonsai.const
+let component _graph =
+  Bonsai.return
     (Vdom.Node.div
        ~attrs:[ Css.firacode ]
        [ Vdom.Node.text "text with some ligatures -> ==> >>=" ])

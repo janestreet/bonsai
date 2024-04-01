@@ -1,5 +1,5 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 
 let build_result send_message (textbox_content, set_textbox_content) =
   let submit_and_then_clear =
@@ -33,16 +33,20 @@ let build_result send_message (textbox_content, set_textbox_content) =
   Vdom.Node.div ~attrs:[ Vdom.Attr.id "compose" ] [ text_input; submit_button ]
 ;;
 
-let component ~send_message =
+let component ~send_message graph =
   let open Bonsai.Let_syntax in
-  let%sub textbox_state =
-    Bonsai.state_machine0
-      ()
-      ~sexp_of_model:[%sexp_of: String.t]
-      ~equal:[%equal: String.t]
-      ~sexp_of_action:[%sexp_of: String.t]
-      ~default_model:""
-      ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) _ new_state -> new_state)
+  let textbox_state =
+    Tuple2.uncurry Bonsai.both
+    @@ Bonsai.state_machine0
+         graph
+         ~sexp_of_model:[%sexp_of: String.t]
+         ~equal:[%equal: String.t]
+         ~sexp_of_action:[%sexp_of: String.t]
+         ~default_model:""
+         ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) _ new_state ->
+         new_state)
   in
-  return (build_result <$> send_message <*> textbox_state)
+  let%arr send_message = send_message
+  and textbox_state = textbox_state in
+  build_result send_message textbox_state
 ;;

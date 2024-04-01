@@ -5,16 +5,28 @@ open Incr.Let_syntax
 let ( >>> ) f inject b = inject (f b)
 let () = Incr.State.(set_max_height_allowed t 1024)
 
-let unzip3_mapi' map ~f =
-  let first, second_and_third =
-    Incr_map.unzip_mapi' map ~f:(fun ~key ~data ->
-      let a, b, c = f ~key ~data in
-      let bc = Incr.both b c in
-      annotate Lifecycle_apply_action_pair bc;
-      a, bc)
-  in
-  let second, third = Incr_map.unzip second_and_third in
-  first, second, third
+let unzip3_mapi' map ~may_contain_lifecycle ~comparator ~f =
+  match (may_contain_lifecycle : May_contain.Lifecycle.t) with
+  | No ->
+    (* if we know that [f] always returns a triple whose last element (the lifecycle
+       incremental) is always the empty lifecycle collection, then we can drop it 
+       here, and avoid nesting unzips *)
+    let first, second =
+      Incr_map.unzip_mapi' map ~f:(fun ~key ~data ->
+        let a, b, _ = f ~key ~data in
+        a, b)
+    in
+    first, second, Incr.return (Map.empty comparator)
+  | Yes_or_maybe ->
+    let first, second_and_third =
+      Incr_map.unzip_mapi' map ~f:(fun ~key ~data ->
+        let a, b, c = f ~key ~data in
+        let bc = Incr.both b c in
+        annotate Lifecycle_apply_action_pair bc;
+        a, bc)
+    in
+    let second, third = Incr_map.unzip second_and_third in
+    first, second, third
 ;;
 
 let do_nothing_lifecycle = Incr.return Lifecycle.Collection.empty
@@ -38,11 +50,13 @@ let rec gather
          ; apply_action = unusable_apply_action
          ; reset = reset_unit_model
          ; run
-         ; can_contain_path = false
+         ; may_contain_path = No
+         ; may_contain_lifecycle = No
          })
   | Leaf1 { model; input_id; dynamic_action; apply_action; input; reset } ->
     let wrap_leaf inject = Action.dynamic_leaf >>> inject in
     let run ~environment ~path:_ ~clock:_ ~model ~inject =
+      annotate Model model;
       let input = Value.eval environment input in
       (* It's important to create [inject_dynamic] outside of the [let%mapn] so that it
          remains [phys_equal] when the [model] changes. *)
@@ -73,11 +87,13 @@ let rec gather
          ; apply_action
          ; reset
          ; run
-         ; can_contain_path = false
+         ; may_contain_path = No
+         ; may_contain_lifecycle = No
          })
   | Leaf0 { model; static_action; apply_action; reset } ->
     let wrap_leaf inject = Action.static_leaf >>> inject in
     let run ~environment:_ ~path:_ ~clock:_ ~model ~inject =
+      annotate Model model;
       (* It's important to create [inject_static] outside of the [let%mapn] so that it
          remains [phys_equal] when the [model] changes. *)
       let inject_static = wrap_leaf inject in
@@ -106,7 +122,8 @@ let rec gather
          ; apply_action
          ; reset
          ; run
-         ; can_contain_path = false
+         ; may_contain_path = No
+         ; may_contain_lifecycle = No
          })
   | Leaf_incr { input; compute } ->
     let run ~environment ~path:_ ~clock ~model:_ ~inject:_ =
@@ -122,7 +139,8 @@ let rec gather
          ; apply_action = unusable_apply_action
          ; reset = reset_unit_model
          ; run
-         ; can_contain_path = false
+         ; may_contain_path = No
+         ; may_contain_lifecycle = No
          })
   | Sub { into = Sub { into = Sub _; _ }; _ } as t ->
     Eval_sub.chain t ~gather:{ f = gather }
@@ -145,7 +163,8 @@ let rec gather
          ; action = gathered.action
          ; apply_action = gathered.apply_action
          ; reset = gathered.reset
-         ; can_contain_path = gathered.can_contain_path
+         ; may_contain_path = gathered.may_contain_path
+         ; may_contain_lifecycle = gathered.may_contain_lifecycle
          })
   | Fetch { id; default; for_some } ->
     let run ~environment ~path:_ ~clock:_ ~model:_ ~inject:_ =
@@ -164,7 +183,8 @@ let rec gather
          ; apply_action = unusable_apply_action
          ; reset = reset_unit_model
          ; run
-         ; can_contain_path = false
+         ; may_contain_path = No
+         ; may_contain_lifecycle = No
          })
   | Assoc { map; key_comparator; key_id; cmp_id; data_id; by } ->
     let module Cmp = (val key_comparator) in
@@ -178,7 +198,8 @@ let rec gather
                           ; apply_action
                           ; run
                           ; reset
-                          ; can_contain_path
+                          ; may_contain_path
+                          ; may_contain_lifecycle
                           })
       =
       gather by
@@ -195,51 +216,61 @@ let rec gather
         unstage (Path.Elem.keyed ~compare:Cmp.comparator.compare key_id)
       in
       let results_map, input_map, lifecycle_map =
-        unzip3_mapi' input_and_models_map ~f:(fun ~key ~data:input_and_model ->
-          annotate Model_and_input input_and_model;
-          let path =
-            if can_contain_path
-            then Path.append path Path.Elem.(Assoc (create_keyed key))
-            else path
-          in
-          let%pattern_bind value, model = input_and_model in
-          let key_incr = Incr.const key in
-          annotate Assoc_key key_incr;
-          annotate Assoc_input value;
-          let environment =
-            (* It is safe to reuse the same [key_id] and [data_id] for each pair in the map,
-               since they all start with a fresh "copy" of the outer environment. *)
-            environment
-            |> Environment.add_exn ~key:key_id ~data:key_incr
-            |> Environment.add_exn ~key:data_id ~data:value
-          in
-          let snapshot, () =
-            run ~environment ~path ~clock ~inject:(wrap_assoc ~key inject) ~model
-            |> Trampoline.run
-          in
-          ( Snapshot.result snapshot
-          , Input.to_incremental (Snapshot.input snapshot)
-          , Snapshot.lifecycle_or_empty snapshot ))
+        unzip3_mapi'
+          input_and_models_map
+          ~comparator:(module Cmp)
+          ~may_contain_lifecycle
+          ~f:(fun ~key ~data:input_and_model ->
+            annotate Model_and_input input_and_model;
+            let path =
+              match may_contain_path with
+              | Yes_or_maybe -> Path.append path Path.Elem.(Assoc (create_keyed key))
+              | No -> path
+            in
+            let%pattern_bind value, model = input_and_model in
+            let key_incr = Incr.const key in
+            annotate Assoc_key key_incr;
+            annotate Assoc_input value;
+            let environment =
+              (* It is safe to reuse the same [key_id] and [data_id] for each pair in the map,
+                 since they all start with a fresh "copy" of the outer environment. *)
+              environment
+              |> Environment.add_exn ~key:key_id ~data:key_incr
+              |> Environment.add_exn ~key:data_id ~data:value
+            in
+            let snapshot, () =
+              run ~environment ~path ~clock ~inject:(wrap_assoc ~key inject) ~model
+              |> Trampoline.run
+            in
+            ( Snapshot.result snapshot
+            , Input.to_incremental (Snapshot.input snapshot)
+            , Snapshot.lifecycle_or_empty snapshot ))
       in
       annotate Assoc_results results_map;
       annotate Assoc_lifecycles lifecycle_map;
       annotate Assoc_inputs input_map;
       let lifecycle =
-        Incr_map.unordered_fold_nested_maps
-          lifecycle_map
-          ~init:Path.Map.empty
-          ~add:(fun ~outer_key:_ ~inner_key:key ~data acc ->
-            Map.update acc key ~f:(function
-              | Some _ -> Path.raise_duplicate key
-              | None -> data))
-          ~remove:(fun ~outer_key:_ ~inner_key:key ~data:_ acc -> Map.remove acc key)
+        (* if we can prove that the body of the assoc doesn't contain a
+           lifecycle node, then return None, dropping the constant incremental
+           node on the floor. *)
+        match may_contain_lifecycle with
+        | No -> None
+        | Yes_or_maybe ->
+          let unfolded =
+            Incr_map.unordered_fold_nested_maps
+              lifecycle_map
+              ~init:Path.Map.empty
+              ~add:(fun ~outer_key:_ ~inner_key:key ~data acc ->
+                Map.update acc key ~f:(function
+                  | Some _ -> Path.raise_duplicate key
+                  | None -> data))
+              ~remove:(fun ~outer_key:_ ~inner_key:key ~data:_ acc -> Map.remove acc key)
+          in
+          annotate Assoc_lifecycles unfolded;
+          Some unfolded
       in
-      annotate Assoc_lifecycles lifecycle;
       Trampoline.return
-        ( Snapshot.create
-            ~result:results_map
-            ~input:(Input.dynamic input_map)
-            ~lifecycle:(Some lifecycle)
+        ( Snapshot.create ~result:results_map ~input:(Input.dynamic input_map) ~lifecycle
         , () )
     in
     let apply_action
@@ -278,7 +309,8 @@ let rec gather
          ; apply_action
          ; reset
          ; run
-         ; can_contain_path
+         ; may_contain_path
+         ; may_contain_lifecycle
          })
   | Assoc_on
       { map
@@ -310,7 +342,8 @@ let rec gather
                           ; apply_action
                           ; run
                           ; reset
-                          ; can_contain_path
+                          ; may_contain_path
+                          ; may_contain_lifecycle
                           })
       =
       gather by
@@ -322,70 +355,81 @@ let rec gather
         unstage (Path.Elem.keyed ~compare:Io_comparator.comparator.compare io_key_id)
       in
       let results_map, input_map, lifecycle_map =
-        unzip3_mapi' map_input ~f:(fun ~key:io_key ~data:value ->
-          let%pattern_bind results_map, input_map, lifecycle_map =
-            let path =
-              if can_contain_path
-              then Path.append path Path.Elem.(Assoc (create_keyed io_key))
-              else path
+        unzip3_mapi'
+          map_input
+          ~may_contain_lifecycle
+          ~comparator:(module Io_comparator)
+          ~f:(fun ~key:io_key ~data:value ->
+            let%pattern_bind results_map, input_map, lifecycle_map =
+              let path =
+                match may_contain_path with
+                | Yes_or_maybe -> Path.append path Path.Elem.(Assoc (create_keyed io_key))
+                | No -> path
+              in
+              let key_incr = Incr.const io_key in
+              annotate Assoc_key key_incr;
+              annotate Assoc_input value;
+              let environment =
+                (* It is safe to reuse the same [key_id] and [data_id] for each pair in the map,
+                   since they all start with a fresh "copy" of the outer environment. *)
+                environment
+                |> Environment.add_exn ~key:io_key_id ~data:key_incr
+                |> Environment.add_exn ~key:data_id ~data:value
+              in
+              let model_key =
+                let%map value = value in
+                get_model_key io_key value
+              in
+              Incr.set_cutoff
+                model_key
+                (Incr.Cutoff.of_compare model_key_comparator.compare);
+              let%bind model_key = model_key in
+              let model =
+                match%map Incr_map.Lookup.find model_lookup model_key with
+                | None -> model_info.default
+                | Some (_prev_io_key, model) -> model
+              in
+              annotate Model model;
+              let snapshot, () =
+                run
+                  ~environment
+                  ~path
+                  ~clock
+                  ~inject:(wrap_assoc_on ~io_key ~model_key inject)
+                  ~model
+                |> Trampoline.run
+              in
+              let%mapn result = Snapshot.result snapshot
+              and input = Input.to_incremental (Snapshot.input snapshot)
+              and lifecycle = Snapshot.lifecycle_or_empty snapshot in
+              result, input, lifecycle
             in
-            let key_incr = Incr.const io_key in
-            annotate Assoc_key key_incr;
-            annotate Assoc_input value;
-            let environment =
-              (* It is safe to reuse the same [key_id] and [data_id] for each pair in the map,
-                 since they all start with a fresh "copy" of the outer environment. *)
-              environment
-              |> Environment.add_exn ~key:io_key_id ~data:key_incr
-              |> Environment.add_exn ~key:data_id ~data:value
-            in
-            let model_key =
-              let%map value = value in
-              get_model_key io_key value
-            in
-            Incr.set_cutoff
-              model_key
-              (Incr.Cutoff.of_compare model_key_comparator.compare);
-            let%bind model_key = model_key in
-            let model =
-              match%map Incr_map.Lookup.find model_lookup model_key with
-              | None -> model_info.default
-              | Some (_prev_io_key, model) -> model
-            in
-            let snapshot, () =
-              run
-                ~environment
-                ~path
-                ~clock
-                ~inject:(wrap_assoc_on ~io_key ~model_key inject)
-                ~model
-              |> Trampoline.run
-            in
-            let%mapn result = Snapshot.result snapshot
-            and input = Input.to_incremental (Snapshot.input snapshot)
-            and lifecycle = Snapshot.lifecycle_or_empty snapshot in
-            result, input, lifecycle
-          in
-          results_map, input_map, lifecycle_map)
+            results_map, input_map, lifecycle_map)
       in
       annotate Assoc_results results_map;
       annotate Assoc_lifecycles lifecycle_map;
       let lifecycle =
-        Incr_map.unordered_fold_nested_maps
-          lifecycle_map
-          ~init:Path.Map.empty
-          ~add:(fun ~outer_key:_ ~inner_key:key ~data acc ->
-            Map.update acc key ~f:(function
-              | Some _ -> Path.raise_duplicate key
-              | None -> data))
-          ~remove:(fun ~outer_key:_ ~inner_key:key ~data:_ acc -> Map.remove acc key)
+        (* if we can prove that the body of the assoc_on doesn't contain a
+           lifecycle node, then return None, dropping the constant incremental
+           node on the floor. *)
+        match may_contain_lifecycle with
+        | No -> None
+        | Yes_or_maybe ->
+          let unfolded =
+            Incr_map.unordered_fold_nested_maps
+              lifecycle_map
+              ~init:Path.Map.empty
+              ~add:(fun ~outer_key:_ ~inner_key:key ~data acc ->
+                Map.update acc key ~f:(function
+                  | Some _ -> Path.raise_duplicate key
+                  | None -> data))
+              ~remove:(fun ~outer_key:_ ~inner_key:key ~data:_ acc -> Map.remove acc key)
+          in
+          annotate Assoc_lifecycles unfolded;
+          Some unfolded
       in
-      annotate Assoc_lifecycles lifecycle;
       Trampoline.return
-        ( Snapshot.create
-            ~result:results_map
-            ~input:(Input.dynamic input_map)
-            ~lifecycle:(Some lifecycle)
+        ( Snapshot.create ~result:results_map ~input:(Input.dynamic input_map) ~lifecycle
         , () )
     in
     let apply_action
@@ -438,9 +482,10 @@ let rec gather
          ; apply_action
          ; reset
          ; run
-         ; can_contain_path
+         ; may_contain_path
+         ; may_contain_lifecycle
          })
-  | Assoc_simpl { map; by; can_contain_path } ->
+  | Assoc_simpl { map; by; may_contain_path } ->
     let run ~environment ~path ~clock:_ ~model:_ ~inject:_ =
       let map_input = Value.eval environment map in
       let result = Incr_map.mapi map_input ~f:(fun ~key ~data -> by path key data) in
@@ -454,20 +499,34 @@ let rec gather
          ; apply_action = unusable_apply_action
          ; reset = reset_unit_model
          ; run
-         ; can_contain_path
+         ; may_contain_path
+         ; may_contain_lifecycle = No
          })
   | Switch { match_; arms; here = _ } ->
     let wrap_switch ~branch ~type_id inject = Action.switch ~branch ~type_id >>> inject in
     let%bind.Trampoline gathered = Trampoline.all_map (Map.map arms ~f:gather) in
-    let can_contain_path, needs_disambiguation =
+    let may_contain_lifecycle =
+      Map.fold
+        gathered
+        ~init:May_contain.Lifecycle.No
+        ~f:(fun ~key:_ ~data:(T gathered) acc ->
+        May_contain.Lifecycle.merge acc gathered.may_contain_lifecycle)
+    in
+    let may_contain_path, needs_disambiguation =
       let num_contain_path =
-        Map.count gathered ~f:(fun (T { can_contain_path; _ }) -> can_contain_path)
+        Map.count gathered ~f:(function
+          | T { may_contain_path = Yes_or_maybe; _ } -> true
+          | T { may_contain_path = No; _ } -> false)
       in
-      num_contain_path > 0, num_contain_path > 1
+      let may_contain_path =
+        if num_contain_path > 0 then May_contain.Path.Yes_or_maybe else No
+      in
+      may_contain_path, num_contain_path > 1
     in
     let run ~environment ~path ~clock ~model ~inject =
+      annotate Model model;
       let index = Value.eval environment match_ in
-      let%pattern_bind result, input, lifecycle =
+      let result_input_and_lifecycle =
         let%bind index = index in
         (* !!!This is a load-bearing bind!!!
 
@@ -484,7 +543,8 @@ let rec gather
               ; action = action_info
               ; apply_action = _
               ; reset = _
-              ; can_contain_path = _
+              ; may_contain_path = _
+              ; may_contain_lifecycle = _
               ; run
               })
           =
@@ -513,13 +573,20 @@ let rec gather
           let%mapn input = Input.to_incremental (Snapshot.input snapshot) in
           Meta.Input.Hidden.T { input; type_id = input_info; key = index }
         in
-        let%mapn result = Snapshot.result snapshot
-        and lifecycle = Snapshot.lifecycle_or_empty snapshot
-        and input = input in
-        result, input, lifecycle
+        Incr.return (Snapshot.result snapshot, input, Snapshot.lifecycle_or_empty snapshot)
       in
+      let result = Incr.bind result_input_and_lifecycle ~f:Tuple3.get1
+      and input = Incr.bind result_input_and_lifecycle ~f:Tuple3.get2
+      and lifecycle = Incr.bind result_input_and_lifecycle ~f:Tuple3.get3 in
       let input = Input.dynamic input in
-      Trampoline.return (Snapshot.create ~result ~input ~lifecycle:(Some lifecycle), ())
+      let lifecycle =
+        (* if we can prove that none of the switch cases have lifecycle functions, 
+           then return None, dropping the incremental node on the floor. *)
+        match may_contain_lifecycle with
+        | No -> None
+        | Yes_or_maybe -> Some lifecycle
+      in
+      Trampoline.return (Snapshot.create ~result ~input ~lifecycle, ())
     in
     let apply_action
       ~inject
@@ -535,7 +602,8 @@ let rec gather
             ; apply_action
             ; run = _
             ; reset = _
-            ; can_contain_path = _
+            ; may_contain_path = _
+            ; may_contain_lifecycle = _
             })
         =
         Map.find_exn gathered index
@@ -597,8 +665,9 @@ let rec gather
               ; action = am
               ; reset
               ; apply_action = _
+              ; may_contain_lifecycle = _
               ; run = _
-              ; can_contain_path = _
+              ; may_contain_path = _
               })
           =
           Map.find_exn gathered index
@@ -631,7 +700,8 @@ let rec gather
          ; apply_action
          ; reset
          ; run
-         ; can_contain_path
+         ; may_contain_path
+         ; may_contain_lifecycle
          })
   | Lazy lazy_computation ->
     let wrap_lazy ~type_id inject = Action.lazy_ ~type_id >>> inject in
@@ -645,11 +715,13 @@ let rec gather
             ; run
             ; apply_action = _
             ; reset = _
-            ; can_contain_path = _
+            ; may_contain_path = _
+            ; may_contain_lifecycle = _
             })
         =
         force gathered
       in
+      annotate Model model;
       let input_model =
         let%map model = model in
         let (Meta.Model.Hidden.T { model; info; _ }) =
@@ -696,7 +768,8 @@ let rec gather
             ; apply_action
             ; run = _
             ; reset = _
-            ; can_contain_path = _
+            ; may_contain_path = _
+            ; may_contain_lifecycle = _
             })
         =
         force gathered
@@ -738,7 +811,8 @@ let rec gather
             ; apply_action = _
             ; run = _
             ; input = _
-            ; can_contain_path = _
+            ; may_contain_path = _
+            ; may_contain_lifecycle = _
             })
         =
         force gathered
@@ -769,7 +843,8 @@ let rec gather
          ; apply_action
          ; run
          ; reset
-         ; can_contain_path = true
+         ; may_contain_path = Yes_or_maybe
+         ; may_contain_lifecycle = Yes_or_maybe
          })
   | Wrap
       { wrapper_model
@@ -788,7 +863,8 @@ let rec gather
                           ; apply_action
                           ; run
                           ; reset
-                          ; can_contain_path
+                          ; may_contain_path
+                          ; may_contain_lifecycle
                           })
       =
       gather inner
@@ -796,7 +872,9 @@ let rec gather
     let wrap_inner inject = Action.wrap_inner >>> inject in
     let wrap_outer inject = Action.wrap_outer >>> inject in
     let run ~environment ~path ~clock ~model ~inject =
+      annotate Model model;
       let%pattern_bind outer_model, inner_model = model in
+      annotate Model outer_model;
       let%bind.Trampoline inner_snapshot, () =
         let environment =
           environment
@@ -857,7 +935,8 @@ let rec gather
          ; apply_action
          ; run
          ; reset
-         ; can_contain_path
+         ; may_contain_path
+         ; may_contain_lifecycle
          })
   | With_model_resetter { inner; reset_id } ->
     let%bind.Trampoline (T
@@ -867,7 +946,8 @@ let rec gather
                            ; apply_action
                            ; run
                            ; reset
-                           ; can_contain_path
+                           ; may_contain_path
+                           ; may_contain_lifecycle
                            } as gathered_inner))
       =
       gather inner
@@ -923,7 +1003,8 @@ let rec gather
             ; apply_action
             ; run
             ; reset
-            ; can_contain_path
+            ; may_contain_path
+            ; may_contain_lifecycle
             }))
   | Path ->
     let run ~environment:_ ~path ~clock:_ ~model:_ ~inject:_ =
@@ -939,7 +1020,8 @@ let rec gather
          ; apply_action = unusable_apply_action
          ; reset = reset_unit_model
          ; run
-         ; can_contain_path = true
+         ; may_contain_path = Yes_or_maybe
+         ; may_contain_lifecycle = No
          })
   | Lifecycle lifecycle ->
     let run ~environment ~path ~clock:_ ~model:_ ~inject:_ =
@@ -965,7 +1047,8 @@ let rec gather
          ; apply_action = unusable_apply_action
          ; reset = reset_unit_model
          ; run
-         ; can_contain_path = true
+         ; may_contain_path = Yes_or_maybe
+         ; may_contain_lifecycle = Yes_or_maybe
          })
 ;;
 

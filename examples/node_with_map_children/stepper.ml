@@ -1,5 +1,5 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 open Bonsai.Let_syntax
 
 type t =
@@ -61,14 +61,17 @@ let generate_diffs ~before ~after =
   |> List.group ~break:(fun _ _ -> Random.bool ())
 ;;
 
-let component ~(before_state : Color_list.t Value.t) ~(after_state : Color_list.t Value.t)
+let component
+  ~(before_state : Color_list.t Bonsai.t)
+  ~(after_state : Color_list.t Bonsai.t)
+  graph
   =
-  let%sub input =
+  let input =
     let%arr before = before_state
     and after = after_state in
     { Input.before; after }
   in
-  let%sub state, inject =
+  let state, inject =
     Bonsai.state_machine1
       ~sexp_of_model:[%sexp_of: Model.t]
       ~equal:[%equal: Model.t]
@@ -76,32 +79,33 @@ let component ~(before_state : Color_list.t Value.t) ~(after_state : Color_list.
       input
       ~default_model:{ cur = Int.Map.empty; diffs = []; pointer = 0 }
       ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) input model action ->
-      match input with
-      | Active { Input.before; after } ->
-        (match action with
-         | Set_state model -> model
-         | Restart ->
-           let diffs = generate_diffs ~before ~after in
-           { cur = before; diffs; pointer = 0 }
-         | Step ->
-           let packet =
-             match List.nth model.diffs model.pointer with
-             | Some packet -> packet
-             | None -> []
-           in
-           let cur = List.fold packet ~init:model.cur ~f:Modification.apply in
-           { model with cur; pointer = model.pointer + 1 })
-      | Inactive ->
-        eprint_s
-          [%message
-            [%here]
-              "An action sent to a [state_machine1] has been dropped because its input \
-               was not present. This happens when the [state_machine1] is inactive when \
-               it receives a message."
-              (action : Action.t)];
-        model)
+        match input with
+        | Active { Input.before; after } ->
+          (match action with
+           | Set_state model -> model
+           | Restart ->
+             let diffs = generate_diffs ~before ~after in
+             { cur = before; diffs; pointer = 0 }
+           | Step ->
+             let packet =
+               match List.nth model.diffs model.pointer with
+               | Some packet -> packet
+               | None -> []
+             in
+             let cur = List.fold packet ~init:model.cur ~f:Modification.apply in
+             { model with cur; pointer = model.pointer + 1 })
+        | Inactive ->
+          eprint_s
+            [%message
+              [%here]
+                "An action sent to a [state_machine1] has been dropped because its input \
+                 was not present. This happens when the [state_machine1] is inactive \
+                 when it receives a message."
+                (action : Action.t)];
+          model)
+      graph
   in
-  let%sub () =
+  let () =
     Bonsai.Edge.on_change
       ~sexp_of_model:[%sexp_of: Input.t]
       ~equal:[%equal: Input.t]
@@ -109,10 +113,13 @@ let component ~(before_state : Color_list.t Value.t) ~(after_state : Color_list.
       ~callback:
         (let%map inject = inject in
          fun _ -> inject Restart)
+      graph
   in
-  let%sub help_toggler = Bonsai.toggle ~default_model:false in
-  let%sub is_automating, toggle_automating = Bonsai.toggle ~default_model:false in
-  let%sub ff_button =
+  let help_toggler =
+    Tuple2.uncurry Bonsai.both @@ Bonsai.toggle ~default_model:false graph
+  in
+  let is_automating, toggle_automating = Bonsai.toggle ~default_model:false graph in
+  let ff_button =
     let%arr toggle_automating = toggle_automating in
     Style.fast_forward `Dark ~on_click:toggle_automating
   in

@@ -29,14 +29,15 @@ stylesheet
 }
 |}]
 
-let component =
-  let%sub search_bar =
+let component graph =
+  let search_bar =
     Form.Elements.Textbox.string
       ~extra_attrs:
-        (Value.return [ Vdom.Attr.many [ Card_like.class_; Search_bar.class_ ] ])
-      ~placeholder:(Value.return "Search icons")
+        (Bonsai.return [ Vdom.Attr.many [ Card_like.class_; Search_bar.class_ ] ])
+      ~placeholder:(Bonsai.return "Search icons")
       ~allow_updates_when_focused:`Never
       ()
+      graph
   in
   let%arr search_bar = search_bar in
   let icons =

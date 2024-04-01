@@ -1,5 +1,5 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 open! Bonsai.Let_syntax
 module Modal = Bonsai_web_ui_modal
 module Native_modal = Draft_modal
@@ -8,12 +8,12 @@ module Native_modal = Draft_modal
 
 let center = Vdom.Attr.style (Css_gen.text_align `Center)
 
-let modal_1_contents =
-  Bonsai.const (Vdom.Node.div ~attrs:[ center ] [ Vdom.Node.text "Surprise!" ])
+let modal_1_contents _graph =
+  Bonsai.return (Vdom.Node.div ~attrs:[ center ] [ Vdom.Node.text "Surprise!" ])
 ;;
 
-let modal_2_contents n =
-  let%sub got_ya =
+let modal_2_contents n _graph =
+  let got_ya =
     match%arr n with
     | 1 -> "Got ya!"
     | n -> sprintf "Got ya %d times!" n
@@ -24,21 +24,23 @@ let modal_2_contents n =
     [ Vdom.Node.text "Surprise!"; Vdom.Node.br (); Vdom.Node.text got_ya ]
 ;;
 
-let original_app =
-  let%sub modal_1 =
+let original_app graph =
+  let modal_1 =
     Modal.create
       (module Unit)
       (fun _ ~hide_self:_ -> modal_1_contents)
       ~equal:[%equal: Unit.t]
+      graph
   in
-  let%sub modal_2 =
+  let modal_2 =
     Modal.create
       (module Int)
       (fun n ~hide_self:_ -> modal_2_contents n)
       ~equal:[%equal: Int.t]
+      graph
   in
-  let%sub state, set_state =
-    Bonsai.state 1 ~sexp_of_model:[%sexp_of: Int.t] ~equal:[%equal: Int.t]
+  let state, set_state =
+    Bonsai.state 1 ~sexp_of_model:[%sexp_of: Int.t] ~equal:[%equal: Int.t] graph
   in
   let%arr state = state
   and set_state = set_state
@@ -92,8 +94,8 @@ let dialog_contents ?title ?close_button:close_button_on_cancel contents =
 
 (* A button that adds lots of content to the page. Used to see/test that we disabled body
    scrolling. *)
-let add_lots_of_content_markup =
-  let%sub show, toggle = Bonsai.toggle ~default_model:false in
+let add_lots_of_content_markup graph =
+  let show, toggle = Bonsai.toggle ~default_model:false graph in
   let%arr show = show
   and toggle = toggle in
   let content =
@@ -115,14 +117,16 @@ let add_lots_of_content_markup =
   [ button; content ]
 ;;
 
-let stacking_example =
+let stacking_example
   (* Note: there's probably a way to write this such that the outer modal takes a bonsai
-     component for it's contents. For now it just demonstrates that the vdom's can stack
-  *)
+         component for it's contents. For now it just demonstrates that the vdom's can stack
+      *)
   (* Creates the button to show/hide the modal and has state management. creator should
-     be fun on_cancel -> modal *)
-  let%sub show_outer, toggle_outer = Bonsai.toggle ~default_model:false in
-  let%sub show_inner, toggle_inner = Bonsai.toggle ~default_model:false in
+         be fun on_cancel -> modal *)
+    graph
+  =
+  let show_outer, toggle_outer = Bonsai.toggle ~default_model:false graph in
+  let show_inner, toggle_inner = Bonsai.toggle ~default_model:false graph in
   let toggle_button text toggler =
     Vdom.Node.button
       ~attrs:[ Vdom.Attr.on_click (fun _ -> toggler) ]
@@ -151,12 +155,14 @@ let stacking_example =
   ]
 ;;
 
-let native_app =
+let native_app
   (* I have a simple code example here of creating a modal, but then for later examples
-     I have a slightly non-idiomatic helper function to cut down on the boilerplate
-     of creating several different similar variations. *)
+         I have a slightly non-idiomatic helper function to cut down on the boilerplate
+         of creating several different similar variations. *)
   (* Creates the button to show/hide the modal and has state management. creator should
-     be fun on_cancel -> modal *)
+         be fun on_cancel -> modal *)
+    graph
+  =
   let create_modal_example' ?desc creator button_text ~show ~toggle () =
     let toggle_button text toggler =
       Vdom.Node.button
@@ -180,13 +186,13 @@ let native_app =
     ; Vdom.Node.div [ toggle_button button_text toggle; extra_desc_markup ]
     ]
   in
-  let create_modal_example ?desc creator button_text () =
-    let%sub show, toggle = Bonsai.toggle ~default_model:false in
+  let create_modal_example ?desc creator button_text () graph =
+    let show, toggle = Bonsai.toggle ~default_model:false graph in
     let%arr show = show
     and toggle = toggle in
     create_modal_example' ?desc creator button_text ~show ~toggle ()
   in
-  let%sub simple_modal =
+  let simple_modal =
     (* I have many examples so I factored out the logic that adds a button and manages show/hide
        with bonsai state, but you can just write that directly.
     *)
@@ -200,9 +206,9 @@ let native_app =
       in
       Native_modal.view ~on_close:toggle contents
     in
-    create_modal_example creator "Simple modal" ()
+    create_modal_example creator "Simple modal" () graph
   in
-  let%sub side_sheet_modal =
+  let side_sheet_modal =
     let creator ~toggle =
       let contents =
         dialog_contents
@@ -212,11 +218,11 @@ let native_app =
       in
       Native_modal.view ~layout:`Right_side_sheet ~on_close:toggle contents
     in
-    create_modal_example creator "Side sheet" ()
+    create_modal_example creator "Side sheet" () graph
   in
-  let%sub confirm_modal =
+  let confirm_modal =
     let%sub contents, confirm_prompt =
-      let%sub value, set_value = Bonsai.state None in
+      let value, set_value = Bonsai.state None graph in
       let%arr value = value
       and set_value = set_value in
       let module N = Vdom.Node in
@@ -230,7 +236,7 @@ let native_app =
           ]
       , Option.map value ~f:(fun _ -> "Are you sure you want to close?") )
     in
-    let%sub show, toggle = Bonsai.toggle ~default_model:false in
+    let show, toggle = Bonsai.toggle ~default_model:false graph in
     let%arr contents = contents
     and confirm_prompt = confirm_prompt
     and show = show
@@ -251,7 +257,7 @@ let native_app =
       ~toggle
       ()
   in
-  let%sub transparent_modal =
+  let transparent_modal =
     let creator ~toggle =
       let contents =
         dialog_contents
@@ -265,7 +271,7 @@ let native_app =
         ~on_close:toggle
         contents
     in
-    create_modal_example creator "Transparent backdrop, no animation" ()
+    create_modal_example creator "Transparent backdrop, no animation" () graph
   in
   let intro_text =
     Vdom.Node.div
@@ -281,8 +287,8 @@ let native_app =
           \            Can customize overlay and frame styling if desired."
       ]
   in
-  let%sub add_lots_of_content_markup = add_lots_of_content_markup in
-  let%sub stacking_example = stacking_example in
+  let add_lots_of_content_markup = add_lots_of_content_markup graph in
+  let stacking_example = stacking_example graph in
   let%arr simple_modal = simple_modal
   and side_sheet_modal = side_sheet_modal
   and confirm_modal = confirm_modal
@@ -304,9 +310,9 @@ let native_app =
           ]))
 ;;
 
-let combined_app =
-  let%sub original_app = original_app in
-  let%sub native_app = native_app in
+let combined_app graph =
+  let original_app = original_app graph in
+  let native_app = native_app graph in
   let%arr original_app = original_app
   and native_app = native_app in
   Vdom.Node.div

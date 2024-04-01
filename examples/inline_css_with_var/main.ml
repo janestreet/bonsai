@@ -1,5 +1,5 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 
 module Style =
 [%css
@@ -34,4 +34,6 @@ let component =
     [ red_box; blue_box; other_box ]
 ;;
 
-let () = Bonsai_web.Start.start (Bonsai.const (Vdom.Node.div [ component ]))
+let () =
+  Bonsai_web.Start.start (fun _graph -> Bonsai.return (Vdom.Node.div [ component ]))
+;;

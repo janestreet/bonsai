@@ -63,11 +63,13 @@ module Kind : sig
     | By_row :
         { on_change : ('k option -> unit Effect.t) Value.t
         ; compute_presence : 'k option Value.t -> 'presence Computation.t
+        ; key_rank : ('k -> int option Effect.t) Value.t
         }
         -> (('k, 'presence) By_row.t, 'presence, 'k, 'col_id) t
     | By_cell :
         { on_change : (('k * 'col_id) option -> unit Effect.t) Value.t
         ; compute_presence : ('k * 'col_id) option Value.t -> 'presence Computation.t
+        ; key_rank : ('k -> int option Effect.t) Value.t
         }
         -> (('k, 'col_id, 'presence) By_cell.t, 'presence, 'k, 'col_id) t
 end

@@ -13,7 +13,7 @@ end
 module Session = Unique_id.Int ()
 
 module Active_users = struct
-  type t = { active_users : (Username.t[@atomic]) Session.Map.t [@diff.map] }
+  type t = { active_users : (Username.t[@atomic]) Session.Map.t }
   [@@deriving diff, bin_io, equal, sexp]
 end
 

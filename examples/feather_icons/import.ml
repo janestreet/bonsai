@@ -1,5 +1,5 @@
 open! Core
-include Bonsai_web
+include Bonsai_web.Cont
 include Bonsai.Let_syntax
 module Form = Bonsai_web_ui_form.With_automatic_view
 

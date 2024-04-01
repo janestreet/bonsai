@@ -11,9 +11,11 @@ module Scale = struct
   let to_string t = sexp_of_t t |> Sexp.to_string
 end
 
-let scale : (Scale.t * Vdom.Node.t) Computation.t =
-  let%sub scale_state =
-    Bonsai.state `log ~sexp_of_model:[%sexp_of: Scale.t] ~equal:[%equal: Scale.t]
+let scale : Bonsai.graph -> (Scale.t * Vdom.Node.t) Bonsai.t =
+  fun graph ->
+  let scale_state =
+    Tuple2.uncurry Bonsai.both
+    @@ Bonsai.state `log ~sexp_of_model:[%sexp_of: Scale.t] ~equal:[%equal: Scale.t] graph
   in
   let%arr scale, set_scale = scale_state in
   let view =
@@ -31,7 +33,7 @@ let data =
   Dygraph.Data.create_date
     ~zone:local_tz
     (Array.of_list (List.map Stock_data.data ~f:(fun (date, a, b) -> date, [| a; b |])))
-  |> Value.return
+  |> Bonsai.return
 ;;
 
 let options ~logscale =
@@ -49,10 +51,10 @@ let options ~logscale =
       (Dygraph.Options.Highlight_series_options.create () ~strokeWidth:1.5)
 ;;
 
-let app =
+let app graph =
   let x_label = "Month" in
   let y_labels = [ "Nominal"; "Real" ] in
-  let%sub scale, scale_view = scale in
+  let%sub scale, scale_view = scale graph in
   let options =
     match%map scale with
     | `log -> options ~logscale:true
@@ -60,10 +62,10 @@ let app =
   in
   let%sub { graph_view; _ } =
     Dygraph.With_bonsai.create
-      ~key:("graph" |> Value.return)
-      ~x_label:(x_label |> Value.return)
+      ~key:("graph" |> Bonsai.return)
+      ~x_label:(x_label |> Bonsai.return)
       ~per_series_info:
-        (y_labels |> Dygraph.Per_series_info.create_all_visible |> Value.return)
+        (y_labels |> Dygraph.Per_series_info.create_all_visible |> Bonsai.return)
       ~options
       ~data
         (* By setting the graph to global variable "g", I'm able to access the graph in the
@@ -71,6 +73,7 @@ let app =
          for debugging/convenience. *)
       ~with_graph:(fun graph -> Js.Unsafe.set Dom_html.window "g" graph)
       ()
+      graph
   in
   let%arr graph_view = graph_view
   and scale_view = scale_view in

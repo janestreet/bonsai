@@ -892,16 +892,17 @@ module type S = sig
   end
 
   module Dynamic_scope : sig
-    (** This module implements dynamic variable scoping.  Once a
+    (** This module implements dynamic variable scoping. Once a
         dynamic variable is created, you can store values in it, and
         lookup those same values.  A lookup will find the nearest-most
-        grandparent [set_within] call. *)
+        parent "unreverted" [set] call where a "set" can be "reverted"
+        with [set']'s  [revert]. *)
 
     type 'a t
 
     (** Creates a new variable for use with the rest of the functions.
         It is critically important that the exact same [Dynamic_scope.t] is used
-        in calls to [set_within] and the corresponding [lookup*].  *)
+        in calls to [set] and the corresponding [lookup].  *)
     val create : ?sexp_of:('a -> Sexp.t) -> name:string -> fallback:'a -> unit -> 'a t
 
     (** Creates a variable which is derived from another.  Typically this is used to

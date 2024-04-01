@@ -1,5 +1,5 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 open Bonsai.Let_syntax
 module Gauge = Bonsai_web_ui_gauge
 open Vdom
@@ -66,10 +66,10 @@ let colors =
 
 let radius = 30.
 
-let ticker =
-  let%sub percentage, increase =
+let ticker graph =
+  let percentage, increase =
     Bonsai.state_machine0
-      ()
+      graph
       ~sexp_of_model:[%sexp_of: Int.t]
       ~equal:[%equal: Int.t]
       ~sexp_of_action:[%sexp_of: Unit.t]
@@ -77,9 +77,9 @@ let ticker =
       ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) model () ->
       (model + 1) % 101)
   in
-  let%sub color_index, increment =
+  let color_index, increment =
     Bonsai.state_machine0
-      ()
+      graph
       ~sexp_of_model:[%sexp_of: Int.t]
       ~equal:[%equal: Int.t]
       ~sexp_of_action:[%sexp_of: Unit.t]
@@ -88,7 +88,7 @@ let ticker =
       prev + (1 % Array.length colors))
   in
   let%sub () =
-    let%sub effect =
+    let effect =
       let%arr increase = increase
       and increment = increment in
       Effect.Many [ increase (); increment () ]
@@ -98,19 +98,21 @@ let ticker =
       ~trigger_on_activate:false
       (Time_ns.Span.of_sec 0.1)
       effect
+      graph;
+    Bonsai.return ()
   in
   let%arr percentage = percentage
   and color_index = color_index in
   Percent.of_percentage (Int.to_float percentage), color_index
 ;;
 
-let component =
-  let%sub percentage, color_index = ticker in
-  let%sub gauge1 =
+let component graph =
+  let%sub percentage, color_index = ticker graph in
+  let gauge1 =
     let%arr percentage = percentage in
     Gauge.create ~radius percentage
   in
-  let%sub gauge2 =
+  let gauge2 =
     let percent_to_color p =
       let open Float in
       let p = Percent.to_percentage p in
@@ -125,8 +127,8 @@ let component =
     let%arr percentage = percentage in
     Gauge.create ~percent_to_color ~radius percentage
   in
-  let%sub gauge3 =
-    let%sub percent_to_color =
+  let gauge3 =
+    let percent_to_color =
       let%arr color_index = color_index in
       let color = Array.get colors (color_index % Array.length colors) in
       Fn.const (`Hex color)

@@ -1,5 +1,5 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 module Form = Bonsai_web_ui_form.With_automatic_view
 module E = Form.Elements
 
@@ -17,9 +17,11 @@ module Person = struct
 
   let label_for_field = `Computed field_to_string
 
-  let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t = function
-    | Name -> E.Textbox.string ~allow_updates_when_focused:`Never ()
-    | Age -> E.Textbox.int ~allow_updates_when_focused:`Never ()
+  let form_for_field : type a. a Typed_field.t -> Bonsai.graph -> a Form.t Bonsai.t =
+    fun typed_field graph ->
+    match typed_field with
+    | Name -> E.Textbox.string ~allow_updates_when_focused:`Never () graph
+    | Age -> E.Textbox.int ~allow_updates_when_focused:`Never () graph
   ;;
 end
 
@@ -45,12 +47,14 @@ module Dyn = struct
   let label_for_variant = `Computed to_string
   let initial_choice = `First_constructor
 
-  let form_for_variant : type a. a Typed_variant.t -> a Form.t Computation.t = function
-    | Unit -> Bonsai.const (Form.return ())
-    | Integer -> E.Textbox.int ~allow_updates_when_focused:`Never ()
-    | Floating -> E.Textbox.float ~allow_updates_when_focused:`Never ()
-    | Text -> E.Textbox.string ~allow_updates_when_focused:`Never ()
-    | People -> Form.Typed.Record.make_table (module Person)
+  let form_for_variant : type a. a Typed_variant.t -> Bonsai.graph -> a Form.t Bonsai.t =
+    fun typed_field graph ->
+    match typed_field with
+    | Unit -> Bonsai.return (Form.return ())
+    | Integer -> E.Textbox.int ~allow_updates_when_focused:`Never () graph
+    | Floating -> E.Textbox.float ~allow_updates_when_focused:`Never () graph
+    | Text -> E.Textbox.string ~allow_updates_when_focused:`Never () graph
+    | People -> Form.Typed.Record.make_table (module Person) graph
   ;;
 end
 
@@ -98,19 +102,20 @@ module Food = struct
     : type a cmp.
       a Typed_variant.t
       -> (a, cmp) Bonsai.comparator
-      -> (a, cmp) Set.t Form.t Computation.t
+      -> Bonsai.graph
+      -> (a, cmp) Set.t Form.t Bonsai.t
     =
-    fun variant (module Cmp) ->
+    fun variant (module Cmp) graph ->
     match variant with
     | Snack ->
-      let%sub.Bonsai checkbox = E.Checkbox.bool ~default:false () in
+      let checkbox = E.Checkbox.bool ~default:false () graph in
       let%arr.Bonsai checkbox = checkbox in
       Form.project
         checkbox
         ~parse_exn:(fun is_set ->
           if is_set then Set.singleton (module Cmp) () else Set.empty (module Cmp))
         ~unparse:(fun set -> Set.is_empty set |> not)
-    | Meal -> E.Typeahead.set (module Cmp) ~all_options:(Value.return Meal.all)
+    | Meal -> E.Typeahead.set (module Cmp) ~all_options:(Bonsai.return Meal.all) graph
   ;;
 
   include Comparable.Make_plain (T)
@@ -118,12 +123,13 @@ end
 
 let food_form = Form.Typed.Variant.make_set (module Food)
 
-let component =
-  let%map.Computation person = person_form
-  and dyn = dyn_form
-  and radio_form = radio_form
-  and horizontal_radio_form = horizontal_radio_form
-  and food_form = food_form in
+let component graph =
+  let open Bonsai.Let_syntax in
+  let%arr person = person_form graph
+  and dyn = dyn_form graph
+  and radio_form = radio_form graph
+  and horizontal_radio_form = horizontal_radio_form graph
+  and food_form = food_form graph in
   Vdom.Node.div
     [ Vdom.Node.h1 [ Vdom.Node.text "Typed Fields" ]
     ; Form.View.to_vdom (Form.view person)

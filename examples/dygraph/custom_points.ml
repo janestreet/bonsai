@@ -1,6 +1,6 @@
 open Core
 open Js_of_ocaml
-open Bonsai_web
+open Bonsai_web.Cont
 
 let side_lengths = Array.init 12 ~f:(fun i -> float i)
 
@@ -75,18 +75,19 @@ let options =
     ~title:"Custom Drawn Points Example"
 ;;
 
-let app =
+let app graph =
   let%sub.Bonsai { graph_view; _ } =
     Dygraph.With_bonsai.create
       ()
-      ~key:("custom-drawn-points-graph" |> Value.return)
-      ~x_label:("diameter/side length" |> Value.return)
+      ~key:("custom-drawn-points-graph" |> Bonsai.return)
+      ~x_label:("diameter/side length" |> Bonsai.return)
       ~per_series_info:
         ([ "circles"; "squares" ]
          |> Dygraph.Per_series_info.create_all_visible
-         |> Value.return)
-      ~options:(options |> Value.return)
-      ~data:(data |> Value.return)
+         |> Bonsai.return)
+      ~options:(options |> Bonsai.return)
+      ~data:(data |> Bonsai.return)
+      graph
   in
-  Bonsai.read graph_view
+  graph_view
 ;;

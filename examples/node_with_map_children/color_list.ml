@@ -1,5 +1,5 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 open Bonsai.Let_syntax
 
 type result =
@@ -42,10 +42,10 @@ module Action = struct
   [@@deriving sexp_of]
 end
 
-let component name =
-  let%sub state, inject =
+let component name graph =
+  let state, inject =
     Bonsai.state_machine0
-      ()
+      graph
       ~sexp_of_model:[%sexp_of: Model.t]
       ~equal:[%equal: Model.t]
       ~sexp_of_action:[%sexp_of: Action.t]
@@ -55,12 +55,12 @@ let component name =
       | Regenerate -> generate_random ()
       | Remove i -> Map.remove model i)
   in
-  let%sub () =
+  let () =
     Bonsai.Edge.lifecycle
       ~on_activate:
         (let%map inject = inject in
          inject Regenerate)
-      ()
+      graph
   in
   let%arr state = state
   and inject = inject in

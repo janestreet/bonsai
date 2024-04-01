@@ -1,5 +1,5 @@
 open! Core
-open Bonsai_web
+open Bonsai_web.Cont
 open Bonsai_examples_mouse_position_common
 open Bonsai.Let_syntax
 open Username_kernel
@@ -17,7 +17,7 @@ let session_to_color session =
   ]
 ;;
 
-let app =
+let app graph =
   let%sub { last_ok_response; _ } =
     Rpc_effect.Polling_state_rpc.poll
       ~sexp_of_query:[%sexp_of: Unit.t]
@@ -27,19 +27,20 @@ let app =
       Protocol.Active_users.rpc
       ~where_to_connect:Self
       ~every:(Time_ns.Span.of_sec 1.0)
-      (Value.return ())
+      (Bonsai.return ())
+      graph
   in
-  let%sub active_users =
+  let active_users =
     match%arr last_ok_response with
     | Some (_, { active_users }) -> active_users
     | None -> Session.Map.empty
   in
-  let%sub rpc_results =
+  let rpc_results =
     Bonsai.assoc
       (module Session)
       active_users
-      ~f:(fun session username ->
-        let%sub result =
+      ~f:(fun session username graph ->
+        let result =
           Rpc_effect.Rpc.poll
             ~sexp_of_query:[%sexp_of: Session.t]
             ~sexp_of_response:[%sexp_of: Mouse_position.t option]
@@ -49,24 +50,27 @@ let app =
             ~where_to_connect:Self
             ~every:(Time_ns.Span.of_sec 0.1)
             session
+            graph
         in
         let%arr result = result
         and username = username in
         result, username)
+      graph
   in
-  let%sub mouse_positions =
+  let mouse_positions =
     Bonsai.Map.filter_mapi
       rpc_results
       ~f:(fun ~key:_ ~data:({ last_ok_response; _ }, username) ->
-      match last_ok_response with
-      | Some (_, Some mouse_position) -> Some (mouse_position, username)
-      | None | Some (_, None) -> None)
+        match last_ok_response with
+        | Some (_, Some mouse_position) -> Some (mouse_position, username)
+        | None | Some (_, None) -> None)
+      graph
   in
-  let%sub cursor_blocks =
+  let cursor_blocks =
     Bonsai.assoc
       (module Session)
       mouse_positions
-      ~f:(fun session info ->
+      ~f:(fun session info _graph ->
         let%arr session = session
         and mouse_position, username = info in
         Node.div
@@ -82,9 +86,10 @@ let app =
             ; Style.item
             ]
           [ Node.text (Username.to_string username) ])
+      graph
   in
-  let%sub status_sidebar =
-    let%sub theme = View.Theme.current in
+  let status_sidebar =
+    let theme = View.Theme.current graph in
     let%arr rpc_results = rpc_results
     and theme = theme in
     let rows = Map.to_alist rpc_results in
@@ -111,8 +116,8 @@ let app =
     in
     Vdom.Node.div ~attrs:[ Style.sidebar ] [ View.Table.render theme columns rows ]
   in
-  let%sub set_mouse_position =
-    Rpc_effect.Rpc.dispatcher Protocol.Set_mouse_position.rpc ~where_to_connect:Self
+  let set_mouse_position =
+    Rpc_effect.Rpc.dispatcher Protocol.Set_mouse_position.rpc ~where_to_connect:Self graph
   in
   let%arr cursor_blocks = cursor_blocks
   and status_sidebar = status_sidebar

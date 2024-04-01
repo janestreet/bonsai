@@ -1,5 +1,5 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 open Bonsai.Let_syntax
 module Rpgdice = Bonsai_web_rpgdice_example
 
@@ -33,25 +33,26 @@ module Action = struct
   [@@deriving sexp_of]
 end
 
-let component =
-  let%sub dice_state =
-    Bonsai.state_machine0
-      ()
-      ~sexp_of_model:[%sexp_of: Model.t]
-      ~equal:[%equal: Model.t]
-      ~sexp_of_action:[%sexp_of: Action.t]
-      ~default_model:Model.init
-      ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) model -> function
-      | Decrement_const -> { model with const = model.const - 1 }
-      | Increment_const -> { model with const = model.const + 1 }
-      | Increment { num_faces } ->
-        { model with
-          dice =
-            Map.update model.dice num_faces ~f:(function
-              | None -> failwith "map keys shouldn't have changed"
-              | Some v -> v + 1)
-        }
-      | Clear -> { const = 0; dice = Map.map model.dice ~f:(Fn.const 0) })
+let component graph =
+  let dice_state =
+    Tuple2.uncurry Bonsai.both
+    @@ Bonsai.state_machine0
+         graph
+         ~sexp_of_model:[%sexp_of: Model.t]
+         ~equal:[%equal: Model.t]
+         ~sexp_of_action:[%sexp_of: Action.t]
+         ~default_model:Model.init
+         ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) model -> function
+         | Decrement_const -> { model with const = model.const - 1 }
+         | Increment_const -> { model with const = model.const + 1 }
+         | Increment { num_faces } ->
+           { model with
+             dice =
+               Map.update model.dice num_faces ~f:(function
+                 | None -> failwith "map keys shouldn't have changed"
+                 | Some v -> v + 1)
+           }
+         | Clear -> { const = 0; dice = Map.map model.dice ~f:(Fn.const 0) })
   in
   let%arr model, inject = dice_state in
   let button = Vdom_input_widgets.Button.simple in

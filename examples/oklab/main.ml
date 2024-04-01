@@ -1,5 +1,5 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 open Bonsai.Let_syntax
 module Knobs = Knobs
 
@@ -61,8 +61,8 @@ let overlay ~left ~right =
   ]
 ;;
 
-let component =
-  let%sub form = Knobs.form in
+let component graph =
+  let form = Knobs.form graph in
   let%arr ( { shared = { left = `Hex left; right = `Hex right }
             ; for_gradient = { steps }
             ; for_overlay = { left_alpha; right_alpha }
@@ -89,5 +89,5 @@ let component =
 
 let () =
   Bonsai_web.Start.start
-    (View.Theme.set_for_app (Value.return (Kado.theme ~version:Bleeding ())) component)
+    (View.Theme.set_for_app (Bonsai.return (Kado.theme ~version:Bleeding ())) component)
 ;;

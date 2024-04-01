@@ -38,6 +38,7 @@ module Private = struct
   let top_level_handle = Cont.Conv.top_level_handle
   let handle = Cont.Conv.handle
   let perform = Cont.Conv.perform
+  let set_perform_on_exception = Cont.Expert.For_bonsai_internal.set_perform_on_exception
 end
 
 include Proc_layer2

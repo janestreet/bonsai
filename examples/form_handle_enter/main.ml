@@ -1,5 +1,5 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 open Bonsai.Let_syntax
 module Form = Bonsai_web_ui_form.With_automatic_view
 
@@ -20,39 +20,42 @@ module Css = [%css stylesheet {|
   color: black;
 } |}]
 
-let component =
-  let%sub notifications =
-    Bonsai_web_ui_notifications.component (module Unit) ~equal:[%equal: Unit.t]
+let component graph =
+  let notifications =
+    Bonsai_web_ui_notifications.component (module Unit) ~equal:[%equal: Unit.t] graph
   in
-  let%sub rendered_notifications =
-    Bonsai_web_ui_notifications.render notifications ~f:(fun ~close:_ _ ->
-      Bonsai.const
-        (Vdom.Node.div ~attrs:[ Css.notification ] [ Vdom.Node.text "Submitted form" ]))
+  let rendered_notifications =
+    Bonsai_web_ui_notifications.render
+      notifications
+      ~f:(fun ~close:_ _ _graph ->
+        Bonsai.return
+          (Vdom.Node.div ~attrs:[ Css.notification ] [ Vdom.Node.text "Submitted form" ]))
+      graph
   in
-  let%sub notify =
+  let notify =
     let%arr notifications = notifications in
     Bonsai_web_ui_notifications.send_notification
       ~close_after:(Time_ns.Span.of_sec 5.0)
       notifications
       ()
   in
-  let%sub form1 =
-    Bonsai_web_ui_auto_generated.form (module One) ~textbox_for_string:() ()
+  let form1 =
+    Bonsai_web_ui_auto_generated.form (module One) ~textbox_for_string:() () graph
   in
-  let%sub form2 =
-    Bonsai_web_ui_auto_generated.form (module One) ~textbox_for_string:() ()
+  let form2 =
+    Bonsai_web_ui_auto_generated.form (module One) ~textbox_for_string:() () graph
   in
-  let%sub form3 =
-    Bonsai_web_ui_auto_generated.form (module One) ~textbox_for_string:() ()
+  let form3 =
+    Bonsai_web_ui_auto_generated.form (module One) ~textbox_for_string:() () graph
   in
-  let%sub form4 =
-    Bonsai_web_ui_auto_generated.form (module Two) ~textbox_for_string:() ()
+  let form4 =
+    Bonsai_web_ui_auto_generated.form (module Two) ~textbox_for_string:() () graph
   in
-  let%sub form5 =
-    Bonsai_web_ui_auto_generated.form (module Two) ~textbox_for_string:() ()
+  let form5 =
+    Bonsai_web_ui_auto_generated.form (module Two) ~textbox_for_string:() () graph
   in
-  let%sub form6 =
-    Bonsai_web_ui_auto_generated.form (module Two) ~textbox_for_string:() ()
+  let form6 =
+    Bonsai_web_ui_auto_generated.form (module Two) ~textbox_for_string:() () graph
   in
   let%arr rendered_notifications = rendered_notifications
   and notify = notify

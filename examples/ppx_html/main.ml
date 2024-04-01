@@ -1,5 +1,5 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 open! Bonsai.Let_syntax
 module Gallery = Bonsai_web_ui_gallery
 
@@ -28,7 +28,7 @@ module Basic = struct
             </div>
           |}]]
     in
-    Bonsai.const (vdom, demo)
+    fun _graph -> Bonsai.return (vdom, demo)
   ;;
 
   let selector = None
@@ -43,7 +43,7 @@ module With_tailwind = struct
     let vdom, demo =
       [%demo [%html {| <div tailwind="w-16 h-16 bg-amber-400"></div> |}]]
     in
-    Bonsai.const (vdom, demo)
+    fun _graph -> Bonsai.return (vdom, demo)
   ;;
 
   let selector = None
@@ -71,15 +71,15 @@ module Svg_example = struct
             </svg>
           |}]]
     in
-    Bonsai.const (vdom, demo)
+    fun _graph -> Bonsai.return (vdom, demo)
   ;;
 
   let selector = None
   let filter_attrs = Some (fun k _ -> not (String.is_prefix k ~prefix:"style"))
 end
 
-let component =
-  let%sub theme, theme_picker = Gallery.Theme_picker.component ~default:Kado () in
+let component graph =
+  let%sub theme, theme_picker = Gallery.Theme_picker.component ~default:Kado () graph in
   View.Theme.set_for_app
     theme
     (Gallery.make_sections
@@ -91,6 +91,7 @@ let component =
            ; Gallery.make_demo (module With_tailwind)
            ] )
        ])
+    graph
 ;;
 
 let () = Bonsai_web.Start.start component

@@ -1,10 +1,10 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 open! Bonsai.Let_syntax
 
-let text_input =
-  let%sub text_contents, set_text_contents =
-    Bonsai.state_opt () ~sexp_of_model:[%sexp_of: String.t] ~equal:[%equal: String.t]
+let text_input graph =
+  let text_contents, set_text_contents =
+    Bonsai.state_opt graph ~sexp_of_model:[%sexp_of: String.t] ~equal:[%equal: String.t]
   in
   let%arr text_contents = text_contents
   and set_text_contents = set_text_contents in
@@ -16,9 +16,9 @@ let text_input =
     ()
 ;;
 
-let date_input =
-  let%sub date_contents, set_date_contents =
-    Bonsai.state_opt () ~sexp_of_model:[%sexp_of: Date.t] ~equal:[%equal: Date.t]
+let date_input graph =
+  let date_contents, set_date_contents =
+    Bonsai.state_opt graph ~sexp_of_model:[%sexp_of: Date.t] ~equal:[%equal: Date.t]
   in
   let%arr date_contents = date_contents
   and set_date_contents = set_date_contents in
@@ -30,9 +30,9 @@ let date_input =
     ()
 ;;
 
-let text_input_first_input =
-  let%sub text_input_first_contents, set_text_input_first_contents =
-    Bonsai.state false ~sexp_of_model:[%sexp_of: Bool.t] ~equal:[%equal: Bool.t]
+let text_input_first_input graph =
+  let text_input_first_contents, set_text_input_first_contents =
+    Bonsai.state false ~sexp_of_model:[%sexp_of: Bool.t] ~equal:[%equal: Bool.t] graph
   in
   let%arr text_input_first_contents = text_input_first_contents
   and set_text_input_first_contents = set_text_input_first_contents in
@@ -50,12 +50,12 @@ let text_input_first_input =
       () )
 ;;
 
-let wrap_in_div nodes = nodes |> Value.all >>| Vdom.Node.div |> return
+let wrap_in_div nodes = nodes |> Bonsai.all >>| Vdom.Node.div
 
-let component =
-  let%sub text_input = text_input in
-  let%sub date_input = date_input in
-  let%sub text_input_first, text_input_first_input = text_input_first_input in
+let component graph =
+  let text_input = text_input graph in
+  let date_input = date_input graph in
+  let%sub text_input_first, text_input_first_input = text_input_first_input graph in
   if%sub text_input_first
   then wrap_in_div [ text_input_first_input; text_input; date_input ]
   else wrap_in_div [ text_input_first_input; date_input; text_input ]

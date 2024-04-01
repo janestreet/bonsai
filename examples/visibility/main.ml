@@ -1,5 +1,5 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 open! Bonsai.Let_syntax
 module Vis = Bonsai_web_ui_visibility
 
@@ -48,22 +48,25 @@ stylesheet
   }
 |}]
 
-let visible_attr = Value.return Style.visible
-let hidden_attr = Value.return Style.hidden
-let data = List.init 30 ~f:(fun i -> i, ()) |> Int.Map.of_alist_exn |> Value.return
+let visible_attr = Bonsai.return Style.visible
+let hidden_attr = Bonsai.return Style.hidden
+let data = List.init 30 ~f:(fun i -> i, ()) |> Int.Map.of_alist_exn |> Bonsai.return
 let view i = Vdom.Node.div ~attrs:[ Style.box ] [ Vdom.Node.textf "%d" i ]
 
-let component =
-  let%sub components =
+let component graph =
+  let components =
     Bonsai.assoc
       (module Int)
       data
-      ~f:(fun key _data ->
+      ~f:(fun key _data graph ->
         Vis.only_when_visible'
           ~visible_attr
           ~hidden_attr
-          (let%arr key = key in
-           view key, key))
+          (fun _graph ->
+            let%arr key = key in
+            view key, key)
+          graph)
+      graph
   in
   let%arr components = components in
   let boxes, debug = components |> Map.data |> List.unzip in

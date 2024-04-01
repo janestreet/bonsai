@@ -26,7 +26,7 @@ stylesheet
 
 let size_slider =
   Form.Elements.Range.int
-    ~extra_attrs:(Value.return [ Range.class_ ])
+    ~extra_attrs:(Bonsai.return [ Range.class_ ])
     ~min:12
     ~max:100
     ~default:default.size
@@ -37,7 +37,7 @@ let size_slider =
 
 let stroke_width_slider =
   Form.Elements.Range.float
-    ~extra_attrs:(Value.return [ Range.class_ ])
+    ~extra_attrs:(Bonsai.return [ Range.class_ ])
     ~min:0.5
     ~max:3.
     ~default:default.stroke_width
@@ -58,13 +58,13 @@ stylesheet {|
 
 let display_none = Vdom.Attr.style (Css_gen.display `None)
 
-let color_input ?(display = Value.return true) () =
+let color_input ?(display = Bonsai.return true) () graph =
   let classes_ = Vdom.Attr.many [ Card_like.class_; Color_input.class_ ] in
-  let%sub extra_attr =
+  let extra_attr =
     let%arr display = display in
     if display then classes_ else Vdom.Attr.(classes_ @ display_none)
   in
-  Form.Elements.Color_picker.hex ~extra_attr ()
+  Form.Elements.Color_picker.hex ~extra_attr () graph
 ;;
 
 module Style =
@@ -116,17 +116,18 @@ module Fill = struct
 }
 |}]
 
-  let component : t Computation.t =
+  let component : Bonsai.graph -> t Bonsai.t =
     (* Equal to --js-primary-color *)
+    fun graph ->
     let default_fill_color = `Hex "#2085ef" in
-    let%sub fill_toggle = Form.Elements.Toggle.bool ~default:false () in
-    let%sub fill_on =
+    let fill_toggle = Form.Elements.Toggle.bool ~default:false () graph in
+    let fill_on =
       let%arr fill_toggle = fill_toggle in
       Form.value_or_default fill_toggle ~default:false
     in
-    let%sub fill_input =
-      let%sub form = color_input ~display:fill_on () in
-      Form.Dynamic.with_default (Value.return default_fill_color) form
+    let fill_input =
+      let form = color_input ~display:fill_on () graph in
+      Form.Dynamic.with_default (Bonsai.return default_fill_color) form graph
     in
     let%arr fill_toggle = fill_toggle
     and fill_on = fill_on
@@ -156,11 +157,11 @@ module Fill = struct
   ;;
 end
 
-let component =
-  let%sub size_slider = size_slider in
-  let%sub stroke_width_slider = stroke_width_slider in
-  let%sub stroke_input = color_input () in
-  let%sub fill = Fill.component in
+let component graph =
+  let size_slider = size_slider graph in
+  let stroke_width_slider = stroke_width_slider graph in
+  let stroke_input = color_input () graph in
+  let fill = Fill.component graph in
   let%arr size_slider = size_slider
   and stroke_width_slider = stroke_width_slider
   and stroke_input = stroke_input

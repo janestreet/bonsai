@@ -1,28 +1,28 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 open Bonsai.Let_syntax
 
-let component =
-  let%sub { tag; reset = reset_tag } = Tag.component in
-  let%sub { attr; reset = reset_attr } = Attr.component in
+let component graph =
+  let%sub { tag; reset = reset_tag } = Tag.component graph in
+  let%sub { attr; reset = reset_attr } = Attr.component graph in
   let%sub { out = before_state; view = before_view; reset = reset_before } =
-    Color_list.component "before"
+    Color_list.component "before" graph
   in
   let%sub { out = after_state; view = after_view; reset = reset_after } =
-    Color_list.component "after"
+    Color_list.component "after" graph
   in
   let%sub { state; view = tweener; is_automating = is_running; is_done; step } =
-    Stepper.component ~before_state ~after_state
+    Stepper.component ~before_state ~after_state graph
   in
-  let%sub reset_all =
+  let reset_all =
     let%arr reset_before = reset_before
     and reset_after = reset_after
     and reset_tag = reset_tag
     and reset_attr = reset_attr in
     Effect.Many [ reset_before; reset_after; reset_tag; reset_attr ]
   in
-  let%sub () = Automator.component ~is_running ~step ~is_done ~reset_all in
-  let%sub comparison = Comparison.view ~tag ~attr state in
+  let%sub () = Automator.component ~is_running ~step ~is_done ~reset_all graph in
+  let comparison = Comparison.view ~tag ~attr state graph in
   let%arr before_view = before_view
   and after_view = after_view
   and tweener = tweener

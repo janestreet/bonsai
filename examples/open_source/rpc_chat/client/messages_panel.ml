@@ -1,5 +1,5 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 open Bonsai_chat_open_source_common
 open Bonsai.Let_syntax
 
@@ -15,7 +15,7 @@ let view messages current_room =
     ]
 ;;
 
-let component ~messages ~current_room =
+let component ~messages ~current_room _graph =
   let%arr messages = messages
   and current_room = current_room in
   view messages current_room

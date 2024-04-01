@@ -1,5 +1,5 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 open Bonsai.Let_syntax
 open Vdom_keyboard
 
@@ -33,23 +33,24 @@ stylesheet
   }
   |}]
 
-let offset_state_machine =
-  Bonsai.state_machine0
-    ()
-    ~sexp_of_model:[%sexp_of: Int.t]
-    ~equal:[%equal: Int.t]
-    ~sexp_of_action:[%sexp_of: Int.t]
-    ~default_model:400
-    ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) x delta -> x + delta)
+let offset_state_machine graph =
+  Tuple2.uncurry Bonsai.both
+  @@ Bonsai.state_machine0
+       graph
+       ~sexp_of_model:[%sexp_of: Int.t]
+       ~equal:[%equal: Int.t]
+       ~sexp_of_action:[%sexp_of: Int.t]
+       ~default_model:400
+       ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) x delta -> x + delta)
 ;;
 
-let component =
-  let%sub x, add_x = offset_state_machine in
-  let%sub y, add_y = offset_state_machine in
-  let%sub show_help, set_show_help =
-    Bonsai.state false ~sexp_of_model:[%sexp_of: Bool.t] ~equal:[%equal: Bool.t]
+let component graph =
+  let%sub x, add_x = offset_state_machine graph in
+  let%sub y, add_y = offset_state_machine graph in
+  let show_help, set_show_help =
+    Bonsai.state false ~sexp_of_model:[%sexp_of: Bool.t] ~equal:[%equal: Bool.t] graph
   in
-  let%sub handler =
+  let handler =
     let%arr add_x = add_x
     and add_y = add_y
     and set_show_help = set_show_help in
@@ -121,7 +122,7 @@ let component =
           (fun _ev -> set_show_help false)
       ]
   in
-  let%sub help_view =
+  let help_view =
     match%sub show_help with
     | true ->
       let%arr handler = handler in
@@ -131,7 +132,7 @@ let component =
             (Keyboard_event_handler.get_help_text handler)
             Help_text.View_spec.plain
         ]
-    | false -> Bonsai.const Vdom.Node.none
+    | false -> Bonsai.return Vdom.Node.none
   in
   let%arr x = x
   and y = y

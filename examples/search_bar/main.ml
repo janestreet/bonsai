@@ -1,5 +1,5 @@
 open! Core
-open Bonsai_web
+open Bonsai_web.Cont
 open Bonsai.Let_syntax
 
 module User_info = struct
@@ -52,7 +52,7 @@ module Input = struct
   let default () = { all_users = User_info.sample_data }
 end
 
-let selected_display selected_user =
+let selected_display selected_user _graph =
   match%arr selected_user with
   | None -> Vdom.Node.div [ Vdom.Node.text "No user selected" ]
   | Some ({ name; int_id } : User_info.t) ->
@@ -63,16 +63,21 @@ let selected_display selected_user =
       ]
 ;;
 
-let set_model_component =
+let set_model_component graph =
   let module User_opt = struct
     type t = User_info.t option [@@deriving equal, sexp]
   end
   in
-  Bonsai.state None ~sexp_of_model:[%sexp_of: User_opt.t] ~equal:[%equal: User_opt.t]
+  Tuple2.uncurry Bonsai.both
+  @@ Bonsai.state
+       None
+       ~sexp_of_model:[%sexp_of: User_opt.t]
+       ~equal:[%equal: User_opt.t]
+       graph
 ;;
 
-let to_server_input input =
-  let%sub set_model = set_model_component in
+let to_server_input input graph =
+  let set_model = set_model_component graph in
   let%arr current_user, inject_set_model = set_model
   and all_users = input >>| Input.all_users in
   let choices = all_users |> Map.data |> List.map ~f:Search_bar.Username.of_user_info in
@@ -82,16 +87,16 @@ let to_server_input input =
   current_user, Search_bar.Input.create ~choices ~on_select
 ;;
 
-let component input =
-  let%sub current_user, search_bar_input = to_server_input input in
-  let%sub selected = selected_display current_user in
-  let%sub search_bar = Search_bar.component search_bar_input in
+let component input graph =
+  let%sub current_user, search_bar_input = to_server_input input graph in
+  let selected = selected_display current_user graph in
+  let search_bar = Search_bar.component search_bar_input graph in
   let%arr selected = selected
   and search_bar = search_bar in
   Vdom.Node.div [ search_bar; selected ]
 ;;
 
 let () =
-  let input = Bonsai.Var.create (Input.default ()) in
-  Bonsai_web.Start.start (component (Bonsai.Var.value input))
+  let input = Bonsai.Expert.Var.create (Input.default ()) in
+  Bonsai_web.Start.start (component (Bonsai.Expert.Var.value input))
 ;;

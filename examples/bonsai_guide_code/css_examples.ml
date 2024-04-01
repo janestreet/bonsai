@@ -1,295 +1,187 @@
 open! Core
-open! Async_kernel
-open! Bonsai_web
+open! Bonsai_web.Cont
 open! Bonsai.Let_syntax
 
-(* $MDX part-begin=politician_table *)
-type row =
-  { id : int
-  ; name : string
-  ; age : int
-  }
-
-let basic_table rows =
-  let open Vdom.Node in
-  let thead = thead [ td [ text "id" ]; td [ text "name" ]; td [ text "age" ] ] in
-  let tbody =
-    rows
-    |> List.map ~f:(fun { id; name; age } ->
-         tr [ td [ textf "%d" id ]; td [ text name ]; td [ textf "%d" age ] ])
-    |> tbody
-  in
-  table [ thead; tbody ]
+(* $MDX part-begin=ppx_css_inline *)
+let view =
+  Vdom.Node.div
+    ~attrs:
+      [ [%css
+          {|
+          background-color: tomato;
+          min-width: 2rem;
+          min-height: 2rem;
+        |}]
+      ]
+    [ Vdom.Node.text "Very Red Background" ]
 ;;
 
-let politicians =
-  basic_table
-    [ { id = 0; name = "George Washington"; age = 67 }
-    ; { id = 1; name = "Alexander Hamilton"; age = 47 }
-    ; { id = 2; name = "Abraham Lincoln"; age = 56 }
-    ]
+(* $MDX part-end *)
+
+let () = Util.run_vdom view ~id:"ppx_css_inline"
+
+(* $MDX part-begin=ppx_css_inline_interpol *)
+let box_with_border (color : Css_gen.Color.t) (width : Css_gen.Length.t) =
+  Vdom.Node.div
+    ~attrs:
+      [ [%css
+          {|
+          border: %{width#Css_gen.Length} solid %{color#Css_gen.Color};
+        |}]
+      ]
+    [ Vdom.Node.text "Nice Borders!" ]
 ;;
 
 (* $MDX part-end *)
 
 let () =
-  Util.run
-    (Bonsai.const
-       (Vdom.Node.div ~attrs:[ Vdom.Attr.class_ "politicians" ] [ politicians ]))
-    ~id:"politician-table"
+  Util.run_vdom (box_with_border (`Name "purple") (`Px 2)) ~id:"ppx_css_inline_interpol"
 ;;
 
-(* $MDX part-begin=attr_table *)
+(* $MDX part-begin=ppx_css_inline_nesting *)
+let hoverable_blocks =
+  let block =
+    Vdom.Node.div
+      ~attrs:
+        [ [%css
+            {|
+            background-color: green;
+            min-width: 2rem;
+            min-height: 2rem;
+            border: 1px solid black;
 
-type row2 =
-  { id : int
-  ; name : string
-  ; age : int
-  }
+            &:hover {
+              background-color: tomato;
+            }
 
-let table_styles =
-  let open Css_gen in
-  border_collapse `Collapse
-  @> border ~style:`Solid ~color:(`Name "brown") ~width:(`Px 1) ()
-;;
-
-let thead_styles =
-  let open Css_gen in
-  text_align `Center
-  @> background_color (`Name "brown")
-  @> color (`Name "antiquewhite")
-  @> font_weight `Bold
-;;
-
-let tr_odd = Css_gen.background_color (`Name "antiquewhite")
-let tr_even = Css_gen.background_color (`Name "wheat")
-
-let td_styles =
-  Css_gen.padding ~top:(`Px 4) ~bottom:(`Px 4) ~left:(`Px 4) ~right:(`Px 4) ()
-;;
-
-let basic_table_attr rows =
-  let open Vdom.Node in
-  let thead =
-    thead
-      ~attrs:[ Vdom.Attr.style thead_styles ]
-      [ td [ text "id" ]; td [ text "name" ]; td [ text "age" ] ]
+            &:not(:nth-child(odd)):hover {
+              background-color: purple;
+            }
+          |}]
+        ]
+      [ Vdom.Node.text "Hoverable" ]
   in
-  let tbody =
-    rows
-    |> List.mapi ~f:(fun i { id; name; age } ->
-         let tr_style = if Int.( % ) i 2 = 0 then tr_even else tr_odd in
-         tr
-           ~attrs:[ Vdom.Attr.style tr_style ]
-           [ td ~attrs:[ Vdom.Attr.style td_styles ] [ textf "%d" id ]
-           ; td ~attrs:[ Vdom.Attr.style td_styles ] [ text name ]
-           ; td ~attrs:[ Vdom.Attr.style td_styles ] [ textf "%d" age ]
-           ])
-    |> tbody
-  in
-  table ~attrs:[ Vdom.Attr.style table_styles ] [ thead; tbody ]
+  Vdom.Node.div (List.init 6 ~f:(fun _ -> block))
 ;;
 
-let politicians =
-  basic_table_attr
-    [ { id = 0; name = "George Washington"; age = 67 }
-    ; { id = 1; name = "Alexander Hamilton"; age = 47 }
-    ; { id = 2; name = "Abraham Lincoln"; age = 56 }
+(* $MDX part-end *)
+
+let () = Util.run_vdom hoverable_blocks ~id:"ppx_css_inline_nesting"
+
+(* $MDX part-begin=ppx_css_inline_multiple *)
+let multiple_ppx_css =
+  Vdom.Node.div
+    ~attrs:[ [%css {|color: red|}] ]
+    [ Vdom.Node.text "Foo"
+    ; Vdom.Node.div ~attrs:[ [%css "color: blue"] ] [ Vdom.Node.text "Bar" ]
     ]
 ;;
 
 (* $MDX part-end *)
 
-let () =
-  Util.run (Bonsai.const (Vdom.Node.div [ politicians ])) ~id:"politician-table-attr"
-;;
+let () = Util.run_vdom multiple_ppx_css ~id:"ppx_css_inline_multiple"
 
-(* $MDX part-begin=inline_css *)
+(* $MDX part-begin=ppx_css_stylesheet *)
 module Style =
 [%css
 stylesheet
   {|
-table.politicians {
-  border-collapse: collapse;
-  border: 1px solid brown;
-}
-
-table.politicians td {
-  padding: 4px;
-}
-
-table.politicians thead {
-  text-align: center;
-  background: brown;
-  color: antiquewhite;
-  font-weight: bold;
-}
-
-table.politicians tr {
-  background: antiquewhite;
-}
-
-table.politicians tr:nth-child(even) {
-  background: wheat;
-}
-    |}]
-
-(* $MDX part-end *)
-
-(* $MDX part-begin=table_with_ppx_css *)
-let table_with_ppx_css rows =
-  let open Vdom.Node in
-  let thead = thead [ td [ text "id" ]; td [ text "name" ]; td [ text "age" ] ] in
-  let tbody =
-    rows
-    |> List.map ~f:(fun { id; name; age } ->
-         tr [ td [ textf "%d" id ]; td [ text name ]; td [ textf "%d" age ] ])
-    |> tbody
-  in
-  table ~attrs:[ Style.politicians ] [ thead; tbody ]
-;;
-
-(* $MDX part-end *)
-
-let politicians =
-  table_with_ppx_css
-    [ { id = 0; name = "George Washington"; age = 67 }
-    ; { id = 1; name = "Alexander Hamilton"; age = 47 }
-    ; { id = 2; name = "Abraham Lincoln"; age = 56 }
-    ]
-;;
-
-let () = Util.run (Bonsai.const (Vdom.Node.div [ politicians ])) ~id:"politician-table"
-
-let themeable_table ?(theme = Style.default) rows =
-  let module Style = (val theme) in
-  let open Vdom.Node in
-  let thead = thead [ td [ text "id" ]; td [ text "name" ]; td [ text "age" ] ] in
-  let tbody =
-    rows
-    |> List.map ~f:(fun { id; name; age } ->
-         tr [ td [ textf "%d" id ]; td [ text name ]; td [ textf "%d" age ] ])
-    |> tbody
-  in
-  table ~attrs:[ Style.politicians ] [ thead; tbody ]
-;;
-
-(* $MDX part-begin=my_theme *)
-module My_theme =
-[%css
-stylesheet
-  {|
-table.politicians {
-  border-collapse: collapse;
-  border: 1px solid black;
-}
-
-table.politicians td {
-  padding: 4px;
-}
-
-table.politicians thead {
-  text-align: center;
-  background: black;
-  color: white;
-  font-weight: bold;
-}
-
-table.politicians td {
-  border: 1px solid black;
-}
-
-    |}]
-
-let table =
-  themeable_table
-    ~theme:(module My_theme)
-    [ { id = 0; name = "George Washington"; age = 67 }
-    ; { id = 1; name = "Alexander Hamilton"; age = 47 }
-    ; { id = 2; name = "Abraham Lincoln"; age = 56 }
-    ]
-;;
-
-(* $MDX part-end *)
-
-let () = Util.run (Bonsai.const (Vdom.Node.div [ table ])) ~id:"themeable-table"
-
-module _ = struct
-  (* $MDX part-begin=tomato-square-ppx-css *)
-  module Style =
-  [%css
-  stylesheet
-    {|
-.square {
-  background-color: tomato;
-  height: 100px;
-  width: 100px;
+@media only screen and (max-width: 300px) {
+  .container {
+    display: none;
   }
-|}]
-  (* $MDX part-end *)
+}
 
-  (* $MDX part-begin=tomato-square *)
-  let square = Vdom.Node.div ~attrs:[ Style.square ] []
-  (* $MDX part-end *)
+@media only screen and (min-width: 300px) {
+  .container {
+    font-size: 10px;
+  }
+}
 
-  let () = Util.run (Bonsai.const (Vdom.Node.div [ square ])) ~id:"tomato-square"
-end
+@media only screen and (min-width: 600px) {
+  .container {
+    font-size: 20px;
+  }
+}
+    |}]
+
+let stylesheet_demo = Vdom.Node.div ~attrs:[ Style.container ] [ Vdom.Node.text "Hello" ]
+
+(* $MDX part-end *)
+
+let () = Util.run_vdom stylesheet_demo ~id:"ppx_css_stylesheet"
+
+(* $MDX part-begin=ppx_css_stylesheet_interpol *)
+
+let stylesheet_interpol small_bg large_bg =
+  let module Style =
+  [%css
+  stylesheet
+    {|
+@media only screen and (max-width: 1200px) {
+  .container {
+    background-color: %{small_bg#Css_gen.Color};
+  }
+}
+
+@media only screen and (min-width: 1200px) {
+  .container {
+    background-color: %{large_bg#Css_gen.Color};
+  }
+}
+  |}]
+  in
+  Vdom.Node.div ~attrs:[ Style.container ] [ Vdom.Node.text "Hello" ]
+;;
+
+(* $MDX part-end *)
+
+let () =
+  Util.run_vdom
+    (stylesheet_interpol (`Name "purple") (`Name "green"))
+    ~id:"ppx_css_stylesheet_interpol"
+;;
 
 module _ = struct
-  (* $MDX part-begin=css-variables-css *)
+  (* $MDX part-begin=ppx_css_stylesheet_vars *)
   module Style =
   [%css
   stylesheet
     {|
-:root {
-  --red: #ff5a5a;
-  --green: #5aff5a;
-  --blue: #5a5aff;
+@media only screen and (max-width: 1200px) {
+  .container {
+    background-color: var(--small-bg);
+  }
 }
 
-.button {
-  /* Add common styles */
-}
-
-.button.red-button {
-  background-color: var(--red);
-}
-
-.button.green-button {
-  background-color: var(--green);
-}
-
-.button.blue-button {
-  background-color: var(--blue);
+@media only screen and (min-width: 1200px) {
+  .container {
+    background-color: var(--large-bg);
+  }
 }
 |}]
-  (* $MDX part-end *)
 
-  type theme =
-    | Light
-    | Dark
-
-  let _ = Light
-  let theme = Dark
-
-  (* $MDX part-begin=css-variables *)
-  let square =
+  let stylesheet_vars =
     Vdom.Node.div
       ~attrs:
-        [ Style.Variables.set
-            ~red:
-              (match theme with
-               | Dark -> "tomato"
-               | Light -> "#ff5a5a")
-            ()
-        ]
-      [ Vdom.Node.button ~attrs:[ Style.red_button ] [ View.text "red" ]
-      ; Vdom.Node.button ~attrs:[ Style.blue_button ] [ View.text "blue" ]
-      ; Vdom.Node.button ~attrs:[ Style.green_button ] [ View.text "green" ]
-      ]
+        [ Style.container; Style.Variables.set_all ~large_bg:"green" ~small_bg:"purple" ]
+      [ Vdom.Node.text "Hello" ]
   ;;
 
   (* $MDX part-end *)
 
-  let () = Util.run (Bonsai.const (Vdom.Node.div [ square ])) ~id:"variables"
+  let () = Util.run_vdom stylesheet_vars ~id:"ppx_css_stylesheet_vars"
 end
+
+(* $MDX part-begin=css_gen_inline *)
+let css_gen_inline =
+  let style : Css_gen.t =
+    let open Css_gen in
+    font_size (`Px 15) @> background_color (`Name "red")
+  in
+  Vdom.Node.div ~attrs:[ Vdom.Attr.style style ] [ Vdom.Node.text "Hello" ]
+;;
+
+(* $MDX part-end *)
+
+let () = Util.run_vdom css_gen_inline ~id:"css_gen_inline"

@@ -1,5 +1,5 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 
 type t =
   { state : Color_list.t
@@ -13,6 +13,7 @@ type t =
    "after" maps that it should step through. It returns the view, the current state of the
    map, and a "step" effect along with its status for the automator component. *)
 val component
-  :  before_state:Color_list.t Value.t
-  -> after_state:Color_list.t Value.t
-  -> t Computation.t
+  :  before_state:Color_list.t Bonsai.t
+  -> after_state:Color_list.t Bonsai.t
+  -> Bonsai.graph
+  -> t Bonsai.t

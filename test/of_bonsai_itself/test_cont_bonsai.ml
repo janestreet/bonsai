@@ -2620,7 +2620,8 @@ let%expect_test "let syntax is collapsed upon eval" =
           ; run
           ; apply_action = _
           ; reset = _
-          ; can_contain_path = _
+          ; may_contain_path = _
+          ; may_contain_lifecycle = _
           })
       =
       computation |> pre_process |> gather
@@ -5596,6 +5597,7 @@ let%expect_test "pipe" =
 ;;
 
 let%expect_test "multi-thunk" =
+  (* this test is rampantly nondeterministic *)
   let module Id = Core.Unique_id.Int () in
   let id graph =
     Bonsai.Expert.thunk graph ~f:(fun () ->
@@ -5612,7 +5614,7 @@ let%expect_test "multi-thunk" =
   [%expect {|
     pulling id!
     pulling id!
-    "1 0"
+    "0 1"
     |}]
 ;;
 
@@ -5638,32 +5640,30 @@ let%expect_test "evaluation of pure values under a match%sub" =
     | false -> return (-1)
   in
   let handle = Handle.create (Result_spec.sexp (module Int)) component in
-  (* Even though [determines_use] is false in this and other cases, we do work
-     unnecessarily. *)
+  (* In the past, even though [determines_use] is false in this and other cases, work
+     was performed unnecessarily.  This is no longer true, but we keep this 
+     around as a regression test *)
   Handle.show handle;
   [%expect {|
-    ("doing work" (depending_on 0))
     -1
     activating!
     |}];
   Bonsai.Var.set determines_use true;
   Handle.show handle;
-  [%expect {| 0 |}];
+  (* this is the only place that "doing work" should be printed *)
+  [%expect {|
+    ("doing work" (depending_on 0))
+    0
+    |}];
   Bonsai.Var.set determines_use false;
   Handle.show handle;
   [%expect {| -1 |}];
   Bonsai.Var.set depending_on 1;
   Handle.show handle;
-  [%expect {|
-    ("doing work" (depending_on 1))
-    -1
-    |}];
+  [%expect {| -1 |}];
   Bonsai.Var.set depending_on 2;
   Handle.show handle;
-  [%expect {|
-    ("doing work" (depending_on 2))
-    -1
-    |}]
+  [%expect {| -1 |}]
 ;;
 
 let%expect_test "evaluation of pure values under an assoc" =

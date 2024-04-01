@@ -1,6 +1,6 @@
 open! Core
 open! Async_kernel
-open! Bonsai_web
+open! Bonsai_web.Cont
 open Bonsai.Let_syntax
 
 let fake_slow_capitalize_string_rpc =
@@ -10,9 +10,10 @@ let fake_slow_capitalize_string_rpc =
     String.uppercase text)
 ;;
 
-let textbox =
-  let%sub state =
-    Bonsai.state "" ~sexp_of_model:[%sexp_of: String.t] ~equal:[%equal: String.t]
+let textbox graph =
+  let state =
+    Tuple2.uncurry Bonsai.both
+    @@ Bonsai.state "" ~sexp_of_model:[%sexp_of: String.t] ~equal:[%equal: String.t] graph
   in
   let%arr text, set_text = state in
   let view =
@@ -23,9 +24,9 @@ let textbox =
   text, view
 ;;
 
-let component =
-  let%sub text, view = textbox in
-  let%sub capitalized =
+let component graph =
+  let%sub text, view = textbox graph in
+  let capitalized =
     Bonsai.Edge.Poll.(
       effect_on_change
         ~sexp_of_input:[%sexp_of: String.t]
@@ -34,7 +35,8 @@ let component =
         ~equal_result:[%equal: String.t]
         (Starting.initial "")
         text
-        ~effect:(Value.return fake_slow_capitalize_string_rpc))
+        ~effect:(Bonsai.return fake_slow_capitalize_string_rpc)
+        graph)
   in
   let%arr view = view
   and capitalized = capitalized in

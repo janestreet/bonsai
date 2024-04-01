@@ -1,6 +1,6 @@
 open! Core
 open! Bonsai_web_test
-open! Bonsai_web
+open! Bonsai_web.Cont
 
 let hello_world = Bonsai_testing_example_lib.hello_world
 let hello_user = Bonsai_testing_example_lib.hello_user
@@ -20,12 +20,12 @@ let%expect_test "it shows hello world" =
 
 (* $MDX part-begin=hello-user-test *)
 let%expect_test "shows hello to a user" =
-  let user_var = Bonsai.Var.create "Bob" in
-  let user = Bonsai.Var.value user_var in
+  let user_var = Bonsai.Expert.Var.create "Bob" in
+  let user = Bonsai.Expert.Var.value user_var in
   let handle = Handle.create (Result_spec.vdom Fn.id) (hello_user user) in
   Handle.show handle;
   [%expect {| <span> hello Bob </span> |}];
-  Bonsai.Var.set user_var "Alice";
+  Bonsai.Expert.Var.set user_var "Alice";
   Handle.show handle;
   [%expect {| <span> hello Alice </span> |}]
 ;;
@@ -34,12 +34,12 @@ let%expect_test "shows hello to a user" =
 
 (* $MDX part-begin=hello-user-diff-test *)
 let%expect_test "shows hello to a user" =
-  let user_var = Bonsai.Var.create "Bob" in
-  let user = Bonsai.Var.value user_var in
+  let user_var = Bonsai.Expert.Var.create "Bob" in
+  let user = Bonsai.Expert.Var.value user_var in
   let handle = Handle.create (Result_spec.vdom Fn.id) (hello_user user) in
   Handle.show handle;
   [%expect {| <span> hello Bob </span> |}];
-  Bonsai.Var.set user_var "Alice";
+  Bonsai.Expert.Var.set user_var "Alice";
   Handle.show_diff handle;
   [%expect {|
     -|<span> hello Bob </span>
@@ -94,8 +94,14 @@ module State_view_spec = struct
 end
 
 let%expect_test "test Bonsai.state" =
-  let component : (string * (string -> unit Vdom.Effect.t)) Computation.t =
-    Bonsai.state "hello" ~sexp_of_model:[%sexp_of: String.t] ~equal:[%equal: String.t]
+  let component : Bonsai.graph -> (string * (string -> unit Vdom.Effect.t)) Bonsai.t =
+    fun graph ->
+    Tuple2.uncurry Bonsai.both
+    @@ Bonsai.state
+         "hello"
+         ~sexp_of_model:[%sexp_of: String.t]
+         ~equal:[%equal: String.t]
+         graph
   in
   let handle = Handle.create (module State_view_spec) component in
   Handle.show handle;

@@ -1,4 +1,4 @@
-# Auto-generating Bonsai Web Components
+# Views and Forms for Sexpable Types
 
 The `Bonsai_web_ui_auto_generated` library provides functions for creating web UIs and
 forms for types that derive `Sexp_grammar`.

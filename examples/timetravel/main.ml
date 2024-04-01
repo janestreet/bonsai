@@ -1,5 +1,5 @@
 open! Core
-open Bonsai_web
+open Bonsai_web.Cont
 
 let timetraveled_component =
   Bonsai.map

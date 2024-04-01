@@ -1,5 +1,5 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 open! Bonsai.Let_syntax
 module Form = Bonsai_web_ui_form.With_automatic_view
 module Gallery = Bonsai_web_ui_gallery
@@ -15,8 +15,8 @@ module Text = struct
     When invoked without any optional parameters, it will produce a dom Text node. |}
   ;;
 
-  let view =
-    let%map.Computation theme = View.Theme.current in
+  let view graph =
+    let%map theme = View.Theme.current graph in
     [%demo View.themed_text theme "hello world"]
   ;;
 
@@ -32,8 +32,8 @@ module Text_with_style_and_size = struct
     that are themable and consistent across different components. |}
   ;;
 
-  let view =
-    let%map.Computation theme = View.Theme.current in
+  let view graph =
+    let%map theme = View.Theme.current graph in
     [%demo
       vbox
         [ View.themed_text theme ?style:None ?size:None "default style and size"
@@ -58,8 +58,8 @@ module Text_with_intent = struct
        to give the theme the ability to style it differently. |}
   ;;
 
-  let view =
-    let%map.Computation theme = View.Theme.current in
+  let view graph =
+    let%map theme = View.Theme.current graph in
     [%demo
       vbox
         [ View.themed_text theme ?intent:None "no intent"
@@ -85,8 +85,8 @@ module Table = struct
     extracts the cell-specific data, and a renderer for that cell-specific data. |}
   ;;
 
-  let view =
-    let%map.Computation theme = View.Theme.current in
+  let view graph =
+    let%map theme = View.Theme.current graph in
     let module T =
     [%demo
     [@@@ocamlformat "disable"]
@@ -137,8 +137,8 @@ module Table_with_group = struct
     {| To make column groups, simply call the "group" function with a list of sub-columns. |}
   ;;
 
-  let view =
-    let%map.Computation theme = View.Theme.current in
+  let view graph =
+    let%map theme = View.Theme.current graph in
     let module T = struct
       type t =
         { sym : string
@@ -188,8 +188,8 @@ module Table_with_empty_cells = struct
     through it indicating that it's properly empty (as opposed to containing - for example - the empty string)|}
   ;;
 
-  let view =
-    let%map.Computation theme = View.Theme.current in
+  let view graph =
+    let%map theme = View.Theme.current graph in
     let module T = struct
       type t =
         { sym : string
@@ -230,8 +230,8 @@ module Tooltip = struct
     {| The standard tooltip function allows annotating some text with a tooltip containing another string |}
   ;;
 
-  let view =
-    let%map.Computation theme = View.Theme.current in
+  let view graph =
+    let%map theme = View.Theme.current graph in
     [%demo
       View.tooltip
         theme
@@ -247,8 +247,8 @@ module Tooltip_directions = struct
   let name = "Tooltip directions"
   let description = {| Tooltips can be positioned relative to the annotated content |}
 
-  let view =
-    let%map.Computation theme = View.Theme.current in
+  let view graph =
+    let%map theme = View.Theme.current graph in
     let vbox = View.vbox ~gap:(`Em 1) in
     let hbox = View.hbox ~gap:(`Em 1) in
     [%demo
@@ -284,8 +284,8 @@ module Tooltip_with_arbitrary_content = struct
     {| With `tooltip'` you can add a tooltip to abitrary content, and the tooltip itself can contain arbitrary content |}
   ;;
 
-  let view =
-    let%map.Computation theme = View.Theme.current in
+  let view graph =
+    let%map theme = View.Theme.current graph in
     [%demo
       let tooltip =
         View.vbox
@@ -308,8 +308,8 @@ module Button = struct
        as input in the form of a string |}
   ;;
 
-  let view =
-    let%map.Computation theme = View.Theme.current in
+  let view graph =
+    let%map theme = View.Theme.current graph in
     [%demo View.button theme ~on_click:Effect.Ignore "click me"]
   ;;
 
@@ -321,8 +321,8 @@ module Disabled_button = struct
   let name = "Disabled button"
   let description = {| Buttons can be disabled with an optional parameter |}
 
-  let view =
-    let%map.Computation theme = View.Theme.current in
+  let view graph =
+    let%map theme = View.Theme.current graph in
     [%demo
       hbox
         [ View.button theme ~disabled:false ~on_click:Effect.Ignore "not disabled"
@@ -338,8 +338,8 @@ module Buttons_with_intent = struct
   let name = "Buttons with Intent"
   let description = {| When given an intent, buttons can change their style |}
 
-  let view =
-    let%map.Computation theme = View.Theme.current in
+  let view graph =
+    let%map theme = View.Theme.current graph in
     let on_click = Effect.Ignore in
     [%demo
       hbox
@@ -363,8 +363,8 @@ module Disabled_buttons_with_intent = struct
       and their visuals change. |}
   ;;
 
-  let view =
-    let%map.Computation theme = View.Theme.current in
+  let view graph =
+    let%map theme = View.Theme.current graph in
     [%demo
       let on_click = Effect.Ignore
       and disabled = true in
@@ -389,8 +389,8 @@ module Badge = struct
        or minor status indicators. |}
   ;;
 
-  let view =
-    let%map.Computation theme = View.Theme.current in
+  let view graph =
+    let%map theme = View.Theme.current graph in
     [%demo
       hbox
         [ View.badge theme ?intent:None "0"
@@ -413,8 +413,8 @@ module Dismissible_badge = struct
        have a dismiss button. This is useful for multiselect forms. |}
   ;;
 
-  let view =
-    let%map.Computation theme = View.Theme.current in
+  let view graph =
+    let%map theme = View.Theme.current graph in
     [%demo
       let on_dismiss = Effect.Ignore in
       hbox
@@ -444,7 +444,7 @@ module Basic_vbox = struct
   let red = make_box (`Name "red") (`Px 20) (`Px 30)
   let green = make_box (`Name "green") (`Px 30) (`Px 50)
   let blue = make_box (`Name "blue") (`Px 50) (`Px 30)
-  let view = Bonsai.const [%demo View.vbox [ red; green; blue ]]
+  let view _graph = Bonsai.return [%demo View.vbox [ red; green; blue ]]
   let selector = None
 
   let filter_attrs =
@@ -459,7 +459,7 @@ module Basic_hbox = struct
   let name = "Basic hbox"
   let description = {| The vbox function builds a horizontally stacking container.  |}
   let red, green, blue, filter_attrs = Basic_vbox.(red, green, blue, filter_attrs)
-  let view = Bonsai.const [%demo View.hbox [ red; green; blue ]]
+  let view _graph = Bonsai.return [%demo View.hbox [ red; green; blue ]]
   let selector = None
 end
 
@@ -477,9 +477,9 @@ module Interactive_vbox = struct
 
   let white_space_pre = Vdom.Attr.style Css_gen.(white_space `Pre)
 
-  let dropdown (type a) ?init name (module M : Bonsai.Enum with type t = a) =
-    Bonsai.Computation.map
-      (Form.Elements.Dropdown.enumerable_opt ?init (module M))
+  let dropdown (type a) ?init name (module M : Bonsai.Enum with type t = a) graph =
+    Bonsai.map
+      (Form.Elements.Dropdown.enumerable_opt ?init (module M) graph)
       ~f:(fun form ->
         let value = Or_error.ok_exn (Form.value form) in
         let view = Form.View.to_vdom_plain (Form.view form) |> List.hd_exn in
@@ -528,16 +528,17 @@ module Interactive_vbox = struct
     [@@deriving sexp, enumerate, equal, compare]
   end
 
-  let view =
-    let%map.Computation axis_v, axis, _ =
-      dropdown "function" ~init:`First_item (module Axis)
-    and v_direction_v, v_direction, v_f1 = dropdown "direction" (module Vertical_dir)
-    and h_direction_v, h_direction, h_f1 = dropdown "direction" (module Horizontal_dir)
+  let view graph =
+    let%map axis_v, axis, _ = dropdown "function" ~init:`First_item (module Axis) graph
+    and v_direction_v, v_direction, v_f1 =
+      dropdown "direction" (module Vertical_dir) graph
+    and h_direction_v, h_direction, h_f1 =
+      dropdown "direction" (module Horizontal_dir) graph
     and main_axis_alignment_v, main_axis_alignment, f2 =
-      dropdown "main_axis_alignment" (module Main_axis_alignment)
+      dropdown "main_axis_alignment" (module Main_axis_alignment) graph
     and cross_axis_alignment_v, cross_axis_alignment, f3 =
-      dropdown "cross_axis_alignment" (module Cross_axis_alignment)
-    and theme = View.Theme.current in
+      dropdown "cross_axis_alignment" (module Cross_axis_alignment) graph
+    and theme = View.Theme.current graph in
     let axis = Option.value axis ~default:Hbox in
     let (view, text), direction_v, f1 =
       match axis with
@@ -613,8 +614,8 @@ module Basic_tabs = struct
   let name = "Basic Tabs"
   let description = ""
 
-  let view =
-    let%map.Computation theme = View.Theme.current in
+  let view graph =
+    let%map theme = View.Theme.current graph in
     [%demo
       let on_change ~from:_ ~to_:_ = Effect.Ignore in
       View.tabs
@@ -639,8 +640,8 @@ module Enumerable_tabs = struct
     {| If you have an enumerable type, tabs_enum can be used to generate tabs for it |}
   ;;
 
-  let view =
-    let%map.Computation theme = View.Theme.current in
+  let view graph =
+    let%map theme = View.Theme.current graph in
     let module T =
     [%demo
     module Pages = struct
@@ -667,8 +668,8 @@ module Devbar = struct
   let name = "Basic Devbar"
   let description = {| |}
 
-  let view =
-    let%map.Computation theme = View.Theme.current in
+  let view graph =
+    let%map theme = View.Theme.current graph in
     let view, text = [%demo View.devbar theme "DEV"] in
     Vdom.Node.div ~attrs:[ Vdom.Attr.style (Css_gen.max_width (`Px 500)) ] [ view ], text
   ;;
@@ -681,8 +682,8 @@ module Devbar_intent = struct
   let name = "Devbar with Intent"
   let description = {| |}
 
-  let view =
-    let%map.Computation theme = View.Theme.current in
+  let view graph =
+    let%map theme = View.Theme.current graph in
     let view, text =
       [%demo
         View.vbox
@@ -705,8 +706,8 @@ module Basic_card = struct
   let name = "Basic Card"
   let description = {| |}
 
-  let view =
-    let%map.Computation theme = View.Theme.current in
+  let view graph =
+    let%map.Bonsai theme = View.Theme.current graph in
     let view, text = [%demo View.card theme "The message is: You are great!"] in
     Vdom.Node.div ~attrs:[ Vdom.Attr.style (Css_gen.max_width (`Px 500)) ] [ view ], text
   ;;
@@ -719,8 +720,8 @@ module Card_with_title = struct
   let name = "Card with a title"
   let description = {| |}
 
-  let view =
-    let%map.Computation theme = View.Theme.current in
+  let view graph =
+    let%map.Bonsai theme = View.Theme.current graph in
     let view, text =
       [%demo View.card theme ~title:"New message!!" "The message is: You are great!"]
     in
@@ -735,8 +736,8 @@ module Cards_with_intent = struct
   let name = "Cards with intent"
   let description = {| |}
 
-  let view =
-    let%map.Computation theme = View.Theme.current in
+  let view graph =
+    let%map.Bonsai theme = View.Theme.current graph in
     let view, text =
       [%demo
         View.vbox
@@ -759,8 +760,8 @@ module Cards_with_fieldset = struct
   let name = "Cards with fieldset styling"
   let description = {| |}
 
-  let view =
-    let%map.Computation theme = View.Theme.current in
+  let view graph =
+    let%map.Bonsai theme = View.Theme.current graph in
     let view, text =
       [%demo
         View.vbox
@@ -811,8 +812,8 @@ module Card_with_rows = struct
     {| View.card' allows for the content to be a list of arbitrary vdom nodes which are separated vertically from one another. |}
   ;;
 
-  let view =
-    let%map.Computation theme = View.Theme.current in
+  let view graph =
+    let%map.Bonsai theme = View.Theme.current graph in
     let view, text =
       [%demo
         hbox
@@ -836,8 +837,8 @@ module Card_with_rows = struct
   let filter_attrs = Some (fun k _ -> not (String.is_prefix k ~prefix:"style"))
 end
 
-let component =
-  let%sub theme, theme_picker = Gallery.Theme_picker.component () in
+let component graph =
+  let%sub theme, theme_picker = Gallery.Theme_picker.component () graph in
   View.Theme.set_for_app
     theme
     (Gallery.make_sections
@@ -904,6 +905,7 @@ let component =
            ; Gallery.make_demo (module Card_with_rows)
            ] )
        ])
+    graph
 ;;
 
 let () =

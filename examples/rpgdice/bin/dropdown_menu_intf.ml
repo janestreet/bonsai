@@ -1,5 +1,5 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 
 module type Enum = sig
   type t [@@deriving enumerate, equal, sexp]
@@ -11,7 +11,7 @@ end
 module type S = sig
   type enum
 
-  val component : default_model:enum -> (enum * Vdom.Node.t) Computation.t
+  val component : default_model:enum -> Bonsai.graph -> (enum * Vdom.Node.t) Bonsai.t
 end
 
 module type Dropdown_menu = sig

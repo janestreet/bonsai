@@ -1,5 +1,5 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 open Bonsai.Let_syntax
 module Form = Bonsai_web_ui_form.With_automatic_view
 
@@ -31,9 +31,11 @@ module Shared = struct
 
         let label_for_field = `Inferred
 
-        let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t = function
-          | Left -> Form.Elements.Color_picker.hex ()
-          | Right -> Form.Elements.Color_picker.hex ()
+        let form_for_field : type a. a Typed_field.t -> Bonsai.graph -> a Form.t Bonsai.t =
+          fun typed_field graph ->
+          match typed_field with
+          | Left -> Form.Elements.Color_picker.hex () graph
+          | Right -> Form.Elements.Color_picker.hex () graph
         ;;
       end)
   ;;
@@ -49,7 +51,9 @@ module For_gradient = struct
 
         let label_for_field = `Inferred
 
-        let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t = function
+        let form_for_field : type a. a Typed_field.t -> Bonsai.graph -> a Form.t Bonsai.t =
+          fun typed_field graph ->
+          match typed_field with
           | Steps ->
             Form.Elements.Range.int
               ~min:1
@@ -58,6 +62,7 @@ module For_gradient = struct
               ~step:1
               ~allow_updates_when_focused:`Never
               ()
+              graph
         ;;
       end)
   ;;
@@ -82,7 +87,9 @@ module For_overlay = struct
 
         let label_for_field = `Computed label_for_field
 
-        let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t = function
+        let form_for_field : type a. a Typed_field.t -> Bonsai.graph -> a Form.t Bonsai.t =
+          fun typed_field graph ->
+          match typed_field with
           | Left_alpha ->
             Form.Elements.Range.float
               ~min:0.0
@@ -91,6 +98,7 @@ module For_overlay = struct
               ~step:0.01
               ~allow_updates_when_focused:`Never
               ()
+              graph
           | Right_alpha ->
             Form.Elements.Range.float
               ~min:0.0
@@ -99,6 +107,7 @@ module For_overlay = struct
               ~step:0.01
               ~allow_updates_when_focused:`Never
               ()
+              graph
         ;;
       end)
   ;;
@@ -118,26 +127,29 @@ let initial_params =
   }
 ;;
 
-let form =
-  let%sub shared = Shared.form in
-  let%sub for_gradient = For_gradient.form in
-  let%sub for_overlay = For_overlay.form in
-  let%sub all =
+let form graph =
+  let shared = Shared.form graph in
+  let for_gradient = For_gradient.form graph in
+  let for_overlay = For_overlay.form graph in
+  let all =
     Form.Typed.Record.make
       (module struct
         module Typed_field = Typed_field
 
         let label_for_field = `Inferred
 
-        let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t = function
-          | Shared -> return shared
-          | For_gradient -> return for_gradient
-          | For_overlay -> return for_overlay
+        let form_for_field : type a. a Typed_field.t -> Bonsai.graph -> a Form.t Bonsai.t =
+          fun typed_field _graph ->
+          match typed_field with
+          | Shared -> shared
+          | For_gradient -> for_gradient
+          | For_overlay -> for_overlay
         ;;
       end)
+      graph
   in
-  let%sub all = Form.Dynamic.with_default (Value.return initial_params) all in
-  let%sub value =
+  let all = Form.Dynamic.with_default (Bonsai.return initial_params) all graph in
+  let value =
     let%arr all = all in
     (match Form.value all with
      | Error e -> print_s [%message (e : Error.t)]
@@ -152,8 +164,8 @@ let form =
       ~title:[ Vdom.Node.text title ]
       [ Form.view_as_vdom form ]
   in
-  let%sub view =
-    let%sub theme = View.Theme.current in
+  let view =
+    let theme = View.Theme.current graph in
     let%arr shared = shared
     and for_gradient = for_gradient
     and for_overlay = for_overlay
@@ -166,5 +178,5 @@ let form =
       ; card_helper theme "for overlay" for_overlay
       ]
   in
-  return (Value.both value view)
+  Bonsai.both value view
 ;;

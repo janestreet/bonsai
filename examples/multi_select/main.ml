@@ -1,5 +1,5 @@
 open Core
-open Bonsai_web
+open Bonsai_web.Cont
 open Bonsai.Let_syntax
 
 module Attribute = struct
@@ -33,18 +33,19 @@ let subwidgets =
        in
        attr, { Widget.default_selection_status = Selected; all_items })
   |> Attribute.Map.of_alist_exn
-  |> Value.return
+  |> Bonsai.return
 ;;
 
-let id_prefix = Value.return "multi-select-widget-example"
+let id_prefix = Bonsai.return "multi-select-widget-example"
 
-let bonsai =
-  let%sub widget_result =
+let bonsai graph =
+  let widget_result =
     Widget.bonsai
       ~allow_updates_when_focused:`Never
       ~all_keys:(Attribute.Set.of_list Attribute.all)
       ~id_prefix
       subwidgets
+      graph
   in
   let%arr widget_result = widget_result in
   let open Virtual_dom.Vdom in

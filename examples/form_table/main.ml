@@ -1,6 +1,5 @@
 open! Core
-open! Bonsai_web
-open Bonsai.Let_syntax
+open! Bonsai_web.Cont
 module Username = Username_kernel.Username
 module Form = Bonsai_web_ui_form.With_automatic_view
 module Table_form = Bonsai_experimental_table_form
@@ -20,7 +19,9 @@ let form_of_t =
 
       let label_for_field = `Inferred
 
-      let form_for_field (type a) (field : a Typed_field.t) : a Form.t Computation.t =
+      let form_for_field (type a) (field : a Typed_field.t)
+        : Bonsai.graph -> a Form.t Bonsai.t
+        =
         match field with
         | Name -> Form.Elements.Textbox.string ~allow_updates_when_focused:`Never ()
         | Age -> Form.Elements.Textbox.int ~allow_updates_when_focused:`Never ()
@@ -43,7 +44,7 @@ let table_form =
     ~key_column_initial_width:(`Px 100)
     form_of_t
     ~columns:
-      (Value.return
+      (Bonsai.return
          [ Table_form.Column.create "name"
          ; Table_form.Column.create "age"
          ; Table_form.Column.create "likes cats"
@@ -51,16 +52,16 @@ let table_form =
 ;;
 
 let () =
-  let app =
-    let%sub table_form = table_form in
-    let%sub table_form =
+  let app graph =
+    let table_form = table_form graph in
+    let table_form =
       (* We call with_default, which sets the form to contain the starting data that we
          care about. *)
-      Form.Dynamic.with_default (Value.return starting_data) table_form
+      Form.Dynamic.with_default (Bonsai.return starting_data) table_form graph
     in
     (* The application doesn't really do anything with this form other than view it, so we
        just project out the view and return that for the application component. *)
-    Bonsai.pure Form.view_as_vdom table_form
+    Bonsai.map ~f:Form.view_as_vdom table_form
   in
   Bonsai_web.Start.start app
 ;;

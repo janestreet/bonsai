@@ -1,6 +1,6 @@
 open! Core
 open! Async_kernel
-open! Bonsai_web
+open! Bonsai_web.Cont
 open Bonsai.Let_syntax
 
 module Style =
@@ -21,9 +21,10 @@ stylesheet
    }
 |}]
 
-let component ~send_message =
-  let%sub textbox_state =
-    Bonsai.state "" ~sexp_of_model:[%sexp_of: String.t] ~equal:[%equal: String.t]
+let component ~send_message graph =
+  let textbox_state =
+    Tuple2.uncurry Bonsai.both
+    @@ Bonsai.state "" ~sexp_of_model:[%sexp_of: String.t] ~equal:[%equal: String.t] graph
   in
   let%arr textbox_content, set_textbox_content = textbox_state
   and send_message = send_message in

@@ -129,31 +129,31 @@ let%expect_test _ =
   [%expect
     {|
     tree:
-      1_1 return -> _1 sub
+      1_1 return -> _1 sub @ 1:2
       1_2 incr -> 1_1 return
-      2-1_1 return -> 2_1 sub
+      2-1_1 return -> 2_1 sub @ 6:2
       2-1_2 incr -> 2-1_1 return
       2-2-1-1_1 named -> 2-2-1_2 map @ 6:2
-      2-2-1_1 return -> 2-2_1 sub
+      2-2-1_1 return -> 2-2_1 sub @ 6:2
       2-2-1_2 map @ 6:2 -> 2-2-1_1 return
-      2-2-2_1 return -> 2-2_1 sub
+      2-2-2_1 return -> 2-2_1 sub @ 6:2
       2-2-2_2 named -> 2-2-2_1 return
-      2-2_1 sub -> 2_1 sub
-      2_1 sub -> _1 sub
-      _1 sub -> _0
+      2-2_1 sub @ 6:2 -> 2_1 sub @ 6:2
+      2_1 sub @ 6:2 -> _1 sub @ 1:2
+      _1 sub @ 1:2 -> _0
     dag:
-      1_1 return -> 2-2-2_2 named, _1 sub
+      1_1 return -> 2-2-2_2 named, _1 sub @ 1:2
       1_2 incr -> 1_1 return
-      2-1_1 return -> 2-2-1-1_1 named, 2_1 sub
+      2-1_1 return -> 2-2-1-1_1 named, 2_1 sub @ 6:2
       2-1_2 incr -> 2-1_1 return
       2-2-1-1_1 named -> 2-2-1_2 map @ 6:2
-      2-2-1_1 return -> 2-2_1 sub
+      2-2-1_1 return -> 2-2_1 sub @ 6:2
       2-2-1_2 map @ 6:2 -> 2-2-1_1 return
-      2-2-2_1 return -> 2-2_1 sub
+      2-2-2_1 return -> 2-2_1 sub @ 6:2
       2-2-2_2 named -> 2-2-2_1 return
-      2-2_1 sub -> 2_1 sub
-      2_1 sub -> _1 sub
-      _1 sub -> _0
+      2-2_1 sub @ 6:2 -> 2_1 sub @ 6:2
+      2_1 sub @ 6:2 -> _1 sub @ 1:2
+      _1 sub @ 1:2 -> _0
     |}]
 ;;
 
@@ -178,19 +178,19 @@ let%expect_test _ =
   [%expect
     {|
     tree:
-      1-1_1 constant -> 1_2 map @ 6:2
-      1_1 return -> _1 sub
+      1-1_1 constant @ 6:2 -> 1_2 map @ 6:2
+      1_1 return -> _1 sub @ 6:2
       1_2 map @ 6:2 -> 1_1 return
-      2_1 return -> _1 sub
+      2_1 return -> _1 sub @ 6:2
       2_2 constant -> 2_1 return
-      _1 sub -> _0
+      _1 sub @ 6:2 -> _0
     dag:
-      1-1_1 constant -> 1_2 map @ 6:2
-      1_1 return -> _1 sub
+      1-1_1 constant @ 6:2 -> 1_2 map @ 6:2
+      1_1 return -> _1 sub @ 6:2
       1_2 map @ 6:2 -> 1_1 return
-      2_1 return -> _1 sub
+      2_1 return -> _1 sub @ 6:2
       2_2 constant -> 2_1 return
-      _1 sub -> _0
+      _1 sub @ 6:2 -> _0
     |}]
 ;;
 
@@ -214,15 +214,15 @@ let%expect_test _ =
   [%expect
     {|
     tree:
-      1_1 return -> _1 sub
+      1_1 return -> _1 sub @ 1:2
       1_2 incr -> 1_1 return
-      2-1_1 return -> 2_1 sub
+      2-1_1 return -> 2_1 sub @ 2:2
       2-1_2 incr -> 2-1_1 return
-      2-2-1_1 return -> 2-2_1 sub
+      2-2-1_1 return -> 2-2_1 sub @ 3:2
       2-2-1_2 incr -> 2-2-1_1 return
-      2-2-2-1_1 return -> 2-2-2_1 sub
+      2-2-2-1_1 return -> 2-2-2_1 sub @ 4:2
       2-2-2-1_2 incr -> 2-2-2-1_1 return
-      2-2-2-2-1_1 return -> 2-2-2-2_1 sub
+      2-2-2-2-1_1 return -> 2-2-2-2_1 sub @ 5:2
       2-2-2-2-1_2 incr -> 2-2-2-2-1_1 return
       2-2-2-2-2-1-1_1 named -> 2-2-2-2-2-1_1 both
       2-2-2-2-2-1-2-1_1 named -> 2-2-2-2-2-1-2_1 both
@@ -233,23 +233,23 @@ let%expect_test _ =
       2-2-2-2-2-1-2-2_1 both -> 2-2-2-2-2-1-2_1 both
       2-2-2-2-2-1-2_1 both -> 2-2-2-2-2-1_1 both
       2-2-2-2-2-1_1 both -> 2-2-2-2-2_2 map @ 6:2
-      2-2-2-2-2_1 return -> 2-2-2-2_1 sub
+      2-2-2-2-2_1 return -> 2-2-2-2_1 sub @ 5:2
       2-2-2-2-2_2 map @ 6:2 -> 2-2-2-2-2_1 return
-      2-2-2-2_1 sub -> 2-2-2_1 sub
-      2-2-2_1 sub -> 2-2_1 sub
-      2-2_1 sub -> 2_1 sub
-      2_1 sub -> _1 sub
-      _1 sub -> _0
+      2-2-2-2_1 sub @ 5:2 -> 2-2-2_1 sub @ 4:2
+      2-2-2_1 sub @ 4:2 -> 2-2_1 sub @ 3:2
+      2-2_1 sub @ 3:2 -> 2_1 sub @ 2:2
+      2_1 sub @ 2:2 -> _1 sub @ 1:2
+      _1 sub @ 1:2 -> _0
     dag:
-      1_1 return -> 2-2-2-2-2-1-1_1 named, _1 sub
+      1_1 return -> 2-2-2-2-2-1-1_1 named, _1 sub @ 1:2
       1_2 incr -> 1_1 return
-      2-1_1 return -> 2-2-2-2-2-1-2-1_1 named, 2_1 sub
+      2-1_1 return -> 2-2-2-2-2-1-2-1_1 named, 2_1 sub @ 2:2
       2-1_2 incr -> 2-1_1 return
-      2-2-1_1 return -> 2-2-2-2-2-1-2-2-1_1 named, 2-2_1 sub
+      2-2-1_1 return -> 2-2-2-2-2-1-2-2-1_1 named, 2-2_1 sub @ 3:2
       2-2-1_2 incr -> 2-2-1_1 return
-      2-2-2-1_1 return -> 2-2-2-2-2-1-2-2-2-1_1 named, 2-2-2_1 sub
+      2-2-2-1_1 return -> 2-2-2-2-2-1-2-2-2-1_1 named, 2-2-2_1 sub @ 4:2
       2-2-2-1_2 incr -> 2-2-2-1_1 return
-      2-2-2-2-1_1 return -> 2-2-2-2-2-1-2-2-2-2_1 named, 2-2-2-2_1 sub
+      2-2-2-2-1_1 return -> 2-2-2-2-2-1-2-2-2-2_1 named, 2-2-2-2_1 sub @ 5:2
       2-2-2-2-1_2 incr -> 2-2-2-2-1_1 return
       2-2-2-2-2-1-1_1 named -> 2-2-2-2-2-1_1 both
       2-2-2-2-2-1-2-1_1 named -> 2-2-2-2-2-1-2_1 both
@@ -260,13 +260,13 @@ let%expect_test _ =
       2-2-2-2-2-1-2-2_1 both -> 2-2-2-2-2-1-2_1 both
       2-2-2-2-2-1-2_1 both -> 2-2-2-2-2-1_1 both
       2-2-2-2-2-1_1 both -> 2-2-2-2-2_2 map @ 6:2
-      2-2-2-2-2_1 return -> 2-2-2-2_1 sub
+      2-2-2-2-2_1 return -> 2-2-2-2_1 sub @ 5:2
       2-2-2-2-2_2 map @ 6:2 -> 2-2-2-2-2_1 return
-      2-2-2-2_1 sub -> 2-2-2_1 sub
-      2-2-2_1 sub -> 2-2_1 sub
-      2-2_1 sub -> 2_1 sub
-      2_1 sub -> _1 sub
-      _1 sub -> _0
+      2-2-2-2_1 sub @ 5:2 -> 2-2-2_1 sub @ 4:2
+      2-2-2_1 sub @ 4:2 -> 2-2_1 sub @ 3:2
+      2-2_1 sub @ 3:2 -> 2_1 sub @ 2:2
+      2_1 sub @ 2:2 -> _1 sub @ 1:2
+      _1 sub @ 1:2 -> _0
     |}];
   let handle = Handle.create (Result_spec.string (module Int)) c in
   Handle.show handle;
@@ -292,39 +292,39 @@ let%expect_test "diamond" =
   [%expect
     {|
     tree:
-      1_1 return -> _1 sub
+      1_1 return -> _1 sub @ 1:2
       1_2 incr -> 1_1 return
       2-1-1_1 named -> 2-1_2 map
-      2-1_1 return -> 2_1 sub
+      2-1_1 return -> 2_1 sub @ 2:2
       2-1_2 map -> 2-1_1 return
       2-2-1-1_1 named -> 2-2-1_2 map
-      2-2-1_1 return -> 2-2_1 sub
+      2-2-1_1 return -> 2-2_1 sub @ 3:2
       2-2-1_2 map -> 2-2-1_1 return
       2-2-2-1-1_1 named -> 2-2-2-1_1 both
       2-2-2-1-2_1 named -> 2-2-2-1_1 both
       2-2-2-1_1 both -> 2-2-2_2 map @ 4:2
-      2-2-2_1 return -> 2-2_1 sub
+      2-2-2_1 return -> 2-2_1 sub @ 3:2
       2-2-2_2 map @ 4:2 -> 2-2-2_1 return
-      2-2_1 sub -> 2_1 sub
-      2_1 sub -> _1 sub
-      _1 sub -> _0
+      2-2_1 sub @ 3:2 -> 2_1 sub @ 2:2
+      2_1 sub @ 2:2 -> _1 sub @ 1:2
+      _1 sub @ 1:2 -> _0
     dag:
-      1_1 return -> 2-2-1-1_1 named, 2-1-1_1 named, _1 sub
+      1_1 return -> 2-2-1-1_1 named, 2-1-1_1 named, _1 sub @ 1:2
       1_2 incr -> 1_1 return
       2-1-1_1 named -> 2-1_2 map
-      2-1_1 return -> 2-2-2-1-1_1 named, 2_1 sub
+      2-1_1 return -> 2-2-2-1-1_1 named, 2_1 sub @ 2:2
       2-1_2 map -> 2-1_1 return
       2-2-1-1_1 named -> 2-2-1_2 map
-      2-2-1_1 return -> 2-2-2-1-2_1 named, 2-2_1 sub
+      2-2-1_1 return -> 2-2-2-1-2_1 named, 2-2_1 sub @ 3:2
       2-2-1_2 map -> 2-2-1_1 return
       2-2-2-1-1_1 named -> 2-2-2-1_1 both
       2-2-2-1-2_1 named -> 2-2-2-1_1 both
       2-2-2-1_1 both -> 2-2-2_2 map @ 4:2
-      2-2-2_1 return -> 2-2_1 sub
+      2-2-2_1 return -> 2-2_1 sub @ 3:2
       2-2-2_2 map @ 4:2 -> 2-2-2_1 return
-      2-2_1 sub -> 2_1 sub
-      2_1 sub -> _1 sub
-      _1 sub -> _0
+      2-2_1 sub @ 3:2 -> 2_1 sub @ 2:2
+      2_1 sub @ 2:2 -> _1 sub @ 1:2
+      _1 sub @ 1:2 -> _0
     |}]
 ;;
 
@@ -443,19 +443,19 @@ let%expect_test "dynamic scope" =
     {|
     tree:
       1_1 constant -> _1 store
-      2-1_1 fetch -> 2_1 sub
+      2-1_1 fetch -> 2_1 sub @ 6:7
       2-2-1_1 named -> 2-2_2 map @ 7:7
-      2-2_1 return -> 2_1 sub
+      2-2_1 return -> 2_1 sub @ 6:7
       2-2_2 map @ 7:7 -> 2-2_1 return
-      2_1 sub -> _1 store
+      2_1 sub @ 6:7 -> _1 store
       _1 store -> _0
     dag:
       1_1 constant -> 2-1_1 fetch, _1 store
-      2-1_1 fetch -> 2-2-1_1 named, 2_1 sub
+      2-1_1 fetch -> 2-2-1_1 named, 2_1 sub @ 6:7
       2-2-1_1 named -> 2-2_2 map @ 7:7
-      2-2_1 return -> 2_1 sub
+      2-2_1 return -> 2_1 sub @ 6:7
       2-2_2 map @ 7:7 -> 2-2_1 return
-      2_1 sub -> _1 store
+      2_1 sub @ 6:7 -> _1 store
       _1 store -> _0
     |}]
 ;;
@@ -542,23 +542,23 @@ let%expect_test "assoc" =
   [%expect
     {|
     tree:
-      1_1 return -> _1 sub
+      1_1 return -> _1 sub @ 1:2
       1_2 incr -> 1_1 return
       2-1_1 constant -> 2_1 assoc
       2-2-1_1 named -> 2-2_2 map @ 6:6
       2-2_1 return -> 2_1 assoc
       2-2_2 map @ 6:6 -> 2-2_1 return
-      2_1 assoc -> _1 sub
-      _1 sub -> _0
+      2_1 assoc -> _1 sub @ 1:2
+      _1 sub @ 1:2 -> _0
     dag:
-      1_1 return -> 2-2-1_1 named, _1 sub
+      1_1 return -> 2-2-1_1 named, _1 sub @ 1:2
       1_2 incr -> 1_1 return
       2-1_1 constant -> 2_1 assoc
       2-2-1_1 named -> 2-2_2 map @ 6:6
       2-2_1 return -> 2_1 assoc
       2-2_2 map @ 6:6 -> 2-2_1 return
-      2_1 assoc -> _1 sub
-      _1 sub -> _0
+      2_1 assoc -> _1 sub @ 1:2
+      _1 sub @ 1:2 -> _0
     |}];
   let handle =
     Handle.create
@@ -596,13 +596,13 @@ let%expect_test "assoc constant folding" =
     {|
     tree:
       1_1 constant -> _1 assoc
-      2-1_1 constant -> 2_2 map @ 6:6
+      2-1_1 constant @ 1:2 -> 2_2 map @ 6:6
       2_1 return -> _1 assoc
       2_2 map @ 6:6 -> 2_1 return
       _1 assoc -> _0
     dag:
       1_1 constant -> _1 assoc
-      2-1_1 constant -> 2_2 map @ 6:6
+      2-1_1 constant @ 1:2 -> 2_2 map @ 6:6
       2_1 return -> _1 assoc
       2_2 map @ 6:6 -> 2_1 return
       _1 assoc -> _0
@@ -939,67 +939,67 @@ let%expect_test "name_used_twice" =
   [%expect
     {|
     tree:
-      1-1_1 return -> 1_1 sub
+      1-1_1 return -> 1_1 sub @ -5:2
       1-1_2 incr -> 1-1_1 return
       1-2-1-1_1 named -> 1-2-1_2 map @ -5:2
-      1-2-1_1 return -> 1-2_1 sub
+      1-2-1_1 return -> 1-2_1 sub @ -5:2
       1-2-1_2 map @ -5:2 -> 1-2-1_1 return
-      1-2-2_1 return -> 1-2_1 sub
+      1-2-2_1 return -> 1-2_1 sub @ -5:2
       1-2-2_2 incr -> 1-2-2_1 return
-      1-2_1 sub -> 1_1 sub
-      1_1 sub -> _1 sub
+      1-2_1 sub @ -5:2 -> 1_1 sub @ -5:2
+      1_1 sub @ -5:2 -> _1 sub @ 1:2
       2-1-1_1 named -> 2-1_2 map @ 1:2
-      2-1_1 return -> 2_1 sub
+      2-1_1 return -> 2_1 sub @ 1:2
       2-1_2 map @ 1:2 -> 2-1_1 return
-      2-2-1-1_1 return -> 2-2-1_1 sub
+      2-2-1-1_1 return -> 2-2-1_1 sub @ -5:2
       2-2-1-1_2 incr -> 2-2-1-1_1 return
       2-2-1-2-1-1_1 named -> 2-2-1-2-1_2 map @ -5:2
-      2-2-1-2-1_1 return -> 2-2-1-2_1 sub
+      2-2-1-2-1_1 return -> 2-2-1-2_1 sub @ -5:2
       2-2-1-2-1_2 map @ -5:2 -> 2-2-1-2-1_1 return
-      2-2-1-2-2_1 return -> 2-2-1-2_1 sub
+      2-2-1-2-2_1 return -> 2-2-1-2_1 sub @ -5:2
       2-2-1-2-2_2 incr -> 2-2-1-2-2_1 return
-      2-2-1-2_1 sub -> 2-2-1_1 sub
-      2-2-1_1 sub -> 2-2_1 sub
+      2-2-1-2_1 sub @ -5:2 -> 2-2-1_1 sub @ -5:2
+      2-2-1_1 sub @ -5:2 -> 2-2_1 sub @ 2:2
       2-2-2-1-1_1 named -> 2-2-2-1_2 map @ 2:2
-      2-2-2-1_1 return -> 2-2-2_1 sub
+      2-2-2-1_1 return -> 2-2-2_1 sub @ 2:2
       2-2-2-1_2 map @ 2:2 -> 2-2-2-1_1 return
-      2-2-2-2_1 return -> 2-2-2_1 sub
+      2-2-2-2_1 return -> 2-2-2_1 sub @ 2:2
       2-2-2-2_2 constant -> 2-2-2-2_1 return
-      2-2-2_1 sub -> 2-2_1 sub
-      2-2_1 sub -> 2_1 sub
-      2_1 sub -> _1 sub
-      _1 sub -> _0
+      2-2-2_1 sub @ 2:2 -> 2-2_1 sub @ 2:2
+      2-2_1 sub @ 2:2 -> 2_1 sub @ 1:2
+      2_1 sub @ 1:2 -> _1 sub @ 1:2
+      _1 sub @ 1:2 -> _0
     dag:
-      1-1_1 return -> 1-2-1-1_1 named, 1_1 sub
+      1-1_1 return -> 1-2-1-1_1 named, 1_1 sub @ -5:2
       1-1_2 incr -> 1-1_1 return
       1-2-1-1_1 named -> 1-2-1_2 map @ -5:2
-      1-2-1_1 return -> 1-2_1 sub
+      1-2-1_1 return -> 1-2_1 sub @ -5:2
       1-2-1_2 map @ -5:2 -> 1-2-1_1 return
-      1-2-2_1 return -> 1-2_1 sub
+      1-2-2_1 return -> 1-2_1 sub @ -5:2
       1-2-2_2 incr -> 1-2-2_1 return
-      1-2_1 sub -> 1_1 sub
-      1_1 sub -> 2-1-1_1 named, _1 sub
+      1-2_1 sub @ -5:2 -> 1_1 sub @ -5:2
+      1_1 sub @ -5:2 -> 2-1-1_1 named, _1 sub @ 1:2
       2-1-1_1 named -> 2-1_2 map @ 1:2
-      2-1_1 return -> 2_1 sub
+      2-1_1 return -> 2_1 sub @ 1:2
       2-1_2 map @ 1:2 -> 2-1_1 return
-      2-2-1-1_1 return -> 2-2-1-2-1-1_1 named, 2-2-1_1 sub
+      2-2-1-1_1 return -> 2-2-1-2-1-1_1 named, 2-2-1_1 sub @ -5:2
       2-2-1-1_2 incr -> 2-2-1-1_1 return
       2-2-1-2-1-1_1 named -> 2-2-1-2-1_2 map @ -5:2
-      2-2-1-2-1_1 return -> 2-2-1-2_1 sub
+      2-2-1-2-1_1 return -> 2-2-1-2_1 sub @ -5:2
       2-2-1-2-1_2 map @ -5:2 -> 2-2-1-2-1_1 return
-      2-2-1-2-2_1 return -> 2-2-1-2_1 sub
+      2-2-1-2-2_1 return -> 2-2-1-2_1 sub @ -5:2
       2-2-1-2-2_2 incr -> 2-2-1-2-2_1 return
-      2-2-1-2_1 sub -> 2-2-1_1 sub
-      2-2-1_1 sub -> 2-2-2-1-1_1 named, 2-2_1 sub
+      2-2-1-2_1 sub @ -5:2 -> 2-2-1_1 sub @ -5:2
+      2-2-1_1 sub @ -5:2 -> 2-2-2-1-1_1 named, 2-2_1 sub @ 2:2
       2-2-2-1-1_1 named -> 2-2-2-1_2 map @ 2:2
-      2-2-2-1_1 return -> 2-2-2_1 sub
+      2-2-2-1_1 return -> 2-2-2_1 sub @ 2:2
       2-2-2-1_2 map @ 2:2 -> 2-2-2-1_1 return
-      2-2-2-2_1 return -> 2-2-2_1 sub
+      2-2-2-2_1 return -> 2-2-2_1 sub @ 2:2
       2-2-2-2_2 constant -> 2-2-2-2_1 return
-      2-2-2_1 sub -> 2-2_1 sub
-      2-2_1 sub -> 2_1 sub
-      2_1 sub -> _1 sub
-      _1 sub -> _0
+      2-2-2_1 sub @ 2:2 -> 2-2_1 sub @ 2:2
+      2-2_1 sub @ 2:2 -> 2_1 sub @ 1:2
+      2_1 sub @ 1:2 -> _1 sub @ 1:2
+      _1 sub @ 1:2 -> _0
     |}]
 ;;
 

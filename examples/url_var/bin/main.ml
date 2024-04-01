@@ -1,5 +1,5 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 open Bonsai.Let_syntax
 
 module Css =
@@ -17,8 +17,8 @@ stylesheet
 let c s = s
 let examples_column = c Css.examples_column
 
-let component =
-  let%sub examples = Bonsai_web_ui_url_var_example_urls.examples in
+let component graph =
+  let examples = Bonsai_web_ui_url_var_example_urls.examples graph in
   let%arr examples = examples in
   Vdom.Node.div [ Vdom.Node.div ~attrs:[ examples_column ] examples ]
 ;;

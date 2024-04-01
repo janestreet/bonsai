@@ -1,5 +1,5 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 open Vdom
 open Bonsai.Let_syntax
 module Id = Int
@@ -30,15 +30,16 @@ module Ids = struct
       { next = state.next + 1; ids = Map.add_exn ~key:state.next ~data:() state.ids }
   ;;
 
-  let component =
-    let%sub state =
-      Bonsai.state_machine0
-        ()
-        ~sexp_of_model:[%sexp_of: State.t]
-        ~equal:[%equal: State.t]
-        ~sexp_of_action:[%sexp_of: [ `Remove of Id.t | `Add_with_next_id ]]
-        ~default_model:State.default
-        ~apply_action
+  let component graph =
+    let state =
+      Tuple2.uncurry Bonsai.both
+      @@ Bonsai.state_machine0
+           graph
+           ~sexp_of_model:[%sexp_of: State.t]
+           ~equal:[%equal: State.t]
+           ~sexp_of_action:[%sexp_of: [ `Remove of Id.t | `Add_with_next_id ]]
+           ~default_model:State.default
+           ~apply_action
     in
     let%arr state, inject = state in
     Result.
@@ -49,19 +50,20 @@ module Ids = struct
   ;;
 end
 
-let panel_component id (_ : unit Value.t) =
+let panel_component id (_ : unit Bonsai.t) _graph =
   let%arr id = id in
   Node.div [ Node.textf !"Hello, world %{Id}!" id ]
 ;;
 
-let component =
-  let%sub { ids; inject_add_with_next_id; inject_remove } = Ids.component in
-  let%sub panels = Bonsai.assoc (module Id) ids ~f:panel_component in
+let component graph =
+  let%sub { ids; inject_add_with_next_id; inject_remove } = Ids.component graph in
+  let panels = Bonsai.assoc (module Id) ids ~f:panel_component graph in
   Bonsai_web_ui_panels_experimental.component
     ~key:(module Id)
     ~inject_add:inject_add_with_next_id
     ~inject_remove
     panels
+    graph
 ;;
 
 let () = Bonsai_web.Start.start component

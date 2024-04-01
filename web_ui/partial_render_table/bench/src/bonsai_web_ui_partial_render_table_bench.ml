@@ -76,7 +76,7 @@ let component_for_bench
   let key_range = Bonsai.Var.value key_range in
   let map = Bonsai.Var.value map in
   let on_change = Bonsai.Var.value on_change in
-  let%sub collate =
+  let%sub collate, key_rank =
     let collate =
       let%map filter = filter
       and order = order
@@ -95,7 +95,7 @@ let component_for_bench
   Table.component
     ?preload_rows
     comparator
-    ~focus:(Table.Focus.By_cell { on_change; compute_presence = return })
+    ~focus:(Table.Focus.By_cell { on_change; compute_presence = return; key_rank })
     ~row_height:(Value.return (`Px 1))
     ~columns
     collate

@@ -1,5 +1,5 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 open! Bonsai.Let_syntax
 module Auto_generated = Bonsai_web_ui_auto_generated
 module Form = Bonsai_web_ui_form.With_automatic_view
@@ -14,14 +14,14 @@ let generated_values =
   |> Sequence.to_list
 ;;
 
-let component =
+let component graph =
   let type_definition =
     Vdom.Node.pre [ Vdom.Node.text Embedded_files.type_intf_dot_ml ]
   in
-  let%sub form = Type.form in
-  let%sub index, incr =
+  let form = Type.form graph in
+  let index, incr =
     Bonsai.state_machine0
-      ()
+      graph
       ~sexp_of_model:[%sexp_of: Int.t]
       ~equal:[%equal: Int.t]
       ~sexp_of_action:[%sexp_of: Unit.t]

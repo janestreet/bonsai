@@ -1,5 +1,5 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 open Vdom
 
 let brightness_suffix : Tailwind_colors.Brightness.t -> string = function
@@ -19,8 +19,8 @@ let abs_position_px t b l r =
   Css_gen.position ~top:(`Px t) ~bottom:(`Px b) ~left:(`Px l) ~right:(`Px r) `Absolute
 ;;
 
-let component =
-  Bonsai.const
+let component _graph =
+  Bonsai.return
     (Node.div
        (List.map Tailwind_colors.Hue.all ~f:(fun hue ->
           Node.div

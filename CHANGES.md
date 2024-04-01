@@ -1,3 +1,31 @@
+- Added a `duplicate` button for elements within auto-generated list forms.
+
+- Added a function to resize prt colum widths.
+
+- Add `Bonsai.Value.of_opt` to new `Bonsai.Cont` api.
+
+- Migrated bonsai examples to new `Bonsai.Cont` API.
+
+- Add documentation about changes and upgrade strategies between proc and cont
+
+- Add 3 new APIs to close Bonsai notifications:
+  * `close_all_notifications` closes all currently open notifications
+  * `close_oldest_notification` closes the oldest currently open notification
+  * `close_newest_notification` closes the newest currently open notification
+
+- Rename `Bonsai.Cont.yoink` to `Bonsai.Cont.peek` to mirror the peek operation in
+other abstract data types
+
+- Made the `close_when_clicked_outside` argument to `Bonsai_web_ui_popover` dynamic.
+
+- Changed Bonsai path generation so that paths are only extended at branch points where
+multple children might reference the paths.
+
+- Balance long chains of Sub nodes to prevent stack overflows and suboptimal
+linear chains of incremental model values.
+
+- Added effects to lock and unlock focus in the `Bonsai_web_ui_partial_render_table`
+
 - `Bonsai_web_ui_form` and `Bonsai_web_ui_form2` were merged into `Bonsai_web_ui_form` under
 submodules `With_automatic_view` and `With_manual_view`, respectively.
 

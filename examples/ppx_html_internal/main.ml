@@ -1,5 +1,5 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 open! Bonsai.Let_syntax
 module Gallery = Bonsai_web_ui_gallery
 
@@ -42,15 +42,15 @@ module Svg_example = struct
             </svg>
           |}]]
     in
-    Bonsai.const (vdom, demo)
+    fun _graph -> Bonsai.return (vdom, demo)
   ;;
 
   let selector = None
   let filter_attrs = Some (fun k _ -> not (String.is_prefix k ~prefix:"style"))
 end
 
-let component =
-  let%sub theme, theme_picker = Gallery.Theme_picker.component ~default:Kado () in
+let component graph =
+  let%sub theme, theme_picker = Gallery.Theme_picker.component ~default:Kado () graph in
   View.Theme.set_for_app
     theme
     (Gallery.make_sections
@@ -59,6 +59,7 @@ let component =
          , {|Internal testing example to test out ppx_html syntax we may not want to show to newcomers.|}
          , [ Gallery.make_demo (module Svg_example) ] )
        ])
+    graph
 ;;
 
 let () = Bonsai_web.Start.start component

@@ -1,6 +1,6 @@
 open! Core
 open! Bonsai_web_test
-open! Bonsai_web
+open! Bonsai_web.Cont
 open Bonsai_examples_mouse_position_lib
 
 let%expect_test "basic page appearance" =

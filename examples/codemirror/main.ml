@@ -1,5 +1,5 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 open Bonsai.Let_syntax
 open Codemirror
 open Virtual_dom
@@ -41,7 +41,7 @@ module Fruit_sexp_grammar_auto_complete = struct
       ~extra_extension:
         (State.Extension.of_list
            [ Basic_setup.basic_setup; Codemirror_rainbow_parentheses.extension () ])
-      (Value.return Query.t_sexp_grammar)
+      (Bonsai.return Query.t_sexp_grammar)
   ;;
 end
 
@@ -79,7 +79,7 @@ let y =
       (module Codemirror_themes)
       ~equal:[%equal: Codemirror_themes.t]
       ~initial_state:(create_state (create_extensions Codemirror_themes.Material_dark))
-      ~compute_extensions:(Value.return create_extensions)
+      ~compute_extensions:(Bonsai.return create_extensions)
       theme
   ;;
 end
@@ -304,6 +304,67 @@ fn main() {
   ;;
 end
 
+module Common_lisp_syntax_highlighting = struct
+  let doc =
+    {|(in-package :cl-postgres)
+
+;; These are used to synthesize reader and writer names for integer
+;; reading/writing functions when the amount of bytes and the
+;; signedness is known. Both the macro that creates the functions and
+;; some macros that use them create names this way.
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defun integer-reader-name (bytes signed)
+    (intern (with-standard-io-syntax
+              (format nil "~a~a~a~a" '#:read- (if signed "" '#:u) '#:int bytes))))
+  (defun integer-writer-name (bytes signed)
+    (intern (with-standard-io-syntax
+              (format nil "~a~a~a~a" '#:write- (if signed "" '#:u) '#:int bytes))))) |}
+  ;;
+
+  let codemirror_editor =
+    Codemirror.of_initial_state
+      (State.Editor_state.create
+         (State.Editor_state_config.create
+            ~doc
+            ~extensions:
+              [ Basic_setup.basic_setup
+              ; Commonlisp.common_lisp
+                |> Stream_parser.Stream_language.define
+                |> Stream_parser.Stream_language.to_language
+                |> Language.extension
+              ]
+            ()))
+  ;;
+end
+
+module Scheme_syntax_highlighting = struct
+  let doc =
+    {|;; Building a list of squares from 0 to 9:
+;; Note: loop is simply an arbitrary symbol used as a label. Any symbol will do.
+
+(define (list-of-squares n)
+  (let loop ((i n) (res '()))
+    (if (< i 0)
+        res
+        (loop (- i 1) (cons (* i i) res)))))|}
+  ;;
+
+  let codemirror_editor =
+    Codemirror.of_initial_state
+      (State.Editor_state.create
+         (State.Editor_state_config.create
+            ~doc
+            ~extensions:
+              [ Basic_setup.basic_setup
+              ; Scheme.scheme
+                |> Stream_parser.Stream_language.define
+                |> Stream_parser.Stream_language.to_language
+                |> Language.extension
+              ]
+            ()))
+  ;;
+end
+
 module Xml_syntax_highlighting = struct
   let doc =
     {|<?xml version="1.0" encoding="ISO-8859-1" ?>
@@ -329,6 +390,8 @@ module Which_language = struct
     | Markdown
     | Sml
     | Sql
+    | Common_lisp
+    | Scheme
     | Diff
     | Html
     | Css
@@ -345,6 +408,8 @@ module Which_language = struct
     | Ocaml -> "OCaml syntax highlighting"
     | Sml -> "SML syntax highlighting"
     | Sql -> "SQL syntax highlighting"
+    | Common_lisp -> "Common Lisp syntax highlighting"
+    | Scheme -> "Scheme syntax highlighting"
     | Diff -> "Diff syntax highlighting"
     | Html -> "HTML syntax highlighting"
     | Css -> "CSS syntax highlighting"
@@ -355,15 +420,19 @@ module Which_language = struct
   ;;
 end
 
-let no_theme_picker = Computation.map ~f:(fun x -> None, x)
+let no_theme_picker x =
+  let%arr x = x in
+  None, x
+;;
 
-let component =
-  let%sub language_picker =
+let component graph =
+  let language_picker =
     Form.Elements.Dropdown.enumerable
       ~to_string:Which_language.to_string
       (module Which_language)
+      graph
   in
-  let%sub chosen_language =
+  let chosen_language =
     let%arr language_picker = language_picker in
     Form.value language_picker |> Or_error.ok_exn
   in
@@ -374,41 +443,60 @@ let component =
        codemirror editors, so we do the less-preferred option. *)
     match%sub chosen_language with
     | Which_language.Fruit ->
-      no_theme_picker @@ Fruit_sexp_grammar_auto_complete.codemirror_editor ~name:"fruit"
+      no_theme_picker
+        (Fruit_sexp_grammar_auto_complete.codemirror_editor ~name:"fruit" graph)
     | Fsharp ->
-      no_theme_picker @@ Fsharp_syntax_highlighting.codemirror_editor ~name:"fsharp"
+      no_theme_picker (Fsharp_syntax_highlighting.codemirror_editor ~name:"fsharp" graph)
     | Markdown ->
-      no_theme_picker @@ Markdown_syntax_highlighting.codemirror_editor ~name:"markdown"
+      no_theme_picker
+        (Markdown_syntax_highlighting.codemirror_editor ~name:"markdown" graph)
     | Ocaml ->
-      let%sub theme_picker =
+      let theme_picker =
         Form.Elements.Dropdown.enumerable
           ~to_string:Codemirror_themes.to_string
           (module Codemirror_themes)
-        |> Computation.map ~f:(Form.label "theme")
+          graph
+        |> Bonsai.map ~f:(Form.label "theme")
       in
-      let%sub chosen_theme =
+      let chosen_theme =
         let%arr theme_picker = theme_picker in
         Form.value theme_picker |> Or_error.ok_exn
       in
-      let%sub c =
-        Ocaml_syntax_highlighting.codemirror_editor ~name:"ocaml" ~theme:chosen_theme
+      let c =
+        Ocaml_syntax_highlighting.codemirror_editor
+          ~name:"ocaml"
+          ~theme:chosen_theme
+          graph
       in
       let%arr c = c
       and theme_picker = theme_picker in
       Some theme_picker, c
-    | Sml -> no_theme_picker @@ Sml_syntax_highlighting.codemirror_editor ~name:"sml"
-    | Sql -> no_theme_picker @@ Sql_syntax_highlighting.codemirror_editor ~name:"sql"
-    | Diff -> no_theme_picker @@ Diff_syntax_highlighting.codemirror_editor ~name:"diff"
-    | Html -> no_theme_picker @@ Html_syntax_highlighting.codemirror_editor ~name:"html"
-    | Css -> no_theme_picker @@ Css_syntax_highlighting.codemirror_editor ~name:"css"
+    | Sml ->
+      no_theme_picker @@ Sml_syntax_highlighting.codemirror_editor ~name:"sml" graph
+    | Sql ->
+      no_theme_picker @@ Sql_syntax_highlighting.codemirror_editor ~name:"sql" graph
+    | Common_lisp ->
+      no_theme_picker
+      @@ Common_lisp_syntax_highlighting.codemirror_editor ~name:"common lisp" graph
+    | Scheme ->
+      no_theme_picker @@ Scheme_syntax_highlighting.codemirror_editor ~name:"scheme" graph
+    | Diff ->
+      no_theme_picker @@ Diff_syntax_highlighting.codemirror_editor ~name:"diff" graph
+    | Html ->
+      no_theme_picker @@ Html_syntax_highlighting.codemirror_editor ~name:"html" graph
+    | Css ->
+      no_theme_picker @@ Css_syntax_highlighting.codemirror_editor ~name:"css" graph
     | Javascript ->
       no_theme_picker
-      @@ Javascript_syntax_highlighting.codemirror_editor ~name:"javascript"
-    | Php -> no_theme_picker @@ Php_syntax_highlighting.codemirror_editor ~name:"php"
-    | Rust -> no_theme_picker @@ Rust_syntax_highlighting.codemirror_editor ~name:"rust"
-    | Xml -> no_theme_picker @@ Xml_syntax_highlighting.codemirror_editor ~name:"xml"
+      @@ Javascript_syntax_highlighting.codemirror_editor ~name:"javascript" graph
+    | Php ->
+      no_theme_picker @@ Php_syntax_highlighting.codemirror_editor ~name:"php" graph
+    | Rust ->
+      no_theme_picker @@ Rust_syntax_highlighting.codemirror_editor ~name:"rust" graph
+    | Xml ->
+      no_theme_picker @@ Xml_syntax_highlighting.codemirror_editor ~name:"xml" graph
   in
-  let%sub codemirror_view =
+  let codemirror_view =
     let%arr codemirror = codemirror in
     Codemirror.view codemirror
   in

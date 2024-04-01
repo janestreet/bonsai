@@ -1,5 +1,5 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 open Bonsai.Let_syntax
 open Js_of_ocaml
 module Form = Bonsai_web_ui_form.With_automatic_view
@@ -65,43 +65,55 @@ module T = struct
   let destroy _input state _element = Dom_html.window##clearInterval state.interval
 end
 
-let canvas_thing =
-  let%sub scope_form =
-    Form.Elements.Number.int ~default:1 ~step:1 ~allow_updates_when_focused:`Never ()
+let canvas_thing graph =
+  let scope_form =
+    Form.Elements.Number.int
+      ~default:1
+      ~step:1
+      ~allow_updates_when_focused:`Never
+      ()
+      graph
   in
-  let%sub how_many =
-    Form.Elements.Number.int ~default:1 ~step:1 ~allow_updates_when_focused:`Never ()
+  let how_many =
+    Form.Elements.Number.int
+      ~default:1
+      ~step:1
+      ~allow_updates_when_focused:`Never
+      ()
+      graph
   in
-  let%sub color_picker = Form.Elements.Color_picker.hex () in
-  let%sub color =
-    Bonsai.pure (Form.value_or_default ~default:(`Hex "#000")) color_picker
+  let color_picker = Form.Elements.Color_picker.hex () graph in
+  let color = Bonsai.map ~f:(Form.value_or_default ~default:(`Hex "#000")) color_picker in
+  let scope = Bonsai.map ~f:(Form.value_or_default ~default:0) scope_form in
+  let widget =
+    Bonsai.scope_model
+      (module Int)
+      ~on:scope
+      ~for_:(Widget.component (module T) color)
+      graph
   in
-  let%sub scope = Bonsai.pure (Form.value_or_default ~default:0) scope_form in
-  let%sub widget =
-    Bonsai.scope_model (module Int) ~on:scope (Widget.component (module T) color)
+  let last_values, set_values =
+    Bonsai.state [] ~sexp_of_model:[%sexp_of: int list] ~equal:[%equal: int list] graph
   in
-  let%sub last_values, set_values =
-    Bonsai.state [] ~sexp_of_model:[%sexp_of: int list] ~equal:[%equal: int list]
-  in
-  let%sub reset_effect =
+  let reset_effect =
     let%arr { modify; _ } = widget in
     modify (fun _input state -> state.frame <- 0)
   in
-  let%sub read_effect =
+  let read_effect =
     let%arr { read; _ } = widget
     and set_values = set_values in
     let%bind.Effect l = read (fun _input state -> state.frame) in
     set_values l
   in
-  let%sub color_picker =
+  let color_picker =
     let%arr color_picker = color_picker in
     color_picker |> Form.label "color" |> Form.view_as_vdom
   in
-  let%sub scope_form =
+  let scope_form =
     let%arr scope_form = scope_form in
     scope_form |> Form.label "scope" |> Form.view_as_vdom
   in
-  let%sub theme = View.Theme.current in
+  let theme = View.Theme.current graph in
   let%arr { view; _ } = widget
   and color_picker = color_picker
   and theme = theme

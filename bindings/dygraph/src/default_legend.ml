@@ -5,6 +5,7 @@ module Model = struct
   module Series = struct
     type t =
       { label : string
+      ; override_label_for_visibility : string option
       ; value : Raw_html.t option
       ; dash : Raw_html.t option
       ; color : string option
@@ -15,7 +16,21 @@ module Model = struct
 
     let toggle_visibility t = { t with is_visible = not t.is_visible }
 
-    let view { label; value; dash; color; is_visible; is_highlighted } ~on_toggle =
+    let label_for_visibility t =
+      Option.value t.override_label_for_visibility ~default:t.label
+    ;;
+
+    let view
+      { label
+      ; override_label_for_visibility = _
+      ; value
+      ; dash
+      ; color
+      ; is_visible
+      ; is_highlighted
+      }
+      ~on_toggle
+      =
       let dash =
         match dash with
         | None -> Vdom.Node.none
@@ -64,12 +79,12 @@ module Model = struct
     { x_label : string
     ; x_value : Raw_html.t option
     ; series : Series.t list
-    ; past_series : Series.t Map.M(String).t
+    ; past_series_visibility : bool Map.M(String).t
     }
   [@@deriving equal, sexp]
 
   let view
-    { x_label; x_value; series; past_series = _ }
+    { x_label; x_value; series; past_series_visibility = _ }
     ~on_toggle
     ~select_all
     ~select_none
@@ -109,7 +124,8 @@ module Model = struct
       select_all_or_none
       :: x
       :: List.map series ~f:(fun series ->
-           Series.view series ~on_toggle:(fun () -> on_toggle series.label))
+           Series.view series ~on_toggle:(fun () ->
+             on_toggle (Series.label_for_visibility series)))
     in
     (* Mostly copied from vdom_input_widgets *)
     Vdom.Node.div
@@ -127,7 +143,7 @@ end
 module Action = struct
   type t =
     | From_graph of Legend_data.t
-    | Toggle_visibility of string
+    | Toggle_visibility of { label_for_visibility : string }
     | Select_none
     | Select_all
   [@@deriving equal, sexp]
@@ -179,15 +195,18 @@ let apply_action
     { model with x_value; series }
   | Select_none -> map_series ~f:(fun series -> { series with is_visible = false })
   | Select_all -> map_series ~f:(fun series -> { series with is_visible = true })
-  | Toggle_visibility label ->
+  | Toggle_visibility { label_for_visibility } ->
     map_series ~f:(fun series ->
-      if String.(series.label = label)
+      if String.(Model.Series.label_for_visibility series = label_for_visibility)
       then Model.Series.toggle_visibility series
       else series)
 ;;
 
-let series_from_info { Per_series_info.label; visible_by_default } =
+let series_from_info
+  { Per_series_info.label; override_label_for_visibility; visible_by_default }
+  =
   { Model.Series.label
+  ; override_label_for_visibility
   ; is_visible = visible_by_default
   ; is_highlighted = false
   ; value = None
@@ -207,7 +226,7 @@ let create ~x_label ~per_series_info
       { Model.x_label
       ; x_value = None
       ; series = List.map per_series_info ~f:series_from_info
-      ; past_series = String.Map.empty
+      ; past_series_visibility = String.Map.empty
       }
     | Some (model : Model.t) ->
       let existing_y_labels = List.map model.series ~f:Model.Series.label in
@@ -216,24 +235,40 @@ let create ~x_label ~per_series_info
          && [%equal: string list] model_y_labels existing_y_labels
       then { model with x_label }
       else (
-        let past_series =
-          (* Every time the [model_y_labels] changes, we want to remember the visibility
-             status of all the series labels we know about so far.  This will help in the
-             case where we toggle visibility on series A, flip to a graph which does not
-             have that series, and then flip back to the original graph.  Without
-             remembering, the visibility status of series A revert back to the default
-             status. *)
-          List.fold ~init:model.past_series model.series ~f:(fun past_series series ->
-            Map.set past_series ~key:series.label ~data:series)
+        (* Every time the [model_y_labels] changes, we want to remember the visibility
+           status of all the series labels we know about so far.  This will help in the
+           case where we toggle visibility on series A, flip to a graph which does not
+           have that series, and then flip back to the original graph.  Without
+           remembering, the visibility status of series A revert back to the default
+           status. *)
+        let past_series_visibility =
+          List.fold
+            ~init:model.past_series_visibility
+            model.series
+            ~f:(fun past_series_visibility series ->
+            Map.set
+              past_series_visibility
+              ~key:(Model.Series.label_for_visibility series)
+              ~data:series.is_visible)
         in
         let series =
           List.map per_series_info ~f:(fun per_series_info ->
-            let { Per_series_info.label; visible_by_default = _ } = per_series_info in
-            match Map.find past_series label with
-            | None -> series_from_info per_series_info
-            | Some series -> series)
+            let { Per_series_info.label
+                ; override_label_for_visibility
+                ; visible_by_default = _
+                }
+              =
+              per_series_info
+            in
+            let series = series_from_info per_series_info in
+            let label_for_visibility =
+              Option.value override_label_for_visibility ~default:label
+            in
+            match Map.find past_series_visibility label_for_visibility with
+            | None -> series
+            | Some is_visible -> { series with is_visible })
         in
-        { model with x_label; series; past_series })
+        { model with x_label; series; past_series_visibility })
   in
   let%sub state =
     Bonsai_extra.state_machine0_dynamic_model
@@ -250,7 +285,8 @@ let create ~x_label ~per_series_info
   let view =
     Model.view
       model
-      ~on_toggle:(fun label -> inject_action (Toggle_visibility label))
+      ~on_toggle:(fun label_for_visibility ->
+        inject_action (Toggle_visibility { label_for_visibility }))
       ~select_all:(fun () -> inject_action Select_all)
       ~select_none:(fun () -> inject_action Select_none)
   in

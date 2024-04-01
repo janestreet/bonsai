@@ -923,7 +923,7 @@ let%expect_test "table body is not recomputed more often than necessary" =
   let test =
     Test.create (fun input _filter_var ->
       let component =
-        let%sub collation =
+        let%sub collation, key_rank =
           Table_expert.collate
             ~filter_equal:[%compare.equal: unit]
             ~order_equal:[%compare.equal: unit]
@@ -953,6 +953,7 @@ let%expect_test "table body is not recomputed more often than necessary" =
             (By_row
                { on_change = Value.return (Fn.const Effect.Ignore)
                ; compute_presence = (fun focus -> return focus)
+               ; key_rank
                })
           ~row_height:(Value.return (`Px 10))
           ~columns

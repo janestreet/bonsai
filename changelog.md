@@ -134,7 +134,7 @@ degree than otherwise available.
 
 ## 2020-06-10
 `Bonsai.Proc` module added.  To read more, check out
-[this document](./docs/blogs/proc.md).
+[this document](./docs/blog/proc.md).
 
 ## 2020-03-17
 - Model type removed from `('input, 'model, 'result) Bonsai.t`.

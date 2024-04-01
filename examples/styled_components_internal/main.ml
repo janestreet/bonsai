@@ -1,5 +1,5 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 open! Bonsai.Let_syntax
 module Gallery = Bonsai_web_ui_gallery
 
@@ -7,7 +7,7 @@ let create ~title ~expect demo =
   let module Out = struct
     let name = title
     let description = expect
-    let view = Bonsai.const demo
+    let view _graph = Bonsai.return demo
     let selector = None
     let filter_attrs = Some (fun k _ -> not (String.is_prefix k ~prefix:"style"))
   end
@@ -15,8 +15,8 @@ let create ~title ~expect demo =
   Gallery.make_demo (module Out)
 ;;
 
-let component =
-  let%sub theme, theme_picker = Gallery.Theme_picker.component ~default:Kado () in
+let component graph =
+  let%sub theme, theme_picker = Gallery.Theme_picker.component ~default:Kado () graph in
   View.Theme.set_for_app
     theme
     (Gallery.make_sections
@@ -149,6 +149,7 @@ let component =
                    ]]
            ] )
        ])
+    graph
 ;;
 
 let () =

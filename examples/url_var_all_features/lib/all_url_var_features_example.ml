@@ -1,5 +1,5 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 open Bonsai.Let_syntax
 module Url_var = Bonsai_web_ui_url_var
 open Url_var.Typed
@@ -21,14 +21,14 @@ module Location = struct
     | Y -> from_query_optional_with_default ~equal:Int.equal int ~default:100
   ;;
 
-  let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t =
+  let form_for_field : type a. a Typed_field.t -> Bonsai.graph -> a Form.t Bonsai.t =
     let open Form.Elements.Textbox in
     function
     | X -> int ~allow_updates_when_focused:`Never ()
     | Y -> int ~allow_updates_when_focused:`Never ()
   ;;
 
-  let form_of_t : t Form.t Computation.t =
+  let form_of_t : Bonsai.graph -> t Form.t Bonsai.t =
     Form.Typed.Record.make
       (module struct
         module Typed_field = Typed_field
@@ -70,33 +70,35 @@ module Record = struct
     | Remaining_words_on_path -> with_prefix [] (from_remaining_path string)
   ;;
 
-  let form_of_t : t Form.t Computation.t =
+  let form_of_t : Bonsai.graph -> t Form.t Bonsai.t =
+    fun graph ->
     Form.Typed.Record.make
       (module struct
         module Typed_field = Typed_field
 
-        let form_for_field : type a. a Typed_field.t -> a Form.t Computation.t =
+        let form_for_field : type a. a Typed_field.t -> Bonsai.graph -> a Form.t Bonsai.t =
+          fun typed_field graph ->
           let open Form.Elements.Textbox in
           let open Form.Elements in
-          function
-          | An_int -> int ~allow_updates_when_focused:`Never ()
-          | Many_floats -> Multiple.list (float ~allow_updates_when_focused:`Never ())
+          match typed_field with
+          | An_int -> int ~allow_updates_when_focused:`Never () graph
+          | Many_floats ->
+            Multiple.list (float ~allow_updates_when_focused:`Never ()) graph
           | Optional_string ->
-            let%sub form = string ~allow_updates_when_focused:`Never () in
+            let form = string ~allow_updates_when_focused:`Never () graph in
             let%arr form = form in
             Form.optional form ~is_some:(fun x -> not (String.equal x "")) ~none:""
-          | Many_locations ->
-            let location_form = Location.form_of_t in
-            Multiple.list location_form
-          | Nested -> Location.form_of_t
-          | Username_on_path -> string ~allow_updates_when_focused:`Never ()
-          | Comment_id_on_path -> int ~allow_updates_when_focused:`Never ()
+          | Many_locations -> Multiple.list Location.form_of_t graph
+          | Nested -> Location.form_of_t graph
+          | Username_on_path -> string ~allow_updates_when_focused:`Never () graph
+          | Comment_id_on_path -> int ~allow_updates_when_focused:`Never () graph
           | Remaining_words_on_path ->
-            Multiple.list (string ~allow_updates_when_focused:`Never ())
+            Multiple.list (string ~allow_updates_when_focused:`Never ()) graph
         ;;
 
         let label_for_field = `Inferred
       end)
+      graph
   ;;
 
   module Path_order = Path_order (Typed_field)
@@ -122,10 +124,13 @@ module Variant = struct
       (module struct
         module Typed_variant = Typed_variant
 
-        let form_for_variant : type a. a Typed_variant.t -> a Form.t Computation.t
-          = function
-          | Post -> Bonsai.const (Form.return ())
-          | Comments -> Bonsai.const (Form.return ())
+        let form_for_variant
+          : type a. a Typed_variant.t -> Bonsai.graph -> a Form.t Bonsai.t
+          =
+          fun typed_field _graph ->
+          match typed_field with
+          | Post -> Bonsai.return (Form.return ())
+          | Comments -> Bonsai.return (Form.return ())
         ;;
 
         let label_for_variant = `Inferred
@@ -154,11 +159,14 @@ module Query_variant = struct
       (module struct
         module Typed_variant = Typed_variant
 
-        let form_for_variant : type a. a Typed_variant.t -> a Form.t Computation.t
-          = function
-          | A -> Form.Elements.Textbox.int ~allow_updates_when_focused:`Never ()
-          | B -> Form.Elements.Textbox.float ~allow_updates_when_focused:`Never ()
-          | C -> Form.Elements.Textbox.string ~allow_updates_when_focused:`Never ()
+        let form_for_variant
+          : type a. a Typed_variant.t -> Bonsai.graph -> a Form.t Bonsai.t
+          =
+          fun typed_field graph ->
+          match typed_field with
+          | A -> Form.Elements.Textbox.int ~allow_updates_when_focused:`Never () graph
+          | B -> Form.Elements.Textbox.float ~allow_updates_when_focused:`Never () graph
+          | C -> Form.Elements.Textbox.string ~allow_updates_when_focused:`Never () graph
         ;;
 
         let label_for_variant = `Inferred
@@ -186,17 +194,20 @@ module T = struct
     | Unable_to_parse -> Parser.with_remaining_path [ "unable" ] Parser.unit
   ;;
 
-  let form_of_t =
+  let form_of_t graph =
     Form.Typed.Variant.make
       (module struct
         module Typed_variant = Typed_variant
 
-        let form_for_variant : type a. a Typed_variant.t -> a Form.t Computation.t
-          = function
-          | Homepage -> Bonsai.const (Form.return ())
+        let form_for_variant
+          : type a. a Typed_variant.t -> Bonsai.graph -> a Form.t Bonsai.t
+          =
+          fun typed_field graph ->
+          match typed_field with
+          | Homepage -> Bonsai.return (Form.return ())
           | Some_string_option ->
-            let%sub text =
-              Form.Elements.Textbox.string ~allow_updates_when_focused:`Never ()
+            let text =
+              Form.Elements.Textbox.string ~allow_updates_when_focused:`Never () graph
             in
             let%arr text = text in
             Form.optional
@@ -205,15 +216,16 @@ module T = struct
                 | "" -> false
                 | _ -> true)
               ~none:""
-          | Query_variant -> Query_variant.form_of_t
-          | Variant -> Variant.form_of_t
-          | Record -> Record.form_of_t
-          | Unable_to_parse -> Bonsai.const (Form.return ())
+          | Query_variant -> Query_variant.form_of_t graph
+          | Variant -> Variant.form_of_t graph
+          | Record -> Record.form_of_t graph
+          | Unable_to_parse -> Bonsai.return (Form.return ())
         ;;
 
         let label_for_variant = `Inferred
         let initial_choice = `First_constructor
       end)
+      graph
   ;;
 end
 
@@ -245,16 +257,16 @@ let%expect_test _ =
 
 let fallback _exn _components = T.Unable_to_parse
 
-let component ~url_var =
+let component ~url_var graph =
   let url_value = Url_var.value url_var in
-  let%sub modify_history, toggle_modify_history = Bonsai.toggle ~default_model:true in
-  let%sub set_url_var =
+  let modify_history, toggle_modify_history = Bonsai.toggle ~default_model:true graph in
+  let set_url_var =
     let%arr modify_history = modify_history in
     let how = if modify_history then `Push else `Replace in
     fun query -> Url_var.set_effect url_var query ~how
   in
-  let%sub form = T.form_of_t in
-  let%sub store_value =
+  let form = T.form_of_t graph in
+  let store_value =
     let%arr url_value = url_value in
     Some url_value
   in
@@ -265,9 +277,10 @@ let component ~url_var =
       ~store_value
       ~store_set:set_url_var
       form
+      graph
   in
-  let%sub update_button =
-    let%sub update_effect =
+  let update_button =
+    let update_effect =
       let%arr modify_history = modify_history in
       let how = if modify_history then `Push else `Replace in
       fun ~f -> Url_var.update_effect url_var ~how ~f

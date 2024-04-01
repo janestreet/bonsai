@@ -1,5 +1,5 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 open Bonsai.Let_syntax
 
 let local_storage_var =
@@ -18,7 +18,7 @@ let session_storage_var =
     ~default:"This will be saved in session storage!"
 ;;
 
-let display_text_var ~doc storage_var =
+let display_text_var ~doc storage_var _graph =
   let set_effect = Bonsai_web.Persistent_var.effect storage_var in
   let%arr value = Bonsai_web.Persistent_var.value storage_var in
   Vdom.Node.div
@@ -34,20 +34,22 @@ let display_text_var ~doc storage_var =
     ]
 ;;
 
-let component =
-  let%sub local_storage_node =
+let component graph =
+  let local_storage_node =
     display_text_var
       ~doc:
         "Write some text in this box and refresh the page or close the tab and reopen \
          it; the text should still be there!"
       local_storage_var
+      graph
   in
-  let%sub session_storage_node =
+  let session_storage_node =
     display_text_var
       ~doc:
         "Write some text in this box and refresh the page; the text should still be \
          there!"
       session_storage_var
+      graph
   in
   let%arr local_storage_node = local_storage_node
   and session_storage_node = session_storage_node in

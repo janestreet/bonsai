@@ -1,33 +1,37 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 open Bonsai.Let_syntax
 module Animation = Bonsai_experimental_animation
 module Form = Bonsai_web_ui_form.With_automatic_view
 
-let component =
-  let%sub interpolator_form =
-    Form.Elements.Dropdown.enumerable (module Animation.Interpolator) ~init:`First_item
+let component graph =
+  let interpolator_form =
+    Form.Elements.Dropdown.enumerable
+      (module Animation.Interpolator)
+      ~init:`First_item
+      graph
   in
-  let%sub text_picker =
-    Form.Elements.Textbox.string ~allow_updates_when_focused:`Never ()
+  let text_picker =
+    Form.Elements.Textbox.string ~allow_updates_when_focused:`Never () graph
   in
-  let%sub text_picker =
-    text_picker |> Form.Dynamic.with_default (Bonsai.Value.return "Hello Animation!")
+  let text_picker =
+    Form.Dynamic.with_default (Bonsai.return "Hello Animation!") text_picker graph
   in
   let interpolator =
     interpolator_form >>| Form.value_or_default ~default:Animation.Interpolator.Linear
   in
   let%sub { value; animate } =
     Animation.Advanced.make
-      ~fallback:(Value.return 0.0)
+      ~fallback:(Bonsai.return 0.0)
       ~interpolate:Animation.Interpolatable.float
+      graph
   in
-  let%sub forward, set_forward =
-    Bonsai.state true ~sexp_of_model:[%sexp_of: Bool.t] ~equal:[%equal: Bool.t]
+  let forward, set_forward =
+    Bonsai.state true ~sexp_of_model:[%sexp_of: Bool.t] ~equal:[%equal: Bool.t] graph
   in
-  let%sub get_forward = Bonsai.yoink forward in
-  let%sub get_interpolator = Bonsai.yoink interpolator in
-  let%sub get_things_started =
+  let get_forward = Bonsai.peek forward graph in
+  let get_interpolator = Bonsai.peek interpolator graph in
+  let get_things_started =
     let%arr animate = animate
     and get_forward = get_forward
     and get_interpolator = get_interpolator
@@ -50,7 +54,7 @@ let component =
     in
     switch_directions ()
   in
-  let%sub () = Bonsai.Edge.lifecycle ~on_activate:get_things_started () in
+  let () = Bonsai.Edge.lifecycle ~on_activate:get_things_started graph in
   let%arr value = value
   and text_picker = text_picker
   and interpolator_form = interpolator_form in

@@ -1,25 +1,26 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 open Bonsai.Let_syntax
 
-let to_vdom_node_map ~with_key map =
+let to_vdom_node_map ~with_key map graph =
   Bonsai.assoc
     (module Int)
     map
-    ~f:(fun key data ->
+    ~f:(fun key data _graph ->
       let%arr key = key
       and data = data in
       let key = Int.to_string key in
       let text = Vdom.Node.textf "%s" key in
       let key = if with_key then Some key else None in
       Style.chip ?key data text)
+    graph
 ;;
 
 let make_comparison_list node = Vdom.Node.div ~attrs:[ Style.comparison_list ] [ node ]
 
-let view ~tag ~attr nodes =
-  let%sub nodes_with_key = to_vdom_node_map ~with_key:true nodes in
-  let%sub nodes_without_key = to_vdom_node_map ~with_key:false nodes in
+let view ~tag ~attr nodes graph =
+  let nodes_with_key = to_vdom_node_map ~with_key:true nodes graph in
+  let nodes_without_key = to_vdom_node_map ~with_key:false nodes graph in
   let%arr nodes_with_key = nodes_with_key
   and nodes_without_key = nodes_without_key
   and tag = tag

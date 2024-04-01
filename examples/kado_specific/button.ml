@@ -1,5 +1,5 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 open Bonsai.Let_syntax
 module Autogen = Bonsai_web_ui_auto_generated
 module Form = Bonsai_web_ui_form.With_automatic_view
@@ -76,19 +76,20 @@ let form_store =
     ~default:Parameters.default
 ;;
 
-let component =
-  let%sub theme = View.Theme.current in
-  let%sub form =
-    Bonsai.sub
-      (Autogen.form (module Parameters) ())
-      ~f:(Form.Dynamic.with_default (Persistent_var.value form_store))
+let component graph =
+  let theme = View.Theme.current graph in
+  let form =
+    Form.Dynamic.with_default
+      (Persistent_var.value form_store)
+      (Autogen.form (module Parameters) () graph)
+      graph
   in
   let%sub () =
     Bonsai_extra.mirror
       ()
       ~sexp_of_model:[%sexp_of: Parameters.t]
       ~equal:[%equal: Parameters.t]
-      ~store_set:(Value.return (Persistent_var.effect form_store))
+      ~store_set:(Bonsai.return (Persistent_var.effect form_store))
       ~store_value:(Persistent_var.value form_store)
       ~interactive_value:
         (let%map form = form in
@@ -96,6 +97,7 @@ let component =
       ~interactive_set:
         (let%map form = form in
          Form.set form)
+      graph
   in
   let%arr theme = theme
   and form = form in

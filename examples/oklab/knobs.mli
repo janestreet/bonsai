@@ -1,5 +1,5 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 
 module Shared : sig
   type t =
@@ -25,4 +25,4 @@ type t =
   ; for_overlay : For_overlay.t
   }
 
-val form : (t * Vdom.Node.t) Computation.t
+val form : Bonsai.graph -> (t * Vdom.Node.t) Bonsai.t

@@ -1,12 +1,12 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 open Js_of_ocaml
 open Bonsai.Let_syntax
 module Form = Bonsai_web_ui_form.With_automatic_view
 
-let component =
-  let%sub form = Form.Elements.Textbox.string ~allow_updates_when_focused:`Never () in
-  let%sub copy_button =
+let component graph =
+  let form = Form.Elements.Textbox.string ~allow_updates_when_focused:`Never () graph in
+  let copy_button =
     let%arr form = form in
     Vdom.Node.button
       ~attrs:
@@ -24,7 +24,7 @@ let component =
   (* NOTE: This button copies from clipboard in a deprecated and non-recommended way. Use
      the above button implementation as a reference if you'd like clipboard copying
      behavior in your app. *)
-  let%sub legacy_copy_button =
+  let legacy_copy_button =
     let%arr form = form in
     Vdom.Node.button
       ~attrs:
@@ -37,7 +37,7 @@ let component =
         ]
       [ Vdom.Node.text "copy to clipboard (legacy behaviour)" ]
   in
-  let%sub paste_button =
+  let paste_button =
     let%arr form = form in
     Vdom.Node.button
       ~attrs:

@@ -1,6 +1,6 @@
 open! Core
 open! Bonsai_web_test
-open! Bonsai_web
+open! Bonsai_web.Cont
 open Bonsai_time_example
 
 (* $MDX part-begin=test-clock-component *)

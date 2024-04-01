@@ -218,11 +218,18 @@ module Expert : sig
               can be offscreen such that it isn't given to the table component. [compute_presence]
               forces the user to consider if a row is considered 'focused' or not. *)
           ; compute_presence : 'k option Value.t -> 'p Computation.t
+              (** A user might try to focus-by-key a row that has not been filtered out,
+              but is not inside the viewport. In that case, [key_rank] will be used as
+              a fallback to compute the desired index.
+              If the effect returns `None`, the key does not correspond to a row under the
+              current filter conditions, and the focus will be a no-op. *)
+          ; key_rank : ('k -> int option Effect.t) Value.t
           }
           -> (('k, 'p) Focus_by_row.t, 'p, 'k, 'c) t
       | By_cell :
           { on_change : (('k * 'c) option -> unit Effect.t) Value.t
           ; compute_presence : ('k * 'c) option Value.t -> 'presence Computation.t
+          ; key_rank : ('k -> int option Effect.t) Value.t
           }
           -> (('k, 'c, 'presence) By_cell.t, 'presence, 'k, 'c) t
   end
@@ -326,7 +333,7 @@ module Expert : sig
     -> ('k, 'filter, 'order) Collate.t Value.t
        (** A [Collate.t] is a specification for how to perform collation: it's where the
         ['filter], ['order], and rank range are defined. *)
-    -> ('k, 'v) Collated.t Computation.t
+    -> (('k, 'v) Collated.t * ('k -> int option Effect.t)) Computation.t
 
   val component
     :  ?theming:Table_view.Theming.t

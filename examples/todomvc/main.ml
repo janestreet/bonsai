@@ -1,5 +1,5 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 open! Bonsai.Let_syntax
 open! Vdom
 module Style = Todomvc
@@ -8,12 +8,12 @@ module Style = Todomvc
    to use Bonsai_web_ui_url_var. As of this writing, that module does not support tracking
    URL Fragments. As a lightweight workaround, I created the Url_hash module. *)
 module Url_hash : sig
-  val get : unit -> string Value.t
+  val get : unit -> string Bonsai.t
 end = struct
   (* is_watching ensures we only add one event listener over the lifetime of the app. *)
   let is_watching = ref false
-  let hash_var = Bonsai.Var.create "/"
-  let hash_val = Bonsai.Var.value hash_var
+  let hash_var = Bonsai.Expert.Var.create "/"
+  let hash_val = Bonsai.Expert.Var.value hash_var
 
   let on_hash_change (f : string -> unit) =
     let open Js_of_ocaml in
@@ -30,7 +30,7 @@ end = struct
   let get () =
     if not !is_watching
     then (
-      let _discarded_id = on_hash_change (Bonsai.Var.set hash_var) in
+      let _discarded_id = on_hash_change (Bonsai.Expert.Var.set hash_var) in
       is_watching := true);
     hash_val
   ;;
@@ -127,9 +127,9 @@ let apply_action context (model : Model.t) (action : Action.t) =
   new_model
 ;;
 
-let header_component ~inject =
-  let%sub state, set_state =
-    Bonsai.state "" ~sexp_of_model:[%sexp_of: String.t] ~equal:[%equal: String.t]
+let header_component ~inject graph =
+  let state, set_state =
+    Bonsai.state "" ~sexp_of_model:[%sexp_of: String.t] ~equal:[%equal: String.t] graph
   in
   let%arr state = state
   and set_state = set_state
@@ -156,11 +156,12 @@ let header_component ~inject =
 ;;
 
 let todo_item_component
-  (todo : Model.todo Value.t)
-  ~(inject : (Action.t -> unit Effect.t) Value.t)
+  (todo : Model.todo Bonsai.t)
+  ~(inject : (Action.t -> unit Effect.t) Bonsai.t)
+  graph
   =
-  let%sub editing, set_editing =
-    Bonsai.state false ~sexp_of_model:[%sexp_of: Bool.t] ~equal:[%equal: Bool.t]
+  let editing, set_editing =
+    Bonsai.state false ~sexp_of_model:[%sexp_of: Bool.t] ~equal:[%equal: Bool.t] graph
   in
   let%arr inject = inject
   and todo = todo
@@ -229,7 +230,7 @@ let todo_item_component
     [ view; task_name_input ]
 ;;
 
-let todo_list (model : Model.t Value.t) ~inject =
+let todo_list (model : Model.t Bonsai.t) ~inject graph =
   let filtered_model =
     let%map model = model
     and hash = Url_hash.get () in
@@ -243,11 +244,12 @@ let todo_list (model : Model.t Value.t) ~inject =
     let%map model = model in
     Map.count model ~f:(fun todo -> not todo.completed)
   in
-  let%sub todo_items =
+  let todo_items =
     Bonsai.assoc
       (module Int)
       filtered_model
       ~f:(fun _id todo -> todo_item_component ~inject todo)
+      graph
   in
   let%arr todo_items = todo_items
   and active_count = active_count
@@ -281,8 +283,9 @@ let todo_list (model : Model.t Value.t) ~inject =
 let pluralize count word = if count > 1 then word ^ "s" else word
 
 let footer_component
-  (state : Model.t Value.t)
-  ~(inject : (Action.t -> unit Effect.t) Value.t)
+  (state : Model.t Bonsai.t)
+  ~(inject : (Action.t -> unit Effect.t) Bonsai.t)
+  _graph
   =
   let%arr inject = inject
   and active, completed =
@@ -337,20 +340,20 @@ let info =
     ]
 ;;
 
-let root_component =
+let root_component graph =
   let default_model = Bonsai_web.Persistent_var.get persisted_model in
-  let%sub state, inject =
+  let state, inject =
     Bonsai.state_machine0
-      ()
+      graph
       ~sexp_of_model:[%sexp_of: Model.t]
       ~sexp_of_action:[%sexp_of: Action.t]
       ~default_model
       ~apply_action
       ~equal:[%equal: Model.t]
   in
-  let%sub header_component = header_component ~inject in
-  let%sub todo_list = todo_list ~inject state in
-  let%sub footer_component = footer_component state ~inject in
+  let header_component = header_component ~inject graph in
+  let todo_list = todo_list ~inject state graph in
+  let footer_component = footer_component state ~inject graph in
   let%arr header_component = header_component
   and todo_list = todo_list
   and footer_component = footer_component in

@@ -50,26 +50,27 @@ let options ~title ?value_formatter ?axis_label_formatter () =
       (Dygraph.Options.Highlight_series_options.create () ~strokeWidth:1.5)
 ;;
 
-let app =
+let app graph =
   let x_label = "time" in
   let y_labels = [ "brownian motion" ] in
-  let make_graph ~name ~title ~data ?value_formatter ?axis_label_formatter () =
+  let make_graph ~name ~title ~data ?value_formatter ?axis_label_formatter () graph =
     let options = options ~title ?value_formatter ?axis_label_formatter () in
     let%sub { graph_view; _ } =
       Dygraph.With_bonsai.create
-        ~key:(Value.return name)
-        ~x_label:(Value.return x_label)
+        ~key:(Bonsai.return name)
+        ~x_label:(Bonsai.return x_label)
         ~per_series_info:
-          (y_labels |> Dygraph.Per_series_info.create_all_visible |> Value.return)
-        ~options:(Value.return options)
-        ~data:(Value.return data)
+          (y_labels |> Dygraph.Per_series_info.create_all_visible |> Bonsai.return)
+        ~options:(Bonsai.return options)
+        ~data:(Bonsai.return data)
         ~with_graph:(fun graph ->
           Js.Unsafe.set Dom_html.window (sprintf "g_%s" name) graph)
         ()
+        graph
     in
-    return graph_view
+    graph_view
   in
-  let%sub hide_overnights_graph =
+  let hide_overnights_graph =
     let { Dygraph.X_axis_mapping.time_to_x_value
         ; x_value_to_time = _
         ; value_formatter
@@ -94,10 +95,16 @@ let app =
       ~axis_label_formatter
       ~data
       ()
+      graph
   in
-  let%sub visible_overnights_graphs =
+  let visible_overnights_graphs =
     let data = Dygraph.Data.create_time_ns raw_data in
-    make_graph ~name:"with_overnights_visible" ~title:"With overnights visible" ~data ()
+    make_graph
+      ~name:"with_overnights_visible"
+      ~title:"With overnights visible"
+      ~data
+      ()
+      graph
   in
   let%arr hide_overnights_graph = hide_overnights_graph
   and visible_overnights_graphs = visible_overnights_graphs in

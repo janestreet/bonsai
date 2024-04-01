@@ -1,5 +1,5 @@
 open! Core
-open! Bonsai_web
+open! Bonsai_web.Cont
 open Bonsai.Let_syntax
 module Table = Bonsai_web_ui_partial_render_table.Basic
 module Form = Bonsai_web_ui_form.With_automatic_view
@@ -21,24 +21,22 @@ module Col_id = struct
   include Comparator.Make (Row.Typed_field.Packed)
 end
 
-let component ?filter (data : Row.t String.Map.t Value.t) =
-  let all = Value.return Row.Typed_field.Packed.all in
-  let%sub form = Form.Elements.Typeahead.list (module Col_id) ~all_options:all in
-  let%sub form = Form.Dynamic.with_default all form in
-  let%sub columns =
-    return (form >>| Form.value_or_default ~default:Row.Typed_field.Packed.all)
-  in
-  let%sub table =
+let component ?filter (data : Row.t String.Map.t Bonsai.t) graph =
+  let all = Bonsai.return Row.Typed_field.Packed.all in
+  let form = Form.Elements.Typeahead.list (module Col_id) ~all_options:all graph in
+  let form = Form.Dynamic.with_default all form graph in
+  let columns = form >>| Form.value_or_default ~default:Row.Typed_field.Packed.all in
+  let table =
     Table.component
       (module String)
       ?filter
-      ~focus:(By_row { on_change = Value.return (Fn.const Effect.Ignore) })
-      ~row_height:(Value.return (`Px 30))
+      ~focus:(By_row { on_change = Bonsai.return (Fn.const Effect.Ignore) })
+      ~row_height:(Bonsai.return (`Px 30))
       ~columns:
         (Column.build
            (module Col_id)
            ~columns
-           ~render_cell:(fun col _key data ->
+           ~render_cell:(fun col _key data _graph ->
              let%arr { f = T field } = col
              and data = data in
              let string, float, int =
@@ -56,11 +54,12 @@ let component ?filter (data : Row.t String.Map.t Value.t) =
              | Position -> int value
              | Last_fill -> Vdom.Node.text (Time_ns_option.to_string value)
              | Trader -> string value)
-           ~render_header:(fun col ->
+           ~render_header:(fun col _graph ->
              let%arr { f = T field } = col in
              Table.Columns.Dynamic_columns.Sortable.Header.with_icon
                (Vdom.Node.text (Row.Typed_field.name field))))
       data
+      graph
   in
   let%arr { Table.Result.view = table
           ; for_testing = _
@@ -95,8 +94,8 @@ let component ?filter (data : Row.t String.Map.t Value.t) =
 ;;
 
 let () =
-  let input = Value.return (Row.many_random 100_000) in
+  let input = Bonsai.return (Row.many_random 100_000) in
   component input
-  |> View.Theme.set_for_app (Value.return (Kado.theme ~version:Bleeding ()))
+  |> View.Theme.set_for_app (Bonsai.return (Kado.theme ~version:Bleeding ()))
   |> Bonsai_web.Start.start
 ;;
