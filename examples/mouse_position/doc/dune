@@ -9,7 +9,7 @@
  (targets graph.svg)
  (deps graph_generator.bc.js)
  (action
-  (bash "%{NODE} %{deps} | dot -T svg -ograph.svg")))
+  (bash "node %{deps} | dot -T svg -ograph.svg")))
 
 (alias
  (name DEFAULT)
