@@ -1,4 +1,5 @@
 opam-version: "2.0"
+version: "v0.17.0"
 maintainer: "Jane Street developers"
 authors: ["Jane Street Group, LLC"]
 homepage: "https://github.com/janestreet/bonsai"
@@ -10,52 +11,52 @@ build: [
   ["dune" "build" "-p" name "-j" jobs]
 ]
 depends: [
-  "ocaml" {>= "5.1.0"}
-  "async"
-  "async_durable"
-  "async_extra"
-  "async_js"
-  "async_kernel"
-  "async_rpc_kernel"
-  "async_rpc_websocket"
-  "babel"
-  "base"
-  "bin_prot"
-  "core"
-  "core_bench"
-  "core_kernel"
-  "core_unix"
-  "expect_test_helpers_core"
-  "fuzzy_match"
-  "incr_dom"
-  "incr_map"
-  "legacy_diffable"
-  "ordinal_abbreviation"
-  "patdiff"
-  "polling_state_rpc"
-  "ppx_css"
-  "ppx_diff"
-  "ppx_here"
-  "ppx_jane"
-  "ppx_let"
-  "ppx_pattern_bind"
-  "ppx_quick_test"
-  "ppx_typed_fields"
-  "profunctor"
-  "record_builder"
-  "sexp_grammar"
-  "sexplib0"
-  "streamable"
-  "textutils"
-  "versioned_polling_state_rpc"
-  "virtual_dom"
+  "ocaml"                       {>= "5.1.0"}
+  "async"                       {>= "v0.17" & < "v0.18"}
+  "async_durable"               {>= "v0.17" & < "v0.18"}
+  "async_extra"                 {>= "v0.17" & < "v0.18"}
+  "async_js"                    {>= "v0.17" & < "v0.18"}
+  "async_kernel"                {>= "v0.17" & < "v0.18"}
+  "async_rpc_kernel"            {>= "v0.17" & < "v0.18"}
+  "async_rpc_websocket"         {>= "v0.17" & < "v0.18"}
+  "babel"                       {>= "v0.17" & < "v0.18"}
+  "base"                        {>= "v0.17" & < "v0.18"}
+  "bin_prot"                    {>= "v0.17" & < "v0.18"}
+  "core"                        {>= "v0.17" & < "v0.18"}
+  "core_bench"                  {>= "v0.17" & < "v0.18"}
+  "core_kernel"                 {>= "v0.17" & < "v0.18"}
+  "core_unix"                   {>= "v0.17" & < "v0.18"}
+  "expect_test_helpers_core"    {>= "v0.17" & < "v0.18"}
+  "fuzzy_match"                 {>= "v0.17" & < "v0.18"}
+  "incr_dom"                    {>= "v0.17" & < "v0.18"}
+  "incr_map"                    {>= "v0.17" & < "v0.18"}
+  "legacy_diffable"             {>= "v0.17" & < "v0.18"}
+  "ordinal_abbreviation"        {>= "v0.17" & < "v0.18"}
+  "patdiff"                     {>= "v0.17" & < "v0.18"}
+  "polling_state_rpc"           {>= "v0.17" & < "v0.18"}
+  "ppx_css"                     {>= "v0.17" & < "v0.18"}
+  "ppx_diff"                    {>= "v0.17" & < "v0.18"}
+  "ppx_here"                    {>= "v0.17" & < "v0.18"}
+  "ppx_jane"                    {>= "v0.17" & < "v0.18"}
+  "ppx_let"                     {>= "v0.17" & < "v0.18"}
+  "ppx_pattern_bind"            {>= "v0.17" & < "v0.18"}
+  "ppx_quick_test"              {>= "v0.17" & < "v0.18"}
+  "ppx_typed_fields"            {>= "v0.17" & < "v0.18"}
+  "profunctor"                  {>= "v0.17" & < "v0.18"}
+  "record_builder"              {>= "v0.17" & < "v0.18"}
+  "sexp_grammar"                {>= "v0.17" & < "v0.18"}
+  "sexplib0"                    {>= "v0.17" & < "v0.18"}
+  "streamable"                  {>= "v0.17" & < "v0.18"}
+  "textutils"                   {>= "v0.17" & < "v0.18"}
+  "versioned_polling_state_rpc" {>= "v0.17" & < "v0.18"}
+  "virtual_dom"                 {>= "v0.17" & < "v0.18"}
   "base64"                      {>= "3.4.0"}
   "cohttp-async"                {>= "2.5.7" & < "3.0.0" | >= "5.1.1" & < "6.0.0"}
   "dune"                        {>= "3.11.0"}
   "gen_js_api"                  {>= "1.0.8"}
   "js_of_ocaml"                 {>= "5.1.1" & < "5.7.0"}
   "js_of_ocaml-ppx"             {>= "5.1.1" & < "5.7.0"}
-  "ocaml-embed-file"
+  "ocaml-embed-file"            {>= "v0.17" & < "v0.18"}
   "ppxlib"                      {>= "0.28.0"}
   "re"                          {>= "1.8.0"}
   "uri"                         {>= "3.0.0"}
