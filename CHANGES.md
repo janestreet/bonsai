@@ -1,3 +1,7 @@
+# Release v0.17.0
+- Rewrote entire bonsai API. The new version is inside of the `Bonsai.Cont` namespace.
+  new docs here: https://github.com/janestreet/bonsai/tree/master/docs/guide
+
 - Added a `duplicate` button for elements within auto-generated list forms.
 
 - Added a function to resize prt colum widths.
