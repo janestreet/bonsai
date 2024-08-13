@@ -1,7 +1,0 @@
-(executables
- (modes byte exe)
- (names main)
- (libraries virtual_dom.svg bonsai_web_ui_element_size_hooks
-   bonsai_experimental_dagviz bonsai_web tailwind_colors feather_icon)
- (preprocess
-  (pps js_of_ocaml-ppx ppx_typed_fields ppx_jane ppx_css ppx_demo ppx_bonsai)))

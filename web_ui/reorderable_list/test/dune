@@ -1,5 +1,0 @@
-(library
- (name bonsai_web_ui_reorderable_list_test)
- (libraries bonsai_web_ui_reorderable_list bonsai_web_test core)
- (preprocess
-  (pps ppx_jane ppx_bonsai)))

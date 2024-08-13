@@ -1,10 +1,10 @@
 open! Core
 open! Import
 
-val read : 'a Value.t -> 'a Computation.t
+val read : ?here:Stdlib.Lexing.position -> 'a Value.t -> 'a Computation.t
 
 val sub
-  :  ?here:Lexing.position
+  :  ?here:Stdlib.Lexing.position
   -> 'via Computation.t
   -> f:('via Value.t -> 'a Computation.t)
   -> 'a Computation.t
@@ -17,15 +17,21 @@ val switch
   -> 'a Computation.t
 
 module Proc_incr : sig
-  val value_cutoff : 'a Value.t -> equal:('a -> 'a -> bool) -> 'a Computation.t
+  val value_cutoff
+    :  ?here:Stdlib.Lexing.position
+    -> 'a Value.t
+    -> equal:('a -> 'a -> bool)
+    -> 'a Computation.t
 
   val compute_with_clock
-    :  'a Value.t
+    :  ?here:Stdlib.Lexing.position
+    -> 'a Value.t
     -> f:(Time_source.t -> 'a Incr.t -> 'b Incr.t)
     -> 'b Computation.t
 
   val of_module
-    :  (module Component_s_incr
+    :  ?here:Stdlib.Lexing.position
+    -> (module Component_s_incr
           with type Input.t = 'input
            and type Model.t = 'model
            and type Result.t = 'result)
@@ -38,20 +44,32 @@ end
 
 module Dynamic_scope : sig
   val fetch
-    :  id:'a Type_equal.Id.t
+    :  ?here:Stdlib.Lexing.position
+    -> id:'a Type_equal.Id.t
     -> default:'b
     -> for_some:('a -> 'b)
+    -> unit
     -> 'b Computation.t
 
   val store
-    :  id:'a Type_equal.Id.t
+    :  ?here:Stdlib.Lexing.position
+    -> id:'a Type_equal.Id.t
     -> value:'a Value.t
     -> inner:'b Computation.t
+    -> unit
     -> 'b Computation.t
 end
 
+val monitor_free_variables
+  :  here:Source_code_position.t
+  -> 'a Computation.t
+  -> 'a Computation.t
+
 module Edge : sig
-  val lifecycle : Lifecycle.t option Value.t -> unit Computation.t
+  val lifecycle
+    :  ?here:Stdlib.Lexing.position
+    -> Lifecycle.t option Value.t
+    -> unit Computation.t
 end
 
 module Computation_status : sig
@@ -62,13 +80,14 @@ module Computation_status : sig
 end
 
 val state_machine1
-  :  ?sexp_of_action:('action -> Sexp.t)
-  -> ?reset:('action Apply_action_context.t -> 'model -> 'model)
+  :  ?here:Stdlib.Lexing.position
+  -> ?sexp_of_action:('action -> Sexp.t)
+  -> ?reset:(('action, unit) Apply_action_context.t -> 'model -> 'model)
   -> ?sexp_of_model:('model -> Sexp.t)
   -> ?equal:('model -> 'model -> bool)
   -> default_model:'model
   -> apply_action:
-       ('action Apply_action_context.t
+       (('action, unit) Apply_action_context.t
         -> 'input Computation_status.t
         -> 'model
         -> 'action
@@ -77,43 +96,58 @@ val state_machine1
   -> ('model * ('action -> unit Effect.t)) Computation.t
 
 val state_machine0
-  :  ?reset:('action Apply_action_context.t -> 'model -> 'model)
+  :  ?here:Stdlib.Lexing.position
+  -> ?reset:(('action, unit) Apply_action_context.t -> 'model -> 'model)
   -> ?sexp_of_model:('model -> Sexp.t)
   -> ?sexp_of_action:('action -> Sexp.t)
   -> ?equal:('model -> 'model -> bool)
   -> default_model:'model
-  -> apply_action:('action Apply_action_context.t -> 'model -> 'action -> 'model)
+  -> apply_action:(('action, unit) Apply_action_context.t -> 'model -> 'action -> 'model)
   -> unit
   -> ('model * ('action -> unit Effect.t)) Computation.t
 
 val assoc
-  :  ('k, 'cmp) comparator
+  :  ?here:Stdlib.Lexing.position
+  -> ('k, 'cmp) comparator
   -> ('k, 'v, 'cmp) Map.t Value.t
   -> f:('k Value.t -> 'v Value.t -> 'result Computation.t)
   -> ('k, 'result, 'cmp) Map.t Computation.t
 
 val assoc_on
-  :  ('io_k, 'io_cmp) comparator
+  :  ?here:Stdlib.Lexing.position
+  -> ('io_k, 'io_cmp) comparator
   -> ('model_k, 'model_cmp) comparator
   -> ('io_k, 'v, 'io_cmp) Map.t Value.t
   -> get_model_key:('io_k -> 'v -> 'model_k)
   -> f:('io_k Value.t -> 'v Value.t -> 'a Computation.t)
   -> ('io_k, 'a, 'io_cmp) Map.t Computation.t
 
-val lazy_ : 'a Computation.t lazy_t -> 'a Computation.t
+val fix
+  :  ?here:Stdlib.Lexing.position
+  -> 'input Value.t
+  -> f:
+       (recurse:('input Value.t -> 'result Computation.t)
+        -> 'input Value.t
+        -> 'result Computation.t)
+  -> 'result Computation.t
+
+val lazy_ : ?here:Stdlib.Lexing.position -> 'a Computation.t lazy_t -> 'a Computation.t
 
 val wrap
-  :  ?reset:('action Apply_action_context.t -> 'model -> 'model)
+  :  ?here:Stdlib.Lexing.position
+  -> ?reset:(('action, unit) Apply_action_context.t -> 'model -> 'model)
   -> ?sexp_of_model:('model -> Sexp.t)
   -> ?equal:('model -> 'model -> bool)
   -> default_model:'model
-  -> apply_action:('action Apply_action_context.t -> 'a -> 'model -> 'action -> 'model)
+  -> apply_action:
+       (('action, unit) Apply_action_context.t -> 'a -> 'model -> 'action -> 'model)
   -> f:('model Value.t -> ('action -> unit Effect.t) Value.t -> 'a Computation.t)
   -> unit
   -> 'a Computation.t
 
 val with_model_resetter
-  :  (reset:unit Effect.t Value.t -> 'a Computation.t)
+  :  ?here:Stdlib.Lexing.position
+  -> (reset:unit Effect.t Value.t -> 'a Computation.t)
   -> 'a Computation.t
 
-val path : Path.t Computation.t
+val path : ?here:Stdlib.Lexing.position -> unit -> Path.t Computation.t

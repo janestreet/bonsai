@@ -1,8 +1,0 @@
-(executables
- (modes byte exe)
- (names main)
- (libraries bonsai_web feather_icon vdom_node_with_map_children)
- (js_of_ocaml
-  (javascript_files ./validate.js))
- (preprocess
-  (pps ppx_jane ppx_bonsai ppx_css js_of_ocaml-ppx)))

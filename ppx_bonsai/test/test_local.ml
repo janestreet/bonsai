@@ -7,10 +7,68 @@ module type S = sig
     val return : 'a -> graph -> 'a t
 
     module Let_syntax : sig
-      val map : ?here:Lexing.position -> 'a t -> f:('a -> 'b) -> 'b t
+      val map : ?here:Stdlib.Lexing.position -> 'a t -> f:('a -> 'b) -> 'b t
       val map2 : 'a t -> 'b t -> f:('a -> 'b -> 'c) -> 'c t
       val both : 'a t -> 'b t -> ('a * 'b) t
-      val arr : ?here:Lexing.position -> 'a t -> f:('a -> 'b) -> 'b t
+      val arr : ?here:Stdlib.Lexing.position -> 'a t -> f:('a -> 'b) -> 'b t
+
+      val arr2
+        :  ?here:Stdlib.Lexing.position
+        -> 'a1 t
+        -> 'a2 t
+        -> f:('a1 -> 'a2 -> 'b)
+        -> 'b t
+
+      val arr3
+        :  ?here:Stdlib.Lexing.position
+        -> 'a1 t
+        -> 'a2 t
+        -> 'a3 t
+        -> f:('a1 -> 'a2 -> 'a3 -> 'b)
+        -> 'b t
+
+      val arr4
+        :  ?here:Stdlib.Lexing.position
+        -> 'a1 t
+        -> 'a2 t
+        -> 'a3 t
+        -> 'a4 t
+        -> f:('a1 -> 'a2 -> 'a3 -> 'a4 -> 'b)
+        -> 'b t
+
+      val arr5
+        :  ?here:Stdlib.Lexing.position
+        -> 'a1 t
+        -> 'a2 t
+        -> 'a3 t
+        -> 'a4 t
+        -> 'a5 t
+        -> f:('a1 -> 'a2 -> 'a3 -> 'a4 -> 'a5 -> 'b)
+        -> 'b t
+
+      val arr6
+        :  ?here:Stdlib.Lexing.position
+        -> 'a1 t
+        -> 'a2 t
+        -> 'a3 t
+        -> 'a4 t
+        -> 'a5 t
+        -> 'a6 t
+        -> f:('a1 -> 'a2 -> 'a3 -> 'a4 -> 'a5 -> 'a6 -> 'b)
+        -> 'b t
+
+      val arr7
+        :  ?here:Stdlib.Lexing.position
+        -> 'a1 t
+        -> 'a2 t
+        -> 'a3 t
+        -> 'a4 t
+        -> 'a5 t
+        -> 'a6 t
+        -> 'a7 t
+        -> f:('a1 -> 'a2 -> 'a3 -> 'a4 -> 'a5 -> 'a6 -> 'a7 -> 'b)
+        -> 'b t
+
       val return : 'a t -> 'a t
       val cutoff : 'a t -> equal:('a -> 'a -> bool) -> 'a t
 

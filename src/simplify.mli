@@ -12,5 +12,4 @@ val computation_to_function
   -> key_compare:('key -> 'key -> int)
   -> key_id:'key Type_equal.Id.t
   -> data_id:'data Type_equal.Id.t
-  -> ((Path.t -> 'key -> 'data -> 'result) * [ `Can_contain_path | `Cannot_contain_path ])
-     option
+  -> ((Path.t -> 'key -> 'data -> 'result) * May_contain.resolved May_contain.t) option

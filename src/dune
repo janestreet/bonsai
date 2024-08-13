@@ -1,7 +1,9 @@
 (library
  (name bonsai)
- (libraries core core_kernel.balanced_reducer core_kernel.reversed_list
-   virtual_dom.ui_effect incr_dom.ui_incr incr_dom.ui_time_source)
+ (libraries bonsai_private_eval core abstract_algebra incr_map incremental
+   core_kernel.reversed_list virtual_dom.ui_effect incr_dom.ui_incr
+   incr_dom.ui_time_source)
  (preprocess
-  (pps ppx_jane ppx_pattern_bind ppx_bonsai ppxlib.traverse))
+  (pps ppx_jane ppx_pattern_bind ppx_bonsai
+    -for-bonsai-internals-use-location-in-scope ppxlib.traverse))
  (public_name bonsai))

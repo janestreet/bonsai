@@ -1,5 +1,0 @@
-(library
- (name bonsai_web_ui_tabs)
- (libraries bonsai_web core)
- (preprocess
-  (pps ppx_jane ppx_pattern_bind ppx_bonsai)))

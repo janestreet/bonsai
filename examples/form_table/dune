@@ -1,7 +1,0 @@
-(executables
- (modes byte exe)
- (names main)
- (libraries bonsai_experimental_table_form bonsai_web bonsai_web_ui_form
-   username_kernel)
- (preprocess
-  (pps ppx_typed_fields ppx_jane ppx_bonsai ppx_css)))

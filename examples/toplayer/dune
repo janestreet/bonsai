@@ -1,7 +1,0 @@
-(executables
- (modes byte exe)
- (names main)
- (libraries async_js bonsai_web bonsai_web_ui_gallery
-   virtual_dom_toplayer.floating_positioning virtual_dom_toplayer.popover)
- (preprocess
-  (pps ppx_jane js_of_ocaml-ppx ppx_bonsai ppx_css ppx_demo)))

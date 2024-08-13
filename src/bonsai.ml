@@ -19,6 +19,7 @@ module Private = struct
   module Path = Path
   module Action = Action
   module Stabilization_tracker = Stabilization_tracker
+  module Enable_free_variable_monitor = Enable_free_variable_monitor
   module Node_path = Node_path
   module Graph_info = Graph_info
   module Instrumentation = Instrumentation
@@ -30,7 +31,7 @@ module Private = struct
   module Trampoline = Trampoline
   module Annotate_incr = Annotate_incr
 
-  let path = Proc_layer2.path
+  let path ?(here = Stdlib.Lexing.dummy_pos) graph = Proc_layer2.path ~here () graph
   let gather = Eval.gather
   let pre_process = Pre_process.pre_process
   let reveal_value = Cont.Conv.reveal_value
@@ -41,15 +42,22 @@ module Private = struct
   let set_perform_on_exception = Cont.Expert.For_bonsai_internal.set_perform_on_exception
 end
 
-include Proc_layer2
+module Proc = struct
+  include Proc_layer2
+  module Private = Private
 
-module For_open = struct
-  module Computation = Computation
-  module Effect = Effect
-  module Value = Value
+  module Bonsai = struct
+    include Proc_layer2
+    module Private = Private
+  end
 end
 
 module Cont = Cont
+include Cont
+
+module For_open = struct
+  module Effect = Effect
+end
 
 module Arrow_deprecated = struct
   include Legacy_api

@@ -1,6 +1,0 @@
-(executables
- (modes byte exe)
- (names main)
- (libraries incr_dom bonsai_web bonsai_web_counters_example)
- (preprocess
-  (pps js_of_ocaml-ppx ppx_bonsai ppx_jane)))

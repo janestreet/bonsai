@@ -12,6 +12,7 @@ module Rpc_kind : sig
   module Interval : sig
     type t =
       | Poll_until_ok of { retry_interval : Time_ns.Span.t }
+      | Poll_until_condition_met of { every : Time_ns.Span.t }
       | Poll of { every : Time_ns.Span.t }
       | Dispatch
     [@@deriving sexp, equal]
@@ -80,6 +81,7 @@ module Event : sig
           ; start_time : Time_ns.Alternate_sexp.t
           ; query : Sexp.t Or_no_sexp_of_provided.t
           ; path : string
+          ; here : Source_code_position.t option
           }
       | Finished of
           { id : Rpc_id.t
@@ -114,6 +116,7 @@ module Rpc_state : sig
     ; query : Sexp.t Or_no_sexp_of_provided.t
     ; status : Rpc_status.t
     ; path : string
+    ; here : Source_code_position.t option
     }
   [@@deriving sexp]
 end
@@ -123,6 +126,42 @@ module State : sig
 
   val empty : t
   val apply_event : t -> Event.t -> t
+end
+
+module For_module_startup_timings : sig
+  (** These types are serialization types for the timings recorded by ppx_module_timer.
+      The types are copied over from the ppx_module_timer_runtime library, but also have
+      sexp functions and a stable type. *)
+  module Duration : sig
+    type t = Int63.t [@@deriving sexp_of]
+  end
+
+  module Gc_events : sig
+    type t = Ppx_module_timer_runtime.For_introspection.Gc_events.t =
+      { minor_collections : int
+      ; major_collections : int
+      ; compactions : int
+      }
+    [@@deriving sexp_of]
+  end
+
+  module Timing_event : sig
+    type t = Ppx_module_timer_runtime.For_introspection.Timing_event.t =
+      { description : string
+      ; runtime : Duration.t
+      ; gc_events : Gc_events.t
+      ; nested_timing_events : t list
+      }
+    [@@deriving sexp_of]
+
+    module Stable : sig
+      type event := t
+      type t [@@deriving sexp]
+
+      val of_latest : event -> t
+      val to_latest : t -> event
+    end
+  end
 end
 
 module For_testing : sig
@@ -141,6 +180,7 @@ module For_testing : sig
           ; start_time : Time_ns.Alternate_sexp.t
           ; query : Sexp.t Or_no_sexp_of_provided.t
           ; path : string
+          ; here : Source_code_position.t option
           }
       | Finished of
           { id : Rpc_id.t

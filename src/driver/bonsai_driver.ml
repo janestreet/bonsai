@@ -6,7 +6,7 @@ module Action = Bonsai.Private.Action
 type ('m, 'action, 'action_input, 'r) unpacked =
   { model_var : 'm Incr.Var.t
   ; default_model : 'm
-  ; clock : Bonsai.Time_source.t
+  ; time_source : Bonsai.Time_source.t
   ; inject : 'action Action.t -> unit Ui_effect.t
   ; sexp_of_model : 'm -> Sexp.t
   ; sexp_of_action : 'action Action.t -> Sexp.t
@@ -44,15 +44,22 @@ let assert_type_equalities
 let create_direct
   (type r)
   ?(optimize = true)
-  ~clock
+  ~time_source
   (computation : r Bonsai.Private.Computation.t)
   : r t
   =
-  let unoptimized_info = Bonsai.Private.gather computation in
+  let unoptimized_info =
+    Bonsai.Private.gather
+      ~recursive_scopes:Bonsai.Private.Computation.Recursive_scopes.empty
+      ~time_source
+      computation
+  in
   let optimized_info =
     computation
     |> (if optimize then Bonsai.Private.pre_process else Fn.id)
     |> Bonsai.Private.gather
+         ~recursive_scopes:Bonsai.Private.Computation.Recursive_scopes.empty
+         ~time_source
   in
   let (T
         ({ model =
@@ -62,8 +69,7 @@ let create_direct
          ; action = _
          ; run = _
          ; reset = _
-         ; may_contain_lifecycle = _
-         ; may_contain_path = _
+         ; may_contain = _
          } as computation_info))
     =
     optimized_info
@@ -98,8 +104,8 @@ let create_direct
     let snapshot, () =
       computation_info.run
         ~environment
+        ~fix_envs:Bonsai.Private.Environment.Recursive.empty
         ~path:Bonsai.Private.Path.empty
-        ~clock
         ~model:(Incr.Var.watch model_var)
         ~inject
       |> Bonsai.Private.Trampoline.run
@@ -116,7 +122,7 @@ let create_direct
     T
       { model_var
       ; default_model
-      ; clock
+      ; time_source
       ; inject
       ; action_input
       ; action_input_incr
@@ -136,8 +142,13 @@ let create_direct
   create_polymorphic computation_info apply_action
 ;;
 
-let create (type r) ?(optimize = true) ~clock (computation : r Bonsai.Computation.t) =
-  create_direct ~optimize ~clock (Bonsai.Private.top_level_handle computation)
+let create
+  (type r)
+  ?(optimize = true)
+  ~time_source
+  (computation : Bonsai.graph -> r Bonsai.t)
+  =
+  create_direct ~optimize ~time_source (Bonsai.Private.top_level_handle computation)
 ;;
 
 let schedule_event _ = Ui_effect.Expert.handle
@@ -148,13 +159,13 @@ let flush
      ; apply_action
      ; action_input
      ; queue
-     ; clock
+     ; time_source
      ; stabilization_tracker
      ; sexp_of_action
      ; _
      } as t))
   =
-  Bonsai.Time_source.Private.flush clock;
+  Bonsai.Time_source.Private.flush time_source;
   let process_event action model =
     if Stabilization_tracker.requires_stabilization stabilization_tracker action
     then (
@@ -199,7 +210,7 @@ let result (T { result; _ }) = Incr.Observer.value_exn result
 let has_after_display_events (T t) =
   let lifecycle = t.lifecycle |> Incr.Observer.value_exn in
   Bonsai.Private.Lifecycle.Collection.has_after_display lifecycle
-  || Bonsai.Time_source.Private.has_after_display_events t.clock
+  || Bonsai.Time_source.Private.has_after_display_events t.time_source
 ;;
 
 let trigger_lifecycles (T t) =
@@ -207,7 +218,7 @@ let trigger_lifecycles (T t) =
   let new_ = t.lifecycle |> Incr.Observer.value_exn in
   t.last_lifecycle <- new_;
   schedule_event () (Bonsai.Private.Lifecycle.Collection.diff old new_);
-  Bonsai.Time_source.Private.trigger_after_display t.clock
+  Bonsai.Time_source.Private.trigger_after_display t.time_source
 ;;
 
 module Expert = struct
@@ -218,7 +229,7 @@ module Expert = struct
   let result_incr (T { result_incr; _ }) = result_incr
   let action_input_incr (T { action_input_incr; _ }) = Ui_incr.pack action_input_incr
   let lifecycle_incr (T { lifecycle_incr; _ }) = Ui_incr.pack lifecycle_incr
-  let clock (T { clock; _ }) = clock
+  let time_source (T { time_source; _ }) = time_source
 
   let invalidate_observers (T { action_input; result; lifecycle; _ }) =
     Incr.Observer.disallow_future_use action_input;

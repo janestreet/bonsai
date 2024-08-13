@@ -1,8 +1,0 @@
-(executables
- (modes byte exe)
- (names main)
- (libraries bonsai_web bonsai_web_ui_codemirror_form bonsai_web_ui_file
-   bonsai_web_ui_form ppx_typed_fields.typed_variants_lib
-   ppx_typed_fields.typed_fields_lib)
- (preprocess
-  (pps js_of_ocaml-ppx ppx_typed_fields ppx_bonsai ppx_css ppx_jane)))

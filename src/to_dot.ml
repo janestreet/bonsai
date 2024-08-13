@@ -27,11 +27,12 @@ module Kind = struct
     | Leaf
     | Value of
         { kind : string
-        ; here : Source_code_position.t option
+        ; here : Source_code_position.t
         }
-    | Subst of Source_code_position.t option
+    | Subst of Source_code_position.t
     | Reset_id
     | Dyn
+    | Fix_id
 
   let basic_shape ?(other = "") ?tooltip ~shape ~label ~color () =
     let tooltip =
@@ -54,18 +55,18 @@ module Kind = struct
         ()
     | Value { kind; here } ->
       let color = "#FFDD94" in
-      let tooltip = Option.map here ~f:Source_code_position.to_string in
-      basic_shape ?tooltip ~shape:"oval" ~label:kind ~color ()
+      let tooltip = Source_code_position.to_string here in
+      basic_shape ~tooltip ~shape:"oval" ~label:kind ~color ()
     | Subst here ->
-      let tooltip = Option.map here ~f:Source_code_position.to_string in
+      let tooltip = Source_code_position.to_string here in
       basic_shape
-        ?tooltip
+        ~tooltip
         ~shape:"oval"
         ~label:"subst"
         ~color:"#FFFFFF"
         ~other:"width=.1, height=.1"
         ()
-    | Reset_id | Dyn ->
+    | Reset_id | Dyn | Fix_id ->
       basic_shape
         ~shape:"circle"
         ~label:""
@@ -159,6 +160,7 @@ let follow_dynamic_skeleton_leaf state (input : Skeleton.Value.t) =
 
 let rec follow_skeleton_computation state (computation : Skeleton.Computation.t) =
   let register_computation kind = register state (Kind.Computation kind) kind in
+  let here = computation.here in
   match computation.kind with
   | Skeleton.Computation.Return { value } ->
     let me = register_computation "read" in
@@ -191,6 +193,21 @@ let rec follow_skeleton_computation state (computation : Skeleton.Computation.t)
     let me = register_computation "assoc" in
     arrow state ~from:(follow_skeleton_computation state by) ~to_:me;
     arrow state ~from:(follow_skeleton_value state map) ~to_:me;
+    me
+  | Fix_define { result; input_id; initial_input; fix_id } ->
+    let me = register_named state Kind.Fix_id fix_id in
+    arrow
+      state
+      ~from:(follow_skeleton_value state initial_input)
+      ~to_:(register_named state (Kind.Subst here) input_id);
+    arrow state ~from:(follow_skeleton_computation state result) ~to_:me;
+    me
+  | Fix_recurse { input; input_id = _; fix_id } ->
+    let me = register_computation "fix_recurse" in
+    arrow
+      state
+      ~from:(follow_skeleton_value state input)
+      ~to_:(register_named state Kind.Fix_id fix_id);
     me
   | Assoc_on { map; by; _ } ->
     let me = register_computation "assoc_on" in
@@ -229,6 +246,10 @@ let rec follow_skeleton_computation state (computation : Skeleton.Computation.t)
   | Identity { t } ->
     let me = register_computation "identity" in
     arrow state ~from:(follow_skeleton_computation state t) ~to_:me;
+    me
+  | Monitor_free_variables { inner; _ } ->
+    let me = register_computation "monitor_free_variables" in
+    arrow state ~from:(follow_skeleton_computation state inner) ~to_:me;
     me
 ;;
 

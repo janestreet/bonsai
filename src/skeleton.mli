@@ -1,6 +1,7 @@
 open! Core
 open! Import
 module Bonsai_value = Value
+module Bonsai_computation = Computation
 
 (** This module provides skeleton versions of [Value.t] and [Component.t]
     that are easier to traverse, and two-way serializable. *)
@@ -14,7 +15,7 @@ module Value : sig
   type t =
     { node_path : Node_path.t Lazy.t
     ; kind : kind
-    ; here : Source_code_position.t option
+    ; here : Source_code_position.t
     ; id : Id.t
     }
 
@@ -49,7 +50,7 @@ module Computation : sig
   type t =
     { node_path : Node_path.t Lazy.t
     ; kind : kind
-    ; here : Source_code_position.t option
+    ; here : Source_code_position.t
     }
 
   and kind =
@@ -91,6 +92,17 @@ module Computation : sig
         ; arms : t list
         }
     | Lazy of { t : t option }
+    | Fix_define of
+        { result : t
+        ; initial_input : Value.t
+        ; fix_id : Id.t
+        ; input_id : Id.t
+        }
+    | Fix_recurse of
+        { input : Value.t
+        ; input_id : Id.t
+        ; fix_id : Id.t
+        }
     | Wrap of
         { model_id : Id.t
         ; inject_id : Id.t
@@ -103,6 +115,10 @@ module Computation : sig
     | Path
     | Lifecycle of { value : Value.t }
     | Identity of { t : t }
+    | Monitor_free_variables of
+        { inner : t
+        ; free_vars : Id.t list
+        }
   [@@deriving sexp_of]
 
   val of_computation : 'result Computation.t -> t
@@ -171,4 +187,20 @@ module Traverse : sig
     method value : Value.t -> Value.t
     method value_kind : Value.kind -> Value.kind
   end
+end
+
+module Counts : sig
+  module Computation : sig
+    type t [@@deriving sexp_of]
+  end
+
+  module Value : sig
+    type t [@@deriving sexp_of]
+  end
+
+  type t [@@deriving sexp_of]
+
+  val computation : t -> Computation.t
+  val value : t -> Value.t
+  val get : ?pre_process:bool -> 'a Bonsai_computation.t -> t
 end

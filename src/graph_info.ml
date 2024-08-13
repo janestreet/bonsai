@@ -147,16 +147,11 @@ module Node_info = struct
       | Map6 _ -> "map6"
       | Map7 _ -> "map7"
     in
-    { node_type; here }
+    { node_type; here = Some here }
   ;;
 
   let of_computation (type result) (computation : result Computation.t) =
-    let here =
-      match computation with
-      | Sub { here; _ } -> here
-      | Switch { here; _ } -> Some here
-      | _ -> None
-    in
+    let here = Computation.source_code_position computation in
     let node_type =
       match computation with
       | Return _ -> "return"
@@ -171,12 +166,15 @@ module Node_info = struct
       | Assoc_simpl _ -> "assoc_simpl"
       | Switch _ -> "switch"
       | Lazy _ -> "lazy"
+      | Fix_define _ -> "fix_define"
+      | Fix_recurse _ -> "fix_recurse"
       | Wrap _ -> "wrap"
       | With_model_resetter _ -> "with_model_resetter"
-      | Path -> "path"
+      | Path _ -> "path"
       | Lifecycle _ -> "lifecycle"
+      | Monitor_free_variables _ -> "monitor_free_variables"
     in
-    { node_type; here }
+    { node_type; here = Some here }
   ;;
 end
 
@@ -226,7 +224,7 @@ let computation_map
     _ Transform.For_computation.context)
   state
   (computation : result Computation.t)
-  : result Computation.t
+  : result Computation.t Trampoline.t
   =
   let environment, add_tree_relationship, add_dag_relationship = state in
   let node_info = Node_info.of_computation computation in
@@ -239,15 +237,16 @@ let computation_map
      Hashtbl.set environment ~key:fst ~data:current_path;
      Hashtbl.set environment ~key:snd ~data:current_path
    | None -> ());
-  let recursed = recurse state computation in
+  let open Trampoline.Let_syntax in
+  let%bind recursed = recurse state computation in
   match recursed with
   | Fetch { id = v_id; _ } ->
     let uid = Type_equal.Id.uid v_id in
     (match Hashtbl.find environment uid with
      | None -> ()
      | Some named_id -> add_dag_relationship ~from:named_id ~to_:current_path);
-    computation
-  | _ -> recursed
+    return computation
+  | _ -> return recursed
 ;;
 
 let iter_graph_updates (t : _ Computation.t) ~on_update =
@@ -262,10 +261,10 @@ let iter_graph_updates (t : _ Computation.t) ~on_update =
     let (lazy from), (lazy to_) = from, to_ in
     let gm = !graph_info in
     graph_info
-      := { gm with
-           info = Map.add_exn gm.info ~key:from ~data:from_info
-         ; tree = Map.add_exn gm.tree ~key:from ~data:to_
-         };
+    := { gm with
+         info = Map.add_exn gm.info ~key:from ~data:from_info
+       ; tree = Map.add_exn gm.tree ~key:from ~data:to_
+       };
     on_update !graph_info
   in
   let environment = Type_equal.Id.Uid.Table.create () in

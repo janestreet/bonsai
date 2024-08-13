@@ -1,6 +1,0 @@
-(library
- (name favicon_svg)
- (public_name bonsai.web_ui_favicon_svg)
- (libraries base64 core virtual_dom.css_gen uri)
- (preprocess
-  (pps ppx_jane)))

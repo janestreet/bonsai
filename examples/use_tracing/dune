@@ -1,6 +1,0 @@
-(executables
- (modes byte exe)
- (names main)
- (libraries bonsai_web tracing.tracing_zero)
- (preprocess
-  (pps ppx_jane ppx_bonsai ppx_tracing)))

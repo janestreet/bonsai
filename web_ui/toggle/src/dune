@@ -1,6 +1,0 @@
-(library
- (name bonsai_web_ui_toggle)
- (public_name bonsai.web_ui_toggle)
- (libraries core virtual_dom)
- (preprocess
-  (pps ppx_css)))

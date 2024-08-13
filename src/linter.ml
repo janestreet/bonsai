@@ -32,10 +32,10 @@ let rec value_is_constant : Skeleton.Value.t -> bool =
 
 let unfolded_constants_linter =
   object
-    inherit [Warning.t list * Source_code_position.t] Skeleton.Traverse.fold as super
+    inherit [Warning.t list] Skeleton.Traverse.fold as super
 
-    method! value (value : Skeleton.Value.t) (warnings, here) =
-      let here = Option.value value.here ~default:here in
+    method! value (value : Skeleton.Value.t) warnings =
+      let here = value.here in
       let is_unfolded_constant =
         match value.kind with
         | Constant | Exception | Incr | Named -> false
@@ -43,17 +43,17 @@ let unfolded_constants_linter =
         | Mapn { inputs } -> List.for_all inputs ~f:value_is_constant
       in
       if is_unfolded_constant
-      then Warning.unfolded_constant here :: warnings, here
-      else super#value value (warnings, here)
+      then Warning.unfolded_constant here :: warnings
+      else super#value value warnings
   end
 ;;
 
 let state_machine1_to_state_machine0_linter =
   object
-    inherit [Warning.t list * Source_code_position.t] Skeleton.Traverse.fold as super
+    inherit [Warning.t list] Skeleton.Traverse.fold as super
 
-    method! computation computation (warnings, here) =
-      let here = Option.value computation.here ~default:here in
+    method! computation computation warnings =
+      let here = computation.here in
       let warnings =
         match computation.kind with
         | Leaf1 { input; _ } ->
@@ -77,17 +77,19 @@ let state_machine1_to_state_machine0_linter =
         | With_model_resetter _
         | Path
         | Lifecycle _
+        | Fix_define _
+        | Fix_recurse _
+        | Monitor_free_variables _
         | Identity _ -> warnings
       in
-      super#computation computation (warnings, here)
+      super#computation computation warnings
   end
 ;;
 
 let list_warnings computation =
   let computation = Skeleton.Computation.of_computation computation in
-  let default_location = Source_code_position.of_pos ("_none_", 0, 0, 0) in
   let linters = [ unfolded_constants_linter; state_machine1_to_state_machine0_linter ] in
   List.fold linters ~init:[] ~f:(fun warnings linter ->
-    let warnings, _ = linter#computation computation (warnings, default_location) in
+    let warnings = linter#computation computation warnings in
     warnings)
 ;;

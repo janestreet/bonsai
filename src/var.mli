@@ -11,13 +11,13 @@ val create : 'a -> 'a t
 val update : 'a t -> f:('a -> 'a) -> unit
 
 (** Change the current value. *)
-val set : 'a t -> 'a -> unit
+val set : ?here:Stdlib.Lexing.position -> 'a t -> 'a -> unit
 
 (** Retrieve the current value. *)
 val get : 'a t -> 'a
 
 (** Get a value that tracks the current value, for use in a computation. *)
-val value : 'a t -> 'a Value.t
+val value : ?here:Stdlib.Lexing.position -> 'a t -> 'a Value.t
 
 (* $MDX part-end *)
 

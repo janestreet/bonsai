@@ -268,10 +268,10 @@ module Action_trie = struct
          | None ->
            let empty = empty () in
            switch.by_branch
-             <- Map.set
-                  switch.by_branch
-                  ~key:branch
-                  ~data:(T { inner = empty; type_id = action_type_id });
+           <- Map.set
+                switch.by_branch
+                ~key:branch
+                ~data:(T { inner = empty; type_id = action_type_id });
            traverser.unexplored state empty inner_action
          | Some (T { inner; type_id }) ->
            let T = Action.Type_id.same_witness_exn type_id action_type_id in
@@ -446,14 +446,13 @@ module Action_trie = struct
       | Lazy (T { type_id = _; inner }) -> loop inner
       | Assoc_on assoc_on ->
         assoc_on.by_io_key
-          <- filter_and_loop_via_fold assoc_on.by_io_key ~f:(fun inner -> T inner)
+        <- filter_and_loop_via_fold assoc_on.by_io_key ~f:(fun inner -> T inner)
       | Assoc assoc ->
         assoc.by_key <- filter_and_loop_via_fold assoc.by_key ~f:(fun inner -> T inner)
       | Switch switch ->
         switch.by_branch
-          <- filter_and_loop_via_fold
-               switch.by_branch
-               ~f:(fun (T { inner; type_id = _ }) -> T inner)
+        <- filter_and_loop_via_fold switch.by_branch ~f:(fun (T { inner; type_id = _ }) ->
+             T inner)
     in
     loop t
   ;;

@@ -3,8 +3,11 @@ open! Import
 include Fix_transform_intf
 
 module Make
-  (Types : Types) (F : functor (_ : Recurse with module Types := Types) ->
-    Transform with module Types := Types) : Transform with module Types := Types = struct
+    (Types : Types)
+    (F : functor
+       (_ : Recurse with module Types := Types)
+       -> Transform with module Types := Types) : Transform with module Types := Types =
+struct
   module rec Recurse : (Recurse with module Types := Types) = struct
     let combine_up, empty, empty_for_lazy = Types.Up.(combine, empty, empty_for_lazy)
 
@@ -14,46 +17,49 @@ module Make
       : (_ * _ * a Computation.t) Trampoline.t
       =
       match computation with
-      | Return value ->
+      | Return { value; here } ->
         let acc, up, value = User.transform_v down acc value in
-        return (acc, up, Computation.Return value)
-      | Leaf1 { model; input_id; dynamic_action; apply_action; input; reset } ->
+        return (acc, up, Computation.Return { value; here })
+      | Leaf1 { model; input_id; dynamic_action; apply_action; input; reset; here } ->
         let acc, up, input = User.transform_v down acc input in
         return
           ( acc
           , up
           , Computation.Leaf1
-              { model; input_id; dynamic_action; apply_action; input; reset } )
-      | Leaf0 { model; static_action; apply_action; reset } ->
+              { model; input_id; dynamic_action; apply_action; input; reset; here } )
+      | Leaf0 { model; static_action; apply_action; reset; here } ->
         return
-          (acc, empty, Computation.Leaf0 { model; static_action; apply_action; reset })
-      | Leaf_incr { input; compute } ->
+          ( acc
+          , empty
+          , Computation.Leaf0 { model; static_action; apply_action; reset; here } )
+      | Leaf_incr { input; compute; here } ->
         let acc, up, input = User.transform_v down acc input in
-        return (acc, up, Computation.Leaf_incr { input; compute })
+        return (acc, up, Computation.Leaf_incr { input; compute; here })
       | Sub { from; via; into; here } ->
         let%bind acc, up1, from = User.transform_c down acc from in
         let%bind acc, up2, into = User.transform_c down acc into in
         return (acc, combine_up up1 up2, Computation.Sub { from; via; into; here })
-      | Store { id; value; inner } ->
+      | Store { id; value; inner; here } ->
         let acc, up1, value = User.transform_v down acc value in
         let%bind acc, up2, inner = User.transform_c down acc inner in
-        return (acc, combine_up up1 up2, Computation.Store { id; value; inner })
-      | Fetch { id; default; for_some } ->
-        return (acc, empty, Computation.Fetch { id; default; for_some })
-      | Assoc { map; key_comparator; key_id; cmp_id; data_id; by } ->
+        return (acc, combine_up up1 up2, Computation.Store { id; value; inner; here })
+      | Fetch { id; default; for_some; here } ->
+        return (acc, empty, Computation.Fetch { id; default; for_some; here })
+      | Assoc { map; key_comparator; key_id; cmp_id; data_id; by; here } ->
         let acc, up1, map = User.transform_v down acc map in
         let%bind acc, up2, by = User.transform_c down acc by in
         return
           ( acc
           , combine_up up1 up2
-          , Computation.Assoc { map; key_comparator; key_id; cmp_id; data_id; by } )
+          , Computation.Assoc { map; key_comparator; key_id; cmp_id; data_id; by; here }
+          )
       | Assoc_on t ->
         let acc, up1, map = User.transform_v down acc t.map in
         let%bind acc, up2, by = User.transform_c down acc t.by in
         return (acc, combine_up up1 up2, Computation.Assoc_on { t with map; by })
-      | Assoc_simpl { map; by; may_contain_path } ->
+      | Assoc_simpl { map; by; may_contain; here } ->
         let acc, up, map = User.transform_v down acc map in
-        return (acc, up, Computation.Assoc_simpl { map; by; may_contain_path })
+        return (acc, up, Computation.Assoc_simpl { map; by; may_contain; here })
       | Switch { match_; arms; here } ->
         let acc, up1, match_ = User.transform_v down acc match_ in
         let acc_and_upn_and_arms =
@@ -69,14 +75,24 @@ module Make
         let%bind acc, upn, arms = acc_and_upn_and_arms in
         let arms = Map.of_alist_exn (module Int) arms in
         return (acc, upn, Computation.Switch { match_; arms; here })
-      | Lazy t ->
+      | Fix_define { result; initial_input; fix_id; input_id; here } ->
+        let acc, up1, initial_input = User.transform_v down acc initial_input in
+        let%bind acc, up2, result = User.transform_c down acc result in
+        return
+          ( acc
+          , combine_up up1 up2
+          , Computation.Fix_define { result; initial_input; fix_id; input_id; here } )
+      | Fix_recurse { fix_id; input; input_id; here } ->
+        let acc, up, input = User.transform_v down acc input in
+        return (acc, up, Computation.Fix_recurse { fix_id; input; input_id; here })
+      | Lazy { t; here } ->
         let t =
           Lazy.map t ~f:(fun t ->
             Trampoline.run
               (let%bind _acc, _up, t = User.transform_c down acc t in
                return t))
         in
-        return (acc, empty_for_lazy, Computation.Lazy t)
+        return (acc, empty_for_lazy, Computation.Lazy { t; here })
       | Wrap
           { wrapper_model
           ; action_id
@@ -86,6 +102,7 @@ module Make
           ; inner
           ; dynamic_apply_action
           ; reset
+          ; here
           } ->
         let%bind acc, up, inner = User.transform_c down acc inner in
         let res =
@@ -98,16 +115,20 @@ module Make
             ; inner
             ; dynamic_apply_action
             ; reset
+            ; here
             }
         in
         return (acc, up, res)
-      | With_model_resetter { inner; reset_id } ->
+      | With_model_resetter { inner; reset_id; here } ->
         let%bind acc, up, inner = User.transform_c down acc inner in
-        return (acc, up, Computation.With_model_resetter { inner; reset_id })
-      | Path -> return (acc, empty, Computation.Path)
-      | Lifecycle value ->
+        return (acc, up, Computation.With_model_resetter { inner; reset_id; here })
+      | Path { here } -> return (acc, empty, Computation.Path { here })
+      | Lifecycle { lifecycle = value; here } ->
         let acc, up, value = User.transform_v down acc value in
-        return (acc, up, Computation.Lifecycle value)
+        return (acc, up, Computation.Lifecycle { lifecycle = value; here })
+      | Monitor_free_variables { inner; free_vars; here } ->
+        let%bind acc, up, inner = User.transform_c down acc inner in
+        return (acc, up, Computation.Monitor_free_variables { inner; free_vars; here })
     ;;
 
     let reduce_up l = List.reduce l ~f:combine_up |> Option.value ~default:empty

@@ -1,6 +1,0 @@
-(library
- (name vdom_node_with_map_children)
- (public_name bonsai.vdom_node_with_map_children)
- (libraries bonsai_web core js_of_ocaml jsoo_weak_collections)
- (preprocess
-  (pps js_of_ocaml-ppx ppx_jane)))

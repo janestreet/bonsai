@@ -1,5 +1,0 @@
-(library
- (name bonsai_time_example)
- (libraries bonsai_web)
- (preprocess
-  (pps ppx_jane ppx_bonsai)))

@@ -1,6 +1,0 @@
-(executables
- (modes byte exe)
- (names main)
- (libraries async_js bonsai_examples_rpc_chat_client)
- (preprocess
-  (pps js_of_ocaml-ppx ppx_css ppx_jane)))

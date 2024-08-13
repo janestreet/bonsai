@@ -1,6 +1,0 @@
-(executables
- (modes byte exe)
- (names main)
- (libraries bonsai_web bonsai_web_ui_element_size_hooks)
- (preprocess
-  (pps ppx_jane ppx_bonsai ppx_css)))

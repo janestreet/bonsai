@@ -1,5 +1,6 @@
 (library
  (name ppx_bonsai_test)
- (libraries core ppxlib ppx_bonsai_expander ppx_let.expander ppx_bonsai)
+ (libraries core ppxlib re ppx_bonsai_expander ppx_let.expander ppx_bonsai
+   core_kernel.nonempty_list patdiff.expect_test_patdiff)
  (preprocess
-  (pps ppx_expect ppx_bonsai ppxlib.metaquot)))
+  (pps ppx_jane ppx_expect ppx_bonsai ppxlib.metaquot ppx_quick_test)))

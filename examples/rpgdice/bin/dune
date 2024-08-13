@@ -1,7 +1,0 @@
-(executables
- (modes byte exe)
- (names main)
- (libraries async_kernel bonsai_web bonsai_web_rpgdice_example core
-   virtual_dom.input_widgets)
- (preprocess
-  (pps ppx_bonsai ppx_jane js_of_ocaml-ppx ppx_pattern_bind)))

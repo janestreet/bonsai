@@ -1,11 +1,13 @@
 open! Core
-open Bonsai.For_open
+module Bonsai_proc = Bonsai.Proc
+module Bonsai = Bonsai.Cont
+module Effect = Bonsai.Effect
 open Bonsai.Let_syntax
 
-let with_inject_fixed_point f =
+let with_inject_fixed_point f graph =
   let%sub r, _ =
     Bonsai.wrap
-      ()
+      graph
       ~sexp_of_model:[%sexp_of: Unit.t]
       ~default_model:()
       ~equal:[%equal: Unit.t]
@@ -14,27 +16,28 @@ let with_inject_fixed_point f =
         Bonsai.Apply_action_context.schedule_event context (inject action))
       ~f:(fun _model inject -> f inject)
   in
-  return r
+  r
 ;;
 
 let with_self_effect
   (type a)
   ?sexp_of_model
   ?equal
-  ~(f : a Bonsai.Computation_status.t Effect.t Value.t -> a Computation.t)
+  ~(f : a Bonsai.Computation_status.t Effect.t Bonsai.t -> Bonsai.graph -> a Bonsai.t)
   ()
-  : a Computation.t
+  : Bonsai.graph -> a Bonsai.t
   =
+  fun graph ->
   Bonsai.wrap
-    ()
+    graph
     ?sexp_of_model:(Option.map ~f:Option.sexp_of_t sexp_of_model)
     ?equal:(Option.map ~f:Option.equal equal)
     ~default_model:None
     ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) result _model () ->
       Some result)
-    ~f:(fun model inject ->
-      let%sub current_model =
-        let%sub get_model = Bonsai.yoink model in
+    ~f:(fun model inject graph ->
+      let current_model =
+        let get_model = Bonsai.peek model graph in
         let%arr inject = inject
         and get_model = get_model in
         let%bind.Effect () = inject () in
@@ -46,22 +49,22 @@ let with_self_effect
         | Active None -> Bonsai.Computation_status.Inactive
         | Active (Some v) -> Active v
       in
-      f current_model)
+      f current_model graph)
 ;;
 
 let state_machine1_dynamic_model
-  (type a)
   ?sexp_of_action
   ?sexp_of_model
   ?equal
   ~model
   ~apply_action
   input
+  graph
   =
   let model_creator =
     match model with
     | `Given m ->
-      Value.map m ~f:(fun m -> function
+      Bonsai.map m ~f:(fun m -> function
         | None -> m
         | Some a -> a)
     | `Computed f -> f
@@ -82,16 +85,18 @@ let state_machine1_dynamic_model
             ~action:(sexp_of_action action : Sexp.t)];
       model
   in
-  let%sub model_and_inject =
+  let model, inject =
     Bonsai.state_machine1
       ?sexp_of_model:(Option.map ~f:Option.sexp_of_t sexp_of_model)
       ?sexp_of_action
       ?equal:(Option.map ~f:Option.equal equal)
       ~default_model:None
       ~apply_action
-      (Value.both input model_creator)
+      (Bonsai.both input model_creator)
+      graph
   in
-  let%arr model, inject = model_and_inject
+  let%arr model = model
+  and inject = inject
   and model_creator = model_creator in
   model_creator model, inject
 ;;
@@ -111,10 +116,10 @@ let state_machine0_dynamic_model
     ?equal
     ~model
     ~apply_action
-    (Value.return ())
+    (Bonsai.return ())
 ;;
 
-let state_dynamic_model (type m) ?sexp_of_model ?equal ~model () =
+let state_dynamic_model ?sexp_of_model ?equal ~model () =
   let apply_action (_ : _ Bonsai.Apply_action_context.t) _old_model new_model =
     new_model
   in
@@ -127,23 +132,24 @@ let state_dynamic_model (type m) ?sexp_of_model ?equal ~model () =
     ()
 ;;
 
-let exactly_once effect =
-  let%sub has_run, set_has_run =
-    Bonsai.state ~equal:[%equal: Bool.t] false ~sexp_of_model:[%sexp_of: Bool.t]
+let exactly_once effect graph =
+  let has_run, set_has_run =
+    Bonsai.state ~equal:[%equal: Bool.t] false ~sexp_of_model:[%sexp_of: Bool.t] graph
   in
   if%sub has_run
-  then Bonsai.const ()
-  else
+  then Bonsai.return ()
+  else (
     Bonsai.Edge.lifecycle
       ~on_activate:
         (let%map set_has_run = set_has_run
          and event = effect in
          Effect.Many [ set_has_run true; event ])
-      ()
+      graph;
+    Bonsai.return ())
 ;;
 
-let exactly_once_with_value ?sexp_of_model ?equal effect =
-  let%sub value, set_value = Bonsai.state_opt ?sexp_of_model ?equal () in
+let exactly_once_with_value ?sexp_of_model ?equal effect graph =
+  let value, set_value = Bonsai.state_opt ?sexp_of_model ?equal graph in
   let%sub () =
     match%sub value with
     | None ->
@@ -153,27 +159,28 @@ let exactly_once_with_value ?sexp_of_model ?equal effect =
            and effect = effect in
            let%bind.Effect r = effect in
            set_value (Some r))
-        ()
-    | Some _ -> Bonsai.const ()
+        graph;
+      Bonsai.return ()
+    | Some _ -> Bonsai.return ()
   in
-  return value
+  value
 ;;
 
-let value_with_override ?sexp_of_model ?equal value =
-  let%sub state, set_state = Bonsai.state_opt () ?sexp_of_model ?equal in
-  let%sub value =
+let value_with_override ?sexp_of_model ?equal value graph =
+  let state, set_state = Bonsai.state_opt graph ?sexp_of_model ?equal in
+  let value =
     match%sub state with
-    | Some override -> return override
-    | None -> return value
+    | Some override -> override
+    | None -> value
   in
-  let%sub setter =
+  let setter =
     let%arr set_state = set_state in
     fun v -> set_state (Some v)
   in
-  return (Value.both value setter)
+  Bonsai.both value setter
 ;;
 
-let pipe (type a) (module A : Bonsai.Model with type t = a) =
+let pipe (type a) (module A : Bonsai_proc.Model with type t = a) graph =
   let module Model = struct
     type t =
       { queued_actions : A.t Fdeque.t
@@ -196,9 +203,9 @@ let pipe (type a) (module A : Bonsai.Model with type t = a) =
     ;;
   end
   in
-  let%sub _, inject =
+  let _, inject =
     Bonsai.state_machine0
-      ()
+      graph
       ~sexp_of_model:[%sexp_of: Model.t]
       ~equal:[%equal: Model.t]
       ~sexp_of_action:[%sexp_of: Action.t]
@@ -236,17 +243,35 @@ let pipe (type a) (module A : Bonsai.Model with type t = a) =
 module Id_gen (T : Int_intf.S) () = struct
   include T
 
-  let component =
-    let%map.Computation _, fetch =
+  let component' ?(reset = (`Reset : [ `Reset | `Do_nothing | `Bump ])) graph =
+    let reset =
+      match reset with
+      | `Reset -> None
+      | `Do_nothing -> Some (fun _ctx model -> model)
+      | `Bump -> Some (fun _ctx model -> T.(model + one))
+    in
+    let model, fetch =
       Bonsai.actor0
+        ?reset
         ~sexp_of_model:[%sexp_of: T.t]
         ~equal:[%equal: T.t]
         ~sexp_of_action:[%sexp_of: Unit.t]
-        ~default_model:T.zero
-        ~recv:(fun ~inject:_ ~schedule_event:_ i () -> T.( + ) i T.one, i)
-        ()
+        ~default_model:T.minus_one
+        ~recv:(fun _ctx i () ->
+          let to_return = T.( + ) i T.one in
+          to_return, to_return)
+        graph
     in
-    fetch ()
+    let fetch =
+      let%arr fetch = fetch in
+      fetch ()
+    in
+    fetch, model
+  ;;
+
+  let component ?(reset = (`Reset : [ `Reset | `Do_nothing ])) graph =
+    let fetch, _ = component' ~reset:(reset :> [ `Reset | `Do_nothing | `Bump ]) graph in
+    fetch
   ;;
 end
 
@@ -254,11 +279,12 @@ let mirror'
   (type m)
   ?sexp_of_model
   ~equal
-  ~(store_set : (m -> unit Effect.t) Value.t)
-  ~(store_value : m option Value.t)
-  ~(interactive_set : (m -> unit Effect.t) Value.t)
-  ~(interactive_value : m option Value.t)
+  ~(store_set : (m -> unit Effect.t) Bonsai.t)
+  ~(store_value : m option Bonsai.t)
+  ~(interactive_set : (m -> unit Effect.t) Bonsai.t)
+  ~(interactive_value : m option Bonsai.t)
   ()
+  graph
   =
   let module M = struct
     type t = m
@@ -346,6 +372,8 @@ let mirror'
      and interactive = interactive_value in
      { M2.store; interactive })
     ~callback
+    graph;
+  Bonsai.return ()
 ;;
 
 let mirror
@@ -369,39 +397,43 @@ let mirror
     ~interactive_value
 ;;
 
-let with_last_modified_time ~equal input =
+let with_last_modified_time
+  ~equal
+  input
   (* Although [Bonsai.Clock.now] is generally discouraged, the cutoff only pays
      attention to [input], so [now] shouldn't cause re-firing of this
      computation's transitive dependencies. *)
-  let%sub now = Bonsai.Clock.now in
-  let%sub result = return (Bonsai.Value.both input now) in
-  Bonsai.Incr.value_cutoff result ~equal:(fun (a, _) (b, _) -> equal a b)
+    graph
+  =
+  let now = Bonsai.Clock.now graph in
+  let result = Bonsai.both input now in
+  Bonsai.Incr.value_cutoff result ~equal:(fun (a, _) (b, _) -> equal a b) graph
 ;;
 
-let is_stable ~equal input ~time_to_stable =
-  let%sub sign =
+let is_stable ~equal input ~time_to_stable graph =
+  let sign =
     let%arr time_to_stable = time_to_stable in
     Time_ns.Span.sign time_to_stable
   in
   match%sub sign with
   | Neg ->
     let on_activate =
-      Value.return
+      Bonsai.return
         (Effect.of_thunk (fun () ->
            eprint_s
              [%message "Bonsai_extra.is_stable: [time_to_stable] should not be negative"]))
     in
-    let%sub () = Bonsai.Edge.lifecycle ~on_activate () in
-    Bonsai.const true
-  | Zero -> Bonsai.const true
+    let () = Bonsai.Edge.lifecycle ~on_activate graph in
+    Bonsai.return true
+  | Zero -> Bonsai.return true
   | Pos ->
-    let%sub _, last_modified_time = with_last_modified_time ~equal input in
-    let%sub next_stable_time =
+    let%sub _, last_modified_time = with_last_modified_time ~equal input graph in
+    let next_stable_time =
       let%arr last_modified_time = last_modified_time
       and time_to_stable = time_to_stable in
       Time_ns.add last_modified_time time_to_stable
     in
-    let%sub at_next_stable_time = Bonsai.Clock.at next_stable_time in
+    let at_next_stable_time = Bonsai.Clock.at next_stable_time graph in
     (match%arr at_next_stable_time with
      | Before -> false
      | After -> true)
@@ -435,16 +467,17 @@ module Stability = struct
   ;;
 end
 
-let value_stability (type a) ?sexp_of_model ~equal:input_equal input ~time_to_stable =
+let value_stability (type a) ?sexp_of_model ~equal:input_equal input ~time_to_stable graph
+  =
   let module M = struct
     type t = a
 
     let sexp_of_t = Option.value ~default:sexp_of_opaque sexp_of_model
   end
   in
-  let%sub is_stable = is_stable ~equal:input_equal input ~time_to_stable in
-  let%sub most_recent_stable_and_true =
-    let%sub input_and_stability = return (Value.both input is_stable) in
+  let is_stable = is_stable ~equal:input_equal input ~time_to_stable graph in
+  let most_recent_stable_and_true =
+    let input_and_stability = Bonsai.both input is_stable in
     let module M = struct
       include M
 
@@ -456,6 +489,7 @@ let value_stability (type a) ?sexp_of_model ~equal:input_equal input ~time_to_st
       ~equal:[%equal: M.t * bool]
       input_and_stability
       ~condition:(fun (_input, is_stable) -> is_stable)
+      graph
   in
   match%sub most_recent_stable_and_true with
   | Some most_recent_stable_and_true ->
@@ -496,26 +530,26 @@ module One_at_a_time = struct
     [@@deriving sexp]
   end
 
-  let effect f =
-    let%sub status, inject_status =
+  let effect f graph =
+    let status, inject_status =
       Bonsai.actor0
-        ()
+        graph
         ~sexp_of_model:[%sexp_of: Status.t]
         ~equal:[%equal: Status.t]
         ~sexp_of_action:[%sexp_of: Lock_action.t]
         ~default_model:Idle
-        ~recv:(fun ~inject:_ ~schedule_event:_ model action ->
-        match action with
-        | Acquire ->
-          let response =
-            match model with
-            | Busy -> false
-            | Idle -> true
-          in
-          Busy, response
-        | Release -> Idle, true)
+        ~recv:(fun _ctx model action ->
+          match action with
+          | Acquire ->
+            let response =
+              match model with
+              | Busy -> false
+              | Idle -> true
+            in
+            Busy, response
+          | Release -> Idle, true)
     in
-    let%sub effect =
+    let effect =
       let%arr inject_status = inject_status
       and f = f in
       let open Effect.Let_syntax in
@@ -527,35 +561,36 @@ module One_at_a_time = struct
           let%map (_ : bool) = inject_status Release in
           Response.Result result
     in
-    return (Value.both effect status)
+    Bonsai.both effect status
   ;;
 end
 
-let bonk =
-  let%sub (), bonk =
+let bonk graph =
+  let (_ : unit Bonsai.t), bonk =
     Bonsai.state_machine0
       ~default_model:()
       ~apply_action:(fun context () effect ->
         Bonsai.Apply_action_context.schedule_event context effect)
-      ()
+      graph
   in
-  return bonk
+  bonk
 ;;
 
-let chain_incr_effects input =
-  let%sub (), inject =
+let chain_incr_effects input graph =
+  let (_ : unit Bonsai.t), inject =
     Bonsai.state_machine1
       input
       ~default_model:()
       ~apply_action:(fun ctx input _model effect_fns ->
-      match input, effect_fns with
-      | Bonsai.Computation_status.Inactive, _ | _, [] -> ()
-      | Active input, effect_fn :: dependents ->
-        let effect =
-          let%bind.Ui_effect () = effect_fn input in
-          Bonsai.Apply_action_context.inject ctx dependents
-        in
-        Bonsai.Apply_action_context.schedule_event ctx effect)
+        match input, effect_fns with
+        | Bonsai.Computation_status.Inactive, _ | _, [] -> ()
+        | Active input, effect_fn :: dependents ->
+          let effect =
+            let%bind.Ui_effect () = effect_fn input in
+            Bonsai.Apply_action_context.inject ctx dependents
+          in
+          Bonsai.Apply_action_context.schedule_event ctx effect)
+      graph
   in
-  return inject
+  inject
 ;;

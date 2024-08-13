@@ -93,6 +93,8 @@ module type S = sig
   module type Recurse = Recurse
 
   module Make
-    (Types : Types) (_ : functor (_ : Recurse with module Types := Types) ->
-      Transform with module Types := Types) : Transform with module Types := Types
+      (Types : Types)
+      (_ : functor
+         (_ : Recurse with module Types := Types)
+         -> Transform with module Types := Types) : Transform with module Types := Types
 end

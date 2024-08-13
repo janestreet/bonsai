@@ -1,7 +1,0 @@
-(executables
- (modes byte exe)
- (names main)
- (libraries bonsai_web bonsai_web_ui_codemirror bonsai_web_ui_form codemirror
-   codemirror_rainbow_parentheses ppx_css.inline_css codemirror_themes)
- (preprocess
-  (pps ppx_bonsai ppx_jane)))

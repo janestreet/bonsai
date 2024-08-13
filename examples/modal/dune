@@ -1,7 +1,0 @@
-(executables
- (modes byte exe)
- (names main)
- (libraries bonsai_web bonsai_web_ui_modal draft_modal
-   virtual_dom.input_widgets)
- (preprocess
-  (pps ppx_bonsai ppx_css ppx_jane js_of_ocaml-ppx)))

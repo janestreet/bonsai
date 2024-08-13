@@ -1,8 +1,0 @@
-(library
- (name uri_parsing)
- (public_name bonsai.uri_parsing)
- (libraries uri base64 textutils.ascii_table_kernel core re
-   ppx_typed_fields.typed_fields_lib ppx_typed_fields.typed_variants_lib
-   ppx_typed_fields.typed_field_map)
- (preprocess
-  (pps ppx_jane js_of_ocaml-ppx ppx_typed_fields)))

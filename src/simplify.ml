@@ -1,20 +1,6 @@
 open! Core
 open! Import
-
-(* This univ-map is basically a set of all the type-ids that are free inside
-   the produced closure. *)
-module Free_variables = struct
-  include
-    Univ_map.Make
-      (Univ_map.Type_id_key)
-      (struct
-        type 'a t = unit [@@deriving sexp_of]
-      end)
-
-  let merge a b =
-    List.fold (to_alist b) ~init:a ~f:(fun acc (T (id, ())) -> set acc ~key:id ~data:())
-  ;;
-end
+module Free_variables = Type_id_set
 
 (* When executing the generated function, this Env is used to pass down any
    variables that were bound in a let%sub. *)
@@ -33,44 +19,56 @@ module Option_or_miss = struct
     | None
     | Some of
         { value : 'a
-        ; can_contain_path : bool
+        ; may_contain : May_contain.Resolved.t
         }
     | Miss of
         { free : Free_variables.t
         ; gen : Env.t -> 'a
-        ; can_contain_path : bool
+        ; may_contain : May_contain.Resolved.t
         }
 
   (* compresses a [Miss] when the set of free variables is empty. *)
   let squash = function
     | None -> None
     | Some a -> Some a
-    | Miss { free; gen; can_contain_path } when Free_variables.is_empty free ->
-      Some { value = gen Env.empty; can_contain_path }
+    | Miss { free; gen; may_contain } when Free_variables.is_empty free ->
+      Some { value = gen Env.empty; may_contain }
     | other -> other
   ;;
 
   let map a ~f =
     match a with
     | None -> None
-    | Some { can_contain_path; value } -> Some { can_contain_path; value = f value }
-    | Miss { free; gen; can_contain_path } ->
-      Miss { free; gen = (fun m -> f (gen m)); can_contain_path }
+    | Some { may_contain; value } -> Some { may_contain; value = f value }
+    | Miss { free; gen; may_contain } ->
+      Miss { free; gen = (fun m -> f (gen m)); may_contain }
   ;;
 
   let both a b =
     match a, b with
     | None, _ | _, None -> None
-    | Some { can_contain_path = pa; value = a }, Some { can_contain_path = pb; value = b }
-      -> Some { value = a, b; can_contain_path = pa || pb }
-    | Some { value = a; can_contain_path = pa }, Miss { free; gen; can_contain_path = pb }
-      -> Miss { free; gen = (fun m -> a, gen m); can_contain_path = pa || pb }
-    | Miss { free; gen; can_contain_path = pa }, Some { value = b; can_contain_path = pb }
-      -> Miss { free; gen = (fun m -> gen m, b); can_contain_path = pa || pb }
-    | ( Miss { free = free_a; gen = gen_a; can_contain_path = pa }
-      , Miss { free = free_b; gen = gen_b; can_contain_path = pb } ) ->
-      let free = Free_variables.merge free_a free_b in
-      Miss { free; gen = (fun env -> gen_a env, gen_b env); can_contain_path = pa || pb }
+    | Some { may_contain = ma; value = a }, Some { may_contain = mb; value = b } ->
+      Some { value = a, b; may_contain = May_contain.Resolved.merge ma mb }
+    | Some { value = a; may_contain = ma }, Miss { free; gen; may_contain = mb } ->
+      Miss
+        { free
+        ; gen = (fun m -> a, gen m)
+        ; may_contain = May_contain.Resolved.merge ma mb
+        }
+    | Miss { free; gen; may_contain = ma }, Some { value = b; may_contain = mb } ->
+      Miss
+        { free
+        ; gen = (fun m -> gen m, b)
+        ; may_contain = May_contain.Resolved.merge ma mb
+        }
+    | ( Miss { free = free_a; gen = gen_a; may_contain = ma }
+      , Miss { free = free_b; gen = gen_b; may_contain = mb } ) ->
+      let free = Free_variables.union free_a free_b in
+      Miss
+        { free
+        ; gen = (fun env -> gen_a env, gen_b env)
+        ; may_contain = May_contain.Resolved.merge ma mb
+        }
   ;;
 
   module Let_syntax = struct
@@ -92,19 +90,31 @@ let rec value_to_function
   fun value key_id data_id ->
   let open Option_or_miss in
   match value.value with
-  | Constant r -> Some { value = (fun _key _data -> r); can_contain_path = false }
+  | Constant r ->
+    Some
+      { value = (fun _key _data -> r)
+      ; may_contain = May_contain.Resolved.create ~path:No ~lifecycle:No ~input:No
+      }
   | Exception _ -> None
   | Incr _ -> None
   | Named _ ->
     let same_name = Type_equal.Id.same_witness in
     (match same_name value.id key_id, same_name value.id data_id with
-     | Some T, _ -> Some { value = (fun key _data -> key); can_contain_path = false }
-     | _, Some T -> Some { value = (fun _key data -> data); can_contain_path = false }
+     | Some T, _ ->
+       Some
+         { value = (fun key _data -> key)
+         ; may_contain = May_contain.Resolved.create ~path:No ~lifecycle:No ~input:No
+         }
+     | _, Some T ->
+       Some
+         { value = (fun _key data -> data)
+         ; may_contain = May_contain.Resolved.create ~path:No ~lifecycle:No ~input:No
+         }
      | None, None ->
        Miss
-         { free = Free_variables.(add_exn empty ~key:value.id ~data:())
+         { free = Free_variables.(add empty value.id)
          ; gen = (fun env _ _ -> Env.find_exn env value.id)
-         ; can_contain_path = false
+         ; may_contain = May_contain.Resolved.create ~path:No ~lifecycle:No ~input:No
          })
   | Cutoff { t; added_by_let_syntax = true; equal = _ } ->
     value_to_function t key_id data_id
@@ -191,10 +201,9 @@ let rec computation_to_function
     (* A rhs that isn't missing any variables can be used by ignoring the computed values
        on the lhs. *)
     | (Some _ | Miss _), Some r -> Some r
-    | ( Some { value = from; can_contain_path = pa }
-      , Miss { free; gen; can_contain_path = pb } ) ->
+    | Some { value = from; may_contain = ma }, Miss { free; gen; may_contain = mb } ->
       let free = Free_variables.remove free via in
-      let both_use_path = pa && pb in
+      let both_use_path = May_contain.Resolved.both_use_path ma mb in
       let gen env path key data =
         let from_path =
           if both_use_path then Path.(append path Elem.Subst_from) else path
@@ -205,12 +214,13 @@ let rec computation_to_function
         let env = Env.add_exn env ~key:via ~data:(from from_path key data) in
         gen env into_path key data
       in
-      Option_or_miss.squash (Miss { free; gen; can_contain_path = pa || pb })
-    | ( Miss { free = free_a; gen = gen_a; can_contain_path = pa }
-      , Miss { free = free_b; gen = gen_b; can_contain_path = pb } ) ->
+      Option_or_miss.squash
+        (Miss { free; gen; may_contain = May_contain.Resolved.merge ma mb })
+    | ( Miss { free = free_a; gen = gen_a; may_contain = ma }
+      , Miss { free = free_b; gen = gen_b; may_contain = mb } ) ->
       let free_b = Free_variables.remove free_b via in
-      let free = Free_variables.merge free_a free_b in
-      let both_use_path = pa && pb in
+      let free = Free_variables.union free_a free_b in
+      let both_use_path = May_contain.Resolved.both_use_path ma mb in
       let gen env path key data =
         let from_path =
           if both_use_path then Path.(append path Elem.Subst_from) else path
@@ -221,28 +231,37 @@ let rec computation_to_function
         let env = Env.add_exn env ~key:via ~data:(gen_a env from_path key data) in
         gen_b env into_path key data
       in
-      Option_or_miss.squash (Miss { free; gen; can_contain_path = pa || pb })
+      Option_or_miss.squash
+        (Miss { free; gen; may_contain = May_contain.Resolved.merge ma mb })
   in
   match computation with
-  | Return value ->
+  | Return { value; here = _ } ->
     Option_or_miss.map (value_to_function value key_id data_id) ~f:(fun f _path -> f)
   | Sub { from; via; into; here = _ } -> handle_subst ~from ~via ~into
-  | Path -> Some { value = (fun path _ _ -> path); can_contain_path = true }
+  | Path { here = _ } ->
+    Some
+      { value = (fun path _ _ -> path)
+      ; may_contain =
+          May_contain.Resolved.create ~path:Yes_or_maybe ~lifecycle:No ~input:No
+      }
   | _ -> None
 ;;
 
 let computation_to_function t ~key_compare ~key_id ~data_id =
   let make_path_element = Path.Elem.keyed ~compare:key_compare key_id |> unstage in
   match computation_to_function t ~key_id ~data_id |> Option_or_miss.squash with
-  | Some { value = f; can_contain_path } ->
+  | Some
+      { value = f
+      ; may_contain = { path = contains_path; input = _; lifecycle = _ } as may_contain
+      } ->
     Option.some
       ( (fun path key data ->
           let path =
-            if can_contain_path
-            then Path.append path (Assoc (make_path_element key))
-            else path
+            match contains_path with
+            | Yes_or_maybe -> Path.append path (Assoc (make_path_element key))
+            | No -> path
           in
           f path key data)
-      , if can_contain_path then `Can_contain_path else `Cannot_contain_path )
+      , may_contain )
   | None | Miss _ -> None
 ;;

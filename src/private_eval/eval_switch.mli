@@ -1,0 +1,10 @@
+open! Core
+open! Import
+
+val f
+  :  gather:'r Computation.gather_fun
+  -> recursive_scopes:Computation.Recursive_scopes.t
+  -> time_source:Time_source.t
+  -> match_:int Value.t
+  -> arms:(int, 'r Computation.t, Base.Int.comparator_witness) Map_intf.Map.t
+  -> ('r, unit) Computation.packed_info Trampoline.t

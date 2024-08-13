@@ -38,7 +38,8 @@ module type S = sig
       takes a first-class module of type [Component_s], as well as the default model for the
       component. For more details, please read the docs for [Component_s]. *)
   val of_module
-    :  ?sexp_of_model:('model -> Sexp.t)
+    :  ?here:Stdlib.Lexing.position
+    -> ?sexp_of_model:('model -> Sexp.t)
     -> ('input, 'model, 'action, 'result) component_s
     -> ?equal:('model -> 'model -> bool)
     -> default_model:'model
@@ -46,7 +47,11 @@ module type S = sig
 
   (** Given two components that have the same input, [both] returns a Bonsai component that
       contains both of their outputs. *)
-  val both : ('input, 'r1) t -> ('input, 'r2) t -> ('input, 'r1 * 'r2) t
+  val both
+    :  ?here:Stdlib.Lexing.position
+    -> ('input, 'r1) t
+    -> ('input, 'r2) t
+    -> ('input, 'r1 * 'r2) t
 
   (** [state_machine] is a function that is used to define a component solely in terms of
       its [apply_action] function. The result value of the component is the value of the
@@ -58,7 +63,7 @@ module type S = sig
     -> Source_code_position.t
     -> default_model:'model
     -> apply_action:
-         ('action Apply_action_context.t -> 'input -> 'model -> 'action -> 'model)
+         (('action, unit) Apply_action_context.t -> 'input -> 'model -> 'action -> 'model)
     -> ('input, 'model * ('action -> unit Effect.t)) t
 
   (** [enum] is how a Bonsai component can branch on its input and handle different cases
@@ -70,14 +75,16 @@ module type S = sig
       The [handle] function translates the values returned by [which] into the component
       that handles this value. *)
   val enum
-    :  (module Enum with type t = 'key)
+    :  ?here:Stdlib.Lexing.position
+    -> (module Enum with type t = 'key)
     -> which:('input -> 'key)
     -> handle:('key -> ('input, 'result) t)
     -> ('input, 'result) t
 
   (** [if_] is a special case of [enum] for booleans. *)
   val if_
-    :  ('input -> bool)
+    :  ?here:Stdlib.Lexing.position
+    -> ('input -> bool)
     -> then_:('input, 'result) t
     -> else_:('input, 'result) t
     -> ('input, 'result) t
@@ -117,42 +124,72 @@ module type S = sig
   val ( ^>> ) : ('a, 'b) t -> ('c -> 'a) -> ('c, 'b) t
 
   (** [first t] applies [t] to the first part of the input. *)
-  val first : ('input, 'result) t -> ('input * 'a, 'result * 'a) t
+  val first
+    :  ?here:Stdlib.Lexing.position
+    -> ('input, 'result) t
+    -> ('input * 'a, 'result * 'a) t
 
   (** [second t] applies [t] to the second part of the input. *)
-  val second : ('input, 'result) t -> ('a * 'input, 'a * 'result) t
+  val second
+    :  ?here:Stdlib.Lexing.position
+    -> ('input, 'result) t
+    -> ('a * 'input, 'a * 'result) t
 
   (** [split t u] applies [t] to the first part of the input and [u] to the second part.
   *)
-  val split : ('i1, 'r1) t -> ('i2, 'r2) t -> ('i1 * 'i2, 'r1 * 'r2) t
+  val split
+    :  ?here:Stdlib.Lexing.position
+    -> ('i1, 'r1) t
+    -> ('i2, 'r2) t
+    -> ('i1 * 'i2, 'r1 * 'r2) t
 
   (** [extend_first] returns the result of a Bonsai component alongside its input. *)
-  val extend_first : ('input, 'result) t -> ('input, 'result * 'input) t
+  val extend_first
+    :  ?here:Stdlib.Lexing.position
+    -> ('input, 'result) t
+    -> ('input, 'result * 'input) t
 
   (** [extend_second] returns the result of a Bonsai component alongside its input. *)
-  val extend_second : ('input, 'result) t -> ('input, 'input * 'result) t
+  val extend_second
+    :  ?here:Stdlib.Lexing.position
+    -> ('input, 'result) t
+    -> ('input, 'input * 'result) t
 
   (** [fanout t u] applies [t] and [u] to the same input and returns both results. It's
       actually just [both]. *)
-  val fanout : ('input, 'r1) t -> ('input, 'r2) t -> ('input, 'r1 * 'r2) t
+  val fanout
+    :  ?here:Stdlib.Lexing.position
+    -> ('input, 'r1) t
+    -> ('input, 'r2) t
+    -> ('input, 'r1 * 'r2) t
 
   (** [t *** u = split t u]. *)
-  val ( *** ) : ('i1, 'r1) t -> ('i2, 'r2) t -> ('i1 * 'i2, 'r1 * 'r2) t
+  val ( *** )
+    :  ?here:Stdlib.Lexing.position
+    -> ('i1, 'r1) t
+    -> ('i2, 'r2) t
+    -> ('i1 * 'i2, 'r1 * 'r2) t
 
   (** [t &&& u = fanout t u]. *)
-  val ( &&& ) : ('input, 'r1) t -> ('input, 'r2) t -> ('input, 'r1 * 'r2) t
+  val ( &&& )
+    :  ?here:Stdlib.Lexing.position
+    -> ('input, 'r1) t
+    -> ('input, 'r2) t
+    -> ('input, 'r1 * 'r2) t
 
   (** Composes two components where one of the outputs of the first component is one of
       the inputs to the second. *)
   val partial_compose_first
-    :  ('input, 'shared * 'output1) t
+    :  ?here:Stdlib.Lexing.position
+    -> ('input, 'shared * 'output1) t
     -> ('input * 'shared, 'output2) t
     -> ('input, 'output1 * 'output2) t
 
   (** [pipe] connects two components, but provides several functions that ease the
       transference of data between the components, as well as collect the final result. *)
   val pipe
-    :  ('input, 'r1) t
+    :  ?here:Stdlib.Lexing.position
+    -> ('input, 'r1) t
     -> into:('intermediate, 'r2) t
     -> via:('input -> 'r1 -> 'intermediate)
     -> finalize:('input -> 'r1 -> 'r2 -> 'r3)
@@ -164,7 +201,8 @@ module type S = sig
     val of_incr : 'a Incr.t -> (_, 'a) t
 
     val of_module
-      :  ?sexp_of_model:('m -> Sexp.t)
+      :  ?here:Stdlib.Lexing.position
+      -> ?sexp_of_model:('m -> Sexp.t)
       -> ('i, 'm, 'a, 'r) component_s_incr
       -> equal:('m -> 'm -> bool)
       -> default_model:'m
@@ -204,7 +242,12 @@ module type S = sig
     module Let_syntax : sig
       val return : 'result -> (_, 'result) t
       val map : ('input, 'r1) t -> f:('r1 -> 'r2) -> ('input, 'r2) t
-      val both : ('input, 'r1) t -> ('input, 'r2) t -> ('input, 'r1 * 'r2) t
+
+      val both
+        :  ?here:Stdlib.Lexing.position
+        -> ('input, 'r1) t
+        -> ('input, 'r2) t
+        -> ('input, 'r1 * 'r2) t
 
       module Open_on_rhs : module type of Infix
     end

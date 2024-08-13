@@ -71,7 +71,7 @@ module type S = sig
         Immediate nesting of cutoff nodes are combined into a single cutoff node whose equality function is
         true when any of the composed nodes is true and is false when all of the composed nodes are false.
         They're "or'ed together". *)
-    val cutoff : 'a t -> equal:('a -> 'a -> bool) -> 'a t
+    val cutoff : ?here:Stdlib.Lexing.position -> 'a t -> equal:('a -> 'a -> bool) -> 'a t
 
     (** flips the option position in a ['a Value.t option] into an ['a option Value.t]. It's
         useful for optional args that take values. *)
@@ -144,7 +144,10 @@ module type S = sig
         [all_map] does the same, but with the data in a map.  This can
         be a useful replacement for [assoc] in scenarios where the map
         is a constant size. *)
-    val all_map : ('k, 'v t, 'cmp) Map.t -> ('k, 'v, 'cmp) Map.t t
+    val all_map
+      :  ?here:Stdlib.Lexing.position
+      -> ('k, 'v t, 'cmp) Map.t
+      -> ('k, 'v, 'cmp) Map.t t
 
     (** The analog of [List.reduce_balanced] for computations, but with [f]
         operating on values instead of the computations themselves *)
@@ -157,14 +160,14 @@ module type S = sig
       -> 'acc t
 
     module Let_syntax : sig
-      val return : 'a -> 'a t
+      val return : ?here:Stdlib.Lexing.position -> 'a -> 'a t
 
-      include Applicative.Applicative_infix with type 'a t := 'a t
+      include Import.Applicative.Applicative_infix with type 'a t := 'a t
 
       module Let_syntax : sig
-        val return : 'a -> 'a t
-        val map : 'a t -> f:('a -> 'b) -> 'b t
-        val both : 'a t -> 'b t -> ('a * 'b) t
+        val return : ?here:Stdlib.Lexing.position -> 'a -> 'a t
+        val map : ?here:Stdlib.Lexing.position -> 'a t -> f:('a -> 'b) -> 'b t
+        val both : ?here:Stdlib.Lexing.position -> 'a t -> 'b t -> ('a * 'b) t
 
         include Mapn with type 'a t := 'a t
       end
@@ -194,14 +197,14 @@ module type S = sig
     val update : 'a t -> f:('a -> 'a) -> unit
 
     (** Sets the value inside of [t]. *)
-    val set : 'a t -> 'a -> unit
+    val set : ?here:Stdlib.Lexing.position -> 'a t -> 'a -> unit
 
     (** Gets the value inside of [t]. *)
     val get : 'a t -> 'a
 
     (** Provides read-only access to [t] by producing a {!Value.t} which is used inside of a
         Bonsai computation. *)
-    val value : 'a t -> 'a Value.t
+    val value : ?here:Stdlib.Lexing.position -> 'a t -> 'a Value.t
 
     (** Retrieves the underlying ['a t] Ui_incr.t var. *)
     val incr_var : 'a t -> 'a Ui_incr.Var.t
@@ -237,16 +240,16 @@ module type S = sig
   val read : 'a Value.t -> 'a Computation.t
 
   (** Creates a [Computation.t] that provides a constant value. *)
-  val const : 'a -> 'a Computation.t
+  val const : ?here:Stdlib.Lexing.position -> 'a -> 'a Computation.t
 
   (** Retrieves the path to the current computation as a string.  This string is
       not human-readable, but can be used as an ID which is unique to this
       particular instance of a component. *)
-  val path_id : string Computation.t
+  val path_id : ?here:Stdlib.Lexing.position -> unit -> string Computation.t
 
   (** Lifts a regular OCaml function into one that takes a Value as input, and produces
       a Computation as output. *)
-  val pure : ('a -> 'b) -> 'a Value.t -> 'b Computation.t
+  val pure : ?here:Stdlib.Lexing.position -> ('a -> 'b) -> 'a Value.t -> 'b Computation.t
 
   module Computation_status : sig
     (** Indicates whether a value is available, which depends on whether the
@@ -267,7 +270,8 @@ module type S = sig
       helper-function implements that state-machine, providing access to the
       current state, as well as an inject function that updates the state. *)
   val state
-    :  ?reset:('model -> 'model)
+    :  ?here:Stdlib.Lexing.position
+    -> ?reset:('model -> 'model)
          (** to learn more about [reset], read the docs on [with_model_resetter] *)
     -> ?sexp_of_model:('model -> Sexp.t)
     -> ?equal:('model -> 'model -> bool)
@@ -277,7 +281,8 @@ module type S = sig
   (** Similar to [state], but stores an option of the model instead.
       [default_model] is optional and defaults to [None].  *)
   val state_opt
-    :  ?reset:('model option -> 'model option)
+    :  ?here:Stdlib.Lexing.position
+    -> ?reset:('model option -> 'model option)
     -> ?default_model:'model
     -> ?sexp_of_model:('model -> Sexp.t)
     -> ?equal:('model -> 'model -> bool)
@@ -286,7 +291,11 @@ module type S = sig
 
   (** A bool-state which starts at [default_model] and flips whenever the
       returned effect is scheduled. *)
-  val toggle : default_model:bool -> (bool * unit Effect.t) Computation.t
+  val toggle
+    :  ?here:Stdlib.Lexing.position
+    -> default_model:bool
+    -> unit
+    -> (bool * unit Effect.t) Computation.t
 
   module Toggle : sig
     type t =
@@ -297,13 +306,18 @@ module type S = sig
   end
 
   (** Like [toggle], but also gives a handle to set the state directly *)
-  val toggle' : default_model:bool -> Toggle.t Computation.t
+  val toggle'
+    :  ?here:Stdlib.Lexing.position
+    -> default_model:bool
+    -> unit
+    -> Toggle.t Computation.t
 
   module Apply_action_context : sig
-    type 'action t = 'action Apply_action_context.t
+    type ('action, 'response) t = ('action, 'response) Apply_action_context.t
 
-    val inject : 'action t -> 'action -> unit Effect.t
+    val inject : ('action, 'response) t -> 'action -> 'response Effect.t
     val schedule_event : _ t -> unit Effect.t -> unit
+    val time_source : _ t -> Time_source.t
   end
 
   (** A constructor for [Computation.t] that models a simple state machine.
@@ -316,13 +330,15 @@ module type S = sig
 
       (It is very common for ['action Apply_action_context.t] to be unused) *)
   val state_machine0
-    :  ?reset:('action Apply_action_context.t -> 'model -> 'model)
+    :  ?here:Stdlib.Lexing.position
+    -> ?reset:(('action, unit) Apply_action_context.t -> 'model -> 'model)
          (** to learn more about [reset], read the docs on [with_model_resetter] *)
     -> ?sexp_of_model:('model -> Sexp.t)
     -> ?sexp_of_action:('action -> Sexp.t)
     -> ?equal:('model -> 'model -> bool)
     -> default_model:'model
-    -> apply_action:('action Apply_action_context.t -> 'model -> 'action -> 'model)
+    -> apply_action:
+         (('action, unit) Apply_action_context.t -> 'model -> 'action -> 'model)
     -> unit
     -> ('model * ('action -> unit Effect.t)) Computation.t
 
@@ -331,14 +347,15 @@ module type S = sig
       plain ['input] to account for the possibility that an action gets sent
       while the state machine is inactive. *)
   val state_machine1
-    :  ?sexp_of_action:('action -> Sexp.t)
-    -> ?reset:('action Apply_action_context.t -> 'model -> 'model)
+    :  ?here:Stdlib.Lexing.position
+    -> ?sexp_of_action:('action -> Sexp.t)
+    -> ?reset:(('action, unit) Apply_action_context.t -> 'model -> 'model)
          (** to learn more about [reset], read the docs on [with_model_resetter] *)
     -> ?sexp_of_model:('model -> Sexp.t)
     -> ?equal:('model -> 'model -> bool)
     -> default_model:'model
     -> apply_action:
-         ('action Apply_action_context.t
+         (('action, unit) Apply_action_context.t
           -> 'input Computation_status.t
           -> 'model
           -> 'action
@@ -348,19 +365,15 @@ module type S = sig
 
   (** Identical to [actor1] but it takes 0 inputs instead of 1. *)
   val actor0
-    :  ?reset:
-         (inject:('action -> 'return Effect.t)
-          -> schedule_event:(unit Effect.t -> unit)
-          -> 'model
-          -> 'model)
+    :  ?here:Stdlib.Lexing.position
+    -> ?reset:(('action, 'return) Apply_action_context.t -> 'model -> 'model)
          (** to learn more about [reset], read the docs on [with_model_resetter] *)
     -> ?sexp_of_model:('model -> Sexp.t)
     -> ?sexp_of_action:('action -> Sexp.t)
     -> ?equal:('model -> 'model -> bool)
     -> default_model:'model
     -> recv:
-         (inject:('action -> 'return Effect.t)
-          -> schedule_event:(unit Effect.t -> unit)
+         (('action, 'return) Apply_action_context.t
           -> 'model
           -> 'action
           -> 'model * 'return)
@@ -376,19 +389,15 @@ module type S = sig
       Because the semantics of this function feel like an actor system, we've
       decided to name the function accordingly.  *)
   val actor1
-    :  ?sexp_of_action:('action -> Sexp.t)
-    -> ?reset:
-         (inject:('action -> 'return Effect.t)
-          -> schedule_event:(unit Effect.t -> unit)
-          -> 'model
-          -> 'model)
+    :  ?here:Stdlib.Lexing.position
+    -> ?sexp_of_action:('action -> Sexp.t)
+    -> ?reset:(('action, 'return) Apply_action_context.t -> 'model -> 'model)
          (** to learn more about [reset], read the docs on [with_model_resetter] *)
     -> ?sexp_of_model:('model -> Sexp.t)
     -> ?equal:('model -> 'model -> bool)
     -> default_model:'model
     -> recv:
-         (inject:('action -> 'return Effect.t)
-          -> schedule_event:(unit Effect.t -> unit)
+         (('action, 'return) Apply_action_context.t
           -> 'input Computation_status.t
           -> 'model
           -> 'action
@@ -403,14 +412,16 @@ module type S = sig
       For example, you could use [narrow] a state containing a record to the value and
       injection function for a single field. *)
   val narrow
-    :  ('a * ('input_action -> unit Effect.t)) Value.t
+    :  ?here:Stdlib.Lexing.position
+    -> ('a * ('input_action -> unit Effect.t)) Value.t
     -> get:('a -> 'b)
     -> set:('a -> 'output_action -> 'input_action)
     -> ('b * ('output_action -> unit Effect.t)) Computation.t
 
   (** Like [narrow], but [get] and [set] are implemented in terms of the given field. *)
   val narrow_via_field
-    :  ('a * ('a -> unit Effect.t)) Value.t
+    :  ?here:Stdlib.Lexing.position
+    -> ('a * ('a -> unit Effect.t)) Value.t
     -> ('a, 'b) Field.t
     -> ('b * ('b -> unit Effect.t)) Computation.t
 
@@ -440,7 +451,8 @@ module type S = sig
 
       Where the [Value.t] values are passed in later. *)
   val of_module1
-    :  ?sexp_of_model:('m -> Sexp.t)
+    :  ?here:Stdlib.Lexing.position
+    -> ?sexp_of_model:('m -> Sexp.t)
     -> ('i, 'm, 'a, 'r) component_s
     -> ?equal:('m -> 'm -> bool)
     -> default_model:'m
@@ -449,7 +461,8 @@ module type S = sig
 
   (** The same as {!of_module1} but with two inputs. *)
   val of_module2
-    :  ?sexp_of_model:('m -> Sexp.t)
+    :  ?here:Stdlib.Lexing.position
+    -> ?sexp_of_model:('m -> Sexp.t)
     -> ('i1 * 'i2, 'm, 'a, 'r) component_s
     -> ?equal:('m -> 'm -> bool)
     -> default_model:'m
@@ -460,7 +473,8 @@ module type S = sig
   (** [freeze] takes a Value.t and returns a computation whose output is frozen
       to be the first value that passed through the input. *)
   val freeze
-    :  ?sexp_of_model:('a -> Sexp.t)
+    :  ?here:Stdlib.Lexing.position
+    -> ?sexp_of_model:('a -> Sexp.t)
     -> ?equal:('a -> 'a -> bool)
     -> 'a Value.t
     -> 'a Computation.t
@@ -476,8 +490,8 @@ module type S = sig
           let _ = Bonsai.lazy_ (lazy (some_component ...)) in
           ...
       ]} *)
-  val lazy_ : 'a Computation.t Lazy.t -> 'a Computation.t
-    [@@deprecated "[since 2023-07] Use Bonsai.fix "]
+  val lazy_ : ?here:Stdlib.Lexing.position -> 'a Computation.t Lazy.t -> 'a Computation.t
+  [@@deprecated "[since 2023-07] Use Bonsai.fix "]
 
   (** A fixed-point combinator for bonsai components.  This is used to build recursive
       components like so:
@@ -490,7 +504,8 @@ module type S = sig
       ]}
   *)
   val fix
-    :  'input Value.t
+    :  ?here:Stdlib.Lexing.position
+    -> 'input Value.t
     -> f:
          (recurse:('input Value.t -> 'result Computation.t)
           -> 'input Value.t
@@ -499,7 +514,8 @@ module type S = sig
 
   (** Like [fix], but for two arguments instead of just one. *)
   val fix2
-    :  'a Value.t
+    :  ?here:Stdlib.Lexing.position
+    -> 'a Value.t
     -> 'b Value.t
     -> f:
          (recurse:('a Value.t -> 'b Value.t -> 'result Computation.t)
@@ -520,7 +536,8 @@ module type S = sig
       [scope_model] also impacts lifecycle events; when [on] changes value,
       edge triggers like [on_activate] and [on_deactivate] will run *)
   val scope_model
-    :  ('a, _) comparator
+    :  ?here:Stdlib.Lexing.position
+    -> ('a, _) comparator
     -> on:'a Value.t
     -> 'b Computation.t
     -> 'b Computation.t
@@ -529,7 +546,8 @@ module type S = sig
       output of [f] for which it returned [Some]. If the input value has never
       contained a valid value, then the result is [None]. *)
   val most_recent_some
-    :  ?sexp_of_model:('b -> Sexp.t)
+    :  ?here:Stdlib.Lexing.position
+    -> ?sexp_of_model:('b -> Sexp.t)
     -> equal:('b -> 'b -> bool)
     -> 'a Value.t
     -> f:('a -> 'b option)
@@ -539,7 +557,8 @@ module type S = sig
       value for which [condition] returns true. If the input value has never
       contained a valid value, then the result is [None]. *)
   val most_recent_value_satisfying
-    :  ?sexp_of_model:('a -> Sexp.t)
+    :  ?here:Stdlib.Lexing.position
+    -> ?sexp_of_model:('a -> Sexp.t)
     -> equal:('a -> 'a -> bool)
     -> 'a Value.t
     -> condition:('a -> bool)
@@ -553,7 +572,8 @@ module type S = sig
       changes to the input are assumed to have occurred exactly when the
       component was re-activated. *)
   val previous_value
-    :  ?sexp_of_model:('a -> Sexp.t)
+    :  ?here:Stdlib.Lexing.position
+    -> ?sexp_of_model:('a -> Sexp.t)
     -> equal:('a -> 'a -> bool)
     -> 'a Value.t
     -> 'a option Computation.t
@@ -566,14 +586,16 @@ module type S = sig
       Bonsai values, which means that the computation is done incrementally and also
       maintains a state machine for every key-value pair. *)
   val assoc
-    :  ('key, 'cmp) comparator
+    :  ?here:Stdlib.Lexing.position
+    -> ('key, 'cmp) comparator
     -> ('key, 'data, 'cmp) Map.t Value.t
     -> f:('key Value.t -> 'data Value.t -> 'result Computation.t)
     -> ('key, 'result, 'cmp) Map.t Computation.t
 
   (** Like [assoc] except that the input value is a Set instead of a Map. *)
   val assoc_set
-    :  ('key, 'cmp) comparator
+    :  ?here:Stdlib.Lexing.position
+    -> ('key, 'cmp) comparator
     -> ('key, 'cmp) Set.t Value.t
     -> f:('key Value.t -> 'result Computation.t)
     -> ('key, 'result, 'cmp) Map.t Computation.t
@@ -584,7 +606,8 @@ module type S = sig
       This function performs O(n log(n)) work (where n is the length of the list) any time
       that anything in the input list changes, so it may be quite slow with large lists. *)
   val assoc_list
-    :  ('key, _) comparator
+    :  ?here:Stdlib.Lexing.position
+    -> ('key, _) comparator
     -> 'a list Value.t
     -> get_key:('a -> 'key)
     -> f:('key Value.t -> 'a Value.t -> 'b Computation.t)
@@ -598,7 +621,8 @@ module type S = sig
       syntax, with [match_] taking the value to match on, and [with_] taking a function that
       choose which behavior to use. *)
   val enum
-    :  (module Enum with type t = 'k)
+    :  ?here:Stdlib.Lexing.position
+    -> (module Enum with type t = 'k)
     -> match_:'k Value.t
     -> with_:('k -> 'a Computation.t)
     -> 'a Computation.t
@@ -608,12 +632,17 @@ module type S = sig
       is that the [apply_action] for this outer-model has access to the result
       value of the Computation being wrapped. *)
   val wrap
-    :  ?reset:('action Apply_action_context.t -> 'model -> 'model)
+    :  ?here:Stdlib.Lexing.position
+    -> ?reset:(('action, unit) Apply_action_context.t -> 'model -> 'model)
     -> ?sexp_of_model:('model -> Sexp.t)
     -> ?equal:('model -> 'model -> bool)
     -> default_model:'model
     -> apply_action:
-         ('action Apply_action_context.t -> 'result -> 'model -> 'action -> 'model)
+         (('action, unit) Apply_action_context.t
+          -> 'result
+          -> 'model
+          -> 'action
+          -> 'model)
     -> f:('model Value.t -> ('action -> unit Effect.t) Value.t -> 'result Computation.t)
     -> unit
     -> 'result Computation.t
@@ -623,12 +652,16 @@ module type S = sig
       a stateful component is to have its model set to the value provided by
       [default_model], though this behavior is overridable on a component-by-component
       basis by providing a value for the optional [reset] argument on stateful components. *)
-  val with_model_resetter : 'a Computation.t -> ('a * unit Effect.t) Computation.t
+  val with_model_resetter
+    :  ?here:Stdlib.Lexing.position
+    -> 'a Computation.t
+    -> ('a * unit Effect.t) Computation.t
 
   (** like [with_model_resetter], but makes the resetting effect available to the
       computation being wrapped. *)
   val with_model_resetter'
-    :  (reset:unit Effect.t Value.t -> 'a Computation.t)
+    :  ?here:Stdlib.Lexing.position
+    -> (reset:unit Effect.t Value.t -> 'a Computation.t)
     -> 'a Computation.t
 
   (** [yoink] is a function that takes a bonsai value and produces a
@@ -640,14 +673,17 @@ module type S = sig
       The ['a Computation_state.t] returned by the effect means that if the value
       was inactive at the time it got yoinked, then the effect will be unable to
       retrieve it. *)
-  val yoink : 'a Value.t -> 'a Computation_status.t Effect.t Computation.t
+  val yoink
+    :  ?here:Stdlib.Lexing.position
+    -> 'a Value.t
+    -> 'a Computation_status.t Effect.t Computation.t
 
   (** [sub] instantiates a computation and provides a reference to its results to
       [f] in the form of a [Value.t]. The main way to use this function is via
-      the [let%sub] syntax extension. [?here] is used by the Bonsai debugger
+      the [let%sub] syntax extension. [here:[%call_pos]] is used by the Bonsai debugger
       to tie visualizations to precise source locations. *)
   val sub
-    :  ?here:Source_code_position.t
+    :  ?here:Stdlib.Lexing.position
     -> 'a Computation.t
     -> f:('a Value.t -> 'b Computation.t)
     -> 'b Computation.t
@@ -657,10 +693,14 @@ module type S = sig
         a testable way. *)
 
     (** The current time, updated at [tick_every] intervals. *)
-    val approx_now : tick_every:Time_ns.Span.t -> Time_ns.t Computation.t
+    val approx_now
+      :  ?here:Stdlib.Lexing.position
+      -> tick_every:Time_ns.Span.t
+      -> unit
+      -> Time_ns.t Computation.t
 
     (** The current time, update as frequently as possible. *)
-    val now : Time_ns.t Computation.t
+    val now : ?here:Stdlib.Lexing.position -> unit -> Time_ns.t Computation.t
 
     module Before_or_after : sig
       type t = Ui_incr.Before_or_after.t =
@@ -671,7 +711,10 @@ module type S = sig
 
     (** Mirrors [Incr.Clock.at], which changes from [Before] to [After] at the
         specified time. *)
-    val at : Time_ns.t Value.t -> Before_or_after.t Computation.t
+    val at
+      :  ?here:Stdlib.Lexing.position
+      -> Time_ns.t Value.t
+      -> Before_or_after.t Computation.t
 
     (** An event passed to [every] is scheduled on an interval determined by
         the time-span argument.
@@ -683,7 +726,8 @@ module type S = sig
         | `Every_multiple_of_period_blocking -> Same as `Every_multiple_of_second, but skips a beat if the previous effect is still running.
     *)
     val every
-      :  when_to_start_next_effect:
+      :  ?here:Stdlib.Lexing.position
+      -> when_to_start_next_effect:
            [< `Wait_period_after_previous_effect_starts_blocking
            | `Wait_period_after_previous_effect_finishes_blocking
            | `Every_multiple_of_period_non_blocking
@@ -695,15 +739,24 @@ module type S = sig
       -> unit Computation.t
 
     (** An effect for fetching the current time. *)
-    val get_current_time : Time_ns.t Effect.t Computation.t
+    val get_current_time
+      :  ?here:Stdlib.Lexing.position
+      -> unit
+      -> Time_ns.t Effect.t Computation.t
 
     (** The function in this computation produces an effect that completes after
         the specified amount of time. *)
-    val sleep : (Time_ns.Span.t -> unit Effect.t) Computation.t
+    val sleep
+      :  ?here:Stdlib.Lexing.position
+      -> unit
+      -> (Time_ns.Span.t -> unit Effect.t) Computation.t
 
     (** Like [sleep], but waits until a specific time, rather than a time
         relative to now. *)
-    val until : (Time_ns.t -> unit Effect.t) Computation.t
+    val until
+      :  ?here:Stdlib.Lexing.position
+      -> unit
+      -> (Time_ns.t -> unit Effect.t) Computation.t
   end
 
   module Edge : sig
@@ -720,7 +773,8 @@ module type S = sig
         These functions do not wait for previous calls to [callback] to complete before
         calling it again. *)
     val on_change
-      :  ?sexp_of_model:('a -> Sexp.t)
+      :  ?here:Stdlib.Lexing.position
+      -> ?sexp_of_model:('a -> Sexp.t)
       -> equal:('a -> 'a -> bool)
       -> 'a Value.t
       -> callback:('a -> unit Effect.t) Value.t
@@ -729,7 +783,8 @@ module type S = sig
     (** The same as [on_change], but the callback function gets access to the
         previous value that was witnessed. *)
     val on_change'
-      :  ?sexp_of_model:('a -> Sexp.t)
+      :  ?here:Stdlib.Lexing.position
+      -> ?sexp_of_model:('a -> Sexp.t)
       -> equal:('a -> 'a -> bool)
       -> 'a Value.t
       -> callback:('a option -> 'a -> unit Effect.t) Value.t
@@ -748,7 +803,8 @@ module type S = sig
         and an "after-display" won't occur before an activation, or after a
         deactivation for a given computation. *)
     val lifecycle
-      :  ?on_activate:unit Effect.t Value.t
+      :  ?here:Stdlib.Lexing.position
+      -> ?on_activate:unit Effect.t Value.t
       -> ?on_deactivate:unit Effect.t Value.t
       -> ?after_display:unit Effect.t Value.t
       -> unit
@@ -757,7 +813,8 @@ module type S = sig
     (** Like [lifecycle], but the events are optional values.  If the event value
         is None when the action occurs, nothing will happen *)
     val lifecycle'
-      :  ?on_activate:unit Effect.t option Value.t
+      :  ?here:Stdlib.Lexing.position
+      -> ?on_activate:unit Effect.t option Value.t
       -> ?on_deactivate:unit Effect.t option Value.t
       -> ?after_display:unit Effect.t option Value.t
       -> unit
@@ -766,12 +823,21 @@ module type S = sig
     (** [after_display] and [after_display'] are lower-level functions that
         can be used to register an event to occur once-per-frame (after each
         render). *)
-    val after_display : unit Effect.t Value.t -> unit Computation.t
+    val after_display
+      :  ?here:Stdlib.Lexing.position
+      -> unit Effect.t Value.t
+      -> unit Computation.t
 
-    val after_display' : unit Effect.t option Value.t -> unit Computation.t
+    val after_display'
+      :  ?here:Stdlib.Lexing.position
+      -> unit Effect.t option Value.t
+      -> unit Computation.t
 
     (** [wait_after_display] is an effect that will complete after the next frame. *)
-    val wait_after_display : unit Effect.t Computation.t
+    val wait_after_display
+      :  ?here:Stdlib.Lexing.position
+      -> unit
+      -> unit Effect.t Computation.t
 
     module Poll : sig
       module Starting : sig
@@ -796,7 +862,8 @@ module type S = sig
           [Option.None] or a default value ['o] in the time in between the
           computation starting and the first result coming back from the effect. *)
       val effect_on_change
-        :  ?sexp_of_input:('a -> Sexp.t)
+        :  ?here:Stdlib.Lexing.position
+        -> ?sexp_of_input:('a -> Sexp.t)
         -> ?sexp_of_result:('o -> Sexp.t)
         -> equal_input:('a -> 'a -> bool)
         -> ?equal_result:('o -> 'o -> bool)
@@ -806,7 +873,8 @@ module type S = sig
         -> 'r Computation.t
 
       val manual_refresh
-        :  ?sexp_of_model:('o -> Sexp.t)
+        :  ?here:Stdlib.Lexing.position
+        -> ?sexp_of_model:('o -> Sexp.t)
         -> ?equal:('o -> 'o -> bool)
         -> ('o, 'r) Starting.t
         -> effect:'o Effect.t Value.t
@@ -833,7 +901,8 @@ module type S = sig
 
     (** Creates a memo instance that can be used by calling [lookup] *)
     val create
-      :  ('input, 'cmp) comparator
+      :  ?here:Stdlib.Lexing.position
+      -> ('input, 'cmp) comparator
       -> f:('input Value.t -> 'result Computation.t)
       -> ('input, 'result) t Computation.t
 
@@ -842,7 +911,8 @@ module type S = sig
         results in [none] being returned for a brief period of time, after which it'll
         return a [Some] containing the result of that computation *)
     val lookup
-      :  ?sexp_of_model:('input -> Sexp.t)
+      :  ?here:Stdlib.Lexing.position
+      -> ?sexp_of_model:('input -> Sexp.t)
       -> equal:('input -> 'input -> bool)
       -> ('input, 'result) t Value.t
       -> 'input Value.t
@@ -853,11 +923,11 @@ module type S = sig
     module Poll_result : sig
       type 'a t =
         | Aborted
-            (** [Aborted] indicates that the effect was aborted before it even
+        (** [Aborted] indicates that the effect was aborted before it even
             started. If an effect starts, then it should complete with some kind
             of result - [Effect] does not support cancellation in general. *)
         | Finished of 'a
-            (** [Finished x] indicates that an effect successfully completed with value x. *)
+        (** [Finished x] indicates that an effect successfully completed with value x. *)
       [@@deriving sexp, equal]
 
       (** Collapses values of type ['a Or_error.t t] a plain Or_error.t, where
@@ -887,7 +957,8 @@ module type S = sig
         executed, since they will all be waiting for the one that raised to
         complete. *)
     val poll
-      :  ('a -> 'b Effect.t) Value.t
+      :  ?here:Stdlib.Lexing.position
+      -> ('a -> 'b Effect.t) Value.t
       -> ('a -> 'b Poll_result.t Effect.t) Computation.t
   end
 
@@ -917,20 +988,31 @@ module type S = sig
     (** Given a ['a Dynamic_scope.t] and a ['a Value.t] evaluate a function
         whose resulting Computation.t has access to the value via the
         [lookup] function. *)
-    val set : 'a t -> 'a Value.t -> inside:'r Computation.t -> 'r Computation.t
+    val set
+      :  ?here:Stdlib.Lexing.position
+      -> 'a t
+      -> 'a Value.t
+      -> inside:'r Computation.t
+      -> 'r Computation.t
 
     type revert = { revert : 'a. 'a Computation.t -> 'a Computation.t }
 
     (** like [set] but with the ability to revert the value in sub-computations. *)
-    val set' : 'a t -> 'a Value.t -> f:(revert -> 'r Computation.t) -> 'r Computation.t
+    val set'
+      :  ?here:Stdlib.Lexing.position
+      -> 'a t
+      -> 'a Value.t
+      -> f:(revert -> 'r Computation.t)
+      -> 'r Computation.t
 
     (** Lookup attempts to find the value inside the
         nearest scope, but if there isn't one, it falls back to
         default specified in [create]. *)
-    val lookup : 'a t -> 'a Computation.t
+    val lookup : ?here:Stdlib.Lexing.position -> 'a t -> 'a Computation.t
 
     val modify
-      :  'a t
+      :  ?here:Stdlib.Lexing.position
+      -> 'a t
       -> change:('a Value.t -> 'a Value.t)
       -> f:(revert -> 'r Computation.t)
       -> 'r Computation.t
@@ -939,18 +1021,29 @@ module type S = sig
   module Incr : sig
     (** A [Value.t] passed through [value_cutoff] will only trigger changes on its dependents when the
         value changes according to the provided equality function *)
-    val value_cutoff : 'a Value.t -> equal:('a -> 'a -> bool) -> 'a Computation.t
+    val value_cutoff
+      :  ?here:Stdlib.Lexing.position
+      -> 'a Value.t
+      -> equal:('a -> 'a -> bool)
+      -> 'a Computation.t
 
     (** Use [compute] to move a function from the incremental world into the bonsai world. *)
-    val compute : 'a Value.t -> f:('a Incr.t -> 'b Incr.t) -> 'b Computation.t
+    val compute
+      :  ?here:Stdlib.Lexing.position
+      -> 'a Value.t
+      -> f:('a Incr.t -> 'b Incr.t)
+      -> 'b Computation.t
 
     (** If you've got an incremental, you can convert it to a value with this function. *)
-    val to_value : 'a Incr.t -> 'a Value.t
+    val to_value : ?here:Stdlib.Lexing.position -> 'a Incr.t -> 'a Value.t
 
     (** Compute some incremental value based on the time source. Using this time source
         instead of [Incr.clock] is the more testable approach, since it allows tests
         to control how time moves forward. *)
-    val with_clock : (Time_source.t -> 'a Incr.t) -> 'a Computation.t
+    val with_clock
+      :  ?here:Stdlib.Lexing.position
+      -> (Time_source.t -> 'a Incr.t)
+      -> 'a Computation.t
   end
 
   (** This [Let_syntax] module is basically just {!Value.Let_syntax} with the addition of
@@ -968,23 +1061,33 @@ module type S = sig
   module Let_syntax : sig
     (*_ [let%pattern_bind] requires that a function named [return] with these semantics
       exist here. *)
-    val return : 'a Value.t -> 'a Computation.t
-    val ( >>| ) : 'a Value.t -> ('a -> 'b) -> 'b Value.t
-    val ( <*> ) : ('a -> 'b) Value.t -> 'a Value.t -> 'b Value.t
-    val ( <$> ) : ('a -> 'b) -> 'a Value.t -> 'b Value.t
+    val return : ?here:Stdlib.Lexing.position -> 'a Value.t -> 'a Computation.t
+    val ( >>| ) : ?here:Stdlib.Lexing.position -> 'a Value.t -> ('a -> 'b) -> 'b Value.t
+
+    val ( <*> )
+      :  ?here:Stdlib.Lexing.position
+      -> ('a -> 'b) Value.t
+      -> 'a Value.t
+      -> 'b Value.t
+
+    val ( <$> ) : ?here:Stdlib.Lexing.position -> ('a -> 'b) -> 'a Value.t -> 'b Value.t
 
     module Let_syntax : sig
       (** [sub] instantiates a computation and provides a reference to its results to
           [f] in the form of a [Value.t]. The main way to use this function is via
-          the [let%sub] syntax extension. [?here] is used by the Bonsai debugger
+          the [let%sub] syntax extension. [here:[%call_pos]] is used by the Bonsai debugger
           to tie visualizations to precise source locations. *)
       val sub
-        :  ?here:Source_code_position.t
+        :  ?here:Stdlib.Lexing.position
         -> 'a Computation.t
         -> f:('a Value.t -> 'b Computation.t)
         -> 'b Computation.t
 
-      val cutoff : 'a Value.t -> equal:('a -> 'a -> bool) -> 'a Value.t
+      val cutoff
+        :  ?here:Stdlib.Lexing.position
+        -> 'a Value.t
+        -> equal:('a -> 'a -> bool)
+        -> 'a Value.t
 
       val switch
         :  here:Source_code_position.t
@@ -993,18 +1096,87 @@ module type S = sig
         -> with_:(int -> 'a Computation.t)
         -> 'a Computation.t
 
-      val map : ?here:Source_code_position.t -> 'a Value.t -> f:('a -> 'b) -> 'b Value.t
-      val map2 : 'a Value.t -> 'b Value.t -> f:('a -> 'b -> 'c) -> 'c Value.t
-      val return : 'a Value.t -> 'a Computation.t
-      val both : 'a Value.t -> 'b Value.t -> ('a * 'b) Value.t
+      val map : ?here:Stdlib.Lexing.position -> 'a Value.t -> f:('a -> 'b) -> 'b Value.t
+
+      val map2
+        :  ?here:Stdlib.Lexing.position
+        -> 'a Value.t
+        -> 'b Value.t
+        -> f:('a -> 'b -> 'c)
+        -> 'c Value.t
+
+      val return : ?here:Stdlib.Lexing.position -> 'a Value.t -> 'a Computation.t
+
+      val both
+        :  ?here:Stdlib.Lexing.position
+        -> 'a Value.t
+        -> 'b Value.t
+        -> ('a * 'b) Value.t
 
       val arr
-        :  ?here:Source_code_position.t
+        :  ?here:Stdlib.Lexing.position
         -> 'a Value.t
         -> f:('a -> 'b)
         -> 'b Computation.t
 
       include Mapn with type 'a t := 'a Value.t
+
+      val arr2
+        :  ?here:Stdlib.Lexing.position
+        -> 'a Value.t
+        -> 'b Value.t
+        -> f:('a -> 'b -> 'c)
+        -> 'c Computation.t
+
+      val arr3
+        :  ?here:Stdlib.Lexing.position
+        -> 'a Value.t
+        -> 'b Value.t
+        -> 'c Value.t
+        -> f:('a -> 'b -> 'c -> 'd)
+        -> 'd Computation.t
+
+      val arr4
+        :  ?here:Stdlib.Lexing.position
+        -> 'a Value.t
+        -> 'b Value.t
+        -> 'c Value.t
+        -> 'd Value.t
+        -> f:('a -> 'b -> 'c -> 'd -> 'e)
+        -> 'e Computation.t
+
+      val arr5
+        :  ?here:Stdlib.Lexing.position
+        -> 'a Value.t
+        -> 'b Value.t
+        -> 'c Value.t
+        -> 'd Value.t
+        -> 'e Value.t
+        -> f:('a -> 'b -> 'c -> 'd -> 'e -> 'f)
+        -> 'f Computation.t
+
+      val arr6
+        :  ?here:Stdlib.Lexing.position
+        -> 'a Value.t
+        -> 'b Value.t
+        -> 'c Value.t
+        -> 'd Value.t
+        -> 'e Value.t
+        -> 'f Value.t
+        -> f:('a -> 'b -> 'c -> 'd -> 'e -> 'f -> 'g)
+        -> 'g Computation.t
+
+      val arr7
+        :  ?here:Stdlib.Lexing.position
+        -> 'a Value.t
+        -> 'b Value.t
+        -> 'c Value.t
+        -> 'd Value.t
+        -> 'e Value.t
+        -> 'f Value.t
+        -> 'g Value.t
+        -> f:('a -> 'b -> 'c -> 'd -> 'e -> 'f -> 'g -> 'h)
+        -> 'h Computation.t
     end
   end
 
@@ -1013,7 +1185,7 @@ module type S = sig
   module Expert : sig
     (** [thunk] will execute its argument exactly once per instantiation of the
         computation. *)
-    val thunk : (unit -> 'a) -> 'a Computation.t
+    val thunk : ?here:Stdlib.Lexing.position -> (unit -> 'a) -> 'a Computation.t
 
     (** [assoc_on] is similar to [assoc], but allows the model to be keyed differently than
         the input map. This comes with a few caveats:
@@ -1025,7 +1197,8 @@ module type S = sig
         [assoc] should almost always be used instead. Consider whether you really need the
         additional power before reaching for this function. *)
     val assoc_on
-      :  ('io_key, 'io_cmp) comparator
+      :  ?here:Stdlib.Lexing.position
+      -> ('io_key, 'io_cmp) comparator
       -> ('model_key, 'model_cmp) comparator
       -> ('io_key, 'data, 'io_cmp) Map.t Value.t
       -> get_model_key:('io_key -> 'data -> 'model_key)
@@ -1035,24 +1208,33 @@ module type S = sig
 
   module Debug : sig
     (** [on_change v ~f] executes the function [f] every time that [v] is recomputed. *)
-    val on_change : 'a Value.t -> f:('a -> unit) -> unit Computation.t
+    val on_change
+      :  ?here:Stdlib.Lexing.position
+      -> 'a Value.t
+      -> f:('a -> unit)
+      -> unit Computation.t
 
-    (** like [on_change], but specialized for printing a sexp of the value that you
-        are watching. *)
-    val on_change_print_s : 'a Value.t -> ('a -> Sexp.t) -> unit Computation.t
+    (** like [on_change], but specialized for printing a sexp of the value that you are watching. *)
+    val on_change_print_s
+      :  ?here:Stdlib.Lexing.position
+      -> 'a Value.t
+      -> ('a -> Sexp.t)
+      -> unit Computation.t
 
     val instrument_computation
-      :  'a Computation.t
+      :  ?here:Stdlib.Lexing.position
+      -> 'a Computation.t
       -> start_timer:(string -> unit)
       -> stop_timer:(string -> unit)
       -> 'a Computation.t
 
     val to_dot : ?pre_process:bool -> 'a Computation.t -> string
+    val bonsai_node_counts : ?pre_process:bool -> 'a Computation.t -> Skeleton.Counts.t
     val enable_incremental_annotations : unit -> unit
     val disable_incremental_annotations : unit -> unit
   end
 
-  val path : Path.t Computation.t
+  val path : ?here:Stdlib.Lexing.position -> unit -> Path.t Computation.t
 
   (** Analog to [Incr_map] functions in Bonsai. In general, you should prefer to use
       [Bonsai.assoc] where possible. For functions that are particularly easy to implement

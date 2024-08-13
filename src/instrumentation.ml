@@ -7,12 +7,8 @@ module Entry_label = struct
      that we receive from the [PerformanceObserver]. Since this label may be
      viewed by humans, we include the [node_type] field and hand-craft the sexp
      representation. *)
-  type t =
-    { id : Node_path.t
-    ; node_type : string
-    }
 
-  let to_string { id; node_type } = [%string "##%{node_type} %{id#Node_path}"]
+  let to_string ~id ~node_type = [%string "##%{node_type} %{id}"]
 end
 
 let extract_node_path_from_entry_label label =
@@ -30,38 +26,58 @@ let instrument_computation (t : _ Computation.t) ~start_timer ~stop_timer =
     (context : unit Transform.For_computation.context)
     ()
     (computation : result Computation.t)
-    : result Computation.t
+    : result Computation.t Trampoline.t
     =
     let node_info = Graph_info.Node_info.of_computation computation in
-    let entry_label node_type =
+    let id =
       let (lazy current_path) = context.current_path in
-      { Entry_label.id = current_path; node_type } |> Entry_label.to_string
+      Node_path.to_string current_path
     in
+    let entry_label node_type = Entry_label.to_string ~id ~node_type in
     let compute_label = entry_label [%string "%{node_info.node_type}-compute"] in
     let apply_action_label =
       entry_label [%string "%{node_info.node_type}-apply_action"]
     in
     let by_label = entry_label [%string "%{node_info.node_type}-by"] in
-    let time_apply_action ~apply_action ~inject ~schedule_event input model action =
+    let time_apply_action
+      ~apply_action
+      ~inject
+      ~schedule_event
+      ~time_source
+      input
+      model
+      action
+      =
       start_timer apply_action_label;
-      let model = apply_action ~inject ~schedule_event input model action in
+      let model = apply_action ~inject ~schedule_event ~time_source input model action in
       stop_timer apply_action_label;
       model
     in
-    let time_static_apply_action ~apply_action ~inject ~schedule_event model action =
+    let time_static_apply_action
+      ~apply_action
+      ~inject
+      ~schedule_event
+      ~time_source
+      model
+      action
+      =
       start_timer apply_action_label;
-      let model = apply_action ~inject ~schedule_event model action in
+      let model = apply_action ~inject ~schedule_event ~time_source model action in
       stop_timer apply_action_label;
       model
     in
-    let recursed = context.recurse () computation in
+    let open Trampoline.Let_syntax in
+    let%bind recursed = context.recurse () computation in
     match recursed with
-    | Fetch v_id -> Computation.Fetch v_id
+    | Fetch v_id -> return (Computation.Fetch v_id)
     | Leaf1 t ->
-      Leaf1 { t with apply_action = time_apply_action ~apply_action:t.apply_action }
+      return
+        (Computation.Leaf1
+           { t with apply_action = time_apply_action ~apply_action:t.apply_action })
     | Leaf0 t ->
-      Leaf0
-        { t with apply_action = time_static_apply_action ~apply_action:t.apply_action }
+      return
+        (Computation.Leaf0
+           { t with apply_action = time_static_apply_action ~apply_action:t.apply_action })
     | Leaf_incr t ->
       let compute clock input =
         start_timer compute_label;
@@ -69,7 +85,7 @@ let instrument_computation (t : _ Computation.t) ~start_timer ~stop_timer =
         stop_timer compute_label;
         computed
       in
-      Leaf_incr { t with compute }
+      return (Computation.Leaf_incr { t with compute })
     | Assoc_simpl t ->
       let by path key value =
         start_timer by_label;
@@ -77,8 +93,8 @@ let instrument_computation (t : _ Computation.t) ~start_timer ~stop_timer =
         stop_timer by_label;
         by
       in
-      Assoc_simpl { t with by }
-    | computation -> computation
+      return (Computation.Assoc_simpl { t with by })
+    | computation -> return computation
   in
   let value_map
     (type a)
@@ -89,8 +105,8 @@ let instrument_computation (t : _ Computation.t) ~start_timer ~stop_timer =
     let (lazy current_path) = context.current_path in
     let node_info = Graph_info.Node_info.of_value wrapped_value in
     let entry_label =
-      { Entry_label.id = current_path; node_type = node_info.node_type }
-      |> Entry_label.to_string
+      let id = Node_path.to_string current_path in
+      Entry_label.to_string ~id ~node_type:node_info.node_type
     in
     let value =
       match value with

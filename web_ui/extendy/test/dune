@@ -1,5 +1,0 @@
-(library
- (name bonsai_web_ui_extendy_test)
- (libraries bonsai_web_ui_extendy bonsai_web_test core)
- (preprocess
-  (pps ppx_jane)))

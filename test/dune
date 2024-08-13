@@ -1,7 +1,0 @@
-(library
- (name bonsai_test)
- (public_name bonsai.test)
- (libraries bonsai bonsai_driver patdiff.expect_test_patdiff core
-   expect_test_helpers_core async_js.test_handle_garbage_collector)
- (preprocess
-  (pps ppx_jane ppx_pattern_bind ppx_bonsai)))

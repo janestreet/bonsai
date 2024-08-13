@@ -1,5 +1,0 @@
-(library
- (name bonsai_experimental_table_form_test)
- (libraries expect_test_helpers_core)
- (preprocess
-  (pps ppx_jane)))

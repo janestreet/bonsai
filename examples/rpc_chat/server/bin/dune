@@ -1,6 +1,0 @@
-(executables
- (modes byte exe)
- (names main)
- (libraries bonsai_chat_native core_unix.command_unix)
- (preprocess
-  (pps ppx_jane)))

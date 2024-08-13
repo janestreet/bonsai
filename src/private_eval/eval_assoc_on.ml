@@ -1,0 +1,187 @@
+open! Core
+open! Import
+open Incr.Let_syntax
+
+let f
+  (type io cmp_io model cmp_model)
+  ~gather
+  ~recursive_scopes
+  ~time_source
+  ~map
+  ~(io_comparator : (io, cmp_io) comparator)
+  ~(model_comparator : (model, cmp_model) comparator)
+  ~io_key_id
+  ~io_cmp_id
+  ~model_key_id
+  ~model_cmp_id
+  ~data_id
+  ~by
+  ~get_model_key
+  =
+  let module Model_comparator = (val model_comparator) in
+  let module Io_comparator = (val io_comparator) in
+  let wrap_assoc_on ~io_key ~model_key inject =
+    Action.assoc_on
+      ~io_key
+      ~model_key
+      ~io_id:io_key_id
+      ~io_compare:Io_comparator.comparator.compare
+    >>> inject
+  in
+  let model_key_comparator = Model_comparator.comparator in
+  let%bind.Trampoline (Computation.T
+                        { model = model_info
+                        ; input = input_info
+                        ; action
+                        ; apply_action
+                        ; run
+                        ; reset
+                        ; may_contain
+                        })
+    =
+    gather ~recursive_scopes ~time_source by
+  in
+  let run ~environment ~fix_envs ~path ~model ~inject =
+    let resolved = Environment.Recursive.resolve_may_contain fix_envs may_contain in
+    let map_input = Value.eval environment map in
+    let model_lookup = Incr_map.Lookup.create (module Model_comparator) model in
+    let create_keyed =
+      unstage (Path.Elem.keyed ~compare:Io_comparator.comparator.compare io_key_id)
+    in
+    let results_map, input_map, lifecycle_map =
+      Eval_assoc.unzip3_mapi'
+        map_input
+        ~contains_lifecycle:resolved.lifecycle
+        ~contains_input:resolved.input
+        ~comparator:(module Io_comparator)
+        ~f:(fun ~key:io_key ~data:value ->
+          let%pattern_bind results_map, input_map, lifecycle_map =
+            let path =
+              match resolved.path with
+              | Yes_or_maybe -> Path.append path Path.Elem.(Assoc (create_keyed io_key))
+              | No -> path
+            in
+            let key_incr = Incr.const io_key in
+            annotate Assoc_key key_incr;
+            annotate Assoc_input value;
+            let environment =
+              (* It is safe to reuse the same [key_id] and [data_id] for each pair in the map,
+                     since they all start with a fresh "copy" of the outer environment. *)
+              environment
+              |> Environment.add_exn ~key:io_key_id ~data:key_incr
+              |> Environment.add_exn ~key:data_id ~data:value
+            in
+            let model_key =
+              let%map value = value in
+              get_model_key io_key value
+            in
+            Incr.set_cutoff
+              model_key
+              (Incr.Cutoff.of_compare model_key_comparator.compare);
+            let%bind model_key = model_key in
+            let model =
+              match%map Incr_map.Lookup.find model_lookup model_key with
+              | None -> model_info.default
+              | Some (_prev_io_key, model) -> model
+            in
+            annotate Model model;
+            let snapshot, () =
+              run
+                ~environment
+                ~fix_envs
+                ~path
+                ~inject:(wrap_assoc_on ~io_key ~model_key inject)
+                ~model
+              |> Trampoline.run
+            in
+            let%mapn result = Snapshot.result snapshot
+            and input = Input.to_incremental (Snapshot.input snapshot)
+            and lifecycle = Snapshot.lifecycle_or_empty snapshot in
+            result, input, lifecycle
+          in
+          results_map, input_map, lifecycle_map)
+    in
+    annotate Assoc_results results_map;
+    annotate Assoc_lifecycles lifecycle_map;
+    let lifecycle =
+      (* if we can prove that the body of the assoc_on doesn't contain a
+             lifecycle node, then return None, dropping the constant incremental
+             node on the floor. *)
+      match resolved.lifecycle with
+      | No -> None
+      | Yes_or_maybe ->
+        let unfolded =
+          Incr_map.unordered_fold_nested_maps
+            lifecycle_map
+            ~init:Path.Map.empty
+            ~add:(fun ~outer_key:_ ~inner_key:key ~data acc ->
+              Map.update acc key ~f:(function
+                | Some _ -> Path.raise_duplicate key
+                | None -> data))
+            ~remove:(fun ~outer_key:_ ~inner_key:key ~data:_ acc -> Map.remove acc key)
+        in
+        annotate Assoc_lifecycles unfolded;
+        Some unfolded
+    in
+    let input =
+      match resolved.input with
+      | No -> Input.static_none
+      | Yes_or_maybe -> Input.dynamic (input_map >>| Option.some)
+    in
+    Trampoline.return (Snapshot.create ~result:results_map ~input ~lifecycle, ())
+  in
+  let apply_action
+    ~inject
+    ~schedule_event
+    input
+    model
+    (Action.Assoc_on { io_key; model_key; action; io_id = _; io_compare = _ })
+    =
+    let input =
+      input |> Option.join |> Option.bind ~f:(fun input -> Map.find input io_key)
+    in
+    let specific_model =
+      match Map.find model model_key with
+      | None -> model_info.default
+      | Some (_prev_io_key, model) -> model
+    in
+    let new_model =
+      apply_action
+        ~inject:(wrap_assoc_on ~io_key ~model_key inject)
+        ~schedule_event
+        input
+        specific_model
+        action
+    in
+    if model_info.equal new_model model_info.default
+    then Map.remove model model_key
+    else Map.set model ~key:model_key ~data:(io_key, new_model)
+  in
+  let reset ~inject ~schedule_event model =
+    Map.filter_mapi model ~f:(fun ~key:model_key ~data:(io_key, model) ->
+      let new_model =
+        reset ~inject:(wrap_assoc_on ~io_key ~model_key inject) ~schedule_event model
+      in
+      if model_info.equal new_model model_info.default
+      then None
+      else Some (io_key, new_model))
+  in
+  Trampoline.return
+    (Computation.T
+       { model =
+           Meta.Model.map_on
+             model_comparator
+             io_comparator
+             model_key_id
+             io_key_id
+             model_cmp_id
+             model_info
+       ; input = Meta.Input.map io_key_id io_cmp_id input_info
+       ; action =
+           Action.Type_id.assoc_on ~io_key:io_key_id ~model_key:model_key_id ~action
+       ; apply_action
+       ; reset
+       ; run
+       ; may_contain
+       })
+;;

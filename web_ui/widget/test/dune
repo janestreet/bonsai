@@ -1,5 +1,0 @@
-(library
- (name mutable_state_tracker_test)
- (libraries core bonsai_web_ui_widget bonsai_test)
- (preprocess
-  (pps ppx_bonsai ppx_jane)))

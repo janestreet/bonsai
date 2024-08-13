@@ -4,12 +4,12 @@ open! Import
 module Var_from_parent : sig
   type t =
     | None
-        (** The common case, in which the parent node does not introduce any variables. *)
+    (** The common case, in which the parent node does not introduce any variables. *)
     | One of Type_equal.Id.Uid.t
-        (** The case in which the parent node introduces one new variable; most of
+    (** The case in which the parent node introduces one new variable; most of
         the time this is for [Subst] or [Subst_stateless] *)
     | Two of Type_equal.Id.Uid.t * Type_equal.Id.Uid.t
-        (** The case in which the parent node introduces two new variables; most of
+    (** The case in which the parent node introduces two new variables; most of
         the time this is for [Assoc]. *)
 end
 
@@ -42,21 +42,25 @@ end
     the current node (these correspond to post- and pre- order traversal). *)
 module For_value : sig
   type 'from_parent context =
-    { recurse : 'a. 'from_parent -> 'a Value.t -> 'a Value.t
+    { recurse : 'a. 'from_parent -> 'a Value.t -> 'a Value.t Trampoline.t
     ; var_from_parent : Var_from_parent.t
     ; parent_path : Node_path.t Lazy.t
     ; current_path : Node_path.t Lazy.t
     }
 
   type 'from_parent user_mapper =
-    { f : 'a. 'from_parent context -> 'from_parent -> 'a Value.t -> 'a Value.t }
+    { f :
+        'a. 'from_parent context -> 'from_parent -> 'a Value.t -> 'a Value.t Trampoline.t
+    }
 
   val id : 'from_parent user_mapper
 end
 
 module For_computation : sig
   type 'from_parent context =
-    { recurse : 'result. 'from_parent -> 'result Computation.t -> 'result Computation.t
+    { recurse :
+        'result.
+        'from_parent -> 'result Computation.t -> 'result Computation.t Trampoline.t
     ; var_from_parent : Var_from_parent.t
     ; parent_path : Node_path.t Lazy.t
     ; current_path : Node_path.t Lazy.t
@@ -68,7 +72,7 @@ module For_computation : sig
         'from_parent context
         -> 'from_parent
         -> 'result Computation.t
-        -> 'result Computation.t
+        -> 'result Computation.t Trampoline.t
     }
 
   val id : 'from_parent user_mapper

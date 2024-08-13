@@ -1,5 +1,25 @@
 open! Core
+open! Import
 
+(** A tracker for actions being applied during the main loop of a Bonsai app, to reduce
+    unnecessary stabilizations.
+
+    When a dynamic action (from a [state_machine1]) is applied, the incremental graph
+    needs to be stabilized to witness the most up-to-date value of its input. However, if
+    we can prove that the input is already up-to-date, we can skip the stabilization (i.e.
+    it's an unnecessary stabilization).
+
+    The tracker keeps track of what parts of the Bonsai graph have had actions applied
+    since the most recent stabilization and tells Bonsai to skip stabilization if there
+    is a dynamic action with an input that the tracker can prove is up-to-date.
+
+    This optimization is particularly helpful when setting forms for highly nested types,
+    which generally schedule lots of dynamic actions that are independent of one another.
+*)
+
+(** [t] contains a phantom type representing the action type of the top-level Bonsai
+   computation. It uses this phantom type to ensure the structure of the stabilization
+   tracker matches the structure of the actions being applied. *)
 type 'action t
 
 (** An empty [t]. Takes a unit parameter because the data structure is mutable. *)

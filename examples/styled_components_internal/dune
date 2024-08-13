@@ -1,6 +1,0 @@
-(executables
- (modes byte exe)
- (names main)
- (libraries async_js bonsai_web bonsai_web_ui_gallery)
- (preprocess
-  (pps ppx_jane ppx_bonsai ppx_css ppx_demo)))

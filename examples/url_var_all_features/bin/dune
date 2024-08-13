@@ -1,6 +1,0 @@
-(executables
- (modes byte exe)
- (names main)
- (libraries bonsai_web all_url_var_features_example bonsai_web_ui_url_var)
- (preprocess
-  (pps js_of_ocaml-ppx ppx_typed_fields ppx_jane ppx_css)))

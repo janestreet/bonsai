@@ -1,6 +1,0 @@
-(executables
- (modes byte exe)
- (names main)
- (libraries bonsai_web kado)
- (preprocess
-  (pps ppx_jane ppx_bonsai)))

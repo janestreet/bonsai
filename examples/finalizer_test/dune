@@ -1,7 +1,0 @@
-(executables
- (modes byte exe)
- (names main)
- (libraries core js_of_ocaml core_kernel.weak_pointer core_kernel.weak_array
-   core_kernel.weak_hashtbl)
- (preprocess
-  (pps js_of_ocaml-ppx ppx_string ppx_demo)))

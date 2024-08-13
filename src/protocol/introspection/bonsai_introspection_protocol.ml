@@ -16,10 +16,21 @@ module Rpc_id = struct
   end
 end
 
+module Source_code_position = struct
+  type t = Source_code_position.t =
+    { pos_fname : string
+    ; pos_lnum : int
+    ; pos_bol : int
+    ; pos_cnum : int
+    }
+  [@@deriving sexp, quickcheck, equal]
+end
+
 module Rpc_kind = struct
   module Interval = struct
     type t =
       | Poll_until_ok of { retry_interval : Time_ns.Span.t }
+      | Poll_until_condition_met of { every : Time_ns.Span.t }
       | Poll of { every : Time_ns.Span.t }
       | Dispatch
     [@@deriving sexp, equal, quickcheck]
@@ -118,6 +129,7 @@ module Event = struct
           ; query : Sexp.t Or_no_sexp_of_provided.t
                [@default No_sexp_of_provided] [@sexp_drop_default.equal]
           ; path : string
+          ; here : Source_code_position.t option [@sexp.option]
           } [@sexp.allow_extra_fields]
       | Finished of
           { id : Rpc_id.t
@@ -152,6 +164,7 @@ module Rpc_state = struct
     ; query : Sexp.t Or_no_sexp_of_provided.t
     ; status : Rpc_status.t
     ; path : string
+    ; here : Source_code_position.t option [@sexp.option]
     }
   [@@deriving sexp, equal]
 end
@@ -185,8 +198,10 @@ module State = struct
 
   let apply_event (state : t) (event : Event.t) : t =
     match event with
-    | Started { id; rpc_kind; start_time; query; path } ->
-      let rpc_state = { Rpc_state.status = Running; rpc_kind; start_time; query; path } in
+    | Started { id; rpc_kind; start_time; query; path; here } ->
+      let rpc_state =
+        { Rpc_state.status = Running; rpc_kind; start_time; query; path; here }
+      in
       (match Map.add state ~key:id ~data:rpc_state with
        | `Ok state -> state
        | `Duplicate ->
@@ -213,10 +228,10 @@ module State = struct
            ~rpc_id:id
            ~original:state
            ~on_is_running:(fun () ->
-           Map.set
-             state
-             ~key:id
-             ~data:{ rpc_state with status = Finished { duration; response } }))
+             Map.set
+               state
+               ~key:id
+               ~data:{ rpc_state with status = Finished { duration; response } }))
     | Aborted { id; duration } ->
       (match Map.find state id with
        | None ->
@@ -233,8 +248,41 @@ module State = struct
            ~rpc_id:id
            ~original:state
            ~on_is_running:(fun () ->
-           Map.set state ~key:id ~data:{ rpc_state with status = Aborted { duration } }))
+             Map.set state ~key:id ~data:{ rpc_state with status = Aborted { duration } }))
   ;;
+end
+
+module For_module_startup_timings = struct
+  module Duration = struct
+    type t = Int63.t [@@deriving sexp]
+  end
+
+  module Gc_events = struct
+    type t = Ppx_module_timer_runtime.For_introspection.Gc_events.t =
+      { minor_collections : int
+      ; major_collections : int
+      ; compactions : int
+      }
+    [@@deriving sexp]
+  end
+
+  module Timing_event = struct
+    type t = Ppx_module_timer_runtime.For_introspection.Timing_event.t =
+      { description : string
+      ; runtime : Duration.t
+      ; gc_events : Gc_events.t
+      ; nested_timing_events : t list
+      }
+    [@@deriving sexp]
+
+    module Stable = struct
+      type event = t [@@deriving sexp]
+      type t = V1 of event [@@deriving sexp]
+
+      let of_latest event = V1 event
+      let to_latest (V1 event) = event
+    end
+  end
 end
 
 module For_testing = struct

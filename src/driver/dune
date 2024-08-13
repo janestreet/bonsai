@@ -1,6 +1,6 @@
 (library
  (name bonsai_driver)
  (public_name bonsai.driver)
- (libraries bonsai core incr_map)
+ (libraries bonsai core incr_map virtual_dom.ui_effect incr_dom.ui_incr)
  (preprocess
   (pps ppx_jane)))

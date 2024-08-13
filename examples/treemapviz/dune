@@ -1,7 +1,0 @@
-(executables
- (modes byte exe)
- (names main)
- (libraries bonsai_experimental_treemapviz bonsai_web feather_icon
-   bonsai_web_ui_element_size_hooks)
- (preprocess
-  (pps ppx_bonsai ppx_css ppx_jane)))

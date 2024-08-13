@@ -10,14 +10,16 @@ end
 
 module For_value = struct
   type 'from_parent context =
-    { recurse : 'a. 'from_parent -> 'a Value.t -> 'a Value.t
+    { recurse : 'a. 'from_parent -> 'a Value.t -> 'a Value.t Trampoline.t
     ; var_from_parent : Var_from_parent.t
     ; parent_path : Node_path.t Lazy.t
     ; current_path : Node_path.t Lazy.t
     }
 
   type 'from_parent user_mapper =
-    { f : 'a. 'from_parent context -> 'from_parent -> 'a Value.t -> 'a Value.t }
+    { f :
+        'a. 'from_parent context -> 'from_parent -> 'a Value.t -> 'a Value.t Trampoline.t
+    }
 
   let rec descend
     : type a.
@@ -26,7 +28,7 @@ module For_value = struct
       -> append_to:Node_path.builder
       -> 'from_parent
       -> a Value.t
-      -> a Value.t
+      -> a Value.t Trampoline.t
     =
     fun ~f ~var_from_parent ~append_to parent { value; here; id } ->
     let current_path = Node_path.descend append_to in
@@ -42,52 +44,64 @@ module For_value = struct
         parent
         v
     in
-    let value =
+    let open Trampoline.Let_syntax in
+    let%bind value =
       match value with
-      | Constant _ -> value
-      | Exception _ -> value
-      | Incr _ -> value
-      | Named _ -> value
-      | Both (a, b) -> Both (map 1 a, map 2 b)
-      | Cutoff t -> Cutoff { t with t = map 1 t.t }
-      | Map t -> Map { f = t.f; t = map 1 t.t }
-      | Map2 t -> Map2 { f = t.f; t1 = map 1 t.t1; t2 = map 2 t.t2 }
-      | Map3 t -> Map3 { f = t.f; t1 = map 1 t.t1; t2 = map 2 t.t2; t3 = map 3 t.t3 }
+      | Constant _ -> return value
+      | Exception _ -> return value
+      | Incr _ -> return value
+      | Named _ -> return value
+      | Both (a, b) ->
+        let%bind a = map 1 a in
+        let%bind b = map 2 b in
+        return (Value.Both (a, b))
+      | Cutoff { equal; added_by_let_syntax; t } ->
+        let%bind t = map 1 t in
+        return (Value.Cutoff { t; equal; added_by_let_syntax })
+      | Map t ->
+        let%bind inner = map 1 t.t in
+        return (Value.Map { f = t.f; t = inner })
+      | Map2 t ->
+        let%bind t1 = map 1 t.t1 in
+        let%bind t2 = map 2 t.t2 in
+        return (Value.Map2 { f = t.f; t1; t2 })
+      | Map3 t ->
+        let%bind t1 = map 1 t.t1 in
+        let%bind t2 = map 2 t.t2 in
+        let%bind t3 = map 3 t.t3 in
+        return (Value.Map3 { f = t.f; t1; t2; t3 })
       | Map4 t ->
-        Map4
-          { f = t.f; t1 = map 1 t.t1; t2 = map 2 t.t2; t3 = map 3 t.t3; t4 = map 4 t.t4 }
+        let%bind t1 = map 1 t.t1 in
+        let%bind t2 = map 2 t.t2 in
+        let%bind t3 = map 3 t.t3 in
+        let%bind t4 = map 4 t.t4 in
+        return (Value.Map4 { f = t.f; t1; t2; t3; t4 })
       | Map5 t ->
-        Map5
-          { f = t.f
-          ; t1 = map 1 t.t1
-          ; t2 = map 2 t.t2
-          ; t3 = map 3 t.t3
-          ; t4 = map 4 t.t4
-          ; t5 = map 5 t.t5
-          }
+        let%bind t1 = map 1 t.t1 in
+        let%bind t2 = map 2 t.t2 in
+        let%bind t3 = map 3 t.t3 in
+        let%bind t4 = map 4 t.t4 in
+        let%bind t5 = map 5 t.t5 in
+        return (Value.Map5 { f = t.f; t1; t2; t3; t4; t5 })
       | Map6 t ->
-        Map6
-          { f = t.f
-          ; t1 = map 1 t.t1
-          ; t2 = map 2 t.t2
-          ; t3 = map 3 t.t3
-          ; t4 = map 4 t.t4
-          ; t5 = map 5 t.t5
-          ; t6 = map 6 t.t6
-          }
+        let%bind t1 = map 1 t.t1 in
+        let%bind t2 = map 2 t.t2 in
+        let%bind t3 = map 3 t.t3 in
+        let%bind t4 = map 4 t.t4 in
+        let%bind t5 = map 5 t.t5 in
+        let%bind t6 = map 6 t.t6 in
+        return (Value.Map6 { f = t.f; t1; t2; t3; t4; t5; t6 })
       | Map7 t ->
-        Map7
-          { f = t.f
-          ; t1 = map 1 t.t1
-          ; t2 = map 2 t.t2
-          ; t3 = map 3 t.t3
-          ; t4 = map 4 t.t4
-          ; t5 = map 5 t.t5
-          ; t6 = map 6 t.t6
-          ; t7 = map 7 t.t7
-          }
+        let%bind t1 = map 1 t.t1 in
+        let%bind t2 = map 2 t.t2 in
+        let%bind t3 = map 3 t.t3 in
+        let%bind t4 = map 4 t.t4 in
+        let%bind t5 = map 5 t.t5 in
+        let%bind t6 = map 6 t.t6 in
+        let%bind t7 = map 7 t.t7 in
+        return (Value.Map7 { f = t.f; t1; t2; t3; t4; t5; t6; t7 })
     in
-    { value; here; id }
+    return { Value.value; here; id }
   ;;
 
   let map ~f ~var_from_parent ~parent_path ~append_to parent v =
@@ -107,7 +121,9 @@ end
 
 module For_computation = struct
   type 'from_parent context =
-    { recurse : 'result. 'from_parent -> 'result Computation.t -> 'result Computation.t
+    { recurse :
+        'result.
+        'from_parent -> 'result Computation.t -> 'result Computation.t Trampoline.t
     ; var_from_parent : Var_from_parent.t
     ; parent_path : Node_path.t Lazy.t
     ; current_path : Node_path.t Lazy.t
@@ -119,7 +135,7 @@ module For_computation = struct
         'from_parent context
         -> 'from_parent
         -> 'result Computation.t
-        -> 'result Computation.t
+        -> 'result Computation.t Trampoline.t
     }
 
   let rec descend
@@ -129,7 +145,7 @@ module For_computation = struct
       -> append_to:Node_path.builder
       -> 'from_parent
       -> result Computation.t
-      -> result Computation.t
+      -> result Computation.t Trampoline.t
     =
     fun ~f ~for_value ~append_to parent (computation : _ Computation.t) ->
     let current_path = Node_path.descend append_to in
@@ -163,68 +179,94 @@ module For_computation = struct
         parent
         v
     in
+    let open Trampoline.Let_syntax in
     match computation with
-    | Return value -> Return (map_value value)
-    | Leaf1 t -> Leaf1 { t with input = map_value t.input }
-    | Leaf0 _ -> computation
-    | Leaf_incr t -> Leaf_incr { t with input = map_value t.input }
+    | Return { value; here } ->
+      let%bind value = map_value value in
+      return (Computation.Return { value; here })
+    | Leaf1 t ->
+      let%bind input = map_value t.input in
+      return (Computation.Leaf1 { t with input })
+    | Leaf0 _ -> return computation
+    | Leaf_incr t ->
+      let%bind input = map_value t.input in
+      return (Computation.Leaf_incr { t with input })
     | Sub t ->
-      let from = map ~var_from_parent:(One (Type_equal.Id.uid t.via)) ~choice:1 t.from in
-      let into = map ~choice:2 t.into in
-      Sub { t with from; into }
+      let%bind from =
+        map ~var_from_parent:(One (Type_equal.Id.uid t.via)) ~choice:1 t.from
+      in
+      let%bind into = map ~choice:2 t.into in
+      return (Computation.Sub { t with from; into })
     | Store t ->
-      let value =
+      let%bind value =
         map_value ~var_from_parent:(One (Type_equal.Id.uid t.id)) ~choice:1 t.value
       in
-      let inner = map ~choice:2 t.inner in
-      Store { t with value; inner }
-    | Fetch _ -> computation
+      let%bind inner = map ~choice:2 t.inner in
+      return (Computation.Store { t with value; inner })
+    | Fetch _ -> return computation
     | Assoc t ->
-      Assoc
-        { t with
-          map = map_value ~choice:1 t.map
-        ; by =
-            map
-              ~var_from_parent:
-                (Two (Type_equal.Id.uid t.key_id, Type_equal.Id.uid t.data_id))
-              ~choice:2
-              t.by
-        }
+      let%bind map' = map_value ~choice:1 t.map in
+      let%bind by =
+        map
+          ~var_from_parent:(Two (Type_equal.Id.uid t.key_id, Type_equal.Id.uid t.data_id))
+          ~choice:2
+          t.by
+      in
+      return (Computation.Assoc { t with map = map'; by })
     | Assoc_on t ->
-      Assoc_on
-        { t with
-          map = map_value ~choice:1 t.map
-        ; by =
-            map
-              ~var_from_parent:
-                (Two (Type_equal.Id.uid t.io_key_id, Type_equal.Id.uid t.data_id))
-              ~choice:2
-              t.by
-        }
-    | Assoc_simpl t -> Assoc_simpl { t with map = map_value t.map }
+      let%bind map' = map_value ~choice:1 t.map in
+      let%bind by =
+        map
+          ~var_from_parent:
+            (Two (Type_equal.Id.uid t.io_key_id, Type_equal.Id.uid t.data_id))
+          ~choice:2
+          t.by
+      in
+      return (Computation.Assoc_on { t with map = map'; by })
+    | Assoc_simpl t ->
+      let%bind map = map_value t.map in
+      return (Computation.Assoc_simpl { t with map })
     | Switch { match_; arms; here } ->
       let index = ref 1 in
-      let match_ = map_value ~choice:!index match_ in
-      let arms =
-        Map.map arms ~f:(fun c ->
-          incr index;
-          map ~choice:!index c)
+      let%bind match_ = map_value ~choice:!index match_ in
+      let%bind arms =
+        Trampoline.all_map
+          (Map.map arms ~f:(fun c ->
+             incr index;
+             map ~choice:!index c))
       in
-      Switch { match_; arms; here }
-    | Lazy t -> Lazy (Lazy.map t ~f:map)
+      return (Computation.Switch { match_; arms; here })
+    | Fix_define { result; initial_input; fix_id; input_id; here } ->
+      let%bind initial_input = map_value ~choice:1 initial_input in
+      let%bind result = map ~choice:1 result in
+      return (Computation.Fix_define { result; initial_input; fix_id; input_id; here })
+    | Fix_recurse { fix_id; input_id; input; here } ->
+      let%bind input = map_value ~choice:1 input in
+      return (Computation.Fix_recurse { fix_id; input_id; input; here })
+    | Lazy { t; here } ->
+      let inner =
+        Lazy.map t ~f:(fun t ->
+          let t = map t in
+          Trampoline.run t)
+      in
+      return (Computation.Lazy { t = inner; here })
     | Wrap ({ model_id; inject_id; inner; _ } as t) ->
-      Wrap
-        { t with
-          inner =
-            map
-              ~var_from_parent:
-                (Two (Type_equal.Id.uid model_id, Type_equal.Id.uid inject_id))
-              inner
-        }
-    | With_model_resetter { inner; reset_id } ->
-      With_model_resetter { inner = map inner; reset_id }
-    | Path -> computation
-    | Lifecycle t -> Lifecycle (map_value t)
+      let%bind inner =
+        map
+          ~var_from_parent:(Two (Type_equal.Id.uid model_id, Type_equal.Id.uid inject_id))
+          inner
+      in
+      return (Computation.Wrap { t with inner })
+    | With_model_resetter { inner; reset_id; here } ->
+      let%bind inner = map inner in
+      return (Computation.With_model_resetter { inner; reset_id; here })
+    | Path _ -> return computation
+    | Lifecycle { lifecycle = t; here } ->
+      let%bind inner = map_value t in
+      return (Computation.Lifecycle { lifecycle = inner; here })
+    | Monitor_free_variables { inner; free_vars; here } ->
+      let%bind inner = map inner in
+      return (Computation.Monitor_free_variables { inner; free_vars; here })
   ;;
 
   let id =
@@ -238,14 +280,15 @@ let map ~computation_mapper ~value_mapper ~init computation =
   let parent_path = Node_path.empty in
   let append_to = Node_path.empty in
   let open For_computation in
-  (computation_mapper : _ user_mapper).f
-    { recurse =
-        (fun parent c ->
-          descend ~f:computation_mapper ~for_value:value_mapper ~append_to parent c)
-    ; var_from_parent = None
-    ; parent_path = lazy (Node_path.finalize parent_path)
-    ; current_path = lazy (Node_path.finalize current_path)
-    }
-    init
-    computation
+  Trampoline.run
+    ((computation_mapper : _ user_mapper).f
+       { recurse =
+           (fun parent c ->
+             descend ~f:computation_mapper ~for_value:value_mapper ~append_to parent c)
+       ; var_from_parent = None
+       ; parent_path = lazy (Node_path.finalize parent_path)
+       ; current_path = lazy (Node_path.finalize current_path)
+       }
+       init
+       computation)
 ;;

@@ -2,12 +2,15 @@ open! Core
 open! Import
 open Computation
 
-let read x = Return x
+let read ?(here = Stdlib.Lexing.dummy_pos) value = Return { value; here }
 
-let sub (type via) ?here (from : via Computation.t) ~f =
+let monitor_free_variables ~here inner =
+  Monitor_free_variables { here; inner; free_vars = Type_id_set.empty }
+;;
+
+let sub (type via) ?(here = Stdlib.Lexing.dummy_pos) (from : via Computation.t) ~f =
   match from with
-  | Return { here = there; value = Named _ as named; id } ->
-    let here = Option.first_some here there in
+  | Return { value = { here = _; value = Named _ as named; id }; here } ->
     f { Value.here; value = named; id }
   | _ ->
     let via : via Type_equal.Id.t =
@@ -15,7 +18,7 @@ let sub (type via) ?here (from : via Computation.t) ~f =
         ~name:(Source_code_position.to_string [%here])
         [%sexp_of: opaque]
     in
-    let into = f (Value.named (Sub here) via) in
+    let into = f (Value.named ~here (Sub here) via) in
     Sub { from; via; into; here }
 ;;
 
@@ -24,7 +27,7 @@ let switch ~here ~match_ ~branches ~with_ =
     List.init branches ~f:(fun key ->
       let computation =
         try with_ key with
-        | exn -> read (Value.return_exn exn)
+        | exn -> read ~here (Value.return_exn exn)
       in
       key, computation)
     |> Int.Map.of_alist_exn
@@ -33,15 +36,23 @@ let switch ~here ~match_ ~branches ~with_ =
 ;;
 
 module Dynamic_scope = struct
-  let fetch ~id ~default ~for_some = Fetch { id; default; for_some }
-  let store ~id ~value ~inner = Store { id; value; inner }
+  let fetch ?(here = Stdlib.Lexing.dummy_pos) ~id ~default ~for_some () =
+    Fetch { id; default; for_some; here }
+  ;;
+
+  let store ?(here = Stdlib.Lexing.dummy_pos) ~id ~value ~inner () =
+    Store { id; value; inner; here }
+  ;;
 end
 
 module Edge = struct
-  let lifecycle t = Lifecycle t
+  let lifecycle ?(here = Stdlib.Lexing.dummy_pos) lifecycle =
+    Lifecycle { lifecycle; here }
+  ;;
 end
 
 let state_machine1_safe
+  ~here
   ?(sexp_of_action = sexp_of_opaque)
   ~sexp_of_model
   ?reset
@@ -50,16 +61,17 @@ let state_machine1_safe
   ~apply_action
   input
   =
-  let name = Source_code_position.to_string [%here] in
+  let name = Source_code_position.to_string here in
   let reset =
     match reset with
-    | None -> fun ~inject:_ ~schedule_event:_ _ -> default_model
+    | None -> fun ~inject:_ ~schedule_event:_ ~time_source:_ _ -> default_model
     | Some reset ->
-      fun ~inject ~schedule_event ->
-        reset (Apply_action_context.create ~inject ~schedule_event)
+      fun ~inject ~schedule_event ~time_source ->
+        reset (Apply_action_context.Private.create ~inject ~schedule_event ~time_source)
   in
-  let apply_action ~inject ~schedule_event =
-    apply_action (Apply_action_context.create ~inject ~schedule_event)
+  let apply_action ~inject ~schedule_event ~time_source =
+    apply_action
+      (Apply_action_context.Private.create ~inject ~schedule_event ~time_source)
   in
   Leaf1
     { model = Meta.Model.of_module ~sexp_of_model ~equal ~name ~default:default_model
@@ -68,6 +80,7 @@ let state_machine1_safe
     ; apply_action
     ; reset
     ; input
+    ; here
     }
 ;;
 
@@ -84,6 +97,7 @@ module Computation_status = struct
 end
 
 let state_machine1
+  ?(here = Stdlib.Lexing.dummy_pos)
   ?sexp_of_action
   ?reset
   ?sexp_of_model
@@ -97,6 +111,7 @@ let state_machine1
     apply_action context input model action
   in
   state_machine1_safe
+    ~here
     ?sexp_of_action
     ~sexp_of_model:(Option.value sexp_of_model ~default:sexp_of_opaque)
     ?reset
@@ -107,6 +122,7 @@ let state_machine1
 ;;
 
 let state_machine0
+  ?(here = Stdlib.Lexing.dummy_pos)
   ?reset
   ?sexp_of_model
   ?(sexp_of_action = sexp_of_opaque)
@@ -115,16 +131,17 @@ let state_machine0
   ~apply_action
   ()
   =
-  let name = Source_code_position.to_string [%here] in
-  let apply_action ~inject ~schedule_event =
-    apply_action (Apply_action_context.create ~inject ~schedule_event)
+  let name = Source_code_position.to_string here in
+  let apply_action ~inject ~schedule_event ~time_source =
+    apply_action
+      (Apply_action_context.Private.create ~inject ~schedule_event ~time_source)
   in
   let reset =
     match reset with
-    | None -> fun ~inject:_ ~schedule_event:_ _ -> default_model
+    | None -> fun ~inject:_ ~schedule_event:_ ~time_source:_ _ -> default_model
     | Some reset ->
-      fun ~inject ~schedule_event ->
-        reset (Apply_action_context.create ~inject ~schedule_event)
+      fun ~inject ~schedule_event ~time_source ->
+        reset (Apply_action_context.Private.create ~inject ~schedule_event ~time_source)
   in
   Leaf0
     { model =
@@ -136,15 +153,22 @@ let state_machine0
     ; static_action = Type_equal.Id.create ~name sexp_of_action
     ; apply_action
     ; reset
+    ; here
     }
 ;;
 
 module Proc_incr = struct
-  let value_cutoff t ~equal = read (Value.cutoff ~added_by_let_syntax:false ~equal t)
-  let compute_with_clock t ~f = Computation.Leaf_incr { input = t; compute = f }
+  let value_cutoff ?(here = Stdlib.Lexing.dummy_pos) t ~equal =
+    read ~here (Value.cutoff ~here ~added_by_let_syntax:false ~equal t)
+  ;;
+
+  let compute_with_clock ?(here = Stdlib.Lexing.dummy_pos) t ~f =
+    Computation.Leaf_incr { input = t; compute = f; here }
+  ;;
 
   let of_module
     (type input model result)
+    ?(here = Stdlib.Lexing.dummy_pos)
     (module M : Component_s_incr
       with type Input.t = input
        and type Model.t = model
@@ -156,13 +180,14 @@ module Proc_incr = struct
     : result Computation.t
     =
     sub
+      ~here
       (state_machine1
          ~sexp_of_action:M.Action.sexp_of_t
          ?sexp_of_model
          ~equal
          ~default_model
          ~apply_action:(fun context input model action ->
-           let%tydi { inject; schedule_event } =
+           let { Apply_action_context.Private.inject; schedule_event; time_source = _ } =
              Apply_action_context.Private.reveal context
            in
            match input with
@@ -186,6 +211,7 @@ end
 
 let assoc
   (type k v cmp)
+  ?(here = Stdlib.Lexing.dummy_pos)
   (comparator : (k, cmp) comparator)
   (map : (k, v, cmp) Map.t Value.t)
   ~f
@@ -198,14 +224,15 @@ let assoc
   let data_id : v Type_equal.Id.t =
     Type_equal.Id.create ~name:"data id" [%sexp_of: opaque]
   in
-  let key_var = Value.named Assoc_like_key key_id in
-  let data_var = Value.named Assoc_like_data data_id in
+  let key_var = Value.named ~here Assoc_like_key key_id in
+  let data_var = Value.named ~here Assoc_like_data data_id in
   let by = f key_var data_var in
-  Assoc { map; key_comparator = comparator; key_id; cmp_id; data_id; by }
+  Assoc { map; key_comparator = comparator; key_id; cmp_id; data_id; by; here }
 ;;
 
 let assoc_on
   (type model_k io_k model_cmp io_cmp v)
+  ?(here = Stdlib.Lexing.dummy_pos)
   (io_comparator : (io_k, io_cmp) comparator)
   (model_comparator : (model_k, model_cmp) comparator)
   (map : (io_k, v, io_cmp) Map.t Value.t)
@@ -229,8 +256,8 @@ let assoc_on
   let data_id : v Type_equal.Id.t =
     Type_equal.Id.create ~name:"data id" [%sexp_of: opaque]
   in
-  let key_var = Value.named Assoc_like_key io_key_id in
-  let data_var = Value.named Assoc_like_data data_id in
+  let key_var = Value.named ~here Assoc_like_key io_key_id in
+  let data_var = Value.named ~here Assoc_like_data data_id in
   let by = f key_var data_var in
   Assoc_on
     { map
@@ -243,13 +270,34 @@ let assoc_on
     ; model_cmp_id
     ; by
     ; get_model_key
+    ; here
     }
 ;;
 
-let lazy_ t = Lazy t
+let lazy_ ?(here = Stdlib.Lexing.dummy_pos) t = Lazy { t; here }
+
+let fix
+  (type input result)
+  ?(here = Stdlib.Lexing.dummy_pos)
+  (input : input Value.t)
+  ~(f :
+      recurse:(input Value.t -> result Computation.t)
+      -> input Value.t
+      -> result Computation.t)
+  =
+  let fix_id : result Fix_id.t = Fix_id.create () in
+  let input_id : input Type_equal.Id.t =
+    Type_equal.Id.create ~name:"fix input" sexp_of_opaque
+  in
+  let arg_value = Value.named ~here Fix_recurse input_id in
+  let fix_recurse input = Fix_recurse { input; input_id; fix_id; here } in
+  let result = f ~recurse:fix_recurse arg_value in
+  Fix_define { fix_id; initial_input = input; input_id; result; here }
+;;
 
 let wrap
   (type model action)
+  ?(here = Stdlib.Lexing.dummy_pos)
   ?reset
   ?sexp_of_model
   ?equal
@@ -263,10 +311,10 @@ let wrap
   in
   let reset =
     match reset with
-    | None -> fun ~inject:_ ~schedule_event:_ _ -> default_model
+    | None -> fun ~inject:_ ~schedule_event:_ ~time_source:_ _ -> default_model
     | Some reset ->
-      fun ~inject ~schedule_event ->
-        reset (Apply_action_context.create ~inject ~schedule_event)
+      fun ~inject ~schedule_event ~time_source ->
+        reset (Apply_action_context.Private.create ~inject ~schedule_event ~time_source)
   in
   let action_id : action Type_equal.Id.t =
     Type_equal.Id.create ~name:"action id" [%sexp_of: opaque]
@@ -275,11 +323,11 @@ let wrap
   let inject_id : (action -> unit Effect.t) Type_equal.Id.t =
     Type_equal.Id.create ~name:"inject id" [%sexp_of: opaque]
   in
-  let apply_action ~inject ~schedule_event result model action =
+  let apply_action ~inject ~schedule_event ~time_source result model action =
     match result with
     | Some result ->
       apply_action
-        (Apply_action_context.create ~inject ~schedule_event)
+        (Apply_action_context.Private.create ~inject ~schedule_event ~time_source)
         result
         model
         action
@@ -289,11 +337,12 @@ let wrap
         [%message
           "An action sent to a [wrap] has been dropped because its input was not \
            present. This happens when the [wrap] is inactive when it receives a message."
-            (action : Sexp.t)];
+            (action : Sexp.t)
+            (here : Source_code_position.t)];
       model
   in
-  let model_var = Value.named Wrap_model model_id in
-  let inject_var = Value.named Wrap_inject inject_id in
+  let model_var = Value.named ~here Wrap_model model_id in
+  let inject_var = Value.named ~here Wrap_inject inject_id in
   let inner = f model_var inject_var in
   let wrapper_model =
     Meta.Model.of_module
@@ -311,13 +360,14 @@ let wrap
     ; inner
     ; dynamic_apply_action = apply_action
     ; reset
+    ; here
     }
 ;;
 
-let with_model_resetter f =
+let with_model_resetter ?(here = Stdlib.Lexing.dummy_pos) f =
   let reset_id = Type_equal.Id.create ~name:"reset-model" [%sexp_of: opaque] in
-  let inner = f ~reset:(Value.named Model_resetter reset_id) in
-  With_model_resetter { reset_id; inner }
+  let inner = f ~reset:(Value.named ~here Model_resetter reset_id) in
+  With_model_resetter { reset_id; inner; here }
 ;;
 
-let path = Path
+let path ?(here = Stdlib.Lexing.dummy_pos) () = Path { here }

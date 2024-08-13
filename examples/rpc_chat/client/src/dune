@@ -1,6 +1,0 @@
-(library
- (name bonsai_examples_rpc_chat_client)
- (libraries async_kernel core bonsai_web bonsai_chat_common
-   virtual_dom.input_widgets)
- (preprocess
-  (pps js_of_ocaml-ppx ppx_css ppx_jane ppx_bonsai)))
