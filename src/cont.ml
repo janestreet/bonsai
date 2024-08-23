@@ -18,37 +18,41 @@ module Cont_primitives : sig
   type graph
 
   (* Main primitives; see above for explanation. *)
-  val perform : here:Source_code_position.t -> graph -> 'a Computation.t -> 'a Value.t
+  val perform
+    :  here:Source_code_position.t
+    -> local_ graph
+    -> 'a Computation.t
+    -> 'a Value.t
 
   val handle
-    :  ?here:Stdlib.Lexing.position
-    -> f:(graph -> 'a Value.t)
-    -> graph
+    :  here:[%call_pos]
+    -> f:(local_ graph -> 'a Value.t)
+    -> local_ graph
     -> 'a Computation.t
 
   (* Special-use primitives for getting the global graph, and creating it in the top level. *)
   val isolated
-    :  graph
+    :  local_ graph
     -> here:Source_code_position.t
-    -> f:(unit -> 'a Value.t)
+    -> f:local_ (unit -> 'a Value.t)
     -> 'a Computation.t
 
   val top_level_handle
-    :  ?here:Stdlib.Lexing.position
-    -> (graph -> 'a Value.t)
+    :  here:[%call_pos]
+    -> (local_ graph -> 'a Value.t)
     -> 'a Computation.t
 
   val handle_for_lazy
-    :  ?here:Stdlib.Lexing.position
-    -> (graph -> 'a Value.t)
+    :  here:[%call_pos]
+    -> (local_ graph -> 'a Value.t)
     -> 'a Computation.t
 
-  val with_global_graph : f:(graph -> 'a) -> no_graph:(unit -> 'a) -> 'a
+  val with_global_graph : f:local_ (local_ graph -> 'a) -> no_graph:(unit -> 'a) -> 'a
 end = struct
   type graph = { mutable f : 'a. 'a Computation.t -> 'a Computation.t }
 
   let perform
-    : type a. here:Source_code_position.t -> graph -> a Computation.t -> a Value.t
+    : type a. here:Source_code_position.t -> local_ graph -> a Computation.t -> a Value.t
     =
     fun ~here graph -> function
     | Return
@@ -84,7 +88,7 @@ end = struct
      mutate the same ['graph'], so that [the_one_and_only] is kept up to date.
      [isolated] also has an exception handler that returns any exceptions inside a Value.t.
      This restricts the return type of [isolated] to ['a Computation.t]. *)
-  let isolated graph ~here ~f =
+  let isolated graph ~here ~(local_ f) =
     let backup_f = graph.f in
     graph.f <- Fn.id;
     try
@@ -111,7 +115,7 @@ end = struct
 
   (* A small wrapper around isolated.  All it does is ensure that you're using
      the same graph that you passed in. *)
-  let handle ?(here = Stdlib.Lexing.dummy_pos) ~f graph =
+  let handle ~(here : [%call_pos]) ~f (local_ graph) =
     isolated graph ~here ~f:(fun () -> f graph) [@nontail]
   ;;
 
@@ -139,13 +143,13 @@ end = struct
       ~finally:(fun () -> decr num_nested_top_level_handles) [@nontail]
   ;;
 
-  let handle_for_lazy ?(here = Stdlib.Lexing.dummy_pos) f =
+  let handle_for_lazy ~(here : [%call_pos]) f =
     handle_with_global_graph ~here `Inside_lazy f
   ;;
 
   (* Meant to be called at bonsai entrypoints only, [top_level_handle] uses the
      singleton graph and sets [nested_top_level_handles] acordingly. *)
-  let top_level_handle ?(here = Stdlib.Lexing.dummy_pos) f =
+  let top_level_handle ~(here : [%call_pos]) f =
     handle_with_global_graph ~here `Not_inside_lazy f
   ;;
 
@@ -163,42 +167,42 @@ open Cont_primitives
 
 let return = Value.return
 
-let arr1 ?(here = Stdlib.Lexing.dummy_pos) graph a ~f =
+let arr1 ~(here : [%call_pos]) graph a ~f =
   perform ~here graph (Proc.read ~here (Proc.Value.map ~here a ~f))
 ;;
 
-let arr2 ?(here = Stdlib.Lexing.dummy_pos) graph a b ~f =
+let arr2 ~(here : [%call_pos]) graph a b ~f =
   perform ~here graph (Proc.read ~here (Proc.Value.map2 ~here a b ~f))
 ;;
 
-let arr3 ?(here = Stdlib.Lexing.dummy_pos) graph a b c ~f =
+let arr3 ~(here : [%call_pos]) graph a b c ~f =
   perform ~here graph (Proc.read ~here (Proc.Value.map3 ~here a b c ~f))
 ;;
 
-let arr4 ?(here = Stdlib.Lexing.dummy_pos) graph a b c d ~f =
+let arr4 ~(here : [%call_pos]) graph a b c d ~f =
   perform ~here graph (Proc.read ~here (Proc.Value.map4 ~here a b c d ~f))
 ;;
 
-let arr5 ?(here = Stdlib.Lexing.dummy_pos) graph a b c d e ~f =
+let arr5 ~(here : [%call_pos]) graph a b c d e ~f =
   perform ~here graph (Proc.read ~here (Proc.Value.map5 ~here a b c d e ~f))
 ;;
 
-let arr6 ?(here = Stdlib.Lexing.dummy_pos) graph a b c d e g ~f =
+let arr6 ~(here : [%call_pos]) graph a b c d e g ~f =
   perform ~here graph (Proc.read ~here (Proc.Value.map6 ~here a b c d e g ~f))
 ;;
 
-let arr7 ?(here = Stdlib.Lexing.dummy_pos) graph a b c d e g h ~f =
+let arr7 ~(here : [%call_pos]) graph a b c d e g h ~f =
   perform ~here graph (Proc.read ~here (Proc.Value.map7 ~here a b c d e g h ~f))
 ;;
 
 (* If we aren't inside of a [top_level_handle], then fall back to using [Value.map] *)
-let map ?(here = Stdlib.Lexing.dummy_pos) a ~f =
+let map ~(here : [%call_pos]) a ~f =
   with_global_graph
     ~f:(fun graph -> arr1 ~here graph a ~f)
     ~no_graph:(fun () -> Value.map ~here a ~f)
 ;;
 
-let map2 ?(here = Stdlib.Lexing.dummy_pos) a b ~f =
+let map2 ~(here : [%call_pos]) a b ~f =
   with_global_graph
     ~f:(fun graph -> arr2 ~here graph a b ~f)
     ~no_graph:(fun () -> Value.map2 ~here a b ~f)
@@ -212,43 +216,43 @@ include Applicative.Make_using_map2 (struct
     let map = `Custom map
   end)
 
-let map3 ?(here = Stdlib.Lexing.dummy_pos) a b c ~f =
+let map3 ~(here : [%call_pos]) a b c ~f =
   with_global_graph
     ~f:(fun graph -> arr3 graph ~here a b c ~f)
     ~no_graph:(fun () -> Value.map3 ~here a b c ~f)
 ;;
 
-let map4 ?(here = Stdlib.Lexing.dummy_pos) a b c d ~f =
+let map4 ~(here : [%call_pos]) a b c d ~f =
   with_global_graph
     ~f:(fun graph -> arr4 ~here graph a b c d ~f)
     ~no_graph:(fun () -> Value.map4 ~here a b c d ~f)
 ;;
 
-let map5 ?(here = Stdlib.Lexing.dummy_pos) a b c d e ~f =
+let map5 ~(here : [%call_pos]) a b c d e ~f =
   with_global_graph
     ~f:(fun graph -> arr5 ~here graph a b c d e ~f)
     ~no_graph:(fun () -> Value.map5 ~here a b c d e ~f)
 ;;
 
-let map6 ?(here = Stdlib.Lexing.dummy_pos) a b c d e g ~f =
+let map6 ~(here : [%call_pos]) a b c d e g ~f =
   with_global_graph
     ~f:(fun graph -> arr6 ~here graph a b c d e g ~f)
     ~no_graph:(fun () -> Value.map6 ~here a b c d e g ~f)
 ;;
 
-let map7 ?(here = Stdlib.Lexing.dummy_pos) a b c d e g h ~f =
+let map7 ~(here : [%call_pos]) a b c d e g h ~f =
   with_global_graph
     ~f:(fun graph -> arr7 ~here graph a b c d e g h ~f)
     ~no_graph:(fun () -> Value.map7 ~here a b c d e g h ~f)
 ;;
 
-let both ?(here = Stdlib.Lexing.dummy_pos) a b = map2 ~here a b ~f:Tuple2.create
+let both ~(here : [%call_pos]) a b = map2 ~here a b ~f:Tuple2.create
 
-let cutoff ?(here = Stdlib.Lexing.dummy_pos) v ~equal =
+let cutoff ~(here : [%call_pos]) v ~equal =
   Value.cutoff ~here v ~equal ~added_by_let_syntax:false
 ;;
 
-let all_map ?(here = Stdlib.Lexing.dummy_pos) v graph =
+let all_map ~(here : [%call_pos]) v (local_ graph) =
   perform
     ~here
     graph
@@ -259,9 +263,7 @@ let transpose_opt opt =
   Option.value_map opt ~default:(return None) ~f:(map ~f:Option.some)
 ;;
 
-let path_id ?(here = Stdlib.Lexing.dummy_pos) graph =
-  perform ~here graph (Proc.path_id ~here ())
-;;
+let path_id ~(here : [%call_pos]) graph = perform ~here graph (Proc.path_id ~here ())
 
 let split ~here graph tuple =
   let a = arr1 ~here graph tuple ~f:Tuple2.get1 in
@@ -270,36 +272,29 @@ let split ~here graph tuple =
 ;;
 
 let state__for_proc2
-  ?(here = Stdlib.Lexing.dummy_pos)
+  ~(here : [%call_pos])
   ?reset
   ?sexp_of_model
   ?equal
   default_model
-  graph
+  (local_ graph)
   =
   perform ~here graph (Proc.state ~here ?reset ?sexp_of_model ?equal default_model)
 ;;
 
-let state
-  ?(here = Stdlib.Lexing.dummy_pos)
-  ?reset
-  ?sexp_of_model
-  ?equal
-  default_model
-  graph
-  =
+let state ~(here : [%call_pos]) ?reset ?sexp_of_model ?equal default_model (local_ graph) =
   state__for_proc2 ~here ?reset ?sexp_of_model ?equal default_model graph
   |> split ~here graph
 ;;
 
 let state_opt__for_proc2
-  ?(here = Stdlib.Lexing.dummy_pos)
+  ~(here : [%call_pos])
   ?reset
   ?default_model
   ?sexp_of_model
   ?equal
   ()
-  graph
+  (local_ graph)
   =
   perform
     ~here
@@ -308,22 +303,22 @@ let state_opt__for_proc2
 ;;
 
 let state_opt
-  ?(here = Stdlib.Lexing.dummy_pos)
+  ~(here : [%call_pos])
   ?reset
   ?sexp_of_model
   ?equal
   ?default_model
-  graph
+  (local_ graph)
   =
   state_opt__for_proc2 ~here ?reset ?sexp_of_model ?equal ?default_model () graph
   |> split ~here graph
 ;;
 
-let toggle__for_proc2 ?(here = Stdlib.Lexing.dummy_pos) ~default_model graph =
+let toggle__for_proc2 ~(here : [%call_pos]) ~default_model (local_ graph) =
   perform ~here graph (Proc.toggle ~here ~default_model ())
 ;;
 
-let toggle ?(here = Stdlib.Lexing.dummy_pos) ~default_model graph =
+let toggle ~(here : [%call_pos]) ~default_model (local_ graph) =
   toggle__for_proc2 ~here ~default_model graph |> split ~here graph
 ;;
 
@@ -338,7 +333,7 @@ module Toggle = struct
   [@@deriving fields ~getters]
 end
 
-let toggle' ?(here = Stdlib.Lexing.dummy_pos) ~default_model graph =
+let toggle' ~(here : [%call_pos]) ~default_model (local_ graph) =
   let all = perform ~here graph (Proc.toggle' ~here ~default_model ()) in
   let state = arr1 graph all ~f:(fun { Proc.Toggle.state; _ } -> state) in
   let set_state = arr1 graph all ~f:(fun { Proc.Toggle.set_state; _ } -> set_state) in
@@ -348,12 +343,10 @@ let toggle' ?(here = Stdlib.Lexing.dummy_pos) ~default_model graph =
 
 module Path = Path
 
-let path ?(here = Stdlib.Lexing.dummy_pos) graph =
-  perform ~here graph (Proc.path ~here ())
-;;
+let path ~(here : [%call_pos]) graph = perform ~here graph (Proc.path ~here ())
 
 let state_machine0__for_proc2
-  ?(here = Stdlib.Lexing.dummy_pos)
+  ~(here : [%call_pos])
   ?reset
   ?sexp_of_model
   ?sexp_of_action
@@ -361,7 +354,7 @@ let state_machine0__for_proc2
   ~default_model
   ~apply_action
   ()
-  graph
+  (local_ graph)
   =
   Proc.state_machine0
     ~here
@@ -376,14 +369,14 @@ let state_machine0__for_proc2
 ;;
 
 let state_machine0
-  ?(here = Stdlib.Lexing.dummy_pos)
+  ~(here : [%call_pos])
   ?reset
   ?sexp_of_model
   ?sexp_of_action
   ?equal
   ~default_model
   ~apply_action
-  graph
+  (local_ graph)
   =
   state_machine0__for_proc2
     ~here
@@ -401,7 +394,7 @@ let state_machine0
 module Computation_status = Proc.Computation_status
 
 let state_machine1__for_proc2
-  ?(here = Stdlib.Lexing.dummy_pos)
+  ~(here : [%call_pos])
   ?sexp_of_action
   ?reset
   ?sexp_of_model
@@ -409,7 +402,7 @@ let state_machine1__for_proc2
   ~default_model
   ~apply_action
   input
-  graph
+  (local_ graph)
   =
   Proc.state_machine1
     ~here
@@ -424,7 +417,7 @@ let state_machine1__for_proc2
 ;;
 
 let state_machine1
-  ?(here = Stdlib.Lexing.dummy_pos)
+  ~(here : [%call_pos])
   ?reset
   ?sexp_of_model
   ?sexp_of_action
@@ -432,7 +425,7 @@ let state_machine1
   ~default_model
   ~apply_action
   input
-  graph
+  (local_ graph)
   =
   state_machine1__for_proc2
     ~here
@@ -448,7 +441,7 @@ let state_machine1
 ;;
 
 let actor0__for_proc2
-  ?(here = Stdlib.Lexing.dummy_pos)
+  ~(here : [%call_pos])
   ?reset
   ?sexp_of_model
   ?sexp_of_action
@@ -456,21 +449,21 @@ let actor0__for_proc2
   ~default_model
   ~recv
   ()
-  graph
+  (local_ graph)
   =
   Proc.actor0 ~here ?reset ?sexp_of_model ?sexp_of_action ?equal ~default_model ~recv ()
   |> perform ~here graph
 ;;
 
 let actor0
-  ?(here = Stdlib.Lexing.dummy_pos)
+  ~(here : [%call_pos])
   ?reset
   ?sexp_of_model
   ?sexp_of_action
   ?equal
   ~default_model
   ~recv
-  graph
+  (local_ graph)
   =
   actor0__for_proc2
     ~here
@@ -486,7 +479,7 @@ let actor0
 ;;
 
 let actor1__for_proc2
-  ?(here = Stdlib.Lexing.dummy_pos)
+  ~(here : [%call_pos])
   ?sexp_of_action
   ?reset
   ?sexp_of_model
@@ -494,7 +487,7 @@ let actor1__for_proc2
   ~default_model
   ~recv
   input
-  graph
+  (local_ graph)
   =
   Proc.actor1
     ~here
@@ -509,7 +502,7 @@ let actor1__for_proc2
 ;;
 
 let actor1
-  ?(here = Stdlib.Lexing.dummy_pos)
+  ~(here : [%call_pos])
   ?sexp_of_action
   ?reset
   ?sexp_of_model
@@ -517,7 +510,7 @@ let actor1
   ~default_model
   ~recv
   input
-  graph
+  (local_ graph)
   =
   actor1__for_proc2
     ~here
@@ -532,24 +525,14 @@ let actor1
   |> split ~here graph
 ;;
 
-let delay ?(here = Stdlib.Lexing.dummy_pos) ~f graph =
+let delay ~(here : [%call_pos]) ~f (local_ graph) =
   Proc.lazy_ ~here (lazy (handle_for_lazy ~here f)) |> perform ~here graph
 ;;
 
 module Expert = struct
-  let thunk ?(here = Stdlib.Lexing.dummy_pos) ~f graph =
-    perform ~here graph (Proc.thunk ~here f)
-  ;;
+  let thunk ~(here : [%call_pos]) ~f graph = perform ~here graph (Proc.thunk ~here f)
 
-  let assoc_on
-    ?(here = Stdlib.Lexing.dummy_pos)
-    io_cmp
-    model_cmp
-    map
-    ~get_model_key
-    ~f
-    graph
-    =
+  let assoc_on ~(here : [%call_pos]) io_cmp model_cmp map ~get_model_key ~f graph =
     Proc.assoc_on ~here io_cmp model_cmp map ~get_model_key ~f:(fun k v ->
       handle ~here graph ~f:(fun graph -> f k v graph) [@nontail])
     |> perform ~here graph
@@ -561,58 +544,51 @@ module Expert = struct
   module For_bonsai_internal = For_bonsai_internal
 end
 
-let freeze ?(here = Stdlib.Lexing.dummy_pos) ?sexp_of_model ?equal v graph =
+let freeze ~(here : [%call_pos]) ?sexp_of_model ?equal v (local_ graph) =
   perform ~here graph (Proc.freeze ~here ?sexp_of_model ?equal v)
 ;;
 
-let fix ?(here = Stdlib.Lexing.dummy_pos) v ~f graph =
+let fix ~(here : [%call_pos]) v ~f graph =
   Proc_min.fix v ~here ~f:(fun ~recurse value ->
     let recurse v graph = perform ~here graph (recurse v) in
     isolated graph ~here ~f:(fun () -> f ~recurse value graph) [@nontail])
   |> perform ~here graph
 ;;
 
-let fix2 ?(here = Stdlib.Lexing.dummy_pos) a b ~f graph =
+let fix2 ~(here : [%call_pos]) a b ~f graph =
   fix ~here (both ~here a b) graph ~f:(fun ~recurse a_and_b graph ->
     let a, b = split ~here graph a_and_b in
     let recurse a b graph = recurse (both ~here a b) graph in
     f ~recurse a b graph)
 ;;
 
-let scope_model ?(here = Stdlib.Lexing.dummy_pos) comparator ~on ~for_ graph =
+let scope_model ~(here : [%call_pos]) comparator ~on ~for_ (local_ graph) =
   Proc.scope_model ~here comparator ~on (handle ~here graph ~f:(fun graph -> for_ graph))
   |> perform ~here graph
 ;;
 
-let most_recent_some
-  ?(here = Stdlib.Lexing.dummy_pos)
-  ?sexp_of_model
-  ~equal
-  value
-  ~f
-  graph
-  =
+let most_recent_some ~(here : [%call_pos]) ?sexp_of_model ~equal value ~f (local_ graph) =
   Proc.most_recent_some ~here ?sexp_of_model ~equal value ~f |> perform ~here graph
 ;;
 
 let most_recent_value_satisfying
-  ?(here = Stdlib.Lexing.dummy_pos)
+  ~(here : [%call_pos])
   ?sexp_of_model
   ~equal
   value
   ~condition
-  graph
+  (local_ graph)
   =
   Proc.most_recent_value_satisfying ~here ?sexp_of_model ~equal value ~condition
   |> perform ~here graph
 ;;
 
-let previous_value ?(here = Stdlib.Lexing.dummy_pos) ?sexp_of_model ~equal value graph =
+let previous_value ~(here : [%call_pos]) ?sexp_of_model ~equal value (local_ graph) =
   Proc.previous_value ~here ?sexp_of_model ~equal value |> perform ~here graph
 ;;
 
 let wrap__for_proc2
-  ?(here = Stdlib.Lexing.dummy_pos)
+  ~(here : [%call_pos])
   ?reset
   ?sexp_of_model
   ?equal
@@ -620,7 +596,7 @@ let wrap__for_proc2
   ~apply_action
   ~f
   ()
-  graph
+  (local_ graph)
   =
   Proc_min.wrap
     ~here
@@ -636,14 +612,14 @@ let wrap__for_proc2
 ;;
 
 let wrap
-  ?(here = Stdlib.Lexing.dummy_pos)
+  ~(here : [%call_pos])
   ?reset
   ?sexp_of_model
   ?equal
   ~default_model
   ~apply_action
   ~f
-  graph
+  (local_ graph)
   =
   wrap__for_proc2
     ~here
@@ -657,44 +633,39 @@ let wrap
     graph
 ;;
 
-let enum ?(here = Stdlib.Lexing.dummy_pos) m ~match_ ~with_ graph =
+let enum ~(here : [%call_pos]) m ~match_ ~with_ (local_ graph) =
   let with_ : 'k -> 'd Computation.t =
-    fun k -> handle ~f:(fun graph -> with_ k graph) graph [@nontail]
+    fun k -> handle ~f:(fun (local_ graph) -> with_ k graph) graph [@nontail]
   in
   perform ~here graph (Proc.enum m ~match_ ~with_)
 ;;
 
-let with_model_resetter__for_proc2 ?(here = Stdlib.Lexing.dummy_pos) ~f graph =
+let with_model_resetter__for_proc2 ~(here : [%call_pos]) ~f graph =
   perform
     ~here
     graph
     (Proc.with_model_resetter ~here (handle graph ~here ~f:(fun graph -> f graph)))
 ;;
 
-let with_model_resetter ?(here = Stdlib.Lexing.dummy_pos) ~f graph =
+let with_model_resetter ~(here : [%call_pos]) ~f graph =
   with_model_resetter__for_proc2 ~here ~f graph |> split ~here graph
 ;;
 
-let with_model_resetter' ?(here = Stdlib.Lexing.dummy_pos) ~f graph =
+let with_model_resetter' ~(here : [%call_pos]) ~f (local_ graph) =
   Proc_min.with_model_resetter ~here (fun ~reset ->
     handle ~here graph ~f:(fun graph -> f ~reset graph) [@nontail])
   |> perform ~here graph
 ;;
 
-let peek ?(here = Stdlib.Lexing.dummy_pos) value graph =
-  perform ~here graph (Proc.yoink ~here value)
-;;
-
+let peek ~(here : [%call_pos]) value graph = perform ~here graph (Proc.yoink ~here value)
 let ignore_t (_ : unit t) = ()
 
 module Clock = struct
-  let approx_now ?(here = Stdlib.Lexing.dummy_pos) ~tick_every graph =
+  let approx_now ~(here : [%call_pos]) ~tick_every graph =
     perform ~here graph (Proc.Clock.approx_now ~here ~tick_every ())
   ;;
 
-  let now ?(here = Stdlib.Lexing.dummy_pos) graph =
-    perform ~here graph (Proc.Clock.now ~here ())
-  ;;
+  let now ~(here : [%call_pos]) graph = perform ~here graph (Proc.Clock.now ~here ())
 
   module Before_or_after = struct
     type t = Ui_incr.Before_or_after.t =
@@ -703,12 +674,10 @@ module Clock = struct
     [@@deriving sexp, equal]
   end
 
-  let at ?(here = Stdlib.Lexing.dummy_pos) time graph =
-    perform ~here graph (Proc.Clock.at ~here time)
-  ;;
+  let at ~(here : [%call_pos]) time graph = perform ~here graph (Proc.Clock.at ~here time)
 
   let every
-    ?(here = Stdlib.Lexing.dummy_pos)
+    ~(here : [%call_pos])
     ~when_to_start_next_effect
     ?trigger_on_activate
     span
@@ -720,22 +689,17 @@ module Clock = struct
     |> ignore_t
   ;;
 
-  let get_current_time ?(here = Stdlib.Lexing.dummy_pos) graph =
+  let get_current_time ~(here : [%call_pos]) graph =
     perform ~here graph (Proc.Clock.get_current_time ~here ())
   ;;
 
-  let sleep ?(here = Stdlib.Lexing.dummy_pos) graph =
-    perform ~here graph (Proc.Clock.sleep ~here ())
-  ;;
-
-  let until ?(here = Stdlib.Lexing.dummy_pos) graph =
-    perform ~here graph (Proc.Clock.until ~here ())
-  ;;
+  let sleep ~(here : [%call_pos]) graph = perform ~here graph (Proc.Clock.sleep ~here ())
+  let until ~(here : [%call_pos]) graph = perform ~here graph (Proc.Clock.until ~here ())
 end
 
 module Edge = struct
   let on_change__for_proc2
-    ?(here = Stdlib.Lexing.dummy_pos)
+    ~(here : [%call_pos])
     ?sexp_of_model
     ~equal
     value
@@ -745,19 +709,12 @@ module Edge = struct
     perform ~here graph (Proc.Edge.on_change ~here ?sexp_of_model ~equal value ~callback)
   ;;
 
-  let on_change
-    ?(here = Stdlib.Lexing.dummy_pos)
-    ?sexp_of_model
-    ~equal
-    value
-    ~callback
-    graph
-    =
+  let on_change ~(here : [%call_pos]) ?sexp_of_model ~equal value ~callback graph =
     ignore_t (on_change__for_proc2 ~here ?sexp_of_model ~equal value ~callback graph)
   ;;
 
   let on_change'__for_proc2
-    ?(here = Stdlib.Lexing.dummy_pos)
+    ~(here : [%call_pos])
     ?sexp_of_model
     ~equal
     value
@@ -767,19 +724,12 @@ module Edge = struct
     perform ~here graph (Proc.Edge.on_change' ~here ?sexp_of_model ~equal value ~callback)
   ;;
 
-  let on_change'
-    ?(here = Stdlib.Lexing.dummy_pos)
-    ?sexp_of_model
-    ~equal
-    value
-    ~callback
-    graph
-    =
+  let on_change' ~(here : [%call_pos]) ?sexp_of_model ~equal value ~callback graph =
     ignore_t (on_change'__for_proc2 ~here ?sexp_of_model ~equal value ~callback graph)
   ;;
 
   let lifecycle__for_proc2
-    ?(here = Stdlib.Lexing.dummy_pos)
+    ~(here : [%call_pos])
     ?on_activate
     ?on_deactivate
     ?after_display
@@ -792,19 +742,13 @@ module Edge = struct
       (Proc.Edge.lifecycle ~here ?on_activate ?on_deactivate ?after_display ())
   ;;
 
-  let lifecycle
-    ?(here = Stdlib.Lexing.dummy_pos)
-    ?on_activate
-    ?on_deactivate
-    ?after_display
-    graph
-    =
+  let lifecycle ~(here : [%call_pos]) ?on_activate ?on_deactivate ?after_display graph =
     ignore_t
       (lifecycle__for_proc2 ~here ?on_activate ?on_deactivate ?after_display () graph)
   ;;
 
   let lifecycle'__for_proc2
-    ?(here = Stdlib.Lexing.dummy_pos)
+    ~(here : [%call_pos])
     ?on_activate
     ?on_deactivate
     ?after_display
@@ -817,34 +761,28 @@ module Edge = struct
       (Proc.Edge.lifecycle' ?on_activate ?on_deactivate ?after_display ())
   ;;
 
-  let lifecycle'
-    ?(here = Stdlib.Lexing.dummy_pos)
-    ?on_activate
-    ?on_deactivate
-    ?after_display
-    graph
-    =
+  let lifecycle' ~(here : [%call_pos]) ?on_activate ?on_deactivate ?after_display graph =
     ignore_t
       (lifecycle'__for_proc2 ~here ?on_activate ?on_deactivate ?after_display () graph)
   ;;
 
-  let after_display__for_proc2 ?(here = Stdlib.Lexing.dummy_pos) callback graph =
+  let after_display__for_proc2 ~(here : [%call_pos]) callback graph =
     perform ~here graph (Proc.Edge.after_display ~here callback)
   ;;
 
-  let after_display ?(here = Stdlib.Lexing.dummy_pos) callback graph =
+  let after_display ~(here : [%call_pos]) callback graph =
     ignore_t (after_display__for_proc2 ~here callback graph)
   ;;
 
-  let after_display'__for_proc2 ?(here = Stdlib.Lexing.dummy_pos) callback graph =
+  let after_display'__for_proc2 ~(here : [%call_pos]) callback graph =
     perform ~here graph (Proc.Edge.after_display' ~here callback)
   ;;
 
-  let after_display' ?(here = Stdlib.Lexing.dummy_pos) callback graph =
+  let after_display' ~(here : [%call_pos]) callback graph =
     ignore_t (after_display'__for_proc2 ~here callback graph)
   ;;
 
-  let wait_after_display ?(here = Stdlib.Lexing.dummy_pos) graph =
+  let wait_after_display ~(here : [%call_pos]) graph =
     perform ~here graph (Proc.Edge.wait_after_display ~here ())
   ;;
 
@@ -852,7 +790,7 @@ module Edge = struct
     module Starting = Proc.Edge.Poll.Starting
 
     let effect_on_change
-      ?(here = Stdlib.Lexing.dummy_pos)
+      ~(here : [%call_pos])
       ?sexp_of_input
       ?sexp_of_result
       ~equal_input
@@ -875,7 +813,7 @@ module Edge = struct
     ;;
 
     let manual_refresh__for_proc2
-      ?(here = Stdlib.Lexing.dummy_pos)
+      ~(here : [%call_pos])
       ?sexp_of_model
       ?equal
       starting
@@ -888,14 +826,7 @@ module Edge = struct
         (Proc.Edge.Poll.manual_refresh ~here ?sexp_of_model ?equal starting ~effect)
     ;;
 
-    let manual_refresh
-      ?(here = Stdlib.Lexing.dummy_pos)
-      ?sexp_of_model
-      ?equal
-      starting
-      ~effect
-      graph
-      =
+    let manual_refresh ~(here : [%call_pos]) ?sexp_of_model ?equal starting ~effect graph =
       manual_refresh__for_proc2 ~here ?sexp_of_model ?equal starting ~effect graph
       |> split ~here graph
     ;;
@@ -905,13 +836,13 @@ end
 module Memo = struct
   type ('input, 'result) t = ('input, 'result) Proc.Memo.t
 
-  let create ?(here = Stdlib.Lexing.dummy_pos) cmp ~f graph =
+  let create ~(here : [%call_pos]) cmp ~f graph =
     Proc.Memo.create ~here cmp ~f:(fun v ->
       handle ~here graph ~f:(fun graph -> f v graph) [@nontail])
     |> perform ~here graph
   ;;
 
-  let lookup ?(here = Stdlib.Lexing.dummy_pos) ?sexp_of_model ~equal t input graph =
+  let lookup ~(here : [%call_pos]) ?sexp_of_model ~equal t input graph =
     perform ~here graph (Proc.Memo.lookup ~here ?sexp_of_model ~equal t input)
   ;;
 end
@@ -919,7 +850,7 @@ end
 module Effect_throttling = struct
   module Poll_result = Proc.Effect_throttling.Poll_result
 
-  let poll ?(here = Stdlib.Lexing.dummy_pos) callback graph =
+  let poll ~(here : [%call_pos]) callback graph =
     perform ~here graph (Proc.Effect_throttling.poll ~here callback)
   ;;
 end
@@ -927,17 +858,19 @@ end
 module Dynamic_scope = struct
   type 'a bonsai_t = 'a t
   type 'a t = 'a Proc.Dynamic_scope.t
-  type revert = { revert : 'a. (graph -> 'a bonsai_t) -> graph -> 'a bonsai_t }
+
+  type revert =
+    { revert : 'a. (local_ graph -> 'a bonsai_t) -> (local_ graph -> 'a bonsai_t) }
 
   let create = Proc.Dynamic_scope.create
   let derived = Proc.Dynamic_scope.derived
 
-  let set ?(here = Stdlib.Lexing.dummy_pos) var value ~inside graph =
+  let set ~(here : [%call_pos]) var value ~inside (local_ graph) =
     let inside = handle ~here graph ~f:(fun graph -> inside graph) in
     perform ~here graph (Proc.Dynamic_scope.set ~here var value ~inside)
   ;;
 
-  let f_with_resetter ~here ~f graph (resetter : Proc.Dynamic_scope.revert) =
+  let f_with_resetter ~here ~f (local_ graph) (resetter : Proc.Dynamic_scope.revert) =
     let resetter : revert =
       { revert =
           (fun c graph ->
@@ -950,57 +883,57 @@ module Dynamic_scope = struct
     handle ~here graph ~f:(fun graph -> f resetter graph)
   ;;
 
-  let set' ?(here = Stdlib.Lexing.dummy_pos) var value ~f graph =
+  let set' ~(here : [%call_pos]) var value ~f (local_ graph) =
     let f = f_with_resetter ~here ~f graph in
     perform ~here graph (Proc.Dynamic_scope.set' ~here var value ~f)
   ;;
 
-  let lookup ?(here = Stdlib.Lexing.dummy_pos) var graph =
+  let lookup ~(here : [%call_pos]) var graph =
     perform ~here graph (Proc.Dynamic_scope.lookup ~here var)
   ;;
 
-  let modify ?(here = Stdlib.Lexing.dummy_pos) var ~change ~f graph =
+  let modify ~(here : [%call_pos]) var ~change ~f (local_ graph) =
     let f = f_with_resetter ~here ~f graph in
     perform ~here graph (Proc.Dynamic_scope.modify ~here var ~change ~f)
   ;;
 end
 
 module Incr = struct
-  let value_cutoff ?(here = Stdlib.Lexing.dummy_pos) t ~equal graph =
+  let value_cutoff ~(here : [%call_pos]) t ~equal (local_ graph) =
     perform ~here graph (Proc.Incr.value_cutoff ~here t ~equal)
   ;;
 
-  let compute ?(here = Stdlib.Lexing.dummy_pos) t ~f graph =
+  let compute ~(here : [%call_pos]) t ~f (local_ graph) =
     perform ~here graph (Proc.Incr.compute ~here t ~f)
   ;;
 
-  let to_value ?(here = Stdlib.Lexing.dummy_pos) incr = Proc.Incr.to_value ~here incr
+  let to_value ~(here : [%call_pos]) incr = Proc.Incr.to_value ~here incr
 
-  let with_clock ?(here = Stdlib.Lexing.dummy_pos) ~f graph =
+  let with_clock ~(here : [%call_pos]) ~f (local_ graph) =
     perform ~here graph (Proc.Incr.with_clock ~here f)
   ;;
 end
 
-let assoc ?(here = Stdlib.Lexing.dummy_pos) comparator map ~f graph =
+let assoc ~(here : [%call_pos]) comparator map ~f (local_ graph) =
   (Proc.assoc ~here comparator map ~f:(fun k v ->
      handle ~here graph ~f:(fun graph -> f k v graph) [@nontail]) [@nontail])
   |> perform ~here graph
 ;;
 
-let assoc_set ?(here = Stdlib.Lexing.dummy_pos) comparator set ~f graph =
+let assoc_set ~(here : [%call_pos]) comparator set ~f (local_ graph) =
   Proc.assoc_set ~here comparator set ~f:(fun k ->
     handle ~here graph ~f:(fun graph -> f k graph) [@nontail])
   |> perform ~here graph
 ;;
 
-let assoc_list ?(here = Stdlib.Lexing.dummy_pos) comparator list ~get_key ~f graph =
+let assoc_list ~(here : [%call_pos]) comparator list ~get_key ~f (local_ graph) =
   Proc.assoc_list ~here comparator list ~get_key ~f:(fun k v ->
     handle ~here graph ~f:(fun graph -> f k v graph) [@nontail])
   |> perform ~here graph
 ;;
 
 module Debug = struct
-  let on_change ?(here = Stdlib.Lexing.dummy_pos) v ~f graph =
+  let on_change ~(here : [%call_pos]) v ~f graph =
     (* Use [after_display] because the incremental node is always considered to be in use.*)
     let f =
       arr1 ~here graph v ~f:(fun v ->
@@ -1010,7 +943,7 @@ module Debug = struct
     Edge.after_display ~here f graph
   ;;
 
-  let on_change_print_s ?(here = Stdlib.Lexing.dummy_pos) v sexp_of =
+  let on_change_print_s ~(here : [%call_pos]) v sexp_of =
     on_change ~here v ~f:(fun a -> print_s (sexp_of a))
   ;;
 
@@ -1023,18 +956,12 @@ module Debug = struct
   let enable_incremental_annotations = Annotate_incr.enable
   let disable_incremental_annotations = Annotate_incr.disable
 
-  let instrument_computation
-    ?(here = Stdlib.Lexing.dummy_pos)
-    c
-    ~start_timer
-    ~stop_timer
-    graph
-    =
+  let instrument_computation ~(here : [%call_pos]) c ~start_timer ~stop_timer graph =
     Instrumentation.instrument_computation (handle graph ~f:c) ~start_timer ~stop_timer
     |> perform ~here graph
   ;;
 
-  let monitor_free_variables ?(here = Stdlib.Lexing.dummy_pos) ~f graph =
+  let monitor_free_variables ~(here : [%call_pos]) ~f (local_ graph) =
     perform
       graph
       ~here
@@ -1042,7 +969,13 @@ module Debug = struct
   ;;
 end
 
-let switch__for_proc2 ?(here = Stdlib.Lexing.dummy_pos) ~match_ ~branches ~with_ graph =
+let switch__for_proc2
+  ~(here : [%call_pos])
+  ~match_
+  ~branches
+  ~(local_ with_)
+  (local_ graph)
+  =
   let arms =
     let arms = ref [] in
     for i = 0 to branches - 1 do
@@ -1057,11 +990,11 @@ let switch__for_proc2 ?(here = Stdlib.Lexing.dummy_pos) ~match_ ~branches ~with_
 
 module Let_syntax = struct
   let return = return
-  let ( >>| ) ?(here = Stdlib.Lexing.dummy_pos) t f = map ~here t ~f
+  let ( >>| ) ~(here : [%call_pos]) t f = map ~here t ~f
 
   module Let_syntax = struct
     let return = Fn.id
-    let map ?(here = Stdlib.Lexing.dummy_pos) a ~f = map ~here a ~f
+    let map ~(here : [%call_pos]) a ~f = map ~here a ~f
     let map2 = map2
     let map3 = map3
     let map4 = map4
@@ -1077,16 +1010,16 @@ module Let_syntax = struct
     let arr7 = map7
     let both = both
 
-    let cutoff ?(here = Stdlib.Lexing.dummy_pos) v ~equal =
+    let cutoff ~(here : [%call_pos]) v ~equal =
       Value.cutoff ~here v ~equal ~added_by_let_syntax:true
     ;;
 
-    let switch ?(here = Stdlib.Lexing.dummy_pos) ~match_ ~branches ~with_ graph =
+    let switch ~(here : [%call_pos]) ~match_ ~branches ~with_ graph =
       let with_ i _graph = with_ i in
       switch__for_proc2 ~here ~match_ ~branches ~with_ graph [@nontail]
     ;;
 
-    let switch ~here ~match_ ~branches ~with_ =
+    let switch ~here ~match_ ~branches ~(local_ with_) =
       with_global_graph
         ~f:(fun graph -> switch ~here ~match_ ~branches ~with_ graph)
         ~no_graph:(fun () ->
@@ -1096,7 +1029,7 @@ module Let_syntax = struct
                 (here : Source_code_position.t)]) [@nontail]
     ;;
 
-    let sub ?here:(_ = Stdlib.Lexing.dummy_pos) a ~f = f a
+    let sub ~here:(_ : [%call_pos]) a ~f = f a
   end
 end
 
@@ -1118,7 +1051,7 @@ module For_proc2 = struct
 
   module Toggle = Proc.Toggle
 
-  let toggle' ?(here = Stdlib.Lexing.dummy_pos) ~default_model graph =
+  let toggle' ~(here : [%call_pos]) ~default_model graph =
     perform ~here graph (Proc.toggle' ~here ~default_model ())
   ;;
 
@@ -1128,19 +1061,19 @@ module For_proc2 = struct
   let actor1 = actor1__for_proc2
   let wrap = wrap__for_proc2
 
-  let with_model_resetter ?(here = Stdlib.Lexing.dummy_pos) f graph =
+  let with_model_resetter ~(here : [%call_pos]) f graph =
     with_model_resetter__for_proc2 ~here ~f graph
   ;;
 
-  let with_model_resetter' ?(here = Stdlib.Lexing.dummy_pos) f graph =
+  let with_model_resetter' ~(here : [%call_pos]) f graph =
     with_model_resetter' ~here ~f graph
   ;;
 
-  let lazy_ ?(here = Stdlib.Lexing.dummy_pos) f graph =
+  let lazy_ ~(here : [%call_pos]) f graph =
     delay ~here ~f:(fun graph -> Lazy.force f graph) graph
   ;;
 
-  let switch ?(here = Stdlib.Lexing.dummy_pos) ~match_ ~branches ~with_ graph =
+  let switch ~(here : [%call_pos]) ~match_ ~branches ~with_ graph =
     switch__for_proc2 ~here ~match_ ~branches ~with_ graph
   ;;
 
@@ -1152,7 +1085,7 @@ module For_proc2 = struct
   let after_display' = Edge.after_display'__for_proc2
   let manual_refresh = Edge.Poll.manual_refresh__for_proc2
 
-  let debug_on_change ?(here = Stdlib.Lexing.dummy_pos) v ~f graph =
+  let debug_on_change ~(here : [%call_pos]) v ~f graph =
     let f =
       arr1 ~here graph v ~f:(fun v ->
         f v;
@@ -1161,32 +1094,30 @@ module For_proc2 = struct
     Edge.after_display__for_proc2 ~here f graph
   ;;
 
-  let debug_on_change_print_s ?(here = Stdlib.Lexing.dummy_pos) v sexp_of =
+  let debug_on_change_print_s ~(here : [%call_pos]) v sexp_of =
     debug_on_change ~here v ~f:(fun a -> print_s (sexp_of a))
   ;;
 
-  let narrow ?(here = Stdlib.Lexing.dummy_pos) state_and_inject ~get ~set graph =
+  let narrow ~(here : [%call_pos]) state_and_inject ~get ~set graph =
     let open Let_syntax in
     let state, inject = state_and_inject |> split ~here graph in
     let inject =
       let peek_state = peek ~here state graph in
-      let%arr peek_state = peek_state
-      and inject = inject in
+      let%arr peek_state and inject in
       fun a ->
         match%bind.Effect peek_state with
         | Inactive -> Effect.Ignore
         | Active state -> inject (set state a)
     in
     let state =
-      let%arr state = state in
+      let%arr state in
       get state
     in
-    let%arr state = state
-    and inject = inject in
+    let%arr state and inject in
     state, inject
   ;;
 
-  let narrow_via_field ?(here = Stdlib.Lexing.dummy_pos) state_and_inject field =
+  let narrow_via_field ~(here : [%call_pos]) state_and_inject field =
     narrow state_and_inject ~here ~get:(Field.get field) ~set:(Field.fset field)
   ;;
 end
@@ -1194,7 +1125,7 @@ end
 module Conv = struct
   let handle = handle
   let top_level_handle = top_level_handle
-  let perform ?(here = Stdlib.Lexing.dummy_pos) graph c = perform ~here graph c
+  let perform ~(here : [%call_pos]) (local_ graph) c = perform ~here graph c
   let reveal_value = Fn.id
   let conceal_value = Fn.id
   let isolated = isolated
@@ -1208,7 +1139,7 @@ module Map = Map0.Make (struct
     end
 
     module Computation = struct
-      type nonrec 'a t = graph -> 'a t
+      type nonrec 'a t = local_ graph -> 'a t
     end
 
     module Incr = struct

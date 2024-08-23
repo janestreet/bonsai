@@ -4,7 +4,7 @@ module Bonsai = Bonsai.Cont
 module Effect = Bonsai.Effect
 open Bonsai.Let_syntax
 
-let with_inject_fixed_point f graph =
+let with_inject_fixed_point f (local_ graph) =
   let%sub r, _ =
     Bonsai.wrap
       graph
@@ -23,11 +23,12 @@ let with_self_effect
   (type a)
   ?sexp_of_model
   ?equal
-  ~(f : a Bonsai.Computation_status.t Effect.t Bonsai.t -> Bonsai.graph -> a Bonsai.t)
+  ~(f :
+      a Bonsai.Computation_status.t Effect.t Bonsai.t -> local_ Bonsai.graph -> a Bonsai.t)
   ()
-  : Bonsai.graph -> a Bonsai.t
+  : local_ Bonsai.graph -> a Bonsai.t
   =
-  fun graph ->
+  fun (local_ graph) ->
   Bonsai.wrap
     graph
     ?sexp_of_model:(Option.map ~f:Option.sexp_of_t sexp_of_model)
@@ -35,11 +36,10 @@ let with_self_effect
     ~default_model:None
     ~apply_action:(fun (_ : _ Bonsai.Apply_action_context.t) result _model () ->
       Some result)
-    ~f:(fun model inject graph ->
+    ~f:(fun model inject (local_ graph) ->
       let current_model =
         let get_model = Bonsai.peek model graph in
-        let%arr inject = inject
-        and get_model = get_model in
+        let%arr inject and get_model in
         let%bind.Effect () = inject () in
         let%map.Effect model = get_model in
         match model with
@@ -59,7 +59,7 @@ let state_machine1_dynamic_model
   ~model
   ~apply_action
   input
-  graph
+  (local_ graph)
   =
   let model_creator =
     match model with
@@ -95,9 +95,7 @@ let state_machine1_dynamic_model
       (Bonsai.both input model_creator)
       graph
   in
-  let%arr model = model
-  and inject = inject
-  and model_creator = model_creator in
+  let%arr model and inject and model_creator in
   model_creator model, inject
 ;;
 
@@ -132,7 +130,7 @@ let state_dynamic_model ?sexp_of_model ?equal ~model () =
     ()
 ;;
 
-let exactly_once effect graph =
+let exactly_once effect (local_ graph) =
   let has_run, set_has_run =
     Bonsai.state ~equal:[%equal: Bool.t] false ~sexp_of_model:[%sexp_of: Bool.t] graph
   in
@@ -141,22 +139,21 @@ let exactly_once effect graph =
   else (
     Bonsai.Edge.lifecycle
       ~on_activate:
-        (let%map set_has_run = set_has_run
+        (let%map set_has_run
          and event = effect in
          Effect.Many [ set_has_run true; event ])
       graph;
     Bonsai.return ())
 ;;
 
-let exactly_once_with_value ?sexp_of_model ?equal effect graph =
+let exactly_once_with_value ?sexp_of_model ?equal effect (local_ graph) =
   let value, set_value = Bonsai.state_opt ?sexp_of_model ?equal graph in
   let%sub () =
     match%sub value with
     | None ->
       Bonsai.Edge.lifecycle
         ~on_activate:
-          (let%map set_value = set_value
-           and effect = effect in
+          (let%map set_value and effect in
            let%bind.Effect r = effect in
            set_value (Some r))
         graph;
@@ -166,7 +163,7 @@ let exactly_once_with_value ?sexp_of_model ?equal effect graph =
   value
 ;;
 
-let value_with_override ?sexp_of_model ?equal value graph =
+let value_with_override ?sexp_of_model ?equal value (local_ graph) =
   let state, set_state = Bonsai.state_opt graph ?sexp_of_model ?equal in
   let value =
     match%sub state with
@@ -174,13 +171,13 @@ let value_with_override ?sexp_of_model ?equal value graph =
     | None -> value
   in
   let setter =
-    let%arr set_state = set_state in
+    let%arr set_state in
     fun v -> set_state (Some v)
   in
   Bonsai.both value setter
 ;;
 
-let pipe (type a) (module A : Bonsai_proc.Model with type t = a) graph =
+let pipe (type a) (module A : Bonsai_proc.Model with type t = a) (local_ graph) =
   let module Model = struct
     type t =
       { queued_actions : A.t Fdeque.t
@@ -232,7 +229,7 @@ let pipe (type a) (module A : Bonsai_proc.Model with type t = a) graph =
              (Effect.Private.Callback.respond_to r hd);
            { model with queued_actions }))
   in
-  let%arr inject = inject in
+  let%arr inject in
   let request =
     Effect.Private.make ~request:() ~evaluator:(fun r ->
       Effect.Expert.handle (inject (Add_receiver r)))
@@ -243,7 +240,7 @@ let pipe (type a) (module A : Bonsai_proc.Model with type t = a) graph =
 module Id_gen (T : Int_intf.S) () = struct
   include T
 
-  let component' ?(reset = (`Reset : [ `Reset | `Do_nothing | `Bump ])) graph =
+  let component' ?(reset = (`Reset : [ `Reset | `Do_nothing | `Bump ])) (local_ graph) =
     let reset =
       match reset with
       | `Reset -> None
@@ -263,13 +260,13 @@ module Id_gen (T : Int_intf.S) () = struct
         graph
     in
     let fetch =
-      let%arr fetch = fetch in
+      let%arr fetch in
       fetch ()
     in
     fetch, model
   ;;
 
-  let component ?(reset = (`Reset : [ `Reset | `Do_nothing ])) graph =
+  let component ?(reset = (`Reset : [ `Reset | `Do_nothing ])) (local_ graph) =
     let fetch, _ = component' ~reset:(reset :> [ `Reset | `Do_nothing | `Bump ]) graph in
     fetch
   ;;
@@ -284,7 +281,7 @@ let mirror'
   ~(interactive_set : (m -> unit Effect.t) Bonsai.t)
   ~(interactive_value : m option Bonsai.t)
   ()
-  graph
+  (local_ graph)
   =
   let module M = struct
     type t = m
@@ -306,8 +303,7 @@ let mirror'
   end
   in
   let callback =
-    let%map store_set = store_set
-    and interactive_set = interactive_set in
+    let%map store_set and interactive_set in
     fun old_pair { M2.store = store_value; interactive = interactive_value } ->
       let stability =
         if Option.equal equal store_value interactive_value then `Stable else `Unstable
@@ -403,16 +399,16 @@ let with_last_modified_time
   (* Although [Bonsai.Clock.now] is generally discouraged, the cutoff only pays
      attention to [input], so [now] shouldn't cause re-firing of this
      computation's transitive dependencies. *)
-    graph
+  (local_ graph)
   =
   let now = Bonsai.Clock.now graph in
   let result = Bonsai.both input now in
   Bonsai.Incr.value_cutoff result ~equal:(fun (a, _) (b, _) -> equal a b) graph
 ;;
 
-let is_stable ~equal input ~time_to_stable graph =
+let is_stable ~equal input ~time_to_stable (local_ graph) =
   let sign =
-    let%arr time_to_stable = time_to_stable in
+    let%arr time_to_stable in
     Time_ns.Span.sign time_to_stable
   in
   match%sub sign with
@@ -429,8 +425,7 @@ let is_stable ~equal input ~time_to_stable graph =
   | Pos ->
     let%sub _, last_modified_time = with_last_modified_time ~equal input graph in
     let next_stable_time =
-      let%arr last_modified_time = last_modified_time
-      and time_to_stable = time_to_stable in
+      let%arr last_modified_time and time_to_stable in
       Time_ns.add last_modified_time time_to_stable
     in
     let at_next_stable_time = Bonsai.Clock.at next_stable_time graph in
@@ -467,7 +462,13 @@ module Stability = struct
   ;;
 end
 
-let value_stability (type a) ?sexp_of_model ~equal:input_equal input ~time_to_stable graph
+let value_stability
+  (type a)
+  ?sexp_of_model
+  ~equal:input_equal
+  input
+  ~time_to_stable
+  (local_ graph)
   =
   let module M = struct
     type t = a
@@ -494,8 +495,8 @@ let value_stability (type a) ?sexp_of_model ~equal:input_equal input ~time_to_st
   match%sub most_recent_stable_and_true with
   | Some most_recent_stable_and_true ->
     let%arr most_recent_stable, must_be_true = most_recent_stable_and_true
-    and is_stable = is_stable
-    and input = input in
+    and is_stable
+    and input in
     (match must_be_true with
      | true -> ()
      | false ->
@@ -504,7 +505,7 @@ let value_stability (type a) ?sexp_of_model ~equal:input_equal input ~time_to_st
     then Stability.Stable input
     else Unstable { previously_stable = Some most_recent_stable; unstable_value = input }
   | None ->
-    let%arr input = input in
+    let%arr input in
     Stability.Unstable { previously_stable = None; unstable_value = input }
 ;;
 
@@ -530,7 +531,7 @@ module One_at_a_time = struct
     [@@deriving sexp]
   end
 
-  let effect f graph =
+  let effect f (local_ graph) =
     let status, inject_status =
       Bonsai.actor0
         graph
@@ -550,8 +551,7 @@ module One_at_a_time = struct
           | Release -> Idle, true)
     in
     let effect =
-      let%arr inject_status = inject_status
-      and f = f in
+      let%arr inject_status and f in
       let open Effect.Let_syntax in
       fun query ->
         match%bind inject_status Acquire with
@@ -565,7 +565,7 @@ module One_at_a_time = struct
   ;;
 end
 
-let bonk graph =
+let bonk (local_ graph) =
   let (_ : unit Bonsai.t), bonk =
     Bonsai.state_machine0
       ~default_model:()
@@ -576,7 +576,7 @@ let bonk graph =
   bonk
 ;;
 
-let chain_incr_effects input graph =
+let chain_incr_effects input (local_ graph) =
   let (_ : unit Bonsai.t), inject =
     Bonsai.state_machine1
       input

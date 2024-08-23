@@ -92,16 +92,16 @@ include Applicative.S with type 'a t := 'a t
 include Applicative.Let_syntax with type 'a t := 'a t
 include Mapn with type 'a t := 'a t
 
-val named : ?here:Stdlib.Lexing.position -> Name_source.t -> 'a Type_equal.Id.t -> 'a t
+val named : here:[%call_pos] -> Name_source.t -> 'a Type_equal.Id.t -> 'a t
 
 val cutoff
-  :  ?here:Stdlib.Lexing.position
+  :  here:[%call_pos]
   -> added_by_let_syntax:bool
   -> 'a t
   -> equal:('a -> 'a -> bool)
   -> 'a t
 
 val eval : Environment.t -> 'a t -> 'a Incr.t
-val of_incr : ?here:Stdlib.Lexing.position -> 'a Incr.t -> 'a t
-val return_exn : ?here:Stdlib.Lexing.position -> exn -> 'a t
+val of_incr : here:[%call_pos] -> 'a Incr.t -> 'a t
+val return_exn : here:[%call_pos] -> exn -> 'a t
 val transpose_opt : 'a t option -> 'a option t

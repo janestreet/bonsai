@@ -31,7 +31,7 @@ module Private = struct
   module Trampoline = Trampoline
   module Annotate_incr = Annotate_incr
 
-  let path ?(here = Stdlib.Lexing.dummy_pos) graph = Proc_layer2.path ~here () graph
+  let path ~(here : [%call_pos]) (local_ graph) = Proc_layer2.path ~here () graph
   let gather = Eval.gather
   let pre_process = Pre_process.pre_process
   let reveal_value = Cont.Conv.reveal_value

@@ -114,10 +114,7 @@ module type Component_s_incr = sig
   val apply_action
     :  Input.t
     -> inject:(Action.t -> unit Ui_effect.t)
-    -> schedule_event:(unit Ui_effect.t -> unit)
-    -> Model.t
-    -> Action.t
-    -> Model.t
+    -> (schedule_event:(unit Ui_effect.t -> unit) -> Model.t -> Action.t -> Model.t)
 
   val compute
     :  Input.t Incr.t
@@ -137,7 +134,7 @@ module type Mapn = sig
   type 'a t
 
   val map3
-    :  ?here:Stdlib.Lexing.position
+    :  here:[%call_pos]
     -> 'a1 t
     -> 'a2 t
     -> 'a3 t
@@ -145,7 +142,7 @@ module type Mapn = sig
     -> 'b t
 
   val map4
-    :  ?here:Stdlib.Lexing.position
+    :  here:[%call_pos]
     -> 'a1 t
     -> 'a2 t
     -> 'a3 t
@@ -154,7 +151,7 @@ module type Mapn = sig
     -> 'b t
 
   val map5
-    :  ?here:Stdlib.Lexing.position
+    :  here:[%call_pos]
     -> 'a1 t
     -> 'a2 t
     -> 'a3 t
@@ -164,7 +161,7 @@ module type Mapn = sig
     -> 'b t
 
   val map6
-    :  ?here:Stdlib.Lexing.position
+    :  here:[%call_pos]
     -> 'a1 t
     -> 'a2 t
     -> 'a3 t
@@ -175,7 +172,7 @@ module type Mapn = sig
     -> 'b t
 
   val map7
-    :  ?here:Stdlib.Lexing.position
+    :  here:[%call_pos]
     -> 'a1 t
     -> 'a2 t
     -> 'a3 t
@@ -190,15 +187,10 @@ end
 module type Arrn = sig
   type 'a t
 
-  val arr2
-    :  ?here:Stdlib.Lexing.position
-    -> 'a1 t
-    -> 'a2 t
-    -> f:('a1 -> 'a2 -> 'result)
-    -> 'result t
+  val arr2 : here:[%call_pos] -> 'a1 t -> 'a2 t -> f:('a1 -> 'a2 -> 'result) -> 'result t
 
   val arr3
-    :  ?here:Stdlib.Lexing.position
+    :  here:[%call_pos]
     -> 'a1 t
     -> 'a2 t
     -> 'a3 t
@@ -206,7 +198,7 @@ module type Arrn = sig
     -> 'result t
 
   val arr4
-    :  ?here:Stdlib.Lexing.position
+    :  here:[%call_pos]
     -> 'a1 t
     -> 'a2 t
     -> 'a3 t
@@ -215,7 +207,7 @@ module type Arrn = sig
     -> 'result t
 
   val arr5
-    :  ?here:Stdlib.Lexing.position
+    :  here:[%call_pos]
     -> 'a1 t
     -> 'a2 t
     -> 'a3 t
@@ -225,7 +217,7 @@ module type Arrn = sig
     -> 'result t
 
   val arr6
-    :  ?here:Stdlib.Lexing.position
+    :  here:[%call_pos]
     -> 'a1 t
     -> 'a2 t
     -> 'a3 t
@@ -236,7 +228,7 @@ module type Arrn = sig
     -> 'result t
 
   val arr7
-    :  ?here:Stdlib.Lexing.position
+    :  here:[%call_pos]
     -> 'a1 t
     -> 'a2 t
     -> 'a3 t

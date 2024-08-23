@@ -1,7 +1,7 @@
 open Core
 open Ppxlib
 
-let locality = `global
+let locality = Ppx_let_expander.Locality.global
 let loc = Location.none
 let print_expr expr = Pprintast.string_of_expression expr |> print_string
 

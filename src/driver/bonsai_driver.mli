@@ -7,7 +7,7 @@ type 'r t
 val create
   :  ?optimize:bool
   -> time_source:Bonsai.Time_source.t
-  -> (Bonsai.graph -> 'r Bonsai.t)
+  -> (local_ Bonsai.graph -> 'r Bonsai.t)
   -> 'r t
 
 (** The "main loop" of a bonsai handle is

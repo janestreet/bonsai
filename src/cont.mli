@@ -32,21 +32,21 @@ include Applicative.S with type 'a t := 'a t
 include Mapn with type 'a t := 'a t
 
 (** [return] produces a [Bonsai.t] whose inner value is constant. *)
-val return : ?here:Stdlib.Lexing.position -> 'a -> 'a t
+val return : here:[%call_pos] -> 'a -> 'a t
 
 (** [map], [map2], and [both] are ways to build a new [Bonsai.t] which is dependent on
     the values of other [Bonsai.t]. As noted above, you should prefer to use [let%arr]
     than these functions, because they come with some performance benefits. *)
-val map : ?here:Stdlib.Lexing.position -> 'a t -> f:('a -> 'b) -> 'b t
+val map : here:[%call_pos] -> 'a t -> f:('a -> 'b) -> 'b t
 
-val map2 : ?here:Stdlib.Lexing.position -> 'a t -> 'b t -> f:('a -> 'b -> 'c) -> 'c t
-val both : ?here:Stdlib.Lexing.position -> 'a t -> 'b t -> ('a * 'b) t
+val map2 : here:[%call_pos] -> 'a t -> 'b t -> f:('a -> 'b -> 'c) -> 'c t
+val both : here:[%call_pos] -> 'a t -> 'b t -> ('a * 'b) t
 
 (** The Bonsai runtime will recompute a node if any of its dependencies change. But
     sometimes, you may want to consider two contained values to be "close enough" and
     cut off recomputation. You can do that by passing a custom equality function to
     [Bonsai.cutoff]. *)
-val cutoff : ?here:Stdlib.Lexing.position -> 'a t -> equal:('a -> 'a -> bool) -> 'a t
+val cutoff : here:[%call_pos] -> 'a t -> equal:('a -> 'a -> bool) -> 'a t
 
 (** [transpose_opt] flips the order of a [Bonsai.t] and an [option]. This is useful
     for optional args that take [Bonsai.t]s. Note: the inverse operation is not possible.
@@ -67,33 +67,33 @@ val transpose_opt : 'a t option -> 'a option t
 
     [?equal] is used as a cutoff for the model value. See [Bonsai.cutoff] for more. *)
 val state
-  :  ?here:Stdlib.Lexing.position
+  :  here:[%call_pos]
   -> ?reset:('model -> 'model)
   -> ?sexp_of_model:('model -> Sexp.t)
   -> ?equal:('model -> 'model -> bool)
   -> 'model
-  -> graph
+  -> local_ graph
   -> 'model t * ('model -> unit Effect.t) t
 
 (** [state_opt] is just like [state] except that the model is optional.
     The model starts out as [None] unless you provide a value to the [default_model]
     optional parameter. *)
 val state_opt
-  :  ?here:Stdlib.Lexing.position
+  :  here:[%call_pos]
   -> ?reset:('model option -> 'model option)
   -> ?sexp_of_model:('model -> Sexp.t)
   -> ?equal:('model -> 'model -> bool)
   -> ?default_model:'model
-  -> graph
+  -> local_ graph
   -> 'model option t * ('model option -> unit Effect.t) t
 
 (** [Bonsai.toggle] is a small helper function for building a [bool] state
     that toggles back and forth between [true] and [false] whenever the
     [unit Effect.t] is scheduled. *)
 val toggle
-  :  ?here:Stdlib.Lexing.position
+  :  here:[%call_pos]
   -> default_model:bool
-  -> graph
+  -> local_ graph
   -> bool t * unit Effect.t t
 
 module Toggle : sig
@@ -108,7 +108,7 @@ end
 
 (** Just like [toggle] except that you also have an [Effect.t] for directly
     setting the state in addition to toggling it back and forth. *)
-val toggle' : ?here:Stdlib.Lexing.position -> default_model:bool -> graph -> Toggle.t
+val toggle' : here:[%call_pos] -> default_model:bool -> local_ graph -> Toggle.t
 
 module Apply_action_context : sig
   (** A value with the type [('action, 'response) Apply_action_context.t] is provided
@@ -140,14 +140,14 @@ type ('model, 'action, 'response) resetter :=
     [?reset], [?sexp_of_model], and [?equal] do the same things that they do for
     [Bonsai.state], go read those docs for more. *)
 val state_machine0
-  :  ?here:Stdlib.Lexing.position
+  :  here:[%call_pos]
   -> ?reset:('model, 'action, unit) resetter
   -> ?sexp_of_model:('model -> Sexp.t)
   -> ?sexp_of_action:('action -> Sexp.t)
   -> ?equal:('model -> 'model -> bool)
   -> default_model:'model
   -> apply_action:(('action, unit) Apply_action_context.t -> 'model -> 'action -> 'model)
-  -> graph
+  -> local_ graph
   -> 'model t * ('action -> unit Effect.t) t
 
 module Computation_status : sig
@@ -165,7 +165,7 @@ end
     the apply_action function. In the event that the state-machine is inactive, the
     computation status will be [Inactive] *)
 val state_machine1
-  :  ?here:Stdlib.Lexing.position
+  :  here:[%call_pos]
   -> ?reset:('model, 'action, unit) resetter
   -> ?sexp_of_model:('model -> Sexp.t)
   -> ?sexp_of_action:('action -> Sexp.t)
@@ -178,14 +178,14 @@ val state_machine1
         -> 'action
         -> 'model)
   -> 'input t
-  -> graph
+  -> local_ graph
   -> 'model t * ('action -> unit Effect.t) t
 
 (** [Bonsai.actor0] is similar to [Bonsai.state_machine0], but its [recv] function
     is responsible for not only transitioning the state of the state machine, but also
     for responding with a "return value" to whoever sent the message to the actor. *)
 val actor0
-  :  ?here:Stdlib.Lexing.position
+  :  here:[%call_pos]
   -> ?reset:('model, 'action, 'return) resetter
   -> ?sexp_of_model:('model -> Sexp.t)
   -> ?sexp_of_action:('action -> Sexp.t)
@@ -196,13 +196,13 @@ val actor0
         -> 'model
         -> 'action
         -> 'model * 'return)
-  -> graph
+  -> local_ graph
   -> 'model t * ('action -> 'return Effect.t) t
 
 (** [actor1] is just like [actor0] but it can witness the current value of a [Bonsai.t]
     inside its [recv] function just like [state_machine1] *)
 val actor1
-  :  ?here:Stdlib.Lexing.position
+  :  here:[%call_pos]
   -> ?sexp_of_action:('action -> Sexp.t)
   -> ?reset:('model, 'action, 'return) resetter
   -> ?sexp_of_model:('model -> Sexp.t)
@@ -215,50 +215,54 @@ val actor1
         -> 'action
         -> 'model * 'return)
   -> 'input t
-  -> graph
+  -> local_ graph
   -> 'model t * ('action -> 'return Effect.t) t
 
 (** [freeze] takes a ['a Bonsai.t] and returns a new ['a Bonsai.t] whose value
     is frozen to the first value that it witnesses from its input. *)
 val freeze
-  :  ?here:Stdlib.Lexing.position
+  :  here:[%call_pos]
   -> ?sexp_of_model:('a -> Sexp.t)
   -> ?equal:('a -> 'a -> bool)
   -> 'a t
-  -> graph
+  -> local_ graph
   -> 'a t
 
 (** A fixed-point combinator for writing recursive Bonsai components. *)
 val fix
-  :  ?here:Stdlib.Lexing.position
+  :  here:[%call_pos]
   -> 'input t
-  -> f:(recurse:('input t -> graph -> 'result t) -> 'input t -> graph -> 'result t)
-  -> graph
+  -> f:
+       (recurse:('input t -> local_ graph -> 'result t)
+        -> 'input t
+        -> local_ graph
+        -> 'result t)
+  -> local_ graph
   -> 'result t
 
 (** Just like [fix] but specialized for 2-arity functions. *)
 val fix2
-  :  ?here:Stdlib.Lexing.position
+  :  here:[%call_pos]
   -> 'a t
   -> 'b t
   -> f:
-       (recurse:('a t -> 'b t -> graph -> 'result t)
+       (recurse:('a t -> 'b t -> local_ graph -> 'result t)
         -> 'a t
         -> 'b t
-        -> graph
+        -> local_ graph
         -> 'result t)
-  -> graph
+  -> local_ graph
   -> 'result t
 
 (** [scope_model] is used to associate the state of some component graph with some other
     value.
    *)
 val scope_model
-  :  ?here:Stdlib.Lexing.position
+  :  here:[%call_pos]
   -> ('a, _) comparator
   -> on:'a t
-  -> for_:(graph -> 'b t)
-  -> graph
+  -> for_:(local_ graph -> 'b t)
+  -> local_ graph
   -> 'b t
 
 (** [Bonsai.most_recent_some] can be used to find and store a value that has some
@@ -267,33 +271,33 @@ val scope_model
     ['b option Bonsai.t] that contains the most recent output of [f] that returned a
     [Some]. *)
 val most_recent_some
-  :  ?here:Stdlib.Lexing.position
+  :  here:[%call_pos]
   -> ?sexp_of_model:('b -> Sexp.t)
   -> equal:('b -> 'b -> bool)
   -> 'a t
   -> f:('a -> 'b option)
-  -> graph
+  -> local_ graph
   -> 'b option t
 
 (** The output of [most_recent_value_satisfying] is a ['a option Bonsai.t] that contains
     the most recent input value for for which [f] returned [true ]. *)
 val most_recent_value_satisfying
-  :  ?here:Stdlib.Lexing.position
+  :  here:[%call_pos]
   -> ?sexp_of_model:('a -> Sexp.t)
   -> equal:('a -> 'a -> bool)
   -> 'a t
   -> condition:('a -> bool)
-  -> graph
+  -> local_ graph
   -> 'a option t
 
 (** [previous_value] returns a [Bonsai.t] which contains the value that its input held on
     the previous frame.*)
 val previous_value
-  :  ?here:Stdlib.Lexing.position
+  :  here:[%call_pos]
   -> ?sexp_of_model:('a -> Sexp.t)
   -> equal:('a -> 'a -> bool)
   -> 'a t
-  -> graph
+  -> local_ graph
   -> 'a option t
 
 (** [wrap] wraps a Computation (built using [f]) and provides a model and
@@ -301,15 +305,15 @@ val previous_value
     is that the [apply_action] for this outer-model has access to the result
     value of the Computation being wrapped. *)
 val wrap
-  :  ?here:Stdlib.Lexing.position
+  :  here:[%call_pos]
   -> ?reset:('model, 'action, unit) resetter
   -> ?sexp_of_model:('model -> Sexp.t)
   -> ?equal:('model -> 'model -> bool)
   -> default_model:'model
   -> apply_action:
        (('action, unit) Apply_action_context.t -> 'result -> 'model -> 'action -> 'model)
-  -> f:('model t -> ('action -> unit Effect.t) t -> graph -> 'result t)
-  -> graph
+  -> f:('model t -> ('action -> unit Effect.t) t -> local_ graph -> 'result t)
+  -> local_ graph
   -> 'result t
 
 (** [enum] is used for matching on a value and providing different behaviors on different
@@ -320,28 +324,28 @@ val wrap
     syntax, with [match_] taking the value to match on, and [with_] taking a function that
     choose which behavior to use. *)
 val enum
-  :  ?here:Stdlib.Lexing.position
+  :  here:[%call_pos]
   -> (module Enum with type t = 'k)
   -> match_:'k t
-  -> with_:('k -> graph -> 'a t)
-  -> graph
+  -> with_:('k -> local_ graph -> 'a t)
+  -> local_ graph
   -> 'a t
 
 (** All stateful components allocated inside of [with_model_resetter]'s [f] callback
     will have their [reset] functions invoked whenever the [unit Effect.t] returned by
     [with_model_resetter] is scheduled. *)
 val with_model_resetter
-  :  ?here:Stdlib.Lexing.position
-  -> f:(graph -> 'a t)
-  -> graph
+  :  here:[%call_pos]
+  -> f:(local_ graph -> 'a t)
+  -> local_ graph
   -> 'a t * unit Effect.t t
 
 (** The same as [with_model_resetter], but the closure has access to the [reset] function
     this time. *)
 val with_model_resetter'
-  :  ?here:Stdlib.Lexing.position
-  -> f:(reset:unit Effect.t t -> graph -> 'a t)
-  -> graph
+  :  here:[%call_pos]
+  -> f:(reset:unit Effect.t t -> local_ graph -> 'a t)
+  -> local_ graph
   -> 'a t
 
 (** [peek] maps a [Bonsai.t] to an [Effect.t] with the same underlying value.
@@ -353,25 +357,21 @@ val with_model_resetter'
     The ['a Computation_state.t] returned by the effect means that if the value
     was inactive at the time it is peeked, then the effect will be unable to
     retrieve it. *)
-val peek
-  :  ?here:Stdlib.Lexing.position
-  -> 'a t
-  -> graph
-  -> 'a Computation_status.t Effect.t t
+val peek : here:[%call_pos] -> 'a t -> local_ graph -> 'a Computation_status.t Effect.t t
 
 (** Various clock and timing functions *)
 module Clock : sig
   (** Returns a [Bonsai.t] that contains the current time. Using this value can lead to
       inefficient programs that are continuously recomputing because the current time
       changes on every frame. Consider using [approx_now] instead, if possible. *)
-  val now : ?here:Stdlib.Lexing.position -> graph -> Time_ns.t t
+  val now : here:[%call_pos] -> local_ graph -> Time_ns.t t
 
   (** Similar to [now], but instead of updating every frame, it will only update
       every [tick_every] time span. *)
   val approx_now
-    :  ?here:Stdlib.Lexing.position
+    :  here:[%call_pos]
     -> tick_every:Time_ns.Span.t
-    -> graph
+    -> local_ graph
     -> Time_ns.t t
 
   module Before_or_after : sig
@@ -383,7 +383,7 @@ module Clock : sig
 
   (** [Bonsai.Clock.at] can tell you if a given [Time_ns.t Bonsai.t] is before or after
       the current wall clock time. *)
-  val at : ?here:Stdlib.Lexing.position -> Time_ns.t t -> graph -> Before_or_after.t t
+  val at : here:[%call_pos] -> Time_ns.t t -> local_ graph -> Before_or_after.t t
 
   (** An event passed to [every] is scheduled on an interval determined by
       the time-span argument.
@@ -395,7 +395,7 @@ module Clock : sig
       | `Every_multiple_of_period_blocking -> Same as `Every_multiple_of_second, but skips a beat if the previous effect is still running.
     *)
   val every
-    :  ?here:Stdlib.Lexing.position
+    :  here:[%call_pos]
     -> when_to_start_next_effect:
          [< `Wait_period_after_previous_effect_starts_blocking
          | `Wait_period_after_previous_effect_finishes_blocking
@@ -405,17 +405,17 @@ module Clock : sig
     -> ?trigger_on_activate:bool
     -> Time_ns.Span.t
     -> unit Effect.t t
-    -> graph
+    -> local_ graph
     -> unit
 
   (** Produces an effect that can be used to query the current time. *)
-  val get_current_time : ?here:Stdlib.Lexing.position -> graph -> Time_ns.t Effect.t t
+  val get_current_time : here:[%call_pos] -> local_ graph -> Time_ns.t Effect.t t
 
   (** Produces an effect that can be used to sleep for some amount of time. *)
-  val sleep : ?here:Stdlib.Lexing.position -> graph -> (Time_ns.Span.t -> unit Effect.t) t
+  val sleep : here:[%call_pos] -> local_ graph -> (Time_ns.Span.t -> unit Effect.t) t
 
   (** Produces an effect that can be used to sleep until some timestamp. *)
-  val until : ?here:Stdlib.Lexing.position -> graph -> (Time_ns.t -> unit Effect.t) t
+  val until : here:[%call_pos] -> local_ graph -> (Time_ns.t -> unit Effect.t) t
 end
 
 module Edge : sig
@@ -428,12 +428,12 @@ module Edge : sig
 
       *)
   val on_change
-    :  ?here:Stdlib.Lexing.position
+    :  here:[%call_pos]
     -> ?sexp_of_model:('a -> Sexp.t)
     -> equal:('a -> 'a -> bool)
     -> 'a t
     -> callback:('a -> unit Effect.t) t
-    -> graph
+    -> local_ graph
     -> unit
 
   (** Just like [on_change] except that the callback function also has access to the
@@ -441,12 +441,12 @@ module Edge : sig
       because the callback is _always_ invoked the first time that this component is
       becomes active. *)
   val on_change'
-    :  ?here:Stdlib.Lexing.position
+    :  here:[%call_pos]
     -> ?sexp_of_model:('a -> Sexp.t)
     -> equal:('a -> 'a -> bool)
     -> 'a t
     -> callback:('a option -> 'a -> unit Effect.t) t
-    -> graph
+    -> local_ graph
     -> unit
 
   (** [Bonsai.Edge.lifecycle] is used to add effects to Bonsai's lifecycle events.
@@ -455,35 +455,31 @@ module Edge : sig
 
       *)
   val lifecycle
-    :  ?here:Stdlib.Lexing.position
+    :  here:[%call_pos]
     -> ?on_activate:unit Effect.t t
     -> ?on_deactivate:unit Effect.t t
     -> ?after_display:unit Effect.t t
-    -> graph
+    -> local_ graph
     -> unit
 
   (** Just like [lifecycle] except that each effect is optional *)
   val lifecycle'
-    :  ?here:Stdlib.Lexing.position
+    :  here:[%call_pos]
     -> ?on_activate:unit Effect.t option t
     -> ?on_deactivate:unit Effect.t option t
     -> ?after_display:unit Effect.t option t
-    -> graph
+    -> local_ graph
     -> unit
 
   (** [after_display] will schedule an effect at the end of every frame. *)
-  val after_display : ?here:Stdlib.Lexing.position -> unit Effect.t t -> graph -> unit
+  val after_display : here:[%call_pos] -> unit Effect.t t -> local_ graph -> unit
 
   (** Just like [after_display] except that the effect is optional *)
-  val after_display'
-    :  ?here:Stdlib.Lexing.position
-    -> unit Effect.t option t
-    -> graph
-    -> unit
+  val after_display' : here:[%call_pos] -> unit Effect.t option t -> local_ graph -> unit
 
   (** [wait_after_display] gives you an effect that will block until the end of the next
       frame. *)
-  val wait_after_display : ?here:Stdlib.Lexing.position -> graph -> unit Effect.t t
+  val wait_after_display : here:[%call_pos] -> local_ graph -> unit Effect.t t
 
   module Poll : sig
     module Starting : sig
@@ -497,7 +493,7 @@ module Edge : sig
         every time that the input ['a Bonsai.t] changes. The result of the effect
         function is stored and returned as a new [Bonsai.t]. *)
     val effect_on_change
-      :  ?here:Stdlib.Lexing.position
+      :  here:[%call_pos]
       -> ?sexp_of_input:('a -> Sexp.t)
       -> ?sexp_of_result:('o -> Sexp.t)
       -> equal_input:('a -> 'a -> bool)
@@ -505,19 +501,19 @@ module Edge : sig
       -> ('o, 'r) Starting.t
       -> 'a t
       -> effect:('a -> 'o Effect.t) t
-      -> graph
+      -> local_ graph
       -> 'r t
 
     (** [manual_refresh] is a stateful component for storing the result of an effect.
         The most recent return value is returned inside a [Bonsai.t] alongside a
         [unit Effect.t Bonsai.t] that contains an effect for kicking off a new effect. *)
     val manual_refresh
-      :  ?here:Stdlib.Lexing.position
+      :  here:[%call_pos]
       -> ?sexp_of_model:('o -> Sexp.t)
       -> ?equal:('o -> 'o -> bool)
       -> ('o, 'r) Starting.t
       -> effect:'o Effect.t t
-      -> graph
+      -> local_ graph
       -> 'r t * unit Effect.t t
   end
 end
@@ -542,10 +538,10 @@ module Memo : sig
 
   (** Creates a memo instance that can be used by calling [lookup] *)
   val create
-    :  ?here:Stdlib.Lexing.position
+    :  here:[%call_pos]
     -> ('input, 'cmp) comparator
-    -> f:('input bonsai_t -> graph -> 'result bonsai_t)
-    -> graph
+    -> f:('input bonsai_t -> local_ graph -> 'result bonsai_t)
+    -> local_ graph
     -> ('input, 'result) t bonsai_t
 
   (** Requests an instance of the shared computation for a given ['input] value.
@@ -553,12 +549,12 @@ module Memo : sig
       results in [none] being returned for a brief period of time, after which it'll
       return a [Some] containing the result of that computation *)
   val lookup
-    :  ?here:Stdlib.Lexing.position
+    :  here:[%call_pos]
     -> ?sexp_of_model:('input -> Sexp.t)
     -> equal:('input -> 'input -> bool)
     -> ('input, 'result) t bonsai_t
     -> 'input bonsai_t
-    -> graph
+    -> local_ graph
     -> 'result option bonsai_t
 end
 
@@ -584,8 +580,7 @@ module Effect_throttling : sig
     val collapse_fun_to_or_error
       :  ?sexp_of_input:('a -> Sexp.t)
       -> ('a -> 'b Or_error.t t Effect.t)
-      -> 'a
-      -> 'b Or_error.t Effect.t
+      -> ('a -> 'b Or_error.t Effect.t)
   end
 
   (** Transforms an input effect into a new effect that enforces that invariant that at
@@ -599,9 +594,9 @@ module Effect_throttling : sig
       run of the effect raises, no more runs will ever get executed, since they will all
       be waiting for the one that raised to complete. *)
   val poll
-    :  ?here:Stdlib.Lexing.position
+    :  here:[%call_pos]
     -> ('a -> 'b Effect.t) t
-    -> graph
+    -> local_ graph
     -> ('a -> 'b Poll_result.t Effect.t) t
 end
 
@@ -631,62 +626,63 @@ module Dynamic_scope : sig
   (** Given a ['a Dynamic_scope.t] and a ['a Bonsai.t] evaluate the [~inside] function
       that now has access to the value via the [lookup] function. *)
   val set
-    :  ?here:Stdlib.Lexing.position
+    :  here:[%call_pos]
     -> 'a t
     -> 'a bonsai_t
-    -> inside:(graph -> 'r bonsai_t)
-    -> graph
+    -> inside:(local_ graph -> 'r bonsai_t)
+    -> local_ graph
     -> 'r bonsai_t
 
-  type revert = { revert : 'a. (graph -> 'a bonsai_t) -> graph -> 'a bonsai_t }
+  type revert =
+    { revert : 'a. (local_ graph -> 'a bonsai_t) -> (local_ graph -> 'a bonsai_t) }
 
   (** like [set] but with the ability to revert the value in sub-computations. *)
   val set'
-    :  ?here:Stdlib.Lexing.position
+    :  here:[%call_pos]
     -> 'a t
     -> 'a bonsai_t
-    -> f:(revert -> graph -> 'r bonsai_t)
-    -> graph
+    -> f:(revert -> local_ graph -> 'r bonsai_t)
+    -> local_ graph
     -> 'r bonsai_t
 
   (** Lookup attempts to find the value inside the nearest scope, but if there isn't
       one, it falls back to default specified in [create]. *)
-  val lookup : ?here:Stdlib.Lexing.position -> 'a t -> graph -> 'a bonsai_t
+  val lookup : here:[%call_pos] -> 'a t -> local_ graph -> 'a bonsai_t
 
   (** [modify] can be used to change the current value of a dynamically scoped variable. *)
   val modify
-    :  ?here:Stdlib.Lexing.position
+    :  here:[%call_pos]
     -> 'a t
     -> change:('a bonsai_t -> 'a bonsai_t)
-    -> f:(revert -> graph -> 'r bonsai_t)
-    -> graph
+    -> f:(revert -> local_ graph -> 'r bonsai_t)
+    -> local_ graph
     -> 'r bonsai_t
 end
 
 module Incr : sig
   val value_cutoff
-    :  ?here:Stdlib.Lexing.position
+    :  here:[%call_pos]
     -> 'a t
     -> equal:('a -> 'a -> bool)
-    -> graph
+    -> local_ graph
     -> 'a t
 
   (** compute a value using the lower-level [Incremental] library *)
   val compute
-    :  ?here:Stdlib.Lexing.position
+    :  here:[%call_pos]
     -> 'a t
     -> f:('a Incr.t -> 'b Incr.t)
-    -> graph
+    -> local_ graph
     -> 'b t
 
   (** Compute an incremental value from a Time_source.t *)
   val with_clock
-    :  ?here:Stdlib.Lexing.position
+    :  here:[%call_pos]
     -> f:(Time_source.t -> 'a Incr.t)
-    -> graph
+    -> local_ graph
     -> 'a t
 
-  val to_value : ?here:Stdlib.Lexing.position -> 'a Incr.t -> 'a t
+  val to_value : here:[%call_pos] -> 'a Incr.t -> 'a t
 end
 
 (** [assoc] is used to build a new instance of a Bonsai component for each element of a
@@ -698,27 +694,27 @@ end
     Bonsai values, which means that the computation is done incrementally and also
     maintains a state machine for every key-value pair. *)
 val assoc
-  :  ?here:Stdlib.Lexing.position
+  :  here:[%call_pos]
   -> ('k, 'cmp) comparator
   -> ('k, 'v, 'cmp) Map.t t
-  -> f:('k t -> 'v t -> graph -> 'a t)
-  -> graph
+  -> f:('k t -> 'v t -> local_ graph -> 'a t)
+  -> local_ graph
   -> ('k, 'a, 'cmp) Map.t t
 
 (** [all_map] is like [assoc] but is only usable when the input map is constant. *)
 val all_map
-  :  ?here:Stdlib.Lexing.position
-  -> ('k, graph -> 'v t, 'cmp) Map.t
-  -> graph
+  :  here:[%call_pos]
+  -> ('k, local_ graph -> 'v t, 'cmp) Map.t
+  -> local_ graph
   -> ('k, 'v, 'cmp) Map.t t
 
 (** Like [assoc] except that the input value is a Set instead of a Map. *)
 val assoc_set
-  :  ?here:Stdlib.Lexing.position
+  :  here:[%call_pos]
   -> ('key, 'cmp) comparator
   -> ('key, 'cmp) Set.t t
-  -> f:('key t -> graph -> 'result t)
-  -> graph
+  -> f:('key t -> local_ graph -> 'result t)
+  -> local_ graph
   -> ('key, 'result, 'cmp) Map.t t
 
 (** Like [assoc] except that the input value is a list instead of a Map. The output list
@@ -726,42 +722,45 @@ val assoc_set
     n is the length of the list) any time that anything in the input list changes, so it
     may be quite slow with large lists. *)
 val assoc_list
-  :  ?here:Stdlib.Lexing.position
+  :  here:[%call_pos]
   -> ('key, _) comparator
   -> 'a list t
   -> get_key:('a -> 'key)
-  -> f:('key t -> 'a t -> graph -> 'b t)
-  -> graph
+  -> f:('key t -> 'a t -> local_ graph -> 'b t)
+  -> local_ graph
   -> [ `Duplicate_key of 'key | `Ok of 'b list ] t
 
 module Time_source = Time_source
 
 module Debug : sig
   (** [on_change v ~f] executes the function [f] every time that [v] is recomputed. *)
-  val on_change : ?here:Stdlib.Lexing.position -> 'a t -> f:('a -> unit) -> graph -> unit
+  val on_change : here:[%call_pos] -> 'a t -> f:('a -> unit) -> local_ graph -> unit
 
   (** like [on_change], but specialized for printing a sexp of the value that you are
       watching. *)
   val on_change_print_s
-    :  ?here:Stdlib.Lexing.position
+    :  here:[%call_pos]
     -> 'a t
     -> ('a -> Sexp.t)
-    -> graph
+    -> local_ graph
     -> unit
 
   val instrument_computation
-    :  ?here:Stdlib.Lexing.position
-    -> (graph -> 'a t)
+    :  here:[%call_pos]
+    -> (local_ graph -> 'a t)
     -> start_timer:(string -> unit)
     -> stop_timer:(string -> unit)
-    -> graph
+    -> local_ graph
     -> 'a t
 
   (** Builds a graphviz dot file string for the component *)
-  val to_dot : ?pre_process:bool -> (graph -> 'a t) -> string
+  val to_dot : ?pre_process:bool -> (local_ graph -> 'a t) -> string
 
   (** Counts the number of nodes in the static Bonsai graph *)
-  val bonsai_node_counts : ?pre_process:bool -> (graph -> 'a t) -> Skeleton.Counts.t
+  val bonsai_node_counts
+    :  ?pre_process:bool
+    -> (local_ graph -> 'a t)
+    -> Skeleton.Counts.t
 
   val enable_incremental_annotations : unit -> unit
   val disable_incremental_annotations : unit -> unit
@@ -775,9 +774,9 @@ module Debug : sig
       manually with external tools.  This is so you can leave calls to this function
       in production builds without impacting performance until you start debugging. *)
   val monitor_free_variables
-    :  ?here:Stdlib.Lexing.position
-    -> f:(graph -> 'a t)
-    -> graph
+    :  here:[%call_pos]
+    -> f:(local_ graph -> 'a t)
+    -> local_ graph
     -> 'a t
 end
 
@@ -803,67 +802,56 @@ module Path : sig
 end
 
 (** Fetches the current [Path.t] *)
-val path : ?here:Stdlib.Lexing.position -> graph -> Path.t t
+val path : here:[%call_pos] -> local_ graph -> Path.t t
 
 (** Fetches the current [Path.t] and converts it to a string using
     [Path.to_unique_identifier_string] *)
-val path_id : ?here:Stdlib.Lexing.position -> graph -> string t
+val path_id : here:[%call_pos] -> local_ graph -> string t
 
-val arr1 : ?here:Stdlib.Lexing.position -> graph -> 'a t -> f:('a -> 'b) -> 'b t
-
-val arr2
-  :  ?here:Stdlib.Lexing.position
-  -> graph
-  -> 'a t
-  -> 'b t
-  -> f:('a -> 'b -> 'c)
-  -> 'c t
+val arr1 : here:[%call_pos] -> local_ graph -> 'a t -> f:('a -> 'b) -> 'b t
+val arr2 : here:[%call_pos] -> local_ graph -> 'a t -> 'b t -> f:('a -> 'b -> 'c) -> 'c t
 
 module Conv : sig
   val handle
-    :  ?here:Stdlib.Lexing.position
-    -> f:(graph -> 'a t)
-    -> graph
+    :  here:[%call_pos]
+    -> f:(local_ graph -> 'a t)
+    -> local_ graph
     -> 'a Computation.t
 
-  val top_level_handle
-    :  ?here:Stdlib.Lexing.position
-    -> (graph -> 'a t)
-    -> 'a Computation.t
-
-  val perform : ?here:Stdlib.Lexing.position -> graph -> 'a Computation.t -> 'a t
+  val top_level_handle : here:[%call_pos] -> (local_ graph -> 'a t) -> 'a Computation.t
+  val perform : here:[%call_pos] -> local_ graph -> 'a Computation.t -> 'a t
   val reveal_value : 'a t -> 'a Value.t
   val conceal_value : 'a Value.t -> 'a t
 
   val isolated
-    :  graph
+    :  local_ graph
     -> here:Source_code_position.t
-    -> f:(unit -> 'a Value.t)
+    -> f:local_ (unit -> 'a Value.t)
     -> 'a Computation.t
 end
 
 module Effect = Ui_effect
 
 module Let_syntax : sig
-  val ( >>| ) : ?here:Stdlib.Lexing.position -> 'a t -> ('a -> 'b) -> 'b t
-  val return : ?here:Stdlib.Lexing.position -> 'a -> 'a t
+  val ( >>| ) : here:[%call_pos] -> 'a t -> ('a -> 'b) -> 'b t
+  val return : here:[%call_pos] -> 'a -> 'a t
 
   module Let_syntax : sig
-    val map : ?here:Stdlib.Lexing.position -> 'a t -> f:('a -> 'b) -> 'b t
-    val map2 : ?here:Stdlib.Lexing.position -> 'a t -> 'b t -> f:('a -> 'b -> 'c) -> 'c t
-    val both : ?here:Stdlib.Lexing.position -> 'a t -> 'b t -> ('a * 'b) t
-    val arr : ?here:Stdlib.Lexing.position -> 'a t -> f:('a -> 'b) -> 'b t
+    val map : here:[%call_pos] -> 'a t -> f:('a -> 'b) -> 'b t
+    val map2 : here:[%call_pos] -> 'a t -> 'b t -> f:('a -> 'b -> 'c) -> 'c t
+    val both : here:[%call_pos] -> 'a t -> 'b t -> ('a * 'b) t
+    val arr : here:[%call_pos] -> 'a t -> f:('a -> 'b) -> 'b t
     val return : 'a t -> 'a t
-    val cutoff : ?here:Stdlib.Lexing.position -> 'a t -> equal:('a -> 'a -> bool) -> 'a t
+    val cutoff : here:[%call_pos] -> 'a t -> equal:('a -> 'a -> bool) -> 'a t
 
     val switch
       :  here:Source_code_position.t
       -> match_:int t
       -> branches:int
-      -> with_:(int -> 'a t)
+      -> with_:local_ (int -> 'a t)
       -> 'a t
 
-    val sub : ?here:Stdlib.Lexing.position -> 'a -> f:('a -> 'b) -> 'b
+    val sub : here:[%call_pos] -> 'a -> f:local_ ('a -> 'b) -> 'b
 
     include Mapn with type 'a t := 'a t
     include Arrn with type 'a t := 'a t
@@ -873,12 +861,12 @@ end
 module Map :
   Map0_intf.Output
   with type 'a Value.t := 'a t
-   and type 'a Computation.t := graph -> 'a t
+   and type 'a Computation.t := local_ graph -> 'a t
    and module Value := Value
    and module Computation := Computation
 
 module Expert : sig
-  val thunk : ?here:Stdlib.Lexing.position -> f:(unit -> 'a) -> graph -> 'a t
+  val thunk : here:[%call_pos] -> f:(unit -> 'a) -> local_ graph -> 'a t
 
   (** [assoc_on] is similar to [assoc], but allows the model to be keyed differently than
       the input map. This comes with a few caveats:
@@ -890,16 +878,16 @@ module Expert : sig
       [assoc] should almost always be used instead. Consider whether you really need the
       additional power before reaching for this function. *)
   val assoc_on
-    :  ?here:Stdlib.Lexing.position
+    :  here:[%call_pos]
     -> ('io_key, 'io_cmp) comparator
     -> ('model_key, 'model_cmp) comparator
     -> ('io_key, 'data, 'io_cmp) Core.Map.t t
     -> get_model_key:('io_key -> 'data -> 'model_key)
-    -> f:('io_key t -> 'data t -> graph -> 'result t)
-    -> graph
+    -> f:('io_key t -> 'data t -> local_ graph -> 'result t)
+    -> local_ graph
     -> ('io_key, 'result, 'io_cmp) Core.Map.t t
 
-  val delay : ?here:Stdlib.Lexing.position -> f:(graph -> 'a t) -> graph -> 'a t
+  val delay : here:[%call_pos] -> f:(local_ graph -> 'a t) -> local_ graph -> 'a t
   [@@deprecated "[since 2023-07] Use Bonsai.fix "]
 
   module Var : sig
@@ -916,14 +904,14 @@ module Expert : sig
     val create : 'a -> 'a t
 
     (** Provides incremental, read-only access to [t] by producing a {!Bonsai.t}. *)
-    val value : ?here:Stdlib.Lexing.position -> 'a t -> 'a bonsai
+    val value : here:[%call_pos] -> 'a t -> 'a bonsai
 
     (** Updates the value inside of [t]. [f] is given the previous value of [t] so that
         you can reuse parts of the value if applicable. *)
     val update : 'a t -> f:('a -> 'a) -> unit
 
     (** Sets the value inside of [t]. *)
-    val set : ?here:Stdlib.Lexing.position -> 'a t -> 'a -> unit
+    val set : here:[%call_pos] -> 'a t -> 'a -> unit
 
     (** Gets the value inside of [t]. *)
     val get : 'a t -> 'a
@@ -939,19 +927,19 @@ end
 
 (** Just in subfeature to reimplement proc on top of cont *)
 module For_proc2 : sig
-  val arr1 : ?here:Stdlib.Lexing.position -> graph -> 'a t -> f:('a -> 'b) -> 'b t
+  val arr1 : here:[%call_pos] -> local_ graph -> 'a t -> f:('a -> 'b) -> 'b t
 
   val arr2
-    :  ?here:Stdlib.Lexing.position
-    -> graph
+    :  here:[%call_pos]
+    -> local_ graph
     -> 'a t
     -> 'b t
     -> f:('a -> 'b -> 'c)
     -> 'c t
 
   val arr3
-    :  ?here:Stdlib.Lexing.position
-    -> graph
+    :  here:[%call_pos]
+    -> local_ graph
     -> 'a t
     -> 'b t
     -> 'c t
@@ -959,8 +947,8 @@ module For_proc2 : sig
     -> 'd t
 
   val arr4
-    :  ?here:Stdlib.Lexing.position
-    -> graph
+    :  here:[%call_pos]
+    -> local_ graph
     -> 'a t
     -> 'b t
     -> 'c t
@@ -969,8 +957,8 @@ module For_proc2 : sig
     -> 'e t
 
   val arr5
-    :  ?here:Stdlib.Lexing.position
-    -> graph
+    :  here:[%call_pos]
+    -> local_ graph
     -> 'a t
     -> 'b t
     -> 'c t
@@ -980,8 +968,8 @@ module For_proc2 : sig
     -> 'f t
 
   val arr6
-    :  ?here:Stdlib.Lexing.position
-    -> graph
+    :  here:[%call_pos]
+    -> local_ graph
     -> 'a t
     -> 'b t
     -> 'c t
@@ -992,8 +980,8 @@ module For_proc2 : sig
     -> 'g t
 
   val arr7
-    :  ?here:Stdlib.Lexing.position
-    -> graph
+    :  here:[%call_pos]
+    -> local_ graph
     -> 'a t
     -> 'b t
     -> 'c t
@@ -1008,28 +996,28 @@ module For_proc2 : sig
   val conceal_value : 'a Value.t -> 'a t
 
   val state
-    :  ?here:Stdlib.Lexing.position
+    :  here:[%call_pos]
     -> ?reset:('model -> 'model)
     -> ?sexp_of_model:('model -> Sexp.t)
     -> ?equal:('model -> 'model -> bool)
     -> 'model
-    -> graph
+    -> local_ graph
     -> ('model * ('model -> unit Effect.t)) t
 
   val state_opt
-    :  ?here:Stdlib.Lexing.position
+    :  here:[%call_pos]
     -> ?reset:('model option -> 'model option)
     -> ?default_model:'model
     -> ?sexp_of_model:('model -> Sexp.t)
     -> ?equal:('model -> 'model -> bool)
     -> unit
-    -> graph
+    -> local_ graph
     -> ('model option * ('model option -> unit Effect.t)) t
 
   val toggle
-    :  ?here:Stdlib.Lexing.position
+    :  here:[%call_pos]
     -> default_model:bool
-    -> graph
+    -> local_ graph
     -> (bool * unit Effect.t) t
 
   module Toggle : sig
@@ -1040,10 +1028,10 @@ module For_proc2 : sig
       }
   end
 
-  val toggle' : ?here:Stdlib.Lexing.position -> default_model:bool -> graph -> Toggle.t t
+  val toggle' : here:[%call_pos] -> default_model:bool -> local_ graph -> Toggle.t t
 
   val state_machine0
-    :  ?here:Stdlib.Lexing.position
+    :  here:[%call_pos]
     -> ?reset:('model, 'action, unit) resetter
     -> ?sexp_of_model:('model -> Sexp.t)
     -> ?sexp_of_action:('action -> Sexp.t)
@@ -1052,11 +1040,11 @@ module For_proc2 : sig
     -> apply_action:
          (('action, unit) Apply_action_context.t -> 'model -> 'action -> 'model)
     -> unit
-    -> graph
+    -> local_ graph
     -> ('model * ('action -> unit Effect.t)) t
 
   val state_machine1
-    :  ?here:Stdlib.Lexing.position
+    :  here:[%call_pos]
     -> ?sexp_of_action:('action -> Sexp.t)
     -> ?reset:('model, 'action, unit) resetter
     -> ?sexp_of_model:('model -> Sexp.t)
@@ -1069,11 +1057,11 @@ module For_proc2 : sig
           -> 'action
           -> 'model)
     -> 'input t
-    -> graph
+    -> local_ graph
     -> ('model * ('action -> unit Effect.t)) t
 
   val actor0
-    :  ?here:Stdlib.Lexing.position
+    :  here:[%call_pos]
     -> ?reset:(('action, 'return) Apply_action_context.t -> 'model -> 'model)
     -> ?sexp_of_model:('model -> Sexp.t)
     -> ?sexp_of_action:('action -> Sexp.t)
@@ -1085,11 +1073,11 @@ module For_proc2 : sig
           -> 'action
           -> 'model * 'return)
     -> unit
-    -> graph
+    -> local_ graph
     -> ('model * ('action -> 'return Effect.t)) t
 
   val actor1
-    :  ?here:Stdlib.Lexing.position
+    :  here:[%call_pos]
     -> ?sexp_of_action:('action -> Sexp.t)
     -> ?reset:(('action, 'return) Apply_action_context.t -> 'model -> 'model)
          (** to learn more about [reset], read the docs on [with_model_resetter] *)
@@ -1103,11 +1091,11 @@ module For_proc2 : sig
           -> 'action
           -> 'model * 'return)
     -> 'input t
-    -> graph
+    -> local_ graph
     -> ('model * ('action -> 'return Effect.t)) t
 
   val wrap
-    :  ?here:Stdlib.Lexing.position
+    :  here:[%call_pos]
     -> ?reset:(('action, unit) Apply_action_context.t -> 'model -> 'model)
     -> ?sexp_of_model:('model -> Sexp.t)
     -> ?equal:('model -> 'model -> bool)
@@ -1118,112 +1106,112 @@ module For_proc2 : sig
           -> 'model
           -> 'action
           -> 'model)
-    -> f:('model t -> ('action -> unit Effect.t) t -> graph -> 'result t)
+    -> f:('model t -> ('action -> unit Effect.t) t -> local_ graph -> 'result t)
     -> unit
-    -> graph
+    -> local_ graph
     -> 'result t
 
   val switch
-    :  ?here:Stdlib.Lexing.position
+    :  here:[%call_pos]
     -> match_:int t
     -> branches:int
-    -> with_:(int -> graph -> 'a t)
-    -> graph
+    -> with_:(int -> local_ graph -> 'a t)
+    -> local_ graph
     -> 'a t
 
   val with_model_resetter
-    :  ?here:Stdlib.Lexing.position
-    -> (graph -> 'a t)
-    -> graph
+    :  here:[%call_pos]
+    -> (local_ graph -> 'a t)
+    -> local_ graph
     -> ('a * unit Effect.t) t
 
   val with_model_resetter'
-    :  ?here:Stdlib.Lexing.position
-    -> (reset:unit Effect.t t -> graph -> 'a t)
-    -> graph
+    :  here:[%call_pos]
+    -> (reset:unit Effect.t t -> local_ graph -> 'a t)
+    -> local_ graph
     -> 'a t
 
   val on_change
-    :  ?here:Stdlib.Lexing.position
+    :  here:[%call_pos]
     -> ?sexp_of_model:('a -> Sexp.t)
     -> equal:('a -> 'a -> bool)
     -> 'a t
     -> callback:('a -> unit Effect.t) t
-    -> graph
+    -> local_ graph
     -> unit t
 
   val on_change'
-    :  ?here:Stdlib.Lexing.position
+    :  here:[%call_pos]
     -> ?sexp_of_model:('a -> Sexp.t)
     -> equal:('a -> 'a -> bool)
     -> 'a t
     -> callback:('a option -> 'a -> unit Effect.t) t
-    -> graph
+    -> local_ graph
     -> unit t
 
   val lifecycle
-    :  ?here:Stdlib.Lexing.position
+    :  here:[%call_pos]
     -> ?on_activate:unit Effect.t t
     -> ?on_deactivate:unit Effect.t t
     -> ?after_display:unit Effect.t t
     -> unit
-    -> graph
+    -> local_ graph
     -> unit t
 
   val lifecycle'
-    :  ?here:Stdlib.Lexing.position
+    :  here:[%call_pos]
     -> ?on_activate:unit Effect.t option t
     -> ?on_deactivate:unit Effect.t option t
     -> ?after_display:unit Effect.t option t
     -> unit
-    -> graph
+    -> local_ graph
     -> unit t
 
-  val after_display : ?here:Stdlib.Lexing.position -> unit Effect.t t -> graph -> unit t
+  val after_display : here:[%call_pos] -> unit Effect.t t -> local_ graph -> unit t
 
   val after_display'
-    :  ?here:Stdlib.Lexing.position
+    :  here:[%call_pos]
     -> unit Effect.t option t
-    -> graph
+    -> local_ graph
     -> unit t
 
   val manual_refresh
-    :  ?here:Stdlib.Lexing.position
+    :  here:[%call_pos]
     -> ?sexp_of_model:('o -> Sexp.t)
     -> ?equal:('o -> 'o -> bool)
     -> ('o, 'r) Edge.Poll.Starting.t
     -> effect:'o Effect.t t
-    -> graph
+    -> local_ graph
     -> ('r * unit Effect.t) t
 
   val debug_on_change
-    :  ?here:Stdlib.Lexing.position
+    :  here:[%call_pos]
     -> 'a t
     -> f:('a -> unit)
-    -> graph
+    -> local_ graph
     -> unit t
 
   val debug_on_change_print_s
-    :  ?here:Stdlib.Lexing.position
+    :  here:[%call_pos]
     -> 'a t
     -> ('a -> Sexp.t)
-    -> graph
+    -> local_ graph
     -> unit t
 
-  val lazy_ : ?here:Stdlib.Lexing.position -> (graph -> 'a t) lazy_t -> graph -> 'a t
+  val lazy_ : here:[%call_pos] -> (local_ graph -> 'a t) lazy_t -> local_ graph -> 'a t
 
   val narrow
-    :  ?here:Stdlib.Lexing.position
+    :  here:[%call_pos]
     -> ('a * ('b -> unit Effect.t)) t
     -> get:('a -> 'c)
     -> set:('a -> 'd -> 'b)
-    -> graph
+    -> local_ graph
     -> ('c * ('d -> unit Effect.t)) t
 
   val narrow_via_field
-    :  ?here:Stdlib.Lexing.position
+    :  here:[%call_pos]
     -> ('a * ('a -> unit Effect.t)) t
     -> ('a, 'b) Field.t
-    -> graph
+    -> local_ graph
     -> ('b * ('b -> unit Effect.t)) t
 end

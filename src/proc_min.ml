@@ -2,13 +2,13 @@ open! Core
 open! Import
 open Computation
 
-let read ?(here = Stdlib.Lexing.dummy_pos) value = Return { value; here }
+let read ~(here : [%call_pos]) value = Return { value; here }
 
 let monitor_free_variables ~here inner =
   Monitor_free_variables { here; inner; free_vars = Type_id_set.empty }
 ;;
 
-let sub (type via) ?(here = Stdlib.Lexing.dummy_pos) (from : via Computation.t) ~f =
+let sub (type via) ~(here : [%call_pos]) (from : via Computation.t) ~f =
   match from with
   | Return { value = { here = _; value = Named _ as named; id }; here } ->
     f { Value.here; value = named; id }
@@ -22,7 +22,7 @@ let sub (type via) ?(here = Stdlib.Lexing.dummy_pos) (from : via Computation.t) 
     Sub { from; via; into; here }
 ;;
 
-let switch ~here ~match_ ~branches ~with_ =
+let switch ~here ~match_ ~branches ~(local_ with_) =
   let arms =
     List.init branches ~f:(fun key ->
       let computation =
@@ -36,19 +36,15 @@ let switch ~here ~match_ ~branches ~with_ =
 ;;
 
 module Dynamic_scope = struct
-  let fetch ?(here = Stdlib.Lexing.dummy_pos) ~id ~default ~for_some () =
+  let fetch ~(here : [%call_pos]) ~id ~default ~for_some () =
     Fetch { id; default; for_some; here }
   ;;
 
-  let store ?(here = Stdlib.Lexing.dummy_pos) ~id ~value ~inner () =
-    Store { id; value; inner; here }
-  ;;
+  let store ~(here : [%call_pos]) ~id ~value ~inner () = Store { id; value; inner; here }
 end
 
 module Edge = struct
-  let lifecycle ?(here = Stdlib.Lexing.dummy_pos) lifecycle =
-    Lifecycle { lifecycle; here }
-  ;;
+  let lifecycle ~(here : [%call_pos]) lifecycle = Lifecycle { lifecycle; here }
 end
 
 let state_machine1_safe
@@ -97,7 +93,7 @@ module Computation_status = struct
 end
 
 let state_machine1
-  ?(here = Stdlib.Lexing.dummy_pos)
+  ~(here : [%call_pos])
   ?sexp_of_action
   ?reset
   ?sexp_of_model
@@ -122,7 +118,7 @@ let state_machine1
 ;;
 
 let state_machine0
-  ?(here = Stdlib.Lexing.dummy_pos)
+  ~(here : [%call_pos])
   ?reset
   ?sexp_of_model
   ?(sexp_of_action = sexp_of_opaque)
@@ -158,17 +154,17 @@ let state_machine0
 ;;
 
 module Proc_incr = struct
-  let value_cutoff ?(here = Stdlib.Lexing.dummy_pos) t ~equal =
+  let value_cutoff ~(here : [%call_pos]) t ~equal =
     read ~here (Value.cutoff ~here ~added_by_let_syntax:false ~equal t)
   ;;
 
-  let compute_with_clock ?(here = Stdlib.Lexing.dummy_pos) t ~f =
+  let compute_with_clock ~(here : [%call_pos]) t ~f =
     Computation.Leaf_incr { input = t; compute = f; here }
   ;;
 
   let of_module
     (type input model result)
-    ?(here = Stdlib.Lexing.dummy_pos)
+    ~(here : [%call_pos])
     (module M : Component_s_incr
       with type Input.t = input
        and type Model.t = model
@@ -211,7 +207,7 @@ end
 
 let assoc
   (type k v cmp)
-  ?(here = Stdlib.Lexing.dummy_pos)
+  ~(here : [%call_pos])
   (comparator : (k, cmp) comparator)
   (map : (k, v, cmp) Map.t Value.t)
   ~f
@@ -232,7 +228,7 @@ let assoc
 
 let assoc_on
   (type model_k io_k model_cmp io_cmp v)
-  ?(here = Stdlib.Lexing.dummy_pos)
+  ~(here : [%call_pos])
   (io_comparator : (io_k, io_cmp) comparator)
   (model_comparator : (model_k, model_cmp) comparator)
   (map : (io_k, v, io_cmp) Map.t Value.t)
@@ -274,16 +270,16 @@ let assoc_on
     }
 ;;
 
-let lazy_ ?(here = Stdlib.Lexing.dummy_pos) t = Lazy { t; here }
+let lazy_ ~(here : [%call_pos]) t = Lazy { t; here }
 
 let fix
   (type input result)
-  ?(here = Stdlib.Lexing.dummy_pos)
+  ~(here : [%call_pos])
   (input : input Value.t)
-  ~(f :
-      recurse:(input Value.t -> result Computation.t)
-      -> input Value.t
-      -> result Computation.t)
+  ~(local_ f :
+             recurse:(input Value.t -> result Computation.t)
+             -> input Value.t
+             -> result Computation.t)
   =
   let fix_id : result Fix_id.t = Fix_id.create () in
   let input_id : input Type_equal.Id.t =
@@ -297,7 +293,7 @@ let fix
 
 let wrap
   (type model action)
-  ?(here = Stdlib.Lexing.dummy_pos)
+  ~(here : [%call_pos])
   ?reset
   ?sexp_of_model
   ?equal
@@ -364,10 +360,10 @@ let wrap
     }
 ;;
 
-let with_model_resetter ?(here = Stdlib.Lexing.dummy_pos) f =
+let with_model_resetter ~(here : [%call_pos]) f =
   let reset_id = Type_equal.Id.create ~name:"reset-model" [%sexp_of: opaque] in
   let inner = f ~reset:(Value.named ~here Model_resetter reset_id) in
   With_model_resetter { reset_id; inner; here }
 ;;
 
-let path ?(here = Stdlib.Lexing.dummy_pos) () = Path { here }
+let path ~(here : [%call_pos]) () = Path { here }

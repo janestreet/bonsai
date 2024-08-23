@@ -120,7 +120,7 @@ module Source_code_position = struct
     ; pos_bol : int
     ; pos_cnum : int
     }
-  [@@deriving sexp, bin_io]
+  [@@deriving sexp, bin_io, equal]
 end
 
 module Node_info = struct
@@ -128,7 +128,7 @@ module Node_info = struct
     { node_type : string
     ; here : Source_code_position.t option
     }
-  [@@deriving sexp, bin_io]
+  [@@deriving sexp, bin_io, equal]
 
   let of_value (type a) ({ value; here; id = _ } : a Value.t) =
     let node_type =
@@ -183,7 +183,7 @@ type t = V3.t =
   ; dag : Node_path.t list Node_path.Map.t
   ; info : Node_info.t Node_path.Map.t
   }
-[@@deriving bin_io, sexp]
+[@@deriving bin_io, sexp, equal]
 
 let empty =
   { tree = Node_path.Map.empty; dag = Node_path.Map.empty; info = Node_path.Map.empty }

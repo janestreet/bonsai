@@ -146,7 +146,7 @@ let create
   (type r)
   ?(optimize = true)
   ~time_source
-  (computation : Bonsai.graph -> r Bonsai.t)
+  (computation : local_ Bonsai.graph -> r Bonsai.t)
   =
   create_direct ~optimize ~time_source (Bonsai.Private.top_level_handle computation)
 ;;

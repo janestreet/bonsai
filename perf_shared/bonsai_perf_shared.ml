@@ -101,6 +101,6 @@ module type Config = sig
   type action
 
   val name : t -> string
-  val computation : t -> input Bonsai.t -> Bonsai.graph -> output Bonsai.t
-  val get_inject : output -> action -> unit Bonsai.Effect.t
+  val computation : t -> input Bonsai.t -> local_ Bonsai.graph -> output Bonsai.t
+  val get_inject : output -> (action -> unit Bonsai.Effect.t)
 end

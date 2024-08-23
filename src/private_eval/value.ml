@@ -120,19 +120,14 @@ and 'a t =
 
 let value_id name = Type_equal.Id.create ~name sexp_of_opaque
 
-let map2 ?(here = Stdlib.Lexing.dummy_pos) t1 t2 ~f =
+let map2 ~(here : [%call_pos]) t1 t2 ~f =
   { value = Map2 { t1; t2; f }; here; id = value_id "map2" }
 ;;
 
-let map ?(here = Stdlib.Lexing.dummy_pos) t ~f =
-  { value = Map { t; f }; here; id = value_id "map" }
-;;
+let map ~(here : [%call_pos]) t ~f = { value = Map { t; f }; here; id = value_id "map" }
+let named ~(here : [%call_pos]) name_source id = { value = Named name_source; here; id }
 
-let named ?(here = Stdlib.Lexing.dummy_pos) name_source id =
-  { value = Named name_source; here; id }
-;;
-
-let cutoff ?(here = Stdlib.Lexing.dummy_pos) ~added_by_let_syntax t ~equal =
+let cutoff ~(here : [%call_pos]) ~added_by_let_syntax t ~equal =
   let value = Cutoff { t; equal; added_by_let_syntax } in
   { value; here; id = value_id "cutoff" }
 ;;
@@ -216,11 +211,9 @@ let eval env t =
   incr
 ;;
 
-let return ?(here = Stdlib.Lexing.dummy_pos) a =
-  { value = Constant a; here; id = value_id "return" }
-;;
+let return ~(here : [%call_pos]) a = { value = Constant a; here; id = value_id "return" }
 
-let return_exn ?(here = Stdlib.Lexing.dummy_pos) exn =
+let return_exn ~(here : [%call_pos]) exn =
   { value = Exception exn; here; id = value_id "return exn" }
 ;;
 
@@ -236,31 +229,29 @@ include Applicative.Make_using_map2 (struct
     let map = `Custom map
   end)
 
-let both ?(here = Stdlib.Lexing.dummy_pos) a b =
-  { value = Both (a, b); here; id = value_id "both" }
-;;
+let both ~(here : [%call_pos]) a b = { value = Both (a, b); here; id = value_id "both" }
 
-let map3 ?(here = Stdlib.Lexing.dummy_pos) t1 t2 t3 ~f =
+let map3 ~(here : [%call_pos]) t1 t2 t3 ~f =
   { value = Map3 { t1; t2; t3; f }; here; id = value_id "map3" }
 ;;
 
-let map4 ?(here = Stdlib.Lexing.dummy_pos) t1 t2 t3 t4 ~f =
+let map4 ~(here : [%call_pos]) t1 t2 t3 t4 ~f =
   { value = Map4 { t1; t2; t3; t4; f }; here; id = value_id "map4" }
 ;;
 
-let map5 ?(here = Stdlib.Lexing.dummy_pos) t1 t2 t3 t4 t5 ~f =
+let map5 ~(here : [%call_pos]) t1 t2 t3 t4 t5 ~f =
   { value = Map5 { t1; t2; t3; t4; t5; f }; here; id = value_id "map5" }
 ;;
 
-let map6 ?(here = Stdlib.Lexing.dummy_pos) t1 t2 t3 t4 t5 t6 ~f =
+let map6 ~(here : [%call_pos]) t1 t2 t3 t4 t5 t6 ~f =
   { value = Map6 { t1; t2; t3; t4; t5; t6; f }; here; id = value_id "map6" }
 ;;
 
-let map7 ?(here = Stdlib.Lexing.dummy_pos) t1 t2 t3 t4 t5 t6 t7 ~f =
+let map7 ~(here : [%call_pos]) t1 t2 t3 t4 t5 t6 t7 ~f =
   { value = Map7 { t1; t2; t3; t4; t5; t6; t7; f }; here; id = value_id "map7" }
 ;;
 
-let rec all ?(here = Stdlib.Lexing.dummy_pos) = function
+let rec all ~(here : [%call_pos]) = function
   | [] -> return []
   | [ t1 ] -> map ~here t1 ~f:(fun a1 -> [ a1 ])
   | [ t1; t2 ] -> map2 ~here t1 t2 ~f:(fun a1 a2 -> [ a1; a2 ])
@@ -283,9 +274,7 @@ let rec all ?(here = Stdlib.Lexing.dummy_pos) = function
     map2 ~here left right ~f:(fun left right -> left @ right)
 ;;
 
-let of_incr ?(here = Stdlib.Lexing.dummy_pos) x =
-  { value = Incr x; here; id = value_id "incr" }
-;;
+let of_incr ~(here : [%call_pos]) x = { value = Incr x; here; id = value_id "incr" }
 
 module Open_on_rhs_intf = struct
   module type S = sig end

@@ -11,7 +11,7 @@ let f ~model ~input_id ~dynamic_action ~input ~time_source ~reset ~apply_action 
            remains [phys_equal] when the [model] changes. *)
     let inject_dynamic = Lazy_inject.make (wrap_leaf inject) in
     let result =
-      let%mapn model = model in
+      let%mapn model in
       model, inject_dynamic
     in
     Trampoline.return

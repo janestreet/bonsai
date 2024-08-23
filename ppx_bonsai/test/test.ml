@@ -16,7 +16,7 @@ module Arrow_example = struct
     | 0 -> return (X.return_v true)
     | b ->
       return
-        (let%map b = b in
+        (let%map b in
          b = 1)
   ;;
 
@@ -25,7 +25,7 @@ module Arrow_example = struct
     | 0 -> return (X.return_v true)
     | _ as b ->
       return
-        (let%map b = b in
+        (let%map b in
          b = 1)
   ;;
 
@@ -37,12 +37,12 @@ module Arrow_example = struct
     match%sub a with
     | A b ->
       return
-        (let%map b = b in
+        (let%map b in
          b = 1)
   ;;
 
   let _arrow_example_5 (a : _ X.v) : _ X.c =
-    let%arr a = a in
+    let%arr a in
     a
   ;;
 

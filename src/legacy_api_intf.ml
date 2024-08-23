@@ -38,7 +38,7 @@ module type S = sig
       takes a first-class module of type [Component_s], as well as the default model for the
       component. For more details, please read the docs for [Component_s]. *)
   val of_module
-    :  ?here:Stdlib.Lexing.position
+    :  here:[%call_pos]
     -> ?sexp_of_model:('model -> Sexp.t)
     -> ('input, 'model, 'action, 'result) component_s
     -> ?equal:('model -> 'model -> bool)
@@ -48,7 +48,7 @@ module type S = sig
   (** Given two components that have the same input, [both] returns a Bonsai component that
       contains both of their outputs. *)
   val both
-    :  ?here:Stdlib.Lexing.position
+    :  here:[%call_pos]
     -> ('input, 'r1) t
     -> ('input, 'r2) t
     -> ('input, 'r1 * 'r2) t
@@ -75,7 +75,7 @@ module type S = sig
       The [handle] function translates the values returned by [which] into the component
       that handles this value. *)
   val enum
-    :  ?here:Stdlib.Lexing.position
+    :  here:[%call_pos]
     -> (module Enum with type t = 'key)
     -> which:('input -> 'key)
     -> handle:('key -> ('input, 'result) t)
@@ -83,7 +83,7 @@ module type S = sig
 
   (** [if_] is a special case of [enum] for booleans. *)
   val if_
-    :  ?here:Stdlib.Lexing.position
+    :  here:[%call_pos]
     -> ('input -> bool)
     -> then_:('input, 'result) t
     -> else_:('input, 'result) t
@@ -124,55 +124,45 @@ module type S = sig
   val ( ^>> ) : ('a, 'b) t -> ('c -> 'a) -> ('c, 'b) t
 
   (** [first t] applies [t] to the first part of the input. *)
-  val first
-    :  ?here:Stdlib.Lexing.position
-    -> ('input, 'result) t
-    -> ('input * 'a, 'result * 'a) t
+  val first : here:[%call_pos] -> ('input, 'result) t -> ('input * 'a, 'result * 'a) t
 
   (** [second t] applies [t] to the second part of the input. *)
-  val second
-    :  ?here:Stdlib.Lexing.position
-    -> ('input, 'result) t
-    -> ('a * 'input, 'a * 'result) t
+  val second : here:[%call_pos] -> ('input, 'result) t -> ('a * 'input, 'a * 'result) t
 
   (** [split t u] applies [t] to the first part of the input and [u] to the second part.
   *)
-  val split
-    :  ?here:Stdlib.Lexing.position
-    -> ('i1, 'r1) t
-    -> ('i2, 'r2) t
-    -> ('i1 * 'i2, 'r1 * 'r2) t
+  val split : here:[%call_pos] -> ('i1, 'r1) t -> ('i2, 'r2) t -> ('i1 * 'i2, 'r1 * 'r2) t
 
   (** [extend_first] returns the result of a Bonsai component alongside its input. *)
   val extend_first
-    :  ?here:Stdlib.Lexing.position
+    :  here:[%call_pos]
     -> ('input, 'result) t
     -> ('input, 'result * 'input) t
 
   (** [extend_second] returns the result of a Bonsai component alongside its input. *)
   val extend_second
-    :  ?here:Stdlib.Lexing.position
+    :  here:[%call_pos]
     -> ('input, 'result) t
     -> ('input, 'input * 'result) t
 
   (** [fanout t u] applies [t] and [u] to the same input and returns both results. It's
       actually just [both]. *)
   val fanout
-    :  ?here:Stdlib.Lexing.position
+    :  here:[%call_pos]
     -> ('input, 'r1) t
     -> ('input, 'r2) t
     -> ('input, 'r1 * 'r2) t
 
   (** [t *** u = split t u]. *)
   val ( *** )
-    :  ?here:Stdlib.Lexing.position
+    :  here:[%call_pos]
     -> ('i1, 'r1) t
     -> ('i2, 'r2) t
     -> ('i1 * 'i2, 'r1 * 'r2) t
 
   (** [t &&& u = fanout t u]. *)
   val ( &&& )
-    :  ?here:Stdlib.Lexing.position
+    :  here:[%call_pos]
     -> ('input, 'r1) t
     -> ('input, 'r2) t
     -> ('input, 'r1 * 'r2) t
@@ -180,7 +170,7 @@ module type S = sig
   (** Composes two components where one of the outputs of the first component is one of
       the inputs to the second. *)
   val partial_compose_first
-    :  ?here:Stdlib.Lexing.position
+    :  here:[%call_pos]
     -> ('input, 'shared * 'output1) t
     -> ('input * 'shared, 'output2) t
     -> ('input, 'output1 * 'output2) t
@@ -188,7 +178,7 @@ module type S = sig
   (** [pipe] connects two components, but provides several functions that ease the
       transference of data between the components, as well as collect the final result. *)
   val pipe
-    :  ?here:Stdlib.Lexing.position
+    :  here:[%call_pos]
     -> ('input, 'r1) t
     -> into:('intermediate, 'r2) t
     -> via:('input -> 'r1 -> 'intermediate)
@@ -201,7 +191,7 @@ module type S = sig
     val of_incr : 'a Incr.t -> (_, 'a) t
 
     val of_module
-      :  ?here:Stdlib.Lexing.position
+      :  here:[%call_pos]
       -> ?sexp_of_model:('m -> Sexp.t)
       -> ('i, 'm, 'a, 'r) component_s_incr
       -> equal:('m -> 'm -> bool)
@@ -244,7 +234,7 @@ module type S = sig
       val map : ('input, 'r1) t -> f:('r1 -> 'r2) -> ('input, 'r2) t
 
       val both
-        :  ?here:Stdlib.Lexing.position
+        :  here:[%call_pos]
         -> ('input, 'r1) t
         -> ('input, 'r2) t
         -> ('input, 'r1 * 'r2) t

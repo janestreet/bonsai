@@ -45,7 +45,7 @@ module Rpc_kind = struct
 
   module Async_rpc_kernel_rpc_descriptions = struct
     type t = Async_rpc_kernel.Rpc.Description.t =
-      { name : string
+      { global_ name : string
       ; version : int
       }
     [@@deriving sexp, equal, quickcheck]

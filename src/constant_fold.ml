@@ -45,7 +45,7 @@ open Types.Down
 include struct
   let value_id name = Type_equal.Id.create ~name sexp_of_opaque
 
-  let wrap_value ?(here = Stdlib.Lexing.dummy_pos) name v =
+  let wrap_value ~(here : [%call_pos]) name v =
     { Value.value = v; here; id = value_id name }
   ;;
 
@@ -95,7 +95,7 @@ include struct
 
   let simplify_assoc_if_simpl
     (type k v cmp)
-    ?(here = Stdlib.Lexing.dummy_pos)
+    ~(here : [%call_pos])
     ~(key_comparator : (k, cmp) comparator)
     ~(key_id : k Type_equal.Id.t)
     ~(data_id : v Type_equal.Id.t)

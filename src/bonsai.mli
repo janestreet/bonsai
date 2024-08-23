@@ -22,23 +22,23 @@ module Private : sig
   val conceal_value : 'a Private_value.t -> 'a Cont.t
 
   val top_level_handle
-    :  ?here:Stdlib.Lexing.position
-    -> (Cont.graph -> 'a Cont.t)
+    :  here:[%call_pos]
+    -> (local_ Cont.graph -> 'a Cont.t)
     -> 'a Private_computation.t
 
   val handle
-    :  ?here:Stdlib.Lexing.position
-    -> f:(Cont.graph -> 'a Cont.t)
-    -> Cont.graph
+    :  here:[%call_pos]
+    -> f:(local_ Cont.graph -> 'a Cont.t)
+    -> local_ Cont.graph
     -> 'a Private_computation.t
 
   val perform
-    :  ?here:Stdlib.Lexing.position
-    -> Cont.graph
+    :  here:[%call_pos]
+    -> local_ Cont.graph
     -> 'a Private_computation.t
     -> 'a Cont.t
 
-  val path : ?here:Stdlib.Lexing.position -> Cont.graph -> Path.t Cont.t
+  val path : here:[%call_pos] -> local_ Cont.graph -> Path.t Cont.t
 
   module Value = Private_value
   module Computation = Private_computation
@@ -78,7 +78,7 @@ module Proc : sig
     with module Private_computation := Private_computation
      and module Private_value := Private_value
      and type 'a Value.t = 'a Cont.t
-     and type 'a Computation.t = Cont.graph -> 'a Cont.t
+     and type 'a Computation.t = local_ Cont.graph -> 'a Cont.t
      and type 'a Computation_status.t = 'a Cont.Computation_status.t
      and type 'a Dynamic_scope.t = 'a Cont.Dynamic_scope.t
      and type 'a Effect_throttling.Poll_result.t = 'a Cont.Effect_throttling.Poll_result.t
@@ -92,7 +92,7 @@ module Proc : sig
       with module Private_computation := Private_computation
        and module Private_value := Private_value
        and type 'a Value.t = 'a Cont.t
-       and type 'a Computation.t = Cont.graph -> 'a Cont.t
+       and type 'a Computation.t = local_ Cont.graph -> 'a Cont.t
        and type 'a Computation_status.t = 'a Cont.Computation_status.t
        and type 'a Dynamic_scope.t = 'a Cont.Dynamic_scope.t
        and type 'a Effect_throttling.Poll_result.t =
@@ -106,7 +106,7 @@ end
 module Arrow_deprecated : sig
   include
     Legacy_api_intf.S
-    with type ('input, 'result) t = 'input Cont.t -> Cont.graph -> 'result Cont.t
+    with type ('input, 'result) t = 'input Cont.t -> (local_ Cont.graph -> 'result Cont.t)
 end
 
 module Stable : sig

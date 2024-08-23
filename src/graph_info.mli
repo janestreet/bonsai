@@ -6,7 +6,7 @@ module Node_info : sig
     { node_type : string
     ; here : Source_code_position.t option
     }
-  [@@deriving sexp, bin_io]
+  [@@deriving sexp, bin_io, equal]
 
   val of_computation : _ Computation.t -> t
   val of_value : _ Value.t -> t
@@ -36,7 +36,7 @@ type t =
   ; dag : Node_path.t list Node_path.Map.t
   ; info : Node_info.t Node_path.Map.t
   }
-[@@deriving bin_io, sexp]
+[@@deriving bin_io, sexp, equal]
 
 val empty : t
 

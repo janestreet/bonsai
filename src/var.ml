@@ -5,7 +5,7 @@ type 'a t = 'a Incr.Var.t
 
 let create x = Incr.Var.create x
 
-let set ?(here = Stdlib.Lexing.dummy_pos) t v =
+let set ~(here : [%call_pos]) t v =
   Stabilization_tracker.mark_incremental_dirty ();
   if Incr.am_stabilizing ()
   then
@@ -22,5 +22,5 @@ let update t ~f =
 ;;
 
 let get t = Incr.Var.value t
-let value ?(here = Stdlib.Lexing.dummy_pos) t = t |> Incr.Var.watch |> Value.of_incr ~here
+let value ~(here : [%call_pos]) t = t |> Incr.Var.watch |> Value.of_incr ~here
 let incr_var = Fn.id

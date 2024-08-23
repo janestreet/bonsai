@@ -22,13 +22,11 @@ module Apply_action_context = Proc.Apply_action_context
 module Value = struct
   type 'a t = 'a Cont.t
 
-  let return ?(here = Stdlib.Lexing.dummy_pos) a =
-    Value.return ~here a |> Cont.Conv.conceal_value
-  ;;
+  let return ~(here : [%call_pos]) a = Value.return ~here a |> Cont.Conv.conceal_value
 
   (* we depend on Proc's [map] function so that we can keep passing
      the [here] parameter for the let%arr and let%sub ppxes. *)
-  let map ?(here = Stdlib.Lexing.dummy_pos) v ~f =
+  let map ~(here : [%call_pos]) v ~f =
     Proc.Let_syntax.Let_syntax.map ~here (Cont.Conv.reveal_value v) ~f
     |> Cont.Conv.conceal_value
   ;;
@@ -37,7 +35,7 @@ module Value = struct
     Option.value_map opt ~default:(return None) ~f:(map ~f:Option.some)
   ;;
 
-  let cutoff ?(here = Stdlib.Lexing.dummy_pos) a ~equal =
+  let cutoff ~(here : [%call_pos]) a ~equal =
     Cont.Conv.reveal_value a
     |> Value.cutoff ~here ~added_by_let_syntax:false ~equal
     |> Cont.Conv.conceal_value
@@ -59,21 +57,21 @@ module Value = struct
 
       let return = return
       let map2 = map2
-      let map ?(here = Stdlib.Lexing.dummy_pos) a ~f = map ~here a ~f
+      let map ~(here : [%call_pos]) a ~f = map ~here a ~f
       let map = `Custom map
     end)
 
-  let both ?(here = Stdlib.Lexing.dummy_pos) a b =
+  let both ~(here : [%call_pos]) a b =
     Value.both ~here (Cont.Conv.reveal_value a) (Cont.Conv.reveal_value b)
     |> Cont.Conv.conceal_value
   ;;
 
   module Let_syntax = struct
-    let ( >>| ) ?(here = Stdlib.Lexing.dummy_pos) a f =
+    let ( >>| ) ~(here : [%call_pos]) a f =
       Value.map ~here (Cont.Conv.reveal_value a) ~f |> Cont.Conv.conceal_value
     ;;
 
-    let ( <*> ) ?(here = Stdlib.Lexing.dummy_pos) f a =
+    let ( <*> ) ~(here : [%call_pos]) f a =
       Value.map2
         ~here
         (Cont.Conv.reveal_value a)
@@ -82,25 +80,25 @@ module Value = struct
       |> Cont.Conv.conceal_value
     ;;
 
-    let ( <$> ) ?(here = Stdlib.Lexing.dummy_pos) f a =
+    let ( <$> ) ~(here : [%call_pos]) f a =
       Cont.Conv.reveal_value a
       |> Value.map ~here ~f:(fun a -> f a)
       |> Cont.Conv.conceal_value
     ;;
 
     module Let_syntax = struct
-      let map ?(here = Stdlib.Lexing.dummy_pos) v ~f =
+      let map ~(here : [%call_pos]) v ~f =
         Proc.Let_syntax.Let_syntax.map ~here (Cont.Conv.reveal_value v) ~f
         |> Cont.Conv.conceal_value
       ;;
 
-      let cutoff ?(here = Stdlib.Lexing.dummy_pos) a ~equal =
+      let cutoff ~(here : [%call_pos]) a ~equal =
         Cont.Conv.reveal_value a
         |> Proc.Let_syntax.Let_syntax.cutoff ~here ~equal
         |> Cont.Conv.conceal_value
       ;;
 
-      let both ?(here = Stdlib.Lexing.dummy_pos) a b =
+      let both ~(here : [%call_pos]) a b =
         Value.both ~here (Cont.Conv.reveal_value a) (Cont.Conv.reveal_value b)
         |> Cont.Conv.conceal_value
       ;;
@@ -111,7 +109,7 @@ module Value = struct
 end
 
 module This_let_syntax = struct
-  let comp_return ?(here = Stdlib.Lexing.dummy_pos) v graph =
+  let comp_return ~(here : [%call_pos]) v graph =
     Cont.Conv.perform ~here graph (Proc.read ~here (Cont.Conv.reveal_value v))
   ;;
 
@@ -122,42 +120,36 @@ module This_let_syntax = struct
   module Let_syntax = struct
     include Value.Let_syntax.Let_syntax
 
-    let subcomputation ?(here = Stdlib.Lexing.dummy_pos) a graph =
+    let subcomputation ~(here : [%call_pos]) a graph =
       Cont.Conv.handle ~here graph ~f:(fun graph -> a graph)
       |> Cont.Conv.perform ~here graph
     ;;
 
-    let sub ?(here = Stdlib.Lexing.dummy_pos) a ~f graph =
-      f (subcomputation ~here a graph) graph
-    ;;
-
+    let sub ~(here : [%call_pos]) a ~f graph = f (subcomputation ~here a graph) graph
     let return = comp_return
+    let arr ~(here : [%call_pos]) v ~f graph = Cont.For_proc2.arr1 ~here graph v ~f
 
-    let arr ?(here = Stdlib.Lexing.dummy_pos) v ~f graph =
-      Cont.For_proc2.arr1 ~here graph v ~f
-    ;;
-
-    let arr2 ?(here = Stdlib.Lexing.dummy_pos) v1 v2 ~f graph =
+    let arr2 ~(here : [%call_pos]) v1 v2 ~f graph =
       Cont.For_proc2.arr2 ~here graph v1 v2 ~f
     ;;
 
-    let arr3 ?(here = Stdlib.Lexing.dummy_pos) v1 v2 v3 ~f graph =
+    let arr3 ~(here : [%call_pos]) v1 v2 v3 ~f graph =
       Cont.For_proc2.arr3 ~here graph v1 v2 v3 ~f
     ;;
 
-    let arr4 ?(here = Stdlib.Lexing.dummy_pos) v1 v2 v3 v4 ~f graph =
+    let arr4 ~(here : [%call_pos]) v1 v2 v3 v4 ~f graph =
       Cont.For_proc2.arr4 ~here graph v1 v2 v3 v4 ~f
     ;;
 
-    let arr5 ?(here = Stdlib.Lexing.dummy_pos) v1 v2 v3 v4 v5 ~f graph =
+    let arr5 ~(here : [%call_pos]) v1 v2 v3 v4 v5 ~f graph =
       Cont.For_proc2.arr5 ~here graph v1 v2 v3 v4 v5 ~f
     ;;
 
-    let arr6 ?(here = Stdlib.Lexing.dummy_pos) v1 v2 v3 v4 v5 v6 ~f graph =
+    let arr6 ~(here : [%call_pos]) v1 v2 v3 v4 v5 v6 ~f graph =
       Cont.For_proc2.arr6 ~here graph v1 v2 v3 v4 v5 v6 ~f
     ;;
 
-    let arr7 ?(here = Stdlib.Lexing.dummy_pos) v1 v2 v3 v4 v5 v6 v7 ~f graph =
+    let arr7 ~(here : [%call_pos]) v1 v2 v3 v4 v5 v6 v7 ~f graph =
       Cont.For_proc2.arr7 ~here graph v1 v2 v3 v4 v5 v6 v7 ~f
     ;;
 
@@ -168,25 +160,22 @@ module This_let_syntax = struct
 end
 
 module Computation = struct
-  type 'a t = Cont.graph -> 'a Cont.t
+  type 'a t = local_ Cont.graph -> 'a Cont.t
 
   include Applicative.Make_using_map2 (struct
       type nonrec 'a t = 'a t
 
-      let return ?(here = Stdlib.Lexing.dummy_pos) (a : 'a) : 'a t =
+      let return ~(here : [%call_pos]) (a : 'a) : 'a t =
         fun _graph -> Value.return ~here a
       ;;
 
-      let map2 ?(here = Stdlib.Lexing.dummy_pos) a b ~f graph =
+      let map2 ~(here : [%call_pos]) a b ~f graph =
         let a = a graph
         and b = b graph in
         Cont.arr2 ~here graph a b ~f
       ;;
 
-      let map ?(here = Stdlib.Lexing.dummy_pos) a ~f graph =
-        Cont.arr1 ~here graph (a graph) ~f
-      ;;
-
+      let map ~(here : [%call_pos]) a ~f graph = Cont.arr1 ~here graph (a graph) ~f
       let map = `Custom map
     end)
 
@@ -200,48 +189,48 @@ module Computation = struct
   module Mapn = struct
     let map2 = map2
 
-    let map3 ?(here = Stdlib.Lexing.dummy_pos) t1 t2 t3 ~f =
-      let%sub t1 = t1 in
-      let%sub t2 = t2 in
-      let%sub t3 = t3 in
+    let map3 ~(here : [%call_pos]) t1 t2 t3 ~f =
+      let%sub t1 in
+      let%sub t2 in
+      let%sub t3 in
       read (Value.Let_syntax.Let_syntax.map3 ~here t1 t2 t3 ~f)
     ;;
 
-    let map4 ?(here = Stdlib.Lexing.dummy_pos) t1 t2 t3 t4 ~f =
-      let%sub t1 = t1 in
-      let%sub t2 = t2 in
-      let%sub t3 = t3 in
-      let%sub t4 = t4 in
+    let map4 ~(here : [%call_pos]) t1 t2 t3 t4 ~f =
+      let%sub t1 in
+      let%sub t2 in
+      let%sub t3 in
+      let%sub t4 in
       read (Value.Let_syntax.Let_syntax.map4 ~here t1 t2 t3 t4 ~f)
     ;;
 
-    let map5 ?(here = Stdlib.Lexing.dummy_pos) t1 t2 t3 t4 t5 ~f =
-      let%sub t1 = t1 in
-      let%sub t2 = t2 in
-      let%sub t3 = t3 in
-      let%sub t4 = t4 in
-      let%sub t5 = t5 in
+    let map5 ~(here : [%call_pos]) t1 t2 t3 t4 t5 ~f =
+      let%sub t1 in
+      let%sub t2 in
+      let%sub t3 in
+      let%sub t4 in
+      let%sub t5 in
       read (Value.Let_syntax.Let_syntax.map5 ~here t1 t2 t3 t4 t5 ~f)
     ;;
 
-    let map6 ?(here = Stdlib.Lexing.dummy_pos) t1 t2 t3 t4 t5 t6 ~f =
-      let%sub t1 = t1 in
-      let%sub t2 = t2 in
-      let%sub t3 = t3 in
-      let%sub t4 = t4 in
-      let%sub t5 = t5 in
-      let%sub t6 = t6 in
+    let map6 ~(here : [%call_pos]) t1 t2 t3 t4 t5 t6 ~f =
+      let%sub t1 in
+      let%sub t2 in
+      let%sub t3 in
+      let%sub t4 in
+      let%sub t5 in
+      let%sub t6 in
       read (Value.Let_syntax.Let_syntax.map6 ~here t1 t2 t3 t4 t5 t6 ~f)
     ;;
 
-    let map7 ?(here = Stdlib.Lexing.dummy_pos) t1 t2 t3 t4 t5 t6 t7 ~f =
-      let%sub t1 = t1 in
-      let%sub t2 = t2 in
-      let%sub t3 = t3 in
-      let%sub t4 = t4 in
-      let%sub t5 = t5 in
-      let%sub t6 = t6 in
-      let%sub t7 = t7 in
+    let map7 ~(here : [%call_pos]) t1 t2 t3 t4 t5 t6 t7 ~f =
+      let%sub t1 in
+      let%sub t2 in
+      let%sub t3 in
+      let%sub t4 in
+      let%sub t5 in
+      let%sub t6 in
+      let%sub t7 in
       read (Value.Let_syntax.Let_syntax.map7 ~here t1 t2 t3 t4 t5 t6 t7 ~f)
     ;;
   end
@@ -272,14 +261,12 @@ module Computation = struct
       map2 ~here left right ~f:(fun left right -> left @ right)
   ;;
 
-  let all ?(here = Stdlib.Lexing.dummy_pos) xs =
-    Let_syntax.subcomputation ~here (all ~here xs)
-  ;;
+  let all ~(here : [%call_pos]) xs = Let_syntax.subcomputation ~here (all ~here xs)
 
-  let reduce_balanced ?(here = Stdlib.Lexing.dummy_pos) xs ~f =
+  let reduce_balanced ~(here : [%call_pos]) xs ~f =
     List.reduce_balanced xs ~f:(fun a b ->
-      let%sub a = a in
-      let%sub b = b in
+      let%sub a in
+      let%sub b in
       f a b)
   ;;
 
@@ -289,21 +276,18 @@ module Computation = struct
     | _ -> Some (Let_syntax.subcomputation (Option.value_exn (reduce_balanced xs ~f)))
   ;;
 
-  let fold_right ?(here = Stdlib.Lexing.dummy_pos) xs ~f ~init =
+  let fold_right ~(here : [%call_pos]) xs ~f ~init =
     List.fold_right xs ~init:(read init) ~f:(fun a b ->
-      let%sub a = a in
-      let%sub b = b in
+      let%sub a in
+      let%sub b in
       f a b)
   ;;
 
   let fold_right xs ~f ~init = Let_syntax.subcomputation (fold_right xs ~f ~init)
   let all_unit ~here xs = all ~here xs |> map ~here ~f:(fun (_ : unit list) -> ())
+  let all_unit ~(here : [%call_pos]) xs = Let_syntax.subcomputation (all_unit ~here xs)
 
-  let all_unit ?(here = Stdlib.Lexing.dummy_pos) xs =
-    Let_syntax.subcomputation (all_unit ~here xs)
-  ;;
-
-  let all_map ?(here = Stdlib.Lexing.dummy_pos) map_of_computations =
+  let all_map ~(here : [%call_pos]) map_of_computations =
     map_of_computations
     |> Map.to_alist
     |> List.map ~f:(fun (key, data) -> map ~here data ~f:(Tuple2.create key))
@@ -311,7 +295,7 @@ module Computation = struct
     |> map ~here ~f:(Map.of_alist_exn (Map.comparator_s map_of_computations))
   ;;
 
-  let all_map ?(here = Stdlib.Lexing.dummy_pos) map_of_computations =
+  let all_map ~(here : [%call_pos]) map_of_computations =
     Let_syntax.subcomputation ~here (all_map ~here map_of_computations)
   ;;
 
@@ -350,14 +334,14 @@ include (
 
 include Cont.For_proc2
 
-let path_id ?(here = Stdlib.Lexing.dummy_pos) () graph = path_id ~here graph
-let path ?(here = Stdlib.Lexing.dummy_pos) () graph = path ~here graph
+let path_id ~(here : [%call_pos]) () (local_ graph) = path_id ~here graph
+let path ~(here : [%call_pos]) () (local_ graph) = path ~here graph
 
-let toggle ?(here = Stdlib.Lexing.dummy_pos) ~default_model () graph =
+let toggle ~(here : [%call_pos]) ~default_model () (local_ graph) =
   toggle ~here ~default_model graph
 ;;
 
-let toggle' ?(here = Stdlib.Lexing.dummy_pos) ~default_model () graph =
+let toggle' ~(here : [%call_pos]) ~default_model () (local_ graph) =
   toggle' ~here ~default_model graph
 ;;
 
@@ -368,31 +352,27 @@ open struct
 end
 
 let read v _graph = v
-let const ?(here = Stdlib.Lexing.dummy_pos) a _graph = return ~here a
-let pure ?(here = Stdlib.Lexing.dummy_pos) f i _graph = map ~here i ~f
-
-let scope_model ?(here = Stdlib.Lexing.dummy_pos) cmp ~on for_ =
-  scope_model ~here cmp ~on ~for_
-;;
-
+let const ~(here : [%call_pos]) a _graph = return ~here a
+let pure ~(here : [%call_pos]) f i _graph = map ~here i ~f
+let scope_model ~(here : [%call_pos]) cmp ~on for_ = scope_model ~here cmp ~on ~for_
 let yoink = peek
 
 module Clock = struct
   open Clock
   module Before_or_after = Before_or_after
 
-  let approx_now ?(here = Stdlib.Lexing.dummy_pos) ~tick_every () graph =
+  let approx_now ~(here : [%call_pos]) ~tick_every () (local_ graph) =
     approx_now ~here ~tick_every graph
   ;;
 
-  let now ?(here = Stdlib.Lexing.dummy_pos) () graph = now ~here graph
+  let now ~(here : [%call_pos]) () (local_ graph) = now ~here graph
 
-  let get_current_time ?(here = Stdlib.Lexing.dummy_pos) () graph =
+  let get_current_time ~(here : [%call_pos]) () (local_ graph) =
     get_current_time ~here graph
   ;;
 
   let every
-    ?(here = Stdlib.Lexing.dummy_pos)
+    ~(here : [%call_pos])
     ~when_to_start_next_effect
     ?trigger_on_activate
     time_span
@@ -403,15 +383,15 @@ module Clock = struct
     return ~here ()
   ;;
 
-  let sleep ?(here = Stdlib.Lexing.dummy_pos) () graph = sleep ~here graph
-  let until ?(here = Stdlib.Lexing.dummy_pos) () graph = until ~here graph
+  let sleep ~(here : [%call_pos]) () (local_ graph) = sleep ~here graph
+  let until ~(here : [%call_pos]) () (local_ graph) = until ~here graph
   let at = at
 end
 
 module Incr = struct
   include Incr
 
-  let with_clock ?(here = Stdlib.Lexing.dummy_pos) f = with_clock ~here ~f
+  let with_clock ~(here : [%call_pos]) f = with_clock ~here ~f
 end
 
 module Edge = struct
@@ -424,7 +404,7 @@ module Edge = struct
   let after_display = For_proc2.after_display
   let after_display' = For_proc2.after_display'
 
-  let wait_after_display ?(here = Stdlib.Lexing.dummy_pos) () graph =
+  let wait_after_display ~(here : [%call_pos]) () (local_ graph) =
     wait_after_display ~here graph
   ;;
 
@@ -445,18 +425,18 @@ end
 module Expert = struct
   include Expert
 
-  let thunk ?(here = Stdlib.Lexing.dummy_pos) f graph = thunk ~here ~f graph
+  let thunk ~(here : [%call_pos]) f graph = thunk ~here ~f graph
 end
 
 let of_module1
   (type i m a r)
-  ?(here = Stdlib.Lexing.dummy_pos)
+  ~(here : [%call_pos])
   ?sexp_of_model
   (component : (i, m, a, r) component_s)
   ?equal
   ~default_model
   input
-  graph
+  (local_ graph)
   =
   let (module M) = component in
   let model, inject =
@@ -480,9 +460,7 @@ let of_module1
       input
       graph
   in
-  let%map model = model
-  and inject = inject
-  and input = input in
+  let%map model and inject and input in
   M.compute ~inject input model
 ;;
 
@@ -504,26 +482,17 @@ let of_module0
       ~apply_action:(fun ctx -> M.apply_action ctx ())
       graph
   in
-  let%map model = model
-  and inject = inject in
+  let%map model and inject in
   M.compute ~inject () model
 ;;
 
-let of_module2
-  ?(here = Stdlib.Lexing.dummy_pos)
-  ?sexp_of_model
-  c
-  ?equal
-  ~default_model
-  i1
-  i2
-  =
+let of_module2 ~(here : [%call_pos]) ?sexp_of_model c ?equal ~default_model i1 i2 =
   of_module1 ~here ?sexp_of_model c ?equal ~default_model (both ~here i1 i2)
 ;;
 
 let enum
   (type k)
-  ?(here = Stdlib.Lexing.dummy_pos)
+  ~(here : [%call_pos])
   (module E : Enum with type t = k)
   ~match_
   ~with_

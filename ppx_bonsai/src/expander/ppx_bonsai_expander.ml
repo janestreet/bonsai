@@ -172,7 +172,7 @@ let sub (location_behavior : Location_behavior.t) : (module Ext) =
             ~destruct
             ~loc
             ~modul
-            ~locality
+            ~return_value_in_exclave:locality.return_value_in_exclave
             ~lhs:case.pc_lhs
             ~body:case.pc_rhs
         in
@@ -360,7 +360,7 @@ let arr (location_behavior : Location_behavior.t) : (module Ext) =
     (* These functions have been copied verbatim. *)
     module From_let_expander = struct
       (* Wrap a function body in [exclave_] *)
-      let wrap_exclave ~loc expr = [%expr [%e expr]]
+      let wrap_exclave ~loc expr = [%expr exclave_ [%e expr]]
 
       let maybe_wrap_exclave ~loc ~locality expr =
         match locality with
@@ -446,7 +446,13 @@ let arr (location_behavior : Location_behavior.t) : (module Ext) =
             args
             ~init:(maybe_wrap_exclave ~loc ~locality body)
             ~f:(fun pat inner ->
-              maybe_destruct ~destruct ~modul ~locality:`global ~loc ~lhs:pat ~body:inner)
+              maybe_destruct
+                ~destruct
+                ~modul
+                ~return_value_in_exclave:false
+                ~loc
+                ~lhs:pat
+                ~body:inner)
         in
         let build_application unlabelled_exps ~f_exp ~op_name =
           let args =
@@ -505,11 +511,10 @@ let arr (location_behavior : Location_behavior.t) : (module Ext) =
         expression
     ;;
 
-    let expand_match ~loc ~modul ~locality expr cases =
+    let expand_match ~loc ~modul ~(locality : Locality.t) expr cases =
       (match locality with
-       | `global -> ()
-       | `local ->
-         Location.raise_errorf ~loc "ppx_bonsai supports neither [bindl] nor [mapl]");
+       | { allocate_function_on_stack = false; return_value_in_exclave = false } -> ()
+       | _ -> Location.raise_errorf ~loc "ppx_bonsai supports neither [bindl] nor [mapl]");
       bind_apply
         ~prevent_tail_call
         ~loc

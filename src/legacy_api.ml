@@ -51,20 +51,20 @@ let state_machine
     input
 ;;
 
-let both ?(here = Stdlib.Lexing.dummy_pos) a b i =
+let both ~(here : [%call_pos]) a b i =
   let open Proc.Let_syntax in
   let%sub a = a i in
   let%sub b = b i in
   return (Proc.Value.both a b)
 ;;
 
-let enum ?(here = Stdlib.Lexing.dummy_pos) m ~which ~handle input =
+let enum ~(here : [%call_pos]) m ~which ~handle input =
   let match_ = Proc.Value.map ~here input ~f:which in
   let with_ key = handle key input in
   Proc.enum m ~match_ ~with_
 ;;
 
-let if_ ?(here = Stdlib.Lexing.dummy_pos) choose ~then_ ~else_ input =
+let if_ ~(here : [%call_pos]) choose ~then_ ~else_ input =
   let open Proc.Let_syntax in
   let cond = Proc.Value.map input ~f:choose in
   if%sub cond then then_ input else else_ input
@@ -92,49 +92,49 @@ include struct
   let ( >>^ ) a f = map a ~f
   let ( ^>> ) a f = map_input a ~f
 
-  let first ?(here = Stdlib.Lexing.dummy_pos) f i =
+  let first ~(here : [%call_pos]) f i =
     let%pattern_bind fst, snd = i in
     let%sub out = f fst in
     return (Proc.Value.both ~here out snd)
   ;;
 
-  let second ?(here = Stdlib.Lexing.dummy_pos) f i =
+  let second ~(here : [%call_pos]) f i =
     let%pattern_bind fst, snd = i in
     let%sub out = f snd in
     return (Proc.Value.both ~here fst out)
   ;;
 
-  let split ?(here = Stdlib.Lexing.dummy_pos) f1 f2 i =
+  let split ~(here : [%call_pos]) f1 f2 i =
     let%pattern_bind fst, snd = i in
     let%sub out1 = f1 fst in
     let%sub out2 = f2 snd in
     return (Proc.Value.both ~here out1 out2)
   ;;
 
-  let extend_first ?(here = Stdlib.Lexing.dummy_pos) f i =
+  let extend_first ~(here : [%call_pos]) f i =
     let%sub out = f i in
     return (Proc.Value.both ~here out i)
   ;;
 
-  let extend_second ?(here = Stdlib.Lexing.dummy_pos) f i =
+  let extend_second ~(here : [%call_pos]) f i =
     let%sub out = f i in
     return (Proc.Value.both ~here i out)
   ;;
 
-  let fanout ?(here = Stdlib.Lexing.dummy_pos) f1 f2 i =
+  let fanout ~(here : [%call_pos]) f1 f2 i =
     let%sub out1 = f1 i in
     let%sub out2 = f2 i in
     return (Proc.Value.both out1 out2)
   ;;
 
-  let partial_compose_first ?(here = Stdlib.Lexing.dummy_pos) f1 f2 i =
+  let partial_compose_first ~(here : [%call_pos]) f1 f2 i =
     let%sub out1 = f1 i in
     let%pattern_bind shared, out1 = out1 in
     let%sub out2 = f2 (Proc.Value.both i shared) in
     return (Proc.Value.both out1 out2)
   ;;
 
-  let pipe ?(here = Stdlib.Lexing.dummy_pos) f1 ~into ~via ~finalize i =
+  let pipe ~(here : [%call_pos]) f1 ~into ~via ~finalize i =
     let%sub r1 = f1 i in
     let intermediate = via <$> i <*> r1 in
     let%sub r2 = into intermediate in
@@ -152,7 +152,7 @@ module With_incr = struct
 
   let of_module
     (type i m a r)
-    ?(here = Stdlib.Lexing.dummy_pos)
+    ~(here : [%call_pos])
     ?sexp_of_model
     (component : (i, m, a, r) component_s_incr)
     ~equal

@@ -15,9 +15,9 @@ module Effect := Bonsai.Effect
     an inifinite loop to occur in the action scheduler. *)
 val with_inject_fixed_point
   :  (('action -> unit Effect.t) Bonsai.t
-      -> Bonsai.graph
+      -> local_ Bonsai.graph
       -> ('result * ('action -> unit Effect.t)) Bonsai.t)
-  -> Bonsai.graph
+  -> local_ Bonsai.graph
   -> 'result Bonsai.t
 
 (** [with_self_effect] gives access to an effect which produces the output ['a] within
@@ -26,21 +26,24 @@ val with_inject_fixed_point
 val with_self_effect
   :  ?sexp_of_model:('a -> Sexp.t)
   -> ?equal:('a -> 'a -> bool)
-  -> f:('a Bonsai.Computation_status.t Effect.t Bonsai.t -> Bonsai.graph -> 'a Bonsai.t)
+  -> f:
+       ('a Bonsai.Computation_status.t Effect.t Bonsai.t
+        -> local_ Bonsai.graph
+        -> 'a Bonsai.t)
   -> unit
-  -> Bonsai.graph
+  -> local_ Bonsai.graph
   -> 'a Bonsai.t
 
 (** [pipe] constructs a pipe of [a] and returns a pair containing an injection
     function that enqueues items and an Effect that dequeues them.  *)
 val pipe
   :  (module Bonsai_proc.Model with type t = 'a)
-  -> Bonsai.graph
+  -> local_ Bonsai.graph
   -> (('a -> unit Effect.t) * 'a Effect.t) Bonsai.t
 
 (** As its name implies, [exactly_once] runs the event passed in via [Bonsai.t]
     exactly once. *)
-val exactly_once : unit Effect.t Bonsai.t -> Bonsai.graph -> unit Bonsai.t
+val exactly_once : unit Effect.t Bonsai.t -> local_ Bonsai.graph -> unit Bonsai.t
 
 (** As its name implies, [exactly_once] runs the event passed in via [Bonsai.t]
     exactly once.  The return value is stored and returned.  [None] is returned
@@ -49,7 +52,7 @@ val exactly_once_with_value
   :  ?sexp_of_model:('a -> Sexp.t)
   -> ?equal:('a -> 'a -> bool)
   -> 'a Effect.t Bonsai.t
-  -> Bonsai.graph
+  -> local_ Bonsai.graph
   -> 'a option Bonsai.t
 
 (** Extends a Bonsai.t by providing a setter effect that can be used to override the
@@ -62,7 +65,7 @@ val value_with_override
   :  ?sexp_of_model:('a -> Sexp.t)
   -> ?equal:('a -> 'a -> bool)
   -> 'a Bonsai.t
-  -> Bonsai.graph
+  -> local_ Bonsai.graph
   -> ('a * ('a -> unit Effect.t)) Bonsai.t
 
 (** This function is identical to [Bonsai.state_machine0] except that
@@ -81,7 +84,7 @@ val state_machine0_dynamic_model
   -> apply_action:
        (('action, unit) Bonsai.Apply_action_context.t -> 'model -> 'action -> 'model)
   -> unit
-  -> Bonsai.graph
+  -> local_ Bonsai.graph
   -> ('model * ('action -> unit Effect.t)) Bonsai.t
 
 (** Read the docs for [state_machine0_dynamic_model]. This one has
@@ -100,7 +103,7 @@ val state_machine1_dynamic_model
         -> 'action
         -> 'model)
   -> 'input Bonsai.t
-  -> Bonsai.graph
+  -> local_ Bonsai.graph
   -> ('model * ('action -> unit Effect.t)) Bonsai.t
 
 (** The analog of [Bonsai.state], but with a dynamic model. Read the docs for
@@ -111,7 +114,7 @@ val state_dynamic_model
   -> model:
        [< `Computed of ('model option -> 'model) Bonsai.t | `Given of 'model Bonsai.t ]
   -> unit
-  -> Bonsai.graph
+  -> local_ Bonsai.graph
   -> ('model * ('model -> unit Effect.t)) Bonsai.t
 
 (** Id_gen builds a component which generates unique identifiers by
@@ -136,13 +139,13 @@ module Id_gen (T : Int_intf.S) () : sig
 
   val component
     :  ?reset:[ `Reset | `Do_nothing ]
-    -> Bonsai.graph
+    -> local_ Bonsai.graph
     -> t Bonsai.Effect.t Bonsai.t
 
   (** [component'] also gives you access to the most recently generated id *)
   val component'
     :  ?reset:[ `Reset | `Do_nothing | `Bump ]
-    -> Bonsai.graph
+    -> local_ Bonsai.graph
     -> t Bonsai.Effect.t Bonsai.t * t Bonsai.t
 end
 
@@ -171,7 +174,7 @@ val mirror
   -> interactive_set:('m -> unit Effect.t) Bonsai.t
   -> interactive_value:'m Bonsai.t
   -> unit
-  -> Bonsai.graph
+  -> local_ Bonsai.graph
   -> unit Bonsai.t
 
 (** [mirror'] is like [mirror], but the incoming values have the type ['a option Bonsai.t]
@@ -185,7 +188,7 @@ val mirror'
   -> interactive_set:('m -> unit Effect.t) Bonsai.t
   -> interactive_value:'m option Bonsai.t
   -> unit
-  -> Bonsai.graph
+  -> local_ Bonsai.graph
   -> unit Bonsai.t
 
 (** [with_last_modified_time] applies a cutoff to the input value and takes a
@@ -197,7 +200,7 @@ val mirror'
 val with_last_modified_time
   :  equal:('a -> 'a -> bool)
   -> 'a Bonsai.t
-  -> Bonsai.graph
+  -> local_ Bonsai.graph
   -> ('a * Time_ns.t) Bonsai.t
 
 (** [is_stable] indicates whether the input value has changed (according to
@@ -206,7 +209,7 @@ val is_stable
   :  equal:('a -> 'a -> bool)
   -> 'a Bonsai.t
   -> time_to_stable:Time_ns.Span.t Bonsai.t
-  -> Bonsai.graph
+  -> local_ Bonsai.graph
   -> bool Bonsai.t
 
 module Stability : sig
@@ -232,7 +235,7 @@ val value_stability
   -> equal:('a -> 'a -> bool)
   -> 'a Bonsai.t
   -> time_to_stable:Time_ns.Span.t Bonsai.t
-  -> Bonsai.graph
+  -> local_ Bonsai.graph
   -> 'a Stability.t Bonsai.t
 
 module One_at_a_time : sig
@@ -260,7 +263,7 @@ module One_at_a_time : sig
   *)
   val effect
     :  ('query -> 'response Effect.t) Bonsai.t
-    -> Bonsai.graph
+    -> local_ Bonsai.graph
     -> (('query -> 'response Response.t Effect.t) * Status.t) Bonsai.t
 end
 
@@ -268,7 +271,7 @@ end
     effect, but it will be enqueued onto the Bonsai action queue instead of running
     immediately. This can be useful in niche situations where you have a batch of effects
     that would otherwise interleave and have bad performance behavior. *)
-val bonk : Bonsai.graph -> (unit Effect.t -> unit Effect.t) Bonsai.t
+val bonk : local_ Bonsai.graph -> (unit Effect.t -> unit Effect.t) Bonsai.t
 
 (** [chain_incr_effects input effects] allows you to sequentially schedule effects
     that depend on a common ['a Bonsai.t], while ensuring that no effect will receive
@@ -286,5 +289,5 @@ val bonk : Bonsai.graph -> (unit Effect.t -> unit Effect.t) Bonsai.t
     with the state of the world before *any* of them recalculated state. *)
 val chain_incr_effects
   :  'a Bonsai.t
-  -> Bonsai.graph
+  -> local_ Bonsai.graph
   -> (('a -> unit Ui_effect.t) list -> unit Ui_effect.t) Bonsai.t

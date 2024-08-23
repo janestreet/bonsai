@@ -87,4 +87,6 @@ module Versioned_message : sig
     | V3 of Stable.Worker_message.V1.t list
     | V4 of Stable.Worker_message.V2.t list
   [@@deriving sexp, bin_io]
+
+  val to_latest : t -> Stable.Message.V3.t list
 end
