@@ -109,6 +109,33 @@ module Versioned_message = struct
     | V3 of Worker_message.V1.t list
     | V4 of Worker_message.V2.t list
   [@@deriving sexp, bin_io]
+
+  let to_latest : t -> Stable.Message.V3.t list = function
+    | V1 messages ->
+      List.map messages ~f:(fun message ->
+        message |> Stable.Message.V2.of_v1 |> Stable.Message.V3.of_v2)
+    | V2 messages -> List.map messages ~f:Stable.Message.V3.of_v2
+    | V3 messages ->
+      (* NOTE: UUIDs are safe to ignore as UUIDs are never sent now as the concept
+         of a bonsai bug "session" disappeared when bonsai-bug was moved onto the
+         chrome extension. *)
+      let _uuids, messages =
+        List.partition_map messages ~f:(function
+          | Uuid uuid -> First uuid
+          | Message message -> Second message)
+      in
+      List.map messages ~f:Stable.Message.V3.of_v2
+    | V4 messages ->
+      (* NOTE: UUIDs are safe to ignore as UUIDs are never sent now as the concept
+         of a bonsai bug "session" disappeared when bonsai-bug was moved onto the
+         chrome extension. *)
+      let _uuids, messages =
+        List.partition_map messages ~f:(function
+          | Uuid uuid -> First uuid
+          | Message message -> Second message)
+      in
+      messages
+  ;;
 end
 
 module Entry = struct

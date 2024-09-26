@@ -72,13 +72,13 @@ let f
               |> Environment.add_exn ~key:data_id ~data:value
             in
             let model_key =
-              let%map value = value in
+              let%map value in
               get_model_key io_key value
             in
             Incr.set_cutoff
               model_key
               (Incr.Cutoff.of_compare model_key_comparator.compare);
-            let%bind model_key = model_key in
+            let%bind model_key in
             let model =
               match%map Incr_map.Lookup.find model_lookup model_key with
               | None -> model_info.default

@@ -9,7 +9,7 @@ let f ~lifecycle =
     let lifecycle =
       match%pattern_bind Value.eval environment lifecycle with
       | Some lifecycle ->
-        let%map lifecycle = lifecycle in
+        let%map lifecycle in
         Path.Map.singleton path lifecycle
       | None -> do_nothing_lifecycle
     in

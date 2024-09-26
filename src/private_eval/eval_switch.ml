@@ -28,7 +28,7 @@ let f ~gather ~recursive_scopes ~time_source ~match_ ~arms =
     annotate Switch_model model;
     let index = Value.eval environment match_ in
     let result_input_and_lifecycle =
-      let%bind index = index in
+      let%bind index in
       (* !!!This is a load-bearing bind!!!
 
              If this bind isn't here, the scope that is created for the bind

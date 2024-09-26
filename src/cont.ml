@@ -1170,19 +1170,17 @@ module For_proc2 = struct
     let state, inject = state_and_inject |> split ~here graph in
     let inject =
       let peek_state = peek ~here state graph in
-      let%arr peek_state = peek_state
-      and inject = inject in
+      let%arr peek_state and inject in
       fun a ->
         match%bind.Effect peek_state with
         | Inactive -> Effect.Ignore
         | Active state -> inject (set state a)
     in
     let state =
-      let%arr state = state in
+      let%arr state in
       get state
     in
-    let%arr state = state
-    and inject = inject in
+    let%arr state and inject in
     state, inject
   ;;
 

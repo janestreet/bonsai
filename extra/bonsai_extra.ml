@@ -38,8 +38,7 @@ let with_self_effect
     ~f:(fun model inject graph ->
       let current_model =
         let get_model = Bonsai.peek model graph in
-        let%arr inject = inject
-        and get_model = get_model in
+        let%arr inject and get_model in
         let%bind.Effect () = inject () in
         let%map.Effect model = get_model in
         match model with
@@ -95,9 +94,7 @@ let state_machine1_dynamic_model
       (Bonsai.both input model_creator)
       graph
   in
-  let%arr model = model
-  and inject = inject
-  and model_creator = model_creator in
+  let%arr model and inject and model_creator in
   model_creator model, inject
 ;;
 
@@ -141,7 +138,7 @@ let exactly_once effect graph =
   else (
     Bonsai.Edge.lifecycle
       ~on_activate:
-        (let%map set_has_run = set_has_run
+        (let%map set_has_run
          and event = effect in
          Effect.Many [ set_has_run true; event ])
       graph;
@@ -155,8 +152,7 @@ let exactly_once_with_value ?sexp_of_model ?equal effect graph =
     | None ->
       Bonsai.Edge.lifecycle
         ~on_activate:
-          (let%map set_value = set_value
-           and effect = effect in
+          (let%map set_value and effect in
            let%bind.Effect r = effect in
            set_value (Some r))
         graph;
@@ -174,7 +170,7 @@ let value_with_override ?sexp_of_model ?equal value graph =
     | None -> value
   in
   let setter =
-    let%arr set_state = set_state in
+    let%arr set_state in
     fun v -> set_state (Some v)
   in
   Bonsai.both value setter
@@ -232,7 +228,7 @@ let pipe (type a) (module A : Bonsai_proc.Model with type t = a) graph =
              (Effect.Private.Callback.respond_to r hd);
            { model with queued_actions }))
   in
-  let%arr inject = inject in
+  let%arr inject in
   let request =
     Effect.Private.make ~request:() ~evaluator:(fun r ->
       Effect.Expert.handle (inject (Add_receiver r)))
@@ -263,7 +259,7 @@ module Id_gen (T : Int_intf.S) () = struct
         graph
     in
     let fetch =
-      let%arr fetch = fetch in
+      let%arr fetch in
       fetch ()
     in
     fetch, model
@@ -306,8 +302,7 @@ let mirror'
   end
   in
   let callback =
-    let%map store_set = store_set
-    and interactive_set = interactive_set in
+    let%map store_set and interactive_set in
     fun old_pair { M2.store = store_value; interactive = interactive_value } ->
       let stability =
         if Option.equal equal store_value interactive_value then `Stable else `Unstable
@@ -412,7 +407,7 @@ let with_last_modified_time
 
 let is_stable ~equal input ~time_to_stable graph =
   let sign =
-    let%arr time_to_stable = time_to_stable in
+    let%arr time_to_stable in
     Time_ns.Span.sign time_to_stable
   in
   match%sub sign with
@@ -429,8 +424,7 @@ let is_stable ~equal input ~time_to_stable graph =
   | Pos ->
     let%sub _, last_modified_time = with_last_modified_time ~equal input graph in
     let next_stable_time =
-      let%arr last_modified_time = last_modified_time
-      and time_to_stable = time_to_stable in
+      let%arr last_modified_time and time_to_stable in
       Time_ns.add last_modified_time time_to_stable
     in
     let at_next_stable_time = Bonsai.Clock.at next_stable_time graph in
@@ -494,8 +488,8 @@ let value_stability (type a) ?sexp_of_model ~equal:input_equal input ~time_to_st
   match%sub most_recent_stable_and_true with
   | Some most_recent_stable_and_true ->
     let%arr most_recent_stable, must_be_true = most_recent_stable_and_true
-    and is_stable = is_stable
-    and input = input in
+    and is_stable
+    and input in
     (match must_be_true with
      | true -> ()
      | false ->
@@ -504,7 +498,7 @@ let value_stability (type a) ?sexp_of_model ~equal:input_equal input ~time_to_st
     then Stability.Stable input
     else Unstable { previously_stable = Some most_recent_stable; unstable_value = input }
   | None ->
-    let%arr input = input in
+    let%arr input in
     Stability.Unstable { previously_stable = None; unstable_value = input }
 ;;
 
@@ -550,8 +544,7 @@ module One_at_a_time = struct
           | Release -> Idle, true)
     in
     let effect =
-      let%arr inject_status = inject_status
-      and f = f in
+      let%arr inject_status and f in
       let open Effect.Let_syntax in
       fun query ->
         match%bind inject_status Acquire with

@@ -172,7 +172,7 @@ let sub (location_behavior : Location_behavior.t) : (module Ext) =
             ~destruct
             ~loc
             ~modul
-            ~locality
+            ~return_value_in_exclave:locality.return_value_in_exclave
             ~lhs:case.pc_lhs
             ~body:case.pc_rhs
         in
@@ -238,7 +238,7 @@ let arr (location_behavior : Location_behavior.t) : (module Ext) =
             match acc with
             | true -> true
             | false ->
-              (match pattern.ppat_desc with
+              (match Ppxlib_jane.Shim.Pattern_desc.of_parsetree pattern.ppat_desc with
                (* let (_ as a) = x in ... *)
                | Ppat_alias (_, _) -> false
                | Ppat_any
@@ -251,10 +251,11 @@ let arr (location_behavior : Location_behavior.t) : (module Ext) =
                | Ppat_constant _
                | Ppat_interval (_, _)
                | Ppat_var _ | Ppat_tuple _
+               | Ppat_unboxed_tuple (_, _)
                | Ppat_construct (_, _)
                | Ppat_array _
                | Ppat_or (_, _)
-               | Ppat_constraint (_, _)
+               | Ppat_constraint (_, _, _)
                | Ppat_type _ | Ppat_lazy _ | Ppat_extension _
                | Ppat_open (_, _)
                | Ppat_exception _
@@ -446,7 +447,13 @@ let arr (location_behavior : Location_behavior.t) : (module Ext) =
             args
             ~init:(maybe_wrap_exclave ~loc ~locality body)
             ~f:(fun pat inner ->
-              maybe_destruct ~destruct ~modul ~locality:`global ~loc ~lhs:pat ~body:inner)
+              maybe_destruct
+                ~destruct
+                ~modul
+                ~return_value_in_exclave:false
+                ~loc
+                ~lhs:pat
+                ~body:inner)
         in
         let build_application unlabelled_exps ~f_exp ~op_name =
           let args =
@@ -505,11 +512,10 @@ let arr (location_behavior : Location_behavior.t) : (module Ext) =
         expression
     ;;
 
-    let expand_match ~loc ~modul ~locality expr cases =
+    let expand_match ~loc ~modul ~(locality : Locality.t) expr cases =
       (match locality with
-       | `global -> ()
-       | `local ->
-         Location.raise_errorf ~loc "ppx_bonsai supports neither [bindl] nor [mapl]");
+       | { allocate_function_on_stack = false; return_value_in_exclave = false } -> ()
+       | _ -> Location.raise_errorf ~loc "ppx_bonsai supports neither [bindl] nor [mapl]");
       bind_apply
         ~prevent_tail_call
         ~loc

@@ -10,7 +10,7 @@ let f ~model ~static_action ~time_source ~apply_action ~reset =
            remains [phys_equal] when the [model] changes. *)
     let inject_static = Lazy_inject.make (wrap_leaf inject) in
     let result =
-      let%map model = model in
+      let%map model in
       model, inject_static
     in
     Trampoline.return (Snapshot.create ~result ~input:Input.static ~lifecycle:None, ())

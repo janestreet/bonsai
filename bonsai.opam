@@ -13,9 +13,9 @@ depends: [
   "ocaml" {>= "5.1.0"}
   "abstract_algebra"
   "async_rpc_kernel"
+  "bonsai_concrete"
   "core"
   "core_kernel"
-  "incr_dom"
   "incr_map"
   "incremental"
   "ppx_here"
@@ -26,7 +26,7 @@ depends: [
   "virtual_dom"
   "dune"             {>= "3.11.0"}
   "ocaml-embed-file"
-  "ppxlib"           {>= "0.28.0"}
+  "ppxlib"           {>= "0.33.0"}
 ]
 available: arch != "arm32" & arch != "x86_32"
 synopsis: "A library for building dynamic webapps, using Js_of_ocaml"

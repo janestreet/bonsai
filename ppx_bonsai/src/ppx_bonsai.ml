@@ -3,7 +3,7 @@ open Ppx_let_expander
 open Ppx_bonsai_expander
 module Test_extension = Test_extension
 
-let locality = `global
+let locality = Locality.global
 
 let location_behavior : Location_behavior.t ref =
   ref Location_behavior.Location_of_callsite

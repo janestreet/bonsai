@@ -201,47 +201,47 @@ module Computation = struct
     let map2 = map2
 
     let map3 ?(here = Stdlib.Lexing.dummy_pos) t1 t2 t3 ~f =
-      let%sub t1 = t1 in
-      let%sub t2 = t2 in
-      let%sub t3 = t3 in
+      let%sub t1 in
+      let%sub t2 in
+      let%sub t3 in
       read (Value.Let_syntax.Let_syntax.map3 ~here t1 t2 t3 ~f)
     ;;
 
     let map4 ?(here = Stdlib.Lexing.dummy_pos) t1 t2 t3 t4 ~f =
-      let%sub t1 = t1 in
-      let%sub t2 = t2 in
-      let%sub t3 = t3 in
-      let%sub t4 = t4 in
+      let%sub t1 in
+      let%sub t2 in
+      let%sub t3 in
+      let%sub t4 in
       read (Value.Let_syntax.Let_syntax.map4 ~here t1 t2 t3 t4 ~f)
     ;;
 
     let map5 ?(here = Stdlib.Lexing.dummy_pos) t1 t2 t3 t4 t5 ~f =
-      let%sub t1 = t1 in
-      let%sub t2 = t2 in
-      let%sub t3 = t3 in
-      let%sub t4 = t4 in
-      let%sub t5 = t5 in
+      let%sub t1 in
+      let%sub t2 in
+      let%sub t3 in
+      let%sub t4 in
+      let%sub t5 in
       read (Value.Let_syntax.Let_syntax.map5 ~here t1 t2 t3 t4 t5 ~f)
     ;;
 
     let map6 ?(here = Stdlib.Lexing.dummy_pos) t1 t2 t3 t4 t5 t6 ~f =
-      let%sub t1 = t1 in
-      let%sub t2 = t2 in
-      let%sub t3 = t3 in
-      let%sub t4 = t4 in
-      let%sub t5 = t5 in
-      let%sub t6 = t6 in
+      let%sub t1 in
+      let%sub t2 in
+      let%sub t3 in
+      let%sub t4 in
+      let%sub t5 in
+      let%sub t6 in
       read (Value.Let_syntax.Let_syntax.map6 ~here t1 t2 t3 t4 t5 t6 ~f)
     ;;
 
     let map7 ?(here = Stdlib.Lexing.dummy_pos) t1 t2 t3 t4 t5 t6 t7 ~f =
-      let%sub t1 = t1 in
-      let%sub t2 = t2 in
-      let%sub t3 = t3 in
-      let%sub t4 = t4 in
-      let%sub t5 = t5 in
-      let%sub t6 = t6 in
-      let%sub t7 = t7 in
+      let%sub t1 in
+      let%sub t2 in
+      let%sub t3 in
+      let%sub t4 in
+      let%sub t5 in
+      let%sub t6 in
+      let%sub t7 in
       read (Value.Let_syntax.Let_syntax.map7 ~here t1 t2 t3 t4 t5 t6 t7 ~f)
     ;;
   end
@@ -278,8 +278,8 @@ module Computation = struct
 
   let reduce_balanced ?(here = Stdlib.Lexing.dummy_pos) xs ~f =
     List.reduce_balanced xs ~f:(fun a b ->
-      let%sub a = a in
-      let%sub b = b in
+      let%sub a in
+      let%sub b in
       f a b)
   ;;
 
@@ -291,8 +291,8 @@ module Computation = struct
 
   let fold_right ?(here = Stdlib.Lexing.dummy_pos) xs ~f ~init =
     List.fold_right xs ~init:(read init) ~f:(fun a b ->
-      let%sub a = a in
-      let%sub b = b in
+      let%sub a in
+      let%sub b in
       f a b)
   ;;
 
@@ -480,9 +480,7 @@ let of_module1
       input
       graph
   in
-  let%map model = model
-  and inject = inject
-  and input = input in
+  let%map model and inject and input in
   M.compute ~inject input model
 ;;
 
@@ -504,8 +502,7 @@ let of_module0
       ~apply_action:(fun ctx -> M.apply_action ctx ())
       graph
   in
-  let%map model = model
-  and inject = inject in
+  let%map model and inject in
   M.compute ~inject () model
 ;;
 

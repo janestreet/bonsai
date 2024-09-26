@@ -104,7 +104,7 @@ let scope_model
   =
   let v = Value.map ~here v ~f:(fun k -> Map.singleton (module M) k ()) in
   let%sub map = assoc ~here (module M) v ~f:(fun _ _ -> computation) in
-  let%arr map = map in
+  let%arr map in
   (* This _exn is ok because we know that the map is a singleton *)
   let _k, r = Map.max_elt_exn map in
   r
@@ -142,7 +142,7 @@ let of_module1
       input
   in
   let%arr model, inject = model_and_inject
-  and input = input in
+  and input in
   M.compute ~inject input model
 ;;
 
@@ -213,7 +213,7 @@ let race_dynamic_model
       (Value.both ~here input model_creator)
   in
   let%arr model, inject = model_and_inject
-  and model_creator = model_creator in
+  and model_creator in
   model_creator model, inject
 ;;
 
@@ -310,11 +310,10 @@ let actor1
       input
   in
   let%sub inject =
-    let%arr inject = inject in
+    let%arr inject in
     make_inject ~inject ~schedule_event:Effect.Expert.handle
   in
-  let%arr model = model
-  and inject = inject in
+  let%arr model and inject in
   model, inject
 ;;
 
@@ -387,15 +386,14 @@ let toggle' ?(here = Stdlib.Lexing.dummy_pos) ~default_model () =
         | Set state -> state)
       ()
   in
-  let%arr state_and_inject = state_and_inject in
+  let%arr state_and_inject in
   let state, inject = state_and_inject in
   { Toggle.state; set_state = (fun state -> inject (Set state)); toggle = inject Toggle }
 ;;
 
 let toggle ?(here = Stdlib.Lexing.dummy_pos) ~default_model () =
   let%sub { state; toggle; set_state = _ } = toggle' ~here ~default_model () in
-  let%arr state = state
-  and toggle = toggle in
+  let%arr state and toggle in
   state, toggle
 ;;
 
@@ -417,7 +415,7 @@ let state_opt
 
 let path_id ?(here = Stdlib.Lexing.dummy_pos) () =
   let%sub path = path ~here () in
-  let%arr path = path in
+  let%arr path in
   Path.to_unique_identifier_string path
 ;;
 
@@ -435,7 +433,7 @@ let yoink ?(here = Stdlib.Lexing.dummy_pos) a =
       ~default_model:()
       a
   in
-  let%arr result = result in
+  let%arr result in
   result ()
 ;;
 
@@ -508,15 +506,10 @@ module Edge = struct
     let%sub update =
       match%sub state with
       | None ->
-        let%arr set_state = set_state
-        and input = input
-        and callback = callback in
+        let%arr set_state and input and callback in
         Some (Ui_effect.Many [ set_state (Some input); callback None input ])
       | Some state ->
-        let%arr state = state
-        and set_state = set_state
-        and input = input
-        and callback = callback in
+        let%arr state and set_state and input and callback in
         if phys_equal state input || equal state input
         then None
         else
@@ -604,15 +597,13 @@ module Edge = struct
           ()
       in
       let%sub callback =
-        let%arr effect = effect
-        and next_seqnum = next_seqnum
-        and inject_change = inject_change in
+        let%arr effect and next_seqnum and inject_change in
         let%bind.Effect seqnum = next_seqnum () in
         let%bind.Effect result = effect in
         inject_change (Action.Set (seqnum, wrap_result result))
       in
       let%arr { State.last_result; _ } = state
-      and callback = callback in
+      and callback in
       last_result, callback
     ;;
 
@@ -672,8 +663,7 @@ module Edge = struct
         end) in
       let%sub get_input = yoink ~here input in
       let%sub effect =
-        let%arr get_input = get_input
-        and effect = effect in
+        let%arr get_input and effect in
         let%bind.Effect input =
           match%bind.Effect get_input with
           | Active input -> Effect.return input
@@ -690,7 +680,7 @@ module Edge = struct
           ~effect
       in
       let%sub callback =
-        let%arr refresh = refresh in
+        let%arr refresh in
         fun (_ : a) -> refresh
       in
       let%sub () =
@@ -851,11 +841,11 @@ module Effect_throttling = struct
         effect
     in
     let%sub on_activate =
-      let%arr inject = inject in
+      let%arr inject in
       inject Activate
     in
     let%sub () = Edge.lifecycle ~here ~on_activate () in
-    let%arr inject = inject in
+    let%arr inject in
     fun request ->
       Effect.Private.make ~request ~evaluator:(fun callback ->
         Effect.Expert.handle (inject (Run callback)))
@@ -883,8 +873,7 @@ let freeze ?(here = Stdlib.Lexing.dummy_pos) ?sexp_of_model ?equal value =
   | None ->
     let%sub () =
       let%sub on_activate =
-        let%arr set_state = set_state
-        and value = value in
+        let%arr set_state and value in
         set_state (Some value)
       in
       Edge.lifecycle ~here ~on_activate ()
@@ -913,7 +902,7 @@ let most_recent_some ?(here = Stdlib.Lexing.dummy_pos) ?sexp_of_model ~equal inp
   | None -> return ~here most_recent_valid_value
   | Some inner ->
     let%sub callback =
-      let%arr set_most_recent_valid_value = set_most_recent_valid_value in
+      let%arr set_most_recent_valid_value in
       fun x -> set_most_recent_valid_value (Some x)
     in
     let%sub () = Edge.on_change ~here ?sexp_of_model ~equal inner ~callback in
@@ -941,7 +930,7 @@ let previous_value
     end) in
   let%sub prev, set_prev = state_opt ~here ?sexp_of_model ~equal () in
   let%sub callback =
-    let%arr set_prev = set_prev in
+    let%arr set_prev in
     fun input -> set_prev (Some input)
   in
   let%sub () = Edge.on_change ~here ?sexp_of_model ~equal input ~callback in
@@ -966,18 +955,17 @@ let assoc_list
       let here = here
     end) in
   let%sub alist =
-    let%arr list = list in
+    let%arr list in
     List.map list ~f:(fun x -> get_key x, x)
   in
   let%sub input_map =
-    let%arr alist = alist in
+    let%arr alist in
     Map.of_alist (module M) alist
   in
   match%sub input_map with
   | `Ok input_map ->
     let%sub output_map = assoc ~here m input_map ~f:(fun k v -> f k v) [@nontail] in
-    let%arr alist = alist
-    and output_map = output_map in
+    let%arr alist and output_map in
     `Ok
       (List.map alist ~f:(fun (k, _) ->
          match Map.find output_map k with
@@ -986,7 +974,7 @@ let assoc_list
            raise_s
              [%message "BUG" [%here] "Incremental glitch" ~key:(k : M.t) "not found"]))
   | `Duplicate_key key ->
-    let%arr key = key in
+    let%arr key in
     `Duplicate_key key
 ;;
 
@@ -1045,8 +1033,7 @@ module Dynamic_scope = struct
     | Derived { base; get = _; set; sexp_of = _ } ->
       let%sub current = lookup ~here base in
       let%sub new_ =
-        let%arr current = current
-        and value = value in
+        let%arr current and value in
         set current value
       in
       store ~here base new_ inner
@@ -1141,7 +1128,7 @@ module Clock = struct
         ~sexp_of_model:[%sexp_of: Time_ns.Alternate_sexp.t]
     in
     let%sub initial_model =
-      let%arr base_time = base_time in
+      let%arr base_time in
       let start_time =
         if trigger_on_activate then base_time else Time_ns.add base_time span
       in
@@ -1149,9 +1136,7 @@ module Clock = struct
     in
     let%sub get_current_time = get_current_time ~here () in
     let%sub race_input =
-      let%arr base_time = base_time
-      and get_current_time = get_current_time
-      and callback = callback in
+      let%arr base_time and get_current_time and callback in
       base_time, get_current_time, callback
     in
     let apply_action ~inject ~schedule_event ~time_source:_ input _old_model = function
@@ -1182,12 +1167,11 @@ module Clock = struct
       | Waiting_for_effect_to_finish -> const ~here None
       | Waiting_for (trigger_id, time) ->
         let%sub before_or_after = at ~here time in
-        let%arr trigger_id = trigger_id
-        and before_or_after = before_or_after in
+        let%arr trigger_id and before_or_after in
         Some (trigger_id, before_or_after)
     in
     let%sub callback =
-      let%arr inject = inject in
+      let%arr inject in
       function
       | None | Some (_, Before_or_after.Before) -> Effect.Ignore
       | Some (_, After) -> inject Schedule_effect
@@ -1235,7 +1219,7 @@ module Clock = struct
 
   let every_multiple_of_period_non_blocking ~here ?trigger_on_activate span callback =
     let%sub callback =
-      let%arr callback = callback in
+      let%arr callback in
       Effect.Many [ callback ]
     in
     every_multiple_of_period_blocking ~here ?trigger_on_activate span callback
@@ -1327,8 +1311,7 @@ module Memo = struct
     let%sub responses =
       assoc ~here (module Query) queries ~f:(fun query _count -> f query)
     in
-    let%arr responses = responses
-    and inject = inject in
+    let%arr responses and inject in
     T { responses; inject }
   ;;
 
@@ -1346,20 +1329,18 @@ module Memo = struct
     let%sub (T { inject; _ }) = return ~here t in
     let%sub () =
       let%sub on_activate =
-        let%arr inject = inject
-        and query = query in
+        let%arr inject and query in
         inject (Add query)
       in
       let%sub on_deactivate =
-        let%arr inject = inject
-        and query = query in
+        let%arr inject and query in
         inject (Remove query)
       in
       Edge.lifecycle ~here () ~on_activate ~on_deactivate
     in
     let%sub () =
       let%sub callback =
-        let%arr inject = inject in
+        let%arr inject in
         fun prev next ->
           match prev, next with
           | None, _ -> Effect.Ignore
@@ -1367,8 +1348,7 @@ module Memo = struct
       in
       Edge.on_change' ~here ?sexp_of_model ~equal query ~callback
     in
-    let%arr t = t
-    and query = query in
+    let%arr t and query in
     let (T { responses; _ }) = t in
     Map.find responses query
   ;;
@@ -1386,7 +1366,7 @@ module Computation = struct
 
       let map2 ?(here = Stdlib.Lexing.dummy_pos) a b ~f =
         sub ~here a ~f:(fun a ->
-          sub ~here b ~f:(fun b -> Let_syntax.return (Let_syntax.map2 ~here a b ~f)))
+          sub ~here b ~f:(fun b -> Let_syntax.return ~here (Let_syntax.map2 ~here a b ~f)))
       ;;
 
       let map ?(here = Stdlib.Lexing.dummy_pos) a ~f =
@@ -1400,97 +1380,101 @@ module Computation = struct
     let map2 = map2
 
     let map3 ?(here = Stdlib.Lexing.dummy_pos) t1 t2 t3 ~f =
-      let%sub t1 = t1 in
-      let%sub t2 = t2 in
-      let%sub t3 = t3 in
+      let%sub t1 in
+      let%sub t2 in
+      let%sub t3 in
       read (Value.map3 t1 t2 t3 ~f)
     ;;
 
     let map4 ?(here = Stdlib.Lexing.dummy_pos) t1 t2 t3 t4 ~f =
-      let%sub t1 = t1 in
-      let%sub t2 = t2 in
-      let%sub t3 = t3 in
-      let%sub t4 = t4 in
+      let%sub t1 in
+      let%sub t2 in
+      let%sub t3 in
+      let%sub t4 in
       read (Value.map4 t1 t2 t3 t4 ~f)
     ;;
 
     let map5 ?(here = Stdlib.Lexing.dummy_pos) t1 t2 t3 t4 t5 ~f =
-      let%sub t1 = t1 in
-      let%sub t2 = t2 in
-      let%sub t3 = t3 in
-      let%sub t4 = t4 in
-      let%sub t5 = t5 in
+      let%sub t1 in
+      let%sub t2 in
+      let%sub t3 in
+      let%sub t4 in
+      let%sub t5 in
       read (Value.map5 t1 t2 t3 t4 t5 ~f)
     ;;
 
     let map6 ?(here = Stdlib.Lexing.dummy_pos) t1 t2 t3 t4 t5 t6 ~f =
-      let%sub t1 = t1 in
-      let%sub t2 = t2 in
-      let%sub t3 = t3 in
-      let%sub t4 = t4 in
-      let%sub t5 = t5 in
-      let%sub t6 = t6 in
+      let%sub t1 in
+      let%sub t2 in
+      let%sub t3 in
+      let%sub t4 in
+      let%sub t5 in
+      let%sub t6 in
       read (Value.map6 t1 t2 t3 t4 t5 t6 ~f)
     ;;
 
     let map7 ?(here = Stdlib.Lexing.dummy_pos) t1 t2 t3 t4 t5 t6 t7 ~f =
-      let%sub t1 = t1 in
-      let%sub t2 = t2 in
-      let%sub t3 = t3 in
-      let%sub t4 = t4 in
-      let%sub t5 = t5 in
-      let%sub t6 = t6 in
-      let%sub t7 = t7 in
+      let%sub t1 in
+      let%sub t2 in
+      let%sub t3 in
+      let%sub t4 in
+      let%sub t5 in
+      let%sub t6 in
+      let%sub t7 in
       read (Value.map7 t1 t2 t3 t4 t5 t6 t7 ~f)
     ;;
   end
 
   include Mapn
 
-  let rec all = function
-    | [] -> return []
-    | [ t1 ] -> map t1 ~f:(fun a1 -> [ a1 ])
-    | [ t1; t2 ] -> map2 t1 t2 ~f:(fun a1 a2 -> [ a1; a2 ])
-    | [ t1; t2; t3 ] -> map3 t1 t2 t3 ~f:(fun a1 a2 a3 -> [ a1; a2; a3 ])
-    | [ t1; t2; t3; t4 ] -> map4 t1 t2 t3 t4 ~f:(fun a1 a2 a3 a4 -> [ a1; a2; a3; a4 ])
+  let rec all ?(here = Stdlib.Lexing.dummy_pos) = function
+    | [] -> return ~here []
+    | [ t1 ] -> map t1 ~here ~f:(fun a1 -> [ a1 ])
+    | [ t1; t2 ] -> map2 t1 t2 ~here ~f:(fun a1 a2 -> [ a1; a2 ])
+    | [ t1; t2; t3 ] -> map3 t1 t2 t3 ~here ~f:(fun a1 a2 a3 -> [ a1; a2; a3 ])
+    | [ t1; t2; t3; t4 ] ->
+      map4 t1 t2 t3 t4 ~here ~f:(fun a1 a2 a3 a4 -> [ a1; a2; a3; a4 ])
     | [ t1; t2; t3; t4; t5 ] ->
-      map5 t1 t2 t3 t4 t5 ~f:(fun a1 a2 a3 a4 a5 -> [ a1; a2; a3; a4; a5 ])
+      map5 t1 t2 t3 t4 t5 ~here ~f:(fun a1 a2 a3 a4 a5 -> [ a1; a2; a3; a4; a5 ])
     | [ t1; t2; t3; t4; t5; t6 ] ->
-      map6 t1 t2 t3 t4 t5 t6 ~f:(fun a1 a2 a3 a4 a5 a6 -> [ a1; a2; a3; a4; a5; a6 ])
+      map6 t1 t2 t3 t4 t5 t6 ~here ~f:(fun a1 a2 a3 a4 a5 a6 ->
+        [ a1; a2; a3; a4; a5; a6 ])
     | [ t1; t2; t3; t4; t5; t6; t7 ] ->
-      map7 t1 t2 t3 t4 t5 t6 t7 ~f:(fun a1 a2 a3 a4 a5 a6 a7 ->
+      map7 t1 t2 t3 t4 t5 t6 t7 ~here ~f:(fun a1 a2 a3 a4 a5 a6 a7 ->
         [ a1; a2; a3; a4; a5; a6; a7 ])
     | t1 :: t2 :: t3 :: t4 :: t5 :: t6 :: t7 :: rest ->
       let left =
-        map7 t1 t2 t3 t4 t5 t6 t7 ~f:(fun a1 a2 a3 a4 a5 a6 a7 ->
+        map7 t1 t2 t3 t4 t5 t6 t7 ~here ~f:(fun a1 a2 a3 a4 a5 a6 a7 ->
           [ a1; a2; a3; a4; a5; a6; a7 ])
       in
       let right = all rest in
-      map2 left right ~f:(fun left right -> left @ right)
+      map2 left right ~here ~f:(fun left right -> left @ right)
   ;;
 
   let reduce_balanced ?(here = Stdlib.Lexing.dummy_pos) xs ~f =
     List.reduce_balanced xs ~f:(fun a b ->
-      let%sub a = a in
-      let%sub b = b in
+      let%sub a in
+      let%sub b in
       f a b)
   ;;
 
   let fold_right ?(here = Stdlib.Lexing.dummy_pos) xs ~f ~init =
     List.fold_right xs ~init:(read init) ~f:(fun a b ->
-      let%sub a = a in
-      let%sub b = b in
+      let%sub a in
+      let%sub b in
       f a b)
   ;;
 
-  let all_unit xs = all xs |> map ~f:(fun (_ : unit list) -> ())
+  let all_unit ?(here = Stdlib.Lexing.dummy_pos) xs =
+    all ~here xs |> map ~here ~f:(fun (_ : unit list) -> ())
+  ;;
 
-  let all_map map_of_computations =
+  let all_map ?(here = Stdlib.Lexing.dummy_pos) map_of_computations =
     map_of_computations
     |> Map.to_alist
-    |> List.map ~f:(fun (key, data) -> map data ~f:(Tuple2.create key))
-    |> all
-    |> map ~f:(Map.of_alist_exn (Map.comparator_s map_of_computations))
+    |> List.map ~f:(fun (key, data) -> map ~here data ~f:(Tuple2.create key))
+    |> all ~here
+    |> map ~here ~f:(Map.of_alist_exn (Map.comparator_s map_of_computations))
   ;;
 
   module Let_syntax = struct

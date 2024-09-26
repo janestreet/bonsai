@@ -72,4 +72,8 @@ end
 
 module For_testing : sig
   val dump_dot : _ t -> string
+
+  (** returns the computation that is actually being run 
+      (it has optimizations applied if applicable) *)
+  val running_computation : 'r t -> 'r Bonsai.Private.Computation.t
 end

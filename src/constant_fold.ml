@@ -95,7 +95,7 @@ include struct
 
   let simplify_assoc_if_simpl
     (type k v cmp)
-    ?(here = Stdlib.Lexing.dummy_pos)
+    ~(here : Source_code_position.t)
     ~(key_comparator : (k, cmp) comparator)
     ~(key_id : k Type_equal.Id.t)
     ~(data_id : v Type_equal.Id.t)
@@ -305,7 +305,7 @@ module Constant_fold (Recurse : Fix_transform.Recurse with module Types := Types
              in
              Computation.Sub
                { here; from = Proc.const key; via = key_id; into = data_binding })
-           |> Proc.Computation.all_map
+           |> Proc.Computation.all_map ~here
          in
          let%bind (), (), r =
            Recurse.on_computation { constants_in_scope; evaluated } () `Directly_on folded
@@ -319,12 +319,14 @@ module Constant_fold (Recurse : Fix_transform.Recurse with module Types := Types
              `Directly_on
              by
          in
-         (match simplify_assoc_if_simpl ~key_comparator ~key_id ~data_id map_v by with
+         (match
+            simplify_assoc_if_simpl ~here ~key_comparator ~key_id ~data_id map_v by
+          with
           | Some kind -> return kind
           | None -> return (Computation.Assoc { assoc_t with map = map_v; by })))
     | Assoc_on
-        ({ map; io_comparator = key_comparator; io_key_id = key_id; data_id; by; _ } as
-         assoc_on_t) ->
+        ({ map; io_comparator = key_comparator; io_key_id = key_id; data_id; by; here; _ }
+         as assoc_on_t) ->
       let (), (), map =
         Recurse.on_value { constants_in_scope; evaluated } () `Directly_on map
       in
@@ -335,7 +337,7 @@ module Constant_fold (Recurse : Fix_transform.Recurse with module Types := Types
           `Directly_on
           by
       in
-      (match simplify_assoc_if_simpl ~key_comparator ~key_id ~data_id map by with
+      (match simplify_assoc_if_simpl ~here ~key_comparator ~key_id ~data_id map by with
        | Some kind -> return kind
        | None -> return (Computation.Assoc_on { assoc_on_t with map; by }))
     | Switch { match_; arms; here } ->

@@ -73,7 +73,7 @@ let recurse ~recursive_scopes ~input ~input_id ~fix_id =
       force gathered
     in
     let input_model =
-      let%map model = model in
+      let%map model in
       let (Meta.Model.Hidden.T { model; info; _ }) =
         Option.value
           model

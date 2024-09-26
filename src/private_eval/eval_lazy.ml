@@ -29,7 +29,7 @@ let f
     in
     annotate Model model;
     let input_model =
-      let%map model = model in
+      let%map model in
       let (Meta.Model.Hidden.T { model; info; _ }) =
         Option.value
           model

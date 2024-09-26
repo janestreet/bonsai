@@ -97,7 +97,7 @@ module M (X : S) = struct
     match%sub a with
     | 0 -> return true graph
     | b ->
-      let%map b = b in
+      let%map b in
       b = 1
   ;;
 
@@ -105,7 +105,7 @@ module M (X : S) = struct
     match%sub a with
     | 0 -> return true graph
     | _ as b ->
-      let%map b = b in
+      let%map b in
       b = 1
   ;;
 
@@ -116,12 +116,12 @@ module M (X : S) = struct
   let _arrow_example_4 a : _ X.t =
     match%sub a with
     | A b ->
-      let%map b = b in
+      let%map b in
       b = 1
   ;;
 
   let _arrow_example_5 (a : _ X.t) : _ X.t =
-    let%arr a = a in
+    let%arr a in
     a
   ;;
 
