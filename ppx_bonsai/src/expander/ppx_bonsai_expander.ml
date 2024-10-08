@@ -238,28 +238,20 @@ let arr (location_behavior : Location_behavior.t) : (module Ext) =
             match acc with
             | true -> true
             | false ->
-              (match Ppxlib_jane.Shim.Pattern_desc.of_parsetree pattern.ppat_desc with
-               (* let (_ as a) = x in ... *)
-               | Ppat_alias (_, _) -> false
-               | Ppat_any
-               (* let { a ; b ; _ } = x in ... *)
-               | Ppat_record (_, Open)
-               (* let { a = (module _) ; b } = x in ... *)
-               | Ppat_unpack { txt = None; _ } -> true
-               | Ppat_record (_, Closed)
-               | Ppat_unpack { txt = Some _; _ }
-               | Ppat_constant _
-               | Ppat_interval (_, _)
-               | Ppat_var _ | Ppat_tuple _
-               | Ppat_unboxed_tuple (_, _)
-               | Ppat_construct (_, _)
-               | Ppat_array _
-               | Ppat_or (_, _)
-               | Ppat_constraint (_, _, _)
-               | Ppat_type _ | Ppat_lazy _ | Ppat_extension _
-               | Ppat_open (_, _)
-               | Ppat_exception _
-               | Ppat_variant (_, _) -> super#pattern pattern acc)
+              (match Ppxlib_jane.Jane_syntax.Pattern.of_ast pattern with
+               | Some (Jpat_tuple (_tuple, Open), _attrs) -> true
+               | _ ->
+                 (match Ppxlib_jane.Shim.Pattern_desc.of_parsetree pattern.ppat_desc with
+                  (* let (_ as a) = x in ... *)
+                  | Ppat_alias (_, _) -> false
+                  | Ppat_any
+                  (* let { a ; b ; _ } = x in ... *)
+                  | Ppat_record (_, Open)
+                  (* let { a = (module _) ; b } = x in ... *)
+                  | Ppat_unpack { txt = None; _ } -> true
+                  | Ppat_record (_, Closed) | Ppat_unpack { txt = Some _; _ } ->
+                    super#pattern pattern acc
+                  | _ -> super#pattern pattern acc))
         end
       in
       ignore_finder#pattern pattern false

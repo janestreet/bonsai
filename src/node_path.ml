@@ -52,43 +52,41 @@ let choice_point t n =
 
 let descend t = { t with depth = t.depth + 1 }
 
-let%test_module _ =
-  (module struct
-    let test t =
-      let s = to_string t in
-      print_endline s
-    ;;
+module%test _ = struct
+  let test t =
+    let s = to_string t in
+    print_endline s
+  ;;
 
-    let%expect_test _ =
-      test
-        { choices =
-            Reversed_list.of_list_rev
-              [ { choice = 1; count = 1 }
-              ; { choice = 2; count = 2 }
-              ; { choice = 1; count = 1 }
-              ; { choice = 0; count = 1 }
-              ]
-        ; depth = 0
-        };
-      [%expect {| 1-2x2-1-0_0 |}]
-    ;;
+  let%expect_test _ =
+    test
+      { choices =
+          Reversed_list.of_list_rev
+            [ { choice = 1; count = 1 }
+            ; { choice = 2; count = 2 }
+            ; { choice = 1; count = 1 }
+            ; { choice = 0; count = 1 }
+            ]
+      ; depth = 0
+      };
+    [%expect {| 1-2x2-1-0_0 |}]
+  ;;
 
-    let%expect_test _ =
-      test { choices = []; depth = 1 };
-      [%expect {| _1 |}]
-    ;;
+  let%expect_test _ =
+    test { choices = []; depth = 1 };
+    [%expect {| _1 |}]
+  ;;
 
-    let%expect_test _ =
-      test empty;
-      [%expect {| _0 |}]
-    ;;
+  let%expect_test _ =
+    test empty;
+    [%expect {| _0 |}]
+  ;;
 
-    let%expect_test _ =
-      test { choices = [ { choice = 30; count = 1 } ]; depth = 1 };
-      [%expect {| 30_1 |}]
-    ;;
-  end)
-;;
+  let%expect_test _ =
+    test { choices = [ { choice = 30; count = 1 } ]; depth = 1 };
+    [%expect {| 30_1 |}]
+  ;;
+end
 
 let finalize builder = to_string builder
 

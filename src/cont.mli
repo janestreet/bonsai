@@ -31,6 +31,66 @@ include Applicative.S with type 'a t := 'a t
 
 include Mapn with type 'a t := 'a t
 
+module Autopack : sig
+  type 'a bonsai := 'a t
+
+  (** Several Bonsai combinators take functions as a parameter where the user-provided function 
+      returns a [Bonsai.t].  If the user has _multiple_ [Bonsai.t] that they'd like to return, 
+      then they'd need to pack them up, e.g. going from [int Bonsai.t * string Bonsai.t] to a
+      [(int * string) Bonsai.t] to return it.  Then, if the function returns the single [Bonsai.t], 
+      you may need to unpack the values again.
+
+      To reduce boilerplate, these functions also have a version that automatically packs and unpacks 
+      tuples of Bonsai.t.  For example, instead of writing 
+
+      {[
+      let results, reset_effect = 
+        Bonsai.with_model_resetter graph ~f:(fun ~reset (local_ graph) ->
+          let a, b = Bonsai.state None graph in
+          let c, d = Bonsai.state None graph in
+          let%arr a and b and c and d in 
+          a, b, c, d)
+      in
+      let%sub (a, b, c, d) = results in 
+      ...
+      ]}
+
+      you can use version which takes an [Autopack.t]:
+
+      {[
+      let (a, b, c, d), reset_effect =
+        Bonsai.with_model_resetter_n graph ~n:Four ~f:(fun ~reset (local_ graph) ->
+          let a, b = Bonsai.state None graph in
+          let c, d = Bonsai.state None graph in
+          a, b, c, d)
+      in
+      ...
+      ]} *)
+  type ('packed, 'unpacked) t =
+    | One : ('a, 'a bonsai) t
+    | Two : ('a * 'b, 'a bonsai * 'b bonsai) t
+    | Three : ('a * 'b * 'c, 'a bonsai * 'b bonsai * 'c bonsai) t
+    | Four : ('a * 'b * 'c * 'd, 'a bonsai * 'b bonsai * 'c bonsai * 'd bonsai) t
+    | Five :
+        ( 'a * 'b * 'c * 'd * 'e
+          , 'a bonsai * 'b bonsai * 'c bonsai * 'd bonsai * 'e bonsai )
+          t
+    | Six :
+        ( 'a * 'b * 'c * 'd * 'e * 'f
+          , 'a bonsai * 'b bonsai * 'c bonsai * 'd bonsai * 'e bonsai * 'f bonsai )
+          t
+    | Seven :
+        ( 'a * 'b * 'c * 'd * 'e * 'f * 'g
+          , 'a bonsai
+            * 'b bonsai
+            * 'c bonsai
+            * 'd bonsai
+            * 'e bonsai
+            * 'f bonsai
+            * 'g bonsai )
+          t
+end
+
 (** [return] produces a [Bonsai.t] whose inner value is constant. *)
 val return : ?here:Stdlib.Lexing.position -> 'a -> 'a t
 
@@ -261,6 +321,18 @@ val scope_model
   -> graph
   -> 'b t
 
+(** Exactly like [scope_model] but will automatically pack and unpack any number of
+    [Bonsai.t] produced inside the [for_] closure.  
+    See documentation for [Autopack.t] for more info. *)
+val scope_model_n
+  :  ?here:Stdlib.Lexing.position
+  -> ('a, _) comparator
+  -> n:(_, 'b) Autopack.t
+  -> on:'a t
+  -> for_:(graph -> 'b)
+  -> graph
+  -> 'b
+
 (** [Bonsai.most_recent_some] can be used to find and store a value that has some
     interesting property by transforming a ['a Bonsai.t] into a ['b option Bonsai.t] via
     a [f:('a -> 'b option)] function. The output of this function is a
@@ -312,6 +384,22 @@ val wrap
   -> graph
   -> 'result t
 
+(** Exactly like [wrap] but will automatically pack and unpack any number of
+    [Bonsai.t] produced inside the [f] closure.  
+    See documentation for [Autopack.t] for more info. *)
+val wrap_n
+  :  ?here:Stdlib.Lexing.position
+  -> ?reset:('model, 'action, unit) resetter
+  -> ?sexp_of_model:('model -> Sexp.t)
+  -> ?equal:('model -> 'model -> bool)
+  -> default_model:'model
+  -> apply_action:
+       (('action, unit) Apply_action_context.t -> 'packed -> 'model -> 'action -> 'model)
+  -> f:('model t -> ('action -> unit Effect.t) t -> graph -> 'unpacked)
+  -> n:('packed, 'unpacked) Autopack.t
+  -> graph
+  -> 'unpacked
+
 (** [enum] is used for matching on a value and providing different behaviors on different
     values. The type of the value must be enumerable (there must be a finite number of
     possible values), and it must be comparable and sexpable.
@@ -336,6 +424,16 @@ val with_model_resetter
   -> graph
   -> 'a t * unit Effect.t t
 
+(** Exactly like [with_model_resetter] but will automatically pack and unpack any number
+    of [Bonsai.t] produced inside the [f] closure.  
+    See documentation for [Autopack.t] for more info. *)
+val with_model_resetter_n
+  :  ?here:Stdlib.Lexing.position
+  -> f:(graph -> 'a)
+  -> n:(_, 'a) Autopack.t
+  -> graph
+  -> 'a * unit Effect.t t
+
 (** The same as [with_model_resetter], but the closure has access to the [reset] function
     this time. *)
 val with_model_resetter'
@@ -343,6 +441,16 @@ val with_model_resetter'
   -> f:(reset:unit Effect.t t -> graph -> 'a t)
   -> graph
   -> 'a t
+
+(** Exactly like [with_model_resetter'] but will automatically pack and unpack any number
+    of [Bonsai.t] produced inside the [f] closure.  
+    See documentation for [Autopack.t] for more info. *)
+val with_model_resetter_n'
+  :  ?here:Stdlib.Lexing.position
+  -> f:(reset:unit Effect.t t -> graph -> 'a)
+  -> n:(_, 'a) Autopack.t
+  -> graph
+  -> 'a
 
 (** [peek] maps a [Bonsai.t] to an [Effect.t] with the same underlying value.
     This allows you to inspect the ['a] value from inside of a [let%bind.Effect]
@@ -705,6 +813,18 @@ val assoc
   -> graph
   -> ('k, 'a, 'cmp) Map.t t
 
+(** Exactly like [assoc] but will automatically pack multiple [Bonsai.t] 
+    produced inside the [f] closure into a tuple.
+    See documentation for [Autopack.t] for more info. *)
+val assoc_n
+  :  ?here:Stdlib.Lexing.position
+  -> ('k, 'cmp) comparator
+  -> ('k, 'v, 'cmp) Map.t t
+  -> f:('k t -> 'v t -> graph -> 'unpacked)
+  -> n:('packed, 'unpacked) Autopack.t
+  -> graph
+  -> ('k, 'packed, 'cmp) Map.t t
+
 (** [all_map] is like [assoc] but is only usable when the input map is constant. *)
 val all_map
   :  ?here:Stdlib.Lexing.position
@@ -721,6 +841,18 @@ val assoc_set
   -> graph
   -> ('key, 'result, 'cmp) Map.t t
 
+(** Exactly like [assoc_set] but will automatically pack multiple [Bonsai.t] 
+    produced inside the [f] closure into a tuple.
+    See documentation for [Autopack.t] for more info. *)
+val assoc_set_n
+  :  ?here:Stdlib.Lexing.position
+  -> ('key, 'cmp) comparator
+  -> ('key, 'cmp) Set.t t
+  -> f:('key t -> graph -> 'unpacked)
+  -> n:('packed, 'unpacked) Autopack.t
+  -> graph
+  -> ('key, 'packed, 'cmp) Map.t t
+
 (** Like [assoc] except that the input value is a list instead of a Map. The output list
     is in the same order as the input list. This function performs O(n log(n)) work (where
     n is the length of the list) any time that anything in the input list changes, so it
@@ -733,6 +865,19 @@ val assoc_list
   -> f:('key t -> 'a t -> graph -> 'b t)
   -> graph
   -> [ `Duplicate_key of 'key | `Ok of 'b list ] t
+
+(** Exactly like [assoc_list] but will automatically pack multiple [Bonsai.t] 
+    produced inside the [f] closure into a tuple.
+    See documentation for [Autopack.t] for more info. *)
+val assoc_list_n
+  :  ?here:Stdlib.Lexing.position
+  -> ('key, _) comparator
+  -> 'a list t
+  -> get_key:('a -> 'key)
+  -> f:('key t -> 'a t -> graph -> 'unpacked)
+  -> n:('packed, 'unpacked) Autopack.t
+  -> graph
+  -> [ `Duplicate_key of 'key | `Ok of 'packed list ] t
 
 module Time_source = Time_source
 
@@ -752,8 +897,8 @@ module Debug : sig
   val instrument_computation
     :  ?here:Stdlib.Lexing.position
     -> (graph -> 'a t)
-    -> start_timer:(string -> unit)
-    -> stop_timer:(string -> unit)
+    -> start_timer:(string -> 'timer)
+    -> stop_timer:('timer -> unit)
     -> graph
     -> 'a t
 

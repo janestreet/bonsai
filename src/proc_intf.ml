@@ -1224,8 +1224,8 @@ module type S = sig
     val instrument_computation
       :  ?here:Stdlib.Lexing.position
       -> 'a Computation.t
-      -> start_timer:(string -> unit)
-      -> stop_timer:(string -> unit)
+      -> start_timer:(string -> 'timer)
+      -> stop_timer:('timer -> unit)
       -> 'a Computation.t
 
     val to_dot : ?pre_process:bool -> 'a Computation.t -> string

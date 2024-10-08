@@ -938,8 +938,8 @@ let previous_value
 ;;
 
 let assoc_set ?(here = Stdlib.Lexing.dummy_pos) m v ~f =
-  let%sub as_map = Map0.of_set v in
-  assoc m as_map ~f:(fun k _ -> f k) [@nontail]
+  let%sub as_map = Map0.of_set ~here v in
+  assoc ~here m as_map ~f:(fun k _ -> f k) [@nontail]
 ;;
 
 let assoc_list

@@ -242,6 +242,110 @@ let map7 ?(here = Stdlib.Lexing.dummy_pos) a b c d e g h ~f =
     ~no_graph:(fun () -> Value.map7 ~here a b c d e g h ~f)
 ;;
 
+module Autopack = struct
+  type 'a bonsai = 'a Value.t
+
+  type ('packed, 'unpacked) t =
+    | One : ('a, 'a bonsai) t
+    | Two : ('a * 'b, 'a bonsai * 'b bonsai) t
+    | Three : ('a * 'b * 'c, 'a bonsai * 'b bonsai * 'c bonsai) t
+    | Four : ('a * 'b * 'c * 'd, 'a bonsai * 'b bonsai * 'c bonsai * 'd bonsai) t
+    | Five :
+        ( 'a * 'b * 'c * 'd * 'e
+          , 'a bonsai * 'b bonsai * 'c bonsai * 'd bonsai * 'e bonsai )
+          t
+    | Six :
+        ( 'a * 'b * 'c * 'd * 'e * 'f
+          , 'a bonsai * 'b bonsai * 'c bonsai * 'd bonsai * 'e bonsai * 'f bonsai )
+          t
+    | Seven :
+        ( 'a * 'b * 'c * 'd * 'e * 'f * 'g
+          , 'a bonsai
+            * 'b bonsai
+            * 'c bonsai
+            * 'd bonsai
+            * 'e bonsai
+            * 'f bonsai
+            * 'g bonsai )
+          t
+
+  let pack
+    : type packed unpacked.
+      here:Source_code_position.t -> n:(packed, unpacked) t -> unpacked -> packed bonsai
+    =
+    fun ~here ~n unpacked ->
+    match n with
+    | One -> unpacked
+    | Two ->
+      let t1, t2 = unpacked in
+      map2 ~here t1 t2 ~f:(fun v1 v2 -> v1, v2)
+    | Three ->
+      let t1, t2, t3 = unpacked in
+      map3 ~here t1 t2 t3 ~f:(fun v1 v2 v3 -> v1, v2, v3)
+    | Four ->
+      let t1, t2, t3, t4 = unpacked in
+      map4 ~here t1 t2 t3 t4 ~f:(fun v1 v2 v3 v4 -> v1, v2, v3, v4)
+    | Five ->
+      let t1, t2, t3, t4, t5 = unpacked in
+      map5 ~here t1 t2 t3 t4 t5 ~f:(fun v1 v2 v3 v4 v5 -> v1, v2, v3, v4, v5)
+    | Six ->
+      let t1, t2, t3, t4, t5, t6 = unpacked in
+      map6 ~here t1 t2 t3 t4 t5 t6 ~f:(fun v1 v2 v3 v4 v5 v6 -> v1, v2, v3, v4, v5, v6)
+    | Seven ->
+      let t1, t2, t3, t4, t5, t6, t7 = unpacked in
+      map7 ~here t1 t2 t3 t4 t5 t6 t7 ~f:(fun v1 v2 v3 v4 v5 v6 v7 ->
+        v1, v2, v3, v4, v5, v6, v7)
+  ;;
+
+  let unpack
+    : type packed unpacked.
+      here:Source_code_position.t -> n:(packed, unpacked) t -> packed bonsai -> unpacked
+    =
+    fun ~here ~n packed ->
+    match n with
+    | One -> packed
+    | Two ->
+      let t1 = map packed ~here ~f:(fun (v1, _) -> v1) in
+      let t2 = map packed ~here ~f:(fun (_, v2) -> v2) in
+      t1, t2
+    | Three ->
+      let t1 = map packed ~here ~f:(fun (v1, _, _) -> v1) in
+      let t2 = map packed ~here ~f:(fun (_, v2, _) -> v2) in
+      let t3 = map packed ~here ~f:(fun (_, _, v3) -> v3) in
+      t1, t2, t3
+    | Four ->
+      let t1 = map packed ~here ~f:(fun (v1, _, _, _) -> v1) in
+      let t2 = map packed ~here ~f:(fun (_, v2, _, _) -> v2) in
+      let t3 = map packed ~here ~f:(fun (_, _, v3, _) -> v3) in
+      let t4 = map packed ~here ~f:(fun (_, _, _, v4) -> v4) in
+      t1, t2, t3, t4
+    | Five ->
+      let t1 = map packed ~here ~f:(fun (v1, _, _, _, _) -> v1) in
+      let t2 = map packed ~here ~f:(fun (_, v2, _, _, _) -> v2) in
+      let t3 = map packed ~here ~f:(fun (_, _, v3, _, _) -> v3) in
+      let t4 = map packed ~here ~f:(fun (_, _, _, v4, _) -> v4) in
+      let t5 = map packed ~here ~f:(fun (_, _, _, _, v5) -> v5) in
+      t1, t2, t3, t4, t5
+    | Six ->
+      let t1 = map packed ~here ~f:(fun (v1, _, _, _, _, _) -> v1) in
+      let t2 = map packed ~here ~f:(fun (_, v2, _, _, _, _) -> v2) in
+      let t3 = map packed ~here ~f:(fun (_, _, v3, _, _, _) -> v3) in
+      let t4 = map packed ~here ~f:(fun (_, _, _, v4, _, _) -> v4) in
+      let t5 = map packed ~here ~f:(fun (_, _, _, _, v5, _) -> v5) in
+      let t6 = map packed ~here ~f:(fun (_, _, _, _, _, v6) -> v6) in
+      t1, t2, t3, t4, t5, t6
+    | Seven ->
+      let t1 = map packed ~here ~f:(fun (v1, _, _, _, _, _, _) -> v1) in
+      let t2 = map packed ~here ~f:(fun (_, v2, _, _, _, _, _) -> v2) in
+      let t3 = map packed ~here ~f:(fun (_, _, v3, _, _, _, _) -> v3) in
+      let t4 = map packed ~here ~f:(fun (_, _, _, v4, _, _, _) -> v4) in
+      let t5 = map packed ~here ~f:(fun (_, _, _, _, v5, _, _) -> v5) in
+      let t6 = map packed ~here ~f:(fun (_, _, _, _, _, v6, _) -> v6) in
+      let t7 = map packed ~here ~f:(fun (_, _, _, _, _, _, v7) -> v7) in
+      t1, t2, t3, t4, t5, t6, t7
+  ;;
+end
+
 let both ?(here = Stdlib.Lexing.dummy_pos) a b = map2 ~here a b ~f:Tuple2.create
 
 let cutoff ?(here = Stdlib.Lexing.dummy_pos) v ~equal =
@@ -584,6 +688,24 @@ let scope_model ?(here = Stdlib.Lexing.dummy_pos) comparator ~on ~for_ graph =
   |> perform ~here graph
 ;;
 
+let scope_model_n
+  : type unpacked.
+    ?here:Stdlib.Lexing.position
+    -> _
+    -> n:(_, unpacked) Autopack.t
+    -> on:_
+    -> for_:(graph -> unpacked)
+    -> graph
+    -> unpacked
+  =
+  fun ?(here = Stdlib.Lexing.dummy_pos) comparator ~n ~on ~for_ graph ->
+  let result =
+    scope_model ~here comparator ~on graph ~for_:(fun graph ->
+      Autopack.pack ~here ~n (for_ graph))
+  in
+  Autopack.unpack ~here ~n result
+;;
+
 let most_recent_some
   ?(here = Stdlib.Lexing.dummy_pos)
   ?sexp_of_model
@@ -657,6 +779,42 @@ let wrap
     graph
 ;;
 
+let wrap_n
+  : type packed unpacked.
+    ?here:Stdlib.Lexing.position
+    -> ?reset:_
+    -> ?sexp_of_model:_
+    -> ?equal:_
+    -> default_model:_
+    -> apply_action:(_ -> packed -> _)
+    -> f:(_ -> _ t -> graph -> unpacked)
+    -> n:(packed, unpacked) Autopack.t
+    -> graph
+    -> unpacked
+  =
+  fun ?(here = Stdlib.Lexing.dummy_pos)
+    ?reset
+    ?sexp_of_model
+    ?equal
+    ~default_model
+    ~apply_action
+    ~f
+    ~n
+    graph ->
+  let packed =
+    wrap
+      ~here
+      ?reset
+      ?sexp_of_model
+      ?equal
+      ~default_model
+      ~apply_action
+      graph
+      ~f:(fun model inject graph -> Autopack.pack ~here ~n (f model inject graph))
+  in
+  Autopack.unpack ~here ~n packed
+;;
+
 let enum ?(here = Stdlib.Lexing.dummy_pos) m ~match_ ~with_ graph =
   let with_ : 'k -> 'd Computation.t =
     fun k -> handle ~f:(fun graph -> with_ k graph) graph [@nontail]
@@ -675,10 +833,41 @@ let with_model_resetter ?(here = Stdlib.Lexing.dummy_pos) ~f graph =
   with_model_resetter__for_proc2 ~here ~f graph |> split ~here graph
 ;;
 
+let with_model_resetter_n
+  : type packed unpacked.
+    ?here:Stdlib.Lexing.position
+    -> f:(graph -> unpacked)
+    -> n:(packed, unpacked) Autopack.t
+    -> graph
+    -> unpacked * _
+  =
+  fun ?(here = Stdlib.Lexing.dummy_pos) ~f ~n graph ->
+  let packed, effect =
+    with_model_resetter ~here graph ~f:(fun graph -> Autopack.pack ~here ~n (f graph))
+  in
+  Autopack.unpack ~here ~n packed, effect
+;;
+
 let with_model_resetter' ?(here = Stdlib.Lexing.dummy_pos) ~f graph =
   Proc_min.with_model_resetter ~here (fun ~reset ->
     handle ~here graph ~f:(fun graph -> f ~reset graph) [@nontail])
   |> perform ~here graph
+;;
+
+let with_model_resetter_n'
+  : type packed unpacked.
+    ?here:Stdlib.Lexing.position
+    -> f:(reset:_ -> graph -> unpacked)
+    -> n:(packed, unpacked) Autopack.t
+    -> graph
+    -> unpacked
+  =
+  fun ?(here = Stdlib.Lexing.dummy_pos) ~f ~n graph ->
+  let packed =
+    with_model_resetter' ~here graph ~f:(fun ~reset graph ->
+      Autopack.pack ~here ~n (f ~reset graph))
+  in
+  Autopack.unpack ~here ~n packed
 ;;
 
 let peek ?(here = Stdlib.Lexing.dummy_pos) value graph =
@@ -987,16 +1176,62 @@ let assoc ?(here = Stdlib.Lexing.dummy_pos) comparator map ~f graph =
   |> perform ~here graph
 ;;
 
+let assoc_n
+  : type packed unpacked.
+    ?here:Stdlib.Lexing.position
+    -> _
+    -> _
+    -> f:(_ -> _ -> graph -> unpacked)
+    -> n:(packed, unpacked) Autopack.t
+    -> graph
+    -> (_, packed, _) Map.t t
+  =
+  fun ?(here = Stdlib.Lexing.dummy_pos) comparator map ~f ~n graph ->
+  assoc ~here comparator map graph ~f:(fun key data graph ->
+    Autopack.pack ~here ~n (f key data graph))
+;;
+
 let assoc_set ?(here = Stdlib.Lexing.dummy_pos) comparator set ~f graph =
   Proc.assoc_set ~here comparator set ~f:(fun k ->
     handle ~here graph ~f:(fun graph -> f k graph) [@nontail])
   |> perform ~here graph
 ;;
 
+let assoc_set_n
+  : type packed unpacked.
+    ?here:Stdlib.Lexing.position
+    -> _
+    -> _
+    -> f:(_ -> graph -> unpacked)
+    -> n:(packed, unpacked) Autopack.t
+    -> graph
+    -> (_, packed, _) Map.t t
+  =
+  fun ?(here = Stdlib.Lexing.dummy_pos) comparator map ~f ~n graph ->
+  assoc_set ~here comparator map graph ~f:(fun key graph ->
+    Autopack.pack ~here ~n (f key graph))
+;;
+
 let assoc_list ?(here = Stdlib.Lexing.dummy_pos) comparator list ~get_key ~f graph =
   Proc.assoc_list ~here comparator list ~get_key ~f:(fun k v ->
     handle ~here graph ~f:(fun graph -> f k v graph) [@nontail])
   |> perform ~here graph
+;;
+
+let assoc_list_n
+  : type packed unpacked.
+    ?here:Stdlib.Lexing.position
+    -> _
+    -> _
+    -> get_key:_
+    -> f:(_ -> _ -> graph -> unpacked)
+    -> n:(packed, unpacked) Autopack.t
+    -> graph
+    -> [ `Duplicate_key of 'key | `Ok of packed list ] t
+  =
+  fun ?(here = Stdlib.Lexing.dummy_pos) comparator list ~get_key ~f ~n graph ->
+  assoc_list ~here comparator list ~get_key graph ~f:(fun key data graph ->
+    Autopack.pack ~here ~n (f key data graph))
 ;;
 
 module Debug = struct

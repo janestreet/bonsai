@@ -22,6 +22,7 @@ depends: [
   "ppx_jane"
   "ppx_let"
   "ppx_pattern_bind"
+  "ppxlib_jane"
   "uopt"
   "virtual_dom"
   "dune"             {>= "3.11.0"}
