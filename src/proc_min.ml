@@ -4,8 +4,37 @@ open Computation
 
 let read ~(here : [%call_pos]) value = Return { value; here }
 
-let monitor_free_variables ~here inner =
-  Monitor_free_variables { here; inner; free_vars = Type_id_set.empty }
+let watch_computation
+  ~here
+  ~log_model_before
+  ~log_model_after
+  ~log_action
+  ~log_incr_info
+  ~log_watcher_positions
+  ~log_dependency_definition_position
+  ~label
+  inner
+  =
+  Computation_watcher
+    { here
+    ; inner
+    ; free_vars = Computation_watcher.Type_id_location_map.empty
+    ; config =
+        { log_model_before
+        ; log_model_after
+        ; log_action
+        ; log_incr_info
+        ; log_watcher_positions
+        ; log_dependency_definition_position
+        ; label
+        }
+    ; queue = None
+    ; value_type_id_observation_definition_positions = None
+    ; enable_watcher =
+        false
+        (* [enable_watcher] will be set during the transformation stage if computation watchers
+           are enabled *)
+    }
 ;;
 
 let sub (type via) ~(here : [%call_pos]) (from : via Computation.t) ~f =

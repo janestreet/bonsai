@@ -2,6 +2,6 @@
  (name bonsai_perf_shared)
  (public_name bonsai.perf_shared)
  (libraries bonsai bonsai_driver core incr_map virtual_dom.ui_effect
-   incr_dom.ui_incr)
+   bonsai_concrete.ui_incr)
  (preprocess
   (pps ppx_jane)))

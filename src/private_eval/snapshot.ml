@@ -8,10 +8,10 @@ type ('model, 'input, 'result) t =
   }
 [@@deriving fields ~getters ~iterators:create]
 
-let create ~input ~lifecycle ~result =
-  Input.iter_incremental input ~f:(annotate_packed Input);
-  Option.iter lifecycle ~f:(annotate Lifecycle);
-  annotate Result result;
+let create ~here ~input ~lifecycle ~result =
+  Input.iter_incremental input ~f:(annotate_packed ~here Input);
+  Option.iter lifecycle ~f:(annotate ~here Lifecycle);
+  annotate ~here Result result;
   Fields.create ~input ~lifecycle ~result
 ;;
 
@@ -21,11 +21,11 @@ let attribute_positions here t =
   attribute here t.result
 ;;
 
-let lifecycle_or_empty t =
+let lifecycle_or_empty ~here t =
   match lifecycle t with
   | None ->
     let r = Incr.const Lifecycle.Collection.empty in
-    annotate Empty_lifecycle r;
+    annotate ~here Empty_lifecycle r;
     r
   | Some l -> l
 ;;

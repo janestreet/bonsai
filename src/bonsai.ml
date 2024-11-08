@@ -19,7 +19,7 @@ module Private = struct
   module Path = Path
   module Action = Action
   module Stabilization_tracker = Stabilization_tracker
-  module Enable_free_variable_monitor = Enable_free_variable_monitor
+  module Enable_computation_watcher = Enable_computation_watcher
   module Node_path = Node_path
   module Graph_info = Graph_info
   module Instrumentation = Instrumentation
@@ -30,6 +30,7 @@ module Private = struct
   module Linter = Linter
   module Trampoline = Trampoline
   module Annotate_incr = Annotate_incr
+  module Computation_watcher = Computation_watcher
 
   let path ~(here : [%call_pos]) (local_ graph) = Proc_layer2.path ~here () graph
   let gather = Eval.gather
@@ -52,7 +53,14 @@ module Proc = struct
   end
 end
 
-module Cont = Cont
+module Cont = struct
+  include Cont
+
+  module Bonsai = struct
+    include Cont
+  end
+end
+
 include Cont
 
 module For_open = struct

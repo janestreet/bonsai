@@ -89,9 +89,13 @@ let sub (location_behavior : Location_behavior.t) : (module Ext) =
              List.fold
                pattern_projections
                ~init:body
-               ~f:(fun expr { txt = binding; loc } ->
+               ~f:(fun expr { txt = binding; loc = _ } ->
                  sub_return
-                   ~loc
+                   ~loc:
+                     { loc_start = lhs.ppat_loc.loc_start
+                     ; loc_end = body.pexp_loc.loc_end
+                     ; loc_ghost = true
+                     }
                    ~modul
                    ~lhs:binding.pvb_pat
                    ~rhs:binding.pvb_expr
@@ -154,13 +158,16 @@ let sub (location_behavior : Location_behavior.t) : (module Ext) =
 
     let expand_match ~loc ~modul ~locality expr =
       let expr =
-        match expr.pexp_desc with
-        | Pexp_tuple expressions ->
-          match_tuple_mapper
-            ~modul
-            ~loc:{ expr.pexp_loc with loc_ghost = true }
-            ~expressions
-            ~locality
+        match Ppxlib_jane.Shim.Expression_desc.of_parsetree ~loc expr.pexp_desc with
+        | Pexp_tuple labeled_expressions ->
+          (match Ppxlib_jane.as_unlabeled_tuple labeled_expressions with
+           | Some expressions ->
+             match_tuple_mapper
+               ~modul
+               ~loc:{ expr.pexp_loc with loc_ghost = true }
+               ~expressions
+               ~locality
+           | None -> expr)
         | _ -> expr
       in
       function
@@ -238,27 +245,20 @@ let arr (location_behavior : Location_behavior.t) : (module Ext) =
             match acc with
             | true -> true
             | false ->
-              (match pattern.ppat_desc with
+              (match Ppxlib_jane.Shim.Pattern_desc.of_parsetree pattern.ppat_desc with
                (* let (_ as a) = x in ... *)
                | Ppat_alias (_, _) -> false
                | Ppat_any
                (* let { a ; b ; _ } = x in ... *)
                | Ppat_record (_, Open)
+               (* let ~a, .. = x in ... *)
+               | Ppat_tuple (_, Open)
                (* let { a = (module _) ; b } = x in ... *)
                | Ppat_unpack { txt = None; _ } -> true
                | Ppat_record (_, Closed)
-               | Ppat_unpack { txt = Some _; _ }
-               | Ppat_constant _
-               | Ppat_interval (_, _)
-               | Ppat_var _ | Ppat_tuple _
-               | Ppat_construct (_, _)
-               | Ppat_array _
-               | Ppat_or (_, _)
-               | Ppat_constraint (_, _)
-               | Ppat_type _ | Ppat_lazy _ | Ppat_extension _
-               | Ppat_open (_, _)
-               | Ppat_exception _
-               | Ppat_variant (_, _) -> super#pattern pattern acc)
+               | Ppat_tuple (_, Closed)
+               | Ppat_unpack { txt = Some _; _ } -> super#pattern pattern acc
+               | _ -> super#pattern pattern acc)
         end
       in
       ignore_finder#pattern pattern false
@@ -485,7 +485,12 @@ let arr (location_behavior : Location_behavior.t) : (module Ext) =
         in
         match Balance_list_tree.balance ~n ppx_bindings with
         | Error err -> invalid_arg (Error.to_string_hum err)
-        | Ok subtrees ->
+        | Ok balanced ->
+          let subtrees =
+            match balanced with
+            | Balance_list_tree.Leaf _ -> Nonempty_list.singleton balanced
+            | Node xs -> xs
+          in
           let exps, pats = Nonempty_list.map subtrees ~f:loop |> Nonempty_list.unzip in
           let f_exp = build_multiarg_fun ~args:pats ~body:ppx_body in
           build_application exps ~f_exp ~op_name:"arr"

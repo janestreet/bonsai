@@ -325,6 +325,37 @@ let actor0
     (Value.return ~here ())
 ;;
 
+let state' (type model) ~(here : [%call_pos]) ?reset ?sexp_of_model ?equal default_model =
+  let module Action = struct
+    type t = Source_code_position.t * (model -> model) [@@deriving sexp_of]
+  end
+  in
+  let reset =
+    Option.map reset ~f:(fun reset (_ : _ Apply_action_context.t) m -> reset m)
+  in
+  let open Let_syntax_with_map_location (struct
+      let here = here
+    end) in
+  let%sub state, set_state =
+    state_machine0
+      ~here
+      ?reset
+      ~sexp_of_action:[%sexp_of: Action.t]
+      ?sexp_of_model
+      ?equal
+      ~apply_action:(fun (_ : _ Apply_action_context.t) old_model (_location, f) ->
+        f old_model)
+      ~default_model
+      ()
+  in
+  let%sub set_state =
+    let%arr set_state in
+    fun ~(here : [%call_pos]) prev -> set_state (here, prev)
+  in
+  let%arr state and set_state in
+  state, set_state
+;;
+
 let state ~(here : [%call_pos]) ?reset ?sexp_of_model ?equal default_model =
   let sexp_of_action =
     (* NOTE: The model and the action for [state] are the same. *)
@@ -905,8 +936,8 @@ let previous_value
 ;;
 
 let assoc_set ~(here : [%call_pos]) m v ~(local_ f) =
-  let%sub as_map = Map0.of_set v in
-  assoc m as_map ~f:(fun k _ -> f k) [@nontail]
+  let%sub as_map = Map0.of_set ~here v in
+  assoc ~here m as_map ~f:(fun k _ -> f k) [@nontail]
 ;;
 
 let assoc_list
@@ -1322,7 +1353,7 @@ module Computation = struct
 
       let map2 ~(here : [%call_pos]) a b ~f =
         sub ~here a ~f:(fun a ->
-          sub ~here b ~f:(fun b -> Let_syntax.return (Let_syntax.map2 ~here a b ~f)))
+          sub ~here b ~f:(fun b -> Let_syntax.return ~here (Let_syntax.map2 ~here a b ~f)))
       ;;
 
       let map ~(here : [%call_pos]) a ~f =
@@ -1383,26 +1414,28 @@ module Computation = struct
 
   include Mapn
 
-  let rec all = function
-    | [] -> return []
-    | [ t1 ] -> map t1 ~f:(fun a1 -> [ a1 ])
-    | [ t1; t2 ] -> map2 t1 t2 ~f:(fun a1 a2 -> [ a1; a2 ])
-    | [ t1; t2; t3 ] -> map3 t1 t2 t3 ~f:(fun a1 a2 a3 -> [ a1; a2; a3 ])
-    | [ t1; t2; t3; t4 ] -> map4 t1 t2 t3 t4 ~f:(fun a1 a2 a3 a4 -> [ a1; a2; a3; a4 ])
+  let rec all ~(here : [%call_pos]) = function
+    | [] -> return ~here []
+    | [ t1 ] -> map t1 ~here ~f:(fun a1 -> [ a1 ])
+    | [ t1; t2 ] -> map2 t1 t2 ~here ~f:(fun a1 a2 -> [ a1; a2 ])
+    | [ t1; t2; t3 ] -> map3 t1 t2 t3 ~here ~f:(fun a1 a2 a3 -> [ a1; a2; a3 ])
+    | [ t1; t2; t3; t4 ] ->
+      map4 t1 t2 t3 t4 ~here ~f:(fun a1 a2 a3 a4 -> [ a1; a2; a3; a4 ])
     | [ t1; t2; t3; t4; t5 ] ->
-      map5 t1 t2 t3 t4 t5 ~f:(fun a1 a2 a3 a4 a5 -> [ a1; a2; a3; a4; a5 ])
+      map5 t1 t2 t3 t4 t5 ~here ~f:(fun a1 a2 a3 a4 a5 -> [ a1; a2; a3; a4; a5 ])
     | [ t1; t2; t3; t4; t5; t6 ] ->
-      map6 t1 t2 t3 t4 t5 t6 ~f:(fun a1 a2 a3 a4 a5 a6 -> [ a1; a2; a3; a4; a5; a6 ])
+      map6 t1 t2 t3 t4 t5 t6 ~here ~f:(fun a1 a2 a3 a4 a5 a6 ->
+        [ a1; a2; a3; a4; a5; a6 ])
     | [ t1; t2; t3; t4; t5; t6; t7 ] ->
-      map7 t1 t2 t3 t4 t5 t6 t7 ~f:(fun a1 a2 a3 a4 a5 a6 a7 ->
+      map7 t1 t2 t3 t4 t5 t6 t7 ~here ~f:(fun a1 a2 a3 a4 a5 a6 a7 ->
         [ a1; a2; a3; a4; a5; a6; a7 ])
     | t1 :: t2 :: t3 :: t4 :: t5 :: t6 :: t7 :: rest ->
       let left =
-        map7 t1 t2 t3 t4 t5 t6 t7 ~f:(fun a1 a2 a3 a4 a5 a6 a7 ->
+        map7 t1 t2 t3 t4 t5 t6 t7 ~here ~f:(fun a1 a2 a3 a4 a5 a6 a7 ->
           [ a1; a2; a3; a4; a5; a6; a7 ])
       in
       let right = all rest in
-      map2 left right ~f:(fun left right -> left @ right)
+      map2 left right ~here ~f:(fun left right -> left @ right)
   ;;
 
   let reduce_balanced ~(here : [%call_pos]) xs ~f =
@@ -1419,14 +1452,16 @@ module Computation = struct
       f a b)
   ;;
 
-  let all_unit xs = all xs |> map ~f:(fun (_ : unit list) -> ())
+  let all_unit ~(here : [%call_pos]) xs =
+    all ~here xs |> map ~here ~f:(fun (_ : unit list) -> ())
+  ;;
 
-  let all_map map_of_computations =
+  let all_map ~(here : [%call_pos]) map_of_computations =
     map_of_computations
     |> Map.to_alist
-    |> List.map ~f:(fun (key, data) -> map data ~f:(Tuple2.create key))
-    |> all
-    |> map ~f:(Map.of_alist_exn (Map.comparator_s map_of_computations))
+    |> List.map ~f:(fun (key, data) -> map ~here data ~f:(Tuple2.create key))
+    |> all ~here
+    |> map ~here ~f:(Map.of_alist_exn (Map.comparator_s map_of_computations))
   ;;
 
   module Let_syntax = struct

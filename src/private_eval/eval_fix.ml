@@ -2,7 +2,15 @@ open! Core
 open! Import
 open Incr.Let_syntax
 
-let define ~gather ~recursive_scopes ~time_source ~fix_id ~initial_input ~input_id ~result
+let define
+  ~gather
+  ~recursive_scopes
+  ~time_source
+  ~fix_id
+  ~initial_input
+  ~input_id
+  ~result
+  ~here:_
   =
   let rec inner_packed =
     lazy
@@ -50,7 +58,7 @@ let define ~gather ~recursive_scopes ~time_source ~fix_id ~initial_input ~input_
     (Computation.T { model; input; action; apply_action; reset; run; may_contain })
 ;;
 
-let recurse ~recursive_scopes ~input ~input_id ~fix_id =
+let recurse ~recursive_scopes ~input ~input_id ~fix_id ~here =
   let wrap_lazy ~type_id inject = Action.lazy_ ~type_id >>> inject in
   let model = Meta.Model.Hidden.lazy_ in
   let gathered = Computation.Recursive_scopes.find_exn recursive_scopes fix_id in
@@ -99,6 +107,7 @@ let recurse ~recursive_scopes ~input ~input_id ~fix_id =
     in
     Trampoline.return
       ( Snapshot.create
+          ~here
           ~input
           ~result:(Snapshot.result snapshot)
           ~lifecycle:(Snapshot.lifecycle snapshot)

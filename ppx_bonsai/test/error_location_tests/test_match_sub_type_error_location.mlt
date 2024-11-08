@@ -1,0 +1,74 @@
+#print_line_numbers true
+
+open! Bonsai
+open Bonsai.Let_syntax
+
+(* This test file is a regression test for a bug where the errors from the match
+   arms of a match%sub were instead reported at the start of the match%sub which results
+   in confusing type error messages! *)
+
+type t =
+  | A of int
+  | B of int
+  | C of t list
+
+let _component t (local_ _graph) =
+  match%sub t with
+  | A x ->
+    let%arr x in
+    x
+  | B x ->
+    let%arr x in
+    x
+  | C l ->
+    let%arr l in
+    let _ = l in
+    Bonsai.return 1.0
+;;
+
+[%%expect
+  {xxx|
+Line 23, characters 4-66:
+Error: This expression has type float Bonsai.t Bonsai.t
+       but an expression was expected of type int Bonsai.t
+       Type float Bonsai.t is not compatible with type int
+|xxx}]
+
+let _more_basic_component t (local_ _graph) =
+  match%sub Bonsai.return false with
+  | false ->
+    (* An int! *)
+    Bonsai.return 1
+  | true ->
+    (* A float! *)
+    Bonsai.return 1.0
+;;
+
+(* This one is fine! *)
+
+[%%expect
+  {|
+Line 44, characters 4-21:
+Error: This expression has type float Bonsai.t
+       but an expression was expected of type int Bonsai.t
+       Type float is not compatible with type int
+|}]
+
+let _more_basic_component t (local_ _graph) =
+  match%sub Bonsai.return false with
+  | false ->
+    (* An int! *)
+    Bonsai.return 1
+  | true ->
+    (* A float! *)
+    Bonsai.return (Bonsai.return 1)
+;;
+
+(* This one is also fine! (error points to a useful location) *)
+[%%expect
+  {|
+Line 64, characters 4-35:
+Error: This expression has type int Bonsai.t Bonsai.t
+       but an expression was expected of type int Bonsai.t
+       Type int Bonsai.t is not compatible with type int
+|}]

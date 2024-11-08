@@ -26,6 +26,7 @@ type ('m, 'action, 'action_input, 'r) unpacked =
   ; mutable last_lifecycle : Bonsai.Private.Lifecycle.Collection.t
   ; mutable print_actions : bool
   ; stabilization_tracker : 'action Stabilization_tracker.t
+  ; running_computation : 'r Bonsai.Private.Computation.t
   }
 
 type 'r t = T : (_, _, _, 'r) unpacked -> 'r t
@@ -54,12 +55,14 @@ let create_direct
       ~time_source
       computation
   in
+  let running_computation =
+    if optimize then Bonsai.Private.pre_process computation else computation
+  in
   let optimized_info =
-    computation
-    |> (if optimize then Bonsai.Private.pre_process else Fn.id)
-    |> Bonsai.Private.gather
-         ~recursive_scopes:Bonsai.Private.Computation.Recursive_scopes.empty
-         ~time_source
+    Bonsai.Private.gather
+      running_computation
+      ~recursive_scopes:Bonsai.Private.Computation.Recursive_scopes.empty
+      ~time_source
   in
   let (T
         ({ model =
@@ -116,7 +119,9 @@ let create_direct
     in
     let action_input = Incr.observe action_input_incr in
     let result = result_incr |> Incr.observe in
-    let lifecycle_incr = Bonsai.Private.Snapshot.lifecycle_or_empty snapshot in
+    let lifecycle_incr =
+      Bonsai.Private.Snapshot.lifecycle_or_empty ~here:[%here] snapshot
+    in
     let lifecycle = Incr.observe lifecycle_incr in
     Incr.stabilize ();
     T
@@ -137,6 +142,7 @@ let create_direct
       ; last_lifecycle = Bonsai.Private.Lifecycle.Collection.empty
       ; print_actions = false
       ; stabilization_tracker = Stabilization_tracker.empty ()
+      ; running_computation
       }
   in
   create_polymorphic computation_info apply_action
@@ -261,4 +267,6 @@ module For_testing = struct
         [ Incr.pack result_incr; Incr.pack lifecycle_incr; Incr.pack action_input_incr ]);
     In_channel.read_all tempfile
   ;;
+
+  let running_computation (T { running_computation; _ }) = running_computation
 end

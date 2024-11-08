@@ -2,10 +2,10 @@ open! Core
 open! Import
 open Incr.Let_syntax
 
-let f ~model ~static_action ~time_source ~apply_action ~reset =
+let f ~model ~static_action ~time_source ~apply_action ~reset ~here =
   let wrap_leaf inject = Action.static_leaf >>> inject in
   let run ~environment:_ ~fix_envs:_ ~path:_ ~model ~inject =
-    annotate Model model;
+    annotate ~here Model model;
     (* It's important to create [inject_static] outside of the [let%mapn] so that it
            remains [phys_equal] when the [model] changes. *)
     let inject_static = Lazy_inject.make (wrap_leaf inject) in
@@ -13,7 +13,8 @@ let f ~model ~static_action ~time_source ~apply_action ~reset =
       let%map model in
       model, inject_static
     in
-    Trampoline.return (Snapshot.create ~result ~input:Input.static ~lifecycle:None, ())
+    Trampoline.return
+      (Snapshot.create ~here ~result ~input:Input.static ~lifecycle:None, ())
   in
   let apply_action ~inject ~schedule_event _input model = function
     | Action.Leaf_dynamic _ ->

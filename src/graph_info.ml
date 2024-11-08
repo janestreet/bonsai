@@ -172,7 +172,7 @@ module Node_info = struct
       | With_model_resetter _ -> "with_model_resetter"
       | Path _ -> "path"
       | Lifecycle _ -> "lifecycle"
-      | Monitor_free_variables _ -> "monitor_free_variables"
+      | Computation_watcher _ -> "computation_watcher"
     in
     { node_type; here = Some here }
   ;;
@@ -260,11 +260,24 @@ let iter_graph_updates (t : _ Computation.t) ~on_update =
   let add_tree_relationship ~from ~to_ ~from_info =
     let (lazy from), (lazy to_) = from, to_ in
     let gm = !graph_info in
-    graph_info
-    := { gm with
-         info = Map.add_exn gm.info ~key:from ~data:from_info
-       ; tree = Map.add_exn gm.tree ~key:from ~data:to_
-       };
+    let info =
+      match Map.add gm.info ~key:from ~data:from_info with
+      | `Ok info -> info
+      | `Duplicate ->
+        print_s
+          [%message
+            "BUG: [ duplicate info ]" (from : Node_path.t) (from_info : Node_info.t)];
+        gm.info
+    in
+    let tree =
+      match Map.add gm.tree ~key:from ~data:to_ with
+      | `Ok tree -> tree
+      | `Duplicate ->
+        print_s
+          [%message "BUG: [ duplicate tree ]" (from : Node_path.t) (to_ : Node_path.t)];
+        gm.tree
+    in
+    graph_info := { gm with info; tree };
     on_update !graph_info
   in
   let environment = Type_equal.Id.Uid.Table.create () in

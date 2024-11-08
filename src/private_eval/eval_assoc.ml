@@ -22,7 +22,7 @@ let unzip3_mapi'
        incremental) is always the empty lifecycle collection, then we can drop it
        here, and avoid nesting unzips *)
     let first, second =
-      Incr_map.unzip_mapi' ~comparator map ~f:(fun ~key ~data ->
+      Incr_map.unzip_mapi' map ~f:(fun ~key ~data ->
         let a, b, _ = f ~key ~data in
         a, b)
     in
@@ -32,12 +32,12 @@ let unzip3_mapi'
        incremental) is always the empty lifecycle collection, then we can drop it
        here, and avoid nesting unzips *)
     let first, third =
-      Incr_map.unzip_mapi' ~comparator map ~f:(fun ~key ~data ->
+      Incr_map.unzip_mapi' map ~f:(fun ~key ~data ->
         let a, _, c = f ~key ~data in
         a, c)
     in
     first, Incr.return (Map.empty comparator), third
-  | Yes_or_maybe, Yes_or_maybe -> Incr_map.unzip3_mapi' ~comparator map ~f
+  | Yes_or_maybe, Yes_or_maybe -> Incr_map.unzip3_mapi' map ~f
 ;;
 
 let f
@@ -51,6 +51,7 @@ let f
   ~cmp_id
   ~data_id
   ~by
+  ~here
   =
   let module Cmp = (val key_comparator) in
   let wrap_assoc ~key inject =
@@ -85,7 +86,7 @@ let f
         ~contains_lifecycle:resolved.lifecycle
         ~contains_input:resolved.input
         ~f:(fun ~key ~data:input_and_model ->
-          annotate Model_and_input input_and_model;
+          annotate ~here Model_and_input input_and_model;
           let path =
             match resolved.path with
             | Yes_or_maybe -> Path.append path Path.Elem.(Assoc (create_keyed key))
@@ -93,8 +94,8 @@ let f
           in
           let%pattern_bind value, model = input_and_model in
           let key_incr = Incr.const key in
-          annotate Assoc_key key_incr;
-          annotate Assoc_input value;
+          annotate ~here Assoc_key key_incr;
+          annotate ~here Assoc_input value;
           let environment =
             (* It is safe to reuse the same [key_id] and [data_id] for each pair in the map,
                    since they all start with a fresh "copy" of the outer environment. *)
@@ -108,11 +109,11 @@ let f
           in
           ( Snapshot.result snapshot
           , Input.to_incremental (Snapshot.input snapshot)
-          , Snapshot.lifecycle_or_empty snapshot ))
+          , Snapshot.lifecycle_or_empty ~here snapshot ))
     in
-    annotate Assoc_results results_map;
-    annotate Assoc_lifecycles lifecycle_map;
-    annotate Assoc_inputs input_map;
+    annotate ~here Assoc_results results_map;
+    annotate ~here Assoc_lifecycles lifecycle_map;
+    annotate ~here Assoc_inputs input_map;
     let lifecycle =
       (* if we can prove that the body of the assoc doesn't contain a
              lifecycle node, then return None, dropping the constant incremental
@@ -130,7 +131,7 @@ let f
                 | None -> data))
             ~remove:(fun ~outer_key:_ ~inner_key:key ~data:_ acc -> Map.remove acc key)
         in
-        annotate Assoc_lifecycles unfolded;
+        annotate ~here Assoc_lifecycles unfolded;
         Some unfolded
     in
     let input =
@@ -138,7 +139,7 @@ let f
       | No -> Input.static_none
       | Yes_or_maybe -> Input.dynamic (input_map >>| Option.some)
     in
-    Trampoline.return (Snapshot.create ~result:results_map ~input ~lifecycle, ())
+    Trampoline.return (Snapshot.create ~here ~result:results_map ~input ~lifecycle, ())
   in
   let apply_action
     ~inject

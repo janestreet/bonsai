@@ -15,6 +15,13 @@ module Cont : sig
     module type of Cont
     with module For_proc2 := Cont.For_proc2
      and module Conv := Cont.Conv
+
+  module Bonsai : sig
+    include
+      module type of Cont
+      with module For_proc2 := Cont.For_proc2
+       and module Conv := Cont.Conv
+  end
 end
 
 module Private : sig
@@ -55,12 +62,13 @@ module Private : sig
   module Instrumentation = Instrumentation
   module Flatten_values = Flatten_values
   module Constant_fold = Constant_fold
-  module Enable_free_variable_monitor = Enable_free_variable_monitor
+  module Enable_computation_watcher = Enable_computation_watcher
   module Skeleton = Skeleton
   module Transform = Transform
   module Linter = Linter
   module Trampoline = Trampoline
   module Annotate_incr = Annotate_incr
+  module Computation_watcher = Computation_watcher
 
   val gather
     :  recursive_scopes:Computation.Recursive_scopes.t
@@ -116,7 +124,7 @@ module Stable : sig
   end
 end
 
-include module type of Cont
+include module type of Cont with module Map := Cont.Map
 
 module For_open : sig
   module Effect = Effect

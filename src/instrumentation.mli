@@ -15,8 +15,8 @@ open! Import
     expand the graph to include what was inside the Lazy. *)
 val instrument_computation
   :  'result Computation.t
-  -> start_timer:(string -> unit)
-  -> stop_timer:(string -> unit)
+  -> start_timer:(string -> 'timer)
+  -> stop_timer:('timer -> unit)
   -> 'result Computation.t
 
 val extract_node_path_from_entry_label : string -> Node_path.t option

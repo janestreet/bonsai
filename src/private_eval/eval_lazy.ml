@@ -7,6 +7,7 @@ let f
   ~recursive_scopes
   ~time_source
   ~lazy_computation
+  ~here
   =
   let wrap_lazy ~type_id inject = Action.lazy_ ~type_id >>> inject in
   let model = Meta.Model.Hidden.lazy_ in
@@ -27,7 +28,7 @@ let f
       =
       force gathered
     in
-    annotate Model model;
+    annotate ~here Model model;
     let input_model =
       let%map model in
       let (Meta.Model.Hidden.T { model; info; _ }) =
@@ -52,6 +53,7 @@ let f
     in
     Trampoline.return
       ( Snapshot.create
+          ~here
           ~input
           ~result:(Snapshot.result snapshot)
           ~lifecycle:(Snapshot.lifecycle snapshot)

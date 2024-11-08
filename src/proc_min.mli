@@ -60,8 +60,15 @@ module Dynamic_scope : sig
     -> 'b Computation.t
 end
 
-val monitor_free_variables
+val watch_computation
   :  here:Source_code_position.t
+  -> log_model_before:bool
+  -> log_model_after:bool
+  -> log_action:bool
+  -> log_incr_info:bool
+  -> log_watcher_positions:bool
+  -> log_dependency_definition_position:bool
+  -> label:string option
   -> 'a Computation.t
   -> 'a Computation.t
 

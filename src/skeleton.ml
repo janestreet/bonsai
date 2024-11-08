@@ -224,7 +224,7 @@ module Computation0 = struct
     | Path
     | Lifecycle of { value : Value.t }
     | Identity of { t : t }
-    | Monitor_free_variables of
+    | Computation_watcher of
         { inner : t
         ; free_vars : Id.t list
         }
@@ -387,11 +387,22 @@ module Computation0 = struct
             }
         in
         { node_path; here; kind }
-      | Monitor_free_variables { inner; free_vars; here } ->
+      | Computation_watcher
+          { inner
+          ; here
+          ; free_vars
+          ; config = _
+          ; queue = _
+          ; value_type_id_observation_definition_positions = _
+          ; enable_watcher = _
+          } ->
         let kind =
-          Monitor_free_variables
+          Computation_watcher
             { inner = helper ~current_path:(Node_path.descend current_path) inner
-            ; free_vars = Type_id_set.map_to_list free_vars { f = Id.of_type_id }
+            ; free_vars =
+                Computation_watcher.Type_id_location_map.map_to_list
+                  free_vars
+                  { f = (fun key _ -> Id.of_type_id key) }
             }
         in
         { node_path; here; kind }
@@ -464,7 +475,7 @@ module Computation0 = struct
       | Path
       | Lifecycle of { value : Value.Minimal.t }
       | Identity of { t : t }
-      | Monitor_free_variables of
+      | Computation_watcher of
           { inner : t
           ; free_vars : Id.t list
           }
@@ -524,8 +535,8 @@ module Computation0 = struct
       | Path -> Path
       | Lifecycle { value } -> Lifecycle { value = Value.Minimal.of_complete value }
       | Identity { t } -> Identity { t = of_complete t }
-      | Monitor_free_variables { inner; free_vars } ->
-        Monitor_free_variables { inner = of_complete inner; free_vars }
+      | Computation_watcher { inner; free_vars } ->
+        Computation_watcher { inner = of_complete inner; free_vars }
     ;;
   end
 
@@ -556,7 +567,7 @@ module Computation0 = struct
     | Path -> []
     | Lifecycle { value } -> [ value ]
     | Identity _ -> []
-    | Monitor_free_variables _ -> []
+    | Computation_watcher _ -> []
   ;;
 
   let children (t : t) =
@@ -585,7 +596,7 @@ module Computation0 = struct
     | Path -> []
     | Lifecycle _ -> []
     | Identity { t } -> [ t ]
-    | Monitor_free_variables { inner; _ } -> [ inner ]
+    | Computation_watcher { inner; _ } -> [ inner ]
   ;;
 end
 
@@ -669,7 +680,7 @@ include struct
     | Path
     | Lifecycle of { value : value }
     | Identity of { t : computation }
-    | Monitor_free_variables of
+    | Computation_watcher of
         { inner : computation
         ; free_vars : id list
         }
@@ -771,7 +782,7 @@ module Counts = struct
       ; path : int
       ; lifecycle : int
       ; identity : int
-      ; monitor_free_variables : int
+      ; computation_watcher : int
       }
     [@@deriving sexp_of]
   end
@@ -827,9 +838,8 @@ module Counts = struct
            | Lifecycle _ -> acc.computation <- { c with lifecycle = c.lifecycle + 1 }
            | Identity _ -> acc.computation <- { c with identity = c.identity + 1 }
            | Lazy _ -> ()
-           | Monitor_free_variables _ ->
-             acc.computation
-             <- { c with monitor_free_variables = c.monitor_free_variables + 1 });
+           | Computation_watcher _ ->
+             acc.computation <- { c with computation_watcher = c.computation_watcher + 1 });
           super#computation_kind t acc
 
         method! value_kind t acc =
@@ -867,7 +877,7 @@ module Counts = struct
           ; path = 0
           ; lifecycle = 0
           ; identity = 0
-          ; monitor_free_variables = 0
+          ; computation_watcher = 0
           }
       ; value =
           { constant = 0; exception_ = 0; incr = 0; named = 0; cutoff = 0; mapn = 0 }

@@ -1,7 +1,7 @@
 open! Core
 open! Import
 
-let f ~gather ~recursive_scopes ~time_source ~inner ~reset_id =
+let f ~gather ~recursive_scopes ~time_source ~inner ~reset_id ~here =
   let%bind.Trampoline (Computation.T
                         ({ model; input; action; apply_action; run; reset; may_contain }
                          as gathered_inner))
@@ -38,6 +38,7 @@ let f ~gather ~recursive_scopes ~time_source ~inner ~reset_id =
       let result = Snapshot.result snapshot in
       Trampoline.return
         ( Snapshot.create
+            ~here
             ~result
             ~input:(Snapshot.input snapshot)
             ~lifecycle:(Snapshot.lifecycle snapshot)

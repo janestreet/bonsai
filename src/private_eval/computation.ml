@@ -240,10 +240,19 @@ type 'result t =
       ; here : Source_code_position.t
       }
       -> unit t
-  | Monitor_free_variables :
+  | Computation_watcher :
       { inner : 'result t
+      ; enable_watcher : bool
       ; here : Source_code_position.t
-      ; free_vars : Type_id_set.t
+      ; free_vars : Computation_watcher.Type_id_location_map.t
+      ; config : Computation_watcher.Config.t
+      ; queue : Computation_watcher.Output_queue.t option
+      ; value_type_id_observation_definition_positions :
+          (Computation_watcher.Source_code_positions.finalized
+             Computation_watcher.Source_code_positions.t
+          * Computation_watcher.Config.t)
+            Computation_watcher.Type_id_location_hashmap.t
+            option
       }
       -> 'result t
 
@@ -273,5 +282,5 @@ let source_code_position (type result) (computation : result t) =
   | With_model_resetter { here; _ }
   | Path { here; _ }
   | Lifecycle { here; _ }
-  | Monitor_free_variables { here; _ } -> here
+  | Computation_watcher { here; _ } -> here
 ;;

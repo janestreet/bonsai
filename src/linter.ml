@@ -79,7 +79,7 @@ let state_machine1_to_state_machine0_linter =
         | Lifecycle _
         | Fix_define _
         | Fix_recurse _
-        | Monitor_free_variables _
+        | Computation_watcher _
         | Identity _ -> warnings
       in
       super#computation computation warnings

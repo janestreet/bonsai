@@ -246,6 +246,116 @@ let map7 ~(here : [%call_pos]) a b c d e g h ~f =
     ~no_graph:(fun () -> Value.map7 ~here a b c d e g h ~f)
 ;;
 
+let all ~(here : [%call_pos]) ts =
+  with_global_graph
+    ~f:(fun graph -> perform ~here graph (Proc.read ~here (Value.all ~here ts)))
+    ~no_graph:(fun () -> Value.all ts)
+;;
+
+module Autopack = struct
+  type 'a bonsai = 'a Value.t
+
+  type ('packed, 'unpacked) t =
+    | One : ('a, 'a bonsai) t
+    | Two : ('a * 'b, 'a bonsai * 'b bonsai) t
+    | Three : ('a * 'b * 'c, 'a bonsai * 'b bonsai * 'c bonsai) t
+    | Four : ('a * 'b * 'c * 'd, 'a bonsai * 'b bonsai * 'c bonsai * 'd bonsai) t
+    | Five :
+        ( 'a * 'b * 'c * 'd * 'e
+          , 'a bonsai * 'b bonsai * 'c bonsai * 'd bonsai * 'e bonsai )
+          t
+    | Six :
+        ( 'a * 'b * 'c * 'd * 'e * 'f
+          , 'a bonsai * 'b bonsai * 'c bonsai * 'd bonsai * 'e bonsai * 'f bonsai )
+          t
+    | Seven :
+        ( 'a * 'b * 'c * 'd * 'e * 'f * 'g
+          , 'a bonsai
+            * 'b bonsai
+            * 'c bonsai
+            * 'd bonsai
+            * 'e bonsai
+            * 'f bonsai
+            * 'g bonsai )
+          t
+
+  let pack
+    : type packed unpacked.
+      here:Source_code_position.t -> n:(packed, unpacked) t -> unpacked -> packed bonsai
+    =
+    fun ~here ~n unpacked ->
+    match n with
+    | One -> unpacked
+    | Two ->
+      let t1, t2 = unpacked in
+      map2 ~here t1 t2 ~f:(fun v1 v2 -> v1, v2)
+    | Three ->
+      let t1, t2, t3 = unpacked in
+      map3 ~here t1 t2 t3 ~f:(fun v1 v2 v3 -> v1, v2, v3)
+    | Four ->
+      let t1, t2, t3, t4 = unpacked in
+      map4 ~here t1 t2 t3 t4 ~f:(fun v1 v2 v3 v4 -> v1, v2, v3, v4)
+    | Five ->
+      let t1, t2, t3, t4, t5 = unpacked in
+      map5 ~here t1 t2 t3 t4 t5 ~f:(fun v1 v2 v3 v4 v5 -> v1, v2, v3, v4, v5)
+    | Six ->
+      let t1, t2, t3, t4, t5, t6 = unpacked in
+      map6 ~here t1 t2 t3 t4 t5 t6 ~f:(fun v1 v2 v3 v4 v5 v6 -> v1, v2, v3, v4, v5, v6)
+    | Seven ->
+      let t1, t2, t3, t4, t5, t6, t7 = unpacked in
+      map7 ~here t1 t2 t3 t4 t5 t6 t7 ~f:(fun v1 v2 v3 v4 v5 v6 v7 ->
+        v1, v2, v3, v4, v5, v6, v7)
+  ;;
+
+  let unpack
+    : type packed unpacked.
+      here:Source_code_position.t -> n:(packed, unpacked) t -> packed bonsai -> unpacked
+    =
+    fun ~here ~n packed ->
+    match n with
+    | One -> packed
+    | Two ->
+      let t1 = map packed ~here ~f:(fun (v1, _) -> v1) in
+      let t2 = map packed ~here ~f:(fun (_, v2) -> v2) in
+      t1, t2
+    | Three ->
+      let t1 = map packed ~here ~f:(fun (v1, _, _) -> v1) in
+      let t2 = map packed ~here ~f:(fun (_, v2, _) -> v2) in
+      let t3 = map packed ~here ~f:(fun (_, _, v3) -> v3) in
+      t1, t2, t3
+    | Four ->
+      let t1 = map packed ~here ~f:(fun (v1, _, _, _) -> v1) in
+      let t2 = map packed ~here ~f:(fun (_, v2, _, _) -> v2) in
+      let t3 = map packed ~here ~f:(fun (_, _, v3, _) -> v3) in
+      let t4 = map packed ~here ~f:(fun (_, _, _, v4) -> v4) in
+      t1, t2, t3, t4
+    | Five ->
+      let t1 = map packed ~here ~f:(fun (v1, _, _, _, _) -> v1) in
+      let t2 = map packed ~here ~f:(fun (_, v2, _, _, _) -> v2) in
+      let t3 = map packed ~here ~f:(fun (_, _, v3, _, _) -> v3) in
+      let t4 = map packed ~here ~f:(fun (_, _, _, v4, _) -> v4) in
+      let t5 = map packed ~here ~f:(fun (_, _, _, _, v5) -> v5) in
+      t1, t2, t3, t4, t5
+    | Six ->
+      let t1 = map packed ~here ~f:(fun (v1, _, _, _, _, _) -> v1) in
+      let t2 = map packed ~here ~f:(fun (_, v2, _, _, _, _) -> v2) in
+      let t3 = map packed ~here ~f:(fun (_, _, v3, _, _, _) -> v3) in
+      let t4 = map packed ~here ~f:(fun (_, _, _, v4, _, _) -> v4) in
+      let t5 = map packed ~here ~f:(fun (_, _, _, _, v5, _) -> v5) in
+      let t6 = map packed ~here ~f:(fun (_, _, _, _, _, v6) -> v6) in
+      t1, t2, t3, t4, t5, t6
+    | Seven ->
+      let t1 = map packed ~here ~f:(fun (v1, _, _, _, _, _, _) -> v1) in
+      let t2 = map packed ~here ~f:(fun (_, v2, _, _, _, _, _) -> v2) in
+      let t3 = map packed ~here ~f:(fun (_, _, v3, _, _, _, _) -> v3) in
+      let t4 = map packed ~here ~f:(fun (_, _, _, v4, _, _, _) -> v4) in
+      let t5 = map packed ~here ~f:(fun (_, _, _, _, v5, _, _) -> v5) in
+      let t6 = map packed ~here ~f:(fun (_, _, _, _, _, v6, _) -> v6) in
+      let t7 = map packed ~here ~f:(fun (_, _, _, _, _, _, v7) -> v7) in
+      t1, t2, t3, t4, t5, t6, t7
+  ;;
+end
+
 let both ~(here : [%call_pos]) a b = map2 ~here a b ~f:Tuple2.create
 
 let cutoff ~(here : [%call_pos]) v ~equal =
@@ -311,6 +421,23 @@ let state_opt
   (local_ graph)
   =
   state_opt__for_proc2 ~here ?reset ?sexp_of_model ?equal ?default_model () graph
+  |> split ~here graph
+;;
+
+let state'__for_proc2
+  ~(here : [%call_pos])
+  ?reset
+  ?sexp_of_model
+  ?equal
+  default_model
+  (local_ graph)
+  =
+  perform ~here graph (Proc.state' ~here ?reset ?sexp_of_model ?equal default_model)
+;;
+
+let state' ~(here : [%call_pos]) ?reset ?sexp_of_model ?equal default_model (local_ graph)
+  =
+  state'__for_proc2 ~here ?reset ?sexp_of_model ?equal default_model graph
   |> split ~here graph
 ;;
 
@@ -567,6 +694,24 @@ let scope_model ~(here : [%call_pos]) comparator ~on ~for_ (local_ graph) =
   |> perform ~here graph
 ;;
 
+let scope_model_n
+  : type unpacked.
+    here:[%call_pos]
+    -> _
+    -> n:(_, unpacked) Autopack.t
+    -> on:_
+    -> for_:(local_ graph -> unpacked)
+    -> local_ graph
+    -> unpacked
+  =
+  fun ~(here : [%call_pos]) comparator ~n ~on ~for_ (local_ graph) ->
+  let result =
+    scope_model ~here comparator ~on graph ~for_:(fun (local_ graph) ->
+      Autopack.pack ~here ~n (for_ graph))
+  in
+  Autopack.unpack ~here ~n result
+;;
+
 let most_recent_some ~(here : [%call_pos]) ?sexp_of_model ~equal value ~f (local_ graph) =
   Proc.most_recent_some ~here ?sexp_of_model ~equal value ~f |> perform ~here graph
 ;;
@@ -633,6 +778,43 @@ let wrap
     graph
 ;;
 
+let wrap_n
+  : type packed unpacked.
+    here:[%call_pos]
+    -> ?reset:_
+    -> ?sexp_of_model:_
+    -> ?equal:_
+    -> default_model:_
+    -> apply_action:(_ -> packed -> _)
+    -> f:(_ -> _ t -> local_ graph -> unpacked)
+    -> n:(packed, unpacked) Autopack.t
+    -> local_ graph
+    -> unpacked
+  =
+  fun ~(here : [%call_pos])
+    ?reset
+    ?sexp_of_model
+    ?equal
+    ~default_model
+    ~apply_action
+    ~f
+    ~n
+    (local_ graph) ->
+  let packed =
+    wrap
+      ~here
+      ?reset
+      ?sexp_of_model
+      ?equal
+      ~default_model
+      ~apply_action
+      graph
+      ~f:(fun model inject (local_ graph) ->
+        Autopack.pack ~here ~n (f model inject graph))
+  in
+  Autopack.unpack ~here ~n packed
+;;
+
 let enum ~(here : [%call_pos]) m ~match_ ~with_ (local_ graph) =
   let with_ : 'k -> 'd Computation.t =
     fun k -> handle ~f:(fun (local_ graph) -> with_ k graph) graph [@nontail]
@@ -651,10 +833,41 @@ let with_model_resetter ~(here : [%call_pos]) ~f graph =
   with_model_resetter__for_proc2 ~here ~f graph |> split ~here graph
 ;;
 
+let with_model_resetter_n
+  : type packed unpacked.
+    here:[%call_pos]
+    -> f:(local_ graph -> unpacked)
+    -> n:(packed, unpacked) Autopack.t
+    -> local_ graph
+    -> unpacked * _
+  =
+  fun ~(here : [%call_pos]) ~f ~n (local_ graph) ->
+  let packed, effect =
+    with_model_resetter ~here graph ~f:(fun graph -> Autopack.pack ~here ~n (f graph))
+  in
+  Autopack.unpack ~here ~n packed, effect
+;;
+
 let with_model_resetter' ~(here : [%call_pos]) ~f (local_ graph) =
   Proc_min.with_model_resetter ~here (fun ~reset ->
     handle ~here graph ~f:(fun graph -> f ~reset graph) [@nontail])
   |> perform ~here graph
+;;
+
+let with_model_resetter_n'
+  : type packed unpacked.
+    here:[%call_pos]
+    -> f:(reset:_ -> local_ graph -> unpacked)
+    -> n:(packed, unpacked) Autopack.t
+    -> local_ graph
+    -> unpacked
+  =
+  fun ~(here : [%call_pos]) ~f ~n (local_ graph) ->
+  let packed =
+    with_model_resetter' ~here graph ~f:(fun ~reset graph ->
+      Autopack.pack ~here ~n (f ~reset graph))
+  in
+  Autopack.unpack ~here ~n packed
 ;;
 
 let peek ~(here : [%call_pos]) value graph = perform ~here graph (Proc.yoink ~here value)
@@ -920,16 +1133,62 @@ let assoc ~(here : [%call_pos]) comparator map ~f (local_ graph) =
   |> perform ~here graph
 ;;
 
+let assoc_n
+  : type packed unpacked.
+    here:[%call_pos]
+    -> _
+    -> _
+    -> f:(_ -> _ -> local_ graph -> unpacked)
+    -> n:(packed, unpacked) Autopack.t
+    -> local_ graph
+    -> (_, packed, _) Map.t t
+  =
+  fun ~(here : [%call_pos]) comparator map ~f ~n (local_ graph) ->
+  assoc ~here comparator map graph ~f:(fun key data (local_ graph) ->
+    Autopack.pack ~here ~n (f key data graph))
+;;
+
 let assoc_set ~(here : [%call_pos]) comparator set ~f (local_ graph) =
   Proc.assoc_set ~here comparator set ~f:(fun k ->
     handle ~here graph ~f:(fun graph -> f k graph) [@nontail])
   |> perform ~here graph
 ;;
 
+let assoc_set_n
+  : type packed unpacked.
+    here:[%call_pos]
+    -> _
+    -> _
+    -> f:(_ -> local_ graph -> unpacked)
+    -> n:(packed, unpacked) Autopack.t
+    -> local_ graph
+    -> (_, packed, _) Map.t t
+  =
+  fun ~(here : [%call_pos]) comparator map ~f ~n (local_ graph) ->
+  assoc_set ~here comparator map graph ~f:(fun key (local_ graph) ->
+    Autopack.pack ~here ~n (f key graph))
+;;
+
 let assoc_list ~(here : [%call_pos]) comparator list ~get_key ~f (local_ graph) =
   Proc.assoc_list ~here comparator list ~get_key ~f:(fun k v ->
     handle ~here graph ~f:(fun graph -> f k v graph) [@nontail])
   |> perform ~here graph
+;;
+
+let assoc_list_n
+  : type packed unpacked.
+    here:[%call_pos]
+    -> _
+    -> _
+    -> get_key:_
+    -> f:(_ -> _ -> local_ graph -> unpacked)
+    -> n:(packed, unpacked) Autopack.t
+    -> local_ graph
+    -> [ `Duplicate_key of 'key | `Ok of packed list ] t
+  =
+  fun ~(here : [%call_pos]) comparator list ~get_key ~f ~n (local_ graph) ->
+  assoc_list ~here comparator list ~get_key graph ~f:(fun key data (local_ graph) ->
+    Autopack.pack ~here ~n (f key data graph))
 ;;
 
 module Debug = struct
@@ -961,11 +1220,31 @@ module Debug = struct
     |> perform ~here graph
   ;;
 
-  let monitor_free_variables ~(here : [%call_pos]) ~f (local_ graph) =
+  let watch_computation
+    ~(here : [%call_pos])
+    ?(log_model_before = false)
+    ?(log_model_after = false)
+    ?(log_action = false)
+    ?(log_incr_info = true)
+    ?(log_watcher_positions = true)
+    ?(log_dependency_definition_position = true)
+    ?label
+    ~f
+    (local_ graph)
+    =
     perform
       graph
+      (Proc.watch_computation
+         ~here
+         ~log_model_before
+         ~log_model_after
+         ~log_action
+         ~log_incr_info
+         ~log_watcher_positions
+         ~log_dependency_definition_position
+         ~label
+         (handle graph ~f:(fun graph -> f graph)))
       ~here
-      (Proc.monitor_free_variables ~here (handle graph ~f:(fun graph -> f graph)))
   ;;
 end
 
@@ -1046,6 +1325,7 @@ module For_proc2 = struct
   let value_cutoff v ~equal = Value.cutoff v ~equal ~added_by_let_syntax:false
   let conceal_value v = v
   let state = state__for_proc2
+  let state' = state'__for_proc2
   let state_opt = state_opt__for_proc2
   let toggle = toggle__for_proc2
 

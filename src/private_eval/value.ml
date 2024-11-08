@@ -207,7 +207,7 @@ let rec eval : type a. Environment.t -> a t -> a Incr.t =
 
 let eval env t =
   let incr = eval env t in
-  annotate Value incr;
+  annotate ~here:t.here Value incr;
   incr
 ;;
 
@@ -251,27 +251,205 @@ let map7 ~(here : [%call_pos]) t1 t2 t3 t4 t5 t6 t7 ~f =
   { value = Map7 { t1; t2; t3; t4; t5; t6; t7; f }; here; id = value_id "map7" }
 ;;
 
-let rec all ~(here : [%call_pos]) = function
+let all ~(here : [%call_pos]) = function
   | [] -> return []
-  | [ t1 ] -> map ~here t1 ~f:(fun a1 -> [ a1 ])
-  | [ t1; t2 ] -> map2 ~here t1 t2 ~f:(fun a1 a2 -> [ a1; a2 ])
-  | [ t1; t2; t3 ] -> map3 ~here t1 t2 t3 ~f:(fun a1 a2 a3 -> [ a1; a2; a3 ])
-  | [ t1; t2; t3; t4 ] ->
-    map4 ~here t1 t2 t3 t4 ~f:(fun a1 a2 a3 a4 -> [ a1; a2; a3; a4 ])
-  | [ t1; t2; t3; t4; t5 ] ->
-    map5 ~here t1 t2 t3 t4 t5 ~f:(fun a1 a2 a3 a4 a5 -> [ a1; a2; a3; a4; a5 ])
-  | [ t1; t2; t3; t4; t5; t6 ] ->
-    map6 ~here t1 t2 t3 t4 t5 t6 ~f:(fun a1 a2 a3 a4 a5 a6 -> [ a1; a2; a3; a4; a5; a6 ])
-  | [ t1; t2; t3; t4; t5; t6; t7 ] ->
-    map7 ~here t1 t2 t3 t4 t5 t6 t7 ~f:(fun a1 a2 a3 a4 a5 a6 a7 ->
-      [ a1; a2; a3; a4; a5; a6; a7 ])
-  | t1 :: t2 :: t3 :: t4 :: t5 :: t6 :: t7 :: rest ->
-    let left =
-      map7 ~here t1 t2 t3 t4 t5 t6 t7 ~f:(fun a1 a2 a3 a4 a5 a6 a7 ->
-        [ a1; a2; a3; a4; a5; a6; a7 ])
+  | [ x ] -> map x ~f:(fun x -> [ x ])
+  | xs ->
+    (* [Balance_list_tree] guarantees that if there are any [Node]s, they will all be at the
+        start of the list. This means we don't need to match on all possible permutations
+        of leaves and nodes. *)
+    let tree = Balance_list_tree.balance ~n:7 xs |> ok_exn in
+    let rec flatten (node : 'a t Balance_list_tree.t) =
+      match node with
+      | Leaf x -> map ~here x ~f:(fun x -> [ x ])
+      | Node [ x1 ] -> flatten x1
+      | Node [ Leaf x1; Leaf x2 ] -> map2 ~here x1 x2 ~f:(fun x1 x2 -> [ x1; x2 ])
+      | Node [ x1; Leaf x2 ] -> map2 ~here (flatten x1) x2 ~f:(fun x1 x2 -> x1 @ [ x2 ])
+      | Node [ x1; x2 ] -> map2 ~here (flatten x1) (flatten x2) ~f:(fun x1 x2 -> x1 @ x2)
+      | Node [ Leaf x1; Leaf x2; Leaf x3 ] ->
+        map3 ~here x1 x2 x3 ~f:(fun x1 x2 x3 -> [ x1; x2; x3 ])
+      | Node [ x1; Leaf x2; Leaf x3 ] ->
+        map3 ~here (flatten x1) x2 x3 ~f:(fun x1 x2 x3 -> x1 @ [ x2; x3 ])
+      | Node [ x1; x2; Leaf x3 ] ->
+        map3 ~here (flatten x1) (flatten x2) x3 ~f:(fun x1 x2 x3 -> x1 @ x2 @ [ x3 ])
+      | Node [ x1; x2; x3 ] ->
+        map3 ~here (flatten x1) (flatten x2) (flatten x3) ~f:(fun x1 x2 x3 ->
+          x1 @ x2 @ x3)
+      | Node [ Leaf x1; Leaf x2; Leaf x3; Leaf x4 ] ->
+        map4 ~here x1 x2 x3 x4 ~f:(fun x1 x2 x3 x4 -> [ x1; x2; x3; x4 ])
+      | Node [ x1; Leaf x2; Leaf x3; Leaf x4 ] ->
+        map4 ~here (flatten x1) x2 x3 x4 ~f:(fun x1 x2 x3 x4 -> x1 @ [ x2; x3; x4 ])
+      | Node [ x1; x2; Leaf x3; Leaf x4 ] ->
+        map4 ~here (flatten x1) (flatten x2) x3 x4 ~f:(fun x1 x2 x3 x4 ->
+          x1 @ x2 @ [ x3; x4 ])
+      | Node [ x1; x2; x3; Leaf x4 ] ->
+        map4 ~here (flatten x1) (flatten x2) (flatten x3) x4 ~f:(fun x1 x2 x3 x4 ->
+          x1 @ x2 @ x3 @ [ x4 ])
+      | Node [ x1; x2; x3; x4 ] ->
+        map4
+          ~here
+          (flatten x1)
+          (flatten x2)
+          (flatten x3)
+          (flatten x4)
+          ~f:(fun x1 x2 x3 x4 -> x1 @ x2 @ x3 @ x4)
+      | Node [ Leaf x1; Leaf x2; Leaf x3; Leaf x4; Leaf x5 ] ->
+        map5 ~here x1 x2 x3 x4 x5 ~f:(fun x1 x2 x3 x4 x5 -> [ x1; x2; x3; x4; x5 ])
+      | Node [ x1; Leaf x2; Leaf x3; Leaf x4; Leaf x5 ] ->
+        map5 ~here (flatten x1) x2 x3 x4 x5 ~f:(fun x1 x2 x3 x4 x5 ->
+          x1 @ [ x2; x3; x4; x5 ])
+      | Node [ x1; x2; Leaf x3; Leaf x4; Leaf x5 ] ->
+        map5 ~here (flatten x1) (flatten x2) x3 x4 x5 ~f:(fun x1 x2 x3 x4 x5 ->
+          x1 @ x2 @ [ x3; x4; x5 ])
+      | Node [ x1; x2; x3; Leaf x4; Leaf x5 ] ->
+        map5 ~here (flatten x1) (flatten x2) (flatten x3) x4 x5 ~f:(fun x1 x2 x3 x4 x5 ->
+          x1 @ x2 @ x3 @ [ x4; x5 ])
+      | Node [ x1; x2; x3; x4; Leaf x5 ] ->
+        map5
+          ~here
+          (flatten x1)
+          (flatten x2)
+          (flatten x3)
+          (flatten x4)
+          x5
+          ~f:(fun x1 x2 x3 x4 x5 -> x1 @ x2 @ x3 @ x4 @ [ x5 ])
+      | Node [ x1; x2; x3; x4; x5 ] ->
+        map5
+          ~here
+          (flatten x1)
+          (flatten x2)
+          (flatten x3)
+          (flatten x4)
+          (flatten x5)
+          ~f:(fun x1 x2 x3 x4 x5 -> x1 @ x2 @ x3 @ x4 @ x5)
+      | Node [ Leaf x1; Leaf x2; Leaf x3; Leaf x4; Leaf x5; Leaf x6 ] ->
+        map6 ~here x1 x2 x3 x4 x5 x6 ~f:(fun x1 x2 x3 x4 x5 x6 ->
+          [ x1; x2; x3; x4; x5; x6 ])
+      | Node [ x1; Leaf x2; Leaf x3; Leaf x4; Leaf x5; Leaf x6 ] ->
+        map6 ~here (flatten x1) x2 x3 x4 x5 x6 ~f:(fun x1 x2 x3 x4 x5 x6 ->
+          x1 @ [ x2; x3; x4; x5; x6 ])
+      | Node [ x1; x2; Leaf x3; Leaf x4; Leaf x5; Leaf x6 ] ->
+        map6 ~here (flatten x1) (flatten x2) x3 x4 x5 x6 ~f:(fun x1 x2 x3 x4 x5 x6 ->
+          x1 @ x2 @ [ x3; x4; x5; x6 ])
+      | Node [ x1; x2; x3; Leaf x4; Leaf x5; Leaf x6 ] ->
+        map6
+          ~here
+          (flatten x1)
+          (flatten x2)
+          (flatten x3)
+          x4
+          x5
+          x6
+          ~f:(fun x1 x2 x3 x4 x5 x6 -> x1 @ x2 @ x3 @ [ x4; x5; x6 ])
+      | Node [ x1; x2; x3; x4; Leaf x5; Leaf x6 ] ->
+        map6
+          ~here
+          (flatten x1)
+          (flatten x2)
+          (flatten x3)
+          (flatten x4)
+          x5
+          x6
+          ~f:(fun x1 x2 x3 x4 x5 x6 -> x1 @ x2 @ x3 @ x4 @ [ x5; x6 ])
+      | Node [ x1; x2; x3; x4; x5; Leaf x6 ] ->
+        map6
+          ~here
+          (flatten x1)
+          (flatten x2)
+          (flatten x3)
+          (flatten x4)
+          (flatten x5)
+          x6
+          ~f:(fun x1 x2 x3 x4 x5 x6 -> x1 @ x2 @ x3 @ x4 @ x5 @ [ x6 ])
+      | Node [ x1; x2; x3; x4; x5; x6 ] ->
+        map6
+          ~here
+          (flatten x1)
+          (flatten x2)
+          (flatten x3)
+          (flatten x4)
+          (flatten x5)
+          (flatten x6)
+          ~f:(fun x1 x2 x3 x4 x5 x6 -> x1 @ x2 @ x3 @ x4 @ x5 @ x6)
+      | Node [ Leaf x1; Leaf x2; Leaf x3; Leaf x4; Leaf x5; Leaf x6; Leaf x7 ] ->
+        map7 ~here x1 x2 x3 x4 x5 x6 x7 ~f:(fun x1 x2 x3 x4 x5 x6 x7 ->
+          [ x1; x2; x3; x4; x5; x6; x7 ])
+      | Node [ x1; Leaf x2; Leaf x3; Leaf x4; Leaf x5; Leaf x6; Leaf x7 ] ->
+        map7 ~here (flatten x1) x2 x3 x4 x5 x6 x7 ~f:(fun x1 x2 x3 x4 x5 x6 x7 ->
+          x1 @ [ x2; x3; x4; x5; x6; x7 ])
+      | Node [ x1; x2; Leaf x3; Leaf x4; Leaf x5; Leaf x6; Leaf x7 ] ->
+        map7
+          ~here
+          (flatten x1)
+          (flatten x2)
+          x3
+          x4
+          x5
+          x6
+          x7
+          ~f:(fun x1 x2 x3 x4 x5 x6 x7 -> x1 @ x2 @ [ x3; x4; x5; x6; x7 ])
+      | Node [ x1; x2; x3; Leaf x4; Leaf x5; Leaf x6; Leaf x7 ] ->
+        map7
+          ~here
+          (flatten x1)
+          (flatten x2)
+          (flatten x3)
+          x4
+          x5
+          x6
+          x7
+          ~f:(fun x1 x2 x3 x4 x5 x6 x7 -> x1 @ x2 @ x3 @ [ x4; x5; x6; x7 ])
+      | Node [ x1; x2; x3; x4; Leaf x5; Leaf x6; Leaf x7 ] ->
+        map7
+          ~here
+          (flatten x1)
+          (flatten x2)
+          (flatten x3)
+          (flatten x4)
+          x5
+          x6
+          x7
+          ~f:(fun x1 x2 x3 x4 x5 x6 x7 -> x1 @ x2 @ x3 @ x4 @ [ x5; x6; x7 ])
+      | Node [ x1; x2; x3; x4; x5; Leaf x6; Leaf x7 ] ->
+        map7
+          ~here
+          (flatten x1)
+          (flatten x2)
+          (flatten x3)
+          (flatten x4)
+          (flatten x5)
+          x6
+          x7
+          ~f:(fun x1 x2 x3 x4 x5 x6 x7 -> x1 @ x2 @ x3 @ x4 @ x5 @ [ x6; x7 ])
+      | Node [ x1; x2; x3; x4; x5; x6; Leaf x7 ] ->
+        map7
+          ~here
+          (flatten x1)
+          (flatten x2)
+          (flatten x3)
+          (flatten x4)
+          (flatten x5)
+          (flatten x6)
+          x7
+          ~f:(fun x1 x2 x3 x4 x5 x6 x7 -> x1 @ x2 @ x3 @ x4 @ x5 @ x6 @ [ x7 ])
+      | Node [ x1; x2; x3; x4; x5; x6; x7 ] ->
+        map7
+          ~here
+          (flatten x1)
+          (flatten x2)
+          (flatten x3)
+          (flatten x4)
+          (flatten x5)
+          (flatten x6)
+          (flatten x7)
+          ~f:(fun x1 x2 x3 x4 x5 x6 x7 -> x1 @ x2 @ x3 @ x4 @ x5 @ x6 @ x7)
+      | Node xs ->
+        (* This shouldn't happen, because the balancer guaruntees that each node has at
+           most 7 children. But exceptions at runtime are scary, so let's be safe. *)
+        Nonempty_list.fold_right xs ~init:(return ~here []) ~f:(fun x acc ->
+          map2 ~here (flatten x) acc ~f:(fun x acc -> x @ acc))
     in
-    let right = all ~here rest in
-    map2 ~here left right ~f:(fun left right -> left @ right)
+    flatten tree
 ;;
 
 let of_incr ~(here : [%call_pos]) x = { value = Incr x; here; id = value_id "incr" }

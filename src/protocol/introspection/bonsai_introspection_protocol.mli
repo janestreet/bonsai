@@ -164,6 +164,8 @@ module For_module_startup_timings : sig
   end
 end
 
+module For_incr_node_introspection = Incr_node_introspection
+
 module For_testing : sig
   module Rpc_id : sig
     type t = Rpc_id.t

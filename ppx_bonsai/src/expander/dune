@@ -1,7 +1,7 @@
 (library
  (name ppx_bonsai_expander)
  (public_name bonsai.ppx_bonsai_expander)
- (libraries core core_kernel.nonempty_list ppxlib ppx_let.expander
-   ppx_pattern_bind ppx_here.expander)
+ (libraries balance_list_tree core core_kernel.nonempty_list
+   ppx_here.expander ppx_let.expander ppx_pattern_bind ppxlib ppxlib_jane)
  (preprocess
   (pps ppxlib.metaquot ppx_jane)))

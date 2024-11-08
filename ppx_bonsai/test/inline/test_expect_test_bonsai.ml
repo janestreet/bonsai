@@ -11,130 +11,128 @@ let test_bonsai_expect_test = function
   | _ -> failwith "expected a single value binding"
 ;;
 
-let%test_module "expect_test.bonsai" =
-  (module struct
-    let no_expect_blocks =
-      [%str
+module%test [@name "expect_test.bonsai"] _ = struct
+  let no_expect_blocks =
+    [%str
+      let "no expect blocks" =
+        let open Bonsai.Let_syntax in
+        let handle =
+          Handle.create (Result_spec.vdom Fn.id) Bonsai_testing_example_lib.hello_world
+        in
+        Handle.show handle
+      ;;]
+  ;;
+
+  let%expect_test "no expect blocks" =
+    test_bonsai_expect_test no_expect_blocks;
+    [%expect
+      {xxx|
+      [%%expect_test
         let "no expect blocks" =
           let open Bonsai.Let_syntax in
-          let handle =
-            Handle.create (Result_spec.vdom Fn.id) Bonsai_testing_example_lib.hello_world
-          in
-          Handle.show handle
-        ;;]
-    ;;
+            let handle =
+              Handle.create (Result_spec.vdom Fn.id)
+                Bonsai_testing_example_lib.hello_world in
+            Handle.show handle]
+      |xxx}]
+  ;;
 
-    let%expect_test "no expect blocks" =
-      test_bonsai_expect_test no_expect_blocks;
-      [%expect
-        {xxx|
-        [%%expect_test
-          let "no expect blocks" =
-            let open Bonsai.Let_syntax in
-              let handle =
-                Handle.create (Result_spec.vdom Fn.id)
-                  Bonsai_testing_example_lib.hello_world in
-              Handle.show handle]
-        |xxx}]
-    ;;
+  let single_expect_block =
+    [%str
+      let "single expect block" =
+        let open Bonsai.Let_syntax in
+        let handle =
+          Handle.create (Result_spec.vdom Fn.id) Bonsai_testing_example_lib.hello_world
+        in
+        Handle.show handle;
+        [%expect {| <span> hello world </span> |}]
+      ;;]
+  ;;
 
-    let single_expect_block =
-      [%str
+  let%expect_test "single expect block" =
+    test_bonsai_expect_test single_expect_block;
+    [%expect
+      {xxx|
+      [%%expect_test
         let "single expect block" =
           let open Bonsai.Let_syntax in
-          let handle =
-            Handle.create (Result_spec.vdom Fn.id) Bonsai_testing_example_lib.hello_world
-          in
-          Handle.show handle;
-          [%expect {| <span> hello world </span> |}]
-        ;;]
-    ;;
+            let handle =
+              Handle.create (Result_spec.vdom Fn.id)
+                Bonsai_testing_example_lib.hello_world in
+            Handle.show handle; [%expect {| <span> hello world </span> |}]]
+      |xxx}]
+  ;;
 
-    let%expect_test "single expect block" =
-      test_bonsai_expect_test single_expect_block;
-      [%expect
-        {xxx|
-        [%%expect_test
-          let "single expect block" =
-            let open Bonsai.Let_syntax in
-              let handle =
-                Handle.create (Result_spec.vdom Fn.id)
-                  Bonsai_testing_example_lib.hello_world in
-              Handle.show handle; [%expect {| <span> hello world </span> |}]]
-        |xxx}]
-    ;;
+  let multiple_expect_blocks =
+    [%str
+      let "multiple expect blocks" =
+        let handle = Handle.create (Result_spec.vdom Fn.id) hello_textbox in
+        Handle.show handle;
+        [%expect
+          {|
+          <div>
+            <input oninput> </input>
+            <span> hello  </span>
+          </div>
+          |}];
+        Handle.input_text handle ~get_vdom:Fn.id ~selector:"input" ~text:"Bob";
+        Handle.show_diff handle;
+        [%expect
+          {|
+            <div>
+              <input oninput> </input>
+          -|  <span> hello  </span>
+          +|  <span> hello Bob </span>
+            </div>
+          |}];
+        Handle.input_text handle ~get_vdom:Fn.id ~selector:"input" ~text:"Alice";
+        Handle.show_diff handle;
+        [%expect
+          {|
+            <div>
+              <input oninput> </input>
+          -|  <span> hello Bob </span>
+          +|  <span> hello Alice </span>
+            </div>
+          |}]
+      ;;]
+  ;;
 
-    let multiple_expect_blocks =
-      [%str
+  let%expect_test "multiple expect blocks" =
+    test_bonsai_expect_test multiple_expect_blocks;
+    [%expect
+      {xxx|
+      [%%expect_test
         let "multiple expect blocks" =
           let handle = Handle.create (Result_spec.vdom Fn.id) hello_textbox in
           Handle.show handle;
           [%expect
             {|
-            <div>
-              <input oninput> </input>
-              <span> hello  </span>
-            </div>
-            |}];
+                <div>
+                  <input oninput> </input>
+                  <span> hello  </span>
+                </div>
+                |}];
           Handle.input_text handle ~get_vdom:Fn.id ~selector:"input" ~text:"Bob";
           Handle.show_diff handle;
           [%expect
             {|
-              <div>
-                <input oninput> </input>
-            -|  <span> hello  </span>
-            +|  <span> hello Bob </span>
-              </div>
-            |}];
+                  <div>
+                    <input oninput> </input>
+                -|  <span> hello  </span>
+                +|  <span> hello Bob </span>
+                  </div>
+                |}];
           Handle.input_text handle ~get_vdom:Fn.id ~selector:"input" ~text:"Alice";
           Handle.show_diff handle;
           [%expect
             {|
-              <div>
-                <input oninput> </input>
-            -|  <span> hello Bob </span>
-            +|  <span> hello Alice </span>
-              </div>
-            |}]
-        ;;]
-    ;;
-
-    let%expect_test "multiple expect blocks" =
-      test_bonsai_expect_test multiple_expect_blocks;
-      [%expect
-        {xxx|
-        [%%expect_test
-          let "multiple expect blocks" =
-            let handle = Handle.create (Result_spec.vdom Fn.id) hello_textbox in
-            Handle.show handle;
-            [%expect
-              {|
-                    <div>
-                      <input oninput> </input>
-                      <span> hello  </span>
-                    </div>
-                    |}];
-            Handle.input_text handle ~get_vdom:Fn.id ~selector:"input" ~text:"Bob";
-            Handle.show_diff handle;
-            [%expect
-              {|
-                      <div>
-                        <input oninput> </input>
-                    -|  <span> hello  </span>
-                    +|  <span> hello Bob </span>
-                      </div>
-                    |}];
-            Handle.input_text handle ~get_vdom:Fn.id ~selector:"input" ~text:"Alice";
-            Handle.show_diff handle;
-            [%expect
-              {|
-                      <div>
-                        <input oninput> </input>
-                    -|  <span> hello Bob </span>
-                    +|  <span> hello Alice </span>
-                      </div>
-                    |}]]
-        |xxx}]
-    ;;
-  end)
-;;
+                  <div>
+                    <input oninput> </input>
+                -|  <span> hello Bob </span>
+                +|  <span> hello Alice </span>
+                  </div>
+                |}]]
+      |xxx}]
+  ;;
+end

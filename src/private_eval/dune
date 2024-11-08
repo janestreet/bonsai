@@ -1,8 +1,9 @@
 (library
  (name bonsai_private_eval)
- (libraries core core_kernel.balanced_reducer incr_map incremental
-   core_kernel.reversed_list virtual_dom.ui_effect incr_dom.ui_incr
-   incr_dom.ui_time_source uopt)
+ (libraries balance_list_tree core_kernel.balanced_reducer core incr_map
+   incremental core_kernel.nonempty_list core_kernel.reversed_list
+   virtual_dom.ui_effect bonsai_concrete.ui_incr
+   bonsai_concrete.ui_time_source uopt)
  (preprocess
   (pps ppx_jane ppx_pattern_bind))
  (public_name bonsai.private_eval))

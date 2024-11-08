@@ -1,11 +1,12 @@
 open! Core
 open! Import
 
-let f =
+let f ~here =
   let run ~environment:_ ~fix_envs:_ ~path ~model:_ ~inject:_ =
     let result = Incr.return path in
-    annotate Path result;
-    Trampoline.return (Snapshot.create ~result ~input:Input.static ~lifecycle:None, ())
+    annotate ~here Path result;
+    Trampoline.return
+      (Snapshot.create ~here ~result ~input:Input.static ~lifecycle:None, ())
   in
   Trampoline.return
     (Computation.T

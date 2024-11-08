@@ -48,9 +48,9 @@ let instrument_computation (t : _ Computation.t) ~start_timer ~stop_timer =
       model
       action
       =
-      start_timer apply_action_label;
+      let handle = start_timer apply_action_label in
       let model = apply_action ~inject ~schedule_event ~time_source input model action in
-      stop_timer apply_action_label;
+      stop_timer handle;
       model
     in
     let time_static_apply_action
@@ -61,9 +61,9 @@ let instrument_computation (t : _ Computation.t) ~start_timer ~stop_timer =
       model
       action
       =
-      start_timer apply_action_label;
+      let handle = start_timer apply_action_label in
       let model = apply_action ~inject ~schedule_event ~time_source model action in
-      stop_timer apply_action_label;
+      stop_timer handle;
       model
     in
     let open Trampoline.Let_syntax in
@@ -80,17 +80,17 @@ let instrument_computation (t : _ Computation.t) ~start_timer ~stop_timer =
            { t with apply_action = time_static_apply_action ~apply_action:t.apply_action })
     | Leaf_incr t ->
       let compute clock input =
-        start_timer compute_label;
+        let handle = start_timer compute_label in
         let computed = t.compute clock input in
-        stop_timer compute_label;
+        stop_timer handle;
         computed
       in
       return (Computation.Leaf_incr { t with compute })
     | Assoc_simpl t ->
       let by path key value =
-        start_timer by_label;
+        let handle = start_timer by_label in
         let by = t.by path key value in
-        stop_timer by_label;
+        stop_timer handle;
         by
       in
       return (Computation.Assoc_simpl { t with by })
@@ -113,57 +113,57 @@ let instrument_computation (t : _ Computation.t) ~start_timer ~stop_timer =
       | Constant _ | Exception _ | Incr _ | Named _ | Both (_, _) | Cutoff _ -> value
       | Map t ->
         let f a =
-          start_timer entry_label;
+          let handle = start_timer entry_label in
           let x = t.f a in
-          stop_timer entry_label;
+          stop_timer handle;
           x
         in
         Map { t with f }
       | Map2 t ->
         let f a b =
-          start_timer entry_label;
+          let handle = start_timer entry_label in
           let x = t.f a b in
-          stop_timer entry_label;
+          stop_timer handle;
           x
         in
         Map2 { t with f }
       | Map3 t ->
         let f a b c =
-          start_timer entry_label;
+          let handle = start_timer entry_label in
           let x = t.f a b c in
-          stop_timer entry_label;
+          stop_timer handle;
           x
         in
         Map3 { t with f }
       | Map4 t ->
         let f a b c d =
-          start_timer entry_label;
+          let handle = start_timer entry_label in
           let x = t.f a b c d in
-          stop_timer entry_label;
+          stop_timer handle;
           x
         in
         Map4 { t with f }
       | Map5 t ->
         let f a b c d e =
-          start_timer entry_label;
+          let handle = start_timer entry_label in
           let x = t.f a b c d e in
-          stop_timer entry_label;
+          stop_timer handle;
           x
         in
         Map5 { t with f }
       | Map6 t ->
         let f a b c d e f =
-          start_timer entry_label;
+          let handle = start_timer entry_label in
           let x = t.f a b c d e f in
-          stop_timer entry_label;
+          stop_timer handle;
           x
         in
         Map6 { t with f }
       | Map7 t ->
         let f a b c d e f g =
-          start_timer entry_label;
+          let handle = start_timer entry_label in
           let x = t.f a b c d e f g in
-          stop_timer entry_label;
+          stop_timer handle;
           x
         in
         Map7 { t with f }

@@ -286,6 +286,17 @@ module type S = sig
     -> unit
     -> ('model option * ('model option -> unit Effect.t)) Computation.t
 
+  (** Similar to [state], but the `set` function takes a function that calculates
+      the new state from the previous state. *)
+  val state'
+    :  here:[%call_pos]
+    -> ?reset:('model -> 'model)
+         (** to learn more about [reset], read the docs on [with_model_resetter] *)
+    -> ?sexp_of_model:('model -> Sexp.t)
+    -> ?equal:('model -> 'model -> bool)
+    -> 'model
+    -> ('model * (here:[%call_pos] -> ('model -> 'model) -> unit Effect.t)) Computation.t
+
   (** A bool-state which starts at [default_model] and flips whenever the
       returned effect is scheduled. *)
   val toggle
@@ -1178,8 +1189,8 @@ module type S = sig
     val instrument_computation
       :  here:[%call_pos]
       -> 'a Computation.t
-      -> start_timer:(string -> unit)
-      -> stop_timer:(string -> unit)
+      -> start_timer:(string -> 'timer)
+      -> stop_timer:('timer -> unit)
       -> 'a Computation.t
 
     val to_dot : ?pre_process:bool -> 'a Computation.t -> string

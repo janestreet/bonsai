@@ -31,6 +31,66 @@ include Applicative.S with type 'a t := 'a t
 
 include Mapn with type 'a t := 'a t
 
+module Autopack : sig
+  type 'a bonsai := 'a t
+
+  (** Several Bonsai combinators take functions as a parameter where the user-provided function 
+      returns a [Bonsai.t].  If the user has _multiple_ [Bonsai.t] that they'd like to return, 
+      then they'd need to pack them up, e.g. going from [int Bonsai.t * string Bonsai.t] to a
+      [(int * string) Bonsai.t] to return it.  Then, if the function returns the single [Bonsai.t], 
+      you may need to unpack the values again.
+
+      To reduce boilerplate, these functions also have a version that automatically packs and unpacks 
+      tuples of Bonsai.t.  For example, instead of writing 
+
+      {[
+      let results, reset_effect = 
+        Bonsai.with_model_resetter graph ~f:(fun ~reset (local_ graph) ->
+          let a, b = Bonsai.state None graph in
+          let c, d = Bonsai.state None graph in
+          let%arr a and b and c and d in 
+          a, b, c, d)
+      in
+      let%sub (a, b, c, d) = results in 
+      ...
+      ]}
+
+      you can use version which takes an [Autopack.t]:
+
+      {[
+      let (a, b, c, d), reset_effect =
+        Bonsai.with_model_resetter_n graph ~n:Four ~f:(fun ~reset (local_ graph) ->
+          let a, b = Bonsai.state None graph in
+          let c, d = Bonsai.state None graph in
+          a, b, c, d)
+      in
+      ...
+      ]} *)
+  type ('packed, 'unpacked) t =
+    | One : ('a, 'a bonsai) t
+    | Two : ('a * 'b, 'a bonsai * 'b bonsai) t
+    | Three : ('a * 'b * 'c, 'a bonsai * 'b bonsai * 'c bonsai) t
+    | Four : ('a * 'b * 'c * 'd, 'a bonsai * 'b bonsai * 'c bonsai * 'd bonsai) t
+    | Five :
+        ( 'a * 'b * 'c * 'd * 'e
+          , 'a bonsai * 'b bonsai * 'c bonsai * 'd bonsai * 'e bonsai )
+          t
+    | Six :
+        ( 'a * 'b * 'c * 'd * 'e * 'f
+          , 'a bonsai * 'b bonsai * 'c bonsai * 'd bonsai * 'e bonsai * 'f bonsai )
+          t
+    | Seven :
+        ( 'a * 'b * 'c * 'd * 'e * 'f * 'g
+          , 'a bonsai
+            * 'b bonsai
+            * 'c bonsai
+            * 'd bonsai
+            * 'e bonsai
+            * 'f bonsai
+            * 'g bonsai )
+          t
+end
+
 (** [return] produces a [Bonsai.t] whose inner value is constant. *)
 val return : here:[%call_pos] -> 'a -> 'a t
 
@@ -86,6 +146,17 @@ val state_opt
   -> ?default_model:'model
   -> local_ graph
   -> 'model option t * ('model option -> unit Effect.t) t
+
+(** Similar to [state], but the `set` function takes a function that calculates
+    the new state from the previous state. *)
+val state'
+  :  here:[%call_pos]
+  -> ?reset:('model -> 'model)
+  -> ?sexp_of_model:('model -> Sexp.t)
+  -> ?equal:('model -> 'model -> bool)
+  -> 'model
+  -> local_ graph
+  -> 'model t * (here:[%call_pos] -> ('model -> 'model) -> unit Effect.t) t
 
 (** [Bonsai.toggle] is a small helper function for building a [bool] state
     that toggles back and forth between [true] and [false] whenever the
@@ -265,6 +336,18 @@ val scope_model
   -> local_ graph
   -> 'b t
 
+(** Exactly like [scope_model] but will automatically pack and unpack any number of
+    [Bonsai.t] produced inside the [for_] closure.  
+    See documentation for [Autopack.t] for more info. *)
+val scope_model_n
+  :  here:[%call_pos]
+  -> ('a, _) comparator
+  -> n:(_, 'b) Autopack.t
+  -> on:'a t
+  -> for_:(local_ graph -> 'b)
+  -> local_ graph
+  -> 'b
+
 (** [Bonsai.most_recent_some] can be used to find and store a value that has some
     interesting property by transforming a ['a Bonsai.t] into a ['b option Bonsai.t] via
     a [f:('a -> 'b option)] function. The output of this function is a
@@ -316,6 +399,22 @@ val wrap
   -> local_ graph
   -> 'result t
 
+(** Exactly like [wrap] but will automatically pack and unpack any number of
+    [Bonsai.t] produced inside the [f] closure.  
+    See documentation for [Autopack.t] for more info. *)
+val wrap_n
+  :  here:[%call_pos]
+  -> ?reset:('model, 'action, unit) resetter
+  -> ?sexp_of_model:('model -> Sexp.t)
+  -> ?equal:('model -> 'model -> bool)
+  -> default_model:'model
+  -> apply_action:
+       (('action, unit) Apply_action_context.t -> 'packed -> 'model -> 'action -> 'model)
+  -> f:('model t -> ('action -> unit Effect.t) t -> local_ graph -> 'unpacked)
+  -> n:('packed, 'unpacked) Autopack.t
+  -> local_ graph
+  -> 'unpacked
+
 (** [enum] is used for matching on a value and providing different behaviors on different
     values. The type of the value must be enumerable (there must be a finite number of
     possible values), and it must be comparable and sexpable.
@@ -340,6 +439,16 @@ val with_model_resetter
   -> local_ graph
   -> 'a t * unit Effect.t t
 
+(** Exactly like [with_model_resetter] but will automatically pack and unpack any number
+    of [Bonsai.t] produced inside the [f] closure.  
+    See documentation for [Autopack.t] for more info. *)
+val with_model_resetter_n
+  :  here:[%call_pos]
+  -> f:(local_ graph -> 'a)
+  -> n:(_, 'a) Autopack.t
+  -> local_ graph
+  -> 'a * unit Effect.t t
+
 (** The same as [with_model_resetter], but the closure has access to the [reset] function
     this time. *)
 val with_model_resetter'
@@ -347,6 +456,16 @@ val with_model_resetter'
   -> f:(reset:unit Effect.t t -> local_ graph -> 'a t)
   -> local_ graph
   -> 'a t
+
+(** Exactly like [with_model_resetter'] but will automatically pack and unpack any number
+    of [Bonsai.t] produced inside the [f] closure.  
+    See documentation for [Autopack.t] for more info. *)
+val with_model_resetter_n'
+  :  here:[%call_pos]
+  -> f:(reset:unit Effect.t t -> local_ graph -> 'a)
+  -> n:(_, 'a) Autopack.t
+  -> local_ graph
+  -> 'a
 
 (** [peek] maps a [Bonsai.t] to an [Effect.t] with the same underlying value.
     This allows you to inspect the ['a] value from inside of a [let%bind.Effect]
@@ -701,6 +820,18 @@ val assoc
   -> local_ graph
   -> ('k, 'a, 'cmp) Map.t t
 
+(** Exactly like [assoc] but will automatically pack multiple [Bonsai.t] 
+    produced inside the [f] closure into a tuple.
+    See documentation for [Autopack.t] for more info. *)
+val assoc_n
+  :  here:[%call_pos]
+  -> ('k, 'cmp) comparator
+  -> ('k, 'v, 'cmp) Map.t t
+  -> f:('k t -> 'v t -> local_ graph -> 'unpacked)
+  -> n:('packed, 'unpacked) Autopack.t
+  -> local_ graph
+  -> ('k, 'packed, 'cmp) Map.t t
+
 (** [all_map] is like [assoc] but is only usable when the input map is constant. *)
 val all_map
   :  here:[%call_pos]
@@ -717,6 +848,18 @@ val assoc_set
   -> local_ graph
   -> ('key, 'result, 'cmp) Map.t t
 
+(** Exactly like [assoc_set] but will automatically pack multiple [Bonsai.t] 
+    produced inside the [f] closure into a tuple.
+    See documentation for [Autopack.t] for more info. *)
+val assoc_set_n
+  :  here:[%call_pos]
+  -> ('key, 'cmp) comparator
+  -> ('key, 'cmp) Set.t t
+  -> f:('key t -> local_ graph -> 'unpacked)
+  -> n:('packed, 'unpacked) Autopack.t
+  -> local_ graph
+  -> ('key, 'packed, 'cmp) Map.t t
+
 (** Like [assoc] except that the input value is a list instead of a Map. The output list
     is in the same order as the input list. This function performs O(n log(n)) work (where
     n is the length of the list) any time that anything in the input list changes, so it
@@ -729,6 +872,19 @@ val assoc_list
   -> f:('key t -> 'a t -> local_ graph -> 'b t)
   -> local_ graph
   -> [ `Duplicate_key of 'key | `Ok of 'b list ] t
+
+(** Exactly like [assoc_list] but will automatically pack multiple [Bonsai.t] 
+    produced inside the [f] closure into a tuple.
+    See documentation for [Autopack.t] for more info. *)
+val assoc_list_n
+  :  here:[%call_pos]
+  -> ('key, _) comparator
+  -> 'a list t
+  -> get_key:('a -> 'key)
+  -> f:('key t -> 'a t -> local_ graph -> 'unpacked)
+  -> n:('packed, 'unpacked) Autopack.t
+  -> local_ graph
+  -> [ `Duplicate_key of 'key | `Ok of 'packed list ] t
 
 module Time_source = Time_source
 
@@ -748,8 +904,8 @@ module Debug : sig
   val instrument_computation
     :  here:[%call_pos]
     -> (local_ graph -> 'a t)
-    -> start_timer:(string -> unit)
-    -> stop_timer:(string -> unit)
+    -> start_timer:(string -> 'timer)
+    -> stop_timer:('timer -> unit)
     -> local_ graph
     -> 'a t
 
@@ -765,16 +921,59 @@ module Debug : sig
   val enable_incremental_annotations : unit -> unit
   val disable_incremental_annotations : unit -> unit
 
-  (** Wrapping [monitor_free_variables] around a computation will add informative print
+  (** Wrapping [watch_computation] around a computation will add informative print
       statements every time that a value defined outside the closue - and used _inside_
       the closure - is updated.  This can be useful to debug why a component is being
       updated.
 
-      By default, calls to [monitor_free_variables] are no-ops, and must be enabled
-      manually with external tools.  This is so you can leave calls to this function
-      in production builds without impacting performance until you start debugging. *)
-  val monitor_free_variables
+      By default, calls to [watch_computation] are no-ops, and must be enabled manually
+      with external tools.  This is so you can leave calls to this function in production
+      builds without impacting performance until you start debugging. 
+
+      [log_model_before]: Will log a state machine's model before apply_action/reset is
+      called. Uses the sexp_of_model function passed to the state machine, or
+      sexp_of_opaque if no sexp function is provided. 
+      (Default: false)
+
+      [log_model_after]: Will log a state machine's model after apply_action/reset is
+      applied to it. Uses the sexp_of_model function passed to the state machine, or
+      sexp_of_opaque if no sexp function is provided. 
+      (Default: false)
+
+      [log_action]: Logs the action applied to the state machine. Uses the sexp_of_action
+      function passed to the state machine, or sexp_of_opaque if no sexp function is
+      provided. 
+      (Default: false)
+
+      [log_incr_info]: Will log a state machine's model after apply_action/reset is
+      applied to it. Uses the sexp_of_model function passed to the state machine, or
+      sexp_of_opaque if no sexp function is provided. 
+      (Default: false)
+
+      [log_watcher_positions]: Logs the source code positions of the Computation_watcher
+      nodes that are relevant to the current change. The node nearest to the change is at
+      the top
+      (Default: true)
+
+      [log_dependency_definition_position]: Logs the source code position of the 
+      Computation node that updated and caused the watched computation to update. 
+      (Default: true)
+
+      [label]: Prefixes the watcher position in the list of watchers for easier 
+      identification of individual watchers. Will not show up if [log_watcher_positions]
+      is set to false
+      (Default: None)
+
+  *)
+  val watch_computation
     :  here:[%call_pos]
+    -> ?log_model_before:bool
+    -> ?log_model_after:bool
+    -> ?log_action:bool
+    -> ?log_incr_info:bool
+    -> ?log_watcher_positions:bool
+    -> ?log_dependency_definition_position:bool
+    -> ?label:string
     -> f:(local_ graph -> 'a t)
     -> local_ graph
     -> 'a t
@@ -1003,6 +1202,15 @@ module For_proc2 : sig
     -> 'model
     -> local_ graph
     -> ('model * ('model -> unit Effect.t)) t
+
+  val state'
+    :  here:[%call_pos]
+    -> ?reset:('model -> 'model)
+    -> ?sexp_of_model:('model -> Sexp.t)
+    -> ?equal:('model -> 'model -> bool)
+    -> 'model
+    -> local_ graph
+    -> ('model * (here:[%call_pos] -> ('model -> 'model) -> unit Effect.t)) t
 
   val state_opt
     :  here:[%call_pos]
