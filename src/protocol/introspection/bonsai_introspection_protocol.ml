@@ -285,6 +285,8 @@ module For_module_startup_timings = struct
   end
 end
 
+module For_incr_node_introspection = Incr_node_introspection
+
 module For_testing = struct
   module Rpc_id = struct
     include Rpc_id

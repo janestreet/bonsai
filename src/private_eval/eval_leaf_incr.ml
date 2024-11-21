@@ -1,11 +1,12 @@
 open! Core
 open! Import
 
-let f ~input ~compute ~time_source =
+let f ~input ~compute ~time_source ~here =
   let run ~environment ~fix_envs:_ ~path:_ ~model:_ ~inject:_ =
     let input = Value.eval environment input in
     let result = compute time_source input in
-    Trampoline.return (Snapshot.create ~result ~input:Input.static ~lifecycle:None, ())
+    Trampoline.return
+      (Snapshot.create ~here ~result ~input:Input.static ~lifecycle:None, ())
   in
   Trampoline.return
     (Computation.T

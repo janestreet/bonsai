@@ -1,10 +1,11 @@
 open! Core
 open! Import
 
-let f ~value =
+let f ~value ~here =
   let run ~environment ~fix_envs:_ ~path:_ ~model:_ ~inject:_ =
     let result = Value.eval environment value in
-    Trampoline.return (Snapshot.create ~result ~input:Input.static ~lifecycle:None, ())
+    Trampoline.return
+      (Snapshot.create ~here ~result ~input:Input.static ~lifecycle:None, ())
   in
   Trampoline.return
     (Computation.T

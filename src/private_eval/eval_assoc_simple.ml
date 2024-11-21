@@ -1,11 +1,12 @@
 open! Core
 open! Import
 
-let f ~map ~by ~may_contain =
+let f ~map ~by ~may_contain ~here =
   let run ~environment ~fix_envs:_ ~path ~model:_ ~inject:_ =
     let map_input = Value.eval environment map in
     let result = Incr_map.mapi map_input ~f:(fun ~key ~data -> by path key data) in
-    Trampoline.return (Snapshot.create ~result ~input:Input.static ~lifecycle:None, ())
+    Trampoline.return
+      (Snapshot.create ~here ~result ~input:Input.static ~lifecycle:None, ())
   in
   Trampoline.return
     (Computation.T

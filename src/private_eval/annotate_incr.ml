@@ -246,10 +246,10 @@ end
 
 let incr_annotation_listeners =
   ref
-    [ (fun kind _ ->
+    [ (fun ~here:_ kind _ ->
         (* NOTE: Because this counting is cheap, it is safe to always do it. *)
         Counts.incr_global kind)
-    ; (fun kind incr ->
+    ; (fun ~here:_ kind incr ->
         (* The "is enabled" check is performed here in order to avoid
                going through the memoization or allocation of a Packed.t even
                when disabled. *)
@@ -259,11 +259,14 @@ let incr_annotation_listeners =
 
 let on_incr_annotation f = incr_annotation_listeners := f :: !incr_annotation_listeners
 
-let annotate_packed kind incr =
-  List.iter !incr_annotation_listeners ~f:(fun f -> f kind incr)
+let annotate_packed ~here kind incr =
+  List.iter !incr_annotation_listeners ~f:(fun f -> f ~here kind incr)
 ;;
 
-let annotate (type a) kind (incr : a Ui_incr.t) = annotate_packed kind (Ui_incr.pack incr)
+let annotate (type a) ~here kind (incr : a Ui_incr.t) =
+  annotate_packed ~here kind (Ui_incr.pack incr)
+;;
+
 let attribute_packed pos incr = if !enabled then attribute_loc pos incr
 let attribute pos_opt incr = attribute_packed pos_opt (Ui_incr.pack incr)
 

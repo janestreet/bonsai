@@ -22,16 +22,14 @@ let balance ~n nodes =
     | _ when Nonempty_list.length chunks > n -> Nonempty_list.map chunks ~f:loop |> loop
     | _ -> Node (Nonempty_list.map chunks ~f:loop)
   in
-  match loop nodes with
-  | Leaf _ as single -> Nonempty_list.singleton single
-  | Node ls -> ls
+  loop nodes
 ;;
 
 let balance ~n list =
   match Nonempty_list.of_list list with
   | None -> Or_error.error_string "expand_letn: list of bindings must be non-empty"
   | Some _ when n <= 0 -> Or_error.error_string "expand_letn: n must be positive"
-  | Some [ singleton ] when n = 1 -> Ok (Nonempty_list.singleton (Leaf singleton))
+  | Some [ singleton ] when n = 1 -> Ok (Leaf singleton)
   | Some _ when n = 1 ->
     Or_error.error_string
       "expand_letn: n may only be 1 if the length of the input list is exactly 1"

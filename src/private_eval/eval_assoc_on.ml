@@ -17,6 +17,7 @@ let f
   ~data_id
   ~by
   ~get_model_key
+  ~here
   =
   let module Model_comparator = (val model_comparator) in
   let module Io_comparator = (val io_comparator) in
@@ -62,8 +63,8 @@ let f
               | No -> path
             in
             let key_incr = Incr.const io_key in
-            annotate Assoc_key key_incr;
-            annotate Assoc_input value;
+            annotate ~here Assoc_key key_incr;
+            annotate ~here Assoc_input value;
             let environment =
               (* It is safe to reuse the same [key_id] and [data_id] for each pair in the map,
                      since they all start with a fresh "copy" of the outer environment. *)
@@ -84,7 +85,7 @@ let f
               | None -> model_info.default
               | Some (_prev_io_key, model) -> model
             in
-            annotate Model model;
+            annotate ~here Model model;
             let snapshot, () =
               run
                 ~environment
@@ -96,13 +97,13 @@ let f
             in
             let%mapn result = Snapshot.result snapshot
             and input = Input.to_incremental (Snapshot.input snapshot)
-            and lifecycle = Snapshot.lifecycle_or_empty snapshot in
+            and lifecycle = Snapshot.lifecycle_or_empty ~here snapshot in
             result, input, lifecycle
           in
           results_map, input_map, lifecycle_map)
     in
-    annotate Assoc_results results_map;
-    annotate Assoc_lifecycles lifecycle_map;
+    annotate ~here Assoc_results results_map;
+    annotate ~here Assoc_lifecycles lifecycle_map;
     let lifecycle =
       (* if we can prove that the body of the assoc_on doesn't contain a
              lifecycle node, then return None, dropping the constant incremental
@@ -120,7 +121,7 @@ let f
                 | None -> data))
             ~remove:(fun ~outer_key:_ ~inner_key:key ~data:_ acc -> Map.remove acc key)
         in
-        annotate Assoc_lifecycles unfolded;
+        annotate ~here Assoc_lifecycles unfolded;
         Some unfolded
     in
     let input =
@@ -128,7 +129,7 @@ let f
       | No -> Input.static_none
       | Yes_or_maybe -> Input.dynamic (input_map >>| Option.some)
     in
-    Trampoline.return (Snapshot.create ~result:results_map ~input ~lifecycle, ())
+    Trampoline.return (Snapshot.create ~here ~result:results_map ~input ~lifecycle, ())
   in
   let apply_action
     ~inject

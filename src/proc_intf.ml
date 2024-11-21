@@ -289,6 +289,18 @@ module type S = sig
     -> unit
     -> ('model option * ('model option -> unit Effect.t)) Computation.t
 
+  (** Similar to [state], but the `set` function takes a function that calculates
+      the new state from the previous state. *)
+  val state'
+    :  ?here:Stdlib.Lexing.position
+    -> ?reset:('model -> 'model)
+         (** to learn more about [reset], read the docs on [with_model_resetter] *)
+    -> ?sexp_of_model:('model -> Sexp.t)
+    -> ?equal:('model -> 'model -> bool)
+    -> 'model
+    -> ('model * (?here:Stdlib.Lexing.position -> ('model -> 'model) -> unit Effect.t))
+         Computation.t
+
   (** A bool-state which starts at [default_model] and flips whenever the
       returned effect is scheduled. *)
   val toggle

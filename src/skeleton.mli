@@ -115,7 +115,7 @@ module Computation : sig
     | Path
     | Lifecycle of { value : Value.t }
     | Identity of { t : t }
-    | Monitor_free_variables of
+    | Computation_watcher of
         { inner : t
         ; free_vars : Id.t list
         }

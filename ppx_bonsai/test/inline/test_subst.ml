@@ -1,9 +1,9 @@
 open Core
 open Ppxlib
+open Test_util
 
 let locality = Ppx_let_expander.Locality.global
 let loc = Location.none
-let print_expr expr = Pprintast.string_of_expression expr |> print_string
 
 let%expect_test "single let%sub " =
   Ppx_let_expander.expand
@@ -20,7 +20,7 @@ let%expect_test "single let%sub " =
     ((Let_syntax.sub
         ~here:{
                 Ppx_here_lib.pos_fname = "_none_";
-                pos_lnum = 1;
+                pos_lnum = 0;
                 pos_cnum = (-1);
                 pos_bol = 0
               } ((MY_EXPR)[@ppxlib.enter_value a]) ~f:(fun a -> MY_BODY))
@@ -61,7 +61,7 @@ let%expect_test "single pattern sub with modul" =
     ((X.Let_syntax.Let_syntax.sub
         ~here:{
                 Ppx_here_lib.pos_fname = "_none_";
-                pos_lnum = 1;
+                pos_lnum = 0;
                 pos_cnum = (-1);
                 pos_bol = 0
               } ((MY_EXPR)[@ppxlib.enter_value a]) ~f:(fun a -> MY_BODY))
@@ -110,7 +110,7 @@ let%expect_test "single pattern sub open" =
     ((Let_syntax.sub
         ~here:{
                 Ppx_here_lib.pos_fname = "_none_";
-                pos_lnum = 1;
+                pos_lnum = 0;
                 pos_cnum = (-1);
                 pos_bol = 0
               } ((MY_EXPR_1)[@ppxlib.enter_value a]) ~f:(fun a -> MY_BODY))
@@ -159,7 +159,7 @@ let%expect_test "if%sub is supported" =
     ((Let_syntax.sub
         ~here:{
                 Ppx_here_lib.pos_fname = "_none_";
-                pos_lnum = 1;
+                pos_lnum = 0;
                 pos_cnum = (-1);
                 pos_bol = 0
               } (Let_syntax.return MY_EXPR_1)
@@ -167,7 +167,7 @@ let%expect_test "if%sub is supported" =
               ((Let_syntax.switch
                   ~here:{
                           Ppx_here_lib.pos_fname = "_none_";
-                          pos_lnum = 1;
+                          pos_lnum = 0;
                           pos_cnum = (-1);
                           pos_bol = 0
                         }
@@ -198,7 +198,7 @@ let%expect_test "very simple match%sub" =
     ((Let_syntax.sub
         ~here:{
                 Ppx_here_lib.pos_fname = "_none_";
-                pos_lnum = 1;
+                pos_lnum = 0;
                 pos_cnum = (-1);
                 pos_bol = 0
               } (Let_syntax.return MY_EXPR_1) ~f:(fun a -> BODY_1))
@@ -221,7 +221,7 @@ let%expect_test "destructuring let%sub" =
     ((Let_syntax.sub
         ~here:{
                 Ppx_here_lib.pos_fname = "_none_";
-                pos_lnum = 1;
+                pos_lnum = 0;
                 pos_cnum = (-1);
                 pos_bol = 0
               } MY_EXPR
@@ -229,7 +229,7 @@ let%expect_test "destructuring let%sub" =
               ((Let_syntax.sub
                   ~here:{
                           Ppx_here_lib.pos_fname = "_none_";
-                          pos_lnum = 1;
+                          pos_lnum = 0;
                           pos_cnum = (-1);
                           pos_bol = 0
                         }
@@ -237,7 +237,7 @@ let%expect_test "destructuring let%sub" =
                      ((Let_syntax.map
                          ~here:{
                                  Ppx_here_lib.pos_fname = "_none_";
-                                 pos_lnum = 1;
+                                 pos_lnum = 0;
                                  pos_cnum = (-1);
                                  pos_bol = 0
                                } __pattern_syntax__007_
@@ -248,7 +248,7 @@ let%expect_test "destructuring let%sub" =
                         ((Let_syntax.sub
                             ~here:{
                                     Ppx_here_lib.pos_fname = "_none_";
-                                    pos_lnum = 1;
+                                    pos_lnum = 0;
                                     pos_cnum = (-1);
                                     pos_bol = 0
                                   }
@@ -256,7 +256,7 @@ let%expect_test "destructuring let%sub" =
                                ((Let_syntax.map
                                    ~here:{
                                            Ppx_here_lib.pos_fname = "_none_";
-                                           pos_lnum = 1;
+                                           pos_lnum = 0;
                                            pos_cnum = (-1);
                                            pos_bol = 0
                                          } __pattern_syntax__007_
@@ -269,7 +269,7 @@ let%expect_test "destructuring let%sub" =
                                   ((Let_syntax.sub
                                       ~here:{
                                               Ppx_here_lib.pos_fname = "_none_";
-                                              pos_lnum = 1;
+                                              pos_lnum = 0;
                                               pos_cnum = (-1);
                                               pos_bol = 0
                                             }
@@ -278,7 +278,7 @@ let%expect_test "destructuring let%sub" =
                                              ~here:{
                                                      Ppx_here_lib.pos_fname =
                                                        "_none_";
-                                                     pos_lnum = 1;
+                                                     pos_lnum = 0;
                                                      pos_cnum = (-1);
                                                      pos_bol = 0
                                                    } __pattern_syntax__007_
@@ -368,7 +368,7 @@ let%expect_test "destructuring let%sub (comparing location of callsite vs locati
     -|((Let_syntax.sub
     -|    ~here:{
     -|            Ppx_here_lib.pos_fname = "_none_";
-    -|            pos_lnum = 1;
+    -|            pos_lnum = 0;
     -|            pos_cnum = (-1);
     -|            pos_bol = 0
     -|          } MY_EXPR
@@ -377,7 +377,7 @@ let%expect_test "destructuring let%sub (comparing location of callsite vs locati
     -|          ((Let_syntax.sub
     -|              ~here:{
     -|                      Ppx_here_lib.pos_fname = "_none_";
-    -|                      pos_lnum = 1;
+    -|                      pos_lnum = 0;
     -|                      pos_cnum = (-1);
     -|                      pos_bol = 0
     -|                    }
@@ -386,7 +386,7 @@ let%expect_test "destructuring let%sub (comparing location of callsite vs locati
     -|                 ((Let_syntax.map
     -|                     ~here:{
     -|                             Ppx_here_lib.pos_fname = "_none_";
-    -|                             pos_lnum = 1;
+    -|                             pos_lnum = 0;
     -|                             pos_cnum = (-1);
     -|                             pos_bol = 0
     -|                           } __pattern_syntax__ID_REPLACED_IN_TEST_
@@ -399,7 +399,7 @@ let%expect_test "destructuring let%sub (comparing location of callsite vs locati
     -|                    ((Let_syntax.sub
     -|                        ~here:{
     -|                                Ppx_here_lib.pos_fname = "_none_";
-    -|                                pos_lnum = 1;
+    -|                                pos_lnum = 0;
     -|                                pos_cnum = (-1);
     -|                                pos_bol = 0
     -|                              }
@@ -408,7 +408,7 @@ let%expect_test "destructuring let%sub (comparing location of callsite vs locati
     -|                           ((Let_syntax.map
     -|                               ~here:{
     -|                                       Ppx_here_lib.pos_fname = "_none_";
-    -|                                       pos_lnum = 1;
+    -|                                       pos_lnum = 0;
     -|                                       pos_cnum = (-1);
     -|                                       pos_bol = 0
     -|                                     } __pattern_syntax__ID_REPLACED_IN_TEST_
@@ -423,7 +423,7 @@ let%expect_test "destructuring let%sub (comparing location of callsite vs locati
     -|                              ((Let_syntax.sub
     -|                                  ~here:{
     -|                                          Ppx_here_lib.pos_fname = "_none_";
-    -|                                          pos_lnum = 1;
+    -|                                          pos_lnum = 0;
     -|                                          pos_cnum = (-1);
     -|                                          pos_bol = 0
     -|                                        }
@@ -433,7 +433,7 @@ let%expect_test "destructuring let%sub (comparing location of callsite vs locati
     -|                                         ~here:{
     -|                                                 Ppx_here_lib.pos_fname =
     -|                                                   "_none_";
-    -|                                                 pos_lnum = 1;
+    -|                                                 pos_lnum = 0;
     -|                                                 pos_cnum = (-1);
     -|                                                 pos_bol = 0
     -|                                               } __pattern_syntax__ID_REPLACED_IN_TEST_
@@ -470,7 +470,7 @@ let%expect_test "destructuring match%sub" =
     ((Let_syntax.sub
         ~here:{
                 Ppx_here_lib.pos_fname = "_none_";
-                pos_lnum = 1;
+                pos_lnum = 0;
                 pos_cnum = (-1);
                 pos_bol = 0
               } (Let_syntax.return MY_EXPR)
@@ -478,7 +478,7 @@ let%expect_test "destructuring match%sub" =
               ((Let_syntax.switch
                   ~here:{
                           Ppx_here_lib.pos_fname = "_none_";
-                          pos_lnum = 1;
+                          pos_lnum = 0;
                           pos_cnum = (-1);
                           pos_bol = 0
                         }
@@ -493,7 +493,7 @@ let%expect_test "destructuring match%sub" =
                               ((Let_syntax.sub
                                   ~here:{
                                           Ppx_here_lib.pos_fname = "_none_";
-                                          pos_lnum = 1;
+                                          pos_lnum = 0;
                                           pos_cnum = (-1);
                                           pos_bol = 0
                                         }
@@ -502,7 +502,7 @@ let%expect_test "destructuring match%sub" =
                                          ~here:{
                                                  Ppx_here_lib.pos_fname =
                                                    "_none_";
-                                                 pos_lnum = 1;
+                                                 pos_lnum = 0;
                                                  pos_cnum = (-1);
                                                  pos_bol = 0
                                                } __pattern_syntax__023_
@@ -517,7 +517,7 @@ let%expect_test "destructuring match%sub" =
                                             ~here:{
                                                     Ppx_here_lib.pos_fname =
                                                       "_none_";
-                                                    pos_lnum = 1;
+                                                    pos_lnum = 0;
                                                     pos_cnum = (-1);
                                                     pos_bol = 0
                                                   }
@@ -526,7 +526,7 @@ let%expect_test "destructuring match%sub" =
                                                    ~here:{
                                                            Ppx_here_lib.pos_fname
                                                              = "_none_";
-                                                           pos_lnum = 1;
+                                                           pos_lnum = 0;
                                                            pos_cnum = (-1);
                                                            pos_bol = 0
                                                          } __pattern_syntax__023_
@@ -628,7 +628,7 @@ let%expect_test "single-case match%sub doesn't call switch" =
     ((Module.Let_syntax.Let_syntax.sub
         ~here:{
                 Ppx_here_lib.pos_fname = "_none_";
-                pos_lnum = 1;
+                pos_lnum = 0;
                 pos_cnum = (-1);
                 pos_bol = 0
               } (Module.Let_syntax.Let_syntax.return MY_EXPR)
@@ -636,7 +636,7 @@ let%expect_test "single-case match%sub doesn't call switch" =
               ((Module.Let_syntax.Let_syntax.sub
                   ~here:{
                           Ppx_here_lib.pos_fname = "_none_";
-                          pos_lnum = 1;
+                          pos_lnum = 0;
                           pos_cnum = (-1);
                           pos_bol = 0
                         }
@@ -644,7 +644,7 @@ let%expect_test "single-case match%sub doesn't call switch" =
                      ((Module.Let_syntax.Let_syntax.map
                          ~here:{
                                  Ppx_here_lib.pos_fname = "_none_";
-                                 pos_lnum = 1;
+                                 pos_lnum = 0;
                                  pos_cnum = (-1);
                                  pos_bol = 0
                                } __pattern_syntax__029_
@@ -674,7 +674,7 @@ let%expect_test "module-qualified match%sub" =
     ((Module.Let_syntax.Let_syntax.sub
         ~here:{
                 Ppx_here_lib.pos_fname = "_none_";
-                pos_lnum = 1;
+                pos_lnum = 0;
                 pos_cnum = (-1);
                 pos_bol = 0
               } (Module.Let_syntax.Let_syntax.return MY_EXPR)
@@ -682,7 +682,7 @@ let%expect_test "module-qualified match%sub" =
               ((Module.Let_syntax.Let_syntax.switch
                   ~here:{
                           Ppx_here_lib.pos_fname = "_none_";
-                          pos_lnum = 1;
+                          pos_lnum = 0;
                           pos_cnum = (-1);
                           pos_bol = 0
                         }
@@ -695,7 +695,7 @@ let%expect_test "module-qualified match%sub" =
                               ((Module.Let_syntax.Let_syntax.sub
                                   ~here:{
                                           Ppx_here_lib.pos_fname = "_none_";
-                                          pos_lnum = 1;
+                                          pos_lnum = 0;
                                           pos_cnum = (-1);
                                           pos_bol = 0
                                         }
@@ -704,7 +704,7 @@ let%expect_test "module-qualified match%sub" =
                                          ~here:{
                                                  Ppx_here_lib.pos_fname =
                                                    "_none_";
-                                                 pos_lnum = 1;
+                                                 pos_lnum = 0;
                                                  pos_cnum = (-1);
                                                  pos_bol = 0
                                                } __pattern_syntax__031_
@@ -719,7 +719,7 @@ let%expect_test "module-qualified match%sub" =
                               ((Module.Let_syntax.Let_syntax.sub
                                   ~here:{
                                           Ppx_here_lib.pos_fname = "_none_";
-                                          pos_lnum = 1;
+                                          pos_lnum = 0;
                                           pos_cnum = (-1);
                                           pos_bol = 0
                                         }
@@ -728,7 +728,7 @@ let%expect_test "module-qualified match%sub" =
                                          ~here:{
                                                  Ppx_here_lib.pos_fname =
                                                    "_none_";
-                                                 pos_lnum = 1;
+                                                 pos_lnum = 0;
                                                  pos_cnum = (-1);
                                                  pos_bol = 0
                                                } __pattern_syntax__031_
@@ -760,7 +760,7 @@ let%expect_test "type annotations are preserved" =
     ((Let_syntax.sub
         ~here:{
                 Ppx_here_lib.pos_fname = "_none_";
-                pos_lnum = 1;
+                pos_lnum = 0;
                 pos_cnum = (-1);
                 pos_bol = 0
               } EXPR
@@ -768,7 +768,7 @@ let%expect_test "type annotations are preserved" =
               ((Let_syntax.sub
                   ~here:{
                           Ppx_here_lib.pos_fname = "_none_";
-                          pos_lnum = 1;
+                          pos_lnum = 0;
                           pos_cnum = (-1);
                           pos_bol = 0
                         }
@@ -776,7 +776,7 @@ let%expect_test "type annotations are preserved" =
                      ((Let_syntax.map
                          ~here:{
                                  Ppx_here_lib.pos_fname = "_none_";
-                                 pos_lnum = 1;
+                                 pos_lnum = 0;
                                  pos_cnum = (-1);
                                  pos_bol = 0
                                } __pattern_syntax__034_
@@ -804,7 +804,7 @@ let%expect_test "function%sub" =
       ((Let_syntax.sub
           ~here:{
                   Ppx_here_lib.pos_fname = "_none_";
-                  pos_lnum = 1;
+                  pos_lnum = 0;
                   pos_cnum = (-1);
                   pos_bol = 0
                 } (Let_syntax.return __let_syntax__035_)
@@ -812,7 +812,7 @@ let%expect_test "function%sub" =
                 ((Let_syntax.switch
                     ~here:{
                             Ppx_here_lib.pos_fname = "_none_";
-                            pos_lnum = 1;
+                            pos_lnum = 0;
                             pos_cnum = (-1);
                             pos_bol = 0
                           }
@@ -824,7 +824,7 @@ let%expect_test "function%sub" =
                                 ((Let_syntax.sub
                                     ~here:{
                                             Ppx_here_lib.pos_fname = "_none_";
-                                            pos_lnum = 1;
+                                            pos_lnum = 0;
                                             pos_cnum = (-1);
                                             pos_bol = 0
                                           }
@@ -833,7 +833,7 @@ let%expect_test "function%sub" =
                                            ~here:{
                                                    Ppx_here_lib.pos_fname =
                                                      "_none_";
-                                                   pos_lnum = 1;
+                                                   pos_lnum = 0;
                                                    pos_cnum = (-1);
                                                    pos_bol = 0
                                                  } __pattern_syntax__036_
@@ -869,7 +869,7 @@ let%expect_test "function%arr" =
       Let_syntax.arr
         ~here:{
                 Ppx_here_lib.pos_fname = "_none_";
-                pos_lnum = 1;
+                pos_lnum = 0;
                 pos_cnum = (-1);
                 pos_bol = 0
               } __let_syntax__038_
@@ -892,7 +892,7 @@ let%expect_test "destructuring let%arr uses cutoff" =
     Let_syntax.arr
       ~here:{
               Ppx_here_lib.pos_fname = "_none_";
-              pos_lnum = 1;
+              pos_lnum = 0;
               pos_cnum = (-1);
               pos_bol = 0
             }
@@ -928,7 +928,7 @@ let%expect_test "destructuring let%arr uses cutoff, if specific fields have igno
     Let_syntax.arr
       ~here:{
               Ppx_here_lib.pos_fname = "_none_";
-              pos_lnum = 1;
+              pos_lnum = 0;
               pos_cnum = (-1);
               pos_bol = 0
             }
@@ -996,7 +996,7 @@ let%expect_test "destructuring let%arr uses cutoff (multiple arms)" =
     Let_syntax.arr2
       ~here:{
               Ppx_here_lib.pos_fname = "_none_";
-              pos_lnum = 1;
+              pos_lnum = 0;
               pos_cnum = (-1);
               pos_bol = 0
             }
@@ -1045,7 +1045,7 @@ let%expect_test "one arm of destructuring let%arr uses cutoff" =
     Let_syntax.arr2
       ~here:{
               Ppx_here_lib.pos_fname = "_none_";
-              pos_lnum = 1;
+              pos_lnum = 0;
               pos_cnum = (-1);
               pos_bol = 0
             }
@@ -1079,7 +1079,7 @@ let%expect_test "Destructuring does not happen when there is no ignoring" =
     Let_syntax.arr
       ~here:{
               Ppx_here_lib.pos_fname = "_none_";
-              pos_lnum = 1;
+              pos_lnum = 0;
               pos_cnum = (-1);
               pos_bol = 0
             } MY_EXPR ~f:(fun (a, { b; c; d }) -> MY_BODY)
@@ -1104,7 +1104,7 @@ let%expect_test "Destructuring does not happen when there is no ignoring (multip
     Let_syntax.arr2
       ~here:{
               Ppx_here_lib.pos_fname = "_none_";
-              pos_lnum = 1;
+              pos_lnum = 0;
               pos_cnum = (-1);
               pos_bol = 0
             } __let_syntax__087_ __let_syntax__088_
@@ -1135,7 +1135,7 @@ module%test [@name "Destructuring vs. no destructuring criteria."] _ = struct
       Let_syntax.arr
         ~here:{
                 Ppx_here_lib.pos_fname = "_none_";
-                pos_lnum = 1;
+                pos_lnum = 0;
                 pos_cnum = (-1);
                 pos_bol = 0
               } ((NO_DESTRUCTION)[@ppxlib.enter_value a]) ~f:(fun a -> BODY)
@@ -1159,7 +1159,7 @@ module%test [@name "Destructuring vs. no destructuring criteria."] _ = struct
       Let_syntax.arr2
         ~here:{
                 Ppx_here_lib.pos_fname = "_none_";
-                pos_lnum = 1;
+                pos_lnum = 0;
                 pos_cnum = (-1);
                 pos_bol = 0
               } __let_syntax__092_ __let_syntax__093_ ~f:(fun a b -> BODY)
@@ -1183,7 +1183,7 @@ module%test [@name "Destructuring vs. no destructuring criteria."] _ = struct
       Let_syntax.arr2
         ~here:{
                 Ppx_here_lib.pos_fname = "_none_";
-                pos_lnum = 1;
+                pos_lnum = 0;
                 pos_cnum = (-1);
                 pos_bol = 0
               } __let_syntax__096_ __let_syntax__097_
@@ -1204,7 +1204,7 @@ module%test [@name "Destructuring vs. no destructuring criteria."] _ = struct
       Let_syntax.arr
         ~here:{
                 Ppx_here_lib.pos_fname = "_none_";
-                pos_lnum = 1;
+                pos_lnum = 0;
                 pos_cnum = (-1);
                 pos_bol = 0
               }
@@ -1226,7 +1226,7 @@ module%test [@name "Destructuring vs. no destructuring criteria."] _ = struct
       Let_syntax.arr
         ~here:{
                 Ppx_here_lib.pos_fname = "_none_";
-                pos_lnum = 1;
+                pos_lnum = 0;
                 pos_cnum = (-1);
                 pos_bol = 0
               }
@@ -1255,7 +1255,7 @@ module%test [@name "Destructuring vs. no destructuring criteria."] _ = struct
       Let_syntax.arr
         ~here:{
                 Ppx_here_lib.pos_fname = "_none_";
-                pos_lnum = 1;
+                pos_lnum = 0;
                 pos_cnum = (-1);
                 pos_bol = 0
               }
@@ -1283,7 +1283,7 @@ module%test [@name "Destructuring vs. no destructuring criteria."] _ = struct
       Let_syntax.arr2
         ~here:{
                 Ppx_here_lib.pos_fname = "_none_";
-                pos_lnum = 1;
+                pos_lnum = 0;
                 pos_cnum = (-1);
                 pos_bol = 0
               }
@@ -1311,7 +1311,7 @@ module%test [@name "Destructuring vs. no destructuring criteria."] _ = struct
       Let_syntax.arr
         ~here:{
                 Ppx_here_lib.pos_fname = "_none_";
-                pos_lnum = 1;
+                pos_lnum = 0;
                 pos_cnum = (-1);
                 pos_bol = 0
               } NO_DESTRUCTION ~f:(fun { a; b } -> BODY)
@@ -1331,7 +1331,7 @@ module%test [@name "Destructuring vs. no destructuring criteria."] _ = struct
       Let_syntax.arr2
         ~here:{
                 Ppx_here_lib.pos_fname = "_none_";
-                pos_lnum = 1;
+                pos_lnum = 0;
                 pos_cnum = (-1);
                 pos_bol = 0
               } __let_syntax__126_ __let_syntax__127_
@@ -1349,7 +1349,7 @@ module%test [@name "Destructuring vs. no destructuring criteria."] _ = struct
       Let_syntax.arr
         ~here:{
                 Ppx_here_lib.pos_fname = "_none_";
-                pos_lnum = 1;
+                pos_lnum = 0;
                 pos_cnum = (-1);
                 pos_bol = 0
               } NO_DESTRUCTION ~f:(fun ({ a; b = (module X)  }, c) -> BODY)
@@ -1366,7 +1366,7 @@ module%test [@name "Destructuring vs. no destructuring criteria."] _ = struct
       Let_syntax.arr
         ~here:{
                 Ppx_here_lib.pos_fname = "_none_";
-                pos_lnum = 1;
+                pos_lnum = 0;
                 pos_cnum = (-1);
                 pos_bol = 0
               }
@@ -1393,7 +1393,7 @@ module%test [@name "Destructuring vs. no destructuring criteria."] _ = struct
       Let_syntax.arr
         ~here:{
                 Ppx_here_lib.pos_fname = "_none_";
-                pos_lnum = 1;
+                pos_lnum = 0;
                 pos_cnum = (-1);
                 pos_bol = 0
               } (Let_syntax.cutoff ALWAYS_EQUAL ~equal:(fun _ _ -> true))
@@ -1415,7 +1415,7 @@ module%test [@name "Destructuring vs. no destructuring criteria."] _ = struct
       Let_syntax.arr
         ~here:{
                 Ppx_here_lib.pos_fname = "_none_";
-                pos_lnum = 1;
+                pos_lnum = 0;
                 pos_cnum = (-1);
                 pos_bol = 0
               }
@@ -1446,7 +1446,7 @@ let%expect_test "current match%arr behavior" =
     Let_syntax.arr
       ~here:{
               Ppx_here_lib.pos_fname = "_none_";
-              pos_lnum = 1;
+              pos_lnum = 0;
               pos_cnum = (-1);
               pos_bol = 0
             } EXPR
@@ -1476,7 +1476,7 @@ module%test [@name "match%sub with tuple payload"] _ = struct
       ((Let_syntax.sub
           ~here:{
                   Ppx_here_lib.pos_fname = "_none_";
-                  pos_lnum = 1;
+                  pos_lnum = 0;
                   pos_cnum = (-1);
                   pos_bol = 0
                 }
@@ -1495,7 +1495,7 @@ module%test [@name "match%sub with tuple payload"] _ = struct
                 ((Let_syntax.switch
                     ~here:{
                             Ppx_here_lib.pos_fname = "_none_";
-                            pos_lnum = 1;
+                            pos_lnum = 0;
                             pos_cnum = (-1);
                             pos_bol = 0
                           }
@@ -1521,7 +1521,7 @@ module%test [@name "match%sub with tuple payload"] _ = struct
       ((Let_syntax.sub
           ~here:{
                   Ppx_here_lib.pos_fname = "_none_";
-                  pos_lnum = 1;
+                  pos_lnum = 0;
                   pos_cnum = (-1);
                   pos_bol = 0
                 }
@@ -1559,7 +1559,7 @@ module%test [@name "match%sub with tuple payload"] _ = struct
                 ((Let_syntax.sub
                     ~here:{
                             Ppx_here_lib.pos_fname = "_none_";
-                            pos_lnum = 1;
+                            pos_lnum = 0;
                             pos_cnum = (-1);
                             pos_bol = 0
                           }
@@ -1567,7 +1567,7 @@ module%test [@name "match%sub with tuple payload"] _ = struct
                        ((Let_syntax.map
                            ~here:{
                                    Ppx_here_lib.pos_fname = "_none_";
-                                   pos_lnum = 1;
+                                   pos_lnum = 0;
                                    pos_cnum = (-1);
                                    pos_bol = 0
                                  } __pattern_syntax__159_
@@ -1591,7 +1591,7 @@ module%test [@name "match%sub with tuple payload"] _ = struct
       ((Let_syntax.sub
           ~here:{
                   Ppx_here_lib.pos_fname = "_none_";
-                  pos_lnum = 1;
+                  pos_lnum = 0;
                   pos_cnum = (-1);
                   pos_bol = 0
                 } (Let_syntax.return EXPR)
@@ -1599,7 +1599,7 @@ module%test [@name "match%sub with tuple payload"] _ = struct
                 ((Let_syntax.switch
                     ~here:{
                             Ppx_here_lib.pos_fname = "_none_";
-                            pos_lnum = 1;
+                            pos_lnum = 0;
                             pos_cnum = (-1);
                             pos_bol = 0
                           }
@@ -1615,7 +1615,7 @@ module%test [@name "match%sub with tuple payload"] _ = struct
                                 ((Let_syntax.sub
                                     ~here:{
                                             Ppx_here_lib.pos_fname = "_none_";
-                                            pos_lnum = 1;
+                                            pos_lnum = 0;
                                             pos_cnum = (-1);
                                             pos_bol = 0
                                           }
@@ -1624,7 +1624,7 @@ module%test [@name "match%sub with tuple payload"] _ = struct
                                            ~here:{
                                                    Ppx_here_lib.pos_fname =
                                                      "_none_";
-                                                   pos_lnum = 1;
+                                                   pos_lnum = 0;
                                                    pos_cnum = (-1);
                                                    pos_bol = 0
                                                  } __pattern_syntax__160_
@@ -1664,7 +1664,7 @@ module%test [@name "arrn nesting edge cases"] _ = struct
       Let_syntax.arr
         ~here:{
                 Ppx_here_lib.pos_fname = "_none_";
-                pos_lnum = 1;
+                pos_lnum = 0;
                 pos_cnum = (-1);
                 pos_bol = 0
               } ((E)[@ppxlib.enter_value a]) ~f:(fun a -> MY_BODY)
@@ -1686,7 +1686,7 @@ module%test [@name "arrn nesting edge cases"] _ = struct
       Let_syntax.arr2
         ~here:{
                 Ppx_here_lib.pos_fname = "_none_";
-                pos_lnum = 1;
+                pos_lnum = 0;
                 pos_cnum = (-1);
                 pos_bol = 0
               } __let_syntax__163_ __let_syntax__164_ ~f:(fun x1 x2 -> MY_BODY)
@@ -1720,7 +1720,7 @@ module%test [@name "arrn nesting edge cases"] _ = struct
       Let_syntax.arr6
         ~here:{
                 Ppx_here_lib.pos_fname = "_none_";
-                pos_lnum = 1;
+                pos_lnum = 0;
                 pos_cnum = (-1);
                 pos_bol = 0
               } __let_syntax__167_ __let_syntax__168_ __let_syntax__169_
@@ -1759,7 +1759,7 @@ module%test [@name "arrn nesting edge cases"] _ = struct
       Let_syntax.arr7
         ~here:{
                 Ppx_here_lib.pos_fname = "_none_";
-                pos_lnum = 1;
+                pos_lnum = 0;
                 pos_cnum = (-1);
                 pos_bol = 0
               } __let_syntax__179_ __let_syntax__180_ __let_syntax__181_
@@ -1801,14 +1801,14 @@ module%test [@name "arrn nesting edge cases"] _ = struct
       Let_syntax.arr2
         ~here:{
                 Ppx_here_lib.pos_fname = "_none_";
-                pos_lnum = 1;
+                pos_lnum = 0;
                 pos_cnum = (-1);
                 pos_bol = 0
               }
         (Let_syntax.map7
            ~here:{
                    Ppx_here_lib.pos_fname = "_none_";
-                   pos_lnum = 1;
+                   pos_lnum = 0;
                    pos_cnum = (-1);
                    pos_bol = 0
                  } __let_syntax__193_ __let_syntax__194_ __let_syntax__195_
@@ -1870,14 +1870,14 @@ module%test [@name "arrn nesting edge cases"] _ = struct
       Let_syntax.arr2
         ~here:{
                 Ppx_here_lib.pos_fname = "_none_";
-                pos_lnum = 1;
+                pos_lnum = 0;
                 pos_cnum = (-1);
                 pos_bol = 0
               }
         (Let_syntax.map7
            ~here:{
                    Ppx_here_lib.pos_fname = "_none_";
-                   pos_lnum = 1;
+                   pos_lnum = 0;
                    pos_cnum = (-1);
                    pos_bol = 0
                  } __let_syntax__210_ __let_syntax__211_ __let_syntax__212_
@@ -1887,7 +1887,7 @@ module%test [@name "arrn nesting edge cases"] _ = struct
         (Let_syntax.map7
            ~here:{
                    Ppx_here_lib.pos_fname = "_none_";
-                   pos_lnum = 1;
+                   pos_lnum = 0;
                    pos_cnum = (-1);
                    pos_bol = 0
                  } __let_syntax__217_ __let_syntax__218_ __let_syntax__219_
@@ -1947,14 +1947,14 @@ module%test [@name "arrn nesting edge cases"] _ = struct
       Let_syntax.arr2
         ~here:{
                 Ppx_here_lib.pos_fname = "_none_";
-                pos_lnum = 1;
+                pos_lnum = 0;
                 pos_cnum = (-1);
                 pos_bol = 0
               }
         (Let_syntax.map7
            ~here:{
                    Ppx_here_lib.pos_fname = "_none_";
-                   pos_lnum = 1;
+                   pos_lnum = 0;
                    pos_cnum = (-1);
                    pos_bol = 0
                  } __let_syntax__240_ __let_syntax__241_ __let_syntax__242_
@@ -1964,7 +1964,7 @@ module%test [@name "arrn nesting edge cases"] _ = struct
         (Let_syntax.map6
            ~here:{
                    Ppx_here_lib.pos_fname = "_none_";
-                   pos_lnum = 1;
+                   pos_lnum = 0;
                    pos_cnum = (-1);
                    pos_bol = 0
                  } __let_syntax__247_ __let_syntax__248_ __let_syntax__249_
@@ -2135,21 +2135,21 @@ module%test [@name "arrn nesting edge cases"] _ = struct
       Let_syntax.arr2
         ~here:{
                 Ppx_here_lib.pos_fname = "_none_";
-                pos_lnum = 1;
+                pos_lnum = 0;
                 pos_cnum = (-1);
                 pos_bol = 0
               }
         (Let_syntax.map7
            ~here:{
                    Ppx_here_lib.pos_fname = "_none_";
-                   pos_lnum = 1;
+                   pos_lnum = 0;
                    pos_cnum = (-1);
                    pos_bol = 0
                  }
            (Let_syntax.map7
               ~here:{
                       Ppx_here_lib.pos_fname = "_none_";
-                      pos_lnum = 1;
+                      pos_lnum = 0;
                       pos_cnum = (-1);
                       pos_bol = 0
                     } __let_syntax__268_ __let_syntax__269_ __let_syntax__270_
@@ -2159,7 +2159,7 @@ module%test [@name "arrn nesting edge cases"] _ = struct
            (Let_syntax.map7
               ~here:{
                       Ppx_here_lib.pos_fname = "_none_";
-                      pos_lnum = 1;
+                      pos_lnum = 0;
                       pos_cnum = (-1);
                       pos_bol = 0
                     } __let_syntax__275_ __let_syntax__276_ __let_syntax__277_
@@ -2169,7 +2169,7 @@ module%test [@name "arrn nesting edge cases"] _ = struct
            (Let_syntax.map7
               ~here:{
                       Ppx_here_lib.pos_fname = "_none_";
-                      pos_lnum = 1;
+                      pos_lnum = 0;
                       pos_cnum = (-1);
                       pos_bol = 0
                     } __let_syntax__282_ __let_syntax__283_ __let_syntax__284_
@@ -2179,7 +2179,7 @@ module%test [@name "arrn nesting edge cases"] _ = struct
            (Let_syntax.map7
               ~here:{
                       Ppx_here_lib.pos_fname = "_none_";
-                      pos_lnum = 1;
+                      pos_lnum = 0;
                       pos_cnum = (-1);
                       pos_bol = 0
                     } __let_syntax__289_ __let_syntax__290_ __let_syntax__291_
@@ -2189,7 +2189,7 @@ module%test [@name "arrn nesting edge cases"] _ = struct
            (Let_syntax.map7
               ~here:{
                       Ppx_here_lib.pos_fname = "_none_";
-                      pos_lnum = 1;
+                      pos_lnum = 0;
                       pos_cnum = (-1);
                       pos_bol = 0
                     } __let_syntax__296_ __let_syntax__297_ __let_syntax__298_
@@ -2199,7 +2199,7 @@ module%test [@name "arrn nesting edge cases"] _ = struct
            (Let_syntax.map7
               ~here:{
                       Ppx_here_lib.pos_fname = "_none_";
-                      pos_lnum = 1;
+                      pos_lnum = 0;
                       pos_cnum = (-1);
                       pos_bol = 0
                     } __let_syntax__303_ __let_syntax__304_ __let_syntax__305_
@@ -2209,7 +2209,7 @@ module%test [@name "arrn nesting edge cases"] _ = struct
            (Let_syntax.map7
               ~here:{
                       Ppx_here_lib.pos_fname = "_none_";
-                      pos_lnum = 1;
+                      pos_lnum = 0;
                       pos_cnum = (-1);
                       pos_bol = 0
                     } __let_syntax__310_ __let_syntax__311_ __let_syntax__312_

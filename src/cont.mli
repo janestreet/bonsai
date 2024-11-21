@@ -147,6 +147,17 @@ val state_opt
   -> graph
   -> 'model option t * ('model option -> unit Effect.t) t
 
+(** Similar to [state], but the `set` function takes a function that calculates
+    the new state from the previous state. *)
+val state'
+  :  ?here:Stdlib.Lexing.position
+  -> ?reset:('model -> 'model)
+  -> ?sexp_of_model:('model -> Sexp.t)
+  -> ?equal:('model -> 'model -> bool)
+  -> 'model
+  -> graph
+  -> 'model t * (?here:Stdlib.Lexing.position -> ('model -> 'model) -> unit Effect.t) t
+
 (** [Bonsai.toggle] is a small helper function for building a [bool] state
     that toggles back and forth between [true] and [false] whenever the
     [unit Effect.t] is scheduled. *)
@@ -911,16 +922,59 @@ module Debug : sig
   val enable_incremental_annotations : unit -> unit
   val disable_incremental_annotations : unit -> unit
 
-  (** Wrapping [monitor_free_variables] around a computation will add informative print
+  (** Wrapping [watch_computation] around a computation will add informative print
       statements every time that a value defined outside the closue - and used _inside_
       the closure - is updated.  This can be useful to debug why a component is being
       updated.
 
-      By default, calls to [monitor_free_variables] are no-ops, and must be enabled
-      manually with external tools.  This is so you can leave calls to this function
-      in production builds without impacting performance until you start debugging. *)
-  val monitor_free_variables
+      By default, calls to [watch_computation] are no-ops, and must be enabled manually
+      with external tools.  This is so you can leave calls to this function in production
+      builds without impacting performance until you start debugging. 
+
+      [log_model_before]: Will log a state machine's model before apply_action/reset is
+      called. Uses the sexp_of_model function passed to the state machine, or
+      sexp_of_opaque if no sexp function is provided. 
+      (Default: false)
+
+      [log_model_after]: Will log a state machine's model after apply_action/reset is
+      applied to it. Uses the sexp_of_model function passed to the state machine, or
+      sexp_of_opaque if no sexp function is provided. 
+      (Default: false)
+
+      [log_action]: Logs the action applied to the state machine. Uses the sexp_of_action
+      function passed to the state machine, or sexp_of_opaque if no sexp function is
+      provided. 
+      (Default: false)
+
+      [log_incr_info]: Will log a state machine's model after apply_action/reset is
+      applied to it. Uses the sexp_of_model function passed to the state machine, or
+      sexp_of_opaque if no sexp function is provided. 
+      (Default: false)
+
+      [log_watcher_positions]: Logs the source code positions of the Computation_watcher
+      nodes that are relevant to the current change. The node nearest to the change is at
+      the top
+      (Default: true)
+
+      [log_dependency_definition_position]: Logs the source code position of the 
+      Computation node that updated and caused the watched computation to update. 
+      (Default: true)
+
+      [label]: Prefixes the watcher position in the list of watchers for easier 
+      identification of individual watchers. Will not show up if [log_watcher_positions]
+      is set to false
+      (Default: None)
+
+  *)
+  val watch_computation
     :  ?here:Stdlib.Lexing.position
+    -> ?log_model_before:bool
+    -> ?log_model_after:bool
+    -> ?log_action:bool
+    -> ?log_incr_info:bool
+    -> ?log_watcher_positions:bool
+    -> ?log_dependency_definition_position:bool
+    -> ?label:string
     -> f:(graph -> 'a t)
     -> graph
     -> 'a t
@@ -1160,6 +1214,15 @@ module For_proc2 : sig
     -> 'model
     -> graph
     -> ('model * ('model -> unit Effect.t)) t
+
+  val state'
+    :  ?here:Stdlib.Lexing.position
+    -> ?reset:('model -> 'model)
+    -> ?sexp_of_model:('model -> Sexp.t)
+    -> ?equal:('model -> 'model -> bool)
+    -> 'model
+    -> graph
+    -> ('model * (?here:Stdlib.Lexing.position -> ('model -> 'model) -> unit Effect.t)) t
 
   val state_opt
     :  ?here:Stdlib.Lexing.position

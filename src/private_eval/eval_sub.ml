@@ -118,7 +118,7 @@ let baseline
     let both_use_path =
       May_contain.Resolved.both_use_path from_may_contain into_may_contain
     in
-    annotate Model model;
+    annotate ~here Model model;
     let%bind.Trampoline from, maybe_env =
       let model = Incr.map model ~f:Tuple2.get1 in
       let path = if both_use_path then Path.append path Path.Elem.Subst_from else path in
@@ -142,7 +142,7 @@ let baseline
     in
     let input = Input.merge (Snapshot.input from) (Snapshot.input into) in
     Trampoline.return
-      ( Snapshot.create ~result ~input ~lifecycle
+      ( Snapshot.create ~here ~result ~input ~lifecycle
       , Thread_env.capture thread_environment ~environment ~maybe_env )
   in
   let model = Meta.Model.both info_from.model info_into.model in
@@ -204,7 +204,7 @@ let from_stateless
     in
     let input = Snapshot.input into in
     Trampoline.return
-      ( Snapshot.create ~result ~input ~lifecycle
+      ( Snapshot.create ~here ~result ~input ~lifecycle
       , Thread_env.capture thread_environment ~environment ~maybe_env )
   in
   T
@@ -264,7 +264,7 @@ let into_stateless
     in
     let input = Snapshot.input from in
     Trampoline.return
-      ( Snapshot.create ~result ~input ~lifecycle
+      ( Snapshot.create ~here ~result ~input ~lifecycle
       , Thread_env.capture thread_environment ~environment ~maybe_env )
   in
   T

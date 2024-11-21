@@ -20,6 +20,8 @@ module Kind : sig
     | Assoc_inputs
     | Path
     | Lifecycle_apply_action_pair
+
+  val name : t -> string
 end
 
 (** [on_incr_annotation] registers a callback that will run whenever Bonsai annotates an
@@ -30,12 +32,14 @@ end
 
     A single node may be annotated multiple times, e.g. if it is both a model and a result.
  *)
-val on_incr_annotation : (Kind.t -> Ui_incr.Packed.t -> unit) -> unit
+val on_incr_annotation
+  :  (here:Source_code_position.t -> Kind.t -> Ui_incr.Packed.t -> unit)
+  -> unit
 
 (** [annotate] will run all [on_incr_annotation] listeners. *)
-val annotate : Kind.t -> 'a Ui_incr.t -> unit
+val annotate : here:Source_code_position.t -> Kind.t -> 'a Ui_incr.t -> unit
 
-val annotate_packed : Kind.t -> Ui_incr.Packed.t -> unit
+val annotate_packed : here:Source_code_position.t -> Kind.t -> Ui_incr.Packed.t -> unit
 
 module Counts : sig
   (** Values of this type contain a counter for every kind of incremental

@@ -126,9 +126,28 @@ struct
       | Lifecycle { lifecycle = value; here } ->
         let acc, up, value = User.transform_v down acc value in
         return (acc, up, Computation.Lifecycle { lifecycle = value; here })
-      | Monitor_free_variables { inner; free_vars; here } ->
+      | Computation_watcher
+          { inner
+          ; here
+          ; free_vars
+          ; config
+          ; queue
+          ; value_type_id_observation_definition_positions
+          ; enable_watcher
+          } ->
         let%bind acc, up, inner = User.transform_c down acc inner in
-        return (acc, up, Computation.Monitor_free_variables { inner; free_vars; here })
+        return
+          ( acc
+          , up
+          , Computation.Computation_watcher
+              { inner
+              ; here
+              ; free_vars
+              ; config
+              ; queue
+              ; value_type_id_observation_definition_positions
+              ; enable_watcher
+              } )
     ;;
 
     let reduce_up l = List.reduce l ~f:combine_up |> Option.value ~default:empty

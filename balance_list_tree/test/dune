@@ -1,0 +1,6 @@
+(library
+ (name balance_list_tree_test)
+ (libraries balance_list_tree core patdiff.expect_test_patdiff
+   core_kernel.nonempty_list)
+ (preprocess
+  (pps ppx_jane ppx_expect ppx_bonsai ppxlib.metaquot ppx_quick_test)))

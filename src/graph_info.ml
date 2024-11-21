@@ -172,7 +172,7 @@ module Node_info = struct
       | With_model_resetter _ -> "with_model_resetter"
       | Path _ -> "path"
       | Lifecycle _ -> "lifecycle"
-      | Monitor_free_variables _ -> "monitor_free_variables"
+      | Computation_watcher _ -> "computation_watcher"
     in
     { node_type; here = Some here }
   ;;

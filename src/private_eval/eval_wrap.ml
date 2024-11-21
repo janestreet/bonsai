@@ -14,6 +14,7 @@ let f
   ~inner
   ~dynamic_apply_action
   ~reset:reset_me
+  ~here
   =
   let%bind.Trampoline (Computation.T
                         { model = inner_model
@@ -30,9 +31,9 @@ let f
   let wrap_inner inject = Action.wrap_inner >>> inject in
   let wrap_outer inject = Action.wrap_outer >>> inject in
   let run ~environment ~fix_envs ~path ~model ~inject =
-    annotate Model model;
+    annotate ~here Model model;
     let%pattern_bind outer_model, inner_model = model in
-    annotate Model outer_model;
+    annotate ~here Model outer_model;
     let%bind.Trampoline inner_snapshot, () =
       let outer_inject = Lazy_inject.make (wrap_outer inject) in
       let environment =
@@ -50,6 +51,7 @@ let f
     in
     Trampoline.return
       ( Snapshot.create
+          ~here
           ~result:inner_result
           ~input
           ~lifecycle:(Snapshot.lifecycle inner_snapshot)

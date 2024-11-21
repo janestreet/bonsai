@@ -18,6 +18,7 @@ depends: [
   "core_kernel"
   "incr_map"
   "incremental"
+  "ocaml-embed-file"
   "ppx_here"
   "ppx_jane"
   "ppx_let"
@@ -26,7 +27,6 @@ depends: [
   "uopt"
   "virtual_dom"
   "dune"             {>= "3.11.0"}
-  "ocaml-embed-file"
   "ppxlib"           {>= "0.33.0"}
 ]
 available: arch != "arm32" & arch != "x86_32"

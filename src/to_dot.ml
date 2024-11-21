@@ -247,8 +247,8 @@ let rec follow_skeleton_computation state (computation : Skeleton.Computation.t)
     let me = register_computation "identity" in
     arrow state ~from:(follow_skeleton_computation state t) ~to_:me;
     me
-  | Monitor_free_variables { inner; _ } ->
-    let me = register_computation "monitor_free_variables" in
+  | Computation_watcher { inner; _ } ->
+    let me = register_computation "computation_watcher" in
     arrow state ~from:(follow_skeleton_computation state inner) ~to_:me;
     me
 ;;

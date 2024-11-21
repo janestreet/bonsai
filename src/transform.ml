@@ -264,9 +264,26 @@ module For_computation = struct
     | Lifecycle { lifecycle = t; here } ->
       let%bind inner = map_value t in
       return (Computation.Lifecycle { lifecycle = inner; here })
-    | Monitor_free_variables { inner; free_vars; here } ->
+    | Computation_watcher
+        { inner
+        ; here
+        ; free_vars
+        ; config
+        ; queue
+        ; value_type_id_observation_definition_positions
+        ; enable_watcher
+        } ->
       let%bind inner = map inner in
-      return (Computation.Monitor_free_variables { inner; free_vars; here })
+      return
+        (Computation.Computation_watcher
+           { inner
+           ; here
+           ; free_vars
+           ; config
+           ; queue
+           ; value_type_id_observation_definition_positions
+           ; enable_watcher
+           })
   ;;
 
   let id =

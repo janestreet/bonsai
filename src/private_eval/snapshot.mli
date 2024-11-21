@@ -18,12 +18,16 @@ val result : (_, _, 'result) t -> 'result Incr.t
     deactivation, and after_display callbacks. *)
 val lifecycle : _ t -> Lifecycle.Collection.t Incr.t option
 
-val lifecycle_or_empty : _ t -> Lifecycle.Collection.t Incr.t
+val lifecycle_or_empty
+  :  here:Source_code_position.t
+  -> _ t
+  -> Lifecycle.Collection.t Incr.t
 
 (** Creates a new snapshot. Note that the [apply_action] provided here should apply the
     action in question to the model in force at the time [create] is called. *)
 val create
-  :  input:'input Input.t
+  :  here:Source_code_position.t
+  -> input:'input Input.t
   -> lifecycle:Lifecycle.Collection.t Incr.t option
   -> result:'result Incr.t
   -> ('model, 'input, 'result) t

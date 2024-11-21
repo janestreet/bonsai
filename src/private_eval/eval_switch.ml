@@ -2,7 +2,7 @@ open! Core
 open! Import
 open Incr.Let_syntax
 
-let f ~gather ~recursive_scopes ~time_source ~match_ ~arms =
+let f ~gather ~recursive_scopes ~time_source ~match_ ~arms ~here =
   let wrap_switch ~branch ~type_id inject = Action.switch ~branch ~type_id >>> inject in
   let%bind.Trampoline gathered =
     Trampoline.all_map (Map.map arms ~f:(gather ~recursive_scopes ~time_source))
@@ -25,7 +25,7 @@ let f ~gather ~recursive_scopes ~time_source ~match_ ~arms =
       in
       num_contain_path > 1
     in
-    annotate Switch_model model;
+    annotate ~here Switch_model model;
     let index = Value.eval environment match_ in
     let result_input_and_lifecycle =
       let%bind index in
@@ -75,7 +75,8 @@ let f ~gather ~recursive_scopes ~time_source ~match_ ~arms =
         let%mapn input = Input.to_incremental (Snapshot.input snapshot) in
         Some (Meta.Input.Hidden.T { input; type_id = input_info; key = index })
       in
-      Incr.return (Snapshot.result snapshot, input, Snapshot.lifecycle_or_empty snapshot)
+      Incr.return
+        (Snapshot.result snapshot, input, Snapshot.lifecycle_or_empty ~here snapshot)
     in
     let result = Incr.bind result_input_and_lifecycle ~f:Tuple3.get1
     and input = Incr.bind result_input_and_lifecycle ~f:Tuple3.get2
@@ -92,7 +93,7 @@ let f ~gather ~recursive_scopes ~time_source ~match_ ~arms =
       | Yes_or_maybe -> Input.dynamic input
       | No -> Input.static_none
     in
-    Trampoline.return (Snapshot.create ~result ~input ~lifecycle, ())
+    Trampoline.return (Snapshot.create ~here ~result ~input ~lifecycle, ())
   in
   let apply_action
     ~inject

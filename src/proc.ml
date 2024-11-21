@@ -339,6 +339,44 @@ let actor0
     (Value.return ~here ())
 ;;
 
+let state'
+  (type model)
+  ?(here = Stdlib.Lexing.dummy_pos)
+  ?reset
+  ?sexp_of_model
+  ?equal
+  default_model
+  =
+  let module Action = struct
+    type t = Source_code_position.t * (model -> model) [@@deriving sexp_of]
+  end
+  in
+  let reset =
+    Option.map reset ~f:(fun reset (_ : _ Apply_action_context.t) m -> reset m)
+  in
+  let open Let_syntax_with_map_location (struct
+      let here = here
+    end) in
+  let%sub state, set_state =
+    state_machine0
+      ~here
+      ?reset
+      ~sexp_of_action:[%sexp_of: Action.t]
+      ?sexp_of_model
+      ?equal
+      ~apply_action:(fun (_ : _ Apply_action_context.t) old_model (_location, f) ->
+        f old_model)
+      ~default_model
+      ()
+  in
+  let%sub set_state =
+    let%arr set_state in
+    fun ?(here = Stdlib.Lexing.dummy_pos) prev -> set_state (here, prev)
+  in
+  let%arr state and set_state in
+  state, set_state
+;;
+
 let state ?(here = Stdlib.Lexing.dummy_pos) ?reset ?sexp_of_model ?equal default_model =
   let sexp_of_action =
     (* NOTE: The model and the action for [state] are the same. *)

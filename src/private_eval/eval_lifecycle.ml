@@ -4,7 +4,7 @@ open Incr.Let_syntax
 
 let do_nothing_lifecycle = Incr.return Lifecycle.Collection.empty
 
-let f ~lifecycle =
+let f ~lifecycle ~here =
   let run ~environment ~fix_envs:_ ~path ~model:_ ~inject:_ =
     let lifecycle =
       match%pattern_bind Value.eval environment lifecycle with
@@ -15,6 +15,7 @@ let f ~lifecycle =
     in
     Trampoline.return
       ( Snapshot.create
+          ~here
           ~result:(Incr.return ())
           ~input:Input.static
           ~lifecycle:(Some lifecycle)

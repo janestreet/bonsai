@@ -242,6 +242,12 @@ let map7 ?(here = Stdlib.Lexing.dummy_pos) a b c d e g h ~f =
     ~no_graph:(fun () -> Value.map7 ~here a b c d e g h ~f)
 ;;
 
+let all ?(here = Stdlib.Lexing.dummy_pos) ts =
+  with_global_graph
+    ~f:(fun graph -> perform ~here graph (Proc.read ~here (Value.all ~here ts)))
+    ~no_graph:(fun () -> Value.all ts)
+;;
+
 module Autopack = struct
   type 'a bonsai = 'a Value.t
 
@@ -420,6 +426,29 @@ let state_opt
   graph
   =
   state_opt__for_proc2 ~here ?reset ?sexp_of_model ?equal ?default_model () graph
+  |> split ~here graph
+;;
+
+let state'__for_proc2
+  ?(here = Stdlib.Lexing.dummy_pos)
+  ?reset
+  ?sexp_of_model
+  ?equal
+  default_model
+  graph
+  =
+  perform ~here graph (Proc.state' ~here ?reset ?sexp_of_model ?equal default_model)
+;;
+
+let state'
+  ?(here = Stdlib.Lexing.dummy_pos)
+  ?reset
+  ?sexp_of_model
+  ?equal
+  default_model
+  graph
+  =
+  state'__for_proc2 ~here ?reset ?sexp_of_model ?equal default_model graph
   |> split ~here graph
 ;;
 
@@ -1269,11 +1298,31 @@ module Debug = struct
     |> perform ~here graph
   ;;
 
-  let monitor_free_variables ?(here = Stdlib.Lexing.dummy_pos) ~f graph =
+  let watch_computation
+    ?(here = Stdlib.Lexing.dummy_pos)
+    ?(log_model_before = false)
+    ?(log_model_after = false)
+    ?(log_action = false)
+    ?(log_incr_info = true)
+    ?(log_watcher_positions = true)
+    ?(log_dependency_definition_position = true)
+    ?label
+    ~f
+    graph
+    =
     perform
       graph
+      (Proc.watch_computation
+         ~here
+         ~log_model_before
+         ~log_model_after
+         ~log_action
+         ~log_incr_info
+         ~log_watcher_positions
+         ~log_dependency_definition_position
+         ~label
+         (handle graph ~f:(fun graph -> f graph)))
       ~here
-      (Proc.monitor_free_variables ~here (handle graph ~f:(fun graph -> f graph)))
   ;;
 end
 
@@ -1348,6 +1397,7 @@ module For_proc2 = struct
   let value_cutoff v ~equal = Value.cutoff v ~equal ~added_by_let_syntax:false
   let conceal_value v = v
   let state = state__for_proc2
+  let state' = state'__for_proc2
   let state_opt = state_opt__for_proc2
   let toggle = toggle__for_proc2
 

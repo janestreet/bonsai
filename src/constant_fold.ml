@@ -458,7 +458,7 @@ module Constant_fold (Recurse : Fix_transform.Recurse with module Types := Types
     | With_model_resetter _
     | Path _
     | Assoc_simpl _
-    | Monitor_free_variables _
+    | Computation_watcher _
     | Lifecycle _ ->
       let%bind (), (), c =
         Recurse.on_computation { constants_in_scope; evaluated } () `Skipping_over t

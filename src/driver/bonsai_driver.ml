@@ -119,7 +119,9 @@ let create_direct
     in
     let action_input = Incr.observe action_input_incr in
     let result = result_incr |> Incr.observe in
-    let lifecycle_incr = Bonsai.Private.Snapshot.lifecycle_or_empty snapshot in
+    let lifecycle_incr =
+      Bonsai.Private.Snapshot.lifecycle_or_empty ~here:[%here] snapshot
+    in
     let lifecycle = Incr.observe lifecycle_incr in
     Incr.stabilize ();
     T

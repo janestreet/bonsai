@@ -12,4 +12,4 @@ type 'a t = private
     - the length of the list is < 1, or
     - n <= 0, or
     - n = 1, and the length of the list is not exactly 1 *)
-val balance : n:int -> 'a list -> 'a t Nonempty_list.t Or_error.t
+val balance : n:int -> 'a list -> 'a t Or_error.t

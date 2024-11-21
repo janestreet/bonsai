@@ -2,10 +2,10 @@ open! Core
 open! Import
 open Incr.Let_syntax
 
-let f ~model ~input_id ~dynamic_action ~input ~time_source ~reset ~apply_action =
+let f ~model ~input_id ~dynamic_action ~input ~time_source ~reset ~apply_action ~here =
   let wrap_leaf inject = Action.dynamic_leaf >>> inject in
   let run ~environment ~fix_envs:_ ~path:_ ~model ~inject =
-    annotate Model model;
+    annotate ~here Model model;
     let input = Value.eval environment input in
     (* It's important to create [inject_dynamic] outside of the [let%mapn] so that it
            remains [phys_equal] when the [model] changes. *)
@@ -15,7 +15,7 @@ let f ~model ~input_id ~dynamic_action ~input ~time_source ~reset ~apply_action 
       model, inject_dynamic
     in
     Trampoline.return
-      (Snapshot.create ~result ~input:(Input.dynamic input) ~lifecycle:None, ())
+      (Snapshot.create ~here ~result ~input:(Input.dynamic input) ~lifecycle:None, ())
   in
   let apply_action ~inject ~schedule_event input model = function
     | Action.Leaf_static _ ->
