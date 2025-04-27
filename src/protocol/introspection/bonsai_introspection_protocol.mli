@@ -1,11 +1,11 @@
 open! Core
 
-(** This library contains the types for rpc effect's chrome devtool pannel.
-    The reason it needs to be in its own split library instead of alongside the for_introspection module inside
-    of bonsai web is so that it can be used in non-jsoo situations.*)
+(** This library contains the types for rpc effect's chrome devtool pannel. The reason it
+    needs to be in its own split library instead of alongside the for_introspection module
+    inside of bonsai web is so that it can be used in non-jsoo situations. *)
 
-(** Represents an rpc_id. This bears no resemblance/equality with
-    async_rpc_kernel's rpc ids and is instead a bonsai-specific id. *)
+(** Represents an rpc_id. This bears no resemblance/equality with async_rpc_kernel's rpc
+    ids and is instead a bonsai-specific id. *)
 module Rpc_id : Unique_id.Id with type t = private Int63.t
 
 module Rpc_kind : sig

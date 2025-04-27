@@ -10,6 +10,7 @@ module Name_source = struct
     | Wrap_inject
     | App_input
     | Model_resetter
+    | Inverted_lifecycles_dependency
     | Fix_recurse
 
   let to_string = function
@@ -38,6 +39,9 @@ module Name_source = struct
        computation"
     | App_input -> "The app input Value.t"
     | Model_resetter -> "A model resetter"
+    | Inverted_lifecycles_dependency ->
+      "The value passed from [compute_dep] into [f] in \
+       [Bonsai.with_inverted_lifecycle_ordering]"
     | Fix_recurse ->
       "The value parameter passed to the recursive call within [Bonsai.fix]"
   ;;

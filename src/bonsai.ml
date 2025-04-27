@@ -31,8 +31,9 @@ module Private = struct
   module Trampoline = Trampoline
   module Annotate_incr = Annotate_incr
   module Computation_watcher = Computation_watcher
+  module For_proc = Cont.For_proc
 
-  let path ~(here : [%call_pos]) (local_ graph) = Proc_layer2.path ~here () graph
+  let path ~(here : [%call_pos]) (local_ graph) = Cont.path ~here graph
   let gather = Eval.gather
   let pre_process = Pre_process.pre_process
   let reveal_value = Cont.Conv.reveal_value
@@ -40,17 +41,8 @@ module Private = struct
   let top_level_handle = Cont.Conv.top_level_handle
   let handle = Cont.Conv.handle
   let perform = Cont.Conv.perform
+  let read = Proc_min.read
   let set_perform_on_exception = Cont.Expert.For_bonsai_internal.set_perform_on_exception
-end
-
-module Proc = struct
-  include Proc_layer2
-  module Private = Private
-
-  module Bonsai = struct
-    include Proc_layer2
-    module Private = Private
-  end
 end
 
 module Cont = struct
@@ -65,8 +57,4 @@ include Cont
 
 module For_open = struct
   module Effect = Effect
-end
-
-module Arrow_deprecated = struct
-  include Legacy_api
 end

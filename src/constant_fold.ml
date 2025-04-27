@@ -9,7 +9,6 @@ open! Import
    separate `Bonsai.state`s.
 
    The value here is relatively arbitrary.
-  
 *)
 let assoc_max_input_size_to_fold = 20
 
@@ -96,7 +95,7 @@ include struct
   let simplify_assoc_if_simpl
     (type k v cmp)
     ~(here : Source_code_position.t)
-    ~(key_comparator : (k, cmp) comparator)
+    ~(key_comparator : (k, cmp) Comparator.Module.t)
     ~(key_id : k Type_equal.Id.t)
     ~(data_id : v Type_equal.Id.t)
     (map : (k, v, cmp) Map.t Value.t)
@@ -299,12 +298,26 @@ module Constant_fold (Recurse : Fix_transform.Recurse with module Types := Types
              (* In this case, the map is constant, so we have access to the key/data pair
                 directly. We use the [Sub]s below with the correct [key_id]/[data_id] so
                 that [by] will refer to these constants and then we can recursively rely on
-                the constant-folding optimizations to clean up these [Sub]s for us. *)
+                the constant-folding optimizations to clean up these [Sub]s for us.
+
+                We only invert lifecycles for explicit calls to
+                [Bonsai.with_inverted_lifecycle_ordering], so it's [false] here. *)
              let data_binding =
-               Computation.Sub { here; from = Proc.const data; via = data_id; into = by }
+               Computation.Sub
+                 { here
+                 ; from = Proc.const data
+                 ; via = data_id
+                 ; into = by
+                 ; invert_lifecycles = false
+                 }
              in
              Computation.Sub
-               { here; from = Proc.const key; via = key_id; into = data_binding })
+               { here
+               ; from = Proc.const key
+               ; via = key_id
+               ; into = data_binding
+               ; invert_lifecycles = false
+               })
            |> Proc.Computation.all_map ~here
          in
          let%bind (), (), r =
@@ -375,7 +388,7 @@ module Constant_fold (Recurse : Fix_transform.Recurse with module Types := Types
            |> Trampoline.all_map
          in
          return (Computation.Switch { match_; arms; here }))
-    | Sub { from; via; into; here } ->
+    | Sub { from; via; into; invert_lifecycles; here } ->
       let%bind (), (), from =
         Recurse.on_computation { constants_in_scope; evaluated } () `Directly_on from
       in
@@ -396,7 +409,7 @@ module Constant_fold (Recurse : Fix_transform.Recurse with module Types := Types
          let%bind (), (), into =
            Recurse.on_computation { constants_in_scope; evaluated } () `Directly_on into
          in
-         return (Computation.Sub { from; via; into; here }))
+         return (Computation.Sub { from; via; into; invert_lifecycles; here }))
     | Leaf1 { input; input_id; model; dynamic_action; apply_action; reset; here } ->
       let (), (), input =
         Recurse.on_value { constants_in_scope; evaluated } () `Directly_on input

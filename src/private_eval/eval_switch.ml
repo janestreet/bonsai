@@ -154,6 +154,7 @@ let f ~gather ~recursive_scopes ~time_source ~match_ ~arms ~here =
       Meta.Multi_model.set model ~key:index ~data:new_model
     | None, None | Some T, None | None, Some T ->
       let action = Action.Type_id.to_sexp action_type_id action in
+      Bonsai_metrics.Counters.observe Bonsai_switch_action_dropped;
       eprint_s
         [%message
           "an action inside of Bonsai.switch has been dropped because the computation is \

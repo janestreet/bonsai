@@ -3,8 +3,8 @@ open! Import
 module Bonsai_value = Value
 module Bonsai_computation = Computation
 
-(** This module provides skeleton versions of [Value.t] and [Component.t]
-    that are easier to traverse, and two-way serializable. *)
+(** This module provides skeleton versions of [Value.t] and [Component.t] that are easier
+    to traverse, and two-way serializable. *)
 
 module Id : sig
   type t [@@deriving compare, hash, sexp_of]
@@ -33,15 +33,16 @@ module Value : sig
 
   val of_value : 'a Value.t -> t
 
-  (** Computes a sexp that shows the structure of the value, it leaves any node_path's and positions
-      that add an extra level of indentation making it hard to read in test output. *)
+  (** Computes a sexp that shows the structure of the value, it leaves any node_path's and
+      positions that add an extra level of indentation making it hard to read in test
+      output. *)
   val minimal_sexp_of_t : t -> Sexp.t
 
   (** Returns the input to the given node. *)
   val inputs : t -> t list
 
-  (** Turns a value into a string that looks like the OCaml source code that
-      would produce a value of the same structure as the provided value. *)
+  (** Turns a value into a string that looks like the OCaml source code that would produce
+      a value of the same structure as the provided value. *)
   val to_string_hum : t -> string
 end
 
@@ -64,6 +65,7 @@ module Computation : sig
         { from : t
         ; via : Id.t
         ; into : t
+        ; invert_lifecycles : bool
         }
     | Store of
         { id : Id.t
@@ -124,13 +126,14 @@ module Computation : sig
   val of_computation : 'result Computation.t -> t
 
   (** Uid.t's is different between ocaml and javascript build targets, which makes
-      printing uids on expect tests tricky. You can use [sanitize_uids_for_testing]
-      to make sure that all uids for a given computation are the same for a compilation
+      printing uids on expect tests tricky. You can use [sanitize_uids_for_testing] to
+      make sure that all uids for a given computation are the same for a compilation
       target. *)
   val sanitize_for_testing : t -> t
 
-  (** Computes a sexp that shows the structure of the value, it leaves any node_path's and positions
-      that add an extra level of indentation making it hard to read in tests out. *)
+  (** Computes a sexp that shows the structure of the value, it leaves any node_path's and
+      positions that add an extra level of indentation making it hard to read in tests
+      out. *)
   val minimal_sexp_of_t : t -> Sexp.t
 
   (** Returns the input values for the computation. *)
@@ -141,22 +144,20 @@ module Computation : sig
 end
 
 module Traverse : sig
-  (**
-     Provides a nice way of folding through a [Computation.t], e.g.
+  (** Provides a nice way of folding through a [Computation.t], e.g.
 
-     {[
-       let count_uids =
-         object
-           inherit [int] fold as super
+      {[
+        let count_uids =
+          object
+            inherit [int] fold as super
 
-           method! id id acc =
-             let acc = acc + 1 in
-             super#id id acc
-         end
-       in
-       count_uids#computation t 0
-     ]}
-  *)
+            method! id id acc =
+              let acc = acc + 1 in
+              super#id id acc
+          end
+        in
+        count_uids#computation t 0
+      ]} *)
   class ['acc] fold : object
     method bool : bool -> 'acc -> 'acc
     method computation : Computation.t -> 'acc -> 'acc
@@ -171,9 +172,8 @@ module Traverse : sig
     method value_kind : Value.kind -> 'acc -> 'acc
   end
 
-  (**
-     Provides a nice way of mapping over computations and its elements similarly to [fold].
-  *)
+  (** Provides a nice way of mapping over computations and its elements similarly to
+      [fold]. *)
   class map : object
     method bool : bool -> bool
     method computation : Computation.t -> Computation.t

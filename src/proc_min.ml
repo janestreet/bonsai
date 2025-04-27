@@ -48,7 +48,20 @@ let sub (type via) ~(here : [%call_pos]) (from : via Computation.t) ~f =
         [%sexp_of: opaque]
     in
     let into = f (Value.named ~here (Sub here) via) in
-    Sub { from; via; into; here }
+    Sub
+      { from
+      ; via
+      ; into
+      ; (* We only invert lifecycles for explicit calls to [Bonsai.with_inverted_lifecycles]. *)
+        invert_lifecycles = false
+      ; here
+      }
+;;
+
+let with_inverted_lifecycle_ordering ~(here : [%call_pos]) ~compute_dep f =
+  let via = Type_equal.Id.create ~name:"inverted-lifecycle-dep-id" [%sexp_of: opaque] in
+  let into = f (Value.named ~here Inverted_lifecycles_dependency via) in
+  Sub { from = compute_dep; via; into; invert_lifecycles = true; here }
 ;;
 
 let switch ~here ~match_ ~branches ~(local_ with_) =
@@ -76,7 +89,7 @@ module Edge = struct
   let lifecycle ~(here : [%call_pos]) lifecycle = Lifecycle { lifecycle; here }
 end
 
-let state_machine1_safe
+let state_machine_with_input_safe
   ~here
   ?(sexp_of_action = sexp_of_opaque)
   ~sexp_of_model
@@ -121,7 +134,7 @@ module Computation_status = struct
   ;;
 end
 
-let state_machine1
+let state_machine_with_input
   ~(here : [%call_pos])
   ?sexp_of_action
   ?reset
@@ -135,7 +148,7 @@ let state_machine1
     let input = Computation_status.of_option input in
     apply_action context input model action
   in
-  state_machine1_safe
+  state_machine_with_input_safe
     ~here
     ?sexp_of_action
     ~sexp_of_model:(Option.value sexp_of_model ~default:sexp_of_opaque)
@@ -146,7 +159,7 @@ let state_machine1
     input
 ;;
 
-let state_machine0
+let state_machine
   ~(here : [%call_pos])
   ?reset
   ?sexp_of_model
@@ -206,7 +219,7 @@ module Proc_incr = struct
     =
     sub
       ~here
-      (state_machine1
+      (state_machine_with_input
          ~sexp_of_action:M.Action.sexp_of_t
          ?sexp_of_model
          ~equal
@@ -237,12 +250,14 @@ end
 let assoc
   (type k v cmp)
   ~(here : [%call_pos])
-  (comparator : (k, cmp) comparator)
+  (comparator : (k, cmp) Comparator.Module.t)
   (map : (k, v, cmp) Map.t Value.t)
   ~f
   =
   let module C = (val comparator) in
-  let key_id : k Type_equal.Id.t = Type_equal.Id.create ~name:"key id" C.sexp_of_t in
+  let key_id : k Type_equal.Id.t =
+    Type_equal.Id.create ~name:"key id" C.comparator.sexp_of_t
+  in
   let cmp_id : cmp Type_equal.Id.t =
     Type_equal.Id.create ~name:"cmp id" [%sexp_of: opaque]
   in
@@ -258,8 +273,8 @@ let assoc
 let assoc_on
   (type model_k io_k model_cmp io_cmp v)
   ~(here : [%call_pos])
-  (io_comparator : (io_k, io_cmp) comparator)
-  (model_comparator : (model_k, model_cmp) comparator)
+  (io_comparator : (io_k, io_cmp) Comparator.Module.t)
+  (model_comparator : (model_k, model_cmp) Comparator.Module.t)
   (map : (io_k, v, io_cmp) Map.t Value.t)
   ~get_model_key
   ~f
@@ -267,13 +282,13 @@ let assoc_on
   let module Io_comparator = (val io_comparator) in
   let module Model_comparator = (val model_comparator) in
   let io_key_id : io_k Type_equal.Id.t =
-    Type_equal.Id.create ~name:"io key id" Io_comparator.sexp_of_t
+    Type_equal.Id.create ~name:"io key id" Io_comparator.comparator.sexp_of_t
   in
   let io_cmp_id : io_cmp Type_equal.Id.t =
     Type_equal.Id.create ~name:"io cmp id" [%sexp_of: opaque]
   in
   let model_key_id : model_k Type_equal.Id.t =
-    Type_equal.Id.create ~name:"model key id" Model_comparator.sexp_of_t
+    Type_equal.Id.create ~name:"model key id" Model_comparator.comparator.sexp_of_t
   in
   let model_cmp_id : model_cmp Type_equal.Id.t =
     Type_equal.Id.create ~name:"model key id" [%sexp_of: opaque]
@@ -349,22 +364,16 @@ let wrap
     Type_equal.Id.create ~name:"inject id" [%sexp_of: opaque]
   in
   let apply_action ~inject ~schedule_event ~time_source result model action =
-    match result with
-    | Some result ->
-      apply_action
-        (Apply_action_context.Private.create ~inject ~schedule_event ~time_source)
-        result
-        model
-        action
-    | None ->
-      let action = sexp_of_opaque action in
-      eprint_s
-        [%message
-          "An action sent to a [wrap] has been dropped because its input was not \
-           present. This happens when the [wrap] is inactive when it receives a message."
-            (action : Sexp.t)
-            (here : Source_code_position.t)];
+    let result =
+      match result with
+      | Some result -> Computation_status.Active result
+      | None -> Computation_status.Inactive
+    in
+    apply_action
+      (Apply_action_context.Private.create ~inject ~schedule_event ~time_source)
+      result
       model
+      action
   in
   let model_var = Value.named ~here Wrap_model model_id in
   let inject_var = Value.named ~here Wrap_inject inject_id in

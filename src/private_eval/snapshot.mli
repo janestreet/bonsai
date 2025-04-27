@@ -5,13 +5,13 @@ open! Import
 
 type ('model, 'input, 'result) t
 
-(** The input in a snapshot contains any incrementally computed data required
-    by the computation's apply-action function. *)
+(** The input in a snapshot contains any incrementally computed data required by the
+    computation's apply-action function. *)
 val input : (_, 'input, _) t -> 'input Input.t
 
-(** The result of a component is the primary value computed by the component in
-    question. At the top level of a UI, this is generally a representation of the view,
-    but it's often useful to compute other kinds of results in inner components. *)
+(** The result of a component is the primary value computed by the component in question.
+    At the top level of a UI, this is generally a representation of the view, but it's
+    often useful to compute other kinds of results in inner components. *)
 val result : (_, _, 'result) t -> 'result Incr.t
 
 (** The lifecycle component of a snapshot contains an optional map of all the activation,

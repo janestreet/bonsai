@@ -205,12 +205,18 @@ module Model = struct
 
   let map
     (type k cmp)
-    (module M : Comparator with type t = k and type comparator_witness = cmp)
+    (module M : Comparator.S with type t = k and type comparator_witness = cmp)
     k
     cmp
     model
     =
     let sexp_of_model = model.sexp_of in
+    let module M = struct
+      include M
+
+      let sexp_of_t = comparator.sexp_of_t
+    end
+    in
     let sexp_of_map_model = [%sexp_of: model Map.M(M).t] in
     let model_map_type_id = Map { k; cmp; by = model.type_id } in
     { type_id = model_map_type_id
@@ -222,13 +228,25 @@ module Model = struct
 
   let map_on
     (type k cmp k_io cmp_io)
-    (module M : Comparator with type t = k and type comparator_witness = cmp)
-    (module M_io : Comparator with type t = k_io and type comparator_witness = cmp_io)
+    (module M : Comparator.S with type t = k and type comparator_witness = cmp)
+    (module M_io : Comparator.S with type t = k_io and type comparator_witness = cmp_io)
     k_model
     k_io
     cmp
     model
     =
+    let module M = struct
+      include M
+
+      let sexp_of_t = comparator.sexp_of_t
+    end
+    in
+    let module M_io = struct
+      include M_io
+
+      let sexp_of_t = comparator.sexp_of_t
+    end
+    in
     let sexp_of_model = model.sexp_of in
     let sexp_of_map_model = [%sexp_of: (M_io.t * model) Map.M(M).t] in
     let model_map_type_id = Map_on { k_model; k_io; cmp; by = model.type_id } in

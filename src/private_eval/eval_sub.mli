@@ -6,11 +6,11 @@ val gather
   -> info_from:(_, _, _, 'from_result, unit) Computation.info
   -> info_into:(_, _, _, 'into_result, unit) Computation.info
   -> via:'from_result Type_equal.Id.t
+  -> invert_lifecycles:bool
   -> ('into_result, unit) Computation.packed_info
 
-(** [eval.ml]'s [gather] function depends on [eval_sub.ml], so we can't
-    call [Eval.gather] from here, so it needs to be pased in while packed
-    up in this polymorphic type. *)
+(** [eval.ml]'s [gather] function depends on [eval_sub.ml], so we can't call [Eval.gather]
+    from here, so it needs to be pased in while packed up in this polymorphic type. *)
 type generic_gather =
   { f :
       'a.

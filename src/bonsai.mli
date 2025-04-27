@@ -1,25 +1,24 @@
-(** Bonsai documentation can be found in [proc_intf.ml].
+(** Bonsai documentation can be found in [cont.mli].
 
     The Bonsai API is currently in an intermediate state. It is transitioning from the
-    "old" [Proc] API to the "new" [Cont] API. Currently the [Proc] API is the default and
-    is included when you use [include Bonsai/_web/_web]. Current Bonsai documentation can
-    be found in [proc_intf.ml]. *)
+    "old" [Proc] API to the "new" [Cont] API. The [Cont] API is now the default and is
+    included when you use [include Bonsai/_web/_web], but [Proc] style code still exists
+    in some places. Current Bonsai documentation can be found in [cont.mli]. *)
 
 open! Core
 open! Import
 module Private_computation := Computation
 module Private_value := Value
+module For_proc := Cont.For_proc
 
 module Cont : sig
   include
-    module type of Cont
-    with module For_proc2 := Cont.For_proc2
-     and module Conv := Cont.Conv
+    module type of Cont with module For_proc := Cont.For_proc and module Conv := Cont.Conv
 
   module Bonsai : sig
     include
       module type of Cont
-      with module For_proc2 := Cont.For_proc2
+      with module For_proc := Cont.For_proc
        and module Conv := Cont.Conv
   end
 end
@@ -45,6 +44,7 @@ module Private : sig
     -> 'a Private_computation.t
     -> 'a Cont.t
 
+  val read : here:[%call_pos] -> 'a Private_value.t -> 'a Private_computation.t
   val path : here:[%call_pos] -> local_ Cont.graph -> Path.t Cont.t
 
   module Value = Private_value
@@ -69,6 +69,7 @@ module Private : sig
   module Trampoline = Trampoline
   module Annotate_incr = Annotate_incr
   module Computation_watcher = Computation_watcher
+  module For_proc = For_proc
 
   val gather
     :  recursive_scopes:Computation.Recursive_scopes.t
@@ -80,43 +81,6 @@ module Private : sig
   val set_perform_on_exception : (exn -> unit) -> unit
 end
 
-module Proc : sig
-  include
-    Proc_intf.S
-    with module Private_computation := Private_computation
-     and module Private_value := Private_value
-     and type 'a Value.t = 'a Cont.t
-     and type 'a Computation.t = local_ Cont.graph -> 'a Cont.t
-     and type 'a Computation_status.t = 'a Cont.Computation_status.t
-     and type 'a Dynamic_scope.t = 'a Cont.Dynamic_scope.t
-     and type 'a Effect_throttling.Poll_result.t = 'a Cont.Effect_throttling.Poll_result.t
-     and type 'a Var.t = 'a Cont.Expert.Var.t
-
-  module Private = Private
-
-  module Bonsai : sig
-    include
-      Proc_intf.S
-      with module Private_computation := Private_computation
-       and module Private_value := Private_value
-       and type 'a Value.t = 'a Cont.t
-       and type 'a Computation.t = local_ Cont.graph -> 'a Cont.t
-       and type 'a Computation_status.t = 'a Cont.Computation_status.t
-       and type 'a Dynamic_scope.t = 'a Cont.Dynamic_scope.t
-       and type 'a Effect_throttling.Poll_result.t =
-        'a Cont.Effect_throttling.Poll_result.t
-       and type 'a Var.t = 'a Cont.Expert.Var.t
-
-    module Private = Private
-  end
-end
-
-module Arrow_deprecated : sig
-  include
-    Legacy_api_intf.S
-    with type ('input, 'result) t = 'input Cont.t -> (local_ Cont.graph -> 'result Cont.t)
-end
-
 module Stable : sig
   module Private : sig
     module Node_path = Node_path.Stable
@@ -124,6 +88,7 @@ module Stable : sig
   end
 end
 
+(*_ We don't want to shadow [Map] for people doing [open Bonsai]. *)
 include module type of Cont with module Map := Cont.Map
 
 module For_open : sig

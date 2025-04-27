@@ -24,8 +24,8 @@ end = struct
     Incr.compute ~here m ~f:(Incr_map.partition_mapi ~f)
   ;;
 
-  let unordered_fold ~(here : [%call_pos]) ?update m ~init ~add ~remove =
-    Incr.compute ~here m ~f:(Incr_map.unordered_fold ?update ~init ~add ~remove)
+  let unordered_fold ~(here : [%call_pos]) ?update ?finalize m ~init ~add ~remove =
+    Incr.compute ~here m ~f:(Incr_map.unordered_fold ?update ?finalize ~init ~add ~remove)
   ;;
 
   let unordered_fold_with_extra
@@ -51,7 +51,7 @@ end = struct
     (type k cmp)
     ~(here : [%call_pos])
     m
-    ~comparator:((module M) : (k, cmp) Module_types.comparator)
+    ~comparator:((module M) : (k, cmp) Comparator.Module.t)
     ~f
     =
     Incr.compute ~here m ~f:(Incr_map.mapi_count ~comparator:(module M) ~f)
@@ -61,7 +61,7 @@ end = struct
     (type k cmp)
     ~(here : [%call_pos])
     m
-    ~comparator:((module M) : (k, cmp) Module_types.comparator)
+    ~comparator:((module M) : (k, cmp) Comparator.Module.t)
     ~f
     =
     Incr.compute ~here m ~f:(Incr_map.map_count ~comparator:(module M) ~f)
@@ -71,7 +71,7 @@ end = struct
     (type k cmp)
     ~(here : [%call_pos])
     m
-    ~comparator:((module M) : (k, cmp) Module_types.comparator)
+    ~comparator:((module M) : (k, cmp) Comparator.Module.t)
     ~f
     =
     Incr.compute ~here m ~f:(Incr_map.mapi_min ~comparator:(module M) ~f)
@@ -81,7 +81,7 @@ end = struct
     (type k cmp)
     ~(here : [%call_pos])
     m
-    ~comparator:((module M) : (k, cmp) Module_types.comparator)
+    ~comparator:((module M) : (k, cmp) Comparator.Module.t)
     ~f
     =
     Incr.compute ~here m ~f:(Incr_map.mapi_max ~comparator:(module M) ~f)
@@ -91,7 +91,7 @@ end = struct
     (type k cmp)
     ~(here : [%call_pos])
     m
-    ~comparator:((module M) : (k, cmp) Module_types.comparator)
+    ~comparator:((module M) : (k, cmp) Comparator.Module.t)
     ~f
     =
     Incr.compute ~here m ~f:(Incr_map.map_min ~comparator:(module M) ~f)
@@ -101,7 +101,7 @@ end = struct
     (type k cmp)
     ~(here : [%call_pos])
     m
-    ~comparator:((module M) : (k, cmp) Module_types.comparator)
+    ~comparator:((module M) : (k, cmp) Comparator.Module.t)
     ~f
     =
     Incr.compute ~here m ~f:(Incr_map.map_max ~comparator:(module M) ~f)
@@ -111,7 +111,7 @@ end = struct
     (type k cmp)
     ~(here : [%call_pos])
     m
-    ~comparator:((module M) : (k, cmp) Module_types.comparator)
+    ~comparator:((module M) : (k, cmp) Comparator.Module.t)
     =
     Incr.compute ~here m ~f:(Incr_map.min_value ~comparator:(module M))
   ;;
@@ -120,7 +120,7 @@ end = struct
     (type k cmp)
     ~(here : [%call_pos])
     m
-    ~comparator:((module M) : (k, cmp) Module_types.comparator)
+    ~comparator:((module M) : (k, cmp) Comparator.Module.t)
     =
     Incr.compute ~here m ~f:(Incr_map.max_value ~comparator:(module M))
   ;;
@@ -129,7 +129,7 @@ end = struct
     (type k cmp)
     ~(here : [%call_pos])
     m
-    ~comparator:((module M) : (k, cmp) Module_types.comparator)
+    ~comparator:((module M) : (k, cmp) Comparator.Module.t)
     ~f
     =
     Incr.compute ~here m ~f:(Incr_map.mapi_bounds ~comparator:(module M) ~f)
@@ -139,7 +139,7 @@ end = struct
     (type k cmp)
     ~(here : [%call_pos])
     m
-    ~comparator:((module M) : (k, cmp) Module_types.comparator)
+    ~comparator:((module M) : (k, cmp) Comparator.Module.t)
     ~f
     =
     Incr.compute ~here m ~f:(Incr_map.map_bounds ~comparator:(module M) ~f)
@@ -149,7 +149,7 @@ end = struct
     (type k cmp)
     ~(here : [%call_pos])
     m
-    ~comparator:((module M) : (k, cmp) Module_types.comparator)
+    ~comparator:((module M) : (k, cmp) Comparator.Module.t)
     =
     Incr.compute ~here m ~f:(Incr_map.value_bounds ~comparator:(module M))
   ;;
@@ -202,7 +202,7 @@ end = struct
     (type k cmp)
     ~(here : [%call_pos])
     m
-    ~comparator:((module M) : (k, cmp) Module_types.comparator)
+    ~comparator:((module M) : (k, cmp) Comparator.Module.t)
     ~f
     =
     Incr.compute ~here m ~f:(Incr_map.rekey ~comparator:(module M) ~f)
@@ -212,7 +212,7 @@ end = struct
     (type k cmp)
     ~(here : [%call_pos])
     m
-    ~comparator:((module M) : (k, cmp) Module_types.comparator)
+    ~comparator:((module M) : (k, cmp) Comparator.Module.t)
     ~index
     =
     Incr.compute ~here m ~f:(Incr_map.index_byi ~comparator:(module M) ~index)
@@ -222,7 +222,7 @@ end = struct
     (type k cmp)
     ~(here : [%call_pos])
     m
-    ~comparator:((module M) : (k, cmp) Module_types.comparator)
+    ~comparator:((module M) : (k, cmp) Comparator.Module.t)
     ~index
     =
     Incr.compute ~here m ~f:(Incr_map.index_by ~comparator:(module M) ~index)
@@ -238,7 +238,7 @@ end = struct
   let transpose
     (type k cmp)
     ~(here : [%call_pos])
-    ((module M) : (k, cmp) Module_types.comparator)
+    ((module M) : (k, cmp) Comparator.Module.t)
     m
     =
     Incr.compute ~here m ~f:(Incr_map.transpose (module M))
@@ -248,7 +248,7 @@ end = struct
     (type k cmp)
     ~(here : [%call_pos])
     m
-    ~comparator:((module M) : (k, cmp) Module_types.comparator)
+    ~comparator:((module M) : (k, cmp) Comparator.Module.t)
     =
     Incr.compute ~here m ~f:(Incr_map.collapse ~comparator:(module M))
   ;;
@@ -258,7 +258,7 @@ end = struct
     ~(here : [%call_pos])
     m
     ~merge_keys
-    ~comparator:((module M) : (k, cmp) Module_types.comparator)
+    ~comparator:((module M) : (k, cmp) Comparator.Module.t)
     =
     Incr.compute ~here m ~f:(Incr_map.collapse_by ~comparator:(module M) ~merge_keys)
   ;;
@@ -267,8 +267,8 @@ end = struct
     (type k k2 cmp cmp2)
     ~(here : [%call_pos])
     m
-    ~outer_comparator:((module M_outer) : (k, cmp) Module_types.comparator)
-    ~inner_comparator:((module M_inner) : (k2, cmp2) Module_types.comparator)
+    ~outer_comparator:((module M_outer) : (k, cmp) Comparator.Module.t)
+    ~inner_comparator:((module M_inner) : (k2, cmp2) Comparator.Module.t)
     =
     Incr.compute
       ~here

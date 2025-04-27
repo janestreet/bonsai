@@ -68,6 +68,7 @@ module type Output = sig
   val unordered_fold
     :  here:[%call_pos]
     -> ?update:(key:'k -> old_data:'v -> new_data:'v -> 'acc -> 'acc)
+    -> ?finalize:('acc -> 'acc)
     -> ('k, 'v, 'cmp) Map.t Value.t
     -> init:'acc
     -> add:(key:'k -> data:'v -> 'acc -> 'acc)
@@ -99,75 +100,75 @@ module type Output = sig
   val mapi_count
     :  here:[%call_pos]
     -> ('k1, 'v, 'cmp1) Map.t Value.t
-    -> comparator:('k2, 'cmp2) Module_types.comparator
+    -> comparator:('k2, 'cmp2) Comparator.Module.t
     -> f:(key:'k1 -> data:'v -> 'k2)
     -> ('k2, int, 'cmp2) Map.t Computation.t
 
   val map_count
     :  here:[%call_pos]
     -> ('k1, 'v, 'cmp1) Map.t Value.t
-    -> comparator:('k2, 'cmp2) Module_types.comparator
+    -> comparator:('k2, 'cmp2) Comparator.Module.t
     -> f:('v -> 'k2)
     -> ('k2, int, 'cmp2) Map.t Computation.t
 
   val mapi_min
     :  here:[%call_pos]
     -> ('k, 'v, _) Map.t Value.t
-    -> comparator:('r, _) Module_types.comparator
+    -> comparator:('r, _) Comparator.Module.t
     -> f:(key:'k -> data:'v -> 'r)
     -> 'r option Computation.t
 
   val mapi_max
     :  here:[%call_pos]
     -> ('k, 'v, _) Map.t Value.t
-    -> comparator:('r, _) Module_types.comparator
+    -> comparator:('r, _) Comparator.Module.t
     -> f:(key:'k -> data:'v -> 'r)
     -> 'r option Computation.t
 
   val map_min
     :  here:[%call_pos]
     -> ('k, 'v, _) Map.t Value.t
-    -> comparator:('r, _) Module_types.comparator
+    -> comparator:('r, _) Comparator.Module.t
     -> f:('v -> 'r)
     -> 'r option Computation.t
 
   val map_max
     :  here:[%call_pos]
     -> ('k, 'v, _) Map.t Value.t
-    -> comparator:('r, _) Module_types.comparator
+    -> comparator:('r, _) Comparator.Module.t
     -> f:('v -> 'r)
     -> 'r option Computation.t
 
   val min_value
     :  here:[%call_pos]
     -> ('k, 'v, _) Map.t Value.t
-    -> comparator:('v, _) Module_types.comparator
+    -> comparator:('v, _) Comparator.Module.t
     -> 'v option Computation.t
 
   val max_value
     :  here:[%call_pos]
     -> ('k, 'v, _) Map.t Value.t
-    -> comparator:('v, _) Module_types.comparator
+    -> comparator:('v, _) Comparator.Module.t
     -> 'v option Computation.t
 
   val mapi_bounds
     :  here:[%call_pos]
     -> ('k, 'v, _) Map.t Value.t
-    -> comparator:('r, _) Module_types.comparator
+    -> comparator:('r, _) Comparator.Module.t
     -> f:(key:'k -> data:'v -> 'r)
     -> ('r * 'r) option Computation.t
 
   val map_bounds
     :  here:[%call_pos]
     -> ('k, 'v, _) Map.t Value.t
-    -> comparator:('r, _) Module_types.comparator
+    -> comparator:('r, _) Comparator.Module.t
     -> f:('v -> 'r)
     -> ('r * 'r) option Computation.t
 
   val value_bounds
     :  here:[%call_pos]
     -> ('k, 'v, _) Map.t Value.t
-    -> comparator:('v, _) Module_types.comparator
+    -> comparator:('v, _) Comparator.Module.t
     -> ('v * 'v) option Computation.t
 
   val merge
@@ -221,21 +222,21 @@ module type Output = sig
   val rekey
     :  here:[%call_pos]
     -> ('k1, 'v, 'cmp1) Map.t Value.t
-    -> comparator:('k2, 'cmp2) Module_types.comparator
+    -> comparator:('k2, 'cmp2) Comparator.Module.t
     -> f:(key:'k1 -> data:'v -> 'k2)
     -> ('k2, 'v, 'cmp2) Map.t Computation.t
 
   val index_byi
     :  here:[%call_pos]
     -> ('inner_key, 'v, 'inner_cmp) Map.t Value.t
-    -> comparator:('outer_key, 'outer_cmp) Module_types.comparator
+    -> comparator:('outer_key, 'outer_cmp) Comparator.Module.t
     -> index:(key:'inner_key -> data:'v -> 'outer_key option)
     -> ('outer_key, ('inner_key, 'v, 'inner_cmp) Map.t, 'outer_cmp) Map.t Computation.t
 
   val index_by
     :  here:[%call_pos]
     -> ('inner_key, 'v, 'inner_cmp) Map.t Value.t
-    -> comparator:('outer_key, 'outer_cmp) Module_types.comparator
+    -> comparator:('outer_key, 'outer_cmp) Comparator.Module.t
     -> index:('v -> 'outer_key option)
     -> ('outer_key, ('inner_key, 'v, 'inner_cmp) Map.t, 'outer_cmp) Map.t Computation.t
 
@@ -256,14 +257,14 @@ module type Output = sig
 
   val transpose
     :  here:[%call_pos]
-    -> ('k2, 'k2_cmp) Module_types.comparator
+    -> ('k2, 'k2_cmp) Comparator.Module.t
     -> ('k1, ('k2, 'v, 'k2_cmp) Map.t, 'k1_cmp) Map.t Value.t
     -> ('k2, ('k1, 'v, 'k1_cmp) Map.t, 'k2_cmp) Map.t Computation.t
 
   val collapse
     :  here:[%call_pos]
     -> ('outer_key, ('inner_key, 'v, 'inner_cmp) Map.t, 'outer_cmp) Map.t Value.t
-    -> comparator:('inner_key, 'inner_cmp) Module_types.comparator
+    -> comparator:('inner_key, 'inner_cmp) Comparator.Module.t
     -> ( 'outer_key * 'inner_key
          , 'v
          , ('outer_cmp, 'inner_cmp) Tuple2.comparator_witness )
@@ -274,14 +275,14 @@ module type Output = sig
     :  here:[%call_pos]
     -> ('outer_key, ('inner_key, 'v, 'inner_cmp) Map.t, 'outer_cmp) Map.t Value.t
     -> merge_keys:('outer_key -> 'inner_key -> 'combined_key)
-    -> comparator:('combined_key, 'combined_cmp) Module_types.comparator
+    -> comparator:('combined_key, 'combined_cmp) Comparator.Module.t
     -> ('combined_key, 'v, 'combined_cmp) Map.t Computation.t
 
   val expand
     :  here:[%call_pos]
     -> ('outer_key * 'inner_key, 'v, 'tuple_cmp) Map.t Value.t
-    -> outer_comparator:('outer_key, 'outer_cmp) Module_types.comparator
-    -> inner_comparator:('inner_key, 'inner_cmp) Module_types.comparator
+    -> outer_comparator:('outer_key, 'outer_cmp) Comparator.Module.t
+    -> inner_comparator:('inner_key, 'inner_cmp) Comparator.Module.t
     -> ('outer_key, ('inner_key, 'v, 'inner_cmp) Map.t, 'outer_cmp) Map.t Computation.t
 
   val counti

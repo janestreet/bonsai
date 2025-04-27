@@ -30,8 +30,8 @@ end
     - On node creation
     - When a node is registered as an input or result to a [Snapshot.t]
 
-    A single node may be annotated multiple times, e.g. if it is both a model and a result.
- *)
+    A single node may be annotated multiple times, e.g. if it is both a model and a
+    result. *)
 val on_incr_annotation
   :  (here:Source_code_position.t -> Kind.t -> Ui_incr.Packed.t -> unit)
   -> unit
@@ -42,17 +42,16 @@ val annotate : here:Source_code_position.t -> Kind.t -> 'a Ui_incr.t -> unit
 val annotate_packed : here:Source_code_position.t -> Kind.t -> Ui_incr.Packed.t -> unit
 
 module Counts : sig
-  (** Values of this type contain a counter for every kind of incremental
-      node created by Bonsai. The numbers are tracked since the
-      start of the program, so we recommend that you call [diff] to see how
-      the counts have changed between two calls to [current].
+  (** Values of this type contain a counter for every kind of incremental node created by
+      Bonsai. The numbers are tracked since the start of the program, so we recommend that
+      you call [diff] to see how the counts have changed between two calls to [current].
 
-      IMPORTANT: this number is not decremented when nodes are deleted,
-      because we don't have a performant way of doing that.
+      IMPORTANT: this number is not decremented when nodes are deleted, because we don't
+      have a performant way of doing that.
 
-      Some of the counts may be double-counted!  For example, a state's
-      model may be considered a "model" incremental as well as a "result"
-      incremental if it's returned from a component. *)
+      Some of the counts may be double-counted! For example, a state's model may be
+      considered a "model" incremental as well as a "result" incremental if it's returned
+      from a component. *)
   type t [@@deriving sexp_of]
 
   val current : unit -> t

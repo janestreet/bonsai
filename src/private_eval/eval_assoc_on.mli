@@ -7,9 +7,9 @@ val f
   -> time_source:Time_source.t
   -> map:('io, 'v, 'cmp_io) Map_intf.Map.t Value.t
   -> io_comparator:
-       (module Comparator with type comparator_witness = 'cmp_io and type t = 'io)
+       (module Comparator.S with type comparator_witness = 'cmp_io and type t = 'io)
   -> model_comparator:
-       (module Comparator with type comparator_witness = 'cmp_model and type t = 'model)
+       (module Comparator.S with type comparator_witness = 'cmp_model and type t = 'model)
   -> io_key_id:'io Type_equal.Id.t
   -> io_cmp_id:'cmp_io Type_equal.Id.t
   -> model_key_id:'model Type_equal.Id.t

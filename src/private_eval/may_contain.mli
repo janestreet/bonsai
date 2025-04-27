@@ -3,9 +3,9 @@ open! Core
 (** Types to perform gather-time analysis on data-dependencies of computations.
     Data-dependencies can be resolved or unresolved:
 
-    - Unresolved dependencies track a (possibly empty) set of recursive dependencies
-      they depend on, introduced when computations call the [~recurse] argument of
-      a [Bonsai.fix].
+    - Unresolved dependencies track a (possibly empty) set of recursive dependencies they
+      depend on, introduced when computations call the [~recurse] argument of a
+      [Bonsai.fix].
     - Resolved dependencies don't have any recursive dependencies.
 
     The logic for resolving dependencies (i.e. going from unresolved -> resolved) lives in

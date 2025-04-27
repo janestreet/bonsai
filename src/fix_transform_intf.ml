@@ -2,8 +2,8 @@ open! Core
 open! Import
 
 module type Up = sig
-  (** Values of type [Up.t] are passed from child to parent during a transformation.
-      For transformations that use the fallback "skipping-over" recursion, the default
+  (** Values of type [Up.t] are passed from child to parent during a transformation. For
+      transformations that use the fallback "skipping-over" recursion, the default
       transformer needs to know how to allocate empty [Up.t] values, and combine [Up.t]
       for computations that have more than one child. *)
 
@@ -12,12 +12,12 @@ module type Up = sig
   val combine : t -> t -> t
   val empty : t
 
-  (** [Computation.lazy] is an obstacle to optimization in many cases.  To force
+  (** [Computation.lazy] is an obstacle to optimization in many cases. To force
       optimization authors to think about [lazy], we have a special empty value.
 
-      Optimizations get applied to [Computation.lazy] when it is forced, rather
-      than immediately. Thus, we use a constant, [empty_for_lazy], as the value
-      that is passed back to the parent computation. *)
+      Optimizations get applied to [Computation.lazy] when it is forced, rather than
+      immediately. Thus, we use a constant, [empty_for_lazy], as the value that is passed
+      back to the parent computation. *)
   val empty_for_lazy : t
 end
 
@@ -41,16 +41,16 @@ module Unit : Up with type t = unit = struct
 end
 
 module type Recurse = sig
-  (** A module with signature [Recurse] is passed to the transformation implementation.  Use
-      of values in this module is necessary for the transformation to recurse.  The main
-      value that this API provides is that it allows transformation authors to skip
+  (** A module with signature [Recurse] is passed to the transformation implementation.
+      Use of values in this module is necessary for the transformation to recurse. The
+      main value that this API provides is that it allows transformation authors to skip
       computation constructors that they can't do anything for, while still applying their
       transformation to children of that node. *)
 
   module Types : Types
 
   (** [on_computation] is the function that a user of the transform API must call to
-      recursively transform a computation.  The main feature of it is the ability for the
+      recursively transform a computation. The main feature of it is the ability for the
       caller to skip applying their transformation to the provided node, while still
       applying it to the children of that node. This behavior is produced by providing
       [`Skipping_over] to the function, while [`Directly_on] will run the users

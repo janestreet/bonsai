@@ -13,9 +13,9 @@ open! Import
       map3 a b c ~f:(fun a b c -> a, (b, c))
     ]}
 
-    since this generates fewer incremental nodes, thus leading to better
-    performance. The same optimization gets applied for up to 7 nodes both'd
-    together. A similar optimization is applied to nodes of the form
+    since this generates fewer incremental nodes, thus leading to better performance. The
+    same optimization gets applied for up to 7 nodes both'd together. A similar
+    optimization is applied to nodes of the form
 
     {[
       map (both a b) ~f
@@ -28,6 +28,5 @@ open! Import
     ]}
 
     since, again, this generates fewer incremental nodes. As with the previous
-    transformation, this generalizes to an arity of 7.
-*)
+    transformation, this generalizes to an arity of 7. *)
 val flatten_values : 'result Computation.t -> 'result Computation.t

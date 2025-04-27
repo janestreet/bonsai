@@ -1,8 +1,8 @@
 open! Core
 open! Import
 
-(** A type for containing a set of [Type_equal.Id.t].  Typically used 
-    to track free variables inside a computation *)
+(** A type for containing a set of [Type_equal.Id.t]. Typically used to track free
+    variables inside a computation *)
 type t
 
 (** a polymorphic function for mapping over the set *)
@@ -22,10 +22,10 @@ val is_empty : t -> bool
 
 val length : t -> int
 
-(** Adds a type-id to the set.  Nothing happens if the set already contains the item.*)
+(** Adds a type-id to the set. Nothing happens if the set already contains the item. *)
 val add : t -> _ Type_equal.Id.t -> t
 
-(** Removes a type-id from the set.  Nothing happens if the set doesn't already contain it *)
+(** Removes a type-id from the set. Nothing happens if the set doesn't already contain it *)
 val remove : t -> _ Type_equal.Id.t -> t
 
 (** computes the union of two sets *)

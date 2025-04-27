@@ -11,7 +11,7 @@ let with_clock ~(here : [%call_pos]) f =
 ;;
 
 let to_value ~(here : [%call_pos]) incr =
-  { Value.value = Value.Incr incr
+  { Value.value = Incr incr
   ; here
   ; id = Type_equal.Id.create ~name:"to_value" sexp_of_opaque
   }

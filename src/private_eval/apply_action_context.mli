@@ -5,7 +5,7 @@ type ('action, 'response) t
 val inject : ('action, 'response) t -> 'action -> 'response Ui_effect.t
 val schedule_event : _ t -> unit Ui_effect.t -> unit
 
-(** Receive the time-source for this application.  This is most likely useful to: 
+(** Receive the time-source for this application. This is most likely useful to:
     - read the current time
     - sleep for some time span *)
 val time_source : _ t -> Ui_time_source.t

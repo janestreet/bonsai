@@ -119,6 +119,7 @@ type 'result t =
       { from : 'via t
       ; via : 'via Type_equal.Id.t
       ; into : 'result t
+      ; invert_lifecycles : bool
       ; here : Source_code_position.t
       }
       -> 'result t
@@ -138,7 +139,7 @@ type 'result t =
       -> 'result t
   | Assoc :
       { map : ('k, 'v, 'cmp) Map.t Value.t
-      ; key_comparator : ('k, 'cmp) comparator
+      ; key_comparator : ('k, 'cmp) Comparator.Module.t
       ; key_id : 'k Type_equal.Id.t
       ; cmp_id : 'cmp Type_equal.Id.t
       ; data_id : 'v Type_equal.Id.t
@@ -148,8 +149,8 @@ type 'result t =
       -> ('k, 'result, 'cmp) Map.t t
   | Assoc_on :
       { map : ('io_key, 'v, 'io_cmp) Map.t Value.t
-      ; io_comparator : ('io_key, 'io_cmp) comparator
-      ; model_comparator : ('model_key, 'model_cmp) comparator
+      ; io_comparator : ('io_key, 'io_cmp) Comparator.Module.t
+      ; model_comparator : ('model_key, 'model_cmp) Comparator.Module.t
       ; io_key_id : 'io_key Type_equal.Id.t
       ; io_cmp_id : 'io_cmp Type_equal.Id.t
       ; model_key_id : 'model_key Type_equal.Id.t

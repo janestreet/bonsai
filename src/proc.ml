@@ -92,7 +92,7 @@ let enum (type k) (module E : Enum with type t = k) ~match_ ~(local_ with_) =
 let scope_model
   (type a cmp)
   ~(here : [%call_pos])
-  (module M : Comparator with type t = a and type comparator_witness = cmp)
+  (module M : Comparator.S with type t = a and type comparator_witness = cmp)
   ~on:v
   computation
   =
@@ -104,7 +104,7 @@ let scope_model
   r
 ;;
 
-let of_module1
+let of_module_with_input
   (type i m a r)
   ~(here : [%call_pos])
   ?sexp_of_model
@@ -116,7 +116,7 @@ let of_module1
   let (module M) = component in
   let%sub input = return input in
   let%sub model_and_inject =
-    state_machine1
+    state_machine_with_input
       ~sexp_of_action:M.Action.sexp_of_t
       ?sexp_of_model
       ?equal
@@ -128,9 +128,9 @@ let of_module1
           eprint_s
             [%message
               [%here]
-                "An action sent to an [of_module1] has been dropped because its input \
-                 was not present. This happens when the [of_module1] is inactive when it \
-                 receives a message."
+                "An action sent to an [of_module_with_input] has been dropped because \
+                 its input was not present. This happens when the [of_module_with_input] \
+                 is inactive when it receives a message."
                 (action : M.Action.t)];
           model)
       input
@@ -141,7 +141,7 @@ let of_module1
 ;;
 
 let of_module2 ~(here : [%call_pos]) ?sexp_of_model c ?equal ~default_model i1 i2 =
-  of_module1 ~here ?sexp_of_model c ?equal ~default_model (Value.both i1 i2)
+  of_module_with_input ~here ?sexp_of_model c ?equal ~default_model (Value.both i1 i2)
 ;;
 
 let race_dynamic_model
@@ -189,7 +189,7 @@ let race_dynamic_model
       Some (apply_action ~inject ~schedule_event ~time_source Inactive model action)
   in
   let%sub model_and_inject =
-    state_machine1
+    state_machine_with_input
       ~here
       ?sexp_of_action
       ?sexp_of_model:(Option.map sexp_of_model ~f:Option.sexp_of_t)
@@ -203,7 +203,7 @@ let race_dynamic_model
   model_creator model, inject
 ;;
 
-let of_module0
+let of_module
   (type m a r)
   ~(here : [%call_pos])
   ?sexp_of_model
@@ -213,7 +213,7 @@ let of_module0
   =
   let (module M) = component in
   let%sub model_and_inject =
-    state_machine0
+    state_machine
       ~here
       ()
       ~sexp_of_action:M.Action.sexp_of_t
@@ -226,7 +226,7 @@ let of_module0
   M.compute ~inject () model
 ;;
 
-let actor1
+let actor_with_input
   : type input model action return.
     here:[%call_pos]
     -> ?sexp_of_action:(action -> Sexp.t)
@@ -274,7 +274,7 @@ let actor1
       f ctx model)
   in
   let%sub model, inject =
-    state_machine1
+    state_machine_with_input
       ~here
       ~sexp_of_action:[%sexp_of: Action_with_callback.t]
       ?sexp_of_model
@@ -303,7 +303,7 @@ let actor1
   model, inject
 ;;
 
-let actor0
+let actor
   ~(here : [%call_pos])
   ?reset
   ?sexp_of_model
@@ -314,7 +314,7 @@ let actor0
   ()
   =
   let recv ctx (_ : unit Computation_status.t) = recv ctx in
-  actor1
+  actor_with_input
     ~here
     ?sexp_of_action
     ?sexp_of_model
@@ -337,7 +337,7 @@ let state' (type model) ~(here : [%call_pos]) ?reset ?sexp_of_model ?equal defau
       let here = here
     end) in
   let%sub state, set_state =
-    state_machine0
+    state_machine
       ~here
       ?reset
       ~sexp_of_action:[%sexp_of: Action.t]
@@ -364,7 +364,7 @@ let state ~(here : [%call_pos]) ?reset ?sexp_of_model ?equal default_model =
   let reset =
     Option.map reset ~f:(fun reset (_ : _ Apply_action_context.t) m -> reset m)
   in
-  state_machine0
+  state_machine
     ~here
     ?reset
     ~sexp_of_action
@@ -392,7 +392,7 @@ let toggle' ~(here : [%call_pos]) ~default_model () =
   end
   in
   let%sub state_and_inject =
-    state_machine0
+    state_machine
       ~here
       ~sexp_of_model:[%sexp_of: Bool.t]
       ~sexp_of_action:[%sexp_of: Action.t]
@@ -409,6 +409,9 @@ let toggle' ~(here : [%call_pos]) ~default_model () =
 ;;
 
 let toggle ~(here : [%call_pos]) ~default_model () =
+  let open Let_syntax_with_map_location (struct
+      let here = here
+    end) in
   let%sub { state; toggle; set_state = _ } = toggle' ~here ~default_model () in
   let%arr state and toggle in
   state, toggle
@@ -434,7 +437,7 @@ let yoink ~(here : [%call_pos]) a =
       let here = here
     end) in
   let%sub _, result =
-    actor1
+    actor_with_input
       ~here
       ~sexp_of_model:[%sexp_of: Unit.t]
       ~sexp_of_action:[%sexp_of: Unit.t]
@@ -549,7 +552,7 @@ module Edge = struct
           let here = here
         end) in
       let%sub _, next_seqnum =
-        actor0
+        actor
           ~here
           ~sexp_of_model:[%sexp_of: Int.t]
           ~sexp_of_action:[%sexp_of: Unit.t]
@@ -580,7 +583,7 @@ module Edge = struct
       end
       in
       let%sub state, inject_change =
-        state_machine0
+        state_machine
           ~here
           ~sexp_of_model:[%sexp_of: State.t]
           ~sexp_of_action:[%sexp_of: Action.t]
@@ -751,7 +754,7 @@ module Effect_throttling = struct
     end
     in
     let%sub _model, inject =
-      state_machine1
+      state_machine_with_input
         ~here
         ~sexp_of_action:[%sexp_of: Action.t]
         ~sexp_of_model:[%sexp_of: Model.t]
@@ -943,7 +946,7 @@ let assoc_set ~(here : [%call_pos]) m v ~(local_ f) =
 let assoc_list
   (type key cmp)
   ~(here : [%call_pos])
-  (m : (key, cmp) comparator)
+  (m : (key, cmp) Comparator.Module.t)
   list
   ~get_key
   ~(local_ f)
@@ -970,7 +973,12 @@ let assoc_list
          | Some r -> r
          | None ->
            raise_s
-             [%message "BUG" [%here] "Incremental glitch" ~key:(k : M.t) "not found"]))
+             [%message
+               "BUG"
+                 [%here]
+                 "Incremental glitch"
+                 ~key:(M.comparator.sexp_of_t k : Sexp.t)
+                 "not found"]))
   | `Duplicate_key key ->
     let%arr key in
     `Duplicate_key key
@@ -1038,18 +1046,7 @@ module Dynamic_scope = struct
 
   type revert = { revert : 'a. 'a Computation.t -> 'a Computation.t }
 
-  let modify ~(here : [%call_pos]) var ~change ~f =
-    let%sub current = lookup ~here var in
-    let revert c = store ~here var current c in
-    let value = change current in
-    store ~here var value (f { revert })
-  ;;
-
   let set ~(here : [%call_pos]) t v ~inside = store ~here t v inside
-
-  let set' ~(here : [%call_pos]) var value ~(local_ f) =
-    modify ~here var ~change:(fun _ -> value) ~f
-  ;;
 end
 
 module Clock = struct
@@ -1115,22 +1112,22 @@ module Clock = struct
         ~sexp_of_model:[%sexp_of: Time_ns.Alternate_sexp.t]
     in
     let%sub initial_model =
-      let%arr base_time in
+      let%arr base_time and span in
       let start_time =
         if trigger_on_activate then base_time else Time_ns.add base_time span
       in
       Every_model.Waiting_for (None, start_time)
     in
-    let%sub get_current_time = get_current_time ~here () in
     let%sub race_input =
-      let%arr base_time and get_current_time and callback in
-      base_time, get_current_time, callback
+      let%arr base_time and callback and span in
+      span, base_time, callback
     in
-    let apply_action ~inject ~schedule_event ~time_source:_ input _old_model = function
+    let apply_action ~inject ~schedule_event ~time_source input _old_model = function
       | Every_action.Schedule_effect ->
         (match input with
          | Computation_status.Inactive -> Every_model.Waiting_for (None, Time_ns.epoch)
-         | Active (base_time, get_current_time, callback) ->
+         | Active (span, base_time, callback) ->
+           let get_current_time () = Time_source.now time_source in
            schedule_event
              (let%bind.Effect next_time =
                 create_effect ~span ~base_time ~get_current_time ~callback
@@ -1177,23 +1174,23 @@ module Clock = struct
 
   let every_wait_period_after_previous_effect_finishes_blocking =
     generic_every ~create_effect:(fun ~span ~base_time:_ ~get_current_time ~callback ->
-      let%bind.Effect () = callback in
-      let%map.Effect now = get_current_time in
+      let%map.Effect () = callback in
+      let now = get_current_time () in
       ensure_clock_advances now (Time_ns.add now span))
   ;;
 
   let every_wait_period_after_previous_effect_starts_blocking =
     generic_every ~create_effect:(fun ~span ~base_time:_ ~get_current_time ~callback ->
-      let%bind.Effect start = get_current_time in
-      let%bind.Effect () = callback in
-      let%map.Effect now = get_current_time in
+      let start = get_current_time () in
+      let%map.Effect () = callback in
+      let now = get_current_time () in
       ensure_clock_advances now (Time_ns.add start span))
   ;;
 
   let every_multiple_of_period_blocking =
     generic_every ~create_effect:(fun ~span ~base_time ~get_current_time ~callback ->
-      let%bind.Effect () = callback in
-      let%map.Effect now = get_current_time in
+      let%map.Effect () = callback in
+      let now = get_current_time () in
       ensure_clock_advances
         now
         (Time_ns.next_multiple
@@ -1220,7 +1217,7 @@ module Clock = struct
          | `Every_multiple_of_period_non_blocking
          | `Every_multiple_of_period_blocking
          ]
-    -> ?trigger_on_activate:bool -> Time_ns.Span.t -> unit Effect.t Value.t
+    -> ?trigger_on_activate:bool -> Time_ns.Span.t Value.t -> unit Effect.t Value.t
     -> unit Computation.t
     =
     fun ~(here : [%call_pos]) ~when_to_start_next_effect ->
@@ -1246,7 +1243,8 @@ module Memo = struct
 
   type ('query, 'response) t =
     | T :
-        { responses : ('query, 'response, 'cmp) Map.t
+        { queries : ('query, int, 'cmp) Map.t
+        ; responses : ('query, 'response, 'cmp) Map.t
         ; inject : 'query Action.t -> unit Effect.t
         }
         -> ('query, 'response) t
@@ -1254,9 +1252,15 @@ module Memo = struct
   let create
     (type query cmp response)
     ~(here : [%call_pos])
-    (module Query : Comparator with type t = query and type comparator_witness = cmp)
+    (module Query : Comparator.S with type t = query and type comparator_witness = cmp)
     ~(local_ f : query Value.t -> response Computation.t)
     =
+    let module Query = struct
+      include Query
+
+      let sexp_of_t = comparator.sexp_of_t
+    end
+    in
     let open Let_syntax_with_map_location (struct
         let here = here
       end) in
@@ -1286,7 +1290,7 @@ module Memo = struct
       | Change (before, after) -> add (remove model before) after
     in
     let%sub queries, inject =
-      state_machine0
+      state_machine
         ~here
         ~sexp_of_model:[%sexp_of: Model.t]
         ~sexp_of_action:[%sexp_of: Action.t]
@@ -1298,8 +1302,8 @@ module Memo = struct
     let%sub responses =
       assoc ~here (module Query) queries ~f:(fun query _count -> f query)
     in
-    let%arr responses and inject in
-    T { responses; inject }
+    let%arr queries and responses and inject in
+    T { queries; responses; inject }
   ;;
 
   let lookup

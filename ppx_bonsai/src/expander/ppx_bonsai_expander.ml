@@ -6,7 +6,7 @@ open Ppx_pattern_bind
 
 module Location_behavior = struct
   type t =
-    | Location_of_callsite (**  Uses [~here:[%here]] *)
+    | Location_of_callsite (** Uses [~here:[%here]] *)
     | Location_in_scope (** Uses [~here:here] *)
 
   let to_ppx_let_behavior = function
