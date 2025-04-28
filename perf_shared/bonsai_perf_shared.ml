@@ -27,7 +27,7 @@ module Interaction = struct
     | Change_input : 'a Bonsai.Expert.Var.t * 'a -> _ t
     | Inject : 'action -> 'action t
     | Advance_clock_by : Time_ns.Span.t -> _ t
-    | Stabilize : _ t
+    | Recompute : _ t
     | Reset_model : _ t
     | Many : 'action t list -> 'action t
 
@@ -39,11 +39,11 @@ module Interaction = struct
   let change_input input value = update_input input ~f:(fun _ -> value)
   let inject action = Inject action
   let advance_clock_by span = Advance_clock_by span
-  let stabilize = Stabilize
+  let recompute = Recompute
   let reset_model = Reset_model
   let profile ~name = Profile name
   let many ts = Many ts
-  let many_with_stabilizations ts = Many (List.intersperse ts ~sep:Stabilize)
+  let many_with_recomputes ts = Many (List.intersperse ts ~sep:Recompute)
 
   module Finalized = struct
     type nonrec 'a t = 'a t
@@ -51,7 +51,11 @@ module Interaction = struct
     let handle ~driver ~time_source ~inject_action ~handle_profile interaction =
       match (interaction : _ t) with
       | Profile name -> handle_profile name
-      | Stabilize -> Bonsai_driver.flush driver
+      | Recompute ->
+        (* This is the same as the test handle's recompute, except that we don't fetch
+           the computed value. *)
+        Bonsai_driver.flush driver;
+        Bonsai_driver.trigger_lifecycles driver
       | Reset_model -> Bonsai_driver.Expert.reset_model_to_default driver
       | Change_input (var, value) -> Bonsai.Expert.Var.set var value
       | Inject action -> Bonsai_driver.schedule_event driver (inject_action action)
@@ -68,12 +72,12 @@ module Interaction = struct
   ;;
 
   let dedup_stabilizations interactions =
-    let both_stabilize t t' =
+    let both_Recompute t t' =
       match t, t' with
-      | Stabilize, Stabilize -> true
+      | Recompute, Recompute -> true
       | _ -> false
     in
-    List.remove_consecutive_duplicates interactions ~equal:both_stabilize
+    List.remove_consecutive_duplicates interactions ~equal:both_Recompute
   ;;
 
   let finalize ~filter_profiles interactions =
@@ -94,13 +98,5 @@ module Scenario = struct
     }
 end
 
-module type Config = sig
-  type t [@@deriving compare, sexp_of]
-  type input
-  type output
-  type action
-
-  val name : t -> string
-  val computation : t -> input Bonsai.t -> Bonsai.graph -> output Bonsai.t
-  val get_inject : output -> action -> unit Bonsai.Effect.t
-end
+type ('input, 'output) compare_computation =
+  'input Bonsai.t -> Bonsai.graph -> 'output Bonsai.t

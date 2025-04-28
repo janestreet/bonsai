@@ -86,7 +86,7 @@ module Computation_status : sig
   [@@deriving sexp_of]
 end
 
-val state_machine1
+val state_machine_with_input
   :  ?here:Stdlib.Lexing.position
   -> ?sexp_of_action:('action -> Sexp.t)
   -> ?reset:(('action, unit) Apply_action_context.t -> 'model -> 'model)
@@ -102,7 +102,7 @@ val state_machine1
   -> 'input Value.t
   -> ('model * ('action -> unit Effect.t)) Computation.t
 
-val state_machine0
+val state_machine
   :  ?here:Stdlib.Lexing.position
   -> ?reset:(('action, unit) Apply_action_context.t -> 'model -> 'model)
   -> ?sexp_of_model:('model -> Sexp.t)
@@ -115,15 +115,15 @@ val state_machine0
 
 val assoc
   :  ?here:Stdlib.Lexing.position
-  -> ('k, 'cmp) comparator
+  -> ('k, 'cmp) Comparator.Module.t
   -> ('k, 'v, 'cmp) Map.t Value.t
   -> f:('k Value.t -> 'v Value.t -> 'result Computation.t)
   -> ('k, 'result, 'cmp) Map.t Computation.t
 
 val assoc_on
   :  ?here:Stdlib.Lexing.position
-  -> ('io_k, 'io_cmp) comparator
-  -> ('model_k, 'model_cmp) comparator
+  -> ('io_k, 'io_cmp) Comparator.Module.t
+  -> ('model_k, 'model_cmp) Comparator.Module.t
   -> ('io_k, 'v, 'io_cmp) Map.t Value.t
   -> get_model_key:('io_k -> 'v -> 'model_k)
   -> f:('io_k Value.t -> 'v Value.t -> 'a Computation.t)
@@ -147,7 +147,11 @@ val wrap
   -> ?equal:('model -> 'model -> bool)
   -> default_model:'model
   -> apply_action:
-       (('action, unit) Apply_action_context.t -> 'a -> 'model -> 'action -> 'model)
+       (('action, unit) Apply_action_context.t
+        -> 'a Computation_status.t
+        -> 'model
+        -> 'action
+        -> 'model)
   -> f:('model Value.t -> ('action -> unit Effect.t) Value.t -> 'a Computation.t)
   -> unit
   -> 'a Computation.t
@@ -155,6 +159,12 @@ val wrap
 val with_model_resetter
   :  ?here:Stdlib.Lexing.position
   -> (reset:unit Effect.t Value.t -> 'a Computation.t)
+  -> 'a Computation.t
+
+val with_inverted_lifecycle_ordering
+  :  ?here:Stdlib.Lexing.position
+  -> compute_dep:'input Computation.t
+  -> ('input Value.t -> 'a Computation.t)
   -> 'a Computation.t
 
 val path : ?here:Stdlib.Lexing.position -> unit -> Path.t Computation.t

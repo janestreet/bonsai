@@ -1,5 +1,5 @@
 (** [Meta.Model] and [Meta.Action] contain the necessary functions associated with the
-    hidden model and action types of Bonsai components.  These are stored in
+    hidden model and action types of Bonsai components. These are stored in
     [Computation.info]. *)
 
 open! Core
@@ -46,15 +46,15 @@ module Model : sig
   val both : 'a t -> 'b t -> ('a * 'b) t
 
   val map
-    :  ('k, 'cmp) comparator
+    :  ('k, 'cmp) Comparator.Module.t
     -> 'k Type_equal.Id.t
     -> 'cmp Type_equal.Id.t
     -> 'a t
     -> ('k, 'a, 'cmp) Map.t t
 
   val map_on
-    :  ('k, 'cmp) comparator
-    -> ('k_io, 'cmp_io) comparator
+    :  ('k, 'cmp) Comparator.Module.t
+    -> ('k_io, 'cmp_io) Comparator.Module.t
     -> 'k Type_equal.Id.t
     -> 'k_io Type_equal.Id.t
     -> 'cmp Type_equal.Id.t

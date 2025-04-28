@@ -21,12 +21,27 @@ let rec gather : type result. result Computation.gather_fun =
       Eval_leaf0.f ~model ~static_action ~time_source ~apply_action ~reset ~here
     | Leaf_incr { input; compute; here } ->
       Eval_leaf_incr.f ~input ~compute ~time_source ~here
-    | Sub { into = Sub { into = Sub _; _ }; _ } as t ->
+    | Sub
+        { into =
+            Sub
+              { into = Sub { invert_lifecycles = false; _ }
+              ; invert_lifecycles = false
+              ; _
+              }
+        ; invert_lifecycles = false
+        ; _
+        } as t ->
+      (* [invert_ordering] nodes reuse [Sub] mechanics, (in the sense of passing the
+          output of one computation to another), but should be thought of as their own
+          "kind" of node, and aren't interoperable with the chain of subs generated via
+          graph application. We only chain for 3 subsequent non-inverted [Sub]s, since
+          a chain of at least 3 nodes is required for balancing to be useful. *)
       Eval_sub.chain t ~gather:{ f = gather } ~recursive_scopes ~time_source
-    | Sub { from; via; into; here } ->
+    | Sub { from; via; into; invert_lifecycles; here } ->
       let%bind.Trampoline (T info_from) = gather ~recursive_scopes ~time_source from in
       let%bind.Trampoline (T info_into) = gather ~recursive_scopes ~time_source into in
-      Trampoline.return (Eval_sub.gather ~here ~info_from ~info_into ~via)
+      Trampoline.return
+        (Eval_sub.gather ~here ~info_from ~info_into ~invert_lifecycles ~via)
     | Store { id; value; inner; here = _ } ->
       Eval_store.f ~gather ~recursive_scopes ~time_source ~id ~value ~inner
     | Fetch { id; default; for_some; here } -> Eval_fetch.f ~id ~default ~for_some ~here

@@ -183,7 +183,7 @@ let rec follow_skeleton_computation state (computation : Skeleton.Computation.t)
     let me = register_computation "model_cutoff" in
     arrow state ~from:(follow_skeleton_computation state t) ~to_:me;
     me
-  | Sub { from; via; into } ->
+  | Sub { from; via; into; invert_lifecycles = _ } ->
     arrow
       state
       ~from:(follow_skeleton_computation state from)

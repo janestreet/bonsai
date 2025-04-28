@@ -254,6 +254,26 @@ let incr_annotation_listeners =
                going through the memoization or allocation of a Packed.t even
                when disabled. *)
         if !enabled then annotate_for_graphviz kind incr)
+    ; (fun ~here:_ kind _ ->
+        let metrics_counter_kind =
+          match kind with
+          | Input -> Bonsai_metrics.Counters.Kind.Incr_node_input
+          | Value -> Incr_node_value
+          | Result -> Incr_node_result
+          | Lifecycle -> Incr_node_lifecycle
+          | Empty_lifecycle -> Incr_node_empty_lifecycle
+          | Model -> Incr_node_model
+          | Model_and_input -> Incr_node_model_and_input
+          | Switch_model -> Incr_node_switch_model
+          | Assoc_key -> Incr_node_assoc_key
+          | Assoc_input -> Incr_node_assoc_input
+          | Assoc_results -> Incr_node_assoc_results
+          | Assoc_lifecycles -> Incr_node_assoc_lifecycles
+          | Assoc_inputs -> Incr_node_assoc_input
+          | Path -> Incr_node_path
+          | Lifecycle_apply_action_pair -> Incr_node_lifecycle_apply_action_pair
+        in
+        Bonsai_metrics.Counters.observe metrics_counter_kind)
     ]
 ;;
 

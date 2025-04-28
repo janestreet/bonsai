@@ -1,13 +1,10 @@
 open! Core
 open! Import
-module Proc = Proc_layer2
+module Proc = Bonsai_proc
 
 module type S = Module_types.Component_s
 
 type ('i, 'r) t = 'i Proc.Value.t -> 'r Proc.Computation.t
-
-module type Model = Model
-module type Action = Action
 
 let const x _ = Proc.const x
 let input = Proc.read
@@ -19,7 +16,7 @@ let map a ~f i =
 ;;
 
 let map_input a ~f i = a (Proc.Value.map i ~f)
-let of_module = Proc.of_module1
+let of_module = Proc.of_module_with_input
 
 let state_machine
   ~sexp_of_action
@@ -30,7 +27,7 @@ let state_machine
   ~apply_action
   input
   =
-  Proc.state_machine1
+  Proc.state_machine_with_input
     ~sexp_of_action
     ?sexp_of_model
     ~equal
@@ -146,7 +143,7 @@ include struct
 end
 
 module With_incr = struct
-  let of_incr i _ = Proc.read (Cont.Conv.conceal_value (Value.of_incr i))
+  let of_incr : 'a Incr.t -> (_, 'a) t = fun i _ -> Proc.read (Proc.Incr.to_value i)
 
   open Proc.Let_syntax
 
@@ -162,7 +159,7 @@ module With_incr = struct
     =
     let (module M) = component in
     let%sub state =
-      Proc.state_machine1
+      Proc.state_machine_with_input
         ~here
         ~sexp_of_action:M.Action.sexp_of_t
         ?sexp_of_model
@@ -188,7 +185,7 @@ module With_incr = struct
             model)
         input
     in
-    Proc.Incr.compute ~here (Cont.both ~here input state) ~f:(fun input_and_state ->
+    Proc.Incr.compute ~here (Proc.Value.both ~here input state) ~f:(fun input_and_state ->
       let%pattern_bind.Ui_incr input, (model, inject) = input_and_state in
       M.compute input model ~inject)
   ;;

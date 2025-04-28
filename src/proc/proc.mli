@@ -1,5 +1,5 @@
 open! Core
-open! Import
+module Cont := Bonsai
 
 include
   Proc_intf.S

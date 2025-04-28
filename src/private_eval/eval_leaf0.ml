@@ -18,6 +18,7 @@ let f ~model ~static_action ~time_source ~apply_action ~reset ~here =
   in
   let apply_action ~inject ~schedule_event _input model = function
     | Action.Leaf_dynamic _ ->
+      Bonsai_metrics.Counters.observe Bonsai_leaf0_apply_action_got_dynamic_action;
       eprint_s
         [%message "BUG: state_machine0's apply_action was called with a dynamic action"];
       model

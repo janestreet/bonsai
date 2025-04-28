@@ -3,13 +3,11 @@ open! Import
 
 module Source_code_positions : sig
   (** [watchers] is a list that contains the chain of Computation_watcher nodes that
-      contain this current node.
-      [dependency_definitions] a set of [Source_code_position.t]s that caused the 
-      Computation_watcher to update. All of these [dependency_definitions] are 
-      semantically the same but some nodes happen to be generated more than once 
-      [depended_on_at] is the location of the Map node/let%arr that was called
-      on the value
-  *)
+      contain this current node. [dependency_definitions] a set of
+      [Source_code_position.t]s that caused the Computation_watcher to update. All of
+      these [dependency_definitions] are semantically the same but some nodes happen to be
+      generated more than once [depended_on_at] is the location of the Map node/let%arr
+      that was called on the value *)
   type pending =
     { watchers : string option Source_code_position.Map.t
     ; depended_on_at : Source_code_position.Set.t
@@ -38,8 +36,7 @@ module Source_code_positions : sig
 end
 
 (** [dependecy_definition_position] is the first thing set when looking for free
-    variables, so we know that we can use [finalized] in this map
-*)
+    variables, so we know that we can use [finalized] in this map *)
 module Type_id_location_map : sig
   type t
 

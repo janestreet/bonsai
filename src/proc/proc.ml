@@ -1,36 +1,19 @@
 open! Core
 open! Import
-
-(* > What is [proc_layer2] and why is it needed?
-   The tower of bonsai implementations are as follows
-   1. proc_min    : the bare minimum bonsai combinators
-   2. proc        : includes bonsai combinators that can be built on top of proc_min
-   3. cont        : implements the local-graph API on top of proc
-   4. proc_layer2 : re-implements the proc API on top of cont
-
-   The reason that the 4th layer is necessary is so that its `Computation.t` can be defined
-   to be exactly `local_ Cont.graph -> 'a Cont.t` and its `Value.t` can be defined to be
-   exactly `'a Cont.t`. *)
-
-(* These aren't pulled from `Cont` because they are no longer recommended,
-   and therefore not included in the new API. *)
-module type Model = Module_types.Model
-module type Action = Module_types.Action
-
-module Apply_action_context = Proc.Apply_action_context
+module Bonsai_cont = Bonsai
+module Apply_action_context = Bonsai_cont.Apply_action_context
 
 module Value = struct
-  type 'a t = 'a Cont.t
+  type 'a t = 'a Bonsai_cont.t
 
   let return ?(here = Stdlib.Lexing.dummy_pos) a =
-    Value.return ~here a |> Cont.Conv.conceal_value
+    Value.return ~here a |> Bonsai_cont.Private.conceal_value
   ;;
 
   (* we depend on Proc's [map] function so that we can keep passing
      the [here] parameter for the let%arr and let%sub ppxes. *)
   let map ?(here = Stdlib.Lexing.dummy_pos) v ~f =
-    Proc.Let_syntax.Let_syntax.map ~here (Cont.Conv.reveal_value v) ~f
-    |> Cont.Conv.conceal_value
+    Bonsai_cont.Private.For_proc.value_map ~here v ~f
   ;;
 
   let transpose_opt opt =
@@ -38,18 +21,18 @@ module Value = struct
   ;;
 
   let cutoff ?(here = Stdlib.Lexing.dummy_pos) a ~equal =
-    Cont.Conv.reveal_value a
+    Bonsai_cont.Private.reveal_value a
     |> Value.cutoff ~here ~added_by_let_syntax:false ~equal
-    |> Cont.Conv.conceal_value
+    |> Bonsai_cont.Private.conceal_value
   ;;
 
   module Mapn = struct
-    let map2 = Cont.map2
-    let map3 = Cont.map3
-    let map4 = Cont.map4
-    let map5 = Cont.map5
-    let map6 = Cont.map6
-    let map7 = Cont.map7
+    let map2 = Bonsai_cont.map2
+    let map3 = Bonsai_cont.map3
+    let map4 = Bonsai_cont.map4
+    let map5 = Bonsai_cont.map5
+    let map6 = Bonsai_cont.map6
+    let map7 = Bonsai_cont.map7
   end
 
   include Mapn
@@ -64,45 +47,49 @@ module Value = struct
     end)
 
   let both ?(here = Stdlib.Lexing.dummy_pos) a b =
-    Value.both ~here (Cont.Conv.reveal_value a) (Cont.Conv.reveal_value b)
-    |> Cont.Conv.conceal_value
+    Value.both
+      ~here
+      (Bonsai_cont.Private.reveal_value a)
+      (Bonsai_cont.Private.reveal_value b)
+    |> Bonsai_cont.Private.conceal_value
   ;;
 
   module Let_syntax = struct
     let ( >>| ) ?(here = Stdlib.Lexing.dummy_pos) a f =
-      Value.map ~here (Cont.Conv.reveal_value a) ~f |> Cont.Conv.conceal_value
+      Value.map ~here (Bonsai_cont.Private.reveal_value a) ~f
+      |> Bonsai_cont.Private.conceal_value
     ;;
 
     let ( <*> ) ?(here = Stdlib.Lexing.dummy_pos) f a =
       Value.map2
         ~here
-        (Cont.Conv.reveal_value a)
-        (Cont.Conv.reveal_value f)
+        (Bonsai_cont.Private.reveal_value a)
+        (Bonsai_cont.Private.reveal_value f)
         ~f:(fun a f -> f a)
-      |> Cont.Conv.conceal_value
+      |> Bonsai_cont.Private.conceal_value
     ;;
 
     let ( <$> ) ?(here = Stdlib.Lexing.dummy_pos) f a =
-      Cont.Conv.reveal_value a
+      Bonsai_cont.Private.reveal_value a
       |> Value.map ~here ~f:(fun a -> f a)
-      |> Cont.Conv.conceal_value
+      |> Bonsai_cont.Private.conceal_value
     ;;
 
     module Let_syntax = struct
       let map ?(here = Stdlib.Lexing.dummy_pos) v ~f =
-        Proc.Let_syntax.Let_syntax.map ~here (Cont.Conv.reveal_value v) ~f
-        |> Cont.Conv.conceal_value
+        Bonsai_cont.Private.For_proc.value_map ~here v ~f
       ;;
 
       let cutoff ?(here = Stdlib.Lexing.dummy_pos) a ~equal =
-        Cont.Conv.reveal_value a
-        |> Proc.Let_syntax.Let_syntax.cutoff ~here ~equal
-        |> Cont.Conv.conceal_value
+        Bonsai_cont.Let_syntax.Let_syntax.cutoff ~here a ~equal
       ;;
 
       let both ?(here = Stdlib.Lexing.dummy_pos) a b =
-        Value.both ~here (Cont.Conv.reveal_value a) (Cont.Conv.reveal_value b)
-        |> Cont.Conv.conceal_value
+        Value.both
+          ~here
+          (Bonsai_cont.Private.reveal_value a)
+          (Bonsai_cont.Private.reveal_value b)
+        |> Bonsai_cont.Private.conceal_value
       ;;
 
       include Mapn
@@ -112,7 +99,10 @@ end
 
 module This_let_syntax = struct
   let comp_return ?(here = Stdlib.Lexing.dummy_pos) v graph =
-    Cont.Conv.perform ~here graph (Proc.read ~here (Cont.Conv.reveal_value v))
+    Bonsai_cont.Private.perform
+      ~here
+      graph
+      (Bonsai_cont.Private.read ~here (Bonsai_cont.Private.reveal_value v))
   ;;
 
   include Value.Let_syntax
@@ -123,8 +113,8 @@ module This_let_syntax = struct
     include Value.Let_syntax.Let_syntax
 
     let subcomputation ?(here = Stdlib.Lexing.dummy_pos) a graph =
-      Cont.Conv.handle ~here graph ~f:(fun graph -> a graph)
-      |> Cont.Conv.perform ~here graph
+      Bonsai_cont.Private.handle ~here graph ~f:(fun graph -> a graph)
+      |> Bonsai_cont.Private.perform ~here graph
     ;;
 
     let sub ?(here = Stdlib.Lexing.dummy_pos) a ~f graph =
@@ -134,41 +124,41 @@ module This_let_syntax = struct
     let return = comp_return
 
     let arr ?(here = Stdlib.Lexing.dummy_pos) v ~f graph =
-      Cont.For_proc2.arr1 ~here graph v ~f
+      Bonsai_cont.arr1 ~here graph v ~f
     ;;
 
     let arr2 ?(here = Stdlib.Lexing.dummy_pos) v1 v2 ~f graph =
-      Cont.For_proc2.arr2 ~here graph v1 v2 ~f
+      Bonsai_cont.Private.For_proc.arr2 ~here graph v1 v2 ~f
     ;;
 
     let arr3 ?(here = Stdlib.Lexing.dummy_pos) v1 v2 v3 ~f graph =
-      Cont.For_proc2.arr3 ~here graph v1 v2 v3 ~f
+      Bonsai_cont.Private.For_proc.arr3 ~here graph v1 v2 v3 ~f
     ;;
 
     let arr4 ?(here = Stdlib.Lexing.dummy_pos) v1 v2 v3 v4 ~f graph =
-      Cont.For_proc2.arr4 ~here graph v1 v2 v3 v4 ~f
+      Bonsai_cont.Private.For_proc.arr4 ~here graph v1 v2 v3 v4 ~f
     ;;
 
     let arr5 ?(here = Stdlib.Lexing.dummy_pos) v1 v2 v3 v4 v5 ~f graph =
-      Cont.For_proc2.arr5 ~here graph v1 v2 v3 v4 v5 ~f
+      Bonsai_cont.Private.For_proc.arr5 ~here graph v1 v2 v3 v4 v5 ~f
     ;;
 
     let arr6 ?(here = Stdlib.Lexing.dummy_pos) v1 v2 v3 v4 v5 v6 ~f graph =
-      Cont.For_proc2.arr6 ~here graph v1 v2 v3 v4 v5 v6 ~f
+      Bonsai_cont.Private.For_proc.arr6 ~here graph v1 v2 v3 v4 v5 v6 ~f
     ;;
 
     let arr7 ?(here = Stdlib.Lexing.dummy_pos) v1 v2 v3 v4 v5 v6 v7 ~f graph =
-      Cont.For_proc2.arr7 ~here graph v1 v2 v3 v4 v5 v6 v7 ~f
+      Bonsai_cont.Private.For_proc.arr7 ~here graph v1 v2 v3 v4 v5 v6 v7 ~f
     ;;
 
     let switch ~here ~match_ ~branches ~with_ graph =
-      Cont.For_proc2.switch ~here ~match_ ~branches ~with_ graph
+      Bonsai_cont.Private.For_proc.switch ~here ~match_ ~branches ~with_ graph
     ;;
   end
 end
 
 module Computation = struct
-  type 'a t = Cont.graph -> 'a Cont.t
+  type 'a t = Bonsai_cont.graph -> 'a Bonsai_cont.t
 
   include Applicative.Make_using_map2 (struct
       type nonrec 'a t = 'a t
@@ -180,11 +170,11 @@ module Computation = struct
       let map2 ?(here = Stdlib.Lexing.dummy_pos) a b ~f graph =
         let a = a graph
         and b = b graph in
-        Cont.arr2 ~here graph a b ~f
+        Bonsai_cont.arr2 ~here graph a b ~f
       ;;
 
       let map ?(here = Stdlib.Lexing.dummy_pos) a ~f graph =
-        Cont.arr1 ~here graph (a graph) ~f
+        Bonsai_cont.arr1 ~here graph (a graph) ~f
       ;;
 
       let map = `Custom map
@@ -330,10 +320,8 @@ module Computation = struct
   end
 end
 
-module Var = Cont.Expert.Var
+module Var = Bonsai_cont.Expert.Var
 module Effect = Effect
-module Private_value = Value
-module Private_computation = Computation
 
 module For_open = struct
   module Computation = Computation
@@ -342,13 +330,13 @@ module For_open = struct
 end
 
 include (
-  Cont :
-    module type of Cont
-    with module Let_syntax := Cont.Let_syntax
+  Bonsai_cont.Cont :
+    module type of Bonsai_cont.Cont
+    with module Let_syntax := Bonsai_cont.Cont.Let_syntax
     with module Apply_action_context := Apply_action_context
     with module Effect := Effect)
 
-include Cont.For_proc2
+include Bonsai_cont.Private.For_proc
 
 let path_id ?(here = Stdlib.Lexing.dummy_pos) () graph = path_id ~here graph
 let path ?(here = Stdlib.Lexing.dummy_pos) () graph = path ~here graph
@@ -361,7 +349,7 @@ let toggle' ?(here = Stdlib.Lexing.dummy_pos) ~default_model () graph =
   toggle' ~here ~default_model graph
 ;;
 
-open Cont.Let_syntax
+open Bonsai_cont.Let_syntax
 
 open struct
   module Map = Core.Map
@@ -417,12 +405,12 @@ end
 module Edge = struct
   open Edge
 
-  let on_change = For_proc2.on_change
-  let on_change' = For_proc2.on_change'
-  let lifecycle = For_proc2.lifecycle
-  let lifecycle' = For_proc2.lifecycle'
-  let after_display = For_proc2.after_display
-  let after_display' = For_proc2.after_display'
+  let on_change = Bonsai_cont.Private.For_proc.on_change
+  let on_change' = Bonsai_cont.Private.For_proc.on_change'
+  let lifecycle = Bonsai_cont.Private.For_proc.lifecycle
+  let lifecycle' = Bonsai_cont.Private.For_proc.lifecycle'
+  let after_display = Bonsai_cont.Private.For_proc.after_display
+  let after_display' = Bonsai_cont.Private.For_proc.after_display'
 
   let wait_after_display ?(here = Stdlib.Lexing.dummy_pos) () graph =
     wait_after_display ~here graph
@@ -431,7 +419,7 @@ module Edge = struct
   module Poll = struct
     include Poll
 
-    let manual_refresh = For_proc2.manual_refresh
+    let manual_refresh = Bonsai_cont.Private.For_proc.manual_refresh
   end
 end
 
@@ -448,7 +436,7 @@ module Expert = struct
   let thunk ?(here = Stdlib.Lexing.dummy_pos) f graph = thunk ~here ~f graph
 end
 
-let of_module1
+let of_module_with_input
   (type i m a r)
   ?(here = Stdlib.Lexing.dummy_pos)
   ?sexp_of_model
@@ -460,7 +448,7 @@ let of_module1
   =
   let (module M) = component in
   let model, inject =
-    Cont.state_machine1
+    Bonsai_cont.state_machine_with_input
       ~here
       ~sexp_of_action:M.Action.sexp_of_t
       ?sexp_of_model
@@ -472,9 +460,9 @@ let of_module1
         | Inactive ->
           eprint_s
             [%message
-              "An action sent to an [of_module1] has been dropped because its input was \
-               not present. This happens when the [of_module1] is inactive when it \
-               receives a message."
+              "An action sent to an [of_module_with_input] has been dropped because its \
+               input was not present. This happens when the [of_module_with_input] is \
+               inactive when it receives a message."
                 (action : M.Action.t)];
           model)
       input
@@ -484,7 +472,7 @@ let of_module1
   M.compute ~inject input model
 ;;
 
-let of_module0
+let of_module
   (type m a r)
   ?sexp_of_model
   ?equal
@@ -494,7 +482,7 @@ let of_module0
   =
   let (module M) = component in
   let model, inject =
-    Cont.state_machine0
+    Bonsai_cont.state_machine
       ~sexp_of_action:M.Action.sexp_of_t
       ?sexp_of_model
       ?equal
@@ -515,7 +503,7 @@ let of_module2
   i1
   i2
   =
-  of_module1 ~here ?sexp_of_model c ?equal ~default_model (both ~here i1 i2)
+  of_module_with_input ~here ?sexp_of_model c ?equal ~default_model (both ~here i1 i2)
 ;;
 
 let enum
@@ -538,10 +526,10 @@ let enum
   let match_ = ( >>| ) match_ ~here (Map.find_exn reverse_index) in
   let branches = Array.length forward_index in
   let with_ i = with_ (Array.get forward_index i) in
-  For_proc2.switch ~here ~match_ ~branches ~with_ graph
+  Bonsai_cont.Private.For_proc.switch ~here ~match_ ~branches ~with_ graph
 ;;
 
 let sub = This_let_syntax.Let_syntax.sub
 
-module Map = Cont.Map
+module Map = Bonsai_cont.Cont.Map
 module Let_syntax = This_let_syntax

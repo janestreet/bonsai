@@ -5,6 +5,7 @@ module Elem = struct
   let keyed ~compare id = stage (fun key -> Keyed.create ~key ~id ~compare)
 
   type t =
+    | Subst_into_invert_lifecycles
     | Subst_from
     | Subst_into
     | Assoc of Keyed.t
@@ -36,6 +37,7 @@ module Elem = struct
       Buffer.contents buf
     in
     function
+    | Subst_into_invert_lifecycles -> "w"
     | Subst_from -> "x"
     | Subst_into -> "y"
     | Assoc k -> keyed_to_string k

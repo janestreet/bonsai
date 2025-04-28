@@ -5,9 +5,6 @@ module Time_source = Time_source
 module Apply_action_context = Apply_action_context
 
 module type Enum = Module_types.Enum
-module type Comparator = Module_types.Comparator
-
-type ('k, 'cmp) comparator = ('k, 'cmp) Module_types.comparator
 
 module For_bonsai_internal = struct
   let perform_on_exception = ref ignore
@@ -45,7 +42,10 @@ module Cont_primitives : sig
 
   val with_global_graph : f:(graph -> 'a) -> no_graph:(unit -> 'a) -> 'a
 end = struct
-  type graph = { mutable f : 'a. 'a Computation.t -> 'a Computation.t }
+  (* NOTE: We use [Trampoline.t] to avoid stack overflows when this function is
+     applied.*)
+  type graph =
+    { mutable f : 'a. 'a Computation.t Trampoline.t -> 'a Computation.t Trampoline.t }
 
   let perform
     : type a. here:Source_code_position.t -> graph -> a Computation.t -> a Value.t
@@ -62,17 +62,34 @@ end = struct
       (* Mint a fresh type-id to hold the result of performing this graph modification  *)
       let via : a Type_equal.Id.t = Type_equal.Id.create ~name:"" [%sexp_of: opaque] in
       (* Keep hold of the previous graph-modification function *)
-      let old_f : type b. b Computation.t -> b Computation.t = graph.f in
-      let new_f : type x. x Computation.t -> x Computation.t = function
-        | Return { value = { value = Named _; id; _ }; here = _ }
-          when Type_equal.Id.same via id ->
-          (* introduce the optimization {[ let%sub a = foo bar in return a ]} => {[ foo bar ]} *)
-          let T = Type_equal.Id.same_witness_exn via id in
-          old_f computation_to_perform
-        | eventual_result ->
-          (* old_f takes the eventual innermost result, and wraps it in 0+ layers of subs.
+      let old_f : type b. b Computation.t Trampoline.t -> b Computation.t Trampoline.t =
+        graph.f
+      in
+      let new_f computation =
+        let new_f : type x. x Computation.t -> x Computation.t Trampoline.t = function
+          | Return { value = { value = Named _; id; _ }; here = _ }
+            when Type_equal.Id.same via id ->
+            (* introduce the optimization {[ let%sub a = foo bar in return a ]} => {[ foo bar ]} *)
+            let T = Type_equal.Id.same_witness_exn via id in
+            old_f (Trampoline.return computation_to_perform)
+          | eventual_result ->
+            (* old_f takes the eventual innermost result, and wraps it in 0+ layers of subs.
                We replace it with a new function that adds another layer to the inside. *)
-          old_f (Sub { from = computation_to_perform; via; into = eventual_result; here })
+            let computation =
+              Computation.Sub
+                { from = computation_to_perform
+                ; via
+                ; into = eventual_result
+                ; (* We only invert lifecycles for explicit calls to
+                     [Bonsai.with_inverted_lifecycle_ordering]. *)
+                  invert_lifecycles = false
+                ; here
+                }
+            in
+            old_f (Trampoline.return computation)
+        in
+        let%bind.Trampoline computation in
+        new_f computation
       in
       (* write the new hole into the graph, and return a new value referencing the
            type-id that will be populated when [new_f] is invoked. *)
@@ -89,9 +106,9 @@ end = struct
     graph.f <- Fn.id;
     try
       let r = f () in
-      let r = graph.f (Proc.read ~here r) in
+      let r = graph.f (Trampoline.return (Proc.read ~here r)) in
       graph.f <- backup_f;
-      r
+      Trampoline.run r
     with
     | exn ->
       !For_bonsai_internal.perform_on_exception exn;
@@ -135,7 +152,8 @@ end = struct
         g.f <- backup_f;
         (* You grit your teeth, plant your feet against the floor, and dredge a
            Computation.t from the void. *)
-        computation_context (Proc_min.read ~here v) [@nontail])
+        Trampoline.run
+          (computation_context (Trampoline.return (Proc_min.read ~here v))) [@nontail])
       ~finally:(fun () -> decr num_nested_top_level_handles) [@nontail]
   ;;
 
@@ -473,9 +491,11 @@ end
 
 let toggle' ?(here = Stdlib.Lexing.dummy_pos) ~default_model graph =
   let all = perform ~here graph (Proc.toggle' ~here ~default_model ()) in
-  let state = arr1 graph all ~f:(fun { Proc.Toggle.state; _ } -> state) in
-  let set_state = arr1 graph all ~f:(fun { Proc.Toggle.set_state; _ } -> set_state) in
-  let toggle = arr1 graph all ~f:(fun { Proc.Toggle.toggle; _ } -> toggle) in
+  let state = arr1 ~here graph all ~f:(fun { Proc.Toggle.state; _ } -> state) in
+  let set_state =
+    arr1 ~here graph all ~f:(fun { Proc.Toggle.set_state; _ } -> set_state)
+  in
+  let toggle = arr1 ~here graph all ~f:(fun { Proc.Toggle.toggle; _ } -> toggle) in
   { Toggle.state; set_state; toggle }
 ;;
 
@@ -485,7 +505,7 @@ let path ?(here = Stdlib.Lexing.dummy_pos) graph =
   perform ~here graph (Proc.path ~here ())
 ;;
 
-let state_machine0__for_proc2
+let state_machine__for_proc2
   ?(here = Stdlib.Lexing.dummy_pos)
   ?reset
   ?sexp_of_model
@@ -496,7 +516,7 @@ let state_machine0__for_proc2
   ()
   graph
   =
-  Proc.state_machine0
+  Proc.state_machine
     ~here
     ?reset
     ?sexp_of_model
@@ -508,7 +528,7 @@ let state_machine0__for_proc2
   |> perform ~here graph
 ;;
 
-let state_machine0
+let state_machine
   ?(here = Stdlib.Lexing.dummy_pos)
   ?reset
   ?sexp_of_model
@@ -518,7 +538,7 @@ let state_machine0
   ~apply_action
   graph
   =
-  state_machine0__for_proc2
+  state_machine__for_proc2
     ~here
     ?reset
     ?sexp_of_model
@@ -533,7 +553,7 @@ let state_machine0
 
 module Computation_status = Proc.Computation_status
 
-let state_machine1__for_proc2
+let state_machine_with_input__for_proc2
   ?(here = Stdlib.Lexing.dummy_pos)
   ?sexp_of_action
   ?reset
@@ -544,7 +564,7 @@ let state_machine1__for_proc2
   input
   graph
   =
-  Proc.state_machine1
+  Proc.state_machine_with_input
     ~here
     ?reset
     ?sexp_of_model
@@ -556,7 +576,7 @@ let state_machine1__for_proc2
   |> perform ~here graph
 ;;
 
-let state_machine1
+let state_machine_with_input
   ?(here = Stdlib.Lexing.dummy_pos)
   ?reset
   ?sexp_of_model
@@ -567,7 +587,7 @@ let state_machine1
   input
   graph
   =
-  state_machine1__for_proc2
+  state_machine_with_input__for_proc2
     ~here
     ?reset
     ?sexp_of_model
@@ -580,7 +600,7 @@ let state_machine1
   |> split ~here graph
 ;;
 
-let actor0__for_proc2
+let actor__for_proc2
   ?(here = Stdlib.Lexing.dummy_pos)
   ?reset
   ?sexp_of_model
@@ -591,11 +611,11 @@ let actor0__for_proc2
   ()
   graph
   =
-  Proc.actor0 ~here ?reset ?sexp_of_model ?sexp_of_action ?equal ~default_model ~recv ()
+  Proc.actor ~here ?reset ?sexp_of_model ?sexp_of_action ?equal ~default_model ~recv ()
   |> perform ~here graph
 ;;
 
-let actor0
+let actor
   ?(here = Stdlib.Lexing.dummy_pos)
   ?reset
   ?sexp_of_model
@@ -605,7 +625,7 @@ let actor0
   ~recv
   graph
   =
-  actor0__for_proc2
+  actor__for_proc2
     ~here
     ?reset
     ?sexp_of_model
@@ -618,7 +638,7 @@ let actor0
   |> split ~here graph
 ;;
 
-let actor1__for_proc2
+let actor_with_input__for_proc2
   ?(here = Stdlib.Lexing.dummy_pos)
   ?sexp_of_action
   ?reset
@@ -629,7 +649,7 @@ let actor1__for_proc2
   input
   graph
   =
-  Proc.actor1
+  Proc.actor_with_input
     ~here
     ?reset
     ?sexp_of_model
@@ -641,7 +661,7 @@ let actor1__for_proc2
   |> perform ~here graph
 ;;
 
-let actor1
+let actor_with_input
   ?(here = Stdlib.Lexing.dummy_pos)
   ?sexp_of_action
   ?reset
@@ -652,7 +672,7 @@ let actor1
   input
   graph
   =
-  actor1__for_proc2
+  actor_with_input__for_proc2
     ~here
     ?sexp_of_action
     ?reset
@@ -815,7 +835,7 @@ let wrap_n
     -> ?sexp_of_model:_
     -> ?equal:_
     -> default_model:_
-    -> apply_action:(_ -> packed -> _)
+    -> apply_action:(_ -> packed Computation_status.t -> _)
     -> f:(_ -> _ t -> graph -> unpacked)
     -> n:(packed, unpacked) Autopack.t
     -> graph
@@ -849,6 +869,19 @@ let enum ?(here = Stdlib.Lexing.dummy_pos) m ~match_ ~with_ graph =
     fun k -> handle ~f:(fun graph -> with_ k graph) graph [@nontail]
   in
   perform ~here graph (Proc.enum m ~match_ ~with_)
+;;
+
+let with_inverted_lifecycle_ordering
+  ?(here = Stdlib.Lexing.dummy_pos)
+  ~compute_dep
+  ~f
+  graph
+  =
+  Proc_min.with_inverted_lifecycle_ordering
+    ~here
+    ~compute_dep:(handle ~here graph ~f:(fun graph -> compute_dep graph) [@nontail])
+    (fun value -> handle ~here graph ~f:(fun graph -> f value graph) [@nontail])
+  |> perform ~here graph
 ;;
 
 let with_model_resetter__for_proc2 ?(here = Stdlib.Lexing.dummy_pos) ~f graph =
@@ -1150,36 +1183,36 @@ module Dynamic_scope = struct
   let create = Proc.Dynamic_scope.create
   let derived = Proc.Dynamic_scope.derived
 
-  let set ?(here = Stdlib.Lexing.dummy_pos) var value ~inside graph =
-    let inside = handle ~here graph ~f:(fun graph -> inside graph) in
-    perform ~here graph (Proc.Dynamic_scope.set ~here var value ~inside)
-  ;;
-
-  let f_with_resetter ~here ~f graph (resetter : Proc.Dynamic_scope.revert) =
-    let resetter : revert =
-      { revert =
-          (fun c graph ->
-            perform
-              ~here
-              graph
-              (resetter.revert (handle ~here graph ~f:(fun graph -> c graph))))
-      }
-    in
-    handle ~here graph ~f:(fun graph -> f resetter graph)
-  ;;
-
-  let set' ?(here = Stdlib.Lexing.dummy_pos) var value ~f graph =
-    let f = f_with_resetter ~here ~f graph in
-    perform ~here graph (Proc.Dynamic_scope.set' ~here var value ~f)
-  ;;
-
   let lookup ?(here = Stdlib.Lexing.dummy_pos) var graph =
     perform ~here graph (Proc.Dynamic_scope.lookup ~here var)
   ;;
 
   let modify ?(here = Stdlib.Lexing.dummy_pos) var ~change ~f graph =
-    let f = f_with_resetter ~here ~f graph in
-    perform ~here graph (Proc.Dynamic_scope.modify ~here var ~change ~f)
+    let current = lookup ~here var graph in
+    let revert c graph =
+      perform
+        ~here
+        graph
+        (Proc.Dynamic_scope.store ~here var current (handle ~here ~f:c graph))
+    in
+    let value = change current in
+    perform
+      ~here
+      graph
+      (Proc.Dynamic_scope.store
+         ~here
+         var
+         value
+         (handle ~here graph ~f:(fun graph -> f { revert } graph)))
+  ;;
+
+  let set ?(here = Stdlib.Lexing.dummy_pos) var value ~inside graph =
+    let inside = handle ~here graph ~f:(fun graph -> inside graph) in
+    perform ~here graph (Proc.Dynamic_scope.set ~here var value ~inside)
+  ;;
+
+  let set' ?(here = Stdlib.Lexing.dummy_pos) var value ~f graph =
+    modify ~here var ~change:(fun _ -> value) ~f graph
   ;;
 end
 
@@ -1201,7 +1234,8 @@ end
 
 let assoc ?(here = Stdlib.Lexing.dummy_pos) comparator map ~f graph =
   (Proc.assoc ~here comparator map ~f:(fun k v ->
-     handle ~here graph ~f:(fun graph -> f k v graph) [@nontail]) [@nontail])
+     handle ~here graph ~f:(fun graph -> f k v graph) [@nontail])
+  [@nontail])
   |> perform ~here graph
 ;;
 
@@ -1265,13 +1299,13 @@ let assoc_list_n
 
 module Debug = struct
   let on_change ?(here = Stdlib.Lexing.dummy_pos) v ~f graph =
-    (* Use [after_display] because the incremental node is always considered to be in use.*)
     let f =
       arr1 ~here graph v ~f:(fun v ->
         f v;
         Effect.Ignore)
     in
-    Edge.after_display ~here f graph
+    (* Use [on_deactivate] because the incremental node is always considered to be in use.*)
+    Edge.lifecycle ~here ~on_deactivate:f graph
   ;;
 
   let on_change_print_s ?(here = Stdlib.Lexing.dummy_pos) v sexp_of =
@@ -1286,17 +1320,6 @@ module Debug = struct
 
   let enable_incremental_annotations = Annotate_incr.enable
   let disable_incremental_annotations = Annotate_incr.disable
-
-  let instrument_computation
-    ?(here = Stdlib.Lexing.dummy_pos)
-    c
-    ~start_timer
-    ~stop_timer
-    graph
-    =
-    Instrumentation.instrument_computation (handle graph ~f:c) ~start_timer ~stop_timer
-    |> perform ~here graph
-  ;;
 
   let watch_computation
     ?(here = Stdlib.Lexing.dummy_pos)
@@ -1324,6 +1347,8 @@ module Debug = struct
          (handle graph ~f:(fun graph -> f graph)))
       ~here
   ;;
+
+  let memo_query_counts (T { queries; _ } : _ Memo.t) = Map.to_alist queries
 end
 
 let switch__for_proc2 ?(here = Stdlib.Lexing.dummy_pos) ~match_ ~branches ~with_ graph =
@@ -1384,9 +1409,9 @@ module Let_syntax = struct
   end
 end
 
-(* These functions are here to provide the basis for the [proc_layer2.ml] which
-   wants versions of these functions that don't have calls to [split ~here] in them *)
-module For_proc2 = struct
+module For_proc = struct
+  module type Map0_output = Map0_intf.Output
+
   let arr1 = arr1
   let arr2 = arr2
   let arr3 = arr3
@@ -1395,6 +1420,7 @@ module For_proc2 = struct
   let arr6 = arr6
   let arr7 = arr7
   let value_cutoff v ~equal = Value.cutoff v ~equal ~added_by_let_syntax:false
+  let value_map ?(here = Stdlib.Lexing.dummy_pos) t ~f = { (Value.map t ~f) with here }
   let conceal_value v = v
   let state = state__for_proc2
   let state' = state'__for_proc2
@@ -1407,10 +1433,10 @@ module For_proc2 = struct
     perform ~here graph (Proc.toggle' ~here ~default_model ())
   ;;
 
-  let state_machine0 = state_machine0__for_proc2
-  let state_machine1 = state_machine1__for_proc2
-  let actor0 = actor0__for_proc2
-  let actor1 = actor1__for_proc2
+  let state_machine = state_machine__for_proc2
+  let state_machine_with_input = state_machine_with_input__for_proc2
+  let actor = actor__for_proc2
+  let actor_with_input = actor_with_input__for_proc2
   let wrap = wrap__for_proc2
 
   let with_model_resetter ?(here = Stdlib.Lexing.dummy_pos) f graph =

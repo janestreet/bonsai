@@ -8,8 +8,8 @@ let f
   ~recursive_scopes
   ~time_source
   ~map
-  ~(io_comparator : (io, cmp_io) comparator)
-  ~(model_comparator : (model, cmp_model) comparator)
+  ~(io_comparator : (io, cmp_io) Comparator.Module.t)
+  ~(model_comparator : (model, cmp_model) Comparator.Module.t)
   ~io_key_id
   ~io_cmp_id
   ~model_key_id

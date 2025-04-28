@@ -189,6 +189,8 @@ let empty =
   { tree = Node_path.Map.empty; dag = Node_path.Map.empty; info = Node_path.Map.empty }
 ;;
 
+let already_printed_bug_message = ref false
+
 let value_map
   (type a)
   ({ recurse; var_from_parent; parent_path; current_path; _ } :
@@ -212,7 +214,10 @@ let value_map
     | Named _ ->
       (match Hashtbl.find environment (Type_equal.Id.uid value.id) with
        | Some named_id -> add_dag_relationship ~from:named_id ~to_:current_path
-       | None -> print_s [%message "BUG" [%here]])
+       | None when !already_printed_bug_message -> ()
+       | None ->
+         already_printed_bug_message := true;
+         print_s [%message "BUG" [%here]])
     | _ -> ()
   in
   recurse state value

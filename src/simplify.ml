@@ -237,7 +237,8 @@ let rec computation_to_function
   match computation with
   | Return { value; here = _ } ->
     Option_or_miss.map (value_to_function value key_id data_id) ~f:(fun f _path -> f)
-  | Sub { from; via; into; here = _ } -> handle_subst ~from ~via ~into
+  | Sub { from; via; into; invert_lifecycles = _; here = _ } ->
+    handle_subst ~from ~via ~into
   | Path { here = _ } ->
     Some
       { value = (fun path _ _ -> path)

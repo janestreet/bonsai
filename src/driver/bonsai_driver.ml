@@ -2,8 +2,22 @@ open! Core
 module Incr = Ui_incr
 module Stabilization_tracker = Bonsai.Private.Stabilization_tracker
 module Action = Bonsai.Private.Action
+module Instrumentation = Instrumentation
 
-type ('m, 'action, 'action_input, 'r) unpacked =
+let timer
+  (type timer)
+  (event : Instrumentation.Timeable_event.t)
+  (instrumentation :
+    (Instrumentation.Timeable_event.t, timer) Bonsai.Private.Instrumentation.Config.t)
+  ~f
+  =
+  let timer = instrumentation.start_timer event in
+  let result = f () in
+  instrumentation.stop_timer timer;
+  result
+;;
+
+type ('m, 'action, 'action_input, 'r, 'timer) unpacked =
   { model_var : 'm Incr.Var.t
   ; default_model : 'm
   ; time_source : Bonsai.Time_source.t
@@ -27,9 +41,13 @@ type ('m, 'action, 'action_input, 'r) unpacked =
   ; mutable print_actions : bool
   ; stabilization_tracker : 'action Stabilization_tracker.t
   ; running_computation : 'r Bonsai.Private.Computation.t
+  ; instrumentation :
+      (Instrumentation.Timeable_event.t, 'timer) Bonsai.Private.Instrumentation.Config.t
+  ; (* [timer] is split out for convenience. *)
+    timer : 'a. Instrumentation.Timeable_event.t -> f:(unit -> 'a) -> 'a
   }
 
-type 'r t = T : (_, _, _, 'r) unpacked -> 'r t
+type 'r t = T : (_, _, _, 'r, _) unpacked -> 'r t
 
 let assert_type_equalities
   (T a : _ Bonsai.Private.Computation.packed_info)
@@ -42,27 +60,43 @@ let assert_type_equalities
   ()
 ;;
 
-let create_direct
-  (type r)
-  ?(optimize = true)
-  ~time_source
-  (computation : r Bonsai.Private.Computation.t)
-  : r t
-  =
+let assert_unoptimized_type_equalities ~time_source computation =
   let unoptimized_info =
     Bonsai.Private.gather
       ~recursive_scopes:Bonsai.Private.Computation.Recursive_scopes.empty
       ~time_source
       computation
   in
+  assert_type_equalities unoptimized_info unoptimized_info
+;;
+
+let create_direct
+  (type r)
+  ?(optimize = true)
+  ~instrumentation
+  ~time_source
+  (unoptimized_computation : r Bonsai.Private.Computation.t)
+  : r t
+  =
+  let timer event ~f = timer event instrumentation ~f in
+  (* This check is mostly here to catch bugs in the implementation of
+     [Bonsai.Private.Meta.Model.Type_id.same_witness_exn] and
+     [Bonsai.Private.Action.Type_id.same_witness_exn]. We only run it in tests to avoid
+     slowing down prod or benchmarks. *)
+  if am_running_test
+  then assert_unoptimized_type_equalities ~time_source unoptimized_computation;
   let running_computation =
-    if optimize then Bonsai.Private.pre_process computation else computation
+    timer Preprocess ~f:(fun () ->
+      if optimize
+      then Bonsai.Private.pre_process unoptimized_computation
+      else unoptimized_computation)
   in
   let optimized_info =
-    Bonsai.Private.gather
-      running_computation
-      ~recursive_scopes:Bonsai.Private.Computation.Recursive_scopes.empty
-      ~time_source
+    timer Gather ~f:(fun () ->
+      Bonsai.Private.gather
+        running_computation
+        ~recursive_scopes:Bonsai.Private.Computation.Recursive_scopes.empty
+        ~time_source)
   in
   let (T
         ({ model =
@@ -77,8 +111,7 @@ let create_direct
     =
     optimized_info
   in
-  assert_type_equalities unoptimized_info unoptimized_info;
-  assert_type_equalities optimized_info optimized_info;
+  if am_running_test then assert_type_equalities optimized_info optimized_info;
   let environment = Bonsai.Private.Environment.empty in
   let starting_model = default_model in
   let model_var = Incr.Var.create starting_model in
@@ -87,6 +120,7 @@ let create_direct
      https://github.com/ocaml/ocaml/issues/7074. *)
   let create_polymorphic
     (type action action_input)
+    (computation : r Bonsai.Private.Computation.t)
     (computation_info :
       (_, action, action_input, r, unit) Bonsai.Private.Computation.info)
     apply_action
@@ -104,26 +138,47 @@ let create_direct
     in
     let inject = A.inject in
     let sexp_of_action = Action.Type_id.to_sexp computation_info.action in
-    let snapshot, () =
-      computation_info.run
-        ~environment
-        ~fix_envs:Bonsai.Private.Environment.Recursive.empty
-        ~path:Bonsai.Private.Path.empty
-        ~model:(Incr.Var.watch model_var)
-        ~inject
-      |> Bonsai.Private.Trampoline.run
+    let result_incr, result, action_input_incr, action_input, lifecycle_incr, lifecycle =
+      timer Run_eval_fun ~f:(fun () ->
+        let%pattern_bind.Ui_incr result_incr, action_input_incr, lifecycle_incr =
+          let instrumentation =
+            { instrumentation with
+              start_timer = (fun s -> instrumentation.start_timer (Profiling_entry s))
+            }
+          in
+          Bonsai.Private.Instrumentation.create_computation_with_instrumentation
+            instrumentation
+            ~f:(fun run ->
+              let snapshot, () =
+                run
+                  ~environment
+                  ~fix_envs:Bonsai.Private.Environment.Recursive.empty
+                  ~path:Bonsai.Private.Path.empty
+                  ~model:(Incr.Var.watch model_var)
+                  ~inject
+                |> Bonsai.Private.Trampoline.run
+              in
+              Ui_incr.map3
+                (Bonsai.Private.Snapshot.result snapshot)
+                (Bonsai.Private.Input.to_incremental
+                   (Bonsai.Private.Snapshot.input snapshot))
+                (Bonsai.Private.Snapshot.lifecycle_or_empty ~here:[%here] snapshot)
+                ~f:(fun result_incr action_input_incr lifecycle_incr ->
+                  result_incr, action_input_incr, lifecycle_incr))
+            ~recursive_scopes:Bonsai.Private.Computation.Recursive_scopes.empty
+            ~time_source
+            ~computation
+            computation_info
+        in
+        let result = Incr.observe result_incr in
+        let action_input = Incr.observe action_input_incr in
+        let lifecycle = Incr.observe lifecycle_incr in
+        result_incr, result, action_input_incr, action_input, lifecycle_incr, lifecycle)
     in
-    let result_incr = Bonsai.Private.Snapshot.result snapshot in
-    let action_input_incr =
-      Bonsai.Private.Input.to_incremental (Bonsai.Private.Snapshot.input snapshot)
-    in
-    let action_input = Incr.observe action_input_incr in
-    let result = result_incr |> Incr.observe in
-    let lifecycle_incr =
-      Bonsai.Private.Snapshot.lifecycle_or_empty ~here:[%here] snapshot
-    in
-    let lifecycle = Incr.observe lifecycle_incr in
-    Incr.stabilize ();
+    let stabilization_tracker = Stabilization_tracker.empty () in
+    timer First_stabilization ~f:(fun () ->
+      Incr.stabilize ();
+      Stabilization_tracker.mark_stabilization stabilization_tracker);
     T
       { model_var
       ; default_model
@@ -141,25 +196,34 @@ let create_direct
       ; queue
       ; last_lifecycle = Bonsai.Private.Lifecycle.Collection.empty
       ; print_actions = false
-      ; stabilization_tracker = Stabilization_tracker.empty ()
+      ; stabilization_tracker
       ; running_computation
+      ; instrumentation
+      ; timer
       }
   in
-  create_polymorphic computation_info apply_action
+  create_polymorphic running_computation computation_info apply_action
 ;;
 
 let create
   (type r)
   ?(optimize = true)
+  ~instrumentation
   ~time_source
   (computation : Bonsai.graph -> r Bonsai.t)
   =
-  create_direct ~optimize ~time_source (Bonsai.Private.top_level_handle computation)
+  let graph_applied =
+    timer Graph_application instrumentation ~f:(fun () ->
+      Bonsai.Private.top_level_handle computation)
+  in
+  create_direct ~optimize ~instrumentation ~time_source graph_applied
 ;;
 
 let schedule_event _ = Ui_effect.Expert.handle
 
 let flush
+  ?(log_before_action_application = fun ~action_sexp:_ -> ())
+  ?(log_on_skipped_stabilization = fun ~action_sexp:_ -> ())
   (T
     ({ model_var
      ; apply_action
@@ -168,16 +232,27 @@ let flush
      ; time_source
      ; stabilization_tracker
      ; sexp_of_action
+     ; timer
      ; _
      } as t))
   =
   Bonsai.Time_source.Private.flush time_source;
+  timer Stabilize_for_clock ~f:(fun () ->
+    Incr.stabilize ();
+    Stabilization_tracker.mark_stabilization stabilization_tracker);
   let process_event action model =
+    log_before_action_application ~action_sexp:(lazy (sexp_of_action action));
+    (* It's important that we don't call [Incr.Var.set] within [process_event] unless
+       we're also going to stabilize. Some code in Bonsai relies on this assumption
+       as part of its [action_requires_stabilization] logic. Breaking this invariant
+       won't break Bonsai code, but it will effectively remove an optimization. *)
     if Stabilization_tracker.requires_stabilization stabilization_tracker action
     then (
       Incr.Var.set model_var model;
-      Incr.stabilize ();
-      Stabilization_tracker.mark_stabilization stabilization_tracker);
+      timer Stabilize_for_action ~f:(fun () ->
+        Incr.stabilize ();
+        Stabilization_tracker.mark_stabilization stabilization_tracker))
+    else log_on_skipped_stabilization ~action_sexp:(lazy (sexp_of_action action));
     let new_model =
       let action_input = Incr.Observer.value_exn action_input in
       apply_action
@@ -194,8 +269,9 @@ let flush
     match Queue.dequeue queue with
     | None ->
       Incr.Var.set model_var model;
-      Incr.stabilize ();
-      Stabilization_tracker.mark_stabilization stabilization_tracker
+      timer Stabilize_after_all_apply_actions ~f:(fun () ->
+        Incr.stabilize ();
+        Stabilization_tracker.mark_stabilization stabilization_tracker)
     | Some action ->
       let new_model = process_event action model in
       apply_actions new_model
@@ -208,7 +284,7 @@ let flush
      but I think it's important to be explicit about which behavior we use,
      so I chose the one that would be least surprising if a stabilization
      does happen to occur. *)
-  apply_actions (Incr.Var.latest_value model_var)
+  timer Apply_actions ~f:(fun () -> apply_actions (Incr.Var.latest_value model_var))
 ;;
 
 let result (T { result; _ }) = Incr.Observer.value_exn result
@@ -260,12 +336,12 @@ end
 
 module For_testing = struct
   let dump_dot (T { result_incr; lifecycle_incr; action_input_incr; _ }) =
-    let tempfile = "/tmp/dump.dot" in
-    Out_channel.with_file tempfile ~f:(fun oc ->
-      Ui_incr.Packed.save_dot
-        oc
-        [ Incr.pack result_incr; Incr.pack lifecycle_incr; Incr.pack action_input_incr ]);
-    In_channel.read_all tempfile
+    let buffer = Buffer.create 10 in
+    let formatter = Format.formatter_of_buffer buffer in
+    Ui_incr.Packed.save_dot
+      formatter
+      [ Incr.pack result_incr; Incr.pack lifecycle_incr; Incr.pack action_input_incr ];
+    Buffer.contents buffer
   ;;
 
   let running_computation (T { running_computation; _ }) = running_computation

@@ -26,7 +26,7 @@ depends: [
   "ppxlib_jane"
   "uopt"
   "virtual_dom"
-  "dune"             {>= "3.11.0"}
+  "dune"             {>= "3.17.0"}
   "ppxlib"           {>= "0.33.0"}
 ]
 available: arch != "arm32" & arch != "x86_32"

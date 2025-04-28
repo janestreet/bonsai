@@ -46,7 +46,7 @@ let f
   ~recursive_scopes
   ~time_source
   ~map
-  ~(key_comparator : (k, cmp) comparator)
+  ~(key_comparator : (k, cmp) Comparator.Module.t)
   ~key_id
   ~cmp_id
   ~data_id

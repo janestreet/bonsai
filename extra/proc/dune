@@ -1,0 +1,19 @@
+(library
+ (name bonsai_extra_proc)
+ (public_name bonsai.extra_proc)
+ (libraries core bonsai bonsai_extra bonsai_concrete.ui_incr
+   virtual_dom.ui_effect)
+ (preprocess
+  (pps ppx_jane ppx_bonsai)))
+
+(rule
+ (targets bonsai_extra_cont_and_proc.diff)
+ (deps ./bonsai_extra_proc.mli
+   %{workspace_root}/lib/bonsai/extra/bonsai_extra.mli)
+ (action
+  (bash
+    "%{bin:patdiff-for-review} %{bin:patdiff} -context 1000  ../bonsai_extra.mli ./bonsai_extra_proc.mli > bonsai_extra_cont_and_proc.diff")))
+
+(alias
+ (name DEFAULT)
+ (deps ./bonsai_extra_cont_and_proc.diff))

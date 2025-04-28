@@ -35,10 +35,13 @@ struct
       | Leaf_incr { input; compute; here } ->
         let acc, up, input = User.transform_v down acc input in
         return (acc, up, Computation.Leaf_incr { input; compute; here })
-      | Sub { from; via; into; here } ->
+      | Sub { from; via; into; invert_lifecycles; here } ->
         let%bind acc, up1, from = User.transform_c down acc from in
         let%bind acc, up2, into = User.transform_c down acc into in
-        return (acc, combine_up up1 up2, Computation.Sub { from; via; into; here })
+        return
+          ( acc
+          , combine_up up1 up2
+          , Computation.Sub { from; via; into; invert_lifecycles; here } )
       | Store { id; value; inner; here } ->
         let acc, up1, value = User.transform_v down acc value in
         let%bind acc, up2, inner = User.transform_c down acc inner in

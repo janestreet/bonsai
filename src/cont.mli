@@ -2,22 +2,18 @@ open! Core
 open! Import
 
 module type Enum = Module_types.Enum
-module type Comparator = Module_types.Comparator
 
-type ('k, 'cmp) comparator = ('k, 'cmp) Module_types.comparator
-
-(** The primary type in the Bonsai library, you can think of a value with type
-    ['a t] as "a 'a that changes over time". The two main ways that you get a value
-    with this type are:
+(** The primary type in the Bonsai library, you can think of a value with type ['a t] as
+    "a 'a that changes over time". The two main ways that you get a value with this type
+    are:
     1. by creating a state machine
        - the current value of the state machine is returned as a ['state Bonsai.t]
        - the "send the state machine an action" function is also inside of a [Bonsai.t]
     2. by mapping on existing [Bonsai.t]'s to derive a new computed [Bonsai.t] *)
 type 'a t
 
-(** [Bonsai.graph] is a required parameter to all Bonsai functions which do more than
-    pure computation. The value is always [local_] because Bonsai applications have two
-    phases:
+(** [Bonsai.graph] is a required parameter to all Bonsai functions which do more than pure
+    computation. The value is always [local_] because Bonsai applications have two phases:
     1. The graph building phase. This is the phase where you have access to a
        [local_ Bonsai.graph]
     2. Runtime. The application has started and modifying the graph is no longer
@@ -34,37 +30,38 @@ include Mapn with type 'a t := 'a t
 module Autopack : sig
   type 'a bonsai := 'a t
 
-  (** Several Bonsai combinators take functions as a parameter where the user-provided function 
-      returns a [Bonsai.t].  If the user has _multiple_ [Bonsai.t] that they'd like to return, 
-      then they'd need to pack them up, e.g. going from [int Bonsai.t * string Bonsai.t] to a
-      [(int * string) Bonsai.t] to return it.  Then, if the function returns the single [Bonsai.t], 
-      you may need to unpack the values again.
+  (** Several Bonsai combinators take functions as a parameter where the user-provided
+      function returns a [Bonsai.t]. If the user has _multiple_ [Bonsai.t] that they'd
+      like to return, then they'd need to pack them up, e.g. going from
+      [int Bonsai.t * string Bonsai.t] to a [(int * string) Bonsai.t] to return it. Then,
+      if the function returns the single [Bonsai.t], you may need to unpack the values
+      again.
 
-      To reduce boilerplate, these functions also have a version that automatically packs and unpacks 
-      tuples of Bonsai.t.  For example, instead of writing 
+      To reduce boilerplate, these functions also have a version that automatically packs
+      and unpacks tuples of Bonsai.t. For example, instead of writing
 
       {[
-      let results, reset_effect = 
-        Bonsai.with_model_resetter graph ~f:(fun ~reset (local_ graph) ->
-          let a, b = Bonsai.state None graph in
-          let c, d = Bonsai.state None graph in
-          let%arr a and b and c and d in 
-          a, b, c, d)
-      in
-      let%sub (a, b, c, d) = results in 
-      ...
+        let results, reset_effect =
+          Bonsai.with_model_resetter graph ~f:(fun ~reset (local_ graph) ->
+            let a, b = Bonsai.state None graph in
+            let c, d = Bonsai.state None graph in
+            let%arr a and b and c and d in
+            a, b, c, d)
+        in
+        let%sub (a, b, c, d) = results in
+        ...
       ]}
 
       you can use version which takes an [Autopack.t]:
 
       {[
-      let (a, b, c, d), reset_effect =
-        Bonsai.with_model_resetter_n graph ~n:Four ~f:(fun ~reset (local_ graph) ->
-          let a, b = Bonsai.state None graph in
-          let c, d = Bonsai.state None graph in
-          a, b, c, d)
-      in
-      ...
+        let (a, b, c, d), reset_effect =
+          Bonsai.with_model_resetter_n graph ~n:Four ~f:(fun ~reset (local_ graph) ->
+            let a, b = Bonsai.state None graph in
+            let c, d = Bonsai.state None graph in
+            a, b, c, d)
+        in
+        ...
       ]} *)
   type ('packed, 'unpacked) t =
     | One : ('a, 'a bonsai) t
@@ -94,23 +91,22 @@ end
 (** [return] produces a [Bonsai.t] whose inner value is constant. *)
 val return : ?here:Stdlib.Lexing.position -> 'a -> 'a t
 
-(** [map], [map2], and [both] are ways to build a new [Bonsai.t] which is dependent on
-    the values of other [Bonsai.t]. As noted above, you should prefer to use [let%arr]
-    than these functions, because they come with some performance benefits. *)
+(** [map], [map2], and [both] are ways to build a new [Bonsai.t] which is dependent on the
+    values of other [Bonsai.t]. As noted above, you should prefer to use [let%arr] than
+    these functions, because they come with some performance benefits. *)
 val map : ?here:Stdlib.Lexing.position -> 'a t -> f:('a -> 'b) -> 'b t
 
 val map2 : ?here:Stdlib.Lexing.position -> 'a t -> 'b t -> f:('a -> 'b -> 'c) -> 'c t
 val both : ?here:Stdlib.Lexing.position -> 'a t -> 'b t -> ('a * 'b) t
 
 (** The Bonsai runtime will recompute a node if any of its dependencies change. But
-    sometimes, you may want to consider two contained values to be "close enough" and
-    cut off recomputation. You can do that by passing a custom equality function to
+    sometimes, you may want to consider two contained values to be "close enough" and cut
+    off recomputation. You can do that by passing a custom equality function to
     [Bonsai.cutoff]. *)
 val cutoff : ?here:Stdlib.Lexing.position -> 'a t -> equal:('a -> 'a -> bool) -> 'a t
 
-(** [transpose_opt] flips the order of a [Bonsai.t] and an [option]. This is useful
-    for optional args that take [Bonsai.t]s. Note: the inverse operation is not possible.
-*)
+(** [transpose_opt] flips the order of a [Bonsai.t] and an [option]. This is useful for
+    optional args that take [Bonsai.t]s. Note: the inverse operation is not possible. *)
 val transpose_opt : 'a t option -> 'a option t
 
 (** [Bonsai.state] allocates a stateful Bonsai.t node in the graph. It returns both the
@@ -135,9 +131,8 @@ val state
   -> graph
   -> 'model t * ('model -> unit Effect.t) t
 
-(** [state_opt] is just like [state] except that the model is optional.
-    The model starts out as [None] unless you provide a value to the [default_model]
-    optional parameter. *)
+(** [state_opt] is just like [state] except that the model is optional. The model starts
+    out as [None] unless you provide a value to the [default_model] optional parameter. *)
 val state_opt
   :  ?here:Stdlib.Lexing.position
   -> ?reset:('model option -> 'model option)
@@ -147,8 +142,8 @@ val state_opt
   -> graph
   -> 'model option t * ('model option -> unit Effect.t) t
 
-(** Similar to [state], but the `set` function takes a function that calculates
-    the new state from the previous state. *)
+(** Similar to [state], but the `set` function takes a function that calculates the new
+    state from the previous state. *)
 val state'
   :  ?here:Stdlib.Lexing.position
   -> ?reset:('model -> 'model)
@@ -158,9 +153,8 @@ val state'
   -> graph
   -> 'model t * (?here:Stdlib.Lexing.position -> ('model -> 'model) -> unit Effect.t) t
 
-(** [Bonsai.toggle] is a small helper function for building a [bool] state
-    that toggles back and forth between [true] and [false] whenever the
-    [unit Effect.t] is scheduled. *)
+(** [Bonsai.toggle] is a small helper function for building a [bool] state that toggles
+    back and forth between [true] and [false] whenever the [unit Effect.t] is scheduled. *)
 val toggle
   :  ?here:Stdlib.Lexing.position
   -> default_model:bool
@@ -168,8 +162,8 @@ val toggle
   -> bool t * unit Effect.t t
 
 module Toggle : sig
-  (** For the more advanced toggle function [Bonsai.toggle'] we return the
-      state, the toggling function, and a function to set the state directly. *)
+  (** For the more advanced toggle function [Bonsai.toggle'] we return the state, the
+      toggling function, and a function to set the state directly. *)
   type nonrec t =
     { state : bool t
     ; set_state : (bool -> unit Effect.t) t
@@ -177,18 +171,18 @@ module Toggle : sig
     }
 end
 
-(** Just like [toggle] except that you also have an [Effect.t] for directly
-    setting the state in addition to toggling it back and forth. *)
+(** Just like [toggle] except that you also have an [Effect.t] for directly setting the
+    state in addition to toggling it back and forth. *)
 val toggle' : ?here:Stdlib.Lexing.position -> default_model:bool -> graph -> Toggle.t
 
 module Apply_action_context : sig
-  (** A value with the type [('action, 'response) Apply_action_context.t] is provided
-      to all state-machine's [apply_action] functions. It can be used to do a variety
-      of things that are only legal inside of [apply_action]:
+  (** A value with the type [('action, 'response) Apply_action_context.t] is provided to
+      all state-machine's [apply_action] functions. It can be used to do a variety of
+      things that are only legal inside of [apply_action]:
       1. Access the application time source directly. This is most likely useful to read
          the current time or sleep for some time span
-      2. "inject" a value corresponding to the state-machine's action type into an
-         effect that can be scheduled.
+      2. "inject" a value corresponding to the state-machine's action type into an effect
+         that can be scheduled.
       3. Directly schedule effects. *)
 
   type ('action, 'response) t = ('action, 'response) Apply_action_context.t
@@ -201,16 +195,18 @@ end
 type ('model, 'action, 'response) resetter :=
   ('action, 'response) Apply_action_context.t -> 'model -> 'model
 
-(** [Bonsai.state_machine0] allows you to build a state machine whose state
-    is initialized to whatever you pass to [default_model], and the state machine
-    transitions states using the [apply_action] function. The current state
-    and a function for injecting an action into a schedulable effect are returned.
+(** [Bonsai.state_machine] allows you to build a state machine whose state is initialized
+    to whatever you pass to [default_model], and the state machine transitions states
+    using the [apply_action] function. The current state and a function for injecting an
+    action into a schedulable effect are returned.
 
     [?sexp_of_action] is used to provide more information to debugging tools.
 
     [?reset], [?sexp_of_model], and [?equal] do the same things that they do for
-    [Bonsai.state], go read those docs for more. *)
-val state_machine0
+    [Bonsai.state], go read those docs for more.
+
+    Previously called [state_machine0] *)
+val state_machine
   :  ?here:Stdlib.Lexing.position
   -> ?reset:('model, 'action, unit) resetter
   -> ?sexp_of_model:('model -> Sexp.t)
@@ -222,20 +218,25 @@ val state_machine0
   -> 'model t * ('action -> unit Effect.t) t
 
 module Computation_status : sig
-  (** A [Computation_status.t] is used by [state_machine1] and [actor1] in order to
-      signal to their action-application functions that the state machine is inactive
-      because an inactive state machine doesn't have access to its input. *)
+  (** A [Computation_status.t] is used by [state_machine_with_input] and
+      [actor_with_input] in order to signal to their action-application functions that the
+      state machine is inactive because an inactive state machine doesn't have access to
+      its input. *)
   type 'input t =
     | Active of 'input
     | Inactive
   [@@deriving sexp_of]
 end
 
-(** A [state_machine1] is identical to a [state_machine0] except that you can pass
-    an arbirary ['a Bonsai.t] and have access to a ['a Computation_status.t] inside of
-    the apply_action function. In the event that the state-machine is inactive, the
-    computation status will be [Inactive] *)
-val state_machine1
+(** A [state_machine_with_input] is identical to a [state_machine] except that you can
+    pass an arbitrary ['a Bonsai.t] dependency and have access to a
+    ['a Computation_status.t] inside of the apply_action function.
+
+    In the event that the state-machine is inactive, the computation status will be
+    [Inactive]
+
+    Previously called [state_machine1] *)
+val state_machine_with_input
   :  ?here:Stdlib.Lexing.position
   -> ?reset:('model, 'action, unit) resetter
   -> ?sexp_of_model:('model -> Sexp.t)
@@ -252,10 +253,10 @@ val state_machine1
   -> graph
   -> 'model t * ('action -> unit Effect.t) t
 
-(** [Bonsai.actor0] is similar to [Bonsai.state_machine0], but its [recv] function
-    is responsible for not only transitioning the state of the state machine, but also
-    for responding with a "return value" to whoever sent the message to the actor. *)
-val actor0
+(** [Bonsai.actor] is similar to [Bonsai.state_machine], but its [recv] function is
+    responsible for not only transitioning the state of the state machine, but also for
+    responding with a "return value" to whoever sent the message to the actor. *)
+val actor
   :  ?here:Stdlib.Lexing.position
   -> ?reset:('model, 'action, 'return) resetter
   -> ?sexp_of_model:('model -> Sexp.t)
@@ -270,9 +271,9 @@ val actor0
   -> graph
   -> 'model t * ('action -> 'return Effect.t) t
 
-(** [actor1] is just like [actor0] but it can witness the current value of a [Bonsai.t]
-    inside its [recv] function just like [state_machine1] *)
-val actor1
+(** [actor_with_input] is just like [actor] but it can witness the current value of a
+    [Bonsai.t] inside its [recv] function just like [state_machine_with_input] *)
+val actor_with_input
   :  ?here:Stdlib.Lexing.position
   -> ?sexp_of_action:('action -> Sexp.t)
   -> ?reset:('model, 'action, 'return) resetter
@@ -289,8 +290,8 @@ val actor1
   -> graph
   -> 'model t * ('action -> 'return Effect.t) t
 
-(** [freeze] takes a ['a Bonsai.t] and returns a new ['a Bonsai.t] whose value
-    is frozen to the first value that it witnesses from its input. *)
+(** [freeze] takes a ['a Bonsai.t] and returns a new ['a Bonsai.t] whose value is frozen
+    to the first value that it witnesses from its input. *)
 val freeze
   :  ?here:Stdlib.Lexing.position
   -> ?sexp_of_model:('a -> Sexp.t)
@@ -322,22 +323,21 @@ val fix2
   -> 'result t
 
 (** [scope_model] is used to associate the state of some component graph with some other
-    value.
-   *)
+    value. *)
 val scope_model
   :  ?here:Stdlib.Lexing.position
-  -> ('a, _) comparator
+  -> ('a, _) Comparator.Module.t
   -> on:'a t
   -> for_:(graph -> 'b t)
   -> graph
   -> 'b t
 
 (** Exactly like [scope_model] but will automatically pack and unpack any number of
-    [Bonsai.t] produced inside the [for_] closure.  
-    See documentation for [Autopack.t] for more info. *)
+    [Bonsai.t] produced inside the [for_] closure. See documentation for [Autopack.t] for
+    more info. *)
 val scope_model_n
   :  ?here:Stdlib.Lexing.position
-  -> ('a, _) comparator
+  -> ('a, _) Comparator.Module.t
   -> n:(_, 'b) Autopack.t
   -> on:'a t
   -> for_:(graph -> 'b)
@@ -345,10 +345,9 @@ val scope_model_n
   -> 'b
 
 (** [Bonsai.most_recent_some] can be used to find and store a value that has some
-    interesting property by transforming a ['a Bonsai.t] into a ['b option Bonsai.t] via
-    a [f:('a -> 'b option)] function. The output of this function is a
-    ['b option Bonsai.t] that contains the most recent output of [f] that returned a
-    [Some]. *)
+    interesting property by transforming a ['a Bonsai.t] into a ['b option Bonsai.t] via a
+    [f:('a -> 'b option)] function. The output of this function is a ['b option Bonsai.t]
+    that contains the most recent output of [f] that returned a [Some]. *)
 val most_recent_some
   :  ?here:Stdlib.Lexing.position
   -> ?sexp_of_model:('b -> Sexp.t)
@@ -370,7 +369,7 @@ val most_recent_value_satisfying
   -> 'a option t
 
 (** [previous_value] returns a [Bonsai.t] which contains the value that its input held on
-    the previous frame.*)
+    the previous frame. *)
 val previous_value
   :  ?here:Stdlib.Lexing.position
   -> ?sexp_of_model:('a -> Sexp.t)
@@ -379,10 +378,11 @@ val previous_value
   -> graph
   -> 'a option t
 
-(** [wrap] wraps a Computation (built using [f]) and provides a model and
-    injection function that the wrapped component can use. Especially of note
-    is that the [apply_action] for this outer-model has access to the result
-    value of the Computation being wrapped. *)
+(** [wrap] wraps a Computation (built using [f]) and provides a model and injection
+    function that the wrapped component can use. Especially of note is that the
+    [apply_action] for this outer-model has access to the result value of the Computation
+    being wrapped. ['result] is wrapped in a [Computation_status.t] so that you are able
+    to reset the underlying model even if the computation is inactive *)
 val wrap
   :  ?here:Stdlib.Lexing.position
   -> ?reset:('model, 'action, unit) resetter
@@ -390,14 +390,17 @@ val wrap
   -> ?equal:('model -> 'model -> bool)
   -> default_model:'model
   -> apply_action:
-       (('action, unit) Apply_action_context.t -> 'result -> 'model -> 'action -> 'model)
+       (('action, unit) Apply_action_context.t
+        -> 'result Computation_status.t
+        -> 'model
+        -> 'action
+        -> 'model)
   -> f:('model t -> ('action -> unit Effect.t) t -> graph -> 'result t)
   -> graph
   -> 'result t
 
-(** Exactly like [wrap] but will automatically pack and unpack any number of
-    [Bonsai.t] produced inside the [f] closure.  
-    See documentation for [Autopack.t] for more info. *)
+(** Exactly like [wrap] but will automatically pack and unpack any number of [Bonsai.t]
+    produced inside the [f] closure. See documentation for [Autopack.t] for more info. *)
 val wrap_n
   :  ?here:Stdlib.Lexing.position
   -> ?reset:('model, 'action, unit) resetter
@@ -405,7 +408,11 @@ val wrap_n
   -> ?equal:('model -> 'model -> bool)
   -> default_model:'model
   -> apply_action:
-       (('action, unit) Apply_action_context.t -> 'packed -> 'model -> 'action -> 'model)
+       (('action, unit) Apply_action_context.t
+        -> 'packed Computation_status.t
+        -> 'model
+        -> 'action
+        -> 'model)
   -> f:('model t -> ('action -> unit Effect.t) t -> graph -> 'unpacked)
   -> n:('packed, 'unpacked) Autopack.t
   -> graph
@@ -426,8 +433,18 @@ val enum
   -> graph
   -> 'a t
 
-(** All stateful components allocated inside of [with_model_resetter]'s [f] callback
-    will have their [reset] functions invoked whenever the [unit Effect.t] returned by
+(** [with_inverted_lifecycle_ordering] will run [compute_dep] and pass its result to [f],
+    but any lifecycles registered in [f] will run before those registered in
+    [compute_dep]. *)
+val with_inverted_lifecycle_ordering
+  :  ?here:Stdlib.Lexing.position
+  -> compute_dep:(graph -> 'dep t)
+  -> f:('dep t -> graph -> 'a t)
+  -> graph
+  -> 'a t
+
+(** All stateful components allocated inside of [with_model_resetter]'s [f] callback will
+    have their [reset] functions invoked whenever the [unit Effect.t] returned by
     [with_model_resetter] is scheduled. *)
 val with_model_resetter
   :  ?here:Stdlib.Lexing.position
@@ -436,8 +453,8 @@ val with_model_resetter
   -> 'a t * unit Effect.t t
 
 (** Exactly like [with_model_resetter] but will automatically pack and unpack any number
-    of [Bonsai.t] produced inside the [f] closure.  
-    See documentation for [Autopack.t] for more info. *)
+    of [Bonsai.t] produced inside the [f] closure. See documentation for [Autopack.t] for
+    more info. *)
 val with_model_resetter_n
   :  ?here:Stdlib.Lexing.position
   -> f:(graph -> 'a)
@@ -454,8 +471,8 @@ val with_model_resetter'
   -> 'a t
 
 (** Exactly like [with_model_resetter'] but will automatically pack and unpack any number
-    of [Bonsai.t] produced inside the [f] closure.  
-    See documentation for [Autopack.t] for more info. *)
+    of [Bonsai.t] produced inside the [f] closure. See documentation for [Autopack.t] for
+    more info. *)
 val with_model_resetter_n'
   :  ?here:Stdlib.Lexing.position
   -> f:(reset:unit Effect.t t -> graph -> 'a)
@@ -463,15 +480,14 @@ val with_model_resetter_n'
   -> graph
   -> 'a
 
-(** [peek] maps a [Bonsai.t] to an [Effect.t] with the same underlying value.
-    This allows you to inspect the ['a] value from inside of a [let%bind.Effect]
-    chain which might have been changed by previous effects. It is analogous to
-    [peek] on other abstract data types, including [Deferred.t]s and [Mvar.t]s,
-    but more constrained in that you still can only read from within an effect bind.
+(** [peek] maps a [Bonsai.t] to an [Effect.t] with the same underlying value. This allows
+    you to inspect the ['a] value from inside of a [let%bind.Effect] chain which might
+    have been changed by previous effects. It is analogous to [peek] on other abstract
+    data types, including [Deferred.t]s and [Mvar.t]s, but more constrained in that you
+    still can only read from within an effect bind.
 
-    The ['a Computation_state.t] returned by the effect means that if the value
-    was inactive at the time it is peeked, then the effect will be unable to
-    retrieve it. *)
+    The ['a Computation_state.t] returned by the effect means that if the value was
+    inactive at the time it is peeked, then the effect will be unable to retrieve it. *)
 val peek
   :  ?here:Stdlib.Lexing.position
   -> 'a t
@@ -485,8 +501,8 @@ module Clock : sig
       changes on every frame. Consider using [approx_now] instead, if possible. *)
   val now : ?here:Stdlib.Lexing.position -> graph -> Time_ns.t t
 
-  (** Similar to [now], but instead of updating every frame, it will only update
-      every [tick_every] time span. *)
+  (** Similar to [now], but instead of updating every frame, it will only update every
+      [tick_every] time span. *)
   val approx_now
     :  ?here:Stdlib.Lexing.position
     -> tick_every:Time_ns.Span.t
@@ -504,7 +520,8 @@ module Clock : sig
       the current wall clock time. *)
   val at : ?here:Stdlib.Lexing.position -> Time_ns.t t -> graph -> Before_or_after.t t
 
-  (** An event passed to [every] is scheduled on an interval determined by
+  (** {v
+ An event passed to [every] is scheduled on an interval determined by
       the time-span argument.
 
       [when_to_start_next_effect] has the following behavior
@@ -512,7 +529,7 @@ module Clock : sig
       | `Wait_period_after_previous_effect_finishes_blocking -> The effect will always be executed [period] after the previous effect finishes.
       | `Every_multiple_of_period_non_blocking -> Executes the effect at a regular interval.
       | `Every_multiple_of_period_blocking -> Same as `Every_multiple_of_second, but skips a beat if the previous effect is still running.
-    *)
+      v} *)
   val every
     :  ?here:Stdlib.Lexing.position
     -> when_to_start_next_effect:
@@ -522,7 +539,7 @@ module Clock : sig
          | `Every_multiple_of_period_blocking
          ]
     -> ?trigger_on_activate:bool
-    -> Time_ns.Span.t
+    -> Time_ns.Span.t t
     -> unit Effect.t t
     -> graph
     -> unit
@@ -539,13 +556,10 @@ end
 
 module Edge : sig
   (** [Bonsai.Edge.on_change] is used to schedule an effect whenever some [Bonsai.t]
-      changes.
-      The [equal] function is used to determine if a value is the same or not.
-      The callback is _always_ invoked the first time that this component is becomes active.
-      The callback is invoked at most once per frame and will be called with the latest value.
-      [?sexp_of_model] is only used for debugging.
-
-      *)
+      changes. The [equal] function is used to determine if a value is the same or not.
+      The callback is _always_ invoked the first time that this component is becomes
+      active. The callback is invoked at most once per frame and will be called with the
+      latest value. [?sexp_of_model] is only used for debugging. *)
   val on_change
     :  ?here:Stdlib.Lexing.position
     -> ?sexp_of_model:('a -> Sexp.t)
@@ -568,11 +582,9 @@ module Edge : sig
     -> graph
     -> unit
 
-  (** [Bonsai.Edge.lifecycle] is used to add effects to Bonsai's lifecycle events.
-      Using this, you can witness component activation and deactiation, as well as
-      schedule an effect at the end of every frame.
-
-      *)
+  (** [Bonsai.Edge.lifecycle] is used to add effects to Bonsai's lifecycle events. Using
+      this, you can witness component activation and deactiation, as well as schedule an
+      effect at the end of every frame. *)
   val lifecycle
     :  ?here:Stdlib.Lexing.position
     -> ?on_activate:unit Effect.t t
@@ -612,9 +624,13 @@ module Edge : sig
       val initial : 'o -> ('o, 'o) t
     end
 
-    (** [Bonsai.Edge.Poll.effect_on_change] will invoke the [~effect] function
-        every time that the input ['a Bonsai.t] changes. The result of the effect
-        function is stored and returned as a new [Bonsai.t]. *)
+    (** [Bonsai.Edge.Poll.effect_on_change] will invoke the [~effect] function every time
+        that the input ['a Bonsai.t] changes. The result of the effect function is stored
+        and returned as a new [Bonsai.t].
+
+        The main feature of [Bonsai.Edge.Poll.effect_on_change] is that it guarantees that
+        the result from an effect that are scheduled later than another effect will take
+        priority, even if the effects complete out of order. *)
     val effect_on_change
       :  ?here:Stdlib.Lexing.position
       -> ?sexp_of_input:('a -> Sexp.t)
@@ -627,8 +643,8 @@ module Edge : sig
       -> graph
       -> 'r t
 
-    (** [manual_refresh] is a stateful component for storing the result of an effect.
-        The most recent return value is returned inside a [Bonsai.t] alongside a
+    (** [manual_refresh] is a stateful component for storing the result of an effect. The
+        most recent return value is returned inside a [Bonsai.t] alongside a
         [unit Effect.t Bonsai.t] that contains an effect for kicking off a new effect. *)
     val manual_refresh
       :  ?here:Stdlib.Lexing.position
@@ -642,14 +658,14 @@ module Edge : sig
 end
 
 module Memo : sig
-  (** The [Memo] module can be used to share a computation between multiple
-      components, meaning that if the shared computation is stateful, then
-      the users of that computation will see the same state.
+  (** The [Memo] module can be used to share a computation between multiple components,
+      meaning that if the shared computation is stateful, then the users of that
+      computation will see the same state.
 
-      The way that [Memo] differs from just using [let%sub] on a computation
-      and then passing the resulting [Value.t] down to its children is twofold:
-      - The shared computation is not made active until it's actually requested
-        by another component
+      The way that [Memo] differs from just using [let%sub] on a computation and then
+      passing the resulting [Value.t] down to its children is twofold:
+      - The shared computation is not made active until it's actually requested by another
+        component
       - Knowledge of any inputs to component are be deferred to "lookup time", when
         components request an instance of the component.
 
@@ -662,15 +678,15 @@ module Memo : sig
   (** Creates a memo instance that can be used by calling [lookup] *)
   val create
     :  ?here:Stdlib.Lexing.position
-    -> ('input, 'cmp) comparator
+    -> ('input, 'cmp) Comparator.Module.t
     -> f:('input bonsai_t -> graph -> 'result bonsai_t)
     -> graph
     -> ('input, 'result) t bonsai_t
 
-  (** Requests an instance of the shared computation for a given ['input] value.
-      If an instance doesn't already exist, it will request a new computation, which
-      results in [none] being returned for a brief period of time, after which it'll
-      return a [Some] containing the result of that computation *)
+  (** Requests an instance of the shared computation for a given ['input] value. If an
+      instance doesn't already exist, it will request a new computation, which results in
+      [none] being returned for a brief period of time, after which it'll return a [Some]
+      containing the result of that computation *)
   val lookup
     :  ?here:Stdlib.Lexing.position
     -> ?sexp_of_model:('input -> Sexp.t)
@@ -685,17 +701,17 @@ module Effect_throttling : sig
   module Poll_result : sig
     type 'a t =
       | Aborted
-      (** [Aborted] indicates that the effect was aborted before it even
-          started. If an effect starts, then it should complete with some kind
-          of result - [Effect] does not support cancellation in general. *)
+      (** [Aborted] indicates that the effect was aborted before it even started. If an
+          effect starts, then it should complete with some kind of result - [Effect] does
+          not support cancellation in general. *)
       | Finished of 'a
       (** [Finished x] indicates that an effect successfully completed with value x. *)
     [@@deriving sexp, equal]
 
-    (** Collapses values of type ['a Or_error.t t] a plain Or_error.t, where
-          the Aborted case is transformed into an error.
+    (** Collapses values of type ['a Or_error.t t] a plain Or_error.t, where the Aborted
+        case is transformed into an error.
 
-          The [tag_s] parameter can be used to add additional info to the error. *)
+        The [tag_s] parameter can be used to add additional info to the error. *)
     val collapse_to_or_error : ?tag_s:Sexp.t lazy_t -> 'a Or_error.t t -> 'a Or_error.t
 
     (** Like [collapse_to_or_error], but transforms a function that returns an
@@ -728,7 +744,7 @@ module Dynamic_scope : sig
   (** This module implements dynamic variable scoping. Once a dynamic variable is created,
       you can store values in it, and lookup those same values. A lookup will find the
       nearest-most parent "unreverted" [set] call where a "set" can be "reverted" with
-      [set']'s  [revert]. *)
+      [set']'s [revert]. *)
 
   type 'a bonsai_t := 'a t
   type 'a t
@@ -738,8 +754,8 @@ module Dynamic_scope : sig
       corresponding [lookup]. *)
   val create : ?sexp_of:('a -> Sexp.t) -> name:string -> fallback:'a -> unit -> 'a t
 
-  (** Creates a variable which is derived from another. Typically this is used to
-      project out a field of another dynamic variable which contains a record. *)
+  (** Creates a variable which is derived from another. Typically this is used to project
+      out a field of another dynamic variable which contains a record. *)
   val derived
     :  ?sexp_of:('a -> Sexp.t)
     -> 'b t
@@ -768,8 +784,8 @@ module Dynamic_scope : sig
     -> graph
     -> 'r bonsai_t
 
-  (** Lookup attempts to find the value inside the nearest scope, but if there isn't
-      one, it falls back to default specified in [create]. *)
+  (** Lookup attempts to find the value inside the nearest scope, but if there isn't one,
+      it falls back to default specified in [create]. *)
   val lookup : ?here:Stdlib.Lexing.position -> 'a t -> graph -> 'a bonsai_t
 
   (** [modify] can be used to change the current value of a dynamically scoped variable. *)
@@ -818,18 +834,17 @@ end
     maintains a state machine for every key-value pair. *)
 val assoc
   :  ?here:Stdlib.Lexing.position
-  -> ('k, 'cmp) comparator
+  -> ('k, 'cmp) Comparator.Module.t
   -> ('k, 'v, 'cmp) Map.t t
   -> f:('k t -> 'v t -> graph -> 'a t)
   -> graph
   -> ('k, 'a, 'cmp) Map.t t
 
-(** Exactly like [assoc] but will automatically pack multiple [Bonsai.t] 
-    produced inside the [f] closure into a tuple.
-    See documentation for [Autopack.t] for more info. *)
+(** Exactly like [assoc] but will automatically pack multiple [Bonsai.t] produced inside
+    the [f] closure into a tuple. See documentation for [Autopack.t] for more info. *)
 val assoc_n
   :  ?here:Stdlib.Lexing.position
-  -> ('k, 'cmp) comparator
+  -> ('k, 'cmp) Comparator.Module.t
   -> ('k, 'v, 'cmp) Map.t t
   -> f:('k t -> 'v t -> graph -> 'unpacked)
   -> n:('packed, 'unpacked) Autopack.t
@@ -846,18 +861,17 @@ val all_map
 (** Like [assoc] except that the input value is a Set instead of a Map. *)
 val assoc_set
   :  ?here:Stdlib.Lexing.position
-  -> ('key, 'cmp) comparator
+  -> ('key, 'cmp) Comparator.Module.t
   -> ('key, 'cmp) Set.t t
   -> f:('key t -> graph -> 'result t)
   -> graph
   -> ('key, 'result, 'cmp) Map.t t
 
-(** Exactly like [assoc_set] but will automatically pack multiple [Bonsai.t] 
-    produced inside the [f] closure into a tuple.
-    See documentation for [Autopack.t] for more info. *)
+(** Exactly like [assoc_set] but will automatically pack multiple [Bonsai.t] produced
+    inside the [f] closure into a tuple. See documentation for [Autopack.t] for more info. *)
 val assoc_set_n
   :  ?here:Stdlib.Lexing.position
-  -> ('key, 'cmp) comparator
+  -> ('key, 'cmp) Comparator.Module.t
   -> ('key, 'cmp) Set.t t
   -> f:('key t -> graph -> 'unpacked)
   -> n:('packed, 'unpacked) Autopack.t
@@ -870,19 +884,18 @@ val assoc_set_n
     may be quite slow with large lists. *)
 val assoc_list
   :  ?here:Stdlib.Lexing.position
-  -> ('key, _) comparator
+  -> ('key, _) Comparator.Module.t
   -> 'a list t
   -> get_key:('a -> 'key)
   -> f:('key t -> 'a t -> graph -> 'b t)
   -> graph
   -> [ `Duplicate_key of 'key | `Ok of 'b list ] t
 
-(** Exactly like [assoc_list] but will automatically pack multiple [Bonsai.t] 
-    produced inside the [f] closure into a tuple.
-    See documentation for [Autopack.t] for more info. *)
+(** Exactly like [assoc_list] but will automatically pack multiple [Bonsai.t] produced
+    inside the [f] closure into a tuple. See documentation for [Autopack.t] for more info. *)
 val assoc_list_n
   :  ?here:Stdlib.Lexing.position
-  -> ('key, _) comparator
+  -> ('key, _) Comparator.Module.t
   -> 'a list t
   -> get_key:('a -> 'key)
   -> f:('key t -> 'a t -> graph -> 'unpacked)
@@ -905,14 +918,6 @@ module Debug : sig
     -> graph
     -> unit
 
-  val instrument_computation
-    :  ?here:Stdlib.Lexing.position
-    -> (graph -> 'a t)
-    -> start_timer:(string -> 'timer)
-    -> stop_timer:('timer -> unit)
-    -> graph
-    -> 'a t
-
   (** Builds a graphviz dot file string for the component *)
   val to_dot : ?pre_process:bool -> (graph -> 'a t) -> string
 
@@ -924,48 +929,40 @@ module Debug : sig
 
   (** Wrapping [watch_computation] around a computation will add informative print
       statements every time that a value defined outside the closue - and used _inside_
-      the closure - is updated.  This can be useful to debug why a component is being
+      the closure - is updated. This can be useful to debug why a component is being
       updated.
 
       By default, calls to [watch_computation] are no-ops, and must be enabled manually
-      with external tools.  This is so you can leave calls to this function in production
-      builds without impacting performance until you start debugging. 
+      with external tools. This is so you can leave calls to this function in production
+      builds without impacting performance until you start debugging.
 
       [log_model_before]: Will log a state machine's model before apply_action/reset is
       called. Uses the sexp_of_model function passed to the state machine, or
-      sexp_of_opaque if no sexp function is provided. 
-      (Default: false)
+      sexp_of_opaque if no sexp function is provided. (Default: false)
 
       [log_model_after]: Will log a state machine's model after apply_action/reset is
       applied to it. Uses the sexp_of_model function passed to the state machine, or
-      sexp_of_opaque if no sexp function is provided. 
-      (Default: false)
+      sexp_of_opaque if no sexp function is provided. (Default: false)
 
       [log_action]: Logs the action applied to the state machine. Uses the sexp_of_action
       function passed to the state machine, or sexp_of_opaque if no sexp function is
-      provided. 
-      (Default: false)
+      provided. (Default: false)
 
       [log_incr_info]: Will log a state machine's model after apply_action/reset is
       applied to it. Uses the sexp_of_model function passed to the state machine, or
-      sexp_of_opaque if no sexp function is provided. 
-      (Default: false)
+      sexp_of_opaque if no sexp function is provided. (Default: false)
 
       [log_watcher_positions]: Logs the source code positions of the Computation_watcher
       nodes that are relevant to the current change. The node nearest to the change is at
-      the top
+      the top (Default: true)
+
+      [log_dependency_definition_position]: Logs the source code position of the
+      Computation node that updated and caused the watched computation to update.
       (Default: true)
 
-      [log_dependency_definition_position]: Logs the source code position of the 
-      Computation node that updated and caused the watched computation to update. 
-      (Default: true)
-
-      [label]: Prefixes the watcher position in the list of watchers for easier 
+      [label]: Prefixes the watcher position in the list of watchers for easier
       identification of individual watchers. Will not show up if [log_watcher_positions]
-      is set to false
-      (Default: None)
-
-  *)
+      is set to false (Default: None) *)
   val watch_computation
     :  ?here:Stdlib.Lexing.position
     -> ?log_model_before:bool
@@ -978,24 +975,27 @@ module Debug : sig
     -> f:(graph -> 'a t)
     -> graph
     -> 'a t
+
+  (** [memo_query_counts] prints how many listeners there are for each query. *)
+  val memo_query_counts : ('query, _) Memo.t -> ('query * int) List.t
 end
 
 module Path : sig
   (** A [Bonsai.Path.t] is a value that records the path through the bonsai graph that was
-      taken to reach the requesting component. This means that every call to
-      [Bonsai.path] will yield a distinct and reproducable [Bonsai.Path.t], which you can
-      use as keys, or to generate stable unique ids.*)
+      taken to reach the requesting component. This means that every call to [Bonsai.path]
+      will yield a distinct and reproducable [Bonsai.Path.t], which you can use as keys,
+      or to generate stable unique ids. *)
 
   type t = Path.t [@@deriving compare, sexp_of]
 
   include Comparable.S_plain with type t := t
 
-  (** Converts the path to a "unique" string that contains only
-      lowercase letters and underscores. This makes it viable for e.g. HTML ids.
+  (** Converts the path to a "unique" string that contains only lowercase letters and
+      underscores. This makes it viable for e.g. HTML ids.
 
-      The uniqueness of this string depends on the uniqueness of the sexp
-      function for any modules that are being used in "assoc". The
-      invariant that must be upheld by those modules is the following:
+      The uniqueness of this string depends on the uniqueness of the sexp function for any
+      modules that are being used in "assoc". The invariant that must be upheld by those
+      modules is the following:
 
       [a != b] implies [sexp_of a != sexp_of b] *)
   val to_unique_identifier_string : t -> string
@@ -1017,29 +1017,6 @@ val arr2
   -> 'b t
   -> f:('a -> 'b -> 'c)
   -> 'c t
-
-module Conv : sig
-  val handle
-    :  ?here:Stdlib.Lexing.position
-    -> f:(graph -> 'a t)
-    -> graph
-    -> 'a Computation.t
-
-  val top_level_handle
-    :  ?here:Stdlib.Lexing.position
-    -> (graph -> 'a t)
-    -> 'a Computation.t
-
-  val perform : ?here:Stdlib.Lexing.position -> graph -> 'a Computation.t -> 'a t
-  val reveal_value : 'a t -> 'a Value.t
-  val conceal_value : 'a Value.t -> 'a t
-
-  val isolated
-    :  graph
-    -> here:Source_code_position.t
-    -> f:(unit -> 'a Value.t)
-    -> 'a Computation.t
-end
 
 module Effect = Ui_effect
 
@@ -1090,8 +1067,8 @@ module Expert : sig
       additional power before reaching for this function. *)
   val assoc_on
     :  ?here:Stdlib.Lexing.position
-    -> ('io_key, 'io_cmp) comparator
-    -> ('model_key, 'model_cmp) comparator
+    -> ('io_key, 'io_cmp) Comparator.Module.t
+    -> ('model_key, 'model_cmp) Comparator.Module.t
     -> ('io_key, 'data, 'io_cmp) Core.Map.t t
     -> get_model_key:('io_key -> 'data -> 'model_key)
     -> f:('io_key t -> 'data t -> graph -> 'result t)
@@ -1136,8 +1113,11 @@ module Expert : sig
   end
 end
 
-(** Just in subfeature to reimplement proc on top of cont *)
-module For_proc2 : sig
+(** These functions are here to provide the basis for [bonsai_proc] which wants versions
+    of these functions that don't have calls to [split ~here] in them. *)
+module For_proc : sig
+  module type Map0_output = Map0_intf.Output
+
   val arr1 : ?here:Stdlib.Lexing.position -> graph -> 'a t -> f:('a -> 'b) -> 'b t
 
   val arr2
@@ -1204,6 +1184,7 @@ module For_proc2 : sig
     -> 'h t
 
   val value_cutoff : 'a t -> equal:('a -> 'a -> bool) -> 'a t
+  val value_map : ?here:Stdlib.Lexing.position -> 'a t -> f:('a -> 'b) -> 'b t
   val conceal_value : 'a Value.t -> 'a t
 
   val state
@@ -1250,7 +1231,7 @@ module For_proc2 : sig
 
   val toggle' : ?here:Stdlib.Lexing.position -> default_model:bool -> graph -> Toggle.t t
 
-  val state_machine0
+  val state_machine
     :  ?here:Stdlib.Lexing.position
     -> ?reset:('model, 'action, unit) resetter
     -> ?sexp_of_model:('model -> Sexp.t)
@@ -1263,7 +1244,7 @@ module For_proc2 : sig
     -> graph
     -> ('model * ('action -> unit Effect.t)) t
 
-  val state_machine1
+  val state_machine_with_input
     :  ?here:Stdlib.Lexing.position
     -> ?sexp_of_action:('action -> Sexp.t)
     -> ?reset:('model, 'action, unit) resetter
@@ -1280,7 +1261,7 @@ module For_proc2 : sig
     -> graph
     -> ('model * ('action -> unit Effect.t)) t
 
-  val actor0
+  val actor
     :  ?here:Stdlib.Lexing.position
     -> ?reset:(('action, 'return) Apply_action_context.t -> 'model -> 'model)
     -> ?sexp_of_model:('model -> Sexp.t)
@@ -1296,7 +1277,7 @@ module For_proc2 : sig
     -> graph
     -> ('model * ('action -> 'return Effect.t)) t
 
-  val actor1
+  val actor_with_input
     :  ?here:Stdlib.Lexing.position
     -> ?sexp_of_action:('action -> Sexp.t)
     -> ?reset:(('action, 'return) Apply_action_context.t -> 'model -> 'model)
@@ -1322,7 +1303,7 @@ module For_proc2 : sig
     -> default_model:'model
     -> apply_action:
          (('action, unit) Apply_action_context.t
-          -> 'result
+          -> 'result Computation_status.t
           -> 'model
           -> 'action
           -> 'model)
@@ -1434,4 +1415,27 @@ module For_proc2 : sig
     -> ('a, 'b) Field.t
     -> graph
     -> ('b * ('b -> unit Effect.t)) t
+end
+
+module Conv : sig
+  val handle
+    :  ?here:Stdlib.Lexing.position
+    -> f:(graph -> 'a t)
+    -> graph
+    -> 'a Computation.t
+
+  val top_level_handle
+    :  ?here:Stdlib.Lexing.position
+    -> (graph -> 'a t)
+    -> 'a Computation.t
+
+  val perform : ?here:Stdlib.Lexing.position -> graph -> 'a Computation.t -> 'a t
+  val reveal_value : 'a t -> 'a Value.t
+  val conceal_value : 'a Value.t -> 'a t
+
+  val isolated
+    :  graph
+    -> here:Source_code_position.t
+    -> f:(unit -> 'a Value.t)
+    -> 'a Computation.t
 end

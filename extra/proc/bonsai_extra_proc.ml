@@ -1,0 +1,159 @@
+open! Core
+module Bonsai = Bonsai.Cont
+open Bonsai.Let_syntax
+
+let with_inject_fixed_point f graph =
+  let f inject graph =
+    let%sub a, b = f inject graph in
+    a, b
+  in
+  let result = Bonsai_extra.with_inject_fixed_point f graph in
+  result
+;;
+
+let with_self_effect ?sexp_of_model ?equal ~f () graph =
+  Bonsai_extra.with_self_effect ?sexp_of_model ?equal ~f graph
+;;
+
+let pipe ?sexp_of graph =
+  let enqueue, dequeue = Bonsai_extra.pipe ?sexp_of graph in
+  Bonsai.both enqueue dequeue
+;;
+
+let exactly_once effect graph =
+  Bonsai_extra.exactly_once effect graph;
+  Bonsai.return ()
+;;
+
+let exactly_once_with_value = Bonsai_extra.exactly_once_with_value
+
+let value_with_override ?sexp_of_model ?equal value graph =
+  let value, override =
+    Bonsai_extra.value_with_override ?sexp_of_model ?equal value graph
+  in
+  Bonsai.both value override
+;;
+
+let state_machine0_dynamic_model
+  ?sexp_of_action
+  ?sexp_of_model
+  ?equal
+  ~model
+  ~apply_action
+  ()
+  graph
+  =
+  let result, inject =
+    Bonsai_extra.state_machine0_dynamic_model
+      ?sexp_of_action
+      ?sexp_of_model
+      ?equal
+      ~model
+      ~apply_action
+      graph
+  in
+  Bonsai.both result inject
+;;
+
+let state_machine1_dynamic_model
+  ?sexp_of_action
+  ?sexp_of_model
+  ?equal
+  ~model
+  ~apply_action
+  input
+  graph
+  =
+  let result, inject =
+    Bonsai_extra.state_machine1_dynamic_model
+      ?sexp_of_action
+      ?sexp_of_model
+      ?equal
+      ~model
+      ~apply_action
+      input
+      graph
+  in
+  Bonsai.both result inject
+;;
+
+let state_dynamic_model ?sexp_of_model ?equal ~model () graph =
+  let result, inject =
+    Bonsai_extra.state_dynamic_model ?sexp_of_model ?equal ~model graph
+  in
+  Bonsai.both result inject
+;;
+
+module Id_gen (T : Int_intf.S) () = struct
+  include Bonsai_extra.Id_gen (T) ()
+
+  let component' ?reset graph =
+    let generate, newest = component' ?reset graph in
+    Bonsai.both generate newest
+  ;;
+end
+
+let mirror'
+  ?sexp_of_model
+  ~equal
+  ~store_set
+  ~store_value
+  ~interactive_set
+  ~interactive_value
+  ()
+  graph
+  =
+  Bonsai_extra.mirror'
+    ?sexp_of_model
+    ~equal
+    ~store_set
+    ~store_value
+    ~interactive_set
+    ~interactive_value
+    graph;
+  Bonsai.return ()
+;;
+
+let mirror
+  ?sexp_of_model
+  ~equal
+  ~store_set
+  ~store_value
+  ~interactive_set
+  ~interactive_value
+  ()
+  graph
+  =
+  Bonsai_extra.mirror
+    ?sexp_of_model
+    ~equal
+    ~store_set
+    ~store_value
+    ~interactive_set
+    ~interactive_value
+    graph;
+  Bonsai.return ()
+;;
+
+let with_last_modified_time ~equal input graph =
+  let value, time = Bonsai_extra.with_last_modified_time ~equal input graph in
+  Bonsai.both value time
+;;
+
+let is_stable = Bonsai_extra.is_stable
+
+module Stability = Bonsai_extra.Stability
+
+let value_stability = Bonsai_extra.value_stability
+
+module One_at_a_time = struct
+  include Bonsai_extra.One_at_a_time
+
+  let effect send_effect graph =
+    let send, status = effect send_effect graph in
+    Bonsai.both send status
+  ;;
+end
+
+let bonk = Bonsai_extra.bonk
+let chain_incr_effects = Bonsai_extra.chain_incr_effects

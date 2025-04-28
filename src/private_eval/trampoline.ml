@@ -42,11 +42,15 @@ let all_map (type k v) (map : (k, v t, 'cmp) Map.t) =
   |> bind ~f:(fun alist -> return (Map.of_alist_exn (Map.comparator_s map) alist))
 ;;
 
+let both a b = bind a ~f:(fun a -> bind b ~f:(fun b -> return (a, b)))
+
 module Let_syntax = struct
   let return = return
 
   module Let_syntax = struct
     let return = return
     let bind = bind
+    let map = map
+    let both = both
   end
 end

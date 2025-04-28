@@ -10,6 +10,7 @@ module Name_source : sig
     | Wrap_inject
     | App_input
     | Model_resetter
+    | Inverted_lifecycles_dependency
     | Fix_recurse
 end
 

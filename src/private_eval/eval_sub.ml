@@ -68,12 +68,17 @@ module Thread_env = struct
   ;;
 end
 
+let subst_into_path_segment ~invert_lifecycles : Path.Elem.t =
+  if invert_lifecycles then Subst_into_invert_lifecycles else Subst_into
+;;
+
 let baseline
   (type thread_env)
   ~here
   ~(info_from : (_, _, _, _, thread_env) Computation.info)
   ~(info_into : (_, _, _, _, thread_env) Computation.info)
   ~via
+  ~invert_lifecycles
   ~(thread_environment : thread_env Thread_env.t)
   : (_, thread_env) Computation.packed_info
   =
@@ -130,7 +135,11 @@ let baseline
     let environment = Environment.add_exn environment ~key:via ~data:from_result in
     let%bind.Trampoline into, maybe_env =
       let model = Incr.map model ~f:Tuple2.get2 in
-      let path = if both_use_path then Path.append path Path.Elem.Subst_into else path in
+      let path =
+        if both_use_path
+        then Path.append path (subst_into_path_segment ~invert_lifecycles)
+        else path
+      in
       info_into.run ~environment ~fix_envs ~path ~model ~inject:(wrap_sub_into inject)
     in
     let result = Snapshot.result into in
@@ -165,6 +174,7 @@ let from_stateless
   ~(info_from : (_, _, _, _, thread_env) Computation.info)
   ~(info_into : (_, _, _, _, thread_env) Computation.info)
   ~via
+  ~invert_lifecycles
   ~(thread_environment : thread_env Thread_env.t)
   : (_, thread_env) Computation.packed_info
   =
@@ -192,7 +202,11 @@ let from_stateless
     let environment = Thread_env.pick thread_environment ~environment ~maybe_env in
     let environment = Environment.add_exn environment ~key:via ~data:from_result in
     let%bind.Trampoline into, maybe_env =
-      let path = if both_use_path then Path.append path Path.Elem.Subst_into else path in
+      let path =
+        if both_use_path
+        then Path.append path (subst_into_path_segment ~invert_lifecycles)
+        else path
+      in
       info_into.run ~environment ~fix_envs ~path ~model ~inject
     in
     let result = Snapshot.result into in
@@ -225,6 +239,7 @@ let into_stateless
   ~(info_from : (_, _, _, _, thread_env) Computation.info)
   ~(info_into : (_, _, _, _, thread_env) Computation.info)
   ~via
+  ~invert_lifecycles
   ~(thread_environment : thread_env Thread_env.t)
   : (_, thread_env) Computation.packed_info
   =
@@ -247,7 +262,11 @@ let into_stateless
     let environment = Thread_env.pick thread_environment ~environment ~maybe_env in
     let environment = Environment.add_exn environment ~key:via ~data:from_result in
     let%bind.Trampoline into, maybe_env =
-      let path = if both_use_path then Path.append path Path.Elem.Subst_into else path in
+      let path =
+        if both_use_path
+        then Path.append path (subst_into_path_segment ~invert_lifecycles)
+        else path
+      in
       info_into.run
         ~environment
         ~fix_envs
@@ -285,6 +304,7 @@ let gather
   ~(info_from : (a, b, c, d, thread_env) Computation.info)
   ~(info_into : (e, f, g, h, thread_env) Computation.info)
   ~via
+  ~invert_lifecycles
   ~(thread_environment : thread_env Thread_env.t)
   : (_, thread_env) Computation.packed_info
   =
@@ -298,7 +318,8 @@ let gather
     Some (a, b)
   in
   match can_run_from_stateless with
-  | Some (T, T) -> from_stateless ~here ~info_from ~info_into ~via ~thread_environment
+  | Some (T, T) ->
+    from_stateless ~here ~info_from ~info_into ~via ~invert_lifecycles ~thread_environment
   | None ->
     let into_model = is_unit info_into.model.type_id in
     let into_action =
@@ -310,8 +331,16 @@ let gather
       Some (a, b)
     in
     (match can_run_into_stateless with
-     | Some (T, T) -> into_stateless ~here ~info_from ~info_into ~via ~thread_environment
-     | None -> baseline ~here ~info_from ~info_into ~via ~thread_environment)
+     | Some (T, T) ->
+       into_stateless
+         ~here
+         ~info_from
+         ~info_into
+         ~via
+         ~invert_lifecycles
+         ~thread_environment
+     | None ->
+       baseline ~here ~info_from ~info_into ~via ~invert_lifecycles ~thread_environment)
 ;;
 
 module Chain = struct
@@ -349,7 +378,7 @@ module Chain = struct
     ~recurse
     =
     match (computation : _ Computation.t) with
-    | Sub { from; via; into; here } ->
+    | Sub { from; via; into; here; invert_lifecycles = false } ->
       let%bind.Trampoline from = recurse.f ~recursive_scopes ~time_source from in
       let bound = Computation_info.with_threaded_environment from in
       build_chain
@@ -375,6 +404,7 @@ module Chain = struct
         ~info_from:bound_left
         ~info_into:bound_right
         ~via:via_left
+        ~invert_lifecycles:false
         ~thread_environment:Thread_env
     in
     Link.T { bound; via = via_right; here = here_right }
@@ -387,7 +417,13 @@ module Chain = struct
       List.iteri init ~f:(fun i link -> Balanced_reducer.set_exn reducer i link);
       let (T { bound = T info_from; via; here }) = Balanced_reducer.compute_exn reducer in
       let (T info_into) = Computation_info.with_threaded_environment final in
-      gather ~here ~info_from ~info_into ~via ~thread_environment:Thread_env
+      gather
+        ~here
+        ~info_from
+        ~info_into
+        ~via
+        ~invert_lifecycles:false
+        ~thread_environment:Thread_env
       |> Computation_info.drop_threaded_environment
   ;;
 
@@ -405,8 +441,8 @@ module Chain = struct
   ;;
 end
 
-let gather ~here ~info_from ~info_into ~via =
-  gather ~here ~info_from ~info_into ~via ~thread_environment:None
+let gather ~here ~info_from ~info_into ~via ~invert_lifecycles =
+  gather ~here ~info_from ~info_into ~via ~invert_lifecycles ~thread_environment:None
 ;;
 
 type generic_gather = Chain.recurse =

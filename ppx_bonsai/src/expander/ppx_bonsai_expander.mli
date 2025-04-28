@@ -2,7 +2,7 @@ open! Core
 
 module Location_behavior : sig
   type t =
-    | Location_of_callsite (**  Uses [~here:[%here]] *)
+    | Location_of_callsite (** Uses [~here:[%here]] *)
     | Location_in_scope (** Uses [~here:here] *)
 end
 

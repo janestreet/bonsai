@@ -86,39 +86,40 @@ module Value = struct
     | Mapn { inputs } -> inputs
   ;;
 
-  let of_value' : initial_path:Node_path.builder -> 'a Value.t -> t =
+  let of_value' : initial_path:Node_path.builder -> 'a Value.t -> t Trampoline.t =
     fun ~initial_path value ->
-    let rec helper : type a. current_path:Node_path.builder -> a Value.t -> t =
+    let rec helper : type a. current_path:Node_path.builder -> a Value.t -> t Trampoline.t
+      =
       let module Packed_value = struct
         type t = T : 'a Value.t -> t
       end
       in
       let create_mapn_with_choices ~current_path (values : Packed_value.t list) =
-        Mapn
-          { inputs =
-              List.mapi values ~f:(fun i (T value) ->
-                helper
-                  ~current_path:
-                    (Node_path.choice_point current_path (i + 1) |> Node_path.descend)
-                  value)
-          }
+        let%map.Trampoline inputs =
+          List.mapi values ~f:(fun i (T value) ->
+            helper
+              ~current_path:
+                (Node_path.choice_point current_path (i + 1) |> Node_path.descend)
+              value)
+          |> Trampoline.all
+        in
+        Mapn { inputs }
       in
       fun ~current_path { value; here; id = outer_id } ->
-        let kind =
+        let open Trampoline.Let_syntax in
+        let%bind kind =
           match value with
-          | Constant _ -> Constant
-          | Exception _ -> Exception
-          | Incr _ -> Incr
-          | Named _ -> Named
+          | Constant _ -> return Constant
+          | Exception _ -> return Exception
+          | Incr _ -> return Incr
+          | Named _ -> return Named
           | Cutoff { t; equal = _; added_by_let_syntax } ->
-            Cutoff
-              { t =
-                  helper
-                    ~current_path:
-                      (Node_path.choice_point current_path 1 |> Node_path.descend)
-                    t
-              ; added_by_let_syntax
-              }
+            let%map t =
+              helper
+                ~current_path:(Node_path.choice_point current_path 1 |> Node_path.descend)
+                t
+            in
+            Cutoff { t; added_by_let_syntax }
           | Map { t; f = _ } -> create_mapn_with_choices ~current_path [ T t ]
           | Both (t1, t2) -> create_mapn_with_choices ~current_path [ T t1; T t2 ]
           | Map2 { t1; t2; f = _ } ->
@@ -136,12 +137,15 @@ module Value = struct
               ~current_path
               [ T t1; T t2; T t3; T t4; T t5; T t6; T t7 ]
         in
-        { node_path = finalize current_path; here; kind; id = Id.of_type_id outer_id }
+        return
+          { node_path = finalize current_path; here; kind; id = Id.of_type_id outer_id }
     in
     helper ~current_path:initial_path value
   ;;
 
-  let of_value value = of_value' ~initial_path:(Node_path.descend Node_path.empty) value
+  let of_value value =
+    Trampoline.run (of_value' ~initial_path:(Node_path.descend Node_path.empty) value)
+  ;;
 
   let rec to_string_hum { node_path = _; kind; here = _; id } =
     match kind with
@@ -173,6 +177,9 @@ module Computation0 = struct
         { from : t
         ; via : Id.t
         ; into : t
+        ; (* [invert_lifecycles] is quite rare, and adds clutter to expect text
+           outputs, so we don't include it in skeleton serializations by default. *)
+          invert_lifecycles : bool [@sexp.default false] [@sexp_drop_default.equal]
         }
     | Store of
         { id : Id.t
@@ -233,181 +240,172 @@ module Computation0 = struct
   let of_computation : 'result Computation.t -> t =
     fun computation ->
     let rec helper
-      : type result. current_path:Node_path.builder -> result Computation.t -> t
+      : type result.
+        current_path:Node_path.builder -> result Computation.t -> t Trampoline.t
       =
+      let open Trampoline.Let_syntax in
       fun ~current_path computation ->
-      let choice_point choice =
-        Node_path.choice_point current_path choice |> Node_path.descend
-      in
-      let node_path = finalize current_path in
-      match computation with
-      | Return { value; here } ->
-        { node_path
-        ; here
-        ; kind =
-            Return
-              { value =
-                  Value.of_value' ~initial_path:(Node_path.descend current_path) value
+        let choice_point choice =
+          Node_path.choice_point current_path choice |> Node_path.descend
+        in
+        let node_path = finalize current_path in
+        match computation with
+        | Return { value; here } ->
+          let%map kind =
+            let%map value =
+              Value.of_value' ~initial_path:(Node_path.descend current_path) value
+            in
+            Return { value }
+          in
+          { node_path; here; kind }
+        | Leaf1 { input; here; _ } ->
+          let%map input =
+            Value.of_value' ~initial_path:(Node_path.descend current_path) input
+          in
+          { node_path; here; kind = Leaf1 { input } }
+        | Leaf0 { here; _ } -> return { node_path; here; kind = Leaf0 }
+        | Leaf_incr { input; here; _ } ->
+          let%map input =
+            Value.of_value' ~initial_path:(Node_path.descend current_path) input
+          in
+          { node_path; here; kind = Leaf_incr { input } }
+        | Sub { from; via; into; here; invert_lifecycles } ->
+          let%map from = helper ~current_path:(choice_point 1) from
+          and into = helper ~current_path:(choice_point 2) into in
+          let kind = Sub { from; via = Id.of_type_id via; into; invert_lifecycles } in
+          { node_path; here; kind }
+        | Store { id; value; inner; here } ->
+          let%map value = Value.of_value' ~initial_path:(choice_point 1) value
+          and inner = helper ~current_path:(choice_point 2) inner in
+          let kind = Store { id = Id.of_type_id id; value; inner } in
+          { node_path; here; kind }
+        | Fetch { id; here; _ } ->
+          let kind = Fetch { id = Id.of_type_id id } in
+          return { node_path; here; kind }
+        | Assoc { map; key_id; cmp_id; data_id; by; here; _ } ->
+          let%map map = Value.of_value' ~initial_path:(choice_point 1) map
+          and by = helper ~current_path:(choice_point 2) by in
+          let kind =
+            Assoc
+              { map
+              ; key_id = Id.of_type_id key_id
+              ; cmp_id = Id.of_type_id cmp_id
+              ; data_id = Id.of_type_id data_id
+              ; by
               }
-        }
-      | Leaf1 { input; here; _ } ->
-        { node_path
-        ; here
-        ; kind =
-            Leaf1
-              { input =
-                  Value.of_value' ~initial_path:(Node_path.descend current_path) input
+          in
+          { node_path; here; kind }
+        | Assoc_simpl { map; here; _ } ->
+          let%map map =
+            Value.of_value' ~initial_path:(Node_path.descend current_path) map
+          in
+          let kind = Assoc_simpl { map } in
+          { node_path; here; kind }
+        | Assoc_on { map; io_key_id; model_key_id; model_cmp_id; data_id; by; here; _ } ->
+          let%map map = Value.of_value' ~initial_path:(choice_point 1) map
+          and by = helper ~current_path:(choice_point 2) by in
+          let kind =
+            Assoc_on
+              { map
+              ; io_key_id = Id.of_type_id io_key_id
+              ; model_key_id = Id.of_type_id model_key_id
+              ; model_cmp_id = Id.of_type_id model_cmp_id
+              ; data_id = Id.of_type_id data_id
+              ; by
               }
-        }
-      | Leaf0 { here; _ } -> { node_path; here; kind = Leaf0 }
-      | Leaf_incr { input; here; _ } ->
-        { node_path
-        ; here
-        ; kind =
-            Leaf_incr
-              { input =
-                  Value.of_value' ~initial_path:(Node_path.descend current_path) input
-              }
-        }
-      | Sub { from; via; into; here } ->
-        let kind =
-          Sub
-            { from = helper ~current_path:(choice_point 1) from
-            ; via = Id.of_type_id via
-            ; into = helper ~current_path:(choice_point 2) into
-            }
-        in
-        { node_path; here; kind }
-      | Store { id; value; inner; here } ->
-        let kind =
-          Store
-            { id = Id.of_type_id id
-            ; value = Value.of_value' ~initial_path:(choice_point 1) value
-            ; inner = helper ~current_path:(choice_point 2) inner
-            }
-        in
-        { node_path; here; kind }
-      | Fetch { id; here; _ } ->
-        let kind = Fetch { id = Id.of_type_id id } in
-        { node_path; here; kind }
-      | Assoc { map; key_id; cmp_id; data_id; by; here; _ } ->
-        let kind =
-          Assoc
-            { map = Value.of_value' ~initial_path:(choice_point 1) map
-            ; key_id = Id.of_type_id key_id
-            ; cmp_id = Id.of_type_id cmp_id
-            ; data_id = Id.of_type_id data_id
-            ; by = helper ~current_path:(choice_point 2) by
-            }
-        in
-        { node_path; here; kind }
-      | Assoc_simpl { map; here; _ } ->
-        let kind =
-          Assoc_simpl
-            { map = Value.of_value' ~initial_path:(Node_path.descend current_path) map }
-        in
-        { node_path; here; kind }
-      | Assoc_on { map; io_key_id; model_key_id; model_cmp_id; data_id; by; here; _ } ->
-        let kind =
-          Assoc_on
-            { map = Value.of_value' ~initial_path:(choice_point 1) map
-            ; io_key_id = Id.of_type_id io_key_id
-            ; model_key_id = Id.of_type_id model_key_id
-            ; model_cmp_id = Id.of_type_id model_cmp_id
-            ; data_id = Id.of_type_id data_id
-            ; by = helper ~current_path:(choice_point 2) by
-            }
-        in
-        { node_path; here; kind }
-      | Switch { match_; arms; here; _ } ->
-        (* This form of node_path generation is necessary to achive the same traversal as the one
+          in
+          { node_path; here; kind }
+        | Switch { match_; arms; here; _ } ->
+          (* This form of node_path generation is necessary to achive the same traversal as the one
            in [transform.mli] so that both node paths are in sync. *)
-        let index = ref 1 in
-        let kind =
-          Switch
-            { match_ = Value.of_value' ~initial_path:(choice_point 1) match_
-            ; arms =
-                Map.fold arms ~init:[] ~f:(fun ~key:_ ~data:computation acc ->
-                  incr index;
-                  helper ~current_path:(choice_point !index) computation :: acc)
-                |> List.rev
-            }
-        in
-        { node_path; here; kind }
-      | Fix_define { result; initial_input; fix_id; input_id; here } ->
-        let kind =
-          Fix_define
-            { initial_input = Value.of_value' ~initial_path:(choice_point 1) initial_input
-            ; fix_id = Id.of_type_id (Fix_id.type_id fix_id)
-            ; input_id = Id.of_type_id input_id
-            ; result = helper ~current_path:(choice_point 1) result
-            }
-        in
-        { node_path; here; kind }
-      | Fix_recurse { fix_id; input_id; input; here } ->
-        let kind =
-          Fix_recurse
-            { input = Value.of_value' ~initial_path:(choice_point 1) input
-            ; input_id = Id.of_type_id input_id
-            ; fix_id = Id.of_type_id (Fix_id.type_id fix_id)
-            }
-        in
-        { node_path; here; kind }
-      | Lazy { t; here } ->
-        let potentially_evaluated =
-          (* If lazy has already been forced, then the forced value is stored. *)
-          match Lazy.is_val t with
-          | false -> None
-          | true ->
-            Lazy.force t |> helper ~current_path:(Node_path.descend current_path) |> Some
-        in
-        { node_path; here; kind = Lazy { t = potentially_evaluated } }
-      | With_model_resetter { reset_id; inner; here } ->
-        let kind =
-          With_model_resetter
-            { reset_id = Id.of_type_id reset_id
-            ; inner = helper ~current_path:(Node_path.descend current_path) inner
-            }
-        in
-        { node_path; here; kind }
-      | Wrap { inner; wrapper_model; inject_id; here; _ } ->
-        let kind =
-          Wrap
-            { model_id = Id.of_model_type_id wrapper_model.type_id
-            ; inject_id = Id.of_type_id inject_id
-            ; inner = helper ~current_path:(Node_path.descend current_path) inner
-            }
-        in
-        { node_path; here; kind }
-      | Path { here } -> { node_path; here; kind = Path }
-      | Lifecycle { lifecycle = value; here } ->
-        let kind =
-          Lifecycle
-            { value = Value.of_value' ~initial_path:(Node_path.descend current_path) value
-            }
-        in
-        { node_path; here; kind }
-      | Computation_watcher
-          { inner
-          ; here
-          ; free_vars
-          ; config = _
-          ; queue = _
-          ; value_type_id_observation_definition_positions = _
-          ; enable_watcher = _
-          } ->
-        let kind =
-          Computation_watcher
-            { inner = helper ~current_path:(Node_path.descend current_path) inner
-            ; free_vars =
-                Computation_watcher.Type_id_location_map.map_to_list
-                  free_vars
-                  { f = (fun key _ -> Id.of_type_id key) }
-            }
-        in
-        { node_path; here; kind }
+          let index = ref 1 in
+          let%map match_ = Value.of_value' ~initial_path:(choice_point 1) match_
+          and arms =
+            Map.fold arms ~init:[] ~f:(fun ~key:_ ~data:computation acc ->
+              incr index;
+              helper ~current_path:(choice_point !index) computation :: acc)
+            |> List.rev
+            |> Trampoline.all
+          in
+          let kind = Switch { match_; arms } in
+          { node_path; here; kind }
+        | Fix_define { result; initial_input; fix_id; input_id; here } ->
+          let%map initial_input =
+            Value.of_value' ~initial_path:(choice_point 1) initial_input
+          and result = helper ~current_path:(choice_point 2) result in
+          let kind =
+            Fix_define
+              { initial_input
+              ; fix_id = Id.of_type_id (Fix_id.type_id fix_id)
+              ; input_id = Id.of_type_id input_id
+              ; result
+              }
+          in
+          { node_path; here; kind }
+        | Fix_recurse { fix_id; input_id; input; here } ->
+          let%map input = Value.of_value' ~initial_path:(choice_point 1) input in
+          let kind =
+            Fix_recurse
+              { input
+              ; input_id = Id.of_type_id input_id
+              ; fix_id = Id.of_type_id (Fix_id.type_id fix_id)
+              }
+          in
+          { node_path; here; kind }
+        | Lazy { t; here } ->
+          let%map potentially_evaluated =
+            (* If lazy has already been forced, then the forced value is stored. *)
+            match Lazy.is_val t with
+            | false -> return None
+            | true ->
+              Lazy.force t
+              |> helper ~current_path:(Node_path.descend current_path)
+              |> Trampoline.map ~f:Option.some
+          in
+          { node_path; here; kind = Lazy { t = potentially_evaluated } }
+        | With_model_resetter { reset_id; inner; here } ->
+          let%map inner = helper ~current_path:(Node_path.descend current_path) inner in
+          let kind = With_model_resetter { reset_id = Id.of_type_id reset_id; inner } in
+          { node_path; here; kind }
+        | Wrap { inner; wrapper_model; inject_id; here; _ } ->
+          let%map inner = helper ~current_path:(Node_path.descend current_path) inner in
+          let kind =
+            Wrap
+              { model_id = Id.of_model_type_id wrapper_model.type_id
+              ; inject_id = Id.of_type_id inject_id
+              ; inner
+              }
+          in
+          { node_path; here; kind }
+        | Path { here } -> return { node_path; here; kind = Path }
+        | Lifecycle { lifecycle = value; here } ->
+          let%map value =
+            Value.of_value' ~initial_path:(Node_path.descend current_path) value
+          in
+          let kind = Lifecycle { value } in
+          { node_path; here; kind }
+        | Computation_watcher
+            { inner
+            ; here
+            ; free_vars
+            ; config = _
+            ; queue = _
+            ; value_type_id_observation_definition_positions = _
+            ; enable_watcher = _
+            } ->
+          let%map inner = helper ~current_path:(Node_path.descend current_path) inner in
+          let kind =
+            Computation_watcher
+              { inner
+              ; free_vars =
+                  Computation_watcher.Type_id_location_map.map_to_list
+                    free_vars
+                    { f = (fun key _ -> Id.of_type_id key) }
+              }
+          in
+          { node_path; here; kind }
     in
-    helper ~current_path:(Node_path.descend Node_path.empty) computation
+    Trampoline.run (helper ~current_path:(Node_path.descend Node_path.empty) computation)
   ;;
 
   module Minimal = struct
@@ -424,6 +422,9 @@ module Computation0 = struct
           { from : t
           ; via : Id.t
           ; into : t
+              (* [invert_lifecycles] is quite rare, and adds clutter to expect text
+                 outputs, so we don't include it in skeleton serializations by default. *)
+          ; invert_lifecycles : bool [@sexp.default false] [@sexp_drop_default.equal]
           }
       | Store of
           { id : Id.t
@@ -489,8 +490,8 @@ module Computation0 = struct
       | Leaf0 -> Leaf0
       | Leaf_incr { input } -> Leaf_incr { input = Value.Minimal.of_complete input }
       | Model_cutoff { t } -> Model_cutoff { t = of_complete t }
-      | Sub { from; via; into } ->
-        Sub { from = of_complete from; via; into = of_complete into }
+      | Sub { from; via; into; invert_lifecycles } ->
+        Sub { from = of_complete from; via; into = of_complete into; invert_lifecycles }
       | Store { id; value; inner } ->
         Store { id; value = Value.Minimal.of_complete value; inner = of_complete inner }
       | Fetch { id } -> Fetch { id }
@@ -550,7 +551,7 @@ module Computation0 = struct
     | Leaf0 -> []
     | Leaf_incr { input } -> [ input ]
     | Model_cutoff _ -> []
-    | Sub { from = _; via = _; into = _ } -> []
+    | Sub { from = _; via = _; into = _; invert_lifecycles = _ } -> []
     | Store { value; id = _; inner = _ } -> [ value ]
     | Fetch { id = _ } -> []
     | Assoc { map; key_id = _; cmp_id = _; data_id = _; by = _ } -> [ map ]
@@ -578,7 +579,7 @@ module Computation0 = struct
     | Leaf0 -> []
     | Leaf_incr { input = _ } -> []
     | Model_cutoff { t } -> [ t ]
-    | Sub { from; via = _; into } -> [ from; into ]
+    | Sub { from; via = _; into; invert_lifecycles = _ } -> [ from; into ]
     | Store { id = _; value = _; inner : t } -> [ inner ]
     | Fetch { id = _ } -> []
     | Assoc { map = _; key_id = _; cmp_id = _; data_id = _; by } -> [ by ]
@@ -629,6 +630,7 @@ include struct
         { from : computation
         ; via : id
         ; into : computation
+        ; invert_lifecycles : bool
         }
     | Store of
         { id : id

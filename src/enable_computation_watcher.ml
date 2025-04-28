@@ -230,13 +230,13 @@ module F (Recurse : Fix_transform.Recurse with module Types := Types) = struct
     (t : a Computation.t)
     =
     match t with
-    | Sub { via; from = _; into = _; here = _ } ->
+    | Sub { via; from = _; into = _; here = _; invert_lifecycles = _ } ->
       let%bind (), free_vars, c = Recurse.on_computation down () `Skipping_over t in
       (* the values bound in a sub are no longer free, so remove them *)
       return ((), Computation_watcher.Type_id_location_map.remove free_vars via, c)
     | Fix_define { fix_id = _; initial_input = _; input_id; result = _; here = _ } ->
       let%bind (), free_vars, c = Recurse.on_computation down () `Skipping_over t in
-      (* input_id is no longer free, remove it. Fix_define is the top-level node for 
+      (* input_id is no longer free, remove it. Fix_define is the top-level node for
          Fix_recurse *)
       return ((), Computation_watcher.Type_id_location_map.remove free_vars input_id, c)
     | Assoc { map = _; key_comparator = _; key_id; cmp_id = _; data_id; by = _; here = _ }
@@ -421,8 +421,8 @@ module F (Recurse : Fix_transform.Recurse with module Types := Types) = struct
         ; value_type_id_observation_definition_positions = _
         ; enable_watcher = _
         } ->
-      (* [enable_watcher] should only be set to true once we've hit a 
-         [Computation_watcher] node and [should_run_computation_watcher] is true. 
+      (* [enable_watcher] should only be set to true once we've hit a
+         [Computation_watcher] node and [should_run_computation_watcher] is true.
          Redefining here so that both [Down] and [Computation_watcher] receive
          the proper value
       *)

@@ -14,7 +14,7 @@ val f
   -> recursive_scopes:Computation.Recursive_scopes.t
   -> time_source:Time_source.t
   -> map:('k, 'v, 'cmp) Map_intf.Map.t Value.t
-  -> key_comparator:('k, 'cmp) comparator
+  -> key_comparator:('k, 'cmp) Comparator.Module.t
   -> key_id:'k Type_equal.Id.t
   -> cmp_id:'cmp Type_equal.Id.t
   -> data_id:'v Type_equal.Id.t
