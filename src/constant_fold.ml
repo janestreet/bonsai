@@ -105,7 +105,7 @@ include struct
     let%map.Option by, may_contain =
       Simplify.computation_to_function
         by
-        ~key_compare:C.comparator.compare
+        ~key_compare:(Comparator.compare C.comparator)
         ~key_id
         ~data_id
     in

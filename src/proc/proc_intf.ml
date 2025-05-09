@@ -879,8 +879,6 @@ module type S = sig
         [Some] containing the result of that computation *)
     val lookup
       :  here:[%call_pos]
-      -> ?sexp_of_model:('input -> Sexp.t)
-      -> equal:('input -> 'input -> bool)
       -> ('input, 'result) t Value.t
       -> 'input Value.t
       -> 'result option Computation.t

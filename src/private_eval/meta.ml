@@ -214,7 +214,7 @@ module Model = struct
     let module M = struct
       include M
 
-      let sexp_of_t = comparator.sexp_of_t
+      let sexp_of_t = Comparator.sexp_of_t comparator
     end
     in
     let sexp_of_map_model = [%sexp_of: model Map.M(M).t] in
@@ -238,19 +238,19 @@ module Model = struct
     let module M = struct
       include M
 
-      let sexp_of_t = comparator.sexp_of_t
+      let sexp_of_t = Comparator.sexp_of_t comparator
     end
     in
     let module M_io = struct
       include M_io
 
-      let sexp_of_t = comparator.sexp_of_t
+      let sexp_of_t = Comparator.sexp_of_t comparator
     end
     in
     let sexp_of_model = model.sexp_of in
     let sexp_of_map_model = [%sexp_of: (M_io.t * model) Map.M(M).t] in
     let model_map_type_id = Map_on { k_model; k_io; cmp; by = model.type_id } in
-    let io_equal a b = M_io.comparator.compare a b = 0 in
+    let io_equal a b = (Comparator.compare M_io.comparator) a b = 0 in
     { type_id = model_map_type_id
     ; default = Map.empty (module M)
     ; equal = Map.equal (Tuple2.equal ~eq1:io_equal ~eq2:model.equal)

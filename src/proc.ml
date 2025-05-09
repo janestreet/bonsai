@@ -977,7 +977,7 @@ let assoc_list
                "BUG"
                  [%here]
                  "Incremental glitch"
-                 ~key:(M.comparator.sexp_of_t k : Sexp.t)
+                 ~key:((Comparator.sexp_of_t M.comparator) k : Sexp.t)
                  "not found"]))
   | `Duplicate_key key ->
     let%arr key in
@@ -1235,17 +1235,18 @@ end
 module Memo = struct
   module Action = struct
     type 'query t =
-      | Add of 'query
-      | Remove of 'query
-      | Change of 'query * 'query
+      | Set_subscriber_query of Path.t * 'query
+      | Unsubscribe of Path.t
     [@@deriving sexp_of]
   end
 
   type ('query, 'response) t =
     | T :
-        { queries : ('query, int, 'cmp) Map.t
+        { subscribers : 'query Path.Map.t
         ; responses : ('query, 'response, 'cmp) Map.t
         ; inject : 'query Action.t -> unit Effect.t
+        ; path : Path.t
+        ; query_equal : 'query -> 'query -> bool
         }
         -> ('query, 'response) t
 
@@ -1258,90 +1259,90 @@ module Memo = struct
     let module Query = struct
       include Query
 
-      let sexp_of_t = comparator.sexp_of_t
+      let equal = Comparable.equal (Comparator.compare comparator)
+      let sexp_of_t = Comparator.sexp_of_t comparator
     end
     in
     let open Let_syntax_with_map_location (struct
         let here = here
       end) in
     let module Model = struct
-      type t = int Map.M(Query).t [@@deriving sexp_of, equal]
+      type t = Query.t Path.Map.t [@@deriving sexp_of, equal]
     end
     in
-    let module Action = struct
-      type t = Query.t Action.t [@@deriving sexp_of]
-    end
-    in
-    let apply_action (_ : _ Apply_action_context.t) model (action : Action.t) =
-      let add model q =
-        Map.update model q ~f:(function
-          | None -> 1
-          | Some c -> c + 1)
-      in
-      let remove model q =
-        Map.change model q ~f:(function
-          | None -> None
-          | Some 1 -> None
-          | Some c -> Some (c - 1))
-      in
-      match action with
-      | Add q -> add model q
-      | Remove q -> remove model q
-      | Change (before, after) -> add (remove model before) after
-    in
-    let%sub queries, inject =
+    let%sub path = path ~here () in
+    let%sub subscribers, inject =
       state_machine
         ~here
         ~sexp_of_model:[%sexp_of: Model.t]
-        ~sexp_of_action:[%sexp_of: Action.t]
+        ~sexp_of_action:[%sexp_of: Query.t Action.t]
         ~equal:[%equal: Model.t]
-        ~apply_action
-        ~default_model:(Map.empty (module Query))
+        ~default_model:Path.Map.empty
+        ~apply_action:(fun _ model -> function
+          | Set_subscriber_query (path, query) -> Map.set model ~key:path ~data:query
+          | Unsubscribe path -> Map.remove model path)
         ()
     in
-    let%sub responses =
-      assoc ~here (module Query) queries ~f:(fun query _count -> f query)
+    let%sub queries =
+      Map0.unordered_fold
+        ~here
+        subscribers
+        ~init:(Map.empty (module Query))
+        ~add:(fun ~key:_path ~data:query acc ->
+          Map.change acc query ~f:(function
+            | None -> Some 1
+            | Some n -> Some (n + 1)))
+        ~remove:(fun ~key:_path ~data:query acc ->
+          Map.change acc query ~f:(function
+            | None -> None
+            | Some 1 -> None
+            | Some n -> Some (n - 1)))
     in
-    let%arr queries and responses and inject in
-    T { queries; responses; inject }
+    let%sub responses =
+      assoc ~here (module Query) queries ~f:(fun query (_ : int Value.t) -> f query)
+    in
+    let%arr subscribers and responses and inject and path in
+    T { subscribers; responses; inject; path; query_equal = Query.equal }
   ;;
 
   let lookup
     (type query response)
     ~(here : [%call_pos])
-    ?sexp_of_model
-    ~equal
     (t : (query, response) t Value.t)
     query
     =
     let open Let_syntax_with_map_location (struct
         let here = here
       end) in
-    let%sub (T { inject; _ }) = return ~here t in
-    let%sub () =
-      let%sub on_activate =
-        let%arr inject and query in
-        inject (Add query)
-      in
-      let%sub on_deactivate =
-        let%arr inject and query in
-        inject (Remove query)
-      in
-      Edge.lifecycle ~here () ~on_activate ~on_deactivate
-    in
-    let%sub () =
-      let%sub callback =
-        let%arr inject in
-        fun prev next ->
-          match prev, next with
-          | None, _ -> Effect.Ignore
-          | Some prev, next -> inject (Change (prev, next))
-      in
-      Edge.on_change' ~here ?sexp_of_model ~equal query ~callback
-    in
-    let%arr t and query in
-    let (T { responses; _ }) = t in
-    Map.find responses query
+    let%sub (T { inject; path = memo_path; _ }) = return ~here t in
+    (* This [scope_model] is needed so that whenever a [lookup] gets reassigned to a new
+       [Memo.t] (e.g. one of several [Memo.t]s is returned from a [match%sub], or a
+       [Memo.t] is wrapped in a [scope_model]), [lookup]s get reassigned from the old
+       [Memo.t] to the new one. *)
+    let%sub my_path = path ~here () in
+    scope_model
+      ~here
+      (module Path)
+      ~on:memo_path
+      (let%sub () =
+         let%sub on_deactivate =
+           let%arr inject and my_path in
+           Some (inject (Unsubscribe my_path))
+         in
+         let%sub after_display =
+           let%arr t and query and my_path in
+           let (T { subscribers; inject; query_equal; _ }) = t in
+           let resubscribe = Some (inject (Set_subscriber_query (my_path, query))) in
+           match Map.find subscribers my_path with
+           | None -> resubscribe
+           | Some memo_query when not (query_equal query memo_query) -> resubscribe
+           | Some _ -> None
+         in
+         Edge.lifecycle' ~here () ~on_deactivate ~after_display
+       in
+       let%arr t and query in
+       let (T { responses; _ }) = t in
+       Map.find responses query)
   ;;
 end
 

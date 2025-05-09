@@ -60,7 +60,6 @@ module Private : sig
   module Node_path = Node_path
   module Graph_info = Graph_info
   module Instrumentation = Instrumentation
-  module Flatten_values = Flatten_values
   module Constant_fold = Constant_fold
   module Enable_computation_watcher = Enable_computation_watcher
   module Skeleton = Skeleton

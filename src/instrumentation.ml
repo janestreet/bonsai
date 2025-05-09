@@ -9,7 +9,7 @@ module Entry_label = struct
      representation. *)
 
   let to_string ~here ~id ~node_type =
-    [%string "##%{node_type} %{id} %{here#Source_code_position}"]
+    [%string "##%{node_type} %{here#Source_code_position} %{id}"]
   ;;
 end
 
@@ -17,7 +17,7 @@ let extract_node_path_from_entry_label label =
   if String.is_prefix ~prefix:"##" label
   then (
     match String.split label ~on:' ' with
-    | [ _; node_path ] | _ :: node_path :: _ -> Some (Node_path.of_string node_path)
+    | [ _; node_path ] | _ :: _ :: node_path :: _ -> Some (Node_path.of_string node_path)
     | _ -> None)
   else None
 ;;
@@ -107,9 +107,14 @@ let instrument_for_measuring_timings (t : _ Computation.t) ~start_timer ~stop_ti
     (type a)
     (context : unit Transform.For_value.context)
     ()
-    ({ here; value; id } : a Value.t)
+    ({ here; value; id } as value' : a Value.t)
     =
-    let entry_label = lazy (Source_code_position.to_string here) in
+    let entry_label =
+      lazy
+        (let id = Node_path.to_string (force context.current_path) in
+         let node_info = Graph_info.Node_info.of_value value' in
+         Entry_label.to_string ~here ~id ~node_type:node_info.node_type)
+    in
     let value =
       match value with
       | Constant _ | Exception _ | Incr _ | Named _ | Both (_, _) | Cutoff _ -> value

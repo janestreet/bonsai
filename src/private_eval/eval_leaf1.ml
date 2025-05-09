@@ -19,7 +19,7 @@ let f ~model ~input_id ~dynamic_action ~input ~time_source ~reset ~apply_action 
   in
   let apply_action ~inject ~schedule_event input model = function
     | Action.Leaf_static _ ->
-      Bonsai_metrics.Counters.observe Bonsai_leaf1_apply_action_got_static_action;
+      Ui_metrics.Counters.observe Bonsai_leaf1_apply_action_got_static_action;
       eprint_s
         [%message "BUG: state_machine1's apply_action was called with a static action"];
       model

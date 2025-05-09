@@ -1083,8 +1083,8 @@ module Memo = struct
     |> perform ~here graph
   ;;
 
-  let lookup ~(here : [%call_pos]) ?sexp_of_model ~equal t input graph =
-    perform ~here graph (Proc.Memo.lookup ~here ?sexp_of_model ~equal t input)
+  let lookup ~(here : [%call_pos]) t input graph =
+    perform ~here graph (Proc.Memo.lookup ~here t input)
   ;;
 end
 
@@ -1271,7 +1271,7 @@ module Debug = struct
       ~here
   ;;
 
-  let memo_query_counts (T { queries; _ } : _ Memo.t) = Map.to_alist queries
+  let memo_subscribers (T { subscribers; _ } : _ Memo.t) = subscribers
 end
 
 let switch__for_proc2

@@ -1,7 +1,7 @@
 open! Core
 
-(** The [Bonsai_perf_shared] library contains code that is shared between benchmarking and
-    testing. *)
+(** The [Bonsai_bench_scenario] library contains code that is shared between benchmarking
+    and testing. *)
 
 module Input : sig
   (** An input to the Bonsai computation you are testing / benchmarking. It can be changed
@@ -49,8 +49,12 @@ module Interaction : sig
   (** [profile] indicates that the [profile] function below should print a snapshot of the
       time spent in each part of your computation since the previous snapshot.
 
-      Note: profiling interactions are filtered out in [benchmark] runs, so you needn't
-      worry about *)
+      By default, [Bonsai_bench.profile] will take a snapshot after startup, and another
+      after running all interactions. [Interaction.profile] can be used to add an
+      additional snapshot, in between your other interactions.
+
+      Note: profiling interactions are filtered out when not running
+      [Bonsai_bench.profile], so including them is free. *)
   val profile : name:string -> _ t
 
   (** [many] is used to create lists of interactions all at once. Interactions created
