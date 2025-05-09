@@ -1,6 +1,6 @@
 (library
- (name bonsai_perf_shared)
- (public_name bonsai.perf_shared)
+ (name bonsai_bench_scenario)
+ (public_name bonsai.bench_scenario)
  (libraries bonsai bonsai_driver core incr_map virtual_dom.ui_effect
    bonsai_concrete.ui_incr)
  (preprocess

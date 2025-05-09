@@ -55,7 +55,7 @@ let f
   =
   let module Cmp = (val key_comparator) in
   let wrap_assoc ~key inject =
-    Action.assoc ~id:key_id ~compare:Cmp.comparator.compare ~key >>> inject
+    Action.assoc ~id:key_id ~compare:(Comparator.compare Cmp.comparator) ~key >>> inject
   in
   let%bind.Trampoline (Computation.T
                         { model = model_info
@@ -78,7 +78,9 @@ let f
         | `Right _ -> None
         | `Both input_and_models -> Some input_and_models)
     in
-    let create_keyed = unstage (Path.Elem.keyed ~compare:Cmp.comparator.compare key_id) in
+    let create_keyed =
+      unstage (Path.Elem.keyed ~compare:(Comparator.compare Cmp.comparator) key_id)
+    in
     let results_map, input_map, lifecycle_map =
       unzip3_mapi'
         input_and_models_map

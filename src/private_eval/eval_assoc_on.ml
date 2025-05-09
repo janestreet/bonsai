@@ -26,7 +26,7 @@ let f
       ~io_key
       ~model_key
       ~io_id:io_key_id
-      ~io_compare:Io_comparator.comparator.compare
+      ~io_compare:(Comparator.compare Io_comparator.comparator)
     >>> inject
   in
   let model_key_comparator = Model_comparator.comparator in
@@ -47,7 +47,8 @@ let f
     let map_input = Value.eval environment map in
     let model_lookup = Incr_map.Lookup.create (module Model_comparator) model in
     let create_keyed =
-      unstage (Path.Elem.keyed ~compare:Io_comparator.comparator.compare io_key_id)
+      unstage
+        (Path.Elem.keyed ~compare:(Comparator.compare Io_comparator.comparator) io_key_id)
     in
     let results_map, input_map, lifecycle_map =
       Eval_assoc.unzip3_mapi'
@@ -78,7 +79,7 @@ let f
             in
             Incr.set_cutoff
               model_key
-              (Incr.Cutoff.of_compare model_key_comparator.compare);
+              (Incr.Cutoff.of_compare (Comparator.compare model_key_comparator));
             let%bind model_key in
             let model =
               match%map Incr_map.Lookup.find model_lookup model_key with

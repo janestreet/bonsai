@@ -257,7 +257,7 @@ let incr_annotation_listeners =
     ; (fun ~here:_ kind _ ->
         let metrics_counter_kind =
           match kind with
-          | Input -> Bonsai_metrics.Counters.Kind.Incr_node_input
+          | Input -> Ui_metrics.Counters.Kind.Incr_node_input
           | Value -> Incr_node_value
           | Result -> Incr_node_result
           | Lifecycle -> Incr_node_lifecycle
@@ -273,7 +273,7 @@ let incr_annotation_listeners =
           | Path -> Incr_node_path
           | Lifecycle_apply_action_pair -> Incr_node_lifecycle_apply_action_pair
         in
-        Bonsai_metrics.Counters.observe metrics_counter_kind)
+        Ui_metrics.Counters.observe metrics_counter_kind)
     ]
 ;;
 

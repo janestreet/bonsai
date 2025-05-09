@@ -260,7 +260,7 @@ let assoc
   =
   let module C = (val comparator) in
   let key_id : k Type_equal.Id.t =
-    Type_equal.Id.create ~name:"key id" C.comparator.sexp_of_t
+    Type_equal.Id.create ~name:"key id" (Comparator.sexp_of_t C.comparator)
   in
   let cmp_id : cmp Type_equal.Id.t =
     Type_equal.Id.create ~name:"cmp id" [%sexp_of: opaque]
@@ -286,13 +286,15 @@ let assoc_on
   let module Io_comparator = (val io_comparator) in
   let module Model_comparator = (val model_comparator) in
   let io_key_id : io_k Type_equal.Id.t =
-    Type_equal.Id.create ~name:"io key id" Io_comparator.comparator.sexp_of_t
+    Type_equal.Id.create ~name:"io key id" (Comparator.sexp_of_t Io_comparator.comparator)
   in
   let io_cmp_id : io_cmp Type_equal.Id.t =
     Type_equal.Id.create ~name:"io cmp id" [%sexp_of: opaque]
   in
   let model_key_id : model_k Type_equal.Id.t =
-    Type_equal.Id.create ~name:"model key id" Model_comparator.comparator.sexp_of_t
+    Type_equal.Id.create
+      ~name:"model key id"
+      (Comparator.sexp_of_t Model_comparator.comparator)
   in
   let model_cmp_id : model_cmp Type_equal.Id.t =
     Type_equal.Id.create ~name:"model key id" [%sexp_of: opaque]

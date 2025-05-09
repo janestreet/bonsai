@@ -121,7 +121,9 @@ val transpose_opt : 'a t option -> 'a option t
 
     [?sexp_of_model] is only used to give the debugger more information.
 
-    [?equal] is used as a cutoff for the model value. See [Bonsai.cutoff] for more. *)
+    [?equal] (default [phys_equal]) is used by some combinators to reduce memory usage.
+    (E.g. [assoc] and [match%sub] may determine that they can store a reference to only
+    the default model rather than the current model.) *)
 val state
   :  ?here:Stdlib.Lexing.position
   -> ?reset:('model -> 'model)
@@ -583,8 +585,14 @@ module Edge : sig
     -> unit
 
   (** [Bonsai.Edge.lifecycle] is used to add effects to Bonsai's lifecycle events. Using
-      this, you can witness component activation and deactiation, as well as schedule an
-      effect at the end of every frame. *)
+      this, you can witness component activation and deactivation, as well as schedule an
+      effect. Lifecycle events are run at the end of every frame, so incremental updates
+      and DOM updates will be run before any lifecycle events.
+
+      Lifecycle events are run in the following order:
+      1. on_deactivate
+      2. on_activate
+      3. after_display *)
   val lifecycle
     :  ?here:Stdlib.Lexing.position
     -> ?on_activate:unit Effect.t t
@@ -689,8 +697,6 @@ module Memo : sig
       containing the result of that computation *)
   val lookup
     :  ?here:Stdlib.Lexing.position
-    -> ?sexp_of_model:('input -> Sexp.t)
-    -> equal:('input -> 'input -> bool)
     -> ('input, 'result) t bonsai_t
     -> 'input bonsai_t
     -> graph
@@ -976,8 +982,8 @@ module Debug : sig
     -> graph
     -> 'a t
 
-  (** [memo_query_counts] prints how many listeners there are for each query. *)
-  val memo_query_counts : ('query, _) Memo.t -> ('query * int) List.t
+  (** [memo_subscribers] prints the internal state for each query. *)
+  val memo_subscribers : ('query, _) Memo.t -> 'query Path.Map.t
 end
 
 module Path : sig
