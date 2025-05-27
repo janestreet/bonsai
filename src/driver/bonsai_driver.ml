@@ -70,6 +70,21 @@ let assert_unoptimized_type_equalities ~time_source computation =
   assert_type_equalities unoptimized_info unoptimized_info
 ;;
 
+let[@inline never] define_ui_effect (type action) () =
+  let queue = Queue.create () in
+  let module A =
+    Ui_effect.Define (struct
+      module Action = struct
+        type t = action Action.t
+      end
+
+      let handle = Queue.enqueue queue
+    end)
+  in
+  let inject = A.inject in
+  inject, queue
+;;
+
 let create_direct
   (type r)
   ?(optimize = true)
@@ -126,17 +141,9 @@ let create_direct
     apply_action
     : r t
     =
-    let queue = Queue.create () in
-    let module A =
-      Ui_effect.Define (struct
-        module Action = struct
-          type t = action Action.t
-        end
-
-        let handle = Queue.enqueue queue
-      end)
-    in
-    let inject = A.inject in
+    (* Call [define_ui_effect] twice to prevent inlining *)
+    let _ : _ = define_ui_effect () in
+    let inject, queue = define_ui_effect () in
     let sexp_of_action = Action.Type_id.to_sexp computation_info.action in
     let result_incr, result, action_input_incr, action_input, lifecycle_incr, lifecycle =
       timer Run_eval_fun ~f:(fun () ->
