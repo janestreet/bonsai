@@ -56,12 +56,11 @@ end = struct
     =
     fun ~here graph -> function
     | Return
-        { value = { value = (Named _ | Constant _ | Exception _) as value; id; _ }; here }
-      ->
+        { value = { value = (Named _ | Constant _ | Exception _) as value; _ }; here } ->
       (* Introduce the optimization [let%sub a = return foo in use a] => [use foo]
            This only makes sense if the Value.t being returned is either a constant or an
            already-bound named value, otherwise you risk losing value sharing. *)
-      { Value.value; id; here }
+      { Value.value; here }
     | computation_to_perform ->
       (* Mint a fresh type-id to hold the result of performing this graph modification  *)
       let via : a Type_equal.Id.t = Type_equal.Id.create ~name:"" [%sexp_of: opaque] in
@@ -71,7 +70,7 @@ end = struct
       in
       let new_f computation =
         let new_f : type x. x Computation.t -> x Computation.t Trampoline.t = function
-          | Return { value = { value = Named _; id; _ }; here = _ }
+          | Return { value = { value = Named (_, id); _ }; here = _ }
             when Type_equal.Id.same via id ->
             (* introduce the optimization {[ let%sub a = foo bar in return a ]} => {[ foo bar ]} *)
             let T = Type_equal.Id.same_witness_exn via id in

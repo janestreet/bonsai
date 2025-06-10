@@ -16,14 +16,13 @@ module Value : sig
     { node_path : Node_path.t Lazy.t
     ; kind : kind
     ; here : Source_code_position.t
-    ; id : Id.t
     }
 
   and kind =
     | Constant
     | Exception
     | Incr
-    | Named
+    | Named of Id.t
     | Cutoff of
         { t : t
         ; added_by_let_syntax : bool

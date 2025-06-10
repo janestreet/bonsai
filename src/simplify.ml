@@ -97,9 +97,9 @@ let rec value_to_function
       }
   | Exception _ -> None
   | Incr _ -> None
-  | Named _ ->
+  | Named (_, id) ->
     let same_name = Type_equal.Id.same_witness in
-    (match same_name value.id key_id, same_name value.id data_id with
+    (match same_name id key_id, same_name id data_id with
      | Some T, _ ->
        Some
          { value = (fun key _data -> key)
@@ -112,8 +112,8 @@ let rec value_to_function
          }
      | None, None ->
        Miss
-         { free = Free_variables.(add empty value.id)
-         ; gen = (fun env _ _ -> Env.find_exn env value.id)
+         { free = Free_variables.(add empty id)
+         ; gen = (fun env _ _ -> Env.find_exn env id)
          ; may_contain = May_contain.Resolved.create ~path:No ~lifecycle:No ~input:No
          })
   | Cutoff { t; added_by_let_syntax = true; equal = _ } ->

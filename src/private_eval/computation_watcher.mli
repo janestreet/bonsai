@@ -98,11 +98,16 @@ module Config : sig
   val merge : t -> t -> t
 end
 
-module Type_id_location_hashmap : sig
-  include Hashtbl.S_plain with type key = Type_equal.Id.Uid.t
+module Id_location_hashmap : sig
+  include
+    Hashtbl.S_plain
+    with type key =
+      [ `Named of Type_equal.Id.Uid.t
+      | `Incr of Incremental.For_analyzer.Node_id.t
+      ]
 
   val update_and_check_if_value_set
-    :  id:_ Type_equal.Id.t
+    :  id:key
     -> update_data:Source_code_positions.finalized * Config.t
     -> (Source_code_positions.finalized Source_code_positions.t * Config.t) t
     -> [ `Already_set | `Not_set ]
@@ -151,12 +156,11 @@ end
 
 val instrument_incremental_node
   :  here:Source_code_position.t
-  -> kind:[ `Named | `Incr ]
-  -> value_type_id_observation_definition_positions:
+  -> id:Id_location_hashmap.key
+  -> value_id_observation_definition_positions:
        (Source_code_positions.finalized Source_code_positions.t * Config.t)
-         Type_id_location_hashmap.t
+         Id_location_hashmap.t
   -> watcher_queue:Output_queue.t
-  -> id:_ Type_equal.Id.t
   -> 'a Ui_incr.Incr.t
   -> 'a Ui_incr.Incr.t
 

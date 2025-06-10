@@ -50,7 +50,7 @@ end
 type _ without_position =
   | Constant : 'a -> 'a without_position
   | Incr : 'a Incr.t -> 'a without_position
-  | Named : Name_source.t -> 'a without_position
+  | Named : Name_source.t * 'a Type_equal.Id.t -> 'a without_position
   | Both : 'a t * 'b t -> ('a * 'b) without_position
   | Cutoff :
       { t : 'a t
@@ -119,25 +119,19 @@ type _ without_position =
 and 'a t =
   { value : 'a without_position
   ; here : Source_code_position.t
-  ; id : 'a Type_equal.Id.t
   }
 
-let value_id name = Type_equal.Id.create ~name sexp_of_opaque
-
-let map2 ~(here : [%call_pos]) t1 t2 ~f =
-  { value = Map2 { t1; t2; f }; here; id = value_id "map2" }
-;;
-
-let map ~(here : [%call_pos]) t ~f = { value = Map { t; f }; here; id = value_id "map" }
-let named ~(here : [%call_pos]) name_source id = { value = Named name_source; here; id }
+let map2 ~(here : [%call_pos]) t1 t2 ~f = { value = Map2 { t1; t2; f }; here }
+let map ~(here : [%call_pos]) t ~f = { value = Map { t; f }; here }
+let named ~(here : [%call_pos]) name_source id = { value = Named (name_source, id); here }
 
 let cutoff ~(here : [%call_pos]) ~added_by_let_syntax t ~equal =
   let value = Cutoff { t; equal; added_by_let_syntax } in
-  { value; here; id = value_id "cutoff" }
+  { value; here }
 ;;
 
 let rec eval : type a. Environment.t -> a t -> a Incr.t =
-  fun env { value; id; here = _ } ->
+  fun env { value; here = _ } ->
   match value with
   | Incr x -> x
   | Cutoff { t; equal; added_by_let_syntax = _ } ->
@@ -171,7 +165,7 @@ let rec eval : type a. Environment.t -> a t -> a Incr.t =
     incremental_node
   | Constant x -> Incr.return x
   | Exception ex -> Incr.map (Incr.return ()) ~f:(fun () -> raise ex)
-  | Named name_source ->
+  | Named (name_source, id) ->
     (match Environment.find env id with
      | Some incremental -> incremental
      | None ->
@@ -215,11 +209,8 @@ let eval env t =
   incr
 ;;
 
-let return ~(here : [%call_pos]) a = { value = Constant a; here; id = value_id "return" }
-
-let return_exn ~(here : [%call_pos]) exn =
-  { value = Exception exn; here; id = value_id "return exn" }
-;;
+let return ~(here : [%call_pos]) a = { value = Constant a; here }
+let return_exn ~(here : [%call_pos]) exn = { value = Exception exn; here }
 
 let transpose_opt opt =
   Option.value_map opt ~default:(return None) ~f:(map ~f:Option.some)
@@ -233,26 +224,23 @@ include Applicative.Make_using_map2 (struct
     let map = `Custom map
   end)
 
-let both ~(here : [%call_pos]) a b = { value = Both (a, b); here; id = value_id "both" }
-
-let map3 ~(here : [%call_pos]) t1 t2 t3 ~f =
-  { value = Map3 { t1; t2; t3; f }; here; id = value_id "map3" }
-;;
+let both ~(here : [%call_pos]) a b = { value = Both (a, b); here }
+let map3 ~(here : [%call_pos]) t1 t2 t3 ~f = { value = Map3 { t1; t2; t3; f }; here }
 
 let map4 ~(here : [%call_pos]) t1 t2 t3 t4 ~f =
-  { value = Map4 { t1; t2; t3; t4; f }; here; id = value_id "map4" }
+  { value = Map4 { t1; t2; t3; t4; f }; here }
 ;;
 
 let map5 ~(here : [%call_pos]) t1 t2 t3 t4 t5 ~f =
-  { value = Map5 { t1; t2; t3; t4; t5; f }; here; id = value_id "map5" }
+  { value = Map5 { t1; t2; t3; t4; t5; f }; here }
 ;;
 
 let map6 ~(here : [%call_pos]) t1 t2 t3 t4 t5 t6 ~f =
-  { value = Map6 { t1; t2; t3; t4; t5; t6; f }; here; id = value_id "map6" }
+  { value = Map6 { t1; t2; t3; t4; t5; t6; f }; here }
 ;;
 
 let map7 ~(here : [%call_pos]) t1 t2 t3 t4 t5 t6 t7 ~f =
-  { value = Map7 { t1; t2; t3; t4; t5; t6; t7; f }; here; id = value_id "map7" }
+  { value = Map7 { t1; t2; t3; t4; t5; t6; t7; f }; here }
 ;;
 
 let all ~(here : [%call_pos]) = function
@@ -456,7 +444,7 @@ let all ~(here : [%call_pos]) = function
     flatten tree
 ;;
 
-let of_incr ~(here : [%call_pos]) x = { value = Incr x; here; id = value_id "incr" }
+let of_incr ~(here : [%call_pos]) x = { value = Incr x; here }
 
 module Open_on_rhs_intf = struct
   module type S = sig end

@@ -42,26 +42,21 @@ end
 open Types.Down
 
 include struct
-  let value_id name = Type_equal.Id.create ~name sexp_of_opaque
-
-  let wrap_value ~(here : [%call_pos]) name v =
-    { Value.value = v; here; id = value_id name }
-  ;;
+  let wrap_value ~(here : [%call_pos]) v = { Value.value = v; here }
 
   let value_exception_folder ~f =
     try f () with
-    | exn -> wrap_value "exception" (Value.Exception exn)
+    | exn -> wrap_value (Value.Exception exn)
   ;;
 
-  let computation_exception_folder ~here name ~f =
+  let computation_exception_folder ~here ~f =
     try f () with
     | exn ->
-      Trampoline.return
-        (Computation.Return { value = wrap_value name (Exception exn); here })
+      Trampoline.return (Computation.Return { value = wrap_value (Exception exn); here })
   ;;
 
   let lazy_contents_if_value_is_constant : type a. a Value.t -> a Lazy.t option =
-    fun { value; here = _; id = _ } ->
+    fun { value; here = _ } ->
     match value with
     | Incr _
     | Named _
@@ -117,17 +112,17 @@ module Constant_fold (Recurse : Fix_transform.Recurse with module Types := Types
   let transform_v (type a) { constants_in_scope; evaluated } (value : a Value.t)
     : a Value.t
     =
-    let (), (), ({ Value.value; here = _; id } as value_with_id) =
+    let (), (), ({ Value.value; here = _ } as value_with_position) =
       Recurse.on_value { constants_in_scope; evaluated } () `Skipping_over value
     in
-    let rebuild value = { value_with_id with value } in
+    let rebuild value = { value_with_position with value } in
     let open Option.Let_syntax in
     match value with
-    | Exception _ | Constant _ | Incr _ -> value_with_id
-    | Named _ ->
+    | Exception _ | Constant _ | Incr _ -> value_with_position
+    | Named (_, id) ->
       (match Constants_in_scope.find constants_in_scope id with
        | Some value -> value
-       | None -> value_with_id)
+       | None -> value_with_position)
     | Both (a, b) as original ->
       value_exception_folder ~f:(fun () ->
         let value =
@@ -161,18 +156,18 @@ module Constant_fold (Recurse : Fix_transform.Recurse with module Types := Types
                }
            | None, _ -> original))
     | Map { t; f } ->
-      constant_or_value value_with_id ~f:(fun () ->
+      constant_or_value value_with_position ~f:(fun () ->
         let%map t1 = contents_if_value_is_constant t in
         `Constant (f t1))
     | Map2 { t1; t2; f } ->
-      constant_or_value value_with_id ~f:(fun () ->
+      constant_or_value value_with_position ~f:(fun () ->
         match contents_if_value_is_constant t1, contents_if_value_is_constant t2 with
         | Some t1, Some t2 -> Some (`Constant (f t1 t2))
         | Some t1, None -> Some (`Value (Value.Map { t = t2; f = (fun t2 -> f t1 t2) }))
         | None, Some t2 -> Some (`Value (Value.Map { t = t1; f = (fun t1 -> f t1 t2) }))
         | None, None -> None)
     | Map3 { t1; t2; t3; f } ->
-      constant_or_value value_with_id ~f:(fun () ->
+      constant_or_value value_with_position ~f:(fun () ->
         match
           ( contents_if_value_is_constant t1
           , contents_if_value_is_constant t2
@@ -193,7 +188,7 @@ module Constant_fold (Recurse : Fix_transform.Recurse with module Types := Types
           Some (`Value (Value.Map2 { t1; t2 = t3; f = (fun t1 t3 -> f t1 t2 t3) }))
         | None, None, None -> None)
     | Map4 { t1; t2; t3; t4; f } ->
-      constant_or_value value_with_id ~f:(fun () ->
+      constant_or_value value_with_position ~f:(fun () ->
         match
           ( contents_if_value_is_constant t1
           , contents_if_value_is_constant t2
@@ -240,7 +235,7 @@ module Constant_fold (Recurse : Fix_transform.Recurse with module Types := Types
           Some (`Value (Value.Map3 { t1; t2; t3; f = (fun t1 t2 t3 -> f t1 t2 t3 t4) }))
         | None, None, None, None -> None)
     | Map5 { t1; t2; t3; t4; t5; f } ->
-      constant_or_value value_with_id ~f:(fun () ->
+      constant_or_value value_with_position ~f:(fun () ->
         match
           ( contents_if_value_is_constant t1
           , contents_if_value_is_constant t2
@@ -252,7 +247,7 @@ module Constant_fold (Recurse : Fix_transform.Recurse with module Types := Types
           Some (`Constant (f t1 t2 t3 t4 t5))
         | _ -> None)
     | Map6 { t1; t2; t3; t4; t5; t6; f } ->
-      constant_or_value value_with_id ~f:(fun () ->
+      constant_or_value value_with_position ~f:(fun () ->
         match
           ( contents_if_value_is_constant t1
           , contents_if_value_is_constant t2
@@ -265,7 +260,7 @@ module Constant_fold (Recurse : Fix_transform.Recurse with module Types := Types
           Some (`Constant (f t1 t2 t3 t4 t5 t6))
         | _ -> None)
     | Map7 { t1; t2; t3; t4; t5; t6; t7; f } ->
-      constant_or_value value_with_id ~f:(fun () ->
+      constant_or_value value_with_position ~f:(fun () ->
         match
           ( contents_if_value_is_constant t1
           , contents_if_value_is_constant t2
@@ -414,7 +409,7 @@ module Constant_fold (Recurse : Fix_transform.Recurse with module Types := Types
       let (), (), input =
         Recurse.on_value { constants_in_scope; evaluated } () `Directly_on input
       in
-      computation_exception_folder ~here "leaf1" ~f:(fun () ->
+      computation_exception_folder ~here ~f:(fun () ->
         match contents_if_value_is_constant input with
         | None ->
           return

@@ -146,7 +146,7 @@ module Config = struct
   ;;
 end
 
-(* Mutability is required here because whenever we hit the incremental node, 
+(* Mutability is required here because whenever we hit the incremental node,
    we cannot be sure of two things:
 
    1. We do not know if we've already wrapped the Incremental node
@@ -157,23 +157,31 @@ end
    in the queue for each [depended_on_at] location per update of the Incremental node. This
    is an undesired outcome, as we want to have one node per update for the Incremental node.
 
-   We could either run the transformation twice (once to retrieve all the source code 
+   We could either run the transformation twice (once to retrieve all the source code
    positions necessary, and then another to transform the computations), or use mutability
    to share a hashmap that allows for retrieving the most complete [Source_code_positions.t]
    as well as provides a way to know if the Incremental node has already been wrapped.
 *)
-module Type_id_location_hashmap = struct
-  include Hashtbl.Make_plain (Type_equal.Id.Uid)
+module Id_location_hashmap = struct
+  module Key = struct
+    module T = struct
+      type t =
+        [ `Named of Type_equal.Id.Uid.t
+        | `Incr of Incremental.For_analyzer.Node_id.t
+        ]
+      [@@deriving compare, hash, sexp_of]
+    end
 
-  let update_and_check_if_value_set
-    ~(id : _ Type_equal.Id.t)
-    ~update_data:(update_data, config)
-    table
-    =
-    let id = Type_equal.Id.uid id in
+    include T
+    include Hashable.Make_plain_and_derive_hash_fold_t (T)
+  end
+
+  include Key.Table
+
+  let update_and_check_if_value_set ~id ~update_data:(update_data, config) table =
     let stored_value = Hashtbl.find table id in
-    (* Merge the [depended_on_at], [dependency_definitions], AND [watcher] values if 
-            watcher is enabled. The node prior to this should have been a Map node, 
+    (* Merge the [depended_on_at], [dependency_definitions], AND [watcher] values if
+            watcher is enabled. The node prior to this should have been a Map node,
             so it should have a [depended_on_at] value *)
     Hashtbl.update table id ~f:(function
       | None -> Source_code_positions.Finalized update_data, config
@@ -526,19 +534,21 @@ end
 
 let instrument_incremental_node
   ~here
-  ~kind
-  ~value_type_id_observation_definition_positions
-  ~watcher_queue
   ~id
+  ~value_id_observation_definition_positions
+  ~watcher_queue
   value
   =
   let incr_info = (Incr.user_info value : Info.t option) in
+  let kind =
+    match id with
+    | `Named _ -> `Named
+    | `Incr _ -> `Incr
+  in
   (* Using Incr.map for better code clarity as to when the stored value should
      be pulled from the hashmap *)
   Incr.map value ~f:(fun a ->
-    (match
-       Hashtbl.find value_type_id_observation_definition_positions (Type_equal.Id.uid id)
-     with
+    (match Hashtbl.find value_id_observation_definition_positions id with
      | None ->
        let kind_string =
          match kind with
@@ -551,7 +561,7 @@ let instrument_incremental_node
          [%message
            "BUG"
              (here : Source_code_position.t)
-             (kind_string ^ "node did not have source code positions set")]
+             (kind_string ^ " node did not have source code positions set")]
      | Some (stored_value, config) ->
        let source_code_positions =
          stored_value |> Source_code_positions.extract_finalized

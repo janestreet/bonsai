@@ -51,7 +51,7 @@ let f
         (Path.Elem.keyed ~compare:(Comparator.compare Io_comparator.comparator) io_key_id)
     in
     let results_map, input_map, lifecycle_map =
-      Eval_assoc.unzip3_mapi'
+      Gather_assoc.unzip3_mapi'
         map_input
         ~contains_lifecycle:resolved.lifecycle
         ~contains_input:resolved.input

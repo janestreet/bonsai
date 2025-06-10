@@ -33,7 +33,7 @@ module Private = struct
   module For_proc = Cont.For_proc
 
   let path ~(here : [%call_pos]) (local_ graph) = Cont.path ~here graph
-  let gather = Eval.gather
+  let gather = Gather.gather
   let pre_process = Pre_process.pre_process
   let reveal_value = Cont.Conv.reveal_value
   let conceal_value = Cont.Conv.conceal_value

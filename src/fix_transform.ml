@@ -135,7 +135,7 @@ struct
           ; free_vars
           ; config
           ; queue
-          ; value_type_id_observation_definition_positions
+          ; value_id_observation_definition_positions
           ; enable_watcher
           } ->
         let%bind acc, up, inner = User.transform_c down acc inner in
@@ -148,20 +148,21 @@ struct
               ; free_vars
               ; config
               ; queue
-              ; value_type_id_observation_definition_positions
+              ; value_id_observation_definition_positions
               ; enable_watcher
               } )
     ;;
 
     let reduce_up l = List.reduce l ~f:combine_up |> Option.value ~default:empty
 
-    let default_v (type a) down acc ({ value; id; here } : a Value.t) : _ * _ * a Value.t =
+    let default_v (type a) down acc ({ value; here } : a Value.t) : _ * _ * a Value.t =
       let acc, up, value =
         match value with
         | Constant (c : a) -> acc, empty, Value.Constant c
         | Exception (e : exn) -> acc, empty, Exception e
         | Incr incr_node -> acc, empty, Incr incr_node
-        | Named (name_source : Value.Name_source.t) -> acc, empty, Named name_source
+        | Named ((name_source, id) : Value.Name_source.t * a Type_equal.Id.t) ->
+          acc, empty, Named (name_source, id)
         | Both (a, b) ->
           let acc, up_a, a = User.transform_v down acc a in
           let acc, up_b, b = User.transform_v down acc b in
@@ -219,7 +220,7 @@ struct
           let up = reduce_up [ up1; up2; up3; up4; up5; up6; up7 ] in
           acc, up, Map7 { f = t.f; t1; t2; t3; t4; t5; t6; t7 }
       in
-      acc, up, { value; here; id }
+      acc, up, { value; here }
     ;;
 
     let on_value down acc behavior value =

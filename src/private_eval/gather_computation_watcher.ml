@@ -7,7 +7,7 @@ let enqueue_value
   ~source_code_positions
   ~watcher_queue
   ~config
-  ~value_type_id_observation_definition_positions
+  ~value_id_observation_definition_positions
   environment
   id
   =
@@ -18,11 +18,12 @@ let enqueue_value
     eprint_s [%message "BUG" [%here] "value not found in environment"];
     environment
   | Some value ->
+    let uid = Type_equal.Id.uid id in
     let has_been_set =
-      Computation_watcher.Type_id_location_hashmap.update_and_check_if_value_set
-        ~id
+      Computation_watcher.Id_location_hashmap.update_and_check_if_value_set
+        ~id:(`Named uid)
         ~update_data:(source_code_positions, config)
-        value_type_id_observation_definition_positions
+        value_id_observation_definition_positions
     in
     (match has_been_set with
      | `Already_set -> environment
@@ -30,10 +31,9 @@ let enqueue_value
        let loud_value =
          Computation_watcher.instrument_incremental_node
            ~here:[%here]
-           ~kind:`Named
+           ~id:(`Named uid)
            ~watcher_queue
-           ~value_type_id_observation_definition_positions
-           ~id
+           ~value_id_observation_definition_positions
            value
        in
        Environment.add_overwriting environment ~key:id ~data:loud_value)
@@ -50,12 +50,12 @@ let f
   ~free_vars
   ~config
   ~watcher_queue
-  ~value_type_id_observation_definition_positions
+  ~value_id_observation_definition_positions
   =
   match
     ( `Enable_watcher enable_watcher
     , `Queue watcher_queue
-    , `Positions value_type_id_observation_definition_positions )
+    , `Positions value_id_observation_definition_positions )
   with
   | `Enable_watcher false, _, _ ->
     (* If watcher isn't enabled, we shouldn't be printing anything *)
@@ -64,18 +64,16 @@ let f
   | `Enable_watcher true, `Queue None, `Positions None
   | `Enable_watcher true, `Queue None, `Positions (Some _)
   | `Enable_watcher true, `Queue (Some _), `Positions None ->
-    (* If watcher is enabled and we are missing one or both of [watcher_queue] and 
-       [value_type_id_observation_definition_positions], something's gone wrong
+    (* If watcher is enabled and we are missing one or both of [watcher_queue] and
+       [value_id_observation_definition_positions], something's gone wrong
        and we need to raise
     *)
     Core.raise_s
       [%message
-        "BUG"
-          [%here]
-          "watcher queue or value_type_id_observation_definition_positions is none"]
+        "BUG" [%here] "watcher queue or value_id_observation_definition_positions is none"]
   | ( `Enable_watcher true
     , `Queue (Some watcher_queue)
-    , `Positions (Some value_type_id_observation_definition_positions) ) ->
+    , `Positions (Some value_id_observation_definition_positions) ) ->
     let%bind.Trampoline (T inner) = gather ~recursive_scopes ~time_source inner in
     let run ~environment ~fix_envs ~path ~model ~inject =
       let environment =
@@ -91,7 +89,7 @@ let f
                   ~source_code_positions
                   ~watcher_queue
                   ~config
-                  ~value_type_id_observation_definition_positions
+                  ~value_id_observation_definition_positions
                   env
                   id)
           }

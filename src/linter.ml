@@ -25,7 +25,7 @@ let rec value_is_constant : Skeleton.Value.t -> bool =
   fun { kind; _ } ->
   match kind with
   | Constant | Exception -> true
-  | Incr | Named -> false
+  | Incr | Named _ -> false
   | Cutoff { t; added_by_let_syntax = _ } -> value_is_constant t
   | Mapn { inputs } -> List.for_all inputs ~f:value_is_constant
 ;;
@@ -38,7 +38,7 @@ let unfolded_constants_linter =
       let here = value.here in
       let is_unfolded_constant =
         match value.kind with
-        | Constant | Exception | Incr | Named -> false
+        | Constant | Exception | Incr | Named _ -> false
         | Cutoff { t; added_by_let_syntax = _ } -> value_is_constant t
         | Mapn { inputs } -> List.for_all inputs ~f:value_is_constant
       in

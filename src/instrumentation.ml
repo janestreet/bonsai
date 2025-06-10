@@ -107,7 +107,7 @@ let instrument_for_measuring_timings (t : _ Computation.t) ~start_timer ~stop_ti
     (type a)
     (context : unit Transform.For_value.context)
     ()
-    ({ here; value; id } as value' : a Value.t)
+    ({ here; value } as value' : a Value.t)
     =
     let entry_label =
       lazy
@@ -175,7 +175,7 @@ let instrument_for_measuring_timings (t : _ Computation.t) ~start_timer ~stop_ti
         in
         Map7 { t with f }
     in
-    context.recurse () { here; value; id }
+    context.recurse () { here; value }
   in
   Transform.map
     ~init:()
@@ -236,7 +236,7 @@ let create_computation_with_instrumentation
   let open Ui_incr.Incr.Let_syntax in
   let gather_and_assert_typechecks ~what instrumented_computation =
     let (T info') =
-      instrumented_computation |> Eval.gather ~recursive_scopes ~time_source
+      instrumented_computation |> Gather.gather ~recursive_scopes ~time_source
     in
     match
       Meta.(

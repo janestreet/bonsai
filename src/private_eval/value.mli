@@ -17,7 +17,7 @@ end
 type _ without_position =
   | Constant : 'a -> 'a without_position
   | Incr : 'a Incr.t -> 'a without_position
-  | Named : Name_source.t -> 'a without_position
+  | Named : Name_source.t * 'a Type_equal.Id.t -> 'a without_position
   | Both : 'a t * 'b t -> ('a * 'b) without_position
   | Cutoff :
       { t : 'a t
@@ -86,7 +86,6 @@ type _ without_position =
 and 'a t =
   { value : 'a without_position
   ; here : Source_code_position.t
-  ; id : 'a Type_equal.Id.t
   }
 
 include Applicative.S with type 'a t := 'a t

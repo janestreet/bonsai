@@ -285,3 +285,10 @@ val chain_incr_effects
   :  'a Bonsai.t
   -> local_ Bonsai.graph
   -> (('a -> unit Ui_effect.t) list -> unit Ui_effect.t) Bonsai.t
+
+(** Like [Bonsai.cutoff] but where the [equal] function can be determined dynamically. *)
+val dynamic_cutoff
+  :  'a Bonsai.t
+  -> equal:('a -> 'a -> bool) Bonsai.t
+  -> local_ Bonsai.graph
+  -> 'a Bonsai.t

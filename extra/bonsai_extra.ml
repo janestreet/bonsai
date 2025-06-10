@@ -628,3 +628,9 @@ let chain_incr_effects input (local_ graph) =
   in
   inject
 ;;
+
+let dynamic_cutoff a ~equal (local_ graph) =
+  Bonsai.both a equal
+  |> Bonsai.cutoff ~equal:(fun (a, _old_equal) (b, equal) -> equal a b)
+  |> Bonsai.arr1 graph ~f:Tuple2.get1
+;;
