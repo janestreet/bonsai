@@ -1,0 +1,69 @@
+#print_line_numbers true
+
+open! Bonsai
+open Bonsai.Let_syntax
+
+let _component t (local_ _graph) =
+  match%arr t with
+  | None -> 0
+  | Some unused -> 1
+;;
+
+[%%expect
+  {xxx|
+Line 9, characters 9-15:
+Error (warning 27 [unused-var-strict]): unused variable unused.
+|xxx}]
+
+let _component t (local_ _graph) =
+  match%arr t with
+  | None -> 0
+  | Some -> 1
+;;
+
+[%%expect
+  {|
+Line 21, characters 4-8:
+Error: The constructor Some expects 1 argument(s),
+       but is applied here to 0 argument(s)
+|}]
+
+let _component (local_ _graph) =
+  let t = Some 5 in
+  match%arr t with
+  | None -> 0
+  | Some t -> t
+;;
+
+[%%expect
+  {|
+Line 33, characters 12-13:
+Error: This expression has type int option
+       but an expression was expected of type 'a t
+|}]
+
+let _component t (local_ _graph) =
+  match%arr t with
+  | None -> 0
+;;
+
+[%%expect
+  {|
+Line 46, characters 2-32:
+Error (warning 8 [partial-match]): this pattern-matching is not exhaustive.
+Here is an example of a case that is not matched:
+Some _
+|}]
+
+let _component t (local_ _graph) =
+  match%arr t with
+  | Some t when t > 5 -> 1
+  | _ -> 0
+;;
+
+[%%expect
+  {|
+Line 60, characters 16-21:
+Error: match%arr doesn't support when clauses. Try using let%arr ... match
+       ... or casing within a match%arr arm instead
+|}]

@@ -35,14 +35,13 @@ module Value = struct
     { node_path : Node_path.t Lazy.t
     ; kind : kind
     ; here : Source_code_position.Stable.V1.t
-    ; id : Id.t
     }
 
   and kind =
     | Constant
     | Exception
     | Incr
-    | Named
+    | Named of Id.t
     | Cutoff of
         { t : t
         ; added_by_let_syntax : bool
@@ -54,7 +53,7 @@ module Value = struct
     type nonrec complete = t
 
     type t =
-      | Constant of { id : Id.t }
+      | Constant
       | Exception
       | Incr
       | Named of { uid : Id.t }
@@ -67,10 +66,10 @@ module Value = struct
 
     let rec of_complete (complete : complete) =
       match complete.kind with
-      | Constant -> Constant { id = complete.id }
+      | Constant -> Constant
       | Exception -> Exception
       | Incr -> Incr
-      | Named -> Named { uid = complete.id }
+      | Named id -> Named { uid = id }
       | Cutoff { t; added_by_let_syntax } ->
         Cutoff { t = of_complete t; added_by_let_syntax }
       | Mapn { inputs } -> Mapn { inputs = List.map inputs ~f:of_complete }
@@ -79,9 +78,9 @@ module Value = struct
 
   let minimal_sexp_of_t t = Minimal.(of_complete t |> sexp_of_t)
 
-  let inputs { kind; node_path = _; here = _; id = _ } =
+  let inputs { kind; node_path = _; here = _ } =
     match kind with
-    | Constant | Incr | Named | Exception -> []
+    | Constant | Incr | Named _ | Exception -> []
     | Cutoff { t; added_by_let_syntax = _ } -> [ t ]
     | Mapn { inputs } -> inputs
   ;;
@@ -105,14 +104,14 @@ module Value = struct
         in
         Mapn { inputs }
       in
-      fun ~current_path { value; here; id = outer_id } ->
+      fun ~current_path { value; here } ->
         let open Trampoline.Let_syntax in
         let%bind kind =
           match value with
           | Constant _ -> return Constant
           | Exception _ -> return Exception
           | Incr _ -> return Incr
-          | Named _ -> return Named
+          | Named (_, id) -> return (Named (Id.of_type_id id))
           | Cutoff { t; equal = _; added_by_let_syntax } ->
             let%map t =
               helper
@@ -137,8 +136,7 @@ module Value = struct
               ~current_path
               [ T t1; T t2; T t3; T t4; T t5; T t6; T t7 ]
         in
-        return
-          { node_path = finalize current_path; here; kind; id = Id.of_type_id outer_id }
+        return { node_path = finalize current_path; here; kind }
     in
     helper ~current_path:initial_path value
   ;;
@@ -147,12 +145,12 @@ module Value = struct
     Trampoline.run (of_value' ~initial_path:(Node_path.descend Node_path.empty) value)
   ;;
 
-  let rec to_string_hum { node_path = _; kind; here = _; id } =
+  let rec to_string_hum { node_path = _; kind; here = _ } =
     match kind with
-    | Exception -> sprintf "exception_%s" (Id.to_string id)
-    | Constant -> sprintf "constant_%s" (Id.to_string id)
+    | Exception -> sprintf "exception"
+    | Constant -> sprintf "constant"
     | Incr -> "incr"
-    | Named -> sprintf "x%s" (Id.to_string id)
+    | Named id -> sprintf "x%s" (Id.to_string id)
     | Cutoff { t; added_by_let_syntax = _ } -> sprintf "(cutoff %s)" (to_string_hum t)
     | Mapn { inputs } ->
       sprintf "(mapn %s)" (String.concat ~sep:" " (List.map inputs ~f:to_string_hum))
@@ -390,7 +388,7 @@ module Computation0 = struct
             ; free_vars
             ; config = _
             ; queue = _
-            ; value_type_id_observation_definition_positions = _
+            ; value_id_observation_definition_positions = _
             ; enable_watcher = _
             } ->
           let%map inner = helper ~current_path:(Node_path.descend current_path) inner in
@@ -691,14 +689,13 @@ include struct
     { node_path : node_path lazy_
     ; kind : value_kind
     ; here : source_code_position
-    ; id : id
     }
 
   and value_kind = Value.kind =
     | Constant
     | Exception
     | Incr
-    | Named
+    | Named of id
     | Cutoff of
         { t : value
         ; added_by_let_syntax : bool
@@ -850,7 +847,7 @@ module Counts = struct
            | Constant -> acc.value <- { v with constant = v.constant + 1 }
            | Exception -> acc.value <- { v with exception_ = v.exception_ + 1 }
            | Incr -> acc.value <- { v with incr = v.incr + 1 }
-           | Named -> acc.value <- { v with named = v.named + 1 }
+           | Named _ -> acc.value <- { v with named = v.named + 1 }
            | Cutoff _ -> acc.value <- { v with cutoff = v.cutoff + 1 }
            | Mapn _ -> acc.value <- { v with mapn = v.mapn + 1 });
           super#value_kind t acc

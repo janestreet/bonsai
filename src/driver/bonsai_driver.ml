@@ -3,19 +3,7 @@ module Incr = Ui_incr
 module Stabilization_tracker = Bonsai.Private.Stabilization_tracker
 module Action = Bonsai.Private.Action
 module Instrumentation = Instrumentation
-
-let timer
-  (type timer)
-  (event : Instrumentation.Timeable_event.t)
-  (instrumentation :
-    (Instrumentation.Timeable_event.t, timer) Bonsai.Private.Instrumentation.Config.t)
-  ~f
-  =
-  let timer = instrumentation.start_timer event in
-  let result = f () in
-  instrumentation.stop_timer timer;
-  result
-;;
+module Timer = Bonsai.Private.Timer
 
 type ('m, 'action, 'action_input, 'r, 'timer) unpacked =
   { model_var : 'm Incr.Var.t
@@ -78,7 +66,7 @@ let[@inline never] define_ui_effect (type action) () =
         type t = action Action.t
       end
 
-      let handle = Queue.enqueue queue
+      let handle value ~on_exn:_ = Queue.enqueue queue value
     end)
   in
   let inject = A.inject in
@@ -88,12 +76,17 @@ let[@inline never] define_ui_effect (type action) () =
 let create_direct
   (type r)
   ?(optimize = true)
-  ~instrumentation
+  ~(instrumentation :
+      (Instrumentation.Timeable_event.t, _) Bonsai.Private.Instrumentation.Config.t)
   ~time_source
   (unoptimized_computation : r Bonsai.Private.Computation.t)
   : r t
   =
-  let timer event ~f = timer event instrumentation ~f in
+  let { Timer.time } =
+    Timer.create
+      ~start_timer:instrumentation.start_timer
+      ~stop_timer:instrumentation.stop_timer
+  in
   (* This check is mostly here to catch bugs in the implementation of
      [Bonsai.Private.Meta.Model.Type_id.same_witness_exn] and
      [Bonsai.Private.Action.Type_id.same_witness_exn]. We only run it in tests to avoid
@@ -101,13 +94,13 @@ let create_direct
   if am_running_test
   then assert_unoptimized_type_equalities ~time_source unoptimized_computation;
   let running_computation =
-    timer Preprocess ~f:(fun () ->
+    time Preprocess ~f:(fun () ->
       if optimize
       then Bonsai.Private.pre_process unoptimized_computation
       else unoptimized_computation)
   in
   let optimized_info =
-    timer Gather ~f:(fun () ->
+    time Gather ~f:(fun () ->
       Bonsai.Private.gather
         running_computation
         ~recursive_scopes:Bonsai.Private.Computation.Recursive_scopes.empty
@@ -146,7 +139,7 @@ let create_direct
     let inject, queue = define_ui_effect () in
     let sexp_of_action = Action.Type_id.to_sexp computation_info.action in
     let result_incr, result, action_input_incr, action_input, lifecycle_incr, lifecycle =
-      timer Run_eval_fun ~f:(fun () ->
+      time Run_eval_fun ~f:(fun () ->
         let%pattern_bind.Ui_incr result_incr, action_input_incr, lifecycle_incr =
           let instrumentation =
             { instrumentation with
@@ -183,7 +176,7 @@ let create_direct
         result_incr, result, action_input_incr, action_input, lifecycle_incr, lifecycle)
     in
     let stabilization_tracker = Stabilization_tracker.empty () in
-    timer First_stabilization ~f:(fun () ->
+    time First_stabilization ~f:(fun () ->
       Incr.stabilize ();
       Stabilization_tracker.mark_stabilization stabilization_tracker);
     T
@@ -206,7 +199,7 @@ let create_direct
       ; stabilization_tracker
       ; running_computation
       ; instrumentation
-      ; timer
+      ; timer = time
       }
   in
   create_polymorphic running_computation computation_info apply_action
@@ -215,18 +208,34 @@ let create_direct
 let create
   (type r)
   ?(optimize = true)
-  ~instrumentation
+  ~(instrumentation : _ Bonsai.Private.Instrumentation.Config.t)
   ~time_source
   (computation : Bonsai.graph -> r Bonsai.t)
   =
+  let timer =
+    Timer.create
+      ~start_timer:(fun event ->
+        let event =
+          match event with
+          | `Graph_application -> Instrumentation.Timeable_event.Graph_application
+          | `Preprocess -> Preprocess
+          | `Gather -> Gather
+        in
+        instrumentation.start_timer event)
+      ~stop_timer:instrumentation.stop_timer
+  in
+  Timer.set_timer ~timer;
   let graph_applied =
-    timer Graph_application instrumentation ~f:(fun () ->
+    timer.time `Graph_application ~f:(fun () ->
       Bonsai.Private.top_level_handle computation)
   in
   create_direct ~optimize ~instrumentation ~time_source graph_applied
 ;;
 
-let schedule_event _ = Ui_effect.Expert.handle
+let schedule_event _ t =
+  Ui_effect.Expert.handle t ~on_exn:(fun exn ->
+    Exn.reraise exn "Unhandled exception raised in effect")
+;;
 
 let flush
   ?(log_before_action_application = fun ~action_sexp:_ -> ())
@@ -263,7 +272,9 @@ let flush
     let new_model =
       let action_input = Incr.Observer.value_exn action_input in
       apply_action
-        ~schedule_event:Ui_effect.Expert.handle
+        ~schedule_event:
+          (Ui_effect.Expert.handle ~on_exn:(fun exn ->
+             Exn.reraise exn "Unhandled exception raised in effect"))
         (Some action_input)
         model
         action

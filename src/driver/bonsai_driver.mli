@@ -25,12 +25,12 @@ val flush
   -> 'a t
   -> unit
 
-(** retreives the computed result of the bonsai application *)
+(** retrieves the computed result of the bonsai application *)
 val result : 'r t -> 'r
 
 (** Triggers all lifecycle events that need to be run. Lifecycle events are run in this
     order:
-    1. componnet deactivations
+    1. component deactivations
     2. component activations
     3. after display, which includes things like on_change *)
 val trigger_lifecycles : _ t -> unit
@@ -60,7 +60,7 @@ module Expert : sig
       exceptions without warning. *)
   val invalidate_observers : _ t -> unit
 
-  (** Serilizes the model of the component to a sexp. Used only for debugging *)
+  (** Serializes the model of the component to a sexp. Used only for debugging *)
   val sexp_of_model : _ t -> Sexp.t
 
   (** Resets the model of the component back to its initial model. Used only for

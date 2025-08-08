@@ -240,6 +240,136 @@ let of_module
   M.compute ~inject () model
 ;;
 
+module Actor (Action : T1) = struct
+  type get_apply_action_context =
+    { get : 'a. unit -> ('a Action.t, 'a) Apply_action_context.t }
+
+  type ('model, 'input) recv_with_input =
+    { f :
+        'a.
+        get_apply_action_context
+        -> 'input Computation_status.t
+        -> 'model
+        -> 'a Action.t
+        -> 'model * 'a
+    }
+
+  type sexp_of_action = { f : 'a. 'a Action.t -> Sexp.t }
+
+  type hidden_callback =
+    | T : ('a Action.t, 'a) Effect.Private.Callback.t -> hidden_callback
+
+  type inject = { f : 'a. 'a Action.t -> 'a Effect.t }
+
+  let create_with_input
+    : type input model.
+      ?here:Stdlib.Lexing.position
+      -> ?sexp_of_action:sexp_of_action
+      -> ?reset:(get_apply_action_context -> model -> model)
+      -> ?sexp_of_model:(model -> Sexp.t)
+      -> ?equal:(model -> model -> bool)
+      -> default_model:model
+      -> recv:(model, input) recv_with_input
+      -> input Value.t
+      -> (model * inject) Computation.t
+    =
+    fun ?(here = Stdlib.Lexing.dummy_pos)
+      ?(sexp_of_action = { f = sexp_of_opaque })
+      ?reset
+      ?sexp_of_model
+      ?equal
+      ~default_model
+      ~recv
+      input ->
+    let open Let_syntax_with_map_location (struct
+        let here = here
+      end) in
+    let sexp_of_action (T cb) = sexp_of_action.f (Effect.Private.Callback.request cb) in
+    let make_inject
+      (type a)
+      ~(inject : hidden_callback -> unit Effect.t)
+      ~schedule_event
+      (action : a Action.t)
+      : a Effect.t
+      =
+      Effect.Private.make ~request:action ~evaluator:(fun action ->
+        schedule_event (inject (T action)) ~on_exn:(Effect.Private.Callback.on_exn action))
+    in
+    let ctx ~context =
+      let { Apply_action_context.Private.inject; schedule_event; time_source } =
+        Apply_action_context.Private.reveal context
+      in
+      { get =
+          (fun () ->
+            let inject =
+              make_inject ~inject ~schedule_event:(fun action ~on_exn:_ ->
+                schedule_event action)
+            in
+            Apply_action_context.Private.create ~inject ~schedule_event ~time_source)
+      }
+    in
+    let reset = Option.map reset ~f:(fun f context model -> f (ctx ~context) model) in
+    let%sub model, inject =
+      state_machine_with_input
+        ~here
+        ~sexp_of_action
+        ?sexp_of_model
+        ?reset
+        ?equal
+        ~default_model
+        ~apply_action:(fun context input model (T callback) ->
+          let%tydi { schedule_event; _ } = Apply_action_context.Private.reveal context in
+          let action = Effect.Private.Callback.request callback in
+          let new_model, response = recv.f (ctx ~context) input model action in
+          schedule_event (Effect.Private.Callback.respond_to callback response);
+          new_model)
+        input
+    in
+    let%sub inject =
+      let%arr inject in
+      let f action =
+        make_inject
+          ~inject
+          ~schedule_event:(fun action ~on_exn -> Effect.Expert.handle action ~on_exn)
+          action
+      in
+      ({ f } : inject)
+    in
+    let%arr model and inject in
+    model, inject
+  ;;
+
+  type 'model recv =
+    { f : 'a. get_apply_action_context -> 'model -> 'a Action.t -> 'model * 'a }
+
+  let create
+    ?(here = Stdlib.Lexing.dummy_pos)
+    ?sexp_of_action
+    ?reset
+    ?sexp_of_model
+    ?equal
+    ~default_model
+    ~recv
+    ()
+    =
+    let recv : _ recv_with_input =
+      { f =
+          (fun get_apply_action_context (_ : unit Computation_status.t) model action ->
+            recv.f get_apply_action_context model action)
+      }
+    in
+    create_with_input
+      ~here
+      ?sexp_of_action
+      ?sexp_of_model
+      ?equal
+      ?reset
+      ~default_model
+      ~recv
+      (Value.return ~here ())
+  ;;
+end
+
 let actor_with_input
   : type input model action return.
     ?here:Stdlib.Lexing.position
@@ -272,9 +402,13 @@ let actor_with_input
     let sexp_of_t cb = sexp_of_action (Effect.Private.Callback.request cb)
   end
   in
-  let make_inject ~inject ~schedule_event action =
+  let make_inject_with_on_exn ~inject ~schedule_event action =
     Effect.Private.make ~request:action ~evaluator:(fun action ->
-      schedule_event (inject action))
+      schedule_event (inject action) ~on_exn:(Effect.Private.Callback.on_exn action))
+  in
+  let make_inject ~inject ~schedule_event action =
+    let schedule_event effect ~on_exn:_ = schedule_event effect in
+    make_inject_with_on_exn ~inject ~schedule_event action
   in
   let reset =
     Option.map reset ~f:(fun f context model ->
@@ -311,7 +445,8 @@ let actor_with_input
   in
   let%sub inject =
     let%arr inject in
-    make_inject ~inject ~schedule_event:Effect.Expert.handle
+    make_inject_with_on_exn ~inject ~schedule_event:(fun effect ~on_exn ->
+      Effect.Expert.handle ~on_exn effect)
   in
   let%arr model and inject in
   model, inject
@@ -889,7 +1024,9 @@ module Effect_throttling = struct
     let%arr inject in
     fun request ->
       Effect.Private.make ~request ~evaluator:(fun callback ->
-        Effect.Expert.handle (inject (Run callback)))
+        Effect.Expert.handle
+          (inject (Run callback))
+          ~on_exn:(Effect.Private.Callback.on_exn callback))
   ;;
 end
 
@@ -898,11 +1035,13 @@ module Incr = struct
   include Incr0
 end
 
-module Map0 = Map0.Make (struct
+module Map_and_set0 = Map_and_set0.Make (struct
     module Value = Value
     module Computation = Computation
     module Incr = Incr
   end)
+
+module Map0 = Map_and_set0.Map
 
 let freeze ?(here = Stdlib.Lexing.dummy_pos) ?sexp_of_model ?equal value =
   let open Let_syntax_with_map_location (struct
@@ -1165,7 +1304,7 @@ module Clock = struct
     let%sub initial_model =
       let%arr base_time and span in
       let start_time =
-        if trigger_on_activate then base_time else Time_ns.add base_time span
+        if trigger_on_activate then base_time else Time_ns.add_saturating base_time span
       in
       Every_model.Waiting_for (None, start_time)
     in
@@ -1227,7 +1366,7 @@ module Clock = struct
     generic_every ~create_effect:(fun ~span ~base_time:_ ~get_current_time ~callback ->
       let%map.Effect () = callback in
       let now = get_current_time () in
-      ensure_clock_advances now (Time_ns.add now span))
+      ensure_clock_advances now (Time_ns.add_saturating now span))
   ;;
 
   let every_wait_period_after_previous_effect_starts_blocking =
@@ -1235,7 +1374,7 @@ module Clock = struct
       let start = get_current_time () in
       let%map.Effect () = callback in
       let now = get_current_time () in
-      ensure_clock_advances now (Time_ns.add start span))
+      ensure_clock_advances now (Time_ns.add_saturating start span))
   ;;
 
   let every_multiple_of_period_blocking =
@@ -1553,4 +1692,4 @@ module Expert = struct
   let assoc_on = assoc_on
 end
 
-module Map = Map0
+module Map = Map_and_set0

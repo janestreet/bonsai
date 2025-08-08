@@ -29,7 +29,7 @@ let watch_computation
         ; label
         }
     ; queue = None
-    ; value_type_id_observation_definition_positions = None
+    ; value_id_observation_definition_positions = None
     ; enable_watcher =
         false
         (* [enable_watcher] will be set during the transformation stage if computation watchers
@@ -39,8 +39,8 @@ let watch_computation
 
 let sub (type via) ?(here = Stdlib.Lexing.dummy_pos) (from : via Computation.t) ~f =
   match from with
-  | Return { value = { here = _; value = Named _ as named; id }; here } ->
-    f { Value.here; value = named; id }
+  | Return { value = { here = _; value = Named _ as named }; here } ->
+    f { Value.here; value = named }
   | _ ->
     let via : via Type_equal.Id.t =
       Type_equal.Id.create

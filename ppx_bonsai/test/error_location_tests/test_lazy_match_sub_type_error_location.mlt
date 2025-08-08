@@ -1,0 +1,214 @@
+#print_line_numbers true
+
+open! Bonsai
+open Bonsai.Let_syntax
+
+(* Graph name errors: *)
+
+let _component t (local_ _graph) =
+  match%sub [%lazy] t with
+  | 0 -> Bonsai.return ()
+  | _ -> Bonsai.return ()
+;;
+
+[%%expect
+  {|
+Line 9, characters 12-19:
+Error: Unbound value graph
+Hint: Did you mean _graph?
+|}]
+
+let _component t (local_ graph) =
+  match%sub [%lazy _graph] t with
+  | 0 -> Bonsai.return ()
+  | _ -> Bonsai.return ()
+;;
+
+[%%expect
+  {|
+Line 22, characters 19-25:
+Error: Unbound value _graph
+Hint: Did you mean graph?
+|}]
+
+let _component t (local_ graph) =
+  match%sub [%lazy 1] t with
+  | 0 -> Bonsai.return ()
+  | _ -> Bonsai.return ()
+;;
+
+[%%expect
+  {|
+Line 35, characters 12-21:
+Error: This should either have no arguments (i.e. [%lazy]) or a single graph identifier (e.g. [%lazy my_graph]).
+|}]
+
+(* Graph name errors w/ graph used in branches: *)
+
+let _component t (local_ _graph) =
+  match%sub [%lazy] t with
+  | 0 -> Bonsai.state 0 graph |> fst
+  | _ -> Bonsai.return ()
+;;
+
+(* Good, tells you that the [%lazy] is bad first *)
+[%%expect
+  {|
+Line 49, characters 12-19:
+Error: Unbound value graph
+Hint: Did you mean _graph?
+|}]
+
+let _component t (local_ _graph) =
+  match%sub [%lazy] t with
+  | 0 -> Bonsai.state 0 _graph |> fst
+  | _ -> Bonsai.return ()
+;;
+
+(* Not as good, tells you that you can't use _graph rather than complain about [%lazy] *)
+[%%expect
+  {|
+Line 64, characters 24-30:
+Error: The value _graph is local, so cannot be used inside a function that might escape.
+Hint: The function might escape because it is an argument to a tail call
+|}]
+
+(* Type errors in cases: *)
+
+let _component t (local_ graph) =
+  match%sub [%lazy] t with
+  | 0 -> Bonsai.state 0 graph
+  | _ -> Bonsai.return ()
+;;
+
+[%%expect
+  {|
+Line 80, characters 9-29:
+Error: This expression has type int t * (int -> unit Ui_effect.t) t
+       but an expression was expected of type 'a t
+|}]
+
+(* Incorrectly placed [%lazy] blocks: *)
+
+let [%lazy] = ()
+
+[%%expect
+  {|
+Line 93, characters 6-10:
+Error: Extension `lazy' was not translated.
+       Hint: `lazy' is available for expressions but is used here in the
+       context of
+       a pattern.
+       Did you put it at the wrong level?
+|}]
+
+let _component t (local_ graph) =
+  match%sub t [%lazy] with
+  | 0 -> Bonsai.return ()
+  | _ -> Bonsai.return ()
+;;
+
+[%%expect
+  {|
+Line 106, characters 14-21:
+Error: Syntax error. The correct syntax is `match%sub [%lazy] ...` or
+       `match%sub [%lazy graph] ...`. Does your code compile if you delete
+       this [%lazy] block?
+|}]
+
+let _component t (local_ graph) =
+  match%sub t with
+  | 0 -> [%lazy] Bonsai.return ()
+  | _ -> Bonsai.return ()
+;;
+
+[%%expect
+  {|
+Line 121, characters 9-16:
+Error: Syntax error. The correct syntax is `match%sub [%lazy] ...` or
+       `match%sub [%lazy graph] ...`. Does your code compile if you delete
+       this [%lazy] block?
+|}]
+
+let _component t (local_ graph) =
+  match%sub [%lazy] with
+  | 0 -> Bonsai.return ()
+  | _ -> Bonsai.return ()
+;;
+
+[%%expect
+  {|
+Line 134, characters 12-19:
+Error: Syntax error. The correct syntax is `match%sub [%lazy] ...` or
+       `match%sub [%lazy graph] ...`. Does your code compile if you delete
+       this [%lazy] block?
+|}]
+
+(* Bad labels: *)
+
+let _component t (local_ graph) =
+  match%sub [%lazy] ~t with
+  | 0 -> Bonsai.return ()
+  | _ -> Bonsai.return ()
+;;
+
+[%%expect
+  {|
+Line 150, characters 12-19:
+Error: Syntax error. The correct syntax is `match%sub [%lazy] ...` or
+       `match%sub [%lazy graph] ...`. Does your code compile if you delete
+       this [%lazy] block?
+|}]
+
+let _component t (local_ graph) =
+  match%sub [%lazy] ~t 1 2 with
+  | 0 -> Bonsai.return ()
+  | _ -> Bonsai.return ()
+;;
+
+[%%expect
+  {|
+Line 164, characters 12-19:
+Error: Syntax error. The correct syntax is `match%sub [%lazy] ...` or
+       `match%sub [%lazy graph] ...`. Does your code compile if you delete
+       this [%lazy] block?
+|}]
+
+let _component t (local_ graph) =
+  match%sub [%lazy] ~t 1 2, ~t with
+  | 0, _ -> Bonsai.return ()
+  | _, _ -> Bonsai.return ()
+;;
+
+[%%expect
+  {|
+Line 178, characters 12-30:
+Error: This expression has type 'a * t:'b
+       but an expression was expected of type 'c t
+|}]
+
+let _component t (local_ graph) =
+  match%sub ~lazy_:[%lazy], t with
+  | 0, _ -> Bonsai.return ()
+  | _, _ -> Bonsai.return ()
+;;
+
+[%%expect
+  {|
+Line 191, characters 12-29:
+Error: This expression has type lazy_:'a * 'b
+       but an expression was expected of type 'c t
+|}]
+
+let _component t (local_ graph) =
+  match%sub [%lazy] ~t, ~t with
+  | 0 -> Bonsai.return ()
+  | _ -> Bonsai.return ()
+;;
+
+[%%expect
+  {|
+Line 204, characters 12-26:
+Error: This expression has type 'a * t:'b
+       but an expression was expected of type 'c t
+|}]

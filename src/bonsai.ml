@@ -27,13 +27,14 @@ module Private = struct
   module Skeleton = Skeleton
   module Transform = Transform
   module Linter = Linter
+  module Timer = Timer
   module Trampoline = Trampoline
   module Annotate_incr = Annotate_incr
   module Computation_watcher = Computation_watcher
   module For_proc = Cont.For_proc
 
   let path ?(here = Stdlib.Lexing.dummy_pos) graph = Cont.path ~here graph
-  let gather = Eval.gather
+  let gather = Gather.gather
   let pre_process = Pre_process.pre_process
   let reveal_value = Cont.Conv.reveal_value
   let conceal_value = Cont.Conv.conceal_value

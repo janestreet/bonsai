@@ -364,7 +364,7 @@ let%expect_test "destructuring let%sub (comparing location of callsite vs locati
   Expect_test_patdiff.print_patdiff (test Location_of_callsite) (test Location_in_scope);
   [%expect
     {|
-    -1,74 +1,32
+    === DIFF HUNK ===
     -|((Let_syntax.sub
     -|    ~here:{
     -|            Ppx_here_lib.pos_fname = "_none_";
@@ -898,16 +898,46 @@ let%expect_test "destructuring let%arr uses cutoff" =
             }
       (Let_syntax.cutoff MY_EXPR
          ~equal:(fun
-                   (__old_for_cutoff__044_,
-                    { b = __old_for_cutoff__042_; c = __old_for_cutoff__040_;_})
-                   (__new_for_cutoff__043_,
-                    { b = __new_for_cutoff__041_; c = __new_for_cutoff__039_;_})
+                   (__old_for_cutoff__040_,
+                    { b = __old_for_cutoff__042_; c = __old_for_cutoff__044_;_})
+                   (__new_for_cutoff__039_,
+                    { b = __new_for_cutoff__041_; c = __new_for_cutoff__043_;_})
                    ->
                    (phys_equal __old_for_cutoff__044_ __new_for_cutoff__043_) &&
                      ((phys_equal __old_for_cutoff__042_ __new_for_cutoff__041_)
                         &&
                         (phys_equal __old_for_cutoff__040_ __new_for_cutoff__039_))))
       ~f:(fun (a, { b; c;_}) -> MY_BODY)
+    |}]
+;;
+
+let%expect_test "let%arr different values, but same names" =
+  Ppx_let_expander.expand
+    (Ppx_bonsai_expander.arr Location_of_callsite)
+    Ppx_let_expander.Extension_kind.default
+    ~modul:None
+    ~locality
+    [%expr
+      let (`Foo (a, _) | `Bar (_, a)) = MY_EXPR in
+      MY_BODY]
+  |> print_expr;
+  [%expect
+    {|
+    Let_syntax.arr
+      ~here:{
+              Ppx_here_lib.pos_fname = "_none_";
+              pos_lnum = 0;
+              pos_cnum = (-1);
+              pos_bol = 0
+            }
+      (Let_syntax.cutoff ((MY_EXPR)[@ppxlib.enter_value a])
+         ~equal:(fun
+                   (`Foo (__old_for_cutoff__049_, _)
+                    | `Bar (_, __old_for_cutoff__049_))
+                   (`Foo (__new_for_cutoff__048_, _)
+                    | `Bar (_, __new_for_cutoff__048_))
+                   -> phys_equal __old_for_cutoff__049_ __new_for_cutoff__048_))
+      ~f:(fun (`Foo (a, _) | `Bar (_, a)) -> MY_BODY)
     |}]
 ;;
 
@@ -934,17 +964,17 @@ let%expect_test "destructuring let%arr uses cutoff, if specific fields have igno
             }
       (Let_syntax.cutoff MY_EXPR
          ~equal:(fun
-                   (__old_for_cutoff__051_,
-                    { b = __old_for_cutoff__049_; c = __old_for_cutoff__047_;
+                   (__old_for_cutoff__052_,
+                    { b = __old_for_cutoff__054_; c = __old_for_cutoff__056_;
                       d = _; e = _; f = _; g = { h = _; i = { k = _ } } })
-                   (__new_for_cutoff__050_,
-                    { b = __new_for_cutoff__048_; c = __new_for_cutoff__046_;
+                   (__new_for_cutoff__051_,
+                    { b = __new_for_cutoff__053_; c = __new_for_cutoff__055_;
                       d = _; e = _; f = _; g = { h = _; i = { k = _ } } })
                    ->
-                   (phys_equal __old_for_cutoff__051_ __new_for_cutoff__050_) &&
-                     ((phys_equal __old_for_cutoff__049_ __new_for_cutoff__048_)
+                   (phys_equal __old_for_cutoff__056_ __new_for_cutoff__055_) &&
+                     ((phys_equal __old_for_cutoff__054_ __new_for_cutoff__053_)
                         &&
-                        (phys_equal __old_for_cutoff__047_ __new_for_cutoff__046_))))
+                        (phys_equal __old_for_cutoff__052_ __new_for_cutoff__051_))))
       ~f:(fun (a, { b; c; d = _; e = _; f = _; g = { h = _; i = { k = _ } } }) ->
             MY_BODY)
     |}]
@@ -965,15 +995,15 @@ let%expect_test "let%arr - location-in-scope" =
     Let_syntax.arr ~here
       (Let_syntax.cutoff ~here MY_EXPR
          ~equal:(fun
-                   (__old_for_cutoff__058_,
-                    { b = __old_for_cutoff__056_; c = __old_for_cutoff__054_;_})
-                   (__new_for_cutoff__057_,
-                    { b = __new_for_cutoff__055_; c = __new_for_cutoff__053_;_})
+                   (__old_for_cutoff__059_,
+                    { b = __old_for_cutoff__061_; c = __old_for_cutoff__063_;_})
+                   (__new_for_cutoff__058_,
+                    { b = __new_for_cutoff__060_; c = __new_for_cutoff__062_;_})
                    ->
-                   (phys_equal __old_for_cutoff__058_ __new_for_cutoff__057_) &&
-                     ((phys_equal __old_for_cutoff__056_ __new_for_cutoff__055_)
+                   (phys_equal __old_for_cutoff__063_ __new_for_cutoff__062_) &&
+                     ((phys_equal __old_for_cutoff__061_ __new_for_cutoff__060_)
                         &&
-                        (phys_equal __old_for_cutoff__054_ __new_for_cutoff__053_))))
+                        (phys_equal __old_for_cutoff__059_ __new_for_cutoff__058_))))
       ~f:(fun (a, { b; c;_}) -> MY_BODY)
     |}]
 ;;
@@ -991,8 +1021,8 @@ let%expect_test "destructuring let%arr uses cutoff (multiple arms)" =
   |> print_expr;
   [%expect
     {|
-    let __let_syntax__060_ = MY_EXPR[@@ppxlib.do_not_enter_value ]
-    and __let_syntax__061_ = OTHER_EXPR[@@ppxlib.do_not_enter_value ] in
+    let __let_syntax__065_ = MY_EXPR[@@ppxlib.do_not_enter_value ]
+    and __let_syntax__066_ = OTHER_EXPR[@@ppxlib.do_not_enter_value ] in
     Let_syntax.arr2
       ~here:{
               Ppx_here_lib.pos_fname = "_none_";
@@ -1000,28 +1030,28 @@ let%expect_test "destructuring let%arr uses cutoff (multiple arms)" =
               pos_cnum = (-1);
               pos_bol = 0
             }
-      (Let_syntax.cutoff __let_syntax__060_
+      (Let_syntax.cutoff __let_syntax__065_
          ~equal:(fun
-                   (__old_for_cutoff__067_,
-                    { b = __old_for_cutoff__065_; c = __old_for_cutoff__063_;_})
-                   (__new_for_cutoff__066_,
-                    { b = __new_for_cutoff__064_; c = __new_for_cutoff__062_;_})
+                   (__old_for_cutoff__068_,
+                    { b = __old_for_cutoff__070_; c = __old_for_cutoff__072_;_})
+                   (__new_for_cutoff__067_,
+                    { b = __new_for_cutoff__069_; c = __new_for_cutoff__071_;_})
                    ->
-                   (phys_equal __old_for_cutoff__067_ __new_for_cutoff__066_) &&
-                     ((phys_equal __old_for_cutoff__065_ __new_for_cutoff__064_)
+                   (phys_equal __old_for_cutoff__072_ __new_for_cutoff__071_) &&
+                     ((phys_equal __old_for_cutoff__070_ __new_for_cutoff__069_)
                         &&
-                        (phys_equal __old_for_cutoff__063_ __new_for_cutoff__062_))))
-      (Let_syntax.cutoff __let_syntax__061_
+                        (phys_equal __old_for_cutoff__068_ __new_for_cutoff__067_))))
+      (Let_syntax.cutoff __let_syntax__066_
          ~equal:(fun
-                   (__old_for_cutoff__073_,
-                    { y = __old_for_cutoff__071_; z = __old_for_cutoff__069_;_})
-                   (__new_for_cutoff__072_,
-                    { y = __new_for_cutoff__070_; z = __new_for_cutoff__068_;_})
+                   (__old_for_cutoff__074_,
+                    { y = __old_for_cutoff__076_; z = __old_for_cutoff__078_;_})
+                   (__new_for_cutoff__073_,
+                    { y = __new_for_cutoff__075_; z = __new_for_cutoff__077_;_})
                    ->
-                   (phys_equal __old_for_cutoff__073_ __new_for_cutoff__072_) &&
-                     ((phys_equal __old_for_cutoff__071_ __new_for_cutoff__070_)
+                   (phys_equal __old_for_cutoff__078_ __new_for_cutoff__077_) &&
+                     ((phys_equal __old_for_cutoff__076_ __new_for_cutoff__075_)
                         &&
-                        (phys_equal __old_for_cutoff__069_ __new_for_cutoff__068_))))
+                        (phys_equal __old_for_cutoff__074_ __new_for_cutoff__073_))))
       ~f:(fun (a, { b; c;_}) (x, { y; z;_}) -> MY_BODY)
     |}]
 ;;
@@ -1039,8 +1069,8 @@ let%expect_test "one arm of destructuring let%arr uses cutoff" =
   |> print_expr;
   [%expect
     {|
-    let __let_syntax__076_ = MY_EXPR[@@ppxlib.do_not_enter_value ]
-    and __let_syntax__077_ = ((OTHER_EXPR)[@ppxlib.enter_value y])[@@ppxlib.do_not_enter_value
+    let __let_syntax__081_ = MY_EXPR[@@ppxlib.do_not_enter_value ]
+    and __let_syntax__082_ = ((OTHER_EXPR)[@ppxlib.enter_value y])[@@ppxlib.do_not_enter_value
                                                                     ] in
     Let_syntax.arr2
       ~here:{
@@ -1049,18 +1079,18 @@ let%expect_test "one arm of destructuring let%arr uses cutoff" =
               pos_cnum = (-1);
               pos_bol = 0
             }
-      (Let_syntax.cutoff __let_syntax__076_
+      (Let_syntax.cutoff __let_syntax__081_
          ~equal:(fun
-                   (__old_for_cutoff__083_,
-                    { b = __old_for_cutoff__081_; c = __old_for_cutoff__079_;_})
-                   (__new_for_cutoff__082_,
-                    { b = __new_for_cutoff__080_; c = __new_for_cutoff__078_;_})
+                   (__old_for_cutoff__084_,
+                    { b = __old_for_cutoff__086_; c = __old_for_cutoff__088_;_})
+                   (__new_for_cutoff__083_,
+                    { b = __new_for_cutoff__085_; c = __new_for_cutoff__087_;_})
                    ->
-                   (phys_equal __old_for_cutoff__083_ __new_for_cutoff__082_) &&
-                     ((phys_equal __old_for_cutoff__081_ __new_for_cutoff__080_)
+                   (phys_equal __old_for_cutoff__088_ __new_for_cutoff__087_) &&
+                     ((phys_equal __old_for_cutoff__086_ __new_for_cutoff__085_)
                         &&
-                        (phys_equal __old_for_cutoff__079_ __new_for_cutoff__078_))))
-      __let_syntax__077_ ~f:(fun (a, { b; c;_}) y -> MY_BODY)
+                        (phys_equal __old_for_cutoff__084_ __new_for_cutoff__083_))))
+      __let_syntax__082_ ~f:(fun (a, { b; c;_}) y -> MY_BODY)
     |}]
 ;;
 
@@ -1099,15 +1129,15 @@ let%expect_test "Destructuring does not happen when there is no ignoring (multip
   |> print_expr;
   [%expect
     {|
-    let __let_syntax__087_ = MY_EXPR[@@ppxlib.do_not_enter_value ]
-    and __let_syntax__088_ = OTHER_EXPR[@@ppxlib.do_not_enter_value ] in
+    let __let_syntax__092_ = MY_EXPR[@@ppxlib.do_not_enter_value ]
+    and __let_syntax__093_ = OTHER_EXPR[@@ppxlib.do_not_enter_value ] in
     Let_syntax.arr2
       ~here:{
               Ppx_here_lib.pos_fname = "_none_";
               pos_lnum = 0;
               pos_cnum = (-1);
               pos_bol = 0
-            } __let_syntax__087_ __let_syntax__088_
+            } __let_syntax__092_ __let_syntax__093_
       ~f:(fun (a, { b; c; d }) (x, { y; z; w }) -> MY_BODY)
     |}]
 ;;
@@ -1152,9 +1182,9 @@ module%test [@name "Destructuring vs. no destructuring criteria."] _ = struct
         BODY];
     [%expect
       {|
-      let __let_syntax__092_ = ((NO_DESTRUCTION)[@ppxlib.enter_value a])[@@ppxlib.do_not_enter_value
+      let __let_syntax__097_ = ((NO_DESTRUCTION)[@ppxlib.enter_value a])[@@ppxlib.do_not_enter_value
                                                                           ]
-      and __let_syntax__093_ = ((ALSO_NO_DESTRUCTION)[@ppxlib.enter_value b])
+      and __let_syntax__098_ = ((ALSO_NO_DESTRUCTION)[@ppxlib.enter_value b])
       [@@ppxlib.do_not_enter_value ] in
       Let_syntax.arr2
         ~here:{
@@ -1162,7 +1192,7 @@ module%test [@name "Destructuring vs. no destructuring criteria."] _ = struct
                 pos_lnum = 0;
                 pos_cnum = (-1);
                 pos_bol = 0
-              } __let_syntax__092_ __let_syntax__093_ ~f:(fun a b -> BODY)
+              } __let_syntax__097_ __let_syntax__098_ ~f:(fun a b -> BODY)
       |}]
   ;;
 
@@ -1176,9 +1206,9 @@ module%test [@name "Destructuring vs. no destructuring criteria."] _ = struct
         BODY];
     [%expect
       {|
-      let __let_syntax__096_ = ((NO_DESTRUCTION)[@ppxlib.enter_value a])[@@ppxlib.do_not_enter_value
+      let __let_syntax__101_ = ((NO_DESTRUCTION)[@ppxlib.enter_value a])[@@ppxlib.do_not_enter_value
                                                                           ]
-      and __let_syntax__097_ = ((ALSO_NO_DESTRUCTION)[@ppxlib.enter_value b])
+      and __let_syntax__102_ = ((ALSO_NO_DESTRUCTION)[@ppxlib.enter_value b])
       [@@ppxlib.do_not_enter_value ] in
       Let_syntax.arr2
         ~here:{
@@ -1186,7 +1216,7 @@ module%test [@name "Destructuring vs. no destructuring criteria."] _ = struct
                 pos_lnum = 0;
                 pos_cnum = (-1);
                 pos_bol = 0
-              } __let_syntax__096_ __let_syntax__097_
+              } __let_syntax__101_ __let_syntax__102_
         ~f:(fun (_ as a) (_ as b) -> BODY)
       |}]
   ;;
@@ -1209,9 +1239,9 @@ module%test [@name "Destructuring vs. no destructuring criteria."] _ = struct
                 pos_bol = 0
               }
         (Let_syntax.cutoff ((DESTRUCT)[@ppxlib.enter_value a])
-           ~equal:(fun ((_ as __old_for_cutoff__101_), _)
-                     ((_ as __new_for_cutoff__100_), _) ->
-                     phys_equal __old_for_cutoff__101_ __new_for_cutoff__100_))
+           ~equal:(fun ((_ as __old_for_cutoff__106_), _)
+                     ((_ as __new_for_cutoff__105_), _) ->
+                     phys_equal __old_for_cutoff__106_ __new_for_cutoff__105_))
         ~f:(fun ((_ as a), _) -> BODY)
       |}]
   ;;
@@ -1232,13 +1262,13 @@ module%test [@name "Destructuring vs. no destructuring criteria."] _ = struct
               }
         (Let_syntax.cutoff BASE
            ~equal:(fun
-                     { foo = __old_for_cutoff__106_;
-                       bar = { baz = __old_for_cutoff__104_;_};_}
-                     { foo = __new_for_cutoff__105_;
-                       bar = { baz = __new_for_cutoff__103_;_};_}
+                     { foo = __old_for_cutoff__109_;
+                       bar = { baz = __old_for_cutoff__111_;_};_}
+                     { foo = __new_for_cutoff__108_;
+                       bar = { baz = __new_for_cutoff__110_;_};_}
                      ->
-                     (phys_equal __old_for_cutoff__106_ __new_for_cutoff__105_) &&
-                       (phys_equal __old_for_cutoff__104_ __new_for_cutoff__103_)))
+                     (phys_equal __old_for_cutoff__109_ __new_for_cutoff__108_) &&
+                       (phys_equal __old_for_cutoff__111_ __new_for_cutoff__110_)))
         ~f:(fun { foo; bar = { baz;_};_} -> BODY)
       |}]
   ;;
@@ -1260,10 +1290,10 @@ module%test [@name "Destructuring vs. no destructuring criteria."] _ = struct
                 pos_bol = 0
               }
         (Let_syntax.cutoff DESTRUCT
-           ~equal:(fun (((__old_for_cutoff__111_, _) : t), __old_for_cutoff__109_)
-                     (((__new_for_cutoff__110_, _) : t), __new_for_cutoff__108_) ->
-                     (phys_equal __old_for_cutoff__111_ __new_for_cutoff__110_) &&
-                       (phys_equal __old_for_cutoff__109_ __new_for_cutoff__108_)))
+           ~equal:(fun (((__old_for_cutoff__114_, _) : t), __old_for_cutoff__116_)
+                     (((__new_for_cutoff__113_, _) : t), __new_for_cutoff__115_) ->
+                     (phys_equal __old_for_cutoff__116_ __new_for_cutoff__115_) &&
+                       (phys_equal __old_for_cutoff__114_ __new_for_cutoff__113_)))
         ~f:(fun (((b, _) : t), c) -> BODY)
       |}]
   ;;
@@ -1278,8 +1308,8 @@ module%test [@name "Destructuring vs. no destructuring criteria."] _ = struct
         BODY];
     [%expect
       {|
-      let __let_syntax__113_ = DESTRUCT[@@ppxlib.do_not_enter_value ]
-      and __let_syntax__114_ = ALSO_DESTRUCT[@@ppxlib.do_not_enter_value ] in
+      let __let_syntax__118_ = DESTRUCT[@@ppxlib.do_not_enter_value ]
+      and __let_syntax__119_ = ALSO_DESTRUCT[@@ppxlib.do_not_enter_value ] in
       Let_syntax.arr2
         ~here:{
                 Ppx_here_lib.pos_fname = "_none_";
@@ -1287,16 +1317,16 @@ module%test [@name "Destructuring vs. no destructuring criteria."] _ = struct
                 pos_cnum = (-1);
                 pos_bol = 0
               }
-        (Let_syntax.cutoff __let_syntax__113_
-           ~equal:(fun (((__old_for_cutoff__118_, _) : t), __old_for_cutoff__116_)
-                     (((__new_for_cutoff__117_, _) : t), __new_for_cutoff__115_) ->
-                     (phys_equal __old_for_cutoff__118_ __new_for_cutoff__117_) &&
-                       (phys_equal __old_for_cutoff__116_ __new_for_cutoff__115_)))
-        (Let_syntax.cutoff __let_syntax__114_
-           ~equal:(fun (((__old_for_cutoff__122_, _) : t), __old_for_cutoff__120_)
-                     (((__new_for_cutoff__121_, _) : t), __new_for_cutoff__119_) ->
-                     (phys_equal __old_for_cutoff__122_ __new_for_cutoff__121_) &&
-                       (phys_equal __old_for_cutoff__120_ __new_for_cutoff__119_)))
+        (Let_syntax.cutoff __let_syntax__118_
+           ~equal:(fun (((__old_for_cutoff__121_, _) : t), __old_for_cutoff__123_)
+                     (((__new_for_cutoff__120_, _) : t), __new_for_cutoff__122_) ->
+                     (phys_equal __old_for_cutoff__123_ __new_for_cutoff__122_) &&
+                       (phys_equal __old_for_cutoff__121_ __new_for_cutoff__120_)))
+        (Let_syntax.cutoff __let_syntax__119_
+           ~equal:(fun (((__old_for_cutoff__125_, _) : t), __old_for_cutoff__127_)
+                     (((__new_for_cutoff__124_, _) : t), __new_for_cutoff__126_) ->
+                     (phys_equal __old_for_cutoff__127_ __new_for_cutoff__126_) &&
+                       (phys_equal __old_for_cutoff__125_ __new_for_cutoff__124_)))
         ~f:(fun (((b, _) : t), c) (((d, _) : t), e) -> BODY)
       |}]
   ;;
@@ -1326,15 +1356,15 @@ module%test [@name "Destructuring vs. no destructuring criteria."] _ = struct
         BODY];
     [%expect
       {|
-      let __let_syntax__126_ = NO_DESTRUCTION[@@ppxlib.do_not_enter_value ]
-      and __let_syntax__127_ = ALSO_NO_DESTRUCTION[@@ppxlib.do_not_enter_value ] in
+      let __let_syntax__131_ = NO_DESTRUCTION[@@ppxlib.do_not_enter_value ]
+      and __let_syntax__132_ = ALSO_NO_DESTRUCTION[@@ppxlib.do_not_enter_value ] in
       Let_syntax.arr2
         ~here:{
                 Ppx_here_lib.pos_fname = "_none_";
                 pos_lnum = 0;
                 pos_cnum = (-1);
                 pos_bol = 0
-              } __let_syntax__126_ __let_syntax__127_
+              } __let_syntax__131_ __let_syntax__132_
         ~f:(fun { a; b } { c; d } -> BODY)
       |}]
   ;;
@@ -1372,13 +1402,13 @@ module%test [@name "Destructuring vs. no destructuring criteria."] _ = struct
               }
         (Let_syntax.cutoff DESTRUCT
            ~equal:(fun
-                     (({ a = __old_for_cutoff__134_; b = (module _)  } : t),
-                      __old_for_cutoff__132_)
-                     (({ a = __new_for_cutoff__133_; b = (module _)  } : t),
-                      __new_for_cutoff__131_)
+                     (({ a = __old_for_cutoff__137_; b = (module _)  } : t),
+                      __old_for_cutoff__139_)
+                     (({ a = __new_for_cutoff__136_; b = (module _)  } : t),
+                      __new_for_cutoff__138_)
                      ->
-                     (phys_equal __old_for_cutoff__134_ __new_for_cutoff__133_) &&
-                       (phys_equal __old_for_cutoff__132_ __new_for_cutoff__131_)))
+                     (phys_equal __old_for_cutoff__139_ __new_for_cutoff__138_) &&
+                       (phys_equal __old_for_cutoff__137_ __new_for_cutoff__136_)))
         ~f:(fun (({ a; b = (module _)  } : t), c) -> BODY)
       |}]
   ;;
@@ -1420,16 +1450,15 @@ module%test [@name "Destructuring vs. no destructuring criteria."] _ = struct
                 pos_bol = 0
               }
         (Let_syntax.cutoff ((EXPR)[@ppxlib.enter_value a])
-           ~equal:(fun { a = __old_for_cutoff__140_; b = __old_for_cutoff__140_;_}
-                     { a = __new_for_cutoff__139_; b = __new_for_cutoff__139_;_} ->
-                     (phys_equal __old_for_cutoff__140_ __new_for_cutoff__139_) &&
-                       (phys_equal __old_for_cutoff__138_ __new_for_cutoff__137_)))
+           ~equal:(fun { a = __old_for_cutoff__145_; b = __old_for_cutoff__145_;_}
+                     { a = __new_for_cutoff__144_; b = __new_for_cutoff__144_;_} ->
+                     phys_equal __old_for_cutoff__145_ __new_for_cutoff__144_))
         ~f:(fun { a; b = a;_} -> BODY)
       |}]
   ;;
 end
 
-let%expect_test "current match%arr behavior" =
+let%expect_test "match%arr inserts cutoff when there are ignored variables" =
   Ppx_let_expander.expand
     (Ppx_bonsai_expander.arr Location_of_callsite)
     Ppx_let_expander.Extension_kind.default
@@ -1449,10 +1478,512 @@ let%expect_test "current match%arr behavior" =
               pos_lnum = 0;
               pos_cnum = (-1);
               pos_bol = 0
-            } EXPR
+            }
+      (Let_syntax.cutoff EXPR
+         ~equal:(fun __old_for_cutoff_ppx_bonsai__149_
+                   __new_for_cutoff_ppx_bonsai__150_ ->
+                   ((match (__old_for_cutoff_ppx_bonsai__149_,
+                             __new_for_cutoff_ppx_bonsai__150_)
+                     with
+                     | (A (__old_for_cutoff__148_, _), A
+                        (__new_for_cutoff__147_, _)) ->
+                         phys_equal __old_for_cutoff__148_ __new_for_cutoff__147_
+                     | (A (__new_for_cutoff__147_, _), _)
+                       | (_, A (__new_for_cutoff__147_, _)) -> false
+                     | (B, B) -> true
+                     | (B, _) | (_, B) -> false
+                     | (_, _) -> true)
+                   [@ocaml.warning "-8-11"])))
       ~f:(function | A (a, _) -> MY_BODY | B -> MY_BODY | _ -> MY_BODY)
     |}]
 ;;
+
+let%expect_test "match%arr with different patterns inside same constructor" =
+  Ppx_let_expander.expand
+    (Ppx_bonsai_expander.arr Location_of_callsite)
+    Ppx_let_expander.Extension_kind.default
+    ~modul:None
+    ~locality
+    [%expr
+      match EXPR with
+      | A (1, _) -> MY_BODY
+      | A (_, 2) -> MY_BODY
+      | A (a, _) -> MY_BODY]
+  |> print_expr;
+  [%expect
+    {|
+    Let_syntax.arr
+      ~here:{
+              Ppx_here_lib.pos_fname = "_none_";
+              pos_lnum = 0;
+              pos_cnum = (-1);
+              pos_bol = 0
+            }
+      (Let_syntax.cutoff EXPR
+         ~equal:(fun __old_for_cutoff_ppx_bonsai__153_
+                   __new_for_cutoff_ppx_bonsai__154_ ->
+                   ((match (__old_for_cutoff_ppx_bonsai__153_,
+                             __new_for_cutoff_ppx_bonsai__154_)
+                     with
+                     | (A (1, _), A (1, _)) -> true
+                     | (A (1, _), _) | (_, A (1, _)) -> false
+                     | (A (_, 2), A (_, 2)) -> true
+                     | (A (_, 2), _) | (_, A (_, 2)) -> false
+                     | (A (__old_for_cutoff__152_, _), A
+                        (__new_for_cutoff__151_, _)) ->
+                         phys_equal __old_for_cutoff__152_ __new_for_cutoff__151_
+                     | (A (__new_for_cutoff__151_, _), _)
+                       | (_, A (__new_for_cutoff__151_, _)) -> false)
+                   [@ocaml.warning "-8-11"])))
+      ~f:(function
+          | A (1, _) -> MY_BODY
+          | A (_, 2) -> MY_BODY
+          | A (a, _) -> MY_BODY)
+    |}]
+;;
+
+let%expect_test "match%arr doesn't add cutoff when there are no ignored variables" =
+  Ppx_let_expander.expand
+    (Ppx_bonsai_expander.arr Location_of_callsite)
+    Ppx_let_expander.Extension_kind.default
+    ~modul:None
+    ~locality
+    [%expr
+      match EXPR with
+      | A (a, b) -> MY_BODY
+      | B -> MY_BODY]
+  |> print_expr;
+  [%expect
+    {|
+    Let_syntax.arr
+      ~here:{
+              Ppx_here_lib.pos_fname = "_none_";
+              pos_lnum = 0;
+              pos_cnum = (-1);
+              pos_bol = 0
+            } EXPR ~f:(function | A (a, b) -> MY_BODY | B -> MY_BODY)
+    |}]
+;;
+
+let%expect_test "match%arr with [or] pattern" =
+  Ppx_let_expander.expand
+    (Ppx_bonsai_expander.arr Location_of_callsite)
+    Ppx_let_expander.Extension_kind.default
+    ~modul:None
+    ~locality
+    [%expr
+      match EXPR with
+      | A (t, _) | B (_, t) -> MY_BODY
+      | C -> MY_BODY]
+  |> print_expr;
+  [%expect
+    {|
+    Let_syntax.arr
+      ~here:{
+              Ppx_here_lib.pos_fname = "_none_";
+              pos_lnum = 0;
+              pos_cnum = (-1);
+              pos_bol = 0
+            }
+      (Let_syntax.cutoff EXPR
+         ~equal:(fun __old_for_cutoff_ppx_bonsai__159_
+                   __new_for_cutoff_ppx_bonsai__160_ ->
+                   ((match (__old_for_cutoff_ppx_bonsai__159_,
+                             __new_for_cutoff_ppx_bonsai__160_)
+                     with
+                     | ((A (__old_for_cutoff__158_, _) | B
+                         (_, __old_for_cutoff__158_)),
+                        (A (__new_for_cutoff__157_, _) | B
+                         (_, __new_for_cutoff__157_))) ->
+                         phys_equal __old_for_cutoff__158_ __new_for_cutoff__157_
+                     | ((A (__new_for_cutoff__157_, _) | B
+                         (_, __new_for_cutoff__157_)),
+                        _)
+                       | (_,
+                          (A (__new_for_cutoff__157_, _) | B
+                           (_, __new_for_cutoff__157_)))
+                         -> false
+                     | (C, C) -> true
+                     | (C, _) | (_, C) -> false)
+                   [@ocaml.warning "-8-11"])))
+      ~f:(function | A (t, _) | B (_, t) -> MY_BODY | C -> MY_BODY)
+    |}]
+;;
+
+let%expect_test "match%arr with [as] pattern (with no _s in other branches)" =
+  Ppx_let_expander.expand
+    (Ppx_bonsai_expander.arr Location_of_callsite)
+    Ppx_let_expander.Extension_kind.default
+    ~modul:None
+    ~locality
+    [%expr
+      match EXPR with
+      | A (t1, _) as t2 -> MY_BODY
+      | B -> MY_BODY]
+  |> print_expr;
+  [%expect
+    {|
+    Let_syntax.arr
+      ~here:{
+              Ppx_here_lib.pos_fname = "_none_";
+              pos_lnum = 0;
+              pos_cnum = (-1);
+              pos_bol = 0
+            } EXPR ~f:(function | A (t1, _) as t2 -> MY_BODY | B -> MY_BODY)
+    |}]
+;;
+
+let%expect_test "match%arr with [as] pattern (with _s in other branches)" =
+  Ppx_let_expander.expand
+    (Ppx_bonsai_expander.arr Location_of_callsite)
+    Ppx_let_expander.Extension_kind.default
+    ~modul:None
+    ~locality
+    [%expr
+      match EXPR with
+      | A (t1, _) as t2 -> MY_BODY
+      | B _ -> MY_BODY]
+  |> print_expr;
+  [%expect
+    {|
+    Let_syntax.arr
+      ~here:{
+              Ppx_here_lib.pos_fname = "_none_";
+              pos_lnum = 0;
+              pos_cnum = (-1);
+              pos_bol = 0
+            }
+      (Let_syntax.cutoff EXPR
+         ~equal:(fun __old_for_cutoff_ppx_bonsai__165_
+                   __new_for_cutoff_ppx_bonsai__166_ ->
+                   ((match (__old_for_cutoff_ppx_bonsai__165_,
+                             __new_for_cutoff_ppx_bonsai__166_)
+                     with
+                     | ((A (__old_for_cutoff__162_, _) as __old_for_cutoff__164_),
+                        (A (__new_for_cutoff__161_, _) as __new_for_cutoff__163_))
+                         ->
+                         (phys_equal __old_for_cutoff__164_
+                            __new_for_cutoff__163_)
+                           &&
+                           (phys_equal __old_for_cutoff__162_
+                              __new_for_cutoff__161_)
+                     | ((A (__new_for_cutoff__161_, _) as __new_for_cutoff__163_),
+                        _)
+                       | (_,
+                          (A (__new_for_cutoff__161_, _) as
+                             __new_for_cutoff__163_))
+                         -> false
+                     | (B _, B _) -> true
+                     | (B _, _) | (_, B _) -> false)
+                   [@ocaml.warning "-8-11"])))
+      ~f:(function | A (t1, _) as t2 -> MY_BODY | B _ -> MY_BODY)
+    |}]
+;;
+
+module%test [@name "match%arr with tuple payload"] _ = struct
+  let test expr =
+    Ppx_let_expander.expand
+      (Ppx_bonsai_expander.arr Location_of_callsite)
+      Ppx_let_expander.Extension_kind.default
+      ~modul:None
+      ~locality
+      expr
+    |> print_expr
+  ;;
+
+  let%expect_test "basic/normal case" =
+    test
+      [%expr
+        match EXPR1, EXPR2 with
+        | A, B -> MY_BODY
+        | B -> MY_BODY];
+    [%expect
+      {|
+      Let_syntax.arr
+        ~here:{
+                Ppx_here_lib.pos_fname = "_none_";
+                pos_lnum = 0;
+                pos_cnum = (-1);
+                pos_bol = 0
+              }
+        (let __let_syntax__169_ = ((EXPR1)
+           [@ppxlib.enter_value __ppx_bonsai_tuple__167_])[@@ppxlib.do_not_enter_value
+                                                            ]
+         and __let_syntax__170_ = ((EXPR2)
+           [@ppxlib.enter_value __ppx_bonsai_tuple__168_])[@@ppxlib.do_not_enter_value
+                                                            ] in
+         Let_syntax.map2
+           ~here:{
+                   Ppx_here_lib.pos_fname = "_none_";
+                   pos_lnum = 0;
+                   pos_cnum = (-1);
+                   pos_bol = 0
+                 } __let_syntax__169_ __let_syntax__170_
+           ~f:(fun __ppx_bonsai_tuple__167_ __ppx_bonsai_tuple__168_ ->
+                 (__ppx_bonsai_tuple__167_, __ppx_bonsai_tuple__168_)))
+        ~f:(function | (A, B) -> MY_BODY | B -> MY_BODY)
+      |}]
+  ;;
+
+  let%expect_test "many tuples" =
+    test
+      [%expr
+        match EXPR1, EXPR2, EXPR3, EXPR4, EXPR5 with
+        | A, B, C, D, E -> BODY];
+    [%expect
+      {|
+      Let_syntax.arr
+        ~here:{
+                Ppx_here_lib.pos_fname = "_none_";
+                pos_lnum = 0;
+                pos_cnum = (-1);
+                pos_bol = 0
+              }
+        (let __let_syntax__178_ = ((EXPR1)
+           [@ppxlib.enter_value __ppx_bonsai_tuple__173_])[@@ppxlib.do_not_enter_value
+                                                            ]
+         and __let_syntax__179_ = ((EXPR2)
+           [@ppxlib.enter_value __ppx_bonsai_tuple__174_])[@@ppxlib.do_not_enter_value
+                                                            ]
+         and __let_syntax__180_ = ((EXPR3)
+           [@ppxlib.enter_value __ppx_bonsai_tuple__175_])[@@ppxlib.do_not_enter_value
+                                                            ]
+         and __let_syntax__181_ = ((EXPR4)
+           [@ppxlib.enter_value __ppx_bonsai_tuple__176_])[@@ppxlib.do_not_enter_value
+                                                            ]
+         and __let_syntax__182_ = ((EXPR5)
+           [@ppxlib.enter_value __ppx_bonsai_tuple__177_])[@@ppxlib.do_not_enter_value
+                                                            ] in
+         Let_syntax.map5
+           ~here:{
+                   Ppx_here_lib.pos_fname = "_none_";
+                   pos_lnum = 0;
+                   pos_cnum = (-1);
+                   pos_bol = 0
+                 } __let_syntax__178_ __let_syntax__179_ __let_syntax__180_
+           __let_syntax__181_ __let_syntax__182_
+           ~f:(fun __ppx_bonsai_tuple__173_ __ppx_bonsai_tuple__174_
+                 __ppx_bonsai_tuple__175_ __ppx_bonsai_tuple__176_
+                 __ppx_bonsai_tuple__177_ ->
+                 (__ppx_bonsai_tuple__173_, __ppx_bonsai_tuple__174_,
+                   __ppx_bonsai_tuple__175_, __ppx_bonsai_tuple__176_,
+                   __ppx_bonsai_tuple__177_)))
+        ~f:(function | (A, B, C, D, E) -> BODY)
+      |}]
+  ;;
+
+  let%expect_test "unreasonable amount of tuples" =
+    test
+      [%expr
+        match
+          ( EXPR1
+          , EXPR2
+          , EXPR3
+          , EXPR4
+          , EXPR5
+          , EXPR6
+          , EXPR7
+          , EXPR8
+          , EXPR9
+          , EXPR10
+          , EXPR11
+          , EXPR12
+          , EXPR13
+          , EXPR14
+          , EXPR15
+          , EXPR16
+          , EXPR17
+          , EXPR18
+          , EXPR19
+          , EXPR20 )
+        with
+        | A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T -> BODY];
+    [%expect
+      {|
+      Let_syntax.arr
+        ~here:{
+                Ppx_here_lib.pos_fname = "_none_";
+                pos_lnum = 0;
+                pos_cnum = (-1);
+                pos_bol = 0
+              }
+        (let __let_syntax__208_ = ((EXPR1)
+           [@ppxlib.enter_value __ppx_bonsai_tuple__188_])[@@ppxlib.do_not_enter_value
+                                                            ]
+         and __let_syntax__209_ = ((EXPR2)
+           [@ppxlib.enter_value __ppx_bonsai_tuple__189_])[@@ppxlib.do_not_enter_value
+                                                            ]
+         and __let_syntax__210_ = ((EXPR3)
+           [@ppxlib.enter_value __ppx_bonsai_tuple__190_])[@@ppxlib.do_not_enter_value
+                                                            ]
+         and __let_syntax__211_ = ((EXPR4)
+           [@ppxlib.enter_value __ppx_bonsai_tuple__191_])[@@ppxlib.do_not_enter_value
+                                                            ]
+         and __let_syntax__212_ = ((EXPR5)
+           [@ppxlib.enter_value __ppx_bonsai_tuple__192_])[@@ppxlib.do_not_enter_value
+                                                            ]
+         and __let_syntax__213_ = ((EXPR6)
+           [@ppxlib.enter_value __ppx_bonsai_tuple__193_])[@@ppxlib.do_not_enter_value
+                                                            ]
+         and __let_syntax__214_ = ((EXPR7)
+           [@ppxlib.enter_value __ppx_bonsai_tuple__194_])[@@ppxlib.do_not_enter_value
+                                                            ]
+         and __let_syntax__215_ = ((EXPR8)
+           [@ppxlib.enter_value __ppx_bonsai_tuple__195_])[@@ppxlib.do_not_enter_value
+                                                            ]
+         and __let_syntax__216_ = ((EXPR9)
+           [@ppxlib.enter_value __ppx_bonsai_tuple__196_])[@@ppxlib.do_not_enter_value
+                                                            ]
+         and __let_syntax__217_ = ((EXPR10)
+           [@ppxlib.enter_value __ppx_bonsai_tuple__197_])[@@ppxlib.do_not_enter_value
+                                                            ]
+         and __let_syntax__218_ = ((EXPR11)
+           [@ppxlib.enter_value __ppx_bonsai_tuple__198_])[@@ppxlib.do_not_enter_value
+                                                            ]
+         and __let_syntax__219_ = ((EXPR12)
+           [@ppxlib.enter_value __ppx_bonsai_tuple__199_])[@@ppxlib.do_not_enter_value
+                                                            ]
+         and __let_syntax__220_ = ((EXPR13)
+           [@ppxlib.enter_value __ppx_bonsai_tuple__200_])[@@ppxlib.do_not_enter_value
+                                                            ]
+         and __let_syntax__221_ = ((EXPR14)
+           [@ppxlib.enter_value __ppx_bonsai_tuple__201_])[@@ppxlib.do_not_enter_value
+                                                            ]
+         and __let_syntax__222_ = ((EXPR15)
+           [@ppxlib.enter_value __ppx_bonsai_tuple__202_])[@@ppxlib.do_not_enter_value
+                                                            ]
+         and __let_syntax__223_ = ((EXPR16)
+           [@ppxlib.enter_value __ppx_bonsai_tuple__203_])[@@ppxlib.do_not_enter_value
+                                                            ]
+         and __let_syntax__224_ = ((EXPR17)
+           [@ppxlib.enter_value __ppx_bonsai_tuple__204_])[@@ppxlib.do_not_enter_value
+                                                            ]
+         and __let_syntax__225_ = ((EXPR18)
+           [@ppxlib.enter_value __ppx_bonsai_tuple__205_])[@@ppxlib.do_not_enter_value
+                                                            ]
+         and __let_syntax__226_ = ((EXPR19)
+           [@ppxlib.enter_value __ppx_bonsai_tuple__206_])[@@ppxlib.do_not_enter_value
+                                                            ]
+         and __let_syntax__227_ = ((EXPR20)
+           [@ppxlib.enter_value __ppx_bonsai_tuple__207_])[@@ppxlib.do_not_enter_value
+                                                            ] in
+         Let_syntax.map3
+           ~here:{
+                   Ppx_here_lib.pos_fname = "_none_";
+                   pos_lnum = 0;
+                   pos_cnum = (-1);
+                   pos_bol = 0
+                 }
+           (Let_syntax.map7
+              ~here:{
+                      Ppx_here_lib.pos_fname = "_none_";
+                      pos_lnum = 0;
+                      pos_cnum = (-1);
+                      pos_bol = 0
+                    } __let_syntax__208_ __let_syntax__209_ __let_syntax__210_
+              __let_syntax__211_ __let_syntax__212_ __let_syntax__213_
+              __let_syntax__214_
+              ~f:(fun t0 t1 t2 t3 t4 t5 t6 -> (t0, t1, t2, t3, t4, t5, t6)))
+           (Let_syntax.map7
+              ~here:{
+                      Ppx_here_lib.pos_fname = "_none_";
+                      pos_lnum = 0;
+                      pos_cnum = (-1);
+                      pos_bol = 0
+                    } __let_syntax__215_ __let_syntax__216_ __let_syntax__217_
+              __let_syntax__218_ __let_syntax__219_ __let_syntax__220_
+              __let_syntax__221_
+              ~f:(fun t0 t1 t2 t3 t4 t5 t6 -> (t0, t1, t2, t3, t4, t5, t6)))
+           (Let_syntax.map6
+              ~here:{
+                      Ppx_here_lib.pos_fname = "_none_";
+                      pos_lnum = 0;
+                      pos_cnum = (-1);
+                      pos_bol = 0
+                    } __let_syntax__222_ __let_syntax__223_ __let_syntax__224_
+              __let_syntax__225_ __let_syntax__226_ __let_syntax__227_
+              ~f:(fun t0 t1 t2 t3 t4 t5 -> (t0, t1, t2, t3, t4, t5)))
+           ~f:(fun
+                 (__ppx_bonsai_tuple__188_, __ppx_bonsai_tuple__189_,
+                  __ppx_bonsai_tuple__190_, __ppx_bonsai_tuple__191_,
+                  __ppx_bonsai_tuple__192_, __ppx_bonsai_tuple__193_,
+                  __ppx_bonsai_tuple__194_)
+                 (__ppx_bonsai_tuple__195_, __ppx_bonsai_tuple__196_,
+                  __ppx_bonsai_tuple__197_, __ppx_bonsai_tuple__198_,
+                  __ppx_bonsai_tuple__199_, __ppx_bonsai_tuple__200_,
+                  __ppx_bonsai_tuple__201_)
+                 (__ppx_bonsai_tuple__202_, __ppx_bonsai_tuple__203_,
+                  __ppx_bonsai_tuple__204_, __ppx_bonsai_tuple__205_,
+                  __ppx_bonsai_tuple__206_, __ppx_bonsai_tuple__207_)
+                 ->
+                 (__ppx_bonsai_tuple__188_, __ppx_bonsai_tuple__189_,
+                   __ppx_bonsai_tuple__190_, __ppx_bonsai_tuple__191_,
+                   __ppx_bonsai_tuple__192_, __ppx_bonsai_tuple__193_,
+                   __ppx_bonsai_tuple__194_, __ppx_bonsai_tuple__195_,
+                   __ppx_bonsai_tuple__196_, __ppx_bonsai_tuple__197_,
+                   __ppx_bonsai_tuple__198_, __ppx_bonsai_tuple__199_,
+                   __ppx_bonsai_tuple__200_, __ppx_bonsai_tuple__201_,
+                   __ppx_bonsai_tuple__202_, __ppx_bonsai_tuple__203_,
+                   __ppx_bonsai_tuple__204_, __ppx_bonsai_tuple__205_,
+                   __ppx_bonsai_tuple__206_, __ppx_bonsai_tuple__207_)))
+        ~f:(function
+            | (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T) -> BODY)
+      |}]
+  ;;
+
+  let%expect_test "tuple & cutoff mix" =
+    test
+      [%expr
+        match EXPR1, EXPR2 with
+        | Some _, _ -> BODY
+        | None, Some (_, f) -> BODY
+        | _ -> BODY];
+    [%expect
+      {|
+      Let_syntax.arr
+        ~here:{
+                Ppx_here_lib.pos_fname = "_none_";
+                pos_lnum = 0;
+                pos_cnum = (-1);
+                pos_bol = 0
+              }
+        (Let_syntax.cutoff
+           (let __let_syntax__253_ = ((EXPR1)
+              [@ppxlib.enter_value __ppx_bonsai_tuple__251_])[@@ppxlib.do_not_enter_value
+                                                               ]
+            and __let_syntax__254_ = ((EXPR2)
+              [@ppxlib.enter_value __ppx_bonsai_tuple__252_])[@@ppxlib.do_not_enter_value
+                                                               ] in
+            Let_syntax.map2
+              ~here:{
+                      Ppx_here_lib.pos_fname = "_none_";
+                      pos_lnum = 0;
+                      pos_cnum = (-1);
+                      pos_bol = 0
+                    } __let_syntax__253_ __let_syntax__254_
+              ~f:(fun __ppx_bonsai_tuple__251_ __ppx_bonsai_tuple__252_ ->
+                    (__ppx_bonsai_tuple__251_, __ppx_bonsai_tuple__252_)))
+           ~equal:(fun __old_for_cutoff_ppx_bonsai__259_
+                     __new_for_cutoff_ppx_bonsai__260_ ->
+                     ((match (__old_for_cutoff_ppx_bonsai__259_,
+                               __new_for_cutoff_ppx_bonsai__260_)
+                       with
+                       | ((Some _, _), (Some _, _)) -> true
+                       | ((Some _, _), _) | (_, (Some _, _)) -> false
+                       | ((None, Some (_, __old_for_cutoff__258_)),
+                          (None, Some (_, __new_for_cutoff__257_))) ->
+                           phys_equal __old_for_cutoff__258_ __new_for_cutoff__257_
+                       | ((None, Some (_, __new_for_cutoff__257_)), _)
+                         | (_, (None, Some (_, __new_for_cutoff__257_))) -> false
+                       | (_, _) -> true)
+                     [@ocaml.warning "-8-11"])))
+        ~f:(function
+            | (Some _, _) -> BODY
+            | (None, Some (_, f)) -> BODY
+            | _ -> BODY)
+      |}]
+  ;;
+end
 
 module%test [@name "match%sub with tuple payload"] _ = struct
   let test expr =
@@ -1481,17 +2012,22 @@ module%test [@name "match%sub with tuple payload"] _ = struct
                   pos_bol = 0
                 }
           (Let_syntax.return
-             (let __let_syntax__144_ = ((EXPR1)
-                [@ppxlib.enter_value __ppx_bonsai_tuple__142_])[@@ppxlib.do_not_enter_value
+             (let __let_syntax__263_ = ((EXPR1)
+                [@ppxlib.enter_value __ppx_bonsai_tuple__261_])[@@ppxlib.do_not_enter_value
                                                                  ]
-              and __let_syntax__145_ = ((EXPR2)
-                [@ppxlib.enter_value __ppx_bonsai_tuple__143_])[@@ppxlib.do_not_enter_value
+              and __let_syntax__264_ = ((EXPR2)
+                [@ppxlib.enter_value __ppx_bonsai_tuple__262_])[@@ppxlib.do_not_enter_value
                                                                  ] in
-              Let_syntax.map
-                (Let_syntax.both __let_syntax__144_ __let_syntax__145_)
-                ~f:(fun (__ppx_bonsai_tuple__142_, __ppx_bonsai_tuple__143_) ->
-                      (__ppx_bonsai_tuple__142_, __ppx_bonsai_tuple__143_))))
-          ~f:(fun __pattern_syntax__147_ ->
+              Let_syntax.map2
+                ~here:{
+                        Ppx_here_lib.pos_fname = "_none_";
+                        pos_lnum = 0;
+                        pos_cnum = (-1);
+                        pos_bol = 0
+                      } __let_syntax__263_ __let_syntax__264_
+                ~f:(fun __ppx_bonsai_tuple__261_ __ppx_bonsai_tuple__262_ ->
+                      (__ppx_bonsai_tuple__261_, __ppx_bonsai_tuple__262_))))
+          ~f:(fun __pattern_syntax__267_ ->
                 ((Let_syntax.switch
                     ~here:{
                             Ppx_here_lib.pos_fname = "_none_";
@@ -1499,7 +2035,7 @@ module%test [@name "match%sub with tuple payload"] _ = struct
                             pos_cnum = (-1);
                             pos_bol = 0
                           }
-                    ~match_:((Let_syntax.map __pattern_syntax__147_
+                    ~match_:((Let_syntax.map __pattern_syntax__267_
                                 ~f:(function | (A, B) -> 0 | B -> 1))
                     [@ocaml.warning "-26-27"]) ~branches:2
                     ~with_:(function
@@ -1526,36 +2062,36 @@ module%test [@name "match%sub with tuple payload"] _ = struct
                   pos_bol = 0
                 }
           (Let_syntax.return
-             (let __let_syntax__153_ = ((EXPR1)
-                [@ppxlib.enter_value __ppx_bonsai_tuple__148_])[@@ppxlib.do_not_enter_value
+             (let __let_syntax__273_ = ((EXPR1)
+                [@ppxlib.enter_value __ppx_bonsai_tuple__268_])[@@ppxlib.do_not_enter_value
                                                                  ]
-              and __let_syntax__154_ = ((EXPR2)
-                [@ppxlib.enter_value __ppx_bonsai_tuple__149_])[@@ppxlib.do_not_enter_value
+              and __let_syntax__274_ = ((EXPR2)
+                [@ppxlib.enter_value __ppx_bonsai_tuple__269_])[@@ppxlib.do_not_enter_value
                                                                  ]
-              and __let_syntax__155_ = ((EXPR3)
-                [@ppxlib.enter_value __ppx_bonsai_tuple__150_])[@@ppxlib.do_not_enter_value
+              and __let_syntax__275_ = ((EXPR3)
+                [@ppxlib.enter_value __ppx_bonsai_tuple__270_])[@@ppxlib.do_not_enter_value
                                                                  ]
-              and __let_syntax__156_ = ((EXPR4)
-                [@ppxlib.enter_value __ppx_bonsai_tuple__151_])[@@ppxlib.do_not_enter_value
+              and __let_syntax__276_ = ((EXPR4)
+                [@ppxlib.enter_value __ppx_bonsai_tuple__271_])[@@ppxlib.do_not_enter_value
                                                                  ]
-              and __let_syntax__157_ = ((EXPR5)
-                [@ppxlib.enter_value __ppx_bonsai_tuple__152_])[@@ppxlib.do_not_enter_value
+              and __let_syntax__277_ = ((EXPR5)
+                [@ppxlib.enter_value __ppx_bonsai_tuple__272_])[@@ppxlib.do_not_enter_value
                                                                  ] in
-              Let_syntax.map
-                (Let_syntax.both __let_syntax__153_
-                   (Let_syntax.both __let_syntax__154_
-                      (Let_syntax.both __let_syntax__155_
-                         (Let_syntax.both __let_syntax__156_ __let_syntax__157_))))
-                ~f:(fun
-                      (__ppx_bonsai_tuple__148_,
-                       (__ppx_bonsai_tuple__149_,
-                        (__ppx_bonsai_tuple__150_,
-                         (__ppx_bonsai_tuple__151_, __ppx_bonsai_tuple__152_))))
-                      ->
-                      (__ppx_bonsai_tuple__148_, __ppx_bonsai_tuple__149_,
-                        __ppx_bonsai_tuple__150_, __ppx_bonsai_tuple__151_,
-                        __ppx_bonsai_tuple__152_))))
-          ~f:(fun __pattern_syntax__159_ ->
+              Let_syntax.map5
+                ~here:{
+                        Ppx_here_lib.pos_fname = "_none_";
+                        pos_lnum = 0;
+                        pos_cnum = (-1);
+                        pos_bol = 0
+                      } __let_syntax__273_ __let_syntax__274_ __let_syntax__275_
+                __let_syntax__276_ __let_syntax__277_
+                ~f:(fun __ppx_bonsai_tuple__268_ __ppx_bonsai_tuple__269_
+                      __ppx_bonsai_tuple__270_ __ppx_bonsai_tuple__271_
+                      __ppx_bonsai_tuple__272_ ->
+                      (__ppx_bonsai_tuple__268_, __ppx_bonsai_tuple__269_,
+                        __ppx_bonsai_tuple__270_, __ppx_bonsai_tuple__271_,
+                        __ppx_bonsai_tuple__272_))))
+          ~f:(fun __pattern_syntax__283_ ->
                 ((Let_syntax.sub
                     ~here:{
                             Ppx_here_lib.pos_fname = "_none_";
@@ -1570,7 +2106,7 @@ module%test [@name "match%sub with tuple payload"] _ = struct
                                    pos_lnum = 0;
                                    pos_cnum = (-1);
                                    pos_bol = 0
-                                 } __pattern_syntax__159_
+                                 } __pattern_syntax__283_
                            ~f:(function | (A, B, C, D, E) -> ()))[@nontail ]))
                     ~f:(fun _ -> ((BODY)[@nontail ])))
                 [@nontail ])))
@@ -1595,7 +2131,7 @@ module%test [@name "match%sub with tuple payload"] _ = struct
                   pos_cnum = (-1);
                   pos_bol = 0
                 } (Let_syntax.return EXPR)
-          ~f:(fun __pattern_syntax__160_ ->
+          ~f:(fun __pattern_syntax__284_ ->
                 ((Let_syntax.switch
                     ~here:{
                             Ppx_here_lib.pos_fname = "_none_";
@@ -1603,7 +2139,7 @@ module%test [@name "match%sub with tuple payload"] _ = struct
                             pos_cnum = (-1);
                             pos_bol = 0
                           }
-                    ~match_:((Let_syntax.map __pattern_syntax__160_
+                    ~match_:((Let_syntax.map __pattern_syntax__284_
                                 ~f:(function
                                     | Some ((_)[@merlin.focus ]) -> 0
                                     | Some (((_)[@merlin.focus ]), f) -> 1
@@ -1627,10 +2163,10 @@ module%test [@name "match%sub with tuple payload"] _ = struct
                                                    pos_lnum = 0;
                                                    pos_cnum = (-1);
                                                    pos_bol = 0
-                                                 } __pattern_syntax__160_
+                                                 } __pattern_syntax__284_
                                            ~f:((function
-                                                | Some (_, __pattern_syntax__161_)
-                                                    -> __pattern_syntax__161_
+                                                | Some (_, __pattern_syntax__285_)
+                                                    -> __pattern_syntax__285_
                                                 | _ -> assert false)
                                            [@ocaml.warning "-11"]))[@merlin.hide ]))
                                     ~f:(fun f -> ((BODY)[@nontail ])))
@@ -1679,9 +2215,9 @@ module%test [@name "arrn nesting edge cases"] _ = struct
         MY_BODY];
     [%expect
       {|
-      let __let_syntax__163_ = ((E1)[@ppxlib.enter_value x1])[@@ppxlib.do_not_enter_value
+      let __let_syntax__287_ = ((E1)[@ppxlib.enter_value x1])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__164_ = ((E2)[@ppxlib.enter_value x2])[@@ppxlib.do_not_enter_value
+      and __let_syntax__288_ = ((E2)[@ppxlib.enter_value x2])[@@ppxlib.do_not_enter_value
                                                                ] in
       Let_syntax.arr2
         ~here:{
@@ -1689,7 +2225,7 @@ module%test [@name "arrn nesting edge cases"] _ = struct
                 pos_lnum = 0;
                 pos_cnum = (-1);
                 pos_bol = 0
-              } __let_syntax__163_ __let_syntax__164_ ~f:(fun x1 x2 -> MY_BODY)
+              } __let_syntax__287_ __let_syntax__288_ ~f:(fun x1 x2 -> MY_BODY)
       |}]
   ;;
 
@@ -1705,17 +2241,17 @@ module%test [@name "arrn nesting edge cases"] _ = struct
         MY_BODY];
     [%expect
       {|
-      let __let_syntax__167_ = ((E1)[@ppxlib.enter_value x1])[@@ppxlib.do_not_enter_value
+      let __let_syntax__291_ = ((E1)[@ppxlib.enter_value x1])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__168_ = ((E2)[@ppxlib.enter_value x2])[@@ppxlib.do_not_enter_value
+      and __let_syntax__292_ = ((E2)[@ppxlib.enter_value x2])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__169_ = ((E3)[@ppxlib.enter_value x3])[@@ppxlib.do_not_enter_value
+      and __let_syntax__293_ = ((E3)[@ppxlib.enter_value x3])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__170_ = ((E4)[@ppxlib.enter_value x4])[@@ppxlib.do_not_enter_value
+      and __let_syntax__294_ = ((E4)[@ppxlib.enter_value x4])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__171_ = ((E5)[@ppxlib.enter_value x5])[@@ppxlib.do_not_enter_value
+      and __let_syntax__295_ = ((E5)[@ppxlib.enter_value x5])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__172_ = ((E6)[@ppxlib.enter_value x6])[@@ppxlib.do_not_enter_value
+      and __let_syntax__296_ = ((E6)[@ppxlib.enter_value x6])[@@ppxlib.do_not_enter_value
                                                                ] in
       Let_syntax.arr6
         ~here:{
@@ -1723,8 +2259,8 @@ module%test [@name "arrn nesting edge cases"] _ = struct
                 pos_lnum = 0;
                 pos_cnum = (-1);
                 pos_bol = 0
-              } __let_syntax__167_ __let_syntax__168_ __let_syntax__169_
-        __let_syntax__170_ __let_syntax__171_ __let_syntax__172_
+              } __let_syntax__291_ __let_syntax__292_ __let_syntax__293_
+        __let_syntax__294_ __let_syntax__295_ __let_syntax__296_
         ~f:(fun x1 x2 x3 x4 x5 x6 -> MY_BODY)
       |}]
   ;;
@@ -1742,19 +2278,19 @@ module%test [@name "arrn nesting edge cases"] _ = struct
         MY_BODY];
     [%expect
       {|
-      let __let_syntax__179_ = ((E1)[@ppxlib.enter_value x1])[@@ppxlib.do_not_enter_value
+      let __let_syntax__303_ = ((E1)[@ppxlib.enter_value x1])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__180_ = ((E2)[@ppxlib.enter_value x2])[@@ppxlib.do_not_enter_value
+      and __let_syntax__304_ = ((E2)[@ppxlib.enter_value x2])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__181_ = ((E3)[@ppxlib.enter_value x3])[@@ppxlib.do_not_enter_value
+      and __let_syntax__305_ = ((E3)[@ppxlib.enter_value x3])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__182_ = ((E4)[@ppxlib.enter_value x4])[@@ppxlib.do_not_enter_value
+      and __let_syntax__306_ = ((E4)[@ppxlib.enter_value x4])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__183_ = ((E5)[@ppxlib.enter_value x5])[@@ppxlib.do_not_enter_value
+      and __let_syntax__307_ = ((E5)[@ppxlib.enter_value x5])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__184_ = ((E6)[@ppxlib.enter_value x6])[@@ppxlib.do_not_enter_value
+      and __let_syntax__308_ = ((E6)[@ppxlib.enter_value x6])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__185_ = ((E7)[@ppxlib.enter_value x7])[@@ppxlib.do_not_enter_value
+      and __let_syntax__309_ = ((E7)[@ppxlib.enter_value x7])[@@ppxlib.do_not_enter_value
                                                                ] in
       Let_syntax.arr7
         ~here:{
@@ -1762,8 +2298,8 @@ module%test [@name "arrn nesting edge cases"] _ = struct
                 pos_lnum = 0;
                 pos_cnum = (-1);
                 pos_bol = 0
-              } __let_syntax__179_ __let_syntax__180_ __let_syntax__181_
-        __let_syntax__182_ __let_syntax__183_ __let_syntax__184_ __let_syntax__185_
+              } __let_syntax__303_ __let_syntax__304_ __let_syntax__305_
+        __let_syntax__306_ __let_syntax__307_ __let_syntax__308_ __let_syntax__309_
         ~f:(fun x1 x2 x3 x4 x5 x6 x7 -> MY_BODY)
       |}]
   ;;
@@ -1782,21 +2318,21 @@ module%test [@name "arrn nesting edge cases"] _ = struct
         MY_BODY];
     [%expect
       {|
-      let __let_syntax__193_ = ((E1)[@ppxlib.enter_value x1])[@@ppxlib.do_not_enter_value
+      let __let_syntax__317_ = ((E1)[@ppxlib.enter_value x1])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__194_ = ((E2)[@ppxlib.enter_value x2])[@@ppxlib.do_not_enter_value
+      and __let_syntax__318_ = ((E2)[@ppxlib.enter_value x2])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__195_ = ((E3)[@ppxlib.enter_value x3])[@@ppxlib.do_not_enter_value
+      and __let_syntax__319_ = ((E3)[@ppxlib.enter_value x3])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__196_ = ((E4)[@ppxlib.enter_value x4])[@@ppxlib.do_not_enter_value
+      and __let_syntax__320_ = ((E4)[@ppxlib.enter_value x4])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__197_ = ((E5)[@ppxlib.enter_value x5])[@@ppxlib.do_not_enter_value
+      and __let_syntax__321_ = ((E5)[@ppxlib.enter_value x5])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__198_ = ((E6)[@ppxlib.enter_value x6])[@@ppxlib.do_not_enter_value
+      and __let_syntax__322_ = ((E6)[@ppxlib.enter_value x6])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__199_ = ((E7)[@ppxlib.enter_value x7])[@@ppxlib.do_not_enter_value
+      and __let_syntax__323_ = ((E7)[@ppxlib.enter_value x7])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__200_ = ((E8)[@ppxlib.enter_value x8])[@@ppxlib.do_not_enter_value
+      and __let_syntax__324_ = ((E8)[@ppxlib.enter_value x8])[@@ppxlib.do_not_enter_value
                                                                ] in
       Let_syntax.arr2
         ~here:{
@@ -1811,11 +2347,11 @@ module%test [@name "arrn nesting edge cases"] _ = struct
                    pos_lnum = 0;
                    pos_cnum = (-1);
                    pos_bol = 0
-                 } __let_syntax__193_ __let_syntax__194_ __let_syntax__195_
-           __let_syntax__196_ __let_syntax__197_ __let_syntax__198_
-           __let_syntax__199_
+                 } __let_syntax__317_ __let_syntax__318_ __let_syntax__319_
+           __let_syntax__320_ __let_syntax__321_ __let_syntax__322_
+           __let_syntax__323_
            ~f:(fun t0 t1 t2 t3 t4 t5 t6 -> (t0, t1, t2, t3, t4, t5, t6)))
-        __let_syntax__200_ ~f:(fun (x1, x2, x3, x4, x5, x6, x7) x8 -> MY_BODY)
+        __let_syntax__324_ ~f:(fun (x1, x2, x3, x4, x5, x6, x7) x8 -> MY_BODY)
       |}]
   ;;
 
@@ -1839,33 +2375,33 @@ module%test [@name "arrn nesting edge cases"] _ = struct
         MY_BODY];
     [%expect
       {|
-      let __let_syntax__210_ = ((E1)[@ppxlib.enter_value x1])[@@ppxlib.do_not_enter_value
+      let __let_syntax__334_ = ((E1)[@ppxlib.enter_value x1])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__211_ = ((E2)[@ppxlib.enter_value x2])[@@ppxlib.do_not_enter_value
+      and __let_syntax__335_ = ((E2)[@ppxlib.enter_value x2])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__212_ = ((E3)[@ppxlib.enter_value x3])[@@ppxlib.do_not_enter_value
+      and __let_syntax__336_ = ((E3)[@ppxlib.enter_value x3])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__213_ = ((E4)[@ppxlib.enter_value x4])[@@ppxlib.do_not_enter_value
+      and __let_syntax__337_ = ((E4)[@ppxlib.enter_value x4])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__214_ = ((E5)[@ppxlib.enter_value x5])[@@ppxlib.do_not_enter_value
+      and __let_syntax__338_ = ((E5)[@ppxlib.enter_value x5])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__215_ = ((E6)[@ppxlib.enter_value x6])[@@ppxlib.do_not_enter_value
+      and __let_syntax__339_ = ((E6)[@ppxlib.enter_value x6])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__216_ = ((E7)[@ppxlib.enter_value x7])[@@ppxlib.do_not_enter_value
+      and __let_syntax__340_ = ((E7)[@ppxlib.enter_value x7])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__217_ = ((E8)[@ppxlib.enter_value x8])[@@ppxlib.do_not_enter_value
+      and __let_syntax__341_ = ((E8)[@ppxlib.enter_value x8])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__218_ = ((E9)[@ppxlib.enter_value x9])[@@ppxlib.do_not_enter_value
+      and __let_syntax__342_ = ((E9)[@ppxlib.enter_value x9])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__219_ = ((E10)[@ppxlib.enter_value x10])[@@ppxlib.do_not_enter_value
+      and __let_syntax__343_ = ((E10)[@ppxlib.enter_value x10])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__220_ = ((E11)[@ppxlib.enter_value x11])[@@ppxlib.do_not_enter_value
+      and __let_syntax__344_ = ((E11)[@ppxlib.enter_value x11])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__221_ = ((E12)[@ppxlib.enter_value x12])[@@ppxlib.do_not_enter_value
+      and __let_syntax__345_ = ((E12)[@ppxlib.enter_value x12])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__222_ = ((E13)[@ppxlib.enter_value x13])[@@ppxlib.do_not_enter_value
+      and __let_syntax__346_ = ((E13)[@ppxlib.enter_value x13])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__223_ = ((E14)[@ppxlib.enter_value x14])[@@ppxlib.do_not_enter_value
+      and __let_syntax__347_ = ((E14)[@ppxlib.enter_value x14])[@@ppxlib.do_not_enter_value
                                                                  ] in
       Let_syntax.arr2
         ~here:{
@@ -1880,9 +2416,9 @@ module%test [@name "arrn nesting edge cases"] _ = struct
                    pos_lnum = 0;
                    pos_cnum = (-1);
                    pos_bol = 0
-                 } __let_syntax__210_ __let_syntax__211_ __let_syntax__212_
-           __let_syntax__213_ __let_syntax__214_ __let_syntax__215_
-           __let_syntax__216_
+                 } __let_syntax__334_ __let_syntax__335_ __let_syntax__336_
+           __let_syntax__337_ __let_syntax__338_ __let_syntax__339_
+           __let_syntax__340_
            ~f:(fun t0 t1 t2 t3 t4 t5 t6 -> (t0, t1, t2, t3, t4, t5, t6)))
         (Let_syntax.map7
            ~here:{
@@ -1890,9 +2426,9 @@ module%test [@name "arrn nesting edge cases"] _ = struct
                    pos_lnum = 0;
                    pos_cnum = (-1);
                    pos_bol = 0
-                 } __let_syntax__217_ __let_syntax__218_ __let_syntax__219_
-           __let_syntax__220_ __let_syntax__221_ __let_syntax__222_
-           __let_syntax__223_
+                 } __let_syntax__341_ __let_syntax__342_ __let_syntax__343_
+           __let_syntax__344_ __let_syntax__345_ __let_syntax__346_
+           __let_syntax__347_
            ~f:(fun t0 t1 t2 t3 t4 t5 t6 -> (t0, t1, t2, t3, t4, t5, t6)))
         ~f:(fun (x1, x2, x3, x4, x5, x6, x7) (x8, x9, x10, x11, x12, x13, x14) ->
               MY_BODY)
@@ -1918,31 +2454,31 @@ module%test [@name "arrn nesting edge cases"] _ = struct
         MY_BODY];
     [%expect
       {|
-      let __let_syntax__240_ = ((E1)[@ppxlib.enter_value x1])[@@ppxlib.do_not_enter_value
+      let __let_syntax__364_ = ((E1)[@ppxlib.enter_value x1])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__241_ = ((E2)[@ppxlib.enter_value x2])[@@ppxlib.do_not_enter_value
+      and __let_syntax__365_ = ((E2)[@ppxlib.enter_value x2])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__242_ = ((E3)[@ppxlib.enter_value x3])[@@ppxlib.do_not_enter_value
+      and __let_syntax__366_ = ((E3)[@ppxlib.enter_value x3])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__243_ = ((E4)[@ppxlib.enter_value x4])[@@ppxlib.do_not_enter_value
+      and __let_syntax__367_ = ((E4)[@ppxlib.enter_value x4])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__244_ = ((E5)[@ppxlib.enter_value x5])[@@ppxlib.do_not_enter_value
+      and __let_syntax__368_ = ((E5)[@ppxlib.enter_value x5])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__245_ = ((E6)[@ppxlib.enter_value x6])[@@ppxlib.do_not_enter_value
+      and __let_syntax__369_ = ((E6)[@ppxlib.enter_value x6])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__246_ = ((E7)[@ppxlib.enter_value x7])[@@ppxlib.do_not_enter_value
+      and __let_syntax__370_ = ((E7)[@ppxlib.enter_value x7])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__247_ = ((E8)[@ppxlib.enter_value x8])[@@ppxlib.do_not_enter_value
+      and __let_syntax__371_ = ((E8)[@ppxlib.enter_value x8])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__248_ = ((E9)[@ppxlib.enter_value x9])[@@ppxlib.do_not_enter_value
+      and __let_syntax__372_ = ((E9)[@ppxlib.enter_value x9])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__249_ = ((E10)[@ppxlib.enter_value x10])[@@ppxlib.do_not_enter_value
+      and __let_syntax__373_ = ((E10)[@ppxlib.enter_value x10])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__250_ = ((E11)[@ppxlib.enter_value x11])[@@ppxlib.do_not_enter_value
+      and __let_syntax__374_ = ((E11)[@ppxlib.enter_value x11])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__251_ = ((E12)[@ppxlib.enter_value x12])[@@ppxlib.do_not_enter_value
+      and __let_syntax__375_ = ((E12)[@ppxlib.enter_value x12])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__252_ = ((E13)[@ppxlib.enter_value x13])[@@ppxlib.do_not_enter_value
+      and __let_syntax__376_ = ((E13)[@ppxlib.enter_value x13])[@@ppxlib.do_not_enter_value
                                                                  ] in
       Let_syntax.arr2
         ~here:{
@@ -1957,9 +2493,9 @@ module%test [@name "arrn nesting edge cases"] _ = struct
                    pos_lnum = 0;
                    pos_cnum = (-1);
                    pos_bol = 0
-                 } __let_syntax__240_ __let_syntax__241_ __let_syntax__242_
-           __let_syntax__243_ __let_syntax__244_ __let_syntax__245_
-           __let_syntax__246_
+                 } __let_syntax__364_ __let_syntax__365_ __let_syntax__366_
+           __let_syntax__367_ __let_syntax__368_ __let_syntax__369_
+           __let_syntax__370_
            ~f:(fun t0 t1 t2 t3 t4 t5 t6 -> (t0, t1, t2, t3, t4, t5, t6)))
         (Let_syntax.map6
            ~here:{
@@ -1967,8 +2503,8 @@ module%test [@name "arrn nesting edge cases"] _ = struct
                    pos_lnum = 0;
                    pos_cnum = (-1);
                    pos_bol = 0
-                 } __let_syntax__247_ __let_syntax__248_ __let_syntax__249_
-           __let_syntax__250_ __let_syntax__251_ __let_syntax__252_
+                 } __let_syntax__371_ __let_syntax__372_ __let_syntax__373_
+           __let_syntax__374_ __let_syntax__375_ __let_syntax__376_
            ~f:(fun t0 t1 t2 t3 t4 t5 -> (t0, t1, t2, t3, t4, t5)))
         ~f:(fun (x1, x2, x3, x4, x5, x6, x7) (x8, x9, x10, x11, x12, x13) ->
               MY_BODY)
@@ -2032,105 +2568,105 @@ module%test [@name "arrn nesting edge cases"] _ = struct
         MY_BODY];
     [%expect
       {|
-      let __let_syntax__268_ = ((E1)[@ppxlib.enter_value x1])[@@ppxlib.do_not_enter_value
+      let __let_syntax__392_ = ((E1)[@ppxlib.enter_value x1])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__269_ = ((E2)[@ppxlib.enter_value x2])[@@ppxlib.do_not_enter_value
+      and __let_syntax__393_ = ((E2)[@ppxlib.enter_value x2])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__270_ = ((E3)[@ppxlib.enter_value x3])[@@ppxlib.do_not_enter_value
+      and __let_syntax__394_ = ((E3)[@ppxlib.enter_value x3])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__271_ = ((E4)[@ppxlib.enter_value x4])[@@ppxlib.do_not_enter_value
+      and __let_syntax__395_ = ((E4)[@ppxlib.enter_value x4])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__272_ = ((E5)[@ppxlib.enter_value x5])[@@ppxlib.do_not_enter_value
+      and __let_syntax__396_ = ((E5)[@ppxlib.enter_value x5])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__273_ = ((E6)[@ppxlib.enter_value x6])[@@ppxlib.do_not_enter_value
+      and __let_syntax__397_ = ((E6)[@ppxlib.enter_value x6])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__274_ = ((E7)[@ppxlib.enter_value x7])[@@ppxlib.do_not_enter_value
+      and __let_syntax__398_ = ((E7)[@ppxlib.enter_value x7])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__275_ = ((E8)[@ppxlib.enter_value x8])[@@ppxlib.do_not_enter_value
+      and __let_syntax__399_ = ((E8)[@ppxlib.enter_value x8])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__276_ = ((E9)[@ppxlib.enter_value x9])[@@ppxlib.do_not_enter_value
+      and __let_syntax__400_ = ((E9)[@ppxlib.enter_value x9])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__277_ = ((E10)[@ppxlib.enter_value x10])[@@ppxlib.do_not_enter_value
+      and __let_syntax__401_ = ((E10)[@ppxlib.enter_value x10])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__278_ = ((E11)[@ppxlib.enter_value x11])[@@ppxlib.do_not_enter_value
+      and __let_syntax__402_ = ((E11)[@ppxlib.enter_value x11])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__279_ = ((E12)[@ppxlib.enter_value x12])[@@ppxlib.do_not_enter_value
+      and __let_syntax__403_ = ((E12)[@ppxlib.enter_value x12])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__280_ = ((E13)[@ppxlib.enter_value x13])[@@ppxlib.do_not_enter_value
+      and __let_syntax__404_ = ((E13)[@ppxlib.enter_value x13])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__281_ = ((E14)[@ppxlib.enter_value x14])[@@ppxlib.do_not_enter_value
+      and __let_syntax__405_ = ((E14)[@ppxlib.enter_value x14])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__282_ = ((E15)[@ppxlib.enter_value x15])[@@ppxlib.do_not_enter_value
+      and __let_syntax__406_ = ((E15)[@ppxlib.enter_value x15])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__283_ = ((E16)[@ppxlib.enter_value x16])[@@ppxlib.do_not_enter_value
+      and __let_syntax__407_ = ((E16)[@ppxlib.enter_value x16])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__284_ = ((E17)[@ppxlib.enter_value x17])[@@ppxlib.do_not_enter_value
+      and __let_syntax__408_ = ((E17)[@ppxlib.enter_value x17])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__285_ = ((E18)[@ppxlib.enter_value x18])[@@ppxlib.do_not_enter_value
+      and __let_syntax__409_ = ((E18)[@ppxlib.enter_value x18])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__286_ = ((E19)[@ppxlib.enter_value x19])[@@ppxlib.do_not_enter_value
+      and __let_syntax__410_ = ((E19)[@ppxlib.enter_value x19])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__287_ = ((E20)[@ppxlib.enter_value x20])[@@ppxlib.do_not_enter_value
+      and __let_syntax__411_ = ((E20)[@ppxlib.enter_value x20])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__288_ = ((E21)[@ppxlib.enter_value x21])[@@ppxlib.do_not_enter_value
+      and __let_syntax__412_ = ((E21)[@ppxlib.enter_value x21])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__289_ = ((E22)[@ppxlib.enter_value x22])[@@ppxlib.do_not_enter_value
+      and __let_syntax__413_ = ((E22)[@ppxlib.enter_value x22])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__290_ = ((E23)[@ppxlib.enter_value x23])[@@ppxlib.do_not_enter_value
+      and __let_syntax__414_ = ((E23)[@ppxlib.enter_value x23])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__291_ = ((E24)[@ppxlib.enter_value x24])[@@ppxlib.do_not_enter_value
+      and __let_syntax__415_ = ((E24)[@ppxlib.enter_value x24])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__292_ = ((E25)[@ppxlib.enter_value x25])[@@ppxlib.do_not_enter_value
+      and __let_syntax__416_ = ((E25)[@ppxlib.enter_value x25])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__293_ = ((E26)[@ppxlib.enter_value x26])[@@ppxlib.do_not_enter_value
+      and __let_syntax__417_ = ((E26)[@ppxlib.enter_value x26])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__294_ = ((E27)[@ppxlib.enter_value x27])[@@ppxlib.do_not_enter_value
+      and __let_syntax__418_ = ((E27)[@ppxlib.enter_value x27])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__295_ = ((E28)[@ppxlib.enter_value x28])[@@ppxlib.do_not_enter_value
+      and __let_syntax__419_ = ((E28)[@ppxlib.enter_value x28])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__296_ = ((E29)[@ppxlib.enter_value x29])[@@ppxlib.do_not_enter_value
+      and __let_syntax__420_ = ((E29)[@ppxlib.enter_value x29])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__297_ = ((E30)[@ppxlib.enter_value x30])[@@ppxlib.do_not_enter_value
+      and __let_syntax__421_ = ((E30)[@ppxlib.enter_value x30])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__298_ = ((E31)[@ppxlib.enter_value x31])[@@ppxlib.do_not_enter_value
+      and __let_syntax__422_ = ((E31)[@ppxlib.enter_value x31])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__299_ = ((E32)[@ppxlib.enter_value x32])[@@ppxlib.do_not_enter_value
+      and __let_syntax__423_ = ((E32)[@ppxlib.enter_value x32])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__300_ = ((E33)[@ppxlib.enter_value x33])[@@ppxlib.do_not_enter_value
+      and __let_syntax__424_ = ((E33)[@ppxlib.enter_value x33])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__301_ = ((E34)[@ppxlib.enter_value x34])[@@ppxlib.do_not_enter_value
+      and __let_syntax__425_ = ((E34)[@ppxlib.enter_value x34])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__302_ = ((E35)[@ppxlib.enter_value x35])[@@ppxlib.do_not_enter_value
+      and __let_syntax__426_ = ((E35)[@ppxlib.enter_value x35])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__303_ = ((E36)[@ppxlib.enter_value x36])[@@ppxlib.do_not_enter_value
+      and __let_syntax__427_ = ((E36)[@ppxlib.enter_value x36])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__304_ = ((E37)[@ppxlib.enter_value x37])[@@ppxlib.do_not_enter_value
+      and __let_syntax__428_ = ((E37)[@ppxlib.enter_value x37])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__305_ = ((E38)[@ppxlib.enter_value x38])[@@ppxlib.do_not_enter_value
+      and __let_syntax__429_ = ((E38)[@ppxlib.enter_value x38])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__306_ = ((E39)[@ppxlib.enter_value x39])[@@ppxlib.do_not_enter_value
+      and __let_syntax__430_ = ((E39)[@ppxlib.enter_value x39])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__307_ = ((E40)[@ppxlib.enter_value x40])[@@ppxlib.do_not_enter_value
+      and __let_syntax__431_ = ((E40)[@ppxlib.enter_value x40])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__308_ = ((E41)[@ppxlib.enter_value x41])[@@ppxlib.do_not_enter_value
+      and __let_syntax__432_ = ((E41)[@ppxlib.enter_value x41])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__309_ = ((E42)[@ppxlib.enter_value x42])[@@ppxlib.do_not_enter_value
+      and __let_syntax__433_ = ((E42)[@ppxlib.enter_value x42])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__310_ = ((E43)[@ppxlib.enter_value x43])[@@ppxlib.do_not_enter_value
+      and __let_syntax__434_ = ((E43)[@ppxlib.enter_value x43])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__311_ = ((E44)[@ppxlib.enter_value x44])[@@ppxlib.do_not_enter_value
+      and __let_syntax__435_ = ((E44)[@ppxlib.enter_value x44])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__312_ = ((E45)[@ppxlib.enter_value x45])[@@ppxlib.do_not_enter_value
+      and __let_syntax__436_ = ((E45)[@ppxlib.enter_value x45])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__313_ = ((E46)[@ppxlib.enter_value x46])[@@ppxlib.do_not_enter_value
+      and __let_syntax__437_ = ((E46)[@ppxlib.enter_value x46])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__314_ = ((E47)[@ppxlib.enter_value x47])[@@ppxlib.do_not_enter_value
+      and __let_syntax__438_ = ((E47)[@ppxlib.enter_value x47])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__315_ = ((E48)[@ppxlib.enter_value x48])[@@ppxlib.do_not_enter_value
+      and __let_syntax__439_ = ((E48)[@ppxlib.enter_value x48])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__316_ = ((E49)[@ppxlib.enter_value x49])[@@ppxlib.do_not_enter_value
+      and __let_syntax__440_ = ((E49)[@ppxlib.enter_value x49])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__317_ = ((E50)[@ppxlib.enter_value x50])[@@ppxlib.do_not_enter_value
+      and __let_syntax__441_ = ((E50)[@ppxlib.enter_value x50])[@@ppxlib.do_not_enter_value
                                                                  ] in
       Let_syntax.arr2
         ~here:{
@@ -2152,9 +2688,9 @@ module%test [@name "arrn nesting edge cases"] _ = struct
                       pos_lnum = 0;
                       pos_cnum = (-1);
                       pos_bol = 0
-                    } __let_syntax__268_ __let_syntax__269_ __let_syntax__270_
-              __let_syntax__271_ __let_syntax__272_ __let_syntax__273_
-              __let_syntax__274_
+                    } __let_syntax__392_ __let_syntax__393_ __let_syntax__394_
+              __let_syntax__395_ __let_syntax__396_ __let_syntax__397_
+              __let_syntax__398_
               ~f:(fun t0 t1 t2 t3 t4 t5 t6 -> (t0, t1, t2, t3, t4, t5, t6)))
            (Let_syntax.map7
               ~here:{
@@ -2162,9 +2698,9 @@ module%test [@name "arrn nesting edge cases"] _ = struct
                       pos_lnum = 0;
                       pos_cnum = (-1);
                       pos_bol = 0
-                    } __let_syntax__275_ __let_syntax__276_ __let_syntax__277_
-              __let_syntax__278_ __let_syntax__279_ __let_syntax__280_
-              __let_syntax__281_
+                    } __let_syntax__399_ __let_syntax__400_ __let_syntax__401_
+              __let_syntax__402_ __let_syntax__403_ __let_syntax__404_
+              __let_syntax__405_
               ~f:(fun t0 t1 t2 t3 t4 t5 t6 -> (t0, t1, t2, t3, t4, t5, t6)))
            (Let_syntax.map7
               ~here:{
@@ -2172,9 +2708,9 @@ module%test [@name "arrn nesting edge cases"] _ = struct
                       pos_lnum = 0;
                       pos_cnum = (-1);
                       pos_bol = 0
-                    } __let_syntax__282_ __let_syntax__283_ __let_syntax__284_
-              __let_syntax__285_ __let_syntax__286_ __let_syntax__287_
-              __let_syntax__288_
+                    } __let_syntax__406_ __let_syntax__407_ __let_syntax__408_
+              __let_syntax__409_ __let_syntax__410_ __let_syntax__411_
+              __let_syntax__412_
               ~f:(fun t0 t1 t2 t3 t4 t5 t6 -> (t0, t1, t2, t3, t4, t5, t6)))
            (Let_syntax.map7
               ~here:{
@@ -2182,9 +2718,9 @@ module%test [@name "arrn nesting edge cases"] _ = struct
                       pos_lnum = 0;
                       pos_cnum = (-1);
                       pos_bol = 0
-                    } __let_syntax__289_ __let_syntax__290_ __let_syntax__291_
-              __let_syntax__292_ __let_syntax__293_ __let_syntax__294_
-              __let_syntax__295_
+                    } __let_syntax__413_ __let_syntax__414_ __let_syntax__415_
+              __let_syntax__416_ __let_syntax__417_ __let_syntax__418_
+              __let_syntax__419_
               ~f:(fun t0 t1 t2 t3 t4 t5 t6 -> (t0, t1, t2, t3, t4, t5, t6)))
            (Let_syntax.map7
               ~here:{
@@ -2192,9 +2728,9 @@ module%test [@name "arrn nesting edge cases"] _ = struct
                       pos_lnum = 0;
                       pos_cnum = (-1);
                       pos_bol = 0
-                    } __let_syntax__296_ __let_syntax__297_ __let_syntax__298_
-              __let_syntax__299_ __let_syntax__300_ __let_syntax__301_
-              __let_syntax__302_
+                    } __let_syntax__420_ __let_syntax__421_ __let_syntax__422_
+              __let_syntax__423_ __let_syntax__424_ __let_syntax__425_
+              __let_syntax__426_
               ~f:(fun t0 t1 t2 t3 t4 t5 t6 -> (t0, t1, t2, t3, t4, t5, t6)))
            (Let_syntax.map7
               ~here:{
@@ -2202,9 +2738,9 @@ module%test [@name "arrn nesting edge cases"] _ = struct
                       pos_lnum = 0;
                       pos_cnum = (-1);
                       pos_bol = 0
-                    } __let_syntax__303_ __let_syntax__304_ __let_syntax__305_
-              __let_syntax__306_ __let_syntax__307_ __let_syntax__308_
-              __let_syntax__309_
+                    } __let_syntax__427_ __let_syntax__428_ __let_syntax__429_
+              __let_syntax__430_ __let_syntax__431_ __let_syntax__432_
+              __let_syntax__433_
               ~f:(fun t0 t1 t2 t3 t4 t5 t6 -> (t0, t1, t2, t3, t4, t5, t6)))
            (Let_syntax.map7
               ~here:{
@@ -2212,12 +2748,12 @@ module%test [@name "arrn nesting edge cases"] _ = struct
                       pos_lnum = 0;
                       pos_cnum = (-1);
                       pos_bol = 0
-                    } __let_syntax__310_ __let_syntax__311_ __let_syntax__312_
-              __let_syntax__313_ __let_syntax__314_ __let_syntax__315_
-              __let_syntax__316_
+                    } __let_syntax__434_ __let_syntax__435_ __let_syntax__436_
+              __let_syntax__437_ __let_syntax__438_ __let_syntax__439_
+              __let_syntax__440_
               ~f:(fun t0 t1 t2 t3 t4 t5 t6 -> (t0, t1, t2, t3, t4, t5, t6)))
            ~f:(fun t0 t1 t2 t3 t4 t5 t6 -> (t0, t1, t2, t3, t4, t5, t6)))
-        __let_syntax__317_
+        __let_syntax__441_
         ~f:(fun
               ((x1, x2, x3, x4, x5, x6, x7), (x8, x9, x10, x11, x12, x13, x14),
                (x15, x16, x17, x18, x19, x20, x21),

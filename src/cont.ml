@@ -52,12 +52,11 @@ end = struct
     =
     fun ~here graph -> function
     | Return
-        { value = { value = (Named _ | Constant _ | Exception _) as value; id; _ }; here }
-      ->
+        { value = { value = (Named _ | Constant _ | Exception _) as value; _ }; here } ->
       (* Introduce the optimization [let%sub a = return foo in use a] => [use foo]
            This only makes sense if the Value.t being returned is either a constant or an
            already-bound named value, otherwise you risk losing value sharing. *)
-      { Value.value; id; here }
+      { Value.value; here }
     | computation_to_perform ->
       (* Mint a fresh type-id to hold the result of performing this graph modification  *)
       let via : a Type_equal.Id.t = Type_equal.Id.create ~name:"" [%sexp_of: opaque] in
@@ -67,7 +66,7 @@ end = struct
       in
       let new_f computation =
         let new_f : type x. x Computation.t -> x Computation.t Trampoline.t = function
-          | Return { value = { value = Named _; id; _ }; here = _ }
+          | Return { value = { value = Named (_, id); _ }; here = _ }
             when Type_equal.Id.same via id ->
             (* introduce the optimization {[ let%sub a = foo bar in return a ]} => {[ foo bar ]} *)
             let T = Type_equal.Id.same_witness_exn via id in
@@ -158,7 +157,8 @@ end = struct
   ;;
 
   let handle_for_lazy ?(here = Stdlib.Lexing.dummy_pos) f =
-    handle_with_global_graph ~here `Inside_lazy f
+    (Timer.timer ()).time `Graph_application ~f:(fun () ->
+      handle_with_global_graph ~here `Inside_lazy f)
   ;;
 
   (* Meant to be called at bonsai entrypoints only, [top_level_handle] uses the
@@ -180,6 +180,7 @@ type graph = Cont_primitives.graph
 open Cont_primitives
 
 let return = Value.return
+let return_lazy = Value.return_lazy
 
 let arr1 ?(here = Stdlib.Lexing.dummy_pos) graph a ~f =
   perform ~here graph (Proc.read ~here (Proc.Value.map ~here a ~f))
@@ -553,6 +554,62 @@ let state_machine
 
 module Computation_status = Proc.Computation_status
 
+module Actor (Action : T1) = struct
+  module Base = Proc.Actor (Action)
+  include Base
+
+  let create_with_input
+    ?(here = Stdlib.Lexing.dummy_pos)
+    ?sexp_of_action
+    ?reset
+    ?sexp_of_model
+    ?equal
+    ~default_model
+    ~recv
+    input
+    graph
+    =
+    let model_and_inject =
+      Base.create_with_input
+        ~here
+        ?sexp_of_action
+        ?reset
+        ?sexp_of_model
+        ?equal
+        ~default_model
+        ~recv
+        input
+      |> perform ~here graph
+    in
+    map ~here model_and_inject ~f:Tuple2.get1, map ~here model_and_inject ~f:Tuple2.get2
+  ;;
+
+  let create
+    ?(here = Stdlib.Lexing.dummy_pos)
+    ?sexp_of_action
+    ?reset
+    ?sexp_of_model
+    ?equal
+    ~default_model
+    ~recv
+    graph
+    =
+    let model_and_inject =
+      Base.create
+        ~here
+        ?sexp_of_action
+        ?reset
+        ?sexp_of_model
+        ?equal
+        ~default_model
+        ~recv
+        ()
+      |> perform ~here graph
+    in
+    map ~here model_and_inject ~f:Tuple2.get1, map ~here model_and_inject ~f:Tuple2.get2
+  ;;
+end
+
 let state_machine_with_input__for_proc2
   ?(here = Stdlib.Lexing.dummy_pos)
   ?sexp_of_action
@@ -707,8 +764,6 @@ module Expert = struct
       handle ~here graph ~f:(fun graph -> f k v graph) [@nontail])
     |> perform ~here graph
   ;;
-
-  let delay = delay
 
   module Var = Var
   module For_bonsai_internal = For_bonsai_internal
@@ -1406,11 +1461,12 @@ module Let_syntax = struct
     ;;
 
     let sub ?here:(_ = Stdlib.Lexing.dummy_pos) a ~f = f a
+    let delay = delay
   end
 end
 
 module For_proc = struct
-  module type Map0_output = Map0_intf.Output
+  module type Map_and_set0_output = Map_and_set0_intf.Output
 
   let arr1 = arr1
   let arr2 = arr2
@@ -1509,7 +1565,7 @@ module Conv = struct
   let isolated = isolated
 end
 
-module Map = Map0.Make (struct
+include Map_and_set0.Make (struct
     module Value = struct
       type nonrec 'a t = 'a t
 

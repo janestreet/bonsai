@@ -91,6 +91,10 @@ end
 (** [return] produces a [Bonsai.t] whose inner value is constant. *)
 val return : ?here:Stdlib.Lexing.position -> 'a -> 'a t
 
+(** [return_lazy] produces a [Bonsai.t] whose inner value is only computed when it becomes
+    necessary. *)
+val return_lazy : ?here:Stdlib.Lexing.position -> 'a Lazy.t -> 'a t
+
 (** [map], [map2], and [both] are ways to build a new [Bonsai.t] which is dependent on the
     values of other [Bonsai.t]. As noted above, you should prefer to use [let%arr] than
     these functions, because they come with some performance benefits. *)
@@ -291,6 +295,83 @@ val actor_with_input
   -> 'input t
   -> graph
   -> 'model t * ('action -> 'return Effect.t) t
+
+module Actor (Action : T1) : sig
+  (** Unlike the traditional [actor] and [actor_with_input] functions, the [Actor] functor
+      allows the type of the value returned inside of the effect to change based on which
+      action is being handled.
+
+      Example:
+      {[
+        module Action = struct
+          type 'a t =
+            | Increment : int t
+            | Get_string : string -> string t
+        end
+
+        module My_actor = Actor (Action)
+
+        let model, inject =
+          My_actor.create
+            ~default_model:0
+            ~recv:
+              { f =
+                  (fun _ctx model -> function
+                    | Action.Increment -> model + 1, model
+                    | Action.Get_string s -> model, sprintf "Got %s at count %d" s model)
+              }
+            graph
+        ;;
+      ]} *)
+
+  type sexp_of_action = { f : 'a. 'a Action.t -> Sexp.t }
+  type inject = { f : 'a. 'a Action.t -> 'a Effect.t }
+
+  type get_apply_action_context =
+    { get : 'a. unit -> ('a Action.t, 'a) Apply_action_context.t }
+
+  type ('model, 'input) recv_with_input =
+    { f :
+        'a.
+        get_apply_action_context
+        -> 'input Computation_status.t
+        -> 'model
+        -> 'a Action.t
+        -> 'model * 'a
+    }
+
+  (** [create_with_input] creates a stateful component that depends on external input. The
+      [recv] function handles actions and returns both an updated model and a typed
+      response. *)
+  val create_with_input
+    :  ?here:Stdlib.Lexing.position
+    -> ?sexp_of_action:sexp_of_action
+    -> ?reset:(get_apply_action_context -> 'model -> 'model)
+    -> ?sexp_of_model:('model -> Sexp.t)
+    -> ?equal:('model -> 'model -> bool)
+    -> default_model:'model
+    -> recv:('model, 'input) recv_with_input
+    -> 'input Value.t
+    -> graph
+    -> 'model t * inject t
+
+  type 'model recv =
+    { f : 'a. get_apply_action_context -> 'model -> 'a Action.t -> 'model * 'a }
+
+  (** [create] creates a stateful component without external input dependencies. The
+      [recv] function handles actions and returns both an updated model and a typed
+      response. *)
+  val create
+    :  ?here:Stdlib.Lexing.position
+    -> ?sexp_of_action:sexp_of_action
+    -> ?reset:(get_apply_action_context -> 'model -> 'model)
+    -> ?sexp_of_model:('model -> Sexp.t)
+    -> ?equal:('model -> 'model -> bool)
+    -> default_model:'model
+    -> recv:'model recv
+    -> graph
+    -> 'model t * inject t
+end
 
 (** [freeze] takes a ['a Bonsai.t] and returns a new ['a Bonsai.t] whose value is frozen
     to the first value that it witnesses from its input. *)
@@ -1046,18 +1127,38 @@ module Let_syntax : sig
       -> 'a t
 
     val sub : ?here:Stdlib.Lexing.position -> 'a -> f:('a -> 'b) -> 'b
+    val delay : ?here:Stdlib.Lexing.position -> f:(graph -> 'a t) -> graph -> 'a t
 
     include Mapn with type 'a t := 'a t
     include Arrn with type 'a t := 'a t
   end
 end
 
-module Map :
-  Map0_intf.Output
+include
+  Map_and_set0_intf.Output
   with type 'a Value.t := 'a t
    and type 'a Computation.t := graph -> 'a t
    and module Value := Value
    and module Computation := Computation
+
+(** Delays the computation in [f] until it is needed. One use case for this is delaying
+    large [match%sub] branches that might not initially be in use:
+
+    {[
+      match%sub x with
+      | A -> Bonsai.delay ~f:terrible_computation_1 graph
+      | B -> Bonsai.delay ~f:terrible_computation_2 graph
+      | C -> Bonsai.delay ~f:terrible_computation_3 graph
+    ]}
+
+    Here, if [x] initially has the value [A], then only [terrible_computation_1] will be
+    computed at first, while [terrible_computation_2] and [terrible_computation_3] will be
+    put off until [x] changes to [B] or [C], respectively.
+
+    Note that [f] will be called at most once.
+
+    For recursive components, see [fix]. *)
+val delay : ?here:Stdlib.Lexing.position -> f:(graph -> 'a t) -> graph -> 'a t
 
 module Expert : sig
   val thunk : ?here:Stdlib.Lexing.position -> f:(unit -> 'a) -> graph -> 'a t
@@ -1080,9 +1181,6 @@ module Expert : sig
     -> f:('io_key t -> 'data t -> graph -> 'result t)
     -> graph
     -> ('io_key, 'result, 'io_cmp) Core.Map.t t
-
-  val delay : ?here:Stdlib.Lexing.position -> f:(graph -> 'a t) -> graph -> 'a t
-  [@@deprecated "[since 2023-07] Use Bonsai.fix "]
 
   module Var : sig
     type 'a bonsai := 'a t
@@ -1122,7 +1220,7 @@ end
 (** These functions are here to provide the basis for [bonsai_proc] which wants versions
     of these functions that don't have calls to [split ~here] in them. *)
 module For_proc : sig
-  module type Map0_output = Map0_intf.Output
+  module type Map_and_set0_output = Map_and_set0_intf.Output
 
   val arr1 : ?here:Stdlib.Lexing.position -> graph -> 'a t -> f:('a -> 'b) -> 'b t
 

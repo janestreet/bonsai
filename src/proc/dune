@@ -1,7 +1,7 @@
 (library
  (name bonsai_proc)
  (public_name bonsai.proc)
- (libraries bonsai bonsai_private_eval core virtual_dom.ui_effect
+ (libraries bonsai bonsai_private_base core virtual_dom.ui_effect
    bonsai_concrete.ui_incr bonsai_concrete.ui_time_source)
  (preprocess
   (pps ppx_jane ppx_bonsai -for-bonsai-internals-use-location-in-scope)))

@@ -12,10 +12,10 @@ module Types = struct
       ; config : Computation_watcher.Config.t
       ; enable_watcher : bool
       ; should_run_computation_watcher : bool
-      ; value_type_id_observation_definition_positions :
+      ; value_id_observation_definition_positions :
           (Source_code_positions.finalized Source_code_positions.t
           * Computation_watcher.Config.t)
-            Computation_watcher.Type_id_location_hashmap.t
+            Computation_watcher.Id_location_hashmap.t
       }
   end
 
@@ -158,11 +158,11 @@ module F (Recurse : Fix_transform.Recurse with module Types := Types) = struct
      ; config
      ; watcher_queue
      ; enable_watcher
-     ; value_type_id_observation_definition_positions
+     ; value_id_observation_definition_positions
      ; visited_stores = _
      } as down)
     ()
-    ({ value; id; here } as v : a Value.t)
+    ({ value; here } as v : a Value.t)
     =
     (* We only want to transform values if we're below a Computation_watcher node, which
        is what [enable_watcher] signifies *)
@@ -170,21 +170,22 @@ module F (Recurse : Fix_transform.Recurse with module Types := Types) = struct
     | false -> Recurse.on_value down () `Skipping_over v
     | true ->
       (match value with
-       | Named _ ->
+       | Named (_, id) ->
          ( ()
          , Computation_watcher.Type_id_location_map.singleton
              id
              (Source_code_positions.add_dependency_definition source_code_positions here)
          , v )
        | Incr incr_value ->
+         let id = Incremental.For_analyzer.node_id (Incr.pack incr_value) in
          let has_been_set =
-           Computation_watcher.Type_id_location_hashmap.update_and_check_if_value_set
-             ~id
+           Computation_watcher.Id_location_hashmap.update_and_check_if_value_set
+             ~id:(`Incr id)
              ~update_data:
                ( Source_code_positions.add_dependency_definition source_code_positions here
                  |> Source_code_positions.extract_finalized
                , config )
-             value_type_id_observation_definition_positions
+             value_id_observation_definition_positions
          in
          let value_node =
            match has_been_set with
@@ -192,13 +193,12 @@ module F (Recurse : Fix_transform.Recurse with module Types := Types) = struct
              let new_incr =
                Computation_watcher.instrument_incremental_node
                  ~here:[%here]
-                 ~kind:`Incr
+                 ~id:(`Incr id)
                  ~watcher_queue
-                 ~value_type_id_observation_definition_positions
-                 ~id
+                 ~value_id_observation_definition_positions
                  incr_value
              in
-             { Value.value = Incr new_incr; id; here }
+             { Value.value = Incr new_incr; here }
            | `Already_set -> v
          in
          (), Computation_watcher.Type_id_location_map.empty, value_node
@@ -224,7 +224,7 @@ module F (Recurse : Fix_transform.Recurse with module Types := Types) = struct
        ; watcher_queue
        ; enable_watcher
        ; visited_stores
-       ; value_type_id_observation_definition_positions
+       ; value_id_observation_definition_positions
        } as down)
     ()
     (t : a Computation.t)
@@ -418,7 +418,7 @@ module F (Recurse : Fix_transform.Recurse with module Types := Types) = struct
         ; free_vars = _
         ; config = inner_config
         ; queue = _
-        ; value_type_id_observation_definition_positions = _
+        ; value_id_observation_definition_positions = _
         ; enable_watcher = _
         } ->
       (* [enable_watcher] should only be set to true once we've hit a
@@ -440,7 +440,7 @@ module F (Recurse : Fix_transform.Recurse with module Types := Types) = struct
           ; should_run_computation_watcher
           ; enable_watcher
           ; visited_stores
-          ; value_type_id_observation_definition_positions
+          ; value_id_observation_definition_positions
           }
           ()
           `Directly_on
@@ -455,8 +455,8 @@ module F (Recurse : Fix_transform.Recurse with module Types := Types) = struct
             ; free_vars
             ; config
             ; queue = Some watcher_queue
-            ; value_type_id_observation_definition_positions =
-                Some value_type_id_observation_definition_positions
+            ; value_id_observation_definition_positions =
+                Some value_id_observation_definition_positions
             ; enable_watcher
             } )
     | Store { id; value; inner; here } ->
@@ -521,8 +521,8 @@ let run ~watcher_queue c =
             any [Computation_watcher] node *)
          ; should_run_computation_watcher = true
          ; visited_stores = Type_equal.Id.Uid.Set.empty
-         ; value_type_id_observation_definition_positions =
-             Computation_watcher.Type_id_location_hashmap.create ()
+         ; value_id_observation_definition_positions =
+             Computation_watcher.Id_location_hashmap.create ()
          }
          ()
          c)

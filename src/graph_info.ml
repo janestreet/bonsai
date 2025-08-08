@@ -130,7 +130,7 @@ module Node_info = struct
     }
   [@@deriving sexp, bin_io, equal]
 
-  let of_value (type a) ({ value; here; id = _ } : a Value.t) =
+  let of_value (type a) ({ value; here } : a Value.t) =
     let node_type =
       match value with
       | Constant _ -> "constant"
@@ -211,8 +211,8 @@ let value_map
   add_dag_relationship ~from:current_path ~to_:parent_path;
   let () =
     match value.value with
-    | Named _ ->
-      (match Hashtbl.find environment (Type_equal.Id.uid value.id) with
+    | Named (_, id) ->
+      (match Hashtbl.find environment (Type_equal.Id.uid id) with
        | Some named_id -> add_dag_relationship ~from:named_id ~to_:current_path
        | None when !already_printed_bug_message -> ()
        | None ->

@@ -264,7 +264,9 @@ let pipe (type a) ?(sexp_of = sexp_of_opaque) graph =
   let dequeue =
     let%arr inject in
     Effect.Private.make ~request:() ~evaluator:(fun r ->
-      Effect.Expert.handle (inject (Add_receiver r)))
+      Effect.Expert.handle
+        (inject (Add_receiver r))
+        ~on_exn:(Effect.Private.Callback.on_exn r))
   in
   enqueue, dequeue
 ;;
@@ -547,8 +549,9 @@ module One_at_a_time = struct
   module Response = struct
     type 'a t =
       | Result of 'a
+      | Exn of Exn.t
       | Busy
-    [@@deriving sexp]
+    [@@deriving sexp_of]
   end
 
   module Lock_action = struct
@@ -584,9 +587,14 @@ module One_at_a_time = struct
         match%bind inject_status Acquire with
         | false -> return Response.Busy
         | true ->
-          let%bind result = f query in
-          let%map (_ : bool) = inject_status Release in
-          Response.Result result
+          let result_effect =
+            Effect.protect
+              (Effect.lazy_ (lazy (f query)))
+              ~finally:(inject_status Release |> Effect.ignore_m)
+          in
+          (match%map Effect.try_with result_effect with
+           | Ok result -> Response.Result result
+           | Error exn -> Response.Exn exn)
     in
     effect, status
   ;;
@@ -620,4 +628,10 @@ let chain_incr_effects input graph =
       graph
   in
   inject
+;;
+
+let dynamic_cutoff a ~equal graph =
+  Bonsai.both a equal
+  |> Bonsai.cutoff ~equal:(fun (a, _old_equal) (b, equal) -> equal a b)
+  |> Bonsai.arr1 graph ~f:Tuple2.get1
 ;;

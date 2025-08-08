@@ -15,5 +15,5 @@
     "%{bin:patdiff-for-review} %{bin:patdiff} -context 1000  ../bonsai_extra.mli ./bonsai_extra_proc.mli > bonsai_extra_cont_and_proc.diff")))
 
 (alias
- (name DEFAULT)
+ (name default)
  (deps ./bonsai_extra_cont_and_proc.diff))

@@ -30,7 +30,7 @@ module For_value = struct
       -> a Value.t
       -> a Value.t Trampoline.t
     =
-    fun ~f ~var_from_parent ~append_to parent { value; here; id } ->
+    fun ~f ~var_from_parent ~append_to parent { value; here } ->
     let current_path = Node_path.descend append_to in
     let map n v =
       let append_to = Node_path.choice_point current_path n in
@@ -101,7 +101,7 @@ module For_value = struct
         let%bind t7 = map 7 t.t7 in
         return (Value.Map7 { f = t.f; t1; t2; t3; t4; t5; t6; t7 })
     in
-    return { Value.value; here; id }
+    return { Value.value; here }
   ;;
 
   let map ~f ~var_from_parent ~parent_path ~append_to parent v =
@@ -270,7 +270,7 @@ module For_computation = struct
         ; free_vars
         ; config
         ; queue
-        ; value_type_id_observation_definition_positions
+        ; value_id_observation_definition_positions
         ; enable_watcher
         } ->
       let%bind inner = map inner in
@@ -281,7 +281,7 @@ module For_computation = struct
            ; free_vars
            ; config
            ; queue
-           ; value_type_id_observation_definition_positions
+           ; value_id_observation_definition_positions
            ; enable_watcher
            })
   ;;

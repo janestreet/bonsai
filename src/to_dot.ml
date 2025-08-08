@@ -116,22 +116,13 @@ let register_named state shape name =
     register state shape "named")
 ;;
 
-let register_const state shape id =
-  Hashtbl.find_or_add state.State.type_id_to_name id ~default:(fun () ->
-    register state shape "const")
-;;
-
-let rec follow_skeleton_value
-  state
-  { Skeleton.Value.kind = value; here; node_path = _; id }
-  =
+let rec follow_skeleton_value state { Skeleton.Value.kind = value; here; node_path = _ } =
   let register s = register state (Kind.Value { kind = s; here }) s in
-  let register_const = register_const state (Kind.Value { kind = "const"; here }) in
   match value with
-  | Skeleton.Value.Constant -> register_const id
+  | Skeleton.Value.Constant -> register "const"
   | Exception -> register "exception"
   | Incr -> register "incr"
-  | Named -> register_named state (Kind.Subst here) id
+  | Named id -> register_named state (Kind.Subst here) id
   | Cutoff { t; added_by_let_syntax = _ } ->
     let me = register "cutoff" in
     let them = follow_skeleton_value state t in

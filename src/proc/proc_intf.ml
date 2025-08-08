@@ -474,19 +474,11 @@ module type S = sig
     -> 'a Value.t
     -> 'a Computation.t
 
-  (** Because all Bonsai computation-returning-functions are eagerly evaluated, attempting
-      to use "let rec" to construct a recursive component will recurse infinitely. One way
-      to avoid this is to use a lazy computation and [Bonsai.lazy_] to defer evaluating
-      the [Computation.t].
+  (** [lazy_ c] produces a computation that only forces [c] when necessary. This can be
+      used to delay large computations that might not initially be useful.
 
-      {[
-        let rec some_component arg1 arg2 =
-          ...
-          let _ = Bonsai.lazy_ (lazy (some_component ...)) in
-          ...
-      ]} *)
+      For recursive computations, see [fix]. *)
   val lazy_ : ?here:Stdlib.Lexing.position -> 'a Computation.t Lazy.t -> 'a Computation.t
-  [@@deprecated "[since 2023-07] Use Bonsai.fix "]
 
   (** A fixed-point combinator for bonsai components. This is used to build recursive
       components like so:
@@ -1225,8 +1217,8 @@ module type S = sig
       also skip wrapping the prime versions of [Incr_map] functions, since they more
       easily allow [Incr.bind], which we want to make sure is used only when absolutely
       necessary. *)
-  module Map :
-    Bonsai.Private.For_proc.Map0_output
+  include
+    Bonsai.Private.For_proc.Map_and_set0_output
     with module Value := Value
      and module Computation := Computation
 end

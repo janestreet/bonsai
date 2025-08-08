@@ -241,17 +241,15 @@ module One_at_a_time : sig
   module Response : sig
     type 'a t =
       | Result of 'a
+      | Exn of Exn.t
       | Busy
-    [@@deriving sexp]
+    [@@deriving sexp_of]
   end
 
   (** Turns the input effect into an effect which ensures that only one instance of it is
       running at a time. If another instance of the effect is already running, then [Busy]
       is returned instead of running the effect. In addition, it also returns a value
-      representing whether or not an instance of the effect is in progress.
-
-      CAREFUL: If the effect function raises while it is executing, then the status will
-      stay at busy, since the computation is unable to witness that the effect completed. *)
+      representing whether or not an instance of the effect is in progress. *)
   val effect
     :  ('query -> 'response Effect.t) Bonsai.t
     -> Bonsai.graph
@@ -282,3 +280,10 @@ val chain_incr_effects
   :  'a Bonsai.t
   -> Bonsai.graph
   -> (('a -> unit Ui_effect.t) list -> unit Ui_effect.t) Bonsai.t
+
+(** Like [Bonsai.cutoff] but where the [equal] function can be determined dynamically. *)
+val dynamic_cutoff
+  :  'a Bonsai.t
+  -> equal:('a -> 'a -> bool) Bonsai.t
+  -> Bonsai.graph
+  -> 'a Bonsai.t
