@@ -1,0 +1,7 @@
+(library
+ (name bonsai_extra_mirror_test)
+ (preprocess
+  (pps ppx_jane ppx_inline_test js_of_ocaml-ppx ppx_bonsai))
+ (libraries bonsai bonsai_extra bonsai_extra_mirror bonsai_proc bonsai_test
+   core expect_test_helpers_core virtual_dom.ui_effect
+   bonsai_concrete.ui_incr))

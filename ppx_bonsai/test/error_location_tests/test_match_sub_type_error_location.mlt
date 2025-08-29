@@ -1,11 +1,8 @@
 #print_line_numbers true
 
+open! Core
 open! Bonsai
 open Bonsai.Let_syntax
-
-(* This test file is a regression test for a bug where the errors from the match
-   arms of a match%sub were instead reported at the start of the match%sub which results
-   in confusing type error messages! *)
 
 type t =
   | A of int
@@ -28,7 +25,7 @@ let _component t (local_ _graph) =
 
 [%%expect
   {xxx|
-Line 23, characters 4-66:
+Line 20, characters 4-66:
 Error: This expression has type float Bonsai.t Bonsai.t
        but an expression was expected of type int Bonsai.t
        Type float Bonsai.t is not compatible with type int
@@ -48,7 +45,7 @@ let _more_basic_component t (local_ _graph) =
 
 [%%expect
   {|
-Line 44, characters 4-21:
+Line 41, characters 4-21:
 Error: This expression has type float Bonsai.t
        but an expression was expected of type int Bonsai.t
        Type float is not compatible with type int
@@ -67,8 +64,44 @@ let _more_basic_component t (local_ _graph) =
 (* This one is also fine! (error points to a useful location) *)
 [%%expect
   {|
-Line 64, characters 4-35:
+Line 61, characters 4-35:
 Error: This expression has type int Bonsai.t Bonsai.t
        but an expression was expected of type int Bonsai.t
        Type int Bonsai.t is not compatible with type int
+|}]
+
+(* . errors *)
+let component (local_ _graph) =
+  let a : (unit, Nothing.t) Result.t Bonsai.t = Bonsai.return (Ok ()) in
+  match%sub a with
+  | Ok () -> Bonsai.return ()
+  | Error _ -> .
+;;
+
+[%%expect {| |}]
+
+let component (local_ _graph) =
+  let a : (unit, unit) Result.t Bonsai.t = Bonsai.return (Ok ()) in
+  match%sub a with
+  | Ok () -> Bonsai.return ()
+  | Error _ -> .
+;;
+
+[%%expect
+  {|
+Line 87, characters 4-11:
+Error: This match case could not be refuted.
+       Here is an example of a value that would reach it: Error ()
+|}]
+
+(* not ideal to have this error, but can easily write match%arr instead *)
+let component (never : unit -> Nothing.t Bonsai.t) (local_ _graph) =
+  match%sub never () with
+  | _ -> .
+;;
+
+[%%expect
+  {|
+Line 100, characters 9-10:
+Error: Unreachable expression was reached
 |}]

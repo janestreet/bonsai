@@ -95,6 +95,19 @@ let%expect_test "double pattern let%sub" =
   [%expect {| let%sub should not be used with 'and'. |}]
 ;;
 
+let%expect_test "disallow let%sub mutable" =
+  assert_fails_with_syntax_error ~f:(fun () ->
+    Ppx_let_expander.expand
+      (Ppx_bonsai_expander.sub Location_of_callsite)
+      Ppx_let_expander.Extension_kind.default
+      ~modul:None
+      ~locality
+      [%expr
+        let mutable a = MY_EXPR_1 in
+        MY_BODY]);
+  [%expect {| let%sub should not be used with 'mutable'. |}]
+;;
+
 let%expect_test "single pattern sub open" =
   Ppx_let_expander.expand
     (Ppx_bonsai_expander.sub Location_of_callsite)
@@ -2179,6 +2192,93 @@ module%test [@name "match%sub with tuple payload"] _ = struct
   ;;
 end
 
+module%test [@name "match%sub with . case"] _ = struct
+  let test expr =
+    Ppx_let_expander.expand
+      (Ppx_bonsai_expander.sub Location_of_callsite)
+      Ppx_let_expander.Extension_kind.default
+      ~modul:None
+      ~locality
+      expr
+    |> print_expr
+  ;;
+
+  let%expect_test "single-case match%sub" =
+    test
+      [%expr
+        match EXPR with
+        | _ -> .];
+    [%expect
+      {|
+      ((Let_syntax.sub
+          ~here:{
+                  Ppx_here_lib.pos_fname = "_none_";
+                  pos_lnum = 0;
+                  pos_cnum = (-1);
+                  pos_bol = 0
+                } (Let_syntax.return EXPR)
+          ~f:(fun __pattern_syntax__286_ ->
+                ((Let_syntax.sub
+                    ~here:{
+                            Ppx_here_lib.pos_fname = "_none_";
+                            pos_lnum = 0;
+                            pos_cnum = (-1);
+                            pos_bol = 0
+                          }
+                    (Let_syntax.return
+                       ((Let_syntax.map
+                           ~here:{
+                                   Ppx_here_lib.pos_fname = "_none_";
+                                   pos_lnum = 0;
+                                   pos_cnum = (-1);
+                                   pos_bol = 0
+                                 } __pattern_syntax__286_ ~f:(function | _ -> ()))
+                       [@nontail ])) ~f:(fun _ -> ((.)[@nontail ])))
+                [@nontail ])))
+      [@nontail ])
+      |}]
+  ;;
+
+  let%expect_test "multi-case match%sub" =
+    test
+      [%expr
+        match EXPR with
+        | A _ -> MY_BODY
+        | B _ -> .
+        | C -> MY_BODY];
+    [%expect
+      {|
+      ((Let_syntax.sub
+          ~here:{
+                  Ppx_here_lib.pos_fname = "_none_";
+                  pos_lnum = 0;
+                  pos_cnum = (-1);
+                  pos_bol = 0
+                } (Let_syntax.return EXPR)
+          ~f:(fun __pattern_syntax__287_ ->
+                ((Let_syntax.switch
+                    ~here:{
+                            Ppx_here_lib.pos_fname = "_none_";
+                            pos_lnum = 0;
+                            pos_cnum = (-1);
+                            pos_bol = 0
+                          }
+                    ~match_:((Let_syntax.map __pattern_syntax__287_
+                                ~f:(function
+                                    | A ((_)[@merlin.focus ]) -> 0
+                                    | C -> 1
+                                    | B ((_)[@merlin.focus ]) -> .))
+                    [@ocaml.warning "-26-27"]) ~branches:2
+                    ~with_:(function
+                            | ((0)[@merlin.hide ]) -> MY_BODY
+                            | ((1)[@merlin.hide ]) -> MY_BODY
+                            | _ -> assert false))
+                [@nontail ])))
+      [@nontail ])
+      |}]
+  ;;
+end
+
 module%test [@name "arrn nesting edge cases"] _ = struct
   let expand_arr expr =
     Ppx_let_expander.expand
@@ -2215,9 +2315,9 @@ module%test [@name "arrn nesting edge cases"] _ = struct
         MY_BODY];
     [%expect
       {|
-      let __let_syntax__287_ = ((E1)[@ppxlib.enter_value x1])[@@ppxlib.do_not_enter_value
+      let __let_syntax__289_ = ((E1)[@ppxlib.enter_value x1])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__288_ = ((E2)[@ppxlib.enter_value x2])[@@ppxlib.do_not_enter_value
+      and __let_syntax__290_ = ((E2)[@ppxlib.enter_value x2])[@@ppxlib.do_not_enter_value
                                                                ] in
       Let_syntax.arr2
         ~here:{
@@ -2225,7 +2325,7 @@ module%test [@name "arrn nesting edge cases"] _ = struct
                 pos_lnum = 0;
                 pos_cnum = (-1);
                 pos_bol = 0
-              } __let_syntax__287_ __let_syntax__288_ ~f:(fun x1 x2 -> MY_BODY)
+              } __let_syntax__289_ __let_syntax__290_ ~f:(fun x1 x2 -> MY_BODY)
       |}]
   ;;
 
@@ -2241,17 +2341,17 @@ module%test [@name "arrn nesting edge cases"] _ = struct
         MY_BODY];
     [%expect
       {|
-      let __let_syntax__291_ = ((E1)[@ppxlib.enter_value x1])[@@ppxlib.do_not_enter_value
+      let __let_syntax__293_ = ((E1)[@ppxlib.enter_value x1])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__292_ = ((E2)[@ppxlib.enter_value x2])[@@ppxlib.do_not_enter_value
+      and __let_syntax__294_ = ((E2)[@ppxlib.enter_value x2])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__293_ = ((E3)[@ppxlib.enter_value x3])[@@ppxlib.do_not_enter_value
+      and __let_syntax__295_ = ((E3)[@ppxlib.enter_value x3])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__294_ = ((E4)[@ppxlib.enter_value x4])[@@ppxlib.do_not_enter_value
+      and __let_syntax__296_ = ((E4)[@ppxlib.enter_value x4])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__295_ = ((E5)[@ppxlib.enter_value x5])[@@ppxlib.do_not_enter_value
+      and __let_syntax__297_ = ((E5)[@ppxlib.enter_value x5])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__296_ = ((E6)[@ppxlib.enter_value x6])[@@ppxlib.do_not_enter_value
+      and __let_syntax__298_ = ((E6)[@ppxlib.enter_value x6])[@@ppxlib.do_not_enter_value
                                                                ] in
       Let_syntax.arr6
         ~here:{
@@ -2259,8 +2359,8 @@ module%test [@name "arrn nesting edge cases"] _ = struct
                 pos_lnum = 0;
                 pos_cnum = (-1);
                 pos_bol = 0
-              } __let_syntax__291_ __let_syntax__292_ __let_syntax__293_
-        __let_syntax__294_ __let_syntax__295_ __let_syntax__296_
+              } __let_syntax__293_ __let_syntax__294_ __let_syntax__295_
+        __let_syntax__296_ __let_syntax__297_ __let_syntax__298_
         ~f:(fun x1 x2 x3 x4 x5 x6 -> MY_BODY)
       |}]
   ;;
@@ -2278,19 +2378,19 @@ module%test [@name "arrn nesting edge cases"] _ = struct
         MY_BODY];
     [%expect
       {|
-      let __let_syntax__303_ = ((E1)[@ppxlib.enter_value x1])[@@ppxlib.do_not_enter_value
+      let __let_syntax__305_ = ((E1)[@ppxlib.enter_value x1])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__304_ = ((E2)[@ppxlib.enter_value x2])[@@ppxlib.do_not_enter_value
+      and __let_syntax__306_ = ((E2)[@ppxlib.enter_value x2])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__305_ = ((E3)[@ppxlib.enter_value x3])[@@ppxlib.do_not_enter_value
+      and __let_syntax__307_ = ((E3)[@ppxlib.enter_value x3])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__306_ = ((E4)[@ppxlib.enter_value x4])[@@ppxlib.do_not_enter_value
+      and __let_syntax__308_ = ((E4)[@ppxlib.enter_value x4])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__307_ = ((E5)[@ppxlib.enter_value x5])[@@ppxlib.do_not_enter_value
+      and __let_syntax__309_ = ((E5)[@ppxlib.enter_value x5])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__308_ = ((E6)[@ppxlib.enter_value x6])[@@ppxlib.do_not_enter_value
+      and __let_syntax__310_ = ((E6)[@ppxlib.enter_value x6])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__309_ = ((E7)[@ppxlib.enter_value x7])[@@ppxlib.do_not_enter_value
+      and __let_syntax__311_ = ((E7)[@ppxlib.enter_value x7])[@@ppxlib.do_not_enter_value
                                                                ] in
       Let_syntax.arr7
         ~here:{
@@ -2298,8 +2398,8 @@ module%test [@name "arrn nesting edge cases"] _ = struct
                 pos_lnum = 0;
                 pos_cnum = (-1);
                 pos_bol = 0
-              } __let_syntax__303_ __let_syntax__304_ __let_syntax__305_
-        __let_syntax__306_ __let_syntax__307_ __let_syntax__308_ __let_syntax__309_
+              } __let_syntax__305_ __let_syntax__306_ __let_syntax__307_
+        __let_syntax__308_ __let_syntax__309_ __let_syntax__310_ __let_syntax__311_
         ~f:(fun x1 x2 x3 x4 x5 x6 x7 -> MY_BODY)
       |}]
   ;;
@@ -2318,21 +2418,21 @@ module%test [@name "arrn nesting edge cases"] _ = struct
         MY_BODY];
     [%expect
       {|
-      let __let_syntax__317_ = ((E1)[@ppxlib.enter_value x1])[@@ppxlib.do_not_enter_value
+      let __let_syntax__319_ = ((E1)[@ppxlib.enter_value x1])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__318_ = ((E2)[@ppxlib.enter_value x2])[@@ppxlib.do_not_enter_value
+      and __let_syntax__320_ = ((E2)[@ppxlib.enter_value x2])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__319_ = ((E3)[@ppxlib.enter_value x3])[@@ppxlib.do_not_enter_value
+      and __let_syntax__321_ = ((E3)[@ppxlib.enter_value x3])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__320_ = ((E4)[@ppxlib.enter_value x4])[@@ppxlib.do_not_enter_value
+      and __let_syntax__322_ = ((E4)[@ppxlib.enter_value x4])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__321_ = ((E5)[@ppxlib.enter_value x5])[@@ppxlib.do_not_enter_value
+      and __let_syntax__323_ = ((E5)[@ppxlib.enter_value x5])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__322_ = ((E6)[@ppxlib.enter_value x6])[@@ppxlib.do_not_enter_value
+      and __let_syntax__324_ = ((E6)[@ppxlib.enter_value x6])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__323_ = ((E7)[@ppxlib.enter_value x7])[@@ppxlib.do_not_enter_value
+      and __let_syntax__325_ = ((E7)[@ppxlib.enter_value x7])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__324_ = ((E8)[@ppxlib.enter_value x8])[@@ppxlib.do_not_enter_value
+      and __let_syntax__326_ = ((E8)[@ppxlib.enter_value x8])[@@ppxlib.do_not_enter_value
                                                                ] in
       Let_syntax.arr2
         ~here:{
@@ -2347,11 +2447,11 @@ module%test [@name "arrn nesting edge cases"] _ = struct
                    pos_lnum = 0;
                    pos_cnum = (-1);
                    pos_bol = 0
-                 } __let_syntax__317_ __let_syntax__318_ __let_syntax__319_
-           __let_syntax__320_ __let_syntax__321_ __let_syntax__322_
-           __let_syntax__323_
+                 } __let_syntax__319_ __let_syntax__320_ __let_syntax__321_
+           __let_syntax__322_ __let_syntax__323_ __let_syntax__324_
+           __let_syntax__325_
            ~f:(fun t0 t1 t2 t3 t4 t5 t6 -> (t0, t1, t2, t3, t4, t5, t6)))
-        __let_syntax__324_ ~f:(fun (x1, x2, x3, x4, x5, x6, x7) x8 -> MY_BODY)
+        __let_syntax__326_ ~f:(fun (x1, x2, x3, x4, x5, x6, x7) x8 -> MY_BODY)
       |}]
   ;;
 
@@ -2375,33 +2475,33 @@ module%test [@name "arrn nesting edge cases"] _ = struct
         MY_BODY];
     [%expect
       {|
-      let __let_syntax__334_ = ((E1)[@ppxlib.enter_value x1])[@@ppxlib.do_not_enter_value
+      let __let_syntax__336_ = ((E1)[@ppxlib.enter_value x1])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__335_ = ((E2)[@ppxlib.enter_value x2])[@@ppxlib.do_not_enter_value
+      and __let_syntax__337_ = ((E2)[@ppxlib.enter_value x2])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__336_ = ((E3)[@ppxlib.enter_value x3])[@@ppxlib.do_not_enter_value
+      and __let_syntax__338_ = ((E3)[@ppxlib.enter_value x3])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__337_ = ((E4)[@ppxlib.enter_value x4])[@@ppxlib.do_not_enter_value
+      and __let_syntax__339_ = ((E4)[@ppxlib.enter_value x4])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__338_ = ((E5)[@ppxlib.enter_value x5])[@@ppxlib.do_not_enter_value
+      and __let_syntax__340_ = ((E5)[@ppxlib.enter_value x5])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__339_ = ((E6)[@ppxlib.enter_value x6])[@@ppxlib.do_not_enter_value
+      and __let_syntax__341_ = ((E6)[@ppxlib.enter_value x6])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__340_ = ((E7)[@ppxlib.enter_value x7])[@@ppxlib.do_not_enter_value
+      and __let_syntax__342_ = ((E7)[@ppxlib.enter_value x7])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__341_ = ((E8)[@ppxlib.enter_value x8])[@@ppxlib.do_not_enter_value
+      and __let_syntax__343_ = ((E8)[@ppxlib.enter_value x8])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__342_ = ((E9)[@ppxlib.enter_value x9])[@@ppxlib.do_not_enter_value
+      and __let_syntax__344_ = ((E9)[@ppxlib.enter_value x9])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__343_ = ((E10)[@ppxlib.enter_value x10])[@@ppxlib.do_not_enter_value
+      and __let_syntax__345_ = ((E10)[@ppxlib.enter_value x10])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__344_ = ((E11)[@ppxlib.enter_value x11])[@@ppxlib.do_not_enter_value
+      and __let_syntax__346_ = ((E11)[@ppxlib.enter_value x11])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__345_ = ((E12)[@ppxlib.enter_value x12])[@@ppxlib.do_not_enter_value
+      and __let_syntax__347_ = ((E12)[@ppxlib.enter_value x12])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__346_ = ((E13)[@ppxlib.enter_value x13])[@@ppxlib.do_not_enter_value
+      and __let_syntax__348_ = ((E13)[@ppxlib.enter_value x13])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__347_ = ((E14)[@ppxlib.enter_value x14])[@@ppxlib.do_not_enter_value
+      and __let_syntax__349_ = ((E14)[@ppxlib.enter_value x14])[@@ppxlib.do_not_enter_value
                                                                  ] in
       Let_syntax.arr2
         ~here:{
@@ -2416,9 +2516,9 @@ module%test [@name "arrn nesting edge cases"] _ = struct
                    pos_lnum = 0;
                    pos_cnum = (-1);
                    pos_bol = 0
-                 } __let_syntax__334_ __let_syntax__335_ __let_syntax__336_
-           __let_syntax__337_ __let_syntax__338_ __let_syntax__339_
-           __let_syntax__340_
+                 } __let_syntax__336_ __let_syntax__337_ __let_syntax__338_
+           __let_syntax__339_ __let_syntax__340_ __let_syntax__341_
+           __let_syntax__342_
            ~f:(fun t0 t1 t2 t3 t4 t5 t6 -> (t0, t1, t2, t3, t4, t5, t6)))
         (Let_syntax.map7
            ~here:{
@@ -2426,9 +2526,9 @@ module%test [@name "arrn nesting edge cases"] _ = struct
                    pos_lnum = 0;
                    pos_cnum = (-1);
                    pos_bol = 0
-                 } __let_syntax__341_ __let_syntax__342_ __let_syntax__343_
-           __let_syntax__344_ __let_syntax__345_ __let_syntax__346_
-           __let_syntax__347_
+                 } __let_syntax__343_ __let_syntax__344_ __let_syntax__345_
+           __let_syntax__346_ __let_syntax__347_ __let_syntax__348_
+           __let_syntax__349_
            ~f:(fun t0 t1 t2 t3 t4 t5 t6 -> (t0, t1, t2, t3, t4, t5, t6)))
         ~f:(fun (x1, x2, x3, x4, x5, x6, x7) (x8, x9, x10, x11, x12, x13, x14) ->
               MY_BODY)
@@ -2454,31 +2554,31 @@ module%test [@name "arrn nesting edge cases"] _ = struct
         MY_BODY];
     [%expect
       {|
-      let __let_syntax__364_ = ((E1)[@ppxlib.enter_value x1])[@@ppxlib.do_not_enter_value
+      let __let_syntax__366_ = ((E1)[@ppxlib.enter_value x1])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__365_ = ((E2)[@ppxlib.enter_value x2])[@@ppxlib.do_not_enter_value
+      and __let_syntax__367_ = ((E2)[@ppxlib.enter_value x2])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__366_ = ((E3)[@ppxlib.enter_value x3])[@@ppxlib.do_not_enter_value
+      and __let_syntax__368_ = ((E3)[@ppxlib.enter_value x3])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__367_ = ((E4)[@ppxlib.enter_value x4])[@@ppxlib.do_not_enter_value
+      and __let_syntax__369_ = ((E4)[@ppxlib.enter_value x4])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__368_ = ((E5)[@ppxlib.enter_value x5])[@@ppxlib.do_not_enter_value
+      and __let_syntax__370_ = ((E5)[@ppxlib.enter_value x5])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__369_ = ((E6)[@ppxlib.enter_value x6])[@@ppxlib.do_not_enter_value
+      and __let_syntax__371_ = ((E6)[@ppxlib.enter_value x6])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__370_ = ((E7)[@ppxlib.enter_value x7])[@@ppxlib.do_not_enter_value
+      and __let_syntax__372_ = ((E7)[@ppxlib.enter_value x7])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__371_ = ((E8)[@ppxlib.enter_value x8])[@@ppxlib.do_not_enter_value
+      and __let_syntax__373_ = ((E8)[@ppxlib.enter_value x8])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__372_ = ((E9)[@ppxlib.enter_value x9])[@@ppxlib.do_not_enter_value
+      and __let_syntax__374_ = ((E9)[@ppxlib.enter_value x9])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__373_ = ((E10)[@ppxlib.enter_value x10])[@@ppxlib.do_not_enter_value
+      and __let_syntax__375_ = ((E10)[@ppxlib.enter_value x10])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__374_ = ((E11)[@ppxlib.enter_value x11])[@@ppxlib.do_not_enter_value
+      and __let_syntax__376_ = ((E11)[@ppxlib.enter_value x11])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__375_ = ((E12)[@ppxlib.enter_value x12])[@@ppxlib.do_not_enter_value
+      and __let_syntax__377_ = ((E12)[@ppxlib.enter_value x12])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__376_ = ((E13)[@ppxlib.enter_value x13])[@@ppxlib.do_not_enter_value
+      and __let_syntax__378_ = ((E13)[@ppxlib.enter_value x13])[@@ppxlib.do_not_enter_value
                                                                  ] in
       Let_syntax.arr2
         ~here:{
@@ -2493,9 +2593,9 @@ module%test [@name "arrn nesting edge cases"] _ = struct
                    pos_lnum = 0;
                    pos_cnum = (-1);
                    pos_bol = 0
-                 } __let_syntax__364_ __let_syntax__365_ __let_syntax__366_
-           __let_syntax__367_ __let_syntax__368_ __let_syntax__369_
-           __let_syntax__370_
+                 } __let_syntax__366_ __let_syntax__367_ __let_syntax__368_
+           __let_syntax__369_ __let_syntax__370_ __let_syntax__371_
+           __let_syntax__372_
            ~f:(fun t0 t1 t2 t3 t4 t5 t6 -> (t0, t1, t2, t3, t4, t5, t6)))
         (Let_syntax.map6
            ~here:{
@@ -2503,8 +2603,8 @@ module%test [@name "arrn nesting edge cases"] _ = struct
                    pos_lnum = 0;
                    pos_cnum = (-1);
                    pos_bol = 0
-                 } __let_syntax__371_ __let_syntax__372_ __let_syntax__373_
-           __let_syntax__374_ __let_syntax__375_ __let_syntax__376_
+                 } __let_syntax__373_ __let_syntax__374_ __let_syntax__375_
+           __let_syntax__376_ __let_syntax__377_ __let_syntax__378_
            ~f:(fun t0 t1 t2 t3 t4 t5 -> (t0, t1, t2, t3, t4, t5)))
         ~f:(fun (x1, x2, x3, x4, x5, x6, x7) (x8, x9, x10, x11, x12, x13) ->
               MY_BODY)
@@ -2568,105 +2668,105 @@ module%test [@name "arrn nesting edge cases"] _ = struct
         MY_BODY];
     [%expect
       {|
-      let __let_syntax__392_ = ((E1)[@ppxlib.enter_value x1])[@@ppxlib.do_not_enter_value
+      let __let_syntax__394_ = ((E1)[@ppxlib.enter_value x1])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__393_ = ((E2)[@ppxlib.enter_value x2])[@@ppxlib.do_not_enter_value
+      and __let_syntax__395_ = ((E2)[@ppxlib.enter_value x2])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__394_ = ((E3)[@ppxlib.enter_value x3])[@@ppxlib.do_not_enter_value
+      and __let_syntax__396_ = ((E3)[@ppxlib.enter_value x3])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__395_ = ((E4)[@ppxlib.enter_value x4])[@@ppxlib.do_not_enter_value
+      and __let_syntax__397_ = ((E4)[@ppxlib.enter_value x4])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__396_ = ((E5)[@ppxlib.enter_value x5])[@@ppxlib.do_not_enter_value
+      and __let_syntax__398_ = ((E5)[@ppxlib.enter_value x5])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__397_ = ((E6)[@ppxlib.enter_value x6])[@@ppxlib.do_not_enter_value
+      and __let_syntax__399_ = ((E6)[@ppxlib.enter_value x6])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__398_ = ((E7)[@ppxlib.enter_value x7])[@@ppxlib.do_not_enter_value
+      and __let_syntax__400_ = ((E7)[@ppxlib.enter_value x7])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__399_ = ((E8)[@ppxlib.enter_value x8])[@@ppxlib.do_not_enter_value
+      and __let_syntax__401_ = ((E8)[@ppxlib.enter_value x8])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__400_ = ((E9)[@ppxlib.enter_value x9])[@@ppxlib.do_not_enter_value
+      and __let_syntax__402_ = ((E9)[@ppxlib.enter_value x9])[@@ppxlib.do_not_enter_value
                                                                ]
-      and __let_syntax__401_ = ((E10)[@ppxlib.enter_value x10])[@@ppxlib.do_not_enter_value
+      and __let_syntax__403_ = ((E10)[@ppxlib.enter_value x10])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__402_ = ((E11)[@ppxlib.enter_value x11])[@@ppxlib.do_not_enter_value
+      and __let_syntax__404_ = ((E11)[@ppxlib.enter_value x11])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__403_ = ((E12)[@ppxlib.enter_value x12])[@@ppxlib.do_not_enter_value
+      and __let_syntax__405_ = ((E12)[@ppxlib.enter_value x12])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__404_ = ((E13)[@ppxlib.enter_value x13])[@@ppxlib.do_not_enter_value
+      and __let_syntax__406_ = ((E13)[@ppxlib.enter_value x13])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__405_ = ((E14)[@ppxlib.enter_value x14])[@@ppxlib.do_not_enter_value
+      and __let_syntax__407_ = ((E14)[@ppxlib.enter_value x14])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__406_ = ((E15)[@ppxlib.enter_value x15])[@@ppxlib.do_not_enter_value
+      and __let_syntax__408_ = ((E15)[@ppxlib.enter_value x15])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__407_ = ((E16)[@ppxlib.enter_value x16])[@@ppxlib.do_not_enter_value
+      and __let_syntax__409_ = ((E16)[@ppxlib.enter_value x16])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__408_ = ((E17)[@ppxlib.enter_value x17])[@@ppxlib.do_not_enter_value
+      and __let_syntax__410_ = ((E17)[@ppxlib.enter_value x17])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__409_ = ((E18)[@ppxlib.enter_value x18])[@@ppxlib.do_not_enter_value
+      and __let_syntax__411_ = ((E18)[@ppxlib.enter_value x18])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__410_ = ((E19)[@ppxlib.enter_value x19])[@@ppxlib.do_not_enter_value
+      and __let_syntax__412_ = ((E19)[@ppxlib.enter_value x19])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__411_ = ((E20)[@ppxlib.enter_value x20])[@@ppxlib.do_not_enter_value
+      and __let_syntax__413_ = ((E20)[@ppxlib.enter_value x20])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__412_ = ((E21)[@ppxlib.enter_value x21])[@@ppxlib.do_not_enter_value
+      and __let_syntax__414_ = ((E21)[@ppxlib.enter_value x21])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__413_ = ((E22)[@ppxlib.enter_value x22])[@@ppxlib.do_not_enter_value
+      and __let_syntax__415_ = ((E22)[@ppxlib.enter_value x22])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__414_ = ((E23)[@ppxlib.enter_value x23])[@@ppxlib.do_not_enter_value
+      and __let_syntax__416_ = ((E23)[@ppxlib.enter_value x23])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__415_ = ((E24)[@ppxlib.enter_value x24])[@@ppxlib.do_not_enter_value
+      and __let_syntax__417_ = ((E24)[@ppxlib.enter_value x24])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__416_ = ((E25)[@ppxlib.enter_value x25])[@@ppxlib.do_not_enter_value
+      and __let_syntax__418_ = ((E25)[@ppxlib.enter_value x25])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__417_ = ((E26)[@ppxlib.enter_value x26])[@@ppxlib.do_not_enter_value
+      and __let_syntax__419_ = ((E26)[@ppxlib.enter_value x26])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__418_ = ((E27)[@ppxlib.enter_value x27])[@@ppxlib.do_not_enter_value
+      and __let_syntax__420_ = ((E27)[@ppxlib.enter_value x27])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__419_ = ((E28)[@ppxlib.enter_value x28])[@@ppxlib.do_not_enter_value
+      and __let_syntax__421_ = ((E28)[@ppxlib.enter_value x28])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__420_ = ((E29)[@ppxlib.enter_value x29])[@@ppxlib.do_not_enter_value
+      and __let_syntax__422_ = ((E29)[@ppxlib.enter_value x29])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__421_ = ((E30)[@ppxlib.enter_value x30])[@@ppxlib.do_not_enter_value
+      and __let_syntax__423_ = ((E30)[@ppxlib.enter_value x30])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__422_ = ((E31)[@ppxlib.enter_value x31])[@@ppxlib.do_not_enter_value
+      and __let_syntax__424_ = ((E31)[@ppxlib.enter_value x31])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__423_ = ((E32)[@ppxlib.enter_value x32])[@@ppxlib.do_not_enter_value
+      and __let_syntax__425_ = ((E32)[@ppxlib.enter_value x32])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__424_ = ((E33)[@ppxlib.enter_value x33])[@@ppxlib.do_not_enter_value
+      and __let_syntax__426_ = ((E33)[@ppxlib.enter_value x33])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__425_ = ((E34)[@ppxlib.enter_value x34])[@@ppxlib.do_not_enter_value
+      and __let_syntax__427_ = ((E34)[@ppxlib.enter_value x34])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__426_ = ((E35)[@ppxlib.enter_value x35])[@@ppxlib.do_not_enter_value
+      and __let_syntax__428_ = ((E35)[@ppxlib.enter_value x35])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__427_ = ((E36)[@ppxlib.enter_value x36])[@@ppxlib.do_not_enter_value
+      and __let_syntax__429_ = ((E36)[@ppxlib.enter_value x36])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__428_ = ((E37)[@ppxlib.enter_value x37])[@@ppxlib.do_not_enter_value
+      and __let_syntax__430_ = ((E37)[@ppxlib.enter_value x37])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__429_ = ((E38)[@ppxlib.enter_value x38])[@@ppxlib.do_not_enter_value
+      and __let_syntax__431_ = ((E38)[@ppxlib.enter_value x38])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__430_ = ((E39)[@ppxlib.enter_value x39])[@@ppxlib.do_not_enter_value
+      and __let_syntax__432_ = ((E39)[@ppxlib.enter_value x39])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__431_ = ((E40)[@ppxlib.enter_value x40])[@@ppxlib.do_not_enter_value
+      and __let_syntax__433_ = ((E40)[@ppxlib.enter_value x40])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__432_ = ((E41)[@ppxlib.enter_value x41])[@@ppxlib.do_not_enter_value
+      and __let_syntax__434_ = ((E41)[@ppxlib.enter_value x41])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__433_ = ((E42)[@ppxlib.enter_value x42])[@@ppxlib.do_not_enter_value
+      and __let_syntax__435_ = ((E42)[@ppxlib.enter_value x42])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__434_ = ((E43)[@ppxlib.enter_value x43])[@@ppxlib.do_not_enter_value
+      and __let_syntax__436_ = ((E43)[@ppxlib.enter_value x43])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__435_ = ((E44)[@ppxlib.enter_value x44])[@@ppxlib.do_not_enter_value
+      and __let_syntax__437_ = ((E44)[@ppxlib.enter_value x44])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__436_ = ((E45)[@ppxlib.enter_value x45])[@@ppxlib.do_not_enter_value
+      and __let_syntax__438_ = ((E45)[@ppxlib.enter_value x45])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__437_ = ((E46)[@ppxlib.enter_value x46])[@@ppxlib.do_not_enter_value
+      and __let_syntax__439_ = ((E46)[@ppxlib.enter_value x46])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__438_ = ((E47)[@ppxlib.enter_value x47])[@@ppxlib.do_not_enter_value
+      and __let_syntax__440_ = ((E47)[@ppxlib.enter_value x47])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__439_ = ((E48)[@ppxlib.enter_value x48])[@@ppxlib.do_not_enter_value
+      and __let_syntax__441_ = ((E48)[@ppxlib.enter_value x48])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__440_ = ((E49)[@ppxlib.enter_value x49])[@@ppxlib.do_not_enter_value
+      and __let_syntax__442_ = ((E49)[@ppxlib.enter_value x49])[@@ppxlib.do_not_enter_value
                                                                  ]
-      and __let_syntax__441_ = ((E50)[@ppxlib.enter_value x50])[@@ppxlib.do_not_enter_value
+      and __let_syntax__443_ = ((E50)[@ppxlib.enter_value x50])[@@ppxlib.do_not_enter_value
                                                                  ] in
       Let_syntax.arr2
         ~here:{
@@ -2688,9 +2788,9 @@ module%test [@name "arrn nesting edge cases"] _ = struct
                       pos_lnum = 0;
                       pos_cnum = (-1);
                       pos_bol = 0
-                    } __let_syntax__392_ __let_syntax__393_ __let_syntax__394_
-              __let_syntax__395_ __let_syntax__396_ __let_syntax__397_
-              __let_syntax__398_
+                    } __let_syntax__394_ __let_syntax__395_ __let_syntax__396_
+              __let_syntax__397_ __let_syntax__398_ __let_syntax__399_
+              __let_syntax__400_
               ~f:(fun t0 t1 t2 t3 t4 t5 t6 -> (t0, t1, t2, t3, t4, t5, t6)))
            (Let_syntax.map7
               ~here:{
@@ -2698,9 +2798,9 @@ module%test [@name "arrn nesting edge cases"] _ = struct
                       pos_lnum = 0;
                       pos_cnum = (-1);
                       pos_bol = 0
-                    } __let_syntax__399_ __let_syntax__400_ __let_syntax__401_
-              __let_syntax__402_ __let_syntax__403_ __let_syntax__404_
-              __let_syntax__405_
+                    } __let_syntax__401_ __let_syntax__402_ __let_syntax__403_
+              __let_syntax__404_ __let_syntax__405_ __let_syntax__406_
+              __let_syntax__407_
               ~f:(fun t0 t1 t2 t3 t4 t5 t6 -> (t0, t1, t2, t3, t4, t5, t6)))
            (Let_syntax.map7
               ~here:{
@@ -2708,9 +2808,9 @@ module%test [@name "arrn nesting edge cases"] _ = struct
                       pos_lnum = 0;
                       pos_cnum = (-1);
                       pos_bol = 0
-                    } __let_syntax__406_ __let_syntax__407_ __let_syntax__408_
-              __let_syntax__409_ __let_syntax__410_ __let_syntax__411_
-              __let_syntax__412_
+                    } __let_syntax__408_ __let_syntax__409_ __let_syntax__410_
+              __let_syntax__411_ __let_syntax__412_ __let_syntax__413_
+              __let_syntax__414_
               ~f:(fun t0 t1 t2 t3 t4 t5 t6 -> (t0, t1, t2, t3, t4, t5, t6)))
            (Let_syntax.map7
               ~here:{
@@ -2718,9 +2818,9 @@ module%test [@name "arrn nesting edge cases"] _ = struct
                       pos_lnum = 0;
                       pos_cnum = (-1);
                       pos_bol = 0
-                    } __let_syntax__413_ __let_syntax__414_ __let_syntax__415_
-              __let_syntax__416_ __let_syntax__417_ __let_syntax__418_
-              __let_syntax__419_
+                    } __let_syntax__415_ __let_syntax__416_ __let_syntax__417_
+              __let_syntax__418_ __let_syntax__419_ __let_syntax__420_
+              __let_syntax__421_
               ~f:(fun t0 t1 t2 t3 t4 t5 t6 -> (t0, t1, t2, t3, t4, t5, t6)))
            (Let_syntax.map7
               ~here:{
@@ -2728,9 +2828,9 @@ module%test [@name "arrn nesting edge cases"] _ = struct
                       pos_lnum = 0;
                       pos_cnum = (-1);
                       pos_bol = 0
-                    } __let_syntax__420_ __let_syntax__421_ __let_syntax__422_
-              __let_syntax__423_ __let_syntax__424_ __let_syntax__425_
-              __let_syntax__426_
+                    } __let_syntax__422_ __let_syntax__423_ __let_syntax__424_
+              __let_syntax__425_ __let_syntax__426_ __let_syntax__427_
+              __let_syntax__428_
               ~f:(fun t0 t1 t2 t3 t4 t5 t6 -> (t0, t1, t2, t3, t4, t5, t6)))
            (Let_syntax.map7
               ~here:{
@@ -2738,9 +2838,9 @@ module%test [@name "arrn nesting edge cases"] _ = struct
                       pos_lnum = 0;
                       pos_cnum = (-1);
                       pos_bol = 0
-                    } __let_syntax__427_ __let_syntax__428_ __let_syntax__429_
-              __let_syntax__430_ __let_syntax__431_ __let_syntax__432_
-              __let_syntax__433_
+                    } __let_syntax__429_ __let_syntax__430_ __let_syntax__431_
+              __let_syntax__432_ __let_syntax__433_ __let_syntax__434_
+              __let_syntax__435_
               ~f:(fun t0 t1 t2 t3 t4 t5 t6 -> (t0, t1, t2, t3, t4, t5, t6)))
            (Let_syntax.map7
               ~here:{
@@ -2748,12 +2848,12 @@ module%test [@name "arrn nesting edge cases"] _ = struct
                       pos_lnum = 0;
                       pos_cnum = (-1);
                       pos_bol = 0
-                    } __let_syntax__434_ __let_syntax__435_ __let_syntax__436_
-              __let_syntax__437_ __let_syntax__438_ __let_syntax__439_
-              __let_syntax__440_
+                    } __let_syntax__436_ __let_syntax__437_ __let_syntax__438_
+              __let_syntax__439_ __let_syntax__440_ __let_syntax__441_
+              __let_syntax__442_
               ~f:(fun t0 t1 t2 t3 t4 t5 t6 -> (t0, t1, t2, t3, t4, t5, t6)))
            ~f:(fun t0 t1 t2 t3 t4 t5 t6 -> (t0, t1, t2, t3, t4, t5, t6)))
-        __let_syntax__441_
+        __let_syntax__443_
         ~f:(fun
               ((x1, x2, x3, x4, x5, x6, x7), (x8, x9, x10, x11, x12, x13, x14),
                (x15, x16, x17, x18, x19, x20, x21),

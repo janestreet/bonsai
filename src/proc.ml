@@ -740,7 +740,7 @@ module Edge = struct
         type result = r
 
         let sexp_of_result = Option.value ~default:sexp_of_opaque sexp_of_model
-        let equal_result = Option.value equal ~default:phys_equal
+        let equal_result = Option.value equal ~default:[%eta2 phys_equal]
 
         type t =
           { last_seqnum : int
@@ -925,7 +925,7 @@ module Effect_throttling = struct
         }
 
       let sexp_of_t = sexp_of_opaque
-      let equal = phys_equal
+      let equal = [%eta2 phys_equal]
     end
     in
     let%sub _model, inject =
@@ -1063,7 +1063,7 @@ let freeze ?(here = Stdlib.Lexing.dummy_pos) ?sexp_of_model ?equal value =
 
 let thunk (type a) ?(here = Stdlib.Lexing.dummy_pos) (f : unit -> a) =
   let%sub out = return ~here Value.(map ~here (Var.value ~here (Var.create ())) ~f) in
-  freeze ~here ~sexp_of_model:[%sexp_of: opaque] ~equal:phys_equal out
+  freeze ~here ~sexp_of_model:[%sexp_of: opaque] ~equal:[%eta2 phys_equal] out
 ;;
 
 let most_recent_some ?(here = Stdlib.Lexing.dummy_pos) ?sexp_of_model ~equal input ~f =

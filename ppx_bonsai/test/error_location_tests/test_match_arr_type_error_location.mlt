@@ -1,5 +1,6 @@
 #print_line_numbers true
 
+open! Core
 open! Bonsai
 open Bonsai.Let_syntax
 
@@ -11,7 +12,7 @@ let _component t (local_ _graph) =
 
 [%%expect
   {xxx|
-Line 9, characters 9-15:
+Line 10, characters 9-15:
 Error (warning 27 [unused-var-strict]): unused variable unused.
 |xxx}]
 
@@ -23,7 +24,7 @@ let _component t (local_ _graph) =
 
 [%%expect
   {|
-Line 21, characters 4-8:
+Line 22, characters 4-8:
 Error: The constructor Some expects 1 argument(s),
        but is applied here to 0 argument(s)
 |}]
@@ -37,7 +38,7 @@ let _component (local_ _graph) =
 
 [%%expect
   {|
-Line 33, characters 12-13:
+Line 34, characters 12-13:
 Error: This expression has type int option
        but an expression was expected of type 'a t
 |}]
@@ -49,7 +50,7 @@ let _component t (local_ _graph) =
 
 [%%expect
   {|
-Line 46, characters 2-32:
+Line 47, characters 2-32:
 Error (warning 8 [partial-match]): this pattern-matching is not exhaustive.
 Here is an example of a case that is not matched:
 Some _
@@ -63,7 +64,55 @@ let _component t (local_ _graph) =
 
 [%%expect
   {|
-Line 60, characters 16-21:
+Line 61, characters 16-21:
 Error: match%arr doesn't support when clauses. Try using let%arr ... match
        ... or casing within a match%arr arm instead
+|}]
+
+(* . errors *)
+let component (local_ _graph) =
+  let a : (unit, Nothing.t) Result.t Bonsai.t = Bonsai.return (Ok ()) in
+  match%arr a with
+  | Ok () -> ()
+  | Error _ -> .
+;;
+
+[%%expect {| |}]
+
+let component (local_ _graph) =
+  let a : (unit, unit) Result.t Bonsai.t = Bonsai.return (Ok ()) in
+  match%arr a with
+  | Ok () -> ()
+  | Error _ -> .
+;;
+
+[%%expect
+  {|
+Line 86, characters 4-11:
+Error: This match case could not be refuted.
+       Here is an example of a value that would reach it: Error ()
+|}]
+
+let component (never : unit -> Nothing.t Bonsai.t) (local_ _graph) =
+  match%arr never () with
+  | _ -> .
+;;
+
+[%%expect {| |}]
+
+(* NOTE: Supporting [Nothing.unreachable_code] instead of [.] is beyond the scope of what
+   is possible for a ppx, so we do not support it as it would involve needing to understand
+   the semantics of [Nothing.unreachable_code] / not just the syntax. *)
+let component (local_ _graph) =
+  let a : (unit, Nothing.t) Result.t Bonsai.t = Bonsai.return (Ok ()) in
+  match%arr a with
+  | Ok () -> ()
+  | Error unreachable -> Nothing.unreachable_code unreachable
+;;
+
+[%%expect
+  {|
+Line 110, characters 4-21:
+Error (warning 56 [unreachable-case]): this match case is unreachable.
+Consider replacing it with a refutation case '<pat> -> .'
 |}]

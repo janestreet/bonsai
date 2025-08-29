@@ -5,15 +5,3 @@
    virtual_dom.ui_effect)
  (preprocess
   (pps ppx_jane ppx_bonsai)))
-
-(rule
- (targets bonsai_extra_cont_and_proc.diff)
- (deps ./bonsai_extra_proc.mli
-   %{workspace_root}/lib/bonsai/extra/bonsai_extra.mli)
- (action
-  (bash
-    "%{bin:patdiff-for-review} %{bin:patdiff} -context 1000  ../bonsai_extra.mli ./bonsai_extra_proc.mli > bonsai_extra_cont_and_proc.diff")))
-
-(alias
- (name default)
- (deps ./bonsai_extra_cont_and_proc.diff))

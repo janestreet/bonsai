@@ -259,7 +259,7 @@ module Model = struct
   ;;
 
   let of_module ~sexp_of_model ~equal ~default ~name =
-    let equal = Option.value ~default:phys_equal equal in
+    let equal = Option.value ~default:[%eta2 phys_equal] equal in
     let type_id = Type_equal.Id.create ~name:(sprintf "%s-model" name) sexp_of_model in
     { type_id = Leaf { type_id }; default; equal; sexp_of = sexp_of_model }
   ;;

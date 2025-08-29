@@ -291,7 +291,7 @@ and arr ~(expand_with : label) (location_behavior : Location_behavior.t) : (modu
       | true -> add_cutoff_to_value_binding ~loc ~modul value_binding
     ;;
 
-    let disallow_expression _ = function
+    let disallow_expression ~loc:_ _ = function
       | Pexp_while (_, _) -> Error "while%%arr is not supported."
       | _ -> Ok ()
     ;;
@@ -582,11 +582,13 @@ let sub (location_behavior : Location_behavior.t) : (module Ext) =
     let wrap_expansion = wrap_expansion_identity
     let prevent_tail_call = true
 
-    let disallow_expression _ = function
+    let disallow_expression ~loc _ pexp_desc =
+      match Ppxlib_jane.Shim.Expression_desc.of_parsetree pexp_desc ~loc with
       (* It is worse to use let%sub...and instead of multiple let%sub in a row,
        so disallow it. *)
-      | Pexp_let (Nonrecursive, _ :: _ :: _, _) ->
+      | Pexp_let (_, Nonrecursive, _ :: _ :: _, _) ->
         Error "let%sub should not be used with 'and'."
+      | Pexp_let (Mutable, _, _, _) -> Error "let%sub should not be used with 'mutable'."
       | Pexp_while (_, _) -> Error "while%sub is not supported"
       | _ -> Ok ()
     ;;
