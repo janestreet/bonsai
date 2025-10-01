@@ -27,6 +27,7 @@ depends: [
   "uopt"
   "virtual_dom"
   "dune"             {>= "3.17.0"}
+  "js_of_ocaml-ppx"  {= "6.0.1+ox"}
   "ppxlib"           {= "0.33.0+ox"}
 ]
 available: arch != "arm32" & arch != "x86_32"

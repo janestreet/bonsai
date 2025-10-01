@@ -1,0 +1,6 @@
+(library
+ (name bonsai_extra_id_gen)
+ (public_name bonsai.extra.id_gen)
+ (preprocess
+  (pps ppx_jane js_of_ocaml-ppx ppx_bonsai))
+ (libraries bonsai core))

@@ -1,7 +1,7 @@
 (library
  (name bonsai_arrow_deprecated)
  (public_name bonsai.arrow_deprecated)
- (libraries bonsai bonsai_private_eval bonsai_proc core incr_map incremental
+ (libraries bonsai bonsai_private_base bonsai_proc core incr_map incremental
    virtual_dom.ui_effect bonsai_concrete.ui_incr
    bonsai_concrete.ui_time_source)
  (preprocess

@@ -161,7 +161,8 @@ end = struct
   ;;
 
   let handle_for_lazy ~(here : [%call_pos]) f =
-    handle_with_global_graph ~here `Inside_lazy f
+    (Timer.timer ()).time `Graph_application ~f:(fun () ->
+      handle_with_global_graph ~here `Inside_lazy f)
   ;;
 
   (* Meant to be called at bonsai entrypoints only, [top_level_handle] uses the
@@ -183,6 +184,7 @@ type graph = Cont_primitives.graph
 open Cont_primitives
 
 let return = Value.return
+let return_lazy = Value.return_lazy
 
 let arr1 ~(here : [%call_pos]) graph a ~f =
   perform ~here graph (Proc.read ~here (Proc.Value.map ~here a ~f))
@@ -383,11 +385,11 @@ let all_map ~(here : [%call_pos]) v (local_ graph) =
   perform
     ~here
     graph
-    (Proc.Computation.all_map (Core.Map.map v ~f:(fun f -> handle ~f graph)))
+    (Proc.Computation.all_map ~here (Core.Map.map v ~f:(fun f -> handle ~here ~f graph)))
 ;;
 
-let transpose_opt opt =
-  Option.value_map opt ~default:(return None) ~f:(map ~f:Option.some)
+let transpose_opt ~(here : [%call_pos]) opt =
+  Option.value_map opt ~default:(return ~here None) ~f:(map ~here ~f:Option.some)
 ;;
 
 let path_id ~(here : [%call_pos]) graph = perform ~here graph (Proc.path_id ~here ())
@@ -539,6 +541,62 @@ let state_machine
 
 module Computation_status = Proc.Computation_status
 
+module Actor (Action : T1) = struct
+  module Base = Proc.Actor (Action)
+  include Base
+
+  let create_with_input
+    ~(here : [%call_pos])
+    ?sexp_of_action
+    ?reset
+    ?sexp_of_model
+    ?equal
+    ~default_model
+    ~recv
+    input
+    (local_ graph)
+    =
+    let model_and_inject =
+      Base.create_with_input
+        ~here
+        ?sexp_of_action
+        ?reset
+        ?sexp_of_model
+        ?equal
+        ~default_model
+        ~recv
+        input
+      |> perform ~here graph
+    in
+    map ~here model_and_inject ~f:Tuple2.get1, map ~here model_and_inject ~f:Tuple2.get2
+  ;;
+
+  let create
+    ~(here : [%call_pos])
+    ?sexp_of_action
+    ?reset
+    ?sexp_of_model
+    ?equal
+    ~default_model
+    ~recv
+    (local_ graph)
+    =
+    let model_and_inject =
+      Base.create
+        ~here
+        ?sexp_of_action
+        ?reset
+        ?sexp_of_model
+        ?equal
+        ~default_model
+        ~recv
+        ()
+      |> perform ~here graph
+    in
+    map ~here model_and_inject ~f:Tuple2.get1, map ~here model_and_inject ~f:Tuple2.get2
+  ;;
+end
+
 let state_machine_with_input__for_proc2
   ~(here : [%call_pos])
   ?sexp_of_action
@@ -683,8 +741,6 @@ module Expert = struct
       handle ~here graph ~f:(fun graph -> f k v graph) [@nontail])
     |> perform ~here graph
   ;;
-
-  let delay = delay
 
   module Var = Var
   module For_bonsai_internal = For_bonsai_internal
@@ -838,7 +894,7 @@ let enum ~(here : [%call_pos]) m ~match_ ~with_ (local_ graph) =
   let with_ : 'k -> 'd Computation.t =
     fun k -> handle ~f:(fun (local_ graph) -> with_ k graph) graph [@nontail]
   in
-  perform ~here graph (Proc.enum m ~match_ ~with_)
+  perform ~here graph (Proc.enum ~here m ~match_ ~with_)
 ;;
 
 let with_inverted_lifecycle_ordering ~(here : [%call_pos]) ~compute_dep ~f (local_ graph) =
@@ -998,7 +1054,7 @@ module Edge = struct
     perform
       ~here
       graph
-      (Proc.Edge.lifecycle' ?on_activate ?on_deactivate ?after_display ())
+      (Proc.Edge.lifecycle' ~here ?on_activate ?on_deactivate ?after_display ())
   ;;
 
   let lifecycle' ~(here : [%call_pos]) ?on_activate ?on_deactivate ?after_display graph =
@@ -1334,11 +1390,12 @@ module Let_syntax = struct
     ;;
 
     let sub ~here:(_ : [%call_pos]) a ~f = f a
+    let delay = delay
   end
 end
 
 module For_proc = struct
-  module type Map0_output = Map0_intf.Output
+  module type Map_and_set0_output = Map_and_set0_intf.Output
 
   let arr1 = arr1
   let arr2 = arr2
@@ -1437,7 +1494,7 @@ module Conv = struct
   let isolated = isolated
 end
 
-module Map = Map0.Make (struct
+include Map_and_set0.Make (struct
     module Value = struct
       type nonrec 'a t = 'a t
 

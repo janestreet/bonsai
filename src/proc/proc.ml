@@ -504,4 +504,5 @@ let enum
 let sub = This_let_syntax.Let_syntax.sub
 
 module Map = Bonsai_cont.Cont.Map
+module Set = Bonsai_cont.Cont.Set
 module Let_syntax = This_let_syntax

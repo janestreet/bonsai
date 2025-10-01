@@ -37,9 +37,9 @@ module Let_syntax = struct
     ;;
   end
 
-  let ( >>| ) a f = Let_syntax.map a ~f
-  let ( <*> ) f a = Value.map2 f a ~f:(fun f a -> f a)
-  let ( <$> ) f a = Let_syntax.map a ~f
+  let ( >>| ) ~(here : [%call_pos]) a f = Let_syntax.map ~here a ~f
+  let ( <*> ) ~(here : [%call_pos]) f a = Value.map2 ~here f a ~f:(fun f a -> f a)
+  let ( <$> ) ~(here : [%call_pos]) f a = Let_syntax.map ~here a ~f
 end
 
 open Let_syntax
@@ -73,7 +73,13 @@ let with_model_resetter ~(here : [%call_pos]) inside =
     sub ~here inside ~f:(fun r -> read ~here (Value.both ~here r reset)))
 ;;
 
-let enum (type k) (module E : Enum with type t = k) ~match_ ~(local_ with_) =
+let enum
+  (type k)
+  ~(here : [%call_pos])
+  (module E : Enum with type t = k)
+  ~match_
+  ~(local_ with_)
+  =
   let module E = struct
     include E
     include Comparator.Make (E)
@@ -83,10 +89,10 @@ let enum (type k) (module E : Enum with type t = k) ~match_ ~(local_ with_) =
   let reverse_index =
     Map.of_alist_exn (module E) (List.mapi E.all ~f:(fun i k -> k, i))
   in
-  let match_ = match_ >>| Map.find_exn reverse_index in
+  let match_ = Value.map ~here match_ ~f:(Map.find_exn reverse_index) in
   let branches = Array.length forward_index in
   let with_ i = with_ (Array.get forward_index i) in
-  Let_syntax.switch ~here:[%here] ~match_ ~branches ~with_ [@nontail]
+  Let_syntax.switch ~here ~match_ ~branches ~with_ [@nontail]
 ;;
 
 let scope_model
@@ -226,6 +232,136 @@ let of_module
   M.compute ~inject () model
 ;;
 
+module Actor (Action : T1) = struct
+  type get_apply_action_context =
+    { get : 'a. unit -> ('a Action.t, 'a) Apply_action_context.t }
+
+  type ('model, 'input) recv_with_input =
+    { f :
+        'a.
+        get_apply_action_context
+        -> 'input Computation_status.t
+        -> 'model
+        -> 'a Action.t
+        -> 'model * 'a
+    }
+
+  type sexp_of_action = { f : 'a. 'a Action.t -> Sexp.t }
+
+  type hidden_callback =
+    | T : ('a Action.t, 'a) Effect.Private.Callback.t -> hidden_callback
+
+  type inject = { f : 'a. 'a Action.t -> 'a Effect.t }
+
+  let create_with_input
+    : type input model.
+      here:[%call_pos]
+      -> ?sexp_of_action:sexp_of_action
+      -> ?reset:(get_apply_action_context -> model -> model)
+      -> ?sexp_of_model:(model -> Sexp.t)
+      -> ?equal:(model -> model -> bool)
+      -> default_model:model
+      -> recv:(model, input) recv_with_input
+      -> input Value.t
+      -> (model * inject) Computation.t
+    =
+    fun ~(here : [%call_pos])
+      ?(sexp_of_action = { f = sexp_of_opaque })
+      ?reset
+      ?sexp_of_model
+      ?equal
+      ~default_model
+      ~recv
+      input ->
+    let open Let_syntax_with_map_location (struct
+        let here = here
+      end) in
+    let sexp_of_action (T cb) = sexp_of_action.f (Effect.Private.Callback.request cb) in
+    let make_inject
+      (type a)
+      ~(inject : hidden_callback -> unit Effect.t)
+      ~schedule_event
+      (action : a Action.t)
+      : a Effect.t
+      =
+      Effect.Private.make ~request:action ~evaluator:(fun action ->
+        schedule_event (inject (T action)) ~on_exn:(Effect.Private.Callback.on_exn action))
+    in
+    let ctx ~context =
+      let { Apply_action_context.Private.inject; schedule_event; time_source } =
+        Apply_action_context.Private.reveal context
+      in
+      { get =
+          (fun () ->
+            let inject =
+              make_inject ~inject ~schedule_event:(fun action ~on_exn:_ ->
+                schedule_event action)
+            in
+            Apply_action_context.Private.create ~inject ~schedule_event ~time_source)
+      }
+    in
+    let reset = Option.map reset ~f:(fun f context model -> f (ctx ~context) model) in
+    let%sub model, inject =
+      state_machine_with_input
+        ~here
+        ~sexp_of_action
+        ?sexp_of_model
+        ?reset
+        ?equal
+        ~default_model
+        ~apply_action:(fun context input model (T callback) ->
+          let%tydi { schedule_event; _ } = Apply_action_context.Private.reveal context in
+          let action = Effect.Private.Callback.request callback in
+          let new_model, response = recv.f (ctx ~context) input model action in
+          schedule_event (Effect.Private.Callback.respond_to callback response);
+          new_model)
+        input
+    in
+    let%sub inject =
+      let%arr inject in
+      let f action =
+        make_inject
+          ~inject
+          ~schedule_event:(fun action ~on_exn -> Effect.Expert.handle action ~on_exn)
+          action
+      in
+      ({ f } : inject)
+    in
+    let%arr model and inject in
+    model, inject
+  ;;
+
+  type 'model recv =
+    { f : 'a. get_apply_action_context -> 'model -> 'a Action.t -> 'model * 'a }
+
+  let create
+    ~(here : [%call_pos])
+    ?sexp_of_action
+    ?reset
+    ?sexp_of_model
+    ?equal
+    ~default_model
+    ~recv
+    ()
+    =
+    let recv : _ recv_with_input =
+      { f =
+          (fun get_apply_action_context (_ : unit Computation_status.t) model action ->
+            recv.f get_apply_action_context model action)
+      }
+    in
+    create_with_input
+      ~here
+      ?sexp_of_action
+      ?sexp_of_model
+      ?equal
+      ?reset
+      ~default_model
+      ~recv
+      (Value.return ~here ())
+  ;;
+end
+
 let actor_with_input
   : type input model action return.
     here:[%call_pos]
@@ -258,9 +394,13 @@ let actor_with_input
     let sexp_of_t cb = sexp_of_action (Effect.Private.Callback.request cb)
   end
   in
-  let make_inject ~inject ~schedule_event action =
+  let make_inject_with_on_exn ~inject ~schedule_event action =
     Effect.Private.make ~request:action ~evaluator:(fun action ->
-      schedule_event (inject action))
+      schedule_event (inject action) ~on_exn:(Effect.Private.Callback.on_exn action))
+  in
+  let make_inject ~inject ~schedule_event action =
+    let schedule_event effect ~on_exn:_ = schedule_event effect in
+    make_inject_with_on_exn ~inject ~schedule_event action
   in
   let reset =
     Option.map reset ~f:(fun f context model ->
@@ -297,7 +437,8 @@ let actor_with_input
   in
   let%sub inject =
     let%arr inject in
-    make_inject ~inject ~schedule_event:Effect.Expert.handle
+    make_inject_with_on_exn ~inject ~schedule_event:(fun effect ~on_exn ->
+      Effect.Expert.handle ~on_exn effect)
   in
   let%arr model and inject in
   model, inject
@@ -350,7 +491,7 @@ let state' (type model) ~(here : [%call_pos]) ?reset ?sexp_of_model ?equal defau
   in
   let%sub set_state =
     let%arr set_state in
-    fun ~(here : [%call_pos]) prev -> set_state (here, prev)
+    fun prev -> set_state (here, prev)
   in
   let%arr state and set_state in
   state, set_state
@@ -565,7 +706,7 @@ module Edge = struct
         type result = r
 
         let sexp_of_result = Option.value ~default:sexp_of_opaque sexp_of_model
-        let equal_result = Option.value equal ~default:phys_equal
+        let equal_result = Option.value equal ~default:[%eta2 phys_equal]
 
         type t =
           { last_seqnum : int
@@ -750,7 +891,7 @@ module Effect_throttling = struct
         }
 
       let sexp_of_t = sexp_of_opaque
-      let equal = phys_equal
+      let equal = [%eta2 phys_equal]
     end
     in
     let%sub _model, inject =
@@ -849,7 +990,9 @@ module Effect_throttling = struct
     let%arr inject in
     fun request ->
       Effect.Private.make ~request ~evaluator:(fun callback ->
-        Effect.Expert.handle (inject (Run callback)))
+        Effect.Expert.handle
+          (inject (Run callback))
+          ~on_exn:(Effect.Private.Callback.on_exn callback))
   ;;
 end
 
@@ -858,11 +1001,13 @@ module Incr = struct
   include Incr0
 end
 
-module Map0 = Map0.Make (struct
+module Map_and_set0 = Map_and_set0.Make (struct
     module Value = Value
     module Computation = Computation
     module Incr = Incr
   end)
+
+module Map0 = Map_and_set0.Map
 
 let freeze ~(here : [%call_pos]) ?sexp_of_model ?equal value =
   let open Let_syntax_with_map_location (struct
@@ -884,7 +1029,7 @@ let freeze ~(here : [%call_pos]) ?sexp_of_model ?equal value =
 
 let thunk (type a) ~(here : [%call_pos]) (f : unit -> a) =
   let%sub out = return ~here Value.(map ~here (Var.value ~here (Var.create ())) ~f) in
-  freeze ~here ~sexp_of_model:[%sexp_of: opaque] ~equal:phys_equal out
+  freeze ~here ~sexp_of_model:[%sexp_of: opaque] ~equal:[%eta2 phys_equal] out
 ;;
 
 let most_recent_some ~(here : [%call_pos]) ?sexp_of_model ~equal input ~f =
@@ -1114,7 +1259,7 @@ module Clock = struct
     let%sub initial_model =
       let%arr base_time and span in
       let start_time =
-        if trigger_on_activate then base_time else Time_ns.add base_time span
+        if trigger_on_activate then base_time else Time_ns.add_saturating base_time span
       in
       Every_model.Waiting_for (None, start_time)
     in
@@ -1176,7 +1321,7 @@ module Clock = struct
     generic_every ~create_effect:(fun ~span ~base_time:_ ~get_current_time ~callback ->
       let%map.Effect () = callback in
       let now = get_current_time () in
-      ensure_clock_advances now (Time_ns.add now span))
+      ensure_clock_advances now (Time_ns.add_saturating now span))
   ;;
 
   let every_wait_period_after_previous_effect_starts_blocking =
@@ -1184,7 +1329,7 @@ module Clock = struct
       let start = get_current_time () in
       let%map.Effect () = callback in
       let now = get_current_time () in
-      ensure_clock_advances now (Time_ns.add start span))
+      ensure_clock_advances now (Time_ns.add_saturating start span))
   ;;
 
   let every_multiple_of_period_blocking =
@@ -1375,7 +1520,7 @@ module Computation = struct
       let%sub t1 in
       let%sub t2 in
       let%sub t3 in
-      read (Value.map3 t1 t2 t3 ~f)
+      read ~here (Value.map3 ~here t1 t2 t3 ~f)
     ;;
 
     let map4 ~(here : [%call_pos]) t1 t2 t3 t4 ~f =
@@ -1383,7 +1528,7 @@ module Computation = struct
       let%sub t2 in
       let%sub t3 in
       let%sub t4 in
-      read (Value.map4 t1 t2 t3 t4 ~f)
+      read ~here (Value.map4 ~here t1 t2 t3 t4 ~f)
     ;;
 
     let map5 ~(here : [%call_pos]) t1 t2 t3 t4 t5 ~f =
@@ -1392,7 +1537,7 @@ module Computation = struct
       let%sub t3 in
       let%sub t4 in
       let%sub t5 in
-      read (Value.map5 t1 t2 t3 t4 t5 ~f)
+      read ~here (Value.map5 ~here t1 t2 t3 t4 t5 ~f)
     ;;
 
     let map6 ~(here : [%call_pos]) t1 t2 t3 t4 t5 t6 ~f =
@@ -1402,7 +1547,7 @@ module Computation = struct
       let%sub t4 in
       let%sub t5 in
       let%sub t6 in
-      read (Value.map6 t1 t2 t3 t4 t5 t6 ~f)
+      read ~here (Value.map6 ~here t1 t2 t3 t4 t5 t6 ~f)
     ;;
 
     let map7 ~(here : [%call_pos]) t1 t2 t3 t4 t5 t6 t7 ~f =
@@ -1413,7 +1558,7 @@ module Computation = struct
       let%sub t5 in
       let%sub t6 in
       let%sub t7 in
-      read (Value.map7 t1 t2 t3 t4 t5 t6 t7 ~f)
+      read ~here (Value.map7 ~here t1 t2 t3 t4 t5 t6 t7 ~f)
     ;;
   end
 
@@ -1439,7 +1584,7 @@ module Computation = struct
         map7 t1 t2 t3 t4 t5 t6 t7 ~here ~f:(fun a1 a2 a3 a4 a5 a6 a7 ->
           [ a1; a2; a3; a4; a5; a6; a7 ])
       in
-      let right = all rest in
+      let right = all ~here rest in
       map2 left right ~here ~f:(fun left right -> left @ right)
   ;;
 
@@ -1451,7 +1596,7 @@ module Computation = struct
   ;;
 
   let fold_right ~(here : [%call_pos]) xs ~f ~init =
-    List.fold_right xs ~init:(read init) ~f:(fun a b ->
+    List.fold_right xs ~init:(read ~here init) ~f:(fun a b ->
       let%sub a in
       let%sub b in
       f a b)
@@ -1502,4 +1647,4 @@ module Expert = struct
   let assoc_on = assoc_on
 end
 
-module Map = Map0
+module Map = Map_and_set0

@@ -69,12 +69,19 @@ include struct
     | Map5 _
     | Map6 _
     | Map7 _ -> None
-    | Constant x -> Some (lazy x)
+    | Constant x -> Some x
     | Exception ex -> Some (lazy (raise ex))
   ;;
 
-  let contents_if_value_is_constant value =
-    Option.map (lazy_contents_if_value_is_constant value) ~f:Lazy.force
+  let force_but_capture_exceptions ({ Value.value; here } as t) =
+    match value with
+    | Constant x ->
+      (try
+         let _ : _ = Lazy.force x in
+         t
+       with
+       | exn -> wrap_value ~here (Value.Exception exn))
+    | _ -> t
   ;;
 
   let value_is_constant value = Option.is_some (lazy_contents_if_value_is_constant value)
@@ -126,10 +133,12 @@ module Constant_fold (Recurse : Fix_transform.Recurse with module Types := Types
     | Both (a, b) as original ->
       value_exception_folder ~f:(fun () ->
         let value =
-          match contents_if_value_is_constant a, contents_if_value_is_constant b with
-          | Some l, Some r -> Value.Constant (l, r)
-          | Some l, None -> Map { t = b; f = (fun b -> l, b) }
-          | None, Some r -> Map { t = a; f = (fun a -> a, r) }
+          match
+            lazy_contents_if_value_is_constant a, lazy_contents_if_value_is_constant b
+          with
+          | Some l, Some r -> Value.Constant (lazy (Lazy.force l, Lazy.force r))
+          | Some l, None -> Map { t = b; f = (fun b -> Lazy.force l, b) }
+          | None, Some r -> Map { t = a; f = (fun a -> a, Lazy.force r) }
           | None, None -> original
         in
         rebuild value)
@@ -137,7 +146,7 @@ module Constant_fold (Recurse : Fix_transform.Recurse with module Types := Types
       original ->
       value_exception_folder ~f:(fun () ->
         rebuild
-          (match contents_if_value_is_constant t, t.value with
+          (match lazy_contents_if_value_is_constant t, t.value with
            | Some v, _ -> Constant v
            | ( None
              , Cutoff
@@ -157,121 +166,230 @@ module Constant_fold (Recurse : Fix_transform.Recurse with module Types := Types
            | None, _ -> original))
     | Map { t; f } ->
       constant_or_value value_with_position ~f:(fun () ->
-        let%map t1 = contents_if_value_is_constant t in
-        `Constant (f t1))
+        let%map t1 = lazy_contents_if_value_is_constant t in
+        `Constant (Lazy.map t1 ~f))
     | Map2 { t1; t2; f } ->
       constant_or_value value_with_position ~f:(fun () ->
-        match contents_if_value_is_constant t1, contents_if_value_is_constant t2 with
-        | Some t1, Some t2 -> Some (`Constant (f t1 t2))
-        | Some t1, None -> Some (`Value (Value.Map { t = t2; f = (fun t2 -> f t1 t2) }))
-        | None, Some t2 -> Some (`Value (Value.Map { t = t1; f = (fun t1 -> f t1 t2) }))
+        match
+          lazy_contents_if_value_is_constant t1, lazy_contents_if_value_is_constant t2
+        with
+        | Some t1, Some t2 -> Some (`Constant (lazy (f (Lazy.force t1) (Lazy.force t2))))
+        | Some t1, None ->
+          Some (`Value (Value.Map { t = t2; f = (fun t2 -> f (Lazy.force t1) t2) }))
+        | None, Some t2 ->
+          Some (`Value (Value.Map { t = t1; f = (fun t1 -> f t1 (Lazy.force t2)) }))
         | None, None -> None)
     | Map3 { t1; t2; t3; f } ->
       constant_or_value value_with_position ~f:(fun () ->
         match
-          ( contents_if_value_is_constant t1
-          , contents_if_value_is_constant t2
-          , contents_if_value_is_constant t3 )
+          ( lazy_contents_if_value_is_constant t1
+          , lazy_contents_if_value_is_constant t2
+          , lazy_contents_if_value_is_constant t3 )
         with
-        | Some t1, Some t2, Some t3 -> Some (`Constant (f t1 t2 t3))
+        | Some t1, Some t2, Some t3 ->
+          Some (`Constant (lazy (f (Lazy.force t1) (Lazy.force t2) (Lazy.force t3))))
         | Some t1, Some t2, None ->
-          Some (`Value (Value.Map { t = t3; f = (fun t3 -> f t1 t2 t3) }))
+          Some
+            (`Value
+              (Value.Map { t = t3; f = (fun t3 -> f (Lazy.force t1) (Lazy.force t2) t3) }))
         | Some t1, None, Some t3 ->
-          Some (`Value (Value.Map { t = t2; f = (fun t2 -> f t1 t2 t3) }))
+          Some
+            (`Value
+              (Value.Map { t = t2; f = (fun t2 -> f (Lazy.force t1) t2 (Lazy.force t3)) }))
         | None, Some t2, Some t3 ->
-          Some (`Value (Value.Map { t = t1; f = (fun t1 -> f t1 t2 t3) }))
+          Some
+            (`Value
+              (Value.Map { t = t1; f = (fun t1 -> f t1 (Lazy.force t2) (Lazy.force t3)) }))
         | Some t1, None, None ->
-          Some (`Value (Value.Map2 { t1 = t2; t2 = t3; f = (fun t2 t3 -> f t1 t2 t3) }))
+          Some
+            (`Value
+              (Value.Map2 { t1 = t2; t2 = t3; f = (fun t2 t3 -> f (Lazy.force t1) t2 t3) }))
         | None, None, Some t3 ->
-          Some (`Value (Value.Map2 { t1; t2; f = (fun t1 t2 -> f t1 t2 t3) }))
+          Some
+            (`Value (Value.Map2 { t1; t2; f = (fun t1 t2 -> f t1 t2 (Lazy.force t3)) }))
         | None, Some t2, None ->
-          Some (`Value (Value.Map2 { t1; t2 = t3; f = (fun t1 t3 -> f t1 t2 t3) }))
+          Some
+            (`Value
+              (Value.Map2 { t1; t2 = t3; f = (fun t1 t3 -> f t1 (Lazy.force t2) t3) }))
         | None, None, None -> None)
     | Map4 { t1; t2; t3; t4; f } ->
       constant_or_value value_with_position ~f:(fun () ->
         match
-          ( contents_if_value_is_constant t1
-          , contents_if_value_is_constant t2
-          , contents_if_value_is_constant t3
-          , contents_if_value_is_constant t4 )
+          ( lazy_contents_if_value_is_constant t1
+          , lazy_contents_if_value_is_constant t2
+          , lazy_contents_if_value_is_constant t3
+          , lazy_contents_if_value_is_constant t4 )
         with
-        | Some t1, Some t2, Some t3, Some t4 -> Some (`Constant (f t1 t2 t3 t4))
+        | Some t1, Some t2, Some t3, Some t4 ->
+          Some
+            (`Constant
+              (lazy (f (Lazy.force t1) (Lazy.force t2) (Lazy.force t3) (Lazy.force t4))))
         | Some t1, Some t2, Some t3, None ->
-          Some (`Value (Value.Map { t = t4; f = (fun t4 -> f t1 t2 t3 t4) }))
+          Some
+            (`Value
+              (Value.Map
+                 { t = t4
+                 ; f = (fun t4 -> f (Lazy.force t1) (Lazy.force t2) (Lazy.force t3) t4)
+                 }))
         | Some t1, Some t2, None, Some t4 ->
-          Some (`Value (Value.Map { t = t3; f = (fun t3 -> f t1 t2 t3 t4) }))
+          Some
+            (`Value
+              (Value.Map
+                 { t = t3
+                 ; f = (fun t3 -> f (Lazy.force t1) (Lazy.force t2) t3 (Lazy.force t4))
+                 }))
         | Some t1, None, Some t3, Some t4 ->
-          Some (`Value (Value.Map { t = t2; f = (fun t2 -> f t1 t2 t3 t4) }))
+          Some
+            (`Value
+              (Value.Map
+                 { t = t2
+                 ; f = (fun t2 -> f (Lazy.force t1) t2 (Lazy.force t3) (Lazy.force t4))
+                 }))
         | None, Some t2, Some t3, Some t4 ->
-          Some (`Value (Value.Map { t = t1; f = (fun t1 -> f t1 t2 t3 t4) }))
+          Some
+            (`Value
+              (Value.Map
+                 { t = t1
+                 ; f = (fun t1 -> f t1 (Lazy.force t2) (Lazy.force t3) (Lazy.force t4))
+                 }))
         | Some t1, Some t2, None, None ->
           Some
-            (`Value (Value.Map2 { t1 = t3; t2 = t4; f = (fun t3 t4 -> f t1 t2 t3 t4) }))
+            (`Value
+              (Value.Map2
+                 { t1 = t3
+                 ; t2 = t4
+                 ; f = (fun t3 t4 -> f (Lazy.force t1) (Lazy.force t2) t3 t4)
+                 }))
         | Some t1, None, Some t3, None ->
           Some
-            (`Value (Value.Map2 { t1 = t2; t2 = t4; f = (fun t2 t4 -> f t1 t2 t3 t4) }))
+            (`Value
+              (Value.Map2
+                 { t1 = t2
+                 ; t2 = t4
+                 ; f = (fun t2 t4 -> f (Lazy.force t1) t2 (Lazy.force t3) t4)
+                 }))
         | None, Some t2, Some t3, None ->
-          Some (`Value (Value.Map2 { t1; t2 = t4; f = (fun t1 t4 -> f t1 t2 t3 t4) }))
+          Some
+            (`Value
+              (Value.Map2
+                 { t1
+                 ; t2 = t4
+                 ; f = (fun t1 t4 -> f t1 (Lazy.force t2) (Lazy.force t3) t4)
+                 }))
         | Some t1, None, None, Some t4 ->
           Some
-            (`Value (Value.Map2 { t1 = t2; t2 = t3; f = (fun t2 t3 -> f t1 t2 t3 t4) }))
+            (`Value
+              (Value.Map2
+                 { t1 = t2
+                 ; t2 = t3
+                 ; f = (fun t2 t3 -> f (Lazy.force t1) t2 t3 (Lazy.force t4))
+                 }))
         | None, Some t2, None, Some t4 ->
-          Some (`Value (Value.Map2 { t1; t2 = t3; f = (fun t1 t3 -> f t1 t2 t3 t4) }))
+          Some
+            (`Value
+              (Value.Map2
+                 { t1
+                 ; t2 = t3
+                 ; f = (fun t1 t3 -> f t1 (Lazy.force t2) t3 (Lazy.force t4))
+                 }))
         | None, None, Some t3, Some t4 ->
-          Some (`Value (Value.Map2 { t1; t2; f = (fun t1 t2 -> f t1 t2 t3 t4) }))
+          Some
+            (`Value
+              (Value.Map2
+                 { t1; t2; f = (fun t1 t2 -> f t1 t2 (Lazy.force t3) (Lazy.force t4)) }))
         | Some t1, None, None, None ->
           Some
             (`Value
               (Value.Map3
-                 { t1 = t2; t2 = t3; t3 = t4; f = (fun t2 t3 t4 -> f t1 t2 t3 t4) }))
+                 { t1 = t2
+                 ; t2 = t3
+                 ; t3 = t4
+                 ; f = (fun t2 t3 t4 -> f (Lazy.force t1) t2 t3 t4)
+                 }))
         | None, Some t2, None, None ->
           Some
             (`Value
-              (Value.Map3 { t1; t2 = t3; t3 = t4; f = (fun t1 t3 t4 -> f t1 t2 t3 t4) }))
+              (Value.Map3
+                 { t1
+                 ; t2 = t3
+                 ; t3 = t4
+                 ; f = (fun t1 t3 t4 -> f t1 (Lazy.force t2) t3 t4)
+                 }))
         | None, None, Some t3, None ->
           Some
-            (`Value (Value.Map3 { t1; t2; t3 = t4; f = (fun t1 t2 t4 -> f t1 t2 t3 t4) }))
+            (`Value
+              (Value.Map3
+                 { t1; t2; t3 = t4; f = (fun t1 t2 t4 -> f t1 t2 (Lazy.force t3) t4) }))
         | None, None, None, Some t4 ->
-          Some (`Value (Value.Map3 { t1; t2; t3; f = (fun t1 t2 t3 -> f t1 t2 t3 t4) }))
+          Some
+            (`Value
+              (Value.Map3 { t1; t2; t3; f = (fun t1 t2 t3 -> f t1 t2 t3 (Lazy.force t4)) }))
         | None, None, None, None -> None)
     | Map5 { t1; t2; t3; t4; t5; f } ->
       constant_or_value value_with_position ~f:(fun () ->
         match
-          ( contents_if_value_is_constant t1
-          , contents_if_value_is_constant t2
-          , contents_if_value_is_constant t3
-          , contents_if_value_is_constant t4
-          , contents_if_value_is_constant t5 )
+          ( lazy_contents_if_value_is_constant t1
+          , lazy_contents_if_value_is_constant t2
+          , lazy_contents_if_value_is_constant t3
+          , lazy_contents_if_value_is_constant t4
+          , lazy_contents_if_value_is_constant t5 )
         with
         | Some t1, Some t2, Some t3, Some t4, Some t5 ->
-          Some (`Constant (f t1 t2 t3 t4 t5))
+          Some
+            (`Constant
+              (lazy
+                (f
+                   (Lazy.force t1)
+                   (Lazy.force t2)
+                   (Lazy.force t3)
+                   (Lazy.force t4)
+                   (Lazy.force t5))))
         | _ -> None)
     | Map6 { t1; t2; t3; t4; t5; t6; f } ->
       constant_or_value value_with_position ~f:(fun () ->
         match
-          ( contents_if_value_is_constant t1
-          , contents_if_value_is_constant t2
-          , contents_if_value_is_constant t3
-          , contents_if_value_is_constant t4
-          , contents_if_value_is_constant t5
-          , contents_if_value_is_constant t6 )
+          ( lazy_contents_if_value_is_constant t1
+          , lazy_contents_if_value_is_constant t2
+          , lazy_contents_if_value_is_constant t3
+          , lazy_contents_if_value_is_constant t4
+          , lazy_contents_if_value_is_constant t5
+          , lazy_contents_if_value_is_constant t6 )
         with
         | Some t1, Some t2, Some t3, Some t4, Some t5, Some t6 ->
-          Some (`Constant (f t1 t2 t3 t4 t5 t6))
+          Some
+            (`Constant
+              (lazy
+                (f
+                   (Lazy.force t1)
+                   (Lazy.force t2)
+                   (Lazy.force t3)
+                   (Lazy.force t4)
+                   (Lazy.force t5)
+                   (Lazy.force t6))))
         | _ -> None)
     | Map7 { t1; t2; t3; t4; t5; t6; t7; f } ->
       constant_or_value value_with_position ~f:(fun () ->
         match
-          ( contents_if_value_is_constant t1
-          , contents_if_value_is_constant t2
-          , contents_if_value_is_constant t3
-          , contents_if_value_is_constant t4
-          , contents_if_value_is_constant t5
-          , contents_if_value_is_constant t6
-          , contents_if_value_is_constant t7 )
+          ( lazy_contents_if_value_is_constant t1
+          , lazy_contents_if_value_is_constant t2
+          , lazy_contents_if_value_is_constant t3
+          , lazy_contents_if_value_is_constant t4
+          , lazy_contents_if_value_is_constant t5
+          , lazy_contents_if_value_is_constant t6
+          , lazy_contents_if_value_is_constant t7 )
         with
         | Some t1, Some t2, Some t3, Some t4, Some t5, Some t6, Some t7 ->
-          Some (`Constant (f t1 t2 t3 t4 t5 t6 t7))
+          Some
+            (`Constant
+              (lazy
+                (f
+                   (Lazy.force t1)
+                   (Lazy.force t2)
+                   (Lazy.force t3)
+                   (Lazy.force t4)
+                   (Lazy.force t5)
+                   (Lazy.force t6)
+                   (Lazy.force t7))))
         | _ -> None)
   ;;
 
@@ -285,9 +403,9 @@ module Constant_fold (Recurse : Fix_transform.Recurse with module Types := Types
       let (), (), map_v =
         Recurse.on_value { constants_in_scope; evaluated } () `Directly_on map
       in
-      (match map_v.value with
+      (match (force_but_capture_exceptions map_v).value with
        | Exception exn -> return (Proc.read (Value.return_exn exn))
-       | Constant map when Map.length map <= assoc_max_input_size_to_fold ->
+       | Constant (lazy map) when Map.length map <= assoc_max_input_size_to_fold ->
          let folded =
            Map.mapi map ~f:(fun ~key ~data ->
              (* In this case, the map is constant, so we have access to the key/data pair
@@ -352,9 +470,9 @@ module Constant_fold (Recurse : Fix_transform.Recurse with module Types := Types
       let (), (), match_ =
         Recurse.on_value { constants_in_scope; evaluated } () `Directly_on match_
       in
-      (match match_.value with
+      (match (force_but_capture_exceptions match_).value with
        | Exception exn -> return (Proc.read (Value.return_exn exn))
-       | Constant i ->
+       | Constant (lazy i) ->
          (match Map.find arms i with
           | Some c ->
             let%bind (), (), r =
@@ -410,13 +528,13 @@ module Constant_fold (Recurse : Fix_transform.Recurse with module Types := Types
         Recurse.on_value { constants_in_scope; evaluated } () `Directly_on input
       in
       computation_exception_folder ~here ~f:(fun () ->
-        match contents_if_value_is_constant input with
+        match lazy_contents_if_value_is_constant input with
         | None ->
           return
             (Computation.Leaf1
                { input; input_id; model; dynamic_action; apply_action; reset; here })
         | Some input ->
-          let apply_action ~inject = apply_action ~inject (Some input) in
+          let apply_action ~inject = apply_action ~inject (Some (Lazy.force input)) in
           return
             (Computation.Leaf0
                { model; static_action = dynamic_action; apply_action; reset; here }))
@@ -445,15 +563,16 @@ module Constant_fold (Recurse : Fix_transform.Recurse with module Types := Types
               interesting interacctions between deferred optimizations, we could mint a
               type for deferred optimizations which we can introspect.
            *)
-           Trampoline.run
-             (let%bind (), (), t =
-                Recurse.on_computation
-                  { constants_in_scope; evaluated = Unconditionally }
-                  ()
-                  `Directly_on
-                  t
-              in
-              return t))
+           (Timer.timer ()).time `Preprocess ~f:(fun () ->
+             Trampoline.run
+               (let%bind (), (), t =
+                  Recurse.on_computation
+                    { constants_in_scope; evaluated = Unconditionally }
+                    ()
+                    `Directly_on
+                    t
+                in
+                return t)))
          |> fun t -> Computation.Lazy { t; here } |> return)
     | Fix_define _
     | Fix_recurse _

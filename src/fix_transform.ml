@@ -90,7 +90,13 @@ struct
         return (acc, up, Computation.Fix_recurse { fix_id; input; input_id; here })
       | Lazy { t; here } ->
         let t =
-          Lazy.map t ~f:(fun t ->
+          Incr.lazy_from_fun (fun () ->
+            (* In case any incremental nodes are created inside the transform (e.g.
+               [Incr.map] via [Computation_watcher.instrument_incremental_node]), we need
+               to ensure that we preserve the current scope no matter where we force the
+               lazy. If we ever remove the call to Incr.map, we can revert this case to
+               just calling [Lazy.map]. *)
+            let t = Lazy.force t in
             Trampoline.run
               (let%bind _acc, _up, t = User.transform_c down acc t in
                return t))
@@ -158,7 +164,7 @@ struct
     let default_v (type a) down acc ({ value; here } : a Value.t) : _ * _ * a Value.t =
       let acc, up, value =
         match value with
-        | Constant (c : a) -> acc, empty, Value.Constant c
+        | Constant (c : a Lazy.t) -> acc, empty, Value.Constant c
         | Exception (e : exn) -> acc, empty, Exception e
         | Incr incr_node -> acc, empty, Incr incr_node
         | Named ((name_source, id) : Value.Name_source.t * a Type_equal.Id.t) ->

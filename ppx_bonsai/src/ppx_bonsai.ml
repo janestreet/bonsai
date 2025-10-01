@@ -1,4 +1,5 @@
 open Ppxlib
+open Ast_builder.Default
 open Ppx_let_expander
 open Ppx_bonsai_expander
 module Test_extension = Test_extension
@@ -16,6 +17,22 @@ let ext t extension_kind =
     Ast_pattern.(single_expr_payload __)
     (fun ~loc:_ ~path:_ ~arg expr ->
       expand (t !location_behavior) extension_kind ~locality ~modul:arg expr)
+;;
+
+(* If [%lazy] wasn't expanded, it means you're using it incorrectly. *)
+let lazy_error =
+  Extension.declare_with_path_arg
+    "lazy"
+    Extension.Context.expression
+    Ast_pattern.(alt_option (single_expr_payload (pexp_ident (lident __))) (pstr nil))
+    (fun ~loc ~path:_ ~arg:_ _ ->
+      pexp_extension
+        ~loc
+        (Location.error_extensionf
+           ~loc
+           "Syntax error. The correct syntax is `match%%sub [%%lazy] ...` or `match%%sub \
+            [%%lazy graph] ...`. Does your code compile if you delete this [%%lazy] \
+            block?"))
 ;;
 
 let () =
@@ -39,6 +56,7 @@ let () =
       ; ext sub Extension_kind.default_open
       ; ext arr Extension_kind.default
       ; ext arr Extension_kind.default_open
+      ; lazy_error
       ]
 ;;
 

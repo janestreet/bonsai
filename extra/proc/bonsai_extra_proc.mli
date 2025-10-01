@@ -213,7 +213,7 @@ val is_stable
   -> local_ Bonsai.graph
   -> bool Bonsai.t
 
-module Stability = Bonsai_extra.Stability
+module Stability = Bonsai_extra.Value_stability.Stability
 
 (** [value_stability] determines whether the current value has changed recently, and also
     keeps track of the most recent stable value. *)

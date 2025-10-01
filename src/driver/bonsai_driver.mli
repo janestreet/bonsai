@@ -6,7 +6,8 @@ type 'r t
 
 (** Builds a new driver for a bonsai component. *)
 val create
-  :  ?optimize:bool
+  :  here:[%call_pos]
+  -> ?optimize:bool
   -> instrumentation:
        (Instrumentation.Timeable_event.t, _) Bonsai.Private.Instrumentation.Config.t
   -> time_source:Bonsai.Time_source.t

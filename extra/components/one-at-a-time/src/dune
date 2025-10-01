@@ -1,0 +1,6 @@
+(library
+ (name bonsai_extra_one_at_a_time)
+ (public_name bonsai.extra.one_at_a_time)
+ (preprocess
+  (pps ppx_jane js_of_ocaml-ppx ppx_bonsai))
+ (libraries bonsai core virtual_dom.ui_effect))

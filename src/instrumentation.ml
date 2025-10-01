@@ -23,6 +23,7 @@ let extract_node_path_from_entry_label label =
 ;;
 
 let instrument_for_measuring_timings (t : _ Computation.t) ~start_timer ~stop_timer =
+  let { Timer.time } = Timer.create ~start_timer ~stop_timer in
   let computation_map
     (type result)
     (context : unit Transform.For_computation.context)
@@ -55,10 +56,8 @@ let instrument_for_measuring_timings (t : _ Computation.t) ~start_timer ~stop_ti
       model
       action
       =
-      let handle = start_timer apply_action_label in
-      let model = apply_action ~inject ~schedule_event ~time_source input model action in
-      stop_timer handle;
-      model
+      time apply_action_label ~f:(fun () ->
+        apply_action ~inject ~schedule_event ~time_source input model action)
     in
     let time_static_apply_action
       ~apply_action
@@ -68,10 +67,8 @@ let instrument_for_measuring_timings (t : _ Computation.t) ~start_timer ~stop_ti
       model
       action
       =
-      let handle = start_timer apply_action_label in
-      let model = apply_action ~inject ~schedule_event ~time_source model action in
-      stop_timer handle;
-      model
+      time apply_action_label ~f:(fun () ->
+        apply_action ~inject ~schedule_event ~time_source model action)
     in
     let open Trampoline.Let_syntax in
     let%bind recursed = context.recurse () computation in
@@ -86,20 +83,10 @@ let instrument_for_measuring_timings (t : _ Computation.t) ~start_timer ~stop_ti
         (Computation.Leaf0
            { t with apply_action = time_static_apply_action ~apply_action:t.apply_action })
     | Leaf_incr t ->
-      let compute clock input =
-        let handle = start_timer compute_label in
-        let computed = t.compute clock input in
-        stop_timer handle;
-        computed
-      in
+      let compute clock input = time compute_label ~f:(fun () -> t.compute clock input) in
       return (Computation.Leaf_incr { t with compute })
     | Assoc_simpl t ->
-      let by path key value =
-        let handle = start_timer by_label in
-        let by = t.by path key value in
-        stop_timer handle;
-        by
-      in
+      let by path key value = time by_label ~f:(fun () -> t.by path key value) in
       return (Computation.Assoc_simpl { t with by })
     | computation -> return computation
   in
@@ -119,60 +106,25 @@ let instrument_for_measuring_timings (t : _ Computation.t) ~start_timer ~stop_ti
       match value with
       | Constant _ | Exception _ | Incr _ | Named _ | Both (_, _) | Cutoff _ -> value
       | Map t ->
-        let f a =
-          let handle = start_timer (force entry_label) in
-          let x = t.f a in
-          stop_timer handle;
-          x
-        in
+        let f a = time (force entry_label) ~f:(fun () -> t.f a) in
         Map { t with f }
       | Map2 t ->
-        let f a b =
-          let handle = start_timer (force entry_label) in
-          let x = t.f a b in
-          stop_timer handle;
-          x
-        in
+        let f a b = time (force entry_label) ~f:(fun () -> t.f a b) in
         Map2 { t with f }
       | Map3 t ->
-        let f a b c =
-          let handle = start_timer (force entry_label) in
-          let x = t.f a b c in
-          stop_timer handle;
-          x
-        in
+        let f a b c = time (force entry_label) ~f:(fun () -> t.f a b c) in
         Map3 { t with f }
       | Map4 t ->
-        let f a b c d =
-          let handle = start_timer (force entry_label) in
-          let x = t.f a b c d in
-          stop_timer handle;
-          x
-        in
+        let f a b c d = time (force entry_label) ~f:(fun () -> t.f a b c d) in
         Map4 { t with f }
       | Map5 t ->
-        let f a b c d e =
-          let handle = start_timer (force entry_label) in
-          let x = t.f a b c d e in
-          stop_timer handle;
-          x
-        in
+        let f a b c d e = time (force entry_label) ~f:(fun () -> t.f a b c d e) in
         Map5 { t with f }
       | Map6 t ->
-        let f a b c d e f =
-          let handle = start_timer (force entry_label) in
-          let x = t.f a b c d e f in
-          stop_timer handle;
-          x
-        in
+        let f a b c d e f = time (force entry_label) ~f:(fun () -> t.f a b c d e f) in
         Map6 { t with f }
       | Map7 t ->
-        let f a b c d e f g =
-          let handle = start_timer (force entry_label) in
-          let x = t.f a b c d e f g in
-          stop_timer handle;
-          x
-        in
+        let f a b c d e f g = time (force entry_label) ~f:(fun () -> t.f a b c d e f g) in
         Map7 { t with f }
     in
     context.recurse () { here; value }
@@ -188,7 +140,7 @@ module Profiling = struct
   type t =
     | Profiling
     | Not_profiling
-  [@@deriving sexp_of]
+  [@@deriving sexp]
 end
 
 module Watching = struct
@@ -211,9 +163,7 @@ end
 
 let instrument_for_profiling ~set_latest_graph_info ~start_timer ~stop_timer computation =
   Graph_info.iter_graph_updates computation ~on_update:set_latest_graph_info
-  |> instrument_for_measuring_timings
-       ~start_timer:(fun s -> start_timer s)
-       ~stop_timer:(fun timer -> stop_timer timer)
+  |> instrument_for_measuring_timings ~start_timer ~stop_timer
 ;;
 
 let create_computation_with_instrumentation
@@ -244,31 +194,43 @@ let create_computation_with_instrumentation
         , Action.Type_id.same_witness info.action info'.action
         , Input.same_witness info.input info'.input ))
     with
-    | Some T, Some T, Some T -> f info'.run
+    | Some T, Some T, Some T ->
+      (info' : (model, action, action_input, result, unit) Computation.info).run
     | _ ->
       print_endline
         [%string
           "Not starting %{what}. An error occurred while attempting to instrument the \
            computation; the resulting computation does not typecheck. Reusing previously \
            gathered run information to execute"];
-      f info.run
+      info.run
   in
   let instrument_for_profiling =
     instrument_for_profiling ~set_latest_graph_info ~start_timer ~stop_timer
   in
+  (* We make these lazy so that, after turning recording on once, the recording button
+     can be quickly toggled/we don't have to do this computation multiple times. *)
+  let run_profiling_and_watching =
+    lazy
+      (instrument_for_profiling computation
+       |> Enable_computation_watcher.run ~watcher_queue:computation_watcher_queue
+       |> gather_and_assert_typechecks ~what:"Bonsai profiler or computation watcher")
+  in
+  let run_profiling_not_watching =
+    lazy
+      (instrument_for_profiling computation
+       |> gather_and_assert_typechecks ~what:"computation watcher")
+  in
+  let run_watching_not_profiling =
+    lazy
+      (Enable_computation_watcher.run computation ~watcher_queue:computation_watcher_queue
+       |> gather_and_assert_typechecks ~what:"Bonsai profiler")
+  in
   match%bind
     Ui_incr.both enable_instrument_for_profiling instrument_for_computation_watcher
   with
-  | Profiling, Watching ->
-    instrument_for_profiling computation
-    |> Enable_computation_watcher.run ~watcher_queue:computation_watcher_queue
-    |> gather_and_assert_typechecks ~what:"Bonsai profiler or computation watcher"
-  | Profiling, Not_watching ->
-    instrument_for_profiling computation
-    |> gather_and_assert_typechecks ~what:"computation watcher"
-  | Not_profiling, Watching ->
-    Enable_computation_watcher.run computation ~watcher_queue:computation_watcher_queue
-    |> gather_and_assert_typechecks ~what:"Bonsai profiler"
+  | Profiling, Watching -> f (Lazy.force run_profiling_and_watching)
+  | Profiling, Not_watching -> f (Lazy.force run_profiling_not_watching)
+  | Not_profiling, Watching -> f (Lazy.force run_watching_not_profiling)
   | Not_profiling, Not_watching -> f info.run
 ;;
 

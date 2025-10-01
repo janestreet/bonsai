@@ -1,0 +1,6 @@
+(library
+ (name bonsai_extra_state_machine)
+ (public_name bonsai.extra.state_machin)
+ (preprocess
+  (pps ppx_jane js_of_ocaml-ppx ppx_bonsai))
+ (libraries bonsai core))

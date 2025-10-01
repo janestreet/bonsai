@@ -18,7 +18,7 @@ module Option_or_miss = struct
   type 'a t =
     | None
     | Some of
-        { value : 'a
+        { value : 'a Lazy.t
         ; may_contain : May_contain.Resolved.t
         }
     | Miss of
@@ -32,14 +32,14 @@ module Option_or_miss = struct
     | None -> None
     | Some a -> Some a
     | Miss { free; gen; may_contain } when Free_variables.is_empty free ->
-      Some { value = gen Env.empty; may_contain }
+      Some { value = Lazy.return (gen Env.empty); may_contain }
     | other -> other
   ;;
 
   let map a ~f =
     match a with
     | None -> None
-    | Some { may_contain; value } -> Some { may_contain; value = f value }
+    | Some { may_contain; value } -> Some { may_contain; value = Lazy.map value ~f }
     | Miss { free; gen; may_contain } ->
       Miss { free; gen = (fun m -> f (gen m)); may_contain }
   ;;
@@ -48,17 +48,20 @@ module Option_or_miss = struct
     match a, b with
     | None, _ | _, None -> None
     | Some { may_contain = ma; value = a }, Some { may_contain = mb; value = b } ->
-      Some { value = a, b; may_contain = May_contain.Resolved.merge ma mb }
+      Some
+        { value = lazy (Lazy.force a, Lazy.force b)
+        ; may_contain = May_contain.Resolved.merge ma mb
+        }
     | Some { value = a; may_contain = ma }, Miss { free; gen; may_contain = mb } ->
       Miss
         { free
-        ; gen = (fun m -> a, gen m)
+        ; gen = (fun m -> Lazy.force a, gen m)
         ; may_contain = May_contain.Resolved.merge ma mb
         }
     | Miss { free; gen; may_contain = ma }, Some { value = b; may_contain = mb } ->
       Miss
         { free
-        ; gen = (fun m -> gen m, b)
+        ; gen = (fun m -> gen m, Lazy.force b)
         ; may_contain = May_contain.Resolved.merge ma mb
         }
     | ( Miss { free = free_a; gen = gen_a; may_contain = ma }
@@ -92,7 +95,7 @@ let rec value_to_function
   match value.value with
   | Constant r ->
     Some
-      { value = (fun _key _data -> r)
+      { value = lazy (fun _key _data -> Lazy.force r)
       ; may_contain = May_contain.Resolved.create ~path:No ~lifecycle:No ~input:No
       }
   | Exception _ -> None
@@ -102,12 +105,12 @@ let rec value_to_function
     (match same_name id key_id, same_name id data_id with
      | Some T, _ ->
        Some
-         { value = (fun key _data -> key)
+         { value = Lazy.return (fun key _data -> key)
          ; may_contain = May_contain.Resolved.create ~path:No ~lifecycle:No ~input:No
          }
      | _, Some T ->
        Some
-         { value = (fun _key data -> data)
+         { value = Lazy.return (fun _key data -> data)
          ; may_contain = May_contain.Resolved.create ~path:No ~lifecycle:No ~input:No
          }
      | None, None ->
@@ -201,7 +204,8 @@ let rec computation_to_function
     (* A rhs that isn't missing any variables can be used by ignoring the computed values
        on the lhs. *)
     | (Some _ | Miss _), Some r -> Some r
-    | Some { value = from; may_contain = ma }, Miss { free; gen; may_contain = mb } ->
+    | Some { value = (lazy from); may_contain = ma }, Miss { free; gen; may_contain = mb }
+      ->
       let free = Free_variables.remove free via in
       let both_use_path = May_contain.Resolved.both_use_path ma mb in
       let gen env path key data =
@@ -241,7 +245,7 @@ let rec computation_to_function
     handle_subst ~from ~via ~into
   | Path { here = _ } ->
     Some
-      { value = (fun path _ _ -> path)
+      { value = Lazy.return (fun path _ _ -> path)
       ; may_contain =
           May_contain.Resolved.create ~path:Yes_or_maybe ~lifecycle:No ~input:No
       }
@@ -262,7 +266,7 @@ let computation_to_function t ~key_compare ~key_id ~data_id =
             | Yes_or_maybe -> Path.append path (Assoc (make_path_element key))
             | No -> path
           in
-          f path key data)
+          (Lazy.force f) path key data)
       , may_contain )
   | None | Miss _ -> None
 ;;

@@ -1,0 +1,7 @@
+(library
+ (name bonsai_private_gather)
+ (libraries core_kernel.balanced_reducer bonsai_private_base core incr_map
+   incremental core_kernel.reversed_list bonsai_concrete.metrics)
+ (preprocess
+  (pps ppx_jane ppx_pattern_bind))
+ (public_name bonsai.private_gather))

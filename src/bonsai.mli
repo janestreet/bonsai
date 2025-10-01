@@ -65,6 +65,7 @@ module Private : sig
   module Skeleton = Skeleton
   module Transform = Transform
   module Linter = Linter
+  module Timer = Timer
   module Trampoline = Trampoline
   module Annotate_incr = Annotate_incr
   module Computation_watcher = Computation_watcher
