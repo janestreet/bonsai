@@ -18,7 +18,7 @@ module Message : sig
   (** The debugger/profiler receives both performance entries as well as a description of
       the Bonsai graph. *)
   type t =
-    | Graph_info of Graph_info.t
+    | Graph_info of Graph_info.Node_info.t Node_path.Map.t
     | Performance_measure of Entry.t
   [@@deriving bin_io, sexp]
 end
@@ -54,9 +54,18 @@ module Stable : sig
     end
 
     module V3 : sig
-      type t = Message.t [@@deriving bin_io, sexp]
+      type t =
+        | Graph_info of Graph_info.Stable.V3.t
+        | Performance_measure of Entry.V1.t
+      [@@deriving bin_io, sexp]
 
       val of_v2 : V2.t -> t
+    end
+
+    module V4 : sig
+      type t = Message.t [@@deriving bin_io, sexp]
+
+      val of_v3 : V3.t -> t
     end
   end
 
@@ -69,12 +78,21 @@ module Stable : sig
     end
 
     module V2 : sig
-      type t = Worker_message.t =
+      type t =
         | Uuid of Uuid.Stable.V1.t
         | Message of Message.V3.t
       [@@deriving sexp, bin_io]
 
       val of_v1 : V1.t -> t
+    end
+
+    module V3 : sig
+      type t = Worker_message.t =
+        | Uuid of Uuid.Stable.V1.t
+        | Message of Message.V4.t
+      [@@deriving sexp, bin_io]
+
+      val of_v2 : V2.t -> t
     end
   end
 end
@@ -85,7 +103,8 @@ module Versioned_message : sig
     | V2 of Stable.Message.V2.t list
     | V3 of Stable.Worker_message.V1.t list
     | V4 of Stable.Worker_message.V2.t list
+    | V5 of Stable.Worker_message.V3.t list
   [@@deriving sexp, bin_io]
 
-  val to_latest : t -> Stable.Message.V3.t list
+  val to_latest : t -> Stable.Message.V4.t list
 end

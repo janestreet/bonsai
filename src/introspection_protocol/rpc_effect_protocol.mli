@@ -1,9 +1,5 @@
 open! Core
 
-(** This library contains the types for rpc effect's chrome devtool pannel. The reason it
-    needs to be in its own split library instead of alongside the for_introspection module
-    inside of bonsai web is so that it can be used in non-jsoo situations. *)
-
 (** Represents an rpc_id. This bears no resemblance/equality with async_rpc_kernel's rpc
     ids and is instead a bonsai-specific id. *)
 module Rpc_id : Unique_id.Id with type t = private Int63.t
@@ -92,6 +88,10 @@ module Event : sig
           { id : Rpc_id.t
           ; duration : Time_ns.Span.t
           }
+      | Response_size of
+          { id : Rpc_id.t
+          ; payload_bytes : int
+          }
   end
 
   type t = V1.t
@@ -116,6 +116,7 @@ module Rpc_state : sig
     ; query : Sexp.t Or_no_sexp_of_provided.t
     ; status : Rpc_status.t
     ; path : string
+    ; response_size : int option
     ; here : Source_code_position.t option
     }
   [@@deriving sexp]
@@ -127,44 +128,6 @@ module State : sig
   val empty : t
   val apply_event : t -> Event.t -> t
 end
-
-module For_module_startup_timings : sig
-  (** These types are serialization types for the timings recorded by ppx_module_timer.
-      The types are copied over from the ppx_module_timer_runtime library, but also have
-      sexp functions and a stable type. *)
-  module Duration : sig
-    type t = Int63.t [@@deriving sexp_of]
-  end
-
-  module Gc_events : sig
-    type t = Ppx_module_timer_runtime.For_introspection.Gc_events.t =
-      { minor_collections : int
-      ; major_collections : int
-      ; compactions : int
-      }
-    [@@deriving sexp_of]
-  end
-
-  module Timing_event : sig
-    type t = Ppx_module_timer_runtime.For_introspection.Timing_event.t =
-      { description : string
-      ; runtime : Duration.t
-      ; gc_events : Gc_events.t
-      ; nested_timing_events : t list
-      }
-    [@@deriving sexp_of]
-
-    module Stable : sig
-      type event := t
-      type t [@@deriving sexp]
-
-      val of_latest : event -> t
-      val to_latest : t -> event
-    end
-  end
-end
-
-module For_incr_node_introspection = Incr_node_introspection
 
 module For_testing : sig
   module Rpc_id : sig
@@ -192,6 +155,10 @@ module For_testing : sig
       | Aborted of
           { id : Rpc_id.t
           ; duration : Time_ns.Span.t
+          }
+      | Response_size of
+          { id : Rpc_id.t
+          ; payload_bytes : int
           }
 
     module Unstable : sig

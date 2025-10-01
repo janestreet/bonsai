@@ -381,11 +381,11 @@ let all_map ?(here = Stdlib.Lexing.dummy_pos) v graph =
   perform
     ~here
     graph
-    (Proc.Computation.all_map (Core.Map.map v ~f:(fun f -> handle ~f graph)))
+    (Proc.Computation.all_map ~here (Core.Map.map v ~f:(fun f -> handle ~here ~f graph)))
 ;;
 
-let transpose_opt opt =
-  Option.value_map opt ~default:(return None) ~f:(map ~f:Option.some)
+let transpose_opt ?(here = Stdlib.Lexing.dummy_pos) opt =
+  Option.value_map opt ~default:(return ~here None) ~f:(map ~here ~f:Option.some)
 ;;
 
 let path_id ?(here = Stdlib.Lexing.dummy_pos) graph =
@@ -923,7 +923,7 @@ let enum ?(here = Stdlib.Lexing.dummy_pos) m ~match_ ~with_ graph =
   let with_ : 'k -> 'd Computation.t =
     fun k -> handle ~f:(fun graph -> with_ k graph) graph [@nontail]
   in
-  perform ~here graph (Proc.enum m ~match_ ~with_)
+  perform ~here graph (Proc.enum ~here m ~match_ ~with_)
 ;;
 
 let with_inverted_lifecycle_ordering
@@ -1120,7 +1120,7 @@ module Edge = struct
     perform
       ~here
       graph
-      (Proc.Edge.lifecycle' ?on_activate ?on_deactivate ?after_display ())
+      (Proc.Edge.lifecycle' ~here ?on_activate ?on_deactivate ?after_display ())
   ;;
 
   let lifecycle'

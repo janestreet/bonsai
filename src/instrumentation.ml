@@ -140,7 +140,7 @@ module Profiling = struct
   type t =
     | Profiling
     | Not_profiling
-  [@@deriving sexp_of]
+  [@@deriving sexp]
 end
 
 module Watching = struct
@@ -194,31 +194,43 @@ let create_computation_with_instrumentation
         , Action.Type_id.same_witness info.action info'.action
         , Input.same_witness info.input info'.input ))
     with
-    | Some T, Some T, Some T -> f info'.run
+    | Some T, Some T, Some T ->
+      (info' : (model, action, action_input, result, unit) Computation.info).run
     | _ ->
       print_endline
         [%string
           "Not starting %{what}. An error occurred while attempting to instrument the \
            computation; the resulting computation does not typecheck. Reusing previously \
            gathered run information to execute"];
-      f info.run
+      info.run
   in
   let instrument_for_profiling =
     instrument_for_profiling ~set_latest_graph_info ~start_timer ~stop_timer
   in
+  (* We make these lazy so that, after turning recording on once, the recording button
+     can be quickly toggled/we don't have to do this computation multiple times. *)
+  let run_profiling_and_watching =
+    lazy
+      (instrument_for_profiling computation
+       |> Enable_computation_watcher.run ~watcher_queue:computation_watcher_queue
+       |> gather_and_assert_typechecks ~what:"Bonsai profiler or computation watcher")
+  in
+  let run_profiling_not_watching =
+    lazy
+      (instrument_for_profiling computation
+       |> gather_and_assert_typechecks ~what:"computation watcher")
+  in
+  let run_watching_not_profiling =
+    lazy
+      (Enable_computation_watcher.run computation ~watcher_queue:computation_watcher_queue
+       |> gather_and_assert_typechecks ~what:"Bonsai profiler")
+  in
   match%bind
     Ui_incr.both enable_instrument_for_profiling instrument_for_computation_watcher
   with
-  | Profiling, Watching ->
-    instrument_for_profiling computation
-    |> Enable_computation_watcher.run ~watcher_queue:computation_watcher_queue
-    |> gather_and_assert_typechecks ~what:"Bonsai profiler or computation watcher"
-  | Profiling, Not_watching ->
-    instrument_for_profiling computation
-    |> gather_and_assert_typechecks ~what:"computation watcher"
-  | Not_profiling, Watching ->
-    Enable_computation_watcher.run computation ~watcher_queue:computation_watcher_queue
-    |> gather_and_assert_typechecks ~what:"Bonsai profiler"
+  | Profiling, Watching -> f (Lazy.force run_profiling_and_watching)
+  | Profiling, Not_watching -> f (Lazy.force run_profiling_not_watching)
+  | Not_profiling, Watching -> f (Lazy.force run_watching_not_profiling)
   | Not_profiling, Not_watching -> f info.run
 ;;
 

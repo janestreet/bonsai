@@ -141,6 +141,10 @@ module Event = struct
           { id : Rpc_id.t
           ; duration : Time_ns.Span.t
           } [@sexp.allow_extra_fields]
+      | Response_size of
+          { id : Rpc_id.t
+          ; payload_bytes : int
+          }
     [@@deriving sexp, quickcheck]
   end
 
@@ -164,6 +168,7 @@ module Rpc_state = struct
     ; query : Sexp.t Or_no_sexp_of_provided.t
     ; status : Rpc_status.t
     ; path : string
+    ; response_size : int option [@sexp.option]
     ; here : Source_code_position.t option [@sexp.option]
     }
   [@@deriving sexp, equal]
@@ -200,7 +205,14 @@ module State = struct
     match event with
     | Started { id; rpc_kind; start_time; query; path; here } ->
       let rpc_state =
-        { Rpc_state.status = Running; rpc_kind; start_time; query; path; here }
+        { Rpc_state.status = Running
+        ; rpc_kind
+        ; start_time
+        ; query
+        ; path
+        ; response_size = None
+        ; here
+        }
       in
       (match Map.add state ~key:id ~data:rpc_state with
        | `Ok state -> state
@@ -249,43 +261,26 @@ module State = struct
            ~original:state
            ~on_is_running:(fun () ->
              Map.set state ~key:id ~data:{ rpc_state with status = Aborted { duration } }))
+    | Response_size { id; payload_bytes } ->
+      (match Map.find state id with
+       | None ->
+         print_s
+           [%message
+             "Saw tracing_event message for unknown rpc id, ignoring message."
+               (id : Rpc_id.t)
+               (payload_bytes : int)];
+         state
+       | Some rpc_state ->
+         let current_response_size = Option.value rpc_state.response_size ~default:0 in
+         Map.set
+           state
+           ~key:id
+           ~data:
+             { rpc_state with
+               response_size = Some (current_response_size + payload_bytes)
+             })
   ;;
 end
-
-module For_module_startup_timings = struct
-  module Duration = struct
-    type t = Int63.t [@@deriving sexp]
-  end
-
-  module Gc_events = struct
-    type t = Ppx_module_timer_runtime.For_introspection.Gc_events.t =
-      { minor_collections : int
-      ; major_collections : int
-      ; compactions : int
-      }
-    [@@deriving sexp]
-  end
-
-  module Timing_event = struct
-    type t = Ppx_module_timer_runtime.For_introspection.Timing_event.t =
-      { description : string
-      ; runtime : Duration.t
-      ; gc_events : Gc_events.t
-      ; nested_timing_events : t list
-      }
-    [@@deriving sexp]
-
-    module Stable = struct
-      type event = t [@@deriving sexp]
-      type t = V1 of event [@@deriving sexp]
-
-      let of_latest event = V1 event
-      let to_latest (V1 event) = event
-    end
-  end
-end
-
-module For_incr_node_introspection = Incr_node_introspection
 
 module For_testing = struct
   module Rpc_id = struct

@@ -43,9 +43,13 @@ module Let_syntax = struct
     ;;
   end
 
-  let ( >>| ) a f = Let_syntax.map a ~f
-  let ( <*> ) f a = Value.map2 f a ~f:(fun f a -> f a)
-  let ( <$> ) f a = Let_syntax.map a ~f
+  let ( >>| ) ?(here = Stdlib.Lexing.dummy_pos) a f = Let_syntax.map ~here a ~f
+
+  let ( <*> ) ?(here = Stdlib.Lexing.dummy_pos) f a =
+    Value.map2 ~here f a ~f:(fun f a -> f a)
+  ;;
+
+  let ( <$> ) ?(here = Stdlib.Lexing.dummy_pos) f a = Let_syntax.map ~here a ~f
 end
 
 open Let_syntax
@@ -79,7 +83,13 @@ let with_model_resetter ?(here = Stdlib.Lexing.dummy_pos) inside =
     sub ~here inside ~f:(fun r -> read ~here (Value.both ~here r reset)))
 ;;
 
-let enum (type k) (module E : Enum with type t = k) ~match_ ~with_ =
+let enum
+  (type k)
+  ?(here = Stdlib.Lexing.dummy_pos)
+  (module E : Enum with type t = k)
+  ~match_
+  ~with_
+  =
   let module E = struct
     include E
     include Comparator.Make (E)
@@ -89,10 +99,10 @@ let enum (type k) (module E : Enum with type t = k) ~match_ ~with_ =
   let reverse_index =
     Map.of_alist_exn (module E) (List.mapi E.all ~f:(fun i k -> k, i))
   in
-  let match_ = match_ >>| Map.find_exn reverse_index in
+  let match_ = Value.map ~here match_ ~f:(Map.find_exn reverse_index) in
   let branches = Array.length forward_index in
   let with_ i = with_ (Array.get forward_index i) in
-  Let_syntax.switch ~here:[%here] ~match_ ~branches ~with_ [@nontail]
+  Let_syntax.switch ~here ~match_ ~branches ~with_ [@nontail]
 ;;
 
 let scope_model
@@ -506,7 +516,7 @@ let state'
   in
   let%sub set_state =
     let%arr set_state in
-    fun ?(here = Stdlib.Lexing.dummy_pos) prev -> set_state (here, prev)
+    fun prev -> set_state (here, prev)
   in
   let%arr state and set_state in
   state, set_state
@@ -1565,7 +1575,7 @@ module Computation = struct
       let%sub t1 in
       let%sub t2 in
       let%sub t3 in
-      read (Value.map3 t1 t2 t3 ~f)
+      read ~here (Value.map3 ~here t1 t2 t3 ~f)
     ;;
 
     let map4 ?(here = Stdlib.Lexing.dummy_pos) t1 t2 t3 t4 ~f =
@@ -1573,7 +1583,7 @@ module Computation = struct
       let%sub t2 in
       let%sub t3 in
       let%sub t4 in
-      read (Value.map4 t1 t2 t3 t4 ~f)
+      read ~here (Value.map4 ~here t1 t2 t3 t4 ~f)
     ;;
 
     let map5 ?(here = Stdlib.Lexing.dummy_pos) t1 t2 t3 t4 t5 ~f =
@@ -1582,7 +1592,7 @@ module Computation = struct
       let%sub t3 in
       let%sub t4 in
       let%sub t5 in
-      read (Value.map5 t1 t2 t3 t4 t5 ~f)
+      read ~here (Value.map5 ~here t1 t2 t3 t4 t5 ~f)
     ;;
 
     let map6 ?(here = Stdlib.Lexing.dummy_pos) t1 t2 t3 t4 t5 t6 ~f =
@@ -1592,7 +1602,7 @@ module Computation = struct
       let%sub t4 in
       let%sub t5 in
       let%sub t6 in
-      read (Value.map6 t1 t2 t3 t4 t5 t6 ~f)
+      read ~here (Value.map6 ~here t1 t2 t3 t4 t5 t6 ~f)
     ;;
 
     let map7 ?(here = Stdlib.Lexing.dummy_pos) t1 t2 t3 t4 t5 t6 t7 ~f =
@@ -1603,7 +1613,7 @@ module Computation = struct
       let%sub t5 in
       let%sub t6 in
       let%sub t7 in
-      read (Value.map7 t1 t2 t3 t4 t5 t6 t7 ~f)
+      read ~here (Value.map7 ~here t1 t2 t3 t4 t5 t6 t7 ~f)
     ;;
   end
 
@@ -1629,7 +1639,7 @@ module Computation = struct
         map7 t1 t2 t3 t4 t5 t6 t7 ~here ~f:(fun a1 a2 a3 a4 a5 a6 a7 ->
           [ a1; a2; a3; a4; a5; a6; a7 ])
       in
-      let right = all rest in
+      let right = all ~here rest in
       map2 left right ~here ~f:(fun left right -> left @ right)
   ;;
 
@@ -1641,7 +1651,7 @@ module Computation = struct
   ;;
 
   let fold_right ?(here = Stdlib.Lexing.dummy_pos) xs ~f ~init =
-    List.fold_right xs ~init:(read init) ~f:(fun a b ->
+    List.fold_right xs ~init:(read ~here init) ~f:(fun a b ->
       let%sub a in
       let%sub b in
       f a b)

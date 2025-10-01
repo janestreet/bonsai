@@ -69,7 +69,7 @@ module Stable : sig
     end
 
     module V3 : sig
-      type t = V1.t
+      type t = V1.t [@@deriving sexp, bin_io, compare]
 
       val to_v2 : t -> V2.t
       val of_v2 : V2.t -> t

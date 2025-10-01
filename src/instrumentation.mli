@@ -23,7 +23,7 @@ module Profiling : sig
   type t =
     | Profiling
     | Not_profiling
-  [@@deriving sexp_of]
+  [@@deriving sexp]
 end
 
 module Watching : sig

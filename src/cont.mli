@@ -111,7 +111,7 @@ val cutoff : ?here:Stdlib.Lexing.position -> 'a t -> equal:('a -> 'a -> bool) ->
 
 (** [transpose_opt] flips the order of a [Bonsai.t] and an [option]. This is useful for
     optional args that take [Bonsai.t]s. Note: the inverse operation is not possible. *)
-val transpose_opt : 'a t option -> 'a option t
+val transpose_opt : ?here:Stdlib.Lexing.position -> 'a t option -> 'a option t
 
 (** [Bonsai.state] allocates a stateful Bonsai.t node in the graph. It returns both the
     [Bonsai.t] containing the current state, as well as a [Bonsai.t] containing a function
@@ -157,7 +157,7 @@ val state'
   -> ?equal:('model -> 'model -> bool)
   -> 'model
   -> graph
-  -> 'model t * (?here:Stdlib.Lexing.position -> ('model -> 'model) -> unit Effect.t) t
+  -> 'model t * (('model -> 'model) -> unit Effect.t) t
 
 (** [Bonsai.toggle] is a small helper function for building a [bool] state that toggles
     back and forth between [true] and [false] whenever the [unit Effect.t] is scheduled. *)
@@ -351,7 +351,7 @@ module Actor (Action : T1) : sig
     -> ?equal:('model -> 'model -> bool)
     -> default_model:'model
     -> recv:('model, 'input) recv_with_input
-    -> 'input Value.t
+    -> 'input t
     -> graph
     -> 'model t * inject t
 
@@ -1307,7 +1307,7 @@ module For_proc : sig
     -> ?equal:('model -> 'model -> bool)
     -> 'model
     -> graph
-    -> ('model * (?here:Stdlib.Lexing.position -> ('model -> 'model) -> unit Effect.t)) t
+    -> ('model * (('model -> 'model) -> unit Effect.t)) t
 
   val state_opt
     :  ?here:Stdlib.Lexing.position

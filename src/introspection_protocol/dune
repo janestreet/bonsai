@@ -1,6 +1,7 @@
 (library
  (name bonsai_introspection_protocol)
  (public_name bonsai.introspection_protocol)
- (libraries async_rpc_kernel core core_kernel.nonempty_list)
+ (libraries async_rpc_kernel bonsai core core_kernel.nonempty_list
+   core_kernel.uuid)
  (preprocess
   (pps ppx_jane)))

@@ -69,8 +69,8 @@ let _component t (local_ _graph) =
 [%%expect
   {|
 Line 64, characters 24-30:
-Error: The value _graph is local, so cannot be used inside a function that might escape.
-Hint: The function might escape because it is an argument to a tail call
+Error: The value _graph is local but is expected to be global
+       because it is used inside a function which is expected to be global.
 |}]
 
 (* Type errors in cases: *)

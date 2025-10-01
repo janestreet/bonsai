@@ -58,7 +58,7 @@ end = struct
       ~remove
       ~extra_changed
       =
-      Incr.compute ~here (Value.both m e) ~f:(fun m_and_e ->
+      Incr.compute ~here (Value.both ~here m e) ~f:(fun m_and_e ->
         let%pattern_bind.Ui_incr m, e = m_and_e in
         Incr_map.unordered_fold_with_extra ?update m e ~init ~add ~remove ~extra_changed)
     ;;
@@ -175,13 +175,13 @@ end = struct
     ;;
 
     let merge ?(here = Stdlib.Lexing.dummy_pos) a b ~f =
-      Incr.compute ~here (Value.both a b) ~f:(fun a_and_b ->
+      Incr.compute ~here (Value.both ~here a b) ~f:(fun a_and_b ->
         let%pattern_bind.Ui_incr a, b = a_and_b in
         Incr_map.merge a b ~f)
     ;;
 
     let merge_both_some ?(here = Stdlib.Lexing.dummy_pos) a b ~f =
-      Incr.compute ~here (Value.both a b) ~f:(fun a_and_b ->
+      Incr.compute ~here (Value.both ~here a b) ~f:(fun a_and_b ->
         let%pattern_bind.Ui_incr a, b = a_and_b in
         Incr_map.merge_both_some a b ~f)
     ;;
@@ -201,19 +201,19 @@ end = struct
     let keys ?(here = Stdlib.Lexing.dummy_pos) m = Incr.compute ~here ~f:Incr_map.keys m
 
     let rank ?(here = Stdlib.Lexing.dummy_pos) m k =
-      Incr.compute ~here (Value.both m k) ~f:(fun m_and_k ->
+      Incr.compute ~here (Value.both ~here m k) ~f:(fun m_and_k ->
         let%pattern_bind.Ui_incr m, k = m_and_k in
         Incr_map.rank m k)
     ;;
 
     let subrange ?(here = Stdlib.Lexing.dummy_pos) m bounds =
-      Incr.compute ~here (Value.both m bounds) ~f:(fun m_and_bounds ->
+      Incr.compute ~here (Value.both ~here m bounds) ~f:(fun m_and_bounds ->
         let%pattern_bind.Ui_incr m, bounds = m_and_bounds in
         Incr_map.subrange m bounds)
     ;;
 
     let subrange_by_rank ?(here = Stdlib.Lexing.dummy_pos) m bounds =
-      Incr.compute ~here (Value.both m bounds) ~f:(fun m_and_bounds ->
+      Incr.compute ~here (Value.both ~here m bounds) ~f:(fun m_and_bounds ->
         let%pattern_bind.Ui_incr m, bounds = m_and_bounds in
         Incr_map.subrange_by_rank m bounds)
     ;;
@@ -338,7 +338,7 @@ end = struct
   module Set = struct
     (* Proxy a binary function to Incr and back. *)
     let incr_binary_fn ~here a b ~f =
-      Incr.compute ~here (Value.both a b) ~f:(fun a_and_b ->
+      Incr.compute ~here (Value.both ~here a b) ~f:(fun a_and_b ->
         let%pattern_bind.Ui_incr a, b = a_and_b in
         f a b)
     ;;

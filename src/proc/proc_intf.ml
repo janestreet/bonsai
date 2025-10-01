@@ -280,8 +280,7 @@ module type S = sig
     -> ?sexp_of_model:('model -> Sexp.t)
     -> ?equal:('model -> 'model -> bool)
     -> 'model
-    -> ('model * (?here:Stdlib.Lexing.position -> ('model -> 'model) -> unit Effect.t))
-         Computation.t
+    -> ('model * (('model -> 'model) -> unit Effect.t)) Computation.t
 
   (** A bool-state which starts at [default_model] and flips whenever the returned effect
       is scheduled. *)
