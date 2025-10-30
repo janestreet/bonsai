@@ -759,6 +759,7 @@ module type S = sig
     val on_change
       :  ?here:Stdlib.Lexing.position
       -> ?sexp_of_model:('a -> Sexp.t)
+      -> ?trigger:[ `Before_display | `After_display ]
       -> equal:('a -> 'a -> bool)
       -> 'a Value.t
       -> callback:('a -> unit Effect.t) Value.t
@@ -769,6 +770,7 @@ module type S = sig
     val on_change'
       :  ?here:Stdlib.Lexing.position
       -> ?sexp_of_model:('a -> Sexp.t)
+      -> ?trigger:[ `Before_display | `After_display ]
       -> equal:('a -> 'a -> bool)
       -> 'a Value.t
       -> callback:('a option -> 'a -> unit Effect.t) Value.t
@@ -790,6 +792,7 @@ module type S = sig
       :  ?here:Stdlib.Lexing.position
       -> ?on_activate:unit Effect.t Value.t
       -> ?on_deactivate:unit Effect.t Value.t
+      -> ?before_display:unit Effect.t Value.t
       -> ?after_display:unit Effect.t Value.t
       -> unit
       -> unit Computation.t
@@ -800,8 +803,21 @@ module type S = sig
       :  ?here:Stdlib.Lexing.position
       -> ?on_activate:unit Effect.t option Value.t
       -> ?on_deactivate:unit Effect.t option Value.t
+      -> ?before_display:unit Effect.t option Value.t
       -> ?after_display:unit Effect.t option Value.t
       -> unit
+      -> unit Computation.t
+
+    (** [before_display] and [before_display'] are lower-level functions that can be used
+        to register an event to occur once-per-frame (before the vdom is mounted) *)
+    val before_display
+      :  ?here:Stdlib.Lexing.position
+      -> unit Effect.t Value.t
+      -> unit Computation.t
+
+    val before_display'
+      :  ?here:Stdlib.Lexing.position
+      -> unit Effect.t option Value.t
       -> unit Computation.t
 
     (** [after_display] and [after_display'] are lower-level functions that can be used to

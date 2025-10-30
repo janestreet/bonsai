@@ -105,3 +105,75 @@ let component (never : unit -> Nothing.t Bonsai.t) (local_ _graph) =
 Line 100, characters 9-10:
 Error: Unreachable expression was reached
 |}]
+
+(* Regression tests: match%sub with when clause *)
+
+(* single case: *)
+
+let _component (local_ _graph) =
+  match%sub Bonsai.return 0 with
+  | n when n > 5 -> Bonsai.return ()
+;;
+
+[%%expect {| |}]
+
+let _component (local_ _graph) =
+  match%sub Bonsai.return 0 with
+  | _ when n > 5 -> Bonsai.return ()
+;;
+
+(* BUG: should be disallowed *)
+[%%expect {| |}]
+
+let _component (local_ _graph) =
+  match%sub Bonsai.return 0 with
+  | n when true -> Bonsai.return ()
+;;
+
+[%%expect
+  {|
+Line 130, characters 4-5:
+Error (warning 27 [unused-var-strict]): unused variable n.
+|}]
+
+(* multi case: *)
+
+let _component (local_ _graph) =
+  match%sub Bonsai.return 0 with
+  | n when n > 5 -> Bonsai.return ()
+  | _ -> Bonsai.return ()
+;;
+
+[%%expect {| |}]
+
+let _component (local_ _graph) =
+  match%sub Bonsai.return 0 with
+  | _ when n > 5 -> Bonsai.return ()
+  | _ -> Bonsai.return ()
+;;
+
+[%%expect
+  {|
+Line 151, characters 11-12:
+Error: Unbound value n
+|}]
+
+let _component (local_ _graph) =
+  match%sub Bonsai.return 0 with
+  | n when true -> Bonsai.return ()
+  | _ -> Bonsai.return ()
+;;
+
+[%%expect
+  {|
+Line 163, characters 4-5:
+Error (warning 26 [unused-var]): unused variable n.
+|}]
+
+let _component (local_ _graph) =
+  match%sub Bonsai.return (0, 1) with
+  | m, n when n > 5 -> m
+  | _ -> Bonsai.return 0
+;;
+
+[%%expect {| |}]

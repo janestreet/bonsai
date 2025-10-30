@@ -1043,51 +1043,64 @@ module Edge = struct
   let on_change__for_proc2
     ?(here = Stdlib.Lexing.dummy_pos)
     ?sexp_of_model
+    ?trigger
     ~equal
     value
     ~callback
     graph
     =
-    perform ~here graph (Proc.Edge.on_change ~here ?sexp_of_model ~equal value ~callback)
+    perform
+      ~here
+      graph
+      (Proc.Edge.on_change ~here ?sexp_of_model ?trigger ~equal value ~callback)
   ;;
 
   let on_change
     ?(here = Stdlib.Lexing.dummy_pos)
     ?sexp_of_model
+    ?trigger
     ~equal
     value
     ~callback
     graph
     =
-    ignore_t (on_change__for_proc2 ~here ?sexp_of_model ~equal value ~callback graph)
+    ignore_t
+      (on_change__for_proc2 ~here ?sexp_of_model ?trigger ~equal value ~callback graph)
   ;;
 
   let on_change'__for_proc2
     ?(here = Stdlib.Lexing.dummy_pos)
     ?sexp_of_model
+    ?trigger
     ~equal
     value
     ~callback
     graph
     =
-    perform ~here graph (Proc.Edge.on_change' ~here ?sexp_of_model ~equal value ~callback)
+    perform
+      ~here
+      graph
+      (Proc.Edge.on_change' ~here ?sexp_of_model ?trigger ~equal value ~callback)
   ;;
 
   let on_change'
     ?(here = Stdlib.Lexing.dummy_pos)
     ?sexp_of_model
+    ?trigger
     ~equal
     value
     ~callback
     graph
     =
-    ignore_t (on_change'__for_proc2 ~here ?sexp_of_model ~equal value ~callback graph)
+    ignore_t
+      (on_change'__for_proc2 ~here ?sexp_of_model ?trigger ~equal value ~callback graph)
   ;;
 
   let lifecycle__for_proc2
     ?(here = Stdlib.Lexing.dummy_pos)
     ?on_activate
     ?on_deactivate
+    ?before_display
     ?after_display
     ()
     graph
@@ -1095,24 +1108,39 @@ module Edge = struct
     perform
       ~here
       graph
-      (Proc.Edge.lifecycle ~here ?on_activate ?on_deactivate ?after_display ())
+      (Proc.Edge.lifecycle
+         ~here
+         ?on_activate
+         ?on_deactivate
+         ?before_display
+         ?after_display
+         ())
   ;;
 
   let lifecycle
     ?(here = Stdlib.Lexing.dummy_pos)
     ?on_activate
     ?on_deactivate
+    ?before_display
     ?after_display
     graph
     =
     ignore_t
-      (lifecycle__for_proc2 ~here ?on_activate ?on_deactivate ?after_display () graph)
+      (lifecycle__for_proc2
+         ~here
+         ?on_activate
+         ?on_deactivate
+         ?before_display
+         ?after_display
+         ()
+         graph)
   ;;
 
   let lifecycle'__for_proc2
     ?(here = Stdlib.Lexing.dummy_pos)
     ?on_activate
     ?on_deactivate
+    ?before_display
     ?after_display
     ()
     graph
@@ -1120,19 +1148,51 @@ module Edge = struct
     perform
       ~here
       graph
-      (Proc.Edge.lifecycle' ~here ?on_activate ?on_deactivate ?after_display ())
+      (Proc.Edge.lifecycle'
+         ~here
+         ?on_activate
+         ?on_deactivate
+         ?before_display
+         ?after_display
+         ())
   ;;
 
   let lifecycle'
     ?(here = Stdlib.Lexing.dummy_pos)
     ?on_activate
     ?on_deactivate
+    ?before_display
     ?after_display
     graph
     =
     ignore_t
-      (lifecycle'__for_proc2 ~here ?on_activate ?on_deactivate ?after_display () graph)
+      (lifecycle'__for_proc2
+         ~here
+         ?on_activate
+         ?on_deactivate
+         ?before_display
+         ?after_display
+         ()
+         graph)
   ;;
+
+  let before_display__for_proc2 ?(here = Stdlib.Lexing.dummy_pos) callback graph =
+    perform ~here graph (Proc.Edge.before_display ~here callback)
+  ;;
+
+  let before_display ?(here = Stdlib.Lexing.dummy_pos) callback graph =
+    ignore_t (before_display__for_proc2 ~here callback graph)
+  ;;
+
+  let before_display'__for_proc2 ?(here = Stdlib.Lexing.dummy_pos) callback graph =
+    perform ~here graph (Proc.Edge.before_display' ~here callback)
+  ;;
+
+  let before_display' ?(here = Stdlib.Lexing.dummy_pos) callback graph =
+    ignore_t (before_display'__for_proc2 ~here callback graph)
+  ;;
+
+  (**)
 
   let after_display__for_proc2 ?(here = Stdlib.Lexing.dummy_pos) callback graph =
     perform ~here graph (Proc.Edge.after_display ~here callback)
@@ -1220,6 +1280,11 @@ module Memo = struct
   let lookup ?(here = Stdlib.Lexing.dummy_pos) t input graph =
     perform ~here graph (Proc.Memo.lookup ~here t input)
   ;;
+
+  type ('query, 'response) responses = ('query, 'response) Proc.Memo.responses =
+    | T : ('query, 'response, 'cmp) Map.t -> ('query, 'response) responses
+
+  let responses (type i r) (t : (i, r) t) = Proc.Memo.responses t
 end
 
 module Effect_throttling = struct
@@ -1515,6 +1580,8 @@ module For_proc = struct
   let on_change' = Edge.on_change'__for_proc2
   let lifecycle = Edge.lifecycle__for_proc2
   let lifecycle' = Edge.lifecycle'__for_proc2
+  let before_display = Edge.before_display__for_proc2
+  let before_display' = Edge.before_display'__for_proc2
   let after_display = Edge.after_display__for_proc2
   let after_display' = Edge.after_display'__for_proc2
   let manual_refresh = Edge.Poll.manual_refresh__for_proc2

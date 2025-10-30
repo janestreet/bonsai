@@ -724,7 +724,11 @@ let sub (location_behavior : Location_behavior.t) : (module Ext) =
       function
       | [] -> assert false
       | [ (case : case) ] ->
-        let case = maybe_wrap_with_lazy ~loc ~modul ~graph_name_if_lazy case in
+        let case =
+          case
+          |> maybe_wrap_with_lazy ~loc ~modul ~graph_name_if_lazy
+          |> add_usages_for_vars_definitely_used_in_when_clause
+        in
         let returned_expr = qualified_return ~loc ~modul expr in
         let fn =
           maybe_destruct

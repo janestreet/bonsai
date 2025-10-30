@@ -39,6 +39,10 @@ val trigger_lifecycles : _ t -> unit
 (** Schedules an event *)
 val schedule_event : _ t -> unit Ui_effect.t -> unit
 
+(** returns true if the lifecycle collection has anything that it wants to do before the
+    display is processed. *)
+val has_before_display_events : _ t -> bool
+
 (** returns true if the lifecycle collection has anything that it wants to do after the
     display is processed. *)
 val has_after_display_events : _ t -> bool

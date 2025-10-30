@@ -4,6 +4,7 @@ open! Import
 type t =
   { on_activate : unit Ui_effect.t option
   ; on_deactivate : unit Ui_effect.t option
+  ; before_display : unit Ui_effect.t option
   ; after_display : unit Ui_effect.t option
   }
 
@@ -20,13 +21,28 @@ module Collection = struct
     | None -> tl
   ;;
 
-  let diff old new_ =
-    (* collect the activations and deactivations separately so that we can run them
-       in a different order *)
+  let get_before_display ~old ~new_ =
+    let before_displays =
+      let collect acc = function
+        | _, `Right { before_display; _ } -> maybe_cons before_display acc
+        | _, (`Left _ | `Unequal _) -> acc
+      in
+      let data_equal = phys_equal in
+      Map.fold_symmetric_diff old new_ ~data_equal ~init:Reversed_list.[] ~f:collect
+    in
+    (* We return an option so that we know when to stop looping. *)
+    match before_displays |> Reversed_list.rev with
+    | [] -> None
+    | before_displays -> Some (Ui_effect.Many before_displays)
+  ;;
+
+  let get_after_display ~old ~new_ =
     let after_displays =
       let collect ~key:_ ~data:{ after_display; _ } = maybe_cons after_display in
       Map.fold new_ ~init:Reversed_list.[] ~f:collect
     in
+    (* collect the activations and deactivations separately so that we can run them
+       in a different order *)
     let activations, deactivations =
       let collect (activations, deactivations) = function
         | _, `Left { on_deactivate; _ } ->

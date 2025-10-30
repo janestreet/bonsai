@@ -1,6 +1,6 @@
 (library
  (name balance_list_tree)
  (public_name bonsai.balance_list_tree)
- (libraries core core_kernel.nonempty_list)
+ (libraries core)
  (preprocess
   (pps ppx_jane)))
