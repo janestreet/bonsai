@@ -250,6 +250,34 @@ let schedule_event _ t =
     Exn.reraise exn "Unhandled exception raised in effect")
 ;;
 
+let has_before_display_events (T t) =
+  let lifecycle = t.lifecycle |> Incr.Observer.value_exn in
+  Bonsai.Private.Lifecycle.Collection.get_before_display
+    ~old:Bonsai.Private.Lifecycle.Collection.empty
+    ~new_:lifecycle
+  |> Option.is_some
+  || Bonsai.Time_source.Private.has_before_display_events t.time_source
+;;
+
+let trigger_before_display (T t) ~apply_actions =
+  let old = ref Bonsai.Private.Lifecycle.Collection.empty in
+  let rec loop () =
+    let new_ = t.lifecycle |> Incr.Observer.value_exn in
+    match Bonsai.Private.Lifecycle.Collection.get_before_display ~old:!old ~new_ with
+    | None -> ()
+    | Some before_displays ->
+      schedule_event () before_displays;
+      old := Map.merge_skewed !old new_ ~combine:(fun ~key:_ l _r -> l);
+      apply_actions ();
+      loop ()
+  in
+  loop ();
+  if Bonsai.Time_source.Private.has_before_display_events t.time_source
+  then (
+    Bonsai.Time_source.Private.trigger_before_display t.time_source;
+    apply_actions ())
+;;
+
 let flush
   ?(log_before_action_application = fun ~action_sexp:_ -> ())
   ?(log_on_skipped_stabilization = fun ~action_sexp:_ -> ())
@@ -315,7 +343,11 @@ let flush
      but I think it's important to be explicit about which behavior we use,
      so I chose the one that would be least surprising if a stabilization
      does happen to occur. *)
-  timer Apply_actions ~f:(fun () -> apply_actions (Incr.Var.latest_value model_var))
+  let apply_actions () =
+    timer Apply_actions ~f:(fun () -> apply_actions (Incr.Var.latest_value model_var))
+  in
+  apply_actions ();
+  trigger_before_display (T t) ~apply_actions
 ;;
 
 let result (T { result; _ }) = Incr.Observer.value_exn result
@@ -330,7 +362,7 @@ let trigger_lifecycles (T t) =
   let old = t.last_lifecycle in
   let new_ = t.lifecycle |> Incr.Observer.value_exn in
   t.last_lifecycle <- new_;
-  schedule_event () (Bonsai.Private.Lifecycle.Collection.diff old new_);
+  schedule_event () (Bonsai.Private.Lifecycle.Collection.get_after_display ~old ~new_);
   Bonsai.Time_source.Private.trigger_after_display t.time_source
 ;;
 

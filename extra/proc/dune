@@ -1,7 +1,7 @@
 (library
  (name bonsai_extra_proc)
  (public_name bonsai.extra_proc)
- (libraries core bonsai bonsai_extra bonsai_concrete.ui_incr
-   virtual_dom.ui_effect)
+ (libraries bonsai bonsai_extra core virtual_dom.ui_effect
+   bonsai_concrete.ui_incr)
  (preprocess
   (pps ppx_jane ppx_bonsai)))

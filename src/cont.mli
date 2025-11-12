@@ -642,10 +642,16 @@ module Edge : sig
       changes. The [equal] function is used to determine if a value is the same or not.
       The callback is _always_ invoked the first time that this component is becomes
       active. The callback is invoked at most once per frame and will be called with the
-      latest value. [?sexp_of_model] is only used for debugging. *)
+      latest value. [?sexp_of_model] is only used for debugging.
+
+      [`Before_display] can be used to react to changes in the same frame that they
+      happen, eliminating certain frame gaps. However, the callback is still only invoked
+      at most once per frame; if two different [before_display]s cause [t] to change, the
+      callback will only be invoked on one of the new values. *)
   val on_change
     :  here:[%call_pos]
     -> ?sexp_of_model:('a -> Sexp.t)
+    -> ?trigger:[ `Before_display | `After_display ]
     -> equal:('a -> 'a -> bool)
     -> 'a t
     -> callback:('a -> unit Effect.t) t
@@ -659,6 +665,7 @@ module Edge : sig
   val on_change'
     :  here:[%call_pos]
     -> ?sexp_of_model:('a -> Sexp.t)
+    -> ?trigger:[ `Before_display | `After_display ]
     -> equal:('a -> 'a -> bool)
     -> 'a t
     -> callback:('a option -> 'a -> unit Effect.t) t
@@ -667,17 +674,27 @@ module Edge : sig
 
   (** [Bonsai.Edge.lifecycle] is used to add effects to Bonsai's lifecycle events. Using
       this, you can witness component activation and deactivation, as well as schedule an
-      effect. Lifecycle events are run at the end of every frame, so incremental updates
-      and DOM updates will be run before any lifecycle events.
+      effect.
+
+      Most lifecycle events are run at the end of every frame, so incremental updates and
+      DOM updates will be run before those lifecycle events.
+
+      [before_display] lifecycle events are the exception; they are run before the view is
+      updated. Changes made in [before_display] effects can trigger other [before_display]
+      effects to trigger in the same frame, but each individual effect can only run at
+      most once per frame.
 
       Lifecycle events are run in the following order:
-      1. on_deactivate
-      2. on_activate
-      3. after_display *)
+      1. before_display
+      2. (... incremental/DOM updates ...)
+      3. on_deactivate
+      4. on_activate
+      5. after_display *)
   val lifecycle
     :  here:[%call_pos]
     -> ?on_activate:unit Effect.t t
     -> ?on_deactivate:unit Effect.t t
+    -> ?before_display:unit Effect.t t
     -> ?after_display:unit Effect.t t
     -> local_ graph
     -> unit
@@ -687,9 +704,16 @@ module Edge : sig
     :  here:[%call_pos]
     -> ?on_activate:unit Effect.t option t
     -> ?on_deactivate:unit Effect.t option t
+    -> ?before_display:unit Effect.t option t
     -> ?after_display:unit Effect.t option t
     -> local_ graph
     -> unit
+
+  (** [before_display] will schedule an effect right before the dom is updated. *)
+  val before_display : here:[%call_pos] -> unit Effect.t t -> local_ graph -> unit
+
+  (** Just like [before_display] except that the effect is optional *)
+  val before_display' : here:[%call_pos] -> unit Effect.t option t -> local_ graph -> unit
 
   (** [after_display] will schedule an effect at the end of every frame. *)
   val after_display : here:[%call_pos] -> unit Effect.t t -> local_ graph -> unit
@@ -778,6 +802,14 @@ module Memo : sig
     -> 'input bonsai_t
     -> local_ graph
     -> 'result option bonsai_t
+
+  type ('query, 'response) responses =
+    | T : ('query, 'response, 'cmp) Map.t -> ('query, 'response) responses
+
+  (** Gets all existing entries for each query of the Memo as a [Map.t]. Useful if you
+      want to inspect data from your Memo without actually triggering a computation for a
+      given query *)
+  val responses : ('i, 'r) t -> ('i, 'r) responses
 end
 
 module Effect_throttling : sig
@@ -1431,6 +1463,7 @@ module For_proc : sig
   val on_change
     :  here:[%call_pos]
     -> ?sexp_of_model:('a -> Sexp.t)
+    -> ?trigger:[ `Before_display | `After_display ]
     -> equal:('a -> 'a -> bool)
     -> 'a t
     -> callback:('a -> unit Effect.t) t
@@ -1440,6 +1473,7 @@ module For_proc : sig
   val on_change'
     :  here:[%call_pos]
     -> ?sexp_of_model:('a -> Sexp.t)
+    -> ?trigger:[ `Before_display | `After_display ]
     -> equal:('a -> 'a -> bool)
     -> 'a t
     -> callback:('a option -> 'a -> unit Effect.t) t
@@ -1450,6 +1484,7 @@ module For_proc : sig
     :  here:[%call_pos]
     -> ?on_activate:unit Effect.t t
     -> ?on_deactivate:unit Effect.t t
+    -> ?before_display:unit Effect.t t
     -> ?after_display:unit Effect.t t
     -> unit
     -> local_ graph
@@ -1459,8 +1494,17 @@ module For_proc : sig
     :  here:[%call_pos]
     -> ?on_activate:unit Effect.t option t
     -> ?on_deactivate:unit Effect.t option t
+    -> ?before_display:unit Effect.t option t
     -> ?after_display:unit Effect.t option t
     -> unit
+    -> local_ graph
+    -> unit t
+
+  val before_display : here:[%call_pos] -> unit Effect.t t -> local_ graph -> unit t
+
+  val before_display'
+    :  here:[%call_pos]
+    -> unit Effect.t option t
     -> local_ graph
     -> unit t
 

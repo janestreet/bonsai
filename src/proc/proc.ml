@@ -389,6 +389,8 @@ module Edge = struct
   let on_change' = Bonsai_cont.Private.For_proc.on_change'
   let lifecycle = Bonsai_cont.Private.For_proc.lifecycle
   let lifecycle' = Bonsai_cont.Private.For_proc.lifecycle'
+  let before_display = Bonsai_cont.Private.For_proc.before_display
+  let before_display' = Bonsai_cont.Private.For_proc.before_display'
   let after_display = Bonsai_cont.Private.For_proc.after_display
   let after_display' = Bonsai_cont.Private.For_proc.after_display'
 

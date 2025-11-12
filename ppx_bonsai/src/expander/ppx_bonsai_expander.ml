@@ -391,6 +391,7 @@ and arr ~(expand_with : label) (location_behavior : Location_behavior.t) : (modu
                 ~destruct
                 ~modul
                 ~return_value_in_exclave:false
+                ~zero_alloc:false
                 ~loc
                 ~lhs:pat
                 ~body:inner)
@@ -544,7 +545,7 @@ and arr ~(expand_with : label) (location_behavior : Location_behavior.t) : (modu
       |> location_ghoster#expression
     ;;
 
-    let expand_match ~loc ~modul ~(locality : Locality.t) expr cases =
+    let expand_match ~extension_kind:_ ~loc ~modul ~(locality : Locality.t) expr cases =
       (match locality with
        | { allocate_function_on_stack = false; return_value_in_exclave = false } -> ()
        | _ -> Location.raise_errorf ~loc "ppx_bonsai supports neither [bindl] nor [mapl]");
@@ -712,7 +713,7 @@ let sub (location_behavior : Location_behavior.t) : (module Ext) =
       { case with pc_rhs }
     ;;
 
-    let expand_match ~loc ~modul ~locality expr =
+    let expand_match ~extension_kind:_ ~loc ~modul ~locality expr =
       let expr, graph_name_if_lazy =
         match Extract_lazy_extension.extract expr with
         | Some { expr_without_lazy; graph_name } -> expr_without_lazy, Some graph_name
@@ -724,7 +725,11 @@ let sub (location_behavior : Location_behavior.t) : (module Ext) =
       function
       | [] -> assert false
       | [ (case : case) ] ->
-        let case = maybe_wrap_with_lazy ~loc ~modul ~graph_name_if_lazy case in
+        let case =
+          case
+          |> maybe_wrap_with_lazy ~loc ~modul ~graph_name_if_lazy
+          |> add_usages_for_vars_definitely_used_in_when_clause
+        in
         let returned_expr = qualified_return ~loc ~modul expr in
         let fn =
           maybe_destruct
@@ -732,6 +737,7 @@ let sub (location_behavior : Location_behavior.t) : (module Ext) =
             ~loc
             ~modul
             ~return_value_in_exclave:locality.return_value_in_exclave
+            ~zero_alloc:false
             ~lhs:case.pc_lhs
             ~body:case.pc_rhs
         in

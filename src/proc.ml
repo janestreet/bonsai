@@ -594,7 +594,14 @@ let yoink ~(here : [%call_pos]) a =
 module Edge = struct
   include Edge
 
-  let lifecycle' ~(here : [%call_pos]) ?on_activate ?on_deactivate ?after_display () =
+  let lifecycle'
+    ~(here : [%call_pos])
+    ?on_activate
+    ?on_deactivate
+    ?before_display
+    ?after_display
+    ()
+    =
     let open Let_syntax_with_map_location (struct
         let here = here
       end) in
@@ -602,28 +609,41 @@ module Edge = struct
       | Some a -> a
       | None -> Value.return ~here None
     in
-    let%sub triple =
+    let%sub all =
       let%arr a = transpose_join on_activate
       and b = transpose_join on_deactivate
-      and c = transpose_join after_display in
-      a, b, c
+      and c = transpose_join before_display
+      and d = transpose_join after_display in
+      a, b, c, d
     in
     let%sub t =
-      match%arr triple with
-      | None, None, None -> None
-      | on_activate, on_deactivate, after_display ->
-        Some { Lifecycle.on_activate; on_deactivate; after_display }
+      match%arr all with
+      | None, None, None, None -> None
+      | on_activate, on_deactivate, before_display, after_display ->
+        Some { Lifecycle.on_activate; on_deactivate; before_display; after_display }
     in
     lifecycle ~here t
   ;;
 
-  let lifecycle ~(here : [%call_pos]) ?on_activate ?on_deactivate ?after_display () =
+  let lifecycle
+    ~(here : [%call_pos])
+    ?on_activate
+    ?on_deactivate
+    ?before_display
+    ?after_display
+    ()
+    =
     lifecycle'
       ~here
       ?on_activate:(Option.map on_activate ~f:(Value.map ~here ~f:Option.some))
       ?on_deactivate:(Option.map on_deactivate ~f:(Value.map ~here ~f:Option.some))
+      ?before_display:(Option.map before_display ~f:(Value.map ~here ~f:Option.some))
       ?after_display:(Option.map after_display ~f:(Value.map ~here ~f:Option.some))
       ()
+  ;;
+
+  let before_display' ~(here : [%call_pos]) event_opt_value =
+    lifecycle' ~here ~before_display:event_opt_value ()
   ;;
 
   let after_display' ~(here : [%call_pos]) event_opt_value =
@@ -635,12 +655,24 @@ module Edge = struct
     lifecycle' ~here ~after_display:event_value ()
   ;;
 
+  let before_display ~(here : [%call_pos]) event_value =
+    let event_value = Value.map ~here event_value ~f:Option.some in
+    lifecycle' ~here ~before_display:event_value ()
+  ;;
+
   let wait_after_display ~(here : [%call_pos]) () =
     Incr0.with_clock ~here (fun clock ->
       Ui_incr.return (Time_source.wait_after_display clock))
   ;;
 
-  let on_change' ~(here : [%call_pos]) ?sexp_of_model ~equal input ~callback =
+  let on_change'
+    ~(here : [%call_pos])
+    ?sexp_of_model
+    ?(trigger = (`After_display : [ `Before_display | `After_display ]))
+    ~equal
+    input
+    ~callback
+    =
     let open Let_syntax_with_map_location (struct
         let here = here
       end) in
@@ -659,14 +691,16 @@ module Edge = struct
           |> Ui_effect.lazy_
           |> Some
     in
-    after_display' ~here update
+    match trigger with
+    | `Before_display -> before_display' ~here update
+    | `After_display -> after_display' ~here update
   ;;
 
-  let on_change ~(here : [%call_pos]) ?sexp_of_model ~equal input ~callback =
+  let on_change ~(here : [%call_pos]) ?sexp_of_model ?trigger ~equal input ~callback =
     let callback =
       Value.map ~here callback ~f:(fun callback _prev value -> callback value)
     in
-    on_change' ~here ?sexp_of_model ~equal input ~callback
+    on_change' ~here ?sexp_of_model ?trigger ~equal input ~callback
   ;;
 
   module Poll = struct
@@ -1488,6 +1522,14 @@ module Memo = struct
        let%arr t and query in
        let (T { responses; _ }) = t in
        Map.find responses query)
+  ;;
+
+  type ('query, 'response) responses =
+    | T : ('query, 'response, 'cmp) Map.t -> ('query, 'response) responses
+
+  let responses (type query response) (t : (query, response) t) =
+    let (T { responses; _ }) = t in
+    T responses
   ;;
 end
 
