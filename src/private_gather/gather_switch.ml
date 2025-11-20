@@ -32,10 +32,10 @@ let f ~gather ~recursive_scopes ~time_source ~match_ ~arms ~here =
       let%bind index in
       (* !!!This is a load-bearing bind!!!
 
-             If this bind isn't here, the scope that is created for the bind
-             doesn't exist, and old incremental nodes might still be active, and
-             with things like [match%sub] or [Bonsai.match_either] can witness old
-             nodes, which can cause [assert false] to trigger. *)
+         If this bind isn't here, the scope that is created for the bind doesn't exist,
+         and old incremental nodes might still be active, and with things like [match%sub]
+         or [Bonsai.match_either] can witness old nodes, which can cause [assert false] to
+         trigger. *)
       let path =
         if path_needs_disambiguation
         then Path.append path (Path.Elem.Switch index)
@@ -83,8 +83,8 @@ let f ~gather ~recursive_scopes ~time_source ~match_ ~arms ~here =
     and input = Incr.bind result_input_and_lifecycle ~f:Tuple3.get2
     and lifecycle = Incr.bind result_input_and_lifecycle ~f:Tuple3.get3 in
     let lifecycle =
-      (* if we can prove that none of the switch cases have lifecycle functions,
-             then return None, dropping the incremental node on the floor. *)
+      (* if we can prove that none of the switch cases have lifecycle functions, then
+         return None, dropping the incremental node on the floor. *)
       match resolved.lifecycle with
       | No -> None
       | Yes_or_maybe -> Some lifecycle

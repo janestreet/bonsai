@@ -154,9 +154,9 @@ module Versioned_message = struct
       List.map messages ~f:(fun message ->
         message |> Stable.Message.V3.of_v2 |> Stable.Message.V4.of_v3)
     | V3 messages ->
-      (* NOTE: UUIDs are safe to ignore as UUIDs are never sent now as the concept
-         of a bonsai bug "session" disappeared when bonsai-bug was moved onto the
-         chrome extension. *)
+      (* NOTE: UUIDs are safe to ignore as UUIDs are never sent now as the concept of a
+         bonsai bug "session" disappeared when bonsai-bug was moved onto the chrome
+         extension. *)
       let _uuids, messages =
         List.partition_map messages ~f:(function
           | Uuid uuid -> First uuid
@@ -165,9 +165,9 @@ module Versioned_message = struct
       List.map messages ~f:(fun message ->
         message |> Stable.Message.V3.of_v2 |> Stable.Message.V4.of_v3)
     | V4 messages ->
-      (* NOTE: UUIDs are safe to ignore as UUIDs are never sent now as the concept
-         of a bonsai bug "session" disappeared when bonsai-bug was moved onto the
-         chrome extension. *)
+      (* NOTE: UUIDs are safe to ignore as UUIDs are never sent now as the concept of a
+         bonsai bug "session" disappeared when bonsai-bug was moved onto the chrome
+         extension. *)
       let _uuids, messages =
         List.partition_map messages ~f:(function
           | Uuid uuid -> First uuid
@@ -175,9 +175,9 @@ module Versioned_message = struct
       in
       List.map messages ~f:(fun message -> message |> Stable.Message.V4.of_v3)
     | V5 messages ->
-      (* NOTE: UUIDs are safe to ignore as UUIDs are never sent now as the concept
-         of a bonsai bug "session" disappeared when bonsai-bug was moved onto the
-         chrome extension. *)
+      (* NOTE: UUIDs are safe to ignore as UUIDs are never sent now as the concept of a
+         bonsai bug "session" disappeared when bonsai-bug was moved onto the chrome
+         extension. *)
       let _uuids, messages =
         List.partition_map messages ~f:(function
           | Uuid uuid -> First uuid

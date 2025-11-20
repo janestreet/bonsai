@@ -15,7 +15,7 @@ let enqueue_value
   match Environment.find environment id with
   | None ->
     (* not being able to find this value is probably a bug, but let's not crash inside
-       this debugging utility.  *)
+       this debugging utility. *)
     eprint_s [%message "BUG" [%here] "value not found in environment"];
     environment
   | Some value ->
@@ -66,8 +66,8 @@ let f
   | `Enable_watcher true, `Queue None, `Positions (Some _)
   | `Enable_watcher true, `Queue (Some _), `Positions None ->
     (* If watcher is enabled and we are missing one or both of [watcher_queue] and
-       [value_id_observation_definition_positions], something's gone wrong
-       and we need to raise
+       [value_id_observation_definition_positions], something's gone wrong and we need to
+       raise
     *)
     Core.raise_s
       [%message

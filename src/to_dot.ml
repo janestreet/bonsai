@@ -87,8 +87,8 @@ let register state kind name =
   Id.of_string s
 ;;
 
-(* Connects [from] to [to_] with an arrow.  If [to_] is a "named" value (i.e.
-   it is a Value.t produced by [sub]), the arrow-head on the arrow is removed. *)
+(* Connects [from] to [to_] with an arrow. If [to_] is a "named" value (i.e. it is a
+   Value.t produced by [sub]), the arrow-head on the arrow is removed. *)
 let arrow state ~from ~to_ =
   let arrow_string = if Id.is_named to_ then " [dir=none];" else ";" in
   bprintf
@@ -99,7 +99,7 @@ let arrow state ~from ~to_ =
     arrow_string
 ;;
 
-(* [arrow_from_many state ~to [a;b;c;d]]  is the same as
+(* [arrow_from_many state ~to [a;b;c;d]] is the same as
    {[
      arrow ~from:a ~to_;
      arrow ~from:b ~to_;

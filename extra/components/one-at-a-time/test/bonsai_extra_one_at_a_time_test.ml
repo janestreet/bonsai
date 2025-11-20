@@ -4,12 +4,11 @@ module Bonsai = Bonsai_proc
 open Bonsai.For_open
 module One_at_a_time = Bonsai_extra_proc.One_at_a_time
 
-(* These test are a bit hairier then I'd like because [One_at_a_time.effect]
-   only updates its state machine on [Handle.show] boundaries, which makes
-   things take longer than I'd like. While we usually try to avoid computation
-   introducing frame-delays, this seems sort of okay because it isn't late by a
-   whole frame, and the lateness doesn't compound when this computation is
-   chained together with itself. *)
+(* These test are a bit hairier then I'd like because [One_at_a_time.effect] only updates
+   its state machine on [Handle.show] boundaries, which makes things take longer than I'd
+   like. While we usually try to avoid computation introducing frame-delays, this seems
+   sort of okay because it isn't late by a whole frame, and the lateness doesn't compound
+   when this computation is chained together with itself. *)
 
 let create_handle component =
   Handle.create

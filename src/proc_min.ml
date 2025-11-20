@@ -32,8 +32,8 @@ let watch_computation
     ; value_id_observation_definition_positions = None
     ; enable_watcher =
         false
-        (* [enable_watcher] will be set during the transformation stage if computation watchers
-           are enabled *)
+        (* [enable_watcher] will be set during the transformation stage if computation
+           watchers are enabled *)
     }
 ;;
 
@@ -52,7 +52,8 @@ let sub (type via) ~(here : [%call_pos]) (from : via Computation.t) ~f =
       { from
       ; via
       ; into
-      ; (* We only invert lifecycles for explicit calls to [Bonsai.with_inverted_lifecycles]. *)
+      ; (* We only invert lifecycles for explicit calls to
+           [Bonsai.with_inverted_lifecycles]. *)
         invert_lifecycles = false
       ; here
       }

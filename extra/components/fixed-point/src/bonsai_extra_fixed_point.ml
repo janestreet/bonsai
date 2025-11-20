@@ -66,8 +66,8 @@ let with_self_effect
         let%map.Effect model = get_model in
         match model with
         | Inactive
-        (* Active None could happen if the model were reset in between the injection
-           and get_model effects *)
+        (* Active None could happen if the model were reset in between the injection and
+           get_model effects *)
         | Active None -> Bonsai.Computation_status.Inactive
         | Active (Some v) -> Active v
       in

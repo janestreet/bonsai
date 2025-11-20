@@ -58,7 +58,7 @@ end = struct
     match
       Ppxlib_jane.Shim.Expression_desc.of_parsetree ~loc:expr.pexp_loc expr.pexp_desc
     with
-    (* Things that look like function application.: [%lazy] x | [%lazy] f x *)
+    (*=Things that look like function application.: [%lazy] x | [%lazy] f x *)
     | Pexp_apply
         ( { pexp_desc = Pexp_extension ({ txt = "lazy"; loc = _ }, extension_payload)
           ; pexp_loc
@@ -91,7 +91,7 @@ end = struct
   ;;
 end
 
-(* Maps tuples of [('a Bonsai.t * 'b Bonsai.t ...)] to [('a * 'b ...) Bonsai.t]  *)
+(* Maps tuples of [('a Bonsai.t * 'b Bonsai.t ...)] to [('a * 'b ...) Bonsai.t] *)
 let rec match_tuple_mapper
   ~loc
   ~location_behavior
@@ -151,6 +151,39 @@ and arr ~(expand_with : label) (location_behavior : Location_behavior.t) : (modu
         inherit Ast_traverse.map as super
         method! location loc = super#location { loc with loc_ghost = true }
       end
+    ;;
+
+    (* Check for nested let%arr or let%sub extensions *)
+    let assert_no_nested_let_arr_or_let_sub_extensions ~outer_context expression =
+      let describe_extension ~extension_name payload =
+        match payload with
+        | PStr [ { pstr_desc = Pstr_eval ({ pexp_desc; _ }, _); _ } ] ->
+          (match pexp_desc with
+           | Pexp_let _ -> "let%" ^ extension_name
+           | Pexp_match _ -> "match%" ^ extension_name
+           | Pexp_ifthenelse _ -> "if%" ^ extension_name
+           | _ -> "%" ^ extension_name)
+        | _ -> "%" ^ extension_name
+      in
+      let finder =
+        object
+          inherit [unit] Ast_traverse.fold as super
+
+          method! expression expr acc =
+            match expr.pexp_desc with
+            | Pexp_extension ({ txt = ("arr" | "sub") as extension_name; loc }, payload)
+              ->
+              let extension_desc = describe_extension ~extension_name payload in
+              Location.raise_errorf
+                ~loc
+                "Nested %s is not allowed. You cannot use %%arr or %%sub extensions \
+                 inside the body of another %s."
+                extension_desc
+                outer_context
+            | _ -> super#expression expr acc
+        end
+      in
+      finder#expression expression ()
     ;;
 
     module Extracted_variable = struct
@@ -418,9 +451,9 @@ and arr ~(expand_with : label) (location_behavior : Location_behavior.t) : (modu
               tupleize pats ~build_multiarg_fun
             in
             let mapn_exp =
-              (* NOTE: We are using [map] here instead of [arr] for backwards compatibility
-               with the [Proc] API. Using [map] is safe here as each [map] call is only
-               used/depended on once. *)
+              (* NOTE: We are using [map] here instead of [arr] for backwards
+                 compatibility with the [Proc] API. Using [map] is safe here as each [map]
+                 call is only used/depended on once. *)
               build_application exps ~f_exp:tuplize_n_fun ~op_name:"map"
             in
             mapn_exp, tuple_pat_for_toplevel_f
@@ -445,6 +478,7 @@ and arr ~(expand_with : label) (location_behavior : Location_behavior.t) : (modu
       -> expression
       =
       fun ~loc ~modul value_bindings expression ~expand:_ ->
+      assert_no_nested_let_arr_or_let_sub_extensions ~outer_context:"let%arr" expression;
       let value_bindings =
         List.map value_bindings ~f:(maybe_add_cutoff_to_value_binding ~loc ~modul)
       in
@@ -464,9 +498,9 @@ and arr ~(expand_with : label) (location_behavior : Location_behavior.t) : (modu
     ;;
 
     let build_cutoff_expr ~loc ~modul expr cases =
-      (* If we were just checking for the same branch case below (i.e. if your cases
-         have patterns A and B, then checking against patterns (A, A) and (B, B)), then
-         we would need a final case for (_, _) to catch (A, B), etc.
+      (* If we were just checking for the same branch case below (i.e. if your cases have
+         patterns A and B, then checking against patterns (A, A) and (B, B)), then we
+         would need a final case for (_, _) to catch (A, B), etc.
 
          However, since we add cases like (A, _) and (_, A) in addition to (A, A), our
          cases must be exhaustive if the original match cases are exhaustive, even without
@@ -545,10 +579,27 @@ and arr ~(expand_with : label) (location_behavior : Location_behavior.t) : (modu
       |> location_ghoster#expression
     ;;
 
-    let expand_match ~extension_kind:_ ~loc ~modul ~(locality : Locality.t) expr cases =
+    let expand_match
+      ~extension_kind:_
+      ~(match_kind : Match_kind.t)
+      ~loc
+      ~modul
+      ~(locality : Locality.t)
+      expr
+      cases
+      =
       (match locality with
        | { allocate_function_on_stack = false; return_value_in_exclave = false } -> ()
        | _ -> Location.raise_errorf ~loc "ppx_bonsai supports neither [bindl] nor [mapl]");
+      (* Detect if this match is actually an if statement (desugared from if%arr). An if
+         statement desugars to a match with true/false boolean patterns. *)
+      let outer_context =
+        match match_kind with
+        | Match -> "match%arr"
+        | If_ -> "if%arr"
+      in
+      List.iter cases ~f:(fun case ->
+        assert_no_nested_let_arr_or_let_sub_extensions ~outer_context case.pc_rhs);
       let expr =
         join_tuples_into_single_t ~loc ~location_behavior ~modul ~locality expr
       in
@@ -585,8 +636,8 @@ let sub (location_behavior : Location_behavior.t) : (module Ext) =
 
     let disallow_expression ~loc _ pexp_desc =
       match Ppxlib_jane.Shim.Expression_desc.of_parsetree pexp_desc ~loc with
-      (* It is worse to use let%sub...and instead of multiple let%sub in a row,
-       so disallow it. *)
+      (* It is worse to use let%sub...and instead of multiple let%sub in a row, so
+         disallow it. *)
       | Pexp_let (_, Nonrecursive, _ :: _ :: _, _) ->
         Error "let%sub should not be used with 'and'."
       | Pexp_let (Mutable, _, _, _) -> Error "let%sub should not be used with 'mutable'."
@@ -627,12 +678,11 @@ let sub (location_behavior : Location_behavior.t) : (module Ext) =
         in
         Some
           (match pattern_projections with
-           (* We handle the special case of having no pattern projections (which
-            means there were no variables to be projected) by projecting the
-            whole pattern once, just to ensure that the expression being
-            projected matches the pattern. We only do this when the pattern is
-            exhaustive, because otherwise the pattern matching is already
-            happening inside the [switch] call. *)
+           (* We handle the special case of having no pattern projections (which means
+              there were no variables to be projected) by projecting the whole pattern
+              once, just to ensure that the expression being projected matches the
+              pattern. We only do this when the pattern is exhaustive, because otherwise
+              the pattern matching is already happening inside the [switch] call. *)
            | [] when assume_exhaustive ->
              let projection_case = case ~lhs ~guard:None ~rhs:(eunit ~loc) in
              let fn = pexp_function ~loc [ projection_case ] in
@@ -713,7 +763,7 @@ let sub (location_behavior : Location_behavior.t) : (module Ext) =
       { case with pc_rhs }
     ;;
 
-    let expand_match ~extension_kind:_ ~loc ~modul ~locality expr =
+    let expand_match ~extension_kind:_ ~match_kind:_ ~loc ~modul ~locality expr =
       let expr, graph_name_if_lazy =
         match Extract_lazy_extension.extract expr with
         | Some { expr_without_lazy; graph_name } -> expr_without_lazy, Some graph_name

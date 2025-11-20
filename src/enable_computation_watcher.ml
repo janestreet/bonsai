@@ -243,7 +243,7 @@ module F (Recurse : Fix_transform.Recurse with module Types := Types) = struct
       ->
       let%bind (), free_vars, c = Recurse.on_computation down () `Skipping_over t in
       (* Assoc_like_key and Assoc_like_data are both Named values, must remove both as
-      they are no longer free *)
+         they are no longer free *)
       let removed_key =
         Computation_watcher.Type_id_location_map.remove free_vars key_id
       in
@@ -352,8 +352,8 @@ module F (Recurse : Fix_transform.Recurse with module Types := Types) = struct
         }
       when enable_watcher ->
       let%bind (), free_vars, inner = Recurse.on_computation down () `Directly_on inner in
-      (* Wrap_model and Wrap_inject are both Named values, must remove both as
-         they are no longer free.
+      (* Wrap_model and Wrap_inject are both Named values, must remove both as they are no
+         longer free.
       *)
       let removed_model =
         Computation_watcher.Type_id_location_map.remove free_vars model_id
@@ -423,8 +423,8 @@ module F (Recurse : Fix_transform.Recurse with module Types := Types) = struct
         } ->
       (* [enable_watcher] should only be set to true once we've hit a
          [Computation_watcher] node and [should_run_computation_watcher] is true.
-         Redefining here so that both [Down] and [Computation_watcher] receive
-         the proper value
+         Redefining here so that both [Down] and [Computation_watcher] receive the proper
+         value
       *)
       let enable_watcher = should_run_computation_watcher in
       let config = Computation_watcher.Config.merge config inner_config in
@@ -494,7 +494,7 @@ open Fix_transform.Make (Types) (F)
 
 let run ~watcher_queue c =
   let top_config =
-    (* These values must all be set to false initially.  The fields will switch to [true]
+    (* These values must all be set to false initially. The fields will switch to [true]
        only when they hit `Computation_watcher` nodes that have configs with [true] values
     *)
     { Computation_watcher.Config.log_model_before = false
@@ -517,8 +517,8 @@ let run ~watcher_queue c =
               propagate downwards from said node onwards *)
          ; enable_watcher =
              false
-             (* This flag lets us know that we should set [enable_watcher] once we've reached
-            any [Computation_watcher] node *)
+             (* This flag lets us know that we should set [enable_watcher] once we've
+                reached any [Computation_watcher] node *)
          ; should_run_computation_watcher = true
          ; visited_stores = Type_equal.Id.Uid.Set.empty
          ; value_id_observation_definition_positions =

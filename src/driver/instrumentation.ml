@@ -4,13 +4,13 @@ module Incr = Ui_incr
 module Timeable_event = struct
   (** These are fairly arbitrary, and are subject to change. *)
   type t =
-    (* Startup*)
+    (* Startup *)
     | Graph_application
     | Preprocess
     | Gather
     | Run_eval_fun
     | First_stabilization
-    (* Per-frame*)
+    (* Per-frame *)
     | Stabilize_for_clock
     | Apply_actions
     | Stabilize_for_action

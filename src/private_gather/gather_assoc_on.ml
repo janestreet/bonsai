@@ -67,8 +67,8 @@ let f
             annotate ~here Assoc_key key_incr;
             annotate ~here Assoc_input value;
             let environment =
-              (* It is safe to reuse the same [key_id] and [data_id] for each pair in the map,
-                     since they all start with a fresh "copy" of the outer environment. *)
+              (* It is safe to reuse the same [key_id] and [data_id] for each pair in the
+                 map, since they all start with a fresh "copy" of the outer environment. *)
               environment
               |> Environment.add_exn ~key:io_key_id ~data:key_incr
               |> Environment.add_exn ~key:data_id ~data:value
@@ -107,9 +107,8 @@ let f
     annotate ~here Assoc_results results_map;
     annotate ~here Assoc_lifecycles lifecycle_map;
     let lifecycle =
-      (* if we can prove that the body of the assoc_on doesn't contain a
-             lifecycle node, then return None, dropping the constant incremental
-             node on the floor. *)
+      (* if we can prove that the body of the assoc_on doesn't contain a lifecycle node,
+         then return None, dropping the constant incremental node on the floor. *)
       match resolved.lifecycle with
       | No -> None
       | Yes_or_maybe ->

@@ -139,15 +139,15 @@ let rec eval : type a. Environment.t -> a t -> a Incr.t =
       let incremental_node = eval env t in
       (* In general, we have to create a fresh incremental node here (e.g. by using
          [Ui_incr.map ~f:Fn.id] and set cutoff on the new node. Otherwise it is possible
-         that we will set a cutoff on an incremental node which is used in more than
-         one place and the cutoff may not be correct then.
+         that we will set a cutoff on an incremental node which is used in more than one
+         place and the cutoff may not be correct then.
 
          E.g. the result of evaling a [Named] value gets stored in a map, so calling
          [set_cutoff] directly mutates/affects all usages of it. Similarly for [Incr].
 
          Nodes created by evaluating e.g. [Map] were just created by the [eval] function
-         call in which case we can set the cutoff directly on them, saving some memory
-         and performance by not creating an extra node. *)
+         call in which case we can set the cutoff directly on them, saving some memory and
+         performance by not creating an extra node. *)
       match t.value with
       | Named _ | Incr _ | Cutoff _ -> Ui_incr.map ~f:Fn.id incremental_node
       | Constant _
@@ -248,9 +248,9 @@ let all ~(here : [%call_pos]) = function
   | [] -> return []
   | [ x ] -> map x ~f:(fun x -> [ x ])
   | xs ->
-    (* [Balance_list_tree] guarantees that if there are any [Node]s, they will all be at the
-        start of the list. This means we don't need to match on all possible permutations
-        of leaves and nodes. *)
+    (* [Balance_list_tree] guarantees that if there are any [Node]s, they will all be at
+       the start of the list. This means we don't need to match on all possible
+       permutations of leaves and nodes. *)
     let tree = Balance_list_tree.balance ~n:7 xs |> ok_exn in
     let rec flatten (node : 'a t Balance_list_tree.t) =
       match node with

@@ -676,9 +676,6 @@ module type S = sig
       -> unit
       -> Time_ns.t Computation.t
 
-    (** The current time, update as frequently as possible. *)
-    val now : here:[%call_pos] -> unit -> Time_ns.t Computation.t
-
     module Before_or_after : sig
       type t = Ui_incr.Before_or_after.t =
         | Before
@@ -725,6 +722,11 @@ module type S = sig
 
     (** Like [sleep], but waits until a specific time, rather than a time relative to now. *)
     val until : here:[%call_pos] -> unit -> (Time_ns.t -> unit Effect.t) Computation.t
+
+    module Expert : sig
+      (** The current time, update as frequently as possible. *)
+      val now : here:[%call_pos] -> unit -> Time_ns.t Computation.t
+    end
   end
 
   module Edge : sig
@@ -1022,7 +1024,7 @@ module type S = sig
       In the code above, [b] has type ['a Computation.t], and [a] has type ['a Value.t]. *)
   module Let_syntax : sig
     (*_ [let%pattern_bind] requires that a function named [return] with these semantics
-      exist here. *)
+        exist here. *)
     val return : here:[%call_pos] -> 'a Value.t -> 'a Computation.t
     val ( >>| ) : here:[%call_pos] -> 'a Value.t -> ('a -> 'b) -> 'b Value.t
     val ( <*> ) : here:[%call_pos] -> ('a -> 'b) Value.t -> 'a Value.t -> 'b Value.t

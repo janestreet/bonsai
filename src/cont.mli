@@ -579,11 +579,6 @@ val peek : here:[%call_pos] -> 'a t -> local_ graph -> 'a Computation_status.t E
 
 (** Various clock and timing functions *)
 module Clock : sig
-  (** Returns a [Bonsai.t] that contains the current time. Using this value can lead to
-      inefficient programs that are continuously recomputing because the current time
-      changes on every frame. Consider using [approx_now] instead, if possible. *)
-  val now : here:[%call_pos] -> local_ graph -> Time_ns.t t
-
   (** Similar to [now], but instead of updating every frame, it will only update every
       [tick_every] time span. *)
   val approx_now
@@ -635,6 +630,13 @@ module Clock : sig
 
   (** Produces an effect that can be used to sleep until some timestamp. *)
   val until : here:[%call_pos] -> local_ graph -> (Time_ns.t -> unit Effect.t) t
+
+  module Expert : sig
+    (** Returns a [Bonsai.t] that contains the current time. Using this value can lead to
+        inefficient programs that are continuously recomputing because the current time
+        changes on every frame. Consider using [approx_now] instead, if possible. *)
+    val now : here:[%call_pos] -> local_ graph -> Time_ns.t t
+  end
 end
 
 module Edge : sig

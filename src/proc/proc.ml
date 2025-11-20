@@ -10,8 +10,8 @@ module Value = struct
     Value.return ~here a |> Bonsai_cont.Private.conceal_value
   ;;
 
-  (* we depend on Proc's [map] function so that we can keep passing
-     the [here] parameter for the let%arr and let%sub ppxes. *)
+  (* we depend on Proc's [map] function so that we can keep passing the [here] parameter
+     for the let%arr and let%sub ppxes. *)
   let map ~(here : [%call_pos]) v ~f = Bonsai_cont.Private.For_proc.value_map ~here v ~f
 
   let transpose_opt opt =
@@ -353,8 +353,6 @@ module Clock = struct
     approx_now ~here ~tick_every graph
   ;;
 
-  let now ~(here : [%call_pos]) () (local_ graph) = now ~here graph
-
   let get_current_time ~(here : [%call_pos]) () (local_ graph) =
     get_current_time ~here graph
   ;;
@@ -374,6 +372,10 @@ module Clock = struct
   let sleep ~(here : [%call_pos]) () (local_ graph) = sleep ~here graph
   let until ~(here : [%call_pos]) () (local_ graph) = until ~here graph
   let at = at
+
+  module Expert = struct
+    let now ~(here : [%call_pos]) () (local_ graph) = Expert.now ~here graph
+  end
 end
 
 module Incr = struct

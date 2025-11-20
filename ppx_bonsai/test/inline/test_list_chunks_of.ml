@@ -1,7 +1,7 @@
 open! Core
 
-(* We care about List.chunks_of never returning an empty list when
-   it is given an non_empty list. This test just sanity check this. *)
+(* We care about List.chunks_of never returning an empty list when it is given an
+   non_empty list. This test just sanity check this. *)
 
 let%quick_test {|List.chunks_of never returns an empty list when it is given a non-empty list|}
   =

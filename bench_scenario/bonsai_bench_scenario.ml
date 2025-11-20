@@ -52,8 +52,8 @@ module Interaction = struct
       match (interaction : _ t) with
       | Profile name -> handle_profile name
       | Recompute ->
-        (* This is the same as the test handle's recompute, except that we don't fetch
-           the computed value. *)
+        (* This is the same as the test handle's recompute, except that we don't fetch the
+           computed value. *)
         Bonsai_driver.flush driver;
         Bonsai_driver.trigger_lifecycles driver
       | Reset_model -> Bonsai_driver.Expert.reset_model_to_default driver

@@ -175,8 +175,8 @@ module Computation0 = struct
         { from : t
         ; via : Id.t
         ; into : t
-        ; (* [invert_lifecycles] is quite rare, and adds clutter to expect text
-           outputs, so we don't include it in skeleton serializations by default. *)
+        ; (* [invert_lifecycles] is quite rare, and adds clutter to expect text outputs,
+             so we don't include it in skeleton serializations by default. *)
           invert_lifecycles : bool [@sexp.default false] [@sexp_drop_default.equal]
         }
     | Store of
@@ -314,8 +314,8 @@ module Computation0 = struct
           in
           { node_path; here; kind }
         | Switch { match_; arms; here; _ } ->
-          (* This form of node_path generation is necessary to achive the same traversal as the one
-           in [transform.mli] so that both node paths are in sync. *)
+          (* This form of node_path generation is necessary to achive the same traversal
+             as the one in [transform.mli] so that both node paths are in sync. *)
           let index = ref 1 in
           let%map match_ = Value.of_value' ~initial_path:(choice_point 1) match_
           and arms =
@@ -602,9 +602,9 @@ end
 include struct
   [@@@warning
     "-30"
-    (* disabling [duplicate-definitions] warning which is prompted here due to
-       type sharing names for their fields which is a requisite for type equality
-       with the original type defined within modules. *)]
+    (* disabling [duplicate-definitions] warning which is prompted here due to type
+       sharing names for their fields which is a requisite for type equality with the
+       original type defined within modules. *)]
 
   type node_path = Node_path.t
   type source_code_position = Source_code_position.Stable.V1.t
@@ -715,7 +715,7 @@ module Traverse = struct
 
       method lazy_ _ _ =
         (* NOTE: We do not force the lazy; thus the fold does not enter the lazy by
-           default.*)
+           default. *)
         Fn.id
 
       method id _ = Fn.id

@@ -145,23 +145,27 @@ module M (X : S) = struct
 
   let (_ : _) =
     fun (local_ graph) ->
-    (* Use this code to test if :MerlinTypeOf behaves properly. In particular,
-       you should be able to:
+    (* Use this code to test if :MerlinTypeOf behaves properly. In particular, you should
+       be able to:
 
        1. Ask for the type of things inside each arm of the [match%sub].
-       2. Ask for the type of the entire [match%sub] by putting your cursor on the [match%sub]
-       or [with].
-       3. Ask for the type of the expression being matched on inside of the [match%sub].
-       4. Ask for the type of the case patterns of the match statement.
-       - The type of ppat_var's alone (e.g. case_1_lhs) is ['a X.t]
-       - The type of anything else is the type that the pattern would normally be.
-       - This distinction is weird, but it makes the variables identifiers match the
-         type on the right hand side.
 
-       5. Add [+ "hi"] to random parts of the string and make sure that the type error
-       is on the right location.
+       2. Ask for the type of the entire [match%sub] by putting your cursor on the
+          [match%sub] or [with].
+
+       3. Ask for the type of the expression being matched on inside of the [match%sub].
+
+       4. Ask for the type of the case patterns of the match statement.
+          - The type of ppat_var's alone (e.g. case_1_lhs) is ['a X.t]
+          - The type of anything else is the type that the pattern would normally be.
+          - This distinction is weird, but it makes the variables identifiers match the
+            type on the right hand side.
+
+       5. Add [+ "hi"] to random parts of the string and make sure that the type error is
+          on the right location.
+
        6. Append [, _ ] to the lhs parts of the match arms to make sure that the pattern
-       matching error is in the right location.
+          matching error is in the right location.
     *)
     match%sub return (Some "hello") graph with
     | Some "heyo" -> return 0. graph

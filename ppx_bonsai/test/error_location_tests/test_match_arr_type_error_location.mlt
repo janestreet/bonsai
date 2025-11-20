@@ -101,8 +101,8 @@ let component (never : unit -> Nothing.t Bonsai.t) (local_ _graph) =
 [%%expect {| |}]
 
 (* NOTE: Supporting [Nothing.unreachable_code] instead of [.] is beyond the scope of what
-   is possible for a ppx, so we do not support it as it would involve needing to understand
-   the semantics of [Nothing.unreachable_code] / not just the syntax. *)
+   is possible for a ppx, so we do not support it as it would involve needing to
+   understand the semantics of [Nothing.unreachable_code] / not just the syntax. *)
 let component (local_ _graph) =
   let a : (unit, Nothing.t) Result.t Bonsai.t = Bonsai.return (Ok ()) in
   match%arr a with

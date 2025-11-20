@@ -4,18 +4,17 @@ open Bonsai
 open Bonsai.Let_syntax
 
 (* A big focus of the tests in this file is about making sure that there are no
-   "in-transit" frames - frames during which the result has some intermediate
-   value because lifecycle events haven't yet run. To accomplish this goal, all
-   the tests have been written in a [Common] functor, which accepts a module
-   that specifies what [Handle.show] should do. We supply three different
-   answers to that question:
+   "in-transit" frames - frames during which the result has some intermediate value
+   because lifecycle events haven't yet run. To accomplish this goal, all the tests have
+   been written in a [Common] functor, which accepts a module that specifies what
+   [Handle.show] should do. We supply three different answers to that question:
 
    - it should do what it normally does.
    - it should recompute_view an extra time prior to calling Handle.show.
    - it should recompute_view_until_stable prior to calling Handle.show.
 
-   We do this to ensure that all the functions being tested behave the same no
-   matter which one of those options is chosen. *)
+   We do this to ensure that all the functions being tested behave the same no matter
+   which one of those options is chosen. *)
 
 let advance_by_sec handle seconds =
   Handle.advance_clock_by handle (Time_ns.Span.of_sec seconds)
@@ -249,8 +248,8 @@ module%test [@name "Bonsai_extra.is_stable"] _ = struct
       [%expect {| ((false 1)) |}]
     ;;
 
-    (* The order of lifecycle effect prints and handler show prints
-         depends on if the view is recomputed. This standardizes things. *)
+    (* The order of lifecycle effect prints and handler show prints depends on if the view
+       is recomputed. This standardizes things. *)
     let print_sorted_expect_test_output expect_output =
       expect_output
       |> String.split_lines
@@ -571,21 +570,21 @@ module%test [@name "Bonsai_extra_value_stability"] _ = struct
                  | Stable stable -> Inactive { previously_stable = Some stable }
                in
                (* Deactivating this component will automatically cause the value to be
-                   considered unstable.  This is because we have no way to tell what is
-                   happening to the value when this component is inactive, and I consider
-                   it safer to assume instability than to assume stability. *)
+                  considered unstable. This is because we have no way to tell what is
+                  happening to the value when this component is inactive, and I consider
+                  it safer to assume instability than to assume stability. *)
                { stability; time_to_next_stable = None }
              | Bounce (new_value, now), { stability; _ }, Active time_to_stable ->
                (* Bouncing will cause the value to become unstable, and set the
-                   time-to-next-stable to the provided value. *)
+                  time-to-next-stable to the provided value. *)
                let stability = Model.set_value new_value stability in
                let time_to_next_stable = Some (Time_ns.add now time_to_stable) in
                { stability; time_to_next_stable }
              | ( Set_stable (stable, now)
                , { stability; time_to_next_stable }
                , Active time_to_stable ) ->
-               (* Sets the value which is considered to be stable and resets
-                   the time until next stability. *)
+               (* Sets the value which is considered to be stable and resets the time
+                  until next stability. *)
                (match stability with
                 | Inactive { previously_stable } ->
                   { stability = Unstable { previously_stable; unstable_value = stable }
@@ -616,9 +615,8 @@ module%test [@name "Bonsai_extra_value_stability"] _ = struct
     in
     let get_current_time = Bonsai.Clock.get_current_time graph in
     let bounce =
-      (* [bounce] is an effect which, when scheduled, will bounce the
-           state-machine and set the time-until-stable to the current wallclock
-           time plus the provided offset *)
+      (* [bounce] is an effect which, when scheduled, will bounce the state-machine and
+         set the time-until-stable to the current wallclock time plus the provided offset *)
       let%arr get_current_time and inject and input in
       let%bind.Effect now = get_current_time in
       inject (Bounce (input, now))
@@ -671,7 +669,7 @@ module%test [@name "Bonsai_extra_value_stability"] _ = struct
       Bonsai_extra_value_stability.Stability.Stable input
     | Stable previously_stable ->
       (* Even if the state-machine claims that the value is stable, we can still witness
-           instability one frame before the lifecycle events run. *)
+         instability one frame before the lifecycle events run. *)
       Unstable { previously_stable = Some previously_stable; unstable_value = input }
     | Unstable { previously_stable; unstable_value = _ } ->
       Unstable { previously_stable; unstable_value = input }
@@ -796,14 +794,12 @@ module%test [@name "Bonsai_extra_value_stability"] _ = struct
   end
 
   module _ = Common (struct
-      (* The function reference below is an implementation that exists purely
-           as a sanity check for the real implementation. If two vastly
-           different implemenations always yield the same result, that's an
-           encouraging sign. Sadly, this implementation relies on having a
-           frame between certain real-world events, so we only run the tests
-           with [recompute_view_until_stable] being called before Handle.show.
-           (This downside is one reason why this is not the real
-           implementation.) *)
+      (* The function reference below is an implementation that exists purely as a sanity
+         check for the real implementation. If two vastly different implemenations always
+         yield the same result, that's an encouraging sign. Sadly, this implementation
+         relies on having a frame between certain real-world events, so we only run the
+         tests with [recompute_view_until_stable] being called before Handle.show. (This
+         downside is one reason why this is not the real implementation.) *)
 
       let value_stability = alternate_value_stability_implementation
 

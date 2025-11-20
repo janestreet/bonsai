@@ -20,8 +20,8 @@ let unzip3_mapi'
     results, Incr.return (Map.empty comparator), Incr.return (Map.empty comparator)
   | No, Yes_or_maybe ->
     (* if we know that [f] always returns a triple whose last element (the lifecycle
-       incremental) is always the empty lifecycle collection, then we can drop it
-       here, and avoid nesting unzips *)
+       incremental) is always the empty lifecycle collection, then we can drop it here,
+       and avoid nesting unzips *)
     let first, second =
       Incr_map.unzip_mapi' map ~f:(fun ~key ~data ->
         let a, b, _ = f ~key ~data in
@@ -30,8 +30,8 @@ let unzip3_mapi'
     first, second, Incr.return (Map.empty comparator)
   | Yes_or_maybe, No ->
     (* if we know that [f] always returns a triple whose second element (the input
-       incremental) is always the empty lifecycle collection, then we can drop it
-       here, and avoid nesting unzips *)
+       incremental) is always the empty lifecycle collection, then we can drop it here,
+       and avoid nesting unzips *)
     let first, third =
       Incr_map.unzip_mapi' map ~f:(fun ~key ~data ->
         let a, _, c = f ~key ~data in
@@ -100,8 +100,8 @@ let f
           annotate ~here Assoc_key key_incr;
           annotate ~here Assoc_input value;
           let environment =
-            (* It is safe to reuse the same [key_id] and [data_id] for each pair in the map,
-                   since they all start with a fresh "copy" of the outer environment. *)
+            (* It is safe to reuse the same [key_id] and [data_id] for each pair in the
+               map, since they all start with a fresh "copy" of the outer environment. *)
             environment
             |> Environment.add_exn ~key:key_id ~data:key_incr
             |> Environment.add_exn ~key:data_id ~data:value
@@ -118,9 +118,8 @@ let f
     annotate ~here Assoc_lifecycles lifecycle_map;
     annotate ~here Assoc_inputs input_map;
     let lifecycle =
-      (* if we can prove that the body of the assoc doesn't contain a
-             lifecycle node, then return None, dropping the constant incremental
-             node on the floor. *)
+      (* if we can prove that the body of the assoc doesn't contain a lifecycle node, then
+         return None, dropping the constant incremental node on the floor. *)
       match resolved.lifecycle with
       | No -> None
       | Yes_or_maybe ->

@@ -9,7 +9,7 @@ let f ~model ~input_id ~dynamic_action ~input ~time_source ~reset ~apply_action 
     annotate ~here Model model;
     let input = Value.eval environment input in
     (* It's important to create [inject_dynamic] outside of the [let%mapn] so that it
-           remains [phys_equal] when the [model] changes. *)
+       remains [phys_equal] when the [model] changes. *)
     let inject_dynamic = Lazy_inject.make (wrap_leaf inject) in
     let result =
       let%mapn model in

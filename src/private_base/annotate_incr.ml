@@ -85,28 +85,23 @@ module Kind = struct
   ;;
 
   let color = function
-    (* results
-       red *)
+    (* results red *)
     | Value -> Color.red50
     | Result -> Color.red100
     | Assoc_results -> Color.red200
     | Path -> Color.red300
-    (* input
-       amber *)
+    (* input amber *)
     | Input -> Color.amber100
     | Assoc_inputs -> Color.amber200
-    (* lifecycles
-       blue *)
+    (* lifecycles blue *)
     | Lifecycle -> Color.blue100
     | Assoc_lifecycles -> Color.blue200
     | Empty_lifecycle -> Color.blue300
-    (* models
-       green *)
+    (* models green *)
     | Model -> Color.emerald100
     | Lifecycle_apply_action_pair -> Color.emerald200
     | Switch_model -> Color.emerald300
-    (* assoc-related
-       pink *)
+    (* assoc-related pink *)
     | Model_and_input -> Color.pink100
     | Assoc_key -> Color.pink200
     | Assoc_input -> Color.pink300
@@ -250,9 +245,8 @@ let incr_annotation_listeners =
         (* NOTE: Because this counting is cheap, it is safe to always do it. *)
         Counts.incr_global kind)
     ; (fun ~here:_ kind incr ->
-        (* The "is enabled" check is performed here in order to avoid
-               going through the memoization or allocation of a Packed.t even
-               when disabled. *)
+        (* The "is enabled" check is performed here in order to avoid going through the
+           memoization or allocation of a Packed.t even when disabled. *)
         if !enabled then annotate_for_graphviz kind incr)
     ; (fun ~here:_ kind _ ->
         let metrics_counter_kind =

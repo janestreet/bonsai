@@ -1,8 +1,8 @@
 open! Core
 open! Import
 
-(* Constant folding an assoc with a large constant input (> 50,000 in tests) results
-   in a stack overflow on startup.
+(* Constant folding an assoc with a large constant input (> 50,000 in tests) results in a
+   stack overflow on startup.
 
    It can also result in significantly slower startup, and less efficient graph structure.
    It's cheaper to maintain one 1,000-input assoc around a `Bonsai.state` than 1,000
@@ -410,8 +410,8 @@ module Constant_fold (Recurse : Fix_transform.Recurse with module Types := Types
            Map.mapi map ~f:(fun ~key ~data ->
              (* In this case, the map is constant, so we have access to the key/data pair
                 directly. We use the [Sub]s below with the correct [key_id]/[data_id] so
-                that [by] will refer to these constants and then we can recursively rely on
-                the constant-folding optimizations to clean up these [Sub]s for us.
+                that [by] will refer to these constants and then we can recursively rely
+                on the constant-folding optimizations to clean up these [Sub]s for us.
 
                 We only invert lifecycles for explicit calls to
                 [Bonsai.with_inverted_lifecycle_ordering], so it's [false] here. *)

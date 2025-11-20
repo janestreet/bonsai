@@ -38,10 +38,10 @@ type 'a id =
       }
       -> ('io_key, 'model_key, 'a) assoc_on id
 
-(* A [('dynamic, 'static, 'a) t] represents a Bonsai action. ['dynamic] describes
-   the type of the dynamic actions that could be delivered to this computation. ['static]
-   describes the type of the static actions that could be delivered to this computation.
-   ['a] describes the overall structure of the actions. *)
+(* A [('dynamic, 'static, 'a) t] represents a Bonsai action. ['dynamic] describes the type
+   of the dynamic actions that could be delivered to this computation. ['static] describes
+   the type of the static actions that could be delivered to this computation. ['a]
+   describes the overall structure of the actions. *)
 and 'a t =
   | Leaf_static : 'static -> 'static leaf t
   | Leaf_dynamic : 'dynamic -> 'dynamic leaf t
