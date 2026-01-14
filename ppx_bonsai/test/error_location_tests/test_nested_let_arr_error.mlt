@@ -1,0 +1,121 @@
+#print_line_numbers true
+
+open! Core
+open! Bonsai
+open Bonsai.Let_syntax
+
+let _arr_inside_arr t (local_ _graph) : 'a Bonsai.t Bonsai.t =
+  let%arr t in
+  let%arr t in
+  t
+;;
+
+[%%expect
+  {|
+Line 9, characters 6-9:
+Error: Nested let%arr is not allowed. You cannot use %arr or %sub extensions inside the body of another let%arr.
+|}]
+
+let _sub_inside_arr t (local_ _graph) : 'a Bonsai.t Bonsai.t =
+  let%arr t in
+  let%sub t in
+  t
+;;
+
+[%%expect
+  {|
+Line 21, characters 6-9:
+Error: Nested let%sub is not allowed. You cannot use %arr or %sub extensions inside the body of another let%arr.
+|}]
+
+let _match_sub_inside_arr t (local_ _graph) : int Bonsai.t =
+  let%arr t in
+  match%sub t with
+  | 0 -> return 1
+  | _ -> return 2
+;;
+
+[%%expect
+  {|
+Line 33, characters 8-11:
+Error: Nested match%sub is not allowed. You cannot use %arr or %sub extensions inside the body of another let%arr.
+|}]
+
+let _match_arr_inside_arr t (local_ _graph) : int Bonsai.t =
+  let%arr t in
+  match%arr t with
+  | 0 -> 1
+  | _ -> 2
+;;
+
+[%%expect
+  {|
+Line 46, characters 8-11:
+Error: Nested match%arr is not allowed. You cannot use %arr or %sub extensions inside the body of another let%arr.
+|}]
+
+let _match_sub_inside_match_arr t (local_ _graph) : int Bonsai.t =
+  match%arr t with
+  | 0 ->
+    (match%sub t with
+     | 0 -> return 1
+     | _ -> return 2)
+  | _ -> 2
+;;
+
+[%%expect
+  {|
+Line 60, characters 11-14:
+Error: Nested match%sub is not allowed. You cannot use %arr or %sub extensions inside the body of another match%arr.
+|}]
+
+let _match_arr_inside_match_arr t (local_ _graph) : int Bonsai.t =
+  match%arr t with
+  | 0 ->
+    (match%arr t with
+     | 0 -> 1
+     | _ -> 2)
+  | _ -> 2
+;;
+
+[%%expect
+  {|
+Line 75, characters 11-14:
+Error: Nested match%arr is not allowed. You cannot use %arr or %sub extensions inside the body of another match%arr.
+|}]
+
+let _if_sub_inside_arr t (local_ _graph) : int Bonsai.t =
+  let%arr t in
+  if%sub t then return 1 else return 2
+;;
+
+[%%expect
+  {|
+Line 89, characters 5-8:
+Error: Nested if%sub is not allowed. You cannot use %arr or %sub extensions inside the body of another let%arr.
+|}]
+
+let _if_arr_inside_arr t (local_ _graph) : int Bonsai.t =
+  let%arr t in
+  if%arr t then 1 else 2
+;;
+
+[%%expect
+  {|
+Line 100, characters 5-8:
+Error: Nested if%arr is not allowed. You cannot use %arr or %sub extensions inside the body of another let%arr.
+|}]
+
+let _let_arr_inside_if_arr t (local_ _graph) : int Bonsai.t =
+  if%arr t
+  then (
+    let%arr t in
+    t + 1)
+  else 2
+;;
+
+[%%expect
+  {|
+Line 112, characters 8-11:
+Error: Nested let%arr is not allowed. You cannot use %arr or %sub extensions inside the body of another if%arr.
+|}]

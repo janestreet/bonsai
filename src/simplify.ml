@@ -2,8 +2,8 @@ open! Core
 open! Import
 module Free_variables = Type_id_set
 
-(* When executing the generated function, this Env is used to pass down any
-   variables that were bound in a let%sub. *)
+(* When executing the generated function, this Env is used to pass down any variables that
+   were bound in a let%sub. *)
 module Env =
   Univ_map.Make
     (Univ_map.Type_id_key)
@@ -11,9 +11,9 @@ module Env =
       type 'a t = 'a [@@deriving sexp_of]
     end)
 
-(* This is a tri-state option, where the third state is a function that permits
-   the generation of the contained value, provided that all of the free
-   variables that were found, are bound inside the environment. *)
+(* This is a tri-state option, where the third state is a function that permits the
+   generation of the contained value, provided that all of the free variables that were
+   found, are bound inside the environment. *)
 module Option_or_miss = struct
   type 'a t =
     | None
@@ -80,9 +80,9 @@ module Option_or_miss = struct
   end
 end
 
-(* value_to_function takes a Value.t and attempts to translate it into a function
-   which has access to a "key" and "data" (named so because this function
-   is only used to simplify an [assoc], which provides both of those values.  *)
+(* value_to_function takes a Value.t and attempts to translate it into a function which
+   has access to a "key" and "data" (named so because this function is only used to
+   simplify an [assoc], which provides both of those values. *)
 let rec value_to_function
   : type key data result.
     result Value.t

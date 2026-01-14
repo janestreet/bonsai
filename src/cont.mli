@@ -579,11 +579,6 @@ val peek
 
 (** Various clock and timing functions *)
 module Clock : sig
-  (** Returns a [Bonsai.t] that contains the current time. Using this value can lead to
-      inefficient programs that are continuously recomputing because the current time
-      changes on every frame. Consider using [approx_now] instead, if possible. *)
-  val now : ?here:Stdlib.Lexing.position -> graph -> Time_ns.t t
-
   (** Similar to [now], but instead of updating every frame, it will only update every
       [tick_every] time span. *)
   val approx_now
@@ -635,6 +630,13 @@ module Clock : sig
 
   (** Produces an effect that can be used to sleep until some timestamp. *)
   val until : ?here:Stdlib.Lexing.position -> graph -> (Time_ns.t -> unit Effect.t) t
+
+  module Expert : sig
+    (** Returns a [Bonsai.t] that contains the current time. Using this value can lead to
+        inefficient programs that are continuously recomputing because the current time
+        changes on every frame. Consider using [approx_now] instead, if possible. *)
+    val now : ?here:Stdlib.Lexing.position -> graph -> Time_ns.t t
+  end
 end
 
 module Edge : sig
@@ -651,7 +653,7 @@ module Edge : sig
   val on_change
     :  ?here:Stdlib.Lexing.position
     -> ?sexp_of_model:('a -> Sexp.t)
-    -> ?trigger:[ `Before_display | `After_display ]
+    -> trigger:[ `Before_display | `After_display ]
     -> equal:('a -> 'a -> bool)
     -> 'a t
     -> callback:('a -> unit Effect.t) t
@@ -665,7 +667,7 @@ module Edge : sig
   val on_change'
     :  ?here:Stdlib.Lexing.position
     -> ?sexp_of_model:('a -> Sexp.t)
-    -> ?trigger:[ `Before_display | `After_display ]
+    -> trigger:[ `Before_display | `After_display ]
     -> equal:('a -> 'a -> bool)
     -> 'a t
     -> callback:('a option -> 'a -> unit Effect.t) t
@@ -728,6 +730,10 @@ module Edge : sig
     -> unit Effect.t option t
     -> graph
     -> unit
+
+  (** [wait_before_display] gives you an effect that will block until the beginning of the
+      next frame. *)
+  val wait_before_display : ?here:Stdlib.Lexing.position -> graph -> unit Effect.t t
 
   (** [wait_after_display] gives you an effect that will block until the end of the next
       frame. *)
@@ -1475,7 +1481,7 @@ module For_proc : sig
   val on_change
     :  ?here:Stdlib.Lexing.position
     -> ?sexp_of_model:('a -> Sexp.t)
-    -> ?trigger:[ `Before_display | `After_display ]
+    -> trigger:[ `Before_display | `After_display ]
     -> equal:('a -> 'a -> bool)
     -> 'a t
     -> callback:('a -> unit Effect.t) t
@@ -1485,7 +1491,7 @@ module For_proc : sig
   val on_change'
     :  ?here:Stdlib.Lexing.position
     -> ?sexp_of_model:('a -> Sexp.t)
-    -> ?trigger:[ `Before_display | `After_display ]
+    -> trigger:[ `Before_display | `After_display ]
     -> equal:('a -> 'a -> bool)
     -> 'a t
     -> callback:('a option -> 'a -> unit Effect.t) t

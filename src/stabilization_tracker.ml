@@ -68,8 +68,8 @@ module Action_trie = struct
      stabilize for an action. This number is mostly arbitrary and should be tweaked as
      necessary.
 
-     The number below is:
-     (min stabilization / frame) * (frames / sec) * sec between prunes
+     The number below is: (min stabilization / frame) * (frames / sec) * sec between
+     prunes
   *)
   let num_generations_to_stale = 3 * 60 * max_seconds_between_prunes
 
@@ -333,8 +333,8 @@ module Action_trie = struct
         state
         || outer.generation = current_generation
         || inner.generation = current_generation
-      (* The [Wrap_inner] case intentionally does not check that the [inner]
-           computation's generation. See above. *)
+      (* The [Wrap_inner] case intentionally does not check that the [inner] computation's
+         generation. See above. *)
       | Wrap_inner _ -> state || outer.generation = current_generation
     in
     let model_reset_requires_stabilization state ~inner:_ ~outer

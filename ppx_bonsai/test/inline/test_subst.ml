@@ -1167,8 +1167,8 @@ module%test [@name "Destructuring vs. no destructuring criteria."] _ = struct
   ;;
 
   let%expect_test "Single ppat_var does not get destructed." =
-    (* This is the most common case and since there is no need for destruction here;
-         this one is not destructed. *)
+    (* This is the most common case and since there is no need for destruction here; this
+       one is not destructed. *)
     run_test
       [%expr
         let a = NO_DESTRUCTION in
@@ -1186,8 +1186,8 @@ module%test [@name "Destructuring vs. no destructuring criteria."] _ = struct
   ;;
 
   let%expect_test "Single ppat_var does not get destructed (multiple arms)" =
-    (* This is the most common case and since there is no need for destruction here;
-         this one is not destructed. *)
+    (* This is the most common case and since there is no need for destruction here; this
+       one is not destructed. *)
     run_test
       [%expr
         let a = NO_DESTRUCTION
@@ -1210,8 +1210,8 @@ module%test [@name "Destructuring vs. no destructuring criteria."] _ = struct
   ;;
 
   let%expect_test "alias might result in no destruction (multiple arms)" =
-    (* This test case shows that despite there being an underscored ignored inside of
-         the left handside pattern, the destruction does not occur since there is an alias. *)
+    (* This test case shows that despite there being an underscored ignored inside of the
+       left handside pattern, the destruction does not occur since there is an alias. *)
     run_test
       [%expr
         let (_ as a) = NO_DESTRUCTION
@@ -1235,9 +1235,9 @@ module%test [@name "Destructuring vs. no destructuring criteria."] _ = struct
   ;;
 
   let%expect_test "alias might result in destruction." =
-    (* This test case showcases the true behavior of how aliases are treated. They
-         block any "ignores" inside of them, but remain ineffective is something
-         is ignored outside of its contents/reach. *)
+    (* This test case showcases the true behavior of how aliases are treated. They block
+       any "ignores" inside of them, but remain ineffective is something is ignored
+       outside of its contents/reach. *)
     run_test
       [%expr
         let (_ as a), _ = DESTRUCT in
@@ -1445,9 +1445,9 @@ module%test [@name "Destructuring vs. no destructuring criteria."] _ = struct
   ;;
 
   let%expect_test "Duplicate variables in pattern" =
-    (* This test showcases current behavior. Since OCaml does not allow
-         multiple "parallel" bindings on the same level, there is an error
-         shown to the user by the OCaml compiler and not the ppx.
+    (* This test showcases current behavior. Since OCaml does not allow multiple
+       "parallel" bindings on the same level, there is an error shown to the user by the
+       OCaml compiler and not the ppx.
     *)
     run_test
       [%expr

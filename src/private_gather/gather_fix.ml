@@ -186,8 +186,8 @@ let recurse ~recursive_scopes ~input ~input_id ~fix_id ~here =
     Meta.Model.Hidden.create model_info new_model
   in
   let reset ~inject ~schedule_event model =
-    (* If the model is None, then you can't descend into the reset because it will
-           force the lazy, but that doesn't matter because there's nothing to reset anyway. *)
+    (* If the model is None, then you can't descend into the reset because it will force
+       the lazy, but that doesn't matter because there's nothing to reset anyway. *)
     match model with
     | None -> None
     | Some model -> Some (reset' ~inject ~schedule_event model)

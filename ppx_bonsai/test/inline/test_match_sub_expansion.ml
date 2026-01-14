@@ -15,10 +15,10 @@ let test expr =
   |> print_expr
 ;;
 
-(* This test shows the difference in expansion when there are match%sub arms
-   with and without type variables. We already have implicit tests for this, but
-   this test shows that we generate additional expansion code for the match arms that
-   have bound variables. *)
+(* This test shows the difference in expansion when there are match%sub arms with and
+   without type variables. We already have implicit tests for this, but this test shows
+   that we generate additional expansion code for the match arms that have bound
+   variables. *)
 
 let%expect_test "No bound variables" =
   test

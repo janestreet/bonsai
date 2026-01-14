@@ -1,8 +1,8 @@
 open! Core
 open! Import
 
-(* Constant folding an assoc with a large constant input (> 50,000 in tests) results
-   in a stack overflow on startup.
+(* Constant folding an assoc with a large constant input (> 50,000 in tests) results in a
+   stack overflow on startup.
 
    It can also result in significantly slower startup, and less efficient graph structure.
    It's cheaper to maintain one 1,000-input assoc around a `Bonsai.state` than 1,000
@@ -410,8 +410,8 @@ module Constant_fold (Recurse : Fix_transform.Recurse with module Types := Types
            Map.mapi map ~f:(fun ~key ~data ->
              (* In this case, the map is constant, so we have access to the key/data pair
                 directly. We use the [Sub]s below with the correct [key_id]/[data_id] so
-                that [by] will refer to these constants and then we can recursively rely on
-                the constant-folding optimizations to clean up these [Sub]s for us.
+                that [by] will refer to these constants and then we can recursively rely
+                on the constant-folding optimizations to clean up these [Sub]s for us.
 
                 We only invert lifecycles for explicit calls to
                 [Bonsai.with_inverted_lifecycle_ordering], so it's [false] here. *)
@@ -551,17 +551,16 @@ module Constant_fold (Recurse : Fix_transform.Recurse with module Types := Types
          return c
        | Maybe ->
          Lazy.map t ~f:(fun t ->
-           (* Because this recursion is inside of a Lazy.map, it'll only proceed
-              be run if the lazy is forced, at which point we _are_ unconditionally
-              running it. *)
+           (* Because this recursion is inside of a Lazy.map, it'll only proceed be run if
+              the lazy is forced, at which point we _are_ unconditionally running it. *)
            (* NOTE: Constant folding on lazys is deferred until lazys are forced. One
               important consideration is that multiple deferred optimizations should occur
               as if the lazy's were not there to begin with. One possible bug here is that
-              nested optimizations could be reversed e.g. (constant_fold (lazy (comp))) ==>
-              (lazy (constant_fold (comp))), but because we use Lazy.map the same order is
-              preserved. There is not a use case for this right now, but if we want more
-              interesting interacctions between deferred optimizations, we could mint a
-              type for deferred optimizations which we can introspect.
+              nested optimizations could be reversed e.g. (constant_fold (lazy (comp)))
+              ==> (lazy (constant_fold (comp))), but because we use Lazy.map the same
+              order is preserved. There is not a use case for this right now, but if we
+              want more interesting interacctions between deferred optimizations, we could
+              mint a type for deferred optimizations which we can introspect.
            *)
            (Timer.timer ()).time `Preprocess ~f:(fun () ->
              Trampoline.run

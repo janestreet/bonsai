@@ -33,10 +33,10 @@ let rec gather : type result. result Computation.gather_fun =
         ; _
         } as t ->
       (* [invert_ordering] nodes reuse [Sub] mechanics, (in the sense of passing the
-          output of one computation to another), but should be thought of as their own
-          "kind" of node, and aren't interoperable with the chain of subs generated via
-          graph application. We only chain for 3 subsequent non-inverted [Sub]s, since
-          a chain of at least 3 nodes is required for balancing to be useful. *)
+         output of one computation to another), but should be thought of as their own
+         "kind" of node, and aren't interoperable with the chain of subs generated via
+         graph application. We only chain for 3 subsequent non-inverted [Sub]s, since a
+         chain of at least 3 nodes is required for balancing to be useful. *)
       Gather_sub.chain t ~gather:{ f = gather } ~recursive_scopes ~time_source
     | Sub { from; via; into; invert_lifecycles; here } ->
       let%bind.Trampoline (T info_from) = gather ~recursive_scopes ~time_source from in

@@ -293,9 +293,9 @@ let iter_graph_updates (t : _ Computation.t) ~on_update =
     t
 ;;
 
-(* A lot of nodes in the bonsai graph don't actually have source-code locations
-   attached. This functions walks up the graph from each node and attaches the
-   location from the nearest parent. *)
+(* A lot of nodes in the bonsai graph don't actually have source-code locations attached.
+   This functions walks up the graph from each node and attaches the location from the
+   nearest parent. *)
 let pull_source_locations_from_nearest_parent t =
   let info = ref t.info in
   let rec find_and_update_nearest_here key : Source_code_position.t option =

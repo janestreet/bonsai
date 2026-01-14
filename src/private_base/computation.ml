@@ -179,14 +179,14 @@ type 'result t =
       ; here : Source_code_position.t
       }
       -> 'result t
-  (* [Fix_define] and [Fix_recurse] allow for recursive Bonsai computations. They are
-     more restrictive than [Lazy] and can therefore be introspected and optimized at
+  (* [Fix_define] and [Fix_recurse] allow for recursive Bonsai computations. They are more
+     restrictive than [Lazy] and can therefore be introspected and optimized at
      [gather]-time.
 
      These constructors can pose implementation considerations because they introduce
      bidirectional dependencies: [Fix_define]'s result depends on its body which may
-     contain [Fix_recurse]s. And, a [Fix_recurse] is effectively evaluated to the body
-     of the enclosing [Fix_define]. *)
+     contain [Fix_recurse]s. And, a [Fix_recurse] is effectively evaluated to the body of
+     the enclosing [Fix_define]. *)
   | Fix_define :
       { fix_id : 'result Fix_id.t
       ; initial_input : 'input Value.t

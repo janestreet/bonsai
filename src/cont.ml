@@ -23,7 +23,8 @@ module Cont_primitives : sig
     -> graph
     -> 'a Computation.t
 
-  (* Special-use primitives for getting the global graph, and creating it in the top level. *)
+  (* Special-use primitives for getting the global graph, and creating it in the top
+     level. *)
   val isolated
     :  graph
     -> here:Source_code_position.t
@@ -42,8 +43,7 @@ module Cont_primitives : sig
 
   val with_global_graph : f:(graph -> 'a) -> no_graph:(unit -> 'a) -> 'a
 end = struct
-  (* NOTE: We use [Trampoline.t] to avoid stack overflows when this function is
-     applied.*)
+  (* NOTE: We use [Trampoline.t] to avoid stack overflows when this function is applied. *)
   type graph =
     { mutable f : 'a. 'a Computation.t Trampoline.t -> 'a Computation.t Trampoline.t }
 
@@ -53,12 +53,12 @@ end = struct
     fun ~here graph -> function
     | Return
         { value = { value = (Named _ | Constant _ | Exception _) as value; _ }; here } ->
-      (* Introduce the optimization [let%sub a = return foo in use a] => [use foo]
-           This only makes sense if the Value.t being returned is either a constant or an
-           already-bound named value, otherwise you risk losing value sharing. *)
+      (* Introduce the optimization [let%sub a = return foo in use a] => [use foo] This
+         only makes sense if the Value.t being returned is either a constant or an
+         already-bound named value, otherwise you risk losing value sharing. *)
       { Value.value; here }
     | computation_to_perform ->
-      (* Mint a fresh type-id to hold the result of performing this graph modification  *)
+      (* Mint a fresh type-id to hold the result of performing this graph modification *)
       let via : a Type_equal.Id.t = Type_equal.Id.create ~name:"" [%sexp_of: opaque] in
       (* Keep hold of the previous graph-modification function *)
       let old_f : type b. b Computation.t Trampoline.t -> b Computation.t Trampoline.t =
@@ -72,8 +72,9 @@ end = struct
             let T = Type_equal.Id.same_witness_exn via id in
             old_f (Trampoline.return computation_to_perform)
           | eventual_result ->
-            (* old_f takes the eventual innermost result, and wraps it in 0+ layers of subs.
-               We replace it with a new function that adds another layer to the inside. *)
+            (* old_f takes the eventual innermost result, and wraps it in 0+ layers of
+               subs. We replace it with a new function that adds another layer to the
+               inside. *)
             let computation =
               Computation.Sub
                 { from = computation_to_perform
@@ -90,16 +91,16 @@ end = struct
         let%bind.Trampoline computation in
         new_f computation
       in
-      (* write the new hole into the graph, and return a new value referencing the
-           type-id that will be populated when [new_f] is invoked. *)
+      (* write the new hole into the graph, and return a new value referencing the type-id
+         that will be populated when [new_f] is invoked. *)
       graph.f <- new_f;
       Value.named ~here (Sub here) via
   ;;
 
-  (* [isolated] runs [f] on a fresh graph context. As an implementation detail, we actually
-     mutate the same ['graph'], so that [the_one_and_only] is kept up to date.
-     [isolated] also has an exception handler that returns any exceptions inside a Value.t.
-     This restricts the return type of [isolated] to ['a Computation.t]. *)
+  (* [isolated] runs [f] on a fresh graph context. As an implementation detail, we
+     actually mutate the same ['graph'], so that [the_one_and_only] is kept up to date.
+     [isolated] also has an exception handler that returns any exceptions inside a
+     Value.t. This restricts the return type of [isolated] to ['a Computation.t]. *)
   let isolated graph ~here ~f =
     let backup_f = graph.f in
     graph.f <- Fn.id;
@@ -115,7 +116,7 @@ end = struct
       Proc.read ~here (Value.return_exn ~here exn)
   ;;
 
-  (* A global value which stores the current graph.  This is so that functions like
+  (* A global value which stores the current graph. This is so that functions like
      [Cont.map] can look up the current graph without being passed it explicitly. *)
   let the_one_and_only = { f = (fun _ -> failwith "outside of a Bonsai toplevel") }
 
@@ -125,15 +126,15 @@ end = struct
      [top_level_handle] calls shouldn't be nested, but this is a bit more defensive. *)
   let num_nested_top_level_handles = ref 0
 
-  (* A small wrapper around isolated.  All it does is ensure that you're using
-     the same graph that you passed in. *)
+  (* A small wrapper around isolated. All it does is ensure that you're using the same
+     graph that you passed in. *)
   let handle ?(here = Stdlib.Lexing.dummy_pos) ~f graph =
     isolated graph ~here ~f:(fun () -> f graph) [@nontail]
   ;;
 
   let handle_with_global_graph ~here inside_a_lazy f =
-    (* nesting calls to this function is _fine_, but it should never happen,
-       unless you're inside of a lazy_, where it's begrudgingly expected *)
+    (* nesting calls to this function is _fine_, but it should never happen, unless you're
+       inside of a lazy_, where it's begrudgingly expected *)
     (match inside_a_lazy, !num_nested_top_level_handles > 0 with
      | `Not_inside_lazy, true ->
        eprintf
@@ -161,8 +162,8 @@ end = struct
       handle_with_global_graph ~here `Inside_lazy f)
   ;;
 
-  (* Meant to be called at bonsai entrypoints only, [top_level_handle] uses the
-     singleton graph and sets [nested_top_level_handles] acordingly. *)
+  (* Meant to be called at bonsai entrypoints only, [top_level_handle] uses the singleton
+     graph and sets [nested_top_level_handles] acordingly. *)
   let top_level_handle ?(here = Stdlib.Lexing.dummy_pos) f =
     handle_with_global_graph ~here `Not_inside_lazy f
   ;;
@@ -998,10 +999,6 @@ module Clock = struct
     perform ~here graph (Proc.Clock.approx_now ~here ~tick_every ())
   ;;
 
-  let now ?(here = Stdlib.Lexing.dummy_pos) graph =
-    perform ~here graph (Proc.Clock.now ~here ())
-  ;;
-
   module Before_or_after = struct
     type t = Ui_incr.Before_or_after.t =
       | Before
@@ -1037,13 +1034,19 @@ module Clock = struct
   let until ?(here = Stdlib.Lexing.dummy_pos) graph =
     perform ~here graph (Proc.Clock.until ~here ())
   ;;
+
+  module Expert = struct
+    let now ?(here = Stdlib.Lexing.dummy_pos) graph =
+      perform ~here graph (Proc.Clock.now ~here ())
+    ;;
+  end
 end
 
 module Edge = struct
   let on_change__for_proc2
     ?(here = Stdlib.Lexing.dummy_pos)
     ?sexp_of_model
-    ?trigger
+    ~trigger
     ~equal
     value
     ~callback
@@ -1052,26 +1055,26 @@ module Edge = struct
     perform
       ~here
       graph
-      (Proc.Edge.on_change ~here ?sexp_of_model ?trigger ~equal value ~callback)
+      (Proc.Edge.on_change ~here ?sexp_of_model ~trigger ~equal value ~callback)
   ;;
 
   let on_change
     ?(here = Stdlib.Lexing.dummy_pos)
     ?sexp_of_model
-    ?trigger
+    ~trigger
     ~equal
     value
     ~callback
     graph
     =
     ignore_t
-      (on_change__for_proc2 ~here ?sexp_of_model ?trigger ~equal value ~callback graph)
+      (on_change__for_proc2 ~here ?sexp_of_model ~trigger ~equal value ~callback graph)
   ;;
 
   let on_change'__for_proc2
     ?(here = Stdlib.Lexing.dummy_pos)
     ?sexp_of_model
-    ?trigger
+    ~trigger
     ~equal
     value
     ~callback
@@ -1080,20 +1083,20 @@ module Edge = struct
     perform
       ~here
       graph
-      (Proc.Edge.on_change' ~here ?sexp_of_model ?trigger ~equal value ~callback)
+      (Proc.Edge.on_change' ~here ?sexp_of_model ~trigger ~equal value ~callback)
   ;;
 
   let on_change'
     ?(here = Stdlib.Lexing.dummy_pos)
     ?sexp_of_model
-    ?trigger
+    ~trigger
     ~equal
     value
     ~callback
     graph
     =
     ignore_t
-      (on_change'__for_proc2 ~here ?sexp_of_model ?trigger ~equal value ~callback graph)
+      (on_change'__for_proc2 ~here ?sexp_of_model ~trigger ~equal value ~callback graph)
   ;;
 
   let lifecycle__for_proc2
@@ -1208,6 +1211,10 @@ module Edge = struct
 
   let after_display' ?(here = Stdlib.Lexing.dummy_pos) callback graph =
     ignore_t (after_display'__for_proc2 ~here callback graph)
+  ;;
+
+  let wait_before_display ?(here = Stdlib.Lexing.dummy_pos) graph =
+    perform ~here graph (Proc.Edge.wait_before_display ~here ())
   ;;
 
   let wait_after_display ?(here = Stdlib.Lexing.dummy_pos) graph =
@@ -1424,7 +1431,7 @@ module Debug = struct
         f v;
         Effect.Ignore)
     in
-    (* Use [on_deactivate] because the incremental node is always considered to be in use.*)
+    (* Use [on_deactivate] because the incremental node is always considered to be in use. *)
     Edge.lifecycle ~here ~on_deactivate:f graph
   ;;
 

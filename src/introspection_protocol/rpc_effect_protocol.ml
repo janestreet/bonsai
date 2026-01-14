@@ -149,9 +149,9 @@ module Event = struct
   end
 
   module Stable = struct
-    (* NOTE: We are mostly relying on version upgrading being safe to up-convert
-       via sexp's. For last-resort protocol upgrades we can use this variant mechanism
-       for the upgrades. *)
+    (* NOTE: We are mostly relying on version upgrading being safe to up-convert via
+       sexp's. For last-resort protocol upgrades we can use this variant mechanism for the
+       upgrades. *)
     type nonrec t = V1 of V1.t [@@deriving sexp, quickcheck]
 
     let to_latest (V1 v1) = v1

@@ -104,39 +104,43 @@ let%expect_test "regression" =
     |}]
 ;;
 
-let%quick_test "balancer is balanced, doesn't have more than `n` children per node, and \
-                has all leaves exactly once. Also, leaves preserve order. "
+let%expect_test "balancer is balanced, doesn't have more than `n` children per node, and \
+                 has all leaves exactly once. Also, leaves preserve order. "
   =
-  fun (n : (int[@generator Int.gen_uniform_incl 0 15]))
-    (list_len : (int[@generator Int.gen_uniform_incl 0 1_000])) ->
-  let list = List.init list_len ~f:Fn.id in
-  match balance ~n list, n, list with
-  | Error _, _, [] | Error _, 0, _ -> ()
-  | Error _, 1, ls when List.length ls > 1 -> ()
-  | Error err, _, _ ->
-    Error.raise_s
-      [%message "Balancer errored" (err : Error.t) (n : int) (List.length list : int)]
-  | Ok balanced, _, _ ->
-    let last_visited_leaf = ref (-1) in
-    let rec traverse ~depth = function
-      | Leaf v ->
-        assert (v = !last_visited_leaf + 1);
-        last_visited_leaf := v
-      | Node children ->
-        (match children with
-         | [ Leaf _ ] -> raise_s [%message "Found an unflattened node!"]
-         | _ -> ());
-        assert (Nonempty_list.length children <= n);
-        Nonempty_list.fold children ~init:`Seen_no_leaves ~f:(fun acc child ->
-          traverse ~depth:(depth + 1) child;
-          match acc, child with
-          | `Seen_no_leaves, Node _ -> `Seen_no_leaves
-          | `Seen_no_leaves, Leaf _ -> `Seen_leaves
-          | `Seen_leaves, Node _ -> failwith "All nodes must be before all leaves"
-          | `Seen_leaves, Leaf _ -> `Seen_leaves)
-        |> Fn.ignore
-    in
-    traverse ~depth:0 balanced;
-    assert (List.length list = !last_visited_leaf + 1);
-    [%expect {| |}]
+  let%quick_test prop
+    (n : (int[@generator Int.gen_uniform_incl 0 15]))
+    (list_len : (int[@generator Int.gen_uniform_incl 0 1_000]))
+    =
+    let list = List.init list_len ~f:Fn.id in
+    match balance ~n list, n, list with
+    | Error _, _, [] | Error _, 0, _ -> ()
+    | Error _, 1, ls when List.length ls > 1 -> ()
+    | Error err, _, _ ->
+      Error.raise_s
+        [%message "Balancer errored" (err : Error.t) (n : int) (List.length list : int)]
+    | Ok balanced, _, _ ->
+      let last_visited_leaf = ref (-1) in
+      let rec traverse ~depth = function
+        | Leaf v ->
+          assert (v = !last_visited_leaf + 1);
+          last_visited_leaf := v
+        | Node children ->
+          (match children with
+           | [ Leaf _ ] -> raise_s [%message "Found an unflattened node!"]
+           | _ -> ());
+          assert (Nonempty_list.length children <= n);
+          Nonempty_list.fold children ~init:`Seen_no_leaves ~f:(fun acc child ->
+            traverse ~depth:(depth + 1) child;
+            match acc, child with
+            | `Seen_no_leaves, Node _ -> `Seen_no_leaves
+            | `Seen_no_leaves, Leaf _ -> `Seen_leaves
+            | `Seen_leaves, Node _ -> failwith "All nodes must be before all leaves"
+            | `Seen_leaves, Leaf _ -> `Seen_leaves)
+          |> Fn.ignore
+      in
+      traverse ~depth:0 balanced;
+      assert (List.length list = !last_visited_leaf + 1);
+      [%expect {| |}]
+  in
+  ()
 ;;

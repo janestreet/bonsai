@@ -41,9 +41,9 @@ let wrap_sub_from inject = Action.sub_from >>> inject
 let wrap_sub_into inject = Action.sub_into >>> inject
 
 module Thread_env = struct
-  (* values of this type are used to control if the environment of a sub is threaded
-     into the next sub in a chain, or if there's no threading (which is the standard
-     scoping rule) *)
+  (* values of this type are used to control if the environment of a sub is threaded into
+     the next sub in a chain, or if there's no threading (which is the standard scoping
+     rule) *)
   type 'a t =
     | None : unit t
     | Thread_env : Environment.t option t
@@ -59,8 +59,8 @@ module Thread_env = struct
        | Some env -> env)
   ;;
 
-  (* given a standard environment and what might be a threaded environment, capture
-     an environment (if any) to thread into subsequent subs in the chain. *)
+  (* given a standard environment and what might be a threaded environment, capture an
+     environment (if any) to thread into subsequent subs in the chain. *)
   let capture (type a) (thread_env : a t) ~environment ~(maybe_env : a) : a =
     match thread_env, maybe_env with
     | None, () -> ()

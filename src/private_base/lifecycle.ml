@@ -41,8 +41,8 @@ module Collection = struct
       let collect ~key:_ ~data:{ after_display; _ } = maybe_cons after_display in
       Map.fold new_ ~init:Reversed_list.[] ~f:collect
     in
-    (* collect the activations and deactivations separately so that we can run them
-       in a different order *)
+    (* collect the activations and deactivations separately so that we can run them in a
+       different order *)
     let activations, deactivations =
       let collect (activations, deactivations) = function
         | _, `Left { on_deactivate; _ } ->

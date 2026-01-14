@@ -8,7 +8,7 @@ let f ~model ~static_action ~time_source ~apply_action ~reset ~here =
   let run ~environment:_ ~fix_envs:_ ~path:_ ~model ~inject =
     annotate ~here Model model;
     (* It's important to create [inject_static] outside of the [let%mapn] so that it
-           remains [phys_equal] when the [model] changes. *)
+       remains [phys_equal] when the [model] changes. *)
     let inject_static = Lazy_inject.make (wrap_leaf inject) in
     let result =
       let%map model in

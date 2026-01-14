@@ -2,11 +2,10 @@ open! Core
 open! Import
 
 module Entry_label = struct
-  (* The label that gets attached to performance measurements. It shows up in
-     the flamegraph produced by the chrome profiler, and also in the messages
-     that we receive from the [PerformanceObserver]. Since this label may be
-     viewed by humans, we include the [node_type] field and hand-craft the sexp
-     representation. *)
+  (* The label that gets attached to performance measurements. It shows up in the
+     flamegraph produced by the chrome profiler, and also in the messages that we receive
+     from the [PerformanceObserver]. Since this label may be viewed by humans, we include
+     the [node_type] field and hand-craft the sexp representation. *)
 
   let to_string ~here ~id ~node_type =
     [%string "##%{node_type} %{here#Source_code_position} %{id}"]
@@ -207,8 +206,8 @@ let create_computation_with_instrumentation
   let instrument_for_profiling =
     instrument_for_profiling ~set_latest_graph_info ~start_timer ~stop_timer
   in
-  (* We make these lazy so that, after turning recording on once, the recording button
-     can be quickly toggled/we don't have to do this computation multiple times. *)
+  (* We make these lazy so that, after turning recording on once, the recording button can
+     be quickly toggled/we don't have to do this computation multiple times. *)
   let run_profiling_and_watching =
     lazy
       (instrument_for_profiling computation

@@ -1,13 +1,13 @@
 open! Core
 open! Import
 
-(* This type represents a combination of static and dynamic data. When only one
-   is present, the representation is straightforward, but when both are
-   present, we use the [Join] constructor. [Join] contains the dynamic portion
-   as a single incremental node (which probably contains a tuple-tree built up
-   with several [both] nodes), and the static portion is contained implicitly
-   within the function, call it [f]. [f] rearranges the ['a] by inserting all
-   the pieces of static data into their appropriates places in the tuple tree. *)
+(* This type represents a combination of static and dynamic data. When only one is
+   present, the representation is straightforward, but when both are present, we use the
+   [Join] constructor. [Join] contains the dynamic portion as a single incremental node
+   (which probably contains a tuple-tree built up with several [both] nodes), and the
+   static portion is contained implicitly within the function, call it [f]. [f] rearranges
+   the ['a] by inserting all the pieces of static data into their appropriates places in
+   the tuple tree. *)
 type 'input t =
   | Dynamic : 'input Incr.t -> 'input t
   | Static : 'input -> 'input t

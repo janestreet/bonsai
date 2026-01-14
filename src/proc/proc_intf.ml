@@ -683,9 +683,6 @@ module type S = sig
       -> unit
       -> Time_ns.t Computation.t
 
-    (** The current time, update as frequently as possible. *)
-    val now : ?here:Stdlib.Lexing.position -> unit -> Time_ns.t Computation.t
-
     module Before_or_after : sig
       type t = Ui_incr.Before_or_after.t =
         | Before
@@ -741,6 +738,11 @@ module type S = sig
       :  ?here:Stdlib.Lexing.position
       -> unit
       -> (Time_ns.t -> unit Effect.t) Computation.t
+
+    module Expert : sig
+      (** The current time, update as frequently as possible. *)
+      val now : ?here:Stdlib.Lexing.position -> unit -> Time_ns.t Computation.t
+    end
   end
 
   module Edge : sig
@@ -759,7 +761,7 @@ module type S = sig
     val on_change
       :  ?here:Stdlib.Lexing.position
       -> ?sexp_of_model:('a -> Sexp.t)
-      -> ?trigger:[ `Before_display | `After_display ]
+      -> trigger:[ `Before_display | `After_display ]
       -> equal:('a -> 'a -> bool)
       -> 'a Value.t
       -> callback:('a -> unit Effect.t) Value.t
@@ -770,7 +772,7 @@ module type S = sig
     val on_change'
       :  ?here:Stdlib.Lexing.position
       -> ?sexp_of_model:('a -> Sexp.t)
-      -> ?trigger:[ `Before_display | `After_display ]
+      -> trigger:[ `Before_display | `After_display ]
       -> equal:('a -> 'a -> bool)
       -> 'a Value.t
       -> callback:('a option -> 'a -> unit Effect.t) Value.t
@@ -1051,7 +1053,7 @@ module type S = sig
       In the code above, [b] has type ['a Computation.t], and [a] has type ['a Value.t]. *)
   module Let_syntax : sig
     (*_ [let%pattern_bind] requires that a function named [return] with these semantics
-      exist here. *)
+        exist here. *)
     val return : ?here:Stdlib.Lexing.position -> 'a Value.t -> 'a Computation.t
     val ( >>| ) : ?here:Stdlib.Lexing.position -> 'a Value.t -> ('a -> 'b) -> 'b Value.t
 

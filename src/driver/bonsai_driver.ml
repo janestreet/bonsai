@@ -300,9 +300,9 @@ let flush
   let process_event action model =
     log_before_action_application ~action_sexp:(lazy (sexp_of_action action));
     (* It's important that we don't call [Incr.Var.set] within [process_event] unless
-       we're also going to stabilize. Some code in Bonsai relies on this assumption
-       as part of its [action_requires_stabilization] logic. Breaking this invariant
-       won't break Bonsai code, but it will effectively remove an optimization. *)
+       we're also going to stabilize. Some code in Bonsai relies on this assumption as
+       part of its [action_requires_stabilization] logic. Breaking this invariant won't
+       break Bonsai code, but it will effectively remove an optimization. *)
     if Stabilization_tracker.requires_stabilization stabilization_tracker action
     then (
       Incr.Var.set model_var model;
@@ -335,14 +335,13 @@ let flush
       let new_model = process_event action model in
       apply_actions new_model
   in
-  (* The only difference between [Var.latest_value] and [Var.value] is that
-     if [Var.set] is called _while stabilizing_, then calling [Var.value]
-     will return the value that was set when stabilization started, whereas
-     [latest_value] will give you the value that was just [set].  Now,
-     setting a model in the middle of a stabilization should never happen,
-     but I think it's important to be explicit about which behavior we use,
-     so I chose the one that would be least surprising if a stabilization
-     does happen to occur. *)
+  (* The only difference between [Var.latest_value] and [Var.value] is that if [Var.set]
+     is called _while stabilizing_, then calling [Var.value] will return the value that
+     was set when stabilization started, whereas [latest_value] will give you the value
+     that was just [set]. Now, setting a model in the middle of a stabilization should
+     never happen, but I think it's important to be explicit about which behavior we use,
+     so I chose the one that would be least surprising if a stabilization does happen to
+     occur. *)
   let apply_actions () =
     timer Apply_actions ~f:(fun () -> apply_actions (Incr.Var.latest_value model_var))
   in

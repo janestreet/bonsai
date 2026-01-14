@@ -692,6 +692,11 @@ module Edge = struct
     lifecycle' ~here ~before_display:event_value ()
   ;;
 
+  let wait_before_display ?(here = Stdlib.Lexing.dummy_pos) () =
+    Incr0.with_clock ~here (fun clock ->
+      Ui_incr.return (Time_source.wait_before_display clock))
+  ;;
+
   let wait_after_display ?(here = Stdlib.Lexing.dummy_pos) () =
     Incr0.with_clock ~here (fun clock ->
       Ui_incr.return (Time_source.wait_after_display clock))
@@ -973,10 +978,9 @@ module Effect_throttling = struct
         ~sexp_of_action:[%sexp_of: Action.t]
         ~sexp_of_model:[%sexp_of: Model.t]
         ~equal:[%equal: Model.t]
-          (* This computation does nothing on reset because users should be
-           oblivious to the fact that it has a model. I don't think there is a
-           "correct" decision in this case - this behavior just seems more
-           reasonable to me. *)
+          (* This computation does nothing on reset because users should be oblivious to
+             the fact that it has a model. I don't think there is a "correct" decision in
+             this case - this behavior just seems more reasonable to me. *)
         ~reset:(fun (_ : _ Apply_action_context.t) model -> model)
         ~default_model:{ running = false; next_up = None }
         ~apply_action:(fun context effect { running; next_up } action ->
@@ -1007,10 +1011,10 @@ module Effect_throttling = struct
                   (here : Source_code_position.t)
                     "BUG:  finished effect even though not running"]
           in
-          (* There are a lot of cases, and perhaps this match expression could
-             be factored to be shorter, but the advantage to this is that every
-             case is extremely short, and it's easy to find which code path a
-             set of variable configurations will take. *)
+          (* There are a lot of cases, and perhaps this match expression could be factored
+             to be shorter, but the advantage to this is that every case is extremely
+             short, and it's easy to find which code path a set of variable configurations
+             will take. *)
           match action, running, next_up, effect with
           | Run callback, false, None, Inactive ->
             { running = false; next_up = Some callback }
@@ -1021,8 +1025,8 @@ module Effect_throttling = struct
             abort next_up;
             { running = false; next_up = Some callback }
           | Run callback, false, Some next_up, Active effect ->
-            (* This case is untested because I couldn't figure out how to reach
-               this code path in tests. It seems impossible. *)
+            (* This case is untested because I couldn't figure out how to reach this code
+               path in tests. It seems impossible. *)
             run_effect effect next_up;
             { running = true; next_up = Some callback }
           | Run callback, true, None, (Inactive | Active _) ->
@@ -1031,12 +1035,11 @@ module Effect_throttling = struct
             abort next_up;
             { running = true; next_up = Some callback }
           | Activate, running, next_up, Inactive ->
-            (* This case looks impossible because [Activate] events happen
-               after a computation is activated, so it should have access to
-               the input. However, it can happen if a computation is activated
-               and de-activated the next frame. The Activate effect doesn't run
-               until the frame in which it was deactivated, which means it
-               doesn't have access to the input. *)
+            (* This case looks impossible because [Activate] events happen after a
+               computation is activated, so it should have access to the input. However,
+               it can happen if a computation is activated and de-activated the next
+               frame. The Activate effect doesn't run until the frame in which it was
+               deactivated, which means it doesn't have access to the input. *)
             { running; next_up }
           | Activate, false, None, Active _ -> { running = false; next_up = None }
           | Activate, false, Some next_up, Active effect ->
