@@ -91,6 +91,7 @@ let mirror'
               Effect.Ignore))
   in
   Bonsai.Edge.on_change'
+    ~trigger:`After_display
     ~sexp_of_model:[%sexp_of: M2.t]
     ~equal:[%equal: M2.t]
     (let%map store = store_value

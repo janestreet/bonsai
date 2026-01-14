@@ -177,3 +177,42 @@ let _component (local_ _graph) =
 ;;
 
 [%%expect {| |}]
+
+(* Redundant case warning *)
+
+let _component (local_ _graph) =
+  let module Foo = struct
+    type t =
+      | A
+      | B
+  end
+  in
+  let _b = Foo.B in
+  let a = Bonsai.return Foo.A in
+  match%sub a with
+  | A | B -> Bonsai.return ()
+  | A -> Bonsai.return ()
+;;
+
+[%%expect
+  {|
+Line 194, characters 4-5:
+Error (warning 11 [redundant-case]): this match case is unused.
+|}]
+
+let _component (local_ _graph) =
+  let module Foo = struct
+    type t =
+      | A
+      | B
+  end
+  in
+  let _b = Foo.B in
+  let a = Bonsai.return Foo.A in
+  match%sub a with
+  | A -> Bonsai.return ()
+  | A | B -> Bonsai.return ()
+;;
+
+(* BUG: We expect the second A to be marked as redundant. *)
+[%%expect {| |}]

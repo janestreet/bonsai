@@ -653,7 +653,7 @@ module Edge : sig
   val on_change
     :  here:[%call_pos]
     -> ?sexp_of_model:('a -> Sexp.t)
-    -> ?trigger:[ `Before_display | `After_display ]
+    -> trigger:[ `Before_display | `After_display ]
     -> equal:('a -> 'a -> bool)
     -> 'a t
     -> callback:('a -> unit Effect.t) t
@@ -667,7 +667,7 @@ module Edge : sig
   val on_change'
     :  here:[%call_pos]
     -> ?sexp_of_model:('a -> Sexp.t)
-    -> ?trigger:[ `Before_display | `After_display ]
+    -> trigger:[ `Before_display | `After_display ]
     -> equal:('a -> 'a -> bool)
     -> 'a t
     -> callback:('a option -> 'a -> unit Effect.t) t
@@ -722,6 +722,10 @@ module Edge : sig
 
   (** Just like [after_display] except that the effect is optional *)
   val after_display' : here:[%call_pos] -> unit Effect.t option t -> local_ graph -> unit
+
+  (** [wait_before_display] gives you an effect that will block until the beginning of the
+      next frame. *)
+  val wait_before_display : here:[%call_pos] -> local_ graph -> unit Effect.t t
 
   (** [wait_after_display] gives you an effect that will block until the end of the next
       frame. *)
@@ -1465,7 +1469,7 @@ module For_proc : sig
   val on_change
     :  here:[%call_pos]
     -> ?sexp_of_model:('a -> Sexp.t)
-    -> ?trigger:[ `Before_display | `After_display ]
+    -> trigger:[ `Before_display | `After_display ]
     -> equal:('a -> 'a -> bool)
     -> 'a t
     -> callback:('a -> unit Effect.t) t
@@ -1475,7 +1479,7 @@ module For_proc : sig
   val on_change'
     :  here:[%call_pos]
     -> ?sexp_of_model:('a -> Sexp.t)
-    -> ?trigger:[ `Before_display | `After_display ]
+    -> trigger:[ `Before_display | `After_display ]
     -> equal:('a -> 'a -> bool)
     -> 'a t
     -> callback:('a option -> 'a -> unit Effect.t) t

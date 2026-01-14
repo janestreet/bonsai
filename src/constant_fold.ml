@@ -551,17 +551,16 @@ module Constant_fold (Recurse : Fix_transform.Recurse with module Types := Types
          return c
        | Maybe ->
          Lazy.map t ~f:(fun t ->
-           (* Because this recursion is inside of a Lazy.map, it'll only proceed
-              be run if the lazy is forced, at which point we _are_ unconditionally
-              running it. *)
+           (* Because this recursion is inside of a Lazy.map, it'll only proceed be run if
+              the lazy is forced, at which point we _are_ unconditionally running it. *)
            (* NOTE: Constant folding on lazys is deferred until lazys are forced. One
               important consideration is that multiple deferred optimizations should occur
               as if the lazy's were not there to begin with. One possible bug here is that
-              nested optimizations could be reversed e.g. (constant_fold (lazy (comp))) ==>
-              (lazy (constant_fold (comp))), but because we use Lazy.map the same order is
-              preserved. There is not a use case for this right now, but if we want more
-              interesting interacctions between deferred optimizations, we could mint a
-              type for deferred optimizations which we can introspect.
+              nested optimizations could be reversed e.g. (constant_fold (lazy (comp)))
+              ==> (lazy (constant_fold (comp))), but because we use Lazy.map the same
+              order is preserved. There is not a use case for this right now, but if we
+              want more interesting interacctions between deferred optimizations, we could
+              mint a type for deferred optimizations which we can introspect.
            *)
            (Timer.timer ()).time `Preprocess ~f:(fun () ->
              Trampoline.run

@@ -69,8 +69,10 @@ let _component t (local_ _graph) =
 [%%expect
   {|
 Line 64, characters 24-30:
-Error: The value _graph is local but is expected to be global
-       because it is used inside a function which is expected to be global.
+Error: The value _graph is local to the parent region
+       but is expected to be global
+       because it is used inside the function at File "test_lazy_match_sub_type_error_location.mlt", line 64, characters 9-37
+       which is expected to be global.
 |}]
 
 (* Type errors in cases: *)
@@ -83,7 +85,7 @@ let _component t (local_ graph) =
 
 [%%expect
   {|
-Line 80, characters 9-29:
+Line 82, characters 9-29:
 Error: This expression has type int t * (int -> unit Ui_effect.t) t
        but an expression was expected of type 'a t
 |}]
@@ -94,7 +96,7 @@ let [%lazy] = ()
 
 [%%expect
   {|
-Line 93, characters 6-10:
+Line 95, characters 6-10:
 Error: Extension `lazy' was not translated.
        Hint: `lazy' is available for expressions but is used here in the
        context of
@@ -110,7 +112,7 @@ let _component t (local_ graph) =
 
 [%%expect
   {|
-Line 106, characters 14-21:
+Line 108, characters 14-21:
 Error: Syntax error. The correct syntax is `match%sub [%lazy] ...` or
        `match%sub [%lazy graph] ...`. Does your code compile if you delete
        this [%lazy] block?
@@ -124,7 +126,7 @@ let _component t (local_ graph) =
 
 [%%expect
   {|
-Line 121, characters 9-16:
+Line 123, characters 9-16:
 Error: Syntax error. The correct syntax is `match%sub [%lazy] ...` or
        `match%sub [%lazy graph] ...`. Does your code compile if you delete
        this [%lazy] block?
@@ -138,7 +140,7 @@ let _component t (local_ graph) =
 
 [%%expect
   {|
-Line 134, characters 12-19:
+Line 136, characters 12-19:
 Error: Syntax error. The correct syntax is `match%sub [%lazy] ...` or
        `match%sub [%lazy graph] ...`. Does your code compile if you delete
        this [%lazy] block?
@@ -154,7 +156,7 @@ let _component t (local_ graph) =
 
 [%%expect
   {|
-Line 150, characters 12-19:
+Line 152, characters 12-19:
 Error: Syntax error. The correct syntax is `match%sub [%lazy] ...` or
        `match%sub [%lazy graph] ...`. Does your code compile if you delete
        this [%lazy] block?
@@ -168,7 +170,7 @@ let _component t (local_ graph) =
 
 [%%expect
   {|
-Line 164, characters 12-19:
+Line 166, characters 12-19:
 Error: Syntax error. The correct syntax is `match%sub [%lazy] ...` or
        `match%sub [%lazy graph] ...`. Does your code compile if you delete
        this [%lazy] block?
@@ -182,7 +184,7 @@ let _component t (local_ graph) =
 
 [%%expect
   {|
-Line 178, characters 12-30:
+Line 180, characters 12-30:
 Error: This expression has type 'a * t:'b
        but an expression was expected of type 'c t
 |}]
@@ -195,7 +197,7 @@ let _component t (local_ graph) =
 
 [%%expect
   {|
-Line 191, characters 12-29:
+Line 193, characters 12-29:
 Error: This expression has type lazy_:'a * 'b
        but an expression was expected of type 'c t
 |}]
@@ -208,7 +210,7 @@ let _component t (local_ graph) =
 
 [%%expect
   {|
-Line 204, characters 12-26:
+Line 206, characters 12-26:
 Error: This expression has type 'a * t:'b
        but an expression was expected of type 'c t
 |}]

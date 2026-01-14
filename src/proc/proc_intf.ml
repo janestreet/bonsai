@@ -745,7 +745,7 @@ module type S = sig
     val on_change
       :  here:[%call_pos]
       -> ?sexp_of_model:('a -> Sexp.t)
-      -> ?trigger:[ `Before_display | `After_display ]
+      -> trigger:[ `Before_display | `After_display ]
       -> equal:('a -> 'a -> bool)
       -> 'a Value.t
       -> callback:('a -> unit Effect.t) Value.t
@@ -756,7 +756,7 @@ module type S = sig
     val on_change'
       :  here:[%call_pos]
       -> ?sexp_of_model:('a -> Sexp.t)
-      -> ?trigger:[ `Before_display | `After_display ]
+      -> trigger:[ `Before_display | `After_display ]
       -> equal:('a -> 'a -> bool)
       -> 'a Value.t
       -> callback:('a option -> 'a -> unit Effect.t) Value.t

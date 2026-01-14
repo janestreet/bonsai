@@ -660,6 +660,11 @@ module Edge = struct
     lifecycle' ~here ~before_display:event_value ()
   ;;
 
+  let wait_before_display ~(here : [%call_pos]) () =
+    Incr0.with_clock ~here (fun clock ->
+      Ui_incr.return (Time_source.wait_before_display clock))
+  ;;
+
   let wait_after_display ~(here : [%call_pos]) () =
     Incr0.with_clock ~here (fun clock ->
       Ui_incr.return (Time_source.wait_after_display clock))

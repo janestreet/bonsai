@@ -627,7 +627,13 @@ module%test [@name "Bonsai_extra_value_stability"] _ = struct
         let%arr bounce in
         fun _ -> bounce
       in
-      Bonsai.Edge.on_change ~sexp_of_model:[%sexp_of: M.t] ~equal input ~callback graph
+      Bonsai.Edge.on_change
+        ~trigger:`After_display
+        ~sexp_of_model:[%sexp_of: M.t]
+        ~equal
+        input
+        ~callback
+        graph
     in
     let () =
       let%sub on_deactivate =
@@ -656,6 +662,7 @@ module%test [@name "Bonsai_extra_value_stability"] _ = struct
         in
         let before_or_after = Bonsai.Clock.at next_stable graph in
         Bonsai.Edge.on_change'
+          ~trigger:`After_display
           ~sexp_of_model:[%sexp_of: Bonsai.Clock.Before_or_after.t]
           ~equal:[%equal: Bonsai.Clock.Before_or_after.t]
           before_or_after

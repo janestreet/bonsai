@@ -2,7 +2,7 @@ open! Core
 module Incr = Ui_incr
 
 module Color = struct
-  (* From  [bonsai.tailwind_colors]. *)
+  (* From [bonsai.tailwind_colors]. *)
   let red50 = `Hex "#FEF2F2"
   let red100 = `Hex "#FEE2E2"
   let red200 = `Hex "#FECACA"

@@ -1000,7 +1000,7 @@ module Edge = struct
   let on_change__for_proc2
     ~(here : [%call_pos])
     ?sexp_of_model
-    ?trigger
+    ~trigger
     ~equal
     value
     ~callback
@@ -1009,19 +1009,19 @@ module Edge = struct
     perform
       ~here
       graph
-      (Proc.Edge.on_change ~here ?sexp_of_model ?trigger ~equal value ~callback)
+      (Proc.Edge.on_change ~here ?sexp_of_model ~trigger ~equal value ~callback)
   ;;
 
-  let on_change ~(here : [%call_pos]) ?sexp_of_model ?trigger ~equal value ~callback graph
+  let on_change ~(here : [%call_pos]) ?sexp_of_model ~trigger ~equal value ~callback graph
     =
     ignore_t
-      (on_change__for_proc2 ~here ?sexp_of_model ?trigger ~equal value ~callback graph)
+      (on_change__for_proc2 ~here ?sexp_of_model ~trigger ~equal value ~callback graph)
   ;;
 
   let on_change'__for_proc2
     ~(here : [%call_pos])
     ?sexp_of_model
-    ?trigger
+    ~trigger
     ~equal
     value
     ~callback
@@ -1030,20 +1030,20 @@ module Edge = struct
     perform
       ~here
       graph
-      (Proc.Edge.on_change' ~here ?sexp_of_model ?trigger ~equal value ~callback)
+      (Proc.Edge.on_change' ~here ?sexp_of_model ~trigger ~equal value ~callback)
   ;;
 
   let on_change'
     ~(here : [%call_pos])
     ?sexp_of_model
-    ?trigger
+    ~trigger
     ~equal
     value
     ~callback
     graph
     =
     ignore_t
-      (on_change'__for_proc2 ~here ?sexp_of_model ?trigger ~equal value ~callback graph)
+      (on_change'__for_proc2 ~here ?sexp_of_model ~trigger ~equal value ~callback graph)
   ;;
 
   let lifecycle__for_proc2
@@ -1158,6 +1158,10 @@ module Edge = struct
 
   let after_display' ~(here : [%call_pos]) callback graph =
     ignore_t (after_display'__for_proc2 ~here callback graph)
+  ;;
+
+  let wait_before_display ~(here : [%call_pos]) graph =
+    perform ~here graph (Proc.Edge.wait_before_display ~here ())
   ;;
 
   let wait_after_display ~(here : [%call_pos]) graph =
