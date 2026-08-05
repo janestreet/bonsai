@@ -124,7 +124,7 @@ tests like these you can write an entire component without opening your browser.
 ## Documentation
 
 The [Bonsai
-Quick Start](https://github.com/janestreet/bonsai_web/blob/master/docs/quick-start.md) and [Thinking in Bonsai](https://github.com/janestreet/bonsai_web/blob/master/docs/thinking-in-bonsai.md)
+Quick Start](https://github.com/janestreet/bonsai_web/blob/master/docs/quick_start.md) and [Thinking in Bonsai](https://github.com/janestreet/bonsai_web/blob/master/docs/thinking_in_bonsai.md)
 provide a hands on introduction to Bonsai and are the best places to start learning
 about it. There's also:
 
