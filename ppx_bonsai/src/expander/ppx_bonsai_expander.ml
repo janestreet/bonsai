@@ -334,7 +334,7 @@ and arr ~(expand_with : label) (location_behavior : Location_behavior.t) : (modu
     (* These functions have been copied verbatim. *)
     module From_let_expander = struct
       (* Wrap a function body in [exclave_] *)
-      let wrap_exclave ~loc expr = [%expr [%e expr]]
+      let wrap_exclave ~loc:_ expr = [%expr [%e expr]]
 
       let maybe_wrap_exclave ~loc ~locality expr =
         match locality with
