@@ -1,7 +1,7 @@
 open! Core
 open! Bonsai
 
-(** [effect_throttle input ~effect] performs [effect value] every time the value is
+(** [effect_throttle input ~effect_] performs [effect_ value] every time the value is
     changed, but throttles the effects to be dispatched at most [wait] after they are
     resolved. The effect is performed on both the leading and trailing edge.
 
@@ -18,7 +18,7 @@ val effect_throttle
   :  'input Bonsai.t
   -> equal:('input -> 'input -> bool)
   -> wait:Time_ns.Span.t
-  -> effect:('input -> 'output Effect.t) Bonsai.t
+  -> effect_:('input -> 'output Effect.t) Bonsai.t
   -> Bonsai.graph
   -> 'output option Bonsai.t
 

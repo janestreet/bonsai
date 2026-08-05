@@ -20,8 +20,8 @@ let pipe ?sexp_of graph =
   Bonsai.both enqueue dequeue
 ;;
 
-let exactly_once effect graph =
-  Bonsai_extra.Effects.exactly_once effect graph;
+let exactly_once effect_ graph =
+  Bonsai_extra.Effects.exactly_once effect_ graph;
   Bonsai.return ()
 ;;
 
@@ -151,8 +151,8 @@ let value_stability = Bonsai_extra.Value_stability.value_stability
 module One_at_a_time = struct
   include Bonsai_extra.One_at_a_time
 
-  let effect send_effect graph =
-    let send, status = effect send_effect graph in
+  let effect_ send_effect graph =
+    let send, status = effect_ send_effect graph in
     Bonsai.both send status
   ;;
 end

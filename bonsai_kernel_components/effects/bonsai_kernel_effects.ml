@@ -3,7 +3,7 @@ module Bonsai = Bonsai.Cont
 module Effect = Bonsai.Effect
 open Bonsai.Let_syntax
 
-let exactly_once effect graph =
+let exactly_once effect_ graph =
   let has_run, set_has_run =
     Bonsai.state ~equal:[%equal: Bool.t] false ~sexp_of_model:[%sexp_of: Bool.t] graph
   in
@@ -14,7 +14,7 @@ let exactly_once effect graph =
       Bonsai.Edge.lifecycle
         ~on_activate:
           (let%map set_has_run
-           and event = effect in
+           and event = effect_ in
            Effect.Many [ set_has_run true; event ])
         graph;
       Bonsai.return ())
@@ -22,15 +22,15 @@ let exactly_once effect graph =
   ()
 ;;
 
-let exactly_once_with_value ?sexp_of_model ?equal effect graph =
+let exactly_once_with_value ?sexp_of_model ?equal effect_ graph =
   let value, set_value = Bonsai.state_opt ?sexp_of_model ?equal graph in
   let%sub () =
     match%sub value with
     | None ->
       Bonsai.Edge.lifecycle
         ~on_activate:
-          (let%map set_value and effect in
-           let%bind.Effect r = effect in
+          (let%map set_value and effect_ in
+           let%bind.Effect r = effect_ in
            set_value (Some r))
         graph;
       Bonsai.return ()
@@ -43,8 +43,8 @@ let bonk graph =
   let (_ : unit Bonsai.t), bonk =
     Bonsai.state_machine
       ~default_model:()
-      ~apply_action:(fun context () effect ->
-        Bonsai.Apply_action_context.schedule_event context effect)
+      ~apply_action:(fun context () effect_ ->
+        Bonsai.Apply_action_context.schedule_event context effect_)
       graph
   in
   bonk
@@ -59,11 +59,11 @@ let chain_incr_effects input graph =
         match input, effect_fns with
         | Bonsai.Computation_status.Inactive, _ | _, [] -> ()
         | Active input, effect_fn :: dependents ->
-          let effect =
+          let effect_ =
             let%bind.Ui_effect () = effect_fn input in
             Bonsai.Apply_action_context.inject ctx dependents
           in
-          Bonsai.Apply_action_context.schedule_event ctx effect)
+          Bonsai.Apply_action_context.schedule_event ctx effect_)
       graph
   in
   inject

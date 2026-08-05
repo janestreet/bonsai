@@ -27,14 +27,14 @@ end
 
 let create = Bonsai.Expert.thunk For_non_bonsai_users.create
 
-let run (t : t) ~this_effect_doesn't_call_run:effect =
+let run (t : t) ~this_effect_doesn't_call_run:effect_ =
   Effect.Private.make ~request:() ~evaluator:(fun callback ->
     let previous = !t in
     let current = { finished = false; upon_finish = (fun () -> ()) } in
     let on_exn = Effect.Private.Callback.on_exn callback in
     let run_effect () =
       Effect.Expert.eval
-        effect
+        effect_
         ~f:(fun result ->
           Effect.Expert.handle
             (Effect.Private.Callback.respond_to callback result)

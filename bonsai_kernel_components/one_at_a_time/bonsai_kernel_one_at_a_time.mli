@@ -21,7 +21,7 @@ end
     running at a time. If another instance of the effect is already running, then [Busy]
     is returned instead of running the effect. In addition, it also returns a value
     representing whether or not an instance of the effect is in progress. *)
-val effect
+val effect_
   :  ('query -> 'response Ui_effect.t) Bonsai.t
   -> Bonsai.graph
   -> ('query -> 'response Response.t Ui_effect.t) Bonsai.t * Status.t Bonsai.t
