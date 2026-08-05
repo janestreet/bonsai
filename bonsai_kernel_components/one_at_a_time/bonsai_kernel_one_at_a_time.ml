@@ -24,7 +24,7 @@ module Lock_action = struct
   [@@deriving sexp]
 end
 
-let effect f graph =
+let effect_ f graph =
   let status, inject_status =
     Bonsai.actor
       graph
@@ -43,7 +43,7 @@ let effect f graph =
           Busy, response
         | Release -> Idle, true)
   in
-  let effect =
+  let effect_ =
     let%arr inject_status and f in
     let open Ui_effect.Let_syntax in
     fun query ->
@@ -59,5 +59,5 @@ let effect f graph =
          | Ok result -> Response.Result result
          | Error exn -> Response.Exn exn)
   in
-  effect, status
+  effect_, status
 ;;

@@ -960,10 +960,10 @@ let with_model_resetter_n
     -> unpacked * _
   =
   fun ?(here = Stdlib.Lexing.dummy_pos) ~f ~n graph ->
-  let packed, effect =
+  let packed, effect_ =
     with_model_resetter ~here graph ~f:(fun graph -> Autopack.pack ~here ~n (f graph))
   in
-  Autopack.unpack ~here ~n packed, effect
+  Autopack.unpack ~here ~n packed, effect_
 ;;
 
 let with_model_resetter' ?(here = Stdlib.Lexing.dummy_pos) ~f graph =
@@ -1232,7 +1232,7 @@ module Edge = struct
       ?equal_result
       starting
       value
-      ~effect
+      ~effect_
       graph
       =
       Proc.Edge.Poll.effect_on_change
@@ -1243,7 +1243,7 @@ module Edge = struct
         ?equal_result
         starting
         value
-        ~effect
+        ~effect_
       |> perform ~here graph
     ;;
 
@@ -1252,13 +1252,13 @@ module Edge = struct
       ?sexp_of_model
       ?equal
       starting
-      ~effect
+      ~effect_
       graph
       =
       perform
         ~here
         graph
-        (Proc.Edge.Poll.manual_refresh ~here ?sexp_of_model ?equal starting ~effect)
+        (Proc.Edge.Poll.manual_refresh ~here ?sexp_of_model ?equal starting ~effect_)
     ;;
 
     let manual_refresh
@@ -1266,10 +1266,10 @@ module Edge = struct
       ?sexp_of_model
       ?equal
       starting
-      ~effect
+      ~effect_
       graph
       =
-      manual_refresh__for_proc2 ~here ?sexp_of_model ?equal starting ~effect graph
+      manual_refresh__for_proc2 ~here ?sexp_of_model ?equal starting ~effect_ graph
       |> split ~here graph
     ;;
   end

@@ -233,7 +233,7 @@ module One_at_a_time : sig
 
       CAREFUL: If the effect function raises while it is executing, then the status will
       stay at busy, since the computation is unable to witness that the effect completed. *)
-  val effect
+  val effect_
     :  ('query -> 'response Effect.t) Bonsai.t
     -> Bonsai.graph
     -> (('query -> 'response Response.t Effect.t) * Status.t) Bonsai.t

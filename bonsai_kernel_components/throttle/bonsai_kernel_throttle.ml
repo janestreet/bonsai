@@ -27,7 +27,7 @@ end
 let apply_when_active
   ~(ctx : (_ Action.t, unit) Bonsai.Apply_action_context.t)
   ~sleep
-  ~effect
+  ~effect_
   (model : _ Model.t)
   (action : _ Action.t)
   : _ Model.t
@@ -35,7 +35,7 @@ let apply_when_active
   let perform_effect input =
     let run_effect_and_wait =
       let open Bonsai.Effect.Let_syntax in
-      let%bind output = effect input in
+      let%bind output = effect_ input in
       let%bind () = Bonsai.Apply_action_context.inject ctx (Resolve_effect output) in
       let%bind () = sleep in
       let%bind () = Bonsai.Apply_action_context.inject ctx Finish_sleep in
@@ -68,21 +68,21 @@ let apply_when_inactive (model : _ Model.t) (action : _ Action.t) : _ Model.t =
 
 let apply_action ctx input model action =
   match input with
-  | Bonsai.Computation_status.Active (sleep_for, effect) ->
+  | Bonsai.Computation_status.Active (sleep_for, effect_) ->
     let sleep =
       Bonsai.Time_source.sleep (Bonsai.Apply_action_context.time_source ctx) sleep_for
     in
-    apply_when_active ~ctx ~sleep ~effect model action
+    apply_when_active ~ctx ~sleep ~effect_ model action
   | Inactive -> apply_when_inactive model action
 ;;
 
-let effect_throttle input ~equal ~wait ~effect graph =
+let effect_throttle input ~equal ~wait ~effect_ graph =
   let state, inject_action =
     Bonsai.state_machine_with_input
       ~default_model:Model.default
       ~reset:(fun _ _ -> Model.default)
       ~apply_action
-      (Bonsai.both (Bonsai.return wait) effect)
+      (Bonsai.both (Bonsai.return wait) effect_)
       graph
   in
   let callback =
@@ -98,7 +98,7 @@ let effect_throttle input ~equal ~wait ~effect graph =
 
 let value_throttle ~wait ~equal value graph =
   let opt =
-    effect_throttle ~effect:(Bonsai.return Effect.return) ~equal ~wait value graph
+    effect_throttle ~effect_:(Bonsai.return Effect.return) ~equal ~wait value graph
   in
   let%arr value and opt in
   Option.value opt ~default:value

@@ -747,7 +747,7 @@ module Edge : sig
       val initial : 'o -> ('o, 'o) t
     end
 
-    (** [Bonsai.Edge.Poll.effect_on_change] will invoke the [~effect] function every time
+    (** [Bonsai.Edge.Poll.effect_on_change] will invoke the [~effect_] function every time
         that the input ['a Bonsai.t] changes. The result of the effect function is stored
         and returned as a new [Bonsai.t].
 
@@ -762,7 +762,7 @@ module Edge : sig
       -> ?equal_result:('o -> 'o -> bool)
       -> ('o, 'r) Starting.t
       -> 'a t
-      -> effect:('a -> 'o Effect.t) t
+      -> effect_:('a -> 'o Effect.t) t
       -> graph
       -> 'r t
 
@@ -774,7 +774,7 @@ module Edge : sig
       -> ?sexp_of_model:('o -> Sexp.t)
       -> ?equal:('o -> 'o -> bool)
       -> ('o, 'r) Starting.t
-      -> effect:'o Effect.t t
+      -> effect_:'o Effect.t t
       -> graph
       -> 'r t * unit Effect.t t
   end
@@ -1614,7 +1614,7 @@ module For_proc : sig
     -> ?sexp_of_model:('o -> Sexp.t)
     -> ?equal:('o -> 'o -> bool)
     -> ('o, 'r) Edge.Poll.Starting.t
-    -> effect:'o Effect.t t
+    -> effect_:'o Effect.t t
     -> graph
     -> ('r * unit Effect.t) t
 
