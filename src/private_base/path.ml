@@ -9,6 +9,7 @@ module Elem = struct
     | Subst_from
     | Subst_into
     | Assoc of Keyed.t
+    | Bind of Keyed.t
     | Switch of int
   [@@deriving sexp_of, compare]
 
@@ -40,7 +41,10 @@ module Elem = struct
     | Subst_into_invert_lifecycles -> "w"
     | Subst_from -> "x"
     | Subst_into -> "y"
-    | Assoc k -> keyed_to_string k
+    | Assoc k | Bind k ->
+      (* it's ok to avoid differentiating between assoc and bind because they can never
+         exist in the same location. *)
+      keyed_to_string k
     | Switch i -> int_to_string i
   ;;
 end

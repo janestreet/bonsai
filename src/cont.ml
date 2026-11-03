@@ -36,7 +36,7 @@ module Cont_primitives : sig
     -> (graph -> 'a Value.t)
     -> 'a Computation.t
 
-  val handle_for_lazy
+  val handle_for_lazy_and_bind
     :  ?here:Stdlib.Lexing.position
     -> (graph -> 'a Value.t)
     -> 'a Computation.t
@@ -157,7 +157,7 @@ end = struct
       ~finally:(fun () -> decr num_nested_top_level_handles) [@nontail]
   ;;
 
-  let handle_for_lazy ?(here = Stdlib.Lexing.dummy_pos) f =
+  let handle_for_lazy_and_bind ?(here = Stdlib.Lexing.dummy_pos) f =
     (Timer.timer ()).time `Graph_application ~f:(fun () ->
       handle_with_global_graph ~here `Inside_lazy f)
   ;;
@@ -744,7 +744,13 @@ let actor_with_input
 ;;
 
 let delay ?(here = Stdlib.Lexing.dummy_pos) ~f graph =
-  Proc.lazy_ ~here (lazy (handle_for_lazy ~here f)) |> perform ~here graph
+  Proc.lazy_ ~here (lazy (handle_for_lazy_and_bind ~here f)) |> perform ~here graph
+;;
+
+let stitch ?(here = Stdlib.Lexing.dummy_pos) cmp bound ~f graph =
+  Proc.bind ~here cmp bound ~f:(fun value ->
+    handle_for_lazy_and_bind ~here (fun graph -> f value graph))
+  |> perform ~here graph
 ;;
 
 module Expert = struct
@@ -1573,6 +1579,15 @@ module Let_syntax = struct
     ;;
 
     let sub ?here:(_ = Stdlib.Lexing.dummy_pos) a ~f = f a
+
+    let sub_both
+      (`let_sub_with_and_is_not_supported_in_bonsai :
+        [ `let_sub_with_and_is_not_supported_in_bonsai ])
+      (`use_a_separate_let_sub_per_binding : [ `use_a_separate_let_sub_per_binding ])
+      =
+      ()
+    ;;
+
     let delay = delay
 
     let debug_node ?(here = Stdlib.Lexing.dummy_pos) ~name ~equal ~sexp_of value =

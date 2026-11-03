@@ -516,6 +516,27 @@ val enum
   -> graph
   -> 'a t
 
+(** [stitch] allows you to dynamically construct Bonsai graphs at runtime, giving you
+    unwrapped access to the value being bound.
+
+    The restriction on this function compared to the traditional [bind] signature is that
+    [Bonsai.stitch] requires a comparator module for the value being bound. This is so
+    that we can associate any stored models with a key for the bound value that generated
+    it.
+
+    WARNING: using stitch can make your application slow! Bonsai typically does a lot of
+    work at application startup time in order to make runtime fast, but [stitch] defers
+    the running of [f] to runtime, so it can make things slow at runtime. Use with
+    caution, and profile your apps! *)
+
+val stitch
+  :  ?here:Stdlib.Lexing.position
+  -> ('a, 'cmp) Comparator.Module.t
+  -> 'a t
+  -> f:('a -> graph -> 'b t)
+  -> graph
+  -> 'b t
+
 (** [with_inverted_lifecycle_ordering] will run [compute_dep] and pass its result to [f],
     but any lifecycles registered in [f] will run before those registered in
     [compute_dep]. *)
@@ -594,8 +615,8 @@ module Clock : sig
     [@@deriving sexp, equal]
   end
 
-  (** [Bonsai.Clock.at] can tell you if a given [Time_ns.t Bonsai.t] is before or after
-      the current wall clock time. *)
+  (** [Bonsai.Clock.at] can tell you if the current wall clock time is before or after a
+      given [Time_ns.t Bonsai.t]. *)
   val at : ?here:Stdlib.Lexing.position -> Time_ns.t t -> graph -> Before_or_after.t t
 
   (** {v
@@ -1221,8 +1242,6 @@ module Let_syntax : sig
   val return : ?here:Stdlib.Lexing.position -> 'a -> 'a t
 
   module Let_syntax : sig
-    val map : ?here:Stdlib.Lexing.position -> 'a t -> f:('a -> 'b) -> 'b t
-    val map2 : ?here:Stdlib.Lexing.position -> 'a t -> 'b t -> f:('a -> 'b -> 'c) -> 'c t
     val both : ?here:Stdlib.Lexing.position -> 'a t -> 'b t -> ('a * 'b) t
     val arr : ?here:Stdlib.Lexing.position -> 'a t -> f:('a -> 'b) -> 'b t
     val return : 'a t -> 'a t
@@ -1236,6 +1255,16 @@ module Let_syntax : sig
       -> 'a t
 
     val sub : ?here:Stdlib.Lexing.position -> 'a -> f:('a -> 'b) -> 'b
+
+    (** [let%sub ... and ...] is deliberately not supported in bonsai: use one [let%sub]
+        per binding. This uncallable [sub_both] exists so that [ppx_bonsai]'s expansion of
+        [let%sub ... and ...] fails with a legible type error rather than an unbound-value
+        error. *)
+    val sub_both
+      :  [ `let_sub_with_and_is_not_supported_in_bonsai ]
+      -> [ `use_a_separate_let_sub_per_binding ]
+      -> unit
+
     val delay : ?here:Stdlib.Lexing.position -> f:(graph -> 'a t) -> graph -> 'a t
 
     val debug_node
@@ -1246,8 +1275,73 @@ module Let_syntax : sig
       -> 'a t
       -> 'a t
 
-    include Mapn with type 'a t := 'a t
     include Arrn with type 'a t := 'a t
+
+    val map : ?here:Stdlib.Lexing.position -> 'a t -> f:('a -> 'b) -> 'b t
+    [@@alert for_ppx_bonsai "[since 2026-08] use [let%arr] instead"]
+
+    val map2
+      :  ?here:Stdlib.Lexing.position
+      -> 'a1 t
+      -> 'a2 t
+      -> f:('a1 -> 'a2 -> 'b)
+      -> 'b t
+    [@@alert for_ppx_bonsai "[since 2026-08] use [let%arr] instead"]
+
+    val map3
+      :  ?here:Stdlib.Lexing.position
+      -> 'a1 t
+      -> 'a2 t
+      -> 'a3 t
+      -> f:('a1 -> 'a2 -> 'a3 -> 'b)
+      -> 'b t
+    [@@alert for_ppx_bonsai "[since 2026-08] use [let%arr] instead"]
+
+    val map4
+      :  ?here:Stdlib.Lexing.position
+      -> 'a1 t
+      -> 'a2 t
+      -> 'a3 t
+      -> 'a4 t
+      -> f:('a1 -> 'a2 -> 'a3 -> 'a4 -> 'b)
+      -> 'b t
+    [@@alert for_ppx_bonsai "[since 2026-08] use [let%arr] instead"]
+
+    val map5
+      :  ?here:Stdlib.Lexing.position
+      -> 'a1 t
+      -> 'a2 t
+      -> 'a3 t
+      -> 'a4 t
+      -> 'a5 t
+      -> f:('a1 -> 'a2 -> 'a3 -> 'a4 -> 'a5 -> 'b)
+      -> 'b t
+    [@@alert for_ppx_bonsai "[since 2026-08] use [let%arr] instead"]
+
+    val map6
+      :  ?here:Stdlib.Lexing.position
+      -> 'a1 t
+      -> 'a2 t
+      -> 'a3 t
+      -> 'a4 t
+      -> 'a5 t
+      -> 'a6 t
+      -> f:('a1 -> 'a2 -> 'a3 -> 'a4 -> 'a5 -> 'a6 -> 'b)
+      -> 'b t
+    [@@alert for_ppx_bonsai "[since 2026-08] use [let%arr] instead"]
+
+    val map7
+      :  ?here:Stdlib.Lexing.position
+      -> 'a1 t
+      -> 'a2 t
+      -> 'a3 t
+      -> 'a4 t
+      -> 'a5 t
+      -> 'a6 t
+      -> 'a7 t
+      -> f:('a1 -> 'a2 -> 'a3 -> 'a4 -> 'a5 -> 'a6 -> 'a7 -> 'b)
+      -> 'b t
+    [@@alert for_ppx_bonsai "[since 2026-08] use [let%arr] instead"]
   end
 end
 

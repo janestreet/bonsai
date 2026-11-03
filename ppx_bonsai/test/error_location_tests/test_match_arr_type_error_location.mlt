@@ -39,8 +39,8 @@ let _component (local_ _graph) =
 [%%expect
   {|
 Line 34, characters 12-13:
-Error: This expression has type int option
-       but an expression was expected of type 'a t
+Error: The value t has type int option but an expression was expected of type
+         'a t
 |}]
 
 let _component t (local_ _graph) =
@@ -52,8 +52,7 @@ let _component t (local_ _graph) =
   {|
 Line 47, characters 2-32:
 Error (warning 8 [partial-match]): this pattern-matching is not exhaustive.
-Here is an example of a case that is not matched:
-Some _
+  Here is an example of a case that is not matched: Some _
 |}]
 
 let _component t (local_ _graph) =
@@ -64,7 +63,7 @@ let _component t (local_ _graph) =
 
 [%%expect
   {|
-Line 61, characters 16-21:
+Line 60, characters 16-21:
 Error: match%arr doesn't support when clauses. Try using let%arr ... match
        ... or casing within a match%arr arm instead
 |}]
@@ -88,7 +87,7 @@ let component (local_ _graph) =
 
 [%%expect
   {|
-Line 86, characters 4-11:
+Line 85, characters 4-11:
 Error: This match case could not be refuted.
        Here is an example of a value that would reach it: Error ()
 |}]
@@ -112,7 +111,7 @@ let component (local_ _graph) =
 
 [%%expect
   {|
-Line 110, characters 4-21:
+Line 109, characters 4-21:
 Error (warning 56 [unreachable-case]): this match case is unreachable.
-Consider replacing it with a refutation case '<pat> -> .'
+  Consider replacing it with a refutation case <pat> -> .
 |}]

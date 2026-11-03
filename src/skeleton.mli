@@ -93,6 +93,7 @@ module Computation : sig
         ; arms : t list
         }
     | Lazy of { t : t option }
+    | Bind of { bound : Value.t }
     | Fix_define of
         { result : t
         ; initial_input : Value.t

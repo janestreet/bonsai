@@ -6,5 +6,8 @@
 (** Output a [debug_node] message *)
 val output : string -> unit
 
+(** Retrieve the current output function. Pair with [set_output] to save and restore it. *)
+val get_output : unit -> string -> unit
+
 (** Override the output function. Defaults to [Core.Debug.eprintf]. *)
 val set_output : (string -> unit) -> unit

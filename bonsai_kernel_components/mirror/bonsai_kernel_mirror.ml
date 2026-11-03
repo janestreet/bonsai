@@ -34,7 +34,7 @@ let mirror'
   end
   in
   let callback =
-    let%map store_set and interactive_set in
+    let%arr store_set and interactive_set in
     fun old_pair { M2.store = store_value; interactive = interactive_value } ->
       let stability =
         if Option.equal equal store_value interactive_value then `Stable else `Unstable
@@ -95,7 +95,7 @@ let mirror'
     ~trigger
     ~sexp_of_model:[%sexp_of: M2.t]
     ~equal:[%equal: M2.t]
-    (let%map store = store_value
+    (let%arr store = store_value
      and interactive = interactive_value in
      { M2.store; interactive })
     ~callback

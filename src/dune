@@ -2,9 +2,13 @@
  (name bonsai)
  (libraries abstract_algebra bonsai_private_base bonsai_private_gather core
    incr_map incr_map.incr_set incremental core_kernel.reversed_list
-   virtual_dom.ui_effect bonsai_concrete.ui_incr
-   bonsai_concrete.ui_time_source)
+   virtual_dom.ui_effect bonsai_concrete.ui_incr)
  (preprocess
   (pps ppx_jane ppx_pattern_bind ppx_bonsai
     -for-bonsai-internals-use-location-in-scope ppxlib.traverse))
  (public_name bonsai))
+
+(env
+ (_
+  (env-vars
+   (OCAMLPARAM w=-46,keywords=5.2,_))))

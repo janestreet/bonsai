@@ -112,11 +112,14 @@ module Unresolved = struct
     }
   ;;
 
-  let lazy_ =
+  let lazy_and_bind_are_the_same =
     { contains = { path = Yes_or_maybe; lifecycle = Yes_or_maybe; input = Yes_or_maybe }
     ; recursive_dependencies = Dependencies.empty
     }
   ;;
+
+  let lazy_ = lazy_and_bind_are_the_same
+  let bind = lazy_and_bind_are_the_same
 
   let recursive fix_id =
     { contains =

@@ -1,5 +1,6 @@
 (library
  (name balance_list_tree_test)
- (libraries balance_list_tree core expect_test_helpers_base)
+ (libraries balance_list_tree core)
  (preprocess
-  (pps ppx_jane ppx_expect ppx_bonsai ppxlib.metaquot ppx_quick_test)))
+  (pps ppx_jane -compare-require-explicit-locality ppx_expect ppx_bonsai
+    ppxlib.metaquot ppx_quick_test)))

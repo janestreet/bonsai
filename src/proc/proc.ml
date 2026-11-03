@@ -121,6 +121,14 @@ module This_let_syntax = struct
       f (subcomputation ~here a graph) graph
     ;;
 
+    let sub_both
+      (`let_sub_with_and_is_not_supported_in_bonsai :
+        [ `let_sub_with_and_is_not_supported_in_bonsai ])
+      (`use_a_separate_let_sub_per_binding : [ `use_a_separate_let_sub_per_binding ])
+      =
+      ()
+    ;;
+
     let return = comp_return
 
     let arr ?(here = Stdlib.Lexing.dummy_pos) v ~f graph =
@@ -472,7 +480,7 @@ let of_module_with_input
       input
       graph
   in
-  let%map model and inject and input in
+  let%arr model and inject and input in
   M.compute ~inject input model
 ;;
 
@@ -494,7 +502,8 @@ let of_module
       ~apply_action:(fun ctx -> M.apply_action ctx ())
       graph
   in
-  let%map model and inject in
+  let here = [%here] in
+  let%arr model and inject in
   M.compute ~inject () model
 ;;
 

@@ -36,6 +36,7 @@ module rec T : sig
 
   type ('result, 'extra) packed_info =
     | T : (_, _, _, 'result, 'extra) info -> ('result, 'extra) packed_info
+  [@@unboxed]
 end =
   T
 
@@ -174,6 +175,15 @@ type 'result t =
       ; here : Source_code_position.t
       }
       -> 'result t
+  | Bind :
+      { bound : 'a Value.t
+      ; comparator : ('a, 'cmp) Comparator.Module.t
+      ; bound_id : 'a Var_id.t
+      ; cmp_id : 'cmp Var_id.t
+      ; f : 'a -> 'b t
+      ; here : Source_code_position.t
+      }
+      -> 'b t
   (* [Fix_define] and [Fix_recurse] allow for recursive Bonsai computations. They are more
      restrictive than [Lazy] and can therefore be introspected and optimized at
      [gather]-time.
@@ -271,6 +281,7 @@ let source_code_position (type result) (computation : result t) =
   | Assoc { here; _ }
   | Assoc_on { here; _ }
   | Assoc_simpl { here; _ }
+  | Bind { here; _ }
   | Lazy { here; _ }
   | Fix_define { here; _ }
   | Fix_recurse { here; _ }

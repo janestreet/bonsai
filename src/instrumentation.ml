@@ -1,25 +1,54 @@
 open! Core
 open! Import
 
-module Entry_label = struct
-  (* The label that gets attached to performance measurements. It shows up in the
-     flamegraph produced by the chrome profiler, and also in the messages that we receive
-     from the [PerformanceObserver]. Since this label may be viewed by humans, we include
-     the [node_type] field and hand-craft the sexp representation. *)
+module Profiled_event = struct
+  module Node_id = String
 
-  let to_string ~here ~id ~node_type =
-    [%string "##%{node_type} %{here#Source_code_position} %{id}"]
+  module Metadata = struct
+    type t =
+      | Map of { arity : int }
+      | Assoc_by
+      | Incr_compute
+      | Apply_action of
+          { action_sexp : Sexp.t option
+          ; kind : [ `Static | `Dynamic | `Wrap ]
+          }
+    [@@deriving sexp, equal]
+
+    let node_type = function
+      | Map { arity = 1 } -> "map"
+      | Map { arity = n } -> [%string "map%{n#Int}"]
+      | Assoc_by -> "assoc_simpl"
+      | Incr_compute -> "leaf_incr"
+      | Apply_action { kind; _ } ->
+        (match kind with
+         | `Static -> "leaf0"
+         | `Dynamic -> "leaf1"
+         | `Wrap -> "wrap")
+    ;;
+  end
+
+  type t =
+    { node_id : Node_id.t
+    ; metadata : Metadata.t
+    ; here : Source_code_position.Stable.V1.t
+    }
+  [@@deriving sexp, equal]
+
+  let to_entry_label t = "##" ^ Sexp.to_string_mach [%sexp (t : t)]
+
+  let of_entry_label s =
+    let%bind.Option s = String.chop_prefix s ~prefix:"##" in
+    Option.try_with (fun () -> s |> Sexp.of_string |> t_of_sexp)
   ;;
-end
 
-let extract_node_path_from_entry_label label =
-  if String.is_prefix ~prefix:"##" label
-  then (
-    match String.split label ~on:' ' with
-    | [ _; node_path ] | _ :: _ :: node_path :: _ -> Some (Node_path.of_string node_path)
-    | _ -> None)
-  else None
-;;
+  module For_testing = struct
+    let to_string { node_id; metadata; here } =
+      [%string
+        "##%{Metadata.node_type metadata} %{here#Source_code_position} %{node_id#String}"]
+    ;;
+  end
+end
 
 let instrument_for_measuring_timings (t : _ Computation.t) ~start_timer ~stop_timer =
   let { Timer.time } = Timer.create ~start_timer ~stop_timer in
@@ -30,62 +59,70 @@ let instrument_for_measuring_timings (t : _ Computation.t) ~start_timer ~stop_ti
     (computation : result Computation.t)
     : result Computation.t Trampoline.t
     =
-    let node_info = Graph_info.Node_info.of_computation computation in
-    let id =
-      let (lazy current_path) = context.current_path in
-      Node_path.to_string current_path
+    let node_id =
+      let%map.Lazy node_path = context.current_path in
+      Node_path.to_string node_path
     in
-    let entry_label node_type =
-      Entry_label.to_string
-        ~here:(Computation.source_code_position computation)
-        ~id
-        ~node_type
-    in
-    let compute_label = entry_label [%string "%{node_info.node_type}-compute"] in
-    let apply_action_label =
-      entry_label [%string "%{node_info.node_type}-apply_action"]
-    in
-    let by_label = entry_label [%string "%{node_info.node_type}-by"] in
-    let time_apply_action
-      ~apply_action
-      ~inject
-      ~schedule_event
-      ~time_source
-      input
-      model
-      action
-      =
-      time apply_action_label ~f:(fun () ->
-        apply_action ~inject ~schedule_event ~time_source input model action)
-    in
-    let time_static_apply_action
-      ~apply_action
-      ~inject
-      ~schedule_event
-      ~time_source
-      model
-      action
-      =
-      time apply_action_label ~f:(fun () ->
-        apply_action ~inject ~schedule_event ~time_source model action)
-    in
+    let here = Computation.source_code_position computation in
     let open Trampoline.Let_syntax in
     let%bind recursed = context.recurse () computation in
     match recursed with
     | Fetch v_id -> return (Computation.Fetch v_id)
-    | Leaf1 t ->
-      return
-        (Computation.Leaf1
-           { t with apply_action = time_apply_action ~apply_action:t.apply_action })
     | Leaf0 t ->
-      return
-        (Computation.Leaf0
-           { t with apply_action = time_static_apply_action ~apply_action:t.apply_action })
+      let apply_action ~inject ~schedule_event ~time_source model action =
+        let action_sexp =
+          let%map.Option sexp_of_action = t.sexp_of_action in
+          sexp_of_action action
+        in
+        let event : Profiled_event.t =
+          { node_id = force node_id
+          ; metadata = Apply_action { action_sexp; kind = `Static }
+          ; here
+          }
+        in
+        time event ~f:(fun () ->
+          t.apply_action ~inject ~schedule_event ~time_source model action)
+      in
+      return (Computation.Leaf0 { t with apply_action })
+    | Leaf1 t ->
+      let apply_action ~inject ~schedule_event ~time_source input model action =
+        let action_sexp =
+          let%map.Option sexp_of_action = t.sexp_of_action in
+          sexp_of_action action
+        in
+        let event : Profiled_event.t =
+          { node_id = force node_id
+          ; metadata = Apply_action { action_sexp; kind = `Dynamic }
+          ; here
+          }
+        in
+        time event ~f:(fun () ->
+          t.apply_action ~inject ~schedule_event ~time_source input model action)
+      in
+      return (Computation.Leaf1 { t with apply_action })
+    | Wrap t ->
+      let dynamic_apply_action ~inject ~schedule_event ~time_source input model action =
+        let event : Profiled_event.t =
+          { node_id = force node_id
+          ; metadata = Apply_action { action_sexp = None; kind = `Wrap }
+          ; here
+          }
+        in
+        time event ~f:(fun () ->
+          t.dynamic_apply_action ~inject ~schedule_event ~time_source input model action)
+      in
+      return (Computation.Wrap { t with dynamic_apply_action })
     | Leaf_incr t ->
-      let compute clock input = time compute_label ~f:(fun () -> t.compute clock input) in
+      let event : Profiled_event.t =
+        { node_id = force node_id; metadata = Incr_compute; here }
+      in
+      let compute clock input = time event ~f:(fun () -> t.compute clock input) in
       return (Computation.Leaf_incr { t with compute })
     | Assoc_simpl t ->
-      let by path key value = time by_label ~f:(fun () -> t.by path key value) in
+      let event : Profiled_event.t =
+        { node_id = force node_id; metadata = Assoc_by; here }
+      in
+      let by path key value = time event ~f:(fun () -> t.by path key value) in
       return (Computation.Assoc_simpl { t with by })
     | computation -> return computation
   in
@@ -93,37 +130,38 @@ let instrument_for_measuring_timings (t : _ Computation.t) ~start_timer ~stop_ti
     (type a)
     (context : unit Transform.For_value.context)
     ()
-    ({ here; value } as value' : a Value.t)
+    ({ here; value } : a Value.t)
     =
-    let entry_label =
-      lazy
-        (let id = Node_path.to_string (force context.current_path) in
-         let node_info = Graph_info.Node_info.of_value value' in
-         Entry_label.to_string ~here ~id ~node_type:node_info.node_type)
+    let node_id =
+      let%map.Lazy node_path = context.current_path in
+      Node_path.to_string node_path
+    in
+    let event arity : Profiled_event.t =
+      { node_id = force node_id; metadata = Map { arity }; here }
     in
     let value =
       match value with
       | Constant _ | Exception _ | Incr _ | Named _ | Both (_, _) | Cutoff _ -> value
       | Map t ->
-        let f a = time (force entry_label) ~f:(fun () -> t.f a) in
+        let f a = time (event 1) ~f:(fun () -> t.f a) in
         Map { t with f }
       | Map2 t ->
-        let f a b = time (force entry_label) ~f:(fun () -> t.f a b) in
+        let f a b = time (event 2) ~f:(fun () -> t.f a b) in
         Map2 { t with f }
       | Map3 t ->
-        let f a b c = time (force entry_label) ~f:(fun () -> t.f a b c) in
+        let f a b c = time (event 3) ~f:(fun () -> t.f a b c) in
         Map3 { t with f }
       | Map4 t ->
-        let f a b c d = time (force entry_label) ~f:(fun () -> t.f a b c d) in
+        let f a b c d = time (event 4) ~f:(fun () -> t.f a b c d) in
         Map4 { t with f }
       | Map5 t ->
-        let f a b c d e = time (force entry_label) ~f:(fun () -> t.f a b c d e) in
+        let f a b c d e = time (event 5) ~f:(fun () -> t.f a b c d e) in
         Map5 { t with f }
       | Map6 t ->
-        let f a b c d e f = time (force entry_label) ~f:(fun () -> t.f a b c d e f) in
+        let f a b c d e f = time (event 6) ~f:(fun () -> t.f a b c d e f) in
         Map6 { t with f }
       | Map7 t ->
-        let f a b c d e f g = time (force entry_label) ~f:(fun () -> t.f a b c d e f g) in
+        let f a b c d e f g = time (event 7) ~f:(fun () -> t.f a b c d e f g) in
         Map7 { t with f }
     in
     context.recurse () { here; value }
@@ -153,29 +191,25 @@ module Config = struct
   type ('timeable_event, 'timer) t =
     { instrument_for_computation_watcher : Watching.t Incr.t
     ; instrument_for_profiling : Profiling.t Incr.t
-    ; set_latest_graph_info : Graph_info.Stable.V3.t -> unit
     ; computation_watcher_queue : Computation_watcher.Node.t Queue.t
     ; start_timer : 'timeable_event -> 'timer
     ; stop_timer : 'timer -> unit
     }
 end
 
-let instrument_for_profiling ~set_latest_graph_info ~start_timer ~stop_timer computation =
-  Graph_info.iter_graph_updates computation ~on_update:set_latest_graph_info
-  |> instrument_for_measuring_timings ~start_timer ~stop_timer
+let instrument_for_profiling ~start_timer ~stop_timer computation =
+  instrument_for_measuring_timings computation ~start_timer ~stop_timer
 ;;
 
 let create_computation_with_instrumentation
   (type action_input model action result a)
   { Config.instrument_for_profiling = enable_instrument_for_profiling
   ; instrument_for_computation_watcher
-  ; set_latest_graph_info
   ; computation_watcher_queue
   ; start_timer
   ; stop_timer
   }
-  ~(f :
-      (model, action, action_input, result, unit) Computation.eval_fun -> a Ui_incr.Incr.t)
+  ~(f : (model, action, action_input, result, unit) Computation.info -> a Ui_incr.Incr.t)
   ~(recursive_scopes : Computation.Recursive_scopes.t)
   ~(time_source : Time_source.t)
   ~(computation : result Computation.t)
@@ -194,18 +228,16 @@ let create_computation_with_instrumentation
         , Input.same_witness info.input info'.input ))
     with
     | Some T, Some T, Some T ->
-      (info' : (model, action, action_input, result, unit) Computation.info).run
+      (info' : (model, action, action_input, result, unit) Computation.info)
     | _ ->
       print_endline
         [%string
           "Not starting %{what}. An error occurred while attempting to instrument the \
            computation; the resulting computation does not typecheck. Reusing previously \
            gathered run information to execute"];
-      info.run
+      info
   in
-  let instrument_for_profiling =
-    instrument_for_profiling ~set_latest_graph_info ~start_timer ~stop_timer
-  in
+  let instrument_for_profiling = instrument_for_profiling ~start_timer ~stop_timer in
   (* We make these lazy so that, after turning recording on once, the recording button can
      be quickly toggled/we don't have to do this computation multiple times. *)
   let run_profiling_and_watching =
@@ -230,7 +262,7 @@ let create_computation_with_instrumentation
   | Profiling, Watching -> f (Lazy.force run_profiling_and_watching)
   | Profiling, Not_watching -> f (Lazy.force run_profiling_not_watching)
   | Not_profiling, Watching -> f (Lazy.force run_watching_not_profiling)
-  | Not_profiling, Not_watching -> f info.run
+  | Not_profiling, Not_watching -> f info
 ;;
 
 module For_testing = struct

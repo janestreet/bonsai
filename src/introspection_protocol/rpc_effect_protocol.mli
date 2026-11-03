@@ -14,13 +14,6 @@ module Rpc_kind : sig
     [@@deriving sexp, equal]
   end
 
-  module Polling_state_rpc_interval : sig
-    type t =
-      | Poll of { every : Time_ns.Span.t }
-      | Dispatch
-    [@@deriving sexp, equal]
-  end
-
   (** [Rpc_kind.t]'s correspond to the different rpc kinds available in
       [Bonsai_web.Rpc_effect]. *)
   type t =
@@ -41,11 +34,11 @@ module Rpc_kind : sig
     | Polling_state_rpc of
         { name : string
         ; version : int
-        ; interval : Polling_state_rpc_interval.t
+        ; interval : Interval.t
         }
     | Babel_polling_state_rpc of
         { descriptions : Async_rpc_kernel.Rpc.Description.t Nonempty_list.t
-        ; interval : Polling_state_rpc_interval.t
+        ; interval : Interval.t
         }
   [@@deriving sexp, equal]
 end

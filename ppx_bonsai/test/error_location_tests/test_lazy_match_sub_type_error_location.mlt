@@ -15,7 +15,7 @@ let _component t (local_ _graph) =
   {|
 Line 9, characters 12-19:
 Error: Unbound value graph
-Hint: Did you mean _graph?
+Hint:   Did you mean _graph?
 |}]
 
 let _component t (local_ graph) =
@@ -28,7 +28,7 @@ let _component t (local_ graph) =
   {|
 Line 22, characters 19-25:
 Error: Unbound value _graph
-Hint: Did you mean graph?
+Hint:   Did you mean graph?
 |}]
 
 let _component t (local_ graph) =
@@ -56,7 +56,7 @@ let _component t (local_ _graph) =
   {|
 Line 49, characters 12-19:
 Error: Unbound value graph
-Hint: Did you mean _graph?
+Hint:   Did you mean _graph?
 |}]
 
 let _component t (local_ _graph) =

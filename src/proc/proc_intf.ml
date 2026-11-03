@@ -1076,6 +1076,15 @@ module type S = sig
         -> f:('a Value.t -> 'b Computation.t)
         -> 'b Computation.t
 
+      (** [let%sub ... and ...] is deliberately not supported in bonsai: use one [let%sub]
+          per binding. This uncallable [sub_both] exists so that [ppx_bonsai]'s expansion
+          of [let%sub ... and ...] fails with a legible type error rather than an
+          unbound-value error. *)
+      val sub_both
+        :  [ `let_sub_with_and_is_not_supported_in_bonsai ]
+        -> [ `use_a_separate_let_sub_per_binding ]
+        -> unit
+
       val cutoff
         :  ?here:Stdlib.Lexing.position
         -> 'a Value.t

@@ -61,6 +61,12 @@ let with_inverted_lifecycle_ordering ?(here = Stdlib.Lexing.dummy_pos) ~compute_
   Sub { from = compute_dep; via; into; invert_lifecycles = true; here }
 ;;
 
+let bind ?(here = Stdlib.Lexing.dummy_pos) comparator bound ~f =
+  let bound_id = Var_id.create () in
+  let cmp_id = Var_id.create () in
+  Bind { bound; comparator; bound_id; cmp_id; f; here }
+;;
+
 let switch ~here ~match_ ~branches ~with_ =
   let arms =
     List.init branches ~f:(fun key ->
@@ -96,7 +102,7 @@ let state_machine_with_input
   ?(here = Stdlib.Lexing.dummy_pos)
   ?sexp_of_action
   ?reset
-  ?(sexp_of_model = sexp_of_opaque)
+  ?sexp_of_model
   ?equal
   ~default_model
   ~apply_action
@@ -155,7 +161,7 @@ let state_machine
   Leaf0
     { model =
         Meta.Model.of_module
-          ~sexp_of_model:(Option.value ~default:sexp_of_opaque sexp_of_model)
+          ~sexp_of_model
           ~equal
           ~name:"state_machine"
           ~default:default_model
@@ -321,7 +327,7 @@ let wrap
   let inner = f model_var inject_var in
   let wrapper_model =
     Meta.Model.of_module
-      ~sexp_of_model:(Option.value sexp_of_model ~default:sexp_of_opaque)
+      ~sexp_of_model
       ~equal
       ~default:default_model
       ~name:"outer model for wrap"

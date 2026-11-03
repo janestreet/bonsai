@@ -9,7 +9,9 @@ module Make
        -> Transform with module Types := Types) : Transform with module Types := Types =
 struct
   module rec Recurse : (Recurse with module Types := Types) = struct
-    let combine_up, empty, empty_for_lazy = Types.Up.(combine, empty, empty_for_lazy)
+    let combine_up, empty, empty_for_lazy, empty_for_bind =
+      Types.Up.(combine, empty, empty_for_lazy, empty_for_bind)
+    ;;
 
     open Trampoline.Let_syntax
 
@@ -131,6 +133,14 @@ struct
                return t))
         in
         return (acc, empty_for_lazy, Computation.Lazy { t; here })
+      | Bind ({ f; _ } as t) ->
+        let f v =
+          let c = f v in
+          Trampoline.run
+            (let%bind _, _, t = User.transform_c down acc c in
+             return t)
+        in
+        return (acc, empty_for_bind, Computation.Bind { t with f })
       | Wrap
           { wrapper_model
           ; action_id

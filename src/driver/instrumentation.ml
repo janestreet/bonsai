@@ -16,7 +16,8 @@ module Timeable_event = struct
     | Stabilize_for_action
     | Stabilize_after_all_apply_actions
     (* When profiling *)
-    | Profiling_entry of string
+    | Profiling_entry of Bonsai.Private.Instrumentation.Profiled_event.t
+  [@@deriving equal, sexp_of]
 end
 
 (* It's important that this is a function, not a global, because we want to create
@@ -26,9 +27,12 @@ let default_for_test_handles () =
       Incr.return Bonsai.Private.Instrumentation.Watching.Not_watching
   ; instrument_for_profiling =
       Incr.return Bonsai.Private.Instrumentation.Profiling.Not_profiling
-  ; set_latest_graph_info = (fun _ -> ())
   ; computation_watcher_queue = Queue.create ()
   ; start_timer = (fun _ -> ())
   ; stop_timer = (fun () -> ())
   }
 ;;
+
+module Packed = struct
+  type t = T : (Timeable_event.t, 'timer) Bonsai.Private.Instrumentation.Config.t -> t
+end

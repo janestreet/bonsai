@@ -28,16 +28,19 @@ module Model : sig
   module Hidden : sig
       type 'a model
 
-      type t =
+      type 'extra t =
         | T :
             { model : 'm
             ; info : 'm model
+            ; extra : 'extra
             }
-            -> t
-      [@@deriving equal, sexp_of]
+            -> 'extra t
+      [@@deriving sexp_of]
 
-      val create : 'a model -> 'a -> t
-      val lazy_ : t option model
+      val equal : _ t -> _ t -> bool
+      val create : 'a model -> 'a -> 'extra -> 'extra t
+      val lazy_ : unit t option model
+      val bind : unit -> 'a t option model
     end
     with type 'a model := 'a t
 
@@ -61,7 +64,7 @@ module Model : sig
     -> ('k, 'k_io * 'a, 'cmp) Map.t t
 
   val of_module
-    :  sexp_of_model:('a -> Sexp.t)
+    :  sexp_of_model:('a -> Sexp.t) option
     -> equal:('a -> 'a -> bool) option
     -> default:'a
     -> name:string
@@ -69,14 +72,36 @@ module Model : sig
 end
 
 module Multi_model : sig
-  type t
+  type ('k, 'extra, 'cmp) t
 
-  val sexp_of_t : (int -> Sexp.t) -> t -> Sexp.t
-  val find_exn : t -> int -> Model.Hidden.t
-  val set : t -> key:int -> data:Model.Hidden.t -> t
-  val to_models : t -> Model.Hidden.t Int.Map.t
-  val of_models : Model.Hidden.t Int.Map.t -> t
-  val model_info : t -> t Model.t
+  val sexp_of_t : ('k -> Sexp.t) -> ('k, _, _) t -> Sexp.t
+  val remove : ('k, 'extra, 'cmp) t -> 'k -> ('k, 'extra, 'cmp) t
+  val find_exn : ('k, 'extra, _) t -> 'k -> 'extra Model.Hidden.t
+  val find : ('k, 'extra, _) t -> 'k -> 'extra Model.Hidden.t option
+
+  val set
+    :  ('k, 'extra, 'cmp) t
+    -> key:'k
+    -> data:'extra Model.Hidden.t
+    -> ('k, 'extra, 'cmp) t
+
+  val to_models : ('k, 'extra, 'cmp) t -> ('k, 'extra Model.Hidden.t, 'cmp) Map.t
+
+  val of_models
+    :  ('k, 'extra Model.Hidden.t, 'cmp) Map.t
+    -> id:'k Var_id.t
+    -> cmp_id:'cmp Var_id.t
+    -> extra_id:'extra Var_id.t
+    -> ('k, 'extra, 'cmp) t
+
+  val empty
+    :  ('a, 'b) Comparator.Module.t
+    -> id:'a Var_id.t
+    -> cmp_id:'b Var_id.t
+    -> extra_id:'extra Var_id.t
+    -> ('a, 'extra, 'b) t
+
+  val model_info : ('k, 'extra, 'cmp) t -> ('k, 'extra, 'cmp) t Model.t
 end
 
 module Input : sig

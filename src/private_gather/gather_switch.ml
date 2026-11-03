@@ -3,6 +3,10 @@ open! Bonsai_private_base.Import
 open! Bonsai_private_base
 open Incr.Let_syntax
 
+let int_id : int Var_id.t = Var_id.create ()
+let unit_id : unit Var_id.t = Var_id.create ()
+let int_comparator_id : Int.comparator_witness Var_id.t = Var_id.create ()
+
 let f ~gather ~recursive_scopes ~time_source ~match_ ~arms ~here =
   let wrap_switch ~branch ~type_id inject = Action.switch ~branch ~type_id >>> inject in
   let%bind.Trampoline gathered =
@@ -55,7 +59,7 @@ let f ~gather ~recursive_scopes ~time_source ~match_ ~arms ~here =
       in
       let chosen_model =
         Incremental.map model ~f:(fun map ->
-          let (Meta.Model.Hidden.T { model; info }) =
+          let (Meta.Model.Hidden.T { model; info; extra = () }) =
             Meta.Multi_model.find_exn map index
           in
           let equal =
@@ -151,7 +155,7 @@ let f ~gather ~recursive_scopes ~time_source ~match_ ~arms ~here =
             chosen_model
             action
       in
-      let new_model = Meta.Model.Hidden.create tm new_model in
+      let new_model = Meta.Model.Hidden.create tm new_model () in
       Meta.Multi_model.set model ~key:index ~data:new_model
     | None, None | Some T, None | None, Some T ->
       let action = Action.Type_id.to_sexp action_type_id action in
@@ -165,7 +169,7 @@ let f ~gather ~recursive_scopes ~time_source ~match_ ~arms ~here =
       model
   in
   let reset ~inject ~schedule_event model =
-    let f ~key:index ~data:(model : Meta.Model.Hidden.t) =
+    let f ~key:index ~data:(model : unit Meta.Model.Hidden.t) =
       let (T { model = chosen_model; info = chosen_model_info; _ }) = model in
       let (T
             { model = tm
@@ -186,16 +190,25 @@ let f ~gather ~recursive_scopes ~time_source ~match_ ~arms ~here =
           ~schedule_event
           chosen_model
       in
-      Meta.Model.Hidden.create tm new_model
+      Meta.Model.Hidden.create tm new_model ()
     in
-    Meta.Multi_model.of_models (Map.mapi (Meta.Multi_model.to_models model) ~f)
+    Meta.Multi_model.of_models
+      (Map.mapi (Meta.Multi_model.to_models model) ~f)
+      ~id:int_id
+      ~cmp_id:int_comparator_id
+      ~extra_id:unit_id
   in
   let model =
     let models =
       Map.map gathered ~f:(fun (T { model; _ }) ->
-        Meta.Model.Hidden.create model model.default)
+        Meta.Model.Hidden.create model model.default ())
     in
-    Meta.Multi_model.model_info (Meta.Multi_model.of_models models)
+    Meta.Multi_model.model_info
+      (Meta.Multi_model.of_models
+         models
+         ~id:int_id
+         ~cmp_id:int_comparator_id
+         ~extra_id:unit_id)
   in
   Trampoline.return
     (Computation.T

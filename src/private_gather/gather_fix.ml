@@ -86,7 +86,7 @@ let recurse ~recursive_scopes ~input ~input_id ~fix_id ~here =
       let (Meta.Model.Hidden.T { model; info; _ }) =
         Option.value
           model
-          ~default:(Meta.Model.Hidden.create model_info model_info.default)
+          ~default:(Meta.Model.Hidden.create model_info model_info.default ())
       in
       let witness = Meta.Model.Type_id.same_witness_exn info.type_id model_info.type_id in
       Type_equal.conv witness model
@@ -134,8 +134,12 @@ let recurse ~recursive_scopes ~input ~input_id ~fix_id ~here =
       =
       force gathered
     in
-    let (Meta.Model.Hidden.T { model = chosen_model; info = chosen_model_info; _ }) =
-      Option.value model ~default:(Meta.Model.Hidden.create model_info model_info.default)
+    let (Meta.Model.Hidden.T
+          { model = chosen_model; info = chosen_model_info; extra = (); _ })
+      =
+      Option.value
+        model
+        ~default:(Meta.Model.Hidden.create model_info model_info.default ())
     in
     let T = Action.Type_id.same_witness_exn action_type_id action_info in
     let T =
@@ -160,7 +164,7 @@ let recurse ~recursive_scopes ~input ~input_id ~fix_id ~here =
           chosen_model
           action
     in
-    Some (Meta.Model.Hidden.create model_info new_model)
+    Some (Meta.Model.Hidden.create model_info new_model ())
   in
   let reset' ~inject ~schedule_event model =
     let (T
@@ -184,7 +188,7 @@ let recurse ~recursive_scopes ~input ~input_id ~fix_id ~here =
     let new_model =
       reset ~inject:(wrap_lazy ~type_id:action_info inject) ~schedule_event chosen_model
     in
-    Meta.Model.Hidden.create model_info new_model
+    Meta.Model.Hidden.create model_info new_model ()
   in
   let reset ~inject ~schedule_event model =
     (* If the model is None, then you can't descend into the reset because it will force

@@ -7,6 +7,15 @@ module Let_syntax = struct
 
   module Let_syntax = struct
     let sub = sub
+
+    let sub_both
+      (`let_sub_with_and_is_not_supported_in_bonsai :
+        [ `let_sub_with_and_is_not_supported_in_bonsai ])
+      (`use_a_separate_let_sub_per_binding : [ `use_a_separate_let_sub_per_binding ])
+      =
+      ()
+    ;;
+
     let switch = switch
     let return = return
     let map ?(here = Stdlib.Lexing.dummy_pos) t ~f = { (Value.map t ~f) with here }
@@ -284,7 +293,7 @@ module Actor (Action : T1) = struct
       -> (model * inject) Computation.t
     =
     fun ?(here = Stdlib.Lexing.dummy_pos)
-      ?(sexp_of_action = { f = sexp_of_opaque })
+      ?sexp_of_action
       ?reset
       ?sexp_of_model
       ?equal
@@ -294,7 +303,10 @@ module Actor (Action : T1) = struct
     let open Let_syntax_with_map_location (struct
         let here = here
       end) in
-    let sexp_of_action (T cb) = sexp_of_action.f (Effect.Private.Callback.request cb) in
+    let sexp_of_action =
+      Option.map sexp_of_action ~f:(fun sexp_of_action (T cb) ->
+        sexp_of_action.f (Effect.Private.Callback.request cb))
+    in
     let make_inject
       (type a)
       ~(inject : hidden_callback -> unit Effect.t)
@@ -322,7 +334,7 @@ module Actor (Action : T1) = struct
     let%sub model, inject =
       state_machine_with_input
         ~here
-        ~sexp_of_action
+        ?sexp_of_action
         ?sexp_of_model
         ?reset
         ?equal
@@ -398,7 +410,7 @@ let actor_with_input
     -> (model * (action -> return Effect.t)) Computation.t
   =
   fun ?(here = Stdlib.Lexing.dummy_pos)
-    ?(sexp_of_action = sexp_of_opaque)
+    ?sexp_of_action
     ?reset
     ?sexp_of_model
     ?equal
@@ -408,9 +420,13 @@ let actor_with_input
   let open Let_syntax_with_map_location (struct
       let here = here
     end) in
-  let module Action_with_callback = struct
-    let sexp_of_t cb = sexp_of_action (Effect.Private.Callback.request cb)
-  end
+  let sexp_of_action =
+    Option.map sexp_of_action ~f:(fun sexp_of_action ->
+      let module Action_with_callback = struct
+        let sexp_of_t cb = sexp_of_action (Effect.Private.Callback.request cb)
+      end
+      in
+      [%sexp_of: Action_with_callback.t])
   in
   let make_inject_with_on_exn ~inject ~schedule_event action =
     Effect.Private.make ~request:action ~evaluator:(fun action ->
@@ -434,7 +450,7 @@ let actor_with_input
   let%sub model, inject =
     state_machine_with_input
       ~here
-      ~sexp_of_action:[%sexp_of: Action_with_callback.t]
+      ?sexp_of_action
       ?sexp_of_model
       ?reset
       ?equal
@@ -523,17 +539,13 @@ let state'
 ;;
 
 let state ?(here = Stdlib.Lexing.dummy_pos) ?reset ?sexp_of_model ?equal default_model =
-  let sexp_of_action =
-    (* NOTE: The model and the action for [state] are the same. *)
-    Option.value ~default:sexp_of_opaque sexp_of_model
-  in
   let reset =
     Option.map reset ~f:(fun reset (_ : _ Apply_action_context.t) m -> reset m)
   in
   state_machine
     ~here
     ?reset
-    ~sexp_of_action
+    ?sexp_of_action:sexp_of_model
     ?sexp_of_model
     ?equal
     ~apply_action:(fun (_ : _ Apply_action_context.t) _old_model new_model -> new_model)
@@ -964,8 +976,6 @@ module Effect_throttling = struct
         | Run of (a, b Poll_result.t) Effect.Private.Callback.t
         | Activate
         | Finished
-
-      let sexp_of_t = sexp_of_opaque
     end
     in
     let module Model = struct
@@ -974,15 +984,12 @@ module Effect_throttling = struct
         ; next_up : (a, b Poll_result.t) Effect.Private.Callback.t option
         }
 
-      let sexp_of_t = sexp_of_opaque
       let equal = [%eta2 phys_equal]
     end
     in
     let%sub _model, inject =
       state_machine_with_input
         ~here
-        ~sexp_of_action:[%sexp_of: Action.t]
-        ~sexp_of_model:[%sexp_of: Model.t]
         ~equal:[%equal: Model.t]
           (* This computation does nothing on reset because users should be oblivious to
              the fact that it has a model. I don't think there is a "correct" decision in
@@ -1111,7 +1118,7 @@ let freeze ?(here = Stdlib.Lexing.dummy_pos) ?sexp_of_model ?equal value =
 
 let thunk (type a) ?(here = Stdlib.Lexing.dummy_pos) (f : unit -> a) =
   let%sub out = return ~here Value.(map ~here (Var.value ~here (Var.create ())) ~f) in
-  freeze ~here ~sexp_of_model:[%sexp_of: opaque] ~equal:[%eta2 phys_equal] out
+  freeze ~here ~equal:[%eta2 phys_equal] out
 ;;
 
 let most_recent_some ?(here = Stdlib.Lexing.dummy_pos) ?sexp_of_model ~equal input ~f =
@@ -1275,13 +1282,13 @@ module Dynamic_scope = struct
       store ~here base new_ inner
   ;;
 
-  let create ?(sexp_of = sexp_of_opaque) ~name ~fallback () =
+  let create ?sexp_of ~name ~fallback () =
     ignore sexp_of;
     ignore name;
     Independent { id = Var_id.create (); fallback }
   ;;
 
-  let derived ?(sexp_of = sexp_of_opaque) base ~get ~set =
+  let derived ?sexp_of base ~get ~set =
     ignore sexp_of;
     Derived { base; get; set }
   ;;

@@ -73,6 +73,7 @@ let state_machine1_to_state_machine0_linter =
         | Assoc_simpl _
         | Switch _
         | Lazy _
+        | Bind _
         | Wrap _
         | With_model_resetter _
         | Path

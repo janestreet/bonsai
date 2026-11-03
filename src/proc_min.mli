@@ -140,6 +140,13 @@ val fix
 
 val lazy_ : ?here:Stdlib.Lexing.position -> 'a Computation.t lazy_t -> 'a Computation.t
 
+val bind
+  :  ?here:Stdlib.Lexing.position
+  -> ('a, 'cmp) Comparator.Module.t
+  -> 'a Value.t
+  -> f:('a -> 'b Computation.t)
+  -> 'b Computation.t
+
 val wrap
   :  ?here:Stdlib.Lexing.position
   -> ?reset:(('action, unit) Apply_action_context.t -> 'model -> 'model)

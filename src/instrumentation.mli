@@ -4,20 +4,42 @@ open! Import
 (** This module allows configuring instrumentation of the Bonsai computation graph.
 
     If [instrument_for_profiling], each node in the [Computation.t] will be wrapped with
-    calls to [start_timer] and [stop_timer]. The string passed to both these is intended
-    to be the names for performance entries sent to the browser. The strings contain the
-    [Node_path] to which the time corresponds. When these strings eventually get retrieved
-    via a PerformanceObserver, the id in the string can be retrieved via
-    [extract_node_path_from_entry_label]. (We do things this way because we want also want
-    to include the node_type in this string as well, so that looking at measurements in
-    Chrome's profiling tools is easier).
-
-    Additionally, if [instrument_for_profiling] is enabled, [set_latest_graph_info] will
-    be called whenever the graph info gets updated. In practice, this should occur when
-    the computation watcher is enabled / disabled, or when a [Lazy] gets forced.
+    calls to [start_timer] and [stop_timer].
 
     If [instrument_for_computation_watcher], any enabled [Debug.watch_computation] nodes
     will be able to run. *)
+
+module Profiled_event : sig
+  module Node_id : Identifiable.S
+
+  module Metadata : sig
+    type t =
+      | Map of { arity : int }
+      | Assoc_by
+      | Incr_compute
+      | Apply_action of
+          { action_sexp : Sexp.t option
+          ; kind : [ `Static | `Dynamic | `Wrap ]
+          }
+    [@@deriving sexp, equal]
+
+    val node_type : t -> string
+  end
+
+  type t =
+    { node_id : Node_id.t
+    ; metadata : Metadata.t
+    ; here : Source_code_position.t
+    }
+  [@@deriving sexp, equal]
+
+  val to_entry_label : t -> string
+  val of_entry_label : string -> t option
+
+  module For_testing : sig
+    val to_string : t -> string
+  end
+end
 
 module Profiling : sig
   type t =
@@ -37,7 +59,6 @@ module Config : sig
   type ('timeable_event, 'timer) t =
     { instrument_for_computation_watcher : Watching.t Incr.t
     ; instrument_for_profiling : Profiling.t Incr.t
-    ; set_latest_graph_info : Graph_info.Stable.V3.t -> unit
     ; computation_watcher_queue : Computation_watcher.Node.t Queue.t
     ; start_timer : 'timeable_event -> 'timer
     ; stop_timer : 'timer -> unit
@@ -45,9 +66,9 @@ module Config : sig
 end
 
 val create_computation_with_instrumentation
-  :  (string, _) Config.t
+  :  (Profiled_event.t, _) Config.t
   -> f:
-       (('model, 'action, 'action_input, 'result, unit) Computation.eval_fun
+       (('model, 'action, 'action_input, 'result, unit) Computation.info
         -> 'a Ui_incr.Incr.t)
   -> recursive_scopes:Computation.Recursive_scopes.t
   -> time_source:Time_source.t
@@ -55,12 +76,9 @@ val create_computation_with_instrumentation
   -> ('model, 'action, 'action_input, 'result, unit) Computation.info
   -> 'a Ui_incr.Incr.t
 
-val extract_node_path_from_entry_label : string -> Node_path.t option
-
 module For_testing : sig
   val instrument_for_profiling
-    :  set_latest_graph_info:(Graph_info.t -> unit)
-    -> start_timer:(string -> 'a)
+    :  start_timer:(Profiled_event.t -> 'a)
     -> stop_timer:('a -> unit)
     -> 'b Computation.t
     -> 'b Computation.t

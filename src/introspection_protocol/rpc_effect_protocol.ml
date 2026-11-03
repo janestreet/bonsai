@@ -36,13 +36,6 @@ module Rpc_kind = struct
     [@@deriving sexp, equal, quickcheck]
   end
 
-  module Polling_state_rpc_interval = struct
-    type t =
-      | Poll of { every : Time_ns.Span.t }
-      | Dispatch
-    [@@deriving sexp, equal, quickcheck]
-  end
-
   module Async_rpc_kernel_rpc_descriptions = struct
     type t = Async_rpc_kernel.Rpc.Description.t =
       { name : string [@globalized]
@@ -69,11 +62,11 @@ module Rpc_kind = struct
     | Polling_state_rpc of
         { name : string
         ; version : int
-        ; interval : Polling_state_rpc_interval.t
+        ; interval : Interval.t
         }
     | Babel_polling_state_rpc of
         { descriptions : Async_rpc_kernel_rpc_descriptions.t Nonempty_list.t
-        ; interval : Polling_state_rpc_interval.t
+        ; interval : Interval.t
         }
   [@@deriving sexp, equal, quickcheck]
 end

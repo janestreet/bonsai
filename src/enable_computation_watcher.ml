@@ -27,6 +27,7 @@ module Types = struct
     let empty = Computation_watcher.Var_id_location_map.empty
     let combine = Computation_watcher.Var_id_location_map.merge
     let empty_for_lazy = empty
+    let empty_for_bind = empty
   end
 end
 
@@ -230,6 +231,26 @@ module F (Recurse : Fix_transform.Recurse with module Types := Types) = struct
     (t : a Computation.t)
     =
     match t with
+    | Bind ({ f; bound; _ } as bind) ->
+      let (), free_vars, bound = transform_v down () bound in
+      let f bound =
+        let computation = f bound in
+        (* Each realized branch is gathered separately, so its instrumentation cannot
+           reuse value IDs recorded while gathering another branch. *)
+        let value_id_observation_definition_positions =
+          Hashtbl.copy value_id_observation_definition_positions
+        in
+        Trampoline.run
+          (let%bind (), _, computation =
+             Recurse.on_computation
+               { down with value_id_observation_definition_positions }
+               ()
+               `Directly_on
+               computation
+           in
+           return computation)
+      in
+      return ((), free_vars, Computation.Bind { bind with f; bound })
     | Sub { via; from = _; into = _; here = _; invert_lifecycles = _ } ->
       let%bind (), free_vars, c = Recurse.on_computation down () `Skipping_over t in
       (* the values bound in a sub are no longer free, so remove them *)

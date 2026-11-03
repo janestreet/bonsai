@@ -8,6 +8,7 @@ type 'inner wrap_static = private Wrap_static
 type ('inner, 'outer) wrap_dynamic = private Wrap_dynamic
 type switch = private Switch
 type lazy_ = private Lazy
+type ('bound, 'extra) bind = private Bind
 type ('key, 'inner) assoc = private Assoc
 type ('io_key, 'model_key, 'inner) assoc_on = private Assoc_on
 type 'a id
@@ -32,6 +33,18 @@ type 'a t = private
       ; type_id : 'a id
       }
       -> lazy_ t
+  | Bind :
+      { action : 'a t
+      ; type_id : 'a id
+      ; bound : 'k
+      ; bound_id : 'k Var_id.t
+      ; comparator : ('k, _) Comparator.Module.t
+      (** [extra] is used to hold the [gather]'d [Computation.packed_info] for the
+          computation that is yielding this action. *)
+      ; extra : 'extra
+      ; extra_id : 'extra Var_id.t
+      }
+      -> ('k, 'extra) bind t
   (*_ We use [comparator] for:
       - Initializing maps where necessary
       - Compare function for stabilization tracker
@@ -69,6 +82,7 @@ module Type_id : sig
   val model_reset : 'a t -> 'a model_resetter t
   val switch : switch t
   val lazy_ : lazy_ t
+  val bind : bound_id:'a Var_id.t -> extra_id:'extra Var_id.t -> ('a, 'extra) bind t
   val assoc : key:'key Var_id.t -> action:'a t -> ('key, 'a) assoc t
 
   val assoc_on
@@ -94,6 +108,16 @@ val model_reset_inner : 'a t -> 'a model_resetter t
 val model_reset_outer : _ model_resetter t
 val switch : branch:int -> type_id:'a id -> 'a t -> switch t
 val lazy_ : type_id:'a id -> 'a t -> lazy_ t
+
+val bind
+  :  bound:'k
+  -> bound_id:'k Var_id.t
+  -> comparator:('k, _) Comparator.Module.t
+  -> extra:'extra
+  -> extra_id:'extra Var_id.t
+  -> type_id:'a id
+  -> 'a t
+  -> ('k, 'extra) bind t
 
 val assoc
   :  key:'key

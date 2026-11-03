@@ -15,11 +15,7 @@ type ('m, 'action, 'action_input, 'r, 'timer) unpacked =
   ; action_input_incr : 'action_input Incr.t
   ; action_input : 'action_input Incr.Observer.t
   ; apply_action :
-      schedule_event:(unit Ui_effect.t -> unit)
-      -> 'action_input Bonsai.Computation_status.t
-      -> 'm
-      -> 'action Action.t
-      -> 'm
+      ('action_input, 'action, 'm) Bonsai.Private.Computation.apply_action Incr.Observer.t
   ; result : 'r Incr.Observer.t
   ; result_incr : 'r Incr.t
   ; lifecycle : Bonsai.Private.Lifecycle.Collection.t Incr.Observer.t
@@ -120,7 +116,7 @@ let create_direct
         ({ model =
              { default = default_model; sexp_of = sexp_of_model; equal = _; type_id = _ }
          ; input = _
-         ; apply_action
+         ; apply_action = _
          ; action = _
          ; run = _
          ; reset = _
@@ -143,16 +139,26 @@ let create_direct
     (computation : r Bonsai.Private.Computation.t)
     (computation_info :
       (_, action, action_input, r, unit) Bonsai.Private.Computation.info)
-    apply_action
     : r t
     =
     (* Call [define_ui_effect] twice to prevent inlining *)
     let _ : _ = define_ui_effect () in
     let inject, queue = define_ui_effect () in
     let sexp_of_action = Action.Type_id.to_sexp computation_info.action in
-    let result_incr, result, action_input_incr, action_input, lifecycle_incr, lifecycle =
+    let ( result_incr
+        , result
+        , action_input_incr
+        , action_input
+        , lifecycle_incr
+        , lifecycle
+        , apply_action )
+      =
       time Run_eval_fun ~f:(fun () ->
-        let%pattern_bind.Ui_incr result_incr, action_input_incr, lifecycle_incr =
+        let%pattern_bind.Ui_incr ( result_incr
+                                 , action_input_incr
+                                 , lifecycle_incr
+                                 , apply_action_incr )
+          =
           let instrumentation =
             { instrumentation with
               start_timer = (fun s -> instrumentation.start_timer (Profiling_entry s))
@@ -160,7 +166,7 @@ let create_direct
           in
           Bonsai.Private.Instrumentation.create_computation_with_instrumentation
             instrumentation
-            ~f:(fun run ->
+            ~f:(fun { Bonsai.Private.Computation.run; apply_action; _ } ->
               let snapshot, () =
                 run
                   ~environment
@@ -176,7 +182,7 @@ let create_direct
                    (Bonsai.Private.Snapshot.input snapshot))
                 (Bonsai.Private.Snapshot.lifecycle_or_empty ~here:[%here] snapshot)
                 ~f:(fun result_incr action_input_incr lifecycle_incr ->
-                  result_incr, action_input_incr, lifecycle_incr))
+                  result_incr, action_input_incr, lifecycle_incr, apply_action))
             ~recursive_scopes:Bonsai.Private.Computation.Recursive_scopes.empty
             ~time_source
             ~computation
@@ -185,7 +191,14 @@ let create_direct
         let result = Incr.observe result_incr in
         let action_input = Incr.observe action_input_incr in
         let lifecycle = Incr.observe lifecycle_incr in
-        result_incr, result, action_input_incr, action_input, lifecycle_incr, lifecycle)
+        let apply_action = Incr.observe apply_action_incr in
+        ( result_incr
+        , result
+        , action_input_incr
+        , action_input
+        , lifecycle_incr
+        , lifecycle
+        , apply_action ))
     in
     let stabilization_tracker = Stabilization_tracker.empty () in
     time First_stabilization ~f:(fun () ->
@@ -198,7 +211,7 @@ let create_direct
       ; inject
       ; action_input
       ; action_input_incr
-      ; apply_action = apply_action ~inject
+      ; apply_action
       ; result
       ; result_incr
       ; sexp_of_model
@@ -214,7 +227,7 @@ let create_direct
       ; timer = time
       }
   in
-  create_polymorphic running_computation computation_info apply_action
+  create_polymorphic running_computation computation_info
 ;;
 
 let create
@@ -312,7 +325,9 @@ let flush
     else log_on_skipped_stabilization ~action_sexp:(lazy (sexp_of_action action));
     let new_model =
       let action_input = Incr.Observer.value_exn action_input in
+      let apply_action = Incr.Observer.value_exn apply_action in
       apply_action
+        ~inject:t.inject
         ~schedule_event:
           (Ui_effect.Expert.handle ~on_exn:(fun exn ->
              Exn.reraise exn "Unhandled exception raised in effect"))
@@ -375,10 +390,11 @@ module Expert = struct
   let lifecycle_incr (T { lifecycle_incr; _ }) = Ui_incr.pack lifecycle_incr
   let time_source (T { time_source; _ }) = time_source
 
-  let invalidate_observers (T { action_input; result; lifecycle; _ }) =
+  let invalidate_observers (T { action_input; result; lifecycle; apply_action; _ }) =
     Incr.Observer.disallow_future_use action_input;
     Incr.Observer.disallow_future_use result;
-    Incr.Observer.disallow_future_use lifecycle
+    Incr.Observer.disallow_future_use lifecycle;
+    Incr.Observer.disallow_future_use apply_action
   ;;
 
   let reset_model_to_default (T { default_model; model_var; _ }) =

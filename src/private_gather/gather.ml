@@ -112,6 +112,17 @@ let rec gather : type result. result Computation.gather_fun =
       Gather_assoc_simple.f ~map ~by ~may_contain ~here
     | Switch { match_; arms; here } ->
       Gather_switch.f ~gather ~recursive_scopes ~time_source ~match_ ~arms ~here
+    | Bind { bound; comparator; bound_id; cmp_id; f; here } ->
+      Gather_bind.f
+        ~gather
+        ~recursive_scopes
+        ~time_source
+        ~bound
+        ~comparator
+        ~bound_id
+        ~cmp_id
+        ~f
+        ~here
     | Lazy { t = lazy_computation; here } ->
       Gather_lazy.f ~gather ~recursive_scopes ~time_source ~lazy_computation ~here
     | Fix_define { fix_id; initial_input; input_id; result; here } ->

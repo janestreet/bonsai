@@ -14,6 +14,7 @@ module Elem : sig
     | Subst_from
     | Subst_into
     | Assoc of Keyed.t
+    | Bind of Keyed.t
     | Switch of int
   [@@deriving compare]
 end

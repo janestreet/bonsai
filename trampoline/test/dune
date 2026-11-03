@@ -2,4 +2,4 @@
  (name trampoline_test)
  (libraries core trampoline)
  (preprocess
-  (pps ppx_jane ppx_expect)))
+  (pps ppx_jane -compare-require-explicit-locality ppx_expect)))

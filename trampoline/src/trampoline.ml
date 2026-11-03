@@ -26,7 +26,7 @@ let rec run_aux : type a b. a t -> (a, b) stack -> b =
 
 let run t = run_aux t []
 
-include Monad.Make [@modality portable] (struct
+include Monad.Make (struct
     type nonrec 'a t = 'a t
 
     let bind = bind

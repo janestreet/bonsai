@@ -1,4 +1,4 @@
-open! Core
+open! Base
 
 module Location_behavior : sig
   type t =
