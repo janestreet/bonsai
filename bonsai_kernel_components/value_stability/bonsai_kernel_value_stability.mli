@@ -9,7 +9,7 @@ module Bonsai := Bonsai.Cont
 val with_last_modified_time
   :  equal:('a -> 'a -> bool)
   -> 'a Bonsai.t
-  -> local_ Bonsai.graph
+  -> Bonsai.graph @ local
   -> 'a Bonsai.t * Time_ns.t Bonsai.t
 
 (** [is_stable] indicates whether the input value has changed (according to [equal]) in
@@ -18,7 +18,7 @@ val is_stable
   :  equal:('a -> 'a -> bool)
   -> 'a Bonsai.t
   -> time_to_stable:Time_ns.Span.t Bonsai.t
-  -> local_ Bonsai.graph
+  -> Bonsai.graph @ local
   -> bool Bonsai.t
 
 val most_recent_value_satisfying
@@ -26,7 +26,7 @@ val most_recent_value_satisfying
   -> equal:('a -> 'a -> bool)
   -> 'a Bonsai.t
   -> condition:('a -> bool)
-  -> local_ Bonsai.graph
+  -> Bonsai.graph @ local
   -> 'a option Bonsai.t
 
 module Stability : sig
@@ -52,5 +52,5 @@ val value_stability
   -> equal:('a -> 'a -> bool)
   -> 'a Bonsai.t
   -> time_to_stable:Time_ns.Span.t Bonsai.t
-  -> local_ Bonsai.graph
+  -> Bonsai.graph @ local
   -> 'a Stability.t Bonsai.t

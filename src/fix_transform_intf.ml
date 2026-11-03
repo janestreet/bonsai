@@ -19,6 +19,10 @@ module type Up = sig
       immediately. Thus, we use a constant, [empty_for_lazy], as the value that is passed
       back to the parent computation. *)
   val empty_for_lazy : t
+
+  (** like [empty_for_lazy], [empty_for_bind] is a value that is used for unevaluated Bind
+      nodes. *)
+  val empty_for_bind : t
 end
 
 module type Types = sig
@@ -38,6 +42,7 @@ module Unit : Up with type t = unit = struct
   let combine () () = ()
   let empty = ()
   let empty_for_lazy = ()
+  let empty_for_bind = ()
 end
 
 module type Recurse = sig

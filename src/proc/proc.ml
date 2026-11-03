@@ -116,6 +116,15 @@ module This_let_syntax = struct
     ;;
 
     let sub ~(here : [%call_pos]) a ~f graph = f (subcomputation ~here a graph) graph
+
+    let sub_both
+      (`let_sub_with_and_is_not_supported_in_bonsai :
+        [ `let_sub_with_and_is_not_supported_in_bonsai ])
+      (`use_a_separate_let_sub_per_binding : [ `use_a_separate_let_sub_per_binding ])
+      =
+      ()
+    ;;
+
     let return = comp_return
     let arr ~(here : [%call_pos]) v ~f graph = Bonsai_cont.arr1 ~here graph v ~f
 
@@ -150,7 +159,7 @@ module This_let_syntax = struct
 end
 
 module Computation = struct
-  type 'a t = local_ Bonsai_cont.graph -> 'a Bonsai_cont.t
+  type 'a t = Bonsai_cont.graph @ local -> 'a Bonsai_cont.t
 
   include Applicative.Make_using_map2 (struct
       type nonrec 'a t = 'a t
@@ -452,7 +461,7 @@ let of_module_with_input
       input
       graph
   in
-  let%map model and inject and input in
+  let%arr model and inject and input in
   M.compute ~inject input model
 ;;
 
@@ -474,7 +483,8 @@ let of_module
       ~apply_action:(fun ctx -> M.apply_action ctx ())
       graph
   in
-  let%map model and inject in
+  let here = [%here] in
+  let%arr model and inject in
   M.compute ~inject () model
 ;;
 

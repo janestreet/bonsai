@@ -13,7 +13,7 @@ let exactly_once effect (local_ graph) =
     else (
       Bonsai.Edge.lifecycle
         ~on_activate:
-          (let%map set_has_run
+          (let%arr set_has_run
            and event = effect in
            Effect.Many [ set_has_run true; event ])
         graph;
@@ -29,7 +29,7 @@ let exactly_once_with_value ?sexp_of_model ?equal effect (local_ graph) =
     | None ->
       Bonsai.Edge.lifecycle
         ~on_activate:
-          (let%map set_value and effect in
+          (let%arr set_value and effect in
            let%bind.Effect r = effect in
            set_value (Some r))
         graph;

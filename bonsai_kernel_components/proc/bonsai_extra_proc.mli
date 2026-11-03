@@ -14,9 +14,9 @@ module Effect := Bonsai.Effect
     the action scheduler. *)
 val with_inject_fixed_point
   :  (('action -> unit Effect.t) Bonsai.t
-      -> local_ Bonsai.graph
+      -> Bonsai.graph @ local
       -> ('result * ('action -> unit Effect.t)) Bonsai.t)
-  -> local_ Bonsai.graph
+  -> Bonsai.graph @ local
   -> 'result Bonsai.t
 
 (** [with_self_effect] gives access to an effect which produces the output ['a] within the
@@ -27,22 +27,22 @@ val with_self_effect
   -> ?equal:('a -> 'a -> bool)
   -> f:
        ('a Bonsai.Computation_status.t Effect.t Bonsai.t
-        -> local_ Bonsai.graph
+        -> Bonsai.graph @ local
         -> 'a Bonsai.t)
   -> unit
-  -> local_ Bonsai.graph
+  -> Bonsai.graph @ local
   -> 'a Bonsai.t
 
 (** [pipe] constructs a pipe of [a] and returns a pair containing an injection function
     that enqueues items and an Effect that dequeues them. *)
 val pipe
   :  ?sexp_of:('a -> Sexp.t)
-  -> local_ Bonsai.graph
+  -> Bonsai.graph @ local
   -> (('a -> unit Effect.t) * 'a Effect.t) Bonsai.t
 
 (** As its name implies, [exactly_once] runs the event passed in via [Bonsai.t] exactly
     once. *)
-val exactly_once : unit Effect.t Bonsai.t -> local_ Bonsai.graph -> unit Bonsai.t
+val exactly_once : unit Effect.t Bonsai.t -> Bonsai.graph @ local -> unit Bonsai.t
 
 (** As its name implies, [exactly_once] runs the event passed in via [Bonsai.t] exactly
     once. The return value is stored and returned. [None] is returned while the effect is
@@ -51,7 +51,7 @@ val exactly_once_with_value
   :  ?sexp_of_model:('a -> Sexp.t)
   -> ?equal:('a -> 'a -> bool)
   -> 'a Effect.t Bonsai.t
-  -> local_ Bonsai.graph
+  -> Bonsai.graph @ local
   -> 'a option Bonsai.t
 
 (** Extends a Bonsai.t by providing a setter effect that can be used to override the
@@ -64,7 +64,7 @@ val value_with_override
   :  ?sexp_of_model:('a -> Sexp.t)
   -> ?equal:('a -> 'a -> bool)
   -> 'a Bonsai.t
-  -> local_ Bonsai.graph
+  -> Bonsai.graph @ local
   -> ('a * ('a -> unit Effect.t)) Bonsai.t
 
 (** This function is identical to [Bonsai.state_machine0] except that the [default_model]
@@ -82,7 +82,7 @@ val state_machine0_dynamic_model
   -> apply_action:
        (('action, unit) Bonsai.Apply_action_context.t -> 'model -> 'action -> 'model)
   -> unit
-  -> local_ Bonsai.graph
+  -> Bonsai.graph @ local
   -> ('model * ('action -> unit Effect.t)) Bonsai.t
 
 (** Read the docs for [state_machine0_dynamic_model]. This one has an extra ['input] value
@@ -100,7 +100,7 @@ val state_machine1_dynamic_model
         -> 'action
         -> 'model)
   -> 'input Bonsai.t
-  -> local_ Bonsai.graph
+  -> Bonsai.graph @ local
   -> ('model * ('action -> unit Effect.t)) Bonsai.t
 
 (** The analog of [Bonsai.state], but with a dynamic model. Read the docs for
@@ -117,7 +117,7 @@ val state_dynamic_model
   -> model:
        [< `Computed of ('model option -> 'model) Bonsai.t | `Given of 'model Bonsai.t ]
   -> unit
-  -> local_ Bonsai.graph
+  -> Bonsai.graph @ local
   -> ('model * ('model -> unit Effect.t)) Bonsai.t
 
 (** Id_gen builds a component which generates unique identifiers by starting at 0 and
@@ -143,13 +143,13 @@ module Id_gen (T : Int_intf.S) () : sig
 
   val component
     :  ?reset:[ `Reset | `Do_nothing ]
-    -> local_ Bonsai.graph
+    -> Bonsai.graph @ local
     -> t Bonsai.Effect.t Bonsai.t
 
   (** [component'] also gives you access to the most recently generated id *)
   val component'
     :  ?reset:[ `Reset | `Do_nothing | `Bump ]
-    -> local_ Bonsai.graph
+    -> Bonsai.graph @ local
     -> (t Bonsai.Effect.t * t) Bonsai.t
 end
 
@@ -176,7 +176,7 @@ val mirror
   -> interactive_set:('m -> unit Effect.t) Bonsai.t
   -> interactive_value:'m Bonsai.t
   -> unit
-  -> local_ Bonsai.graph
+  -> Bonsai.graph @ local
   -> unit Bonsai.t
 
 (** [mirror'] is like [mirror], but the incoming values have the type ['a option Bonsai.t]
@@ -190,7 +190,7 @@ val mirror'
   -> interactive_set:('m -> unit Effect.t) Bonsai.t
   -> interactive_value:'m option Bonsai.t
   -> unit
-  -> local_ Bonsai.graph
+  -> Bonsai.graph @ local
   -> unit Bonsai.t
 
 (** [with_last_modified_time] applies a cutoff to the input value and takes a note of the
@@ -201,7 +201,7 @@ val mirror'
 val with_last_modified_time
   :  equal:('a -> 'a -> bool)
   -> 'a Bonsai.t
-  -> local_ Bonsai.graph
+  -> Bonsai.graph @ local
   -> ('a * Time_ns.t) Bonsai.t
 
 (** [is_stable] indicates whether the input value has changed (according to [equal]) in
@@ -210,7 +210,7 @@ val is_stable
   :  equal:('a -> 'a -> bool)
   -> 'a Bonsai.t
   -> time_to_stable:Time_ns.Span.t Bonsai.t
-  -> local_ Bonsai.graph
+  -> Bonsai.graph @ local
   -> bool Bonsai.t
 
 module Stability = Bonsai_extra.Value_stability.Stability
@@ -222,7 +222,7 @@ val value_stability
   -> equal:('a -> 'a -> bool)
   -> 'a Bonsai.t
   -> time_to_stable:Time_ns.Span.t Bonsai.t
-  -> local_ Bonsai.graph
+  -> Bonsai.graph @ local
   -> 'a Stability.t Bonsai.t
 
 module One_at_a_time : sig
@@ -238,7 +238,7 @@ module One_at_a_time : sig
       stay at busy, since the computation is unable to witness that the effect completed. *)
   val effect
     :  ('query -> 'response Effect.t) Bonsai.t
-    -> local_ Bonsai.graph
+    -> Bonsai.graph @ local
     -> (('query -> 'response Response.t Effect.t) * Status.t) Bonsai.t
 end
 
@@ -246,7 +246,7 @@ end
     effect, but it will be enqueued onto the Bonsai action queue instead of running
     immediately. This can be useful in niche situations where you have a batch of effects
     that would otherwise interleave and have bad performance behavior. *)
-val bonk : local_ Bonsai.graph -> (unit Effect.t -> unit Effect.t) Bonsai.t
+val bonk : Bonsai.graph @ local -> (unit Effect.t -> unit Effect.t) Bonsai.t
 
 (** [chain_incr_effects input effects] allows you to sequentially schedule effects that
     depend on a common ['a Bonsai.t], while ensuring that no effect will receive a stale
@@ -264,5 +264,5 @@ val bonk : local_ Bonsai.graph -> (unit Effect.t -> unit Effect.t) Bonsai.t
     world before *any* of them recalculated state. *)
 val chain_incr_effects
   :  'a Bonsai.t
-  -> local_ Bonsai.graph
+  -> Bonsai.graph @ local
   -> (('a -> unit Ui_effect.t) list -> unit Ui_effect.t) Bonsai.t

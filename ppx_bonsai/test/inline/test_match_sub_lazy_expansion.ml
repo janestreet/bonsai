@@ -63,7 +63,7 @@ let%expect_test "automatically delays a single branch" =
                           pos_bol = 0
                         }
                   (Let_syntax.return
-                     ((Let_syntax.map
+                     ((((Let_syntax.map)[@alert "-for_ppx_bonsai"])
                          ~here:{
                                  Ppx_here_lib.pos_fname = "_none_";
                                  pos_lnum = 0;
@@ -111,7 +111,8 @@ let%expect_test "automatically delays multiple branches" =
                           pos_cnum = (-1);
                           pos_bol = 0
                         }
-                  ~match_:((Let_syntax.map __pattern_syntax__004_
+                  ~match_:((((Let_syntax.map)[@alert "-for_ppx_bonsai"])
+                              __pattern_syntax__004_
                               ~f:(function | A -> 0 | B -> 1))
                   [@ocaml.warning "-26-27"]) ~branches:2
                   ~with_:(function
@@ -158,7 +159,8 @@ let%expect_test "function application still parses correctly" =
                           pos_cnum = (-1);
                           pos_bol = 0
                         }
-                  ~match_:((Let_syntax.map __pattern_syntax__007_
+                  ~match_:((((Let_syntax.map)[@alert "-for_ppx_bonsai"])
+                              __pattern_syntax__007_
                               ~f:(function | A -> 0 | B -> 1))
                   [@ocaml.warning "-26-27"]) ~branches:2
                   ~with_:(function
@@ -205,7 +207,8 @@ let%expect_test "constructors with arguments still parse correctly" =
                           pos_cnum = (-1);
                           pos_bol = 0
                         }
-                  ~match_:((Let_syntax.map __pattern_syntax__010_
+                  ~match_:((((Let_syntax.map)[@alert "-for_ppx_bonsai"])
+                              __pattern_syntax__010_
                               ~f:(function | A -> 0 | B -> 1))
                   [@ocaml.warning "-26-27"]) ~branches:2
                   ~with_:(function
@@ -252,7 +255,8 @@ let%expect_test "variants with arguments still parse correctly" =
                           pos_cnum = (-1);
                           pos_bol = 0
                         }
-                  ~match_:((Let_syntax.map __pattern_syntax__013_
+                  ~match_:((((Let_syntax.map)[@alert "-for_ppx_bonsai"])
+                              __pattern_syntax__013_
                               ~f:(function | A -> 0 | B -> 1))
                   [@ocaml.warning "-26-27"]) ~branches:2
                   ~with_:(function
@@ -298,7 +302,7 @@ let%expect_test "tuples still parse correctly" =
             and __let_syntax__019_ = ((EXPR2)
               [@ppxlib.enter_value __ppx_bonsai_tuple__017_])[@@ppxlib.do_not_enter_value
                                                                ] in
-            Let_syntax.map2
+            ((Let_syntax.map2)[@alert "-for_ppx_bonsai"])
               ~here:{
                       Ppx_here_lib.pos_fname = "_none_";
                       pos_lnum = 0;
@@ -315,7 +319,8 @@ let%expect_test "tuples still parse correctly" =
                           pos_cnum = (-1);
                           pos_bol = 0
                         }
-                  ~match_:((Let_syntax.map __pattern_syntax__022_
+                  ~match_:((((Let_syntax.map)[@alert "-for_ppx_bonsai"])
+                              __pattern_syntax__022_
                               ~f:(function | A -> 0 | B -> 1))
                   [@ocaml.warning "-26-27"]) ~branches:2
                   ~with_:(function
@@ -361,7 +366,7 @@ let%expect_test "change a graph name (single branch)" =
                           pos_bol = 0
                         }
                   (Let_syntax.return
-                     ((Let_syntax.map
+                     ((((Let_syntax.map)[@alert "-for_ppx_bonsai"])
                          ~here:{
                                  Ppx_here_lib.pos_fname = "_none_";
                                  pos_lnum = 0;
@@ -411,7 +416,8 @@ let%expect_test "change graph name (multiple branches)" =
                           pos_cnum = (-1);
                           pos_bol = 0
                         }
-                  ~match_:((Let_syntax.map __pattern_syntax__040_
+                  ~match_:((((Let_syntax.map)[@alert "-for_ppx_bonsai"])
+                              __pattern_syntax__040_
                               ~f:(function | A -> 0 | B -> 1))
                   [@ocaml.warning "-26-27"]) ~branches:2
                   ~with_:(function

@@ -13,9 +13,9 @@ module Effect := Bonsai.Effect
     the action scheduler. *)
 val with_inject_fixed_point
   :  (('action -> unit Effect.t) Bonsai.t
-      -> local_ Bonsai.graph
+      -> Bonsai.graph @ local
       -> 'result Bonsai.t * ('action -> unit Effect.t) Bonsai.t)
-  -> local_ Bonsai.graph
+  -> Bonsai.graph @ local
   -> 'result Bonsai.t
 
 (** [with_self_effect] gives access to an effect which produces the output ['a] within the
@@ -26,7 +26,7 @@ val with_self_effect
   -> ?equal:('a -> 'a -> bool)
   -> f:
        ('a Bonsai.Computation_status.t Effect.t Bonsai.t
-        -> local_ Bonsai.graph
+        -> Bonsai.graph @ local
         -> 'a Bonsai.t)
-  -> local_ Bonsai.graph
+  -> Bonsai.graph @ local
   -> 'a Bonsai.t

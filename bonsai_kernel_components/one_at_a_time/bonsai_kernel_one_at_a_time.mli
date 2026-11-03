@@ -23,5 +23,5 @@ end
     representing whether or not an instance of the effect is in progress. *)
 val effect
   :  ('query -> 'response Ui_effect.t) Bonsai.t
-  -> local_ Bonsai.graph
+  -> Bonsai.graph @ local
   -> ('query -> 'response Response.t Ui_effect.t) Bonsai.t * Status.t Bonsai.t

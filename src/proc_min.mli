@@ -6,14 +6,14 @@ val read : here:[%call_pos] -> 'a Value.t -> 'a Computation.t
 val sub
   :  here:[%call_pos]
   -> 'via Computation.t
-  -> f:local_ ('via Value.t -> 'a Computation.t)
+  -> f:('via Value.t -> 'a Computation.t) @ local
   -> 'a Computation.t
 
 val switch
   :  here:Lexing.position
   -> match_:int Value.t
   -> branches:int
-  -> with_:local_ (int -> 'a Computation.t)
+  -> with_:(int -> 'a Computation.t) @ local
   -> 'a Computation.t
 
 module Proc_incr : sig
@@ -114,7 +114,7 @@ val assoc
   :  here:[%call_pos]
   -> ('k, 'cmp) Comparator.Module.t
   -> ('k, 'v, 'cmp) Map.t Value.t
-  -> f:local_ ('k Value.t -> 'v Value.t -> 'result Computation.t)
+  -> f:('k Value.t -> 'v Value.t -> 'result Computation.t) @ local
   -> ('k, 'result, 'cmp) Map.t Computation.t
 
 val assoc_on
@@ -123,19 +123,27 @@ val assoc_on
   -> ('model_k, 'model_cmp) Comparator.Module.t
   -> ('io_k, 'v, 'io_cmp) Map.t Value.t
   -> get_model_key:('io_k -> 'v -> 'model_k)
-  -> f:local_ ('io_k Value.t -> 'v Value.t -> 'a Computation.t)
+  -> f:('io_k Value.t -> 'v Value.t -> 'a Computation.t) @ local
   -> ('io_k, 'a, 'io_cmp) Map.t Computation.t
 
 val fix
   :  here:[%call_pos]
   -> 'input Value.t
   -> f:
-       local_ (recurse:('input Value.t -> 'result Computation.t)
-               -> 'input Value.t
-               -> 'result Computation.t)
+       (recurse:('input Value.t -> 'result Computation.t)
+        -> 'input Value.t
+        -> 'result Computation.t)
+     @ local
   -> 'result Computation.t
 
 val lazy_ : here:[%call_pos] -> 'a Computation.t lazy_t -> 'a Computation.t
+
+val bind
+  :  here:[%call_pos]
+  -> ('a, 'cmp) Comparator.Module.t
+  -> 'a Value.t
+  -> f:('a -> 'b Computation.t)
+  -> 'b Computation.t
 
 val wrap
   :  here:[%call_pos]
@@ -149,19 +157,19 @@ val wrap
         -> 'model
         -> 'action
         -> 'model)
-  -> f:local_ ('model Value.t -> ('action -> unit Effect.t) Value.t -> 'a Computation.t)
+  -> f:('model Value.t -> ('action -> unit Effect.t) Value.t -> 'a Computation.t) @ local
   -> unit
   -> 'a Computation.t
 
 val with_model_resetter
   :  here:[%call_pos]
-  -> local_ (reset:unit Effect.t Value.t -> 'a Computation.t)
+  -> (reset:unit Effect.t Value.t -> 'a Computation.t) @ local
   -> 'a Computation.t
 
 val with_inverted_lifecycle_ordering
   :  here:[%call_pos]
   -> compute_dep:'input Computation.t
-  -> local_ ('input Value.t -> 'a Computation.t)
+  -> ('input Value.t -> 'a Computation.t) @ local
   -> 'a Computation.t
 
 val path : here:[%call_pos] -> unit -> Path.t Computation.t

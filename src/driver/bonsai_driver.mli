@@ -11,7 +11,7 @@ val create
   -> instrumentation:
        (Instrumentation.Timeable_event.t, _) Bonsai.Private.Instrumentation.Config.t
   -> time_source:Bonsai.Time_source.t
-  -> (local_ Bonsai.graph -> 'r Bonsai.t)
+  -> (Bonsai.graph @ local -> 'r Bonsai.t)
   -> 'r t
 
 (** The "main loop" of a bonsai handle is

@@ -220,6 +220,10 @@ let rec follow_skeleton_computation state (computation : Skeleton.Computation.t)
     let me = register_computation "forced_lazy" in
     arrow state ~from:(follow_skeleton_computation state t) ~to_:me;
     me
+  | Bind { bound } ->
+    let me = register_computation "bind" in
+    arrow state ~from:(follow_skeleton_value state bound) ~to_:me;
+    me
   | Wrap { inner; model_id = _; inject_id = _ } ->
     let me = register_computation "wrap" in
     arrow state ~from:(follow_skeleton_computation state inner) ~to_:me;

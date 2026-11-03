@@ -50,7 +50,7 @@ module One_of_many : sig
     :  equal:('a -> 'a -> bool)
     -> ?selection_policy:'a Selection_policy.t Bonsai.t
     -> 'a Nonempty_list.t Bonsai.t
-    -> local_ Bonsai.graph
+    -> Bonsai.graph @ local
     -> 'a t
 end
 
@@ -74,7 +74,7 @@ module Any_of_many : sig
   val create
     :  equal:('a -> 'a -> bool)
     -> ?init:'a list Bonsai.t
-    -> local_ Bonsai.graph
+    -> Bonsai.graph @ local
     -> 'a t
 
   (** Returns a predicate that tells whether [item] is currently selected in [t].

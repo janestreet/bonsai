@@ -1,4 +1,4 @@
-open Core
+open Base
 
 type 'a t =
   | Leaf of 'a

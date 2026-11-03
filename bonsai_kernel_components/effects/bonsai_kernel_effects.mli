@@ -4,7 +4,7 @@ module Effect := Bonsai.Effect
 
 (** As its name implies, [exactly_once] runs the event passed in via [Bonsai.t] exactly
     once. *)
-val exactly_once : unit Effect.t Bonsai.t -> local_ Bonsai.graph -> unit
+val exactly_once : unit Effect.t Bonsai.t -> Bonsai.graph @ local -> unit
 
 (** As its name implies, [exactly_once] runs the event passed in via [Bonsai.t] exactly
     once. The return value is stored and returned. [None] is returned while the effect is
@@ -13,14 +13,14 @@ val exactly_once_with_value
   :  ?sexp_of_model:('a -> Sexp.t)
   -> ?equal:('a -> 'a -> bool)
   -> 'a Effect.t Bonsai.t
-  -> local_ Bonsai.graph
+  -> Bonsai.graph @ local
   -> 'a option Bonsai.t
 
 (** [bonk] returns a function which takes an effect and transforms it into the same
     effect, but it will be enqueued onto the Bonsai action queue instead of running
     immediately. This can be useful in niche situations where you have a batch of effects
     that would otherwise interleave and have bad performance behavior. *)
-val bonk : local_ Bonsai.graph -> (unit Effect.t -> unit Effect.t) Bonsai.t
+val bonk : Bonsai.graph @ local -> (unit Effect.t -> unit Effect.t) Bonsai.t
 
 (** [chain_incr_effects input effects] allows you to sequentially schedule effects that
     depend on a common ['a Bonsai.t], while ensuring that no effect will receive a stale
@@ -38,5 +38,5 @@ val bonk : local_ Bonsai.graph -> (unit Effect.t -> unit Effect.t) Bonsai.t
     world before *any* of them recalculated state. *)
 val chain_incr_effects
   :  'a Bonsai.t
-  -> local_ Bonsai.graph
+  -> Bonsai.graph @ local
   -> (('a -> unit Ui_effect.t) list -> unit Ui_effect.t) Bonsai.t

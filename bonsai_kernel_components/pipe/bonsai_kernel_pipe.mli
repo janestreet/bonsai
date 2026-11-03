@@ -6,5 +6,5 @@ module Effect := Bonsai.Effect
     that enqueues items and an Effect that dequeues them. *)
 val pipe
   :  ?sexp_of:('a -> Sexp.t)
-  -> local_ Bonsai.graph
+  -> Bonsai.graph @ local
   -> ('a -> unit Effect.t) Bonsai.t * 'a Effect.t Bonsai.t

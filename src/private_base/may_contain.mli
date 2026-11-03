@@ -66,6 +66,7 @@ module Unresolved : sig
     -> t
 
   val lazy_ : t
+  val bind : t
   val recursive : 'a Fix_id.t -> t
   val remove_dependency : t -> on:'a Fix_id.t -> t
   val of_resolved : Resolved.t -> t

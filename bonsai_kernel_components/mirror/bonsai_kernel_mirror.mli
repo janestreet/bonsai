@@ -26,7 +26,7 @@ val mirror
   -> store_value:'m Bonsai.t
   -> interactive_set:('m -> unit Effect.t) Bonsai.t
   -> interactive_value:'m Bonsai.t
-  -> local_ Bonsai.graph
+  -> Bonsai.graph @ local
   -> unit
 
 (** [mirror'] is like [mirror], but the incoming values have the type ['a option Bonsai.t]
@@ -41,5 +41,5 @@ val mirror'
   -> store_value:'m option Bonsai.t
   -> interactive_set:('m -> unit Effect.t) Bonsai.t
   -> interactive_value:'m option Bonsai.t
-  -> local_ Bonsai.graph
+  -> Bonsai.graph @ local
   -> unit

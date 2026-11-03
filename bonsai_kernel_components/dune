@@ -1,10 +1,9 @@
 (library
  (name bonsai_extra)
- (libraries bonsai bonsai_kernel_effects bonsai_kernel_fixed_point
+ (libraries bonsai_kernel_effects bonsai_kernel_fixed_point
    bonsai_kernel_id_gen bonsai_kernel_mirror bonsai_kernel_one_at_a_time
    bonsai_kernel_pipe bonsai_kernel_state_machine
-   bonsai_kernel_value_stability bonsai_kernel_value_utilities core
-   virtual_dom.ui_effect bonsai_concrete.ui_incr)
+   bonsai_kernel_value_stability bonsai_kernel_value_utilities core)
  (public_name bonsai.extra)
  (preprocess
   (pps ppx_bonsai ppx_jane ppx_pattern_bind)))

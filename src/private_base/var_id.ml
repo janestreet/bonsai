@@ -65,7 +65,7 @@ include Id
 
 module Map = struct
   module Data_holder = struct
-    type t = int
+    type t = Obj.t
 
     let hide : 'a -> t = Obj.magic
     let reveal : t -> 'a = Obj.magic

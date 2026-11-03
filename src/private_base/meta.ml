@@ -39,7 +39,7 @@ module Model = struct
         ; by : 'result id
         }
         -> ('k_model, 'k_io * 'result, 'cmp_model) Map.t id
-    | Multi_model : { multi_model : hidden Int.Map.t } -> hidden Int.Map.t id
+    | Multi_model : ('k, 'extra, 'cmp) multi -> ('k, 'extra, 'cmp) multi id
 
   and 'a t =
     { default : 'a
@@ -48,12 +48,20 @@ module Model = struct
     ; sexp_of : 'a -> Sexp.t
     }
 
-  and hidden =
+  and 'a hidden =
     | T :
         { model : 'm
         ; info : 'm t
+        ; extra : 'a
         }
-        -> hidden
+        -> 'a hidden
+
+  and ('k, 'extra, 'cmp) multi =
+    { id : 'k Var_id.t
+    ; cmp_id : 'cmp Var_id.t
+    ; extra_id : 'extra Var_id.t
+    ; map : ('k, 'extra hidden, 'cmp) Map.t
+    }
 
   module Type_id = struct
     type 'a t = 'a id
@@ -64,11 +72,17 @@ module Model = struct
       | Tuple { a; b } -> [%sexp (a : opaque t), (b : opaque t)]
       | Map { by; _ } -> [%sexp (by : opaque t)]
       | Map_on { by; _ } -> [%sexp (by : opaque t)]
-      | Multi_model { multi_model } ->
+      | Multi_model { map; id = _; cmp_id = _; extra_id = _ } ->
+        let module Cmp = struct
+          include (val Map.comparator_s map)
+
+          let sexp_of_t = Comparator.sexp_of_t comparator
+        end
+        in
         let sexp_of_hidden (T { info = { type_id; _ }; _ }) =
           [%sexp (type_id : opaque t)]
         in
-        [%sexp (multi_model : hidden Int.Map.t)]
+        [%sexp (map : hidden Map.M(Cmp).t)]
     ;;
 
     exception Fail
@@ -95,14 +109,17 @@ module Model = struct
         let%bind.Option T = same_witness a.by b.by in
         Some (Type_equal.T : (a, b) Type_equal.t)
       | Multi_model a, Multi_model b ->
+        let%bind.Option T = var_id_same_witness a.id b.id in
+        let%bind.Option T = var_id_same_witness a.cmp_id b.cmp_id in
+        let%bind.Option T = var_id_same_witness a.extra_id b.extra_id in
         if Map.equal
              (fun (T a) (T b) ->
                match same_witness a.info.type_id b.info.type_id with
                | None -> false
                | Some T -> true)
-             a.multi_model
-             b.multi_model
-        then Some Type_equal.T
+             a.map
+             b.map
+        then Some (Type_equal.T : (a, b) Type_equal.t)
         else None
       | Leaf _, Tuple _
       | Leaf _, Map _
@@ -205,28 +222,27 @@ module Model = struct
   ;;
 
   let of_module ~sexp_of_model ~equal ~default ~name =
+    let sexp_of = Option.value ~default:sexp_of_opaque sexp_of_model in
     let equal = Option.value ~default:[%eta2 phys_equal] equal in
     let var_id = Var_id.create () in
-    { type_id = Leaf { var_id; name = sprintf "%s-model" name }
-    ; default
-    ; equal
-    ; sexp_of = sexp_of_model
-    }
+    { type_id = Leaf { var_id; name = sprintf "%s-model" name }; default; equal; sexp_of }
   ;;
 
   module Hidden = struct
     type 'a model = 'a t
 
-    type t = hidden =
+    type 'a t = 'a hidden =
       | T :
           { model : 'm
           ; info : 'm model
+          ; extra : 'a
           }
-          -> t
+          -> 'a t
 
-    let sexp_of_t (T { model; info = { sexp_of; _ }; _ }) = sexp_of model
+    let sexp_of_t _ (T { model; info = { sexp_of; _ }; _ }) = sexp_of model
 
     let equal
+      _
       (T { model = m1; info = { type_id = t1; equal; _ }; _ })
       (T { model = m2; info = { type_id = t2; _ }; _ })
       =
@@ -236,40 +252,74 @@ module Model = struct
     ;;
 
     let create (info : _ model) =
-      let wrap m = T { model = m; info } in
+      let wrap m extra = T { model = m; info; extra } in
       wrap
     ;;
 
     let lazy_ =
       { default = None
-      ; equal = [%equal: t option]
+      ; equal = [%equal: unit t option]
       ; type_id = Leaf { var_id = Var_id.create (); name = "lazy-model" }
-      ; sexp_of = [%sexp_of: t option]
+      ; sexp_of = [%sexp_of: unit t option]
       }
     ;;
+
+    let bind (type a) () =
+      let equal_a = equal () in
+      let sexp_of_a = sexp_of_t in
+      { default = None
+      ; equal = [%equal: a t option]
+      ; type_id = Leaf { var_id = Var_id.create (); name = "bind-model" }
+      ; sexp_of = [%sexp_of: a t option]
+      }
+    ;;
+
+    let equal a b = equal () a b
   end
 end
 
 module Multi_model = struct
-  type t = Model.Hidden.t Int.Map.t
+  type ('k, 'extra, 'cmp) t = ('k, 'extra, 'cmp) Model.multi
 
-  let sexp_of_t (type k) (sexp_of_k : k -> Sexp.t) =
+  let sexp_of_t (type k) (sexp_of_k : k -> Sexp.t) (t : (k, _, _) t) =
+    let sexp_of_extra = sexp_of_opaque in
     let module K = struct
       type t = k [@@deriving sexp_of]
     end
     in
-    [%sexp_of: Model.Hidden.t Map.M(K).t]
+    [%sexp_of: extra Model.Hidden.t Map.M(K).t] t.map
   ;;
 
-  let find_exn t key = Map.find_exn t key
-  let set = Map.set
-  let to_models, of_models = Fn.id, Fn.id
+  let find_exn (t : _ t) key = Map.find_exn t.map key
+  let find (t : _ t) key = Map.find t.map key
+  let remove (t : _ t) key = { t with map = Map.remove t.map key }
+  let set (t : _ t) ~key ~data = { t with map = Map.set t.map ~key ~data }
+  let to_models (t : _ t) = t.map
+  let of_models map ~id ~cmp_id ~extra_id : _ t = { map; id; cmp_id; extra_id }
 
-  let model_info default =
-    let sexp_of = [%sexp_of: int t] in
-    let type_id = Model.Multi_model { multi_model = default } in
-    ({ default; type_id; equal = [%equal: Model.Hidden.t Int.Map.t]; sexp_of }
-     : t Model.t)
+  let empty comparator ~id ~cmp_id ~extra_id : _ t =
+    { map = Map.empty comparator; id; cmp_id; extra_id }
+  ;;
+
+  let model_info (type k extra cmp) (default : (k, extra, cmp) t) =
+    let module C = struct
+      include (val Map.comparator_s default.map)
+
+      let sexp_of_t = Comparator.sexp_of_t comparator
+    end
+    in
+    let sexp_of_extra _ = assert false in
+    let sexp_of (t : _ t) = [%sexp_of: extra Model.Hidden.t Map.M(C).t] t.map in
+    let type_id =
+      Model.Multi_model
+        { map = default.map
+        ; id = default.id
+        ; cmp_id = default.cmp_id
+        ; extra_id = default.extra_id
+        }
+    in
+    let equal (a : _ t) (b : _ t) = Map.equal Model.Hidden.equal a.map b.map in
+    { Model.default; type_id; equal; sexp_of }
   ;;
 end
 

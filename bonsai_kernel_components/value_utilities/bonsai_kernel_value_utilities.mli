@@ -12,7 +12,7 @@ val value_with_override
   :  ?sexp_of_model:('a -> Sexp.t)
   -> ?equal:('a -> 'a -> bool)
   -> 'a Bonsai.t
-  -> local_ Bonsai.graph
+  -> Bonsai.graph @ local
   -> 'a Bonsai.t * ('a -> unit Effect.t) Bonsai.t
 
 (** Extends a [Bonsai.state_machine] (value/setter pair) with a dynamic "default model".
@@ -35,5 +35,5 @@ val value_with_state_machine_override
 val dynamic_cutoff
   :  'a Bonsai.t
   -> equal:('a -> 'a -> bool) Bonsai.t
-  -> local_ Bonsai.graph
+  -> Bonsai.graph @ local
   -> 'a Bonsai.t

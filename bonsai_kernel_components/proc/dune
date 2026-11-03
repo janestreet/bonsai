@@ -1,7 +1,11 @@
 (library
  (name bonsai_extra_proc)
  (public_name bonsai.extra_proc)
- (libraries bonsai bonsai_extra core virtual_dom.ui_effect
-   bonsai_concrete.ui_incr)
+ (libraries bonsai bonsai_extra core virtual_dom.ui_effect)
  (preprocess
   (pps ppx_jane ppx_bonsai)))
+
+(env
+ (_
+  (env-vars
+   (OCAMLPARAM w=-46,keywords=5.2,_))))

@@ -206,6 +206,7 @@ module Computation0 = struct
         ; arms : t list
         }
     | Lazy of { t : t option }
+    | Bind of { bound : Value.t }
     | Fix_define of
         { result : t
         ; initial_input : Value.t
@@ -326,6 +327,10 @@ module Computation0 = struct
             |> Trampoline.all
           in
           let kind = Switch { match_; arms } in
+          { node_path; here; kind }
+        | Bind { bound; here; _ } ->
+          let%map bound = Value.of_value' ~initial_path:(choice_point 1) bound in
+          let kind = Bind { bound } in
           { node_path; here; kind }
         | Fix_define { result; initial_input; fix_id; input_id; here } ->
           let%map initial_input =
@@ -462,6 +467,7 @@ module Computation0 = struct
           ; input_id : Id.t
           }
       | Lazy of { t : t option }
+      | Bind of { bound : Value.t }
       | Wrap of
           { model_id : Id.t
           ; inject_id : Id.t
@@ -527,6 +533,7 @@ module Computation0 = struct
         Fix_recurse { input = Value.Minimal.of_complete input; fix_id; input_id }
       | Lazy { t = None } -> Lazy { t = None }
       | Lazy { t = Some t } -> Lazy { t = Some (of_complete t) }
+      | Bind { bound } -> Bind { bound }
       | Wrap { model_id; inject_id; inner } ->
         Wrap { model_id; inject_id; inner = of_complete inner }
       | With_model_resetter { inner; reset_id } ->
@@ -561,6 +568,7 @@ module Computation0 = struct
     | Fix_define { initial_input; _ } -> [ initial_input ]
     | Fix_recurse { input; _ } -> [ input ]
     | Lazy _ -> []
+    | Bind { bound } -> [ bound ]
     | Wrap { model_id = _; inject_id = _; inner = _ } -> []
     | With_model_resetter _ -> []
     | Path -> []
@@ -590,6 +598,7 @@ module Computation0 = struct
     | Fix_recurse _ -> []
     | Lazy { t = None } -> []
     | Lazy { t = Some t } -> [ t ]
+    | Bind _ -> []
     | Wrap { model_id = _; inject_id = _; inner } -> [ inner ]
     | With_model_resetter { inner; reset_id = _ } -> [ inner ]
     | Path -> []
@@ -657,6 +666,7 @@ include struct
         ; arms : computation list
         }
     | Lazy of { t : computation option }
+    | Bind of { bound : value }
     | Fix_define of
         { result : computation
         ; initial_input : value
@@ -837,6 +847,7 @@ module Counts = struct
            | Lifecycle _ -> acc.computation <- { c with lifecycle = c.lifecycle + 1 }
            | Identity _ -> acc.computation <- { c with identity = c.identity + 1 }
            | Lazy _ -> ()
+           | Bind _ -> ()
            | Computation_watcher _ ->
              acc.computation <- { c with computation_watcher = c.computation_watcher + 1 });
           super#computation_kind t acc

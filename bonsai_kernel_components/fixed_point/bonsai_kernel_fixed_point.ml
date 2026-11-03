@@ -36,8 +36,10 @@ let with_self_effect
   ?sexp_of_model
   ?equal
   ~(f :
-      a Bonsai.Computation_status.t Effect.t Bonsai.t -> local_ Bonsai.graph -> a Bonsai.t)
-  : local_ Bonsai.graph -> a Bonsai.t
+      a Bonsai.Computation_status.t Effect.t Bonsai.t
+      -> Bonsai.graph @ local
+      -> a Bonsai.t)
+  : Bonsai.graph @ local -> a Bonsai.t
   =
   fun (local_ graph) ->
   Bonsai.wrap

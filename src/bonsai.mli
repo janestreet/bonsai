@@ -28,23 +28,23 @@ module Private : sig
 
   val top_level_handle
     :  here:[%call_pos]
-    -> (local_ Cont.graph -> 'a Cont.t)
+    -> (Cont.graph @ local -> 'a Cont.t)
     -> 'a Private_computation.t
 
   val handle
     :  here:[%call_pos]
-    -> f:(local_ Cont.graph -> 'a Cont.t)
-    -> local_ Cont.graph
+    -> f:(Cont.graph @ local -> 'a Cont.t)
+    -> Cont.graph @ local
     -> 'a Private_computation.t
 
   val perform
     :  here:[%call_pos]
-    -> local_ Cont.graph
+    -> Cont.graph @ local
     -> 'a Private_computation.t
     -> 'a Cont.t
 
   val read : here:[%call_pos] -> 'a Private_value.t -> 'a Private_computation.t
-  val path : here:[%call_pos] -> local_ Cont.graph -> Path.t Cont.t
+  val path : here:[%call_pos] -> Cont.graph @ local -> Path.t Cont.t
 
   module Value = Private_value
   module Computation = Private_computation

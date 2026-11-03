@@ -165,6 +165,7 @@ module Node_info = struct
       | Assoc_on _ -> "assoc_on"
       | Assoc_simpl _ -> "assoc_simpl"
       | Switch _ -> "switch"
+      | Bind _ -> "bind"
       | Lazy _ -> "lazy"
       | Fix_define _ -> "fix_define"
       | Fix_recurse _ -> "fix_recurse"

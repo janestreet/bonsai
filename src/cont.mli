@@ -134,7 +134,7 @@ val state
   -> ?sexp_of_model:('model -> Sexp.t)
   -> ?equal:('model -> 'model -> bool)
   -> 'model
-  -> local_ graph
+  -> graph @ local
   -> 'model t * ('model -> unit Effect.t) t
 
 (** [state_opt] is just like [state] except that the model is optional. The model starts
@@ -145,7 +145,7 @@ val state_opt
   -> ?sexp_of_model:('model -> Sexp.t)
   -> ?equal:('model -> 'model -> bool)
   -> ?default_model:'model
-  -> local_ graph
+  -> graph @ local
   -> 'model option t * ('model option -> unit Effect.t) t
 
 (** Similar to [state], but the `set` function takes a function that calculates the new
@@ -156,7 +156,7 @@ val state'
   -> ?sexp_of_model:('model -> Sexp.t)
   -> ?equal:('model -> 'model -> bool)
   -> 'model
-  -> local_ graph
+  -> graph @ local
   -> 'model t * (('model -> 'model) -> unit Effect.t) t
 
 (** [Bonsai.toggle] is a small helper function for building a [bool] state that toggles
@@ -164,7 +164,7 @@ val state'
 val toggle
   :  here:[%call_pos]
   -> default_model:bool
-  -> local_ graph
+  -> graph @ local
   -> bool t * unit Effect.t t
 
 module Toggle : sig
@@ -179,7 +179,7 @@ end
 
 (** Just like [toggle] except that you also have an [Effect.t] for directly setting the
     state in addition to toggling it back and forth. *)
-val toggle' : here:[%call_pos] -> default_model:bool -> local_ graph -> Toggle.t
+val toggle' : here:[%call_pos] -> default_model:bool -> graph @ local -> Toggle.t
 
 module Apply_action_context : sig
   (** A value with the type [('action, 'response) Apply_action_context.t] is provided to
@@ -220,7 +220,7 @@ val state_machine
   -> ?equal:('model -> 'model -> bool)
   -> default_model:'model
   -> apply_action:(('action, unit) Apply_action_context.t -> 'model -> 'action -> 'model)
-  -> local_ graph
+  -> graph @ local
   -> 'model t * ('action -> unit Effect.t) t
 
 module Computation_status : sig
@@ -256,7 +256,7 @@ val state_machine_with_input
         -> 'action
         -> 'model)
   -> 'input t
-  -> local_ graph
+  -> graph @ local
   -> 'model t * ('action -> unit Effect.t) t
 
 (** [Bonsai.actor] is similar to [Bonsai.state_machine], but its [recv] function is
@@ -274,7 +274,7 @@ val actor
         -> 'model
         -> 'action
         -> 'model * 'return)
-  -> local_ graph
+  -> graph @ local
   -> 'model t * ('action -> 'return Effect.t) t
 
 (** [actor_with_input] is just like [actor] but it can witness the current value of a
@@ -293,7 +293,7 @@ val actor_with_input
         -> 'action
         -> 'model * 'return)
   -> 'input t
-  -> local_ graph
+  -> graph @ local
   -> 'model t * ('action -> 'return Effect.t) t
 
 module Actor (Action : T1) : sig
@@ -352,7 +352,7 @@ module Actor (Action : T1) : sig
     -> default_model:'model
     -> recv:('model, 'input) recv_with_input
     -> 'input t
-    -> local_ graph
+    -> graph @ local
     -> 'model t * inject t
 
   type 'model recv =
@@ -369,7 +369,7 @@ module Actor (Action : T1) : sig
     -> ?equal:('model -> 'model -> bool)
     -> default_model:'model
     -> recv:'model recv
-    -> local_ graph
+    -> graph @ local
     -> 'model t * inject t
 end
 
@@ -380,7 +380,7 @@ val freeze
   -> ?sexp_of_model:('a -> Sexp.t)
   -> ?equal:('a -> 'a -> bool)
   -> 'a t
-  -> local_ graph
+  -> graph @ local
   -> 'a t
 
 (** A fixed-point combinator for writing recursive Bonsai components. *)
@@ -388,11 +388,11 @@ val fix
   :  here:[%call_pos]
   -> 'input t
   -> f:
-       (recurse:('input t -> local_ graph -> 'result t)
+       (recurse:('input t -> graph @ local -> 'result t)
         -> 'input t
-        -> local_ graph
+        -> graph @ local
         -> 'result t)
-  -> local_ graph
+  -> graph @ local
   -> 'result t
 
 (** Just like [fix] but specialized for 2-arity functions. *)
@@ -401,12 +401,12 @@ val fix2
   -> 'a t
   -> 'b t
   -> f:
-       (recurse:('a t -> 'b t -> local_ graph -> 'result t)
+       (recurse:('a t -> 'b t -> graph @ local -> 'result t)
         -> 'a t
         -> 'b t
-        -> local_ graph
+        -> graph @ local
         -> 'result t)
-  -> local_ graph
+  -> graph @ local
   -> 'result t
 
 (** [scope_model] is used to associate the state of some component graph with some other
@@ -415,8 +415,8 @@ val scope_model
   :  here:[%call_pos]
   -> ('a, _) Comparator.Module.t
   -> on:'a t
-  -> for_:(local_ graph -> 'b t)
-  -> local_ graph
+  -> for_:(graph @ local -> 'b t)
+  -> graph @ local
   -> 'b t
 
 (** Exactly like [scope_model] but will automatically pack and unpack any number of
@@ -427,8 +427,8 @@ val scope_model_n
   -> ('a, _) Comparator.Module.t
   -> n:(_, 'b) Autopack.t
   -> on:'a t
-  -> for_:(local_ graph -> 'b)
-  -> local_ graph
+  -> for_:(graph @ local -> 'b)
+  -> graph @ local
   -> 'b
 
 (** [Bonsai.most_recent_some] can be used to find and store a value that has some
@@ -441,7 +441,7 @@ val most_recent_some
   -> equal:('b -> 'b -> bool)
   -> 'a t
   -> f:('a -> 'b option)
-  -> local_ graph
+  -> graph @ local
   -> 'b option t
 
 (** The output of [most_recent_value_satisfying] is a ['a option Bonsai.t] that contains
@@ -452,7 +452,7 @@ val most_recent_value_satisfying
   -> equal:('a -> 'a -> bool)
   -> 'a t
   -> condition:('a -> bool)
-  -> local_ graph
+  -> graph @ local
   -> 'a option t
 
 (** [previous_value] returns a [Bonsai.t] which contains the value that its input held on
@@ -462,7 +462,7 @@ val previous_value
   -> ?sexp_of_model:('a -> Sexp.t)
   -> equal:('a -> 'a -> bool)
   -> 'a t
-  -> local_ graph
+  -> graph @ local
   -> 'a option t
 
 (** [wrap] wraps a Computation (built using [f]) and provides a model and injection
@@ -482,8 +482,8 @@ val wrap
         -> 'model
         -> 'action
         -> 'model)
-  -> f:('model t -> ('action -> unit Effect.t) t -> local_ graph -> 'result t)
-  -> local_ graph
+  -> f:('model t -> ('action -> unit Effect.t) t -> graph @ local -> 'result t)
+  -> graph @ local
   -> 'result t
 
 (** Exactly like [wrap] but will automatically pack and unpack any number of [Bonsai.t]
@@ -500,9 +500,9 @@ val wrap_n
         -> 'model
         -> 'action
         -> 'model)
-  -> f:('model t -> ('action -> unit Effect.t) t -> local_ graph -> 'unpacked)
+  -> f:('model t -> ('action -> unit Effect.t) t -> graph @ local -> 'unpacked)
   -> n:('packed, 'unpacked) Autopack.t
-  -> local_ graph
+  -> graph @ local
   -> 'unpacked
 
 (** [enum] is used for matching on a value and providing different behaviors on different
@@ -516,18 +516,39 @@ val enum
   :  here:[%call_pos]
   -> (module Enum with type t = 'k)
   -> match_:'k t
-  -> with_:('k -> local_ graph -> 'a t)
-  -> local_ graph
+  -> with_:('k -> graph @ local -> 'a t)
+  -> graph @ local
   -> 'a t
+
+(** [stitch] allows you to dynamically construct Bonsai graphs at runtime, giving you
+    unwrapped access to the value being bound.
+
+    The restriction on this function compared to the traditional [bind] signature is that
+    [Bonsai.stitch] requires a comparator module for the value being bound. This is so
+    that we can associate any stored models with a key for the bound value that generated
+    it.
+
+    WARNING: using stitch can make your application slow! Bonsai typically does a lot of
+    work at application startup time in order to make runtime fast, but [stitch] defers
+    the running of [f] to runtime, so it can make things slow at runtime. Use with
+    caution, and profile your apps! *)
+
+val stitch
+  :  here:[%call_pos]
+  -> ('a, 'cmp) Comparator.Module.t
+  -> 'a t
+  -> f:('a -> graph @ local -> 'b t)
+  -> graph @ local
+  -> 'b t
 
 (** [with_inverted_lifecycle_ordering] will run [compute_dep] and pass its result to [f],
     but any lifecycles registered in [f] will run before those registered in
     [compute_dep]. *)
 val with_inverted_lifecycle_ordering
   :  here:[%call_pos]
-  -> compute_dep:(local_ graph -> 'dep t)
-  -> f:('dep t -> local_ graph -> 'a t)
-  -> local_ graph
+  -> compute_dep:(graph @ local -> 'dep t)
+  -> f:('dep t -> graph @ local -> 'a t)
+  -> graph @ local
   -> 'a t
 
 (** All stateful components allocated inside of [with_model_resetter]'s [f] callback will
@@ -535,8 +556,8 @@ val with_inverted_lifecycle_ordering
     [with_model_resetter] is scheduled. *)
 val with_model_resetter
   :  here:[%call_pos]
-  -> f:(local_ graph -> 'a t)
-  -> local_ graph
+  -> f:(graph @ local -> 'a t)
+  -> graph @ local
   -> 'a t * unit Effect.t t
 
 (** Exactly like [with_model_resetter] but will automatically pack and unpack any number
@@ -544,17 +565,17 @@ val with_model_resetter
     more info. *)
 val with_model_resetter_n
   :  here:[%call_pos]
-  -> f:(local_ graph -> 'a)
+  -> f:(graph @ local -> 'a)
   -> n:(_, 'a) Autopack.t
-  -> local_ graph
+  -> graph @ local
   -> 'a * unit Effect.t t
 
 (** The same as [with_model_resetter], but the closure has access to the [reset] function
     this time. *)
 val with_model_resetter'
   :  here:[%call_pos]
-  -> f:(reset:unit Effect.t t -> local_ graph -> 'a t)
-  -> local_ graph
+  -> f:(reset:unit Effect.t t -> graph @ local -> 'a t)
+  -> graph @ local
   -> 'a t
 
 (** Exactly like [with_model_resetter'] but will automatically pack and unpack any number
@@ -562,9 +583,9 @@ val with_model_resetter'
     more info. *)
 val with_model_resetter_n'
   :  here:[%call_pos]
-  -> f:(reset:unit Effect.t t -> local_ graph -> 'a)
+  -> f:(reset:unit Effect.t t -> graph @ local -> 'a)
   -> n:(_, 'a) Autopack.t
-  -> local_ graph
+  -> graph @ local
   -> 'a
 
 (** [peek] maps a [Bonsai.t] to an [Effect.t] with the same underlying value. This allows
@@ -575,7 +596,7 @@ val with_model_resetter_n'
 
     The ['a Computation_state.t] returned by the effect means that if the value was
     inactive at the time it is peeked, then the effect will be unable to retrieve it. *)
-val peek : here:[%call_pos] -> 'a t -> local_ graph -> 'a Computation_status.t Effect.t t
+val peek : here:[%call_pos] -> 'a t -> graph @ local -> 'a Computation_status.t Effect.t t
 
 (** Various clock and timing functions *)
 module Clock : sig
@@ -584,7 +605,7 @@ module Clock : sig
   val approx_now
     :  here:[%call_pos]
     -> tick_every:Time_ns.Span.t
-    -> local_ graph
+    -> graph @ local
     -> Time_ns.t t
 
   module Before_or_after : sig
@@ -594,9 +615,9 @@ module Clock : sig
     [@@deriving sexp, equal]
   end
 
-  (** [Bonsai.Clock.at] can tell you if a given [Time_ns.t Bonsai.t] is before or after
-      the current wall clock time. *)
-  val at : here:[%call_pos] -> Time_ns.t t -> local_ graph -> Before_or_after.t t
+  (** [Bonsai.Clock.at] can tell you if the current wall clock time is before or after a
+      given [Time_ns.t Bonsai.t]. *)
+  val at : here:[%call_pos] -> Time_ns.t t -> graph @ local -> Before_or_after.t t
 
   (** {v
  An event passed to [every] is scheduled on an interval determined by
@@ -619,23 +640,23 @@ module Clock : sig
     -> ?trigger_on_activate:bool
     -> Time_ns.Span.t t
     -> unit Effect.t t
-    -> local_ graph
+    -> graph @ local
     -> unit
 
   (** Produces an effect that can be used to query the current time. *)
-  val get_current_time : here:[%call_pos] -> local_ graph -> Time_ns.t Effect.t t
+  val get_current_time : here:[%call_pos] -> graph @ local -> Time_ns.t Effect.t t
 
   (** Produces an effect that can be used to sleep for some amount of time. *)
-  val sleep : here:[%call_pos] -> local_ graph -> (Time_ns.Span.t -> unit Effect.t) t
+  val sleep : here:[%call_pos] -> graph @ local -> (Time_ns.Span.t -> unit Effect.t) t
 
   (** Produces an effect that can be used to sleep until some timestamp. *)
-  val until : here:[%call_pos] -> local_ graph -> (Time_ns.t -> unit Effect.t) t
+  val until : here:[%call_pos] -> graph @ local -> (Time_ns.t -> unit Effect.t) t
 
   module Expert : sig
     (** Returns a [Bonsai.t] that contains the current time. Using this value can lead to
         inefficient programs that are continuously recomputing because the current time
         changes on every frame. Consider using [approx_now] instead, if possible. *)
-    val now : here:[%call_pos] -> local_ graph -> Time_ns.t t
+    val now : here:[%call_pos] -> graph @ local -> Time_ns.t t
   end
 end
 
@@ -657,7 +678,7 @@ module Edge : sig
     -> equal:('a -> 'a -> bool)
     -> 'a t
     -> callback:('a -> unit Effect.t) t
-    -> local_ graph
+    -> graph @ local
     -> unit
 
   (** Just like [on_change] except that the callback function also has access to the
@@ -671,7 +692,7 @@ module Edge : sig
     -> equal:('a -> 'a -> bool)
     -> 'a t
     -> callback:('a option -> 'a -> unit Effect.t) t
-    -> local_ graph
+    -> graph @ local
     -> unit
 
   (** [Bonsai.Edge.lifecycle] is used to add effects to Bonsai's lifecycle events. Using
@@ -698,7 +719,7 @@ module Edge : sig
     -> ?on_deactivate:unit Effect.t t
     -> ?before_display:unit Effect.t t
     -> ?after_display:unit Effect.t t
-    -> local_ graph
+    -> graph @ local
     -> unit
 
   (** Just like [lifecycle] except that each effect is optional *)
@@ -708,28 +729,32 @@ module Edge : sig
     -> ?on_deactivate:unit Effect.t option t
     -> ?before_display:unit Effect.t option t
     -> ?after_display:unit Effect.t option t
-    -> local_ graph
+    -> graph @ local
     -> unit
 
   (** [before_display] will schedule an effect right before the dom is updated. *)
-  val before_display : here:[%call_pos] -> unit Effect.t t -> local_ graph -> unit
+  val before_display : here:[%call_pos] -> unit Effect.t t -> graph @ local -> unit
 
   (** Just like [before_display] except that the effect is optional *)
-  val before_display' : here:[%call_pos] -> unit Effect.t option t -> local_ graph -> unit
+  val before_display'
+    :  here:[%call_pos]
+    -> unit Effect.t option t
+    -> graph @ local
+    -> unit
 
   (** [after_display] will schedule an effect at the end of every frame. *)
-  val after_display : here:[%call_pos] -> unit Effect.t t -> local_ graph -> unit
+  val after_display : here:[%call_pos] -> unit Effect.t t -> graph @ local -> unit
 
   (** Just like [after_display] except that the effect is optional *)
-  val after_display' : here:[%call_pos] -> unit Effect.t option t -> local_ graph -> unit
+  val after_display' : here:[%call_pos] -> unit Effect.t option t -> graph @ local -> unit
 
   (** [wait_before_display] gives you an effect that will block until the beginning of the
       next frame. *)
-  val wait_before_display : here:[%call_pos] -> local_ graph -> unit Effect.t t
+  val wait_before_display : here:[%call_pos] -> graph @ local -> unit Effect.t t
 
   (** [wait_after_display] gives you an effect that will block until the end of the next
       frame. *)
-  val wait_after_display : here:[%call_pos] -> local_ graph -> unit Effect.t t
+  val wait_after_display : here:[%call_pos] -> graph @ local -> unit Effect.t t
 
   module Poll : sig
     module Starting : sig
@@ -755,7 +780,7 @@ module Edge : sig
       -> ('o, 'r) Starting.t
       -> 'a t
       -> effect:('a -> 'o Effect.t) t
-      -> local_ graph
+      -> graph @ local
       -> 'r t
 
     (** [manual_refresh] is a stateful component for storing the result of an effect. The
@@ -767,7 +792,7 @@ module Edge : sig
       -> ?equal:('o -> 'o -> bool)
       -> ('o, 'r) Starting.t
       -> effect:'o Effect.t t
-      -> local_ graph
+      -> graph @ local
       -> 'r t * unit Effect.t t
   end
 end
@@ -794,8 +819,8 @@ module Memo : sig
   val create
     :  here:[%call_pos]
     -> ('input, 'cmp) Comparator.Module.t
-    -> f:('input bonsai_t -> local_ graph -> 'result bonsai_t)
-    -> local_ graph
+    -> f:('input bonsai_t -> graph @ local -> 'result bonsai_t)
+    -> graph @ local
     -> ('input, 'result) t bonsai_t
 
   (** Requests an instance of the shared computation for a given ['input] value. If an
@@ -806,7 +831,7 @@ module Memo : sig
     :  here:[%call_pos]
     -> ('input, 'result) t bonsai_t
     -> 'input bonsai_t
-    -> local_ graph
+    -> graph @ local
     -> 'result option bonsai_t
 
   type ('query, 'response) responses =
@@ -856,7 +881,7 @@ module Effect_throttling : sig
   val poll
     :  here:[%call_pos]
     -> ('a -> 'b Effect.t) t
-    -> local_ graph
+    -> graph @ local
     -> ('a -> 'b Poll_result.t Effect.t) t
 end
 
@@ -889,33 +914,33 @@ module Dynamic_scope : sig
     :  here:[%call_pos]
     -> 'a t
     -> 'a bonsai_t
-    -> inside:(local_ graph -> 'r bonsai_t)
-    -> local_ graph
+    -> inside:(graph @ local -> 'r bonsai_t)
+    -> graph @ local
     -> 'r bonsai_t
 
   type revert =
-    { revert : 'a. (local_ graph -> 'a bonsai_t) -> (local_ graph -> 'a bonsai_t) }
+    { revert : 'a. (graph @ local -> 'a bonsai_t) -> (graph @ local -> 'a bonsai_t) }
 
   (** like [set] but with the ability to revert the value in sub-computations. *)
   val set'
     :  here:[%call_pos]
     -> 'a t
     -> 'a bonsai_t
-    -> f:(revert -> local_ graph -> 'r bonsai_t)
-    -> local_ graph
+    -> f:(revert -> graph @ local -> 'r bonsai_t)
+    -> graph @ local
     -> 'r bonsai_t
 
   (** Lookup attempts to find the value inside the nearest scope, but if there isn't one,
       it falls back to default specified in [create]. *)
-  val lookup : here:[%call_pos] -> 'a t -> local_ graph -> 'a bonsai_t
+  val lookup : here:[%call_pos] -> 'a t -> graph @ local -> 'a bonsai_t
 
   (** [modify] can be used to change the current value of a dynamically scoped variable. *)
   val modify
     :  here:[%call_pos]
     -> 'a t
     -> change:('a bonsai_t -> 'a bonsai_t)
-    -> f:(revert -> local_ graph -> 'r bonsai_t)
-    -> local_ graph
+    -> f:(revert -> graph @ local -> 'r bonsai_t)
+    -> graph @ local
     -> 'r bonsai_t
 
   (** [Bulk_setter] allows setting multiple dynamic scope variables at once. This is
@@ -967,8 +992,8 @@ module Dynamic_scope : sig
     val set
       :  here:[%call_pos]
       -> 'args t
-      -> inside:(local_ graph -> 'out bonsai_t)
-      -> local_ graph
+      -> inside:(graph @ local -> 'out bonsai_t)
+      -> graph @ local
       -> 'out bonsai_t
   end
 end
@@ -978,7 +1003,7 @@ module Incr : sig
     :  here:[%call_pos]
     -> 'a t
     -> equal:('a -> 'a -> bool)
-    -> local_ graph
+    -> graph @ local
     -> 'a t
 
   (** compute a value using the lower-level [Incremental] library *)
@@ -986,14 +1011,14 @@ module Incr : sig
     :  here:[%call_pos]
     -> 'a t
     -> f:('a Incr.t -> 'b Incr.t)
-    -> local_ graph
+    -> graph @ local
     -> 'b t
 
   (** Compute an incremental value from a Time_source.t *)
   val with_clock
     :  here:[%call_pos]
     -> f:(Time_source.t -> 'a Incr.t)
-    -> local_ graph
+    -> graph @ local
     -> 'a t
 
   val to_value : here:[%call_pos] -> 'a Incr.t -> 'a t
@@ -1011,8 +1036,8 @@ val assoc
   :  here:[%call_pos]
   -> ('k, 'cmp) Comparator.Module.t
   -> ('k, 'v, 'cmp) Map.t t
-  -> f:('k t -> 'v t -> local_ graph -> 'a t)
-  -> local_ graph
+  -> f:('k t -> 'v t -> graph @ local -> 'a t)
+  -> graph @ local
   -> ('k, 'a, 'cmp) Map.t t
 
 (** Exactly like [assoc] but will automatically pack multiple [Bonsai.t] produced inside
@@ -1021,16 +1046,16 @@ val assoc_n
   :  here:[%call_pos]
   -> ('k, 'cmp) Comparator.Module.t
   -> ('k, 'v, 'cmp) Map.t t
-  -> f:('k t -> 'v t -> local_ graph -> 'unpacked)
+  -> f:('k t -> 'v t -> graph @ local -> 'unpacked)
   -> n:('packed, 'unpacked) Autopack.t
-  -> local_ graph
+  -> graph @ local
   -> ('k, 'packed, 'cmp) Map.t t
 
 (** [all_map] is like [assoc] but is only usable when the input map is constant. *)
 val all_map
   :  here:[%call_pos]
-  -> ('k, local_ graph -> 'v t, 'cmp) Map.t
-  -> local_ graph
+  -> ('k, graph @ local -> 'v t, 'cmp) Map.t
+  -> graph @ local
   -> ('k, 'v, 'cmp) Map.t t
 
 (** Like [assoc] except that the input value is a Set instead of a Map. *)
@@ -1038,8 +1063,8 @@ val assoc_set
   :  here:[%call_pos]
   -> ('key, 'cmp) Comparator.Module.t
   -> ('key, 'cmp) Set.t t
-  -> f:('key t -> local_ graph -> 'result t)
-  -> local_ graph
+  -> f:('key t -> graph @ local -> 'result t)
+  -> graph @ local
   -> ('key, 'result, 'cmp) Map.t t
 
 (** Exactly like [assoc_set] but will automatically pack multiple [Bonsai.t] produced
@@ -1048,9 +1073,9 @@ val assoc_set_n
   :  here:[%call_pos]
   -> ('key, 'cmp) Comparator.Module.t
   -> ('key, 'cmp) Set.t t
-  -> f:('key t -> local_ graph -> 'unpacked)
+  -> f:('key t -> graph @ local -> 'unpacked)
   -> n:('packed, 'unpacked) Autopack.t
-  -> local_ graph
+  -> graph @ local
   -> ('key, 'packed, 'cmp) Map.t t
 
 (** Like [assoc] except that the input value is a list instead of a Map. The output list
@@ -1062,8 +1087,8 @@ val assoc_list
   -> ('key, _) Comparator.Module.t
   -> 'a list t
   -> get_key:('a -> 'key)
-  -> f:('key t -> 'a t -> local_ graph -> 'b t)
-  -> local_ graph
+  -> f:('key t -> 'a t -> graph @ local -> 'b t)
+  -> graph @ local
   -> [ `Duplicate_key of 'key | `Ok of 'b list ] t
 
 (** Exactly like [assoc_list] but will automatically pack multiple [Bonsai.t] produced
@@ -1073,16 +1098,16 @@ val assoc_list_n
   -> ('key, _) Comparator.Module.t
   -> 'a list t
   -> get_key:('a -> 'key)
-  -> f:('key t -> 'a t -> local_ graph -> 'unpacked)
+  -> f:('key t -> 'a t -> graph @ local -> 'unpacked)
   -> n:('packed, 'unpacked) Autopack.t
-  -> local_ graph
+  -> graph @ local
   -> [ `Duplicate_key of 'key | `Ok of 'packed list ] t
 
 module Time_source = Time_source
 
 module Debug : sig
   (** [on_change v ~f] executes the function [f] every time that [v] is recomputed. *)
-  val on_change : here:[%call_pos] -> 'a t -> f:('a -> unit) -> local_ graph -> unit
+  val on_change : here:[%call_pos] -> 'a t -> f:('a -> unit) -> graph @ local -> unit
 
   (** like [on_change], but specialized for printing a sexp of the value that you are
       watching. *)
@@ -1090,16 +1115,16 @@ module Debug : sig
     :  here:[%call_pos]
     -> 'a t
     -> ('a -> Sexp.t)
-    -> local_ graph
+    -> graph @ local
     -> unit
 
   (** Builds a graphviz dot file string for the component *)
-  val to_dot : ?pre_process:bool -> (local_ graph -> 'a t) -> string
+  val to_dot : ?pre_process:bool -> (graph @ local -> 'a t) -> string
 
   (** Counts the number of nodes in the static Bonsai graph *)
   val bonsai_node_counts
     :  ?pre_process:bool
-    -> (local_ graph -> 'a t)
+    -> (graph @ local -> 'a t)
     -> Skeleton.Counts.t
 
   val enable_incremental_annotations : unit -> unit
@@ -1150,8 +1175,8 @@ module Debug : sig
     -> ?log_watcher_positions:bool
     -> ?log_dependency_definition_position:bool
     -> ?label:string
-    -> f:(local_ graph -> 'a t)
-    -> local_ graph
+    -> f:(graph @ local -> 'a t)
+    -> graph @ local
     -> 'a t
 
   (** [debug_node] logs when a [Bonsai.t] changes. By default, output goes to stderr via
@@ -1164,7 +1189,7 @@ module Debug : sig
     -> ?equal:('a -> 'a -> bool)
     -> ?sexp_of:('a -> Sexp.t)
     -> 'a t
-    -> local_ graph
+    -> graph @ local
     -> 'a t
 
   (** [memo_subscribers] prints the internal state for each query. *)
@@ -1193,14 +1218,14 @@ module Path : sig
 end
 
 (** Fetches the current [Path.t] *)
-val path : here:[%call_pos] -> local_ graph -> Path.t t
+val path : here:[%call_pos] -> graph @ local -> Path.t t
 
 (** Fetches the current [Path.t] and converts it to a string using
     [Path.to_unique_identifier_string] *)
-val path_id : here:[%call_pos] -> local_ graph -> string t
+val path_id : here:[%call_pos] -> graph @ local -> string t
 
-val arr1 : here:[%call_pos] -> local_ graph -> 'a t -> f:('a -> 'b) -> 'b t
-val arr2 : here:[%call_pos] -> local_ graph -> 'a t -> 'b t -> f:('a -> 'b -> 'c) -> 'c t
+val arr1 : here:[%call_pos] -> graph @ local -> 'a t -> f:('a -> 'b) -> 'b t
+val arr2 : here:[%call_pos] -> graph @ local -> 'a t -> 'b t -> f:('a -> 'b -> 'c) -> 'c t
 
 module Effect = Ui_effect
 
@@ -1209,8 +1234,6 @@ module Let_syntax : sig
   val return : here:[%call_pos] -> 'a -> 'a t
 
   module Let_syntax : sig
-    val map : here:[%call_pos] -> 'a t -> f:('a -> 'b) -> 'b t
-    val map2 : here:[%call_pos] -> 'a t -> 'b t -> f:('a -> 'b -> 'c) -> 'c t
     val both : here:[%call_pos] -> 'a t -> 'b t -> ('a * 'b) t
     val arr : here:[%call_pos] -> 'a t -> f:('a -> 'b) -> 'b t
     val return : 'a t -> 'a t
@@ -1220,11 +1243,21 @@ module Let_syntax : sig
       :  here:Source_code_position.t
       -> match_:int t
       -> branches:int
-      -> with_:local_ (int -> 'a t)
+      -> with_:(int -> 'a t) @ local
       -> 'a t
 
-    val sub : here:[%call_pos] -> 'a -> f:local_ ('a -> 'b) -> 'b
-    val delay : here:[%call_pos] -> f:(local_ graph -> 'a t) -> local_ graph -> 'a t
+    val sub : here:[%call_pos] -> 'a -> f:('a -> 'b) @ local -> 'b
+
+    (** [let%sub ... and ...] is deliberately not supported in bonsai: use one [let%sub]
+        per binding. This uncallable [sub_both] exists so that [ppx_bonsai]'s expansion of
+        [let%sub ... and ...] fails with a legible type error rather than an unbound-value
+        error. *)
+    val sub_both
+      :  [ `let_sub_with_and_is_not_supported_in_bonsai ]
+      -> [ `use_a_separate_let_sub_per_binding ]
+      -> unit
+
+    val delay : here:[%call_pos] -> f:(graph @ local -> 'a t) -> graph @ local -> 'a t
 
     val debug_node
       :  here:[%call_pos]
@@ -1234,8 +1267,68 @@ module Let_syntax : sig
       -> 'a t
       -> 'a t
 
-    include Mapn with type 'a t := 'a t
     include Arrn with type 'a t := 'a t
+
+    val map : here:[%call_pos] -> 'a t -> f:('a -> 'b) -> 'b t
+    [@@alert for_ppx_bonsai "[since 2026-08] use [let%arr] instead"]
+
+    val map2 : here:[%call_pos] -> 'a1 t -> 'a2 t -> f:('a1 -> 'a2 -> 'b) -> 'b t
+    [@@alert for_ppx_bonsai "[since 2026-08] use [let%arr] instead"]
+
+    val map3
+      :  here:[%call_pos]
+      -> 'a1 t
+      -> 'a2 t
+      -> 'a3 t
+      -> f:('a1 -> 'a2 -> 'a3 -> 'b)
+      -> 'b t
+    [@@alert for_ppx_bonsai "[since 2026-08] use [let%arr] instead"]
+
+    val map4
+      :  here:[%call_pos]
+      -> 'a1 t
+      -> 'a2 t
+      -> 'a3 t
+      -> 'a4 t
+      -> f:('a1 -> 'a2 -> 'a3 -> 'a4 -> 'b)
+      -> 'b t
+    [@@alert for_ppx_bonsai "[since 2026-08] use [let%arr] instead"]
+
+    val map5
+      :  here:[%call_pos]
+      -> 'a1 t
+      -> 'a2 t
+      -> 'a3 t
+      -> 'a4 t
+      -> 'a5 t
+      -> f:('a1 -> 'a2 -> 'a3 -> 'a4 -> 'a5 -> 'b)
+      -> 'b t
+    [@@alert for_ppx_bonsai "[since 2026-08] use [let%arr] instead"]
+
+    val map6
+      :  here:[%call_pos]
+      -> 'a1 t
+      -> 'a2 t
+      -> 'a3 t
+      -> 'a4 t
+      -> 'a5 t
+      -> 'a6 t
+      -> f:('a1 -> 'a2 -> 'a3 -> 'a4 -> 'a5 -> 'a6 -> 'b)
+      -> 'b t
+    [@@alert for_ppx_bonsai "[since 2026-08] use [let%arr] instead"]
+
+    val map7
+      :  here:[%call_pos]
+      -> 'a1 t
+      -> 'a2 t
+      -> 'a3 t
+      -> 'a4 t
+      -> 'a5 t
+      -> 'a6 t
+      -> 'a7 t
+      -> f:('a1 -> 'a2 -> 'a3 -> 'a4 -> 'a5 -> 'a6 -> 'a7 -> 'b)
+      -> 'b t
+    [@@alert for_ppx_bonsai "[since 2026-08] use [let%arr] instead"]
   end
 end
 
@@ -1263,10 +1356,10 @@ include
     Note that [f] will be called at most once.
 
     For recursive components, see [fix]. *)
-val delay : here:[%call_pos] -> f:(local_ graph -> 'a t) -> local_ graph -> 'a t
+val delay : here:[%call_pos] -> f:(graph @ local -> 'a t) -> graph @ local -> 'a t
 
 module Expert : sig
-  val thunk : here:[%call_pos] -> f:(unit -> 'a) -> local_ graph -> 'a t
+  val thunk : here:[%call_pos] -> f:(unit -> 'a) -> graph @ local -> 'a t
 
   (** [assoc_on] is similar to [assoc], but allows the model to be keyed differently than
       the input map. This comes with a few caveats:
@@ -1283,8 +1376,8 @@ module Expert : sig
     -> ('model_key, 'model_cmp) Comparator.Module.t
     -> ('io_key, 'data, 'io_cmp) Core.Map.t t
     -> get_model_key:('io_key -> 'data -> 'model_key)
-    -> f:('io_key t -> 'data t -> local_ graph -> 'result t)
-    -> local_ graph
+    -> f:('io_key t -> 'data t -> graph @ local -> 'result t)
+    -> graph @ local
     -> ('io_key, 'result, 'io_cmp) Core.Map.t t
 
   module Var : sig
@@ -1327,11 +1420,11 @@ end
 module For_proc : sig
   module type Map_and_set0_output = Map_and_set0_intf.Output
 
-  val arr1 : here:[%call_pos] -> local_ graph -> 'a t -> f:('a -> 'b) -> 'b t
+  val arr1 : here:[%call_pos] -> graph @ local -> 'a t -> f:('a -> 'b) -> 'b t
 
   val arr2
     :  here:[%call_pos]
-    -> local_ graph
+    -> graph @ local
     -> 'a t
     -> 'b t
     -> f:('a -> 'b -> 'c)
@@ -1339,7 +1432,7 @@ module For_proc : sig
 
   val arr3
     :  here:[%call_pos]
-    -> local_ graph
+    -> graph @ local
     -> 'a t
     -> 'b t
     -> 'c t
@@ -1348,7 +1441,7 @@ module For_proc : sig
 
   val arr4
     :  here:[%call_pos]
-    -> local_ graph
+    -> graph @ local
     -> 'a t
     -> 'b t
     -> 'c t
@@ -1358,7 +1451,7 @@ module For_proc : sig
 
   val arr5
     :  here:[%call_pos]
-    -> local_ graph
+    -> graph @ local
     -> 'a t
     -> 'b t
     -> 'c t
@@ -1369,7 +1462,7 @@ module For_proc : sig
 
   val arr6
     :  here:[%call_pos]
-    -> local_ graph
+    -> graph @ local
     -> 'a t
     -> 'b t
     -> 'c t
@@ -1381,7 +1474,7 @@ module For_proc : sig
 
   val arr7
     :  here:[%call_pos]
-    -> local_ graph
+    -> graph @ local
     -> 'a t
     -> 'b t
     -> 'c t
@@ -1402,7 +1495,7 @@ module For_proc : sig
     -> ?sexp_of_model:('model -> Sexp.t)
     -> ?equal:('model -> 'model -> bool)
     -> 'model
-    -> local_ graph
+    -> graph @ local
     -> ('model * ('model -> unit Effect.t)) t
 
   val state'
@@ -1411,7 +1504,7 @@ module For_proc : sig
     -> ?sexp_of_model:('model -> Sexp.t)
     -> ?equal:('model -> 'model -> bool)
     -> 'model
-    -> local_ graph
+    -> graph @ local
     -> ('model * (('model -> 'model) -> unit Effect.t)) t
 
   val state_opt
@@ -1421,13 +1514,13 @@ module For_proc : sig
     -> ?sexp_of_model:('model -> Sexp.t)
     -> ?equal:('model -> 'model -> bool)
     -> unit
-    -> local_ graph
+    -> graph @ local
     -> ('model option * ('model option -> unit Effect.t)) t
 
   val toggle
     :  here:[%call_pos]
     -> default_model:bool
-    -> local_ graph
+    -> graph @ local
     -> (bool * unit Effect.t) t
 
   module Toggle : sig
@@ -1438,7 +1531,7 @@ module For_proc : sig
       }
   end
 
-  val toggle' : here:[%call_pos] -> default_model:bool -> local_ graph -> Toggle.t t
+  val toggle' : here:[%call_pos] -> default_model:bool -> graph @ local -> Toggle.t t
 
   val state_machine
     :  here:[%call_pos]
@@ -1450,7 +1543,7 @@ module For_proc : sig
     -> apply_action:
          (('action, unit) Apply_action_context.t -> 'model -> 'action -> 'model)
     -> unit
-    -> local_ graph
+    -> graph @ local
     -> ('model * ('action -> unit Effect.t)) t
 
   val state_machine_with_input
@@ -1467,7 +1560,7 @@ module For_proc : sig
           -> 'action
           -> 'model)
     -> 'input t
-    -> local_ graph
+    -> graph @ local
     -> ('model * ('action -> unit Effect.t)) t
 
   val actor
@@ -1483,7 +1576,7 @@ module For_proc : sig
           -> 'action
           -> 'model * 'return)
     -> unit
-    -> local_ graph
+    -> graph @ local
     -> ('model * ('action -> 'return Effect.t)) t
 
   val actor_with_input
@@ -1501,7 +1594,7 @@ module For_proc : sig
           -> 'action
           -> 'model * 'return)
     -> 'input t
-    -> local_ graph
+    -> graph @ local
     -> ('model * ('action -> 'return Effect.t)) t
 
   val wrap
@@ -1516,29 +1609,29 @@ module For_proc : sig
           -> 'model
           -> 'action
           -> 'model)
-    -> f:('model t -> ('action -> unit Effect.t) t -> local_ graph -> 'result t)
+    -> f:('model t -> ('action -> unit Effect.t) t -> graph @ local -> 'result t)
     -> unit
-    -> local_ graph
+    -> graph @ local
     -> 'result t
 
   val switch
     :  here:[%call_pos]
     -> match_:int t
     -> branches:int
-    -> with_:(int -> local_ graph -> 'a t)
-    -> local_ graph
+    -> with_:(int -> graph @ local -> 'a t)
+    -> graph @ local
     -> 'a t
 
   val with_model_resetter
     :  here:[%call_pos]
-    -> (local_ graph -> 'a t)
-    -> local_ graph
+    -> (graph @ local -> 'a t)
+    -> graph @ local
     -> ('a * unit Effect.t) t
 
   val with_model_resetter'
     :  here:[%call_pos]
-    -> (reset:unit Effect.t t -> local_ graph -> 'a t)
-    -> local_ graph
+    -> (reset:unit Effect.t t -> graph @ local -> 'a t)
+    -> graph @ local
     -> 'a t
 
   val on_change
@@ -1548,7 +1641,7 @@ module For_proc : sig
     -> equal:('a -> 'a -> bool)
     -> 'a t
     -> callback:('a -> unit Effect.t) t
-    -> local_ graph
+    -> graph @ local
     -> unit t
 
   val on_change'
@@ -1558,7 +1651,7 @@ module For_proc : sig
     -> equal:('a -> 'a -> bool)
     -> 'a t
     -> callback:('a option -> 'a -> unit Effect.t) t
-    -> local_ graph
+    -> graph @ local
     -> unit t
 
   val lifecycle
@@ -1568,7 +1661,7 @@ module For_proc : sig
     -> ?before_display:unit Effect.t t
     -> ?after_display:unit Effect.t t
     -> unit
-    -> local_ graph
+    -> graph @ local
     -> unit t
 
   val lifecycle'
@@ -1578,23 +1671,23 @@ module For_proc : sig
     -> ?before_display:unit Effect.t option t
     -> ?after_display:unit Effect.t option t
     -> unit
-    -> local_ graph
+    -> graph @ local
     -> unit t
 
-  val before_display : here:[%call_pos] -> unit Effect.t t -> local_ graph -> unit t
+  val before_display : here:[%call_pos] -> unit Effect.t t -> graph @ local -> unit t
 
   val before_display'
     :  here:[%call_pos]
     -> unit Effect.t option t
-    -> local_ graph
+    -> graph @ local
     -> unit t
 
-  val after_display : here:[%call_pos] -> unit Effect.t t -> local_ graph -> unit t
+  val after_display : here:[%call_pos] -> unit Effect.t t -> graph @ local -> unit t
 
   val after_display'
     :  here:[%call_pos]
     -> unit Effect.t option t
-    -> local_ graph
+    -> graph @ local
     -> unit t
 
   val manual_refresh
@@ -1603,56 +1696,56 @@ module For_proc : sig
     -> ?equal:('o -> 'o -> bool)
     -> ('o, 'r) Edge.Poll.Starting.t
     -> effect:'o Effect.t t
-    -> local_ graph
+    -> graph @ local
     -> ('r * unit Effect.t) t
 
   val debug_on_change
     :  here:[%call_pos]
     -> 'a t
     -> f:('a -> unit)
-    -> local_ graph
+    -> graph @ local
     -> unit t
 
   val debug_on_change_print_s
     :  here:[%call_pos]
     -> 'a t
     -> ('a -> Sexp.t)
-    -> local_ graph
+    -> graph @ local
     -> unit t
 
-  val lazy_ : here:[%call_pos] -> (local_ graph -> 'a t) lazy_t -> local_ graph -> 'a t
+  val lazy_ : here:[%call_pos] -> (graph @ local -> 'a t) lazy_t -> graph @ local -> 'a t
 
   val narrow
     :  here:[%call_pos]
     -> ('a * ('b -> unit Effect.t)) t
     -> get:('a -> 'c)
     -> set:('a -> 'd -> 'b)
-    -> local_ graph
+    -> graph @ local
     -> ('c * ('d -> unit Effect.t)) t
 
   val narrow_via_field
     :  here:[%call_pos]
     -> ('a * ('a -> unit Effect.t)) t
     -> ('a, 'b) Field.t
-    -> local_ graph
+    -> graph @ local
     -> ('b * ('b -> unit Effect.t)) t
 end
 
 module Conv : sig
   val handle
     :  here:[%call_pos]
-    -> f:(local_ graph -> 'a t)
-    -> local_ graph
+    -> f:(graph @ local -> 'a t)
+    -> graph @ local
     -> 'a Computation.t
 
-  val top_level_handle : here:[%call_pos] -> (local_ graph -> 'a t) -> 'a Computation.t
-  val perform : here:[%call_pos] -> local_ graph -> 'a Computation.t -> 'a t
+  val top_level_handle : here:[%call_pos] -> (graph @ local -> 'a t) -> 'a Computation.t
+  val perform : here:[%call_pos] -> graph @ local -> 'a Computation.t -> 'a t
   val reveal_value : 'a t -> 'a Value.t
   val conceal_value : 'a Value.t -> 'a t
 
   val isolated
-    :  local_ graph
+    :  graph @ local
     -> here:Source_code_position.t
-    -> f:local_ (unit -> 'a Value.t)
+    -> f:(unit -> 'a Value.t) @ local
     -> 'a Computation.t
 end

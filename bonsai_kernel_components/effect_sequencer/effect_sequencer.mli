@@ -5,7 +5,7 @@ module Effect = Ui_effect
 type t
 
 (** Makes a new sequencer. *)
-val create : local_ Bonsai.graph -> t Bonsai.t
+val create : Bonsai.graph @ local -> t Bonsai.t
 
 (** Produces an effect that first waits in line until all the effects in front of it are
     finished running, and then runs the provided effect.

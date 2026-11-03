@@ -62,7 +62,7 @@ end
 module Action_trie = struct
   let max_seconds_between_prunes = 15
 
-  (* If an assoc or switch hasn't received an action in the last
+  (* If an assoc, bind, or switch hasn't received an action in the last
      [num_generations_to_stale] generations, then we'll assume the branch is no longer
      active and remove it from our map. Note that generations increase whenever we need to
      stabilize for an action. This number is mostly arbitrary and should be tweaked as
@@ -99,10 +99,12 @@ module Action_trie = struct
         }
         -> 'inner Action.model_resetter node
     | Lazy : packed -> Action.lazy_ node
+    | Bind : bind -> (_, _) Action.bind node
     | Assoc : 'inner assoc -> (_, 'inner) Action.assoc node
     | Assoc_on : 'inner assoc_on -> (_, _, 'inner) Action.assoc_on node
     | Switch : switch -> Action.switch node
 
+  and bind = { mutable by_key : packed Keyed.Map.t }
   and 'inner assoc = { mutable by_key : 'inner node with_generation Keyed.Map.t }
   and 'inner assoc_on = { mutable by_io_key : 'inner node with_generation Keyed.Map.t }
   and switch = { mutable by_branch : packed Int.Map.t }
@@ -145,6 +147,10 @@ module Action_trie = struct
       | Lazy { type_id; action } ->
         let inner = with_current_generation (node_of_action action) in
         Lazy (T { inner; type_id })
+      | Bind { bound; bound_id; comparator; type_id; action; _ } ->
+        let inner = with_current_generation (node_of_action action) in
+        let key = Keyed.create ~key:bound ~id:bound_id ~comparator in
+        Bind { by_key = Keyed.Map.singleton key (T { inner; type_id }) }
       | Assoc { key; id; comparator; action } ->
         let inner = with_current_generation (node_of_action action) in
         Assoc { by_key = Keyed.Map.singleton (Keyed.create ~key ~id ~comparator) inner }
@@ -188,6 +194,22 @@ module Action_trie = struct
         -> 'state
     ; lazy_ :
         'dynamic 'static 'stripped. 'state -> 'stripped t -> 'stripped Action.t -> 'state
+    ; bind :
+        'dynamic 'static 'bound 'extra.
+        'state
+        -> bind:bind
+        -> key:Keyed.t
+        -> ('bound, 'extra) Action.bind Action.t
+        -> 'state
+    ; bind_type_id_mismatch :
+        'dynamic 'static 'stripped.
+        'state
+        -> bind:bind
+        -> key:Keyed.t
+        -> entry_generation:Generation.t
+        -> type_id:'stripped Action.id
+        -> 'stripped Action.t
+        -> 'state
     ; assoc :
         'dynamic 'static 'inner 'key.
         'state
@@ -236,6 +258,46 @@ module Action_trie = struct
         let T = Action.Type_id.same_witness_exn type_id action_type_id in
         let state = traverser.lazy_ state inner action in
         loop state action inner
+      | Bind bind ->
+        let (Bind
+              { bound
+              ; bound_id
+              ; comparator
+              ; type_id = action_type_id
+              ; action = inner_action
+              ; _
+              })
+          =
+          action
+        in
+        let key = Keyed.create ~key:bound ~id:bound_id ~comparator in
+        (match Map.find bind.by_key key with
+         | None ->
+           let state = traverser.bind state ~bind ~key action in
+           let empty = empty () in
+           bind.by_key
+           <- Map.set
+                bind.by_key
+                ~key
+                ~data:(T { inner = empty; type_id = action_type_id });
+           traverser.unexplored state empty inner_action
+         | Some (T { inner; type_id }) ->
+           (* Captured before the [bind] hook runs, since [insert]'s hook stamps it. *)
+           let entry_generation = inner.generation in
+           let state = traverser.bind state ~bind ~key action in
+           (match Action.Type_id.same_witness type_id action_type_id with
+            | Some T -> loop state inner_action inner
+            | None ->
+              (* Unlike [Switch], [bind] can re-gather a key with fresh type-ids while its
+                 trie entry survives. Either the action or the entry may be stale;
+                 [gather_bind] decides whether to drop the action. *)
+              traverser.bind_type_id_mismatch
+                state
+                ~bind
+                ~key
+                ~entry_generation
+                ~type_id:action_type_id
+                inner_action))
       | Assoc assoc ->
         let (Assoc { key; id; comparator; action = inner_action }) = action in
         let keyed = Keyed.create ~key ~id ~comparator in
@@ -292,6 +354,7 @@ module Action_trie = struct
     | Model_reset_inner action -> is_dynamic_action action
     | Switch { action; type_id = _; branch = _ } -> is_dynamic_action action
     | Lazy { action; type_id = _ } -> is_dynamic_action action
+    | Bind { action; _ } -> is_dynamic_action action
     | Assoc { action; key = _; id = _; comparator = _ } -> is_dynamic_action action
     | Assoc_on { action; io_key = _; io_id = _; io_comparator = _; model_key = _ } ->
       is_dynamic_action action
@@ -320,6 +383,7 @@ module Action_trie = struct
        * A dynamic action destined inside a model resetter requires a stabilization if
          that component has been reset this generation
        * A dynamic action destined anywhere after an [Incr.Var.t] has been set
+       * Conservatively, a dynamic action whose [Bind] type-id mismatches its trie entry
      v}
   *)
   let requires_stabilization current_generation stats =
@@ -363,6 +427,12 @@ module Action_trie = struct
       ; assoc_on = (fun state ~assoc_on:_ ~key:_ _ -> state)
       ; switch = (fun state ~switch:_ ~branch:_ _ -> state)
       ; lazy_ = (fun state _ _ -> state)
+      ; bind = (fun state ~bind:_ ~key:_ _ -> state)
+      ; bind_type_id_mismatch =
+          (fun _state ~bind:_ ~key:_ ~entry_generation:_ ~type_id:_ action ->
+            if is_dynamic_action action
+            then should_stabilize_dynamic_action stats true
+            else don't_stabilize ())
       }
     in
     traverse ~initial_state:false traverser
@@ -375,6 +445,9 @@ module Action_trie = struct
       (empty : stripped t)
       (action : stripped Action.t)
       =
+      (* The per-node hook may have run before this entry was installed; newly populated
+         entries must be stamped too. *)
+      empty.generation <- current_generation;
       empty.inner <- node_of_action current_generation action
     in
     let insert_sub () ~from ~into : _ Action.sub Action.t -> unit = function
@@ -399,6 +472,20 @@ module Action_trie = struct
       ; wrap = insert_wrap
       ; model_reset = insert_model_reset
       ; lazy_ = (fun () inner _ -> inner.generation <- current_generation)
+      ; bind =
+          (fun () ~bind ~key _action ->
+            iter_data bind.by_key ~key ~f:(fun (T { inner; type_id = _ }) ->
+              inner.generation <- current_generation))
+      ; bind_type_id_mismatch =
+          (fun () ~bind ~key ~entry_generation ~type_id action ->
+            (* Preserve entries touched this generation: replacing them would lose earlier
+               marks. Omitting this action's subtree marks is safe: any dynamic action
+               that could consult them still mismatches the kept entry and stabilizes. *)
+            if entry_generation < current_generation
+            then (
+              let inner = { generation = current_generation; inner = Unexplored } in
+              bind.by_key <- Map.set bind.by_key ~key ~data:(T { inner; type_id });
+              insert_unexplored () inner action))
       ; assoc =
           (fun () ~assoc ~key _action ->
             iter_data assoc.by_key ~key ~f:(fun inner ->
@@ -445,6 +532,10 @@ module Action_trie = struct
       | Wrap { inner; outer = _ } -> loop inner
       | Model_reset { inner; outer = _ } -> loop inner
       | Lazy (T { type_id = _; inner }) -> loop inner
+      | Bind bind ->
+        bind.by_key
+        <- filter_and_loop_via_fold bind.by_key ~f:(fun (T { inner; type_id = _ }) ->
+             T inner)
       | Assoc_on assoc_on ->
         assoc_on.by_io_key
         <- filter_and_loop_via_fold assoc_on.by_io_key ~f:(fun inner -> T inner)
@@ -498,8 +589,8 @@ let mark_stabilization t =
 ;;
 
 (* [prune_trie] ensures that we don't leak inactive parts of the Bonsai graph. We discard
-   any switch and assoc branches that haven't receieved an action in a long time, since we
-   assume them to be inactive. *)
+   any switch, bind, and assoc branches that haven't receieved an action in a long time,
+   since we assume them to be inactive. *)
 let prune_trie t =
   if t.current_generation
      >= t.last_generation_pruned + Action_trie.num_generations_to_stale

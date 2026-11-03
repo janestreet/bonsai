@@ -242,6 +242,24 @@ module For_computation = struct
           Trampoline.run t)
       in
       return (Computation.Lazy { t = inner; here })
+    | Bind ({ f; comparator; bound; _ } as t) ->
+      let branch_choices = ref (Map.empty comparator) in
+      let%bind bound = map_value ~choice:1 bound in
+      (* Choice 1 belongs to the bound value. *)
+      let next_branch_choice = ref 2 in
+      let f v =
+        let choice =
+          match Map.find !branch_choices v with
+          | Some choice -> choice
+          | None ->
+            let choice = !next_branch_choice in
+            incr next_branch_choice;
+            branch_choices := Map.set !branch_choices ~key:v ~data:choice;
+            choice
+        in
+        Trampoline.run (map ~choice (f v))
+      in
+      return (Computation.Bind { t with f; bound })
     | Wrap ({ model_id; inject_id; inner; _ } as t) ->
       let%bind inner =
         map ~var_from_parent:(Two (pack_id model_id, pack_id inject_id)) inner

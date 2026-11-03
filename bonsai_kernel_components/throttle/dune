@@ -4,3 +4,8 @@
  (libraries bonsai core)
  (preprocess
   (pps ppx_bonsai ppx_jane)))
+
+(env
+ (_
+  (env-vars
+   (OCAMLPARAM w=-46,keywords=5.2,_))))

@@ -8,6 +8,7 @@ type 'inner wrap_static = private Wrap_static
 type ('inner, 'outer) wrap_dynamic = private Wrap_dynamic
 type switch = private Switch
 type lazy_ = private Lazy
+type ('bound, 'extra) bind = private Bind
 type ('key, 'inner) assoc = private Assoc
 type ('io_key, 'model_key, 'inner) assoc_on = private Assoc_on
 
@@ -31,6 +32,7 @@ type 'a id =
   | Model_reset_id : { inner : 'inner id } -> 'inner model_resetter id
   | Switch_id : switch id
   | Lazy_id : lazy_ id
+  | Bind_id : 'a Var_id.t * 'extra Var_id.t -> ('a, 'extra) bind id
   | Assoc_id :
       { key : 'key Var_id.t
       ; action : 'a id
@@ -68,6 +70,16 @@ and 'a t =
       ; type_id : 'a id
       }
       -> lazy_ t
+  | Bind :
+      { action : 'a t
+      ; type_id : 'a id
+      ; bound : 'k
+      ; bound_id : 'k Var_id.t
+      ; comparator : ('k, _) Comparator.Module.t
+      ; extra : 'extra
+      ; extra_id : 'extra Var_id.t
+      }
+      -> ('k, 'extra) bind t
   | Assoc :
       { key : 'key
       ; action : 'a t
@@ -109,6 +121,10 @@ let rec same_witness : type a b. a id -> b id -> (a, b) Type_equal.t option =
      | None -> None)
   | Switch_id, Switch_id -> Some T
   | Lazy_id, Lazy_id -> Some T
+  | Bind_id (a_bound, a_extra), Bind_id (b_bound, b_extra) ->
+    (match Var_id.same_witness a_bound b_bound, Var_id.same_witness a_extra b_extra with
+     | Some T, Some T -> Some T
+     | Some T, None | None, Some T | None, None -> None)
   | Assoc_id { key; action }, Assoc_id { key = key'; action = action' } ->
     let same_key = Var_id.same_witness key key' in
     let same_action = same_witness action action' in
@@ -128,6 +144,7 @@ let rec same_witness : type a b. a id -> b id -> (a, b) Type_equal.t option =
   | Leaf_id _, Model_reset_id _
   | Leaf_id _, Switch_id
   | Leaf_id _, Lazy_id
+  | Leaf_id _, Bind_id _
   | Leaf_id _, Assoc_id _
   | Leaf_id _, Assoc_on_id _
   | Sub_id _, Leaf_id _
@@ -135,6 +152,7 @@ let rec same_witness : type a b. a id -> b id -> (a, b) Type_equal.t option =
   | Sub_id _, Model_reset_id _
   | Sub_id _, Switch_id
   | Sub_id _, Lazy_id
+  | Sub_id _, Bind_id _
   | Sub_id _, Assoc_id _
   | Sub_id _, Assoc_on_id _
   | Wrap_id _, Leaf_id _
@@ -142,6 +160,7 @@ let rec same_witness : type a b. a id -> b id -> (a, b) Type_equal.t option =
   | Wrap_id _, Model_reset_id _
   | Wrap_id _, Switch_id
   | Wrap_id _, Lazy_id
+  | Wrap_id _, Bind_id _
   | Wrap_id _, Assoc_id _
   | Wrap_id _, Assoc_on_id _
   | Model_reset_id _, Leaf_id _
@@ -149,6 +168,7 @@ let rec same_witness : type a b. a id -> b id -> (a, b) Type_equal.t option =
   | Model_reset_id _, Wrap_id _
   | Model_reset_id _, Switch_id
   | Model_reset_id _, Lazy_id
+  | Model_reset_id _, Bind_id _
   | Model_reset_id _, Assoc_id _
   | Model_reset_id _, Assoc_on_id _
   | Switch_id, Leaf_id _
@@ -156,6 +176,7 @@ let rec same_witness : type a b. a id -> b id -> (a, b) Type_equal.t option =
   | Switch_id, Wrap_id _
   | Switch_id, Model_reset_id _
   | Switch_id, Lazy_id
+  | Switch_id, Bind_id _
   | Switch_id, Assoc_id _
   | Switch_id, Assoc_on_id _
   | Lazy_id, Leaf_id _
@@ -165,12 +186,22 @@ let rec same_witness : type a b. a id -> b id -> (a, b) Type_equal.t option =
   | Lazy_id, Switch_id
   | Lazy_id, Assoc_id _
   | Lazy_id, Assoc_on_id _
+  | Lazy_id, Bind_id _
+  | Bind_id _, Leaf_id _
+  | Bind_id _, Sub_id _
+  | Bind_id _, Wrap_id _
+  | Bind_id _, Model_reset_id _
+  | Bind_id _, Switch_id
+  | Bind_id _, Assoc_id _
+  | Bind_id _, Assoc_on_id _
+  | Bind_id _, Lazy_id
   | Assoc_id _, Leaf_id _
   | Assoc_id _, Sub_id _
   | Assoc_id _, Wrap_id _
   | Assoc_id _, Model_reset_id _
   | Assoc_id _, Switch_id
   | Assoc_id _, Lazy_id
+  | Assoc_id _, Bind_id _
   | Assoc_id _, Assoc_on_id _
   | Assoc_on_id _, Leaf_id _
   | Assoc_on_id _, Sub_id _
@@ -178,6 +209,7 @@ let rec same_witness : type a b. a id -> b id -> (a, b) Type_equal.t option =
   | Assoc_on_id _, Model_reset_id _
   | Assoc_on_id _, Switch_id
   | Assoc_on_id _, Lazy_id
+  | Assoc_on_id _, Bind_id _
   | Assoc_on_id _, Assoc_id _ -> None
 ;;
 
@@ -196,6 +228,11 @@ let rec sexp_of_t : type a. a id -> Sexp.t = function
     [%sexp Model_reset (inner : Sexp.t)]
   | Switch_id -> [%sexp Switch]
   | Lazy_id -> [%sexp Lazy]
+  | Bind_id (bound_id, extra_id) ->
+    [%message
+      "Bind"
+        ~bound:(Var_id.pack bound_id : Var_id.Packed.t)
+        ~extra:(Var_id.pack extra_id : Var_id.Packed.t)]
   | Assoc_id { action; _ } ->
     let action = sexp_of_t action in
     [%sexp Assoc, "key id", (action : Sexp.t)]
@@ -238,6 +275,18 @@ let rec to_sexp : type a. a id -> a t -> Sexp.t = function
     fun (Lazy { action; type_id }) ->
       let to_sexp = to_sexp type_id in
       [%sexp Lazy, (to_sexp action : Sexp.t)]
+  | Bind_id _ ->
+    fun (Bind
+          { action
+          ; type_id
+          ; bound = _
+          ; bound_id = _
+          ; comparator = _
+          ; extra = _
+          ; extra_id = _
+          }) ->
+      let to_sexp = to_sexp type_id in
+      [%sexp Bind, (to_sexp action : Sexp.t)]
   | Assoc_id { action = action_id; _ } ->
     fun (Assoc { key; action; id = _; comparator = (module Cmp) }) ->
       let sexp_of_key = Comparator.sexp_of_t Cmp.comparator in
@@ -266,6 +315,7 @@ module Type_id = struct
   let wrap ~inner ~outer = Wrap_id { inner; outer }
   let model_reset inner = Model_reset_id { inner }
   let lazy_ = Lazy_id
+  let bind ~bound_id ~extra_id = Bind_id (bound_id, extra_id)
   let switch = Switch_id
   let assoc ~key ~action = Assoc_id { key; action }
 
@@ -289,6 +339,11 @@ let model_reset_inner action = Model_reset_inner action
 let model_reset_outer = Model_reset_outer
 let switch ~branch ~type_id action = Switch { branch; action; type_id }
 let lazy_ ~type_id action = Lazy { action; type_id }
+
+let bind ~bound ~bound_id ~comparator ~extra ~extra_id ~type_id action =
+  Bind { action; type_id; bound; bound_id; comparator; extra; extra_id }
+;;
+
 let assoc ~key ~id ~comparator action = Assoc { key; action; id; comparator }
 
 let assoc_on ~io_key ~io_id ~io_comparator ~model_key action =

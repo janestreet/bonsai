@@ -448,10 +448,9 @@ module Node = struct
           ; kind = _
           ; config
           } ->
-        let sexp_of_action = Option.value sexp_of_action ~default:sexp_of_opaque in
         log_model_action_monitor
           ~sexp_of_model
-          ~sexp_of_action
+          ?sexp_of_action
           ~config
           ~model_before
           ~model_after

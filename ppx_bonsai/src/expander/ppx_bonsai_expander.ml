@@ -1,8 +1,8 @@
-open! Core
+open! Base
 open Ppxlib
 open Ast_builder.Default
 open Ppx_let_expander
-open Ppx_pattern_bind
+open Ppx_pattern_bind_expander
 
 module Location_behavior = struct
   type t =
@@ -91,6 +91,35 @@ end = struct
   ;;
 end
 
+let silence_for_ppx_bonsai_alert expr =
+  let loc = { expr.pexp_loc with loc_ghost = true } in
+  [%expr [%e expr] [@alert "-for_ppx_bonsai"]]
+;;
+
+let silence_for_ppx_bonsai_alert_on_applied_operator expr =
+  match expr.pexp_desc with
+  | Pexp_apply (operator, args) ->
+    { expr with pexp_desc = Pexp_apply (silence_for_ppx_bonsai_alert operator, args) }
+  | _ -> expr
+;;
+
+(* [Ppx_pattern_bind_expander.project_pattern_variables] always uses [Let_syntax.map]. *)
+let project_pattern_variables ~assume_exhaustive ~modul ~with_location bindings =
+  Ppx_pattern_bind_expander.project_pattern_variables
+    ~assume_exhaustive
+    ~modul
+    ~with_location
+    bindings
+  |> List.map ~f:(fun (projection : value_binding loc) ->
+    let vb = projection.txt in
+    { projection with
+      txt =
+        { vb with
+          pvb_expr = silence_for_ppx_bonsai_alert_on_applied_operator vb.pvb_expr
+        }
+    })
+;;
+
 (* Maps tuples of [('a Bonsai.t * 'b Bonsai.t ...)] to [('a * 'b ...) Bonsai.t] *)
 let rec match_tuple_mapper
   ~loc
@@ -145,6 +174,7 @@ and arr ~(expand_with : label) (location_behavior : Location_behavior.t) : (modu
     let name = "arr"
     let with_location = Location_behavior.to_ppx_let_behavior location_behavior
     let prevent_tail_call = false
+    let implicit_else = None
 
     let location_ghoster =
       object
@@ -237,23 +267,24 @@ and arr ~(expand_with : label) (location_behavior : Location_behavior.t) : (modu
       let ident_to_extracted_variable =
         let variables_of =
           object
-            inherit [Extracted_variable.t String.Map.t] Ast_traverse.fold as super
+            inherit
+              [Extracted_variable.t Base.Map.M(Base.String).t] Ast_traverse.fold as super
 
             method! pattern p acc =
               let acc = super#pattern p acc in
               match p.ppat_desc with
               | Ppat_var var | Ppat_alias (_, var) ->
                 let extracted_variable = Extracted_variable.of_original_name var in
-                Core.Map.set acc ~key:var.txt ~data:extracted_variable
+                Base.Map.set acc ~key:var.txt ~data:extracted_variable
               | _ -> acc
           end
         in
-        variables_of#pattern pattern String.Map.empty
+        variables_of#pattern pattern (Base.Map.empty (module Base.String))
       in
       let old_pattern =
         replace_variable
           ~f:(fun label ->
-            match Core.Map.find ident_to_extracted_variable label.txt with
+            match Base.Map.find ident_to_extracted_variable label.txt with
             | None -> `Remove
             | Some extracted_variable -> `Rename extracted_variable.old_label.txt)
           pattern
@@ -261,12 +292,12 @@ and arr ~(expand_with : label) (location_behavior : Location_behavior.t) : (modu
       let new_pattern =
         replace_variable
           ~f:(fun label ->
-            match Core.Map.find ident_to_extracted_variable label.txt with
+            match Base.Map.find ident_to_extracted_variable label.txt with
             | None -> `Remove
             | Some extracted_variable -> `Rename extracted_variable.new_label.txt)
           pattern
       in
-      old_pattern, new_pattern, Core.Map.data ident_to_extracted_variable
+      old_pattern, new_pattern, Base.Map.data ident_to_extracted_variable
     ;;
 
     let extract_phys_equal_check ~loc variables =
@@ -411,9 +442,16 @@ and arr ~(expand_with : label) (location_behavior : Location_behavior.t) : (modu
         ppx_bindings
         ppx_body
         =
-        let operator ~op_name = function
-          | 1 -> eoperator ~loc ~modul op_name
-          | n -> eoperator ~loc ~modul [%string "%{op_name}%{n#Int}"]
+        let operator ~op_name n =
+          let operator =
+            match n with
+            | 1 -> eoperator ~loc ~modul op_name
+            | n -> eoperator ~loc ~modul [%string "%{op_name}%{n#Int}"]
+          in
+          (* Only [map]/[mapN] carry the [for_ppx_bonsai] alert. *)
+          match op_name with
+          | "map" -> silence_for_ppx_bonsai_alert operator
+          | _ -> operator
         in
         let build_multiarg_fun ~args ~body =
           Nonempty_list.fold_right
@@ -617,7 +655,7 @@ and arr ~(expand_with : label) (location_behavior : Location_behavior.t) : (modu
         ~with_location
         ~op_name:name
         ~arg:cutoff_expr
-        ~fn:(pexp_function ~loc cases)
+        ~fn:(pexp_function_cases ~loc cases)
         ()
     ;;
   end
@@ -635,6 +673,7 @@ let arr_debug (location_behavior : Location_behavior.t) : (module Ext) =
     (* Reuse [%arr]'s unchanged functions *)
     let with_location = Arr.with_location
     let prevent_tail_call = Arr.prevent_tail_call
+    let implicit_else = Arr.implicit_else
     let disallow_expression = Arr.disallow_expression
     let destruct = Arr.destruct
 
@@ -642,7 +681,7 @@ let arr_debug (location_behavior : Location_behavior.t) : (module Ext) =
       match Ppxlib_jane.Shim.Pattern_desc.of_parsetree pat.ppat_desc with
       | Ppat_var { txt; _ }
       | Ppat_constraint ({ ppat_desc = Ppat_var { txt; _ }; _ }, _, _) -> txt
-      | _ -> Format.asprintf "%a" Pprintast.pattern pat
+      | _ -> Stdlib.Format.asprintf "%a" Pprintast.pattern pat
     ;;
 
     let wrap_with_debug_node ~(loc : location) ~modul ~name expr =
@@ -723,15 +762,43 @@ let sub (location_behavior : Location_behavior.t) : (module Ext) =
   let module Sub : Ext = struct
     let name = "sub"
     let with_location = Location_behavior.to_ppx_let_behavior location_behavior
-    let wrap_expansion = wrap_expansion_identity
     let prevent_tail_call = true
+    let implicit_else = None
+
+    let wrap_expansion
+      ~loc
+      ~modul
+      (value_bindings : value_binding list)
+      expression
+      ~expand
+      =
+      match value_bindings with
+      | [] | [ _ ] -> expand ~loc value_bindings expression
+      | _ :: _ :: _ ->
+        (* We expand the [let%sub a = x and b = y in ...] case to something like
+           [let%sub a, b = Let_syntax.sub_both (x, y)]. *)
+        let combined_expression =
+          List.reduce_exn
+            (List.rev_map value_bindings ~f:(fun vb -> vb.pvb_expr))
+            ~f:(fun acc expr ->
+              let loc = { expr.pexp_loc with loc_ghost = true } in
+              eapply ~loc (eoperator ~loc ~modul "sub_both") [ expr; acc ])
+        in
+        let combined_pattern =
+          List.reduce_exn
+            (List.rev_map value_bindings ~f:(fun vb -> vb.pvb_pat))
+            ~f:(fun acc pat ->
+              let loc = { pat.ppat_loc with loc_ghost = true } in
+              ppat_tuple ~loc [ pat; acc ])
+        in
+        let binding =
+          value_binding ~loc ~pat:combined_pattern ~expr:combined_expression
+        in
+        expand ~loc [ binding ] expression
+    ;;
 
     let disallow_expression ~loc _ pexp_desc =
       match Ppxlib_jane.Shim.Expression_desc.of_parsetree pexp_desc ~loc with
-      (* It is worse to use let%sub...and instead of multiple let%sub in a row, so
-         disallow it. *)
-      | Pexp_let (_, Nonrecursive, _ :: _ :: _, _) ->
-        Error "let%sub should not be used with 'and'."
       | Pexp_let (Mutable, _, _, _) -> Error "let%sub should not be used with 'mutable'."
       | Pexp_while (_, _) -> Error "while%sub is not supported"
       | _ -> Ok ()
@@ -781,7 +848,15 @@ let sub (location_behavior : Location_behavior.t) : (module Ext) =
       match lhs.ppat_desc with
       | Ppat_var _ -> None
       | _ ->
-        let bindings = [ value_binding ~loc ~pat:lhs ~expr:rhs ] in
+        let bindings =
+          [ Ppxlib_jane.Ast_builder.Default.value_binding
+              ~loc
+              ~pat:lhs
+              ~expr:rhs
+              ~constraint_:None
+              ~modes:[]
+          ]
+        in
         let pattern_projections =
           project_pattern_variables ~assume_exhaustive ~modul ~with_location bindings
         in
@@ -794,7 +869,7 @@ let sub (location_behavior : Location_behavior.t) : (module Ext) =
               the pattern matching is already happening inside the [switch] call. *)
            | [] when assume_exhaustive ->
              let projection_case = case ~lhs ~guard:None ~rhs:(eunit ~loc) in
-             let fn = pexp_function ~loc [ projection_case ] in
+             let fn = pexp_function_cases ~loc [ projection_case ] in
              let rhs =
                bind_apply
                  ~op_name:Map.name
@@ -805,6 +880,7 @@ let sub (location_behavior : Location_behavior.t) : (module Ext) =
                  ~fn
                  ()
                  ~prevent_tail_call
+               |> silence_for_ppx_bonsai_alert_on_applied_operator
              in
              sub_return ~loc ~modul ~lhs:(ppat_any ~loc) ~rhs ~body
            | _ ->
@@ -836,7 +912,11 @@ let sub (location_behavior : Location_behavior.t) : (module Ext) =
     ;;
 
     let switch ~loc ~switch_loc ~modul case_number case_number_cases =
-      let case_number = focus_any#expression case_number in
+      let case_number =
+        (* The generated case_number is a [Let_syntax.map] application. *)
+        silence_for_ppx_bonsai_alert_on_applied_operator case_number
+        |> focus_any#expression
+      in
       pexp_apply
         ~loc
         (eoperator ~loc:switch_loc ~modul "switch")
@@ -846,7 +926,7 @@ let sub (location_behavior : Location_behavior.t) : (module Ext) =
             | Location_in_scope -> evar ~loc "here" )
         ; Labelled "match_", { case_number with pexp_loc = switch_loc }
         ; Labelled "branches", eint ~loc:switch_loc (List.length case_number_cases - 1)
-        ; Labelled "with_", pexp_function ~loc:switch_loc case_number_cases
+        ; Labelled "with_", pexp_function_cases ~loc:switch_loc case_number_cases
         ]
     ;;
 

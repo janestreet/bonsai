@@ -4,3 +4,8 @@
  (libraries bonsai bonsai_proc core virtual_dom.ui_effect)
  (preprocess
   (pps ppx_jane)))
+
+(env
+ (_
+  (env-vars
+   (OCAMLPARAM w=-46,keywords=5.2,_))))

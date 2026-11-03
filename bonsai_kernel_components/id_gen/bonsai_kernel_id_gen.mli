@@ -24,12 +24,12 @@ module Id_gen (T : Int_intf.S) () : sig
 
   val component
     :  ?reset:[ `Reset | `Do_nothing ]
-    -> local_ Bonsai.graph
+    -> Bonsai.graph @ local
     -> t Bonsai.Effect.t Bonsai.t
 
   (** [component'] also gives you access to the most recently generated id *)
   val component'
     :  ?reset:[ `Reset | `Do_nothing | `Bump ]
-    -> local_ Bonsai.graph
+    -> Bonsai.graph @ local
     -> t Bonsai.Effect.t Bonsai.t * t Bonsai.t
 end

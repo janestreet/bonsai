@@ -3,4 +3,5 @@
  (libraries core patdiff.expect_test_patdiff ppx_bonsai ppx_bonsai_expander
    ppx_let.expander ppxlib re)
  (preprocess
-  (pps ppx_jane ppx_expect ppx_bonsai ppxlib.metaquot ppx_quick_test)))
+  (pps ppx_jane -compare-require-explicit-locality ppx_expect ppx_bonsai
+    ppxlib.metaquot ppx_quick_test)))

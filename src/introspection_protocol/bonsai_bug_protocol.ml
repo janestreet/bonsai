@@ -17,6 +17,22 @@ module Stable = struct
         [%expect {| 06de0862e532730a58840545d773281d |}]
       ;;
     end
+
+    module V2 = struct
+      type t =
+        { node_id : Bonsai.Private.Instrumentation.Profiled_event.Node_id.t
+        ; node_type : string
+        ; here : Source_code_position.V1.t
+        ; start_time : Time_ns.Alternate_sexp.V1.t
+        ; duration : Time_ns.Span.V2.t
+        }
+      [@@deriving bin_io, sexp]
+
+      let%expect_test _ =
+        print_endline [%bin_digest: t];
+        [%expect {| 0972012886d0dcc2c07431f04f1082d9 |}]
+      ;;
+    end
   end
 
   module Message = struct
@@ -81,6 +97,15 @@ module Stable = struct
         of_V3_t t ~modify_Graph_info:(fun graph_info -> Graph_info graph_info.info)
       ;;
     end
+
+    module V5 = struct
+      type t = Performance_measure of Entry.V2.t [@@deriving bin_io, sexp]
+
+      let%expect_test _ =
+        print_endline [%bin_digest: t];
+        [%expect {| 461c2faae1e4e1e1b29f1d484c1c418a |}]
+      ;;
+    end
   end
 
   module Worker_message = struct
@@ -127,6 +152,18 @@ module Stable = struct
         [%expect {| 9a072d0c8ec198d99bf5616b67e1c36a |}]
       ;;
     end
+
+    module V4 = struct
+      type t =
+        | Uuid of Uuid.Stable.V1.t
+        | Message of Message.V5.t
+      [@@deriving bin_io, sexp, stable_variant ~version:V3.t ~modify:[ Message ]]
+
+      let%expect_test _ =
+        print_endline [%bin_digest: t];
+        [%expect {| ad652a29d968a5da2c6b9beb70c4bb02 |}]
+      ;;
+    end
   end
 end
 
@@ -141,71 +178,37 @@ module Versioned_message = struct
     | V3 of Worker_message.V1.t list
     | V4 of Worker_message.V2.t list
     | V5 of Worker_message.V3.t list
+    | V6 of Message.V5.t list
   [@@deriving sexp, bin_io]
 
-  let to_latest : t -> Stable.Message.V4.t list = function
-    | V1 messages ->
-      List.map messages ~f:(fun message ->
-        message
-        |> Stable.Message.V2.of_v1
-        |> Stable.Message.V3.of_v2
-        |> Stable.Message.V4.of_v3)
-    | V2 messages ->
-      List.map messages ~f:(fun message ->
-        message |> Stable.Message.V3.of_v2 |> Stable.Message.V4.of_v3)
-    | V3 messages ->
-      (* NOTE: UUIDs are safe to ignore as UUIDs are never sent now as the concept of a
-         bonsai bug "session" disappeared when bonsai-bug was moved onto the chrome
-         extension. *)
-      let _uuids, messages =
-        List.partition_map messages ~f:(function
-          | Uuid uuid -> First uuid
-          | Message message -> Second message)
-      in
-      List.map messages ~f:(fun message ->
-        message |> Stable.Message.V3.of_v2 |> Stable.Message.V4.of_v3)
-    | V4 messages ->
-      (* NOTE: UUIDs are safe to ignore as UUIDs are never sent now as the concept of a
-         bonsai bug "session" disappeared when bonsai-bug was moved onto the chrome
-         extension. *)
-      let _uuids, messages =
-        List.partition_map messages ~f:(function
-          | Uuid uuid -> First uuid
-          | Message message -> Second message)
-      in
-      List.map messages ~f:(fun message -> message |> Stable.Message.V4.of_v3)
-    | V5 messages ->
-      (* NOTE: UUIDs are safe to ignore as UUIDs are never sent now as the concept of a
-         bonsai bug "session" disappeared when bonsai-bug was moved onto the chrome
-         extension. *)
-      let _uuids, messages =
-        List.partition_map messages ~f:(function
-          | Uuid uuid -> First uuid
-          | Message message -> Second message)
-      in
-      messages
+  let to_latest : t -> Stable.Message.V5.t list = function
+    | V1 _ | V2 _ | V3 _ | V4 _ | V5 _ ->
+      (* Individual messages no longer have enough information to construct a reasonable
+         Entry.V2.t. We could check the message list for any graph info and try to
+         reconstruct the needed info from there, but realistically, the devtool panel will
+         just be unavailable for web pages that haven't rolled onto V6. *)
+      []
+    | V6 messages -> messages
   ;;
 end
 
 module Entry = struct
-  type t = Entry.V1.t =
-    { label : [ `Bonsai of Node_path.t | `Other of string ]
-    ; entry_type : string
-    ; start_time : float
-    ; duration : float
+  type t = Entry.V2.t =
+    { node_id : Instrumentation.Profiled_event.Node_id.t
+    ; node_type : string
+    ; here : Source_code_position.Stable.V1.t
+    ; start_time : Time_ns.Alternate_sexp.t
+    ; duration : Time_ns.Span.t
     }
   [@@deriving bin_io, sexp]
 end
 
 module Message = struct
-  type t = Message.V4.t =
-    | Graph_info of Bonsai.Private.Graph_info.Node_info.t Bonsai.Private.Node_path.Map.t
-    | Performance_measure of Entry.t
-  [@@deriving bin_io, sexp]
+  type t = Message.V5.t = Performance_measure of Entry.t [@@deriving bin_io, sexp]
 end
 
 module Worker_message = struct
-  type t = Worker_message.V3.t =
+  type t = Worker_message.V4.t =
     | Uuid of Uuid.Unstable.t
     | Message of Message.t
 end

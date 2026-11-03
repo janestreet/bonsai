@@ -17,42 +17,42 @@ module Cont_primitives : sig
   (* Main primitives; see above for explanation. *)
   val perform
     :  here:Source_code_position.t
-    -> local_ graph
+    -> graph @ local
     -> 'a Computation.t
     -> 'a Value.t
 
   val handle
     :  here:[%call_pos]
-    -> f:(local_ graph -> 'a Value.t)
-    -> local_ graph
+    -> f:(graph @ local -> 'a Value.t)
+    -> graph @ local
     -> 'a Computation.t
 
   (* Special-use primitives for getting the global graph, and creating it in the top
      level. *)
   val isolated
-    :  local_ graph
+    :  graph @ local
     -> here:Source_code_position.t
-    -> f:local_ (unit -> 'a Value.t)
+    -> f:(unit -> 'a Value.t) @ local
     -> 'a Computation.t
 
   val top_level_handle
     :  here:[%call_pos]
-    -> (local_ graph -> 'a Value.t)
+    -> (graph @ local -> 'a Value.t)
     -> 'a Computation.t
 
-  val handle_for_lazy
+  val handle_for_lazy_and_bind
     :  here:[%call_pos]
-    -> (local_ graph -> 'a Value.t)
+    -> (graph @ local -> 'a Value.t)
     -> 'a Computation.t
 
-  val with_global_graph : f:local_ (local_ graph -> 'a) -> no_graph:(unit -> 'a) -> 'a
+  val with_global_graph : f:(graph @ local -> 'a) @ local -> no_graph:(unit -> 'a) -> 'a
 end = struct
   (* NOTE: We use [Trampoline.t] to avoid stack overflows when this function is applied. *)
   type graph =
     { mutable f : 'a. 'a Computation.t Trampoline.t -> 'a Computation.t Trampoline.t }
 
   let perform
-    : type a. here:Source_code_position.t -> local_ graph -> a Computation.t -> a Value.t
+    : type a. here:Source_code_position.t -> graph @ local -> a Computation.t -> a Value.t
     =
     fun ~here graph -> function
     | Return
@@ -161,7 +161,7 @@ end = struct
       ~finally:(fun () -> decr num_nested_top_level_handles) [@nontail]
   ;;
 
-  let handle_for_lazy ~(here : [%call_pos]) f =
+  let handle_for_lazy_and_bind ~(here : [%call_pos]) f =
     (Timer.timer ()).time `Graph_application ~f:(fun () ->
       handle_with_global_graph ~here `Inside_lazy f)
   ;;
@@ -731,7 +731,13 @@ let actor_with_input
 ;;
 
 let delay ~(here : [%call_pos]) ~f (local_ graph) =
-  Proc.lazy_ ~here (lazy (handle_for_lazy ~here f)) |> perform ~here graph
+  Proc.lazy_ ~here (lazy (handle_for_lazy_and_bind ~here f)) |> perform ~here graph
+;;
+
+let stitch ~(here : [%call_pos]) cmp bound ~f (local_ graph) =
+  Proc.bind ~here cmp bound ~f:(fun value ->
+    handle_for_lazy_and_bind ~here (fun graph -> f value graph))
+  |> perform ~here graph
 ;;
 
 module Expert = struct
@@ -776,8 +782,8 @@ let scope_model_n
     -> _
     -> n:(_, unpacked) Autopack.t
     -> on:_
-    -> for_:(local_ graph -> unpacked)
-    -> local_ graph
+    -> for_:(graph @ local -> unpacked)
+    -> graph @ local
     -> unpacked
   =
   fun ~(here : [%call_pos]) comparator ~n ~on ~for_ (local_ graph) ->
@@ -862,9 +868,9 @@ let wrap_n
     -> ?equal:_
     -> default_model:_
     -> apply_action:(_ -> packed Computation_status.t -> _)
-    -> f:(_ -> _ t -> local_ graph -> unpacked)
+    -> f:(_ -> _ t -> graph @ local -> unpacked)
     -> n:(packed, unpacked) Autopack.t
-    -> local_ graph
+    -> graph @ local
     -> unpacked
   =
   fun ~(here : [%call_pos])
@@ -920,9 +926,9 @@ let with_model_resetter ~(here : [%call_pos]) ~f graph =
 let with_model_resetter_n
   : type packed unpacked.
     here:[%call_pos]
-    -> f:(local_ graph -> unpacked)
+    -> f:(graph @ local -> unpacked)
     -> n:(packed, unpacked) Autopack.t
-    -> local_ graph
+    -> graph @ local
     -> unpacked * _
   =
   fun ~(here : [%call_pos]) ~f ~n (local_ graph) ->
@@ -941,9 +947,9 @@ let with_model_resetter' ~(here : [%call_pos]) ~f (local_ graph) =
 let with_model_resetter_n'
   : type packed unpacked.
     here:[%call_pos]
-    -> f:(reset:_ -> local_ graph -> unpacked)
+    -> f:(reset:_ -> graph @ local -> unpacked)
     -> n:(packed, unpacked) Autopack.t
-    -> local_ graph
+    -> graph @ local
     -> unpacked
   =
   fun ~(here : [%call_pos]) ~f ~n (local_ graph) ->
@@ -1247,7 +1253,7 @@ module Dynamic_scope = struct
   type 'a t = 'a Proc.Dynamic_scope.t
 
   type revert =
-    { revert : 'a. (local_ graph -> 'a bonsai_t) -> (local_ graph -> 'a bonsai_t) }
+    { revert : 'a. (graph @ local -> 'a bonsai_t) -> (graph @ local -> 'a bonsai_t) }
 
   let create = Proc.Dynamic_scope.create
   let derived = Proc.Dynamic_scope.derived
@@ -1326,9 +1332,9 @@ let assoc_n
     here:[%call_pos]
     -> _
     -> _
-    -> f:(_ -> _ -> local_ graph -> unpacked)
+    -> f:(_ -> _ -> graph @ local -> unpacked)
     -> n:(packed, unpacked) Autopack.t
-    -> local_ graph
+    -> graph @ local
     -> (_, packed, _) Map.t t
   =
   fun ~(here : [%call_pos]) comparator map ~f ~n (local_ graph) ->
@@ -1347,9 +1353,9 @@ let assoc_set_n
     here:[%call_pos]
     -> _
     -> _
-    -> f:(_ -> local_ graph -> unpacked)
+    -> f:(_ -> graph @ local -> unpacked)
     -> n:(packed, unpacked) Autopack.t
-    -> local_ graph
+    -> graph @ local
     -> (_, packed, _) Map.t t
   =
   fun ~(here : [%call_pos]) comparator map ~f ~n (local_ graph) ->
@@ -1369,9 +1375,9 @@ let assoc_list_n
     -> _
     -> _
     -> get_key:_
-    -> f:(_ -> _ -> local_ graph -> unpacked)
+    -> f:(_ -> _ -> graph @ local -> unpacked)
     -> n:(packed, unpacked) Autopack.t
-    -> local_ graph
+    -> graph @ local
     -> [ `Duplicate_key of 'key | `Ok of packed list ] t
   =
   fun ~(here : [%call_pos]) comparator list ~get_key ~f ~n (local_ graph) ->
@@ -1521,6 +1527,15 @@ module Let_syntax = struct
     ;;
 
     let sub ~here:(_ : [%call_pos]) a ~f = f a
+
+    let sub_both
+      (`let_sub_with_and_is_not_supported_in_bonsai :
+        [ `let_sub_with_and_is_not_supported_in_bonsai ])
+      (`use_a_separate_let_sub_per_binding : [ `use_a_separate_let_sub_per_binding ])
+      =
+      ()
+    ;;
+
     let delay = delay
 
     let debug_node ~(here : [%call_pos]) ~name ~equal ~sexp_of value =
@@ -1645,7 +1660,7 @@ include Map_and_set0.Make (struct
     end
 
     module Computation = struct
-      type nonrec 'a t = local_ graph -> 'a t
+      type nonrec 'a t = graph @ local -> 'a t
     end
 
     module Incr = struct

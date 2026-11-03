@@ -16,7 +16,7 @@ val state_machine0_dynamic_model
        [< `Computed of ('model option -> 'model) Bonsai.t | `Given of 'model Bonsai.t ]
   -> apply_action:
        (('action, unit) Bonsai.Apply_action_context.t -> 'model -> 'action -> 'model)
-  -> local_ Bonsai.graph
+  -> Bonsai.graph @ local
   -> 'model Bonsai.t * ('action -> unit Effect.t) Bonsai.t
 
 (** Read the docs for [state_machine0_dynamic_model]. This one has an extra ['input] value
@@ -34,7 +34,7 @@ val state_machine1_dynamic_model
         -> 'action
         -> 'model)
   -> 'input Bonsai.t
-  -> local_ Bonsai.graph
+  -> Bonsai.graph @ local
   -> 'model Bonsai.t * ('action -> unit Effect.t) Bonsai.t
 
 (** The analog of [Bonsai.state], but with a dynamic model. Read the docs for
@@ -50,5 +50,5 @@ val state_dynamic_model
   -> ?equal:('model -> 'model -> bool)
   -> model:
        [< `Computed of ('model option -> 'model) Bonsai.t | `Given of 'model Bonsai.t ]
-  -> local_ Bonsai.graph
+  -> Bonsai.graph @ local
   -> 'model Bonsai.t * ('model -> unit Effect.t) Bonsai.t

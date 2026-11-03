@@ -589,6 +589,27 @@ module Constant_fold (Recurse : Fix_transform.Recurse with module Types := Types
                 in
                 return t)))
          |> fun t -> Computation.Lazy { t; here } |> return)
+    | Bind { bound; f; _ } ->
+      let (), (), bound =
+        Recurse.on_value { constants_in_scope; evaluated } () `Directly_on bound
+      in
+      (match (force_but_capture_exceptions bound).value with
+       | Exception exn -> return (Proc.read (Value.return_exn exn))
+       | Constant bound ->
+         let the_only_c = f (Lazy.force bound) in
+         let%bind (), (), t =
+           Recurse.on_computation
+             { constants_in_scope; evaluated }
+             ()
+             `Directly_on
+             the_only_c
+         in
+         return t
+       | _ ->
+         let%bind (), (), t =
+           Recurse.on_computation { constants_in_scope; evaluated } () `Skipping_over t
+         in
+         return t)
     | Fix_define _
     | Fix_recurse _
     | Return _

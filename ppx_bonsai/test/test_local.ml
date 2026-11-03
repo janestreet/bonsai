@@ -4,7 +4,7 @@ module type S = sig
 
   module Let_syntax : sig
     val ( >>| ) : 'a t -> ('a -> 'b) -> 'b t
-    val return : 'a -> local_ graph -> 'a t
+    val return : 'a -> graph @ local -> 'a t
 
     module Let_syntax : sig
       val map : here:[%call_pos] -> 'a t -> f:('a -> 'b) -> 'b t
@@ -70,10 +70,10 @@ module type S = sig
         :  here:Lexing.position
         -> match_:int t
         -> branches:int
-        -> with_:local_ (int -> 'a t)
+        -> with_:(int -> 'a t) @ local
         -> 'a t
 
-      val sub : ?here:_ -> 'a -> f:local_ ('a -> 'b) -> 'b
+      val sub : ?here:_ -> 'a -> f:('a -> 'b) @ local -> 'b
     end
   end
 end

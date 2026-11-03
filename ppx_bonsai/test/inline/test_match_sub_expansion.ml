@@ -43,7 +43,8 @@ let%expect_test "No bound variables" =
                           pos_cnum = (-1);
                           pos_bol = 0
                         }
-                  ~match_:((Let_syntax.map __pattern_syntax__001_
+                  ~match_:((((Let_syntax.map)[@alert "-for_ppx_bonsai"])
+                              __pattern_syntax__001_
                               ~f:(function
                                   | Foo1 ((_)[@merlin.focus ]) -> 0
                                   | Foo2 ((_)[@merlin.focus ]) -> 1))
@@ -80,7 +81,8 @@ let%expect_test "1 bound variables" =
                           pos_cnum = (-1);
                           pos_bol = 0
                         }
-                  ~match_:((Let_syntax.map __pattern_syntax__002_
+                  ~match_:((((Let_syntax.map)[@alert "-for_ppx_bonsai"])
+                              __pattern_syntax__002_
                               ~f:(function
                                   | Foo1 a_variable -> 0
                                   | Foo2 a_variable -> 1))
@@ -95,7 +97,8 @@ let%expect_test "1 bound variables" =
                                           pos_bol = 0
                                         }
                                   (Let_syntax.return
-                                     ((Let_syntax.map
+                                     ((((Let_syntax.map)
+                                         [@alert "-for_ppx_bonsai"])
                                          ~here:{
                                                  Ppx_here_lib.pos_fname =
                                                    "_none_";
@@ -119,7 +122,8 @@ let%expect_test "1 bound variables" =
                                           pos_bol = 0
                                         }
                                   (Let_syntax.return
-                                     ((Let_syntax.map
+                                     ((((Let_syntax.map)
+                                         [@alert "-for_ppx_bonsai"])
                                          ~here:{
                                                  Ppx_here_lib.pos_fname =
                                                    "_none_";

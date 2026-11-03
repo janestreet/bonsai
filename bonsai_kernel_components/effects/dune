@@ -4,3 +4,8 @@
  (preprocess
   (pps ppx_jane js_of_ocaml-ppx ppx_bonsai))
  (libraries bonsai core virtual_dom.ui_effect))
+
+(env
+ (_
+  (env-vars
+   (OCAMLPARAM w=-46,keywords=5.2,_))))
